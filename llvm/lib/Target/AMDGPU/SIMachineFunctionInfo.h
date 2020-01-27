@@ -488,6 +488,9 @@ public: // FIXME
   Register VGPRReservedForSGPRSpill;
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg);
 
+  int ReturnAddressSaveIndex;
+  int EXECSaveIndex;
+
 public:
   SIMachineFunctionInfo(const MachineFunction &MF);
 

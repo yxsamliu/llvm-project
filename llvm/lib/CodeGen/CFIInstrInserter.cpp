@@ -181,6 +181,14 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
         SetRegister = CFI.getRegister();
         SetOffset = CFI.getOffset();
         break;
+      case MCCFIInstruction::OpLLVMDefAspaceCfa:
+        // TODO: Add support for handling cfi_def_aspace_cfa.
+#ifndef NDEBUG
+        report_fatal_error(
+            "Support for cfi_llvm_def_aspace_cfa not implemented! Value of CFA "
+            "may be incorrect!\n");
+#endif
+        break;
       case MCCFIInstruction::OpRememberState:
         // TODO: Add support for handling cfi_remember_state.
 #ifndef NDEBUG
