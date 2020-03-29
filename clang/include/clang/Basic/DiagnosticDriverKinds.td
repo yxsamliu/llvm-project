@@ -127,6 +127,10 @@ def err_drv_invalid_Xopenmp_target_with_args : Error<
   "invalid -Xopenmp-target argument: '%0', options requiring arguments are unsupported">;
 def err_drv_argument_only_allowed_with : Error<
   "invalid argument '%0' only allowed with '%1'">;
+def err_drv_amdgpu_ieee_without_no_honor_nans : Error<
+  "invalid argument '-mno-amdgpu-ieee' only allowed with floating point options "
+  "which do not honor NaNs, e.g. '-fno-honor-nans', '-ffast-math', "
+  "'-ffinite-math-only', etc.">;
 def err_drv_argument_not_allowed_with : Error<
   "invalid argument '%0' not allowed with '%1'">;
 def err_drv_invalid_version_number : Error<
