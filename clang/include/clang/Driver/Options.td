@@ -3171,6 +3171,12 @@ def mexec_model_EQ : Joined<["-"], "mexec-model=">, Group<m_wasm_Features_Driver
                      Values<"command,reactor">,
                      HelpText<"Execution model (WebAssembly only)">;
 
+def mamdgpu_ieee : Flag<["-"], "mamdgpu-ieee">, Flags<[CC1Option]>,
+  Group<m_Group>, HelpText<"Floating point opcodes that support exception flag "
+   "gathering quiet and propagate signaling NaN inputs per IEEE 754-2008 (AMDGPU only)">;
+def mno_amdgpu_ieee : Flag<["-"], "mno-amdgpu-ieee">, Flags<[CC1Option]>,
+  Group<m_Group>;
+
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
   HelpText<"Specify code object ABI version. Defaults to 3. (AMDGPU only)">,
   MetaVarName<"<version>">, Values<"2,3,4">;
