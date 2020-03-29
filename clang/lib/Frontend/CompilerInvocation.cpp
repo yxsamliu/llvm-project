@@ -1943,6 +1943,14 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   else if (Args.hasArg(options::OPT_fno_finite_loops))
     Opts.FiniteLoops = CodeGenOptions::FiniteLoopsKind::Never;
 
+  Opts.EmitIEEENaNCompliantInsts =
+      Args.hasFlag(options::OPT_mamdgpu_ieee, options::OPT_mno_amdgpu_ieee);
+  if (!Opts.EmitIEEENaNCompliantInsts && !LangOptsRef.NoHonorNaNs) {
+    Diags.Report(diag::err_drv_argument_only_allowed_with_or_equivalent)
+        << "-mno-amdgpu-ieee"
+        << "-fno-honor-nans";
+  }
+
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 

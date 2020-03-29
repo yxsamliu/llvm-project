@@ -127,6 +127,8 @@ def err_drv_invalid_Xopenmp_target_with_args : Error<
   "invalid -Xopenmp-target argument: '%0', options requiring arguments are unsupported">;
 def err_drv_argument_only_allowed_with : Error<
   "invalid argument '%0' only allowed with '%1'">;
+def err_drv_argument_only_allowed_with_or_equivalent : Error<
+  "invalid argument '%0' only allowed with '%1' or equivalent">;
 def err_drv_argument_not_allowed_with : Error<
   "invalid argument '%0' not allowed with '%1'">;
 def err_drv_invalid_version_number : Error<
