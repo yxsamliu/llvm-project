@@ -1944,6 +1944,13 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   else if (Args.hasArg(options::OPT_fno_finite_loops))
     Opts.FiniteLoops = CodeGenOptions::FiniteLoopsKind::Never;
 
+  // When NaN is not honored, floating point opcodes that support exception
+  // flag gathering does not need to quiet or propagate signaling NaN inputs
+  // per IEEE 754-2008. Note this only concerns about signaling NaN.
+  Opts.EmitIEEENaNCompliantInsts =
+      Args.hasFlag(options::OPT_mamdgpu_ieee, options::OPT_mno_amdgpu_ieee,
+                   !LangOptsRef.NoHonorNaNs);
+
   return Success && Diags.getNumErrors() == NumErrorsBefore;
 }
 
