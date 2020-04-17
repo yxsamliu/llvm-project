@@ -2629,6 +2629,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
           << Args.getLastArg(OPT_fgpu_allow_device_init)->getAsString(Args);
   }
   Opts.HIPUseNewLaunchAPI = Args.hasArg(OPT_fhip_new_launch_api);
+  Opts.HIPLambdaHostDevice = Args.hasArg(OPT_fhip_lambda_host_device);
   if (Opts.HIP)
     Opts.GPUMaxThreadsPerBlock = getLastArgIntValue(
         Args, OPT_gpu_max_threads_per_block_EQ, Opts.GPUMaxThreadsPerBlock);

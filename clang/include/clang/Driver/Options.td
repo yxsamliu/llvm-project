@@ -646,6 +646,11 @@ defm gpu_allow_device_init : OptInFFlag<"gpu-allow-device-init", "Allow device s
 def gpu_max_threads_per_block_EQ : Joined<["--"], "gpu-max-threads-per-block=">,
   Flags<[CC1Option]>,
   HelpText<"Default max threads per block for kernel launch bounds for HIP">;
+def fhip_lambda_host_device : Flag<["-"], "fhip-lambda-host-device">,
+  Flags<[CC1Option]>,
+  HelpText<"Let a lambda function without host/device attributes be a host "
+  "device function if it does not capture by reference (HIP only)">;
+def fno_hip_lambda_host_device : Flag<["-"], "fno-hip-lambda-host-device">;
 def libomptarget_nvptx_path_EQ : Joined<["--"], "libomptarget-nvptx-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-nvptx libraries">;
 def dD : Flag<["-"], "dD">, Group<d_Group>, Flags<[CC1Option]>,

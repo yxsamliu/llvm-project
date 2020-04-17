@@ -746,13 +746,30 @@ bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
          DiagKind != DeviceDiagBuilder::K_ImmediateWithCallStack;
 }
 
-void Sema::CUDASetLambdaAttrs(CXXMethodDecl *Method) {
+static bool LambdaHasRefCaptures(LambdaIntroducer &LI) {
+  if (LI.Default == LCD_ByRef)
+    return true;
+  for (auto &C : LI.Captures) {
+    if (C.Kind == LCK_ByRef || C.Kind == LCK_This)
+      return true;
+  }
+  return false;
+}
+
+void Sema::CUDASetLambdaAttrs(CXXMethodDecl *Method, LambdaIntroducer &LI) {
   assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
   if (Method->hasAttr<CUDAHostAttr>() || Method->hasAttr<CUDADeviceAttr>())
     return;
   FunctionDecl *CurFn = dyn_cast<FunctionDecl>(CurContext);
   if (!CurFn)
     return;
+  if (getLangOpts().HIP &&
+      (Method->isConstexpr() ||
+       (getLangOpts().HIPLambdaHostDevice && !LambdaHasRefCaptures(LI)))) {
+    Method->addAttr(CUDADeviceAttr::CreateImplicit(Context));
+    Method->addAttr(CUDAHostAttr::CreateImplicit(Context));
+    return;
+  }
   CUDAFunctionTarget Target = IdentifyCUDATarget(CurFn);
   if (Target == CFT_Global || Target == CFT_Device) {
     Method->addAttr(CUDADeviceAttr::CreateImplicit(Context));

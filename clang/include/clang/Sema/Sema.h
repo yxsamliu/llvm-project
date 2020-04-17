@@ -11787,7 +11787,7 @@ public:
   /// CUDA lambdas declared inside __device__ or __global__ functions inherit
   /// the __device__ attribute.  Similarly, lambdas inside __host__ __device__
   /// functions become __host__ __device__ themselves.
-  void CUDASetLambdaAttrs(CXXMethodDecl *Method);
+  void CUDASetLambdaAttrs(CXXMethodDecl *Method, LambdaIntroducer &LI);
 
   /// Finds a function in \p Matches with highest calling priority
   /// from \p Caller context and erases all functions with lower

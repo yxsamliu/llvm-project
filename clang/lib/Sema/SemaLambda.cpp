@@ -993,7 +993,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   // CUDA lambdas get implicit attributes based on the scope in which they're
   // declared.
   if (getLangOpts().CUDA)
-    CUDASetLambdaAttrs(Method);
+    CUDASetLambdaAttrs(Method, Intro);
 
   // Number the lambda for linkage purposes if necessary.
   handleLambdaNumbering(Class, Method);
