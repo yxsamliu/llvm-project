@@ -691,6 +691,8 @@ public:
     return GITPtrHigh;
   }
 
+  Register getGITPtrLoReg(const MachineFunction &MF) const;
+
   uint32_t get32BitAddressHighBits() const {
     return HighBitsOf32BitAddress;
   }
