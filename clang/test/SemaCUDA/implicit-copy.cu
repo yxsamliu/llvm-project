@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=gnu++11 -triple nvptx64-unknown-unknown -fsyntax-only -verify %s
-// RUN: %clang_cc1 -std=gnu++11 -triple nvptx64-unknown-unknown -fcuda-is-device -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=gnu++11 -triple nvptx64-unknown-unknown -fcuda-is-device -fsyntax-only -verify=dev %s
 
 struct CopyableH {
   const CopyableH& operator=(const CopyableH& x) { return *this; }
@@ -11,8 +11,8 @@ struct CopyableD {
 struct SimpleH {
   CopyableH b;
 };
-// expected-note@-3 2 {{candidate function (the implicit copy assignment operator) not viable: call to __host__ function from __device__ function}}
-// expected-note@-4 2 {{candidate function (the implicit move assignment operator) not viable: call to __host__ function from __device__ function}}
+// dev-note@-3 2 {{candidate function (the implicit copy assignment operator) not viable: call to __host__ function from __device__ function}}
+// dev-note@-4 2 {{candidate function (the implicit move assignment operator) not viable: call to __host__ function from __device__ function}}
 
 struct SimpleD {
   CopyableD b;

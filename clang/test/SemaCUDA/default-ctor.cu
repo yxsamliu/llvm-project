@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -triple nvptx64-nvidia-cuda -fsyntax-only \
-// RUN:            -fcuda-is-device -verify -verify-ignore-unexpected=note %s
+// RUN:            -fcuda-is-device -verify=dev -verify-ignore-unexpected=note %s
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-linux-gnu -fsyntax-only \
 // RUN:            -verify -verify-ignore-unexpected=note %s
 
@@ -23,11 +23,11 @@ __host__ __device__ OutHD::OutHD() = default;
 __device__ void fd() {
   In in;
   InD ind;
-  InH inh; // expected-error{{no matching constructor for initialization of 'InH'}}
+  InH inh; // dev-error{{no matching constructor for initialization of 'InH'}}
   InHD inhd;
-  Out out; // expected-error{{no matching constructor for initialization of 'Out'}}
+  Out out; // dev-error{{no matching constructor for initialization of 'Out'}}
   OutD outd;
-  OutH outh; // expected-error{{no matching constructor for initialization of 'OutH'}}
+  OutH outh; // dev-error{{no matching constructor for initialization of 'OutH'}}
   OutHD outhd;
 }
 

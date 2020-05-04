@@ -11571,6 +11571,15 @@ public:
       return Diag;
     }
 
+    friend const DeviceDiagBuilder &operator<<(const DeviceDiagBuilder &Diag,
+                                               const PartialDiagnostic &PD) {
+      if (Diag.ImmediateDiag.hasValue())
+        PD.Emit(*Diag.ImmediateDiag);
+      else if (Diag.PartialDiagId.hasValue())
+        Diag.S.DeviceDeferredDiags[Diag.Fn][*Diag.PartialDiagId].second = PD;
+      return Diag;
+    }
+
   private:
     Sema &S;
     SourceLocation Loc;
@@ -11641,6 +11650,10 @@ public:
   DeviceDiagBuilder diagIfOpenMPHostCode(SourceLocation Loc, unsigned DiagID);
 
   DeviceDiagBuilder targetDiag(SourceLocation Loc, unsigned DiagID);
+  DeviceDiagBuilder targetDiag(SourceLocation Loc,
+                               const PartialDiagnostic &PD) {
+    return targetDiag(Loc, PD.getDiagID()) << PD;
+  }
 
   enum CUDAFunctionTarget {
     CFT_Device,

@@ -21,6 +21,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <type_traits>
 
 //===----------------------------------------------------------------------===//
 // OpaquePtr
@@ -158,7 +159,12 @@ namespace clang {
     ActionResult(bool Invalid = false) : Val(PtrTy()), Invalid(Invalid) {}
     ActionResult(PtrTy val) : Val(val), Invalid(false) {}
     ActionResult(const DiagnosticBuilder &) : Val(PtrTy()), Invalid(true) {}
-
+#if 0
+    template<typename T, typename = typename std::enable_if<
+        std::is_convertible<T, bool>::value &&
+        !std::is_same<T, PtrTy>::value>::type>
+    ActionResult(const T &V) : Val(PtrTy()), Invalid(true/*bool(V)*/) {}
+#endif
     // These two overloads prevent void* -> bool conversions.
     ActionResult(const void *) = delete;
     ActionResult(volatile void *) = delete;
@@ -200,7 +206,12 @@ namespace clang {
     }
 
     ActionResult(const DiagnosticBuilder &) : PtrWithInvalid(0x01) {}
-
+#if 0
+    template<typename T, typename = typename std::enable_if<
+        std::is_convertible<T, bool>::value &&
+        !std::is_same<T, PtrTy>::value>::type>
+    ActionResult(const T &V) : PtrWithInvalid(static_cast<uintptr_t>(true/*bool(V)*/)) {}
+#endif
     // These two overloads prevent void* -> bool conversions.
     ActionResult(const void *) = delete;
     ActionResult(volatile void *) = delete;

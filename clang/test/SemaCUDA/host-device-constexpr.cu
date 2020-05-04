@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -isystem %S/Inputs %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -isystem %S/Inputs %s \
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=expected,com -isystem %S/Inputs %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=dev,com -isystem %S/Inputs %s \
 // RUN:            -fcuda-is-device
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -isystem %S/Inputs \
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=expected,com -isystem %S/Inputs \
 // RUN:            -fopenmp %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -isystem %S/Inputs \
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=dev,com -isystem %S/Inputs \
 // RUN:            -fopenmp %s -fcuda-is-device
 
 #include "Inputs/cuda.h"
@@ -21,7 +21,7 @@ struct HostReturnTy {};
 
 // These shouldn't become host+device because they already have attributes.
 __host__ constexpr int HostOnly() { return 0; }
-// expected-note@-1 0+ {{not viable}}
+// dev-note@-1 0+ {{not viable}}
 __device__ constexpr int DeviceOnly() { return 0; }
 // expected-note@-1 0+ {{not viable}}
 
@@ -40,14 +40,14 @@ constexpr HostReturnTy OverloadMe() { return HostReturnTy(); }
 // This is an error, because NonSysHdrOverload was not defined in a system
 // header.
 __device__ int NonSysHdrOverload() { return 0; }
-// expected-note@-1 {{conflicting __device__ function declared here}}
+// com-note@-1 {{conflicting __device__ function declared here}}
 constexpr int NonSysHdrOverload() { return 0; }
-// expected-error@-1 {{constexpr function 'NonSysHdrOverload' without __host__ or __device__ attributes}}
+// com-error@-1 {{constexpr function 'NonSysHdrOverload' without __host__ or __device__ attributes}}
 
 // Variadic device functions are not allowed, so this is just treated as
 // host-only.
 constexpr void Variadic(const char*, ...);
-// expected-note@-1 {{call to __host__ function from __device__ function}}
+// dev-note@-1 {{call to __host__ function from __device__ function}}
 
 __host__ void HostFn() {
   HostOnly();
@@ -58,11 +58,11 @@ __host__ void HostFn() {
 }
 
 __device__ void DeviceFn() {
-  HostOnly(); // expected-error {{no matching function}}
+  HostOnly(); // dev-error {{no matching function}}
   DeviceOnly();
   int x = OverloadMe();
   int y = ns::OverloadMe();
-  Variadic("abc", 42); // expected-error {{no matching function}}
+  Variadic("abc", 42); // dev-error {{no matching function}}
 }
 
 __host__ __device__ void HostDeviceFn() {

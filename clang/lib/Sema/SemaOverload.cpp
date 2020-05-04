@@ -5582,9 +5582,9 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
   case ImplicitConversionSequence::AmbiguousConversion:
   case ImplicitConversionSequence::BadConversion:
     if (!S.DiagnoseMultipleUserDefinedConversion(From, T))
-      return S.Diag(From->getBeginLoc(),
+      return bool(S.targetDiag(From->getBeginLoc(),
                     diag::err_typecheck_converted_constant_expression)
-             << From->getType() << From->getSourceRange() << T;
+             << From->getType() << From->getSourceRange() << T);
     return ExprError();
 
   case ImplicitConversionSequence::EllipsisConversion:
@@ -5593,15 +5593,15 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
 
   // Check that we would only use permitted conversions.
   if (!CheckConvertedConstantConversions(S, *SCS)) {
-    return S.Diag(From->getBeginLoc(),
+    return bool(S.targetDiag(From->getBeginLoc(),
                   diag::err_typecheck_converted_constant_expression_disallowed)
-           << From->getType() << From->getSourceRange() << T;
+           << From->getType() << From->getSourceRange() << T);
   }
   // [...] and where the reference binding (if any) binds directly.
   if (SCS->ReferenceBinding && !SCS->DirectBinding) {
-    return S.Diag(From->getBeginLoc(),
+    return bool(S.targetDiag(From->getBeginLoc(),
                   diag::err_typecheck_converted_constant_expression_indirect)
-           << From->getType() << From->getSourceRange() << T;
+           << From->getType() << From->getSourceRange() << T);
   }
 
   ExprResult Result =
@@ -5632,13 +5632,13 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
     break;
 
   case NK_Constant_Narrowing:
-    S.Diag(From->getBeginLoc(), diag::ext_cce_narrowing)
+    S.targetDiag(From->getBeginLoc(), diag::ext_cce_narrowing)
         << CCE << /*Constant*/ 1
         << PreNarrowingValue.getAsString(S.Context, PreNarrowingType) << T;
     break;
 
   case NK_Type_Narrowing:
-    S.Diag(From->getBeginLoc(), diag::ext_cce_narrowing)
+    S.targetDiag(From->getBeginLoc(), diag::ext_cce_narrowing)
         << CCE << /*Constant*/ 0 << From->getType() << T;
     break;
   }
@@ -5673,12 +5673,12 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
   // It's not a constant expression. Produce an appropriate diagnostic.
   if (Notes.size() == 1 &&
       Notes[0].second.getDiagID() == diag::note_invalid_subexpr_in_const_expr)
-    S.Diag(Notes[0].first, diag::err_expr_not_cce) << CCE;
+    S.targetDiag(Notes[0].first, diag::err_expr_not_cce) << CCE;
   else {
-    S.Diag(From->getBeginLoc(), diag::err_expr_not_cce)
+    S.targetDiag(From->getBeginLoc(), diag::err_expr_not_cce)
         << CCE << From->getSourceRange();
     for (unsigned I = 0; I < Notes.size(); ++I)
-      S.Diag(Notes[I].first, Notes[I].second);
+      S.targetDiag(Notes[I].first, Notes[I].second);
   }
   return ExprError();
 }
@@ -6587,16 +6587,16 @@ static bool diagnoseDiagnoseIfAttrsWith(Sema &S, const NamedDecl *ND,
                                IsSuccessful);
   if (ErrAttr != WarningBegin) {
     const DiagnoseIfAttr *DIA = *ErrAttr;
-    S.Diag(Loc, diag::err_diagnose_if_succeeded) << DIA->getMessage();
-    S.Diag(DIA->getLocation(), diag::note_from_diagnose_if)
+    S.targetDiag(Loc, diag::err_diagnose_if_succeeded) << DIA->getMessage();
+    S.targetDiag(DIA->getLocation(), diag::note_from_diagnose_if)
         << DIA->getParent() << DIA->getCond()->getSourceRange();
     return true;
   }
 
   for (const auto *DIA : llvm::make_range(WarningBegin, Attrs.end()))
     if (IsSuccessful(DIA)) {
-      S.Diag(Loc, diag::warn_diagnose_if_succeeded) << DIA->getMessage();
-      S.Diag(DIA->getLocation(), diag::note_from_diagnose_if)
+      S.targetDiag(Loc, diag::warn_diagnose_if_succeeded) << DIA->getMessage();
+      S.targetDiag(DIA->getLocation(), diag::note_from_diagnose_if)
           << DIA->getParent() << DIA->getCond()->getSourceRange();
     }
 
@@ -10016,7 +10016,7 @@ void MaybeEmitInheritedConstructorNote(Sema &S, Decl *FoundDecl) {
   // FIXME: It'd be nice to only emit a note once per using-decl per overload
   // set.
   if (auto *Shadow = dyn_cast<ConstructorUsingShadowDecl>(FoundDecl))
-    S.Diag(FoundDecl->getLocation(),
+    S.targetDiag(FoundDecl->getLocation(),
            diag::note_ovl_candidate_inherited_constructor)
       << Shadow->getNominatedBaseClass();
 }
@@ -10050,10 +10050,10 @@ static bool checkAddressOfFunctionIsAvailable(Sema &S, const FunctionDecl *FD,
   if (!isFunctionAlwaysEnabled(S.Context, FD)) {
     if (Complain) {
       if (InOverloadResolution)
-        S.Diag(FD->getBeginLoc(),
+        S.targetDiag(FD->getBeginLoc(),
                diag::note_addrof_ovl_candidate_disabled_by_enable_if_attr);
       else
-        S.Diag(Loc, diag::err_addrof_function_disabled_by_enable_if_attr) << FD;
+        S.targetDiag(Loc, diag::err_addrof_function_disabled_by_enable_if_attr) << FD;
     }
     return false;
   }
@@ -10065,10 +10065,10 @@ static bool checkAddressOfFunctionIsAvailable(Sema &S, const FunctionDecl *FD,
     if (!Satisfaction.IsSatisfied) {
       if (Complain) {
         if (InOverloadResolution)
-          S.Diag(FD->getBeginLoc(),
+          S.targetDiag(FD->getBeginLoc(),
                  diag::note_ovl_candidate_unsatisfied_constraints);
         else
-          S.Diag(Loc, diag::err_addrof_function_constraints_not_satisfied)
+          S.targetDiag(Loc, diag::err_addrof_function_constraints_not_satisfied)
               << FD;
         S.DiagnoseUnsatisfiedConstraint(Satisfaction);
       }
@@ -10086,11 +10086,11 @@ static bool checkAddressOfFunctionIsAvailable(Sema &S, const FunctionDecl *FD,
     // Add one to ParamNo because it's user-facing
     unsigned ParamNo = std::distance(FD->param_begin(), I) + 1;
     if (InOverloadResolution)
-      S.Diag(FD->getLocation(),
+      S.targetDiag(FD->getLocation(),
              diag::note_ovl_candidate_has_pass_object_size_params)
           << ParamNo;
     else
-      S.Diag(Loc, diag::err_address_of_function_with_pass_object_size_params)
+      S.targetDiag(Loc, diag::err_address_of_function_with_pass_object_size_params)
           << FD << ParamNo;
   }
   return false;
@@ -10212,7 +10212,7 @@ void ImplicitConversionSequence::DiagnoseAmbiguousConversion(
                                  Sema &S,
                                  SourceLocation CaretLoc,
                                  const PartialDiagnostic &PDiag) const {
-  S.Diag(CaretLoc, PDiag)
+  S.targetDiag(CaretLoc, PDiag)
     << Ambiguous.getFromType() << Ambiguous.getToType();
   // FIXME: The note limiting machinery is borrowed from
   // OverloadCandidateSet::NoteCandidates; there's an opportunity for
@@ -10227,7 +10227,7 @@ void ImplicitConversionSequence::DiagnoseAmbiguousConversion(
     S.NoteOverloadCandidate(I->first, I->second);
   }
   if (I != E)
-    S.Diag(SourceLocation(), diag::note_ovl_too_many_candidates) << int(E - I);
+    S.targetDiag(SourceLocation(), diag::note_ovl_too_many_candidates) << int(E - I);
 }
 
 static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
@@ -10264,7 +10264,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
       E = cast<UnaryOperator>(E)->getSubExpr()->IgnoreParens();
     DeclarationName Name = cast<OverloadExpr>(E)->getName();
 
-    S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_overload)
+    S.targetDiag(Fn->getLocation(), diag::note_ovl_candidate_bad_overload)
         << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
         << (FromExpr ? FromExpr->getSourceRange() : SourceRange()) << ToTy
         << Name << I + 1;
@@ -10294,12 +10294,12 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
 
     if (FromQs.getAddressSpace() != ToQs.getAddressSpace()) {
       if (isObjectArgument)
-        S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_addrspace_this)
+        S.targetDiag(Fn->getLocation(), diag::note_ovl_candidate_bad_addrspace_this)
             << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second
             << FnDesc << (FromExpr ? FromExpr->getSourceRange() : SourceRange())
             << FromQs.getAddressSpace() << ToQs.getAddressSpace();
       else
-        S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_addrspace)
+        S.targetDiag(Fn->getLocation(), diag::note_ovl_candidate_bad_addrspace)
             << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second
             << FnDesc << (FromExpr ? FromExpr->getSourceRange() : SourceRange())
             << FromQs.getAddressSpace() << ToQs.getAddressSpace()
@@ -10309,7 +10309,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
     }
 
     if (FromQs.getObjCLifetime() != ToQs.getObjCLifetime()) {
-      S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_ownership)
+      S.targetDiag(Fn->getLocation(), diag::note_ovl_candidate_bad_ownership)
           << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
           << (FromExpr ? FromExpr->getSourceRange() : SourceRange()) << FromTy
           << FromQs.getObjCLifetime() << ToQs.getObjCLifetime()
@@ -10319,7 +10319,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
     }
 
     if (FromQs.getObjCGCAttr() != ToQs.getObjCGCAttr()) {
-      S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_gc)
+      S.targetDiag(Fn->getLocation(), diag::note_ovl_candidate_bad_gc)
           << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
           << (FromExpr ? FromExpr->getSourceRange() : SourceRange()) << FromTy
           << FromQs.getObjCGCAttr() << ToQs.getObjCGCAttr()
@@ -10329,7 +10329,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
     }
 
     if (FromQs.hasUnaligned() != ToQs.hasUnaligned()) {
-      S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_unaligned)
+      S.targetDiag(Fn->getLocation(), diag::note_ovl_candidate_bad_unaligned)
           << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
           << (FromExpr ? FromExpr->getSourceRange() : SourceRange()) << FromTy
           << FromQs.hasUnaligned() << I + 1;
@@ -10341,12 +10341,12 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
     assert(CVR && "unexpected qualifiers mismatch");
 
     if (isObjectArgument) {
-      S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_cvr_this)
+      S.targetDiag(Fn->getLocation(), diag::note_ovl_candidate_bad_cvr_this)
           << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
           << (FromExpr ? FromExpr->getSourceRange() : SourceRange()) << FromTy
           << (CVR - 1);
     } else {
-      S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_cvr)
+      S.targetDiag(Fn->getLocation(), diag::note_ovl_candidate_bad_cvr)
           << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
           << (FromExpr ? FromExpr->getSourceRange() : SourceRange()) << FromTy
           << (CVR - 1) << I + 1;
@@ -10358,7 +10358,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   // Special diagnostic for failure to convert an initializer list, since
   // telling the user that it has type void is not useful.
   if (FromExpr && isa<InitListExpr>(FromExpr)) {
-    S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_list_argument)
+    S.targetDiag(Fn->getLocation(), diag::note_ovl_candidate_bad_list_argument)
         << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
         << (FromExpr ? FromExpr->getSourceRange() : SourceRange()) << FromTy
         << ToTy << (unsigned)isObjectArgument << I + 1;
@@ -10374,7 +10374,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
     TempFromTy = PTy->getPointeeType();
   if (TempFromTy->isIncompleteType()) {
     // Emit the generic diagnostic and, optionally, add the hints to it.
-    S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_conv_incomplete)
+    S.targetDiag(Fn->getLocation(), diag::note_ovl_candidate_bad_conv_incomplete)
         << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
         << (FromExpr ? FromExpr->getSourceRange() : SourceRange()) << FromTy
         << ToTy << (unsigned)isObjectArgument << I + 1
@@ -10415,7 +10415,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
     } else if (ToTy->isLValueReferenceType() && !FromExpr->isLValue() &&
                ToTy.getNonReferenceType().getCanonicalType() ==
                FromTy.getNonReferenceType().getCanonicalType()) {
-      S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_lvalue)
+      S.targetDiag(Fn->getLocation(), diag::note_ovl_candidate_bad_lvalue)
           << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
           << (unsigned)isObjectArgument << I + 1
           << (FromExpr ? FromExpr->getSourceRange() : SourceRange());
@@ -10425,7 +10425,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   }
 
   if (BaseToDerivedConversion) {
-    S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_base_to_derived_conv)
+    S.targetDiag(Fn->getLocation(), diag::note_ovl_candidate_bad_base_to_derived_conv)
         << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
         << (FromExpr ? FromExpr->getSourceRange() : SourceRange())
         << (BaseToDerivedConversion - 1) << FromTy << ToTy << I + 1;
@@ -10438,7 +10438,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
       Qualifiers FromQs = CFromTy.getQualifiers();
       Qualifiers ToQs = CToTy.getQualifiers();
       if (FromQs.getObjCLifetime() != ToQs.getObjCLifetime()) {
-        S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_arc_conv)
+        S.targetDiag(Fn->getLocation(), diag::note_ovl_candidate_bad_arc_conv)
             << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second
             << FnDesc << (FromExpr ? FromExpr->getSourceRange() : SourceRange())
             << FromTy << ToTy << (unsigned)isObjectArgument << I + 1;
@@ -10462,7 +10462,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   for (std::vector<FixItHint>::iterator HI = Cand->Fix.Hints.begin(),
        HE = Cand->Fix.Hints.end(); HI != HE; ++HI)
     FDiag << *HI;
-  S.Diag(Fn->getLocation(), FDiag);
+  S.targetDiag(Fn->getLocation(), FDiag);
 
   MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
 }
@@ -10533,11 +10533,11 @@ static void DiagnoseArityMismatch(Sema &S, NamedDecl *Found, Decl *D,
       ClassifyOverloadCandidate(S, Found, Fn, CRK_None, Description);
 
   if (modeCount == 1 && Fn->getParamDecl(0)->getDeclName())
-    S.Diag(Fn->getLocation(), diag::note_ovl_candidate_arity_one)
+    S.targetDiag(Fn->getLocation(), diag::note_ovl_candidate_arity_one)
         << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second
         << Description << mode << Fn->getParamDecl(0) << NumFormalArgs;
   else
-    S.Diag(Fn->getLocation(), diag::note_ovl_candidate_arity)
+    S.targetDiag(Fn->getLocation(), diag::note_ovl_candidate_arity)
         << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second
         << Description << mode << modeCount << NumFormalArgs;
 
@@ -10574,7 +10574,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
 
   case Sema::TDK_Incomplete: {
     assert(ParamD && "no parameter found for incomplete deduction result");
-    S.Diag(Templated->getLocation(),
+    S.targetDiag(Templated->getLocation(),
            diag::note_ovl_candidate_incomplete_deduction)
         << ParamD->getDeclName();
     MaybeEmitInheritedConstructorNote(S, Found);
@@ -10583,7 +10583,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
 
   case Sema::TDK_IncompletePack: {
     assert(ParamD && "no parameter found for incomplete deduction result");
-    S.Diag(Templated->getLocation(),
+    S.targetDiag(Templated->getLocation(),
            diag::note_ovl_candidate_incomplete_deduction_pack)
         << ParamD->getDeclName()
         << (DeductionFailure.getFirstArg()->pack_size() + 1)
@@ -10611,7 +10611,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     // done on dependent types).
     QualType Arg = DeductionFailure.getSecondArg()->getAsType();
 
-    S.Diag(Templated->getLocation(), diag::note_ovl_candidate_underqualified)
+    S.targetDiag(Templated->getLocation(), diag::note_ovl_candidate_underqualified)
         << ParamD->getDeclName() << Arg << NonCanonParam;
     MaybeEmitInheritedConstructorNote(S, Found);
     return;
@@ -10631,7 +10631,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
       QualType T2 =
           DeductionFailure.getSecondArg()->getNonTypeTemplateArgumentType();
       if (!T1.isNull() && !T2.isNull() && !S.Context.hasSameType(T1, T2)) {
-        S.Diag(Templated->getLocation(),
+        S.targetDiag(Templated->getLocation(),
                diag::note_ovl_candidate_inconsistent_deduction_types)
           << ParamD->getDeclName() << *DeductionFailure.getFirstArg() << T1
           << *DeductionFailure.getSecondArg() << T2;
@@ -10654,7 +10654,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
       which = 3;
     }
 
-    S.Diag(Templated->getLocation(),
+    S.targetDiag(Templated->getLocation(),
            diag::note_ovl_candidate_inconsistent_deduction)
         << which << ParamD->getDeclName() << *DeductionFailure.getFirstArg()
         << *DeductionFailure.getSecondArg();
@@ -10665,7 +10665,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
   case Sema::TDK_InvalidExplicitArguments:
     assert(ParamD && "no parameter found for invalid explicit arguments");
     if (ParamD->getDeclName())
-      S.Diag(Templated->getLocation(),
+      S.targetDiag(Templated->getLocation(),
              diag::note_ovl_candidate_explicit_arg_mismatch_named)
           << ParamD->getDeclName();
     else {
@@ -10677,7 +10677,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
         index = NTTP->getIndex();
       else
         index = cast<TemplateTemplateParmDecl>(ParamD)->getIndex();
-      S.Diag(Templated->getLocation(),
+      S.targetDiag(Templated->getLocation(),
              diag::note_ovl_candidate_explicit_arg_mismatch_unnamed)
           << (index + 1);
     }
@@ -10693,7 +10693,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
         getDescribedTemplate(Templated)->getTemplateParameters(), *Args);
     if (TemplateArgString.size() == 1)
       TemplateArgString.clear();
-    S.Diag(Templated->getLocation(),
+    S.targetDiag(Templated->getLocation(),
            diag::note_ovl_candidate_unsatisfied_constraints)
         << TemplateArgString;
 
@@ -10707,7 +10707,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     return;
 
   case Sema::TDK_InstantiationDepth:
-    S.Diag(Templated->getLocation(),
+    S.targetDiag(Templated->getLocation(),
            diag::note_ovl_candidate_instantiation_depth);
     MaybeEmitInheritedConstructorNote(S, Found);
     return;
@@ -10730,7 +10730,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
           diag::err_typename_nested_not_found_enable_if) {
       // FIXME: Use the source range of the condition, and the fully-qualified
       //        name of the enable_if template. These are both present in PDiag.
-      S.Diag(PDiag->first, diag::note_ovl_candidate_disabled_by_enable_if)
+      S.targetDiag(PDiag->first, diag::note_ovl_candidate_disabled_by_enable_if)
         << "'enable_if'" << TemplateArgString;
       return;
     }
@@ -10738,7 +10738,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     // We found a specific requirement that disabled the enable_if.
     if (PDiag && PDiag->second.getDiagID() ==
         diag::err_typename_nested_not_found_requirement) {
-      S.Diag(Templated->getLocation(),
+      S.targetDiag(Templated->getLocation(),
              diag::note_ovl_candidate_disabled_by_requirement)
         << PDiag->second.getStringArg(0) << TemplateArgString;
       return;
@@ -10755,7 +10755,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
       PDiag->second.EmitToString(S.getDiagnostics(), SFINAEArgString);
     }
 
-    S.Diag(Templated->getLocation(),
+    S.targetDiag(Templated->getLocation(),
            diag::note_ovl_candidate_substitution_failure)
         << TemplateArgString << SFINAEArgString << R;
     MaybeEmitInheritedConstructorNote(S, Found);
@@ -10775,7 +10775,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
         TemplateArgString.clear();
     }
 
-    S.Diag(Templated->getLocation(), diag::note_ovl_candidate_deduced_mismatch)
+    S.targetDiag(Templated->getLocation(), diag::note_ovl_candidate_deduced_mismatch)
         << (*DeductionFailure.getCallArgIndex() + 1)
         << *DeductionFailure.getFirstArg() << *DeductionFailure.getSecondArg()
         << TemplateArgString
@@ -10801,7 +10801,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
           // 2) The diagnostic printer only attempts to find a better
           //    name for types, not decls.
           // Ideally, this should folded into the diagnostic printer.
-          S.Diag(Templated->getLocation(),
+          S.targetDiag(Templated->getLocation(),
                  diag::note_ovl_candidate_non_deduced_mismatch_qualified)
               << FirstTN.getAsTemplateDecl() << SecondTN.getAsTemplateDecl();
           return;
@@ -10817,7 +10817,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     // call operator, and if so, emit a prettier and more informative
     // diagnostic that mentions 'auto' and lambda in addition to
     // (or instead of?) the canonical template type parameters.
-    S.Diag(Templated->getLocation(),
+    S.targetDiag(Templated->getLocation(),
            diag::note_ovl_candidate_non_deduced_mismatch)
         << FirstTA << SecondTA;
     return;
@@ -10825,11 +10825,11 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
   // TODO: diagnose these individually, then kill off
   // note_ovl_candidate_bad_deduction, which is uselessly vague.
   case Sema::TDK_MiscellaneousDeductionFailure:
-    S.Diag(Templated->getLocation(), diag::note_ovl_candidate_bad_deduction);
+    S.targetDiag(Templated->getLocation(), diag::note_ovl_candidate_bad_deduction);
     MaybeEmitInheritedConstructorNote(S, Found);
     return;
   case Sema::TDK_CUDATargetMismatch:
-    S.Diag(Templated->getLocation(),
+    S.targetDiag(Templated->getLocation(),
            diag::note_cuda_ovl_candidate_target_mismatch);
     return;
   }
@@ -10861,7 +10861,7 @@ static void DiagnoseBadTarget(Sema &S, OverloadCandidate *Cand) {
       ClassifyOverloadCandidate(S, Cand->FoundDecl, Callee,
                                 Cand->getRewriteKind(), FnDesc);
 
-  S.Diag(Callee->getLocation(), diag::note_ovl_candidate_bad_target)
+  S.targetDiag(Callee->getLocation(), diag::note_ovl_candidate_bad_target)
       << (unsigned)FnKindPair.first << (unsigned)ocs_non_template
       << FnDesc /* Ignored */
       << CalleeTarget << CallerTarget;
@@ -10911,7 +10911,7 @@ static void DiagnoseFailedEnableIfAttr(Sema &S, OverloadCandidate *Cand) {
   FunctionDecl *Callee = Cand->Function;
   EnableIfAttr *Attr = static_cast<EnableIfAttr*>(Cand->DeductionFailure.Data);
 
-  S.Diag(Callee->getLocation(),
+  S.targetDiag(Callee->getLocation(),
          diag::note_ovl_candidate_disabled_by_function_cond_attr)
       << Attr->getCond()->getSourceRange() << Attr->getMessage();
 }
@@ -10943,7 +10943,7 @@ static void DiagnoseFailedExplicitSpec(Sema &S, OverloadCandidate *Cand) {
   if (FunctionDecl *Pattern = First->getTemplateInstantiationPattern())
     First = Pattern->getFirstDecl();
 
-  S.Diag(First->getLocation(),
+  S.targetDiag(First->getLocation(),
          diag::note_ovl_candidate_explicit)
       << Kind << (ES.getExpr() ? 1 : 0)
       << (ES.getExpr() ? ES.getExpr()->getSourceRange() : SourceRange());
@@ -10952,7 +10952,7 @@ static void DiagnoseFailedExplicitSpec(Sema &S, OverloadCandidate *Cand) {
 static void DiagnoseOpenCLExtensionDisabled(Sema &S, OverloadCandidate *Cand) {
   FunctionDecl *Callee = Cand->Function;
 
-  S.Diag(Callee->getLocation(),
+  S.targetDiag(Callee->getLocation(),
          diag::note_ovl_candidate_disabled_by_extension)
     << S.getOpenCLExtensionsFromDeclExtMap(Callee);
 }
@@ -10986,7 +10986,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
           ClassifyOverloadCandidate(S, Cand->FoundDecl, Fn,
                                     Cand->getRewriteKind(), FnDesc);
 
-      S.Diag(Fn->getLocation(), diag::note_ovl_candidate_deleted)
+      S.targetDiag(Fn->getLocation(), diag::note_ovl_candidate_deleted)
           << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
           << (Fn->isDeleted() ? (Fn->isDeletedAsWritten() ? 1 : 2) : 0);
       MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
@@ -11008,7 +11008,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
                                 TakingCandidateAddress);
 
   case ovl_fail_illegal_constructor: {
-    S.Diag(Fn->getLocation(), diag::note_ovl_candidate_illegal_constructor)
+    S.targetDiag(Fn->getLocation(), diag::note_ovl_candidate_illegal_constructor)
       << (Fn->getPrimaryTemplate() ? 1 : 0);
     MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
     return;
@@ -11017,7 +11017,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
   case ovl_fail_object_addrspace_mismatch: {
     Qualifiers QualsForPrinting;
     QualsForPrinting.setAddressSpace(CtorDestAS);
-    S.Diag(Fn->getLocation(),
+    S.targetDiag(Fn->getLocation(),
            diag::note_ovl_candidate_illegal_constructor_adrspace_mismatch)
         << QualsForPrinting;
     MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
@@ -11057,7 +11057,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
     // It's generally not interesting to note copy/move constructors here.
     if (cast<CXXConstructorDecl>(Fn)->isCopyOrMoveConstructor())
       return;
-    S.Diag(Fn->getLocation(),
+    S.targetDiag(Fn->getLocation(),
            diag::note_ovl_candidate_inherited_constructor_slice)
       << (Fn->getPrimaryTemplate() ? 1 : 0)
       << Fn->getParamDecl(0)->getType()->isRValueReferenceType();
@@ -11080,7 +11080,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
         ClassifyOverloadCandidate(S, Cand->FoundDecl, Fn,
                                   Cand->getRewriteKind(), FnDesc);
 
-    S.Diag(Fn->getLocation(),
+    S.targetDiag(Fn->getLocation(),
            diag::note_ovl_candidate_constraints_not_satisfied)
         << (unsigned)FnKindPair.first << (unsigned)ocs_non_template
         << FnDesc /* Ignored */;
@@ -11120,7 +11120,7 @@ static void NoteSurrogateCandidate(Sema &S, OverloadCandidate *Cand) {
   if (isRValueReference) FnType = S.Context.getRValueReferenceType(FnType);
   if (isLValueReference) FnType = S.Context.getLValueReferenceType(FnType);
 
-  S.Diag(Cand->Surrogate->getLocation(), diag::note_ovl_surrogate_cand)
+  S.targetDiag(Cand->Surrogate->getLocation(), diag::note_ovl_surrogate_cand)
     << FnType;
 }
 
@@ -11134,12 +11134,12 @@ static void NoteBuiltinOperatorCandidate(Sema &S, StringRef Opc,
   TypeStr += Cand->BuiltinParamTypes[0].getAsString();
   if (Cand->Conversions.size() == 1) {
     TypeStr += ")";
-    S.Diag(OpLoc, diag::note_ovl_builtin_candidate) << TypeStr;
+    S.targetDiag(OpLoc, diag::note_ovl_builtin_candidate) << TypeStr;
   } else {
     TypeStr += ", ";
     TypeStr += Cand->BuiltinParamTypes[1].getAsString();
     TypeStr += ")";
-    S.Diag(OpLoc, diag::note_ovl_builtin_candidate) << TypeStr;
+    S.targetDiag(OpLoc, diag::note_ovl_builtin_candidate) << TypeStr;
   }
 }
 
@@ -11492,7 +11492,7 @@ void OverloadCandidateSet::NoteCandidates(PartialDiagnosticAt PD,
 
   auto Cands = CompleteCandidates(S, OCD, Args, OpLoc, Filter);
 
-  S.Diag(PD.first, PD.second);
+  S.targetDiag(PD.first, PD.second);
 
   NoteCandidates(S, Args, Cands, Opc, OpLoc);
 
@@ -11544,7 +11544,7 @@ void OverloadCandidateSet::NoteCandidates(Sema &S, ArrayRef<Expr *> Args,
   }
 
   if (I != E)
-    S.Diag(OpLoc, diag::note_ovl_too_many_candidates) << int(E - I);
+    S.targetDiag(OpLoc, diag::note_ovl_too_many_candidates) << int(E - I);
 }
 
 static SourceLocation
@@ -11648,7 +11648,7 @@ void TemplateSpecCandidateSet::NoteCandidates(Sema &S, SourceLocation Loc) {
   }
 
   if (I != E)
-    S.Diag(Loc, diag::note_ovl_too_many_candidates) << int(E - I);
+    S.targetDiag(Loc, diag::note_ovl_too_many_candidates) << int(E - I);
 }
 
 // [PossiblyAFunctionType]  -->   [Return]
@@ -12013,7 +12013,7 @@ private:
 public:
   void ComplainNoMatchesFound() const {
     assert(Matches.empty());
-    S.Diag(OvlExpr->getBeginLoc(), diag::err_addr_ovl_no_viable)
+    S.targetDiag(OvlExpr->getBeginLoc(), diag::err_addr_ovl_no_viable)
         << OvlExpr->getName() << TargetFunctionType
         << OvlExpr->getSourceRange();
     if (FailedCandidates.empty())
@@ -12044,7 +12044,7 @@ public:
       // TODO: Should we condition this on whether any functions might
       // have matched, or is it more appropriate to do that in callers?
       // TODO: a fixit wouldn't hurt.
-      S.Diag(OvlExpr->getNameLoc(), diag::err_addr_ovl_no_qualifier)
+      S.targetDiag(OvlExpr->getNameLoc(), diag::err_addr_ovl_no_qualifier)
         << TargetType << OvlExpr->getSourceRange();
   }
 
@@ -12053,19 +12053,19 @@ public:
   }
 
   void ComplainIsStaticMemberFunctionFromBoundPointer() const {
-    S.Diag(OvlExpr->getBeginLoc(),
+    S.targetDiag(OvlExpr->getBeginLoc(),
            diag::err_invalid_form_pointer_member_function)
         << OvlExpr->getSourceRange();
   }
 
   void ComplainOfInvalidConversion() const {
-    S.Diag(OvlExpr->getBeginLoc(), diag::err_addr_ovl_not_func_ptrref)
+    S.targetDiag(OvlExpr->getBeginLoc(), diag::err_addr_ovl_not_func_ptrref)
         << OvlExpr->getName() << TargetType;
   }
 
   void ComplainMultipleMatchesFound() const {
     assert(Matches.size() > 1);
-    S.Diag(OvlExpr->getBeginLoc(), diag::err_addr_ovl_ambiguous)
+    S.targetDiag(OvlExpr->getBeginLoc(), diag::err_addr_ovl_ambiguous)
         << OvlExpr->getName() << OvlExpr->getSourceRange();
     S.NoteAllOverloadCandidates(OvlExpr, TargetFunctionType,
                                 /*TakingAddress=*/true);
