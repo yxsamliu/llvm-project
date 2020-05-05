@@ -329,6 +329,8 @@ public:
 
   std::string getTargetTriple() const { return TargetTriple; }
 
+  llvm::Triple getHIPOffloadTargetTriple() const;
+
   /// Get the path to the main clang executable.
   const char *getClangProgramPath() const {
     return ClangExecutable.c_str();
