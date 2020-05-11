@@ -9517,11 +9517,27 @@ bool clang::isBetterOverloadCandidate(
   // in global variable initializers once proper context is added.
   if (S.getLangOpts().CUDA && Cand1.Function && Cand2.Function) {
     if (FunctionDecl *Caller = dyn_cast<FunctionDecl>(S.CurContext)) {
+      bool IsCallerImplicitHD = S.IsCUDAImplicitHostDeviceFunction(Caller);
+      bool IsCand1ImplicitHD =
+          S.IsCUDAImplicitHostDeviceFunction(Cand1.Function);
+      bool IsCand2ImplicitHD =
+          S.IsCUDAImplicitHostDeviceFunction(Cand2.Function);
       auto P1 = S.IdentifyCUDAPreference(Caller, Cand1.Function);
       auto P2 = S.IdentifyCUDAPreference(Caller, Cand2.Function);
       assert(P1 != Sema::CFP_Never && P2 != Sema::CFP_Never);
-      auto Cand1Emittable = P1 > Sema::CFP_WrongSide;
-      auto Cand2Emittable = P2 > Sema::CFP_WrongSide;
+      // The implicit HD function may be a function in a system header which
+      // is forced by pragma. In device compilation, if we prefer HD candidates
+      // over wrong-sided candidates, overloading resolution may change, which
+      // may result in non-deferrable diagnostics. As a workaround, we let
+      // implicit HD candidates take equal preference as wrong-sided candidates.
+      // This will preserve the overloading resolution.
+      auto EmitThreshold =
+          (S.getLangOpts().CUDAIsDevice && IsCallerImplicitHD &&
+           (IsCand1ImplicitHD || IsCand2ImplicitHD))
+              ? Sema::CFP_HostDevice
+              : Sema::CFP_WrongSide;
+      auto Cand1Emittable = P1 > EmitThreshold;
+      auto Cand2Emittable = P2 > EmitThreshold;
       if (Cand1Emittable && !Cand2Emittable)
         return true;
       if (!Cand1Emittable && Cand2Emittable)

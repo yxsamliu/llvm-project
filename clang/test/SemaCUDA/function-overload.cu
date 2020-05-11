@@ -1,8 +1,8 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-linux-gnu -fsyntax-only -verify %s
-// RUN: %clang_cc1 -std=c++11 -triple nvptx64-nvidia-cuda -fsyntax-only -fcuda-is-device -verify %s
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-linux-gnu -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++14 -triple nvptx64-nvidia-cuda -fsyntax-only -fcuda-is-device -verify %s
 
 #include "Inputs/cuda.h"
 
@@ -462,4 +462,73 @@ void __test();
 
 void foo() {
   __test<int>();
+}
+
+// Test resolving implicit host device candidate vs wrong-sided candidate.
+// In device compilation, implicit host device caller choose implicit host
+// device candidate and wrong-sided candidate with equal preference.
+namespace ImplicitHostDeviceVsWrongSided {
+inline double callee(double x);
+#pragma clang force_cuda_host_device begin
+inline void callee(int x);
+inline double implicit_hd_caller() {
+  return callee(1.0);
+}
+#pragma clang force_cuda_host_device end
+}
+
+// Test resolving implicit host device candidate vs wrong-sided candidate.
+// In host compilation, implicit host device caller choose implicit host
+// device candidate and same-sided candidate with equal preference.
+namespace ImplicitHostDeviceVsSameSide {
+inline void callee(int x);
+#pragma clang force_cuda_host_device begin
+inline double callee(double x);
+inline double implicit_hd_caller() {
+  return callee(1.0);
+}
+#pragma clang force_cuda_host_device end
+}
+
+// In the implicit host device function 'caller', the second 'callee' should be
+// since it has better match, even though it is an implicit host device function
+// whereas the first 'callee' is a host function. A diagnostic will be emitted
+// if the first 'callee' is chosen since deduced return type cannot be used
+// before it is defined.
+namespace ImplicitHostDeviceByConstExpr {
+template <class a> a b;
+auto callee(...);
+template <class d> constexpr auto callee(d) -> decltype(0);
+struct e {
+  template <class ad, class... f> static auto g(ad, f...) {
+    return h<e, decltype(b<f>)...>;
+  }
+  struct i {
+    template <class, class... f> static constexpr auto caller(f... k) {
+      return callee(k...);
+    }
+  };
+  template <class, class... f> static auto h() {
+    return i::caller<int, f...>;
+  }
+};
+class l {
+  l() {
+    e::g([] {}, this);
+  }
+};
+}
+
+// Test resolving explicit host device candidate vs. wrong-sided candidate.
+// Explicit host device caller favors host device candidate against wrong-sided
+// candidate.
+namespace ExplicitHostDeviceVsWrongSided {
+inline double callee(double x);
+inline __host__ __device__ void callee(int x);
+inline __host__ __device__ double explicit_hd_caller() {
+  return callee(1.0);
+#if __CUDA_ARCH__
+  // expected-error@-2 {{cannot initialize return object of type 'double' with an rvalue of type 'void'}}
+#endif
+}
 }
