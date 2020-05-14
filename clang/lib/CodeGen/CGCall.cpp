@@ -2258,18 +2258,6 @@ static llvm::Value *emitArgumentDemotion(CodeGenFunction &CGF,
   return CGF.Builder.CreateFPCast(value, varType, "arg.unpromote");
 }
 
-/// Returns true if the argument is a generic HIP pointer that was coerced to a
-/// global pointer.
-bool isCoercedHIPGlobalPointer(CodeGenFunction &CGF,
-                               const LangOptions &LangOpts,
-                               const ABIArgInfo &ArgI, const QualType &Ty) {
-  return LangOpts.HIP && isa<llvm::PointerType>(ArgI.getCoerceToType()) &&
-         ArgI.getCoerceToType()->getPointerAddressSpace() == 1 &&
-         CGF.ConvertType(Ty)->getPointerAddressSpace() == 0 &&
-         ArgI.getCoerceToType()->getPointerElementType() ==
-             CGF.ConvertType(Ty)->getPointerElementType();
-}
-
 /// Returns the attribute (either parameter attribute, or function
 /// attribute), which declares argument ArgNo to be non-null.
 static const NonNullAttr *getNonNullAttr(const Decl *FD, const ParmVarDecl *PVD,
@@ -2551,14 +2539,6 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
 
       // Pointer to store into.
       Address Ptr = emitAddressAtOffset(*this, Alloca, ArgI);
-
-      // Restrict qualified HIP pointers that were coerced to global pointers
-      // can be marked with the noalias attribute.
-      if (isCoercedHIPGlobalPointer(*this, getLangOpts(), ArgI, Ty) &&
-          Arg->getType().isRestrictQualified()) {
-        auto AI = cast<llvm::Argument>(FnArgs[FirstIRArg]);
-        AI->addAttr(llvm::Attribute::NoAlias);
-      }
 
       // Fast-isel and the optimizer generally like scalar values better than
       // FCAs, so we flatten them if this is safe to do for this argument.
