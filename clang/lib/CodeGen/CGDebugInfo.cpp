@@ -3779,7 +3779,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   StringRef LinkageName;
 
   const Decl *D = GD.getDecl();
-  if (!D)
+  if (!D || D->hasAttr<NoDebugAttr>())
     return;
 
   llvm::TimeTraceScope TimeScope("DebugFunction", [&]() {
