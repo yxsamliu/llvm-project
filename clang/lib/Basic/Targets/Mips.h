@@ -407,6 +407,17 @@ public:
 
   bool validateTarget(DiagnosticsEngine &Diags) const override;
   bool hasExtIntType() const override { return true; }
+
+  AtomicSupportKind
+  getFPAtomicAddSubSupport(const llvm::fltSemantics &FS) const override {
+    switch (llvm::APFloat::SemanticsToEnum(FS)) {
+    case llvm::APFloat::S_IEEEsingle:
+    case llvm::APFloat::S_IEEEdouble:
+      return AtomicSupportKind::LockFree;
+    default:
+      return AtomicSupportKind::Unsupported;
+    }
+  }
 };
 } // namespace targets
 } // namespace clang

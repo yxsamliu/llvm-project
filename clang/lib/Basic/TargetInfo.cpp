@@ -844,3 +844,23 @@ void TargetInfo::copyAuxTarget(const TargetInfo *Aux) {
   auto *Src = static_cast<const TransferrableTargetInfo*>(Aux);
   *Target = *Src;
 }
+
+TargetInfo::AtomicSupportKind
+TargetInfo::getFPAtomicAddSubSupport(const llvm::fltSemantics &FS) const {
+  return AtomicSupportKind::Unsupported;
+}
+
+TargetInfo::AtomicSupportKind
+TargetInfo::getAtomicSupport(AtomicOperationKind Op, uint64_t AtomicWidthInBits,
+                             uint64_t AlignmentInBits,
+                             const llvm::fltSemantics &FS) const {
+  if (&FS != &llvm::APFloat::Bogus() && Op == AtomicOperationKind::AddSub)
+    return getFPAtomicAddSubSupport(FS);
+
+  return AtomicWidthInBits <= AlignmentInBits &&
+                 AtomicWidthInBits <= getMaxAtomicInlineWidth() &&
+                 (AtomicWidthInBits <= getCharWidth() ||
+                  llvm::isPowerOf2_64(AtomicWidthInBits / getCharWidth()))
+             ? AtomicSupportKind::LockFree
+             : AtomicSupportKind::Library;
+}

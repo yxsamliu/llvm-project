@@ -173,6 +173,22 @@ public:
                            : TargetInfo::UnsignedLongLong)
                : TargetInfo::getLeastIntTypeByWidth(BitWidth, IsSigned);
   }
+
+  TargetInfo::AtomicSupportKind
+  getAtomicSupport(TargetInfo::AtomicOperationKind Op,
+                   uint64_t AtomicWidthInBits, uint64_t AlignmentInBits,
+                   const llvm::fltSemantics &FS) const override {
+    const llvm::Triple &T = this->getTriple();
+    if (Op == TargetInfo::AtomicOperationKind::C11LoadStore &&
+        ((T.isiOS() && T.isOSVersionLT(7)) ||
+         (T.isMacOSX() && T.isOSVersionLT(10, 9))) &&
+        (AtomicWidthInBits != AlignmentInBits ||
+         AtomicWidthInBits > this->getMaxAtomicInlineWidth())) {
+      return TargetInfo::AtomicSupportKind::Unsupported;
+    }
+    return TargetInfo::getAtomicSupport(Op, AtomicWidthInBits, AlignmentInBits,
+                                        FS);
+  }
 };
 
 // DragonFlyBSD Target

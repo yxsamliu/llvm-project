@@ -431,6 +431,28 @@ public:
     return getCanonicalTargetID(getArchNameAMDGCN(GPUKind),
                                 OffloadArchFeatures);
   }
+
+  AtomicSupportKind
+  getFPAtomicAddSubSupport(const llvm::fltSemantics &FS) const override {
+    switch (llvm::APFloat::SemanticsToEnum(FS)) {
+    case llvm::APFloat::S_IEEEsingle:
+    case llvm::APFloat::S_IEEEdouble:
+      return AtomicSupportKind::LockFree;
+    default:
+      return AtomicSupportKind::Unsupported;
+    }
+  }
+
+  AtomicSupportKind
+  getAtomicSupport(AtomicOperationKind Op, uint64_t AtomicSizeInBits,
+                   uint64_t AlignmentInBits,
+                   const llvm::fltSemantics &FS) const override {
+    auto Res =
+        TargetInfo::getAtomicSupport(Op, AtomicSizeInBits, AlignmentInBits, FS);
+    if (Res == AtomicSupportKind::Library)
+      Res = AtomicSupportKind::Unsupported;
+    return Res;
+  }
 };
 
 } // namespace targets

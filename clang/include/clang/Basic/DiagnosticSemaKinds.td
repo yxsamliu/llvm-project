@@ -8156,6 +8156,9 @@ def err_atomic_op_needs_non_const_pointer : Error<
 def err_atomic_op_needs_trivial_copy : Error<
   "address argument to atomic operation must be a pointer to a "
   "trivially-copyable type (%0 invalid)">;
+def err_atomic_op_needs_atomic_int_ptr_or_fp : Error<
+  "address argument to atomic operation must be a pointer to %select{|atomic }0"
+  "integer, pointer or supported floating point type (%1 invalid)">;
 def err_atomic_op_needs_atomic_int_or_ptr : Error<
   "address argument to atomic operation must be a pointer to %select{|atomic }0"
   "integer or pointer (%1 invalid)">;
@@ -8180,9 +8183,9 @@ def err_overflow_builtin_ext_int_max_size : Error<
   "__builtin_mul_overflow does not support signed _ExtInt operands of more "
   "than %0 bits">;
 
-def err_atomic_load_store_uses_lib : Error<
-  "atomic %select{load|store}0 requires runtime support that is not "
-  "available for this target">;
+def err_atomic_op_unsupported : Error<
+  "atomic %select{init|C11 load/store|load/store|add/sub|min/max|logic op|exchange|compare/exchange}0"
+  " of %1 type requires runtime support that is not available for this target">;
 
 def err_nontemporal_builtin_must_be_pointer : Error<
   "address argument to nontemporal builtin must be a pointer (%0 invalid)">;

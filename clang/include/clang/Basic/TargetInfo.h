@@ -686,15 +686,6 @@ public:
   /// Set the maximum inline or promote width lock-free atomic operation
   /// for the given target.
   virtual void setMaxAtomicWidth() {}
-  /// Returns true if the given target supports lock-free atomic
-  /// operations at the specified width and alignment.
-  virtual bool hasBuiltinAtomic(uint64_t AtomicSizeInBits,
-                                uint64_t AlignmentInBits) const {
-    return AtomicSizeInBits <= AlignmentInBits &&
-           AtomicSizeInBits <= getMaxAtomicInlineWidth() &&
-           (AtomicSizeInBits <= getCharWidth() ||
-            llvm::isPowerOf2_64(AtomicSizeInBits / getCharWidth()));
-  }
 
   /// Return the maximum vector alignment supported for the given target.
   unsigned getMaxVectorAlign() const { return MaxVectorAlign; }
@@ -1488,6 +1479,41 @@ public:
 
   /// Whether target allows debuginfo types for decl only variables.
   virtual bool allowDebugInfoForExternalVar() const { return false; }
+
+  /// Abstraction of source level atomic operations.
+  enum class AtomicOperationKind {
+    Init,
+    C11LoadStore,
+    LoadStore,
+    AddSub,
+    MinMax,
+    LogicOp,
+    Xchg,
+    CmpXchg,
+  };
+
+  /// What is emitted in LLVM IR by clang for the atomic operation:
+  /// LockFree - LLVM atomic instructions
+  /// InlineWithLock - LLVM instructions but not lock free
+  /// Library - call of library functions
+  /// Unsupported - diagnostics
+  enum class AtomicSupportKind {
+    LockFree,
+    InlineWithLock,
+    Library,
+    Unsupported,
+  };
+
+  /// Support of floating point atomic add/sub operations by the target.
+  virtual AtomicSupportKind
+  getFPAtomicAddSubSupport(const llvm::fltSemantics &FS) const;
+
+  /// Support of atomic operations by the target. If \p FS is Bogus, the atomic
+  /// type is not a floating point type.
+  virtual AtomicSupportKind
+  getAtomicSupport(AtomicOperationKind Op, uint64_t AtomicWidthInBits,
+                   uint64_t AlignmentInBits,
+                   const llvm::fltSemantics &FS = llvm::APFloat::Bogus()) const;
 
 protected:
   /// Copy type and layout related info.

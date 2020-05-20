@@ -11092,22 +11092,21 @@ ASTContext::getTemplateParamObjectDecl(QualType T, const APValue &V) const {
   return New;
 }
 
-bool ASTContext::AtomicUsesUnsupportedLibcall(const AtomicExpr *E) const {
-  const llvm::Triple &T = getTargetInfo().getTriple();
-  if (!T.isOSDarwin())
-    return false;
-
-  if (!(T.isiOS() && T.isOSVersionLT(7)) &&
-      !(T.isMacOSX() && T.isOSVersionLT(10, 9)))
-    return false;
-
-  QualType AtomicTy = E->getPtr()->getType()->getPointeeType();
-  CharUnits sizeChars = getTypeSizeInChars(AtomicTy);
-  uint64_t Size = sizeChars.getQuantity();
-  CharUnits alignChars = getTypeAlignInChars(AtomicTy);
-  unsigned Align = alignChars.getQuantity();
-  unsigned MaxInlineWidthInBits = getTargetInfo().getMaxAtomicInlineWidth();
-  return (Size != Align || toBits(sizeChars) > MaxInlineWidthInBits);
+TargetInfo::AtomicSupportKind
+ASTContext::getTargetAtomicSupport(TargetInfo::AtomicOperationKind TargetOp,
+                                   QualType AtomicTy) const {
+  AtomicTy = AtomicTy.getCanonicalType();
+  auto ValTy = AtomicTy;
+  if (ValTy->isAtomicType())
+    ValTy = ValTy->getAs<AtomicType>()->getValueType();
+  auto AtomicTI = getTypeInfo(AtomicTy);
+  uint64_t AtomicWidthInBits = AtomicTI.Width;
+  uint64_t AtomicAlignInBits = AtomicTI.Align;
+  const llvm::fltSemantics &FS = ValTy->isRealFloatingType()
+                                     ? getFloatTypeSemantics(ValTy)
+                                     : llvm::APFloat::Bogus();
+  return getTargetInfo().getAtomicSupport(TargetOp, AtomicWidthInBits,
+                                          AtomicAlignInBits, FS);
 }
 
 bool

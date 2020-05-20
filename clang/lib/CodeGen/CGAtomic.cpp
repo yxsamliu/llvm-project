@@ -36,13 +36,12 @@ namespace {
     CharUnits AtomicAlign;
     CharUnits ValueAlign;
     TypeEvaluationKind EvaluationKind;
-    bool UseLibcall;
     LValue LVal;
     CGBitFieldInfo BFI;
   public:
     AtomicInfo(CodeGenFunction &CGF, LValue &lvalue)
         : CGF(CGF), AtomicSizeInBits(0), ValueSizeInBits(0),
-          EvaluationKind(TEK_Scalar), UseLibcall(true) {
+          EvaluationKind(TEK_Scalar) {
       assert(!lvalue.isGlobalReg());
       ASTContext &C = CGF.getContext();
       if (lvalue.isSimple()) {
@@ -126,8 +125,6 @@ namespace {
         AtomicAlign = ValueAlign = lvalue.getAlignment();
         LVal = lvalue;
       }
-      UseLibcall = !C.getTargetInfo().hasBuiltinAtomic(
-          AtomicSizeInBits, C.toBits(lvalue.getAlignment()));
     }
 
     QualType getAtomicType() const { return AtomicTy; }
@@ -136,7 +133,17 @@ namespace {
     uint64_t getAtomicSizeInBits() const { return AtomicSizeInBits; }
     uint64_t getValueSizeInBits() const { return ValueSizeInBits; }
     TypeEvaluationKind getEvaluationKind() const { return EvaluationKind; }
-    bool shouldUseLibcall() const { return UseLibcall; }
+    bool shouldUseLibcall(TargetInfo::AtomicOperationKind Op) const {
+      const llvm::fltSemantics &FS =
+          ValueTy->isRealFloatingType()
+              ? CGF.getContext().getFloatTypeSemantics(ValueTy)
+              : llvm::APFloat::Bogus();
+      auto Support = CGF.getContext().getTargetInfo().getAtomicSupport(
+          Op, AtomicSizeInBits, CGF.getContext().toBits(LVal.getAlignment()),
+          FS);
+      assert(Support != TargetInfo::AtomicSupportKind::Unsupported);
+      return Support == TargetInfo::AtomicSupportKind::Library;
+    }
     const LValue &getAtomicLValue() const { return LVal; }
     llvm::Value *getAtomicPointer() const {
       if (LVal.isSimple())
@@ -602,21 +609,25 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     break;
 
   case AtomicExpr::AO__atomic_add_fetch:
-    PostOp = llvm::Instruction::Add;
+    PostOp = E->getValueType()->isFloatingType() ? llvm::Instruction::FAdd
+                                                 : llvm::Instruction::Add;
     LLVM_FALLTHROUGH;
   case AtomicExpr::AO__c11_atomic_fetch_add:
   case AtomicExpr::AO__opencl_atomic_fetch_add:
   case AtomicExpr::AO__atomic_fetch_add:
-    Op = llvm::AtomicRMWInst::Add;
+    Op = E->getValueType()->isFloatingType() ? llvm::AtomicRMWInst::FAdd
+                                             : llvm::AtomicRMWInst::Add;
     break;
 
   case AtomicExpr::AO__atomic_sub_fetch:
-    PostOp = llvm::Instruction::Sub;
+    PostOp = E->getValueType()->isFloatingType() ? llvm::Instruction::FSub
+                                                 : llvm::Instruction::Sub;
     LLVM_FALLTHROUGH;
   case AtomicExpr::AO__c11_atomic_fetch_sub:
   case AtomicExpr::AO__opencl_atomic_fetch_sub:
   case AtomicExpr::AO__atomic_fetch_sub:
-    Op = llvm::AtomicRMWInst::Sub;
+    Op = E->getValueType()->isFloatingType() ? llvm::AtomicRMWInst::FSub
+                                             : llvm::AtomicRMWInst::Sub;
     break;
 
   case AtomicExpr::AO__atomic_min_fetch:
@@ -813,6 +824,8 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   bool Oversized = getContext().toBits(TInfo.Width) > MaxInlineWidthInBits;
   bool Misaligned = (Ptr.getAlignment() % TInfo.Width) != 0;
   bool UseLibcall = Misaligned | Oversized;
+  bool ShouldCastToIntPtrTy = true;
+
   CharUnits MaxInlineWidth =
       getContext().toCharUnitsFromBits(MaxInlineWidthInBits);
 
@@ -892,11 +905,14 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       EmitStoreOfScalar(Val1Scalar, MakeAddrLValue(Temp, Val1Ty));
       break;
     }
-      LLVM_FALLTHROUGH;
+    LLVM_FALLTHROUGH;
   case AtomicExpr::AO__atomic_fetch_add:
   case AtomicExpr::AO__atomic_fetch_sub:
   case AtomicExpr::AO__atomic_add_fetch:
   case AtomicExpr::AO__atomic_sub_fetch:
+    ShouldCastToIntPtrTy = !MemTy->isFloatingType();
+    LLVM_FALLTHROUGH;
+
   case AtomicExpr::AO__c11_atomic_store:
   case AtomicExpr::AO__c11_atomic_exchange:
   case AtomicExpr::AO__opencl_atomic_store:
@@ -937,15 +953,23 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   LValue AtomicVal = MakeAddrLValue(Ptr, AtomicTy);
   AtomicInfo Atomics(*this, AtomicVal);
 
-  Ptr = Atomics.emitCastToAtomicIntPointer(Ptr);
-  if (Val1.isValid()) Val1 = Atomics.convertToAtomicIntPointer(Val1);
-  if (Val2.isValid()) Val2 = Atomics.convertToAtomicIntPointer(Val2);
-  if (Dest.isValid())
-    Dest = Atomics.emitCastToAtomicIntPointer(Dest);
-  else if (E->isCmpXChg())
+  if (ShouldCastToIntPtrTy) {
+    Ptr = Atomics.emitCastToAtomicIntPointer(Ptr);
+    if (Val1.isValid())
+      Val1 = Atomics.convertToAtomicIntPointer(Val1);
+    if (Val2.isValid())
+      Val2 = Atomics.convertToAtomicIntPointer(Val2);
+  }
+  if (Dest.isValid()) {
+    if (ShouldCastToIntPtrTy)
+      Dest = Atomics.emitCastToAtomicIntPointer(Dest);
+  } else if (E->isCmpXChg())
     Dest = CreateMemTemp(RValTy, "cmpxchg.bool");
-  else if (!RValTy->isVoidType())
-    Dest = Atomics.emitCastToAtomicIntPointer(Atomics.CreateTempAlloca());
+  else if (!RValTy->isVoidType()) {
+    Dest = Atomics.CreateTempAlloca();
+    if (ShouldCastToIntPtrTy)
+      Dest = Atomics.emitCastToAtomicIntPointer(Dest);
+  }
 
   // Use a library call.  See: http://gcc.gnu.org/wiki/Atomic/GCCMM/LIbrary .
   if (UseLibcall) {
@@ -1536,7 +1560,8 @@ bool CodeGenFunction::LValueIsSuitableForInlineAtomic(LValue LV) {
   AtomicInfo AI(*this, LV);
   bool IsVolatile = LV.isVolatile() || hasVolatileMember(LV.getType());
   // An atomic is inline if we don't need to use a libcall.
-  bool AtomicIsInline = !AI.shouldUseLibcall();
+  bool AtomicIsInline =
+      !AI.shouldUseLibcall(TargetInfo::AtomicOperationKind::LoadStore);
   // MSVC doesn't seem to do this for types wider than a pointer.
   if (getContext().getTypeSize(LV.getType()) >
       getContext().getTypeSize(getContext().getIntPtrType()))
@@ -1561,7 +1586,7 @@ RValue AtomicInfo::EmitAtomicLoad(AggValueSlot ResultSlot, SourceLocation Loc,
                                   bool AsValue, llvm::AtomicOrdering AO,
                                   bool IsVolatile) {
   // Check whether we should use a library call.
-  if (shouldUseLibcall()) {
+  if (shouldUseLibcall(TargetInfo::AtomicOperationKind::LoadStore)) {
     Address TempAddr = Address::invalid();
     if (LVal.isSimple() && !ResultSlot.isIgnored()) {
       assert(getEvaluationKind() == TEK_Aggregate);
@@ -1728,7 +1753,7 @@ std::pair<RValue, llvm::Value *> AtomicInfo::EmitAtomicCompareExchange(
     Failure = llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(Success);
 
   // Check whether we should use a library call.
-  if (shouldUseLibcall()) {
+  if (shouldUseLibcall(TargetInfo::AtomicOperationKind::CmpXchg)) {
     // Produce a source address.
     Address ExpectedAddr = materializeRValue(Expected);
     Address DesiredAddr = materializeRValue(Desired);
@@ -1952,7 +1977,7 @@ void AtomicInfo::EmitAtomicUpdateOp(llvm::AtomicOrdering AO, RValue UpdateRVal,
 void AtomicInfo::EmitAtomicUpdate(
     llvm::AtomicOrdering AO, const llvm::function_ref<RValue(RValue)> &UpdateOp,
     bool IsVolatile) {
-  if (shouldUseLibcall()) {
+  if (shouldUseLibcall(TargetInfo::AtomicOperationKind::LoadStore)) {
     EmitAtomicUpdateLibcall(AO, UpdateOp, IsVolatile);
   } else {
     EmitAtomicUpdateOp(AO, UpdateOp, IsVolatile);
@@ -1961,7 +1986,7 @@ void AtomicInfo::EmitAtomicUpdate(
 
 void AtomicInfo::EmitAtomicUpdate(llvm::AtomicOrdering AO, RValue UpdateRVal,
                                   bool IsVolatile) {
-  if (shouldUseLibcall()) {
+  if (shouldUseLibcall(TargetInfo::AtomicOperationKind::LoadStore)) {
     EmitAtomicUpdateLibcall(AO, UpdateRVal, IsVolatile);
   } else {
     EmitAtomicUpdateOp(AO, UpdateRVal, IsVolatile);
@@ -2006,7 +2031,7 @@ void CodeGenFunction::EmitAtomicStore(RValue rvalue, LValue dest,
     }
 
     // Check whether we should use a library call.
-    if (atomics.shouldUseLibcall()) {
+    if (atomics.shouldUseLibcall(TargetInfo::AtomicOperationKind::LoadStore)) {
       // Produce a source address.
       Address srcAddr = atomics.materializeRValue(rvalue);
 

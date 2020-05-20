@@ -374,6 +374,17 @@ public:
   uint64_t getPointerAlignV(unsigned AddrSpace) const override {
     return getPointerWidthV(AddrSpace);
   }
+
+  AtomicSupportKind
+  getFPAtomicAddSubSupport(const llvm::fltSemantics &FS) const override {
+    switch (llvm::APFloat::SemanticsToEnum(FS)) {
+    case llvm::APFloat::S_IEEEsingle:
+    case llvm::APFloat::S_IEEEdouble:
+      return AtomicSupportKind::LockFree;
+    default:
+      return AtomicSupportKind::Unsupported;
+    }
+  }
 };
 
 // X86-32 generic target

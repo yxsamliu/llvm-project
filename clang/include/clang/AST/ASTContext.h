@@ -39,6 +39,7 @@
 #include "clang/Basic/SanitizerBlacklist.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -671,7 +672,9 @@ public:
   /// Returns empty type if there is no appropriate target types.
   QualType getRealTypeForBitwidth(unsigned DestWidth, bool ExplicitIEEE) const;
 
-  bool AtomicUsesUnsupportedLibcall(const AtomicExpr *E) const;
+  TargetInfo::AtomicSupportKind
+  getTargetAtomicSupport(TargetInfo::AtomicOperationKind Op,
+                         QualType AtomicTy) const;
 
   const LangOptions& getLangOpts() const { return LangOpts; }
 

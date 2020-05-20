@@ -5023,12 +5023,64 @@ static void emitOMPAtomicWriteExpr(CodeGenFunction &CGF,
   }
 }
 
+static Optional<TargetInfo::AtomicOperationKind>
+getTargetAtomicOp(BinaryOperatorKind BO) {
+  switch (BO) {
+  case BO_Add:
+  case BO_Sub:
+    return TargetInfo::AtomicOperationKind::AddSub;
+  case BO_And:
+  case BO_Or:
+  case BO_Xor:
+    return TargetInfo::AtomicOperationKind::LogicOp;
+  case BO_LT:
+  case BO_GT:
+    return TargetInfo::AtomicOperationKind::MinMax;
+  case BO_Assign:
+    return TargetInfo::AtomicOperationKind::Xchg;
+  case BO_Mul:
+  case BO_Div:
+  case BO_Rem:
+  case BO_Shl:
+  case BO_Shr:
+  case BO_LAnd:
+  case BO_LOr:
+  case BO_PtrMemD:
+  case BO_PtrMemI:
+  case BO_LE:
+  case BO_GE:
+  case BO_EQ:
+  case BO_NE:
+  case BO_Cmp:
+  case BO_AddAssign:
+  case BO_SubAssign:
+  case BO_AndAssign:
+  case BO_OrAssign:
+  case BO_XorAssign:
+  case BO_MulAssign:
+  case BO_DivAssign:
+  case BO_RemAssign:
+  case BO_ShlAssign:
+  case BO_ShrAssign:
+  case BO_Comma:
+    return None;
+  }
+}
+
 static std::pair<bool, RValue> emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X,
                                                 RValue Update,
                                                 BinaryOperatorKind BO,
                                                 llvm::AtomicOrdering AO,
                                                 bool IsXLHSInRHSPart) {
   ASTContext &Context = CGF.getContext();
+  auto getAtomicSupport = [&](BinaryOperatorKind BO, LValue X) {
+    auto K = getTargetAtomicOp(BO);
+    if (!K.hasValue())
+      return TargetInfo::AtomicSupportKind::Unsupported;
+    return Context.getTargetInfo().getAtomicSupport(
+        K.getValue(), Context.getTypeSize(X.getType()),
+        Context.toBits(X.getAlignment()));
+  };
   // Allow atomicrmw only if 'x' and 'update' are integer values, lvalue for 'x'
   // expression is simple and atomic is allowed for the given type for the
   // target platform.
@@ -5038,8 +5090,7 @@ static std::pair<bool, RValue> emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X,
        (Update.getScalarVal()->getType() !=
         X.getAddress(CGF).getElementType())) ||
       !X.getAddress(CGF).getElementType()->isIntegerTy() ||
-      !Context.getTargetInfo().hasBuiltinAtomic(
-          Context.getTypeSize(X.getType()), Context.toBits(X.getAlignment())))
+      getAtomicSupport(BO, X) != TargetInfo::AtomicSupportKind::LockFree)
     return std::make_pair(false, RValue::get(nullptr));
 
   llvm::AtomicRMWInst::BinOp RMWOp;

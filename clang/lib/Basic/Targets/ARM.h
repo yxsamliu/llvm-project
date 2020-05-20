@@ -188,6 +188,16 @@ public:
   bool hasExtIntType() const override { return true; }
   
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
+
+  AtomicSupportKind
+  getFPAtomicAddSubSupport(const llvm::fltSemantics &FS) const override {
+    switch (llvm::APFloat::SemanticsToEnum(FS)) {
+    case llvm::APFloat::S_IEEEsingle:
+      return AtomicSupportKind::LockFree;
+    default:
+      return AtomicSupportKind::Unsupported;
+    }
+  }
 };
 
 class LLVM_LIBRARY_VISIBILITY ARMleTargetInfo : public ARMTargetInfo {

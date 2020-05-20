@@ -26,6 +26,7 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SyncScope.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
@@ -6275,6 +6276,10 @@ public:
   std::unique_ptr<AtomicScopeModel> getScopeModel() const {
     return getScopeModel(getOp());
   }
+
+  /// Get the target atomic operation kind which can be used to query target
+  /// atomic support.
+  TargetInfo::AtomicOperationKind getTargetAtomicOp() const;
 };
 
 /// TypoExpr - Internal placeholder for expressions where typo correction
