@@ -272,12 +272,18 @@ def warn_atomic_op_misaligned : Warning<
   "significant performance penalty"
   "; the expected alignment (%0 bytes) exceeds the actual alignment (%1 bytes)">,
   InGroup<AtomicAlignment>;
+def err_atomic_op_misaligned : Error<
+  "misaligned atomic operation not supported"
+  "; the expected alignment (%0 bytes) exceeds the actual alignment (%1 bytes)">;
 
 def warn_atomic_op_oversized : Warning<
   "large atomic operation may incur "
   "significant performance penalty"
   "; the access size (%0 bytes) exceeds the max lock-free size (%1  bytes)">,
 InGroup<AtomicAlignment>;
+def err_atomic_op_oversized : Error<
+  "large atomic operation not supported"
+  "; the access size (%0 bytes) exceeds the max lock-free size (%1  bytes)">;
 
 def warn_alias_with_section : Warning<
   "%select{alias|ifunc}1 will not be in section '%0' but in the same section "
