@@ -99,7 +99,8 @@ _Static_assert(__atomic_always_lock_free(8, &i64), "");
 #define _AS2 __attribute__((address_space(2)))
 
 void f(_Atomic(int) *i, const _Atomic(int) *ci,
-       _Atomic(int*) *p, _Atomic(float) *d,
+       _Atomic(int*) *p, _Atomic(float) *d, _Atomic(double) *d2,
+       _Atomic(long double) *d3,
        int *I, const int *CI,
        int **P, float *D, struct S *s1, struct S *s2) {
   __c11_atomic_init(I, 5); // expected-error {{pointer to _Atomic}}
@@ -166,13 +167,15 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
 
   __c11_atomic_fetch_add(i, 1, memory_order_seq_cst);
   __c11_atomic_fetch_add(p, 1, memory_order_seq_cst);
-  __c11_atomic_fetch_add(d, 1, memory_order_seq_cst); // expected-error {{must be a pointer to atomic integer or pointer}}
+  __c11_atomic_fetch_add(d, 1.0f, memory_order_seq_cst); // expected-error {{must be a pointer to atomic integer, pointer or supported floating point type}}
+  __c11_atomic_fetch_add(d2, 1.0, memory_order_seq_cst); // expected-error {{must be a pointer to atomic integer, pointer or supported floating point type}}
+  __c11_atomic_fetch_add(d3, 1.0, memory_order_seq_cst); // expected-error {{must be a pointer to atomic integer, pointer or supported floating point type}}
 
-  __atomic_fetch_add(i, 3, memory_order_seq_cst); // expected-error {{pointer to integer or pointer}}
+  __atomic_fetch_add(i, 3, memory_order_seq_cst); // expected-error {{pointer to integer, pointer or supported floating point type}}
   __atomic_fetch_sub(I, 3, memory_order_seq_cst);
   __atomic_fetch_sub(P, 3, memory_order_seq_cst);
-  __atomic_fetch_sub(D, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer or pointer}}
-  __atomic_fetch_sub(s1, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer or pointer}}
+  __atomic_fetch_sub(D, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer, pointer or supported floating point type}}
+  __atomic_fetch_sub(s1, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer, pointer or supported floating point type}}
   __atomic_fetch_min(D, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer}}
   __atomic_fetch_max(P, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer}}
   __atomic_fetch_max(p, 3);                       // expected-error {{too few arguments to function call, expected 3, have 2}}
