@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -verify -fsyntax-only -triple=spir64
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -verify -fsyntax-only -triple=amdgcn-amdhsa-amd-opencl
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -verify=expected,spir \
+// RUN:   -fsyntax-only -triple=spir64
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -verify -fsyntax-only \
+// RUN:   -triple=amdgcn-amd-amdhsa
 
 // Basic parsing/Sema tests for __opencl_atomic_*
 
@@ -36,7 +38,7 @@ int8 i64;
 
 atomic_int gn;
 void f(atomic_int *i, const atomic_int *ci,
-       atomic_intptr_t *p, atomic_float *d,
+       atomic_intptr_t *p, atomic_float *d, atomic_double *d2,
        int *I, const int *CI,
        intptr_t *P, float *D, struct S *s1, struct S *s2,
        global atomic_int *i_g, local atomic_int *i_l, private atomic_int *i_p,
@@ -70,7 +72,8 @@ void f(atomic_int *i, const atomic_int *ci,
 
   __opencl_atomic_fetch_add(i, 1, memory_order_seq_cst, memory_scope_work_group);
   __opencl_atomic_fetch_add(p, 1, memory_order_seq_cst, memory_scope_work_group);
-  __opencl_atomic_fetch_add(d, 1, memory_order_seq_cst, memory_scope_work_group); // expected-error {{address argument to atomic operation must be a pointer to atomic integer or pointer ('__generic atomic_float *' (aka '__generic _Atomic(float) *') invalid)}}
+  __opencl_atomic_fetch_add(d, 1, memory_order_seq_cst, memory_scope_work_group); // spir-error {{address argument to atomic operation must be a pointer to atomic integer or pointer ('__generic atomic_float *' (aka '__generic _Atomic(float) *') invalid)}}
+  __opencl_atomic_fetch_add(d2, 1, memory_order_seq_cst, memory_scope_work_group); // spir-error {{address argument to atomic operation must be a pointer to atomic integer or pointer ('__generic atomic_double *' (aka '__generic _Atomic(double) *') invalid)}}
   __opencl_atomic_fetch_and(i, 1, memory_order_seq_cst, memory_scope_work_group);
   __opencl_atomic_fetch_and(p, 1, memory_order_seq_cst, memory_scope_work_group);
   __opencl_atomic_fetch_and(d, 1, memory_order_seq_cst, memory_scope_work_group); // expected-error {{address argument to atomic operation must be a pointer to atomic integer ('__generic atomic_float *' (aka '__generic _Atomic(float) *') invalid)}}
