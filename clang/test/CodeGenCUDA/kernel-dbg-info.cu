@@ -37,8 +37,8 @@ extern "C" __global__ void ckernel(int *a) {
 // DEV:  store {{.*}}!dbg
 // DEV:  ret {{.*}}!dbg
 
-// CHECK-NOT: define {{.*}}@__device_stub__ckernel{{.*}}!dbg
-// CHECK: define {{.*}}@[[CSTUB:__device_stub__ckernel]]
+// Make sure there is no !dbg between function attributes and '{'
+// CHECK: define void @[[CSTUB:__device_stub__ckernel]]{{.*}} #{{[0-9]+}} {
 // CHECK-NOT: call {{.*}}@hipLaunchByPtr{{.*}}!dbg
 // CHECK: call {{.*}}@hipLaunchByPtr{{.*}}@[[CSTUB]]
 // CHECK-NOT: ret {{.*}}!dbg
