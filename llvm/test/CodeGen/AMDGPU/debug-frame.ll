@@ -24,7 +24,7 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: func1:
+; CHECK-LABEL: func_no_clobber:
 ; CHECK: .cfi_startproc
 
 ; CHECK-NOT: .cfi_{{.*}}
@@ -48,14 +48,14 @@ entry:
 ; CHECK-NOT: .cfi_{{.*}}
 
 ; CHECK: .cfi_endproc
-define hidden void @func1() #0 {
+define hidden void @func_no_clobber() #0 {
 entry:
   ret void
 }
 
 declare hidden void @ex() #0
 
-; CHECK-LABEL: func2:
+; CHECK-LABEL: func_call_clobber:
 ; CHECK: .cfi_startproc
 
 ; CHECK-NOT: .cfi_{{.*}}
@@ -63,6 +63,7 @@ declare hidden void @ex() #0
 ; CHECK: %bb.0:
 ; CHECK-NEXT: .cfi_llvm_def_aspace_cfa 64, 0, 6
 ; CHECK-NEXT: .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
+
 ; VGPR0_wave64 = 2560
 ; WAVE64-NEXT: .cfi_undefined 2560
 ; WAVE64-NEXT: .cfi_undefined 2561
@@ -96,6 +97,134 @@ declare hidden void @ex() #0
 ; WAVE64-NEXT: .cfi_undefined 2589
 ; WAVE64-NEXT: .cfi_undefined 2590
 ; WAVE64-NEXT: .cfi_undefined 2591
+; WAVE64-NEXT: .cfi_undefined 2592
+; WAVE64-NEXT: .cfi_undefined 2593
+; WAVE64-NEXT: .cfi_undefined 2594
+; WAVE64-NEXT: .cfi_undefined 2595
+; WAVE64-NEXT: .cfi_undefined 2596
+; WAVE64-NEXT: .cfi_undefined 2597
+; WAVE64-NEXT: .cfi_undefined 2598
+; WAVE64-NEXT: .cfi_undefined 2599
+
+; VPGR48_wave64 = 2608
+; WAVE64-NEXT: .cfi_undefined 2608
+; WAVE64-NEXT: .cfi_undefined 2609
+; WAVE64-NEXT: .cfi_undefined 2610
+; WAVE64-NEXT: .cfi_undefined 2611
+; WAVE64-NEXT: .cfi_undefined 2612
+; WAVE64-NEXT: .cfi_undefined 2613
+; WAVE64-NEXT: .cfi_undefined 2614
+; WAVE64-NEXT: .cfi_undefined 2615
+
+; WAVE64-NEXT: .cfi_undefined 2624
+; WAVE64-NEXT: .cfi_undefined 2625
+; WAVE64-NEXT: .cfi_undefined 2626
+; WAVE64-NEXT: .cfi_undefined 2627
+; WAVE64-NEXT: .cfi_undefined 2628
+; WAVE64-NEXT: .cfi_undefined 2629
+; WAVE64-NEXT: .cfi_undefined 2630
+; WAVE64-NEXT: .cfi_undefined 2631
+
+; WAVE64-NEXT: .cfi_undefined 2640
+; WAVE64-NEXT: .cfi_undefined 2641
+; WAVE64-NEXT: .cfi_undefined 2642
+; WAVE64-NEXT: .cfi_undefined 2643
+; WAVE64-NEXT: .cfi_undefined 2644
+; WAVE64-NEXT: .cfi_undefined 2645
+; WAVE64-NEXT: .cfi_undefined 2646
+; WAVE64-NEXT: .cfi_undefined 2647
+
+; WAVE64-NEXT: .cfi_undefined 2656
+; WAVE64-NEXT: .cfi_undefined 2657
+; WAVE64-NEXT: .cfi_undefined 2658
+; WAVE64-NEXT: .cfi_undefined 2659
+; WAVE64-NEXT: .cfi_undefined 2660
+; WAVE64-NEXT: .cfi_undefined 2661
+; WAVE64-NEXT: .cfi_undefined 2662
+; WAVE64-NEXT: .cfi_undefined 2663
+
+; WAVE64-NEXT: .cfi_undefined 2672
+; WAVE64-NEXT: .cfi_undefined 2673
+; WAVE64-NEXT: .cfi_undefined 2674
+; WAVE64-NEXT: .cfi_undefined 2675
+; WAVE64-NEXT: .cfi_undefined 2676
+; WAVE64-NEXT: .cfi_undefined 2677
+; WAVE64-NEXT: .cfi_undefined 2678
+; WAVE64-NEXT: .cfi_undefined 2679
+
+; WAVE64-NEXT: .cfi_undefined 2688
+; WAVE64-NEXT: .cfi_undefined 2689
+; WAVE64-NEXT: .cfi_undefined 2690
+; WAVE64-NEXT: .cfi_undefined 2691
+; WAVE64-NEXT: .cfi_undefined 2692
+; WAVE64-NEXT: .cfi_undefined 2693
+; WAVE64-NEXT: .cfi_undefined 2694
+; WAVE64-NEXT: .cfi_undefined 2695
+
+; WAVE64-NEXT: .cfi_undefined 2704
+; WAVE64-NEXT: .cfi_undefined 2705
+; WAVE64-NEXT: .cfi_undefined 2706
+; WAVE64-NEXT: .cfi_undefined 2707
+; WAVE64-NEXT: .cfi_undefined 2708
+; WAVE64-NEXT: .cfi_undefined 2709
+; WAVE64-NEXT: .cfi_undefined 2710
+; WAVE64-NEXT: .cfi_undefined 2711
+
+; WAVE64-NEXT: .cfi_undefined 2720
+; WAVE64-NEXT: .cfi_undefined 2721
+; WAVE64-NEXT: .cfi_undefined 2722
+; WAVE64-NEXT: .cfi_undefined 2723
+; WAVE64-NEXT: .cfi_undefined 2724
+; WAVE64-NEXT: .cfi_undefined 2725
+; WAVE64-NEXT: .cfi_undefined 2726
+; WAVE64-NEXT: .cfi_undefined 2727
+
+; WAVE64-NEXT: .cfi_undefined 2736
+; WAVE64-NEXT: .cfi_undefined 2737
+; WAVE64-NEXT: .cfi_undefined 2738
+; WAVE64-NEXT: .cfi_undefined 2739
+; WAVE64-NEXT: .cfi_undefined 2740
+; WAVE64-NEXT: .cfi_undefined 2741
+; WAVE64-NEXT: .cfi_undefined 2742
+; WAVE64-NEXT: .cfi_undefined 2743
+
+; WAVE64-NEXT: .cfi_undefined 2752
+; WAVE64-NEXT: .cfi_undefined 2753
+; WAVE64-NEXT: .cfi_undefined 2754
+; WAVE64-NEXT: .cfi_undefined 2755
+; WAVE64-NEXT: .cfi_undefined 2756
+; WAVE64-NEXT: .cfi_undefined 2757
+; WAVE64-NEXT: .cfi_undefined 2758
+; WAVE64-NEXT: .cfi_undefined 2759
+
+; WAVE64-NEXT: .cfi_undefined 2768
+; WAVE64-NEXT: .cfi_undefined 2769
+; WAVE64-NEXT: .cfi_undefined 2770
+; WAVE64-NEXT: .cfi_undefined 2771
+; WAVE64-NEXT: .cfi_undefined 2772
+; WAVE64-NEXT: .cfi_undefined 2773
+; WAVE64-NEXT: .cfi_undefined 2774
+; WAVE64-NEXT: .cfi_undefined 2775
+
+; WAVE64-NEXT: .cfi_undefined 2784
+; WAVE64-NEXT: .cfi_undefined 2785
+; WAVE64-NEXT: .cfi_undefined 2786
+; WAVE64-NEXT: .cfi_undefined 2787
+; WAVE64-NEXT: .cfi_undefined 2788
+; WAVE64-NEXT: .cfi_undefined 2789
+; WAVE64-NEXT: .cfi_undefined 2790
+; WAVE64-NEXT: .cfi_undefined 2791
+
+; WAVE64-NEXT: .cfi_undefined 2800
+; WAVE64-NEXT: .cfi_undefined 2801
+; WAVE64-NEXT: .cfi_undefined 2802
+; WAVE64-NEXT: .cfi_undefined 2803
+; WAVE64-NEXT: .cfi_undefined 2804
+; WAVE64-NEXT: .cfi_undefined 2805
+; WAVE64-NEXT: .cfi_undefined 2806
+; WAVE64-NEXT: .cfi_undefined 2807
+
+
 ; VGPR0_wave32 = 1536
 ; WAVE32-NEXT: .cfi_undefined 1536
 ; WAVE32-NEXT: .cfi_undefined 1537
@@ -129,6 +258,134 @@ declare hidden void @ex() #0
 ; WAVE32-NEXT: .cfi_undefined 1565
 ; WAVE32-NEXT: .cfi_undefined 1566
 ; WAVE32-NEXT: .cfi_undefined 1567
+; WAVE32-NEXT: .cfi_undefined 1568
+; WAVE32-NEXT: .cfi_undefined 1569
+; WAVE32-NEXT: .cfi_undefined 1570
+; WAVE32-NEXT: .cfi_undefined 1571
+; WAVE32-NEXT: .cfi_undefined 1572
+; WAVE32-NEXT: .cfi_undefined 1573
+; WAVE32-NEXT: .cfi_undefined 1574
+; WAVE32-NEXT: .cfi_undefined 1575
+
+; VPGR48_wave64 = 1584
+; WAVE32-NEXT: .cfi_undefined 1584
+; WAVE32-NEXT: .cfi_undefined 1585
+; WAVE32-NEXT: .cfi_undefined 1586
+; WAVE32-NEXT: .cfi_undefined 1587
+; WAVE32-NEXT: .cfi_undefined 1588
+; WAVE32-NEXT: .cfi_undefined 1589
+; WAVE32-NEXT: .cfi_undefined 1590
+; WAVE32-NEXT: .cfi_undefined 1591
+
+; WAVE32-NEXT: .cfi_undefined 1600
+; WAVE32-NEXT: .cfi_undefined 1601
+; WAVE32-NEXT: .cfi_undefined 1602
+; WAVE32-NEXT: .cfi_undefined 1603
+; WAVE32-NEXT: .cfi_undefined 1604
+; WAVE32-NEXT: .cfi_undefined 1605
+; WAVE32-NEXT: .cfi_undefined 1606
+; WAVE32-NEXT: .cfi_undefined 1607
+
+; WAVE32-NEXT: .cfi_undefined 1616
+; WAVE32-NEXT: .cfi_undefined 1617
+; WAVE32-NEXT: .cfi_undefined 1618
+; WAVE32-NEXT: .cfi_undefined 1619
+; WAVE32-NEXT: .cfi_undefined 1620
+; WAVE32-NEXT: .cfi_undefined 1621
+; WAVE32-NEXT: .cfi_undefined 1622
+; WAVE32-NEXT: .cfi_undefined 1623
+
+; WAVE32-NEXT: .cfi_undefined 1632
+; WAVE32-NEXT: .cfi_undefined 1633
+; WAVE32-NEXT: .cfi_undefined 1634
+; WAVE32-NEXT: .cfi_undefined 1635
+; WAVE32-NEXT: .cfi_undefined 1636
+; WAVE32-NEXT: .cfi_undefined 1637
+; WAVE32-NEXT: .cfi_undefined 1638
+; WAVE32-NEXT: .cfi_undefined 1639
+
+; WAVE32-NEXT: .cfi_undefined 1648
+; WAVE32-NEXT: .cfi_undefined 1649
+; WAVE32-NEXT: .cfi_undefined 1650
+; WAVE32-NEXT: .cfi_undefined 1651
+; WAVE32-NEXT: .cfi_undefined 1652
+; WAVE32-NEXT: .cfi_undefined 1653
+; WAVE32-NEXT: .cfi_undefined 1654
+; WAVE32-NEXT: .cfi_undefined 1655
+
+; WAVE32-NEXT: .cfi_undefined 1664
+; WAVE32-NEXT: .cfi_undefined 1665
+; WAVE32-NEXT: .cfi_undefined 1666
+; WAVE32-NEXT: .cfi_undefined 1667
+; WAVE32-NEXT: .cfi_undefined 1668
+; WAVE32-NEXT: .cfi_undefined 1669
+; WAVE32-NEXT: .cfi_undefined 1670
+; WAVE32-NEXT: .cfi_undefined 1671
+
+; WAVE32-NEXT: .cfi_undefined 1680
+; WAVE32-NEXT: .cfi_undefined 1681
+; WAVE32-NEXT: .cfi_undefined 1682
+; WAVE32-NEXT: .cfi_undefined 1683
+; WAVE32-NEXT: .cfi_undefined 1684
+; WAVE32-NEXT: .cfi_undefined 1685
+; WAVE32-NEXT: .cfi_undefined 1686
+; WAVE32-NEXT: .cfi_undefined 1687
+
+; WAVE32-NEXT: .cfi_undefined 1696
+; WAVE32-NEXT: .cfi_undefined 1697
+; WAVE32-NEXT: .cfi_undefined 1698
+; WAVE32-NEXT: .cfi_undefined 1699
+; WAVE32-NEXT: .cfi_undefined 1700
+; WAVE32-NEXT: .cfi_undefined 1701
+; WAVE32-NEXT: .cfi_undefined 1702
+; WAVE32-NEXT: .cfi_undefined 1703
+
+; WAVE32-NEXT: .cfi_undefined 1712
+; WAVE32-NEXT: .cfi_undefined 1713
+; WAVE32-NEXT: .cfi_undefined 1714
+; WAVE32-NEXT: .cfi_undefined 1715
+; WAVE32-NEXT: .cfi_undefined 1716
+; WAVE32-NEXT: .cfi_undefined 1717
+; WAVE32-NEXT: .cfi_undefined 1718
+; WAVE32-NEXT: .cfi_undefined 1719
+
+; WAVE32-NEXT: .cfi_undefined 1728
+; WAVE32-NEXT: .cfi_undefined 1729
+; WAVE32-NEXT: .cfi_undefined 1730
+; WAVE32-NEXT: .cfi_undefined 1731
+; WAVE32-NEXT: .cfi_undefined 1732
+; WAVE32-NEXT: .cfi_undefined 1733
+; WAVE32-NEXT: .cfi_undefined 1734
+; WAVE32-NEXT: .cfi_undefined 1735
+
+; WAVE32-NEXT: .cfi_undefined 1744
+; WAVE32-NEXT: .cfi_undefined 1745
+; WAVE32-NEXT: .cfi_undefined 1746
+; WAVE32-NEXT: .cfi_undefined 1747
+; WAVE32-NEXT: .cfi_undefined 1748
+; WAVE32-NEXT: .cfi_undefined 1749
+; WAVE32-NEXT: .cfi_undefined 1750
+; WAVE32-NEXT: .cfi_undefined 1751
+
+; WAVE32-NEXT: .cfi_undefined 1760
+; WAVE32-NEXT: .cfi_undefined 1761
+; WAVE32-NEXT: .cfi_undefined 1762
+; WAVE32-NEXT: .cfi_undefined 1763
+; WAVE32-NEXT: .cfi_undefined 1764
+; WAVE32-NEXT: .cfi_undefined 1765
+; WAVE32-NEXT: .cfi_undefined 1766
+; WAVE32-NEXT: .cfi_undefined 1767
+
+; WAVE32-NEXT: .cfi_undefined 1776
+; WAVE32-NEXT: .cfi_undefined 1777
+; WAVE32-NEXT: .cfi_undefined 1778
+; WAVE32-NEXT: .cfi_undefined 1779
+; WAVE32-NEXT: .cfi_undefined 1780
+; WAVE32-NEXT: .cfi_undefined 1781
+; WAVE32-NEXT: .cfi_undefined 1782
+; WAVE32-NEXT: .cfi_undefined 1783
+
+
 ; SGPR0 = 32
 ; CHECK-NEXT: .cfi_undefined 32
 ; CHECK-NEXT: .cfi_undefined 33
@@ -170,7 +427,7 @@ declare hidden void @ex() #0
 ; CHECK-NEXT: buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
 ; VGPR40_wave64 = 2600
 ; WAVE64-NEXT: .cfi_offset 2600, 0
-; VGPR32_wave32 = 1576
+; VGPR40_wave32 = 1576
 ; WAVE32-NEXT: .cfi_offset 1576, 0
 ; CHECK-NOT: .cfi_{{.*}}
 ; WAVE64: s_mov_b64 exec, s[4:5]
@@ -212,13 +469,14 @@ declare hidden void @ex() #0
 ; CHECK-NOT: .cfi_{{.*}}
 
 ; CHECK: .cfi_endproc
-define hidden void @func2() #0 {
+define hidden void @func_call_clobber() #0 {
 entry:
   call void @ex() #0
   ret void
 }
 
 attributes #0 = { nounwind }
+attributes #1 = { nounwind "frame-pointer"="all" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}

@@ -27,18 +27,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "frame-info"
 
-
-static ArrayRef<MCPhysReg> getAllSGPR128(const GCNSubtarget &ST,
-                                         const MachineFunction &MF) {
-  return makeArrayRef(AMDGPU::SGPR_128RegClass.begin(),
-                      ST.getMaxNumSGPRs(MF) / 4);
-}
-
-static ArrayRef<MCPhysReg> getAllSGPRs(const GCNSubtarget &ST,
-                                       const MachineFunction &MF) {
-  return makeArrayRef(AMDGPU::SGPR_32RegClass.begin(), ST.getMaxNumSGPRs(MF));
-}
-
 // Find a scratch register that we can use at the start of the prologue to
 // re-align the stack pointer. We avoid using callee-save registers since they
 // may appear to be free when this is called from canUseAsPrologue (during
@@ -295,7 +283,7 @@ Register SIFrameLowering::getEntryFunctionReservedScratchRsrcReg(
   // skip over user SGPRs and may leave unused holes.
 
   unsigned NumPreloaded = (MFI->getNumPreloadedSGPRs() + 3) / 4;
-  ArrayRef<MCPhysReg> AllSGPR128s = getAllSGPR128(ST, MF);
+  ArrayRef<MCPhysReg> AllSGPR128s = TRI->getAllSGPR128(MF);
   AllSGPR128s = AllSGPR128s.slice(std::min(static_cast<unsigned>(AllSGPR128s.size()), NumPreloaded));
 
   // Skip the last N reserved elements because they should have already been
@@ -408,7 +396,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   // wave offset to a free SGPR.
   Register ScratchWaveOffsetReg;
   if (TRI->isSubRegisterEq(ScratchRsrcReg, PreloadedScratchWaveOffsetReg)) {
-    ArrayRef<MCPhysReg> AllSGPRs = getAllSGPRs(ST, MF);
+    ArrayRef<MCPhysReg> AllSGPRs = TRI->getAllSGPR32(MF);
     unsigned NumPreloaded = MFI->getNumPreloadedSGPRs();
     AllSGPRs = AllSGPRs.slice(
         std::min(static_cast<unsigned>(AllSGPRs.size()), NumPreloaded));
@@ -622,6 +610,8 @@ void SIFrameLowering::emitPrologueEntryCFI(MachineBasicBlock &MBB,
   const MachineFunction &MF = *MBB.getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const MCRegisterInfo *MCRI = MF.getMMI().getContext().getRegisterInfo();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIRegisterInfo &TRI = ST.getInstrInfo()->getRegisterInfo();
   Register StackPtrReg =
       MF.getInfo<SIMachineFunctionInfo>()->getStackPtrOffsetReg();
 
@@ -647,32 +637,21 @@ void SIFrameLowering::emitPrologueEntryCFI(MachineBasicBlock &MBB,
            MCCFIInstruction::createEscape(
                nullptr, StringRef(PCEncodedInst, sizeof(PCEncodedInst))));
 
-  static const MCPhysReg CallerSavedRegs[] = {
-      AMDGPU::VGPR0,     AMDGPU::VGPR1,  AMDGPU::VGPR2,  AMDGPU::VGPR3,
-      AMDGPU::VGPR4,     AMDGPU::VGPR5,  AMDGPU::VGPR6,  AMDGPU::VGPR7,
-      AMDGPU::VGPR8,     AMDGPU::VGPR9,  AMDGPU::VGPR10, AMDGPU::VGPR11,
-      AMDGPU::VGPR12,    AMDGPU::VGPR13, AMDGPU::VGPR14, AMDGPU::VGPR15,
-      AMDGPU::VGPR16,    AMDGPU::VGPR17, AMDGPU::VGPR18, AMDGPU::VGPR19,
-      AMDGPU::VGPR20,    AMDGPU::VGPR21, AMDGPU::VGPR22, AMDGPU::VGPR23,
-      AMDGPU::VGPR24,    AMDGPU::VGPR25, AMDGPU::VGPR26, AMDGPU::VGPR27,
-      AMDGPU::VGPR28,    AMDGPU::VGPR29, AMDGPU::VGPR30, AMDGPU::VGPR31,
-      AMDGPU::SGPR0,     AMDGPU::SGPR1,  AMDGPU::SGPR2,  AMDGPU::SGPR3,
-      AMDGPU::SGPR4,     AMDGPU::SGPR5,  AMDGPU::SGPR6,  AMDGPU::SGPR7,
-      AMDGPU::SGPR8,     AMDGPU::SGPR9,  AMDGPU::SGPR10, AMDGPU::SGPR11,
-      AMDGPU::SGPR12,    AMDGPU::SGPR13, AMDGPU::SGPR14, AMDGPU::SGPR15,
-      AMDGPU::SGPR16,    AMDGPU::SGPR17, AMDGPU::SGPR18, AMDGPU::SGPR19,
-      AMDGPU::SGPR20,    AMDGPU::SGPR21, AMDGPU::SGPR22, AMDGPU::SGPR23,
-      AMDGPU::SGPR24,    AMDGPU::SGPR25, AMDGPU::SGPR26, AMDGPU::SGPR27,
-      AMDGPU::SGPR28,    AMDGPU::SGPR29, AMDGPU::SGPR30, AMDGPU::SGPR31,
-      AMDGPU::NoRegister};
-  for (int I = 0; CallerSavedRegs[I]; ++I) {
-    if (!MRI.isPhysRegModified(CallerSavedRegs[I]))
-      continue;
-    MCRegister DwarfReg = MCRI->getDwarfRegNum(CallerSavedRegs[I], false);
+  BitVector IsCalleeSaved(TRI.getNumRegs());
+  const MCPhysReg *CSRegs = MRI.getCalleeSavedRegs();
+  for (unsigned I = 0; CSRegs[I]; ++I) {
+    IsCalleeSaved.set(CSRegs[I]);
+  }
+  auto ProcessReg = [&](MCPhysReg Reg) {
+    if (IsCalleeSaved.test(Reg) || !MRI.isPhysRegModified(Reg))
+      return;
+    MCRegister DwarfReg = MCRI->getDwarfRegNum(Reg, false);
     buildCFI(MBB, MBBI, DL,
              MCCFIInstruction::createUndefined(nullptr, DwarfReg));
-  }
-};
+  };
+  for_each(TRI.getAllVGPR32(MF), ProcessReg);
+  for_each(TRI.getAllSGPR32(MF), ProcessReg);
+}
 
 void SIFrameLowering::emitPrologue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
@@ -1358,7 +1337,7 @@ void SIFrameLowering::buildCFIForSGPRToVGPRSpill(
     encodeDwarfRegisterLocation(MCRI.getDwarfRegNum(Spill.VGPR, false),
                                 OSBlock);
     OSBlock << uint8_t(dwarf::DW_OP_bit_piece);
-    // FIXME:
+    // FIXME:Can this be a function of the SGPR?
     const unsigned SGPRBitSize = 32;
     encodeULEB128(SGPRBitSize, OSBlock);
     encodeULEB128(SGPRBitSize * Spill.Lane, OSBlock);
@@ -1398,7 +1377,7 @@ void SIFrameLowering::buildCFIForVGPRToVMEMSpill(
   OSBlock << uint8_t(dwarf::DW_OP_deref_size);
   OSBlock << uint8_t(ST.getWavefrontSize() / CHAR_BIT);
   OSBlock << uint8_t(dwarf::DW_OP_LLVM_select_bit_piece);
-  // FIXME:
+  // FIXME: Can this be a function of the VGPR?
   const unsigned VGPRLaneBitSize = 32;
   encodeULEB128(VGPRLaneBitSize, OSBlock);
   encodeULEB128(ST.getWavefrontSize(), OSBlock);
