@@ -6021,8 +6021,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fcuda-short-ptr");
   }
 
-  if (IsHIP)
+  if (IsHIP) {
+    // Determine the original source input.
+    const Action *SourceAction = &JA;
+    while (SourceAction->getKind() != Action::InputClass) {
+      assert(!SourceAction->getInputs().empty() && "unexpected root action!");
+      SourceAction = SourceAction->getInputs()[0];
+    }
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine("-cuid=") + Twine(cast<InputAction>(SourceAction)->getId())));
     CmdArgs.push_back("-fcuda-allow-variadic-functions");
+  }
 
   // OpenMP offloading device jobs take the argument -fopenmp-host-ir-file-path
   // to specify the result of the compile phase on the host, so the meaningful

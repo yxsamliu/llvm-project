@@ -10273,12 +10273,20 @@ static GVALinkage adjustGVALinkageForAttributes(const ASTContext &Context,
   } else if (D->hasAttr<DLLExportAttr>()) {
     if (L == GVA_DiscardableODR)
       return GVA_StrongODR;
-  } else if (Context.getLangOpts().CUDA && Context.getLangOpts().CUDAIsDevice &&
-             D->hasAttr<CUDAGlobalAttr>()) {
+  } else if (Context.getLangOpts().CUDA && Context.getLangOpts().CUDAIsDevice) {
     // Device-side functions with __global__ attribute must always be
     // visible externally so they can be launched from host.
-    if (L == GVA_DiscardableODR || L == GVA_Internal)
+    if (D->hasAttr<CUDAGlobalAttr>() &&
+        (L == GVA_DiscardableODR || L == GVA_Internal))
       return GVA_StrongODR;
+    // Single source offloading languages like CUDA/HIP need to be able to
+    // access static device variables from host code of the same compilation
+    // unit. This is done by externalizing the static variable with a shared
+    // name between the host and device compilation which is the same for the
+    // same compilation unit whereas different among different compilation
+    // units.
+    if (Context.shouldExternalizeStaticVar(D))
+      return GVA_StrongExternal;
   }
   return L;
 }
@@ -11163,4 +11171,11 @@ clang::operator<<(const DiagnosticBuilder &DB,
   if (Section.Decl)
     return DB << Section.Decl;
   return DB << "a prior #pragma section";
+}
+
+bool ASTContext::shouldExternalizeStaticVar(const Decl *D) const {
+  return !getLangOpts().CUID.empty() &&
+         (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>()) &&
+         isa<VarDecl>(D) && cast<VarDecl>(D)->isFileVarDecl() &&
+         cast<VarDecl>(D)->getStorageClass() == SC_Static;
 }

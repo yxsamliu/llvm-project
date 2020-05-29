@@ -1091,6 +1091,9 @@ static std::string getMangledNameImpl(const CodeGenModule &CGM, GlobalDecl GD,
       }
     }
 
+  // Make unique name for device side static file-scope variable for HIP.
+  if (CGM.getContext().shouldExternalizeStaticVar(ND))
+    Out << ".static." << CGM.getLangOpts().CUID;
   return std::string(Out.str());
 }
 
