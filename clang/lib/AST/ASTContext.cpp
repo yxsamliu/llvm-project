@@ -10273,12 +10273,19 @@ static GVALinkage adjustGVALinkageForAttributes(const ASTContext &Context,
   } else if (D->hasAttr<DLLExportAttr>()) {
     if (L == GVA_DiscardableODR)
       return GVA_StrongODR;
-  } else if (Context.getLangOpts().CUDA && Context.getLangOpts().CUDAIsDevice &&
-             D->hasAttr<CUDAGlobalAttr>()) {
+  } else if (Context.getLangOpts().CUDA && Context.getLangOpts().CUDAIsDevice) {
     // Device-side functions with __global__ attribute must always be
     // visible externally so they can be launched from host.
-    if (L == GVA_DiscardableODR || L == GVA_Internal)
+    if (D->hasAttr<CUDAGlobalAttr>() &&
+        (L == GVA_DiscardableODR || L == GVA_Internal))
       return GVA_StrongODR;
+    // Externalize device side static file-scope variable for HIP.
+    if (Context.getLangOpts().HIP && Context.getLangOpts().HIPCUID &&
+        (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>()) &&
+        isa<VarDecl>(D) && cast<VarDecl>(D)->isFileVarDecl() &&
+        cast<VarDecl>(D)->getStorageClass() == SC_Static) {
+      return GVA_StrongExternal;
+    }
   }
   return L;
 }

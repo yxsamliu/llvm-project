@@ -214,13 +214,16 @@ public:
 
 class InputAction : public Action {
   const llvm::opt::Arg &Input;
-
+  unsigned Id;
   virtual void anchor();
 
 public:
-  InputAction(const llvm::opt::Arg &Input, types::ID Type);
+  InputAction(const llvm::opt::Arg &Input, types::ID Type, unsigned Id = 0);
 
   const llvm::opt::Arg &getInputArg() const { return Input; }
+
+  void setId(unsigned _Id) { Id = _Id; }
+  unsigned getId() const { return Id; }
 
   static bool classof(const Action *A) {
     return A->getKind() == InputClass;

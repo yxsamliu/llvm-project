@@ -1091,6 +1091,15 @@ static std::string getMangledNameImpl(const CodeGenModule &CGM, GlobalDecl GD,
       }
     }
 
+  // Make unique name for device side static file-scope variable for HIP.
+  if (CGM.getLangOpts().HIP && CGM.getLangOpts().HIPCUID) {
+    if (const auto *VD = dyn_cast<VarDecl>(ND)) {
+      if ((VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>()) &&
+          VD->isFileVarDecl() && VD->getStorageClass() == SC_Static) {
+        Out << ".hip.static." << CGM.getLangOpts().HIPCUID;
+      }
+    }
+  }
   return std::string(Out.str());
 }
 

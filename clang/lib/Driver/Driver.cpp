@@ -2418,7 +2418,7 @@ class OffloadingActionBuilder final {
                                                  : types::TY_CUDA_DEVICE;
         for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I) {
           CudaDeviceActions.push_back(
-              C.MakeAction<InputAction>(IA->getInputArg(), Ty));
+              C.MakeAction<InputAction>(IA->getInputArg(), Ty, IA->getId()));
         }
 
         return ABRT_Success;

@@ -8,6 +8,7 @@
 
 #include "clang/Driver/Action.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Process.h"
 #include <cassert>
 #include <string>
 
@@ -165,8 +166,11 @@ StringRef Action::GetOffloadKindName(OffloadKind Kind) {
 
 void InputAction::anchor() {}
 
-InputAction::InputAction(const Arg &_Input, types::ID _Type)
-    : Action(InputClass, _Type), Input(_Input) {}
+InputAction::InputAction(const Arg &_Input, types::ID _Type, unsigned _Id)
+    : Action(InputClass, _Type), Input(_Input), Id(_Id) {
+  if (!Id)
+    Id = llvm::sys::Process::GetRandomNumber();
+}
 
 void BindArchAction::anchor() {}
 
