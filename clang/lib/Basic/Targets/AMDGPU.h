@@ -354,8 +354,6 @@ public:
   }
 
   void setAuxTarget(const TargetInfo *Aux) override;
-
-  bool isFPAtomicFetchAddSubSupported() const override { return true; }
 };
 
 } // namespace targets
