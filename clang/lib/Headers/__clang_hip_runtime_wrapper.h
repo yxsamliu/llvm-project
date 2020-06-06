@@ -58,7 +58,7 @@ static inline __device__ void *free(void *__ptr) {
 #include <new>
 #endif // !_OPENMP || __HIP_ENABLE_CUDA_WRAPPER_FOR_OPENMP__
 
-#define __CLANG_HIP_RUNTIME_WRPPER_INCLUDED__ 1
+#define __CLANG_HIP_RUNTIME_WRAPPER_INCLUDED__ 1
 
 #endif // __HIP__
 #endif // __CLANG_HIP_RUNTIME_WRAPPER_H__
