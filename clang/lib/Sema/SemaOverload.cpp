@@ -9517,11 +9517,11 @@ bool clang::isBetterOverloadCandidate(
   // in global variable initializers once proper context is added.
   if (S.getLangOpts().CUDA && Cand1.Function && Cand2.Function) {
     if (FunctionDecl *Caller = dyn_cast<FunctionDecl>(S.CurContext)) {
-      bool IsCallerImplicitHD = S.IsCUDAImplicitHostDeviceFunction(Caller);
+      bool IsCallerImplicitHD = Sema::IsCUDAImplicitHostDeviceFunction(Caller);
       bool IsCand1ImplicitHD =
-          S.IsCUDAImplicitHostDeviceFunction(Cand1.Function);
+          Sema::IsCUDAImplicitHostDeviceFunction(Cand1.Function);
       bool IsCand2ImplicitHD =
-          S.IsCUDAImplicitHostDeviceFunction(Cand2.Function);
+          Sema::IsCUDAImplicitHostDeviceFunction(Cand2.Function);
       auto P1 = S.IdentifyCUDAPreference(Caller, Cand1.Function);
       auto P2 = S.IdentifyCUDAPreference(Caller, Cand2.Function);
       assert(P1 != Sema::CFP_Never && P2 != Sema::CFP_Never);
@@ -9534,7 +9534,7 @@ bool clang::isBetterOverloadCandidate(
       auto EmitThreshold =
           (S.getLangOpts().CUDAIsDevice && IsCallerImplicitHD &&
            (IsCand1ImplicitHD || IsCand2ImplicitHD))
-              ? Sema::CFP_HostDevice
+              ? Sema::CFP_Never
               : Sema::CFP_WrongSide;
       auto Cand1Emittable = P1 > EmitThreshold;
       auto Cand2Emittable = P2 > EmitThreshold;

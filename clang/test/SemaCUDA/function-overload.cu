@@ -14,6 +14,13 @@ struct DeviceReturnTy2 {};
 struct HostDeviceReturnTy {};
 struct TemplateReturnTy {};
 
+struct CorrectOverloadRetTy{};
+#if __CUDA_ARCH__
+// expected-note@-2 {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'IncorrectOverloadRetTy' to 'const CorrectOverloadRetTy &' for 1st argument}}
+// expected-note@-3 {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'IncorrectOverloadRetTy' to 'CorrectOverloadRetTy &&' for 1st argument}}
+#endif
+struct IncorrectOverloadRetTy{};
+
 typedef HostReturnTy (*HostFnPtr)();
 typedef DeviceReturnTy (*DeviceFnPtr)();
 typedef HostDeviceReturnTy (*HostDeviceFnPtr)();
@@ -467,34 +474,50 @@ void foo() {
 // Test resolving implicit host device candidate vs wrong-sided candidate.
 // In device compilation, implicit host device caller choose implicit host
 // device candidate and wrong-sided candidate with equal preference.
+// Resolution result should not change with/without pragma.
 namespace ImplicitHostDeviceVsWrongSided {
-inline double callee(double x);
+CorrectOverloadRetTy callee(double x);
 #pragma clang force_cuda_host_device begin
-inline void callee(int x);
-inline double implicit_hd_caller() {
+IncorrectOverloadRetTy callee(int x);
+inline CorrectOverloadRetTy implicit_hd_caller() {
   return callee(1.0);
 }
 #pragma clang force_cuda_host_device end
 }
 
-// Test resolving implicit host device candidate vs wrong-sided candidate.
+// Test resolving implicit host device candidate vs same-sided candidate.
 // In host compilation, implicit host device caller choose implicit host
 // device candidate and same-sided candidate with equal preference.
+// Resolution result should not change with/without pragma.
 namespace ImplicitHostDeviceVsSameSide {
-inline void callee(int x);
+IncorrectOverloadRetTy callee(int x);
 #pragma clang force_cuda_host_device begin
-inline double callee(double x);
-inline double implicit_hd_caller() {
+CorrectOverloadRetTy callee(double x);
+inline CorrectOverloadRetTy implicit_hd_caller() {
   return callee(1.0);
 }
 #pragma clang force_cuda_host_device end
+}
+
+// Test resolving explicit host device candidate vs. wrong-sided candidate.
+// Explicit host device caller favors host device candidate against wrong-sided
+// candidate.
+namespace ExplicitHostDeviceVsWrongSided {
+CorrectOverloadRetTy callee(double x);
+__host__ __device__ IncorrectOverloadRetTy callee(int x);
+inline __host__ __device__ CorrectOverloadRetTy explicit_hd_caller() {
+  return callee(1.0);
+#if __CUDA_ARCH__
+  // expected-error@-2 {{no viable conversion from returned value of type 'IncorrectOverloadRetTy' to function return type 'CorrectOverloadRetTy'}}
+#endif
+}
 }
 
 // In the implicit host device function 'caller', the second 'callee' should be
-// since it has better match, even though it is an implicit host device function
-// whereas the first 'callee' is a host function. A diagnostic will be emitted
-// if the first 'callee' is chosen since deduced return type cannot be used
-// before it is defined.
+// chosen since it has better match, even though it is an implicit host device
+// function whereas the first 'callee' is a host function. A diagnostic will be
+// emitted if the first 'callee' is chosen since deduced return type cannot be
+// used before it is defined.
 namespace ImplicitHostDeviceByConstExpr {
 template <class a> a b;
 auto callee(...);
@@ -519,16 +542,50 @@ class l {
 };
 }
 
-// Test resolving explicit host device candidate vs. wrong-sided candidate.
-// Explicit host device caller favors host device candidate against wrong-sided
-// candidate.
-namespace ExplicitHostDeviceVsWrongSided {
-inline double callee(double x);
-inline __host__ __device__ void callee(int x);
-inline __host__ __device__ double explicit_hd_caller() {
-  return callee(1.0);
-#if __CUDA_ARCH__
-  // expected-error@-2 {{cannot initialize return object of type 'double' with an rvalue of type 'void'}}
-#endif
+// Implicit HD candidate competes with device candidate.
+// a and b have implicit HD copy ctor. In copy ctor of b, ctor of a is resolved.
+// copy ctor of a should win over a(short), otherwise there will be ambiguity
+// due to conversion operator.
+namespace TestImplicitHDWithD {
+  struct a {
+    __device__ a(short);
+    __device__ operator unsigned() const;
+    __device__ operator int() const;
+  };
+  struct b {
+    a d;
+  };
+  void f(b g) { b e = g; }
 }
+
+// Implicit HD candidate competes with host candidate.
+// a and b have implicit HD copy ctor. In copy ctor of b, ctor of a is resolved.
+// copy ctor of a should win over a(short), otherwise there will be ambiguity
+// due to conversion operator.
+namespace TestImplicitHDWithH {
+  struct a {
+    a(short);
+    __device__ operator unsigned() const;
+    __device__ operator int() const;
+  };
+  struct b {
+    a d;
+  };
+  void f(b g) { b e = g; }
+}
+
+// Implicit HD candidate comptes with HD candidate.
+// a and b have implicit HD copy ctor. In copy ctor of b, ctor of a is resolved.
+// copy ctor of a should win over a(short), otherwise there will be ambiguity
+// due to conversion operator.
+namespace TestImplicitHDWithHD {
+  struct a {
+    __host__ __device__ a(short);
+    __device__ operator unsigned() const;
+    __device__ operator int() const;
+  };
+  struct b {
+    a d;
+  };
+  void f(b g) { b e = g; }
 }

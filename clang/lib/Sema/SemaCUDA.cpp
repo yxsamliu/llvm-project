@@ -215,8 +215,7 @@ template <typename AttrT> static bool hasImplicitAttr(const FunctionDecl *D) {
   if (!D)
     return false;
   if (auto *A = D->getAttr<AttrT>())
-    if (A->isImplicit())
-      return true;
+    return A->isImplicit();
   return D->isImplicit();
 }
 
