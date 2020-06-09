@@ -202,6 +202,10 @@ FunctionPass *createAMDGPUPromoteAllocaToVector();
 void initializeAMDGPUPromoteAllocaToVectorPass(PassRegistry&);
 extern char &AMDGPUPromoteAllocaToVectorID;
 
+ModulePass *createPromoteConstant();
+void initializePromoteConstantPass(PassRegistry&);
+extern char &PromoteConstantID;
+
 Pass *createAMDGPUStructurizeCFGPass();
 FunctionPass *createAMDGPUISelDag(
   TargetMachine *TM = nullptr,
