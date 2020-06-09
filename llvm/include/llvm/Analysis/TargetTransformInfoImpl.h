@@ -157,6 +157,8 @@ public:
     return false;
   }
 
+  bool isNoopAddrSpaceCast(unsigned, unsigned) const { return false; }
+
   bool rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
                                         Value *OldV, Value *NewV) const {
     return false;
