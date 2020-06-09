@@ -2707,7 +2707,7 @@ class OffloadingActionBuilder final {
       // code and pass to host in Backend phase.
       if (CudaDeviceActions.empty() ||
           (CurPhase == phases::Backend && Relocatable) ||
-          CurPhase == phases::Assemble)
+          (CurPhase == phases::Assemble && Relocatable))
         return ABRT_Success;
 
       assert(((CurPhase == phases::Link && Relocatable) ||
@@ -2716,7 +2716,7 @@ class OffloadingActionBuilder final {
       assert(!CompileHostOnly &&
              "Not expecting CUDA actions in host-only compilation.");
 
-      if (!Relocatable && CurPhase == phases::Backend && !EmitLLVM &&
+      if (!Relocatable && CurPhase == phases::Assemble && !EmitLLVM &&
           !EmitAsm) {
         // If we are in backend phase, we attempt to generate the fat binary.
         // We compile each arch to IR and use a link action to generate code
@@ -2726,6 +2726,8 @@ class OffloadingActionBuilder final {
         for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I) {
           // Create a link action to link device IR with device library
           // and generate ISA.
+          CudaDeviceActions[I] = C.getDriver().ConstructPhaseAction(
+              C, Args, CurPhase, CudaDeviceActions[I], AssociatedOffloadKind);
           ActionList AL;
           AL.push_back(CudaDeviceActions[I]);
           CudaDeviceActions[I] =
