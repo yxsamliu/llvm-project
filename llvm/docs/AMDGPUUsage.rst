@@ -90,183 +90,175 @@ specify the target triple:
 Processors
 ----------
 
-Use the ``clang -mcpu <Processor>`` option to specify the AMDGPU processor. The
-names from both the *Processor* and *Alternative Processor* can be used.
+Use the ``clang -mcpu <Processor>`` or ``clang -mcpu <Target-ID>`` option to
+specify the AMDGPU processor. The names from both the *Processor* and
+*Alternative Processor* can be used. Target ID is defined in :ref:`target-id`
+which includes the *Processor* and the *Target Features*.
 
   .. table:: AMDGPU Processors
      :name: amdgpu-processor-table
 
-     =========== =============== ============ ===== ================= ======= ======================
-     Processor   Alternative     Target       dGPU/ Target            ROCm    Example
-                 Processor       Triple       APU   Features          Support Products
+     =========== =============== ============ ===== ======================= ======= ======================
+     Processor   Alternative     Target       dGPU/ Target                  ROCm    Example
+                 Processor       Triple       APU   Features                Support Products
                                  Architecture       Supported
-                                                    [Default]
-     =========== =============== ============ ===== ================= ======= ======================
+     =========== =============== ============ ===== ======================= ======= ======================
      **Radeon HD 2000/3000 Series (R600)** [AMD-RADEON-HD-2000-3000]_
-     -----------------------------------------------------------------------------------------------
+     -----------------------------------------------------------------------------------------------------
      ``r600``                    ``r600``     dGPU
      ``r630``                    ``r600``     dGPU
      ``rs880``                   ``r600``     dGPU
      ``rv670``                   ``r600``     dGPU
      **Radeon HD 4000 Series (R700)** [AMD-RADEON-HD-4000]_
-     -----------------------------------------------------------------------------------------------
+     -----------------------------------------------------------------------------------------------------
      ``rv710``                   ``r600``     dGPU
      ``rv730``                   ``r600``     dGPU
      ``rv770``                   ``r600``     dGPU
      **Radeon HD 5000 Series (Evergreen)** [AMD-RADEON-HD-5000]_
-     -----------------------------------------------------------------------------------------------
+     -----------------------------------------------------------------------------------------------------
      ``cedar``                   ``r600``     dGPU
      ``cypress``                 ``r600``     dGPU
      ``juniper``                 ``r600``     dGPU
      ``redwood``                 ``r600``     dGPU
      ``sumo``                    ``r600``     dGPU
      **Radeon HD 6000 Series (Northern Islands)** [AMD-RADEON-HD-6000]_
-     -----------------------------------------------------------------------------------------------
+     -----------------------------------------------------------------------------------------------------
      ``barts``                   ``r600``     dGPU
      ``caicos``                  ``r600``     dGPU
      ``cayman``                  ``r600``     dGPU
      ``turks``                   ``r600``     dGPU
      **GCN GFX6 (Southern Islands (SI))** [AMD-GCN-GFX6]_
-     -----------------------------------------------------------------------------------------------
+     -----------------------------------------------------------------------------------------------------
      ``gfx600``  - ``tahiti``    ``amdgcn``   dGPU
      ``gfx601``  - ``hainan``    ``amdgcn``   dGPU
                  - ``oland``
                  - ``pitcairn``
                  - ``verde``
      **GCN GFX7 (Sea Islands (CI))** [AMD-GCN-GFX7]_
-     -----------------------------------------------------------------------------------------------
-     ``gfx700``  - ``kaveri``    ``amdgcn``   APU                             - A6-7000
-                                                                              - A6 Pro-7050B
-                                                                              - A8-7100
-                                                                              - A8 Pro-7150B
-                                                                              - A10-7300
-                                                                              - A10 Pro-7350B
-                                                                              - FX-7500
-                                                                              - A8-7200P
-                                                                              - A10-7400P
-                                                                              - FX-7600P
-     ``gfx701``  - ``hawaii``    ``amdgcn``   dGPU                    ROCm    - FirePro W8100
-                                                                              - FirePro W9100
-                                                                              - FirePro S9150
-                                                                              - FirePro S9170
-     ``gfx702``                  ``amdgcn``   dGPU                    ROCm    - Radeon R9 290
-                                                                              - Radeon R9 290x
-                                                                              - Radeon R390
-                                                                              - Radeon R390x
-     ``gfx703``  - ``kabini``    ``amdgcn``   APU                             - E1-2100
-                 - ``mullins``                                                - E1-2200
-                                                                              - E1-2500
-                                                                              - E2-3000
-                                                                              - E2-3800
-                                                                              - A4-5000
-                                                                              - A4-5100
-                                                                              - A6-5200
-                                                                              - A4 Pro-3340B
-     ``gfx704``  - ``bonaire``   ``amdgcn``   dGPU                            - Radeon HD 7790
-                                                                              - Radeon HD 8770
-                                                                              - R7 260
-                                                                              - R7 260X
+     -----------------------------------------------------------------------------------------------------
+     ``gfx700``  - ``kaveri``    ``amdgcn``   APU                                   - A6-7000
+                                                                                    - A6 Pro-7050B
+                                                                                    - A8-7100
+                                                                                    - A8 Pro-7150B
+                                                                                    - A10-7300
+                                                                                    - A10 Pro-7350B
+                                                                                    - FX-7500
+                                                                                    - A8-7200P
+                                                                                    - A10-7400P
+                                                                                    - FX-7600P
+     ``gfx701``  - ``hawaii``    ``amdgcn``   dGPU                          ROCm    - FirePro W8100
+                                                                                    - FirePro W9100
+                                                                                    - FirePro S9150
+                                                                                    - FirePro S9170
+     ``gfx702``                  ``amdgcn``   dGPU                          ROCm    - Radeon R9 290
+                                                                                    - Radeon R9 290x
+                                                                                    - Radeon R390
+                                                                                    - Radeon R390x
+     ``gfx703``  - ``kabini``    ``amdgcn``   APU                                   - E1-2100
+                 - ``mullins``                                                      - E1-2200
+                                                                                    - E1-2500
+                                                                                    - E2-3000
+                                                                                    - E2-3800
+                                                                                    - A4-5000
+                                                                                    - A4-5100
+                                                                                    - A6-5200
+                                                                                    - A4 Pro-3340B
+     ``gfx704``  - ``bonaire``   ``amdgcn``   dGPU                                  - Radeon HD 7790
+                                                                                    - Radeon HD 8770
+                                                                                    - R7 260
+                                                                                    - R7 260X
      **GCN GFX8 (Volcanic Islands (VI))** [AMD-GCN-GFX8]_
-     -----------------------------------------------------------------------------------------------
-     ``gfx801``  - ``carrizo``   ``amdgcn``   APU   - xnack                   - A6-8500P
-                                                      [on]                    - Pro A6-8500B
-                                                                              - A8-8600P
-                                                                              - Pro A8-8600B
-                                                                              - FX-8800P
-                                                                              - Pro A12-8800B
-     \                           ``amdgcn``   APU   - xnack           ROCm    - A10-8700P
-                                                      [on]                    - Pro A10-8700B
-                                                                              - A10-8780P
-     \                           ``amdgcn``   APU   - xnack                   - A10-9600P
-                                                      [on]                    - A10-9630P
-                                                                              - A12-9700P
-                                                                              - A12-9730P
-                                                                              - FX-9800P
-                                                                              - FX-9830P
-     \                           ``amdgcn``   APU   - xnack                   - E2-9010
-                                                      [on]                    - A6-9210
-                                                                              - A9-9410
-     ``gfx802``  - ``iceland``   ``amdgcn``   dGPU  - xnack           ROCm    - FirePro S7150
-                 - ``tonga``                          [off]                   - FirePro S7100
-                                                                              - FirePro W7100
-                                                                              - Radeon R285
-                                                                              - Radeon R9 380
-                                                                              - Radeon R9 385
-                                                                              - Mobile FirePro
-                                                                                M7170
-     ``gfx803``  - ``fiji``      ``amdgcn``   dGPU  - xnack           ROCm    - Radeon R9 Nano
-                                                      [off]                   - Radeon R9 Fury
-                                                                              - Radeon R9 FuryX
-                                                                              - Radeon Pro Duo
-                                                                              - FirePro S9300x2
-                                                                              - Radeon Instinct MI8
-     \           - ``polaris10`` ``amdgcn``   dGPU  - xnack           ROCm    - Radeon RX 470
-                                                      [off]                   - Radeon RX 480
-                                                                              - Radeon Instinct MI6
-     \           - ``polaris11`` ``amdgcn``   dGPU  - xnack           ROCm    - Radeon RX 460
-                                                      [off]
+     -----------------------------------------------------------------------------------------------------
+     ``gfx801``  - ``carrizo``   ``amdgcn``   APU   - xnack                         - A6-8500P
+                                                                                    - Pro A6-8500B
+                                                                                    - A8-8600P
+                                                                                    - Pro A8-8600B
+                                                                                    - FX-8800P
+                                                                                    - Pro A12-8800B
+     \                           ``amdgcn``   APU   - xnack                 ROCm    - A10-8700P
+                                                                                    - Pro A10-8700B
+                                                                                    - A10-8780P
+     \                           ``amdgcn``   APU   - xnack                         - A10-9600P
+                                                                                    - A10-9630P
+                                                                                    - A12-9700P
+                                                                                    - A12-9730P
+                                                                                    - FX-9800P
+                                                                                    - FX-9830P
+     \                           ``amdgcn``   APU   - xnack                         - E2-9010
+                                                                                    - A6-9210
+                                                                                    - A9-9410
+     ``gfx802``  - ``iceland``   ``amdgcn``   dGPU  - xnack                 ROCm    - FirePro S7150
+                 - ``tonga``                                                        - FirePro S7100
+                                                                                    - FirePro W7100
+                                                                                    - Radeon R285
+                                                                                    - Radeon R9 380
+                                                                                    - Radeon R9 385
+                                                                                    - Mobile FirePro
+                                                                                      M7170
+     ``gfx803``  - ``fiji``      ``amdgcn``   dGPU  - xnack                 ROCm    - Radeon R9 Nano
+                                                                                    - Radeon R9 Fury
+                                                                                    - Radeon R9 FuryX
+                                                                                    - Radeon Pro Duo
+                                                                                    - FirePro S9300x2
+                                                                                    - Radeon Instinct MI8
+     \           - ``polaris10`` ``amdgcn``   dGPU  - xnack                 ROCm    - Radeon RX 470
+                                                                                    - Radeon RX 480
+                                                                                    - Radeon Instinct MI6
+     \           - ``polaris11`` ``amdgcn``   dGPU  - xnack                 ROCm    - Radeon RX 460
+
      ``gfx810``  - ``stoney``    ``amdgcn``   APU   - xnack
-                                                      [on]
+
      **GCN GFX9** [AMD-GCN-GFX9]_
-     -----------------------------------------------------------------------------------------------
-     ``gfx900``                  ``amdgcn``   dGPU  - xnack           ROCm    - Radeon Vega
-                                                      [off]                     Frontier Edition
-                                                                              - Radeon RX Vega 56
-                                                                              - Radeon RX Vega 64
-                                                                              - Radeon RX Vega 64
-                                                                                Liquid
-                                                                              - Radeon Instinct MI25
-     ``gfx902``                  ``amdgcn``   APU   - xnack                   - Ryzen 3 2200G
-                                                      [on]                    - Ryzen 5 2400G
-     ``gfx904``                  ``amdgcn``   dGPU  - xnack                   *TBA*
-                                                      [off]
-                                                                              .. TODO::
-                                                                                 Add product
-                                                                                 names.
-     ``gfx906``                  ``amdgcn``   dGPU  - xnack                   - Radeon Instinct MI50
-                                                      [off]                   - Radeon Instinct MI60
-                                                                              - Radeon VII
-                                                                              - Radeon Pro VII
-     ``gfx908``                  ``amdgcn``   dGPU  - xnack                   *TBA*
-                                                      [off]
-                                                      sram-ecc
-                                                      [on]
-                                                                              .. TODO::
-                                                                                 Add product
-                                                                                 names.
-     ``gfx909``                  ``amdgcn``   APU   - xnack                   *TBA*
-                                                      [on]
-                                                                              .. TODO::
-                                                                                 Add product
-                                                                                 names.
+     -----------------------------------------------------------------------------------------------------
+     ``gfx900``                  ``amdgcn``   dGPU  - xnack                 ROCm    - Radeon Vega
+                                                                                      Frontier Edition
+                                                                                    - Radeon RX Vega 56
+                                                                                    - Radeon RX Vega 64
+                                                                                    - Radeon RX Vega 64
+                                                                                      Liquid
+                                                                                    - Radeon Instinct MI25
+     ``gfx902``                  ``amdgcn``   APU   - xnack                         - Ryzen 3 2200G
+                                                                                    - Ryzen 5 2400G
+     ``gfx904``                  ``amdgcn``   dGPU  - xnack                          *TBA*
+
+                                                                                    .. TODO::
+                                                                                       Add product
+                                                                                       names.
+     ``gfx906``                  ``amdgcn``   dGPU  - xnack                         - Radeon Instinct MI50
+                                                                                    - Radeon Instinct MI60
+                                                                                    - Radeon VII
+                                                                                    - Radeon Pro VII
+     ``gfx908``                  ``amdgcn``   dGPU  - sram-ecc                      *TBA*
+                                                    - xnack
+                                                                                    .. TODO::
+                                                                                       Add product
+                                                                                       names.
+     ``gfx909``                  ``amdgcn``   APU   - xnack                         *TBA*
+                                                                                    .. TODO::
+                                                                                       Add product
+                                                                                       names.
      **GCN GFX10** [AMD-GCN-GFX10]_
-     -----------------------------------------------------------------------------------------------
-     ``gfx1010``                 ``amdgcn``   dGPU  - xnack                   - Radeon RX 5700
-                                                      [off]                   - Radeon RX 5700 XT
-                                                    - wavefrontsize64         - Radeon Pro 5600 XT
-                                                      [off]
-                                                    - cumode
-                                                      [off]
-     ``gfx1011``                 ``amdgcn``   dGPU  - xnack                   - Radeon Pro 5600M
-                                                      [off]
+     -----------------------------------------------------------------------------------------------------
+     ``gfx1010``                 ``amdgcn``   dGPU  - cumode                        - Radeon RX 5700
+                                                    - wavefrontsize64               - Radeon RX 5700 XT
+                                                    - xnack                         - Radeon Pro 5600 XT
+
+     ``gfx1011``                 ``amdgcn``   dGPU  - cumode                        - Radeon Pro 5600M
                                                     - wavefrontsize64
-                                                      [off]
-                                                    - cumode
-                                                      [off]
-     ``gfx1012``                 ``amdgcn``   dGPU  - xnack                   - Radeon RX 5500
-                                                      [off]                   - Radeon RX 5500 XT
+                                                    - xnack
+
+     ``gfx1012``                 ``amdgcn``   dGPU  - cumode                        - Radeon RX 5500
+                                                    - wavefrontsize64               - Raedon RX 5500 XT
+                                                    - xnack
+
+     ``gfx1030``                 ``amdgcn``   dGPU  - cumode                        *TBA*
                                                     - wavefrontsize64
-                                                      [off]
-                                                    - cumode
-                                                      [off]
-     ``gfx1030``                 ``amdgcn``   dGPU  - wavefrontsize64         *TBA*
-                                                      [off]
-                                                    - cumode
-                                                      [off]
-                                                                              .. TODO
-                                                                                 Add product
-                                                                                 names.
+                                                                                    .. TODO
+                                                                                       Add product
+                                                                                       names.
      =========== =============== ============ ===== ================= ======= ======================
+
+See :ref:`target-features` and :ref:`target-id` for more information on target features.
 
 .. _amdgpu-target-features:
 
@@ -280,55 +272,143 @@ the device used to execute the code match the features enabled when
 generating the code. A mismatch of features may result in incorrect
 execution, or a reduction in performance.
 
-The target features supported by each processor, and the default value
-used if not specified explicitly, is listed in
+The target features supported by each processor is listed in
 :ref:`amdgpu-processor-table`.
 
-Use the ``clang -m[no-]<TargetFeature>`` option to specify the AMDGPU
-target features.
+Target features are controlled by exactly one of the following ``clang``
+options:
+
+``-mcpu=<target-id>``
+
+  The ``-mcpu`` can specify the target feature as optional components
+  of the target ID. See :ref:`_amdgpu-target-ids`. If omitted, the target
+  feature has the ``default`` value.
+
+``-m[no-]<target-feature>``
+
+  Target features not specified by the target ID are specified using a
+  separate option. These target features can have an ``on`` or ``off``
+  value.  ``on`` is specified by omitting the ``no-`` prefix, and
+  ``off`` is specified by including the ``no-`` prefix. The default
+  if not specified is ``off``.
 
 For example:
 
-``-mxnack``
+``-mcpu gfx908:xnack+``
   Enable the ``xnack`` feature.
-``-mno-xnack``
+``-mcpu gfx908:xnack-``
   Disable the ``xnack`` feature.
+``-mcumode``
+  Enable the ``cumode`` feature.
+``-mno-cumode``
+  Disable the ``cumode`` feature.
 
   .. table:: AMDGPU Target Features
      :name: amdgpu-target-feature-table
 
-     ====================== ==================================================
-     Target Feature         Description
-     ====================== ==================================================
-     -m[no-]xnack           Enable/disable generating code that has
-                            memory clauses that are compatible with
-                            having XNACK replay enabled.
+     ====================== ======================= ==================================================
+     Target Feature         ``Clang`` Option to     Description
+     Name                   Control
+     ====================== ======================= ==================================================
+     cumode                 -m[no-]cumode           Control the wavefront execution mode used
+                                                    when generating code for kernels. When disabled
+                                                    native WGP wavefront execution mode is used,
+                                                    when enabled CU wavefront execution mode is used
+                                                    (see :ref:`amdgpu-amdhsa-memory-model`).
 
-                            This is used for demand paging and page
-                            migration. If XNACK replay is enabled in
-                            the device, then if a page fault occurs
-                            the code may execute incorrectly if the
-                            ``xnack`` feature is not enabled. Executing
-                            code that has the feature enabled on a
-                            device that does not have XNACK replay
-                            enabled will execute correctly but may
-                            be less performant than code with the
-                            feature disabled.
+     sram-ecc               -mcpu                   If specified, generate code that can only be
+                                                    loaded and executed in a process that has a
+                                                    matching setting for SRAM ECC.
 
-     -m[no-]sram-ecc        Enable/disable generating code that assumes SRAM
-                            ECC is enabled/disabled.
+                                                    If not specified, generate code that can be
+                                                    loaded and executed in a process with either
+                                                    setting of SRAM ECC.
 
-     -m[no-]wavefrontsize64 Control the default wavefront size used when
-                            generating code for kernels. When disabled
-                            native wavefront size 32 is used, when enabled
-                            wavefront size 64 is used.
+     wavefrontsize64        -m[no-]wavefrontsize64  Control the wavefront size used when
+                                                    generating code for kernels. When disabled
+                                                    native wavefront size 32 is used, when enabled
+                                                    wavefront size 64 is used.
 
-     -m[no-]cumode          Control the default wavefront execution mode used
-                            when generating code for kernels. When disabled
-                            native WGP wavefront execution mode is used,
-                            when enabled CU wavefront execution mode is used
-                            (see :ref:`amdgpu-amdhsa-memory-model`).
-     ====================== ==================================================
+     xnack                  -mcpu                   If specified, generate code that can only be
+                                                    loaded and executed in a process that has a
+                                                    matching setting for XNACK replay.
+
+                                                    If not specified, generate code that can be
+                                                    loaded and executed in a process with either
+                                                    setting of XNACK replay.
+
+                                                    This is used for demand paging and page
+                                                    migration. If XNACK replay is enabled in
+                                                    the device, then if a page fault occurs
+                                                    the code may execute incorrectly if the
+                                                    ``xnack`` feature is not enabled. Executing
+                                                    code that has the feature enabled on a
+                                                    device that does not have XNACK replay
+                                                    enabled will execute correctly but may
+                                                    be less performant than code with the
+                                                    feature disabled.
+     ====================== ======================= ==================================================
+
+.. _amdgpu-target-ids:
+
+Target IDs
+----------
+A target ID is used to indicate the processor configuration a device binary is
+compiled for. It can be treated as an extension of processor since the validity of a
+device binary depends not only on the processor but also its configuration
+which is represented by a set of target features. Target ID provides a way to
+represent processor configurations which affect ISA generation.
+
+Target ID syntax is defined by the following EBNF syntax:
+
+.. code::
+
+  <target_id>          ::= <processor> ( ":" <target_feature> ( "+" | "-" ) )*
+
+Where:
+
+**processor**
+  Is a AMDGPU processor or alternative processor name specified
+  in :ref:`amdgpu-processor-table`.
+
+**target_feature**
+  Is a target feature name specified in :ref:`target-features-table` that is
+  supported by the processor. The target features supported by each processor
+  is specified in :ref:`amdgpu-processor-table`. Each target feature must
+  appear at most once in a target ID and can have one of three values:
+
+  *Default*
+    Specified by omitting the target feature from the target ID.
+    A code object compiled with a target ID specifying the default
+    value of a target feature can be loaded and executed on a processor
+    configured with the target feature on or off.
+
+  *On*
+    Specified by ``+``, indicating the target feature is enabled. A code
+    object compiled with a target ID specifying a target feature on
+    can only be loaded on a processor configured with the target feature on.
+
+  *Off*
+    specified by ``-``, indicating the target feature is disabled. A code
+    object compiled with a target ID specifying a target feature off
+    can only be loaded on a processor configured with the target feature off.
+
+There are two forms of target ID:
+
+*Non-Canonical Form*
+  The non-canonical form is used as the input to user commands to allow
+  the user greater convenience. It allows both the primary and alternative
+  processor name to be used (see :ref:`amdgpu-processors`) and the target
+  features may be specified in any order (see :ref:`amdgpu-target-features`).
+
+*Canonical Form*
+  The canonical form is used for all generated output to allow greater
+  convenience for tools that consume the information. It is also used for
+  internal passing of information between tools. Only the primary and not
+  alternative processor name is used (see :ref:`amdgpu-processors`) and
+  the target features are specified in alphabetic order
+  (see :ref:`amdgpu-target-features`). Command line tools convert
+  non-canonical form to canonical form.
 
 .. _amdgpu-address-spaces:
 
@@ -640,7 +720,8 @@ The AMDGPU backend uses the following ELF header:
                                 - ``ET_DYN``
      ``e_machine``              ``EM_AMDGPU``
      ``e_entry``                0
-     ``e_flags``                See :ref:`amdgpu-elf-header-e_flags-table`
+     ``e_flags``                See :ref:`amdgpu-elf-header-e_flags-table-v0_v1`
+                                and :ref:`amdgpu-elf-header-e_flags-table-v2`
      ========================== ===============================
 
 ..
@@ -648,18 +729,20 @@ The AMDGPU backend uses the following ELF header:
   .. table:: AMDGPU ELF Header Enumeration Values
      :name: amdgpu-elf-header-enumeration-values-table
 
-     =============================== =====
+     =============================== ======
      Name                            Value
-     =============================== =====
+     =============================== ======
      ``EM_AMDGPU``                   224
      ``ELFOSABI_NONE``               0
      ``ELFOSABI_AMDGPU_HSA``         64
      ``ELFOSABI_AMDGPU_PAL``         65
      ``ELFOSABI_AMDGPU_MESA3D``      66
-     ``ELFABIVERSION_AMDGPU_HSA``    1
+     ``ELFABIVERSION_AMDGPU_HSA_V0`` 0
+     ``ELFABIVERSION_AMDGPU_HSA_V1`` 1
+     ``ELFABIVERSION_AMDGPU_HSA_V2`` 2
      ``ELFABIVERSION_AMDGPU_PAL``    0
      ``ELFABIVERSION_AMDGPU_MESA3D`` 0
-     =============================== =====
+     =============================== ======
 
 ``e_ident[EI_CLASS]``
   The ELF class is:
@@ -715,7 +798,8 @@ The AMDGPU backend uses the following ELF header:
   by the ``r600`` and ``amdgcn`` architectures (see
   :ref:`amdgpu-processor-table`). The specific processor is specified in the
   ``EF_AMDGPU_MACH`` bit field of the ``e_flags`` (see
-  :ref:`amdgpu-elf-header-e_flags-table`).
+  :ref:`amdgpu-elf-header-e_flags-table-v0_v1` and
+  :ref:`amdgpu-elf-header-e_flags-table-v2`).
 
 ``e_entry``
   The entry point is 0 as the entry points for individual kernels must be
@@ -724,8 +808,8 @@ The AMDGPU backend uses the following ELF header:
 ``e_flags``
   The AMDGPU backend uses the following ELF header flags:
 
-  .. table:: AMDGPU ELF Header ``e_flags``
-     :name: amdgpu-elf-header-e_flags-table
+  .. table:: AMDGPU ELF Header ``e_flags`` (``EI_ABIVERSION_V0`` and ``EI_ABIVERSION_V1``)
+     :name: amdgpu-elf-header-e_flags-table-v0_v1
 
      ================================= ========== =============================
      Name                              Value      Description
@@ -760,6 +844,29 @@ The AMDGPU backend uses the following ELF header:
                                                   See
                                                   :ref:`amdgpu-target-features`.
      ================================= ========== =============================
+
+  .. table:: AMDGPU ELF Header ``e_flags`` (``EI_ABIVERSION_V2``)
+     :name: amdgpu-elf-header-e_flags-table-v2
+
+     ================================= ========== ==========================================
+     Name                              Value      Description
+     ================================= ========== ==========================================
+     **AMDGPU Processor Flag**                    See :ref:`amdgpu-processor-table`.
+     -------------------------------------------- ------------------------------------------
+     ``EF_AMDGPU_MACH``                0x000000ff AMDGPU processor selection
+                                                  mask for
+                                                  ``EF_AMDGPU_MACH_xxx`` values
+                                                  defined in
+                                                  :ref:`amdgpu-ef-amdgpu-mach-table`.
+     ``EF_AMDGPU_FEATURE_XNACK``       0x00000300 XNACK selection mask for
+                                                  ``EF_AMDGPU_FEATURE_XNACK_xxx`` values
+                                                  defined in
+                                                  :ref:`amdgpu-ef-amdgpu-feature-xnack-table`.
+     ``EF_AMDGPU_FEATURE_SRAM_ECC``     0x00000c00 SRAM_ECC selection mask for
+                                                  ``EF_AMDGPU_FEATURE_SRAM_ECC_xxx`` values
+                                                  defined in
+                                                  :ref:`amdgpu-ef-amdgpu-feature-sram-ecc-table`.
+     ================================= ========== ==========================================
 
   .. table:: AMDGPU ``EF_AMDGPU_MACH`` Values
      :name: amdgpu-ef-amdgpu-mach-table
@@ -811,6 +918,30 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1012`` 0x035      ``gfx1012``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1030`` 0x036      ``gfx1030``
      ================================= ========== =============================
+
+  .. table:: AMDGPU ``EF_AMDGPU_FEATURE_XNACK`` Values (see :ref:`amdgpu-target-features`)
+     :name: amdgpu-ef-amdgpu-feature-xnack-table
+
+     ============================================ =====
+     Name                                         Value
+     ============================================ =====
+     ``EF_AMDGPU_FEATURE_XNACK_NOT_APPLICABLE``   0x0
+     ``EF_AMDGPU_FEATURE_XNACK_DEFAULT``          0x1
+     ``EF_AMDGPU_FEATURE_XNACK_OFF``              0x2
+     ``EF_AMDGPU_FEATURE_XNACK_ON``               0x3
+     ============================================ =====
+
+  .. table:: AMDGPU ``EF_AMDGPU_FEATURE_SRAM_ECC`` Values (see :ref:`amdgpu-target-features`)
+     :name: amdgpu-ef-amdgpu-feature-sram-ecc-table
+
+     ============================================= =====
+     Name                                          Value
+     ============================================= =====
+     ``EF_AMDGPU_FEATURE_SRAM_ECC_NOT_APPLICABLE`` 0x0
+     ``EF_AMDGPU_FEATURE_SRAM_ECC_DEFAULT``        0x1
+     ``EF_AMDGPU_FEATURE_SRAM_ECC_OFF``            0x2
+     ``EF_AMDGPU_FEATURE_SRAM_ECC_ON``             0x3
+     ============================================= =====
 
 Sections
 --------
@@ -1152,6 +1283,178 @@ For example:
   file:///dir1/dir2/file1
   file:///dir3/dir4/file2#offset=0x2000&size=3000
   memory://1234#offset=0x20000&size=3000
+
+.. _amdgpu-bundled-code-objects:
+
+Bundled Code Objects
+====================
+
+The ``clang-offload-bundler`` tool can be used to combine multiple code
+objects into a single bundled code object file. The bundled code object
+entries are identified by a bundle entry ID which is defined by the
+following EBNF syntax:
+
+.. code::
+
+  <bundle_entry_id>   ::= <offload_kind> "-" <target_triple> "-" <target_id>
+
+Where:
+
+**offload_kind**
+  The runtime responsible for managing the loading of the code object.
+  See :ref:`amdgpu-offload-kind-table`.
+
+**target_triple**
+  The target triple of the code object (see :ref:`amdgpu-target-triples`).
+
+**target_id**
+  The target ID of the code object (see :ref:`amdgpu-target-ids`).
+
+ .. table:: Bundled Code Object Offload Kind
+     :name: amdgpu-offload-kind-table
+
+     ============= ==============================================================
+     Offload Kind  Description
+     ============= ==============================================================
+     host          This offload kind is used for the first dummy empty entry
+                   in the header of the bundle, which is required by
+                   clang-offload-bundler, but is not used by language runtimes.
+
+     hip           Code object loading is managed by the HIP language runtime.
+
+     openmp        Code object loading is managed by the OpenMP language runtime.
+     ============= ==============================================================
+
+The format of a bundled code object is defined by the following table:
+
+  .. table:: Bundled Code Object Memory Layout
+     :name: amdgpu-elf-bundled-code-objects-fields-table
+
+     ======================= ======== ========================== ===============================
+     Field                   Type     Size in Bytes              Description
+     ======================= ======== ========================== ===============================
+     Magic String            string   24                         ``__CLANG_OFFLOAD_BUNDLE__``
+
+     Number Of Code Objects  integer  8                          Denoted as N in this table
+
+     Entry Offset 1          integer  8                          Byte offset from beginning of
+                                                                 bundled code object to 1st code
+                                                                 object.
+
+     Entry Size 1            integer  8                          Byte size of 1st code object.
+
+     Entry ID Length 1       integer  8                          Bundle entry ID character length
+                                                                 of 1st code object
+
+     Entry ID 1              string   Byte size of entry ID 1    Bundle entry ID of 1st code
+                                                                 object. This is not NUL
+                                                                 terminated.
+
+     ...
+
+     Entry Offset N          integer  8
+
+     Entry Size N            integer  8
+
+     Entry ID Length N       integer  8
+
+     Entry ID N              string   Byte size of entry ID N
+
+     1st Code Object         bytes    Size Of 1st Code Object
+
+     ...
+
+     N-th Code Object        bytes    Size Of N-th Code Object
+     ======================= ======== ========================== ==============================
+
+.. note::
+
+  Currently the bundled code object format does not specify alignment requirement.
+  It is planned to revise it to support alignment requirement in the next version (v2).
+  The planned format for bundled code object v2 is defined as follows:
+
+  .. table:: Bundled Code Objects V2 Fields
+     :name: amdgpu-elf-bundled-code-objects-v2-fields-table
+
+     ======================= ======= =========================== ==============================
+     Field                   Type    Size in Bytes               Description
+     ======================= ======= =========================== ==============================
+     Magic String            string  27                          ``__CLANG_OFFLOAD_BUNDLE_V2__``
+
+     Magic String Padding    char    1                           Pad magic string to 8 bytes.
+
+     Header Size             integer 8                           Byter size of header.
+
+     Alignment               integer 8                           Alignment of the bundle
+
+     Number Of Code Objects  integer 8                           Denoted as N in this table
+
+     Entry Offset 1          integer 8                           Byte offset from beginning of
+                                                                 bundled code object to 1st code
+                                                                 object. It should satisfy the
+                                                                 alignment requirement of the
+                                                                 code object.
+
+     Entry Size 1            integer 8                           Byte size of 1st code object.
+
+     Entry ID Length 1       integer 8                           Bundle entry ID character length
+                                                                 of 1st code object
+
+     Entry ID 1              string  Byte size of entry ID 1     Bundle entry ID of 1st code
+                                                                 object. This is not NUL
+                                                                 terminated.
+
+     Entry ID padding 1      char    Char length to pad
+                                     Entry ID 1 to 8 bytes
+
+     ...
+
+     Entry Offset N          integer 8
+
+     Entry Size N            integer 8
+
+     Entry ID Length N       integer 8
+
+     Entry ID N              string  Byte size of entry ID N
+
+     Entry ID padding N      char
+
+     1st Code Object         bytes   Size Of 1st Code Object     There is no padding between code
+                                                                 objects.
+
+     ...
+
+     N-th Code Object        bytes   Size Of N-th Code Object
+     ======================= ======= =========================== ==============================
+
+The ``clang-offload-bundler`` is used to bundle code objects for different GPU
+architecture and feature settings.
+
+The rules of compatible offload targets in a single bundled code object is defined
+in :ref:`_amdgpu-embedding-bundled-objects`.
+
+.. _amdgpu-embedding-bundled-objects:
+
+Embedding Bundled Code Objects
+==============================
+
+Use one or more ``--offload-arch=<target-id>`` clang options to specify the
+target IDs of the offload code regions of a single source programing language.
+
+The compiler will perform a separate compilation for the host and a separate
+compilation for the offload code regions for each specified target ID. The
+``clang-offload-bundler`` is used to bundle the offload code objects
+(see :ref:`amdgpu-bundled-code-objects`). The bundled code object is embedded
+in the host code object as a data section with the name ``.offload_bundle``.
+
+.. note::
+
+  Currently the section is named ``.hip_fatbin``.
+
+The host compilation includes an ``init`` function that will use the runtime
+corresponding to the offload kind (see :ref:`amdgpu-offload-kind-table`) to
+load the offload code objects appropriate to the devices present when the
+host program is executed.
 
 .. _amdgpu-dwarf-debug-information:
 
