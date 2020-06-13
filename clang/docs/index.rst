@@ -78,6 +78,7 @@ Using Clang Tools
    ClangFormat
    ClangFormatStyleOptions
    ClangFormattedStatus
+   ClangOffloadBundlerFileFormat
 
 Design Documents
 ================
