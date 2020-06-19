@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -x hip -emit-llvm -std=c++11 %s -o - \
-// RUN:   -triple x86_64-linux-gnu -fhip-lambda-host-device \
+// RUN:   -triple x86_64-linux-gnu \
 // RUN:   | FileCheck -check-prefix=HOST %s
 // RUN: %clang_cc1 -x hip -emit-llvm -std=c++11 %s -o - \
-// RUN:   -fhip-lambda-host-device -triple amdgcn-amd-amdhsa -fcuda-is-device \
+// RUN:   -triple amdgcn-amd-amdhsa -fcuda-is-device \
 // RUN:   | FileCheck -check-prefix=DEV %s
 
 #include "Inputs/cuda.h"
@@ -50,7 +50,7 @@
 // by the lambda function.
 // DEV-LABEL: define amdgpu_kernel void @_Z1gIZ12test_resolvevEUlvE_EvT_
 // DEV:  call void @_ZZ12test_resolvevENKUlvE_clEv
-// DEV-LABE: define internal void @_ZZ12test_resolvevENKUlvE_clEv
+// DEV-LABEL: define internal void @_ZZ12test_resolvevENKUlvE_clEv
 // DEV:  call i32 @_Z10overloadedIiET_v
 // DEV-LABEL: define linkonce_odr i32 @_Z10overloadedIiET_v
 // DEV:  ret i32 1
