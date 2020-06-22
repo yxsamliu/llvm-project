@@ -646,7 +646,8 @@ The AMDGPU backend uses the following ELF header:
                                 - ``ET_DYN``
      ``e_machine``              ``EM_AMDGPU``
      ``e_entry``                0
-     ``e_flags``                See :ref:`amdgpu-elf-header-e_flags-table`
+     ``e_flags``                See :ref:`amdgpu-elf-header-e_flags-table-01`
+                                and :ref:`amdgpu-elf-header-e_flags-table-2`
      ========================== ===============================
 
 ..
@@ -654,18 +655,18 @@ The AMDGPU backend uses the following ELF header:
   .. table:: AMDGPU ELF Header Enumeration Values
      :name: amdgpu-elf-header-enumeration-values-table
 
-     =============================== =====
+     =============================== ======
      Name                            Value
-     =============================== =====
+     =============================== ======
      ``EM_AMDGPU``                   224
      ``ELFOSABI_NONE``               0
      ``ELFOSABI_AMDGPU_HSA``         64
      ``ELFOSABI_AMDGPU_PAL``         65
      ``ELFOSABI_AMDGPU_MESA3D``      66
-     ``ELFABIVERSION_AMDGPU_HSA``    1
+     ``ELFABIVERSION_AMDGPU_HSA``    1 or 2
      ``ELFABIVERSION_AMDGPU_PAL``    0
      ``ELFABIVERSION_AMDGPU_MESA3D`` 0
-     =============================== =====
+     =============================== ======
 
 ``e_ident[EI_CLASS]``
   The ELF class is:
@@ -721,7 +722,8 @@ The AMDGPU backend uses the following ELF header:
   by the ``r600`` and ``amdgcn`` architectures (see
   :ref:`amdgpu-processor-table`). The specific processor is specified in the
   ``EF_AMDGPU_MACH`` bit field of the ``e_flags`` (see
-  :ref:`amdgpu-elf-header-e_flags-table`).
+  :ref:`amdgpu-elf-header-e_flags-table-01` and
+  :ref:`amdgpu-elf-header-e_flags-table-2`).
 
 ``e_entry``
   The entry point is 0 as the entry points for individual kernels must be
@@ -730,8 +732,8 @@ The AMDGPU backend uses the following ELF header:
 ``e_flags``
   The AMDGPU backend uses the following ELF header flags:
 
-  .. table:: AMDGPU ELF Header ``e_flags``
-     :name: amdgpu-elf-header-e_flags-table
+  .. table:: AMDGPU ELF Header ``e_flags`` (``EI_ABIVERSION=0`` and ``EI_ABIVERSION=1``)
+     :name: amdgpu-elf-header-e_flags-table-01
 
      ================================= ========== =============================
      Name                              Value      Description
@@ -766,6 +768,31 @@ The AMDGPU backend uses the following ELF header:
                                                   See
                                                   :ref:`amdgpu-target-features`.
      ================================= ========== =============================
+
+  .. table:: AMDGPU ELF Header ``e_flags`` (``EI_ABIVERSION=2``)
+     :name: amdgpu-elf-header-e_flags-table-2
+
+     ================================= ========== ==========================================
+     Name                              Value      Description
+     ================================= ========== ==========================================
+     **AMDGPU Processor Flag**                    See :ref:`amdgpu-processor-table`.
+     -------------------------------------------- ------------------------------------------
+     ``EF_AMDGPU_MACH``                0x000000ff AMDGPU processor selection
+                                                  mask for
+                                                  ``EF_AMDGPU_MACH_xxx`` values
+                                                  defined in
+                                                  :ref:`amdgpu-ef-amdgpu-mach-table`.
+     ``EF_AMDGPU_FEATURE_XNACK``       0x00000300 XNACK selection mask for
+                                                  representing 3 values:
+                                                  ``EF_AMDGPU_FEATURE_XNACK_DEFAULT`` (1),
+                                                  ``EF_AMDGPU_FEATURE_XNACK_OFF`` (2),
+                                                  ``EF_AMDGPU_FEATURE_XNACK_ON`` (3).
+     ``EF_AMDGPU_FEATURE_SRAMECC``     0x00000c00 SRAMECC selection mask for
+                                                  representing 3 values:
+                                                  ``EF_AMDGPU_FEATURE_SRAMECC_DEFAULT`` (1),
+                                                  ``EF_AMDGPU_FEATURE_SRAMECC_OFF`` (2),
+                                                  ``EF_AMDGPU_FEATURE_SRAMECC_ON`` (3).
+     ================================= ========== ==========================================
 
   .. table:: AMDGPU ``EF_AMDGPU_MACH`` Values
      :name: amdgpu-ef-amdgpu-mach-table
