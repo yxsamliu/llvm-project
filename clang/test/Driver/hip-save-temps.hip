@@ -42,9 +42,18 @@
 // CHECK-NOT: opt
 // CHECK-NOT: llc
 // NORDC: {{.*lld.*}}"-o" "hip-save-temps-hip-amdgcn-amd-amdhsa-gfx900.out"
-// RDCL: "{{.*lld.*}}" {{.*}} "-o" "a.out-hip-amdgcn-amd-amdhsa-gfx900"
-// NORDC: "{{.*clang-offload-bundler.*}}" {{.*}} "-outputs=hip-save-temps.hip-hip-amdgcn-amd-amdhsa.hipfb"
-// CHECK: "{{.*clang.*}}" "-cc1" {{.*}} "-E" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.cui"
+// RDCL: "{{.*lld.*}}" {{.*}} "-plugin-opt=-amdgpu-internalize-symbols" {{.*}}"-save-temps"
+// RDCL-SAME: "-o" "a.out-hip-amdgcn-amd-amdhsa-gfx900"
+// RDCC: "{{.*clang.*}}" "-cc1" {{.*}} "-E" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.cui"
+// RDCC: "{{.*clang.*}}" "-cc1" {{.*}} "-emit-llvm-bc" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.bc"
+// RDCC: "{{.*clang.*}}" "-cc1" {{.*}} "-S" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.s"
+// RDCC: "{{.*clang.*}}" "-cc1as" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.o"
+// RDCC: "{{.*clang-offload-bundler.*}}" {{.*}} "-outputs=hip-save-temps.o"
+// RDCL: "{{.*clang-offload-bundler.*}}" {{.*}} "-outputs=hip-save-temps-hip-amdgcn-amd-amdhsa.hipfb"
+// RDCL: {{.*}}llvm-mc{{.*}}"-o" "hip-save-temps-hip-amdgcn-amd-amdhsa.o" "hip-save-temps-hip-amdgcn-amd-amdhsa.mcin" "--filetype=obj"
+
+// -fno-gpu-rdc host object path
+// NORDC: "{{.*clang.*}}" "-cc1" {{.*}} "-E" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.cui"
 // NORDC: "{{.*clang.*}}" "-cc1" {{.*}} "-emit-llvm-bc" {{.*}}  "-fcuda-include-gpubinary" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.bc"
 // RDC: "{{.*clang.*}}" "-cc1" {{.*}} "-emit-llvm-bc" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.bc"
 // CHECK: "{{.*clang.*}}" "-cc1" {{.*}} "-S" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.s"

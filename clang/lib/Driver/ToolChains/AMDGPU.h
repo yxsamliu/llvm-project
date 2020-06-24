@@ -74,6 +74,9 @@ public:
     return true;
   }
 
+  /// Needed for translating LTO options.
+  const char *getDefaultLinker() const override { return "ld.lld"; }
+
   /// Return whether denormals should be flushed, and treated as 0 by default
   /// for the subtarget.
   static bool getDefaultDenormsAreZeroForTarget(llvm::AMDGPU::GPUKind GPUKind);

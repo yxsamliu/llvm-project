@@ -37,7 +37,9 @@
 // CHECK-NOT: "*.llvm-link"
 // CHECK-NOT: ".*opt"
 // CHECK-NOT: ".*llc"
-// CHECK: {{".*lld.*"}} {{.*}} "-o" "[[IMG_DEV1:.*.out]]" [[A_BC1]] [[B_BC1]]
+// CHECK: {{".*lld.*"}} {{.*}} "-plugin-opt=-amdgpu-internalize-symbols"
+// CHECK-SAME: "-plugin-opt=mcpu=gfx803"
+// CHECK-SAME: "-o" "[[IMG_DEV1:.*.out]]" [[A_BC1]] [[B_BC1]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
