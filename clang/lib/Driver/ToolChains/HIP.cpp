@@ -57,14 +57,36 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
                                           const llvm::opt::ArgList &Args) const {
   // Construct lld command.
   // The output from ld.lld is an HSA code object file.
-  ArgStringList LldArgs{"-flavor",
-                        "gnu",
-                        "--no-undefined",
-                        "-shared",
-                        "-mllvm",
-                        "-amdgpu-internalize-symbols",
-                        "-o",
-                        Output.getFilename()};
+  ArgStringList LldArgs{"-flavor", "gnu",    "--no-undefined",
+                        "-shared", "-mllvm", "-amdgpu-internalize-symbols"};
+
+  LldArgs.push_back("-mllvm");
+  LldArgs.push_back(
+      Args.MakeArgString(llvm::Twine("-mcpu=") + JA.getOffloadingArch()));
+
+  // Extract all the -m options
+  std::vector<llvm::StringRef> Features;
+  handleTargetFeaturesGroup(Args, Features,
+                            options::OPT_m_amdgpu_Features_Group);
+
+  // Add features to mattr such as cumode
+  std::string MAttrString = "-mattr=";
+  for (auto OneFeature : Features) {
+    MAttrString.append(Args.MakeArgString(OneFeature));
+    if (OneFeature != Features.back())
+      MAttrString.append(",");
+  }
+  if (!Features.empty())
+    LldArgs.append({"-mllvm", Args.MakeArgString(MAttrString)});
+
+  for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
+    LldArgs.append({"-mllvm", A->getValue(0)});
+  }
+
+  if (C.getDriver().isSaveTempsEnabled())
+    LldArgs.push_back("-save-temps");
+
+  LldArgs.append({"-o", Output.getFilename()});
   for (auto Input : Inputs)
     LldArgs.push_back(Input.getFilename());
   const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));
