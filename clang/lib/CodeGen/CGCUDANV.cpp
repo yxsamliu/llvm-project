@@ -236,13 +236,13 @@ std::string CGNVCUDARuntime::getDeviceSideName(const NamedDecl *ND) {
     DeviceSideName = std::string(ND->getIdentifier()->getName());
 
   // Make unique name for device side static file-scope variable for HIP.
-  if (CGM.getLangOpts().HIP && CGM.getLangOpts().HIPCUID) {
+  if (!CGM.getLangOpts().CUID.empty()) {
     if (const auto *VD = dyn_cast<VarDecl>(ND)) {
       if ((VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>()) &&
           VD->isFileVarDecl() && VD->getStorageClass() == SC_Static) {
         SmallString<256> Buffer;
         llvm::raw_svector_ostream Out(Buffer);
-        Out << DeviceSideName << ".hip.static." << CGM.getLangOpts().HIPCUID;
+        Out << DeviceSideName << ".static." << CGM.getLangOpts().CUID;
         DeviceSideName = std::string(Out.str());
       }
     }

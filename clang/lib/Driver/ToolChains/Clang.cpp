@@ -6029,7 +6029,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       SourceAction = SourceAction->getInputs()[0];
     }
     CmdArgs.push_back(Args.MakeArgString(
-        Twine("-hip-cuid=") + Twine(cast<InputAction>(SourceAction)->getId())));
+        Twine("-cuid=") + Twine(cast<InputAction>(SourceAction)->getId())));
     CmdArgs.push_back("-fcuda-allow-variadic-functions");
   }
 

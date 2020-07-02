@@ -11,10 +11,10 @@
 // RUN: 2>&1 | FileCheck %s
 
 // CHECK: "{{.*}}clang{{.*}}" "-cc1" "-triple" "amdgcn-amd-amdhsa"
-// CHECK-SAME: "-hip-cuid=[[CUID:[^"]+]]"
+// CHECK-SAME: "-cuid=[[CUID:[^"]+]]"
 
 // CHECK: "{{.*}}clang{{.*}}" "-cc1" "-triple" "amdgcn-amd-amdhsa"
-// CHECK-SAME: "-hip-cuid=[[CUID]]"
+// CHECK-SAME: "-cuid=[[CUID]]"
 
 // CHECK: "{{.*}}clang{{.*}}" "-cc1" "-triple" "x86_64-unknown-linux-gnu"
-// CHECK-SAME: "-hip-cuid=[[CUID]]"
+// CHECK-SAME: "-cuid=[[CUID]]"

@@ -10280,7 +10280,7 @@ static GVALinkage adjustGVALinkageForAttributes(const ASTContext &Context,
         (L == GVA_DiscardableODR || L == GVA_Internal))
       return GVA_StrongODR;
     // Externalize device side static file-scope variable for HIP.
-    if (Context.getLangOpts().HIP && Context.getLangOpts().HIPCUID &&
+    if (!Context.getLangOpts().CUID.empty() &&
         (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>()) &&
         isa<VarDecl>(D) && cast<VarDecl>(D)->isFileVarDecl() &&
         cast<VarDecl>(D)->getStorageClass() == SC_Static) {

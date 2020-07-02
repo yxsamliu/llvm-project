@@ -2629,12 +2629,12 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
           << Args.getLastArg(OPT_fgpu_allow_device_init)->getAsString(Args);
   }
   Opts.HIPUseNewLaunchAPI = Args.hasArg(OPT_fhip_new_launch_api);
+  Opts.CUID = std::string(Args.getLastArgValue(OPT_cuid_EQ));
   if (Opts.HIP) {
     Opts.GPUMaxThreadsPerBlock = getLastArgIntValue(
         Args, OPT_gpu_max_threads_per_block_EQ, Opts.GPUMaxThreadsPerBlock);
-    Opts.HIPCUID = getLastArgIntValue(Args, OPT_hip_cuid_EQ, Opts.HIPCUID);
   } else {
-    for (auto Opt : {OPT_gpu_max_threads_per_block_EQ, OPT_hip_cuid_EQ})
+    for (auto Opt : {OPT_gpu_max_threads_per_block_EQ})
       if (Args.hasArg(Opt))
         Diags.Report(diag::warn_ignored_hip_only_option)
             << Args.getLastArg(Opt)->getAsString(Args);

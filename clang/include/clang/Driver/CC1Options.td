@@ -905,9 +905,10 @@ def fno_cuda_host_device_constexpr : Flag<["-"], "fno-cuda-host-device-constexpr
 // HIP Options
 //===----------------------------------------------------------------------===//
 
-def hip_cuid_EQ : Joined<["-"], "hip-cuid=">,
-  HelpText<"A unique id to identify a HIP compilation unit, which can be used to "
-           "identify a device-side static declaration in host compilation">;
+def cuid_EQ : Joined<["-"], "cuid=">,
+  HelpText<"A unique id to identify a compilation unit, which can be used to "
+           "identify a device-side static declaration in host compilation for "
+           "single source offloading languages like CUDA/HIP/OpenMP">;
 
 //===----------------------------------------------------------------------===//
 // OpenMP Options

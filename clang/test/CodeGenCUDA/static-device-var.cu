@@ -7,10 +7,10 @@
 // RUN: %clang_cc1 -triple x86_64-gnu-linux \
 // RUN:    -emit-llvm -o - -x hip %s | FileCheck -check-prefix=INT-HOST %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -hip-cuid=123 \
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=123abc \
 // RUN:    -emit-llvm -o - -x hip %s | FileCheck -check-prefix=EXT-DEV %s
 
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -hip-cuid=123 \
+// RUN: %clang_cc1 -triple x86_64-gnu-linux -cuid=123abc \
 // RUN:    -emit-llvm -o - -x hip %s | FileCheck -check-prefix=EXT-HOST %s
 
 #include "Inputs/cuda.h"
@@ -21,9 +21,9 @@
 // INT-HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x\00"
 
 // Test externalized static device variables
-// EXT-DEV: @_ZL1x.hip.static.123 = addrspace(1) externally_initialized global i32 0
-// EXT-HOST-DAG: @_ZL1x.hip.static.123 = internal global i32 undef
-// EXT-HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x.hip.static.123\00"
+// EXT-DEV: @_ZL1x.static.123abc = addrspace(1) externally_initialized global i32 0
+// EXT-HOST-DAG: @_ZL1x.static.123abc = internal global i32 undef
+// EXT-HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x.static.123abc\00"
 
 static __device__ int x;
 
@@ -33,9 +33,9 @@ static __device__ int x;
 // INT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y\00"
 
 // Test externalized static device variables
-// EXT-DEV: @_ZL1y.hip.static.123 = addrspace(4) externally_initialized global i32 0
-// EXT-HOST-DAG: @_ZL1y.hip.static.123 = internal global i32 undef
-// EXT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y.hip.static.123\00"
+// EXT-DEV: @_ZL1y.static.123abc = addrspace(4) externally_initialized global i32 0
+// EXT-HOST-DAG: @_ZL1y.static.123abc = internal global i32 undef
+// EXT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y.static.123abc\00"
 
 static __constant__ int y;
 
@@ -53,5 +53,5 @@ void foo() {
 
 // INT-HOST: __hipRegisterVar({{.*}}@_ZL1x{{.*}}@[[DEVNAMEX]]
 // INT-HOST: __hipRegisterVar({{.*}}@_ZL1y{{.*}}@[[DEVNAMEY]]
-// EXT-HOST: __hipRegisterVar({{.*}}@_ZL1x.hip.static.123{{.*}}@[[DEVNAMEX]]
-// EXT-HOST: __hipRegisterVar({{.*}}@_ZL1y.hip.static.123{{.*}}@[[DEVNAMEY]]
+// EXT-HOST: __hipRegisterVar({{.*}}@_ZL1x.static.123abc{{.*}}@[[DEVNAMEX]]
+// EXT-HOST: __hipRegisterVar({{.*}}@_ZL1y.static.123abc{{.*}}@[[DEVNAMEY]]
