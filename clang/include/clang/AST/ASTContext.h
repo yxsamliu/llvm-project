@@ -3018,6 +3018,9 @@ public:
   /// Return a new OMPTraitInfo object owned by this context.
   OMPTraitInfo &getNewOMPTraitInfo();
 
+  /// Whether a C++ static variable should be externalized.
+  bool shouldExternalizeStaticVar(const Decl *D) const;
+
 private:
   /// All OMPTraitInfo objects live in this collection, one per
   /// `pragma omp [begin] declare variant` directive.
