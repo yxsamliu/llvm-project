@@ -2416,9 +2416,12 @@ class OffloadingActionBuilder final {
         // Replicate inputs for each GPU architecture.
         auto Ty = IA->getType() == types::TY_HIP ? types::TY_HIP_DEVICE
                                                  : types::TY_CUDA_DEVICE;
+        StringRef CUID = Args.getLastArgValue(options::OPT_cuid_EQ);
         SmallString<10> Tmp;
-        IA->setId(llvm::Twine(llvm::sys::Process::GetRandomNumber())
-                      .toStringRef(Tmp));
+        if (CUID.empty())
+          CUID = llvm::Twine(llvm::sys::Process::GetRandomNumber())
+                     .toStringRef(Tmp);
+        IA->setId(CUID);
 
         for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I) {
           CudaDeviceActions.push_back(

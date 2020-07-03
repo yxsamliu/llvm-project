@@ -902,15 +902,6 @@ def fno_cuda_host_device_constexpr : Flag<["-"], "fno-cuda-host-device-constexpr
   HelpText<"Don't treat unattributed constexpr functions as __host__ __device__.">;
 
 //===----------------------------------------------------------------------===//
-// HIP Options
-//===----------------------------------------------------------------------===//
-
-def cuid_EQ : Joined<["-"], "cuid=">,
-  HelpText<"A unique id to identify a compilation unit, which can be used to "
-           "identify a device-side static declaration in host compilation for "
-           "single source offloading languages like CUDA/HIP/OpenMP">;
-
-//===----------------------------------------------------------------------===//
 // OpenMP Options
 //===----------------------------------------------------------------------===//
 

@@ -646,6 +646,10 @@ defm gpu_allow_device_init : OptInFFlag<"gpu-allow-device-init", "Allow device s
 def gpu_max_threads_per_block_EQ : Joined<["--"], "gpu-max-threads-per-block=">,
   Flags<[CC1Option]>,
   HelpText<"Default max threads per block for kernel launch bounds for HIP">;
+def cuid_EQ : Joined<["-"], "cuid=">, Flags<[CC1Option]>,
+  HelpText<"A unique id to identify a compilation unit, which can be used to "
+           "identify a device-side static declaration in host compilation for "
+           "single source offloading languages like CUDA/HIP/OpenMP">;
 def libomptarget_nvptx_path_EQ : Joined<["--"], "libomptarget-nvptx-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-nvptx libraries">;
 def dD : Flag<["-"], "dD">, Group<d_Group>, Flags<[CC1Option]>,
