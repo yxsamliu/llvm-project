@@ -239,7 +239,8 @@ std::string CGNVCUDARuntime::getDeviceSideName(const NamedDecl *ND) {
   if (CGM.getContext().shouldExternalizeStaticVar(ND)) {
     SmallString<256> Buffer;
     llvm::raw_svector_ostream Out(Buffer);
-    Out << DeviceSideName << ".static." << CGM.getLangOpts().CUID;
+    Out << DeviceSideName;
+    CGM.printPostfixForExternalizedStaticVar(Out);
     DeviceSideName = std::string(Out.str());
   }
   return DeviceSideName;
