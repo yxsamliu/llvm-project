@@ -358,7 +358,9 @@ void InferAddressSpaces::collectRewritableIntrinsicOperands(
 void InferAddressSpaces::appendsFlatAddressExpressionToPostorderStack(
     Value *V, std::vector<std::pair<Value *, bool>> &PostorderStack,
     DenseSet<Value *> &Visited) const {
-  assert(V->getType()->isPointerTy());
+  // Skip non pointers.
+  if (!V->getType()->isPointerTy())
+    return;
 
   // Generic addressing expressions may be hidden in nested constant
   // expressions.
