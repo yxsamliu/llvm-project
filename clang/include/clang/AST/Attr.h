@@ -344,8 +344,10 @@ struct ParsedTargetAttr {
 
 #include "clang/AST/Attrs.inc"
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           const Attr *At) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB, const Attr *At) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(At),
                   DiagnosticsEngine::ak_attr);
   return DB;
