@@ -7,4 +7,10 @@ __global__ void k1() {}
 template<int ...Dimensions> void k1Wrapper() {
   void (*f)() = [] { k1<<<Dimensions, Dimensions>>>(); }; // expected-error {{initializer contains unexpanded parameter pack 'Dimensions'}}
   void (*g[])() = { [] { k1<<<Dimensions, Dimensions>>>(); } ... }; // ok
+  f();
+  g();
+}
+
+void foo() {
+  k1Wrapper<1,1>();
 }

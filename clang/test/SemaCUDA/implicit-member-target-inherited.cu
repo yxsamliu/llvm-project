@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s -Wno-defaulted-function-deleted
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=expected,host %s -Wno-defaulted-function-deleted
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -fcuda-is-device -verify=expected,dev %s -Wno-defaulted-function-deleted
 
 #include "Inputs/cuda.h"
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify=com %s
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify=com,host %s
 // RUN: %clang_cc1 -std=c++17 -fsyntax-only -fcuda-is-device -verify=com,dev %s
 
 #include "Inputs/cuda.h"

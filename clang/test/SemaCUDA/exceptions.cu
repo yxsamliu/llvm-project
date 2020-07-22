@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fcuda-is-device -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fcxx-exceptions -fcuda-is-device -fsyntax-only -verify=expected,dev %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify=expected,host %s
 
 #include "Inputs/cuda.h"
 

@@ -81,9 +81,9 @@ __host__ __device__ void test_hd(void *p) {
 __host__ __device__ void tests_hd(void *t) {
   test_hd<H1D1>(t);
   test_hd<h1D1>(t);
-  // host-note@-1 {{in instantiation of function template specialization 'test_hd<h1D1>' requested here}}
+  // host-note@-1 {{called by 'tests_hd'}}
   test_hd<H1d1>(t);
-  // device-note@-1 {{in instantiation of function template specialization 'test_hd<H1d1>' requested here}}
+  // device-note@-1 {{called by 'tests_hd'}}
   test_hd<H1D2>(t);
   test_hd<H2D1>(t);
   test_hd<H2D2>(t);

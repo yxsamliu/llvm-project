@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
-// RUN: %clang_cc1 -triple nvptx-unknown-cuda -fsyntax-only -fcuda-is-device -verify %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple nvptx-unknown-cuda -fsyntax-only -fcuda-is-device -verify=dev %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsyntax-only -verify=host %s
 
 __attribute__((device)) register long global_dev_reg asm("r0");
 __attribute__((device)) register long
@@ -30,10 +30,10 @@ void hf() {
 // We should only see errors relevant to current compilation mode.
 #if defined(__CUDA_ARCH__)
 // Device-side compilation:
-// expected-error@8 {{unknown register name 'rsp' in asm}}
-// expected-error@15 {{unknown register name 'rsp' in asm}}
+// dev-error@8 {{unknown register name 'rsp' in asm}}
+// dev-error@15 {{unknown register name 'rsp' in asm}}
 #else
 // Host-side compilation:
-// expected-error@11 {{unknown register name 'r0' in asm}}
-// expected-error@22 {{unknown register name 'r0' in asm}}
+// host-error@11 {{unknown register name 'r0' in asm}}
+// host-error@22 {{unknown register name 'r0' in asm}}
 #endif
