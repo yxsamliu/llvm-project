@@ -11302,6 +11302,14 @@ clang::operator<<(const DiagnosticBuilder &DB,
   return DB << "a prior #pragma section";
 }
 
+const PartialDiagnostic &clang::
+operator<<(const PartialDiagnostic &DB,
+           const ASTContext::SectionInfo &Section) {
+  if (Section.Decl)
+    return DB << Section.Decl;
+  return DB << "a prior #pragma section";
+}
+
 bool ASTContext::mayExternalizeStaticVar(const Decl *D) const {
   return !getLangOpts().GPURelocatableDeviceCode &&
          ((D->hasAttr<CUDADeviceAttr>() &&

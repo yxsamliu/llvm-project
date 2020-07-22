@@ -1511,6 +1511,7 @@ public:
       BaseDiag << Value;
       return Diag;
     }
+    const static bool IsDiagBuilder = false;
   };
 
   /// Emit a diagnostic.

@@ -7070,8 +7070,10 @@ inline const Type *Type::getPointeeOrArrayElementType() const {
 }
 /// Insertion operator for diagnostics. This allows sending address spaces into
 /// a diagnostic with <<.
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           LangAS AS) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB, LangAS AS) {
   DB.AddTaggedVal(static_cast<std::underlying_type_t<LangAS>>(AS),
                   DiagnosticsEngine::ArgumentKind::ak_addrspace);
   return DB;
@@ -7088,8 +7090,10 @@ inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
 
 /// Insertion operator for diagnostics. This allows sending Qualifiers into a
 /// diagnostic with <<.
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           Qualifiers Q) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB, Qualifiers Q) {
   DB.AddTaggedVal(Q.getAsOpaqueValue(),
                   DiagnosticsEngine::ArgumentKind::ak_qual);
   return DB;
@@ -7106,8 +7110,10 @@ inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
 
 /// Insertion operator for diagnostics.  This allows sending QualType's into a
 /// diagnostic with <<.
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           QualType T) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB, QualType T) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(T.getAsOpaquePtr()),
                   DiagnosticsEngine::ak_qualtype);
   return DB;
