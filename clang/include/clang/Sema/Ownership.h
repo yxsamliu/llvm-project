@@ -134,6 +134,7 @@ namespace clang {
 
   // Basic
   class DiagnosticBuilder;
+  class PartialDiagnostic;
 
   // Determines whether the low bit of the result pointer for the
   // given UID is always zero. If so, ActionResult will use that bit

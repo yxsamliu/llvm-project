@@ -163,24 +163,8 @@ private:
     DiagStorage = nullptr;
   }
 
-  void AddSourceRange(const CharSourceRange &R) const {
-    if (!DiagStorage)
-      DiagStorage = getStorage();
-
-    DiagStorage->DiagRanges.push_back(R);
-  }
-
-  void AddFixItHint(const FixItHint &Hint) const {
-    if (Hint.isNull())
-      return;
-
-    if (!DiagStorage)
-      DiagStorage = getStorage();
-
-    DiagStorage->FixItHints.push_back(Hint);
-  }
-
 public:
+  const static bool IsDiagBuilder = true;
   struct NullDiagnostic {};
 
   /// Create a null partial diagnostic, which cannot carry a payload,
@@ -286,6 +270,23 @@ public:
     DiagStorage->DiagArgumentsKind[DiagStorage->NumDiagArgs]
       = DiagnosticsEngine::ak_std_string;
     DiagStorage->DiagArgumentsStr[DiagStorage->NumDiagArgs++] = std::string(V);
+  }
+
+  void AddSourceRange(const CharSourceRange &R) const {
+    if (!DiagStorage)
+      DiagStorage = getStorage();
+
+    DiagStorage->DiagRanges.push_back(R);
+  }
+
+  void AddFixItHint(const FixItHint &Hint) const {
+    if (Hint.isNull())
+      return;
+
+    if (!DiagStorage)
+      DiagStorage = getStorage();
+
+    DiagStorage->FixItHints.push_back(Hint);
   }
 
   void Emit(const DiagnosticBuilder &DB) const {
@@ -406,8 +407,11 @@ public:
   }
 };
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           const PartialDiagnostic &PD) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB,
+                                      const PartialDiagnostic &PD) {
   PD.Emit(DB);
   return DB;
 }

@@ -813,8 +813,11 @@ private:
 
 /// Insertion operator for diagnostics.  This allows sending DeclarationName's
 /// into a diagnostic with <<.
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           DeclarationName N) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB,
+                                      DeclarationName N) {
   DB.AddTaggedVal(N.getAsOpaqueInteger(),
                   DiagnosticsEngine::ak_declarationname);
   return DB;

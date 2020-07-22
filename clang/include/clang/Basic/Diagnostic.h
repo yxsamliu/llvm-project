@@ -1187,6 +1187,7 @@ public:
   }
 
   void addFlagValue(StringRef V) const { DiagObj->FlagValue = std::string(V); }
+  const static bool IsDiagBuilder = true;
 };
 
 struct AddFlagValue {
@@ -1199,53 +1200,82 @@ struct AddFlagValue {
 /// value will be shown as the suffix "=value" after the flag name. It is
 /// useful in cases where the diagnostic flag accepts values (e.g.,
 /// -Rpass or -Wframe-larger-than).
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           const AddFlagValue V) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB,
+                                      const AddFlagValue V) {
   DB.addFlagValue(V.Val);
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           StringRef S) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB, StringRef S) {
   DB.AddString(S);
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           const char *Str) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB,
+                                      const std::string &S) {
+  DB.AddString(StringRef(S));
+  return DB;
+}
+
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB, const char *Str) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(Str),
                   DiagnosticsEngine::ak_c_string);
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB, int I) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB, int I) {
   DB.AddTaggedVal(I, DiagnosticsEngine::ak_sint);
   return DB;
 }
 
 // We use enable_if here to prevent that this overload is selected for
 // pointers or other arguments that are implicitly convertible to bool.
-template <typename T>
-inline std::enable_if_t<std::is_same<T, bool>::value, const DiagnosticBuilder &>
-operator<<(const DiagnosticBuilder &DB, T I) {
+template <typename DiagBuilderT, typename T>
+inline std::enable_if_t<std::is_same<T, bool>::value &&
+                            DiagBuilderT::IsDiagBuilder,
+                        const DiagBuilderT &>
+operator<<(const DiagBuilderT &DB, T I) {
   DB.AddTaggedVal(I, DiagnosticsEngine::ak_sint);
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           unsigned I) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB, unsigned I) {
   DB.AddTaggedVal(I, DiagnosticsEngine::ak_uint);
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           tok::TokenKind I) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB,
+                                      tok::TokenKind I) {
   DB.AddTaggedVal(static_cast<unsigned>(I), DiagnosticsEngine::ak_tokenkind);
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           const IdentifierInfo *II) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB,
+                                      const IdentifierInfo *II) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(II),
                   DiagnosticsEngine::ak_identifierinfo);
   return DB;
@@ -1255,66 +1285,88 @@ inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
 // so that we only match those arguments that are (statically) DeclContexts;
 // other arguments that derive from DeclContext (e.g., RecordDecls) will not
 // match.
-template <typename T>
+template <typename DiagBuilderT, typename T>
 inline std::enable_if_t<
-    std::is_same<std::remove_const_t<T>, DeclContext>::value,
-    const DiagnosticBuilder &>
-operator<<(const DiagnosticBuilder &DB, T *DC) {
+    std::is_same<std::remove_const_t<T>, DeclContext>::value &&
+        DiagBuilderT::IsDiagBuilder,
+    const DiagBuilderT &>
+operator<<(const DiagBuilderT &DB, T *DC) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(DC),
                   DiagnosticsEngine::ak_declcontext);
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           SourceRange R) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB, SourceRange R) {
   DB.AddSourceRange(CharSourceRange::getTokenRange(R));
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           ArrayRef<SourceRange> Ranges) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB,
+                                      ArrayRef<SourceRange> Ranges) {
   for (SourceRange R : Ranges)
     DB.AddSourceRange(CharSourceRange::getTokenRange(R));
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           const CharSourceRange &R) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB,
+                                      const CharSourceRange &R) {
   DB.AddSourceRange(R);
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           const FixItHint &Hint) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB,
+                                      const FixItHint &Hint) {
   DB.AddFixItHint(Hint);
   return DB;
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           ArrayRef<FixItHint> Hints) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB,
+                                      ArrayRef<FixItHint> Hints) {
   for (const FixItHint &Hint : Hints)
     DB.AddFixItHint(Hint);
   return DB;
 }
 
-inline const DiagnosticBuilder &
-operator<<(const DiagnosticBuilder &DB,
-           const llvm::Optional<SourceRange> &Opt) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB,
+                                      const llvm::Optional<SourceRange> &Opt) {
   if (Opt)
     DB << *Opt;
   return DB;
 }
 
-inline const DiagnosticBuilder &
-operator<<(const DiagnosticBuilder &DB,
-           const llvm::Optional<CharSourceRange> &Opt) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &
+operator<<(const DiagBuilderT &DB, const llvm::Optional<CharSourceRange> &Opt) {
   if (Opt)
     DB << *Opt;
   return DB;
 }
 
-inline const DiagnosticBuilder &
-operator<<(const DiagnosticBuilder &DB, const llvm::Optional<FixItHint> &Opt) {
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+inline const DiagBuilderT &operator<<(const DiagBuilderT &DB,
+                                      const llvm::Optional<FixItHint> &Opt) {
   if (Opt)
     DB << *Opt;
   return DB;
@@ -1324,8 +1376,29 @@ operator<<(const DiagnosticBuilder &DB, const llvm::Optional<FixItHint> &Opt) {
 /// context-sensitive keyword.
 using DiagNullabilityKind = std::pair<NullabilityKind, bool>;
 
-const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                    DiagNullabilityKind nullability);
+template <
+    typename DiagBuilderT,
+    typename std::enable_if<DiagBuilderT::IsDiagBuilder>::type * = nullptr>
+const DiagBuilderT &operator<<(const DiagBuilderT &DB,
+                               DiagNullabilityKind nullability) {
+  StringRef string;
+  switch (nullability.first) {
+  case NullabilityKind::NonNull:
+    string = nullability.second ? "'nonnull'" : "'_Nonnull'";
+    break;
+
+  case NullabilityKind::Nullable:
+    string = nullability.second ? "'nullable'" : "'_Nullable'";
+    break;
+
+  case NullabilityKind::Unspecified:
+    string = nullability.second ? "'null_unspecified'" : "'_Null_unspecified'";
+    break;
+  }
+
+  DB.AddString(string);
+  return DB;
+}
 
 inline DiagnosticBuilder DiagnosticsEngine::Report(SourceLocation Loc,
                                                    unsigned DiagID) {

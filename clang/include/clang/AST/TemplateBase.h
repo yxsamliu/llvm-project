@@ -683,6 +683,8 @@ struct alignas(void *) ASTTemplateKWAndArgsInfo {
 
 const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
                                     const TemplateArgument &Arg);
+const PartialDiagnostic &operator<<(const PartialDiagnostic &DB,
+                                    const TemplateArgument &Arg);
 
 inline TemplateSpecializationType::iterator
     TemplateSpecializationType::end() const {

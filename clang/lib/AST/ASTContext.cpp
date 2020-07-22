@@ -11164,3 +11164,11 @@ clang::operator<<(const DiagnosticBuilder &DB,
     return DB << Section.Decl;
   return DB << "a prior #pragma section";
 }
+
+const PartialDiagnostic &clang::
+operator<<(const PartialDiagnostic &DB,
+           const ASTContext::SectionInfo &Section) {
+  if (Section.Decl)
+    return DB << Section.Decl;
+  return DB << "a prior #pragma section";
+}
