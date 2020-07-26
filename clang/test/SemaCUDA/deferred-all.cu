@@ -9,25 +9,23 @@ __device__ void callee(int);
 __host__ void callee(float); // host-note 2{{candidate function}}
 __host__ void callee(double); // host-note 2{{candidate function}}
 
-// Check no semantic diagnostics for this function since it is never
+// Check no overloading diagnostics for this function since it is never
 // called. Other kinds of diagnostics are still emitted.
 
 inline __host__ __device__ void hdf_not_called() {
   callee(1);
-  typedef 123; // com-error {{expected unqualified-id}}
-  bad_line // this is a semantic error
+  bad_line // com-error {{use of undeclared identifier 'bad_line'}}
 }
 
-// When emitted on device, there is syntax error.
-// When emitted on host, there is ambiguity and syntax error.
-  
+// When emitted on device, there is undeclared identifir error.
+// When emitted on host, there is ambiguity and undeclared identifier error.
+
 inline __host__ __device__ void hdf_called() {
   callee(1); // host-error {{call to 'callee' is ambiguous}}
   bad_line // com-error {{use of undeclared identifier 'bad_line'}}
 }
 
-// This is similar to the above but is always emitted on
-// both sides.
+// This is save as above.
 
 __host__ __device__ void hdf_always_emitted() {
   callee(1); // host-error {{call to 'callee' is ambiguous}}
@@ -37,12 +35,10 @@ __host__ __device__ void hdf_always_emitted() {
 void hf() {
  hdf_called(); // host-note {{called by 'hf'}}
 }
- 
-__device__ void df() {
- hdf_called(); // dev-note {{called by 'df'}}
-}
 
-struct A { int x; typedef int type; };
+__device__ void df() { hdf_called(); }
+
+struct A { int x; typedef int isA; };
 struct B { int x; };
 
 // This function is invalid for A and B by SFINAE.
@@ -58,7 +54,7 @@ __host__ __device__ void sfinae(T t) { // com-note {{candidate template ignored:
 // The error should not be deferred since it happens in
 // file scope.
 
-template<typename T, typename T::type* = nullptr>
+template<typename T, typename T::isA* = nullptr>
 __host__ __device__ void sfinae(T t) { // com-note {{candidate template ignored: substitution failure [with T = B]}}
   t.x = 1;
 }

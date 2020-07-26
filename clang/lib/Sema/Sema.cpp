@@ -1728,7 +1728,8 @@ Sema::SemaDiagnosticBuilder Sema::targetDiag(SourceLocation Loc,
 }
 
 Sema::SemaDiagnosticBuilder Sema::Diag(SourceLocation Loc, unsigned DiagID) {
-  if (!getLangOpts().CUDA || !LangOpts.GPUDeferDiag)
+  if (!getLangOpts().CUDA || !LangOpts.GPUDeferDiag ||
+      !DiagnosticIDs::isDeferrable(DiagID))
     return SemaDiagnosticBuilder(SemaDiagnosticBuilder::K_Immediate, Loc,
                                  DiagID, getCurFunctionDecl(), *this);
 
