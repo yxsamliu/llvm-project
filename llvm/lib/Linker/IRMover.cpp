@@ -1195,6 +1195,35 @@ void IRLinker::linkNamedMDNodes() {
 
 /// Merge the linker flags in Src into the Dest module.
 Error IRLinker::linkModuleFlagsMetadata() {
+  // A module with MergeTargetID is not allowed to link with a module
+  // without MergeTargetID.
+  auto HasMergeTargetIDBehavior = [](Module &M) {
+    auto *ModFlags = M.getModuleFlagsMetadata();
+    if (!ModFlags)
+      return false;
+    for (unsigned I = 0, E = ModFlags->getNumOperands(); I != E; ++I) {
+      MDNode *Op = ModFlags->getOperand(I);
+      ConstantInt *Behavior = mdconst::extract<ConstantInt>(Op->getOperand(0));
+      if (Behavior->getZExtValue() == Module::MergeTargetID)
+        return true;
+    }
+    return false;
+  };
+  // llvm-link starts with an empty module and adds modules one by one. We
+  // have to allow the empty module to link with any other module.
+  if (DstM.getModuleFlagsMetadata()) {
+    bool SrcHasTargetID = HasMergeTargetIDBehavior(*SrcM);
+    bool DstHasTargetID = HasMergeTargetIDBehavior(DstM);
+    if (SrcHasTargetID != DstHasTargetID) {
+      auto *HasM = SrcHasTargetID ? &*SrcM : &DstM;
+      auto *NoM = SrcHasTargetID ? &DstM : &*SrcM;
+      return stringErr("cannot link '" + HasM->getModuleIdentifier() +
+                       "' which has target-id with '" +
+                       NoM->getModuleIdentifier() +
+                       "' which does not have target-id.");
+    }
+  }
+
   // If the source module has no module flags, we are done.
   const NamedMDNode *SrcModFlags = SrcM->getModuleFlagsMetadata();
   if (!SrcModFlags)

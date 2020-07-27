@@ -19,7 +19,7 @@
 ; RUN: llvm-link %s %p/Inputs/module-flags-target-id-src-diff-cpu.ll -S -o - \
 ; RUN:  2>&1 | FileCheck -check-prefixes=DIFFCPU,COMMON %s
 
-; RUN: llvm-link %s %p/Inputs/module-flags-target-id-src-none.ll -S -o - \
+; RUN: not llvm-link %s %p/Inputs/module-flags-target-id-src-none.ll -S -o - \
 ; RUN:  2>&1 | FileCheck -check-prefix=NONE %s
 
 ; Test target id module flags.
@@ -31,11 +31,9 @@
 ; XNACK: !0 = !{i32 8, !"target-id", !"amdgcn-amd-amdhsa--gfx908:xnack-"}
 ; DIFFTRIPLE: !0 = !{i32 8, !"target-id", !"amdgcn-amd-amdpal--gfx908"}
 ; DIFFCPU: !0 = !{i32 8, !"target-id", !"amdgcn-amd-amdhsa--gfx900"}
-; NONE: !llvm.module.flags = !{!0, !1}
-; NONE: !0 = !{i32 8, !"target-id", !""}
-; NONE: !1 = !{i32 1, !"foo", i32 37}
 
 ; INVALID: error: invalid module flag 'target-id': incorrect format ('amdgcn-amd-amdhsa--gfx908:xnack'
+; NONE: error: cannot link 'llvm-link' which has target-id with '{{.*}}' which does not have target-id
 
 !llvm.module.flags = !{ !0 }
 !0 = !{ i32 8, !"target-id", !"" }
