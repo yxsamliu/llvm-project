@@ -19,8 +19,8 @@
 ; RUN: not llvm-link %s %p/Inputs/module-flags-target-id-src-diff-cpu.ll -S -o - \
 ; RUN:  2>&1 | FileCheck -check-prefix=DIFFCPU %s
 
-; RUN: llvm-link %s %p/Inputs/module-flags-target-id-src-none.ll -S -o - \
-; RUN:  2>&1 | FileCheck -check-prefix=NONE %s
+; RUN: not llvm-link %s %p/Inputs/module-flags-target-id-src-none.ll -S -o - \
+; RUN:  2>&1 | FileCheck -check-prefix=CONFLICT2 %s
 
 ; Test target id module flags.
 
@@ -28,13 +28,11 @@
 ; NOCHANGE: !0 = !{i32 8, !"target-id", !"amdgcn-amd-amdhsa--gfx908"}
 ; BOTH: !0 = !{i32 8, !"target-id", !"amdgcn-amd-amdhsa--gfx908:sram-ecc-:xnack+"}
 ; XNACK: !0 = !{i32 8, !"target-id", !"amdgcn-amd-amdhsa--gfx908:xnack-"}
-; NONE: !llvm.module.flags = !{!0, !1}
-; NONE: !0 = !{i32 8, !"target-id", !"amdgcn-amd-amdhsa--gfx908"}
-; NONE: !1 = !{i32 1, !"foo", i32 37}
 
 ; INVALID: error: invalid module flag 'target-id': incorrect format ('amdgcn-amd-amdhsa--gfx908:xnack'
 ; DIFFTRIPLE: error: linking module flags 'target-id': IDs have conflicting values ('amdgcn-amd-amdpal--gfx908' from '{{.*}}' with 'amdgcn-amd-amdhsa--gfx908' from '{{.*}}'
 ; DIFFCPU: error: linking module flags 'target-id': IDs have conflicting values ('amdgcn-amd-amdhsa--gfx900' from '{{.*}}' with 'amdgcn-amd-amdhsa--gfx908' from '{{.*}}'
+; CONFLICT2: error: cannot link '{{.*}}' which has target-id with '{{.*}}' which does not have target-id.
 
 !llvm.module.flags = !{ !0 }
 !0 = !{ i32 8, !"target-id", !"amdgcn-amd-amdhsa--gfx908" }
