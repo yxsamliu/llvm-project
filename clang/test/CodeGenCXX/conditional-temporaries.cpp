@@ -64,8 +64,8 @@ int getDtorCalls() {
 bool success() {
   // CHECK-LEGACY-OPT: ret i1 true
   // X64-NEWPM-OPT: ret i1 true
-  // AMDGCN-NEWPM-OPT: [[CTORS:%.*]] = load i32, i32* addrspacecast (i32 addrspace(1)* @_ZN12_GLOBAL__N_19ctorcallsE to i32*), align 4, !tbaa !2
-  // AMDGCN-NEWPM-OPT: [[DTORS:%.*]] = load i32, i32* addrspacecast (i32 addrspace(1)* @_ZN12_GLOBAL__N_19dtorcallsE to i32*), align 4, !tbaa !2
+  // AMDGCN-NEWPM-OPT: [[CTORS:%.*]] = load i32, i32* addrspacecast (i32 addrspace(1)* @_ZN12_GLOBAL__N_19ctorcallsE to i32*), align 4
+  // AMDGCN-NEWPM-OPT: [[DTORS:%.*]] = load i32, i32* addrspacecast (i32 addrspace(1)* @_ZN12_GLOBAL__N_19dtorcallsE to i32*), align 4
   // AMDGCN-NEWPM-OPT: %cmp = icmp eq i32 [[CTORS]], [[DTORS]]
   // AMDGCN-NEWPM-OPT: ret i1 %cmp
   return ctorcalls == dtorcalls;
