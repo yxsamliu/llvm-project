@@ -886,9 +886,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__atomic_fetch_sub:
   case AtomicExpr::AO__atomic_add_fetch:
   case AtomicExpr::AO__atomic_sub_fetch:
-    if (MemTy->isFloatingType()) {
-      ShouldCastToIntPtrTy = false;
-    }
+    ShouldCastToIntPtrTy = !MemTy->isFloatingType();
     LLVM_FALLTHROUGH;
 
   case AtomicExpr::AO__c11_atomic_store:
