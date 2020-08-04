@@ -10281,7 +10281,10 @@ static GVALinkage adjustGVALinkageForAttributes(const ASTContext &Context,
       return GVA_StrongODR;
     // Single source offloading languages like CUDA/HIP need to be able to
     // access static device variables from host code of the same compilation
-    // unit. This is done by externalizing the static variable.
+    // unit. This is done by externalizing the static variable with a shared
+    // name between the host and device compilation which is the same for the
+    // same compilation unit whereas different among different compilation
+    // units.
     if (Context.shouldExternalizeStaticVar(D))
       return GVA_StrongExternal;
   }
@@ -11170,10 +11173,15 @@ clang::operator<<(const DiagnosticBuilder &DB,
   return DB << "a prior #pragma section";
 }
 
-bool ASTContext::shouldExternalizeStaticVar(const Decl *D) const {
-  return !getLangOpts().GPURelocatableDeviceCode &&
+bool ASTContext::mayExternalizeStaticVar(const Decl *D) const {
+  return (!getLangOpts().CUID.empty() ||
+          !getLangOpts().GPURelocatableDeviceCode) &&
          (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>()) &&
          isa<VarDecl>(D) && cast<VarDecl>(D)->isFileVarDecl() &&
-         cast<VarDecl>(D)->getStorageClass() == SC_Static &&
+         cast<VarDecl>(D)->getStorageClass() == SC_Static;
+}
+
+bool ASTContext::shouldExternalizeStaticVar(const Decl *D) const {
+  return mayExternalizeStaticVar(D) &&
          CUDAStaticDeviceVarReferencedByHost.count(cast<VarDecl>(D));
 }

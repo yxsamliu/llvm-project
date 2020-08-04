@@ -297,6 +297,8 @@ public:
   /// Return whether an error during the parsing of the input args.
   bool containsError() const { return ContainsError; }
 
+  void setContainsError() { ContainsError = true; }
+
   /// Redirect - Redirect output of this compilation. Can only be done once.
   ///
   /// \param Redirects - array of optional paths. The array should have a size
