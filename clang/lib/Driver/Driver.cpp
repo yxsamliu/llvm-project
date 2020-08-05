@@ -2783,7 +2783,6 @@ class OffloadingActionBuilder final {
           parseTargetID(getHIPOffloadTargetTriple(), IdStr, &Features);
       if (!ArchStr) {
         C.getDriver().Diag(clang::diag::err_drv_bad_target_id) << IdStr;
-        C.setContainsError();
         return StringRef();
       }
       auto CanId = getCanonicalTargetID(ArchStr.getValue(), Features);
