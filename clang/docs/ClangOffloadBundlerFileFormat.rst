@@ -8,7 +8,7 @@ following EBNF syntax:
 
 .. code::
 
-  <bundle_entry_id>   ::= <offload_kind> "-" <target_triple> "-" <target_id>
+  <bundle_entry_id>   ::= <offload_kind> "-" <target_triple> "-" <processor_or_target_id>
 
 Where:
 
@@ -19,9 +19,10 @@ Where:
 **target_triple**
   The target triple of the device binary.
 
-**target_id**
-  The target ID of the device binary (see `Target ID Definition
-  <https://llvm.org/docs/AMDGPUUsage.html#target-ids>`_).
+**processor_or_target_id**
+  If target ID is not supported by the target, this is the processor for which the device
+  binary is compiled. If target ID is supported by the target, this is the target ID for which the
+  device binary is compiled (see `Target ID Definition <https://llvm.org/docs/AMDGPUUsage.html#target-ids>`_).
 
  .. table:: Bundled Device Binary Offload Kind
      :name: offload-kind-table
@@ -83,6 +84,6 @@ The format of a bundled device binary is defined by the following table:
 The ``clang-offload-bundler`` is used to bundle device binaries for different processor
 and feature settings.
 
-The rules of compatible offload targets in a single bundled device binary is defined
+If target ID is supported, the rules of compatible offload targets in a single bundled device binary is defined
 in `AMDGPU Embedding Bundled Code Objects
   <https://llvm.org/docs/AMDGPUUsage.html#embedding-bundled-objects>`_.

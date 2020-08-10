@@ -169,25 +169,25 @@ which includes the *Processor* and the *Target Features*.
                                                                                     - R7 260X
      **GCN GFX8 (Volcanic Islands (VI))** [AMD-GCN-GFX8]_
      -----------------------------------------------------------------------------------------------------
-     ``gfx801``  - ``carrizo``   ``amdgcn``   APU   - xnack                         - A6-8500P
+     ``gfx801``  - ``carrizo``   ``amdgcn``   APU                                   - A6-8500P
                                                                                     - Pro A6-8500B
                                                                                     - A8-8600P
                                                                                     - Pro A8-8600B
                                                                                     - FX-8800P
                                                                                     - Pro A12-8800B
-     \                           ``amdgcn``   APU   - xnack                 ROCm    - A10-8700P
+     \                           ``amdgcn``   APU                           ROCm    - A10-8700P
                                                                                     - Pro A10-8700B
                                                                                     - A10-8780P
-     \                           ``amdgcn``   APU   - xnack                         - A10-9600P
+     \                           ``amdgcn``   APU                                   - A10-9600P
                                                                                     - A10-9630P
                                                                                     - A12-9700P
                                                                                     - A12-9730P
                                                                                     - FX-9800P
                                                                                     - FX-9830P
-     \                           ``amdgcn``   APU   - xnack                         - E2-9010
+     \                           ``amdgcn``   APU                                   - E2-9010
                                                                                     - A6-9210
                                                                                     - A9-9410
-     ``gfx802``  - ``iceland``   ``amdgcn``   dGPU  - xnack                 ROCm    - FirePro S7150
+     ``gfx802``  - ``iceland``   ``amdgcn``   dGPU                          ROCm    - FirePro S7150
                  - ``tonga``                                                        - FirePro S7100
                                                                                     - FirePro W7100
                                                                                     - Radeon R285
@@ -195,18 +195,18 @@ which includes the *Processor* and the *Target Features*.
                                                                                     - Radeon R9 385
                                                                                     - Mobile FirePro
                                                                                       M7170
-     ``gfx803``  - ``fiji``      ``amdgcn``   dGPU  - xnack                 ROCm    - Radeon R9 Nano
+     ``gfx803``  - ``fiji``      ``amdgcn``   dGPU                          ROCm    - Radeon R9 Nano
                                                                                     - Radeon R9 Fury
                                                                                     - Radeon R9 FuryX
                                                                                     - Radeon Pro Duo
                                                                                     - FirePro S9300x2
                                                                                     - Radeon Instinct MI8
-     \           - ``polaris10`` ``amdgcn``   dGPU  - xnack                 ROCm    - Radeon RX 470
+     \           - ``polaris10`` ``amdgcn``   dGPU                          ROCm    - Radeon RX 470
                                                                                     - Radeon RX 480
                                                                                     - Radeon Instinct MI6
-     \           - ``polaris11`` ``amdgcn``   dGPU  - xnack                 ROCm    - Radeon RX 460
+     \           - ``polaris11`` ``amdgcn``   dGPU                          ROCm    - Radeon RX 460
 
-     ``gfx810``  - ``stoney``    ``amdgcn``   APU   - xnack
+     ``gfx810``  - ``stoney``    ``amdgcn``   APU
 
      **GCN GFX9** [AMD-GCN-GFX9]_
      -----------------------------------------------------------------------------------------------------
@@ -224,8 +224,8 @@ which includes the *Processor* and the *Target Features*.
                                                                                     .. TODO::
                                                                                        Add product
                                                                                        names.
-     ``gfx906``                  ``amdgcn``   dGPU  - xnack                         - Radeon Instinct MI50
-                                                                                    - Radeon Instinct MI60
+     ``gfx906``                  ``amdgcn``   dGPU  - sram-ecc                      - Radeon Instinct MI50
+                                                    - xnack                         - Radeon Instinct MI60
                                                                                     - Radeon VII
                                                                                     - Radeon Pro VII
      ``gfx908``                  ``amdgcn``   dGPU  - sram-ecc                      *TBA*
@@ -253,6 +253,13 @@ which includes the *Processor* and the *Target Features*.
 
      ``gfx1030``                 ``amdgcn``   dGPU  - cumode                        *TBA*
                                                     - wavefrontsize64
+                                                                                    .. TODO
+                                                                                       Add product
+                                                                                       names.
+
+     ``gfx1031``                 ``amdgcn``   dGPU  - cumode                        *TBA*
+                                                    - wavefrontsize64
+                                                    - xnack
                                                                                     .. TODO
                                                                                        Add product
                                                                                        names.
@@ -1296,7 +1303,7 @@ target IDs of the offload code regions of a single source programing language.
 The compiler will perform a separate compilation for the host and a separate
 compilation for the offload code regions for each specified target ID. The
 ``clang-offload-bundler`` is used to bundle the offload code objects
-(see `ClangOffloadBundlerFileFormat<https://clang.llvm.org/docs/ClangOffloadBundlerFileFormat.html>`_).
+(see :doc:`ClangOffloadBundlerFileFormat`).
 The bundled code object is embedded in the host code object as a data section
 with the name ``.hip_fatbin``.
 
