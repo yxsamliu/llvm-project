@@ -2537,7 +2537,7 @@ class OffloadingActionBuilder final {
 
     virtual bool isValidOffloadArchCombination(
         const std::set<StringRef> &GpuArchs,
-        llvm::SmallVectorImpl<llvm::StringRef> &ConflictingTIDs) = 0;
+        std::pair<llvm::StringRef, llvm::StringRef> &ConflictingTIDs) = 0;
 
     bool initialize() override {
       assert(AssociatedOffloadKind == Action::OFK_Cuda ||
@@ -2611,11 +2611,10 @@ class OffloadingActionBuilder final {
           llvm_unreachable("Unexpected option.");
       }
 
-      llvm::SmallVector<llvm::StringRef, 2> ConflictingArchs;
+      std::pair<llvm::StringRef, llvm::StringRef> ConflictingArchs;
       if (!isValidOffloadArchCombination(GpuArchs, ConflictingArchs)) {
-        assert(ConflictingArchs.size() == 2);
         C.getDriver().Diag(clang::diag::err_drv_bad_offload_arch_combo)
-            << ConflictingArchs[0] << ConflictingArchs[1];
+            << ConflictingArchs.first << ConflictingArchs.second;
         C.setContainsError();
         return true;
       }
@@ -2655,7 +2654,7 @@ class OffloadingActionBuilder final {
 
     bool isValidOffloadArchCombination(
         const std::set<StringRef> &GpuArchs,
-        llvm::SmallVectorImpl<llvm::StringRef> &ConflictingTIDs) override {
+        std::pair<llvm::StringRef, llvm::StringRef> &ConflictingTIDs) override {
       return true;
     }
 
@@ -2792,7 +2791,7 @@ class OffloadingActionBuilder final {
 
     bool isValidOffloadArchCombination(
         const std::set<StringRef> &GpuArchs,
-        llvm::SmallVectorImpl<llvm::StringRef> &ConflictingTIDs) override {
+        std::pair<llvm::StringRef, llvm::StringRef> &ConflictingTIDs) override {
       return isValidTargetIDCombination(GpuArchs, &ConflictingTIDs);
     }
 

@@ -44,8 +44,8 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   /// Target ID is device name followed by optional feature name postfixed
   /// by plus or minus sign delimitted by colon, e.g. gfx908:xnack+:sram-ecc-.
-  /// If the target ID contains +feature, map it to true.
-  /// If the target ID contains -feature, map it to false.
+  /// If the target ID contains feature+, map it to true.
+  /// If the target ID contains feature-, map it to false.
   /// If the target ID does not contain a feature (default), do not map it.
   llvm::StringMap<bool> OffloadArchFeatures;
   std::string TargetID;
@@ -403,11 +403,15 @@ public:
   // pre-defined macros.
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override {
-    for (auto &F : Features) {
+    auto TargetIDFeatures =
+        getAllPossibleTargetIDFeatures(getTriple(), getArchNameAMDGCN(GPUKind));
+    for (auto &&F : Features) {
       assert(F.front() == '+' || F.front() == '-');
       bool IsOn = F.front() == '+';
       StringRef Name = StringRef(F).drop_front();
-      if (Name != "xnack" && Name != "sram-ecc")
+      auto Loc =
+          std::find(TargetIDFeatures.begin(), TargetIDFeatures.end(), Name);
+      if (Loc == TargetIDFeatures.end())
         continue;
       assert(OffloadArchFeatures.find(Name) == OffloadArchFeatures.end());
       OffloadArchFeatures[Name] = IsOn;

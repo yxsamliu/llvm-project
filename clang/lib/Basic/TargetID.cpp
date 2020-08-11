@@ -114,11 +114,11 @@ parseTargetID(const llvm::Triple &T, llvm::StringRef TargetID,
   if (Processor.empty())
     return llvm::None;
 
-  llvm::SmallSet<llvm::StringRef, 2> AllFeatures;
-  for (auto F : getAllPossibleTargetIDFeatures(T, Processor))
+  llvm::SmallSet<llvm::StringRef, 4> AllFeatures;
+  for (auto &&F : getAllPossibleTargetIDFeatures(T, Processor))
     AllFeatures.insert(F);
 
-  for (auto &F : *FeatureMap)
+  for (auto &&F : *FeatureMap)
     if (!AllFeatures.count(F.first()))
       return llvm::None;
 
@@ -143,13 +143,13 @@ std::string getCanonicalTargetID(llvm::StringRef Processor,
 // is invalid.
 bool isValidTargetIDCombination(
     const std::set<llvm::StringRef> &TargetIDs,
-    llvm::SmallVectorImpl<llvm::StringRef> *ConflictingTIDs) {
+    std::pair<llvm::StringRef, llvm::StringRef> *ConflictingTIDs) {
   struct Info {
     llvm::StringRef TargetID;
     llvm::StringMap<bool> Features;
   };
   llvm::StringMap<Info> FeatureMap;
-  for (auto &ID : TargetIDs) {
+  for (auto &&ID : TargetIDs) {
     llvm::StringMap<bool> Features;
     llvm::StringRef Proc =
         parseTargetIDWithFormatCheckingOnly(ID, &Features).getValue();
@@ -157,12 +157,12 @@ bool isValidTargetIDCombination(
     if (Loc == FeatureMap.end())
       FeatureMap[Proc] = Info{ID, Features};
     else {
-      auto ExistingFeatures = Loc->second.Features;
-      for (auto &F : Features) {
+      auto &ExistingFeatures = Loc->second.Features;
+      for (auto &&F : Features) {
         if (ExistingFeatures.find(F.first()) == ExistingFeatures.end()) {
           if (ConflictingTIDs) {
-            ConflictingTIDs->push_back(Loc->second.TargetID);
-            ConflictingTIDs->push_back(ID);
+            ConflictingTIDs->first = Loc->second.TargetID;
+            ConflictingTIDs->second = ID;
           }
           return false;
         }

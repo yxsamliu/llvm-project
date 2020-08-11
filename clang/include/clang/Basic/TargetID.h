@@ -30,7 +30,7 @@ getAllPossibleTargetIDFeatures(const llvm::Triple &T,
 llvm::StringRef getProcessorFromTargetID(const llvm::Triple &T,
                                          llvm::StringRef OffloadArch);
 
-/// Parse an target ID to get processor and feature map.
+/// Parse a target ID to get processor and feature map.
 /// Returns processor name or None if the target ID is invalid.
 /// Returns target ID features in \p FeatureMap if it is not null pointer.
 /// This function assumes \p OffloadArch is a valid target ID.
@@ -55,7 +55,7 @@ std::string getCanonicalTargetID(llvm::StringRef Processor,
 /// pointer.
 bool isValidTargetIDCombination(
     const std::set<llvm::StringRef> &TargetIDs,
-    llvm::SmallVectorImpl<llvm::StringRef> *ConflictingTIDs = nullptr);
+    std::pair<llvm::StringRef, llvm::StringRef> *ConflictingTIDs = nullptr);
 } // namespace clang
 
 #endif
