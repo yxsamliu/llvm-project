@@ -112,41 +112,6 @@ __device__ __attribute__((const)) float __ocml_trunc_f32(float);
 __device__ float __ocml_y0_f32(float);
 __device__ float __ocml_y1_f32(float);
 
-// BEGIN INTRINSICS
-__device__ __attribute__((const)) float __ocml_add_rte_f32(float, float);
-__device__ __attribute__((const)) float __ocml_add_rtn_f32(float, float);
-__device__ __attribute__((const)) float __ocml_add_rtp_f32(float, float);
-__device__ __attribute__((const)) float __ocml_add_rtz_f32(float, float);
-__device__ __attribute__((const)) float __ocml_sub_rte_f32(float, float);
-__device__ __attribute__((const)) float __ocml_sub_rtn_f32(float, float);
-__device__ __attribute__((const)) float __ocml_sub_rtp_f32(float, float);
-__device__ __attribute__((const)) float __ocml_sub_rtz_f32(float, float);
-__device__ __attribute__((const)) float __ocml_mul_rte_f32(float, float);
-__device__ __attribute__((const)) float __ocml_mul_rtn_f32(float, float);
-__device__ __attribute__((const)) float __ocml_mul_rtp_f32(float, float);
-__device__ __attribute__((const)) float __ocml_mul_rtz_f32(float, float);
-__device__ __attribute__((const)) float __ocml_div_rte_f32(float, float);
-__device__ __attribute__((const)) float __ocml_div_rtn_f32(float, float);
-__device__ __attribute__((const)) float __ocml_div_rtp_f32(float, float);
-__device__ __attribute__((const)) float __ocml_div_rtz_f32(float, float);
-__device__ __attribute__((const)) float __ocml_sqrt_rte_f32(float, float);
-__device__ __attribute__((const)) float __ocml_sqrt_rtn_f32(float, float);
-__device__ __attribute__((const)) float __ocml_sqrt_rtp_f32(float, float);
-__device__ __attribute__((const)) float __ocml_sqrt_rtz_f32(float, float);
-__device__ __attribute__((const)) float __ocml_fma_rte_f32(float, float, float);
-__device__ __attribute__((const)) float __ocml_fma_rtn_f32(float, float, float);
-__device__ __attribute__((const)) float __ocml_fma_rtp_f32(float, float, float);
-__device__ __attribute__((const)) float __ocml_fma_rtz_f32(float, float, float);
-
-__device__ __attribute__((const)) float
-__llvm_amdgcn_cos_f32(float) __asm("llvm.amdgcn.cos.f32");
-__device__ __attribute__((const)) float
-__llvm_amdgcn_rcp_f32(float) __asm("llvm.amdgcn.rcp.f32");
-__device__ __attribute__((const)) float
-__llvm_amdgcn_rsq_f32(float) __asm("llvm.amdgcn.rsq.f32");
-__device__ __attribute__((const)) float
-__llvm_amdgcn_sin_f32(float) __asm("llvm.amdgcn.sin.f32");
-// END INTRINSICS
 // END FLOAT
 
 // BEGIN DOUBLE
@@ -239,41 +204,6 @@ __device__ __attribute__((const)) double __ocml_trunc_f64(double);
 __device__ double __ocml_y0_f64(double);
 __device__ double __ocml_y1_f64(double);
 
-// BEGIN INTRINSICS
-__device__ __attribute__((const)) double __ocml_add_rte_f64(double, double);
-__device__ __attribute__((const)) double __ocml_add_rtn_f64(double, double);
-__device__ __attribute__((const)) double __ocml_add_rtp_f64(double, double);
-__device__ __attribute__((const)) double __ocml_add_rtz_f64(double, double);
-__device__ __attribute__((const)) double __ocml_sub_rte_f64(double, double);
-__device__ __attribute__((const)) double __ocml_sub_rtn_f64(double, double);
-__device__ __attribute__((const)) double __ocml_sub_rtp_f64(double, double);
-__device__ __attribute__((const)) double __ocml_sub_rtz_f64(double, double);
-__device__ __attribute__((const)) double __ocml_mul_rte_f64(double, double);
-__device__ __attribute__((const)) double __ocml_mul_rtn_f64(double, double);
-__device__ __attribute__((const)) double __ocml_mul_rtp_f64(double, double);
-__device__ __attribute__((const)) double __ocml_mul_rtz_f64(double, double);
-__device__ __attribute__((const)) double __ocml_div_rte_f64(double, double);
-__device__ __attribute__((const)) double __ocml_div_rtn_f64(double, double);
-__device__ __attribute__((const)) double __ocml_div_rtp_f64(double, double);
-__device__ __attribute__((const)) double __ocml_div_rtz_f64(double, double);
-__device__ __attribute__((const)) double __ocml_sqrt_rte_f64(double, double);
-__device__ __attribute__((const)) double __ocml_sqrt_rtn_f64(double, double);
-__device__ __attribute__((const)) double __ocml_sqrt_rtp_f64(double, double);
-__device__ __attribute__((const)) double __ocml_sqrt_rtz_f64(double, double);
-__device__ __attribute__((const)) double __ocml_fma_rte_f64(double, double,
-                                                            double);
-__device__ __attribute__((const)) double __ocml_fma_rtn_f64(double, double,
-                                                            double);
-__device__ __attribute__((const)) double __ocml_fma_rtp_f64(double, double,
-                                                            double);
-__device__ __attribute__((const)) double __ocml_fma_rtz_f64(double, double,
-                                                            double);
-
-__device__ __attribute__((const)) double
-__llvm_amdgcn_rcp_f64(double) __asm("llvm.amdgcn.rcp.f64");
-__device__ __attribute__((const)) double
-__llvm_amdgcn_rsq_f64(double) __asm("llvm.amdgcn.rsq.f64");
-
 __device__ __attribute__((const)) _Float16 __ocml_ceil_f16(_Float16);
 __device__ _Float16 __ocml_cos_f16(_Float16);
 __device__ __attribute__((pure)) _Float16 __ocml_exp_f16(_Float16);
@@ -288,7 +218,6 @@ __device__ __attribute__((const)) int __ocml_isnan_f16(_Float16);
 __device__ __attribute__((pure)) _Float16 __ocml_log_f16(_Float16);
 __device__ __attribute__((pure)) _Float16 __ocml_log10_f16(_Float16);
 __device__ __attribute__((pure)) _Float16 __ocml_log2_f16(_Float16);
-__device__ __attribute__((const)) _Float16 __llvm_amdgcn_rcp_f16(_Float16);
 __device__ __attribute__((const)) _Float16 __ocml_rint_f16(_Float16);
 __device__ __attribute__((const)) _Float16 __ocml_rsqrt_f16(_Float16);
 __device__ _Float16 __ocml_sin_f16(_Float16);
@@ -315,11 +244,6 @@ __device__ __attribute__((const)) __2i16 __ocml_isnan_2f16(__2f16);
 __device__ __attribute__((pure)) __2f16 __ocml_log_2f16(__2f16);
 __device__ __attribute__((pure)) __2f16 __ocml_log10_2f16(__2f16);
 __device__ __attribute__((pure)) __2f16 __ocml_log2_2f16(__2f16);
-__device__ inline __2f16
-__llvm_amdgcn_rcp_2f16(__2f16 __x) // Not currently exposed by ROCDL.
-{
-  return (__2f16)(__llvm_amdgcn_rcp_f16(__x.x), __llvm_amdgcn_rcp_f16(__x.y));
-}
 __device__ __attribute__((const)) __2f16 __ocml_rint_2f16(__2f16);
 __device__ __attribute__((const)) __2f16 __ocml_rsqrt_2f16(__2f16);
 __device__ __2f16 __ocml_sin_2f16(__2f16);
