@@ -37,8 +37,6 @@ llvm::StringRef getProcessorFromTargetID(const llvm::Triple &T,
 /// If the target ID contains feature+, map it to true.
 /// If the target ID contains feature-, map it to false.
 /// If the target ID does not contain a feature (default), do not map it.
-/// Returns whether the target ID features are valid in \p IsValid if it
-/// is not a null pointer.
 llvm::Optional<llvm::StringRef>
 parseTargetID(const llvm::Triple &T, llvm::StringRef OffloadArch,
               llvm::StringMap<bool> *FeatureMap);

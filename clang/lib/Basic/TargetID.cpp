@@ -158,7 +158,7 @@ getConflictTargetIDCombination(const std::set<llvm::StringRef> &TargetIDs) {
     else {
       auto &ExistingFeatures = Loc->second.Features;
       if (llvm::any_of(Features, [&](auto &F) {
-            return ExistingFeatures.find(F.first()) == ExistingFeatures.end();
+            return ExistingFeatures.count(F.first()) == 0;
           }))
         return std::make_pair(Loc->second.TargetID, ID);
     }

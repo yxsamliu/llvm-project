@@ -2535,9 +2535,8 @@ class OffloadingActionBuilder final {
     /// option is invalid.
     virtual StringRef getCanonicalOffloadArch(StringRef Arch) = 0;
 
-    virtual bool isValidOffloadArchCombination(
-        const std::set<StringRef> &GpuArchs,
-        std::pair<llvm::StringRef, llvm::StringRef> &ConflictingTIDs) = 0;
+    virtual llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>
+    getConflictOffloadArchCombination(const std::set<StringRef> &GpuArchs) = 0;
 
     bool initialize() override {
       assert(AssociatedOffloadKind == Action::OFK_Cuda ||
@@ -2611,10 +2610,11 @@ class OffloadingActionBuilder final {
           llvm_unreachable("Unexpected option.");
       }
 
-      std::pair<llvm::StringRef, llvm::StringRef> ConflictingArchs;
-      if (!isValidOffloadArchCombination(GpuArchs, ConflictingArchs)) {
+      auto &&ConflictingArchs = getConflictOffloadArchCombination(GpuArchs);
+      if (ConflictingArchs) {
         C.getDriver().Diag(clang::diag::err_drv_bad_offload_arch_combo)
-            << ConflictingArchs.first << ConflictingArchs.second;
+            << ConflictingArchs.getValue().first
+            << ConflictingArchs.getValue().second;
         C.setContainsError();
         return true;
       }
@@ -2652,10 +2652,10 @@ class OffloadingActionBuilder final {
       return CudaArchToString(Arch);
     }
 
-    bool isValidOffloadArchCombination(
-        const std::set<StringRef> &GpuArchs,
-        std::pair<llvm::StringRef, llvm::StringRef> &ConflictingTIDs) override {
-      return true;
+    llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>
+    getConflictOffloadArchCombination(
+        const std::set<StringRef> &GpuArchs) override {
+      return llvm::None;
     }
 
     ActionBuilderReturnCode
@@ -2789,14 +2789,10 @@ class OffloadingActionBuilder final {
       return Args.MakeArgStringRef(CanId);
     };
 
-    bool isValidOffloadArchCombination(
-        const std::set<StringRef> &GpuArchs,
-        std::pair<llvm::StringRef, llvm::StringRef> &ConflictingTIDs) override {
-      auto CTID = getConflictTargetIDCombination(GpuArchs);
-      if (!CTID)
-        return true;
-      ConflictingTIDs = CTID.getValue();
-      return false;
+    llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>
+    getConflictOffloadArchCombination(
+        const std::set<StringRef> &GpuArchs) override {
+      return getConflictTargetIDCombination(GpuArchs);
     }
 
     ActionBuilderReturnCode
