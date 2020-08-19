@@ -617,7 +617,7 @@ def no_cuda_include_ptx_EQ : Joined<["--"], "no-cuda-include-ptx=">, Flags<[Driv
 def offload_arch_EQ : Joined<["--"], "offload-arch=">, Flags<[DriverOption]>,
   HelpText<"CUDA offloading device architecture (e.g. sm_35), or HIP offloading target ID in the form of a "
            "device architecture followed by target ID features delimited by a colon. Each target ID feature "
-           "is a pre-defined string followed by a plus or minus sign (e.g. gfx908:xnack+:sram-ecc-).  May be "
+           "is a pre-defined string followed by a plus or minus sign (e.g. gfx908:xnack+:sramecc-).  May be "
            "specified more than once.">;
 def cuda_gpu_arch_EQ : Joined<["--"], "cuda-gpu-arch=">, Flags<[DriverOption]>,
   Alias<offload_arch_EQ>;
@@ -2427,9 +2427,9 @@ def mxnack : Flag<["-"], "mxnack">, Group<m_amdgpu_Features_Group>,
   HelpText<"Enable XNACK (AMDGPU only)">;
 def mno_xnack : Flag<["-"], "mno-xnack">, Group<m_amdgpu_Features_Group>,
   HelpText<"Disable XNACK (AMDGPU only)">;
-def msram_ecc : Flag<["-"], "msram-ecc">, Group<m_amdgpu_Features_Group>,
+def msram_ecc : Flag<["-"], "msramecc">, Group<m_amdgpu_Features_Group>,
   HelpText<"Enable SRAM ECC (AMDGPU only)">;
-def mno_sram_ecc : Flag<["-"], "mno-sram-ecc">, Group<m_amdgpu_Features_Group>,
+def mno_sram_ecc : Flag<["-"], "mno-sramecc">, Group<m_amdgpu_Features_Group>,
   HelpText<"Disable SRAM ECC (AMDGPU only)">;
 
 def mcumode : Flag<["-"], "mcumode">, Group<m_amdgpu_Features_Group>,
