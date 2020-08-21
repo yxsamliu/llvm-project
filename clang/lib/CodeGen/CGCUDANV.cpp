@@ -116,7 +116,9 @@ private:
   }
 
   void emitDeviceStubBodyLegacy(CodeGenFunction &CGF, FunctionArgList &Args);
-  void emitDeviceStubBodyNew(CodeGenFunction &CGF, FunctionArgList &Args);
+  void emitDeviceStubBodyNew(CodeGenFunction &CGF, llvm::Value *Kernel,
+                             const Address &KernelArgs,
+                             Expr const *const *ConfigArgs = nullptr);
   std::string getDeviceSideName(const NamedDecl *ND) override;
 
 public:
@@ -149,6 +151,13 @@ public:
   llvm::Function *makeModuleCtorFunction() override;
   /// Creates module destructor function
   llvm::Function *makeModuleDtorFunction() override;
+
+  RValue EmitCUDAKernelCallExpr(CodeGenFunction &CGF,
+                                const CUDAKernelCallExpr *E,
+                                ReturnValueSlot ReturnValue) override;
+
+  Address createTempVarForKernelArgs(CodeGenFunction &CGF,
+                                     FunctionArgList &Args);
 };
 
 }
@@ -241,19 +250,17 @@ void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
                                      FunctionArgList &Args) {
   EmittedKernels.push_back({CGF.CurFn, CGF.CurFuncDecl});
   if (CudaFeatureEnabled(CGM.getTarget().getSDKVersion(),
-                         CudaFeature::CUDA_USES_NEW_LAUNCH) ||
-      (CGF.getLangOpts().HIP && CGF.getLangOpts().HIPUseNewLaunchAPI))
-    emitDeviceStubBodyNew(CGF, Args);
-  else
+                         CudaFeature::CUDA_USES_NEW_LAUNCH))
+    emitDeviceStubBodyNew(CGF, CGF.CurFn,
+                          createTempVarForKernelArgs(CGF, Args));
+  else if (!CGF.getLangOpts().HIP || !CGF.getLangOpts().HIPUseNewLaunchAPI)
     emitDeviceStubBodyLegacy(CGF, Args);
 }
 
-// CUDA 9.0+ uses new way to launch kernels. Parameters are packed in a local
-// array and kernels are launched using cudaLaunchKernel().
-void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
-                                            FunctionArgList &Args) {
-  // Build the shadow stack entry at the very start of the function.
-
+// Create a temporary array to hold all kernel arguments for kernel stub.
+// \p Args is the kernel argument list of the kernel stub.
+Address CGNVCUDARuntime::createTempVarForKernelArgs(CodeGenFunction &CGF,
+                                                    FunctionArgList &Args) {
   // Calculate amount of space we will need for all arguments.  If we have no
   // args, allocate a single pointer so we still have a valid pointer to the
   // argument array that we can pass to runtime, even if it will be unused.
@@ -267,8 +274,19 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
     CGF.Builder.CreateDefaultAlignedStore(
         VoidVarPtr, CGF.Builder.CreateConstGEP1_32(KernelArgs.getPointer(), i));
   }
+  return KernelArgs;
+}
 
-  llvm::BasicBlock *EndBlock = CGF.createBasicBlock("setup.end");
+// CUDA 9.0+ uses new way to launch kernels. Parameters are packed in a local
+// array and kernels are launched using cudaLaunchKernel().
+void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
+                                            llvm::Value *Kernel,
+                                            const Address &KernelArgs,
+                                            Expr const *const *ConfigArgs) {
+  // Build the shadow stack entry at the very start of the function.
+  llvm::BasicBlock *EndBlock = nullptr;
+  if (!CGF.getLangOpts().HIP)
+     EndBlock = CGF.createBasicBlock("setup.end");
 
   // Lookup cudaLaunchKernel/hipLaunchKernel function.
   // cudaError_t cudaLaunchKernel(const void *func, dim3 gridDim, dim3 blockDim,
@@ -296,39 +314,49 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
   // Create temporary dim3 grid_dim, block_dim.
   ParmVarDecl *GridDimParam = cudaLaunchKernelFD->getParamDecl(1);
   QualType Dim3Ty = GridDimParam->getType();
-  Address GridDim =
-      CGF.CreateMemTemp(Dim3Ty, CharUnits::fromQuantity(8), "grid_dim");
-  Address BlockDim =
-      CGF.CreateMemTemp(Dim3Ty, CharUnits::fromQuantity(8), "block_dim");
-  Address ShmemSize =
-      CGF.CreateTempAlloca(SizeTy, CGM.getSizeAlign(), "shmem_size");
-  Address Stream =
-      CGF.CreateTempAlloca(VoidPtrTy, CGM.getPointerAlign(), "stream");
-  llvm::FunctionCallee cudaPopConfigFn = CGM.CreateRuntimeFunction(
-      llvm::FunctionType::get(IntTy,
-                              {/*gridDim=*/GridDim.getType(),
-                               /*blockDim=*/BlockDim.getType(),
-                               /*ShmemSize=*/ShmemSize.getType(),
-                               /*Stream=*/Stream.getType()},
-                              /*isVarArg=*/false),
-      addUnderscoredPrefixToName("PopCallConfiguration"));
-
-  CGF.EmitRuntimeCallOrInvoke(cudaPopConfigFn,
-                              {GridDim.getPointer(), BlockDim.getPointer(),
-                               ShmemSize.getPointer(), Stream.getPointer()});
+  RValue ConfigArgRVals[4];
+  if (!CGF.getLangOpts().HIP) {
+    Address GridDim =
+        CGF.CreateMemTemp(Dim3Ty, CharUnits::fromQuantity(8), "grid_dim");
+    Address BlockDim =
+        CGF.CreateMemTemp(Dim3Ty, CharUnits::fromQuantity(8), "block_dim");
+    Address ShmemSize =
+        CGF.CreateTempAlloca(SizeTy, CGM.getSizeAlign(), "shmem_size");
+    Address Stream =
+        CGF.CreateTempAlloca(VoidPtrTy, CGM.getPointerAlign(), "stream");
+    llvm::FunctionCallee cudaPopConfigFn = CGM.CreateRuntimeFunction(
+        llvm::FunctionType::get(IntTy,
+                                {/*gridDim=*/GridDim.getType(),
+                                 /*blockDim=*/BlockDim.getType(),
+                                 /*ShmemSize=*/ShmemSize.getType(),
+                                 /*Stream=*/Stream.getType()},
+                                /*isVarArg=*/false),
+        addUnderscoredPrefixToName("PopCallConfiguration"));
+    CGF.EmitRuntimeCallOrInvoke(cudaPopConfigFn,
+                                {GridDim.getPointer(), BlockDim.getPointer(),
+                                 ShmemSize.getPointer(), Stream.getPointer()});
+    ConfigArgRVals[0] = RValue::getAggregate(GridDim);
+    ConfigArgRVals[1] = RValue::getAggregate(BlockDim);
+    ConfigArgRVals[2] = RValue::get(CGF.Builder.CreateLoad(ShmemSize));
+    ConfigArgRVals[3] = RValue::get(CGF.Builder.CreateLoad(Stream));
+  } else {
+    assert(ConfigArgs);
+    for (unsigned I = 0; I < 4; ++I)
+      ConfigArgRVals[I] = CGF.EmitAnyExprToTemp(ConfigArgs[I]);
+  }
 
   // Emit the call to cudaLaunch
-  llvm::Value *Kernel = CGF.Builder.CreatePointerCast(CGF.CurFn, VoidPtrTy);
   CallArgList LaunchKernelArgs;
-  LaunchKernelArgs.add(RValue::get(Kernel),
-                       cudaLaunchKernelFD->getParamDecl(0)->getType());
-  LaunchKernelArgs.add(RValue::getAggregate(GridDim), Dim3Ty);
-  LaunchKernelArgs.add(RValue::getAggregate(BlockDim), Dim3Ty);
+  LaunchKernelArgs.add(
+      RValue::get(CGF.Builder.CreatePointerCast(Kernel, VoidPtrTy)),
+      cudaLaunchKernelFD->getParamDecl(0)->getType());
+  LaunchKernelArgs.add(ConfigArgRVals[0], Dim3Ty);
+  LaunchKernelArgs.add(ConfigArgRVals[1], Dim3Ty);
   LaunchKernelArgs.add(RValue::get(KernelArgs.getPointer()),
                        cudaLaunchKernelFD->getParamDecl(3)->getType());
-  LaunchKernelArgs.add(RValue::get(CGF.Builder.CreateLoad(ShmemSize)),
+  LaunchKernelArgs.add(ConfigArgRVals[2],
                        cudaLaunchKernelFD->getParamDecl(4)->getType());
-  LaunchKernelArgs.add(RValue::get(CGF.Builder.CreateLoad(Stream)),
+  LaunchKernelArgs.add(ConfigArgRVals[3],
                        cudaLaunchKernelFD->getParamDecl(5)->getType());
 
   QualType QT = cudaLaunchKernelFD->getType();
@@ -342,9 +370,12 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
       CGM.CreateRuntimeFunction(FTy, LaunchKernelName);
   CGF.EmitCall(FI, CGCallee::forDirect(cudaLaunchKernelFn), ReturnValueSlot(),
                LaunchKernelArgs);
-  CGF.EmitBranch(EndBlock);
 
-  CGF.EmitBlock(EndBlock);
+  if (!CGF.getLangOpts().HIP) {
+    assert(EndBlock);
+    CGF.EmitBranch(EndBlock);
+    CGF.EmitBlock(EndBlock);
+  }
 }
 
 void CGNVCUDARuntime::emitDeviceStubBodyLegacy(CodeGenFunction &CGF,
@@ -845,4 +876,51 @@ llvm::Function *CGNVCUDARuntime::makeModuleDtorFunction() {
 
 CGCUDARuntime *CodeGen::CreateNVCUDARuntime(CodeGenModule &CGM) {
   return new CGNVCUDARuntime(CGM);
+}
+
+RValue CGNVCUDARuntime::EmitCUDAKernelCallExpr(CodeGenFunction &CGF,
+                                               const CUDAKernelCallExpr *E,
+                                               ReturnValueSlot ReturnValue) {
+  if (!CGF.CGM.getLangOpts().HIP || !CGF.getLangOpts().HIPUseNewLaunchAPI)
+    return CGCUDARuntime::EmitCUDAKernelCallExpr(CGF, E, ReturnValue);
+
+  CGCallee Callee = CGF.EmitCallee(E->getCallee());
+  auto FnType = E->getCallee()
+                    ->getType()
+                    ->getAs<PointerType>()
+                    ->getPointeeType()
+                    ->getAs<FunctionProtoType>();
+  CallArgList Args;
+  CGF.EmitCallArgs(Args, FnType, E->arguments());
+
+  Address KernelArgs = CGF.CreateTempAlloca(
+      VoidPtrTy, CharUnits::fromQuantity(16), "kernel_args",
+      llvm::ConstantInt::get(SizeTy, std::max<size_t>(1, Args.size())));
+  for (unsigned I = 0; I < Args.size(); ++I) {
+    auto RV = Args[I].getRValue(CGF);
+    llvm::Value *VoidArgPtr;
+    if (RV.isScalar()) {
+      llvm::Value *Arg = RV.getScalarVal();
+      auto Ty = Arg->getType();
+      Address ArgPtr = CGF.CreateTempAlloca(
+          Ty,
+          CharUnits::fromQuantity(
+              CGF.CGM.getDataLayout().getPrefTypeAlignment(Ty)),
+          "kernel_arg");
+      CGF.Builder.CreateDefaultAlignedStore(Arg, ArgPtr.getPointer());
+      VoidArgPtr =
+          CGF.Builder.CreatePointerCast(ArgPtr.getPointer(), VoidPtrTy);
+    } else {
+      Address ArgPtr = RV.getAggregateAddress();
+      VoidArgPtr =
+          CGF.Builder.CreatePointerCast(ArgPtr.getPointer(), VoidPtrTy);
+    }
+    CGF.Builder.CreateDefaultAlignedStore(
+        VoidArgPtr, CGF.Builder.CreateConstGEP1_32(KernelArgs.getPointer(), I));
+  }
+
+  emitDeviceStubBodyNew(CGF, Callee.getFunctionPointer(), KernelArgs,
+                        E->getConfig()->getArgs());
+
+  return RValue::get(nullptr);
 }
