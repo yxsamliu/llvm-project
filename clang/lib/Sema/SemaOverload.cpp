@@ -11493,7 +11493,15 @@ void OverloadCandidateSet::NoteCandidates(PartialDiagnosticAt PD,
 
   auto Cands = CompleteCandidates(S, OCD, Args, OpLoc, Filter);
 
-  S.Diag(PD.first, PD.second);
+  OverloadingResult OverloadResult = OR_No_Viable_Function;
+  bool DeferHint = false;
+  if (OverloadResult == OR_No_Viable_Function) {
+    DeferHint = llvm::any_of(Cands, [](auto *Cand){
+       return Cand->FailureKind == ovl_fail_bad_target;
+      });
+  }
+
+  S.Diag(PD.first, PD.second/*DeferHint*/);
 
   NoteCandidates(S, Args, Cands, Opc, OpLoc);
 
