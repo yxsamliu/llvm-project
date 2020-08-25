@@ -663,8 +663,7 @@ Sema::SemaDiagnosticBuilder Sema::CUDADiagIfDeviceCode(SourceLocation Loc,
                  ? SemaDiagnosticBuilder::K_ImmediateWithCallStack
                  : SemaDiagnosticBuilder::K_Deferred;
     default:
-      return EmitOnBothSides ? SemaDiagnosticBuilder::K_Immediate
-                             : SemaDiagnosticBuilder::K_Nop;
+      return SemaDiagnosticBuilder::K_Nop;
     }
   }();
   return SemaDiagnosticBuilder(DiagKind, Loc, DiagID,
@@ -694,8 +693,7 @@ Sema::SemaDiagnosticBuilder Sema::CUDADiagIfHostCode(SourceLocation Loc,
                  ? SemaDiagnosticBuilder::K_ImmediateWithCallStack
                  : SemaDiagnosticBuilder::K_Deferred;
     default:
-      return EmitOnBothSides ? SemaDiagnosticBuilder::K_Immediate
-                             : SemaDiagnosticBuilder::K_Nop;
+      return SemaDiagnosticBuilder::K_Nop;
     }
   }();
   return SemaDiagnosticBuilder(DiagKind, Loc, DiagID,
