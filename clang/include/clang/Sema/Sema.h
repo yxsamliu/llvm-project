@@ -11785,15 +11785,13 @@ public:
   ///    return ExprError();
   ///  // Otherwise, continue parsing as normal.
   SemaDiagnosticBuilder CUDADiagIfDeviceCode(SourceLocation Loc,
-                                             unsigned DiagID,
-                                             bool EmitOnBothSides = false);
+                                             unsigned DiagID);
 
   /// Creates a SemaDiagnosticBuilder that emits the diagnostic if the current
   /// context is "used as host code".
   ///
   /// Same as CUDADiagIfDeviceCode, with "host" and "device" switched.
-  SemaDiagnosticBuilder CUDADiagIfHostCode(SourceLocation Loc, unsigned DiagID,
-                                           bool EmitOnBothSides = false);
+  SemaDiagnosticBuilder CUDADiagIfHostCode(SourceLocation Loc, unsigned DiagID);
 
   /// Creates a SemaDiagnosticBuilder that emits the diagnostic if the current
   /// context is "used as device code".

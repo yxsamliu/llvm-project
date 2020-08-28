@@ -1735,8 +1735,8 @@ Sema::SemaDiagnosticBuilder Sema::Diag(SourceLocation Loc, unsigned DiagID) {
 
   SemaDiagnosticBuilder DB =
       getLangOpts().CUDAIsDevice
-          ? CUDADiagIfDeviceCode(Loc, DiagID, /*EmitOnBothSides=*/true)
-          : CUDADiagIfHostCode(Loc, DiagID, /*EmitOnBothSides=*/true);
+          ? CUDADiagIfDeviceCode(Loc, DiagID)
+          : CUDADiagIfHostCode(Loc, DiagID);
 
   if (Diags.getDiagnosticIDs()->isDefaultMappingAsError(DiagID))
     IsLastErrorImmediate = DB.isImmediate();

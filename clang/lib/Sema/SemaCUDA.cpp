@@ -640,8 +640,7 @@ void Sema::MaybeAddCUDAConstantAttr(VarDecl *VD) {
 }
 
 Sema::SemaDiagnosticBuilder Sema::CUDADiagIfDeviceCode(SourceLocation Loc,
-                                                       unsigned DiagID,
-                                                       bool EmitOnBothSides) {
+                                                       unsigned DiagID) {
   assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
   SemaDiagnosticBuilder::Kind DiagKind = [&] {
     if (!isa<FunctionDecl>(CurContext))
@@ -671,8 +670,7 @@ Sema::SemaDiagnosticBuilder Sema::CUDADiagIfDeviceCode(SourceLocation Loc,
 }
 
 Sema::SemaDiagnosticBuilder Sema::CUDADiagIfHostCode(SourceLocation Loc,
-                                                     unsigned DiagID,
-                                                     bool EmitOnBothSides) {
+                                                     unsigned DiagID) {
   assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
   SemaDiagnosticBuilder::Kind DiagKind = [&] {
     if (!isa<FunctionDecl>(CurContext))
