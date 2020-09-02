@@ -8,6 +8,7 @@ define amdgpu_ps void @global_store_saddr_i8_zext_vgpr(i8 addrspace(1)* inreg %s
 ; GCN-LABEL: global_store_saddr_i8_zext_vgpr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_load_dword v0, v[0:1], off
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    global_store_byte v0, v2, s[2:3]
 ; GCN-NEXT:    s_endpgm
@@ -23,6 +24,7 @@ define amdgpu_ps void @global_store_saddr_i8_zext_vgpr_offset_2047(i8 addrspace(
 ; GCN-LABEL: global_store_saddr_i8_zext_vgpr_offset_2047:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_load_dword v0, v[0:1], off
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    global_store_byte v0, v2, s[2:3] offset:2047
 ; GCN-NEXT:    s_endpgm
@@ -39,6 +41,7 @@ define amdgpu_ps void @global_store_saddr_i8_zext_vgpr_offset_neg2048(i8 addrspa
 ; GCN-LABEL: global_store_saddr_i8_zext_vgpr_offset_neg2048:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_load_dword v0, v[0:1], off
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    global_store_byte v0, v2, s[2:3] offset:-2048
 ; GCN-NEXT:    s_endpgm

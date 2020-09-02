@@ -300,6 +300,8 @@ private:
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
 
+  Optional<AMDGPU::IsaInfo::AMDGPUTargetID> TargetID;
+
 protected:
   // Basic subtarget description.
   Triple TargetTriple;
@@ -320,8 +322,12 @@ protected:
   bool UnalignedScratchAccess;
   bool UnalignedAccessMode;
   bool HasApertureRegs;
+  bool SupportsXNACK;
+
+  // This should not be used directly. 'TargetID' tracks the dynamic settings
+  // for XNACK.
   bool EnableXNACK;
-  bool DoesNotSupportXNACK;
+
   bool EnableCuMode;
   bool TrapHandler;
 
@@ -375,8 +381,12 @@ protected:
   bool HasMAIInsts;
   bool HasPkFmacF16Inst;
   bool HasAtomicFaddInsts;
+  bool SupportsSRAMECC;
+
+  // This should not be used directly. 'TargetID' tracks the dynamic settings
+  // for SRAMECC.
   bool EnableSRAMECC;
-  bool DoesNotSupportSRAMECC;
+
   bool HasNoSdstCMPX;
   bool HasVscnt;
   bool HasGetWaveIdInst;
@@ -466,6 +476,11 @@ public:
 
   const RegisterBankInfo *getRegBankInfo() const override {
     return RegBankInfo.get();
+  }
+
+  const AMDGPU::IsaInfo::AMDGPUTargetID &getTargetID() const {
+    assert(TargetID.hasValue() && "TargetID has not be initialized");
+    return *TargetID;
   }
 
   // Nothing implemented, just prevent crashes on use.
@@ -735,7 +750,7 @@ public:
   }
 
   bool isXNACKEnabled() const {
-    return EnableXNACK;
+    return getTargetID().isXnackOnOrAny();
   }
 
   bool isCuModeEnabled() const {
@@ -791,7 +806,7 @@ public:
   }
 
   bool d16PreservesUnusedBits() const {
-    return hasD16LoadStore() && !isSRAMECCEnabled();
+    return hasD16LoadStore() && !getTargetID().isSramEccOnOrAny();
   }
 
   bool hasD16Images() const {
@@ -897,10 +912,6 @@ public:
 
   bool hasAtomicFaddInsts() const {
     return HasAtomicFaddInsts;
-  }
-
-  bool isSRAMECCEnabled() const {
-    return EnableSRAMECC;
   }
 
   bool hasNoSdstCMPX() const {

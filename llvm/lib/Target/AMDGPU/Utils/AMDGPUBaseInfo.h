@@ -19,6 +19,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetParser.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -59,6 +60,43 @@ enum {
   // doesn't spill SGPRs as much as when 80 is set.
   FIXED_NUM_SGPRS_FOR_INIT_BUG = 96,
   TRAP_NUM_SGPRS = 16
+};
+
+enum class TargetIDSetting {
+  Unsupported,
+  Any,
+  Off,
+  On
+};
+
+class AMDGPUTargetID {
+private:
+  TargetIDSetting XnackSetting;
+  TargetIDSetting SramEccSetting;
+
+public:
+  explicit AMDGPUTargetID(const MCSubtargetInfo &STI);
+  ~AMDGPUTargetID() = default;
+
+  /// Returns the current xnack TargetIDSetting, possible options are
+  /// "Unsupported", "Any", "Off", and "On".
+  TargetIDSetting getXnackSetting() const;
+
+  /// Returns the current sramecc TargetIDSetting, possible options are
+  /// "Unsupported", "Any", "Off", and "On".
+  TargetIDSetting getSramEccSetting() const;
+
+  /// Returns true if the current xnack setting is "On" or "Any".
+  bool isXnackOnOrAny() const;
+
+  /// Returns true if the current sramecc setting is "On" or "Any".
+  bool isSramEccOnOrAny() const;
+
+  bool isXnackSupported() const;
+  bool isSramEccSupported() const;
+
+  void setTargetIDFromFeaturesString(StringRef FS);
+  void setTargetIDFromTargetIDStream(StringRef TargetID);
 };
 
 /// Streams isa version string for given subtarget \p STI into \p Stream.
@@ -835,6 +873,10 @@ struct SIModeRegisterDefaults {
 };
 
 } // end namespace AMDGPU
+
+raw_ostream &operator<<(raw_ostream &OS,
+                        const AMDGPU::IsaInfo::TargetIDSetting S);
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H

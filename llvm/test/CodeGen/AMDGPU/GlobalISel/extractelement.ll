@@ -1672,7 +1672,7 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(double addrspace(1)* %out, i32 
 ; GPRIDX-NEXT:     is_ptr64 = 1
 ; GPRIDX-NEXT:     is_dynamic_callstack = 0
 ; GPRIDX-NEXT:     is_debug_enabled = 0
-; GPRIDX-NEXT:     is_xnack_enabled = 0
+; GPRIDX-NEXT:     is_xnack_enabled = 1
 ; GPRIDX-NEXT:     workitem_private_segment_byte_size = 0
 ; GPRIDX-NEXT:     workgroup_group_segment_byte_size = 0
 ; GPRIDX-NEXT:     gds_segment_byte_size = 0
@@ -1764,7 +1764,7 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(double addrspace(1)* %out, i32 
 ; MOVREL-NEXT:     is_ptr64 = 1
 ; MOVREL-NEXT:     is_dynamic_callstack = 0
 ; MOVREL-NEXT:     is_debug_enabled = 0
-; MOVREL-NEXT:     is_xnack_enabled = 0
+; MOVREL-NEXT:     is_xnack_enabled = 1
 ; MOVREL-NEXT:     workitem_private_segment_byte_size = 0
 ; MOVREL-NEXT:     workgroup_group_segment_byte_size = 0
 ; MOVREL-NEXT:     gds_segment_byte_size = 0
@@ -2187,7 +2187,7 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(float addrspace(1)* %out, i32
 ; GPRIDX-NEXT:     is_ptr64 = 1
 ; GPRIDX-NEXT:     is_dynamic_callstack = 0
 ; GPRIDX-NEXT:     is_debug_enabled = 0
-; GPRIDX-NEXT:     is_xnack_enabled = 0
+; GPRIDX-NEXT:     is_xnack_enabled = 1
 ; GPRIDX-NEXT:     workitem_private_segment_byte_size = 0
 ; GPRIDX-NEXT:     workgroup_group_segment_byte_size = 0
 ; GPRIDX-NEXT:     gds_segment_byte_size = 0
@@ -2272,7 +2272,7 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(float addrspace(1)* %out, i32
 ; MOVREL-NEXT:     is_ptr64 = 1
 ; MOVREL-NEXT:     is_dynamic_callstack = 0
 ; MOVREL-NEXT:     is_debug_enabled = 0
-; MOVREL-NEXT:     is_xnack_enabled = 0
+; MOVREL-NEXT:     is_xnack_enabled = 1
 ; MOVREL-NEXT:     workitem_private_segment_byte_size = 0
 ; MOVREL-NEXT:     workgroup_group_segment_byte_size = 0
 ; MOVREL-NEXT:     gds_segment_byte_size = 0
@@ -2363,7 +2363,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(double addrspace(1)* %out, i3
 ; GPRIDX-NEXT:     is_ptr64 = 1
 ; GPRIDX-NEXT:     is_dynamic_callstack = 0
 ; GPRIDX-NEXT:     is_debug_enabled = 0
-; GPRIDX-NEXT:     is_xnack_enabled = 0
+; GPRIDX-NEXT:     is_xnack_enabled = 1
 ; GPRIDX-NEXT:     workitem_private_segment_byte_size = 0
 ; GPRIDX-NEXT:     workgroup_group_segment_byte_size = 0
 ; GPRIDX-NEXT:     gds_segment_byte_size = 0
@@ -2451,7 +2451,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(double addrspace(1)* %out, i3
 ; MOVREL-NEXT:     is_ptr64 = 1
 ; MOVREL-NEXT:     is_dynamic_callstack = 0
 ; MOVREL-NEXT:     is_debug_enabled = 0
-; MOVREL-NEXT:     is_xnack_enabled = 0
+; MOVREL-NEXT:     is_xnack_enabled = 1
 ; MOVREL-NEXT:     workitem_private_segment_byte_size = 0
 ; MOVREL-NEXT:     workgroup_group_segment_byte_size = 0
 ; MOVREL-NEXT:     gds_segment_byte_size = 0

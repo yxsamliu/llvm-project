@@ -273,7 +273,7 @@ entry:
 ; MOVREL: s_add_i32 m0, s{{[0-9]+}}, 0xfffffe{{[0-9a-z]+}}
 ; MOVREL: v_movreld_b32_e32 v0, 5
 
-; IDXMODE: s_add_i32 s{{[0-9]+}}, s{{[0-9]+}}, 0xfffffe00{{$}}
+; IDXMODE: s_addk_i32 s{{[0-9]+}}, 0xfe00{{$}}
 ; IDXMODE: s_set_gpr_idx_on s{{[0-9]+}}, gpr_idx(DST)
 ; IDXMODE-NEXT: v_mov_b32_e32 v0, 5
 ; IDXMODE-NEXT: s_set_gpr_idx_off

@@ -30,13 +30,13 @@ define amdgpu_kernel void @break_inserted_outside_of_loop(i32 addrspace(1)* %out
 ; FLAT-LABEL: break_inserted_outside_of_loop:
 ; FLAT:       ; %bb.0: ; %main_body
 ; FLAT-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
-; FLAT-NEXT:    s_load_dword s0, s[0:1], 0x2c
+; FLAT-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; FLAT-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; FLAT-NEXT:    s_mov_b64 s[0:1], 0
 ; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
-; FLAT-NEXT:    v_and_b32_e32 v0, s0, v0
+; FLAT-NEXT:    v_and_b32_e32 v0, s2, v0
 ; FLAT-NEXT:    v_and_b32_e32 v0, 1, v0
 ; FLAT-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; FLAT-NEXT:    s_mov_b64 s[0:1], 0
 ; FLAT-NEXT:  BB0_1: ; %ENDIF
 ; FLAT-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; FLAT-NEXT:    s_and_b64 s[2:3], exec, vcc

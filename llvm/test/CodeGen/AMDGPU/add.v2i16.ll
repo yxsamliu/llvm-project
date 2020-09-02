@@ -260,8 +260,8 @@ define amdgpu_kernel void @v_test_add_v2i16_sext_to_v2i32(<2 x i32> addrspace(1)
 ; GFX9: v_pk_add_u16
 ; GFX9: v_lshrrev_b32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
 
-; VI: v_add_u16_sdwa
 ; VI: v_add_u16_e32
+; VI: v_add_u16_sdwa
 
 ; GCN: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 16
 ; GCN: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 16

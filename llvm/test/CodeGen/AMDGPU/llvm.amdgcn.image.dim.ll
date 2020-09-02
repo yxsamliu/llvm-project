@@ -3208,6 +3208,7 @@ define amdgpu_ps void @image_store_wait(<8 x i32> inreg %arg, <8 x i32> inreg %a
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf unorm
 ; FIJI-NEXT:    image_load v[0:3], v4, s[8:15] dmask:0xf unorm
+; FIJI-NEXT:    s_nop 0
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    image_store v[0:3], v4, s[16:23] dmask:0xf unorm
 ; FIJI-NEXT:    s_endpgm
@@ -3216,6 +3217,7 @@ define amdgpu_ps void @image_store_wait(<8 x i32> inreg %arg, <8 x i32> inreg %a
 ; GFX6789:       ; %bb.0: ; %main_body
 ; GFX6789-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf unorm
 ; GFX6789-NEXT:    image_load v[0:3], v4, s[8:15] dmask:0xf unorm
+; GFX6789-NEXT:    s_nop 0
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    image_store v[0:3], v4, s[16:23] dmask:0xf unorm
 ; GFX6789-NEXT:    s_endpgm
@@ -3224,6 +3226,7 @@ define amdgpu_ps void @image_store_wait(<8 x i32> inreg %arg, <8 x i32> inreg %a
 ; NOPRT:       ; %bb.0: ; %main_body
 ; NOPRT-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf unorm
 ; NOPRT-NEXT:    image_load v[0:3], v4, s[8:15] dmask:0xf unorm
+; NOPRT-NEXT:    s_nop 0
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    image_store v[0:3], v4, s[16:23] dmask:0xf unorm
 ; NOPRT-NEXT:    s_endpgm
@@ -3233,6 +3236,7 @@ define amdgpu_ps void @image_store_wait(<8 x i32> inreg %arg, <8 x i32> inreg %a
 ; GFX10-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm ; encoding: [0x00,0x1f,0x20,0xf0,0x04,0x00,0x00,0x00]
 ; GFX10-NEXT:    image_load v[0:3], v4, s[8:15] dmask:0xf dim:SQ_RSRC_IMG_1D unorm ; encoding: [0x00,0x1f,0x00,0xf0,0x04,0x00,0x02,0x00]
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_nop 0 ; encoding: [0x00,0x00,0x80,0xbf]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    image_store v[0:3], v4, s[16:23] dmask:0xf dim:SQ_RSRC_IMG_1D unorm ; encoding: [0x00,0x1f,0x20,0xf0,0x04,0x00,0x04,0x00]
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]

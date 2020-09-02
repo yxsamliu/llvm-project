@@ -400,6 +400,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_addr64(i32 addrspace
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v4, vcc
 ; VI-NEXT:    v_mov_b32_e32 v4, 42
 ; VI-NEXT:    flat_atomic_inc v2, v[2:3], v4 glc
+; VI-NEXT:    s_nop 0
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
@@ -411,6 +412,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i32_offset_addr64(i32 addrspace
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_inc v1, v0, v1, s[2:3] offset:20 glc
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
@@ -940,6 +942,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_addr64(i64 addrspace
 ; VI-NEXT:    v_mov_b32_e32 v4, 42
 ; VI-NEXT:    v_mov_b32_e32 v5, 0
 ; VI-NEXT:    flat_atomic_inc_x2 v[2:3], v[2:3], v[4:5] glc
+; VI-NEXT:    s_nop 0
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; VI-NEXT:    s_endpgm
@@ -952,6 +955,7 @@ define amdgpu_kernel void @global_atomic_inc_ret_i64_offset_addr64(i64 addrspace
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_atomic_inc_x2 v[0:1], v2, v[0:1], s[2:3] offset:40 glc
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_endpgm
@@ -1124,6 +1128,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_addr64(i32* %out, i32*
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v4, vcc
 ; VI-NEXT:    v_mov_b32_e32 v4, 42
 ; VI-NEXT:    flat_atomic_inc v2, v[2:3], v4 glc
+; VI-NEXT:    s_nop 0
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
@@ -1145,6 +1150,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i32_offset_addr64(i32* %out, i32*
 ; GFX9-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v4, vcc
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 42
 ; GFX9-NEXT:    flat_atomic_inc v2, v[2:3], v4 glc
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    flat_store_dword v[0:1], v2
 ; GFX9-NEXT:    s_endpgm
@@ -1393,6 +1399,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_addr64(i64* %out, i64*
 ; VI-NEXT:    v_mov_b32_e32 v4, 42
 ; VI-NEXT:    v_mov_b32_e32 v5, 0
 ; VI-NEXT:    flat_atomic_inc_x2 v[2:3], v[2:3], v[4:5] glc
+; VI-NEXT:    s_nop 0
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; VI-NEXT:    s_endpgm
@@ -1415,6 +1422,7 @@ define amdgpu_kernel void @flat_atomic_inc_ret_i64_offset_addr64(i64* %out, i64*
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 42
 ; GFX9-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-NEXT:    flat_atomic_inc_x2 v[2:3], v[2:3], v[4:5] glc
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX9-NEXT:    s_endpgm
@@ -1506,12 +1514,12 @@ define amdgpu_kernel void @nocse_lds_atomic_inc_ret_i32(i32 addrspace(1)* %out0,
 ; VI-LABEL: nocse_lds_atomic_inc_ret_i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; VI-NEXT:    s_load_dword s4, s[4:5], 0x10
+; VI-NEXT:    s_load_dword s6, s[4:5], 0x10
 ; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    s_mov_b32 m0, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
-; VI-NEXT:    v_mov_b32_e32 v1, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s6
 ; VI-NEXT:    ds_inc_rtn_u32 v4, v1, v0
 ; VI-NEXT:    ds_inc_rtn_u32 v5, v1, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -1526,11 +1534,11 @@ define amdgpu_kernel void @nocse_lds_atomic_inc_ret_i32(i32 addrspace(1)* %out0,
 ; GFX9-LABEL: nocse_lds_atomic_inc_ret_i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GFX9-NEXT:    s_load_dword s4, s[4:5], 0x10
+; GFX9-NEXT:    s_load_dword s6, s[4:5], 0x10
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 42
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s2
-; GFX9-NEXT:    v_mov_b32_e32 v1, s4
+; GFX9-NEXT:    v_mov_b32_e32 v1, s6
 ; GFX9-NEXT:    ds_inc_rtn_u32 v4, v1, v0
 ; GFX9-NEXT:    ds_inc_rtn_u32 v5, v1, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0

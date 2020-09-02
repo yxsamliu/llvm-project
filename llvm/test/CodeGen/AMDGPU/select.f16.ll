@@ -489,8 +489,8 @@ define amdgpu_kernel void @select_v2f16(
 ; VI-NEXT:    s_mov_b32 s15, s3
 ; VI-NEXT:    buffer_load_dword v0, off, s[16:19], 0
 ; VI-NEXT:    buffer_load_dword v1, off, s[20:23], 0
-; VI-NEXT:    buffer_load_dword v2, off, s[12:15], 0
-; VI-NEXT:    buffer_load_dword v3, off, s[8:11], 0
+; VI-NEXT:    buffer_load_dword v3, off, s[12:15], 0
+; VI-NEXT:    buffer_load_dword v2, off, s[8:11], 0
 ; VI-NEXT:    s_mov_b32 s0, s4
 ; VI-NEXT:    s_mov_b32 s1, s5
 ; VI-NEXT:    s_waitcnt vmcnt(3)
@@ -499,9 +499,9 @@ define amdgpu_kernel void @select_v2f16(
 ; VI-NEXT:    v_cmp_lt_f16_e32 vcc, v0, v1
 ; VI-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
-; VI-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
-; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v3
+; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; VI-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
+; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; VI-NEXT:    v_cmp_lt_f16_e32 vcc, v6, v5
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1

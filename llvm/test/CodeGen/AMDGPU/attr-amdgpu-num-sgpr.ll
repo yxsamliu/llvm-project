@@ -125,7 +125,7 @@ declare i64 @llvm.amdgcn.dispatch.id() #1
 declare i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #1
 declare i8 addrspace(4)* @llvm.amdgcn.queue.ptr() #1
 
-attributes #0 = { nounwind "amdgpu-num-sgpr"="14" }
+attributes #0 = { nounwind "amdgpu-num-sgpr"="16" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "amdgpu-num-sgpr"="12" }
-attributes #3 = { nounwind "amdgpu-num-sgpr"="11" }
+attributes #2 = { nounwind "amdgpu-num-sgpr"="14" }
+attributes #3 = { nounwind "amdgpu-num-sgpr"="13" }

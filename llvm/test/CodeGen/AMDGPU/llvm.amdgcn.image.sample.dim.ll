@@ -70,6 +70,7 @@ define amdgpu_ps <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX6789-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX6789-NEXT:    s_and_b64 exec, exec, s[14:15]
 ; GFX6789-NEXT:    image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf tfe
+; GFX6789-NEXT:    s_nop 0
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v[6:7], v4, off
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
@@ -90,6 +91,7 @@ define amdgpu_ps <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-NEXT:    v_mov_b32_e32 v4, v0 ; encoding: [0x00,0x03,0x08,0x7e]
 ; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s14 ; encoding: [0x7e,0x0e,0x7e,0x87]
 ; GFX10-NEXT:    image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D tfe ; encoding: [0x00,0x0f,0x81,0xf0,0x05,0x00,0x40,0x00]
+; GFX10-NEXT:    s_nop 0 ; encoding: [0x00,0x00,0x80,0xbf]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v[6:7], v4, off ; encoding: [0x00,0x80,0x70,0xdc,0x06,0x04,0x7d,0x00]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
@@ -492,6 +494,7 @@ define amdgpu_ps <4 x float> @sample_1d_lwe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX6789-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX6789-NEXT:    s_and_b64 exec, exec, s[14:15]
 ; GFX6789-NEXT:    image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf lwe
+; GFX6789-NEXT:    s_nop 0
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v[6:7], v4, off
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
@@ -512,6 +515,7 @@ define amdgpu_ps <4 x float> @sample_1d_lwe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-NEXT:    v_mov_b32_e32 v4, v0 ; encoding: [0x00,0x03,0x08,0x7e]
 ; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s14 ; encoding: [0x7e,0x0e,0x7e,0x87]
 ; GFX10-NEXT:    image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D lwe ; encoding: [0x00,0x0f,0x82,0xf0,0x05,0x00,0x40,0x00]
+; GFX10-NEXT:    s_nop 0 ; encoding: [0x00,0x00,0x80,0xbf]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v[6:7], v4, off ; encoding: [0x00,0x80,0x70,0xdc,0x06,0x04,0x7d,0x00]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]

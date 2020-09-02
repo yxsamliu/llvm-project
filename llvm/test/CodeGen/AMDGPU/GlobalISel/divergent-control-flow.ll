@@ -131,6 +131,7 @@ define void @constrained_if_register_class() {
 ; CHECK-NEXT:    s_add_u32 s4, s4, external_constant@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, external_constant@gotpcrel32@hi+4
 ; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)

@@ -95,7 +95,7 @@ define i32 @called(i32 %a) noinline {
 ; GFX9-LABEL: {{^}}call:
 define amdgpu_kernel void @call(<4 x i32> inreg %tmp14, i32 inreg %arg) {
 ; GFX9-O0: v_mov_b32_e32 v0, s0
-; GFX9-O3: v_mov_b32_e32 v2, s0
+; GFX9-O3: v_mov_b32_e32 v2, s2
 ; GFX9-NEXT: s_not_b64 exec, exec
 ; GFX9-O0-NEXT: v_mov_b32_e32 v0, s1
 ; GFX9-O3-NEXT: v_mov_b32_e32 v2, 0
@@ -129,8 +129,8 @@ define i64 @called_i64(i64 %a) noinline {
 define amdgpu_kernel void @call_i64(<4 x i32> inreg %tmp14, i64 inreg %arg) {
 ; GFX9-O0: v_mov_b32_e32 v0, s0
 ; GFX9-O0: v_mov_b32_e32 v1, s1
-; GFX9-O3: v_mov_b32_e32 v7, s1
-; GFX9-O3: v_mov_b32_e32 v6, s0
+; GFX9-O3: v_mov_b32_e32 v7, s3
+; GFX9-O3: v_mov_b32_e32 v6, s2
 ; GFX9-NEXT: s_not_b64 exec, exec
 ; GFX9-O0-NEXT: v_mov_b32_e32 v0, s2
 ; GFX9-O0-NEXT: v_mov_b32_e32 v1, s3

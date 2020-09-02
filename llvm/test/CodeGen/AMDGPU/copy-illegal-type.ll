@@ -73,18 +73,18 @@ define amdgpu_kernel void @test_copy_v4i8_x2(<4 x i8> addrspace(1)* %out0, <4 x 
 ; VI-LABEL: test_copy_v4i8_x2:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
+; VI-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; VI-NEXT:    s_mov_b32 s3, 0xf000
-; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    s_mov_b32 s10, s2
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
+; VI-NEXT:    s_mov_b32 s0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s3
+; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    s_mov_b32 s0, s4
+; VI-NEXT:    s_mov_b32 s3, 0xf000
+; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_mov_b32 s1, s5
+; VI-NEXT:    s_mov_b32 s10, s2
 ; VI-NEXT:    s_mov_b32 s11, s3
 ; VI-NEXT:    s_mov_b32 s8, s6
 ; VI-NEXT:    s_mov_b32 s9, s7
@@ -279,14 +279,14 @@ define amdgpu_kernel void @test_copy_v4i8_extra_use(<4 x i8> addrspace(1)* %out0
 ; VI-LABEL: test_copy_v4i8_extra_use:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
+; VI-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    s_movk_i32 s12, 0xff00
 ; VI-NEXT:    s_movk_i32 s13, 0xff
 ; VI-NEXT:    s_movk_i32 s14, 0x900
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
+; VI-NEXT:    v_mov_b32_e32 v1, s3
+; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_dword v0, v[0:1]
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
@@ -585,6 +585,7 @@ define amdgpu_kernel void @test_copy_v4i8_volatile_load(<4 x i8> addrspace(1)* %
 ; VI-NEXT:    s_mov_b32 s6, s2
 ; VI-NEXT:    s_mov_b32 s7, s3
 ; VI-NEXT:    buffer_load_dword v0, off, s[4:7], 0
+; VI-NEXT:    s_nop 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm

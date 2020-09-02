@@ -34,11 +34,11 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+code-object-v3,+xnack < %s | FileCheck --check-prefixes=XNACK-GFX900 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx902 -mattr=+code-object-v3,-xnack < %s | FileCheck --check-prefixes=NO-XNACK-GFX902 %s
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+code-object-v3,+sram-ecc < %s | FileCheck --check-prefixes=SRAM-ECC-GFX904 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=+code-object-v3,+sram-ecc < %s | FileCheck --check-prefixes=SRAM-ECC-GFX906 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+code-object-v3,+sramecc < %s | FileCheck --check-prefixes=SRAM-ECC-GFX904 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=+code-object-v3,+sramecc < %s | FileCheck --check-prefixes=SRAM-ECC-GFX906 %s
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+code-object-v3,+sram-ecc,+xnack < %s | FileCheck --check-prefixes=SRAM-ECC-XNACK-GFX904 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=+code-object-v3,+sram-ecc,+xnack < %s | FileCheck --check-prefixes=SRAM-ECC-XNACK-GFX906 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+code-object-v3,+sramecc,+xnack < %s | FileCheck --check-prefixes=SRAM-ECC-XNACK-GFX904 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=+code-object-v3,+sramecc,+xnack < %s | FileCheck --check-prefixes=SRAM-ECC-XNACK-GFX906 %s
 
 ; GFX600: .amdgcn_target "amdgcn-amd-amdhsa--gfx600"
 ; GFX601: .amdgcn_target "amdgcn-amd-amdhsa--gfx601"
@@ -47,23 +47,23 @@
 ; GFX702: .amdgcn_target "amdgcn-amd-amdhsa--gfx702"
 ; GFX703: .amdgcn_target "amdgcn-amd-amdhsa--gfx703"
 ; GFX704: .amdgcn_target "amdgcn-amd-amdhsa--gfx704"
-; GFX801: .amdgcn_target "amdgcn-amd-amdhsa--gfx801+xnack"
+; GFX801: .amdgcn_target "amdgcn-amd-amdhsa--gfx801"
 ; GFX802: .amdgcn_target "amdgcn-amd-amdhsa--gfx802"
 ; GFX803: .amdgcn_target "amdgcn-amd-amdhsa--gfx803"
-; GFX810: .amdgcn_target "amdgcn-amd-amdhsa--gfx810+xnack"
+; GFX810: .amdgcn_target "amdgcn-amd-amdhsa--gfx810"
 ; GFX900: .amdgcn_target "amdgcn-amd-amdhsa--gfx900"
-; GFX902: .amdgcn_target "amdgcn-amd-amdhsa--gfx902+xnack"
+; GFX902: .amdgcn_target "amdgcn-amd-amdhsa--gfx902"
 ; GFX904: .amdgcn_target "amdgcn-amd-amdhsa--gfx904"
 ; GFX906: .amdgcn_target "amdgcn-amd-amdhsa--gfx906"
 
 ; XNACK-GFX900: .amdgcn_target "amdgcn-amd-amdhsa--gfx900+xnack"
 ; NO-XNACK-GFX902: .amdgcn_target "amdgcn-amd-amdhsa--gfx902"
 
-; SRAM-ECC-GFX904: .amdgcn_target "amdgcn-amd-amdhsa--gfx904+sram-ecc"
-; SRAM-ECC-GFX906: "amdgcn-amd-amdhsa--gfx906+sram-ecc"
+; SRAM-ECC-GFX904: .amdgcn_target "amdgcn-amd-amdhsa--gfx904+sramecc"
+; SRAM-ECC-GFX906: "amdgcn-amd-amdhsa--gfx906+sramecc"
 
-; SRAM-ECC-XNACK-GFX904: .amdgcn_target "amdgcn-amd-amdhsa--gfx904+xnack+sram-ecc"
-; SRAM-ECC-XNACK-GFX906: .amdgcn_target "amdgcn-amd-amdhsa--gfx906+xnack+sram-ecc"
+; SRAM-ECC-XNACK-GFX904: .amdgcn_target "amdgcn-amd-amdhsa--gfx904+xnack+sramecc"
+; SRAM-ECC-XNACK-GFX906: .amdgcn_target "amdgcn-amd-amdhsa--gfx906+xnack+sramecc"
 
 define amdgpu_kernel void @directive_amdgcn_target() {
   ret void

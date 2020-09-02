@@ -35,7 +35,6 @@ define amdgpu_kernel void @fneg_fabs_fmul_f32(float addrspace(1)* %out, float %x
 ; R600: -PV
 
 ; SI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80000000
-; VI: s_bitset1_b32 s{{[0-9]+}}, 31
 define amdgpu_kernel void @fneg_fabs_free_f32(float addrspace(1)* %out, i32 %in) {
   %bc = bitcast i32 %in to float
   %fabs = call float @llvm.fabs.f32(float %bc)

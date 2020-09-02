@@ -1,10 +1,12 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s 2>&1 | FileCheck -check-prefix=NOSICIVI10 %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=hawaii -show-encoding %s 2>&1 | FileCheck -check-prefix=NOSICIVI10 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s 2>&1 | FileCheck -check-prefix=NOSICIVI10 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -mattr=-xnack -show-encoding %s 2>&1 | FileCheck -check-prefix=NOSICIVI10 %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1001 -show-encoding %s 2>&1 | FileCheck -check-prefix=NOSICIVI10 %s
 
-// RUN: not llvm-mc -arch=amdgcn -mcpu=stoney -show-encoding %s 2>&1 | FileCheck -check-prefix=XNACKERR %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=stoney -show-encoding %s | FileCheck -check-prefix=XNACK %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=stoney -mattr=+xnack -show-encoding %s 2>&1 | FileCheck -check-prefix=XNACKERR %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=stoney -mattr=+xnack -show-encoding %s | FileCheck -check-prefix=XNACK %s
+
+; FIXME: Incorrect diagnostics after changing the defaults for xnack and sramecc.
 
 s_mov_b64 xnack_mask, -1
 // NOSICIVI10: error: not a valid operand.
