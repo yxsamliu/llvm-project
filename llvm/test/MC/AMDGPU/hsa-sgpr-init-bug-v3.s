@@ -1,4 +1,4 @@
-// RUN: llvm-mc -mattr=+code-object-v3 -triple amdgcn-amd-amdhsa -mcpu=gfx802 -filetype=obj < %s > %t
+// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx802 -filetype=obj < %s > %t
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
 // big endian not supported
@@ -15,7 +15,7 @@
 
 .text
 
-.amdgcn_target "amdgcn-amd-amdhsa--gfx802"
+.amdgcn_target "amdgcn-amd-amdhsa--gfx802+xnack"
 
 .p2align 8
 minimal:

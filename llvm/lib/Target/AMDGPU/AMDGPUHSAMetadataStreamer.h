@@ -17,6 +17,7 @@
 
 #include "AMDGPU.h"
 #include "AMDKernelCodeT.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MsgPackDocument.h"
 #include "llvm/Support/AMDGPUMetadata.h"
@@ -43,7 +44,8 @@ public:
 
   virtual bool emitTo(AMDGPUTargetStreamer &TargetStreamer) = 0;
 
-  virtual void begin(const Module &Mod) = 0;
+  virtual void begin(const Module &Mod,
+                     const IsaInfo::AMDGPUTargetID &TargetID) = 0;
 
   virtual void end() = 0;
 
@@ -51,6 +53,7 @@ public:
                           const SIProgramInfo &ProgramInfo) = 0;
 };
 
+// TODO: Rename MetadataStreamerV3 -> MetadataStreamerMsgPack.
 class MetadataStreamerV3 final : public MetadataStreamer {
 private:
   std::unique_ptr<msgpack::Document> HSAMetadataDoc =
@@ -75,6 +78,8 @@ private:
                                         const SIProgramInfo &ProgramInfo) const;
 
   void emitVersion();
+
+  void emitTargetID(const IsaInfo::AMDGPUTargetID &TargetID);
 
   void emitPrintf(const Module &Mod);
 
@@ -111,7 +116,8 @@ public:
 
   bool emitTo(AMDGPUTargetStreamer &TargetStreamer) override;
 
-  void begin(const Module &Mod) override;
+  void begin(const Module &Mod,
+             const IsaInfo::AMDGPUTargetID &TargetID) override;
 
   void end() override;
 
@@ -119,6 +125,7 @@ public:
                   const SIProgramInfo &ProgramInfo) override;
 };
 
+// TODO: Rename MetadataStreamerV2 -> MetadataStreamerYaml.
 class MetadataStreamerV2 final : public MetadataStreamer {
 private:
   Metadata HSAMetadata;
@@ -175,7 +182,8 @@ public:
 
   bool emitTo(AMDGPUTargetStreamer &TargetStreamer) override;
 
-  void begin(const Module &Mod) override;
+  void begin(const Module &Mod,
+             const IsaInfo::AMDGPUTargetID &TargetID) override;
 
   void end() override;
 

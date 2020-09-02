@@ -6,8 +6,8 @@
 ; NO-XNACK-GFX801-NEXT: ]
 
 ; XNACK-GFX802:      Flags [
+; XNACK-GFX802-NEXT:   EF_AMDGPU_FEATURE_XNACK_V3   (0x100)
 ; XNACK-GFX802-NEXT:   EF_AMDGPU_MACH_AMDGCN_GFX802 (0x29)
-; XNACK-GFX802-NEXT:   EF_AMDGPU_XNACK              (0x100)
 ; XNACK-GFX802-NEXT: ]
 
 define amdgpu_kernel void @elf_header() {

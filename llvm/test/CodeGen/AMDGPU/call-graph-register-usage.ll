@@ -1,11 +1,12 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=-code-object-v3 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=-code-object-v3 -mcpu=fiji -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,VI-NOBUG %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=-code-object-v3 -mcpu=iceland -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,VI-BUG %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 -mcpu=fiji -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,VI-NOBUG %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 -mcpu=iceland -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,VI-BUG %s
 
 ; Make sure to run a GPU with the SGPR allocation bug.
 
 ; GCN-LABEL: {{^}}use_vcc:
-; GCN: ; NumSgprs: 34
+; CI: ; NumSgprs: 34
+; VI: ; NumSgprs: 36
 ; GCN: ; NumVgprs: 0
 define void @use_vcc() #1 {
   call void asm sideeffect "", "~{vcc}" () #0
@@ -20,7 +21,8 @@ define void @use_vcc() #1 {
 ; GCN: v_readlane_b32 s4, v40, 0
 ; GCN: v_readlane_b32 s5, v40, 1
 ; GCN: v_readlane_b32 s33, v40, 2
-; GCN: ; NumSgprs: 36
+; CI: ; NumSgprs: 36
+; VI: ; NumSgprs: 38
 ; GCN: ; NumVgprs: 41
 define void @indirect_use_vcc() #1 {
   call void @use_vcc()
@@ -105,14 +107,16 @@ define void @indirect_use_50_vgpr() #0 {
 }
 
 ; GCN-LABEL: {{^}}use_80_sgpr:
-; GCN: ; NumSgprs: 80
+; CI: ; NumSgprs: 80
+; VI: ; NumSgprs: 84
 define void @use_80_sgpr() #1 {
   call void asm sideeffect "", "~{s79}"() #0
   ret void
 }
 
 ; GCN-LABEL: {{^}}indirect_use_80_sgpr:
-; GCN: ; NumSgprs: 82
+; CI: ; NumSgprs: 82
+; VI: ; NumSgprs: 84
 define void @indirect_use_80_sgpr() #1 {
   call void @use_80_sgpr()
   ret void

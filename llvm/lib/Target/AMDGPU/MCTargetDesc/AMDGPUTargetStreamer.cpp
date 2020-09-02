@@ -179,8 +179,8 @@ void AMDGPUTargetAsmStreamer::finish() {
   getPALMetadata()->reset();
 }
 
-void AMDGPUTargetAsmStreamer::EmitDirectiveAMDGCNTarget(StringRef Target) {
-  OS << "\t.amdgcn_target \"" << Target << "\"\n";
+void AMDGPUTargetAsmStreamer::EmitDirectiveAMDGCNTarget() {
+  OS << "\t.amdgcn_target \"" << getTargetID()->toString() << "\"\n";
 }
 
 void AMDGPUTargetAsmStreamer::EmitDirectiveHSACodeObjectVersion(
@@ -224,8 +224,8 @@ void AMDGPUTargetAsmStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
      << Alignment.value() << '\n';
 }
 
-bool AMDGPUTargetAsmStreamer::EmitISAVersion(StringRef IsaVersionString) {
-  OS << "\t.amd_amdgpu_isa \"" << IsaVersionString << "\"\n";
+bool AMDGPUTargetAsmStreamer::EmitISAVersion() {
+  OS << "\t.amd_amdgpu_isa \"" << getTargetID()->toString() << "\"\n";
   return true;
 }
 
@@ -267,7 +267,7 @@ bool AMDGPUTargetAsmStreamer::EmitCodeEnd() {
 void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     const MCSubtargetInfo &STI, StringRef KernelName,
     const amdhsa::kernel_descriptor_t &KD, uint64_t NextVGPR, uint64_t NextSGPR,
-    bool ReserveVCC, bool ReserveFlatScr, bool ReserveXNACK) {
+    bool ReserveVCC, bool ReserveFlatScr) {
   IsaVersion IVersion = getIsaVersion(STI.getCPU());
 
   OS << "\t.amdhsa_kernel " << KernelName << '\n';
@@ -334,8 +334,20 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     OS << "\t\t.amdhsa_reserve_vcc " << ReserveVCC << '\n';
   if (IVersion.Major >= 7 && !ReserveFlatScr)
     OS << "\t\t.amdhsa_reserve_flat_scratch " << ReserveFlatScr << '\n';
-  if (IVersion.Major >= 8 && ReserveXNACK != hasXNACK(STI))
-    OS << "\t\t.amdhsa_reserve_xnack_mask " << ReserveXNACK << '\n';
+
+  if (const auto &&HsaAbiVer = getHsaAbiVersion(&STI)) {
+    switch (HsaAbiVer.getValue()) {
+    default:
+      break;
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
+      break;
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+      if (getTargetID()->isXnackSupported())
+        OS << "\t\t.amdhsa_reserve_xnack_mask " << getTargetID()->isXnackOnOrAny() << '\n';
+      break;
+    }
+  }
 
   PRINT_FIELD(OS, ".amdhsa_float_round_mode_32", KD,
               compute_pgm_rsrc1,
@@ -404,23 +416,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
 
 AMDGPUTargetELFStreamer::AMDGPUTargetELFStreamer(MCStreamer &S,
                                                  const MCSubtargetInfo &STI)
-    : AMDGPUTargetStreamer(S), Streamer(S), Os(STI.getTargetTriple().getOS()) {
-  MCAssembler &MCA = getStreamer().getAssembler();
-  unsigned EFlags = MCA.getELFHeaderEFlags();
-
-  EFlags &= ~ELF::EF_AMDGPU_MACH;
-  EFlags |= getElfMach(STI.getCPU());
-
-  EFlags &= ~ELF::EF_AMDGPU_XNACK;
-  if (AMDGPU::hasXNACK(STI))
-    EFlags |= ELF::EF_AMDGPU_XNACK;
-
-  EFlags &= ~ELF::EF_AMDGPU_SRAM_ECC;
-  if (AMDGPU::hasSRAMECC(STI))
-    EFlags |= ELF::EF_AMDGPU_SRAM_ECC;
-
-  MCA.setELFHeaderEFlags(EFlags);
-}
+    : AMDGPUTargetStreamer(S), STI(STI), Streamer(S) {}
 
 MCELFStreamer &AMDGPUTargetELFStreamer::getStreamer() {
   return static_cast<MCELFStreamer &>(Streamer);
@@ -430,6 +426,9 @@ MCELFStreamer &AMDGPUTargetELFStreamer::getStreamer() {
 // We use it for emitting the accumulated PAL metadata as a .note record.
 // The PAL metadata is reset after it is emitted.
 void AMDGPUTargetELFStreamer::finish() {
+  MCAssembler &MCA = getStreamer().getAssembler();
+  MCA.setELFHeaderEFlags(getEFlags());
+
   std::string Blob;
   const char *Vendor = getPALMetadata()->getVendor();
   unsigned Type = getPALMetadata()->getType();
@@ -455,7 +454,7 @@ void AMDGPUTargetELFStreamer::EmitNote(
   unsigned NoteFlags = 0;
   // TODO Apparently, this is currently needed for OpenCL as mentioned in
   // https://reviews.llvm.org/D74995
-  if (Os == Triple::AMDHSA)
+  if (STI.getTargetTriple().getOS() == Triple::AMDHSA)
     NoteFlags = ELF::SHF_ALLOC;
 
   S.PushSection();
@@ -471,7 +470,133 @@ void AMDGPUTargetELFStreamer::EmitNote(
   S.PopSection();
 }
 
-void AMDGPUTargetELFStreamer::EmitDirectiveAMDGCNTarget(StringRef Target) {}
+unsigned AMDGPUTargetELFStreamer::getEFlags() {
+  switch (STI.getTargetTriple().getArch()) {
+  default:
+    llvm_unreachable("Unsupported Arch");
+  case Triple::r600:
+    return getEFlagsR600();
+  case Triple::amdgcn:
+    return getEFlagsAMDGCN();
+  }
+}
+
+unsigned AMDGPUTargetELFStreamer::getEFlagsR600() {
+  assert(STI.getTargetTriple().getArch() == Triple::r600);
+
+  return getElfMach(STI.getCPU());
+}
+
+unsigned AMDGPUTargetELFStreamer::getEFlagsAMDGCN() {
+  assert(STI.getTargetTriple().getArch() == Triple::amdgcn);
+
+  switch (STI.getTargetTriple().getOS()) {
+  default:
+    // TODO: Why are some tests have "mingw" listed as OS?
+    // llvm_unreachable("Unsupported OS");
+  case Triple::UnknownOS:
+    return getEFlagsUnknownOS();
+  case Triple::AMDHSA:
+    return getEFlagsAMDHSA();
+  case Triple::AMDPAL:
+    return getEFlagsAMDPAL();
+  case Triple::Mesa3D:
+    return getEFlagsMesa3D();
+  }
+}
+
+unsigned AMDGPUTargetELFStreamer::getEFlagsUnknownOS() {
+  // TODO: Why are some tests have "mingw" listed as OS?
+  // assert(STI.getTargetTriple().getOS() == Triple::UnknownOS);
+
+  return getEFlagsV3();
+}
+
+unsigned AMDGPUTargetELFStreamer::getEFlagsAMDHSA() {
+  assert(STI.getTargetTriple().getOS() == Triple::AMDHSA);
+
+  if (const auto &&HsaAbiVer = getHsaAbiVersion(&STI)) {
+    switch (HsaAbiVer.getValue()) {
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
+      return getEFlagsV3();
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+      return getEFlagsV4();
+    }
+  }
+
+  llvm_unreachable("HSA OS ABI Version identification must be defined");
+}
+
+unsigned AMDGPUTargetELFStreamer::getEFlagsAMDPAL() {
+  assert(STI.getTargetTriple().getOS() == Triple::AMDPAL);
+
+  return getEFlagsV3();
+}
+
+unsigned AMDGPUTargetELFStreamer::getEFlagsMesa3D() {
+  assert(STI.getTargetTriple().getOS() == Triple::Mesa3D);
+
+  return getEFlagsV3();
+}
+
+unsigned AMDGPUTargetELFStreamer::getEFlagsV3() {
+  unsigned EFlagsV3 = 0;
+
+  // mach.
+  EFlagsV3 |= getElfMach(STI.getCPU());
+
+  // xnack.
+  if (getTargetID()->isXnackOnOrAny())
+    EFlagsV3 |= ELF::EF_AMDGPU_FEATURE_XNACK_V3;
+  // sramecc.
+  if (getTargetID()->isSramEccOnOrAny())
+    EFlagsV3 |= ELF::EF_AMDGPU_FEATURE_SRAMECC_V3;
+
+  return EFlagsV3;
+}
+
+unsigned AMDGPUTargetELFStreamer::getEFlagsV4() {
+  unsigned EFlagsV4 = 0;
+
+  // mach.
+  EFlagsV4 |= getElfMach(STI.getCPU());
+
+  // xnack.
+  switch (getTargetID()->getXnackSetting()) {
+  case AMDGPU::IsaInfo::TargetIDSetting::Unsupported:
+    EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4;
+    break;
+  case AMDGPU::IsaInfo::TargetIDSetting::Any:
+    EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4;
+    break;
+  case AMDGPU::IsaInfo::TargetIDSetting::Off:
+    EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4;
+    break;
+  case AMDGPU::IsaInfo::TargetIDSetting::On:
+    EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4;
+    break;
+  }
+  // sramecc.
+  switch (getTargetID()->getSramEccSetting()) {
+  case AMDGPU::IsaInfo::TargetIDSetting::Unsupported:
+    EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4;
+    break;
+  case AMDGPU::IsaInfo::TargetIDSetting::Any:
+    EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_SRAMECC_ANY_V4;
+    break;
+  case AMDGPU::IsaInfo::TargetIDSetting::Off:
+    EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_SRAMECC_OFF_V4;
+    break;
+  case AMDGPU::IsaInfo::TargetIDSetting::On:
+    EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_SRAMECC_ON_V4;
+    break;
+  }
+
+  return EFlagsV4;
+}
+
+void AMDGPUTargetELFStreamer::EmitDirectiveAMDGCNTarget() {}
 
 void AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectVersion(
     uint32_t Major, uint32_t Minor) {
@@ -545,7 +670,7 @@ void AMDGPUTargetELFStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
   SymbolELF->setSize(MCConstantExpr::create(Size, getContext()));
 }
 
-bool AMDGPUTargetELFStreamer::EmitISAVersion(StringRef IsaVersionString) {
+bool AMDGPUTargetELFStreamer::EmitISAVersion() {
   // Create two labels to mark the beginning and end of the desc field
   // and a MCExpr to calculate the size of the desc field.
   auto &Context = getContext();
@@ -558,7 +683,7 @@ bool AMDGPUTargetELFStreamer::EmitISAVersion(StringRef IsaVersionString) {
   EmitNote(ElfNote::NoteNameV2, DescSZ, ELF::NT_AMD_AMDGPU_ISA,
            [&](MCELFStreamer &OS) {
              OS.emitLabel(DescBegin);
-             OS.emitBytes(IsaVersionString);
+             OS.emitBytes(getTargetID()->toString());
              OS.emitLabel(DescEnd);
            });
   return true;
@@ -630,8 +755,7 @@ bool AMDGPUTargetELFStreamer::EmitCodeEnd() {
 void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
     const MCSubtargetInfo &STI, StringRef KernelName,
     const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
-    uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr,
-    bool ReserveXNACK) {
+    uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr) {
   auto &Streamer = getStreamer();
   auto &Context = Streamer.getContext();
 

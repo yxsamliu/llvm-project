@@ -32,6 +32,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
@@ -47,6 +48,10 @@
 #include "AMDGPUGenInstrInfo.inc"
 #undef GET_INSTRMAP_INFO
 #undef GET_INSTRINFO_NAMED_OPS
+
+static llvm::cl::opt<unsigned> AmdhsaCodeObjectVersion(
+  "amdhsa-code-object-version", llvm::cl::Hidden,
+  llvm::cl::desc("AMDHSA Code Object Version"), llvm::cl::init(3));
 
 namespace {
 
@@ -102,6 +107,44 @@ unsigned getVmcntBitWidthHi() { return 2; }
 namespace llvm {
 
 namespace AMDGPU {
+
+Optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
+  if (STI && STI->getTargetTriple().getOS() != Triple::AMDHSA)
+    return None;
+
+  switch (AmdhsaCodeObjectVersion) {
+  case 2:
+    return ELF::ELFABIVERSION_AMDGPU_HSA_V2;
+  case 3:
+    return ELF::ELFABIVERSION_AMDGPU_HSA_V3;
+  case 4:
+    return ELF::ELFABIVERSION_AMDGPU_HSA_V4;
+  default:
+    return ELF::ELFABIVERSION_AMDGPU_HSA_V3;
+  }
+}
+
+bool isHsaAbiVersion2(const MCSubtargetInfo *STI) {
+  if (const auto &&HsaAbiVer = getHsaAbiVersion(STI))
+    return HsaAbiVer.getValue() == ELF::ELFABIVERSION_AMDGPU_HSA_V2;
+  return false;
+}
+
+bool isHsaAbiVersion3(const MCSubtargetInfo *STI) {
+  if (const auto &&HsaAbiVer = getHsaAbiVersion(STI))
+    return HsaAbiVer.getValue() == ELF::ELFABIVERSION_AMDGPU_HSA_V3;
+  return false;
+}
+
+bool isHsaAbiVersion4(const MCSubtargetInfo *STI) {
+  if (const auto &&HsaAbiVer = getHsaAbiVersion(STI))
+    return HsaAbiVer.getValue() == ELF::ELFABIVERSION_AMDGPU_HSA_V4;
+  return false;
+}
+
+bool isHsaAbiVersion3Or4(const MCSubtargetInfo *STI) {
+  return isHsaAbiVersion3(STI) || isHsaAbiVersion4(STI);
+}
 
 #define GET_MIMGBaseOpcodesTable_IMPL
 #define GET_MIMGDimInfoTable_IMPL
@@ -237,7 +280,8 @@ int getMCOpcode(uint16_t Opcode, unsigned Gen) {
 namespace IsaInfo {
 
 AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI)
-    : XnackSetting(TargetIDSetting::Any), SramEccSetting(TargetIDSetting::Any) {
+    : STI(STI), XnackSetting(TargetIDSetting::Any),
+      SramEccSetting(TargetIDSetting::Any) {
   if (!STI.getFeatureBits().test(FeatureSupportsXNACK))
     XnackSetting = TargetIDSetting::Unsupported;
   if (!STI.getFeatureBits().test(FeatureSupportsSRAMECC))
@@ -350,30 +394,57 @@ void AMDGPUTargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
   }
 }
 
-void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream) {
-  auto TargetTriple = STI->getTargetTriple();
-  auto Version = getIsaVersion(STI->getCPU());
+std::string AMDGPUTargetID::toString() const {
+  std::string StringRep = "";
+  raw_string_ostream StreamRep(StringRep);
 
-  Stream << TargetTriple.getArchName() << '-'
-         << TargetTriple.getVendorName() << '-'
-         << TargetTriple.getOSName() << '-'
-         << TargetTriple.getEnvironmentName() << '-'
-         << "gfx"
-         << Version.Major
-         << Version.Minor
-         << Version.Stepping;
+  auto TargetTriple = STI.getTargetTriple();
+  auto Version = getIsaVersion(STI.getCPU());
 
-  if (hasXNACK(*STI))
-    Stream << "+xnack";
-  if (hasSRAMECC(*STI))
-    Stream << "+sramecc";
+  StreamRep << TargetTriple.getArchName() << '-'
+            << TargetTriple.getVendorName() << '-'
+            << TargetTriple.getOSName() << '-'
+            << TargetTriple.getEnvironmentName() << '-';
 
-  Stream.flush();
-}
+  // TODO: Following else statement is present here because we used various
+  // alias names for GPUs up until GFX9 (e.g. 'fiji' is same as 'gfx803').
+  // Remove once all aliases are removed from GCNProcessors.td.
+  if (Version.Major >= 9)
+    StreamRep << STI.getCPU();
+  else
+    StreamRep << "gfx" << Version.Major << Version.Minor << Version.Stepping;
 
-bool hasCodeObjectV3(const MCSubtargetInfo *STI) {
-  return STI->getTargetTriple().getOS() == Triple::AMDHSA &&
-             STI->getFeatureBits().test(FeatureCodeObjectV3);
+  if (const auto &&HsaAbiVersion = getHsaAbiVersion(&STI)) {
+    switch (HsaAbiVersion.getValue()) {
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
+      // xnack.
+      if (isXnackOnOrAny())
+        StreamRep << "+xnack";
+      // In code object v2 and v3, "sramecc" feature was spelled with a
+      // hyphen ("sram-ecc").
+      if (isSramEccOnOrAny())
+        StreamRep << "+sram-ecc";
+      break;
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+      // sramecc.
+      if (getSramEccSetting() == TargetIDSetting::Off)
+        StreamRep << ":sramecc-";
+      else if (getSramEccSetting() == TargetIDSetting::On)
+        StreamRep << ":sramecc+";
+      // xnack.
+      if (getXnackSetting() == TargetIDSetting::Off)
+        StreamRep << ":xnack-";
+      else if (getXnackSetting() == TargetIDSetting::On)
+        StreamRep << ":xnack+";
+      break;
+    default:
+      break;
+    }
+  }
+
+  StreamRep.flush();
+  return StringRep;
 }
 
 unsigned getWavefrontSize(const MCSubtargetInfo *STI) {

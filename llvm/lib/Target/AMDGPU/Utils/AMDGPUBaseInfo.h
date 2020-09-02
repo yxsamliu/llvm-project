@@ -38,6 +38,21 @@ class Triple;
 
 namespace AMDGPU {
 
+/// \returns HSA OS ABI Version identification.
+Optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI);
+/// \returns True if HSA OS ABI Version identification is 2,
+/// false otherwise.
+bool isHsaAbiVersion2(const MCSubtargetInfo *STI);
+/// \returns True if HSA OS ABI Version identification is 3,
+/// false otherwise.
+bool isHsaAbiVersion3(const MCSubtargetInfo *STI);
+/// \returns True if HSA OS ABI Version identification is 4,
+/// false otherwise.
+bool isHsaAbiVersion4(const MCSubtargetInfo *STI);
+/// \returns True if HSA OS ABI Version identification is 3 or 4,
+/// false otherwise.
+bool isHsaAbiVersion3Or4(const MCSubtargetInfo *STI);
+
 struct GcnBufferFormatInfo {
   unsigned Format;
   unsigned BitsPerComp;
@@ -71,6 +86,7 @@ enum class TargetIDSetting {
 
 class AMDGPUTargetID {
 private:
+  const MCSubtargetInfo &STI;
   TargetIDSetting XnackSetting;
   TargetIDSetting SramEccSetting;
 
@@ -97,14 +113,34 @@ public:
 
   void setTargetIDFromFeaturesString(StringRef FS);
   void setTargetIDFromTargetIDStream(StringRef TargetID);
+
+  /// \returns True if current xnack setting is "On" or "Off",
+  /// false otherwise.
+  bool isXnackOnOrOff() const {
+    return getXnackSetting() == TargetIDSetting::On ||
+        getXnackSetting() == TargetIDSetting::Off;
+  }
+
+  /// \returns True if current sramecc setting is "On" or "Off",
+  /// false otherwise.
+  bool isSramEccOnOrOff() const {
+    return getSramEccSetting() == TargetIDSetting::On ||
+        getSramEccSetting() == TargetIDSetting::Off;
+  }
+
+  /// Sets xnack setting to \p NewXnackSetting.
+  void setXnackSetting(TargetIDSetting NewXnackSetting) {
+    XnackSetting = NewXnackSetting;
+  }
+
+  /// Sets sramecc setting to \p NewSramEccSetting.
+  void setSramEccSetting(TargetIDSetting NewSramEccSetting) {
+    SramEccSetting = NewSramEccSetting;
+  }
+
+  /// \returns String representation of an object.
+  std::string toString() const;
 };
-
-/// Streams isa version string for given subtarget \p STI into \p Stream.
-void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream);
-
-/// \returns True if given subtarget \p STI supports code object version 3,
-/// false otherwise.
-bool hasCodeObjectV3(const MCSubtargetInfo *STI);
 
 /// \returns Wavefront size for given subtarget \p STI.
 unsigned getWavefrontSize(const MCSubtargetInfo *STI);

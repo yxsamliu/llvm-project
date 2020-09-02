@@ -18,8 +18,8 @@
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIProgramInfo.h"
-#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
@@ -440,7 +440,8 @@ bool MetadataStreamerV2::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
   return TargetStreamer.EmitHSAMetadata(getHSAMetadata());
 }
 
-void MetadataStreamerV2::begin(const Module &Mod) {
+void MetadataStreamerV2::begin(const Module &Mod,
+                               const IsaInfo::AMDGPUTargetID &TargetID) {
   emitVersion();
   emitPrintf(Mod);
 }
@@ -616,6 +617,11 @@ void MetadataStreamerV3::emitVersion() {
   Version.push_back(Version.getDocument()->getNode(VersionMajor));
   Version.push_back(Version.getDocument()->getNode(VersionMinor));
   getRootMetadata("amdhsa.version") = Version;
+}
+
+void MetadataStreamerV3::emitTargetID(const IsaInfo::AMDGPUTargetID &TargetID) {
+  getRootMetadata("amdhsa.target") =
+      HSAMetadataDoc->getNode(TargetID.toString(), /*Copy=*/true);
 }
 
 void MetadataStreamerV3::emitPrintf(const Module &Mod) {
@@ -886,8 +892,14 @@ bool MetadataStreamerV3::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
   return TargetStreamer.EmitHSAMetadata(*HSAMetadataDoc, true);
 }
 
-void MetadataStreamerV3::begin(const Module &Mod) {
+void MetadataStreamerV3::begin(const Module &Mod,
+                               const IsaInfo::AMDGPUTargetID &TargetID) {
   emitVersion();
+
+  const auto &&HsaAbiVer = getHsaAbiVersion(nullptr);
+  if (HsaAbiVer && HsaAbiVer.getValue() == ELF::ELFABIVERSION_AMDGPU_HSA_V4)
+    emitTargetID(TargetID);
+
   emitPrintf(Mod);
   getRootMetadata("amdhsa.kernels") = HSAMetadataDoc->getArrayNode();
 }

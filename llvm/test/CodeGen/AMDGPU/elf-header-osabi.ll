@@ -17,7 +17,7 @@
 ; PAL:    OS/ABI: AMDGPU_PAL    (0x41)
 ; PAL:    ABIVersion: 0
 ; MESA3D: OS/ABI: AMDGPU_MESA3D (0x42)
-; MESA3D:    ABIVersion: 0
+; MESA3D: ABIVersion: 0
 
 define amdgpu_kernel void @elf_header() {
   ret void

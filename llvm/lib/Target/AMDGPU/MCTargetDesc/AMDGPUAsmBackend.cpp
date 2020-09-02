@@ -237,7 +237,8 @@ MCAsmBackend *llvm::createAMDGPUAsmBackend(const Target &T,
                                            const MCSubtargetInfo &STI,
                                            const MCRegisterInfo &MRI,
                                            const MCTargetOptions &Options) {
+  uint8_t ABIVersion = getHsaAbiVersion(&STI).getValueOr(0);
+
   // Use 64-bit ELF for amdgcn
-  return new ELFAMDGPUAsmBackend(T, STI.getTargetTriple(),
-                                 IsaInfo::hasCodeObjectV3(&STI) ? 1 : 0);
+  return new ELFAMDGPUAsmBackend(T, STI.getTargetTriple(), ABIVersion);
 }

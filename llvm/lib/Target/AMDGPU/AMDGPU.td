@@ -632,13 +632,6 @@ def FeatureAutoWaitcntBeforeBarrier : SubtargetFeature <
   "Hardware automatically inserts waitcnt before barrier"
 >;
 
-def FeatureCodeObjectV3 : SubtargetFeature <
-  "code-object-v3",
-  "CodeObjectV3",
-  "true",
-  "Generate code object version 3"
->;
-
 def FeatureTrigReducedRange : SubtargetFeature<"trig-reduced-range",
   "HasTrigReducedRange",
   "true",
@@ -740,85 +733,71 @@ class FeatureSet<list<SubtargetFeature> Features_> {
 def FeatureISAVersion6_0_0 : FeatureSet<[FeatureSouthernIslands,
    FeatureFastFMAF32,
    HalfRate64Ops,
-   FeatureLDSBankCount32,
-   FeatureCodeObjectV3]>;
+   FeatureLDSBankCount32]>;
 
 def FeatureISAVersion6_0_1 : FeatureSet<
   [FeatureSouthernIslands,
-   FeatureLDSBankCount32,
-   FeatureCodeObjectV3]>;
+   FeatureLDSBankCount32]>;
 
 def FeatureISAVersion7_0_0 : FeatureSet<
   [FeatureSeaIslands,
-   FeatureLDSBankCount32,
-   FeatureCodeObjectV3]>;
+   FeatureLDSBankCount32]>;
 
 def FeatureISAVersion7_0_1 : FeatureSet<
   [FeatureSeaIslands,
    HalfRate64Ops,
    FeatureLDSBankCount32,
-   FeatureFastFMAF32,
-   FeatureCodeObjectV3]>;
+   FeatureFastFMAF32]>;
 
 def FeatureISAVersion7_0_2 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount16,
-   FeatureFastFMAF32,
-   FeatureCodeObjectV3]>;
+   FeatureFastFMAF32]>;
 
 def FeatureISAVersion7_0_3 : FeatureSet<
   [FeatureSeaIslands,
-   FeatureLDSBankCount16,
-   FeatureCodeObjectV3]>;
+   FeatureLDSBankCount16]>;
 
 def FeatureISAVersion7_0_4 : FeatureSet<
   [FeatureSeaIslands,
-   FeatureLDSBankCount32,
-   FeatureCodeObjectV3]>;
+   FeatureLDSBankCount32]>;
 
 def FeatureISAVersion8_0_1 : FeatureSet<
   [FeatureVolcanicIslands,
    FeatureFastFMAF32,
    HalfRate64Ops,
    FeatureLDSBankCount32,
-   FeatureUnpackedD16VMem,
-   FeatureCodeObjectV3]>;
+   FeatureUnpackedD16VMem]>;
 
 def FeatureISAVersion8_0_2 : FeatureSet<
   [FeatureVolcanicIslands,
    FeatureLDSBankCount32,
    FeatureSGPRInitBug,
-   FeatureUnpackedD16VMem,
-   FeatureCodeObjectV3]>;
+   FeatureUnpackedD16VMem]>;
 
 def FeatureISAVersion8_0_3 : FeatureSet<
   [FeatureVolcanicIslands,
    FeatureLDSBankCount32,
-   FeatureUnpackedD16VMem,
-   FeatureCodeObjectV3]>;
+   FeatureUnpackedD16VMem]>;
 
 def FeatureISAVersion8_1_0 : FeatureSet<
   [FeatureVolcanicIslands,
-   FeatureLDSBankCount16,
-   FeatureCodeObjectV3]>;
+   FeatureLDSBankCount16]>;
 
 def FeatureISAVersion9_0_0 : FeatureSet<
   [FeatureGFX9,
    FeatureMadMixInsts,
-   FeatureLDSBankCount32,
-   FeatureCodeObjectV3]>;
+   FeatureLDSBankCount32]>;
 
 def FeatureISAVersion9_0_2 : FeatureSet<
   [FeatureGFX9,
    FeatureMadMixInsts,
-   FeatureLDSBankCount32,
-   FeatureCodeObjectV3]>;
+   FeatureLDSBankCount32]>;
 
 def FeatureISAVersion9_0_4 : FeatureSet<
   [FeatureGFX9,
    FeatureLDSBankCount32,
-   FeatureFmaMixInsts,
-   FeatureCodeObjectV3]>;
+   FeatureFmaMixInsts]>;
 
 def FeatureISAVersion9_0_6 : FeatureSet<
   [FeatureGFX9,
@@ -828,7 +807,6 @@ def FeatureISAVersion9_0_6 : FeatureSet<
    FeatureDLInsts,
    FeatureDot1Insts,
    FeatureDot2Insts,
-   FeatureCodeObjectV3,
    FeatureSupportsSRAMECC]>;
 
 def FeatureISAVersion9_0_8 : FeatureSet<
@@ -847,14 +825,12 @@ def FeatureISAVersion9_0_8 : FeatureSet<
    FeaturePkFmacF16Inst,
    FeatureAtomicFaddInsts,
    FeatureMFMAInlineLiteralBug,
-   FeatureCodeObjectV3,
    FeatureSupportsSRAMECC]>;
 
 def FeatureISAVersion9_0_9 : FeatureSet<
   [FeatureGFX9,
    FeatureMadMixInsts,
-   FeatureLDSBankCount32,
-   FeatureCodeObjectV3]>;
+   FeatureLDSBankCount32]>;
 
 // TODO: Organize more features into groups.
 def FeatureGroup {
@@ -887,7 +863,6 @@ def FeatureISAVersion10_1_0 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureCodeObjectV3,
      FeatureSupportsXNACK])>;
 
 def FeatureISAVersion10_1_1 : FeatureSet<
@@ -908,7 +883,6 @@ def FeatureISAVersion10_1_1 : FeatureSet<
      FeatureSMemTimeInst,
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
-     FeatureCodeObjectV3,
      FeatureSupportsXNACK])>;
 
 def FeatureISAVersion10_1_2 : FeatureSet<
@@ -930,7 +904,6 @@ def FeatureISAVersion10_1_2 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureCodeObjectV3,
      FeatureSupportsXNACK])>;
 
 def FeatureISAVersion10_3_0 : FeatureSet<
@@ -944,8 +917,7 @@ def FeatureISAVersion10_3_0 : FeatureSet<
    FeatureDot5Insts,
    FeatureDot6Insts,
    FeatureNSAEncoding,
-   FeatureWavefrontSize32,
-   FeatureCodeObjectV3]>;
+   FeatureWavefrontSize32]>;
 
 //===----------------------------------------------------------------------===//
 

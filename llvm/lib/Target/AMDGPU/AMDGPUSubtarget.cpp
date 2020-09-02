@@ -177,7 +177,6 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
 
     FlatForGlobal(false),
     AutoWaitcntBeforeBarrier(false),
-    CodeObjectV3(false),
     UnalignedScratchAccess(false),
     UnalignedAccessMode(false),
 

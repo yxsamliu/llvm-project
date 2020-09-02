@@ -1,7 +1,10 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s 2>&1 | FileCheck -check-prefix=NOSICIVI10 %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=hawaii -show-encoding %s 2>&1 | FileCheck -check-prefix=NOSICIVI10 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -mattr=-xnack -show-encoding %s 2>&1 | FileCheck -check-prefix=NOSICIVI10 %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1001 -show-encoding %s 2>&1 | FileCheck -check-prefix=NOSICIVI10 %s
+
+// Though xnack is disabled for tonga, tonga still supports it.
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -mattr=-xnack -show-encoding %s 2>&1 | FileCheck -check-prefix=XNACKERR %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -mattr=-xnack -show-encoding %s | FileCheck -check-prefix=XNACK %s
 
 // RUN: not llvm-mc -arch=amdgcn -mcpu=stoney -mattr=+xnack -show-encoding %s 2>&1 | FileCheck -check-prefix=XNACKERR %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=stoney -mattr=+xnack -show-encoding %s | FileCheck -check-prefix=XNACK %s
