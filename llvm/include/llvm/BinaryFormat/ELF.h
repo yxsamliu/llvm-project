@@ -729,6 +729,17 @@ enum : unsigned {
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.
   //
+  // Only valid for ELFOSABI_AMDGPU_HSA and ELFABIVERSION_AMDGPU_HSA_V2.
+  EF_AMDGPU_FEATURE_XNACK_V2 = 0x01,
+  // Indicates if the trap handler is enabled for all code contained
+  // in the object.
+  //
+  // Only valid for ELFOSABI_AMDGPU_HSA and ELFABIVERSION_AMDGPU_HSA_V2.
+  EF_AMDGPU_FEATURE_TRAP_HANDLER_V2 = 0x02,
+
+  // Indicates if the "xnack" target feature is enabled for all code contained
+  // in the object.
+  //
   // Only valid for ELFOSABI_AMDGPU_HSA and ELFABIVERSION_AMDGPU_HSA_V3.
   EF_AMDGPU_FEATURE_XNACK_V3 = 0x100,
   // Indicates if the "sramecc" target feature is enabled for all code
