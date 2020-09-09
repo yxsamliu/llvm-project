@@ -602,7 +602,7 @@ void AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectVersion(
     uint32_t Major, uint32_t Minor) {
 
   EmitNote(ElfNote::NoteNameV2, MCConstantExpr::create(8, getContext()),
-           ElfNote::NT_AMDGPU_HSA_CODE_OBJECT_VERSION, [&](MCELFStreamer &OS) {
+           ELF::NT_AMD_HSA_CODE_OBJECT_VERSION, [&](MCELFStreamer &OS) {
              OS.emitInt32(Major);
              OS.emitInt32(Minor);
            });
@@ -622,7 +622,7 @@ AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectISA(uint32_t Major,
     VendorNameSize + ArchNameSize;
 
   EmitNote(ElfNote::NoteNameV2, MCConstantExpr::create(DescSZ, getContext()),
-           ElfNote::NT_AMDGPU_HSA_ISA, [&](MCELFStreamer &OS) {
+           ELF::NT_AMD_HSA_ISA_VERSION, [&](MCELFStreamer &OS) {
              OS.emitInt16(VendorNameSize);
              OS.emitInt16(ArchNameSize);
              OS.emitInt32(Major);
@@ -680,7 +680,7 @@ bool AMDGPUTargetELFStreamer::EmitISAVersion() {
     MCSymbolRefExpr::create(DescEnd, Context),
     MCSymbolRefExpr::create(DescBegin, Context), Context);
 
-  EmitNote(ElfNote::NoteNameV2, DescSZ, ELF::NT_AMD_AMDGPU_ISA,
+  EmitNote(ElfNote::NoteNameV2, DescSZ, ELF::NT_AMD_HSA_ISA_NAME,
            [&](MCELFStreamer &OS) {
              OS.emitLabel(DescBegin);
              OS.emitBytes(getTargetID()->toString());
@@ -731,7 +731,7 @@ bool AMDGPUTargetELFStreamer::EmitHSAMetadata(
     MCSymbolRefExpr::create(DescEnd, Context),
     MCSymbolRefExpr::create(DescBegin, Context), Context);
 
-  EmitNote(ElfNote::NoteNameV2, DescSZ, ELF::NT_AMD_AMDGPU_HSA_METADATA,
+  EmitNote(ElfNote::NoteNameV2, DescSZ, ELF::NT_AMD_HSA_METADATA,
            [&](MCELFStreamer &OS) {
              OS.emitLabel(DescBegin);
              OS.emitBytes(HSAMetadataString);

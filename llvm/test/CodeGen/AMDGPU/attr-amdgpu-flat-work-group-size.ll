@@ -129,7 +129,7 @@ define amdgpu_kernel void @min_1024_max_1024() #3 {
 }
 attributes #3 = {"amdgpu-flat-work-group-size"="1024,1024"}
 
-; HSAMD: NT_AMD_AMDGPU_HSA_METADATA (HSA Metadata)
+; HSAMD: NT_AMD_HSA_METADATA (AMD HSA Metadata)
 ; HSAMD: Version: [ 1, 0 ]
 ; HSAMD: Kernels:
 ; HSAMD: - Name:                 min_64_max_64

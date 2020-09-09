@@ -5032,11 +5032,14 @@ static std::string getAMDNoteTypeName(const uint32_t NT) {
   static const struct {
     uint32_t ID;
     const char *Name;
-  } Notes[] = {{ELF::NT_AMD_AMDGPU_HSA_METADATA,
-                "NT_AMD_AMDGPU_HSA_METADATA (HSA Metadata)"},
-               {ELF::NT_AMD_AMDGPU_ISA, "NT_AMD_AMDGPU_ISA (ISA Version)"},
-               {ELF::NT_AMD_AMDGPU_PAL_METADATA,
-                "NT_AMD_AMDGPU_PAL_METADATA (PAL Metadata)"}};
+  } Notes[] = {
+      {ELF::NT_AMD_HSA_CODE_OBJECT_VERSION,
+       "NT_AMD_HSA_CODE_OBJECT_VERSION (AMD HSA Code Object Version)"},
+      {ELF::NT_AMD_HSA_HSAIL, "NT_AMD_HSA_HSAIL (AMD HSA HSAIL Properties)"},
+      {ELF::NT_AMD_HSA_ISA_VERSION, "NT_AMD_HSA_ISA_VERSION (AMD HSA ISA Version)"},
+      {ELF::NT_AMD_HSA_METADATA, "NT_AMD_HSA_METADATA (AMD HSA Metadata)"},
+      {ELF::NT_AMD_HSA_ISA_NAME, "NT_AMD_HSA_ISA_NAME (AMD HSA ISA Name)"},
+      {ELF::NT_AMD_PAL_METADATA, "NT_AMD_PAL_METADATA (AMD PAL Metadata)"}};
 
   for (const auto &Note : Notes)
     if (Note.ID == NT)
@@ -5044,7 +5047,7 @@ static std::string getAMDNoteTypeName(const uint32_t NT) {
 
   std::string string;
   raw_string_ostream OS(string);
-  OS << format("Unknown note type (0x%08x)", NT);
+  OS << format("Unknown AMD note type (0x%08x)", NT);
   return OS.str();
 }
 
@@ -5054,7 +5057,7 @@ static std::string getAMDGPUNoteTypeName(const uint32_t NT) {
 
   std::string string;
   raw_string_ostream OS(string);
-  OS << format("Unknown note type (0x%08x)", NT);
+  OS << format("Unknown AMDGPU note type (0x%08x)", NT);
   return OS.str();
 }
 
@@ -5294,14 +5297,95 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
   switch (NoteType) {
   default:
     return {"", ""};
-  case ELF::NT_AMD_AMDGPU_HSA_METADATA:
+  case ELF::NT_AMD_HSA_CODE_OBJECT_VERSION: {
+    struct CodeObjectVersion {
+      uint32_t MajorVersion;
+      uint32_t MinorVersion;
+    };
+    if (Desc.size() != sizeof(CodeObjectVersion))
+      return {"AMD HSA Code Object Version",
+              "Invalid AMD HSA Code Object Version"};
+    std::string VersionString;
+    raw_string_ostream StrOS(VersionString);
+    auto Version = reinterpret_cast<const CodeObjectVersion *>(Desc.data());
+    StrOS << "[Major: " << Version->MajorVersion
+          << ", Minor: " << Version->MinorVersion << "]";
+    return {"AMD HSA Code Object Version", StrOS.str()};
+  }
+  case ELF::NT_AMD_HSA_HSAIL: {
+    struct HSAILProperties {
+      uint32_t HSAILMajorVersion;
+      uint32_t HSAILMinorVersion;
+      uint8_t Profile;
+      uint8_t MachineModel;
+      uint8_t DefaultFloatRound;
+    };
+    if (Desc.size() != sizeof(HSAILProperties))
+      return {"AMD HSA HSAIL Properties", "Invalid AMD HSA HSAIL Properties"};
+    auto Properties = reinterpret_cast<const HSAILProperties *>(Desc.data());
+    std::string HSAILPropetiesString;
+    raw_string_ostream StrOS(HSAILPropetiesString);
+    StrOS << "[HSAIL Major: " << Properties->HSAILMajorVersion
+          << ", HSAIL Minor: " << Properties->HSAILMinorVersion
+          << ", Profile: " << Properties->Profile
+          << ", Machine Model: " << Properties->MachineModel
+          << ", Default Float Round: " << Properties->DefaultFloatRound << "]";
+    return {"AMD HSA HSAIL Properties", StrOS.str()};
+  }
+  case ELF::NT_AMD_HSA_ISA_VERSION: {
+    struct IsaVersion {
+      uint16_t VendorNameSize;
+      uint16_t ArchitectureNameSize;
+      uint32_t Major;
+      uint32_t Minor;
+      uint32_t Stepping;
+      char VendorAndArchitectureName[1];
+    };
+    if (Desc.size() < offsetof(IsaVersion, VendorAndArchitectureName))
+      return {"AMD HSA ISA Version", "Invalid AMD HSA ISA Version"};
+    auto Isa = reinterpret_cast<const IsaVersion *>(Desc.data());
+    if (Desc.size() < offsetof(IsaVersion, VendorAndArchitectureName) +
+                          Isa->VendorNameSize + Isa->ArchitectureNameSize ||
+        Isa->VendorNameSize == 0 || Isa->ArchitectureNameSize == 0)
+      return {"AMD HSA ISA Version", "Invalid AMD HSA ISA Version"};
+    std::string IsaString;
+    raw_string_ostream StrOS(IsaString);
+    StrOS << "[Vendor: "
+          << StringRef(Isa->VendorAndArchitectureName, Isa->VendorNameSize - 1)
+          << ", Architecture: "
+          << StringRef(Isa->VendorAndArchitectureName + Isa->VendorNameSize,
+                       Isa->ArchitectureNameSize - 1)
+          << ", Major: " << Isa->Major << ", Minor: " << Isa->Minor
+          << ", Stepping: " << Isa->Stepping << "]";
+    return {"AMD HSA ISA Version", StrOS.str()};
+  }
+  case ELF::NT_AMD_HSA_METADATA: {
+    if (Desc.size() == 0)
+      return {"AMD HSA Metadata", "Invalid AMD HSA Metadata"};
     return {
-        "HSA Metadata",
-        std::string(reinterpret_cast<const char *>(Desc.data()), Desc.size())};
-  case ELF::NT_AMD_AMDGPU_ISA:
+        "AMD HSA Metadata",
+        std::string(reinterpret_cast<const char *>(Desc.data()), Desc.size() - 1)};
+  }
+  case ELF::NT_AMD_HSA_ISA_NAME: {
+    if (Desc.size() == 0)
+      return {"AMD HSA ISA Name", "Invalid AMD HSA ISA Name"};
     return {
-        "ISA Version",
+        "AMD HSA ISA Name",
         std::string(reinterpret_cast<const char *>(Desc.data()), Desc.size())};
+  }
+  case ELF::NT_AMD_PAL_METADATA: {
+    struct PALMetadata {
+      uint32_t Key;
+      uint32_t Value;
+    };
+    auto Isa = reinterpret_cast<const PALMetadata *>(Desc.data());
+    std::string MetadataString;
+    raw_string_ostream StrOS(MetadataString);
+    for (size_t i = 0; i < Desc.size() / sizeof(PALMetadata); ++i) {
+      StrOS << "[" << Isa[i].Key << ": " << Isa[i].Value << "]";
+    }
+    return {"AMD PAL Metadata", StrOS.str()};
+  }
   }
 }
 
@@ -5326,8 +5410,8 @@ static AMDGPUNote getAMDGPUNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
     if (!Verifier.verify(MsgPackDoc.getRoot()))
       return {"AMDGPU Metadata", "Invalid AMDGPU Metadata"};
 
-    std::string HSAMetadataString;
-    raw_string_ostream StrOS(HSAMetadataString);
+    std::string MetadataString;
+    raw_string_ostream StrOS(MetadataString);
     MsgPackDoc.toYAML(StrOS);
 
     return {"AMDGPU Metadata", StrOS.str()};

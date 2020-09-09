@@ -900,15 +900,18 @@ alignment.
 
 .. _amdgpu-note-records-v2:
 
-Code Object V2 Note Records (-mattr=-code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Code Object V2 Note Records (``--amdhsa-code-object-version=2``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning:: Code Object V2 is not the default code object version emitted by
   this version of LLVM. For a description of the notes generated with the
   default configuration (Code Object V3) see :ref:`amdgpu-note-records-v3`.
 
 The AMDGPU backend code object uses the following ELF note record in the
-``.note`` section when compiling for Code Object V2 (-mattr=-code-object-v3).
+``.note`` section when compiling for Code Object V2
+(``--amdhsa-code-object-version=2``).
+
+The note record vendor field is "AMD".
 
 Additional note records may be present, but any which are not documented here
 are deprecated and should not be used.
@@ -916,26 +919,86 @@ are deprecated and should not be used.
   .. table:: AMDGPU Code Object V2 ELF Note Records
      :name: amdgpu-elf-note-records-table-v2
 
-     ===== ============================== ======================================
-     Name  Type                           Description
-     ===== ============================== ======================================
-     "AMD" ``NT_AMD_AMDGPU_HSA_METADATA`` <metadata null terminated string>
-     ===== ============================== ======================================
+     ===== ===================================== ======================================
+     Name  Type                                  Description
+     ===== ===================================== ======================================
+     "AMD" ``NT_AMD_HSA_CODE_OBJECT_VERSION``    Code object version.
+     "AMD" ``NT_AMD_HSA_HSAIL``                  HSAIL properties used by the HSAIL
+                                                 Finalizer.
+     "AMD" ``NT_AMD_HSA_ISA_VERSION``            Target ISA version.
+     "AMD" ``NT_AMD_HSA_METADATA``               Metadata null terminated string in
+                                                 YAML [YAML]_ textual format.
+     "AMD" ``NT_AMD_HSA_ISA_NAME``               Target ISA name.
+     ===== ===================================== ======================================
 
 ..
 
   .. table:: AMDGPU Code Object V2 ELF Note Record Enumeration Values
      :name: amdgpu-elf-note-record-enumeration-values-table-v2
 
-     ============================== =====
-     Name                           Value
-     ============================== =====
-     *reserved*                       0-9
-     ``NT_AMD_AMDGPU_HSA_METADATA``    10
-     *reserved*                        11
-     ============================== =====
+     ===================================== =====
+     Name                                  Value
+     ===================================== =====
+     ``NT_AMD_HSA_CODE_OBJECT_VERSION``    1
+     ``NT_AMD_HSA_HSAIL``                  2
+     ``NT_AMD_HSA_ISA_VERSION``            3
+     *reserved*                            4-9
+     ``NT_AMD_HSA_METADATA``               10
+     ``NT_AMD_HSA_ISA_NAME``               11
+     ===================================== =====
 
-``NT_AMD_AMDGPU_HSA_METADATA``
+``NT_AMD_HSA_CODE_OBJECT_VERSION``
+  Specifies the code object version number. The description field has the
+  following layout:
+
+  .. code::
+
+    struct amdgpu_hsa_note_code_object_version_s {
+      uint32_t major_version;
+      uint32_t minor_version;
+    };
+
+  The ``major_version`` has a value less than or equal to 2.
+
+``NT_AMD_HSA_HSAIL``
+  Specifies the HSAIL properties used by the HSAIL Finalizer. The description
+  field has the following layout:
+
+  .. code::
+
+    struct amdgpu_hsa_note_hsail_s {
+      uint32_t hsail_major_version;
+      uint32_t hsail_minor_version;
+      uint8_t profile;
+      uint8_t machine_model;
+      uint8_t default_float_round;
+    };
+
+``NT_AMD_HSA_ISA_VERSION``
+  Specifies the target ISA version. The description field has the following layout:
+
+  .. code::
+
+    struct amdgpu_hsa_note_isa_s {
+      uint16_t vendor_name_size;
+      uint16_t architecture_name_size;
+      uint32_t major;
+      uint32_t minor;
+      uint32_t stepping;
+      char vendor_and_architecture_name[1];
+    };
+
+  ``vendor_name_size`` and ``architecture_name_size`` are the length of the
+  vendor and architecture names respectively, including the NUL character.
+
+  ``vendor_and_architecture_name`` contains the NUL terminates string for the
+  vendor, immediately followed by the NUL terminated string for the
+  architecture.
+
+``NT_AMD_HSA_ISA_NAME``
+  Specifies the target ISA name as a non-NUL terminated string.
+
+``NT_AMD_HSA_METADATA``
   Specifies extensible metadata associated with the code objects executed on HSA
   [HSA]_ compatible runtimes such as AMD's ROCm [AMD-ROCm]_. It is required when
   the target triple OS is ``amdhsa`` (see :ref:`amdgpu-target-triples`). See
@@ -944,11 +1007,14 @@ are deprecated and should not be used.
 
 .. _amdgpu-note-records-v3:
 
-Code Object V3 Note Records (-mattr=+code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Code Object V3 Note Records (``--amdhsa-code-object-version=3``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The AMDGPU backend code object uses the following ELF note record in the
-``.note`` section when compiling for Code Object V3 (-mattr=+code-object-v3).
+``.note`` section when compiling for Code Object V3
+(``--amdhsa-code-object-version=3``).
+
+The note record vendor field is "AMDGPU".
 
 Additional note records may be present, but any which are not documented here
 are deprecated and should not be used.
@@ -2065,16 +2131,16 @@ OpenCL runtime records kernel argument information.
 
 .. _amdgpu-amdhsa-code-object-metadata-v2:
 
-Code Object V2 Metadata (-mattr=-code-object-v3)
-++++++++++++++++++++++++++++++++++++++++++++++++
+Code Object V2 Metadata (``--amdhsa-code-object-version=2``)
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 .. warning:: Code Object V2 is not the default code object version emitted by
   this version of LLVM. For a description of the metadata generated with the
   default configuration (Code Object V3) see
   :ref:`amdgpu-amdhsa-code-object-metadata-v3`.
 
-Code object V2 metadata is specified by the ``NT_AMD_AMDGPU_METADATA`` note
-record (see :ref:`amdgpu-note-records-v2`).
+Code object V2 metadata is specified by the ``NT_AMD_HSA_METADATA`` note record
+(see :ref:`amdgpu-note-records-v2`).
 
 The metadata is specified as a YAML formatted string (see [YAML]_ and
 :doc:`YamlIO`).
@@ -2486,8 +2552,8 @@ non-AMD key names should be prefixed by "*vendor-name*.".
 
 .. _amdgpu-amdhsa-code-object-metadata-v3:
 
-Code Object V3 Metadata (-mattr=+code-object-v3)
-++++++++++++++++++++++++++++++++++++++++++++++++
+Code Object V3 Metadata (``--amdhsa-code-object-version=3``)
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 Code object V3 metadata is specified by the ``NT_AMDGPU_METADATA`` note record
 (see :ref:`amdgpu-note-records-v3`).
@@ -7333,8 +7399,8 @@ one.
 
 .. _amdgpu-amdhsa-assembler-directives-v2:
 
-Code Object V2 Directives (-mattr=-code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Code Object V2 Directives (``--amdhsa-code-object-version=2``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning:: Code Object V2 is not the default code object version emitted by
   this version of LLVM. For a description of the directives supported with
@@ -7408,8 +7474,8 @@ comments in lib/Target/AMDGPU/AmdKernelCodeT.h and test/CodeGen/AMDGPU/hsa.s.
 
 .. _amdgpu-amdhsa-assembler-example-v2:
 
-Code Object V2 Example Source Code (-mattr=-code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Code Object V2 Example Source Code (``--amdhsa-code-object-version=2``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning:: Code Object V2 is not the default code object version emitted by
   this version of LLVM. For a description of the directives supported with
@@ -7516,8 +7582,8 @@ May be set at any time, e.g. manually set to zero at the start of each kernel.
 
 .. _amdgpu-amdhsa-assembler-directives-v3:
 
-Code Object V3 Directives (-mattr=+code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Code Object V3 Directives (``--amdhsa-code-object-version=3``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Directives which begin with ``.amdgcn`` are valid for all ``amdgcn``
 architecture processors, and are not OS-specific. Directives which begin with
@@ -7671,8 +7737,8 @@ This directive is terminated by an ``.end_amdgpu_metadata`` directive.
 
 .. _amdgpu-amdhsa-assembler-example-v3:
 
-Code Object V3 Example Source Code (-mattr=+code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Code Object V3 Example Source Code (``--amdhsa-code-object-version=3``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Here is an example of a minimal assembly source file, defining one HSA kernel:
 
