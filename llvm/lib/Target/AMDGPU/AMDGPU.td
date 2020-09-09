@@ -685,7 +685,7 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureSDWA, FeatureSDWAOutModsVOPC, FeatureSDWAMac, FeatureDPP,
    FeatureIntClamp, FeatureTrigReducedRange, FeatureGFX8Insts,
    FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
-   FeatureDsSrc2Insts, FeatureFastDenormalF32, FeatureSupportsXNACK,
+   FeatureDsSrc2Insts, FeatureFastDenormalF32,
    FeatureUnalignedBufferAccess]
 >;
 
@@ -764,6 +764,7 @@ def FeatureISAVersion7_0_4 : FeatureSet<
 
 def FeatureISAVersion8_0_1 : FeatureSet<
   [FeatureVolcanicIslands,
+   FeatureSupportsXNACK,
    FeatureFastFMAF32,
    HalfRate64Ops,
    FeatureLDSBankCount32,
@@ -782,6 +783,7 @@ def FeatureISAVersion8_0_3 : FeatureSet<
 
 def FeatureISAVersion8_1_0 : FeatureSet<
   [FeatureVolcanicIslands,
+   FeatureSupportsXNACK,
    FeatureLDSBankCount16]>;
 
 def FeatureISAVersion9_0_0 : FeatureSet<

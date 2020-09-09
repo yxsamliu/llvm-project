@@ -186,25 +186,24 @@ names from both the *Processor* and *Alternative Processor* can be used.
      \                           ``amdgcn``   APU   - xnack                   - E2-9010
                                                       [on]                    - A6-9210
                                                                               - A9-9410
-     ``gfx802``  - ``iceland``   ``amdgcn``   dGPU  - xnack           ROCm    - FirePro S7150
-                 - ``tonga``                          [off]                   - FirePro S7100
+     ``gfx802``  - ``iceland``   ``amdgcn``   dGPU                    ROCm    - FirePro S7150
+                 - ``tonga``                                                  - FirePro S7100
                                                                               - FirePro W7100
                                                                               - Radeon R285
                                                                               - Radeon R9 380
                                                                               - Radeon R9 385
                                                                               - Mobile FirePro
                                                                                 M7170
-     ``gfx803``  - ``fiji``      ``amdgcn``   dGPU  - xnack           ROCm    - Radeon R9 Nano
-                                                      [off]                   - Radeon R9 Fury
+     ``gfx803``  - ``fiji``      ``amdgcn``   dGPU                    ROCm    - Radeon R9 Nano
+                                                                              - Radeon R9 Fury
                                                                               - Radeon R9 FuryX
                                                                               - Radeon Pro Duo
                                                                               - FirePro S9300x2
                                                                               - Radeon Instinct MI8
-     \           - ``polaris10`` ``amdgcn``   dGPU  - xnack           ROCm    - Radeon RX 470
-                                                      [off]                   - Radeon RX 480
+     \           - ``polaris10`` ``amdgcn``   dGPU                    ROCm    - Radeon RX 470
+                                                                              - Radeon RX 480
                                                                               - Radeon Instinct MI6
-     \           - ``polaris11`` ``amdgcn``   dGPU  - xnack           ROCm    - Radeon RX 460
-                                                      [off]
+     \           - ``polaris11`` ``amdgcn``   dGPU                    ROCm    - Radeon RX 460
      ``gfx810``  - ``stoney``    ``amdgcn``   APU   - xnack
                                                       [on]
      **GCN GFX9** [AMD-GCN-GFX9]_
