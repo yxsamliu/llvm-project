@@ -11527,7 +11527,8 @@ void OverloadCandidateSet::NoteCandidates(PartialDiagnosticAt PD,
     // Defer diagnostic for CUDA/HIP if there are wrong-sided candidates.
     auto WrongSidedCands =
         CompleteCandidates(S, OCD_AllCandidates, Args, OpLoc, [](auto &Cand) {
-          return Cand.FailureKind == ovl_fail_bad_target;
+          return Cand.Viable == false &&
+                 Cand.FailureKind == ovl_fail_bad_target;
         });
     DeferHint = WrongSidedCands.size();
   }
