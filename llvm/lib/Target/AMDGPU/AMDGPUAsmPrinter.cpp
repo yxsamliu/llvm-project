@@ -111,8 +111,10 @@ AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     if (isHsaAbiVersion2(getGlobalSTI())) {
       HSAMetadataStream.reset(new MetadataStreamerV2());
-    } else {
+    } else if (isHsaAbiVersion3(getGlobalSTI())) {
       HSAMetadataStream.reset(new MetadataStreamerV3());
+    } else {
+      HSAMetadataStream.reset(new MetadataStreamerV4());
     }
   }
 }

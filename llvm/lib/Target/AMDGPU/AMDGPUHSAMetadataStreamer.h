@@ -53,9 +53,9 @@ public:
                           const SIProgramInfo &ProgramInfo) = 0;
 };
 
-// TODO: Rename MetadataStreamerV3 -> MetadataStreamerMsgPack.
-class MetadataStreamerV3 final : public MetadataStreamer {
-private:
+// TODO: Rename MetadataStreamerV3 -> MetadataStreamerMsgPackV3.
+class MetadataStreamerV3 : public MetadataStreamer {
+protected:
   std::unique_ptr<msgpack::Document> HSAMetadataDoc =
       std::make_unique<msgpack::Document>();
 
@@ -78,8 +78,6 @@ private:
                                         const SIProgramInfo &ProgramInfo) const;
 
   void emitVersion();
-
-  void emitTargetID(const IsaInfo::AMDGPUTargetID &TargetID);
 
   void emitPrintf(const Module &Mod);
 
@@ -125,7 +123,21 @@ public:
                   const SIProgramInfo &ProgramInfo) override;
 };
 
-// TODO: Rename MetadataStreamerV2 -> MetadataStreamerYaml.
+// TODO: Rename MetadataStreamerV4 -> MetadataStreamerMsgPackV4.
+class MetadataStreamerV4 final : public MetadataStreamerV3 {
+  void emitVersion();
+
+  void emitTargetID(const IsaInfo::AMDGPUTargetID &TargetID);
+
+public:
+  MetadataStreamerV4() = default;
+  ~MetadataStreamerV4() = default;
+
+  void begin(const Module &Mod,
+             const IsaInfo::AMDGPUTargetID &TargetID) override;
+};
+
+// TODO: Rename MetadataStreamerV2 -> MetadataStreamerYamlV2.
 class MetadataStreamerV2 final : public MetadataStreamer {
 private:
   Metadata HSAMetadata;
