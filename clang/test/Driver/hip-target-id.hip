@@ -47,7 +47,7 @@
 // CHECK-SAME: "-plugin-opt=-mattr=-sramecc,+xnack"
 
 // CHECK: {{"[^"]*clang-offload-bundler[^"]*"}}
-// CHECK-SAME: "-targets=host-x86_64-unknown-linux,hip-amdgcn-amd-amdhsa--gfx908:sram-ecc+:xnack+,hip-amdgcn-amd-amdhsa--gfx908:sram-ecc-:xnack+"
+// CHECK-SAME: "-targets=host-x86_64-unknown-linux,hip-amdgcn-amd-amdhsa--gfx908:sramecc+:xnack+,hip-amdgcn-amd-amdhsa--gfx908:sramecc-:xnack+"
 
 // Check canonicalization and repeating of target ID.
 
@@ -69,4 +69,4 @@
 // RUN:   --offload-arch=gfx906 \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=MULTI %s
-// MULTI: "-targets=host-x86_64-unknown-linux,hip-amdgcn-amd-amdhsa--gfx900:xnack+,hip-amdgcn-amd-amdhsa--gfx900:xnack-,hip-amdgcn-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx908:sram-ecc+,hip-amdgcn-amd-amdhsa--gfx908:sram-ecc-"
+// MULTI: "-targets=host-x86_64-unknown-linux,hip-amdgcn-amd-amdhsa--gfx900:xnack+,hip-amdgcn-amd-amdhsa--gfx900:xnack-,hip-amdgcn-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx908:sramecc+,hip-amdgcn-amd-amdhsa--gfx908:sramecc-"
