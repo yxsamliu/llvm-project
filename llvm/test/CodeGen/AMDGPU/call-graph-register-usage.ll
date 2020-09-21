@@ -5,8 +5,7 @@
 ; Make sure to run a GPU with the SGPR allocation bug.
 
 ; GCN-LABEL: {{^}}use_vcc:
-; CI: ; NumSgprs: 34
-; VI: ; NumSgprs: 36
+; GCN: ; NumSgprs: 34
 ; GCN: ; NumVgprs: 0
 define void @use_vcc() #1 {
   call void asm sideeffect "", "~{vcc}" () #0
@@ -21,8 +20,7 @@ define void @use_vcc() #1 {
 ; GCN: v_readlane_b32 s4, v40, 0
 ; GCN: v_readlane_b32 s5, v40, 1
 ; GCN: v_readlane_b32 s33, v40, 2
-; CI: ; NumSgprs: 36
-; VI: ; NumSgprs: 38
+; GCN: ; NumSgprs: 36
 ; GCN: ; NumVgprs: 41
 define void @indirect_use_vcc() #1 {
   call void @use_vcc()
@@ -107,16 +105,14 @@ define void @indirect_use_50_vgpr() #0 {
 }
 
 ; GCN-LABEL: {{^}}use_80_sgpr:
-; CI: ; NumSgprs: 80
-; VI: ; NumSgprs: 84
+; GCN: ; NumSgprs: 80
 define void @use_80_sgpr() #1 {
   call void asm sideeffect "", "~{s79}"() #0
   ret void
 }
 
 ; GCN-LABEL: {{^}}indirect_use_80_sgpr:
-; CI: ; NumSgprs: 82
-; VI: ; NumSgprs: 84
+; GCN: ; NumSgprs: 82
 define void @indirect_use_80_sgpr() #1 {
   call void @use_80_sgpr()
   ret void

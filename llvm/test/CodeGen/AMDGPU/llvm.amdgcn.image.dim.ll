@@ -3208,7 +3208,6 @@ define amdgpu_ps void @image_store_wait(<8 x i32> inreg %arg, <8 x i32> inreg %a
 ; FIJI:       ; %bb.0: ; %main_body
 ; FIJI-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf unorm
 ; FIJI-NEXT:    image_load v[0:3], v4, s[8:15] dmask:0xf unorm
-; FIJI-NEXT:    s_nop 0
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
 ; FIJI-NEXT:    image_store v[0:3], v4, s[16:23] dmask:0xf unorm
 ; FIJI-NEXT:    s_endpgm

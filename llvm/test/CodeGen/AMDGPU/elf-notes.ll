@@ -27,7 +27,7 @@
 
 ; OSABI-HSA: .hsa_code_object_version
 ; OSABI-HSA: .hsa_code_object_isa
-; OSABI-HSA: .amd_amdgpu_isa "amdgcn-amd-amdhsa--gfx802+xnack"
+; OSABI-HSA: .amd_amdgpu_isa "amdgcn-amd-amdhsa--gfx802"
 ; OSABI-HSA: .amd_amdgpu_hsa_metadata
 ; OSABI-HSA-NOT: .amd_amdgpu_pal_metadata
 

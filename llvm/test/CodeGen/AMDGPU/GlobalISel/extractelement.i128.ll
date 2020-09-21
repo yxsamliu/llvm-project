@@ -60,15 +60,15 @@ define amdgpu_ps i128 @extractelement_vgpr_v4i128_sgpr_idx(<4 x i128> addrspace(
 ;
 ; GFX8-LABEL: extractelement_vgpr_v4i128_sgpr_idx:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    v_add_u32_e32 v10, vcc, 16, v0
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, 16, v0
+; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v10, vcc, 32, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v11, vcc, 0, v1, vcc
-; GFX8-NEXT:    v_add_u32_e32 v18, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v19, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[2:5], v[0:1]
-; GFX8-NEXT:    flat_load_dwordx4 v[6:9], v[10:11]
+; GFX8-NEXT:    flat_load_dwordx4 v[6:9], v[6:7]
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 48, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dwordx4 v[10:13], v[18:19]
+; GFX8-NEXT:    flat_load_dwordx4 v[10:13], v[10:11]
 ; GFX8-NEXT:    flat_load_dwordx4 v[14:17], v[0:1]
 ; GFX8-NEXT:    s_lshl_b32 s0, s2, 1
 ; GFX8-NEXT:    s_lshl_b32 m0, s0, 1
@@ -173,8 +173,8 @@ define i128 @extractelement_vgpr_v4i128_vgpr_idx(<4 x i128> addrspace(1)* %ptr, 
 ; GFX8-NEXT:    v_add_u32_e32 v3, vcc, 16, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v4, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[8:11], v[0:1]
-; GFX8-NEXT:    v_lshlrev_b32_e32 v16, 1, v2
 ; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[3:4]
+; GFX8-NEXT:    v_lshlrev_b32_e32 v16, 1, v2
 ; GFX8-NEXT:    v_add_u32_e32 v17, vcc, 1, v16
 ; GFX8-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v16
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v17
