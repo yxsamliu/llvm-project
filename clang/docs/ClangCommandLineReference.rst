@@ -26,6 +26,14 @@ Add <dir> to search path for binaries and object files used implicitly
 
 Add directory to framework include search path
 
+.. option:: -Mallocatable=<arg>
+
+Select semantics for assignments to allocatables (F03 or F95)
+
+.. option:: -Minform=<arg>
+
+Set error level of messages to display
+
 .. option:: -ObjC
 
 Treat source input files as Objective-C inputs
@@ -144,8 +152,6 @@ Specifies configuration file
 
 .. option:: --constant-cfstrings
 
-.. option:: -coverage, --coverage
-
 .. option:: --cuda-compile-host-device
 
 Compile CUDA code for both host and device (default).  Has no effect on non-CUDA compilations.
@@ -178,6 +184,10 @@ Filename to write DOT-formatted header dependencies to
 
 Filename (or -) to write dependency output to
 
+.. option:: -dsym-dir<dir>
+
+Directory to output dSYM's (if any) to
+
 .. option:: -dumpmachine
 
 .. option:: -dumpversion
@@ -199,6 +209,10 @@ Filename (or -) to write dependency output to
 .. option:: -emit-ast
 
 Emit Clang AST files for source inputs
+
+.. option:: --emit-static-lib
+
+Enable linker job to emit a static library.
 
 .. option:: -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang
 
@@ -280,6 +294,10 @@ Display help for hidden options
 
 Link clang-offload-bundler bundles for HIP
 
+.. option:: --hip-version=<arg>
+
+HIP version in the format of major.minor.patch
+
 .. option:: -ibuiltininc
 
 Enable builtin #include directories even when -nostdinc is used before or after -ibuiltininc. Using -nobuiltininc after the option disables it
@@ -309,6 +327,10 @@ Make the next included directory (-I or -F) an indexer header map
 .. option:: -mbranch-protection=<arg>
 
 Enforce targets of indirect branches and function returns
+
+.. option:: -mharden-sls=<arg>
+
+Select straight-line speculation hardening scope
 
 .. option:: --migrate
 
@@ -384,11 +406,7 @@ Do not link device library for CUDA/HIP device compilation
 
 Disable standard #include directories for the C++ standard library
 
-.. option:: -nostdlib, --no-standard-libraries
-
-.. program:: clang1
 .. option:: -nostdlib++
-.. program:: clang
 
 .. option:: -nostdlibinc
 
@@ -464,17 +482,19 @@ Only modify files with a filename contained in the provided directory path
 
 .. option:: --offload-arch=<arg>, --cuda-gpu-arch=<arg>, --no-offload-arch=<arg>
 
-CUDA/HIP offloading device architecture (e.g. sm\_35, gfx906).  May be specified more than once.
+CUDA offloading device architecture (e.g. sm\_35), or HIP offloading target ID in the form of a device architecture followed by target ID features delimited by a colon. Each target ID feature is a pre-defined string followed by a plus or minus sign (e.g. gfx908:xnack+:sramecc-).  May be specified more than once.
 
 .. option:: -p, --profile
 
 .. option:: -pagezero\_size<arg>
 
+.. option:: -parallel-jobs=<arg>
+
+Number of parallel jobs
+
 .. option:: -pg
 
 Enable mcount instrumentation
-
-.. option:: -pie
 
 .. option:: -pipe, --pipe
 
@@ -538,8 +558,6 @@ Support POSIX threads in generated code
 
 .. option:: -pthreads
 
-.. option:: -rdynamic
-
 .. option:: -read\_only\_relocs <arg>
 
 .. option:: -relocatable-pch, --relocatable-pch
@@ -602,8 +620,6 @@ Save intermediate compilation results.
 
 Serialize compiler diagnostics to a file
 
-.. option:: -shared, --shared
-
 .. option:: -shared-libgcc
 
 .. option:: -shared-libsan, -shared-libasan
@@ -613,8 +629,6 @@ Dynamically link the sanitizer runtime
 .. option:: -single\_module
 
 .. option:: -specs=<arg>, --specs=<arg>
-
-.. option:: -static, --static
 
 .. option:: -static-libgcc
 
@@ -627,8 +641,6 @@ Statically link the sanitizer runtime
 .. option:: -static-openmp
 
 Use the static host OpenMP runtime while linking.
-
-.. option:: -static-pie
 
 .. option:: -std-default=<arg>
 
@@ -734,7 +746,7 @@ Only run preprocess, compile, and assemble steps
 
 .. option:: -emit-interface-stubs
 
-Generate Inteface Stub Files.
+Generate Interface Stub Files.
 
 .. option:: -emit-llvm
 
@@ -820,7 +832,7 @@ Enables an experimental new pass manager in LLVM.
 
 .. option:: -fexperimental-strict-floating-point
 
-Enables the use of non-default rounding modes and non-default exception handling on targets that are not currently ready.
+Enables experimental strict floating point in LLVM.
 
 .. option:: -ffine-grained-bitfield-accesses, -fno-fine-grained-bitfield-accesses
 
@@ -886,11 +898,11 @@ Enable control flow integrity (CFI) checks for cross-DSO calls.
 
 Generalize pointers in CFI indirect call type signature checks
 
-.. option:: -fsanitize-coverage-allowlist=<arg>
+.. option:: -fsanitize-coverage-allowlist=<arg>, -fsanitize-coverage-whitelist=<arg>
 
 Restrict sanitizer coverage instrumentation exclusively to modules and functions that match the provided special case list, except the blocked ones
 
-.. option:: -fsanitize-coverage-blocklist=<arg>
+.. option:: -fsanitize-coverage-blocklist=<arg>, -fsanitize-coverage-blacklist=<arg>
 
 Disable sanitizer coverage instrumentation for modules and functions that match the provided special case list, even the allowed ones
 
@@ -1529,6 +1541,10 @@ Use DWARF style exceptions
 
 .. option:: -feliminate-unused-debug-symbols, -fno-eliminate-unused-debug-symbols
 
+.. option:: -feliminate-unused-debug-types, -fno-eliminate-unused-debug-types
+
+Do not emit  debug info for defined but unused types
+
 .. option:: -fembed-bitcode=<option>, -fembed-bitcode (equivalent to -fembed-bitcode=all), -fembed-bitcode-marker (equivalent to -fembed-bitcode=marker)
 
 Embed LLVM bitcode (option: off, all, bitcode, marker)
@@ -1833,10 +1849,6 @@ Directly create compilation output files. This may lead to incorrect incremental
 .. option:: -fno\_pch-validate-input-files-content
 .. program:: clang
 
-.. option:: -fnostack-clash-protection
-
-Disable stack clash protection
-
 .. option:: -fnoxray-link-deps
 
 .. option:: -fobjc-abi-version=<arg>
@@ -1932,6 +1944,18 @@ Generate M NOPs before function entry and N-M NOPs after function entry
 .. option:: -fpcc-struct-return
 
 Override the default ABI to return all structs on the stack
+
+.. option:: -fpch-codegen, -fno-pch-codegen
+
+Generate code for uses of this PCH that assumes an explicit object file will be built for the PCH
+
+.. option:: -fpch-debuginfo, -fno-pch-debuginfo
+
+Generate debug info for types in an object file built from this PCH and do not generate them elsewhere
+
+.. option:: -fpch-instantiate-templates, -fno-pch-instantiate-templates
+
+Instantiate templates already while building a PCH
 
 .. option:: -fpch-preprocess
 
@@ -2130,13 +2154,13 @@ Enables splitting of the LTO unit
 
 .. option:: -fsplit-stack
 
-.. option:: -fstack-clash-protection
+.. option:: -fstack-clash-protection, -fno-stack-clash-protection
 
 Enable stack clash protection
 
 .. option:: -fstack-protector, -fno-stack-protector
 
-Enable stack protectors for some functions vulnerable to stack smashing. This uses a loose heuristic which considers functions vulnerable if they contain a char (or 8bit integer) array or constant sized calls to alloca , which are of greater size than ssp-buffer-size (default: 8 bytes). All variable sized calls to alloca are considered vulnerable. A function witha stack protector has a guard value added to the stack frame that is checked on function exit. The guard value must be positioned in the stack frame such that a buffer overflow from a vulnerable variable will overwrite the guard value before overwriting the function's return address. The reference stack guard value is stored in a global variable.
+Enable stack protectors for some functions vulnerable to stack smashing. This uses a loose heuristic which considers functions vulnerable if they contain a char (or 8bit integer) array or constant sized calls to alloca , which are of greater size than ssp-buffer-size (default: 8 bytes). All variable sized calls to alloca are considered vulnerable. A function with a stack protector has a guard value added to the stack frame that is checked on function exit. The guard value must be positioned in the stack frame such that a buffer overflow from a vulnerable variable will overwrite the guard value before overwriting the function's return address. The reference stack guard value is stored in a global variable.
 
 .. option:: -fstack-protector-all
 
@@ -2153,10 +2177,6 @@ Emit section containing metadata on function stack sizes
 .. option:: -fstandalone-debug, -fno-limit-debug-info, -fno-standalone-debug
 
 Emit full debug info for all types used by the program
-
-.. option:: -feliminate-unused-debug-types, -fno-eliminate-unused-debug-types
-
-Suppress (or emit) debug info for types that are unused but defined by the program.
 
 .. option:: -fstrict-aliasing, -fno-strict-aliasing
 
@@ -2753,6 +2773,10 @@ Generate a \_\_mcount\_loc section entry for each \_\_fentry\_\_ call.
 
 .. option:: -mregparm=<arg>
 
+.. option:: -mrelax, -mno-relax
+
+Enable linker relaxation
+
 .. option:: -mrelax-all, -mno-relax-all
 
 (integrated-as) Relax all machine instructions
@@ -2770,6 +2794,8 @@ Enable speculative execution side effect suppression (SESES). Includes LVI contr
 .. option:: -msign-return-address=<arg>
 
 Select return address signing scope
+
+.. option:: -msim
 
 .. option:: -msoft-float, -mno-soft-float
 
@@ -2817,7 +2843,7 @@ Specify bit size of immediate TLS offsets (AArch64 ELF only): 12 (for 4KB) \| 24
 .. option:: -mtune=<arg>
 .. program:: clang
 
-Accepted for compatibility with GCC. Currently has no effect.
+Only supported on X86. Otherwise accepted for compatibility with GCC.
 
 .. option:: -mtvos-version-min=<arg>, -mappletvos-version-min=<arg>
 
@@ -2883,23 +2909,15 @@ Workaround Cortex-A53 erratum 835769 (AArch64 only)
 
 Generate code which only uses the general purpose registers (AArch64 only)
 
+.. option:: -msve-vector-bits=<arg>
+
+Specify the size in bits of an SVE vector register. Defaults to the vector length agnostic value of "scalable". (AArch64 only)
+
 AMDGPU
 ------
-.. option:: -mcode-object-v3, -mno-code-object-v3
-
-Enable code object v3 (AMDGPU only)
-
 .. option:: -mcumode, -mno-cumode
 
 CU wavefront execution mode is used (AMDGPU only)
-
-.. option:: -msram-ecc, -mno-sram-ecc
-
-Enable SRAM ECC (AMDGPU only)
-
-.. option:: -mxnack, -mno-xnack
-
-Enable XNACK (AMDGPU only)
 
 ARM
 ---
@@ -3080,6 +3098,10 @@ PowerPC
 .. option:: -mlongcall, -mno-longcall
 
 .. option:: -mmfocrf, -mmfcrf, -mno-mfocrf
+
+.. option:: -mmma, -mno-mma
+
+.. option:: -mpaired-vector-memops, -mno-paired-vector-memops
 
 .. option:: -mpcrel, -mno-pcrel
 
@@ -3301,10 +3323,6 @@ X86
 
 RISCV
 -----
-.. option:: -mrelax, -mno-relax
-
-Enable linker relaxation
-
 .. option:: -msave-restore, -mno-save-restore
 
 Enable using library calls for save and restore
@@ -3463,6 +3481,10 @@ a Fortran input.
 
 .. option:: -J<arg>
 
+.. option:: -byteswapio
+
+Swap byte-order for unformatted input/output
+
 .. option:: -cpp
 
 .. option:: -faggressive-function-elimination, -fno-aggressive-function-elimination
@@ -3471,9 +3493,15 @@ a Fortran input.
 
 .. option:: -fall-intrinsics, -fno-all-intrinsics
 
+.. option:: -fallow-fortran-gnu-ext, -fno-allow-fortran-gnu-ext
+
+Allow Fortran GNU extensions
+
 .. option:: -fautomatic, -fno-automatic
 
 .. option:: -fbackslash, -fno-backslash
+
+Treat backslash as C-style escape character
 
 .. option:: -fbacktrace, -fno-backtrace
 
@@ -3513,17 +3541,17 @@ a Fortran input.
 
 .. option:: -ff2c, -fno-f2c
 
-.. option:: -ffixed-form, -fno-fixed-form
-
 .. option:: -ffixed-line-length-<arg>
 
 .. option:: -ffpe-trap=<arg>
 
-.. option:: -ffree-form, -fno-free-form
-
 .. option:: -ffree-line-length-<arg>
 
 .. option:: -ffrontend-optimize, -fno-frontend-optimize
+
+.. option:: -ffunc-args-alias, -fno-func-args-alias
+
+Function argument may alias (equivalent to ansi alias)
 
 .. option:: -fimplicit-none, -fno-implicit-none
 
@@ -3552,6 +3580,10 @@ a Fortran input.
 .. option:: -fmax-subrecord-length=<arg>
 
 .. option:: -fmodule-private, -fno-module-private
+
+.. option:: -fno-fortran-main
+
+Don't link in Fortran main
 
 .. option:: -fpack-derived, -fno-pack-derived
 
@@ -3587,6 +3619,10 @@ a Fortran input.
 
 .. option:: -funderscoring, -fno-underscoring
 
+.. option:: -fuse-flang-math-libs, -fno-use-flang-math-libs
+
+Use Flang internal runtime math library instead of LLVM math intrinsics.
+
 .. option:: -fwhole-file, -fno-whole-file
 
 .. option:: -imultilib <arg>
@@ -3594,6 +3630,26 @@ a Fortran input.
 .. option:: -nocpp
 
 .. option:: -static-libgfortran
+
+Fortran format Group
+~~~~~~~~~~~~~~~~~~~~
+.. option:: -ffixed-form, -fno-fixed-form
+
+Enable fixed-form format for Fortran
+
+.. option:: -ffree-form, -fno-free-form
+
+Enable free-form format for Fortran
+
+Flang runtime library Group
+===========================
+.. option:: -no-flang-libs
+
+Do not link against Flang libraries
+
+.. option:: -static-flang-libs
+
+Link using static Flang libraries
 
 Linker flags
 ============
@@ -3635,13 +3691,11 @@ Pass <arg> to the linker
 .. option:: -Z
 .. program:: clang
 
+.. option:: -coverage, --coverage
+
 .. option:: -e<arg>, --entry
 
 .. option:: -filelist <arg>
-
-.. option:: --hip-device-lib-path=<arg>
-
-HIP device library path. Alternative to rocm-path.
 
 .. option:: --hip-device-lib=<arg>
 
@@ -3649,11 +3703,31 @@ HIP device library
 
 .. option:: -l<arg>
 
+.. option:: --ld-path=<arg>
+
+.. program:: clang1
+.. option:: -nostdlib, --no-standard-libraries
+.. program:: clang
+
+.. option:: -pie
+
 .. option:: -r
+
+.. option:: -rdynamic
+
+.. option:: --rocm-device-lib-path=<arg>, --hip-device-lib-path=<arg>
+
+ROCm device library path. Alternative to rocm-path.
 
 .. option:: -rpath <arg>
 
 .. option:: -s
+
+.. option:: -shared, --shared
+
+.. option:: -static, --static
+
+.. option:: -static-pie
 
 .. option:: -t
 
