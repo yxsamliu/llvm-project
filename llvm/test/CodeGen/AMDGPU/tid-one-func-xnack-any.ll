@@ -3,6 +3,9 @@
 
 ; ASM: .amdgcn_target "amdgcn-amd-amdhsa--gfx900"
 ; ASM:  amdhsa.target: amdgcn-amd-amdhsa--gfx900
+; ASM:  amdhsa.version:
+; ASM:    - 1
+; ASM:    - 1
 
 ; ELF:      OS/ABI: AMDGPU_HSA (0x40)
 ; ELF:      ABIVersion: 2
