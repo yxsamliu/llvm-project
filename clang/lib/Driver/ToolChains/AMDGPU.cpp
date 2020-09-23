@@ -404,6 +404,14 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
     Features.push_back("-wavefrontsize64");
   }
 
+  // TODO: Remove before upstreaming target id.
+  if (Args.getLastArg(options::OPT_msram_ecc_legacy)) {
+    Features.push_back("+sramecc");
+  }
+  if (Args.getLastArg(options::OPT_mno_sram_ecc_legacy)) {
+    Features.push_back("-sramecc");
+  }
+
   handleTargetFeaturesGroup(
     Args, Features, options::OPT_m_amdgpu_Features_Group);
 }

@@ -2428,9 +2428,15 @@ def mxnack : Flag<["-"], "mxnack">, Group<m_amdgpu_Features_Group>,
 def mno_xnack : Flag<["-"], "mno-xnack">, Group<m_amdgpu_Features_Group>,
   HelpText<"Disable XNACK (AMDGPU only)">;
 
-def msram_ecc : Flag<["-"], "msramecc">, Group<m_amdgpu_Features_Group>,
+// TODO: Remove before upstreaming target id.
+def msram_ecc_legacy : Flag<["-"], "msram-ecc">, Group<m_Group>,
+  HelpText<"Legacy option for enabling SRAM ECC (AMDGPU only)">;
+def mno_sram_ecc_legacy : Flag<["-"], "mno-sram-ecc">, Group<m_Group>,
+  HelpText<"Legacy option for disabling SRAM ECC (AMDGPU only)">;
+
+def msramecc : Flag<["-"], "msramecc">, Group<m_amdgpu_Features_Group>,
   HelpText<"Enable SRAM ECC (AMDGPU only)">;
-def mno_sram_ecc : Flag<["-"], "mno-sramecc">, Group<m_amdgpu_Features_Group>,
+def mno_sramecc : Flag<["-"], "mno-sramecc">, Group<m_amdgpu_Features_Group>,
   HelpText<"Disable SRAM ECC (AMDGPU only)">;
 
 def mcumode : Flag<["-"], "mcumode">, Group<m_amdgpu_Features_Group>,
