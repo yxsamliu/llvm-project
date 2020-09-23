@@ -2919,6 +2919,14 @@ AMDGPU
 
 CU wavefront execution mode is used (AMDGPU only)
 
+.. option:: -msramecc, -mno-sramecc
+
+Enable SRAM ECC (AMDGPU only)
+
+.. option:: -mxnack, -mno-xnack
+
+Enable XNACK (AMDGPU only)
+
 ARM
 ---
 .. option:: -fAAPCSBitfieldLoad
