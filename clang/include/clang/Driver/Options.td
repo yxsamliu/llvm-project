@@ -2423,6 +2423,15 @@ def mamdgpu_debugger_abi : Joined<["-"], "mamdgpu-debugger-abi=">,
   HelpText<"Generate additional code for specified <version> of debugger ABI (AMDGPU only)">,
   MetaVarName<"<version>">;
 
+def mxnack : Flag<["-"], "mxnack">, Group<m_amdgpu_Features_Group>,
+  HelpText<"Enable XNACK (AMDGPU only)">;
+def mno_xnack : Flag<["-"], "mno-xnack">, Group<m_amdgpu_Features_Group>,
+  HelpText<"Disable XNACK (AMDGPU only)">;
+def msram_ecc : Flag<["-"], "msramecc">, Group<m_amdgpu_Features_Group>,
+  HelpText<"Enable SRAM ECC (AMDGPU only)">;
+def mno_sram_ecc : Flag<["-"], "mno-sramecc">, Group<m_amdgpu_Features_Group>,
+  HelpText<"Disable SRAM ECC (AMDGPU only)">;
+
 def mcumode : Flag<["-"], "mcumode">, Group<m_amdgpu_Features_Group>,
   HelpText<"CU wavefront execution mode is used (AMDGPU only)">;
 def mno_cumode : Flag<["-"], "mno-cumode">, Group<m_amdgpu_Features_Group>,
