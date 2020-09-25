@@ -41,6 +41,20 @@ using namespace llvm::AMDGPU::HSAMD;
 // AMDGPUTargetStreamer
 //===----------------------------------------------------------------------===//
 
+static void convertIsaVersionV2(uint32_t &Major, uint32_t &Minor,
+                                uint32_t &Stepping, bool Sramecc, bool Xnack) {
+  if (Major == 9 && Minor == 0) {
+    switch (Stepping) {
+      case 0:
+      case 2:
+      case 4:
+      case 6:
+        if (Xnack)
+          Stepping++;
+    }
+  }
+}
+
 bool AMDGPUTargetStreamer::EmitHSAMetadataV2(StringRef HSAMetadataString) {
   HSAMD::Metadata HSAMetadata;
   if (HSAMD::fromString(std::string(HSAMetadataString), HSAMetadata))
@@ -190,15 +204,14 @@ void AMDGPUTargetAsmStreamer::EmitDirectiveHSACodeObjectVersion(
 }
 
 void
-AMDGPUTargetAsmStreamer::EmitDirectiveHSACodeObjectISA(uint32_t Major,
-                                                       uint32_t Minor,
-                                                       uint32_t Stepping,
-                                                       StringRef VendorName,
-                                                       StringRef ArchName) {
-  OS << "\t.hsa_code_object_isa " <<
-        Twine(Major) << "," << Twine(Minor) << "," << Twine(Stepping) <<
-        ",\"" << VendorName << "\",\"" << ArchName << "\"\n";
-
+AMDGPUTargetAsmStreamer::EmitDirectiveHSACodeObjectISAV2(uint32_t Major,
+                                                         uint32_t Minor,
+                                                         uint32_t Stepping,
+                                                         StringRef VendorName,
+                                                         StringRef ArchName) {
+  convertIsaVersionV2(Major, Minor, Stepping, TargetID->isSramEccOnOrAny(), TargetID->isXnackOnOrAny());
+  OS << "\t.hsa_code_object_isa " << Twine(Major) << "," << Twine(Minor) << ","
+     << Twine(Stepping) << ",\"" << VendorName << "\",\"" << ArchName << "\"\n";
 }
 
 void
@@ -609,11 +622,11 @@ void AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectVersion(
 }
 
 void
-AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectISA(uint32_t Major,
-                                                       uint32_t Minor,
-                                                       uint32_t Stepping,
-                                                       StringRef VendorName,
-                                                       StringRef ArchName) {
+AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectISAV2(uint32_t Major,
+                                                         uint32_t Minor,
+                                                         uint32_t Stepping,
+                                                         StringRef VendorName,
+                                                         StringRef ArchName) {
   uint16_t VendorNameSize = VendorName.size() + 1;
   uint16_t ArchNameSize = ArchName.size() + 1;
 
@@ -621,6 +634,7 @@ AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectISA(uint32_t Major,
     sizeof(Major) + sizeof(Minor) + sizeof(Stepping) +
     VendorNameSize + ArchNameSize;
 
+  convertIsaVersionV2(Major, Minor, Stepping, TargetID->isSramEccOnOrAny(), TargetID->isXnackOnOrAny());
   EmitNote(ElfNote::NoteNameV2, MCConstantExpr::create(DescSZ, getContext()),
            ELF::NT_AMD_HSA_ISA_VERSION, [&](MCELFStreamer &OS) {
              OS.emitInt16(VendorNameSize);

@@ -49,10 +49,10 @@ public:
   virtual void EmitDirectiveHSACodeObjectVersion(uint32_t Major,
                                                  uint32_t Minor) = 0;
 
-  virtual void EmitDirectiveHSACodeObjectISA(uint32_t Major, uint32_t Minor,
-                                             uint32_t Stepping,
-                                             StringRef VendorName,
-                                             StringRef ArchName) = 0;
+  virtual void EmitDirectiveHSACodeObjectISAV2(uint32_t Major, uint32_t Minor,
+                                               uint32_t Stepping,
+                                               StringRef VendorName,
+                                               StringRef ArchName) = 0;
 
   virtual void EmitAMDKernelCodeT(const amd_kernel_code_t &Header) = 0;
 
@@ -123,9 +123,9 @@ public:
   void EmitDirectiveHSACodeObjectVersion(uint32_t Major,
                                          uint32_t Minor) override;
 
-  void EmitDirectiveHSACodeObjectISA(uint32_t Major, uint32_t Minor,
-                                     uint32_t Stepping, StringRef VendorName,
-                                     StringRef ArchName) override;
+  void EmitDirectiveHSACodeObjectISAV2(uint32_t Major, uint32_t Minor,
+                                       uint32_t Stepping, StringRef VendorName,
+                                       StringRef ArchName) override;
 
   void EmitAMDKernelCodeT(const amd_kernel_code_t &Header) override;
 
@@ -183,9 +183,9 @@ public:
   void EmitDirectiveHSACodeObjectVersion(uint32_t Major,
                                          uint32_t Minor) override;
 
-  void EmitDirectiveHSACodeObjectISA(uint32_t Major, uint32_t Minor,
-                                     uint32_t Stepping, StringRef VendorName,
-                                     StringRef ArchName) override;
+  void EmitDirectiveHSACodeObjectISAV2(uint32_t Major, uint32_t Minor,
+                                       uint32_t Stepping, StringRef VendorName,
+                                       StringRef ArchName) override;
 
   void EmitAMDKernelCodeT(const amd_kernel_code_t &Header) override;
 
