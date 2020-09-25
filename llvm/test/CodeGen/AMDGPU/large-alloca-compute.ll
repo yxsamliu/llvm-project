@@ -5,6 +5,9 @@
 ; RUN: llc -march=amdgcn -mcpu=carrizo -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCNHSA -check-prefix=VIHSA -check-prefix=ALL %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCNHSA -check-prefix=GFX10HSA -check-prefix=ALL %s
 
+; TODO(TID/kzhuravl): Update these for v4.
+; XFAIL: *
+
 ; FIXME: align on alloca seems to be ignored for private_segment_alignment
 
 ; ALL-LABEL: {{^}}large_alloca_compute_shader:

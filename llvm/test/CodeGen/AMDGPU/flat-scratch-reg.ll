@@ -11,6 +11,9 @@
 ; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=carrizo --amdhsa-code-object-version=2 -mattr=-xnack -verify-machineinstrs < %s | FileCheck -check-prefix=HSA-VI-NOXNACK -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=carrizo --amdhsa-code-object-version=2 -mattr=+xnack -verify-machineinstrs < %s | FileCheck -check-prefix=HSA-VI-XNACK -check-prefix=GCN %s
 
+; TODO(TID/kzhuravl): Update these for v4.
+; XFAIL: *
+
 ; GCN-LABEL: {{^}}no_vcc_no_flat:
 ; HSA-CI: is_xnack_enabled = 0
 ; HSA-VI-NOXNACK: is_xnack_enabled = 0

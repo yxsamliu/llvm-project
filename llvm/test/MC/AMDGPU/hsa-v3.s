@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+xnack -filetype=obj < %s > %t
+// RUN: llvm-mc -triple amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx904 -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx904 -mattr=+xnack -filetype=obj < %s > %t
 // RUN: llvm-readelf -sections -symbols -relocations %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 

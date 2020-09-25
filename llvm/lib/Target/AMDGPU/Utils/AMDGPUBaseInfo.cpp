@@ -51,7 +51,7 @@
 
 static llvm::cl::opt<unsigned> AmdhsaCodeObjectVersion(
   "amdhsa-code-object-version", llvm::cl::Hidden,
-  llvm::cl::desc("AMDHSA Code Object Version"), llvm::cl::init(3));
+  llvm::cl::desc("AMDHSA Code Object Version"), llvm::cl::init(4));
 
 namespace {
 
@@ -120,7 +120,8 @@ Optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
   case 4:
     return ELF::ELFABIVERSION_AMDGPU_HSA_V4;
   default:
-    return ELF::ELFABIVERSION_AMDGPU_HSA_V4;
+    report_fatal_error(Twine("Unsupported AMDHSA Code Object Version ") +
+                       Twine(AmdhsaCodeObjectVersion));
   }
 }
 
