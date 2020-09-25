@@ -406,42 +406,96 @@ std::string AMDGPUTargetID::toString() const {
             << TargetTriple.getOSName() << '-'
             << TargetTriple.getEnvironmentName() << '-';
 
+  std::string Processor = "";
   // TODO: Following else statement is present here because we used various
   // alias names for GPUs up until GFX9 (e.g. 'fiji' is same as 'gfx803').
   // Remove once all aliases are removed from GCNProcessors.td.
   if (Version.Major >= 9)
-    StreamRep << STI.getCPU();
+    Processor = STI.getCPU().str();
   else
-    StreamRep << "gfx" << Version.Major << Version.Minor << Version.Stepping;
+    Processor = (Twine("gfx") + Twine(Version.Major) + Twine(Version.Minor) +
+                Twine(Version.Stepping)).str();
 
+  std::string Features = "";
   if (const auto &&HsaAbiVersion = getHsaAbiVersion(&STI)) {
     switch (HsaAbiVersion.getValue()) {
     case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
+      // Code object V2 only supported specific processors and had fixed
+      // settings for the XNACK.
+      if (Processor == "gfx700") {
+        ;
+      } else if (Processor == "gfx701") {
+        ;
+      } else if (Processor == "gfx702") {
+        ;
+      } else if (Processor == "gfx703") {
+        ;
+      } else if (Processor == "gfx704") {
+        ;
+      } else if (Processor == "gfx801") {
+        if (!isXnackOnOrAny())
+          report_fatal_error(
+              "AMD GPU code object V2 does not support processor  " +
+              Processor + " without XNACK");
+      } else if (Processor == "gfx802") {
+        ;
+      } else if (Processor == "gfx803") {
+        ;
+      } else if (Processor == "gfx810") {
+        if (!isXnackOnOrAny())
+          report_fatal_error(
+              "AMD GPU code object V2 does not support processor  " +
+              Processor + " without XNACK");
+      } else if (Processor == "gfx900") {
+        if (isXnackOnOrAny())
+          Processor = "gfx901";
+      } else if (Processor == "gfx902") {
+        if (!isXnackOnOrAny())
+          report_fatal_error(
+              "AMD GPU code object V2 does not support processor  " +
+              Processor + " without XNACK");
+      } else if (Processor == "gfx904") {
+        if (isXnackOnOrAny())
+          report_fatal_error(
+              "AMD GPU code object V2 does not support processor  " +
+              Processor + " with XNACK");
+      } else if (Processor == "gfx906") {
+        if (isXnackOnOrAny())
+          report_fatal_error(
+              "AMD GPU code object V2 does not support processor  " +
+              Processor + " with XNACK");
+      } else {
+        report_fatal_error(
+            "AMD GPU code object V2 does not support processor  " + Processor);
+      }
+      break;
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
       // xnack.
       if (isXnackOnOrAny())
-        StreamRep << "+xnack";
+        Features += "+xnack";
       // In code object v2 and v3, "sramecc" feature was spelled with a
       // hyphen ("sram-ecc").
       if (isSramEccOnOrAny())
-        StreamRep << "+sram-ecc";
+        Features += "+sram-ecc";
       break;
     case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
       // sramecc.
       if (getSramEccSetting() == TargetIDSetting::Off)
-        StreamRep << ":sramecc-";
+        Features += ":sramecc-";
       else if (getSramEccSetting() == TargetIDSetting::On)
-        StreamRep << ":sramecc+";
+        Features += ":sramecc+";
       // xnack.
       if (getXnackSetting() == TargetIDSetting::Off)
-        StreamRep << ":xnack-";
+        Features += ":xnack-";
       else if (getXnackSetting() == TargetIDSetting::On)
-        StreamRep << ":xnack+";
+        Features += ":xnack+";
       break;
     default:
       break;
     }
   }
+
+  StreamRep << Processor << Features;
 
   StreamRep.flush();
   return StringRep;
@@ -774,7 +828,7 @@ int getIntegerAttribute(const Function &F, StringRef Name, int Default) {
     StringRef Str = A.getValueAsString();
     if (Str.getAsInteger(0, Result)) {
       LLVMContext &Ctx = F.getContext();
-      Ctx.emitError("can't parse integer attribute " + Name);
+      report_fatal_error("can't parse integer attribute " + Name);
     }
   }
 
@@ -793,12 +847,12 @@ std::pair<int, int> getIntegerPairAttribute(const Function &F,
   std::pair<int, int> Ints = Default;
   std::pair<StringRef, StringRef> Strs = A.getValueAsString().split(',');
   if (Strs.first.trim().getAsInteger(0, Ints.first)) {
-    Ctx.emitError("can't parse first integer attribute " + Name);
+    report_fatal_error("can't parse first integer attribute " + Name);
     return Default;
   }
   if (Strs.second.trim().getAsInteger(0, Ints.second)) {
     if (!OnlyFirstRequired || !Strs.second.trim().empty()) {
-      Ctx.emitError("can't parse second integer attribute " + Name);
+      report_fatal_error("can't parse second integer attribute " + Name);
       return Default;
     }
   }
