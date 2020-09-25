@@ -120,7 +120,7 @@ Optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
   case 4:
     return ELF::ELFABIVERSION_AMDGPU_HSA_V4;
   default:
-    return ELF::ELFABIVERSION_AMDGPU_HSA_V3;
+    return ELF::ELFABIVERSION_AMDGPU_HSA_V4;
   }
 }
 
