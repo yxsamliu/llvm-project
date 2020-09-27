@@ -41,6 +41,7 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   llvm::AMDGPU::GPUKind GPUKind;
   unsigned GPUFeatures;
+  unsigned WavefrontSize;
 
   /// Target ID is device name followed by optional feature name postfixed
   /// by plus or minus sign delimitted by colon, e.g. gfx908:xnack+:sram-ecc-.
@@ -414,6 +415,9 @@ public:
       assert(OffloadArchFeatures.find(Name) == OffloadArchFeatures.end());
       OffloadArchFeatures[Name] = IsOn;
     });
+
+    if (llvm::find(Features, "+wavefrontsize64") != Features.end())
+      WavefrontSize = 64;
     return true;
   }
 
