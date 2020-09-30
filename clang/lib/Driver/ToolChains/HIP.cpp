@@ -235,8 +235,7 @@ void HIPToolChain::addClangTargetOptions(
     Action::OffloadKind DeviceOffloadingKind) const {
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
 
-  // Allow using target ID in --offload-arch.
-  StringRef GpuArch = translateTargetID(DriverArgs, CC1Args);
+  StringRef GpuArch = getGPUArch(DriverArgs);
   assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
   (void) GpuArch;
   assert(DeviceOffloadingKind == Action::OFK_HIP &&
@@ -351,6 +350,7 @@ HIPToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     checkTargetID(*DAL);
   }
 
+  checkTargetID(*DAL);
   return DAL;
 }
 
