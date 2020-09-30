@@ -348,6 +348,7 @@ HIPToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   if (!BoundArch.empty()) {
     DAL->eraseArg(options::OPT_mcpu_EQ);
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mcpu_EQ), BoundArch);
+    checkTargetID(*DAL);
   }
 
   return DAL;
