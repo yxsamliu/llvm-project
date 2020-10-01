@@ -9,42 +9,15 @@
 #include "mlir-c/IR.h"
 
 #include "mlir/CAPI/IR.h"
+#include "mlir/CAPI/Utils.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Parser.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
-
-/* ========================================================================== */
-/* Printing helper.                                                           */
-/* ========================================================================== */
-
-namespace {
-/// A simple raw ostream subclass that forwards write_impl calls to the
-/// user-supplied callback together with opaque user-supplied data.
-class CallbackOstream : public llvm::raw_ostream {
-public:
-  CallbackOstream(std::function<void(const char *, intptr_t, void *)> callback,
-                  void *opaqueData)
-      : callback(callback), opaqueData(opaqueData), pos(0u) {}
-
-  void write_impl(const char *ptr, size_t size) override {
-    callback(ptr, size, opaqueData);
-    pos += size;
-  }
-
-  uint64_t current_pos() const override { return pos; }
-
-private:
-  std::function<void(const char *, intptr_t, void *)> callback;
-  void *opaqueData;
-  uint64_t pos;
-};
-} // end namespace
 
 /* ========================================================================== */
 /* Context API.                                                               */
@@ -53,6 +26,10 @@ private:
 MlirContext mlirContextCreate() {
   auto *context = new MLIRContext(/*loadAllDialects=*/false);
   return wrap(context);
+}
+
+int mlirContextEqual(MlirContext ctx1, MlirContext ctx2) {
+  return unwrap(ctx1) == unwrap(ctx2);
 }
 
 void mlirContextDestroy(MlirContext context) { delete unwrap(context); }
@@ -73,7 +50,7 @@ MlirLocation mlirLocationUnknownGet(MlirContext context) {
 
 void mlirLocationPrint(MlirLocation location, MlirStringCallback callback,
                        void *userData) {
-  CallbackOstream stream(callback, userData);
+  detail::CallbackOstream stream(callback, userData);
   unwrap(location).print(stream);
   stream.flush();
 }
@@ -240,7 +217,7 @@ MlirAttribute mlirOperationGetAttributeByName(MlirOperation op,
 
 void mlirOperationPrint(MlirOperation op, MlirStringCallback callback,
                         void *userData) {
-  CallbackOstream stream(callback, userData);
+  detail::CallbackOstream stream(callback, userData);
   unwrap(op)->print(stream);
   stream.flush();
 }
@@ -322,7 +299,7 @@ MlirValue mlirBlockGetArgument(MlirBlock block, intptr_t pos) {
 
 void mlirBlockPrint(MlirBlock block, MlirStringCallback callback,
                     void *userData) {
-  CallbackOstream stream(callback, userData);
+  detail::CallbackOstream stream(callback, userData);
   unwrap(block)->print(stream);
   stream.flush();
 }
@@ -337,7 +314,7 @@ MlirType mlirValueGetType(MlirValue value) {
 
 void mlirValuePrint(MlirValue value, MlirStringCallback callback,
                     void *userData) {
-  CallbackOstream stream(callback, userData);
+  detail::CallbackOstream stream(callback, userData);
   unwrap(value).print(stream);
   stream.flush();
 }
@@ -350,10 +327,14 @@ MlirType mlirTypeParseGet(MlirContext context, const char *type) {
   return wrap(mlir::parseType(type, unwrap(context)));
 }
 
+MlirContext mlirTypeGetContext(MlirType type) {
+  return wrap(unwrap(type).getContext());
+}
+
 int mlirTypeEqual(MlirType t1, MlirType t2) { return unwrap(t1) == unwrap(t2); }
 
 void mlirTypePrint(MlirType type, MlirStringCallback callback, void *userData) {
-  CallbackOstream stream(callback, userData);
+  detail::CallbackOstream stream(callback, userData);
   unwrap(type).print(stream);
   stream.flush();
 }
@@ -374,7 +355,7 @@ int mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2) {
 
 void mlirAttributePrint(MlirAttribute attr, MlirStringCallback callback,
                         void *userData) {
-  CallbackOstream stream(callback, userData);
+  detail::CallbackOstream stream(callback, userData);
   unwrap(attr).print(stream);
   stream.flush();
 }

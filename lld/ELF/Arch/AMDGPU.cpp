@@ -45,11 +45,11 @@ AMDGPU::AMDGPU() {
 }
 
 static uint8_t getAbiVersion(InputFile *file) {
-  return cast<ObjFile<ELF64LE>>(file)->getObj().getHeader()->e_ident[EI_ABIVERSION];
+  return cast<ObjFile<ELF64LE>>(file)->getObj().getHeader().e_ident[EI_ABIVERSION];
 }
 
 static uint32_t getEFlags(InputFile *file) {
-  return cast<ObjFile<ELF64LE>>(file)->getObj().getHeader()->e_flags;
+  return cast<ObjFile<ELF64LE>>(file)->getObj().getHeader().e_flags;
 }
 
 static uint32_t getMach(InputFile *file) {

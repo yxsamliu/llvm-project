@@ -28,12 +28,13 @@
 
 // List of all plugins that can support offloading.
 static const char *RTLNames[] = {
+    /* PowerPC target       */ "libomptarget.rtl.ppc64.so",
+    /* x86_64 target        */ "libomptarget.rtl.x86_64.so",
+    /* CUDA target          */ "libomptarget.rtl.cuda.so",
+    /* AArch64 target       */ "libomptarget.rtl.aarch64.so",
     /* SX-Aurora VE target  */ "libomptarget.rtl.ve.so",
-    /* PowerPC target */ "libomptarget.rtl.ppc64.so",
-    /* x86_64 target  */ "libomptarget.rtl.x86_64.so",
-    /* CUDA target    */ "libomptarget.rtl.cuda.so",
-    /* HSA target     */ "libomptarget.rtl.hsa.so",
-    /* AArch64 target */ "libomptarget.rtl.aarch64.so"};
+    /* AMDGPU target        */ "libomptarget.rtl.amdgpu.so",
+};
 
 // Define the platform quick check files.
 // At least one must be found to attempt to load plugin for that platform.
@@ -43,13 +44,14 @@ static const char *RTLNames[] = {
 // below
 static const char *RTLQuickCheckFiles[][MAX_PLATFORM_CHECK_FILES] = {
     /* ppc64 has multiple quick check files */
-    /* SX-Aurora VE target         */ {"fixme.so"},
     {"/sys/firmware/devicetree/base/ibm,firmware-versions/open-power",
      "/sys/firmware/devicetree/base/cpus/ibm,powerpc-cpu-features"},
     /* acpi is unique to x86       */ {"/sys/firmware/acpi"},
     /* nvidia0 is unique with cuda */ {"/dev/nvidia0"},
+    /* More arm check files needed */ {"/sys/module/mdio_thunder/initstate"},
+    /* SX-Aurora VE target         */ {"fixme.so"},
     /* kfd is unique to amdgcn     */ {"/dev/kfd"},
-    /* More arm check files needed */ {"/sys/module/mdio_thunder/initstate"}};
+};
 
 RTLsTy *RTLs;
 std::mutex *RTLsMtx;
@@ -81,11 +83,6 @@ __attribute__((destructor(101))) void deinit() {
 }
 
 void RTLsTy::LoadRTLs() {
-#ifdef OMPTARGET_DEBUG
-  if (char *envStr = getenv("LIBOMPTARGET_DEBUG")) {
-    DebugLevel = std::stoi(envStr);
-  }
-#endif // OMPTARGET_DEBUG
 
   // FIXME this is amdgcn specific.
   // Propogate HIP_VISIBLE_DEVICES if set to ROCR_VISIBLE_DEVICES.
@@ -226,8 +223,7 @@ void RTLsTy::LoadRTLs() {
 // Functionality for registering libs
 
 static void RegisterImageIntoTranslationTable(TranslationTable &TT,
-                                              RTLInfoTy &RTL,
-                                              __tgt_device_image *image) {
+    RTLInfoTy &RTL, __tgt_device_image *image) {
 
   // same size, as when we increase one, we also increase the other.
   assert(TT.TargetsTable.size() == TT.TargetsImages.size() &&
@@ -256,24 +252,23 @@ static void RegisterImageIntoTranslationTable(TranslationTable &TT,
 // Functionality for registering Ctors/Dtors
 
 static void RegisterGlobalCtorsDtorsForImage(__tgt_bin_desc *desc,
-                                             __tgt_device_image *img,
-                                             RTLInfoTy *RTL) {
+    __tgt_device_image *img, RTLInfoTy *RTL) {
 
   for (int32_t i = 0; i < RTL->NumberOfDevices; ++i) {
     DeviceTy &Device = Devices[RTL->Idx + i];
     Device.PendingGlobalsMtx.lock();
     Device.HasPendingGlobals = true;
     for (__tgt_offload_entry *entry = img->EntriesBegin;
-         entry != img->EntriesEnd; ++entry) {
+        entry != img->EntriesEnd; ++entry) {
       if (entry->flags & OMP_DECLARE_TARGET_CTOR) {
         DP("Adding ctor " DPxMOD " to the pending list.\n",
-           DPxPTR(entry->addr));
+            DPxPTR(entry->addr));
         Device.PendingCtorsDtors[desc].PendingCtors.push_back(entry->addr);
       } else if (entry->flags & OMP_DECLARE_TARGET_DTOR) {
         // Dtors are pushed in reverse order so they are executed from end
         // to beginning when unregistering the library!
         DP("Adding dtor " DPxMOD " to the pending list.\n",
-           DPxPTR(entry->addr));
+            DPxPTR(entry->addr));
         Device.PendingCtorsDtors[desc].PendingDtors.push_front(entry->addr);
       }
 
@@ -305,18 +300,17 @@ void RTLsTy::RegisterRequires(int64_t flags) {
   //  - unified_shared_memory
   if ((RequiresFlags & OMP_REQ_REVERSE_OFFLOAD) !=
       (flags & OMP_REQ_REVERSE_OFFLOAD)) {
-    FATAL_MESSAGE0(
-        1, "'#pragma omp requires reverse_offload' not used consistently!");
+    FATAL_MESSAGE0(1,
+        "'#pragma omp requires reverse_offload' not used consistently!");
   }
   if ((RequiresFlags & OMP_REQ_UNIFIED_ADDRESS) !=
-      (flags & OMP_REQ_UNIFIED_ADDRESS)) {
-    FATAL_MESSAGE0(
-        1, "'#pragma omp requires unified_address' not used consistently!");
+          (flags & OMP_REQ_UNIFIED_ADDRESS)) {
+    FATAL_MESSAGE0(1,
+        "'#pragma omp requires unified_address' not used consistently!");
   }
   if ((RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) !=
-      (flags & OMP_REQ_UNIFIED_SHARED_MEMORY)) {
-    FATAL_MESSAGE0(
-        1,
+          (flags & OMP_REQ_UNIFIED_SHARED_MEMORY)) {
+    FATAL_MESSAGE0(1,
         "'#pragma omp requires unified_shared_memory' not used consistently!");
   }
 
@@ -343,12 +337,12 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
     for (auto &R : AllRTLs) {
       if (!R.is_valid_binary(img)) {
         DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
-           DPxPTR(img->ImageStart), R.RTLName.c_str());
+            DPxPTR(img->ImageStart), R.RTLName.c_str());
         continue;
       }
 
       DP("Image " DPxMOD " is compatible with RTL %s!\n",
-         DPxPTR(img->ImageStart), R.RTLName.c_str());
+          DPxPTR(img->ImageStart), R.RTLName.c_str());
 
       // If this RTL is not already in use, initialize it.
       if (!R.isUsed) {
@@ -357,7 +351,7 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
         size_t start = Devices.size();
         Devices.resize(start + R.NumberOfDevices, device);
         for (int32_t device_id = 0; device_id < R.NumberOfDevices;
-             device_id++) {
+            device_id++) {
           // global device ID
           Devices[start + device_id].DeviceID = start + device_id;
           // RTL local device ID
@@ -368,8 +362,8 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
         R.Idx = (UsedRTLs.empty())
                     ? 0
                     : UsedRTLs.back()->Idx + UsedRTLs.back()->NumberOfDevices;
-        assert((size_t)R.Idx == start &&
-               "RTL index should equal the number of devices used so far.");
+        assert((size_t) R.Idx == start &&
+            "RTL index should equal the number of devices used so far.");
         R.isUsed = true;
         UsedRTLs.push_back(&R);
 
@@ -378,7 +372,7 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
 
       // Initialize (if necessary) translation table for this library.
       TrlTblMtx->lock();
-      if (!HostEntriesBeginToTransTable->count(desc->HostEntriesBegin)) {
+      if(!HostEntriesBeginToTransTable->count(desc->HostEntriesBegin)){
         TranslationTable &tt =
             (*HostEntriesBeginToTransTable)[desc->HostEntriesBegin];
         tt.HostTable.EntriesBegin = desc->HostEntriesBegin;
@@ -389,8 +383,8 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
       TranslationTable &TransTable =
           (*HostEntriesBeginToTransTable)[desc->HostEntriesBegin];
 
-      DP("Registering image " DPxMOD " with RTL %s!\n", DPxPTR(img->ImageStart),
-         R.RTLName.c_str());
+      DP("Registering image " DPxMOD " with RTL %s!\n",
+          DPxPTR(img->ImageStart), R.RTLName.c_str());
       RegisterImageIntoTranslationTable(TransTable, R, img);
       TrlTblMtx->unlock();
       FoundRTL = &R;
@@ -407,6 +401,7 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
     }
   }
   RTLsMtx->unlock();
+
 
   DP("Done registering entries!\n");
 }
@@ -430,12 +425,12 @@ void RTLsTy::UnregisterLib(__tgt_bin_desc *desc) {
 
       if (!R->is_valid_binary(img)) {
         DP("Image " DPxMOD " is NOT compatible with RTL " DPxMOD "!\n",
-           DPxPTR(img->ImageStart), DPxPTR(R->LibraryHandler));
+            DPxPTR(img->ImageStart), DPxPTR(R->LibraryHandler));
         continue;
       }
 
       DP("Image " DPxMOD " is compatible with RTL " DPxMOD "!\n",
-         DPxPTR(img->ImageStart), DPxPTR(R->LibraryHandler));
+          DPxPTR(img->ImageStart), DPxPTR(R->LibraryHandler));
 
       FoundRTL = R;
 
@@ -447,7 +442,7 @@ void RTLsTy::UnregisterLib(__tgt_bin_desc *desc) {
         if (Device.PendingCtorsDtors[desc].PendingCtors.empty()) {
           for (auto &dtor : Device.PendingCtorsDtors[desc].PendingDtors) {
             int rc = target(Device.DeviceID, dtor, 0, NULL, NULL, NULL, NULL,
-                            NULL, 1, 1, true /*team*/);
+                NULL, 1, 1, true /*team*/);
             if (rc != OFFLOAD_SUCCESS) {
               DP("Running destructor " DPxMOD " failed.\n", DPxPTR(dtor));
             }
@@ -459,15 +454,15 @@ void RTLsTy::UnregisterLib(__tgt_bin_desc *desc) {
       }
 
       DP("Unregistered image " DPxMOD " from RTL " DPxMOD "!\n",
-         DPxPTR(img->ImageStart), DPxPTR(R->LibraryHandler));
+          DPxPTR(img->ImageStart), DPxPTR(R->LibraryHandler));
 
       break;
     }
 
     // if no RTL was found proceed to unregister the next image
-    if (!FoundRTL) {
+    if (!FoundRTL){
       DP("No RTLs in use support the image " DPxMOD "!\n",
-         DPxPTR(img->ImageStart));
+          DPxPTR(img->ImageStart));
     }
   }
   RTLsMtx->unlock();
@@ -476,7 +471,7 @@ void RTLsTy::UnregisterLib(__tgt_bin_desc *desc) {
   // Remove entries from HostPtrToTableMap
   TblMapMtx->lock();
   for (__tgt_offload_entry *cur = desc->HostEntriesBegin;
-       cur < desc->HostEntriesEnd; ++cur) {
+      cur < desc->HostEntriesEnd; ++cur) {
     HostPtrToTableMap->erase(cur->addr);
   }
 
@@ -484,12 +479,11 @@ void RTLsTy::UnregisterLib(__tgt_bin_desc *desc) {
   auto tt = HostEntriesBeginToTransTable->find(desc->HostEntriesBegin);
   if (tt != HostEntriesBeginToTransTable->end()) {
     DP("Removing translation table for descriptor " DPxMOD "\n",
-       DPxPTR(desc->HostEntriesBegin));
+        DPxPTR(desc->HostEntriesBegin));
     HostEntriesBeginToTransTable->erase(tt);
   } else {
     DP("Translation table for descriptor " DPxMOD " cannot be found, probably "
-       "it has been already removed.\n",
-       DPxPTR(desc->HostEntriesBegin));
+        "it has been already removed.\n", DPxPTR(desc->HostEntriesBegin));
   }
 
   TblMapMtx->unlock();

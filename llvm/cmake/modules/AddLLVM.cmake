@@ -567,7 +567,7 @@ function(llvm_add_library name)
   endif()
 
   if(ARG_SHARED)
-    if(WIN32)
+    if(MSVC)
       set_target_properties(${name} PROPERTIES
         PREFIX ""
         )
@@ -1400,9 +1400,6 @@ function(add_unittest test_suite test_name)
   if( NOT LLVM_BUILD_TESTS )
     set(EXCLUDE_FROM_ALL ON)
   endif()
-
-  include_directories(${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include)
-  include_directories(${LLVM_MAIN_SRC_DIR}/utils/unittest/googlemock/include)
 
   if (SUPPORTS_VARIADIC_MACROS_FLAG)
     list(APPEND LLVM_COMPILE_FLAGS "-Wno-variadic-macros")

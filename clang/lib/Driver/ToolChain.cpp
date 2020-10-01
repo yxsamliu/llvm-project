@@ -12,6 +12,7 @@
 #include "ToolChains/Clang.h"
 #include "ToolChains/InterfaceStubs.h"
 #include "ToolChains/Flang.h"
+#include "ToolChains/AMDFlang.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Config/config.h"
@@ -262,9 +263,9 @@ Tool *ToolChain::getClang() const {
 }
 
 Tool *ToolChain::getFlang() const {
-  if (!Flang)
-    Flang.reset(new tools::Flang(*this));
-  return Flang.get();
+  if (!AMDFlang)
+    AMDFlang.reset(new tools::AMDFlang(*this));
+  return AMDFlang.get();
 }
 
 Tool *ToolChain::buildAssembler() const {
@@ -807,6 +808,14 @@ void ToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   // Each toolchain should provide the appropriate include flags.
 }
 
+void ToolChain::addActionsFromClangTargetOptions(
+    const ArgList &DriverArgs,
+    ArgStringList &CC1Args,
+    const JobAction &JA,
+    Compilation &C,
+    const InputInfoList &Inputs) const
+{}
+
 void ToolChain::addClangTargetOptions(
     const ArgList &DriverArgs, ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadKind) const {}
@@ -1060,14 +1069,14 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
   // Return sanitizers which don't require runtime support and are not
   // platform dependent.
 
-  SanitizerMask Res = (SanitizerKind::Undefined & ~SanitizerKind::Vptr &
-                       ~SanitizerKind::Function) |
-                      (SanitizerKind::CFI & ~SanitizerKind::CFIICall) |
-                      SanitizerKind::CFICastStrict |
-                      SanitizerKind::FloatDivideByZero |
-                      SanitizerKind::UnsignedIntegerOverflow |
-                      SanitizerKind::ImplicitConversion |
-                      SanitizerKind::Nullability | SanitizerKind::LocalBounds;
+  SanitizerMask Res =
+      (SanitizerKind::Undefined & ~SanitizerKind::Vptr &
+       ~SanitizerKind::Function) |
+      (SanitizerKind::CFI & ~SanitizerKind::CFIICall) |
+      SanitizerKind::CFICastStrict | SanitizerKind::FloatDivideByZero |
+      SanitizerKind::UnsignedIntegerOverflow |
+      SanitizerKind::UnsignedShiftBase | SanitizerKind::ImplicitConversion |
+      SanitizerKind::Nullability | SanitizerKind::LocalBounds;
   if (getTriple().getArch() == llvm::Triple::x86 ||
       getTriple().getArch() == llvm::Triple::x86_64 ||
       getTriple().getArch() == llvm::Triple::arm || getTriple().isWasm() ||

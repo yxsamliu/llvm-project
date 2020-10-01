@@ -51,10 +51,10 @@ define amdgpu_cs void @mmo_offsets0(<4 x i32> addrspace(6)* inreg noalias derefe
   ; GCN:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[DEF3]].sub0
   ; GCN:   INLINEASM &"", 1 /* sideeffect attdialect */
   ; GCN:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1065353216, implicit $exec
-  ; GCN:   BUFFER_ATOMIC_ADD_F32_OFFSET [[V_MOV_B32_e32_1]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 112, 0, implicit $exec :: (load store 4 on custom "TargetCustom7" + 112, addrspace 4)
-  ; GCN:   BUFFER_ATOMIC_ADD_F32_OFFEN [[V_MOV_B32_e32_1]], [[COPY]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 0, 0, implicit $exec :: (load store 4 on custom "TargetCustom7", addrspace 4)
-  ; GCN:   BUFFER_ATOMIC_ADD_F32_IDXEN [[V_MOV_B32_e32_1]], [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 112, 0, implicit $exec :: (load store 4 on custom "TargetCustom7", addrspace 4)
-  ; GCN:   BUFFER_ATOMIC_ADD_F32_IDXEN [[V_MOV_B32_e32_1]], [[COPY]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 112, 0, implicit $exec :: (load store 4 on custom "TargetCustom7", addrspace 4)
+  ; GCN:   BUFFER_ATOMIC_ADD_F32_OFFSET [[V_MOV_B32_e32_1]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 112, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom "TargetCustom7" + 112, align 1, addrspace 4)
+  ; GCN:   BUFFER_ATOMIC_ADD_F32_OFFEN [[V_MOV_B32_e32_1]], [[COPY]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 0, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom "TargetCustom7", align 1, addrspace 4)
+  ; GCN:   BUFFER_ATOMIC_ADD_F32_IDXEN [[V_MOV_B32_e32_1]], [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 112, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom "TargetCustom7", align 1, addrspace 4)
+  ; GCN:   BUFFER_ATOMIC_ADD_F32_IDXEN [[V_MOV_B32_e32_1]], [[COPY]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 112, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom "TargetCustom7", align 1, addrspace 4)
   ; GCN:   INLINEASM &"", 1 /* sideeffect attdialect */
   ; GCN:   [[BUFFER_LOAD_DWORDX4_OFFSET1:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom "TargetCustom7" + 128, align 1, addrspace 4)
   ; GCN:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 64
@@ -268,10 +268,10 @@ bb.0:
 
   call void asm sideeffect "", "" ()
 
-  call void @llvm.amdgcn.buffer.atomic.fadd.f32(float 1.0, <4 x i32> %tmp0, i32 0, i32 112, i1 false) #2
-  call void @llvm.amdgcn.buffer.atomic.fadd.f32(float 1.0, <4 x i32> %tmp0, i32 0, i32 %arg1, i1 false) #2
-  call void @llvm.amdgcn.buffer.atomic.fadd.f32(float 1.0, <4 x i32> %tmp0, i32 1, i32 112, i1 false) #2
-  call void @llvm.amdgcn.buffer.atomic.fadd.f32(float 1.0, <4 x i32> %tmp0, i32 %arg1, i32 112, i1 false) #2
+  %fadd1 = call float @llvm.amdgcn.buffer.atomic.fadd.f32(float 1.0, <4 x i32> %tmp0, i32 0, i32 112, i1 false) #2
+  %fadd2 = call float @llvm.amdgcn.buffer.atomic.fadd.f32(float 1.0, <4 x i32> %tmp0, i32 0, i32 %arg1, i1 false) #2
+  %fadd3 = call float @llvm.amdgcn.buffer.atomic.fadd.f32(float 1.0, <4 x i32> %tmp0, i32 1, i32 112, i1 false) #2
+  %fadd4 = call float @llvm.amdgcn.buffer.atomic.fadd.f32(float 1.0, <4 x i32> %tmp0, i32 %arg1, i32 112, i1 false) #2
 
   call void asm sideeffect "", "" ()
 
@@ -392,7 +392,7 @@ declare <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32>, i32, i32, i
 declare void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) #1
 declare i32 @llvm.amdgcn.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i1) #2
 declare i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32, i32, <4 x i32>, i32, i32, i1) #2
-declare void @llvm.amdgcn.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i1) #2
+declare float @llvm.amdgcn.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i1) #2
 declare <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32>, i32, i32, i32) #0
 declare <4 x float> @llvm.amdgcn.raw.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32) #0
 declare i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i32) #2

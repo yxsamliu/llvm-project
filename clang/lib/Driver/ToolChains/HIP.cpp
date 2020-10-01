@@ -90,6 +90,8 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   if (C.getDriver().isSaveTempsEnabled())
     LldArgs.push_back("-save-temps");
 
+  addLinkerCompressDebugSectionsOption(TC, Args, LldArgs);
+
   LldArgs.append({"-o", Output.getFilename()});
   for (auto Input : Inputs)
     LldArgs.push_back(Input.getFilename());
@@ -228,6 +230,15 @@ HIPToolChain::HIPToolChain(const Driver &D, const llvm::Triple &Triple,
   getProgramPaths().push_back(getDriver().Dir);
 }
 
+void HIPToolChain::addActionsFromClangTargetOptions(
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    const JobAction &JA, Compilation &C, const InputInfoList &Inputs) const {
+  StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_mcpu_EQ);
+  AddStaticDeviceLibs(C, *getTool(JA.getKind()), JA, Inputs, DriverArgs,
+                      CC1Args, "amdgcn", GpuArch,
+                      /* bitcode SDL?*/ true, /* PostClang Link? */ true);
+}
+
 void HIPToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args,
@@ -266,6 +277,10 @@ void HIPToolChain::addClangTargetOptions(
   if (DriverArgs.hasFlag(options::OPT_fgpu_allow_device_init,
                          options::OPT_fno_gpu_allow_device_init, false))
     CC1Args.push_back("-fgpu-allow-device-init");
+
+  if (DriverArgs.hasFlag(options::OPT_fgpu_defer_diag,
+                         options::OPT_fno_gpu_defer_diag, false))
+    CC1Args.push_back("-fgpu-defer-diag");
 
   CC1Args.push_back("-fcuda-allow-variadic-functions");
 

@@ -246,6 +246,24 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
     Arg->claim();
 }
 
+void tools::addLinkerCompressDebugSectionsOption(
+    const ToolChain &TC, const llvm::opt::ArgList &Args,
+    llvm::opt::ArgStringList &CmdArgs) {
+  // GNU ld supports --compress-debug-sections=none|zlib|zlib-gnu|zlib-gabi
+  // whereas zlib is an alias to zlib-gabi. Therefore -gz=none|zlib|zlib-gnu
+  // are translated to --compress-debug-sections=none|zlib|zlib-gnu.
+  // -gz is not translated since ld --compress-debug-sections option requires an
+  // argument.
+  if (const Arg *A = Args.getLastArg(options::OPT_gz_EQ)) {
+    StringRef V = A->getValue();
+    if (V == "none" || V == "zlib" || V == "zlib-gnu")
+      CmdArgs.push_back(Args.MakeArgString("--compress-debug-sections=" + V));
+    else
+      TC.getDriver().Diag(diag::err_drv_unsupported_option_argument)
+          << A->getOption().getName() << V;
+  }
+}
+
 void tools::AddTargetFeature(const ArgList &Args,
                              std::vector<StringRef> &Features,
                              OptSpecifier OnOpt, OptSpecifier OffOpt,
@@ -379,6 +397,8 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
   case llvm::Triple::sparcv9:
     if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
       return A->getValue();
+    if (T.getArch() == llvm::Triple::sparc && T.isOSSolaris())
+      return "v9";
     return "";
 
   case llvm::Triple::x86:
@@ -759,6 +779,11 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
         HelperStaticRuntimes.push_back("asan-preinit");
     }
+    if (SanArgs.needsMemProfRt() && SanArgs.linkRuntimes()) {
+      SharedRuntimes.push_back("memprof");
+      if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
+        HelperStaticRuntimes.push_back("memprof-preinit");
+    }
     if (SanArgs.needsUbsanRt() && SanArgs.linkRuntimes()) {
       if (SanArgs.requiresMinimalRuntime())
         SharedRuntimes.push_back("ubsan_minimal");
@@ -771,6 +796,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       else
         SharedRuntimes.push_back("scudo");
     }
+    if (SanArgs.needsTsanRt() && SanArgs.linkRuntimes())
+      SharedRuntimes.push_back("tsan");
     if (SanArgs.needsHwasanRt() && SanArgs.linkRuntimes())
       SharedRuntimes.push_back("hwasan");
   }
@@ -794,6 +821,13 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       StaticRuntimes.push_back("asan_cxx");
   }
 
+  if (!SanArgs.needsSharedRt() && SanArgs.needsMemProfRt() &&
+      SanArgs.linkRuntimes()) {
+    StaticRuntimes.push_back("memprof");
+    if (SanArgs.linkCXXRuntimes())
+      StaticRuntimes.push_back("memprof_cxx");
+  }
+
   if (!SanArgs.needsSharedRt() && SanArgs.needsHwasanRt() && SanArgs.linkRuntimes()) {
     StaticRuntimes.push_back("hwasan");
     if (SanArgs.linkCXXRuntimes())
@@ -808,7 +842,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("msan_cxx");
   }
-  if (SanArgs.needsTsanRt() && SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsTsanRt() &&
+      SanArgs.linkRuntimes()) {
     StaticRuntimes.push_back("tsan");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("tsan_cxx");
@@ -1563,20 +1598,15 @@ bool tools::SDLSearch(const Driver &D, const llvm::opt::ArgList &DriverArgs,
   return FoundSDL;
 }
 
-bool tools::SDLSearch(Compilation &C, const Driver &D, const Tool &T,
-                      const JobAction &JA, const InputInfoList &Inputs,
-                      const llvm::opt::ArgList &DriverArgs,
-                      llvm::opt::ArgStringList &CC1Args,
-                      SmallVector<std::string, 8> LibraryPaths,
-                      std::string libname, StringRef ArchName,
-                      StringRef GpuArch, bool isBitCodeSDL,
-                      bool postClangLink) {
-
-  // Try the basic stuff first before looking into archives.
-  if (SDLSearch(D, DriverArgs, CC1Args, LibraryPaths, libname, ArchName,
-                GpuArch, isBitCodeSDL, postClangLink))
-    return true;
-
+bool tools::GetSDLFromOffloadArchive(Compilation &C, const Driver &D,
+                                     const Tool &T, const JobAction &JA,
+                                     const InputInfoList &Inputs,
+                                     const llvm::opt::ArgList &DriverArgs,
+                                     llvm::opt::ArgStringList &CC1Args,
+                                     SmallVector<std::string, 8> LibraryPaths,
+                                     std::string libname, StringRef ArchName,
+                                     StringRef GpuArch, bool isBitCodeSDL,
+                                     bool postClangLink) {
   std::string archname = ArchName.str();
   std::string gpuname = GpuArch.str();
 
@@ -1584,10 +1614,9 @@ bool tools::SDLSearch(Compilation &C, const Driver &D, const Tool &T,
   if (isBitCodeSDL && archname == "nvptx")
     return false;
 
-  bool FoundSDL = false;
+  bool FoundAOB = false;
   SmallVector<std::string, 2> AOBFileNames;
   std::string ArchiveOfBundles;
-
   for (std::string LibraryPath : LibraryPaths) {
     AOBFileNames.push_back(
         std::string(LibraryPath + "/libdevice/lib" + libname + ".a"));
@@ -1596,21 +1625,18 @@ bool tools::SDLSearch(Compilation &C, const Driver &D, const Tool &T,
     for (auto AOB : AOBFileNames) {
       if (llvm::sys::fs::exists(AOB)) {
         ArchiveOfBundles = AOB;
+	FoundAOB = true;
         break;
       }
     }
 
-    if (ArchiveOfBundles != "") {
+    if (FoundAOB) {
       std::string Err;
-      llvm::SmallString<128> TmpDirString;
-      llvm::sys::path::system_temp_directory(true, TmpDirString);
-      std::string TmpDir(TmpDirString.str());
-
-      std::string OutputLib = isBitCodeSDL
-                                  ? TmpDir + "/libbc-" + libname + "-" +
-                                        archname + "-" + gpuname + ".a"
-                                  : TmpDir + "/lib" + libname + "-" + archname +
-                                        "-" + gpuname + ".a";
+      std::string OutputLib = D.GetTemporaryPath(
+          isBitCodeSDL
+              ? "libbc-" + libname + "-" + archname + "-" + gpuname
+              : "lib" + libname + "-" + archname + "-" + gpuname,
+          "a");
 
       C.addTempFile(C.getArgs().MakeArgString(OutputLib.c_str()));
 
@@ -1643,12 +1669,11 @@ bool tools::SDLSearch(Compilation &C, const Driver &D, const Tool &T,
         CC1Args.push_back("-mlink-builtin-bitcode");
 
       CC1Args.push_back(DriverArgs.MakeArgString(OutputLib));
-      FoundSDL = true;
       break;
     }
   }
 
-  return FoundSDL;
+  return FoundAOB;
 }
 
 void tools::AddStaticDeviceLibs(Compilation &C, const Tool &T,
@@ -1703,9 +1728,10 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
   // Build list of Static Device Libraries SDLs specified by -l option
   SmallVector<std::string, 16> SDL_Names;
   for (std::string SDL_Name : DriverArgs.getAllArgValues(options::OPT_l)) {
-    // No SDL for -lomp or -lcudart, they only have host libs, SDL for -lm added
-    // automatically
-    if (SDL_Name != "omp" && SDL_Name != "cudart" && SDL_Name != "m") {
+    // No Device specific SDL for these libs: omp,cudart,m,gcc,gcc_s,pthread
+    if ( SDL_Name != "omp" && SDL_Name != "cudart" && SDL_Name != "m" &&
+         SDL_Name != "gcc" && SDL_Name != "gcc_s" && SDL_Name != "pthread" &&
+         SDL_Name != "hip_hcc" ) {
       bool inSDL_Names = false;
       for (std::string OldName : SDL_Names) {
         if (OldName == SDL_Name)
@@ -1717,22 +1743,12 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
   }
 
   for (std::string SDL_Name : SDL_Names) {
-    if (C == nullptr) {
-      SDLSearch(D, DriverArgs, CC1Args, LibraryPaths, SDL_Name, ArchName,
-                GpuArch, isBitCodeSDL, postClangLink);
-    } else {
-      SDLSearch(*C, D, *T, *JA, *Inputs, DriverArgs, CC1Args, LibraryPaths,
-                SDL_Name, ArchName, GpuArch, isBitCodeSDL, postClangLink);
+    //  THIS IS THE ONLY CALL TO SDLSearch
+    if (!(SDLSearch(D, DriverArgs, CC1Args, LibraryPaths, SDL_Name, ArchName,
+                    GpuArch, isBitCodeSDL, postClangLink))) {
+      GetSDLFromOffloadArchive(*C, D, *T, *JA, *Inputs, DriverArgs, CC1Args,
+                               LibraryPaths, SDL_Name, ArchName, GpuArch,
+                               isBitCodeSDL, postClangLink);
     }
-  }
-
-  bool isTargOmp = JA->isDeviceOffloading(Action::OFK_OpenMP);
-
-  // Add the autoinclude that allows system headers to work for devices
-  if (postClangLink && isTargOmp) {
-    CC1Args.push_back("-include");
-    SmallString<128> P(D.ResourceDir);
-    llvm::sys::path::append(P, "/include/__clang_openmp_runtime_wrapper.h");
-    CC1Args.push_back(DriverArgs.MakeArgString(P));
   }
 }

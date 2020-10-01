@@ -86,6 +86,8 @@ public:
   NODE(parser, AccSizeExpr)
   NODE(parser, AccSizeExprList)
   NODE(parser, AccStandaloneDirective)
+  NODE(parser, AccTileExpr)
+  NODE(parser, AccTileExprList)
   NODE(parser, AccLoopDirective)
   NODE(parser, AccWaitArgument)
   static std::string GetNodeName(const llvm::acc::Directive &x) {
@@ -443,6 +445,9 @@ public:
   NODE(parser, OmpAtomicCapture)
   NODE(OmpAtomicCapture, Stmt1)
   NODE(OmpAtomicCapture, Stmt2)
+  NODE(parser, OmpAtomicMemoryOrderClause)
+  NODE(parser, OmpAtomicMemoryOrderClauseList)
+  NODE(parser, OmpAtomicMemoryOrderClausePostList)
   NODE(parser, OmpAtomicRead)
   NODE(parser, OmpAtomicUpdate)
   NODE(parser, OmpAtomicWrite)
@@ -462,7 +467,6 @@ public:
 #include "llvm/Frontend/OpenMP/OMP.cpp.inc"
   NODE(parser, OmpClauseList)
   NODE(parser, OmpCriticalDirective)
-  NODE(OmpCriticalDirective, Hint)
   NODE(parser, OmpDeclareTargetSpecifier)
   NODE(parser, OmpDeclareTargetWithClause)
   NODE(parser, OmpDeclareTargetWithList)
@@ -485,6 +489,7 @@ public:
   NODE(parser, OmpEndCriticalDirective)
   NODE(parser, OmpEndLoopDirective)
   NODE(parser, OmpEndSectionsDirective)
+  NODE(parser, OmpHintExpr)
   NODE(parser, OmpIfClause)
   NODE_ENUM(OmpIfClause, DirectiveNameModifier)
   NODE(parser, OmpLinearClause)
@@ -497,10 +502,12 @@ public:
   NODE(parser, OmpMapType)
   NODE(OmpMapType, Always)
   NODE_ENUM(OmpMapType, Type)
-  NODE(parser, OmpMemoryClause)
-  NODE_ENUM(OmpMemoryClause, MemoryOrder)
-  NODE(parser, OmpMemoryClauseList)
-  NODE(parser, OmpMemoryClausePostList)
+  NODE(parser, OmpMemoryOrderClause)
+  static std::string GetNodeName(const llvm::omp::Clause &x) {
+    return llvm::Twine(
+        "llvm::omp::Clause = ", llvm::omp::getOpenMPClauseName(x))
+        .str();
+  }
   NODE(parser, OmpNowait)
   NODE(parser, OmpObject)
   NODE(parser, OmpObjectList)
@@ -547,7 +554,6 @@ public:
   NODE(parser, OpenMPDeclareSimdConstruct)
   NODE(parser, OpenMPDeclareTargetConstruct)
   NODE(parser, OmpFlushMemoryClause)
-  NODE_ENUM(OmpFlushMemoryClause, FlushMemoryOrder)
   NODE(parser, OpenMPFlushConstruct)
   NODE(parser, OpenMPLoopConstruct)
   NODE(parser, OpenMPSimpleStandaloneConstruct)

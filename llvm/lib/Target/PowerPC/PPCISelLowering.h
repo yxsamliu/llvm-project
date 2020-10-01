@@ -441,6 +441,11 @@ namespace llvm {
     /// through an add like PADDI.
     TLS_DYNAMIC_MAT_PCREL_ADDR,
 
+    /// TLS_LOCAL_EXEC_MAT_ADDR = Materialize an address for TLS global address
+    /// when using local exec access models, and when prefixed instructions are
+    /// available. This is used with ADD_TLS to produce an add like PADDI.
+    TLS_LOCAL_EXEC_MAT_ADDR,
+
     // Constrained conversion from floating point to int
     STRICT_FCTIDZ = ISD::FIRST_TARGET_STRICTFP_OPCODE,
     STRICT_FCTIWZ,
@@ -452,6 +457,9 @@ namespace llvm {
     STRICT_FCFIDU,
     STRICT_FCFIDS,
     STRICT_FCFIDUS,
+
+    /// Constrained floating point add in round-to-zero mode.
+    STRICT_FADDRTZ,
 
     /// CHAIN = STBRX CHAIN, GPRC, Ptr, Type - This is a
     /// byte-swapping store instruction.  It byte-swaps the low "Type" bits of
@@ -493,6 +501,12 @@ namespace llvm {
     /// Maps directly to an lxvd2x instruction that will be followed by
     /// an xxswapd.
     LXVD2X,
+
+    /// LXVRZX - Load VSX Vector Rightmost and Zero Extend
+    /// This node represents v1i128 BUILD_VECTOR of a zero extending load
+    /// instruction from <byte, halfword, word, or doubleword> to i128.
+    /// Allows utilization of the Load VSX Vector Rightmost Instructions.
+    LXVRZX,
 
     /// VSRC, CHAIN = LOAD_VEC_BE CHAIN, Ptr - Occurs only for little endian.
     /// Maps directly to one of lxvd2x/lxvw4x/lxvh8x/lxvb16x depending on

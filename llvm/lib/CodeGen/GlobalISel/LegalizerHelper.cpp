@@ -558,12 +558,11 @@ simpleLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size,
 LegalizerHelper::LegalizeResult
 llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                        MachineInstr &MI) {
-  assert(MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS);
   auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
 
   SmallVector<CallLowering::ArgInfo, 3> Args;
   // Add all the args, except for the last which is an imm denoting 'tail'.
-  for (unsigned i = 1; i < MI.getNumOperands() - 1; i++) {
+  for (unsigned i = 0; i < MI.getNumOperands() - 1; ++i) {
     Register Reg = MI.getOperand(i).getReg();
 
     // Need derive an IR type for call lowering.
@@ -578,30 +577,27 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
 
   auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
   auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
-  Intrinsic::ID ID = MI.getOperand(0).getIntrinsicID();
   RTLIB::Libcall RTLibcall;
-  switch (ID) {
-  case Intrinsic::memcpy:
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_MEMCPY:
     RTLibcall = RTLIB::MEMCPY;
     break;
-  case Intrinsic::memset:
-    RTLibcall = RTLIB::MEMSET;
-    break;
-  case Intrinsic::memmove:
+  case TargetOpcode::G_MEMMOVE:
     RTLibcall = RTLIB::MEMMOVE;
+    break;
+  case TargetOpcode::G_MEMSET:
+    RTLibcall = RTLIB::MEMSET;
     break;
   default:
     return LegalizerHelper::UnableToLegalize;
   }
   const char *Name = TLI.getLibcallName(RTLibcall);
 
-  MIRBuilder.setInstrAndDebugLoc(MI);
-
   CallLowering::CallLoweringInfo Info;
   Info.CallConv = TLI.getLibcallCallingConv(RTLibcall);
   Info.Callee = MachineOperand::CreateES(Name);
   Info.OrigRet = CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx));
-  Info.IsTailCall = MI.getOperand(MI.getNumOperands() - 1).getImm() == 1 &&
+  Info.IsTailCall = MI.getOperand(MI.getNumOperands() - 1).getImm() &&
                     isLibCallInTailPosition(MIRBuilder.getTII(), MI);
 
   std::copy(Args.begin(), Args.end(), std::back_inserter(Info.OrigArgs));
@@ -747,6 +743,13 @@ LegalizerHelper::libcall(MachineInstr &MI) {
     if (Status != Legalized)
       return Status;
     break;
+  }
+  case TargetOpcode::G_MEMCPY:
+  case TargetOpcode::G_MEMMOVE:
+  case TargetOpcode::G_MEMSET: {
+    LegalizeResult Result = createMemLibcall(MIRBuilder, *MIRBuilder.getMRI(), MI);
+    MI.eraseFromParent();
+    return Result;
   }
   }
 
@@ -2030,7 +2033,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       return UnableToLegalize;
 
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    if (!isPowerOf2_32(Ty.getSizeInBits()))
+    if (!Ty.isScalar())
       return UnableToLegalize;
 
     Observer.changingInstr(MI);
@@ -3282,7 +3285,7 @@ LegalizerHelper::fewerElementsVectorCasts(MachineInstr &MI, unsigned TypeIdx,
     if (NumParts * NarrowTy.getNumElements() != DstTy.getNumElements())
       return UnableToLegalize;
 
-    NarrowTy1 = LLT::vector(NumParts, SrcTy.getElementType().getSizeInBits());
+    NarrowTy1 = LLT::vector(NarrowTy.getNumElements(), SrcTy.getElementType());
   } else {
     NumParts = DstTy.getNumElements();
     NarrowTy1 = SrcTy.getElementType();

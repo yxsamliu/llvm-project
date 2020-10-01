@@ -1006,7 +1006,8 @@ void DAGTypeLegalizer::IncrementPointer(MemSDNode *N, EVT MemVT,
     Flags.setNoUnsignedWrap(true);
     if (ScaledOffset)
       *ScaledOffset += IncrementSize;
-    Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr, BytesIncrement);
+    Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr, BytesIncrement,
+                      Flags);
   } else {
     MPI = N->getPointerInfo().getWithOffset(IncrementSize);
     // Increment the pointer to the other half.
@@ -1638,9 +1639,10 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
   else
     std::tie(PassThruLo, PassThruHi) = DAG.SplitVector(PassThru, dl);
 
+  unsigned LoSize = MemoryLocation::getSizeOrUnknown(LoMemVT.getStoreSize());
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MLD->getPointerInfo(), MachineMemOperand::MOLoad, LoMemVT.getStoreSize(),
-      Alignment, MLD->getAAInfo(), MLD->getRanges());
+      MLD->getPointerInfo(), MachineMemOperand::MOLoad, LoSize, Alignment,
+      MLD->getAAInfo(), MLD->getRanges());
 
   Lo = DAG.getMaskedLoad(LoVT, dl, Ch, Ptr, Offset, MaskLo, PassThruLo, LoMemVT,
                          MMO, MLD->getAddressingMode(), ExtType,
@@ -1654,12 +1656,18 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
     // Generate hi masked load.
     Ptr = TLI.IncrementMemoryAddress(Ptr, MaskLo, dl, LoMemVT, DAG,
                                      MLD->isExpandingLoad());
-    unsigned HiOffset = LoMemVT.getStoreSize();
+    unsigned HiSize = MemoryLocation::getSizeOrUnknown(HiMemVT.getStoreSize());
+
+    MachinePointerInfo MPI;
+    if (LoMemVT.isScalableVector())
+      MPI = MachinePointerInfo(MLD->getPointerInfo().getAddrSpace());
+    else
+      MPI = MLD->getPointerInfo().getWithOffset(
+          LoMemVT.getStoreSize().getFixedSize());
 
     MMO = DAG.getMachineFunction().getMachineMemOperand(
-        MLD->getPointerInfo().getWithOffset(HiOffset),
-        MachineMemOperand::MOLoad, HiMemVT.getStoreSize(), Alignment,
-        MLD->getAAInfo(), MLD->getRanges());
+        MPI, MachineMemOperand::MOLoad, HiSize, Alignment, MLD->getAAInfo(),
+        MLD->getRanges());
 
     Hi = DAG.getMaskedLoad(HiVT, dl, Ch, Ptr, Offset, MaskHi, PassThruHi,
                            HiMemVT, MMO, MLD->getAddressingMode(), ExtType,
@@ -2037,16 +2045,12 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
     case ISD::FP_TO_UINT:
     case ISD::STRICT_FP_TO_SINT:
     case ISD::STRICT_FP_TO_UINT:
-    case ISD::CTTZ:
-    case ISD::CTLZ:
-    case ISD::CTPOP:
     case ISD::STRICT_FP_EXTEND:
     case ISD::FP_EXTEND:
     case ISD::SIGN_EXTEND:
     case ISD::ZERO_EXTEND:
     case ISD::ANY_EXTEND:
     case ISD::FTRUNC:
-    case ISD::FCANONICALIZE:
       Res = SplitVecOp_UnaryOp(N);
       break;
 
@@ -2139,7 +2143,6 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE(SDNode *N, unsigned OpNo) {
   EVT LoOpVT, HiOpVT;
   std::tie(LoOpVT, HiOpVT) = DAG.GetSplitDestVTs(VecVT);
 
-  bool NoNaN = N->getFlags().hasNoNaNs();
   unsigned CombineOpc = 0;
   switch (N->getOpcode()) {
   case ISD::VECREDUCE_FADD: CombineOpc = ISD::FADD; break;
@@ -2153,12 +2156,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE(SDNode *N, unsigned OpNo) {
   case ISD::VECREDUCE_SMIN: CombineOpc = ISD::SMIN; break;
   case ISD::VECREDUCE_UMAX: CombineOpc = ISD::UMAX; break;
   case ISD::VECREDUCE_UMIN: CombineOpc = ISD::UMIN; break;
-  case ISD::VECREDUCE_FMAX:
-    CombineOpc = NoNaN ? ISD::FMAXNUM : ISD::FMAXIMUM;
-    break;
-  case ISD::VECREDUCE_FMIN:
-    CombineOpc = NoNaN ? ISD::FMINNUM : ISD::FMINIMUM;
-    break;
+  case ISD::VECREDUCE_FMAX: CombineOpc = ISD::FMAXNUM; break;
+  case ISD::VECREDUCE_FMIN: CombineOpc = ISD::FMINNUM; break;
   default:
     llvm_unreachable("Unexpected reduce ISD node");
   }
@@ -3300,19 +3299,34 @@ SDValue DAGTypeLegalizer::WidenVecRes_OverflowOp(SDNode *N, unsigned ResNo) {
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
+  LLVMContext &Ctx = *DAG.getContext();
   SDValue InOp = N->getOperand(0);
   SDLoc DL(N);
 
-  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  EVT WidenVT = TLI.getTypeToTransformTo(Ctx, N->getValueType(0));
   unsigned WidenNumElts = WidenVT.getVectorNumElements();
 
   EVT InVT = InOp.getValueType();
-  EVT InEltVT = InVT.getVectorElementType();
-  EVT InWidenVT = EVT::getVectorVT(*DAG.getContext(), InEltVT, WidenNumElts);
 
   unsigned Opcode = N->getOpcode();
-  unsigned InVTNumElts = InVT.getVectorNumElements();
   const SDNodeFlags Flags = N->getFlags();
+
+  // Handle the case of ZERO_EXTEND where the promoted InVT element size does
+  // not equal that of WidenVT.
+  if (N->getOpcode() == ISD::ZERO_EXTEND &&
+      getTypeAction(InVT) == TargetLowering::TypePromoteInteger &&
+      TLI.getTypeToTransformTo(Ctx, InVT).getScalarSizeInBits() !=
+      WidenVT.getScalarSizeInBits()) {
+    InOp = ZExtPromotedInteger(InOp);
+    InVT = InOp.getValueType();
+    if (WidenVT.getScalarSizeInBits() < InVT.getScalarSizeInBits())
+      Opcode = ISD::TRUNCATE;
+  }
+
+  EVT InEltVT = InVT.getVectorElementType();
+  EVT InWidenVT = EVT::getVectorVT(Ctx, InEltVT, WidenNumElts);
+  unsigned InVTNumElts = InVT.getVectorNumElements();
+
   if (getTypeAction(InVT) == TargetLowering::TypeWidenVector) {
     InOp = GetWidenedVector(N->getOperand(0));
     InVT = InOp.getValueType();
@@ -4749,6 +4763,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
   EVT OrigVT = N->getOperand(0).getValueType();
   EVT WideVT = Op.getValueType();
   EVT ElemVT = OrigVT.getVectorElementType();
+  SDNodeFlags Flags = N->getFlags();
 
   SDValue NeutralElem;
   switch (N->getOpcode()) {
@@ -4780,12 +4795,18 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
     NeutralElem = DAG.getConstantFP(1.0, dl, ElemVT);
     break;
   case ISD::VECREDUCE_FMAX:
+    // This has maxnum semantics, so NaN represents missing data. We must clear
+    // 'nnan' if it was set because the NaN would be a poison value.
     NeutralElem = DAG.getConstantFP(
-        -std::numeric_limits<double>::infinity(), dl, ElemVT);
+        std::numeric_limits<double>::quiet_NaN(), dl, ElemVT);
+    Flags.setNoNaNs(false);
     break;
   case ISD::VECREDUCE_FMIN:
+    // This has minnum semantics, so NaN represents missing data. We must clear
+    // 'nnan' if it was set because the NaN would be a poison value.
     NeutralElem = DAG.getConstantFP(
-        std::numeric_limits<double>::infinity(), dl, ElemVT);
+        std::numeric_limits<double>::quiet_NaN(), dl, ElemVT);
+    Flags.setNoNaNs(false);
     break;
   }
 
@@ -4796,7 +4817,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
     Op = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, WideVT, Op, NeutralElem,
                      DAG.getVectorIdxConstant(Idx, dl));
 
-  return DAG.getNode(N->getOpcode(), dl, N->getValueType(0), Op, N->getFlags());
+  return DAG.getNode(N->getOpcode(), dl, N->getValueType(0), Op, Flags);
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_VSELECT(SDNode *N) {

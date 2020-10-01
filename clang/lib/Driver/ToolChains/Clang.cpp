@@ -2074,20 +2074,28 @@ void Clang::AddX86TargetArgs(const ArgList &Args,
   }
 
   // Handle -mtune.
-  // FIXME: We should default to "generic" unless -march is set to match gcc.
+
+  // Default to "generic" unless -march is present or targetting the PS4.
+  std::string TuneCPU;
+  if (!Args.hasArg(clang::driver::options::OPT_march_EQ) &&
+      !getToolChain().getTriple().isPS4CPU())
+    TuneCPU = "generic";
+
+  // Override based on -mtune.
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mtune_EQ)) {
     StringRef Name = A->getValue();
 
-    if (Name == "native")
+    if (Name == "native") {
       Name = llvm::sys::getHostCPUName();
+      if (!Name.empty())
+        TuneCPU = std::string(Name);
+    } else
+      TuneCPU = std::string(Name);
+  }
 
-    // Ignore generic either from getHostCPUName or from command line.
-    // FIXME: We need to support this eventually but isValidCPUName and the
-    // backend aren't ready for it yet.
-    if (Name != "generic") {
-      CmdArgs.push_back("-tune-cpu");
-      CmdArgs.push_back(Args.MakeArgString(Name));
-    }
+  if (!TuneCPU.empty()) {
+    CmdArgs.push_back("-tune-cpu");
+    CmdArgs.push_back(Args.MakeArgString(TuneCPU));
   }
 }
 
@@ -4223,6 +4231,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.getLastArg(options::OPT_save_temps_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_save_temps_EQ);
 
+  if (Args.hasFlag(options::OPT_fmemory_profile,
+                   options::OPT_fno_memory_profile, false))
+    Args.AddLastArg(CmdArgs, options::OPT_fmemory_profile);
+
   // Embed-bitcode option.
   // Only white-listed flags below are allowed to be embedded.
   if (C.getDriver().embedBitcodeInObject() && !C.getDriver().isUsingLTO() &&
@@ -4233,6 +4245,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-disable-llvm-passes");
 
     // Render target options.
+    TC.addActionsFromClangTargetOptions(Args, CmdArgs, JA, C, Inputs);
     TC.addClangTargetOptions(Args, CmdArgs, JA.getOffloadingDeviceKind());
 
     // reject options that shouldn't be supported in bitcode
@@ -4747,6 +4760,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                       /*ForAS*/ false, /*IsAux*/ true);
   }
 
+  TC.addActionsFromClangTargetOptions(Args, CmdArgs, JA, C, Inputs);
   TC.addClangTargetOptions(Args, CmdArgs, JA.getOffloadingDeviceKind());
 
   // FIXME: Handle -mtune=.
@@ -4875,13 +4889,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_fbasic_block_sections_EQ)) {
-    StringRef Val = A->getValue();
-    if (Val != "all" && Val != "labels" && Val != "none" &&
-        !(Val.startswith("list=") && llvm::sys::fs::exists(Val.substr(5))))
-      D.Diag(diag::err_drv_invalid_value)
-          << A->getAsString(Args) << A->getValue();
-    else
-      A->render(Args, CmdArgs);
+    if (Triple.isX86() && Triple.isOSBinFormatELF()) {
+      StringRef Val = A->getValue();
+      if (Val != "all" && Val != "labels" && Val != "none" &&
+          !(Val.startswith("list=") && llvm::sys::fs::exists(Val.substr(5))))
+        D.Diag(diag::err_drv_invalid_value)
+            << A->getAsString(Args) << A->getValue();
+      else
+        A->render(Args, CmdArgs);
+    } else {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << TripleStr;
+    }
   }
 
   if (Args.hasFlag(options::OPT_fdata_sections, options::OPT_fno_data_sections,
@@ -4900,6 +4919,26 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_funique_basic_block_section_names,
                    options::OPT_fno_unique_basic_block_section_names, false))
     CmdArgs.push_back("-funique-basic-block-section-names");
+
+  if (Arg *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
+                               options::OPT_fno_split_machine_functions)) {
+    // This codegen pass is only available on x86-elf targets.
+    if (Triple.isX86() && Triple.isOSBinFormatELF()) {
+      if (A->getOption().matches(options::OPT_fsplit_machine_functions)) {
+        // If the flag is enabled but no profile information is available then
+        // emit a warning.
+        if (getLastProfileUseArg(Args) || getLastProfileSampleUseArg(Args)) {
+          A->render(Args, CmdArgs);
+        } else {
+          D.Diag(diag::warn_drv_diagnostics_hotness_requires_pgo)
+              << A->getAsString(Args);
+        }
+      }
+    } else {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << TripleStr;
+    }
+  }
 
   Args.AddLastArg(CmdArgs, options::OPT_finstrument_functions,
                   options::OPT_finstrument_functions_after_inlining,
@@ -5206,6 +5245,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   Args.AddLastArg(CmdArgs, options::OPT_fvisibility_inlines_hidden);
+  Args.AddLastArg(CmdArgs, options::OPT_fvisibility_inlines_hidden_static_local_var,
+                           options::OPT_fno_visibility_inlines_hidden_static_local_var);
   Args.AddLastArg(CmdArgs, options::OPT_fvisibility_global_new_delete_hidden);
 
   Args.AddLastArg(CmdArgs, options::OPT_ftlsmodel_EQ);
@@ -6988,6 +7029,15 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
                      options::OPT_mno_default_build_attributes, true)) {
         CmdArgs.push_back("-mllvm");
         CmdArgs.push_back("-arm-add-build-attributes");
+    }
+    break;
+
+  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_32:
+  case llvm::Triple::aarch64_be:
+    if (Args.hasArg(options::OPT_mmark_bti_property)) {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-aarch64-mark-bti-property");
     }
     break;
 

@@ -6245,27 +6245,9 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vbfdot_v:
   case NEON::BI__builtin_neon_vbfdotq_v: {
     llvm::Type *InputTy =
-        llvm::FixedVectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
+        llvm::FixedVectorType::get(BFloatTy, Ty->getPrimitiveSizeInBits() / 16);
     llvm::Type *Tys[2] = { Ty, InputTy };
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vbfdot");
-  }
-  case NEON::BI__builtin_neon_vbfmmlaq_v: {
-    llvm::Type *InputTy =
-        llvm::FixedVectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
-    llvm::Type *Tys[2] = { Ty, InputTy };
-    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vbfmmla");
-  }
-  case NEON::BI__builtin_neon_vbfmlalbq_v: {
-    llvm::Type *InputTy =
-        llvm::FixedVectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
-    llvm::Type *Tys[2] = { Ty, InputTy };
-    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vbfmlalb");
-  }
-  case NEON::BI__builtin_neon_vbfmlaltq_v: {
-    llvm::Type *InputTy =
-        llvm::FixedVectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
-    llvm::Type *Tys[2] = { Ty, InputTy };
-    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vbfmlalt");
   }
   case NEON::BI__builtin_neon___a32_vcvt_bf16_v: {
     llvm::Type *Tys[1] = { Ty };
@@ -8479,7 +8461,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svlen_u64: {
     SVETypeFlags TF(Builtin->TypeModifier);
     auto VTy = cast<llvm::VectorType>(getSVEType(TF));
-    auto NumEls = llvm::ConstantInt::get(Ty, VTy->getElementCount().Min);
+    auto *NumEls =
+        llvm::ConstantInt::get(Ty, VTy->getElementCount().getKnownMinValue());
 
     Function *F = CGM.getIntrinsic(Intrinsic::vscale, Ty);
     return Builder.CreateMul(NumEls, Builder.CreateCall(F));
@@ -11335,25 +11318,6 @@ static Value *EmitX86ConvertIntToFp(CodeGenFunction &CGF,
   return EmitX86Select(CGF, Ops[2], Res, Ops[1]);
 }
 
-static Value *EmitX86Abs(CodeGenFunction &CGF, ArrayRef<Value *> Ops) {
-
-  llvm::Type *Ty = Ops[0]->getType();
-  Value *Zero = llvm::Constant::getNullValue(Ty);
-  Value *Sub = CGF.Builder.CreateSub(Zero, Ops[0]);
-  Value *Cmp = CGF.Builder.CreateICmp(ICmpInst::ICMP_SGT, Ops[0], Zero);
-  Value *Res = CGF.Builder.CreateSelect(Cmp, Ops[0], Sub);
-  return Res;
-}
-
-static Value *EmitX86MinMax(CodeGenFunction &CGF, ICmpInst::Predicate Pred,
-                            ArrayRef<Value *> Ops) {
-  Value *Cmp = CGF.Builder.CreateICmp(Pred, Ops[0], Ops[1]);
-  Value *Res = CGF.Builder.CreateSelect(Cmp, Ops[0], Ops[1]);
-
-  assert(Ops.size() == 2);
-  return Res;
-}
-
 // Lowers X86 FMA intrinsics to IR.
 static Value *EmitX86FMAExpr(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
                              unsigned BuiltinID, bool IsAddSub) {
@@ -11564,13 +11528,9 @@ static Value *EmitX86SExtMask(CodeGenFunction &CGF, Value *Op,
   return CGF.Builder.CreateSExt(Mask, DstTy, "vpmovm2");
 }
 
-// Emit addition or subtraction with signed/unsigned saturation.
-static Value *EmitX86AddSubSatExpr(CodeGenFunction &CGF,
-                                   ArrayRef<Value *> Ops, bool IsSigned,
-                                   bool IsAddition) {
-  Intrinsic::ID IID =
-      IsSigned ? (IsAddition ? Intrinsic::sadd_sat : Intrinsic::ssub_sat)
-               : (IsAddition ? Intrinsic::uadd_sat : Intrinsic::usub_sat);
+// Emit binary intrinsic with the same type used in result/args.
+static Value *EmitX86BinaryIntrinsic(CodeGenFunction &CGF,
+                                     ArrayRef<Value *> Ops, Intrinsic::ID IID) {
   llvm::Function *F = CGF.CGM.getIntrinsic(IID, Ops[0]->getType());
   return CGF.Builder.CreateCall(F, {Ops[0], Ops[1]});
 }
@@ -13325,9 +13285,10 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_pabsb512:
   case X86::BI__builtin_ia32_pabsw512:
   case X86::BI__builtin_ia32_pabsd512:
-  case X86::BI__builtin_ia32_pabsq512:
-    return EmitX86Abs(*this, Ops);
-
+  case X86::BI__builtin_ia32_pabsq512: {
+    Function *F = CGM.getIntrinsic(Intrinsic::abs, Ops[0]->getType());
+    return Builder.CreateCall(F, {Ops[0], Builder.getInt1(false)});
+  }
   case X86::BI__builtin_ia32_pmaxsb128:
   case X86::BI__builtin_ia32_pmaxsw128:
   case X86::BI__builtin_ia32_pmaxsd128:
@@ -13340,7 +13301,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_pmaxsw512:
   case X86::BI__builtin_ia32_pmaxsd512:
   case X86::BI__builtin_ia32_pmaxsq512:
-    return EmitX86MinMax(*this, ICmpInst::ICMP_SGT, Ops);
+    return EmitX86BinaryIntrinsic(*this, Ops, Intrinsic::smax);
   case X86::BI__builtin_ia32_pmaxub128:
   case X86::BI__builtin_ia32_pmaxuw128:
   case X86::BI__builtin_ia32_pmaxud128:
@@ -13353,7 +13314,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_pmaxuw512:
   case X86::BI__builtin_ia32_pmaxud512:
   case X86::BI__builtin_ia32_pmaxuq512:
-    return EmitX86MinMax(*this, ICmpInst::ICMP_UGT, Ops);
+    return EmitX86BinaryIntrinsic(*this, Ops, Intrinsic::umax);
   case X86::BI__builtin_ia32_pminsb128:
   case X86::BI__builtin_ia32_pminsw128:
   case X86::BI__builtin_ia32_pminsd128:
@@ -13366,7 +13327,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_pminsw512:
   case X86::BI__builtin_ia32_pminsd512:
   case X86::BI__builtin_ia32_pminsq512:
-    return EmitX86MinMax(*this, ICmpInst::ICMP_SLT, Ops);
+    return EmitX86BinaryIntrinsic(*this, Ops, Intrinsic::smin);
   case X86::BI__builtin_ia32_pminub128:
   case X86::BI__builtin_ia32_pminuw128:
   case X86::BI__builtin_ia32_pminud128:
@@ -13379,7 +13340,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_pminuw512:
   case X86::BI__builtin_ia32_pminud512:
   case X86::BI__builtin_ia32_pminuq512:
-    return EmitX86MinMax(*this, ICmpInst::ICMP_ULT, Ops);
+    return EmitX86BinaryIntrinsic(*this, Ops, Intrinsic::umin);
 
   case X86::BI__builtin_ia32_pmuludq128:
   case X86::BI__builtin_ia32_pmuludq256:
@@ -14054,28 +14015,28 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_paddsw256:
   case X86::BI__builtin_ia32_paddsb128:
   case X86::BI__builtin_ia32_paddsw128:
-    return EmitX86AddSubSatExpr(*this, Ops, true, true);
+    return EmitX86BinaryIntrinsic(*this, Ops, Intrinsic::sadd_sat);
   case X86::BI__builtin_ia32_paddusb512:
   case X86::BI__builtin_ia32_paddusw512:
   case X86::BI__builtin_ia32_paddusb256:
   case X86::BI__builtin_ia32_paddusw256:
   case X86::BI__builtin_ia32_paddusb128:
   case X86::BI__builtin_ia32_paddusw128:
-    return EmitX86AddSubSatExpr(*this, Ops, false, true);
+    return EmitX86BinaryIntrinsic(*this, Ops, Intrinsic::uadd_sat);
   case X86::BI__builtin_ia32_psubsb512:
   case X86::BI__builtin_ia32_psubsw512:
   case X86::BI__builtin_ia32_psubsb256:
   case X86::BI__builtin_ia32_psubsw256:
   case X86::BI__builtin_ia32_psubsb128:
   case X86::BI__builtin_ia32_psubsw128:
-    return EmitX86AddSubSatExpr(*this, Ops, true, false);
+    return EmitX86BinaryIntrinsic(*this, Ops, Intrinsic::ssub_sat);
   case X86::BI__builtin_ia32_psubusb512:
   case X86::BI__builtin_ia32_psubusw512:
   case X86::BI__builtin_ia32_psubusb256:
   case X86::BI__builtin_ia32_psubusw256:
   case X86::BI__builtin_ia32_psubusb128:
   case X86::BI__builtin_ia32_psubusw128:
-    return EmitX86AddSubSatExpr(*this, Ops, false, false);
+    return EmitX86BinaryIntrinsic(*this, Ops, Intrinsic::usub_sat);
   }
 }
 
@@ -14307,8 +14268,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     else if (BuiltinID == PPC::BI__builtin_vsx_xvrdpic ||
              BuiltinID == PPC::BI__builtin_vsx_xvrspic)
       ID = Builder.getIsFPConstrained()
-               ? Intrinsic::experimental_constrained_nearbyint
-               : Intrinsic::nearbyint;
+               ? Intrinsic::experimental_constrained_rint
+               : Intrinsic::rint;
     else if (BuiltinID == PPC::BI__builtin_vsx_xvrdpip ||
              BuiltinID == PPC::BI__builtin_vsx_xvrspip)
       ID = Builder.getIsFPConstrained()

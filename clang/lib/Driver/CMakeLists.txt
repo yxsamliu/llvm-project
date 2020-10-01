@@ -49,6 +49,7 @@ add_clang_library(clangDriver
   ToolChains/Darwin.cpp
   ToolChains/DragonFly.cpp
   ToolChains/Flang.cpp
+  ToolChains/AMDFlang.cpp
   ToolChains/FreeBSD.cpp
   ToolChains/Fuchsia.cpp
   ToolChains/Gnu.cpp
@@ -75,6 +76,7 @@ add_clang_library(clangDriver
   ToolChains/XCore.cpp
   ToolChains/PPCLinux.cpp
   ToolChains/InterfaceStubs.cpp
+  ToolChains/ZOS.cpp
   Types.cpp
   XRayArgs.cpp
 

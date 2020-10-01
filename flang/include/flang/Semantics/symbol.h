@@ -478,7 +478,6 @@ std::string DetailsToString(const Details &);
 class Symbol {
 public:
   ENUM_CLASS(Flag,
-      Error, // an error has been reported on this symbol
       Function, // symbol is a function
       Subroutine, // symbol is a subroutine
       StmtFunction, // symbol is a statement function (Function is set too)
@@ -502,9 +501,9 @@ public:
       // OpenMP data-mapping attribute
       OmpMapTo, OmpMapFrom, OmpMapAlloc, OmpMapRelease, OmpMapDelete,
       // OpenMP miscellaneous flags
-      OmpCommonBlock, OmpReduction, OmpDeclareSimd, OmpDeclareTarget,
-      OmpThreadprivate, OmpDeclareReduction, OmpFlushed, OmpCriticalLock,
-      OmpIfSpecified, OmpNone, OmpPreDetermined);
+      OmpCommonBlock, OmpReduction, OmpAllocate, OmpDeclareSimd,
+      OmpDeclareTarget, OmpThreadprivate, OmpDeclareReduction, OmpFlushed,
+      OmpCriticalLock, OmpIfSpecified, OmpNone, OmpPreDetermined);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }

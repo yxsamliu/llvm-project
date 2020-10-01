@@ -24,7 +24,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
 #include <cassert>
 
@@ -293,8 +292,7 @@ public:
   static Constant *
   getSafeVectorConstantForBinop(BinaryOperator::BinaryOps Opcode, Constant *In,
                                 bool IsRHSConstant) {
-    auto *InVTy = dyn_cast<VectorType>(In->getType());
-    assert(InVTy && "Not expecting scalars here");
+    auto *InVTy = cast<FixedVectorType>(In->getType());
 
     Type *EltTy = InVTy->getElementType();
     auto *SafeC = ConstantExpr::getBinOpIdentity(Opcode, EltTy, IsRHSConstant);

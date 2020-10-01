@@ -78,7 +78,7 @@ protected:
   bool EnablePromoteAlloca;
   bool HasTrigReducedRange;
   unsigned MaxWavesPerEU;
-  int LocalMemorySize;
+  unsigned LocalMemorySize;
   char WavefrontSizeLog2;
 
 public:
@@ -202,7 +202,7 @@ public:
     return WavefrontSizeLog2;
   }
 
-  int getLocalMemorySize() const {
+  unsigned getLocalMemorySize() const {
     return LocalMemorySize;
   }
 
@@ -243,7 +243,7 @@ public:
   /// 2) dimension.
   unsigned getMaxWorkitemID(const Function &Kernel, unsigned Dimension) const;
 
-  /// Creates value range metadata on an workitemid.* inrinsic call or load.
+  /// Creates value range metadata on an workitemid.* intrinsic call or load.
   bool makeLIDRangeMetadata(Instruction *I) const;
 
   /// \returns Number of bytes of arguments that are passed to a shader or
@@ -319,6 +319,7 @@ protected:
   bool FlatForGlobal;
   bool AutoWaitcntBeforeBarrier;
   bool UnalignedScratchAccess;
+  bool UnalignedBufferAccess;
   bool UnalignedAccessMode;
   bool HasApertureRegs;
   bool SupportsXNACK;
@@ -407,7 +408,6 @@ protected:
   bool HasMFMAInlineLiteralBug;
   bool HasVertexCache;
   short TexVTXClauseSize;
-  bool UnalignedBufferAccess;
   bool UnalignedDSAccess;
   bool ScalarizeGlobal;
 
@@ -715,24 +715,16 @@ public:
     return UnalignedBufferAccess;
   }
 
-  bool hasUnalignedBufferAccessEnabled() const {
-    return UnalignedBufferAccess && UnalignedAccessMode;
-  }
-
-  bool hasUnalignedDSAccess() const {
-    return UnalignedDSAccess;
-  }
-
-  bool hasUnalignedDSAccessEnabled() const {
-    return UnalignedDSAccess && UnalignedAccessMode;
-  }
-
   bool hasUnalignedScratchAccess() const {
     return UnalignedScratchAccess;
   }
 
   bool hasUnalignedAccessMode() const {
     return UnalignedAccessMode;
+  }
+
+  bool hasUnalignedDSAccess() const {
+    return UnalignedDSAccess;
   }
 
   bool hasApertureRegs() const {

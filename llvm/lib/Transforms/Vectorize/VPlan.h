@@ -51,14 +51,12 @@ namespace llvm {
 class BasicBlock;
 class DominatorTree;
 class InnerLoopVectorizer;
-template <class T> class InterleaveGroup;
 class LoopInfo;
 class raw_ostream;
 class RecurrenceDescriptor;
 class Value;
 class VPBasicBlock;
 class VPRegionBlock;
-class VPSlotTracker;
 class VPlan;
 class VPlanSlp;
 
@@ -151,14 +149,15 @@ public:
   /// \return True if the map has a scalar entry for \p Key and \p Instance.
   bool hasScalarValue(Value *Key, const VPIteration &Instance) const {
     assert(Instance.Part < UF && "Queried Scalar Part is too large.");
-    assert(Instance.Lane < VF.Min && "Queried Scalar Lane is too large.");
-    assert(!VF.Scalable && "VF is assumed to be non scalable.");
+    assert(Instance.Lane < VF.getKnownMinValue() &&
+           "Queried Scalar Lane is too large.");
+    assert(!VF.isScalable() && "VF is assumed to be non scalable.");
 
     if (!hasAnyScalarValue(Key))
       return false;
     const ScalarParts &Entry = ScalarMapStorage.find(Key)->second;
     assert(Entry.size() == UF && "ScalarParts has wrong dimensions.");
-    assert(Entry[Instance.Part].size() == VF.Min &&
+    assert(Entry[Instance.Part].size() == VF.getKnownMinValue() &&
            "ScalarParts has wrong dimensions.");
     return Entry[Instance.Part][Instance.Lane] != nullptr;
   }
@@ -197,7 +196,7 @@ public:
       // TODO: Consider storing uniform values only per-part, as they occupy
       //       lane 0 only, keeping the other VF-1 redundant entries null.
       for (unsigned Part = 0; Part < UF; ++Part)
-        Entry[Part].resize(VF.Min, nullptr);
+        Entry[Part].resize(VF.getKnownMinValue(), nullptr);
       ScalarMapStorage[Key] = Entry;
     }
     ScalarMapStorage[Key][Instance.Part][Instance.Lane] = Scalar;
