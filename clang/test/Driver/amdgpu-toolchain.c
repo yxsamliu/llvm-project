@@ -17,6 +17,6 @@
 
 // TODO: Remove during upstreaming target id.
 // RUN: %clang -### -target amdgcn--amdhsa -mcpu=gfx900 -mcode-object-v3 %s 2>&1 | FileCheck -check-prefix=COV3 %s
-// COV3: clang{{.*}} "-mllvm --amdhsa-code-object-version=3"
+// COV3: clang{{.*}} "-mllvm" "--amdhsa-code-object-version=3"
 // RUN: %clang -### -target amdgcn--amdhsa -mcpu=gfx900 -mno-code-object-v3 %s 2>&1 | FileCheck -check-prefix=COV2 %s
-// COV2: clang{{.*}} "-mllvm --amdhsa-code-object-version=2"
+// COV2: clang{{.*}} "-mllvm" "--amdhsa-code-object-version=2"

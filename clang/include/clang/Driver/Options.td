@@ -2452,10 +2452,9 @@ def mamdgpu_debugger_abi : Joined<["-"], "mamdgpu-debugger-abi=">,
   HelpText<"Generate additional code for specified <version> of debugger ABI (AMDGPU only)">,
   MetaVarName<"<version>">;
 
-// TODO: Remove during upstreaming target id.
-def mcode_object_v3 : Flag<["-"], "mcode-object-v3">, Group<m_Group>,
+def mcode_object_v3_legacy : Flag<["-"], "mcode-object-v3">, Group<m_Group>,
   HelpText<"Legacy option to specify code object v3 (AMDGPU only)">;
-def mno_code_object_v3 : Flag<["-"], "mno-code-object-v3">, Group<m_Group>,
+def mno_code_object_v3_legacy : Flag<["-"], "mno-code-object-v3">, Group<m_Group>,
   HelpText<"Legacy option to specify code object v2 (AMDGPU only)">;
 
 // TODO: Remove during upstreaming target id.
