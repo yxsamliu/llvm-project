@@ -2452,13 +2452,19 @@ def mamdgpu_debugger_abi : Joined<["-"], "mamdgpu-debugger-abi=">,
   HelpText<"Generate additional code for specified <version> of debugger ABI (AMDGPU only)">,
   MetaVarName<"<version>">;
 
-// TODO: Remove before upstreaming target id.
-def msram_ecc_legacy : Flag<["-"], "msram-ecc">, Group<m_amdgpu_Features_Group>,
+// TODO: Remove during upstreaming target id.
+def mcode_object_v3 : Flag<["-"], "mcode-object-v3">, Group<m_Group>,
+  HelpText<"Legacy option to specify code object v3 (AMDGPU only)">;
+def mno_code_object_v3 : Flag<["-"], "mno-code-object-v3">, Group<m_Group>,
+  HelpText<"Legacy option to specify code object v2 (AMDGPU only)">;
+
+// TODO: Remove during upstreaming target id.
+def msram_ecc_legacy : Flag<["-"], "msram-ecc">, Group<m_Group>,
   HelpText<"Legacy option for enabling SRAM ECC (AMDGPU only)">;
-def mno_sram_ecc_legacy : Flag<["-"], "mno-sram-ecc">, Group<m_amdgpu_Features_Group>,
+def mno_sram_ecc_legacy : Flag<["-"], "mno-sram-ecc">, Group<m_Group>,
   HelpText<"Legacy option for disabling SRAM ECC (AMDGPU only)">;
 
-// TODO: Remove before upstreaming target id.
+// TODO: Remove during upstreaming target id.
 def mxnack : Flag<["-"], "mxnack">, Group<m_amdgpu_Features_Group>,
   HelpText<"Legacy option for enabling XNACK (AMDGPU only)">;
 def mno_xnack : Flag<["-"], "mno-xnack">, Group<m_amdgpu_Features_Group>,

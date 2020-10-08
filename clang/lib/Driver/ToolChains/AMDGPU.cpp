@@ -405,7 +405,7 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
     Features.push_back("-wavefrontsize64");
   }
 
-  // TODO: Remove before upstreaming target id.
+  // TODO: Remove during upstreaming target id.
   if (Args.getLastArg(options::OPT_msram_ecc_legacy)) {
     Features.push_back("+sramecc");
   }
@@ -544,6 +544,12 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("hidden");
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
+
+  // TODO: Remove during upstreaming target id.
+  if (DriverArgs.hasArg(options::OPT_mcode_object_v3))
+    CC1Args.push_back("-mllvm --amdhsa-code-object-version=3");
+  if (DriverArgs.hasArg(options::OPT_mno_code_object_v3))
+    CC1Args.push_back("-mllvm --amdhsa-code-object-version=2");
 }
 
 StringRef

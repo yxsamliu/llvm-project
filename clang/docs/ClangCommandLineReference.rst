@@ -396,8 +396,6 @@ Do not link device library for CUDA/HIP device compilation
 
 .. option:: -noseglinkedit
 
-.. option:: -nostartfiles
-
 .. option:: -nostdinc, --no-standard-includes
 
 .. program:: clang1
@@ -627,8 +625,6 @@ Serialize compiler diagnostics to a file
 Dynamically link the sanitizer runtime
 
 .. option:: -single\_module
-
-.. option:: -specs=<arg>, --specs=<arg>
 
 .. option:: -static-libgcc
 
@@ -1653,6 +1649,10 @@ Sets various macros to claim compatibility with the given GCC version (default i
 
 Allow device side init function in HIP
 
+.. option:: -fgpu-defer-diag, -fno-gpu-defer-diag
+
+Defer host/device related diagnostic messages for CUDA/HIP
+
 .. option:: -fgpu-rdc, -fcuda-rdc, -fno-gpu-rdc
 
 Generate relocatable device code, also known as separate compilation mode
@@ -1740,6 +1740,10 @@ Max total number of preprocessed tokens for -Wmax-tokens.
 .. option:: -fmax-type-align=<arg>
 
 Specify the maximum alignment to enforce on pointers lacking an explicit alignment
+
+.. option:: -fmemory-profile, -fno-memory-profile
+
+Enable heap memory profiling
 
 .. option:: -fmerge-all-constants, -fno-merge-all-constants
 
@@ -2152,6 +2156,10 @@ Provide minimal debug info in the object/executable to facilitate online symboli
 
 Enables splitting of the LTO unit
 
+.. option:: -fsplit-machine-functions, -fno-split-machine-functions
+
+Enable late function splitting using profile information (x86 ELF)
+
 .. option:: -fsplit-stack
 
 .. option:: -fstack-clash-protection, -fno-stack-clash-protection
@@ -2326,6 +2334,10 @@ Give global C++ operator new and delete declarations hidden visibility
 .. option:: -fvisibility-inlines-hidden
 
 Give inline C++ member functions hidden visibility by default
+
+.. option:: -fvisibility-inlines-hidden-static-local-var, -fno-visibility-inlines-hidden-static-local-var
+
+When -fvisibility-inlines-hidden is enabled, static variables in inline C++ member functions will also be given hidden visibility by default
 
 .. option:: -fvisibility-ms-compat
 
@@ -2643,6 +2655,10 @@ Align selected branches (fused, jcc, jmp) within 32-byte boundary
 
 .. option:: -mcmodel=<arg>, -mcmodel=medany (equivalent to -mcmodel=medium), -mcmodel=medlow (equivalent to -mcmodel=small)
 
+.. option:: -mcode-object-v3, -mno-code-object-v3
+
+Legacy option to specify code object v3 (AMDGPU only)
+
 .. option:: -mconsole<arg>
 
 .. program:: clang1
@@ -2803,6 +2819,10 @@ Use software floating point
 
 .. option:: -mspeculative-load-hardening, -mno-speculative-load-hardening
 
+.. option:: -msram-ecc, -mno-sram-ecc
+
+Legacy option for enabling SRAM ECC (AMDGPU only)
+
 .. option:: -mstack-alignment=<arg>
 
 Set the stack alignment
@@ -2909,6 +2929,10 @@ Workaround Cortex-A53 erratum 835769 (AArch64 only)
 
 Generate code which only uses the general purpose registers (AArch64 only)
 
+.. option:: -mmark-bti-property
+
+Add .note.gnu.property with BTI to assembly files (AArch64 only)
+
 .. option:: -msve-vector-bits=<arg>
 
 Specify the size in bits of an SVE vector register. Defaults to the vector length agnostic value of "scalable". (AArch64 only)
@@ -2918,10 +2942,6 @@ AMDGPU
 .. option:: -mcumode, -mno-cumode
 
 CU wavefront execution mode is used (AMDGPU only)
-
-.. option:: -msram-ecc, -mno-sram-ecc
-
-Legacy option for enabling SRAM ECC (AMDGPU only)
 
 .. option:: -mxnack, -mno-xnack
 
@@ -3713,6 +3733,8 @@ HIP device library
 
 .. option:: --ld-path=<arg>
 
+.. option:: -nostartfiles
+
 .. program:: clang1
 .. option:: -nostdlib, --no-standard-libraries
 .. program:: clang
@@ -3732,6 +3754,8 @@ ROCm device library path. Alternative to rocm-path.
 .. option:: -s
 
 .. option:: -shared, --shared
+
+.. option:: -specs=<arg>, --specs=<arg>
 
 .. option:: -static, --static
 
