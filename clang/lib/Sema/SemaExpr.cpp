@@ -364,6 +364,7 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
       const auto *VD = dyn_cast<VarDecl>(D);
       if (VD && VD->hasGlobalStorage() && !VD->hasAttr<CUDADeviceAttr>() &&
           !VD->hasAttr<CUDAConstantAttr>() && !VD->hasAttr<CUDASharedAttr>() &&
+          !VD->hasAttr<HIPManagedAttr>() &&
           !VD->getType()->isCUDADeviceBuiltinSurfaceType() &&
           !VD->getType()->isCUDADeviceBuiltinTextureType() &&
           !VD->isConstexpr() && !VD->getType().isConstQualified())

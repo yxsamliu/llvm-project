@@ -2740,6 +2740,7 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
           !Global->hasAttr<CUDAGlobalAttr>() &&
           !Global->hasAttr<CUDAConstantAttr>() &&
           !Global->hasAttr<CUDASharedAttr>() &&
+          !Global->hasAttr<HIPManagedAttr>() &&
           !Global->getType()->isCUDADeviceBuiltinSurfaceType() &&
           !Global->getType()->isCUDADeviceBuiltinTextureType())
         return;
@@ -3993,7 +3994,8 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
       return LangAS::cuda_constant;
     else if (D && D->hasAttr<CUDASharedAttr>())
       return LangAS::cuda_shared;
-    else if (D && D->hasAttr<CUDADeviceAttr>())
+    else if (D &&
+             (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<HIPManagedAttr>()))
       return LangAS::cuda_device;
     else if (D && D->getType().isConstQualified())
       return LangAS::cuda_constant;
@@ -4151,7 +4153,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   bool IsCUDADeviceShadowVar =
       getLangOpts().CUDAIsDevice &&
       (D->getType()->isCUDADeviceBuiltinSurfaceType() ||
-       D->getType()->isCUDADeviceBuiltinTextureType());
+       D->getType()->isCUDADeviceBuiltinTextureType() ||
+       D->hasAttr<HIPManagedAttr>());
   // HIP pinned shadow of initialized host-side global variables are also
   // left undefined.
   if (getLangOpts().CUDA &&
@@ -4256,14 +4259,16 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   if (GV && LangOpts.CUDA) {
     if (LangOpts.CUDAIsDevice) {
       if (Linkage != llvm::GlobalValue::InternalLinkage &&
-          (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>()))
+          (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
+           D->hasAttr<HIPManagedAttr>()))
         GV->setExternallyInitialized(true);
     } else {
       // Host-side shadows of external declarations of device-side
       // global variables become internal definitions. These have to
       // be internal in order to prevent name conflicts with global
       // host variables with the same name in a different TUs.
-      if (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>()) {
+      if (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
+          D->hasAttr<HIPManagedAttr>()) {
         Linkage = llvm::GlobalValue::InternalLinkage;
         // Shadow variables and their properties must be registered with CUDA
         // runtime. Skip Extern global variables, which will be registered in

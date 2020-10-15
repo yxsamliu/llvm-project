@@ -44,9 +44,9 @@ FTIHasNonVoidParameters(const DeclaratorChunk::FunctionTypeInfo &FTI) {
 inline bool DeclAttrsMatchCUDAMode(const LangOptions &LangOpts, Decl *D) {
   if (!LangOpts.CUDA || !D)
     return true;
-  bool isDeviceSideDecl = D->hasAttr<CUDADeviceAttr>() ||
-                          D->hasAttr<CUDASharedAttr>() ||
-                          D->hasAttr<CUDAGlobalAttr>();
+  bool isDeviceSideDecl =
+      D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDASharedAttr>() ||
+      D->hasAttr<CUDAGlobalAttr>() || D->hasAttr<HIPManagedAttr>();
   return isDeviceSideDecl == LangOpts.CUDAIsDevice;
 }
 

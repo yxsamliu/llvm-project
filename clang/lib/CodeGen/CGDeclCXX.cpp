@@ -460,7 +460,7 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
   // are allowed are empty and we just need to ignore them here.
   if (getLangOpts().CUDAIsDevice && !getLangOpts().GPUAllowDeviceInit &&
       (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
-       D->hasAttr<CUDASharedAttr>()))
+       D->hasAttr<CUDASharedAttr>() || D->hasAttr<HIPManagedAttr>()))
     return;
 
   if (getLangOpts().OpenMP &&

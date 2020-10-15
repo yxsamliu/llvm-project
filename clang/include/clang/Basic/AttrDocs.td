@@ -5419,6 +5419,17 @@ unbind runtime APIs.
   }];
 }
 
+def HIPManagedAttrDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``__managed__`` attribute can be applied to a global variable declaration in HIP.
+A managed variable is emitted as a undefined global symbol in device binary and
+registered by ``__hipRegisterVariable`` in init functions. HIP runtime defines
+the symbol when loading the device binary. A managed variable can be accessed
+in both device and host code.
+  }];
+}
+
 def LifetimeOwnerDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{

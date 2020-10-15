@@ -516,7 +516,7 @@ void Sema::checkAllowedCUDAInitializer(VarDecl *VD) {
     return;
   const Expr *Init = VD->getInit();
   if (VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>() ||
-      VD->hasAttr<CUDASharedAttr>()) {
+      VD->hasAttr<CUDASharedAttr>() || VD->hasAttr<HIPManagedAttr>()) {
     if (LangOpts.GPUAllowDeviceInit)
       return;
     bool AllowedInit = false;
@@ -527,7 +527,8 @@ void Sema::checkAllowedCUDAInitializer(VarDecl *VD) {
     // constructor according to CUDA rules. This deviates from NVCC,
     // but allows us to handle things like constexpr constructors.
     if (!AllowedInit &&
-        (VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>())) {
+        (VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>() ||
+         VD->hasAttr<HIPManagedAttr>())) {
       auto *Init = VD->getInit();
       AllowedInit =
           ((VD->getType()->isDependentType() || Init->isValueDependent()) &&

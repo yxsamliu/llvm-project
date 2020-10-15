@@ -128,13 +128,15 @@ public:
     DeviceVars.push_back({&Var,
                           VD,
                           {DeviceVarFlags::Variable, Extern, Constant,
-                           /*Normalized*/ false, /*Type*/ 0}});
+                           VD->hasAttr<HIPManagedAttr>(),
+                           /*Normalized*/ false, 0}});
   }
   void registerDeviceSurf(const VarDecl *VD, llvm::GlobalVariable &Var,
                           bool Extern, int Type) override {
     DeviceVars.push_back({&Var,
                           VD,
                           {DeviceVarFlags::Surface, Extern, /*Constant*/ false,
+                           /*Managed*/ false,
                            /*Normalized*/ false, Type}});
   }
   void registerDeviceTex(const VarDecl *VD, llvm::GlobalVariable &Var,
@@ -142,7 +144,7 @@ public:
     DeviceVars.push_back({&Var,
                           VD,
                           {DeviceVarFlags::Texture, Extern, /*Constant*/ false,
-                           Normalized, Type}});
+                           /*Managed*/ false, Normalized, Type}});
   }
 
   /// Creates module constructor function
@@ -482,7 +484,8 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
           llvm::ConstantInt::get(IntTy, Info.Flags.isExtern()),
           llvm::ConstantInt::get(VarSizeTy, VarSize),
           llvm::ConstantInt::get(IntTy, Info.Flags.isConstant()),
-          llvm::ConstantInt::get(IntTy, 0)};
+          llvm::ConstantInt::get(IntTy, CGM.getLangOpts().HIP &&
+                                            Info.Flags.isManaged())};
       Builder.CreateCall(RegisterVar, Args);
       break;
     }
