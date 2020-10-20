@@ -1,4 +1,4 @@
-/*===---- __clang_hip_math.h - Device-side HIP math support ----------------===
+/*===---- __clang_hip_math.h - HIP math decls -------------------------------===
  *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
@@ -6,32 +6,25 @@
  *
  *===-----------------------------------------------------------------------===
  */
+
 #ifndef __CLANG_HIP_MATH_H__
 #define __CLANG_HIP_MATH_H__
 
-#if !defined(__HIP__)
-#error "This file is for HIP and OpenMP AMDGCN device compilation only."
-#endif
-
-#if defined(__cplusplus)
 #include <algorithm>
-#endif
 #include <limits.h>
+#include <limits>
 #include <stdint.h>
+#include <assert.h>
 
 #pragma push_macro("__DEVICE__")
-#define __DEVICE__ static __device__ inline __attribute__((always_inline))
-
-// A few functions return bool type starting only in C++11.
 #pragma push_macro("__RETURN_TYPE")
-#if defined(__cplusplus)
+
+// to be consistent with __clang_cuda_math_forward_declares
+#define __DEVICE__ static __device__
 #define __RETURN_TYPE bool
-#else
-#define __RETURN_TYPE int
-#endif
 
 #if defined (__cplusplus) && __cplusplus < 201103L
-// emulate static_assert on type sizes
+//emulate static_assert on type sizes
 template<bool>
 struct __compare_result{};
 template<>
@@ -40,23 +33,26 @@ struct __compare_result<true> {
 };
 
 __DEVICE__
-void __suppress_unused_warning(bool b){};
-template <unsigned int S, unsigned int T>
-__DEVICE__ void __static_assert_equal_size() {
-  __suppress_unused_warning(__compare_result<S == T>::valid);
+inline void __suppress_unused_warning(bool b) {};
+template<unsigned int S, unsigned int T>
+__DEVICE__
+inline void __static_assert_equal_size() {
+    __suppress_unused_warning(__compare_result<S==T>::valid);
 }
 
 #define __static_assert_type_size_equal(A, B) \
   __static_assert_equal_size<A,B>()
 
 #else
+
 #define __static_assert_type_size_equal(A,B) \
   static_assert((A) == (B), "")
 
 #endif
 
+
 __DEVICE__
-uint64_t __make_mantissa_base8(const char *__tagp) {
+inline uint64_t __make_mantissa_base8(const char *__tagp) {
   uint64_t __r = 0;
   while (__tagp) {
     char __tmp = *__tagp;
@@ -73,7 +69,7 @@ uint64_t __make_mantissa_base8(const char *__tagp) {
 }
 
 __DEVICE__
-uint64_t __make_mantissa_base10(const char *__tagp) {
+inline uint64_t __make_mantissa_base10(const char *__tagp) {
   uint64_t __r = 0;
   while (__tagp) {
     char __tmp = *__tagp;
@@ -90,7 +86,7 @@ uint64_t __make_mantissa_base10(const char *__tagp) {
 }
 
 __DEVICE__
-uint64_t __make_mantissa_base16(const char *__tagp) {
+inline uint64_t __make_mantissa_base16(const char *__tagp) {
   uint64_t __r = 0;
   while (__tagp) {
     char __tmp = *__tagp;
@@ -111,7 +107,7 @@ uint64_t __make_mantissa_base16(const char *__tagp) {
 }
 
 __DEVICE__
-uint64_t __make_mantissa(const char *__tagp) {
+inline uint64_t __make_mantissa(const char *__tagp) {
   if (!__tagp)
     return 0u;
 
@@ -128,124 +124,80 @@ uint64_t __make_mantissa(const char *__tagp) {
 }
 
 // BEGIN FLOAT
-#if defined(__cplusplus)
+#ifdef __cplusplus
 __DEVICE__
-int abs(int __x) {
-  int __sgn = __x >> (sizeof(int) * CHAR_BIT - 1);
-  return (__x ^ __sgn) - __sgn;
-}
-__DEVICE__
-long labs(long __x) {
-  long __sgn = __x >> (sizeof(long) * CHAR_BIT - 1);
-  return (__x ^ __sgn) - __sgn;
-}
-__DEVICE__
-long long llabs(long long __x) {
-  long long __sgn = __x >> (sizeof(long long) * CHAR_BIT - 1);
-  return (__x ^ __sgn) - __sgn;
-}
+inline float abs(float __x) { return __ocml_fabs_f32(__x); }
 #endif
-
 __DEVICE__
-float acosf(float __x) { return __ocml_acos_f32(__x); }
-
+inline float acosf(float __x) { return __ocml_acos_f32(__x); }
 __DEVICE__
-float acoshf(float __x) { return __ocml_acosh_f32(__x); }
-
+inline float acoshf(float __x) { return __ocml_acosh_f32(__x); }
 __DEVICE__
-float asinf(float __x) { return __ocml_asin_f32(__x); }
-
+inline float asinf(float __x) { return __ocml_asin_f32(__x); }
 __DEVICE__
-float asinhf(float __x) { return __ocml_asinh_f32(__x); }
-
+inline float asinhf(float __x) { return __ocml_asinh_f32(__x); }
 __DEVICE__
-float atan2f(float __x, float __y) { return __ocml_atan2_f32(__x, __y); }
-
+inline float atan2f(float __x, float __y) { return __ocml_atan2_f32(__x, __y); }
 __DEVICE__
-float atanf(float __x) { return __ocml_atan_f32(__x); }
-
+inline float atanf(float __x) { return __ocml_atan_f32(__x); }
 __DEVICE__
-float atanhf(float __x) { return __ocml_atanh_f32(__x); }
-
+inline float atanhf(float __x) { return __ocml_atanh_f32(__x); }
 __DEVICE__
-float cbrtf(float __x) { return __ocml_cbrt_f32(__x); }
-
+inline float cbrtf(float __x) { return __ocml_cbrt_f32(__x); }
 __DEVICE__
-float ceilf(float __x) { return __ocml_ceil_f32(__x); }
-
+inline float ceilf(float __x) { return __ocml_ceil_f32(__x); }
 __DEVICE__
-float copysignf(float __x, float __y) { return __ocml_copysign_f32(__x, __y); }
-
+inline float copysignf(float __x, float __y) {
+  return __ocml_copysign_f32(__x, __y);
+}
 __DEVICE__
-float cosf(float __x) { return __ocml_cos_f32(__x); }
-
+inline float cosf(float __x) { return __ocml_cos_f32(__x); }
 __DEVICE__
-float coshf(float __x) { return __ocml_cosh_f32(__x); }
-
+inline float coshf(float __x) { return __ocml_cosh_f32(__x); }
 __DEVICE__
-float cospif(float __x) { return __ocml_cospi_f32(__x); }
-
+inline float cospif(float __x) { return __ocml_cospi_f32(__x); }
 __DEVICE__
-float cyl_bessel_i0f(float __x) { return __ocml_i0_f32(__x); }
-
+inline float cyl_bessel_i0f(float __x) { return __ocml_i0_f32(__x); }
 __DEVICE__
-float cyl_bessel_i1f(float __x) { return __ocml_i1_f32(__x); }
-
+inline float cyl_bessel_i1f(float __x) { return __ocml_i1_f32(__x); }
 __DEVICE__
-float erfcf(float __x) { return __ocml_erfc_f32(__x); }
-
+inline float erfcf(float __x) { return __ocml_erfc_f32(__x); }
 __DEVICE__
-float erfcinvf(float __x) { return __ocml_erfcinv_f32(__x); }
-
+inline float erfcinvf(float __x) { return __ocml_erfcinv_f32(__x); }
 __DEVICE__
-float erfcxf(float __x) { return __ocml_erfcx_f32(__x); }
-
+inline float erfcxf(float __x) { return __ocml_erfcx_f32(__x); }
 __DEVICE__
-float erff(float __x) { return __ocml_erf_f32(__x); }
-
+inline float erff(float __x) { return __ocml_erf_f32(__x); }
 __DEVICE__
-float erfinvf(float __x) { return __ocml_erfinv_f32(__x); }
-
+inline float erfinvf(float __x) { return __ocml_erfinv_f32(__x); }
 __DEVICE__
-float exp10f(float __x) { return __ocml_exp10_f32(__x); }
-
+inline float exp10f(float __x) { return __ocml_exp10_f32(__x); }
 __DEVICE__
-float exp2f(float __x) { return __ocml_exp2_f32(__x); }
-
+inline float exp2f(float __x) { return __ocml_exp2_f32(__x); }
 __DEVICE__
-float expf(float __x) { return __ocml_exp_f32(__x); }
-
+inline float expf(float __x) { return __ocml_exp_f32(__x); }
 __DEVICE__
-float expm1f(float __x) { return __ocml_expm1_f32(__x); }
-
+inline float expm1f(float __x) { return __ocml_expm1_f32(__x); }
 __DEVICE__
-float fabsf(float __x) { return __ocml_fabs_f32(__x); }
-
+inline float fabsf(float __x) { return __ocml_fabs_f32(__x); }
 __DEVICE__
-float fdimf(float __x, float __y) { return __ocml_fdim_f32(__x, __y); }
-
+inline float fdimf(float __x, float __y) { return __ocml_fdim_f32(__x, __y); }
 __DEVICE__
-float fdividef(float __x, float __y) { return __x / __y; }
-
+inline float fdividef(float __x, float __y) { return __x / __y; }
 __DEVICE__
-float floorf(float __x) { return __ocml_floor_f32(__x); }
-
+inline float floorf(float __x) { return __ocml_floor_f32(__x); }
 __DEVICE__
-float fmaf(float __x, float __y, float __z) {
+inline float fmaf(float __x, float __y, float __z) {
   return __ocml_fma_f32(__x, __y, __z);
 }
-
 __DEVICE__
-float fmaxf(float __x, float __y) { return __ocml_fmax_f32(__x, __y); }
-
+inline float fmaxf(float __x, float __y) { return __ocml_fmax_f32(__x, __y); }
 __DEVICE__
-float fminf(float __x, float __y) { return __ocml_fmin_f32(__x, __y); }
-
+inline float fminf(float __x, float __y) { return __ocml_fmin_f32(__x, __y); }
 __DEVICE__
-float fmodf(float __x, float __y) { return __ocml_fmod_f32(__x, __y); }
-
+inline float fmodf(float __x, float __y) { return __ocml_fmod_f32(__x, __y); }
 __DEVICE__
-float frexpf(float __x, int *__nptr) {
+inline float frexpf(float __x, int *__nptr) {
   int __tmp;
   float __r =
       __ocml_frexp_f32(__x, (__attribute__((address_space(5))) int *)&__tmp);
@@ -253,31 +205,24 @@ float frexpf(float __x, int *__nptr) {
 
   return __r;
 }
-
 __DEVICE__
-float hypotf(float __x, float __y) { return __ocml_hypot_f32(__x, __y); }
-
+inline float hypotf(float __x, float __y) { return __ocml_hypot_f32(__x, __y); }
 __DEVICE__
-int ilogbf(float __x) { return __ocml_ilogb_f32(__x); }
-
+inline int ilogbf(float __x) { return __ocml_ilogb_f32(__x); }
 __DEVICE__
-__RETURN_TYPE __finitef(float __x) { return __ocml_isfinite_f32(__x); }
-
+inline __RETURN_TYPE isfinite(float __x) { return __ocml_isfinite_f32(__x); }
 __DEVICE__
-__RETURN_TYPE __isinff(float __x) { return __ocml_isinf_f32(__x); }
-
+inline __RETURN_TYPE isinf(float __x) { return __ocml_isinf_f32(__x); }
 __DEVICE__
-__RETURN_TYPE __isnanf(float __x) { return __ocml_isnan_f32(__x); }
-
+inline __RETURN_TYPE isnan(float __x) { return __ocml_isnan_f32(__x); }
 __DEVICE__
-float j0f(float __x) { return __ocml_j0_f32(__x); }
-
+inline float j0f(float __x) { return __ocml_j0_f32(__x); }
 __DEVICE__
-float j1f(float __x) { return __ocml_j1_f32(__x); }
-
+inline float j1f(float __x) { return __ocml_j1_f32(__x); }
 __DEVICE__
-float jnf(int __n, float __x) { // TODO: we could use Ahmes multiplication
-                                // and the Miller & Brown algorithm
+inline float jnf(int __n,
+                 float __x) { // TODO: we could use Ahmes multiplication
+                              // and the Miller & Brown algorithm
   //       for linear recurrences to get O(log n) steps, but it's unclear if
   //       it'd be beneficial in this case.
   if (__n == 0)
@@ -295,58 +240,46 @@ float jnf(int __n, float __x) { // TODO: we could use Ahmes multiplication
 
   return __x1;
 }
-
 __DEVICE__
-float ldexpf(float __x, int __e) { return __ocml_ldexp_f32(__x, __e); }
-
+inline float ldexpf(float __x, int __e) { return __ocml_ldexp_f32(__x, __e); }
 __DEVICE__
-float lgammaf(float __x) { return __ocml_lgamma_f32(__x); }
-
+inline float lgammaf(float __x) { return __ocml_lgamma_f32(__x); }
 __DEVICE__
-long long int llrintf(float __x) { return __ocml_rint_f32(__x); }
-
+inline long long int llrintf(float __x) { return __ocml_rint_f32(__x); }
 __DEVICE__
-long long int llroundf(float __x) { return __ocml_round_f32(__x); }
-
+inline long long int llroundf(float __x) { return __ocml_round_f32(__x); }
 __DEVICE__
-float log10f(float __x) { return __ocml_log10_f32(__x); }
-
+inline float log10f(float __x) { return __ocml_log10_f32(__x); }
 __DEVICE__
-float log1pf(float __x) { return __ocml_log1p_f32(__x); }
-
+inline float log1pf(float __x) { return __ocml_log1p_f32(__x); }
 __DEVICE__
-float log2f(float __x) { return __ocml_log2_f32(__x); }
-
+inline float log2f(float __x) { return __ocml_log2_f32(__x); }
 __DEVICE__
-float logbf(float __x) { return __ocml_logb_f32(__x); }
-
+inline float logbf(float __x) { return __ocml_logb_f32(__x); }
 __DEVICE__
-float logf(float __x) { return __ocml_log_f32(__x); }
-
+inline float logf(float __x) { return __ocml_log_f32(__x); }
 __DEVICE__
-long int lrintf(float __x) { return __ocml_rint_f32(__x); }
-
+inline long int lrintf(float __x) { return __ocml_rint_f32(__x); }
 __DEVICE__
-long int lroundf(float __x) { return __ocml_round_f32(__x); }
-
+inline long int lroundf(float __x) { return __ocml_round_f32(__x); }
 __DEVICE__
-float modff(float __x, float *__iptr) {
+inline float modff(float __x, float *__iptr) {
   float __tmp;
   float __r =
       __ocml_modf_f32(__x, (__attribute__((address_space(5))) float *)&__tmp);
   *__iptr = __tmp;
+
   return __r;
 }
-
 __DEVICE__
-float nanf(const char *__tagp) {
+inline float nanf(const char *__tagp) {
   union {
     float val;
     struct ieee_float {
-      unsigned int mantissa : 22;
-      unsigned int quiet : 1;
-      unsigned int exponent : 8;
-      unsigned int sign : 1;
+      uint32_t mantissa : 22;
+      uint32_t quiet : 1;
+      uint32_t exponent : 8;
+      uint32_t sign : 1;
     } bits;
   } __tmp;
   __static_assert_type_size_equal(sizeof(__tmp.val), sizeof(__tmp.bits));
@@ -358,34 +291,28 @@ float nanf(const char *__tagp) {
 
   return __tmp.val;
 }
-
 __DEVICE__
-float nearbyintf(float __x) { return __ocml_nearbyint_f32(__x); }
-
+inline float nearbyintf(float __x) { return __ocml_nearbyint_f32(__x); }
 __DEVICE__
-float nextafterf(float __x, float __y) {
+inline float nextafterf(float __x, float __y) {
   return __ocml_nextafter_f32(__x, __y);
 }
-
 __DEVICE__
-float norm3df(float __x, float __y, float __z) {
+inline float norm3df(float __x, float __y, float __z) {
   return __ocml_len3_f32(__x, __y, __z);
 }
-
 __DEVICE__
-float norm4df(float __x, float __y, float __z, float __w) {
+inline float norm4df(float __x, float __y, float __z, float __w) {
   return __ocml_len4_f32(__x, __y, __z, __w);
 }
-
 __DEVICE__
-float normcdff(float __x) { return __ocml_ncdf_f32(__x); }
-
+inline float normcdff(float __x) { return __ocml_ncdf_f32(__x); }
 __DEVICE__
-float normcdfinvf(float __x) { return __ocml_ncdfinv_f32(__x); }
-
+inline float normcdfinvf(float __x) { return __ocml_ncdfinv_f32(__x); }
 __DEVICE__
-float normf(int __dim,
-            const float *__a) { // TODO: placeholder until OCML adds support.
+inline float
+normf(int __dim,
+      const float *__a) { // TODO: placeholder until OCML adds support.
   float __r = 0;
   while (__dim--) {
     __r += __a[0] * __a[0];
@@ -394,23 +321,18 @@ float normf(int __dim,
 
   return __ocml_sqrt_f32(__r);
 }
-
 __DEVICE__
-float powf(float __x, float __y) { return __ocml_pow_f32(__x, __y); }
-
+inline float powf(float __x, float __y) { return __ocml_pow_f32(__x, __y); }
 __DEVICE__
-float powif(float __x, int __y) { return __ocml_pown_f32(__x, __y); }
-
+inline float powif(float __x, int __y) { return __ocml_pown_f32(__x, __y); }
 __DEVICE__
-float rcbrtf(float __x) { return __ocml_rcbrt_f32(__x); }
-
+inline float rcbrtf(float __x) { return __ocml_rcbrt_f32(__x); }
 __DEVICE__
-float remainderf(float __x, float __y) {
+inline float remainderf(float __x, float __y) {
   return __ocml_remainder_f32(__x, __y);
 }
-
 __DEVICE__
-float remquof(float __x, float __y, int *__quo) {
+inline float remquof(float __x, float __y, int *__quo) {
   int __tmp;
   float __r = __ocml_remquo_f32(
       __x, __y, (__attribute__((address_space(5))) int *)&__tmp);
@@ -418,26 +340,25 @@ float remquof(float __x, float __y, int *__quo) {
 
   return __r;
 }
-
 __DEVICE__
-float rhypotf(float __x, float __y) { return __ocml_rhypot_f32(__x, __y); }
-
+inline float rhypotf(float __x, float __y) {
+  return __ocml_rhypot_f32(__x, __y);
+}
 __DEVICE__
-float rintf(float __x) { return __ocml_rint_f32(__x); }
-
+inline float rintf(float __x) { return __ocml_rint_f32(__x); }
 __DEVICE__
-float rnorm3df(float __x, float __y, float __z) {
+inline float rnorm3df(float __x, float __y, float __z) {
   return __ocml_rlen3_f32(__x, __y, __z);
 }
 
 __DEVICE__
-float rnorm4df(float __x, float __y, float __z, float __w) {
+inline float rnorm4df(float __x, float __y, float __z, float __w) {
   return __ocml_rlen4_f32(__x, __y, __z, __w);
 }
-
 __DEVICE__
-float rnormf(int __dim,
-             const float *__a) { // TODO: placeholder until OCML adds support.
+inline float
+rnormf(int __dim,
+       const float *__a) { // TODO: placeholder until OCML adds support.
   float __r = 0;
   while (__dim--) {
     __r += __a[0] * __a[0];
@@ -446,74 +367,59 @@ float rnormf(int __dim,
 
   return __ocml_rsqrt_f32(__r);
 }
-
 __DEVICE__
-float roundf(float __x) { return __ocml_round_f32(__x); }
-
+inline float roundf(float __x) { return __ocml_round_f32(__x); }
 __DEVICE__
-float rsqrtf(float __x) { return __ocml_rsqrt_f32(__x); }
-
+inline float rsqrtf(float __x) { return __ocml_rsqrt_f32(__x); }
 __DEVICE__
-float scalblnf(float __x, long int __n) {
+inline float scalblnf(float __x, long int __n) {
   return (__n < INT_MAX) ? __ocml_scalbn_f32(__x, __n)
                          : __ocml_scalb_f32(__x, __n);
 }
-
 __DEVICE__
-float scalbnf(float __x, int __n) { return __ocml_scalbn_f32(__x, __n); }
-
+inline float scalbnf(float __x, int __n) { return __ocml_scalbn_f32(__x, __n); }
 __DEVICE__
-__RETURN_TYPE __signbitf(float __x) { return __ocml_signbit_f32(__x); }
-
+inline __RETURN_TYPE signbit(float __x) { return __ocml_signbit_f32(__x); }
 __DEVICE__
-void sincosf(float __x, float *__sinptr, float *__cosptr) {
+inline void sincosf(float __x, float *__sinptr, float *__cosptr) {
   float __tmp;
+
   *__sinptr =
       __ocml_sincos_f32(__x, (__attribute__((address_space(5))) float *)&__tmp);
   *__cosptr = __tmp;
 }
-
 __DEVICE__
-void sincospif(float __x, float *__sinptr, float *__cosptr) {
+inline void sincospif(float __x, float *__sinptr, float *__cosptr) {
   float __tmp;
+
   *__sinptr = __ocml_sincospi_f32(
       __x, (__attribute__((address_space(5))) float *)&__tmp);
   *__cosptr = __tmp;
 }
-
 __DEVICE__
-float sinf(float __x) { return __ocml_sin_f32(__x); }
-
+inline float sinf(float __x) { return __ocml_sin_f32(__x); }
 __DEVICE__
-float sinhf(float __x) { return __ocml_sinh_f32(__x); }
-
+inline float sinhf(float __x) { return __ocml_sinh_f32(__x); }
 __DEVICE__
-float sinpif(float __x) { return __ocml_sinpi_f32(__x); }
-
+inline float sinpif(float __x) { return __ocml_sinpi_f32(__x); }
 __DEVICE__
-float sqrtf(float __x) { return __ocml_sqrt_f32(__x); }
-
+inline float sqrtf(float __x) { return __ocml_sqrt_f32(__x); }
 __DEVICE__
-float tanf(float __x) { return __ocml_tan_f32(__x); }
-
+inline float tanf(float __x) { return __ocml_tan_f32(__x); }
 __DEVICE__
-float tanhf(float __x) { return __ocml_tanh_f32(__x); }
-
+inline float tanhf(float __x) { return __ocml_tanh_f32(__x); }
 __DEVICE__
-float tgammaf(float __x) { return __ocml_tgamma_f32(__x); }
-
+inline float tgammaf(float __x) { return __ocml_tgamma_f32(__x); }
 __DEVICE__
-float truncf(float __x) { return __ocml_trunc_f32(__x); }
-
+inline float truncf(float __x) { return __ocml_trunc_f32(__x); }
 __DEVICE__
-float y0f(float __x) { return __ocml_y0_f32(__x); }
-
+inline float y0f(float __x) { return __ocml_y0_f32(__x); }
 __DEVICE__
-float y1f(float __x) { return __ocml_y1_f32(__x); }
-
+inline float y1f(float __x) { return __ocml_y1_f32(__x); }
 __DEVICE__
-float ynf(int __n, float __x) { // TODO: we could use Ahmes multiplication
-                                // and the Miller & Brown algorithm
+inline float ynf(int __n,
+                 float __x) { // TODO: we could use Ahmes multiplication
+                              // and the Miller & Brown algorithm
   //       for linear recurrences to get O(log n) steps, but it's unclear if
   //       it'd be beneficial in this case. Placeholder until OCML adds
   //       support.
@@ -534,328 +440,292 @@ float ynf(int __n, float __x) { // TODO: we could use Ahmes multiplication
 }
 
 // BEGIN INTRINSICS
-
 __DEVICE__
-float __cosf(float __x) { return __ocml_native_cos_f32(__x); }
-
+inline float __cosf(float __x) { return __ocml_native_cos_f32(__x); }
 __DEVICE__
-float __exp10f(float __x) { return __ocml_native_exp10_f32(__x); }
-
+inline float __exp10f(float __x) { return __ocml_native_exp10_f32(__x); }
 __DEVICE__
-float __expf(float __x) { return __ocml_native_exp_f32(__x); }
-
+inline float __expf(float __x) { return __ocml_native_exp_f32(__x); }
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-float __fadd_rd(float __x, float __y) { return __ocml_add_rtn_f32(__x, __y); }
+inline float __fadd_rd(float __x, float __y) {
+  return __ocml_add_rtn_f32(__x, __y);
+}
 #endif
 __DEVICE__
-float __fadd_rn(float __x, float __y) { return __ocml_add_rte_f32(__x, __y); }
+inline float __fadd_rn(float __x, float __y) { return __x + __y; }
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-float __fadd_ru(float __x, float __y) { return __ocml_add_rtp_f32(__x, __y); }
-
+inline float __fadd_ru(float __x, float __y) {
+  return __ocml_add_rtp_f32(__x, __y);
+}
 __DEVICE__
-float __fadd_rz(float __x, float __y) { return __ocml_add_rtz_f32(__x, __y); }
-
+inline float __fadd_rz(float __x, float __y) {
+  return __ocml_add_rtz_f32(__x, __y);
+}
 __DEVICE__
-float __fdiv_rd(float __x, float __y) { return __ocml_div_rtn_f32(__x, __y); }
+inline float __fdiv_rd(float __x, float __y) {
+  return __ocml_div_rtn_f32(__x, __y);
+}
 #endif
 __DEVICE__
-float __fdiv_rn(float __x, float __y) { return __ocml_div_rte_f32(__x, __y); }
+inline float __fdiv_rn(float __x, float __y) { return __x / __y; }
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-float __fdiv_ru(float __x, float __y) { return __ocml_div_rtp_f32(__x, __y); }
-
+inline float __fdiv_ru(float __x, float __y) {
+  return __ocml_div_rtp_f32(__x, __y);
+}
 __DEVICE__
-float __fdiv_rz(float __x, float __y) { return __ocml_div_rtz_f32(__x, __y); }
+inline float __fdiv_rz(float __x, float __y) {
+  return __ocml_div_rtz_f32(__x, __y);
+}
 #endif
 __DEVICE__
-float __fdividef(float __x, float __y) { return __x / __y; }
+inline float __fdividef(float __x, float __y) { return __x / __y; }
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-float __fmaf_rd(float __x, float __y, float __z) {
+inline float __fmaf_rd(float __x, float __y, float __z) {
   return __ocml_fma_rtn_f32(__x, __y, __z);
 }
 #endif
 __DEVICE__
-float __fmaf_rn(float __x, float __y, float __z) {
-  return __ocml_fma_rte_f32(__x, __y, __z);
+inline float __fmaf_rn(float __x, float __y, float __z) {
+  return __ocml_fma_f32(__x, __y, __z);
 }
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-float __fmaf_ru(float __x, float __y, float __z) {
+inline float __fmaf_ru(float __x, float __y, float __z) {
   return __ocml_fma_rtp_f32(__x, __y, __z);
 }
-
 __DEVICE__
-float __fmaf_rz(float __x, float __y, float __z) {
+inline float __fmaf_rz(float __x, float __y, float __z) {
   return __ocml_fma_rtz_f32(__x, __y, __z);
 }
-
 __DEVICE__
-float __fmul_rd(float __x, float __y) { return __ocml_mul_rtn_f32(__x, __y); }
+inline float __fmul_rd(float __x, float __y) {
+  return __ocml_mul_rtn_f32(__x, __y);
+}
 #endif
 __DEVICE__
-float __fmul_rn(float __x, float __y) { return __ocml_mul_rte_f32(__x, __y); }
+inline float __fmul_rn(float __x, float __y) { return __x * __y; }
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-float __fmul_ru(float __x, float __y) { return __ocml_mul_rtp_f32(__x, __y); }
-
+inline float __fmul_ru(float __x, float __y) {
+  return __ocml_mul_rtp_f32(__x, __y);
+}
 __DEVICE__
-float __fmul_rz(float __x, float __y) { return __ocml_mul_rtz_f32(__x, __y); }
-
+inline float __fmul_rz(float __x, float __y) {
+  return __ocml_mul_rtz_f32(__x, __y);
+}
 __DEVICE__
-float __frcp_rd(float __x) { return __llvm_amdgcn_rcp_f32(__x); }
+inline float __frcp_rd(float __x) { return __llvm_amdgcn_rcp_f32(__x); }
 #endif
 __DEVICE__
-float __frcp_rn(float __x) { return __llvm_amdgcn_rcp_f32(__x); }
+inline float __frcp_rn(float __x) { return __llvm_amdgcn_rcp_f32(__x); }
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-float __frcp_ru(float __x) { return __llvm_amdgcn_rcp_f32(__x); }
-
+inline float __frcp_ru(float __x) { return __llvm_amdgcn_rcp_f32(__x); }
 __DEVICE__
-float __frcp_rz(float __x) { return __llvm_amdgcn_rcp_f32(__x); }
+inline float __frcp_rz(float __x) { return __llvm_amdgcn_rcp_f32(__x); }
 #endif
 __DEVICE__
-float __frsqrt_rn(float __x) { return __llvm_amdgcn_rsq_f32(__x); }
+inline float __frsqrt_rn(float __x) { return __llvm_amdgcn_rsq_f32(__x); }
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-float __fsqrt_rd(float __x) { return __ocml_sqrt_rtn_f32(__x); }
+inline float __fsqrt_rd(float __x) { return __ocml_sqrt_rtn_f32(__x); }
 #endif
 __DEVICE__
-float __fsqrt_rn(float __x) { return __ocml_sqrt_rte_f32(__x); }
+inline float __fsqrt_rn(float __x) { return __ocml_native_sqrt_f32(__x); }
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-float __fsqrt_ru(float __x) { return __ocml_sqrt_rtp_f32(__x); }
-
+inline float __fsqrt_ru(float __x) { return __ocml_sqrt_rtp_f32(__x); }
 __DEVICE__
-float __fsqrt_rz(float __x) { return __ocml_sqrt_rtz_f32(__x); }
-
+inline float __fsqrt_rz(float __x) { return __ocml_sqrt_rtz_f32(__x); }
 __DEVICE__
-float __fsub_rd(float __x, float __y) { return __ocml_sub_rtn_f32(__x, __y); }
+inline float __fsub_rd(float __x, float __y) {
+  return __ocml_sub_rtn_f32(__x, __y);
+}
 #endif
 __DEVICE__
-float __fsub_rn(float __x, float __y) { return __ocml_sub_rte_f32(__x, __y); }
+inline float __fsub_rn(float __x, float __y) { return __x - __y; }
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-float __fsub_ru(float __x, float __y) { return __ocml_sub_rtp_f32(__x, __y); }
-
+inline float __fsub_ru(float __x, float __y) {
+  return __ocml_sub_rtp_f32(__x, __y);
+}
 __DEVICE__
-float __fsub_rz(float __x, float __y) { return __ocml_sub_rtz_f32(__x, __y); }
+inline float __fsub_rz(float __x, float __y) {
+  return __ocml_sub_rtz_f32(__x, __y);
+}
 #endif
 __DEVICE__
-float __log10f(float __x) { return __ocml_native_log10_f32(__x); }
-
+inline float __log10f(float __x) { return __ocml_native_log10_f32(__x); }
 __DEVICE__
-float __log2f(float __x) { return __ocml_native_log2_f32(__x); }
-
+inline float __log2f(float __x) { return __ocml_native_log2_f32(__x); }
 __DEVICE__
-float __logf(float __x) { return __ocml_native_log_f32(__x); }
-
+inline float __logf(float __x) { return __ocml_native_log_f32(__x); }
 __DEVICE__
-float __powf(float __x, float __y) { return __ocml_pow_f32(__x, __y); }
-
+inline float __powf(float __x, float __y) { return __ocml_pow_f32(__x, __y); }
 __DEVICE__
-float __saturatef(float __x) { return (__x < 0) ? 0 : ((__x > 1) ? 1 : __x); }
-
+inline float __saturatef(float __x) {
+  return (__x < 0) ? 0 : ((__x > 1) ? 1 : __x);
+}
 __DEVICE__
-void __sincosf(float __x, float *__sinptr, float *__cosptr) {
+inline void __sincosf(float __x, float *__sinptr, float *__cosptr) {
   *__sinptr = __ocml_native_sin_f32(__x);
   *__cosptr = __ocml_native_cos_f32(__x);
 }
-
 __DEVICE__
-float __sinf(float __x) { return __ocml_native_sin_f32(__x); }
-
+inline float __sinf(float __x) { return __ocml_native_sin_f32(__x); }
 __DEVICE__
-float __tanf(float __x) { return __ocml_tan_f32(__x); }
+inline float __tanf(float __x) { return __ocml_tan_f32(__x); }
 // END INTRINSICS
 // END FLOAT
 
 // BEGIN DOUBLE
+#ifdef __cplusplus
 __DEVICE__
-double acos(double __x) { return __ocml_acos_f64(__x); }
-
+inline double abs(double __x) { return __ocml_fabs_f64(__x); }
+#endif
 __DEVICE__
-double acosh(double __x) { return __ocml_acosh_f64(__x); }
-
+inline double acos(double __x) { return __ocml_acos_f64(__x); }
 __DEVICE__
-double asin(double __x) { return __ocml_asin_f64(__x); }
-
+inline double acosh(double __x) { return __ocml_acosh_f64(__x); }
 __DEVICE__
-double asinh(double __x) { return __ocml_asinh_f64(__x); }
-
+inline double asin(double __x) { return __ocml_asin_f64(__x); }
 __DEVICE__
-double atan(double __x) { return __ocml_atan_f64(__x); }
-
+inline double asinh(double __x) { return __ocml_asinh_f64(__x); }
 __DEVICE__
-double atan2(double __x, double __y) { return __ocml_atan2_f64(__x, __y); }
-
+inline double atan(double __x) { return __ocml_atan_f64(__x); }
 __DEVICE__
-double atanh(double __x) { return __ocml_atanh_f64(__x); }
-
+inline double atan2(double __x, double __y) {
+  return __ocml_atan2_f64(__x, __y);
+}
 __DEVICE__
-double cbrt(double __x) { return __ocml_cbrt_f64(__x); }
-
+inline double atanh(double __x) { return __ocml_atanh_f64(__x); }
 __DEVICE__
-double ceil(double __x) { return __ocml_ceil_f64(__x); }
-
+inline double cbrt(double __x) { return __ocml_cbrt_f64(__x); }
 __DEVICE__
-double copysign(double __x, double __y) {
+inline double ceil(double __x) { return __ocml_ceil_f64(__x); }
+__DEVICE__
+inline double copysign(double __x, double __y) {
   return __ocml_copysign_f64(__x, __y);
 }
-
 __DEVICE__
-double cos(double __x) { return __ocml_cos_f64(__x); }
-
+inline double cos(double __x) { return __ocml_cos_f64(__x); }
 __DEVICE__
-double cosh(double __x) { return __ocml_cosh_f64(__x); }
-
+inline double cosh(double __x) { return __ocml_cosh_f64(__x); }
 __DEVICE__
-double cospi(double __x) { return __ocml_cospi_f64(__x); }
-
+inline double cospi(double __x) { return __ocml_cospi_f64(__x); }
 __DEVICE__
-double cyl_bessel_i0(double __x) { return __ocml_i0_f64(__x); }
-
+inline double cyl_bessel_i0(double __x) { return __ocml_i0_f64(__x); }
 __DEVICE__
-double cyl_bessel_i1(double __x) { return __ocml_i1_f64(__x); }
-
+inline double cyl_bessel_i1(double __x) { return __ocml_i1_f64(__x); }
 __DEVICE__
-double erf(double __x) { return __ocml_erf_f64(__x); }
-
+inline double erf(double __x) { return __ocml_erf_f64(__x); }
 __DEVICE__
-double erfc(double __x) { return __ocml_erfc_f64(__x); }
-
+inline double erfc(double __x) { return __ocml_erfc_f64(__x); }
 __DEVICE__
-double erfcinv(double __x) { return __ocml_erfcinv_f64(__x); }
-
+inline double erfcinv(double __x) { return __ocml_erfcinv_f64(__x); }
 __DEVICE__
-double erfcx(double __x) { return __ocml_erfcx_f64(__x); }
-
+inline double erfcx(double __x) { return __ocml_erfcx_f64(__x); }
 __DEVICE__
-double erfinv(double __x) { return __ocml_erfinv_f64(__x); }
-
+inline double erfinv(double __x) { return __ocml_erfinv_f64(__x); }
 __DEVICE__
-double exp(double __x) { return __ocml_exp_f64(__x); }
-
+inline double exp(double __x) { return __ocml_exp_f64(__x); }
 __DEVICE__
-double exp10(double __x) { return __ocml_exp10_f64(__x); }
-
+inline double exp10(double __x) { return __ocml_exp10_f64(__x); }
 __DEVICE__
-double exp2(double __x) { return __ocml_exp2_f64(__x); }
-
+inline double exp2(double __x) { return __ocml_exp2_f64(__x); }
 __DEVICE__
-double expm1(double __x) { return __ocml_expm1_f64(__x); }
-
+inline double expm1(double __x) { return __ocml_expm1_f64(__x); }
 __DEVICE__
-double fabs(double __x) { return __ocml_fabs_f64(__x); }
-
+inline double fabs(double __x) { return __ocml_fabs_f64(__x); }
 __DEVICE__
-double fdim(double __x, double __y) { return __ocml_fdim_f64(__x, __y); }
-
+inline double fdim(double __x, double __y) { return __ocml_fdim_f64(__x, __y); }
 __DEVICE__
-double floor(double __x) { return __ocml_floor_f64(__x); }
-
+inline double floor(double __x) { return __ocml_floor_f64(__x); }
 __DEVICE__
-double fma(double __x, double __y, double __z) {
+inline double fma(double __x, double __y, double __z) {
   return __ocml_fma_f64(__x, __y, __z);
 }
-
 __DEVICE__
-double fmax(double __x, double __y) { return __ocml_fmax_f64(__x, __y); }
-
+inline double fmax(double __x, double __y) { return __ocml_fmax_f64(__x, __y); }
 __DEVICE__
-double fmin(double __x, double __y) { return __ocml_fmin_f64(__x, __y); }
-
+inline double fmin(double __x, double __y) { return __ocml_fmin_f64(__x, __y); }
 __DEVICE__
-double fmod(double __x, double __y) { return __ocml_fmod_f64(__x, __y); }
-
+inline double fmod(double __x, double __y) { return __ocml_fmod_f64(__x, __y); }
 __DEVICE__
-double frexp(double __x, int *__nptr) {
+inline double frexp(double __x, int *__nptr) {
   int __tmp;
   double __r =
       __ocml_frexp_f64(__x, (__attribute__((address_space(5))) int *)&__tmp);
   *__nptr = __tmp;
+
   return __r;
 }
-
 __DEVICE__
-double hypot(double __x, double __y) { return __ocml_hypot_f64(__x, __y); }
-
+inline double hypot(double __x, double __y) {
+  return __ocml_hypot_f64(__x, __y);
+}
 __DEVICE__
-int ilogb(double __x) { return __ocml_ilogb_f64(__x); }
-
+inline int ilogb(double __x) { return __ocml_ilogb_f64(__x); }
 __DEVICE__
-__RETURN_TYPE __finite(double __x) { return __ocml_isfinite_f64(__x); }
-
+inline __RETURN_TYPE isfinite(double __x) { return __ocml_isfinite_f64(__x); }
 __DEVICE__
-__RETURN_TYPE __isinf(double __x) { return __ocml_isinf_f64(__x); }
-
+inline __RETURN_TYPE isinf(double __x) { return __ocml_isinf_f64(__x); }
 __DEVICE__
-__RETURN_TYPE __isnan(double __x) { return __ocml_isnan_f64(__x); }
-
+inline __RETURN_TYPE isnan(double __x) { return __ocml_isnan_f64(__x); }
 __DEVICE__
-double j0(double __x) { return __ocml_j0_f64(__x); }
-
+inline double j0(double __x) { return __ocml_j0_f64(__x); }
 __DEVICE__
-double j1(double __x) { return __ocml_j1_f64(__x); }
-
+inline double j1(double __x) { return __ocml_j1_f64(__x); }
 __DEVICE__
-double jn(int __n, double __x) { // TODO: we could use Ahmes multiplication
-                                 // and the Miller & Brown algorithm
+inline double jn(int __n,
+                 double __x) { // TODO: we could use Ahmes multiplication
+                               // and the Miller & Brown algorithm
   //       for linear recurrences to get O(log n) steps, but it's unclear if
   //       it'd be beneficial in this case. Placeholder until OCML adds
   //       support.
   if (__n == 0)
-    return j0(__x);
+    return j0f(__x);
   if (__n == 1)
-    return j1(__x);
+    return j1f(__x);
 
-  double __x0 = j0(__x);
-  double __x1 = j1(__x);
+  double __x0 = j0f(__x);
+  double __x1 = j1f(__x);
   for (int __i = 1; __i < __n; ++__i) {
     double __x2 = (2 * __i) / __x * __x1 - __x0;
     __x0 = __x1;
     __x1 = __x2;
   }
+
   return __x1;
 }
-
 __DEVICE__
-double ldexp(double __x, int __e) { return __ocml_ldexp_f64(__x, __e); }
-
+inline double ldexp(double __x, int __e) { return __ocml_ldexp_f64(__x, __e); }
 __DEVICE__
-double lgamma(double __x) { return __ocml_lgamma_f64(__x); }
-
+inline double lgamma(double __x) { return __ocml_lgamma_f64(__x); }
 __DEVICE__
-long long int llrint(double __x) { return __ocml_rint_f64(__x); }
-
+inline long long int llrint(double __x) { return __ocml_rint_f64(__x); }
 __DEVICE__
-long long int llround(double __x) { return __ocml_round_f64(__x); }
-
+inline long long int llround(double __x) { return __ocml_round_f64(__x); }
 __DEVICE__
-double log(double __x) { return __ocml_log_f64(__x); }
-
+inline double log(double __x) { return __ocml_log_f64(__x); }
 __DEVICE__
-double log10(double __x) { return __ocml_log10_f64(__x); }
-
+inline double log10(double __x) { return __ocml_log10_f64(__x); }
 __DEVICE__
-double log1p(double __x) { return __ocml_log1p_f64(__x); }
-
+inline double log1p(double __x) { return __ocml_log1p_f64(__x); }
 __DEVICE__
-double log2(double __x) { return __ocml_log2_f64(__x); }
-
+inline double log2(double __x) { return __ocml_log2_f64(__x); }
 __DEVICE__
-double logb(double __x) { return __ocml_logb_f64(__x); }
-
+inline double logb(double __x) { return __ocml_logb_f64(__x); }
 __DEVICE__
-long int lrint(double __x) { return __ocml_rint_f64(__x); }
-
+inline long int lrint(double __x) { return __ocml_rint_f64(__x); }
 __DEVICE__
-long int lround(double __x) { return __ocml_round_f64(__x); }
-
+inline long int lround(double __x) { return __ocml_round_f64(__x); }
 __DEVICE__
-double modf(double __x, double *__iptr) {
+inline double modf(double __x, double *__iptr) {
   double __tmp;
   double __r =
       __ocml_modf_f64(__x, (__attribute__((address_space(5))) double *)&__tmp);
@@ -863,9 +733,8 @@ double modf(double __x, double *__iptr) {
 
   return __r;
 }
-
 __DEVICE__
-double nan(const char *__tagp) {
+inline double nan(const char *__tagp) {
 #if !_WIN32
   union {
     double val;
@@ -886,23 +755,21 @@ double nan(const char *__tagp) {
   return __tmp.val;
 #else
   __static_assert_type_size_equal(sizeof(uint64_t), sizeof(double));
-  uint64_t __val = __make_mantissa(__tagp);
-  __val |= 0xFFF << 51;
-  return *reinterpret_cast<double *>(&__val);
+  uint64_t val = __make_mantissa(__tagp);
+  val |= 0xFFF << 51;
+  return *reinterpret_cast<double *>(&val);
 #endif
 }
-
 __DEVICE__
-double nearbyint(double __x) { return __ocml_nearbyint_f64(__x); }
-
+inline double nearbyint(double __x) { return __ocml_nearbyint_f64(__x); }
 __DEVICE__
-double nextafter(double __x, double __y) {
+inline double nextafter(double __x, double __y) {
   return __ocml_nextafter_f64(__x, __y);
 }
-
 __DEVICE__
-double norm(int __dim,
-            const double *__a) { // TODO: placeholder until OCML adds support.
+inline double
+norm(int __dim,
+     const double *__a) { // TODO: placeholder until OCML adds support.
   double __r = 0;
   while (__dim--) {
     __r += __a[0] * __a[0];
@@ -911,39 +778,30 @@ double norm(int __dim,
 
   return __ocml_sqrt_f64(__r);
 }
-
 __DEVICE__
-double norm3d(double __x, double __y, double __z) {
+inline double norm3d(double __x, double __y, double __z) {
   return __ocml_len3_f64(__x, __y, __z);
 }
-
 __DEVICE__
-double norm4d(double __x, double __y, double __z, double __w) {
+inline double norm4d(double __x, double __y, double __z, double __w) {
   return __ocml_len4_f64(__x, __y, __z, __w);
 }
-
 __DEVICE__
-double normcdf(double __x) { return __ocml_ncdf_f64(__x); }
-
+inline double normcdf(double __x) { return __ocml_ncdf_f64(__x); }
 __DEVICE__
-double normcdfinv(double __x) { return __ocml_ncdfinv_f64(__x); }
-
+inline double normcdfinv(double __x) { return __ocml_ncdfinv_f64(__x); }
 __DEVICE__
-double pow(double __x, double __y) { return __ocml_pow_f64(__x, __y); }
-
+inline double pow(double __x, double __y) { return __ocml_pow_f64(__x, __y); }
 __DEVICE__
-double powi(double __x, int __y) { return __ocml_pown_f64(__x, __y); }
-
+inline double powi(double __x, int __y) { return __ocml_pown_f64(__x, __y); }
 __DEVICE__
-double rcbrt(double __x) { return __ocml_rcbrt_f64(__x); }
-
+inline double rcbrt(double __x) { return __ocml_rcbrt_f64(__x); }
 __DEVICE__
-double remainder(double __x, double __y) {
+inline double remainder(double __x, double __y) {
   return __ocml_remainder_f64(__x, __y);
 }
-
 __DEVICE__
-double remquo(double __x, double __y, int *__quo) {
+inline double remquo(double __x, double __y, int *__quo) {
   int __tmp;
   double __r = __ocml_remquo_f64(
       __x, __y, (__attribute__((address_space(5))) int *)&__tmp);
@@ -951,16 +809,16 @@ double remquo(double __x, double __y, int *__quo) {
 
   return __r;
 }
-
 __DEVICE__
-double rhypot(double __x, double __y) { return __ocml_rhypot_f64(__x, __y); }
-
+inline double rhypot(double __x, double __y) {
+  return __ocml_rhypot_f64(__x, __y);
+}
 __DEVICE__
-double rint(double __x) { return __ocml_rint_f64(__x); }
-
+inline double rint(double __x) { return __ocml_rint_f64(__x); }
 __DEVICE__
-double rnorm(int __dim,
-             const double *__a) { // TODO: placeholder until OCML adds support.
+inline double
+rnorm(int __dim,
+      const double *__a) { // TODO: placeholder until OCML adds support.
   double __r = 0;
   while (__dim--) {
     __r += __a[0] * __a[0];
@@ -969,93 +827,77 @@ double rnorm(int __dim,
 
   return __ocml_rsqrt_f64(__r);
 }
-
 __DEVICE__
-double rnorm3d(double __x, double __y, double __z) {
+inline double rnorm3d(double __x, double __y, double __z) {
   return __ocml_rlen3_f64(__x, __y, __z);
 }
-
 __DEVICE__
-double rnorm4d(double __x, double __y, double __z, double __w) {
+inline double rnorm4d(double __x, double __y, double __z, double __w) {
   return __ocml_rlen4_f64(__x, __y, __z, __w);
 }
-
 __DEVICE__
-double round(double __x) { return __ocml_round_f64(__x); }
-
+inline double round(double __x) { return __ocml_round_f64(__x); }
 __DEVICE__
-double rsqrt(double __x) { return __ocml_rsqrt_f64(__x); }
-
+inline double rsqrt(double __x) { return __ocml_rsqrt_f64(__x); }
 __DEVICE__
-double scalbln(double __x, long int __n) {
+inline double scalbln(double __x, long int __n) {
   return (__n < INT_MAX) ? __ocml_scalbn_f64(__x, __n)
                          : __ocml_scalb_f64(__x, __n);
 }
 __DEVICE__
-double scalbn(double __x, int __n) { return __ocml_scalbn_f64(__x, __n); }
-
+inline double scalbn(double __x, int __n) {
+  return __ocml_scalbn_f64(__x, __n);
+}
 __DEVICE__
-__RETURN_TYPE __signbit(double __x) { return __ocml_signbit_f64(__x); }
-
+inline __RETURN_TYPE signbit(double __x) { return __ocml_signbit_f64(__x); }
 __DEVICE__
-double sin(double __x) { return __ocml_sin_f64(__x); }
-
+inline double sin(double __x) { return __ocml_sin_f64(__x); }
 __DEVICE__
-void sincos(double __x, double *__sinptr, double *__cosptr) {
+inline void sincos(double __x, double *__sinptr, double *__cosptr) {
   double __tmp;
   *__sinptr = __ocml_sincos_f64(
       __x, (__attribute__((address_space(5))) double *)&__tmp);
   *__cosptr = __tmp;
 }
-
 __DEVICE__
-void sincospi(double __x, double *__sinptr, double *__cosptr) {
+inline void sincospi(double __x, double *__sinptr, double *__cosptr) {
   double __tmp;
   *__sinptr = __ocml_sincospi_f64(
       __x, (__attribute__((address_space(5))) double *)&__tmp);
   *__cosptr = __tmp;
 }
-
 __DEVICE__
-double sinh(double __x) { return __ocml_sinh_f64(__x); }
-
+inline double sinh(double __x) { return __ocml_sinh_f64(__x); }
 __DEVICE__
-double sinpi(double __x) { return __ocml_sinpi_f64(__x); }
-
+inline double sinpi(double __x) { return __ocml_sinpi_f64(__x); }
 __DEVICE__
-double sqrt(double __x) { return __ocml_sqrt_f64(__x); }
-
+inline double sqrt(double __x) { return __ocml_sqrt_f64(__x); }
 __DEVICE__
-double tan(double __x) { return __ocml_tan_f64(__x); }
-
+inline double tan(double __x) { return __ocml_tan_f64(__x); }
 __DEVICE__
-double tanh(double __x) { return __ocml_tanh_f64(__x); }
-
+inline double tanh(double __x) { return __ocml_tanh_f64(__x); }
 __DEVICE__
-double tgamma(double __x) { return __ocml_tgamma_f64(__x); }
-
+inline double tgamma(double __x) { return __ocml_tgamma_f64(__x); }
 __DEVICE__
-double trunc(double __x) { return __ocml_trunc_f64(__x); }
-
+inline double trunc(double __x) { return __ocml_trunc_f64(__x); }
 __DEVICE__
-double y0(double __x) { return __ocml_y0_f64(__x); }
-
+inline double y0(double __x) { return __ocml_y0_f64(__x); }
 __DEVICE__
-double y1(double __x) { return __ocml_y1_f64(__x); }
-
+inline double y1(double __x) { return __ocml_y1_f64(__x); }
 __DEVICE__
-double yn(int __n, double __x) { // TODO: we could use Ahmes multiplication
-                                 // and the Miller & Brown algorithm
+inline double yn(int __n,
+                 double __x) { // TODO: we could use Ahmes multiplication
+                               // and the Miller & Brown algorithm
   //       for linear recurrences to get O(log n) steps, but it's unclear if
   //       it'd be beneficial in this case. Placeholder until OCML adds
   //       support.
   if (__n == 0)
-    return y0(__x);
+    return j0f(__x);
   if (__n == 1)
-    return y1(__x);
+    return j1f(__x);
 
-  double __x0 = y0(__x);
-  double __x1 = y1(__x);
+  double __x0 = j0f(__x);
+  double __x1 = j1f(__x);
   for (int __i = 1; __i < __n; ++__i) {
     double __x2 = (2 * __i) / __x * __x1 - __x0;
     __x0 = __x1;
@@ -1068,168 +910,297 @@ double yn(int __n, double __x) { // TODO: we could use Ahmes multiplication
 // BEGIN INTRINSICS
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-double __dadd_rd(double __x, double __y) {
+inline double __dadd_rd(double __x, double __y) {
   return __ocml_add_rtn_f64(__x, __y);
 }
 #endif
 __DEVICE__
-double __dadd_rn(double __x, double __y) {
-  return __ocml_add_rte_f64(__x, __y);
-}
+inline double __dadd_rn(double __x, double __y) { return __x + __y; }
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-double __dadd_ru(double __x, double __y) {
+inline double __dadd_ru(double __x, double __y) {
   return __ocml_add_rtp_f64(__x, __y);
 }
-
 __DEVICE__
-double __dadd_rz(double __x, double __y) {
+inline double __dadd_rz(double __x, double __y) {
   return __ocml_add_rtz_f64(__x, __y);
 }
-
 __DEVICE__
-double __ddiv_rd(double __x, double __y) {
+inline double __ddiv_rd(double __x, double __y) {
   return __ocml_div_rtn_f64(__x, __y);
 }
 #endif
 __DEVICE__
-double __ddiv_rn(double __x, double __y) {
-  return __ocml_div_rte_f64(__x, __y);
-}
+inline double __ddiv_rn(double __x, double __y) { return __x / __y; }
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-double __ddiv_ru(double __x, double __y) {
+inline double __ddiv_ru(double __x, double __y) {
   return __ocml_div_rtp_f64(__x, __y);
 }
-
 __DEVICE__
-double __ddiv_rz(double __x, double __y) {
+inline double __ddiv_rz(double __x, double __y) {
   return __ocml_div_rtz_f64(__x, __y);
 }
-
 __DEVICE__
-double __dmul_rd(double __x, double __y) {
+inline double __dmul_rd(double __x, double __y) {
   return __ocml_mul_rtn_f64(__x, __y);
 }
 #endif
 __DEVICE__
-double __dmul_rn(double __x, double __y) {
-  return __ocml_mul_rte_f64(__x, __y);
-}
+inline double __dmul_rn(double __x, double __y) { return __x * __y; }
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-double __dmul_ru(double __x, double __y) {
+inline double __dmul_ru(double __x, double __y) {
   return __ocml_mul_rtp_f64(__x, __y);
 }
-
 __DEVICE__
-double __dmul_rz(double __x, double __y) {
+inline double __dmul_rz(double __x, double __y) {
   return __ocml_mul_rtz_f64(__x, __y);
 }
-
 __DEVICE__
-double __drcp_rd(double __x) { return __llvm_amdgcn_rcp_f64(__x); }
+inline double __drcp_rd(double __x) { return __llvm_amdgcn_rcp_f64(__x); }
 #endif
 __DEVICE__
-double __drcp_rn(double __x) { return __llvm_amdgcn_rcp_f64(__x); }
+inline double __drcp_rn(double __x) { return __llvm_amdgcn_rcp_f64(__x); }
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-double __drcp_ru(double __x) { return __llvm_amdgcn_rcp_f64(__x); }
-
+inline double __drcp_ru(double __x) { return __llvm_amdgcn_rcp_f64(__x); }
 __DEVICE__
-double __drcp_rz(double __x) { return __llvm_amdgcn_rcp_f64(__x); }
-
+inline double __drcp_rz(double __x) { return __llvm_amdgcn_rcp_f64(__x); }
 __DEVICE__
-double __dsqrt_rd(double __x) { return __ocml_sqrt_rtn_f64(__x); }
+inline double __dsqrt_rd(double __x) { return __ocml_sqrt_rtn_f64(__x); }
 #endif
 __DEVICE__
-double __dsqrt_rn(double __x) { return __ocml_sqrt_rte_f64(__x); }
+inline double __dsqrt_rn(double __x) { return __ocml_sqrt_f64(__x); }
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-double __dsqrt_ru(double __x) { return __ocml_sqrt_rtp_f64(__x); }
-
+inline double __dsqrt_ru(double __x) { return __ocml_sqrt_rtp_f64(__x); }
 __DEVICE__
-double __dsqrt_rz(double __x) { return __ocml_sqrt_rtz_f64(__x); }
-
+inline double __dsqrt_rz(double __x) { return __ocml_sqrt_rtz_f64(__x); }
 __DEVICE__
-double __dsub_rd(double __x, double __y) {
+inline double __dsub_rd(double __x, double __y) {
   return __ocml_sub_rtn_f64(__x, __y);
 }
 #endif
 __DEVICE__
-double __dsub_rn(double __x, double __y) {
-  return __ocml_sub_rte_f64(__x, __y);
-}
+inline double __dsub_rn(double __x, double __y) { return __x - __y; }
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-double __dsub_ru(double __x, double __y) {
+inline double __dsub_ru(double __x, double __y) {
   return __ocml_sub_rtp_f64(__x, __y);
 }
-
 __DEVICE__
-double __dsub_rz(double __x, double __y) {
+inline double __dsub_rz(double __x, double __y) {
   return __ocml_sub_rtz_f64(__x, __y);
 }
-
 __DEVICE__
-double __fma_rd(double __x, double __y, double __z) {
+inline double __fma_rd(double __x, double __y, double __z) {
   return __ocml_fma_rtn_f64(__x, __y, __z);
 }
 #endif
 __DEVICE__
-double __fma_rn(double __x, double __y, double __z) {
-  return __ocml_fma_rte_f64(__x, __y, __z);
+inline double __fma_rn(double __x, double __y, double __z) {
+  return __ocml_fma_f64(__x, __y, __z);
 }
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-double __fma_ru(double __x, double __y, double __z) {
+inline double __fma_ru(double __x, double __y, double __z) {
   return __ocml_fma_rtp_f64(__x, __y, __z);
 }
-
 __DEVICE__
-double __fma_rz(double __x, double __y, double __z) {
+inline double __fma_rz(double __x, double __y, double __z) {
   return __ocml_fma_rtz_f64(__x, __y, __z);
 }
 #endif
 // END INTRINSICS
 // END DOUBLE
 
-// C only macros
-#if !defined(__cplusplus) && __STDC_VERSION__ >= 201112L
-#define isfinite(__x) _Generic((__x), float : __finitef, double : __finite)(__x)
-#define isinf(__x) _Generic((__x), float : __isinff, double : __isinf)(__x)
-#define isnan(__x) _Generic((__x), float : __isnanf, double : __isnan)(__x)
-#define signbit(__x)                                                           \
-  _Generic((__x), float : __signbitf, double : __signbit)(__x)
-#endif // !defined(__cplusplus) && __STDC_VERSION__ >= 201112L
+// BEGIN INTEGER
+__DEVICE__
+inline int abs(int __x) {
+  int __sgn = __x >> (sizeof(int) * CHAR_BIT - 1);
+  return (__x ^ __sgn) - __sgn;
+}
+__DEVICE__
+inline long labs(long __x) {
+  long __sgn = __x >> (sizeof(long) * CHAR_BIT - 1);
+  return (__x ^ __sgn) - __sgn;
+}
+__DEVICE__
+inline long long llabs(long long __x) {
+  long long __sgn = __x >> (sizeof(long long) * CHAR_BIT - 1);
+  return (__x ^ __sgn) - __sgn;
+}
 
 #if defined(__cplusplus)
-template <class T> __DEVICE__ T min(T __arg1, T __arg2) {
+__DEVICE__
+inline long abs(long __x) { return labs(__x); }
+__DEVICE__
+inline long long abs(long long __x) { return llabs(__x); }
+#endif
+// END INTEGER
+
+__DEVICE__
+inline _Float16 fma(_Float16 __x, _Float16 __y, _Float16 __z) {
+  return __ocml_fma_f16(__x, __y, __z);
+}
+
+__DEVICE__
+inline float fma(float __x, float __y, float __z) {
+  return fmaf(__x, __y, __z);
+}
+
+#pragma push_macro("__DEF_FUN1")
+#pragma push_macro("__DEF_FUN2")
+#pragma push_macro("__DEF_FUNI")
+#pragma push_macro("__DEF_FLOAT_FUN2I")
+#pragma push_macro("__HIP_OVERLOAD1")
+#pragma push_macro("__HIP_OVERLOAD2")
+
+// __hip_enable_if::type is a type function which returns __T if __B is true.
+template <bool __B, class __T = void> struct __hip_enable_if {};
+
+template <class __T> struct __hip_enable_if<true, __T> { typedef __T type; };
+
+// __HIP_OVERLOAD1 is used to resolve function calls with integer argument to
+// avoid compilation error due to ambibuity. e.g. floor(5) is resolved with
+// floor(double).
+#define __HIP_OVERLOAD1(__retty, __fn)                                         \
+  template <typename __T>                                                      \
+  __DEVICE__ typename __hip_enable_if<std::numeric_limits<__T>::is_integer,    \
+                                      __retty>::type                           \
+  __fn(__T __x) {                                                              \
+    return ::__fn((double)__x);                                                \
+  }
+
+// __HIP_OVERLOAD2 is used to resolve function calls with mixed float/double
+// or integer argument to avoid compilation error due to ambibuity. e.g.
+// max(5.0f, 6.0) is resolved with max(double, double).
+#define __HIP_OVERLOAD2(__retty, __fn)                                         \
+  template <typename __T1, typename __T2>                                      \
+  __DEVICE__                                                                   \
+      typename __hip_enable_if<std::numeric_limits<__T1>::is_specialized &&    \
+                                   std::numeric_limits<__T2>::is_specialized,  \
+                               __retty>::type                                  \
+      __fn(__T1 __x, __T2 __y) {                                               \
+    return __fn((double)__x, (double)__y);                                     \
+  }
+
+// Define cmath functions with float argument and returns float.
+#define __DEF_FUN1(__retty, __func)                                            \
+  __DEVICE__                                                                   \
+  inline float __func(float __x) { return __func##f(__x); }                    \
+  __HIP_OVERLOAD1(__retty, __func)
+
+// Define cmath functions with float argument and returns __retty.
+#define __DEF_FUNI(__retty, __func)                                            \
+  __DEVICE__                                                                   \
+  inline __retty __func(float __x) { return __func##f(__x); }                  \
+  __HIP_OVERLOAD1(__retty, __func)
+
+// define cmath functions with two float arguments.
+#define __DEF_FUN2(__retty, __func)                                            \
+  __DEVICE__                                                                   \
+  inline float __func(float __x, float __y) { return __func##f(__x, __y); }    \
+  __HIP_OVERLOAD2(__retty, __func)
+
+__DEF_FUN1(double, acos)
+__DEF_FUN1(double, acosh)
+__DEF_FUN1(double, asin)
+__DEF_FUN1(double, asinh)
+__DEF_FUN1(double, atan)
+__DEF_FUN2(double, atan2);
+__DEF_FUN1(double, atanh)
+__DEF_FUN1(double, cbrt)
+__DEF_FUN1(double, ceil)
+__DEF_FUN2(double, copysign);
+__DEF_FUN1(double, cos)
+__DEF_FUN1(double, cosh)
+__DEF_FUN1(double, erf)
+__DEF_FUN1(double, erfc)
+__DEF_FUN1(double, exp)
+__DEF_FUN1(double, exp2)
+__DEF_FUN1(double, expm1)
+__DEF_FUN1(double, fabs)
+__DEF_FUN2(double, fdim);
+__DEF_FUN1(double, floor)
+__DEF_FUN2(double, fmax);
+__DEF_FUN2(double, fmin);
+__DEF_FUN2(double, fmod);
+//__HIP_OVERLOAD1(int, fpclassify)
+__DEF_FUN2(double, hypot);
+__DEF_FUNI(int, ilogb)
+__HIP_OVERLOAD1(bool, isfinite)
+__HIP_OVERLOAD2(bool, isgreater);
+__HIP_OVERLOAD2(bool, isgreaterequal);
+__HIP_OVERLOAD1(bool, isinf);
+__HIP_OVERLOAD2(bool, isless);
+__HIP_OVERLOAD2(bool, islessequal);
+__HIP_OVERLOAD2(bool, islessgreater);
+__HIP_OVERLOAD1(bool, isnan);
+//__HIP_OVERLOAD1(bool, isnormal)
+__HIP_OVERLOAD2(bool, isunordered);
+__DEF_FUN1(double, lgamma)
+__DEF_FUN1(double, log)
+__DEF_FUN1(double, log10)
+__DEF_FUN1(double, log1p)
+__DEF_FUN1(double, log2)
+__DEF_FUN1(double, logb)
+__DEF_FUNI(long long, llrint)
+__DEF_FUNI(long long, llround)
+__DEF_FUNI(long, lrint)
+__DEF_FUNI(long, lround)
+__DEF_FUN1(double, nearbyint);
+__DEF_FUN2(double, nextafter);
+__DEF_FUN2(double, pow);
+__DEF_FUN2(double, remainder);
+__DEF_FUN1(double, rint);
+__DEF_FUN1(double, round);
+__HIP_OVERLOAD1(bool, signbit)
+__DEF_FUN1(double, sin)
+__DEF_FUN1(double, sinh)
+__DEF_FUN1(double, sqrt)
+__DEF_FUN1(double, tan)
+__DEF_FUN1(double, tanh)
+__DEF_FUN1(double, tgamma)
+__DEF_FUN1(double, trunc);
+
+// define cmath functions with a float and an integer argument.
+#define __DEF_FLOAT_FUN2I(__func)                                              \
+  __DEVICE__                                                                   \
+  inline float __func(float __x, int __y) { return __func##f(__x, __y); }
+__DEF_FLOAT_FUN2I(scalbn)
+__DEF_FLOAT_FUN2I(ldexp)
+
+template <class T> __DEVICE__ inline T min(T __arg1, T __arg2) {
   return (__arg1 < __arg2) ? __arg1 : __arg2;
 }
 
-template <class T> __DEVICE__ T max(T __arg1, T __arg2) {
+template <class T> __DEVICE__ inline T max(T __arg1, T __arg2) {
   return (__arg1 > __arg2) ? __arg1 : __arg2;
 }
 
-__DEVICE__ int min(int __arg1, int __arg2) {
+__DEVICE__ inline int min(int __arg1, int __arg2) {
   return (__arg1 < __arg2) ? __arg1 : __arg2;
 }
-__DEVICE__ int max(int __arg1, int __arg2) {
+__DEVICE__ inline int max(int __arg1, int __arg2) {
   return (__arg1 > __arg2) ? __arg1 : __arg2;
 }
 
 __DEVICE__
-float max(float __x, float __y) { return fmaxf(__x, __y); }
+inline float max(float __x, float __y) { return fmaxf(__x, __y); }
 
 __DEVICE__
-double max(double __x, double __y) { return fmax(__x, __y); }
+inline double max(double __x, double __y) { return fmax(__x, __y); }
 
 __DEVICE__
-float min(float __x, float __y) { return fminf(__x, __y); }
+inline float min(float __x, float __y) { return fminf(__x, __y); }
 
 __DEVICE__
-double min(double __x, double __y) { return fmin(__x, __y); }
+inline double min(double __x, double __y) { return fmin(__x, __y); }
+
+__HIP_OVERLOAD2(double, max)
+__HIP_OVERLOAD2(double, min)
 
 __host__ inline static int min(int __arg1, int __arg2) {
   return std::min(__arg1, __arg2);
@@ -1238,8 +1209,26 @@ __host__ inline static int min(int __arg1, int __arg2) {
 __host__ inline static int max(int __arg1, int __arg2) {
   return std::max(__arg1, __arg2);
 }
+
+#ifdef __cplusplus
+__DEVICE__
+inline float pow(float __base, int __iexp) { return powif(__base, __iexp); }
+
+__DEVICE__
+inline double pow(double __base, int __iexp) { return powi(__base, __iexp); }
+
+__DEVICE__
+inline _Float16 pow(_Float16 __base, int __iexp) {
+  return __ocml_pown_f16(__base, __iexp);
+}
 #endif
 
+#pragma pop_macro("__DEF_FUN1")
+#pragma pop_macro("__DEF_FUN2")
+#pragma pop_macro("__DEF_FUNI")
+#pragma pop_macro("__DEF_FLOAT_FUN2I")
+#pragma pop_macro("__HIP_OVERLOAD1")
+#pragma pop_macro("__HIP_OVERLOAD2")
 #pragma pop_macro("__DEVICE__")
 #pragma pop_macro("__RETURN_TYPE")
 
