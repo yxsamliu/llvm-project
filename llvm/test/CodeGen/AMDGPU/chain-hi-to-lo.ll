@@ -6,6 +6,7 @@ define <2 x half> @chain_hi_to_lo_private() {
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    buffer_load_ushort v0, off, s[0:3], 0 offset:2
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_short_d16_hi v0, off, s[0:3], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -27,6 +28,7 @@ define <2 x half> @chain_hi_to_lo_private_different_bases(half addrspace(5)* %ba
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    buffer_load_ushort v0, v0, s[0:3], 0 offen
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_short_d16_hi v0, v1, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -131,6 +133,7 @@ define <2 x half> @chain_hi_to_lo_global_different_bases(half addrspace(1)* %bas
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    global_load_ushort v0, v[0:1], off
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    global_load_short_d16_hi v0, v[2:3], off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -175,6 +178,7 @@ define <2 x half> @chain_hi_to_lo_flat_different_bases(half* %base_lo, half* %ba
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    flat_load_ushort v0, v[0:1]
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    flat_load_short_d16_hi v0, v[2:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -202,9 +206,11 @@ define amdgpu_kernel void @vload2_private(i16 addrspace(1)* nocapture readonly %
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
 ; GCN-NEXT:    global_load_ushort v2, v[0:1], off
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_short v2, off, s[0:3], 0 offset:4
 ; GCN-NEXT:    global_load_ushort v2, v[0:1], off offset:2
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_short v2, off, s[0:3], 0 offset:6
 ; GCN-NEXT:    global_load_ushort v2, v[0:1], off offset:4
@@ -213,6 +219,7 @@ define amdgpu_kernel void @vload2_private(i16 addrspace(1)* nocapture readonly %
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_short v2, off, s[0:3], 0 offset:8
 ; GCN-NEXT:    buffer_load_ushort v2, off, s[0:3], 0 offset:4
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    buffer_load_ushort v4, off, s[0:3], 0 offset:6
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_and_b32_e32 v2, 0xffff, v2
@@ -323,6 +330,7 @@ define <2 x i16> @chain_hi_to_lo_global_other_dep(i16 addrspace(1)* %ptr) {
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    global_load_ushort v2, v[0:1], off offset:2
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    global_load_short_d16_hi v0, v[0:1], off
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0xffff
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -345,6 +353,7 @@ define <2 x i16> @chain_hi_to_lo_flat_other_dep(i16 addrspace(0)* %ptr) {
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    flat_load_ushort v2, v[0:1] offset:2
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    flat_load_short_d16_hi v0, v[0:1]
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0xffff
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

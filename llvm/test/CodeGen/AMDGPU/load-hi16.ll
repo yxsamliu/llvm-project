@@ -254,6 +254,7 @@ entry:
 ; GCN-LABEL: {{^}}load_global_hi_v2i16_reglo_vreg:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: global_load_short_d16_hi v2, v[0:1], off offset:-4094
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
 ; GFX900-NEXT: s_waitcnt
@@ -271,6 +272,7 @@ entry:
 ; GCN-LABEL: {{^}}load_global_hi_v2f16_reglo_vreg:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: global_load_short_d16_hi v2, v[0:1], off offset:-4094
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
 ; GFX900-NEXT: s_waitcnt
@@ -288,6 +290,7 @@ entry:
 ; GCN-LABEL: {{^}}load_global_hi_v2i16_reglo_vreg_zexti8:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: global_load_ubyte_d16_hi v2, v[0:1], off offset:-4095
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
 ; GFX900-NEXT: s_waitcnt
@@ -306,6 +309,7 @@ entry:
 ; GCN-LABEL: {{^}}load_global_hi_v2i16_reglo_vreg_sexti8:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: global_load_sbyte_d16_hi v2, v[0:1], off offset:-4095
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
 ; GFX900-NEXT: s_waitcnt
@@ -324,6 +328,7 @@ entry:
 ; GCN-LABEL: {{^}}load_global_hi_v2f16_reglo_vreg_sexti8:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: global_load_sbyte_d16_hi v2, v[0:1], off offset:-4095
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
 ; GFX900-NEXT: s_waitcnt
@@ -343,6 +348,7 @@ entry:
 ; GCN-LABEL: {{^}}load_global_hi_v2f16_reglo_vreg_zexti8:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: global_load_ubyte_d16_hi v2, v[0:1], off offset:-4095
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
 ; GFX900-NEXT: s_waitcnt
@@ -362,6 +368,7 @@ entry:
 ; GCN-LABEL: load_flat_hi_v2i16_reglo_vreg:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: flat_load_short_d16_hi v2, v[0:1]
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v[0:1], v2
 ; GFX900-NEXT: s_waitcnt
@@ -383,6 +390,7 @@ entry:
 ; GCN-LABEL: {{^}}load_flat_hi_v2f16_reglo_vreg:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: flat_load_short_d16_hi v2, v[0:1]
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v[0:1], v2
 ; GFX900-NEXT: s_waitcnt
@@ -404,6 +412,7 @@ entry:
 ; GCN-LABEL: {{^}}load_flat_hi_v2i16_reglo_vreg_zexti8:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: flat_load_ubyte_d16_hi v2, v[0:1]
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v[0:1], v2
 ; GFX900-NEXT: s_waitcnt
@@ -426,6 +435,7 @@ entry:
 ; GCN-LABEL: {{^}}load_flat_hi_v2i16_reglo_vreg_sexti8:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: flat_load_sbyte_d16_hi v2, v[0:1]
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v[0:1], v2
 ; GFX900-NEXT: s_waitcnt
@@ -448,6 +458,7 @@ entry:
 ; GCN-LABEL: {{^}}load_flat_hi_v2f16_reglo_vreg_zexti8:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: flat_load_ubyte_d16_hi v2, v[0:1]
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v[0:1], v2
 ; GFX900-NEXT: s_waitcnt
@@ -471,6 +482,7 @@ entry:
 ; GCN-LABEL: {{^}}load_flat_hi_v2f16_reglo_vreg_sexti8:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: flat_load_sbyte_d16_hi v2, v[0:1]
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v[0:1], v2
 ; GFX900-NEXT: s_waitcnt
@@ -494,6 +506,7 @@ entry:
 ; GCN-LABEL: {{^}}load_private_hi_v2i16_reglo_vreg:
 ; GCN: s_waitcnt
 ; GFX900: buffer_load_short_d16_hi v0, off, s[0:3], s32 offset:4094{{$}}
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GFX900-NEXT: s_waitcnt
@@ -513,6 +526,7 @@ entry:
 ; GCN-LABEL: {{^}}load_private_hi_v2f16_reglo_vreg:
 ; GCN: s_waitcnt
 ; GFX900: buffer_load_short_d16_hi v0, off, s[0:3], s32 offset:4094{{$}}
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GFX900-NEXT: s_waitcnt
@@ -532,6 +546,7 @@ entry:
 ; GCN-LABEL: {{^}}load_private_hi_v2i16_reglo_vreg_nooff:
 ; GCN: s_waitcnt
 ; GFX900: buffer_load_short_d16_hi v0, off, s[0:3], 0 offset:4094{{$}}
+; GFX900-NEXT: s_nop
 ; GFX900: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GFX900-NEXT: s_waitcnt
@@ -550,6 +565,7 @@ entry:
 ; GCN-LABEL: {{^}}load_private_hi_v2f16_reglo_vreg_nooff:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: buffer_load_short_d16_hi v1, off, s[0:3], 0 offset:4094{{$}}
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
 ; GFX900-NEXT: s_waitcnt
@@ -568,6 +584,7 @@ entry:
 ; GCN-LABEL: {{^}}load_private_hi_v2i16_reglo_vreg_zexti8:
 ; GCN: s_waitcnt
 ; GFX900: buffer_load_ubyte_d16_hi v0, off, s[0:3], s32 offset:4095{{$}}
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GFX900-NEXT: s_waitcnt
@@ -588,6 +605,7 @@ entry:
 ; GCN-LABEL: {{^}}load_private_hi_v2f16_reglo_vreg_zexti8:
 ; GCN: s_waitcnt
 ; GFX900: buffer_load_ubyte_d16_hi v0, off, s[0:3], s32 offset:4095{{$}}
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GFX900-NEXT: s_waitcnt
@@ -609,6 +627,7 @@ entry:
 ; GCN-LABEL: {{^}}load_private_hi_v2f16_reglo_vreg_sexti8:
 ; GCN: s_waitcnt
 ; GFX900: buffer_load_sbyte_d16_hi v0, off, s[0:3], s32 offset:4095{{$}}
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GFX900-NEXT: s_waitcnt
@@ -630,6 +649,7 @@ entry:
 ; GCN-LABEL: {{^}}load_private_hi_v2i16_reglo_vreg_sexti8:
 ; GCN: s_waitcnt
 ; GFX900: buffer_load_sbyte_d16_hi v0, off, s[0:3], s32 offset:4095{{$}}
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GFX900-NEXT: s_waitcnt
@@ -650,6 +670,7 @@ entry:
 ; GCN-LABEL: {{^}}load_private_hi_v2i16_reglo_vreg_nooff_zexti8:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: buffer_load_ubyte_d16_hi v1, off, s[0:3], 0 offset:4094{{$}}
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
 ; GFX900-NEXT: s_waitcnt
@@ -669,6 +690,7 @@ entry:
 ; GCN-LABEL: {{^}}load_private_hi_v2i16_reglo_vreg_nooff_sexti8:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: buffer_load_sbyte_d16_hi v1, off, s[0:3], 0 offset:4094{{$}}
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
 ; GFX900-NEXT: s_waitcnt
@@ -688,6 +710,7 @@ entry:
 ; GCN-LABEL: {{^}}load_private_hi_v2f16_reglo_vreg_nooff_zexti8:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: buffer_load_ubyte_d16_hi v1, off, s[0:3], 0 offset:4094{{$}}
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
 ; GFX900-NEXT: s_waitcnt
@@ -708,6 +731,7 @@ entry:
 ; GCN-LABEL: {{^}}load_constant_hi_v2i16_reglo_vreg:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: global_load_short_d16_hi v2, v[0:1], off offset:-4094
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
 ; GFX900-NEXT: s_waitcnt
@@ -728,6 +752,7 @@ entry:
 ; GCN-LABEL: load_constant_hi_v2f16_reglo_vreg
 ; GCN: s_waitcnt
 ; GFX900-NEXT: global_load_short_d16_hi v2, v[0:1], off offset:-4094
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
 ; GFX900-NEXT: s_waitcnt
@@ -748,6 +773,7 @@ entry:
 ; GCN-LABEL: {{^}}load_constant_hi_v2f16_reglo_vreg_sexti8:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: global_load_sbyte_d16_hi v2, v[0:1], off offset:-4095
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
 ; GFX900-NEXT: s_waitcnt
@@ -767,6 +793,7 @@ entry:
 ; GCN-LABEL: {{^}}load_constant_hi_v2f16_reglo_vreg_zexti8:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: global_load_ubyte_d16_hi v2, v[0:1], off offset:-4095
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword
 ; GFX900-NEXT: s_waitcnt
@@ -917,6 +944,7 @@ entry:
 ; GCN-LABEL: {{^}}load_global_v2i16_split:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: global_load_ushort v2
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_load_short_d16_hi v2
 ; GFX900-NEXT: s_waitcnt
@@ -936,6 +964,7 @@ entry:
 ; GCN-LABEL: {{^}}load_flat_v2i16_split:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: flat_load_ushort v2
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: flat_load_short_d16_hi v2
 ; GFX900-NEXT: s_waitcnt
@@ -955,6 +984,7 @@ entry:
 ; GCN-LABEL: {{^}}load_constant_v2i16_split:
 ; GCN: s_waitcnt
 ; GFX900-NEXT: global_load_ushort v2
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_load_short_d16_hi v2
 ; GFX900-NEXT: s_waitcnt
@@ -975,6 +1005,7 @@ entry:
 ; GCN-LABEL: {{^}}load_private_v2i16_split:
 ; GCN: s_waitcnt
 ; GFX900: buffer_load_ushort v0, off, s[0:3], s32{{$}}
+; GFX900-NEXT: s_nop
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: buffer_load_short_d16_hi v0, off, s[0:3], s32 offset:2
 ; GFX900-NEXT: s_waitcnt

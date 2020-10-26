@@ -19,6 +19,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetParser.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -36,6 +37,21 @@ class StringRef;
 class Triple;
 
 namespace AMDGPU {
+
+/// \returns HSA OS ABI Version identification.
+Optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI);
+/// \returns True if HSA OS ABI Version identification is 2,
+/// false otherwise.
+bool isHsaAbiVersion2(const MCSubtargetInfo *STI);
+/// \returns True if HSA OS ABI Version identification is 3,
+/// false otherwise.
+bool isHsaAbiVersion3(const MCSubtargetInfo *STI);
+/// \returns True if HSA OS ABI Version identification is 4,
+/// false otherwise.
+bool isHsaAbiVersion4(const MCSubtargetInfo *STI);
+/// \returns True if HSA OS ABI Version identification is 3 or 4,
+/// false otherwise.
+bool isHsaAbiVersion3Or4(const MCSubtargetInfo *STI);
 
 struct GcnBufferFormatInfo {
   unsigned Format;
@@ -61,12 +77,70 @@ enum {
   TRAP_NUM_SGPRS = 16
 };
 
-/// Streams isa version string for given subtarget \p STI into \p Stream.
-void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream);
+enum class TargetIDSetting {
+  Unsupported,
+  Any,
+  Off,
+  On
+};
 
-/// \returns True if given subtarget \p STI supports code object version 3,
-/// false otherwise.
-bool hasCodeObjectV3(const MCSubtargetInfo *STI);
+class AMDGPUTargetID {
+private:
+  const MCSubtargetInfo &STI;
+  TargetIDSetting XnackSetting;
+  TargetIDSetting SramEccSetting;
+
+public:
+  explicit AMDGPUTargetID(const MCSubtargetInfo &STI);
+  ~AMDGPUTargetID() = default;
+
+  /// Returns the current xnack TargetIDSetting, possible options are
+  /// "Unsupported", "Any", "Off", and "On".
+  TargetIDSetting getXnackSetting() const;
+
+  /// Returns the current sramecc TargetIDSetting, possible options are
+  /// "Unsupported", "Any", "Off", and "On".
+  TargetIDSetting getSramEccSetting() const;
+
+  /// Returns true if the current xnack setting is "On" or "Any".
+  bool isXnackOnOrAny() const;
+
+  /// Returns true if the current sramecc setting is "On" or "Any".
+  bool isSramEccOnOrAny() const;
+
+  bool isXnackSupported() const;
+  bool isSramEccSupported() const;
+
+  void setTargetIDFromFeaturesString(StringRef FS);
+  void setTargetIDFromTargetIDStream(StringRef TargetID);
+
+  /// \returns True if current xnack setting is "On" or "Off",
+  /// false otherwise.
+  bool isXnackOnOrOff() const {
+    return getXnackSetting() == TargetIDSetting::On ||
+        getXnackSetting() == TargetIDSetting::Off;
+  }
+
+  /// \returns True if current sramecc setting is "On" or "Off",
+  /// false otherwise.
+  bool isSramEccOnOrOff() const {
+    return getSramEccSetting() == TargetIDSetting::On ||
+        getSramEccSetting() == TargetIDSetting::Off;
+  }
+
+  /// Sets xnack setting to \p NewXnackSetting.
+  void setXnackSetting(TargetIDSetting NewXnackSetting) {
+    XnackSetting = NewXnackSetting;
+  }
+
+  /// Sets sramecc setting to \p NewSramEccSetting.
+  void setSramEccSetting(TargetIDSetting NewSramEccSetting) {
+    SramEccSetting = NewSramEccSetting;
+  }
+
+  /// \returns String representation of an object.
+  std::string toString() const;
+};
 
 /// \returns Wavefront size for given subtarget \p STI.
 unsigned getWavefrontSize(const MCSubtargetInfo *STI);
@@ -838,6 +912,10 @@ struct SIModeRegisterDefaults {
 };
 
 } // end namespace AMDGPU
+
+raw_ostream &operator<<(raw_ostream &OS,
+                        const AMDGPU::IsaInfo::TargetIDSetting S);
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H

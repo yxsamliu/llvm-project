@@ -84,5 +84,5 @@ attributes #3 = { nounwind "target-features"="-half-rate-64-ops" }
 attributes #4 = { nounwind "target-features"="+half-rate-64-ops" }
 attributes #5 = { nounwind "target-features"="-load-store-opt" }
 attributes #6 = { nounwind "target-features"="+load-store-opt" }
-attributes #7 = { nounwind "target-features"="+code-object-v3" }
-attributes #8 = { nounwind "target-features"="-code-object-v3" }
+attributes #7 = { nounwind }
+attributes #8 = { nounwind }

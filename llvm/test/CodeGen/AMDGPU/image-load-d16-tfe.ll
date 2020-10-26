@@ -17,6 +17,7 @@ define amdgpu_ps void @load_1d_f16_tfe_dmask0(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX9-NEXT:    s_mov_b32 s4, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX9-NEXT:    image_load v[1:2], v0, s[4:11] dmask:0x1 unorm tfe d16
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_short v[0:1], v1, off
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
@@ -36,6 +37,7 @@ define amdgpu_ps void @load_1d_f16_tfe_dmask0(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX10-NEXT:    image_load v[1:2], v0, s[4:11] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm tfe d16
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_nop 0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_store_short v[0:1], v1, off
 ; GFX10-NEXT:    global_store_dword v[0:1], v2, off
@@ -80,6 +82,7 @@ define amdgpu_ps void @load_1d_f16_tfe_dmask1(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX9-NEXT:    s_mov_b32 s4, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX9-NEXT:    image_load v[1:2], v0, s[4:11] dmask:0x1 unorm tfe d16
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_short v[0:1], v1, off
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
@@ -99,6 +102,7 @@ define amdgpu_ps void @load_1d_f16_tfe_dmask1(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX10-NEXT:    image_load v[1:2], v0, s[4:11] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm tfe d16
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_nop 0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_store_short v[0:1], v1, off
 ; GFX10-NEXT:    global_store_dword v[0:1], v2, off
@@ -143,6 +147,7 @@ define amdgpu_ps void @load_1d_v2f16_tfe_dmask0(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX9-NEXT:    s_mov_b32 s4, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX9-NEXT:    image_load v[1:2], v0, s[4:11] dmask:0x1 unorm tfe d16
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_dword v[0:1], v1, off
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
@@ -162,6 +167,7 @@ define amdgpu_ps void @load_1d_v2f16_tfe_dmask0(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX10-NEXT:    image_load v[1:2], v0, s[4:11] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm tfe d16
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_nop 0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_store_dword v[0:1], v1, off
 ; GFX10-NEXT:    global_store_dword v[0:1], v2, off
@@ -206,6 +212,7 @@ define amdgpu_ps void @load_1d_v2f16_tfe_dmask1(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX9-NEXT:    s_mov_b32 s4, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX9-NEXT:    image_load v[1:2], v0, s[4:11] dmask:0x1 unorm tfe d16
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_dword v[0:1], v1, off
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
@@ -225,6 +232,7 @@ define amdgpu_ps void @load_1d_v2f16_tfe_dmask1(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX10-NEXT:    image_load v[1:2], v0, s[4:11] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm tfe d16
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_nop 0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_store_dword v[0:1], v1, off
 ; GFX10-NEXT:    global_store_dword v[0:1], v2, off
@@ -269,6 +277,7 @@ define amdgpu_ps void @load_1d_v2f16_tfe_dmask3(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX9-NEXT:    s_mov_b32 s4, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX9-NEXT:    image_load v[1:2], v0, s[4:11] dmask:0x3 unorm tfe d16
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_dword v[0:1], v1, off
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
@@ -288,6 +297,7 @@ define amdgpu_ps void @load_1d_v2f16_tfe_dmask3(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX10-NEXT:    image_load v[1:2], v0, s[4:11] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm tfe d16
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_nop 0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_store_dword v[0:1], v1, off
 ; GFX10-NEXT:    global_store_dword v[0:1], v2, off
@@ -336,6 +346,7 @@ define amdgpu_ps void @load_1d_v3f16_tfe_dmask7(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX9-NEXT:    image_load v[1:3], v0, s[4:11] dmask:0x7 unorm tfe d16
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_short v[0:1], v2, off
 ; GFX9-NEXT:    global_store_dword v[0:1], v1, off
@@ -357,6 +368,7 @@ define amdgpu_ps void @load_1d_v3f16_tfe_dmask7(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX10-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX10-NEXT:    image_load v[1:3], v0, s[4:11] dmask:0x7 dim:SQ_RSRC_IMG_1D unorm tfe d16
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_nop 0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_store_short v[0:1], v2, off
 ; GFX10-NEXT:    global_store_dword v[0:1], v1, off
@@ -408,6 +420,7 @@ define amdgpu_ps void @load_1d_v4f16_tfe_dmask15(<8 x i32> inreg %rsrc, i32 %s) 
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX9-NEXT:    image_load v[1:3], v0, s[4:11] dmask:0xf unorm tfe d16
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_dwordx2 v[0:1], v[1:2], off
 ; GFX9-NEXT:    global_store_dword v[0:1], v3, off
@@ -428,6 +441,7 @@ define amdgpu_ps void @load_1d_v4f16_tfe_dmask15(<8 x i32> inreg %rsrc, i32 %s) 
 ; GFX10-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX10-NEXT:    image_load v[1:3], v0, s[4:11] dmask:0xf dim:SQ_RSRC_IMG_1D unorm tfe d16
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
+; GFX10-NEXT:    s_nop 0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_store_dwordx2 v[0:1], v[1:2], off
 ; GFX10-NEXT:    global_store_dword v[0:1], v3, off

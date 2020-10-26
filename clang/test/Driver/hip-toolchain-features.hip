@@ -13,24 +13,24 @@
 // NOXNACK: {{.*}}clang{{.*}}"-target-feature" "-xnack"
 
 // RUN: %clang -### -target x86_64-linux-gnu -fgpu-rdc -nogpulib \
-// RUN:   --cuda-gpu-arch=gfx908:sram-ecc+ %s \
+// RUN:   --cuda-gpu-arch=gfx908:sramecc+ %s \
 // RUN:   2>&1 | FileCheck %s -check-prefix=SRAM
 // RUN: %clang -### -target x86_64-linux-gnu -fgpu-rdc -nogpulib \
-// RUN:   --cuda-gpu-arch=gfx908:sram-ecc- %s \
+// RUN:   --cuda-gpu-arch=gfx908:sramecc- %s \
 // RUN:   2>&1 | FileCheck %s -check-prefix=NOSRAM
 
-// SRAM: {{.*}}clang{{.*}}"-target-feature" "+sram-ecc"
-// NOSRAM: {{.*}}clang{{.*}}"-target-feature" "-sram-ecc"
+// SRAM: {{.*}}clang{{.*}}"-target-feature" "+sramecc"
+// NOSRAM: {{.*}}clang{{.*}}"-target-feature" "-sramecc"
 
 // RUN: %clang -### -target x86_64-linux-gnu -fgpu-rdc -nogpulib \
-// RUN:   --cuda-gpu-arch=gfx908:xnack+:sram-ecc+ %s \
+// RUN:   --cuda-gpu-arch=gfx908:xnack+:sramecc+ %s \
 // RUN:   2>&1 | FileCheck %s -check-prefix=ALL3
 // RUN: %clang -### -target x86_64-linux-gnu -fgpu-rdc -nogpulib \
-// RUN:   --cuda-gpu-arch=gfx908:xnack-:sram-ecc- %s \
+// RUN:   --cuda-gpu-arch=gfx908:xnack-:sramecc- %s \
 // RUN:   2>&1 | FileCheck %s -check-prefix=NOALL3
 
-// ALL3: {{.*}}clang{{.*}}"-target-feature" "+sram-ecc" "-target-feature" "+xnack"
-// NOALL3: {{.*}}clang{{.*}}"-target-feature" "-sram-ecc" "-target-feature" "-xnack"
+// ALL3: {{.*}}clang{{.*}}"-target-feature" "+sramecc" "-target-feature" "+xnack"
+// NOALL3: {{.*}}clang{{.*}}"-target-feature" "-sramecc" "-target-feature" "-xnack"
 
 // RUN: %clang -### -target x86_64-linux-gnu -fgpu-rdc -nogpulib \
 // RUN:   --cuda-gpu-arch=gfx1010 %s \

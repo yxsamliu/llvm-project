@@ -533,6 +533,7 @@ define amdgpu_ps float @global_load_saddr_f32_natural_addressing_immoffset(i8 ad
 ; GCN-LABEL: global_load_saddr_f32_natural_addressing_immoffset:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_load_dword v0, v[0:1], off
+; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    global_load_dword v0, v0, s[2:3] offset:128
 ; GCN-NEXT:    s_waitcnt vmcnt(0)

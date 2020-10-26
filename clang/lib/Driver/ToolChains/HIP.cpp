@@ -117,7 +117,7 @@ void AMDGCN::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
 
   for (const auto &II : Inputs) {
     const auto* A = II.getAction();
-    BundlerTargetArg = BundlerTargetArg + ",hip-amdgcn-amd-amdhsa-" +
+    BundlerTargetArg = BundlerTargetArg + ",hip-amdgcn-amd-amdhsa--" +
                        StringRef(A->getOffloadingArch()).str();
     BundlerInputArg = BundlerInputArg + "," + II.getFilename();
   }
@@ -277,10 +277,6 @@ void HIPToolChain::addClangTargetOptions(
   if (DriverArgs.hasFlag(options::OPT_fgpu_allow_device_init,
                          options::OPT_fno_gpu_allow_device_init, false))
     CC1Args.push_back("-fgpu-allow-device-init");
-
-  if (DriverArgs.hasFlag(options::OPT_fgpu_defer_diag,
-                         options::OPT_fno_gpu_defer_diag, false))
-    CC1Args.push_back("-fgpu-defer-diag");
 
   CC1Args.push_back("-fcuda-allow-variadic-functions");
 

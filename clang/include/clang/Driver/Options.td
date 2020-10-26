@@ -624,7 +624,7 @@ def no_cuda_include_ptx_EQ : Joined<["--"], "no-cuda-include-ptx=">, Flags<[Driv
 def offload_arch_EQ : Joined<["--"], "offload-arch=">, Flags<[DriverOption]>,
   HelpText<"CUDA offloading device architecture (e.g. sm_35), or HIP offloading target ID in the form of a "
            "device architecture followed by target ID features delimited by a colon. Each target ID feature "
-           "is a pre-defined string followed by a plus or minus sign (e.g. gfx908:xnack+:sram-ecc-).  May be "
+           "is a pre-defined string followed by a plus or minus sign (e.g. gfx908:xnack+:sramecc-).  May be "
            "specified more than once.">;
 def cuda_gpu_arch_EQ : Joined<["--"], "cuda-gpu-arch=">, Flags<[DriverOption]>,
   Alias<offload_arch_EQ>;
@@ -675,9 +675,6 @@ defm hip_new_launch_api : OptInFFlag<"hip-new-launch-api",
   "Use", "Don't use", " new kernel launching API for HIP">;
 defm gpu_allow_device_init : OptInFFlag<"gpu-allow-device-init",
   "Allow", "Don't allow", " device side init function in HIP">;
-defm gpu_defer_diag : OptInFFlag<"gpu-defer-diag",
-  "Defer", "Don't defer", " host/device related diagnostic messages"
-  " for CUDA/HIP">;
 def gpu_max_threads_per_block_EQ : Joined<["--"], "gpu-max-threads-per-block=">,
   Flags<[CC1Option]>,
   HelpText<"Default max threads per block for kernel launch bounds for HIP">;
@@ -2452,18 +2449,22 @@ def mamdgpu_debugger_abi : Joined<["-"], "mamdgpu-debugger-abi=">,
   HelpText<"Generate additional code for specified <version> of debugger ABI (AMDGPU only)">,
   MetaVarName<"<version>">;
 
-def mcode_object_v3 : Flag<["-"], "mcode-object-v3">, Group<m_amdgpu_Features_Group>,
-  HelpText<"Enable code object v3 (AMDGPU only)">;
-def mno_code_object_v3 : Flag<["-"], "mno-code-object-v3">, Group<m_amdgpu_Features_Group>,
-  HelpText<"Disable code object v3 (AMDGPU only)">;
+def mcode_object_v3_legacy : Flag<["-"], "mcode-object-v3">, Group<m_Group>,
+  HelpText<"Legacy option to specify code object v3 (AMDGPU only)">;
+def mno_code_object_v3_legacy : Flag<["-"], "mno-code-object-v3">, Group<m_Group>,
+  HelpText<"Legacy option to specify code object v2 (AMDGPU only)">;
+
+// TODO: Remove during upstreaming target id.
+def msram_ecc_legacy : Flag<["-"], "msram-ecc">, Group<m_Group>,
+  HelpText<"Legacy option for enabling SRAM ECC (AMDGPU only)">;
+def mno_sram_ecc_legacy : Flag<["-"], "mno-sram-ecc">, Group<m_Group>,
+  HelpText<"Legacy option for disabling SRAM ECC (AMDGPU only)">;
+
+// TODO: Remove during upstreaming target id.
 def mxnack : Flag<["-"], "mxnack">, Group<m_amdgpu_Features_Group>,
-  HelpText<"Enable XNACK (AMDGPU only)">;
+  HelpText<"Legacy option for enabling XNACK (AMDGPU only)">;
 def mno_xnack : Flag<["-"], "mno-xnack">, Group<m_amdgpu_Features_Group>,
-  HelpText<"Disable XNACK (AMDGPU only)">;
-def msram_ecc : Flag<["-"], "msram-ecc">, Group<m_amdgpu_Features_Group>,
-  HelpText<"Enable SRAM ECC (AMDGPU only)">;
-def mno_sram_ecc : Flag<["-"], "mno-sram-ecc">, Group<m_amdgpu_Features_Group>,
-  HelpText<"Disable SRAM ECC (AMDGPU only)">;
+  HelpText<"Legacy option for disabling XNACK (AMDGPU only)">;
 
 def mcumode : Flag<["-"], "mcumode">, Group<m_amdgpu_Features_Group>,
   HelpText<"CU wavefront execution mode is used (AMDGPU only)">;

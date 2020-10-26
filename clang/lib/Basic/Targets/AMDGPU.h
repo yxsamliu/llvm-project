@@ -43,7 +43,7 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   unsigned GPUFeatures;
 
   /// Target ID is device name followed by optional feature name postfixed
-  /// by plus or minus sign delimitted by colon, e.g. gfx908:xnack+:sram-ecc-.
+  /// by plus or minus sign delimitted by colon, e.g. gfx908:xnack+:sramecc-.
   /// If the target ID contains feature+, map it to true.
   /// If the target ID contains feature-, map it to false.
   /// If the target ID does not contain a feature (default), do not map it.
