@@ -1203,6 +1203,7 @@ int main(int argc, const char **argv) {
                                      .Case("host", true)
                                      .Case("openmp", true)
                                      .Case("hip", true)
+                                     .Case("hipv4", true)
                                      .Default(false);
 
     bool TripleIsValid = !Triple.empty();
