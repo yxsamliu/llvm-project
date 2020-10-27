@@ -100,10 +100,17 @@ Where:
                     embedded bundled code object this entry is not used by the
                     runtime and so is generally an empty code object.
 
-      hip           Offload code object for the HIP language. The
+      hip           Offload code object version 2 and 3 for the HIP language. The
                     ``clang-offload-bundler`` is used to bundle the offload code
                     objects. The bundled code object is embedded in the host
                     code object as a data section with the name ``.hip_fatbin``.
+                    The code object version is determined by clang option
+                    -mcode-object-v3, -mno-code-object-v3, -mcode-object-version=2,
+                    or -mcode-object-version=3.
+
+      hipv4         Same as `hip` but for code object version 4 and above. The
+                    code object version is default or determined by
+                    -mcode-object-version=n where n is equal to or greater than 4.
 
       openmp        Offload code object for the OpenMP language extension.
       ============= ==============================================================
