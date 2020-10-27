@@ -100,10 +100,22 @@ Where:
                     embedded bundled code object this entry is not used by the
                     runtime and so is generally an empty code object.
 
-      hip           Offload code object for the HIP language. The
-                    ``clang-offload-bundler`` is used to bundle the offload code
-                    objects. The bundled code object is embedded in the host
-                    code object as a data section with the name ``.hip_fatbin``.
+      hip           Offload code object for the HIP language. Used for all
+                    HIP language offload code objects when the
+                    ``clang-offload-bundler`` is used to bundle code objects as
+                    intermediate steps of the tool chain. Also used for AMD GPU
+                    code objects before ABI version V4 when the
+                    ``clang-offload-bundler`` is used to create a *fat binary*
+                    to be loaded by the HIP runtime. The fat binary can be
+                    loaded directly from a file, or be embedded in the host code
+                    object as a data section with the name ``.hip_fatbin``.
+
+      hipv4         Offload code object for the HIP language. Used for AMD GPU
+                    code objects with at least ABI version V4 when the
+                    ``clang-offload-bundler`` is used to create a *fat binary*
+                    to be loaded by the HIP runtime. The fat binary can be
+                    loaded directly from a file, or be embedded in the host code
+                    object as a data section with the name ``.hip_fatbin``.
 
       openmp        Offload code object for the OpenMP language extension.
       ============= ==============================================================

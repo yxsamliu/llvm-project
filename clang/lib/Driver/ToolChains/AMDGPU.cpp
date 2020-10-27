@@ -421,8 +421,14 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
 AMDGPUToolChain::AMDGPUToolChain(const Driver &D, const llvm::Triple &Triple,
                                  const ArgList &Args)
     : Generic_ELF(D, Triple, Args),
-      OptionsDefault({{options::OPT_O, "3"},
-                      {options::OPT_cl_std_EQ, "CL1.2"}}) {}
+      OptionsDefault(
+          {{options::OPT_O, "3"}, {options::OPT_cl_std_EQ, "CL1.2"}}) {
+  // Check code object version options. Emit warnings for legacy options
+  // and errors for the last invalid code object version options.
+  // It is done here to avoid repeated warning or error messages for
+  // each tool invocation.
+  (void)getOrCheckAMDGPUCodeObjectVersion(D, Args, /*Diagnose=*/true);
+}
 
 Tool *AMDGPUToolChain::buildLinker() const {
   return new tools::amdgpu::Linker(*this);
@@ -543,19 +549,6 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("-fvisibility");
     CC1Args.push_back("hidden");
     CC1Args.push_back("-fapply-global-visibility-to-externs");
-  }
-
-  if (DriverArgs.hasArg(options::OPT_mcode_object_v3_legacy)) {
-    getDriver().Diag(diag::warn_drv_deprecated_arg) << "-mcode-object-v3" <<
-      "-mllvm --amdhsa-code-object-version=3";
-    CC1Args.push_back("-mllvm");
-    CC1Args.push_back("--amdhsa-code-object-version=3");
-  }
-  if (DriverArgs.hasArg(options::OPT_mno_code_object_v3_legacy)) {
-    getDriver().Diag(diag::warn_drv_deprecated_arg) << "-mno-code-object-v3" <<
-      "-mllvm --amdhsa-code-object-version=2";
-    CC1Args.push_back("-mllvm");
-    CC1Args.push_back("--amdhsa-code-object-version=2");
   }
 }
 

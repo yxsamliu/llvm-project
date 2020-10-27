@@ -1061,6 +1061,15 @@ static const char *RelocationModelName(llvm::Reloc::Model Model) {
   }
   llvm_unreachable("Unknown Reloc::Model kind");
 }
+static void handleAMDGPUCodeObjectVersionOptions(const Driver &D,
+                                                 const ArgList &Args,
+                                                 ArgStringList &CmdArgs) {
+  unsigned CodeObjVer = getOrCheckAMDGPUCodeObjectVersion(D, Args);
+  CmdArgs.insert(CmdArgs.begin() + 1,
+                 Args.MakeArgString(Twine("--amdhsa-code-object-version=") +
+                                    Twine(CodeObjVer)));
+  CmdArgs.insert(CmdArgs.begin() + 1, "-mllvm");
+}
 
 void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
                                     const Driver &D, const ArgList &Args,
@@ -6111,6 +6120,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  if (Triple.isAMDGPU())
+    handleAMDGPUCodeObjectVersionOptions(D, Args, CmdArgs);
+
   // For all the host OpenMP offloading compile jobs we need to pass the targets
   // information using -fopenmp-targets= option.
   if (JA.isHostOffloading(Action::OFK_OpenMP)) {
@@ -7070,6 +7082,9 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-split-dwarf-output");
     CmdArgs.push_back(SplitDebugName(Args, Input, Output));
   }
+
+  if (Triple.isAMDGPU())
+    handleAMDGPUCodeObjectVersionOptions(D, Args, CmdArgs);
 
   assert(Input.isFilename() && "Invalid input.");
   CmdArgs.push_back(Input.getFilename());
