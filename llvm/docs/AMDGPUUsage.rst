@@ -753,16 +753,16 @@ The AMDGPU backend uses the following ELF header:
   object conforms:
 
   * ``ELFABIVERSION_AMDGPU_HSA_V2`` is used to specify the version of AMD HSA
-    runtime ABI for code object V2. Specify using the Clang backend option
-    ``-mllvm --amdhsa-code-object-version=2``.
+    runtime ABI for code object V2. Specify using the Clang option
+    ``-mcode-object-version=2``.
 
   * ``ELFABIVERSION_AMDGPU_HSA_V3`` is used to specify the version of AMD HSA
-    runtime ABI for code object V3. Specify using the Clang backend option
-    ``-mllvm --amdhsa-code-object-version=3``.
+    runtime ABI for code object V3. Specify using the Clang option
+    ``-mcode-object-version=3``.
 
   * ``ELFABIVERSION_AMDGPU_HSA_V4`` is used to specify the version of AMD HSA
-    runtime ABI for code object V4. Specify using the Clang backend option
-    ``-mllvm --amdhsa-code-object-version=4``. This is the default code object
+    runtime ABI for code object V4. Specify using the Clang option
+    ``-mcode-object-version=4``. This is the default code object
     version if not specified.
 
   * ``ELFABIVERSION_AMDGPU_PAL`` is used to specify the version of AMD PAL

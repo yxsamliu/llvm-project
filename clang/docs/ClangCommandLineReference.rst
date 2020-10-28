@@ -1649,10 +1649,6 @@ Sets various macros to claim compatibility with the given GCC version (default i
 
 Allow device side init function in HIP
 
-.. option:: -fgpu-defer-diag, -fno-gpu-defer-diag
-
-Defer host/device related diagnostic messages for CUDA/HIP
-
 .. option:: -fgpu-rdc, -fcuda-rdc, -fno-gpu-rdc
 
 Generate relocatable device code, also known as separate compilation mode
@@ -2655,10 +2651,6 @@ Align selected branches (fused, jcc, jmp) within 32-byte boundary
 
 .. option:: -mcmodel=<arg>, -mcmodel=medany (equivalent to -mcmodel=medium), -mcmodel=medlow (equivalent to -mcmodel=small)
 
-.. option:: -mcode-object-v3, -mno-code-object-v3
-
-Legacy option to specify code object v3 (AMDGPU only)
-
 .. option:: -mconsole<arg>
 
 .. program:: clang1
@@ -2819,10 +2811,6 @@ Use software floating point
 
 .. option:: -mspeculative-load-hardening, -mno-speculative-load-hardening
 
-.. option:: -msram-ecc, -mno-sram-ecc
-
-Legacy option for enabling SRAM ECC (AMDGPU only)
-
 .. option:: -mstack-alignment=<arg>
 
 Set the stack alignment
@@ -2874,10 +2862,6 @@ Only supported on X86. Otherwise accepted for compatibility with GCC.
 .. option:: -mwarn-nonportable-cfstrings, -mno-warn-nonportable-cfstrings
 
 .. option:: -mwatchos-version-min=<arg>
-
-.. option:: -mwavefrontsize64, -mno-wavefrontsize64
-
-Wavefront size 64 is used
 
 .. option:: -mwindows<arg>
 
@@ -2939,13 +2923,29 @@ Specify the size in bits of an SVE vector register. Defaults to the vector lengt
 
 AMDGPU
 ------
+.. option:: -mcode-object-v3, -mno-code-object-v3
+
+Legacy option to specify code object ABI V2 (-mnocode-object-v3) or V3 (-mcode-object-v3) (AMDGPU only)
+
+.. option:: -mcode-object-version= <version>
+
+Specify code object ABI <version> (AMDGPU only)
+
 .. option:: -mcumode, -mno-cumode
 
-CU wavefront execution mode is used (AMDGPU only)
+Specify CU (-mcumode) or WGP (-mno-cumode) wavefront execution mode (AMDGPU only)
+
+.. option:: -msram-ecc, -mno-sram-ecc
+
+Legacy option to specify SRAM ECC mode (AMDGPU only)
+
+.. option:: -mwavefrontsize64, -mno-wavefrontsize64
+
+Specify wavefront size 64 mode
 
 .. option:: -mxnack, -mno-xnack
 
-Legacy option for enabling XNACK (AMDGPU only)
+Legacy option to specify XNACK mode (AMDGPU only)
 
 ARM
 ---
