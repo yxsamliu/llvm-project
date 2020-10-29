@@ -2443,37 +2443,37 @@ def mexec_model_EQ : Joined<["-"], "mexec-model=">, Group<m_wasm_Features_Driver
                      Values<"command,reactor">,
                      HelpText<"Execution model (WebAssembly only)">;
 
-def mamdgpu_debugger_abi : Joined<["-"], "mamdgpu-debugger-abi=">, Group<m_amdgpu_Features_Group>,
+def mamdgpu_debugger_abi : Joined<["-"], "mamdgpu-debugger-abi=">, Group<m_Group>,
   Flags<[HelpHidden]>,
   HelpText<"Generate additional code for specified <version> of debugger ABI (AMDGPU only)">,
   MetaVarName<"<version>">;
 
-def mcode_object_version : Flag<["-"], "mcode-object-version=">, Group<m_amdgpu_Features_Group>,
+def mcode_object_version : Flag<["-"], "mcode-object-version=">, Group<m_Group>,
   HelpText<"Specify code object ABI <version> (AMDGPU only)">,
   MetaVarName<"<version>">;
 
-def mcode_object_v3_legacy : Flag<["-"], "mcode-object-v3">, Group<m_amdgpu_Features_Group>,
+def mcode_object_v3_legacy : Flag<["-"], "mcode-object-v3">, Group<m_Group>,
   HelpText<"Legacy option to specify code object ABI V2 (-mnocode-object-v3) or V3 (-mcode-object-v3) (AMDGPU only)">;
-def mno_code_object_v3_legacy : Flag<["-"], "mno-code-object-v3">, Group<m_amdgpu_Features_Group>;
-
-// TODO: Remove during upstreaming target id.
-def msram_ecc_legacy : Flag<["-"], "msram-ecc">, Group<m_amdgpu_Features_Group>,
-  HelpText<"Legacy option to specify SRAM ECC mode (AMDGPU only)">;
-def mno_sram_ecc_legacy : Flag<["-"], "mno-sram-ecc">, Group<m_amdgpu_Features_Group>;
-
-// TODO: Remove during upstreaming target id.
-def mxnack : Flag<["-"], "mxnack">, Group<m_amdgpu_Features_Group>,
-  HelpText<"Legacy option to specify XNACK mode (AMDGPU only)">;
-def mno_xnack : Flag<["-"], "mno-xnack">, Group<m_amdgpu_Features_Group>;
+def mno_code_object_v3_legacy : Flag<["-"], "mno-code-object-v3">, Group<m_Group>;
 
 def mcumode : Flag<["-"], "mcumode">, Group<m_amdgpu_Features_Group>,
   HelpText<"Specify CU (-mcumode) or WGP (-mno-cumode) wavefront execution mode (AMDGPU only)">;
 def mno_cumode : Flag<["-"], "mno-cumode">, Group<m_amdgpu_Features_Group>;
 
-def mwavefrontsize64 : Flag<["-"], "mwavefrontsize64">, Group<m_amdgpu_Features_Group>,
-  HelpText<"Specify wavefront size 64 mode">;
-def mno_wavefrontsize64 : Flag<["-"], "mno-wavefrontsize64">, Group<m_amdgpu_Features_Group>,
-  HelpText<"Specify wavefront size 32 mode">;
+// TODO: Remove during upstreaming target id.
+def msram_ecc_legacy : Flag<["-"], "msram-ecc">, Group<m_Group>,
+  HelpText<"Legacy option to specify SRAM ECC mode (AMDGPU only)">;
+def mno_sram_ecc_legacy : Flag<["-"], "mno-sram-ecc">, Group<m_Group>;
+
+def mwavefrontsize64 : Flag<["-"], "mwavefrontsize64">, Group<m_Group>,
+  HelpText<"Specify wavefront size 64 mode (AMDGPU only)">;
+def mno_wavefrontsize64 : Flag<["-"], "mno-wavefrontsize64">, Group<m_Group>,
+  HelpText<"Specify wavefront size 32 mode (AMDGPU only)">;
+
+// TODO: Remove during upstreaming target id.
+def mxnack : Flag<["-"], "mxnack">, Group<m_amdgpu_Features_Group>,
+  HelpText<"Legacy option to specify XNACK mode (AMDGPU only)">;
+def mno_xnack : Flag<["-"], "mno-xnack">, Group<m_amdgpu_Features_Group>;
 
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>, Flags<[DriverOption]>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>, Flags<[DriverOption]>;

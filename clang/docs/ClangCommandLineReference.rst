@@ -2651,6 +2651,14 @@ Align selected branches (fused, jcc, jmp) within 32-byte boundary
 
 .. option:: -mcmodel=<arg>, -mcmodel=medany (equivalent to -mcmodel=medium), -mcmodel=medlow (equivalent to -mcmodel=small)
 
+.. option:: -mcode-object-v3, -mno-code-object-v3
+
+Legacy option to specify code object ABI V2 (-mnocode-object-v3) or V3 (-mcode-object-v3) (AMDGPU only)
+
+.. option:: -mcode-object-version= <version>
+
+Specify code object ABI <version> (AMDGPU only)
+
 .. option:: -mconsole<arg>
 
 .. program:: clang1
@@ -2811,6 +2819,10 @@ Use software floating point
 
 .. option:: -mspeculative-load-hardening, -mno-speculative-load-hardening
 
+.. option:: -msram-ecc, -mno-sram-ecc
+
+Legacy option to specify SRAM ECC mode (AMDGPU only)
+
 .. option:: -mstack-alignment=<arg>
 
 Set the stack alignment
@@ -2862,6 +2874,10 @@ Only supported on X86. Otherwise accepted for compatibility with GCC.
 .. option:: -mwarn-nonportable-cfstrings, -mno-warn-nonportable-cfstrings
 
 .. option:: -mwatchos-version-min=<arg>
+
+.. option:: -mwavefrontsize64, -mno-wavefrontsize64
+
+Specify wavefront size 64 mode (AMDGPU only)
 
 .. option:: -mwindows<arg>
 
@@ -2923,25 +2939,9 @@ Specify the size in bits of an SVE vector register. Defaults to the vector lengt
 
 AMDGPU
 ------
-.. option:: -mcode-object-v3, -mno-code-object-v3
-
-Legacy option to specify code object ABI V2 (-mnocode-object-v3) or V3 (-mcode-object-v3) (AMDGPU only)
-
-.. option:: -mcode-object-version= <version>
-
-Specify code object ABI <version> (AMDGPU only)
-
 .. option:: -mcumode, -mno-cumode
 
 Specify CU (-mcumode) or WGP (-mno-cumode) wavefront execution mode (AMDGPU only)
-
-.. option:: -msram-ecc, -mno-sram-ecc
-
-Legacy option to specify SRAM ECC mode (AMDGPU only)
-
-.. option:: -mwavefrontsize64, -mno-wavefrontsize64
-
-Specify wavefront size 64 mode
 
 .. option:: -mxnack, -mno-xnack
 
