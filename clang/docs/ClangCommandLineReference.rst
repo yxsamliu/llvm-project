@@ -2655,9 +2655,9 @@ Align selected branches (fused, jcc, jmp) within 32-byte boundary
 
 Legacy option to specify code object ABI V2 (-mnocode-object-v3) or V3 (-mcode-object-v3) (AMDGPU only)
 
-.. option:: -mcode-object-version= <version>
+.. option:: -mcode-object-version=<version>
 
-Specify code object ABI <version> (AMDGPU only)
+Specify code object ABI version. Defaults to 4. (AMDGPU only)
 
 .. option:: -mconsole<arg>
 

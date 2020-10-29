@@ -2448,9 +2448,9 @@ def mamdgpu_debugger_abi : Joined<["-"], "mamdgpu-debugger-abi=">, Group<m_Group
   HelpText<"Generate additional code for specified <version> of debugger ABI (AMDGPU only)">,
   MetaVarName<"<version>">;
 
-def mcode_object_version : Flag<["-"], "mcode-object-version=">, Group<m_Group>,
-  HelpText<"Specify code object ABI <version> (AMDGPU only)">,
-  MetaVarName<"<version>">;
+def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
+  HelpText<"Specify code object ABI version. Defaults to 4. (AMDGPU only)">,
+  MetaVarName<"<version>">, Values<"2,3,4">;
 
 def mcode_object_v3_legacy : Flag<["-"], "mcode-object-v3">, Group<m_Group>,
   HelpText<"Legacy option to specify code object ABI V2 (-mnocode-object-v3) or V3 (-mcode-object-v3) (AMDGPU only)">;
