@@ -58,3 +58,14 @@
 // RUN:   --offload-arch=gfx906 -nogpulib \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=INVALID %s
 // INVALID: error: invalid integral value '1' in '-mcode-object-version=1'
+
+// Check warnings are emitted for legacy options before -mcode-object-version options.
+// Check warnings are emitted only once.
+
+// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN:   -mno-code-object-v3 -mcode-object-v3 -mcode-object-version=4 \
+// RUN:   --offload-arch=gfx906 -nogpulib \
+// RUN:   %s 2>&1 | FileCheck -check-prefixes=WARN %s
+// WARN: warning: argument '-mno-code-object-v3' is deprecated, use '-mcode-object-version=2' instead [-Wdeprecated]
+// WARN: warning: argument '-mcode-object-v3' is deprecated, use '-mcode-object-version=3' instead [-Wdeprecated]
+// WARN-NOT: warning: argument {{.*}} is deprecated

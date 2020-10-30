@@ -1765,13 +1765,9 @@ unsigned tools::getAMDGPUCodeObjectVersion(const Driver &D,
                           options::OPT_mcode_object_version_EQ)) {
     if (CodeObjArg->getOption().getID() ==
         options::OPT_mno_code_object_v3_legacy) {
-      D.Diag(diag::warn_drv_deprecated_arg) << "-mno-code-object-v3"
-                                            << "-mcode-object-version=2";
       CodeObjVer = 2;
     } else if (CodeObjArg->getOption().getID() ==
                options::OPT_mcode_object_v3_legacy) {
-      D.Diag(diag::warn_drv_deprecated_arg) << "-mcode-object-v3"
-                                            << "-mcode-object-version=3";
       CodeObjVer = 3;
     } else {
       auto Remnant =

@@ -421,8 +421,16 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
 AMDGPUToolChain::AMDGPUToolChain(const Driver &D, const llvm::Triple &Triple,
                                  const ArgList &Args)
     : Generic_ELF(D, Triple, Args),
-      OptionsDefault({{options::OPT_O, "3"},
-                      {options::OPT_cl_std_EQ, "CL1.2"}}) {}
+      OptionsDefault(
+          {{options::OPT_O, "3"}, {options::OPT_cl_std_EQ, "CL1.2"}}) {
+  if (Args.hasArg(options::OPT_mno_code_object_v3_legacy))
+    D.Diag(diag::warn_drv_deprecated_arg) << "-mno-code-object-v3"
+                                          << "-mcode-object-version=2";
+
+  if (Args.hasArg(options::OPT_mcode_object_v3_legacy))
+    D.Diag(diag::warn_drv_deprecated_arg) << "-mcode-object-v3"
+                                          << "-mcode-object-version=3";
+}
 
 Tool *AMDGPUToolChain::buildLinker() const {
   return new tools::amdgpu::Linker(*this);
