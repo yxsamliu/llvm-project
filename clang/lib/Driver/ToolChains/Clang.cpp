@@ -1064,7 +1064,7 @@ static const char *RelocationModelName(llvm::Reloc::Model Model) {
 static void handleAMDGPUCodeObjectVersionOptions(const Driver &D,
                                                  const ArgList &Args,
                                                  ArgStringList &CmdArgs) {
-  unsigned CodeObjVer = getAMDGPUCodeObjectVersion(D, Args);
+  unsigned CodeObjVer = getOrCheckAMDGPUCodeObjectVersion(D, Args);
   CmdArgs.push_back("-mllvm");
   CmdArgs.push_back(Args.MakeArgString(Twine("--amdhsa-code-object-version=") +
                                        Twine(CodeObjVer)));

@@ -58,6 +58,7 @@
 // RUN:   --offload-arch=gfx906 -nogpulib \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=INVALID %s
 // INVALID: error: invalid integral value '1' in '-mcode-object-version=1'
+// INVALID-NOT: error: invalid integral value
 
 // Check warnings are emitted for legacy options before -mcode-object-version options.
 // Check warnings are emitted only once.
