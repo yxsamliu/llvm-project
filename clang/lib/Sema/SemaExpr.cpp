@@ -354,6 +354,21 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
 
   diagnoseUseOfInternalDeclInInlineFunction(*this, D, Loc);
 
+  if (LangOpts.CUDAIsDevice) {
+    auto *FD = dyn_cast_or_null<FunctionDecl>(CurContext);
+    auto Target = IdentifyCUDATarget(FD);
+    if (FD && Target != CFT_Host) {
+      const auto *VD = dyn_cast<VarDecl>(D);
+      if (VD && VD->hasGlobalStorage() && !VD->hasAttr<CUDADeviceAttr>() &&
+          !VD->hasAttr<CUDAConstantAttr>() && !VD->hasAttr<CUDASharedAttr>() &&
+          !VD->getType()->isCUDADeviceBuiltinSurfaceType() &&
+          !VD->getType()->isCUDADeviceBuiltinTextureType() &&
+          !VD->isConstexpr() && !VD->getType().isConstQualified())
+        targetDiag(*Locs.begin(), diag::err_ref_bad_target)
+            << /*host*/ 2 << /*variable*/ 1 << VD << Target;
+    }
+  }
+
   if (LangOpts.SYCLIsDevice || (LangOpts.OpenMP && LangOpts.OpenMPIsDevice)) {
     if (const auto *VD = dyn_cast<ValueDecl>(D))
       checkDeviceDecl(VD, Loc);
@@ -1939,13 +1954,47 @@ NonOdrUseReason Sema::getNonOdrUseReasonInCurrentContext(ValueDecl *D) {
   if (isUnevaluatedContext())
     return NOUR_Unevaluated;
 
+  // CUDA/HIP: Check whether a captured reference variable is referencing a
+  // host variable in a device or host device lambda.
+  auto IsCapturingReferenceToHostVarInCUDADeviceLambda = [&](VarDecl *VD) {
+    if (!getLangOpts().CUDA || !VD->hasInit())
+      return false;
+    assert(VD->getType()->isReferenceType());
+
+    // Check whether the reference variable is referencing a host variable.
+    auto *DRE = dyn_cast<DeclRefExpr>(VD->getInit());
+    if (!DRE)
+      return false;
+    auto *Referee = dyn_cast<VarDecl>(DRE->getDecl());
+    if (!Referee || !Referee->hasGlobalStorage() ||
+        Referee->hasAttr<CUDADeviceAttr>())
+      return false;
+
+    // Check whether the current function is a device or host device lambda.
+    // Check whether the reference variable is a capture by getDeclContext()
+    // since refersToEnclosingVariableOrCapture() is not ready at this point.
+    auto *MD = dyn_cast_or_null<CXXMethodDecl>(CurContext);
+    if (MD && MD->getParent()->isLambda() &&
+        MD->getOverloadedOperator() == OO_Call &&
+        MD->hasAttr<CUDADeviceAttr>() && VD->getDeclContext() != MD)
+      return true;
+
+    return false;
+  };
   // C++2a [basic.def.odr]p4:
   //   A variable x whose name appears as a potentially-evaluated expression e
   //   is odr-used by e unless [...] x is a reference that is usable in
   //   constant expressions.
+  // CUDA/HIP:
+  //   If a reference variable referencing a host variable is captured in a
+  //   device or host device lambda, the value of the referee must be copied
+  //   to the capture and the reference variable must be treated as odr-use
+  //   since the value of the referee is not known at compile time and must
+  //   be loaded from the captured.
   if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
     if (VD->getType()->isReferenceType() &&
         !(getLangOpts().OpenMP && isOpenMPCapturedDecl(D)) &&
+        !IsCapturingReferenceToHostVarInCUDADeviceLambda(VD) &&
         VD->isUsableInConstantExpressions(Context))
       return NOUR_Constant;
   }
