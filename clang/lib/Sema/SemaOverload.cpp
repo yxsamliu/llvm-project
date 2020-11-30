@@ -9646,7 +9646,12 @@ bool clang::isBetterOverloadCandidate(
   // correct context about device/host. Therefore we can only enforce this
   // rule when there is a caller. We should enforce this rule for functions
   // in global variable initializers once proper context is added.
-  if (S.getLangOpts().CUDA && Cand1.Function && Cand2.Function) {
+  //
+  // TODO: We can only enable the hostness based overloading resolution when
+  // -ffix-overload-resolution is on since this requires deferring overloading
+  // resolution diagnostics.
+  if (S.getLangOpts().CUDA && Cand1.Function && Cand2.Function &&
+      S.getLangOpts().FixOverloadResolution) {
     if (FunctionDecl *Caller = dyn_cast<FunctionDecl>(S.CurContext)) {
       bool IsCallerImplicitHD = Sema::isCUDAImplicitHostDeviceFunction(Caller);
       bool IsCand1ImplicitHD =
@@ -9662,11 +9667,13 @@ bool clang::isBetterOverloadCandidate(
       // may result in non-deferrable diagnostics. As a workaround, we let
       // implicit HD candidates take equal preference as wrong-sided candidates.
       // This will preserve the overloading resolution.
+      // TODO: We still need special handling of implicit HD functions since
+      // they may incur other diagnostics to be deferred. We should make all
+      // host/device related diagnostics deferrable and remove special handling
+      // of implicit HD functions.
       auto EmitThreshold =
           (S.getLangOpts().CUDAIsDevice && IsCallerImplicitHD &&
-           (IsCand1ImplicitHD || IsCand2ImplicitHD)) ||
-                  (!S.getLangOpts().GPUDeferDiag && P1 < Sema::CFP_SameSide &&
-                   P2 < Sema::CFP_SameSide)
+           (IsCand1ImplicitHD || IsCand2ImplicitHD))
               ? Sema::CFP_Never
               : Sema::CFP_WrongSide;
       auto Cand1Emittable = P1 > EmitThreshold;
@@ -10018,6 +10025,36 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
   llvm::SmallVector<OverloadCandidate *, 16> Candidates;
   std::transform(begin(), end(), std::back_inserter(Candidates),
                  [](OverloadCandidate &Cand) { return &Cand; });
+
+  // [CUDA] HD->H or HD->D calls are technically not allowed by CUDA but
+  // are accepted by both clang and NVCC. However, during a particular
+  // compilation mode only one call variant is viable. We need to
+  // exclude non-viable overload candidates from consideration based
+  // only on their host/device attributes. Specifically, if one
+  // candidate call is WrongSide and the other is SameSide, we ignore
+  // the WrongSide candidate.
+  // We only need to remove wrong-sided candidates here if
+  // -ffix-overload-resolution is off. When -ffix-overload-resolution is on,
+  // all candidates are compared uniformly in isBetterOverloadCandidate.
+  if (S.getLangOpts().CUDA && !S.getLangOpts().FixOverloadResolution) {
+    const FunctionDecl *Caller = dyn_cast<FunctionDecl>(S.CurContext);
+    bool ContainsSameSideCandidate =
+        llvm::any_of(Candidates, [&](OverloadCandidate *Cand) {
+          // Check viable function only.
+          return Cand->Viable && Cand->Function &&
+                 S.IdentifyCUDAPreference(Caller, Cand->Function) ==
+                     Sema::CFP_SameSide;
+        });
+    if (ContainsSameSideCandidate) {
+      auto IsWrongSideCandidate = [&](OverloadCandidate *Cand) {
+        // Check viable function only to avoid unnecessary data copying/moving.
+        return Cand->Viable && Cand->Function &&
+               S.IdentifyCUDAPreference(Caller, Cand->Function) ==
+                   Sema::CFP_WrongSide;
+      };
+      llvm::erase_if(Candidates, IsWrongSideCandidate);
+    }
+  }
 
   // Find the best viable function.
   Best = end();

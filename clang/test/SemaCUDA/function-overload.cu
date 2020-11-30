@@ -1,10 +1,16 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-linux-gnu -fsyntax-only -verify=host,hostdefer,devdefer,expected %s
-// RUN: %clang_cc1 -std=c++14 -triple nvptx64-nvidia-cuda -fsyntax-only -fcuda-is-device -verify=dev,devnodeferonly,hostdefer,devdefer,expected %s
-// RUN: %clang_cc1 -fgpu-defer-diag -DDEFER=1 -std=c++14 -triple x86_64-unknown-linux-gnu -fsyntax-only -verify=host,hostdefer,expected %s
-// RUN: %clang_cc1 -fgpu-defer-diag -DDEFER=1 -std=c++14 -triple nvptx64-nvidia-cuda -fsyntax-only -fcuda-is-device -verify=dev,devdeferonly,devdefer,expected %s
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-linux-gnu -fsyntax-only \
+// RUN:   -verify=host,hostdefer,devdefer,expected %s
+// RUN: %clang_cc1 -std=c++14 -triple nvptx64-nvidia-cuda -fsyntax-only \
+// RUN:   -fcuda-is-device -verify=dev,devnodeferonly,hostdefer,devdefer,expected %s
+// RUN: %clang_cc1 -ffix-overload-resolution -fgpu-defer-diag -DDEFER=1 \
+// RUN:    -std=c++14 -triple x86_64-unknown-linux-gnu -fsyntax-only \
+// RUN:    -verify=host,hostdefer,expected %s
+// RUN: %clang_cc1 -ffix-overload-resolution -fgpu-defer-diag -DDEFER=1 \
+// RUN:    -std=c++14 -triple nvptx64-nvidia-cuda -fsyntax-only -fcuda-is-device \
+// RUN:    -verify=dev,devdeferonly,devdefer,expected %s
 
 #include "Inputs/cuda.h"
 
@@ -596,44 +602,112 @@ namespace TestImplicitHDWithHD {
 // In device compilation, H wins when -fgpu-defer-diag is off and HD wins
 // when -fgpu-defer-diags is on. In both cases the diagnostic should be
 // deferred.
-namespace TestDeferNoMatchingFunc {
+namespace TestDeferNoMatchingFuncNotEmitted {
   template <typename> struct a {};
   namespace b {
     struct c : a<int> {};
     template <typename d> void ag(d);
   } // namespace b
   template <typename ae>
-  __attribute__((host)) __attribute__((device))
-  void ag(a<ae>) {
+  __host__ __device__ void ag(a<ae>) {
     ae e;
     ag(e);
   }
   void f() { (void)ag<b::c>; }
 }
 
-// Two HD candidates competes with H candidate.
+namespace TestDeferNoMatchingFuncEmitted {
+  template <typename> struct a {};
+  namespace b {
+    struct c : a<int> {};
+    template <typename d> void ag(d);
+    // devnodeferonly-note@-1{{'ag<TestDeferNoMatchingFuncEmitted::b::c>' declared here}}
+  } // namespace b
+  template <typename ae>
+  __host__ __device__ void ag(a<ae>) {
+    ae e;
+    ag(e);
+    // devnodeferonly-error@-1{{reference to __host__ function 'ag<TestDeferNoMatchingFuncEmitted::b::c>' in __host__ __device__ function}}
+    // devdeferonly-error@-2{{no matching function for call to 'ag'}}
+    // devdeferonly-note@-3{{called by 'ag<TestDeferNoMatchingFuncEmitted::b::c>'}}
+  }
+  __host__ __device__ void f() { (void)ag<b::c>; }
+  // devnodeferonly-note@-1{{called by 'f'}}
+  // devdeferonly-note@-2{{called by 'f'}}
+}
+
+// Two HD candidates compete with H candidate.
 // HDs have type mismatch whereas H has type match.
 // In device compilation, H wins when -fgpu-defer-diag is off and two HD win
 // when -fgpu-defer-diags is on. In both cases the diagnostic should be
 // deferred.
-namespace TestDeferAmbiguity {
+namespace TestDeferAmbiguityNotEmitted {
   template <typename> struct a {};
   namespace b {
     struct c : a<int> {};
     template <typename d> void ag(d, int);
   } // namespace b
   template <typename ae>
-  __attribute__((host)) __attribute__((device))
-  void ag(a<ae>, float) {
+  __host__ __device__ void ag(a<ae>, float) {
     ae e;
     ag(e, 1);
   }
   template <typename ae>
-  __attribute__((host)) __attribute__((device))
-  void ag(a<ae>, double) {
+  __host__ __device__ void ag(a<ae>, double) {
   }
   void f() {
     b::c x;
     ag(x, 1);
+  }
+}
+
+namespace TestDeferAmbiguityEmitted {
+  template <typename> struct a {};
+  namespace b {
+    struct c : a<int> {};
+    template <typename d> void ag(d, int);
+    // devnodeferonly-note@-1{{'ag<TestDeferAmbiguityEmitted::b::c>' declared here}}
+  } // namespace b
+  template <typename ae>
+  __host__ __device__ void ag(a<ae>, float) {
+    // devdeferonly-note@-1{{candidate function [with ae = int]}}
+    ae e;
+    ag(e, 1);
+  }
+  template <typename ae>
+  __host__ __device__ void ag(a<ae>, double) {
+    // devdeferonly-note@-1{{candidate function [with ae = int]}}
+  }
+  __host__ __device__ void f() {
+    b::c x;
+    ag(x, 1);
+    // devnodeferonly-error@-1{{reference to __host__ function 'ag<TestDeferAmbiguityEmitted::b::c>' in __host__ __device__ function}}
+    // devdeferonly-error@-2{{call to 'ag' is ambiguous}}
+  }
+}
+
+// Implicit HD functions compute with H function and D function.
+// In host compilation, foo(0.0, 2) should resolve to X::foo<double, int>.
+// In device compilation, foo(0.0, 2) should resolve to foo(double, int).
+// In either case there should be no ambiguity.
+namespace TestImplicitHDWithHAndD {
+  namespace X {
+    inline double foo(double, double) { return 0;}
+    inline constexpr float foo(float, float) { return 1;}
+    inline constexpr long double foo(long double, long double) { return 2;}
+    template<typename _Tp, typename _Up> inline constexpr double foo(_Tp, _Up) { return 3;}
+  };
+  using X::foo;
+  inline __device__ double foo(double, double) { return 4;}
+  inline __device__ float foo(float, int) { return 5;}
+  inline __device__ float foo(int, int) { return 6;}
+  inline __device__ double foo(double, int) { return 7;}
+  inline __device__ float foo(float, float) { return 9;}
+  template<typename _Tp, typename _Up> inline __device__ double foo(_Tp, _Up) { return 10;}
+
+  int g() {
+    return [](){
+    return foo(0.0, 2);
+    }();
   }
 }
