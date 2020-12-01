@@ -2646,8 +2646,12 @@ class OffloadingActionBuilder final {
       // Default to sm_20 which is the lowest common denominator for
       // supported GPUs.  sm_20 code should work correctly, if
       // suboptimally, on all newer GPUs.
-      if (GpuArchList.empty())
+      if (GpuArchList.empty()) {
         GpuArchList.push_back(DefaultCudaArch);
+        if (AssociatedOffloadKind == Action::OFK_HIP)
+          C.getDriver().Diag(clang::diag::warn_drv_no_offload_arch)
+              << CudaArchToString(DefaultCudaArch);
+      }
 
       return Error;
     }

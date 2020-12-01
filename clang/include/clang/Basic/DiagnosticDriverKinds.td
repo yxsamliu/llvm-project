@@ -82,6 +82,8 @@ def err_drv_bad_target_id : Error<"Invalid target ID: %0 (A target ID is a proce
   "by colon, e.g. 'gfx908:sram-ecc+:xnack-')">;
 def err_drv_bad_offload_arch_combo : Error<"Invalid offload arch combinations: %0 and %1 (For a specific "
   "processor, a feature should either exist in all offload archs, or not exist in any offload archs)">;
+def warn_drv_no_offload_arch : Warning<"no offload arch is specified. Assuming %0. Use --offload-arch=<arch> to"
+  " specify offload arch">, InGroup<HIPOptionMising>;
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
 def err_drv_invalid_linker_name : Error<
