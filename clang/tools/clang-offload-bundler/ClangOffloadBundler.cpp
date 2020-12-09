@@ -62,11 +62,11 @@ static cl::list<std::string>
                    cl::desc("[<input file>,...]"),
                    cl::cat(ClangOffloadBundlerCategory));
 static cl::list<std::string>
-    OutputFileNames("outputs", cl::CommaSeparated, cl::OneOrMore,
+    OutputFileNames("outputs", cl::CommaSeparated,
                     cl::desc("[<output file>,...]"),
                     cl::cat(ClangOffloadBundlerCategory));
 static cl::list<std::string>
-    TargetNames("targets", cl::CommaSeparated, cl::OneOrMore,
+    TargetNames("targets", cl::CommaSeparated,
                 cl::desc("[<offload kind>-<target triple>,...]"),
                 cl::cat(ClangOffloadBundlerCategory));
 static cl::opt<std::string>
@@ -88,6 +88,10 @@ static cl::opt<bool>
     Unbundle("unbundle",
              cl::desc("Unbundle bundled file into several output files.\n"),
              cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+
+static cl::opt<bool>
+    ListBundleIDs("list", cl::desc("List bundle IDs in the bundled file.\n"),
+                  cl::init(false), cl::cat(ClangOffloadBundlerCategory));
 
 static cl::opt<bool> PrintExternalCommands(
     "###",
@@ -163,6 +167,29 @@ public:
 
   /// Write the bundle from \a Input into \a OS.
   virtual Error WriteBundle(raw_fd_ostream &OS, MemoryBuffer &Input) = 0;
+
+  /// List bundle IDs in \a Input.
+  virtual Error listBundleIDs(MemoryBuffer &Input) = 0;
+
+  /// For each bundle in \a Input, do \a Func.
+  Error forEachBundle(MemoryBuffer &Input, std::function<Error()> Func) {
+    while (true) {
+      Expected<Optional<StringRef>> CurTripleOrErr = ReadBundleStart(Input);
+      if (!CurTripleOrErr)
+        return CurTripleOrErr.takeError();
+
+      // No more bundles.
+      if (!*CurTripleOrErr)
+        break;
+
+      StringRef CurTriple = **CurTripleOrErr;
+      assert(!CurTriple.empty());
+
+      if (Error Err = Func())
+        return Err;
+    }
+    return Error::success();
+  }
 };
 
 /// Handler for binary files. The bundled file will have the following format
@@ -290,6 +317,8 @@ public:
 
       StringRef Triple(&FC.data()[ReadChars], TripleSize);
       ReadChars += TripleSize;
+      if (ListBundleIDs)
+        llvm::outs() << Triple << '\n';
 
       // Check if the offset and size make sense.
       if (!Offset || Offset + Size > FC.size())
@@ -375,6 +404,11 @@ public:
     OS.seek(BI.Offset);
     OS.write(Input.getBufferStart(), Input.getBufferSize());
     return Error::success();
+  }
+
+  Error listBundleIDs(MemoryBuffer &Input) final {
+    // List bundle IDs in a binary file only needs go through the header.
+    return ReadHeader(Input);
   }
 };
 
@@ -472,8 +506,11 @@ public:
           IsOffloadSection(*CurrentSection);
       if (!TripleOrErr)
         return TripleOrErr.takeError();
-      if (*TripleOrErr)
+      if (*TripleOrErr) {
+        if (ListBundleIDs)
+          llvm::outs() << **TripleOrErr << '\n';
         return **TripleOrErr;
+      }
     }
     return None;
   }
@@ -595,6 +632,15 @@ public:
     return Error::success();
   }
 
+  Error listBundleIDs(MemoryBuffer &Input) final {
+    if (Error Err = ReadHeader(Input))
+      return Err;
+
+    // To list bundle IDs in bundled object files we only need to read the
+    // start of each bundle which is done by forEachBundle.
+    return forEachBundle(Input, []() { return Error::success(); });
+  }
+
 private:
   static Error executeObjcopy(StringRef Objcopy, ArrayRef<StringRef> Args) {
     // If the user asked for the commands to be printed out, we do that
@@ -657,7 +703,10 @@ protected:
     // Next time we read after the new line.
     ++ReadChars;
 
-    return StringRef(&FC.data()[TripleStart], TripleEnd - TripleStart);
+    auto Triple = StringRef(&FC.data()[TripleStart], TripleEnd - TripleStart);
+    if (ListBundleIDs)
+      llvm::outs() << Triple << '\n';
+    return Triple;
   }
 
   Error ReadBundleEnd(MemoryBuffer &Input) final {
@@ -714,6 +763,22 @@ public:
         "\n" + Comment.str() + " " OFFLOAD_BUNDLER_MAGIC_STR "__START__ ";
     BundleEndString =
         "\n" + Comment.str() + " " OFFLOAD_BUNDLER_MAGIC_STR "__END__ ";
+  }
+
+  Error listBundleIDs(MemoryBuffer &Input) final {
+    if (Error Err = ReadHeader(Input))
+      return Err;
+
+    return forEachBundle(Input, [&]() -> Error {
+      // TODO: To list bundle IDs in a bundled text file we need to go through
+      // all bundles. The format of bundled text file may need to include a
+      // header if the performance of listing bundle IDs of bundled text file is
+      // important.
+      ReadChars = Input.getBuffer().find(BundleEndString, ReadChars);
+      if (Error Err = ReadBundleEnd(Input))
+        return Err;
+      return Error::success();
+    });
   }
 };
 
@@ -813,6 +878,27 @@ static Error BundleFiles() {
     ++Input;
   }
   return Error::success();
+}
+
+// List bundle IDs. Return true if an error was found.
+static Error ListBundleIDsInFile() {
+  // Open Input file.
+  ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
+      MemoryBuffer::getFileOrSTDIN(InputFileNames.front());
+  if (std::error_code EC = CodeOrErr.getError())
+    return createFileError(InputFileNames.front(), EC);
+
+  MemoryBuffer &Input = **CodeOrErr;
+
+  // Select the right files handler.
+  Expected<std::unique_ptr<FileHandler>> FileHandlerOrErr =
+      CreateFileHandler(Input);
+  if (!FileHandlerOrErr)
+    return FileHandlerOrErr.takeError();
+
+  std::unique_ptr<FileHandler> &FH = *FileHandlerOrErr;
+  assert(FH);
+  return FH->listBundleIDs(Input);
 }
 
 // Unbundle the files. Return true if an error was found.
@@ -942,6 +1028,41 @@ int main(int argc, const char **argv) {
   };
 
   bool Error = false;
+  if (!ListBundleIDs) {
+    if (OutputFileNames.getNumOccurrences() == 0) {
+      Error = true;
+      reportError(createStringError(
+          errc::invalid_argument,
+          "for the --outputs option: must be specified at least once!"));
+    }
+    if (TargetNames.getNumOccurrences() == 0) {
+      Error = true;
+      reportError(createStringError(
+          errc::invalid_argument,
+          "for the --targets option: must be specified at least once!"));
+    }
+  }
+  if (Unbundle && ListBundleIDs) {
+    Error = true;
+    reportError(createStringError(
+        errc::invalid_argument, "-unbundle and -list cannot be used together"));
+  } else if (ListBundleIDs) {
+    if (InputFileNames.size() != 1) {
+      Error = true;
+      reportError(createStringError(errc::invalid_argument,
+                                    "only one input file supported for -list"));
+    }
+    if (OutputFileNames.size()) {
+      Error = true;
+      reportError(createStringError(errc::invalid_argument,
+                                    "-outputs option is invalid for -list"));
+    }
+    if (TargetNames.size()) {
+      Error = true;
+      reportError(createStringError(errc::invalid_argument,
+                                    "-targets option is invalid for -list"));
+    }
+  }
   if (Unbundle) {
     if (InputFileNames.size() != 1) {
       Error = true;
@@ -955,7 +1076,7 @@ int main(int argc, const char **argv) {
                                     "number of output files and targets should "
                                     "match in unbundling mode"));
     }
-  } else {
+  } else if (!ListBundleIDs) {
     if (OutputFileNames.size() != 1) {
       Error = true;
       reportError(createStringError(
@@ -1014,7 +1135,8 @@ int main(int argc, const char **argv) {
 
   // Host triple is not really needed for unbundling operation, so do not
   // treat missing host triple as error if we do unbundling.
-  if ((Unbundle && HostTargetNum > 1) || (!Unbundle && HostTargetNum != 1)) {
+  if ((Unbundle && HostTargetNum > 1) ||
+      (!Unbundle && !ListBundleIDs && HostTargetNum != 1)) {
     Error = true;
     reportError(createStringError(errc::invalid_argument,
                                   "expecting exactly one host target but got " +
@@ -1030,7 +1152,10 @@ int main(int argc, const char **argv) {
   if (!llvm::sys::fs::exists(BundlerExecutable))
     BundlerExecutable = sys::fs::getMainExecutable(argv[0], &BundlerExecutable);
 
-  if (llvm::Error Err = Unbundle ? UnbundleFiles() : BundleFiles()) {
+  llvm::Error Err = ListBundleIDs
+                        ? ListBundleIDsInFile()
+                        : (Unbundle ? UnbundleFiles() : BundleFiles());
+  if (Err) {
     reportError(std::move(Err));
     return 1;
   }
