@@ -43,6 +43,7 @@
 #include <cstdint>
 #include <forward_list>
 #include <memory>
+#include <set>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -98,6 +99,12 @@ static cl::opt<bool> PrintExternalCommands(
     cl::desc("Print any external commands that are to be executed "
              "instead of actually executing them - for testing purposes.\n"),
     cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+
+static cl::opt<bool>
+    FailOnMissingBundles("fail-on-missing-bundles",
+                         cl::desc("Fail if bundles are missing when"
+                                  "unbundling.\n"),
+                         cl::init(false), cl::cat(ClangOffloadBundlerCategory));
 
 static cl::opt<unsigned>
     BundleAlignment("bundle-align",
@@ -967,6 +974,25 @@ static Error UnbundleFiles() {
     // Record if we found the host bundle.
     if (hasHostKind(CurTriple))
       FoundHostBundle = true;
+  }
+
+  if (FailOnMissingBundles && !Worklist.empty()) {
+    std::string ErrMsg = "Can't find bundles for";
+    std::set<StringRef> Sorted;
+    for (auto &E : Worklist)
+      Sorted.insert(E.first());
+    unsigned I = 0;
+    unsigned Last = Worklist.size() - 1;
+    for (auto &E : Sorted) {
+      if (I != 0 && Last > 1)
+        ErrMsg += ",";
+      ErrMsg += " ";
+      if (I == Last && I != 0)
+        ErrMsg += "and ";
+      ErrMsg += E.str();
+      ++I;
+    }
+    return createStringError(inconvertibleErrorCode(), ErrMsg);
   }
 
   // If no bundles were found, assume the input file is the host bundle and

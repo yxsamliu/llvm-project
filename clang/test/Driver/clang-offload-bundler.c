@@ -323,6 +323,26 @@
 // CKLST2-NOT: openmp-powerpc64le-ibm-linux-gnu
 // CKLST2-NOT: openmp-x86_64-pc-linux-gnu
 
+//
+// Check -fail-on-missing-bundles option
+//
+// RUN: clang-offload-bundler -type=bc -targets=host-%itanium_abi_triple,hip-amdgcn-amd-amdhsa-gfx900 -inputs=%t.bc,%t.tgt1 -outputs=%t.hip.bundle.bc
+// RUN: not clang-offload-bundler -type=bc -inputs=%t.hip.bundle.bc -outputs=%t.tmp.bc -unbundle -fail-on-missing-bundles \
+// RUN:   -targets=hip-amdgcn-amd-amdhsa-gfx906 \
+// RUN:   2>&1 | FileCheck -check-prefix=MISS1 %s
+// RUN: not clang-offload-bundler -type=bc -inputs=%t.hip.bundle.bc -outputs=%t.tmp.bc,%t.tmp2.bc -unbundle -fail-on-missing-bundles \
+// RUN:   -targets=hip-amdgcn-amd-amdhsa-gfx906,hip-amdgcn-amd-amdhsa-gfx900 \
+// RUN:   2>&1 | FileCheck -check-prefix=MISS1 %s
+// MISS1: error: Can't find bundles for hip-amdgcn-amd-amdhsa-gfx906
+// RUN: not clang-offload-bundler -type=bc -inputs=%t.hip.bundle.bc -outputs=%t.tmp.bc,%t.tmp2.bc -unbundle -fail-on-missing-bundles \
+// RUN:   -targets=hip-amdgcn-amd-amdhsa-gfx906,hip-amdgcn-amd-amdhsa-gfx803 \
+// RUN:   2>&1 | FileCheck -check-prefix=MISS2 %s
+// MISS2: error: Can't find bundles for hip-amdgcn-amd-amdhsa-gfx803 and hip-amdgcn-amd-amdhsa-gfx906
+// RUN: not clang-offload-bundler -type=bc -inputs=%t.hip.bundle.bc -outputs=%t.tmp.bc,%t.tmp2.bc,%t.tmp3.bc -unbundle -fail-on-missing-bundles \
+// RUN:   -targets=hip-amdgcn-amd-amdhsa-gfx906,hip-amdgcn-amd-amdhsa-gfx803,hip-amdgcn-amd-amdhsa-gfx1010 \
+// RUN:   2>&1 | FileCheck -check-prefix=MISS3 %s
+// MISS3: error: Can't find bundles for hip-amdgcn-amd-amdhsa-gfx1010, hip-amdgcn-amd-amdhsa-gfx803, and hip-amdgcn-amd-amdhsa-gfx906
+
 // Some code so that we can create a binary out of this file.
 int A = 0;
 void test_func(void) {
