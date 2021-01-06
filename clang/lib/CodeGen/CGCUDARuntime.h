@@ -98,6 +98,8 @@ public:
   /// Returns function or variable name on device side even if the current
   /// compilation is for host.
   virtual std::string getDeviceSideName(const NamedDecl *ND) = 0;
+
+  virtual void transformManagedVariables() = 0;
 };
 
 /// Creates an instance of a CUDA runtime class.

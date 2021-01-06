@@ -151,6 +151,7 @@ public:
   llvm::Function *makeModuleCtorFunction() override;
   /// Creates module destructor function
   llvm::Function *makeModuleDtorFunction() override;
+  void transformManagedVariables() override;
 };
 
 }
@@ -454,6 +455,13 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
   llvm::FunctionCallee RegisterVar = CGM.CreateRuntimeFunction(
       llvm::FunctionType::get(VoidTy, RegisterVarParams, false),
       addUnderscoredPrefixToName("RegisterVar"));
+  // void __hipRegisterManagedVar(void **, char *, char *, const char *,
+  //                              size_t, unsigned)
+  llvm::Type *RegisterManagedVarParams[] = {VoidPtrPtrTy, CharPtrTy, CharPtrTy,
+                                            CharPtrTy,    VarSizeTy, IntTy};
+  llvm::FunctionCallee RegisterManagedVar = CGM.CreateRuntimeFunction(
+      llvm::FunctionType::get(VoidTy, RegisterManagedVarParams, false),
+      addUnderscoredPrefixToName("RegisterManagedVar"));
   // void __cudaRegisterSurface(void **, const struct surfaceReference *,
   //                            const void **, const char *, int, int);
   llvm::FunctionCallee RegisterSurf = CGM.CreateRuntimeFunction(
@@ -476,17 +484,49 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
     case DeviceVarFlags::Variable: {
       uint64_t VarSize =
           CGM.getDataLayout().getTypeAllocSize(Var->getValueType());
-      llvm::Value *Args[] = {
-          &GpuBinaryHandlePtr,
-          Builder.CreateBitCast(Var, VoidPtrTy),
-          VarName,
-          VarName,
-          llvm::ConstantInt::get(IntTy, Info.Flags.isExtern()),
-          llvm::ConstantInt::get(VarSizeTy, VarSize),
-          llvm::ConstantInt::get(IntTy, Info.Flags.isConstant()),
-          llvm::ConstantInt::get(IntTy, CGM.getLangOpts().HIP &&
-                                            Info.Flags.isManaged())};
-      Builder.CreateCall(RegisterVar, Args);
+      if (Info.Flags.isManaged()) {
+        if (getenv("DBG_MAN")) {
+          Var->dump();
+        }
+        auto ManagedVar = new llvm::GlobalVariable(
+            CGM.getModule(), Var->getType(),
+            /*isConstant=*/false, llvm::GlobalValue::ExternalLinkage, nullptr,
+            Twine(Var->getName() + ".managed"), nullptr,
+            llvm::GlobalVariable::NotThreadLocal);
+        SmallVector<llvm::Instruction *, 8> WorkList;
+        for (auto &&U : Var->uses()) {
+          WorkList.push_back(cast<llvm::Instruction>(U.getUser()));
+        }
+        for (auto &&U : WorkList) {
+          if (getenv("DBG_MAN")) {
+            U->dump();
+          }
+          auto *LD =
+              new llvm::LoadInst(Var->getType(), ManagedVar, "ld.managed",
+                                 false, llvm::Align(Var->getAlignment()), U);
+          U->replaceUsesOfWith(Var, LD);
+        }
+        llvm::Value *Args[] = {
+            &GpuBinaryHandlePtr,
+            Builder.CreateBitCast(ManagedVar, VoidPtrTy),
+            Builder.CreateBitCast(Var, VoidPtrTy),
+            VarName,
+            llvm::ConstantInt::get(VarSizeTy, VarSize),
+            llvm::ConstantInt::get(IntTy, Var->getAlignment())};
+        Builder.CreateCall(RegisterManagedVar, Args);
+      } else {
+        llvm::Value *Args[] = {
+            &GpuBinaryHandlePtr,
+            Builder.CreateBitCast(Var, VoidPtrTy),
+            VarName,
+            VarName,
+            llvm::ConstantInt::get(IntTy, Info.Flags.isExtern()),
+            llvm::ConstantInt::get(VarSizeTy, VarSize),
+            llvm::ConstantInt::get(IntTy, Info.Flags.isConstant()),
+            llvm::ConstantInt::get(IntTy, CGM.getLangOpts().HIP &&
+                                              Info.Flags.isManaged())};
+        Builder.CreateCall(RegisterVar, Args);
+      }
       break;
     }
     case DeviceVarFlags::Surface:
@@ -845,6 +885,8 @@ llvm::Function *CGNVCUDARuntime::makeModuleDtorFunction() {
   DtorBuilder.CreateRetVoid();
   return ModuleDtorFunc;
 }
+
+void CGNVCUDARuntime::transformManagedVariables() {}
 
 CGCUDARuntime *CodeGen::CreateNVCUDARuntime(CodeGenModule &CGM) {
   return new CGNVCUDARuntime(CGM);

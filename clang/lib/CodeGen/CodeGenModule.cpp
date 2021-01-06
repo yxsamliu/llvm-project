@@ -462,6 +462,7 @@ void CodeGenModule::Release() {
     if (llvm::Function *CudaCtorFunction =
             CUDARuntime->makeModuleCtorFunction())
       AddGlobalCtor(CudaCtorFunction);
+    CUDARuntime->transformManagedVariables();
   }
   if (OpenMPRuntime) {
     if (llvm::Function *OpenMPRequiresDirectiveRegFun =
