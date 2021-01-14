@@ -21,6 +21,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/NoFolder.h"
 #include "llvm/Support/Format.h"
 
 using namespace clang;
@@ -383,6 +384,56 @@ void CGNVCUDARuntime::emitDeviceStubBodyLegacy(CodeGenFunction &CGF,
   CGF.EmitBlock(EndBlock);
 }
 
+static llvm::Instruction *createReplacementInstr(llvm::ConstantExpr *CE,
+                                                 llvm::Instruction *Instr) {
+  llvm::IRBuilder<llvm::NoFolder> Builder(Instr);
+  unsigned OpCode = CE->getOpcode();
+  switch (OpCode) {
+  case llvm::Instruction::GetElementPtr: {
+    SmallVector<llvm::Value *, 4> CEOpVec(CE->operands());
+    ArrayRef<llvm::Value *> CEOps(CEOpVec);
+    return dyn_cast<llvm::Instruction>(Builder.CreateInBoundsGEP(
+        cast<llvm::GEPOperator>(CE)->getSourceElementType(), CEOps[0],
+        CEOps.slice(1)));
+  }
+  case llvm::Instruction::Add:
+  case llvm::Instruction::Sub:
+  case llvm::Instruction::Mul:
+  case llvm::Instruction::UDiv:
+  case llvm::Instruction::SDiv:
+  case llvm::Instruction::FDiv:
+  case llvm::Instruction::URem:
+  case llvm::Instruction::SRem:
+  case llvm::Instruction::FRem:
+  case llvm::Instruction::Shl:
+  case llvm::Instruction::LShr:
+  case llvm::Instruction::AShr:
+  case llvm::Instruction::And:
+  case llvm::Instruction::Or:
+  case llvm::Instruction::Xor:
+    return dyn_cast<llvm::Instruction>(Builder.CreateBinOp(
+        (llvm::Instruction::BinaryOps)OpCode, CE->getOperand(0),
+        CE->getOperand(1), CE->getName()));
+  case llvm::Instruction::Trunc:
+  case llvm::Instruction::ZExt:
+  case llvm::Instruction::SExt:
+  case llvm::Instruction::FPToUI:
+  case llvm::Instruction::FPToSI:
+  case llvm::Instruction::UIToFP:
+  case llvm::Instruction::SIToFP:
+  case llvm::Instruction::FPTrunc:
+  case llvm::Instruction::FPExt:
+  case llvm::Instruction::PtrToInt:
+  case llvm::Instruction::IntToPtr:
+  case llvm::Instruction::BitCast:
+    return dyn_cast<llvm::Instruction>(
+        Builder.CreateCast((llvm::Instruction::CastOps)OpCode,
+                           CE->getOperand(0), CE->getType(), CE->getName()));
+  default:
+    llvm_unreachable("Unhandled constant expression!\n");
+  }
+}
+
 /// Creates a function that sets up state on the host side for CUDA objects that
 /// have a presence on both the host and device sides. Specifically, registers
 /// the host side of kernel functions and device global variables with the CUDA
@@ -493,18 +544,46 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
             /*isConstant=*/false, llvm::GlobalValue::ExternalLinkage, nullptr,
             Twine(Var->getName() + ".managed"), nullptr,
             llvm::GlobalVariable::NotThreadLocal);
-        SmallVector<llvm::Instruction *, 8> WorkList;
-        for (auto &&U : Var->uses()) {
-          WorkList.push_back(cast<llvm::Instruction>(U.getUser()));
+        SmallVector<SmallVector<llvm::User *, 8>, 8> WorkList;
+        for (auto &&UU : Var->uses()) {
+          WorkList.push_back({UU.getUser()});
         }
-        for (auto &&U : WorkList) {
+        while (!WorkList.empty()) {
+          auto &&US = WorkList.pop_back_val();
+          auto *U = US.back();
           if (getenv("DBG_MAN")) {
             U->dump();
           }
-          auto *LD =
-              new llvm::LoadInst(Var->getType(), ManagedVar, "ld.managed",
-                                 false, llvm::Align(Var->getAlignment()), U);
-          U->replaceUsesOfWith(Var, LD);
+          if (isa<llvm::ConstantExpr>(U)) {
+            for (auto &&UU : U->uses()) {
+              US.push_back(UU.getUser());
+              WorkList.push_back(US);
+              US.pop_back();
+            }
+            continue;
+          }
+          if (auto *I = dyn_cast<llvm::Instruction>(U)) {
+            llvm::Value *OldV = Var;
+            llvm::Instruction *NewV =
+                new llvm::LoadInst(Var->getType(), ManagedVar, "ld.managed",
+                                   false, llvm::Align(Var->getAlignment()), I);
+            US.pop_back();
+            for (auto &&Op : US) {
+              auto *CE = cast<llvm::ConstantExpr>(Op);
+              auto *NewInst = createReplacementInstr(CE, I);
+              NewInst->replaceUsesOfWith(OldV, NewV);
+              OldV = CE;
+              NewV = NewInst;
+              if (getenv("DBG_MAN")) {
+                llvm::errs() << "ops:\n";
+                llvm::errs() << "old op: ";
+                OldV->dump();
+                llvm::errs() << "new op: ";
+                NewV->dump();
+              }
+            }
+            I->replaceUsesOfWith(OldV, NewV);
+          }
         }
         llvm::Value *Args[] = {
             &GpuBinaryHandlePtr,
