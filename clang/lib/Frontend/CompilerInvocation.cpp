@@ -2302,6 +2302,21 @@ void CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Diags.Report(diag::warn_ignored_hip_only_option)
           << Args.getLastArg(OPT_fgpu_allow_device_init)->getAsString(Args);
   }
+
+  // Only alphanumeric and underscore is allowed in -cuid option.
+  if (auto *A = Args.getLastArg(OPT_cuid_EQ)) {
+    const char *V = A->getValue();
+    bool IsValid = true;
+    for (const char *P = V; *P; ++P) {
+      if (!std::isalnum(*P) && *P != '_') {
+        Diags.Report(diag::err_drv_invalid_cuid) << A->getAsString(Args) << V;
+        IsValid = false;
+        break;
+      }
+    }
+    if (IsValid)
+      Opts.CUID = std::string(V);
+  }
   if (Opts.HIP)
     Opts.GPUMaxThreadsPerBlock = getLastArgIntValue(
         Args, OPT_gpu_max_threads_per_block_EQ, Opts.GPUMaxThreadsPerBlock);
