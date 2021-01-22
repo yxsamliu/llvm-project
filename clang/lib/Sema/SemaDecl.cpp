@@ -7244,6 +7244,23 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   // Handle attributes prior to checking for duplicates in MergeVarDecl
   ProcessDeclAttributes(S, NewVD, D);
 
+  // CUDA/HIP: Function-scope static variables in device functions have implicit
+  // device or constant attribute. Function-scope static variables in host
+  // device functions have implicit device or constant attribute in device
+  // compilation only.
+  if (getLangOpts().CUDA && SC == SC_Static) {
+    FunctionDecl *CurFD = getCurFunctionDecl();
+    if (CurFD && CurFD->hasAttr<CUDADeviceAttr>() &&
+        (getLangOpts().CUDAIsDevice || !CurFD->hasAttr<CUDAHostAttr>()) &&
+        !NewVD->hasAttr<CUDASharedAttr>() &&
+        !NewVD->hasAttr<CUDAConstantAttr>()) {
+      if (NewVD->isConstexpr() || NewVD->getType().getQualifiers().hasConst())
+        NewVD->addAttr(CUDAConstantAttr::CreateImplicit(getASTContext()));
+      else if (!NewVD->hasAttr<CUDADeviceAttr>())
+        NewVD->addAttr(CUDADeviceAttr::CreateImplicit(getASTContext()));
+    }
+  }
+
   if (getLangOpts().CUDA || getLangOpts().OpenMPIsDevice ||
       getLangOpts().SYCLIsDevice) {
     if (EmitTLSUnsupportedError &&
