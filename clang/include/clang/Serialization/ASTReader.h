@@ -25,6 +25,7 @@
 #include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Sema/ExternalSemaSource.h"
 #include "clang/Sema/IdentifierResolver.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ContinuousRangeMap.h"
 #include "clang/Serialization/ModuleFile.h"
@@ -869,17 +870,17 @@ private:
   llvm::SmallVector<FpPragmaStackEntry, 2> FpPragmaStack;
   llvm::SmallVector<std::string, 2> FpPragmaStrings;
 
-  /// The pragma pack state.
-  Optional<unsigned> PragmaPackCurrentValue;
-  SourceLocation PragmaPackCurrentLocation;
-  struct PragmaPackStackEntry {
-    unsigned Value;
+  /// The pragma align/pack state.
+  Optional<Sema::AlignPackInfo> PragmaAlignPackCurrentValue;
+  SourceLocation PragmaAlignPackCurrentLocation;
+  struct PragmaAlignPackStackEntry {
+    Sema::AlignPackInfo Value;
     SourceLocation Location;
     SourceLocation PushLocation;
     StringRef SlotLabel;
   };
-  llvm::SmallVector<PragmaPackStackEntry, 2> PragmaPackStack;
-  llvm::SmallVector<std::string, 2> PragmaPackStrings;
+  llvm::SmallVector<PragmaAlignPackStackEntry, 2> PragmaAlignPackStack;
+  llvm::SmallVector<std::string, 2> PragmaAlignPackStrings;
 
   /// The OpenCL extension settings.
   OpenCLOptions OpenCLExtensions;
@@ -1450,8 +1451,6 @@ private:
   void Error(StringRef Msg) const;
   void Error(unsigned DiagID, StringRef Arg1 = StringRef(),
              StringRef Arg2 = StringRef(), StringRef Arg3 = StringRef()) const;
-  void Error(unsigned DiagID, StringRef Arg1, StringRef Arg2,
-             unsigned Select) const;
   void Error(llvm::Error &&Err) const;
 
 public:
@@ -2118,6 +2117,11 @@ public:
 
   /// Read the contents of a CXXCtorInitializer array.
   CXXCtorInitializer **GetExternalCXXCtorInitializers(uint64_t Offset) override;
+
+  /// Read a AlignPackInfo from raw form.
+  Sema::AlignPackInfo ReadAlignPackInfo(uint32_t Raw) const {
+    return Sema::AlignPackInfo::getFromRawEncoding(Raw);
+  }
 
   /// Read a source location from raw form and return it in its
   /// originating module file's source location space.

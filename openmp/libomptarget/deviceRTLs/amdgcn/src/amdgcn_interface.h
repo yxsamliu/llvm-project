@@ -12,13 +12,20 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef _OPENMP
+#define EXTERN extern "C"
+#else
 #define EXTERN extern "C" __attribute__((device))
+#endif
+
 typedef uint64_t __kmpc_impl_lanemask_t;
 typedef uint32_t omp_lock_t; /* arbitrary type of the right length */
 
 ////////////////////////////////////////////////////////////////////////////////
 // OpenMP interface
 ////////////////////////////////////////////////////////////////////////////////
+
+EXTERN uint32_t __kmpc_amdgcn_gpu_num_threads(void);
 
 EXTERN int omp_get_device_num(void);
 EXTERN int omp_ext_get_warp_id(void);
@@ -38,5 +45,7 @@ EXTERN unsigned long long omp_ext_get_active_threads_mask(void);
 
 typedef struct ident ident_t;
 typedef ident_t kmp_Ident;
+
+EXTERN uint32_t __kmpc_amdgcn_gpu_num_threads();
 
 #endif

@@ -273,12 +273,7 @@ bool PointerReplacer::collectUsers(Instruction &I) {
   return true;
 }
 
-Value *PointerReplacer::getReplacement(Value *V) {
-  auto Loc = WorkMap.find(V);
-  if (Loc != WorkMap.end())
-    return Loc->second;
-  return nullptr;
-}
+Value *PointerReplacer::getReplacement(Value *V) { return WorkMap.lookup(V); }
 
 void PointerReplacer::replace(Instruction *I) {
   if (getReplacement(I))
@@ -589,12 +584,55 @@ static Instruction *combineLoadToOperationType(InstCombinerImpl &IC,
   if (LI.getPointerOperand()->isSwiftError())
     return nullptr;
 
+  Type *Ty = LI.getType();
   const DataLayout &DL = IC.getDataLayout();
+
+  // Try to canonicalize loads which are only ever stored to operate over
+  // integers instead of any other type. We only do this when the loaded type
+  // is sized and has a size exactly the same as its store size and the store
+  // size is a legal integer type.
+  // Do not perform canonicalization if minmax pattern is found (to avoid
+  // infinite loop).
+  Type *Dummy;
+  if (!Ty->isIntegerTy() && Ty->isSized() && !isa<ScalableVectorType>(Ty) &&
+      DL.isLegalInteger(DL.getTypeStoreSizeInBits(Ty)) &&
+      DL.typeSizeEqualsStoreSize(Ty) && !DL.isNonIntegralPointerType(Ty) &&
+      !isMinMaxWithLoads(InstCombiner::peekThroughBitcast(
+                             LI.getPointerOperand(), /*OneUseOnly=*/true),
+                         Dummy)) {
+    if (all_of(LI.users(), [&LI](User *U) {
+          auto *SI = dyn_cast<StoreInst>(U);
+          return SI && SI->getPointerOperand() != &LI &&
+                 !SI->getPointerOperand()->isSwiftError();
+        })) {
+      LoadInst *NewLoad = IC.combineLoadToNewType(
+          LI, Type::getIntNTy(LI.getContext(), DL.getTypeStoreSizeInBits(Ty)));
+      // Replace all the stores with stores of the newly loaded value.
+      for (auto UI = LI.user_begin(), UE = LI.user_end(); UI != UE;) {
+        auto *SI = cast<StoreInst>(*UI++);
+        IC.Builder.SetInsertPoint(SI);
+        combineStoreToNewValue(IC, *SI, NewLoad);
+        IC.eraseInstFromFunction(*SI);
+      }
+      assert(LI.use_empty() && "Failed to remove all users of the load!");
+      // Return the old load so the combiner can delete it safely.
+      return &LI;
+    }
+  }
 
   // Fold away bit casts of the loaded value by loading the desired type.
   // Note that we should not do this for pointer<->integer casts,
   // because that would result in type punning.
-  if (LI.hasOneUse())
+  if (LI.hasOneUse()) {
+    // Don't transform when the type is x86_amx, it makes the pass that lower
+    // x86_amx type happy.
+    if (auto *BC = dyn_cast<BitCastInst>(LI.user_back())) {
+      assert(!LI.getType()->isX86_AMXTy() &&
+             "load from x86_amx* should not happen!");
+      if (BC->getType()->isX86_AMXTy())
+        return nullptr;
+    }
+
     if (auto* CI = dyn_cast<CastInst>(LI.user_back()))
       if (CI->isNoopCast(DL) && LI.getType()->isPtrOrPtrVectorTy() ==
                                     CI->getDestTy()->isPtrOrPtrVectorTy())
@@ -604,6 +642,7 @@ static Instruction *combineLoadToOperationType(InstCombinerImpl &IC,
           IC.eraseInstFromFunction(*CI);
           return &LI;
         }
+  }
 
   // FIXME: We should also canonicalize loads of vectors when their elements are
   // cast to other types.
@@ -1119,7 +1158,13 @@ static bool combineStoreToValueType(InstCombinerImpl &IC, StoreInst &SI) {
 
   // Fold away bit casts of the stored value by storing the original type.
   if (auto *BC = dyn_cast<BitCastInst>(V)) {
+    assert(!BC->getType()->isX86_AMXTy() &&
+           "store to x86_amx* should not happen!");
     V = BC->getOperand(0);
+    // Don't transform when the type is x86_amx, it makes the pass that lower
+    // x86_amx type happy.
+    if (V->getType()->isX86_AMXTy())
+      return false;
     if (!SI.isAtomic() || isSupportedAtomicType(V->getType())) {
       combineStoreToNewValue(IC, SI, V);
       return true;

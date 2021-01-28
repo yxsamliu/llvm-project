@@ -11,10 +11,11 @@
 #include "Globals.h"
 #include "PybindUtils.h"
 
+#include "mlir-c/AffineMap.h"
 #include "mlir-c/Bindings/Python/Interop.h"
+#include "mlir-c/BuiltinAttributes.h"
+#include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Registration.h"
-#include "mlir-c/StandardAttributes.h"
-#include "mlir-c/StandardTypes.h"
 #include "llvm/ADT/SmallVector.h"
 #include <pybind11/stl.h>
 
@@ -23,6 +24,8 @@ using namespace mlir;
 using namespace mlir::python;
 
 using llvm::SmallVector;
+using llvm::StringRef;
+using llvm::Twine;
 
 //------------------------------------------------------------------------------
 // Docstrings (trivial, non-duplicated docstrings are included inline).
@@ -145,6 +148,26 @@ createCustomDialectWrapper(const std::string &dialectNamespace,
   // Create the custom implementation.
   return (*dialectClass)(std::move(dialectDescriptor));
 }
+
+static MlirStringRef toMlirStringRef(const std::string &s) {
+  return mlirStringRefCreate(s.data(), s.size());
+}
+
+template <typename PermutationTy>
+static bool isPermutation(std::vector<PermutationTy> permutation) {
+  llvm::SmallVector<bool, 8> seen(permutation.size(), false);
+  for (auto val : permutation) {
+    if (val < permutation.size()) {
+      if (seen[val])
+        return false;
+      seen[val] = true;
+      continue;
+    }
+    return false;
+  }
+  return true;
+}
+
 //------------------------------------------------------------------------------
 // Collections.
 //------------------------------------------------------------------------------
@@ -200,7 +223,7 @@ public:
   }
 
   static void bind(py::module &m) {
-    py::class_<PyRegionList>(m, "ReqionSequence")
+    py::class_<PyRegionList>(m, "RegionSequence")
         .def("__len__", &PyRegionList::dunderLen)
         .def("__getitem__", &PyRegionList::dunderGetItem);
   }
@@ -284,7 +307,7 @@ public:
     llvm::SmallVector<MlirType, 4> argTypes;
     argTypes.reserve(pyArgTypes.size());
     for (auto &pyArg : pyArgTypes) {
-      argTypes.push_back(pyArg.cast<PyType &>().type);
+      argTypes.push_back(pyArg.cast<PyType &>());
     }
 
     MlirBlock block = mlirBlockCreate(argTypes.size(), argTypes.data());
@@ -626,7 +649,7 @@ MlirDialect PyDialects::getDialectForKey(const std::string &key,
       getContext()->get(), {canonKey->data(), canonKey->size()});
   if (mlirDialectIsNull(dialect)) {
     throw SetPyError(attrError ? PyExc_AttributeError : PyExc_IndexError,
-                     llvm::Twine("Dialect '") + key + "' not found");
+                     Twine("Dialect '") + key + "' not found");
   }
   return dialect;
 }
@@ -634,6 +657,18 @@ MlirDialect PyDialects::getDialectForKey(const std::string &key,
 //------------------------------------------------------------------------------
 // PyLocation
 //------------------------------------------------------------------------------
+
+py::object PyLocation::getCapsule() {
+  return py::reinterpret_steal<py::object>(mlirPythonLocationToCapsule(*this));
+}
+
+PyLocation PyLocation::createFromCapsule(py::object capsule) {
+  MlirLocation rawLoc = mlirPythonCapsuleToLocation(capsule.ptr());
+  if (mlirLocationIsNull(rawLoc))
+    throw py::error_already_set();
+  return PyLocation(PyMlirContext::forContext(mlirLocationGetContext(rawLoc)),
+                    rawLoc);
+}
 
 py::object PyLocation::contextEnter() {
   return PyThreadContextEntry::pushLocation(*this);
@@ -776,7 +811,7 @@ PyOperationRef PyOperation::createDetached(PyMlirContextRef contextRef,
   return created;
 }
 
-void PyOperation::checkValid() {
+void PyOperation::checkValid() const {
   if (!valid) {
     throw SetPyError(PyExc_RuntimeError, "the operation has been invalidated");
   }
@@ -790,6 +825,12 @@ void PyOperationBase::print(py::object fileObject, bool binary,
   operation.checkValid();
   if (fileObject.is_none())
     fileObject = py::module::import("sys").attr("stdout");
+
+  if (!printGenericOpForm && !mlirOperationVerify(operation)) {
+    fileObject.attr("write")("// Verification failed, printing generic form\n");
+    printGenericOpForm = true;
+  }
+
   MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
   if (largeElementsLimit)
     mlirOpPrintingFlagsElideLargeElementsAttrs(flags, *largeElementsLimit);
@@ -800,7 +841,7 @@ void PyOperationBase::print(py::object fileObject, bool binary,
 
   PyFileAccumulator accum(fileObject, binary);
   py::gil_scoped_release();
-  mlirOperationPrintWithFlags(operation.get(), flags, accum.getCallback(),
+  mlirOperationPrintWithFlags(operation, flags, accum.getCallback(),
                               accum.getUserData());
   mlirOpPrintingFlagsDestroy(flags);
 }
@@ -874,18 +915,38 @@ py::object PyOperation::create(
       // TODO: Verify result type originate from the same context.
       if (!result)
         throw SetPyError(PyExc_ValueError, "result type cannot be None");
-      mlirResults.push_back(result->type);
+      mlirResults.push_back(*result);
     }
   }
   // Unpack/validate attributes.
   if (attributes) {
     mlirAttributes.reserve(attributes->size());
     for (auto &it : *attributes) {
-
-      auto name = it.first.cast<std::string>();
-      auto &attribute = it.second.cast<PyAttribute &>();
-      // TODO: Verify attribute originates from the same context.
-      mlirAttributes.emplace_back(std::move(name), attribute.attr);
+      std::string key;
+      try {
+        key = it.first.cast<std::string>();
+      } catch (py::cast_error &err) {
+        std::string msg = "Invalid attribute key (not a string) when "
+                          "attempting to create the operation \"" +
+                          name + "\" (" + err.what() + ")";
+        throw py::cast_error(msg);
+      }
+      try {
+        auto &attribute = it.second.cast<PyAttribute &>();
+        // TODO: Verify attribute originates from the same context.
+        mlirAttributes.emplace_back(std::move(key), attribute);
+      } catch (py::reference_cast_error &) {
+        // This exception seems thrown when the value is "None".
+        std::string msg =
+            "Found an invalid (`None`?) attribute value for the key \"" + key +
+            "\" when attempting to create the operation \"" + name + "\"";
+        throw py::cast_error(msg);
+      } catch (py::cast_error &err) {
+        std::string msg = "Invalid attribute value for the key \"" + key +
+                          "\" when attempting to create the operation \"" +
+                          name + "\" (" + err.what() + ")";
+        throw py::cast_error(msg);
+      }
     }
   }
   // Unpack/validate successors.
@@ -902,7 +963,8 @@ py::object PyOperation::create(
 
   // Apply unpacked/validated to the operation state. Beyond this
   // point, exceptions cannot be thrown or else the state will leak.
-  MlirOperationState state = mlirOperationStateGet(name.c_str(), location->loc);
+  MlirOperationState state =
+      mlirOperationStateGet(toMlirStringRef(name), location);
   if (!mlirOperands.empty())
     mlirOperationStateAddOperands(&state, mlirOperands.size(),
                                   mlirOperands.data());
@@ -916,8 +978,10 @@ py::object PyOperation::create(
     llvm::SmallVector<MlirNamedAttribute, 4> mlirNamedAttributes;
     mlirNamedAttributes.reserve(mlirAttributes.size());
     for (auto &it : mlirAttributes)
-      mlirNamedAttributes.push_back(
-          mlirNamedAttributeGet(it.first.c_str(), it.second));
+      mlirNamedAttributes.push_back(mlirNamedAttributeGet(
+          mlirIdentifierGet(mlirAttributeGetContext(it.second),
+                            toMlirStringRef(it.first)),
+          it.second));
     mlirOperationStateAddAttributes(&state, mlirNamedAttributes.size(),
                                     mlirNamedAttributes.data());
   }
@@ -957,7 +1021,7 @@ py::object PyOperation::createOpView() {
   MlirIdentifier ident = mlirOperationGetName(get());
   MlirStringRef identStr = mlirIdentifierStr(ident);
   auto opViewClass = PyGlobals::get().lookupRawOpViewClass(
-      llvm::StringRef(identStr.data, identStr.length));
+      StringRef(identStr.data, identStr.length));
   if (opViewClass)
     return (*opViewClass)(getRef().getObject());
   return py::cast(PyOpView(getRef().getObject()));
@@ -1026,7 +1090,7 @@ void PyInsertionPoint::insert(PyOperationBase &operationBase) {
     (*refOperation)->checkValid();
     beforeOp = (*refOperation)->get();
   }
-  mlirBlockInsertOwnedOperationBefore(block.get(), beforeOp, operation.get());
+  mlirBlockInsertOwnedOperationBefore(block.get(), beforeOp, operation);
   operation.setAttached();
 }
 
@@ -1070,13 +1134,28 @@ bool PyAttribute::operator==(const PyAttribute &other) {
   return mlirAttributeEqual(attr, other.attr);
 }
 
+py::object PyAttribute::getCapsule() {
+  return py::reinterpret_steal<py::object>(mlirPythonAttributeToCapsule(*this));
+}
+
+PyAttribute PyAttribute::createFromCapsule(py::object capsule) {
+  MlirAttribute rawAttr = mlirPythonCapsuleToAttribute(capsule.ptr());
+  if (mlirAttributeIsNull(rawAttr))
+    throw py::error_already_set();
+  return PyAttribute(
+      PyMlirContext::forContext(mlirAttributeGetContext(rawAttr)), rawAttr);
+}
+
 //------------------------------------------------------------------------------
 // PyNamedAttribute.
 //------------------------------------------------------------------------------
 
 PyNamedAttribute::PyNamedAttribute(MlirAttribute attr, std::string ownedName)
     : ownedName(new std::string(std::move(ownedName))) {
-  namedAttr = mlirNamedAttributeGet(this->ownedName->c_str(), attr);
+  namedAttr = mlirNamedAttributeGet(
+      mlirIdentifierGet(mlirAttributeGetContext(attr),
+                        toMlirStringRef(*this->ownedName)),
+      attr);
 }
 
 //------------------------------------------------------------------------------
@@ -1085,6 +1164,18 @@ PyNamedAttribute::PyNamedAttribute(MlirAttribute attr, std::string ownedName)
 
 bool PyType::operator==(const PyType &other) {
   return mlirTypeEqual(type, other.type);
+}
+
+py::object PyType::getCapsule() {
+  return py::reinterpret_steal<py::object>(mlirPythonTypeToCapsule(*this));
+}
+
+PyType PyType::createFromCapsule(py::object capsule) {
+  MlirType rawType = mlirPythonCapsuleToType(capsule.ptr());
+  if (mlirTypeIsNull(rawType))
+    throw py::error_already_set();
+  return PyType(PyMlirContext::forContext(mlirTypeGetContext(rawType)),
+                rawType);
 }
 
 //------------------------------------------------------------------------------
@@ -1103,7 +1194,7 @@ public:
   //   const char *pyClassName
   // and redefine bindDerived.
   using ClassTy = py::class_<DerivedTy, PyValue>;
-  using IsAFunctionTy = int (*)(MlirValue);
+  using IsAFunctionTy = bool (*)(MlirValue);
 
   PyConcreteValue() = default;
   PyConcreteValue(PyOperationRef operationRef, MlirValue value)
@@ -1116,7 +1207,7 @@ public:
   static MlirValue castFrom(PyValue &orig) {
     if (!DerivedTy::isaFunction(orig.get())) {
       auto origRepr = py::repr(py::cast(orig)).cast<std::string>();
-      throw SetPyError(PyExc_ValueError, llvm::Twine("Cannot cast value to ") +
+      throw SetPyError(PyExc_ValueError, Twine("Cannot cast value to ") +
                                              DerivedTy::pyClassName +
                                              " (from " + origRepr + ")");
     }
@@ -1287,8 +1378,8 @@ public:
   PyOpAttributeMap(PyOperationRef operation) : operation(operation) {}
 
   PyAttribute dunderGetItemNamed(const std::string &name) {
-    MlirAttribute attr =
-        mlirOperationGetAttributeByName(operation->get(), name.c_str());
+    MlirAttribute attr = mlirOperationGetAttributeByName(operation->get(),
+                                                         toMlirStringRef(name));
     if (mlirAttributeIsNull(attr)) {
       throw SetPyError(PyExc_KeyError,
                        "attempt to access a non-existent attribute");
@@ -1303,18 +1394,41 @@ public:
     }
     MlirNamedAttribute namedAttr =
         mlirOperationGetAttribute(operation->get(), index);
-    return PyNamedAttribute(namedAttr.attribute, std::string(namedAttr.name));
+    return PyNamedAttribute(
+        namedAttr.attribute,
+        std::string(mlirIdentifierStr(namedAttr.name).data));
+  }
+
+  void dunderSetItem(const std::string &name, PyAttribute attr) {
+    mlirOperationSetAttributeByName(operation->get(), toMlirStringRef(name),
+                                    attr);
+  }
+
+  void dunderDelItem(const std::string &name) {
+    int removed = mlirOperationRemoveAttributeByName(operation->get(),
+                                                     toMlirStringRef(name));
+    if (!removed)
+      throw SetPyError(PyExc_KeyError,
+                       "attempt to delete a non-existent attribute");
   }
 
   intptr_t dunderLen() {
     return mlirOperationGetNumAttributes(operation->get());
   }
 
+  bool dunderContains(const std::string &name) {
+    return !mlirAttributeIsNull(mlirOperationGetAttributeByName(
+        operation->get(), toMlirStringRef(name)));
+  }
+
   static void bind(py::module &m) {
     py::class_<PyOpAttributeMap>(m, "OpAttributeMap")
+        .def("__contains__", &PyOpAttributeMap::dunderContains)
         .def("__len__", &PyOpAttributeMap::dunderLen)
         .def("__getitem__", &PyOpAttributeMap::dunderGetItemNamed)
-        .def("__getitem__", &PyOpAttributeMap::dunderGetItemIndexed);
+        .def("__getitem__", &PyOpAttributeMap::dunderGetItemIndexed)
+        .def("__setitem__", &PyOpAttributeMap::dunderSetItem)
+        .def("__delitem__", &PyOpAttributeMap::dunderDelItem);
   }
 
 private:
@@ -1324,7 +1438,7 @@ private:
 } // end namespace
 
 //------------------------------------------------------------------------------
-// Standard attribute subclasses.
+// Builtin attribute subclasses.
 //------------------------------------------------------------------------------
 
 namespace {
@@ -1341,7 +1455,7 @@ public:
   //   IsAFunctionTy isaFunction
   //   const char *pyClassName
   using ClassTy = py::class_<DerivedTy, BaseTy>;
-  using IsAFunctionTy = int (*)(MlirAttribute);
+  using IsAFunctionTy = bool (*)(MlirAttribute);
 
   PyConcreteAttribute() = default;
   PyConcreteAttribute(PyMlirContextRef contextRef, MlirAttribute attr)
@@ -1350,23 +1464,100 @@ public:
       : PyConcreteAttribute(orig.getContext(), castFrom(orig)) {}
 
   static MlirAttribute castFrom(PyAttribute &orig) {
-    if (!DerivedTy::isaFunction(orig.attr)) {
+    if (!DerivedTy::isaFunction(orig)) {
       auto origRepr = py::repr(py::cast(orig)).cast<std::string>();
-      throw SetPyError(PyExc_ValueError,
-                       llvm::Twine("Cannot cast attribute to ") +
-                           DerivedTy::pyClassName + " (from " + origRepr + ")");
+      throw SetPyError(PyExc_ValueError, Twine("Cannot cast attribute to ") +
+                                             DerivedTy::pyClassName +
+                                             " (from " + origRepr + ")");
     }
-    return orig.attr;
+    return orig;
   }
 
   static void bind(py::module &m) {
-    auto cls = ClassTy(m, DerivedTy::pyClassName);
+    auto cls = ClassTy(m, DerivedTy::pyClassName, py::buffer_protocol());
     cls.def(py::init<PyAttribute &>(), py::keep_alive<0, 1>());
     DerivedTy::bindDerived(cls);
   }
 
   /// Implemented by derived classes to add methods to the Python subclass.
   static void bindDerived(ClassTy &m) {}
+};
+
+class PyArrayAttribute : public PyConcreteAttribute<PyArrayAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAArray;
+  static constexpr const char *pyClassName = "ArrayAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+
+  class PyArrayAttributeIterator {
+  public:
+    PyArrayAttributeIterator(PyAttribute attr) : attr(attr) {}
+
+    PyArrayAttributeIterator &dunderIter() { return *this; }
+
+    PyAttribute dunderNext() {
+      if (nextIndex >= mlirArrayAttrGetNumElements(attr.get())) {
+        throw py::stop_iteration();
+      }
+      return PyAttribute(attr.getContext(),
+                         mlirArrayAttrGetElement(attr.get(), nextIndex++));
+    }
+
+    static void bind(py::module &m) {
+      py::class_<PyArrayAttributeIterator>(m, "ArrayAttributeIterator")
+          .def("__iter__", &PyArrayAttributeIterator::dunderIter)
+          .def("__next__", &PyArrayAttributeIterator::dunderNext);
+    }
+
+  private:
+    PyAttribute attr;
+    int nextIndex = 0;
+  };
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](py::list attributes, DefaultingPyMlirContext context) {
+          SmallVector<MlirAttribute> mlirAttributes;
+          mlirAttributes.reserve(py::len(attributes));
+          for (auto attribute : attributes) {
+            try {
+              mlirAttributes.push_back(attribute.cast<PyAttribute>());
+            } catch (py::cast_error &err) {
+              std::string msg = std::string("Invalid attribute when attempting "
+                                            "to create an ArrayAttribute (") +
+                                err.what() + ")";
+              throw py::cast_error(msg);
+            } catch (py::reference_cast_error &err) {
+              // This exception seems thrown when the value is "None".
+              std::string msg =
+                  std::string("Invalid attribute (None?) when attempting to "
+                              "create an ArrayAttribute (") +
+                  err.what() + ")";
+              throw py::cast_error(msg);
+            }
+          }
+          MlirAttribute attr = mlirArrayAttrGet(
+              context->get(), mlirAttributes.size(), mlirAttributes.data());
+          return PyArrayAttribute(context->getRef(), attr);
+        },
+        py::arg("attributes"), py::arg("context") = py::none(),
+        "Gets a uniqued Array attribute");
+    c.def("__getitem__",
+          [](PyArrayAttribute &arr, intptr_t i) {
+            if (i >= mlirArrayAttrGetNumElements(arr))
+              throw py::index_error("ArrayAttribute index out of range");
+            return PyAttribute(arr.getContext(),
+                               mlirArrayAttrGetElement(arr, i));
+          })
+        .def("__len__",
+             [](const PyArrayAttribute &arr) {
+               return mlirArrayAttrGetNumElements(arr);
+             })
+        .def("__iter__", [](const PyArrayAttribute &arr) {
+          return PyArrayAttributeIterator(arr);
+        });
+  }
 };
 
 /// Float Point Attribute subclass - FloatAttr.
@@ -1380,13 +1571,12 @@ public:
     c.def_static(
         "get",
         [](PyType &type, double value, DefaultingPyLocation loc) {
-          MlirAttribute attr =
-              mlirFloatAttrDoubleGetChecked(type.type, value, loc->loc);
+          MlirAttribute attr = mlirFloatAttrDoubleGetChecked(type, value, loc);
           // TODO: Rework error reporting once diagnostic engine is exposed
           // in C API.
           if (mlirAttributeIsNull(attr)) {
             throw SetPyError(PyExc_ValueError,
-                             llvm::Twine("invalid '") +
+                             Twine("invalid '") +
                                  py::repr(py::cast(type)).cast<std::string>() +
                                  "' and expected floating point type.");
           }
@@ -1415,7 +1605,7 @@ public:
     c.def_property_readonly(
         "value",
         [](PyFloatAttribute &self) {
-          return mlirFloatAttrGetValueDouble(self.attr);
+          return mlirFloatAttrGetValueDouble(self);
         },
         "Returns the value of the float point attribute");
   }
@@ -1432,7 +1622,7 @@ public:
     c.def_static(
         "get",
         [](PyType &type, int64_t value) {
-          MlirAttribute attr = mlirIntegerAttrGet(type.type, value);
+          MlirAttribute attr = mlirIntegerAttrGet(type, value);
           return PyIntegerAttribute(type.getContext(), attr);
         },
         py::arg("type"), py::arg("value"),
@@ -1440,7 +1630,7 @@ public:
     c.def_property_readonly(
         "value",
         [](PyIntegerAttribute &self) {
-          return mlirIntegerAttrGetValueInt(self.attr);
+          return mlirIntegerAttrGetValueInt(self);
         },
         "Returns the value of the integer attribute");
   }
@@ -1464,8 +1654,35 @@ public:
         "Gets an uniqued bool attribute");
     c.def_property_readonly(
         "value",
-        [](PyBoolAttribute &self) { return mlirBoolAttrGetValue(self.attr); },
+        [](PyBoolAttribute &self) { return mlirBoolAttrGetValue(self); },
         "Returns the value of the bool attribute");
+  }
+};
+
+class PyFlatSymbolRefAttribute
+    : public PyConcreteAttribute<PyFlatSymbolRefAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAFlatSymbolRef;
+  static constexpr const char *pyClassName = "FlatSymbolRefAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](std::string value, DefaultingPyMlirContext context) {
+          MlirAttribute attr =
+              mlirFlatSymbolRefAttrGet(context->get(), toMlirStringRef(value));
+          return PyFlatSymbolRefAttribute(context->getRef(), attr);
+        },
+        py::arg("value"), py::arg("context") = py::none(),
+        "Gets a uniqued FlatSymbolRef attribute");
+    c.def_property_readonly(
+        "value",
+        [](PyFlatSymbolRefAttribute &self) {
+          MlirStringRef stringRef = mlirFlatSymbolRefAttrGetValue(self);
+          return py::str(stringRef.data, stringRef.length);
+        },
+        "Returns the value of the FlatSymbolRef attribute as a string");
   }
 };
 
@@ -1480,7 +1697,7 @@ public:
         "get",
         [](std::string value, DefaultingPyMlirContext context) {
           MlirAttribute attr =
-              mlirStringAttrGet(context->get(), value.size(), &value[0]);
+              mlirStringAttrGet(context->get(), toMlirStringRef(value));
           return PyStringAttribute(context->getRef(), attr);
         },
         py::arg("value"), py::arg("context") = py::none(),
@@ -1489,7 +1706,7 @@ public:
         "get_typed",
         [](PyType &type, std::string value) {
           MlirAttribute attr =
-              mlirStringAttrTypedGet(type.type, value.size(), &value[0]);
+              mlirStringAttrTypedGet(type, toMlirStringRef(value));
           return PyStringAttribute(type.getContext(), attr);
         },
 
@@ -1497,7 +1714,7 @@ public:
     c.def_property_readonly(
         "value",
         [](PyStringAttribute &self) {
-          MlirStringRef stringRef = mlirStringAttrGetValue(self.attr);
+          MlirStringRef stringRef = mlirStringAttrGetValue(self);
           return py::str(stringRef.data, stringRef.length);
         },
         "Returns the value of the string attribute");
@@ -1528,6 +1745,7 @@ public:
     MlirContext context = contextWrapper->get();
     // Switch on the types that can be bulk loaded between the Python and
     // MLIR-C APIs.
+    // See: https://docs.python.org/3/library/struct.html#format-characters
     if (arrayInfo.format == "f") {
       // f32
       assert(arrayInfo.itemsize == 4 && "mismatched array itemsize");
@@ -1542,42 +1760,44 @@ public:
           contextWrapper->getRef(),
           bulkLoad(context, mlirDenseElementsAttrDoubleGet,
                    mlirF64TypeGet(context), arrayInfo));
-    } else if (arrayInfo.format == "i") {
-      // i32
-      assert(arrayInfo.itemsize == 4 && "mismatched array itemsize");
-      MlirType elementType = signless ? mlirIntegerTypeGet(context, 32)
-                                      : mlirIntegerTypeSignedGet(context, 32);
-      return PyDenseElementsAttribute(contextWrapper->getRef(),
-                                      bulkLoad(context,
-                                               mlirDenseElementsAttrInt32Get,
-                                               elementType, arrayInfo));
-    } else if (arrayInfo.format == "I") {
-      // unsigned i32
-      assert(arrayInfo.itemsize == 4 && "mismatched array itemsize");
-      MlirType elementType = signless ? mlirIntegerTypeGet(context, 32)
-                                      : mlirIntegerTypeUnsignedGet(context, 32);
-      return PyDenseElementsAttribute(contextWrapper->getRef(),
-                                      bulkLoad(context,
-                                               mlirDenseElementsAttrUInt32Get,
-                                               elementType, arrayInfo));
-    } else if (arrayInfo.format == "l") {
-      // i64
-      assert(arrayInfo.itemsize == 8 && "mismatched array itemsize");
-      MlirType elementType = signless ? mlirIntegerTypeGet(context, 64)
-                                      : mlirIntegerTypeSignedGet(context, 64);
-      return PyDenseElementsAttribute(contextWrapper->getRef(),
-                                      bulkLoad(context,
-                                               mlirDenseElementsAttrInt64Get,
-                                               elementType, arrayInfo));
-    } else if (arrayInfo.format == "L") {
-      // unsigned i64
-      assert(arrayInfo.itemsize == 8 && "mismatched array itemsize");
-      MlirType elementType = signless ? mlirIntegerTypeGet(context, 64)
-                                      : mlirIntegerTypeUnsignedGet(context, 64);
-      return PyDenseElementsAttribute(contextWrapper->getRef(),
-                                      bulkLoad(context,
-                                               mlirDenseElementsAttrUInt64Get,
-                                               elementType, arrayInfo));
+    } else if (isSignedIntegerFormat(arrayInfo.format)) {
+      if (arrayInfo.itemsize == 4) {
+        // i32
+        MlirType elementType = signless ? mlirIntegerTypeGet(context, 32)
+                                        : mlirIntegerTypeSignedGet(context, 32);
+        return PyDenseElementsAttribute(contextWrapper->getRef(),
+                                        bulkLoad(context,
+                                                 mlirDenseElementsAttrInt32Get,
+                                                 elementType, arrayInfo));
+      } else if (arrayInfo.itemsize == 8) {
+        // i64
+        MlirType elementType = signless ? mlirIntegerTypeGet(context, 64)
+                                        : mlirIntegerTypeSignedGet(context, 64);
+        return PyDenseElementsAttribute(contextWrapper->getRef(),
+                                        bulkLoad(context,
+                                                 mlirDenseElementsAttrInt64Get,
+                                                 elementType, arrayInfo));
+      }
+    } else if (isUnsignedIntegerFormat(arrayInfo.format)) {
+      if (arrayInfo.itemsize == 4) {
+        // unsigned i32
+        MlirType elementType = signless
+                                   ? mlirIntegerTypeGet(context, 32)
+                                   : mlirIntegerTypeUnsignedGet(context, 32);
+        return PyDenseElementsAttribute(contextWrapper->getRef(),
+                                        bulkLoad(context,
+                                                 mlirDenseElementsAttrUInt32Get,
+                                                 elementType, arrayInfo));
+      } else if (arrayInfo.itemsize == 8) {
+        // unsigned i64
+        MlirType elementType = signless
+                                   ? mlirIntegerTypeGet(context, 64)
+                                   : mlirIntegerTypeUnsignedGet(context, 64);
+        return PyDenseElementsAttribute(contextWrapper->getRef(),
+                                        bulkLoad(context,
+                                                 mlirDenseElementsAttrUInt64Get,
+                                                 elementType, arrayInfo));
+      }
     }
 
     // TODO: Fall back to string-based get.
@@ -1590,8 +1810,8 @@ public:
                                            PyAttribute &elementAttr) {
     auto contextWrapper =
         PyMlirContext::forContext(mlirTypeGetContext(shapedType));
-    if (!mlirAttributeIsAInteger(elementAttr.attr) &&
-        !mlirAttributeIsAFloat(elementAttr.attr)) {
+    if (!mlirAttributeIsAInteger(elementAttr) &&
+        !mlirAttributeIsAFloat(elementAttr)) {
       std::string message = "Illegal element type for DenseElementsAttr: ";
       message.append(py::repr(py::cast(elementAttr)));
       throw SetPyError(PyExc_ValueError, message);
@@ -1603,8 +1823,8 @@ public:
       message.append(py::repr(py::cast(shapedType)));
       throw SetPyError(PyExc_ValueError, message);
     }
-    MlirType shapedElementType = mlirShapedTypeGetElementType(shapedType.type);
-    MlirType attrType = mlirAttributeGetType(elementAttr.attr);
+    MlirType shapedElementType = mlirShapedTypeGetElementType(shapedType);
+    MlirType attrType = mlirAttributeGetType(elementAttr);
     if (!mlirTypeEqual(shapedElementType, attrType)) {
       std::string message =
           "Shaped element type and attribute type must be equal: shaped=";
@@ -1615,11 +1835,47 @@ public:
     }
 
     MlirAttribute elements =
-        mlirDenseElementsAttrSplatGet(shapedType.type, elementAttr.attr);
+        mlirDenseElementsAttrSplatGet(shapedType, elementAttr);
     return PyDenseElementsAttribute(contextWrapper->getRef(), elements);
   }
 
-  intptr_t dunderLen() { return mlirElementsAttrGetNumElements(attr); }
+  intptr_t dunderLen() { return mlirElementsAttrGetNumElements(*this); }
+
+  py::buffer_info accessBuffer() {
+    MlirType shapedType = mlirAttributeGetType(*this);
+    MlirType elementType = mlirShapedTypeGetElementType(shapedType);
+
+    if (mlirTypeIsAF32(elementType)) {
+      // f32
+      return bufferInfo(shapedType, mlirDenseElementsAttrGetFloatValue);
+    } else if (mlirTypeIsAF64(elementType)) {
+      // f64
+      return bufferInfo(shapedType, mlirDenseElementsAttrGetDoubleValue);
+    } else if (mlirTypeIsAInteger(elementType) &&
+               mlirIntegerTypeGetWidth(elementType) == 32) {
+      if (mlirIntegerTypeIsSignless(elementType) ||
+          mlirIntegerTypeIsSigned(elementType)) {
+        // i32
+        return bufferInfo(shapedType, mlirDenseElementsAttrGetInt32Value);
+      } else if (mlirIntegerTypeIsUnsigned(elementType)) {
+        // unsigned i32
+        return bufferInfo(shapedType, mlirDenseElementsAttrGetUInt32Value);
+      }
+    } else if (mlirTypeIsAInteger(elementType) &&
+               mlirIntegerTypeGetWidth(elementType) == 64) {
+      if (mlirIntegerTypeIsSignless(elementType) ||
+          mlirIntegerTypeIsSigned(elementType)) {
+        // i64
+        return bufferInfo(shapedType, mlirDenseElementsAttrGetInt64Value);
+      } else if (mlirIntegerTypeIsUnsigned(elementType)) {
+        // unsigned i64
+        return bufferInfo(shapedType, mlirDenseElementsAttrGetUInt64Value);
+      }
+    }
+
+    std::string message = "unimplemented array format.";
+    throw SetPyError(PyExc_ValueError, message);
+  }
 
   static void bindDerived(ClassTy &c) {
     c.def("__len__", &PyDenseElementsAttribute::dunderLen)
@@ -1632,8 +1888,9 @@ public:
                     "Gets a DenseElementsAttr where all values are the same")
         .def_property_readonly("is_splat",
                                [](PyDenseElementsAttribute &self) -> bool {
-                                 return mlirDenseElementsAttrIsSplat(self.attr);
-                               });
+                                 return mlirDenseElementsAttrIsSplat(self);
+                               })
+        .def_buffer(&PyDenseElementsAttribute::accessBuffer);
   }
 
 private:
@@ -1650,7 +1907,51 @@ private:
     const ElementTy *contents = static_cast<const ElementTy *>(arrayInfo.ptr);
     return ctor(shapedType, numElements, contents);
   }
-};
+
+  static bool isUnsignedIntegerFormat(const std::string &format) {
+    if (format.empty())
+      return false;
+    char code = format[0];
+    return code == 'I' || code == 'B' || code == 'H' || code == 'L' ||
+           code == 'Q';
+  }
+
+  static bool isSignedIntegerFormat(const std::string &format) {
+    if (format.empty())
+      return false;
+    char code = format[0];
+    return code == 'i' || code == 'b' || code == 'h' || code == 'l' ||
+           code == 'q';
+  }
+
+  template <typename Type>
+  py::buffer_info bufferInfo(MlirType shapedType,
+                             Type (*value)(MlirAttribute, intptr_t)) {
+    intptr_t rank = mlirShapedTypeGetRank(shapedType);
+    // Prepare the data for the buffer_info.
+    // Buffer is configured for read-only access below.
+    Type *data = static_cast<Type *>(
+        const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
+    // Prepare the shape for the buffer_info.
+    SmallVector<intptr_t, 4> shape;
+    for (intptr_t i = 0; i < rank; ++i)
+      shape.push_back(mlirShapedTypeGetDimSize(shapedType, i));
+    // Prepare the strides for the buffer_info.
+    SmallVector<intptr_t, 4> strides;
+    intptr_t strideFactor = 1;
+    for (intptr_t i = 1; i < rank; ++i) {
+      strideFactor = 1;
+      for (intptr_t j = i; j < rank; ++j) {
+        strideFactor *= mlirShapedTypeGetDimSize(shapedType, j);
+      }
+      strides.push_back(sizeof(Type) * strideFactor);
+    }
+    strides.push_back(sizeof(Type));
+    return py::buffer_info(data, sizeof(Type),
+                           py::format_descriptor<Type>::format(), rank, shape,
+                           strides, /*readonly=*/true);
+  }
+}; // namespace
 
 /// Refinement of the PyDenseElementsAttribute for attributes containing integer
 /// (and boolean) values. Supports element access.
@@ -1670,7 +1971,7 @@ public:
                        "attempt to access out of bounds element");
     }
 
-    MlirType type = mlirAttributeGetType(attr);
+    MlirType type = mlirAttributeGetType(*this);
     type = mlirShapedTypeGetElementType(type);
     assert(mlirTypeIsAInteger(type) &&
            "expected integer element type in dense int elements attribute");
@@ -1683,23 +1984,23 @@ public:
     bool isUnsigned = mlirIntegerTypeIsUnsigned(type);
     if (isUnsigned) {
       if (width == 1) {
-        return mlirDenseElementsAttrGetBoolValue(attr, pos);
+        return mlirDenseElementsAttrGetBoolValue(*this, pos);
       }
       if (width == 32) {
-        return mlirDenseElementsAttrGetUInt32Value(attr, pos);
+        return mlirDenseElementsAttrGetUInt32Value(*this, pos);
       }
       if (width == 64) {
-        return mlirDenseElementsAttrGetUInt64Value(attr, pos);
+        return mlirDenseElementsAttrGetUInt64Value(*this, pos);
       }
     } else {
       if (width == 1) {
-        return mlirDenseElementsAttrGetBoolValue(attr, pos);
+        return mlirDenseElementsAttrGetBoolValue(*this, pos);
       }
       if (width == 32) {
-        return mlirDenseElementsAttrGetInt32Value(attr, pos);
+        return mlirDenseElementsAttrGetInt32Value(*this, pos);
       }
       if (width == 64) {
-        return mlirDenseElementsAttrGetInt64Value(attr, pos);
+        return mlirDenseElementsAttrGetInt64Value(*this, pos);
       }
     }
     throw SetPyError(PyExc_TypeError, "Unsupported integer type");
@@ -1707,6 +2008,58 @@ public:
 
   static void bindDerived(ClassTy &c) {
     c.def("__getitem__", &PyDenseIntElementsAttribute::dunderGetItem);
+  }
+};
+
+class PyDictAttribute : public PyConcreteAttribute<PyDictAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsADictionary;
+  static constexpr const char *pyClassName = "DictAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+
+  intptr_t dunderLen() { return mlirDictionaryAttrGetNumElements(*this); }
+
+  static void bindDerived(ClassTy &c) {
+    c.def("__len__", &PyDictAttribute::dunderLen);
+    c.def_static(
+        "get",
+        [](py::dict attributes, DefaultingPyMlirContext context) {
+          SmallVector<MlirNamedAttribute> mlirNamedAttributes;
+          mlirNamedAttributes.reserve(attributes.size());
+          for (auto &it : attributes) {
+            auto &mlir_attr = it.second.cast<PyAttribute &>();
+            auto name = it.first.cast<std::string>();
+            mlirNamedAttributes.push_back(mlirNamedAttributeGet(
+                mlirIdentifierGet(mlirAttributeGetContext(mlir_attr),
+                                  toMlirStringRef(name)),
+                mlir_attr));
+          }
+          MlirAttribute attr =
+              mlirDictionaryAttrGet(context->get(), mlirNamedAttributes.size(),
+                                    mlirNamedAttributes.data());
+          return PyDictAttribute(context->getRef(), attr);
+        },
+        py::arg("value"), py::arg("context") = py::none(),
+        "Gets an uniqued dict attribute");
+    c.def("__getitem__", [](PyDictAttribute &self, const std::string &name) {
+      MlirAttribute attr =
+          mlirDictionaryAttrGetElementByName(self, toMlirStringRef(name));
+      if (mlirAttributeIsNull(attr)) {
+        throw SetPyError(PyExc_KeyError,
+                         "attempt to access a non-existent attribute");
+      }
+      return PyAttribute(self.getContext(), attr);
+    });
+    c.def("__getitem__", [](PyDictAttribute &self, intptr_t index) {
+      if (index < 0 || index >= self.dunderLen()) {
+        throw SetPyError(PyExc_IndexError,
+                         "attempt to access out of bounds attribute");
+      }
+      MlirNamedAttribute namedAttr = mlirDictionaryAttrGetElement(self, index);
+      return PyNamedAttribute(
+          namedAttr.attribute,
+          std::string(mlirIdentifierStr(namedAttr.name).data));
+    });
   }
 };
 
@@ -1726,7 +2079,7 @@ public:
                        "attempt to access out of bounds element");
     }
 
-    MlirType type = mlirAttributeGetType(attr);
+    MlirType type = mlirAttributeGetType(*this);
     type = mlirShapedTypeGetElementType(type);
     // Dispatch element extraction to an appropriate C function based on the
     // elemental type of the attribute. py::float_ is implicitly constructible
@@ -1734,10 +2087,10 @@ public:
     // TODO: consider caching the type properties in the constructor to avoid
     // querying them on each element access.
     if (mlirTypeIsAF32(type)) {
-      return mlirDenseElementsAttrGetFloatValue(attr, pos);
+      return mlirDenseElementsAttrGetFloatValue(*this, pos);
     }
     if (mlirTypeIsAF64(type)) {
-      return mlirDenseElementsAttrGetDoubleValue(attr, pos);
+      return mlirDenseElementsAttrGetDoubleValue(*this, pos);
     }
     throw SetPyError(PyExc_TypeError, "Unsupported floating-point type");
   }
@@ -1747,10 +2100,50 @@ public:
   }
 };
 
+class PyTypeAttribute : public PyConcreteAttribute<PyTypeAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAType;
+  static constexpr const char *pyClassName = "TypeAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](PyType value, DefaultingPyMlirContext context) {
+          MlirAttribute attr = mlirTypeAttrGet(value.get());
+          return PyTypeAttribute(context->getRef(), attr);
+        },
+        py::arg("value"), py::arg("context") = py::none(),
+        "Gets a uniqued Type attribute");
+    c.def_property_readonly("value", [](PyTypeAttribute &self) {
+      return PyType(self.getContext()->getRef(),
+                    mlirTypeAttrGetValue(self.get()));
+    });
+  }
+};
+
+/// Unit Attribute subclass. Unit attributes don't have values.
+class PyUnitAttribute : public PyConcreteAttribute<PyUnitAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAUnit;
+  static constexpr const char *pyClassName = "UnitAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](DefaultingPyMlirContext context) {
+          return PyUnitAttribute(context->getRef(),
+                                 mlirUnitAttrGet(context->get()));
+        },
+        py::arg("context") = py::none(), "Create a Unit attribute.");
+  }
+};
+
 } // namespace
 
 //------------------------------------------------------------------------------
-// Standard type subclasses.
+// Builtin type subclasses.
 //------------------------------------------------------------------------------
 
 namespace {
@@ -1767,7 +2160,7 @@ public:
   //   IsAFunctionTy isaFunction
   //   const char *pyClassName
   using ClassTy = py::class_<DerivedTy, BaseTy>;
-  using IsAFunctionTy = int (*)(MlirType);
+  using IsAFunctionTy = bool (*)(MlirType);
 
   PyConcreteType() = default;
   PyConcreteType(PyMlirContextRef contextRef, MlirType t)
@@ -1776,13 +2169,13 @@ public:
       : PyConcreteType(orig.getContext(), castFrom(orig)) {}
 
   static MlirType castFrom(PyType &orig) {
-    if (!DerivedTy::isaFunction(orig.type)) {
+    if (!DerivedTy::isaFunction(orig)) {
       auto origRepr = py::repr(py::cast(orig)).cast<std::string>();
-      throw SetPyError(PyExc_ValueError, llvm::Twine("Cannot cast type to ") +
+      throw SetPyError(PyExc_ValueError, Twine("Cannot cast type to ") +
                                              DerivedTy::pyClassName +
                                              " (from " + origRepr + ")");
     }
-    return orig.type;
+    return orig;
   }
 
   static void bind(py::module &m) {
@@ -1828,24 +2221,24 @@ public:
         "Create an unsigned integer type");
     c.def_property_readonly(
         "width",
-        [](PyIntegerType &self) { return mlirIntegerTypeGetWidth(self.type); },
+        [](PyIntegerType &self) { return mlirIntegerTypeGetWidth(self); },
         "Returns the width of the integer type");
     c.def_property_readonly(
         "is_signless",
         [](PyIntegerType &self) -> bool {
-          return mlirIntegerTypeIsSignless(self.type);
+          return mlirIntegerTypeIsSignless(self);
         },
         "Returns whether this is a signless integer");
     c.def_property_readonly(
         "is_signed",
         [](PyIntegerType &self) -> bool {
-          return mlirIntegerTypeIsSigned(self.type);
+          return mlirIntegerTypeIsSigned(self);
         },
         "Returns whether this is a signed integer");
     c.def_property_readonly(
         "is_unsigned",
         [](PyIntegerType &self) -> bool {
-          return mlirIntegerTypeIsUnsigned(self.type);
+          return mlirIntegerTypeIsUnsigned(self);
         },
         "Returns whether this is an unsigned integer");
   }
@@ -1971,13 +2364,13 @@ public:
         "get",
         [](PyType &elementType) {
           // The element must be a floating point or integer scalar type.
-          if (mlirTypeIsAIntegerOrFloat(elementType.type)) {
-            MlirType t = mlirComplexTypeGet(elementType.type);
+          if (mlirTypeIsAIntegerOrFloat(elementType)) {
+            MlirType t = mlirComplexTypeGet(elementType);
             return PyComplexType(elementType.getContext(), t);
           }
           throw SetPyError(
               PyExc_ValueError,
-              llvm::Twine("invalid '") +
+              Twine("invalid '") +
                   py::repr(py::cast(elementType)).cast<std::string>() +
                   "' and expected floating point or integer type.");
         },
@@ -1985,7 +2378,7 @@ public:
     c.def_property_readonly(
         "element_type",
         [](PyComplexType &self) -> PyType {
-          MlirType t = mlirComplexTypeGetElementType(self.type);
+          MlirType t = mlirComplexTypeGetElementType(self);
           return PyType(self.getContext(), t);
         },
         "Returns element type.");
@@ -2002,34 +2395,32 @@ public:
     c.def_property_readonly(
         "element_type",
         [](PyShapedType &self) {
-          MlirType t = mlirShapedTypeGetElementType(self.type);
+          MlirType t = mlirShapedTypeGetElementType(self);
           return PyType(self.getContext(), t);
         },
         "Returns the element type of the shaped type.");
     c.def_property_readonly(
         "has_rank",
-        [](PyShapedType &self) -> bool {
-          return mlirShapedTypeHasRank(self.type);
-        },
+        [](PyShapedType &self) -> bool { return mlirShapedTypeHasRank(self); },
         "Returns whether the given shaped type is ranked.");
     c.def_property_readonly(
         "rank",
         [](PyShapedType &self) {
           self.requireHasRank();
-          return mlirShapedTypeGetRank(self.type);
+          return mlirShapedTypeGetRank(self);
         },
         "Returns the rank of the given ranked shaped type.");
     c.def_property_readonly(
         "has_static_shape",
         [](PyShapedType &self) -> bool {
-          return mlirShapedTypeHasStaticShape(self.type);
+          return mlirShapedTypeHasStaticShape(self);
         },
         "Returns whether the given shaped type has a static shape.");
     c.def(
         "is_dynamic_dim",
         [](PyShapedType &self, intptr_t dim) -> bool {
           self.requireHasRank();
-          return mlirShapedTypeIsDynamicDim(self.type, dim);
+          return mlirShapedTypeIsDynamicDim(self, dim);
         },
         "Returns whether the dim-th dimension of the given shaped type is "
         "dynamic.");
@@ -2037,7 +2428,7 @@ public:
         "get_dim_size",
         [](PyShapedType &self, intptr_t dim) {
           self.requireHasRank();
-          return mlirShapedTypeGetDimSize(self.type, dim);
+          return mlirShapedTypeGetDimSize(self, dim);
         },
         "Returns the dim-th dimension of the given ranked shaped type.");
     c.def_static(
@@ -2057,7 +2448,7 @@ public:
 
 private:
   void requireHasRank() {
-    if (!mlirShapedTypeHasRank(type)) {
+    if (!mlirShapedTypeHasRank(*this)) {
       throw SetPyError(
           PyExc_ValueError,
           "calling this method requires that the type has a rank.");
@@ -2078,13 +2469,13 @@ public:
         [](std::vector<int64_t> shape, PyType &elementType,
            DefaultingPyLocation loc) {
           MlirType t = mlirVectorTypeGetChecked(shape.size(), shape.data(),
-                                                elementType.type, loc->loc);
+                                                elementType, loc);
           // TODO: Rework error reporting once diagnostic engine is exposed
           // in C API.
           if (mlirTypeIsNull(t)) {
             throw SetPyError(
                 PyExc_ValueError,
-                llvm::Twine("invalid '") +
+                Twine("invalid '") +
                     py::repr(py::cast(elementType)).cast<std::string>() +
                     "' and expected floating point or integer type.");
           }
@@ -2109,13 +2500,13 @@ public:
         [](std::vector<int64_t> shape, PyType &elementType,
            DefaultingPyLocation loc) {
           MlirType t = mlirRankedTensorTypeGetChecked(
-              shape.size(), shape.data(), elementType.type, loc->loc);
+              shape.size(), shape.data(), elementType, loc);
           // TODO: Rework error reporting once diagnostic engine is exposed
           // in C API.
           if (mlirTypeIsNull(t)) {
             throw SetPyError(
                 PyExc_ValueError,
-                llvm::Twine("invalid '") +
+                Twine("invalid '") +
                     py::repr(py::cast(elementType)).cast<std::string>() +
                     "' and expected floating point, integer, vector or "
                     "complex "
@@ -2140,14 +2531,13 @@ public:
     c.def_static(
         "get",
         [](PyType &elementType, DefaultingPyLocation loc) {
-          MlirType t =
-              mlirUnrankedTensorTypeGetChecked(elementType.type, loc->loc);
+          MlirType t = mlirUnrankedTensorTypeGetChecked(elementType, loc);
           // TODO: Rework error reporting once diagnostic engine is exposed
           // in C API.
           if (mlirTypeIsNull(t)) {
             throw SetPyError(
                 PyExc_ValueError,
-                llvm::Twine("invalid '") +
+                Twine("invalid '") +
                     py::repr(py::cast(elementType)).cast<std::string>() +
                     "' and expected floating point, integer, vector or "
                     "complex "
@@ -2160,6 +2550,8 @@ public:
   }
 };
 
+class PyMemRefLayoutMapList;
+
 /// Ranked MemRef Type subclass - MemRefType.
 class PyMemRefType : public PyConcreteType<PyMemRefType, PyShapedType> {
 public:
@@ -2167,23 +2559,28 @@ public:
   static constexpr const char *pyClassName = "MemRefType";
   using PyConcreteType::PyConcreteType;
 
+  PyMemRefLayoutMapList getLayout();
+
   static void bindDerived(ClassTy &c) {
-    // TODO: Add mlirMemRefTypeGet and mlirMemRefTypeGetAffineMap binding
-    // once the affine map binding is completed.
     c.def_static(
-         "get_contiguous_memref",
-         // TODO: Make the location optional and create a default location.
+         "get",
          [](PyType &elementType, std::vector<int64_t> shape,
-            unsigned memorySpace, DefaultingPyLocation loc) {
-           MlirType t = mlirMemRefTypeContiguousGetChecked(
-               elementType.type, shape.size(), shape.data(), memorySpace,
-               loc->loc);
+            std::vector<PyAffineMap> layout, unsigned memorySpace,
+            DefaultingPyLocation loc) {
+           SmallVector<MlirAffineMap> maps;
+           maps.reserve(layout.size());
+           for (PyAffineMap &map : layout)
+             maps.push_back(map);
+
+           MlirType t = mlirMemRefTypeGetChecked(elementType, shape.size(),
+                                                 shape.data(), maps.size(),
+                                                 maps.data(), memorySpace, loc);
            // TODO: Rework error reporting once diagnostic engine is exposed
            // in C API.
            if (mlirTypeIsNull(t)) {
              throw SetPyError(
                  PyExc_ValueError,
-                 llvm::Twine("invalid '") +
+                 Twine("invalid '") +
                      py::repr(py::cast(elementType)).cast<std::string>() +
                      "' and expected floating point, integer, vector or "
                      "complex "
@@ -2191,23 +2588,54 @@ public:
            }
            return PyMemRefType(elementType.getContext(), t);
          },
-         py::arg("element_type"), py::arg("shape"), py::arg("memory_space"),
+         py::arg("element_type"), py::arg("shape"),
+         py::arg("layout") = py::list(), py::arg("memory_space") = 0,
          py::arg("loc") = py::none(), "Create a memref type")
-        .def_property_readonly(
-            "num_affine_maps",
-            [](PyMemRefType &self) -> intptr_t {
-              return mlirMemRefTypeGetNumAffineMaps(self.type);
-            },
-            "Returns the number of affine layout maps in the given MemRef "
-            "type.")
+        .def_property_readonly("layout", &PyMemRefType::getLayout,
+                               "The list of layout maps of the MemRef type.")
         .def_property_readonly(
             "memory_space",
             [](PyMemRefType &self) -> unsigned {
-              return mlirMemRefTypeGetMemorySpace(self.type);
+              return mlirMemRefTypeGetMemorySpace(self);
             },
             "Returns the memory space of the given MemRef type.");
   }
 };
+
+/// A list of affine layout maps in a memref type. Internally, these are stored
+/// as consecutive elements, random access is cheap. Both the type and the maps
+/// are owned by the context, no need to worry about lifetime extension.
+class PyMemRefLayoutMapList
+    : public Sliceable<PyMemRefLayoutMapList, PyAffineMap> {
+public:
+  static constexpr const char *pyClassName = "MemRefLayoutMapList";
+
+  PyMemRefLayoutMapList(PyMemRefType type, intptr_t startIndex = 0,
+                        intptr_t length = -1, intptr_t step = 1)
+      : Sliceable(startIndex,
+                  length == -1 ? mlirMemRefTypeGetNumAffineMaps(type) : length,
+                  step),
+        memref(type) {}
+
+  intptr_t getNumElements() { return mlirMemRefTypeGetNumAffineMaps(memref); }
+
+  PyAffineMap getElement(intptr_t index) {
+    return PyAffineMap(memref.getContext(),
+                       mlirMemRefTypeGetAffineMap(memref, index));
+  }
+
+  PyMemRefLayoutMapList slice(intptr_t startIndex, intptr_t length,
+                              intptr_t step) {
+    return PyMemRefLayoutMapList(memref, startIndex, length, step);
+  }
+
+private:
+  PyMemRefType memref;
+};
+
+PyMemRefLayoutMapList PyMemRefType::getLayout() {
+  return PyMemRefLayoutMapList(*this);
+}
 
 /// Unranked MemRef Type subclass - UnrankedMemRefType.
 class PyUnrankedMemRefType
@@ -2222,14 +2650,14 @@ public:
          "get",
          [](PyType &elementType, unsigned memorySpace,
             DefaultingPyLocation loc) {
-           MlirType t = mlirUnrankedMemRefTypeGetChecked(elementType.type,
-                                                         memorySpace, loc->loc);
+           MlirType t =
+               mlirUnrankedMemRefTypeGetChecked(elementType, memorySpace, loc);
            // TODO: Rework error reporting once diagnostic engine is exposed
            // in C API.
            if (mlirTypeIsNull(t)) {
              throw SetPyError(
                  PyExc_ValueError,
-                 llvm::Twine("invalid '") +
+                 Twine("invalid '") +
                      py::repr(py::cast(elementType)).cast<std::string>() +
                      "' and expected floating point, integer, vector or "
                      "complex "
@@ -2242,7 +2670,7 @@ public:
         .def_property_readonly(
             "memory_space",
             [](PyUnrankedMemRefType &self) -> unsigned {
-              return mlirUnrankedMemrefGetMemorySpace(self.type);
+              return mlirUnrankedMemrefGetMemorySpace(self);
             },
             "Returns the memory space of the given Unranked MemRef type.");
   }
@@ -2263,7 +2691,7 @@ public:
           // Mapping py::list to SmallVector.
           SmallVector<MlirType, 4> elements;
           for (auto element : elementList)
-            elements.push_back(element.cast<PyType>().type);
+            elements.push_back(element.cast<PyType>());
           MlirType t = mlirTupleTypeGet(context->get(), num, elements.data());
           return PyTupleType(context->getRef(), t);
         },
@@ -2272,14 +2700,14 @@ public:
     c.def(
         "get_type",
         [](PyTupleType &self, intptr_t pos) -> PyType {
-          MlirType t = mlirTupleTypeGetType(self.type, pos);
+          MlirType t = mlirTupleTypeGetType(self, pos);
           return PyType(self.getContext(), t);
         },
         "Returns the pos-th type in the tuple type.");
     c.def_property_readonly(
         "num_types",
         [](PyTupleType &self) -> intptr_t {
-          return mlirTupleTypeGetNumTypes(self.type);
+          return mlirTupleTypeGetNumTypes(self);
         },
         "Returns the number of types contained in a tuple.");
   }
@@ -2309,11 +2737,11 @@ public:
     c.def_property_readonly(
         "inputs",
         [](PyFunctionType &self) {
-          MlirType t = self.type;
+          MlirType t = self;
           auto contextRef = self.getContext();
           py::list types;
-          for (intptr_t i = 0, e = mlirFunctionTypeGetNumInputs(self.type);
-               i < e; ++i) {
+          for (intptr_t i = 0, e = mlirFunctionTypeGetNumInputs(self); i < e;
+               ++i) {
             types.append(PyType(contextRef, mlirFunctionTypeGetInput(t, i)));
           }
           return types;
@@ -2322,12 +2750,12 @@ public:
     c.def_property_readonly(
         "results",
         [](PyFunctionType &self) {
-          MlirType t = self.type;
           auto contextRef = self.getContext();
           py::list types;
-          for (intptr_t i = 0, e = mlirFunctionTypeGetNumResults(self.type);
-               i < e; ++i) {
-            types.append(PyType(contextRef, mlirFunctionTypeGetResult(t, i)));
+          for (intptr_t i = 0, e = mlirFunctionTypeGetNumResults(self); i < e;
+               ++i) {
+            types.append(
+                PyType(contextRef, mlirFunctionTypeGetResult(self, i)));
           }
           return types;
         },
@@ -2336,6 +2764,293 @@ public:
 };
 
 } // namespace
+
+//------------------------------------------------------------------------------
+// PyAffineExpr and subclasses.
+//------------------------------------------------------------------------------
+
+namespace {
+/// CRTP base class for Python MLIR affine expressions that subclass AffineExpr
+/// and should be castable from it. Intermediate hierarchy classes can be
+/// modeled by specifying BaseTy.
+template <typename DerivedTy, typename BaseTy = PyAffineExpr>
+class PyConcreteAffineExpr : public BaseTy {
+public:
+  // Derived classes must define statics for:
+  //   IsAFunctionTy isaFunction
+  //   const char *pyClassName
+  // and redefine bindDerived.
+  using ClassTy = py::class_<DerivedTy, BaseTy>;
+  using IsAFunctionTy = bool (*)(MlirAffineExpr);
+
+  PyConcreteAffineExpr() = default;
+  PyConcreteAffineExpr(PyMlirContextRef contextRef, MlirAffineExpr affineExpr)
+      : BaseTy(std::move(contextRef), affineExpr) {}
+  PyConcreteAffineExpr(PyAffineExpr &orig)
+      : PyConcreteAffineExpr(orig.getContext(), castFrom(orig)) {}
+
+  static MlirAffineExpr castFrom(PyAffineExpr &orig) {
+    if (!DerivedTy::isaFunction(orig)) {
+      auto origRepr = py::repr(py::cast(orig)).cast<std::string>();
+      throw SetPyError(PyExc_ValueError,
+                       Twine("Cannot cast affine expression to ") +
+                           DerivedTy::pyClassName + " (from " + origRepr + ")");
+    }
+    return orig;
+  }
+
+  static void bind(py::module &m) {
+    auto cls = ClassTy(m, DerivedTy::pyClassName);
+    cls.def(py::init<PyAffineExpr &>());
+    DerivedTy::bindDerived(cls);
+  }
+
+  /// Implemented by derived classes to add methods to the Python subclass.
+  static void bindDerived(ClassTy &m) {}
+};
+
+class PyAffineConstantExpr : public PyConcreteAffineExpr<PyAffineConstantExpr> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAffineExprIsAConstant;
+  static constexpr const char *pyClassName = "AffineConstantExpr";
+  using PyConcreteAffineExpr::PyConcreteAffineExpr;
+
+  static PyAffineConstantExpr get(intptr_t value,
+                                  DefaultingPyMlirContext context) {
+    MlirAffineExpr affineExpr =
+        mlirAffineConstantExprGet(context->get(), static_cast<int64_t>(value));
+    return PyAffineConstantExpr(context->getRef(), affineExpr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get", &PyAffineConstantExpr::get, py::arg("value"),
+                 py::arg("context") = py::none());
+    c.def_property_readonly("value", [](PyAffineConstantExpr &self) {
+      return mlirAffineConstantExprGetValue(self);
+    });
+  }
+};
+
+class PyAffineDimExpr : public PyConcreteAffineExpr<PyAffineDimExpr> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAffineExprIsADim;
+  static constexpr const char *pyClassName = "AffineDimExpr";
+  using PyConcreteAffineExpr::PyConcreteAffineExpr;
+
+  static PyAffineDimExpr get(intptr_t pos, DefaultingPyMlirContext context) {
+    MlirAffineExpr affineExpr = mlirAffineDimExprGet(context->get(), pos);
+    return PyAffineDimExpr(context->getRef(), affineExpr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get", &PyAffineDimExpr::get, py::arg("position"),
+                 py::arg("context") = py::none());
+    c.def_property_readonly("position", [](PyAffineDimExpr &self) {
+      return mlirAffineDimExprGetPosition(self);
+    });
+  }
+};
+
+class PyAffineSymbolExpr : public PyConcreteAffineExpr<PyAffineSymbolExpr> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAffineExprIsASymbol;
+  static constexpr const char *pyClassName = "AffineSymbolExpr";
+  using PyConcreteAffineExpr::PyConcreteAffineExpr;
+
+  static PyAffineSymbolExpr get(intptr_t pos, DefaultingPyMlirContext context) {
+    MlirAffineExpr affineExpr = mlirAffineSymbolExprGet(context->get(), pos);
+    return PyAffineSymbolExpr(context->getRef(), affineExpr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get", &PyAffineSymbolExpr::get, py::arg("position"),
+                 py::arg("context") = py::none());
+    c.def_property_readonly("position", [](PyAffineSymbolExpr &self) {
+      return mlirAffineSymbolExprGetPosition(self);
+    });
+  }
+};
+
+class PyAffineBinaryExpr : public PyConcreteAffineExpr<PyAffineBinaryExpr> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAffineExprIsABinary;
+  static constexpr const char *pyClassName = "AffineBinaryExpr";
+  using PyConcreteAffineExpr::PyConcreteAffineExpr;
+
+  PyAffineExpr lhs() {
+    MlirAffineExpr lhsExpr = mlirAffineBinaryOpExprGetLHS(get());
+    return PyAffineExpr(getContext(), lhsExpr);
+  }
+
+  PyAffineExpr rhs() {
+    MlirAffineExpr rhsExpr = mlirAffineBinaryOpExprGetRHS(get());
+    return PyAffineExpr(getContext(), rhsExpr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_property_readonly("lhs", &PyAffineBinaryExpr::lhs);
+    c.def_property_readonly("rhs", &PyAffineBinaryExpr::rhs);
+  }
+};
+
+class PyAffineAddExpr
+    : public PyConcreteAffineExpr<PyAffineAddExpr, PyAffineBinaryExpr> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAffineExprIsAAdd;
+  static constexpr const char *pyClassName = "AffineAddExpr";
+  using PyConcreteAffineExpr::PyConcreteAffineExpr;
+
+  static PyAffineAddExpr get(PyAffineExpr lhs, PyAffineExpr rhs) {
+    MlirAffineExpr expr = mlirAffineAddExprGet(lhs, rhs);
+    return PyAffineAddExpr(lhs.getContext(), expr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get", &PyAffineAddExpr::get);
+  }
+};
+
+class PyAffineMulExpr
+    : public PyConcreteAffineExpr<PyAffineMulExpr, PyAffineBinaryExpr> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAffineExprIsAMul;
+  static constexpr const char *pyClassName = "AffineMulExpr";
+  using PyConcreteAffineExpr::PyConcreteAffineExpr;
+
+  static PyAffineMulExpr get(PyAffineExpr lhs, PyAffineExpr rhs) {
+    MlirAffineExpr expr = mlirAffineMulExprGet(lhs, rhs);
+    return PyAffineMulExpr(lhs.getContext(), expr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get", &PyAffineMulExpr::get);
+  }
+};
+
+class PyAffineModExpr
+    : public PyConcreteAffineExpr<PyAffineModExpr, PyAffineBinaryExpr> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAffineExprIsAMod;
+  static constexpr const char *pyClassName = "AffineModExpr";
+  using PyConcreteAffineExpr::PyConcreteAffineExpr;
+
+  static PyAffineModExpr get(PyAffineExpr lhs, PyAffineExpr rhs) {
+    MlirAffineExpr expr = mlirAffineModExprGet(lhs, rhs);
+    return PyAffineModExpr(lhs.getContext(), expr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get", &PyAffineModExpr::get);
+  }
+};
+
+class PyAffineFloorDivExpr
+    : public PyConcreteAffineExpr<PyAffineFloorDivExpr, PyAffineBinaryExpr> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAffineExprIsAFloorDiv;
+  static constexpr const char *pyClassName = "AffineFloorDivExpr";
+  using PyConcreteAffineExpr::PyConcreteAffineExpr;
+
+  static PyAffineFloorDivExpr get(PyAffineExpr lhs, PyAffineExpr rhs) {
+    MlirAffineExpr expr = mlirAffineFloorDivExprGet(lhs, rhs);
+    return PyAffineFloorDivExpr(lhs.getContext(), expr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get", &PyAffineFloorDivExpr::get);
+  }
+};
+
+class PyAffineCeilDivExpr
+    : public PyConcreteAffineExpr<PyAffineCeilDivExpr, PyAffineBinaryExpr> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAffineExprIsACeilDiv;
+  static constexpr const char *pyClassName = "AffineCeilDivExpr";
+  using PyConcreteAffineExpr::PyConcreteAffineExpr;
+
+  static PyAffineCeilDivExpr get(PyAffineExpr lhs, PyAffineExpr rhs) {
+    MlirAffineExpr expr = mlirAffineCeilDivExprGet(lhs, rhs);
+    return PyAffineCeilDivExpr(lhs.getContext(), expr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get", &PyAffineCeilDivExpr::get);
+  }
+};
+} // namespace
+
+bool PyAffineExpr::operator==(const PyAffineExpr &other) {
+  return mlirAffineExprEqual(affineExpr, other.affineExpr);
+}
+
+py::object PyAffineExpr::getCapsule() {
+  return py::reinterpret_steal<py::object>(
+      mlirPythonAffineExprToCapsule(*this));
+}
+
+PyAffineExpr PyAffineExpr::createFromCapsule(py::object capsule) {
+  MlirAffineExpr rawAffineExpr = mlirPythonCapsuleToAffineExpr(capsule.ptr());
+  if (mlirAffineExprIsNull(rawAffineExpr))
+    throw py::error_already_set();
+  return PyAffineExpr(
+      PyMlirContext::forContext(mlirAffineExprGetContext(rawAffineExpr)),
+      rawAffineExpr);
+}
+
+//------------------------------------------------------------------------------
+// PyAffineMap and utilities.
+//------------------------------------------------------------------------------
+
+namespace {
+/// A list of expressions contained in an affine map. Internally these are
+/// stored as a consecutive array leading to inexpensive random access. Both
+/// the map and the expression are owned by the context so we need not bother
+/// with lifetime extension.
+class PyAffineMapExprList
+    : public Sliceable<PyAffineMapExprList, PyAffineExpr> {
+public:
+  static constexpr const char *pyClassName = "AffineExprList";
+
+  PyAffineMapExprList(PyAffineMap map, intptr_t startIndex = 0,
+                      intptr_t length = -1, intptr_t step = 1)
+      : Sliceable(startIndex,
+                  length == -1 ? mlirAffineMapGetNumResults(map) : length,
+                  step),
+        affineMap(map) {}
+
+  intptr_t getNumElements() { return mlirAffineMapGetNumResults(affineMap); }
+
+  PyAffineExpr getElement(intptr_t pos) {
+    return PyAffineExpr(affineMap.getContext(),
+                        mlirAffineMapGetResult(affineMap, pos));
+  }
+
+  PyAffineMapExprList slice(intptr_t startIndex, intptr_t length,
+                            intptr_t step) {
+    return PyAffineMapExprList(affineMap, startIndex, length, step);
+  }
+
+private:
+  PyAffineMap affineMap;
+};
+} // end namespace
+
+bool PyAffineMap::operator==(const PyAffineMap &other) {
+  return mlirAffineMapEqual(affineMap, other.affineMap);
+}
+
+py::object PyAffineMap::getCapsule() {
+  return py::reinterpret_steal<py::object>(mlirPythonAffineMapToCapsule(*this));
+}
+
+PyAffineMap PyAffineMap::createFromCapsule(py::object capsule) {
+  MlirAffineMap rawAffineMap = mlirPythonCapsuleToAffineMap(capsule.ptr());
+  if (mlirAffineMapIsNull(rawAffineMap))
+    throw py::error_already_set();
+  return PyAffineMap(
+      PyMlirContext::forContext(mlirAffineMapGetContext(rawAffineMap)),
+      rawAffineMap);
+}
 
 //------------------------------------------------------------------------------
 // Populates the pybind11 IR submodule.
@@ -2383,7 +3098,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
                 self.get(), {name.data(), name.size()});
             if (mlirDialectIsNull(dialect)) {
               throw SetPyError(PyExc_ValueError,
-                               llvm::Twine("Dialect '") + name + "' not found");
+                               Twine("Dialect '") + name + "' not found");
             }
             return PyDialectDescriptor(self.getRef(), dialect);
           },
@@ -2454,8 +3169,15 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   // Mapping of Location
   //----------------------------------------------------------------------------
   py::class_<PyLocation>(m, "Location")
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR, &PyLocation::getCapsule)
+      .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyLocation::createFromCapsule)
       .def("__enter__", &PyLocation::contextEnter)
       .def("__exit__", &PyLocation::contextExit)
+      .def("__eq__",
+           [](PyLocation &self, PyLocation &other) -> bool {
+             return mlirLocationEqual(self, other);
+           })
+      .def("__eq__", [](PyLocation &self, py::object other) { return false; })
       .def_property_readonly_static(
           "current",
           [](py::object & /*class*/) {
@@ -2477,9 +3199,10 @@ void mlir::python::populateIRSubmodule(py::module &m) {
           "file",
           [](std::string filename, int line, int col,
              DefaultingPyMlirContext context) {
-            return PyLocation(context->getRef(),
-                              mlirLocationFileLineColGet(
-                                  context->get(), filename.c_str(), line, col));
+            return PyLocation(
+                context->getRef(),
+                mlirLocationFileLineColGet(
+                    context->get(), toMlirStringRef(filename), line, col));
           },
           py::arg("filename"), py::arg("line"), py::arg("col"),
           py::arg("context") = py::none(), kContextGetFileLocationDocstring)
@@ -2489,7 +3212,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
           "Context that owns the Location")
       .def("__repr__", [](PyLocation &self) {
         PyPrintAccumulator printAccum;
-        mlirLocationPrint(self.loc, printAccum.getCallback(),
+        mlirLocationPrint(self, printAccum.getCallback(),
                           printAccum.getUserData());
         return printAccum.join();
       });
@@ -2503,8 +3226,8 @@ void mlir::python::populateIRSubmodule(py::module &m) {
       .def_static(
           "parse",
           [](const std::string moduleAsm, DefaultingPyMlirContext context) {
-            MlirModule module =
-                mlirModuleCreateParse(context->get(), moduleAsm.c_str());
+            MlirModule module = mlirModuleCreateParse(
+                context->get(), toMlirStringRef(moduleAsm));
             // TODO: Rework error reporting once diagnostic engine is exposed
             // in C API.
             if (mlirModuleIsNull(module)) {
@@ -2519,7 +3242,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
       .def_static(
           "create",
           [](DefaultingPyLocation loc) {
-            MlirModule module = mlirModuleCreateEmpty(loc->loc);
+            MlirModule module = mlirModuleCreateEmpty(loc);
             return PyModule::forModule(module).releaseObject();
           },
           py::arg("loc") = py::none(), "Creates an empty module")
@@ -2594,6 +3317,26 @@ void mlir::python::populateIRSubmodule(py::module &m) {
             return PyOpResultList(self.getOperation().getRef());
           },
           "Returns the list of Operation results.")
+      .def_property_readonly(
+          "result",
+          [](PyOperationBase &self) {
+            auto &operation = self.getOperation();
+            auto numResults = mlirOperationGetNumResults(operation);
+            if (numResults != 1) {
+              auto name = mlirIdentifierStr(mlirOperationGetName(operation));
+              throw SetPyError(
+                  PyExc_ValueError,
+                  Twine("Cannot call .result on operation ") +
+                      StringRef(name.data, name.length) + " which has " +
+                      Twine(numResults) +
+                      " results (it is only valid for operations with a "
+                      "single result)");
+            }
+            return PyOpResult(operation.getRef(),
+                              mlirOperationGetResult(operation, 0));
+          },
+          "Shortcut to get an op result if it has only one (throws an error "
+          "otherwise).")
       .def("__iter__",
            [](PyOperationBase &self) {
              return PyRegionIterator(self.getOperation().getRef());
@@ -2624,7 +3367,14 @@ void mlir::python::populateIRSubmodule(py::module &m) {
            py::arg("enable_debug_info") = false,
            py::arg("pretty_debug_info") = false,
            py::arg("print_generic_op_form") = false,
-           py::arg("use_local_scope") = false, kOperationGetAsmDocstring);
+           py::arg("use_local_scope") = false, kOperationGetAsmDocstring)
+      .def(
+          "verify",
+          [](PyOperationBase &self) {
+            return mlirOperationVerify(self.getOperation());
+          },
+          "Verify the operation and return true if it passes, false if it "
+          "fails.");
 
   py::class_<PyOperation, PyOperationBase>(m, "Operation")
       .def_static("create", &PyOperation::create, py::arg("name"),
@@ -2634,6 +3384,13 @@ void mlir::python::populateIRSubmodule(py::module &m) {
                   py::arg("successors") = py::none(), py::arg("regions") = 0,
                   py::arg("loc") = py::none(), py::arg("ip") = py::none(),
                   kOperationCreateDocstring)
+      .def_property_readonly("name",
+                             [](PyOperation &self) {
+                               MlirOperation operation = self.get();
+                               MlirStringRef name = mlirIdentifierStr(
+                                   mlirOperationGetName(operation));
+                               return py::str(name.data, name.length);
+                             })
       .def_property_readonly(
           "context",
           [](PyOperation &self) { return self.getContext().getObject(); },
@@ -2750,16 +3507,19 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   // Mapping of PyAttribute.
   //----------------------------------------------------------------------------
   py::class_<PyAttribute>(m, "Attribute")
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
+                             &PyAttribute::getCapsule)
+      .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyAttribute::createFromCapsule)
       .def_static(
           "parse",
           [](std::string attrSpec, DefaultingPyMlirContext context) {
-            MlirAttribute type =
-                mlirAttributeParseGet(context->get(), attrSpec.c_str());
+            MlirAttribute type = mlirAttributeParseGet(
+                context->get(), toMlirStringRef(attrSpec));
             // TODO: Rework error reporting once diagnostic engine is exposed
             // in C API.
             if (mlirAttributeIsNull(type)) {
               throw SetPyError(PyExc_ValueError,
-                               llvm::Twine("Unable to parse attribute: '") +
+                               Twine("Unable to parse attribute: '") +
                                    attrSpec + "'");
             }
             return PyAttribute(context->getRef(), type);
@@ -2773,25 +3533,25 @@ void mlir::python::populateIRSubmodule(py::module &m) {
       .def_property_readonly("type",
                              [](PyAttribute &self) {
                                return PyType(self.getContext()->getRef(),
-                                             mlirAttributeGetType(self.attr));
+                                             mlirAttributeGetType(self));
                              })
       .def(
           "get_named",
           [](PyAttribute &self, std::string name) {
-            return PyNamedAttribute(self.attr, std::move(name));
+            return PyNamedAttribute(self, std::move(name));
           },
           py::keep_alive<0, 1>(), "Binds a name to the attribute")
       .def("__eq__",
            [](PyAttribute &self, PyAttribute &other) { return self == other; })
       .def("__eq__", [](PyAttribute &self, py::object &other) { return false; })
       .def(
-          "dump", [](PyAttribute &self) { mlirAttributeDump(self.attr); },
+          "dump", [](PyAttribute &self) { mlirAttributeDump(self); },
           kDumpDocstring)
       .def(
           "__str__",
           [](PyAttribute &self) {
             PyPrintAccumulator printAccum;
-            mlirAttributePrint(self.attr, printAccum.getCallback(),
+            mlirAttributePrint(self, printAccum.getCallback(),
                                printAccum.getUserData());
             return printAccum.join();
           },
@@ -2804,7 +3564,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
         // being excessive.
         PyPrintAccumulator printAccum;
         printAccum.parts.append("Attribute(");
-        mlirAttributePrint(self.attr, printAccum.getCallback(),
+        mlirAttributePrint(self, printAccum.getCallback(),
                            printAccum.getUserData());
         printAccum.parts.append(")");
         return printAccum.join();
@@ -2818,7 +3578,8 @@ void mlir::python::populateIRSubmodule(py::module &m) {
            [](PyNamedAttribute &self) {
              PyPrintAccumulator printAccum;
              printAccum.parts.append("NamedAttribute(");
-             printAccum.parts.append(self.namedAttr.name);
+             printAccum.parts.append(
+                 mlirIdentifierStr(self.namedAttr.name).data);
              printAccum.parts.append("=");
              mlirAttributePrint(self.namedAttr.attribute,
                                 printAccum.getCallback(),
@@ -2829,7 +3590,8 @@ void mlir::python::populateIRSubmodule(py::module &m) {
       .def_property_readonly(
           "name",
           [](PyNamedAttribute &self) {
-            return py::str(self.namedAttr.name, strlen(self.namedAttr.name));
+            return py::str(mlirIdentifierStr(self.namedAttr.name).data,
+                           mlirIdentifierStr(self.namedAttr.name).length);
           },
           "The name of the NamedAttribute binding")
       .def_property_readonly(
@@ -2844,29 +3606,38 @@ void mlir::python::populateIRSubmodule(py::module &m) {
           py::keep_alive<0, 1>(),
           "The underlying generic attribute of the NamedAttribute binding");
 
-  // Standard attribute bindings.
+  // Builtin attribute bindings.
   PyFloatAttribute::bind(m);
+  PyArrayAttribute::bind(m);
+  PyArrayAttribute::PyArrayAttributeIterator::bind(m);
   PyIntegerAttribute::bind(m);
   PyBoolAttribute::bind(m);
+  PyFlatSymbolRefAttribute::bind(m);
   PyStringAttribute::bind(m);
   PyDenseElementsAttribute::bind(m);
   PyDenseIntElementsAttribute::bind(m);
   PyDenseFPElementsAttribute::bind(m);
+  PyDictAttribute::bind(m);
+  PyTypeAttribute::bind(m);
+  PyUnitAttribute::bind(m);
 
   //----------------------------------------------------------------------------
   // Mapping of PyType.
   //----------------------------------------------------------------------------
   py::class_<PyType>(m, "Type")
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR, &PyType::getCapsule)
+      .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyType::createFromCapsule)
       .def_static(
           "parse",
           [](std::string typeSpec, DefaultingPyMlirContext context) {
-            MlirType type = mlirTypeParseGet(context->get(), typeSpec.c_str());
+            MlirType type =
+                mlirTypeParseGet(context->get(), toMlirStringRef(typeSpec));
             // TODO: Rework error reporting once diagnostic engine is exposed
             // in C API.
             if (mlirTypeIsNull(type)) {
               throw SetPyError(PyExc_ValueError,
-                               llvm::Twine("Unable to parse type: '") +
-                                   typeSpec + "'");
+                               Twine("Unable to parse type: '") + typeSpec +
+                                   "'");
             }
             return PyType(context->getRef(), type);
           },
@@ -2878,12 +3649,12 @@ void mlir::python::populateIRSubmodule(py::module &m) {
       .def("__eq__", [](PyType &self, PyType &other) { return self == other; })
       .def("__eq__", [](PyType &self, py::object &other) { return false; })
       .def(
-          "dump", [](PyType &self) { mlirTypeDump(self.type); }, kDumpDocstring)
+          "dump", [](PyType &self) { mlirTypeDump(self); }, kDumpDocstring)
       .def(
           "__str__",
           [](PyType &self) {
             PyPrintAccumulator printAccum;
-            mlirTypePrint(self.type, printAccum.getCallback(),
+            mlirTypePrint(self, printAccum.getCallback(),
                           printAccum.getUserData());
             return printAccum.join();
           },
@@ -2895,13 +3666,12 @@ void mlir::python::populateIRSubmodule(py::module &m) {
         // assembly forms and printing them is useful.
         PyPrintAccumulator printAccum;
         printAccum.parts.append("Type(");
-        mlirTypePrint(self.type, printAccum.getCallback(),
-                      printAccum.getUserData());
+        mlirTypePrint(self, printAccum.getCallback(), printAccum.getUserData());
         printAccum.parts.append(")");
         return printAccum.join();
       });
 
-  // Standard type bindings.
+  // Builtin type bindings.
   PyIntegerType::bind(m);
   PyIndexType::bind(m);
   PyBF16Type::bind(m);
@@ -2915,6 +3685,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   PyRankedTensorType::bind(m);
   PyUnrankedTensorType::bind(m);
   PyMemRefType::bind(m);
+  PyMemRefLayoutMapList::bind(m);
   PyUnrankedMemRefType::bind(m);
   PyTupleType::bind(m);
   PyFunctionType::bind(m);
@@ -2964,4 +3735,254 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   PyOpResultList::bind(m);
   PyRegionIterator::bind(m);
   PyRegionList::bind(m);
+
+  //----------------------------------------------------------------------------
+  // Mapping of PyAffineExpr and derived classes.
+  //----------------------------------------------------------------------------
+  py::class_<PyAffineExpr>(m, "AffineExpr")
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
+                             &PyAffineExpr::getCapsule)
+      .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyAffineExpr::createFromCapsule)
+      .def("__add__",
+           [](PyAffineExpr &self, PyAffineExpr &other) {
+             return PyAffineAddExpr::get(self, other);
+           })
+      .def("__mul__",
+           [](PyAffineExpr &self, PyAffineExpr &other) {
+             return PyAffineMulExpr::get(self, other);
+           })
+      .def("__mod__",
+           [](PyAffineExpr &self, PyAffineExpr &other) {
+             return PyAffineModExpr::get(self, other);
+           })
+      .def("__sub__",
+           [](PyAffineExpr &self, PyAffineExpr &other) {
+             auto negOne =
+                 PyAffineConstantExpr::get(-1, *self.getContext().get());
+             return PyAffineAddExpr::get(self,
+                                         PyAffineMulExpr::get(negOne, other));
+           })
+      .def("__eq__", [](PyAffineExpr &self,
+                        PyAffineExpr &other) { return self == other; })
+      .def("__eq__",
+           [](PyAffineExpr &self, py::object &other) { return false; })
+      .def("__str__",
+           [](PyAffineExpr &self) {
+             PyPrintAccumulator printAccum;
+             mlirAffineExprPrint(self, printAccum.getCallback(),
+                                 printAccum.getUserData());
+             return printAccum.join();
+           })
+      .def("__repr__",
+           [](PyAffineExpr &self) {
+             PyPrintAccumulator printAccum;
+             printAccum.parts.append("AffineExpr(");
+             mlirAffineExprPrint(self, printAccum.getCallback(),
+                                 printAccum.getUserData());
+             printAccum.parts.append(")");
+             return printAccum.join();
+           })
+      .def_property_readonly(
+          "context",
+          [](PyAffineExpr &self) { return self.getContext().getObject(); })
+      .def_static(
+          "get_add", &PyAffineAddExpr::get,
+          "Gets an affine expression containing a sum of two expressions.")
+      .def_static(
+          "get_mul", &PyAffineMulExpr::get,
+          "Gets an affine expression containing a product of two expressions.")
+      .def_static("get_mod", &PyAffineModExpr::get,
+                  "Gets an affine expression containing the modulo of dividing "
+                  "one expression by another.")
+      .def_static("get_floor_div", &PyAffineFloorDivExpr::get,
+                  "Gets an affine expression containing the rounded-down "
+                  "result of dividing one expression by another.")
+      .def_static("get_ceil_div", &PyAffineCeilDivExpr::get,
+                  "Gets an affine expression containing the rounded-up result "
+                  "of dividing one expression by another.")
+      .def_static("get_constant", &PyAffineConstantExpr::get, py::arg("value"),
+                  py::arg("context") = py::none(),
+                  "Gets a constant affine expression with the given value.")
+      .def_static(
+          "get_dim", &PyAffineDimExpr::get, py::arg("position"),
+          py::arg("context") = py::none(),
+          "Gets an affine expression of a dimension at the given position.")
+      .def_static(
+          "get_symbol", &PyAffineSymbolExpr::get, py::arg("position"),
+          py::arg("context") = py::none(),
+          "Gets an affine expression of a symbol at the given position.")
+      .def(
+          "dump", [](PyAffineExpr &self) { mlirAffineExprDump(self); },
+          kDumpDocstring);
+  PyAffineConstantExpr::bind(m);
+  PyAffineDimExpr::bind(m);
+  PyAffineSymbolExpr::bind(m);
+  PyAffineBinaryExpr::bind(m);
+  PyAffineAddExpr::bind(m);
+  PyAffineMulExpr::bind(m);
+  PyAffineModExpr::bind(m);
+  PyAffineFloorDivExpr::bind(m);
+  PyAffineCeilDivExpr::bind(m);
+
+  //----------------------------------------------------------------------------
+  // Mapping of PyAffineMap.
+  //----------------------------------------------------------------------------
+  py::class_<PyAffineMap>(m, "AffineMap")
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
+                             &PyAffineMap::getCapsule)
+      .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyAffineMap::createFromCapsule)
+      .def("__eq__",
+           [](PyAffineMap &self, PyAffineMap &other) { return self == other; })
+      .def("__eq__", [](PyAffineMap &self, py::object &other) { return false; })
+      .def("__str__",
+           [](PyAffineMap &self) {
+             PyPrintAccumulator printAccum;
+             mlirAffineMapPrint(self, printAccum.getCallback(),
+                                printAccum.getUserData());
+             return printAccum.join();
+           })
+      .def("__repr__",
+           [](PyAffineMap &self) {
+             PyPrintAccumulator printAccum;
+             printAccum.parts.append("AffineMap(");
+             mlirAffineMapPrint(self, printAccum.getCallback(),
+                                printAccum.getUserData());
+             printAccum.parts.append(")");
+             return printAccum.join();
+           })
+      .def_property_readonly(
+          "context",
+          [](PyAffineMap &self) { return self.getContext().getObject(); },
+          "Context that owns the Affine Map")
+      .def(
+          "dump", [](PyAffineMap &self) { mlirAffineMapDump(self); },
+          kDumpDocstring)
+      .def_static(
+          "get",
+          [](intptr_t dimCount, intptr_t symbolCount, py::list exprs,
+             DefaultingPyMlirContext context) {
+            SmallVector<MlirAffineExpr> affineExprs;
+            affineExprs.reserve(py::len(exprs));
+            for (py::handle expr : exprs) {
+              try {
+                affineExprs.push_back(expr.cast<PyAffineExpr>());
+              } catch (py::cast_error &err) {
+                std::string msg =
+                    std::string("Invalid expression when attempting to create "
+                                "an AffineMap (") +
+                    err.what() + ")";
+                throw py::cast_error(msg);
+              } catch (py::reference_cast_error &err) {
+                std::string msg =
+                    std::string("Invalid expression (None?) when attempting to "
+                                "create an AffineMap (") +
+                    err.what() + ")";
+                throw py::cast_error(msg);
+              }
+            }
+            MlirAffineMap map =
+                mlirAffineMapGet(context->get(), dimCount, symbolCount,
+                                 affineExprs.size(), affineExprs.data());
+            return PyAffineMap(context->getRef(), map);
+          },
+          py::arg("dim_count"), py::arg("symbol_count"), py::arg("exprs"),
+          py::arg("context") = py::none(),
+          "Gets a map with the given expressions as results.")
+      .def_static(
+          "get_constant",
+          [](intptr_t value, DefaultingPyMlirContext context) {
+            MlirAffineMap affineMap =
+                mlirAffineMapConstantGet(context->get(), value);
+            return PyAffineMap(context->getRef(), affineMap);
+          },
+          py::arg("value"), py::arg("context") = py::none(),
+          "Gets an affine map with a single constant result")
+      .def_static(
+          "get_empty",
+          [](DefaultingPyMlirContext context) {
+            MlirAffineMap affineMap = mlirAffineMapEmptyGet(context->get());
+            return PyAffineMap(context->getRef(), affineMap);
+          },
+          py::arg("context") = py::none(), "Gets an empty affine map.")
+      .def_static(
+          "get_identity",
+          [](intptr_t nDims, DefaultingPyMlirContext context) {
+            MlirAffineMap affineMap =
+                mlirAffineMapMultiDimIdentityGet(context->get(), nDims);
+            return PyAffineMap(context->getRef(), affineMap);
+          },
+          py::arg("n_dims"), py::arg("context") = py::none(),
+          "Gets an identity map with the given number of dimensions.")
+      .def_static(
+          "get_minor_identity",
+          [](intptr_t nDims, intptr_t nResults,
+             DefaultingPyMlirContext context) {
+            MlirAffineMap affineMap =
+                mlirAffineMapMinorIdentityGet(context->get(), nDims, nResults);
+            return PyAffineMap(context->getRef(), affineMap);
+          },
+          py::arg("n_dims"), py::arg("n_results"),
+          py::arg("context") = py::none(),
+          "Gets a minor identity map with the given number of dimensions and "
+          "results.")
+      .def_static(
+          "get_permutation",
+          [](std::vector<unsigned> permutation,
+             DefaultingPyMlirContext context) {
+            if (!isPermutation(permutation))
+              throw py::cast_error("Invalid permutation when attempting to "
+                                   "create an AffineMap");
+            MlirAffineMap affineMap = mlirAffineMapPermutationGet(
+                context->get(), permutation.size(), permutation.data());
+            return PyAffineMap(context->getRef(), affineMap);
+          },
+          py::arg("permutation"), py::arg("context") = py::none(),
+          "Gets an affine map that permutes its inputs.")
+      .def("get_submap",
+           [](PyAffineMap &self, std::vector<intptr_t> &resultPos) {
+             intptr_t numResults = mlirAffineMapGetNumResults(self);
+             for (intptr_t pos : resultPos) {
+               if (pos < 0 || pos >= numResults)
+                 throw py::value_error("result position out of bounds");
+             }
+             MlirAffineMap affineMap = mlirAffineMapGetSubMap(
+                 self, resultPos.size(), resultPos.data());
+             return PyAffineMap(self.getContext(), affineMap);
+           })
+      .def("get_major_submap",
+           [](PyAffineMap &self, intptr_t nResults) {
+             if (nResults >= mlirAffineMapGetNumResults(self))
+               throw py::value_error("number of results out of bounds");
+             MlirAffineMap affineMap =
+                 mlirAffineMapGetMajorSubMap(self, nResults);
+             return PyAffineMap(self.getContext(), affineMap);
+           })
+      .def("get_minor_submap",
+           [](PyAffineMap &self, intptr_t nResults) {
+             if (nResults >= mlirAffineMapGetNumResults(self))
+               throw py::value_error("number of results out of bounds");
+             MlirAffineMap affineMap =
+                 mlirAffineMapGetMinorSubMap(self, nResults);
+             return PyAffineMap(self.getContext(), affineMap);
+           })
+      .def_property_readonly(
+          "is_permutation",
+          [](PyAffineMap &self) { return mlirAffineMapIsPermutation(self); })
+      .def_property_readonly("is_projected_permutation",
+                             [](PyAffineMap &self) {
+                               return mlirAffineMapIsProjectedPermutation(self);
+                             })
+      .def_property_readonly(
+          "n_dims",
+          [](PyAffineMap &self) { return mlirAffineMapGetNumDims(self); })
+      .def_property_readonly(
+          "n_inputs",
+          [](PyAffineMap &self) { return mlirAffineMapGetNumInputs(self); })
+      .def_property_readonly(
+          "n_symbols",
+          [](PyAffineMap &self) { return mlirAffineMapGetNumSymbols(self); })
+      .def_property_readonly("results", [](PyAffineMap &self) {
+        return PyAffineMapExprList(self);
+      });
+  PyAffineMapExprList::bind(m);
 }

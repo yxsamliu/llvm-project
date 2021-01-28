@@ -10,8 +10,7 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/Function.h"
-#include "mlir/IR/Module.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/SetVector.h"
@@ -365,11 +364,6 @@ void ArgConverter::applyRewrites(ConversionValueMapping &mapping) {
       // If the argument is still used, replace it with the generated cast.
       if (!origArg.use_empty())
         origArg.replaceAllUsesWith(mapping.lookupOrDefault(castValue));
-
-      // If all users of the cast were removed, we can drop it. Otherwise, keep
-      // the operation alive and let the user handle any remaining usages.
-      if (castValue.use_empty() && castValue.getDefiningOp())
-        castValue.getDefiningOp()->erase();
     }
   }
 }
@@ -563,7 +557,7 @@ class OperationTransactionState {
 public:
   OperationTransactionState() = default;
   OperationTransactionState(Operation *op)
-      : op(op), loc(op->getLoc()), attrs(op->getMutableAttrDict()),
+      : op(op), loc(op->getLoc()), attrs(op->getAttrDictionary()),
         operands(op->operand_begin(), op->operand_end()),
         successors(op->successor_begin(), op->successor_end()) {}
 
@@ -583,7 +577,7 @@ public:
 private:
   Operation *op;
   LocationAttr loc;
-  MutableDictionaryAttr attrs;
+  DictionaryAttr attrs;
   SmallVector<Value, 8> operands;
   SmallVector<Block *, 2> successors;
 };
@@ -855,6 +849,7 @@ static void detachNestedAndErase(Operation *op) {
       block.dropAllDefinedValueUses();
     }
   }
+  op->dropAllUses();
   op->erase();
 }
 
@@ -989,7 +984,7 @@ void ConversionPatternRewriterImpl::undoBlockActions(
       Block *insertAfterBlock = action.originalPosition.insertAfterBlock;
       blockList.insert((insertAfterBlock
                             ? std::next(Region::iterator(insertAfterBlock))
-                            : blockList.end()),
+                            : blockList.begin()),
                        action.block);
       break;
     }
@@ -1254,6 +1249,21 @@ ConversionPatternRewriter::ConversionPatternRewriter(MLIRContext *ctx)
     : PatternRewriter(ctx),
       impl(new detail::ConversionPatternRewriterImpl(*this)) {}
 ConversionPatternRewriter::~ConversionPatternRewriter() {}
+
+/// PatternRewriter hook for replacing the results of an operation when the
+/// given functor returns true.
+void ConversionPatternRewriter::replaceOpWithIf(
+    Operation *op, ValueRange newValues, bool *allUsesReplaced,
+    llvm::unique_function<bool(OpOperand &) const> functor) {
+  // TODO: To support this we will need to rework a bit of how replacements are
+  // tracked, given that this isn't guranteed to replace all of the uses of an
+  // operation. The main change is that now an operation can be replaced
+  // multiple times, in parts. The current "set" based tracking is mainly useful
+  // for tracking if a replaced operation should be ignored, i.e. if all of the
+  // uses will be replaced.
+  llvm_unreachable(
+      "replaceOpWithIf is currently not supported by DialectConversion");
+}
 
 /// PatternRewriter hook for replacing the results of an operation.
 void ConversionPatternRewriter::replaceOp(Operation *op, ValueRange newValues) {
@@ -2528,8 +2538,8 @@ struct FuncOpSignatureConversion : public OpConversionPattern<FuncOp> {
 
     // Update the function signature in-place.
     rewriter.updateRootInPlace(funcOp, [&] {
-      funcOp.setType(FunctionType::get(result.getConvertedTypes(), newResults,
-                                       funcOp.getContext()));
+      funcOp.setType(FunctionType::get(funcOp.getContext(),
+                                       result.getConvertedTypes(), newResults));
     });
     return success();
   }

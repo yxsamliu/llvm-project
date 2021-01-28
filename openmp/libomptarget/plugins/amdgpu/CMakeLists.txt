@@ -30,8 +30,8 @@ if(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_
   return()
 endif()
 
-if (NOT LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR)
-  libomptarget_say("Not building AMDGPU plugin: Missing definition for LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR")
+if (NOT LIBOMPTARGET_LLVM_INCLUDE_DIRS)
+  libomptarget_say("Not building AMDGPU plugin: Missing definition for LIBOMPTARGET_LLVM_INCLUDE_DIRS")
   return()
 endif()
 
@@ -50,7 +50,7 @@ endif()
 
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/impl
-  ${LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR}
+  ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
 )
 
 add_library(omptarget.rtl.amdgpu SHARED
@@ -69,12 +69,13 @@ add_library(omptarget.rtl.amdgpu SHARED
 # When we build for debug, OPENMP_LIBDIR_SUFFIX get set to -debug
 install(TARGETS omptarget.rtl.amdgpu LIBRARY DESTINATION "lib${OPENMP_LIBDIR_SUFFIX}")
 
-set_property(TARGET omptarget.rtl.amdgpu PROPERTY INSTALL_RPATH "$ORIGIN")
+set_property(TARGET omptarget.rtl.amdgpu PROPERTY INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib")
 target_link_libraries(
   omptarget.rtl.amdgpu
   PUBLIC
   -Wl,--whole-archive hostrpc_services -Wl,--no-whole-archive
   PRIVATE
+  elf_common
   hsa-runtime64::hsa-runtime64
   pthread dl elf
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"

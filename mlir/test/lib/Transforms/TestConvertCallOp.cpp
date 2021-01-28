@@ -25,7 +25,7 @@ public:
       test::TestTypeProducerOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(test::TestTypeProducerOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<LLVM::NullOp>(op, getVoidPtrType());
     return success();
@@ -45,7 +45,7 @@ public:
     // Populate type conversions.
     LLVMTypeConverter type_converter(m.getContext());
     type_converter.addConversion([&](test::TestType type) {
-      return LLVM::LLVMType::getInt8PtrTy(m.getContext());
+      return LLVM::LLVMPointerType::get(IntegerType::get(m.getContext(), 8));
     });
 
     // Populate patterns.

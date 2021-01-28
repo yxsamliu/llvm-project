@@ -375,7 +375,7 @@ static ExprResult buildMemberCall(Sema &S, Expr *Base, SourceLocation Loc,
 // returning await_suspend that results in a guaranteed tail call to the target
 // coroutine.
 static Expr *maybeTailCall(Sema &S, QualType RetType, Expr *E,
-                           SourceLocation Loc, bool IsImplicit) {
+                           SourceLocation Loc) {
   if (RetType->isReferenceType())
     return nullptr;
   Type const *T = RetType.getTypePtr();
@@ -421,8 +421,7 @@ static Expr *maybeTailCall(Sema &S, QualType RetType, Expr *E,
 /// ExprWithCleanups to clean up the awaiter associated with the co_await
 /// expression.
 static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
-                                                  SourceLocation Loc, Expr *E,
-                                                  bool IsImplicit) {
+                                                  SourceLocation Loc, Expr *E) {
   OpaqueValueExpr *Operand = new (S.Context)
       OpaqueValueExpr(Loc, E->getType(), VK_LValue, E->getObjectKind(), E);
 
@@ -482,7 +481,7 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
 
     // Experimental support for coroutine_handle returning await_suspend.
     if (Expr *TailCallSuspend =
-            maybeTailCall(S, RetType, AwaitSuspend, Loc, IsImplicit))
+            maybeTailCall(S, RetType, AwaitSuspend, Loc))
       // Note that we don't wrap the expression with ExprWithCleanups here
       // because that might interfere with tailcall contract (e.g. inserting
       // clean up instructions in-between tailcall and return). Instead
@@ -545,6 +544,7 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
   auto *VD = VarDecl::Create(Context, FD, FD->getLocation(), FD->getLocation(),
                              &PP.getIdentifierTable().get("__promise"), T,
                              Context.getTrivialTypeSourceInfo(T, Loc), SC_None);
+  VD->setImplicit();
   CheckVariableDeclarationType(VD);
   if (VD->isInvalidDecl())
     return nullptr;
@@ -907,7 +907,7 @@ ExprResult Sema::BuildResolvedCoawaitExpr(SourceLocation Loc, Expr *E,
 
   // Build the await_ready, await_suspend, await_resume calls.
   ReadySuspendResumeResult RSS = buildCoawaitCalls(
-      *this, Coroutine->CoroutinePromise, CallLoc, E, IsImplicit);
+      *this, Coroutine->CoroutinePromise, CallLoc, E);
   if (RSS.IsInvalid)
     return ExprError();
 
@@ -962,7 +962,7 @@ ExprResult Sema::BuildCoyieldExpr(SourceLocation Loc, Expr *E) {
 
   // Build the await_ready, await_suspend, await_resume calls.
   ReadySuspendResumeResult RSS = buildCoawaitCalls(
-      *this, Coroutine->CoroutinePromise, Loc, E, /*IsImplicit*/ false);
+      *this, Coroutine->CoroutinePromise, Loc, E);
   if (RSS.IsInvalid)
     return ExprError();
 
@@ -1578,6 +1578,7 @@ bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
       S.Context, &FD, FD.getLocation(), FD.getLocation(),
       &S.PP.getIdentifierTable().get("__coro_gro"), GroType,
       S.Context.getTrivialTypeSourceInfo(GroType, Loc), SC_None);
+  GroDecl->setImplicit();
 
   S.CheckVariableDeclarationType(GroDecl);
   if (GroDecl->isInvalidDecl())

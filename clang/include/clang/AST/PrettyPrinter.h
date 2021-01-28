@@ -18,6 +18,7 @@
 
 namespace clang {
 
+class DeclContext;
 class LangOptions;
 class SourceManager;
 class Stmt;
@@ -39,6 +40,15 @@ public:
   virtual std::string remapPath(StringRef Path) const {
     return std::string(Path);
   }
+
+  /// When printing type to be inserted into code in specific context, this
+  /// callback can be used to avoid printing the redundant part of the
+  /// qualifier. For example, when inserting code inside namespace foo, we
+  /// should print bar::SomeType instead of foo::bar::SomeType.
+  /// To do this, shouldPrintScope should return true on "foo" NamespaceDecl.
+  /// The printing stops at the first isScopeVisible() == true, so there will
+  /// be no calls with outer scopes.
+  virtual bool isScopeVisible(const DeclContext *DC) const { return false; }
 };
 
 /// Describes how types, statements, expressions, and declarations should be
@@ -52,10 +62,11 @@ struct PrintingPolicy {
       : Indentation(2), SuppressSpecifiers(false),
         SuppressTagKeyword(LO.CPlusPlus), IncludeTagDefinition(false),
         SuppressScope(false), SuppressUnwrittenScope(false),
-        SuppressInitializers(false), ConstantArraySizeAsWritten(false),
-        AnonymousTagLocations(true), SuppressStrongLifetime(false),
-        SuppressLifetimeQualifiers(false),
-        SuppressTemplateArgsInCXXConstructors(false), Bool(LO.Bool),
+        SuppressInlineNamespace(true), SuppressInitializers(false),
+        ConstantArraySizeAsWritten(false), AnonymousTagLocations(true),
+        SuppressStrongLifetime(false), SuppressLifetimeQualifiers(false),
+        SuppressTemplateArgsInCXXConstructors(false),
+        SuppressDefaultTemplateArgs(true), Bool(LO.Bool),
         Nullptr(LO.CPlusPlus11), Restrict(LO.C99), Alignof(LO.CPlusPlus11),
         UnderscoreAlignof(LO.C11), UseVoidForZeroParams(!LO.CPlusPlus),
         SplitTemplateClosers(!LO.CPlusPlus11), TerseOutput(false),
@@ -117,9 +128,14 @@ struct PrintingPolicy {
   /// Suppresses printing of scope specifiers.
   unsigned SuppressScope : 1;
 
-  /// Suppress printing parts of scope specifiers that don't need
-  /// to be written, e.g., for inline or anonymous namespaces.
+  /// Suppress printing parts of scope specifiers that are never
+  /// written, e.g., for anonymous namespaces.
   unsigned SuppressUnwrittenScope : 1;
+
+  /// Suppress printing parts of scope specifiers that correspond
+  /// to inline namespaces, where the name is unambiguous with the specifier
+  /// removed.
+  unsigned SuppressInlineNamespace : 1;
 
   /// Suppress printing of variable initializers.
   ///
@@ -166,6 +182,10 @@ struct PrintingPolicy {
   /// When true, suppresses printing template arguments in names of C++
   /// constructors.
   unsigned SuppressTemplateArgsInCXXConstructors : 1;
+
+  /// When true, attempt to suppress template arguments that match the default
+  /// argument for the parameter.
+  unsigned SuppressDefaultTemplateArgs : 1;
 
   /// Whether we can use 'bool' rather than '_Bool' (even if the language
   /// doesn't actually have 'bool', because, e.g., it is defined as a macro).

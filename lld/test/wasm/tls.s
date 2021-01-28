@@ -7,7 +7,7 @@
 tls1_addr:
   .functype tls1_addr () -> (i32)
   global.get __tls_base
-  i32.const tls1
+  i32.const tls1@TLSREL
   i32.add
   end_function
 
@@ -15,7 +15,15 @@ tls1_addr:
 tls2_addr:
   .functype tls2_addr () -> (i32)
   global.get __tls_base
-  i32.const tls2
+  i32.const tls2@TLSREL
+  i32.add
+  end_function
+
+.globl tls3_addr
+tls3_addr:
+  .functype tls3_addr () -> (i32)
+  global.get __tls_base
+  i32.const tls3
   i32.add
   end_function
 
@@ -46,6 +54,13 @@ tls2:
   .int32  1
   .size tls2, 4
 
+.section  .tbss.tls3,"",@
+.globl  tls3
+.p2align  2
+tls3:
+  .int32  0
+  .size tls3, 4
+
 .section  .custom_section.target_features,"",@
   .int8 2
   .int8 43
@@ -58,8 +73,8 @@ tls2:
 # RUN: wasm-ld -no-gc-sections --shared-memory --max-memory=131072 --no-entry -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
-# RUN: wasm-ld -no-gc-sections --shared-memory --max-memory=131072 --no-merge-data-segments --no-entry -o %t.wasm %t.o
-# RUN: obj2yaml %t.wasm | FileCheck %s
+# RUN: wasm-ld -no-gc-sections --shared-memory --max-memory=131072 --no-merge-data-segments --no-entry -o %t2.wasm %t.o
+# RUN: obj2yaml %t2.wasm | FileCheck %s
 
 # CHECK:      - Type:            GLOBAL
 # CHECK-NEXT:   Globals:
@@ -84,7 +99,7 @@ tls2:
 # CHECK-NEXT:       Mutable:         false
 # CHECK-NEXT:       InitExpr:
 # CHECK-NEXT:         Opcode:          I32_CONST
-# CHECK-NEXT:         Value:           8
+# CHECK-NEXT:         Value:           12
 
 # __tls_align
 # CHECK-NEXT:     - Index:           3
@@ -97,21 +112,21 @@ tls2:
 
 # CHECK:      - Type:            CODE
 # CHECK-NEXT:   Functions:
-# Skip __wasm_call_ctors and __wasm_init_memory
-# CHECK:          - Index:           2
+# Skip __wasm_call_ctors
+# CHECK:          - Index:           1
 # CHECK-NEXT:       Locals:          []
-# CHECK-NEXT:       Body:            20002401200041004108FC0800000B
+# CHECK-NEXT:       Body:            2000240120004100410CFC0800000B
 
 # Expected body of __wasm_init_tls:
 #   local.get 0
 #   global.set  1
 #   local.get 0
 #   i32.const 0
-#   i32.const 8
+#   i32.const 12
 #   memory.init 1, 0
 #   end
 
-# CHECK-NEXT:     - Index:           3
+# CHECK-NEXT:     - Index:           2
 # CHECK-NEXT:       Locals:          []
 # CHECK-NEXT:       Body:            2381808080004180808080006A0B
 
@@ -121,11 +136,21 @@ tls2:
 #   i32.add
 #   end
 
-# CHECK-NEXT:     - Index:           4
+# CHECK-NEXT:     - Index:           3
 # CHECK-NEXT:       Locals:          []
 # CHECK-NEXT:       Body:            2381808080004184808080006A0B
 
-# Expected body of tls1_addr:
+# Expected body of tls2_addr:
+#   global.get 1
+#   i32.const 4
+#   i32.add
+#   end
+
+# CHECK-NEXT:     - Index:           4
+# CHECK-NEXT:       Locals:          []
+# CHECK-NEXT:       Body:            2381808080004188808080006A0B
+
+# Expected body of tls3_addr:
 #   global.get 1
 #   i32.const 4
 #   i32.add
@@ -135,6 +160,35 @@ tls2:
 # CHECK-NEXT:       Locals:          []
 # CHECK-NEXT:       Body:            2383808080000B
 
-# Expected body of tls1_addr:
+# Expected body of tls_align:
 #   global.get 3
 #   end
+
+
+# Also verify TLS usage with --relocatable
+# RUN: wasm-ld --relocatable -o %t3.wasm %t.o
+# RUN: obj2yaml %t3.wasm | FileCheck %s --check-prefix=RELOC
+
+# RELOC:       - Type:            IMPORT
+# RELOC-NEXT:    Imports:
+# RELOC-NEXT:      - Module:          env
+# RELOC-NEXT:        Field:           __tls_base
+# RELOC-NEXT:        Kind:            GLOBAL
+# RELOC-NEXT:        GlobalType:      I32
+# RELOC-NEXT:        GlobalMutable:   true
+# RELOC-NEXT:      - Module:          env
+# RELOC-NEXT:        Field:           __tls_align
+# RELOC-NEXT:        Kind:            GLOBAL
+# RELOC-NEXT:        GlobalType:      I32
+# RELOC-NEXT:        GlobalMutable:   false
+
+# RELOC:         GlobalNames:
+# RELOC-NEXT:      - Index:           0
+# RELOC-NEXT:        Name:            __tls_base
+# RELOC-NEXT:      - Index:           1
+# RELOC-NEXT:        Name:            __tls_align
+# RELOC-NEXT:    DataSegmentNames:
+# RELOC-NEXT:      - Index:           0
+# RELOC-NEXT:        Name:            .tdata
+# RELOC-NEXT:      - Index:           1
+# RELOC-NEXT:        Name:            .bss.no_tls

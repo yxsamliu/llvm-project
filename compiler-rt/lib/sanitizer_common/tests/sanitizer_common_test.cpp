@@ -93,7 +93,7 @@ TEST(SanitizerCommon, InternalMmapVectorRoundUpCapacity) {
   CHECK_EQ(v.capacity(), GetPageSizeCached() / sizeof(uptr));
 }
 
-TEST(SanitizerCommon, InternalMmapVectorResize) {
+TEST(SanitizerCommon, InternalMmapVectorReize) {
   InternalMmapVector<uptr> v;
   CHECK_EQ(0U, v.size());
   CHECK_GE(v.capacity(), v.size());
@@ -176,30 +176,6 @@ TEST(SanitizerCommon, InternalMmapVectorSwap) {
   EXPECT_EQ(vector1, vector4);
 }
 
-TEST(SanitizerCommon, InternalMmapVectorErase) {
-  InternalMmapVector<uptr> v;
-  std::vector<uptr> r;
-  for (uptr i = 0; i < 10; i++) {
-    v.push_back(i);
-    r.push_back(i);
-  }
-
-  v.erase(&v[9]);
-  r.erase(r.begin() + 9);
-  EXPECT_EQ(r.size(), v.size());
-  for (uptr i = 0; i < r.size(); i++) EXPECT_EQ(r[i], v[i]);
-
-  v.erase(&v[3]);
-  r.erase(r.begin() + 3);
-  EXPECT_EQ(r.size(), v.size());
-  for (uptr i = 0; i < r.size(); i++) EXPECT_EQ(r[i], v[i]);
-
-  v.erase(&v[0]);
-  r.erase(r.begin());
-  EXPECT_EQ(r.size(), v.size());
-  for (uptr i = 0; i < r.size(); i++) EXPECT_EQ(r[i], v[i]);
-}
-
 void TestThreadInfo(bool main) {
   uptr stk_addr = 0;
   uptr stk_size = 0;
@@ -250,27 +226,21 @@ bool UptrLess(uptr a, uptr b) {
 }
 
 TEST(SanitizerCommon, InternalLowerBound) {
-  static const uptr kSize = 5;
-  int arr[kSize];
-  arr[0] = 1;
-  arr[1] = 3;
-  arr[2] = 5;
-  arr[3] = 7;
-  arr[4] = 11;
+  std::vector<int> arr = {1, 3, 5, 7, 11};
 
-  EXPECT_EQ(0u, InternalLowerBound(arr, 0, kSize, 0, UptrLess));
-  EXPECT_EQ(0u, InternalLowerBound(arr, 0, kSize, 1, UptrLess));
-  EXPECT_EQ(1u, InternalLowerBound(arr, 0, kSize, 2, UptrLess));
-  EXPECT_EQ(1u, InternalLowerBound(arr, 0, kSize, 3, UptrLess));
-  EXPECT_EQ(2u, InternalLowerBound(arr, 0, kSize, 4, UptrLess));
-  EXPECT_EQ(2u, InternalLowerBound(arr, 0, kSize, 5, UptrLess));
-  EXPECT_EQ(3u, InternalLowerBound(arr, 0, kSize, 6, UptrLess));
-  EXPECT_EQ(3u, InternalLowerBound(arr, 0, kSize, 7, UptrLess));
-  EXPECT_EQ(4u, InternalLowerBound(arr, 0, kSize, 8, UptrLess));
-  EXPECT_EQ(4u, InternalLowerBound(arr, 0, kSize, 9, UptrLess));
-  EXPECT_EQ(4u, InternalLowerBound(arr, 0, kSize, 10, UptrLess));
-  EXPECT_EQ(4u, InternalLowerBound(arr, 0, kSize, 11, UptrLess));
-  EXPECT_EQ(5u, InternalLowerBound(arr, 0, kSize, 12, UptrLess));
+  EXPECT_EQ(0u, InternalLowerBound(arr, 0));
+  EXPECT_EQ(0u, InternalLowerBound(arr, 1));
+  EXPECT_EQ(1u, InternalLowerBound(arr, 2));
+  EXPECT_EQ(1u, InternalLowerBound(arr, 3));
+  EXPECT_EQ(2u, InternalLowerBound(arr, 4));
+  EXPECT_EQ(2u, InternalLowerBound(arr, 5));
+  EXPECT_EQ(3u, InternalLowerBound(arr, 6));
+  EXPECT_EQ(3u, InternalLowerBound(arr, 7));
+  EXPECT_EQ(4u, InternalLowerBound(arr, 8));
+  EXPECT_EQ(4u, InternalLowerBound(arr, 9));
+  EXPECT_EQ(4u, InternalLowerBound(arr, 10));
+  EXPECT_EQ(4u, InternalLowerBound(arr, 11));
+  EXPECT_EQ(5u, InternalLowerBound(arr, 12));
 }
 
 TEST(SanitizerCommon, InternalLowerBoundVsStdLowerBound) {
@@ -292,12 +262,41 @@ TEST(SanitizerCommon, InternalLowerBoundVsStdLowerBound) {
       for (auto to_find : {val - 1, val, val + 1}) {
         uptr expected =
             std::lower_bound(data.begin(), data.end(), to_find) - data.begin();
-        EXPECT_EQ(expected, InternalLowerBound(data.data(), 0, data.size(),
-                                               to_find, std::less<int>()));
+        EXPECT_EQ(expected,
+                  InternalLowerBound(data, to_find, std::less<int>()));
       }
     }
   }
 }
+
+class SortAndDedupTest : public ::testing::TestWithParam<std::vector<int>> {};
+
+TEST_P(SortAndDedupTest, SortAndDedup) {
+  std::vector<int> v_std = GetParam();
+  std::sort(v_std.begin(), v_std.end());
+  v_std.erase(std::unique(v_std.begin(), v_std.end()), v_std.end());
+
+  std::vector<int> v = GetParam();
+  SortAndDedup(v);
+
+  EXPECT_EQ(v_std, v);
+}
+
+const std::vector<int> kSortAndDedupTests[] = {
+    {},
+    {1},
+    {1, 1},
+    {1, 1, 1},
+    {1, 2, 3},
+    {3, 2, 1},
+    {1, 2, 2, 3},
+    {3, 3, 2, 1, 2},
+    {3, 3, 2, 1, 2},
+    {1, 2, 1, 1, 2, 1, 1, 1, 2, 2},
+    {1, 3, 3, 2, 3, 1, 3, 1, 4, 4, 2, 1, 4, 1, 1, 2, 2},
+};
+INSTANTIATE_TEST_CASE_P(SortAndDedupTest, SortAndDedupTest,
+                        ::testing::ValuesIn(kSortAndDedupTests));
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
 TEST(SanitizerCommon, FindPathToBinary) {
