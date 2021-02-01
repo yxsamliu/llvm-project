@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGBlocks.h"
+#include "CGCUDARuntime.h"
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
 #include "CGDebugInfo.h"
@@ -414,15 +415,41 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
   llvm::GlobalVariable *var =
     cast<llvm::GlobalVariable>(addr->stripPointerCasts());
 
+  // CUDA/HIP: need to register static device variable declared in host
+  // or host device functions.
+  if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice && CurFuncDecl) {
+    if (auto *FD = dyn_cast<FunctionDecl>(CurFuncDecl)) {
+      if (!FD->hasAttr<CUDAGlobalAttr>() &&
+          (!FD->hasAttr<CUDADeviceAttr>() || FD->hasAttr<CUDAHostAttr>()))
+        CGM.getCUDARuntime().handleVarRegistration(&D, *var);
+    }
+  }
+
   // CUDA's local and local static __shared__ variables should not
   // have any non-empty initializers. This is ensured by Sema.
   // Whatever initializer such variable may have when it gets here is
   // a no-op and should not be emitted.
   bool isCudaSharedVar = getLangOpts().CUDA && getLangOpts().CUDAIsDevice &&
                          D.hasAttr<CUDASharedAttr>();
-  // If this value has an initializer, emit it.
-  if (D.getInit() && !isCudaSharedVar)
+  // HIP static managed variables need to be emitted as declarations in device
+  // compilation in host or host device functions.
+  bool isUndefManagedVar = false;
+  if (getLangOpts().CUDAIsDevice && D.hasAttr<HIPManagedAttr>() &&
+      CurFuncDecl) {
+    if (auto *FD = dyn_cast<FunctionDecl>(CurFuncDecl)) {
+      if (!FD->hasAttr<CUDAGlobalAttr>() &&
+          (!FD->hasAttr<CUDADeviceAttr>() || FD->hasAttr<CUDAHostAttr>())) {
+        isUndefManagedVar = true;
+      }
+    }
+  }
+  if (isUndefManagedVar) {
+    var->setInitializer(nullptr);
+    var->setLinkage(llvm::GlobalValue::ExternalLinkage);
+  } else if (D.getInit() && !isCudaSharedVar) {
+    // If this value has an initializer, emit it.
     var = AddInitializerToStaticVarDecl(D, var);
+  }
 
   var->setAlignment(alignment.getAsAlign());
 

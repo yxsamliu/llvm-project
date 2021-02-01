@@ -11438,9 +11438,9 @@ bool ASTContext::mayExternalizeStaticVar(const Decl *D) const {
          ((D->hasAttr<CUDADeviceAttr>() &&
            !D->getAttr<CUDADeviceAttr>()->isImplicit()) ||
           (D->hasAttr<CUDAConstantAttr>() &&
-           !D->getAttr<CUDAConstantAttr>()->isImplicit())) &&
-         isa<VarDecl>(D) && cast<VarDecl>(D)->isFileVarDecl() &&
-         cast<VarDecl>(D)->getStorageClass() == SC_Static;
+           !D->getAttr<CUDAConstantAttr>()->isImplicit()) ||
+          D->hasAttr<HIPManagedAttr>()) &&
+         isa<VarDecl>(D) && cast<VarDecl>(D)->getStorageClass() == SC_Static;
 }
 
 bool ASTContext::shouldExternalizeStaticVar(const Decl *D) const {

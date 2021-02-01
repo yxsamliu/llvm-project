@@ -94,6 +94,42 @@ static CGCXXABI *createCXXABI(CodeGenModule &CGM) {
   llvm_unreachable("invalid C++ ABI kind");
 }
 
+// Helper class for emitting device-side static variables created in host-side
+// functions for CUDA/HIP. While we do not emit host-side functions on device,
+// we still need to emit the static variables the host code will expect to see
+// on the device.
+class CUDAStaticDeviceVarEmitter
+    : public StmtVisitor<CUDAStaticDeviceVarEmitter> {
+public:
+  CodeGenFunction CGF;
+  CUDAStaticDeviceVarEmitter(CodeGenModule &CGM) : CGF(CGM) {}
+  void Visit(Stmt *S) {
+    if (!S)
+      return;
+    if (auto *DS = dyn_cast<DeclStmt>(S)) {
+      for (auto &&D : DS->decls()) {
+        if (auto *VD = dyn_cast<VarDecl>(D)) {
+          if (VD->hasAttr<CUDADeviceAttr>() ||
+              VD->hasAttr<CUDAConstantAttr>()) {
+            llvm::GlobalValue::LinkageTypes Linkage =
+                CGF.CGM.getLLVMLinkageVarDefinition(VD, /*IsConstant=*/false);
+            return CGF.EmitStaticVarDecl(*VD, Linkage);
+          }
+        }
+      }
+    }
+    for (auto &&SS : S->children())
+      Visit(SS);
+  }
+  void runOn(const FunctionDecl *FD) {
+    assert(CGF.getLangOpts().CUDAIsDevice);
+    assert(!FD->hasAttr<CUDADeviceAttr>() && !FD->hasAttr<CUDAGlobalAttr>());
+    assert(FD->hasBody());
+    CGF.CurFuncDecl = FD;
+    Visit(FD->getBody());
+  }
+};
+
 CodeGenModule::CodeGenModule(ASTContext &C, const HeaderSearchOptions &HSO,
                              const PreprocessorOptions &PPO,
                              const CodeGenOptions &CGO, llvm::Module &M,
@@ -2748,8 +2784,16 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
           !Global->hasAttr<CUDAConstantAttr>() &&
           !Global->hasAttr<CUDASharedAttr>() &&
           !Global->getType()->isCUDADeviceBuiltinSurfaceType() &&
-          !Global->getType()->isCUDADeviceBuiltinTextureType())
+          !Global->getType()->isCUDADeviceBuiltinTextureType()) {
+        if (auto *FD = dyn_cast<FunctionDecl>(Global)) {
+          if (FD->hasBody()) {
+            // Emit static device or constant variables for host functions.
+            CUDAStaticDeviceVarEmitter E(*this);
+            E.runOn(FD);
+          }
+        }
         return;
+      }
     } else {
       // We need to emit host-side 'shadows' for all global
       // device-side variables because the CUDA runtime needs their

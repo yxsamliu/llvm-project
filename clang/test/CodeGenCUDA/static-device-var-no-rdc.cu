@@ -14,7 +14,7 @@
 // Test function scope static device variable, which should not be externalized.
 // DEV-DAG: @_ZZ6kernelPiPPKiE1w = internal addrspace(4) constant i32 1
 // DEV-DAG: @_ZZ6kernelPiPPKiE21local_static_constant = internal addrspace(4) constant i32 42
-// DEV-DAG: @_ZZ6kernelPiPPKiE19local_static_device = internal addrspace(1) constant i32 43
+// DEV-DAG: @_ZZ6kernelPiPPKiE19local_static_device = internal addrspace(4) constant i32 43
 
 // Check a static device variable referenced by host function is externalized.
 // DEV-DAG: @_ZL1x ={{.*}} addrspace(1) externally_initialized global i32 0
