@@ -459,10 +459,11 @@ void CodeGenModule::Release() {
   if (ObjCRuntime)
     if (llvm::Function *ObjCInitFunction = ObjCRuntime->ModuleInitFunction())
       AddGlobalCtor(ObjCInitFunction);
-  if (Context.getLangOpts().CUDA && !Context.getLangOpts().CUDAIsDevice &&
-      CUDARuntime) {
-    if (llvm::Function *CudaCtorFunction =
-            CUDARuntime->makeModuleCtorFunction())
+  if (Context.getLangOpts().CUDA && CUDARuntime) {
+    if (Context.getLangOpts().CUDAIsDevice)
+      CUDARuntime->transformManagedVars();
+    else if (llvm::Function *CudaCtorFunction =
+                 CUDARuntime->makeModuleCtorFunction())
       AddGlobalCtor(CudaCtorFunction);
   }
   if (OpenMPRuntime) {
@@ -3860,8 +3861,14 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
     }
   }
 
-  if (GV->isDeclaration())
+  if (GV->isDeclaration()) {
     getTargetCodeGenInfo().setTargetAttributes(D, GV, *this);
+    // External HIP managed variables needed to be recorded for transformation
+    // in both device and host compilations.
+    if (getLangOpts().CUDA && D && D->hasAttr<HIPManagedAttr>() &&
+        D->hasExternalStorage())
+      getCUDARuntime().handleVarRegistration(D, *GV);
+  }
 
   LangAS ExpectedAS =
       D ? D->getType().getAddressSpace()
@@ -4190,8 +4197,6 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
       (D->getType()->isCUDADeviceBuiltinSurfaceType() ||
        D->getType()->isCUDADeviceBuiltinTextureType() ||
        D->hasAttr<HIPManagedAttr>());
-  // HIP pinned shadow of initialized host-side global variables are also
-  // left undefined.
   if (getLangOpts().CUDA &&
       (IsCUDASharedVar || IsCUDAShadowVar || IsCUDADeviceShadowVar))
     Init = llvm::UndefValue::get(getTypes().ConvertType(ASTTy));
@@ -4298,8 +4303,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
         GV->setExternallyInitialized(true);
     } else {
       getCUDARuntime().internalizeDeviceSideVar(D, Linkage);
-      getCUDARuntime().handleVarRegistration(D, *GV);
     }
+    getCUDARuntime().handleVarRegistration(D, *GV);
   }
 
   GV->setInitializer(Init);

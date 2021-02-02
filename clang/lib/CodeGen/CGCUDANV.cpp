@@ -158,6 +158,8 @@ public:
   void
   internalizeDeviceSideVar(const VarDecl *D,
                            llvm::GlobalValue::LinkageTypes &Linkage) override;
+
+  void transformManagedVars() override;
 };
 
 }
@@ -530,6 +532,9 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
       addUnderscoredPrefixToName("RegisterTexture"));
   for (auto &&Info : DeviceVars) {
     llvm::GlobalVariable *Var = Info.Var;
+    assert((!Var->isDeclaration() || Info.Flags.isManaged()) &&
+           "External variables should not show up here, except HIP managed "
+           "variables");
     llvm::Constant *VarName = makeConstantString(getDeviceSideName(Info.D));
     switch (Info.Flags.getKind()) {
     case DeviceVarFlags::Variable: {
@@ -539,9 +544,16 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
         auto ManagedVar = new llvm::GlobalVariable(
             CGM.getModule(), Var->getType(),
             /*isConstant=*/false, Var->getLinkage(),
-            /*Init=*/llvm::ConstantPointerNull::get(Var->getType()),
-            Twine(Var->getName() + ".managed"), /*InsertBefore=*/nullptr,
+            /*Init=*/Var->isDeclaration()
+                ? nullptr
+                : llvm::ConstantPointerNull::get(Var->getType()),
+            /*Name=*/"", /*InsertBefore=*/nullptr,
             llvm::GlobalVariable::NotThreadLocal);
+        ManagedVar->setDSOLocal(Var->isDSOLocal());
+        ManagedVar->setVisibility(Var->getVisibility());
+        ManagedVar->setExternallyInitialized(true);
+        ManagedVar->takeName(Var);
+        Var->setName(Twine(ManagedVar->getName() + ".init"));
         replaceManagedVar(Var, ManagedVar);
         llvm::Value *Args[] = {
             &GpuBinaryHandlePtr,
@@ -550,7 +562,8 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
             VarName,
             llvm::ConstantInt::get(VarSizeTy, VarSize),
             llvm::ConstantInt::get(IntTy, Var->getAlignment())};
-        Builder.CreateCall(RegisterManagedVar, Args);
+        if (!Var->isDeclaration())
+          Builder.CreateCall(RegisterManagedVar, Args);
       } else {
         llvm::Value *Args[] = {
             &GpuBinaryHandlePtr,
@@ -928,11 +941,16 @@ CGCUDARuntime *CodeGen::CreateNVCUDARuntime(CodeGenModule &CGM) {
 
 void CGNVCUDARuntime::internalizeDeviceSideVar(
     const VarDecl *D, llvm::GlobalValue::LinkageTypes &Linkage) {
-  // Host-side shadows of external declarations of device-side
-  // global variables become internal definitions. These have to
-  // be internal in order to prevent name conflicts with global
-  // host variables with the same name in a different TUs.
+  // For -fno-gpu-rdc, host-side shadows of external declarations of device-side
+  // global variables become internal definitions. These have to be internal in
+  // order to prevent name conflicts with global host variables with the same
+  // name in a different TUs.
   //
+  // For -fgpu-rdc, the shadow variables should not be internalized because
+  // they may be accessed by different TU.
+  if (CGM.getLangOpts().GPURelocatableDeviceCode)
+    return;
+
   // __shared__ variables are odd. Shadows do get created, but
   // they are not registered with the CUDA runtime, so they
   // can't really be used to access their device-side
@@ -957,9 +975,13 @@ void CGNVCUDARuntime::handleVarRegistration(const VarDecl *D,
     // discarded and referencing a discarded local symbol from outside the
     // comdat (__cuda_register_globals) is disallowed by the ELF spec.
     // TODO: Reject __device__ constexpr and __device__ inline in Sema.
-    if (!D->hasExternalStorage() && !D->isInline())
+    // HIP managed variables need to be always recorded in device and host
+    // compilations for transformation.
+    if ((!D->hasExternalStorage() && !D->isInline()) ||
+        D->hasAttr<HIPManagedAttr>()) {
       registerDeviceVar(D, GV, !D->hasDefinition(),
                         D->hasAttr<CUDAConstantAttr>());
+    }
   } else if (D->getType()->isCUDADeviceBuiltinSurfaceType() ||
              D->getType()->isCUDADeviceBuiltinTextureType()) {
     // Builtin surfaces and textures and their template arguments are
@@ -984,6 +1006,29 @@ void CGNVCUDARuntime::handleVarRegistration(const VarDecl *D,
       if (!D->hasExternalStorage())
         registerDeviceTex(D, GV, !D->hasDefinition(), TexType.getSExtValue(),
                           Normalized.getZExtValue());
+    }
+  }
+}
+
+void CGNVCUDARuntime::transformManagedVars() {
+  for (auto &&Info : DeviceVars) {
+    llvm::GlobalVariable *Var = Info.Var;
+    if (Info.Flags.getKind() == DeviceVarFlags::Variable &&
+        Info.Flags.isManaged()) {
+      auto ManagedVar = new llvm::GlobalVariable(
+          CGM.getModule(), Var->getType(),
+          /*isConstant=*/false, Var->getLinkage(),
+          /*Init=*/Var->isDeclaration()
+              ? nullptr
+              : llvm::ConstantPointerNull::get(Var->getType()),
+          /*Name=*/"", /*InsertBefore=*/nullptr,
+          llvm::GlobalVariable::NotThreadLocal,
+          CGM.getContext().getTargetAddressSpace(LangAS::cuda_device));
+      ManagedVar->setDSOLocal(Var->isDSOLocal());
+      ManagedVar->setVisibility(Var->getVisibility());
+      ManagedVar->setExternallyInitialized(true);
+      replaceManagedVar(Var, ManagedVar);
+      ManagedVar->takeName(Var);
     }
   }
 }
