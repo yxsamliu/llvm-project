@@ -11434,16 +11434,17 @@ operator<<(const StreamingDiagnostic &DB,
 }
 
 bool ASTContext::mayExternalizeStaticVar(const Decl *D) const {
-  return !getLangOpts().GPURelocatableDeviceCode &&
-         ((D->hasAttr<CUDADeviceAttr>() &&
-           !D->getAttr<CUDADeviceAttr>()->isImplicit()) ||
-          (D->hasAttr<CUDAConstantAttr>() &&
-           !D->getAttr<CUDAConstantAttr>()->isImplicit()) ||
+  return ((!getLangOpts().GPURelocatableDeviceCode &&
+           ((D->hasAttr<CUDADeviceAttr>() &&
+             !D->getAttr<CUDADeviceAttr>()->isImplicit()) ||
+            (D->hasAttr<CUDAConstantAttr>() &&
+             !D->getAttr<CUDAConstantAttr>()->isImplicit()))) ||
           D->hasAttr<HIPManagedAttr>()) &&
          isa<VarDecl>(D) && cast<VarDecl>(D)->getStorageClass() == SC_Static;
 }
 
 bool ASTContext::shouldExternalizeStaticVar(const Decl *D) const {
   return mayExternalizeStaticVar(D) &&
-         CUDAStaticDeviceVarReferencedByHost.count(cast<VarDecl>(D));
+         (D->hasAttr<HIPManagedAttr>() ||
+          CUDAStaticDeviceVarReferencedByHost.count(cast<VarDecl>(D)));
 }
