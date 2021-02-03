@@ -50,7 +50,7 @@
 // CHECK-NOT: {{".*opt"}}
 // CHECK-NOT: {{".*llc"}}
 
-// CHECK: [[LLD: ".*lld.*"]] "-flavor" "gnu" "--no-undefined" "-shared"
+// CHECK: [[LLD: ".*lld.*"]] "-flavor" "gnu" "-shared"
 // CHECK-SAME: "-o" "[[IMG_DEV_A_803:.*out]]" [[OBJ_DEV_A_803]]
 
 //
@@ -73,7 +73,7 @@
 // CHECK-NOT: {{".*opt"}}
 // CHECK-NOT: {{".*llc"}}
 
-// CHECK: [[LLD]] "-flavor" "gnu" "--no-undefined" "-shared"
+// CHECK: [[LLD]] "-flavor" "gnu" "-shared"
 // CHECK-SAME: "-o" "[[IMG_DEV_A_900:.*out]]" [[OBJ_DEV_A_900]]
 
 //
@@ -113,7 +113,7 @@
 // CHECK-NOT: {{".*opt"}}
 // CHECK-NOT: {{".*llc"}}
 
-// CHECK: [[LLD]] "-flavor" "gnu" "--no-undefined" "-shared"
+// CHECK: [[LLD]] "-flavor" "gnu" "-shared"
 // CHECK-SAME: "-o" "[[IMG_DEV_B_803:.*out]]" [[OBJ_DEV_B_803]]
 
 //
@@ -136,7 +136,7 @@
 // CHECK-NOT: {{".*opt"}}
 // CHECK-NOT: {{".*llc"}}
 
-// CHECK: [[LLD]] "-flavor" "gnu" "--no-undefined" "-shared"
+// CHECK: [[LLD]] "-flavor" "gnu" "-shared"
 // CHECK-SAME: "-o" "[[IMG_DEV_B_900:.*out]]" [[OBJ_DEV_B_900]]
 
 //

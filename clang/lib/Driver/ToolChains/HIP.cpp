@@ -60,7 +60,9 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
                                           const llvm::opt::ArgList &Args) const {
   // Construct lld command.
   // The output from ld.lld is an HSA code object file.
-  ArgStringList LldArgs{"-flavor", "gnu", "--no-undefined", "-shared",
+  // Do not use --no-undefined option since managed variables need to be emitted
+  // as undefined symbols.
+  ArgStringList LldArgs{"-flavor", "gnu", "-shared",
                         "-plugin-opt=-amdgpu-internalize-symbols"};
 
   auto &TC = getToolChain();
