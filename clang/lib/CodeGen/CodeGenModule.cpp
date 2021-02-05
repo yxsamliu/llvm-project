@@ -459,10 +459,11 @@ void CodeGenModule::Release() {
   if (ObjCRuntime)
     if (llvm::Function *ObjCInitFunction = ObjCRuntime->ModuleInitFunction())
       AddGlobalCtor(ObjCInitFunction);
-  if (Context.getLangOpts().CUDA && !Context.getLangOpts().CUDAIsDevice &&
-      CUDARuntime) {
-    if (llvm::Function *CudaCtorFunction =
-            CUDARuntime->makeModuleCtorFunction())
+  if (Context.getLangOpts().CUDA && CUDARuntime) {
+    if (Context.getLangOpts().CUDAIsDevice)
+      CUDARuntime->transformManagedVars();
+    else if (llvm::Function *CudaCtorFunction =
+                 CUDARuntime->makeModuleCtorFunction())
       AddGlobalCtor(CudaCtorFunction);
   }
   if (OpenMPRuntime) {
@@ -3860,8 +3861,14 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
     }
   }
 
-  if (GV->isDeclaration())
+  if (GV->isDeclaration()) {
     getTargetCodeGenInfo().setTargetAttributes(D, GV, *this);
+    // External HIP managed variables needed to be recorded for transformation
+    // in both device and host compilations.
+    if (getLangOpts().CUDA && D && D->hasAttr<HIPManagedAttr>() &&
+        D->hasExternalStorage())
+      getCUDARuntime().handleVarRegistration(D, *GV);
+  }
 
   LangAS ExpectedAS =
       D ? D->getType().getAddressSpace()
@@ -4169,12 +4176,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   bool NeedsGlobalDtor =
       D->needsDestruction(getContext()) == QualType::DK_cxx_destructor;
 
-  bool IsHIPManagedVarOnDevice =
-      getLangOpts().CUDAIsDevice && D->hasAttr<HIPManagedAttr>();
-
   const VarDecl *InitDecl;
-  const Expr *InitExpr =
-      IsHIPManagedVarOnDevice ? nullptr : D->getAnyInitializer(InitDecl);
+  const Expr *InitExpr = D->getAnyInitializer(InitDecl);
 
   Optional<ConstantEmitter> emitter;
 
@@ -4300,14 +4303,11 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
         GV->setExternallyInitialized(true);
     } else {
       getCUDARuntime().internalizeDeviceSideVar(D, Linkage);
-      getCUDARuntime().handleVarRegistration(D, *GV);
     }
+    getCUDARuntime().handleVarRegistration(D, *GV);
   }
 
-  // HIP managed variables need to be emitted as declarations in device
-  // compilation.
-  if (!IsHIPManagedVarOnDevice)
-    GV->setInitializer(Init);
+  GV->setInitializer(Init);
   if (emitter)
     emitter->finalize(GV);
 
