@@ -102,6 +102,9 @@ public:
   virtual void
   internalizeDeviceSideVar(const VarDecl *D,
                            llvm::GlobalValue::LinkageTypes &Linkage) = 0;
+
+  /// Transform managed variables in device compilation.
+  virtual void transformManagedVars() = 0;
 };
 
 /// Creates an instance of a CUDA runtime class.
