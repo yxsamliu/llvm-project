@@ -8945,7 +8945,12 @@ static bool requiresAMDGPUProtectedVisibility(const Decl *D,
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
-  if (requiresAMDGPUProtectedVisibility(D, GV)) {
+  // HIP managed variables need to be emitted as undefined symbols which will be
+  // defined by the runtime, therefore they need to have default visibility.
+  if (isa<VarDecl>(D) && D->hasAttr<HIPManagedAttr>()) {
+    GV->setVisibility(llvm::GlobalValue::DefaultVisibility);
+    GV->setDSOLocal(true);
+  } else if (requiresAMDGPUProtectedVisibility(D, GV)) {
     GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
     GV->setDSOLocal(true);
   }
