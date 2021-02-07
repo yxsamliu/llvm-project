@@ -337,6 +337,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   }
 
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
+  AtomicLibCallSupported = false;
 }
 
 void AMDGPUTargetInfo::adjust(LangOptions &Opts) {

@@ -32,6 +32,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   BigEndian = !T.isLittleEndian();
   TLSSupported = true;
   VLASupported = true;
+  AtomicLibCallSupported = true;
   NoAsmVariants = false;
   HasLegalHalfType = false;
   HasFloat128 = false;

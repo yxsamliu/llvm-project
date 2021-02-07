@@ -186,6 +186,7 @@ protected:
   bool BigEndian;
   bool TLSSupported;
   bool VLASupported;
+  bool AtomicLibCallSupported;
   bool NoAsmVariants;  // True if {|} are normal characters.
   bool HasLegalHalfType; // True if the backend supports operations on the half
                          // LLVM IR type.
@@ -695,6 +696,8 @@ public:
            (AtomicSizeInBits <= getCharWidth() ||
             llvm::isPowerOf2_64(AtomicSizeInBits / getCharWidth()));
   }
+  /// Return true if the target supports atomic runtime library functions.
+  bool supportsAtomicLibCall() const { return AtomicLibCallSupported; }
 
   /// Return the maximum vector alignment supported for the given target.
   unsigned getMaxVectorAlign() const { return MaxVectorAlign; }
