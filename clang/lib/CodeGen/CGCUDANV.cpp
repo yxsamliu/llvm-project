@@ -42,12 +42,18 @@ private:
   llvm::LLVMContext &Context;
   /// Convenience reference to the current module
   llvm::Module &TheModule;
-  /// Keeps track of kernel launch stubs emitted in this module
+  /// Keeps track of kernel launch stubs and handles emitted in this module
   struct KernelInfo {
-    llvm::Function *Kernel;
+    llvm::Function *Kernel; // stub function to help launch kernel
     const Decl *D;
   };
   llvm::SmallVector<KernelInfo, 16> EmittedKernels;
+  // Map a device stub function to a symbol for identifying kernel in host code.
+  // For CUDA, the symbol for identifying the kernel is the same as the device
+  // stub function. For HIP, they are different.
+  llvm::DenseMap<llvm::Function *, llvm::GlobalValue *> KernelHandles;
+  // Map a kernel handle to the kernel stub.
+  llvm::DenseMap<llvm::GlobalValue *, llvm::Function *> KernelStubs;
   struct VarInfo {
     llvm::GlobalVariable *Var;
     const VarDecl *D;
@@ -147,6 +153,12 @@ private:
 public:
   CGNVCUDARuntime(CodeGenModule &CGM);
 
+  llvm::GlobalValue *getKernelHandle(llvm::Function *F, GlobalDecl GD) override;
+  llvm::Function *getKernelStub(llvm::GlobalValue *Handle) override {
+    auto Loc = KernelStubs.find(Handle);
+    assert(Loc != KernelStubs.end());
+    return Loc->second;
+  }
   void emitDeviceStub(CodeGenFunction &CGF, FunctionArgList &Args) override;
   void handleVarRegistration(const VarDecl *VD,
                              llvm::GlobalVariable &Var) override;
@@ -257,6 +269,10 @@ std::string CGNVCUDARuntime::getDeviceSideName(const NamedDecl *ND) {
 void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
                                      FunctionArgList &Args) {
   EmittedKernels.push_back({CGF.CurFn, CGF.CurFuncDecl});
+  if (auto *GV = dyn_cast<llvm::GlobalVariable>(KernelHandles[CGF.CurFn])) {
+    GV->setLinkage(CGF.CurFn->getLinkage());
+    GV->setInitializer(CGF.CurFn);
+  }
   if (CudaFeatureEnabled(CGM.getTarget().getSDKVersion(),
                          CudaFeature::CUDA_USES_NEW_LAUNCH) ||
       (CGF.getLangOpts().HIP && CGF.getLangOpts().HIPUseNewLaunchAPI))
@@ -335,7 +351,8 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
                                ShmemSize.getPointer(), Stream.getPointer()});
 
   // Emit the call to cudaLaunch
-  llvm::Value *Kernel = CGF.Builder.CreatePointerCast(CGF.CurFn, VoidPtrTy);
+  llvm::Value *Kernel =
+      CGF.Builder.CreatePointerCast(KernelHandles[CGF.CurFn], VoidPtrTy);
   CallArgList LaunchKernelArgs;
   LaunchKernelArgs.add(RValue::get(Kernel),
                        cudaLaunchKernelFD->getParamDecl(0)->getType());
@@ -390,7 +407,8 @@ void CGNVCUDARuntime::emitDeviceStubBodyLegacy(CodeGenFunction &CGF,
 
   // Emit the call to cudaLaunch
   llvm::FunctionCallee cudaLaunchFn = getLaunchFn();
-  llvm::Value *Arg = CGF.Builder.CreatePointerCast(CGF.CurFn, CharPtrTy);
+  llvm::Value *Arg =
+      CGF.Builder.CreatePointerCast(KernelHandles[CGF.CurFn], CharPtrTy);
   CGF.EmitRuntimeCallOrInvoke(cudaLaunchFn, Arg);
   CGF.EmitBranch(EndBlock);
 
@@ -484,7 +502,7 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
     llvm::Constant *NullPtr = llvm::ConstantPointerNull::get(VoidPtrTy);
     llvm::Value *Args[] = {
         &GpuBinaryHandlePtr,
-        Builder.CreateBitCast(I.Kernel, VoidPtrTy),
+        Builder.CreateBitCast(KernelHandles[I.Kernel], VoidPtrTy),
         KernelName,
         KernelName,
         llvm::ConstantInt::get(IntTy, -1),
@@ -997,4 +1015,30 @@ void CGNVCUDARuntime::handleVarRegistration(const VarDecl *D,
                           Normalized.getZExtValue());
     }
   }
+}
+
+
+llvm::GlobalValue *CGNVCUDARuntime::getKernelHandle(llvm::Function *F,
+                                                    GlobalDecl GD) {
+  auto Loc = KernelHandles.find(F);
+  if (Loc != KernelHandles.end())
+    return Loc->second;
+
+  if (!CGM.getLangOpts().HIP) {
+    KernelHandles[F] = F;
+    KernelStubs[F] = F;
+    return F;
+  }
+
+  auto *Var = new llvm::GlobalVariable(
+      TheModule, F->getType(), /*isConstant=*/true, F->getLinkage(),
+      /*Initializer=*/nullptr,
+      CGM.getMangledName(
+          GD.getWithKernelReferenceKind(KernelReferenceKind::Kernel)));
+  Var->setAlignment(CGM.getPointerAlign().getAsAlign());
+  Var->setDSOLocal(F->isDSOLocal());
+  Var->setVisibility(F->getVisibility());
+  KernelHandles[F] = Var;
+  KernelStubs[Var] = F;
+  return Var;
 }
