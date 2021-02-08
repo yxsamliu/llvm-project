@@ -6,6 +6,12 @@
 
 #include "Inputs/cuda.h"
 
+// Kernel handles
+
+// CHECK: @[[HCKERN:ckernel]] = constant i8* null
+// CHECK: @[[HNSKERN:_ZN2ns8nskernelEv]] = constant i8* null
+// CHECK: @[[HTKERN:_Z10kernelfuncIiEvv]] = linkonce_odr constant i8* null
+
 extern "C" __global__ void ckernel() {}
 
 namespace ns {
@@ -26,9 +32,9 @@ __global__ void kernel_decl();
 // Non-template kernel stub functions
 
 // CHECK: define{{.*}}@[[CSTUB:__device_stub__ckernel]]
-// CHECK: call{{.*}}@hipLaunchByPtr{{.*}}@[[CSTUB]]
+// CHECK: call{{.*}}@hipLaunchByPtr{{.*}}@[[HCKERN]]
 // CHECK: define{{.*}}@[[NSSTUB:_ZN2ns23__device_stub__nskernelEv]]
-// CHECK: call{{.*}}@hipLaunchByPtr{{.*}}@[[NSSTUB]]
+// CHECK: call{{.*}}@hipLaunchByPtr{{.*}}@[[HNSKERN]]
 
 // CHECK-LABEL: define{{.*}}@_Z8hostfuncv()
 // CHECK: call void @[[CSTUB]]()
@@ -45,11 +51,11 @@ void hostfunc(void) {
 // Template kernel stub functions
 
 // CHECK: define{{.*}}@[[TSTUB]]
-// CHECK: call{{.*}}@hipLaunchByPtr{{.*}}@[[TSTUB]]
+// CHECK: call{{.*}}@hipLaunchByPtr{{.*}}@[[HTKERN]]
 
 // CHECK: declare{{.*}}@[[DSTUB]]
 
 // CHECK-LABEL: define{{.*}}@__hip_register_globals
-// CHECK: call{{.*}}@__hipRegisterFunction{{.*}}@[[CSTUB]]{{.*}}@[[CKERN]]
-// CHECK: call{{.*}}@__hipRegisterFunction{{.*}}@[[NSSTUB]]{{.*}}@[[NSKERN]]
-// CHECK: call{{.*}}@__hipRegisterFunction{{.*}}@[[TSTUB]]{{.*}}@[[TKERN]]
+// CHECK: call{{.*}}@__hipRegisterFunction{{.*}}@[[HCKERN]]{{.*}}@[[CKERN]]
+// CHECK: call{{.*}}@__hipRegisterFunction{{.*}}@[[HNSKERN]]{{.*}}@[[NSKERN]]
+// CHECK: call{{.*}}@__hipRegisterFunction{{.*}}@[[HTKERN]]{{.*}}@[[TKERN]]
