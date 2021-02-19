@@ -125,6 +125,10 @@ public:
   ArrayRef<AffineExpr> getResults() const;
   AffineExpr getResult(unsigned idx) const;
 
+  /// Extracts the position of the dimensional expression at the given result,
+  /// when the caller knows it is safe to do so.
+  unsigned getDimPosition(unsigned idx) const;
+
   /// Walk all of the AffineExpr's in this mapping. Each node in an expression
   /// tree is visited in postorder.
   void walkExprs(std::function<void(AffineExpr)> callback) const;
@@ -322,6 +326,24 @@ AffineMap inversePermutation(AffineMap map);
 ///     (i, j, k) -> (i, k, k, j, i, j)
 /// ```
 AffineMap concatAffineMaps(ArrayRef<AffineMap> maps);
+
+/// Returns the map that results from projecting out the dimensions specified in
+/// `projectedDimensions`. The projected dimensions are set to 0.
+///
+/// Example:
+/// 1) map                  : affine_map<(d0, d1, d2) -> (d0, d1)>
+///    projected_dimensions : {2}
+///    result               : affine_map<(d0, d1) -> (d0, d1)>
+///
+/// 2) map                  : affine_map<(d0, d1) -> (d0 + d1)>
+///    projected_dimensions : {1}
+///    result               : affine_map<(d0) -> (d0)>
+///
+/// 3) map                  : affine_map<(d0, d1, d2) -> (d0, d1)>
+///    projected_dimensions : {1}
+///    result               : affine_map<(d0, d1) -> (d0, 0)>
+AffineMap getProjectedMap(AffineMap map,
+                          ArrayRef<unsigned> projectedDimensions);
 
 inline raw_ostream &operator<<(raw_ostream &os, AffineMap map) {
   map.print(os);

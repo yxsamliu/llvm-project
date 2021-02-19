@@ -7,21 +7,15 @@
 //==-----------------------------------------------------------------------===//
 
 #include "SIFrameLowering.h"
+#include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
-#include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
-#include "SIRegisterInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-
-#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
-#include "llvm/MC/MCDwarf.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -811,7 +805,7 @@ bool SIFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
   case TargetStackID::NoAlloc:
   case TargetStackID::SGPRSpill:
     return true;
-  case TargetStackID::SVEVector:
+  case TargetStackID::ScalableVector:
     return false;
   }
   llvm_unreachable("Invalid TargetStackID::Value");

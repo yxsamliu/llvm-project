@@ -127,6 +127,9 @@ public:
   /// output a diagnostic and return failure.
   ParseResult parseToken(Token::Kind expectedToken, const Twine &message);
 
+  /// Parse an optional integer value from the stream.
+  OptionalParseResult parseOptionalInteger(uint64_t &result);
+
   //===--------------------------------------------------------------------===//
   // Type Parsing
   //===--------------------------------------------------------------------===//
@@ -242,12 +245,6 @@ public:
 
   /// Parse a name or FileLineCol location instance.
   ParseResult parseNameOrFileLineColLocation(LocationAttr &loc);
-
-  /// Parse an optional trailing location.
-  ///
-  ///   trailing-location ::= (`loc` (`(` location `)` | attribute-alias))?
-  ///
-  ParseResult parseOptionalTrailingLocation(Location &loc);
 
   //===--------------------------------------------------------------------===//
   // Affine Parsing

@@ -28,8 +28,8 @@ def LinalgFoldUnitExtentDims : FunctionPass<"linalg-fold-unit-extent-dims"> {
   let options = [
     Option<"foldOneTripLoopsOnly", "fold-one-trip-loops-only", "bool",
             /*default=*/"false",
-	    "Only folds the one-trip loops from Linalg ops on tensors "
-	    "(for testing purposes only)">
+           "Only folds the one-trip loops from Linalg ops on tensors "
+           "(for testing purposes only)">
   ];
   let dependentDialects = ["linalg::LinalgDialect"];
 }
@@ -52,19 +52,31 @@ def LinalgLowerToAffineLoops : FunctionPass<"convert-linalg-to-affine-loops"> {
   let summary = "Lower the operations from the linalg dialect into affine "
                 "loops";
   let constructor = "mlir::createConvertLinalgToAffineLoopsPass()";
+  let options = [
+    ListOption<"interchangeVector", "interchange-vector", "unsigned",
+               "Permute the loops in the nest following the given "
+               "interchange vector",
+               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
+  ];
   let dependentDialects = ["linalg::LinalgDialect", "AffineDialect"];
 }
 
 def LinalgLowerToLoops : FunctionPass<"convert-linalg-to-loops"> {
   let summary = "Lower the operations from the linalg dialect into loops";
   let constructor = "mlir::createConvertLinalgToLoopsPass()";
+  let options = [
+    ListOption<"interchangeVector", "interchange-vector", "unsigned",
+               "Permute the loops in the nest following the given "
+               "interchange vector",
+               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
+  ];
   let dependentDialects = ["linalg::LinalgDialect", "scf::SCFDialect", "AffineDialect"];
 }
 
-def LinalgBufferize : Pass<"linalg-bufferize", "ModuleOp"> {
+def LinalgBufferize : Pass<"linalg-bufferize", "FuncOp"> {
   let summary = "Bufferize the linalg dialect";
   let constructor = "mlir::createLinalgBufferizePass()";
-  let dependentDialects = ["linalg::LinalgDialect", "vector::VectorDialect"];
+  let dependentDialects = ["linalg::LinalgDialect", "AffineDialect"];
 }
 
 def LinalgLowerToParallelLoops
@@ -72,6 +84,12 @@ def LinalgLowerToParallelLoops
   let summary = "Lower the operations from the linalg dialect into parallel "
                 "loops";
   let constructor = "mlir::createConvertLinalgToParallelLoopsPass()";
+  let options = [
+    ListOption<"interchangeVector", "interchange-vector", "unsigned",
+               "Permute the loops in the nest following the given "
+               "interchange vector",
+               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
+  ];
   let dependentDialects = ["AffineDialect", "linalg::LinalgDialect", "scf::SCFDialect"];
 }
 
@@ -110,6 +128,12 @@ def LinalgTilingToParallelLoops
                "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
   ];
   let dependentDialects = ["AffineDialect", "linalg::LinalgDialect", "scf::SCFDialect"];
+}
+
+def LinalgGeneralization : FunctionPass<"linalg-generalize-named-ops"> {
+  let summary = "Convert named ops into generic ops";
+  let constructor = "mlir::createLinalgGeneralizationPass()";
+  let dependentDialects = ["linalg::LinalgDialect"];
 }
 
 #endif // MLIR_DIALECT_LINALG_PASSES

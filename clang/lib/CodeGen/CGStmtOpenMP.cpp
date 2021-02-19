@@ -633,14 +633,12 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
       "CapturedStmtInfo should be set when generating the captured function");
   const CapturedDecl *CD = S.getCapturedDecl();
   // Build the argument list.
-  bool NeedWrapperFunction =
-      getDebugInfo() && CGM.getCodeGenOpts().hasReducedDebugInfo();
+  // AMDGCN does not generate wrapper kernels properly, fails to launch kernel.
+  bool NeedWrapperFunction = !CGM.getTriple().isAMDGCN() &&
+      (getDebugInfo() && CGM.getCodeGenOpts().hasReducedDebugInfo());
   FunctionArgList Args;
   llvm::MapVector<const Decl *, std::pair<const VarDecl *, Address>> LocalAddrs;
   llvm::DenseMap<const Decl *, std::pair<const Expr *, llvm::Value *>> VLASizes;
-  // AMDGCN does not generate wrapper kernels properly, fails to launch kernel.
-  if (CGM.getTriple().isAMDGCN())
-    NeedWrapperFunction = false;
   SmallString<256> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
   Out << CapturedStmtInfo->getHelperName();
@@ -652,8 +650,6 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
   llvm::Function *F = emitOutlinedFunctionPrologue(
       *this, Args, LocalAddrs, VLASizes, CXXThisValue, FO, isKernel);
   CodeGenFunction::OMPPrivateScope LocalScope(*this);
-  if ((CGM.getTriple().isAMDGCN()) && isKernel)
-    F->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
   for (const auto &LocalAddrPair : LocalAddrs) {
     if (LocalAddrPair.second.first) {
       LocalScope.addPrivate(LocalAddrPair.second.first, [&LocalAddrPair]() {
@@ -687,8 +683,6 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
   llvm::Function *WrapperF = emitOutlinedFunctionPrologue(
       WrapperCGF, Args, LocalAddrs, VLASizes, WrapperCGF.CXXThisValue,
       WrapperFO, isKernel);
-  if ((CGM.getTriple().isAMDGCN()) && isKernel)
-    WrapperF->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
 
   llvm::SmallVector<llvm::Value *, 4> CallArgs;
   for (const auto *Arg : Args) {
@@ -1753,7 +1747,7 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
     //
     // TODO: This defaults to shared right now.
     auto PrivCB = [](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
-                     llvm::Value &Val, llvm::Value *&ReplVal) {
+                     llvm::Value &, llvm::Value &Val, llvm::Value *&ReplVal) {
       // The next line is appropriate only for variables (Val) with the
       // data-sharing attribute "shared".
       ReplVal = &Val;

@@ -13,10 +13,10 @@
 #include "NearestIntegerOperations.h"
 #include "NormalFloat.h"
 
-#include "include/math.h"
 #include "utils/CPP/TypeTraits.h"
 
 #include <limits.h>
+#include <math.h>
 
 namespace __llvm_libc {
 namespace fputil {
@@ -116,7 +116,69 @@ static inline T logb(T x) {
   return normal.exponent;
 }
 
+template <typename T,
+          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
+static inline T ldexp(T x, int exp) {
+  FPBits<T> bits(x);
+  if (bits.isZero() || bits.isInfOrNaN() || exp == 0)
+    return x;
+
+  // NormalFloat uses int32_t to store the true exponent value. We should ensure
+  // that adding |exp| to it does not lead to integer rollover. But, if |exp|
+  // value is larger the exponent range for type T, then we can return infinity
+  // early. Because the result of the ldexp operation can be a subnormal number,
+  // we need to accommodate the (mantissaWidht + 1) worth of shift in
+  // calculating the limit.
+  int expLimit = FPBits<T>::maxExponent + MantissaWidth<T>::value + 1;
+  if (exp > expLimit)
+    return bits.sign ? FPBits<T>::negInf() : FPBits<T>::inf();
+
+  // Similarly on the negative side we return zero early if |exp| is too small.
+  if (exp < -expLimit)
+    return bits.sign ? FPBits<T>::negZero() : FPBits<T>::zero();
+
+  // For all other values, NormalFloat to T conversion handles it the right way.
+  NormalFloat<T> normal(bits);
+  normal.exponent += exp;
+  return normal;
+}
+
+template <typename T,
+          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
+static inline T nextafter(T from, T to) {
+  FPBits<T> fromBits(from);
+  if (fromBits.isNaN())
+    return from;
+
+  FPBits<T> toBits(to);
+  if (toBits.isNaN())
+    return to;
+
+  if (from == to)
+    return to;
+
+  using UIntType = typename FPBits<T>::UIntType;
+  auto intVal = fromBits.bitsAsUInt();
+  UIntType signMask = (UIntType(1) << (sizeof(T) * 8 - 1));
+  if (from != T(0.0)) {
+    if ((from < to) == (from > T(0.0))) {
+      ++intVal;
+    } else {
+      --intVal;
+    }
+  } else {
+    intVal = (toBits.bitsAsUInt() & signMask) + UIntType(1);
+  }
+
+  return *reinterpret_cast<T *>(&intVal);
+  // TODO: Raise floating point exceptions as required by the standard.
+}
+
 } // namespace fputil
 } // namespace __llvm_libc
+
+#if (defined(__x86_64__) || defined(__i386__))
+#include "NextAfterLongDoubleX86.h"
+#endif // defined(__x86_64__) || defined(__i386__)
 
 #endif // LLVM_LIBC_UTILS_FPUTIL_MANIPULATION_FUNCTIONS_H

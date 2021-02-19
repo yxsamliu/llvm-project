@@ -44,6 +44,10 @@ function(add_mlir_python_extension libname extname)
     "${pybind11_INCLUDE_DIR}"
   )
 
+  target_link_directories(${libname} PRIVATE
+    "${Python3_LIBRARY_DIRS}"
+  )
+
   # The extension itself must be compiled with RTTI and exceptions enabled.
   # Also, some warning classes triggered by pybind11 are disabled.
   target_compile_options(${libname} PRIVATE
@@ -74,6 +78,15 @@ function(add_mlir_python_extension libname extname)
     PREFIX "${PYTHON_MODULE_PREFIX}"
     SUFFIX "${PYTHON_MODULE_SUFFIX}${PYTHON_MODULE_EXTENSION}"
   )
+
+  if(WIN32)
+    # Need to also set the RUNTIME_OUTPUT_DIRECTORY on Windows in order to
+    # control where the .dll gets written.
+    set_target_properties(
+      ${libname} PROPERTIES
+      RUNTIME_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/python
+    )
+  endif()
 
   # pybind11 requires binding code to be compiled with -fvisibility=hidden
   # For static linkage, better code can be generated if the entire project
@@ -123,24 +136,27 @@ function(add_mlir_python_extension libname extname)
 
 endfunction()
 
-function(add_mlir_dialect_python_bindings filename dialectname)
-  set(LLVM_TARGET_DEFINITIONS ${filename})
-  mlir_tablegen("${dialectname}.py" -gen-python-op-bindings
-                -bind-dialect=${dialectname})
-  if (${ARGC} GREATER 2)
-    set(suffix ${ARGV2})
-  else()
-    get_filename_component(suffix ${filename} NAME_WE)
+function(add_mlir_dialect_python_bindings tblgen_target)
+  cmake_parse_arguments(ARG
+    ""
+    "TD_FILE;DIALECT_NAME"
+    "DEPENDS"
+    ${ARGN})
+
+  set(LLVM_TARGET_DEFINITIONS ${ARG_TD_FILE})
+  mlir_tablegen("${ARG_DIALECT_NAME}.py" -gen-python-op-bindings
+                -bind-dialect=${ARG_DIALECT_NAME})
+  add_public_tablegen_target(
+    ${tblgen_target})
+  if(ARG_DEPENDS)
+    add_dependencies(${tblgen_target} ${ARG_DEPENDS})
   endif()
-  set(tblgen_target "MLIRBindingsPython${suffix}")
-  add_public_tablegen_target(${tblgen_target})
 
   add_custom_command(
     TARGET ${tblgen_target} POST_BUILD
-    COMMENT "Copying generated python source \"dialects/${dialectname}.py\""
+    COMMENT "Copying generated python source \"dialects/${ARG_DIALECT_NAME}.py\""
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-      "${CMAKE_CURRENT_BINARY_DIR}/${dialectname}.py"
-      "${PROJECT_BINARY_DIR}/python/mlir/dialects/${dialectname}.py")
-  add_dependencies(MLIRBindingsPythonIncGen ${tblgen_target})
+      "${CMAKE_CURRENT_BINARY_DIR}/${ARG_DIALECT_NAME}.py"
+      "${PROJECT_BINARY_DIR}/python/mlir/dialects/${ARG_DIALECT_NAME}.py")
 endfunction()
 
