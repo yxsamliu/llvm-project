@@ -627,7 +627,7 @@ RocmInstallationDetector::getCommonBitcodeLibs(
     bool DAZ, bool FiniteOnly, bool UnsafeMathOpt, bool FastRelaxedMath,
     bool CorrectSqrt) const {
 
-  llvm::SmallVector<std::string, 8> BCLibs;
+  llvm::SmallVector<std::string, 12> BCLibs;
 
   auto AddBCLib = [&](StringRef BCFile) { BCLibs.push_back(BCFile.str()); };
 

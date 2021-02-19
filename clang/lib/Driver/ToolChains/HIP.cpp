@@ -353,7 +353,7 @@ VersionTuple HIPToolChain::computeMSVCVersion(const Driver *D,
 
 llvm::SmallVector<std::string, 12>
 HIPToolChain::getHIPDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
-  llvm::SmallVector<std::string, 9> BCLibs;
+  llvm::SmallVector<std::string, 12> BCLibs;
   if (DriverArgs.hasArg(options::OPT_nogpulib))
     return {};
   ArgStringList LibraryPaths;
