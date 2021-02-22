@@ -666,6 +666,7 @@ public:
 
   void append(const SmallVectorImpl &RHS) { append(RHS.begin(), RHS.end()); }
 
+
   void assign(size_type NumElts, ValueParamT Elt) {
     // Note that Elt could be an internal reference.
     if (NumElts > this->capacity()) {
