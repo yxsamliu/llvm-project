@@ -347,6 +347,13 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known = Known.sext(BitWidth);
     break;
   }
+  case TargetOpcode::G_ASSERT_SEXT:
+  case TargetOpcode::G_SEXT_INREG: {
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    Known = Known.sextInReg(MI.getOperand(2).getImm());
+    break;
+  }
   case TargetOpcode::G_ANYEXT: {
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
                          Depth + 1);
@@ -397,13 +404,21 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   case TargetOpcode::G_PTRTOINT:
     // Fall through and handle them the same as zext/trunc.
     LLVM_FALLTHROUGH;
+  case TargetOpcode::G_ASSERT_ZEXT:
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_TRUNC: {
     Register SrcReg = MI.getOperand(1).getReg();
     LLT SrcTy = MRI.getType(SrcReg);
-    unsigned SrcBitWidth = SrcTy.isPointer()
-                               ? DL.getIndexSizeInBits(SrcTy.getAddressSpace())
-                               : SrcTy.getSizeInBits();
+    unsigned SrcBitWidth;
+
+    // G_ASSERT_ZEXT stores the original bitwidth in the immediate operand.
+    if (Opcode == TargetOpcode::G_ASSERT_ZEXT)
+      SrcBitWidth = MI.getOperand(2).getImm();
+    else {
+      SrcBitWidth = SrcTy.isPointer()
+                        ? DL.getIndexSizeInBits(SrcTy.getAddressSpace())
+                        : SrcTy.getSizeInBits();
+    }
     assert(SrcBitWidth && "SrcBitWidth can't be zero");
     Known = Known.zextOrTrunc(SrcBitWidth);
     computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
@@ -517,6 +532,7 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
     unsigned Tmp = DstTy.getScalarSizeInBits() - SrcTy.getScalarSizeInBits();
     return computeNumSignBits(Src, DemandedElts, Depth + 1) + Tmp;
   }
+  case TargetOpcode::G_ASSERT_SEXT:
   case TargetOpcode::G_SEXT_INREG: {
     // Max of the input and what this extends.
     Register Src = MI.getOperand(1).getReg();

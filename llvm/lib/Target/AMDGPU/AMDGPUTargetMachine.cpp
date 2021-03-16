@@ -230,7 +230,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPreLegalizerCombinerPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUPromoteAllocaToVectorPass(*PR);
-  initializeAMDGPUPromotePointerKernArgsToGlobalPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
   initializeAMDGPULateCodeGenPreparePass(*PR);
   initializeAMDGPUPropagateAttributesEarlyPass(*PR);
@@ -256,7 +255,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUExternalAAWrapperPass(*PR);
   initializeAMDGPUUseNativeCallsPass(*PR);
   initializeAMDGPUSimplifyLibCallsPass(*PR);
-  initializeAMDGPUInlinerPass(*PR);
   initializeAMDGPUPrintfRuntimeBindingPass(*PR);
   initializeAMDGPULowerKernelCallsPass(*PR);
   initializeGCNRegBankReassignPass(*PR);
@@ -386,6 +384,10 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
     else if (getMCSubtargetInfo()->checkFeatures("+wavefrontsize32"))
       MRI.reset(llvm::createGCNMCRegisterInfo(AMDGPUDwarfFlavour::Wave32));
   }
+  // Set -fixed-function-abi to true if not provided..
+  if (TT.getOS() == Triple::AMDHSA &&
+      EnableAMDGPUFixedFunctionABIOpt.getNumOccurrences() == 0)
+    EnableFixedFunctionABI = true;
 }
 
 bool AMDGPUTargetMachine::EnableLateStructurizeCFG = false;
@@ -425,7 +427,7 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
 
   if (EnableFunctionCalls) {
     delete Builder.Inliner;
-    Builder.Inliner = createAMDGPUFunctionInliningPass();
+    Builder.Inliner = createFunctionInliningPass();
   }
 
   Builder.addExtension(
@@ -464,9 +466,6 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
   Builder.addExtension(
     PassManagerBuilder::EP_CGSCCOptimizerLate,
     [EnableOpt](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
-      // Premote generic pointer kernel arguments to global ones.
-      PM.add(llvm::createAMDGPUPromotePointerKernArgsToGlobalPass());
-
       // Add infer address spaces pass to the opt pipeline after inlining
       // but before SROA to increase SROA opportunities.
       PM.add(createInferAddressSpacesPass());
@@ -585,24 +584,27 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
   PB.registerCGSCCOptimizerLateEPCallback(
       [this, DebugPassManager](CGSCCPassManager &PM,
                                PassBuilder::OptimizationLevel Level) {
-          FunctionPassManager FPM(DebugPassManager);
+        if (Level == PassBuilder::OptimizationLevel::O0)
+          return;
 
-          // Add infer address spaces pass to the opt pipeline after inlining
-          // but before SROA to increase SROA opportunities.
-          FPM.addPass(InferAddressSpacesPass());
+        FunctionPassManager FPM(DebugPassManager);
 
-          // This should run after inlining to have any chance of doing
-          // anything, and before other cleanup optimizations.
-          FPM.addPass(AMDGPULowerKernelAttributesPass());
+        // Add infer address spaces pass to the opt pipeline after inlining
+        // but before SROA to increase SROA opportunities.
+        FPM.addPass(InferAddressSpacesPass());
 
-          if (Level != PassBuilder::OptimizationLevel::O0) {
-            // Promote alloca to vector before SROA and loop unroll. If we
-            // manage to eliminate allocas before unroll we may choose to unroll
-            // less.
-            FPM.addPass(AMDGPUPromoteAllocaToVectorPass(*this));
-          }
+        // This should run after inlining to have any chance of doing
+        // anything, and before other cleanup optimizations.
+        FPM.addPass(AMDGPULowerKernelAttributesPass());
 
-          PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
+        if (Level != PassBuilder::OptimizationLevel::O0) {
+          // Promote alloca to vector before SROA and loop unroll. If we
+          // manage to eliminate allocas before unroll we may choose to unroll
+          // less.
+          FPM.addPass(AMDGPUPromoteAllocaToVectorPass(*this));
+        }
+
+        PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
       });
 }
 
@@ -1116,6 +1118,10 @@ bool GCNPassConfig::addRegBankSelect() {
 
 bool GCNPassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect());
+  // TODO: Fix instruction selection to do the right thing for image
+  // instructions with tfe or lwe in the first place, instead of running a
+  // separate pass to fix them up?
+  addPass(createSIAddIMGInitPass());
   return false;
 }
 
@@ -1231,6 +1237,12 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   MFI->initializeBaseYamlFields(YamlMFI);
+
+  if (MFI->Occupancy == 0) {
+    // Fixup the subtarget dependent default value.
+    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+    MFI->Occupancy = ST.computeOccupancy(MF.getFunction(), MFI->getLDSSize());
+  }
 
   auto parseRegister = [&](const yaml::StringValue &RegName, Register &RegVal) {
     Register TempReg;

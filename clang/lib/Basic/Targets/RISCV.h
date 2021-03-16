@@ -32,7 +32,20 @@ protected:
   bool HasC = false;
   bool HasB = false;
   bool HasV = false;
+  bool HasZba = false;
+  bool HasZbb = false;
+  bool HasZbc = false;
+  bool HasZbe = false;
+  bool HasZbf = false;
+  bool HasZbm = false;
+  bool HasZbp = false;
+  bool HasZbproposedc = false;
+  bool HasZbr = false;
+  bool HasZbs = false;
+  bool HasZbt = false;
   bool HasZfh = false;
+  bool HasZvamo = false;
+  bool HasZvlsseg = false;
 
 public:
   RISCVTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
@@ -43,6 +56,7 @@ public:
     SuitableAlign = 128;
     WCharType = SignedInt;
     WIntType = UnsignedInt;
+    HasRISCVVTypes = true;
   }
 
   bool setCPU(const std::string &Name) override {

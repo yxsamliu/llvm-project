@@ -16,8 +16,10 @@
 //===----------------------------------------------------------------------===//
 #pragma omp declare target
 
+
+#include "common/omptarget.h"
+#include "target_interface.h"
 #include "common/support.h"
-#include "common/target_atomic.h"
 #include "target_impl.h"
 
 #define UNSET 0u

@@ -870,6 +870,30 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   return SI;
 }
 
+/// Freely adapt every user of V as-if V was changed to !V.
+/// WARNING: only if canFreelyInvertAllUsersOf() said this can be done.
+void InstCombinerImpl::freelyInvertAllUsersOf(Value *I) {
+  for (User *U : I->users()) {
+    switch (cast<Instruction>(U)->getOpcode()) {
+    case Instruction::Select: {
+      auto *SI = cast<SelectInst>(U);
+      SI->swapValues();
+      SI->swapProfMetadata();
+      break;
+    }
+    case Instruction::Br:
+      cast<BranchInst>(U)->swapSuccessors(); // swaps prof metadata too
+      break;
+    case Instruction::Xor:
+      replaceInstUsesWith(cast<Instruction>(*U), I);
+      break;
+    default:
+      llvm_unreachable("Got unexpected user - out of sync with "
+                       "canFreelyInvertAllUsersOf() ?");
+    }
+  }
+}
+
 /// Given a 'sub' instruction, return the RHS of the instruction if the LHS is a
 /// constant zero (which is the 'negate' form).
 Value *InstCombinerImpl::dyn_castNegVal(Value *V) const {
@@ -2196,7 +2220,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         // GEP (bitcast i8* X to [0 x i8]*), i32 0, ... ?
         if (CATy->getElementType() == StrippedPtrEltTy) {
           // -> GEP i8* X, ...
-          SmallVector<Value*, 8> Idx(GEP.idx_begin()+1, GEP.idx_end());
+          SmallVector<Value *, 8> Idx(drop_begin(GEP.indices()));
           GetElementPtrInst *Res = GetElementPtrInst::Create(
               StrippedPtrEltTy, StrippedPtr, Idx, GEP.getName());
           Res->setIsInBounds(GEP.isInBounds());
@@ -2775,6 +2799,20 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI) {
   if (isa<ConstantPointerNull>(Op))
     return eraseInstFromFunction(FI);
 
+  // If we free a pointer we've been explicitly told won't be freed, this
+  // would be full UB and thus we can conclude this is unreachable. Cases:
+  // 1) freeing a pointer which is explicitly nofree
+  // 2) calling free from a call site marked nofree
+  // 3) calling free in a function scope marked nofree
+  if (auto *A = dyn_cast<Argument>(Op->stripPointerCasts()))
+    if (A->hasAttribute(Attribute::NoFree) ||
+        FI.hasFnAttr(Attribute::NoFree) ||
+        FI.getFunction()->hasFnAttribute(Attribute::NoFree)) {
+      // Leave a marker since we can't modify the CFG here.
+      CreateNonTerminatorUnreachable(&FI);
+      return eraseInstFromFunction(FI);
+    }
+
   // If we optimize for code size, try to move the call to free before the null
   // test so that simplify cfg can remove the empty block and dead code
   // elimination the branch. I.e., helps to turn something like:
@@ -3059,9 +3097,8 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
       SmallVector<Value*, 4> Indices;
       // Prefix an i32 0 since we need the first element.
       Indices.push_back(Builder.getInt32(0));
-      for (ExtractValueInst::idx_iterator I = EV.idx_begin(), E = EV.idx_end();
-            I != E; ++I)
-        Indices.push_back(Builder.getInt32(*I));
+      for (unsigned Idx : EV.indices())
+        Indices.push_back(Builder.getInt32(Idx));
 
       // We need to insert these at the location of the old load, not at that of
       // the extractvalue.
@@ -3742,6 +3779,55 @@ bool InstCombinerImpl::run() {
   return MadeIRChange;
 }
 
+// Track the scopes used by !alias.scope and !noalias. In a function, a
+// @llvm.experimental.noalias.scope.decl is only useful if that scope is used
+// by both sets. If not, the declaration of the scope can be safely omitted.
+// The MDNode of the scope can be omitted as well for the instructions that are
+// part of this function. We do not do that at this point, as this might become
+// too time consuming to do.
+class AliasScopeTracker {
+  SmallPtrSet<const MDNode *, 8> UsedAliasScopesAndLists;
+  SmallPtrSet<const MDNode *, 8> UsedNoAliasScopesAndLists;
+
+public:
+  void analyse(Instruction *I) {
+    // This seems to be faster than checking 'mayReadOrWriteMemory()'.
+    if (!I->hasMetadataOtherThanDebugLoc())
+      return;
+
+    auto Track = [](Metadata *ScopeList, auto &Container) {
+      const auto *MDScopeList = dyn_cast_or_null<MDNode>(ScopeList);
+      if (!MDScopeList || !Container.insert(MDScopeList).second)
+        return;
+      for (auto &MDOperand : MDScopeList->operands())
+        if (auto *MDScope = dyn_cast<MDNode>(MDOperand))
+          Container.insert(MDScope);
+    };
+
+    Track(I->getMetadata(LLVMContext::MD_alias_scope), UsedAliasScopesAndLists);
+    Track(I->getMetadata(LLVMContext::MD_noalias), UsedNoAliasScopesAndLists);
+  }
+
+  bool isNoAliasScopeDeclDead(Instruction *Inst) {
+    NoAliasScopeDeclInst *Decl = dyn_cast<NoAliasScopeDeclInst>(Inst);
+    if (!Decl)
+      return false;
+
+    assert(Decl->use_empty() &&
+           "llvm.experimental.noalias.scope.decl in use ?");
+    const MDNode *MDSL = Decl->getScopeList();
+    assert(MDSL->getNumOperands() == 1 &&
+           "llvm.experimental.noalias.scope should refer to a single scope");
+    auto &MDOperand = MDSL->getOperand(0);
+    if (auto *MD = dyn_cast<MDNode>(MDOperand))
+      return !UsedAliasScopesAndLists.contains(MD) ||
+             !UsedNoAliasScopesAndLists.contains(MD);
+
+    // Not an MDNode ? throw away.
+    return true;
+  }
+};
+
 /// Populate the IC worklist from a function, by walking it in depth-first
 /// order and adding all reachable code to the worklist.
 ///
@@ -3760,6 +3846,7 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
 
   SmallVector<Instruction*, 128> InstrsForInstCombineWorklist;
   DenseMap<Constant *, Constant *> FoldedConstants;
+  AliasScopeTracker SeenAliasScopes;
 
   do {
     BasicBlock *BB = Worklist.pop_back_val();
@@ -3804,10 +3891,13 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
         }
       }
 
-      // Skip processing debug intrinsics in InstCombine. Processing these call instructions
-      // consumes non-trivial amount of time and provides no value for the optimization.
-      if (!isa<DbgInfoIntrinsic>(Inst))
+      // Skip processing debug and pseudo intrinsics in InstCombine. Processing
+      // these call instructions consumes non-trivial amount of time and
+      // provides no value for the optimization.
+      if (!Inst->isDebugOrPseudoInst()) {
         InstrsForInstCombineWorklist.push_back(Inst);
+        SeenAliasScopes.analyse(Inst);
+      }
     }
 
     // Recursively visit successors.  If this is a branch or switch on a
@@ -3827,8 +3917,7 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
       }
     }
 
-    for (BasicBlock *SuccBB : successors(TI))
-      Worklist.push_back(SuccBB);
+    append_range(Worklist, successors(TI));
   } while (!Worklist.empty());
 
   // Remove instructions inside unreachable blocks. This prevents the
@@ -3856,7 +3945,8 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
   for (Instruction *Inst : reverse(InstrsForInstCombineWorklist)) {
     // DCE instruction if trivially dead. As we iterate in reverse program
     // order here, we will clean up whole chains of dead instructions.
-    if (isInstructionTriviallyDead(Inst, TLI)) {
+    if (isInstructionTriviallyDead(Inst, TLI) ||
+        SeenAliasScopes.isNoAliasScopeDeclDead(Inst)) {
       ++NumDeadInst;
       LLVM_DEBUG(dbgs() << "IC: DCE: " << *Inst << '\n');
       salvageDebugInfo(*Inst);

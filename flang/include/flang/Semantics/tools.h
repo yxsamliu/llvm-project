@@ -14,6 +14,7 @@
 
 #include "flang/Common/Fortran.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Evaluate/variable.h"
 #include "flang/Parser/message.h"
@@ -38,6 +39,7 @@ const Scope &GetProgramUnitContaining(const Scope &);
 const Scope &GetProgramUnitContaining(const Symbol &);
 
 const Scope *FindModuleContaining(const Scope &);
+const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Symbol &);
 const Symbol *FindPointerComponent(const Scope &);
@@ -558,5 +560,12 @@ private:
 // Return the (possibly null) name of the ConstructNode
 const std::optional<parser::Name> &MaybeGetNodeName(
     const ConstructNode &construct);
+
+// Convert evaluate::GetShape() result into an ArraySpec
+std::optional<ArraySpec> ToArraySpec(
+    evaluate::FoldingContext &, const evaluate::Shape &);
+std::optional<ArraySpec> ToArraySpec(
+    evaluate::FoldingContext &, const std::optional<evaluate::Shape> &);
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

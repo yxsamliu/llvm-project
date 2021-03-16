@@ -14,12 +14,14 @@
 #include "SIRegisterInfo.h"
 #include "AMDGPU.h"
 #include "AMDGPURegisterBankInfo.h"
-#include "AMDGPUSubtarget.h"
+#include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+
 using namespace llvm;
 
 #define GET_REGINFO_TARGET_DESC
@@ -125,7 +127,9 @@ const MCPhysReg *SIRegisterInfo::getCalleeSavedRegs(
   case CallingConv::Fast:
   case CallingConv::Cold:
   case CallingConv::AMDGPU_Gfx:
-    return CSR_AMDGPU_HighRegs_SaveList;
+    return MF->getSubtarget<GCNSubtarget>().hasGFX90AInsts()
+        ? CSR_AMDGPU_HighRegs_With_AGPRs_SaveList
+        : CSR_AMDGPU_HighRegs_SaveList;
   default: {
     // Dummy to not crash RegisterClassInfo.
     static const MCPhysReg NoCalleeSavedReg = AMDGPU::NoRegister;
@@ -146,7 +150,9 @@ const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   case CallingConv::Fast:
   case CallingConv::Cold:
   case CallingConv::AMDGPU_Gfx:
-    return CSR_AMDGPU_HighRegs_RegMask;
+    return MF.getSubtarget<GCNSubtarget>().hasGFX90AInsts()
+        ? CSR_AMDGPU_HighRegs_With_AGPRs_RegMask
+        : CSR_AMDGPU_HighRegs_RegMask;
   default:
     return nullptr;
   }
@@ -182,6 +188,14 @@ Register SIRegisterInfo::getBaseRegister() const { return AMDGPU::SGPR34; }
 
 const uint32_t *SIRegisterInfo::getAllVGPRRegMask() const {
   return CSR_AMDGPU_AllVGPRs_RegMask;
+}
+
+const uint32_t *SIRegisterInfo::getAllAGPRRegMask() const {
+  return CSR_AMDGPU_AllAGPRs_RegMask;
+}
+
+const uint32_t *SIRegisterInfo::getAllVectorRegMask() const {
+  return CSR_AMDGPU_AllVectorRegs_RegMask;
 }
 
 const uint32_t *SIRegisterInfo::getAllAllocatableSRegMask() const {
@@ -270,6 +284,12 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   }
 
   unsigned MaxNumVGPRs = ST.getMaxNumVGPRs(MF);
+  // TODO: In an entry function without calls and AGPRs used it is possible
+  //       to use the whole register budget for VGPRs. Even more it shall
+  //       be possible to estimate maximum AGPR/VGPR pressure and split
+  //       register file accordingly.
+  if (ST.hasGFX90AInsts())
+    MaxNumVGPRs /= 2;
   unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
   for (unsigned i = MaxNumVGPRs; i < TotalNumVGPRs; ++i) {
     unsigned Reg = AMDGPU::VGPR_32RegClass.getRegister(i);
@@ -333,6 +353,13 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   for (MCRegister Reg : MFI->WWMReservedRegs) {
     reserveRegisterTuples(Reserved, Reg);
   }
+
+  if (ST.hasGFX90AInsts())
+    for (const TargetRegisterClass *RC : this->regclasses())
+      if (getRegSizeInBits(*RC) > 32 && hasVectorRegisters(RC))
+        for (unsigned Reg : *RC)
+          if (getEncodingValue(Reg) & 1)
+            Reserved.set(Reg);
 
   // FIXME: Stop using reserved registers for this.
   for (MCPhysReg Reg : MFI->getAGPRSpillVGPRs())
@@ -415,7 +442,7 @@ int64_t SIRegisterInfo::getFrameIndexInstrOffset(const MachineInstr *MI,
 }
 
 bool SIRegisterInfo::needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
-  if (!MI->mayLoadOrStore())
+  if (!SIInstrInfo::isMUBUF(*MI) && !SIInstrInfo::isFLATScratch(*MI))
     return false;
 
   int64_t FullOffset = Offset + getScratchInstrOffset(MI);
@@ -424,13 +451,12 @@ bool SIRegisterInfo::needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
     return !SIInstrInfo::isLegalMUBUFImmOffset(FullOffset);
 
   const SIInstrInfo *TII = ST.getInstrInfo();
-  return TII->isLegalFLATOffset(FullOffset, AMDGPUAS::PRIVATE_ADDRESS, true);
+  return !TII->isLegalFLATOffset(FullOffset, AMDGPUAS::PRIVATE_ADDRESS, true);
 }
 
-void SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
-                                                  Register BaseReg,
-                                                  int FrameIdx,
-                                                  int64_t Offset) const {
+Register SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
+                                                      int FrameIdx,
+                                                      int64_t Offset) const {
   MachineBasicBlock::iterator Ins = MBB->begin();
   DebugLoc DL; // Defaults to "unknown"
 
@@ -439,16 +465,20 @@ void SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
 
   MachineFunction *MF = MBB->getParent();
   const SIInstrInfo *TII = ST.getInstrInfo();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
   unsigned MovOpc = ST.enableFlatScratch() ? AMDGPU::S_MOV_B32
                                            : AMDGPU::V_MOV_B32_e32;
+
+  Register BaseReg = MRI.createVirtualRegister(
+      ST.enableFlatScratch() ? &AMDGPU::SReg_32_XEXEC_HIRegClass
+                             : &AMDGPU::VGPR_32RegClass);
 
   if (Offset == 0) {
     BuildMI(*MBB, Ins, DL, TII->get(MovOpc), BaseReg)
       .addFrameIndex(FrameIdx);
-    return;
+    return BaseReg;
   }
 
-  MachineRegisterInfo &MRI = MF->getRegInfo();
   Register OffsetReg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
   Register FIReg = MRI.createVirtualRegister(
@@ -464,13 +494,15 @@ void SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
     BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::S_ADD_U32), BaseReg)
         .addReg(OffsetReg, RegState::Kill)
         .addReg(FIReg);
-    return;
+    return BaseReg;
   }
 
   TII->getAddNoCarry(*MBB, Ins, DL, BaseReg)
     .addReg(OffsetReg, RegState::Kill)
     .addReg(FIReg)
     .addImm(0); // clamp bit
+
+  return BaseReg;
 }
 
 void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
@@ -498,9 +530,6 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
   MachineOperand *OffsetOp = TII->getNamedOperand(MI, AMDGPU::OpName::offset);
   int64_t NewOffset = OffsetOp->getImm() + Offset;
 
-#ifndef NDEBUG
-  MachineBasicBlock *MBB = MI.getParent();
-  MachineFunction *MF = MBB->getParent();
   assert(FIOp && FIOp->isFI() && "frame index must be address operand");
   assert(TII->isMUBUF(MI) || TII->isFLATScratch(MI));
 
@@ -512,11 +541,9 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
     return;
   }
 
+#ifndef NDEBUG
   MachineOperand *SOffset = TII->getNamedOperand(MI, AMDGPU::OpName::soffset);
-  assert((SOffset->isReg() &&
-          SOffset->getReg() ==
-              MF->getInfo<SIMachineFunctionInfo>()->getStackPtrOffsetReg()) ||
-         (SOffset->isImm() && SOffset->getImm() == 0));
+  assert(SOffset->isImm() && SOffset->getImm() == 0);
 #endif
 
   assert(SIInstrInfo::isLegalMUBUFImmOffset(NewOffset) &&
@@ -529,7 +556,7 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
 bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
                                         Register BaseReg,
                                         int64_t Offset) const {
-  if (!SIInstrInfo::isMUBUF(*MI) && !!SIInstrInfo::isFLATScratch(*MI))
+  if (!SIInstrInfo::isMUBUF(*MI) && !SIInstrInfo::isFLATScratch(*MI))
     return false;
 
   int64_t NewOffset = Offset + getScratchInstrOffset(MI);
@@ -577,6 +604,7 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_V256_CFI_SAVE:
   case AMDGPU::SI_SPILL_V256_RESTORE:
   case AMDGPU::SI_SPILL_A256_SAVE:
+  case AMDGPU::SI_SPILL_A256_CFI_SAVE:
   case AMDGPU::SI_SPILL_A256_RESTORE:
     return 8;
   case AMDGPU::SI_SPILL_S192_SAVE:
@@ -753,6 +781,7 @@ static bool buildMUBUFOffsetLoadStore(const GCNSubtarget &ST,
           .addImm(0) // tfe
           .addImm(0) // dlc
           .addImm(0) // swz
+          .addImm(0) // scc
           .cloneMemRefs(*MI);
 
   const MachineOperand *VDataIn = TII->getNamedOperand(*MI,
@@ -823,7 +852,8 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
   MCRegister SOffset = ScratchOffsetReg;
 
   const TargetRegisterClass *RC = getRegClassForReg(MF->getRegInfo(), ValueReg);
-  const bool IsAGPR = hasAGPRs(RC);
+  // On gfx90a+ AGPR is a regular VGPR acceptable for loads and stores.
+  const bool IsAGPR = !ST.hasGFX90AInsts() && hasAGPRs(RC);
   const unsigned RegWidth = AMDGPU::getRegBitWidth(RC->getID()) / 8;
 
   // Always use 4 byte operations for AGPRs because we need to scavenge
@@ -1023,6 +1053,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
     if (!IsFlat)
       MIB.addImm(0) // dlc
          .addImm(0); // swz
+    MIB.addImm(0); // scc
     MIB.addMemOperand(NewMMO);
 
     if (IsStore && NeedsCFI)
@@ -1770,18 +1801,10 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                           AMDGPU::OpName::vaddr));
 
         auto &SOffset = *TII->getNamedOperand(*MI, AMDGPU::OpName::soffset);
-        assert((SOffset.isReg() &&
-                SOffset.getReg() == MFI->getStackPtrOffsetReg()) ||
-               (SOffset.isImm() && SOffset.getImm() == 0));
-        if (SOffset.isReg()) {
-          if (FrameReg == AMDGPU::NoRegister) {
-            SOffset.ChangeToImmediate(0);
-          } else {
-            SOffset.setReg(FrameReg);
-          }
-        } else if (SOffset.isImm() && FrameReg != AMDGPU::NoRegister) {
+        assert((SOffset.isImm() && SOffset.getImm() == 0));
+
+        if (FrameReg != AMDGPU::NoRegister)
           SOffset.ChangeToRegister(FrameReg, false);
-        }
 
         int64_t Offset = FrameInfo.getObjectOffset(Index);
         int64_t OldImm
@@ -2132,6 +2155,13 @@ bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
   unsigned SrcSize = getRegSizeInBits(*SrcRC);
   unsigned DstSize = getRegSizeInBits(*DstRC);
   unsigned NewSize = getRegSizeInBits(*NewRC);
+
+  // Do not allow coalescing between an odd and an even lanes as it will
+  // result in misaligned tuple access.
+  if (ST.hasGFX90AInsts() && !isSGPRClass(NewRC) &&
+      (getChannelFromSubReg(DstSubReg) & 1) !=
+      (getChannelFromSubReg(SubReg) & 1))
+    return false;
 
   // Do not increase size of registers beyond dword, we would need to allocate
   // adjacent registers and constraint regalloc more than needed.

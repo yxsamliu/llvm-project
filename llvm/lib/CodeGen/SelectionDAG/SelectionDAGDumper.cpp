@@ -289,6 +289,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::SCALAR_TO_VECTOR:           return "scalar_to_vector";
   case ISD::VECTOR_SHUFFLE:             return "vector_shuffle";
   case ISD::SPLAT_VECTOR:               return "splat_vector";
+  case ISD::VECTOR_REVERSE:             return "vector_reverse";
   case ISD::CARRY_FALSE:                return "carry_false";
   case ISD::ADDC:                       return "addc";
   case ISD::ADDE:                       return "adde";
@@ -336,7 +337,6 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::TRUNCATE:                   return "truncate";
   case ISD::FP_ROUND:                   return "fp_round";
   case ISD::STRICT_FP_ROUND:            return "strict_fp_round";
-  case ISD::FLT_ROUNDS_:                return "flt_rounds";
   case ISD::FP_EXTEND:                  return "fp_extend";
   case ISD::STRICT_FP_EXTEND:           return "strict_fp_extend";
 
@@ -409,6 +409,10 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "call_setup";
   case ISD::PREALLOCATED_ARG:
     return "call_alloc";
+
+  // Floating point environment manipulation
+  case ISD::FLT_ROUNDS_:                return "flt_rounds";
+  case ISD::SET_ROUNDING:               return "set_rounding";
 
   // Bit manipulation
   case ISD::ABS:                        return "abs";
@@ -892,12 +896,10 @@ static void DumpNodes(const SDNode *N, unsigned indent, const SelectionDAG *G) {
 LLVM_DUMP_METHOD void SelectionDAG::dump() const {
   dbgs() << "SelectionDAG has " << AllNodes.size() << " nodes:\n";
 
-  for (allnodes_const_iterator I = allnodes_begin(), E = allnodes_end();
-       I != E; ++I) {
-    const SDNode *N = &*I;
-    if (!N->hasOneUse() && N != getRoot().getNode() &&
-        (!shouldPrintInline(*N, this) || N->use_empty()))
-      DumpNodes(N, 2, this);
+  for (const SDNode &N : allnodes()) {
+    if (!N.hasOneUse() && &N != getRoot().getNode() &&
+        (!shouldPrintInline(N, this) || N.use_empty()))
+      DumpNodes(&N, 2, this);
   }
 
   if (getRoot().getNode()) DumpNodes(getRoot().getNode(), 2, this);

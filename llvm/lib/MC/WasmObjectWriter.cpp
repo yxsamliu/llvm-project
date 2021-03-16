@@ -488,10 +488,14 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
 
     const MCSymbol *SectionSymbol = nullptr;
     const MCSection &SecA = SymA->getSection();
-    if (SecA.getKind().isText())
-      SectionSymbol = SectionFunctions.find(&SecA)->second;
-    else
+    if (SecA.getKind().isText()) {
+      auto SecSymIt = SectionFunctions.find(&SecA);
+      if (SecSymIt == SectionFunctions.end())
+        report_fatal_error("section doesn\'t have defining symbol");
+      SectionSymbol = SecSymIt->second;
+    } else {
       SectionSymbol = SecA.getBeginSymbol();
+    }
     if (!SectionSymbol)
       report_fatal_error("section symbol is required for relocation");
 
@@ -519,13 +523,6 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
       Sym->setUndefined();
     }
     Sym->setUsedInReloc();
-    // Any time we have a TABLE_INDEX relocation against a function symbol, we
-    // need to ensure that table itself is part of the final output too.  In the
-    // future we may want to define a new kind of reloc against both the
-    // function and the table, so that the linker can see that the function
-    // symbol keeps the table alive, but for now manually mark the table as
-    // live.
-    Sym->setNoStrip();
     Asm.registerSymbol(*Sym);
   }
 
@@ -613,16 +610,13 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry,
   case wasm::R_WASM_MEMORY_ADDR_I64:
   case wasm::R_WASM_MEMORY_ADDR_TLS_SLEB: {
     // Provisional value is address of the global plus the offset
-    const MCSymbolWasm *Base =
-        cast<MCSymbolWasm>(Layout.getBaseSymbol(*RelEntry.Symbol));
     // For undefined symbols, use zero
-    if (!Base->isDefined())
+    if (!RelEntry.Symbol->isDefined())
       return 0;
-    const wasm::WasmDataReference &BaseRef = DataLocations[Base],
-                                  &SymRef = DataLocations[RelEntry.Symbol];
-    const WasmDataSegment &Segment = DataSegments[BaseRef.Segment];
+    const wasm::WasmDataReference &SymRef = DataLocations[RelEntry.Symbol];
+    const WasmDataSegment &Segment = DataSegments[SymRef.Segment];
     // Ignore overflow. LLVM allows address arithmetic to silently wrap.
-    return Segment.Offset + BaseRef.Offset + SymRef.Offset + RelEntry.Addend;
+    return Segment.Offset + SymRef.Offset + RelEntry.Addend;
   }
   default:
     llvm_unreachable("invalid relocation type");
@@ -979,11 +973,11 @@ uint32_t WasmObjectWriter::writeDataSection(const MCAsmLayout &Layout) {
 
   for (const WasmDataSegment &Segment : DataSegments) {
     encodeULEB128(Segment.InitFlags, W->OS); // flags
-    if (Segment.InitFlags & wasm::WASM_SEGMENT_HAS_MEMINDEX)
+    if (Segment.InitFlags & wasm::WASM_DATA_SEGMENT_HAS_MEMINDEX)
       encodeULEB128(0, W->OS); // memory index
-    if ((Segment.InitFlags & wasm::WASM_SEGMENT_IS_PASSIVE) == 0) {
-      W->OS << char(Segment.Offset > INT32_MAX ? wasm::WASM_OPCODE_I64_CONST
-                                               : wasm::WASM_OPCODE_I32_CONST);
+    if ((Segment.InitFlags & wasm::WASM_DATA_SEGMENT_IS_PASSIVE) == 0) {
+      W->OS << char(is64Bit() ? wasm::WASM_OPCODE_I64_CONST
+                              : wasm::WASM_OPCODE_I32_CONST);
       encodeSLEB128(Segment.Offset, W->OS); // offset
       W->OS << char(wasm::WASM_OPCODE_END);
     }
@@ -1400,8 +1394,9 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       DataSegments.emplace_back();
       WasmDataSegment &Segment = DataSegments.back();
       Segment.Name = SectionName;
-      Segment.InitFlags =
-          Section.getPassive() ? (uint32_t)wasm::WASM_SEGMENT_IS_PASSIVE : 0;
+      Segment.InitFlags = Section.getPassive()
+                              ? (uint32_t)wasm::WASM_DATA_SEGMENT_IS_PASSIVE
+                              : 0;
       Segment.Offset = DataSize;
       Segment.Section = &Section;
       addData(Segment.Data, Section);
@@ -1464,8 +1459,10 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         continue;
 
       const auto &WS = static_cast<const MCSymbolWasm &>(S);
-      LLVM_DEBUG(
-          dbgs() << "MCSymbol: " << toString(WS.getType()) << " '" << S << "'"
+      LLVM_DEBUG(dbgs()
+                 << "MCSymbol: "
+                 << toString(WS.getType().getValueOr(wasm::WASM_SYMBOL_TYPE_DATA))
+                 << " '" << S << "'"
                  << " isDefined=" << S.isDefined() << " isExternal="
                  << S.isExternal() << " isTemporary=" << S.isTemporary()
                  << " isWeak=" << WS.isWeak() << " isHidden=" << WS.isHidden()
@@ -1677,6 +1674,10 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       WS.setIndex(InvalidIndex);
       continue;
     }
+    if (WS.isTable() && WS.getName() == "__indirect_function_table") {
+      // For the moment, don't emit table symbols -- wasm-ld can't handle them.
+      continue;
+    }
     LLVM_DEBUG(dbgs() << "adding to symtab: " << WS << "\n");
 
     uint32_t Flags = 0;
@@ -1701,7 +1702,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
 
     wasm::WasmSymbolInfo Info;
     Info.Name = WS.getName();
-    Info.Kind = WS.getType();
+    Info.Kind = WS.getType().getValueOr(wasm::WASM_SYMBOL_TYPE_DATA);
     Info.Flags = Flags;
     if (!WS.isData()) {
       assert(WasmIndices.count(&WS) > 0);

@@ -273,6 +273,10 @@ private:
 
   LogicalResult processFunctionType(ArrayRef<uint32_t> operands);
 
+  LogicalResult processImageType(ArrayRef<uint32_t> operands);
+
+  LogicalResult processSampledImageType(ArrayRef<uint32_t> operands);
+
   LogicalResult processRuntimeArrayType(ArrayRef<uint32_t> operands);
 
   LogicalResult processStructType(ArrayRef<uint32_t> operands);
@@ -303,11 +307,11 @@ private:
   /// `operands`.
   LogicalResult processSpecConstantComposite(ArrayRef<uint32_t> operands);
 
-  /// Processes a SPIR-V OpSpecConstantOperation instruction with the given
+  /// Processes a SPIR-V OpSpecConstantOp instruction with the given
   /// `operands`.
   LogicalResult processSpecConstantOperation(ArrayRef<uint32_t> operands);
 
-  /// Materializes/emits an OpSpecConstantOperation instruction.
+  /// Materializes/emits an OpSpecConstantOp instruction.
   Value materializeSpecConstantOperation(uint32_t resultID,
                                          spirv::Opcode enclosedOpcode,
                                          uint32_t resultTypeID,
@@ -537,7 +541,7 @@ private:
   // Result <id> to composite spec constant mapping.
   DenseMap<uint32_t, spirv::SpecConstantCompositeOp> specConstCompositeMap;
 
-  /// Result <id> to info needed to materialize an OpSpecConstantOperation
+  /// Result <id> to info needed to materialize an OpSpecConstantOp
   /// mapping.
   DenseMap<uint32_t, SpecConstOperationMaterializationInfo>
       specConstOperationMap;

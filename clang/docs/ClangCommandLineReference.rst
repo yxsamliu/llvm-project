@@ -1159,9 +1159,9 @@ Set directory to include search path with prefix
 
 Add directory to SYSTEM include search path, absolute paths are relative to -isysroot
 
-.. option:: --libomptarget-nvptx-path=<arg>
+.. option:: --libomptarget-nvptx-bc-path=<arg>
 
-Path to libomptarget-nvptx libraries
+Path to libomptarget-nvptx bitcode library
 
 .. option:: --ptxas-path=<arg>
 
@@ -2074,6 +2074,12 @@ Set update method of profile counters (atomic,prefer-atomic,single)
 .. program:: clang
 
 Use instrumentation data for profile-guided optimization. If pathname is a directory, it reads from <pathname>/default.profdata. Otherwise, it reads from file <pathname>.
+
+.. program:: clang1
+.. option:: -fprofile-list=<file>
+.. program:: clang
+
+Filename defining the list of functions/files to instrument. The file uses the sanitizer special case list format.
 
 .. option:: -freciprocal-math, -fno-reciprocal-math
 
@@ -3028,9 +3034,17 @@ AMDGPU
 
 Specify CU (-mcumode) or WGP (-mno-cumode) wavefront execution mode (AMDGPU only)
 
+.. option:: -msram-ecc, -mno-sram-ecc
+
+Specify SRAM ECC mode (AMDGPU only)
+
+.. option:: -mtgsplit, -mno-tgsplit
+
+Enable threadgroup split execution mode (AMDGPU only)
+
 .. option:: -mxnack, -mno-xnack
 
-Legacy option to specify XNACK mode (AMDGPU only)
+Specify XNACK mode (AMDGPU only)
 
 ARM
 ---

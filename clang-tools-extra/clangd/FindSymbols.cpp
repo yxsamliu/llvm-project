@@ -25,6 +25,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <limits>
 #include <tuple>
 
 #define DEBUG_TYPE "FindSymbols"
@@ -146,8 +147,9 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
       return;
     }
     Relevance.merge(Sym);
-    auto Score = evaluateSymbolAndRelevance(Quality.evaluateHeuristics(),
-                                            Relevance.evaluateHeuristics());
+    auto QualScore = Quality.evaluateHeuristics();
+    auto RelScore = Relevance.evaluateHeuristics();
+    auto Score = evaluateSymbolAndRelevance(QualScore, RelScore);
     dlog("FindSymbols: {0}{1} = {2}\n{3}{4}\n", Sym.Scope, Sym.Name, Score,
          Quality, Relevance);
 
@@ -159,7 +161,9 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
     Info.containerName = Scope.str();
 
     // Exposed score excludes fuzzy-match component, for client-side re-ranking.
-    Info.score = Score / Relevance.NameMatch;
+    Info.score = Relevance.NameMatch > std::numeric_limits<float>::epsilon()
+                     ? Score / Relevance.NameMatch
+                     : QualScore;
     Top.push({Score, std::move(Info)});
   });
   for (auto &R : std::move(Top).items())
@@ -168,6 +172,38 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
 }
 
 namespace {
+std::string getSymbolDetail(ASTContext &Ctx, const NamedDecl &ND) {
+  PrintingPolicy P(Ctx.getPrintingPolicy());
+  P.SuppressScope = true;
+  P.SuppressUnwrittenScope = true;
+  P.AnonymousTagLocations = false;
+  P.PolishForDeclaration = true;
+  std::string Detail;
+  llvm::raw_string_ostream OS(Detail);
+  if (ND.getDescribedTemplateParams()) {
+    OS << "template ";
+  }
+  if (const auto *VD = dyn_cast<ValueDecl>(&ND)) {
+    // FIXME: better printing for dependent type
+    if (isa<CXXConstructorDecl>(VD)) {
+      std::string ConstructorType = VD->getType().getAsString(P);
+      // Print constructor type as "(int)" instead of "void (int)".
+      llvm::StringRef WithoutVoid = ConstructorType;
+      WithoutVoid.consume_front("void ");
+      OS << WithoutVoid;
+    } else if (!isa<CXXDestructorDecl>(VD)) {
+      VD->getType().print(OS, P);
+    }
+  } else if (const auto *TD = dyn_cast<TagDecl>(&ND)) {
+    OS << TD->getKindName();
+  } else if (isa<TypedefNameDecl>(&ND)) {
+    OS << "type alias";
+  } else if (isa<ConceptDecl>(&ND)) {
+    OS << "concept";
+  }
+  return std::move(OS.str());
+}
+
 llvm::Optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   auto &SM = Ctx.getSourceManager();
 
@@ -189,6 +225,7 @@ llvm::Optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   SI.deprecated = ND.isDeprecated();
   SI.range = Range{sourceLocToPosition(SM, SymbolRange->getBegin()),
                    sourceLocToPosition(SM, SymbolRange->getEnd())};
+  SI.detail = getSymbolDetail(Ctx, ND);
 
   SourceLocation NameLoc = ND.getLocation();
   SourceLocation FallbackNameLoc;

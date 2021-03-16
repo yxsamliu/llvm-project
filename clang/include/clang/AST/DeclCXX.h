@@ -747,9 +747,14 @@ public:
   ///
   /// This value is used for lazy creation of default constructors.
   bool needsImplicitDefaultConstructor() const {
-    return !data().UserDeclaredConstructor &&
-           !(data().DeclaredSpecialMembers & SMF_DefaultConstructor) &&
-           (!isLambda() || lambdaIsDefaultConstructibleAndAssignable());
+    return (!data().UserDeclaredConstructor &&
+            !(data().DeclaredSpecialMembers & SMF_DefaultConstructor) &&
+            (!isLambda() || lambdaIsDefaultConstructibleAndAssignable())) ||
+           // FIXME: Proposed fix to core wording issue: if a class inherits
+           // a default constructor and doesn't explicitly declare one, one
+           // is declared implicitly.
+           (data().HasInheritedDefaultConstructor &&
+            !(data().DeclaredSpecialMembers & SMF_DefaultConstructor));
   }
 
   /// Determine whether this class has any user-declared constructors.
@@ -1734,14 +1739,10 @@ public:
   }
 
   /// Set the device side mangling number.
-  void setDeviceLambdaManglingNumber(unsigned Num) {
-    getLambdaData().DeviceManglingNumber = Num;
-  }
+  void setDeviceLambdaManglingNumber(unsigned Num) const;
 
-  unsigned getDeviceLambdaManglingNumber() const {
-    assert(isLambda() && "Not a lambda closure type!");
-    return getLambdaData().DeviceManglingNumber;
-  }
+  /// Retrieve the device side mangling number.
+  unsigned getDeviceLambdaManglingNumber() const;
 
   /// Returns the inheritance model used for this record.
   MSInheritanceModel getMSInheritanceModel() const;

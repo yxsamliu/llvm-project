@@ -165,7 +165,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_SMULH, G_UMULH}).legalFor({s32, s64});
 
-  getActionDefinitionsBuilder({G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_UADDO})
+  getActionDefinitionsBuilder(
+      {G_SADDE, G_SSUBE, G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_UADDO, G_USUBO})
       .legalFor({{s32, s1}, {s64, s1}})
       .minScalar(0, s32);
 
@@ -292,8 +293,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         return Query.Types[0].getSizeInBits() != Query.MMODescrs[0].SizeInBits;
       })
       .widenScalarToNextPow2(0)
-      .clampMaxNumElements(0, s32, 2)
-      .clampMaxNumElements(0, s64, 1)
+      .clampMaxNumElements(0, s8, 16)
+      .clampMaxNumElements(0, s16, 8)
+      .clampMaxNumElements(0, s32, 4)
+      .clampMaxNumElements(0, s64, 2)
       .customIf(IsPtrVecPred);
 
   getActionDefinitionsBuilder(G_STORE)
@@ -318,8 +321,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         return Query.Types[0].isScalar() &&
                Query.Types[0].getSizeInBits() != Query.MMODescrs[0].SizeInBits;
       })
-      .clampMaxNumElements(0, s32, 2)
-      .clampMaxNumElements(0, s64, 1)
+      // Maximum: sN * k = 128
+      .clampMaxNumElements(0, s8, 16)
+      .clampMaxNumElements(0, s16, 8)
+      .clampMaxNumElements(0, s32, 4)
+      .clampMaxNumElements(0, s64, 2)
       .customIf(IsPtrVecPred);
 
   // Constants
@@ -686,7 +692,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lower();
 
   getActionDefinitionsBuilder(G_VECREDUCE_ADD)
-      .legalFor({{s8, v16s8}, {s16, v8s16}, {s32, v4s32}, {s64, v2s64}})
+      .legalFor(
+          {{s8, v16s8}, {s16, v8s16}, {s32, v4s32}, {s32, v2s32}, {s64, v2s64}})
       .lower();
 
   computeTables();

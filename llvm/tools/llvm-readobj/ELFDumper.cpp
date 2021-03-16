@@ -173,37 +173,6 @@ struct GroupSection {
 };
 
 namespace {
-struct VerdAux {
-  unsigned Offset;
-  std::string Name;
-};
-
-struct VerDef {
-  unsigned Offset;
-  unsigned Version;
-  unsigned Flags;
-  unsigned Ndx;
-  unsigned Cnt;
-  unsigned Hash;
-  std::string Name;
-  std::vector<VerdAux> AuxV;
-};
-
-struct VernAux {
-  unsigned Hash;
-  unsigned Flags;
-  unsigned Other;
-  unsigned Offset;
-  std::string Name;
-};
-
-struct VerNeed {
-  unsigned Version;
-  unsigned Cnt;
-  unsigned Offset;
-  std::string File;
-  std::vector<VernAux> AuxV;
-};
 
 struct NoteType {
   uint32_t ID;
@@ -366,7 +335,7 @@ protected:
 
   Expected<StringRef> getSymbolVersion(const Elf_Sym &Sym,
                                        bool &IsDefault) const;
-  Error LoadVersionMap() const;
+  Expected<SmallVector<Optional<VersionEntry>, 0> *> getVersionMap() const;
 
   DynRegionInfo DynRelRegion;
   DynRegionInfo DynRelaRegion;
@@ -389,12 +358,6 @@ protected:
   const Elf_Shdr *SymbolVersionNeedSection = nullptr; // .gnu.version_r
   const Elf_Shdr *SymbolVersionDefSection = nullptr; // .gnu.version_d
 
-  struct VersionEntry {
-    std::string Name;
-    bool IsVerDef;
-  };
-  mutable SmallVector<Optional<VersionEntry>, 16> VersionMap;
-
   std::string getFullSymbolName(const Elf_Sym &Symbol, unsigned SymIndex,
                                 DataRegion<Elf_Word> ShndxTable,
                                 Optional<StringRef> StrTable,
@@ -406,32 +369,18 @@ protected:
                                            unsigned SectionIndex) const;
   std::string getStaticSymbolName(uint32_t Index) const;
   StringRef getDynamicString(uint64_t Value) const;
-  Expected<StringRef> getSymbolVersionByIndex(uint32_t VersionSymbolIndex,
-                                              bool &IsDefault) const;
 
   void printSymbolsHelper(bool IsDynamic) const;
   std::string getDynamicEntry(uint64_t Type, uint64_t Value) const;
-
-  Expected<std::vector<VerDef>>
-  getVersionDefinitions(const Elf_Shdr &Sec) const;
-  Expected<std::vector<VerNeed>>
-  getVersionDependencies(const Elf_Shdr &Sec) const;
 
   Expected<RelSymbol<ELFT>> getRelocationTarget(const Relocation<ELFT> &R,
                                                 const Elf_Shdr *SymTab) const;
 
   ArrayRef<Elf_Word> getShndxTable(const Elf_Shdr *Symtab) const;
-};
 
-template <class ELFT>
-static std::string describe(const ELFFile<ELFT> &Obj,
-                            const typename ELFT::Shdr &Sec) {
-  unsigned SecNdx = &Sec - &cantFail(Obj.sections()).front();
-  return (object::getELFSectionTypeName(Obj.getHeader().e_machine,
-                                        Sec.sh_type) +
-          " section with index " + Twine(SecNdx))
-      .str();
-}
+private:
+  mutable SmallVector<Optional<VersionEntry>, 0> VersionMap;
+};
 
 template <class ELFT>
 std::string ELFDumper<ELFT>::describe(const Elf_Shdr &Sec) const {
@@ -439,22 +388,6 @@ std::string ELFDumper<ELFT>::describe(const Elf_Shdr &Sec) const {
 }
 
 namespace {
-
-template <class ELFT>
-Expected<StringRef> getLinkAsStrtab(const ELFFile<ELFT> &Obj,
-                                    const typename ELFT::Shdr &Sec) {
-  Expected<const typename ELFT::Shdr *> StrTabSecOrErr =
-      Obj.getSection(Sec.sh_link);
-  if (!StrTabSecOrErr)
-    return createError("invalid section linked to " + describe(Obj, Sec) +
-                       ": " + toString(StrTabSecOrErr.takeError()));
-
-  Expected<StringRef> StrTabOrErr = Obj.getStringTable(**StrTabSecOrErr);
-  if (!StrTabOrErr)
-    return createError("invalid string table linked to " + describe(Obj, Sec) +
-                       ": " + toString(StrTabOrErr.takeError()));
-  return *StrTabOrErr;
-}
 
 template <class ELFT> struct SymtabLink {
   typename ELFT::SymRange Symbols;
@@ -482,7 +415,7 @@ Expected<SymtabLink<ELFT>> getLinkAsSymtab(const ELFFile<ELFT> &Obj,
         object::getELFSectionTypeName(Obj.getHeader().e_machine,
                                       (*SymtabOrErr)->sh_type));
 
-  Expected<StringRef> StrTabOrErr = getLinkAsStrtab(Obj, **SymtabOrErr);
+  Expected<StringRef> StrTabOrErr = Obj.getLinkAsStrtab(**SymtabOrErr);
   if (!StrTabOrErr)
     return createError(
         "can't get a string table for the symbol table linked to " +
@@ -539,173 +472,6 @@ ELFDumper<ELFT>::getVersionTable(const Elf_Shdr &Sec, ArrayRef<Elf_Sym> *SymTab,
 }
 
 template <class ELFT>
-Expected<std::vector<VerDef>>
-ELFDumper<ELFT>::getVersionDefinitions(const Elf_Shdr &Sec) const {
-  Expected<StringRef> StrTabOrErr = getLinkAsStrtab(Obj, Sec);
-  if (!StrTabOrErr)
-    return StrTabOrErr.takeError();
-
-  Expected<ArrayRef<uint8_t>> ContentsOrErr = Obj.getSectionContents(Sec);
-  if (!ContentsOrErr)
-    return createError("cannot read content of " + describe(Sec) + ": " +
-                       toString(ContentsOrErr.takeError()));
-
-  const uint8_t *Start = ContentsOrErr->data();
-  const uint8_t *End = Start + ContentsOrErr->size();
-
-  auto ExtractNextAux = [&](const uint8_t *&VerdauxBuf,
-                            unsigned VerDefNdx) -> Expected<VerdAux> {
-    if (VerdauxBuf + sizeof(Elf_Verdaux) > End)
-      return createError("invalid " + describe(Sec) + ": version definition " +
-                         Twine(VerDefNdx) +
-                         " refers to an auxiliary entry that goes past the end "
-                         "of the section");
-
-    auto *Verdaux = reinterpret_cast<const Elf_Verdaux *>(VerdauxBuf);
-    VerdauxBuf += Verdaux->vda_next;
-
-    VerdAux Aux;
-    Aux.Offset = VerdauxBuf - Start;
-    if (Verdaux->vda_name <= StrTabOrErr->size())
-      Aux.Name = std::string(StrTabOrErr->drop_front(Verdaux->vda_name));
-    else
-      Aux.Name = "<invalid vda_name: " + to_string(Verdaux->vda_name) + ">";
-    return Aux;
-  };
-
-  std::vector<VerDef> Ret;
-  const uint8_t *VerdefBuf = Start;
-  for (unsigned I = 1; I <= /*VerDefsNum=*/Sec.sh_info; ++I) {
-    if (VerdefBuf + sizeof(Elf_Verdef) > End)
-      return createError("invalid " + describe(Sec) + ": version definition " +
-                         Twine(I) + " goes past the end of the section");
-
-    if (reinterpret_cast<uintptr_t>(VerdefBuf) % sizeof(uint32_t) != 0)
-      return createError(
-          "invalid " + describe(Sec) +
-          ": found a misaligned version definition entry at offset 0x" +
-          Twine::utohexstr(VerdefBuf - Start));
-
-    unsigned Version = *reinterpret_cast<const Elf_Half *>(VerdefBuf);
-    if (Version != 1)
-      return createError("unable to dump " + describe(Sec) + ": version " +
-                         Twine(Version) + " is not yet supported");
-
-    const Elf_Verdef *D = reinterpret_cast<const Elf_Verdef *>(VerdefBuf);
-    VerDef &VD = *Ret.emplace(Ret.end());
-    VD.Offset = VerdefBuf - Start;
-    VD.Version = D->vd_version;
-    VD.Flags = D->vd_flags;
-    VD.Ndx = D->vd_ndx;
-    VD.Cnt = D->vd_cnt;
-    VD.Hash = D->vd_hash;
-
-    const uint8_t *VerdauxBuf = VerdefBuf + D->vd_aux;
-    for (unsigned J = 0; J < D->vd_cnt; ++J) {
-      if (reinterpret_cast<uintptr_t>(VerdauxBuf) % sizeof(uint32_t) != 0)
-        return createError("invalid " + describe(Sec) +
-                           ": found a misaligned auxiliary entry at offset 0x" +
-                           Twine::utohexstr(VerdauxBuf - Start));
-
-      Expected<VerdAux> AuxOrErr = ExtractNextAux(VerdauxBuf, I);
-      if (!AuxOrErr)
-        return AuxOrErr.takeError();
-
-      if (J == 0)
-        VD.Name = AuxOrErr->Name;
-      else
-        VD.AuxV.push_back(*AuxOrErr);
-    }
-
-    VerdefBuf += D->vd_next;
-  }
-
-  return Ret;
-}
-
-template <class ELFT>
-Expected<std::vector<VerNeed>>
-ELFDumper<ELFT>::getVersionDependencies(const Elf_Shdr &Sec) const {
-  StringRef StrTab;
-  Expected<StringRef> StrTabOrErr = getLinkAsStrtab(Obj, Sec);
-  if (!StrTabOrErr)
-    reportUniqueWarning(StrTabOrErr.takeError());
-  else
-    StrTab = *StrTabOrErr;
-
-  Expected<ArrayRef<uint8_t>> ContentsOrErr = Obj.getSectionContents(Sec);
-  if (!ContentsOrErr)
-    return createError("cannot read content of " + describe(Sec) + ": " +
-                       toString(ContentsOrErr.takeError()));
-
-  const uint8_t *Start = ContentsOrErr->data();
-  const uint8_t *End = Start + ContentsOrErr->size();
-  const uint8_t *VerneedBuf = Start;
-
-  std::vector<VerNeed> Ret;
-  for (unsigned I = 1; I <= /*VerneedNum=*/Sec.sh_info; ++I) {
-    if (VerneedBuf + sizeof(Elf_Verdef) > End)
-      return createError("invalid " + describe(Sec) + ": version dependency " +
-                         Twine(I) + " goes past the end of the section");
-
-    if (reinterpret_cast<uintptr_t>(VerneedBuf) % sizeof(uint32_t) != 0)
-      return createError(
-          "invalid " + describe(Sec) +
-          ": found a misaligned version dependency entry at offset 0x" +
-          Twine::utohexstr(VerneedBuf - Start));
-
-    unsigned Version = *reinterpret_cast<const Elf_Half *>(VerneedBuf);
-    if (Version != 1)
-      return createError("unable to dump " + describe(Sec) + ": version " +
-                         Twine(Version) + " is not yet supported");
-
-    const Elf_Verneed *Verneed =
-        reinterpret_cast<const Elf_Verneed *>(VerneedBuf);
-
-    VerNeed &VN = *Ret.emplace(Ret.end());
-    VN.Version = Verneed->vn_version;
-    VN.Cnt = Verneed->vn_cnt;
-    VN.Offset = VerneedBuf - Start;
-
-    if (Verneed->vn_file < StrTab.size())
-      VN.File = std::string(StrTab.drop_front(Verneed->vn_file));
-    else
-      VN.File = "<corrupt vn_file: " + to_string(Verneed->vn_file) + ">";
-
-    const uint8_t *VernauxBuf = VerneedBuf + Verneed->vn_aux;
-    for (unsigned J = 0; J < Verneed->vn_cnt; ++J) {
-      if (reinterpret_cast<uintptr_t>(VernauxBuf) % sizeof(uint32_t) != 0)
-        return createError("invalid " + describe(Sec) +
-                           ": found a misaligned auxiliary entry at offset 0x" +
-                           Twine::utohexstr(VernauxBuf - Start));
-
-      if (VernauxBuf + sizeof(Elf_Vernaux) > End)
-        return createError(
-            "invalid " + describe(Sec) + ": version dependency " + Twine(I) +
-            " refers to an auxiliary entry that goes past the end "
-            "of the section");
-
-      const Elf_Vernaux *Vernaux =
-          reinterpret_cast<const Elf_Vernaux *>(VernauxBuf);
-
-      VernAux &Aux = *VN.AuxV.emplace(VN.AuxV.end());
-      Aux.Hash = Vernaux->vna_hash;
-      Aux.Flags = Vernaux->vna_flags;
-      Aux.Other = Vernaux->vna_other;
-      Aux.Offset = VernauxBuf - Start;
-      if (StrTab.size() <= Vernaux->vna_name)
-        Aux.Name = "<corrupt>";
-      else
-        Aux.Name = std::string(StrTab.drop_front(Vernaux->vna_name));
-
-      VernauxBuf += Vernaux->vna_next;
-    }
-    VerneedBuf += Verneed->vn_next;
-  }
-  return Ret;
-}
-
-template <class ELFT>
 void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
   Optional<StringRef> StrTable;
   size_t Entries = 0;
@@ -733,7 +499,7 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
           toString(SymsOrErr.takeError()));
     Entries = DotSymtabSec->getEntityCount();
   }
-  if (Syms.begin() == Syms.end())
+  if (Syms.empty())
     return;
 
   // The st_other field has 2 logical parts. The first two bits hold the symbol
@@ -953,46 +719,22 @@ std::unique_ptr<ObjDumper> createELFDumper(const object::ELFObjectFileBase &Obj,
 
 } // end namespace llvm
 
-template <class ELFT> Error ELFDumper<ELFT>::LoadVersionMap() const {
-  // If there is no dynamic symtab or version table, there is nothing to do.
-  if (!DynSymRegion || !SymbolVersionSection)
-    return Error::success();
+template <class ELFT>
+Expected<SmallVector<Optional<VersionEntry>, 0> *>
+ELFDumper<ELFT>::getVersionMap() const {
+  // If the VersionMap has already been loaded or if there is no dynamic symtab
+  // or version table, there is nothing to do.
+  if (!VersionMap.empty() || !DynSymRegion || !SymbolVersionSection)
+    return &VersionMap;
 
-  // Has the VersionMap already been loaded?
-  if (!VersionMap.empty())
-    return Error::success();
+  Expected<SmallVector<Optional<VersionEntry>, 0>> MapOrErr =
+      Obj.loadVersionMap(SymbolVersionNeedSection, SymbolVersionDefSection);
+  if (MapOrErr)
+    VersionMap = *MapOrErr;
+  else
+    return MapOrErr.takeError();
 
-  // The first two version indexes are reserved.
-  // Index 0 is LOCAL, index 1 is GLOBAL.
-  VersionMap.push_back(VersionEntry());
-  VersionMap.push_back(VersionEntry());
-
-  auto InsertEntry = [this](unsigned N, StringRef Version, bool IsVerdef) {
-    if (N >= VersionMap.size())
-      VersionMap.resize(N + 1);
-    VersionMap[N] = {std::string(Version), IsVerdef};
-  };
-
-  if (SymbolVersionDefSection) {
-    Expected<std::vector<VerDef>> Defs =
-        this->getVersionDefinitions(*SymbolVersionDefSection);
-    if (!Defs)
-      return Defs.takeError();
-    for (const VerDef &Def : *Defs)
-      InsertEntry(Def.Ndx & ELF::VERSYM_VERSION, Def.Name, true);
-  }
-
-  if (SymbolVersionNeedSection) {
-    Expected<std::vector<VerNeed>> Deps =
-        this->getVersionDependencies(*SymbolVersionNeedSection);
-    if (!Deps)
-      return Deps.takeError();
-    for (const VerNeed &Dep : *Deps)
-      for (const VernAux &Aux : Dep.AuxV)
-        InsertEntry(Aux.Other & ELF::VERSYM_VERSION, Aux.Name, false);
-  }
-
-  return Error::success();
+  return &VersionMap;
 }
 
 template <typename ELFT>
@@ -1012,11 +754,24 @@ Expected<StringRef> ELFDumper<ELFT>::getSymbolVersion(const Elf_Sym &Sym,
                       sizeof(Elf_Sym);
 
   // Get the corresponding version index entry.
-  if (Expected<const Elf_Versym *> EntryOrErr =
-          Obj.template getEntry<Elf_Versym>(*SymbolVersionSection, EntryIndex))
-    return getSymbolVersionByIndex((*EntryOrErr)->vs_index, IsDefault);
-  else
+  Expected<const Elf_Versym *> EntryOrErr =
+      Obj.template getEntry<Elf_Versym>(*SymbolVersionSection, EntryIndex);
+  if (!EntryOrErr)
     return EntryOrErr.takeError();
+
+  unsigned Version = (*EntryOrErr)->vs_index;
+  if (Version == VER_NDX_LOCAL || Version == VER_NDX_GLOBAL) {
+    IsDefault = false;
+    return "";
+  }
+
+  Expected<SmallVector<Optional<VersionEntry>, 0> *> MapOrErr =
+      getVersionMap();
+  if (!MapOrErr)
+    return MapOrErr.takeError();
+
+  return Obj.getSymbolVersionByIndex(Version, IsDefault, **MapOrErr,
+                                     Sym.st_shndx == ELF::SHN_UNDEF);
 }
 
 template <typename ELFT>
@@ -1084,33 +839,6 @@ std::string ELFDumper<ELFT>::getStaticSymbolName(uint32_t Index) const {
   if (!NameOrErr)
     return Warn(NameOrErr.takeError());
   return maybeDemangle(*NameOrErr);
-}
-
-template <typename ELFT>
-Expected<StringRef>
-ELFDumper<ELFT>::getSymbolVersionByIndex(uint32_t SymbolVersionIndex,
-                                         bool &IsDefault) const {
-  size_t VersionIndex = SymbolVersionIndex & VERSYM_VERSION;
-
-  // Special markers for unversioned symbols.
-  if (VersionIndex == VER_NDX_LOCAL || VersionIndex == VER_NDX_GLOBAL) {
-    IsDefault = false;
-    return "";
-  }
-
-  // Lookup this symbol in the version table.
-  if (Error E = LoadVersionMap())
-    return std::move(E);
-  if (VersionIndex >= VersionMap.size() || !VersionMap[VersionIndex])
-    return createError("SHT_GNU_versym section refers to a version index " +
-                       Twine(VersionIndex) + " which is missing");
-
-  const VersionEntry &Entry = *VersionMap[VersionIndex];
-  if (Entry.IsVerDef)
-    IsDefault = !(SymbolVersionIndex & VERSYM_HIDDEN);
-  else
-    IsDefault = false;
-  return Entry.Name.c_str();
 }
 
 template <typename ELFT>
@@ -1473,6 +1201,7 @@ static const EnumEntry<unsigned> ElfSectionFlags[] = {
   ENUM_ENT(SHF_GROUP,            "G"),
   ENUM_ENT(SHF_TLS,              "T"),
   ENUM_ENT(SHF_COMPRESSED,       "C"),
+  ENUM_ENT(SHF_GNU_RETAIN,       "R"),
   ENUM_ENT(SHF_EXCLUDE,          "E"),
 };
 
@@ -1737,6 +1466,7 @@ static const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion3[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX906),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX908),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX909),
+  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90A),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90C),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1010),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1011),
@@ -1784,6 +1514,7 @@ static const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion4[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX906),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX908),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX909),
+  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90A),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1010),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1011),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1012),
@@ -3805,15 +3536,14 @@ static void printSectionDescription(formatted_raw_ostream &OS,
   OS << "  L (link order), O (extra OS processing required), G (group), T "
         "(TLS),\n";
   OS << "  C (compressed), x (unknown), o (OS specific), E (exclude),\n";
+  OS << "  R (retain)";
 
   if (EMachine == EM_X86_64)
-    OS << "  l (large), ";
+    OS << ", l (large)";
   else if (EMachine == EM_ARM)
-    OS << "  y (purecode), ";
-  else
-    OS << "  ";
+    OS << ", y (purecode)";
 
-  OS << "p (processor specific)\n";
+  OS << ", p (processor specific)\n";
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printSectionHeaders() {
@@ -4686,6 +4416,13 @@ void GNUELFDumper<ELFT>::printVersionSymbolSection(const Elf_Shdr *Sec) {
     return;
   }
 
+  SmallVector<Optional<VersionEntry>, 0> *VersionMap = nullptr;
+  if (Expected<SmallVector<Optional<VersionEntry>, 0> *> MapOrErr =
+          this->getVersionMap())
+    VersionMap = *MapOrErr;
+  else
+    this->reportUniqueWarning(MapOrErr.takeError());
+
   ArrayRef<Elf_Versym> VerTable = *VerTableOrErr;
   std::vector<StringRef> Versions;
   for (size_t I = 0, E = VerTable.size(); I < E; ++I) {
@@ -4695,9 +4432,14 @@ void GNUELFDumper<ELFT>::printVersionSymbolSection(const Elf_Shdr *Sec) {
       continue;
     }
 
+    if (!VersionMap) {
+      Versions.emplace_back("<corrupt>");
+      continue;
+    }
+
     bool IsDefault;
-    Expected<StringRef> NameOrErr =
-        this->getSymbolVersionByIndex(Ndx, IsDefault);
+    Expected<StringRef> NameOrErr = this->Obj.getSymbolVersionByIndex(
+        Ndx, IsDefault, *VersionMap, /*IsSymHidden=*/None);
     if (!NameOrErr) {
       this->reportUniqueWarning("unable to get a version for entry " +
                                 Twine(I) + " of " + this->describe(*Sec) +
@@ -4751,7 +4493,7 @@ void GNUELFDumper<ELFT>::printVersionDefinitionSection(const Elf_Shdr *Sec) {
 
   printGNUVersionSectionProlog(*Sec, "Version definition", Sec->sh_info);
 
-  Expected<std::vector<VerDef>> V = this->getVersionDefinitions(*Sec);
+  Expected<std::vector<VerDef>> V = this->Obj.getVersionDefinitions(*Sec);
   if (!V) {
     this->reportUniqueWarning(V.takeError());
     return;
@@ -4779,7 +4521,8 @@ void GNUELFDumper<ELFT>::printVersionDependencySection(const Elf_Shdr *Sec) {
   unsigned VerneedNum = Sec->sh_info;
   printGNUVersionSectionProlog(*Sec, "Version needs", VerneedNum);
 
-  Expected<std::vector<VerNeed>> V = this->getVersionDependencies(*Sec);
+  Expected<std::vector<VerNeed>> V =
+      this->Obj.getVersionDependencies(*Sec, this->WarningHandler);
   if (!V) {
     this->reportUniqueWarning(V.takeError());
     return;
@@ -5186,11 +4929,12 @@ static StringRef getGNUGoldVersion(ArrayRef<uint8_t> Desc) {
 }
 
 template <typename ELFT>
-static void printGNUNote(raw_ostream &OS, uint32_t NoteType,
+static bool printGNUNote(raw_ostream &OS, uint32_t NoteType,
                          ArrayRef<uint8_t> Desc) {
+  // Return true if we were able to pretty-print the note, false otherwise.
   switch (NoteType) {
   default:
-    return;
+    return false;
   case ELF::NT_GNU_ABI_TAG: {
     const GNUAbiTag &AbiTag = getGNUAbiTag<ELFT>(Desc);
     if (!AbiTag.IsValid)
@@ -5213,6 +4957,54 @@ static void printGNUNote(raw_ostream &OS, uint32_t NoteType,
     break;
   }
   OS << '\n';
+  return true;
+}
+
+static const EnumEntry<unsigned> FreeBSDFeatureCtlFlags[] = {
+    {"ASLR_DISABLE", NT_FREEBSD_FCTL_ASLR_DISABLE},
+    {"PROTMAX_DISABLE", NT_FREEBSD_FCTL_PROTMAX_DISABLE},
+    {"STKGAP_DISABLE", NT_FREEBSD_FCTL_STKGAP_DISABLE},
+    {"WXNEEDED", NT_FREEBSD_FCTL_WXNEEDED},
+    {"LA48", NT_FREEBSD_FCTL_LA48},
+    {"ASG_DISABLE", NT_FREEBSD_FCTL_ASG_DISABLE},
+};
+
+struct FreeBSDNote {
+  std::string Type;
+  std::string Value;
+};
+
+template <typename ELFT>
+static Optional<FreeBSDNote>
+getFreeBSDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc, bool IsCore) {
+  if (IsCore)
+    return None; // No pretty-printing yet.
+  switch (NoteType) {
+  case ELF::NT_FREEBSD_ABI_TAG:
+    if (Desc.size() != 4)
+      return None;
+    return FreeBSDNote{
+        "ABI tag",
+        utostr(support::endian::read32<ELFT::TargetEndianness>(Desc.data()))};
+  case ELF::NT_FREEBSD_ARCH_TAG:
+    return FreeBSDNote{"Arch tag", toStringRef(Desc).str()};
+  case ELF::NT_FREEBSD_FEATURE_CTL: {
+    if (Desc.size() != 4)
+      return None;
+    unsigned Value =
+        support::endian::read32<ELFT::TargetEndianness>(Desc.data());
+    std::string FlagsStr;
+    raw_string_ostream OS(FlagsStr);
+    printFlags(Value, makeArrayRef(FreeBSDFeatureCtlFlags), OS);
+    if (OS.str().empty())
+      OS << "0x" << utohexstr(Value);
+    else
+      OS << "(0x" << utohexstr(Value) << ")";
+    return FreeBSDNote{"Feature flags", OS.str()};
+  }
+  default:
+    return None;
+  }
 }
 
 struct AMDNote {
@@ -5289,14 +5081,14 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
   }
   case ELF::NT_AMD_HSA_METADATA: {
     if (Desc.size() == 0)
-      return {"AMD HSA Metadata", "Invalid AMD HSA Metadata"};
+      return {"AMD HSA Metadata", ""};
     return {
         "AMD HSA Metadata",
         std::string(reinterpret_cast<const char *>(Desc.data()), Desc.size() - 1)};
   }
   case ELF::NT_AMD_HSA_ISA_NAME: {
     if (Desc.size() == 0)
-      return {"AMD HSA ISA Name", "Invalid AMD HSA ISA Name"};
+      return {"AMD HSA ISA Name", ""};
     return {
         "AMD HSA ISA Name",
         std::string(reinterpret_cast<const char *>(Desc.data()), Desc.size())};
@@ -5332,7 +5124,7 @@ static AMDGPUNote getAMDGPUNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
         StringRef(reinterpret_cast<const char *>(Desc.data()), Desc.size());
     msgpack::Document MsgPackDoc;
     if (!MsgPackDoc.readFromBlob(MsgPackString, /*Multi=*/false))
-      return {"AMDGPU Metadata", "Invalid AMDGPU Metadata"};
+      return {"", ""};
 
     AMDGPU::HSAMD::V3::MetadataVerifier Verifier(true);
     std::string MetadataString;
@@ -5340,8 +5132,14 @@ static AMDGPUNote getAMDGPUNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
       MetadataString = "Invalid AMDGPU Metadata\n";
 
     raw_string_ostream StrOS(MetadataString);
+    if (MsgPackDoc.getRoot().isScalar()) {
+      // TODO: passing a scalar root to toYAML() asserts:
+      // (PolymorphicTraits<T>::getKind(Val) != NodeKind::Scalar &&
+      //    "plain scalar documents are not supported")
+      // To avoid this crash we print the raw data instead.
+      return {"", ""};
+    }
     MsgPackDoc.toYAML(StrOS);
-
     return {"AMDGPU Metadata", StrOS.str()};
   }
   }
@@ -5439,7 +5237,7 @@ static const NoteType GNUNoteTypes[] = {
     {ELF::NT_GNU_PROPERTY_TYPE_0, "NT_GNU_PROPERTY_TYPE_0 (property note)"},
 };
 
-static const NoteType FreeBSDNoteTypes[] = {
+static const NoteType FreeBSDCoreNoteTypes[] = {
     {ELF::NT_FREEBSD_THRMISC, "NT_THRMISC (thrmisc structure)"},
     {ELF::NT_FREEBSD_PROCSTAT_PROC, "NT_PROCSTAT_PROC (proc data)"},
     {ELF::NT_FREEBSD_PROCSTAT_FILES, "NT_PROCSTAT_FILES (files data)"},
@@ -5451,6 +5249,14 @@ static const NoteType FreeBSDNoteTypes[] = {
     {ELF::NT_FREEBSD_PROCSTAT_PSSTRINGS,
      "NT_PROCSTAT_PSSTRINGS (ps_strings data)"},
     {ELF::NT_FREEBSD_PROCSTAT_AUXV, "NT_PROCSTAT_AUXV (auxv data)"},
+};
+
+static const NoteType FreeBSDNoteTypes[] = {
+    {ELF::NT_FREEBSD_ABI_TAG, "NT_FREEBSD_ABI_TAG (ABI version tag)"},
+    {ELF::NT_FREEBSD_NOINIT_TAG, "NT_FREEBSD_NOINIT_TAG (no .init tag)"},
+    {ELF::NT_FREEBSD_ARCH_TAG, "NT_FREEBSD_ARCH_TAG (architecture tag)"},
+    {ELF::NT_FREEBSD_FEATURE_CTL,
+     "NT_FREEBSD_FEATURE_CTL (FreeBSD feature control)"},
 };
 
 static const NoteType AMDNoteTypes[] = {
@@ -5533,8 +5339,7 @@ static const NoteType CoreNoteTypes[] = {
 };
 
 template <class ELFT>
-const StringRef getNoteTypeName(const typename ELFT::Note &Note,
-                                unsigned ELFType) {
+StringRef getNoteTypeName(const typename ELFT::Note &Note, unsigned ELFType) {
   uint32_t Type = Note.getType();
   auto FindNote = [&](ArrayRef<NoteType> V) -> StringRef {
     for (const NoteType &N : V)
@@ -5546,8 +5351,17 @@ const StringRef getNoteTypeName(const typename ELFT::Note &Note,
   StringRef Name = Note.getName();
   if (Name == "GNU")
     return FindNote(GNUNoteTypes);
-  if (Name == "FreeBSD")
-    return FindNote(FreeBSDNoteTypes);
+  if (Name == "FreeBSD") {
+    if (ELFType == ELF::ET_CORE) {
+      // FreeBSD also places the generic core notes in the FreeBSD namespace.
+      StringRef Result = FindNote(FreeBSDCoreNoteTypes);
+      if (!Result.empty())
+        return Result;
+      return FindNote(CoreNoteTypes);
+    } else {
+      return FindNote(FreeBSDNoteTypes);
+    }
+  }
   if (Name == "AMD")
     return FindNote(AMDNoteTypes);
   if (Name == "AMDGPU")
@@ -5564,12 +5378,13 @@ static void printNotesHelper(
     llvm::function_ref<void(Optional<StringRef>, typename ELFT::Off,
                             typename ELFT::Addr)>
         StartNotesFn,
-    llvm::function_ref<Error(const typename ELFT::Note &)> ProcessNoteFn,
+    llvm::function_ref<Error(const typename ELFT::Note &, bool)> ProcessNoteFn,
     llvm::function_ref<void()> FinishNotesFn) {
   const ELFFile<ELFT> &Obj = Dumper.getElfObject().getELFFile();
+  bool IsCoreFile = Obj.getHeader().e_type == ELF::ET_CORE;
 
   ArrayRef<typename ELFT::Shdr> Sections = cantFail(Obj.sections());
-  if (Obj.getHeader().e_type != ELF::ET_CORE && !Sections.empty()) {
+  if (!IsCoreFile && !Sections.empty()) {
     for (const typename ELFT::Shdr &S : Sections) {
       if (S.sh_type != SHT_NOTE)
         continue;
@@ -5578,7 +5393,7 @@ static void printNotesHelper(
       Error Err = Error::success();
       size_t I = 0;
       for (const typename ELFT::Note Note : Obj.notes(S, Err)) {
-        if (Error E = ProcessNoteFn(Note))
+        if (Error E = ProcessNoteFn(Note, IsCoreFile))
           Dumper.reportUniqueWarning(
               "unable to read note with index " + Twine(I) + " from the " +
               describe(Obj, S) + ": " + toString(std::move(E)));
@@ -5609,7 +5424,7 @@ static void printNotesHelper(
     Error Err = Error::success();
     size_t Index = 0;
     for (const typename ELFT::Note Note : Obj.notes(P, Err)) {
-      if (Error E = ProcessNoteFn(Note))
+      if (Error E = ProcessNoteFn(Note, IsCoreFile))
         Dumper.reportUniqueWarning("unable to read note with index " +
                                    Twine(Index) +
                                    " from the PT_NOTE segment with index " +
@@ -5625,9 +5440,17 @@ static void printNotesHelper(
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
+  bool IsFirstHeader = true;
   auto PrintHeader = [&](Optional<StringRef> SecName,
                          const typename ELFT::Off Offset,
                          const typename ELFT::Addr Size) {
+    // Print a newline between notes sections to match GNU readelf.
+    if (!IsFirstHeader) {
+      OS << '\n';
+    } else {
+      IsFirstHeader = false;
+    }
+
     OS << "Displaying notes found ";
 
     if (SecName)
@@ -5639,7 +5462,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
     OS << "  Owner                Data size \tDescription\n";
   };
 
-  auto ProcessNote = [&](const Elf_Note &Note) -> Error {
+  auto ProcessNote = [&](const Elf_Note &Note, bool IsCore) -> Error {
     StringRef Name = Note.getName();
     ArrayRef<uint8_t> Descriptor = Note.getDesc();
     Elf_Word Type = Note.getType();
@@ -5656,28 +5479,42 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
       OS << "Unknown note type: (" << format_hex(Type, 10) << ")\n";
 
     // Print the description, or fallback to printing raw bytes for unknown
-    // owners.
+    // owners/if we fail to pretty-print the contents.
     if (Name == "GNU") {
-      printGNUNote<ELFT>(OS, Type, Descriptor);
+      if (printGNUNote<ELFT>(OS, Type, Descriptor))
+        return Error::success();
+    } else if (Name == "FreeBSD") {
+      if (Optional<FreeBSDNote> N =
+              getFreeBSDNote<ELFT>(Type, Descriptor, IsCore)) {
+        OS << "    " << N->Type << ": " << N->Value << '\n';
+        return Error::success();
+      }
     } else if (Name == "AMD") {
       const AMDNote N = getAMDNote<ELFT>(Type, Descriptor);
-      if (!N.Type.empty())
+      if (!N.Type.empty()) {
         OS << "    " << N.Type << ":\n        " << N.Value << '\n';
+        return Error::success();
+      }
     } else if (Name == "AMDGPU") {
       const AMDGPUNote N = getAMDGPUNote<ELFT>(Type, Descriptor);
-      if (!N.Type.empty())
+      if (!N.Type.empty()) {
         OS << "    " << N.Type << ":\n        " << N.Value << '\n';
+        return Error::success();
+      }
     } else if (Name == "CORE") {
       if (Type == ELF::NT_FILE) {
         DataExtractor DescExtractor(Descriptor,
                                     ELFT::TargetEndianness == support::little,
                                     sizeof(Elf_Addr));
-        if (Expected<CoreNote> NoteOrErr = readCoreNote(DescExtractor))
+        if (Expected<CoreNote> NoteOrErr = readCoreNote(DescExtractor)) {
           printCoreNote<ELFT>(OS, *NoteOrErr);
-        else
+          return Error::success();
+        } else {
           return NoteOrErr.takeError();
+        }
       }
-    } else if (!Descriptor.empty()) {
+    }
+    if (!Descriptor.empty()) {
       OS << "   description data:";
       for (uint8_t B : Descriptor)
         OS << " " << format("%02x", B);
@@ -6761,7 +6598,7 @@ void LLVMELFDumper<ELFT>::printVersionDefinitionSection(const Elf_Shdr *Sec) {
   if (!Sec)
     return;
 
-  Expected<std::vector<VerDef>> V = this->getVersionDefinitions(*Sec);
+  Expected<std::vector<VerDef>> V = this->Obj.getVersionDefinitions(*Sec);
   if (!V) {
     this->reportUniqueWarning(V.takeError());
     return;
@@ -6786,7 +6623,8 @@ void LLVMELFDumper<ELFT>::printVersionDependencySection(const Elf_Shdr *Sec) {
   if (!Sec)
     return;
 
-  Expected<std::vector<VerNeed>> V = this->getVersionDependencies(*Sec);
+  Expected<std::vector<VerNeed>> V =
+      this->Obj.getVersionDependencies(*Sec, this->WarningHandler);
   if (!V) {
     this->reportUniqueWarning(V.takeError());
     return;
@@ -6855,15 +6693,17 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printAddrsig() {
 }
 
 template <typename ELFT>
-static void printGNUNoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
+static bool printGNUNoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
                                   ScopedPrinter &W) {
+  // Return true if we were able to pretty-print the note, false otherwise.
   switch (NoteType) {
   default:
-    return;
+    return false;
   case ELF::NT_GNU_ABI_TAG: {
     const GNUAbiTag &AbiTag = getGNUAbiTag<ELFT>(Desc);
     if (!AbiTag.IsValid) {
       W.printString("ABI", "<corrupt GNU_ABI_TAG>");
+      return false;
     } else {
       W.printString("OS", AbiTag.OSName);
       W.printString("ABI", AbiTag.ABI);
@@ -6883,6 +6723,7 @@ static void printGNUNoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
       W.printString(Property);
     break;
   }
+  return true;
 }
 
 static void printCoreNoteLLVMStyle(const CoreNote &Note, ScopedPrinter &W) {
@@ -6911,7 +6752,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
 
   auto EndNotes = [&] { NoteScope.reset(); };
 
-  auto ProcessNote = [&](const Elf_Note &Note) -> Error {
+  auto ProcessNote = [&](const Elf_Note &Note, bool IsCore) -> Error {
     DictScope D2(W, "Note");
     StringRef Name = Note.getName();
     ArrayRef<uint8_t> Descriptor = Note.getDesc();
@@ -6930,28 +6771,42 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
                     "Unknown (" + to_string(format_hex(Type, 10)) + ")");
 
     // Print the description, or fallback to printing raw bytes for unknown
-    // owners.
+    // owners/if we fail to pretty-print the contents.
     if (Name == "GNU") {
-      printGNUNoteLLVMStyle<ELFT>(Type, Descriptor, W);
+      if (printGNUNoteLLVMStyle<ELFT>(Type, Descriptor, W))
+        return Error::success();
+    } else if (Name == "FreeBSD") {
+      if (Optional<FreeBSDNote> N =
+              getFreeBSDNote<ELFT>(Type, Descriptor, IsCore)) {
+        W.printString(N->Type, N->Value);
+        return Error::success();
+      }
     } else if (Name == "AMD") {
       const AMDNote N = getAMDNote<ELFT>(Type, Descriptor);
-      if (!N.Type.empty())
+      if (!N.Type.empty()) {
         W.printString(N.Type, N.Value);
+        return Error::success();
+      }
     } else if (Name == "AMDGPU") {
       const AMDGPUNote N = getAMDGPUNote<ELFT>(Type, Descriptor);
-      if (!N.Type.empty())
+      if (!N.Type.empty()) {
         W.printString(N.Type, N.Value);
+        return Error::success();
+      }
     } else if (Name == "CORE") {
       if (Type == ELF::NT_FILE) {
         DataExtractor DescExtractor(Descriptor,
                                     ELFT::TargetEndianness == support::little,
                                     sizeof(Elf_Addr));
-        if (Expected<CoreNote> Note = readCoreNote(DescExtractor))
-          printCoreNoteLLVMStyle(*Note, W);
-        else
-          return Note.takeError();
+        if (Expected<CoreNote> N = readCoreNote(DescExtractor)) {
+          printCoreNoteLLVMStyle(*N, W);
+          return Error::success();
+        } else {
+          return N.takeError();
+        }
       }
-    } else if (!Descriptor.empty()) {
+    }
+    if (!Descriptor.empty()) {
       W.printBinaryBlock("Description data", Descriptor);
     }
     return Error::success();

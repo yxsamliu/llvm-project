@@ -23,6 +23,7 @@
 namespace clang {
 namespace clangd {
 namespace {
+using testing::ElementsAre;
 
 MATCHER_P(DiagMessage, M, "") {
   if (const auto *O = arg.getAsObject()) {
@@ -192,6 +193,67 @@ TEST_F(LSPTest, IncomingCalls) {
   EXPECT_EQ(FirstCall["fromRanges"], llvm::json::Value{Code.range()});
   auto From = *FirstCall["from"].getAsObject();
   EXPECT_EQ(From["name"], "caller1");
+}
+
+TEST_F(LSPTest, CDBConfigIntegration) {
+  auto CfgProvider =
+      config::Provider::fromAncestorRelativeYAMLFiles(".clangd", FS);
+  Opts.ConfigProvider = CfgProvider.get();
+
+  // Map bar.cpp to a different compilation database which defines FOO->BAR.
+  FS.Files[".clangd"] = R"yaml(
+If:
+  PathMatch: bar.cpp
+CompileFlags:
+  CompilationDatabase: bar
+)yaml";
+  FS.Files["bar/compile_flags.txt"] = "-DFOO=BAR";
+
+  auto &Client = start();
+  // foo.cpp gets parsed as normal.
+  Client.didOpen("foo.cpp", "int x = FOO;");
+  EXPECT_THAT(Client.diagnostics("foo.cpp"),
+              llvm::ValueIs(testing::ElementsAre(
+                  DiagMessage("Use of undeclared identifier 'FOO'"))));
+  // bar.cpp shows the configured compile command.
+  Client.didOpen("bar.cpp", "int x = FOO;");
+  EXPECT_THAT(Client.diagnostics("bar.cpp"),
+              llvm::ValueIs(testing::ElementsAre(
+                  DiagMessage("Use of undeclared identifier 'BAR'"))));
+}
+
+TEST_F(LSPTest, ModulesTest) {
+  class MathModule final : public Module {
+    OutgoingNotification<int> Changed;
+    void initializeLSP(LSPBinder &Bind, const llvm::json::Object &ClientCaps,
+                       llvm::json::Object &ServerCaps) override {
+      Bind.notification("add", this, &MathModule::add);
+      Bind.method("get", this, &MathModule::get);
+      Changed = Bind.outgoingNotification("changed");
+    }
+
+    int Value = 0;
+
+    void add(const int &X) {
+      Value += X;
+      Changed(Value);
+    }
+    void get(const std::nullptr_t &, Callback<int> Reply) {
+      scheduler().runQuick(
+          "get", "",
+          [Reply(std::move(Reply)), Value(Value)]() mutable { Reply(Value); });
+    }
+  };
+  ModuleSet Mods;
+  Mods.add(std::make_unique<MathModule>());
+  Opts.Modules = &Mods;
+
+  auto &Client = start();
+  Client.notify("add", 2);
+  Client.notify("add", 8);
+  EXPECT_EQ(10, Client.call("get", nullptr).takeValue());
+  EXPECT_THAT(Client.takeNotifications("changed"),
+              ElementsAre(llvm::json::Value(2), llvm::json::Value(10)));
 }
 
 } // namespace

@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
@@ -177,8 +178,10 @@ private:
                                    MachineIRBuilder &MIRBuilder) const;
 
   /// Emit a floating point comparison between \p LHS and \p RHS.
+  /// \p Pred if given is the intended predicate to use.
   MachineInstr *emitFPCompare(Register LHS, Register RHS,
-                              MachineIRBuilder &MIRBuilder) const;
+                              MachineIRBuilder &MIRBuilder,
+                              Optional<CmpInst::Predicate> = None) const;
 
   MachineInstr *emitInstr(unsigned Opcode,
                           std::initializer_list<llvm::DstOp> DstOps,
@@ -249,9 +252,10 @@ private:
 
   /// Emit a CSet for an integer compare.
   ///
-  /// \p DefReg is expected to be a 32-bit scalar register.
+  /// \p DefReg and \p SrcReg are expected to be 32-bit scalar registers.
   MachineInstr *emitCSetForICMP(Register DefReg, unsigned Pred,
-                                MachineIRBuilder &MIRBuilder) const;
+                                MachineIRBuilder &MIRBuilder,
+                                Register SrcReg = AArch64::WZR) const;
   /// Emit a CSet for a FP compare.
   ///
   /// \p Dst is expected to be a 32-bit scalar register.
@@ -862,6 +866,7 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
 #ifndef NDEBUG
     ValidCopy = KnownValid || isValidCopy(I, DstRegBank, MRI, TRI, RBI);
     assert(ValidCopy && "Invalid copy.");
+    (void)KnownValid;
 #endif
     return ValidCopy;
   };
@@ -1081,7 +1086,9 @@ AArch64InstructionSelector::emitSelect(Register Dst, Register True,
     //
     // Into:
     // %select = CSINC %reg, %x, cc
-    if (mi_match(Reg, MRI, m_GAdd(m_Reg(MatchReg), m_SpecificICst(1)))) {
+    if (mi_match(Reg, MRI,
+                 m_any_of(m_GAdd(m_Reg(MatchReg), m_SpecificICst(1)),
+                          m_GPtrAdd(m_Reg(MatchReg), m_SpecificICst(1))))) {
       Opc = Is32Bit ? AArch64::CSINCWr : AArch64::CSINCXr;
       Reg = MatchReg;
       if (Invert) {
@@ -1483,11 +1490,11 @@ bool AArch64InstructionSelector::selectCompareBranchFedByFCmp(
   assert(I.getOpcode() == TargetOpcode::G_BRCOND);
   // Unfortunately, the mapping of LLVM FP CC's onto AArch64 CC's isn't
   // totally clean.  Some of them require two branches to implement.
-  emitFPCompare(FCmp.getOperand(2).getReg(), FCmp.getOperand(3).getReg(), MIB);
+  auto Pred = (CmpInst::Predicate)FCmp.getOperand(1).getPredicate();
+  emitFPCompare(FCmp.getOperand(2).getReg(), FCmp.getOperand(3).getReg(), MIB,
+                Pred);
   AArch64CC::CondCode CC1, CC2;
-  changeFCMPPredToAArch64CC(
-      static_cast<CmpInst::Predicate>(FCmp.getOperand(1).getPredicate()), CC1,
-      CC2);
+  changeFCMPPredToAArch64CC(static_cast<CmpInst::Predicate>(Pred), CC1, CC2);
   MachineBasicBlock *DestMBB = I.getOperand(1).getMBB();
   MIB.buildInstr(AArch64::Bcc, {}, {}).addImm(CC1).addMBB(DestMBB);
   if (CC2 != AArch64CC::AL)
@@ -1911,8 +1918,22 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     }
     return true;
   }
-  case TargetOpcode::G_STORE:
-    return contractCrossBankCopyIntoStore(I, MRI);
+  case TargetOpcode::G_STORE: {
+    bool Changed = contractCrossBankCopyIntoStore(I, MRI);
+    MachineOperand &SrcOp = I.getOperand(0);
+    if (MRI.getType(SrcOp.getReg()).isPointer()) {
+      // Allow matching with imported patterns for stores of pointers. Unlike
+      // G_LOAD/G_PTR_ADD, we may not have selected all users. So, emit a copy
+      // and constrain.
+      MachineIRBuilder MIB(I);
+      auto Copy = MIB.buildCopy(LLT::scalar(64), SrcOp);
+      Register NewSrc = Copy.getReg(0);
+      SrcOp.setReg(NewSrc);
+      RBI.constrainGenericRegister(NewSrc, AArch64::GPR64RegClass, MRI);
+      Changed = true;
+    }
+    return Changed;
+  }
   case TargetOpcode::G_PTR_ADD:
     return convertPtrAddToAdd(I, MRI);
   case TargetOpcode::G_LOAD: {
@@ -2133,6 +2154,41 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) const {
       return false;
 
     I.setDesc(TII.get(TargetOpcode::COPY));
+    return true;
+  }
+
+  case TargetOpcode::G_ADD: {
+    // Check if this is being fed by a G_ICMP on either side.
+    //
+    // (cmp pred, x, y) + z
+    //
+    // In the above case, when the cmp is true, we increment z by 1. So, we can
+    // fold the add into the cset for the cmp by using cinc.
+    //
+    // FIXME: This would probably be a lot nicer in PostLegalizerLowering.
+    Register X = I.getOperand(1).getReg();
+
+    // Only handle scalars. Scalar G_ICMP is only legal for s32, so bail out
+    // early if we see it.
+    LLT Ty = MRI.getType(X);
+    if (Ty.isVector() || Ty.getSizeInBits() != 32)
+      return false;
+
+    Register CmpReg = I.getOperand(2).getReg();
+    MachineInstr *Cmp = getOpcodeDef(TargetOpcode::G_ICMP, CmpReg, MRI);
+    if (!Cmp) {
+      std::swap(X, CmpReg);
+      Cmp = getOpcodeDef(TargetOpcode::G_ICMP, CmpReg, MRI);
+      if (!Cmp)
+        return false;
+    }
+    MachineIRBuilder MIRBuilder(I);
+    auto Pred =
+        static_cast<CmpInst::Predicate>(Cmp->getOperand(1).getPredicate());
+    emitIntegerCompare(Cmp->getOperand(2), Cmp->getOperand(3),
+                       Cmp->getOperand(1), MIRBuilder);
+    emitCSetForICMP(I.getOperand(0).getReg(), Pred, MIRBuilder, X);
+    I.eraseFromParent();
     return true;
   }
   default:
@@ -2741,7 +2797,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   }
   case TargetOpcode::G_SADDO:
   case TargetOpcode::G_UADDO:
-  case TargetOpcode::G_SSUBO: {
+  case TargetOpcode::G_SSUBO:
+  case TargetOpcode::G_USUBO: {
     // Emit the operation and get the correct condition code.
     MachineIRBuilder MIRBuilder(I);
     auto OpAndCC = emitOverflowOp(Opcode, I.getOperand(0).getReg(),
@@ -3090,7 +3147,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     CmpInst::Predicate Pred =
         static_cast<CmpInst::Predicate>(I.getOperand(1).getPredicate());
     if (!emitFPCompare(I.getOperand(2).getReg(), I.getOperand(3).getReg(),
-                       MIRBuilder) ||
+                       MIRBuilder, Pred) ||
         !emitCSetForFCmp(I.getOperand(0).getReg(), Pred, MIRBuilder))
       return false;
     I.eraseFromParent();
@@ -3182,6 +3239,21 @@ bool AArch64InstructionSelector::selectReduction(
   Register VecReg = I.getOperand(1).getReg();
   LLT VecTy = MRI.getType(VecReg);
   if (I.getOpcode() == TargetOpcode::G_VECREDUCE_ADD) {
+    // For <2 x i32> ADDPv2i32 generates an FPR64 value, so we need to emit
+    // a subregister copy afterwards.
+    if (VecTy == LLT::vector(2, 32)) {
+      MachineIRBuilder MIB(I);
+      Register DstReg = I.getOperand(0).getReg();
+      auto AddP = MIB.buildInstr(AArch64::ADDPv2i32, {&AArch64::FPR64RegClass},
+                                 {VecReg, VecReg});
+      auto Copy = MIB.buildInstr(TargetOpcode::COPY, {DstReg}, {})
+                      .addReg(AddP.getReg(0), 0, AArch64::ssub)
+                      .getReg(0);
+      RBI.constrainGenericRegister(Copy, AArch64::FPR32RegClass, MRI);
+      I.eraseFromParent();
+      return constrainSelectedInstRegOperands(*AddP, TII, TRI, RBI);
+    }
+
     unsigned Opc = 0;
     if (VecTy == LLT::vector(16, 8))
       Opc = AArch64::ADDVv16i8v;
@@ -4211,7 +4283,8 @@ MachineInstr *AArch64InstructionSelector::emitCSetForFCmp(
 
 MachineInstr *
 AArch64InstructionSelector::emitFPCompare(Register LHS, Register RHS,
-                                          MachineIRBuilder &MIRBuilder) const {
+                                          MachineIRBuilder &MIRBuilder,
+                                          Optional<CmpInst::Predicate> Pred) const {
   MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
   LLT Ty = MRI.getType(LHS);
   if (Ty.isVector())
@@ -4224,6 +4297,19 @@ AArch64InstructionSelector::emitFPCompare(Register LHS, Register RHS,
   // to explicitly materialize a constant.
   const ConstantFP *FPImm = getConstantFPVRegVal(RHS, MRI);
   bool ShouldUseImm = FPImm && (FPImm->isZero() && !FPImm->isNegative());
+
+  auto IsEqualityPred = [](CmpInst::Predicate P) {
+    return P == CmpInst::FCMP_OEQ || P == CmpInst::FCMP_ONE ||
+           P == CmpInst::FCMP_UEQ || P == CmpInst::FCMP_UNE;
+  };
+  if (!ShouldUseImm && Pred && IsEqualityPred(*Pred)) {
+    // Try commutating the operands.
+    const ConstantFP *LHSImm = getConstantFPVRegVal(LHS, MRI);
+    if (LHSImm && (LHSImm->isZero() && !LHSImm->isNegative())) {
+      ShouldUseImm = true;
+      std::swap(LHS, RHS);
+    }
+  }
   unsigned CmpOpcTbl[2][2] = {{AArch64::FCMPSrr, AArch64::FCMPDrr},
                               {AArch64::FCMPSri, AArch64::FCMPDri}};
   unsigned CmpOpc = CmpOpcTbl[ShouldUseImm][OpSize == 64];
@@ -4332,14 +4418,13 @@ MachineInstr *AArch64InstructionSelector::emitFMovForFConstant(
 
 MachineInstr *
 AArch64InstructionSelector::emitCSetForICMP(Register DefReg, unsigned Pred,
-                                     MachineIRBuilder &MIRBuilder) const {
+                                            MachineIRBuilder &MIRBuilder,
+                                            Register SrcReg) const {
   // CSINC increments the result when the predicate is false. Invert it.
   const AArch64CC::CondCode InvCC = changeICMPPredToAArch64CC(
       CmpInst::getInversePredicate((CmpInst::Predicate)Pred));
-  auto I =
-      MIRBuilder
-    .buildInstr(AArch64::CSINCWr, {DefReg}, {Register(AArch64::WZR), Register(AArch64::WZR)})
-          .addImm(InvCC);
+  auto I = MIRBuilder.buildInstr(AArch64::CSINCWr, {DefReg}, {SrcReg, SrcReg})
+               .addImm(InvCC);
   constrainSelectedInstRegOperands(*I, TII, TRI, RBI);
   return &*I;
 }
@@ -4358,6 +4443,8 @@ AArch64InstructionSelector::emitOverflowOp(unsigned Opcode, Register Dst,
     return std::make_pair(emitADDS(Dst, LHS, RHS, MIRBuilder), AArch64CC::HS);
   case TargetOpcode::G_SSUBO:
     return std::make_pair(emitSUBS(Dst, LHS, RHS, MIRBuilder), AArch64CC::VS);
+  case TargetOpcode::G_USUBO:
+    return std::make_pair(emitSUBS(Dst, LHS, RHS, MIRBuilder), AArch64CC::LO);
   }
 }
 
@@ -5147,7 +5234,7 @@ bool AArch64InstructionSelector::isWorthFoldingIntoExtendedReg(
   // Always fold if there is one use, or if we're optimizing for size.
   Register DefReg = MI.getOperand(0).getReg();
   if (MRI.hasOneNonDBGUse(DefReg) ||
-      MI.getParent()->getParent()->getFunction().hasMinSize())
+      MI.getParent()->getParent()->getFunction().hasOptSize())
     return true;
 
   // It's better to avoid folding and recomputing shifts when we don't have a
