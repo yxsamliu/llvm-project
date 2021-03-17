@@ -768,6 +768,13 @@ void CodeGenModule::Release() {
   // that might affect the DLL storage class or the visibility, and
   // before anything that might act on these.
   setVisibilityFromDLLStorageClass(LangOpts, getModule());
+
+  // Remove unused address space casts of global variables.
+  for (auto &Cast : GlobalVarCasts) {
+    if (Cast.first->use_empty()) {
+      Cast.first->destroyConstant();
+    }
+  }
 }
 
 void CodeGenModule::EmitOpenCLMetadata() {
@@ -3938,9 +3945,13 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
         : (LangOpts.OpenCL ? LangAS::opencl_global : LangAS::Default);
   assert(getContext().getTargetAddressSpace(ExpectedAS) ==
          Ty->getPointerAddressSpace());
-  if (AddrSpace != ExpectedAS)
-    return getTargetCodeGenInfo().performAddrSpaceCast(*this, GV, AddrSpace,
+  if (AddrSpace != ExpectedAS) {
+    auto *Cast = getTargetCodeGenInfo().performAddrSpaceCast(*this, GV, AddrSpace,
                                                        ExpectedAS, Ty);
+    // Record address space casts of global variables for cleaning up if unused.
+    GlobalVarCasts[Cast] = GV;
+    return Cast;
+  }
 
   return GV;
 }
