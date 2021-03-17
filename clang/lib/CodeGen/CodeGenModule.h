@@ -371,6 +371,14 @@ private:
   llvm::SmallVector<std::pair<llvm::GlobalValue *, llvm::Constant *>, 8>
     GlobalValReplacements;
 
+  /// Potentially unused address space casts of global variables to be cleaned
+  /// up. In CUDA/HIP, global variables are emitted as global variables in
+  /// device or constant address space which are then casted to default address
+  /// space. If the global variables are not used, the address space casts
+  /// become invisible LLVM constants, causing spurious use of the global
+  /// variables which prevents them from being erased.
+  llvm::DenseSet<llvm::Constant *> GlobalVarCasts;
+
   /// Variables for which we've emitted globals containing their constant
   /// values along with the corresponding globals, for opportunistic reuse.
   llvm::DenseMap<const VarDecl*, llvm::GlobalVariable*> InitializerConstants;
