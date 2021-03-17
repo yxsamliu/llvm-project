@@ -420,6 +420,14 @@ static bool mustPreserveGV(const GlobalValue &GV) {
   if (const Function *F = dyn_cast<Function>(&GV))
     return F->isDeclaration() || AMDGPU::isEntryFunctionCC(F->getCallingConv());
 
+  if (getenv("DBG_INT")) {
+    llvm::errs() << "mustPreserveGV: ";
+    GV.dump();
+    llvm::errs() << "GV.use_empty(): " << GV.use_empty() << "\n";
+    for (auto& U: GV.uses()) {
+      llvm::errs() << "User: "; U.getUser()->dump();
+    }
+  }
   return !GV.use_empty();
 }
 
@@ -447,8 +455,12 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
       }
       PM.add(createAMDGPUUnifyMetadataPass());
       PM.add(createAMDGPUPrintfRuntimeBinding());
-      if (Internalize)
+      if (Internalize) {
+        if (getenv("DBG_INT")) {
+          llvm::errs() << "AMDGPUTargetMachine::adjustPassManager: createInternalizePass\n";
+        }
         PM.add(createInternalizePass(mustPreserveGV));
+      }
       PM.add(createAMDGPUPropagateAttributesLatePass(this));
       if (Internalize)
         PM.add(createGlobalDCEPass());

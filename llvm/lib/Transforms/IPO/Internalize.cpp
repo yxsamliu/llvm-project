@@ -100,18 +100,25 @@ bool InternalizePass::shouldPreserveGV(const GlobalValue &GV) {
     return true;
 
   // Already local, has nothing to do.
-  if (GV.hasLocalLinkage())
+  if (GV.hasLocalLinkage()) {
+    LLVM_DEBUG(dbgs() << "hasLocalLinkage\n");
     return false;
+  }
 
   // Check some special cases
-  if (AlwaysPreserved.count(GV.getName()))
+  if (AlwaysPreserved.count(GV.getName())) {
+    LLVM_DEBUG(dbgs() << "AlwaysPreserved\n");
     return true;
+  }
 
-  return MustPreserveGV(GV);
+  bool Must = MustPreserveGV(GV);
+  LLVM_DEBUG(dbgs() << "MustPreserveGV: " << Must << '\n');
+  return Must;
 }
 
 bool InternalizePass::maybeInternalize(
     GlobalValue &GV, const DenseSet<const Comdat *> &ExternalComdats) {
+  LLVM_DEBUG(dbgs() << "maybeInternalize: "; GV.dump(););
   if (Comdat *C = GV.getComdat()) {
     if (ExternalComdats.count(C))
       return false;
@@ -126,8 +133,10 @@ bool InternalizePass::maybeInternalize(
     if (GV.hasLocalLinkage())
       return false;
 
-    if (shouldPreserveGV(GV))
+    if (shouldPreserveGV(GV)) {
+      LLVM_DEBUG(dbgs() << "shouldPreserveGV\n";);
       return false;
+    }
   }
 
   GV.setVisibility(GlobalValue::DefaultVisibility);
@@ -148,6 +157,7 @@ void InternalizePass::checkComdatVisibility(
 }
 
 bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
+  LLVM_DEBUG(dbgs() << "internalizeModule\n"; M.dump());
   bool Changed = false;
   CallGraphNode *ExternalNode = CG ? CG->getExternalCallingNode() : nullptr;
 
@@ -239,6 +249,7 @@ InternalizePass::InternalizePass() : MustPreserveGV(PreserveAPIList()) {}
 PreservedAnalyses InternalizePass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!internalizeModule(M, AM.getCachedResult<CallGraphAnalysis>(M)))
     return PreservedAnalyses::all();
+  //LLVM_DEBUG(dbgs() << "InternalizePass::run\n"; M.dump());
 
   PreservedAnalyses PA;
   PA.preserve<CallGraphAnalysis>();
@@ -263,6 +274,7 @@ public:
   bool runOnModule(Module &M) override {
     if (skipModule(M))
       return false;
+    //LLVM_DEBUG(dbgs() << "InternalizeLegacyPass::run\n"; M.dump());
 
     CallGraphWrapperPass *CGPass =
         getAnalysisIfAvailable<CallGraphWrapperPass>();
