@@ -605,19 +605,22 @@ static llvm::Triple computeTargetTriple(const Driver &D,
 }
 
 // Parse the LTO options and record the type of LTO compilation
-// based on which -f(no-)?lto(=.*)? option occurs last.
-void Driver::setLTOMode(const llvm::opt::ArgList &Args) {
-  LTOMode = LTOK_None;
-  if (!Args.hasFlag(options::OPT_flto, options::OPT_flto_EQ,
-                    options::OPT_fno_lto, false))
-    return;
+// based on which -f(no-)?lto(=.*)? or -f(no-)?offload-lto(=.*)?
+// option occurs last.
+static llvm::Optional<driver::LTOKind>
+parseLTOMode(Driver &D, const llvm::opt::ArgList &Args, OptSpecifier OptPos,
+             OptSpecifier OptNeg, OptSpecifier OptEq) {
+  driver::LTOKind LTOMode = LTOK_None;
+  if (!Args.hasFlag(OptPos, OptEq, OptNeg, false))
+    return None;
 
   StringRef LTOName("full");
 
-  const Arg *A = Args.getLastArg(options::OPT_flto_EQ);
+  const Arg *A = Args.getLastArg(OptEq);
   if (A)
     LTOName = A->getValue();
 
+  llvm::errs() << LTOName << '\n';
   LTOMode = llvm::StringSwitch<LTOKind>(LTOName)
                 .Case("full", LTOK_Full)
                 .Case("thin", LTOK_Thin)
@@ -625,9 +628,25 @@ void Driver::setLTOMode(const llvm::opt::ArgList &Args) {
 
   if (LTOMode == LTOK_Unknown) {
     assert(A);
-    Diag(diag::err_drv_unsupported_option_argument) << A->getOption().getName()
-                                                    << A->getValue();
+    D.Diag(diag::err_drv_unsupported_option_argument)
+        << A->getOption().getName() << A->getValue();
+    return None;
   }
+  return LTOMode;
+}
+
+// Parse the LTO options.
+void Driver::setLTOMode(const llvm::opt::ArgList &Args) {
+  LTOMode = LTOK_None;
+  if (auto M = parseLTOMode(*this, Args, options::OPT_flto,
+                            options::OPT_fno_lto, options::OPT_flto_EQ))
+    LTOMode = M.getValue();
+
+  OffloadLTOMode = LTOK_None;
+  if (auto M = parseLTOMode(*this, Args, options::OPT_foffload_lto,
+                            options::OPT_fno_offload_lto,
+                            options::OPT_foffload_lto_EQ))
+    OffloadLTOMode = M.getValue();
 }
 
 /// Compute the desired OpenMP runtime from the flags provided.

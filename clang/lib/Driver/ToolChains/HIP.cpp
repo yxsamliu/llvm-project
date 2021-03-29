@@ -50,8 +50,8 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   auto &TC = getToolChain();
   auto &D = TC.getDriver();
   assert(!Inputs.empty() && "Must have at least one input.");
-  addLTOOptions(TC, Args, LldArgs, Output, Inputs[0],
-                D.getLTOMode() == LTOK_Thin);
+  bool IsThinLTO = D.getLTOMode(/*IsOffload=*/true) == LTOK_Thin;
+  addLTOOptions(TC, Args, LldArgs, Output, Inputs[0], IsThinLTO);
 
   // Extract all the -m options
   std::vector<llvm::StringRef> Features;
@@ -66,6 +66,14 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   }
   if (!Features.empty())
     LldArgs.push_back(Args.MakeArgString(MAttrString));
+
+  // ToDo: Remove these options after AMDGPU backend supports ISA-level linking.
+  // Since AMDGPU backend currently does not support ISA-level linking, all
+  // called functions need to be imported.
+  if (IsThinLTO)
+    LldArgs.append(
+        {Args.MakeArgString("-plugin-opt=-import-instr-limit=100000"),
+         Args.MakeArgString("-plugin-opt=-import-noinline")});
 
   for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
     LldArgs.push_back(

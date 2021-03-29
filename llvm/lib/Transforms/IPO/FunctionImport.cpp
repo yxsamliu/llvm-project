@@ -84,6 +84,10 @@ static cl::opt<int> ImportCutoff(
     "import-cutoff", cl::init(-1), cl::Hidden, cl::value_desc("N"),
     cl::desc("Only import first N functions if N>=0 (default -1)"));
 
+static cl::opt<bool>
+    ImportNoInline("import-noinline", cl::init(false), cl::Hidden,
+                   cl::desc("Import functions with noinline attribute"));
+
 static cl::opt<float>
     ImportInstrFactor("import-instr-evolution-factor", cl::init(0.7),
                       cl::Hidden, cl::value_desc("x"),
@@ -240,7 +244,7 @@ selectCallee(const ModuleSummaryIndex &Index,
         }
 
         // Don't bother importing if we can't inline it anyway.
-        if (Summary->fflags().NoInline) {
+        if (Summary->fflags().NoInline && !ImportNoInline) {
           Reason = FunctionImporter::ImportFailureReason::NoInline;
           return false;
         }

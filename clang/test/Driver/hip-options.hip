@@ -51,3 +51,12 @@
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefix=CTA %s
 // CTA: clang{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-mconstructor-aliases"
 // CTA-NOT: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-mconstructor-aliases"
+
+// Check -foffload-lto=thin translated correctly.
+
+// RUN: %clang -### -target x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx906 -fgpu-rdc -foffload-lto=thin %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=THINLTO %s
+// THINLTO-NOT: clang{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-flto-unit"
+// THINLTO: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-flto-unit"
+// THINLTO: lld{{.*}}"-plugin-opt=mcpu=gfx906" "-plugin-opt=thinlto" "-plugin-opt=-import-instr-limit=100000" "-plugin-opt=-import-noinline"
