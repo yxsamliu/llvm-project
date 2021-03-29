@@ -15,7 +15,11 @@
 ; RUN: opt -function-import -enable-import-metadata  -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=5 -S | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIM5
 ; INSTLIM5-NOT: @staticfunc.llvm.
 
+; Test force import all
+; RUN: opt -function-import -force-import-all -summary-file %t3.thinlto.bc %t.bc -S 2>&1 \
+; RUN:  | FileCheck %s --check-prefix=IMPORTALL
 
+; IMPORTALL-DAG: Error importing module: Failed to import functions to {{.*}}funcimport.ll.tmp.bc: weakalias, weakfunc, linkoncefunc2, __gxx_personality_v0, staticfunc2.llvm.0
 define i32 @main() #0 {
 entry:
   call void (...) @weakalias()

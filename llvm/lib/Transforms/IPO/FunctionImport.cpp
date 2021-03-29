@@ -84,6 +84,10 @@ static cl::opt<int> ImportCutoff(
     "import-cutoff", cl::init(-1), cl::Hidden, cl::value_desc("N"),
     cl::desc("Only import first N functions if N>=0 (default -1)"));
 
+static cl::opt<bool>
+    ForceImportAll("force-import-all", cl::init(false), cl::Hidden,
+                   cl::desc("Import functions with noinline attribute"));
+
 static cl::opt<float>
     ImportInstrFactor("import-instr-evolution-factor", cl::init(0.7),
                       cl::Hidden, cl::value_desc("x"),
@@ -227,7 +231,7 @@ selectCallee(const ModuleSummaryIndex &Index,
         }
 
         if ((Summary->instCount() > Threshold) &&
-            !Summary->fflags().AlwaysInline) {
+            !Summary->fflags().AlwaysInline && !ForceImportAll) {
           Reason = FunctionImporter::ImportFailureReason::TooLarge;
           return false;
         }
@@ -240,7 +244,7 @@ selectCallee(const ModuleSummaryIndex &Index,
         }
 
         // Don't bother importing if we can't inline it anyway.
-        if (Summary->fflags().NoInline) {
+        if (Summary->fflags().NoInline && !ForceImportAll) {
           Reason = FunctionImporter::ImportFailureReason::NoInline;
           return false;
         }
@@ -496,8 +500,8 @@ static void computeImportForFunction(
       CalleeSummary = CalleeSummary->getBaseObject();
       ResolvedCalleeSummary = cast<FunctionSummary>(CalleeSummary);
 
-      assert((ResolvedCalleeSummary->fflags().AlwaysInline ||
-	     (ResolvedCalleeSummary->instCount() <= NewThreshold)) &&
+      assert((ResolvedCalleeSummary->fflags().AlwaysInline || ForceImportAll ||
+              (ResolvedCalleeSummary->instCount() <= NewThreshold)) &&
              "selectCallee() didn't honor the threshold");
 
       auto ExportModulePath = ResolvedCalleeSummary->modulePath();
@@ -1306,6 +1310,28 @@ Expected<bool> FunctionImporter::importFunctions(
   LLVM_DEBUG(dbgs() << "Imported " << ImportedGVCount
                     << " global variables for Module "
                     << DestModule.getModuleIdentifier() << "\n");
+
+  if (ForceImportAll) {
+    SmallVector<StringRef> Undefined;
+    for (Function &F : DestModule) {
+      if (F.isDeclaration() && !F.isIntrinsic()) {
+        Undefined.push_back(F.getName());
+      }
+    }
+    if (!Undefined.empty()) {
+      std::string Msg = std::string("Failed to import functions to ") +
+                        DestModule.getName().str() + ": ";
+      bool First = true;
+      for (auto I : Undefined) {
+        if (!First)
+          Msg = Msg + ", ";
+        Msg = Msg + I.str();
+        First = false;
+      }
+      return make_error<StringError>(
+          Msg, std::make_error_code(std::errc::operation_not_supported));
+    }
+  }
   return ImportedCount;
 }
 
