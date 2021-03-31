@@ -972,4 +972,101 @@ def SPV_GLSLSClampOp : SPV_GLSLTernaryArithmeticOp<"SClamp", 45, SPV_SignedInt> 
   }];
 }
 
+// -----
+
+def SPV_GLSLFmaOp : SPV_GLSLTernaryArithmeticOp<"Fma", 50, SPV_Float> {
+  let summary = "Computes a * b + c.";
+
+  let description = [{
+    In uses where this operation is decorated with NoContraction:
+
+    - fma is considered a single operation, whereas the expression a * b + c
+      is considered two operations.
+    - The precision of fma can differ from the precision of the expression
+      a * b + c.
+    - fma will be computed with the same precision as any other fma decorated
+      with NoContraction, giving invariant results for the same input values
+      of a, b, and c.
+
+    Otherwise, in the absence of a NoContraction decoration, there are no
+    special constraints on the number of operations or difference in precision
+    between fma and the expression a * b +c.
+
+    The operands must all be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of all operands must be the same type. Results
+    are computed per component.
+
+    <!-- End of AutoGen section -->
+    ```
+    fma-op ::= ssa-id `=` `spv.GLSL.Fma` ssa-use, ssa-use, ssa-use `:`
+               float-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %0 = spv.GLSL.Fma %a, %b, %c : f32
+    %1 = spv.GLSL.Fma %a, %b, %c : vector<3xf16>
+    ```
+  }];
+}
+
+// ----
+
+def SPV_GLSLFrexpStructOp : SPV_GLSLOp<"FrexpStruct", 52, [NoSideEffect]> {
+  let summary = "Splits x into two components such that x = significand * 2^exponent";
+
+  let description = [{
+    Result is a structure containing x split into a floating-point significand
+    in the range (-1.0, 0.5] or [0.5, 1.0) and an integral exponent of 2, such that:
+
+    x = significand * 2^exponent
+
+    If x is a zero, the exponent is 0.0. If x is an infinity or a NaN, the
+    exponent is undefined. If x is 0.0, the significand is 0.0. If x is -0.0,
+    the significand is -0.0
+
+    Result Type must be an OpTypeStruct with two members. Member 0 must have
+    the same type as the type of x. Member 0 holds the significand. Member 1
+    must be a scalar or vector with integer component type, with 32-bit
+    component width. Member 1 holds the exponent. These two members and x must
+    have the same number of components.
+
+    The operand x must be a scalar or vector whose component type is
+    floating-point.
+
+    <!-- End of AutoGen section -->
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    integer-scalar-vector-type ::= integer-type |
+                                 `vector<` integer-literal `x` integer-type `>`
+    frexpstruct-op ::= ssa-id `=` `spv.GLSL.FrexpStruct` ssa-use `:`
+                                  `!spv.struct<` float-scalar-vector-type `,`
+                                                  integer-scalar-vector-type `>`
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.GLSL.FrexpStruct %0 : f32 -> !spv.struct<f32, i32>
+    %3 = spv.GLSL.FrexpStruct %0 : vector<3xf32> -> !spv.struct<vector<3xf32>, vector<3xi32>>
+    ```
+  }];
+
+  let arguments = (ins
+    SPV_ScalarOrVectorOf<SPV_Float>:$operand
+  );
+
+  let results = (outs
+    SPV_AnyStruct:$result
+  );
+
+  let assemblyFormat = [{
+    attr-dict $operand `:` type($operand) `->` type($result)
+  }];
+
+  let verifier = [{ return ::verifyGLSLFrexpStructOp(*this); }];
+}
+
 #endif // MLIR_DIALECT_SPIRV_IR_GLSL_OPS

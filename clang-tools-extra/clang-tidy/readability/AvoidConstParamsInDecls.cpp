@@ -33,21 +33,13 @@ void AvoidConstParamsInDecls::registerMatchers(MatchFinder *Finder) {
       parmVarDecl(hasType(qualType(isConstQualified()))).bind("param");
   Finder->addMatcher(
       functionDecl(unless(isDefinition()),
-                   // Lambdas are always their own definition, but they
-                   // generate a non-definition FunctionDecl too. Ignore those.
-                   // Class template instantiations have a non-definition
-                   // CXXMethodDecl for methods that aren't used in this
-                   // translation unit. Ignore those, as the template will have
-                   // already been checked.
-                   unless(cxxMethodDecl(ofClass(cxxRecordDecl(anyOf(
-                       isLambda(), ast_matchers::isTemplateInstantiation()))))),
                    has(typeLoc(forEach(ConstParamDecl))))
           .bind("func"),
       this);
 }
 
 // Re-lex the tokens to get precise location of last 'const'
-static llvm::Optional<Token> ConstTok(CharSourceRange Range,
+static llvm::Optional<Token> constTok(CharSourceRange Range,
                                       const MatchFinder::MatchResult &Result) {
   const SourceManager &Sources = *Result.SourceManager;
   std::pair<FileID, unsigned> LocInfo =
@@ -86,9 +78,9 @@ void AvoidConstParamsInDecls::check(const MatchFinder::MatchResult &Result) {
                    "declaration; const-qualification of parameters only has an "
                    "effect in function definitions");
   if (Param->getName().empty()) {
-    for (unsigned int i = 0; i < Func->getNumParams(); ++i) {
-      if (Param == Func->getParamDecl(i)) {
-        Diag << (i + 1);
+    for (unsigned int I = 0; I < Func->getNumParams(); ++I) {
+      if (Param == Func->getParamDecl(I)) {
+        Diag << (I + 1);
         break;
       }
     }
@@ -109,7 +101,7 @@ void AvoidConstParamsInDecls::check(const MatchFinder::MatchResult &Result) {
   if (!FileRange.isValid())
     return;
 
-  auto Tok = ConstTok(FileRange, Result);
+  auto Tok = constTok(FileRange, Result);
   if (!Tok)
     return;
   Diag << FixItHint::CreateRemoval(

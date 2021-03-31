@@ -17,9 +17,17 @@ def fconstant_to_constant : GICombineRule<
          [{ return matchFConstantToConstant(*${root}, MRI); }]),
   (apply [{ applyFConstantToConstant(*${root}); }])>;
 
+def icmp_redundant_trunc_matchdata : GIDefMatchData<"Register">;
+def icmp_redundant_trunc : GICombineRule<
+  (defs root:$root, icmp_redundant_trunc_matchdata:$matchinfo),
+  (match (wip_match_opcode G_ICMP):$root,
+         [{ return matchICmpRedundantTrunc(*${root}, MRI, Helper.getKnownBits(), ${matchinfo}); }]),
+  (apply [{ applyICmpRedundantTrunc(*${root}, MRI, B, Observer, ${matchinfo}); }])>;
+
 def AArch64PreLegalizerCombinerHelper: GICombinerHelper<
   "AArch64GenPreLegalizerCombinerHelper", [all_combines,
-                                           fconstant_to_constant]> {
+                                           fconstant_to_constant,
+                                           icmp_redundant_trunc]> {
   let DisableRuleOption = "aarch64prelegalizercombiner-disable-rule";
   let StateClass = "AArch64PreLegalizerCombinerHelperState";
   let AdditionalArguments = [];
@@ -137,6 +145,6 @@ def AArch64PostLegalizerCombinerHelper
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
                         extractvecelt_pairwise_add, redundant_or,
-                        mul_const]> {
+                        mul_const, redundant_sext_inreg]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }

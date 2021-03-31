@@ -115,6 +115,11 @@
 
 using namespace llvm;
 
+static cl::opt<bool> VerifyNoAliasScopeDomination(
+    "verify-noalias-scope-decl-dom", cl::Hidden, cl::init(false),
+    cl::desc("Ensure that llvm.experimental.noalias.scope.decl for identical "
+             "scopes are not dominating"));
+
 namespace llvm {
 
 struct VerifierSupport {
@@ -313,6 +318,8 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
 
   TBAAVerifier TBAAVerifyHelper;
 
+  SmallVector<IntrinsicInst *, 4> NoAliasScopeDecls;
+
   void checkAtomicMemAccessSize(Type *Ty, const Instruction *I);
 
 public:
@@ -360,6 +367,8 @@ public:
     LandingPadResultTy = nullptr;
     SawFrameEscape = false;
     SiblingFuncletInfo.clear();
+    verifyNoAliasScopeDecl();
+    NoAliasScopeDecls.clear();
 
     return !Broken;
   }
@@ -536,6 +545,9 @@ private:
 
   /// Verify all-or-nothing property of DIFile source attribute within a CU.
   void verifySourceDebugInfo(const DICompileUnit &U, const DIFile &F);
+
+  /// Verify the llvm.experimental.noalias.scope.decl declarations
+  void verifyNoAliasScopeDecl();
 };
 
 } // end anonymous namespace
@@ -702,11 +714,15 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
   }
 
   // Scalable vectors cannot be global variables, since we don't know
-  // the runtime size. If the global is a struct or an array containing
-  // scalable vectors, that will be caught by the isValidElementType methods
-  // in StructType or ArrayType instead.
+  // the runtime size. If the global is an array containing scalable vectors,
+  // that will be caught by the isValidElementType methods in StructType or
+  // ArrayType instead.
   Assert(!isa<ScalableVectorType>(GV.getValueType()),
          "Globals cannot contain scalable vectors", &GV);
+
+  if (auto *STy = dyn_cast<StructType>(GV.getValueType()))
+    Assert(!STy->containsScalableVectorType(),
+           "Globals cannot contain scalable vectors", &GV);
 
   if (!GV.hasInitializer()) {
     visitGlobalValue(GV);
@@ -1053,12 +1069,6 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
 
   if (auto *Params = N.getRawTemplateParams())
     visitTemplateParams(N, *Params);
-
-  if (N.getTag() == dwarf::DW_TAG_class_type ||
-      N.getTag() == dwarf::DW_TAG_union_type) {
-    AssertDI(N.getFile() && !N.getFile()->getFilename().empty(),
-             "class/union requires a filename", &N, N.getFile());
-  }
 
   if (auto *D = N.getRawDiscriminator()) {
     AssertDI(isa<DIDerivedType>(D) && N.getTag() == dwarf::DW_TAG_variant_part,
@@ -1639,6 +1649,7 @@ static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
   case Attribute::StrictFP:
   case Attribute::NullPointerIsValid:
   case Attribute::MustProgress:
+  case Attribute::NoProfile:
     return true;
   default:
     break;
@@ -3176,7 +3187,8 @@ void Verifier::visitCallBase(CallBase &Call) {
   // and at most one "preallocated" operand bundle.
   bool FoundDeoptBundle = false, FoundFuncletBundle = false,
        FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false,
-       FoundPreallocatedBundle = false, FoundGCLiveBundle = false;;
+       FoundPreallocatedBundle = false, FoundGCLiveBundle = false,
+       FoundAttachedCallBundle = false;
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
     OperandBundleUse BU = Call.getOperandBundleAt(i);
     uint32_t Tag = BU.getTagID();
@@ -3217,8 +3229,18 @@ void Verifier::visitCallBase(CallBase &Call) {
       Assert(!FoundGCLiveBundle, "Multiple gc-live operand bundles",
              Call);
       FoundGCLiveBundle = true;
+    } else if (Tag == LLVMContext::OB_clang_arc_attachedcall) {
+      Assert(!FoundAttachedCallBundle,
+             "Multiple \"clang.arc.attachedcall\" operand bundles", Call);
+      FoundAttachedCallBundle = true;
     }
   }
+
+  if (FoundAttachedCallBundle)
+    Assert(FTy->getReturnType()->isPointerTy(),
+           "a call with operand bundle \"clang.arc.attachedcall\" must call a "
+           "function returning a pointer",
+           Call);
 
   // Verify that each inlinable callsite of a debug-info-bearing function in a
   // debug-info-bearing function has a debug location attached to it. Failure to
@@ -4571,12 +4593,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       break;
     auto *GV = dyn_cast<GlobalVariable>(InfoArg);
     Assert(GV && GV->isConstant() && GV->hasDefinitiveInitializer(),
-      "info argument of llvm.coro.begin must refer to an initialized "
-      "constant");
+           "info argument of llvm.coro.id must refer to an initialized "
+           "constant");
     Constant *Init = GV->getInitializer();
     Assert(isa<ConstantStruct>(Init) || isa<ConstantArray>(Init),
-      "info argument of llvm.coro.begin must refer to either a struct or "
-      "an array");
+           "info argument of llvm.coro.id must refer to either a struct or "
+           "an array");
     break;
   }
 #define INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC)                        \
@@ -4996,20 +5018,34 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
     break;
   }
-  case Intrinsic::sadd_sat:
-  case Intrinsic::uadd_sat:
-  case Intrinsic::ssub_sat:
-  case Intrinsic::usub_sat:
-  case Intrinsic::sshl_sat:
-  case Intrinsic::ushl_sat: {
-    Value *Op1 = Call.getArgOperand(0);
-    Value *Op2 = Call.getArgOperand(1);
-    Assert(Op1->getType()->isIntOrIntVectorTy(),
-           "first operand of [us][add|sub|shl]_sat must be an int type or "
-           "vector of ints");
-    Assert(Op2->getType()->isIntOrIntVectorTy(),
-           "second operand of [us][add|sub|shl]_sat must be an int type or "
-           "vector of ints");
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_xor:
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_mul:
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_umin: {
+    Type *ArgTy = Call.getArgOperand(0)->getType();
+    Assert(ArgTy->isIntOrIntVectorTy() && ArgTy->isVectorTy(),
+           "Intrinsic has incorrect argument type!");
+    break;
+  }
+  case Intrinsic::vector_reduce_fmax:
+  case Intrinsic::vector_reduce_fmin: {
+    Type *ArgTy = Call.getArgOperand(0)->getType();
+    Assert(ArgTy->isFPOrFPVectorTy() && ArgTy->isVectorTy(),
+           "Intrinsic has incorrect argument type!");
+    break;
+  }
+  case Intrinsic::vector_reduce_fadd:
+  case Intrinsic::vector_reduce_fmul: {
+    // Unlike the other reductions, the first argument is a start value. The
+    // second argument is the vector to be reduced.
+    Type *ArgTy = Call.getArgOperand(1)->getType();
+    Assert(ArgTy->isFPOrFPVectorTy() && ArgTy->isVectorTy(),
+           "Intrinsic has incorrect argument type!");
     break;
   }
   case Intrinsic::smul_fix:
@@ -5161,6 +5197,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
            "experimental_vector_extract result must have the same element "
            "type as the input vector.",
            &Call);
+    break;
+  }
+  case Intrinsic::experimental_noalias_scope_decl: {
+    NoAliasScopeDecls.push_back(cast<IntrinsicInst>(&Call));
     break;
   }
   };
@@ -5511,6 +5551,75 @@ void Verifier::verifySourceDebugInfo(const DICompileUnit &U, const DIFile &F) {
     HasSourceDebugInfo[&U] = HasSource;
   AssertDI(HasSource == HasSourceDebugInfo[&U],
            "inconsistent use of embedded source");
+}
+
+void Verifier::verifyNoAliasScopeDecl() {
+  if (NoAliasScopeDecls.empty())
+    return;
+
+  // only a single scope must be declared at a time.
+  for (auto *II : NoAliasScopeDecls) {
+    assert(II->getIntrinsicID() == Intrinsic::experimental_noalias_scope_decl &&
+           "Not a llvm.experimental.noalias.scope.decl ?");
+    const auto *ScopeListMV = dyn_cast<MetadataAsValue>(
+        II->getOperand(Intrinsic::NoAliasScopeDeclScopeArg));
+    Assert(ScopeListMV != nullptr,
+           "llvm.experimental.noalias.scope.decl must have a MetadataAsValue "
+           "argument",
+           II);
+
+    const auto *ScopeListMD = dyn_cast<MDNode>(ScopeListMV->getMetadata());
+    Assert(ScopeListMD != nullptr, "!id.scope.list must point to an MDNode",
+           II);
+    Assert(ScopeListMD->getNumOperands() == 1,
+           "!id.scope.list must point to a list with a single scope", II);
+  }
+
+  // Only check the domination rule when requested. Once all passes have been
+  // adapted this option can go away.
+  if (!VerifyNoAliasScopeDomination)
+    return;
+
+  // Now sort the intrinsics based on the scope MDNode so that declarations of
+  // the same scopes are next to each other.
+  auto GetScope = [](IntrinsicInst *II) {
+    const auto *ScopeListMV = cast<MetadataAsValue>(
+        II->getOperand(Intrinsic::NoAliasScopeDeclScopeArg));
+    return &cast<MDNode>(ScopeListMV->getMetadata())->getOperand(0);
+  };
+
+  // We are sorting on MDNode pointers here. For valid input IR this is ok.
+  // TODO: Sort on Metadata ID to avoid non-deterministic error messages.
+  auto Compare = [GetScope](IntrinsicInst *Lhs, IntrinsicInst *Rhs) {
+    return GetScope(Lhs) < GetScope(Rhs);
+  };
+
+  llvm::sort(NoAliasScopeDecls, Compare);
+
+  // Go over the intrinsics and check that for the same scope, they are not
+  // dominating each other.
+  auto ItCurrent = NoAliasScopeDecls.begin();
+  while (ItCurrent != NoAliasScopeDecls.end()) {
+    auto CurScope = GetScope(*ItCurrent);
+    auto ItNext = ItCurrent;
+    do {
+      ++ItNext;
+    } while (ItNext != NoAliasScopeDecls.end() &&
+             GetScope(*ItNext) == CurScope);
+
+    // [ItCurrent, ItNext) represents the declarations for the same scope.
+    // Ensure they are not dominating each other.. but only if it is not too
+    // expensive.
+    if (ItNext - ItCurrent < 32)
+      for (auto *I : llvm::make_range(ItCurrent, ItNext))
+        for (auto *J : llvm::make_range(ItCurrent, ItNext))
+          if (I != J)
+            Assert(!DT.dominates(I, J),
+                   "llvm.experimental.noalias.scope.decl dominates another one "
+                   "with the same scope",
+                   I);
+    ItCurrent = ItNext;
+  }
 }
 
 //===----------------------------------------------------------------------===//

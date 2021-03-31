@@ -28,6 +28,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %11 = spv.GLSL.Pow %arg0, %arg1 : f32
     // CHECK: {{%.*}} = spv.GLSL.Round {{%.*}} : f32
     %12 = spv.GLSL.Round %arg0 : f32
+    // CHECK: {{%.*}} = spv.GLSL.FrexpStruct {{%.*}} : f32 -> !spv.struct<(f32, i32)>
+    %13 = spv.GLSL.FrexpStruct %arg0 : f32 -> !spv.struct<(f32, i32)>
     spv.Return
   }
 
@@ -46,6 +48,12 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.func @sclamp(%arg0 : si32, %arg1 : si32, %arg2 : si32) "None" {
     // CHECK: spv.GLSL.SClamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : si32
     %13 = spv.GLSL.SClamp %arg0, %arg1, %arg2 : si32
+    spv.Return
+  }
+
+  spv.func @fma(%arg0 : f32, %arg1 : f32, %arg2 : f32) "None" {
+    // CHECK: spv.GLSL.Fma {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
+    %13 = spv.GLSL.Fma %arg0, %arg1, %arg2 : f32
     spv.Return
   }
 }

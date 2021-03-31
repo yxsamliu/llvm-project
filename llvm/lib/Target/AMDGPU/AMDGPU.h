@@ -15,7 +15,6 @@
 
 namespace llvm {
 
-class AMDGPUTargetMachine;
 class FunctionPass;
 class GCNTargetMachine;
 class ImmutablePass;
@@ -331,9 +330,6 @@ void initializeAMDGPUExternalAAWrapperPass(PassRegistry&);
 
 void initializeAMDGPUArgumentUsageInfoPass(PassRegistry &);
 
-Pass *createAMDGPUFunctionInliningPass();
-void initializeAMDGPUInlinerPass(PassRegistry&);
-
 ModulePass *createAMDGPUOpenCLEnqueuedBlockLoweringPass();
 void initializeAMDGPUOpenCLEnqueuedBlockLoweringPass(PassRegistry &);
 extern char &AMDGPUOpenCLEnqueuedBlockLoweringID;
@@ -343,9 +339,6 @@ extern char &GCNRegBankReassignID;
 
 void initializeGCNNSAReassignPass(PassRegistry &);
 extern char &GCNNSAReassignID;
-
-FunctionPass *createAMDGPUPromotePointerKernArgsToGlobalPass();
-void initializeAMDGPUPromotePointerKernArgsToGlobalPass(PassRegistry &);
 
 namespace AMDGPU {
 enum TargetIndex {

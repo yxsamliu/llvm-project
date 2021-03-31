@@ -12,8 +12,8 @@
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
-#include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -239,7 +239,7 @@ public:
       });
       for (auto DeinitFnAddr : *Deinitializers) {
         LLVM_DEBUG({
-          dbgs() << "  Running init " << formatv("{0:x16}", DeinitFnAddr)
+          dbgs() << "  Running deinit " << formatv("{0:x16}", DeinitFnAddr)
                  << "...\n";
         });
         auto *DeinitFn = jitTargetAddressToFunction<void (*)()>(DeinitFnAddr);
@@ -922,7 +922,8 @@ Error LLJITBuilderState::prepareForConstruction() {
   }
 
   LLVM_DEBUG({
-    dbgs() << "  JITTargetMachineBuilder is " << JTMB << "\n"
+    dbgs() << "  JITTargetMachineBuilder is "
+           << JITTargetMachineBuilderPrinter(*JTMB, "  ")
            << "  Pre-constructed ExecutionSession: " << (ES ? "Yes" : "No")
            << "\n"
            << "  DataLayout: ";

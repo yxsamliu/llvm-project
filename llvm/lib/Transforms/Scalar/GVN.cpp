@@ -289,9 +289,8 @@ GVN::Expression GVN::ValueTable::createExpr(Instruction *I) {
   Expression e;
   e.type = I->getType();
   e.opcode = I->getOpcode();
-  for (Instruction::op_iterator OI = I->op_begin(), OE = I->op_end();
-       OI != OE; ++OI)
-    e.varargs.push_back(lookupOrAdd(*OI));
+  for (Use &Op : I->operands())
+    e.varargs.push_back(lookupOrAdd(Op));
   if (I->isCommutative()) {
     // Ensure that commutative instructions that only differ by a permutation
     // of their operands get the same value number by sorting the operand value
@@ -362,13 +361,10 @@ GVN::Expression GVN::ValueTable::createExtractvalueExpr(ExtractValueInst *EI) {
   // Not a recognised intrinsic. Fall back to producing an extract value
   // expression.
   e.opcode = EI->getOpcode();
-  for (Instruction::op_iterator OI = EI->op_begin(), OE = EI->op_end();
-       OI != OE; ++OI)
-    e.varargs.push_back(lookupOrAdd(*OI));
+  for (Use &Op : EI->operands())
+    e.varargs.push_back(lookupOrAdd(Op));
 
-  for (ExtractValueInst::idx_iterator II = EI->idx_begin(), IE = EI->idx_end();
-         II != IE; ++II)
-    e.varargs.push_back(*II);
+  append_range(e.varargs, EI->indices());
 
   return e;
 }
@@ -2675,9 +2671,11 @@ BasicBlock *GVN::splitCriticalEdges(BasicBlock *Pred, BasicBlock *Succ) {
   BasicBlock *BB = SplitCriticalEdge(
       Pred, Succ,
       CriticalEdgeSplittingOptions(DT, LI, MSSAU).unsetPreserveLoopSimplify());
-  if (MD)
-    MD->invalidateCachedPredecessors();
-  InvalidBlockRPONumbers = true;
+  if (BB) {
+    if (MD)
+      MD->invalidateCachedPredecessors();
+    InvalidBlockRPONumbers = true;
+  }
   return BB;
 }
 
@@ -2686,14 +2684,20 @@ BasicBlock *GVN::splitCriticalEdges(BasicBlock *Pred, BasicBlock *Succ) {
 bool GVN::splitCriticalEdges() {
   if (toSplit.empty())
     return false;
+
+  bool Changed = false;
   do {
     std::pair<Instruction *, unsigned> Edge = toSplit.pop_back_val();
-    SplitCriticalEdge(Edge.first, Edge.second,
-                      CriticalEdgeSplittingOptions(DT, LI, MSSAU));
+    Changed |= SplitCriticalEdge(Edge.first, Edge.second,
+                                 CriticalEdgeSplittingOptions(DT, LI, MSSAU)) !=
+               nullptr;
   } while (!toSplit.empty());
-  if (MD) MD->invalidateCachedPredecessors();
-  InvalidBlockRPONumbers = true;
-  return true;
+  if (Changed) {
+    if (MD)
+      MD->invalidateCachedPredecessors();
+    InvalidBlockRPONumbers = true;
+  }
+  return Changed;
 }
 
 /// Executes one iteration of GVN
@@ -2789,9 +2793,7 @@ void GVN::addDeadBlock(BasicBlock *BB) {
 
   // For the dead blocks' live successors, update their phi nodes by replacing
   // the operands corresponding to dead blocks with UndefVal.
-  for(SmallSetVector<BasicBlock *, 4>::iterator I = DF.begin(), E = DF.end();
-        I != E; I++) {
-    BasicBlock *B = *I;
+  for (BasicBlock *B : DF) {
     if (DeadBlocks.count(B))
       continue;
 

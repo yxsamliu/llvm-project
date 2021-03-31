@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIINSTRINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_SIINSTRINFO_H
 
+#include "AMDGPUMIRFormatter.h"
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SetVector.h"
@@ -39,6 +40,7 @@ private:
   const SIRegisterInfo RI;
   const GCNSubtarget &ST;
   TargetSchedModel SchedModel;
+  mutable std::unique_ptr<AMDGPUMIRFormatter> Formatter;
 
   // The inverse predicate should have the negative value.
   enum BranchPredicate {
@@ -167,6 +169,10 @@ public:
 
   const SIRegisterInfo &getRegisterInfo() const {
     return RI;
+  }
+
+  const GCNSubtarget &getSubtarget() const {
+    return ST;
   }
 
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
@@ -549,6 +555,32 @@ public:
 
   bool isEXP(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::EXP;
+  }
+
+  static bool isAtomicNoRet(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::IsAtomicNoRet;
+  }
+
+  bool isAtomicNoRet(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::IsAtomicNoRet;
+  }
+
+  static bool isAtomicRet(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::IsAtomicRet;
+  }
+
+  bool isAtomicRet(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::IsAtomicRet;
+  }
+
+  static bool isAtomic(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & (SIInstrFlags::IsAtomicRet |
+                                   SIInstrFlags::IsAtomicNoRet);
+  }
+
+  bool isAtomic(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & (SIInstrFlags::IsAtomicRet |
+                                  SIInstrFlags::IsAtomicNoRet);
   }
 
   static bool isWQM(const MachineInstr &MI) {
@@ -1072,11 +1104,7 @@ public:
   const TargetRegisterClass *getRegClass(const MCInstrDesc &TID, unsigned OpNum,
                                          const TargetRegisterInfo *TRI,
                                          const MachineFunction &MF)
-    const override {
-    if (OpNum >= TID.getNumOperands())
-      return nullptr;
-    return RI.getRegClass(TID.OpInfo[OpNum].RegClass);
-  }
+    const override;
 
   void fixImplicitOperands(MachineInstr &MI) const;
 
@@ -1090,6 +1118,12 @@ public:
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
+
+  const MIRFormatter *getMIRFormatter() const override {
+    if (!Formatter.get())
+      Formatter = std::make_unique<AMDGPUMIRFormatter>();
+    return Formatter.get();
+  }
 
   static unsigned getDSShaderTypeValue(const MachineFunction &MF);
 };
@@ -1171,9 +1205,6 @@ namespace AMDGPU {
 
   LLVM_READONLY
   int getMUBUFNoLdsInst(uint16_t Opcode);
-
-  LLVM_READONLY
-  int getAtomicRetOp(uint16_t Opcode);
 
   LLVM_READONLY
   int getAtomicNoRetOp(uint16_t Opcode);

@@ -507,12 +507,23 @@ public:
 
   /// True if the C++ Standard Requires Progress.
   bool CPlusPlusWithProgress() {
+    if (CGM.getCodeGenOpts().getFiniteLoops() ==
+        CodeGenOptions::FiniteLoopsKind::Never)
+      return false;
+
     return getLangOpts().CPlusPlus11 || getLangOpts().CPlusPlus14 ||
            getLangOpts().CPlusPlus17 || getLangOpts().CPlusPlus20;
   }
 
   /// True if the C Standard Requires Progress.
   bool CWithProgress() {
+    if (CGM.getCodeGenOpts().getFiniteLoops() ==
+        CodeGenOptions::FiniteLoopsKind::Always)
+      return true;
+    if (CGM.getCodeGenOpts().getFiniteLoops() ==
+        CodeGenOptions::FiniteLoopsKind::Never)
+      return false;
+
     return getLangOpts().C11 || getLangOpts().C17 || getLangOpts().C2x;
   }
 
@@ -1447,7 +1458,8 @@ public:
   /// Increment the profiler's counter for the given statement by \p StepV.
   /// If \p StepV is null, the default increment is 1.
   void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr) {
-    if (CGM.getCodeGenOpts().hasProfileClangInstr())
+    if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
+        !CurFn->hasFnAttribute(llvm::Attribute::NoProfile))
       PGO.emitCounterIncrement(Builder, S, StepV);
     PGO.setCurrentStmt(S);
   }
@@ -3394,6 +3406,7 @@ public:
 
   void EmitOMPParallelDirective(const OMPParallelDirective &S);
   void EmitOMPSimdDirective(const OMPSimdDirective &S);
+  void EmitOMPTileDirective(const OMPTileDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
   void EmitOMPForSimdDirective(const OMPForSimdDirective &S);
   void EmitOMPSectionsDirective(const OMPSectionsDirective &S);
@@ -4209,6 +4222,8 @@ public:
   llvm::Value *EmitARCUnsafeUnretainedScalarExpr(const Expr *expr);
 
   void EmitARCIntrinsicUse(ArrayRef<llvm::Value*> values);
+
+  void EmitARCNoopIntrinsicUse(ArrayRef<llvm::Value *> values);
 
   static Destroyer destroyARCStrongImprecise;
   static Destroyer destroyARCStrongPrecise;

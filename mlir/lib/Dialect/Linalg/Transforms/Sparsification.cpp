@@ -500,6 +500,7 @@ static unsigned buildLattices(Merger &merger, linalg::GenericOp op,
   case Kind::kAddI:
     return merger.takeDisj(kind, s0, s1);
   }
+  llvm_unreachable("unexpected expression kind");
 }
 
 /// Maps sparse integer option to actual integral storage type.
@@ -511,7 +512,43 @@ static Type genIntType(PatternRewriter &rewriter, linalg::SparseIntType tp) {
     return rewriter.getIntegerType(64);
   case linalg::SparseIntType::kI32:
     return rewriter.getIntegerType(32);
+  case linalg::SparseIntType::kI16:
+    return rewriter.getIntegerType(16);
+  case linalg::SparseIntType::kI8:
+    return rewriter.getIntegerType(8);
   }
+  llvm_unreachable("unexpected SparseIntType");
+}
+
+/// Returns true if tensor was set up with sparse storage scheme.
+static bool linkedSparse(linalg::GenericOp op, unsigned tensor) {
+  if (tensor < op.getNumInputs())
+    return isa_and_nonnull<linalg::SparseTensorFromPointerOp>(
+        op.getInput(tensor).getDefiningOp());
+  return false;
+}
+
+/// Generates buffer for the output tensor.
+static Value genOutputBuffer(CodeGen &codegen, PatternRewriter &rewriter,
+                             linalg::GenericOp op, MemRefType denseTp,
+                             ArrayRef<Value> args) {
+  Location loc = op.getLoc();
+  Value tensor = op.getOutput(0);
+  // The output tensor simply could materialize from the buffer that will
+  // be generated for the tensor present in the outs() clause. This has
+  // the major advantage that the sparse kernel only updates the nonzero
+  // positions for the output tensor. Currently this results in functional,
+  // but slightly imprecise IR, so it is put under an experimental option.
+  if (codegen.options.fastOutput)
+    return rewriter.create<TensorToMemrefOp>(loc, denseTp, tensor);
+  // By default, a new buffer is allocated which is initialized to the
+  // tensor defined in the outs() clause. This is always correct but
+  // introduces a dense initialization component that may negatively
+  // impact the running complexity of the sparse kernel.
+  Value init = rewriter.create<TensorToMemrefOp>(loc, denseTp, tensor);
+  Value alloc = rewriter.create<AllocOp>(loc, denseTp, args);
+  rewriter.create<linalg::CopyOp>(loc, init, alloc);
+  return alloc;
 }
 
 /// Local bufferization of all dense and sparse data structures.
@@ -523,53 +560,63 @@ static void genBuffers(Merger &merger, CodeGen &codegen,
   unsigned numTensors = op.getNumShapedOperands();
   unsigned numInputs = op.getNumInputs();
   assert(numTensors == numInputs + 1);
-
-  // For now, set all unknown dimensions to 999.
-  // TODO: compute these values (using sparsity or by reading tensor)
-  Value unknown = rewriter.create<ConstantIndexOp>(loc, 999);
-
   // For every tensor, find lower and upper bound on dimensions, set the
-  // same bounds on loop indices, and allocate dense or sparse buffer(s).
+  // same bounds on loop indices, and obtain dense or sparse buffer(s).
   SmallVector<Value, 4> args;
   for (unsigned t = 0; t < numTensors; t++) {
+    Value tensor = t < numInputs ? op.getInput(t) : op.getOutput(0);
     auto tensorType = op.getShapedType(t);
     auto shape = tensorType.getShape();
     auto map = op.getIndexingMap(t);
     // Scan all dimensions of current tensor.
-    bool allDense = true;
+    bool dense = !linkedSparse(op, t);
     args.clear();
     for (unsigned d = 0, rank = shape.size(); d < rank; d++) {
       unsigned i = map.getDimPosition(d);
       // Handle sparse storage schemes.
       if (merger.isDim(t, i, Dim::kSparse)) {
-        allDense = false;
+        dense = false;
         auto dynShape = {ShapedType::kDynamicSize};
         auto ptrTp = MemRefType::get(
             dynShape, genIntType(rewriter, codegen.options.ptrType));
         auto indTp = MemRefType::get(
             dynShape, genIntType(rewriter, codegen.options.indType));
-        codegen.pointers[t][i] = rewriter.create<AllocaOp>(loc, ptrTp, unknown);
-        codegen.indices[t][i] = rewriter.create<AllocaOp>(loc, indTp, unknown);
+        Value dim = rewriter.create<ConstantIndexOp>(loc, d);
+        // Generate sparse primitives to obtains pointer and indices.
+        codegen.pointers[t][i] =
+            rewriter.create<linalg::SparseTensorToPointersMemRefOp>(
+                loc, ptrTp, tensor, dim);
+        codegen.indices[t][i] =
+            rewriter.create<linalg::SparseTensorToIndicesMemRefOp>(loc, indTp,
+                                                                   tensor, dim);
       }
       // Find lower and upper bound in current dimension.
       Value up;
       if (shape[d] == TensorType::kDynamicSize) {
-        Value arg = t < numInputs ? op.getInput(t) : op.getOutput(0);
-        up = rewriter.create<DimOp>(loc, arg, d);
+        up = rewriter.create<DimOp>(loc, tensor, d);
         args.push_back(up);
       } else {
         up = rewriter.create<ConstantIndexOp>(loc, shape[d]);
       }
       codegen.sizes[i] = codegen.highs[t][i] = up;
     }
-    // Allocate dense or sparse buffer for numerical values.
-    if (allDense) {
+    // Perform the required bufferization. All dense inputs materialize
+    // from the input tensor. The dense output tensor needs special
+    // handling. Sparse inputs use a sparse primitive to obtain the values.
+    if (dense) {
       auto denseTp = MemRefType::get(shape, tensorType.getElementType());
-      codegen.buffers[t] = rewriter.create<AllocaOp>(loc, denseTp, args);
+      if (t < numInputs)
+        codegen.buffers[t] =
+            rewriter.create<TensorToMemrefOp>(loc, denseTp, tensor);
+      else
+        codegen.buffers[t] =
+            genOutputBuffer(codegen, rewriter, op, denseTp, args);
     } else {
-      auto sparseTp = MemRefType::get({ShapedType::kDynamicSize},
-                                      tensorType.getElementType());
-      codegen.buffers[t] = rewriter.create<AllocaOp>(loc, sparseTp, unknown);
+      auto dynShape = {ShapedType::kDynamicSize};
+      auto sparseTp = MemRefType::get(dynShape, tensorType.getElementType());
+      codegen.buffers[t] =
+          rewriter.create<linalg::SparseTensorToValuesMemRefOp>(loc, sparseTp,
+                                                                tensor);
     }
   }
 }
@@ -651,7 +698,7 @@ static Value genTensorLoad(Merger &merger, CodeGen &codegen,
   SmallVector<Value, 4> args;
   unsigned tensor = merger.exp(exp).e0;
   auto map = op.getIndexingMap(tensor);
-  bool sparse = false;
+  bool sparse = linkedSparse(op, tensor);
   for (unsigned i = 0, m = map.getNumResults(); i < m; ++i) {
     unsigned idx = map.getDimPosition(i);
     args.push_back(codegen.loops[idx]); // universal dense index
@@ -735,6 +782,7 @@ static Value genExp(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
   case Kind::kAddI:
     return rewriter.create<AddIOp>(op.getLoc(), v0, v1);
   }
+  llvm_unreachable("unexpected expression kind");
 }
 
 /// Hoists loop invariant tensor loads for which indices have been exhausted.
@@ -825,6 +873,7 @@ static bool isVectorFor(CodeGen &codegen, bool isInner, bool isSparse) {
   case linalg::SparseVectorizationStrategy::kAnyStorageInnerLoop:
     return isInner;
   }
+  llvm_unreachable("unexpected vectorization strategy");
 }
 
 /// Returns parallelization strategy. Any implicit loop in the Linalg operation
@@ -844,6 +893,7 @@ static bool isParallelFor(CodeGen &codegen, bool isOuter, bool isReduction,
   case linalg::SparseParallelizationStrategy::kAnyStorageAnyLoop:
     return !isReduction && !isVector;
   }
+  llvm_unreachable("unexpected parallelization strategy");
 }
 
 /// Generates a for-loop on a single index.

@@ -170,6 +170,10 @@ private:
     EffectiveTriple = std::move(ET);
   }
 
+  mutable llvm::Optional<CXXStdlibType> cxxStdlibType;
+  mutable llvm::Optional<RuntimeLibType> runtimeLibType;
+  mutable llvm::Optional<UnwindLibType> unwindLibType;
+
 protected:
   MultilibSet Multilibs;
   Multilib SelectedMultilib;
@@ -460,6 +464,12 @@ public:
   /// by default.
   virtual bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const;
 
+  /// Test whether this toolchain supports outline atomics by default.
+  virtual bool
+  IsAArch64OutlineAtomicsDefault(const llvm::opt::ArgList &Args) const {
+    return false;
+  }
+
   /// Test whether this toolchain defaults to PIC.
   virtual bool isPICDefault() const = 0;
 
@@ -678,7 +688,10 @@ public:
   virtual void AddFortranStdlibLibArgs(const llvm::opt::ArgList &Args,
                                        llvm::opt::ArgStringList &CmdArgs) const;
 
-  /// Return sanitizers which are available in this toolchain.
+  /// Get paths of HIP device libraries.
+  virtual llvm::SmallVector<std::string, 12>
+  getHIPDeviceLibs(const llvm::opt::ArgList &Args) const;
+
   /// Return sanitizers which are available in this toolchain.
   virtual SanitizerMask getSupportedSanitizers() const;
 
