@@ -23,7 +23,7 @@ class Value;
 ///  /* OUT */ %success, /* OUT */ %new_loaded)
 using CreateCmpXchgInstFun =
     function_ref<void(IRBuilder<> &, Value *, Value *, Value *, AtomicOrdering,
-                      Value *&, Value *&)>;
+                      SyncScope::ID, Value *&, Value *&)>;
 
 /// Expand an atomic RMW instruction into a loop utilizing
 /// cmpxchg. You'll want to make sure your target machine likes cmpxchg
