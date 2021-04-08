@@ -4082,6 +4082,16 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
     }
   }
 
+  if (isGFX90A()) {
+    int SCCBPos = AMDGPU::getNamedOperandIdx(Inst.getOpcode(),
+                                             AMDGPU::OpName::sccb);
+    if (SCCBPos != -1 && Inst.getOperand(SCCBPos).getImm()) {
+      SMLoc S = getImmLoc(AMDGPUOperand::ImmTySCCB, Operands);
+      Error(S, "scc is not supported on this GPU");
+      return false;
+    }
+  }
+
   return true;
 }
 

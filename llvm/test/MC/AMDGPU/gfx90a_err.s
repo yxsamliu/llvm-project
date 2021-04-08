@@ -230,3 +230,6 @@ global_atomic_min_f64 v[0:1], v[2:3], off scc
 
 global_atomic_max_f64 v[0:1], v[2:3], off scc
 // GFX90A: error: invalid operand for instruction
+
+flat_load_dword v0, v[0:1] scc
+// GFX90A: error: scc is not supported on this GPU
