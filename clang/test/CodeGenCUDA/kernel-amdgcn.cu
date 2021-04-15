@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple amdgcn -fcuda-is-device -emit-llvm -x hip %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn -target-cpu gfx906 -fcuda-is-device \
+// RUN:    -emit-llvm -x hip %s -o - | FileCheck %s
 #include "Inputs/cuda.h"
 
 // CHECK: define{{.*}} amdgpu_kernel void @_ZN1A6kernelEv

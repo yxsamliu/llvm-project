@@ -5,7 +5,8 @@
 // RUN:   -o - -x hip | FileCheck -check-prefixes=CHECK,O0 %s
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -emit-llvm %s -O0 \
 // RUN:   -fcuda-include-gpubinary %t -debug-info-kind=limited \
-// RUN:   -o - -x hip -fcuda-is-device | FileCheck -check-prefix=DEV %s
+// RUN:   -target-cpu gfx906 -o - -x hip -fcuda-is-device \
+// RUN:   | FileCheck -check-prefix=DEV %s
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -O0 \
 // RUN:   -fcuda-include-gpubinary %t -debug-info-kind=limited \
@@ -14,7 +15,8 @@
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -emit-llvm %s -O0 \
 // RUN:   -fcuda-include-gpubinary %t -debug-info-kind=limited \
 // RUN:   -o - -x hip -debugger-tuning=gdb -dwarf-version=4 \
-// RUN:   -fcuda-is-device | FileCheck -check-prefix=DEV %s
+// RUN:   -target-cpu gfx906 -fcuda-is-device \
+// RUN:   | FileCheck -check-prefix=DEV %s
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -O3 \
 // RUN:   -fcuda-include-gpubinary %t -debug-info-kind=limited \
@@ -22,7 +24,8 @@
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -emit-llvm %s -O3 \
 // RUN:   -fcuda-include-gpubinary %t -debug-info-kind=limited \
 // RUN:   -o - -x hip -debugger-tuning=gdb -dwarf-version=4 \
-// RUN:   -fcuda-is-device | FileCheck -check-prefix=DEV %s
+// RUN:   -target-cpu gfx906 -fcuda-is-device \
+// RUN:   | FileCheck -check-prefix=DEV %s
 
 #include "Inputs/cuda.h"
 

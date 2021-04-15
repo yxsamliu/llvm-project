@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -x hip -triple amdgcn-amd-amdhsa -fcuda-is-device \
-// RUN:     -emit-llvm %s -o - | FileCheck -check-prefix=AMDGCN %s
+// RUN:     -target-cpu gfx906 -emit-llvm %s -o - \
+// RUN:     | FileCheck -check-prefix=AMDGCN %s
 // RUN: %clang_cc1 -x cuda -triple nvptx64-nvidia-cuda- -fcuda-is-device \
 // RUN:     -emit-llvm %s -o - | FileCheck -check-prefix=NVPTX %s
 #include "Inputs/cuda.h"

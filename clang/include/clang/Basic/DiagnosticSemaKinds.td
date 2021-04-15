@@ -8256,6 +8256,9 @@ def warn_kern_is_method : Extension<
 def warn_kern_is_inline : Warning<
   "ignored 'inline' attribute on kernel function %0">,
   InGroup<CudaCompat>;
+def err_hip_kern_without_gpu : Error<
+  "compile HIP kernel without specifying offload arch is not allowed">,
+  DefaultFatal;
 def err_variadic_device_fn : Error<
   "CUDA device code does not support variadic functions">;
 def err_va_arg_in_device : Error<

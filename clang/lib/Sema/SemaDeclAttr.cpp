@@ -4428,6 +4428,11 @@ static void handleGlobalAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
     S.Diag(Method->getBeginLoc(), diag::warn_kern_is_method) << Method;
   }
+  if (S.getASTContext().getTargetInfo().getTargetOpts().CPU.empty() &&
+      S.getLangOpts().HIP && S.getLangOpts().CUDAIsDevice) {
+    S.Diag(FD->getBeginLoc(), diag::err_hip_kern_without_gpu);
+    return;
+  }
   // Only warn for "inline" when compiling for host, to cut down on noise.
   if (FD->isInlineSpecified() && !S.getLangOpts().CUDAIsDevice)
     S.Diag(FD->getBeginLoc(), diag::warn_kern_is_inline) << FD;

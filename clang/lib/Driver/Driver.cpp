@@ -2727,8 +2727,9 @@ class OffloadingActionBuilder final {
       // Default to sm_20 which is the lowest common denominator for
       // supported GPUs.  sm_20 code should work correctly, if
       // suboptimally, on all newer GPUs.
-      if (GpuArchList.empty())
+      if (GpuArchList.empty()) {
         GpuArchList.push_back(DefaultCudaArch);
+      }
 
       return Error;
     }
@@ -2873,7 +2874,6 @@ class OffloadingActionBuilder final {
     HIPActionBuilder(Compilation &C, DerivedArgList &Args,
                      const Driver::InputList &Inputs)
         : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_HIP) {
-      DefaultCudaArch = CudaArch::GFX803;
       GPUSanitize = Args.hasFlag(options::OPT_fgpu_sanitize,
                                  options::OPT_fno_gpu_sanitize, false);
     }

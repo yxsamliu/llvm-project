@@ -293,8 +293,11 @@ HIPToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 
   if (!BoundArch.empty()) {
     DAL->eraseArg(options::OPT_mcpu_EQ);
-    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mcpu_EQ), BoundArch);
-    checkTargetID(*DAL);
+    if (BoundArch != "unknown") {
+      DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mcpu_EQ),
+                        BoundArch);
+      checkTargetID(*DAL);
+    }
   }
 
   return DAL;
@@ -355,7 +358,8 @@ VersionTuple HIPToolChain::computeMSVCVersion(const Driver *D,
 llvm::SmallVector<std::string, 12>
 HIPToolChain::getHIPDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
   llvm::SmallVector<std::string, 12> BCLibs;
-  if (DriverArgs.hasArg(options::OPT_nogpulib))
+  StringRef GpuArch = getGPUArch(DriverArgs);
+  if (DriverArgs.hasArg(options::OPT_nogpulib) || GpuArch.empty())
     return {};
   ArgStringList LibraryPaths;
 
@@ -386,7 +390,6 @@ HIPToolChain::getHIPDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
       getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 0;
       return {};
     }
-    StringRef GpuArch = getGPUArch(DriverArgs);
     assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
     (void)GpuArch;
     auto Kind = llvm::AMDGPU::parseArchAMDGCN(GpuArch);

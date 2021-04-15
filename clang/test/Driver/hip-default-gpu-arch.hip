@@ -4,4 +4,5 @@
 
 // RUN: %clang -### -c %s 2>&1 | FileCheck %s
 
-// CHECK: {{.*}}clang{{.*}}"-target-cpu" "gfx803"
+// CHECK-NOT: {{.*}}clang{{.*}}"-triple" "amdgcn-amd-amdhsa"{{.*}}"-target-cpu"
+// CHECK: {{.*}}clang{{.*}}"-triple" "amdgcn-amd-amdhsa"
