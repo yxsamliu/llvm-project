@@ -2,7 +2,7 @@
 // REQUIRES: amdgpu-registered-target
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device \
-// RUN:   -fgpu-rdc -emit-llvm -o - -x hip %s | FileCheck \
+// RUN:   -target-cpu gfx906 -fgpu-rdc -emit-llvm -o - -x hip %s | FileCheck \
 // RUN:   -check-prefixes=DEV,INT-DEV %s
 
 // RUN: %clang_cc1 -triple x86_64-gnu-linux \
@@ -10,7 +10,7 @@
 // RUN:   -check-prefixes=HOST,INT-HOST %s
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
-// RUN:   -fgpu-rdc -emit-llvm -o - -x hip %s > %t.dev
+// RUN:   -target-cpu gfx906 -fgpu-rdc -emit-llvm -o - -x hip %s > %t.dev
 // RUN: cat %t.dev | FileCheck -check-prefixes=DEV,EXT-DEV %s
 
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -cuid=abc \

@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx906 \
 // RUN:     -fcuda-is-device -emit-llvm -o - -x hip %s \
 // RUN:     | FileCheck -check-prefixes=CHECK,DEFAULT %s
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa --gpu-max-threads-per-block=1024 \
-// RUN:     -fcuda-is-device -emit-llvm -o - -x hip %s \
+// RUN:     -target-cpu gfx906 -fcuda-is-device -emit-llvm -o - -x hip %s \
 // RUN:     | FileCheck -check-prefixes=CHECK,MAX1024 %s
 // RUN: %clang_cc1 -triple nvptx \
 // RUN:     -fcuda-is-device -emit-llvm -o - %s | FileCheck %s \

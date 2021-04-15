@@ -5,7 +5,8 @@
 // RUN:     -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device \
-// RUN:     -emit-llvm -disable-llvm-passes -o - -x hip %s | FileCheck %s
+// RUN:     -target-cpu gfx906 -emit-llvm -disable-llvm-passes \
+// RUN:     -o - -x hip %s | FileCheck %s
 
 #include "Inputs/cuda.h"
 
