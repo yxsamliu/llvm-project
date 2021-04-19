@@ -21,7 +21,21 @@ __global__ void kern(float *x, float y) {
 }
 
 // CHECK-LABEL: define{{.*}} i64 @_Z11test_size_tv
-// CHEC: ret i64 8
+// CHECK: ret i64 8
 __device__ size_t test_size_t() {
   return sizeof(size_t);
+}
+
+// Check there is no ambiguity when calling overloaded math functions.
+
+// CHECK-LABEL: define{{.*}}@_Z10test_floorv
+// CHECK: call {{.*}}double @__ocml_floor_f64(double
+__device__ float test_floor() {
+  return floor(5);
+}
+
+// CHECK-LABEL: define{{.*}}@_Z8test_maxv
+// CHECK: call {{.*}}double @__ocml_fmax_f64(double {{.*}}, double
+__device__ float test_max() {
+  return max(5, 6.0);
 }
