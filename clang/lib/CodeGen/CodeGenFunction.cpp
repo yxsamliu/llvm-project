@@ -1084,6 +1084,22 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         RetTy->isObjCRetainableType())
       AutoreleaseResult = true;
   }
+  // Alloca address space may be different than default address space. Return
+  // value is expected to be in default address space. This is no-op if they
+  // are the same.
+  if (ReturnValue.isValid()) {
+    ReturnValue =
+        Address(getTargetHooks().performAddrSpaceCast(
+                    *this, ReturnValue.getPointer(), LangAS::Default,
+                    getASTAllocaAddressSpace(),
+                    ReturnValue.getPointer()
+                        ->getType()
+                        ->getPointerElementType()
+                        ->getPointerTo(getContext().getTargetAddressSpace(
+                            LangAS::Default)),
+                    /*non-null*/ true),
+                ReturnValue.getAlignment());
+  }
 
   EmitStartEHSpec(CurCodeDecl);
 

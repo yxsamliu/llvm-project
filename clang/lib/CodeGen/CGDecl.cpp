@@ -1604,8 +1604,11 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
     if (UsePointerValue)
       DebugAddr = ReturnValuePointer;
 
-    (void)DI->EmitDeclareOfAutoVariable(&D, DebugAddr.getPointer(), Builder,
-                                        UsePointerValue);
+    // Local variables are casted to default address space if the alloca address
+    // space is different. Need to strip casts to get the real variables.
+    (void)DI->EmitDeclareOfAutoVariable(
+        &D, DebugAddr.getPointer()->stripPointerCasts(), Builder,
+        UsePointerValue);
   }
 
   if (D.hasAttr<AnnotateAttr>() && HaveInsertPoint())
