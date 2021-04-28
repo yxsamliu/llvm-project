@@ -1624,7 +1624,8 @@ CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
   if (IRFunctionArgs.hasSRetArg()) {
     QualType Ret = FI.getReturnType();
     llvm::Type *Ty = ConvertType(Ret);
-    unsigned AddressSpace = Context.getTargetAddressSpace(Ret);
+    unsigned AddressSpace =
+        Context.getTargetAddressSpace(CGM.getASTAllocaAddressSpace());
     ArgTypes[IRFunctionArgs.getSRetArgNo()] =
         llvm::PointerType::get(Ty, AddressSpace);
   }
@@ -4671,7 +4672,17 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       }
     }
     if (IRFunctionArgs.hasSRetArg()) {
-      IRCallArgs[IRFunctionArgs.getSRetArgNo()] = SRetPtr.getPointer();
+      IRCallArgs[IRFunctionArgs.getSRetArgNo()] =
+          getTargetHooks().performAddrSpaceCast(
+              *this, SRetPtr.getPointer(), LangAS::Default,
+              getASTAllocaAddressSpace(),
+              SRetPtr.getPointer()
+                  ->getType()
+                  ->getPointerElementType()
+                  ->getPointerTo(getContext().getTargetAddressSpace(
+                      getASTAllocaAddressSpace())),
+              /*non-null*/ true);
+
     } else if (RetAI.isInAlloca()) {
       Address Addr =
           Builder.CreateStructGEP(ArgMemory, RetAI.getInAllocaFieldIndex());
@@ -4891,11 +4902,13 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             V->getType()->isIntegerTy())
           V = Builder.CreateZExt(V, ArgInfo.getCoerceToType());
 
-        // If the argument doesn't match, perform a bitcast to coerce it.  This
-        // can happen due to trivial type mismatches.
+        // If the argument doesn't match, perform a bitcast or addrspacecast
+        // to coerce it.  This can happen due to trivial type mismatches.
         if (FirstIRArg < IRFuncTy->getNumParams() &&
-            V->getType() != IRFuncTy->getParamType(FirstIRArg))
-          V = Builder.CreateBitCast(V, IRFuncTy->getParamType(FirstIRArg));
+            V->getType() != IRFuncTy->getParamType(FirstIRArg)) {
+          V = Builder.CreatePointerBitCastOrAddrSpaceCast(
+              V, IRFuncTy->getParamType(FirstIRArg));
+        }
 
         IRCallArgs[FirstIRArg] = V;
         break;
