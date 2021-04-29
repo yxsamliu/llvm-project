@@ -9,6 +9,16 @@
 // CHECK: {{.*}}clang-offload-bundler{{.*}}"-outputs=hip-output-file-name.o"
 
 // Check -E default output is "-" (stdout).
+// If there are multiple preprocessor expansion outputs clang-offload-bundler
+// is used to bundle the final output.
+
+// RUN: %clang -### -E -target x86_64-linux-gnu \
+// RUN:   --cuda-gpu-arch=gfx803 %s \
+// RUN: 2>&1 | FileCheck -check-prefixes=DASH %s
+
+// RUN: %clang -### -E --cuda-device-only -target x86_64-linux-gnu \
+// RUN:   --cuda-gpu-arch=gfx803 %s \
+// RUN: 2>&1 | FileCheck -check-prefixes=CLANG-DASH %s
 
 // RUN: %clang -### -E -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
@@ -20,7 +30,7 @@
 
 // RUN: %clang -### -E --cuda-device-only -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
-// RUN: 2>&1 | FileCheck -check-prefixes=CLANG-DASH %s
+// RUN: 2>&1 | FileCheck -check-prefixes=DASH %s
 
 // RUN: %clang -### -E --cuda-host-only -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
@@ -41,7 +51,7 @@
 
 // RUN: %clang -### -E -o test.cui --cuda-device-only -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
-// RUN: 2>&1 | FileCheck -check-prefixes=CLANG-OUT %s
+// RUN: 2>&1 | FileCheck -check-prefixes=OUT %s
 
 // RUN: %clang -### -E -o test.cui --cuda-host-only -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
