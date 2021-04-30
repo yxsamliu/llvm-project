@@ -939,6 +939,13 @@ defm hip_new_launch_api : BoolFOption<"hip-new-launch-api",
   LangOpts<"HIPUseNewLaunchAPI">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Use">, NegFlag<SetFalse, [], "Don't use">,
   BothFlags<[], " new kernel launching API for HIP">>;
+defm hip_fp32_correctly_rounded_divide_sqrt : BoolFOption<"hip-fp32-correctly-rounded-divide-sqrt",
+  CodeGenOpts<"CorrectlyRoundedDivSqrt">, DefaultTrue,
+  PosFlag<SetTrue, [], "Specify">,
+  NegFlag<SetFalse, [CC1Option], "Don't specify">,
+  BothFlags<[], " that single precision floating-point divide and sqrt used in "
+  "the program source are correctly rounded (HIP device compilation only)">>,
+  ShouldParseIf<hip.KeyPath>;
 defm gpu_allow_device_init : BoolFOption<"gpu-allow-device-init",
   LangOpts<"GPUAllowDeviceInit">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Allow">, NegFlag<SetFalse, [], "Don't allow">,
