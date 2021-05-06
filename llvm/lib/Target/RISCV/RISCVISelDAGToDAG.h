@@ -54,7 +54,9 @@ public:
     return selectShiftMask(N, 32, ShAmt);
   }
 
-  bool MatchSRLIW(SDNode *N) const;
+  bool selectSExti32(SDValue N, SDValue &Val);
+  bool selectZExti32(SDValue N, SDValue &Val);
+
   bool MatchSLLIUW(SDNode *N) const;
 
   bool selectVLOp(SDValue N, SDValue &VL);
@@ -72,6 +74,12 @@ public:
   template <unsigned Width> bool selectRVVUimm5(SDValue N, SDValue &Imm) {
     return selectRVVUimm5(N, Width, Imm);
   }
+
+  void addVectorLoadStoreOperands(SDNode *Node, unsigned SEWImm,
+                                  const SDLoc &DL, unsigned CurOp,
+                                  bool IsMasked, bool IsStridedOrIndexed,
+                                  SmallVectorImpl<SDValue> &Operands,
+                                  MVT *IndexVT = nullptr);
 
   void selectVLSEG(SDNode *Node, bool IsMasked, bool IsStrided);
   void selectVLSEGFF(SDNode *Node, bool IsMasked);
@@ -126,6 +134,23 @@ struct VSXSEGPseudo {
   uint16_t Pseudo;
 };
 
+struct VLEPseudo {
+  uint8_t Masked;
+  uint8_t Strided;
+  uint8_t FF;
+  uint8_t SEW;
+  uint8_t LMUL;
+  uint16_t Pseudo;
+};
+
+struct VSEPseudo {
+  uint8_t Masked;
+  uint8_t Strided;
+  uint8_t SEW;
+  uint8_t LMUL;
+  uint16_t Pseudo;
+};
+
 struct VLX_VSXPseudo {
   uint8_t Masked;
   uint8_t Ordered;
@@ -139,6 +164,8 @@ struct VLX_VSXPseudo {
 #define GET_RISCVVLSEGTable_DECL
 #define GET_RISCVVLXSEGTable_DECL
 #define GET_RISCVVSXSEGTable_DECL
+#define GET_RISCVVLETable_DECL
+#define GET_RISCVVSETable_DECL
 #define GET_RISCVVLXTable_DECL
 #define GET_RISCVVSXTable_DECL
 #include "RISCVGenSearchableTables.inc"

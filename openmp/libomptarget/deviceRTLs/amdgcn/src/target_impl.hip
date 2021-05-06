@@ -15,8 +15,6 @@
 #include "target_impl.h"
 #include "target_interface.h"
 
-// Implementations initially derived from hcc
-
 // Initialized with a 64-bit mask with bits set in positions less than the
 // thread's lane number in the warp
 DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_lt() {
@@ -53,14 +51,6 @@ DEVICE __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
   return __builtin_amdgcn_read_exec();
 }
 
-DEVICE int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t, int32_t var,
-                                     int32_t srcLane) {
-  int width = WARPSIZE;
-  int self = GetLaneId();
-  int index = srcLane + (self & ~(width - 1));
-  return __builtin_amdgcn_ds_bpermute(index << 2, var);
-}
-
 DEVICE int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t var,
                                           uint32_t laneDelta, int32_t width) {
   int self = GetLaneId();
@@ -70,7 +60,7 @@ DEVICE int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t var,
 }
 
 // Use of these will hand smoke reduction_teams test
-static uint32_t __kmpc_L1_Barrier [[clang::loader_uninitialized]];
+uint32_t __kmpc_L1_Barrier [[clang::loader_uninitialized]];
 #pragma allocate(__kmpc_L1_Barrier) allocator(omp_pteam_mem_alloc)
 
 // static doesn't work for openmp + shared, the variable is discarded by llc
@@ -135,12 +125,12 @@ DEVICE void __kmpc_impl_named_sync(uint32_t num_threads) {
 }
 
 namespace {
-DEVICE uint32_t get_grid_dim(uint32_t n, uint16_t d) {
+uint32_t get_grid_dim(uint32_t n, uint16_t d) {
   uint32_t q = n / d;
   return q + (n > q * d);
 }
-DEVICE uint32_t get_workgroup_dim(uint32_t group_id, uint32_t grid_size,
-                                  uint16_t group_size) {
+uint32_t get_workgroup_dim(uint32_t group_id, uint32_t grid_size,
+                           uint16_t group_size) {
   uint32_t r = grid_size - group_id * group_size;
   return (r < group_size) ? r : group_size;
 }
@@ -157,8 +147,9 @@ DEVICE int GetNumberOfThreadsInBlock() {
                            __builtin_amdgcn_workgroup_size_x());
 }
 
-DEVICE unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
-DEVICE unsigned GetLaneId() {
+EXTERN unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
+EXTERN unsigned GetWarpSize() { return WARPSIZE; }
+EXTERN unsigned GetLaneId() {
   return __builtin_amdgcn_mbcnt_hi(~0u, __builtin_amdgcn_mbcnt_lo(~0u, 0u));
 }
 
@@ -177,36 +168,35 @@ DEVICE void *__kmpc_impl_malloc(size_t t) { return global_allocate(t); }
 DEVICE void __kmpc_impl_free(void * ptr) {global_free(ptr);}
 
 // Atomics
-DEVICE uint32_t __kmpc_atomic_add(uint32_t *Address, uint32_t Val) {
+uint32_t __kmpc_atomic_add(uint32_t *Address, uint32_t Val) {
   return __atomic_fetch_add(Address, Val, __ATOMIC_SEQ_CST);
 }
-DEVICE uint32_t __kmpc_atomic_inc(uint32_t *Address, uint32_t Val) {
+uint32_t __kmpc_atomic_inc(uint32_t *Address, uint32_t Val) {
   return __builtin_amdgcn_atomic_inc32(Address, Val, __ATOMIC_SEQ_CST, "");
 }
-DEVICE uint32_t __kmpc_atomic_max(uint32_t *Address, uint32_t Val) {
+uint32_t __kmpc_atomic_max(uint32_t *Address, uint32_t Val) {
   return __atomic_fetch_max(Address, Val, __ATOMIC_SEQ_CST);
 }
 
-DEVICE uint32_t __kmpc_atomic_exchange(uint32_t *Address, uint32_t Val) {
+uint32_t __kmpc_atomic_exchange(uint32_t *Address, uint32_t Val) {
   uint32_t R;
   __atomic_exchange(Address, &Val, &R, __ATOMIC_SEQ_CST);
   return R;
 }
-DEVICE uint32_t __kmpc_atomic_cas(uint32_t *Address, uint32_t Compare,
-                                  uint32_t Val) {
+uint32_t __kmpc_atomic_cas(uint32_t *Address, uint32_t Compare, uint32_t Val) {
   (void)__atomic_compare_exchange(Address, &Compare, &Val, false,
                                   __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
   return Compare;
 }
 
-DEVICE unsigned long long __kmpc_atomic_exchange(unsigned long long *Address,
-                                                 unsigned long long Val) {
+unsigned long long __kmpc_atomic_exchange(unsigned long long *Address,
+                                          unsigned long long Val) {
   unsigned long long R;
   __atomic_exchange(Address, &Val, &R, __ATOMIC_SEQ_CST);
   return R;
 }
-DEVICE unsigned long long __kmpc_atomic_add(unsigned long long *Address,
-                                            unsigned long long Val) {
+unsigned long long __kmpc_atomic_add(unsigned long long *Address,
+                                     unsigned long long Val) {
   return __atomic_fetch_add(Address, Val, __ATOMIC_SEQ_CST);
 }
 

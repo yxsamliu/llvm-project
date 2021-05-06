@@ -16,6 +16,7 @@
 
 #include "AArch64.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/CallingConv.h"
@@ -50,6 +51,10 @@ enum NodeType : unsigned {
   WrapperLarge, // 4-instruction MOVZ/MOVK sequence for 64-bit addresses.
   CALL,         // Function call.
 
+  // Pseudo for a OBJC call that gets emitted together with a special `mov
+  // x29, x29` marker instruction.
+  CALL_RVMARKER,
+
   // Produces the full sequence of instructions for getting the thread pointer
   // offset of a variable into X0, using the TLSDesc model.
   TLSDESC_CALLSEQ,
@@ -79,6 +84,8 @@ enum NodeType : unsigned {
   FMA_PRED,
   FMAXNM_PRED,
   FMINNM_PRED,
+  FMAX_PRED,
+  FMIN_PRED,
   FMUL_PRED,
   FSUB_PRED,
   MUL_PRED,
@@ -231,6 +238,10 @@ enum NodeType : unsigned {
   UABD,
   SABD,
 
+  // udot/sdot instructions
+  UDOT,
+  SDOT,
+
   // Vector across-lanes min/max
   // Only the lower result lane is defined.
   SMINV,
@@ -273,6 +284,8 @@ enum NodeType : unsigned {
   /// need to re-interpret the data in SIMD vector registers in big-endian
   /// mode without emitting such REV instructions.
   NVCAST,
+
+  MRS, // MRS, also sets the flags via a glue.
 
   SMULL,
   UMULL,
@@ -424,10 +437,6 @@ enum NodeType : unsigned {
   LDP,
   STP,
   STNP,
-
-  // Pseudo for a OBJC call that gets emitted together with a special `mov
-  // x29, x29` marker instruction.
-  CALL_RVMARKER
 };
 
 } // end namespace AArch64ISD
@@ -803,6 +812,13 @@ public:
   /// vector types this override can be removed.
   bool mergeStoresAfterLegalization(EVT VT) const override;
 
+  // If the platform/function should have a redzone, return the size in bytes.
+  unsigned getRedZoneSize(const Function &F) const {
+    if (F.hasFnAttribute(Attribute::NoRedZone))
+      return 0;
+    return 128;
+  }
+
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.
@@ -920,6 +936,7 @@ private:
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSPLAT_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSTEP_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDUPQLane(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerToPredicatedOp(SDValue Op, SelectionDAG &DAG, unsigned NewOp,
                               bool OverrideNEON = false) const;
@@ -971,6 +988,8 @@ private:
   SDValue LowerFixedLengthVectorStoreToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorTruncateToSVE(SDValue Op,
                                               SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthExtractVectorElt(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthInsertVectorElt(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                         SmallVectorImpl<SDNode *> &Created) const override;

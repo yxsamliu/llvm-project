@@ -142,6 +142,7 @@ protected:
   bool HasDot4Insts;
   bool HasDot5Insts;
   bool HasDot6Insts;
+  bool HasDot7Insts;
   bool HasMAIInsts;
   bool HasPkFmacF16Inst;
   bool HasAtomicFaddInsts;
@@ -155,6 +156,7 @@ protected:
   bool HasVscnt;
   bool HasGetWaveIdInst;
   bool HasSMemTimeInst;
+  bool HasShaderCyclesRegister;
   bool HasRegisterBanking;
   bool HasVOP3Literal;
   bool HasNoDataDepHazard;
@@ -687,6 +689,10 @@ public:
     return HasDot6Insts;
   }
 
+  bool hasDot7Insts() const {
+    return HasDot7Insts;
+  }
+
   bool hasMAIInsts() const {
     return HasMAIInsts;
   }
@@ -713,6 +719,10 @@ public:
 
   bool hasSMemTimeInst() const {
     return HasSMemTimeInst;
+  }
+
+  bool hasShaderCyclesRegister() const {
+    return HasShaderCyclesRegister;
   }
 
   bool hasRegisterBanking() const {
@@ -800,6 +810,9 @@ public:
   bool hasLDSFPAtomics() const {
     return GFX8Insts;
   }
+
+  /// \returns true if the subtarget has the v_permlanex16_b32 instruction.
+  bool hasPermLaneX16() const { return getGeneration() >= GFX10; }
 
   bool hasDPP() const {
     return HasDPP;
@@ -930,6 +943,9 @@ public:
   bool hasHardClauses() const { return getGeneration() >= GFX10; }
 
   bool hasGFX90AInsts() const { return GFX90AInsts; }
+
+  /// Return if operations acting on VGPR tuples require even alignment.
+  bool needsAlignedVGPRs() const { return GFX90AInsts; }
 
   bool hasPackedTID() const { return HasPackedTID; }
 

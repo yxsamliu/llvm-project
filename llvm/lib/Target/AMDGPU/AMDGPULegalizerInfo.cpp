@@ -937,10 +937,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .widenScalarToNextPow2(0, 32)
     .widenScalarToNextPow2(1, 32);
 
+  // S64 is only legal on SALU, and needs to be broken into 32-bit elements in
+  // RegBankSelect.
   getActionDefinitionsBuilder(G_BITREVERSE)
-    .legalFor({S32})
-    .clampScalar(0, S32, S32)
-    .scalarize(0);
+    .legalFor({S32, S64})
+    .clampScalar(0, S32, S64)
+    .scalarize(0)
+    .widenScalarToNextPow2(0);
 
   if (ST.has16BitInsts()) {
     getActionDefinitionsBuilder(G_BSWAP)
@@ -1288,12 +1291,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Atomics.legalFor({{S32, FlatPtr}, {S64, FlatPtr}});
   }
 
+  auto &Atomic = getActionDefinitionsBuilder(G_ATOMICRMW_FADD);
   if (ST.hasLDSFPAtomics()) {
-    auto &Atomic = getActionDefinitionsBuilder(G_ATOMICRMW_FADD)
-      .legalFor({{S32, LocalPtr}, {S32, RegionPtr}});
+    Atomic.legalFor({{S32, LocalPtr}, {S32, RegionPtr}});
     if (ST.hasGFX90AInsts())
       Atomic.legalFor({{S64, LocalPtr}});
   }
+  if (ST.hasAtomicFaddInsts())
+    Atomic.legalFor({{S32, GlobalPtr}});
 
   // BUFFER/FLAT_ATOMIC_CMP_SWAP on GCN GPUs needs input marshalling, and output
   // demarshalling
@@ -1594,16 +1599,36 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(0, S32, S64)
     .lower();
 
+  // TODO: Only Try to form v2s16 with legal packed instructions.
   getActionDefinitionsBuilder(G_FSHR)
     .legalFor({{S32, S32}})
+    .lowerFor({{V2S16, V2S16}})
+    .fewerElementsIf(elementTypeIs(0, S16), changeTo(0, V2S16))
     .scalarize(0)
     .lower();
+
+  if (ST.hasVOP3PInsts()) {
+    getActionDefinitionsBuilder(G_FSHL)
+      .lowerFor({{V2S16, V2S16}})
+      .fewerElementsIf(elementTypeIs(0, S16), changeTo(0, V2S16))
+      .scalarize(0)
+      .lower();
+  } else {
+    getActionDefinitionsBuilder(G_FSHL)
+      .scalarize(0)
+      .lower();
+  }
 
   getActionDefinitionsBuilder(G_READCYCLECOUNTER)
     .legalFor({S64});
 
   getActionDefinitionsBuilder(G_FENCE)
     .alwaysLegal();
+
+  getActionDefinitionsBuilder({G_SMULO, G_UMULO})
+      .scalarize(0)
+      .minScalar(0, S32)
+      .lower();
 
   getActionDefinitionsBuilder({
       // TODO: Verify V_BFI_B32 is generated from expanded bit ops
@@ -1618,9 +1643,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       G_SADDO, G_SSUBO,
 
        // TODO: Implement
-      G_FMINIMUM, G_FMAXIMUM,
-      G_FSHL
-    }).lower();
+      G_FMINIMUM, G_FMAXIMUM}).lower();
 
   getActionDefinitionsBuilder({G_VASTART, G_VAARG, G_BRJT, G_JUMP_TABLE,
         G_INDEXED_LOAD, G_INDEXED_SEXTLOAD,
@@ -4520,31 +4543,31 @@ bool AMDGPULegalizerInfo::legalizeTrapIntrinsic(MachineInstr &MI,
                                                 MachineIRBuilder &B) const {
   if (!ST.isTrapHandlerEnabled() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
-    return legalizeTrap_ENDPGM(MI, MRI, B);
+    return legalizeTrapEndpgm(MI, MRI, B);
 
-  if (const auto &&HsaAbiVer = AMDGPU::getHsaAbiVersion(&ST)) {
-    switch (HsaAbiVer.getValue()) {
+  if (Optional<uint8_t> HsaAbiVer = AMDGPU::getHsaAbiVersion(&ST)) {
+    switch (*HsaAbiVer) {
     case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
-      return legalizeTrap_AMDHSA_QUEUE_PTR(MI, MRI, B);
+      return legalizeTrapHsaQueuePtr(MI, MRI, B);
     case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
       return ST.supportsGetDoorbellID() ?
-          legalizeTrap_AMDHSA(MI, MRI, B) :
-          legalizeTrap_AMDHSA_QUEUE_PTR(MI, MRI, B);
+          legalizeTrapHsa(MI, MRI, B) :
+          legalizeTrapHsaQueuePtr(MI, MRI, B);
     }
   }
 
   llvm_unreachable("Unknown trap handler");
 }
 
-bool AMDGPULegalizerInfo::legalizeTrap_ENDPGM(
+bool AMDGPULegalizerInfo::legalizeTrapEndpgm(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
   B.buildInstr(AMDGPU::S_ENDPGM).addImm(0);
   MI.eraseFromParent();
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeTrap_AMDHSA_QUEUE_PTR(
+bool AMDGPULegalizerInfo::legalizeTrapHsaQueuePtr(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
   // Pass queue pointer to trap handler as input, and insert trap instruction
   // Reference: https://llvm.org/docs/AMDGPUUsage.html#trap-handler-abi
@@ -4563,7 +4586,7 @@ bool AMDGPULegalizerInfo::legalizeTrap_AMDHSA_QUEUE_PTR(
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeTrap_AMDHSA(
+bool AMDGPULegalizerInfo::legalizeTrapHsa(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
   B.buildInstr(AMDGPU::S_TRAP)
       .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSATrap));

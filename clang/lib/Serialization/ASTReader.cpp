@@ -1924,8 +1924,7 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
     // FIXME: This is not always the right filename-as-written, but we're not
     // going to use this information to rebuild the module, so it doesn't make
     // a lot of difference.
-    Module::Header H = {std::string(key.Filename),
-                        *FileMgr.getOptionalFileRef(Filename)};
+    Module::Header H = {std::string(key.Filename), *FileMgr.getFile(Filename)};
     ModMap.addHeader(Mod, H, HeaderRole, /*Imported*/true);
     HFI.isModuleHeader |= !(HeaderRole & ModuleMap::TextualHeader);
   }
@@ -3629,6 +3628,7 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
         auto &OptInfo = OpenCLExtensions.OptMap[Name];
         OptInfo.Supported = Record[I++] != 0;
         OptInfo.Enabled = Record[I++] != 0;
+        OptInfo.WithPragma = Record[I++] != 0;
         OptInfo.Avail = Record[I++];
         OptInfo.Core = Record[I++];
         OptInfo.Opt = Record[I++];
@@ -4172,7 +4172,8 @@ static void updateModuleTimestamp(ModuleFile &MF) {
   // Overwrite the timestamp file contents so that file's mtime changes.
   std::string TimestampFilename = MF.getTimestampFilename();
   std::error_code EC;
-  llvm::raw_fd_ostream OS(TimestampFilename, EC, llvm::sys::fs::OF_Text);
+  llvm::raw_fd_ostream OS(TimestampFilename, EC,
+                          llvm::sys::fs::OF_TextWithCRLF);
   if (EC)
     return;
   OS << "Timestamp file\n";
@@ -5614,7 +5615,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
     case SUBMODULE_UMBRELLA_HEADER: {
       std::string Filename = std::string(Blob);
       ResolveImportedPath(F, Filename);
-      if (auto Umbrella = PP.getFileManager().getOptionalFileRef(Filename)) {
+      if (auto Umbrella = PP.getFileManager().getFile(Filename)) {
         if (!CurrentModule->getUmbrellaHeader())
           ModMap.setUmbrellaHeader(CurrentModule, *Umbrella, Blob);
         else if (CurrentModule->getUmbrellaHeader().Entry != *Umbrella) {
@@ -5647,8 +5648,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
     case SUBMODULE_UMBRELLA_DIR: {
       std::string Dirname = std::string(Blob);
       ResolveImportedPath(F, Dirname);
-      if (auto Umbrella =
-              PP.getFileManager().getOptionalDirectoryRef(Dirname)) {
+      if (auto Umbrella = PP.getFileManager().getDirectory(Dirname)) {
         if (!CurrentModule->getUmbrellaDir())
           ModMap.setUmbrellaDir(CurrentModule, *Umbrella, Blob);
         else if (CurrentModule->getUmbrellaDir().Entry != *Umbrella) {
@@ -7650,9 +7650,10 @@ ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
 
   // Load the list of declarations.
   SmallVector<NamedDecl *, 64> Decls;
+  llvm::SmallPtrSet<NamedDecl *, 8> Found;
   for (DeclID ID : It->second.Table.find(Name)) {
     NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
-    if (ND->getDeclName() == Name)
+    if (ND->getDeclName() == Name && Found.insert(ND).second)
       Decls.push_back(ND);
   }
 
@@ -11968,8 +11969,20 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_order:
     C = new (Context) OMPOrderClause();
     break;
+  case llvm::omp::OMPC_init:
+    C = OMPInitClause::CreateEmpty(Context, Record.readInt());
+    break;
+  case llvm::omp::OMPC_use:
+    C = new (Context) OMPUseClause();
+    break;
   case llvm::omp::OMPC_destroy:
     C = new (Context) OMPDestroyClause();
+    break;
+  case llvm::omp::OMPC_novariants:
+    C = new (Context) OMPNovariantsClause();
+    break;
+  case llvm::omp::OMPC_nocontext:
+    C = new (Context) OMPNocontextClause();
     break;
   case llvm::omp::OMPC_detach:
     C = new (Context) OMPDetachClause();
@@ -12131,7 +12144,42 @@ void OMPClauseReader::VisitOMPSIMDClause(OMPSIMDClause *) {}
 
 void OMPClauseReader::VisitOMPNogroupClause(OMPNogroupClause *) {}
 
-void OMPClauseReader::VisitOMPDestroyClause(OMPDestroyClause *) {}
+void OMPClauseReader::VisitOMPInitClause(OMPInitClause *C) {
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Record.readSubExpr());
+  C->setVarRefs(Vars);
+  C->setIsTarget(Record.readBool());
+  C->setIsTargetSync(Record.readBool());
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setVarLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPUseClause(OMPUseClause *C) {
+  C->setInteropVar(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setVarLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPDestroyClause(OMPDestroyClause *C) {
+  C->setInteropVar(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setVarLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPNovariantsClause(OMPNovariantsClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  C->setCondition(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPNocontextClause(OMPNocontextClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  C->setCondition(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
 
 void OMPClauseReader::VisitOMPUnifiedAddressClause(OMPUnifiedAddressClause *) {}
 

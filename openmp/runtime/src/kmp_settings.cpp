@@ -1399,7 +1399,8 @@ static void __kmp_stg_parse_disp_buffers(char const *name, char const *value,
     KMP_WARNING(EnvSerialWarn, name);
     return;
   } // read value before serial initialization only
-  __kmp_stg_parse_int(name, value, 1, KMP_MAX_NTH, &__kmp_dispatch_num_buffers);
+  __kmp_stg_parse_int(name, value, KMP_MIN_DISP_NUM_BUFF, KMP_MAX_DISP_NUM_BUFF,
+                      &__kmp_dispatch_num_buffers);
 } // __kmp_stg_parse_disp_buffers
 
 static void __kmp_stg_print_disp_buffers(kmp_str_buf_t *buffer,
@@ -1722,6 +1723,7 @@ static void __kmp_stg_print_barrier_pattern(kmp_str_buf_t *buffer,
         __kmp_str_buf_print(buffer, "   %s='",
                             __kmp_barrier_pattern_env_name[i]);
       }
+      KMP_DEBUG_ASSERT(j < bs_last_barrier && k < bs_last_barrier);
       __kmp_str_buf_print(buffer, "%s,%s'\n", __kmp_barrier_pattern_name[j],
                           __kmp_barrier_pattern_name[k]);
     }
@@ -3248,11 +3250,12 @@ static void __kmp_stg_parse_proc_bind(char const *name, char const *value,
     for (;;) {
       enum kmp_proc_bind_t bind;
 
-      if ((num == (int)proc_bind_master) ||
-          __kmp_match_str("master", buf, &next)) {
+      if ((num == (int)proc_bind_primary) ||
+          __kmp_match_str("master", buf, &next) ||
+          __kmp_match_str("primary", buf, &next)) {
         buf = next;
         SKIP_WS(buf);
-        bind = proc_bind_master;
+        bind = proc_bind_primary;
       } else if ((num == (int)proc_bind_close) ||
                  __kmp_match_str("close", buf, &next)) {
         buf = next;
@@ -3320,8 +3323,8 @@ static void __kmp_stg_print_proc_bind(kmp_str_buf_t *buffer, char const *name,
         __kmp_str_buf_print(buffer, "true");
         break;
 
-      case proc_bind_master:
-        __kmp_str_buf_print(buffer, "master");
+      case proc_bind_primary:
+        __kmp_str_buf_print(buffer, "primary");
         break;
 
       case proc_bind_close:

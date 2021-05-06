@@ -137,13 +137,14 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
     : Diags(Diags), VFS(std::move(VFS)), Mode(GCCMode),
       SaveTemps(SaveTempsNone), BitcodeEmbed(EmbedNone), LTOMode(LTOK_None),
       ClangExecutable(ClangExecutable), SysRoot(DEFAULT_SYSROOT),
-      DriverTitle(Title), CCPrintOptionsFilename(nullptr),
-      CCPrintHeadersFilename(nullptr), CCLogDiagnosticsFilename(nullptr),
+      DriverTitle(Title), CCPrintStatReportFilename(), CCPrintOptionsFilename(),
+      CCPrintHeadersFilename(), CCLogDiagnosticsFilename(),
       CCCPrintBindings(false), CCPrintOptions(false), CCPrintHeaders(false),
       CCLogDiagnostics(false), CCGenDiagnostics(false),
-      TargetTriple(TargetTriple), CCCGenericGCCName(""), Saver(Alloc),
-      CheckInputsExist(true), GenReproducer(false),
-      SuppressMissingInputWarning(false), NumParallelJobs(1) {
+      CCPrintProcessStats(false), TargetTriple(TargetTriple),
+      CCCGenericGCCName(""), Saver(Alloc), CheckInputsExist(true),
+      GenReproducer(false), SuppressMissingInputWarning(false),
+      NumParallelJobs(1) {
   // Provide a sane fallback if no VFS is specified.
   if (!this->VFS)
     this->VFS = llvm::vfs::getRealFileSystem();
@@ -1130,6 +1131,15 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   GenReproducer = Args.hasFlag(options::OPT_gen_reproducer,
                                options::OPT_fno_crash_diagnostics,
                                !!::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH"));
+
+  // Process -fproc-stat-report options.
+  if (const Arg *A = Args.getLastArg(options::OPT_fproc_stat_report_EQ)) {
+    CCPrintProcessStats = true;
+    CCPrintStatReportFilename = A->getValue();
+  }
+  if (Args.hasArg(options::OPT_fproc_stat_report))
+    CCPrintProcessStats = true;
+
   // FIXME: TargetTriple is used by the target-prefixed calls to as/ld
   // and getToolChain is const.
   if (IsCLMode()) {
@@ -1855,6 +1865,15 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
     return false;
   }
 
+  if (C.getArgs().hasArg(options::OPT_print_runtime_dir)) {
+    if (auto RuntimePath = TC.getRuntimePath()) {
+      llvm::outs() << *RuntimePath << '\n';
+      return false;
+    }
+    llvm::outs() << TC.getCompilerRTPath() << '\n';
+    return false;
+  }
+
   // FIXME: The following handlers should use a callback mechanism, we don't
   // know what the client would like to do.
   if (Arg *A = C.getArgs().getLastArg(options::OPT_print_file_name_EQ)) {
@@ -2232,15 +2251,20 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
 
         // stdin must be handled specially.
         if (memcmp(Value, "-", 2) == 0) {
-          // If running with -E, treat as a C input (this changes the builtin
-          // macros, for example). This may be overridden by -ObjC below.
-          //
-          // Otherwise emit an error but still use a valid type to avoid
-          // spurious errors (e.g., no inputs).
-          if (!Args.hasArgNoClaim(options::OPT_E) && !CCCIsCPP())
-            Diag(IsCLMode() ? clang::diag::err_drv_unknown_stdin_type_clang_cl
-                            : clang::diag::err_drv_unknown_stdin_type);
-          Ty = types::TY_C;
+          if (IsFlangMode()) {
+            Ty = types::TY_Fortran;
+          } else {
+            // If running with -E, treat as a C input (this changes the
+            // builtin macros, for example). This may be overridden by -ObjC
+            // below.
+            //
+            // Otherwise emit an error but still use a valid type to avoid
+            // spurious errors (e.g., no inputs).
+            if (!Args.hasArgNoClaim(options::OPT_E) && !CCCIsCPP())
+              Diag(IsCLMode() ? clang::diag::err_drv_unknown_stdin_type_clang_cl
+                              : clang::diag::err_drv_unknown_stdin_type);
+            Ty = types::TY_C;
+          }
         } else {
           // Otherwise lookup by extension.
           // Fallback is C if invoked as C preprocessor, C++ if invoked with
@@ -3129,11 +3153,18 @@ class OffloadingActionBuilder final {
       }
 
       // By default, we produce an action for each device arch.
-      for (Action *&A : OpenMPDeviceActions) {
+      for (unsigned I = 0; I < ToolChains.size(); ++I) {
+        Action *&A = OpenMPDeviceActions[I];
+        // AMDGPU does not support linking of object files, so we skip
+        // assemble and backend actions to produce LLVM IR.
+        if (ToolChains[I]->getTriple().isAMDGCN() &&
+            (CurPhase == phases::Assemble || CurPhase == phases::Backend))
+          continue;
+
         A = C.getDriver().ConstructPhaseAction(C, Args, CurPhase, A);
       }
-      return (CompileDeviceOnly && CurPhase == FinalPhase) ? ABRT_Ignore_Host
-                                                           : ABRT_Success;
+
+      return ABRT_Success;
     }
 
     ActionBuilderReturnCode addDeviceDepences(Action *HostAction) override {
@@ -4186,66 +4217,64 @@ void Driver::BuildJobs(Compilation &C) const {
                        /*TargetDeviceOffloadKind*/ Action::OFK_None);
   }
 
-  StringRef StatReportFile;
-  bool PrintProcessStat = false;
-  if (const Arg *A = C.getArgs().getLastArg(options::OPT_fproc_stat_report_EQ))
-    StatReportFile = A->getValue();
-  if (C.getArgs().hasArg(options::OPT_fproc_stat_report))
-    PrintProcessStat = true;
-
   // If we have more than one job, then disable integrated-cc1 for now. Do this
   // also when we need to report process execution statistics.
-  if (C.getJobs().size() > 1 || !StatReportFile.empty() || PrintProcessStat)
+  if (C.getJobs().size() > 1 || CCPrintProcessStats)
     for (auto &J : C.getJobs())
       J.InProcess = false;
 
-  if (!StatReportFile.empty() || PrintProcessStat) {
+  if (CCPrintProcessStats) {
     C.setPostCallback([=](const Command &Cmd, int Res) {
       Optional<llvm::sys::ProcessStatistics> ProcStat =
           Cmd.getProcessStatistics();
       if (!ProcStat)
         return;
-      if (PrintProcessStat) {
+
+      const char *LinkingOutput = nullptr;
+      if (FinalOutput)
+        LinkingOutput = FinalOutput->getValue();
+      else if (!Cmd.getOutputFilenames().empty())
+        LinkingOutput = Cmd.getOutputFilenames().front().c_str();
+      else
+        LinkingOutput = getDefaultImageName();
+
+      if (CCPrintStatReportFilename.empty()) {
         using namespace llvm;
         // Human readable output.
         outs() << sys::path::filename(Cmd.getExecutable()) << ": "
-               << "output=";
-        if (Cmd.getOutputFilenames().empty())
-          outs() << "\"\"";
-        else
-          outs() << Cmd.getOutputFilenames().front();
+               << "output=" << LinkingOutput;
         outs() << ", total="
                << format("%.3f", ProcStat->TotalTime.count() / 1000.) << " ms"
                << ", user="
                << format("%.3f", ProcStat->UserTime.count() / 1000.) << " ms"
                << ", mem=" << ProcStat->PeakMemory << " Kb\n";
-      }
-      if (!StatReportFile.empty()) {
+      } else {
         // CSV format.
         std::string Buffer;
         llvm::raw_string_ostream Out(Buffer);
         llvm::sys::printArg(Out, llvm::sys::path::filename(Cmd.getExecutable()),
                             /*Quote*/ true);
         Out << ',';
-        if (Cmd.getOutputFilenames().empty())
-          Out << "\"\"";
-        else
-          llvm::sys::printArg(Out, Cmd.getOutputFilenames().front(), true);
+        llvm::sys::printArg(Out, LinkingOutput, true);
         Out << ',' << ProcStat->TotalTime.count() << ','
             << ProcStat->UserTime.count() << ',' << ProcStat->PeakMemory
             << '\n';
         Out.flush();
         std::error_code EC;
-        llvm::raw_fd_ostream OS(StatReportFile, EC, llvm::sys::fs::OF_Append);
+        llvm::raw_fd_ostream OS(CCPrintStatReportFilename.c_str(), EC,
+                                llvm::sys::fs::OF_Append |
+                                    llvm::sys::fs::OF_Text);
         if (EC)
           return;
         auto L = OS.lock();
         if (!L) {
-          llvm::errs() << "ERROR: Cannot lock file " << StatReportFile << ": "
+          llvm::errs() << "ERROR: Cannot lock file "
+                       << CCPrintStatReportFilename << ": "
                        << toString(L.takeError()) << "\n";
           return;
         }
         OS << Buffer;
+        OS.flush();
       }
     });
   }
@@ -5247,11 +5276,6 @@ void Driver::generatePrefixedToolNames(
   // FIXME: Needs a better variable than TargetTriple
   Names.emplace_back((TargetTriple + "-" + Tool).str());
   Names.emplace_back(Tool);
-
-  // Allow the discovery of tools prefixed with LLVM's default target triple.
-  std::string DefaultTargetTriple = llvm::sys::getDefaultTargetTriple();
-  if (DefaultTargetTriple != TargetTriple)
-    Names.emplace_back((DefaultTargetTriple + "-" + Tool).str());
 }
 
 static bool ScanDirForExecutable(SmallString<128> &Dir, StringRef Name) {

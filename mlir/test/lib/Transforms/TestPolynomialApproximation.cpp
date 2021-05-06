@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
@@ -24,14 +25,15 @@ struct TestMathPolynomialApproximationPass
     : public PassWrapper<TestMathPolynomialApproximationPass, FunctionPass> {
   void runOnFunction() override;
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<vector::VectorDialect, math::MathDialect>();
+    registry
+        .insert<vector::VectorDialect, math::MathDialect, LLVM::LLVMDialect>();
   }
 };
 } // end anonymous namespace
 
 void TestMathPolynomialApproximationPass::runOnFunction() {
-  OwningRewritePatternList patterns;
-  populateMathPolynomialApproximationPatterns(patterns, &getContext());
+  RewritePatternSet patterns(&getContext());
+  populateMathPolynomialApproximationPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 

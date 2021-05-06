@@ -167,6 +167,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
                               "signed?<%s>, loc = %%s\n",
                               traits_t<T>::spec, traits_t<T>::spec,
                               traits_t<ST>::spec, traits_t<T>::spec);
+      check_loc(loc);
       KD_TRACE(100,
                (buff, *plastiter, *plower, *pupper, *pstride, loc->psource));
       __kmp_str_free(&buff);
@@ -301,7 +302,8 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
       if (tid < trip_count) {
         *pupper = *plower = *plower + tid * incr;
       } else {
-        *plower = *pupper + incr;
+        // set bounds so non-active threads execute no iterations
+        *plower = *pupper + (incr > 0 ? 1 : -1);
       }
       if (plastiter != NULL)
         *plastiter = (tid == trip_count - 1);
@@ -345,15 +347,28 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
   }
   case kmp_sch_static_chunked: {
     ST span;
-    if (chunk < 1) {
+    UT nchunks;
+    if (chunk < 1)
       chunk = 1;
-    }
+    else if ((UT)chunk > trip_count)
+      chunk = trip_count;
+    nchunks = (trip_count) / (UT)chunk + (trip_count % (UT)chunk ? 1 : 0);
     span = chunk * incr;
-    *pstride = span * nth;
-    *plower = *plower + (span * tid);
-    *pupper = *plower + span - incr;
+    if (nchunks < nth) {
+      *pstride = span * nchunks;
+      if (tid < nchunks) {
+        *plower = *plower + (span * tid);
+        *pupper = *plower + span - incr;
+      } else {
+        *plower = *pupper + (incr > 0 ? 1 : -1);
+      }
+    } else {
+      *pstride = span * nth;
+      *plower = *plower + (span * tid);
+      *pupper = *plower + span - incr;
+    }
     if (plastiter != NULL)
-      *plastiter = (tid == ((trip_count - 1) / (UT)chunk) % nth);
+      *plastiter = (tid == (nchunks - 1) % nth);
     break;
   }
   case kmp_sch_static_balanced_chunked: {
@@ -508,8 +523,8 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
         __kmp_static == kmp_sch_static_greedy ||
         __kmp_static ==
             kmp_sch_static_balanced); // Unknown static scheduling type.
-    // only masters of some teams get single iteration, other threads get
-    // nothing
+    // only primary threads of some teams get single iteration, other threads
+    // get nothing
     if (team_id < trip_count && tid == 0) {
       *pupper = *pupperDist = *plower = *plower + team_id * incr;
     } else {

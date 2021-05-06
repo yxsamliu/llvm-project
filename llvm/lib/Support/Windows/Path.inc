@@ -595,6 +595,9 @@ std::error_code access(const Twine &Path, AccessMode Mode) {
   if (Mode == AccessMode::Write && (Attributes & FILE_ATTRIBUTE_READONLY))
     return errc::permission_denied;
 
+  if (Mode == AccessMode::Execute && (Attributes & FILE_ATTRIBUTE_DIRECTORY))
+    return errc::permission_denied;
+
   return std::error_code();
 }
 
@@ -1052,8 +1055,10 @@ static std::error_code nativeFileToFd(Expected<HANDLE> H, int &ResultFD,
   if (Flags & OF_Append)
     CrtOpenFlags |= _O_APPEND;
 
-  if (Flags & OF_Text)
+  if (Flags & OF_CRLF) {
+    assert(Flags & OF_Text && "Flags set OF_CRLF without OF_Text");
     CrtOpenFlags |= _O_TEXT;
+  }
 
   ResultFD = -1;
   if (!H)

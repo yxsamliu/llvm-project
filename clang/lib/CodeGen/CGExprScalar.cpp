@@ -348,6 +348,9 @@ public:
           EmitImplicitIntegerSignChangeChecks(
               SanOpts.has(SanitizerKind::ImplicitIntegerSignChange)) {}
   };
+  Value *EmitScalarCast(Value *Src, QualType SrcType, QualType DstType,
+                        llvm::Type *SrcTy, llvm::Type *DstTy,
+                        ScalarConversionOpts Opts);
   Value *
   EmitScalarConversion(Value *Src, QualType SrcTy, QualType DstTy,
                        SourceLocation Loc,
@@ -1191,6 +1194,35 @@ void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
                 {Src, Dst});
 }
 
+Value *ScalarExprEmitter::EmitScalarCast(Value *Src, QualType SrcType,
+                                         QualType DstType, llvm::Type *SrcTy,
+                                         llvm::Type *DstTy,
+                                         ScalarConversionOpts Opts) {
+  if (isa<llvm::IntegerType>(SrcTy)) {
+    bool InputSigned = SrcType->isSignedIntegerOrEnumerationType();
+    if (SrcType->isBooleanType() && Opts.TreatBooleanAsSigned) {
+      InputSigned = true;
+    }
+
+    if (isa<llvm::IntegerType>(DstTy))
+      return Builder.CreateIntCast(Src, DstTy, InputSigned, "conv");
+    if (InputSigned)
+      return Builder.CreateSIToFP(Src, DstTy, "conv");
+    return Builder.CreateUIToFP(Src, DstTy, "conv");
+  }
+
+  if (isa<llvm::IntegerType>(DstTy)) {
+    assert(SrcTy->isFloatingPointTy() && "Unknown real conversion");
+    if (DstType->isSignedIntegerOrEnumerationType())
+      return Builder.CreateFPToSI(Src, DstTy, "conv");
+    return Builder.CreateFPToUI(Src, DstTy, "conv");
+  }
+
+  if (DstTy->getTypeID() < SrcTy->getTypeID())
+    return Builder.CreateFPTrunc(Src, DstTy, "conv");
+  return Builder.CreateFPExt(Src, DstTy, "conv");
+}
+
 /// Emit a conversion from the specified type to the specified destination type,
 /// both of which are LLVM scalar types.
 Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
@@ -1384,31 +1416,7 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
     DstTy = CGF.FloatTy;
   }
 
-  if (isa<llvm::IntegerType>(SrcTy)) {
-    bool InputSigned = SrcType->isSignedIntegerOrEnumerationType();
-    if (SrcType->isBooleanType() && Opts.TreatBooleanAsSigned) {
-      InputSigned = true;
-    }
-    if (isa<llvm::IntegerType>(DstTy))
-      Res = Builder.CreateIntCast(Src, DstTy, InputSigned, "conv");
-    else if (InputSigned)
-      Res = Builder.CreateSIToFP(Src, DstTy, "conv");
-    else
-      Res = Builder.CreateUIToFP(Src, DstTy, "conv");
-  } else if (isa<llvm::IntegerType>(DstTy)) {
-    assert(SrcTy->isFloatingPointTy() && "Unknown real conversion");
-    if (DstType->isSignedIntegerOrEnumerationType())
-      Res = Builder.CreateFPToSI(Src, DstTy, "conv");
-    else
-      Res = Builder.CreateFPToUI(Src, DstTy, "conv");
-  } else {
-    assert(SrcTy->isFloatingPointTy() && DstTy->isFloatingPointTy() &&
-           "Unknown real conversion");
-    if (DstTy->getTypeID() < SrcTy->getTypeID())
-      Res = Builder.CreateFPTrunc(Src, DstTy, "conv");
-    else
-      Res = Builder.CreateFPExt(Src, DstTy, "conv");
-  }
+  Res = EmitScalarCast(Src, SrcType, DstType, SrcTy, DstTy, Opts);
 
   if (DstTy != ResTy) {
     if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
@@ -1729,7 +1737,7 @@ Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   llvm::MatrixBuilder<CGBuilderTy> MB(Builder);
   return MB.CreateExtractElement(
       Matrix, RowIdx, ColumnIdx,
-      E->getBase()->getType()->getAs<ConstantMatrixType>()->getNumRows());
+      E->getBase()->getType()->castAs<ConstantMatrixType>()->getNumRows());
 }
 
 static int getMaskElt(llvm::ShuffleVectorInst *SVI, unsigned Idx,
@@ -3125,7 +3133,7 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
 
     llvm::Value *IntMin =
       Builder.getInt(llvm::APInt::getSignedMinValue(Ty->getBitWidth()));
-    llvm::Value *NegOne = llvm::ConstantInt::get(Ty, -1ULL);
+    llvm::Value *NegOne = llvm::Constant::getAllOnesValue(Ty);
 
     llvm::Value *LHSCmp = Builder.CreateICmpNE(Ops.LHS, IntMin);
     llvm::Value *RHSCmp = Builder.CreateICmpNE(Ops.RHS, NegOne);
@@ -3155,6 +3163,21 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
       EmitBinOpCheck(std::make_pair(NonZero, SanitizerKind::FloatDivideByZero),
                      Ops);
     }
+  }
+
+  if (Ops.Ty->isConstantMatrixType()) {
+    llvm::MatrixBuilder<CGBuilderTy> MB(Builder);
+    // We need to check the types of the operands of the operator to get the
+    // correct matrix dimensions.
+    auto *BO = cast<BinaryOperator>(Ops.E);
+    (void)BO;
+    assert(
+        isa<ConstantMatrixType>(BO->getLHS()->getType().getCanonicalType()) &&
+        "first operand must be a matrix");
+    assert(BO->getRHS()->getType().getCanonicalType()->isArithmeticType() &&
+           "second operand must be an arithmetic type");
+    return MB.CreateScalarDiv(Ops.LHS, Ops.RHS,
+                              Ops.Ty->hasUnsignedIntegerRepresentation());
   }
 
   if (Ops.LHS->getType()->isFPOrFPVectorTy()) {
