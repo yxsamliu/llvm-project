@@ -72,6 +72,12 @@ static constexpr int z2 = 456;
 
 static __device__ int w;
 
+// Test non-ODR-use of static device var should not be emitted or registered.
+// DEV-NOT: @_ZL1u
+// HOST-NOT: @_ZL1u
+
+static __device__ int u;
+
 inline __device__ void devfun(const int ** b) {
   const static int p = 2;
   b[0] = &p;
@@ -88,6 +94,7 @@ __global__ void kernel(int *a, const int **b) {
   a[3] = x3;
   a[4] = x4;
   a[5] = x5;
+  a[6] = sizeof(u);
   b[0] = &w;
   b[1] = &z2;
   b[2] = &local_static_constant;
@@ -108,10 +115,12 @@ void foo(const int **a) {
   getDeviceSymbol(&w);
   z = 123;
   a[0] = &z2;
+  decltype(u) tmp;
 }
 
 // HOST: __hipRegisterVar({{.*}}@_ZL1x {{.*}}@[[DEVNAMEX]]
 // HOST: __hipRegisterVar({{.*}}@_ZL1y {{.*}}@[[DEVNAMEY]]
 // HOST: __hipRegisterVar({{.*}}@_ZL1w {{.*}}@[[DEVNAMEW]]
+// HOST-NOT: __hipRegisterVar({{.*}}@_ZL1u
 // HOST-NOT: __hipRegisterVar({{.*}}@_ZZ6kernelPiPPKiE1w
 // HOST-NOT: __hipRegisterVar({{.*}}@_ZZ6devfunPPKiE1p
