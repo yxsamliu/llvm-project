@@ -85,6 +85,9 @@
 # RUN: yaml2obj %s -o %t -DCPU=GFX1033
 # RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX1033 -DFLAGS=0x39
 
+# RUN: yaml2obj %s -o %t -DCPU=GFX1034
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX1034 -DFLAGS=0x3E
+
 --- !ELF
 FileHeader:
   Class:           ELFCLASS64
