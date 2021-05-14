@@ -1,0 +1,34 @@
+/*===---- functional - CUDA/HIP wrapper for <functional> -------------------===
+ *
+ * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See https://llvm.org/LICENSE.txt for license information.
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ *
+ *===-----------------------------------------------------------------------===
+ */
+
+#ifndef __CLANG_CUDA_WRAPPERS_FUNCTIONAL
+#define __CLANG_CUDA_WRAPPERS_FUNCTIONAL
+
+#if __HIP_USE_LIBCPP
+#pragma push_macro("_LIBCPP_NO_EXCEPTIONS")
+#define _LIBCPP_NO_EXCEPTIONS
+
+extern __device__ void abort() __attribute__ ((__noreturn__));
+namespace std {
+namespace __1 {
+  inline __device__ void abort() {
+    return ::abort();
+  }
+}
+}
+
+#pragma clang force_cuda_host_device begin
+#include_next <functional>
+#pragma clang force_cuda_host_device end
+#pragma pop_macro("_LIBCPP_NO_EXCEPTIONS")
+#else
+#include_next <functional>
+#endif // __HIP_USE_LIBCPP
+
+#endif // __CLANG_CUDA_WRAPPERS_FUNCTIONAL

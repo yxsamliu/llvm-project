@@ -140,8 +140,14 @@ set(files
 
 set(cuda_wrapper_files
   cuda_wrappers/algorithm
+  cuda_wrappers/array
   cuda_wrappers/complex
+  cuda_wrappers/functional
   cuda_wrappers/new
+  cuda_wrappers/type_traits
+  cuda_wrappers/tuple
+  cuda_wrappers/utility
+  cuda_wrappers/__tuple
 )
 
 set(ppc_wrapper_files

@@ -18,6 +18,10 @@
 
 #if __HIP__
 
+#if __has_include(<__libcpp_version>)
+#define __HIP_USE_LIBCPP 1
+#endif // __has_include(<__libcpp_version>)
+
 #if !defined(__HIPCC_RTC__)
 #include <cmath>
 #include <cstdlib>
