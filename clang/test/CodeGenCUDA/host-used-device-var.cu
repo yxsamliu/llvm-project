@@ -66,8 +66,22 @@ __device__ T add_func (T x, T y)
 template <typename T>
 __device__ func_t<T> p_add_func = add_func<T>;
 
+// Check non-constant constexpr variables ODR-used by host code only is not emitted.
+// DEV-NEG-NOT: constexpr_var1a
+// DEV-NEG-NOT: constexpr_var1b
+constexpr int constexpr_var1a = 1;
+inline constexpr int constexpr_var1b = 1;
+
+// Check constant constexpr variables ODR-used by host code only.
+// Non-inline constexpr variable has internal linkage, therefore it is not accessible by host and not kept.
+// Inline constexpr variable has linkonce_ord linkage, therefore it can be accessed by host and kept.
+// DEV-NEG-NOT: constexpr_var2a
+// DEV-DAG: @constexpr_var2b = linkonce_odr addrspace(4) externally_initialized constant i32 2
+__constant__ constexpr int constexpr_var2a = 2;
+inline __constant__ constexpr int constexpr_var2b = 2;
+
 void use(func_t<int> p);
-void use(int *p);
+void use(const int *p);
 
 void fun1() {
   use(&u1);
@@ -76,20 +90,58 @@ void fun1() {
   use(&ext_var);
   use(&inline_var);
   use(p_add_func<int>);
+  use(&constexpr_var1a);
+  use(&constexpr_var1b);
+  use(&constexpr_var2a);
+  use(&constexpr_var2b);
 }
 
 __global__ void kern1(int **x) {
   *x = &u4;
 }
 
+// Check implicit constant variable ODR-used by host code is not emitted.
+// DEV-NEG-NOT: _ZN16TestConstexprVar1oE
+namespace TestConstexprVar {
+char o;
+class ou {
+public:
+  ou(char) { __builtin_strlen(&o); }
+};
+template < typename ao > struct aw { static constexpr ao c; };
+class x {
+protected:
+  typedef ou (*y)(const x *);
+  constexpr x(y ag) : ah(ag) {}
+  template < bool * > struct ak;
+  template < typename > struct al {
+    static bool am;
+    static ak< &am > an;
+  };
+  template < typename ao > static x ap() { (void)aw< ao >::c; return x(nullptr); }
+  y ah;
+};
+template < typename ao > bool x::al< ao >::am(&ap< ao >);
+class ar : x {
+public:
+  constexpr ar() : x(as) {}
+  static ou as(const x *) { return 0; }
+  al< ar > av;
+};
+}
+
 // Check the exact list of variables to ensure @_ZL2u4 is not among them.
-// DEV: @llvm.compiler.used = {{[^@]*}} @_Z10p_add_funcIiE {{[^@]*}} @_ZL2u3 {{[^@]*}} @inline_var {{[^@]*}} @u1 {{[^@]*}} @u2 {{[^@]*}} @u5
+// DEV: @llvm.compiler.used = {{[^@]*}} @_Z10p_add_funcIiE {{[^@]*}} @_ZL2u3 {{[^@]*}} @constexpr_var2b {{[^@]*}} @inline_var {{[^@]*}} @u1 {{[^@]*}} @u2 {{[^@]*}} @u5
 
 // HOST-DAG: hipRegisterVar{{.*}}@u1
 // HOST-DAG: hipRegisterVar{{.*}}@u2
 // HOST-DAG: hipRegisterVar{{.*}}@_ZL2u3
+// HOST-DAG: hipRegisterVar{{.*}}@constexpr_var2b
 // HOST-DAG: hipRegisterVar{{.*}}@u5
 // HOST-DAG: hipRegisterVar{{.*}}@inline_var
 // HOST-DAG: hipRegisterVar{{.*}}@_Z10p_add_funcIiE
 // HOST-NEG-NOT: hipRegisterVar{{.*}}@ext_var
 // HOST-NEG-NOT: hipRegisterVar{{.*}}@_ZL2u4
+// HOST-NEG-NOT: hipRegisterVar{{.*}}@constexpr_var1a
+// HOST-NEG-NOT: hipRegisterVar{{.*}}@constexpr_var1b
+// HOST-NEG-NOT: hipRegisterVar{{.*}}@constexpr_var2a

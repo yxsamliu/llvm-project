@@ -637,7 +637,8 @@ void Sema::maybeAddCUDAHostDeviceAttrs(FunctionDecl *NewD,
 
 void Sema::MaybeAddCUDAConstantAttr(VarDecl *VD) {
   if (getLangOpts().CUDAIsDevice && VD->isConstexpr() &&
-      (VD->isFileVarDecl() || VD->isStaticDataMember())) {
+      (VD->isFileVarDecl() || VD->isStaticDataMember()) &&
+      !VD->hasAttr<CUDAConstantAttr>()) {
     VD->addAttr(CUDAConstantAttr::CreateImplicit(getASTContext()));
   }
 }

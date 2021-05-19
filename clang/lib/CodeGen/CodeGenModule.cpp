@@ -2364,9 +2364,28 @@ void CodeGenModule::EmitDeferred() {
   }
 
   // Emit CUDA/HIP static device variables referenced by host code only.
+  // Note we should not clear CUDADeviceVarODRUsedByHost since it is still
+  // needed for further handling.
   if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
-    for (const auto *V : getContext().CUDADeviceVarODRUsedByHost)
-      DeferredDeclsToEmit.push_back(V);
+    for (const auto *V : getContext().CUDADeviceVarODRUsedByHost) {
+      // ToDo: The user of ODR-used variables may not be emitted on host side.
+      // There needs a more accurate way to determine whether a device side
+      // variable ODR-used by host only should be emitted on device side.
+      //
+      // Currently we do it conservatively. However this does not work well
+      // with implicit constant variables since use of implicit constant
+      // variable in host function cannot be easily differentiated from
+      // use of the host variable with the same name. Therefore we do not
+      // force emit implicit constant variable.
+      auto HasImplicitConstantAttr = [](const VarDecl *Var) {
+        auto *A = Var->getAttr<CUDAConstantAttr>();
+        if (!A)
+          return false;
+        return A->isImplicit();
+      };
+      if (!HasImplicitConstantAttr(V))
+        DeferredDeclsToEmit.push_back(V);
+    }
 
   // Stop if we're out of both deferred vtables and deferred declarations.
   if (DeferredDeclsToEmit.empty())
