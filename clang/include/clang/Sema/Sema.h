@@ -12063,6 +12063,15 @@ public:
                                         bool IgnoreImplicitHDAttr = false);
   CUDAFunctionTarget IdentifyCUDATarget(const ParsedAttributesView &Attrs);
 
+  enum CUDAVariableTarget {
+    CVT_Device,  /// Device only
+    CVT_Host,    /// Host only
+    CVT_Both,    /// Emitted on both sides with different addresses
+    CVT_Unified, /// Emitted as a unified address, e.g. managed variables
+  };
+  /// Determines whether the given variable is emitted on host or device side.
+  CUDAVariableTarget IdentifyCUDATarget(const VarDecl *D);
+
   /// Gets the CUDA target for the current context.
   CUDAFunctionTarget CurrentCUDATarget() {
     return IdentifyCUDATarget(dyn_cast<FunctionDecl>(CurContext));
