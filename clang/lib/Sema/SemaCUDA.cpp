@@ -147,6 +147,9 @@ Sema::CUDAVariableTarget Sema::IdentifyCUDATarget(const VarDecl *Var) {
     return CVT_Unified;
   if (Var->isConstexpr() && !hasExplicitAttr<CUDAConstantAttr>(Var))
     return CVT_Both;
+  if (Var->getType().isConstQualified() && Var->hasAttr<CUDAConstantAttr>() &&
+      !hasExplicitAttr<CUDAConstantAttr>(Var))
+    return CVT_Both;
   if (Var->hasAttr<CUDADeviceAttr>() || Var->hasAttr<CUDAConstantAttr>() ||
       Var->hasAttr<CUDASharedAttr>() ||
       Var->getType()->isCUDADeviceBuiltinSurfaceType() ||
@@ -549,47 +552,72 @@ bool Sema::isEmptyCudaDestructor(SourceLocation Loc, CXXDestructorDecl *DD) {
   return true;
 }
 
+namespace {
+enum CUDAInitializerCheckKind {
+  CICK_DeviceOrConstant, // Check initializer for device/constant variable
+  CICK_Shared,           // Check initializer for shared variable
+};
+
+// Check whether a variable has an allowed initializer for a CUDA device side
+// variable with global storage. \p VD may be a host variable to be checked for
+// potential promotion to device side variable.
+//
+// CUDA/HIP allows only empty constructors as initializers for global
+// variables (see E.2.3.1, CUDA 7.5). The same restriction also applies to all
+// __shared__ variables whether they are local or not (they all are implicitly
+// static in CUDA). One exception is that CUDA allows constant initializers
+// for __constant__ and __device__ variables.
+bool HasAllowedCUDADeviceStaticInitializer(Sema &S, VarDecl *VD,
+                                           CUDAInitializerCheckKind CheckKind) {
+  assert(!VD->isInvalidDecl() && VD->hasGlobalStorage());
+  const Expr *Init = VD->getInit();
+  auto IsEmptyInit = [&](const Expr *Init) {
+    if (!Init)
+      return true;
+    if (const auto *CE = dyn_cast<CXXConstructExpr>(Init)) {
+      return S.isEmptyCudaConstructor(VD->getLocation(), CE->getConstructor());
+    }
+    return false;
+  };
+  // isConstantInitializer cannot be called with dependent value, therefore
+  // we skip checking dependent value here. This is OK since
+  // IsAllowedCUDAStaticInitializer is called again when the template is
+  // instantiated.
+  auto IsDependentOrConstantInit = [&](const Expr *Init) {
+    assert(Init);
+    return VD->getType()->isDependentType() || Init->isValueDependent() ||
+           Init->isConstantInitializer(S.Context,
+                                       VD->getType()->isReferenceType());
+  };
+  auto HasEmptyDtor = [&](VarDecl *VD) {
+    if (const auto *RD = VD->getType()->getAsCXXRecordDecl())
+      return S.isEmptyCudaDestructor(VD->getLocation(), RD->getDestructor());
+    return true;
+  };
+  if (CheckKind == CICK_Shared)
+    return IsEmptyInit(Init) && HasEmptyDtor(VD);
+  return S.LangOpts.GPUAllowDeviceInit ||
+         ((IsEmptyInit(Init) || IsDependentOrConstantInit(Init)) &&
+          HasEmptyDtor(VD));
+}
+} // namespace
+
 void Sema::checkAllowedCUDAInitializer(VarDecl *VD) {
   if (VD->isInvalidDecl() || !VD->hasInit() || !VD->hasGlobalStorage())
     return;
   const Expr *Init = VD->getInit();
-  if (VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>() ||
-      VD->hasAttr<CUDASharedAttr>()) {
-    if (LangOpts.GPUAllowDeviceInit)
+  bool IsSharedVar = VD->hasAttr<CUDASharedAttr>();
+  bool IsDeviceOrConstantVar =
+      !IsSharedVar &&
+      (VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>());
+  if (IsDeviceOrConstantVar || IsSharedVar) {
+    if (HasAllowedCUDADeviceStaticInitializer(
+            *this, VD, IsSharedVar ? CICK_Shared : CICK_DeviceOrConstant))
       return;
-    bool AllowedInit = false;
-    if (const CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(Init))
-      AllowedInit =
-          isEmptyCudaConstructor(VD->getLocation(), CE->getConstructor());
-    // We'll allow constant initializers even if it's a non-empty
-    // constructor according to CUDA rules. This deviates from NVCC,
-    // but allows us to handle things like constexpr constructors.
-    if (!AllowedInit &&
-        (VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>())) {
-      auto *Init = VD->getInit();
-      // isConstantInitializer cannot be called with dependent value, therefore
-      // we skip checking dependent value here. This is OK since
-      // checkAllowedCUDAInitializer is called again when the template is
-      // instantiated.
-      AllowedInit =
-          VD->getType()->isDependentType() || Init->isValueDependent() ||
-          Init->isConstantInitializer(Context,
-                                      VD->getType()->isReferenceType());
-    }
-
-    // Also make sure that destructor, if there is one, is empty.
-    if (AllowedInit)
-      if (CXXRecordDecl *RD = VD->getType()->getAsCXXRecordDecl())
-        AllowedInit =
-            isEmptyCudaDestructor(VD->getLocation(), RD->getDestructor());
-
-    if (!AllowedInit) {
-      Diag(VD->getLocation(), VD->hasAttr<CUDASharedAttr>()
-                                  ? diag::err_shared_var_init
-                                  : diag::err_dynamic_var_init)
-          << Init->getSourceRange();
-      VD->setInvalidDecl();
-    }
+    Diag(VD->getLocation(),
+         IsSharedVar ? diag::err_shared_var_init : diag::err_dynamic_var_init)
+        << Init->getSourceRange();
+    VD->setInvalidDecl();
   } else {
     // This is a host-side global variable.  Check that the initializer is
     // callable from the host side.
@@ -673,9 +701,12 @@ void Sema::maybeAddCUDAHostDeviceAttrs(FunctionDecl *NewD,
 }
 
 void Sema::MaybeAddCUDAConstantAttr(VarDecl *VD) {
-  if (getLangOpts().CUDAIsDevice && VD->isConstexpr() &&
+  if (getLangOpts().CUDAIsDevice && !VD->hasAttr<CUDAConstantAttr>() &&
+      !VD->hasAttr<CUDAConstantAttr>() && !VD->hasAttr<CUDASharedAttr>() &&
       (VD->isFileVarDecl() || VD->isStaticDataMember()) &&
-      !VD->hasAttr<CUDAConstantAttr>()) {
+      (VD->isConstexpr() || (VD->getType().isConstQualified() &&
+                             HasAllowedCUDADeviceStaticInitializer(
+                                 *this, VD, CICK_DeviceOrConstant)))) {
     VD->addAttr(CUDAConstantAttr::CreateImplicit(getASTContext()));
   }
 }
