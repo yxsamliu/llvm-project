@@ -550,6 +550,7 @@ public:
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printHashHistograms() override;
   void printCGProfile() override;
+  void printBBAddrMaps() override;
   void printAddrsig() override;
   void printNotes() override;
   void printELFLinkerOptions() override;
@@ -660,6 +661,7 @@ public:
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printHashHistograms() override;
   void printCGProfile() override;
+  void printBBAddrMaps() override;
   void printAddrsig() override;
   void printNotes() override;
   void printELFLinkerOptions() override;
@@ -1500,14 +1502,17 @@ static const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion4[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_TURKS),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX600),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX601),
+  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX602),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX700),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX701),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX702),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX703),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX704),
+  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX705),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX801),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX802),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX803),
+  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX805),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX810),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX900),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX902),
@@ -1516,6 +1521,7 @@ static const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion4[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX908),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX909),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90A),
+  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90C),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1010),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1011),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1012),
@@ -3988,21 +3994,17 @@ template <class ELFT> void GNUELFDumper<ELFT>::printSectionDetails() {
 
     uint64_t Flags = S.sh_flags;
     uint64_t UnknownFlags = 0;
-    bool NeedsComma = false;
+    ListSeparator LS;
     while (Flags) {
       // Take the least significant bit as a flag.
       uint64_t Flag = Flags & -Flags;
       Flags -= Flag;
 
       auto It = FlagToName.find(Flag);
-      if (It != FlagToName.end()) {
-        if (NeedsComma)
-          OS << ", ";
-        NeedsComma = true;
-        OS << It->second;
-      } else {
+      if (It != FlagToName.end())
+        OS << LS << It->second;
+      else
         UnknownFlags |= Flag;
-      }
     }
 
     auto PrintUnknownFlags = [&](uint64_t Mask, StringRef Name) {
@@ -4010,12 +4012,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printSectionDetails() {
       if (!FlagsToPrint)
         return;
 
-      if (NeedsComma)
-        OS << ", ";
-      OS << Name << " ("
+      OS << LS << Name << " ("
          << to_string(format_hex_no_prefix(FlagsToPrint, AddrSize)) << ")";
       UnknownFlags &= ~Mask;
-      NeedsComma = true;
     };
 
     PrintUnknownFlags(SHF_MASKOS, "OS");
@@ -4677,6 +4676,10 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
   OS << "GNUStyle::printCGProfile not implemented\n";
 }
 
+template <class ELFT> void GNUELFDumper<ELFT>::printBBAddrMaps() {
+  OS << "GNUStyle::printBBAddrMaps not implemented\n";
+}
+
 static Expected<std::vector<uint64_t>> toULEB128Array(ArrayRef<uint8_t> Data) {
   std::vector<uint64_t> Ret;
   const uint8_t *Cur = Data.begin();
@@ -4790,47 +4793,6 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
     if (PrData)
       OS << format("<unknown flags: 0x%x>", PrData);
     return OS.str();
-  case GNU_PROPERTY_X86_ISA_1_NEEDED:
-  case GNU_PROPERTY_X86_ISA_1_USED:
-    OS << "x86 ISA "
-       << (Type == GNU_PROPERTY_X86_ISA_1_NEEDED ? "needed: " : "used: ");
-    if (DataSize != 4) {
-      OS << format("<corrupt length: 0x%x>", DataSize);
-      return OS.str();
-    }
-    PrData = support::endian::read32<ELFT::TargetEndianness>(Data.data());
-    if (PrData == 0) {
-      OS << "<None>";
-      return OS.str();
-    }
-    DumpBit(GNU_PROPERTY_X86_ISA_1_CMOV, "CMOV");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_SSE, "SSE");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_SSE2, "SSE2");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_SSE3, "SSE3");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_SSSE3, "SSSE3");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_SSE4_1, "SSE4_1");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_SSE4_2, "SSE4_2");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX, "AVX");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX2, "AVX2");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_FMA, "FMA");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512F, "AVX512F");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512CD, "AVX512CD");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512ER, "AVX512ER");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512PF, "AVX512PF");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512VL, "AVX512VL");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512DQ, "AVX512DQ");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512BW, "AVX512BW");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512_4FMAPS, "AVX512_4FMAPS");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512_4VNNIW, "AVX512_4VNNIW");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512_BITALG, "AVX512_BITALG");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512_IFMA, "AVX512_IFMA");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512_VBMI, "AVX512_VBMI");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512_VBMI2, "AVX512_VBMI2");
-    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512_VNNI, "AVX512_VNNI");
-    if (PrData)
-      OS << format("<unknown flags: 0x%x>", PrData);
-    return OS.str();
-    break;
   case GNU_PROPERTY_X86_FEATURE_2_NEEDED:
   case GNU_PROPERTY_X86_FEATURE_2_USED:
     OS << "x86 feature "
@@ -4854,6 +4816,26 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
     DumpBit(GNU_PROPERTY_X86_FEATURE_2_XSAVE, "XSAVE");
     DumpBit(GNU_PROPERTY_X86_FEATURE_2_XSAVEOPT, "XSAVEOPT");
     DumpBit(GNU_PROPERTY_X86_FEATURE_2_XSAVEC, "XSAVEC");
+    if (PrData)
+      OS << format("<unknown flags: 0x%x>", PrData);
+    return OS.str();
+  case GNU_PROPERTY_X86_ISA_1_NEEDED:
+  case GNU_PROPERTY_X86_ISA_1_USED:
+    OS << "x86 ISA "
+       << (Type == GNU_PROPERTY_X86_ISA_1_NEEDED ? "needed: " : "used: ");
+    if (DataSize != 4) {
+      OS << format("<corrupt length: 0x%x>", DataSize);
+      return OS.str();
+    }
+    PrData = support::endian::read32<ELFT::TargetEndianness>(Data.data());
+    if (PrData == 0) {
+      OS << "<None>";
+      return OS.str();
+    }
+    DumpBit(GNU_PROPERTY_X86_ISA_1_BASELINE, "x86-64-baseline");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_V2, "x86-64-v2");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_V3, "x86-64-v3");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_V4, "x86-64-v4");
     if (PrData)
       OS << format("<unknown flags: 0x%x>", PrData);
     return OS.str();
@@ -5032,7 +5014,7 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
     auto Version = reinterpret_cast<const CodeObjectVersion *>(Desc.data());
     StrOS << "[Major: " << Version->MajorVersion
           << ", Minor: " << Version->MinorVersion << "]";
-    return {"AMD HSA Code Object Version", StrOS.str()};
+    return {"AMD HSA Code Object Version", VersionString};
   }
   case ELF::NT_AMD_HSA_HSAIL: {
     struct HSAILProperties {
@@ -5052,7 +5034,7 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
           << ", Profile: " << Properties->Profile
           << ", Machine Model: " << Properties->MachineModel
           << ", Default Float Round: " << Properties->DefaultFloatRound << "]";
-    return {"AMD HSA HSAIL Properties", StrOS.str()};
+    return {"AMD HSA HSAIL Properties", HSAILPropetiesString};
   }
   case ELF::NT_AMD_HSA_ISA_VERSION: {
     struct IsaVersion {
@@ -5061,25 +5043,24 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
       uint32_t Major;
       uint32_t Minor;
       uint32_t Stepping;
-      char VendorAndArchitectureName[1];
     };
-    if (Desc.size() < offsetof(IsaVersion, VendorAndArchitectureName))
+    if (Desc.size() < sizeof(IsaVersion))
       return {"AMD HSA ISA Version", "Invalid AMD HSA ISA Version"};
     auto Isa = reinterpret_cast<const IsaVersion *>(Desc.data());
-    if (Desc.size() < offsetof(IsaVersion, VendorAndArchitectureName) +
+    if (Desc.size() < sizeof(IsaVersion) +
                           Isa->VendorNameSize + Isa->ArchitectureNameSize ||
         Isa->VendorNameSize == 0 || Isa->ArchitectureNameSize == 0)
       return {"AMD HSA ISA Version", "Invalid AMD HSA ISA Version"};
     std::string IsaString;
     raw_string_ostream StrOS(IsaString);
     StrOS << "[Vendor: "
-          << StringRef(Isa->VendorAndArchitectureName, Isa->VendorNameSize - 1)
+          << StringRef((const char*)Desc.data() + sizeof(IsaVersion), Isa->VendorNameSize - 1)
           << ", Architecture: "
-          << StringRef(Isa->VendorAndArchitectureName + Isa->VendorNameSize,
+          << StringRef((const char*)Desc.data() + sizeof(IsaVersion) + Isa->VendorNameSize,
                        Isa->ArchitectureNameSize - 1)
           << ", Major: " << Isa->Major << ", Minor: " << Isa->Minor
           << ", Stepping: " << Isa->Stepping << "]";
-    return {"AMD HSA ISA Version", StrOS.str()};
+    return {"AMD HSA ISA Version", IsaString};
   }
   case ELF::NT_AMD_HSA_METADATA: {
     if (Desc.size() == 0)
@@ -5103,10 +5084,10 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
     auto Isa = reinterpret_cast<const PALMetadata *>(Desc.data());
     std::string MetadataString;
     raw_string_ostream StrOS(MetadataString);
-    for (size_t i = 0; i < Desc.size() / sizeof(PALMetadata); ++i) {
-      StrOS << "[" << Isa[i].Key << ": " << Isa[i].Value << "]";
+    for (size_t I = 0, E = Desc.size() / sizeof(PALMetadata); I < E; ++E) {
+      StrOS << "[" << Isa[I].Key << ": " << Isa[I].Value << "]";
     }
-    return {"AMD PAL Metadata", StrOS.str()};
+    return {"AMD PAL Metadata", MetadataString};
   }
   }
 }
@@ -6211,6 +6192,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
     else if (E.e_machine == EM_AMDGPU) {
       switch (E.e_ident[ELF::EI_ABIVERSION]) {
       default:
+        W.printHex("Flags", E.e_flags);
+        break;
+      case 0:
         // ELFOSABI_AMDGPU_PAL, ELFOSABI_AMDGPU_MESA3D support *_V3 flags.
         LLVM_FALLTHROUGH;
       case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
@@ -6675,6 +6659,35 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
     W.printNumber("To", this->getStaticSymbolName(CGPE.cgp_to),
                   CGPE.cgp_to);
     W.printNumber("Weight", CGPE.cgp_weight);
+  }
+}
+
+template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
+  for (const Elf_Shdr &Sec : cantFail(this->Obj.sections())) {
+    if (Sec.sh_type != SHT_LLVM_BB_ADDR_MAP)
+      continue;
+    ListScope L(W, "BBAddrMap");
+    Expected<std::vector<Elf_BBAddrMap>> BBAddrMapOrErr =
+        this->Obj.decodeBBAddrMap(Sec);
+    if (!BBAddrMapOrErr) {
+      this->reportUniqueWarning("unable to dump " + this->describe(Sec) + ": " +
+                                toString(BBAddrMapOrErr.takeError()));
+      continue;
+    }
+    for (const Elf_BBAddrMap &AM : *BBAddrMapOrErr) {
+      DictScope D(W, "Function");
+      W.printHex("At", AM.Addr);
+      ListScope L(W, "BB entries");
+      for (const typename Elf_BBAddrMap::BBEntry &BBE : AM.BBEntries) {
+        DictScope L(W);
+        W.printHex("Offset", BBE.Offset);
+        W.printHex("Size", BBE.Size);
+        W.printBoolean("HasReturn", BBE.HasReturn);
+        W.printBoolean("HasTailCall", BBE.HasTailCall);
+        W.printBoolean("IsEHPad", BBE.IsEHPad);
+        W.printBoolean("CanFallThrough", BBE.CanFallThrough);
+      }
+    }
   }
 }
 

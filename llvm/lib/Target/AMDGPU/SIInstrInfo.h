@@ -96,7 +96,8 @@ private:
                           unsigned Opcode) const;
 
   void splitScalar64BitUnaryOp(SetVectorType &Worklist,
-                               MachineInstr &Inst, unsigned Opcode) const;
+                               MachineInstr &Inst, unsigned Opcode,
+                               bool Swap = false) const;
 
   void splitScalar64BitAddSub(SetVectorType &Worklist, MachineInstr &Inst,
                               MachineDominatorTree *MDT = nullptr) const;
@@ -122,6 +123,8 @@ private:
   void addSCCDefUsersToVALUWorklist(MachineOperand &Op,
                                     MachineInstr &SCCDefInst,
                                     SetVectorType &Worklist) const;
+  void addSCCDefsToVALUWorklist(MachineOperand &Op,
+                                SetVectorType &Worklist) const;
 
   const TargetRegisterClass *
   getDestEquivalentVGPRClass(const MachineInstr &Inst) const;

@@ -82,7 +82,7 @@ public:
   bool hasBasePointer(const MachineFunction &MF) const;
   Register getBaseRegister() const;
 
-  bool canRealignStack(const MachineFunction &MF) const override;
+  bool shouldRealignStack(const MachineFunction &MF) const override;
   bool requiresRegisterScavenging(const MachineFunction &Fn) const override;
 
   bool requiresFrameIndexScavenging(const MachineFunction &MF) const override;
@@ -137,8 +137,13 @@ public:
     return getEncodingValue(Reg) & 0xff;
   }
 
-  static const TargetRegisterClass *getVGPRClassForBitWidth(unsigned BitWidth);
-  static const TargetRegisterClass *getAGPRClassForBitWidth(unsigned BitWidth);
+  LLVM_READONLY
+  const TargetRegisterClass *getVGPRClassForBitWidth(unsigned BitWidth) const;
+
+  LLVM_READONLY
+  const TargetRegisterClass *getAGPRClassForBitWidth(unsigned BitWidth) const;
+
+  LLVM_READONLY
   static const TargetRegisterClass *getSGPRClassForBitWidth(unsigned BitWidth);
 
   /// Return the 'base' register class for this register.
@@ -185,11 +190,20 @@ public:
   const TargetRegisterClass *
   getEquivalentSGPRClass(const TargetRegisterClass *VRC) const;
 
-  /// \returns The register class that is used for a sub-register of \p RC for
-  /// the given \p SubIdx.  If \p SubIdx equals NoSubRegister, \p RC will
-  /// be returned.
+  /// \returns The canonical register class that is used for a sub-register of
+  /// \p RC for the given \p SubIdx.  If \p SubIdx equals NoSubRegister, \p RC
+  /// will be returned.
   const TargetRegisterClass *getSubRegClass(const TargetRegisterClass *RC,
                                             unsigned SubIdx) const;
+
+  /// Returns a register class which is compatible with \p SuperRC, such that a
+  /// subregister exists with class \p SubRC with subregister index \p
+  /// SubIdx. If this is impossible (e.g., an unaligned subregister index within
+  /// a register tuple), return null.
+  const TargetRegisterClass *
+  getCompatibleSubRegClass(const TargetRegisterClass *SuperRC,
+                           const TargetRegisterClass *SubRC,
+                           unsigned SubIdx) const;
 
   bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
                             unsigned DefSubReg,
@@ -271,6 +285,10 @@ public:
                     : &AMDGPU::SReg_64_XEXECRegClass;
   }
 
+  // Return the appropriate register class to use for 64-bit VGPRs for the
+  // subtarget.
+  const TargetRegisterClass *getVGPR64Class() const;
+
   MCRegister getVCC() const;
 
   const TargetRegisterClass *getRegClass(unsigned RCID) const;
@@ -310,6 +328,10 @@ public:
   // For a given 16 bit \p Reg \returns a 32 bit register holding it.
   // \returns \p Reg otherwise.
   MCPhysReg get32BitRegister(MCPhysReg Reg) const;
+
+  // Returns true if a given register class is properly aligned for
+  // the subtarget.
+  bool isProperlyAlignedRC(const TargetRegisterClass &RC) const;
 
   /// Return all SGPR128 which satisfy the waves per execution unit requirement
   /// of the subtarget.

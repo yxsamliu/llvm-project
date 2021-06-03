@@ -291,6 +291,7 @@ struct MIMGBaseOpcodeInfo {
   bool Coordinates;
   bool LodOrClampOrMip;
   bool HasD16;
+  bool MSAA;
 };
 
 LLVM_READONLY
@@ -300,6 +301,7 @@ struct MIMGDimInfo {
   MIMGDim Dim;
   uint8_t NumCoords;
   uint8_t NumGradients;
+  bool MSAA;
   bool DA;
   uint8_t Encoding;
   const char *AsmSuffix;
@@ -394,6 +396,15 @@ bool getMUBUFHasSoffset(unsigned Opc);
 
 LLVM_READONLY
 bool getSMEMIsBuffer(unsigned Opc);
+
+LLVM_READONLY
+bool getVOP1IsSingle(unsigned Opc);
+
+LLVM_READONLY
+bool getVOP2IsSingle(unsigned Opc);
+
+LLVM_READONLY
+bool getVOP3IsSingle(unsigned Opc);
 
 LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
@@ -634,10 +645,12 @@ LLVM_READNONE
 bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI, bool Strict = true);
 
 LLVM_READNONE
-bool isValidMsgOp(int64_t MsgId, int64_t OpId, bool Strict = true);
+bool isValidMsgOp(int64_t MsgId, int64_t OpId, const MCSubtargetInfo &STI,
+                  bool Strict = true);
 
 LLVM_READNONE
-bool isValidMsgStream(int64_t MsgId, int64_t OpId, int64_t StreamId, bool Strict = true);
+bool isValidMsgStream(int64_t MsgId, int64_t OpId, int64_t StreamId,
+                      const MCSubtargetInfo &STI, bool Strict = true);
 
 LLVM_READNONE
 bool msgRequiresOp(int64_t MsgId);

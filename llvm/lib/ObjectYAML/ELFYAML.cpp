@@ -459,6 +459,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCase(EF_HEXAGON_MACH_V66);
     BCase(EF_HEXAGON_MACH_V67);
     BCase(EF_HEXAGON_MACH_V67T);
+    BCase(EF_HEXAGON_MACH_V68);
     BCase(EF_HEXAGON_ISA_V2);
     BCase(EF_HEXAGON_ISA_V3);
     BCase(EF_HEXAGON_ISA_V4);
@@ -469,6 +470,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCase(EF_HEXAGON_ISA_V65);
     BCase(EF_HEXAGON_ISA_V66);
     BCase(EF_HEXAGON_ISA_V67);
+    BCase(EF_HEXAGON_ISA_V68);
     break;
   case ELF::EM_AVR:
     BCase(EF_AVR_ARCH_AVR1);
@@ -812,6 +814,9 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
     break;
   case ELF::EM_PPC64:
 #include "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
+    break;
+  case ELF::EM_68K:
+#include "llvm/BinaryFormat/ELFRelocs/M68k.def"
     break;
   default:
     // Nothing to do.
@@ -1691,8 +1696,8 @@ void MappingTraits<ELFYAML::BBAddrMapEntry>::mapping(
     IO &IO, ELFYAML::BBAddrMapEntry &E) {
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapOptional("Address", E.Address, Hex64(0));
-  IO.mapOptional("BBEntries", E.BBEntries);
   IO.mapOptional("NumBlocks", E.NumBlocks);
+  IO.mapOptional("BBEntries", E.BBEntries);
 }
 
 void MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry>::mapping(

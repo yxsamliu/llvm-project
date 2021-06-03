@@ -334,11 +334,8 @@ EXTERN int omp_get_team_num() {
   return rc;
 }
 
-// For some reason this function, and only this function, triggers
-// error: definition of builtin function 'omp_is_initial_device'
-// Working around here until the compiler quirk is understood
-DEVICE int omp_is_initial_device_OVERLOAD(void) asm("omp_is_initial_device");
-DEVICE int omp_is_initial_device_OVERLOAD(void) {
+EXTERN int omp_is_initial_device_OVERLOAD(void) asm("omp_is_initial_device");
+EXTERN int omp_is_initial_device_OVERLOAD(void) {
   PRINT0(LD_IO, "call omp_is_initial_device() returns 0\n");
   return 0; // 0 by def on device
 }

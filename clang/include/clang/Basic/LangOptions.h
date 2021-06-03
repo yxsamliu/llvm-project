@@ -124,6 +124,7 @@ public:
     MSVC2017_5 = 1912,
     MSVC2017_7 = 1914,
     MSVC2019 = 1920,
+    MSVC2019_8 = 1928,
   };
 
   enum SYCLMajorVersion {
@@ -264,9 +265,9 @@ public:
   /// Set of enabled sanitizers.
   SanitizerSet Sanitize;
 
-  /// Paths to blacklist files specifying which objects
+  /// Paths to files specifying which objects
   /// (files, functions, variables) should not be instrumented.
-  std::vector<std::string> SanitizerBlacklistFiles;
+  std::vector<std::string> NoSanitizeFiles;
 
   /// Paths to the XRay "always instrument" files specifying which
   /// objects (files, functions, variables) should be imbued with the XRay

@@ -1,4 +1,4 @@
-//===-- X86PreTileConfig.cpp - Tile Register Configure---------------------===//
+//===-- X86PreTileConfig.cpp - Tile Register Pre-configure-----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -87,10 +87,10 @@ public:
 char X86PreTileConfig::ID = 0;
 
 INITIALIZE_PASS_BEGIN(X86PreTileConfig, "tilepreconfig",
-                      "Tile Register Configure", false, false)
+                      "Tile Register Pre-configure", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_END(X86PreTileConfig, "tilepreconfig",
-                    "Tile Register Configure", false, false)
+                    "Tile Register Pre-configure", false, false)
 
 void X86PreTileConfig::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
@@ -155,7 +155,11 @@ static ShapeT getShape(const MachineInstr &MI, MachineRegisterInfo *MRI) {
     llvm_unreachable("Unexpected machine instruction on tile");
   case X86::PTILELOADDV:
   case X86::PTDPBSSDV:
+  case X86::PTDPBSUDV:
+  case X86::PTDPBUSDV:
+  case X86::PTDPBUUDV:
   case X86::PTILEZEROV:
+  case X86::PTDPBF16PSV:
     MachineOperand &MO1 = const_cast<MachineOperand &>(MI.getOperand(1));
     MachineOperand &MO2 = const_cast<MachineOperand &>(MI.getOperand(2));
     ShapeT Shape(&MO1, &MO2, MRI);
@@ -249,7 +253,11 @@ static bool isAMXInstruction(MachineBasicBlock::iterator MII) {
   case X86::PTILELOADDV:
   case X86::PTILESTOREDV:
   case X86::PTDPBSSDV:
+  case X86::PTDPBSUDV:
+  case X86::PTDPBUSDV:
+  case X86::PTDPBUUDV:
   case X86::PTILEZEROV:
+  case X86::PTDPBF16PSV:
     return true;
   }
 }
@@ -287,6 +295,12 @@ static void reloadTileConfig(MachineInstr *MI, int FI,
 
   MachineBasicBlock *MBB = MI->getParent();
   BBVisitedInfo[MBB] = BBInfo(CfgNeedInsert, MBB, MI);
+
+  // The entry BB is special, since it always has a ldtilecfg before AMX
+  // instruction. We don't need to check if its predecessor BBs have call.
+  // FIXME: This case happens only when the entry BB is in a loop. We need to
+  // hoist the first tile config point out of the loop in future.
+  BBVisitedInfo[MBB].HasCallBeforeAMX = true;
 
   WorkList.push_back(MBB);
   while (!WorkList.empty()) {

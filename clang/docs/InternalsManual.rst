@@ -770,7 +770,7 @@ uses key paths, which are declared in two steps. First, a tablegen definition
 for the ``CompilerInvocation`` member is created by inheriting from
 ``KeyPathAndMacro``:
 
-.. code-block::
+.. code-block:: text
 
   // Options.td
 
@@ -861,7 +861,7 @@ information required for parsing or generating the command line argument.
 The key path defaults to ``false`` and is set to ``true`` when the flag is
 present on command line.
 
-.. code-block::
+.. code-block:: text
 
   def fignore_exceptions : Flag<["-"], "fignore-exceptions">, Flags<[CC1Option]>,
     MarshallingInfoFlag<LangOpts<"IgnoreExceptions">>;
@@ -871,7 +871,7 @@ present on command line.
 The key path defaults to ``true`` and is set to ``false`` when the flag is
 present on command line.
 
-.. code-block::
+.. code-block:: text
 
   def fno_verbose_asm : Flag<["-"], "fno-verbose-asm">, Flags<[CC1Option]>,
     MarshallingInfoNegativeFlag<CodeGenOpts<"AsmVerbose">>;
@@ -883,7 +883,7 @@ boolean value that's statically unknown in the tablegen file). Then, the key
 path is set to the value associated with the flag that appears last on command
 line.
 
-.. code-block::
+.. code-block:: text
 
   defm legacy_pass_manager : BoolOption<"f", "legacy-pass-manager",
     CodeGenOpts<"LegacyPassManager">, DefaultFalse,
@@ -911,7 +911,7 @@ the positive and negative flag and their common help text suffix.
 The key path defaults to the specified string, or an empty one, if omitted. When
 the option appears on the command line, the argument value is simply copied.
 
-.. code-block::
+.. code-block:: text
 
   def isysroot : JoinedOrSeparate<["-"], "isysroot">, Flags<[CC1Option]>,
     MarshallingInfoString<HeaderSearchOpts<"Sysroot">, [{"/"}]>;
@@ -922,7 +922,7 @@ The key path defaults to an empty ``std::vector<std::string>``. Values specified
 with each appearance of the option on the command line are appended to the
 vector.
 
-.. code-block::
+.. code-block:: text
 
   def frewrite_map_file : Separate<["-"], "frewrite-map-file">, Flags<[CC1Option]>,
     MarshallingInfoStringVector<CodeGenOpts<"RewriteMapFiles">>;
@@ -933,30 +933,29 @@ The key path defaults to the specified integer value, or ``0`` if omitted. When
 the option appears on the command line, its value gets parsed by ``llvm::APInt``
 and the result is assigned to the key path on success.
 
-.. code-block::
+.. code-block:: text
 
   def mstack_probe_size : Joined<["-"], "mstack-probe-size=">, Flags<[CC1Option]>,
-    MarshallingInfoStringInt<CodeGenOpts<"StackProbeSize">, "4096">;
+    MarshallingInfoInt<CodeGenOpts<"StackProbeSize">, "4096">;
 
 **Enumeration**
 
-The key path defaults to the value specified in ``MarshallingInfoString``
-prefixed by the contents of ``NormalizedValuesScope`` and ``::``. This ensures
-correct reference to an enum case is formed even if the enum resides in different
+The key path defaults to the value specified in ``MarshallingInfoEnum`` prefixed
+by the contents of ``NormalizedValuesScope`` and ``::``. This ensures correct
+reference to an enum case is formed even if the enum resides in different
 namespace or is an enum class. If the value present on command line does not
 match any of the comma-separated values from ``Values``, an error diagnostics is
 issued. Otherwise, the corresponding element from ``NormalizedValues`` at the
 same index is assigned to the key path (also correctly scoped). The number of
 comma-separated string values and elements of the array within
-``NormalizedValues`` must match. The ``AutoNormalizeEnum`` mix-in denotes the
-key path option should be treated as an enum and not as a string.
+``NormalizedValues`` must match.
 
-.. code-block::
+.. code-block:: text
 
   def mthread_model : Separate<["-"], "mthread-model">, Flags<[CC1Option]>,
     Values<"posix,single">, NormalizedValues<["POSIX", "Single"]>,
     NormalizedValuesScope<"LangOptions::ThreadModelKind">,
-    MarshallingInfoString<LangOpts<"ThreadModel">, "POSIX">, AutoNormalizeEnum;
+    MarshallingInfoEnum<LangOpts<"ThreadModel">, "POSIX">;
 
 ..
   Intentionally omitting MarshallingInfoBitfieldFlag. It's adding some
@@ -971,7 +970,7 @@ annotation. Then, if any of the elements of ``ImpliedByAnyOf`` evaluate to true,
 the key path value is changed to the specified value or ``true`` if missing.
 Finally, the command line is parsed according to the primary annotation.
 
-.. code-block::
+.. code-block:: text
 
   def fms_extensions : Flag<["-"], "fms-extensions">, Flags<[CC1Option]>,
     MarshallingInfoFlag<LangOpts<"MicrosoftExt">>,
@@ -982,7 +981,7 @@ Finally, the command line is parsed according to the primary annotation.
 The option is parsed only if the expression in ``ShouldParseIf`` evaluates to
 true.
 
-.. code-block::
+.. code-block:: text
 
   def fopenmp_enable_irbuilder : Flag<["-"], "fopenmp-enable-irbuilder">, Flags<[CC1Option]>,
     MarshallingInfoFlag<LangOpts<"OpenMPIRBuilder">>,
@@ -1855,13 +1854,151 @@ Because the same entity can be defined multiple times in different modules,
 it is also possible for there to be multiple definitions of (for instance)
 a ``CXXRecordDecl``, all of which describe a definition of the same class.
 In such a case, only one of those "definitions" is considered by Clang to be
-the definiition of the class, and the others are treated as non-defining
+the definition of the class, and the others are treated as non-defining
 declarations that happen to also contain member declarations. Corresponding
 members in each definition of such multiply-defined classes are identified
 either by redeclaration chains (if the members are ``Redeclarable``)
 or by simply a pointer to the canonical declaration (if the declarations
 are not ``Redeclarable`` -- in that case, a ``Mergeable`` base class is used
 instead).
+
+Error Handling
+--------------
+
+Clang produces an AST even when the code contains errors. Clang won't generate
+and optimize code for it, but it's used as parsing continues to detect further
+errors in the input. Clang-based tools also depend on such ASTs, and IDEs in
+particular benefit from a high-quality AST for broken code.
+
+In presence of errors, clang uses a few error-recovery strategies to present the
+broken code in the AST:
+
+- correcting errors: in cases where clang is confident about the fix, it
+  provides a FixIt attaching to the error diagnostic and emits a corrected AST
+  (reflecting the written code with FixIts applied). The advantage of that is to
+  provide more accurate subsequent diagnostics. Typo correction is a typical
+  example.
+- representing invalid node: the invalid node is preserved in the AST in some
+  form, e.g. when the "declaration" part of the declaration contains semantic
+  errors, the Decl node is marked as invalid.
+- dropping invalid node: this often happens for errors that we don’t have
+  graceful recovery. Prior to Recovery AST, a mismatched-argument function call
+  expression was dropped though a CallExpr was created for semantic analysis.
+
+With these strategies, clang surfaces better diagnostics, and provides AST
+consumers a rich AST reflecting the written source code as much as possible even
+for broken code.
+
+Recovery AST
+^^^^^^^^^^^^
+
+The idea of Recovery AST is to use recovery nodes which act as a placeholder to
+maintain the rough structure of the parsing tree, preserve locations and
+children but have no language semantics attached to them.
+
+For example, consider the following mismatched function call:
+
+.. code-block:: c++
+
+   int NoArg();
+   void test(int abc) {
+     NoArg(abc); // oops, mismatched function arguments.
+   }
+
+Without Recovery AST, the invalid function call expression (and its child
+expressions) would be dropped in the AST:
+
+::
+
+    |-FunctionDecl <line:1:1, col:11> NoArg 'int ()'
+    `-FunctionDecl <line:2:1, line:4:1> test 'void (int)'
+     |-ParmVarDecl <col:11, col:15> col:15 used abc 'int'
+     `-CompoundStmt <col:20, line:4:1>
+
+
+With Recovery AST, the AST looks like:
+
+::
+
+    |-FunctionDecl <line:1:1, col:11> NoArg 'int ()'
+    `-FunctionDecl <line:2:1, line:4:1> test 'void (int)'
+      |-ParmVarDecl <col:11, col:15> used abc 'int'
+      `-CompoundStmt <col:20, line:4:1>
+        `-RecoveryExpr <line:3:3, col:12> 'int' contains-errors
+          |-UnresolvedLookupExpr <col:3> '<overloaded function type>' lvalue (ADL) = 'NoArg'
+          `-DeclRefExpr <col:9> 'int' lvalue ParmVar 'abc' 'int'
+
+
+An alternative is to use existing Exprs, e.g. CallExpr for the above example.
+This would capture more call details (e.g. locations of parentheses) and allow
+it to be treated uniformly with valid CallExprs. However, jamming the data we
+have into CallExpr forces us to weaken its invariants, e.g. arg count may be
+wrong. This would introduce a huge burden on consumers of the AST to handle such
+"impossible" cases. So when we're representing (rather than correcting) errors,
+we use a distinct recovery node type with extremely weak invariants instead.
+
+``RecoveryExpr`` is the only recovery node so far. In practice, broken decls
+need more detailed semantics preserved (the current ``Invalid`` flag works
+fairly well), and completely broken statements with interesting internal
+structure are rare (so dropping the statements is OK).
+
+Types and dependence
+^^^^^^^^^^^^^^^^^^^^
+
+``RecoveryExpr`` is an ``Expr``, so it must have a type. In many cases the true
+type can't really be known until the code is corrected (e.g. a call to a
+function that doesn't exist). And it means that we can't properly perform type
+checks on some containing constructs, such as ``return 42 + unknownFunction()``.
+
+To model this, we generalize the concept of dependence from C++ templates to
+mean dependence on a template parameter or how an error is repaired. The
+``RecoveryExpr`` ``unknownFunction()`` has the totally unknown type
+``DependentTy``, and this suppresses type-based analysis in the same way it
+would inside a template.
+
+In cases where we are confident about the concrete type (e.g. the return type
+for a broken non-overloaded function call), the ``RecoveryExpr`` will have this
+type. This allows more code to be typechecked, and produces a better AST and
+more diagnostics. For example:
+
+.. code-block:: C++
+
+   unknownFunction().size() // .size() is a CXXDependentScopeMemberExpr
+   std::string(42).size() // .size() is a resolved MemberExpr
+
+Whether or not the ``RecoveryExpr`` has a dependent type, it is always
+considered value-dependent, because its value isn't well-defined until the error
+is resolved. Among other things, this means that clang doesn't emit more errors
+where a RecoveryExpr is used as a constant (e.g. array size), but also won't try
+to evaluate it.
+
+ContainsErrors bit
+^^^^^^^^^^^^^^^^^^
+
+Beyond the template dependence bits, we add a new “ContainsErrors” bit to
+express “Does this expression or anything within it contain errors” semantic,
+this bit is always set for RecoveryExpr, and propagated to other related nodes.
+This provides a fast way to query whether any (recursive) child of an expression
+had an error, which is often used to improve diagnostics.
+
+.. code-block:: C++
+
+   // C++
+   void recoveryExpr(int abc) {
+    unknownFunction(); // type-dependent, value-dependent, contains-errors
+
+    std::string(42).size(); // value-dependent, contains-errors,
+                            // not type-dependent, as we know the type is std::string
+   }
+
+
+.. code-block:: C
+
+   // C
+   void recoveryExpr(int abc) {
+     unknownVar + abc; // type-dependent, value-dependent, contains-errors
+   }
+
 
 The ASTImporter
 ---------------
@@ -2658,12 +2795,14 @@ implementing a keyword attribute, the parsing of the keyword and creation of the
 ``ParsedAttr`` object must be done manually.
 
 Eventually, ``Sema::ProcessDeclAttributeList()`` is called with a ``Decl`` and
-an ``ParsedAttr``, at which point the parsed attribute can be transformed
+a ``ParsedAttr``, at which point the parsed attribute can be transformed
 into a semantic attribute. The process by which a parsed attribute is converted
 into a semantic attribute depends on the attribute definition and semantic
 requirements of the attribute. The end result, however, is that the semantic
 attribute object is attached to the ``Decl`` object, and can be obtained by a
-call to ``Decl::getAttr<T>()``.
+call to ``Decl::getAttr<T>()``. Similarly, for statement attributes,
+``Sema::ProcessStmtAttributes()`` is called with a ``Stmt`` a list of
+``ParsedAttr`` objects to be converted into a semantic attribute.
 
 The structure of the semantic attribute is also governed by the attribute
 definition given in Attr.td. This definition is used to automatically generate
@@ -2683,12 +2822,13 @@ semantic) type, or one of its derivatives. Most attributes will derive from the
 later redeclarations of the ``Decl`` it is associated with.
 ``InheritableParamAttr`` is similar to ``InheritableAttr``, except that the
 attribute is written on a parameter instead of a declaration. If the attribute
-is intended to apply to a type instead of a declaration, such an attribute
-should derive from ``TypeAttr``, and will generally not be given an AST
-representation. (Note that this document does not cover the creation of type
-attributes.) An attribute that inherits from ``IgnoredAttr`` is parsed, but will
-generate an ignored attribute diagnostic when used, which may be useful when an
-attribute is supported by another vendor but not supported by clang.
+applies to statements, it should inherit from ``StmtAttr`. If the attribute is
+intended to apply to a type instead of a declaration, such an attribute should
+derive from ``TypeAttr``, and will generally not be given an AST representation.
+(Note that this document does not cover the creation of type attributes.) An
+attribute that inherits from ``IgnoredAttr`` is parsed, but will generate an
+ignored attribute diagnostic when used, which may be useful when an attribute is
+supported by another vendor but not supported by clang.
 
 The definition will specify several key pieces of information, such as the
 semantic name of the attribute, the spellings the attribute supports, the
@@ -2717,10 +2857,11 @@ are created implicitly. The following spellings are accepted:
   ``Declspec``  Spelled with a Microsoft-style ``__declspec(attr)`` syntax.
   ``Keyword``   The attribute is spelled as a keyword, and required custom
                 parsing.
-  ``GCC``       Specifies two spellings: the first is a GNU-style spelling, and
-                the second is a C++-style spelling with the ``gnu`` namespace.
-                Attributes should only specify this spelling for attributes
-                supported by GCC.
+  ``GCC``       Specifies two or three spellings: the first is a GNU-style
+                spelling, the second is a C++-style spelling with the ``gnu``
+                namespace, and the third is an optional C-style spelling with
+                the ``gnu`` namespace. Attributes should only specify this
+                spelling for attributes supported by GCC.
   ``Clang``     Specifies two or three spellings: the first is a GNU-style
                 spelling, the second is a C++-style spelling with the ``clang``
                 namespace, and the third is an optional C-style spelling with
@@ -2734,19 +2875,16 @@ are created implicitly. The following spellings are accepted:
 
 Subjects
 ~~~~~~~~
-Attributes appertain to one or more ``Decl`` subjects. If the attribute attempts
-to attach to a subject that is not in the subject list, a diagnostic is issued
+Attributes appertain to one or more subjects. If the attribute attempts to 
+attach to a subject that is not in the subject list, a diagnostic is issued
 automatically. Whether the diagnostic is a warning or an error depends on how
 the attribute's ``SubjectList`` is defined, but the default behavior is to warn.
 The diagnostics displayed to the user are automatically determined based on the
 subjects in the list, but a custom diagnostic parameter can also be specified in
 the ``SubjectList``. The diagnostics generated for subject list violations are
-either ``diag::warn_attribute_wrong_decl_type`` or
-``diag::err_attribute_wrong_decl_type``, and the parameter enumeration is found
-in `include/clang/Sema/ParsedAttr.h
-<https://github.com/llvm/llvm-project/blob/main/clang/include/clang/Sema/ParsedAttr.h>`_
-If a previously unused Decl node is added to the ``SubjectList``, the logic used
-to automatically determine the diagnostic parameter in `utils/TableGen/ClangAttrEmitter.cpp
+calculated automatically or specified by the subject list itself. If a
+previously unused Decl node is added to the ``SubjectList``, the logic used to
+automatically determine the diagnostic parameter in `utils/TableGen/ClangAttrEmitter.cpp
 <https://github.com/llvm/llvm-project/blob/main/clang/utils/TableGen/ClangAttrEmitter.cpp>`_
 may need to be updated.
 
@@ -2760,8 +2898,8 @@ instance, a ``NonBitField`` SubsetSubject appertains to a ``FieldDecl``, and
 tests whether the given FieldDecl is a bit field. When a SubsetSubject is
 specified in a SubjectList, a custom diagnostic parameter must also be provided.
 
-Diagnostic checking for attribute subject lists is automated except when
-``HasCustomParsing`` is set to ``1``.
+Diagnostic checking for attribute subject lists for declaration and statement
+attributes is automated except when ``HasCustomParsing`` is set to ``1``.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -2895,6 +3033,13 @@ If additional functionality is desired for the semantic form of the attribute,
 the ``AdditionalMembers`` field specifies code to be copied verbatim into the
 semantic attribute class object, with ``public`` access.
 
+If two or more attributes cannot be used in combination on the same declaration
+or statement, a ``MutualExclusions`` definition can be supplied to automatically
+generate diagnostic code. This will disallow the attribute combinations
+regardless of spellings used. Additionally, it will diagnose combinations within
+the same attribute list, different attribute list, and redeclarations, as
+appropriate.
+
 Boilerplate
 ^^^^^^^^^^^
 All semantic processing of declaration attributes happens in `lib/Sema/SemaDeclAttr.cpp
@@ -2908,8 +3053,8 @@ the switch statement. Please do not implement handling logic directly in the
 
 Unless otherwise specified by the attribute definition, common semantic checking
 of the parsed attribute is handled automatically. This includes diagnosing
-parsed attributes that do not appertain to the given ``Decl``, ensuring the
-correct minimum number of arguments are passed, etc.
+parsed attributes that do not appertain to the given ``Decl`` or ``Stmt``,
+ensuring the correct minimum number of arguments are passed, etc.
 
 If the attribute adds additional warnings, define a ``DiagGroup`` in
 `include/clang/Basic/DiagnosticGroups.td
@@ -2934,6 +3079,10 @@ the custom logic requiring use of the attribute.
 The ``clang::Decl`` object can be queried for the presence or absence of an
 attribute using ``hasAttr<T>()``. To obtain a pointer to the semantic
 representation of the attribute, ``getAttr<T>`` may be used.
+
+The ``clang::AttributedStmt`` object can  be queried for the presence or absence
+of an attribute by calling ``getAttrs()`` and looping over the list of
+attributes.
 
 How to add an expression or statement
 -------------------------------------

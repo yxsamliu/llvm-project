@@ -1296,7 +1296,7 @@ static void AddAlignmentAssumptions(CallBase &CB, InlineFunctionInfo &IFI) {
 
       CallInst *NewAsmp =
           IRBuilder<>(&CB).CreateAlignmentAssumption(DL, ArgVal, Align);
-      AC->registerAssumption(NewAsmp);
+      AC->registerAssumption(cast<AssumeInst>(NewAsmp));
     }
   }
 }
@@ -1954,13 +1954,19 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     if (objcarc::hasAttachedCallOpBundle(&CB))
       inlineRetainOrClaimRVCalls(CB, Returns);
 
-    if (IFI.CallerBFI != nullptr && IFI.CalleeBFI != nullptr)
-      // Update the BFI of blocks cloned into the caller.
-      updateCallerBFI(OrigBB, VMap, IFI.CallerBFI, IFI.CalleeBFI,
-                      CalledFunc->front());
+    // Updated caller/callee profiles only when requested. For sample loader
+    // inlining, the context-sensitive inlinee profile doesn't need to be
+    // subtracted from callee profile, and the inlined clone also doesn't need
+    // to be scaled based on call site count.
+    if (IFI.UpdateProfile) {
+      if (IFI.CallerBFI != nullptr && IFI.CalleeBFI != nullptr)
+        // Update the BFI of blocks cloned into the caller.
+        updateCallerBFI(OrigBB, VMap, IFI.CallerBFI, IFI.CalleeBFI,
+                        CalledFunc->front());
 
-    updateCallProfile(CalledFunc, VMap, CalledFunc->getEntryCount(), CB,
-                      IFI.PSI, IFI.CallerBFI);
+      updateCallProfile(CalledFunc, VMap, CalledFunc->getEntryCount(), CB,
+                        IFI.PSI, IFI.CallerBFI);
+    }
 
     // Inject byval arguments initialization.
     for (std::pair<Value*, Value*> &Init : ByValInit)
@@ -2044,9 +2050,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       for (BasicBlock &NewBlock :
            make_range(FirstNewBlock->getIterator(), Caller->end()))
         for (Instruction &I : NewBlock)
-          if (auto *II = dyn_cast<IntrinsicInst>(&I))
-            if (II->getIntrinsicID() == Intrinsic::assume)
-              IFI.GetAssumptionCache(*Caller).registerAssumption(II);
+          if (auto *II = dyn_cast<AssumeInst>(&I))
+            IFI.GetAssumptionCache(*Caller).registerAssumption(II);
   }
 
   // If there are any alloca instructions in the block that used to be the entry

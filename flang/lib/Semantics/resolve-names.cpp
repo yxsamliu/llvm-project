@@ -681,7 +681,9 @@ public:
   bool isAbstract() const;
 
 protected:
-  GenericDetails &GetGenericDetails();
+  Symbol &GetGenericSymbol() {
+    return DEREF(genericInfo_.top().symbol);
+  }
   // Add to generic the symbol for the subprogram with the same name
   void CheckGenericProcedures(Symbol &);
 
@@ -745,7 +747,7 @@ private:
   } funcInfo_;
 
   // Create a subprogram symbol in the current scope and push a new scope.
-  void CheckExtantExternal(const parser::Name &, Symbol::Flag);
+  void CheckExtantProc(const parser::Name &, Symbol::Flag);
   Symbol &PushSubprogramScope(const parser::Name &, Symbol::Flag);
   Symbol *GetSpecificFromGeneric(const parser::Name &);
   SubprogramDetails &PostSubprogramStmt(const parser::Name &);
@@ -1003,6 +1005,7 @@ private:
     context().SetError(symbol);
     return symbol;
   }
+  bool HasCycle(const Symbol &, const ProcInterface &);
 };
 
 // Resolve construct entities and statement entities.
@@ -1527,19 +1530,26 @@ bool AttrsVisitor::SetPassNameOn(Symbol &symbol) {
 }
 
 bool AttrsVisitor::SetBindNameOn(Symbol &symbol) {
-  if (!bindName_) {
+  if (!attrs_ || !attrs_->test(Attr::BIND_C)) {
     return false;
   }
-  std::visit(
-      common::visitors{
-          [&](EntityDetails &x) { x.set_bindName(std::move(bindName_)); },
-          [&](ObjectEntityDetails &x) { x.set_bindName(std::move(bindName_)); },
-          [&](ProcEntityDetails &x) { x.set_bindName(std::move(bindName_)); },
-          [&](SubprogramDetails &x) { x.set_bindName(std::move(bindName_)); },
-          [&](CommonBlockDetails &x) { x.set_bindName(std::move(bindName_)); },
-          [](auto &) { common::die("unexpected bind name"); },
-      },
-      symbol.details());
+  std::optional<std::string> label{evaluate::GetScalarConstantValue<
+      evaluate::Type<TypeCategory::Character, 1>>(bindName_)};
+  // 18.9.2(2): discard leading and trailing blanks, ignore if all blank
+  if (label) {
+    auto first{label->find_first_not_of(" ")};
+    auto last{label->find_last_not_of(" ")};
+    if (first == std::string::npos) {
+      Say(currStmtSource().value(), "Blank binding label ignored"_en_US);
+      label.reset();
+    } else {
+      label = label->substr(first, last - first + 1);
+    }
+  }
+  if (!label) {
+    label = parser::ToLowerCaseLetters(symbol.name().ToString());
+  }
+  symbol.SetBindName(std::move(*label));
   return true;
 }
 
@@ -2132,7 +2142,7 @@ static bool NeedsType(const Symbol &symbol) {
 
 void ScopeHandler::ApplyImplicitRules(
     Symbol &symbol, bool allowForwardReference) {
-  if (!NeedsType(symbol)) {
+  if (context().HasError(symbol) || !NeedsType(symbol)) {
     return;
   }
   if (const DeclTypeSpec * type{GetImplicitType(symbol)}) {
@@ -2673,9 +2683,6 @@ bool InterfaceVisitor::isGeneric() const {
 bool InterfaceVisitor::isAbstract() const {
   return !genericInfo_.empty() && GetGenericInfo().isAbstract;
 }
-GenericDetails &InterfaceVisitor::GetGenericDetails() {
-  return GetGenericInfo().symbol->get<GenericDetails>();
-}
 
 void InterfaceVisitor::AddSpecificProcs(
     const std::list<parser::Name> &names, ProcedureKind kind) {
@@ -2689,7 +2696,7 @@ void InterfaceVisitor::AddSpecificProcs(
 // this generic interface. Resolve those names to symbols.
 void InterfaceVisitor::ResolveSpecificsInGeneric(Symbol &generic) {
   auto &details{generic.get<GenericDetails>()};
-  SymbolSet symbolsSeen;
+  UnorderedSymbolSet symbolsSeen;
   for (const Symbol &symbol : details.specificProcs()) {
     symbolsSeen.insert(symbol);
   }
@@ -2877,7 +2884,9 @@ void SubprogramVisitor::Post(const parser::ImplicitPart &) {
   if (funcInfo_.parsedType) {
     messageHandler().set_currStmtSource(funcInfo_.source);
     if (const auto *type{ProcessTypeSpec(*funcInfo_.parsedType, true)}) {
-      funcInfo_.resultSymbol->SetType(*type);
+      if (!context().HasError(funcInfo_.resultSymbol)) {
+        funcInfo_.resultSymbol->SetType(*type);
+      }
     }
   }
   funcInfo_ = {};
@@ -2937,11 +2946,16 @@ void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
     funcResultName = &name;
   }
   // add function result to function scope
-  EntityDetails funcResultDetails;
-  funcResultDetails.set_funcResult(true);
-  funcInfo_.resultSymbol =
-      &MakeSymbol(*funcResultName, std::move(funcResultDetails));
-  details.set_result(*funcInfo_.resultSymbol);
+  if (details.isFunction()) {
+    CHECK(context().HasError(currScope().symbol()));
+  } else {
+    // add function result to function scope
+    EntityDetails funcResultDetails;
+    funcResultDetails.set_funcResult(true);
+    funcInfo_.resultSymbol =
+        &MakeSymbol(*funcResultName, std::move(funcResultDetails));
+    details.set_result(*funcInfo_.resultSymbol);
+  }
 
   // C1560.
   if (funcInfo_.resultName && funcInfo_.resultName->source == name.source) {
@@ -3083,7 +3097,6 @@ void SubprogramVisitor::Post(const parser::EntryStmt &stmt) {
 
   Symbol::Flag subpFlag{
       inFunction ? Symbol::Flag::Function : Symbol::Flag::Subroutine};
-  CheckExtantExternal(name, subpFlag);
   Scope &outer{inclusiveScope.parent()}; // global or module scope
   if (Symbol * extant{FindSymbol(outer, name)}) {
     if (extant->has<ProcEntityDetails>()) {
@@ -3156,6 +3169,13 @@ bool SubprogramVisitor::BeginMpSubprogram(const parser::Name &name) {
 // A subprogram declared with SUBROUTINE or FUNCTION
 bool SubprogramVisitor::BeginSubprogram(
     const parser::Name &name, Symbol::Flag subpFlag, bool hasModulePrefix) {
+  if (hasModulePrefix && currScope().IsGlobal()) { // C1547
+    Say(name,
+        "'%s' is a MODULE procedure which must be declared within a "
+        "MODULE or SUBMODULE"_err_en_US);
+    return false;
+  }
+
   if (hasModulePrefix && !inInterfaceBlock() &&
       !IsSeparateModuleProcedureInterface(
           FindSymbol(currScope().parent(), name))) {
@@ -3168,7 +3188,7 @@ bool SubprogramVisitor::BeginSubprogram(
 
 void SubprogramVisitor::EndSubprogram() { PopScope(); }
 
-void SubprogramVisitor::CheckExtantExternal(
+void SubprogramVisitor::CheckExtantProc(
     const parser::Name &name, Symbol::Flag subpFlag) {
   if (auto *prev{FindSymbol(name)}) {
     if (prev->attrs().test(Attr::EXTERNAL) && prev->has<ProcEntityDetails>()) {
@@ -3181,6 +3201,11 @@ void SubprogramVisitor::CheckExtantExternal(
             *prev, "Previous call of '%s'"_en_US);
       }
       EraseSymbol(name);
+    } else if (const auto *details{prev->detailsIf<EntityDetails>()}) {
+      if (!details->isDummy()) {
+        Say2(name, "Procedure '%s' was previously declared"_err_en_US, *prev,
+            "Previous declaration of '%s'"_en_US);
+      }
     }
   }
 }
@@ -3189,7 +3214,7 @@ Symbol &SubprogramVisitor::PushSubprogramScope(
     const parser::Name &name, Symbol::Flag subpFlag) {
   auto *symbol{GetSpecificFromGeneric(name)};
   if (!symbol) {
-    CheckExtantExternal(name, subpFlag);
+    CheckExtantProc(name, subpFlag);
     symbol = &MakeSymbol(name, SubprogramDetails{});
   }
   symbol->set(subpFlag);
@@ -3204,7 +3229,13 @@ Symbol &SubprogramVisitor::PushSubprogramScope(
       MakeExternal(*symbol);
     }
     if (isGeneric()) {
-      GetGenericDetails().AddSpecificProc(*symbol, name.source);
+      Symbol &genericSymbol{GetGenericSymbol()};
+      if (genericSymbol.has<GenericDetails>()) {
+        genericSymbol.get<GenericDetails>().AddSpecificProc(
+            *symbol, name.source);
+      } else {
+        CHECK(context().HasError(genericSymbol));
+      }
     }
     set_inheritFromParent(false);
   }
@@ -3240,7 +3271,12 @@ Symbol *SubprogramVisitor::GetSpecificFromGeneric(const parser::Name &name) {
       if (!specific) {
         specific =
             &currScope().MakeSymbol(name.source, Attrs{}, SubprogramDetails{});
-        details->set_specific(Resolve(name, *specific));
+        if (details->derivedType()) {
+          // A specific procedure with the same name as a derived type
+          SayAlreadyDeclared(name, *details->derivedType());
+        } else {
+          details->set_specific(Resolve(name, *specific));
+        }
       } else if (isGeneric()) {
         SayAlreadyDeclared(name, *specific);
       }
@@ -3641,6 +3677,35 @@ Symbol &DeclarationVisitor::DeclareUnknownEntity(
   }
 }
 
+bool DeclarationVisitor::HasCycle(
+    const Symbol &procSymbol, const ProcInterface &interface) {
+  OrderedSymbolSet procsInCycle;
+  procsInCycle.insert(procSymbol);
+  const ProcInterface *thisInterface{&interface};
+  bool haveInterface{true};
+  while (haveInterface) {
+    haveInterface = false;
+    if (const Symbol * interfaceSymbol{thisInterface->symbol()}) {
+      if (procsInCycle.count(*interfaceSymbol) > 0) {
+        for (const auto &procInCycle : procsInCycle) {
+          Say(procInCycle->name(),
+              "The interface for procedure '%s' is recursively "
+              "defined"_err_en_US,
+              procInCycle->name());
+          context().SetError(*procInCycle);
+        }
+        return true;
+      } else if (const auto *procDetails{
+                     interfaceSymbol->detailsIf<ProcEntityDetails>()}) {
+        haveInterface = true;
+        thisInterface = &procDetails->interface();
+        procsInCycle.insert(*interfaceSymbol);
+      }
+    }
+  }
+  return false;
+}
+
 Symbol &DeclarationVisitor::DeclareProcEntity(
     const parser::Name &name, Attrs attrs, const ProcInterface &interface) {
   Symbol &symbol{DeclareEntity<ProcEntityDetails>(name, attrs)};
@@ -3650,20 +3715,20 @@ Symbol &DeclarationVisitor::DeclareProcEntity(
           "The interface for procedure '%s' has already been "
           "declared"_err_en_US);
       context().SetError(symbol);
-    } else {
-      if (interface.type()) {
+    } else if (HasCycle(symbol, interface)) {
+      return symbol;
+    } else if (interface.type()) {
+      symbol.set(Symbol::Flag::Function);
+    } else if (interface.symbol()) {
+      if (interface.symbol()->test(Symbol::Flag::Function)) {
         symbol.set(Symbol::Flag::Function);
-      } else if (interface.symbol()) {
-        if (interface.symbol()->test(Symbol::Flag::Function)) {
-          symbol.set(Symbol::Flag::Function);
-        } else if (interface.symbol()->test(Symbol::Flag::Subroutine)) {
-          symbol.set(Symbol::Flag::Subroutine);
-        }
+      } else if (interface.symbol()->test(Symbol::Flag::Subroutine)) {
+        symbol.set(Symbol::Flag::Subroutine);
       }
-      details->set_interface(interface);
-      SetBindNameOn(symbol);
-      SetPassNameOn(symbol);
     }
+    details->set_interface(interface);
+    SetBindNameOn(symbol);
+    SetPassNameOn(symbol);
   }
   return symbol;
 }
@@ -5005,7 +5070,7 @@ Symbol *DeclarationVisitor::NoteInterfaceName(const parser::Name &name) {
 
 void DeclarationVisitor::CheckExplicitInterface(const parser::Name &name) {
   if (const Symbol * symbol{name.symbol}) {
-    if (!symbol->HasExplicitInterface()) {
+    if (!context().HasError(*symbol) && !symbol->HasExplicitInterface()) {
       Say(name,
           "'%s' must be an abstract interface or a procedure with "
           "an explicit interface"_err_en_US,
@@ -6356,7 +6421,7 @@ void ResolveNamesVisitor::FinishSpecificationPart(
       CheckPossibleBadForwardRef(symbol);
     }
   }
-  currScope().InstantiateDerivedTypes(context());
+  currScope().InstantiateDerivedTypes();
   for (const auto &decl : decls) {
     if (const auto *statement{std::get_if<
             parser::Statement<common::Indirection<parser::StmtFunctionStmt>>>(

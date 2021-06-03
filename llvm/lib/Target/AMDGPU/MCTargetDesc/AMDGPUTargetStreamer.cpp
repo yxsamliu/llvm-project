@@ -279,15 +279,21 @@ bool AMDGPUTargetAsmStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
   const uint32_t Encoded_s_code_end = 0xbf9f0000;
   const uint32_t Encoded_s_nop = 0xbf800000;
   uint32_t Encoded_pad = Encoded_s_code_end;
-  unsigned FillSize = 48;
+
+  // Instruction cache line size in bytes.
+  const unsigned Log2CacheLineSize = 6;
+  const unsigned CacheLineSize = 1u << Log2CacheLineSize;
+
+  // Extra padding amount in bytes to support prefetch mode 3.
+  unsigned FillSize = 3 * CacheLineSize;
 
   if (AMDGPU::isGFX90A(STI)) {
     Encoded_pad = Encoded_s_nop;
-    FillSize = 256;
+    FillSize = 16 * CacheLineSize;
   }
 
-  OS << "\t.p2alignl 6, " << Encoded_pad << '\n';
-  OS << "\t.fill " << FillSize << ", 4, " << Encoded_pad << '\n';
+  OS << "\t.p2alignl " << Log2CacheLineSize << ", " << Encoded_pad << '\n';
+  OS << "\t.fill " << (FillSize / 4) << ", 4, " << Encoded_pad << '\n';
   return true;
 }
 
@@ -369,8 +375,8 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   if (IVersion.Major >= 7 && !ReserveFlatScr)
     OS << "\t\t.amdhsa_reserve_flat_scratch " << ReserveFlatScr << '\n';
 
-  if (const auto &&HsaAbiVer = getHsaAbiVersion(&STI)) {
-    switch (HsaAbiVer.getValue()) {
+  if (Optional<uint8_t> HsaAbiVer = getHsaAbiVersion(&STI)) {
+    switch (*HsaAbiVer) {
     default:
       break;
     case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
@@ -553,8 +559,8 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsUnknownOS() {
 unsigned AMDGPUTargetELFStreamer::getEFlagsAMDHSA() {
   assert(STI.getTargetTriple().getOS() == Triple::AMDHSA);
 
-  if (const auto &&HsaAbiVer = getHsaAbiVersion(&STI)) {
-    switch (HsaAbiVer.getValue()) {
+  if (Optional<uint8_t> HsaAbiVer = getHsaAbiVersion(&STI)) {
+    switch (*HsaAbiVer) {
     case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
       return getEFlagsV3();
@@ -783,17 +789,23 @@ bool AMDGPUTargetELFStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
   const uint32_t Encoded_s_code_end = 0xbf9f0000;
   const uint32_t Encoded_s_nop = 0xbf800000;
   uint32_t Encoded_pad = Encoded_s_code_end;
-  unsigned FillSize = 48;
+
+  // Instruction cache line size in bytes.
+  const unsigned Log2CacheLineSize = 6;
+  const unsigned CacheLineSize = 1u << Log2CacheLineSize;
+
+  // Extra padding amount in bytes to support prefetch mode 3.
+  unsigned FillSize = 3 * CacheLineSize;
 
   if (AMDGPU::isGFX90A(STI)) {
     Encoded_pad = Encoded_s_nop;
-    FillSize = 256;
+    FillSize = 16 * CacheLineSize;
   }
 
   MCStreamer &OS = getStreamer();
   OS.PushSection();
-  OS.emitValueToAlignment(64, Encoded_pad, 4);
-  for (unsigned I = 0; I < FillSize; ++I)
+  OS.emitValueToAlignment(CacheLineSize, Encoded_pad, 4);
+  for (unsigned I = 0; I < FillSize; I += 4)
     OS.emitInt32(Encoded_pad);
   OS.PopSection();
   return true;

@@ -31,6 +31,7 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 
 using namespace __dfsan;
@@ -597,14 +598,41 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_maybe_store_origin(
   }
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_set_label(
-    dfsan_label label, void *addr, uptr size) {
+// Releases the pages within the origin address range, and sets the origin
+// addresses not on the pages to be 0.
+static void ReleaseOrClearOrigins(void *addr, uptr size) {
+  const uptr beg_origin_addr = (uptr)__dfsan::origin_for(addr);
+  const void *end_addr = (void *)((uptr)addr + size);
+  const uptr end_origin_addr = (uptr)__dfsan::origin_for(end_addr);
+  const uptr page_size = GetPageSizeCached();
+  const uptr beg_aligned = RoundUpTo(beg_origin_addr, page_size);
+  const uptr end_aligned = RoundDownTo(end_origin_addr, page_size);
+
+  // dfsan_set_label can be called from the following cases
+  // 1) mapped ranges by new/delete and malloc/free. This case has origin memory
+  // size > 50k, and happens less frequently.
+  // 2) zero-filling internal data structures by utility libraries. This case
+  // has origin memory size < 16k, and happens more often.
+  // Set kNumPagesThreshold to be 4 to avoid releasing small pages.
+  const int kNumPagesThreshold = 4;
+  if (beg_aligned + kNumPagesThreshold * page_size >= end_aligned)
+    return;
+
+  ReleaseMemoryPagesToOS(beg_aligned, end_aligned);
+}
+
+void SetShadow(dfsan_label label, void *addr, uptr size, dfsan_origin origin) {
   const uptr beg_shadow_addr = (uptr)__dfsan::shadow_for(addr);
 
   if (0 != label) {
     WriteShadowIfDifferent(label, beg_shadow_addr, size);
+    if (__dfsan_get_track_origins())
+      SetOrigin(addr, size, origin);
     return;
   }
+
+  if (__dfsan_get_track_origins())
+    ReleaseOrClearOrigins(addr, size);
 
   // If label is 0, releases the pages within the shadow address range, and sets
   // the shadow addresses not on the pages to be 0.
@@ -629,13 +657,34 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_set_label(
   WriteShadowIfDifferent(label, end_aligned, end_shadow_addr - end_aligned);
 }
 
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_set_label(
+    dfsan_label label, dfsan_origin origin, void *addr, uptr size) {
+  SetShadow(label, addr, size, origin);
+}
+
 SANITIZER_INTERFACE_ATTRIBUTE
 void dfsan_set_label(dfsan_label label, void *addr, uptr size) {
-  __dfsan_set_label(label, addr, size);
+  dfsan_origin init_origin = 0;
+  if (label && __dfsan_get_track_origins()) {
+    GET_CALLER_PC_BP;
+    GET_STORE_STACK_TRACE_PC_BP(pc, bp);
+    init_origin = ChainOrigin(0, &stack, true);
+  }
+  SetShadow(label, addr, size, init_origin);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void dfsan_add_label(dfsan_label label, void *addr, uptr size) {
+  if (0 == label)
+    return;
+
+  if (__dfsan_get_track_origins()) {
+    GET_CALLER_PC_BP;
+    GET_STORE_STACK_TRACE_PC_BP(pc, bp);
+    dfsan_origin init_origin = ChainOrigin(0, &stack, true);
+    SetOrigin(addr, size, init_origin);
+  }
+
   for (dfsan_label *labelp = shadow_for(addr); size != 0; --size, ++labelp)
     if (*labelp != label)
       *labelp = __dfsan_union(*labelp, label);
@@ -651,6 +700,30 @@ __dfsw_dfsan_get_label(long data, dfsan_label data_label,
   return data_label;
 }
 
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_label __dfso_dfsan_get_label(
+    long data, dfsan_label data_label, dfsan_label *ret_label,
+    dfsan_origin data_origin, dfsan_origin *ret_origin) {
+  *ret_label = 0;
+  *ret_origin = 0;
+  return data_label;
+}
+
+// This function is used if dfsan_get_origin is called when origin tracking is
+// off.
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_origin __dfsw_dfsan_get_origin(
+    long data, dfsan_label data_label, dfsan_label *ret_label) {
+  *ret_label = 0;
+  return 0;
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_origin __dfso_dfsan_get_origin(
+    long data, dfsan_label data_label, dfsan_label *ret_label,
+    dfsan_origin data_origin, dfsan_origin *ret_origin) {
+  *ret_label = 0;
+  *ret_origin = 0;
+  return data_origin;
+}
+
 SANITIZER_INTERFACE_ATTRIBUTE dfsan_label
 dfsan_read_label(const void *addr, uptr size) {
   if (size == 0)
@@ -661,6 +734,13 @@ dfsan_read_label(const void *addr, uptr size) {
 SANITIZER_INTERFACE_ATTRIBUTE dfsan_origin
 dfsan_read_origin_of_first_taint(const void *addr, uptr size) {
   return GetOriginIfTainted((uptr)addr, size);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE void dfsan_set_label_origin(dfsan_label label,
+                                                          dfsan_origin origin,
+                                                          void *addr,
+                                                          uptr size) {
+  __dfsan_set_label(label, origin, addr, size);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
@@ -714,6 +794,78 @@ dfsan_dump_labels(int fd) {
     }
     WriteToFile(fd, "\n", 1);
   }
+}
+
+class Decorator : public __sanitizer::SanitizerCommonDecorator {
+ public:
+  Decorator() : SanitizerCommonDecorator() {}
+  const char *Origin() const { return Magenta(); }
+};
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void dfsan_print_origin_trace(
+    const void *addr, const char *description) {
+  Decorator d;
+
+  if (!__dfsan_get_track_origins()) {
+    Printf(
+        "  %sDFSan: origin tracking is not enabled. Did you specify the "
+        "-dfsan-track-origins=1 option?%s\n",
+        d.Warning(), d.Default());
+    return;
+  }
+
+  const dfsan_label label = *__dfsan::shadow_for(addr);
+  if (!label) {
+    Printf("  %sDFSan: no tainted value at %x%s\n", d.Warning(), addr,
+           d.Default());
+    return;
+  }
+
+  const dfsan_origin origin = *__dfsan::origin_for(addr);
+
+  Printf("  %sTaint value 0x%x (at %p) origin tracking (%s)%s\n", d.Origin(),
+         label, addr, description ? description : "", d.Default());
+  Origin o = Origin::FromRawId(origin);
+  bool found = false;
+  while (o.isChainedOrigin()) {
+    StackTrace stack;
+    dfsan_origin origin_id = o.raw_id();
+    o = o.getNextChainedOrigin(&stack);
+    if (o.isChainedOrigin())
+      Printf("  %sOrigin value: 0x%x, Taint value was stored to memory at%s\n",
+             d.Origin(), origin_id, d.Default());
+    else
+      Printf("  %sOrigin value: 0x%x, Taint value was created at%s\n",
+             d.Origin(), origin_id, d.Default());
+    stack.Print();
+    found = true;
+  }
+  if (!found)
+    Printf(
+        "  %sTaint value 0x%x (at %p) has invalid origin tracking. This can "
+        "be a DFSan bug.%s\n",
+        d.Warning(), label, addr, d.Default());
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_origin
+dfsan_get_init_origin(const void *addr) {
+  if (!__dfsan_get_track_origins())
+    return 0;
+
+  const dfsan_label label = *__dfsan::shadow_for(addr);
+  if (!label)
+    return 0;
+
+  const dfsan_origin origin = *__dfsan::origin_for(addr);
+
+  Origin o = Origin::FromRawId(origin);
+  dfsan_origin origin_id = o.raw_id();
+  while (o.isChainedOrigin()) {
+    StackTrace stack;
+    origin_id = o.raw_id();
+    o = o.getNextChainedOrigin(&stack);
+  }
+  return origin_id;
 }
 
 #define GET_FATAL_STACK_TRACE_PC_BP(pc, bp) \

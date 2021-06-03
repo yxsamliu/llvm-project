@@ -104,10 +104,7 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
     unsigned BaseOff;
     unsigned DMask;
     InstClassEnum InstClass;
-    bool GLC = 0;
-    bool SLC = 0;
-    bool DLC = 0;
-    bool SCCB = 0; // vmem only.
+    unsigned CPol = 0;
     bool UseST64;
     int AddrIdx[MaxAddressRegs];
     const MachineOperand *AddrReg[MaxAddressRegs];
@@ -533,14 +530,7 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
   if ((InstClass == DS_READ) || (InstClass == DS_WRITE)) {
     Offset &= 0xffff;
   } else if (InstClass != MIMG) {
-    GLC = TII.getNamedOperand(*I, AMDGPU::OpName::glc)->getImm();
-    if (InstClass != S_BUFFER_LOAD_IMM) {
-      SLC = TII.getNamedOperand(*I, AMDGPU::OpName::slc)->getImm();
-    }
-    DLC = TII.getNamedOperand(*I, AMDGPU::OpName::dlc)->getImm();
-    if (InstClass != S_BUFFER_LOAD_IMM) {
-      SCCB = TII.getNamedOperand(*I, AMDGPU::OpName::sccb)->getImm();
-    }
+    CPol = TII.getNamedOperand(*I, AMDGPU::OpName::cpol)->getImm();
   }
 
   AddressRegs Regs = getRegs(Opc, TII);
@@ -690,10 +680,9 @@ bool SILoadStoreOptimizer::dmasksCanBeCombined(const CombineInfo &CI,
     return false;
 
   // Check other optional immediate operands for equality.
-  unsigned OperandsToMatch[] = {AMDGPU::OpName::glc, AMDGPU::OpName::slc,
-                                AMDGPU::OpName::d16, AMDGPU::OpName::unorm,
-                                AMDGPU::OpName::da,  AMDGPU::OpName::r128,
-                                AMDGPU::OpName::a16, AMDGPU::OpName::dlc};
+  unsigned OperandsToMatch[] = {AMDGPU::OpName::cpol, AMDGPU::OpName::d16,
+                                AMDGPU::OpName::unorm, AMDGPU::OpName::da,
+                                AMDGPU::OpName::r128, AMDGPU::OpName::a16};
 
   for (auto op : OperandsToMatch) {
     int Idx = AMDGPU::getNamedOperandIdx(CI.I->getOpcode(), op);
@@ -798,9 +787,8 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
   if ((CI.InstClass != DS_READ) && (CI.InstClass != DS_WRITE)) {
     return (EltOffset0 + CI.Width == EltOffset1 ||
             EltOffset1 + Paired.Width == EltOffset0) &&
-           CI.GLC == Paired.GLC && CI.DLC == Paired.DLC &&
-           (CI.InstClass == S_BUFFER_LOAD_IMM ||
-               (CI.SLC == Paired.SLC && CI.SCCB == Paired.SCCB));
+           CI.CPol == Paired.CPol &&
+           (CI.InstClass == S_BUFFER_LOAD_IMM || CI.CPol == Paired.CPol);
   }
 
   // If the offset in elements doesn't fit in 8-bits, we might be able to use
@@ -1301,8 +1289,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSBufferLoadImmPair(
     BuildMI(*MBB, Paired.I, DL, TII->get(Opcode), DestReg)
         .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::sbase))
         .addImm(MergedOffset) // offset
-        .addImm(CI.GLC)      // glc
-        .addImm(CI.DLC)      // dlc
+        .addImm(CI.CPol)      // cpol
         .addMemOperand(combineKnownAdjacentMMOs(*MBB->getParent(), MMOa, MMOb));
 
   std::pair<unsigned, unsigned> SubRegIdx = getSubRegIdxs(CI, Paired);
@@ -1361,12 +1348,9 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferLoadPair(
     MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::srsrc))
         .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::soffset))
         .addImm(MergedOffset) // offset
-        .addImm(CI.GLC)      // glc
-        .addImm(CI.SLC)      // slc
+        .addImm(CI.CPol)      // cpol
         .addImm(0)            // tfe
-        .addImm(CI.DLC)      // dlc
         .addImm(0)            // swz
-        .addImm(CI.SCCB)     // scc
         .addMemOperand(combineKnownAdjacentMMOs(*MBB->getParent(), MMOa, MMOb));
 
   std::pair<unsigned, unsigned> SubRegIdx = getSubRegIdxs(CI, Paired);
@@ -1429,12 +1413,9 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
           .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::soffset))
           .addImm(MergedOffset) // offset
           .addImm(JoinedFormat) // format
-          .addImm(CI.GLC)      // glc
-          .addImm(CI.SLC)      // slc
+          .addImm(CI.CPol)      // cpol
           .addImm(0)            // tfe
-          .addImm(CI.DLC)      // dlc
           .addImm(0)            // swz
-          .addImm(CI.SCCB)     // scc
           .addMemOperand(
               combineKnownAdjacentMMOs(*MBB->getParent(), MMOa, MMOb));
 
@@ -1510,12 +1491,9 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferStorePair(
           .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::soffset))
           .addImm(std::min(CI.Offset, Paired.Offset)) // offset
           .addImm(JoinedFormat)                     // format
-          .addImm(CI.GLC)                          // glc
-          .addImm(CI.SLC)                          // slc
+          .addImm(CI.CPol)                          // cpol
           .addImm(0)                                // tfe
-          .addImm(CI.DLC)                          // dlc
           .addImm(0)                                // swz
-          .addImm(CI.SCCB)                         // scc
           .addMemOperand(
               combineKnownAdjacentMMOs(*MBB->getParent(), MMOa, MMOb));
 
@@ -1612,26 +1590,11 @@ SILoadStoreOptimizer::getTargetRegisterClass(const CombineInfo &CI,
       return &AMDGPU::SGPR_512RegClass;
     }
   }
-  const TargetRegisterClass *RC = nullptr;
 
-  switch (CI.Width + Paired.Width) {
-  default:
-    return nullptr;
-  case 2:
-    RC = &AMDGPU::VReg_64RegClass;
-    break;
-  case 3:
-    RC = &AMDGPU::VReg_96RegClass;
-    break;
-  case 4:
-    RC = &AMDGPU::VReg_128RegClass;
-    break;
-  }
-
-  if (TRI->hasAGPRs(getDataRegClass(*CI.I)))
-    return TRI->getEquivalentAGPRClass(RC);
-
-  return RC;
+  unsigned BitWidth = 32 * (CI.Width + Paired.Width);
+  return TRI->hasAGPRs(getDataRegClass(*CI.I))
+             ? TRI->getAGPRClassForBitWidth(BitWidth)
+             : TRI->getVGPRClassForBitWidth(BitWidth);
 }
 
 MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferStorePair(
@@ -1680,12 +1643,9 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferStorePair(
     MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::srsrc))
         .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::soffset))
         .addImm(std::min(CI.Offset, Paired.Offset)) // offset
-        .addImm(CI.GLC)      // glc
-        .addImm(CI.SLC)      // slc
+        .addImm(CI.CPol)      // cpol
         .addImm(0)            // tfe
-        .addImm(CI.DLC)      // dlc
         .addImm(0)            // swz
-        .addImm(CI.SCCB)     // scc
         .addMemOperand(combineKnownAdjacentMMOs(*MBB->getParent(), MMOa, MMOb));
 
   moveInstsAfter(MIB, InstsToMove);
@@ -1756,7 +1716,7 @@ Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
   (void)HiHalf;
   LLVM_DEBUG(dbgs() << "    "; HiHalf->dump(););
 
-  Register FullDestReg = MRI->createVirtualRegister(&AMDGPU::VReg_64RegClass);
+  Register FullDestReg = MRI->createVirtualRegister(TRI->getVGPR64Class());
   MachineInstr *FullBase =
     BuildMI(*MBB, MBBI, DL, TII->get(TargetOpcode::REG_SEQUENCE), FullDestReg)
       .addReg(DestSub0)

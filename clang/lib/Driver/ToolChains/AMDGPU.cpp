@@ -231,7 +231,8 @@ RocmInstallationDetector::getInstallationPathCandidates() {
     // Some versions of the aomp package install to /opt/rocm/aomp/bin
     if (ParentName == "llvm" || ParentName.startswith("aomp"))
       ParentDir = llvm::sys::path::parent_path(ParentDir);
-
+    // Some versions of the aomp package install to /opt/rocm/aomp/bin
+    // and it seems ParentDir is already pointing to correct place.
     return Candidate(ParentDir.str(), /*StrictChecking=*/true);
   };
 
@@ -652,8 +653,8 @@ llvm::DenormalMode AMDGPUToolChain::getDefaultDenormalModeForType(
     auto Arch = getProcessorFromTargetID(getTriple(), JA.getOffloadingArch());
     auto Kind = llvm::AMDGPU::parseArchAMDGCN(Arch);
     if (FPType && FPType == &llvm::APFloat::IEEEsingle() &&
-        DriverArgs.hasFlag(options::OPT_fcuda_flush_denormals_to_zero,
-                           options::OPT_fno_cuda_flush_denormals_to_zero,
+        DriverArgs.hasFlag(options::OPT_fgpu_flush_denormals_to_zero,
+                           options::OPT_fno_gpu_flush_denormals_to_zero,
                            getDefaultDenormsAreZeroForTarget(Kind)))
       return llvm::DenormalMode::getPreserveSign();
 
