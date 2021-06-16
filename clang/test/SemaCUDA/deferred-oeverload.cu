@@ -31,12 +31,20 @@ __host__ void callee4(int); // com-note 2{{candidate function not viable: requir
 __host__ void callee5(float); // com-note {{candidate function}}
 __host__ void callee5(double); // com-note {{candidate function}}
 
+// When '<<` operator is called by a device function, there is error for 'invalid operands'.
+// It should be deferred since it involves wrong-sided candidates.
+struct S {
+  __host__ S &operator <<(int i); // dev-note {{candidate function not viable}}
+};
+
 __host__ void hf() {
  callee(1); // host-error {{call to 'callee' is ambiguous}}
  callee2();
  callee3();
  callee4(); // com-error {{no matching function for call to 'callee4'}}
  callee5(1); // com-error {{call to 'callee5' is ambiguous}}
+ S s;
+ s << 1;
  undeclared_func(); // com-error {{use of undeclared identifier 'undeclared_func'}}
 }
 
@@ -45,6 +53,8 @@ __device__ void df() {
  callee2(); // dev-error {{no matching function for call to 'callee2'}}
  callee3(); // dev-error {{no matching function for call to 'callee3'}}
  callee4(); // com-error {{no matching function for call to 'callee4'}}
+ S s;
+ s << 1;    // dev-error {{invalid operands to binary expression}}
 }
 
 struct A { int x; typedef int isA; };
