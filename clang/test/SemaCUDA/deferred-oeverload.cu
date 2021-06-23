@@ -5,6 +5,11 @@
 // RUN: %clang_cc1 -fopenmp -fsyntax-only -verify=host,com %s \
 // RUN:   -std=c++11 -fgpu-defer-diag
 
+// With -fgpu-defer-diag, clang defers overloading resolution induced
+// diagnostics when the full candidates set include host device
+// functions or wrong-sided candidates. This roughly matches nvcc's
+// behavior.
+
 #include "Inputs/cuda.h"
 
 // When callee is called by a host function with integer arguments, there is an error for ambiguity.
