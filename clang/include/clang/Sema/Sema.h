@@ -1764,8 +1764,8 @@ public:
     bool SavedDeferDiags = false;
 
   public:
-    DeferDiagsRAII(Sema &_S, bool DeferDiags)
-        : S(_S), SavedDeferDiags(S.DeferDiags) {
+    DeferDiagsRAII(Sema &S, bool DeferDiags)
+        : S(S), SavedDeferDiags(S.DeferDiags) {
       S.DeferDiags = DeferDiags;
     }
     ~DeferDiagsRAII() { S.DeferDiags = SavedDeferDiags; }
