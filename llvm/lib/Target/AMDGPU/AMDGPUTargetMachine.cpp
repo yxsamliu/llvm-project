@@ -198,6 +198,11 @@ static cl::opt<bool>
                           cl::desc("Disable lower module lds pass"),
                           cl::init(false));
 
+static cl::opt<bool> EnablePreRAOptimizations(
+    "amdgpu-enable-pre-ra-optimizations",
+    cl::desc("Enable Pre-RA optimizations pass"), cl::init(true),
+    cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -266,6 +271,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULowerKernelCallsPass(*PR);
   initializeGCNRegBankReassignPass(*PR);
   initializeGCNNSAReassignPass(*PR);
+  initializeGCNPreRAOptimizationsPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -1164,6 +1170,11 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 
   if (OptExecMaskPreRA)
     insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
+
+  if (EnablePreRAOptimizations.getNumOccurrences()
+          ? EnablePreRAOptimizations
+          : TM->getOptLevel() > CodeGenOpt::Less)
+    insertPass(&RenameIndependentSubregsID, &GCNPreRAOptimizationsID);
   insertPass(&MachineSchedulerID, &SIFormMemoryClausesID);
 
   // This must be run immediately after phi elimination and before

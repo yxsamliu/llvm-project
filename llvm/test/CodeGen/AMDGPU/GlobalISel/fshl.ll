@@ -4723,8 +4723,7 @@ define <2 x i64> @v_fshl_v2i64(<2 x i64> %lhs, <2 x i64> %rhs, <2 x i64> %amt) {
 define amdgpu_ps i128 @s_fshl_i128(i128 inreg %lhs, i128 inreg %rhs, i128 inreg %amt) {
 ; GFX6-LABEL: s_fshl_i128:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_movk_i32 s10, 0x7f
-; GFX6-NEXT:    s_mov_b32 s11, 0
+; GFX6-NEXT:    s_mov_b64 s[10:11], 0x7f
 ; GFX6-NEXT:    s_and_b64 s[12:13], s[8:9], s[10:11]
 ; GFX6-NEXT:    s_andn2_b64 s[8:9], s[10:11], s[8:9]
 ; GFX6-NEXT:    s_sub_i32 s9, s12, 64
@@ -4783,8 +4782,7 @@ define amdgpu_ps i128 @s_fshl_i128(i128 inreg %lhs, i128 inreg %rhs, i128 inreg 
 ;
 ; GFX8-LABEL: s_fshl_i128:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_movk_i32 s10, 0x7f
-; GFX8-NEXT:    s_mov_b32 s11, 0
+; GFX8-NEXT:    s_mov_b64 s[10:11], 0x7f
 ; GFX8-NEXT:    s_and_b64 s[12:13], s[8:9], s[10:11]
 ; GFX8-NEXT:    s_andn2_b64 s[8:9], s[10:11], s[8:9]
 ; GFX8-NEXT:    s_sub_i32 s9, s12, 64
@@ -4843,8 +4841,7 @@ define amdgpu_ps i128 @s_fshl_i128(i128 inreg %lhs, i128 inreg %rhs, i128 inreg 
 ;
 ; GFX9-LABEL: s_fshl_i128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_movk_i32 s10, 0x7f
-; GFX9-NEXT:    s_mov_b32 s11, 0
+; GFX9-NEXT:    s_mov_b64 s[10:11], 0x7f
 ; GFX9-NEXT:    s_and_b64 s[12:13], s[8:9], s[10:11]
 ; GFX9-NEXT:    s_andn2_b64 s[8:9], s[10:11], s[8:9]
 ; GFX9-NEXT:    s_sub_i32 s9, s12, 64
@@ -4903,8 +4900,7 @@ define amdgpu_ps i128 @s_fshl_i128(i128 inreg %lhs, i128 inreg %rhs, i128 inreg 
 ;
 ; GFX10-LABEL: s_fshl_i128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_movk_i32 s10, 0x7f
-; GFX10-NEXT:    s_mov_b32 s11, 0
+; GFX10-NEXT:    s_mov_b64 s[10:11], 0x7f
 ; GFX10-NEXT:    s_and_b64 s[12:13], s[8:9], s[10:11]
 ; GFX10-NEXT:    s_andn2_b64 s[8:9], s[10:11], s[8:9]
 ; GFX10-NEXT:    s_sub_i32 s9, s12, 64
@@ -5509,8 +5505,7 @@ define amdgpu_ps <4 x float> @v_fshl_i128_ssv(i128 inreg %lhs, i128 inreg %rhs, 
 define amdgpu_ps <4 x float> @v_fshl_i128_svs(i128 inreg %lhs, i128 %rhs, i128 inreg %amt) {
 ; GFX6-LABEL: v_fshl_i128_svs:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_movk_i32 s6, 0x7f
-; GFX6-NEXT:    s_mov_b32 s7, 0
+; GFX6-NEXT:    s_mov_b64 s[6:7], 0x7f
 ; GFX6-NEXT:    s_and_b64 s[8:9], s[4:5], s[6:7]
 ; GFX6-NEXT:    s_andn2_b64 s[4:5], s[6:7], s[4:5]
 ; GFX6-NEXT:    s_sub_i32 s5, s8, 64
@@ -5583,8 +5578,7 @@ define amdgpu_ps <4 x float> @v_fshl_i128_svs(i128 inreg %lhs, i128 %rhs, i128 i
 ;
 ; GFX8-LABEL: v_fshl_i128_svs:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_movk_i32 s6, 0x7f
-; GFX8-NEXT:    s_mov_b32 s7, 0
+; GFX8-NEXT:    s_mov_b64 s[6:7], 0x7f
 ; GFX8-NEXT:    s_and_b64 s[8:9], s[4:5], s[6:7]
 ; GFX8-NEXT:    s_andn2_b64 s[4:5], s[6:7], s[4:5]
 ; GFX8-NEXT:    s_sub_i32 s5, s8, 64
@@ -5657,8 +5651,7 @@ define amdgpu_ps <4 x float> @v_fshl_i128_svs(i128 inreg %lhs, i128 %rhs, i128 i
 ;
 ; GFX9-LABEL: v_fshl_i128_svs:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_movk_i32 s6, 0x7f
-; GFX9-NEXT:    s_mov_b32 s7, 0
+; GFX9-NEXT:    s_mov_b64 s[6:7], 0x7f
 ; GFX9-NEXT:    s_and_b64 s[8:9], s[4:5], s[6:7]
 ; GFX9-NEXT:    s_andn2_b64 s[4:5], s[6:7], s[4:5]
 ; GFX9-NEXT:    s_sub_i32 s5, s8, 64
@@ -5731,8 +5724,7 @@ define amdgpu_ps <4 x float> @v_fshl_i128_svs(i128 inreg %lhs, i128 %rhs, i128 i
 ;
 ; GFX10-LABEL: v_fshl_i128_svs:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_movk_i32 s6, 0x7f
-; GFX10-NEXT:    s_mov_b32 s7, 0
+; GFX10-NEXT:    s_mov_b64 s[6:7], 0x7f
 ; GFX10-NEXT:    v_lshrrev_b64 v[4:5], 1, v[0:1]
 ; GFX10-NEXT:    s_and_b64 s[8:9], s[4:5], s[6:7]
 ; GFX10-NEXT:    s_andn2_b64 s[4:5], s[6:7], s[4:5]
@@ -5808,8 +5800,7 @@ define amdgpu_ps <4 x float> @v_fshl_i128_svs(i128 inreg %lhs, i128 %rhs, i128 i
 define amdgpu_ps <4 x float> @v_fshl_i128_vss(i128 %lhs, i128 inreg %rhs, i128 inreg %amt) {
 ; GFX6-LABEL: v_fshl_i128_vss:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_movk_i32 s6, 0x7f
-; GFX6-NEXT:    s_mov_b32 s7, 0
+; GFX6-NEXT:    s_mov_b64 s[6:7], 0x7f
 ; GFX6-NEXT:    s_and_b64 s[8:9], s[4:5], s[6:7]
 ; GFX6-NEXT:    s_andn2_b64 s[4:5], s[6:7], s[4:5]
 ; GFX6-NEXT:    s_sub_i32 s6, 64, s8
@@ -5876,8 +5867,7 @@ define amdgpu_ps <4 x float> @v_fshl_i128_vss(i128 %lhs, i128 inreg %rhs, i128 i
 ;
 ; GFX8-LABEL: v_fshl_i128_vss:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_movk_i32 s6, 0x7f
-; GFX8-NEXT:    s_mov_b32 s7, 0
+; GFX8-NEXT:    s_mov_b64 s[6:7], 0x7f
 ; GFX8-NEXT:    s_and_b64 s[8:9], s[4:5], s[6:7]
 ; GFX8-NEXT:    s_andn2_b64 s[4:5], s[6:7], s[4:5]
 ; GFX8-NEXT:    s_sub_i32 s6, 64, s8
@@ -5944,8 +5934,7 @@ define amdgpu_ps <4 x float> @v_fshl_i128_vss(i128 %lhs, i128 inreg %rhs, i128 i
 ;
 ; GFX9-LABEL: v_fshl_i128_vss:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_movk_i32 s6, 0x7f
-; GFX9-NEXT:    s_mov_b32 s7, 0
+; GFX9-NEXT:    s_mov_b64 s[6:7], 0x7f
 ; GFX9-NEXT:    s_and_b64 s[8:9], s[4:5], s[6:7]
 ; GFX9-NEXT:    s_andn2_b64 s[4:5], s[6:7], s[4:5]
 ; GFX9-NEXT:    s_sub_i32 s6, 64, s8
@@ -6012,8 +6001,7 @@ define amdgpu_ps <4 x float> @v_fshl_i128_vss(i128 %lhs, i128 inreg %rhs, i128 i
 ;
 ; GFX10-LABEL: v_fshl_i128_vss:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_movk_i32 s6, 0x7f
-; GFX10-NEXT:    s_mov_b32 s7, 0
+; GFX10-NEXT:    s_mov_b64 s[6:7], 0x7f
 ; GFX10-NEXT:    s_and_b64 s[8:9], s[4:5], s[6:7]
 ; GFX10-NEXT:    s_andn2_b64 s[4:5], s[6:7], s[4:5]
 ; GFX10-NEXT:    s_sub_i32 s9, 64, s8
@@ -6472,8 +6460,7 @@ define i128 @v_fshl_i128_65(i128 %lhs, i128 %rhs) {
 define amdgpu_ps <2 x i128> @s_fshl_v2i128(<2 x i128> inreg %lhs, <2 x i128> inreg %rhs, <2 x i128> inreg %amt) {
 ; GFX6-LABEL: s_fshl_v2i128:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_movk_i32 s18, 0x7f
-; GFX6-NEXT:    s_mov_b32 s19, 0
+; GFX6-NEXT:    s_mov_b64 s[18:19], 0x7f
 ; GFX6-NEXT:    s_and_b64 s[22:23], s[16:17], s[18:19]
 ; GFX6-NEXT:    s_andn2_b64 s[16:17], s[18:19], s[16:17]
 ; GFX6-NEXT:    s_sub_i32 s17, s22, 64
@@ -6584,8 +6571,7 @@ define amdgpu_ps <2 x i128> @s_fshl_v2i128(<2 x i128> inreg %lhs, <2 x i128> inr
 ;
 ; GFX8-LABEL: s_fshl_v2i128:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_movk_i32 s18, 0x7f
-; GFX8-NEXT:    s_mov_b32 s19, 0
+; GFX8-NEXT:    s_mov_b64 s[18:19], 0x7f
 ; GFX8-NEXT:    s_and_b64 s[22:23], s[16:17], s[18:19]
 ; GFX8-NEXT:    s_andn2_b64 s[16:17], s[18:19], s[16:17]
 ; GFX8-NEXT:    s_sub_i32 s17, s22, 64
@@ -6696,8 +6682,7 @@ define amdgpu_ps <2 x i128> @s_fshl_v2i128(<2 x i128> inreg %lhs, <2 x i128> inr
 ;
 ; GFX9-LABEL: s_fshl_v2i128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_movk_i32 s18, 0x7f
-; GFX9-NEXT:    s_mov_b32 s19, 0
+; GFX9-NEXT:    s_mov_b64 s[18:19], 0x7f
 ; GFX9-NEXT:    s_and_b64 s[22:23], s[16:17], s[18:19]
 ; GFX9-NEXT:    s_andn2_b64 s[16:17], s[18:19], s[16:17]
 ; GFX9-NEXT:    s_sub_i32 s17, s22, 64
@@ -6808,8 +6793,7 @@ define amdgpu_ps <2 x i128> @s_fshl_v2i128(<2 x i128> inreg %lhs, <2 x i128> inr
 ;
 ; GFX10-LABEL: s_fshl_v2i128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_movk_i32 s18, 0x7f
-; GFX10-NEXT:    s_mov_b32 s19, 0
+; GFX10-NEXT:    s_mov_b64 s[18:19], 0x7f
 ; GFX10-NEXT:    s_mov_b32 s30, s0
 ; GFX10-NEXT:    s_and_b64 s[22:23], s[16:17], s[18:19]
 ; GFX10-NEXT:    s_andn2_b64 s[16:17], s[18:19], s[16:17]

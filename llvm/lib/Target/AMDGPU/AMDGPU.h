@@ -73,6 +73,7 @@ ModulePass *createAMDGPUPropagateAttributesLatePass(const TargetMachine *);
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *createAMDGPULowerModuleLDSPass();
 FunctionPass *createSIModeRegisterPass();
+FunctionPass *createGCNPreRAOptimizationsPass();
 
 namespace AMDGPU {
 enum RegBankReassignMode {
@@ -354,6 +355,9 @@ extern char &GCNRegBankReassignID;
 
 void initializeGCNNSAReassignPass(PassRegistry &);
 extern char &GCNNSAReassignID;
+
+void initializeGCNPreRAOptimizationsPass(PassRegistry &);
+extern char &GCNPreRAOptimizationsID;
 
 namespace AMDGPU {
 enum TargetIndex {

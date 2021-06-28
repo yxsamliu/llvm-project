@@ -974,8 +974,8 @@ define amdgpu_kernel void @v_shl_constant_i64(i64 addrspace(1)* %out, i64 addrsp
 ; GCN-NEXT:    s_mov_b32 s8, s6
 ; GCN-NEXT:    s_mov_b32 s9, s7
 ; GCN-NEXT:    buffer_load_dword v0, off, s[8:11], 0
-; GCN-NEXT:    s_movk_i32 s7, 0x11e
 ; GCN-NEXT:    s_mov_b32 s6, 0xab19b207
+; GCN-NEXT:    s_movk_i32 s7, 0x11e
 ; GCN-NEXT:    s_mov_b32 s0, s4
 ; GCN-NEXT:    s_mov_b32 s1, s5
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -1014,6 +1014,7 @@ define amdgpu_kernel void @v_shl_constant_i64(i64 addrspace(1)* %out, i64 addrsp
 ; EG-NEXT:     CNDE_INT T0.X, T0.W, PV.W, 0.0,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; VI-NEXT:    s_movk_i32 s1, 0x11e
   %a = load i64, i64 addrspace(1)* %aptr, align 8
   %shl = shl i64 1231231234567, %a
   store i64 %shl, i64 addrspace(1)* %out, align 8
@@ -1032,8 +1033,7 @@ define amdgpu_kernel void @v_shl_i64_32_bit_constant(i64 addrspace(1)* %out, i64
 ; GCN-NEXT:    s_mov_b32 s8, s6
 ; GCN-NEXT:    s_mov_b32 s9, s7
 ; GCN-NEXT:    buffer_load_dword v0, off, s[8:11], 0
-; GCN-NEXT:    s_mov_b32 s7, 0
-; GCN-NEXT:    s_mov_b32 s6, 0x12d687
+; GCN-NEXT:    s_mov_b64 s[6:7], 0x12d687
 ; GCN-NEXT:    s_mov_b32 s0, s4
 ; GCN-NEXT:    s_mov_b32 s1, s5
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -1476,8 +1476,7 @@ define amdgpu_kernel void @s_shl_inline_imm_f32_4_0_i64(i64 addrspace(1)* %out, 
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0xd
-; GCN-NEXT:    s_mov_b32 s1, 0
-; GCN-NEXT:    s_mov_b32 s0, 4.0
+; GCN-NEXT:    s_mov_b64 s[0:1], 0x40800000
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1566,8 +1565,8 @@ define amdgpu_kernel void @s_shl_inline_high_imm_f32_4_0_i64(i64 addrspace(1)* %
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0xd
-; GCN-NEXT:    s_mov_b32 s1, 4.0
 ; GCN-NEXT:    s_mov_b32 s0, 0
+; GCN-NEXT:    s_mov_b32 s1, 4.0
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1591,6 +1590,7 @@ define amdgpu_kernel void @s_shl_inline_high_imm_f32_4_0_i64(i64 addrspace(1)* %
 ; EG-NEXT:     MOV T0.X, 0.0,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; VI-NEXT:    s_mov_b32 s1, 4.0
   %shl = shl i64 4647714815446351872, %a
   store i64 %shl, i64 addrspace(1)* %out, align 8
   ret void
@@ -1601,8 +1601,8 @@ define amdgpu_kernel void @s_shl_inline_high_imm_f32_neg_4_0_i64(i64 addrspace(1
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0xd
-; GCN-NEXT:    s_mov_b32 s1, -4.0
 ; GCN-NEXT:    s_mov_b32 s0, 0
+; GCN-NEXT:    s_mov_b32 s1, -4.0
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1626,6 +1626,7 @@ define amdgpu_kernel void @s_shl_inline_high_imm_f32_neg_4_0_i64(i64 addrspace(1
 ; EG-NEXT:     MOV T0.X, 0.0,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; VI-NEXT:    s_mov_b32 s1, -4.0
   %shl = shl i64 13871086852301127680, %a
   store i64 %shl, i64 addrspace(1)* %out, align 8
   ret void
