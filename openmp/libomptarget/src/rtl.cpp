@@ -47,7 +47,7 @@ static const char *RTLQuickCheckFiles[][MAX_PLATFORM_CHECK_FILES] = {
     /* ppc64 has multiple quick check files */
     {"/sys/firmware/devicetree/base/ibm,firmware-versions/open-power",
      "/sys/firmware/devicetree/base/cpus/ibm,powerpc-cpu-features"},
-    /* acpi is unique to x86       */ {"/sys/firmware/acpi"},
+    /* acpi is unique to x86       */ {"/sys/firmware/acpi","/sys/module/acpi"},
     /* nvidia0 is unique with cuda */ {"/dev/nvidia0"},
     /* More arm check files needed */ {"/sys/module/mdio_thunder/initstate"},
     /* SX-Aurora VE target         */ {"fixme.so"},
@@ -234,6 +234,8 @@ void RTLsTy::LoadRTLs() {
         dlsym(dynlib_handle, "__tgt_rtl_unregister_lib");
     *((void **)&R.supports_empty_images) =
         dlsym(dynlib_handle, "__tgt_rtl_supports_empty_images");
+    *((void **)&R.set_info_flag) =
+        dlsym(dynlib_handle, "__tgt_rtl_set_info_flag");
   }
   delete[] libomptarget_dir_name;
   DP("RTLs loaded!\n");

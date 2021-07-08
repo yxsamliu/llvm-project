@@ -16,8 +16,9 @@
 #include "OutputSegment.h"
 #include "Target.h"
 
-#include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -32,6 +33,7 @@ class Defined;
 class DylibSymbol;
 class LoadCommand;
 class ObjFile;
+class UnwindInfoSection;
 
 class SyntheticSection : public OutputSection {
 public:
@@ -79,16 +81,17 @@ public:
 // The header of the Mach-O file, which must have a file offset of zero.
 class MachHeaderSection : public SyntheticSection {
 public:
-  void addLoadCommand(LoadCommand *);
+  MachHeaderSection();
   bool isHidden() const override { return true; }
+  uint64_t getSize() const override;
+  void writeTo(uint8_t *buf) const override;
+
+  void addLoadCommand(LoadCommand *);
 
 protected:
-  MachHeaderSection();
   std::vector<LoadCommand *> loadCommands;
   uint32_t sizeOfCmds = 0;
 };
-
-template <class LP> MachHeaderSection *makeMachHeaderSection();
 
 // A hidden section that exists solely for the purpose of creating the
 // __PAGEZERO segment, which is used to catch null pointer dereferences.
@@ -121,6 +124,10 @@ public:
 
   void addEntry(Symbol *sym);
 
+  uint64_t getVA(uint32_t gotIndex) const {
+    return addr + gotIndex * target->wordSize;
+  }
+
 private:
   llvm::SetVector<const Symbol *> entries;
 };
@@ -148,7 +155,7 @@ struct Location {
 
   Location(const InputSection *isec, uint64_t offset)
       : isec(isec), offset(offset) {}
-  uint64_t getVA() const { return isec->getVA() + offset; }
+  uint64_t getVA() const { return isec->getVA(offset); }
 };
 
 // Stores rebase opcodes, which tell dyld where absolute addresses have been
@@ -214,7 +221,7 @@ struct WeakBindingEntry {
 //   other dylibs should coalesce to.
 //
 //   2) Weak bindings: These tell dyld that a given symbol reference should
-//   coalesce to a non-weak definition if one is found. Note that unlike in the
+//   coalesce to a non-weak definition if one is found. Note that unlike the
 //   entries in the BindingSection, the bindings here only refer to these
 //   symbols by name, but do not specify which dylib to load them from.
 class WeakBindingSection : public LinkEditSection {
@@ -283,11 +290,21 @@ public:
   StubsSection();
   uint64_t getSize() const override;
   bool isNeeded() const override { return !entries.empty(); }
+  void finalize() override;
   void writeTo(uint8_t *buf) const override;
   const llvm::SetVector<Symbol *> &getEntries() const { return entries; }
   // Returns whether the symbol was added. Note that every stubs entry will
   // have a corresponding entry in the LazyPointerSection.
   bool addEntry(Symbol *);
+  uint64_t getVA(uint32_t stubsIndex) const {
+    // ConcatOutputSection::finalize() can seek the address of a
+    // stub before its address is assigned. Before __stubs is
+    // finalized, return a contrived out-of-range address.
+    return isFinal ? addr + stubsIndex * target->stubSize
+                   : TargetInfo::outOfRangeVA;
+  }
+
+  bool isFinal = false; // is address assigned?
 
 private:
   llvm::SetVector<Symbol *> entries;
@@ -310,7 +327,7 @@ public:
 // to cache an address to the image loader it uses. Note that unlike the other
 // synthetic sections, which are OutputSections, the ImageLoaderCacheSection is
 // an InputSection that gets merged into the __data OutputSection.
-class ImageLoaderCacheSection : public InputSection {
+class ImageLoaderCacheSection : public ConcatInputSection {
 public:
   ImageLoaderCacheSection();
   uint64_t getSize() const override { return target->wordSize; }
@@ -487,11 +504,36 @@ public:
   void writeHashes(uint8_t *buf) const;
 };
 
-static_assert((CodeSignatureSection::blobHeadersSize % 8) == 0, "");
-static_assert((CodeSignatureSection::fixedHeadersSize % 8) == 0, "");
+class BitcodeBundleSection : public SyntheticSection {
+public:
+  BitcodeBundleSection();
+  uint64_t getSize() const override { return xarSize; }
+  void finalize() override;
+  void writeTo(uint8_t *buf) const override;
+
+private:
+  llvm::SmallString<261> xarPath;
+  uint64_t xarSize;
+};
+
+class CStringSection : public SyntheticSection {
+public:
+  CStringSection();
+  void addInput(CStringInputSection *);
+  uint64_t getSize() const override { return builder.getSize(); }
+  void finalize() override;
+  bool isNeeded() const override { return !inputs.empty(); }
+  void writeTo(uint8_t *buf) const override { builder.write(buf); }
+
+  std::vector<CStringInputSection *> inputs;
+
+private:
+  llvm::StringTableBuilder builder;
+};
 
 struct InStruct {
   MachHeaderSection *header = nullptr;
+  CStringSection *cStringSection = nullptr;
   RebaseSection *rebase = nullptr;
   BindingSection *binding = nullptr;
   WeakBindingSection *weakBinding = nullptr;
@@ -503,6 +545,7 @@ struct InStruct {
   StubsSection *stubs = nullptr;
   StubHelperSection *stubHelper = nullptr;
   ImageLoaderCacheSection *imageLoaderCache = nullptr;
+  UnwindInfoSection *unwindInfo = nullptr;
 };
 
 extern InStruct in;

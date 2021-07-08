@@ -57,10 +57,9 @@ void MCTargetStreamer::changeSection(const MCSection *CurSection,
                                      MCSection *Section,
                                      const MCExpr *Subsection,
                                      raw_ostream &OS) {
-  Section->PrintSwitchToSection(
-      *Streamer.getContext().getAsmInfo(),
-      Streamer.getContext().getObjectFileInfo()->getTargetTriple(), OS,
-      Subsection);
+  Section->PrintSwitchToSection(*Streamer.getContext().getAsmInfo(),
+                                Streamer.getContext().getTargetTriple(), OS,
+                                Subsection);
 }
 
 void MCTargetStreamer::emitDwarfFileDirective(StringRef Directive) {
@@ -445,7 +444,8 @@ void MCStreamer::emitCFIStartProc(bool IsSimple, SMLoc Loc) {
   if (MAI) {
     for (const MCCFIInstruction& Inst : MAI->getInitialFrameState()) {
       if (Inst.getOperation() == MCCFIInstruction::OpDefCfa ||
-          Inst.getOperation() == MCCFIInstruction::OpDefCfaRegister) {
+          Inst.getOperation() == MCCFIInstruction::OpDefCfaRegister ||
+          Inst.getOperation() == MCCFIInstruction::OpLLVMDefAspaceCfa) {
         Frame.CurrentCfaRegister = Inst.getRegister();
       }
     }

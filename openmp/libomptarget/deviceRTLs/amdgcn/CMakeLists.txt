@@ -6,7 +6,7 @@
 #
 ##===----------------------------------------------------------------------===##
 #
-# Build the AMDGCN Device RTL if the ROCM tools are available
+# Build the AMDGCN Device RTL bitcode library using clang -ffreestanding
 #
 ##===----------------------------------------------------------------------===##
 
@@ -37,7 +37,40 @@ else()
   set(AOMP_BINDIR ${LLVM_BUILD_BINARY_DIR}/bin)
 endif()
 
-libomptarget_say("Building AMDGCN device RTL. LLVM_COMPILER_PATH=${AOMP_BINDIR}")
+set(LIBOMPTARGET_BUILD_AMDGCN_BCLIB TRUE CACHE BOOL
+  "Can be set to false to disable building this library.")
+
+if (NOT LIBOMPTARGET_BUILD_AMDGCN_BCLIB)
+  libomptarget_say("Not building AMDGCN device RTL: Disabled by LIBOMPTARGET_BUILD_AMDGCN_BCLIB")
+  return()
+endif()
+
+# Copied from nvptx CMakeLists
+if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64")
+  set(aux_triple x86_64-unknown-linux-gnu)
+elseif(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "ppc64le")
+  set(aux_triple powerpc64le-unknown-linux-gnu)
+elseif(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "aarch64")
+  set(aux_triple aarch64-unknown-linux-gnu)
+else()
+  libomptarget_say("Not building AMDGCN device RTL: unknown host arch: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+  return()
+endif()
+
+if (LLVM_DIR)
+  # Builds that use pre-installed LLVM have LLVM_DIR set.
+  find_program(CLANG_TOOL clang PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
+  find_program(LINK_TOOL llvm-link PATHS ${LLVM_TOOLS_BINARY_DIR}
+    NO_DEFAULT_PATH)
+  find_program(OPT_TOOL opt PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
+  libomptarget_say("Building AMDGCN device RTL. Using clang: ${CLANG_TOOL}")
+else()
+  # LLVM in-tree builds may use CMake target names to discover the tools.
+  set(CLANG_TOOL $<TARGET_FILE:clang>)
+  set(LINK_TOOL $<TARGET_FILE:llvm-link>)
+  set(OPT_TOOL $<TARGET_FILE:opt>)
+  libomptarget_say("Building AMDGCN device RTL. Using clang from in-tree build")
+endif()
 
 if(${AOMP_STANDALONE_BUILD} STREQUAL "0")
   message("------------- NON STANDALONE BUILD ---------------")
@@ -159,14 +192,14 @@ macro(add_ocl_bc_library dir)
 endmacro()
 
 macro(add_cuda_bc_library)
-  set(cu_cmd ${AOMP_BINDIR}/clang++
+  set(cu_cmd ${CLANG_TOOL}
     -xc++
     -c
     -std=c++14
     -target amdgcn-amd-amdhsa
     -ffreestanding
     -emit-llvm
-    -Xclang -aux-triple -Xclang x86_64-unknown-linux-gnu # see nvptx
+    -Xclang -aux-triple -Xclang ${aux_triple}
     -fopenmp -fopenmp-cuda-mode -Xclang -fopenmp-is-device
     -D__AMDGCN__
     -Xclang -target-cpu -Xclang ${mcpu}
@@ -195,7 +228,7 @@ macro(add_cuda_bc_library)
 
   add_custom_command(
     OUTPUT linkout.cuda.${mcpu}.bc
-    COMMAND ${AOMP_BINDIR}/llvm-link ${bc1_files} -o linkout.cuda.${mcpu}.bc
+    COMMAND ${LINK_TOOL} ${bc1_files} -o linkout.cuda.${mcpu}.bc
     DEPENDS ${bc1_files})
 
   list(APPEND bc_files linkout.cuda.${mcpu}.bc)
@@ -211,12 +244,12 @@ foreach(mcpu ${mcpus})
   set(bc_libname lib${libname}-${mcpu}.bc)
   add_custom_command(
     OUTPUT ${bc_libname}
-    COMMAND ${AOMP_BINDIR}/llvm-link ${bc_files} | ${AOMP_BINDIR}/opt --always-inline -o ${OUTPUTDIR}/${bc_libname}
+    COMMAND ${LINK_TOOL} ${bc_files} | ${OPT_TOOL} --always-inline -o ${OUTPUTDIR}/${bc_libname}
     DEPENDS ${bc_files})
 
   add_custom_target(lib${libname}-${mcpu} ALL DEPENDS ${bc_libname})
 
   install(FILES ${OUTPUTDIR}/${bc_libname}
-     DESTINATION "${OPENMP_INSTALL_LIBDIR}/libdevice"
+     DESTINATION "${OPENMP_INSTALL_LIBDIR}"
   )
 endforeach()

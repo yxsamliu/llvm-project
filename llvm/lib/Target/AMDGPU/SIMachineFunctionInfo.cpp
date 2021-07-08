@@ -8,6 +8,7 @@
 
 #include "SIMachineFunctionInfo.h"
 #include "AMDGPUTargetMachine.h"
+#include "llvm/CodeGen/MIRParser/MIParser.h"
 
 #define MAX_LANES 64
 
@@ -123,13 +124,15 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     if (WorkItemIDZ)
       WorkItemIDY = true;
 
-    PrivateSegmentWaveByteOffset = true;
+    if (!ST.flatScratchIsArchitected()) {
+      PrivateSegmentWaveByteOffset = true;
 
-    // HS and GS always have the scratch wave offset in SGPR5 on GFX9.
-    if (ST.getGeneration() >= AMDGPUSubtarget::GFX9 &&
-        (CC == CallingConv::AMDGPU_HS || CC == CallingConv::AMDGPU_GS))
-      ArgInfo.PrivateSegmentWaveByteOffset =
-          ArgDescriptor::createRegister(AMDGPU::SGPR5);
+      // HS and GS always have the scratch wave offset in SGPR5 on GFX9.
+      if (ST.getGeneration() >= AMDGPUSubtarget::GFX9 &&
+          (CC == CallingConv::AMDGPU_HS || CC == CallingConv::AMDGPU_GS))
+        ArgInfo.PrivateSegmentWaveByteOffset =
+            ArgDescriptor::createRegister(AMDGPU::SGPR5);
+    }
   }
 
   bool isAmdHsaOrMesa = ST.isAmdHsaOrMesa(F);
@@ -161,7 +164,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     KernargSegmentPtr = true;
 
   if (ST.hasFlatAddressSpace() && isEntryFunction() &&
-      (isAmdHsaOrMesa || ST.enableFlatScratch())) {
+      (isAmdHsaOrMesa || ST.enableFlatScratch()) &&
+      !ST.flatScratchIsArchitected()) {
     // TODO: This could be refined a lot. The attribute is a poor way of
     // detecting calls or stack objects that may require it before argument
     // lowering.
@@ -554,7 +558,8 @@ convertArgumentInfo(const AMDGPUFunctionArgInfo &ArgInfo,
 }
 
 yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
-    const llvm::SIMachineFunctionInfo &MFI, const TargetRegisterInfo &TRI)
+    const llvm::SIMachineFunctionInfo &MFI, const TargetRegisterInfo &TRI,
+    const llvm::MachineFunction &MF)
     : ExplicitKernArgSize(MFI.getExplicitKernArgSize()),
       MaxKernArgAlign(MFI.getMaxKernArgAlign()), LDSSize(MFI.getLDSSize()),
       DynLDSAlign(MFI.getDynLDSAlign()), IsEntryFunction(MFI.isEntryFunction()),
@@ -568,6 +573,9 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       FrameOffsetReg(regToString(MFI.getFrameOffsetReg(), TRI)),
       StackPtrOffsetReg(regToString(MFI.getStackPtrOffsetReg(), TRI)),
       ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)), Mode(MFI.getMode()) {
+  auto SFI = MFI.getOptionalScavengeFI();
+  if (SFI)
+    ScavengeFI = yaml::FrameIndex(*SFI, MF.getFrameInfo());
 }
 
 void yaml::SIMachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
@@ -575,7 +583,8 @@ void yaml::SIMachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
 }
 
 bool SIMachineFunctionInfo::initializeBaseYamlFields(
-  const yaml::SIMachineFunctionInfo &YamlMFI) {
+    const yaml::SIMachineFunctionInfo &YamlMFI, const MachineFunction &MF,
+    PerFunctionMIParsingState &PFS, SMDiagnostic &Error, SMRange &SourceRange) {
   ExplicitKernArgSize = YamlMFI.ExplicitKernArgSize;
   MaxKernArgAlign = assumeAligned(YamlMFI.MaxKernArgAlign);
   LDSSize = YamlMFI.LDSSize;
@@ -588,6 +597,24 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   WaveLimiter = YamlMFI.WaveLimiter;
   HasSpilledSGPRs = YamlMFI.HasSpilledSGPRs;
   HasSpilledVGPRs = YamlMFI.HasSpilledVGPRs;
+
+  if (YamlMFI.ScavengeFI) {
+    auto FIOrErr = YamlMFI.ScavengeFI->getFI(MF.getFrameInfo());
+    if (!FIOrErr) {
+      // Create a diagnostic for a the frame index.
+      const MemoryBuffer &Buffer =
+          *PFS.SM->getMemoryBuffer(PFS.SM->getMainFileID());
+
+      Error = SMDiagnostic(*PFS.SM, SMLoc(), Buffer.getBufferIdentifier(), 1, 1,
+                           SourceMgr::DK_Error, toString(FIOrErr.takeError()),
+                           "", None, None);
+      SourceRange = YamlMFI.ScavengeFI->SourceRange;
+      return true;
+    }
+    ScavengeFI = *FIOrErr;
+  } else {
+    ScavengeFI = None;
+  }
   return false;
 }
 

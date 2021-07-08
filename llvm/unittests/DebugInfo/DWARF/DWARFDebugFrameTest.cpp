@@ -451,6 +451,84 @@ TEST(DWARFDebugFrame, RegisterLocations) {
   expectDumpResult(Locs, "");
 }
 
+// Test that empty rows are not added to UnwindTable when
+// dwarf::CIE::CFIs or dwarf::FDE::CFIs is empty.
+TEST(DWARFDebugFrame, UnwindTableEmptyRows) {
+  dwarf::CIE TestCIE = createCIE(/*IsDWARF64=*/false,
+                                 /*Offset=*/0x0,
+                                 /*Length=*/0xff);
+
+  // Having an empty instructions list is fine.
+  EXPECT_THAT_ERROR(parseCFI(TestCIE, {}), Succeeded());
+  EXPECT_TRUE(TestCIE.cfis().empty());
+
+  // Verify dwarf::UnwindTable::create() won't result in errors and
+  // and empty rows are not added to CIE UnwindTable.
+  Expected<dwarf::UnwindTable> RowsOrErr = dwarf::UnwindTable::create(&TestCIE);
+  EXPECT_THAT_ERROR(RowsOrErr.takeError(), Succeeded());
+  const size_t ExpectedNumOfRows = 0;
+  EXPECT_EQ(RowsOrErr->size(), ExpectedNumOfRows);
+
+  dwarf::FDE TestFDE(/*IsDWARF64=*/true,
+                     /*Offset=*/0x3333abcdabcd,
+                     /*Length=*/0x4444abcdabcd,
+                     /*CIEPointer=*/0x1111abcdabcd,
+                     /*InitialLocation=*/0x1000,
+                     /*AddressRange=*/0x1000,
+                     /*Cie=*/&TestCIE,
+                     /*LSDAAddress=*/None,
+                     /*Arch=*/Triple::x86_64);
+
+  // Having an empty instructions list is fine.
+  EXPECT_THAT_ERROR(parseCFI(TestFDE, {}), Succeeded());
+  EXPECT_TRUE(TestFDE.cfis().empty());
+
+  // Verify dwarf::UnwindTable::create() won't result in errors and
+  // and empty rows are not added to FDE UnwindTable.
+  RowsOrErr = dwarf::UnwindTable::create(&TestFDE);
+  EXPECT_THAT_ERROR(RowsOrErr.takeError(), Succeeded());
+  EXPECT_EQ(RowsOrErr->size(), ExpectedNumOfRows);
+}
+
+// Test that empty rows are not added to UnwindTable when dwarf::CIE::CFIs
+// or dwarf::FDE::CFIs is not empty but has only DW_CFA_nop instructions.
+TEST(DWARFDebugFrame, UnwindTableEmptyRows_NOPs) {
+  dwarf::CIE TestCIE = createCIE(/*IsDWARF64=*/false,
+                                 /*Offset=*/0x0,
+                                 /*Length=*/0xff);
+
+  // Make a CIE that has only DW_CFA_nop instructions.
+  EXPECT_THAT_ERROR(parseCFI(TestCIE, {dwarf::DW_CFA_nop}), Succeeded());
+  EXPECT_TRUE(!TestCIE.cfis().empty());
+
+  // Verify dwarf::UnwindTable::create() won't result in errors and
+  // and empty rows are not added to CIE UnwindTable.
+  Expected<dwarf::UnwindTable> RowsOrErr = dwarf::UnwindTable::create(&TestCIE);
+  EXPECT_THAT_ERROR(RowsOrErr.takeError(), Succeeded());
+  const size_t ExpectedNumOfRows = 0;
+  EXPECT_EQ(RowsOrErr->size(), ExpectedNumOfRows);
+
+  dwarf::FDE TestFDE(/*IsDWARF64=*/true,
+                     /*Offset=*/0x3333abcdabcd,
+                     /*Length=*/0x4444abcdabcd,
+                     /*CIEPointer=*/0x1111abcdabcd,
+                     /*InitialLocation=*/0x1000,
+                     /*AddressRange=*/0x1000,
+                     /*Cie=*/&TestCIE,
+                     /*LSDAAddress=*/None,
+                     /*Arch=*/Triple::x86_64);
+
+  // Make an FDE that has only DW_CFA_nop instructions.
+  EXPECT_THAT_ERROR(parseCFI(TestFDE, {dwarf::DW_CFA_nop}), Succeeded());
+  EXPECT_TRUE(!TestFDE.cfis().empty());
+
+  // Verify dwarf::UnwindTable::create() won't result in errors and
+  // and empty rows are not added to FDE UnwindTable.
+  RowsOrErr = dwarf::UnwindTable::create(&TestFDE);
+  EXPECT_THAT_ERROR(RowsOrErr.takeError(), Succeeded());
+  EXPECT_EQ(RowsOrErr->size(), ExpectedNumOfRows);
+}
+
 TEST(DWARFDebugFrame, UnwindTableErrorNonAscendingFDERows) {
   dwarf::CIE TestCIE = createCIE(/*IsDWARF64=*/false,
                                  /*Offset=*/0x0,
@@ -1534,42 +1612,37 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_LLVM_def_aspace_cfa) {
   const dwarf::UnwindTable &Rows = RowsOrErr.get();
   EXPECT_EQ(Rows.size(), 5u);
   EXPECT_EQ(Rows[0].getAddress(), 0x1000u);
-  EXPECT_EQ(Rows[0].getCFAAddressSpace(), AddrSpace);
-  EXPECT_EQ(
-      Rows[0].getCFAValue(),
-      dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg1, CFAOff1));
+  EXPECT_EQ(Rows[0].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg1, CFAOff1,
+                                                              AddrSpace));
   EXPECT_EQ(Rows[0].getRegisterLocations().size(), 1u);
   EXPECT_EQ(Rows[0].getRegisterLocations(), VerifyLocs);
 
   EXPECT_EQ(Rows[1].getAddress(), 0x1004u);
-  EXPECT_EQ(Rows[0].getCFAAddressSpace(), AddrSpace);
-  EXPECT_EQ(
-      Rows[1].getCFAValue(),
-      dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg2, CFAOff1));
+  EXPECT_EQ(Rows[1].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg2, CFAOff1,
+                                                              AddrSpace));
   EXPECT_EQ(Rows[1].getRegisterLocations().size(), 1u);
   EXPECT_EQ(Rows[1].getRegisterLocations(), VerifyLocs);
 
   EXPECT_EQ(Rows[2].getAddress(), 0x1008u);
-  EXPECT_EQ(Rows[0].getCFAAddressSpace(), AddrSpace);
-  EXPECT_EQ(
-      Rows[2].getCFAValue(),
-      dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg2, CFAOff2));
+  EXPECT_EQ(Rows[2].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg2, CFAOff2,
+                                                              AddrSpace));
   EXPECT_EQ(Rows[2].getRegisterLocations().size(), 1u);
   EXPECT_EQ(Rows[2].getRegisterLocations(), VerifyLocs);
 
   EXPECT_EQ(Rows[3].getAddress(), 0x100cu);
-  EXPECT_EQ(Rows[0].getCFAAddressSpace(), AddrSpace);
-  EXPECT_EQ(
-      Rows[3].getCFAValue(),
-      dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg2, CFAOff1));
+  EXPECT_EQ(Rows[3].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg2, CFAOff1,
+                                                              AddrSpace));
   EXPECT_EQ(Rows[3].getRegisterLocations().size(), 1u);
   EXPECT_EQ(Rows[3].getRegisterLocations(), VerifyLocs);
 
   EXPECT_EQ(Rows[4].getAddress(), 0x1010u);
-  EXPECT_EQ(Rows[0].getCFAAddressSpace(), AddrSpace);
-  EXPECT_EQ(
-      Rows[4].getCFAValue(),
-      dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg1, CFAOff2));
+  EXPECT_EQ(Rows[4].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg1, CFAOff2,
+                                                              AddrSpace));
   EXPECT_EQ(Rows[4].getRegisterLocations().size(), 1u);
   EXPECT_EQ(Rows[4].getRegisterLocations(), VerifyLocs);
 }
