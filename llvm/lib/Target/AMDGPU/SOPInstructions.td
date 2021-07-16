@@ -706,6 +706,8 @@ class SOPK_Real<bits<5> op, SOPK_Pseudo ps> :
   let DisableEncoding    = ps.DisableEncoding;
   let Constraints        = ps.Constraints;
   let SchedRW            = ps.SchedRW;
+  let isBranch           = ps.isBranch;
+  let isCall             = ps.isCall;
 
   // encoding
   bits<7>  sdst;
