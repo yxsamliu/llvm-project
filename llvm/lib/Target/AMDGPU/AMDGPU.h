@@ -286,6 +286,9 @@ ModulePass *createAMDGPUPrintfRuntimeBinding();
 void initializeAMDGPUPrintfRuntimeBindingPass(PassRegistry&);
 extern char &AMDGPUPrintfRuntimeBindingID;
 
+void initializeAMDGPUResourceUsageAnalysisPass(PassRegistry &);
+extern char &AMDGPUResourceUsageAnalysisID;
+
 struct AMDGPUPrintfRuntimeBindingPass
     : PassInfoMixin<AMDGPUPrintfRuntimeBindingPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);

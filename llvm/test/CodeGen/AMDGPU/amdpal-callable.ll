@@ -147,10 +147,9 @@ attributes #0 = { nounwind }
 
 ; GCN: amdpal.pipelines:
 ; GCN-NEXT:  - .registers:
-; SDAG-NEXT:      0x2e12 (COMPUTE_PGM_RSRC1): 0xaf03cf{{$}}
-; SDAG-NEXT:      0x2e13 (COMPUTE_PGM_RSRC2): 0x8001{{$}}
-; GISEL-NEXT:      0x2e12 (COMPUTE_PGM_RSRC1): 0xaf03cf{{$}}
-; GISEL-NEXT:      0x2e13 (COMPUTE_PGM_RSRC2): 0x8001{{$}}
+; SDAG-NEXT:      0x2e12 (COMPUTE_PGM_RSRC1): 0xaf01ca{{$}}
+; GISEL-NEXT:      0x2e12 (COMPUTE_PGM_RSRC1): 0xaf01ca{{$}}
+; GCN-NEXT:      0x2e13 (COMPUTE_PGM_RSRC2): 0x8001{{$}}
 ; GCN-NEXT:    .shader_functions:
 ; GCN-NEXT:      dynamic_stack:
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
@@ -165,8 +164,7 @@ attributes #0 = { nounwind }
 ; GCN-NEXT:      no_stack_extern_call:
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
 ; GCN-NEXT:      no_stack_extern_call_many_args:
-; SDAG-NEXT:        .stack_frame_size_in_bytes: 0x90{{$}}
-; GISEL-NEXT:        .stack_frame_size_in_bytes: 0x90{{$}}
+; GCN-NEXT:        .stack_frame_size_in_bytes: 0x90{{$}}
 ; GCN-NEXT:      no_stack_indirect_call:
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
 ; GCN-NEXT:      simple_lds:
