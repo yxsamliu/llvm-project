@@ -375,6 +375,7 @@ static RETSIGTYPE SignalHandler(int Sig) {
   sigprocmask(SIG_UNBLOCK, &SigMask, nullptr);
 
   {
+    llvm::errs() << "Enter LLVM signal handler for signal " << Sig << "\n";
     RemoveFilesToRemove();
 
     if (Sig == SIGPIPE)
@@ -396,6 +397,10 @@ static RETSIGTYPE SignalHandler(int Sig) {
   // Otherwise if it is a fault (like SEGV) run any handler.
   llvm::sys::RunSignalHandlers();
 
+  // Call abort() to force a core dump.
+  if (Sig == SIGSEGV)
+    abort();
+
 #ifdef __s390__
   // On S/390, certain signals are delivered with PSW Address pointing to
   // *after* the faulting instruction.  Simply returning from the signal
@@ -407,6 +412,7 @@ static RETSIGTYPE SignalHandler(int Sig) {
 }
 
 static RETSIGTYPE InfoSignalHandler(int Sig) {
+  llvm::errs() << "Enter LLVM info signal handler for signal " << Sig << "\n";
   SaveAndRestore<int> SaveErrnoDuringASignalHandler(errno);
   if (SignalHandlerFunctionType CurrentInfoFunction = InfoSignalFunction)
     CurrentInfoFunction();

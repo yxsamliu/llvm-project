@@ -138,6 +138,7 @@ class Lexer : public PreprocessorLexer {
   void InitLexer(const char *BufStart, const char *BufPtr, const char *BufEnd);
 
 public:
+  void dump();
   /// Lexer constructor - Create a new lexer object for the specified buffer
   /// with the specified preprocessor managing the lexing process.  This lexer
   /// assumes that the associated file buffer and Preprocessor objects will

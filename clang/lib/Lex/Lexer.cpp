@@ -37,6 +37,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/NativeFormatting.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/UnicodeCharRanges.h"
 #include <algorithm>
 #include <cassert>
@@ -52,6 +53,33 @@ using namespace clang;
 //===----------------------------------------------------------------------===//
 // Token Class Implementation
 //===----------------------------------------------------------------------===//
+
+// Helper class for debugging Lexer crash issue.
+namespace {
+class LexerCrashDumper {
+  static Lexer *Lex;
+
+public:
+  LexerCrashDumper() { llvm::sys::AddSignalHandler(CrashHandler, nullptr); }
+  void log(Lexer *L) { Lex = L; }
+  static void CrashHandler(void *);
+};
+
+void LexerCrashDumper::CrashHandler(void *) {
+  if (Lex)
+    Lex->dump();
+}
+Lexer *LexerCrashDumper::Lex;
+static LexerCrashDumper LexCrashDumper;
+} // namespace
+
+void Lexer::dump() {
+  llvm::errs() << "\nLexer: " << this;
+  llvm::errs() << " BufferStart: " << (void*)BufferStart;
+  llvm::errs() << " BufferEnd: " << (void*)BufferEnd;
+  llvm::errs() << " BufferPtr: " << (void*)BufferPtr;
+  llvm::errs() << '\n';
+}
 
 /// isObjCAtKeyword - Return true if we have an ObjC keyword identifier.
 bool Token::isObjCAtKeyword(tok::ObjCKeywordKind objcKey) const {
@@ -3199,6 +3227,8 @@ bool Lexer::Lex(Token &Result) {
 /// token, not a normal token, as such, it is an internal interface.  It assumes
 /// that the Flags of result have been cleared before calling this.
 bool Lexer::LexTokenInternal(Token &Result, bool TokAtPhysicalStartOfLine) {
+  LexCrashDumper.log(this);
+
 LexNextToken:
   // New token, can't need cleaning yet.
   Result.clearFlag(Token::NeedsCleaning);
@@ -3206,7 +3236,7 @@ LexNextToken:
 
   // CurPtr - Cache BufferPtr in an automatic variable.
   const char *CurPtr = BufferPtr;
-
+  assert(BufferPtr && BufferStart <= BufferPtr && BufferPtr <= BufferEnd);
   // Small amounts of horizontal whitespace is very common between tokens.
   if (isHorizontalWhitespace(*CurPtr)) {
     do {
