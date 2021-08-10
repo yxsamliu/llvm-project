@@ -53,18 +53,15 @@ entry:
 	ret i32 %result
 }
 
-; If bitcast isn't considered a safe phi/select use, the alloca
-; remains as an array.
-; FIXME: Why isn't this identical to test2?
-
-; CHECK-LABEL: @test2_bitcast(
-; CHECK: alloca i32
-; CHECK-NEXT: alloca i32
-
-; CHECK: %select = select i1 %cond, i32* %a.sroa.3, i32* %a.sroa.0
-; CHECK-NEXT: %select.bc = bitcast i32* %select to float*
-; CHECK-NEXT: %result = load float, float* %select.bc, align 4
 define float @test2_bitcast() {
+; CHECK-LABEL: @test2_bitcast(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp sle i32 0, 1
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 1 to float
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 0 to float
+; CHECK-NEXT:    [[RESULT_SROA_SPECULATED:%.*]] = select i1 [[COND]], float [[TMP0]], float [[TMP1]]
+; CHECK-NEXT:    ret float [[RESULT_SROA_SPECULATED]]
+;
 entry:
   %a = alloca [2 x i32]
   %a0 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 0
