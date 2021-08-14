@@ -398,7 +398,7 @@ static RETSIGTYPE SignalHandler(int Sig) {
   llvm::sys::RunSignalHandlers();
 
   // Call abort() to force a core dump.
-  if (Sig == SIGSEGV)
+  if (Sig == SIGSEGV || Sig == SIGBUS)
     abort();
 
 #ifdef __s390__
