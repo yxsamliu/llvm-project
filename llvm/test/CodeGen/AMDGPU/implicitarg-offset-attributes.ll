@@ -69,23 +69,14 @@ define void @use_everything_else() {
 }
 
 define amdgpu_kernel void @test_default_queue_offset_v4_0(ptr addrspace(1) %kernarg) {
-; V4-LABEL: define {{[^@]+}}@test_default_queue_offset_v4_0
-; V4-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR2:[0-9]+]] {
-; V4-NEXT:    call void @use_everything_else()
-; V4-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; V4-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 32
-; V4-NEXT:    [[LOAD:%.*]] = load ptr, ptr addrspace(4) [[GEP]], align 8
-; V4-NEXT:    store ptr [[LOAD]], ptr addrspace(1) [[KERNARG]], align 8
-; V4-NEXT:    ret void
-;
-; V5-LABEL: define {{[^@]+}}@test_default_queue_offset_v4_0
-; V5-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR1]] {
-; V5-NEXT:    call void @use_everything_else()
-; V5-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; V5-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 32
-; V5-NEXT:    [[LOAD:%.*]] = load ptr, ptr addrspace(4) [[GEP]], align 8
-; V5-NEXT:    store ptr [[LOAD]], ptr addrspace(1) [[KERNARG]], align 8
-; V5-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@test_default_queue_offset_v4_0
+; CHECK-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    call void @use_everything_else()
+; CHECK-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 32
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr addrspace(4) [[GEP]], align 8
+; CHECK-NEXT:    store ptr [[LOAD]], ptr addrspace(1) [[KERNARG]], align 8
+; CHECK-NEXT:    ret void
 ;
   call void @use_everything_else()
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -96,23 +87,14 @@ define amdgpu_kernel void @test_default_queue_offset_v4_0(ptr addrspace(1) %kern
 }
 
 define amdgpu_kernel void @test_default_queue_offset_v5_0(ptr addrspace(1) %kernarg) {
-; V4-LABEL: define {{[^@]+}}@test_default_queue_offset_v5_0
-; V4-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR3:[0-9]+]] {
-; V4-NEXT:    call void @use_everything_else()
-; V4-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; V4-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 104
-; V4-NEXT:    [[LOAD:%.*]] = load ptr, ptr addrspace(4) [[GEP]], align 8
-; V4-NEXT:    store ptr [[LOAD]], ptr addrspace(1) [[KERNARG]], align 8
-; V4-NEXT:    ret void
-;
-; V5-LABEL: define {{[^@]+}}@test_default_queue_offset_v5_0
-; V5-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR2:[0-9]+]] {
-; V5-NEXT:    call void @use_everything_else()
-; V5-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; V5-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 104
-; V5-NEXT:    [[LOAD:%.*]] = load ptr, ptr addrspace(4) [[GEP]], align 8
-; V5-NEXT:    store ptr [[LOAD]], ptr addrspace(1) [[KERNARG]], align 8
-; V5-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@test_default_queue_offset_v5_0
+; CHECK-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    call void @use_everything_else()
+; CHECK-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 104
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr addrspace(4) [[GEP]], align 8
+; CHECK-NEXT:    store ptr [[LOAD]], ptr addrspace(1) [[KERNARG]], align 8
+; CHECK-NEXT:    ret void
 ;
   call void @use_everything_else()
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -123,23 +105,14 @@ define amdgpu_kernel void @test_default_queue_offset_v5_0(ptr addrspace(1) %kern
 }
 
 define amdgpu_kernel void @test_completion_action_offset_v4_0(ptr addrspace(1) %kernarg) {
-; V4-LABEL: define {{[^@]+}}@test_completion_action_offset_v4_0
-; V4-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR4:[0-9]+]] {
-; V4-NEXT:    call void @use_everything_else()
-; V4-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; V4-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 40
-; V4-NEXT:    [[LOAD:%.*]] = load ptr, ptr addrspace(4) [[GEP]], align 8
-; V4-NEXT:    store ptr [[LOAD]], ptr addrspace(1) [[KERNARG]], align 8
-; V4-NEXT:    ret void
-;
-; V5-LABEL: define {{[^@]+}}@test_completion_action_offset_v4_0
-; V5-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR1]] {
-; V5-NEXT:    call void @use_everything_else()
-; V5-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; V5-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 40
-; V5-NEXT:    [[LOAD:%.*]] = load ptr, ptr addrspace(4) [[GEP]], align 8
-; V5-NEXT:    store ptr [[LOAD]], ptr addrspace(1) [[KERNARG]], align 8
-; V5-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@test_completion_action_offset_v4_0
+; CHECK-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:    call void @use_everything_else()
+; CHECK-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 40
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr addrspace(4) [[GEP]], align 8
+; CHECK-NEXT:    store ptr [[LOAD]], ptr addrspace(1) [[KERNARG]], align 8
+; CHECK-NEXT:    ret void
 ;
   call void @use_everything_else()
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -151,7 +124,8 @@ define amdgpu_kernel void @test_completion_action_offset_v4_0(ptr addrspace(1) %
 
 define amdgpu_kernel void @test_completion_action_offset_v5_0(ptr addrspace(1) %kernarg) {
 ; CHECK-LABEL: define {{[^@]+}}@test_completion_action_offset_v5_0
-; CHECK-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR3:[0-9]+]] {
+; V4-CHECK-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR3]] {
+; V5-CHECK-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    call void @use_everything_else()
 ; CHECK-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 112
@@ -168,23 +142,14 @@ define amdgpu_kernel void @test_completion_action_offset_v5_0(ptr addrspace(1) %
 }
 
 define amdgpu_kernel void @test_default_queue_completion_action_offset_v3_0(ptr addrspace(1) %kernarg) {
-; V4-LABEL: define {{[^@]+}}@test_default_queue_completion_action_offset_v3_0
-; V4-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR5:[0-9]+]] {
-; V4-NEXT:    call void @use_everything_else()
-; V4-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; V4-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 32
-; V4-NEXT:    [[LOAD:%.*]] = load <2 x ptr>, ptr addrspace(4) [[GEP]], align 16
-; V4-NEXT:    store <2 x ptr> [[LOAD]], ptr addrspace(1) [[KERNARG]], align 16
-; V4-NEXT:    ret void
-;
-; V5-LABEL: define {{[^@]+}}@test_default_queue_completion_action_offset_v3_0
-; V5-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR1]] {
-; V5-NEXT:    call void @use_everything_else()
-; V5-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; V5-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 32
-; V5-NEXT:    [[LOAD:%.*]] = load <2 x ptr>, ptr addrspace(4) [[GEP]], align 16
-; V5-NEXT:    store <2 x ptr> [[LOAD]], ptr addrspace(1) [[KERNARG]], align 16
-; V5-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@test_default_queue_completion_action_offset_v3_0
+; CHECK-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-NEXT:    call void @use_everything_else()
+; CHECK-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 32
+; CHECK-NEXT:    [[LOAD:%.*]] = load <2 x ptr>, ptr addrspace(4) [[GEP]], align 16
+; CHECK-NEXT:    store <2 x ptr> [[LOAD]], ptr addrspace(1) [[KERNARG]], align 16
+; CHECK-NEXT:    ret void
 ;
   call void @use_everything_else()
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -195,23 +160,15 @@ define amdgpu_kernel void @test_default_queue_completion_action_offset_v3_0(ptr 
 }
 
 define amdgpu_kernel void @test_default_queue_completion_action_offset_v5_0(ptr addrspace(1) %kernarg) {
-; V4-LABEL: define {{[^@]+}}@test_default_queue_completion_action_offset_v5_0
-; V4-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR3]] {
-; V4-NEXT:    call void @use_everything_else()
-; V4-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; V4-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 104
-; V4-NEXT:    [[LOAD:%.*]] = load <2 x ptr>, ptr addrspace(4) [[GEP]], align 16
-; V4-NEXT:    store <2 x ptr> [[LOAD]], ptr addrspace(1) [[KERNARG]], align 16
-; V4-NEXT:    ret void
-;
-; V5-LABEL: define {{[^@]+}}@test_default_queue_completion_action_offset_v5_0
-; V5-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR4:[0-9]+]] {
-; V5-NEXT:    call void @use_everything_else()
-; V5-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; V5-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 104
-; V5-NEXT:    [[LOAD:%.*]] = load <2 x ptr>, ptr addrspace(4) [[GEP]], align 16
-; V5-NEXT:    store <2 x ptr> [[LOAD]], ptr addrspace(1) [[KERNARG]], align 16
-; V5-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@test_default_queue_completion_action_offset_v5_0
+; V4-CHECK-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR3]] {
+; V5-CHECK-SAME: (ptr addrspace(1) [[KERNARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    call void @use_everything_else()
+; CHECK-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 104
+; CHECK-NEXT:    [[LOAD:%.*]] = load <2 x ptr>, ptr addrspace(4) [[GEP]], align 16
+; CHECK-NEXT:    store <2 x ptr> [[LOAD]], ptr addrspace(1) [[KERNARG]], align 16
+; CHECK-NEXT:    ret void
 ;
 
   call void @use_everything_else()%implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -228,13 +185,11 @@ attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memo
 ; V4: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; V4: attributes #[[ATTR1]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
 ; V4: attributes #[[ATTR2]] = { "amdgpu-no-completion-action" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
-; V4: attributes #[[ATTR3]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
-; V4: attributes #[[ATTR4]] = { "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
-; V4: attributes #[[ATTR5]] = { "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
 ;.
 ; V5: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; V5: attributes #[[ATTR1]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
-; V5: attributes #[[ATTR2]] = { "amdgpu-no-completion-action" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
-; V5: attributes #[[ATTR3]] = { "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
-; V5: attributes #[[ATTR4]] = { "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
+; V5: attributes #[[ATTR2]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
+; V5: attributes #[[ATTR3]] = { "amdgpu-no-completion-action" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-multigrid-sync-arg" "uniform-work-group-size"="false" }
 ;.
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; V4: {{.*}}
+; V5: {{.*}}

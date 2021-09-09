@@ -43,8 +43,8 @@ join:                                             ; preds = %new, %old
 ; through the select to maintain a set of indices, so that it can precisely
 ; determine that hostcall and other expensive implicit args are not in use.
 
-; CHECK: hidden_hostcall_buffer
-; CHECK: hidden_multigrid_sync_arg
+; CHECK-NOT: hidden_hostcall_buffer
+; CHECK-NOT: hidden_multigrid_sync_arg
 ; CHECK-LABEL: .name:           kernel_2
 
 define amdgpu_kernel void @kernel_2(ptr addrspace(1) %a, i1 %cond)  {

@@ -4,7 +4,7 @@
 
 ; Test with gfx803 so that
 ; addrspacecast/llvm.amdgcn.is.shared/llvm.amdgcn.is.private require
-; the queue ptr.  Tests with code object v3 to test
+; the queue ptr.  Tests with code object v3 and above to test
 ; llvm.trap/llvm.debugtrap that require the queue ptr.
 
 
