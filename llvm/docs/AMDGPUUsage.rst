@@ -15,6 +15,7 @@ User Guide for AMDGPU Backend
    AMDGPU/AMDGPUAsmGFX904
    AMDGPU/AMDGPUAsmGFX906
    AMDGPU/AMDGPUAsmGFX908
+   AMDGPU/AMDGPUAsmGFX90a
    AMDGPU/AMDGPUAsmGFX10
    AMDGPU/AMDGPUAsmGFX1011
    AMDGPUModifierSyntax
@@ -317,7 +318,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                                         Add product
                                                                                                         names.
 
-     **GCN GFX9 (Vega)** [AMD-GCN-GFX9]_
+     **GCN GFX9 (Vega)** [AMD-GCN-GFX9]_ [AMD-GCN-GFX908-CDNA1]_
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx900``                  ``amdgcn``   dGPU  - xnack           - Absolute      - *rocm-amdhsa* - Radeon Vega
                                                                         flat          - *pal-amdhsa*    Frontier Edition
@@ -340,7 +341,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                     - xnack             flat          - *pal-amdhsa*  - Radeon Instinct MI60
                                                                         scratch       - *pal-amdpal*  - Radeon VII
                                                                                                       - Radeon Pro VII
-     ``gfx908``                  ``amdgcn``   dGPU  - sramecc                         - *rocm-amdhsa* - Radeon Instinct MI100 Accelerator
+     ``gfx908``                  ``amdgcn``   dGPU  - sramecc                         - *rocm-amdhsa* - AMD Instinct MI100 Accelerator
                                                     - xnack           - Absolute
                                                                         flat
                                                                         scratch
@@ -1292,7 +1293,7 @@ are deprecated and should not be used.
   Specifies the code object version number. The description field has the
   following layout:
 
-  .. code::
+  .. code:: c
 
     struct amdgpu_hsa_note_code_object_version_s {
       uint32_t major_version;
@@ -1305,7 +1306,7 @@ are deprecated and should not be used.
   Specifies the HSAIL properties used by the HSAIL Finalizer. The description
   field has the following layout:
 
-  .. code::
+  .. code:: c
 
     struct amdgpu_hsa_note_hsail_s {
       uint32_t hsail_major_version;
@@ -1318,7 +1319,7 @@ are deprecated and should not be used.
 ``NT_AMD_HSA_ISA_VERSION``
   Specifies the target ISA version. The description field has the following layout:
 
-  .. code::
+  .. code:: c
 
     struct amdgpu_hsa_note_isa_s {
       uint16_t vendor_name_size;
@@ -1380,34 +1381,35 @@ are deprecated and should not be used.
   .. table:: AMDGPU Code Object V2 Supported Processors and Fixed Target Feature Settings
      :name: amdgpu-elf-note-record-supported_processors-v2-table
 
-     ==================== ==========================
-     Note Record ISA Name Target ID
-     ==================== ==========================
-     ``AMD:AMDGPU:6:0:0`` ``gfx600``
-     ``AMD:AMDGPU:6:0:1`` ``gfx601``
-     ``AMD:AMDGPU:6:0:2`` ``gfx602``
-     ``AMD:AMDGPU:7:0:0`` ``gfx700``
-     ``AMD:AMDGPU:7:0:1`` ``gfx701``
-     ``AMD:AMDGPU:7:0:2`` ``gfx702``
-     ``AMD:AMDGPU:7:0:3`` ``gfx703``
-     ``AMD:AMDGPU:7:0:4`` ``gfx704``
-     ``AMD:AMDGPU:7:0:5`` ``gfx705``
-     ``AMD:AMDGPU:8:0:0`` ``gfx802``
-     ``AMD:AMDGPU:8:0:1`` ``gfx801:xnack+``
-     ``AMD:AMDGPU:8:0:2`` ``gfx802``
-     ``AMD:AMDGPU:8:0:3`` ``gfx803``
-     ``AMD:AMDGPU:8:0:4`` ``gfx803``
-     ``AMD:AMDGPU:8:0:5`` ``gfx805``
-     ``AMD:AMDGPU:8:1:0`` ``gfx810:xnack+``
-     ``AMD:AMDGPU:9:0:0`` ``gfx900:xnack-``
-     ``AMD:AMDGPU:9:0:1`` ``gfx900:xnack+``
-     ``AMD:AMDGPU:9:0:2`` ``gfx902:xnack-``
-     ``AMD:AMDGPU:9:0:3`` ``gfx902:xnack+``
-     ``AMD:AMDGPU:9:0:4`` ``gfx904:xnack-``
-     ``AMD:AMDGPU:9:0:5`` ``gfx904:xnack+``
-     ``AMD:AMDGPU:9:0:6`` ``gfx906:sramecc-:xnack-``
-     ``AMD:AMDGPU:9:0:7`` ``gfx906:sramecc-:xnack+``
-     ==================== ==========================
+     ===================== ==========================
+     Note Record ISA Name  Target ID
+     ===================== ==========================
+     ``AMD:AMDGPU:6:0:0``  ``gfx600``
+     ``AMD:AMDGPU:6:0:1``  ``gfx601``
+     ``AMD:AMDGPU:6:0:2``  ``gfx602``
+     ``AMD:AMDGPU:7:0:0``  ``gfx700``
+     ``AMD:AMDGPU:7:0:1``  ``gfx701``
+     ``AMD:AMDGPU:7:0:2``  ``gfx702``
+     ``AMD:AMDGPU:7:0:3``  ``gfx703``
+     ``AMD:AMDGPU:7:0:4``  ``gfx704``
+     ``AMD:AMDGPU:7:0:5``  ``gfx705``
+     ``AMD:AMDGPU:8:0:0``  ``gfx802``
+     ``AMD:AMDGPU:8:0:1``  ``gfx801:xnack+``
+     ``AMD:AMDGPU:8:0:2``  ``gfx802``
+     ``AMD:AMDGPU:8:0:3``  ``gfx803``
+     ``AMD:AMDGPU:8:0:4``  ``gfx803``
+     ``AMD:AMDGPU:8:0:5``  ``gfx805``
+     ``AMD:AMDGPU:8:1:0``  ``gfx810:xnack+``
+     ``AMD:AMDGPU:9:0:0``  ``gfx900:xnack-``
+     ``AMD:AMDGPU:9:0:1``  ``gfx900:xnack+``
+     ``AMD:AMDGPU:9:0:2``  ``gfx902:xnack-``
+     ``AMD:AMDGPU:9:0:3``  ``gfx902:xnack+``
+     ``AMD:AMDGPU:9:0:4``  ``gfx904:xnack-``
+     ``AMD:AMDGPU:9:0:5``  ``gfx904:xnack+``
+     ``AMD:AMDGPU:9:0:6``  ``gfx906:sramecc-:xnack-``
+     ``AMD:AMDGPU:9:0:7``  ``gfx906:sramecc-:xnack+``
+     ``AMD:AMDGPU:9:0:12`` ``gfx90c:xnack-``
+     ===================== ==========================
 
 .. _amdgpu-note-records-v3-v4:
 
@@ -11517,6 +11519,8 @@ in this description.
 
                                         :doc:`gfx909<AMDGPU/AMDGPUAsmGFX900>`
 
+                                        :doc:`gfx90a<AMDGPU/AMDGPUAsmGFX90a>`
+
     :doc:`GFX10<AMDGPU/AMDGPUAsmGFX10>` :doc:`gfx1011<AMDGPU/AMDGPUAsmGFX1011>`
 
                                         :doc:`gfx1012<AMDGPU/AMDGPUAsmGFX1011>`
@@ -11525,7 +11529,7 @@ in this description.
 For more information about instructions, their semantics and supported
 combinations of operands, refer to one of instruction set architecture manuals
 [AMD-GCN-GFX6]_, [AMD-GCN-GFX7]_, [AMD-GCN-GFX8]_, [AMD-GCN-GFX9]_,
-[AMD-GCN-GFX10-RDNA1]_ and [AMD-GCN-GFX10-RDNA2]_.
+[AMD-GCN-GFX908-CDNA1]_, [AMD-GCN-GFX10-RDNA1]_ and [AMD-GCN-GFX10-RDNA2]_.
 
 Operands
 ~~~~~~~~
@@ -12267,9 +12271,10 @@ Additional Documentation
 .. [AMD-GCN-GFX6] `AMD Southern Islands Series ISA <http://developer.amd.com/wordpress/media/2012/12/AMD_Southern_Islands_Instruction_Set_Architecture.pdf>`__
 .. [AMD-GCN-GFX7] `AMD Sea Islands Series ISA <http://developer.amd.com/wordpress/media/2013/07/AMD_Sea_Islands_Instruction_Set_Architecture.pdf>`_
 .. [AMD-GCN-GFX8] `AMD GCN3 Instruction Set Architecture <http://amd-dev.wpengine.netdna-cdn.com/wordpress/media/2013/12/AMD_GCN3_Instruction_Set_Architecture_rev1.1.pdf>`__
-.. [AMD-GCN-GFX9] `AMD "Vega" Instruction Set Architecture <http://developer.amd.com/wordpress/media/2013/12/Vega_Shader_ISA_28July2017.pdf>`__
-.. [AMD-GCN-GFX10-RDNA1] `AMD "RDNA 1.0" Instruction Set Architecture <https://gpuopen.com/wp-content/uploads/2019/08/RDNA_Shader_ISA_5August2019.pdf>`__
-.. [AMD-GCN-GFX10-RDNA2] `AMD "RDNA 2" Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA2_Shader_ISA_November2020.pdf>`__
+.. [AMD-GCN-GFX9] `AMD Vega Instruction Set Architecture <http://developer.amd.com/wordpress/media/2013/12/Vega_Shader_ISA_28July2017.pdf>`__
+.. [AMD-GCN-GFX908-CDNA1] `AMD Instinct MI100 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/CDNA1_Shader_ISA_14December2020.pdf>`__
+.. [AMD-GCN-GFX10-RDNA1] `AMD RDNA 1.0 Instruction Set Architecture <https://gpuopen.com/wp-content/uploads/2019/08/RDNA_Shader_ISA_5August2019.pdf>`__
+.. [AMD-GCN-GFX10-RDNA2] `AMD RDNA 2 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA2_Shader_ISA_November2020.pdf>`__
 .. [AMD-RADEON-HD-2000-3000] `AMD R6xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R600_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-4000] `AMD R7xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R700-Family_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-5000] `AMD Evergreen shader ISA <http://developer.amd.com/wordpress/media/2012/10/AMD_Evergreen-Family_Instruction_Set_Architecture.pdf>`__

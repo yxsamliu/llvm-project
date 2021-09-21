@@ -160,16 +160,27 @@ declare void @undef_func()
 ; GCN908: NumVgprs: 128
 ; GCN90A: NumVgprs: 256
 ; GCN:    NumAgprs: 32
-; GFX908: TotalNumVgprs: 32
 ; GFX90A: TotalNumVgprs: 64
-; GFX908: VGPRBlocks: 7
+; GFX90A: ScratchSize: 16384
+; GFX90A: MemoryBound: 0
+; GFX90A: FloatMode: 240
+; GFX90A: IeeeMode: 1
+; GFX90A: LDSByteSize: 0 bytes/workgroup (compile time only)
+; GFX90A: SGPRBlocks: 4
 ; GFX90A: VGPRBlocks: 7
-; GFX908: NumVGPRsForWavesPerEU: 32
+; GFX90A: NumSGPRsForWavesPerEU: 39
 ; GFX90A: NumVGPRsForWavesPerEU: 64
-; GFX90A: AccumOffset: 32
-; GFX908: Occupancy: 8
 ; GFX90A: Occupancy: 8
+; GFX90A: WaveLimiterHint : 0
+; GFX90A: COMPUTE_PGM_RSRC2:SCRATCH_EN: 1
+; GFX90A: COMPUTE_PGM_RSRC2:USER_SGPR: 6
+; GFX90A: COMPUTE_PGM_RSRC2:TRAP_HANDLER: 0
+; GFX90A: COMPUTE_PGM_RSRC2:TGID_X_EN: 1
+; GFX90A: COMPUTE_PGM_RSRC2:TGID_Y_EN: 0
+; GFX90A: COMPUTE_PGM_RSRC2:TGID_Z_EN: 0
+; GFX90A: COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: 0
 ; GFX90A: COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: 7
+; GFX90A: COMPUTE_PGM_RSRC3_GFX90A:TG_SPLIT: 0
 define amdgpu_kernel void @kernel_call_undef_func() #0 {
 bb:
   call void @undef_func()

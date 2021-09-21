@@ -46,8 +46,8 @@ using namespace lldb_private;
 class OptionGroupReadMemory : public OptionGroup {
 public:
   OptionGroupReadMemory()
-      : m_num_per_line(1, 1), m_output_as_binary(false), m_view_as_type(),
-        m_offset(0, 0), m_language_for_type(eLanguageTypeUnknown) {}
+      : m_num_per_line(1, 1), m_view_as_type(), m_offset(0, 0),
+        m_language_for_type(eLanguageTypeUnknown) {}
 
   ~OptionGroupReadMemory() override = default;
 
@@ -270,7 +270,7 @@ public:
   }
 
   OptionValueUInt64 m_num_per_line;
-  bool m_output_as_binary;
+  bool m_output_as_binary = false;
   OptionValueString m_view_as_type;
   bool m_force;
   OptionValueUInt64 m_offset;
@@ -669,8 +669,8 @@ protected:
       }
 
       Address address(addr, nullptr);
-      bytes_read = target->ReadMemory(address, false, data_sp->GetBytes(),
-                                      data_sp->GetByteSize(), error);
+      bytes_read = target->ReadMemory(address, data_sp->GetBytes(),
+                                      data_sp->GetByteSize(), error, true);
       if (bytes_read == 0) {
         const char *error_cstr = error.AsCString();
         if (error_cstr && error_cstr[0]) {

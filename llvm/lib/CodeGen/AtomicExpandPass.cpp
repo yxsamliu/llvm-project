@@ -79,6 +79,7 @@ namespace {
     StoreInst *convertAtomicStoreToIntegerType(StoreInst *SI);
     bool expandAtomicStore(StoreInst *SI);
     bool tryExpandAtomicRMW(AtomicRMWInst *AI);
+    AtomicRMWInst *convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI);
     Value *
     insertRMWLLSCLoop(IRBuilder<> &Builder, Type *ResultTy, Value *Addr,
                       Align AddrAlign, AtomicOrdering MemOpOrder,
@@ -236,12 +237,13 @@ bool AtomicExpand::runOnFunction(Function &F) {
                  TLI->shouldExpandAtomicCmpXchgInIR(CASI) ==
                      TargetLoweringBase::AtomicExpansionKind::None &&
                  (isReleaseOrStronger(CASI->getSuccessOrdering()) ||
-                  isAcquireOrStronger(CASI->getSuccessOrdering()))) {
+                  isAcquireOrStronger(CASI->getSuccessOrdering()) ||
+                  isAcquireOrStronger(CASI->getFailureOrdering()))) {
         // If a compare and swap is lowered to LL/SC, we can do smarter fence
         // insertion, with a stronger one on the success path than on the
         // failure path. As a result, fence insertion is directly done by
         // expandAtomicCmpXchg in that case.
-        FenceOrdering = CASI->getSuccessOrdering();
+        FenceOrdering = CASI->getMergedOrdering();
         CASI->setSuccessOrdering(AtomicOrdering::Monotonic);
         CASI->setFailureOrdering(AtomicOrdering::Monotonic);
       }
@@ -282,9 +284,18 @@ bool AtomicExpand::runOnFunction(Function &F) {
       if (isIdempotentRMW(RMWI) && simplifyIdempotentRMW(RMWI)) {
         MadeChange = true;
       } else {
+        AtomicRMWInst::BinOp Op = RMWI->getOperation();
+        if (Op == AtomicRMWInst::Xchg &&
+            RMWI->getValOperand()->getType()->isFloatingPointTy()) {
+          // TODO: add a TLI hook to control this so that each target can
+          // convert to lowering the original type one at a time.
+          RMWI = convertAtomicXchgToIntegerType(RMWI);
+          assert(RMWI->getValOperand()->getType()->isIntegerTy() &&
+                 "invariant broken");
+          MadeChange = true;
+        }
         unsigned MinCASSize = TLI->getMinCmpXchgSizeInBits() / 8;
         unsigned ValueSize = getAtomicOpSize(RMWI);
-        AtomicRMWInst::BinOp Op = RMWI->getOperation();
         if (ValueSize < MinCASSize &&
             (Op == AtomicRMWInst::Or || Op == AtomicRMWInst::Xor ||
              Op == AtomicRMWInst::And)) {
@@ -364,6 +375,32 @@ LoadInst *AtomicExpand::convertAtomicLoadToIntegerType(LoadInst *LI) {
   return NewLI;
 }
 
+AtomicRMWInst *
+AtomicExpand::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
+  auto *M = RMWI->getModule();
+  Type *NewTy =
+      getCorrespondingIntegerType(RMWI->getType(), M->getDataLayout());
+
+  IRBuilder<> Builder(RMWI);
+
+  Value *Addr = RMWI->getPointerOperand();
+  Value *Val = RMWI->getValOperand();
+  Type *PT = PointerType::get(NewTy, RMWI->getPointerAddressSpace());
+  Value *NewAddr = Builder.CreateBitCast(Addr, PT);
+  Value *NewVal = Builder.CreateBitCast(Val, NewTy);
+
+  auto *NewRMWI =
+      Builder.CreateAtomicRMW(AtomicRMWInst::Xchg, NewAddr, NewVal,
+                              RMWI->getAlign(), RMWI->getOrdering());
+  NewRMWI->setVolatile(RMWI->isVolatile());
+  LLVM_DEBUG(dbgs() << "Replaced " << *RMWI << " with " << *NewRMWI << "\n");
+
+  Value *NewRVal = Builder.CreateBitCast(NewRMWI, RMWI->getType());
+  RMWI->replaceAllUsesWith(NewRVal);
+  RMWI->eraseFromParent();
+  return NewRMWI;
+}
+
 bool AtomicExpand::tryExpandAtomicLoad(LoadInst *LI) {
   switch (TLI->shouldExpandAtomicLoadInIR(LI)) {
   case TargetLoweringBase::AtomicExpansionKind::None:
@@ -406,7 +443,7 @@ bool AtomicExpand::expandAtomicLoadToCmpXchg(LoadInst *LI) {
     Order = AtomicOrdering::Monotonic;
 
   Value *Addr = LI->getPointerOperand();
-  Type *Ty = cast<PointerType>(Addr->getType())->getElementType();
+  Type *Ty = LI->getType();
   Constant *DummyVal = Constant::getNullValue(Ty);
 
   Value *Pair = Builder.CreateAtomicCmpXchg(
@@ -1031,7 +1068,7 @@ void AtomicExpand::expandAtomicCmpXchgToMaskedIntrinsic(AtomicCmpXchgInst *CI) {
       "NewVal_Shifted");
   Value *OldVal = TLI->emitMaskedAtomicCmpXchgIntrinsic(
       Builder, CI, PMV.AlignedAddr, CmpVal_Shifted, NewVal_Shifted, PMV.Mask,
-      CI->getSuccessOrdering());
+      CI->getMergedOrdering());
   Value *FinalOldVal = extractMaskedValue(Builder, OldVal, PMV);
   Value *Res = UndefValue::get(CI->getType());
   Res = Builder.CreateInsertValue(Res, FinalOldVal, 0);
@@ -1146,8 +1183,9 @@ bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   // care of everything. Otherwise, emitLeading/TrailingFence are no-op and we
   // should preserve the ordering.
   bool ShouldInsertFencesForAtomic = TLI->shouldInsertFencesForAtomic(CI);
-  AtomicOrdering MemOpOrder =
-      ShouldInsertFencesForAtomic ? AtomicOrdering::Monotonic : SuccessOrder;
+  AtomicOrdering MemOpOrder = ShouldInsertFencesForAtomic
+                                  ? AtomicOrdering::Monotonic
+                                  : CI->getMergedOrdering();
 
   // In implementations which use a barrier to achieve release semantics, we can
   // delay emitting this barrier until we know a store is actually going to be

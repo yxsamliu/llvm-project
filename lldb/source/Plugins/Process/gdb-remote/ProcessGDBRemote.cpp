@@ -8,8 +8,8 @@
 
 #include "lldb/Host/Config.h"
 
-#include <errno.h>
-#include <stdlib.h>
+#include <cerrno>
+#include <cstdlib>
 #if LLDB_ENABLE_POSIX
 #include <netinet/in.h>
 #include <sys/mman.h>
@@ -20,8 +20,8 @@
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
 #endif
+#include <ctime>
 #include <sys/types.h>
-#include <time.h>
 
 #include <algorithm>
 #include <csignal>
@@ -1040,6 +1040,12 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
              "host architecture {0} {1}",
              process_arch.GetArchitectureName(),
              process_arch.GetTriple().getTriple());
+  }
+
+  if (int addresssable_bits = m_gdb_comm.GetAddressingBits()) {
+    lldb::addr_t address_mask = ~((1ULL << addresssable_bits) - 1);
+    SetCodeAddressMask(address_mask);
+    SetDataAddressMask(address_mask);
   }
 
   if (process_arch.IsValid()) {
@@ -3683,12 +3689,25 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
             __FUNCTION__, arg, process->GetID());
 
   EventSP event_sp;
+
+  // We need to ignore any packets that come in after we have
+  // have decided the process has exited.  There are some
+  // situations, for instance when we try to interrupt a running
+  // process and the interrupt fails, where another packet might
+  // get delivered after we've decided to give up on the process.
+  // But once we've decided we are done with the process we will
+  // not be in a state to do anything useful with new packets.
+  // So it is safer to simply ignore any remaining packets by
+  // explicitly checking for eStateExited before reentering the
+  // fetch loop.
+  
   bool done = false;
-  while (!done) {
+  while (!done && process->GetPrivateState() != eStateExited) {
     LLDB_LOGF(log,
               "ProcessGDBRemote::%s (arg = %p, pid = %" PRIu64
               ") listener.WaitForEvent (NULL, event_sp)...",
               __FUNCTION__, arg, process->GetID());
+
     if (process->m_async_listener_sp->GetEvent(event_sp, llvm::None)) {
       const uint32_t event_type = event_sp->GetType();
       if (event_sp->BroadcasterIs(&process->m_async_broadcaster)) {
@@ -3787,6 +3806,7 @@ thread_result_t ProcessGDBRemote::AsyncThread(void *arg) {
                 } else {
                   process->SetExitStatus(-1, "lost connection");
                 }
+                done = true;
                 break;
               }
 
