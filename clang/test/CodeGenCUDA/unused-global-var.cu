@@ -17,10 +17,10 @@
 
 // Check unused device/constant variables are eliminated.
 
-// NEGCHK-NOT: @v1
+// CHECK_DAG: @v1
 __device__ int v1;
 
-// NEGCHK-NOT: @v2
+// CHECK_DAG: @v2
 __constant__ int v2;
 
 // NEGCHK-NOT: @_ZL2v3

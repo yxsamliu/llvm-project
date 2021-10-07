@@ -17,10 +17,10 @@
 
 // Check device variables used by neither host nor device functioins are not kept.
 
-// DEV-NEG-NOT: @v1
+// DEV-DAG: @v1
 __device__ int v1;
 
-// DEV-NEG-NOT: @v2
+// DEV-DAG: @v2
 __constant__ int v2;
 
 // DEV-NEG-NOT: @_ZL2v3
