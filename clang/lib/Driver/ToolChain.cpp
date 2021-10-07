@@ -114,10 +114,14 @@ bool ToolChain::isNoExecStackDefault() const {
     return false;
 }
 
-const SanitizerArgs& ToolChain::getSanitizerArgs() const {
-  if (!SanitizerArguments.get())
-    SanitizerArguments.reset(new SanitizerArgs(*this, Args));
-  return *SanitizerArguments.get();
+SanitizerArgs
+ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const {
+  if (!SanitizerArgsChecked) {
+    SanitizerArgs SanArgs(*this, JobArgs);
+    SanitizerArgsChecked = true;
+    return SanArgs;
+  }
+  return SanitizerArgs(*this, JobArgs, /*DiagnoseErrors=*/false);
 }
 
 const XRayArgs& ToolChain::getXRayArgs() const {
