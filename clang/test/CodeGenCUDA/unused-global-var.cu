@@ -15,13 +15,13 @@
 // DCE before internalization. This test makes sure unused global variables
 // are eliminated.
 
-// Check unused device/constant variables are eliminated.
-
-// CHECK_DAG: @v1
+// CHECK-DAG: @v1
 __device__ int v1;
 
-// CHECK_DAG: @v2
+// CHECK-DAG: @v2
 __constant__ int v2;
+
+// Check unused device/constant variables are eliminated.
 
 // NEGCHK-NOT: @_ZL2v3
 constexpr int v3 = 1;
