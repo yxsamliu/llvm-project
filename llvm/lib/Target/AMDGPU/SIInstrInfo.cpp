@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -2222,15 +2223,17 @@ MachineBasicBlock *SIInstrInfo::getBranchDestBlock(
   return MI.getOperand(0).getMBB();
 }
 
-unsigned SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
-                                           MachineBasicBlock &DestBB,
-                                           const DebugLoc &DL,
-                                           int64_t BrOffset,
-                                           RegScavenger *RS) const {
+void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
+                                       MachineBasicBlock &DestBB,
+                                       MachineBasicBlock &RestoreBB,
+                                       const DebugLoc &DL, int64_t BrOffset,
+                                       RegScavenger *RS) const {
   assert(RS && "RegScavenger required for long branching");
   assert(MBB.empty() &&
          "new block should be inserted for expanding unconditional branch");
   assert(MBB.pred_size() == 1);
+  assert(RestoreBB.empty() &&
+         "restore block should be inserted for restoring clobbered registers");
 
   MachineFunction *MF = MBB.getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -2245,27 +2248,23 @@ unsigned SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   // s_getpc_b64. Insert pc arithmetic code before last terminator.
   MachineInstr *GetPC = BuildMI(MBB, I, DL, get(AMDGPU::S_GETPC_B64), PCReg);
 
-  // TODO: Handle > 32-bit block address.
-  if (BrOffset >= 0) {
-    BuildMI(MBB, I, DL, get(AMDGPU::S_ADD_U32))
+  auto &MCCtx = MF->getContext();
+  MCSymbol *PostGetPCLabel =
+      MCCtx.createTempSymbol("post_getpc", /*AlwaysAddSuffix=*/true);
+  GetPC->setPostInstrSymbol(*MF, PostGetPCLabel);
+
+  MCSymbol *OffsetLo =
+      MCCtx.createTempSymbol("offset_lo", /*AlwaysAddSuffix=*/true);
+  MCSymbol *OffsetHi =
+      MCCtx.createTempSymbol("offset_hi", /*AlwaysAddSuffix=*/true);
+  BuildMI(MBB, I, DL, get(AMDGPU::S_ADD_U32))
       .addReg(PCReg, RegState::Define, AMDGPU::sub0)
       .addReg(PCReg, 0, AMDGPU::sub0)
-      .addMBB(&DestBB, MO_LONG_BRANCH_FORWARD);
-    BuildMI(MBB, I, DL, get(AMDGPU::S_ADDC_U32))
+      .addSym(OffsetLo, MO_FAR_BRANCH_OFFSET);
+  BuildMI(MBB, I, DL, get(AMDGPU::S_ADDC_U32))
       .addReg(PCReg, RegState::Define, AMDGPU::sub1)
       .addReg(PCReg, 0, AMDGPU::sub1)
-      .addImm(0);
-  } else {
-    // Backwards branch.
-    BuildMI(MBB, I, DL, get(AMDGPU::S_SUB_U32))
-      .addReg(PCReg, RegState::Define, AMDGPU::sub0)
-      .addReg(PCReg, 0, AMDGPU::sub0)
-      .addMBB(&DestBB, MO_LONG_BRANCH_BACKWARD);
-    BuildMI(MBB, I, DL, get(AMDGPU::S_SUBB_U32))
-      .addReg(PCReg, RegState::Define, AMDGPU::sub1)
-      .addReg(PCReg, 0, AMDGPU::sub1)
-      .addImm(0);
-  }
+      .addSym(OffsetHi, MO_FAR_BRANCH_OFFSET);
 
   // Insert the indirect branch after the other terminator.
   BuildMI(&MBB, DL, get(AMDGPU::S_SETPC_B64))
@@ -2309,13 +2308,34 @@ unsigned SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
 
   RS->enterBasicBlockEnd(MBB);
   Register Scav = RS->scavengeRegisterBackwards(
-    AMDGPU::SReg_64RegClass,
-    MachineBasicBlock::iterator(GetPC), false, 0);
-  MRI.replaceRegWith(PCReg, Scav);
-  MRI.clearVirtRegs();
-  RS->setRegUsed(Scav);
+      AMDGPU::SReg_64RegClass, MachineBasicBlock::iterator(GetPC),
+      /* RestoreAfter */ false, 0, /* AllowSpill */ false);
+  if (Scav) {
+    RS->setRegUsed(Scav);
+    MRI.replaceRegWith(PCReg, Scav);
+    MRI.clearVirtRegs();
+  } else {
+    // As SGPR needs VGPR to be spilled, we reuse the slot of temporary VGPR for
+    // SGPR spill.
+    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+    const SIRegisterInfo *TRI = ST.getRegisterInfo();
+    TRI->spillEmergencySGPR(GetPC, RestoreBB, AMDGPU::SGPR0_SGPR1, RS);
+    MRI.replaceRegWith(PCReg, AMDGPU::SGPR0_SGPR1);
+    MRI.clearVirtRegs();
+  }
 
-  return 4 + 8 + 4 + 4;
+  MCSymbol *DestLabel = Scav ? DestBB.getSymbol() : RestoreBB.getSymbol();
+  // Now, the distance could be defined.
+  auto *Offset = MCBinaryExpr::createSub(
+      MCSymbolRefExpr::create(DestLabel, MCCtx),
+      MCSymbolRefExpr::create(PostGetPCLabel, MCCtx), MCCtx);
+  // Add offset assignments.
+  auto *Mask = MCConstantExpr::create(0xFFFFFFFFULL, MCCtx);
+  OffsetLo->setVariableValue(MCBinaryExpr::createAnd(Offset, Mask, MCCtx));
+  auto *ShAmt = MCConstantExpr::create(32, MCCtx);
+  OffsetHi->setVariableValue(MCBinaryExpr::createAShr(Offset, ShAmt, MCCtx));
+
+  return;
 }
 
 unsigned SIInstrInfo::getBranchOpcode(SIInstrInfo::BranchPredicate Cond) {
