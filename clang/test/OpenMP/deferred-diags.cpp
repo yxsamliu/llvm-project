@@ -6,8 +6,6 @@
 // RUN:            -verify-ignore-unexpected=note \
 // RUN:            -fopenmp -o - %s
 
-// expected-no-diagnostics
-
 // Test no infinite recursion in DeferredDiagnosticEmitter.
 constexpr int foo(int *x) {
   return 0;
@@ -37,3 +35,15 @@ public:
      }
   }
 };
+
+// Test deleting object with incomplete class definition does not causing
+// assertion.
+namespace TestDeleteIncompleteClassDefinition {
+struct a;
+struct b {
+  b() {
+    delete c;
+  } // expected-warning {{deleting pointer to incomplete type 'TestDeleteIncompleteClassDefinition::a' may cause undefined behavior}}
+  a *c;
+};
+} // namespace TestDeleteIncompleteClassDefinition
