@@ -20,6 +20,7 @@
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/Casting.h"
@@ -151,8 +152,11 @@ public:
   }
 
   static KernelReferenceKind getDefaultKernelReference(const FunctionDecl *D) {
-    return D->getLangOpts().CUDAIsDevice ? KernelReferenceKind::Kernel
-                                         : KernelReferenceKind::Stub;
+    // When Target ABI is MSVC, do not mangle kernel stub differently.
+    return D->getLangOpts().CUDAIsDevice ||
+                   D->getASTContext().getTargetInfo().getCXXABI().isMicrosoft()
+               ? KernelReferenceKind::Kernel
+               : KernelReferenceKind::Stub;
   }
 
   GlobalDecl getWithDecl(const Decl *D) {

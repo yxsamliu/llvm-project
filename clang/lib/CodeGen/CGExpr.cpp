@@ -5322,10 +5322,11 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
   }
 
   // HIP function pointer contains kernel handle when it is used in triple
-  // chevron. The kernel stub needs to be loaded from kernel handle and used
-  // as callee.
+  // chevron for non-MSVC target. The kernel stub needs to be loaded from
+  // kernel handle and used as callee.
   if (CGM.getLangOpts().HIP && !CGM.getLangOpts().CUDAIsDevice &&
       isa<CUDAKernelCallExpr>(E) &&
+      !CGM.getContext().getTargetInfo().getCXXABI().isMicrosoft() &&
       (!TargetDecl || !isa<FunctionDecl>(TargetDecl))) {
     llvm::Value *Handle = Callee.getFunctionPointer();
     auto *Cast =

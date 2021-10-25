@@ -1134,7 +1134,9 @@ llvm::GlobalValue *CGNVCUDARuntime::getKernelHandle(llvm::Function *F,
   if (Loc != KernelHandles.end())
     return Loc->second;
 
-  if (!CGM.getLangOpts().HIP) {
+  // When HIP host target is MSVC, do not use kernel handle.
+  if (!CGM.getLangOpts().HIP ||
+      CGM.getContext().getTargetInfo().getCXXABI().isMicrosoft()) {
     KernelHandles[F] = F;
     KernelStubs[F] = F;
     return F;
