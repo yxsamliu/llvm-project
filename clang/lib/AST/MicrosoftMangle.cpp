@@ -384,10 +384,10 @@ private:
                                   AddrSpace == LangAS::ptr32_uptr));
   }
 
-  void mangleUnqualifiedName(const NamedDecl *ND) {
-    mangleUnqualifiedName(ND, ND->getDeclName());
+  void mangleUnqualifiedName(GlobalDecl GD) {
+    mangleUnqualifiedName(GD, GD.getDecl()->getDeclName());
   }
-  void mangleUnqualifiedName(const NamedDecl *ND, DeclarationName Name);
+  void mangleUnqualifiedName(GlobalDecl GD, DeclarationName Name);
   void mangleSourceName(StringRef Name);
   void mangleOperatorName(OverloadedOperatorKind OO, SourceLocation Loc);
   void mangleCXXDtorType(CXXDtorType T);
@@ -945,7 +945,13 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
   switch (Name.getNameKind()) {
     case DeclarationName::Identifier: {
       if (const IdentifierInfo *II = Name.getAsIdentifierInfo()) {
-        mangleSourceName(II->getName());
+        bool IsDeviceStub =
+            ND && ND->hasAttr<CUDAGlobalAttr>() &&
+            GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
+        if (IsDeviceStub)
+          mangleDeviceStubName(II);
+        else
+          mangleSourceName(II->getName());
         break;
       }
 
