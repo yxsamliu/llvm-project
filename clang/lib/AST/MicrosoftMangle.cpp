@@ -962,7 +962,20 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
   switch (Name.getNameKind()) {
     case DeclarationName::Identifier: {
       if (const IdentifierInfo *II = Name.getAsIdentifierInfo()) {
-        mangleSourceName(II->getName());
+        bool IsDeviceStub =
+            ND &&
+            ((isa<FunctionDecl>(ND) && ND->hasAttr<CUDAGlobalAttr>()) ||
+             (isa<FunctionTemplateDecl>(ND) &&
+              cast<FunctionTemplateDecl>(ND)
+                  ->getTemplatedDecl()
+                  ->hasAttr<CUDAGlobalAttr>())) &&
+            GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
+        if (IsDeviceStub) {
+          llvm::SmallString<128> Buf;
+          mangleSourceName((llvm::Twine("__device_stub__") + II->getName())
+                               .toStringRef(Buf));
+        } else
+          mangleSourceName(II->getName());
         break;
       }
 
