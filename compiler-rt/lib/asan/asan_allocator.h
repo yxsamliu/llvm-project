@@ -64,8 +64,6 @@ class AsanChunkView {
   bool Eq(const AsanChunkView &c) const { return chunk_ == c.chunk_; }
   u32 GetAllocStackId() const;
   u32 GetFreeStackId() const;
-  StackTrace GetAllocStack() const;
-  StackTrace GetFreeStack() const;
   AllocType GetAllocType() const;
   bool AddrIsInside(uptr addr, uptr access_size, sptr *offset) const {
     if (addr >= Beg() && (addr + access_size) <= End()) {
@@ -232,4 +230,23 @@ void PrintInternalAllocatorStats();
 void AsanSoftRssLimitExceededCallback(bool exceeded);
 
 }  // namespace __asan
+
+#if SANITIZER_AMDGPU
+#include <hsa.h>
+#include <hsa_ext_amd.h>
+
+namespace __asan {
+hsa_status_t asan_hsa_amd_memory_pool_allocate(
+  hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags, void **ptr,
+  BufferedStackTrace *stack);
+hsa_status_t asan_hsa_amd_memory_pool_free(
+  void *ptr,
+  BufferedStackTrace *stack);
+hsa_status_t asan_hsa_amd_agents_allow_access(
+  uint32_t num_agents, const hsa_agent_t *agents, const uint32_t *flags,
+  const void *ptr,
+  BufferedStackTrace *stack);
+} // namespace __asan
+#endif
+
 #endif  // ASAN_ALLOCATOR_H

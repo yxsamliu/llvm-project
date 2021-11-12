@@ -517,6 +517,11 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       os << "landing-pad";
       hasAttributes = true;
     }
+    if (isInlineAsmBrIndirectTarget()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "inlineasm-br-indirect-target";
+      hasAttributes = true;
+    }
     if (isEHFuncletEntry()) {
       os << (hasAttributes ? ", " : " (");
       os << "ehfunclet-entry";
@@ -899,32 +904,6 @@ MachineBasicBlock::transferSuccessorsAndUpdatePHIs(MachineBasicBlock *FromMBB) {
     Succ->replacePhiUsesWith(FromMBB, this);
   }
   normalizeSuccProbs();
-}
-
-/// A block emptied (i.e., with all instructions moved out of it) won't be
-/// sampled at run time. In such cases, AutoFDO will be informed of zero samples
-/// collected for the block. This is not accurate and could lead to misleading
-/// weights assigned for the block. A way to mitigate that is to treat such
-/// block as having unknown counts in the AutoFDO profile loader and allow the
-/// counts inference tool a chance to calculate a relatively reasonable weight
-/// for it. This can be done by moving all pseudo probes in the emptied block
-/// i.e, /c this, to before /c ToMBB and tag them dangling. Note that this is
-/// not needed for dead blocks which really have a zero weight. It's per
-/// transforms to decide whether to call this function or not.
-void MachineBasicBlock::moveAndDanglePseudoProbes(MachineBasicBlock *ToMBB) {
-  SmallVector<MachineInstr *, 4> ToBeMoved;
-  for (MachineInstr &MI : instrs()) {
-    if (MI.isPseudoProbe()) {
-      MI.addPseudoProbeAttribute(PseudoProbeAttributes::Dangling);
-      ToBeMoved.push_back(&MI);
-    }
-  }
-
-  MachineBasicBlock::iterator I = ToMBB->getFirstTerminator();
-  for (MachineInstr *MI : ToBeMoved) {
-    MI->removeFromParent();
-    ToMBB->insert(I, MI);
-  }
 }
 
 bool MachineBasicBlock::isPredecessor(const MachineBasicBlock *MBB) const {

@@ -82,6 +82,17 @@ void ShowStatsAndAbort() {
   Die();
 }
 
+NOINLINE
+static void ReportGenericErrorWrapper(uptr addr, bool is_write, int size,
+                                      int exp_arg, bool fatal) {
+  if (__asan_test_only_reported_buggy_pointer) {
+    *__asan_test_only_reported_buggy_pointer = addr;
+  } else {
+    GET_CALLER_PC_BP_SP;
+    ReportGenericError(pc, bp, sp, addr, is_write, size, exp_arg, fatal);
+  }
+}
+
 // --------------- LowLevelAllocateCallbac ---------- {{{1
 static void OnLowLevelAllocate(uptr ptr, uptr size) {
   PoisonShadow(ptr, size, kAsanInternalHeapMagic);
@@ -138,24 +149,16 @@ ASAN_REPORT_ERROR_N(load, false)
 ASAN_REPORT_ERROR_N(store, true)
 
 #define ASAN_MEMORY_ACCESS_CALLBACK_BODY(type, is_write, size, exp_arg, fatal) \
-    if (SANITIZER_MYRIAD2 && !AddrIsInMem(addr) && !AddrIsInShadow(addr))      \
-      return;                                                                  \
-    uptr sp = MEM_TO_SHADOW(addr);                                             \
-    uptr s = size <= SHADOW_GRANULARITY ? *reinterpret_cast<u8 *>(sp)          \
-                                        : *reinterpret_cast<u16 *>(sp);        \
-    if (UNLIKELY(s)) {                                                         \
-      if (UNLIKELY(size >= SHADOW_GRANULARITY ||                               \
-                   ((s8)((addr & (SHADOW_GRANULARITY - 1)) + size - 1)) >=     \
-                       (s8)s)) {                                               \
-        if (__asan_test_only_reported_buggy_pointer) {                         \
-          *__asan_test_only_reported_buggy_pointer = addr;                     \
-        } else {                                                               \
-          GET_CALLER_PC_BP_SP;                                                 \
-          ReportGenericError(pc, bp, sp, addr, is_write, size, exp_arg,        \
-                              fatal);                                          \
-        }                                                                      \
-      }                                                                        \
-    }
+  uptr sp = MEM_TO_SHADOW(addr);                                               \
+  uptr s = size <= SHADOW_GRANULARITY ? *reinterpret_cast<u8 *>(sp)            \
+                                      : *reinterpret_cast<u16 *>(sp);          \
+  if (UNLIKELY(s)) {                                                           \
+    if (UNLIKELY(size >= SHADOW_GRANULARITY ||                                 \
+                 ((s8)((addr & (SHADOW_GRANULARITY - 1)) + size - 1)) >=       \
+                     (s8)s)) {                                                 \
+      ReportGenericErrorWrapper(addr, is_write, size, exp_arg, fatal);         \
+    }                                                                          \
+  }
 
 #define ASAN_MEMORY_ACCESS_CALLBACK(type, is_write, size)                      \
   extern "C" NOINLINE INTERFACE_ATTRIBUTE                                      \
@@ -236,6 +239,43 @@ void __asan_storeN_noabort(uptr addr, uptr size) {
   }
 }
 
+// This interface enables to report an error that is triggered in a
+// thread of execution that the compiler-rt doesn't have information about
+// heterogeneous devices such as GPUs, FGPAs can be call this function to
+// report violations.
+// @param nonself_callstack          - pointer to a array of callstack pointers
+// @param n_nonself_callstack        - depth of callstack
+// @param nonself_addrs              - pointer to the array of addresses
+// whose access is defined by instrumentation as invalid
+// @param n_nonself_addrs            - number of such addresses
+// @param nonself_tids               - pointer to the array identifying the
+// reporting entity.
+// @param n_nonself_tids             - length of the identity
+// @param is_write                   - access type
+// @param access_size                - access size
+// @param is_abort                   - flag to abort the execution
+// @param nonself_name               - c string literal describing the non self
+// entity
+// @param nonself_adjust_vma         - difference between actual load address
+// and VA specified in object.
+// @param nonself_fd                 - posix file handle to the object code (-1
+// if not applicable)
+// @param nonself_file_extent_size   - file size (0 if not applicable)
+// @param nonself_file_extent_start  - file offset (0 if not applicable)
+//
+extern "C" NOINLINE INTERFACE_ATTRIBUTE void __asan_report_nonself_error(
+    uptr *nonself_callstack, u32 n_nonself_callstack, uptr *nonself_addrs,
+    u32 n_nonself_addrs, u64 *nonself_tids, u32 n_nonself_tids, bool is_write,
+    u32 access_size, bool is_abort, const char *nonself_name,
+    s64 nonself_adjust_vma, int nonself_fd, u64 nonself_file_extent_size,
+    u64 nonself_file_extent_start = /*default*/ 0) {
+  ReportNonselfError(nonself_callstack, n_nonself_callstack, nonself_addrs,
+                     n_nonself_addrs, nonself_tids, n_nonself_tids, is_write,
+                     access_size, is_abort, nonself_name, nonself_adjust_vma,
+                     nonself_fd, nonself_file_extent_size,
+                     nonself_file_extent_start);
+}
+
 // Force the linker to keep the symbols for various ASan interface functions.
 // We want to keep those in the executable in order to let the instrumented
 // dynamic libraries access the symbol even if it is not used by the executable
@@ -291,6 +331,8 @@ static NOINLINE void force_interface_symbols() {
     case 43: __asan_set_shadow_f3(0, 0); break;
     case 44: __asan_set_shadow_f5(0, 0); break;
     case 45: __asan_set_shadow_f8(0, 0); break;
+    case 46: __asan_report_nonself_error(0,0,0,0,0,0,0,0,0,
+                 0,0,0,0,0); break;
   }
   // clang-format on
 }
@@ -306,7 +348,6 @@ static void asan_atexit() {
 }
 
 static void InitializeHighMemEnd() {
-#if !SANITIZER_MYRIAD2
 #if !ASAN_FIXED_MAPPING
   kHighMemEnd = GetMaxUserVirtualAddress();
   // Increase kHighMemEnd to make sure it's properly
@@ -314,7 +355,6 @@ static void InitializeHighMemEnd() {
   kHighMemEnd |= (GetMmapGranularity() << SHADOW_SCALE) - 1;
 #endif  // !ASAN_FIXED_MAPPING
   CHECK_EQ((kHighMemBeg % GetMmapGranularity()), 0);
-#endif  // !SANITIZER_MYRIAD2
 }
 
 void PrintAddressSpaceLayout() {
@@ -556,7 +596,8 @@ void UnpoisonStack(uptr bottom, uptr top, const char *type) {
         "False positive error reports may follow\n"
         "For details see "
         "https://github.com/google/sanitizers/issues/189\n",
-        type, top, bottom, top - bottom, top - bottom);
+        type, (void *)top, (void *)bottom, (void *)(top - bottom),
+        top - bottom);
     return;
   }
   PoisonShadow(bottom, RoundUpTo(top - bottom, SHADOW_GRANULARITY), 0);
@@ -570,9 +611,6 @@ static void UnpoisonDefaultStack() {
     const uptr page_size = GetPageSizeCached();
     top = curr_thread->stack_top();
     bottom = ((uptr)&local_stack - page_size) & ~(page_size - 1);
-  } else if (SANITIZER_RTEMS) {
-    // Give up On RTEMS.
-    return;
   } else {
     CHECK(!SANITIZER_FUCHSIA);
     // If we haven't seen this thread, try asking the OS for stack bounds.

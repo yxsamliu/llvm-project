@@ -312,8 +312,7 @@ public:
 
   template <typename ExcludePredicate>
   bool removeBindings(const ExcludePredicate &Predicate) {
-    Bindings.erase(std::remove_if(Bindings.begin(), Bindings.end(), Predicate),
-                   Bindings.end());
+    llvm::erase_if(Bindings, Predicate);
     return !Bindings.empty();
   }
 
@@ -757,7 +756,8 @@ public:
                       std::is_base_of<NestedNameSpecifier, T>::value ||
                       std::is_base_of<NestedNameSpecifierLoc, T>::value ||
                       std::is_base_of<TypeLoc, T>::value ||
-                      std::is_base_of<QualType, T>::value,
+                      std::is_base_of<QualType, T>::value ||
+                      std::is_base_of<Attr, T>::value,
                   "unsupported type for recursive matching");
     return matchesChildOf(DynTypedNode::create(Node), getASTContext(), Matcher,
                           Builder, Bind);
@@ -771,7 +771,8 @@ public:
                       std::is_base_of<NestedNameSpecifier, T>::value ||
                       std::is_base_of<NestedNameSpecifierLoc, T>::value ||
                       std::is_base_of<TypeLoc, T>::value ||
-                      std::is_base_of<QualType, T>::value,
+                      std::is_base_of<QualType, T>::value ||
+                      std::is_base_of<Attr, T>::value,
                   "unsupported type for recursive matching");
     return matchesDescendantOf(DynTypedNode::create(Node), getASTContext(),
                                Matcher, Builder, Bind);
@@ -785,7 +786,8 @@ public:
     static_assert(std::is_base_of<Decl, T>::value ||
                       std::is_base_of<NestedNameSpecifierLoc, T>::value ||
                       std::is_base_of<Stmt, T>::value ||
-                      std::is_base_of<TypeLoc, T>::value,
+                      std::is_base_of<TypeLoc, T>::value ||
+                      std::is_base_of<Attr, T>::value,
                   "type not allowed for recursive matching");
     return matchesAncestorOf(DynTypedNode::create(Node), getASTContext(),
                              Matcher, Builder, MatchMode);
@@ -954,7 +956,7 @@ class HasNameMatcher : public SingleNodeMatcherInterface<NamedDecl> {
 
   bool matchesNode(const NamedDecl &Node) const override;
 
- private:
+private:
   /// Unqualified match routine.
   ///
   /// It is much faster than the full match, but it only works for unqualified
@@ -1175,7 +1177,8 @@ struct IsBaseType {
       std::is_same<T, NestedNameSpecifier>::value ||
       std::is_same<T, NestedNameSpecifierLoc>::value ||
       std::is_same<T, CXXCtorInitializer>::value ||
-      std::is_same<T, TemplateArgumentLoc>::value;
+      std::is_same<T, TemplateArgumentLoc>::value ||
+      std::is_same<T, Attr>::value;
 };
 template <typename T>
 const bool IsBaseType<T>::value;
@@ -1185,7 +1188,7 @@ const bool IsBaseType<T>::value;
 /// Useful for matchers like \c anything and \c unless.
 using AllNodeBaseTypes =
     TypeList<Decl, Stmt, NestedNameSpecifier, NestedNameSpecifierLoc, QualType,
-             Type, TypeLoc, CXXCtorInitializer>;
+             Type, TypeLoc, CXXCtorInitializer, Attr>;
 
 /// Helper meta-function to extract the argument out of a function of
 ///   type void(Arg).
@@ -1212,7 +1215,7 @@ template <class T, class Tuple> constexpr T *new_from_tuple(Tuple &&t) {
 using AdaptativeDefaultFromTypes = AllNodeBaseTypes;
 using AdaptativeDefaultToTypes =
     TypeList<Decl, Stmt, NestedNameSpecifier, NestedNameSpecifierLoc, TypeLoc,
-             QualType>;
+             QualType, Attr>;
 
 /// All types that are supported by HasDeclarationMatcher above.
 using HasDeclarationSupportedTypes =
@@ -2102,6 +2105,8 @@ equivalentUnaryOperator<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
     return UO_Minus;
   case OO_Amp:
     return UO_AddrOf;
+  case OO_Star:
+    return UO_Deref;
   case OO_Tilde:
     return UO_Not;
   case OO_Exclaim:
@@ -2243,11 +2248,7 @@ public:
 
   bool matchesNode(const T &Node) const override {
     Optional<StringRef> OptOpName = getOpName(Node);
-    if (!OptOpName)
-      return false;
-    return llvm::any_of(Names, [OpName = *OptOpName](const std::string &Name) {
-      return Name == OpName;
-    });
+    return OptOpName && llvm::is_contained(Names, *OptOpName);
   }
 
 private:
@@ -2301,6 +2302,26 @@ bool matchesAnyBase(const CXXRecordDecl &Node,
 std::shared_ptr<llvm::Regex> createAndVerifyRegex(StringRef Regex,
                                                   llvm::Regex::RegexFlags Flags,
                                                   StringRef MatcherID);
+
+inline bool
+MatchTemplateArgLocAt(const DeclRefExpr &Node, unsigned int Index,
+                      internal::Matcher<TemplateArgumentLoc> InnerMatcher,
+                      internal::ASTMatchFinder *Finder,
+                      internal::BoundNodesTreeBuilder *Builder) {
+  llvm::ArrayRef<TemplateArgumentLoc> ArgLocs = Node.template_arguments();
+  return Index < ArgLocs.size() &&
+         InnerMatcher.matches(ArgLocs[Index], Finder, Builder);
+}
+
+inline bool
+MatchTemplateArgLocAt(const TemplateSpecializationTypeLoc &Node,
+                      unsigned int Index,
+                      internal::Matcher<TemplateArgumentLoc> InnerMatcher,
+                      internal::ASTMatchFinder *Finder,
+                      internal::BoundNodesTreeBuilder *Builder) {
+  return !Node.isNull() && Index < Node.getNumArgs() &&
+         InnerMatcher.matches(Node.getArgLoc(Index), Finder, Builder);
+}
 
 } // namespace internal
 

@@ -5,7 +5,6 @@
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck %s
-
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
@@ -100,22 +99,6 @@ __device__ float test_max() {
   return max(5, 6.0);
 }
 
-// Check that device malloc and free do not conflict with std headers.
-#include <cstdlib>
-// CHECK-LABEL: define{{.*}}@_Z11test_malloc
-// CHECK: call {{.*}}i8* @malloc(i64
-// CHECK: define weak {{.*}}i8* @malloc(i64
-__device__ void test_malloc(void *a) {
-  a = malloc(42);
-}
-
-// CHECK-LABEL: define{{.*}}@_Z9test_free
-// CHECK: call {{.*}}i8* @free(i8*
-// CHECK: define weak {{.*}}i8* @free(i8*
-__device__ void test_free(void *a) {
-  free(a);
-}
-
 // CHECK-LABEL: define{{.*}}@_Z10test_isnanv
 __device__ double test_isnan() {
   double r = 0;
@@ -131,4 +114,20 @@ __device__ double test_isnan() {
   r += isnan(d);
 
   return r ;
+}
+
+// Check that device malloc and free do not conflict with std headers.
+#include <cstdlib>
+// CHECK-LABEL: define{{.*}}@_Z11test_malloc
+// CHECK: call {{.*}}i8* @malloc(i64
+// CHECK: define weak {{.*}}i8* @malloc(i64
+__device__ void test_malloc(void *a) {
+  a = malloc(42);
+}
+
+// CHECK-LABEL: define{{.*}}@_Z9test_free
+// CHECK: call {{.*}}i8* @free(i8*
+// CHECK: define weak {{.*}}i8* @free(i8*
+__device__ void test_free(void *a) {
+  free(a);
 }

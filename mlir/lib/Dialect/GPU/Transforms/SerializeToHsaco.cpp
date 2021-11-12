@@ -28,10 +28,10 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetOptions.h"
@@ -49,6 +49,11 @@ class SerializeToHsacoPass
     : public PassWrapper<SerializeToHsacoPass, gpu::SerializeToBlobPass> {
 public:
   SerializeToHsacoPass();
+
+  StringRef getArgument() const override { return "gpu-to-hsaco"; }
+  StringRef getDescription() const override {
+    return "Lower GPU kernel function to HSACO binary annotations";
+  }
 
 private:
   void getDependentDialects(DialectRegistry &registry) const override;
@@ -268,7 +273,6 @@ SerializeToHsacoPass::serializeISA(const std::string &isa) {
 // Register pass to serialize GPU kernel functions to a HSACO binary annotation.
 void mlir::registerGpuSerializeToHsacoPass() {
   PassRegistration<SerializeToHsacoPass> registerSerializeToHSACO(
-      "gpu-to-hsaco", "Lower GPU kernel function to HSACO binary annotations",
       [] {
         // Initialize LLVM AMDGPU backend.
         LLVMInitializeAMDGPUAsmParser();

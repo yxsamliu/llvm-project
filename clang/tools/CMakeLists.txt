@@ -34,6 +34,7 @@ if(CLANG_ENABLE_STATIC_ANALYZER)
   add_clang_subdirectory(clang-check)
   add_clang_subdirectory(clang-extdef-mapping)
   add_clang_subdirectory(scan-build)
+  add_clang_subdirectory(scan-build-py)
   add_clang_subdirectory(scan-view)
 endif()
 
@@ -46,5 +47,4 @@ add_llvm_external_project(clang-tools-extra extra)
 
 # libclang may require clang-tidy in clang-tools-extra.
 add_clang_subdirectory(libclang)
-
 add_clang_subdirectory(amdgpu-arch)

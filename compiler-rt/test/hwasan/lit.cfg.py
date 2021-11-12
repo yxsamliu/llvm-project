@@ -15,13 +15,21 @@ clang_hwasan_common_cflags = clang_cflags + ["-fsanitize=hwaddress", "-fuse-ld=l
 
 if config.target_arch == 'x86_64' and config.enable_aliases == '1':
   clang_hwasan_common_cflags += ["-fsanitize-hwaddress-experimental-aliasing"]
-if config.enable_aliases != '1':
+else:
   config.available_features.add('pointer-tagging')
 if config.target_arch == 'x86_64':
-  # This does basically the same thing as tagged-globals on aarch64. Because
-  # the x86_64 implementation is for testing purposes only there is no
-  # equivalent target feature implemented on x86_64.
-  clang_hwasan_common_cflags += ["-mcmodel=large"]
+  # By default the assembler uses R_X86_64_REX_GOTPCRELX relocations, which can
+  # be relaxed to direct references.  When tagged globals are enabled, these
+  # references fail to link since they have more than a 32-bit offset from RIP.
+  # As a workaround, we disable the relaxation.
+  # TODO: Implement a way to disable for the affected relocations only.
+  clang_hwasan_common_cflags += ["-Wa,-mrelax-relocations=no"]
+
+  # The callback instrumentation used on x86_64 has a 1/64 chance of choosing a
+  # stack tag of 0.  This causes stack tests to become flaky, so we force tags
+  # to be generated via calls to __hwasan_generate_tag, which never returns 0.
+  # TODO: See if we can remove this once we use the outlined instrumentation.
+  clang_hwasan_common_cflags += ["-mllvm", "-hwasan-generate-tags-with-calls=1"]
 clang_hwasan_cflags = clang_hwasan_common_cflags + ["-mllvm", "-hwasan-globals",
                                                    "-mllvm", "-hwasan-use-short-granules",
                                                    "-mllvm", "-hwasan-instrument-landing-pads=0",

@@ -8,10 +8,10 @@
 
 #include "AMDGPU.h"
 #include "CommonArgs.h"
-#include "InputInfo.h"
 #include "clang/Basic/TargetID.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
@@ -537,10 +537,15 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                                      const llvm::Triple &Triple,
                                      const llvm::opt::ArgList &Args,
-                                     std::vector<StringRef> &Features) {
+                                     std::vector<StringRef> &Features,
+                                     std::string TcTargetID) {
   // Add target ID features to -target-feature options. No diagnostics should
   // be emitted here since invalid target ID is diagnosed at other places.
   StringRef TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
+
+  // Use this toolchain's TargetID if mcpu is not defined
+  if (TargetID.empty() && !TcTargetID.empty())
+    TargetID = TcTargetID;
   if (!TargetID.empty()) {
     llvm::StringMap<bool> FeatureMap;
     auto OptionalGpuArch = parseTargetID(Triple, TargetID, &FeatureMap);
@@ -757,13 +762,13 @@ AMDGPUToolChain::detectSystemGPUs(const ArgList &Args,
   llvm::FileRemover OutputRemover(OutputFile.c_str());
   llvm::Optional<llvm::StringRef> Redirects[] = {
       {""},
-      StringRef(OutputFile),
+      OutputFile.str(),
       {""},
   };
 
   std::string ErrorMessage;
   if (int Result = llvm::sys::ExecuteAndWait(
-          Program.c_str(), {}, {}, Redirects, /* SecondsToWait */ 0,
+          Program, {}, {}, Redirects, /* SecondsToWait */ 0,
           /*MemoryLimit*/ 0, &ErrorMessage)) {
     if (Result > 0) {
       ErrorMessage = "Exited with error code " + std::to_string(Result);
@@ -805,9 +810,9 @@ llvm::Error AMDGPUToolChain::getSystemGPUArch(const ArgList &Args,
   }
   GPUArch = GPUArchs[0];
   if (GPUArchs.size() > 1) {
-    bool AllSame = std::all_of(
-        GPUArchs.begin(), GPUArchs.end(),
-        [&](const StringRef &GPUArch) { return GPUArch == GPUArchs.front(); });
+    bool AllSame = llvm::all_of(GPUArchs, [&](const StringRef &GPUArch) {
+      return GPUArch == GPUArchs.front();
+    });
     if (!AllSame)
       return llvm::createStringError(
           std::error_code(), "Multiple AMD GPUs found with different archs");
@@ -901,4 +906,39 @@ bool AMDGPUToolChain::shouldSkipArgument(const llvm::opt::Arg *A) const {
   if (O.matches(options::OPT_fPIE) || O.matches(options::OPT_fpie))
     return true;
   return false;
+}
+
+llvm::SmallVector<std::string, 12>
+ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
+                                       const std::string &GPUArch) const {
+  auto Kind = llvm::AMDGPU::parseArchAMDGCN(GPUArch);
+  const StringRef CanonArch = llvm::AMDGPU::getArchNameAMDGCN(Kind);
+
+  std::string LibDeviceFile = RocmInstallation.getLibDeviceFile(CanonArch);
+  if (LibDeviceFile.empty()) {
+    getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 1 << GPUArch;
+    return {};
+  }
+
+  // If --hip-device-lib is not set, add the default bitcode libraries.
+  // TODO: There are way too many flags that change this. Do we need to check
+  // them all?
+  bool DAZ = DriverArgs.hasFlag(options::OPT_fgpu_flush_denormals_to_zero,
+                                options::OPT_fno_gpu_flush_denormals_to_zero,
+                                getDefaultDenormsAreZeroForTarget(Kind));
+  bool FiniteOnly = DriverArgs.hasFlag(
+      options::OPT_ffinite_math_only, options::OPT_fno_finite_math_only, false);
+  bool UnsafeMathOpt =
+      DriverArgs.hasFlag(options::OPT_funsafe_math_optimizations,
+                         options::OPT_fno_unsafe_math_optimizations, false);
+  bool FastRelaxedMath = DriverArgs.hasFlag(options::OPT_ffast_math,
+                                            options::OPT_fno_fast_math, false);
+  bool CorrectSqrt = DriverArgs.hasFlag(
+      options::OPT_fhip_fp32_correctly_rounded_divide_sqrt,
+      options::OPT_fno_hip_fp32_correctly_rounded_divide_sqrt);
+  bool Wave64 = isWave64(DriverArgs, Kind);
+
+  return RocmInstallation.getCommonBitcodeLibs(
+      DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
+      FastRelaxedMath, CorrectSqrt);
 }

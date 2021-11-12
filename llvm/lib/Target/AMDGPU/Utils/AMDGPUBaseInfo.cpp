@@ -450,16 +450,16 @@ std::string AMDGPUTargetID::toString() const {
       } else if (Processor == "gfx801") {
         if (!isXnackOnOrAny())
           report_fatal_error(
-              "AMD GPU code object V2 does not support processor " + Processor +
-              " without XNACK");
+              "AMD GPU code object V2 does not support processor " +
+              Twine(Processor) + " without XNACK");
       } else if (Processor == "gfx802") {
       } else if (Processor == "gfx803") {
       } else if (Processor == "gfx805") {
       } else if (Processor == "gfx810") {
         if (!isXnackOnOrAny())
           report_fatal_error(
-              "AMD GPU code object V2 does not support processor " + Processor +
-              " without XNACK");
+              "AMD GPU code object V2 does not support processor " +
+              Twine(Processor) + " without XNACK");
       } else if (Processor == "gfx900") {
         if (isXnackOnOrAny())
           Processor = "gfx901";
@@ -475,11 +475,12 @@ std::string AMDGPUTargetID::toString() const {
       } else if (Processor == "gfx90c") {
         if (isXnackOnOrAny())
           report_fatal_error(
-              "AMD GPU code object V2 does not support processor " + Processor +
-              " with XNACK being ON or ANY");
+              "AMD GPU code object V2 does not support processor " +
+              Twine(Processor) + " with XNACK being ON or ANY");
       } else {
         report_fatal_error(
-            "AMD GPU code object V2 does not support processor " + Processor);
+            "AMD GPU code object V2 does not support processor " +
+            Twine(Processor));
       }
       break;
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
@@ -671,7 +672,8 @@ unsigned getNumExtraSGPRs(const MCSubtargetInfo *STI, bool VCCUsed,
     if (XNACKUsed)
       ExtraSGPRs = 4;
 
-    if (FlatScrUsed)
+    if (FlatScrUsed ||
+        STI->getFeatureBits().test(AMDGPU::FeatureArchitectedFlatScratch))
       ExtraSGPRs = 6;
   }
 
@@ -1344,6 +1346,17 @@ unsigned getInitialPSInputAddr(const Function &F) {
   return getIntegerAttribute(F, "InitialPSInputAddr", 0);
 }
 
+bool getHasColorExport(const Function &F) {
+  // As a safe default always respond as if PS has color exports.
+  return getIntegerAttribute(
+             F, "amdgpu-color-export",
+             F.getCallingConv() == CallingConv::AMDGPU_PS ? 1 : 0) != 0;
+}
+
+bool getHasDepthExport(const Function &F) {
+  return getIntegerAttribute(F, "amdgpu-depth-export", 0) != 0;
+}
+
 bool isShader(CallingConv::ID cc) {
   switch(cc) {
     case CallingConv::AMDGPU_VS:
@@ -1561,8 +1574,10 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   unsigned OpType = Desc.OpInfo[OpNo].OperandType;
   switch (OpType) {
   case AMDGPU::OPERAND_REG_IMM_FP32:
+  case AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED:
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_IMM_FP16:
+  case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
@@ -1650,6 +1665,13 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::VReg_192_Align2RegClassID:
   case AMDGPU::AReg_192_Align2RegClassID:
     return 192;
+  case AMDGPU::SGPR_224RegClassID:
+  case AMDGPU::SReg_224RegClassID:
+  case AMDGPU::VReg_224RegClassID:
+  case AMDGPU::AReg_224RegClassID:
+  case AMDGPU::VReg_224_Align2RegClassID:
+  case AMDGPU::AReg_224_Align2RegClassID:
+    return 224;
   case AMDGPU::SGPR_256RegClassID:
   case AMDGPU::SReg_256RegClassID:
   case AMDGPU::VReg_256RegClassID:
@@ -1807,8 +1829,8 @@ bool isArgPassedInSGPR(const Argument *A) {
   case CallingConv::AMDGPU_Gfx:
     // For non-compute shaders, SGPR inputs are marked with either inreg or byval.
     // Everything else is in VGPRs.
-    return F->getAttributes().hasParamAttribute(A->getArgNo(), Attribute::InReg) ||
-           F->getAttributes().hasParamAttribute(A->getArgNo(), Attribute::ByVal);
+    return F->getAttributes().hasParamAttr(A->getArgNo(), Attribute::InReg) ||
+           F->getAttributes().hasParamAttr(A->getArgNo(), Attribute::ByVal);
   default:
     // TODO: Should calls support inreg for SGPR inputs?
     return false;

@@ -29,7 +29,7 @@ EXTERN int omp_ext_get_lane_id() {
 
 DEVICE static unsigned getMasterThreadId() {
   unsigned Mask = WARPSIZE - 1;
-  return (GetNumberOfThreadsInBlock() - 1) & (~Mask);
+  return (__kmpc_get_hardware_num_threads_in_block() - 1) & (~Mask);
 }
 
 EXTERN int omp_ext_get_smid() {
@@ -39,9 +39,9 @@ EXTERN int omp_ext_get_smid() {
 }
 
 EXTERN int omp_ext_is_spmd_mode() {
-  int rc = isSPMDMode();
+  int rc = __kmpc_is_spmd_exec_mode();
   PRINT(LD_IO, "call omp_ext_is_spmd_mode() returns %d\n", rc);
-  return rc;
+  return rc != 0;
 }
 
 EXTERN int omp_ext_get_master_thread_id() {

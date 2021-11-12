@@ -21,12 +21,20 @@ set(LIBOMPTARGET_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/omptarget.cpp
 )
 
-set(LIBOMPTARGET_SRC_FILES ${LIBOMPTARGET_SRC_FILES} PARENT_SCOPE)
+if(LIBOMP_OMPT_SUPPORT_IN_LIBOMPTARGET)
+  list(APPEND LIBOMPTARGET_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/ompt-target.cpp)
+  list(APPEND LIBOMPTARGET_LLVM_INCLUDE_DIRS ${LIBOMP_INCLUDE_DIR})
+endif()
 
+set(LIBOMPTARGET_SRC_FILES ${LIBOMPTARGET_SRC_FILES} PARENT_SCOPE)
 include_directories(${LIBOMPTARGET_LLVM_INCLUDE_DIRS})
 
 # Build libomptarget library with libdl dependency.
 add_library(omptarget SHARED ${LIBOMPTARGET_SRC_FILES})
+# Don't override an externally defined RPATH
+if(NOT DEFINED CMAKE_INSTALL_RPATH)
+  set_target_properties(omptarget PROPERTIES INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib:$ORIGIN/../../lib" BUILD_RPATH "$ORIGIN")
+endif()
 if (OPENMP_ENABLE_LIBOMPTARGET_PROFILING)
   # Add LLVMSupport dependency if profiling is enabled.
   # Linking with LLVM component libraries also requires
@@ -37,6 +45,9 @@ if (OPENMP_ENABLE_LIBOMPTARGET_PROFILING)
 endif()
 target_link_libraries(omptarget PRIVATE
   ${CMAKE_DL_LIBS}
+  -lLLVMOffloadArch
+  -lclang-cpp
+  "-Wl,--no-allow-shlib-undefined"
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
 
 # Install libomptarget under the lib destination folder.

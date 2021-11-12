@@ -36,7 +36,7 @@ llvm::Value *CGOpenMPRuntimeNVPTX::getGPUWarpSize(CodeGenFunction &CGF) {
   if (CGF.getTarget().getTriple().isAMDGCN()) {
     CGBuilderTy &Bld = CGF.Builder;
     // return constant compile-time target-specific warp size
-    unsigned TargetWarpSize = CGF.getTarget().getGridValue(GVIDX::GV_Warp_Size);
+    unsigned TargetWarpSize = CGF.getTarget().getGridValue().GV_Warp_Size;
     return Bld.getInt32(TargetWarpSize);
   }
 
@@ -52,12 +52,4 @@ llvm::Value *CGOpenMPRuntimeNVPTX::getGPUThreadID(CodeGenFunction &CGF) {
   F = llvm::Intrinsic::getDeclaration(
       &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_read_ptx_sreg_tid_x);
   return Bld.CreateCall(F, llvm::None, "nvptx_tid");
-}
-
-llvm::Value *CGOpenMPRuntimeNVPTX::getGPUNumThreads(CodeGenFunction &CGF) {
-  CGBuilderTy &Bld = CGF.Builder;
-  llvm::Function *F;
-  F = llvm::Intrinsic::getDeclaration(
-      &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_read_ptx_sreg_ntid_x);
-  return Bld.CreateCall(F, llvm::None, "nvptx_num_threads");
 }

@@ -11,9 +11,8 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 
-namespace llvm {
-namespace objcopy {
-namespace macho {
+using namespace llvm;
+using namespace llvm::objcopy::macho;
 
 StringTableBuilder::Kind
 MachOLayoutBuilder::getStringTableBuilderKind(const Object &O, bool Is64Bit) {
@@ -252,7 +251,10 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
   uint64_t StartOfFunctionStarts = StartOfExportTrie + O.Exports.Trie.size();
   uint64_t StartOfDataInCode =
       StartOfFunctionStarts + O.FunctionStarts.Data.size();
-  uint64_t StartOfSymbols = StartOfDataInCode + O.DataInCode.Data.size();
+  uint64_t StartOfLinkerOptimizationHint =
+      StartOfDataInCode + O.DataInCode.Data.size();
+  uint64_t StartOfSymbols =
+      StartOfLinkerOptimizationHint + O.LinkerOptimizationHint.Data.size();
   uint64_t StartOfIndirectSymbols =
       StartOfSymbols + NListSize * O.SymTable.Symbols.size();
   uint64_t StartOfSymbolStrings =
@@ -260,10 +262,31 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
       sizeof(uint32_t) * O.IndirectSymTable.Symbols.size();
   uint64_t StartOfCodeSignature =
       StartOfSymbolStrings + StrTableBuilder.getSize();
-  if (O.CodeSignatureCommandIndex)
+  uint32_t CodeSignatureSize = 0;
+  if (O.CodeSignatureCommandIndex) {
     StartOfCodeSignature = alignTo(StartOfCodeSignature, 16);
+
+    // Note: These calculations are to be kept in sync with the same
+    // calculations performed in LLD's CodeSignatureSection.
+    const uint32_t AllHeadersSize =
+        alignTo(CodeSignature.FixedHeadersSize + OutputFileName.size() + 1,
+                CodeSignature.Align);
+    const uint32_t BlockCount =
+        (StartOfCodeSignature + CodeSignature.BlockSize - 1) /
+        CodeSignature.BlockSize;
+    const uint32_t Size =
+        alignTo(AllHeadersSize + BlockCount * CodeSignature.HashSize,
+                CodeSignature.Align);
+
+    CodeSignature.StartOffset = StartOfCodeSignature;
+    CodeSignature.AllHeadersSize = AllHeadersSize;
+    CodeSignature.BlockCount = BlockCount;
+    CodeSignature.OutputFileName = OutputFileName;
+    CodeSignature.Size = Size;
+    CodeSignatureSize = Size;
+  }
   uint64_t LinkEditSize =
-      (StartOfCodeSignature + O.CodeSignature.Data.size()) - StartOfLinkEdit;
+      StartOfCodeSignature + CodeSignatureSize - StartOfLinkEdit;
 
   // Now we have determined the layout of the contents of the __LINKEDIT
   // segment. Update its load command.
@@ -291,7 +314,7 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     switch (cmd) {
     case MachO::LC_CODE_SIGNATURE:
       MLC.linkedit_data_command_data.dataoff = StartOfCodeSignature;
-      MLC.linkedit_data_command_data.datasize = O.CodeSignature.Data.size();
+      MLC.linkedit_data_command_data.datasize = CodeSignatureSize;
       break;
     case MachO::LC_SYMTAB:
       MLC.symtab_command_data.symoff = StartOfSymbols;
@@ -320,6 +343,11 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     case MachO::LC_DATA_IN_CODE:
       MLC.linkedit_data_command_data.dataoff = StartOfDataInCode;
       MLC.linkedit_data_command_data.datasize = O.DataInCode.Data.size();
+      break;
+    case MachO::LC_LINKER_OPTIMIZATION_HINT:
+      MLC.linkedit_data_command_data.dataoff = StartOfLinkerOptimizationHint;
+      MLC.linkedit_data_command_data.datasize =
+          O.LinkerOptimizationHint.Data.size();
       break;
     case MachO::LC_FUNCTION_STARTS:
       MLC.linkedit_data_command_data.dataoff = StartOfFunctionStarts;
@@ -373,6 +401,10 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     case MachO::LC_SOURCE_VERSION:
     case MachO::LC_THREAD:
     case MachO::LC_UNIXTHREAD:
+    case MachO::LC_SUB_FRAMEWORK:
+    case MachO::LC_SUB_UMBRELLA:
+    case MachO::LC_SUB_CLIENT:
+    case MachO::LC_SUB_LIBRARY:
       // Nothing to update.
       break;
     default:
@@ -394,7 +426,3 @@ Error MachOLayoutBuilder::layout() {
   Offset = layoutRelocations(Offset);
   return layoutTail(Offset);
 }
-
-} // end namespace macho
-} // end namespace objcopy
-} // end namespace llvm

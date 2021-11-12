@@ -53,7 +53,12 @@ def nm_get_symbols(lib):
     process.stdin.close()
     for line in process.stdout:
         # Look for external symbols that are defined in some section
-        match = re.match("^(\S+)\s+[BDGRSTVW]\s+\S+\s+\S+$", line)
+        # The POSIX format is:
+        #   name   type   value   size
+        # The -P flag displays the size field for symbols only when applicable,
+        # so the last field is optional. There's no space after the value field,
+        # but \s+ match newline also, so \s+\S* will match the optional size field.
+        match = re.match("^(\S+)\s+[BDGRSTVW]\s+\S+\s+\S*$", line)
         if match:
             yield match.group(1)
     process.wait()
@@ -119,6 +124,11 @@ def readobj_is_32bit_windows(lib):
         match = re.match('Format: (\S+)', line)
         if match:
             return (match.group(1) == 'COFF-i386')
+    return False
+
+# On AIX, there isn't an easy way to detect 32-bit windows objects with the system toolchain,
+# so just assume false.
+def aix_is_32bit_windows(lib):
     return False
 
 # MSVC mangles names to ?<identifier_mangling>@<type_mangling>. By examining the
@@ -352,7 +362,7 @@ if __name__ == '__main__':
               'objdump' : (None, objdump_is_32bit_windows),
               'llvm-readobj' : (readobj_get_symbols, readobj_is_32bit_windows) }
     get_symbols = None
-    is_32bit_windows = None
+    is_32bit_windows = aix_is_32bit_windows if sys.platform.startswith('aix') else None
     # If we have a tools argument then use that for the list of tools to check
     if args.tools:
         tool_exes = args.tools

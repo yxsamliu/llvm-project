@@ -148,6 +148,7 @@ using CXXBaseSpecifierMatcher = internal::Matcher<CXXBaseSpecifier>;
 using CXXCtorInitializerMatcher = internal::Matcher<CXXCtorInitializer>;
 using TemplateArgumentMatcher = internal::Matcher<TemplateArgument>;
 using TemplateArgumentLocMatcher = internal::Matcher<TemplateArgumentLoc>;
+using AttrMatcher = internal::Matcher<Attr>;
 /// @}
 
 /// Matches any node.
@@ -307,7 +308,7 @@ AST_POLYMORPHIC_MATCHER_REGEX(isExpansionInFileMatching,
 
 /// Matches statements that are (transitively) expanded from the named macro.
 /// Does not match if only part of the statement is expanded from that macro or
-/// if different parts of the the statement are expanded from different
+/// if different parts of the statement are expanded from different
 /// appearances of the macro.
 AST_POLYMORPHIC_MATCHER_P(isExpandedFromMacro,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Stmt, TypeLoc),
@@ -752,9 +753,10 @@ AST_MATCHER_P(ClassTemplateSpecializationDecl, hasSpecializedTemplate,
           InnerMatcher.matches(*Decl, Finder, Builder));
 }
 
-/// Matches a declaration that has been implicitly added
-/// by the compiler (eg. implicit default/copy constructors).
-AST_MATCHER(Decl, isImplicit) {
+/// Matches an entity that has been implicitly added by the compiler (e.g.
+/// implicit default/copy constructors).
+AST_POLYMORPHIC_MATCHER(isImplicit,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Attr)) {
   return Node.isImplicit();
 }
 
@@ -913,7 +915,7 @@ AST_MATCHER_P(Expr, ignoringImplicit, internal::Matcher<Expr>,
 ///    varDecl(hasInitializer(integerLiteral()))
 ///    varDecl(hasInitializer(declRefExpr()))
 /// \endcode
-/// only match the declarations for b, c, and d.
+/// only match the declarations for a.
 AST_MATCHER_P(Expr, ignoringImpCasts,
               internal::Matcher<Expr>, InnerMatcher) {
   return InnerMatcher.matches(*Node.IgnoreImpCasts(), Finder, Builder);
@@ -3489,8 +3491,8 @@ internal::Matcher<T> findAll(const internal::Matcher<T> &Matcher) {
 /// Usable as: Any Matcher
 extern const internal::ArgumentAdaptingMatcherFunc<
     internal::HasParentMatcher,
-    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc>,
-    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc>>
+    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc, Attr>,
+    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc, Attr>>
     hasParent;
 
 /// Matches AST nodes that have an ancestor that matches the provided
@@ -3506,8 +3508,8 @@ extern const internal::ArgumentAdaptingMatcherFunc<
 /// Usable as: Any Matcher
 extern const internal::ArgumentAdaptingMatcherFunc<
     internal::HasAncestorMatcher,
-    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc>,
-    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc>>
+    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc, Attr>,
+    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc, Attr>>
     hasAncestor;
 
 /// Matches if the provided matcher does not match.
@@ -5875,6 +5877,10 @@ AST_MATCHER(CXXMethodDecl, isVirtualAsWritten) {
   return Node.isVirtualAsWritten();
 }
 
+AST_MATCHER(CXXConstructorDecl, isInheritingConstructor) {
+  return Node.isInheritingConstructor();
+}
+
 /// Matches if the given method or class declaration is final.
 ///
 /// Given:
@@ -6331,6 +6337,187 @@ AST_MATCHER_FUNCTION_P_OVERLOAD(internal::BindableMatcher<TypeLoc>, loc,
                                 internal::Matcher<QualType>, InnerMatcher, 0) {
   return internal::BindableMatcher<TypeLoc>(
       new internal::TypeLocTypeMatcher(InnerMatcher));
+}
+
+/// Matches `QualifiedTypeLoc`s in the clang AST.
+///
+/// Given
+/// \code
+///   const int x = 0;
+/// \endcode
+/// qualifiedTypeLoc()
+///   matches `const int`.
+extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, QualifiedTypeLoc>
+    qualifiedTypeLoc;
+
+/// Matches `QualifiedTypeLoc`s that have an unqualified `TypeLoc` matching
+/// `InnerMatcher`.
+///
+/// Given
+/// \code
+///   int* const x;
+///   const int y;
+/// \endcode
+/// qualifiedTypeLoc(hasUnqualifiedLoc(pointerTypeLoc()))
+///   matches the `TypeLoc` of the variable declaration of `x`, but not `y`.
+AST_MATCHER_P(QualifiedTypeLoc, hasUnqualifiedLoc, internal::Matcher<TypeLoc>,
+              InnerMatcher) {
+  return InnerMatcher.matches(Node.getUnqualifiedLoc(), Finder, Builder);
+}
+
+/// Matches a function declared with the specified return `TypeLoc`.
+///
+/// Given
+/// \code
+///   int f() { return 5; }
+///   void g() {}
+/// \endcode
+/// functionDecl(hasReturnTypeLoc(loc(asString("int"))))
+///   matches the declaration of `f`, but not `g`.
+AST_MATCHER_P(FunctionDecl, hasReturnTypeLoc, internal::Matcher<TypeLoc>,
+              ReturnMatcher) {
+  auto Loc = Node.getFunctionTypeLoc();
+  return Loc && ReturnMatcher.matches(Loc.getReturnLoc(), Finder, Builder);
+}
+
+/// Matches pointer `TypeLoc`s.
+///
+/// Given
+/// \code
+///   int* x;
+/// \endcode
+/// pointerTypeLoc()
+///   matches `int*`.
+extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, PointerTypeLoc>
+    pointerTypeLoc;
+
+/// Matches pointer `TypeLoc`s that have a pointee `TypeLoc` matching
+/// `PointeeMatcher`.
+///
+/// Given
+/// \code
+///   int* x;
+/// \endcode
+/// pointerTypeLoc(hasPointeeLoc(loc(asString("int"))))
+///   matches `int*`.
+AST_MATCHER_P(PointerTypeLoc, hasPointeeLoc, internal::Matcher<TypeLoc>,
+              PointeeMatcher) {
+  return PointeeMatcher.matches(Node.getPointeeLoc(), Finder, Builder);
+}
+
+/// Matches reference `TypeLoc`s.
+///
+/// Given
+/// \code
+///   int x = 3;
+///   int& l = x;
+///   int&& r = 3;
+/// \endcode
+/// referenceTypeLoc()
+///   matches `int&` and `int&&`.
+extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, ReferenceTypeLoc>
+    referenceTypeLoc;
+
+/// Matches reference `TypeLoc`s that have a referent `TypeLoc` matching
+/// `ReferentMatcher`.
+///
+/// Given
+/// \code
+///   int x = 3;
+///   int& xx = x;
+/// \endcode
+/// referenceTypeLoc(hasReferentLoc(loc(asString("int"))))
+///   matches `int&`.
+AST_MATCHER_P(ReferenceTypeLoc, hasReferentLoc, internal::Matcher<TypeLoc>,
+              ReferentMatcher) {
+  return ReferentMatcher.matches(Node.getPointeeLoc(), Finder, Builder);
+}
+
+/// Matches template specialization `TypeLoc`s.
+///
+/// Given
+/// \code
+///   template <typename T> class C {};
+///   C<char> var;
+/// \endcode
+/// varDecl(hasTypeLoc(templateSpecializationTypeLoc(typeLoc())))
+///   matches `C<char> var`.
+extern const internal::VariadicDynCastAllOfMatcher<
+    TypeLoc, TemplateSpecializationTypeLoc>
+    templateSpecializationTypeLoc;
+
+/// Matches template specialization `TypeLoc`s that have at least one
+/// `TemplateArgumentLoc` matching the given `InnerMatcher`.
+///
+/// Given
+/// \code
+///   template<typename T> class A {};
+///   A<int> a;
+/// \endcode
+/// varDecl(hasTypeLoc(templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
+///   hasTypeLoc(loc(asString("int")))))))
+///   matches `A<int> a`.
+AST_MATCHER_P(TemplateSpecializationTypeLoc, hasAnyTemplateArgumentLoc,
+              internal::Matcher<TemplateArgumentLoc>, InnerMatcher) {
+  for (unsigned Index = 0, N = Node.getNumArgs(); Index < N; ++Index) {
+    clang::ast_matchers::internal::BoundNodesTreeBuilder Result(*Builder);
+    if (InnerMatcher.matches(Node.getArgLoc(Index), Finder, &Result)) {
+      *Builder = std::move(Result);
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Matches template specialization `TypeLoc`s where the n'th
+/// `TemplateArgumentLoc` matches the given `InnerMatcher`.
+///
+/// Given
+/// \code
+///   template<typename T, typename U> class A {};
+///   A<double, int> b;
+///   A<int, double> c;
+/// \endcode
+/// varDecl(hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(0,
+///   hasTypeLoc(loc(asString("double")))))))
+///   matches `A<double, int> b`, but not `A<int, double> c`.
+AST_POLYMORPHIC_MATCHER_P2(
+    hasTemplateArgumentLoc,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(DeclRefExpr, TemplateSpecializationTypeLoc),
+    unsigned, Index, internal::Matcher<TemplateArgumentLoc>, InnerMatcher) {
+  return internal::MatchTemplateArgLocAt(Node, Index, InnerMatcher, Finder,
+                                         Builder);
+}
+
+/// Matches C or C++ elaborated `TypeLoc`s.
+///
+/// Given
+/// \code
+///   struct s {};
+///   struct s ss;
+/// \endcode
+/// elaboratedTypeLoc()
+///   matches the `TypeLoc` of the variable declaration of `ss`.
+extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, ElaboratedTypeLoc>
+    elaboratedTypeLoc;
+
+/// Matches elaborated `TypeLoc`s that have a named `TypeLoc` matching
+/// `InnerMatcher`.
+///
+/// Given
+/// \code
+///   template <typename T>
+///   class C {};
+///   class C<int> c;
+///
+///   class D {};
+///   class D d;
+/// \endcode
+/// elaboratedTypeLoc(hasNamedTypeLoc(templateSpecializationTypeLoc()));
+///   matches the `TypeLoc` of the variable declaration of `c`, but not `d`.
+AST_MATCHER_P(ElaboratedTypeLoc, hasNamedTypeLoc, internal::Matcher<TypeLoc>,
+              InnerMatcher) {
+  return InnerMatcher.matches(Node.getNamedTypeLoc(), Finder, Builder);
 }
 
 /// Matches type \c bool.
@@ -7132,6 +7319,24 @@ AST_MATCHER_P(NestedNameSpecifier, specifiesNamespace,
     return false;
   return InnerMatcher.matches(*Node.getAsNamespace(), Finder, Builder);
 }
+
+/// Matches attributes.
+/// Attributes may be attached with a variety of different syntaxes (including
+/// keywords, C++11 attributes, GNU ``__attribute``` and MSVC `__declspec``,
+/// and ``#pragma``s). They may also be implicit.
+///
+/// Given
+/// \code
+///   struct [[nodiscard]] Foo{};
+///   void bar(int * __attribute__((nonnull)) );
+///   __declspec(noinline) void baz();
+///
+///   #pragma omp declare simd
+///   int min();
+/// \endcode
+/// attr()
+///   matches "nodiscard", "nonnull", "noinline", and the whole "#pragma" line.
+extern const internal::VariadicAllOfMatcher<Attr> attr;
 
 /// Overloads for the \c equalsNode matcher.
 /// FIXME: Implement for other node types.

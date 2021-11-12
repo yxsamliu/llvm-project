@@ -161,6 +161,9 @@ def FeatureDirectMove :
 def FeaturePartwordAtomic : SubtargetFeature<"partword-atomics",
                                              "HasPartwordAtomics", "true",
                                              "Enable l[bh]arx and st[bh]cx.">;
+def FeatureQuadwordAtomic : SubtargetFeature<"quadword-atomics",
+                                             "HasQuadwordAtomics", "true",
+                                             "Enable lqarx and stqcx.">;
 def FeatureInvariantFunctionDescriptors :
   SubtargetFeature<"invariant-function-descriptors",
                    "HasInvariantFunctionDescriptors", "true",
@@ -210,9 +213,16 @@ def FeatureSlowPOPCNTD : SubtargetFeature<"slow-popcntd","HasPOPCNTD",
 def DeprecatedDST    : SubtargetFeature<"", "DeprecatedDST", "true",
   "Treat vector data stream cache control instructions as deprecated">;
 
+def FeatureISA2_06 : SubtargetFeature<"isa-v206-instructions", "IsISA2_06",
+                                      "true",
+                                      "Enable instructions in ISA 2.06.">;
+def FeatureISA2_07 : SubtargetFeature<"isa-v207-instructions", "IsISA2_07",
+                                      "true",
+                                      "Enable instructions in ISA 2.07.">;
 def FeatureISA3_0 : SubtargetFeature<"isa-v30-instructions", "IsISA3_0",
                                      "true",
-                                     "Enable instructions in ISA 3.0.">;
+                                     "Enable instructions in ISA 3.0.",
+                                     [FeatureISA2_07]>;
 def FeatureISA3_1 : SubtargetFeature<"isa-v31-instructions", "IsISA3_1",
                                      "true",
                                      "Enable instructions in ISA 3.1.",
@@ -312,7 +322,8 @@ def ProcessorFeatures {
                                                   FeatureMFTB,
                                                   DeprecatedDST,
                                                   FeatureTwoConstNR,
-                                                  FeatureUnalignedFloats];
+                                                  FeatureUnalignedFloats,
+                                                  FeatureISA2_06];
   list<SubtargetFeature> P7SpecificFeatures = [];
   list<SubtargetFeature> P7Features =
     !listconcat(P7InheritableFeatures, P7SpecificFeatures);
@@ -327,7 +338,9 @@ def ProcessorFeatures {
      FeatureDirectMove,
      FeatureICBT,
      FeaturePartwordAtomic,
-     FeaturePredictableSelectIsExpensive
+     FeatureQuadwordAtomic,
+     FeaturePredictableSelectIsExpensive,
+     FeatureISA2_07
     ];
 
   list<SubtargetFeature> P8SpecificFeatures = [FeatureAddiLoadFusion,
@@ -577,8 +590,7 @@ def : ProcessorModel<"pwr6x", G5Model,
 def : ProcessorModel<"pwr7", P7Model, ProcessorFeatures.P7Features>;
 def : ProcessorModel<"pwr8", P8Model, ProcessorFeatures.P8Features>;
 def : ProcessorModel<"pwr9", P9Model, ProcessorFeatures.P9Features>;
-// No scheduler model yet.
-def : ProcessorModel<"pwr10", P9Model, ProcessorFeatures.P10Features>;
+def : ProcessorModel<"pwr10", P10Model, ProcessorFeatures.P10Features>;
 // No scheduler model for future CPU.
 def : ProcessorModel<"future", NoSchedModel,
                   ProcessorFeatures.FutureFeatures>;

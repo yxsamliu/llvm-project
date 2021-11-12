@@ -492,6 +492,7 @@ struct DebugValueSubstitution {
   unsigned SrcOp;
   unsigned DstInst;
   unsigned DstOp;
+  unsigned Subreg;
 
   bool operator==(const DebugValueSubstitution &Other) const {
     return std::tie(SrcInst, SrcOp, DstInst, DstOp) ==
@@ -505,6 +506,7 @@ template <> struct MappingTraits<DebugValueSubstitution> {
     YamlIO.mapRequired("srcop", Sub.SrcOp);
     YamlIO.mapRequired("dstinst", Sub.DstInst);
     YamlIO.mapRequired("dstop", Sub.DstOp);
+    YamlIO.mapRequired("subreg", Sub.Subreg);
   }
 
   static const bool flow = true;
@@ -692,6 +694,7 @@ struct MachineFunction {
   // Register information
   bool TracksRegLiveness = false;
   bool HasWinCFI = false;
+  bool FailsVerification = false;
   std::vector<VirtualRegisterDefinition> VirtualRegisters;
   std::vector<MachineFunctionLiveIn> LiveIns;
   Optional<std::vector<FlowStringValue>> CalleeSavedRegisters;
@@ -705,6 +708,7 @@ struct MachineFunction {
   std::vector<CallSiteInfo> CallSitesInfo;
   std::vector<DebugValueSubstitution> DebugValueSubstitutions;
   MachineJumpTable JumpTableInfo;
+  std::vector<StringValue> MachineMetadataNodes;
   BlockStringValue Body;
 };
 
@@ -719,6 +723,7 @@ template <> struct MappingTraits<MachineFunction> {
     YamlIO.mapOptional("failedISel", MF.FailedISel, false);
     YamlIO.mapOptional("tracksRegLiveness", MF.TracksRegLiveness, false);
     YamlIO.mapOptional("hasWinCFI", MF.HasWinCFI, false);
+    YamlIO.mapOptional("failsVerification", MF.FailsVerification, false);
     YamlIO.mapOptional("registers", MF.VirtualRegisters,
                        std::vector<VirtualRegisterDefinition>());
     YamlIO.mapOptional("liveins", MF.LiveIns,
@@ -739,6 +744,9 @@ template <> struct MappingTraits<MachineFunction> {
     YamlIO.mapOptional("machineFunctionInfo", MF.MachineFuncInfo);
     if (!YamlIO.outputting() || !MF.JumpTableInfo.Entries.empty())
       YamlIO.mapOptional("jumpTable", MF.JumpTableInfo, MachineJumpTable());
+    if (!YamlIO.outputting() || !MF.MachineMetadataNodes.empty())
+      YamlIO.mapOptional("machineMetadataNodes", MF.MachineMetadataNodes,
+                         std::vector<StringValue>());
     YamlIO.mapOptional("body", MF.Body, BlockStringValue());
   }
 };

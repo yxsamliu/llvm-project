@@ -10,9 +10,9 @@
 #define LLVM_ANALYSIS_INLINEADVISOR_H
 
 #include "llvm/Analysis/InlineCost.h"
+#include "llvm/Analysis/Utils/ImportedFunctionsInliningStatistics.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Analysis/Utils/ImportedFunctionsInliningStatistics.h"
 #include <memory>
 #include <unordered_set>
 
@@ -22,6 +22,7 @@ class CallBase;
 class Function;
 class Module;
 class OptimizationRemarkEmitter;
+struct ReplayInlinerSettings;
 
 /// There are 3 scenarios we can use the InlineAdvisor:
 /// - Default - use manual heuristics.
@@ -36,11 +37,7 @@ class OptimizationRemarkEmitter;
 /// requires the full C Tensorflow API library, and evaluates models
 /// dynamically. This mode also permits generating training logs, for offline
 /// training.
-enum class InliningAdvisorMode : int {
-  Default,
-  Release,
-  Development
-};
+enum class InliningAdvisorMode : int { Default, Release, Development };
 
 class InlineAdvisor;
 /// Capture state between an inlining decision having had been made, and
@@ -147,7 +144,11 @@ public:
   /// be up-to-date wrt previous inlining decisions. \p MandatoryOnly indicates
   /// only mandatory (always-inline) call sites should be recommended - this
   /// allows the InlineAdvisor track such inlininings.
-  /// Returns an InlineAdvice with the inlining recommendation.
+  /// Returns:
+  /// - An InlineAdvice with the inlining recommendation.
+  /// - Null when no recommendation is made (https://reviews.llvm.org/D110658).
+  /// TODO: Consider removing the Null return scenario by incorporating the
+  /// SampleProfile inliner into an InlineAdvisor
   std::unique_ptr<InlineAdvice> getAdvice(CallBase &CB,
                                           bool MandatoryOnly = false);
 
@@ -223,15 +224,16 @@ public:
   InlineAdvisorAnalysis() = default;
   struct Result {
     Result(Module &M, ModuleAnalysisManager &MAM) : M(M), MAM(MAM) {}
-    bool invalidate(Module &, const PreservedAnalyses &,
+    bool invalidate(Module &, const PreservedAnalyses &PA,
                     ModuleAnalysisManager::Invalidator &) {
-      // InlineAdvisor must be preserved across analysis invalidations.
-      return false;
+      // Check whether the analysis has been explicitly invalidated. Otherwise,
+      // it's stateless and remains preserved.
+      auto PAC = PA.getChecker<InlineAdvisorAnalysis>();
+      return !PAC.preservedWhenStateless();
     }
     bool tryCreate(InlineParams Params, InliningAdvisorMode Mode,
-                   StringRef ReplayFile);
+                   const ReplayInlinerSettings &ReplaySettings);
     InlineAdvisor *getAdvisor() const { return Advisor.get(); }
-    void clear() { Advisor.reset(); }
 
   private:
     Module &M;
@@ -267,12 +269,16 @@ shouldInline(CallBase &CB, function_ref<InlineCost(CallBase &CB)> GetInlineCost,
 /// Emit ORE message.
 void emitInlinedInto(OptimizationRemarkEmitter &ORE, DebugLoc DLoc,
                      const BasicBlock *Block, const Function &Callee,
-                     const Function &Caller, const InlineCost &IC,
-                     bool ForProfileContext = false,
+                     const Function &Caller, bool IsMandatory,
+                     function_ref<void(OptimizationRemark &)> ExtraContext = {},
                      const char *PassName = nullptr);
 
-/// get call site location as string
-std::string getCallSiteLocation(DebugLoc DLoc);
+/// Emit ORE message based in cost (default heuristic).
+void emitInlinedIntoBasedOnCost(OptimizationRemarkEmitter &ORE, DebugLoc DLoc,
+                                const BasicBlock *Block, const Function &Callee,
+                                const Function &Caller, const InlineCost &IC,
+                                bool ForProfileContext = false,
+                                const char *PassName = nullptr);
 
 /// Add location info to ORE message.
 void addLocationToRemarks(OptimizationRemark &Remark, DebugLoc DLoc);

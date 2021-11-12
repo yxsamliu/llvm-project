@@ -194,19 +194,6 @@ LLVM_DUMP_METHOD void HeaderMapImpl::dump() const {
   }
 }
 
-/// LookupFile - Check to see if the specified relative filename is located in
-/// this HeaderMap.  If so, open it and return its FileEntry.
-Optional<FileEntryRef> HeaderMap::LookupFile(StringRef Filename,
-                                             FileManager &FM) const {
-
-  SmallString<1024> Path;
-  StringRef Dest = HeaderMapImpl::lookupFilename(Filename, Path);
-  if (Dest.empty())
-    return None;
-
-  return FM.getOptionalFileRef(Dest);
-}
-
 StringRef HeaderMapImpl::lookupFilename(StringRef Filename,
                                         SmallVectorImpl<char> &DestPath) const {
   const HMapHeader &Hdr = getHeader();
@@ -224,7 +211,7 @@ StringRef HeaderMapImpl::lookupFilename(StringRef Filename,
     Optional<StringRef> Key = getString(B.Key);
     if (LLVM_UNLIKELY(!Key))
       continue;
-    if (!Filename.equals_lower(*Key))
+    if (!Filename.equals_insensitive(*Key))
       continue;
 
     // If so, we have a match in the hash table.  Construct the destination

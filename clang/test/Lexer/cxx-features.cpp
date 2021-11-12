@@ -31,6 +31,10 @@
 
 // --- C++2b features ---
 
+#if check(implicit_move, 0, 0, 0, 0, 0, 202011)
+#error "wrong value for __cpp_implicit_move"
+#endif
+
 #if check(size_t_suffix, 0, 0, 0, 0, 0, 202011)
 #error "wrong value for __cpp_size_t_suffix"
 #endif
@@ -89,6 +93,10 @@
 
 #if check(impl_three_way_comparison, 0, 0, 0, 0, 201907, 201907)
 #error "wrong value for __cpp_impl_three_way_comparison"
+#endif
+
+#if check(impl_coroutine, 0, 0, 0, 0, 201902L, 201902L)
+#error "wrong value for __cpp_impl_coroutine"
 #endif
 
 // init_captures checked below

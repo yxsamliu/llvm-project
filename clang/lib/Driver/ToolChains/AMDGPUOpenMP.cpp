@@ -9,13 +9,14 @@
 #include "AMDGPUOpenMP.h"
 #include "AMDGPU.h"
 #include "CommonArgs.h"
-#include "InputInfo.h"
-#include "clang/Basic/Cuda.h"
+#include "ToolChains/ROCm.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -114,8 +115,8 @@ static bool checkSystemForAMDGPU(const ArgList &Args, const AMDGPUToolChain &TC,
 // OpenMP needs a custom link tool to build select statement
 const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
     Compilation &C, const JobAction &JA, const InputInfoList &Inputs,
-    const ArgList &Args, StringRef SubArchName,
-    StringRef OutputFilePrefix) const {
+    const ArgList &Args, StringRef TargetID, StringRef OutputFilePrefix) const {
+  ArgStringList CmdArgs;
 
   std::string TmpName;
   TmpName = C.getDriver().isSaveTempsEnabled()
@@ -124,7 +125,6 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
                       OutputFilePrefix.str() + "-select", "bc");
   const char *OutputFileName =
       C.addTempFile(C.getArgs().MakeArgString(TmpName));
-  ArgStringList CmdArgs;
   // CmdArgs.push_back("-v");
   llvm::SmallVector<std::string, 10> BCLibs;
   for (const auto &II : Inputs) {
@@ -160,9 +160,12 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
     BCLibs.push_back(Args.MakeArgString(Lib));
   }
 
+  StringRef GPUArch =
+      getProcessorFromTargetID(getToolChain().getTriple(), TargetID);
+
   // Add libm for Fortran.
   if (C.getDriver().IsFlangMode()) {
-    BCLibs.push_back(Args.MakeArgString("libm-amdgcn-" + SubArchName + ".bc"));
+    BCLibs.push_back(Args.MakeArgString("libm-amdgcn-" + GPUArch + ".bc"));
     if (Args.hasArg(options::OPT_cl_finite_math_only))
       BCLibs.push_back(Args.MakeArgString("oclc_finite_only_on.bc"));
     else
@@ -170,24 +173,27 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
   }
 
   llvm::StringRef WaveFrontSizeBC;
-  std::string GFXVersion = SubArchName.drop_front(3).str();
+  std::string GFXVersion = GPUArch.drop_front(3).str();
   if (stoi(GFXVersion) < 1000)
     WaveFrontSizeBC = "oclc_wavefrontsize64_on.bc";
   else
     WaveFrontSizeBC = "oclc_wavefrontsize64_off.bc";
 
+  std::string BitcodeSuffix;
+  if (Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
+                   options::OPT_fno_openmp_target_new_runtime, false))
+    BitcodeSuffix = "new-amdgpu-" + GPUArch.str();
+  else
+    BitcodeSuffix = "amdgcn-" + GPUArch.str();
   // FIXME: remove double link of hip aompextras, ockl, and WaveFrontSizeBC
   if (Args.hasArg(options::OPT_cuda_device_only))
-    BCLibs.append(
-        {Args.MakeArgString("libomptarget-amdgcn-" + SubArchName + ".bc"),
-         "hip.bc", "ockl.bc",
-         std::string(WaveFrontSizeBC)});
+    BCLibs.append({Args.MakeArgString("libomptarget-amdgcn-" + GPUArch + ".bc"),
+                   "hip.bc", "ockl.bc", std::string(WaveFrontSizeBC)});
   else {
     BCLibs.append(
-        {Args.MakeArgString("libomptarget-amdgcn-" + SubArchName + ".bc"),
-         Args.MakeArgString("libaompextras-amdgcn-" + SubArchName + ".bc"),
-         "hip.bc", "ockl.bc",
-         Args.MakeArgString("libbc-hostrpc-amdgcn.a"),
+        {Args.MakeArgString("libomptarget-amdgcn-" + GPUArch + ".bc"),
+         Args.MakeArgString("libaompextras-amdgcn-" + GPUArch + ".bc"),
+         "hip.bc", "ockl.bc", Args.MakeArgString("libbc-hostrpc-amdgcn.a"),
          std::string(WaveFrontSizeBC)});
   }
 
@@ -201,10 +207,10 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
              /* PostClang Link? */ false);
 
   // This will find .a and .bc files that match naming convention.
-  AddStaticDeviceLibs(C, *this, JA, Inputs, Args, CmdArgs, "amdgcn",
-                      SubArchName,
-                      /* bitcode SDL?*/ true,
-                      /* PostClang Link? */ false);
+  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, CmdArgs, "amdgcn",
+                             TargetID,
+                             /* bitcode SDL?*/ true,
+                             /* PostClang Link? */ false);
 
   // Get the environment variable ROCM_SELECT_ARGS and add to select-link.
   Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_SELECT_ARGS");
@@ -226,17 +232,17 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
 }
 
 const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
-    Compilation &C, const JobAction &JA, const InputInfoList &Inputs,
-    const ArgList &Args, StringRef SubArchName,
+    const toolchains::AMDGPUOpenMPToolChain &AMDGPUOpenMPTC, Compilation &C,
+    const JobAction &JA, const InputInfoList &Inputs,
+    const llvm::opt::ArgList &Args, llvm::StringRef TargetID,
     StringRef OutputFilePrefix) const {
   ArgStringList CmdArgs;
 
   bool DoOverride = JA.getOffloadingDeviceKind() == Action::OFK_OpenMP;
   StringRef overrideInputsFile =
-      DoOverride
-          ? constructOmpExtraCmds(C, JA, Inputs, Args, SubArchName,
-			          OutputFilePrefix)
-          : "";
+      DoOverride ? constructOmpExtraCmds(C, JA, Inputs, Args, TargetID,
+                                         OutputFilePrefix)
+                 : "";
 
   // Add the input bc's created by compile step.
   if (overrideInputsFile.empty()) {
@@ -248,10 +254,10 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
 
   // for OpenMP, we already did this in clang-build-select-link
   if (JA.getOffloadingDeviceKind() != Action::OFK_OpenMP)
-    AddStaticDeviceLibs(C, *this, JA, Inputs, Args, CmdArgs, "amdgcn",
-                        SubArchName,
-                        /* bitcode SDL?*/ true,
-                        /* PostClang Link? */ false);
+    AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, CmdArgs, "amdgcn",
+                               TargetID,
+                               /* bitcode SDL?*/ true,
+                               /* PostClang Link? */ false);
 
   // Get the environment variable ROCM_LINK_ARGS and add to llvm-link.
   Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LINK_ARGS");
@@ -262,6 +268,24 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
       CmdArgs.push_back(Args.MakeArgString(Env.trim()));
   }
 
+  if (Args.hasArg(options::OPT_l)) {
+    auto Lm = Args.getAllArgValues(options::OPT_l);
+    bool HasLibm = false;
+    for (auto &Lib : Lm) {
+      if (Lib == "m") {
+        HasLibm = true;
+        break;
+      }
+    }
+
+    if (HasLibm) {
+      SmallVector<std::string, 12> BCLibs =
+          AMDGPUOpenMPTC.getCommonDeviceLibNames(Args, TargetID.str());
+      llvm::for_each(BCLibs, [&](StringRef BCFile) {
+        CmdArgs.push_back(Args.MakeArgString(BCFile));
+      });
+    }
+  }
   // Add an intermediate output file.
   CmdArgs.push_back("-o");
   auto OutputFileName = getOutputFileName(C, OutputFilePrefix, "-linked", "bc");
@@ -276,7 +300,7 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
 
 const char *AMDGCN::OpenMPLinker::constructOptCommand(
     Compilation &C, const JobAction &JA, const InputInfoList &Inputs,
-    const llvm::opt::ArgList &Args, llvm::StringRef SubArchName,
+    const llvm::opt::ArgList &Args, llvm::StringRef TargetID,
     llvm::StringRef OutputFilePrefix, const char *InputFileName) const {
   // Construct opt command.
   ArgStringList OptArgs;
@@ -285,7 +309,9 @@ const char *AMDGCN::OpenMPLinker::constructOptCommand(
   // Pass optimization arg to opt.
   addLLCOptArg(Args, OptArgs);
   OptArgs.push_back("-mtriple=amdgcn-amd-amdhsa");
-  OptArgs.push_back(Args.MakeArgString("-mcpu=" + SubArchName));
+  StringRef GPUArch =
+      getProcessorFromTargetID(getToolChain().getTriple(), TargetID);
+  OptArgs.push_back(Args.MakeArgString("-mcpu=" + GPUArch));
 
   // Get the environment variable ROCM_OPT_ARGS and add to opt.
   Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_OPT_ARGS");
@@ -299,6 +325,23 @@ const char *AMDGCN::OpenMPLinker::constructOptCommand(
   for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
     OptArgs.push_back(A->getValue(0));
   }
+
+  auto &TC = getToolChain();
+  auto &D = TC.getDriver();
+  // Extract all the -m options
+  std::vector<llvm::StringRef> Features;
+  amdgpu::getAMDGPUTargetFeatures(D, TC.getTriple(), Args, Features,
+                                  TargetID.str());
+
+  // Add features to mattr such as xnack
+  std::string MAttrString = "-mattr=";
+  for (auto OneFeature : Features) {
+    MAttrString.append(Args.MakeArgString(OneFeature));
+    if (OneFeature != Features.back())
+      MAttrString.append(",");
+  }
+  if (!Features.empty())
+    OptArgs.push_back(Args.MakeArgString(MAttrString));
 
   OptArgs.push_back("-o");
   auto OutputFileName =
@@ -314,7 +357,7 @@ const char *AMDGCN::OpenMPLinker::constructOptCommand(
 
 const char *AMDGCN::OpenMPLinker::constructLlcCommand(
     Compilation &C, const JobAction &JA, const InputInfoList &Inputs,
-    const llvm::opt::ArgList &Args, llvm::StringRef SubArchName,
+    const llvm::opt::ArgList &Args, llvm::StringRef TargetID,
     llvm::StringRef OutputFilePrefix, const char *InputFileName,
     bool OutputIsAsm) const {
   // Construct llc command.
@@ -324,7 +367,9 @@ const char *AMDGCN::OpenMPLinker::constructLlcCommand(
   // Pass optimization arg to llc.
   addLLCOptArg(Args, LlcArgs, /*IsLlc=*/true);
   LlcArgs.push_back("-mtriple=amdgcn-amd-amdhsa");
-  LlcArgs.push_back(Args.MakeArgString("-mcpu=" + SubArchName));
+  StringRef GPUArch =
+      getProcessorFromTargetID(getToolChain().getTriple(), TargetID);
+  LlcArgs.push_back(Args.MakeArgString("-mcpu=" + GPUArch));
   LlcArgs.push_back(
       Args.MakeArgString(Twine("-filetype=") + (OutputIsAsm ? "asm" : "obj")));
 
@@ -345,10 +390,12 @@ const char *AMDGCN::OpenMPLinker::constructLlcCommand(
       LlcArgs.push_back(Args.MakeArgString(Env.trim()));
   }
 
+  auto &TC = getToolChain();
+  auto &D = TC.getDriver();
   // Extract all the -m options
   std::vector<llvm::StringRef> Features;
-  handleTargetFeaturesGroup(
-    Args, Features, options::OPT_m_amdgpu_Features_Group);
+  amdgpu::getAMDGPUTargetFeatures(D, TC.getTriple(), Args, Features,
+                                  TargetID.str());
 
   // Add features to mattr such as xnack
   std::string MAttrString = "-mattr=";
@@ -395,6 +442,27 @@ void AMDGCN::OpenMPLinker::constructLldCommand(
       LldArgs.push_back(Args.MakeArgString(Env.trim()));
   }
 
+  auto &TC = getToolChain();
+  auto &D = TC.getDriver();
+  StringRef GPUArch =
+      getProcessorFromTargetID(TC.getTriple(), TC.getTargetID());
+  LldArgs.push_back(Args.MakeArgString("-plugin-opt=mcpu=" + GPUArch));
+
+  // Extract all the -m options
+  std::vector<llvm::StringRef> Features;
+  amdgpu::getAMDGPUTargetFeatures(D, TC.getTriple(), Args, Features,
+                                  TC.getTargetID());
+
+  // Add features to mattr such as cumode
+  std::string MAttrString = "-plugin-opt=-mattr=";
+  for (auto OneFeature : unifyTargetFeatures(Features)) {
+    MAttrString.append(Args.MakeArgString(OneFeature));
+    if (OneFeature != Features.back())
+      MAttrString.append(",");
+  }
+  if (!Features.empty())
+    LldArgs.push_back(Args.MakeArgString(MAttrString));
+
   const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::AtFileCurCP(), Lld, LldArgs, Inputs,
@@ -417,31 +485,29 @@ void AMDGCN::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
   const toolchains::AMDGPUOpenMPToolChain &AMDGPUOpenMPTC =
       static_cast<const toolchains::AMDGPUOpenMPToolChain &>(TC);
 
-  std::string GPUArch = Args.getLastArgValue(options::OPT_march_EQ).str();
-  if (GPUArch.empty()) {
-    if (!checkSystemForAMDGPU(Args, AMDGPUOpenMPTC, GPUArch))
-      return;
-  }
+  std::string TargetIDStr = AMDGPUOpenMPTC.getTargetID();
+  StringRef TargetID = StringRef(TargetIDStr);
+  assert(TargetID.startswith("gfx") && "Unsupported sub arch");
 
   // Prefix for temporary file name.
   std::string Prefix;
   for (const auto &II : Inputs)
     if (II.isFilename())
-      Prefix = llvm::sys::path::stem(II.getFilename()).str() + "-" + GPUArch;
+      Prefix =
+          llvm::sys::path::stem(II.getFilename()).str() + "-" + TargetID.str();
   assert(Prefix.length() && "no linker inputs are files ");
 
   // Each command outputs different files.
-  const char *LLVMLinkCommand =
-      constructLLVMLinkCommand( C, JA, Inputs, Args,  GPUArch.c_str(), Prefix);
-  const char *OptCommand = constructOptCommand(C, JA, Inputs, Args,
-		                               GPUArch.c_str(),
+  const char *LLVMLinkCommand = constructLLVMLinkCommand(
+      AMDGPUOpenMPTC, C, JA, Inputs, Args, TargetID, Prefix);
+  const char *OptCommand = constructOptCommand(C, JA, Inputs, Args, TargetID,
                                                Prefix, LLVMLinkCommand);
+  // Produce readable assembly if save-temps is enabled.
   if (C.getDriver().isSaveTempsEnabled())
-    constructLlcCommand(C, JA, Inputs, Args, GPUArch.c_str(), Prefix, OptCommand,
+    constructLlcCommand(C, JA, Inputs, Args, TargetID, Prefix, OptCommand,
                         /*OutputIsAsm=*/true);
   const char *LlcCommand =
-      constructLlcCommand(C, JA, Inputs, Args, GPUArch.c_str(), Prefix,
-		          OptCommand);
+      constructLlcCommand(C, JA, Inputs, Args, TargetID, Prefix, OptCommand);
   constructLldCommand(C, JA, Inputs, Output, Args, LlcCommand);
 }
 
@@ -454,23 +520,50 @@ AMDGPUOpenMPToolChain::AMDGPUOpenMPToolChain(const Driver &D, const llvm::Triple
   getProgramPaths().push_back(getDriver().Dir);
 }
 
+AMDGPUOpenMPToolChain::AMDGPUOpenMPToolChain(const Driver &D,
+                                             const llvm::Triple &Triple,
+                                             const ToolChain &HostTC,
+                                             const ArgList &Args,
+                                             const Action::OffloadKind OK,
+                                             const std::string TargetID)
+    : ROCMToolChain(D, Triple, Args), HostTC(HostTC), OK(OK) {
+  // Lookup binaries into the driver directory, this is used to
+  // discover the clang-offload-bundler executable.
+  getProgramPaths().push_back(getDriver().Dir);
+  this->TargetID = std::move(TargetID);
+}
+
 void AMDGPUOpenMPToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadingKind) const {
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
-  std::string GPUArch = DriverArgs.getLastArgValue(options::OPT_march_EQ).str();
-  if (GPUArch.empty()) {
-    if (!checkSystemForAMDGPU(DriverArgs, *this, GPUArch))
+
+  std::string TargetIDStr = getTargetID();
+  StringRef TargetID = StringRef(TargetIDStr);
+  if (TargetIDStr.empty()) {
+    if (!checkSystemForAMDGPU(DriverArgs, *this, TargetIDStr))
       return;
   }
   assert((DeviceOffloadingKind == Action::OFK_HIP ||
           DeviceOffloadingKind == Action::OFK_OpenMP) &&
          "Only HIP offloading kinds are supported for GPUs.");
-  auto Kind = llvm::AMDGPU::parseArchAMDGCN(GPUArch);
+  auto Kind = llvm::AMDGPU::parseArchAMDGCN(TargetID);
   const StringRef CanonArch = llvm::AMDGPU::getArchNameAMDGCN(Kind);
 
   CC1Args.push_back("-target-cpu");
+  StringRef GPUArch = getProcessorFromTargetID(getTriple(), TargetID);
   CC1Args.push_back(DriverArgs.MakeArgStringRef(GPUArch));
+
+  // Extract all the -m options
+  std::vector<llvm::StringRef> Features;
+  amdgpu::getAMDGPUTargetFeatures(getDriver(), getTriple(), DriverArgs,
+                                  Features, TargetIDStr);
+
+  for (auto OneFeature : unifyTargetFeatures(Features)) {
+    CC1Args.push_back("-target-feature");
+    CC1Args.push_back(OneFeature.data());
+  }
+
   CC1Args.push_back("-fcuda-is-device");
 
   if (DriverArgs.hasFlag(options::OPT_fcuda_approx_transcendentals,
@@ -555,7 +648,7 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
 
     std::string LibDeviceFile = RocmInstallation.getLibDeviceFile(CanonArch);
     if (LibDeviceFile.empty()) {
-      getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 1 << GPUArch;
+      getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 1 << TargetID;
       return;
     }
 
@@ -581,6 +674,35 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
         DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
         FastRelaxedMath, CorrectSqrt));
 
+    llvm::for_each(BCLibs, [&](StringRef BCFile) {
+      CC1Args.push_back("-mlink-builtin-bitcode");
+      CC1Args.push_back(DriverArgs.MakeArgString(BCFile));
+    });
+  }
+
+  std::string BitcodeSuffix;
+  if (DriverArgs.hasFlag(options::OPT_fopenmp_target_new_runtime,
+                         options::OPT_fno_openmp_target_new_runtime, false)) {
+    BitcodeSuffix = "new-amdgpu-" + GPUArch.str();
+    addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, BitcodeSuffix,
+                       getTriple());
+  }
+
+  if (!DriverArgs.hasArg(options::OPT_l))
+    return;
+
+  auto Lm = DriverArgs.getAllArgValues(options::OPT_l);
+  bool HasLibm = false;
+  for (auto &Lib : Lm) {
+    if (Lib == "m") {
+      HasLibm = true;
+      break;
+    }
+  }
+
+  if (HasLibm) {
+    SmallVector<std::string, 12> BCLibs =
+        getCommonDeviceLibNames(DriverArgs, GPUArch.str());
     llvm::for_each(BCLibs, [&](StringRef BCFile) {
       CC1Args.push_back("-mlink-builtin-bitcode");
       CC1Args.push_back(DriverArgs.MakeArgString(BCFile));

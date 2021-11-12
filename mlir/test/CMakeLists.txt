@@ -1,21 +1,9 @@
 add_subdirectory(CAPI)
-add_subdirectory(SDBM)
 add_subdirectory(lib)
 
-if(MLIR_ENABLE_BINDINGS_PYTHON)
+if (MLIR_ENABLE_BINDINGS_PYTHON)
   add_subdirectory(python)
 endif()
-
-llvm_canonicalize_cmake_booleans(
-  MLIR_ENABLE_BINDINGS_PYTHON
-  LLVM_BUILD_EXAMPLES
-  MLIR_ENABLE_CUDA_CONVERSIONS
-  MLIR_ENABLE_CUDA_RUNNER
-  MLIR_ENABLE_ROCM_CONVERSIONS
-  MLIR_ENABLE_ROCM_RUNNER
-  MLIR_ENABLE_SPIRV_CPU_RUNNER
-  MLIR_ENABLE_VULKAN_RUNNER
-  )
 
 # Passed to lit.site.cfg.py.so that the out of tree Standalone dialect test
 # can find MLIR's CMake configuration
@@ -42,11 +30,28 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   set(MLIR_INTEGRATION_TEST_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
   # Copy test data over.
-  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.mtx
+  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/mttkrp_b.tns
+            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.mtx
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.tns
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/wide.mtx
+            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/zero.mtx
           DESTINATION ${MLIR_INTEGRATION_TEST_DIR}/data/)
 endif()
+
+llvm_canonicalize_cmake_booleans(
+  LLVM_BUILD_EXAMPLES
+  MLIR_ENABLE_BINDINGS_PYTHON
+  MLIR_ENABLE_CUDA_CONVERSIONS
+  MLIR_ENABLE_CUDA_RUNNER
+  MLIR_ENABLE_ROCM_CONVERSIONS
+  MLIR_ENABLE_ROCM_RUNNER
+  MLIR_ENABLE_SPIRV_CPU_RUNNER
+  MLIR_ENABLE_VULKAN_RUNNER
+  MLIR_INCLUDE_INTEGRATION_TESTS
+  MLIR_RUN_AMX_TESTS
+  MLIR_RUN_CUDA_TENSOR_CORE_TESTS
+  MLIR_RUN_X86VECTOR_TESTS
+  )
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
@@ -65,21 +70,24 @@ set(MLIR_TEST_DEPENDS
   FileCheck count not
   mlir-capi-execution-engine-test
   mlir-capi-ir-test
+  mlir-capi-llvm-test
   mlir-capi-pass-test
   mlir-capi-sparse-tensor-test
   mlir-cpu-runner
-  mlir-linalg-ods-gen
   mlir-linalg-ods-yaml-gen
   mlir-lsp-server
   mlir-opt
   mlir-reduce
-  mlir-sdbm-api-test
   mlir-tblgen
   mlir-translate
   mlir_runner_utils
   mlir_c_runner_utils
   mlir_async_runtime
   )
+
+if (MLIR_INCLUDE_INTEGRATION_TESTS)
+  list(APPEND MLIR_TEST_DEPENDS lli)
+endif()
 
 if(MLIR_ENABLE_CUDA_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_cuda_runtime)
@@ -119,13 +127,17 @@ endif()
 
 if(MLIR_ENABLE_BINDINGS_PYTHON)
   list(APPEND MLIR_TEST_DEPENDS
-    MLIRBindingsPythonExtension
-    MLIRBindingsPythonSources
-    MLIRBindingsPythonTestOps
-    MLIRTransformsBindingsPythonExtension
-    MLIRConversionsBindingsPythonExtension
+    MLIRPythonModules
   )
 endif()
+
+# This target can be used to just build the dependencies
+# for the check-mlir target without executing the tests.
+# This is useful for bots when splitting the build step
+# from the testing step.
+add_custom_target(check-mlir-build-only
+  DEPENDS ${MLIR_TEST_DEPENDS}
+)
 
 add_lit_testsuite(check-mlir "Running the MLIR regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}

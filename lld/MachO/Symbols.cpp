@@ -31,24 +31,33 @@ uint64_t Symbol::getStubVA() const { return in.stubs->getVA(stubsIndex); }
 uint64_t Symbol::getGotVA() const { return in.got->getVA(gotIndex); }
 uint64_t Symbol::getTlvVA() const { return in.tlvPointers->getVA(gotIndex); }
 
-bool Symbol::isLive() const {
-  if (isa<DylibSymbol>(this) || isa<Undefined>(this))
-    return used;
-
-  if (auto *d = dyn_cast<Defined>(this)) {
-    // Non-absolute symbols might be alive because their section is
-    // no_dead_strip or live_support. In that case, the section will know
-    // that it's live but `used` might be false. Non-absolute symbols always
-    // have to use the section's `live` bit as source of truth.
-    return d->isAbsolute() ? used : d->isec->live;
+Defined::Defined(StringRefZ name, InputFile *file, InputSection *isec,
+                 uint64_t value, uint64_t size, bool isWeakDef, bool isExternal,
+                 bool isPrivateExtern, bool isThumb,
+                 bool isReferencedDynamically, bool noDeadStrip)
+    : Symbol(DefinedKind, name, file), isec(isec), value(value), size(size),
+      overridesWeakDef(false), privateExtern(isPrivateExtern),
+      includeInSymtab(true), thumb(isThumb),
+      referencedDynamically(isReferencedDynamically), noDeadStrip(noDeadStrip),
+      weakDef(isWeakDef), external(isExternal) {
+  if (isec) {
+    isec->symbols.push_back(this);
+    // Maintain sorted order.
+    for (auto it = isec->symbols.rbegin(), rend = isec->symbols.rend();
+         it != rend; ++it) {
+      auto next = std::next(it);
+      if (next == rend)
+        break;
+      if ((*it)->value < (*next)->value)
+        std::swap(*next, *it);
+      else
+        break;
+    }
   }
+}
 
-  assert(!isa<CommonSymbol>(this) &&
-         "replaceCommonSymbols() runs before dead code stripping, and isLive() "
-         "should only be called after dead code stripping");
-
-  // Assume any other kind of symbol is live.
-  return true;
+bool Defined::isTlv() const {
+  return !isAbsolute() && isThreadLocalVariables(isec->getFlags());
 }
 
 uint64_t Defined::getVA() const {
@@ -71,13 +80,11 @@ uint64_t Defined::getVA() const {
   return isec->getVA(value);
 }
 
-uint64_t Defined::getFileOffset() const {
-  if (isAbsolute()) {
-    error("absolute symbol " + toString(*this) +
-          " does not have a file offset");
-    return 0;
-  }
-  return isec->getFileOffset(value);
+void Defined::canonicalize() {
+  if (compactUnwind)
+    compactUnwind = compactUnwind->canonical();
+  if (isec)
+    isec = isec->canonical();
 }
 
 uint64_t DylibSymbol::getVA() const {

@@ -28,7 +28,6 @@
 #ifndef _OMPTARGET_NVPTX_DEBUG_H_
 #define _OMPTARGET_NVPTX_DEBUG_H_
 
-#include "common/device_environment.h"
 #include "target_interface.h"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -133,8 +132,9 @@
 
 template <typename... Arguments>
 NOINLINE static void log(const char *fmt, Arguments... parameters) {
-  printf(fmt, (int)GetBlockIdInKernel(), (int)GetThreadIdInBlock(),
-         (int)GetWarpId(), (int)GetLaneId(), parameters...);
+  printf(fmt, (int)GetBlockIdInKernel(),
+         (int)__kmpc_get_hardware_thread_id_in_block(), (int)GetWarpId(),
+         (int)GetLaneId(), parameters...);
 }
 
 #endif
@@ -144,8 +144,9 @@ template <typename... Arguments>
 NOINLINE static void check(bool cond, const char *fmt,
                            Arguments... parameters) {
   if (!cond) {
-    printf(fmt, (int)GetBlockIdInKernel(), (int)GetThreadIdInBlock(),
-           (int)GetWarpId(), (int)GetLaneId(), parameters...);
+    printf(fmt, (int)GetBlockIdInKernel(),
+           (int)__kmpc_get_hardware_thread_id_in_block(), (int)GetWarpId(),
+           (int)GetLaneId(), parameters...);
     __builtin_trap();
   }
 }
@@ -187,14 +188,14 @@ NOINLINE static void check(bool cond) {
 
 #define PRINT0(_flag, _str)                                                    \
   {                                                                            \
-    if (omptarget_device_environment.debug_level && DON(_flag)) {              \
+    if (omptarget_device_environment.DebugKind && DON(_flag)) {              \
       log("<b %2d, t %4d, w %2d, l %2d>: " _str);                              \
     }                                                                          \
   }
 
 #define PRINT(_flag, _str, _args...)                                           \
   {                                                                            \
-    if (omptarget_device_environment.debug_level && DON(_flag)) {              \
+    if (omptarget_device_environment.DebugKind && DON(_flag)) {              \
       log("<b %2d, t %4d, w %2d, l %2d>: " _str, _args);                       \
     }                                                                          \
   }

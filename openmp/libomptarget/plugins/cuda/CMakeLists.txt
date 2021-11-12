@@ -15,12 +15,6 @@ if (NOT(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE
 elseif (NOT LIBOMPTARGET_DEP_LIBELF_FOUND)
   libomptarget_say("Not building CUDA offloading plugin: libelf dependency not found.")
   return()
-elseif(NOT LIBOMPTARGET_DEP_CUDA_FOUND)
-  libomptarget_say("Not building CUDA offloading plugin: CUDA not found in system.")
-  return()
-elseif(NOT LIBOMPTARGET_DEP_CUDA_DRIVER_FOUND)
-  libomptarget_say("Not building CUDA offloading plugin: CUDA Driver API not found in system.")
-  return()
 endif()
 
 libomptarget_say("Building CUDA offloading plugin.")
@@ -28,8 +22,10 @@ libomptarget_say("Building CUDA offloading plugin.")
 # Define the suffix for the runtime messaging dumps.
 add_definitions(-DTARGET_NAME=CUDA)
 
-include_directories(${LIBOMPTARGET_DEP_CUDA_INCLUDE_DIRS})
-include_directories(${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIRS})
+include_directories(
+  ${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIRS}
+  ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
+)
 
 set(LIBOMPTARGET_DLOPEN_LIBCUDA OFF)
 option(LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA "Build with dlopened libcuda" ${LIBOMPTARGET_DLOPEN_LIBCUDA})
@@ -57,7 +53,7 @@ install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}
 target_link_libraries(omptarget.rtl.cuda
   elf_common
   MemoryManager
-  ${LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES}
+  ${LIBOMPTARGET_DEP_LIBRARIES}
   ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
   ${OPENMP_PTHREAD_LIB}
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
@@ -69,7 +65,7 @@ target_link_libraries(omptarget.rtl.cuda
 # Otherwise this plugin is being built speculatively and there may be no cuda available
 if (LIBOMPTARGET_CAN_LINK_LIBCUDA OR LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA)
   libomptarget_say("Enable tests using CUDA plugin")
-  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda" PARENT_SCOPE)
+  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda nvptx64-nvidia-cuda-newRTL" PARENT_SCOPE)
 else()
   libomptarget_say("Disabling tests using CUDA plugin as cuda may not be available")
 endif()

@@ -17,6 +17,7 @@ set(files
   avx512dqintrin.h
   avx512erintrin.h
   avx512fintrin.h
+  avx512fp16intrin.h
   avx512ifmaintrin.h
   avx512ifmavlintrin.h
   avx512pfintrin.h
@@ -28,6 +29,7 @@ set(files
   avx512vlbwintrin.h
   avx512vlcdintrin.h
   avx512vldqintrin.h
+  avx512vlfp16intrin.h
   avx512vlintrin.h
   avx512vp2intersectintrin.h
   avx512vlvp2intersectintrin.h
@@ -38,12 +40,14 @@ set(files
   avxvnniintrin.h
   bmi2intrin.h
   bmiintrin.h
+  builtins.h
   __clang_cuda_builtin_vars.h
   __clang_cuda_math.h
   __clang_cuda_cmath.h
   __clang_cuda_complex_builtins.h
   __clang_cuda_device_functions.h
   __clang_cuda_intrinsics.h
+  __clang_cuda_texture_intrinsics.h
   __clang_cuda_libdevice_declares.h
   __clang_cuda_math_forward_declares.h
   __clang_cuda_runtime_wrapper.h
@@ -55,6 +59,7 @@ set(files
   cet.h
   cldemoteintrin.h
   clzerointrin.h
+  crc32intrin.h
   cpuid.h
   clflushoptintrin.h
   clwbintrin.h
@@ -66,6 +71,10 @@ set(files
   fmaintrin.h
   fxsrintrin.h
   gfniintrin.h
+  hexagon_circ_brev_intrinsics.h
+  hexagon_protos.h
+  hexagon_types.h
+  hvx_hexagon_protos.h
   hresetintrin.h
   htmintrin.h
   htmxlintrin.h
@@ -89,6 +98,7 @@ set(files
   nmmintrin.h
   opencl-c.h
   opencl-c-base.h
+  omp_libmextras.h
   offload_macros.h
   pkuintrin.h
   pmmintrin.h

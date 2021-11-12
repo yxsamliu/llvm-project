@@ -125,7 +125,7 @@ public:
       BreakpointSiteSP bp_site_sp(
           process_sp->GetBreakpointSiteList().FindByID(m_value));
       if (bp_site_sp)
-        return bp_site_sp->ValidForThisThread(&thread);
+        return bp_site_sp->ValidForThisThread(thread);
     }
     return false;
   }
@@ -307,7 +307,7 @@ protected:
 
           // There's one other complication here.  We may have run an async
           // breakpoint callback that said we should stop.  We only want to
-          // override that if another breakpoint action says we shouldn't 
+          // override that if another breakpoint action says we shouldn't
           // stop.  If nobody else has an opinion, then we should stop if the
           // async callback says we should.  An example of this is the async
           // shared library load notification breakpoint and the setting
@@ -413,7 +413,7 @@ protected:
             // The breakpoint site may have many locations associated with it,
             // not all of them valid for this thread.  Skip the ones that
             // aren't:
-            if (!bp_loc_sp->ValidForThisThread(thread_sp.get())) {
+            if (!bp_loc_sp->ValidForThisThread(*thread_sp)) {
               if (log) {
                 LLDB_LOGF(log,
                           "Breakpoint %s hit on thread 0x%llx but it was not "
@@ -425,7 +425,7 @@ protected:
             }
 
             internal_breakpoint = bp_loc_sp->GetBreakpoint().IsInternal();
-            
+
             // First run the precondition, but since the precondition is per
             // breakpoint, only run it once per breakpoint.
             std::pair<std::unordered_set<break_id_t>::iterator, bool> result =
@@ -535,7 +535,7 @@ protected:
               else
                 actually_said_continue = true;
             }
-                  
+
             // If we are going to stop for this breakpoint, then remove the
             // breakpoint.
             if (callback_says_stop && bp_loc_sp &&
@@ -579,7 +579,7 @@ protected:
         // Override should_stop decision when we have completed step plan
         // additionally to the breakpoint
         m_should_stop = true;
-        
+
         // We know we're stopping for a completed plan and we don't want to
         // show the breakpoint stop, so compute the public stop info immediately
         // here.
@@ -615,7 +615,7 @@ public:
   // performing watchpoint actions.
   class WatchpointSentry {
   public:
-    WatchpointSentry(ProcessSP p_sp, WatchpointSP w_sp) : process_sp(p_sp), 
+    WatchpointSentry(ProcessSP p_sp, WatchpointSP w_sp) : process_sp(p_sp),
                      watchpoint_sp(w_sp) {
       if (process_sp && watchpoint_sp) {
         const bool notify = false;
@@ -624,7 +624,7 @@ public:
         process_sp->AddPreResumeAction(SentryPreResumeAction, this);
       }
     }
-    
+
     void DoReenable() {
       if (process_sp && watchpoint_sp) {
         bool was_disabled = watchpoint_sp->IsDisabledDuringEphemeralMode();
@@ -637,13 +637,13 @@ public:
         }
       }
     }
-    
+
     ~WatchpointSentry() {
         DoReenable();
         if (process_sp)
             process_sp->ClearPreResumeAction(SentryPreResumeAction, this);
     }
-    
+
     static bool SentryPreResumeAction(void *sentry_void) {
         WatchpointSentry *sentry = (WatchpointSentry *) sentry_void;
         sentry->DoReenable();
@@ -724,14 +724,14 @@ protected:
     // course of this code.  Also by default we're going to stop, so set that
     // here.
     m_should_stop = true;
-    
+
 
     ThreadSP thread_sp(m_thread_wp.lock());
     if (thread_sp) {
 
       WatchpointSP wp_sp(
           thread_sp->CalculateTarget()->GetWatchpointList().FindByID(
-              GetValue()));      
+              GetValue()));
       if (wp_sp) {
         ExecutionContext exe_ctx(thread_sp->GetStackFrameAtIndex(0));
         ProcessSP process_sp = exe_ctx.GetProcessSP();
@@ -889,12 +889,12 @@ protected:
 
           bool old_async = debugger.GetAsyncExecution();
           debugger.SetAsyncExecution(true);
-          
+
           StoppointCallbackContext context(event_ptr, exe_ctx, false);
           bool stop_requested = wp_sp->InvokeCallback(&context);
-          
+
           debugger.SetAsyncExecution(old_async);
-          
+
           // Also make sure that the callback hasn't continued the target. If
           // it did, when we'll set m_should_stop to false and get out of here.
           if (HasTargetRunSinceMe())
@@ -1154,6 +1154,103 @@ protected:
   bool m_performed_action;
 };
 
+// StopInfoFork
+
+class StopInfoFork : public StopInfo {
+public:
+  StopInfoFork(Thread &thread, lldb::pid_t child_pid, lldb::tid_t child_tid)
+      : StopInfo(thread, child_pid), m_performed_action(false),
+        m_child_pid(child_pid), m_child_tid(child_tid) {}
+
+  ~StopInfoFork() override = default;
+
+  bool ShouldStop(Event *event_ptr) override { return false; }
+
+  StopReason GetStopReason() const override { return eStopReasonFork; }
+
+  const char *GetDescription() override { return "fork"; }
+
+protected:
+  void PerformAction(Event *event_ptr) override {
+    // Only perform the action once
+    if (m_performed_action)
+      return;
+    m_performed_action = true;
+    ThreadSP thread_sp(m_thread_wp.lock());
+    if (thread_sp)
+      thread_sp->GetProcess()->DidFork(m_child_pid, m_child_tid);
+  }
+
+  bool m_performed_action;
+
+private:
+  lldb::pid_t m_child_pid;
+  lldb::tid_t m_child_tid;
+};
+
+// StopInfoVFork
+
+class StopInfoVFork : public StopInfo {
+public:
+  StopInfoVFork(Thread &thread, lldb::pid_t child_pid, lldb::tid_t child_tid)
+      : StopInfo(thread, child_pid), m_performed_action(false),
+        m_child_pid(child_pid), m_child_tid(child_tid) {}
+
+  ~StopInfoVFork() override = default;
+
+  bool ShouldStop(Event *event_ptr) override { return false; }
+
+  StopReason GetStopReason() const override { return eStopReasonVFork; }
+
+  const char *GetDescription() override { return "vfork"; }
+
+protected:
+  void PerformAction(Event *event_ptr) override {
+    // Only perform the action once
+    if (m_performed_action)
+      return;
+    m_performed_action = true;
+    ThreadSP thread_sp(m_thread_wp.lock());
+    if (thread_sp)
+      thread_sp->GetProcess()->DidVFork(m_child_pid, m_child_tid);
+  }
+
+  bool m_performed_action;
+
+private:
+  lldb::pid_t m_child_pid;
+  lldb::tid_t m_child_tid;
+};
+
+// StopInfoVForkDone
+
+class StopInfoVForkDone : public StopInfo {
+public:
+  StopInfoVForkDone(Thread &thread)
+      : StopInfo(thread, 0), m_performed_action(false) {}
+
+  ~StopInfoVForkDone() override = default;
+
+  bool ShouldStop(Event *event_ptr) override { return false; }
+
+  StopReason GetStopReason() const override { return eStopReasonVForkDone; }
+
+  const char *GetDescription() override { return "vforkdone"; }
+
+protected:
+  void PerformAction(Event *event_ptr) override {
+    // Only perform the action once
+    if (m_performed_action)
+      return;
+    m_performed_action = true;
+    ThreadSP thread_sp(m_thread_wp.lock());
+    if (thread_sp)
+      thread_sp->GetProcess()->DidVForkDone();
+  }
+
+  bool m_performed_action;
+};
+
 } // namespace lldb_private
 
 StopInfoSP StopInfo::CreateStopReasonWithBreakpointSiteID(Thread &thread,
@@ -1175,6 +1272,7 @@ StopInfo::CreateStopReasonWithWatchpointID(Thread &thread, break_id_t watch_id,
 
 StopInfoSP StopInfo::CreateStopReasonWithSignal(Thread &thread, int signo,
                                                 const char *description) {
+  thread.GetProcess()->GetUnixSignals()->IncrementSignalHitCount(signo);
   return StopInfoSP(new StopInfoUnixSignal(thread, signo, description));
 }
 
@@ -1201,6 +1299,23 @@ StopInfoSP StopInfo::CreateStopReasonProcessorTrace(Thread &thread,
 
 StopInfoSP StopInfo::CreateStopReasonWithExec(Thread &thread) {
   return StopInfoSP(new StopInfoExec(thread));
+}
+
+StopInfoSP StopInfo::CreateStopReasonFork(Thread &thread,
+                                          lldb::pid_t child_pid,
+                                          lldb::tid_t child_tid) {
+  return StopInfoSP(new StopInfoFork(thread, child_pid, child_tid));
+}
+
+
+StopInfoSP StopInfo::CreateStopReasonVFork(Thread &thread,
+                                           lldb::pid_t child_pid,
+                                           lldb::tid_t child_tid) {
+  return StopInfoSP(new StopInfoVFork(thread, child_pid, child_tid));
+}
+
+StopInfoSP StopInfo::CreateStopReasonVForkDone(Thread &thread) {
+  return StopInfoSP(new StopInfoVForkDone(thread));
 }
 
 ValueObjectSP StopInfo::GetReturnValueObject(StopInfoSP &stop_info_sp) {

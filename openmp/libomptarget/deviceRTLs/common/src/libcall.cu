@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 #pragma omp declare target
 
-#include "common/device_environment.h"
+#include <stdint.h>
+
+#include "DeviceEnvironment.h"
 #include "common/omptarget.h"
 #include "target_impl.h"
 
@@ -30,7 +32,7 @@ EXTERN double omp_get_wtime(void) {
 
 EXTERN void omp_set_num_threads(int num) {
   // Ignore it for SPMD mode.
-  if (isSPMDMode())
+  if (__kmpc_is_spmd_exec_mode())
     return;
   ASSERT0(LT_FUSSY, isRuntimeInitialized(), "Expected initialized runtime.");
   PRINT(LD_IO, "call omp_set_num_threads(num %d)\n", num);
@@ -42,7 +44,7 @@ EXTERN void omp_set_num_threads(int num) {
 }
 
 EXTERN int omp_get_num_threads(void) {
-  int rc = GetNumberOfOmpThreads(isSPMDMode());
+  int rc = GetNumberOfOmpThreads(__kmpc_is_spmd_exec_mode());
   PRINT(LD_IO, "call omp_get_num_threads() return %d\n", rc);
   return rc;
 }
@@ -61,23 +63,21 @@ EXTERN int omp_get_max_threads(void) {
 }
 
 EXTERN int omp_get_thread_limit(void) {
-  if (isSPMDMode())
-    return GetNumberOfThreadsInBlock();
+  if (__kmpc_is_spmd_exec_mode())
+    return __kmpc_get_hardware_num_threads_in_block();
   int rc = threadLimit;
   PRINT(LD_IO, "call omp_get_thread_limit() return %d\n", rc);
   return rc;
 }
 
 EXTERN int omp_get_thread_num() {
-  bool isSPMDExecutionMode = isSPMDMode();
-  int tid = GetLogicalThreadIdInBlock(isSPMDExecutionMode);
-  int rc = GetOmpThreadId(tid, isSPMDExecutionMode);
+  int rc = GetOmpThreadId();
   PRINT(LD_IO, "call omp_get_thread_num() returns %d\n", rc);
   return rc;
 }
 
 EXTERN int omp_get_num_procs(void) {
-  int rc = GetNumberOfProcsInDevice(isSPMDMode());
+  int rc = GetNumberOfProcsInDevice(__kmpc_is_spmd_exec_mode());
   PRINT(LD_IO, "call omp_get_num_procs() returns %d\n", rc);
   return rc;
 }
@@ -132,7 +132,7 @@ EXTERN int omp_get_max_active_levels(void) {
 }
 
 EXTERN int omp_get_level(void) {
-  int level = parallelLevel[GetWarpId()] & (OMP_ACTIVE_PARALLEL_LEVEL - 1);
+  int level = __kmpc_parallel_level();
   PRINT(LD_IO, "call omp_get_level() returns %d\n", level);
   return level;
 }
@@ -144,8 +144,8 @@ EXTERN int omp_get_active_level(void) {
 }
 
 EXTERN int omp_get_ancestor_thread_num(int level) {
-  if (isSPMDMode())
-    return level == 1 ? GetThreadIdInBlock() : 0;
+  if (__kmpc_is_spmd_exec_mode())
+    return level == 1 ? __kmpc_get_hardware_thread_id_in_block() : 0;
   int rc = -1;
   // If level is 0 or all parallel regions are not active - return 0.
   unsigned parLevel = parallelLevel[GetWarpId()];
@@ -198,8 +198,8 @@ EXTERN int omp_get_ancestor_thread_num(int level) {
 }
 
 EXTERN int omp_get_team_size(int level) {
-  if (isSPMDMode())
-    return level == 1 ? GetNumberOfThreadsInBlock() : 1;
+  if (__kmpc_is_spmd_exec_mode())
+    return level == 1 ? __kmpc_get_hardware_num_threads_in_block() : 1;
   int rc = -1;
   unsigned parLevel = parallelLevel[GetWarpId()];
   // If level is 0 or all parallel regions are not active - return 1.
@@ -218,13 +218,13 @@ EXTERN int omp_get_team_size(int level) {
 
 EXTERN void omp_get_schedule(omp_sched_t *kind, int *modifier) {
   if (isRuntimeUninitialized()) {
-    ASSERT0(LT_FUSSY, isSPMDMode(),
+    ASSERT0(LT_FUSSY, __kmpc_is_spmd_exec_mode(),
             "Expected SPMD mode only with uninitialized runtime.");
     *kind = omp_sched_static;
     *modifier = 1;
   } else {
     omptarget_nvptx_TaskDescr *currTaskDescr =
-        getMyTopTaskDescriptor(isSPMDMode());
+        getMyTopTaskDescriptor(__kmpc_is_spmd_exec_mode());
     *kind = currTaskDescr->GetRuntimeSched();
     *modifier = currTaskDescr->RuntimeChunkSize();
   }
@@ -236,13 +236,13 @@ EXTERN void omp_set_schedule(omp_sched_t kind, int modifier) {
   PRINT(LD_IO, "call omp_set_schedule(sched %d, modif %d)\n", (int)kind,
         modifier);
   if (isRuntimeUninitialized()) {
-    ASSERT0(LT_FUSSY, isSPMDMode(),
+    ASSERT0(LT_FUSSY, __kmpc_is_spmd_exec_mode(),
             "Expected SPMD mode only with uninitialized runtime.");
     return;
   }
   if (kind >= omp_sched_static && kind < omp_sched_auto) {
     omptarget_nvptx_TaskDescr *currTaskDescr =
-        getMyTopTaskDescriptor(isSPMDMode());
+        getMyTopTaskDescriptor(__kmpc_is_spmd_exec_mode());
     currTaskDescr->SetRuntimeSched(kind);
     currTaskDescr->RuntimeChunkSize() = modifier;
     PRINT(LD_IOD, "omp_set_schedule did set sched %d & modif %" PRIu64 "\n",
@@ -303,22 +303,13 @@ EXTERN int omp_get_default_device(void) {
 #ifdef __AMDGCN__
 EXTERN int omp_get_num_devices(void) {
   PRINT(LD_IO, "call omp_get_num_devices() returns device_size %d\n",
-        omptarget_device_environment.num_devices);
-  return omptarget_device_environment.num_devices;
+        omptarget_device_environment.NumDevices);
+  return omptarget_device_environment.NumDevices;
 }
 EXTERN int omp_get_device_num(void) {
   PRINT(LD_IO, "call omp_get_device_num() returns device_num %d\n",
-        omptarget_device_environment.device_num);
-  return omptarget_device_environment.device_num;
-}
-#else
-EXTERN int omp_get_num_devices(void) {
-  PRINT0(LD_IO, "call omp_get_num_devices() is undef on device, returns 0\n");
-  return 0;
-}
-EXTERN int omp_get_device_num(void) {
-  PRINT0(LD_IO, "call omp_get_device_num() is undef on device, returns 0\n");
-  return 0;
+        omptarget_device_environment.DeviceNum);
+  return omptarget_device_environment.DeviceNum;
 }
 #endif
 

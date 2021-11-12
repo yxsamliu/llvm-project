@@ -2653,10 +2653,20 @@ void Record::checkRecordAssertions() {
   RecordResolver R(*this);
   R.setFinal(true);
 
-  for (auto Assertion : getAssertions()) {
+  for (const auto &Assertion : getAssertions()) {
     Init *Condition = Assertion.Condition->resolveReferences(R);
     Init *Message = Assertion.Message->resolveReferences(R);
     CheckAssert(Assertion.Loc, Condition, Message);
+  }
+}
+
+// Report a warning if the record has unused template arguments.
+void Record::checkUnusedTemplateArgs() {
+  for (const Init *TA : getTemplateArgs()) {
+    const RecordVal *Arg = getValue(TA);
+    if (!Arg->isUsed())
+      PrintWarning(Arg->getLoc(),
+                   "unused template argument: " + Twine(Arg->getName()));
   }
 }
 

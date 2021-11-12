@@ -343,8 +343,8 @@ static bool hasTailCall(const MachineBasicBlock &MBB) {
 
 /// Returns true if MBB contains an instruction that returns.
 static bool hasReturn(const MachineBasicBlock &MBB) {
-    for (auto I = MBB.getFirstTerminator(), E = MBB.end(); I != E; ++I)
-      if (I->isReturn())
+    for (const MachineInstr &MI : MBB.terminators())
+      if (MI.isReturn())
         return true;
     return false;
 }
@@ -1552,7 +1552,7 @@ void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
               auto *NewMMO = MF.getMachineMemOperand(
                   MMO->getPointerInfo(), MMO->getFlags(), MMO->getSize(),
                   MFI.getObjectAlign(FI), MMO->getAAInfo(), MMO->getRanges(),
-                  MMO->getSyncScopeID(), MMO->getOrdering(),
+                  MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
                   MMO->getFailureOrdering());
               new_memops.push_back(NewMMO);
               KeepOld = false;

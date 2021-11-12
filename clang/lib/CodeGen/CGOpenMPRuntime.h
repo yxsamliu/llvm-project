@@ -340,6 +340,35 @@ protected:
   llvm::Value *emitUpdateLocation(CodeGenFunction &CGF, SourceLocation Loc,
                                   unsigned Flags = 0);
 
+  /// Emit the number of teams for a target directive.  Inspect the num_teams
+  /// clause associated with a teams construct combined or closely nested
+  /// with the target directive.
+  ///
+  /// Emit a team of size one for directives such as 'target parallel' that
+  /// have no associated teams construct.
+  ///
+  /// Otherwise, return nullptr.
+  const Expr *getNumTeamsExprForTargetDirective(CodeGenFunction &CGF,
+                                                const OMPExecutableDirective &D,
+                                                int32_t &DefaultVal);
+  llvm::Value *emitNumTeamsForTargetDirective(CodeGenFunction &CGF,
+                                              const OMPExecutableDirective &D);
+  /// Emit the number of threads for a target directive.  Inspect the
+  /// thread_limit clause associated with a teams construct combined or closely
+  /// nested with the target directive.
+  ///
+  /// Emit the num_threads clause for directives such as 'target parallel' that
+  /// have no associated teams construct.
+  ///
+  /// Otherwise, return nullptr.
+  const Expr *
+  getNumThreadsExprForTargetDirective(CodeGenFunction &CGF,
+                                      const OMPExecutableDirective &D,
+                                      int32_t &DefaultVal);
+  llvm::Value *
+  emitNumThreadsForTargetDirective(CodeGenFunction &CGF,
+                                   const OMPExecutableDirective &D);
+
   /// Returns pointer to ident_t type.
   llvm::Type *getIdentTyPointerTy();
 
@@ -769,9 +798,11 @@ private:
   llvm::Type *getKmpc_MicroPointerTy();
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
-  /// size \a IVSize and sign \a IVSigned.
+  /// size \a IVSize and sign \a IVSigned. Will create a distribute call
+  /// __kmpc_distribute_static_init* if \a IsGPUDistribute is set.
   llvm::FunctionCallee createForStaticInitFunction(unsigned IVSize,
-                                                   bool IVSigned);
+                                                   bool IVSigned,
+                                                   bool IsGPUDistribute);
 
   /// Returns __kmpc_dispatch_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned.
@@ -864,10 +895,6 @@ private:
                             const OMPExecutableDirective &D,
                             llvm::Function *TaskFunction, QualType SharedsTy,
                             Address Shareds, const OMPTaskDataTy &Data);
-
-  /// Returns default address space for the constant firstprivates, 0 by
-  /// default.
-  virtual unsigned getDefaultFirstprivateAddressSpace() const { return 0; }
 
   /// Emit code that pushes the trip count of loops associated with constructs
   /// 'target teams distribute' and 'teams distribute parallel for'.
@@ -1594,11 +1621,6 @@ public:
   virtual void registerTargetGlobalVariable(const VarDecl *VD,
                                             llvm::Constant *Addr);
 
-  /// Registers provided target firstprivate variable as global on the
-  /// target.
-  llvm::Constant *registerTargetFirstprivateCopy(CodeGenFunction &CGF,
-                                                 const VarDecl *VD);
-
   /// Emit the global \a GD if it is meaningful for the target. Returns
   /// if it was emitted successfully.
   /// \param GD Global to scan.
@@ -1775,14 +1797,6 @@ public:
                            llvm::FunctionCallee OutlinedFn,
                            ArrayRef<llvm::Value *> Args = llvm::None) const;
 
-  /// Returns __tgt_attribute_struct type.
-  QualType getTgtAttributeStructQTy();
-
-  /// Emit structure descriptor for a kernel
-  void emitStructureKernelDesc(CodeGenModule &CGM, StringRef Name,
-                               int16_t WG_Size, int8_t Mode,
-                               int8_t HostServices);
-
   /// Emits OpenMP-specific function prolog.
   /// Required for device constructs.
   virtual void emitFunctionProlog(CodeGenFunction &CGF, const Decl *D);
@@ -1913,6 +1927,14 @@ public:
 
   /// Returns true if the variable is a local variable in untied task.
   bool isLocalVarInUntiedTask(CodeGenFunction &CGF, const VarDecl *VD) const;
+
+  /// Used for AMDGPU architectures where certain fast FP atomics are defined as
+  /// instrinsic functions
+  virtual std::pair<bool, RValue> emitFastFPAtomicCall(CodeGenFunction &CGF,
+                                                       LValue X, RValue Update,
+                                                       BinaryOperatorKind BO) {
+    return std::make_pair(false, RValue::get(nullptr));
+  }
 };
 
 /// Class supports emissionof SIMD-only code.
@@ -2516,6 +2538,29 @@ public:
                                     const VarDecl *VD) override {
     return Address::invalid();
   }
+};
+
+class HintClause {
+public:
+  /// Hint enum values for atomic and critical constructs (these enumerators are
+  /// taken from the enum omp_sync_hint_t in omp.h).
+  enum OpenMPSyncHintExpr {
+    OMP_sync_hint_none = 0,
+    OMP_lock_hint_none = OMP_sync_hint_none,
+    OMP_sync_hint_uncontended = 1,
+    OMP_lock_hint_uncontended = OMP_sync_hint_uncontended,
+    OMP_sync_hint_contended = (1 << 1),
+    OMP_lock_hint_contended = OMP_sync_hint_contended,
+    OMP_sync_hint_nonspeculative = (1 << 2),
+    OMP_lock_hint_nonspeculative = OMP_sync_hint_nonspeculative,
+    OMP_sync_hint_speculative = (1 << 3),
+    OMP_lock_hint_speculative = OMP_sync_hint_speculative,
+    kmp_lock_hint_hle = (1 << 16),
+    kmp_lock_hint_rtm = (1 << 17),
+    kmp_lock_hint_adaptive = (1 << 18),
+    AMD_fast_fp_atomics = (1 << 19),
+    AMD_safe_fp_atomics = (1 << 20)
+  };
 };
 
 } // namespace CodeGen

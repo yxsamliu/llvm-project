@@ -10,9 +10,10 @@
 // UNSUPPORTED: c++03, c++11
 
 // dylib support for shared_mutex was added in macosx10.12
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
+
+// TODO(ldionne): This test fails on Ubuntu Focal on our CI nodes (and only there), in 32 bit mode.
+// UNSUPPORTED: linux && 32bits-on-64bits
 
 // <shared_mutex>
 
@@ -21,11 +22,13 @@
 // template <class Clock, class Duration>
 //   shared_lock(mutex_type& m, const chrono::time_point<Clock, Duration>& abs_time);
 
-#include <shared_mutex>
 #include <thread>
-#include <vector>
-#include <cstdlib>
+
+#include <atomic>
 #include <cassert>
+#include <cstdlib>
+#include <shared_mutex>
+#include <vector>
 
 #include "make_test_thread.h"
 #include "test_macros.h"

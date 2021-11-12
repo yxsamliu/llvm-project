@@ -23,25 +23,25 @@
 #include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
 
-// There is no general interception at all on Fuchsia and RTEMS.
+// There is no general interception at all on Fuchsia.
 // Only the functions in asan_interceptors_memintrinsics.cpp are
 // really defined to replace libc functions.
-#if !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
+#if !SANITIZER_FUCHSIA
 
-#if SANITIZER_POSIX
-#include "sanitizer_common/sanitizer_posix.h"
-#endif
+#  if SANITIZER_POSIX
+#    include "sanitizer_common/sanitizer_posix.h"
+#  endif
 
-#if ASAN_INTERCEPT__UNWIND_RAISEEXCEPTION || \
-    ASAN_INTERCEPT__SJLJ_UNWIND_RAISEEXCEPTION
-#include <unwind.h>
-#endif
+#  if ASAN_INTERCEPT__UNWIND_RAISEEXCEPTION || \
+      ASAN_INTERCEPT__SJLJ_UNWIND_RAISEEXCEPTION
+#    include <unwind.h>
+#  endif
 
-#if defined(__i386) && SANITIZER_LINUX
-#define ASAN_PTHREAD_CREATE_VERSION "GLIBC_2.1"
-#elif defined(__mips__) && SANITIZER_LINUX
-#define ASAN_PTHREAD_CREATE_VERSION "GLIBC_2.2"
-#endif
+#  if defined(__i386) && SANITIZER_LINUX
+#    define ASAN_PTHREAD_CREATE_VERSION "GLIBC_2.1"
+#  elif defined(__mips__) && SANITIZER_LINUX
+#    define ASAN_PTHREAD_CREATE_VERSION "GLIBC_2.2"
+#  endif
 
 namespace __asan {
 
@@ -49,8 +49,8 @@ namespace __asan {
   ASAN_READ_RANGE((ctx), (s),                                   \
     common_flags()->strict_string_checks ? (len) + 1 : (n))
 
-#define ASAN_READ_STRING(ctx, s, n)                             \
-  ASAN_READ_STRING_OF_LEN((ctx), (s), REAL(strlen)(s), (n))
+#  define ASAN_READ_STRING(ctx, s, n) \
+    ASAN_READ_STRING_OF_LEN((ctx), (s), internal_strlen(s), (n))
 
 static inline uptr MaybeRealStrnlen(const char *s, uptr maxlen) {
 #if SANITIZER_INTERCEPT_STRNLEN
@@ -370,9 +370,9 @@ DEFINE_REAL(char*, index, const char *string, int c)
     ASAN_INTERCEPTOR_ENTER(ctx, strcat);
     ENSURE_ASAN_INITED();
     if (flags()->replace_str) {
-      uptr from_length = REAL(strlen)(from);
+      uptr from_length = internal_strlen(from);
       ASAN_READ_RANGE(ctx, from, from_length + 1);
-      uptr to_length = REAL(strlen)(to);
+      uptr to_length = internal_strlen(to);
       ASAN_READ_STRING_OF_LEN(ctx, to, to_length, to_length);
       ASAN_WRITE_RANGE(ctx, to + to_length, from_length + 1);
       // If the copying actually happens, the |from| string should not overlap
@@ -394,7 +394,7 @@ INTERCEPTOR(char*, strncat, char *to, const char *from, uptr size) {
     uptr from_length = MaybeRealStrnlen(from, size);
     uptr copy_length = Min(size, from_length + 1);
     ASAN_READ_RANGE(ctx, from, copy_length);
-    uptr to_length = REAL(strlen)(to);
+    uptr to_length = internal_strlen(to);
     ASAN_READ_STRING_OF_LEN(ctx, to, to_length, to_length);
     ASAN_WRITE_RANGE(ctx, to + to_length, from_length + 1);
     if (from_length > 0) {
@@ -419,7 +419,7 @@ INTERCEPTOR(char *, strcpy, char *to, const char *from) {
   }
   ENSURE_ASAN_INITED();
   if (flags()->replace_str) {
-    uptr from_size = REAL(strlen)(from) + 1;
+    uptr from_size = internal_strlen(from) + 1;
     CHECK_RANGES_OVERLAP("strcpy", to, from_size, from, from_size);
     ASAN_READ_RANGE(ctx, from, from_size);
     ASAN_WRITE_RANGE(ctx, to, from_size);
@@ -432,7 +432,7 @@ INTERCEPTOR(char*, strdup, const char *s) {
   ASAN_INTERCEPTOR_ENTER(ctx, strdup);
   if (UNLIKELY(!asan_inited)) return internal_strdup(s);
   ENSURE_ASAN_INITED();
-  uptr length = REAL(strlen)(s);
+  uptr length = internal_strlen(s);
   if (flags()->replace_str) {
     ASAN_READ_RANGE(ctx, s, length + 1);
   }
@@ -448,7 +448,7 @@ INTERCEPTOR(char*, __strdup, const char *s) {
   ASAN_INTERCEPTOR_ENTER(ctx, strdup);
   if (UNLIKELY(!asan_inited)) return internal_strdup(s);
   ENSURE_ASAN_INITED();
-  uptr length = REAL(strlen)(s);
+  uptr length = internal_strlen(s);
   if (flags()->replace_str) {
     ASAN_READ_RANGE(ctx, s, length + 1);
   }
@@ -581,7 +581,7 @@ INTERCEPTOR(int, atexit, void (*func)()) {
 #if CAN_SANITIZE_LEAKS
   __lsan::ScopedInterceptorDisabler disabler;
 #endif
-  // Avoid calling real atexit as it is unrechable on at least on Linux.
+  // Avoid calling real atexit as it is unreachable on at least on Linux.
   int res = REAL(__cxa_atexit)((void (*)(void *a))func, nullptr, nullptr);
   REAL(__cxa_atexit)(AtCxaAtexit, nullptr, nullptr);
   return res;
@@ -608,6 +608,79 @@ INTERCEPTOR(int, pthread_atfork, void (*prepare)(), void (*parent)(),
 #if ASAN_INTERCEPT_VFORK
 DEFINE_REAL(int, vfork)
 DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork)
+#endif
+
+#if SANITIZER_AMDGPU
+void ENSURE_HSA_INITED();
+
+INTERCEPTOR(hsa_status_t, hsa_amd_memory_pool_allocate,
+  hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags, void **ptr) {
+  ENSURE_ASAN_INITED();
+  ENSURE_HSA_INITED();
+  GET_STACK_TRACE_MALLOC;
+  return asan_hsa_amd_memory_pool_allocate(memory_pool, size, flags, ptr,
+    &stack);
+}
+
+INTERCEPTOR(hsa_status_t, hsa_amd_memory_pool_free, void *ptr) {
+  ENSURE_ASAN_INITED();
+  ENSURE_HSA_INITED();
+  GET_STACK_TRACE_FREE;
+  return asan_hsa_amd_memory_pool_free(ptr, &stack);
+}
+
+INTERCEPTOR(hsa_status_t, hsa_amd_agents_allow_access, uint32_t num_agents,
+  const hsa_agent_t *agents, const uint32_t *flags, const void *ptr) {
+  ENSURE_ASAN_INITED();
+  ENSURE_HSA_INITED();
+  GET_STACK_TRACE_FREE;
+  return asan_hsa_amd_agents_allow_access(num_agents, agents, flags, ptr,
+    &stack);
+}
+
+INTERCEPTOR(hsa_status_t, hsa_memory_copy, void *dst, const void *src,
+  size_t size) {
+  ENSURE_ASAN_INITED();
+  ENSURE_HSA_INITED();
+  if (flags()->replace_intrin) {
+    if (dst != src) {
+      CHECK_RANGES_OVERLAP("hsa_memory_copy", dst, size, src, size);
+    }
+    ASAN_READ_RANGE(nullptr, src, size);
+    ASAN_WRITE_RANGE(nullptr, dst, size);
+  }
+  return REAL(hsa_memory_copy)(dst, src, size);
+}
+
+INTERCEPTOR(hsa_status_t, hsa_amd_memory_async_copy, void* dst,
+  hsa_agent_t dst_agent, const void* src, hsa_agent_t src_agent, size_t size,
+  uint32_t num_dep_signals, const hsa_signal_t* dep_signals,
+  hsa_signal_t completion_signal) {
+  ENSURE_ASAN_INITED();
+  ENSURE_HSA_INITED();
+  if (flags()->replace_intrin) {
+    if (dst != src) {
+      CHECK_RANGES_OVERLAP("hsa_amd_memory_async_copy", dst, size, src, size);
+    }
+    ASAN_READ_RANGE(nullptr, src, size);
+    ASAN_WRITE_RANGE(nullptr, dst, size);
+  }
+  return REAL(hsa_amd_memory_async_copy)(dst, dst_agent, src, src_agent, size,
+    num_dep_signals, dep_signals, completion_signal);
+}
+
+void InitializeAmdgpuInterceptors() {
+  ASAN_INTERCEPT_FUNC(hsa_memory_copy);
+  ASAN_INTERCEPT_FUNC(hsa_amd_memory_pool_allocate);
+  ASAN_INTERCEPT_FUNC(hsa_amd_memory_pool_free);
+  ASAN_INTERCEPT_FUNC(hsa_amd_agents_allow_access);
+  ASAN_INTERCEPT_FUNC(hsa_amd_memory_async_copy);
+}
+
+void ENSURE_HSA_INITED() {
+  if (!REAL(hsa_memory_copy))
+    InitializeAmdgpuInterceptors();
+}
 #endif
 
 // ---------------------- InitializeAsanInterceptors ---------------- {{{1
@@ -698,6 +771,10 @@ void InitializeAsanInterceptors() {
 
 #if ASAN_INTERCEPT_VFORK
   ASAN_INTERCEPT_FUNC(vfork);
+#endif
+
+#if SANITIZER_AMDGPU
+  InitializeAmdgpuInterceptors();
 #endif
 
   InitializePlatformInterceptors();

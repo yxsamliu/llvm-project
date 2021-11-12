@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
@@ -15,6 +16,8 @@
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
+
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorOpsDialect.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // TensorDialect Attribute Methods.
@@ -36,8 +39,7 @@ static bool acceptBitWidth(unsigned bitWidth) {
   }
 }
 
-Attribute SparseTensorEncodingAttr::parse(MLIRContext *context,
-                                          DialectAsmParser &parser, Type type) {
+Attribute SparseTensorEncodingAttr::parse(DialectAsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
   // Parse the data as a dictionary.
@@ -111,8 +113,8 @@ Attribute SparseTensorEncodingAttr::parse(MLIRContext *context,
     }
   }
   // Construct struct-like storage for attribute.
-  return parser.getChecked<SparseTensorEncodingAttr>(context, dlt, map, ptr,
-                                                     ind);
+  return parser.getChecked<SparseTensorEncodingAttr>(parser.getContext(), dlt,
+                                                     map, ptr, ind);
 }
 
 void SparseTensorEncodingAttr::print(DialectAsmPrinter &printer) const {
@@ -169,6 +171,8 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
   // Check integrity with tensor type specifics. Dimension ordering is optional,
   // but we always should have dimension level types for the full rank.
   unsigned size = shape.size();
+  if (size == 0)
+    return emitError() << "expected non-scalar sparse tensor";
   if (getDimOrdering() && getDimOrdering().getNumResults() != size)
     return emitError() << "expected an affine map of size " << size
                        << " for dimension ordering";
@@ -190,7 +194,7 @@ mlir::sparse_tensor::getSparseTensorEncoding(Type type) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult isInBounds(Value dim, Value tensor) {
-  if (auto constantOp = dim.getDefiningOp<ConstantOp>()) {
+  if (auto constantOp = dim.getDefiningOp<arith::ConstantOp>()) {
     unsigned d = constantOp.getValue().cast<IntegerAttr>().getInt();
     if (d >= tensor.getType().cast<RankedTensorType>().getRank())
       return failure();
@@ -206,15 +210,69 @@ static LogicalResult isMatchingWidth(Value result, unsigned width) {
 }
 
 static LogicalResult verify(NewOp op) {
-  if (!getSparseTensorEncoding(op.getResult().getType()))
+  if (!getSparseTensorEncoding(op.result().getType()))
     return op.emitError("expected a sparse tensor result");
   return success();
 }
 
+static LogicalResult verify(InitOp op) {
+  if (!getSparseTensorEncoding(op.result().getType()))
+    return op.emitError("expected a sparse tensor result");
+  RankedTensorType ttp = op.getType().cast<RankedTensorType>();
+  unsigned rank = ttp.getRank();
+  if (rank != op.sizes().size())
+    return op.emitError("unexpected mismatch between tensor rank and sizes: ")
+           << rank << " vs. " << op.sizes().size();
+  auto shape = ttp.getShape();
+  for (unsigned i = 0; i < rank; i++) {
+    if (shape[i] == ShapedType::kDynamicSize)
+      continue;
+    auto constantOp = op.sizes()[i].getDefiningOp<arith::ConstantOp>();
+    if (!constantOp ||
+        constantOp.getValue().cast<IntegerAttr>().getInt() != shape[i])
+      return op.emitError("unexpected mismatch with static dimension size ")
+             << shape[i];
+  }
+  return success();
+}
+
+static LogicalResult verify(ConvertOp op) {
+  if (auto tp1 = op.source().getType().dyn_cast<RankedTensorType>()) {
+    if (auto tp2 = op.dest().getType().dyn_cast<RankedTensorType>()) {
+      if (tp1.getRank() != tp2.getRank())
+        return op.emitError("unexpected conversion mismatch in rank");
+      auto shape1 = tp1.getShape();
+      auto shape2 = tp2.getShape();
+      // Accept size matches between the source and the destination type
+      // (e.g. 10 vs. 10, 10 vs. ?, or ? vs. ?), but reject direct mismatches or
+      // matches that would need a runtime assert (e.g. 10 vs. 20 or ? vs. 10).
+      for (unsigned d = 0, rank = tp1.getRank(); d < rank; d++) {
+        if (shape1[d] != shape2[d] && shape2[d] != ShapedType::kDynamicSize)
+          return op.emitError("unexpected conversion mismatch in dimension ")
+                 << d;
+      }
+      return success();
+    }
+  }
+  return op.emitError("unexpected type in convert");
+}
+
+OpFoldResult ConvertOp::fold(ArrayRef<Attribute> operands) {
+  if (getType() == source().getType())
+    return source();
+  return {};
+}
+
+static LogicalResult verify(ReleaseOp op) {
+  if (!getSparseTensorEncoding(op.tensor().getType()))
+    return op.emitError("expected a sparse tensor to release");
+  return success();
+}
+
 static LogicalResult verify(ToPointersOp op) {
-  if (failed(isInBounds(op.dim(), op.tensor())))
-    return op.emitError("requested pointers dimension out of bounds");
   if (auto e = getSparseTensorEncoding(op.tensor().getType())) {
+    if (failed(isInBounds(op.dim(), op.tensor())))
+      return op.emitError("requested pointers dimension out of bounds");
     if (failed(isMatchingWidth(op.result(), e.getPointerBitWidth())))
       return op.emitError("unexpected type for pointers");
     return success();
@@ -223,9 +281,9 @@ static LogicalResult verify(ToPointersOp op) {
 }
 
 static LogicalResult verify(ToIndicesOp op) {
-  if (failed(isInBounds(op.dim(), op.tensor())))
-    return op.emitError("requested indices dimension out of bounds");
   if (auto e = getSparseTensorEncoding(op.tensor().getType())) {
+    if (failed(isInBounds(op.dim(), op.tensor())))
+      return op.emitError("requested indices dimension out of bounds");
     if (failed(isMatchingWidth(op.result(), e.getIndexBitWidth())))
       return op.emitError("unexpected type for indices");
     return success();
@@ -240,6 +298,12 @@ static LogicalResult verify(ToValuesOp op) {
   MemRefType mtp = op.result().getType().cast<MemRefType>();
   if (ttp.getElementType() != mtp.getElementType())
     return op.emitError("unexpected mismatch in element types");
+  return success();
+}
+
+static LogicalResult verify(ToTensorOp op) {
+  if (!getSparseTensorEncoding(op.result().getType()))
+    return op.emitError("expected a sparse tensor result");
   return success();
 }
 
@@ -267,8 +331,7 @@ Attribute SparseTensorDialect::parseAttribute(DialectAsmParser &parser,
   if (failed(parser.parseKeyword(&attrTag)))
     return Attribute();
   Attribute attr;
-  auto parseResult =
-      generatedAttributeParser(getContext(), parser, attrTag, type, attr);
+  auto parseResult = generatedAttributeParser(parser, attrTag, type, attr);
   if (parseResult.hasValue())
     return attr;
   parser.emitError(parser.getNameLoc(), "unknown sparse tensor attribute");

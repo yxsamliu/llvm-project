@@ -20,6 +20,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Cuda.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 
 using namespace clang;
@@ -35,7 +36,7 @@ CGOpenMPRuntimeAMDGCN::CGOpenMPRuntimeAMDGCN(CodeGenModule &CGM)
 llvm::Value *CGOpenMPRuntimeAMDGCN::getGPUWarpSize(CodeGenFunction &CGF) {
   CGBuilderTy &Bld = CGF.Builder;
   // return constant compile-time target-specific warp size
-  unsigned WarpSize = CGF.getTarget().getGridValue(llvm::omp::GV_Warp_Size);
+  unsigned WarpSize = CGF.getTarget().getGridValue().GV_Warp_Size;
   return Bld.getInt32(WarpSize);
 }
 
@@ -46,15 +47,33 @@ llvm::Value *CGOpenMPRuntimeAMDGCN::getGPUThreadID(CodeGenFunction &CGF) {
   return Bld.CreateCall(F, llvm::None, "nvptx_tid");
 }
 
-llvm::Value *CGOpenMPRuntimeAMDGCN::getGPUNumThreads(CodeGenFunction &CGF) {
+std::pair<bool, RValue> CGOpenMPRuntimeAMDGCN::emitFastFPAtomicCall(
+    CodeGenFunction &CGF, LValue X, RValue Update, BinaryOperatorKind BO) {
   CGBuilderTy &Bld = CGF.Builder;
-  llvm::Module *M = &CGF.CGM.getModule();
-  const char *LocSize = "__kmpc_amdgcn_gpu_num_threads";
-  llvm::Function *F = M->getFunction(LocSize);
-  if (!F) {
-    F = llvm::Function::Create(
-        llvm::FunctionType::get(CGF.Int32Ty, llvm::None, false),
-        llvm::GlobalVariable::ExternalLinkage, LocSize, &CGF.CGM.getModule());
+  unsigned int IID = -1;
+  RValue UpdateFixed = Update;
+  switch (BO) {
+  case BO_Sub:
+    UpdateFixed = RValue::get(Bld.CreateFNeg(Update.getScalarVal()));
+    IID = llvm::Intrinsic::amdgcn_global_atomic_fadd;
+    break;
+  case BO_Add:
+    IID = llvm::Intrinsic::amdgcn_global_atomic_fadd;
+    break;
+  default:
+    // remaining operations are not supported yet
+    return std::make_pair(false, RValue::get(nullptr));
   }
-  return Bld.CreateCall(F, llvm::None, "nvptx_num_threads");
+
+  SmallVector<llvm::Value *> FPAtomicArgs;
+  FPAtomicArgs.reserve(2);
+  FPAtomicArgs.push_back(X.getPointer(CGF));
+  FPAtomicArgs.push_back(UpdateFixed.getScalarVal());
+
+  llvm::Function *AtomicF = CGM.getIntrinsic(IID, {FPAtomicArgs[1]->getType(),
+                                                   FPAtomicArgs[0]->getType(),
+                                                   FPAtomicArgs[1]->getType()});
+  auto CallInst = CGF.EmitNounwindRuntimeCall(AtomicF, FPAtomicArgs);
+
+  return std::make_pair(true, RValue::get(CallInst));
 }

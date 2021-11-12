@@ -9,7 +9,6 @@ declare hidden void @external_void_func_void() #0
 ; GCN: s_getpc_b64 s[34:35]
 ; GCN-NEXT: s_add_u32 s34, s34,
 ; GCN-NEXT: s_addc_u32 s35, s35,
-; GCN-NEXT: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64 s[30:31], s[34:35]
 
 ; GCN-NEXT: #ASMSTART
@@ -95,10 +94,10 @@ define hidden void @void_func_void_clobber_vcc() #2 {
 }
 
 ; GCN-LABEL: {{^}}test_call_void_func_void_clobber_vcc:
-; GCN: s_getpc_b64
+; GCN: s_mov_b64 s[34:35], vcc
+; GCN-NEXT: s_getpc_b64
 ; GCN-NEXT: s_add_u32
 ; GCN-NEXT: s_addc_u32
-; GCN: s_mov_b64 s[34:35], vcc
 ; GCN-NEXT: s_swappc_b64
 ; GCN: s_mov_b64 vcc, s[34:35]
 define amdgpu_kernel void @test_call_void_func_void_clobber_vcc(i32 addrspace(1)* %out) #0 {
@@ -112,7 +111,7 @@ define amdgpu_kernel void @test_call_void_func_void_clobber_vcc(i32 addrspace(1)
 
 ; GCN-LABEL: {{^}}test_call_void_func_void_mayclobber_s31:
 ; GCN: s_mov_b32 s33, s31
-; GCN-NEXT: s_swappc_b64
+; GCN: s_swappc_b64
 ; GCN-NEXT: s_mov_b32 s31, s33
 define amdgpu_kernel void @test_call_void_func_void_mayclobber_s31(i32 addrspace(1)* %out) #0 {
   %s31 = call i32 asm sideeffect "; def $0", "={s31}"()
@@ -123,7 +122,7 @@ define amdgpu_kernel void @test_call_void_func_void_mayclobber_s31(i32 addrspace
 
 ; GCN-LABEL: {{^}}test_call_void_func_void_mayclobber_v31:
 ; GCN: v_mov_b32_e32 v40, v31
-; GCN-NEXT: s_swappc_b64
+; GCN: s_swappc_b64
 ; GCN-NEXT: v_mov_b32_e32 v31, v40
 define amdgpu_kernel void @test_call_void_func_void_mayclobber_v31(i32 addrspace(1)* %out) #0 {
   %v31 = call i32 asm sideeffect "; def $0", "={v31}"()
@@ -135,18 +134,17 @@ define amdgpu_kernel void @test_call_void_func_void_mayclobber_v31(i32 addrspace
 ; FIXME: What is the expected behavior for reserved registers here?
 
 ; GCN-LABEL: {{^}}test_call_void_func_void_preserves_s33:
-; MUBUF:        s_getpc_b64 s[4:5]
-; MUBUF-NEXT:   s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
-; MUBUF-NEXT:   s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
-; FLATSCR:      s_getpc_b64 s[0:1]
-; FLATSCR-NEXT: s_add_u32 s0, s0, external_void_func_void@rel32@lo+4
-; FLATSCR-NEXT: s_addc_u32 s1, s1, external_void_func_void@rel32@hi+12
-; GCN: s_mov_b32 s32, 0
 ; GCN: #ASMSTART
 ; GCN-NEXT: ; def s33
 ; GCN-NEXT: #ASMEND
-; MUBUF:   s_swappc_b64 s[30:31], s[4:5]
-; FLATSCR: s_swappc_b64 s[30:31], s[0:1]
+; FLATSCR:      s_getpc_b64 s[0:1]
+; FLATSCR-NEXT: s_add_u32 s0, s0, external_void_func_void@rel32@lo+4
+; FLATSCR-NEXT: s_addc_u32 s1, s1, external_void_func_void@rel32@hi+12
+; FLATSCR-NEXT: s_swappc_b64 s[30:31], s[0:1]
+; MUBUF:        s_getpc_b64 s[4:5]
+; MUBUF-NEXT:   s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
+; MUBUF-NEXT:   s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
+; MUBUF-NEXT:   s_swappc_b64 s[30:31], s[4:5]
 ; GCN: ;;#ASMSTART
 ; GCN-NEXT: ; use s33
 ; GCN-NEXT: ;;#ASMEND
@@ -162,18 +160,18 @@ define amdgpu_kernel void @test_call_void_func_void_preserves_s33(i32 addrspace(
 ; GCN-LABEL: {{^}}test_call_void_func_void_preserves_s34: {{.*}}
 ; GCN-NOT: s34
 
-; MUBUF:        s_getpc_b64 s[4:5]
-; MUBUF-NEXT:   s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
-; MUBUF-NEXT:   s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
-; FLATSCR:      s_getpc_b64 s[0:1]
-; FLATSCR-NEXT: s_add_u32 s0, s0, external_void_func_void@rel32@lo+4
-; FLATSCR-NEXT: s_addc_u32 s1, s1, external_void_func_void@rel32@hi+12
 ; GCN: s_mov_b32 s32, 0
 
 ; GCN-NOT: s34
 ; GCN: ;;#ASMSTART
 ; GCN-NEXT: ; def s34
 ; GCN-NEXT: ;;#ASMEND
+; FLATSCR:      s_getpc_b64 s[0:1]
+; FLATSCR-NEXT: s_add_u32 s0, s0, external_void_func_void@rel32@lo+4
+; FLATSCR-NEXT: s_addc_u32 s1, s1, external_void_func_void@rel32@hi+12
+; MUBUF:        s_getpc_b64 s[4:5]
+; MUBUF-NEXT:   s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
+; MUBUF-NEXT:   s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
 
 ; GCN-NOT: s34
 ; MUBUF:   s_swappc_b64 s[30:31], s[4:5]
@@ -195,18 +193,18 @@ define amdgpu_kernel void @test_call_void_func_void_preserves_s34(i32 addrspace(
 ; GCN-LABEL: {{^}}test_call_void_func_void_preserves_v40: {{.*}}
 
 ; GCN-NOT: v32
-; MUBUF: s_getpc_b64 s[4:5]
-; MUBUF-NEXT:   s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
-; MUBUF-NEXT:   s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
-; FLATSCR:      s_getpc_b64 s[0:1]
-; FLATSCR-NEXT: s_add_u32 s0, s0, external_void_func_void@rel32@lo+4
-; FLATSCR-NEXT: s_addc_u32 s1, s1, external_void_func_void@rel32@hi+12
 ; GCN: s_mov_b32 s32, 0
 ; GCN-NOT: v40
 
 ; GCN: ;;#ASMSTART
 ; GCN-NEXT: ; def v40
 ; GCN-NEXT: ;;#ASMEND
+; MUBUF: s_getpc_b64 s[4:5]
+; MUBUF-NEXT:   s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
+; MUBUF-NEXT:   s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
+; FLATSCR:      s_getpc_b64 s[0:1]
+; FLATSCR-NEXT: s_add_u32 s0, s0, external_void_func_void@rel32@lo+4
+; FLATSCR-NEXT: s_addc_u32 s1, s1, external_void_func_void@rel32@hi+12
 
 ; MUBUF:   s_swappc_b64 s[30:31], s[4:5]
 ; FLATSCR: s_swappc_b64 s[30:31], s[0:1]
@@ -249,10 +247,10 @@ define hidden void @void_func_void_clobber_s34() #2 {
 }
 
 ; GCN-LABEL: {{^}}test_call_void_func_void_clobber_s33:
+; GCN: s_mov_b32 s32, 0
 ; GCN: s_getpc_b64
 ; GCN-NEXT: s_add_u32
 ; GCN-NEXT: s_addc_u32
-; GCN-NEXT: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_void_func_void_clobber_s33() #0 {
@@ -261,10 +259,10 @@ define amdgpu_kernel void @test_call_void_func_void_clobber_s33() #0 {
 }
 
 ; GCN-LABEL: {{^}}test_call_void_func_void_clobber_s34:
+; GCN: s_mov_b32 s32, 0
 ; GCN: s_getpc_b64
 ; GCN-NEXT: s_add_u32
 ; GCN-NEXT: s_addc_u32
-; GCN-NEXT: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_void_func_void_clobber_s34() #0 {
