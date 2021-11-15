@@ -8,12 +8,6 @@
 
 ; CHECK-LABEL: indirect_call_known_no_special_inputs:
 
-; CHECK-DAG: s_cselect_b64 [[CALL_TARGET:s\[[0-9]+:[0-9]+\]]]
-; CHECK-DAG: s_mov_b64 s[14:15], 0
-; CHECK-DAG: s_mov_b32 s12, s14
-; CHECK-DAG: v_mov_b32_e32 v1, 0
-; CHECK: s_swappc_b64 s[30:31], [[CALL_TARGET]]
-
 ; CHECK: .amdhsa_kernarg_size 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_private_segment_buffer 1
 ; CHECK-NEXT: .amdhsa_user_sgpr_dispatch_ptr 1
