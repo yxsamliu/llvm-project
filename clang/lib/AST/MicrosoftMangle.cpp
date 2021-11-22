@@ -308,12 +308,6 @@ class MicrosoftCXXNameMangler {
   MicrosoftMangleContextImpl &Context;
   raw_ostream &Out;
 
-  /// The "structor" is the top-level declaration being mangled, if
-  /// that's not a template specialization; otherwise it's the pattern
-  /// for that specialization.
-  const NamedDecl *Structor;
-  unsigned StructorType;
-
   typedef llvm::SmallVector<std::string, 10> BackRefVec;
   BackRefVec NameBackReferences;
 
@@ -337,21 +331,7 @@ public:
   enum QualifierMangleMode { QMM_Drop, QMM_Mangle, QMM_Escape, QMM_Result };
 
   MicrosoftCXXNameMangler(MicrosoftMangleContextImpl &C, raw_ostream &Out_)
-      : Context(C), Out(Out_), Structor(nullptr), StructorType(-1),
-        TemplateArgStringStorage(TemplateArgStringStorageAlloc),
-        PointersAre64Bit(C.getASTContext().getTargetInfo().getPointerWidth(0) ==
-                         64) {}
-
-  MicrosoftCXXNameMangler(MicrosoftMangleContextImpl &C, raw_ostream &Out_,
-                          const CXXConstructorDecl *D, CXXCtorType Type)
-      : Context(C), Out(Out_), Structor(getStructor(D)), StructorType(Type),
-        TemplateArgStringStorage(TemplateArgStringStorageAlloc),
-        PointersAre64Bit(C.getASTContext().getTargetInfo().getPointerWidth(0) ==
-                         64) {}
-
-  MicrosoftCXXNameMangler(MicrosoftMangleContextImpl &C, raw_ostream &Out_,
-                          const CXXDestructorDecl *D, CXXDtorType Type)
-      : Context(C), Out(Out_), Structor(getStructor(D)), StructorType(Type),
+      : Context(C), Out(Out_),
         TemplateArgStringStorage(TemplateArgStringStorageAlloc),
         PointersAre64Bit(C.getASTContext().getTargetInfo().getPointerWidth(0) ==
                          64) {}
@@ -379,15 +359,23 @@ public:
   void mangleAddressSpaceType(QualType T, Qualifiers Quals, SourceRange Range);
   void mangleType(QualType T, SourceRange Range,
                   QualifierMangleMode QMM = QMM_Mangle);
-  void mangleFunctionType(const FunctionType *T,
-                          const FunctionDecl *D = nullptr,
+  void mangleFunctionType(const FunctionType *T, GlobalDecl GD = GlobalDecl(),
                           bool ForceThisQuals = false,
                           bool MangleExceptionSpec = true);
   void mangleNestedName(GlobalDecl GD);
 
 private:
-  bool isStructorDecl(const NamedDecl *ND) const {
-    return ND == Structor || getStructor(ND) == Structor;
+  bool isStructorDecl(GlobalDecl GD) const {
+    const FunctionDecl *FD = dyn_cast_or_null<const FunctionDecl>(GD.getDecl());
+    auto IsCtorOrDtor = [](const FunctionDecl *FD) {
+      return isa<CXXConstructorDecl>(FD) || isa<CXXDestructorDecl>(FD);
+    };
+    if (!FD)
+      return false;
+    if (IsCtorOrDtor(FD))
+      return true;
+    auto *D = getStructor(FD);
+    return D && IsCtorOrDtor(D);
   }
 
   bool is64BitPointer(Qualifiers Quals) const {
@@ -434,7 +422,7 @@ private:
   void mangleType(const TagDecl *TD);
   void mangleDecayedArrayType(const ArrayType *T);
   void mangleArrayType(const ArrayType *T);
-  void mangleFunctionClass(const FunctionDecl *FD);
+  void mangleFunctionClass(GlobalDecl);
   void mangleCallingConvention(CallingConv CC);
   void mangleCallingConvention(const FunctionType *T);
   void mangleIntegerLiteral(const llvm::APSInt &Number,
@@ -597,9 +585,9 @@ void MicrosoftCXXNameMangler::mangleFunctionEncoding(GlobalDecl GD,
     if (FD->isExternC() && FD->hasAttr<OverloadableAttr>())
       Out << "$$J0";
 
-    mangleFunctionClass(FD);
+    mangleFunctionClass(GD);
 
-    mangleFunctionType(FT, FD, false, false);
+    mangleFunctionType(FT, GD, false, false);
   } else {
     Out << '9';
   }
@@ -1113,12 +1101,12 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
     }
 
     case DeclarationName::CXXConstructorName:
-      if (isStructorDecl(ND)) {
-        if (StructorType == Ctor_CopyingClosure) {
+      if (isStructorDecl(GD)) {
+        if (GD.getCtorType() == Ctor_CopyingClosure) {
           Out << "?_O";
           return;
         }
-        if (StructorType == Ctor_DefaultClosure) {
+        if (GD.getCtorType() == Ctor_DefaultClosure) {
           Out << "?_F";
           return;
         }
@@ -1127,10 +1115,10 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
       return;
 
     case DeclarationName::CXXDestructorName:
-      if (isStructorDecl(ND))
+      if (isStructorDecl(GD))
         // If the named decl is the C++ destructor we're mangling,
         // use the type we were given.
-        mangleCXXDtorType(static_cast<CXXDtorType>(StructorType));
+        mangleCXXDtorType(GD.getDtorType());
       else
         // Otherwise, use the base destructor name. This is relevant if a
         // class with a destructor is declared within a destructor.
@@ -2503,7 +2491,7 @@ void MicrosoftCXXNameMangler::mangleType(const FunctionProtoType *T, Qualifiers,
   // FIXME: This may not be lambda-friendly.
   if (T->getMethodQuals() || T->getRefQualifier() != RQ_None) {
     Out << "$$A8@@";
-    mangleFunctionType(T, /*D=*/nullptr, /*ForceThisQuals=*/true);
+    mangleFunctionType(T, GlobalDecl(), /*ForceThisQuals=*/true);
   } else {
     Out << "$$A6";
     mangleFunctionType(T);
@@ -2516,12 +2504,13 @@ void MicrosoftCXXNameMangler::mangleType(const FunctionNoProtoType *T,
 }
 
 void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
-                                                 const FunctionDecl *D,
+                                                 GlobalDecl GD,
                                                  bool ForceThisQuals,
                                                  bool MangleExceptionSpec) {
   // <function-type> ::= <this-cvr-qualifiers> <calling-convention>
   //                     <return-type> <argument-list> <throw-spec>
   const FunctionProtoType *Proto = dyn_cast<FunctionProtoType>(T);
+  const FunctionDecl *D = dyn_cast_or_null<const FunctionDecl>(GD.getDecl());
 
   SourceRange Range;
   if (D) Range = D->getSourceRange();
@@ -2538,9 +2527,9 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
       IsStructor = true;
     } else if (isa<CXXConstructorDecl>(MD)) {
       IsStructor = true;
-      IsCtorClosure = (StructorType == Ctor_CopyingClosure ||
-                       StructorType == Ctor_DefaultClosure) &&
-                      isStructorDecl(MD);
+      IsCtorClosure = (GD.getCtorType() == Ctor_CopyingClosure ||
+                       GD.getCtorType() == Ctor_DefaultClosure) &&
+                      isStructorDecl(GD);
       if (IsCtorClosure)
         CC = getASTContext().getDefaultCallingConvention(
             /*IsVariadic=*/false, /*IsCXXMethod=*/true);
@@ -2561,15 +2550,15 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
   // <return-type> ::= <type>
   //               ::= @ # structors (they have no declared return type)
   if (IsStructor) {
-    if (isa<CXXDestructorDecl>(D) && isStructorDecl(D)) {
+    if (isa<CXXDestructorDecl>(D) && isStructorDecl(GD)) {
       // The scalar deleting destructor takes an extra int argument which is not
       // reflected in the AST.
-      if (StructorType == Dtor_Deleting) {
+      if (GD.getDtorType() == Dtor_Deleting) {
         Out << (PointersAre64Bit ? "PEAXI@Z" : "PAXI@Z");
         return;
       }
       // The vbase destructor returns void which is not reflected in the AST.
-      if (StructorType == Dtor_Complete) {
+      if (GD.getDtorType() == Dtor_Complete) {
         Out << "XXZ";
         return;
       }
@@ -2579,10 +2568,10 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
       // void.
       Out << 'X';
 
-      if (StructorType == Ctor_DefaultClosure) {
+      if (GD.getCtorType() == Ctor_DefaultClosure) {
         // Default constructor closure always has no arguments.
         Out << 'X';
-      } else if (StructorType == Ctor_CopyingClosure) {
+      } else if (GD.getCtorType() == Ctor_CopyingClosure) {
         // Copy constructor closure always takes an unqualified reference.
         mangleFunctionArgumentType(getASTContext().getLValueReferenceType(
                                        Proto->getParamType(0)
@@ -2669,7 +2658,7 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
     Out << 'Z';
 }
 
-void MicrosoftCXXNameMangler::mangleFunctionClass(const FunctionDecl *FD) {
+void MicrosoftCXXNameMangler::mangleFunctionClass(GlobalDecl GD) {
   // <function-class>  ::= <member-function> E? # E designates a 64-bit 'this'
   //                                            # pointer. in 64-bit mode *all*
   //                                            # 'this' pointers are 64-bit.
@@ -2694,12 +2683,13 @@ void MicrosoftCXXNameMangler::mangleFunctionClass(const FunctionDecl *FD) {
   //                   ::= V # public: virtual far
   // <global-function> ::= Y # global near
   //                   ::= Z # global far
+  const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
   if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD)) {
     bool IsVirtual = MD->isVirtual();
     // When mangling vbase destructor variants, ignore whether or not the
     // underlying destructor was defined to be virtual.
-    if (isa<CXXDestructorDecl>(MD) && isStructorDecl(MD) &&
-        StructorType == Dtor_Complete) {
+    if (isa<CXXDestructorDecl>(MD) && isStructorDecl(GD) &&
+        GD.getDtorType() == Dtor_Complete) {
       IsVirtual = false;
     }
     switch (MD->getAccess()) {
@@ -2930,7 +2920,7 @@ void MicrosoftCXXNameMangler::mangleType(const MemberPointerType *T,
   if (const FunctionProtoType *FPT = PointeeType->getAs<FunctionProtoType>()) {
     Out << '8';
     mangleName(T->getClass()->castAs<RecordType>()->getDecl());
-    mangleFunctionType(FPT, nullptr, true);
+    mangleFunctionType(FPT, GlobalDecl(), true);
   } else {
     mangleQualifiers(PointeeType.getQualifiers(), true);
     mangleName(T->getClass()->castAs<RecordType>()->getDecl());
@@ -3336,19 +3326,6 @@ void MicrosoftMangleContextImpl::mangleCXXName(GlobalDecl GD,
                                  "Mangling declaration");
 
   msvc_hashing_ostream MHO(Out);
-
-  if (auto *CD = dyn_cast<CXXConstructorDecl>(D)) {
-    auto Type = GD.getCtorType();
-    MicrosoftCXXNameMangler mangler(*this, MHO, CD, Type);
-    return mangler.mangle(GD);
-  }
-
-  if (auto *DD = dyn_cast<CXXDestructorDecl>(D)) {
-    auto Type = GD.getDtorType();
-    MicrosoftCXXNameMangler mangler(*this, MHO, DD, Type);
-    return mangler.mangle(GD);
-  }
-
   MicrosoftCXXNameMangler Mangler(*this, MHO);
   return Mangler.mangle(GD);
 }
@@ -3504,11 +3481,12 @@ void MicrosoftMangleContextImpl::mangleCXXDtorThunk(
   // mangling manually until we support both deleting dtor types.
   assert(Type == Dtor_Deleting);
   msvc_hashing_ostream MHO(Out);
-  MicrosoftCXXNameMangler Mangler(*this, MHO, DD, Type);
+  MicrosoftCXXNameMangler Mangler(*this, MHO);
   Mangler.getStream() << "??_E";
   Mangler.mangleName(DD->getParent());
   mangleThunkThisAdjustment(DD->getAccess(), Adjustment, Mangler, MHO);
-  Mangler.mangleFunctionType(DD->getType()->castAs<FunctionProtoType>(), DD);
+  Mangler.mangleFunctionType(DD->getType()->castAs<FunctionProtoType>(),
+                             GlobalDecl(DD, Type));
 }
 
 void MicrosoftMangleContextImpl::mangleCXXVFTable(
