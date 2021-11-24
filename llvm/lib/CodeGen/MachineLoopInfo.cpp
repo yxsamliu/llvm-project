@@ -178,7 +178,7 @@ bool MachineLoop::isLoopInvariant(MachineInstr &I) const {
         // then this use is safe to hoist.
         if (!MRI->isConstantPhysReg(Reg) &&
             !(TRI->isCallerPreservedPhysReg(Reg.asMCReg(), *I.getMF())) &&
-            !TII->isIgnorableUse(MO))
+            (getenv("DBG_RESTRICT") || !TII->isIgnorableUse(MO)))
           return false;
         // Otherwise it's safe to move.
         continue;
