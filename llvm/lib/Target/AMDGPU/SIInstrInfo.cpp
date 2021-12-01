@@ -129,8 +129,39 @@ bool SIInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   return false;
 }
 
+static bool readsExecAsData(const MachineInstr &MI) {
+  if (MI.isCompare())
+    return true;
+
+  switch (MI.getOpcode()) {
+  default:
+    break;
+  case AMDGPU::V_READFIRSTLANE_B32:
+  case AMDGPU::V_CNDMASK_B64_PSEUDO:
+  case AMDGPU::V_CNDMASK_B32_dpp:
+  case AMDGPU::V_CNDMASK_B32_e32:
+  case AMDGPU::V_CNDMASK_B32_e64:
+  case AMDGPU::V_CNDMASK_B32_sdwa:
+    return true;
+  }
+
+  return false;
+}
+
 bool SIInstrInfo::isIgnorableUse(const MachineOperand &MO) const {
   // Any implicit use of exec by VALU is not a real register read.
+  // isRematerializable check excludes instructions reading EXEC as data,
+  // such as compares, v_cndmask_b32, and readfirstlane.
+  if (getenv("HIP_FIX1")) {
+    return MO.getReg() == AMDGPU::EXEC && MO.isImplicit() &&
+           isVALU(*MO.getParent()) && MO.getParent()->isRematerializable();
+  }
+
+  if (getenv("HIP_FIX2")) {
+    return MO.getReg() == AMDGPU::EXEC && MO.isImplicit() &&
+           isVALU(*MO.getParent()) && !readsExecAsData(*MO.getParent());
+  }
+
   return MO.getReg() == AMDGPU::EXEC && MO.isImplicit() &&
          isVALU(*MO.getParent());
 }
