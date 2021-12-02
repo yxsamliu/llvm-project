@@ -201,7 +201,9 @@ void AMDGCN::Linker::constructGenerateObjFileFromHIPFatBinary(
   ObjStream << "  .p2align " << llvm::Log2(llvm::Align(HIPCodeObjectAlign))
             << "\n";
   ObjStream << "__hip_fatbin:\n";
-  ObjStream << "  .incbin \"" << BundleFile << "\"\n";
+  ObjStream << "  .incbin ";
+  llvm::sys::printArg(ObjStream, BundleFile, /*Quote=*/true);
+  ObjStream << "\n";
   ObjStream.flush();
 
   // Dump the contents of the temp object file gen if the user requested that.
