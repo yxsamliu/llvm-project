@@ -195,7 +195,7 @@ void AMDGCN::Linker::constructGenerateObjFileFromHIPFatBinary(
     ObjStream << "  .type __hip_fatbin,@object\n";
     ObjStream << "  .section .hip_fatbin,\"a\",@progbits\n";
   } else {
-    ObjStream << "  .section .hip_fatbin\n";
+    ObjStream << "  .section .hip_fatbin, \"dw\"\n";
   }
   ObjStream << "  .globl __hip_fatbin\n";
   ObjStream << "  .p2align " << llvm::Log2(llvm::Align(HIPCodeObjectAlign))
