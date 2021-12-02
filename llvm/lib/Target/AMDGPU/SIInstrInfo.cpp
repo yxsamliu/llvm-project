@@ -144,6 +144,9 @@ static bool readsExecAsData(const MachineInstr &MI) {
   case AMDGPU::V_CNDMASK_B32_sdwa:
     return true;
   }
+  for (auto &Op : MI.operands())
+    if (Op.isFI())
+      return true;
 
   return false;
 }
