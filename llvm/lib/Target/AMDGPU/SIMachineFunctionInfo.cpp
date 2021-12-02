@@ -280,6 +280,39 @@ bool SIMachineFunctionInfo::haveFreeLanesForSGPRSpill(const MachineFunction &MF,
   return NumVGPRSpillLanes + NumNeed <= WaveSize * SpillVGPRs.size();
 }
 
+// If IPRA is enabled this newly reserved VGPR may be clobbered by some
+// callee. In that case spill the VGPR before the call.
+static void saveReservedVGPR(Register Reg, MachineFunction &MF) {
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (!MI.isCall())
+        continue;
+
+      // Get RegMask of call instruction.
+      const uint32_t *RegMask = nullptr;
+      for (MachineOperand &MO : MI.operands()) {
+        if (MO.isRegMask())
+          RegMask = MO.getRegMask();
+      }
+
+      assert(RegMask && "No RegMask operand for call");
+
+      // Check if register is not preserved by the call.
+      if ((RegMask[Reg / 32] & (1u << Reg % 32)) == 0) {
+        auto FI = MFI.CreateSpillStackObject(4, Align(4));
+        TII.storeRegToStackSlot(MBB, MI, Reg, false, FI,
+                                &AMDGPU::VGPR_32RegClass, TRI);
+        TII.loadRegFromStackSlot(MBB, std::next(MI.getIterator()), Reg, FI,
+                                 &AMDGPU::VGPR_32RegClass, TRI);
+      }
+    }
+  }
+}
+
 /// Reserve a slice of a VGPR to support spilling for FrameIndex \p FI.
 bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
                                                     int FI) {
@@ -320,6 +353,9 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
     if (FuncInfo->VGPRReservedForSGPRSpill && NumVGPRSpillLanes < WaveSize) {
       assert(FuncInfo->VGPRReservedForSGPRSpill == SpillVGPRs.back().VGPR);
       LaneVGPR = FuncInfo->VGPRReservedForSGPRSpill;
+      if (VGPRIndex == 0) {
+        saveReservedVGPR(LaneVGPR, MF);
+      }
     } else if (VGPRIndex == 0) {
       LaneVGPR = TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF);
       if (LaneVGPR == AMDGPU::NoRegister) {
@@ -337,6 +373,7 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
         return false;
       }
 
+      saveReservedVGPR(LaneVGPR, MF);
       Optional<int> SpillFI;
       // We need to preserve inactive lanes, so always save, even caller-save
       // registers.
