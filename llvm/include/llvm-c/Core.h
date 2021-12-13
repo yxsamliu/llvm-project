@@ -1580,10 +1580,10 @@ LLVMTypeRef LLVMX86AMXType(void);
       macro(ConstantVector)                 \
       macro(GlobalValue)                    \
         macro(GlobalAlias)                  \
-        macro(GlobalIFunc)                  \
         macro(GlobalObject)                 \
           macro(Function)                   \
           macro(GlobalVariable)             \
+          macro(GlobalIFunc)                \
       macro(UndefValue)                     \
       macro(PoisonValue)                    \
     macro(Instruction)                      \
@@ -2514,6 +2514,12 @@ LLVMTypeRef LLVMIntrinsicGetType(LLVMContextRef Ctx, unsigned ID,
  */
 const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength);
 
+/** Deprecated: Use LLVMIntrinsicCopyOverloadedName2 instead. */
+const char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
+                                            LLVMTypeRef *ParamTypes,
+                                            size_t ParamCount,
+                                            size_t *NameLength);
+
 /**
  * Copies the name of an overloaded intrinsic identified by a given list of
  * parameter types.
@@ -2521,12 +2527,14 @@ const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength);
  * Unlike LLVMIntrinsicGetName, the caller is responsible for freeing the
  * returned string.
  *
+ * This version also supports unnamed types.
+ *
  * @see llvm::Intrinsic::getName()
  */
-const char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
-                                            LLVMTypeRef *ParamTypes,
-                                            size_t ParamCount,
-                                            size_t *NameLength);
+const char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod, unsigned ID,
+                                             LLVMTypeRef *ParamTypes,
+                                             size_t ParamCount,
+                                             size_t *NameLength);
 
 /**
  * Obtain if the intrinsic identified by the given ID is overloaded.
@@ -3279,7 +3287,7 @@ void LLVMSetInstructionCallConv(LLVMValueRef Instr, unsigned CC);
  */
 unsigned LLVMGetInstructionCallConv(LLVMValueRef Instr);
 
-void LLVMSetInstrParamAlignment(LLVMValueRef Instr, unsigned index,
+void LLVMSetInstrParamAlignment(LLVMValueRef Instr, LLVMAttributeIndex Idx,
                                 unsigned Align);
 
 void LLVMAddCallSiteAttribute(LLVMValueRef C, LLVMAttributeIndex Idx,
@@ -3603,9 +3611,19 @@ void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Builder, LLVMMetadataRef Loc);
  * current debug location for the given builder.  If the builder has no current
  * debug location, this function is a no-op.
  *
+ * @deprecated LLVMSetInstDebugLocation is deprecated in favor of the more general
+ *             LLVMAddMetadataToInst.
+ *
  * @see llvm::IRBuilder::SetInstDebugLocation()
  */
 void LLVMSetInstDebugLocation(LLVMBuilderRef Builder, LLVMValueRef Inst);
+
+/**
+ * Adds the metadata registered with the given builder to the given instruction.
+ *
+ * @see llvm::IRBuilder::AddMetadataToInst()
+ */
+void LLVMAddMetadataToInst(LLVMBuilderRef Builder, LLVMValueRef Inst);
 
 /**
  * Get the dafult floating-point math metadata for a given builder.

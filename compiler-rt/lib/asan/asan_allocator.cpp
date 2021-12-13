@@ -338,7 +338,11 @@ struct Allocator {
 
   void InitLinkerInitialized(const AllocatorOptions &options) {
     SetAllocatorMayReturnNull(options.may_return_null);
+#if SANITIZER_AMDGPU
+    allocator.InitLinkerInitialized(options.release_to_os_interval_ms, true);
+#else
     allocator.InitLinkerInitialized(options.release_to_os_interval_ms);
+#endif
     SharedInitCode(options);
     max_user_defined_malloc_size = common_flags()->max_allocation_size_mb
                                        ? common_flags()->max_allocation_size_mb
@@ -482,7 +486,8 @@ struct Allocator {
 
   // -------------------- Allocation/Deallocation routines ---------------
   void *Allocate(uptr size, uptr alignment, BufferedStackTrace *stack,
-                 AllocType alloc_type, bool can_fill) {
+                 AllocType alloc_type, bool can_fill,
+                 DeviceAllocationInfo *da_info = nullptr) {
     if (UNLIKELY(!asan_inited))
       AsanInitFromRtl();
     if (RssLimitExceeded()) {
@@ -522,7 +527,7 @@ struct Allocator {
         size > max_user_defined_malloc_size) {
       if (AllocatorMayReturnNull()) {
         Report("WARNING: AddressSanitizer failed to allocate 0x%zx bytes\n",
-               (void*)size);
+               size);
         return nullptr;
       }
       uptr malloc_limit =
@@ -534,11 +539,11 @@ struct Allocator {
     void *allocated;
     if (t) {
       AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
-      allocated = allocator.Allocate(cache, needed_size, 8);
+      allocated = allocator.Allocate(cache, needed_size, 8, da_info);
     } else {
       SpinMutexLock l(&fallback_mutex);
       AllocatorCache *cache = &fallback_allocator_cache;
-      allocated = allocator.Allocate(cache, needed_size, 8);
+      allocated = allocator.Allocate(cache, needed_size, 8, da_info);
     }
     if (UNLIKELY(!allocated)) {
       SetAllocatorOutOfMemory();
@@ -852,12 +857,12 @@ struct Allocator {
     quarantine.PrintStats();
   }
 
-  void ForceLock() {
+  void ForceLock() ACQUIRE(fallback_mutex) {
     allocator.ForceLock();
     fallback_mutex.Lock();
   }
 
-  void ForceUnlock() {
+  void ForceUnlock() RELEASE(fallback_mutex) {
     fallback_mutex.Unlock();
     allocator.ForceUnlock();
   }
@@ -908,13 +913,6 @@ AllocType AsanChunkView::GetAllocType() const {
   return (AllocType)chunk_->alloc_type;
 }
 
-static StackTrace GetStackTraceFromId(u32 id) {
-  CHECK(id);
-  StackTrace res = StackDepotGet(id);
-  CHECK(res.trace);
-  return res;
-}
-
 u32 AsanChunkView::GetAllocStackId() const {
   u32 tid = 0;
   u32 stack = 0;
@@ -929,14 +927,6 @@ u32 AsanChunkView::GetFreeStackId() const {
   u32 stack = 0;
   chunk_->GetFreeContext(tid, stack);
   return stack;
-}
-
-StackTrace AsanChunkView::GetAllocStack() const {
-  return GetStackTraceFromId(GetAllocStackId());
-}
-
-StackTrace AsanChunkView::GetFreeStack() const {
-  return GetStackTraceFromId(GetFreeStackId());
 }
 
 void InitializeAllocator(const AllocatorOptions &options) {
@@ -1081,11 +1071,9 @@ uptr asan_mz_size(const void *ptr) {
   return instance.AllocationSize(reinterpret_cast<uptr>(ptr));
 }
 
-void asan_mz_force_lock() {
-  instance.ForceLock();
-}
+void asan_mz_force_lock() NO_THREAD_SAFETY_ANALYSIS { instance.ForceLock(); }
 
-void asan_mz_force_unlock() {
+void asan_mz_force_unlock() NO_THREAD_SAFETY_ANALYSIS {
   instance.ForceUnlock();
 }
 
@@ -1260,4 +1248,48 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_malloc_hook,
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_free_hook, void *ptr) {
   (void)ptr;
 }
+#endif
+
+#if SANITIZER_AMDGPU
+DECLARE_REAL(hsa_status_t, hsa_amd_agents_allow_access, uint32_t num_agents,
+  const hsa_agent_t *agents, const uint32_t *flags, const void *ptr)
+
+namespace __asan {
+
+// Always align to page boundary to match current ROCr behavior
+static const size_t kPageSize_ = 4096;
+
+hsa_status_t asan_hsa_amd_memory_pool_allocate(
+  hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags, void **ptr,
+  BufferedStackTrace *stack) {
+  AmdgpuAllocationInfo aa_info;
+  aa_info.alloc_func = reinterpret_cast<void *>(asan_hsa_amd_memory_pool_allocate);
+  aa_info.memory_pool = memory_pool;
+  aa_info.size = size;
+  aa_info.flags = flags;
+  aa_info.ptr = nullptr;
+  SetErrnoOnNull(*ptr = instance.Allocate(size, kPageSize_, stack, FROM_MALLOC,
+                                          false, &aa_info));
+  return aa_info.status;
+}
+
+hsa_status_t asan_hsa_amd_memory_pool_free(
+  void *ptr,
+  BufferedStackTrace *stack) {
+  instance.Deallocate(ptr, 0, 0, stack, FROM_MALLOC);
+  return HSA_STATUS_SUCCESS;
+}
+
+hsa_status_t asan_hsa_amd_agents_allow_access(
+  uint32_t num_agents, const hsa_agent_t *agents, const uint32_t *flags,
+  const void *ptr,
+  BufferedStackTrace *stack) {
+  void *p = get_allocator().GetBlockBegin(ptr);
+  if (p) {
+    return REAL(hsa_amd_agents_allow_access)(num_agents, agents, flags, p);
+  } else {
+    return HSA_STATUS_ERROR_FATAL;
+  }
+}
+}  // namespace __asan
 #endif

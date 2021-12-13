@@ -1791,8 +1791,8 @@ HexagonInstrInfo::CreateTargetPostRAHazardRecognizer(
 /// compares against in CmpValue. Return true if the comparison instruction
 /// can be analyzed.
 bool HexagonInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
-                                      Register &SrcReg2, int &Mask,
-                                      int &Value) const {
+                                      Register &SrcReg2, int64_t &Mask,
+                                      int64_t &Value) const {
   unsigned Opc = MI.getOpcode();
 
   // Set mask and the first source register.
@@ -3627,8 +3627,8 @@ int HexagonInstrInfo::getDotNewOp(const MachineInstr &MI) const {
 
   switch (MI.getOpcode()) {
   default:
-    report_fatal_error(std::string("Unknown .new type: ") +
-      std::to_string(MI.getOpcode()));
+    report_fatal_error(Twine("Unknown .new type: ") +
+                       std::to_string(MI.getOpcode()));
   case Hexagon::S4_storerb_ur:
     return Hexagon::S4_storerbnew_ur;
 

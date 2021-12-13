@@ -18,6 +18,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_platform.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stoptheworld.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
 
@@ -221,8 +222,8 @@ void UnlockAllocator();
 // Returns true if [addr, addr + sizeof(void *)) is poisoned.
 bool WordIsPoisoned(uptr addr);
 // Wrappers for ThreadRegistry access.
-void LockThreadRegistry();
-void UnlockThreadRegistry();
+void LockThreadRegistry() NO_THREAD_SAFETY_ANALYSIS;
+void UnlockThreadRegistry() NO_THREAD_SAFETY_ANALYSIS;
 ThreadRegistry *GetThreadRegistryLocked();
 bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
                            uptr *tls_begin, uptr *tls_end, uptr *cache_begin,

@@ -32,12 +32,12 @@ namespace __asan {
 static void (*error_report_callback)(const char*);
 static char *error_message_buffer = nullptr;
 static uptr error_message_buffer_pos = 0;
-static BlockingMutex error_message_buf_mutex(LINKER_INITIALIZED);
+static Mutex error_message_buf_mutex;
 static const unsigned kAsanBuggyPcPoolSize = 25;
 static __sanitizer::atomic_uintptr_t AsanBuggyPcPool[kAsanBuggyPcPoolSize];
 
 void AppendToErrorMessageBuffer(const char *buffer) {
-  BlockingMutexLock l(&error_message_buf_mutex);
+  Lock l(&error_message_buf_mutex);
   if (!error_message_buffer) {
     error_message_buffer =
       (char*)MmapOrDieQuietly(kErrorMessageBufferSize, __func__);
@@ -67,14 +67,14 @@ static void PrintZoneForPointer(uptr ptr, uptr zone_ptr,
                                 const char *zone_name) {
   if (zone_ptr) {
     if (zone_name) {
-      Printf("malloc_zone_from_ptr(%p) = %p, which is %s\n",
-                 ptr, zone_ptr, zone_name);
+      Printf("malloc_zone_from_ptr(%p) = %p, which is %s\n", (void *)ptr,
+             (void *)zone_ptr, zone_name);
     } else {
       Printf("malloc_zone_from_ptr(%p) = %p, which doesn't have a name\n",
-                 ptr, zone_ptr);
+             (void *)ptr, (void *)zone_ptr);
     }
   } else {
-    Printf("malloc_zone_from_ptr(%p) = 0\n", ptr);
+    Printf("malloc_zone_from_ptr(%p) = 0\n", (void *)ptr);
   }
 }
 
@@ -121,8 +121,9 @@ bool ParseFrameDescription(const char *frame_descr,
 // immediately after printing error report.
 class ScopedInErrorReport {
  public:
-  explicit ScopedInErrorReport(bool fatal = false)
-      : halt_on_error_(fatal || flags()->halt_on_error) {
+  explicit ScopedInErrorReport(bool fatal = false, bool nonself = false)
+      : halt_on_error_(fatal || flags()->halt_on_error),
+        nonself_report_(nonself) {
     // Make sure the registry and sanitizer report mutexes are locked while
     // we're printing an error report.
     // We can lock them only here to avoid self-deadlock in case of
@@ -140,8 +141,10 @@ class ScopedInErrorReport {
     ASAN_ON_ERROR();
     if (current_error_.IsValid()) current_error_.Print();
 
-    // Make sure the current thread is announced.
-    DescribeThread(GetCurrentThread());
+    if (!nonself_report_)
+      // Make sure the current thread is announced.
+      DescribeThread(GetCurrentThread());
+
     // We may want to grab this lock again when printing stats.
     asanThreadRegistry().Unlock();
     // Print memory stats.
@@ -155,10 +158,10 @@ class ScopedInErrorReport {
       DumpProcessMap();
 
     // Copy the message buffer so that we could start logging without holding a
-    // lock that gets aquired during printing.
+    // lock that gets acquired during printing.
     InternalMmapVector<char> buffer_copy(kErrorMessageBufferSize);
     {
-      BlockingMutexLock l(&error_message_buf_mutex);
+      Lock l(&error_message_buf_mutex);
       internal_memcpy(buffer_copy.data(),
                       error_message_buffer, kErrorMessageBufferSize);
       // Clear error_message_buffer so that if we find other errors
@@ -207,6 +210,9 @@ class ScopedInErrorReport {
   // with the debugger and point it to an error description.
   static ErrorDescription current_error_;
   bool halt_on_error_;
+  // used to control logging specific information when non-self entity is
+  // reporting
+  bool nonself_report_;
 };
 
 ErrorDescription ScopedInErrorReport::current_error_(LINKER_INITIALIZED);
@@ -435,9 +441,10 @@ static inline void CheckForInvalidPointerPair(void *p1, void *p2) {
 void ReportMacMzReallocUnknown(uptr addr, uptr zone_ptr, const char *zone_name,
                                BufferedStackTrace *stack) {
   ScopedInErrorReport in_report;
-  Printf("mz_realloc(%p) -- attempting to realloc unallocated memory.\n"
-             "This is an unrecoverable problem, exiting now.\n",
-             addr);
+  Printf(
+      "mz_realloc(%p) -- attempting to realloc unallocated memory.\n"
+      "This is an unrecoverable problem, exiting now.\n",
+      (void *)addr);
   PrintZoneForPointer(addr, zone_ptr, zone_name);
   stack->Print();
   DescribeAddressIfHeap(addr);
@@ -477,6 +484,34 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
   in_report.ReportError(error);
 }
 
+void ReportNonselfError(uptr *nonself_callstack, u32 n_nonself_callstack,
+                        uptr *nonself_addrs, u32 n_nonself_addrs,
+                        u64 *nonself_tids, u32 n_nonself_tids, bool is_write,
+                        u32 access_size, bool is_abort,
+                        const char *nonself_name, s64 nonself_vma_adjust,
+                        int nonself_fd, u64 nonself_file_extent_size,
+                        u64 nonself_file_extent_start) {
+  ScopedInErrorReport in_report(is_abort, true);
+  // delegate to amdgpu error handler
+  if (!internal_strcmp(ErrorNonSelfAMDGPU::key, nonself_name)) {
+    ErrorNonSelfAMDGPU amdgpu_wavefront_error(
+        nonself_callstack, n_nonself_callstack, nonself_addrs, n_nonself_addrs,
+        nonself_tids, n_nonself_tids, (bool)is_write, access_size, nonself_fd,
+        nonself_vma_adjust, nonself_file_extent_start,
+        nonself_file_extent_size);
+    in_report.ReportError(amdgpu_wavefront_error);
+  }
+  // default fallback
+  else {
+    ErrorNonSelfGeneric error_val(
+        nonself_callstack, n_nonself_callstack, nonself_addrs, n_nonself_addrs,
+        nonself_tids, n_nonself_tids, (bool)is_write, access_size, nonself_fd,
+        nonself_vma_adjust, nonself_file_extent_start,
+        nonself_file_extent_size);
+    in_report.ReportError(error_val);
+  }
+}
+
 }  // namespace __asan
 
 // --------------------------- Interface --------------------- {{{1
@@ -490,7 +525,7 @@ void __asan_report_error(uptr pc, uptr bp, uptr sp, uptr addr, int is_write,
 }
 
 void NOINLINE __asan_set_error_report_callback(void (*callback)(const char*)) {
-  BlockingMutexLock l(&error_message_buf_mutex);
+  Lock l(&error_message_buf_mutex);
   error_report_callback = callback;
 }
 

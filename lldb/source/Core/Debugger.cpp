@@ -23,6 +23,7 @@
 #include "lldb/Host/Terminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueSInt64.h"
@@ -604,6 +605,17 @@ void Debugger::Destroy(DebuggerSP &debugger_sp) {
   if (!debugger_sp)
     return;
 
+  CommandInterpreter &cmd_interpreter = debugger_sp->GetCommandInterpreter();
+
+  if (cmd_interpreter.GetSaveSessionOnQuit()) {
+    CommandReturnObject result(debugger_sp->GetUseColor());
+    cmd_interpreter.SaveTranscript(result);
+    if (result.Succeeded())
+      debugger_sp->GetOutputStream() << result.GetOutputData() << '\n';
+    else
+      debugger_sp->GetErrorStream() << result.GetErrorData() << '\n';
+  }
+
   debugger_sp->Clear();
 
   if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
@@ -711,10 +723,10 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   m_collection_sp->AppendProperty(
       ConstString("target"),
       ConstString("Settings specify to debugging targets."), true,
-      Target::GetGlobalProperties()->GetValueProperties());
+      Target::GetGlobalProperties().GetValueProperties());
   m_collection_sp->AppendProperty(
       ConstString("platform"), ConstString("Platform settings."), true,
-      Platform::GetGlobalPlatformProperties()->GetValueProperties());
+      Platform::GetGlobalPlatformProperties().GetValueProperties());
   m_collection_sp->AppendProperty(
       ConstString("symbols"), ConstString("Symbol lookup and cache settings."),
       true, ModuleList::GetGlobalModuleListProperties().GetValueProperties());
@@ -761,12 +773,9 @@ void Debugger::Clear() {
     StopIOHandlerThread();
     StopEventHandlerThread();
     m_listener_sp->Clear();
-    int num_targets = m_target_list.GetNumTargets();
-    for (int i = 0; i < num_targets; i++) {
-      TargetSP target_sp(m_target_list.GetTargetAtIndex(i));
+    for (TargetSP target_sp : m_target_list.Targets()) {
       if (target_sp) {
-        ProcessSP process_sp(target_sp->GetProcessSP());
-        if (process_sp)
+        if (ProcessSP process_sp = target_sp->GetProcessSP())
           process_sp->Finalize();
         target_sp->Destroy();
       }
@@ -1234,7 +1243,7 @@ bool Debugger::EnableLog(llvm::StringRef channel,
       log_stream_sp = pos->second.lock();
     if (!log_stream_sp) {
       File::OpenOptions flags =
-          File::eOpenOptionWrite | File::eOpenOptionCanCreate;
+          File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate;
       if (log_options & LLDB_LOG_OPTION_APPEND)
         flags |= File::eOpenOptionAppend;
       else
@@ -1414,10 +1423,9 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
               output_stream_sp->PutCString(content_stream.GetString());
             }
           } else {
-            error_stream_sp->Printf("Failed to print structured "
-                                    "data with plugin %s: %s",
-                                    plugin_sp->GetPluginName().AsCString(),
-                                    error.AsCString());
+            error_stream_sp->Format("Failed to print structured "
+                                    "data with plugin {0}: {1}",
+                                    plugin_sp->GetPluginName(), error);
           }
         }
       }

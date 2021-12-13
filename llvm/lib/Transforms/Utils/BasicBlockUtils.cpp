@@ -39,6 +39,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -51,6 +52,12 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "basicblock-utils"
+
+static cl::opt<unsigned> MaxDeoptOrUnreachableSuccessorCheckDepth(
+    "max-deopt-or-unreachable-succ-check-depth", cl::init(8), cl::Hidden,
+    cl::desc("Set the maximum path length when checking whether a basic block "
+             "is followed by a block that either has a terminating "
+             "deoptimizing call or is terminated with an unreachable"));
 
 void llvm::DetatchDeadBlocks(
     ArrayRef<BasicBlock *> BBs,
@@ -230,7 +237,7 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   if (DTU) {
     SmallPtrSet<BasicBlock *, 2> SuccsOfBB(succ_begin(BB), succ_end(BB));
     SmallPtrSet<BasicBlock *, 2> SuccsOfPredBB(succ_begin(PredBB),
-                                               succ_begin(PredBB));
+                                               succ_end(PredBB));
     Updates.reserve(Updates.size() + 2 * SuccsOfBB.size() + 1);
     // Add insert edges first. Experimentally, for the particular case of two
     // blocks that can be merged, with a single successor and single predecessor
@@ -429,7 +436,7 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
   return !ToBeRemoved.empty();
 }
 
-bool llvm::RemoveRedundantDbgInstrs(BasicBlock *BB, bool RemovePseudoOp) {
+bool llvm::RemoveRedundantDbgInstrs(BasicBlock *BB) {
   bool MadeChanges = false;
   // By using the "backward scan" strategy before the "forward scan" strategy we
   // can remove both dbg.value (2) and (3) in a situation like this:
@@ -444,8 +451,6 @@ bool llvm::RemoveRedundantDbgInstrs(BasicBlock *BB, bool RemovePseudoOp) {
   // already is described as having the value V1 at (1).
   MadeChanges |= removeRedundantDbgInstrsUsingBackwardScan(BB);
   MadeChanges |= removeRedundantDbgInstrsUsingForwardScan(BB);
-  if (RemovePseudoOp)
-    MadeChanges |= removeRedundantPseudoProbes(BB);
 
   if (MadeChanges)
     LLVM_DEBUG(dbgs() << "Removed redundant dbg instrs from: "
@@ -485,6 +490,20 @@ void llvm::ReplaceInstWithInst(BasicBlock::InstListType &BIL,
 
   // Move BI back to point to the newly inserted instruction
   BI = New;
+}
+
+bool llvm::IsBlockFollowedByDeoptOrUnreachable(const BasicBlock *BB) {
+  // Remember visited blocks to avoid infinite loop
+  SmallPtrSet<const BasicBlock *, 8> VisitedBlocks;
+  unsigned Depth = 0;
+  while (BB && Depth++ < MaxDeoptOrUnreachableSuccessorCheckDepth &&
+         VisitedBlocks.insert(BB).second) {
+    if (BB->getTerminatingDeoptimizeCall() ||
+        isa<UnreachableInst>(BB->getTerminator()))
+      return true;
+    BB = BB->getUniqueSuccessor();
+  }
+  return false;
 }
 
 void llvm::ReplaceInstWithInst(Instruction *From, Instruction *To) {
@@ -768,8 +787,10 @@ static BasicBlock *SplitBlockImpl(BasicBlock *Old, Instruction *SplitPt,
                             BBName);
   }
   BasicBlock::iterator SplitIt = SplitPt->getIterator();
-  while (isa<PHINode>(SplitIt) || SplitIt->isEHPad())
+  while (isa<PHINode>(SplitIt) || SplitIt->isEHPad()) {
     ++SplitIt;
+    assert(SplitIt != SplitPt->getParent()->end());
+  }
   std::string Name = BBName.str();
   BasicBlock *New = Old->splitBasicBlock(
       SplitIt, Name.empty() ? Old->getName() + ".split" : Name);
@@ -1456,8 +1477,8 @@ void llvm::SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
   ReplaceInstWithInst(HeadOldTerm, HeadNewTerm);
 }
 
-Value *llvm::GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
-                             BasicBlock *&IfFalse) {
+BranchInst *llvm::GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
+                                 BasicBlock *&IfFalse) {
   PHINode *SomePHI = dyn_cast<PHINode>(BB->begin());
   BasicBlock *Pred1 = nullptr;
   BasicBlock *Pred2 = nullptr;
@@ -1523,7 +1544,7 @@ Value *llvm::GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
       return nullptr;
     }
 
-    return Pred1Br->getCondition();
+    return Pred1Br;
   }
 
   // Ok, if we got here, both predecessors end with an unconditional branch to
@@ -1545,7 +1566,7 @@ Value *llvm::GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
     IfTrue = Pred2;
     IfFalse = Pred1;
   }
-  return BI->getCondition();
+  return BI;
 }
 
 // After creating a control flow hub, the operands of PHINodes in an outgoing

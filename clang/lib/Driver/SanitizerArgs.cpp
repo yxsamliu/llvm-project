@@ -18,6 +18,7 @@
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include <memory>
 
 using namespace clang;
@@ -754,7 +755,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     parseSpecialCaseListArg(
         D, Args, CoverageAllowlistFiles,
         options::OPT_fsanitize_coverage_allowlist, OptSpecifier(),
-        clang::diag::err_drv_malformed_sanitizer_coverage_whitelist);
+        clang::diag::err_drv_malformed_sanitizer_coverage_allowlist);
     parseSpecialCaseListArg(
         D, Args, CoverageIgnorelistFiles,
         options::OPT_fsanitize_coverage_ignorelist, OptSpecifier(),
@@ -804,6 +805,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         options::OPT_fno_sanitize_address_poison_custom_array_cookie,
         AsanPoisonCustomArrayCookie);
 
+    AsanOutlineInstrumentation =
+        Args.hasFlag(options::OPT_fsanitize_address_outline_instrumentation,
+                     options::OPT_fno_sanitize_address_outline_instrumentation,
+                     AsanOutlineInstrumentation);
+
     // As a workaround for a bug in gold 2.26 and earlier, dead stripping of
     // globals in ASan is disabled by default on ELF targets.
     // See https://sourceware.org/bugzilla/show_bug.cgi?id=19002
@@ -839,6 +845,18 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
             << Arg->getOption().getName() << Arg->getValue();
       }
       AsanDtorKind = parsedAsanDtorKind;
+    }
+
+    if (const auto *Arg = Args.getLastArg(
+            options::OPT_sanitize_address_use_after_return_EQ)) {
+      auto parsedAsanUseAfterReturn =
+          AsanDetectStackUseAfterReturnModeFromString(Arg->getValue());
+      if (parsedAsanUseAfterReturn ==
+          llvm::AsanDetectStackUseAfterReturnMode::Invalid) {
+        TC.getDriver().Diag(clang::diag::err_drv_unsupported_option_argument)
+            << Arg->getOption().getName() << Arg->getValue();
+      }
+      AsanUseAfterReturn = parsedAsanUseAfterReturn;
     }
 
   } else {
@@ -1105,6 +1123,11 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     CmdArgs.push_back("-asan-detect-invalid-pointer-sub");
   }
 
+  if (AsanOutlineInstrumentation) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-asan-instrumentation-with-call-threshold=0");
+  }
+
   // Only pass the option to the frontend if the user requested,
   // otherwise the frontend will just use the codegen default.
   if (AsanDtorKind != llvm::AsanDtorKind::Invalid) {
@@ -1112,12 +1135,18 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                                          AsanDtorKindToString(AsanDtorKind)));
   }
 
+  if (AsanUseAfterReturn != llvm::AsanDetectStackUseAfterReturnMode::Invalid) {
+    CmdArgs.push_back(Args.MakeArgString(
+        "-fsanitize-address-use-after-return=" +
+        AsanDetectStackUseAfterReturnModeToString(AsanUseAfterReturn)));
+  }
+
   if (!HwasanAbi.empty()) {
     CmdArgs.push_back("-default-function-attr");
     CmdArgs.push_back(Args.MakeArgString("hwasan-abi=" + HwasanAbi));
   }
 
-  if (Sanitizers.has(SanitizerKind::HWAddress) && TC.getTriple().isAArch64()) {
+  if (Sanitizers.has(SanitizerKind::HWAddress) && !HwasanUseAliases) {
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back("+tagged-globals");
   }

@@ -77,8 +77,7 @@ INLINE static uint16_t determineNumberOfThreads(uint16_t NumThreadsClause,
 
 // This routine is always called by the team master..
 EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn) {
-  PRINT0(LD_IO, "call to __kmpc_kernel_prepare_parallel\n");
-
+  PRINT0(LD_IO | LD_PAR, "call to __kmpc_kernel_prepare_parallel\n");
   omptarget_nvptx_workFn = WorkFn;
 
   // This routine is only called by the team master.  The team master is
@@ -108,7 +107,8 @@ EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn) {
 
   ASSERT(LT_FUSSY, NumThreads > 0, "bad thread request of %d threads",
          (int)NumThreads);
-  ASSERT0(LT_FUSSY, GetThreadIdInBlock() == GetMasterThreadID(),
+  ASSERT0(LT_FUSSY,
+          __kmpc_get_hardware_thread_id_in_block() == GetMasterThreadID(),
           "only team master can create parallel");
 
 #ifdef OMPD_SUPPORT
@@ -150,7 +150,7 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn) {
 
   // Only the worker threads call this routine and the master warp
   // never arrives here.  Therefore, use the nvptx thread id.
-  int threadId = GetThreadIdInBlock();
+  int threadId = __kmpc_get_hardware_thread_id_in_block();
   omptarget_nvptx_WorkDescr &workDescr = getMyWorkDescriptor();
   // Set to true for workers participating in the parallel region.
   bool isActive = false;
@@ -171,16 +171,6 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn) {
           (int)newTaskDescr->ThreadId(), (int)nThreads);
 
     isActive = true;
-    // Reconverge the threads at the end of the parallel region to correctly
-    // handle parallel levels.
-    // In Cuda9+ in non-SPMD mode we have either 1 worker thread or the whole
-    // warp. If only 1 thread is active, not need to reconverge the threads.
-    // If we have the whole warp, reconverge all the threads in the warp before
-    // actually trying to change the parallel level. Otherwise, parallel level
-    // can be changed incorrectly because of threads divergence.
-    bool IsActiveParallelRegion = threadsInTeam != 1;
-    IncParallelLevel(IsActiveParallelRegion,
-                     IsActiveParallelRegion ? __kmpc_impl_all_lanes : 1u);
 #ifdef OMPD_SUPPORT
     ompd_init_thread_parallel();
     ompd_bp_thread_begin();
@@ -197,21 +187,11 @@ EXTERN void __kmpc_kernel_end_parallel() {
 
   // Only the worker threads call this routine and the master warp
   // never arrives here.  Therefore, use the nvptx thread id.
-  int threadId = GetThreadIdInBlock();
+  int threadId = __kmpc_get_hardware_thread_id_in_block();
   omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(threadId);
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(
       threadId, currTaskDescr->GetPrevTaskDescr());
 
-  // Reconverge the threads at the end of the parallel region to correctly
-  // handle parallel levels.
-  // In Cuda9+ in non-SPMD mode we have either 1 worker thread or the whole
-  // warp. If only 1 thread is active, not need to reconverge the threads.
-  // If we have the whole warp, reconverge all the threads in the warp before
-  // actually trying to change the parallel level. Otherwise, parallel level can
-  // be changed incorrectly because of threads divergence.
-  bool IsActiveParallelRegion = threadsInTeam != 1;
-  DecParallelLevel(IsActiveParallelRegion,
-                   IsActiveParallelRegion ? __kmpc_impl_all_lanes : 1u);
 #ifdef OMPD_SUPPORT
   ompd_reset_device_thread_state();
   ompd_bp_thread_end();
@@ -226,18 +206,18 @@ EXTERN void __kmpc_kernel_end_parallel() {
 ////////////////////////////////////////////////////////////////////////////////
 
 EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid) {
-  PRINT0(LD_IO, "call to __kmpc_serialized_parallel\n");
+  PRINT0(LD_IO | LD_PAR, "call to __kmpc_serialized_parallel\n");
 
   IncParallelLevel(/*ActiveParallel=*/false, __kmpc_impl_activemask());
 
-  if (checkRuntimeUninitialized(loc)) {
-    ASSERT0(LT_FUSSY, checkSPMDMode(loc),
+  if (isRuntimeUninitialized()) {
+    ASSERT0(LT_FUSSY, __kmpc_is_spmd_exec_mode(),
             "Expected SPMD mode with uninitialized runtime.");
     return;
   }
 
   // assume this is only called for nested parallel
-  int threadId = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
+  int threadId = GetLogicalThreadIdInBlock();
 
   // unlike actual parallel, threads in the same team do not share
   // the workTaskDescr in this case and num threads is fixed to 1
@@ -245,7 +225,6 @@ EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid) {
   // get current task
   omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(threadId);
   currTaskDescr->SaveLoopData();
-  int ParLev = currTaskDescr->ParLev();
   // allocate new task descriptor and copy value from current one, set prev to
   // it
 
@@ -258,7 +237,6 @@ EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid) {
   // - each thread becomes ID 0 in its serialized parallel, and
   // - there is only one thread per team
   newTaskDescr->ThreadId() = 0;
-  newTaskDescr->ParLev() = ParLev + 1;
 
 #ifdef OMPD_SUPPORT
   // Set ompd parallel info for the next parallel region in the previous task
@@ -284,18 +262,18 @@ EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid) {
 
 EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc,
                                            uint32_t global_tid) {
-  PRINT0(LD_IO, "call to __kmpc_end_serialized_parallel\n");
+  PRINT0(LD_IO | LD_PAR, "call to __kmpc_end_serialized_parallel\n");
 
   DecParallelLevel(/*ActiveParallel=*/false, __kmpc_impl_activemask());
 
-  if (checkRuntimeUninitialized(loc)) {
-    ASSERT0(LT_FUSSY, checkSPMDMode(loc),
+  if (isRuntimeUninitialized()) {
+    ASSERT0(LT_FUSSY, __kmpc_is_spmd_exec_mode(),
             "Expected SPMD mode with uninitialized runtime.");
     return;
   }
 
   // pop stack
-  int threadId = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
+  int threadId = GetLogicalThreadIdInBlock();
   omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(threadId);
   // set new top
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(
@@ -309,9 +287,7 @@ EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc,
   currTaskDescr->RestoreLoopData();
 }
 
-EXTERN uint16_t __kmpc_parallel_level(kmp_Ident *loc, uint32_t global_tid) {
-  PRINT0(LD_IO, "call to __kmpc_parallel_level\n");
-
+NOINLINE EXTERN uint32_t __kmpc_parallel_level() {
   return parallelLevel[GetWarpId()] & (OMP_ACTIVE_PARALLEL_LEVEL - 1);
 }
 
@@ -320,22 +296,28 @@ EXTERN uint16_t __kmpc_parallel_level(kmp_Ident *loc, uint32_t global_tid) {
 // it's cheap to recalculate this value so we never use the result
 // of this call.
 EXTERN int32_t __kmpc_global_thread_num(kmp_Ident *loc) {
-  int tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
-  return GetOmpThreadId(tid, checkSPMDMode(loc));
+  return GetOmpThreadId();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // push params
 ////////////////////////////////////////////////////////////////////////////////
 
+#define SHARE_ATTR __attribute__((address_space(3)))
 EXTERN void __kmpc_push_num_threads(kmp_Ident *loc, int32_t tid,
                                     int32_t num_threads) {
   PRINT(LD_IO, "call kmpc_push_num_threads %d\n", num_threads);
-  ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc),
+  ASSERT0(LT_FUSSY, isRuntimeInitialized(),
           "Runtime must be initialized.");
-  tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
-  omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(tid) =
-      num_threads;
+  tid = GetLogicalThreadIdInBlock();
+  uint16_t &u16ref =
+    omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(tid);
+  uint16_t SHARE_ATTR * p16_shared = (uint16_t SHARE_ATTR *) &u16ref;
+  // Limit threads to the number the kernel started was started with
+  uint16_t ThreadsAvailable = GetNumberOfWorkersInTeam();
+  uint16_t nthreads_for_next_parallel_region =
+      (num_threads > ThreadsAvailable) ? ThreadsAvailable : num_threads;
+  *p16_shared = (uint16_t SHARE_ATTR)nthreads_for_next_parallel_region;
 }
 
 // Do nothing. The host guarantees we started the requested number of
@@ -355,25 +337,32 @@ EXTERN void __kmpc_push_proc_bind(kmp_Ident *loc, uint32_t tid, int proc_bind) {
 // parallel interface
 ////////////////////////////////////////////////////////////////////////////////
 
-EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
-                               kmp_int32 if_expr, kmp_int32 num_threads,
-                               int proc_bind, void *fn, void *wrapper_fn,
-                               void **args, size_t nargs) {
+NOINLINE EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
+                                        kmp_int32 if_expr,
+                                        kmp_int32 num_threads, int proc_bind,
+                                        void *fn, void *wrapper_fn, void **args,
+                                        size_t nargs) {
 
-  // Handle the serialized case first, same for SPMD/non-SPMD except that in
-  // SPMD mode we already incremented the parallel level counter, account for
-  // that.
-  bool InParallelRegion =
-      (__kmpc_parallel_level(ident, global_tid) > __kmpc_is_spmd_exec_mode());
+  PRINT0(LD_IO | LD_PAR, "call kmpc_parallel_51\n");
+  // Handle the serialized case first, same for SPMD/non-SPMD
+  bool InParallelRegion = (__kmpc_parallel_level() > 0);
   if (!if_expr || InParallelRegion) {
+    // increment parallel level to set all thread IDs to 0
     __kmpc_serialized_parallel(ident, global_tid);
-    __kmp_invoke_microtask(global_tid, 0, fn, args, nargs);
+    __kmp_invoke_microtask(GetOmpThreadId(), 0, fn, args, nargs);
+    // decrement parallel level to reset all thread IDs to the value it had
+    // before entering the region
     __kmpc_end_serialized_parallel(ident, global_tid);
     return;
   }
 
   if (__kmpc_is_spmd_exec_mode()) {
+    IncParallelLevel(/*ActiveParallel=*/false, __kmpc_impl_activemask());
     __kmp_invoke_microtask(global_tid, 0, fn, args, nargs);
+    DecParallelLevel(/*ActiveParallel=*/false, __kmpc_impl_activemask());
+#ifdef __AMDGCN__
+    __kmpc_barrier_simple_spmd(ident, 0);
+#endif
     return;
   }
 
@@ -387,6 +376,7 @@ EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
     void **GlobalArgs;
     __kmpc_begin_sharing_variables(&GlobalArgs, nargs);
     // TODO: faster memcpy?
+    // Removed unroll pragma in preference of eventual use of memcpy
     for (int I = 0; I < nargs; I++)
       GlobalArgs[I] = args[I];
   }
@@ -401,8 +391,11 @@ EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
     parallelLevel[I] +=
         (1 + (IsActiveParallelRegion ? OMP_ACTIVE_PARALLEL_LEVEL : 0));
 
+#ifdef __AMDGCN__
+  omptarget_master_ready = true;
+#endif
   // Master signals work to activate workers.
-  __kmpc_barrier_simple_spmd(nullptr, 0);
+  __kmpc_barrier_simple_spmd(ident, 0);
 
   // OpenMP [2.5, Parallel Construct, p.49]
   // There is an implied barrier at the end of a parallel region. After the
@@ -410,7 +403,15 @@ EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
   // execution of the enclosing task region.
   //
   // The master waits at this barrier until all workers are done.
-  __kmpc_barrier_simple_spmd(nullptr, 0);
+  __kmpc_barrier_simple_spmd(ident, 0);
+#ifdef __AMDGCN__
+  while (!omptarget_workers_done)
+    __kmpc_barrier_simple_spmd(ident, 0);
+
+  // Initialize for next parallel region
+  omptarget_workers_done = false;
+  omptarget_master_ready = false;
+#endif
 
   // Decrement parallel level for non-SPMD warps.
   for (int I = 0; I < NumWarps; ++I)

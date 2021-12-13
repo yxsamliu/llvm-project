@@ -152,12 +152,12 @@ INTERCEPTOR(uptr, malloc_usable_size, void *ptr) {
   if (__dfsan::dfsan_init_is_running)       \
     return REAL(func)(__VA_ARGS__);         \
   ENSURE_DFSAN_INITED();                    \
-  dfsan_set_label(0, __errno_location(), sizeof(int)); /* NOLINT */
+  dfsan_set_label(0, __errno_location(), sizeof(int));
 
 INTERCEPTOR(void *, mmap, void *addr, SIZE_T length, int prot, int flags,
             int fd, OFF_T offset) {
   if (common_flags()->detect_write_exec)
-    ReportMmapWriteExec(prot);
+    ReportMmapWriteExec(prot, flags);
   if (!__dfsan::dfsan_inited)
     return (void *)internal_mmap(addr, length, prot, flags, fd, offset);
   COMMON_INTERCEPTOR_ENTER(mmap, addr, length, prot, flags, fd, offset);
@@ -171,7 +171,7 @@ INTERCEPTOR(void *, mmap, void *addr, SIZE_T length, int prot, int flags,
 INTERCEPTOR(void *, mmap64, void *addr, SIZE_T length, int prot, int flags,
             int fd, OFF64_T offset) {
   if (common_flags()->detect_write_exec)
-    ReportMmapWriteExec(prot);
+    ReportMmapWriteExec(prot, flags);
   if (!__dfsan::dfsan_inited)
     return (void *)internal_mmap(addr, length, prot, flags, fd, offset);
   COMMON_INTERCEPTOR_ENTER(mmap64, addr, length, prot, flags, fd, offset);

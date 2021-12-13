@@ -95,7 +95,7 @@ bool Constant::isAllOnesValue() const {
 
   // Check for FP which are bitcasted from -1 integers
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
-    return CFP->getValueAPF().bitcastToAPInt().isAllOnesValue();
+    return CFP->getValueAPF().bitcastToAPInt().isAllOnes();
 
   // Check for constant splat vectors of 1 values.
   if (getType()->isVectorTy())
@@ -112,7 +112,7 @@ bool Constant::isOneValue() const {
 
   // Check for FP which are bitcasted from 1 integers
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
-    return CFP->getValueAPF().bitcastToAPInt().isOneValue();
+    return CFP->getValueAPF().bitcastToAPInt().isOne();
 
   // Check for constant splat vectors of 1 values.
   if (getType()->isVectorTy())
@@ -129,7 +129,7 @@ bool Constant::isNotOneValue() const {
 
   // Check for FP which are bitcasted from 1 integers
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
-    return !CFP->getValueAPF().bitcastToAPInt().isOneValue();
+    return !CFP->getValueAPF().bitcastToAPInt().isOne();
 
   // Check that vectors don't contain 1
   if (auto *VTy = dyn_cast<FixedVectorType>(getType())) {
@@ -315,9 +315,11 @@ containsUndefinedElement(const Constant *C,
       return false;
 
     for (unsigned i = 0, e = cast<FixedVectorType>(VTy)->getNumElements();
-         i != e; ++i)
-      if (HasFn(C->getAggregateElement(i)))
-        return true;
+         i != e; ++i) {
+      if (Constant *Elem = C->getAggregateElement(i))
+        if (HasFn(Elem))
+          return true;
+    }
   }
 
   return false;
@@ -366,9 +368,8 @@ Constant *Constant::getNullValue(Type *Ty) {
     return ConstantFP::get(Ty->getContext(),
                            APFloat::getZero(APFloat::IEEEquad()));
   case Type::PPC_FP128TyID:
-    return ConstantFP::get(Ty->getContext(),
-                           APFloat(APFloat::PPCDoubleDouble(),
-                                   APInt::getNullValue(128)));
+    return ConstantFP::get(Ty->getContext(), APFloat(APFloat::PPCDoubleDouble(),
+                                                     APInt::getZero(128)));
   case Type::PointerTyID:
     return ConstantPointerNull::get(cast<PointerType>(Ty));
   case Type::StructTyID:
@@ -404,11 +405,10 @@ Constant *Constant::getIntegerValue(Type *Ty, const APInt &V) {
 Constant *Constant::getAllOnesValue(Type *Ty) {
   if (IntegerType *ITy = dyn_cast<IntegerType>(Ty))
     return ConstantInt::get(Ty->getContext(),
-                            APInt::getAllOnesValue(ITy->getBitWidth()));
+                            APInt::getAllOnes(ITy->getBitWidth()));
 
   if (Ty->isFloatingPointTy()) {
-    APFloat FL = APFloat::getAllOnesValue(Ty->getFltSemantics(),
-                                          Ty->getPrimitiveSizeInBits());
+    APFloat FL = APFloat::getAllOnesValue(Ty->getFltSemantics());
     return ConstantFP::get(Ty->getContext(), FL);
   }
 
@@ -442,6 +442,7 @@ Constant *Constant::getAggregateElement(unsigned Elt) const {
   if (const auto *CDS = dyn_cast<ConstantDataSequential>(this))
     return Elt < CDS->getNumElements() ? CDS->getElementAsConstant(Elt)
                                        : nullptr;
+
   return nullptr;
 }
 
@@ -713,28 +714,40 @@ Constant::PossibleRelocationsTy Constant::getRelocationInfo() const {
   return Result;
 }
 
-/// If the specified constantexpr is dead, remove it. This involves recursively
-/// eliminating any dead users of the constantexpr.
-static bool removeDeadUsersOfConstant(const Constant *C) {
+/// Return true if the specified constantexpr is dead. This involves
+/// recursively traversing users of the constantexpr.
+/// If RemoveDeadUsers is true, also remove dead users at the same time.
+static bool constantIsDead(const Constant *C, bool RemoveDeadUsers) {
   if (isa<GlobalValue>(C)) return false; // Cannot remove this
 
-  while (!C->use_empty()) {
-    const Constant *User = dyn_cast<Constant>(C->user_back());
+  Value::const_user_iterator I = C->user_begin(), E = C->user_end();
+  while (I != E) {
+    const Constant *User = dyn_cast<Constant>(*I);
     if (!User) return false; // Non-constant usage;
-    if (!removeDeadUsersOfConstant(User))
+    if (!constantIsDead(User, RemoveDeadUsers))
       return false; // Constant wasn't dead
+
+    // Just removed User, so the iterator was invalidated.
+    // Since we return immediately upon finding a live user, we can always
+    // restart from user_begin().
+    if (RemoveDeadUsers)
+      I = C->user_begin();
+    else
+      ++I;
   }
 
-  // If C is only used by metadata, it should not be preserved but should have
-  // its uses replaced.
-  if (C->isUsedByMetadata()) {
-    const_cast<Constant *>(C)->replaceAllUsesWith(
-        UndefValue::get(C->getType()));
+  if (RemoveDeadUsers) {
+    // If C is only used by metadata, it should not be preserved but should
+    // have its uses replaced.
+    if (C->isUsedByMetadata()) {
+      const_cast<Constant *>(C)->replaceAllUsesWith(
+          UndefValue::get(C->getType()));
+    }
+    const_cast<Constant *>(C)->destroyConstant();
   }
-  const_cast<Constant*>(C)->destroyConstant();
+
   return true;
 }
-
 
 void Constant::removeDeadConstantUsers() const {
   Value::const_user_iterator I = user_begin(), E = user_end();
@@ -747,7 +760,7 @@ void Constant::removeDeadConstantUsers() const {
       continue;
     }
 
-    if (!removeDeadUsersOfConstant(User)) {
+    if (!constantIsDead(User, /* RemoveDeadUsers= */ true)) {
       // If the constant wasn't dead, remember that this was the last live use
       // and move on to the next constant.
       LastNonDeadUser = I;
@@ -761,6 +774,20 @@ void Constant::removeDeadConstantUsers() const {
     else
       I = std::next(LastNonDeadUser);
   }
+}
+
+bool Constant::hasOneLiveUse() const {
+  unsigned NumUses = 0;
+  for (const Use &use : uses()) {
+    const Constant *User = dyn_cast<Constant>(use.getUser());
+    if (!User || !constantIsDead(User, /* RemoveDeadUsers= */ false)) {
+      ++NumUses;
+
+      if (NumUses > 1)
+        return false;
+    }
+  }
+  return NumUses == 1;
 }
 
 Constant *Constant::replaceUndefsWith(Constant *C, Constant *Replacement) {
@@ -1429,12 +1456,12 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
   Type *I32Ty = Type::getInt32Ty(VTy->getContext());
 
   // Move scalar into vector.
-  Constant *UndefV = UndefValue::get(VTy);
-  V = ConstantExpr::getInsertElement(UndefV, V, ConstantInt::get(I32Ty, 0));
+  Constant *PoisonV = PoisonValue::get(VTy);
+  V = ConstantExpr::getInsertElement(PoisonV, V, ConstantInt::get(I32Ty, 0));
   // Build shuffle mask to perform the splat.
   SmallVector<int, 8> Zeros(EC.getKnownMinValue(), 0);
   // Splat.
-  return ConstantExpr::getShuffleVector(V, UndefV, Zeros);
+  return ConstantExpr::getShuffleVector(V, PoisonV, Zeros);
 }
 
 ConstantTokenNone *ConstantTokenNone::get(LLVMContext &Context) {
@@ -1505,20 +1532,6 @@ ArrayRef<int> ConstantExpr::getShuffleMask() const {
 
 Constant *ConstantExpr::getShuffleMaskForBitcode() const {
   return cast<ShuffleVectorConstantExpr>(this)->ShuffleMaskForBitcode;
-}
-
-Constant *
-ConstantExpr::getWithOperandReplaced(unsigned OpNo, Constant *Op) const {
-  assert(Op->getType() == getOperand(OpNo)->getType() &&
-         "Replacing operand with value of different type!");
-  if (getOperand(OpNo) == Op)
-    return const_cast<ConstantExpr*>(this);
-
-  SmallVector<Constant*, 8> NewOps;
-  for (unsigned i = 0, e = getNumOperands(); i != e; ++i)
-    NewOps.push_back(i == OpNo ? Op : getOperand(i));
-
-  return getWithOperands(NewOps);
 }
 
 Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
@@ -1829,8 +1842,8 @@ BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
 }
 
 BlockAddress::BlockAddress(Function *F, BasicBlock *BB)
-: Constant(Type::getInt8PtrTy(F->getContext()), Value::BlockAddressVal,
-           &Op<0>(), 2) {
+    : Constant(Type::getInt8PtrTy(F->getContext(), F->getAddressSpace()),
+               Value::BlockAddressVal, &Op<0>(), 2) {
   setOperand(0, F);
   setOperand(1, BB);
   BB->AdjustBlockAddressRefCount(1);
@@ -2238,9 +2251,9 @@ Constant *ConstantExpr::getAddrSpaceCast(Constant *C, Type *DstTy,
   // bitcasting the pointer type and then converting the address space.
   PointerType *SrcScalarTy = cast<PointerType>(C->getType()->getScalarType());
   PointerType *DstScalarTy = cast<PointerType>(DstTy->getScalarType());
-  Type *DstElemTy = DstScalarTy->getElementType();
-  if (SrcScalarTy->getElementType() != DstElemTy) {
-    Type *MidTy = PointerType::get(DstElemTy, SrcScalarTy->getAddressSpace());
+  if (!SrcScalarTy->hasSameElementTypeAs(DstScalarTy)) {
+    Type *MidTy = PointerType::getWithSamePointeeType(
+        DstScalarTy, SrcScalarTy->getAddressSpace());
     if (VectorType *VT = dyn_cast<VectorType>(DstTy)) {
       // Handle vectors of pointers.
       MidTy = FixedVectorType::get(MidTy,
@@ -2425,11 +2438,9 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
                                          ArrayRef<Value *> Idxs, bool InBounds,
                                          Optional<unsigned> InRangeIndex,
                                          Type *OnlyIfReducedTy) {
-  if (!Ty)
-    Ty = cast<PointerType>(C->getType()->getScalarType())->getElementType();
-  else
-    assert(Ty ==
-           cast<PointerType>(C->getType()->getScalarType())->getElementType());
+  PointerType *OrigPtrTy = cast<PointerType>(C->getType()->getScalarType());
+  assert(Ty && "Must specify element type");
+  assert(OrigPtrTy->isOpaqueOrPointeeTypeMatches(Ty));
 
   if (Constant *FC =
           ConstantFoldGetElementPtr(Ty, C, InBounds, InRangeIndex, Idxs))
@@ -2438,8 +2449,10 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   // Get the result type of the getelementptr!
   Type *DestTy = GetElementPtrInst::getIndexedType(Ty, Idxs);
   assert(DestTy && "GEP indices invalid!");
-  unsigned AS = C->getType()->getPointerAddressSpace();
-  Type *ReqTy = DestTy->getPointerTo(AS);
+  unsigned AS = OrigPtrTy->getAddressSpace();
+  Type *ReqTy = OrigPtrTy->isOpaque()
+      ? PointerType::get(OrigPtrTy->getContext(), AS)
+      : DestTy->getPointerTo(AS);
 
   auto EltCount = ElementCount::getFixed(0);
   if (VectorType *VecTy = dyn_cast<VectorType>(C->getType()))
@@ -3281,7 +3294,7 @@ bool ConstantDataSequential::isCString() const {
   if (Str.back() != 0) return false;
 
   // Other elements must be non-nul.
-  return Str.drop_back().find(0) == StringRef::npos;
+  return !Str.drop_back().contains(0);
 }
 
 bool ConstantDataVector::isSplatData() const {
@@ -3479,7 +3492,7 @@ Value *ConstantExpr::handleOperandChangeImpl(Value *From, Value *ToV) {
       NewOps, this, From, To, NumUpdated, OperandNo);
 }
 
-Instruction *ConstantExpr::getAsInstruction() const {
+Instruction *ConstantExpr::getAsInstruction(Instruction *InsertBefore) const {
   SmallVector<Value *, 4> ValueOperands(operands());
   ArrayRef<Value*> Ops(ValueOperands);
 
@@ -3497,40 +3510,43 @@ Instruction *ConstantExpr::getAsInstruction() const {
   case Instruction::IntToPtr:
   case Instruction::BitCast:
   case Instruction::AddrSpaceCast:
-    return CastInst::Create((Instruction::CastOps)getOpcode(),
-                            Ops[0], getType());
+    return CastInst::Create((Instruction::CastOps)getOpcode(), Ops[0],
+                            getType(), "", InsertBefore);
   case Instruction::Select:
-    return SelectInst::Create(Ops[0], Ops[1], Ops[2]);
+    return SelectInst::Create(Ops[0], Ops[1], Ops[2], "", InsertBefore);
   case Instruction::InsertElement:
-    return InsertElementInst::Create(Ops[0], Ops[1], Ops[2]);
+    return InsertElementInst::Create(Ops[0], Ops[1], Ops[2], "", InsertBefore);
   case Instruction::ExtractElement:
-    return ExtractElementInst::Create(Ops[0], Ops[1]);
+    return ExtractElementInst::Create(Ops[0], Ops[1], "", InsertBefore);
   case Instruction::InsertValue:
-    return InsertValueInst::Create(Ops[0], Ops[1], getIndices());
+    return InsertValueInst::Create(Ops[0], Ops[1], getIndices(), "",
+                                   InsertBefore);
   case Instruction::ExtractValue:
-    return ExtractValueInst::Create(Ops[0], getIndices());
+    return ExtractValueInst::Create(Ops[0], getIndices(), "", InsertBefore);
   case Instruction::ShuffleVector:
-    return new ShuffleVectorInst(Ops[0], Ops[1], getShuffleMask());
+    return new ShuffleVectorInst(Ops[0], Ops[1], getShuffleMask(), "",
+                                 InsertBefore);
 
   case Instruction::GetElementPtr: {
     const auto *GO = cast<GEPOperator>(this);
     if (GO->isInBounds())
-      return GetElementPtrInst::CreateInBounds(GO->getSourceElementType(),
-                                               Ops[0], Ops.slice(1));
+      return GetElementPtrInst::CreateInBounds(
+          GO->getSourceElementType(), Ops[0], Ops.slice(1), "", InsertBefore);
     return GetElementPtrInst::Create(GO->getSourceElementType(), Ops[0],
-                                     Ops.slice(1));
+                                     Ops.slice(1), "", InsertBefore);
   }
   case Instruction::ICmp:
   case Instruction::FCmp:
     return CmpInst::Create((Instruction::OtherOps)getOpcode(),
-                           (CmpInst::Predicate)getPredicate(), Ops[0], Ops[1]);
+                           (CmpInst::Predicate)getPredicate(), Ops[0], Ops[1],
+                           "", InsertBefore);
   case Instruction::FNeg:
-    return UnaryOperator::Create((Instruction::UnaryOps)getOpcode(), Ops[0]);
+    return UnaryOperator::Create((Instruction::UnaryOps)getOpcode(), Ops[0], "",
+                                 InsertBefore);
   default:
     assert(getNumOperands() == 2 && "Must be binary operator?");
-    BinaryOperator *BO =
-      BinaryOperator::Create((Instruction::BinaryOps)getOpcode(),
-                             Ops[0], Ops[1]);
+    BinaryOperator *BO = BinaryOperator::Create(
+        (Instruction::BinaryOps)getOpcode(), Ops[0], Ops[1], "", InsertBefore);
     if (isa<OverflowingBinaryOperator>(BO)) {
       BO->setHasNoUnsignedWrap(SubclassOptionalData &
                                OverflowingBinaryOperator::NoUnsignedWrap);

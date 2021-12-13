@@ -7,7 +7,7 @@
 define hidden void @_ZL3barv() #0 !dbg !1644 {
 ; CHECK-LABEL: _ZL3barv:
 ; CHECK:       .Lfunc_begin0:
-; CHECK-NEXT:    .file 0 "/tmp/lane-info.cpp" md5 0x4ab9b75a30baffdf0f6f536a80e3e382
+; CHECK-NEXT:    .file 0 "/tmp" "lane-info.cpp" md5 0x4ab9b75a30baffdf0f6f536a80e3e382
 ; CHECK-NEXT:    .loc 0 30 0 ; lane-info.cpp:30:0
 ; CHECK-NEXT:    .cfi_sections .debug_frame
 ; CHECK-NEXT:    .cfi_startproc
@@ -199,7 +199,7 @@ define hidden void @_ZL3barv() #0 !dbg !1644 {
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x41, 0x05, 0x90, 0xa8, 0x14, 0xe4, 0x08 ;
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    .cfi_def_cfa_register 65
-; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    s_add_i32 s32, s32, 0x400
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    .loc 0 31 3 prologue_end ; lane-info.cpp:31:3
 ; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
@@ -217,7 +217,7 @@ define hidden void @_ZL3barv() #0 !dbg !1644 {
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
 ; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
-; CHECK-NEXT:    s_addk_i32 s32, 0xfc00
+; CHECK-NEXT:    s_add_i32 s32, s32, 0xfffffc00
 ; CHECK-NEXT:    v_readlane_b32 s33, v40, 2
 ; CHECK-NEXT:    .cfi_def_cfa_register 64
 ; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1

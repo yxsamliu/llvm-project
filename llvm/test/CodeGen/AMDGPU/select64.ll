@@ -61,6 +61,7 @@ define amdgpu_kernel void @v_select_trunc_i64_2(i32 addrspace(1)* %out, i32 %con
 ; GCN-DAG: v_cndmask_b32_e32 {{v[0-9]+}}, 63, {{v[0-9]+}}
 ; GCN: s_endpgm
 define amdgpu_kernel void @v_select_i64_split_imm(i64 addrspace(1)* %out, i32 %cond, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) nounwind {
+; GFX90A-NEXT:    s_cmp_gt_u32 s6, 5
   %cmp = icmp ugt i32 %cond, 5
   %a = load i64, i64 addrspace(1)* %aptr, align 8
   %b = load i64, i64 addrspace(1)* %bptr, align 8

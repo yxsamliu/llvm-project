@@ -14,6 +14,7 @@
 #define SANITIZER_ALLOCATOR_H
 
 #include "sanitizer_common.h"
+#include "sanitizer_flat_map.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_lfstack.h"
 #include "sanitizer_libc.h"
@@ -22,6 +23,11 @@
 #include "sanitizer_mutex.h"
 #include "sanitizer_procmaps.h"
 #include "sanitizer_type_traits.h"
+
+#if SANITIZER_AMDGPU
+#include <hsa.h>
+#include <hsa_ext_amd.h>
+#endif
 
 namespace __sanitizer {
 
@@ -42,12 +48,6 @@ bool IsAllocatorOutOfMemory();
 void SetAllocatorOutOfMemory();
 
 void PrintHintAllocatorCannotReturnNull();
-
-// Allocators call these callbacks on mmap/munmap.
-struct NoOpMapUnmapCallback {
-  void OnMap(uptr p, uptr size) const { }
-  void OnUnmap(uptr p, uptr size) const { }
-};
 
 // Callback type for iterating over chunks.
 typedef void (*ForEachChunkCallback)(uptr chunk, void *arg);
@@ -70,10 +70,10 @@ inline void RandomShuffle(T *a, u32 n, u32 *rand_state) {
 #include "sanitizer_allocator_size_class_map.h"
 #include "sanitizer_allocator_stats.h"
 #include "sanitizer_allocator_primary64.h"
-#include "sanitizer_allocator_bytemap.h"
 #include "sanitizer_allocator_primary32.h"
 #include "sanitizer_allocator_local_cache.h"
 #include "sanitizer_allocator_secondary.h"
+#include "sanitizer_allocator_device.h"
 #include "sanitizer_allocator_combined.h"
 
 } // namespace __sanitizer

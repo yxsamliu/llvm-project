@@ -863,14 +863,13 @@ void MachineConstPropagator::removeCFGEdge(MachineBasicBlock *From,
   // First, remove the CFG successor/predecessor information.
   From->removeSuccessor(To);
   // Remove all corresponding PHI operands in the To block.
-  for (auto I = To->begin(), E = To->getFirstNonPHI(); I != E; ++I) {
-    MachineInstr *PN = &*I;
+  for (MachineInstr &PN : To->phis()) {
     // reg0 = PHI reg1, bb2, reg3, bb4, ...
-    int N = PN->getNumOperands()-2;
+    int N = PN.getNumOperands() - 2;
     while (N > 0) {
-      if (PN->getOperand(N+1).getMBB() == From) {
-        PN->RemoveOperand(N+1);
-        PN->RemoveOperand(N);
+      if (PN.getOperand(N + 1).getMBB() == From) {
+        PN.RemoveOperand(N + 1);
+        PN.RemoveOperand(N);
       }
       N -= 2;
     }
@@ -3133,11 +3132,9 @@ void HexagonConstEvaluator::replaceAllRegUsesWith(Register FromReg,
                                                   Register ToReg) {
   assert(FromReg.isVirtual());
   assert(ToReg.isVirtual());
-  for (auto I = MRI->use_begin(FromReg), E = MRI->use_end(); I != E;) {
-    MachineOperand &O = *I;
-    ++I;
+  for (MachineOperand &O :
+       llvm::make_early_inc_range(MRI->use_operands(FromReg)))
     O.setReg(ToReg);
-  }
 }
 
 bool HexagonConstEvaluator::rewriteHexBranch(MachineInstr &BrI,

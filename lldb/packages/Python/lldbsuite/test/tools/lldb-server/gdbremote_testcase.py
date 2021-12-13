@@ -162,9 +162,6 @@ class GdbRemoteTestCaseBase(Base):
         self._verbose_log_handler = None
         TestBase.tearDown(self)
 
-    def build(self, *args, **kwargs):
-        self.buildDefault(*args, **kwargs)
-
     def getLocalServerLogFile(self):
         return self.getLogBasenameForCurrentTest() + "-server.log"
 
@@ -723,7 +720,9 @@ class GdbRemoteTestCaseBase(Base):
                  "permissions",
                  "flags",
                  "name",
-                 "error"])
+                 "error",
+                 "dirty-pages",
+                 "type"])
             self.assertIsNotNone(val)
 
         mem_region_dict["name"] = seven.unhexlify(mem_region_dict.get("name", ""))
@@ -857,6 +856,8 @@ class GdbRemoteTestCaseBase(Base):
         "multiprocess",
         "fork-events",
         "vfork-events",
+        "memory-tagging",
+        "qSaveCore",
     ]
 
     def parse_qSupported_response(self, context):

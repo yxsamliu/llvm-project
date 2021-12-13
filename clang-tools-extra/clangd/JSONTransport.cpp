@@ -10,9 +10,11 @@
 #include "support/Cancellation.h"
 #include "support/Logger.h"
 #include "support/Shutdown.h"
+#include "support/ThreadCrashReporter.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Threading.h"
 #include <system_error>
 
 namespace clang {
@@ -109,6 +111,11 @@ public:
         return llvm::errorCodeToError(
             std::error_code(errno, std::system_category()));
       if (readRawMessage(JSON)) {
+        ThreadCrashReporter ScopedReporter([&JSON]() {
+          auto &OS = llvm::errs();
+          OS << "Signalled while processing message:\n";
+          OS << JSON << "\n";
+        });
         if (auto Doc = llvm::json::parse(JSON)) {
           vlog(Pretty ? "<<< {0:2}\n" : "<<< {0}\n", *Doc);
           if (!handleMessage(std::move(*Doc), Handler))
@@ -230,7 +237,7 @@ bool JSONTransport::readStandardMessage(std::string &JSON) {
       return false;
     InMirror << Line;
 
-    llvm::StringRef LineRef(Line);
+    llvm::StringRef LineRef = Line;
 
     // We allow comments in headers. Technically this isn't part
 
@@ -298,7 +305,7 @@ bool JSONTransport::readDelimitedMessage(std::string &JSON) {
   llvm::SmallString<128> Line;
   while (readLine(In, Line)) {
     InMirror << Line;
-    auto LineRef = llvm::StringRef(Line).trim();
+    auto LineRef = Line.str().trim();
     if (LineRef.startswith("#")) // comment
       continue;
 

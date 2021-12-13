@@ -9,6 +9,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Modifications Copyright (c) 2021 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef KMP_TASKDEPS_H
 #define KMP_TASKDEPS_H
@@ -18,13 +23,18 @@
 #define KMP_ACQUIRE_DEPNODE(gtid, n) __kmp_acquire_lock(&(n)->dn.lock, (gtid))
 #define KMP_RELEASE_DEPNODE(gtid, n) __kmp_release_lock(&(n)->dn.lock, (gtid))
 
+/* AOCC begin */
+#define DI_DEP_TYPE_IN 11
+#define DI_DEP_TYPE_OUT 12
+#define DI_DEP_TYPE_INOUT 13
+/* AOCC end */
+
 static inline void __kmp_node_deref(kmp_info_t *thread, kmp_depnode_t *node) {
   if (!node)
     return;
 
   kmp_int32 n = KMP_ATOMIC_DEC(&node->dn.nrefs) - 1;
-  // TODO: temporarily disable assertion until the bug with dependences is fixed
-  //  KMP_DEBUG_ASSERT(n >= 0);
+  KMP_DEBUG_ASSERT(n >= 0);
   if (n == 0) {
     KMP_ASSERT(node->dn.nrefs == 0);
 #if USE_FAST_MEMORY
@@ -58,8 +68,8 @@ static inline void __kmp_dephash_free_entries(kmp_info_t *thread,
       kmp_dephash_entry_t *next;
       for (kmp_dephash_entry_t *entry = h->buckets[i]; entry; entry = next) {
         next = entry->next_in_bucket;
-        __kmp_depnode_list_free(thread, entry->last_ins);
-        __kmp_depnode_list_free(thread, entry->last_mtxs);
+        __kmp_depnode_list_free(thread, entry->last_set);
+        __kmp_depnode_list_free(thread, entry->prev_set);
         __kmp_node_deref(thread, entry->last_out);
         if (entry->mtx_lock) {
           __kmp_destroy_lock(entry->mtx_lock);
@@ -74,6 +84,8 @@ static inline void __kmp_dephash_free_entries(kmp_info_t *thread,
       h->buckets[i] = 0;
     }
   }
+  __kmp_node_deref(thread, h->last_all);
+  h->last_all = NULL;
 }
 
 static inline void __kmp_dephash_free(kmp_info_t *thread, kmp_dephash_t *h) {
@@ -84,6 +96,8 @@ static inline void __kmp_dephash_free(kmp_info_t *thread, kmp_dephash_t *h) {
   __kmp_thread_free(thread, h);
 #endif
 }
+
+extern void __kmpc_give_task(kmp_task_t *ptask, kmp_int32 start);
 
 static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
   kmp_info_t *thread = __kmp_threads[gtid];
@@ -143,7 +157,10 @@ static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
           // encountering thread's queue; otherwise, it can be pushed to its own
           // queue.
           if (!next_taskdata->td_flags.hidden_helper) {
-            __kmp_omp_task(task->encountering_gtid, successor->dn.task, false);
+            kmp_int32 encountering_gtid =
+                next_taskdata->td_alloc_thread->th.th_info.ds.ds_gtid;
+            kmp_int32 encountering_tid = __kmp_tid_from_gtid(encountering_gtid);
+            __kmpc_give_task(successor->dn.task, encountering_tid);
           } else {
             __kmp_omp_task(gtid, successor->dn.task, false);
           }

@@ -13,13 +13,17 @@ add_mlir_dialect_library(MLIRLinalg
 
   LINK_LIBS PUBLIC
   MLIRAffine
+  MLIRArithmetic
   MLIRDialectUtils
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRParser
   MLIRSideEffectInterfaces
-  MLIRViewLikeInterface
+  MLIRSCF
   MLIRStandard
+  MLIRMath
   MLIRMemRef
   MLIRTensor
+  MLIRTilingInterface
+  MLIRViewLikeInterface
   )

@@ -261,6 +261,8 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("liveout", MIToken::kw_liveout)
       .Case("address-taken", MIToken::kw_address_taken)
       .Case("landing-pad", MIToken::kw_landing_pad)
+      .Case("inlineasm-br-indirect-target",
+            MIToken::kw_inlineasm_br_indirect_target)
       .Case("ehfunclet-entry", MIToken::kw_ehfunclet_entry)
       .Case("liveins", MIToken::kw_liveins)
       .Case("successors", MIToken::kw_successors)
@@ -273,6 +275,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("bbsections", MIToken::kw_bbsections)
       .Case("unknown-size", MIToken::kw_unknown_size)
       .Case("unknown-address", MIToken::kw_unknown_address)
+      .Case("distinct", MIToken::kw_distinct)
       .Default(MIToken::Identifier);
 }
 

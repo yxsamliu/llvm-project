@@ -32,10 +32,21 @@
 #define DEVICE __attribute__((device))
 #endif
 
-#define INLINE inline DEVICE
-#define NOINLINE __attribute__((noinline)) DEVICE
+typedef uint64_t __kmpc_impl_lanemask_t;
 
+#define INLINE inline
+#define NOINLINE __attribute__((noinline))
 #define ALIGN(N) __attribute__((aligned(N)))
+#define PLUGIN_ACCESSIBLE                                                      \
+  __attribute__((used)) /* Don't discard values the plugin reads */            \
+  __attribute__((visibility("default"))) /* Access via SHT_HASH */             \
+  __attribute__((section(".data")))      /* Not .bss, can write before load */
+
+#include "llvm/Frontend/OpenMP/OMPGridValues.h"
+
+INLINE constexpr const llvm::omp::GV &getGridValue() {
+  return llvm::omp::getAMDGPUGridValues<__AMDGCN_WAVEFRONT_SIZE>();
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Kernel options
@@ -44,31 +55,42 @@
 ////////////////////////////////////////////////////////////////////////////////
 // The following def must match the absolute limit hardwired in the host RTL
 // max number of threads per team
-#define MAX_THREADS_PER_TEAM 1024
-
-#define WARPSIZE 64
-
-// Maximum number of preallocated arguments to an outlined parallel/simd
-// function. Anything more requires dynamic memory allocation.
-#define MAX_SHARED_ARGS 40
+enum { MAX_THREADS_PER_TEAM = getGridValue().GV_Max_WG_Size };
+enum { WARPSIZE = getGridValue().GV_Warp_Size };
 
 // Maximum number of omp state objects per SM allocated statically in global
 // memory.
 #define OMP_STATE_COUNT 32
-#define MAX_SM 64
+
+// FIXME: determine correct number of CUs for each amdgpu
+#if defined(__gfx900__)
+#define MAX_SM  64
+#elif defined(__gfx906__)
+#define MAX_SM  64
+#elif defined(__gfx908__)
+#define MAX_SM  120
+#elif defined(__gfx90a__)
+#define MAX_SM  110
+#elif defined(__gfx90c__)
+#define MAX_SM  120
+#elif defined(__gfx1030__)
+#define MAX_SM  72
+#elif defined(__gfx1031__)
+#define MAX_SM  40
+#else
+#define MAX_SM  120
+#endif
 
 #define OMP_ACTIVE_PARALLEL_LEVEL 128
 
 // Data sharing related quantities, need to match what is used in the compiler.
 enum DATA_SHARING_SIZES {
-  // The maximum number of workers in a kernel.
-  DS_Max_Worker_Threads = 960,
   // The size reserved for data in a shared memory slot.
-  DS_Slot_Size = 256,
+  DS_Slot_Size = getGridValue().GV_Slot_Size,
   // The slot size that should be reserved for a working warp.
-  DS_Worker_Warp_Slot_Size = WARPSIZE * DS_Slot_Size,
+  DS_Worker_Warp_Slot_Size = getGridValue().warpSlotSize(),
   // The maximum number of warps in use
-  DS_Max_Warp_Number = 16,
+  DS_Max_Warp_Number = getGridValue().maxWarpNumber(),
 };
 
 enum : __kmpc_impl_lanemask_t {
@@ -79,6 +101,6 @@ enum : __kmpc_impl_lanemask_t {
 // A call to a function named printf currently hits some special case handling
 // for opencl, which translates to calls that do not presently exist for openmp
 // Therefore, for now, stub out printf while building this library.
-#define printf(...)
+EXTERN int printf(const char *, ...);
 
 #endif

@@ -20,6 +20,7 @@
 #include <queue>
 #include <vector>
 
+#include "mlir/IR/OwningOpRef.h"
 #include "mlir/Reducer/Tester.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -57,7 +58,7 @@ public:
   /// will have been applied certain reduction strategies. Note that it's not
   /// necessary to be an interesting case or a reduced module (has smaller size
   /// than parent's).
-  ModuleOp getModule() const { return module; }
+  ModuleOp getModule() const { return module.get(); }
 
   /// Return the region we're reducing.
   Region &getRegion() const { return *region; }
@@ -141,7 +142,7 @@ private:
 
   /// This is a copy of module from parent node. All the reducer patterns will
   /// be applied to this instance.
-  ModuleOp module;
+  OwningOpRef<ModuleOp> module;
 
   /// The region of certain operation we're reducing in the module
   Region *region;
@@ -159,7 +160,7 @@ private:
   Tester::Interestingness interesting;
 
   /// `ranges` represents the selected subset of operations in the region. We
-  /// implictly number each operation in the region and ReductionTreePass will
+  /// implicitly number each operation in the region and ReductionTreePass will
   /// apply reducer patterns on the operation falls into the `ranges`. We will
   /// generate new ReductionNode with subset of `ranges` to see if we can do
   /// further reduction. we may split the element in the `ranges` so that we can

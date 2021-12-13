@@ -14,8 +14,9 @@
 #ifndef LLVM_CLANG_INTERPRETER_INTERPRETER_H
 #define LLVM_CLANG_INTERPRETER_INTERPRETER_H
 
-#include "clang/Interpreter/Transaction.h"
+#include "clang/Interpreter/PartialTranslationUnit.h"
 
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Support/Error.h"
 
 #include <memory>
@@ -55,16 +56,18 @@ public:
   static llvm::Expected<std::unique_ptr<Interpreter>>
   create(std::unique_ptr<CompilerInstance> CI);
   const CompilerInstance *getCompilerInstance() const;
-  llvm::Expected<Transaction &> Parse(llvm::StringRef Code);
-  llvm::Error Execute(Transaction &T);
+  llvm::Expected<PartialTranslationUnit &> Parse(llvm::StringRef Code);
+  llvm::Error Execute(PartialTranslationUnit &T);
   llvm::Error ParseAndExecute(llvm::StringRef Code) {
-    auto ErrOrTransaction = Parse(Code);
-    if (auto Err = ErrOrTransaction.takeError())
-      return Err;
-    if (ErrOrTransaction->TheModule)
-      return Execute(*ErrOrTransaction);
+    auto PTU = Parse(Code);
+    if (!PTU)
+      return PTU.takeError();
+    if (PTU->TheModule)
+      return Execute(*PTU);
     return llvm::Error::success();
   }
+  llvm::Expected<llvm::JITTargetAddress>
+  getSymbolAddress(llvm::StringRef UnmangledName) const;
 };
 } // namespace clang
 

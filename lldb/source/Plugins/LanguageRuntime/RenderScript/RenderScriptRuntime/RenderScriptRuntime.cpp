@@ -17,7 +17,6 @@
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -61,7 +60,7 @@ namespace {
 template <typename type_t> class empirical_type {
 public:
   // Ctor. Contents is invalid when constructed.
-  empirical_type() {}
+  empirical_type() = default;
 
   // Return true and copy contents to out if valid, else return false.
   bool get(type_t &out) const {
@@ -967,11 +966,6 @@ void RenderScriptRuntime::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString RenderScriptRuntime::GetPluginNameStatic() {
-  static ConstString plugin_name("renderscript");
-  return plugin_name;
-}
-
 RenderScriptRuntime::ModuleKind
 RenderScriptRuntime::GetModuleKind(const lldb::ModuleSP &module_sp) {
   if (module_sp) {
@@ -1013,13 +1007,6 @@ void RenderScriptRuntime::ModulesDidLoad(const ModuleList &module_list) {
     }
   }
 }
-
-// PluginInterface protocol
-lldb_private::ConstString RenderScriptRuntime::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t RenderScriptRuntime::GetPluginVersion() { return 1; }
 
 bool RenderScriptRuntime::GetDynamicTypeAndAddress(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
@@ -2660,7 +2647,7 @@ bool RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id,
   FileSpec file_spec(path);
   FileSystem::Instance().Resolve(file_spec);
   auto file = FileSystem::Instance().Open(
-      file_spec, File::eOpenOptionWrite | File::eOpenOptionCanCreate |
+      file_spec, File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate |
                      File::eOpenOptionTruncate);
 
   if (!file) {
@@ -4187,7 +4174,6 @@ public:
       result.AppendErrorWithFormat("'%s' takes 1 argument of reduction name, "
                                    "and an optional kernel type list",
                                    m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4201,7 +4187,6 @@ public:
     auto coord = m_options.m_have_coord ? &m_options.m_coord : nullptr;
     if (!runtime->PlaceBreakpointOnReduction(target, outstream, name, coord,
                                              m_options.m_kernel_types)) {
-      result.SetStatus(eReturnStatusFailed);
       result.AppendError("Error: unable to place breakpoint on reduction");
       return false;
     }
@@ -4289,7 +4274,6 @@ public:
       result.AppendErrorWithFormat(
           "'%s' takes 1 argument of kernel name, and an optional coordinate.",
           m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4302,7 +4286,6 @@ public:
     auto name = command.GetArgumentAtIndex(0);
     auto coord = m_options.m_have_coord ? &m_options.m_coord : nullptr;
     if (!runtime->PlaceBreakpointOnKernel(target, outstream, name, coord)) {
-      result.SetStatus(eReturnStatusFailed);
       result.AppendErrorWithFormat(
           "Error: unable to set breakpoint on kernel '%s'", name);
       return false;
@@ -4340,7 +4323,6 @@ public:
     if (argc != 1) {
       result.AppendErrorWithFormat(
           "'%s' takes 1 argument of 'enable' or 'disable'", m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4359,7 +4341,6 @@ public:
     } else {
       result.AppendErrorWithFormat(
           "Argument must be either 'enable' or 'disable'");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4566,7 +4547,6 @@ public:
       result.AppendErrorWithFormat("'%s' takes 1 argument, an allocation ID. "
                                    "As well as an optional -f argument",
                                    m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4575,13 +4555,10 @@ public:
             eLanguageTypeExtRenderScript));
 
     const char *id_cstr = command.GetArgumentAtIndex(0);
-    bool success = false;
-    const uint32_t id =
-        StringConvert::ToUInt32(id_cstr, UINT32_MAX, 0, &success);
-    if (!success) {
+    uint32_t id;
+    if (!llvm::to_integer(id_cstr, id)) {
       result.AppendErrorWithFormat("invalid allocation id argument '%s'",
                                    id_cstr);
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4593,8 +4570,9 @@ public:
     if (outfile_spec) {
       // Open output file
       std::string path = outfile_spec.GetPath();
-      auto file = FileSystem::Instance().Open(
-          outfile_spec, File::eOpenOptionWrite | File::eOpenOptionCanCreate);
+      auto file = FileSystem::Instance().Open(outfile_spec,
+                                              File::eOpenOptionWriteOnly |
+                                                  File::eOpenOptionCanCreate);
       if (file) {
         output_stream_storage =
             std::make_unique<StreamFile>(std::move(file.get()));
@@ -4606,7 +4584,6 @@ public:
         std::string error = llvm::toString(file.takeError());
         result.AppendErrorWithFormat("Couldn't open file '%s': %s",
                                      path.c_str(), error.c_str());
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     } else
@@ -4715,7 +4692,6 @@ public:
       result.AppendErrorWithFormat(
           "'%s' takes 2 arguments, an allocation ID and filename to read from.",
           m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4724,13 +4700,10 @@ public:
             eLanguageTypeExtRenderScript));
 
     const char *id_cstr = command.GetArgumentAtIndex(0);
-    bool success = false;
-    const uint32_t id =
-        StringConvert::ToUInt32(id_cstr, UINT32_MAX, 0, &success);
-    if (!success) {
+    uint32_t id;
+    if (!llvm::to_integer(id_cstr, id)) {
       result.AppendErrorWithFormat("invalid allocation id argument '%s'",
                                    id_cstr);
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4766,7 +4739,6 @@ public:
       result.AppendErrorWithFormat(
           "'%s' takes 2 arguments, an allocation ID and filename to read from.",
           m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4775,13 +4747,10 @@ public:
             eLanguageTypeExtRenderScript));
 
     const char *id_cstr = command.GetArgumentAtIndex(0);
-    bool success = false;
-    const uint32_t id =
-        StringConvert::ToUInt32(id_cstr, UINT32_MAX, 0, &success);
-    if (!success) {
+    uint32_t id;
+    if (!llvm::to_integer(id_cstr, id)) {
       result.AppendErrorWithFormat("invalid allocation id argument '%s'",
                                    id_cstr);
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 

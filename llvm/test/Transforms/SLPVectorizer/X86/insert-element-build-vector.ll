@@ -177,17 +177,19 @@ define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> 
 ; MINTREESIZE-NEXT:    [[RD:%.*]] = insertelement <4 x float> [[RC]], float [[S3]], i32 3
 ; MINTREESIZE-NEXT:    [[Q0:%.*]] = extractelement <4 x float> [[RD]], i32 0
 ; MINTREESIZE-NEXT:    [[Q1:%.*]] = extractelement <4 x float> [[RD]], i32 1
+; MINTREESIZE-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[Q0]], i32 0
+; MINTREESIZE-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[Q1]], i32 1
 ; MINTREESIZE-NEXT:    [[Q2:%.*]] = extractelement <4 x float> [[RD]], i32 2
 ; MINTREESIZE-NEXT:    [[Q3:%.*]] = extractelement <4 x float> [[RD]], i32 3
-; MINTREESIZE-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[Q2]], i32 0
-; MINTREESIZE-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[Q3]], i32 1
+; MINTREESIZE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[Q2]], i32 0
+; MINTREESIZE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[Q3]], i32 1
 ; MINTREESIZE-NEXT:    [[Q4:%.*]] = fadd float [[Q0]], [[Q1]]
 ; MINTREESIZE-NEXT:    [[Q5:%.*]] = fadd float [[Q2]], [[Q3]]
-; MINTREESIZE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[Q4]], i32 0
-; MINTREESIZE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[Q5]], i32 1
-; MINTREESIZE-NEXT:    [[Q6:%.*]] = fadd float [[Q4]], [[Q5]]
-; MINTREESIZE-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[Q6]], i32 0
+; MINTREESIZE-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[Q4]], i32 0
 ; MINTREESIZE-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[Q5]], i32 1
+; MINTREESIZE-NEXT:    [[Q6:%.*]] = fadd float [[Q4]], [[Q5]]
+; MINTREESIZE-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> poison, float [[Q6]], i32 0
+; MINTREESIZE-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> [[TMP7]], float [[Q5]], i32 1
 ; MINTREESIZE-NEXT:    [[QI:%.*]] = fcmp olt float [[Q6]], [[Q5]]
 ; MINTREESIZE-NEXT:    call void @llvm.assume(i1 [[QI]])
 ; MINTREESIZE-NEXT:    ret <4 x float> undef
@@ -335,7 +337,6 @@ define <4 x float> @simple_select_no_users(<4 x float> %a, <4 x float> %b, <4 x 
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> [[TMP14]], float [[B3]], i32 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP6]], <2 x float> [[TMP13]], <2 x float> [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RB2:%.*]] = shufflevector <4 x float> undef, <4 x float> [[TMP17]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x float> [[TMP16]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[RD1:%.*]] = shufflevector <4 x float> undef, <4 x float> [[TMP18]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    ret <4 x float> [[RD1]]

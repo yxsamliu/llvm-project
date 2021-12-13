@@ -13,6 +13,11 @@
 #include "rtl.h"
 #include "device.h"
 #include "private.h"
+#include "llvm/OffloadArch/OffloadArch.h"
+
+#if OMPT_SUPPORT
+#include "ompt-target.h"
+#endif
 
 #include <cassert>
 #include <cstdlib>
@@ -108,6 +113,11 @@ void RTLsTy::LoadRTLs() {
   if (PM->TargetOffloadPolicy == tgt_disabled) {
     return;
   }
+
+  // Parse environment variable OMPX_DISABLE_MAPS (if set)
+  if (const char *NoMapChecksStr = getenv("OMPX_DISABLE_MAPS"))
+    if (NoMapChecksStr)
+      NoUSMMapChecks = std::stoi(NoMapChecksStr);
 
   // Plugins should be loaded from same directory as libomptarget.so
   void *handle = dlopen("libomptarget.so", RTLD_NOW);
@@ -236,8 +246,36 @@ void RTLsTy::LoadRTLs() {
         dlsym(dynlib_handle, "__tgt_rtl_supports_empty_images");
     *((void **)&R.set_info_flag) =
         dlsym(dynlib_handle, "__tgt_rtl_set_info_flag");
+    *((void **)&R.print_device_info) =
+        dlsym(dynlib_handle, "__tgt_rtl_print_device_info");
+    *((void **)&R.create_event) =
+        dlsym(dynlib_handle, "__tgt_rtl_create_event");
+    *((void **)&R.record_event) =
+        dlsym(dynlib_handle, "__tgt_rtl_record_event");
+    *((void **)&R.wait_event) = dlsym(dynlib_handle, "__tgt_rtl_wait_event");
+    *((void **)&R.sync_event) = dlsym(dynlib_handle, "__tgt_rtl_sync_event");
+    *((void **)&R.destroy_event) =
+        dlsym(dynlib_handle, "__tgt_rtl_destroy_event");
+    *((void **)&R.set_coarse_grain_mem_region) =
+      dlsym(dynlib_handle, "__tgt_rtl_set_coarse_grain_mem_region");
+    *((void **)&R.query_coarse_grain_mem_region) =
+      dlsym(dynlib_handle, "__tgt_rtl_query_coarse_grain_mem_region");
   }
   delete[] libomptarget_dir_name;
+
+#if OMPT_SUPPORT
+  DP("OMPT_SUPPORT is enabled in libomptarget\n");
+  DP("Init OMPT for libomptarget\n");
+  if (libomp_start_tool) {
+    DP("Retrieve libomp_start_tool successfully\n");
+    if (!libomp_start_tool(&ompt_target_enabled)) {
+      DP("Turn off OMPT in libomptarget because libomp_start_tool returns "
+         "false\n");
+      memset(&ompt_target_enabled, 0, sizeof(ompt_target_enabled));
+    }
+  }
+#endif
+
   DP("RTLs loaded!\n");
 
   return;
@@ -281,7 +319,7 @@ static void RegisterGlobalCtorsDtorsForImage(__tgt_bin_desc *desc,
                                              RTLInfoTy *RTL) {
 
   for (int32_t i = 0; i < RTL->NumberOfDevices; ++i) {
-    DeviceTy &Device = PM->Devices[RTL->Idx + i];
+    DeviceTy &Device = *PM->Devices[RTL->Idx + i];
     Device.PendingGlobalsMtx.lock();
     Device.HasPendingGlobals = true;
     for (__tgt_offload_entry *entry = img->EntriesBegin;
@@ -347,18 +385,129 @@ void RTLsTy::RegisterRequires(int64_t flags) {
      flags, RequiresFlags);
 }
 
+void RTLsTy::initRTLonce(RTLInfoTy &R) {
+  // If this RTL is not already in use, initialize it.
+  if (!R.isUsed && R.NumberOfDevices != 0) {
+    // Initialize the device information for the RTL we are about to use.
+    const size_t Start = PM->Devices.size();
+    PM->Devices.reserve(Start + R.NumberOfDevices);
+    for (int32_t device_id = 0; device_id < R.NumberOfDevices; device_id++) {
+      PM->Devices.push_back(std::make_unique<DeviceTy>(&R));
+      // global device ID
+      PM->Devices[Start + device_id]->DeviceID = Start + device_id;
+      // RTL local device ID
+      PM->Devices[Start + device_id]->RTLDeviceID = device_id;
+    }
+
+    // Initialize the index of this RTL and save it in the used RTLs.
+    R.Idx = (UsedRTLs.empty())
+                ? 0
+                : UsedRTLs.back()->Idx + UsedRTLs.back()->NumberOfDevices;
+    assert((size_t)R.Idx == Start &&
+           "RTL index should equal the number of devices used so far.");
+    R.isUsed = true;
+    UsedRTLs.push_back(&R);
+
+    DP("RTL " DPxMOD " has index %d!\n", DPxPTR(R.LibraryHandler), R.Idx);
+  }
+}
+
+void RTLsTy::initAllRTLs() {
+  for (auto &R : AllRTLs)
+    initRTLonce(R);
+}
+
+/// Query runtime capabilities of this system by calling offload-arch -c
+/// offload_arch_output_buffer is persistant storage returned by this
+/// __tgt_get_active_offload_env.
+static void
+__tgt_get_active_offload_env(__tgt_active_offload_env *active_env,
+                             char *offload_arch_output_buffer,
+                             size_t offload_arch_output_buffer_size) {
+  // Qget runtime capabilities of this system with libLLVMOffloadArch.a
+  if (int rc = getRuntimeCapabilities(offload_arch_output_buffer,
+                                      offload_arch_output_buffer_size))
+    return;
+  active_env->capabilities = offload_arch_output_buffer;
+  return;
+}
+
+std::vector<std::string> _splitstrings(char *input, const char *sep) {
+  std::vector<std::string> split_strings;
+  std::string s(input);
+  std::string delimiter(sep);
+  size_t pos = 0;
+  while ((pos = s.find(delimiter)) != std::string::npos) {
+    if (pos != 0)
+      split_strings.push_back(s.substr(0, pos));
+    s.erase(0, pos + delimiter.length());
+  }
+  if (s.length() > 1)
+    split_strings.push_back(s.substr(0, s.length()));
+  return split_strings;
+}
+
+static bool _ImageIsCompatibleWithEnv(__tgt_image_info *img_info,
+                                      __tgt_active_offload_env *active_env) {
+  // get_image_info will return null if no image information was registered.
+  // If no image information, assume application built with old compiler and
+  // check each image.
+  if (!img_info)
+    return true;
+
+  // Each runtime requirement for the compiled image is stored in
+  // the img_info->offload_arch (TargetID) string.
+  // Each runtime capability obtained from "offload-arch -c" is stored in
+  // actvie_env->capabilities (TargetID) string.
+  // If every requirement has a matching capability, then the image
+  // is compatible with active environment
+
+  std::vector<std::string> reqs = _splitstrings(img_info->offload_arch, ":");
+  std::vector<std::string> caps = _splitstrings(active_env->capabilities, ":");
+
+  bool is_compatible = true;
+  for (auto req : reqs) {
+    bool missing_capability = true;
+    for (auto capability : caps)
+      if (capability == req)
+        missing_capability = false;
+    if (missing_capability) {
+      DP("Image requires %s but runtime capability %s is missing.\n",
+         img_info->offload_arch, req.c_str());
+      is_compatible = false;
+    }
+  }
+  return is_compatible;
+}
+
+#define MAX_CAPS_STR_SIZE 1024
 void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
+
+  // Get the current active offload environment
+  __tgt_active_offload_env offload_env;
+  // Need a buffer to hold results of offload-arch -c command
+  size_t offload_arch_output_buffer_size = MAX_CAPS_STR_SIZE;
+  std::vector<char> offload_arch_output_buffer;
+  offload_arch_output_buffer.resize(offload_arch_output_buffer_size);
+  __tgt_get_active_offload_env(&offload_env, offload_arch_output_buffer.data(),
+                               offload_arch_output_buffer_size);
+
+  RTLInfoTy *FoundRTL = NULL;
   PM->RTLsMtx.lock();
   // Register the images with the RTLs that understand them, if any.
   for (int32_t i = 0; i < desc->NumDeviceImages; ++i) {
     // Obtain the image.
     __tgt_device_image *img = &desc->DeviceImages[i];
 
-    RTLInfoTy *FoundRTL = NULL;
-
+    // Get corresponding image info offload_arch and check with runtime
+    __tgt_image_info *img_info = __tgt_get_image_info(i);
+    if (!_ImageIsCompatibleWithEnv(img_info, &offload_env))
+      continue;
+    FoundRTL = NULL;
     // Scan the RTLs that have associated images until we find one that supports
     // the current image.
     for (auto &R : AllRTLs) {
+
       if (!R.is_valid_binary(img)) {
         DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
            DPxPTR(img->ImageStart), R.RTLName.c_str());
@@ -368,31 +517,7 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
       DP("Image " DPxMOD " is compatible with RTL %s!\n",
          DPxPTR(img->ImageStart), R.RTLName.c_str());
 
-      // If this RTL is not already in use, initialize it.
-      if (!R.isUsed) {
-        // Initialize the device information for the RTL we are about to use.
-        DeviceTy device(&R);
-        size_t Start = PM->Devices.size();
-        PM->Devices.resize(Start + R.NumberOfDevices, device);
-        for (int32_t device_id = 0; device_id < R.NumberOfDevices;
-             device_id++) {
-          // global device ID
-          PM->Devices[Start + device_id].DeviceID = Start + device_id;
-          // RTL local device ID
-          PM->Devices[Start + device_id].RTLDeviceID = device_id;
-        }
-
-        // Initialize the index of this RTL and save it in the used RTLs.
-        R.Idx = (UsedRTLs.empty())
-                    ? 0
-                    : UsedRTLs.back()->Idx + UsedRTLs.back()->NumberOfDevices;
-        assert((size_t)R.Idx == Start &&
-               "RTL index should equal the number of devices used so far.");
-        R.isUsed = true;
-        UsedRTLs.push_back(&R);
-
-        DP("RTL " DPxMOD " has index %d!\n", DPxPTR(R.LibraryHandler), R.Idx);
-      }
+      initRTLonce(R);
 
       // Initialize (if necessary) translation table for this library.
       PM->TrlTblMtx.lock();
@@ -426,6 +551,39 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
     }
   }
   PM->RTLsMtx.unlock();
+
+  if (!FoundRTL) {
+    if (PM->TargetOffloadPolicy == tgt_mandatory)
+      fprintf(stderr, "ERROR:\
+	Runtime capabilities do NOT meet any offload image offload_arch\n\
+	and the OMP_TARGET_OFFLOAD policy is mandatory.  Terminating!\n\
+	Runtime capabilities : %s\n",
+              offload_env.capabilities);
+    else if (PM->TargetOffloadPolicy == tgt_disabled)
+      fprintf(stderr, "WARNING: Offloading is disabled.\n");
+    else
+      fprintf(
+          stderr,
+          "WARNING: Runtime capabilities do NOT meet any image offload_arch.\n\
+	 So device offloading is now disabled.\n\
+	Runtime capabilities : %s\n",
+          offload_env.capabilities);
+    if (PM->TargetOffloadPolicy != tgt_disabled) {
+      for (int32_t i = 0; i < desc->NumDeviceImages; ++i) {
+        __tgt_image_info *img_info = __tgt_get_image_info(i);
+        if (img_info)
+          fprintf(stderr, "\
+	  Image %d offload_arch : %s\n",
+                  i, img_info->offload_arch);
+        else
+          fprintf(stderr, "\
+	  Image %d has no offload_arch. Could be from older compiler\n",
+                  i);
+      }
+    }
+    if (PM->TargetOffloadPolicy == tgt_mandatory)
+      exit(1);
+  }
 
   DP("Done registering entries!\n");
 }
@@ -461,7 +619,7 @@ void RTLsTy::UnregisterLib(__tgt_bin_desc *desc) {
       // Execute dtors for static objects if the device has been used, i.e.
       // if its PendingCtors list has been emptied.
       for (int32_t i = 0; i < FoundRTL->NumberOfDevices; ++i) {
-        DeviceTy &Device = PM->Devices[FoundRTL->Idx + i];
+        DeviceTy &Device = *PM->Devices[FoundRTL->Idx + i];
         Device.PendingGlobalsMtx.lock();
         if (Device.PendingCtorsDtors[desc].PendingCtors.empty()) {
           AsyncInfoTy AsyncInfo(Device);

@@ -9,8 +9,8 @@
 #ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_COMMONARGS_H
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_COMMONARGS_H
 
-#include "InputInfo.h"
 #include "clang/Driver/Driver.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Multilib.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
@@ -52,27 +52,29 @@ void AddRunTimeLibs(const ToolChain &TC, const Driver &D,
                     llvm::opt::ArgStringList &CmdArgs,
                     const llvm::opt::ArgList &Args);
 
-void AddStaticDeviceLibs(Compilation &C, const Tool &T, const JobAction &JA,
-                         const InputInfoList &Inputs,
-                         const llvm::opt::ArgList &DriverArgs,
-                         llvm::opt::ArgStringList &CmdArgs, StringRef ArchName,
-                         StringRef GpuArch, bool isBitCodeSDL,
-                         bool postClangLink);
-void AddStaticDeviceLibs(const Driver &D, const llvm::opt::ArgList &DriverArgs,
-                         llvm::opt::ArgStringList &CmdArgs, StringRef ArchName,
-                         StringRef GpuArch, bool isBitCodeSDL,
-                         bool postClangLink);
+void AddStaticDeviceLibsLinking(Compilation &C, const Tool &T,
+                                const JobAction &JA,
+                                const InputInfoList &Inputs,
+                                const llvm::opt::ArgList &DriverArgs,
+                                llvm::opt::ArgStringList &CmdArgs,
+                                StringRef Arch, StringRef TargetID,
+                                bool isBitCodeSDL, bool postClangLink);
+void AddStaticDeviceLibsPostLinking(const Driver &D,
+                                    const llvm::opt::ArgList &DriverArgs,
+                                    llvm::opt::ArgStringList &CmdArgs,
+                                    StringRef Arch, StringRef TargetID,
+                                    bool isBitCodeSDL, bool postClangLink);
 void AddStaticDeviceLibs(Compilation *C, const Tool *T, const JobAction *JA,
-                         const InputInfoList *Inputs,
-                         const Driver &D, const llvm::opt::ArgList &DriverArgs,
-                         llvm::opt::ArgStringList &CmdArgs, StringRef ArchName,
-                         StringRef GpuArch, bool isBitCodeSDL,
+                         const InputInfoList *Inputs, const Driver &D,
+                         const llvm::opt::ArgList &DriverArgs,
+                         llvm::opt::ArgStringList &CmdArgs, StringRef Arch,
+                         StringRef TargetID, bool isBitCodeSDL,
                          bool postClangLink);
 
 bool SDLSearch(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                llvm::opt::ArgStringList &CmdArgs,
-               SmallVector<std::string, 8> LibraryPaths, std::string libname,
-               StringRef ArchName, StringRef GpuArch, bool isBitCodeSDL,
+               SmallVector<std::string, 8> LibraryPaths, std::string Lib,
+               StringRef Arch, StringRef TargetID, bool isBitCodeSDL,
                bool postClangLink);
 
 bool GetSDLFromOffloadArchive(Compilation &C, const Driver &D, const Tool &T,
@@ -80,9 +82,8 @@ bool GetSDLFromOffloadArchive(Compilation &C, const Driver &D, const Tool &T,
                               const llvm::opt::ArgList &DriverArgs,
                               llvm::opt::ArgStringList &CC1Args,
                               SmallVector<std::string, 8> LibraryPaths,
-                              std::string libname, StringRef ArchName,
-                              StringRef GpuArch, bool isBitCodeSDL,
-                              bool postClangLink);
+                              StringRef Lib, StringRef Arch, StringRef TargetID,
+                              bool isBitCodeSDL, bool postClangLink);
 
 const char *SplitDebugName(const JobAction &JA, const llvm::opt::ArgList &Args,
                            const InputInfo &Input, const InputInfo &Output);
@@ -147,8 +148,8 @@ void AddTargetFeature(const llvm::opt::ArgList &Args,
                       llvm::opt::OptSpecifier OnOpt,
                       llvm::opt::OptSpecifier OffOpt, StringRef FeatureName);
 
-std::string getCPUName(const llvm::opt::ArgList &Args, const llvm::Triple &T,
-                       bool FromAs = false);
+std::string getCPUName(const Driver &D, const llvm::opt::ArgList &Args,
+                       const llvm::Triple &T, bool FromAs = false);
 
 /// Iterate \p Args and convert -mxxx to +xxx and -mno-xxx to -xxx and
 /// append it to \p Features.

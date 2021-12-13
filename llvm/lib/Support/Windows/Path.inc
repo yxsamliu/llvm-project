@@ -402,7 +402,33 @@ std::error_code is_local(int FD, bool &Result) {
 }
 
 static std::error_code setDeleteDisposition(HANDLE Handle, bool Delete) {
+  // Clear the FILE_DISPOSITION_INFO flag first, before checking if it's a
+  // network file. On Windows 7 the function realPathFromHandle() below fails
+  // if the FILE_DISPOSITION_INFO flag was already set to 'DeleteFile = true' by
+  // a prior call.
   FILE_DISPOSITION_INFO Disposition;
+  Disposition.DeleteFile = false;
+  if (!SetFileInformationByHandle(Handle, FileDispositionInfo, &Disposition,
+                                  sizeof(Disposition)))
+    return mapWindowsError(::GetLastError());
+  if (!Delete)
+    return std::error_code();
+
+  // Check if the file is on a network (non-local) drive. If so, don't
+  // continue when DeleteFile is true, since it prevents opening the file for
+  // writes.
+  SmallVector<wchar_t, 128> FinalPath;
+  if (std::error_code EC = realPathFromHandle(Handle, FinalPath))
+    return EC;
+
+  bool IsLocal;
+  if (std::error_code EC = is_local_internal(FinalPath, IsLocal))
+    return EC;
+
+  if (!IsLocal)
+    return errc::not_supported;
+
+  // The file is on a local drive, set the DeleteFile to true.
   Disposition.DeleteFile = Delete;
   if (!SetFileInformationByHandle(Handle, FileDispositionInfo, &Disposition,
                                   sizeof(Disposition)))
@@ -641,7 +667,7 @@ static bool isReservedName(StringRef path) {
 
   // Then compare against the list of ancient reserved names.
   for (size_t i = 0; i < array_lengthof(sReservedNames); ++i) {
-    if (path.equals_lower(sReservedNames[i]))
+    if (path.equals_insensitive(sReservedNames[i]))
       return true;
   }
 
@@ -1155,12 +1181,6 @@ Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
     }
   }
 
-  if (Flags & OF_Delete) {
-    if ((EC = setDeleteDisposition(Result, true))) {
-      ::CloseHandle(Result);
-      return errorCodeToError(EC);
-    }
-  }
   return Result;
 }
 

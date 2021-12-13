@@ -62,6 +62,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -281,6 +282,7 @@ struct CodeCompletionBuilder {
       : ASTCtx(ASTCtx),
         EnableFunctionArgSnippets(Opts.EnableFunctionArgSnippets),
         IsUsingDeclaration(IsUsingDeclaration), NextTokenKind(NextTokenKind) {
+    Completion.Deprecated = true; // cleared by any non-deprecated overload.
     add(C, SemaCCS);
     if (C.SemaResult) {
       assert(ASTCtx);
@@ -309,8 +311,6 @@ struct CodeCompletionBuilder {
         return std::tie(X.range.start.line, X.range.start.character) <
                std::tie(Y.range.start.line, Y.range.start.character);
       });
-      Completion.Deprecated |=
-          (C.SemaResult->Availability == CXAvailability_Deprecated);
     }
     if (C.IndexResult) {
       Completion.Origin |= C.IndexResult->Origin;
@@ -332,7 +332,6 @@ struct CodeCompletionBuilder {
         }
         Completion.RequiredQualifier = std::string(ShortestQualifier);
       }
-      Completion.Deprecated |= (C.IndexResult->Flags & Symbol::Deprecated);
     }
     if (C.IdentifierResult) {
       Completion.Origin |= SymbolOrigin::Identifier;
@@ -404,9 +403,18 @@ struct CodeCompletionBuilder {
       if (C.IndexResult) {
         SetDoc(C.IndexResult->Documentation);
       } else if (C.SemaResult) {
-        SetDoc(getDocComment(*ASTCtx, *C.SemaResult,
-                             /*CommentsFromHeader=*/false));
+        const auto DocComment = getDocComment(*ASTCtx, *C.SemaResult,
+                                              /*CommentsFromHeader=*/false);
+        SetDoc(formatDocumentation(*SemaCCS, DocComment));
       }
+    }
+    if (Completion.Deprecated) {
+      if (C.SemaResult)
+        Completion.Deprecated &=
+            C.SemaResult->Availability == CXAvailability_Deprecated;
+      if (C.IndexResult)
+        Completion.Deprecated &=
+            bool(C.IndexResult->Flags & Symbol::Deprecated);
     }
   }
 
@@ -708,6 +716,7 @@ bool contextAllowsIndex(enum CodeCompletionContext::Kind K) {
   case CodeCompletionContext::CCC_ObjCInstanceMessage:
   case CodeCompletionContext::CCC_ObjCClassMessage:
   case CodeCompletionContext::CCC_IncludedFile:
+  case CodeCompletionContext::CCC_Attribute:
   // FIXME: Provide identifier based completions for the following contexts:
   case CodeCompletionContext::CCC_Other: // Be conservative.
   case CodeCompletionContext::CCC_NaturalLanguage:
@@ -1089,6 +1098,50 @@ private:
   const SymbolIndex *Index;
 }; // SignatureHelpCollector
 
+// Used only for completion of C-style comments in function call (i.e.
+// /*foo=*/7). Similar to SignatureHelpCollector, but needs to do less work.
+class ParamNameCollector final : public CodeCompleteConsumer {
+public:
+  ParamNameCollector(const clang::CodeCompleteOptions &CodeCompleteOpts,
+                     std::set<std::string> &ParamNames)
+      : CodeCompleteConsumer(CodeCompleteOpts),
+        Allocator(std::make_shared<clang::GlobalCodeCompletionAllocator>()),
+        CCTUInfo(Allocator), ParamNames(ParamNames) {}
+
+  void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
+                                 OverloadCandidate *Candidates,
+                                 unsigned NumCandidates,
+                                 SourceLocation OpenParLoc) override {
+    assert(CurrentArg <= (unsigned)std::numeric_limits<int>::max() &&
+           "too many arguments");
+
+    for (unsigned I = 0; I < NumCandidates; ++I) {
+      OverloadCandidate Candidate = Candidates[I];
+      auto *Func = Candidate.getFunction();
+      if (!Func || Func->getNumParams() <= CurrentArg)
+        continue;
+      auto *PVD = Func->getParamDecl(CurrentArg);
+      if (!PVD)
+        continue;
+      auto *Ident = PVD->getIdentifier();
+      if (!Ident)
+        continue;
+      auto Name = Ident->getName();
+      if (!Name.empty())
+        ParamNames.insert(Name.str());
+    }
+  }
+
+private:
+  GlobalCodeCompletionAllocator &getAllocator() override { return *Allocator; }
+
+  CodeCompletionTUInfo &getCodeCompletionTUInfo() override { return CCTUInfo; }
+
+  std::shared_ptr<clang::GlobalCodeCompletionAllocator> Allocator;
+  CodeCompletionTUInfo CCTUInfo;
+  std::set<std::string> &ParamNames;
+};
+
 struct SemaCompleteInput {
   PathRef FileName;
   size_t Offset;
@@ -1194,7 +1247,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   loadMainFilePreambleMacros(Clang->getPreprocessor(), Input.Preamble);
   if (Includes)
     Clang->getPreprocessor().addPPCallbacks(
-        collectIncludeStructureCallback(Clang->getSourceManager(), Includes));
+        Includes->collect(Clang->getSourceManager()));
   if (llvm::Error Err = Action.Execute()) {
     log("Execute() failed when running codeComplete for {0}: {1}",
         Input.FileName, toString(std::move(Err)));
@@ -1370,14 +1423,17 @@ public:
       FileDistanceOptions ProxOpts{}; // Use defaults.
       const auto &SM = Recorder->CCSema->getSourceManager();
       llvm::StringMap<SourceParams> ProxSources;
-      for (auto &Entry : Includes.includeDepth(
-               SM.getFileEntryForID(SM.getMainFileID())->getName())) {
-        auto &Source = ProxSources[Entry.getKey()];
-        Source.Cost = Entry.getValue() * ProxOpts.IncludeCost;
+      auto MainFileID =
+          Includes.getID(SM.getFileEntryForID(SM.getMainFileID()));
+      assert(MainFileID);
+      for (auto &HeaderIDAndDepth : Includes.includeDepth(*MainFileID)) {
+        auto &Source =
+            ProxSources[Includes.getRealPath(HeaderIDAndDepth.getFirst())];
+        Source.Cost = HeaderIDAndDepth.getSecond() * ProxOpts.IncludeCost;
         // Symbols near our transitive includes are good, but only consider
         // things in the same directory or below it. Otherwise there can be
         // many false positives.
-        if (Entry.getValue() > 0)
+        if (HeaderIDAndDepth.getSecond() > 0)
           Source.MaxUpTraversals = 1;
       }
       FileProximity.emplace(ProxSources, ProxOpts);
@@ -1679,7 +1735,7 @@ private:
           C.SemaResult->Kind == CodeCompletionResult::RK_Macro) ||
          (C.IndexResult &&
           C.IndexResult->SymInfo.Kind == index::SymbolKind::Macro)) &&
-        !C.Name.startswith_lower(Filter->pattern()))
+        !C.Name.startswith_insensitive(Filter->pattern()))
       return None;
     return Filter->match(C.Name);
   }
@@ -1833,19 +1889,72 @@ CompletionPrefix guessCompletionPrefix(llvm::StringRef Content,
   CompletionPrefix Result;
 
   // Consume the unqualified name. We only handle ASCII characters.
-  // isIdentifierBody will let us match "0invalid", but we don't mind.
-  while (!Rest.empty() && isIdentifierBody(Rest.back()))
+  // isAsciiIdentifierContinue will let us match "0invalid", but we don't mind.
+  while (!Rest.empty() && isAsciiIdentifierContinue(Rest.back()))
     Rest = Rest.drop_back();
   Result.Name = Content.slice(Rest.size(), Offset);
 
   // Consume qualifiers.
   while (Rest.consume_back("::") && !Rest.endswith(":")) // reject ::::
-    while (!Rest.empty() && isIdentifierBody(Rest.back()))
+    while (!Rest.empty() && isAsciiIdentifierContinue(Rest.back()))
       Rest = Rest.drop_back();
   Result.Qualifier =
       Content.slice(Rest.size(), Result.Name.begin() - Content.begin());
 
   return Result;
+}
+
+// Code complete the argument name on "/*" inside function call.
+// Offset should be pointing to the start of the comment, i.e.:
+// foo(^/*, rather than foo(/*^) where the cursor probably is.
+CodeCompleteResult codeCompleteComment(PathRef FileName, unsigned Offset,
+                                       llvm::StringRef Prefix,
+                                       const PreambleData *Preamble,
+                                       const ParseInputs &ParseInput) {
+  if (Preamble == nullptr) // Can't run without Sema.
+    return CodeCompleteResult();
+
+  clang::CodeCompleteOptions Options;
+  Options.IncludeGlobals = false;
+  Options.IncludeMacros = false;
+  Options.IncludeCodePatterns = false;
+  Options.IncludeBriefComments = false;
+  std::set<std::string> ParamNames;
+  // We want to see signatures coming from newly introduced includes, hence a
+  // full patch.
+  semaCodeComplete(
+      std::make_unique<ParamNameCollector>(Options, ParamNames), Options,
+      {FileName, Offset, *Preamble,
+       PreamblePatch::createFullPatch(FileName, ParseInput, *Preamble),
+       ParseInput});
+  if (ParamNames.empty())
+    return CodeCompleteResult();
+
+  CodeCompleteResult Result;
+  Result.Context = CodeCompletionContext::CCC_NaturalLanguage;
+  for (llvm::StringRef Name : ParamNames) {
+    if (!Name.startswith(Prefix))
+      continue;
+    CodeCompletion Item;
+    Item.Name = Name.str() + "=";
+    Item.Kind = CompletionItemKind::Text;
+    Result.Completions.push_back(Item);
+  }
+
+  return Result;
+}
+
+// If Offset is inside what looks like argument comment (e.g.
+// "/*^" or "/* foo^"), returns new offset pointing to the start of the /*
+// (place where semaCodeComplete should run).
+llvm::Optional<unsigned>
+maybeFunctionArgumentCommentStart(llvm::StringRef Content) {
+  while (!Content.empty() && isAsciiIdentifierContinue(Content.back()))
+    Content = Content.drop_back();
+  Content = Content.rtrim();
+  if (Content.endswith("/*"))
+    return Content.size() - 2;
+  return None;
 }
 
 CodeCompleteResult codeComplete(PathRef FileName, Position Pos,
@@ -1858,6 +1967,19 @@ CodeCompleteResult codeComplete(PathRef FileName, Position Pos,
     elog("Code completion position was invalid {0}", Offset.takeError());
     return CodeCompleteResult();
   }
+
+  auto Content = llvm::StringRef(ParseInput.Contents).take_front(*Offset);
+  if (auto OffsetBeforeComment = maybeFunctionArgumentCommentStart(Content)) {
+    // We are doing code completion of a comment, where we currently only
+    // support completing param names in function calls. To do this, we
+    // require information from Sema, but Sema's comment completion stops at
+    // parsing, so we must move back the position before running it, extract
+    // information we need and construct completion items ourselves.
+    auto CommentPrefix = Content.substr(*OffsetBeforeComment + 2).trim();
+    return codeCompleteComment(FileName, *OffsetBeforeComment, CommentPrefix,
+                               Preamble, ParseInput);
+  }
+
   auto Flow = CodeCompleteFlow(
       FileName, Preamble ? Preamble->Includes : IncludeStructure(),
       SpecFuzzyFind, Opts);
@@ -1865,9 +1987,10 @@ CodeCompleteResult codeComplete(PathRef FileName, Position Pos,
              ? std::move(Flow).runWithoutSema(ParseInput.Contents, *Offset,
                                               *ParseInput.TFS)
              : std::move(Flow).run({FileName, *Offset, *Preamble,
-                                    // We want to serve code completions with
-                                    // low latency, so don't bother patching.
-                                    /*PreamblePatch=*/llvm::None, ParseInput});
+                                    /*PreamblePatch=*/
+                                    PreamblePatch::createMacroPatch(
+                                        FileName, ParseInput, *Preamble),
+                                    ParseInput});
 }
 
 SignatureHelp signatureHelp(PathRef FileName, Position Pos,
@@ -1889,7 +2012,8 @@ SignatureHelp signatureHelp(PathRef FileName, Position Pos,
                                                Result),
       Options,
       {FileName, *Offset, Preamble,
-       PreamblePatch::create(FileName, ParseInput, Preamble), ParseInput});
+       PreamblePatch::createFullPatch(FileName, ParseInput, Preamble),
+       ParseInput});
   return Result;
 }
 
@@ -1908,6 +2032,13 @@ bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
   // We only complete symbol's name, which is the same as the name of the
   // *primary* template in case of template specializations.
   if (isExplicitTemplateSpecialization(&ND))
+    return false;
+
+  // Category decls are not useful on their own outside the interface or
+  // implementation blocks. Moreover, sema already provides completion for
+  // these, even if it requires preamble deserialization. So by excluding them
+  // from the index, we reduce the noise in all the other completion scopes.
+  if (llvm::isa<ObjCCategoryDecl>(&ND) || llvm::isa<ObjCCategoryImplDecl>(&ND))
     return false;
 
   if (InTopLevelScope(ND))
@@ -2032,7 +2163,8 @@ bool allowImplicitCompletion(llvm::StringRef Content, unsigned Offset) {
     Content = Content.substr(Pos + 1);
 
   // Complete after scope operators.
-  if (Content.endswith(".") || Content.endswith("->") || Content.endswith("::"))
+  if (Content.endswith(".") || Content.endswith("->") ||
+      Content.endswith("::") || Content.endswith("/*"))
     return true;
   // Complete after `#include <` and #include `<foo/`.
   if ((Content.endswith("<") || Content.endswith("\"") ||
@@ -2041,8 +2173,8 @@ bool allowImplicitCompletion(llvm::StringRef Content, unsigned Offset) {
     return true;
 
   // Complete words. Give non-ascii characters the benefit of the doubt.
-  return !Content.empty() &&
-         (isIdentifierBody(Content.back()) || !llvm::isASCII(Content.back()));
+  return !Content.empty() && (isAsciiIdentifierContinue(Content.back()) ||
+                              !llvm::isASCII(Content.back()));
 }
 
 } // namespace clangd

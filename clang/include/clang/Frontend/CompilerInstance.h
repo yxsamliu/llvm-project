@@ -219,6 +219,9 @@ public:
   // of the context or else not CompilerInstance specific.
   bool ExecuteAction(FrontendAction &Act);
 
+  /// Load the list of plugins requested in the \c FrontendOptions.
+  void LoadRequestedPlugins();
+
   /// }
   /// @name Compiler Invocation and Options
   /// {
@@ -696,15 +699,13 @@ public:
   /// The files created by this are usually removed on signal, and, depending
   /// on FrontendOptions, may also use a temporary file (that is, the data is
   /// written to a temporary file which will atomically replace the target
-  /// output on success). If a client (like libclang) needs to disable
-  /// RemoveFileOnSignal, temporary files will be forced on.
+  /// output on success).
   ///
   /// \return - Null on error.
-  std::unique_ptr<raw_pwrite_stream>
-  createDefaultOutputFile(bool Binary = true, StringRef BaseInput = "",
-                          StringRef Extension = "",
-                          bool RemoveFileOnSignal = true,
-                          bool CreateMissingDirectories = false);
+  std::unique_ptr<raw_pwrite_stream> createDefaultOutputFile(
+      bool Binary = true, StringRef BaseInput = "", StringRef Extension = "",
+      bool RemoveFileOnSignal = true, bool CreateMissingDirectories = false,
+      bool ForceUseTemporary = false);
 
   /// Create a new output file, optionally deriving the output path name, and
   /// add it to the list of tracked output files.

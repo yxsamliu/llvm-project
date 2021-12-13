@@ -210,6 +210,11 @@ namespace {
     void visitMachineBasicBlockBefore(const MachineBasicBlock *MBB);
     void visitMachineBundleBefore(const MachineInstr *MI);
 
+    /// Verify that all of \p MI's virtual register operands are scalars.
+    /// \returns True if all virtual register operands are scalar. False
+    /// otherwise.
+    bool verifyAllRegOpsScalar(const MachineInstr &MI,
+                               const MachineRegisterInfo &MRI);
     bool verifyVectorElementMatch(LLT Ty0, LLT Ty1, const MachineInstr *MI);
     void verifyPreISelGenericInstruction(const MachineInstr *MI);
     void visitMachineInstrBefore(const MachineInstr *MI);
@@ -287,6 +292,13 @@ namespace {
     }
 
     bool runOnMachineFunction(MachineFunction &MF) override {
+      // Skip functions that have known verification problems.
+      // FIXME: Remove this mechanism when all problematic passes have been
+      // fixed.
+      if (MF.getProperties().hasProperty(
+              MachineFunctionProperties::Property::FailsVerification))
+        return false;
+
       unsigned FoundErrors = MachineVerifier(this, Banner.c_str()).verify(MF);
       if (FoundErrors)
         report_fatal_error("Found "+Twine(FoundErrors)+" machine code errors.");
@@ -849,6 +861,21 @@ void MachineVerifier::verifyInlineAsm(const MachineInstr *MI) {
   }
 }
 
+bool MachineVerifier::verifyAllRegOpsScalar(const MachineInstr &MI,
+                                            const MachineRegisterInfo &MRI) {
+  if (none_of(MI.explicit_operands(), [&MRI](const MachineOperand &Op) {
+        if (!Op.isReg())
+          return false;
+        const auto Reg = Op.getReg();
+        if (Reg.isPhysical())
+          return false;
+        return !MRI.getType(Reg).isScalar();
+      }))
+    return true;
+  report("All register operands must have scalar types", &MI);
+  return false;
+}
+
 /// Check that types are consistent when two operands need to have the same
 /// number of vector elements.
 /// \return true if the types are valid.
@@ -1392,7 +1419,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       AttributeList Attrs
         = Intrinsic::getAttributes(MF->getFunction().getContext(),
                                    static_cast<Intrinsic::ID>(IntrID));
-      bool DeclHasSideEffects = !Attrs.hasFnAttribute(Attribute::ReadNone);
+      bool DeclHasSideEffects = !Attrs.hasFnAttr(Attribute::ReadNone);
       if (NoSideEffects && DeclHasSideEffects) {
         report("G_INTRINSIC used with intrinsic that accesses memory", MI);
         break;
@@ -1477,6 +1504,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
     break;
   }
+  case TargetOpcode::G_MEMCPY_INLINE:
   case TargetOpcode::G_MEMCPY:
   case TargetOpcode::G_MEMMOVE: {
     ArrayRef<MachineMemOperand *> MMOs = MI->memoperands();
@@ -1507,6 +1535,10 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (SrcPtrTy.getAddressSpace() != MMOs[1]->getAddrSpace())
       report("inconsistent load address space", MI);
 
+    if (Opc != TargetOpcode::G_MEMCPY_INLINE)
+      if (!MI->getOperand(3).isImm() || (MI->getOperand(3).getImm() & ~1LL))
+        report("'tail' flag (operand 3) must be an immediate 0 or 1", MI);
+
     break;
   }
   case TargetOpcode::G_BZERO:
@@ -1531,6 +1563,10 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     if (DstPtrTy.getAddressSpace() != MMOs[0]->getAddrSpace())
       report("inconsistent " + Twine(Name, " address space"), MI);
+
+    if (!MI->getOperand(MI->getNumOperands() - 1).isImm() ||
+        (MI->getOperand(MI->getNumOperands() - 1).getImm() & ~1LL))
+      report("'tail' flag (last operand) must be an immediate 0 or 1", MI);
 
     break;
   }
@@ -1561,11 +1597,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   case TargetOpcode::G_VECREDUCE_UMAX:
   case TargetOpcode::G_VECREDUCE_UMIN: {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
-    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
     if (!DstTy.isScalar())
       report("Vector reduction requires a scalar destination type", MI);
-    if (!SrcTy.isVector())
-      report("Vector reduction requires vector source=", MI);
     break;
   }
 
@@ -1589,7 +1622,11 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
     break;
   }
-
+  case TargetOpcode::G_LLROUND:
+  case TargetOpcode::G_LROUND: {
+    verifyAllRegOpsScalar(*MI, *MRI);
+    break;
+  }
   default:
     break;
   }
@@ -1623,6 +1660,8 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
       report("Unspillable Terminator does not define a reg", MI);
     Register Def = MI->getOperand(0).getReg();
     if (Def.isVirtual() &&
+        !MF->getProperties().hasProperty(
+            MachineFunctionProperties::Property::NoPHIs) &&
         std::distance(MRI->use_nodbg_begin(Def), MRI->use_nodbg_end()) > 1)
       report("Unspillable Terminator expected to have at most one use!", MI);
   }
@@ -1773,6 +1812,19 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
 
     // TODO: verify we have properly encoded deopt arguments
   } break;
+  case TargetOpcode::INSERT_SUBREG: {
+    unsigned InsertedSize;
+    if (unsigned SubIdx = MI->getOperand(2).getSubReg())
+      InsertedSize = TRI->getSubRegIdxSize(SubIdx);
+    else
+      InsertedSize = TRI->getRegSizeInBits(MI->getOperand(2).getReg(), *MRI);
+    unsigned SubRegSize = TRI->getSubRegIdxSize(MI->getOperand(3).getImm());
+    if (SubRegSize < InsertedSize) {
+      report("INSERT_SUBREG expected inserted value to have equal or lesser "
+             "size than the subreg it was inserted into", MI);
+      break;
+    }
+  } break;
   }
 }
 
@@ -1844,6 +1896,15 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
 
   switch (MO->getType()) {
   case MachineOperand::MO_Register: {
+    // Verify debug flag on debug instructions. Check this first because reg0
+    // indicates an undefined debug value.
+    if (MI->isDebugInstr() && MO->isUse()) {
+      if (!MO->isDebug())
+        report("Register operand must be marked debug", MO, MONum);
+    } else if (MO->isDebug()) {
+      report("Register operand must not be marked debug", MO, MONum);
+    }
+
     const Register Reg = MO->getReg();
     if (!Reg)
       return;
@@ -1909,10 +1970,6 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
           report("isRenamable set on reserved register", MO, MONum);
           return;
         }
-      }
-      if (MI->isDebugValue() && MO->isUse() && !MO->isDebug()) {
-        report("Use-reg is not IsDebug in a DBG_VALUE", MO, MONum);
-        return;
       }
     } else {
       // Virtual register.
@@ -2166,8 +2223,11 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
     if (MO->isKill())
       addRegWithSubRegs(regsKilled, Reg);
 
-    // Check that LiveVars knows this kill.
-    if (LiveVars && Register::isVirtualRegister(Reg) && MO->isKill()) {
+    // Check that LiveVars knows this kill (unless we are inside a bundle, in
+    // which case we have already checked that LiveVars knows any kills on the
+    // bundle header instead).
+    if (LiveVars && Register::isVirtualRegister(Reg) && MO->isKill() &&
+        !MI->isBundledWithPred()) {
       LiveVariables::VarInfo &VI = LiveVars->getVarInfo(Reg);
       if (!is_contained(VI.Kills, MI))
         report("Kill missing from LiveVariables", MO, MONum);
@@ -2896,9 +2956,13 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
     }
   }
 
-  // A live segment can only end at an early-clobber slot if it is being
-  // redefined by an early-clobber def.
-  if (S.end.isEarlyClobber()) {
+  // After tied operands are rewritten, a live segment can only end at an
+  // early-clobber slot if it is being redefined by an early-clobber def.
+  // TODO: Before tied operands are rewritten, a live segment can only end at an
+  // early-clobber slot if the last use is tied to an early-clobber def.
+  if (MF->getProperties().hasProperty(
+          MachineFunctionProperties::Property::TiedOpsRewritten) &&
+      S.end.isEarlyClobber()) {
     if (I+1 == LR.end() || (I+1)->start != S.end) {
       report("Live segment ending at early clobber slot must be "
              "redefined by an EC def in the same instruction", EndMBB);

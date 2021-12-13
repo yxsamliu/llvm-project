@@ -17,9 +17,10 @@
 #include "../PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
-#include "mlir/Dialect/Vector/VectorUtils.h"
+#include "mlir/Dialect/Vector/VectorTransforms.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Pass/Pass.h"
@@ -122,8 +123,8 @@ static Value generateMaskCheck(OpBuilder &b, OpTy xferOp, Value iv) {
     return Value();
 
   Location loc = xferOp.getLoc();
-  Value ivI32 =
-      b.create<IndexCastOp>(loc, IntegerType::get(b.getContext(), 32), iv);
+  Value ivI32 = b.create<arith::IndexCastOp>(
+      loc, IntegerType::get(b.getContext(), 32), iv);
   return b.create<vector::ExtractElementOp>(loc, xferOp.mask(), ivI32);
 }
 
@@ -165,18 +166,19 @@ static Value generateInBoundsCheck(
   Location loc = xferOp.getLoc();
   ImplicitLocOpBuilder lb(xferOp.getLoc(), b);
   if (!xferOp.isDimInBounds(0) && !isBroadcast) {
-    Value memrefDim = lb.create<memref::DimOp>(xferOp.source(), *dim);
+    Value memrefDim = vector::createOrFoldDimOp(b, loc, xferOp.source(), *dim);
     AffineExpr d0, d1;
     bindDims(xferOp.getContext(), d0, d1);
     Value base = xferOp.indices()[dim.getValue()];
     Value memrefIdx = makeComposedAffineApply(b, loc, d0 + d1, {base, iv});
-    cond = lb.create<CmpIOp>(CmpIPredicate::sgt, memrefDim, memrefIdx);
+    cond = lb.create<arith::CmpIOp>(arith::CmpIPredicate::sgt, memrefDim,
+                                    memrefIdx);
   }
 
   // Condition check 2: Masked in?
   if (auto maskCond = generateMaskCheck(b, xferOp, iv)) {
     if (cond)
-      cond = lb.create<AndOp>(cond, maskCond);
+      cond = lb.create<arith::AndIOp>(cond, maskCond);
     else
       cond = maskCond;
   }
@@ -703,10 +705,10 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
     }
 
     // Loop bounds and step.
-    auto lb = locB.create<ConstantIndexOp>(0);
-    auto ub = locB.create<ConstantIndexOp>(
+    auto lb = locB.create<arith::ConstantIndexOp>(0);
+    auto ub = locB.create<arith::ConstantIndexOp>(
         castedDataType.getDimSize(castedDataType.getRank() - 1));
-    auto step = locB.create<ConstantIndexOp>(1);
+    auto step = locB.create<arith::ConstantIndexOp>(1);
     // TransferWriteOps that operate on tensors return the modified tensor and
     // require a loop state.
     auto loopState = Strategy<OpTy>::initialLoopState(xferOp);
@@ -896,7 +898,7 @@ struct UnrollTransferReadConversion
     // Generate fully unrolled loop of transfer ops.
     Location loc = xferOp.getLoc();
     for (int64_t i = 0; i < dimSize; ++i) {
-      Value iv = rewriter.create<ConstantIndexOp>(loc, i);
+      Value iv = rewriter.create<arith::ConstantIndexOp>(loc, i);
 
       vec = generateInBoundsCheck(
           rewriter, xferOp, iv, unpackedDim(xferOp), TypeRange(vecType),
@@ -1022,7 +1024,7 @@ struct UnrollTransferWriteConversion
     // Generate fully unrolled loop of transfer ops.
     Location loc = xferOp.getLoc();
     for (int64_t i = 0; i < dimSize; ++i) {
-      Value iv = rewriter.create<ConstantIndexOp>(loc, i);
+      Value iv = rewriter.create<arith::ConstantIndexOp>(loc, i);
 
       auto updatedSource = generateInBoundsCheck(
           rewriter, xferOp, iv, unpackedDim(xferOp),
@@ -1113,8 +1115,8 @@ struct Strategy1d<TransferReadOp> {
                                   ValueRange loopState) {
     SmallVector<Value, 8> indices;
     auto dim = get1dMemrefIndices(b, xferOp, iv, indices);
-    Value ivI32 =
-        b.create<IndexCastOp>(loc, IntegerType::get(b.getContext(), 32), iv);
+    Value ivI32 = b.create<arith::IndexCastOp>(
+        loc, IntegerType::get(b.getContext(), 32), iv);
     auto vec = loopState[0];
 
     // In case of out-of-bounds access, leave `vec` as is (was initialized with
@@ -1146,8 +1148,8 @@ struct Strategy1d<TransferWriteOp> {
                                   ValueRange /*loopState*/) {
     SmallVector<Value, 8> indices;
     auto dim = get1dMemrefIndices(b, xferOp, iv, indices);
-    Value ivI32 =
-        b.create<IndexCastOp>(loc, IntegerType::get(b.getContext(), 32), iv);
+    Value ivI32 = b.create<arith::IndexCastOp>(
+        loc, IntegerType::get(b.getContext(), 32), iv);
 
     // Nothing to do in case of out-of-bounds access.
     generateInBoundsCheck(
@@ -1223,9 +1225,10 @@ struct TransferOp1dConversion : public VectorToSCFPattern<OpTy> {
     // Loop bounds, step, state...
     Location loc = xferOp.getLoc();
     auto vecType = xferOp.getVectorType();
-    auto lb = rewriter.create<ConstantIndexOp>(loc, 0);
-    auto ub = rewriter.create<ConstantIndexOp>(loc, vecType.getDimSize(0));
-    auto step = rewriter.create<ConstantIndexOp>(loc, 1);
+    auto lb = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    auto ub =
+        rewriter.create<arith::ConstantIndexOp>(loc, vecType.getDimSize(0));
+    auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
     auto loopState = Strategy1d<OpTy>::initialLoopState(rewriter, xferOp);
 
     // Generate for loop.

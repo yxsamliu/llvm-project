@@ -14,6 +14,7 @@
 #include "PassDetail.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/Threading.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/ADT/STLExtras.h"
@@ -22,7 +23,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Mutex.h"
-#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -98,6 +98,10 @@ struct OpPassManagerImpl {
   /// operation type, it must be the same type as this pass manager.
   void addPass(std::unique_ptr<Pass> pass);
 
+  /// Clear the list of passes in this pass manager, other options are
+  /// preserved.
+  void clear();
+
   /// Coalesce adjacent AdaptorPasses into one large adaptor. This runs
   /// recursively through the pipeline graph.
   void coalesceAdjacentAdaptorPasses();
@@ -166,6 +170,8 @@ void OpPassManagerImpl::addPass(std::unique_ptr<Pass> pass) {
 
   passes.emplace_back(std::move(pass));
 }
+
+void OpPassManagerImpl::clear() { passes.clear(); }
 
 void OpPassManagerImpl::coalesceAdjacentAdaptorPasses() {
   // Bail out early if there are no adaptor passes.
@@ -260,6 +266,8 @@ OpPassManager &OpPassManager::nest(StringRef nestedName) {
 void OpPassManager::addPass(std::unique_ptr<Pass> pass) {
   impl->addPass(std::move(pass));
 }
+
+void OpPassManager::clear() { impl->clear(); }
 
 /// Returns the number of passes held by this manager.
 size_t OpPassManager::size() const { return impl->passes.size(); }
@@ -387,9 +395,27 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
   // Invalidate any non preserved analyses.
   am.invalidate(pass->passState->preservedAnalyses);
 
-  // Run the verifier if this pass didn't fail already.
-  if (!passFailed && verifyPasses)
-    passFailed = failed(verify(op));
+  // When verifyPasses is specified, we run the verifier (unless the pass
+  // failed).
+  if (!passFailed && verifyPasses) {
+    bool runVerifierNow = true;
+    // Reduce compile time by avoiding running the verifier if the pass didn't
+    // change the IR since the last time the verifier was run:
+    //
+    //  1) If the pass said that it preserved all analyses then it can't have
+    //     permuted the IR.
+    //  2) If we just ran an OpToOpPassAdaptor (e.g. to run function passes
+    //     within a module) then each sub-unit will have been verified on the
+    //     subunit (and those passes aren't allowed to modify the parent).
+    //
+    // We run these checks in EXPENSIVE_CHECKS mode out of caution.
+#ifndef EXPENSIVE_CHECKS
+    runVerifierNow = !isa<OpToOpPassAdaptor>(pass) &&
+                     !pass->passState->preservedAnalyses.isAll();
+#endif
+    if (runVerifierNow)
+      passFailed = failed(verify(op));
+  }
 
   // Instrument after the pass has run.
   if (pi) {
@@ -540,12 +566,12 @@ static bool hasSizeMismatch(ArrayRef<OpPassManager> lhs,
 /// Run this pass adaptor synchronously.
 void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
   AnalysisManager am = getAnalysisManager();
+  MLIRContext *context = &getContext();
 
   // Create the async executors if they haven't been created, or if the main
   // pipeline has changed.
   if (asyncExecutors.empty() || hasSizeMismatch(asyncExecutors.front(), mgrs))
-    asyncExecutors.assign(llvm::hardware_concurrency().compute_thread_count(),
-                          mgrs);
+    asyncExecutors.assign(context->getThreadPool().getThreadCount(), mgrs);
 
   // Run a prepass over the operation to collect the nested operations to
   // execute over. This ensures that an analysis manager exists for each
@@ -555,19 +581,11 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
     for (auto &block : region) {
       for (auto &op : block) {
         // Add this operation iff the name matches any of the pass managers.
-        if (findPassManagerFor(mgrs, op.getName().getIdentifier(),
-                               getContext()))
+        if (findPassManagerFor(mgrs, op.getName().getIdentifier(), *context))
           opAMPairs.emplace_back(&op, am.nest(&op));
       }
     }
   }
-
-  // A parallel diagnostic handler that provides deterministic diagnostic
-  // ordering.
-  ParallelDiagnosticHandler diagHandler(&getContext());
-
-  // An index for the current operation/analysis manager pair.
-  std::atomic<unsigned> opIt(0);
 
   // Get the current thread for this adaptor.
   PassInstrumentation::PipelineParentInfo parentInfo = {llvm::get_threadid(),
@@ -575,48 +593,34 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
   auto *instrumentor = am.getPassInstrumentor();
 
   // An atomic failure variable for the async executors.
-  std::atomic<bool> passFailed(false);
-  llvm::parallelForEach(
-      asyncExecutors.begin(),
-      std::next(asyncExecutors.begin(),
-                std::min(asyncExecutors.size(), opAMPairs.size())),
-      [&](MutableArrayRef<OpPassManager> pms) {
-        for (auto e = opAMPairs.size(); !passFailed && opIt < e;) {
-          // Get the next available operation index.
-          unsigned nextID = opIt++;
-          if (nextID >= e)
-            break;
+  std::vector<std::atomic<bool>> activePMs(asyncExecutors.size());
+  std::fill(activePMs.begin(), activePMs.end(), false);
+  auto processFn = [&](auto &opPMPair) {
+    // Find a pass manager for this operation.
+    auto it = llvm::find_if(activePMs, [](std::atomic<bool> &isActive) {
+      bool expectedInactive = false;
+      return isActive.compare_exchange_strong(expectedInactive, true);
+    });
+    unsigned pmIndex = it - activePMs.begin();
 
-          // Set the order id for this thread in the diagnostic handler.
-          diagHandler.setOrderIDForThread(nextID);
+    // Get the pass manager for this operation and execute it.
+    auto *pm =
+        findPassManagerFor(asyncExecutors[pmIndex],
+                           opPMPair.first->getName().getIdentifier(), *context);
+    assert(pm && "expected valid pass manager for operation");
 
-          // Get the pass manager for this operation and execute it.
-          auto &it = opAMPairs[nextID];
-          auto *pm = findPassManagerFor(
-              pms, it.first->getName().getIdentifier(), getContext());
-          assert(pm && "expected valid pass manager for operation");
+    unsigned initGeneration = pm->impl->initializationGeneration;
+    LogicalResult pipelineResult =
+        runPipeline(pm->getPasses(), opPMPair.first, opPMPair.second,
+                    verifyPasses, initGeneration, instrumentor, &parentInfo);
 
-          unsigned initGeneration = pm->impl->initializationGeneration;
-          LogicalResult pipelineResult =
-              runPipeline(pm->getPasses(), it.first, it.second, verifyPasses,
-                          initGeneration, instrumentor, &parentInfo);
-
-          // Drop this thread from being tracked by the diagnostic handler.
-          // After this task has finished, the thread may be used outside of
-          // this pass manager context meaning that we don't want to track
-          // diagnostics from it anymore.
-          diagHandler.eraseOrderIDForThread();
-
-          // Handle a failed pipeline result.
-          if (failed(pipelineResult)) {
-            passFailed = true;
-            break;
-          }
-        }
-      });
+    // Reset the active bit for this pass manager.
+    activePMs[pmIndex].store(false);
+    return pipelineResult;
+  };
 
   // Signal a failure if any of the executors failed.
-  if (passFailed)
+  if (failed(failableParallelForEach(context, opAMPairs, processFn)))
     signalPassFailure();
 }
 

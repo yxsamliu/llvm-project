@@ -7,18 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/ToolChain.h"
-#include "InputInfo.h"
 #include "ToolChains/Arch/ARM.h"
 #include "ToolChains/Clang.h"
-#include "ToolChains/InterfaceStubs.h"
 #include "ToolChains/Flang.h"
 #include "ToolChains/AMDFlang.h"
+#include "ToolChains/InterfaceStubs.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
@@ -30,6 +30,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
@@ -38,7 +39,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetParser.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <cassert>
@@ -170,10 +170,11 @@ static const DriverSuffix *FindDriverSuffix(StringRef ProgName, size_t &Pos) {
 /// present and lower-casing the string on Windows.
 static std::string normalizeProgramName(llvm::StringRef Argv0) {
   std::string ProgName = std::string(llvm::sys::path::stem(Argv0));
-#ifdef _WIN32
-  // Transform to lowercase for case insensitive file systems.
-  std::transform(ProgName.begin(), ProgName.end(), ProgName.begin(), ::tolower);
-#endif
+  if (is_style_windows(llvm::sys::path::Style::native)) {
+    // Transform to lowercase for case insensitive file systems.
+    std::transform(ProgName.begin(), ProgName.end(), ProgName.begin(),
+                   ::tolower);
+  }
   return ProgName;
 }
 
@@ -387,6 +388,9 @@ static StringRef getArchNameForCompilerRTLib(const ToolChain &TC,
   if (TC.getArch() == llvm::Triple::x86 && Triple.isAndroid())
     return "i686";
 
+  if (TC.getArch() == llvm::Triple::x86_64 && Triple.isX32())
+    return "x32";
+
   return llvm::Triple::getArchTypeName(TC.getArch());
 }
 
@@ -584,7 +588,7 @@ std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD,
   // for the linker flavor is brittle. In addition, prepending "ld." or "ld64."
   // to a relative path is surprising. This is more complex due to priorities
   // among -B, COMPILER_PATH and PATH. --ld-path= should be used instead.
-  if (UseLinker.find('/') != StringRef::npos)
+  if (UseLinker.contains('/'))
     getDriver().Diag(diag::warn_drv_fuse_ld_path);
 
   if (llvm::sys::path::is_absolute(UseLinker)) {
@@ -619,6 +623,8 @@ std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD,
 
 std::string ToolChain::GetStaticLibToolPath() const {
   // TODO: Add support for static lib archiving on Windows
+  if (Triple.isOSDarwin())
+    return GetProgramPath("libtool");
   return GetProgramPath("llvm-ar");
 }
 
@@ -1074,7 +1080,7 @@ void ToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
 void ToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                   ArgStringList &CC1Args) const {}
 
-llvm::SmallVector<std::string, 12>
+llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 ToolChain::getHIPDeviceLibs(const ArgList &DriverArgs) const {
   return {};
 }
@@ -1145,6 +1151,10 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
 
   // Handle -Xopenmp-target flags
   for (auto *A : Args) {
+    // -munsafe-fp-atomics applies to device toolchain
+    if (A->getOption().matches(options::OPT_munsafe_fp_atomics))
+      DAL->append(A);
+
     // Exclude flags which may only apply to the host toolchain.
     // Do not exclude flags when the host triple (AuxTriple)
     // matches the current toolchain triple. If it is not present

@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   BinaryFormat
+  MC
   Option
   ProfileData
   Support
@@ -14,7 +15,6 @@ endif()
 add_clang_library(clangDriver
   Action.cpp
   Compilation.cpp
-  DarwinSDKInfo.cpp
   Distro.cpp
   Driver.cpp
   DriverOptions.cpp

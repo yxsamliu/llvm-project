@@ -17,7 +17,6 @@
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -335,7 +334,6 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
                   llvm::AMDGPU::getArchAttrR600(GPUKind)) {
   resetDataLayout(isAMDGCN(getTriple()) ? DataLayoutStringAMDGCN
                                         : DataLayoutStringR600);
-  GridValues = llvm::omp::AMDGPUGpuGridValues;
 
   setAddressSpaceMap(Triple.getOS() == llvm::Triple::Mesa3D ||
                      !isAMDGCN(Triple));
@@ -358,8 +356,8 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
 }
 
-void AMDGPUTargetInfo::adjust(LangOptions &Opts) {
-  TargetInfo::adjust(Opts);
+void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
+  TargetInfo::adjust(Diags, Opts);
   // ToDo: There are still a few places using default address space as private
   // address space in OpenCL, which needs to be cleaned up, then Opts.OpenCL
   // can be removed from the following line.

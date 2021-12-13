@@ -16,7 +16,7 @@
 // to work with CUDA and OpenMP target offloading [in C and C++ mode].)
 
 #pragma push_macro("__DEVICE__")
-#if defined(__OPENMP_NVPTX__) || (defined(_OPENMP) && defined(__AMDGCN__))
+#if defined(__OPENMP_NVPTX__) || defined(__OPENMP_AMDGCN__)
 #pragma omp declare target
 #define __DEVICE__ __attribute__((noinline, nothrow, cold, weak))
 #else
@@ -26,7 +26,7 @@
 // To make the algorithms available for C and C++ in CUDA and OpenMP we select
 // different but equivalent function versions. TODO: For OpenMP we currently
 // select the native builtins as the overload support for templates is lacking.
-#if !defined(__OPENMP_NVPTX__) && (!defined(_OPENMP) || !defined(__AMDGCN__))
+#if !defined(__OPENMP_NVPTX__) && !defined(__OPENMP_AMDGCN__)
 #define _ISNANd std::isnan
 #define _ISNANf std::isnan
 #define _ISINFd std::isinf
@@ -275,7 +275,7 @@ __DEVICE__ float _Complex __divsc3(float __a, float __b, float __c, float __d) {
 }
 
 // Define complex math functions for amdgcn openmp here
-#if defined(_OPENMP) && defined(__AMDGCN__)
+#if defined(__OPENMP_AMDGCN__)
 typedef double __2f64 __attribute__((ext_vector_type(2)));
 typedef float __2f32 __attribute__((ext_vector_type(2)));
 union __union_d {__2f64 d2; _Complex double cd;};
@@ -302,8 +302,8 @@ __DEVICE__ _Complex float cexpf(_Complex float _a){
   union __union_f _ur = {.f2 = __ocml_cexp_f32(_ua.f2)};
   return _ur.cf;
 }
+#endif // defined(__OPENMP_AMDGCN__)
 
-#endif
 #if defined(__cplusplus)
 } // extern "C"
 #endif
@@ -325,7 +325,7 @@ __DEVICE__ _Complex float cexpf(_Complex float _a){
 #undef _fmaxd
 #undef _fmaxf
 
-#if defined(__OPENMP_NVPTX__) || (defined(_OPENMP) && defined(__AMDGCN__))
+#if defined(__OPENMP_NVPTX__) || defined(__OPENMP_AMDGCN__)
 #pragma omp end declare target
 #endif
 

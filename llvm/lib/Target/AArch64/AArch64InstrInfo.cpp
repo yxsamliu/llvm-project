@@ -1112,8 +1112,8 @@ bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
 /// in SrcReg and SrcReg2, and the value it compares against in CmpValue.
 /// Return true if the comparison instruction can be analyzed.
 bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
-                                      Register &SrcReg2, int &CmpMask,
-                                      int &CmpValue) const {
+                                      Register &SrcReg2, int64_t &CmpMask,
+                                      int64_t &CmpValue) const {
   // The first operand can be a frame index where we'd normally expect a
   // register.
   assert(MI.getNumOperands() >= 2 && "All AArch64 cmps should have 2 operands");
@@ -1155,8 +1155,7 @@ bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
     SrcReg = MI.getOperand(1).getReg();
     SrcReg2 = 0;
     CmpMask = ~0;
-    // FIXME: In order to convert CmpValue to 0 or 1
-    CmpValue = MI.getOperand(2).getImm() != 0;
+    CmpValue = MI.getOperand(2).getImm();
     return true;
   case AArch64::ANDSWri:
   case AArch64::ANDSXri:
@@ -1165,14 +1164,9 @@ bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
     SrcReg = MI.getOperand(1).getReg();
     SrcReg2 = 0;
     CmpMask = ~0;
-    // FIXME:The return val type of decodeLogicalImmediate is uint64_t,
-    // while the type of CmpValue is int. When converting uint64_t to int,
-    // the high 32 bits of uint64_t will be lost.
-    // In fact it causes a bug in spec2006-483.xalancbmk
-    // CmpValue is only used to compare with zero in OptimizeCompareInstr
     CmpValue = AArch64_AM::decodeLogicalImmediate(
                    MI.getOperand(2).getImm(),
-                   MI.getOpcode() == AArch64::ANDSWri ? 32 : 64) != 0;
+                   MI.getOpcode() == AArch64::ANDSWri ? 32 : 64);
     return true;
   }
 
@@ -1433,8 +1427,8 @@ bool AArch64InstrInfo::optimizePTestInstr(
 ///    instruction.
 ///    Only comparison with zero is supported.
 bool AArch64InstrInfo::optimizeCompareInstr(
-    MachineInstr &CmpInstr, Register SrcReg, Register SrcReg2, int CmpMask,
-    int CmpValue, const MachineRegisterInfo *MRI) const {
+    MachineInstr &CmpInstr, Register SrcReg, Register SrcReg2, int64_t CmpMask,
+    int64_t CmpValue, const MachineRegisterInfo *MRI) const {
   assert(CmpInstr.getParent());
   assert(MRI);
 
@@ -1462,10 +1456,6 @@ bool AArch64InstrInfo::optimizeCompareInstr(
   if (CmpInstr.getOpcode() == AArch64::PTEST_PP)
     return optimizePTestInstr(&CmpInstr, SrcReg, SrcReg2, MRI);
 
-  // Continue only if we have a "ri" where immediate is zero.
-  // FIXME:CmpValue has already been converted to 0 or 1 in analyzeCompare
-  // function.
-  assert((CmpValue == 0 || CmpValue == 1) && "CmpValue must be 0 or 1!");
   if (SrcReg2 != 0)
     return false;
 
@@ -1473,9 +1463,10 @@ bool AArch64InstrInfo::optimizeCompareInstr(
   if (!MRI->use_nodbg_empty(CmpInstr.getOperand(0).getReg()))
     return false;
 
-  if (!CmpValue && substituteCmpToZero(CmpInstr, SrcReg, *MRI))
+  if (CmpValue == 0 && substituteCmpToZero(CmpInstr, SrcReg, *MRI))
     return true;
-  return removeCmpToZeroOrOne(CmpInstr, SrcReg, CmpValue, *MRI);
+  return (CmpValue == 0 || CmpValue == 1) &&
+         removeCmpToZeroOrOne(CmpInstr, SrcReg, CmpValue, *MRI);
 }
 
 /// Get opcode of S version of Instr.
@@ -2099,10 +2090,8 @@ bool AArch64InstrInfo::isFPRCopy(const MachineInstr &MI) {
   default:
     break;
   case TargetOpcode::COPY: {
-    // FPR64 copies will by lowered to ORR.16b
     Register DstReg = MI.getOperand(0).getReg();
-    return (AArch64::FPR64RegClass.contains(DstReg) ||
-            AArch64::FPR128RegClass.contains(DstReg));
+    return AArch64::FPR128RegClass.contains(DstReg);
   }
   case AArch64::ORRv16i8:
     if (MI.getOperand(1).getReg() == MI.getOperand(2).getReg()) {
@@ -2274,32 +2263,77 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::STNPSi:
   case AArch64::LDG:
   case AArch64::STGPi:
+
   case AArch64::LD1B_IMM:
-  case AArch64::LD1H_IMM:
-  case AArch64::LD1W_IMM:
-  case AArch64::LD1D_IMM:
-  case AArch64::ST1B_IMM:
-  case AArch64::ST1H_IMM:
-  case AArch64::ST1W_IMM:
-  case AArch64::ST1D_IMM:
   case AArch64::LD1B_H_IMM:
+  case AArch64::LD1B_S_IMM:
+  case AArch64::LD1B_D_IMM:
   case AArch64::LD1SB_H_IMM:
+  case AArch64::LD1SB_S_IMM:
+  case AArch64::LD1SB_D_IMM:
+  case AArch64::LD1H_IMM:
   case AArch64::LD1H_S_IMM:
+  case AArch64::LD1H_D_IMM:
   case AArch64::LD1SH_S_IMM:
+  case AArch64::LD1SH_D_IMM:
+  case AArch64::LD1W_IMM:
   case AArch64::LD1W_D_IMM:
   case AArch64::LD1SW_D_IMM:
+  case AArch64::LD1D_IMM:
+
+  case AArch64::ST1B_IMM:
   case AArch64::ST1B_H_IMM:
-  case AArch64::ST1H_S_IMM:
-  case AArch64::ST1W_D_IMM:
-  case AArch64::LD1B_S_IMM:
-  case AArch64::LD1SB_S_IMM:
-  case AArch64::LD1H_D_IMM:
-  case AArch64::LD1SH_D_IMM:
   case AArch64::ST1B_S_IMM:
-  case AArch64::ST1H_D_IMM:
-  case AArch64::LD1B_D_IMM:
-  case AArch64::LD1SB_D_IMM:
   case AArch64::ST1B_D_IMM:
+  case AArch64::ST1H_IMM:
+  case AArch64::ST1H_S_IMM:
+  case AArch64::ST1H_D_IMM:
+  case AArch64::ST1W_IMM:
+  case AArch64::ST1W_D_IMM:
+  case AArch64::ST1D_IMM:
+
+  case AArch64::LD1RB_IMM:
+  case AArch64::LD1RB_H_IMM:
+  case AArch64::LD1RB_S_IMM:
+  case AArch64::LD1RB_D_IMM:
+  case AArch64::LD1RSB_H_IMM:
+  case AArch64::LD1RSB_S_IMM:
+  case AArch64::LD1RSB_D_IMM:
+  case AArch64::LD1RH_IMM:
+  case AArch64::LD1RH_S_IMM:
+  case AArch64::LD1RH_D_IMM:
+  case AArch64::LD1RSH_S_IMM:
+  case AArch64::LD1RSH_D_IMM:
+  case AArch64::LD1RW_IMM:
+  case AArch64::LD1RW_D_IMM:
+  case AArch64::LD1RSW_IMM:
+  case AArch64::LD1RD_IMM:
+
+  case AArch64::LDNT1B_ZRI:
+  case AArch64::LDNT1H_ZRI:
+  case AArch64::LDNT1W_ZRI:
+  case AArch64::LDNT1D_ZRI:
+  case AArch64::STNT1B_ZRI:
+  case AArch64::STNT1H_ZRI:
+  case AArch64::STNT1W_ZRI:
+  case AArch64::STNT1D_ZRI:
+
+  case AArch64::LDNF1B_IMM:
+  case AArch64::LDNF1B_H_IMM:
+  case AArch64::LDNF1B_S_IMM:
+  case AArch64::LDNF1B_D_IMM:
+  case AArch64::LDNF1SB_H_IMM:
+  case AArch64::LDNF1SB_S_IMM:
+  case AArch64::LDNF1SB_D_IMM:
+  case AArch64::LDNF1H_IMM:
+  case AArch64::LDNF1H_S_IMM:
+  case AArch64::LDNF1H_D_IMM:
+  case AArch64::LDNF1SH_S_IMM:
+  case AArch64::LDNF1SH_D_IMM:
+  case AArch64::LDNF1W_IMM:
+  case AArch64::LDNF1W_D_IMM:
+  case AArch64::LDNF1SW_D_IMM:
+  case AArch64::LDNF1D_IMM:
     return 3;
   case AArch64::ADDG:
   case AArch64::STGOffset:
@@ -2850,10 +2884,22 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LD1H_IMM:
   case AArch64::LD1W_IMM:
   case AArch64::LD1D_IMM:
+  case AArch64::LDNT1B_ZRI:
+  case AArch64::LDNT1H_ZRI:
+  case AArch64::LDNT1W_ZRI:
+  case AArch64::LDNT1D_ZRI:
   case AArch64::ST1B_IMM:
   case AArch64::ST1H_IMM:
   case AArch64::ST1W_IMM:
   case AArch64::ST1D_IMM:
+  case AArch64::STNT1B_ZRI:
+  case AArch64::STNT1H_ZRI:
+  case AArch64::STNT1W_ZRI:
+  case AArch64::STNT1D_ZRI:
+  case AArch64::LDNF1B_IMM:
+  case AArch64::LDNF1H_IMM:
+  case AArch64::LDNF1W_IMM:
+  case AArch64::LDNF1D_IMM:
     // A full vectors worth of data
     // Width = mbytes * elements
     Scale = TypeSize::Scalable(16);
@@ -2870,6 +2916,12 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::ST1B_H_IMM:
   case AArch64::ST1H_S_IMM:
   case AArch64::ST1W_D_IMM:
+  case AArch64::LDNF1B_H_IMM:
+  case AArch64::LDNF1SB_H_IMM:
+  case AArch64::LDNF1H_S_IMM:
+  case AArch64::LDNF1SH_S_IMM:
+  case AArch64::LDNF1W_D_IMM:
+  case AArch64::LDNF1SW_D_IMM:
     // A half vector worth of data
     // Width = mbytes * elements
     Scale = TypeSize::Scalable(8);
@@ -2883,6 +2935,10 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LD1SH_D_IMM:
   case AArch64::ST1B_S_IMM:
   case AArch64::ST1H_D_IMM:
+  case AArch64::LDNF1B_S_IMM:
+  case AArch64::LDNF1SB_S_IMM:
+  case AArch64::LDNF1H_D_IMM:
+  case AArch64::LDNF1SH_D_IMM:
     // A quarter vector worth of data
     // Width = mbytes * elements
     Scale = TypeSize::Scalable(4);
@@ -2893,6 +2949,8 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LD1B_D_IMM:
   case AArch64::LD1SB_D_IMM:
   case AArch64::ST1B_D_IMM:
+  case AArch64::LDNF1B_D_IMM:
+  case AArch64::LDNF1SB_D_IMM:
     // A eighth vector worth of data
     // Width = mbytes * elements
     Scale = TypeSize::Scalable(2);
@@ -2911,6 +2969,42 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     Scale = TypeSize::Fixed(16);
     Width = 16;
     MinOffset = -64;
+    MaxOffset = 63;
+    break;
+  case AArch64::LD1RB_IMM:
+  case AArch64::LD1RB_H_IMM:
+  case AArch64::LD1RB_S_IMM:
+  case AArch64::LD1RB_D_IMM:
+  case AArch64::LD1RSB_H_IMM:
+  case AArch64::LD1RSB_S_IMM:
+  case AArch64::LD1RSB_D_IMM:
+    Scale = TypeSize::Fixed(1);
+    Width = 1;
+    MinOffset = 0;
+    MaxOffset = 63;
+    break;
+  case AArch64::LD1RH_IMM:
+  case AArch64::LD1RH_S_IMM:
+  case AArch64::LD1RH_D_IMM:
+  case AArch64::LD1RSH_S_IMM:
+  case AArch64::LD1RSH_D_IMM:
+    Scale = TypeSize::Fixed(2);
+    Width = 2;
+    MinOffset = 0;
+    MaxOffset = 63;
+    break;
+  case AArch64::LD1RW_IMM:
+  case AArch64::LD1RW_D_IMM:
+  case AArch64::LD1RSW_IMM:
+    Scale = TypeSize::Fixed(4);
+    Width = 4;
+    MinOffset = 0;
+    MaxOffset = 63;
+    break;
+  case AArch64::LD1RD_IMM:
+    Scale = TypeSize::Fixed(8);
+    Width = 8;
+    MinOffset = 0;
     MaxOffset = 63;
     break;
   }
@@ -3451,77 +3545,37 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (AArch64::FPR64RegClass.contains(DestReg) &&
       AArch64::FPR64RegClass.contains(SrcReg)) {
-    if (Subtarget.hasNEON()) {
-      DestReg = RI.getMatchingSuperReg(DestReg, AArch64::dsub,
-                                       &AArch64::FPR128RegClass);
-      SrcReg = RI.getMatchingSuperReg(SrcReg, AArch64::dsub,
-                                      &AArch64::FPR128RegClass);
-      BuildMI(MBB, I, DL, get(AArch64::ORRv16i8), DestReg)
-          .addReg(SrcReg)
-          .addReg(SrcReg, getKillRegState(KillSrc));
-    } else {
-      BuildMI(MBB, I, DL, get(AArch64::FMOVDr), DestReg)
-          .addReg(SrcReg, getKillRegState(KillSrc));
-    }
+    BuildMI(MBB, I, DL, get(AArch64::FMOVDr), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   }
 
   if (AArch64::FPR32RegClass.contains(DestReg) &&
       AArch64::FPR32RegClass.contains(SrcReg)) {
-    if (Subtarget.hasNEON()) {
-      DestReg = RI.getMatchingSuperReg(DestReg, AArch64::ssub,
-                                       &AArch64::FPR128RegClass);
-      SrcReg = RI.getMatchingSuperReg(SrcReg, AArch64::ssub,
-                                      &AArch64::FPR128RegClass);
-      BuildMI(MBB, I, DL, get(AArch64::ORRv16i8), DestReg)
-          .addReg(SrcReg)
-          .addReg(SrcReg, getKillRegState(KillSrc));
-    } else {
-      BuildMI(MBB, I, DL, get(AArch64::FMOVSr), DestReg)
-          .addReg(SrcReg, getKillRegState(KillSrc));
-    }
+    BuildMI(MBB, I, DL, get(AArch64::FMOVSr), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   }
 
   if (AArch64::FPR16RegClass.contains(DestReg) &&
       AArch64::FPR16RegClass.contains(SrcReg)) {
-    if (Subtarget.hasNEON()) {
-      DestReg = RI.getMatchingSuperReg(DestReg, AArch64::hsub,
-                                       &AArch64::FPR128RegClass);
-      SrcReg = RI.getMatchingSuperReg(SrcReg, AArch64::hsub,
-                                      &AArch64::FPR128RegClass);
-      BuildMI(MBB, I, DL, get(AArch64::ORRv16i8), DestReg)
-          .addReg(SrcReg)
-          .addReg(SrcReg, getKillRegState(KillSrc));
-    } else {
-      DestReg = RI.getMatchingSuperReg(DestReg, AArch64::hsub,
-                                       &AArch64::FPR32RegClass);
-      SrcReg = RI.getMatchingSuperReg(SrcReg, AArch64::hsub,
-                                      &AArch64::FPR32RegClass);
-      BuildMI(MBB, I, DL, get(AArch64::FMOVSr), DestReg)
-          .addReg(SrcReg, getKillRegState(KillSrc));
-    }
+    DestReg =
+        RI.getMatchingSuperReg(DestReg, AArch64::hsub, &AArch64::FPR32RegClass);
+    SrcReg =
+        RI.getMatchingSuperReg(SrcReg, AArch64::hsub, &AArch64::FPR32RegClass);
+    BuildMI(MBB, I, DL, get(AArch64::FMOVSr), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   }
 
   if (AArch64::FPR8RegClass.contains(DestReg) &&
       AArch64::FPR8RegClass.contains(SrcReg)) {
-    if (Subtarget.hasNEON()) {
-      DestReg = RI.getMatchingSuperReg(DestReg, AArch64::bsub,
-                                       &AArch64::FPR128RegClass);
-      SrcReg = RI.getMatchingSuperReg(SrcReg, AArch64::bsub,
-                                      &AArch64::FPR128RegClass);
-      BuildMI(MBB, I, DL, get(AArch64::ORRv16i8), DestReg)
-          .addReg(SrcReg)
-          .addReg(SrcReg, getKillRegState(KillSrc));
-    } else {
-      DestReg = RI.getMatchingSuperReg(DestReg, AArch64::bsub,
-                                       &AArch64::FPR32RegClass);
-      SrcReg = RI.getMatchingSuperReg(SrcReg, AArch64::bsub,
-                                      &AArch64::FPR32RegClass);
-      BuildMI(MBB, I, DL, get(AArch64::FMOVSr), DestReg)
-          .addReg(SrcReg, getKillRegState(KillSrc));
-    }
+    DestReg =
+        RI.getMatchingSuperReg(DestReg, AArch64::bsub, &AArch64::FPR32RegClass);
+    SrcReg =
+        RI.getMatchingSuperReg(SrcReg, AArch64::bsub, &AArch64::FPR32RegClass);
+    BuildMI(MBB, I, DL, get(AArch64::FMOVSr), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   }
 
@@ -3569,6 +3623,11 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+#ifndef NDEBUG
+  const TargetRegisterInfo &TRI = getRegisterInfo();
+  errs() << TRI.getRegAsmName(DestReg) << " = COPY "
+         << TRI.getRegAsmName(SrcReg) << "\n";
+#endif
   llvm_unreachable("unimplemented reg-to-reg copy");
 }
 
@@ -4282,6 +4341,10 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
   case AArch64::ST1Twov1d:
   case AArch64::ST1Threev1d:
   case AArch64::ST1Fourv1d:
+  case AArch64::ST1i8:
+  case AArch64::ST1i16:
+  case AArch64::ST1i32:
+  case AArch64::ST1i64:
   case AArch64::IRG:
   case AArch64::IRGstack:
   case AArch64::STGloop:
@@ -7132,15 +7195,22 @@ static void signOutlinedFunction(MachineFunction &MF, MachineBasicBlock &MBB,
     //    PACIASP                   EMITBKEY
     //    CFI_INSTRUCTION           PACIBSP
     //                              CFI_INSTRUCTION
+    unsigned PACI;
     if (ShouldSignReturnAddrWithAKey) {
-      BuildMI(MBB, MBBPAC, DebugLoc(), TII->get(AArch64::PACIASP))
-          .setMIFlag(MachineInstr::FrameSetup);
+      PACI = Subtarget.hasPAuth() ? AArch64::PACIA : AArch64::PACIASP;
     } else {
       BuildMI(MBB, MBBPAC, DebugLoc(), TII->get(AArch64::EMITBKEY))
           .setMIFlag(MachineInstr::FrameSetup);
-      BuildMI(MBB, MBBPAC, DebugLoc(), TII->get(AArch64::PACIBSP))
-          .setMIFlag(MachineInstr::FrameSetup);
+      PACI = Subtarget.hasPAuth() ? AArch64::PACIB : AArch64::PACIBSP;
     }
+
+    auto MI = BuildMI(MBB, MBBPAC, DebugLoc(), TII->get(PACI));
+    if (Subtarget.hasPAuth())
+      MI.addReg(AArch64::LR, RegState::Define)
+          .addReg(AArch64::LR)
+          .addReg(AArch64::SP, RegState::InternalRead);
+    MI.setMIFlag(MachineInstr::FrameSetup);
+
     unsigned CFIIndex =
         MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
     BuildMI(MBB, MBBPAC, DebugLoc(), TII->get(AArch64::CFI_INSTRUCTION))
@@ -7148,7 +7218,8 @@ static void signOutlinedFunction(MachineFunction &MF, MachineBasicBlock &MBB,
         .setMIFlags(MachineInstr::FrameSetup);
 
     // If v8.3a features are available we can replace a RET instruction by
-    // RETAA or RETAB and omit the AUT instructions
+    // RETAA or RETAB and omit the AUT instructions. In this case the
+    // DW_CFA_AARCH64_negate_ra_state can't be emitted.
     if (Subtarget.hasPAuth() && MBBAUT != MBB.end() &&
         MBBAUT->getOpcode() == AArch64::RET) {
       BuildMI(MBB, MBBAUT, DL,
@@ -7161,6 +7232,11 @@ static void signOutlinedFunction(MachineFunction &MF, MachineBasicBlock &MBB,
               TII->get(ShouldSignReturnAddrWithAKey ? AArch64::AUTIASP
                                                     : AArch64::AUTIBSP))
           .setMIFlag(MachineInstr::FrameDestroy);
+      unsigned CFIIndexAuth =
+          MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
+      BuildMI(MBB, MBBAUT, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndexAuth)
+          .setMIFlags(MachineInstr::FrameDestroy);
     }
   }
 }
@@ -7337,7 +7413,11 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
     unsigned Reg = findRegisterToSaveLRTo(C);
     assert(Reg != 0 && "No callee-saved register available?");
 
-    // Save and restore LR from that register.
+    // LR has to be a live in so that we can save it.
+    if (!MBB.isLiveIn(AArch64::LR))
+      MBB.addLiveIn(AArch64::LR);
+
+    // Save and restore LR from Reg.
     Save = BuildMI(MF, DebugLoc(), get(AArch64::ORRXrs), Reg)
                .addReg(AArch64::XZR)
                .addReg(AArch64::LR)

@@ -392,7 +392,7 @@ CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
       Context, Class, EndLoc,
       DeclarationNameInfo(MethodName, IntroducerRange.getBegin(),
                           MethodNameLoc),
-      MethodType, MethodTypeInfo, SC_None,
+      MethodType, MethodTypeInfo, SC_None, getCurFPFeatures().isFPConstrained(),
       /*isInline=*/true, ConstexprKind, EndLoc, TrailingRequiresClause);
   Method->setAccess(AS_public);
   if (!TemplateParams)
@@ -1244,7 +1244,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   // cleanups from the enclosing full-expression.
   PushExpressionEvaluationContext(
       LSI->CallOperator->isConsteval()
-          ? ExpressionEvaluationContext::ConstantEvaluated
+          ? ExpressionEvaluationContext::ImmediateFunctionContext
           : ExpressionEvaluationContext::PotentiallyEvaluated);
 }
 
@@ -1446,6 +1446,7 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
   CXXConversionDecl *Conversion = CXXConversionDecl::Create(
       S.Context, Class, Loc,
       DeclarationNameInfo(ConversionName, Loc, ConvNameLoc), ConvTy, ConvTSI,
+      S.getCurFPFeatures().isFPConstrained(),
       /*isInline=*/true, ExplicitSpecifier(),
       S.getLangOpts().CPlusPlus17 ? ConstexprSpecKind::Constexpr
                                   : ConstexprSpecKind::Unspecified,
@@ -1487,6 +1488,7 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
   CXXMethodDecl *Invoke = CXXMethodDecl::Create(
       S.Context, Class, Loc, DeclarationNameInfo(InvokerName, Loc),
       InvokerFunctionTy, CallOperator->getTypeSourceInfo(), SC_Static,
+      S.getCurFPFeatures().isFPConstrained(),
       /*isInline=*/true, ConstexprSpecKind::Unspecified,
       CallOperator->getBody()->getEndLoc());
   for (unsigned I = 0, N = CallOperator->getNumParams(); I != N; ++I)
@@ -1555,6 +1557,7 @@ static void addBlockPointerConversion(Sema &S,
   CXXConversionDecl *Conversion = CXXConversionDecl::Create(
       S.Context, Class, Loc, DeclarationNameInfo(Name, Loc, NameLoc), ConvTy,
       S.Context.getTrivialTypeSourceInfo(ConvTy, Loc),
+      S.getCurFPFeatures().isFPConstrained(),
       /*isInline=*/true, ExplicitSpecifier(), ConstexprSpecKind::Unspecified,
       CallOperator->getBody()->getEndLoc());
   Conversion->setAccess(AS_public);
@@ -1944,6 +1947,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     // ratified, it lays out the exact set of conditions where we shouldn't
     // allow a lambda-expression.
     case ExpressionEvaluationContext::ConstantEvaluated:
+    case ExpressionEvaluationContext::ImmediateFunctionContext:
       // We don't actually diagnose this case immediately, because we
       // could be within a context where we might find out later that
       // the expression is potentially evaluated (e.g., for typeid).
@@ -1974,8 +1978,7 @@ ExprResult Sema::BuildBlockForLambdaConversion(SourceLocation CurrentLocation,
   CallOperator->markUsed(Context);
 
   ExprResult Init = PerformCopyInitialization(
-      InitializedEntity::InitializeLambdaToBlock(ConvLocation, Src->getType(),
-                                                 /*NRVO=*/false),
+      InitializedEntity::InitializeLambdaToBlock(ConvLocation, Src->getType()),
       CurrentLocation, Src);
   if (!Init.isInvalid())
     Init = ActOnFinishFullExpr(Init.get(), /*DiscardedValue*/ false);

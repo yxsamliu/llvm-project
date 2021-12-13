@@ -211,10 +211,8 @@ typedef struct {
   uint32_t device_id;
 } buffer_t;
 
-  hsa_status_t device_malloc(void **mem, size_t size, int device_id);
-  hsa_status_t host_malloc(void **mem, size_t size);
-  hsa_status_t atmi_free(void *mem);
-#include "../../plugins/amdgpu/impl/atmi_runtime.h"
+#include "../../plugins/amdgpu/impl/impl_runtime.h"
+#include "../plugins/amdgpu/src/utils.h"
 
 #ifdef __cplusplus
 } // extern "C"

@@ -108,6 +108,7 @@ public:
     // Assume we are in teams region or that we use a single block
     // per target region
     ST numberOfActiveOMPThreads = GetNumberOfOmpThreads(IsSPMDExecutionMode);
+    int32_t schedtype_nomod = SCHEDULE_WITHOUT_MODIFIERS(schedtype);
 
     // All warps that are in excess of the maximum requested, do
     // not execute the loop
@@ -116,8 +117,12 @@ public:
           "%d, num tids %d\n",
           (int)gtid, (int)schedtype, (long long)chunk, (int)gtid,
           (int)numberOfActiveOMPThreads);
-    ASSERT0(LT_FUSSY, gtid < numberOfActiveOMPThreads,
-            "current thread is not needed here; error");
+    ASSERT(LT_FUSSY, (gtid < numberOfActiveOMPThreads) ||
+           (schedtype_nomod == kmp_sched_distr_static_chunk) ||
+           (schedtype_nomod == kmp_sched_distr_static_nochunk) ||
+           (schedtype_nomod == kmp_sched_distr_static_chunk_sched_static_chunkone),
+           "for_static_init: current thread %d (%d) is not needed here; error\n",
+           gtid, numberOfActiveOMPThreads);
 
     // copy
     int lastiter = 0;
@@ -125,7 +130,7 @@ public:
     T ub = *pupper;
     ST stride = *pstride;
     // init
-    switch (SCHEDULE_WITHOUT_MODIFIERS(schedtype)) {
+    switch (schedtype_nomod) {
     case kmp_sched_static_chunk: {
       if (chunk > 0) {
         ForStaticChunk(lastiter, lb, ub, stride, chunk, gtid,
@@ -210,18 +215,19 @@ public:
   INLINE static void dispatch_init(kmp_Ident *loc, int32_t threadId,
                                    kmp_sched_t schedule, T lb, T ub, ST st,
                                    ST chunk) {
-    if (checkRuntimeUninitialized(loc)) {
+    if (isRuntimeUninitialized()) {
       // In SPMD mode no need to check parallelism level - dynamic scheduling
       // may appear only in L2 parallel regions with lightweight runtime.
-      ASSERT0(LT_FUSSY, checkSPMDMode(loc), "Expected non-SPMD mode.");
+      ASSERT0(LT_FUSSY, __kmpc_is_spmd_exec_mode(), "Expected non-SPMD mode.");
       return;
     }
-    int tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
+    int tid = GetLogicalThreadIdInBlock();
     omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(tid);
-    T tnum = GetNumberOfOmpThreads(checkSPMDMode(loc));
+    T tnum = GetNumberOfOmpThreads(__kmpc_is_spmd_exec_mode());
     T tripCount = ub - lb + 1; // +1 because ub is inclusive
-    ASSERT0(LT_FUSSY, threadId < tnum,
-            "current thread is not needed here; error");
+    ASSERT(LT_FUSSY, threadId < tnum,
+            "dispatch_init: current thread %d (%d) is not needed here; error",
+            threadId, tnum);
 
     /* Currently just ignore the monotonic and non-monotonic modifiers
      * (the compiler isn't producing them * yet anyway).
@@ -450,10 +456,10 @@ public:
 
   INLINE static int dispatch_next(kmp_Ident *loc, int32_t gtid, int32_t *plast,
                                   T *plower, T *pupper, ST *pstride) {
-    if (checkRuntimeUninitialized(loc)) {
+    if (isRuntimeUninitialized()) {
       // In SPMD mode no need to check parallelism level - dynamic scheduling
       // may appear only in L2 parallel regions with lightweight runtime.
-      ASSERT0(LT_FUSSY, checkSPMDMode(loc), "Expected non-SPMD mode.");
+      ASSERT0(LT_FUSSY, __kmpc_is_spmd_exec_mode(), "Expected non-SPMD mode.");
       if (*plast)
         return DISPATCH_FINISHED;
       *plast = 1;
@@ -462,9 +468,10 @@ public:
     // ID of a thread in its own warp
 
     // automatically selects thread or warp ID based on selected implementation
-    int tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
-    ASSERT0(LT_FUSSY, gtid < GetNumberOfOmpThreads(checkSPMDMode(loc)),
-            "current thread is not needed here; error");
+    int tid = GetLogicalThreadIdInBlock();
+    ASSERT(LT_FUSSY, gtid < GetNumberOfOmpThreads(__kmpc_is_spmd_exec_mode()),
+            "dispatch_next: current thread %d (%d) is not needed here; error",
+            gtid, GetNumberOfOmpThreads(__kmpc_is_spmd_exec_mode()));
     // retrieve schedule
     kmp_sched_t schedule =
         omptarget_nvptx_threadPrivateContext->ScheduleType(tid);
@@ -517,7 +524,7 @@ public:
     PRINT(LD_LOOP,
           "Got sched: active %d, total %d: lb %lld, ub %lld, stride = %lld, "
           "last %d\n",
-          (int)GetNumberOfOmpThreads(isSPMDMode()),
+          (int)GetNumberOfOmpThreads(__kmpc_is_spmd_exec_mode()),
           (int)GetNumberOfWorkersInTeam(), (long long)*plower,
           (long long)*pupper, (long long)*pstride, (int)*plast);
     return DISPATCH_NOTFINISHED;
@@ -636,7 +643,7 @@ EXTERN void __kmpc_for_static_init_4(kmp_Ident *loc, int32_t global_tid,
   PRINT0(LD_IO, "call kmpc_for_static_init_4\n");
   omptarget_nvptx_LoopSupport<int32_t, int32_t>::for_static_init(
       global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
-      checkSPMDMode(loc));
+      __kmpc_is_spmd_exec_mode());
 }
 
 EXTERN void __kmpc_for_static_init_4u(kmp_Ident *loc, int32_t global_tid,
@@ -647,7 +654,7 @@ EXTERN void __kmpc_for_static_init_4u(kmp_Ident *loc, int32_t global_tid,
   PRINT0(LD_IO, "call kmpc_for_static_init_4u\n");
   omptarget_nvptx_LoopSupport<uint32_t, int32_t>::for_static_init(
       global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
-      checkSPMDMode(loc));
+      __kmpc_is_spmd_exec_mode());
 }
 
 EXTERN void __kmpc_for_static_init_8(kmp_Ident *loc, int32_t global_tid,
@@ -658,7 +665,7 @@ EXTERN void __kmpc_for_static_init_8(kmp_Ident *loc, int32_t global_tid,
   PRINT0(LD_IO, "call kmpc_for_static_init_8\n");
   omptarget_nvptx_LoopSupport<int64_t, int64_t>::for_static_init(
       global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
-      checkSPMDMode(loc));
+      __kmpc_is_spmd_exec_mode());
 }
 
 EXTERN void __kmpc_for_static_init_8u(kmp_Ident *loc, int32_t global_tid,
@@ -669,7 +676,53 @@ EXTERN void __kmpc_for_static_init_8u(kmp_Ident *loc, int32_t global_tid,
   PRINT0(LD_IO, "call kmpc_for_static_init_8u\n");
   omptarget_nvptx_LoopSupport<uint64_t, int64_t>::for_static_init(
       global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
-      checkSPMDMode(loc));
+      __kmpc_is_spmd_exec_mode());
+}
+
+EXTERN void __kmpc_distribute_static_init_4(kmp_Ident *loc, int32_t global_tid,
+                                            int32_t schedtype,
+                                            int32_t *plastiter, int32_t *plower,
+                                            int32_t *pupper, int32_t *pstride,
+                                            int32_t incr, int32_t chunk) {
+  PRINT0(LD_IO, "call kmpc_distribute_static_init_4\n");
+  omptarget_nvptx_LoopSupport<int32_t, int32_t>::for_static_init(
+      global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
+      __kmpc_is_spmd_exec_mode());
+}
+
+EXTERN void __kmpc_distribute_static_init_4u(kmp_Ident *loc, int32_t global_tid,
+                                             int32_t schedtype,
+                                             int32_t *plastiter,
+                                             uint32_t *plower, uint32_t *pupper,
+                                             int32_t *pstride, int32_t incr,
+                                             int32_t chunk) {
+  PRINT0(LD_IO, "call kmpc_distribute_static_init_4u\n");
+  omptarget_nvptx_LoopSupport<uint32_t, int32_t>::for_static_init(
+      global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
+      __kmpc_is_spmd_exec_mode());
+}
+
+EXTERN void __kmpc_distribute_static_init_8(kmp_Ident *loc, int32_t global_tid,
+                                            int32_t schedtype,
+                                            int32_t *plastiter, int64_t *plower,
+                                            int64_t *pupper, int64_t *pstride,
+                                            int64_t incr, int64_t chunk) {
+  PRINT0(LD_IO, "call kmpc_distribute_static_init_8\n");
+  omptarget_nvptx_LoopSupport<int64_t, int64_t>::for_static_init(
+      global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
+      __kmpc_is_spmd_exec_mode());
+}
+
+EXTERN void __kmpc_distribute_static_init_8u(kmp_Ident *loc, int32_t global_tid,
+                                             int32_t schedtype,
+                                             int32_t *plastiter,
+                                             uint64_t *plower, uint64_t *pupper,
+                                             int64_t *pstride, int64_t incr,
+                                             int64_t chunk) {
+  PRINT0(LD_IO, "call kmpc_distribute_static_init_8u\n");
+  omptarget_nvptx_LoopSupport<uint64_t, int64_t>::for_static_init(
+      global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
+      __kmpc_is_spmd_exec_mode());
 }
 
 EXTERN
@@ -766,6 +819,10 @@ void __kmpc_for_static_init_8u_simple_generic(
   omptarget_nvptx_LoopSupport<uint64_t, int64_t>::for_static_init(
       global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
       /*IsSPMDExecutionMode=*/false);
+}
+
+EXTERN void __kmpc_distribute_static_fini(kmp_Ident *loc, int32_t global_tid) {
+  PRINT0(LD_IO, "call kmpc_distribute_static_fini\n");
 }
 
 EXTERN void __kmpc_for_static_fini(kmp_Ident *loc, int32_t global_tid) {

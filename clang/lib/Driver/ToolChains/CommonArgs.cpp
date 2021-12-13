@@ -18,7 +18,6 @@
 #include "Arch/X86.h"
 #include "HIP.h"
 #include "Hexagon.h"
-#include "InputInfo.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/ObjCRuntime.h"
@@ -28,6 +27,7 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
@@ -35,6 +35,7 @@
 #include "clang/Driver/Util.h"
 #include "clang/Driver/XRayArgs.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -290,6 +291,15 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
       // Pass -z prefix for gcc linker compatibility.
       A.claim();
       A.render(Args, CmdArgs);
+    } else if (A.getOption().matches(options::OPT_b)) {
+      const llvm::Triple &T = TC.getTriple();
+      if (!T.isOSAIX()) {
+        TC.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
+            << A.getSpelling() << T.str();
+      }
+      // Pass -b prefix for AIX linker.
+      A.claim();
+      A.render(Args, CmdArgs);
     } else {
       A.renderAsInput(Args, CmdArgs);
     }
@@ -338,7 +348,12 @@ void tools::AddTargetFeature(const ArgList &Args,
 /// Get the (LLVM) name of the AMDGPU gpu we are targeting.
 static std::string getAMDGPUTargetGPU(const llvm::Triple &T,
                                       const ArgList &Args) {
-  if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
+  Arg *A = Args.getLastArg(options::OPT_mcpu_EQ);
+  if (!A)
+    A = Args.getLastArg(options::OPT_march_EQ);
+  if (!A)
+    A = Args.getLastArg(options::OPT_offload_arch_EQ);
+  if (A) {
     auto GPUName = getProcessorFromTargetID(T, A->getValue());
     return llvm::StringSwitch<std::string>(GPUName)
         .Cases("rv630", "rv635", "r600")
@@ -379,8 +394,8 @@ static StringRef getWebAssemblyTargetCPU(const ArgList &Args) {
   return "generic";
 }
 
-std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
-                              bool FromAs) {
+std::string tools::getCPUName(const Driver &D, const ArgList &Args,
+                              const llvm::Triple &T, bool FromAs) {
   Arg *A;
 
   switch (T.getArch()) {
@@ -436,14 +451,9 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
     if (!TargetCPUName.empty())
       return TargetCPUName;
 
-    if (T.isOSAIX()) {
-      unsigned major, minor, unused_micro;
-      T.getOSVersion(major, minor, unused_micro);
-      // The minimal arch level moved from pwr4 for AIX7.1 to
-      // pwr7 for AIX7.2.
-      TargetCPUName =
-          (major < 7 || (major == 7 && minor < 2)) ? "pwr4" : "pwr7";
-    } else if (T.getArch() == llvm::Triple::ppc64le)
+    if (T.isOSAIX())
+      TargetCPUName = "pwr7";
+    else if (T.getArch() == llvm::Triple::ppc64le)
       TargetCPUName = "ppc64le";
     else if (T.getArch() == llvm::Triple::ppc64)
       TargetCPUName = "ppc64";
@@ -471,7 +481,7 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
 
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
-    return x86::getX86TargetCPU(Args, T);
+    return x86::getX86TargetCPU(D, Args, T);
 
   case llvm::Triple::hexagon:
     return "hexagon" +
@@ -543,7 +553,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   // the plugin.
 
   // Handle flags for selecting CPU variants.
-  std::string CPU = getCPUName(Args, ToolChain.getTriple());
+  std::string CPU = getCPUName(D, Args, ToolChain.getTriple());
   if (!CPU.empty())
     CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=mcpu=") + CPU));
 
@@ -653,11 +663,6 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
       CmdArgs.push_back("-plugin-opt=new-pass-manager");
   }
 
-  // Pass an option to enable pseudo probe emission.
-  if (Args.hasFlag(options::OPT_fpseudo_probe_for_profiling,
-                   options::OPT_fno_pseudo_probe_for_profiling, false))
-    CmdArgs.push_back("-plugin-opt=pseudo-probe-for-profiling");
-
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);
   if (!StatsFile.empty())
@@ -732,7 +737,7 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
   std::string CandidateRPath = TC.getArchSpecificLibPath();
   if (TC.getVFS().exists(CandidateRPath)) {
     CmdArgs.push_back("-rpath");
-    CmdArgs.push_back(Args.MakeArgString(CandidateRPath.c_str()));
+    CmdArgs.push_back(Args.MakeArgString(CandidateRPath));
   }
 }
 
@@ -808,11 +813,6 @@ static bool addSanitizerDynamicList(const ToolChain &TC, const ArgList &Args,
   // the option, so don't try to pass it.
   if (TC.getTriple().getOS() == llvm::Triple::Solaris)
     return true;
-  // Myriad is static linking only.  Furthermore, some versions of its
-  // linker have the bug where --export-dynamic overrides -static, so
-  // don't use --export-dynamic on that platform.
-  if (TC.getTriple().getVendor() == llvm::Triple::Myriad)
-    return true;
   SmallString<128> SanRT(TC.getCompilerRT(Args, Sanitizer));
   if (llvm::sys::fs::exists(SanRT + ".syms")) {
     CmdArgs.push_back(Args.MakeArgString("--dynamic-list=" + SanRT + ".syms"));
@@ -822,6 +822,9 @@ static bool addSanitizerDynamicList(const ToolChain &TC, const ArgList &Args,
 }
 
 static const char *getAsNeededOption(const ToolChain &TC, bool as_needed) {
+  assert(!TC.getTriple().isOSAIX() &&
+         "AIX linker does not support any form of --as-needed option yet.");
+
   // While the Solaris 11.2 ld added --as-needed/--no-as-needed as aliases
   // for the native forms -z ignore/-z record, they are missing in Illumos,
   // so always use the native form.
@@ -850,14 +853,14 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
   }
   CmdArgs.push_back("-lm");
   // There's no libdl on all OSes.
-  if (!TC.getTriple().isOSFreeBSD() &&
-      !TC.getTriple().isOSNetBSD() &&
+  if (!TC.getTriple().isOSFreeBSD() && !TC.getTriple().isOSNetBSD() &&
       !TC.getTriple().isOSOpenBSD() &&
-       TC.getTriple().getOS() != llvm::Triple::RTEMS)
+      TC.getTriple().getOS() != llvm::Triple::RTEMS)
     CmdArgs.push_back("-ldl");
   // Required for backtrace on some OSes
   if (TC.getTriple().isOSFreeBSD() ||
-      TC.getTriple().isOSNetBSD())
+      TC.getTriple().isOSNetBSD() ||
+      TC.getTriple().isOSOpenBSD())
     CmdArgs.push_back("-lexecinfo");
 }
 
@@ -1508,7 +1511,8 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
 
   LibGccType LGT = getLibGccType(TC, D, Args);
   bool AsNeeded = LGT == LibGccType::UnspecifiedLibGcc &&
-                  !TC.getTriple().isAndroid() && !TC.getTriple().isOSCygMing();
+                  !TC.getTriple().isAndroid() &&
+                  !TC.getTriple().isOSCygMing() && !TC.getTriple().isOSAIX();
   if (AsNeeded)
     CmdArgs.push_back(getAsNeededOption(TC, true));
 
@@ -1669,55 +1673,87 @@ void tools::addX86AlignBranchArgs(const Driver &D, const ArgList &Args,
 }
 
 /// SDLSearch: Search for Static Device Library
+/// The search for SDL bitcode files is consistent with how static host
+/// libraries are discovered. That is, the -l option triggers a search for
+/// files in a set of directories called the LINKPATH. The host library search
+/// procedure looks for a specific filename in the LINKPATH.  The filename for
+/// a host library is lib<libname>.a or lib<libname>.so. For SDLs, there is an
+/// ordered-set of filenames that are searched. We call this ordered-set of
+/// filenames as SEARCH-ORDER. Since an SDL can either be device-type specific,
+/// architecture specific, or generic across all architectures, a naming
+/// convention and search order is used where the file name embeds the
+/// architecture name <arch-name> (nvptx or amdgcn) and the GPU device type
+/// <device-name> such as sm_30 and gfx906. <device-name> is absent in case of
+/// device-independent SDLs. To reduce congestion in host library directories,
+/// the search first looks for files in the “libdevice” subdirectory. SDLs that
+/// are bc files begin with the prefix “lib”.
+///
+/// Machine-code SDLs can also be managed as an archive (*.a file). The
+/// convention has been to use the prefix “lib”. To avoid confusion with host
+/// archive libraries, we use prefix "libbc-" for the bitcode SDL archives.
+///
 bool tools::SDLSearch(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                       llvm::opt::ArgStringList &CC1Args,
-                      SmallVector<std::string, 8> LibraryPaths,
-                      std::string libname, StringRef ArchName,
-                      StringRef GpuArch, bool isBitCodeSDL,
+                      SmallVector<std::string, 8> LibraryPaths, std::string Lib,
+                      StringRef Arch, StringRef TargetID, bool isBitCodeSDL,
                       bool postClangLink) {
-  std::string archname = ArchName.str();
-  std::string gpuname = GpuArch.str();
+  SmallVector<std::string, 12> SDLs;
 
-  SmallVector<std::string, 12> SDL_FileNames;
+  std::string LibDeviceLoc = "/libdevice";
+  std::string LibBcPrefix = "/libbc-";
+  std::string LibPrefix = "/lib";
+
   if (isBitCodeSDL) {
-    // For bitcode SDL, search for these 12 relative SDL filenames
-    SDL_FileNames.push_back(std::string("/libdevice/libbc-" + libname + "-" +
-                                        archname + "-" + gpuname + ".a"));
-    SDL_FileNames.push_back(std::string("/libbc-" + libname + "-" + archname +
-                                        "-" + gpuname + ".a"));
-    SDL_FileNames.push_back(
-        std::string("/libdevice/libbc-" + libname + "-" + archname + ".a"));
-    SDL_FileNames.push_back(
-        std::string("/libbc-" + libname + "-" + archname + ".a"));
-    SDL_FileNames.push_back(std::string("/libdevice/libbc-" + libname + ".a"));
-    SDL_FileNames.push_back(std::string("/libbc-" + libname + ".a"));
-    SDL_FileNames.push_back(std::string("/libdevice/lib" + libname + "-" +
-                                        archname + "-" + gpuname + ".bc"));
-    SDL_FileNames.push_back(
-        std::string("/lib" + libname + "-" + archname + "-" + gpuname + ".bc"));
-    SDL_FileNames.push_back(
-        std::string("/libdevice/lib" + libname + "-" + archname + ".bc"));
-    SDL_FileNames.push_back(
-        std::string("/lib" + libname + "-" + archname + ".bc"));
-    SDL_FileNames.push_back(std::string("/libdevice/lib" + libname + ".bc"));
-    SDL_FileNames.push_back(std::string("/lib" + libname + ".bc"));
+    // SEARCH-ORDER for Bitcode SDLs:
+    //       libdevice/libbc-<libname>-<arch-name>-<device-type>.a
+    //       libbc-<libname>-<arch-name>-<device-type>.a
+    //       libdevice/libbc-<libname>-<arch-name>.a
+    //       libbc-<libname>-<arch-name>.a
+    //       libdevice/libbc-<libname>.a
+    //       libbc-<libname>.a
+    //       libdevice/lib<libname>-<arch-name>-<device-type>.bc
+    //       lib<libname>-<arch-name>-<device-type>.bc
+    //       libdevice/lib<libname>-<arch-name>.bc
+    //       lib<libname>-<arch-name>.bc
+    //       libdevice/lib<libname>.bc
+    //       lib<libname>.bc
+
+    for (StringRef Base : {LibBcPrefix, LibPrefix}) {
+      const auto *Ext = Base.contains(LibBcPrefix) ? ".a" : ".bc";
+
+      for (auto Suffix : {Twine(Lib + "-" + Arch + "-" + TargetID).str(),
+                          Twine(Lib + "-" + Arch).str(), Twine(Lib).str()}) {
+        SDLs.push_back(Twine(LibDeviceLoc + Base + Suffix + Ext).str());
+        SDLs.push_back(Twine(Base + Suffix + Ext).str());
+      }
+    }
   } else {
-    // Otherwise only 4 names to search for machine-code SDL
-    SDL_FileNames.push_back(std::string("/libdevice/lib" + libname + "-" +
-                                        archname + "-" + gpuname + ".a"));
-    SDL_FileNames.push_back(
-        std::string("/lib" + libname + "-" + archname + "-" + gpuname + ".a"));
-    SDL_FileNames.push_back(
-        std::string("/libdevice/lib" + libname + "-" + archname + ".a"));
-    SDL_FileNames.push_back(
-        std::string("/lib" + libname + "-" + archname + ".a"));
+    // SEARCH-ORDER for Machine-code SDLs:
+    //    libdevice/lib<libname>-<arch-name>-<device-type>.a
+    //    lib<libname>-<arch-name>-<device-type>.a
+    //    libdevice/lib<libname>-<arch-name>.a
+    //    lib<libname>-<arch-name>.a
+
+    const auto *Ext = ".a";
+
+    for (auto Suffix : {Twine(Lib + "-" + Arch + "-" + TargetID).str(),
+                        Twine(Lib + "-" + Arch).str()}) {
+      SDLs.push_back(Twine(LibDeviceLoc + LibPrefix + Suffix + Ext).str());
+      SDLs.push_back(Twine(LibPrefix + Suffix + Ext).str());
+    }
   }
 
-  // Add file for archive of bundles, this is the final fallback
+  // The CUDA toolchain does not use a global device llvm-link before the LLVM
+  // backend generates ptx. So currently, the use of bitcode SDL for nvptx is
+  // only possible with post-clang-cc1 linking. Clang cc1 has a feature that
+  // will link libraries after clang compilation while the LLVM IR is still in
+  // memory. This utilizes a clang cc1 option called “-mlink-builtin-bitcode”.
+  // This is a clang -cc1 option that is generated by the clang driver. The
+  // option value must a full path to an existing file.
   bool FoundSDL = false;
-  for (std::string LibraryPath : LibraryPaths) {
-    for (std::string SDL_FileName : SDL_FileNames) {
-      std::string FullName = std::string(LibraryPath + SDL_FileName);
+  for (auto LPath : LibraryPaths) {
+    for (auto SDL : SDLs) {
+      auto FullName = Twine(LPath + SDL).str();
       if (llvm::sys::fs::exists(FullName)) {
         if (postClangLink)
           CC1Args.push_back("-mlink-builtin-bitcode");
@@ -1729,33 +1765,33 @@ bool tools::SDLSearch(const Driver &D, const llvm::opt::ArgList &DriverArgs,
     if (FoundSDL)
       break;
   }
-
   return FoundSDL;
 }
 
-bool tools::GetSDLFromOffloadArchive(Compilation &C, const Driver &D,
-                                     const Tool &T, const JobAction &JA,
-                                     const InputInfoList &Inputs,
-                                     const llvm::opt::ArgList &DriverArgs,
-                                     llvm::opt::ArgStringList &CC1Args,
-                                     SmallVector<std::string, 8> LibraryPaths,
-                                     std::string libname, StringRef ArchName,
-                                     StringRef GpuArch, bool isBitCodeSDL,
-                                     bool postClangLink) {
-  std::string archname = ArchName.str();
-  std::string gpuname = GpuArch.str();
+/// Search if a user provided archive file lib<libname>.a exists in any of
+/// the library paths. If so, add a new command to clang-offload-bundler to
+/// unbundle this archive and create a temporary device specific archive. Name
+/// of this SDL is passed to the llvm-link (for amdgcn) or to the
+/// clang-nvlink-wrapper (for nvptx) commands by the driver.
+bool tools::GetSDLFromOffloadArchive(
+    Compilation &C, const Driver &D, const Tool &T, const JobAction &JA,
+    const InputInfoList &Inputs, const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args, SmallVector<std::string, 8> LibraryPaths,
+    StringRef Lib, StringRef Arch, StringRef TargetID, bool isBitCodeSDL,
+    bool postClangLink) {
 
   // We don't support bitcode archive bundles for nvptx
-  if (isBitCodeSDL && archname == "nvptx")
+  if (isBitCodeSDL && Arch.contains("nvptx"))
     return false;
 
   bool FoundAOB = false;
   SmallVector<std::string, 2> AOBFileNames;
   std::string ArchiveOfBundles;
-  for (std::string LibraryPath : LibraryPaths) {
-    AOBFileNames.push_back(
-        std::string(LibraryPath + "/libdevice/lib" + libname + ".a"));
-    AOBFileNames.push_back(std::string(LibraryPath + "/lib" + libname + ".a"));
+  for (auto LPath : LibraryPaths) {
+    ArchiveOfBundles.clear();
+
+    AOBFileNames.push_back(Twine(LPath + "/libdevice/lib" + Lib + ".a").str());
+    AOBFileNames.push_back(Twine(LPath + "/lib" + Lib + ".a").str());
 
     for (auto AOB : AOBFileNames) {
       if (llvm::sys::fs::exists(AOB)) {
@@ -1765,79 +1801,115 @@ bool tools::GetSDLFromOffloadArchive(Compilation &C, const Driver &D,
       }
     }
 
-    if (FoundAOB) {
-      std::string Err;
-      std::string OutputLib = D.GetTemporaryPath(
-          isBitCodeSDL
-              ? "libbc-" + libname + "-" + archname + "-" + gpuname
-              : "lib" + libname + "-" + archname + "-" + gpuname,
-          "a");
+    if (!FoundAOB)
+      continue;
 
-      C.addTempFile(C.getArgs().MakeArgString(OutputLib.c_str()));
+    StringRef Prefix = isBitCodeSDL ? "libbc-" : "lib";
+    std::string OutputLib = D.GetTemporaryPath(
+        Twine(Prefix + Lib + "-" + Arch + "-" + TargetID).str(), "a");
 
-      ArgStringList CmdArgs;
-      SmallString<128> DeviceTriple;
-      DeviceTriple += Action::GetOffloadKindName(JA.getOffloadingDeviceKind());
+    C.addTempFile(C.getArgs().MakeArgString(OutputLib.c_str()));
+
+    ArgStringList CmdArgs;
+    SmallString<128> DeviceTriple;
+    DeviceTriple += Action::GetOffloadKindName(JA.getOffloadingDeviceKind());
+    DeviceTriple += '-';
+    std::string NormalizedTriple = T.getToolChain().getTriple().normalize();
+    DeviceTriple += NormalizedTriple;
+    if (!TargetID.empty()) {
       DeviceTriple += '-';
-      DeviceTriple += T.getToolChain().getTriple().normalize();
-      DeviceTriple += '-';
-      DeviceTriple += gpuname;
-
-      std::string UnbundleArg("-unbundle");
-      std::string TypeArg("-type=a");
-      std::string InputArg("-inputs=" + ArchiveOfBundles);
-      std::string OffloadArg("-targets=" + std::string(DeviceTriple));
-      std::string OutputArg("-outputs=" + OutputLib);
-
-      const char *UBProgram = DriverArgs.MakeArgString(
-          T.getToolChain().GetProgramPath("clang-offload-bundler"));
-
-      ArgStringList UBArgs;
-      UBArgs.push_back(C.getArgs().MakeArgString(UnbundleArg.c_str()));
-      UBArgs.push_back(C.getArgs().MakeArgString(TypeArg.c_str()));
-      UBArgs.push_back(C.getArgs().MakeArgString(InputArg.c_str()));
-      UBArgs.push_back(C.getArgs().MakeArgString(OffloadArg.c_str()));
-      UBArgs.push_back(C.getArgs().MakeArgString(OutputArg.c_str()));
-      C.addCommand(std::make_unique<Command>(
-          JA, T, ResponseFileSupport::AtFileCurCP(), UBProgram, UBArgs, Inputs,
-          InputInfo(&JA, C.getArgs().MakeArgString(OutputLib.c_str()))));
-      if (postClangLink)
-        CC1Args.push_back("-mlink-builtin-bitcode");
-
-      CC1Args.push_back(DriverArgs.MakeArgString(OutputLib));
-      break;
+      DeviceTriple += TargetID;
     }
+
+    std::string UnbundleArg("-unbundle");
+    std::string TypeArg("-type=a");
+    std::string InputArg("-inputs=" + ArchiveOfBundles);
+    std::string OffloadArg("-targets=" + std::string(DeviceTriple));
+    std::string OutputArg("-outputs=" + OutputLib);
+
+    const char *UBProgram = DriverArgs.MakeArgString(
+        T.getToolChain().GetProgramPath("clang-offload-bundler"));
+
+    ArgStringList UBArgs;
+    UBArgs.push_back(C.getArgs().MakeArgString(UnbundleArg.c_str()));
+    UBArgs.push_back(C.getArgs().MakeArgString(TypeArg.c_str()));
+    UBArgs.push_back(C.getArgs().MakeArgString(InputArg.c_str()));
+    UBArgs.push_back(C.getArgs().MakeArgString(OffloadArg.c_str()));
+    UBArgs.push_back(C.getArgs().MakeArgString(OutputArg.c_str()));
+
+    // Add this flag to not exit from clang-offload-bundler if no compatible
+    // code object is found in heterogenous archive library.
+    std::string AdditionalArgs("-allow-missing-bundles");
+    UBArgs.push_back(C.getArgs().MakeArgString(AdditionalArgs.c_str()));
+
+    C.addCommand(std::make_unique<Command>(
+        JA, T, ResponseFileSupport::AtFileCurCP(), UBProgram, UBArgs, Inputs,
+        InputInfo(&JA, C.getArgs().MakeArgString(OutputLib.c_str()))));
+    if (postClangLink)
+      CC1Args.push_back("-mlink-builtin-bitcode");
+
+    CC1Args.push_back(DriverArgs.MakeArgString(OutputLib));
+    break;
   }
 
   return FoundAOB;
 }
 
-void tools::AddStaticDeviceLibs(Compilation &C, const Tool &T,
-                                const JobAction &JA,
-                                const InputInfoList &Inputs,
-                                const llvm::opt::ArgList &DriverArgs,
-                                llvm::opt::ArgStringList &CC1Args,
-                                StringRef ArchName, StringRef GpuArch,
-                                bool isBitCodeSDL, bool postClangLink) {
+// Wrapper function used by driver for adding SDLs during link phase.
+void tools::AddStaticDeviceLibsLinking(Compilation &C, const Tool &T,
+                                       const JobAction &JA,
+                                       const InputInfoList &Inputs,
+                                       const llvm::opt::ArgList &DriverArgs,
+                                       llvm::opt::ArgStringList &CC1Args,
+                                       StringRef Arch, StringRef TargetID,
+                                       bool isBitCodeSDL, bool postClangLink) {
   AddStaticDeviceLibs(&C, &T, &JA, &Inputs, C.getDriver(), DriverArgs, CC1Args,
-                      ArchName, GpuArch, isBitCodeSDL, postClangLink);
+                      Arch, TargetID, isBitCodeSDL, postClangLink);
 }
 
-void tools::AddStaticDeviceLibs(const Driver &D,
-                                const llvm::opt::ArgList &DriverArgs,
-                                llvm::opt::ArgStringList &CC1Args,
-                                StringRef ArchName, StringRef GpuArch,
-                                bool isBitCodeSDL, bool postClangLink) {
+// Wrapper function used for post clang linking of bitcode SDLS for nvptx by
+// the CUDA toolchain.
+void tools::AddStaticDeviceLibsPostLinking(const Driver &D,
+                                           const llvm::opt::ArgList &DriverArgs,
+                                           llvm::opt::ArgStringList &CC1Args,
+                                           StringRef Arch, StringRef TargetID,
+                                           bool isBitCodeSDL,
+                                           bool postClangLink) {
   AddStaticDeviceLibs(nullptr, nullptr, nullptr, nullptr, D, DriverArgs,
-                      CC1Args, ArchName, GpuArch, isBitCodeSDL, postClangLink);
+                      CC1Args, Arch, TargetID, isBitCodeSDL, postClangLink);
 }
 
+// User defined Static Device Libraries(SDLs) can be passed to clang for
+// offloading GPU compilers. Like static host libraries, the use of a SDL is
+// specified with the -l command line option. The primary difference between
+// host and SDLs is the filenames for SDLs (refer SEARCH-ORDER for Bitcode SDLs
+// and SEARCH-ORDER for Machine-code SDLs for the naming convention).
+// SDLs are of following types:
+//
+// * Bitcode SDLs: They can either be a *.bc file or an archive of *.bc files.
+//           For NVPTX, these libraries are post-clang linked following each
+//           compilation. For AMDGPU, these libraries are linked one time
+//           during the application link phase.
+//
+// * Machine-code SDLs: They are archive files. For NVPTX, the archive members
+//           contain cubin for Nvidia GPUs and are linked one time during the
+//           link phase by the CUDA SDK linker called nvlink.	For AMDGPU, the
+//           process for machine code SDLs is still in development. But they
+//           will be linked by the LLVM tool lld.
+//
+// * Bundled objects that contain both host and device codes: Bundled objects
+//           may also contain library code compiled from source. For NVPTX, the
+//           bundle contains cubin. For AMDGPU, the bundle contains bitcode.
+//
+// For Bitcode and Machine-code SDLs, current compiler toolchains hardcode the
+// inclusion of specific SDLs such as math libraries and the OpenMP device
+// library libomptarget.
 void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
                                 const JobAction *JA,
                                 const InputInfoList *Inputs, const Driver &D,
                                 const llvm::opt::ArgList &DriverArgs,
                                 llvm::opt::ArgStringList &CC1Args,
-                                StringRef ArchName, StringRef GpuArch,
+                                StringRef Arch, StringRef TargetID,
                                 bool isBitCodeSDL, bool postClangLink) {
 
   SmallVector<std::string, 8> LibraryPaths;
@@ -1862,28 +1934,26 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
   LibraryPaths.emplace_back(DefaultLibPath.c_str());
 
   // Build list of Static Device Libraries SDLs specified by -l option
-  SmallVector<std::string, 16> SDL_Names;
-  for (std::string SDL_Name : DriverArgs.getAllArgValues(options::OPT_l)) {
-    // No Device specific SDL for these libs: omp,cudart,m,gcc,gcc_s,pthread
-    if ( SDL_Name != "omp" && SDL_Name != "cudart" && SDL_Name != "m" &&
-         SDL_Name != "gcc" && SDL_Name != "gcc_s" && SDL_Name != "pthread" &&
-         SDL_Name != "hip_hcc" ) {
-      bool inSDL_Names = false;
-      for (std::string OldName : SDL_Names) {
-        if (OldName == SDL_Name)
-          inSDL_Names = true;
-      }
-      if (!inSDL_Names) // Avoid duplicates in list of SDL_Names
-        SDL_Names.emplace_back(SDL_Name);
+  llvm::SmallSet<std::string, 16> SDLNames;
+  static const StringRef HostOnlyArchives[] = {
+      "omp", "cudart", "m", "gcc", "gcc_s", "pthread", "hip_hcc"};
+  for (auto SDLName : DriverArgs.getAllArgValues(options::OPT_l)) {
+    if (!HostOnlyArchives->contains(SDLName)) {
+      SDLNames.insert(SDLName);
     }
   }
 
-  for (std::string SDL_Name : SDL_Names) {
-    //  THIS IS THE ONLY CALL TO SDLSearch
-    if (!(SDLSearch(D, DriverArgs, CC1Args, LibraryPaths, SDL_Name, ArchName,
-                    GpuArch, isBitCodeSDL, postClangLink))) {
+  // The search stops as soon as an SDL file is found. The driver then provides
+  // the full filename of the SDL to the llvm-link or clang-nvlink-wrapper
+  // command. If no SDL is found after searching each LINKPATH with
+  // SEARCH-ORDER, it is possible that an archive file lib<libname>.a exists
+  // and may contain bundled object files.
+  for (auto SDLName : SDLNames) {
+    // This is the only call to SDLSearch
+    if (!SDLSearch(D, DriverArgs, CC1Args, LibraryPaths, SDLName, Arch,
+                   TargetID, isBitCodeSDL, postClangLink)) {
       GetSDLFromOffloadArchive(*C, D, *T, *JA, *Inputs, DriverArgs, CC1Args,
-                               LibraryPaths, SDL_Name, ArchName, GpuArch,
+                               LibraryPaths, SDLName, Arch, TargetID,
                                isBitCodeSDL, postClangLink);
     }
   }
@@ -1993,6 +2063,12 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
                                StringRef BitcodeSuffix,
                                const llvm::Triple &Triple) {
   SmallVector<StringRef, 8> LibraryPaths;
+
+  // Add path to clang lib / lib64 folder.
+  SmallString<256> DefaultLibPath = llvm::sys::path::parent_path(D.Dir);
+  llvm::sys::path::append(DefaultLibPath, Twine("lib") + CLANG_LIBDIR_SUFFIX);
+  LibraryPaths.emplace_back(DefaultLibPath.c_str());
+
   // Add user defined library paths from LIBRARY_PATH.
   llvm::Optional<std::string> LibPath =
       llvm::sys::Process::GetEnv("LIBRARY_PATH");
@@ -2004,31 +2080,30 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
       LibraryPaths.emplace_back(Path.trim());
   }
 
-  // Add path to lib / lib64 folder.
-  SmallString<256> DefaultLibPath = llvm::sys::path::parent_path(D.Dir);
-  llvm::sys::path::append(DefaultLibPath, Twine("lib") + CLANG_LIBDIR_SUFFIX);
-  LibraryPaths.emplace_back(DefaultLibPath.c_str());
-
   OptSpecifier LibomptargetBCPathOpt =
       Triple.isAMDGCN() ? options::OPT_libomptarget_amdgcn_bc_path_EQ
                         : options::OPT_libomptarget_nvptx_bc_path_EQ;
 
   StringRef ArchPrefix = Triple.isAMDGCN() ? "amdgcn" : "nvptx";
+  std::string LibOmpTargetName = "libomptarget-" + BitcodeSuffix.str() + ".bc";
+
   // First check whether user specifies bc library
   if (const Arg *A = DriverArgs.getLastArg(LibomptargetBCPathOpt)) {
-    std::string LibOmpTargetName(A->getValue());
-    if (llvm::sys::fs::exists(LibOmpTargetName)) {
+    SmallString<128> LibOmpTargetFile(A->getValue());
+    if (llvm::sys::fs::exists(LibOmpTargetFile) &&
+        llvm::sys::fs::is_directory(LibOmpTargetFile)) {
+      llvm::sys::path::append(LibOmpTargetFile, LibOmpTargetName);
+    }
+
+    if (llvm::sys::fs::exists(LibOmpTargetFile)) {
       CC1Args.push_back("-mlink-builtin-bitcode");
-      CC1Args.push_back(DriverArgs.MakeArgString(LibOmpTargetName));
+      CC1Args.push_back(DriverArgs.MakeArgString(LibOmpTargetFile));
     } else {
       D.Diag(diag::err_drv_omp_offload_target_bcruntime_not_found)
-          << LibOmpTargetName;
+          << LibOmpTargetFile;
     }
   } else {
     bool FoundBCLibrary = false;
-
-    std::string LibOmpTargetName =
-        "libomptarget-" + BitcodeSuffix.str() + ".bc";
 
     for (StringRef LibraryPath : LibraryPaths) {
       SmallString<128> LibOmpTargetFile(LibraryPath);

@@ -221,18 +221,17 @@ void elf::combineEhSections() {
     }
   }
 
-  std::vector<InputSectionBase *> &v = inputSections;
-  v.erase(std::remove(v.begin(), v.end(), nullptr), v.end());
+  llvm::erase_value(inputSections, nullptr);
 }
 
 static Defined *addOptionalRegular(StringRef name, SectionBase *sec,
-                                   uint64_t val, uint8_t stOther = STV_HIDDEN,
-                                   uint8_t binding = STB_GLOBAL) {
+                                   uint64_t val, uint8_t stOther = STV_HIDDEN) {
   Symbol *s = symtab->find(name);
   if (!s || s->isDefined())
     return nullptr;
 
-  s->resolve(Defined{/*file=*/nullptr, name, binding, stOther, STT_NOTYPE, val,
+  s->resolve(Defined{/*file=*/nullptr, name, STB_GLOBAL, stOther, STT_NOTYPE,
+                     val,
                      /*size=*/0, sec});
   return cast<Defined>(s);
 }
@@ -595,9 +594,8 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (errorCount())
     return;
 
-  // If -compressed-debug-sections is specified, we need to compress
-  // .debug_* sections. Do it right now because it changes the size of
-  // output sections.
+  // If --compressed-debug-sections is specified, compress .debug_* sections.
+  // Do it right now because it changes the size of output sections.
   for (OutputSection *sec : outputSections)
     sec->maybeCompress<ELFT>();
 
@@ -622,11 +620,12 @@ template <class ELFT> void Writer<ELFT>::run() {
     for (OutputSection *sec : outputSections)
       sec->addr = 0;
 
-  // Handle --print-map(-M)/--Map, --cref and --print-archive-stats=. Dump them
-  // before checkSections() because the files may be useful in case
-  // checkSections() or openFile() fails, for example, due to an erroneous file
-  // size.
+  // Handle --print-map(-M)/--Map, --why-extract=, --cref and
+  // --print-archive-stats=. Dump them before checkSections() because the files
+  // may be useful in case checkSections() or openFile() fails, for example, due
+  // to an erroneous file size.
   writeMapFile();
+  writeWhyExtract();
   writeCrossReferenceTable();
   writeArchiveStats();
 
@@ -727,16 +726,11 @@ static bool shouldKeepInSymtab(const Defined &sym) {
   // * --discard-locals is used.
   // * The symbol is in a SHF_MERGE section, which is normally the reason for
   //   the assembler keeping the .L symbol.
-  StringRef name = sym.getName();
-  bool isLocal = name.startswith(".L") || name.empty();
-  if (!isLocal)
-    return true;
-
-  if (config->discard == DiscardPolicy::Locals)
+  if (sym.getName().startswith(".L") &&
+      (config->discard == DiscardPolicy::Locals ||
+       (sym.section && (sym.section->flags & SHF_MERGE))))
     return false;
-
-  SectionBase *sec = sym.section;
-  return !sec || !(sec->flags & SHF_MERGE);
+  return true;
 }
 
 static bool includeInSymtab(const Symbol &b) {
@@ -812,7 +806,7 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
 
     // Unlike other synthetic sections, mergeable output sections contain data
     // copied from input sections, and there may be a relocation pointing to its
-    // contents if -r or -emit-reloc are given.
+    // contents if -r or --emit-reloc is given.
     if (isa<SyntheticSection>(isec) && !(isec->flags & SHF_MERGE))
       continue;
 
@@ -1088,7 +1082,7 @@ void PhdrEntry::add(OutputSection *sec) {
 // need these symbols, since IRELATIVE relocs are resolved through GOT
 // and PLT. For details, see http://www.airs.com/blog/archives/403.
 template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
-  if (config->relocatable || needsInterpSection())
+  if (config->relocatable || config->isPic)
     return;
 
   // By default, __rela_iplt_{start,end} belong to a dummy section 0
@@ -1097,11 +1091,11 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   // sure that .rela.plt exists in output.
   ElfSym::relaIpltStart = addOptionalRegular(
       config->isRela ? "__rela_iplt_start" : "__rel_iplt_start",
-      Out::elfHeader, 0, STV_HIDDEN, STB_WEAK);
+      Out::elfHeader, 0, STV_HIDDEN);
 
   ElfSym::relaIpltEnd = addOptionalRegular(
       config->isRela ? "__rela_iplt_end" : "__rel_iplt_end",
-      Out::elfHeader, 0, STV_HIDDEN, STB_WEAK);
+      Out::elfHeader, 0, STV_HIDDEN);
 }
 
 template <class ELFT>
@@ -1255,15 +1249,24 @@ findOrphanPos(std::vector<BaseCommand *>::iterator b,
   });
   if (i == e)
     return e;
+  auto foundSec = dyn_cast<OutputSection>(*i);
+  if (!foundSec)
+    return e;
 
   // Consider all existing sections with the same proximity.
   int proximity = getRankProximity(sec, *i);
+  unsigned sortRank = sec->sortRank;
+  if (script->hasPhdrsCommands())
+    // Prevent the orphan section to be placed before the found section because
+    // that can result in adding it to a previous segment and changing flags of
+    // that segment, for example, making a read-only segment writable.
+    sortRank = std::max(sortRank, foundSec->sortRank);
   for (; i != e; ++i) {
     auto *curSec = dyn_cast<OutputSection>(*i);
     if (!curSec || !curSec->hasInputSections)
       continue;
     if (getRankProximity(sec, curSec) != proximity ||
-        sec->sortRank < curSec->sortRank)
+        sortRank < curSec->sortRank)
       break;
   }
 
@@ -1331,7 +1334,7 @@ static void maybeShuffle(DenseMap<const InputSectionBase *, int> &order) {
 // Builds section order for handling --symbol-ordering-file.
 static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
   DenseMap<const InputSectionBase *, int> sectionOrder;
-  // Use the rarely used option -call-graph-ordering-file to sort sections.
+  // Use the rarely used option --call-graph-ordering-file to sort sections.
   if (!config->callGraphProfile.empty())
     return computeCallGraphProfileOrder();
 
@@ -1480,29 +1483,19 @@ static void sortSection(OutputSection *sec,
       if (auto *isd = dyn_cast<InputSectionDescription>(b))
         sortISDBySectionOrder(isd, order);
 
-  // Sort input sections by section name suffixes for
-  // __attribute__((init_priority(N))).
+  if (script->hasSectionsCommand)
+    return;
+
   if (name == ".init_array" || name == ".fini_array") {
-    if (!script->hasSectionsCommand)
-      sec->sortInitFini();
-    return;
-  }
-
-  // Sort input sections by the special rule for .ctors and .dtors.
-  if (name == ".ctors" || name == ".dtors") {
-    if (!script->hasSectionsCommand)
-      sec->sortCtorsDtors();
-    return;
-  }
-
-  // .toc is allocated just after .got and is accessed using GOT-relative
-  // relocations. Object files compiled with small code model have an
-  // addressable range of [.got, .got + 0xFFFC] for GOT-relative relocations.
-  // To reduce the risk of relocation overflow, .toc contents are sorted so that
-  // sections having smaller relocation offsets are at beginning of .toc
-  if (config->emachine == EM_PPC64 && name == ".toc") {
-    if (script->hasSectionsCommand)
-      return;
+    sec->sortInitFini();
+  } else if (name == ".ctors" || name == ".dtors") {
+    sec->sortCtorsDtors();
+  } else if (config->emachine == EM_PPC64 && name == ".toc") {
+    // .toc is allocated just after .got and is accessed using GOT-relative
+    // relocations. Object files compiled with small code model have an
+    // addressable range of [.got, .got + 0xFFFC] for GOT-relative relocations.
+    // To reduce the risk of relocation overflow, .toc contents are sorted so
+    // that sections having smaller relocation offsets are at beginning of .toc
     assert(sec->sectionCommands.size() == 1);
     auto *isd = cast<InputSectionDescription>(sec->sectionCommands[0]);
     llvm::stable_sort(isd->sections,
@@ -1510,7 +1503,6 @@ static void sortSection(OutputSection *sec,
                         return a->file->ppc64SmallCodeModelTocRelocs &&
                                !b->file->ppc64SmallCodeModelTocRelocs;
                       });
-    return;
   }
 }
 
@@ -1889,26 +1881,44 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
 // out to be empty.
 static void removeUnusedSyntheticSections() {
   // All input synthetic sections that can be empty are placed after
-  // all regular ones. We iterate over them all and exit at first
-  // non-synthetic.
-  for (InputSectionBase *s : llvm::reverse(inputSections)) {
-    SyntheticSection *ss = dyn_cast<SyntheticSection>(s);
-    if (!ss)
-      return;
-    OutputSection *os = ss->getParent();
-    if (!os || ss->isNeeded())
-      continue;
+  // all regular ones. Reverse iterate to find the first synthetic section
+  // after a non-synthetic one which will be our starting point.
+  auto start = std::find_if(inputSections.rbegin(), inputSections.rend(),
+                            [](InputSectionBase *s) {
+                              return !isa<SyntheticSection>(s);
+                            })
+                   .base();
 
-    // If we reach here, then ss is an unused synthetic section and we want to
-    // remove it from the corresponding input section description, and
-    // orphanSections.
-    for (BaseCommand *b : os->sectionCommands)
-      if (auto *isd = dyn_cast<InputSectionDescription>(b))
-        llvm::erase_if(isd->sections,
-                       [=](InputSection *isec) { return isec == ss; });
-    llvm::erase_if(script->orphanSections,
-                   [=](const InputSectionBase *isec) { return isec == ss; });
-  }
+  DenseSet<InputSectionDescription *> isdSet;
+  // Mark unused synthetic sections for deletion
+  auto end = std::stable_partition(
+      start, inputSections.end(), [&](InputSectionBase *s) {
+        SyntheticSection *ss = dyn_cast<SyntheticSection>(s);
+        OutputSection *os = ss->getParent();
+        if (!os || ss->isNeeded())
+          return true;
+
+        // If we reach here, then ss is an unused synthetic section and we want
+        // to remove it from the corresponding input section description, and
+        // orphanSections.
+        for (BaseCommand *b : os->sectionCommands)
+          if (auto *isd = dyn_cast<InputSectionDescription>(b))
+            isdSet.insert(isd);
+
+        llvm::erase_if(
+            script->orphanSections,
+            [=](const InputSectionBase *isec) { return isec == ss; });
+
+        return false;
+      });
+
+  DenseSet<InputSectionBase *> unused(end, inputSections.end());
+  for (auto *isd : isdSet)
+    llvm::erase_if(isd->sections,
+                   [=](InputSection *isec) { return unused.count(isec); });
+
+  // Erase unused synthetic sections.
+  inputSections.erase(end, inputSections.end());
 }
 
 // Create output section objects and add them to OutputSections.
@@ -1947,10 +1957,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     OutputSection *sec = findSection(".sdata");
     ElfSym::riscvGlobalPointer =
         addOptionalRegular("__global_pointer$", sec ? sec : Out::elfHeader,
-                           0x800, STV_DEFAULT, STB_GLOBAL);
+                           0x800, STV_DEFAULT);
   }
 
-  if (config->emachine == EM_X86_64) {
+  if (config->emachine == EM_386 || config->emachine == EM_X86_64) {
     // On targets that support TLSDESC, _TLS_MODULE_BASE_ is defined in such a
     // way that:
     //
@@ -2057,7 +2067,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       for (const SymbolTableEntry &e : part.dynSymTab->getSymbols())
         syms.insert(e.sym);
       for (DynamicReloc &reloc : part.relaDyn->relocs)
-        if (reloc.sym && !reloc.useSymVA && syms.insert(reloc.sym).second)
+        if (reloc.sym && reloc.needsDynSymIndex() &&
+            syms.insert(reloc.sym).second)
           part.dynSymTab->addSymbol(reloc.sym);
     }
   }
@@ -2225,8 +2236,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 }
 
 // Ensure data sections are not mixed with executable sections when
-// -execute-only is used. -execute-only is a feature to make pages executable
-// but not readable, and the feature is currently supported only on AArch64.
+// --execute-only is used. --execute-only make pages executable but not
+// readable.
 template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
   if (!config->executeOnly)
     return;
@@ -2297,7 +2308,7 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection *sec) {
 }
 
 static bool needsPtLoad(OutputSection *sec) {
-  if (!(sec->flags & SHF_ALLOC) || sec->noload)
+  if (!(sec->flags & SHF_ALLOC))
     return false;
 
   // Don't allocate VA space for TLS NOBITS sections. The PT_TLS PHDR is
@@ -2581,9 +2592,10 @@ static uint64_t computeFileOffset(OutputSection *os, uint64_t off) {
     return alignTo(off, os->ptLoad->p_align, os->addr);
 
   // File offsets are not significant for .bss sections other than the first one
-  // in a PT_LOAD. By convention, we keep section offsets monotonically
+  // in a PT_LOAD/PT_TLS. By convention, we keep section offsets monotonically
   // increasing rather than setting to zero.
-   if (os->type == SHT_NOBITS)
+  if (os->type == SHT_NOBITS &&
+      (!Out::tlsPhdr || Out::tlsPhdr->firstSec != os))
      return off;
 
   // If the section is not in a PT_LOAD, we just have to align it.
@@ -2816,8 +2828,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
 // 2. the ENTRY(symbol) command in a linker control script;
 // 3. the value of the symbol _start, if present;
 // 4. the number represented by the entry symbol, if it is a number;
-// 5. the address of the first byte of the .text section, if present;
-// 6. the address 0.
+// 5. the address 0.
 static uint64_t getEntryAddr() {
   // Case 1, 2 or 3
   if (Symbol *b = symtab->find(config->entry))
@@ -2829,14 +2840,6 @@ static uint64_t getEntryAddr() {
     return addr;
 
   // Case 5
-  if (OutputSection *sec = findSection(".text")) {
-    if (config->warnMissingEntry)
-      warn("cannot find entry symbol " + config->entry + "; defaulting to 0x" +
-           utohexstr(sec->addr));
-    return sec->addr;
-  }
-
-  // Case 6
   if (config->warnMissingEntry)
     warn("cannot find entry symbol " + config->entry +
          "; not setting start address");
@@ -2963,7 +2966,7 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
 
 // Write section contents to a mmap'ed file.
 template <class ELFT> void Writer<ELFT>::writeSections() {
-  // In -r or -emit-relocs mode, write the relocation sections first as in
+  // In -r or --emit-relocs mode, write the relocation sections first as in
   // ELf_Rel targets we might find out that we need to modify the relocated
   // section while doing it.
   for (OutputSection *sec : outputSections)
@@ -2973,6 +2976,13 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   for (OutputSection *sec : outputSections)
     if (sec->type != SHT_REL && sec->type != SHT_RELA)
       sec->writeTo<ELFT>(Out::bufferStart + sec->offset);
+
+  // Finally, check that all dynamic relocation addends were written correctly.
+  if (config->checkDynamicRelocs && config->writeAddends) {
+    for (OutputSection *sec : outputSections)
+      if (sec->type == SHT_REL || sec->type == SHT_RELA)
+        sec->checkDynRelAddends(Out::bufferStart);
+  }
 }
 
 // Computes a hash value of Data using a given hash function.

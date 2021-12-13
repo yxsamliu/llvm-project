@@ -596,6 +596,17 @@ class RedirectingFileSystemParser;
 /// contain multiple path components (e.g. /path/to/file). However, any
 /// directory in such a path that contains more than one child must be uniquely
 /// represented by a 'directory' entry.
+///
+/// When the 'use-external-name' field is set, calls to \a vfs::File::status()
+/// give the external (remapped) filesystem name instead of the name the file
+/// was accessed by. This is an intentional leak through the \a
+/// RedirectingFileSystem abstraction layer. It enables clients to discover
+/// (and use) the external file location when communicating with users or tools
+/// that don't use the same VFS overlay.
+///
+/// FIXME: 'use-external-name' causes behaviour that's inconsistent with how
+/// "real" filesystems behave. Maybe there should be a separate channel for
+/// this information.
 class RedirectingFileSystem : public vfs::FileSystem {
 public:
   enum EntryKind { EK_Directory, EK_DirectoryRemap, EK_File };
@@ -752,7 +763,7 @@ private:
   // that, other than the root, path components should not contain slashes or
   // backslashes.
   bool pathComponentMatches(llvm::StringRef lhs, llvm::StringRef rhs) const {
-    if ((CaseSensitive ? lhs.equals(rhs) : lhs.equals_lower(rhs)))
+    if ((CaseSensitive ? lhs.equals(rhs) : lhs.equals_insensitive(rhs)))
       return true;
     return (lhs == "/" && rhs == "\\") || (lhs == "\\" && rhs == "/");
   }
@@ -777,12 +788,7 @@ private:
   /// Whether to perform case-sensitive comparisons.
   ///
   /// Currently, case-insensitive matching only works correctly with ASCII.
-  bool CaseSensitive =
-#ifdef _WIN32
-      false;
-#else
-      true;
-#endif
+  bool CaseSensitive = is_style_posix(sys::path::Style::native);
 
   /// IsRelativeOverlay marks whether a ExternalContentsPrefixDir path must
   /// be prefixed in every 'external-contents' when reading from YAML files.

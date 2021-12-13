@@ -39,7 +39,8 @@ public:
 
 void getAMDGPUTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                              const llvm::opt::ArgList &Args,
-                             std::vector<StringRef> &Features);
+                             std::vector<StringRef> &Features,
+                             std::string TcTargetID = std::string());
 
 } // end namespace amdgpu
 } // end namespace tools
@@ -51,7 +52,7 @@ protected:
   const std::map<options::ID, const StringRef> OptionsDefault;
   unsigned CodeObjectVersion = 4;
   Tool *buildLinker() const override;
-  const StringRef getOptionDefault(options::ID OptID) const {
+  StringRef getOptionDefault(options::ID OptID) const {
     auto opt = OptionsDefault.find(OptID);
     assert(opt != OptionsDefault.end() && "No Default for Option");
     return opt->second;
@@ -138,6 +139,11 @@ public:
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
                         Action::OffloadKind DeviceOffloadKind) const override;
+
+  // Returns a list of device library names shared by different languages
+  llvm::SmallVector<std::string, 12>
+  getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
+                          const std::string &GPUArch) const;
 };
 
 } // end namespace toolchains

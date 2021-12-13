@@ -12,14 +12,14 @@
 #pragma omp declare target
 
 #include "common/allocator.h"
-#include "common/device_environment.h"
 #include "common/omptarget.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // global device environment
 ////////////////////////////////////////////////////////////////////////////////
 
-omptarget_device_environmentTy omptarget_device_environment;
+PLUGIN_ACCESSIBLE
+DeviceEnvironmentTy omptarget_device_environment;
 
 ////////////////////////////////////////////////////////////////////////////////
 // global data holding OpenMP state information
@@ -34,8 +34,8 @@ uint32_t SHARED(usedMemIdx);
 uint32_t SHARED(usedSlotIdx);
 
 // SHARED doesn't work with array so we add the attribute explicitly.
-[[clang::loader_uninitialized]] uint8_t
-    parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
+[[clang::loader_uninitialized]] uint32_t volatile parallelLevel
+    [MAX_THREADS_PER_TEAM / WARPSIZE];
 #pragma omp allocate(parallelLevel) allocator(omp_pteam_mem_alloc)
 uint16_t SHARED(threadLimit);
 uint16_t SHARED(threadsInTeam);
@@ -49,26 +49,18 @@ omptarget_nvptx_ThreadPrivateContext *
 // communicate with the workers.  Since it is in shared memory, there is one
 // copy of these variables for each kernel, instance, and team.
 ////////////////////////////////////////////////////////////////////////////////
-volatile omptarget_nvptx_WorkFn SHARED(omptarget_nvptx_workFn);
+omptarget_nvptx_WorkFn volatile SHARED(omptarget_nvptx_workFn);
+bool volatile SHARED(omptarget_workers_done);
+bool volatile SHARED(omptarget_master_ready);
 
 ////////////////////////////////////////////////////////////////////////////////
 // OpenMP kernel execution parameters
 ////////////////////////////////////////////////////////////////////////////////
-uint32_t SHARED(execution_param);
-
-////////////////////////////////////////////////////////////////////////////////
-// Data sharing state
-////////////////////////////////////////////////////////////////////////////////
-DataSharingStateTy SHARED(DataSharingState);
+int8_t SHARED(execution_param);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Scratchpad for teams reduction.
 ////////////////////////////////////////////////////////////////////////////////
 void *SHARED(ReductionScratchpadPtr);
-
-////////////////////////////////////////////////////////////////////////////////
-// Data sharing related variables.
-////////////////////////////////////////////////////////////////////////////////
-omptarget_nvptx_SharedArgs SHARED(omptarget_nvptx_globalArgs);
 
 #pragma omp end declare target
