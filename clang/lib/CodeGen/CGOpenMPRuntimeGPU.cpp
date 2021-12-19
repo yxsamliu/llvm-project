@@ -3954,6 +3954,17 @@ static CudaArch getCudaArch(CodeGenModule &CGM) {
   return CudaArch::UNKNOWN;
 }
 
+bool CGOpenMPRuntimeGPU::supportFastFPAtomics() {
+  CudaArch Arch = getCudaArch(CGM);
+  switch (Arch) {
+  case CudaArch::GFX90a:
+    return true;
+  default:
+    break;
+  }
+  return false;
+}
+
 /// Check to see if target architecture supports unified addressing which is
 /// a restriction for OpenMP requires clause "unified_shared_memory".
 void CGOpenMPRuntimeGPU::processRequiresDirective(
