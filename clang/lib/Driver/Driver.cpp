@@ -3373,6 +3373,7 @@ class OffloadingActionBuilder final {
       assert(DeviceLinkerInputs.size() == GpuArchList.size() &&
              "Linker inputs and GPU arch list sizes do not match.");
 
+      ActionList Actions;
       // Append a new link action for each device.
       unsigned I = 0;
       for (auto &LI : DeviceLinkerInputs) {
@@ -3384,8 +3385,8 @@ class OffloadingActionBuilder final {
         OffloadAction::DeviceDependences DeviceLinkDeps;
         DeviceLinkDeps.add(*DeviceLinkAction, *ToolChains[0], GpuArchList[I].ID,
                            AssociatedOffloadKind);
-        AL.push_back(C.MakeAction<OffloadAction>(DeviceLinkDeps,
-            DeviceLinkAction->getType()));
+        Actions.push_back(C.MakeAction<OffloadAction>(
+            DeviceLinkDeps, DeviceLinkAction->getType()));
         ++I;
       }
       DeviceLinkerInputs.clear();
@@ -3397,13 +3398,15 @@ class OffloadingActionBuilder final {
       if (!CompileDeviceOnly || !BundleOutput.hasValue() ||
           BundleOutput.getValue()) {
         auto *TopDeviceLinkAction = C.MakeAction<LinkJobAction>(
-            AL, CompileDeviceOnly ? types::TY_HIP_FATBIN : types::TY_Object);
+            Actions,
+            CompileDeviceOnly ? types::TY_HIP_FATBIN : types::TY_Object);
         DDeps.add(*TopDeviceLinkAction, *ToolChains[0], nullptr,
                   AssociatedOffloadKind);
-        AL.clear();
         // Offload the host object to the host linker.
         AL.push_back(
             C.MakeAction<OffloadAction>(DDeps, TopDeviceLinkAction->getType()));
+      } else {
+        AL.append(Actions);
       }
     }
 
