@@ -443,7 +443,8 @@ class MetadataLoader::MetadataLoaderImpl {
   uint64_t GlobalDeclAttachmentPos = 0;
 
 #ifndef NDEBUG
-  /// Sanity check that we end up parsing all of the global decl attachments.
+  /// Baisic correctness check that we end up parsing all of the global decl
+  /// attachments.
   unsigned NumGlobalDeclAttachSkipped = 0;
   unsigned NumGlobalDeclAttachParsed = 0;
 #endif
@@ -554,7 +555,7 @@ class MetadataLoader::MetadataLoaderImpl {
   }
 
   /// Upgrade the expression from previous versions.
-  Error upgradeDIExpression(uint64_t FromVersion,
+  Error upgradeDIExpression(uint64_t FromVersion, bool &IsDistinct,
                             MutableArrayRef<uint64_t> &Expr,
                             SmallVectorImpl<uint64_t> &Buffer) {
     auto N = Expr.size();
@@ -628,6 +629,9 @@ class MetadataLoader::MetadataLoaderImpl {
       LLVM_FALLTHROUGH;
     }
     case 3:
+      IsDistinct = false;
+      LLVM_FALLTHROUGH;
+    case 4:
       // Up-to-date!
       break;
     }
@@ -874,6 +878,9 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       case bitc::METADATA_IMPORTED_ENTITY:
       case bitc::METADATA_GLOBAL_VAR_EXPR:
       case bitc::METADATA_GENERIC_SUBRANGE:
+      case bitc::METADATA_EXPR:
+      case bitc::METADATA_FRAGMENT:
+      case bitc::METADATA_LIFETIME:
         // We don't expect to see any of these, if we see one, give up on
         // lazy-loading and fallback.
         MDStringRef.clear();
@@ -916,7 +923,7 @@ Expected<bool> MetadataLoader::MetadataLoaderImpl::loadGlobalDeclAttachments() {
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
-      // Sanity check that we parsed them all.
+      // Check that we parsed them all.
       assert(NumGlobalDeclAttachSkipped == NumGlobalDeclAttachParsed);
       return true;
     case BitstreamEntry::Record:
@@ -928,7 +935,7 @@ Expected<bool> MetadataLoader::MetadataLoaderImpl::loadGlobalDeclAttachments() {
       return MaybeCode.takeError();
     if (MaybeCode.get() != bitc::METADATA_GLOBAL_DECL_ATTACHMENT) {
       // Anything other than a global decl attachment signals the end of
-      // these records. sanity check that we parsed them all.
+      // these records. Check that we parsed them all.
       assert(NumGlobalDeclAttachSkipped == NumGlobalDeclAttachParsed);
       return true;
     }
@@ -2002,11 +2009,166 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     auto Elts = MutableArrayRef<uint64_t>(Record).slice(1);
 
     SmallVector<uint64_t, 6> Buffer;
-    if (Error Err = upgradeDIExpression(Version, Elts, Buffer))
+    if (Error Err = upgradeDIExpression(Version, IsDistinct, Elts, Buffer))
       return Err;
 
-    MetadataList.assignValue(
-        GET_OR_DISTINCT(DIExpression, (Context, Elts)), NextMetadataNo);
+    if (IsDistinct)
+      return error("Invalid record");
+
+    MetadataList.assignValue(DIExpression::get(Context, Elts), NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
+  case bitc::METADATA_EXPR: {
+    if (Record.size() < 1)
+      return error("Invalid record");
+
+    uint64_t Version = Record[0];
+    if (Version != 0)
+      return error("Invalid record: unknown DIExpr version " + Twine(Version));
+
+    DIExprBuilder Builder(Context);
+
+    for (auto Elems = ArrayRef<uint64_t>(Record).slice(1); Elems.size() > 0;) {
+      auto DIOpID = Elems[0];
+      Elems = Elems.slice(1);
+      switch (DIOpID) {
+#define HANDLE_OP0(NAME)                                                       \
+  case DIOp::NAME::getBitcodeID():                                             \
+    Builder.append<DIOp::NAME>();                                              \
+    break;
+#include "llvm/IR/DIExprOps.def"
+      case DIOp::Referrer::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::Referrer>(Ty);
+        Elems = Elems.slice(1);
+        break;
+      }
+      case DIOp::Arg::getBitcodeID(): {
+        if (Elems.size() < 2)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::Arg>(Elems[1], Ty);
+        Elems = Elems.slice(2);
+        break;
+      }
+      case DIOp::TypeObject::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::TypeObject>(Ty);
+        Elems = Elems.slice(1);
+        break;
+      }
+      case DIOp::Constant::getBitcodeID(): {
+        if (Elems.size() < 2)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Constant *V = ValueList.getConstantFwdRef(Elems[1], Ty);
+        if (!V || !isa<ConstantData>(V))
+          return error("Invalid record");
+        Builder.append<DIOp::Constant>(cast<ConstantData>(V));
+        Elems = Elems.slice(2);
+        break;
+      }
+      case DIOp::Convert::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::Convert>(Ty);
+        Elems = Elems.slice(1);
+        break;
+      }
+      case DIOp::Reinterpret::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::Reinterpret>(Ty);
+        Elems = Elems.slice(1);
+        break;
+      }
+      case DIOp::BitOffset::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::BitOffset>(Ty);
+        Elems = Elems.slice(1);
+        break;
+      }
+      case DIOp::ByteOffset::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::ByteOffset>(Ty);
+        Elems = Elems.slice(1);
+        break;
+      }
+      case DIOp::Composite::getBitcodeID(): {
+        if (Elems.size() < 2)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::Composite>(Elems[1], Ty);
+        Elems = Elems.slice(2);
+        break;
+      }
+      case DIOp::Extend::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Builder.append<DIOp::Extend>(Elems[0]);
+        Elems = Elems.slice(1);
+        break;
+      }
+      case DIOp::AddrOf::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Builder.append<DIOp::AddrOf>(Elems[0]);
+        Elems = Elems.slice(1);
+        break;
+      }
+      case DIOp::Deref::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::Deref>(Ty);
+        Elems = Elems.slice(1);
+        break;
+      }
+      case DIOp::PushLane::getBitcodeID(): {
+        if (Elems.size() < 1)
+          return error("Invalid record");
+        Type *Ty = getTypeByID(Elems[0]);
+        if (!Ty || !Ty->isFirstClassType())
+          return error("Invalid record");
+        Builder.append<DIOp::PushLane>(Ty);
+        Elems = Elems.slice(1);
+        break;
+      }
+      }
+    }
+
+    MetadataList.assignValue(Builder.intoExpr(), NextMetadataNo);
     NextMetadataNo++;
     break;
   }
@@ -2091,6 +2253,15 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         return Err;
     break;
   }
+  case bitc::METADATA_FRAGMENT: {
+    if (Record.size() != 0)
+      return error("Invalid record");
+    IsDistinct = true;
+    MetadataList.assignValue(DIFragment::getDistinct(Context),
+                             NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
   case bitc::METADATA_KIND: {
     // Support older bitcode files that had METADATA_KIND records in a
     // block with METADATA_BLOCK_ID.
@@ -2112,6 +2283,19 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     }
 
     MetadataList.assignValue(DIArgList::get(Context, Elts), NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
+  case bitc::METADATA_LIFETIME: {
+    if (Record.size() < 2)
+      return error("Invalid record");
+    Metadata *Obj = getMD(Record[0]);
+    Metadata *Loc = getMD(Record[1]);
+    SmallVector<Metadata *> Args;
+    for (auto ArgID : ArrayRef<uint64_t>(Record).slice(2))
+      Args.push_back(getMD(ArgID));
+    MetadataList.assignValue(DILifetime::getDistinct(Context, Obj, Loc, Args),
+                             NextMetadataNo);
     NextMetadataNo++;
     break;
   }

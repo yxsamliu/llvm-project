@@ -76,6 +76,9 @@ class ProfileSummaryInfo;
 class SDDbgValue;
 class SDDbgOperand;
 class SDDbgLabel;
+class SDDbgDefKill;
+class SDDbgDef;
+class SDDbgKill;
 class SelectionDAG;
 class SelectionDAGTargetInfo;
 class TargetLibraryInfo;
@@ -152,6 +155,7 @@ class SDDbgInfo {
   SmallVector<SDDbgValue*, 32> DbgValues;
   SmallVector<SDDbgValue*, 32> ByvalParmDbgValues;
   SmallVector<SDDbgLabel*, 4> DbgLabels;
+  SmallVector<SDDbgDefKill *, 32> DbgDefKills;
   using DbgValMapType = DenseMap<const SDNode *, SmallVector<SDDbgValue *, 2>>;
   DbgValMapType DbgValMap;
 
@@ -164,6 +168,8 @@ public:
 
   void add(SDDbgLabel *L) { DbgLabels.push_back(L); }
 
+  void add(SDDbgDefKill *DK) { DbgDefKills.push_back(DK); }
+
   /// Invalidate all DbgValues attached to the node and remove
   /// it from the Node-to-DbgValues map.
   void erase(const SDNode *Node);
@@ -173,13 +179,15 @@ public:
     DbgValues.clear();
     ByvalParmDbgValues.clear();
     DbgLabels.clear();
+    DbgDefKills.clear();
     Alloc.Reset();
   }
 
   BumpPtrAllocator &getAlloc() { return Alloc; }
 
   bool empty() const {
-    return DbgValues.empty() && ByvalParmDbgValues.empty() && DbgLabels.empty();
+    return DbgValues.empty() && ByvalParmDbgValues.empty() &&
+           DbgLabels.empty() && DbgDefKills.empty();
   }
 
   ArrayRef<SDDbgValue*> getSDDbgValues(const SDNode *Node) const {
@@ -191,6 +199,7 @@ public:
 
   using DbgIterator = SmallVectorImpl<SDDbgValue*>::iterator;
   using DbgLabelIterator = SmallVectorImpl<SDDbgLabel*>::iterator;
+  using DbgDefKillIterator = SmallVectorImpl<SDDbgDefKill *>::iterator;
 
   DbgIterator DbgBegin() { return DbgValues.begin(); }
   DbgIterator DbgEnd()   { return DbgValues.end(); }
@@ -198,6 +207,8 @@ public:
   DbgIterator ByvalParmDbgEnd()   { return ByvalParmDbgValues.end(); }
   DbgLabelIterator DbgLabelBegin() { return DbgLabels.begin(); }
   DbgLabelIterator DbgLabelEnd()   { return DbgLabels.end(); }
+  DbgDefKillIterator DbgDefKillBegin() { return DbgDefKills.begin(); }
+  DbgDefKillIterator DbgDefKillEnd() { return DbgDefKills.end(); }
 };
 
 void checkForCycles(const SelectionDAG *DAG, bool force = false);
@@ -1583,6 +1594,13 @@ public:
   /// Creates a SDDbgLabel node.
   SDDbgLabel *getDbgLabel(DILabel *Label, const DebugLoc &DL, unsigned O);
 
+  /// Creates a SDDbgDef node.
+  SDDbgDef *getDbgDef(DILifetime *LT, unsigned O, const Value *Ref,
+                      DebugLoc DLoc);
+
+  /// Creates a SDDbgKill node.
+  SDDbgKill *getDbgKill(DILifetime *LT, unsigned O, DebugLoc DLoc);
+
   /// Transfer debug values from one node to another, while optionally
   /// generating fragment expressions for split-up values. If \p InvalidateDbg
   /// is set, debug values are invalidated after they are transferred.
@@ -1675,6 +1693,9 @@ public:
   /// Add a dbg_label SDNode.
   void AddDbgLabel(SDDbgLabel *DB);
 
+  /// Add a dbg_def/kill.
+  void AddDbgDefKill(SDDbgDefKill *DB);
+
   /// Get the debug values which reference the given SDNode.
   ArrayRef<SDDbgValue*> GetDbgValues(const SDNode* SD) const {
     return DbgInfo->getSDDbgValues(SD);
@@ -1700,6 +1721,13 @@ public:
   }
   SDDbgInfo::DbgLabelIterator DbgLabelEnd() const {
     return DbgInfo->DbgLabelEnd();
+  }
+
+  SDDbgInfo::DbgDefKillIterator DbgDefKillBegin() const {
+    return DbgInfo->DbgDefKillBegin();
+  }
+  SDDbgInfo::DbgDefKillIterator DbgDefKillEnd() const {
+    return DbgInfo->DbgDefKillEnd();
   }
 
   /// To be invoked on an SDNode that is slated to be erased. This
@@ -1731,10 +1759,6 @@ public:
 
   SDValue FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL, EVT VT,
                                  ArrayRef<SDValue> Ops);
-
-  SDValue FoldConstantVectorArithmetic(unsigned Opcode, const SDLoc &DL, EVT VT,
-                                       ArrayRef<SDValue> Ops,
-                                       const SDNodeFlags Flags = SDNodeFlags());
 
   /// Fold floating-point operations with 2 operands when both operands are
   /// constants and/or undefined.
@@ -1837,6 +1861,19 @@ public:
   unsigned ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
                               unsigned Depth = 0) const;
 
+  /// Get the minimum bit size for this Value \p Op as a signed integer.
+  /// i.e.  x == sext(trunc(x to MinSignedBits) to bitwidth(x)).
+  /// Similar to the APInt::getMinSignedBits function.
+  /// Helper wrapper to ComputeNumSignBits.
+  unsigned ComputeMinSignedBits(SDValue Op, unsigned Depth = 0) const;
+
+  /// Get the minimum bit size for this Value \p Op as a signed integer.
+  /// i.e.  x == sext(trunc(x to MinSignedBits) to bitwidth(x)).
+  /// Similar to the APInt::getMinSignedBits function.
+  /// Helper wrapper to ComputeNumSignBits.
+  unsigned ComputeMinSignedBits(SDValue Op, const APInt &DemandedElts,
+                                unsigned Depth = 0) const;
+
   /// Return true if this function can prove that \p Op is never poison
   /// and, if \p PoisonOnly is false, does not have undef bits.
   bool isGuaranteedNotToBeUndefOrPoison(SDValue Op, bool PoisonOnly = false,
@@ -1903,10 +1940,10 @@ public:
   ///
   /// NOTE: The function will return true for a demanded splat of UNDEF values.
   bool isSplatValue(SDValue V, const APInt &DemandedElts, APInt &UndefElts,
-                    unsigned Depth = 0);
+                    unsigned Depth = 0) const;
 
   /// Test whether \p V has a splatted value.
-  bool isSplatValue(SDValue V, bool AllowUndefs = false);
+  bool isSplatValue(SDValue V, bool AllowUndefs = false) const;
 
   /// If V is a splatted value, return the source vector and its splat index.
   SDValue getSplatSourceVector(SDValue V, int &SplatIndex);

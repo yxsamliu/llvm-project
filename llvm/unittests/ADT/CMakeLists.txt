@@ -15,6 +15,7 @@ add_llvm_unittest(ADTTests
   BreadthFirstIteratorTest.cpp
   BumpPtrListTest.cpp
   CoalescingBitVectorTest.cpp
+  CombinationGeneratorTest.cpp
   DAGDeltaAlgorithmTest.cpp
   DeltaAlgorithmTest.cpp
   DenseMapTest.cpp
@@ -41,6 +42,7 @@ add_llvm_unittest(ADTTests
   IntEqClassesTest.cpp
   IntervalMapTest.cpp
   IntrusiveRefCntPtrTest.cpp
+  IntrusiveVariantTest.cpp
   IteratorTest.cpp
   MappedIteratorTest.cpp
   MapVectorTest.cpp

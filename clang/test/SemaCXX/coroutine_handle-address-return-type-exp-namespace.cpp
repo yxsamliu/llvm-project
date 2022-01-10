@@ -66,7 +66,7 @@ struct awaitable {
 } a;
 
 task f() {
-  co_await a;
+  co_await a; // expected-warning {{support for std::experimental::coroutine_traits will be removed}}
 }
 
 int main() {

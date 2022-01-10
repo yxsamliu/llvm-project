@@ -51,6 +51,7 @@
 ; GCN-O0-NEXT:      Expand vector predication intrinsics
 ; GCN-O0-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O0-NEXT:      Expand reduction intrinsics
+; GCN-O0-NEXT:    AMDGPU Attributor
 ; GCN-O0-NEXT:    CallGraph Construction
 ; GCN-O0-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O0-NEXT:      AMDGPU Annotate Kernel Features
@@ -162,6 +163,7 @@
 ; GCN-O1-NEXT:Create Garbage Collector Module Metadata
 ; GCN-O1-NEXT:Machine Branch Probability Analysis
 ; GCN-O1-NEXT:Register Usage Information Storage
+; GCN-O1-NEXT:Default Regalloc Eviction Advisor
 ; GCN-O1-NEXT:  ModulePass Manager
 ; GCN-O1-NEXT:    Pre-ISel Intrinsic Lowering
 ; GCN-O1-NEXT:    AMDGPU Printf lowering
@@ -216,6 +218,7 @@
 ; GCN-O1-NEXT:      Expand vector predication intrinsics
 ; GCN-O1-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O1-NEXT:      Expand reduction intrinsics
+; GCN-O1-NEXT:    AMDGPU Attributor
 ; GCN-O1-NEXT:    CallGraph Construction
 ; GCN-O1-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O1-NEXT:      AMDGPU Annotate Kernel Features
@@ -413,6 +416,7 @@
 ; GCN-O1-OPTS-NEXT:Create Garbage Collector Module Metadata
 ; GCN-O1-OPTS-NEXT:Machine Branch Probability Analysis
 ; GCN-O1-OPTS-NEXT:Register Usage Information Storage
+; GCN-O1-OPTS-NEXT:Default Regalloc Eviction Advisor
 ; GCN-O1-OPTS-NEXT:  ModulePass Manager
 ; GCN-O1-OPTS-NEXT:    Pre-ISel Intrinsic Lowering
 ; GCN-O1-OPTS-NEXT:    AMDGPU Printf lowering
@@ -486,6 +490,7 @@
 ; GCN-O1-OPTS-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O1-OPTS-NEXT:      Expand reduction intrinsics
 ; GCN-O1-OPTS-NEXT:      Early CSE
+; GCN-O1-OPTS-NEXT:    AMDGPU Attributor
 ; GCN-O1-OPTS-NEXT:    CallGraph Construction
 ; GCN-O1-OPTS-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O1-OPTS-NEXT:      AMDGPU Annotate Kernel Features
@@ -697,6 +702,7 @@
 ; GCN-O2-NEXT:Create Garbage Collector Module Metadata
 ; GCN-O2-NEXT:Machine Branch Probability Analysis
 ; GCN-O2-NEXT:Register Usage Information Storage
+; GCN-O2-NEXT:Default Regalloc Eviction Advisor
 ; GCN-O2-NEXT:  ModulePass Manager
 ; GCN-O2-NEXT:    Pre-ISel Intrinsic Lowering
 ; GCN-O2-NEXT:    AMDGPU Printf lowering
@@ -770,6 +776,7 @@
 ; GCN-O2-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O2-NEXT:      Expand reduction intrinsics
 ; GCN-O2-NEXT:      Early CSE
+; GCN-O2-NEXT:    AMDGPU Attributor
 ; GCN-O2-NEXT:    CallGraph Construction
 ; GCN-O2-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O2-NEXT:      AMDGPU Annotate Kernel Features
@@ -983,6 +990,7 @@
 ; GCN-O3-NEXT:Create Garbage Collector Module Metadata
 ; GCN-O3-NEXT:Machine Branch Probability Analysis
 ; GCN-O3-NEXT:Register Usage Information Storage
+; GCN-O3-NEXT:Default Regalloc Eviction Advisor
 ; GCN-O3-NEXT:  ModulePass Manager
 ; GCN-O3-NEXT:    Pre-ISel Intrinsic Lowering
 ; GCN-O3-NEXT:    AMDGPU Printf lowering
@@ -1069,6 +1077,7 @@
 ; GCN-O3-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:      Optimization Remark Emitter
 ; GCN-O3-NEXT:      Global Value Numbering
+; GCN-O3-NEXT:    AMDGPU Attributor
 ; GCN-O3-NEXT:    CallGraph Construction
 ; GCN-O3-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O3-NEXT:      AMDGPU Annotate Kernel Features

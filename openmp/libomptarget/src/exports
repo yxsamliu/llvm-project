@@ -21,10 +21,14 @@ VERS1.0 {
     __tgt_target_mapper;
     __tgt_target_teams_mapper;
     __tgt_target_data_begin_nowait_mapper;
+    __tgt_target_data_begin_with_deps;
     __tgt_target_data_end_nowait_mapper;
+    __tgt_target_data_end_with_deps;
     __tgt_target_data_update_nowait_mapper;
+    __tgt_target_data_update_with_deps;
     __tgt_target_nowait_mapper;
     __tgt_target_teams_nowait_mapper;
+    __tgt_target_with_deps;
     __tgt_mapper_num_components;
     __tgt_push_mapper_component;
     __kmpc_push_target_tripcount;
@@ -62,6 +66,7 @@ VERS1.0 {
     __tgt_set_info_flag;
     __tgt_print_device_info;
     omp_is_coarse_grain_mem_region;
+    libomptarget_ompt_connect;
   local:
     *;
 };

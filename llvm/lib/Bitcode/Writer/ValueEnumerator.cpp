@@ -310,8 +310,7 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
   // We want to visit the functions backward now so we can list function-local
   // constants in the last Function they're used in.  Module-level constants
   // have already been visited above.
-  for (auto I = M.rbegin(), E = M.rend(); I != E; ++I) {
-    const Function &F = *I;
+  for (const Function &F : llvm::reverse(M)) {
     if (F.isDeclaration())
       continue;
     for (const BasicBlock &BB : F)
@@ -541,9 +540,8 @@ void ValueEnumerator::print(raw_ostream &OS, const ValueMapType &Map,
                             const char *Name) const {
   OS << "Map Name: " << Name << "\n";
   OS << "Size: " << Map.size() << "\n";
-  for (ValueMapType::const_iterator I = Map.begin(),
-         E = Map.end(); I != E; ++I) {
-    const Value *V = I->first;
+  for (const auto &I : Map) {
+    const Value *V = I.first;
     if (V->hasName())
       OS << "Value: " << V->getName();
     else
@@ -569,10 +567,10 @@ void ValueEnumerator::print(raw_ostream &OS, const MetadataMapType &Map,
                             const char *Name) const {
   OS << "Map Name: " << Name << "\n";
   OS << "Size: " << Map.size() << "\n";
-  for (auto I = Map.begin(), E = Map.end(); I != E; ++I) {
-    const Metadata *MD = I->first;
-    OS << "Metadata: slot = " << I->second.ID << "\n";
-    OS << "Metadata: function = " << I->second.F << "\n";
+  for (const auto &I : Map) {
+    const Metadata *MD = I.first;
+    OS << "Metadata: slot = " << I.second.ID << "\n";
+    OS << "Metadata: function = " << I.second.F << "\n";
     MD->print(OS);
     OS << "\n";
   }
@@ -740,6 +738,25 @@ const MDNode *ValueEnumerator::enumerateMetadataImpl(unsigned F, const Metadata 
       dropFunctionFromMetadata(*Insertion.first);
     return nullptr;
   }
+
+  if (auto *E = dyn_cast<DIExpr>(MD))
+    for (auto &&Op : E->builder())
+      visit(makeVisitor(
+#define HANDLE_OP0(NAME) [](DIOp::NAME) {},
+#include "llvm/IR/DIExprOps.def"
+                [&](DIOp::Referrer R) { EnumerateType(R.getResultType()); },
+                [&](DIOp::Arg A) { EnumerateType(A.getResultType()); },
+                [&](DIOp::TypeObject T) { EnumerateType(T.getResultType()); },
+                [&](DIOp::Constant C) { EnumerateValue(C.getLiteralValue()); },
+                [&](DIOp::Convert C) { EnumerateType(C.getResultType()); },
+                [&](DIOp::Reinterpret R) { EnumerateType(R.getResultType()); },
+                [&](DIOp::BitOffset B) { EnumerateType(B.getResultType()); },
+                [&](DIOp::ByteOffset B) { EnumerateType(B.getResultType()); },
+                [&](DIOp::Composite C) { EnumerateType(C.getResultType()); },
+                [&](DIOp::Extend) {}, [&](DIOp::AddrOf) {},
+                [&](DIOp::Deref D) { EnumerateType(D.getResultType()); },
+                [&](DIOp::PushLane P) { EnumerateType(P.getResultType()); }),
+            Op);
 
   // Don't assign IDs to metadata nodes.
   if (auto *N = dyn_cast<MDNode>(MD))
@@ -1148,8 +1165,8 @@ void ValueEnumerator::purgeFunction() {
     ValueMap.erase(Values[i].first);
   for (unsigned i = NumModuleMDs, e = MDs.size(); i != e; ++i)
     MetadataMap.erase(MDs[i]);
-  for (unsigned i = 0, e = BasicBlocks.size(); i != e; ++i)
-    ValueMap.erase(BasicBlocks[i]);
+  for (const BasicBlock *BB : BasicBlocks)
+    ValueMap.erase(BB);
 
   Values.resize(NumModuleValues);
   MDs.resize(NumModuleMDs);

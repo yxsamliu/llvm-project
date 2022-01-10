@@ -341,7 +341,16 @@ std::string CodeViewDebug::getFullyQualifiedName(const DIScope *Ty) {
 
 TypeIndex CodeViewDebug::getScopeIndex(const DIScope *Scope) {
   // No scope means global scope and that uses the zero index.
-  if (!Scope || isa<DIFile>(Scope))
+  //
+  // We also use zero index when the scope is a DISubprogram
+  // to suppress the emission of LF_STRING_ID for the function,
+  // which can trigger a link-time error with the linker in
+  // VS2019 version 16.11.2 or newer.
+  // Note, however, skipping the debug info emission for the DISubprogram
+  // is a temporary fix. The root issue here is that we need to figure out
+  // the proper way to encode a function nested in another function
+  // (as introduced by the Fortran 'contains' keyword) in CodeView.
+  if (!Scope || isa<DIFile>(Scope) || isa<DISubprogram>(Scope))
     return TypeIndex();
 
   assert(!isa<DIType>(Scope) && "shouldn't make a namespace scope for a type");
@@ -602,8 +611,8 @@ static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
 void CodeViewDebug::beginModule(Module *M) {
   // If module doesn't have named metadata anchors or COFF debug section
   // is not available, skip any debug info related stuff.
-  if (!M->getNamedMetadata("llvm.dbg.cu") ||
-      !Asm->getObjFileLowering().getCOFFDebugSymbolsSection()) {
+  NamedMDNode *CUs = M->getNamedMetadata("llvm.dbg.cu");
+  if (!CUs || !Asm->getObjFileLowering().getCOFFDebugSymbolsSection()) {
     Asm = nullptr;
     return;
   }
@@ -613,7 +622,6 @@ void CodeViewDebug::beginModule(Module *M) {
   TheCPU = mapArchToCVCPUType(Triple(M->getTargetTriple()).getArch());
 
   // Get the current source language.
-  NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
   const MDNode *Node = *CUs->operands().begin();
   const auto *CU = cast<DICompileUnit>(Node);
 
@@ -641,6 +649,7 @@ void CodeViewDebug::endModule() {
   switchToDebugSectionForSymbol(nullptr);
 
   MCSymbol *CompilerInfo = beginCVSubsection(DebugSubsectionKind::Symbols);
+  emitObjName();
   emitCompilerInformation();
   endCVSubsection(CompilerInfo);
 
@@ -774,6 +783,29 @@ void CodeViewDebug::emitTypeGlobalHashes() {
                 GHR.Hash.size());
     OS.emitBinaryData(S);
   }
+}
+
+void CodeViewDebug::emitObjName() {
+  MCSymbol *CompilerEnd = beginSymbolRecord(SymbolKind::S_OBJNAME);
+
+  StringRef PathRef(Asm->TM.Options.ObjectFilenameForDebug);
+  llvm::SmallString<256> PathStore(PathRef);
+
+  if (PathRef.empty() || PathRef == "-") {
+    // Don't emit the filename if we're writing to stdout or to /dev/null.
+    PathRef = {};
+  } else {
+    llvm::sys::path::remove_dots(PathStore, /*remove_dot_dot=*/true);
+    PathRef = PathStore;
+  }
+
+  OS.AddComment("Signature");
+  OS.emitIntValue(0, 4);
+
+  OS.AddComment("Object name");
+  emitNullTerminatedSymbolName(OS, PathRef);
+
+  endSymbolRecord(CompilerEnd);
 }
 
 namespace {

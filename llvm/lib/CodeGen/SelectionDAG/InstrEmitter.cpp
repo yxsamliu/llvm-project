@@ -765,7 +765,7 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
   assert(!SD->isVariadic());
   SDDbgOperand DbgOperand = SD->getLocationOps()[0];
   MDNode *Var = SD->getVariable();
-  MDNode *Expr = SD->getExpression();
+  DIExpression *Expr = (DIExpression*)SD->getExpression();
   DebugLoc DL = SD->getDebugLoc();
   const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_INSTR_REF);
 
@@ -774,6 +774,13 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
   if (DbgOperand.getKind() == SDDbgOperand::FRAMEIX ||
       DbgOperand.getKind() == SDDbgOperand::CONST)
     return EmitDbgValueFromSingleOp(SD, VRBaseMap);
+
+  // Immediately fold any indirectness from the LLVM-IR intrinsic into the
+  // expression:
+  if (SD->isIndirect()) {
+    std::vector<uint64_t> Elts = {dwarf::DW_OP_deref};
+    Expr = DIExpression::append(Expr, Elts);
+  }
 
   // It may not be immediately possible to identify the MachineInstr that
   // defines a VReg, it can depend for example on the order blocks are
@@ -913,6 +920,49 @@ InstrEmitter::EmitDbgLabel(SDDbgLabel *SD) {
   const MCInstrDesc &II = TII->get(TargetOpcode::DBG_LABEL);
   MachineInstrBuilder MIB = BuildMI(*MF, DL, II);
   MIB.addMetadata(Label);
+
+  return &*MIB;
+}
+
+MachineInstr *
+InstrEmitter::EmitDbgDefKill(SDDbgDefKill *SDDK,
+                             DenseMap<SDValue, Register> &VRBaseMap) {
+  DILifetime *Lifetime = SDDK->getLifetime();
+  DebugLoc DL = SDDK->getDebugLoc();
+
+  bool IsDef = isa<SDDbgDef>(SDDK);
+  unsigned Opcode = IsDef ? TargetOpcode::DBG_DEF : TargetOpcode::DBG_KILL;
+
+  const MCInstrDesc &II = TII->get(Opcode);
+  MachineInstrBuilder MIB = BuildMI(*MF, DL, II);
+  MIB.addMetadata(Lifetime);
+
+  if (IsDef) {
+    SDDbgDef *Def = cast<SDDbgDef>(SDDK);
+    const Value *Referrer = Def->getReferrer();
+    assert(Referrer);
+    if (isa<UndefValue>(Referrer)) {
+      MIB.addReg(Register());
+    } else if (const auto *CI = dyn_cast<ConstantInt>(Referrer)) {
+      MIB.addCImm(CI);
+    } else if (auto *CFP = dyn_cast<ConstantFP>(Referrer)) {
+      MIB.addFPImm(CFP);
+    } else if (auto *AI = dyn_cast<AllocaInst>(Referrer)) {
+      MIB.addFrameIndex(Def->getFI());
+      Lifetime->setLocation(
+          Lifetime->getLocation()
+              ->builder()
+              .removeReferrerIndirection(AI->getAllocatedType())
+              .intoExpr());
+    } else if (Def->getSDValue() &&
+               VRBaseMap.find(*Def->getSDValue()) != VRBaseMap.end()) {
+      MIB.addReg(VRBaseMap.find(*Def->getSDValue())->second);
+    } else if (isa<Argument>(Referrer)) {
+      MIB.addReg(Def->getReg());
+    } else {
+      LLVM_DEBUG(dbgs() << "Dropping debug info for " << SDDK << "\n");
+    }
+  }
 
   return &*MIB;
 }

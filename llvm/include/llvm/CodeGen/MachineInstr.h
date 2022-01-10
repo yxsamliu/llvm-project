@@ -249,7 +249,7 @@ private:
                  PointerSumTypeMember<EIIK_OutOfLine, ExtraInfo *>>
       Info;
 
-  DebugLoc debugLoc;                    // Source line information.
+  DebugLoc DbgLoc; // Source line information.
 
   /// Unique instruction number. Used by DBG_INSTR_REFs to refer to the values
   /// defined by this instruction.
@@ -267,7 +267,7 @@ private:
   /// This constructor create a MachineInstr and add the implicit operands.
   /// It reserves space for number of operands specified by
   /// MCInstrDesc.  An explicit DebugLoc is supplied.
-  MachineInstr(MachineFunction &, const MCInstrDesc &tid, DebugLoc dl,
+  MachineInstr(MachineFunction &, const MCInstrDesc &TID, DebugLoc DL,
                bool NoImp = false);
 
   // MachineInstrs are pool-allocated and owned by MachineFunction.
@@ -415,7 +415,7 @@ public:
   void unbundleFromSucc();
 
   /// Returns the debug location id of this MachineInstr.
-  const DebugLoc &getDebugLoc() const { return debugLoc; }
+  const DebugLoc &getDebugLoc() const { return DbgLoc; }
 
   /// Return the operand containing the offset to be used if this DBG_VALUE
   /// instruction is indirect; will be an invalid register if this value is
@@ -450,6 +450,14 @@ public:
   /// Return the debug label referenced by
   /// this DBG_LABEL instruction.
   const DILabel *getDebugLabel() const;
+
+  /// Return the lifetime referenced by this DBG_DEF or DBG_KILL instruction.
+  const DILifetime *getDebugLifetime() const;
+  /// Return the lifetime referenced by this DBG_DEF or DBG_KILL instruction.
+  DILifetime *getDebugLifetime();
+
+  /// Return the referrer for this DBG_DEF instruction.
+  const MachineOperand &getDebugReferrer() const;
 
   /// Fetch the instruction number of this MachineInstr. If it does not have
   /// one already, a new and unique number will be assigned.
@@ -638,6 +646,8 @@ public:
   /// Returns a range over all operands that are used to determine the variable
   /// location for this DBG_VALUE instruction.
   iterator_range<mop_iterator> debug_operands() {
+    if (isDebugDef())
+      return make_range(operands_begin() + 1, operands_end());
     assert(isDebugValue() && "Must be a debug value instruction.");
     return isDebugValueList()
                ? make_range(operands_begin() + 2, operands_end())
@@ -645,6 +655,8 @@ public:
   }
   /// \copydoc debug_operands()
   iterator_range<const_mop_iterator> debug_operands() const {
+    if (isDebugDef())
+      return make_range(operands_begin() + 1, operands_end());
     assert(isDebugValue() && "Must be a debug value instruction.");
     return isDebugValueList()
                ? make_range(operands_begin() + 2, operands_end())
@@ -1173,12 +1185,6 @@ public:
   /// eraseFromBundle() to erase individual bundled instructions.
   void eraseFromParent();
 
-  /// Unlink 'this' from the containing basic block and delete it.
-  ///
-  /// For all definitions mark their uses in DBG_VALUE nodes
-  /// as undefined. Otherwise like eraseFromParent().
-  void eraseFromParentAndMarkDBGValuesForRemoval();
-
   /// Unlink 'this' form its basic block and delete it.
   ///
   /// If the instruction is part of a bundle, the other instructions in the
@@ -1219,8 +1225,12 @@ public:
   bool isDebugLabel() const { return getOpcode() == TargetOpcode::DBG_LABEL; }
   bool isDebugRef() const { return getOpcode() == TargetOpcode::DBG_INSTR_REF; }
   bool isDebugPHI() const { return getOpcode() == TargetOpcode::DBG_PHI; }
+  bool isDebugDef() const { return getOpcode() == TargetOpcode::DBG_DEF; }
+  bool isDebugKill() const { return getOpcode() == TargetOpcode::DBG_KILL; }
+  bool isDebugDefKill() const { return isDebugDef() || isDebugKill(); }
   bool isDebugInstr() const {
-    return isDebugValue() || isDebugLabel() || isDebugRef() || isDebugPHI();
+    return isDebugValue() || isDebugLabel() || isDebugRef() || isDebugPHI() ||
+           isDebugDefKill();
   }
   bool isDebugOrPseudoInstr() const {
     return isDebugInstr() || isPseudoProbe();
@@ -1328,6 +1338,8 @@ public:
     case TargetOpcode::DBG_INSTR_REF:
     case TargetOpcode::DBG_PHI:
     case TargetOpcode::DBG_LABEL:
+    case TargetOpcode::DBG_DEF:
+    case TargetOpcode::DBG_KILL:
     case TargetOpcode::LIFETIME_START:
     case TargetOpcode::LIFETIME_END:
     case TargetOpcode::PSEUDO_PROBE:
@@ -1739,13 +1751,13 @@ public:
 
   /// Replace the instruction descriptor (thus opcode) of
   /// the current instruction with a new one.
-  void setDesc(const MCInstrDesc &tid) { MCID = &tid; }
+  void setDesc(const MCInstrDesc &TID) { MCID = &TID; }
 
   /// Replace current source information with new such.
   /// Avoid using this, the constructor argument is preferable.
-  void setDebugLoc(DebugLoc dl) {
-    debugLoc = std::move(dl);
-    assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
+  void setDebugLoc(DebugLoc DL) {
+    DbgLoc = std::move(DL);
+    assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
   }
 
   /// Erase an operand from an instruction, leaving it with one

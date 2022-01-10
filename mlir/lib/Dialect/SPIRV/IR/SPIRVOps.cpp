@@ -756,14 +756,28 @@ static void printAtomicUpdateOp(Operation *op, OpAsmPrinter &printer) {
           << "\" " << op->getOperands() << " : " << op->getOperand(0).getType();
 }
 
+template <typename T>
+static StringRef stringifyTypeName();
+
+template <>
+StringRef stringifyTypeName<IntegerType>() {
+  return "integer";
+}
+
+template <>
+StringRef stringifyTypeName<FloatType>() {
+  return "float";
+}
+
 // Verifies an atomic update op.
+template <typename ExpectedElementType>
 static LogicalResult verifyAtomicUpdateOp(Operation *op) {
   auto ptrType = op->getOperand(0).getType().cast<spirv::PointerType>();
   auto elementType = ptrType.getPointeeType();
-  if (!elementType.isa<IntegerType>())
-    return op->emitOpError(
-               "pointer operand must point to an integer value, found ")
-           << elementType;
+  if (!elementType.isa<ExpectedElementType>())
+    return op->emitOpError() << "pointer operand must point to an "
+                             << stringifyTypeName<ExpectedElementType>()
+                             << " value, found " << elementType;
 
   if (op->getNumOperands() > 1) {
     auto valueType = op->getOperand(1).getType();
@@ -2381,12 +2395,6 @@ static LogicalResult verify(spirv::SubgroupBlockWriteINTELOp blockWriteOp) {
 // spv.GroupNonUniformElectOp
 //===----------------------------------------------------------------------===//
 
-void spirv::GroupNonUniformElectOp::build(OpBuilder &builder,
-                                          OperationState &state,
-                                          spirv::Scope scope) {
-  build(builder, state, builder.getI1Type(), scope);
-}
-
 static LogicalResult verify(spirv::GroupNonUniformElectOp groupOp) {
   spirv::Scope scope = groupOp.execution_scope();
   if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
@@ -2835,11 +2843,6 @@ static LogicalResult verify(spirv::ReturnValueOp retValOp) {
 // spv.Select
 //===----------------------------------------------------------------------===//
 
-void spirv::SelectOp::build(OpBuilder &builder, OperationState &state,
-                            Value cond, Value trueValue, Value falseValue) {
-  build(builder, state, trueValue.getType(), cond, trueValue, falseValue);
-}
-
 static LogicalResult verify(spirv::SelectOp op) {
   if (auto conditionTy = op.condition().getType().dyn_cast<VectorType>()) {
     auto resultVectorTy = op.result().getType().dyn_cast<VectorType>();
@@ -3247,13 +3250,13 @@ static ParseResult parseCooperativeMatrixLoadNVOp(OpAsmParser &parser,
   return success();
 }
 
-static void print(spirv::CooperativeMatrixLoadNVOp M, OpAsmPrinter &printer) {
-  printer << " " << M.pointer() << ", " << M.stride() << ", "
-          << M.columnmajor();
+static void print(spirv::CooperativeMatrixLoadNVOp m, OpAsmPrinter &printer) {
+  printer << " " << m.pointer() << ", " << m.stride() << ", "
+          << m.columnmajor();
   // Print optional memory access attribute.
-  if (auto memAccess = M.memory_access())
+  if (auto memAccess = m.memory_access())
     printer << " [\"" << stringifyMemoryAccess(*memAccess) << "\"]";
-  printer << " : " << M.pointer().getType() << " as " << M.getType();
+  printer << " : " << m.pointer().getType() << " as " << m.getType();
 }
 
 static LogicalResult verifyPointerAndCoopMatrixType(Operation *op, Type pointer,

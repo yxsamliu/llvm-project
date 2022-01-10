@@ -93,6 +93,8 @@ public:
     case Intrinsic::dbg_declare:
     case Intrinsic::dbg_value:
     case Intrinsic::dbg_label:
+    case Intrinsic::dbg_def:
+    case Intrinsic::dbg_kill:
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
     case Intrinsic::lifetime_start:
@@ -124,6 +126,8 @@ static inline bool isDbgInfoIntrinsic(Intrinsic::ID ID) {
   case Intrinsic::dbg_value:
   case Intrinsic::dbg_addr:
   case Intrinsic::dbg_label:
+  case Intrinsic::dbg_def:
+  case Intrinsic::dbg_kill:
     return true;
   default:
     return false;
@@ -386,12 +390,72 @@ public:
   /// @}
 };
 
+/// The common base class for the llvm.dbg.def and llvm.dbg.kill instructions.
+class DbgDefKillIntrinsic : public DbgInfoIntrinsic {
+public:
+  Metadata *getRawLifetime() const {
+    return cast<MetadataAsValue>(getArgOperand(0))->getMetadata();
+  }
+  DILifetime *getLifetime() const { return cast<DILifetime>(getRawLifetime()); }
+  /// \name Casting methods
+  /// @{
+  static bool classof(const IntrinsicInst *I) {
+    switch (I->getIntrinsicID()) {
+    case Intrinsic::dbg_def:
+    case Intrinsic::dbg_kill:
+      return true;
+    default:
+      return false;
+    }
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+  /// @}
+};
+
+/// This represents the llvm.dbg.def instruction.
+class DbgDefInst : public DbgDefKillIntrinsic {
+public:
+  Metadata *getRawReferrer() const {
+    return cast<MetadataAsValue>(getArgOperand(1))->getMetadata();
+  }
+  Value *getReferrer() const {
+    return cast<ValueAsMetadata>(getRawReferrer())->getValue();
+  }
+  /// \name Casting methods
+  /// @{
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::dbg_def;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+  /// @}
+};
+
+/// This represents the llvm.dbg.kill instruction.
+class DbgKillInst : public DbgDefKillIntrinsic {
+public:
+  /// \name Casting methods
+  /// @{
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::dbg_kill;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+  /// @}
+};
+
 /// This is the common base class for vector predication intrinsics.
 class VPIntrinsic : public IntrinsicInst {
 public:
   /// \brief Declares a llvm.vp.* intrinsic in \p M that matches the parameters
-  /// \p Params.
+  /// \p Params. Additionally, the load and gather intrinsics require
+  /// \p ReturnType to be specified.
   static Function *getDeclarationForParams(Module *M, Intrinsic::ID,
+                                           Type *ReturnType,
                                            ArrayRef<Value *> Params);
 
   static Optional<unsigned> getMaskParamPos(Intrinsic::ID IntrinsicID);

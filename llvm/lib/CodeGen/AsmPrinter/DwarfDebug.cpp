@@ -228,10 +228,6 @@ void DebugLocDwarfExpression::commitTemporaryBuffer() {
   TmpBuf->Comments.clear();
 }
 
-const DIType *DbgVariable::getType() const {
-  return getVariable()->getType();
-}
-
 /// Get .debug_loc entry for the instruction range starting at MI.
 static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
   const DIExpression *Expr = MI->getDebugExpression();
@@ -258,7 +254,7 @@ static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
   return DbgValueLoc(Expr, DbgValueLocEntries, IsVariadic);
 }
 
-void DbgVariable::initializeDbgValue(const MachineInstr *DbgValue) {
+void OldDbgVariable::initializeDbgValue(const MachineInstr *DbgValue) {
   assert(FrameIndexExprs.empty() && "Already initialized?");
   assert(!ValueLoc.get() && "Already initialized?");
 
@@ -272,7 +268,7 @@ void DbgVariable::initializeDbgValue(const MachineInstr *DbgValue) {
       FrameIndexExprs.push_back({0, E});
 }
 
-ArrayRef<DbgVariable::FrameIndexExpr> DbgVariable::getFrameIndexExprs() const {
+ArrayRef<DbgVariable::FrameIndexExpr> OldDbgVariable::getFrameIndexExprs() const {
   if (FrameIndexExprs.size() == 1)
     return FrameIndexExprs;
 
@@ -290,14 +286,16 @@ ArrayRef<DbgVariable::FrameIndexExpr> DbgVariable::getFrameIndexExprs() const {
   return FrameIndexExprs;
 }
 
-void DbgVariable::addMMIEntry(const DbgVariable &V) {
+void OldDbgVariable::addMMIEntry(const DbgVariable &V) {
+  const OldDbgVariable *OV = dyn_cast<OldDbgVariable>(&V);
+
   assert(DebugLocListIndex == ~0U && !ValueLoc.get() && "not an MMI entry");
-  assert(V.DebugLocListIndex == ~0U && !V.ValueLoc.get() && "not an MMI entry");
-  assert(V.getVariable() == getVariable() && "conflicting variable");
-  assert(V.getInlinedAt() == getInlinedAt() && "conflicting inlined-at location");
+  assert(OV->DebugLocListIndex == ~0U && !OV->ValueLoc.get() && "not an MMI entry");
+  assert(OV->getVariable() == getVariable() && "conflicting variable");
+  assert(OV->getInlinedAt() == getInlinedAt() && "conflicting inlined-at location");
 
   assert(!FrameIndexExprs.empty() && "Expected an MMI entry");
-  assert(!V.FrameIndexExprs.empty() && "Expected an MMI entry");
+  assert(!OV->FrameIndexExprs.empty() && "Expected an MMI entry");
 
   // FIXME: This logic should not be necessary anymore, as we now have proper
   // deduplication. However, without it, we currently run into the assertion
@@ -309,7 +307,7 @@ void DbgVariable::addMMIEntry(const DbgVariable &V) {
       return;
   }
 
-  for (const auto &FIE : V.FrameIndexExprs)
+  for (const auto &FIE : OV->FrameIndexExprs)
     // Ignore duplicate entries.
     if (llvm::none_of(FrameIndexExprs, [&](const FrameIndexExpr &Other) {
           return FIE.FI == Other.FI && FIE.Expr == Other.Expr;
@@ -1147,6 +1145,21 @@ sortGlobalExprs(SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &GVEs) {
   return GVEs;
 }
 
+/// Create a DIE for \p Ty if it doesn't already exist. If type units are
+/// enabled, try to emit a type unit without a CU skeleton DIE.
+static void createMaybeUnusedType(DwarfDebug &DD, DwarfCompileUnit &CU,
+                                  DIType &Ty) {
+  // Try to generate a type unit without creating a skeleton DIE in this CU.
+  if (DICompositeType const *CTy = dyn_cast<DICompositeType>(&Ty)) {
+    MDString const *TypeId = CTy->getRawIdentifier();
+    if (DD.generateTypeUnits() && TypeId && !Ty.isForwardDecl())
+      if (DD.getOrCreateDwarfTypeUnit(CU, TypeId->getString(), CTy))
+        return;
+  }
+  // We couldn't or shouldn't add a type unit so create the DIE normally.
+  CU.getOrCreateTypeDIE(&Ty);
+}
+
 // Emit all Dwarf sections that should come prior to the content. Create
 // global DIEs and emit initial debug info sections. This is invoked by
 // the target AsmPrinter.
@@ -1233,14 +1246,14 @@ void DwarfDebug::beginModule(Module *M) {
     for (auto *Ty : CUNode->getEnumTypes()) {
       // The enum types array by design contains pointers to
       // MDNodes rather than DIRefs. Unique them here.
-      CU.getOrCreateTypeDIE(cast<DIType>(Ty));
+      createMaybeUnusedType(*this, CU, *Ty);
     }
     for (auto *Ty : CUNode->getRetainedTypes()) {
       // The retained types array by design contains pointers to
       // MDNodes rather than DIRefs. Unique them here.
       if (DIType *RT = dyn_cast<DIType>(Ty))
-          // There is no point in force-emitting a forward declaration.
-          CU.getOrCreateTypeDIE(RT);
+        // There is no point in force-emitting a forward declaration.
+        createMaybeUnusedType(*this, CU, *RT);
     }
     // Emit imported_modules last so that the relevant context is already
     // available.
@@ -1411,8 +1424,13 @@ void DwarfDebug::finalizeModuleInfo() {
     SkeletonHolder.computeSizeAndOffsets();
 }
 
+
 // Emit all Dwarf sections that should come after the content.
 void DwarfDebug::endModule() {
+  // Terminate the pending line table.
+  if (PrevCU)
+    terminateLineTable(PrevCU);
+  PrevCU = nullptr;
   assert(CurFn == nullptr);
   assert(CurMI == nullptr);
 
@@ -1512,9 +1530,63 @@ void DwarfDebug::ensureAbstractEntityIsCreatedIfScoped(DwarfCompileUnit &CU,
     CU.createAbstractEntity(Node, Scope);
 }
 
-// Collect variable information from side table maintained by MF.
+// Collect variable information from MF.
+void DwarfDebug::collectVariableInfoFromMF(
+    DwarfCompileUnit &TheCU, DenseSet<InlinedEntity> &Processed) {
+  SmallDenseMap<InlinedEntity, DbgVariable *> MFVars;
+  LLVM_DEBUG(dbgs() << "DwarfDebug: collecting variables from MF\n");
+  for (const auto &MBB : *Asm->MF) {
+    for (const auto &MI : MBB) {
+      if (!MI.isDebugDef()) {
+        continue;
+      }
+
+      LLVM_DEBUG(dbgs() << "Processing instruction: " << MI);
+
+      // FIXME(KZHURAVL): This is fine at -O0. Need to handle DIFragment and
+      // DIGlobalVariable at other optimization levels.
+      const DILifetime *LT = MI.getDebugLifetime();
+      const DILocalVariable *LV = dyn_cast<DILocalVariable>(LT->getObject());
+      assert(LV && "DILifetime's object is not DILocalVariable");
+
+      InlinedEntity Var(LV, nullptr);
+      Processed.insert(Var);
+      LexicalScope *Scope = MI.getDebugLoc().get() ?
+          LScopes.findLexicalScope(MI.getDebugLoc().get()) :
+          LScopes.findLexicalScope(LV->getScope());
+
+      // If variable scope is not found then skip this variable.
+      if (!Scope) {
+        LLVM_DEBUG(dbgs() << "Dropping debug info for " << LV->getName()
+                          << ", no variable scope found\n");
+        continue;
+      }
+
+      ensureAbstractEntityIsCreatedIfScoped(TheCU, Var.first, Scope->getScopeNode());
+      auto RegVar = std::make_unique<NewDbgVariable>(
+                        cast<DILocalVariable>(Var.first), Var.second);
+      RegVar->initializeLifetime(LT);
+      LLVM_DEBUG(dbgs() << "Created DbgVariable for " << LV->getName()
+                        << "\n");
+
+      if (DbgVariable *DbgVar = MFVars.lookup(Var))
+        DbgVar->addMMIEntry(*RegVar);
+      else if (InfoHolder.addScopeVariable(Scope, RegVar.get())) {
+        MFVars.insert({Var, RegVar.get()});
+        ConcreteEntities.push_back(std::move(RegVar));
+      }
+    }
+  }
+}
+
+// Collect variable information from the side table maintained by MF.
 void DwarfDebug::collectVariableInfoFromMFTable(
     DwarfCompileUnit &TheCU, DenseSet<InlinedEntity> &Processed) {
+  if (isHeterogeneousDebug(*Asm->MF->getFunction().getParent())) {
+    collectVariableInfoFromMF(TheCU, Processed);
+    return;
+  }
+
   SmallDenseMap<InlinedEntity, DbgVariable *> MFVars;
   LLVM_DEBUG(dbgs() << "DwarfDebug: collecting variables from MF side table\n");
   for (const auto &VI : Asm->MF->getVariableDbgInfo()) {
@@ -1535,7 +1607,7 @@ void DwarfDebug::collectVariableInfoFromMFTable(
     }
 
     ensureAbstractEntityIsCreatedIfScoped(TheCU, Var.first, Scope->getScopeNode());
-    auto RegVar = std::make_unique<DbgVariable>(
+    auto RegVar = std::make_unique<OldDbgVariable>(
                     cast<DILocalVariable>(Var.first), Var.second);
     RegVar->initializeMMI(VI.Expr, VI.Slot);
     LLVM_DEBUG(dbgs() << "Created DbgVariable for " << VI.Var->getName()
@@ -1819,7 +1891,7 @@ DbgEntity *DwarfDebug::createConcreteEntity(DwarfCompileUnit &TheCU,
   ensureAbstractEntityIsCreatedIfScoped(TheCU, Node, Scope.getScopeNode());
   if (isa<const DILocalVariable>(Node)) {
     ConcreteEntities.push_back(
-        std::make_unique<DbgVariable>(cast<const DILocalVariable>(Node),
+        std::make_unique<OldDbgVariable>(cast<const DILocalVariable>(Node),
                                        Location));
     InfoHolder.addScopeVariable(&Scope,
         cast<DbgVariable>(ConcreteEntities.back().get()));
@@ -1943,6 +2015,11 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
     /// actually address when generating Dwarf DIE.
     MCSymbol *Sym = getLabelBeforeInsn(MI);
     createConcreteEntity(TheCU, *Scope, Label, IL.second, Sym);
+  }
+
+  // FIXME(KZHURAVL): Do we need following *for* loop for heterogeneous debug?
+  if (isHeterogeneousDebug(*Asm->MF->getFunction().getParent())) {
+    return;
   }
 
   // Collect info for variables/labels that were optimized out.
@@ -2178,10 +2255,22 @@ DwarfDebug::getDwarfCompileUnitIDForLineTable(const DwarfCompileUnit &CU) {
     return CU.getUniqueID();
 }
 
+void DwarfDebug::terminateLineTable(const DwarfCompileUnit *CU) {
+  const auto &CURanges = CU->getRanges();
+  auto &LineTable = Asm->OutStreamer->getContext().getMCDwarfLineTable(
+      getDwarfCompileUnitIDForLineTable(*CU));
+  // Add the last range label for the given CU.
+  LineTable.getMCLineSections().addEndEntry(
+      const_cast<MCSymbol *>(CURanges.back().End));
+}
+
 void DwarfDebug::skippedNonDebugFunction() {
   // If we don't have a subprogram for this function then there will be a hole
   // in the range information. Keep note of this by setting the previously used
   // section to nullptr.
+  // Terminate the pending line table.
+  if (PrevCU)
+    terminateLineTable(PrevCU);
   PrevCU = nullptr;
   CurFn = nullptr;
 }
@@ -3364,17 +3453,30 @@ uint64_t DwarfDebug::makeTypeSignature(StringRef Identifier) {
 void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
                                       StringRef Identifier, DIE &RefDie,
                                       const DICompositeType *CTy) {
+  bool TopLevelType = TypeUnitsUnderConstruction.empty();
+  if (auto Signature = getOrCreateDwarfTypeUnit(CU, Identifier, CTy)) {
+    CU.addDIETypeSignature(RefDie, *Signature);
+  } else if (TopLevelType) {
+    // Construct this type in the CU directly.
+    // This is inefficient because all the dependent types will be rebuilt
+    // from scratch, including building them in type units, discovering that
+    // they depend on addresses, throwing them out and rebuilding them.
+    CU.constructTypeDIE(RefDie, cast<DICompositeType>(CTy));
+  }
+}
+
+Optional<uint64_t>
+DwarfDebug::getOrCreateDwarfTypeUnit(DwarfCompileUnit &CU, StringRef Identifier,
+                                     const DICompositeType *CTy) {
   // Fast path if we're building some type units and one has already used the
   // address pool we know we're going to throw away all this work anyway, so
   // don't bother building dependent types.
   if (!TypeUnitsUnderConstruction.empty() && AddrPool.hasBeenUsed())
-    return;
+    return None;
 
   auto Ins = TypeSignatures.insert(std::make_pair(CTy, 0));
-  if (!Ins.second) {
-    CU.addDIETypeSignature(RefDie, Ins.first->second);
-    return;
-  }
+  if (!Ins.second)
+    return Ins.first->second;
 
   bool TopLevelType = TypeUnitsUnderConstruction.empty();
   AddrPool.resetUsedFlag();
@@ -3428,13 +3530,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
       // the type that used an address.
       for (const auto &TU : TypeUnitsToAdd)
         TypeSignatures.erase(TU.second);
-
-      // Construct this type in the CU directly.
-      // This is inefficient because all the dependent types will be rebuilt
-      // from scratch, including building them in type units, discovering that
-      // they depend on addresses, throwing them out and rebuilding them.
-      CU.constructTypeDIE(RefDie, cast<DICompositeType>(CTy));
-      return;
+      return None;
     }
 
     // If the type wasn't dependent on fission addresses, finish adding the type
@@ -3444,7 +3540,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
       InfoHolder.emitUnit(TU.first.get(), useSplitDwarf());
     }
   }
-  CU.addDIETypeSignature(RefDie, Signature);
+  return Signature;
 }
 
 DwarfDebug::NonTypeUnitContext::NonTypeUnitContext(DwarfDebug *DD)
