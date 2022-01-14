@@ -173,7 +173,14 @@ constexpr AMDGPUFunctionArgInfo AMDGPUFunctionArgInfo::fixedABILayout() {
 const AMDGPUFunctionArgInfo &
 AMDGPUArgumentUsageInfo::lookupFuncArgInfo(const Function &F) const {
   auto I = ArgInfoMap.find(&F);
-  if (I == ArgInfoMap.end())
-    return FixedABIFunctionInfo;
+  if (I == ArgInfoMap.end()) {
+    if (AMDGPUTargetMachine::EnableFixedFunctionABI)
+      return FixedABIFunctionInfo;
+
+    // Without the fixed ABI, we assume no function has special inputs.
+    assert(F.isDeclaration());
+    return ExternFunctionInfo;
+  }
+
   return I->second;
 }
