@@ -1177,12 +1177,32 @@ void DwarfDebug::beginModule(Module *M) {
   SingleCU = NumDebugCUs == 1;
   DenseMap<DIGlobalVariable *, SmallVector<DwarfCompileUnit::GlobalExpr, 1>>
       GVMap;
+  DenseMap<DIFragment *, const GlobalVariable *> GVFragmentMap;
   for (const GlobalVariable &Global : M->globals()) {
+    // To support the "inlining" of GV-fragments as an optimization, we record
+    // the referrer for each such fragment.
+    if (llvm::isHeterogeneousDebug(*M)) {
+      if (DIFragment *F = Global.getDbgDef())
+        GVFragmentMap[F] = &Global;
+      continue;
+    }
     SmallVector<DIGlobalVariableExpression *, 1> GVs;
     Global.getDebugInfo(GVs);
     for (auto *GVE : GVs)
       GVMap[GVE->getVariable()].push_back({&Global, GVE->getExpression()});
   }
+  // FIXME: This is a shortcut to enable debug info for globals at -O0. The
+  // general support cannot assume there is only a computed lifetime for each
+  // global, as function-local intrinsics may "override" the computed lifetime
+  // with bounded lifetimes.
+  DenseMap<DICompileUnit *, SmallVector<DILifetime *>> CULifetimeMap;
+  if (isHeterogeneousDebug(*M))
+    if (NamedMDNode *RN = M->getNamedMetadata("llvm.dbg.retainedNodes"))
+      for (MDNode *O : RN->operands())
+        if (auto *L = dyn_cast<DILifetime>(O))
+          if (auto *GV = dyn_cast<DIGlobalVariable>(L->getObject()))
+            if (auto *CU = dyn_cast<DICompileUnit>(GV->getScope()))
+              CULifetimeMap[CU].push_back(L);
 
   // Create the symbol that designates the start of the unit's contribution
   // to the string offsets table. In a split DWARF scenario, only the skeleton
@@ -1220,7 +1240,8 @@ void DwarfDebug::beginModule(Module *M) {
 
     if (!HasNonLocalImportedEntities && CUNode->getEnumTypes().empty() &&
         CUNode->getRetainedTypes().empty() &&
-        CUNode->getGlobalVariables().empty() && CUNode->getMacros().empty())
+        CUNode->getGlobalVariables().empty() && CUNode->getMacros().empty() &&
+        !isHeterogeneousDebug(*M))
       continue;
 
     DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(CUNode);
@@ -1243,11 +1264,22 @@ void DwarfDebug::beginModule(Module *M) {
         CU.getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
     }
 
+    if (isHeterogeneousDebug(*M)) {
+      const auto &LS = CULifetimeMap.find(CUNode);
+      if (LS != CULifetimeMap.end())
+        for (auto &L : LS->getSecond())
+          CU.getOrCreateGlobalVariableDIE(*L, GVFragmentMap);
+    }
+
+    for (auto *Ty : CUNode->getEnumTypes())
+      CU.getOrCreateTypeDIE(cast<DIType>(Ty));
+
     for (auto *Ty : CUNode->getEnumTypes()) {
       // The enum types array by design contains pointers to
       // MDNodes rather than DIRefs. Unique them here.
       createMaybeUnusedType(*this, CU, *Ty);
     }
+
     for (auto *Ty : CUNode->getRetainedTypes()) {
       // The retained types array by design contains pointers to
       // MDNodes rather than DIRefs. Unique them here.

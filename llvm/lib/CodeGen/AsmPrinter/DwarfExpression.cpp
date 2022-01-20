@@ -797,10 +797,10 @@ Optional<uint8_t> DIEDwarfExprAST::Node::getEquivalentDwarfOp() const {
   llvm_unreachable("Unknown DIOp in DIEDwarfExprAST::Node::getEquivalentDwarfOp");
 }
 
-void DIEDwarfExprAST::buildDIExprAST(const DIExpr &Expr) {
+void DIEDwarfExprAST::buildDIExprAST() {
   std::stack<std::unique_ptr<DIEDwarfExprAST::Node>> Operands;
 
-  for (const auto &Op : Expr.builder()) {
+  for (const auto &Op : Lifetime.getLocation()->builder()) {
     std::unique_ptr<DIEDwarfExprAST::Node> OpNode =
         std::make_unique<DIEDwarfExprAST::Node>(Op);
     size_t OpChildrenCount = OpNode->getChildrenCount();
@@ -885,7 +885,41 @@ void DIEDwarfExprAST::lower(DIEDwarfExprAST::Node *OpNode) {
   }
 }
 
+bool DIEDwarfExprAST::tryInlineArgObject(DIObject *ArgObject) {
+  if (!GVFragmentMap)
+    return false;
+  auto *Fragment = dyn_cast<DIFragment>(ArgObject);
+  if (!Fragment)
+    return false;
+  const auto GV = GVFragmentMap->find(Fragment);
+  if (GV == GVFragmentMap->end())
+    return false;
+  const GlobalVariable *Global = GV->getSecond();
+  const MCSymbol *Sym = AP.getSymbol(Global);
+  CU.getDwarfDebug().addArangeLabel(SymbolCU(&CU, Sym));
+  emitDwarfOp(dwarf::DW_OP_addr);
+  CU.addLabel(getActiveDIE(), dwarf::DW_FORM_addr, Sym);
+  emitDwarfOp(dwarf::DW_OP_stack_value);
+  return true;
+}
+
 void DIEDwarfExprAST::lowerDIOpArg(DIEDwarfExprAST::Node *OpNode) {
+  const DIOp::Variant &Element = OpNode->getElement();
+  assert(Element.holdsAlternative<DIOp::Arg>() &&
+         "Expected DIOp::Arg, but got something else");
+
+  const DIOp::Arg &Arg = Element.get<DIOp::Arg>();
+  uint32_t Index = Arg.getIndex();
+  assert(Index >= std::distance(Lifetime.argObjects().end(),
+                                Lifetime.argObjects().begin()));
+  DIObject *ArgObject = *(Lifetime.argObjects().begin() + Index);
+
+  if (tryInlineArgObject(ArgObject)) {
+    OpNode->setIsLowered();
+    OpNode->setResultType(Arg.getResultType());
+    return;
+  }
+
   IsImplemented = false;
 }
 
@@ -925,8 +959,8 @@ void DIEDwarfExprAST::lowerDIOpReferrer(DIEDwarfExprAST::Node *OpNode) {
   assert(Element.holdsAlternative<DIOp::Referrer>() &&
          "Expected DIOp::Referrer, but got something else");
 
-  auto LLVMFrameRegister = TRI.getFrameRegister(*AP.MF);
-  auto DWARFFrameRegister = TRI.getDwarfRegNum(LLVMFrameRegister, false);
+  auto LLVMFrameRegister = TRI->getFrameRegister(*AP.MF);
+  auto DWARFFrameRegister = TRI->getDwarfRegNum(LLVMFrameRegister, false);
 
   // FIXME(KZHURAVL): This is fine at -O0. Need to record the actual Value which
   // is acting as the referrer for each lifetime when we walk the MF.

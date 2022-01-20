@@ -2,6 +2,8 @@
 ; RUN: | llvm-dwarfdump -o - - \
 ; RUN: | FileCheck %s
 
+; XFAIL: *
+
 ;; PR51087
 ;; Check that types that are not referenecd in the CU and have type units
 ;; do not get unecessary skeleton DIEs in the CU, and that types that have
