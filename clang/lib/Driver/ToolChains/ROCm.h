@@ -22,6 +22,23 @@
 namespace clang {
 namespace driver {
 
+/// ABI version of device library.
+struct DeviceLibABIVersion {
+  unsigned Value = 0;
+  DeviceLibABIVersion(unsigned V) : Value(V) {}
+  static DeviceLibABIVersion fromCodeObjectVersion(unsigned V) {
+    if (V < 4)
+      V = 4;
+    return DeviceLibABIVersion(V * 100);
+  }
+  /// Whether ABI version bc file is requested.
+  bool requiresLibrary() { return Value >= 500; }
+  std::string toString() {
+    assert(Value % 100 == 0 && "Not supported");
+    return Twine(Value / 100).str();
+  }
+};
+
 /// A class to find a viable ROCM installation
 /// TODO: Generalize to handle libclc.
 class RocmInstallationDetector {
@@ -107,6 +124,10 @@ private:
   ConditionalLibrary DenormalsAreZero;
   ConditionalLibrary CorrectlyRoundedSqrt;
 
+  // Maps ABI version to library path. The version number is in the format of
+  // three digits as used in the ABI version library name.
+  std::map<unsigned, std::string> ABIVersionMap;
+
   // Cache ROCm installation search paths.
   SmallVector<Candidate, 4> ROCmSearchDirs;
   bool PrintROCmSearchDirs;
@@ -138,10 +159,16 @@ public:
 
   /// Get file paths of default bitcode libraries common to AMDGPU based
   /// toolchains.
-  llvm::SmallVector<std::string, 12> getCommonBitcodeLibs(
-      const llvm::opt::ArgList &DriverArgs, StringRef LibDeviceFile,
-      bool Wave64, bool DAZ, bool FiniteOnly, bool UnsafeMathOpt,
-      bool FastRelaxedMath, bool CorrectSqrt, bool isOpenMP) const;
+  llvm::SmallVector<std::string, 12>
+  getCommonBitcodeLibs(const llvm::opt::ArgList &DriverArgs,
+                       StringRef LibDeviceFile, bool Wave64, bool DAZ,
+                       bool FiniteOnly, bool UnsafeMathOpt,
+                       bool FastRelaxedMath, bool CorrectSqrt,
+                       DeviceLibABIVersion ABIVer, bool isOpenMP) const;
+  /// Check file paths of default bitcode libraries common to AMDGPU based
+  /// toolchains. \returns false if there are invalid or missing files.
+  bool checkCommonBitcodeLibs(StringRef GPUArch, StringRef LibDeviceFile,
+                              DeviceLibABIVersion ABIVer) const;
 
   /// Check whether we detected a valid HIP runtime.
   bool hasHIPRuntime() const { return HasHIPRuntime; }
@@ -211,6 +238,13 @@ public:
 
   StringRef getCorrectlyRoundedSqrtPath(bool Enabled) const {
     return CorrectlyRoundedSqrt.get(Enabled);
+  }
+
+  StringRef getABIVersionPath(DeviceLibABIVersion ABIVer) const {
+    auto Loc = ABIVersionMap.find(ABIVer.Value);
+    if (Loc == ABIVersionMap.end())
+      return StringRef();
+    return Loc->second;
   }
 
   /// Get libdevice file for given architecture
