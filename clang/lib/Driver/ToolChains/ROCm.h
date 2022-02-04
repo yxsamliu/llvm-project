@@ -24,18 +24,21 @@ namespace driver {
 
 /// ABI version of device library.
 struct DeviceLibABIVersion {
-  unsigned Value = 0;
-  DeviceLibABIVersion(unsigned V) : Value(V) {}
-  static DeviceLibABIVersion fromCodeObjectVersion(unsigned V) {
-    if (V < 4)
-      V = 4;
-    return DeviceLibABIVersion(V * 100);
+  unsigned ABIVersion = 0;
+  DeviceLibABIVersion(unsigned V) : ABIVersion(V) {}
+  static DeviceLibABIVersion fromCodeObjectVersion(unsigned CodeObjectVersion) {
+    if (CodeObjectVersion < 4)
+      CodeObjectVersion = 4;
+    return DeviceLibABIVersion(CodeObjectVersion * 100);
   }
   /// Whether ABI version bc file is requested.
-  bool requiresLibrary() { return Value >= 500; }
+  /// ABIVersion is code object version multiplied by 100. Code object v4
+  /// and below works with ROCm 5.0 and below which does not have
+  /// abi_version_*.bc. Code object v5 requires abi_version_500.bc.
+  bool requiresLibrary() { return ABIVersion >= 500; }
   std::string toString() {
-    assert(Value % 100 == 0 && "Not supported");
-    return Twine(Value / 100).str();
+    assert(ABIVersion % 100 == 0 && "Not supported");
+    return Twine(ABIVersion / 100).str();
   }
 };
 
@@ -241,7 +244,7 @@ public:
   }
 
   StringRef getABIVersionPath(DeviceLibABIVersion ABIVer) const {
-    auto Loc = ABIVersionMap.find(ABIVer.Value);
+    auto Loc = ABIVersionMap.find(ABIVer.ABIVersion);
     if (Loc == ABIVersionMap.end())
       return StringRef();
     return Loc->second;
