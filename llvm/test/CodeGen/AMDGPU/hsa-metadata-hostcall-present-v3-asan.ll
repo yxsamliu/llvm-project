@@ -1,3 +1,4 @@
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=3 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=3 -amdgpu-dump-hsa-metadata -amdgpu-verify-hsa-metadata -filetype=obj -o - < %s 2>&1 | FileCheck  %s
 
 ; CHECK:              ---
@@ -47,8 +48,3 @@ attributes #0 = { sanitize_address "amdgpu-implicitarg-num-bytes"="48" }
 
 !opencl.ocl.version = !{!90}
 !90 = !{i32 2, i32 0}
-
-!llvm.module.flags = !{!0}
-!0 = !{i32 4, !"amdgpu_hostcall", i32 1}
-
-; CHECK: AMDGPU HSA Metadata Parser Test: PASS
