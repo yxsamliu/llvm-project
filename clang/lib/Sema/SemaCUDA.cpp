@@ -145,9 +145,8 @@ Sema::CUDAFunctionTarget Sema::IdentifyCUDATarget(const FunctionDecl *D,
 Sema::CUDAVariableTarget Sema::IdentifyCUDATarget(const VarDecl *Var) {
   if (Var->hasAttr<HIPManagedAttr>())
     return CVT_Unified;
-  if (Var->isConstexpr() && !hasExplicitAttr<CUDAConstantAttr>(Var))
-    return CVT_Both;
-  if (Var->getType().isConstQualified() && Var->hasAttr<CUDAConstantAttr>() &&
+  if ((Var->isConstexpr() || Var->getType().isConstQualified()) &&
+      Var->hasAttr<CUDAConstantAttr>() &&
       !hasExplicitAttr<CUDAConstantAttr>(Var))
     return CVT_Both;
   if (Var->hasAttr<CUDADeviceAttr>() || Var->hasAttr<CUDAConstantAttr>() ||
@@ -718,9 +717,9 @@ void Sema::MaybeAddCUDAConstantAttr(VarDecl *VD) {
       !VD->hasAttr<CUDAConstantAttr>() && !VD->hasAttr<CUDASharedAttr>() &&
       (VD->isFileVarDecl() || VD->isStaticDataMember()) &&
       !IsDependentVar(VD) &&
-      (VD->isConstexpr() || (VD->getType().isConstQualified() &&
-                             HasAllowedCUDADeviceStaticInitializer(
-                                 *this, VD, CICK_DeviceOrConstant)))) {
+      ((VD->isConstexpr() || VD->getType().isConstQualified()) &&
+       HasAllowedCUDADeviceStaticInitializer(*this, VD,
+                                             CICK_DeviceOrConstant))) {
     VD->addAttr(CUDAConstantAttr::CreateImplicit(getASTContext()));
   }
 }
