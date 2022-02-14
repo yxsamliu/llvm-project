@@ -405,7 +405,8 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
 
   // Store into LocalDeclMap before generating initializer to handle
   // circular references.
-  setAddrOfLocalVar(&D, Address(addr, alignment));
+  llvm::Type *elemTy = ConvertTypeForMem(D.getType());
+  setAddrOfLocalVar(&D, Address(addr, elemTy, alignment));
 
   // We can't have a VLA here, but we can have a pointer to a VLA,
   // even though that doesn't really make any sense.
@@ -464,8 +465,7 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
   // RAUW's the GV uses of this constant will be invalid.
   llvm::Constant *castedAddr =
     llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(var, expectedType);
-  if (var != castedAddr)
-    LocalDeclMap.find(&D)->second = Address(castedAddr, alignment);
+  LocalDeclMap.find(&D)->second = Address(castedAddr, elemTy, alignment);
   CGM.setStaticLocalDeclAddress(&D, castedAddr);
 
   CGM.getSanitizerMetadata()->reportGlobalToASan(var, D);
@@ -1152,7 +1152,7 @@ Address CodeGenModule::createUnnamedGlobalFrom(const VarDecl &D,
     CacheEntry->setAlignment(Align.getAsAlign());
   }
 
-  return Address(CacheEntry, Align);
+  return Address(CacheEntry, CacheEntry->getValueType(), Align);
 }
 
 static Address createUnnamedGlobalForMemcpyFrom(CodeGenModule &CGM,
@@ -1199,7 +1199,7 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
     bool valueAlreadyCorrect =
         constant->isNullValue() || isa<llvm::UndefValue>(constant);
     if (!valueAlreadyCorrect) {
-      Loc = Builder.CreateBitCast(Loc, Ty->getPointerTo(Loc.getAddressSpace()));
+      Loc = Builder.CreateElementBitCast(Loc, Ty);
       emitStoresForInitAfterBZero(CGM, constant, Loc, isVolatile, Builder,
                                   IsAutoInit);
     }
@@ -1453,6 +1453,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
 
   if (getLangOpts().OpenMP && OpenMPLocalAddr.isValid()) {
     address = OpenMPLocalAddr;
+    AllocaAddr = OpenMPLocalAddr;
   } else if (Ty->isConstantSizeType()) {
     // If this value is an array or struct with a statically determinable
     // constant initializer, there are optimizations we can do.
@@ -1498,6 +1499,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       // return slot, so that we can elide the copy when returning this
       // variable (C++0x [class.copy]p34).
       address = ReturnValue;
+      AllocaAddr = ReturnValue;
 
       if (const RecordType *RecordTy = Ty->getAs<RecordType>()) {
         const auto *RD = RecordTy->getDecl();
@@ -1509,7 +1511,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
           // applied.
           llvm::Value *Zero = Builder.getFalse();
           Address NRVOFlag =
-            CreateTempAlloca(Zero->getType(), CharUnits::One(), "nrvo");
+              CreateTempAlloca(Zero->getType(), CharUnits::One(), "nrvo",
+                               /*ArraySize=*/nullptr, &AllocaAddr);
           EnsureInsertPoint();
           Builder.CreateStore(Zero, NRVOFlag);
 
@@ -1606,14 +1609,26 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
 
   // Emit debug info for local var declaration.
   if (EmitDebugInfo && HaveInsertPoint()) {
-    Address DebugAddr = address;
-    bool UsePointerValue = NRVO && ReturnValuePointer.isValid();
     DI->setLocation(D.getLocation());
 
-    // If NRVO, use a pointer to the return address.
-    if (UsePointerValue)
+    // Even for NRVO, we may not have ReturnValuePointer if the sret parameter
+    // is also byval.
+    bool UsePointerValue = NRVO && ReturnValuePointer.isValid();
+    Address DebugAddr = Address::invalid();
+    if (UsePointerValue) {
       DebugAddr = ReturnValuePointer;
-
+    } else {
+      // We are either in an alloca, and AllocaAddr is valid, or we are in:
+      // * An sret+byval NRVO return parameter.
+      // * A runtime-managed OpenMP allocation.
+      // FIXME: The assert condition here is overly broad.
+      // FIXME: Can the cases where OpenMP requires this be eliminated?
+      assert(AllocaAddr.isValid() || NRVO ||
+             getLangOpts().OpenMP &&
+                 "Expected either an alloca, sret+byval NRVO parameter, or "
+                 "OpenMP runtime allocation.");
+      DebugAddr = AllocaAddr.isValid() ? AllocaAddr : address;
+    }
     (void)DI->EmitDeclareOfAutoVariable(&D, DebugAddr.getPointer(), Builder,
                                         UsePointerValue);
   }
@@ -2456,11 +2471,13 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   }
 
   Address DeclPtr = Address::invalid();
+  Address AllocaPtr = Address::invalid();
+  Address DebugAddr = Address::invalid();
   bool DoStore = false;
   bool IsScalar = hasScalarEvaluationKind(Ty);
   // If we already have a pointer to the argument, reuse the input pointer.
   if (Arg.isIndirect()) {
-    DeclPtr = Arg.getIndirectAddress();
+    DeclPtr = DebugAddr = Arg.getIndirectAddress();
     // If we have a prettier pointer type at this point, bitcast to that.
     unsigned AS = DeclPtr.getType()->getAddressSpace();
     llvm::Type *IRTy = ConvertTypeForMem(Ty)->getPointerTo(AS);
@@ -2470,6 +2487,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     // from the default address space.
     auto AllocaAS = CGM.getASTAllocaAddressSpace();
     auto *V = DeclPtr.getPointer();
+    AllocaPtr = DeclPtr;
     auto SrcLangAS = getLangOpts().OpenCL ? LangAS::opencl_private : AllocaAS;
     auto DestLangAS =
         getLangOpts().OpenCL ? LangAS::opencl_private : LangAS::Default;
@@ -2505,11 +2523,12 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
             ? CGM.getOpenMPRuntime().getAddressOfLocalVariable(*this, &D)
             : Address::invalid();
     if (getLangOpts().OpenMP && OpenMPLocalAddr.isValid()) {
-      DeclPtr = OpenMPLocalAddr;
+      DeclPtr = DebugAddr = OpenMPLocalAddr;
+      AllocaPtr = DeclPtr;
     } else {
       // Otherwise, create a temporary to hold the value.
       DeclPtr = CreateMemTemp(Ty, getContext().getDeclAlign(&D),
-                              D.getName() + ".addr");
+                              D.getName() + ".addr", &DebugAddr);
     }
     DoStore = true;
   }
@@ -2585,7 +2604,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   if (CGDebugInfo *DI = getDebugInfo()) {
     if (CGM.getCodeGenOpts().hasReducedDebugInfo() && !CurFuncIsThunk) {
       llvm::DILocalVariable *DILocalVar = DI->EmitDeclareOfArgVariable(
-          &D, DeclPtr.getPointer(), ArgNo, Builder);
+          &D, DebugAddr.getPointer(), ArgNo, Builder);
       if (const auto *Var = dyn_cast_or_null<ParmVarDecl>(&D))
         DI->getParamDbgMappings().insert({Var, DILocalVar});
     }

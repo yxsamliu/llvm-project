@@ -11,7 +11,9 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -52,6 +54,7 @@ static cl::opt<unsigned> InputDbgValueLimit(
         "Maximum input DBG_VALUE insts supported by debug range extension"),
     cl::init(50000), cl::Hidden);
 
+namespace {
 /// Generic LiveDebugValues pass. Calls through to VarLocBasedLDV or
 /// InstrRefBasedLDV to perform location propagation, via the LDVImpl
 /// base class.
@@ -78,9 +81,11 @@ public:
 private:
   std::unique_ptr<LDVImpl> InstrRefImpl;
   std::unique_ptr<LDVImpl> VarLocImpl;
+  std::unique_ptr<LDVImpl> HeterogeneousImpl;
   TargetPassConfig *TPC;
   MachineDominatorTree MDT;
 };
+} // namespace
 
 char LiveDebugValues::ID = 0;
 
@@ -95,6 +100,8 @@ LiveDebugValues::LiveDebugValues() : MachineFunctionPass(ID) {
   InstrRefImpl =
       std::unique_ptr<LDVImpl>(llvm::makeInstrRefBasedLiveDebugValues());
   VarLocImpl = std::unique_ptr<LDVImpl>(llvm::makeVarLocBasedLiveDebugValues());
+  HeterogeneousImpl =
+      std::unique_ptr<LDVImpl>(llvm::makeHeterogeneousLiveDebugValues());
 }
 
 bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
@@ -111,6 +118,9 @@ bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
     MDT.calculate(MF);
     TheImpl = &*InstrRefImpl;
   }
+
+  if (llvm::isHeterogeneousDebug(*MF.getMMI().getModule()))
+    TheImpl = &*HeterogeneousImpl;
 
   return TheImpl->ExtendRanges(MF, DomTree, TPC, InputBBLimit,
                                InputDbgValueLimit);

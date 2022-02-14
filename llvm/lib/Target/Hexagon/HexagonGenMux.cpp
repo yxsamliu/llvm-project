@@ -183,12 +183,11 @@ void HexagonGenMux::buildMaps(MachineBasicBlock &B, InstrIndexMap &I2X,
   unsigned NR = HRI->getNumRegs();
   BitVector Defs(NR), Uses(NR);
 
-  for (MachineBasicBlock::iterator I = B.begin(), E = B.end(); I != E; ++I) {
-    MachineInstr *MI = &*I;
-    I2X.insert(std::make_pair(MI, Index));
+  for (MachineInstr &MI : B) {
+    I2X.insert(std::make_pair(&MI, Index));
     Defs.reset();
     Uses.reset();
-    getDefsUses(MI, Defs, Uses);
+    getDefsUses(&MI, Defs, Uses);
     DUM.insert(std::make_pair(Index, DefUseInfo(Defs, Uses)));
     Index++;
   }
@@ -329,7 +328,7 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     unsigned MxOpc = getMuxOpcode(*MX.SrcT, *MX.SrcF);
     if (!MxOpc)
       continue;
-    // Basic sanity check: since we are deleting instructions, validate the
+    // Basic correctness check: since we are deleting instructions, validate the
     // iterators. There is a possibility that one of Def1 or Def2 is translated
     // to "mux" and being considered for other "mux" instructions.
     if (!MX.At->getParent() || !MX.Def1->getParent() || !MX.Def2->getParent())
@@ -357,21 +356,21 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
         return true;
     return false;
   };
-  for (auto I = B.rbegin(), E = B.rend(); I != E; ++I) {
-    if (I->isDebugInstr())
+  for (MachineInstr &I : llvm::reverse(B)) {
+    if (I.isDebugInstr())
       continue;
     // This isn't 100% accurate, but it's safe.
     // It won't detect (as a kill) a case like this
     //   r0 = add r0, 1    <-- r0 should be "killed"
     //   ... = r0
-    for (MachineOperand &Op : I->operands()) {
+    for (MachineOperand &Op : I.operands()) {
       if (!Op.isReg() || !Op.isUse())
         continue;
       assert(Op.getSubReg() == 0 && "Should have physical registers only");
       bool Live = IsLive(Op.getReg());
       Op.setIsKill(!Live);
     }
-    LPR.stepBackward(*I);
+    LPR.stepBackward(I);
   }
 
   return Changed;

@@ -19,6 +19,18 @@
 #include <cassert>
 #include <vector>
 
+#ifdef OMPT_SUPPORT
+#include "ompt_callback.h"
+#define OMPT_IF_ENABLED(stmts)                                                 \
+  do {                                                                         \
+    if (ompt_enabled) {                                                        \
+      stmts                                                                    \
+    }                                                                          \
+  } while (0)
+#else
+#define OMPT_IF_ENABLED(stmts)
+#endif
+
 int AsyncInfoTy::synchronize() {
   int Result = OFFLOAD_SUCCESS;
   if (AsyncInfo.Queue) {
@@ -1460,6 +1472,12 @@ int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
   DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
      TargetTable->EntriesBegin[TM->Index].name, DPxPTR(TgtEntryPtr), TM->Index);
 
+  uint64_t start_time = 0;
+  OMPT_IF_ENABLED(ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0),
+                                                OMPT_GET_RETURN_ADDRESS(0));
+                  ompt_interface.target_submit_begin(TeamNum);
+                  start_time = ompt_interface.get_ns_duration_since_epoch(););
+
   {
     TIMESCOPE_WITH_NAME_AND_IDENT(
         IsTeamConstruct ? "runTargetTeamRegion" : "runTargetRegion", loc);
@@ -1471,6 +1489,11 @@ int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
       Ret = Device.runRegion(TgtEntryPtr, &TgtArgs[0], &TgtOffsets[0],
                              TgtArgs.size(), AsyncInfo);
   }
+
+  OMPT_IF_ENABLED(
+      ompt_interface.target_submit_trace_record_gen(start_time, TeamNum);
+      ompt_interface.target_submit_end(TeamNum);
+      ompt_interface.ompt_state_clear(););
 
   if (Ret != OFFLOAD_SUCCESS) {
     REPORT("Executing target region abort target.\n");

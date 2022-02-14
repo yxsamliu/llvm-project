@@ -6607,6 +6607,10 @@ void TypeLocReader::VisitUnresolvedUsingTypeLoc(UnresolvedUsingTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
 }
 
+void TypeLocReader::VisitUsingTypeLoc(UsingTypeLoc TL) {
+  TL.setNameLoc(readSourceLocation());
+}
+
 void TypeLocReader::VisitTypedefTypeLoc(TypedefTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
 }
@@ -6772,11 +6776,11 @@ void TypeLocReader::VisitPipeTypeLoc(PipeTypeLoc TL) {
   TL.setKWLoc(readSourceLocation());
 }
 
-void TypeLocReader::VisitExtIntTypeLoc(clang::ExtIntTypeLoc TL) {
+void TypeLocReader::VisitBitIntTypeLoc(clang::BitIntTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
 }
-void TypeLocReader::VisitDependentExtIntTypeLoc(
-    clang::DependentExtIntTypeLoc TL) {
+void TypeLocReader::VisitDependentBitIntTypeLoc(
+    clang::DependentBitIntTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
 }
 
@@ -11974,6 +11978,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_bind:
     C = OMPBindClause::CreateEmpty(Context);
     break;
+  case llvm::omp::OMPC_align:
+    C = new (Context) OMPAlignClause();
+    break;
 #define OMP_CLAUSE_NO_CLASS(Enum, Str)                                         \
   case llvm::omp::Enum:                                                        \
     break;
@@ -12962,6 +12969,11 @@ void OMPClauseReader::VisitOMPBindClause(OMPBindClause *C) {
   C->setBindKind(Record.readEnum<OpenMPBindClauseKind>());
   C->setLParenLoc(Record.readSourceLocation());
   C->setBindKindLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPAlignClause(OMPAlignClause *C) {
+  C->setAlignment(Record.readExpr());
+  C->setLParenLoc(Record.readSourceLocation());
 }
 
 OMPTraitInfo *ASTRecordReader::readOMPTraitInfo() {

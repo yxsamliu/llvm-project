@@ -15,6 +15,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
@@ -246,6 +247,7 @@ namespace {
 
     void allocateInstruction(MachineInstr &MI);
     void handleDebugValue(MachineInstr &MI);
+    void handleDebugDef(MachineInstr &MI);
     void handleBundle(MachineInstr &MI);
 
     bool usePhysReg(MachineInstr &MI, MCPhysReg PhysReg);
@@ -432,7 +434,7 @@ void RegAllocFast::spill(MachineBasicBlock::iterator Before, Register VirtReg,
   // every definition of it, meaning we can switch all the DBG_VALUEs over
   // to just reference the stack slot.
   SmallVectorImpl<MachineOperand *> &LRIDbgOperands = LiveDbgValueMap[VirtReg];
-  SmallDenseMap<MachineInstr *, SmallVector<const MachineOperand *>>
+  SmallMapVector<MachineInstr *, SmallVector<const MachineOperand *>, 2>
       SpilledOperandsMap;
   for (MachineOperand *MO : LRIDbgOperands)
     SpilledOperandsMap[MO->getParent()].push_back(MO);
@@ -1257,8 +1259,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
     // Free registers occupied by defs.
     // Iterate operands in reverse order, so we see the implicit super register
     // defs first (we added them earlier in case of <def,read-undef>).
-    for (unsigned I = MI.getNumOperands(); I-- > 0;) {
-      MachineOperand &MO = MI.getOperand(I);
+    for (MachineOperand &MO : llvm::reverse(MI.operands())) {
       if (!MO.isReg() || !MO.isDef())
         continue;
 
@@ -1361,8 +1362,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
 
   // Free early clobbers.
   if (HasEarlyClobber) {
-    for (unsigned I = MI.getNumOperands(); I-- > 0; ) {
-      MachineOperand &MO = MI.getOperand(I);
+    for (MachineOperand &MO : llvm::reverse(MI.operands())) {
       if (!MO.isReg() || !MO.isDef() || !MO.isEarlyClobber())
         continue;
       // subreg defs don't free the full register. We left the subreg number
@@ -1435,12 +1435,51 @@ void RegAllocFast::handleDebugValue(MachineInstr &MI) {
   }
 }
 
+void RegAllocFast::handleDebugDef(MachineInstr &MI) {
+  MachineOperand &MO = MI.getDebugOperand(0);
+
+  // Ignore DBG_VALUEs that aren't based on virtual registers. These are
+  // mostly constants and frame indices.
+  if (!MO.isReg())
+    return;
+  Register Reg = MO.getReg();
+  if (!Register::isVirtualRegister(Reg))
+    return;
+
+  // Already spilled to a stackslot?
+  int SS = StackSlotForVirtReg[Reg];
+  if (SS != -1) {
+    // Modify DBG_VALUE now that the value is in a spill slot.
+    MO.ChangeToFrameIndex(SS);
+    LLVM_DEBUG(dbgs() << "Rewrite DBG_VALUE for spilled memory: " << MI);
+    return;
+  }
+
+  // FIXME: This isn't particularly common at -O0, and at least the phys-reg
+  // case requires work in the DIOpReferrer lowering, so for now just drop
+  // debug info in these cases.
+  MO.setReg(Register());
+  /*
+  // See if this virtual register has already been allocated to a physical
+  // register or spilled to a stack slot.
+  LiveRegMap::iterator LRI = findLiveVirtReg(Reg);
+  if (LRI != LiveVirtRegs.end() && LRI->PhysReg) {
+    setPhysReg(MI, MO, LRI->PhysReg);
+  } else {
+    DanglingDbgValues[Reg].push_back(&MI);
+  }
+
+  // If Reg hasn't been spilled, put this DBG_VALUE in LiveDbgValueMap so
+  // that future spills of Reg will have DBG_VALUEs.
+  LiveDbgValueMap[Reg].push_back(&MI);
+  */
+}
+
 void RegAllocFast::handleBundle(MachineInstr &MI) {
   MachineBasicBlock::instr_iterator BundledMI = MI.getIterator();
   ++BundledMI;
   while (BundledMI->isBundledWithPred()) {
-    for (unsigned I = 0; I < BundledMI->getNumOperands(); ++I) {
-      MachineOperand &MO = BundledMI->getOperand(I);
+    for (MachineOperand &MO : BundledMI->operands()) {
       if (!MO.isReg())
         continue;
 
@@ -1482,6 +1521,11 @@ void RegAllocFast::allocateBasicBlock(MachineBasicBlock &MBB) {
     // affect codegen of the other instructions in any way.
     if (MI.isDebugValue()) {
       handleDebugValue(MI);
+      continue;
+    }
+
+    if (MI.isDebugDef()) {
+      handleDebugDef(MI);
       continue;
     }
 

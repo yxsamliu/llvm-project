@@ -23,6 +23,8 @@ User Guide for AMDGPU Backend
    AMDGPUInstructionSyntax
    AMDGPUInstructionNotation
    AMDGPUDwarfExtensionsForHeterogeneousDebugging
+   AMDGPULLVMExtensionsForHeterogeneousDebugging
+   AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack
 
 Introduction
 ============
@@ -373,7 +375,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                                       - Ryzen 3 Pro 4350G
                                                                                                       - Ryzen 3 Pro 4350GE
 
-     **GCN GFX10 (RDNA 1)** [AMD-GCN-GFX10-RDNA1]_
+     **GCN GFX10.1 (RDNA 1)** [AMD-GCN-GFX10-RDNA1]_
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx1010``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 5700
                                                     - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 5700 XT
@@ -393,7 +395,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                                         Add product
                                                                                                         names.
 
-     **GCN GFX10 (RDNA 2)** [AMD-GCN-GFX10-RDNA2]_
+     **GCN GFX10.3 (RDNA 2)** [AMD-GCN-GFX10-RDNA2]_
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx1030``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 6800
                                                     - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 6800 XT
@@ -1702,6 +1704,10 @@ object executable code and data to the source language constructs. It can be
 used by tools such as debuggers and profilers. It uses features defined in
 :doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging` that are made available in
 DWARF Version 4 and DWARF Version 5 as an LLVM vendor extension.
+
+AMDGPU uses LLVM features defined in
+:doc:`AMDGPULLVMExtensionsForHeterogeneousDebugging` to implement the generation
+of DWARF.
 
 This section defines the AMDGPU target architecture specific DWARF mappings.
 
@@ -5925,7 +5931,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
      ------------------------------------------------------------------------------------
      load atomic  seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    load atomic acquire,
-                                              - generic  except must generated
+                                              - generic  except must generate
                                                          all instructions even
                                                          for OpenCL.*
      load atomic  seq_cst      - workgroup    - global   1. s_waitcnt lgkmcnt(0)
@@ -5991,12 +5997,12 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
                                                             instructions same as
                                                             corresponding load
                                                             atomic acquire,
-                                                            except must generated
+                                                            except must generate
                                                             all instructions even
                                                             for OpenCL.*
      load atomic  seq_cst      - workgroup    - local    *Same as corresponding
                                                          load atomic acquire,
-                                                         except must generated
+                                                         except must generate
                                                          all instructions even
                                                          for OpenCL.*
 
@@ -6088,22 +6094,22 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
                                                             instructions same as
                                                             corresponding load
                                                             atomic acquire,
-                                                            except must generated
+                                                            except must generate
                                                             all instructions even
                                                             for OpenCL.*
      store atomic seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    store atomic release,
-                               - workgroup    - generic  except must generated
+                               - workgroup    - generic  except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      atomicrmw    seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    atomicrmw acq_rel,
-                               - workgroup    - generic  except must generated
+                               - workgroup    - generic  except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      fence        seq_cst      - singlethread *none*     *Same as corresponding
                                - wavefront               fence acq_rel,
-                               - workgroup               except must generated
+                               - workgroup               except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      ============ ============ ============== ========== ================================
@@ -8288,7 +8294,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
      ------------------------------------------------------------------------------------
      load atomic  seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    load atomic acquire,
-                                              - generic  except must generated
+                                              - generic  except must generate
                                                          all instructions even
                                                          for OpenCL.*
      load atomic  seq_cst      - workgroup    - global   1. s_waitcnt lgkm/vmcnt(0)
@@ -8373,7 +8379,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                             instructions same as
                                                             corresponding load
                                                             atomic acquire,
-                                                            except must generated
+                                                            except must generate
                                                             all instructions even
                                                             for OpenCL.*
      load atomic  seq_cst      - workgroup    - local    *If TgSplit execution mode,
@@ -8382,7 +8388,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
 
                                                          *Same as corresponding
                                                          load atomic acquire,
-                                                         except must generated
+                                                         except must generate
                                                          all instructions even
                                                          for OpenCL.*
 
@@ -8476,22 +8482,22 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                             instructions same as
                                                             corresponding load
                                                             atomic acquire,
-                                                            except must generated
+                                                            except must generate
                                                             all instructions even
                                                             for OpenCL.*
      store atomic seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    store atomic release,
-                               - workgroup    - generic  except must generated
+                               - workgroup    - generic  except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      atomicrmw    seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    atomicrmw acq_rel,
-                               - workgroup    - generic  except must generated
+                               - workgroup    - generic  except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      fence        seq_cst      - singlethread *none*     *Same as corresponding
                                - wavefront               fence acq_rel,
-                               - workgroup               except must generated
+                               - workgroup               except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      ============ ============ ============== ========== ================================
@@ -8571,6 +8577,9 @@ For GFX10:
   requirements of acquire, release and sequential consistency.
 * The L2 cache can be kept coherent with other agents on some targets, or ranges
   of virtual addresses can be set up to bypass it to ensure system coherence.
+* On GFX10.3 a memory attached last level (MALL) cache exists for GPU memory.
+  The MALL cache is fully coherent with GPU memory and has no impact on system
+  coherence. All agents (GPU and CPU) access GPU memory through the MALL cache.
 
 Scalar memory operations are only used to access memory that is proven to not
 change during the execution of the kernel dispatch. This includes constant
@@ -8673,13 +8682,13 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-table`.
                                               - constant
                                                          - !volatile & nontemporal
 
-                                                            1. buffer/global/flat_store
-                                                               slc=1
+                                                           1. buffer/global/flat_store
+                                                              glc=1 slc=1
 
                                                          - volatile
 
-                                                            1. buffer/global/flat_store
-                                                            2. s_waitcnt vscnt(0)
+                                                           1. buffer/global/flat_store
+                                                           2. s_waitcnt vscnt(0)
 
                                                             - Must happen before
                                                               any following volatile
@@ -10234,7 +10243,7 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-table`.
      ------------------------------------------------------------------------------------
      load atomic  seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    load atomic acquire,
-                                              - generic  except must generated
+                                              - generic  except must generate
                                                          all instructions even
                                                          for OpenCL.*
      load atomic  seq_cst      - workgroup    - global   1. s_waitcnt lgkmcnt(0) &
@@ -10344,7 +10353,7 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-table`.
                                                             instructions same as
                                                             corresponding load
                                                             atomic acquire,
-                                                            except must generated
+                                                            except must generate
                                                             all instructions even
                                                             for OpenCL.*
      load atomic  seq_cst      - workgroup    - local
@@ -10437,7 +10446,7 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-table`.
                                                             instructions same as
                                                             corresponding load
                                                             atomic acquire,
-                                                            except must generated
+                                                            except must generate
                                                             all instructions even
                                                             for OpenCL.*
 
@@ -10545,22 +10554,22 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-table`.
                                                             instructions same as
                                                             corresponding load
                                                             atomic acquire,
-                                                            except must generated
+                                                            except must generate
                                                             all instructions even
                                                             for OpenCL.*
      store atomic seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    store atomic release,
-                               - workgroup    - generic  except must generated
+                               - workgroup    - generic  except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      atomicrmw    seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    atomicrmw acq_rel,
-                               - workgroup    - generic  except must generated
+                               - workgroup    - generic  except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      fence        seq_cst      - singlethread *none*     *Same as corresponding
                                - wavefront               fence acq_rel,
-                               - workgroup               except must generated
+                               - workgroup               except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      ============ ============ ============== ========== ================================

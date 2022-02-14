@@ -346,7 +346,10 @@ enum MetadataCodes {
   // info.
   METADATA_COMMON_BLOCK = 44,     // [distinct, scope, name, variable,...]
   METADATA_GENERIC_SUBRANGE = 45, // [distinct, count, lo, up, stride]
-  METADATA_ARG_LIST = 46          // [n x [type num, value num]]
+  METADATA_ARG_LIST = 46,         // [n x [type num, value num]]
+  METADATA_EXPR = 47,             // [distinct, ...]
+  METADATA_FRAGMENT = 48,         // []
+  METADATA_LIFETIME = 49          // [obj, loc, n x args]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each
@@ -381,9 +384,10 @@ enum ConstantsCodes {
   CST_CODE_CE_UNOP = 25,                   // CE_UNOP:      [opcode, opval]
   CST_CODE_POISON = 26,                    // POISON
   CST_CODE_DSO_LOCAL_EQUIVALENT = 27,      // DSO_LOCAL_EQUIVALENT [gvty, gv]
-  CST_CODE_INLINEASM = 28, // INLINEASM:     [sideeffect|alignstack|
-                           //                 asmdialect|unwind,
-                           //                 asmstr,conststr]
+  CST_CODE_INLINEASM = 28,    // INLINEASM:     [sideeffect|alignstack|
+                              //                 asmdialect|unwind,
+                              //                 asmstr,conststr]
+  CST_CODE_NO_CFI_VALUE = 29, // NO_CFI [ fty, f ]
 };
 
 /// CastOpcodes - These are values used in the bitcode files to encode which

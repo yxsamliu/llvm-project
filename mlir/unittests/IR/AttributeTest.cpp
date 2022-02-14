@@ -8,7 +8,6 @@
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Identifier.h"
 #include "gtest/gtest.h"
 
 using namespace mlir;
@@ -152,7 +151,7 @@ TEST(DenseSplatTest, StringSplat) {
   MLIRContext context;
   context.allowUnregisteredDialects();
   Type stringType =
-      OpaqueType::get(Identifier::get("test", &context), "string");
+      OpaqueType::get(StringAttr::get(&context, "test"), "string");
   StringRef value = "test-string";
   testSplat(stringType, value);
 }
@@ -161,7 +160,7 @@ TEST(DenseSplatTest, StringAttrSplat) {
   MLIRContext context;
   context.allowUnregisteredDialects();
   Type stringType =
-      OpaqueType::get(Identifier::get("test", &context), "string");
+      OpaqueType::get(StringAttr::get(&context, "test"), "string");
   Attribute stringAttr = StringAttr::get("test-string", stringType);
   testSplat(stringType, stringAttr);
 }
@@ -202,7 +201,7 @@ TEST(DenseScalarTest, ExtractZeroRankElement) {
   RankedTensorType shape = RankedTensorType::get({}, intTy);
 
   auto attr = DenseElementsAttr::get(shape, llvm::makeArrayRef({elementValue}));
-  EXPECT_TRUE(attr.getValue({0}) == value);
+  EXPECT_TRUE(attr.getValues<Attribute>()[0] == value);
 }
 
 TEST(SparseElementsAttrTest, GetZero) {
@@ -211,7 +210,7 @@ TEST(SparseElementsAttrTest, GetZero) {
 
   IntegerType intTy = IntegerType::get(&context, 32);
   FloatType floatTy = FloatType::getF32(&context);
-  Type stringTy = OpaqueType::get(Identifier::get("test", &context), "string");
+  Type stringTy = OpaqueType::get(StringAttr::get(&context, "test"), "string");
 
   ShapedType tensorI32 = RankedTensorType::get({2, 2}, intTy);
   ShapedType tensorF32 = RankedTensorType::get({2, 2}, floatTy);
@@ -238,17 +237,17 @@ TEST(SparseElementsAttrTest, GetZero) {
 
   // Only index (0, 0) contains an element, others are supposed to return
   // the zero/empty value.
-  auto zeroIntValue = sparseInt.getValue({1, 1});
+  auto zeroIntValue = sparseInt.getValues<Attribute>()[{1, 1}];
   EXPECT_EQ(zeroIntValue.cast<IntegerAttr>().getInt(), 0);
   EXPECT_TRUE(zeroIntValue.getType() == intTy);
 
-  auto zeroFloatValue = sparseFloat.getValue({1, 1});
+  auto zeroFloatValue = sparseFloat.getValues<Attribute>()[{1, 1}];
   EXPECT_EQ(zeroFloatValue.cast<FloatAttr>().getValueAsDouble(), 0.0f);
   EXPECT_TRUE(zeroFloatValue.getType() == floatTy);
 
-  auto zeroStringValue = sparseString.getValue({1, 1});
+  auto zeroStringValue = sparseString.getValues<Attribute>()[{1, 1}];
   EXPECT_TRUE(zeroStringValue.cast<StringAttr>().getValue().empty());
   EXPECT_TRUE(zeroStringValue.getType() == stringTy);
 }
 
-} // end namespace
+} // namespace

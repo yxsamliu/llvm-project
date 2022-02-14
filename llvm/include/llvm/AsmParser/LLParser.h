@@ -62,12 +62,14 @@ namespace llvm {
     APFloat APFloatVal{0.0};
     Constant *ConstantVal;
     std::unique_ptr<Constant *[]> ConstantStructElts;
+    bool NoCFI = false;
 
     ValID() = default;
     ValID(const ValID &RHS)
         : Kind(RHS.Kind), Loc(RHS.Loc), UIntVal(RHS.UIntVal), FTy(RHS.FTy),
           StrVal(RHS.StrVal), StrVal2(RHS.StrVal2), APSIntVal(RHS.APSIntVal),
-          APFloatVal(RHS.APFloatVal), ConstantVal(RHS.ConstantVal) {
+          APFloatVal(RHS.APFloatVal), ConstantVal(RHS.ConstantVal),
+          NoCFI(RHS.NoCFI) {
       assert(!RHS.ConstantStructElts);
     }
 
@@ -390,6 +392,7 @@ namespace llvm {
       Loc = Lex.getLoc();
       return parseType(Result, AllowVoid);
     }
+    bool parseFirstClassType(Type *&Result);
     bool parseAnonStructType(Type *&Result, bool Packed);
     bool parseStructBody(SmallVectorImpl<Type *> &Body);
     bool parseStructDefinition(SMLoc TypeLoc, StringRef Name,
@@ -520,7 +523,8 @@ namespace llvm {
     template <class ParserTy> bool parseMDFieldsImplBody(ParserTy ParseField);
     template <class ParserTy>
     bool parseMDFieldsImpl(ParserTy ParseField, LocTy &ClosingLoc);
-    bool parseSpecializedMDNode(MDNode *&N, bool IsDistinct = false);
+    bool parseSpecializedMDNode(MDNode *&N, bool IsDistinct = false,
+                                LocTy DistinctLoc = LocTy());
 
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS)                                  \
   bool parse##CLASS(MDNode *&Result, bool IsDistinct);

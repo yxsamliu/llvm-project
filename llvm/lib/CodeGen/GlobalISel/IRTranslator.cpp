@@ -338,9 +338,10 @@ bool IRTranslator::translateCompare(const User &U,
     MIRBuilder.buildCopy(
         Res, getOrCreateVReg(*Constant::getAllOnesValue(U.getType())));
   else {
-    assert(CI && "Instruction should be CmpInst");
-    MIRBuilder.buildFCmp(Pred, Res, Op0, Op1,
-                         MachineInstr::copyFlagsFromInstruction(*CI));
+    uint16_t Flags = 0;
+    if (CI)
+      Flags = MachineInstr::copyFlagsFromInstruction(*CI);
+    MIRBuilder.buildFCmp(Pred, Res, Op0, Op1, Flags);
   }
 
   return true;
@@ -1965,6 +1966,38 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     }
     return true;
   }
+  case Intrinsic::dbg_def:
+  case Intrinsic::dbg_kill: {
+    const DbgDefKillIntrinsic &DDKI = cast<DbgDefKillIntrinsic>(CI);
+    const bool IsDef = ID == Intrinsic::dbg_def;
+    auto MIB = MIRBuilder.buildInstrNoInsert(IsDef ? TargetOpcode::DBG_DEF
+                                                   : TargetOpcode::DBG_KILL);
+    MIB.addMetadata(DDKI.getLifetime());
+    if (IsDef) {
+      const Value *Referrer = cast<DbgDefInst>(DDKI).getReferrer();
+      assert(Referrer);
+      if (const auto *CI = dyn_cast<ConstantInt>(Referrer)) {
+        MIB.addCImm(CI);
+      } else if (auto *CFP = dyn_cast<ConstantFP>(Referrer)) {
+        MIB.addFPImm(CFP);
+      } else if (auto *AI = dyn_cast<AllocaInst>(Referrer)) {
+        MIB.addFrameIndex(getOrCreateFrameIndex(*AI));
+        DILifetime *Lifetime = cast<DbgDefInst>(DDKI).getLifetime();
+        // The translation from an alloca (semantically a pointer) to a frame
+        // index (semantically the stack slot itself) removes one level of
+        // indirection, which needs to be reflected in the expression.
+        Lifetime->setLocation(
+            Lifetime->getLocation()
+                ->builder()
+                .removeReferrerIndirection(AI->getAllocatedType())
+                .intoExpr());
+      } else {
+        MIB.addReg(getOrCreateVReg(*Referrer));
+      }
+    }
+    MIRBuilder.insertInstr(MIB);
+    return true;
+  }
   case Intrinsic::uadd_with_overflow:
     return translateOverflowIntrinsic(CI, TargetOpcode::G_UADDO, MIRBuilder);
   case Intrinsic::sadd_with_overflow:
@@ -2502,32 +2535,19 @@ bool IRTranslator::translateInvoke(const User &U,
   if (!isa<LandingPadInst>(EHPadBB->getFirstNonPHI()))
     return false;
 
-  bool LowerInlineAsm = false;
-  if (I.isInlineAsm()) {
-    const InlineAsm *IA = cast<InlineAsm>(I.getCalledOperand());
-    if (!IA->canThrow()) {
-      // Fast path without emitting EH_LABELs.
-
-      if (!translateInlineAsm(I, MIRBuilder))
-        return false;
-
-      MachineBasicBlock *InvokeMBB = &MIRBuilder.getMBB(),
-                        *ReturnMBB = &getMBB(*ReturnBB);
-
-      // Update successor info.
-      addSuccessorWithProb(InvokeMBB, ReturnMBB, BranchProbability::getOne());
-
-      MIRBuilder.buildBr(*ReturnMBB);
-      return true;
-    } else {
-      LowerInlineAsm = true;
-    }
-  }
+  bool LowerInlineAsm = I.isInlineAsm();
+  bool NeedEHLabel = true;
+  // If it can't throw then use a fast-path without emitting EH labels.
+  if (LowerInlineAsm)
+    NeedEHLabel = (cast<InlineAsm>(I.getCalledOperand()))->canThrow();
 
   // Emit the actual call, bracketed by EH_LABELs so that the MF knows about
   // the region covered by the try.
-  MCSymbol *BeginSymbol = Context.createTempSymbol();
-  MIRBuilder.buildInstr(TargetOpcode::EH_LABEL).addSym(BeginSymbol);
+  MCSymbol *BeginSymbol = nullptr;
+  if (NeedEHLabel) {
+    BeginSymbol = Context.createTempSymbol();
+    MIRBuilder.buildInstr(TargetOpcode::EH_LABEL).addSym(BeginSymbol);
+  }
 
   if (LowerInlineAsm) {
     if (!translateInlineAsm(I, MIRBuilder))
@@ -2535,8 +2555,11 @@ bool IRTranslator::translateInvoke(const User &U,
   } else if (!translateCallBase(I, MIRBuilder))
     return false;
 
-  MCSymbol *EndSymbol = Context.createTempSymbol();
-  MIRBuilder.buildInstr(TargetOpcode::EH_LABEL).addSym(EndSymbol);
+  MCSymbol *EndSymbol = nullptr;
+  if (NeedEHLabel) {
+    EndSymbol = Context.createTempSymbol();
+    MIRBuilder.buildInstr(TargetOpcode::EH_LABEL).addSym(EndSymbol);
+  }
 
   SmallVector<std::pair<MachineBasicBlock *, BranchProbability>, 1> UnwindDests;
   BranchProbabilityInfo *BPI = FuncInfo.BPI;
@@ -2558,7 +2581,12 @@ bool IRTranslator::translateInvoke(const User &U,
   }
   InvokeMBB->normalizeSuccProbs();
 
-  MF->addInvoke(&EHPadMBB, BeginSymbol, EndSymbol);
+  if (NeedEHLabel) {
+    assert(BeginSymbol && "Expected a begin symbol!");
+    assert(EndSymbol && "Expected an end symbol!");
+    MF->addInvoke(&EHPadMBB, BeginSymbol, EndSymbol);
+  }
+
   MIRBuilder.buildBr(ReturnMBB);
   return true;
 }
@@ -3507,7 +3535,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   // Get rid of the now empty basic block.
   EntryBB->removeSuccessor(&NewEntryBB);
   MF->remove(EntryBB);
-  MF->DeleteMachineBasicBlock(EntryBB);
+  MF->deleteMachineBasicBlock(EntryBB);
 
   assert(&MF->front() == &NewEntryBB &&
          "New entry wasn't next in the list of basic block!");

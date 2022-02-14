@@ -50,19 +50,6 @@ set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda-n
 set (LIBOMPTARGET_SYSTEM_TARGETS "")
 set (LIBOMPTARGET_TESTED_PLUGINS "")
 
-# Check OMPT support
-set(OMPT_DEFAULT_IN_LIBOMPTARGET FALSE)
-if ((LIBOMP_HAVE_OMPT_SUPPORT) AND (NOT WIN32))
-  set(OMPT_DEFAULT_IN_LIBOMPTARGET TRUE)
-endif()
-set(LIBOMP_OMPT_SUPPORT_IN_LIBOMPTARGET ${OMPT_DEFAULT_IN_LIBOMPTARGET} CACHE BOOL
-        "OMPT-support in libomptarget?")
-if(LIBOMP_OMPT_SUPPORT_IN_LIBOMPTARGET)
-  message(STATUS "OMPT enabled in libomptarget")
-else()
-  message(STATUS "OMPT disabled in libomptarget")
-endif()
-
 # Check whether using debug mode. In debug mode, allow dumping progress
 # messages at runtime by default. Otherwise, it can be enabled
 # independently using the LIBOMPTARGET_ENABLE_DEBUG option.
@@ -83,10 +70,34 @@ if (LIBOMPTARGET_OMPD_SUPPORT)
   add_definitions(-DOMPD_SUPPORT=1)
 endif()
 
+# OMPT support for libomptarget
+set(OMPT_TARGET_DEFAULT FALSE)
+if ((LIBOMP_HAVE_OMPT_SUPPORT) AND (NOT WIN32))
+  set (OMPT_TARGET_DEFAULT TRUE)
+endif()
+set(LIBOMPTARGET_OMPT_SUPPORT ${OMPT_TARGET_DEFAULT} CACHE BOOL "OMPT-target-support?")
+if (LIBOMPTARGET_OMPT_SUPPORT)
+  add_definitions(-DOMPT_SUPPORT=1)
+  message(STATUS "OMPT target enabled")
+else()
+  message(STATUS "OMPT target disabled")
+endif()
+
 include_directories(include)
+pythonize_bool(LIBOMPTARGET_OMPT_SUPPORT)
 
 set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${LIBOMPTARGET_INCLUDE_DIR})
+
+find_path (
+  LIBOMP_OMP_TOOLS_INCLUDE_DIR
+  NAMES
+    omp-tools.h
+  PATHS
+    ${CMAKE_BINARY_DIR}/openmp/runtime/src
+    ${CMAKE_BINARY_DIR}/runtime/src
+  )
+
+include_directories(${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMP_OMP_TOOLS_INCLUDE_DIR})
 
 # Build target agnostic offloading library.
 set(LIBOMPTARGET_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -102,9 +113,7 @@ set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins)
 add_subdirectory(deviceRTLs)
-if (OPENMP_ENABLE_LIBOMPTARGET_HSA)
-  add_subdirectory(hostrpc)
-endif()
+add_subdirectory(hostrpc)
 add_subdirectory(DeviceRTL)
 add_subdirectory(tools)
 

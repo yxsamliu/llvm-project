@@ -62,13 +62,10 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   // calls.
   const bool HasCalls = F.hasFnAttribute("amdgpu-calls");
 
-  // Enable all kernel inputs if we have the fixed ABI. Don't bother if we don't
-  // have any calls.
-  const bool UseFixedABI = AMDGPUTargetMachine::EnableFixedFunctionABI &&
-                           CC != CallingConv::AMDGPU_Gfx &&
-                           (!isEntryFunction() || HasCalls);
+  const bool IsKernel = CC == CallingConv::AMDGPU_KERNEL ||
+                        CC == CallingConv::SPIR_KERNEL;
 
-  if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL) {
+  if (IsKernel) {
     if (!F.arg_empty() || ST.getImplicitArgNumBytes(F) != 0)
       KernargSegmentPtr = true;
     WorkGroupIDX = true;
@@ -78,7 +75,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   }
 
   if (!isEntryFunction()) {
-    if (UseFixedABI)
+    if (CC != CallingConv::AMDGPU_Gfx)
       ArgInfo = AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
 
     // TODO: Pick a high register, and shift down, similar to a kernel.
@@ -94,45 +91,63 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
         ArgDescriptor::createRegister(ScratchRSrcReg);
     }
 
-    if (F.hasFnAttribute("amdgpu-implicitarg-ptr"))
+    if (!F.hasFnAttribute("amdgpu-no-implicitarg-ptr"))
       ImplicitArgPtr = true;
   } else {
-    if (F.hasFnAttribute("amdgpu-implicitarg-ptr")) {
-      KernargSegmentPtr = true;
-      MaxKernArgAlign = std::max(ST.getAlignmentForImplicitArgPtr(),
-                                 MaxKernArgAlign);
-    }
+    ImplicitArgPtr = false;
+    MaxKernArgAlign = std::max(ST.getAlignmentForImplicitArgPtr(),
+                               MaxKernArgAlign);
   }
 
-  if (UseFixedABI) {
-    WorkGroupIDX = true;
-    WorkGroupIDY = true;
-    WorkGroupIDZ = true;
-    WorkItemIDX = true;
-    WorkItemIDY = true;
-    WorkItemIDZ = true;
-    ImplicitArgPtr = true;
-  } else {
-    if (F.hasFnAttribute("amdgpu-work-group-id-x"))
+  bool isAmdHsaOrMesa = ST.isAmdHsaOrMesa(F);
+  if (isAmdHsaOrMesa && !ST.enableFlatScratch())
+    PrivateSegmentBuffer = true;
+  else if (ST.isMesaGfxShader(F))
+    ImplicitBufferPtr = true;
+
+  if (!AMDGPU::isGraphics(CC)) {
+    if (IsKernel || !F.hasFnAttribute("amdgpu-no-workgroup-id-x"))
       WorkGroupIDX = true;
 
-    if (F.hasFnAttribute("amdgpu-work-group-id-y"))
+    if (!F.hasFnAttribute("amdgpu-no-workgroup-id-y"))
       WorkGroupIDY = true;
 
-    if (F.hasFnAttribute("amdgpu-work-group-id-z"))
+    if (!F.hasFnAttribute("amdgpu-no-workgroup-id-z"))
       WorkGroupIDZ = true;
 
-    if (F.hasFnAttribute("amdgpu-work-item-id-x"))
+    if (IsKernel || !F.hasFnAttribute("amdgpu-no-workitem-id-x"))
       WorkItemIDX = true;
 
-    if (F.hasFnAttribute("amdgpu-work-item-id-y"))
+    if (!F.hasFnAttribute("amdgpu-no-workitem-id-y"))
       WorkItemIDY = true;
 
-    if (F.hasFnAttribute("amdgpu-work-item-id-z"))
+    if (!F.hasFnAttribute("amdgpu-no-workitem-id-z"))
       WorkItemIDZ = true;
+
+    if (!F.hasFnAttribute("amdgpu-no-dispatch-ptr"))
+      DispatchPtr = true;
+
+    if (!F.hasFnAttribute("amdgpu-no-queue-ptr"))
+      QueuePtr = true;
+
+    if (!F.hasFnAttribute("amdgpu-no-dispatch-id"))
+      DispatchID = true;
   }
 
+  // FIXME: This attribute is a hack, we just need an analysis on the function
+  // to look for allocas.
   bool HasStackObjects = F.hasFnAttribute("amdgpu-stack-objects");
+
+  // TODO: This could be refined a lot. The attribute is a poor way of
+  // detecting calls or stack objects that may require it before argument
+  // lowering.
+  if (ST.hasFlatAddressSpace() && isEntryFunction() &&
+      (isAmdHsaOrMesa || ST.enableFlatScratch()) &&
+      (HasCalls || HasStackObjects || ST.enableFlatScratch()) &&
+      !ST.flatScratchIsArchitected()) {
+    FlatScratchInit = true;
+  }
+
   if (isEntryFunction()) {
     // X, XY, and XYZ are the only supported combinations, so make sure Y is
     // enabled if Z is.
@@ -148,41 +163,6 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
         ArgInfo.PrivateSegmentWaveByteOffset =
             ArgDescriptor::createRegister(AMDGPU::SGPR5);
     }
-  }
-
-  bool isAmdHsaOrMesa = ST.isAmdHsaOrMesa(F);
-  if (isAmdHsaOrMesa && !ST.enableFlatScratch())
-    PrivateSegmentBuffer = true;
-  else if (ST.isMesaGfxShader(F))
-    ImplicitBufferPtr = true;
-
-  if (!AMDGPU::isGraphics(CC)) {
-    if (UseFixedABI) {
-      DispatchPtr = true;
-      QueuePtr = true;
-
-      // FIXME: We don't need this?
-      DispatchID = true;
-    } else {
-      if (F.hasFnAttribute("amdgpu-dispatch-ptr"))
-        DispatchPtr = true;
-
-      if (F.hasFnAttribute("amdgpu-queue-ptr"))
-        QueuePtr = true;
-
-      if (F.hasFnAttribute("amdgpu-dispatch-id"))
-        DispatchID = true;
-    }
-  }
-
-  // TODO: This could be refined a lot. The attribute is a poor way of
-  // detecting calls or stack objects that may require it before argument
-  // lowering.
-  if (ST.hasFlatAddressSpace() && isEntryFunction() &&
-      (isAmdHsaOrMesa || ST.enableFlatScratch()) &&
-      (HasCalls || HasStackObjects || ST.enableFlatScratch()) &&
-      !ST.flatScratchIsArchitected()) {
-    FlatScratchInit = true;
   }
 
   Attribute A = F.getFnAttribute("amdgpu-git-ptr-high");
@@ -471,7 +451,7 @@ void SIMachineFunctionInfo::removeDeadFrameIndices(MachineFunction &MF) {
       MFI.setStackID(i, TargetStackID::Default);
 
   for (auto &R : VGPRToAGPRSpills) {
-    if (R.second.FullyAllocated)
+    if (R.second.IsDead)
       MFI.RemoveStackObject(R.first);
   }
 }

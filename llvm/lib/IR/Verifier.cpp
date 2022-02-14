@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines the function verifier interface, that can be used for some
-// sanity checking of input to the system.
+// basic correctness checking of input to the system.
 //
 // Note that this does not provide full `Java style' security and verifications,
 // instead it just tries to ensure that code is well-formed.
@@ -308,6 +308,9 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// Whether the current function has a DISubprogram attached to it.
   bool HasDebugInfo = false;
 
+  /// The Debug Info Version of the module being verified.
+  Optional<unsigned> DebugInfoVersion;
+
   /// The current source language.
   dwarf::SourceLanguage CurrentSourceLang = dwarf::DW_LANG_lo_user;
 
@@ -340,6 +343,10 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   // Keeps track of duplicate function argument debug info.
   SmallVector<const DILocalVariable *, 16> DebugFnArgs;
 
+  // Track which bounded DILifetimes we have seen defs for, so we can diagnose
+  // repeated defs.
+  SmallPtrSet<const DILifetime *, 32> DefinedDebugLifetimes;
+
   TBAAVerifier TBAAVerifyHelper;
 
   SmallVector<IntrinsicInst *, 4> NoAliasScopeDecls;
@@ -352,6 +359,8 @@ public:
       : VerifierSupport(OS, M), LandingPadResultTy(nullptr),
         SawFrameEscape(false), TBAAVerifyHelper(this) {
     TreatBrokenDebugInfoAsError = ShouldTreatBrokenDebugInfoAsError;
+    if (unsigned V = getDebugMetadataVersionFromModule(M))
+      DebugInfoVersion = V;
   }
 
   bool hasBrokenDebugInfo() const { return BrokenDebugInfo; }
@@ -424,9 +433,9 @@ public:
     for (const StringMapEntry<Comdat> &SMEC : M.getComdatSymbolTable())
       visitComdat(SMEC.getValue());
 
-    visitModuleFlags(M);
-    visitModuleIdents(M);
-    visitModuleCommandLines(M);
+    visitModuleFlags();
+    visitModuleIdents();
+    visitModuleCommandLines();
 
     verifyCompileUnits();
 
@@ -452,9 +461,9 @@ private:
   void visitMetadataAsValue(const MetadataAsValue &MD, Function *F);
   void visitValueAsMetadata(const ValueAsMetadata &MD, Function *F);
   void visitComdat(const Comdat &C);
-  void visitModuleIdents(const Module &M);
-  void visitModuleCommandLines(const Module &M);
-  void visitModuleFlags(const Module &M);
+  void visitModuleIdents();
+  void visitModuleCommandLines();
+  void visitModuleFlags();
   void visitModuleFlag(const MDNode *Op,
                        DenseMap<const MDString *, const MDNode *> &SeenIDs,
                        SmallVectorImpl<const MDNode *> &Requirements);
@@ -525,6 +534,7 @@ private:
   void visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI);
   void visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII);
   void visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI);
+  void visitDbgDefKillIntrinsic(StringRef Kind, DbgDefKillIntrinsic &DDI);
   void visitAtomicCmpXchgInst(AtomicCmpXchgInst &CXI);
   void visitAtomicRMWInst(AtomicRMWInst &RMWI);
   void visitFenceInst(FenceInst &FI);
@@ -543,7 +553,7 @@ private:
 
   void verifySwiftErrorCall(CallBase &Call, const Value *SwiftErrorVal);
   void verifySwiftErrorValue(const Value *SwiftErrorVal);
-  void verifyTailCCMustTailAttrs(AttrBuilder Attrs, StringRef Context);
+  void verifyTailCCMustTailAttrs(const AttrBuilder &Attrs, StringRef Context);
   void verifyMustTailCall(CallInst &CI);
   bool verifyAttributeCount(AttributeList Attrs, unsigned Params);
   void verifyAttributeTypes(AttributeSet Attrs, const Value *V);
@@ -553,8 +563,6 @@ private:
   void verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                            const Value *V, bool IsIntrinsic);
   void verifyFunctionMetadata(ArrayRef<std::pair<unsigned, MDNode *>> MDs);
-  template <typename T>
-  void verifyODRTypeAsScopeOperand(const MDNode &MD, T * = nullptr);
 
   void visitConstantExprsRecursively(const Constant *EntryC);
   void visitConstantExpr(const ConstantExpr *CE);
@@ -604,26 +612,35 @@ void Verifier::visit(Instruction &I) {
   InstVisitor<Verifier>::visit(I);
 }
 
-// Helper to recursively iterate over indirect users. By
-// returning false, the callback can ask to stop recursing
-// further.
+// Helper to iterate over indirect users. By returning false, the callback can ask to stop traversing further.
 static void forEachUser(const Value *User,
                         SmallPtrSet<const Value *, 32> &Visited,
                         llvm::function_ref<bool(const Value *)> Callback) {
   if (!Visited.insert(User).second)
     return;
-  for (const Value *TheNextUser : User->materialized_users())
-    if (Callback(TheNextUser))
-      forEachUser(TheNextUser, Visited, Callback);
+
+  SmallVector<const Value *> WorkList;
+  append_range(WorkList, User->materialized_users());
+  while (!WorkList.empty()) {
+   const Value *Cur = WorkList.pop_back_val();
+    if (!Visited.insert(Cur).second)
+      continue;
+    if (Callback(Cur))
+      append_range(WorkList, Cur->materialized_users());
+  }
 }
 
 void Verifier::visitGlobalValue(const GlobalValue &GV) {
   Assert(!GV.isDeclaration() || GV.hasValidDeclarationLinkage(),
          "Global is external, but doesn't have external or weak linkage!", &GV);
 
-  if (const GlobalObject *GO = dyn_cast<GlobalObject>(&GV))
-    Assert(GO->getAlignment() <= Value::MaximumAlignment,
-           "huge alignment values are unsupported", GO);
+  if (const GlobalObject *GO = dyn_cast<GlobalObject>(&GV)) {
+
+    if (MaybeAlign A = GO->getAlign()) {
+      Assert(A->value() <= Value::MaximumAlignment,
+             "huge alignment values are unsupported", GO);
+    }
+  }
   Assert(!GV.hasAppendingLinkage() || isa<GlobalVariable>(GV),
          "Only global variables can have appending linkage!", &GV);
 
@@ -733,8 +750,9 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
           Value *V = Op->stripPointerCasts();
           Assert(isa<GlobalVariable>(V) || isa<Function>(V) ||
                      isa<GlobalAlias>(V),
-                 "invalid llvm.used member", V);
-          Assert(V->hasName(), "members of llvm.used must be named", V);
+                 Twine("invalid ") + GV.getName() + " member", V);
+          Assert(V->hasName(),
+                 Twine("members of ") + GV.getName() + " must be named", V);
         }
       }
     }
@@ -846,30 +864,21 @@ void Verifier::visitNamedMDNode(const NamedMDNode &NMD) {
   // There used to be various other llvm.dbg.* nodes, but we don't support
   // upgrading them and we want to reserve the namespace for future uses.
   if (NMD.getName().startswith("llvm.dbg."))
-    AssertDI(NMD.getName() == "llvm.dbg.cu",
+    AssertDI(NMD.getName() == "llvm.dbg.cu" ||
+                 NMD.getName() == "llvm.dbg.retainedNodes",
              "unrecognized named metadata node in the llvm.dbg namespace",
              &NMD);
   for (const MDNode *MD : NMD.operands()) {
     if (NMD.getName() == "llvm.dbg.cu")
       AssertDI(MD && isa<DICompileUnit>(MD), "invalid compile unit", &NMD, MD);
+    if (NMD.getName() == "llvm.dbg.retainedNodes")
+      AssertDI(MD && isa<DILifetime>(MD), "invalid module retained node", &NMD,
+               MD);
 
     if (!MD)
       continue;
 
     visitMDNode(*MD, AreDebugLocsAllowed::Yes);
-  }
-}
-
-template <typename T>
-void Verifier::verifyODRTypeAsScopeOperand(const MDNode &MD, T *) {
-  if (isa<T>(MD)) {
-    if (auto *N = dyn_cast_or_null<DICompositeType>(cast<T>(MD).getScope()))
-      // Of all the supported tags for DICompositeType(see visitDICompositeType)
-      // we know that enum type cannot be a scope.
-      AssertDI(N->getTag() != dwarf::DW_TAG_enumeration_type,
-               "enum type is not a scope; check enum type ODR "
-               "violation",
-               N, &MD);
   }
 }
 
@@ -882,12 +891,23 @@ void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {
   Assert(&MD.getContext() == &Context,
          "MDNode context does not match Module context!", &MD);
 
-  // Makes sure when a scope operand is a ODR type, the ODR type uniquing does
-  // not create invalid debug metadata.
-  // TODO: check that the non-ODR-type scope operand is valid.
-  verifyODRTypeAsScopeOperand<DIType>(MD);
-  verifyODRTypeAsScopeOperand<DILocalScope>(MD);
-
+  if (DebugInfoVersion) {
+    unsigned V = *DebugInfoVersion;
+    switch (MD.getMetadataID()) {
+    default:
+      break;
+    case Metadata::DIExpressionKind:
+      AssertDI(V == DEBUG_METADATA_VERSION,
+               "MDNode incompatible with Debug Info Version", &MD, V);
+      break;
+    case Metadata::DIExprKind:
+    case Metadata::DIFragmentKind:
+    case Metadata::DILifetimeKind:
+      AssertDI(V == DEBUG_METADATA_VERSION_HETEROGENEOUS_DWARF,
+               "MDNode incompatible with Debug Info Version", &MD, V);
+      break;
+    }
+  }
   switch (MD.getMetadataID()) {
   default:
     llvm_unreachable("Invalid MDNode subclass");
@@ -1257,7 +1277,8 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
     for (Metadata *Op : N.getRetainedTypes()->operands()) {
       AssertDI(Op && (isa<DIType>(Op) ||
                       (isa<DISubprogram>(Op) &&
-                       !cast<DISubprogram>(Op)->isDefinition())),
+                       !cast<DISubprogram>(Op)->isDefinition()) ||
+                      isa<DILifetime>(Op)),
                "invalid retained type", &N, Op);
     }
   }
@@ -1304,8 +1325,10 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     auto *Node = dyn_cast<MDTuple>(RawNode);
     AssertDI(Node, "invalid retained nodes list", &N, RawNode);
     for (Metadata *Op : Node->operands()) {
-      AssertDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op)),
-               "invalid retained nodes, expected DILocalVariable or DILabel",
+      AssertDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op) ||
+                      isa<DILifetime>(Op)),
+               "invalid retained nodes, expected DILocalVariable or DILabel or "
+               "DILifetime",
                &N, Node, Op);
     }
   }
@@ -1473,8 +1496,15 @@ void Verifier::visitDILabel(const DILabel &N) {
            "label requires a valid scope", &N, N.getRawScope());
 }
 
+void Verifier::visitDIFragment(const DIFragment &N) {}
+
 void Verifier::visitDIExpression(const DIExpression &N) {
   AssertDI(N.isValid(), "invalid expression", &N);
+}
+
+void Verifier::visitDIExpr(const DIExpr &N) {
+  // TODO: Strictly limit where DIExpr may occur, forbidding it anywhere except
+  // as the `location:` parameter to DILifetime.
 }
 
 void Verifier::visitDIGlobalVariableExpression(
@@ -1507,6 +1537,33 @@ void Verifier::visitDIImportedEntity(const DIImportedEntity &N) {
            N.getRawEntity());
 }
 
+void Verifier::visitDILifetime(const DILifetime &N) {
+  // TODO: Validate that the the reachable lifetime graph contains no cycles.
+  auto *Obj = N.getRawObject();
+  AssertDI(Obj, "missing object", &N);
+  AssertDI(isa<DIObject>(Obj), "object must be a DIObject", &N, Obj);
+  auto *Loc = N.getRawLocation();
+  AssertDI(Loc, "missing location expression", &N);
+  AssertDI(isa<DIExpr>(Loc), "location expression must be a DIExpr", &N, Loc);
+  unsigned NumArgs = 0;
+  SmallDenseSet<Metadata *> RawArgObjectOperands;
+  for (const MDOperand &Operand : N.rawArgObjects()) {
+    Metadata *A = Operand.get();
+    AssertDI(A, "missing argObject", &N);
+    // FIXME: This should also permit DICode, once that is implemented
+    AssertDI(isa<DIObject>(A), "each argObject must be a DIObject", &N, A);
+    NumArgs++;
+  }
+  for (DIOp::Variant Op : cast<DIExpr>(Loc)->builder()) {
+    if (auto *A = Op.getIf<DIOp::Arg>()) {
+      AssertDI(A->getIndex() < NumArgs,
+               "debug location expression cannot reference an out-of-bounds "
+               "argObjects index",
+               &N);
+    }
+  }
+}
+
 void Verifier::visitComdat(const Comdat &C) {
   // In COFF the Module is invalid if the GlobalValue has private linkage.
   // Entities with private linkage don't have entries in the symbol table.
@@ -1516,7 +1573,7 @@ void Verifier::visitComdat(const Comdat &C) {
              "comdat global value has private linkage", GV);
 }
 
-void Verifier::visitModuleIdents(const Module &M) {
+void Verifier::visitModuleIdents() {
   const NamedMDNode *Idents = M.getNamedMetadata("llvm.ident");
   if (!Idents)
     return;
@@ -1533,7 +1590,7 @@ void Verifier::visitModuleIdents(const Module &M) {
   }
 }
 
-void Verifier::visitModuleCommandLines(const Module &M) {
+void Verifier::visitModuleCommandLines() {
   const NamedMDNode *CommandLines = M.getNamedMetadata("llvm.commandline");
   if (!CommandLines)
     return;
@@ -1551,7 +1608,7 @@ void Verifier::visitModuleCommandLines(const Module &M) {
   }
 }
 
-void Verifier::visitModuleFlags(const Module &M) {
+void Verifier::visitModuleFlags() {
   const NamedMDNode *Flags = M.getModuleFlagsMetadata();
   if (!Flags) return;
 
@@ -1604,7 +1661,7 @@ Verifier::visitModuleFlag(const MDNode *Op,
   Assert(ID, "invalid ID operand in module flag (expected metadata string)",
          Op->getOperand(1));
 
-  // Sanity check the values for behaviors with additional requirements.
+  // Check the values for behaviors with additional requirements.
   switch (MFB) {
   case Module::Error:
   case Module::Warning:
@@ -2055,10 +2112,12 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   }
 
   if (Attrs.hasFnAttr(Attribute::VScaleRange)) {
-    std::pair<unsigned, unsigned> Args =
-        Attrs.getFnAttrs().getVScaleRangeArgs();
+    unsigned VScaleMin = Attrs.getFnAttrs().getVScaleRangeMin();
+    if (VScaleMin == 0)
+      CheckFailed("'vscale_range' minimum must be greater than 0", V);
 
-    if (Args.first > Args.second && Args.second != 0)
+    Optional<unsigned> VScaleMax = Attrs.getFnAttrs().getVScaleRangeMax();
+    if (VScaleMax && VScaleMin > VScaleMax)
       CheckFailed("'vscale_range' minimum cannot be greater than maximum", V);
   }
 
@@ -3328,7 +3387,7 @@ void Verifier::visitCallBase(CallBase &Call) {
   visitInstruction(Call);
 }
 
-void Verifier::verifyTailCCMustTailAttrs(AttrBuilder Attrs,
+void Verifier::verifyTailCCMustTailAttrs(const AttrBuilder &Attrs,
                                          StringRef Context) {
   Assert(!Attrs.contains(Attribute::InAlloca),
          Twine("inalloca attribute not allowed in ") + Context);
@@ -3733,15 +3792,15 @@ void Verifier::visitLoadInst(LoadInst &LI) {
   PointerType *PTy = dyn_cast<PointerType>(LI.getOperand(0)->getType());
   Assert(PTy, "Load operand must be a pointer.", &LI);
   Type *ElTy = LI.getType();
-  Assert(LI.getAlignment() <= Value::MaximumAlignment,
-         "huge alignment values are unsupported", &LI);
+  if (MaybeAlign A = LI.getAlign()) {
+    Assert(A->value() <= Value::MaximumAlignment,
+           "huge alignment values are unsupported", &LI);
+  }
   Assert(ElTy->isSized(), "loading unsized types is not allowed", &LI);
   if (LI.isAtomic()) {
     Assert(LI.getOrdering() != AtomicOrdering::Release &&
                LI.getOrdering() != AtomicOrdering::AcquireRelease,
            "Load cannot have Release ordering", &LI);
-    Assert(LI.getAlignment() != 0,
-           "Atomic load must specify explicit alignment", &LI);
     Assert(ElTy->isIntOrPtrTy() || ElTy->isFloatingPointTy(),
            "atomic load operand must have integer, pointer, or floating point "
            "type!",
@@ -3761,15 +3820,15 @@ void Verifier::visitStoreInst(StoreInst &SI) {
   Type *ElTy = SI.getOperand(0)->getType();
   Assert(PTy->isOpaqueOrPointeeTypeMatches(ElTy),
          "Stored value type does not match pointer operand type!", &SI, ElTy);
-  Assert(SI.getAlignment() <= Value::MaximumAlignment,
-         "huge alignment values are unsupported", &SI);
+  if (MaybeAlign A = SI.getAlign()) {
+    Assert(A->value() <= Value::MaximumAlignment,
+           "huge alignment values are unsupported", &SI);
+  }
   Assert(ElTy->isSized(), "storing unsized types is not allowed", &SI);
   if (SI.isAtomic()) {
     Assert(SI.getOrdering() != AtomicOrdering::Acquire &&
                SI.getOrdering() != AtomicOrdering::AcquireRelease,
            "Store cannot have Acquire ordering", &SI);
-    Assert(SI.getAlignment() != 0,
-           "Atomic store must specify explicit alignment", &SI);
     Assert(ElTy->isIntOrPtrTy() || ElTy->isFloatingPointTy(),
            "atomic store operand must have integer, pointer, or floating point "
            "type!",
@@ -3820,8 +3879,10 @@ void Verifier::visitAllocaInst(AllocaInst &AI) {
          "Cannot allocate unsized type", &AI);
   Assert(AI.getArraySize()->getType()->isIntegerTy(),
          "Alloca array size must have integer type", &AI);
-  Assert(AI.getAlignment() <= Value::MaximumAlignment,
-         "huge alignment values are unsupported", &AI);
+  if (MaybeAlign A = AI.getAlign()) {
+    Assert(A->value() <= Value::MaximumAlignment,
+           "huge alignment values are unsupported", &AI);
+  }
 
   if (AI.isSwiftError()) {
     verifySwiftErrorValue(&AI);
@@ -4757,6 +4818,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::dbg_label: // llvm.dbg.label
     visitDbgLabelIntrinsic("label", cast<DbgLabelInst>(Call));
     break;
+  case Intrinsic::dbg_def: // llvm.dbg.def
+    visitDbgDefKillIntrinsic("def", cast<DbgDefKillIntrinsic>(Call));
+    break;
+  case Intrinsic::dbg_kill: // llvm.dbg.kill
+    visitDbgDefKillIntrinsic("kill", cast<DbgDefKillIntrinsic>(Call));
+    break;
   case Intrinsic::memcpy:
   case Intrinsic::memcpy_inline:
   case Intrinsic::memmove:
@@ -5269,24 +5336,32 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       Op0ElemTy =
           cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
       break;
-    case Intrinsic::matrix_column_major_load:
+    case Intrinsic::matrix_column_major_load: {
       Stride = dyn_cast<ConstantInt>(Call.getArgOperand(1));
       NumRows = cast<ConstantInt>(Call.getArgOperand(3));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(4));
       ResultTy = cast<VectorType>(Call.getType());
-      Op0ElemTy =
-          cast<PointerType>(Call.getArgOperand(0)->getType())->getElementType();
+
+      PointerType *Op0PtrTy =
+          cast<PointerType>(Call.getArgOperand(0)->getType());
+      if (!Op0PtrTy->isOpaque())
+        Op0ElemTy = Op0PtrTy->getElementType();
       break;
-    case Intrinsic::matrix_column_major_store:
+    }
+    case Intrinsic::matrix_column_major_store: {
       Stride = dyn_cast<ConstantInt>(Call.getArgOperand(2));
       NumRows = cast<ConstantInt>(Call.getArgOperand(4));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(5));
       ResultTy = cast<VectorType>(Call.getArgOperand(0)->getType());
       Op0ElemTy =
           cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
-      Op1ElemTy =
-          cast<PointerType>(Call.getArgOperand(1)->getType())->getElementType();
+
+      PointerType *Op1PtrTy =
+          cast<PointerType>(Call.getArgOperand(1)->getType());
+      if (!Op1PtrTy->isOpaque())
+        Op1ElemTy = Op1PtrTy->getElementType();
       break;
+    }
     default:
       llvm_unreachable("unexpected intrinsic");
     }
@@ -5295,9 +5370,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
            ResultTy->getElementType()->isFloatingPointTy(),
            "Result type must be an integer or floating-point type!", IF);
 
-    Assert(ResultTy->getElementType() == Op0ElemTy,
-           "Vector element type mismatch of the result and first operand "
-           "vector!", IF);
+    if (Op0ElemTy)
+      Assert(ResultTy->getElementType() == Op0ElemTy,
+             "Vector element type mismatch of the result and first operand "
+             "vector!", IF);
 
     if (Op1ElemTy)
       Assert(ResultTy->getElementType() == Op1ElemTy,
@@ -5557,6 +5633,10 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
 }
 
 void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
+  if (DebugInfoVersion)
+    AssertDI(*DebugInfoVersion == DEBUG_METADATA_VERSION,
+             "debug intrinsic incompatible with Debug Info Version", &DII,
+             *DebugInfoVersion);
   auto *MD = DII.getRawLocation();
   AssertDI(isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
                (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands()),
@@ -5668,6 +5748,24 @@ void Verifier::verifyFragmentExpression(const DIVariable &V,
   AssertDI(FragSize + FragOffset <= *VarSize,
          "fragment is larger than or outside of variable", Desc, &V);
   AssertDI(FragSize != *VarSize, "fragment covers entire variable", Desc, &V);
+}
+
+void Verifier::visitDbgDefKillIntrinsic(StringRef Kind,
+                                        DbgDefKillIntrinsic &DDI) {
+  if (DebugInfoVersion)
+    AssertDI(*DebugInfoVersion == DEBUG_METADATA_VERSION_HETEROGENEOUS_DWARF,
+             "debug intrinsic incompatible with Debug Info Version", &DDI,
+             *DebugInfoVersion);
+  AssertDI(isa<DILifetime>(DDI.getRawLifetime()),
+           "invalid llvm.dbg." + Kind + " intrinsic lifetime", &DDI,
+           DDI.getRawLifetime());
+  if (DbgDefInst *D = dyn_cast<DbgDefInst>(&DDI)) {
+    AssertDI(isa<ValueAsMetadata>(D->getRawReferrer()),
+             "invalid llvm.dbg.def intrinsic referrer", D, D->getRawReferrer());
+    AssertDI(DefinedDebugLifetimes.insert(D->getLifetime()).second,
+             "invalid llvm.dbg.def refers to an already-defined lifetime",
+             D->getLifetime());
+  }
 }
 
 void Verifier::verifyFnArgs(const DbgVariableIntrinsic &I) {
@@ -6166,11 +6264,7 @@ static bool isNewFormatTBAATypeNode(llvm::MDNode *Type) {
 
   // In the new format type nodes shall have a reference to the parent type as
   // its first operand.
-  MDNode *Parent = dyn_cast_or_null<MDNode>(Type->getOperand(0));
-  if (!Parent)
-    return false;
-
-  return true;
+  return isa_and_nonnull<MDNode>(Type->getOperand(0));
 }
 
 bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {

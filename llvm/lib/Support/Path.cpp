@@ -12,6 +12,7 @@
 
 #include "llvm/Support/Path.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Config/config.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
@@ -37,13 +38,16 @@ namespace {
   using llvm::sys::path::Style;
 
   inline Style real_style(Style style) {
+    if (style != Style::native)
+      return style;
     if (is_style_posix(style))
       return Style::posix;
-    return Style::windows;
+    return LLVM_WINDOWS_PREFER_FORWARD_SLASH ? Style::windows_slash
+                                             : Style::windows_backslash;
   }
 
   inline const char *separators(Style style) {
-    if (real_style(style) == Style::windows)
+    if (is_style_windows(style))
       return "\\/";
     return "/";
   }
@@ -470,7 +474,7 @@ StringRef parent_path(StringRef path, Style style) {
 void remove_filename(SmallVectorImpl<char> &path, Style style) {
   size_t end_pos = parent_path_end(StringRef(path.begin(), path.size()), style);
   if (end_pos != StringRef::npos)
-    path.set_size(end_pos);
+    path.truncate(end_pos);
 }
 
 void replace_extension(SmallVectorImpl<char> &path, const Twine &extension,
@@ -482,7 +486,7 @@ void replace_extension(SmallVectorImpl<char> &path, const Twine &extension,
   // Erase existing extension.
   size_t pos = p.find_last_of('.');
   if (pos != StringRef::npos && pos >= filename_pos(p, style))
-    path.set_size(pos);
+    path.truncate(pos);
 
   // Append '.' if needed.
   if (ext.size() > 0 && ext[0] != '.')
@@ -547,7 +551,9 @@ void native(SmallVectorImpl<char> &Path, Style style) {
   if (Path.empty())
     return;
   if (is_style_windows(style)) {
-    std::replace(Path.begin(), Path.end(), '/', '\\');
+    for (char &Ch : Path)
+      if (is_separator(Ch, style))
+        Ch = preferred_separator(style);
     if (Path[0] == '~' && (Path.size() == 1 || is_separator(Path[1], style))) {
       SmallString<128> PathHome;
       home_directory(PathHome);
@@ -601,7 +607,7 @@ bool is_separator(char value, Style style) {
 }
 
 StringRef get_separator(Style style) {
-  if (is_style_windows(style))
+  if (real_style(style) == Style::windows)
     return "\\";
   return "/";
 }

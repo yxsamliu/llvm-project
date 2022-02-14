@@ -629,6 +629,13 @@ OMPAlignedClause *OMPAlignedClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPAlignedClause(NumVars);
 }
 
+OMPAlignClause *OMPAlignClause::Create(const ASTContext &C, Expr *A,
+                                       SourceLocation StartLoc,
+                                       SourceLocation LParenLoc,
+                                       SourceLocation EndLoc) {
+  return new (C) OMPAlignClause(A, StartLoc, LParenLoc, EndLoc);
+}
+
 void OMPCopyinClause::setSourceExprs(ArrayRef<Expr *> SrcExprs) {
   assert(SrcExprs.size() == varlist_size() && "Number of source expressions is "
                                               "not the same as the "
@@ -1622,6 +1629,12 @@ void OMPClausePrinter::VisitOMPNumThreadsClause(OMPNumThreadsClause *Node) {
   OS << ")";
 }
 
+void OMPClausePrinter::VisitOMPAlignClause(OMPAlignClause *Node) {
+  OS << "align(";
+  Node->getAlignment()->printPretty(OS, nullptr, Policy, 0);
+  OS << ")";
+}
+
 void OMPClausePrinter::VisitOMPSafelenClause(OMPSafelenClause *Node) {
   OS << "safelen(";
   Node->getSafelen()->printPretty(OS, nullptr, Policy, 0);
@@ -2441,7 +2454,7 @@ std::string OMPTraitInfo::getMangledName() const {
                                                 Property.RawString);
     }
   }
-  return OS.str();
+  return MangledName;
 }
 
 OMPTraitInfo::OMPTraitInfo(StringRef MangledName) {

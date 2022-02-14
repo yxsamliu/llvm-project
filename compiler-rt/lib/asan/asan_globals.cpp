@@ -61,14 +61,13 @@ ALWAYS_INLINE void PoisonShadowForGlobal(const Global *g, u8 value) {
 }
 
 ALWAYS_INLINE void PoisonRedZones(const Global &g) {
-  uptr aligned_size = RoundUpTo(g.size, SHADOW_GRANULARITY);
+  uptr aligned_size = RoundUpTo(g.size, ASAN_SHADOW_GRANULARITY);
   FastPoisonShadow(g.beg + aligned_size, g.size_with_redzone - aligned_size,
                    kAsanGlobalRedzoneMagic);
   if (g.size != aligned_size) {
     FastPoisonShadowPartialRightRedzone(
-        g.beg + RoundDownTo(g.size, SHADOW_GRANULARITY),
-        g.size % SHADOW_GRANULARITY,
-        SHADOW_GRANULARITY,
+        g.beg + RoundDownTo(g.size, ASAN_SHADOW_GRANULARITY),
+        g.size % ASAN_SHADOW_GRANULARITY, ASAN_SHADOW_GRANULARITY,
         kAsanGlobalRedzoneMagic);
   }
 }
@@ -89,8 +88,8 @@ static void ReportGlobal(const Global &g, const char *prefix) {
       g.module_name, g.has_dynamic_init, (void *)g.odr_indicator);
   if (g.location) {
     Report("  location (%p): name=%s[%p], %d %d\n", (void *)g.location,
-           g.location->filename, g.location->filename, g.location->line_no,
-           g.location->column_no);
+           g.location->filename, (void *)g.location->filename,
+           g.location->line_no, g.location->column_no);
   }
 }
 

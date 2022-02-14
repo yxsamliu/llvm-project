@@ -527,9 +527,9 @@ static void updateLiveness(MachineFunction &MF) {
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
+  for (const CalleeSavedInfo &I : CSI) {
     for (MachineBasicBlock *MBB : Visited) {
-      MCPhysReg Reg = CSI[i].getReg();
+      MCPhysReg Reg = I.getReg();
       // Add the callee-saved register as live-in.
       // It's killed at the spill.
       if (!MRI.isReserved(Reg) && !MBB->isLiveIn(Reg))
@@ -540,17 +540,16 @@ static void updateLiveness(MachineFunction &MF) {
     // each MBB between the prologue and epilogue so that it is not clobbered
     // before it is reloaded in the epilogue. The Visited set contains all
     // blocks outside of the region delimited by prologue/epilogue.
-    if (CSI[i].isSpilledToReg()) {
+    if (I.isSpilledToReg()) {
       for (MachineBasicBlock &MBB : MF) {
         if (Visited.count(&MBB))
           continue;
-        MCPhysReg DstReg = CSI[i].getDstReg();
+        MCPhysReg DstReg = I.getDstReg();
         if (!MBB.isLiveIn(DstReg))
           MBB.addLiveIn(DstReg);
       }
     }
   }
-
 }
 
 /// Insert restore code for the callee-saved registers used in the function.
@@ -902,9 +901,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
   // incoming stack pointer if a frame pointer is required and is closer
   // to the incoming rather than the final stack pointer.
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
-  bool EarlyScavengingSlots = (TFI.hasFP(MF) && TFI.isFPCloseToIncomingSP() &&
-                               RegInfo->useFPForScavengingIndex(MF) &&
-                               !RegInfo->hasStackRealignment(MF));
+  bool EarlyScavengingSlots = TFI.allocateScavengingFrameIndexesNearIncomingSP(MF);
   if (RS && EarlyScavengingSlots) {
     SmallVector<int, 2> SFIs;
     RS->getScavengingFrameIndices(SFIs);
@@ -956,12 +953,22 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
     // LocalStackSlotPass didn't already allocate a slot for it.
     // If we are told to use the LocalStackAllocationBlock, the stack protector
     // is expected to be already pre-allocated.
-    if (!MFI.getUseLocalStackAllocationBlock())
+    if (MFI.getStackID(StackProtectorFI) != TargetStackID::Default) {
+      // If the stack protector isn't on the default stack then it's up to the
+      // target to set the stack offset.
+      assert(MFI.getObjectOffset(StackProtectorFI) != 0 &&
+             "Offset of stack protector on non-default stack expected to be "
+             "already set.");
+      assert(!MFI.isObjectPreAllocated(MFI.getStackProtectorIndex()) &&
+             "Stack protector on non-default stack expected to not be "
+             "pre-allocated by LocalStackSlotPass.");
+    } else if (!MFI.getUseLocalStackAllocationBlock()) {
       AdjustStackOffset(MFI, StackProtectorFI, StackGrowsDown, Offset, MaxAlign,
                         Skew);
-    else if (!MFI.isObjectPreAllocated(MFI.getStackProtectorIndex()))
+    } else if (!MFI.isObjectPreAllocated(MFI.getStackProtectorIndex())) {
       llvm_unreachable(
           "Stack protector not pre-allocated by LocalStackSlotPass.");
+    }
 
     // Assign large stack objects first.
     for (unsigned i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i) {
@@ -1216,6 +1223,8 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
+  const DataLayout &DL = MF.getDataLayout();
+  LLVMContext &Context = MF.getMMI().getModule()->getContext();
 
   if (RS && FrameIndexEliminationScavenging)
     RS->enterBasicBlock(*BB);
@@ -1236,6 +1245,41 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
     for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
       if (!MI.getOperand(i).isFI())
         continue;
+
+      if (MI.isDebugDef()) {
+        MachineOperand &Op = MI.getOperand(i);
+        assert(MI.isDebugOperand(&Op) &&
+               "Frame indices can only appear as a debug operand in a DBG_DEF"
+               " machine instruction");
+        assert(&Op == &MI.getDebugReferrer() &&
+               "Frame indices can only appear as the referrer of DBG_DEF "
+               "machine instructions");
+        Register Reg;
+        unsigned FrameIdx = Op.getIndex();
+        StackOffset Offset = TFI->getFrameIndexReference(MF, FrameIdx, Reg);
+
+        Op.ChangeToRegister(Reg, false /*isDef*/);
+        Op.setIsDebug();
+
+        DILifetime *Lifetime = MI.getDebugLifetime();
+        DIExprBuilder Builder = Lifetime->getLocation()->builder();
+        for (auto &&I = Builder.begin(); I != Builder.end(); ++I) {
+          if (auto *Referrer = I->getIf<DIOp::Referrer>()) {
+            Type *ResultType = Referrer->getResultType();
+            unsigned PointerSizeInBits =
+                DL.getPointerSizeInBits(DL.getAllocaAddrSpace());
+            ConstantData *C =
+                ConstantInt::get(IntegerType::get(Context, PointerSizeInBits),
+                                 Offset.getFixed(), true);
+            std::initializer_list<DIOp::Variant> IL = {
+                DIOp::Constant(C), DIOp::ByteOffset(ResultType)};
+            I = TFI->insertFrameLocation(
+                MF, Builder, Builder.insert(Builder.erase(I), IL), ResultType);
+          }
+        }
+        Lifetime->setLocation(Builder.intoExpr());
+        continue;
+      }
 
       // Frame indices in debug values are encoded in a target independent
       // way with simply the frame index and offset rather than any

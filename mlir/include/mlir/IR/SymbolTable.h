@@ -15,8 +15,6 @@
 #include "llvm/ADT/StringMap.h"
 
 namespace mlir {
-class Identifier;
-class Operation;
 
 /// This class allows for representing and managing the symbol table used by
 /// operations with the 'SymbolTable' trait. Inserting into and erasing from
@@ -370,7 +368,7 @@ public:
   }
 };
 
-} // end namespace OpTrait
+} // namespace OpTrait
 
 //===----------------------------------------------------------------------===//
 // Visibility parsing implementation.
@@ -381,9 +379,9 @@ namespace impl {
 /// nested) without quotes in a string attribute named 'attrName'.
 ParseResult parseOptionalVisibilityKeyword(OpAsmParser &parser,
                                            NamedAttrList &attrs);
-} // end namespace impl
+} // namespace impl
 
-} // end namespace mlir
+} // namespace mlir
 
 /// Include the generated symbol interfaces.
 #include "mlir/IR/SymbolInterfaces.h.inc"

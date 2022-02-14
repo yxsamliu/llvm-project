@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10 %s
 
-declare void @extern_func()
+declare void @extern_func() #2
 
 define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, float %bias, float %zcompare, float %s, float %t, float %clamp) {
 ; The vgpr tuple8 operand in image_gather4_c_b_cl instruction needs not be
@@ -19,6 +19,7 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX9-NEXT: v_mov_b32_e32 v34, v14
 ; GFX9-NEXT: v_mov_b32_e32 v33, v13
 ; GFX9-NEXT: v_mov_b32_e32 v32, v12
+
 ; GFX9: ;;#ASMSTART
 ; GFX9-NEXT: ;;#ASMEND
 ; GFX9: image_gather4_c_b_cl v[41:44], v[32:36], s[4:11], s[4:7] dmask:0x1
@@ -164,3 +165,4 @@ declare <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.2d.v4f32.f32.f32(i32 immar
 
 attributes #0 = { nounwind writeonly }
 attributes #1 = { nounwind readonly }
+attributes #2 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

@@ -349,10 +349,14 @@ private:
                              unsigned Abbrev);
   void writeDILocalVariable(const DILocalVariable *N,
                             SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeDIFragment(const DIFragment *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev);
   void writeDILabel(const DILabel *N,
                     SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDIExpression(const DIExpression *N,
                          SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeDIExpr(const DIExpr *N, SmallVectorImpl<uint64_t> &Record,
+                   unsigned Abbrev);
   void writeDIGlobalVariableExpression(const DIGlobalVariableExpression *N,
                                        SmallVectorImpl<uint64_t> &Record,
                                        unsigned Abbrev);
@@ -361,6 +365,8 @@ private:
   void writeDIImportedEntity(const DIImportedEntity *N,
                              SmallVectorImpl<uint64_t> &Record,
                              unsigned Abbrev);
+  void writeDILifetime(const DILifetime *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev);
   unsigned createNamedMetadataAbbrev();
   void writeNamedMetadata(SmallVectorImpl<uint64_t> &Record);
   unsigned createMetadataStringsAbbrev();
@@ -596,10 +602,10 @@ static void writeStringRecord(BitstreamWriter &Stream, unsigned Code,
   SmallVector<unsigned, 64> Vals;
 
   // Code: [strchar x N]
-  for (unsigned i = 0, e = Str.size(); i != e; ++i) {
-    if (AbbrevToUse && !BitCodeAbbrevOp::isChar6(Str[i]))
+  for (char C : Str) {
+    if (AbbrevToUse && !BitCodeAbbrevOp::isChar6(C))
       AbbrevToUse = 0;
-    Vals.push_back(Str[i]);
+    Vals.push_back(C);
   }
 
   // Emit the finished record.
@@ -833,8 +839,7 @@ void ModuleBitcodeWriter::writeAttributeTable() {
   Stream.EnterSubblock(bitc::PARAMATTR_BLOCK_ID, 3);
 
   SmallVector<uint64_t, 64> Record;
-  for (unsigned i = 0, e = Attrs.size(); i != e; ++i) {
-    AttributeList AL = Attrs[i];
+  for (const AttributeList &AL : Attrs) {
     for (unsigned i : AL.indexes()) {
       AttributeSet AS = AL.getAttributes(i);
       if (AS.hasAttributes())
@@ -914,8 +919,7 @@ void ModuleBitcodeWriter::writeTypeTable() {
   TypeVals.clear();
 
   // Loop over all of the types, emitting each in turn.
-  for (unsigned i = 0, e = TypeList.size(); i != e; ++i) {
-    Type *T = TypeList[i];
+  for (Type *T : TypeList) {
     int AbbrevToUse = 0;
     unsigned Code = 0;
 
@@ -973,9 +977,8 @@ void ModuleBitcodeWriter::writeTypeTable() {
       // STRUCT: [ispacked, eltty x N]
       TypeVals.push_back(ST->isPacked());
       // Output all of the element types.
-      for (StructType::element_iterator I = ST->element_begin(),
-           E = ST->element_end(); I != E; ++I)
-        TypeVals.push_back(VE.getTypeID(*I));
+      for (Type *ET : ST->elements())
+        TypeVals.push_back(VE.getTypeID(ET));
 
       if (ST->isLiteral()) {
         Code = bitc::TYPE_CODE_STRUCT_ANON;
@@ -1069,6 +1072,7 @@ static uint64_t getEncodedFFlags(FunctionSummary::FFlags Flags) {
   RawFlags |= (Flags.NoUnwind << 6);
   RawFlags |= (Flags.MayThrow << 7);
   RawFlags |= (Flags.HasUnknownCall << 8);
+  RawFlags |= (Flags.MustBeUnreachable << 9);
   return RawFlags;
 }
 
@@ -1766,7 +1770,6 @@ void ModuleBitcodeWriter::writeDIFile(const DIFile *N,
 void ModuleBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
                                              SmallVectorImpl<uint64_t> &Record,
                                              unsigned Abbrev) {
-  assert(N->isDistinct() && "Expected distinct compile units");
   Record.push_back(/* IsDistinct */ true);
   Record.push_back(N->getSourceLanguage());
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
@@ -2003,6 +2006,14 @@ void ModuleBitcodeWriter::writeDILocalVariable(
   Record.clear();
 }
 
+void ModuleBitcodeWriter::writeDIFragment(const DIFragment *N,
+                                          SmallVectorImpl<uint64_t> &Record,
+                                          unsigned Abbrev) {
+  assert(N->isDistinct() && "Expected distinct fragment");
+  Stream.EmitRecord(bitc::METADATA_FRAGMENT, Record, Abbrev);
+  Record.clear();
+}
+
 void ModuleBitcodeWriter::writeDILabel(
     const DILabel *N, SmallVectorImpl<uint64_t> &Record,
     unsigned Abbrev) {
@@ -2020,11 +2031,70 @@ void ModuleBitcodeWriter::writeDIExpression(const DIExpression *N,
                                             SmallVectorImpl<uint64_t> &Record,
                                             unsigned Abbrev) {
   Record.reserve(N->getElements().size() + 1);
-  const uint64_t Version = 3 << 1;
+  const uint64_t Version = 4 << 1;
   Record.push_back((uint64_t)N->isDistinct() | Version);
   Record.append(N->elements_begin(), N->elements_end());
 
   Stream.EmitRecord(bitc::METADATA_EXPRESSION, Record, Abbrev);
+  Record.clear();
+}
+
+void ModuleBitcodeWriter::writeDIExpr(const DIExpr *N,
+                                      SmallVectorImpl<uint64_t> &Record,
+                                      unsigned Abbrev) {
+  assert(!N->isDistinct() && "Expected non-distinct expr");
+  const unsigned Version = 0;
+  Record.push_back(Version);
+  for (auto &Op : N->builder()) {
+    Record.push_back(DIOp::getBitcodeID(Op));
+    visit(makeVisitor(
+#define HANDLE_OP0(NAME) [](DIOp::NAME) {},
+#include "llvm/IR/DIExprOps.def"
+#undef HANDLE_OP0
+              [&](DIOp::Referrer Referrer) {
+                Record.push_back(VE.getTypeID(Referrer.getResultType()));
+              },
+              [&](DIOp::Arg Arg) {
+                Record.push_back(VE.getTypeID(Arg.getResultType()));
+                Record.push_back(Arg.getIndex());
+              },
+              [&](DIOp::TypeObject TypeObject) {
+                Record.push_back(VE.getTypeID(TypeObject.getResultType()));
+              },
+              [&](DIOp::Constant Constant) {
+                Record.push_back(
+                    VE.getTypeID(Constant.getLiteralValue()->getType()));
+                Record.push_back(VE.getValueID(Constant.getLiteralValue()));
+              },
+              [&](DIOp::Convert Convert) {
+                Record.push_back(VE.getTypeID(Convert.getResultType()));
+              },
+              [&](DIOp::Reinterpret Reinterpret) {
+                Record.push_back(VE.getTypeID(Reinterpret.getResultType()));
+              },
+              [&](DIOp::BitOffset BitOffset) {
+                Record.push_back(VE.getTypeID(BitOffset.getResultType()));
+              },
+              [&](DIOp::ByteOffset ByteOffset) {
+                Record.push_back(VE.getTypeID(ByteOffset.getResultType()));
+              },
+              [&](DIOp::Composite Composite) {
+                Record.push_back(VE.getTypeID(Composite.getResultType()));
+                Record.push_back(Composite.getCount());
+              },
+              [&](DIOp::Extend Extend) { Record.push_back(Extend.getCount()); },
+              [&](DIOp::AddrOf AddrOf) {
+                Record.push_back(AddrOf.getAddressSpace());
+              },
+              [&](DIOp::Deref Deref) {
+                Record.push_back(VE.getTypeID(Deref.getResultType()));
+              },
+              [&](DIOp::PushLane PushLane) {
+                Record.push_back(VE.getTypeID(PushLane.getResultType()));
+              }),
+          Op);
+  }
+  Stream.EmitRecord(bitc::METADATA_EXPR, Record, Abbrev);
   Record.clear();
 }
 
@@ -2068,6 +2138,18 @@ void ModuleBitcodeWriter::writeDIImportedEntity(
   Record.push_back(VE.getMetadataOrNullID(N->getElements().get()));
 
   Stream.EmitRecord(bitc::METADATA_IMPORTED_ENTITY, Record, Abbrev);
+  Record.clear();
+}
+
+void ModuleBitcodeWriter::writeDILifetime(const DILifetime *N,
+                                          SmallVectorImpl<uint64_t> &Record,
+                                          unsigned Abbrev) {
+  Record.push_back(VE.getMetadataID(N->getObject()));
+  Record.push_back(VE.getMetadataID(N->getLocation()));
+  for (const auto &I : N->argObjects())
+    Record.push_back(VE.getMetadataID(I));
+
+  Stream.EmitRecord(bitc::METADATA_LIFETIME, Record, Abbrev);
   Record.clear();
 }
 
@@ -2165,6 +2247,20 @@ void ModuleBitcodeWriter::writeMetadataRecords(
       IndexPos->push_back(Stream.GetCurrentBitNo());
     if (const MDNode *N = dyn_cast<MDNode>(MD)) {
       assert(N->isResolved() && "Expected forward references to be resolved");
+
+#ifndef NDEBUG
+      switch (N->getMetadataID()) {
+#define HANDLE_MDNODE_LEAF_UNIQUED(CLASS)                                      \
+  case Metadata::CLASS##Kind:                                                  \
+    assert(!N->isDistinct() && "Expected non-distinct " #CLASS);               \
+    break;
+#define HANDLE_MDNODE_LEAF_DISTINCT(CLASS)                                     \
+  case Metadata::CLASS##Kind:                                                  \
+    assert(N->isDistinct() && "Expected distinct " #CLASS);                    \
+    break;
+#include "llvm/IR/Metadata.def"
+      }
+#endif
 
       switch (N->getMetadataID()) {
       default:
@@ -2659,6 +2755,10 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
       Code = bitc::CST_CODE_DSO_LOCAL_EQUIVALENT;
       Record.push_back(VE.getTypeID(Equiv->getGlobalValue()->getType()));
       Record.push_back(VE.getValueID(Equiv->getGlobalValue()));
+    } else if (const auto *NC = dyn_cast<NoCFIValue>(C)) {
+      Code = bitc::CST_CODE_NO_CFI_VALUE;
+      Record.push_back(VE.getTypeID(NC->getGlobalValue()->getType()));
+      Record.push_back(VE.getValueID(NC->getGlobalValue()));
     } else {
 #ifndef NDEBUG
       C->dump();
@@ -3344,19 +3444,18 @@ void ModuleBitcodeWriter::writeFunction(
 
   DILocation *LastDL = nullptr;
   // Finally, emit all the instructions, in order.
-  for (Function::const_iterator BB = F.begin(), E = F.end(); BB != E; ++BB)
-    for (BasicBlock::const_iterator I = BB->begin(), E = BB->end();
-         I != E; ++I) {
-      writeInstruction(*I, InstID, Vals);
+  for (const BasicBlock &BB : F)
+    for (const Instruction &I : BB) {
+      writeInstruction(I, InstID, Vals);
 
-      if (!I->getType()->isVoidTy())
+      if (!I.getType()->isVoidTy())
         ++InstID;
 
       // If the instruction has metadata, write a metadata attachment later.
-      NeedsMetadataAttachment |= I->hasMetadataOtherThanDebugLoc();
+      NeedsMetadataAttachment |= I.hasMetadataOtherThanDebugLoc();
 
       // If the instruction has a debug location, emit it.
-      DILocation *DL = I->getDebugLoc();
+      DILocation *DL = I.getDebugLoc();
       if (!DL)
         continue;
 
@@ -4430,9 +4529,9 @@ void ModuleBitcodeWriter::write() {
 
   // Emit function bodies.
   DenseMap<const Function *, uint64_t> FunctionToBitcodeIndex;
-  for (Module::const_iterator F = M.begin(), E = M.end(); F != E; ++F)
-    if (!F->isDeclaration())
-      writeFunction(*F, FunctionToBitcodeIndex);
+  for (const Function &F : M)
+    if (!F.isDeclaration())
+      writeFunction(F, FunctionToBitcodeIndex);
 
   // Need to write after the above call to WriteFunction which populates
   // the summary information in the index.

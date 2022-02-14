@@ -124,8 +124,8 @@ void LLParser::restoreParsingState(const SlotMapping *Slots) {
         std::make_pair(I.first, std::make_pair(I.second, LocTy())));
 }
 
-/// validateEndOfModule - Do final validity and sanity checks at the end of the
-/// module.
+/// validateEndOfModule - Do final validity and basic correctness checks at the
+/// end of the module.
 bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   if (!M)
     return false;
@@ -152,28 +152,28 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
         FnAttrs.removeAttribute(Attribute::Alignment);
       }
 
-      AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
+      AS = AS.addFnAttributes(Context, FnAttrs);
       Fn->setAttributes(AS);
     } else if (CallInst *CI = dyn_cast<CallInst>(V)) {
       AttributeList AS = CI->getAttributes();
       AttrBuilder FnAttrs(AS.getFnAttrs());
       AS = AS.removeFnAttributes(Context);
       FnAttrs.merge(B);
-      AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
+      AS = AS.addFnAttributes(Context, FnAttrs);
       CI->setAttributes(AS);
     } else if (InvokeInst *II = dyn_cast<InvokeInst>(V)) {
       AttributeList AS = II->getAttributes();
       AttrBuilder FnAttrs(AS.getFnAttrs());
       AS = AS.removeFnAttributes(Context);
       FnAttrs.merge(B);
-      AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
+      AS = AS.addFnAttributes(Context, FnAttrs);
       II->setAttributes(AS);
     } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(V)) {
       AttributeList AS = CBI->getAttributes();
       AttrBuilder FnAttrs(AS.getFnAttrs());
       AS = AS.removeFnAttributes(Context);
       FnAttrs.merge(B);
-      AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
+      AS = AS.addFnAttributes(Context, FnAttrs);
       CBI->setAttributes(AS);
     } else if (auto *GV = dyn_cast<GlobalVariable>(V)) {
       AttrBuilder Attrs(GV->getAttributes());
@@ -271,7 +271,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   return false;
 }
 
-/// Do final validity and sanity checks at the end of the index.
+/// Do final validity and basic correctness checks at the end of the index.
 bool LLParser::validateEndOfIndex() {
   if (!Index)
     return false;
@@ -742,27 +742,29 @@ bool LLParser::parseNamedMetadata() {
     return true;
 
   NamedMDNode *NMD = M->getOrInsertNamedMetadata(Name);
-  if (Lex.getKind() != lltok::rbrace)
-    do {
-      MDNode *N = nullptr;
-      // parse DIExpressions inline as a special case. They are still MDNodes,
-      // so they can still appear in named metadata. Remove this logic if they
-      // become plain Metadata.
-      if (Lex.getKind() == lltok::MetadataVar &&
-          Lex.getStrVal() == "DIExpression") {
-        if (parseDIExpression(N, /*IsDistinct=*/false))
-          return true;
-        // DIArgLists should only appear inline in a function, as they may
-        // contain LocalAsMetadata arguments which require a function context.
-      } else if (Lex.getKind() == lltok::MetadataVar &&
-                 Lex.getStrVal() == "DIArgList") {
-        return tokError("found DIArgList outside of function");
-      } else if (parseToken(lltok::exclaim, "Expected '!' here") ||
-                 parseMDNodeID(N)) {
-        return true;
-      }
-      NMD->addOperand(N);
-    } while (EatIfPresent(lltok::comma));
+
+  if (Lex.getKind() == lltok::rbrace) {
+    Lex.Lex();
+    return false;
+  }
+
+  do {
+    MDNode *N = nullptr;
+    // Parse uniqued MDNodes inline as a special case.
+#define HANDLE_MDNODE_LEAF_UNIQUED(CLASS)                                      \
+  if (Lex.getKind() == lltok::MetadataVar && Lex.getStrVal() == #CLASS) {      \
+    if (parse##CLASS(N, /*IsDistinct=*/false))                                 \
+      return true;                                                             \
+    NMD->addOperand(N);                                                        \
+    continue;                                                                  \
+  }
+#include "llvm/IR/Metadata.def"
+    // Parse all other MDNodes as an MDNodeID.
+    if (parseToken(lltok::exclaim, "Expected '!' here") || parseMDNodeID(N)) {
+      return true;
+    }
+    NMD->addOperand(N);
+  } while (EatIfPresent(lltok::comma));
 
   return parseToken(lltok::rbrace, "expected end of metadata node");
 }
@@ -782,9 +784,10 @@ bool LLParser::parseStandaloneMetadata() {
   if (Lex.getKind() == lltok::Type)
     return tokError("unexpected type in metadata definition");
 
+  auto DistinctLoc = Lex.getLoc();
   bool IsDistinct = EatIfPresent(lltok::kw_distinct);
   if (Lex.getKind() == lltok::MetadataVar) {
-    if (parseSpecializedMDNode(Init, IsDistinct))
+    if (parseSpecializedMDNode(Init, IsDistinct, DistinctLoc))
       return true;
   } else if (parseToken(lltok::exclaim, "Expected '!' here") ||
              parseMDTuple(Init, IsDistinct))
@@ -1306,7 +1309,8 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     unsigned MinValue, MaxValue;
     if (parseVScaleRangeArguments(MinValue, MaxValue))
       return true;
-    B.addVScaleRangeAttr(MinValue, MaxValue);
+    B.addVScaleRangeAttr(MinValue,
+                         MaxValue > 0 ? MaxValue : Optional<unsigned>());
     return false;
   }
   case Attribute::Dereferenceable: {
@@ -2340,6 +2344,16 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
   }
 }
 
+/// parseFirstClassType - parse a first class type.
+bool LLParser::parseFirstClassType(Type *&Result) {
+  LocTy TyLoc;
+  if (parseType(Result, TyLoc))
+    return true;
+  if (!Result->isFirstClassType())
+    return error(TyLoc, "expected first class type");
+  return false;
+}
+
 /// parseParameterList
 ///    ::= '(' ')'
 ///    ::= '(' Arg (',' Arg)* ')'
@@ -2989,9 +3003,10 @@ BasicBlock *LLParser::PerFunctionState::defineBB(const std::string &Name,
 /// parseValID - parse an abstract value that doesn't necessarily have a
 /// type implied.  For example, if we parse "4" we don't know what integer type
 /// it has.  The value will later be combined with its type and checked for
-/// sanity.  PFS is used to convert function-local operands of metadata (since
-/// metadata operands are not just parsed here but also converted to values).
-/// PFS can be null when we are not parsing metadata values inside a function.
+/// basic correctness.  PFS is used to convert function-local operands of
+/// metadata (since metadata operands are not just parsed here but also
+/// converted to values). PFS can be null when we are not parsing metadata
+/// values inside a function.
 bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   ID.Loc = Lex.getLoc();
   switch (Lex.getKind()) {
@@ -3283,6 +3298,20 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
 
     ID.ConstantVal = DSOLocalEquivalent::get(GV);
     ID.Kind = ValID::t_Constant;
+    return false;
+  }
+
+  case lltok::kw_no_cfi: {
+    // ValID ::= 'no_cfi' @foo
+    Lex.Lex();
+
+    if (parseValID(ID, PFS))
+      return true;
+
+    if (ID.Kind != ValID::t_GlobalID && ID.Kind != ValID::t_GlobalName)
+      return error(ID.Loc, "expected global value name in no_cfi");
+
+    ID.NoCFI = true;
     return false;
   }
 
@@ -4332,12 +4361,25 @@ bool LLParser::parseMDField(StringRef Name, FieldTy &Result) {
   return parseMDField(Loc, Name, Result);
 }
 
-bool LLParser::parseSpecializedMDNode(MDNode *&N, bool IsDistinct) {
+bool LLParser::parseSpecializedMDNode(MDNode *&N, bool IsDistinct,
+                                      LocTy DistinctLoc) {
   assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
 
-#define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS)                                  \
+#define HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUABLE(CLASS)                        \
   if (Lex.getStrVal() == #CLASS)                                               \
     return parse##CLASS(N, IsDistinct);
+#define HANDLE_SPECIALIZED_MDNODE_LEAF_UNIQUED(CLASS)                          \
+  if (Lex.getStrVal() == #CLASS) {                                             \
+    if (IsDistinct)                                                            \
+      return error(DistinctLoc, "'distinct' not allowed for !" #CLASS);        \
+    return parse##CLASS(N, IsDistinct);                                        \
+  }
+#define HANDLE_SPECIALIZED_MDNODE_LEAF_DISTINCT(CLASS)                         \
+  if (Lex.getStrVal() == #CLASS) {                                             \
+    if (!IsDistinct)                                                           \
+      return error(DistinctLoc, "missing 'distinct', required for !" #CLASS);  \
+    return parse##CLASS(N, IsDistinct);                                        \
+  }
 #include "llvm/IR/Metadata.def"
 
   return tokError("expected metadata type");
@@ -4683,9 +4725,6 @@ bool LLParser::parseDIFile(MDNode *&Result, bool IsDistinct) {
 ///                      globals: !4, imports: !5, macros: !6, dwoId: 0x0abcd,
 ///                      sysroot: "/", sdk: "MacOSX.sdk")
 bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
-  if (!IsDistinct)
-    return Lex.Error("missing 'distinct', required for !DICompileUnit");
-
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   REQUIRED(language, DwarfLangField, );                                        \
   REQUIRED(file, MDField, (/* AllowNull */ false));                            \
@@ -5009,6 +5048,7 @@ bool LLParser::parseDILabel(MDNode *&Result, bool IsDistinct) {
 /// parseDIExpression:
 ///   ::= !DIExpression(0, 7, -1)
 bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
+  assert(!IsDistinct && "DIExpression must not be distinct");
   assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
   Lex.Lex();
 
@@ -5050,17 +5090,18 @@ bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
   if (parseToken(lltok::rparen, "expected ')' here"))
     return true;
 
-  Result = GET_OR_DISTINCT(DIExpression, (Context, Elements));
+  Result = DIExpression::get(Context, Elements);
   return false;
 }
 
 bool LLParser::parseDIArgList(MDNode *&Result, bool IsDistinct) {
-  return parseDIArgList(Result, IsDistinct, nullptr);
+  return tokError("!DIArgList cannot appear outside of a function");
 }
 /// ParseDIArgList:
 ///   ::= !DIArgList(i32 7, i64 %0)
 bool LLParser::parseDIArgList(MDNode *&Result, bool IsDistinct,
                               PerFunctionState *PFS) {
+  assert(!IsDistinct && "DIArgList must not be distinct");
   assert(PFS && "Expected valid function state");
   assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
   Lex.Lex();
@@ -5080,7 +5121,133 @@ bool LLParser::parseDIArgList(MDNode *&Result, bool IsDistinct,
   if (parseToken(lltok::rparen, "expected ')' here"))
     return true;
 
-  Result = GET_OR_DISTINCT(DIArgList, (Context, Args));
+  Result = DIArgList::get(Context, Args);
+  return false;
+}
+
+bool LLParser::parseDIExpr(MDNode *&Result, bool IsDistinct) {
+  assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
+  Lex.Lex();
+
+  if (parseToken(lltok::lparen, "expected '(' here"))
+    return true;
+
+  DIExprBuilder Builder(Context);
+  if (Lex.getKind() != lltok::rparen)
+    do {
+      if (Lex.getKind() != lltok::DIOp)
+        return tokError("expected DIOp");
+      std::string Name = Lex.getStrVal();
+      Lex.Lex();
+      if (parseToken(lltok::lparen, "expected '(' here"))
+        return true;
+      if (Name == DIOp::Referrer::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Referrer>(Ty);
+      } else if (Name == DIOp::Arg::getAsmName()) {
+        uint32_t I;
+        Type *Ty = nullptr;
+        if (parseUInt32(I))
+          return true;
+        if (parseToken(lltok::comma, "expected ',' here"))
+          return true;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Arg>(I, Ty);
+      } else if (Name == DIOp::TypeObject::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::TypeObject>(Ty);
+      } else if (Name == DIOp::Constant::getAsmName()) {
+        Type *Ty = nullptr;
+        Constant *C = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        LocTy ValLoc = Lex.getLoc();
+        if (parseConstantValue(Ty, C))
+          return true;
+        if (!isa<ConstantData>(C))
+          return error(ValLoc, "expected constant data");
+        Builder.append<DIOp::Constant>(cast<ConstantData>(C));
+      } else if (Name == DIOp::Convert::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Convert>(Ty);
+      } else if (Name == DIOp::Reinterpret::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Reinterpret>(Ty);
+      } else if (Name == DIOp::BitOffset::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::BitOffset>(Ty);
+      } else if (Name == DIOp::ByteOffset::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::ByteOffset>(Ty);
+      } else if (Name == DIOp::Composite::getAsmName()) {
+        uint32_t I;
+        Type *Ty = nullptr;
+        if (parseUInt32(I))
+          return true;
+        if (parseToken(lltok::comma, "expected ',' here"))
+          return true;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Composite>(I, Ty);
+      } else if (Name == DIOp::Extend::getAsmName()) {
+        uint32_t I;
+        if (parseUInt32(I))
+          return true;
+        Builder.append<DIOp::Extend>(I);
+      } else if (Name == DIOp::AddrOf::getAsmName()) {
+        uint32_t I;
+        if (parseUInt32(I))
+          return true;
+        Builder.append<DIOp::AddrOf>(I);
+      } else if (Name == DIOp::Deref::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Deref>(Ty);
+      } else if (Name == DIOp::PushLane::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::PushLane>(Ty);
+      }
+#define HANDLE_OP0(NAME)                                                       \
+  else if (Name == DIOp::NAME::getAsmName()) {                                 \
+    Builder.append<DIOp::NAME>();                                              \
+  }
+#include "llvm/IR/DIExprOps.def"
+#undef HANDLE_OP0
+      else {
+        llvm_unreachable("unhandled DIOp");
+      }
+      if (parseToken(lltok::rparen, "expected ')' here"))
+        return true;
+    } while (EatIfPresent(lltok::comma));
+
+  if (parseToken(lltok::rparen, "expected ')' here"))
+    return true;
+
+  Result = Builder.intoExpr();
+  return false;
+}
+
+bool LLParser::parseDIFragment(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+  Result = DIFragment::getDistinct(Context);
   return false;
 }
 
@@ -5138,6 +5305,21 @@ bool LLParser::parseDIImportedEntity(MDNode *&Result, bool IsDistinct) {
   Result = GET_OR_DISTINCT(DIImportedEntity,
                            (Context, tag.Val, scope.Val, entity.Val, file.Val,
                             line.Val, name.Val, elements.Val));
+  return false;
+}
+
+/// parseDILifetime:
+///   ::= !DILifetime(object: !0, location: !1, argObjects: {...})
+bool LLParser::parseDILifetime(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  REQUIRED(object, MDField, );                                                 \
+  REQUIRED(location, MDField, );                                               \
+  OPTIONAL(argObjects, MDFieldList, );
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+
+  Result = DILifetime::getDistinct(Context, object.Val, location.Val,
+                                   argObjects.Val);
   return false;
 }
 
@@ -5266,9 +5448,13 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
   }
   case ValID::t_GlobalName:
     V = getGlobalVal(ID.StrVal, Ty, ID.Loc);
+    if (V && ID.NoCFI)
+      V = NoCFIValue::get(cast<GlobalValue>(V));
     return V == nullptr;
   case ValID::t_GlobalID:
     V = getGlobalVal(ID.UIntVal, Ty, ID.Loc);
+    if (V && ID.NoCFI)
+      V = NoCFIValue::get(cast<GlobalValue>(V));
     return V == nullptr;
   case ValID::t_APSInt:
     if (!Ty->isIntegerTy())
@@ -8532,6 +8718,7 @@ bool LLParser::parseFlag(unsigned &Val) {
 ///        [',' 'noUnwind' ':' Flag]? ')'
 ///        [',' 'mayThrow' ':' Flag]? ')'
 ///        [',' 'hasUnknownCall' ':' Flag]? ')'
+///        [',' 'mustBeUnreachable' ':' Flag]? ')'
 
 bool LLParser::parseOptionalFFlags(FunctionSummary::FFlags &FFlags) {
   assert(Lex.getKind() == lltok::kw_funcFlags);
@@ -8597,6 +8784,12 @@ bool LLParser::parseOptionalFFlags(FunctionSummary::FFlags &FFlags) {
       if (parseToken(lltok::colon, "expected ':'") || parseFlag(Val))
         return true;
       FFlags.HasUnknownCall = Val;
+      break;
+    case lltok::kw_mustBeUnreachable:
+      Lex.Lex();
+      if (parseToken(lltok::colon, "expected ':'") || parseFlag(Val))
+        return true;
+      FFlags.MustBeUnreachable = Val;
       break;
     default:
       return error(Lex.getLoc(), "expected function flag type");
