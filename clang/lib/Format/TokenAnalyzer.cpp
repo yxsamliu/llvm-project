@@ -113,12 +113,13 @@ std::pair<tooling::Replacements, unsigned> TokenAnalyzer::process() {
   assert(UnwrappedLines.rbegin()->empty());
   unsigned Penalty = 0;
   for (unsigned Run = 0, RunE = UnwrappedLines.size(); Run + 1 != RunE; ++Run) {
+    const auto &Lines = UnwrappedLines[Run];
     LLVM_DEBUG(llvm::dbgs() << "Run " << Run << "...\n");
     SmallVector<AnnotatedLine *, 16> AnnotatedLines;
 
     TokenAnnotator Annotator(Style, Lex.getKeywords());
-    for (unsigned i = 0, e = UnwrappedLines[Run].size(); i != e; ++i) {
-      AnnotatedLines.push_back(new AnnotatedLine(UnwrappedLines[Run][i]));
+    for (const UnwrappedLine &Line : Lines) {
+      AnnotatedLines.push_back(new AnnotatedLine(Line));
       Annotator.annotate(*AnnotatedLines.back());
     }
 
@@ -127,15 +128,11 @@ std::pair<tooling::Replacements, unsigned> TokenAnalyzer::process() {
 
     LLVM_DEBUG({
       llvm::dbgs() << "Replacements for run " << Run << ":\n";
-      for (tooling::Replacements::const_iterator I = RunResult.first.begin(),
-                                                 E = RunResult.first.end();
-           I != E; ++I) {
-        llvm::dbgs() << I->toString() << "\n";
-      }
+      for (const tooling::Replacement &Fix : RunResult.first)
+        llvm::dbgs() << Fix.toString() << "\n";
     });
-    for (unsigned i = 0, e = AnnotatedLines.size(); i != e; ++i) {
-      delete AnnotatedLines[i];
-    }
+    for (AnnotatedLine *Line : AnnotatedLines)
+      delete Line;
 
     Penalty += RunResult.second;
     for (const auto &R : RunResult.first) {

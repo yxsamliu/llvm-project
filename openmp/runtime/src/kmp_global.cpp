@@ -219,6 +219,13 @@ int __kmp_mwait_enabled = FALSE;
 int __kmp_mwait_hints = 0;
 #endif
 
+#if KMP_HAVE_UMWAIT
+int __kmp_waitpkg_enabled = 0;
+int __kmp_tpause_state = 0;
+int __kmp_tpause_hint = 1;
+int __kmp_tpause_enabled = 0;
+#endif
+
 /* map OMP 3.0 schedule types with our internal schedule types */
 enum sched_type __kmp_sch_map[kmp_sched_upper - kmp_sched_lower_ext +
                               kmp_sched_upper_std - kmp_sched_lower - 2] = {
@@ -337,6 +344,9 @@ omp_memspace_handle_t const llvm_omp_target_shared_mem_space =
     (omp_memspace_handle_t const)101;
 omp_memspace_handle_t const llvm_omp_target_device_mem_space =
     (omp_memspace_handle_t const)102;
+omp_memspace_handle_t const kmp_max_mem_space =
+    (omp_memspace_handle_t const)1024;
+omp_allocator_handle_t __kmp_def_mem_space = omp_default_mem_alloc;
 
 /* This check ensures that the compiler is passing the correct data type for the
    flags formal parameter of the function kmpc_omp_task_alloc(). If the type is
@@ -425,6 +435,7 @@ kmp_int32 __kmp_use_yield_exp_set = 0;
 
 kmp_uint32 __kmp_yield_init = KMP_INIT_WAIT;
 kmp_uint32 __kmp_yield_next = KMP_NEXT_WAIT;
+kmp_uint64 __kmp_pause_init = 1; // for tpause
 
 /* ------------------------------------------------------ */
 /* STATE mostly syncronized with global lock */

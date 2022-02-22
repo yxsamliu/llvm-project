@@ -20,6 +20,7 @@ add_mlir_conversion_library(MLIRTosaToLinalg
   MLIRMath
   MLIRPass
   MLIRTensor
+  MLIRTransforms
   MLIRTosa
   MLIRTosaTransforms
   MLIRSupport

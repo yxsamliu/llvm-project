@@ -82,9 +82,11 @@ Using Clang Tools
    ClangFormat
    ClangFormatStyleOptions
    ClangFormattedStatus
+   ClangLinkerWrapper
    ClangNvlinkWrapper
    ClangOffloadWrapper
    ClangOffloadBundler
+   ClangOffloadWrapper
 
 Design Documents
 ================

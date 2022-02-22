@@ -13,7 +13,7 @@
 #ifndef AFFINE_OPS
 #define AFFINE_OPS
 
-include "mlir/Dialect/StandardOps/IR/StandardOpsBase.td"
+include "mlir/Dialect/Arithmetic/IR/ArithmeticBase.td"
 include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
@@ -27,7 +27,7 @@ def Affine_Dialect : Dialect {
 }
 
 // Base class for Affine dialect ops.
-class Affine_Op<string mnemonic, list<OpTrait> traits = []> :
+class Affine_Op<string mnemonic, list<Trait> traits = []> :
     Op<Affine_Dialect, mnemonic, traits> {
   // For every affine op, there needs to be a:
   //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
@@ -475,7 +475,7 @@ def AffineIfOp : Affine_Op<"if",
   let hasFolder = 1;
 }
 
-class AffineLoadOpBase<string mnemonic, list<OpTrait> traits = []> :
+class AffineLoadOpBase<string mnemonic, list<Trait> traits = []> :
     Affine_Op<mnemonic, !listconcat(traits,
         [DeclareOpInterfaceMethods<AffineReadOpInterface>,
         DeclareOpInterfaceMethods<AffineMapAccessInterface>,
@@ -540,7 +540,7 @@ def AffineLoadOp : AffineLoadOpBase<"load"> {
   let hasFolder = 1;
 }
 
-class AffineMinMaxOpBase<string mnemonic, list<OpTrait> traits = []> :
+class AffineMinMaxOpBase<string mnemonic, list<Trait> traits = []> :
     Op<Affine_Dialect, mnemonic, traits> {
   let arguments = (ins AffineMapAttr:$map, Variadic<Index>:$operands);
   let results = (outs Index);
@@ -691,9 +691,9 @@ def AffineParallelOp : Affine_Op<"parallel",
 
   let builders = [
     OpBuilder<(ins "TypeRange":$resultTypes,
-      "ArrayRef<AtomicRMWKind>":$reductions, "ArrayRef<int64_t>":$ranges)>,
+      "ArrayRef<arith::AtomicRMWKind>":$reductions, "ArrayRef<int64_t>":$ranges)>,
     OpBuilder<(ins "TypeRange":$resultTypes,
-      "ArrayRef<AtomicRMWKind>":$reductions, "ArrayRef<AffineMap>":$lbMaps,
+      "ArrayRef<arith::AtomicRMWKind>":$reductions, "ArrayRef<AffineMap>":$lbMaps,
       "ValueRange":$lbArgs, "ArrayRef<AffineMap>":$ubMaps, "ValueRange":$ubArgs,
       "ArrayRef<int64_t>":$steps)>
   ];
@@ -834,7 +834,7 @@ def AffinePrefetchOp : Affine_Op<"prefetch",
   let hasFolder = 1;
 }
 
-class AffineStoreOpBase<string mnemonic, list<OpTrait> traits = []> :
+class AffineStoreOpBase<string mnemonic, list<Trait> traits = []> :
     Affine_Op<mnemonic, !listconcat(traits,
     [DeclareOpInterfaceMethods<AffineWriteOpInterface>,
     DeclareOpInterfaceMethods<AffineMapAccessInterface>,

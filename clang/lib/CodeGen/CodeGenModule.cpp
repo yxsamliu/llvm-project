@@ -565,7 +565,9 @@ void CodeGenModule::Release() {
         "__amdgpu_device_library_preserve_asan_functions_ptr", nullptr,
         llvm::GlobalVariable::NotThreadLocal);
     addCompilerUsedGlobal(Var);
-    getModule().addModuleFlag(llvm::Module::Override, "amdgpu_hostcall", 1);
+    if (!getModule().getModuleFlag("amdgpu_hostcall")) {
+      getModule().addModuleFlag(llvm::Module::Override, "amdgpu_hostcall", 1);
+    }
   }
 
   emitLLVMUsed();
@@ -610,7 +612,7 @@ void CodeGenModule::Release() {
 
   if (Context.getLangOpts().SemanticInterposition)
     // Require various optimization to respect semantic interposition.
-    getModule().setSemanticInterposition(1);
+    getModule().setSemanticInterposition(true);
 
   if (CodeGenOpts.EmitCodeView) {
     // Indicate that we want CodeView in the metadata.
@@ -715,6 +717,9 @@ void CodeGenModule::Release() {
                               1);
   }
 
+  if (CodeGenOpts.IBTSeal)
+    getModule().addModuleFlag(llvm::Module::Override, "ibt-seal", 1);
+
   // Add module metadata for return address signing (ignoring
   // non-leaf/all) and stack tagging. These are actually turned on by function
   // attributes, but we use module metadata to emit build attributes. This is
@@ -731,6 +736,7 @@ void CodeGenModule::Release() {
                               "tag-stack-memory-buildattr", 1);
 
   if (Arch == llvm::Triple::thumb || Arch == llvm::Triple::thumbeb ||
+      Arch == llvm::Triple::arm || Arch == llvm::Triple::armeb ||
       Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_32 ||
       Arch == llvm::Triple::aarch64_be) {
     getModule().addModuleFlag(llvm::Module::Error, "branch-target-enforcement",
@@ -742,11 +748,9 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Error, "sign-return-address-all",
                               LangOpts.isSignReturnAddressScopeAll());
 
-    if (Arch != llvm::Triple::thumb && Arch != llvm::Triple::thumbeb) {
-      getModule().addModuleFlag(llvm::Module::Error,
-                                "sign-return-address-with-bkey",
-                                !LangOpts.isSignReturnAddressWithAKey());
-    }
+    getModule().addModuleFlag(llvm::Module::Error,
+                              "sign-return-address-with-bkey",
+                              !LangOpts.isSignReturnAddressWithAKey());
   }
 
   if (!CodeGenOpts.MemoryProfileOutput.empty()) {
@@ -1373,7 +1377,8 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
 }
 
 void CodeGenModule::UpdateMultiVersionNames(GlobalDecl GD,
-                                            const FunctionDecl *FD) {
+                                            const FunctionDecl *FD,
+                                            StringRef &CurName) {
   if (!FD->isMultiVersion())
     return;
 
@@ -1405,7 +1410,11 @@ void CodeGenModule::UpdateMultiVersionNames(GlobalDecl GD,
       if (ExistingRecord != std::end(Manglings))
         Manglings.remove(&(*ExistingRecord));
       auto Result = Manglings.insert(std::make_pair(OtherName, OtherGD));
-      MangledDeclNames[OtherGD.getCanonicalDecl()] = Result.first->first();
+      StringRef OtherNameRef = MangledDeclNames[OtherGD.getCanonicalDecl()] =
+          Result.first->first();
+      // If this is the current decl is being created, make sure we update the name.
+      if (GD.getCanonicalDecl() == OtherGD.getCanonicalDecl())
+        CurName = OtherNameRef;
       if (llvm::GlobalValue *Entry = GetGlobalValue(NonTargetName))
         Entry->setName(OtherName);
     }
@@ -1824,7 +1833,7 @@ CodeGenModule::getMostBaseClasses(const CXXRecordDecl *RD) {
 
 void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
                                                            llvm::Function *F) {
-  llvm::AttrBuilder B;
+  llvm::AttrBuilder B(F->getContext());
 
   if (CodeGenOpts.UnwindTables)
     B.addAttribute(llvm::Attribute::UWTable);
@@ -1987,7 +1996,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
 void CodeGenModule::setLLVMFunctionFEnvAttributes(const FunctionDecl *D,
                                                   llvm::Function *F) {
   if (D->hasAttr<StrictFPAttr>()) {
-    llvm::AttrBuilder FuncAttrs;
+    llvm::AttrBuilder FuncAttrs(F->getContext());
     FuncAttrs.addAttribute("strictfp");
     F->addFnAttrs(FuncAttrs);
   }
@@ -2097,12 +2106,12 @@ void CodeGenModule::setNonAliasAttributes(GlobalDecl GD,
         if (!D->getAttr<SectionAttr>())
           F->addFnAttr("implicit-section-name", SA->getName());
 
-      llvm::AttrBuilder Attrs;
+      llvm::AttrBuilder Attrs(F->getContext());
       if (GetCPUAndFeaturesAttributes(GD, Attrs)) {
         // We know that GetCPUAndFeaturesAttributes will always have the
         // newest set, since it has the newest possible FunctionDecl, so the
         // new ones should replace the old.
-        llvm::AttrBuilder RemoveAttrs;
+        llvm::AttributeMask RemoveAttrs;
         RemoveAttrs.addAttribute("target-cpu");
         RemoveAttrs.addAttribute("target-features");
         RemoveAttrs.addAttribute("tune-cpu");
@@ -3484,6 +3493,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
 void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
   const auto *FD = cast<FunctionDecl>(GD.getDecl());
   assert(FD && "Not a FunctionDecl?");
+  assert(FD->isCPUDispatchMultiVersion() && "Not a multiversion function?");
   const auto *DD = FD->getAttr<CPUDispatchAttr>();
   assert(DD && "Not a cpu_dispatch Function?");
   llvm::Type *DeclTy = getTypes().ConvertType(FD->getType());
@@ -3494,14 +3504,16 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
   }
 
   StringRef ResolverName = getMangledName(GD);
+  UpdateMultiVersionNames(GD, FD, ResolverName);
 
   llvm::Type *ResolverType;
   GlobalDecl ResolverGD;
-  if (getTarget().supportsIFunc())
+  if (getTarget().supportsIFunc()) {
     ResolverType = llvm::FunctionType::get(
         llvm::PointerType::get(DeclTy,
                                Context.getTargetAddressSpace(FD->getType())),
         false);
+  }
   else {
     ResolverType = DeclTy;
     ResolverGD = GD;
@@ -3693,8 +3705,7 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
     }
 
     if (FD->isMultiVersion()) {
-      if (FD->hasAttr<TargetAttr>())
-        UpdateMultiVersionNames(GD, FD);
+        UpdateMultiVersionNames(GD, FD, MangledName);
       if (!IsForDefinition)
         return GetOrCreateMultiVersionResolver(GD, Ty, FD);
     }
@@ -3790,7 +3801,7 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
   if (D)
     SetFunctionAttributes(GD, F, IsIncompleteFunction, IsThunk);
   if (ExtraAttrs.hasFnAttrs()) {
-    llvm::AttrBuilder B(ExtraAttrs, llvm::AttributeList::FunctionIndex);
+    llvm::AttrBuilder B(F->getContext(), ExtraAttrs.getFnAttrs());
     F->addFnAttrs(B);
   }
 

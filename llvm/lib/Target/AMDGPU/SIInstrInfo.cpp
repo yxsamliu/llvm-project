@@ -587,12 +587,11 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
   // Registers in the sequence are allocated contiguously so we can just
   // use register number to pick one of three round-robin temps.
   unsigned RegNo = DestReg % 3;
-  Register Tmp = RS.scavengeRegister(&AMDGPU::VGPR_32RegClass, 0);
-  if (!Tmp)
-    report_fatal_error("Cannot scavenge VGPR to copy to AGPR");
-  RS.setRegUsed(Tmp);
-
+  Register Tmp;
   if (!TII.getSubtarget().hasGFX90AInsts()) {
+    Tmp = AMDGPU::VGPR32;
+    assert(MBB.getParent()->getRegInfo().isReserved(AMDGPU::VGPR32));
+
     // Only loop through if there are any free registers left, otherwise
     // scavenger may report a fatal error without emergency spill slot
     // or spill with the slot.
@@ -603,6 +602,9 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
       Tmp = Tmp2;
       RS.setRegUsed(Tmp);
     }
+  } else {
+    Tmp = RS.scavengeRegister(&AMDGPU::VGPR_32RegClass, 0);
+    RS.setRegUsed(Tmp);
   }
 
   // Insert copy to temporary VGPR.
@@ -2459,8 +2461,6 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   OffsetLo->setVariableValue(MCBinaryExpr::createAnd(Offset, Mask, MCCtx));
   auto *ShAmt = MCConstantExpr::create(32, MCCtx);
   OffsetHi->setVariableValue(MCBinaryExpr::createAShr(Offset, ShAmt, MCCtx));
-
-  return;
 }
 
 unsigned SIInstrInfo::getBranchOpcode(SIInstrInfo::BranchPredicate Cond) {
@@ -4597,6 +4597,14 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (!Aligned) {
       ErrInfo = "Subtarget requires even aligned vector registers "
                 "for DS_GWS instructions";
+      return false;
+    }
+  }
+
+  if (Desc.getOpcode() == AMDGPU::G_AMDGPU_WAVE_ADDRESS) {
+    const MachineOperand &SrcOp = MI.getOperand(1);
+    if (!SrcOp.isReg() || SrcOp.getReg().isVirtual()) {
+      ErrInfo = "pseudo expects only physical SGPRs";
       return false;
     }
   }

@@ -207,6 +207,8 @@ BitcodeCompiler::BitcodeCompiler() {
   if (bitcodeFiles.empty())
     return;
   for (Symbol *sym : symtab->symbols()) {
+    if (sym->isPlaceholder())
+      continue;
     StringRef s = sym->getName();
     for (StringRef prefix : {"__start_", "__stop_"})
       if (s.startswith(prefix))
@@ -290,7 +292,7 @@ static void thinLTOCreateEmptyIndexFiles() {
 
     ModuleSummaryIndex m(/*HaveGVs*/ false);
     m.setSkipModuleByDistributedBackend();
-    WriteIndexToFile(m, *os);
+    writeIndexToFile(m, *os);
     if (config->thinLTOEmitImportsFiles)
       openFile(path + ".imports");
   }

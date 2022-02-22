@@ -38,9 +38,11 @@ typedef uint64_t __kmpc_impl_lanemask_t;
 #define NOINLINE __attribute__((noinline))
 #define ALIGN(N) __attribute__((aligned(N)))
 #define PLUGIN_ACCESSIBLE                                                      \
-  __attribute__((used)) /* Don't discard values the plugin reads */            \
-  __attribute__((visibility("default"))) /* Access via SHT_HASH */             \
-  __attribute__((section(".data")))      /* Not .bss, can write before load */
+  __attribute__((used))   /* Don't discard values the plugin reads */          \
+  __attribute__((weak))   /* We may have multiple definitions */               \
+  __attribute__((retain)) /* Also needed to keep values alive */               \
+  __attribute__((visibility("protected"))) /* Access via SHT_HASH */           \
+  __attribute__((section(".data")))        /* Not .bss, can write before load */
 
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
@@ -102,5 +104,7 @@ enum : __kmpc_impl_lanemask_t {
 // for opencl, which translates to calls that do not presently exist for openmp
 // Therefore, for now, stub out printf while building this library.
 EXTERN int printf(const char *, ...);
+EXTERN char *global_allocate(uint32_t bufsz);
+EXTERN int global_free(void *ptr);
 
 #endif

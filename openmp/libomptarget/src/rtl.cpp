@@ -64,7 +64,20 @@ static char *ProfileTraceFile = nullptr;
 
 __attribute__((constructor(101))) void init() {
   DP("Init target library!\n");
-  PM = new PluginManager();
+
+  bool UseEventsForAtomicTransfers = true;
+  if (const char *ForceAtomicMap = getenv("LIBOMPTARGET_MAP_FORCE_ATOMIC")) {
+    std::string ForceAtomicMapStr(ForceAtomicMap);
+    if (ForceAtomicMapStr == "false" || ForceAtomicMapStr == "FALSE")
+      UseEventsForAtomicTransfers = false;
+    else if (ForceAtomicMapStr != "true" && ForceAtomicMapStr != "TRUE")
+      fprintf(stderr,
+              "Warning: 'LIBOMPTARGET_MAP_FORCE_ATOMIC' accepts only "
+              "'true'/'TRUE' or 'false'/'FALSE' as options, '%s' ignored\n",
+              ForceAtomicMap);
+  }
+
+  PM = new PluginManager(UseEventsForAtomicTransfers);
 
 #ifdef OMPTARGET_PROFILE_ENABLED
   ProfileTraceFile = getenv("LIBOMPTARGET_PROFILE");
@@ -258,6 +271,12 @@ void RTLsTy::LoadRTLs() {
       dlsym(dynlib_handle, "__tgt_rtl_query_coarse_grain_mem_region");
     *((void **)&R.enable_access_to_all_agents) =
         dlsym(dynlib_handle, "__tgt_rtl_enable_access_to_all_agents");
+    *((void **)&R.release_async_info) =
+        dlsym(dynlib_handle, "__tgt_rtl_release_async_info");
+    *((void **)&R.init_async_info) =
+        dlsym(dynlib_handle, "__tgt_rtl_init_async_info");
+    *((void **)&R.init_device_info) =
+        dlsym(dynlib_handle, "__tgt_rtl_init_device_info");
   }
   delete[] libomptarget_dir_name;
 
@@ -669,4 +688,11 @@ void RTLsTy::UnregisterLib(__tgt_bin_desc *desc) {
   // TODO: Write some RTL->unload_image(...) function?
 
   DP("Done unregistering library!\n");
+}
+
+bool RTLsTy::SystemSupportManagedMemory() {
+  for (auto it : archsSupportingManagedMemory)
+    if (isHomogeneousSystemOf(it))
+      return true;
+  return false;
 }

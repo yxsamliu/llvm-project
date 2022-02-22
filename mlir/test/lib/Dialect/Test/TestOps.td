@@ -32,7 +32,7 @@ include "TestAttrDefs.td"
 include "TestTypeDefs.td"
 
 
-class TEST_Op<string mnemonic, list<OpTrait> traits = []> :
+class TEST_Op<string mnemonic, list<Trait> traits = []> :
     Op<Test_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
@@ -382,7 +382,10 @@ def ConversionCallOp : TEST_Op<"conversion_call_op",
 
   let extraClassDeclaration = [{
     /// Return the callee of this operation.
-    ::mlir::CallInterfaceCallable getCallableForCallee() {
+    ::mlir::CallInterfaceCallable getCallableForCallee();
+  }];
+  let extraClassDefinition = [{
+    ::mlir::CallInterfaceCallable $cppClass::getCallableForCallee() {
       return (*this)->getAttrOfType<::mlir::SymbolRefAttr>("callee");
     }
   }];
@@ -1952,9 +1955,19 @@ def FormatNestedCompoundAttr : TEST_Op<"format_cpmd_nested_attr"> {
   let assemblyFormat = "`nested` $nested attr-dict-with-keyword";
 }
 
+def FormatQualifiedCompoundAttr : TEST_Op<"format_qual_cpmd_nested_attr"> {
+  let arguments = (ins CompoundNestedOuter:$nested);
+  let assemblyFormat = "`nested` qualified($nested) attr-dict-with-keyword";
+}
+
 def FormatNestedType : TEST_Op<"format_cpmd_nested_type"> {
   let arguments = (ins CompoundNestedOuterType:$nested);
   let assemblyFormat = "$nested `nested` type($nested) attr-dict-with-keyword";
+}
+
+def FormatQualifiedNestedType : TEST_Op<"format_qual_cpmd_nested_type"> {
+  let arguments = (ins CompoundNestedOuterType:$nested);
+  let assemblyFormat = "$nested `nested` qualified(type($nested)) attr-dict-with-keyword";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2139,9 +2152,15 @@ def FormatInferTypeOp : TEST_Op<"format_infer_type", [InferTypeOpInterface]> {
    }];
 }
 
+// Check that formatget supports DeclareOpInterfaceMethods.
+def FormatInferType2Op : TEST_Op<"format_infer_type2", [DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+  let results = (outs AnyType);
+  let assemblyFormat = "attr-dict";
+}
+
 // Base class for testing mixing allOperandTypes, allOperands, and
 // inferResultTypes.
-class FormatInferAllTypesBaseOp<string mnemonic, list<OpTrait> traits = []>
+class FormatInferAllTypesBaseOp<string mnemonic, list<Trait> traits = []>
     : TEST_Op<mnemonic, [InferTypeOpInterface] # traits> {
   let arguments = (ins Variadic<AnyType>:$args);
   let results = (outs Variadic<AnyType>:$outs);
@@ -2273,7 +2292,7 @@ def RegionYieldOp : TEST_Op<"region_yield",
   ];
 }
 
-class BufferBasedOpBase<string mnemonic, list<OpTrait> traits>
+class BufferBasedOpBase<string mnemonic, list<Trait> traits>
     : TEST_Op<mnemonic, traits> {
   let description = [{
     A buffer based operation, that uses memRefs as input and output.
@@ -2323,14 +2342,15 @@ def RegionIfYieldOp : TEST_Op<"region_if_yield",
 }
 
 def RegionIfOp : TEST_Op<"region_if",
-      [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+      [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                 ["getRegionInvocationBounds"]>,
        SingleBlockImplicitTerminator<"RegionIfYieldOp">,
        RecursiveSideEffects]> {
   let description =[{
     Represents an abstract if-then-else-join pattern. In this context, the then
     and else regions jump to the join region, which finally returns to its
     parent op.
-    }];
+  }];
 
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parseRegionIfOp(parser, result); }];
@@ -2351,6 +2371,14 @@ def RegionIfOp : TEST_Op<"region_if",
     }
     ::mlir::OperandRange getSuccessorEntryOperands(unsigned index);
   }];
+}
+
+def AnyCondOp : TEST_Op<"any_cond",
+      [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                 ["getRegionInvocationBounds"]>,
+       RecursiveSideEffects]> {
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region AnyRegion:$region);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2396,7 +2424,7 @@ def TableGenBuildOp4 : TEST_Op<"tblgen_build_4", [SameOperandsAndResultType]> {
 // Base class for testing `build` methods for ops with
 // InferReturnTypeOpInterface.
 class TableGenBuildInferReturnTypeBaseOp<string mnemonic,
-                                         list<OpTrait> traits = []>
+                                         list<Trait> traits = []>
     : TEST_Op<mnemonic, [InferTypeOpInterface] # traits> {
   let arguments = (ins Variadic<AnyType>:$inputs);
   let results = (outs AnyType:$result);
@@ -2560,5 +2588,25 @@ def TestDefaultStrAttrHasValueOp : TEST_Op<"has_str_value"> {
 
 def : Pat<(TestDefaultStrAttrNoValueOp $value),
           (TestDefaultStrAttrHasValueOp ConstantStrAttr<StrAttr, "foo">)>;
+
+//===----------------------------------------------------------------------===//
+// Test Ops with effects
+//===----------------------------------------------------------------------===//
+
+def TestResource : Resource<"TestResource">;
+
+def TestEffectsOpA : TEST_Op<"op_with_effects_a"> {
+    let arguments = (ins
+        Arg<Variadic<AnyMemRef>, "", [MemRead]>,
+        Arg<FlatSymbolRefAttr, "", [MemRead]>:$first,
+        Arg<SymbolRefAttr, "", [MemWrite]>:$second,
+        Arg<OptionalAttr<SymbolRefAttr>, "", [MemRead]>:$optional_symbol
+        );
+
+    let results = (outs Res<AnyMemRef, "", [MemAlloc<TestResource>]>);
+}
+
+def TestEffectsOpB : TEST_Op<"op_with_effects_b",
+    [MemoryEffects<[MemWrite<TestResource>]>]>;
 
 #endif // TEST_OPS

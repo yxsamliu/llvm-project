@@ -1145,21 +1145,6 @@ sortGlobalExprs(SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &GVEs) {
   return GVEs;
 }
 
-/// Create a DIE for \p Ty if it doesn't already exist. If type units are
-/// enabled, try to emit a type unit without a CU skeleton DIE.
-static void createMaybeUnusedType(DwarfDebug &DD, DwarfCompileUnit &CU,
-                                  DIType &Ty) {
-  // Try to generate a type unit without creating a skeleton DIE in this CU.
-  if (DICompositeType const *CTy = dyn_cast<DICompositeType>(&Ty)) {
-    MDString const *TypeId = CTy->getRawIdentifier();
-    if (DD.generateTypeUnits() && TypeId && !Ty.isForwardDecl())
-      if (DD.getOrCreateDwarfTypeUnit(CU, TypeId->getString(), CTy))
-        return;
-  }
-  // We couldn't or shouldn't add a type unit so create the DIE normally.
-  CU.getOrCreateTypeDIE(&Ty);
-}
-
 // Emit all Dwarf sections that should come prior to the content. Create
 // global DIEs and emit initial debug info sections. This is invoked by
 // the target AsmPrinter.
@@ -1274,18 +1259,12 @@ void DwarfDebug::beginModule(Module *M) {
     for (auto *Ty : CUNode->getEnumTypes())
       CU.getOrCreateTypeDIE(cast<DIType>(Ty));
 
-    for (auto *Ty : CUNode->getEnumTypes()) {
-      // The enum types array by design contains pointers to
-      // MDNodes rather than DIRefs. Unique them here.
-      createMaybeUnusedType(*this, CU, *Ty);
-    }
-
     for (auto *Ty : CUNode->getRetainedTypes()) {
       // The retained types array by design contains pointers to
       // MDNodes rather than DIRefs. Unique them here.
       if (DIType *RT = dyn_cast<DIType>(Ty))
         // There is no point in force-emitting a forward declaration.
-        createMaybeUnusedType(*this, CU, *RT);
+        CU.getOrCreateTypeDIE(RT);
     }
     // Emit imported_modules last so that the relevant context is already
     // available.
@@ -1455,7 +1434,6 @@ void DwarfDebug::finalizeModuleInfo() {
   if (useSplitDwarf())
     SkeletonHolder.computeSizeAndOffsets();
 }
-
 
 // Emit all Dwarf sections that should come after the content.
 void DwarfDebug::endModule() {
@@ -2652,12 +2630,10 @@ void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
       if (Op.getDescription().Op[I] == Encoding::SizeNA)
         continue;
       if (Op.getDescription().Op[I] == Encoding::BaseTypeRef) {
-        uint64_t Offset =
-            CU->ExprRefedBaseTypes[Op.getRawOperand(I)].Die->getOffset();
-        assert(Offset < (1ULL << (ULEB128PadSize * 7)) && "Offset wont fit");
-        Streamer.emitULEB128(Offset, "", ULEB128PadSize);
+        unsigned Length =
+          Streamer.emitDIERef(*CU->ExprRefedBaseTypes[Op.getRawOperand(I)].Die);
         // Make sure comments stay aligned.
-        for (unsigned J = 0; J < ULEB128PadSize; ++J)
+        for (unsigned J = 0; J < Length; ++J)
           if (Comment != End)
             Comment++;
       } else {
@@ -3485,30 +3461,17 @@ uint64_t DwarfDebug::makeTypeSignature(StringRef Identifier) {
 void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
                                       StringRef Identifier, DIE &RefDie,
                                       const DICompositeType *CTy) {
-  bool TopLevelType = TypeUnitsUnderConstruction.empty();
-  if (auto Signature = getOrCreateDwarfTypeUnit(CU, Identifier, CTy)) {
-    CU.addDIETypeSignature(RefDie, *Signature);
-  } else if (TopLevelType) {
-    // Construct this type in the CU directly.
-    // This is inefficient because all the dependent types will be rebuilt
-    // from scratch, including building them in type units, discovering that
-    // they depend on addresses, throwing them out and rebuilding them.
-    CU.constructTypeDIE(RefDie, cast<DICompositeType>(CTy));
-  }
-}
-
-Optional<uint64_t>
-DwarfDebug::getOrCreateDwarfTypeUnit(DwarfCompileUnit &CU, StringRef Identifier,
-                                     const DICompositeType *CTy) {
   // Fast path if we're building some type units and one has already used the
   // address pool we know we're going to throw away all this work anyway, so
   // don't bother building dependent types.
   if (!TypeUnitsUnderConstruction.empty() && AddrPool.hasBeenUsed())
-    return None;
+    return;
 
   auto Ins = TypeSignatures.insert(std::make_pair(CTy, 0));
-  if (!Ins.second)
-    return Ins.first->second;
+  if (!Ins.second) {
+    CU.addDIETypeSignature(RefDie, Ins.first->second);
+    return;
+  }
 
   bool TopLevelType = TypeUnitsUnderConstruction.empty();
   AddrPool.resetUsedFlag();
@@ -3562,7 +3525,13 @@ DwarfDebug::getOrCreateDwarfTypeUnit(DwarfCompileUnit &CU, StringRef Identifier,
       // the type that used an address.
       for (const auto &TU : TypeUnitsToAdd)
         TypeSignatures.erase(TU.second);
-      return None;
+
+      // Construct this type in the CU directly.
+      // This is inefficient because all the dependent types will be rebuilt
+      // from scratch, including building them in type units, discovering that
+      // they depend on addresses, throwing them out and rebuilding them.
+      CU.constructTypeDIE(RefDie, cast<DICompositeType>(CTy));
+      return;
     }
 
     // If the type wasn't dependent on fission addresses, finish adding the type
@@ -3572,7 +3541,7 @@ DwarfDebug::getOrCreateDwarfTypeUnit(DwarfCompileUnit &CU, StringRef Identifier,
       InfoHolder.emitUnit(TU.first.get(), useSplitDwarf());
     }
   }
-  return Signature;
+  CU.addDIETypeSignature(RefDie, Signature);
 }
 
 DwarfDebug::NonTypeUnitContext::NonTypeUnitContext(DwarfDebug *DD)

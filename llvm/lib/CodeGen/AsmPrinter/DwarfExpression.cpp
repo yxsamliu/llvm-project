@@ -288,9 +288,17 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   // expression representing a value, rather than a location.
   if ((!isParameterValue() && !isMemoryLocation() && !HasComplexExpression) ||
       isEntryValue()) {
+    auto FragmentInfo = ExprCursor.getFragmentInfo();
+    unsigned RegSize = 0;
     for (auto &Reg : DwarfRegs) {
+      RegSize += Reg.SubRegSize;
       if (Reg.DwarfRegNo >= 0)
         addReg(Reg.DwarfRegNo, Reg.Comment);
+      if (FragmentInfo)
+        if (RegSize > FragmentInfo->SizeInBits)
+          // If the register is larger than the current fragment stop
+          // once the fragment is covered.
+          break;
       addOpPiece(Reg.SubRegSize);
     }
 
@@ -693,9 +701,25 @@ void DwarfExpression::emitLegacySExt(unsigned FromBits) {
 }
 
 void DwarfExpression::emitLegacyZExt(unsigned FromBits) {
-  // (X & (1 << FromBits - 1))
-  emitOp(dwarf::DW_OP_constu);
-  emitUnsigned((1ULL << FromBits) - 1);
+  // Heuristic to decide the most efficient encoding.
+  // A ULEB can encode 7 1-bits per byte.
+  if (FromBits / 7 < 1+1+1+1+1) {
+    // (X & (1 << FromBits - 1))
+    emitOp(dwarf::DW_OP_constu);
+    emitUnsigned((1ULL << FromBits) - 1);
+  } else {
+    // Note that the DWARF 4 stack consists of pointer-sized elements,
+    // so technically it doesn't make sense to shift left more than 64
+    // bits. We leave that for the consumer to decide though. LLDB for
+    // example uses APInt for the stack elements and can still deal
+    // with this.
+    emitOp(dwarf::DW_OP_lit1);
+    emitOp(dwarf::DW_OP_constu);
+    emitUnsigned(FromBits);
+    emitOp(dwarf::DW_OP_shl);
+    emitOp(dwarf::DW_OP_lit1);
+    emitOp(dwarf::DW_OP_minus);
+  }
   emitOp(dwarf::DW_OP_and);
 }
 
@@ -717,84 +741,48 @@ static bool isUnsigned(const ConstantInt *CI) {
 }
 
 size_t DIEDwarfExprAST::Node::getChildrenCount() const {
-  if (Element.holdsAlternative<DIOp::Arg>() ||
-      Element.holdsAlternative<DIOp::Constant>() ||
-      Element.holdsAlternative<DIOp::PushLane>() ||
-      Element.holdsAlternative<DIOp::Referrer>() ||
-      Element.holdsAlternative<DIOp::TypeObject>()) {
-    return 0;
-  } else if (Element.holdsAlternative<DIOp::AddrOf>() ||
-      Element.holdsAlternative<DIOp::Convert>() ||
-      Element.holdsAlternative<DIOp::Deref>() ||
-      Element.holdsAlternative<DIOp::Extend>() ||
-      Element.holdsAlternative<DIOp::Read>() ||
-      Element.holdsAlternative<DIOp::Reinterpret>()) {
-    return 1;
-  } else if (Element.holdsAlternative<DIOp::Add>() ||
-      Element.holdsAlternative<DIOp::BitOffset>() ||
-      Element.holdsAlternative<DIOp::ByteOffset>() ||
-      Element.holdsAlternative<DIOp::Div>() ||
-      Element.holdsAlternative<DIOp::Mul>() ||
-      Element.holdsAlternative<DIOp::Shl>() ||
-      Element.holdsAlternative<DIOp::Shr>() ||
-      Element.holdsAlternative<DIOp::Sub>()) {
-    return 2;
-  } else if (Element.holdsAlternative<DIOp::Select>()) {
-    return 3;
-  } else if (Element.holdsAlternative<DIOp::Composite>()) {
-    // FIXME(KZHURAVL): Handle DIOp::Composite.
-    llvm_unreachable("DIOp::Composite is not handled in DIEDwarfExprAST::Node::getChildrenCount");
-  }
-
-  llvm_unreachable("Unknown DIOp in DIEDwarfExprAST::Node::getChildrenCount");
+  return visit<size_t>(
+      makeVisitor(
+          [](DIOp::Arg) { return 0; }, [](DIOp::Constant) { return 0; },
+          [](DIOp::PushLane) { return 0; }, [](DIOp::Referrer) { return 0; },
+          [](DIOp::TypeObject) { return 0; }, [](DIOp::AddrOf) { return 1; },
+          [](DIOp::Convert) { return 1; }, [](DIOp::Deref) { return 1; },
+          [](DIOp::Extend) { return 1; }, [](DIOp::Read) { return 1; },
+          [](DIOp::Reinterpret) { return 1; }, [](DIOp::Add) { return 2; },
+          [](DIOp::BitOffset) { return 2; }, [](DIOp::ByteOffset) { return 2; },
+          [](DIOp::Div) { return 2; }, [](DIOp::Mul) { return 2; },
+          [](DIOp::Shl) { return 2; }, [](DIOp::Shr) { return 2; },
+          [](DIOp::Sub) { return 2; }, [](DIOp::Select) { return 3; },
+          [](DIOp::Composite) -> size_t {
+            // FIXME(KZHURAVL): Handle DIOp::Composite.
+            llvm_unreachable("DIOp::Composite is not handled in "
+                             "DIEDwarfExprAST::Node::getChildrenCount");
+          }),
+      Element);
 }
 
 Optional<uint8_t> DIEDwarfExprAST::Node::getEquivalentDwarfOp() const {
-  if (Element.holdsAlternative<DIOp::Arg>()) {
-    return None;
-  } else if (Element.holdsAlternative<DIOp::Constant>()) {
-    return None;
-  } else if (Element.holdsAlternative<DIOp::PushLane>()) {
-    return None;
-  } else if (Element.holdsAlternative<DIOp::Referrer>()) {
-    return None;
-  } else if (Element.holdsAlternative<DIOp::TypeObject>()) {
-    return None;
-  } else if (Element.holdsAlternative<DIOp::AddrOf>()) {
-    return None;
-  } else if (Element.holdsAlternative<DIOp::Convert>()) {
-    return None;
-  } else if (Element.holdsAlternative<DIOp::Deref>()) {
-    return None;
-  } else if (Element.holdsAlternative<DIOp::Extend>()) {
-    return None;
-  } else if (Element.holdsAlternative<DIOp::Read>()) {
-    return None;
-  } else if (Element.holdsAlternative<DIOp::Reinterpret>()) {
-    return None;
-  } else if (Element.holdsAlternative<DIOp::Add>()) {
-    return dwarf::DW_OP_plus;
-  } else if (Element.holdsAlternative<DIOp::BitOffset>()) {
-    return dwarf::DW_OP_LLVM_bit_offset;
-  } else if (Element.holdsAlternative<DIOp::ByteOffset>()) {
-    return dwarf::DW_OP_LLVM_offset;
-  } else if (Element.holdsAlternative<DIOp::Div>()) {
-    return dwarf::DW_OP_div;
-  } else if (Element.holdsAlternative<DIOp::Mul>()) {
-    return dwarf::DW_OP_mul;
-  } else if (Element.holdsAlternative<DIOp::Shl>()) {
-    return dwarf::DW_OP_shl;
-  } else if (Element.holdsAlternative<DIOp::Shr>()) {
-    return dwarf::DW_OP_shr;
-  } else if (Element.holdsAlternative<DIOp::Sub>()) {
-    return dwarf::DW_OP_minus;
-  } else if (Element.holdsAlternative<DIOp::Select>()) {
-    return None;
-  } else if (Element.holdsAlternative<DIOp::Composite>()) {
-    return None;
-  }
-
-  llvm_unreachable("Unknown DIOp in DIEDwarfExprAST::Node::getEquivalentDwarfOp");
+  return visit<Optional<uint8_t>>(
+      makeVisitor(
+          [](DIOp::Arg) { return None; }, [](DIOp::Constant) { return None; },
+          [](DIOp::PushLane) { return None; },
+          [](DIOp::Referrer) { return None; },
+          [](DIOp::TypeObject) { return None; },
+          [](DIOp::AddrOf) { return None; }, [](DIOp::Convert) { return None; },
+          [](DIOp::Deref) { return None; }, [](DIOp::Extend) { return None; },
+          [](DIOp::Read) { return None; },
+          [](DIOp::Reinterpret) { return None; },
+          [](DIOp::Add) { return dwarf::DW_OP_plus; },
+          [](DIOp::BitOffset) { return dwarf::DW_OP_LLVM_bit_offset; },
+          [](DIOp::ByteOffset) { return dwarf::DW_OP_LLVM_offset; },
+          [](DIOp::Div) { return dwarf::DW_OP_div; },
+          [](DIOp::Mul) { return dwarf::DW_OP_mul; },
+          [](DIOp::Shl) { return dwarf::DW_OP_shl; },
+          [](DIOp::Shr) { return dwarf::DW_OP_shr; },
+          [](DIOp::Sub) { return dwarf::DW_OP_minus; },
+          [](DIOp::Select) { return None; },
+          [](DIOp::Composite) { return None; }),
+      Element);
 }
 
 void DIEDwarfExprAST::buildDIExprAST() {
@@ -838,51 +826,28 @@ void DIEDwarfExprAST::traverseAndLower(DIEDwarfExprAST::Node *OpNode) {
 }
 
 void DIEDwarfExprAST::lower(DIEDwarfExprAST::Node *OpNode) {
-  if (OpNode->getElement().holdsAlternative<DIOp::Arg>()) {
-    lowerDIOpArg(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::Constant>()) {
-    lowerDIOpConstant(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::PushLane>()) {
-    lowerDIOpPushLane(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::Referrer>()) {
-    lowerDIOpReferrer(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::TypeObject>()) {
-    lowerDIOpTypeObject(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::AddrOf>()) {
-    lowerDIOpAddrOf(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::Convert>()) {
-    lowerDIOpConvert(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::Deref>()) {
-    lowerDIOpDeref(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::Extend>()) {
-    lowerDIOpExtend(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::Read>()) {
-    lowerDIOpRead(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::Reinterpret>()) {
-    lowerDIOpReinterpret(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::Add>()) {
-    lowerDIOpAdd(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::BitOffset>()) {
-    lowerDIOpBitOffset(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::ByteOffset>()) {
-    lowerDIOpByteOffset(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::Div>()) {
-    lowerDIOpDiv(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::Mul>()) {
-    lowerDIOpMul(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::Shl>()) {
-    lowerDIOpShl(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::Shr>()) {
-    lowerDIOpShr(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::Sub>()) {
-    lowerDIOpSub(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::Select>()) {
-    lowerDIOpSelect(OpNode);
-  } else if (OpNode->getElement().holdsAlternative<DIOp::Composite>()) {
-    lowerDIOpComposite(OpNode);
-  } else {
-    llvm_unreachable("Unknown DIOp in DIEDwarfExprAST::lower");
-  }
+  visit(makeVisitor([&](DIOp::Arg) { lowerDIOpArg(OpNode); },
+                    [&](DIOp::Constant) { lowerDIOpConstant(OpNode); },
+                    [&](DIOp::PushLane) { lowerDIOpPushLane(OpNode); },
+                    [&](DIOp::Referrer) { lowerDIOpReferrer(OpNode); },
+                    [&](DIOp::TypeObject) { lowerDIOpTypeObject(OpNode); },
+                    [&](DIOp::AddrOf) { lowerDIOpAddrOf(OpNode); },
+                    [&](DIOp::Convert) { lowerDIOpConvert(OpNode); },
+                    [&](DIOp::Deref) { lowerDIOpDeref(OpNode); },
+                    [&](DIOp::Extend) { lowerDIOpExtend(OpNode); },
+                    [&](DIOp::Read) { lowerDIOpRead(OpNode); },
+                    [&](DIOp::Reinterpret) { lowerDIOpReinterpret(OpNode); },
+                    [&](DIOp::Add) { lowerDIOpAdd(OpNode); },
+                    [&](DIOp::BitOffset) { lowerDIOpBitOffset(OpNode); },
+                    [&](DIOp::ByteOffset) { lowerDIOpByteOffset(OpNode); },
+                    [&](DIOp::Div) { lowerDIOpDiv(OpNode); },
+                    [&](DIOp::Mul) { lowerDIOpMul(OpNode); },
+                    [&](DIOp::Shl) { lowerDIOpShl(OpNode); },
+                    [&](DIOp::Shr) { lowerDIOpShr(OpNode); },
+                    [&](DIOp::Sub) { lowerDIOpSub(OpNode); },
+                    [&](DIOp::Select) { lowerDIOpSelect(OpNode); },
+                    [&](DIOp::Composite) { lowerDIOpComposite(OpNode); }),
+        OpNode->getElement());
 }
 
 bool DIEDwarfExprAST::tryInlineArgObject(DIObject *ArgObject) {
