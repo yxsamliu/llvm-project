@@ -14,6 +14,12 @@
 // DEVINIT: clang{{.*}}" "-cc1" {{.*}}"-fgpu-allow-device-init"
 // DEVINIT: clang{{.*}}" "-cc1" {{.*}}"-fgpu-allow-device-init"
 
+// Check --default-stream=per-thread.
+// RUN: %clang -### -nogpuinc -nogpulib --default-stream=per-thread \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=PTH %s
+// PTH: clang{{.*}}" "-cc1" {{.*}}"--default-stream=per-thread"{{.*}}"-DHIP_API_PER_THREAD_DEFAULT_STREAM"
+// PTH: clang{{.*}}" "-cc1" {{.*}}"--default-stream=per-thread"{{.*}}"-DHIP_API_PER_THREAD_DEFAULT_STREAM"
+
 // RUN: %clang -### -x hip -target x86_64-pc-windows-msvc -fms-extensions \
 // RUN:   -mllvm -amdgpu-early-inline-all=true  %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=MLLVM %s

@@ -6896,8 +6896,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString(Twine("-cuid=") + Twine(CUID)));
   }
 
-  if (IsHIP)
+  if (IsHIP) {
     CmdArgs.push_back("-fcuda-allow-variadic-functions");
+    auto DefStream = Args.getLastArgValue(options::OPT_default_stream_EQ);
+    if (!DefStream.empty()) {
+      Args.AddLastArg(CmdArgs, options::OPT_default_stream_EQ);
+      if (DefStream == "per-thread")
+        CmdArgs.push_back(
+            Args.MakeArgString("-DHIP_API_PER_THREAD_DEFAULT_STREAM"));
+    }
+  }
 
   if (IsCudaDevice || IsHIPDevice) {
     StringRef InlineThresh =

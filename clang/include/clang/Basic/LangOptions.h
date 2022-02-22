@@ -291,6 +291,13 @@ public:
     ExtendTo64
   };
 
+  enum class DefaultStreamKind {
+    /// Legacy default stream
+    Legacy,
+    /// Per-thread default stream
+    PerThread,
+  };
+
 public:
   /// The used language standard.
   LangStandard::Kind LangStd;
@@ -383,6 +390,9 @@ public:
   /// Indicates whether the front-end is explicitly told that the
   /// input is a header file (i.e. -x c-header).
   bool IsHeaderFile = false;
+
+  /// The default stream kind used for HIP kernel launching.
+  DefaultStreamKind DefaultStream;
 
   LangOptions();
 
