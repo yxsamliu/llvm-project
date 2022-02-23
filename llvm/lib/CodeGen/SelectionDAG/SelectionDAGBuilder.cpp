@@ -6136,7 +6136,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
           }
         }
       } else {
-        cast<SDDbgDef>(SDDK)->setSDValue(&N);
+        cast<SDDbgDef>(SDDK)->setSDValue(N);
       }
     } else {
       SDDK =
