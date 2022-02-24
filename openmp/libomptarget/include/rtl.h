@@ -65,6 +65,11 @@ struct RTLInfoTy {
   typedef int(set_coarse_grain_mem_region_ty)(void *, int64_t);
   typedef int32_t(query_coarse_grain_mem_region_ty)(void *, int64_t);
   typedef int32_t(enable_access_to_all_agents_ty)(void *, int32_t);
+  typedef int32_t(release_async_info_ty)(int32_t, __tgt_async_info *);
+  typedef int32_t(init_async_info_ty)(int32_t, __tgt_async_info **);
+  typedef int64_t(init_device_into_ty)(int64_t, __tgt_device_info *,
+                                       const char **);
+
   int32_t Idx = -1;             // RTL index, index is the number of devices
                                 // of other RTLs that were registered before,
                                 // i.e. the OpenMP index of the first device
@@ -110,6 +115,9 @@ struct RTLInfoTy {
   set_coarse_grain_mem_region_ty *set_coarse_grain_mem_region = nullptr;
   query_coarse_grain_mem_region_ty *query_coarse_grain_mem_region = nullptr;
   enable_access_to_all_agents_ty *enable_access_to_all_agents = nullptr;
+  init_async_info_ty *init_async_info = nullptr;
+  init_device_into_ty *init_device_info = nullptr;
+  release_async_info_ty *release_async_info = nullptr;
 
   // Are there images associated with this RTL.
   bool isUsed = false;
@@ -156,6 +164,11 @@ struct RTLsTy {
   // (i.e. the library attempts to load the RTLs (plugins) only once).
   std::once_flag initFlag;
   void LoadRTLs(); // not thread-safe
+
+  std::vector<std::string> archsSupportingManagedMemory = {
+      "gfx908", "gfx90a", "sm_35", "sm_50", "sm_60", "sm_70", "sm_61"};
+  // Return whether the current system supports omp_get_target_memory_space
+  bool SystemSupportManagedMemory();
 };
 
 /// Map between the host entry begin and the translation table. Each
