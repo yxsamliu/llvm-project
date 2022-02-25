@@ -517,10 +517,17 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
     return;
   }
 
-  CC1Args.push_back("-internal-isystem");
-  CC1Args.push_back(DriverArgs.MakeArgString(getIncludePath()));
   if (UsesRuntimeWrapper)
     CC1Args.append({"-include", "__clang_hip_runtime_wrapper.h"});
+}
+
+void RocmInstallationDetector::AddPostSystemHIPIncludeArgs(
+    const ArgList &DriverArgs, ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nogpuinc))
+    return;
+
+  CC1Args.push_back("-internal-isystem");
+  CC1Args.push_back(DriverArgs.MakeArgString(getIncludePath()));
 }
 
 void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,

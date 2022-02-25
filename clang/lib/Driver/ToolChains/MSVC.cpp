@@ -718,6 +718,8 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   };
   addSystemIncludes(DriverArgs, CC1Args, Paths);
 #endif
+
+  RocmInstallation.AddPostSystemHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
 void MSVCToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,

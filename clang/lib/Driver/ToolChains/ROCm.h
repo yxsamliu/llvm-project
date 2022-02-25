@@ -255,8 +255,15 @@ public:
     return LibDeviceMap.lookup(Gpu);
   }
 
+  /// Add HIP wrapper include path arguments which need to be before system
+  /// include paths.
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CC1Args) const;
+
+  /// Add HIP include path arguments which need to be after system include
+  /// paths.
+  void AddPostSystemHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                                   llvm::opt::ArgStringList &CC1Args) const;
 
   void detectDeviceLibrary();
   void detectHIPRuntime();

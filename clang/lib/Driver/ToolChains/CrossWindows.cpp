@@ -255,6 +255,7 @@ AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
   }
   AddSystemAfterIncludes();
   addExternCSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/include");
+  RocmInstallation.AddPostSystemHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
 void CrossWindowsToolChain::

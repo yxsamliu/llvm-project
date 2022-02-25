@@ -588,6 +588,8 @@ void toolchains::MinGW::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                    Base + SubdirName + llvm::sys::path::get_separator() +
                        "include");
   addSystemInclude(DriverArgs, CC1Args, Base + "include");
+
+  RocmInstallation.AddPostSystemHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
 void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(

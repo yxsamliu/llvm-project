@@ -313,6 +313,8 @@ void OpenBSD::AddClangSystemIncludeArgs(
   }
 
   addExternCSystemInclude(DriverArgs, CC1Args, D.SysRoot + "/usr/include");
+
+  RocmInstallation.AddPostSystemHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
 void OpenBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,

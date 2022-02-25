@@ -2251,6 +2251,8 @@ void DarwinClang::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs
     llvm::sys::path::append(P, "usr", "include");
     addExternCSystemInclude(DriverArgs, CC1Args, P.str());
   }
+
+  RocmInstallation.AddPostSystemHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
 bool DarwinClang::AddGnuCPlusPlusIncludePaths(const llvm::opt::ArgList &DriverArgs,
