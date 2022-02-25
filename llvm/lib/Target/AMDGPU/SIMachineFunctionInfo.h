@@ -421,6 +421,8 @@ private:
   // Pointer to where the ABI inserts special kernel arguments separate from the
   // user arguments. This is an offset from the KernargSegmentPtr.
   bool ImplicitArgPtr : 1;
+  bool HostcallPtr : 1;
+  bool HeapPtr : 1;
 
   // The hard-wired high half of the address of the global information table
   // for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since
@@ -695,6 +697,14 @@ public:
 
   bool hasImplicitArgPtr() const {
     return ImplicitArgPtr;
+  }
+
+  bool hasHostcallPtr() const {
+    return HostcallPtr;
+  }
+
+  bool hasHeapPtr () const {
+    return HeapPtr;
   }
 
   bool hasImplicitBufferPtr() const {

@@ -976,6 +976,7 @@ void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const Module *M = Func.getParent();
   auto &DL = M->getDataLayout();
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
 
   auto Int64Ty = Type::getInt64Ty(Func.getContext());
   auto Int32Ty = Type::getInt32Ty(Func.getContext());
@@ -1014,7 +1015,7 @@ void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
   } else
     Offset += 8; // Skipped.
 
-  if (M->getModuleFlag("amdgpu_hostcall")) {
+  if (MFI.hasHostcallPtr()) {
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_hostcall_buffer", Offset,
                   Args);
   } else
@@ -1023,9 +1024,10 @@ void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
   emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_multigrid_sync_arg", Offset,
                 Args);
 
-  // Ignore temporarily until it is implemented.
-  // emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_heap_v1", Offset, Args);
-  Offset += 8;
+  if (MFI.hasHeapPtr())
+    emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_heap_v1", Offset, Args);
+  else
+    Offset += 8; // Skipped.
 
   if (Func.hasFnAttribute("calls-enqueue-kernel")) {
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_default_queue", Offset,
@@ -1044,7 +1046,6 @@ void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
   } else
     Offset += 8; // Skipped.
 
-  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
   if (MFI.hasQueuePtr())
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_queue_ptr", Offset, Args);
 }
