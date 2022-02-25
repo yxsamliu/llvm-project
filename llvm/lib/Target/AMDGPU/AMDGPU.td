@@ -827,6 +827,12 @@ def FeatureAutoWaitcntBeforeBarrier : SubtargetFeature <
   "Hardware automatically inserts waitcnt before barrier"
 >;
 
+def FeatureBackOffBarrier : SubtargetFeature <"back-off-barrier",
+  "BackOffBarrier",
+  "true",
+  "Hardware supports backing off s_barrier if an exception occurs"
+>;
+
 def FeatureTrigReducedRange : SubtargetFeature<"trig-reduced-range",
   "HasTrigReducedRange",
   "true",
@@ -1138,7 +1144,8 @@ def FeatureISAVersion9_0_A : FeatureSet<
    FeatureMadMacF32Insts,
    FeatureSupportsSRAMECC,
    FeaturePackedTID,
-   FullRate64Ops]>;
+   FullRate64Ops,
+   FeatureBackOffBarrier]>;
 
 def FeatureISAVersion9_0_C : FeatureSet<
   [FeatureGFX9,
@@ -1177,7 +1184,8 @@ def FeatureISAVersion9_4_0 : FeatureSet<
    FeatureSupportsSRAMECC,
    FeaturePackedTID,
    FeatureArchitectedFlatScratch,
-   FullRate64Ops]>;
+   FullRate64Ops,
+   FeatureBackOffBarrier]>;
 
 // TODO: Organize more features into groups.
 def FeatureGroup {
@@ -1212,7 +1220,8 @@ def FeatureISAVersion10_1_0 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureSupportsXNACK])>;
+     FeatureSupportsXNACK,
+     FeatureBackOffBarrier])>;
 
 def FeatureISAVersion10_1_1 : FeatureSet<
   !listconcat(FeatureGroup.GFX10_1_Bugs,
@@ -1234,7 +1243,8 @@ def FeatureISAVersion10_1_1 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureSupportsXNACK])>;
+     FeatureSupportsXNACK,
+     FeatureBackOffBarrier])>;
 
 def FeatureISAVersion10_1_2 : FeatureSet<
   !listconcat(FeatureGroup.GFX10_1_Bugs,
@@ -1256,7 +1266,8 @@ def FeatureISAVersion10_1_2 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureSupportsXNACK])>;
+     FeatureSupportsXNACK,
+     FeatureBackOffBarrier])>;
 
 def FeatureISAVersion10_1_3 : FeatureSet<
   !listconcat(FeatureGroup.GFX10_1_Bugs,
@@ -1274,7 +1285,8 @@ def FeatureISAVersion10_1_3 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureSupportsXNACK])>;
+     FeatureSupportsXNACK,
+     FeatureBackOffBarrier])>;
 
 def FeatureISAVersion10_3_0 : FeatureSet<
   [FeatureGFX10,
@@ -1291,7 +1303,8 @@ def FeatureISAVersion10_3_0 : FeatureSet<
    FeatureNSAEncoding,
    FeatureNSAMaxSize13,
    FeatureWavefrontSize32,
-   FeatureShaderCyclesRegister]>;
+   FeatureShaderCyclesRegister,
+   FeatureBackOffBarrier]>;
 
 def FeatureISAVersion11_Common : FeatureSet<
   [FeatureGFX11,
