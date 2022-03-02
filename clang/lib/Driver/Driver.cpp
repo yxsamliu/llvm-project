@@ -2932,6 +2932,7 @@ class OffloadingActionBuilder final {
           UA->registerDependentActionInfo(ToolChains[0], Arch,
                                           AssociatedOffloadKind);
         }
+        IsActive = true;
         return ABRT_Success;
       }
 
@@ -3278,6 +3279,9 @@ class OffloadingActionBuilder final {
     getDeviceDependences(OffloadAction::DeviceDependences &DA,
                          phases::ID CurPhase, phases::ID FinalPhase,
                          PhasesTy &Phases) override {
+      if (!IsActive)
+        return ABRT_Inactive;
+
       // amdgcn does not support linking of object files, therefore we skip
       // backend and assemble phases to output LLVM IR. Except for generating
       // non-relocatable device coee, where we generate fat binary for device
