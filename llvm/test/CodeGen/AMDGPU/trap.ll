@@ -48,11 +48,11 @@ define amdgpu_kernel void @hsa_trap(i32 addrspace(1)* nocapture readonly %arg0) 
 
 ; MESA-TRAP: .section .AMDGPU.config
 ; MESA-TRAP:  .long   47180
-; MESA-TRAP-NEXT: .long   208
+; MESA-TRAP-NEXT: .long   204
 
 ; NOMESA-TRAP: .section .AMDGPU.config
 ; NOMESA-TRAP:  .long   47180
-; NOMESA-TRAP-NEXT: .long   144
+; NOMESA-TRAP-NEXT: .long   140
 
 ; GCN-WARNING: warning: <unknown>:0:0: in function hsa_debugtrap void (i32 addrspace(1)*): debugtrap handler not supported
 ; GCN-LABEL: {{^}}hsa_debugtrap:
