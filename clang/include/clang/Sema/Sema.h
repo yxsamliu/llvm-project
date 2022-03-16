@@ -3319,12 +3319,15 @@ public:
   void ActOnReenterFunctionContext(Scope* S, Decl* D);
   void ActOnExitFunctionContext();
 
-  DeclContext *getFunctionLevelDeclContext();
+  /// If \p AllowLambda is true, treat lambda as function.
+  DeclContext *getFunctionLevelDeclContext(bool AllowLambda = false);
 
-  /// getCurFunctionDecl - If inside of a function body, this returns a pointer
-  /// to the function decl for the function being parsed.  If we're currently
-  /// in a 'block', this returns the containing context.
-  FunctionDecl *getCurFunctionDecl();
+  /// getCurFunctionDecl - If inside of a function or lambda body, this returns
+  /// a pointer to the function or lambda decl for the function or lambda being
+  /// parsed if \p AllowLambda is true. If we're currently in a 'block', this
+  /// returns the containing context. If \p AllowLambda is false and we are
+  /// currently in a 'lambda', this returns the function enclosing the lambda.
+  FunctionDecl *getCurFunctionDecl(bool AllowLambda = false);
 
   /// getCurMethodDecl - If inside of a method body, this returns a pointer to
   /// the method decl for the method being parsed.  If we're currently
