@@ -64,7 +64,6 @@ class CXXFinalOverriderMap;
 class CXXIndirectPrimaryBaseSet;
 class CXXMethodDecl;
 class DecompositionDecl;
-class DiagnosticBuilder;
 class FriendDecl;
 class FunctionTemplateDecl;
 class IdentifierInfo;
@@ -1142,6 +1141,9 @@ public:
   ///
   /// \note This does NOT include a check for union-ness.
   bool isEmpty() const { return data().Empty; }
+
+  void setInitMethod(bool Val) { data().HasInitMethod = Val; }
+  bool hasInitMethod() const { return data().HasInitMethod; }
 
   bool hasPrivateFields() const {
     return data().HasPrivateFields;
@@ -3294,7 +3296,7 @@ class BaseUsingDecl : public NamedDecl {
 
 protected:
   BaseUsingDecl(Kind DK, DeclContext *DC, SourceLocation L, DeclarationName N)
-      : NamedDecl(DK, DC, L, N), FirstUsingShadow(nullptr, 0) {}
+      : NamedDecl(DK, DC, L, N), FirstUsingShadow(nullptr, false) {}
 
 private:
   void anchor() override;

@@ -55,6 +55,22 @@ define amdgpu_kernel void @indirect_call_known_no_special_inputs() {
 ; CHECK-NEXT:    s_cbranch_execnz .LBB0_1
 ; CHECK-NEXT:  ; %bb.2:
 ; CHECK-NEXT:    s_endpgm
+
+; CHECK: .amdhsa_kernarg_size 0
+; CHECK-NEXT: .amdhsa_user_sgpr_count 6
+; CHECK-NEXT: .amdhsa_user_sgpr_private_segment_buffer 1
+; CHECK-NEXT: .amdhsa_user_sgpr_dispatch_ptr 0
+; CHECK-NEXT: .amdhsa_user_sgpr_queue_ptr 0
+; CHECK-NEXT: .amdhsa_user_sgpr_kernarg_segment_ptr 0
+; CHECK-NEXT: .amdhsa_user_sgpr_dispatch_id 0
+; CHECK-NEXT: .amdhsa_user_sgpr_flat_scratch_init 1
+; CHECK-NEXT: .amdhsa_user_sgpr_private_segment_size 0
+; CHECK-NEXT: .amdhsa_system_sgpr_private_segment_wavefront_offset 1
+; CHECK-NEXT: .amdhsa_system_sgpr_workgroup_id_x 1
+; CHECK-NEXT: .amdhsa_system_sgpr_workgroup_id_y 0
+; CHECK-NEXT: .amdhsa_system_sgpr_workgroup_id_z 0
+; CHECK-NEXT: .amdhsa_system_sgpr_workgroup_info 0
+; CHECK-NEXT: .amdhsa_system_vgpr_workitem_id 0
 bb:
   %cond = load i1, i1 addrspace(4)* null
   %tmp = select i1 %cond, void (i8*, i32, i8*)* bitcast (void ()* @wobble to void (i8*, i32, i8*)*), void (i8*, i32, i8*)* bitcast (void ()* @snork to void (i8*, i32, i8*)*)

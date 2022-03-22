@@ -55,18 +55,14 @@ void parseFile(InputFile *file);
 
 // The root class of input files.
 class InputFile {
-private:
-  // Cache for getNameForScript().
-  mutable SmallString<0> nameForScriptCache;
-
 protected:
+  SmallVector<Symbol *, 0> symbols;
   SmallVector<InputSectionBase *, 0> sections;
 
 public:
   enum Kind : uint8_t {
     ObjKind,
     SharedKind,
-    LazyObjKind,
     ArchiveKind,
     BitcodeKind,
     BinaryKind,
@@ -91,9 +87,7 @@ public:
 
   // Returns object file symbols. It is a runtime error to call this
   // function on files of other types.
-  ArrayRef<Symbol *> getSymbols() { return getMutableSymbols(); }
-
-  MutableArrayRef<Symbol *> getMutableSymbols() {
+  ArrayRef<Symbol *> getSymbols() const {
     assert(fileKind == BinaryKind || fileKind == ObjKind ||
            fileKind == BitcodeKind);
     return symbols;
@@ -105,15 +99,6 @@ public:
   // Check if a non-common symbol should be extracted to override a common
   // definition.
   bool shouldExtractForCommon(StringRef name);
-
-  // If not empty, this stores the name of the archive containing this file.
-  // We use this string for creating error messages.
-  SmallString<0> archiveName;
-
-  // Cache for toString(). Only toString() should use this member.
-  mutable SmallString<0> toStringCache;
-
-  SmallVector<Symbol *, 0> symbols;
 
   // .got2 in the current file. This is used by PPC32 -fPIC/-fPIE to compute
   // offsets in PLT call stubs.
@@ -165,6 +150,17 @@ public:
 
 protected:
   InputFile(Kind k, MemoryBufferRef m);
+
+public:
+  // If not empty, this stores the name of the archive containing this file.
+  // We use this string for creating error messages.
+  SmallString<0> archiveName;
+  // Cache for toString(). Only toString() should use this member.
+  mutable SmallString<0> toStringCache;
+
+private:
+  // Cache for getNameForScript().
+  mutable SmallString<0> nameForScriptCache;
 };
 
 class ELFFileBase : public InputFile {
@@ -186,7 +182,15 @@ public:
   ArrayRef<Symbol *> getGlobalSymbols() {
     return llvm::makeArrayRef(symbols).slice(firstGlobal);
   }
+  MutableArrayRef<Symbol *> getMutableGlobalSymbols() {
+    return llvm::makeMutableArrayRef(symbols.data(), symbols.size())
+        .slice(firstGlobal);
+  }
 
+  template <typename ELFT> typename ELFT::ShdrRange getELFShdrs() const {
+    return typename ELFT::ShdrRange(
+        reinterpret_cast<const typename ELFT::Shdr *>(elfShdrs), numELFShdrs);
+  }
   template <typename ELFT> typename ELFT::SymRange getELFSyms() const {
     return typename ELFT::SymRange(
         reinterpret_cast<const typename ELFT::Sym *>(elfSyms), numELFSyms);
@@ -199,10 +203,16 @@ protected:
   // Initializes this class's member variables.
   template <typename ELFT> void init();
 
+  StringRef stringTable;
+  const void *elfShdrs = nullptr;
   const void *elfSyms = nullptr;
+  uint32_t numELFShdrs = 0;
   uint32_t numELFSyms = 0;
   uint32_t firstGlobal = 0;
-  StringRef stringTable;
+
+public:
+  uint32_t andFeatures = 0;
+  bool hasCommonSyms = false;
 };
 
 // .o file.
@@ -258,8 +268,6 @@ public:
   // R_MIPS_GPREL16 / R_MIPS_GPREL32 relocations.
   uint32_t mipsGp0 = 0;
 
-  uint32_t andFeatures = 0;
-
   // True if the file defines functions compiled with
   // -fsplit-stack. Usually false.
   bool splitStack = false;
@@ -272,14 +280,15 @@ public:
   DWARFCache *getDwarf();
 
 private:
-  void initializeSections(bool ignoreComdats);
-  void initializeSymbols();
+  void initializeSections(bool ignoreComdats,
+                          const llvm::object::ELFFile<ELFT> &obj);
+  void initializeSymbols(const llvm::object::ELFFile<ELFT> &obj);
   void initializeJustSymbols();
 
-  InputSectionBase *getRelocTarget(uint32_t idx, StringRef name,
-                                   const Elf_Shdr &sec);
+  InputSectionBase *getRelocTarget(uint32_t idx, const Elf_Shdr &sec,
+                                   uint32_t info);
   InputSectionBase *createInputSection(uint32_t idx, const Elf_Shdr &sec,
-                                       StringRef shstrtab);
+                                       StringRef name);
 
   bool shouldMerge(const Elf_Shdr &sec, StringRef name);
 
@@ -397,6 +406,7 @@ inline bool isBitcode(MemoryBufferRef mb) {
 
 std::string replaceThinLTOSuffix(StringRef path);
 
+extern SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
 extern SmallVector<ArchiveFile *, 0> archiveFiles;
 extern SmallVector<BinaryFile *, 0> binaryFiles;
 extern SmallVector<BitcodeFile *, 0> bitcodeFiles;

@@ -604,6 +604,7 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
     }
   } else {
     Tmp = RS.scavengeRegister(&AMDGPU::VGPR_32RegClass, 0);
+    RS.setRegUsed(Tmp);
   }
 
   // Insert copy to temporary VGPR.
@@ -2460,8 +2461,6 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   OffsetLo->setVariableValue(MCBinaryExpr::createAnd(Offset, Mask, MCCtx));
   auto *ShAmt = MCConstantExpr::create(32, MCCtx);
   OffsetHi->setVariableValue(MCBinaryExpr::createAShr(Offset, ShAmt, MCCtx));
-
-  return;
 }
 
 unsigned SIInstrInfo::getBranchOpcode(SIInstrInfo::BranchPredicate Cond) {
@@ -4598,6 +4597,14 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (!Aligned) {
       ErrInfo = "Subtarget requires even aligned vector registers "
                 "for DS_GWS instructions";
+      return false;
+    }
+  }
+
+  if (Desc.getOpcode() == AMDGPU::G_AMDGPU_WAVE_ADDRESS) {
+    const MachineOperand &SrcOp = MI.getOperand(1);
+    if (!SrcOp.isReg() || SrcOp.getReg().isVirtual()) {
+      ErrInfo = "pseudo expects only physical SGPRs";
       return false;
     }
   }

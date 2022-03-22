@@ -128,6 +128,8 @@
 #define FTN_GET_MASTER_THREAD_ID omp_ext_get_master_thread_id
 #define FTN_GET_ACTIVE_THREAD_MASK omp_ext_get_active_threads_mask
 #define FTN_CONTROL_TOOL omp_control_tool
+#define FTN_GET_MEMSPACE omp_get_memory_space
+#define FTN_DESTROY_MEMSPACE omp_destroy_memory_space
 #define FTN_INIT_ALLOCATOR omp_init_allocator
 #define FTN_DESTROY_ALLOCATOR omp_destroy_allocator
 #define FTN_SET_DEFAULT_ALLOCATOR omp_set_default_allocator
@@ -146,6 +148,14 @@
 #define FTN_GET_MAX_TEAMS omp_get_max_teams
 #define FTN_SET_TEAMS_THREAD_LIMIT omp_set_teams_thread_limit
 #define FTN_GET_TEAMS_THREAD_LIMIT omp_get_teams_thread_limit
+
+#define FTN_GET_NUM_INTEROP_PROPERTIES omp_get_num_interop_properties
+#define FTN_GET_INTEROP_INT omp_get_interop_int
+#define FTN_GET_INTEROP_PTR omp_get_interop_ptr
+#define FTN_GET_INTEROP_STR omp_get_interop_str
+#define FTN_GET_INTEROP_NAME omp_get_interop_name
+#define FTN_GET_INTEROP_TYPE_DESC omp_get_interop_type_desc
+#define FTN_GET_INTEROP_RC_DESC omp_get_interop_rc_desc
 
 #endif /* KMP_FTN_PLAIN */
 
@@ -261,6 +271,8 @@
 #define FTN_GET_MASTER_THREAD_ID omp_ext_get_master_thread_id_
 #define FTN_GET_ACTIVE_THREAD_MASK omp_ext_get_active_threads_mask_
 #define FTN_CONTROL_TOOL omp_control_tool_
+#define FTN_GET_MEMSPACE omp_get_memory_space_
+#define FTN_DESTROY_MEMSPACE omp_destroy_memory_space_
 #define FTN_INIT_ALLOCATOR omp_init_allocator_
 #define FTN_DESTROY_ALLOCATOR omp_destroy_allocator_
 #define FTN_SET_DEFAULT_ALLOCATOR omp_set_default_allocator_
@@ -281,6 +293,14 @@
 #define FTN_GET_MAX_TEAMS omp_get_max_teams_
 #define FTN_SET_TEAMS_THREAD_LIMIT omp_set_teams_thread_limit_
 #define FTN_GET_TEAMS_THREAD_LIMIT omp_get_teams_thread_limit_
+
+#define FTN_GET_NUM_INTEROP_PROPERTIES omp_get_num_interop_properties_
+#define FTN_GET_INTEROP_INT omp_get_interop_int_
+#define FTN_GET_INTEROP_PTR omp_get_interop_ptr_
+#define FTN_GET_INTEROP_STR omp_get_interop_str_
+#define FTN_GET_INTEROP_NAME omp_get_interop_name_
+#define FTN_GET_INTEROP_TYPE_DESC omp_get_interop_type_desc_
+#define FTN_GET_INTEROP_RC_DESC omp_get_interop_rc_desc_
 
 #endif /* KMP_FTN_APPEND */
 
@@ -414,6 +434,14 @@
 #define FTN_SET_TEAMS_THREAD_LIMIT OMP_SET_TEAMS_THREAD_LIMIT
 #define FTN_GET_TEAMS_THREAD_LIMIT OMP_GET_TEAMS_THREAD_LIMIT
 
+#define FTN_GET_NUM_INTEROP_PROPERTIES OMP_GET_NUM_INTEROP_PROPERTIES
+#define FTN_GET_INTEROP_INT OMP_GET_INTEROP_INT
+#define FTN_GET_INTEROP_PTR OMP_GET_INTEROP_PTR
+#define FTN_GET_INTEROP_STR OMP_GET_INTEROP_STR
+#define FTN_GET_INTEROP_NAME OMP_GET_INTEROP_NAME
+#define FTN_GET_INTEROP_TYPE_DESC OMP_GET_INTEROP_TYPE_DESC
+#define FTN_GET_INTEROP_RC_DESC OMP_GET_INTEROP_RC_DESC
+
 #endif /* KMP_FTN_UPPER */
 
 /* ------------------------------------------------------------------------ */
@@ -541,6 +569,14 @@
 #define FTN_GET_MAX_TEAMS OMP_GET_MAX_TEAMS_
 #define FTN_SET_TEAMS_THREAD_LIMIT OMP_SET_TEAMS_THREAD_LIMIT_
 #define FTN_GET_TEAMS_THREAD_LIMIT OMP_GET_TEAMS_THREAD_LIMIT_
+
+#define FTN_GET_NUM_INTEROP_PROPERTIES OMP_GET_NUM_INTEROP_PROPERTIES_
+#define FTN_GET_INTEROP_INT OMP_GET_INTEROP_INT_
+#define FTN_GET_INTEROP_PTR OMP_GET_INTEROP_PTR_
+#define FTN_GET_INTEROP_STR OMP_GET_INTEROP_STR_
+#define FTN_GET_INTEROP_NAME OMP_GET_INTEROP_NAME_
+#define FTN_GET_INTEROP_TYPE_DESC OMP_GET_INTEROP_TYPE_DESC_
+#define FTN_GET_INTEROP_RC_DESC OMP_GET_INTEROP_RC_DESC_
 
 #endif /* KMP_FTN_UAPPEND */
 

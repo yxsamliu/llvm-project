@@ -12,6 +12,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Action.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Phases.h"
 #include "clang/Driver/ToolChain.h"
@@ -25,6 +26,7 @@
 
 #include <list>
 #include <map>
+#include <set>
 #include <string>
 
 namespace llvm {
@@ -38,13 +40,14 @@ namespace clang {
 
 namespace driver {
 
-  class Command;
-  class Compilation;
-  class InputInfo;
-  class JobList;
-  class JobAction;
-  class SanitizerArgs;
-  class ToolChain;
+typedef SmallVector<InputInfo, 4> InputInfoList;
+
+class Command;
+class Compilation;
+class JobList;
+class JobAction;
+class SanitizerArgs;
+class ToolChain;
 
 /// Describes the kind of LTO mode selected via -f(no-)?lto(=.*)? options.
 enum LTOKind {
@@ -171,9 +174,11 @@ public:
   /// The file to log CC_LOG_DIAGNOSTICS output to, if enabled.
   std::string CCLogDiagnosticsFilename;
 
+  /// An input type and its arguments.
+  using InputTy = std::pair<types::ID, const llvm::opt::Arg *>;
+
   /// A list of inputs and their types for the given arguments.
-  typedef SmallVector<std::pair<types::ID, const llvm::opt::Arg *>, 16>
-      InputList;
+  using InputList = SmallVector<InputTy, 16>;
 
   /// Whether the driver should follow g++ like behavior.
   bool CCCIsCXX() const { return Mode == GXXMode; }
@@ -416,6 +421,18 @@ public:
   void BuildUniversalActions(Compilation &C, const ToolChain &TC,
                              const InputList &BAInputs) const;
 
+  /// BuildOffloadingActions - Construct the list of actions to perform for the
+  /// offloading toolchain that will be embedded in the host.
+  ///
+  /// \param C - The compilation that is being built.
+  /// \param Args - The input arguments.
+  /// \param Input - The input type and arguments
+  /// \param HostAction - The host action used in the offloading toolchain.
+  Action *BuildOffloadingActions(Compilation &C,
+                                 llvm::opt::DerivedArgList &Args,
+                                 const InputTy &Input,
+                                 Action *HostAction) const;
+
   /// Check that the file referenced by Value exists. If it doesn't,
   /// issue a diagnostic and return false.
   /// If TypoCorrect is true and the file does not exist, see if it looks
@@ -506,13 +523,12 @@ public:
   /// BuildJobsForAction - Construct the jobs to perform for the action \p A and
   /// return an InputInfo for the result of running \p A.  Will only construct
   /// jobs for a given (Action, ToolChain, BoundArch, DeviceKind) tuple once.
-  InputInfo
-  BuildJobsForAction(Compilation &C, const Action *A, const ToolChain *TC,
-                     StringRef BoundArch, bool AtTopLevel, bool MultipleArchs,
-                     const char *LinkingOutput,
-                     std::map<std::pair<const Action *, std::string>, InputInfo>
-                         &CachedResults,
-                     Action::OffloadKind TargetDeviceOffloadKind) const;
+  InputInfoList BuildJobsForAction(
+      Compilation &C, const Action *A, const ToolChain *TC, StringRef BoundArch,
+      bool AtTopLevel, bool MultipleArchs, const char *LinkingOutput,
+      std::map<std::pair<const Action *, std::string>, InputInfoList>
+          &CachedResults,
+      Action::OffloadKind TargetDeviceOffloadKind) const;
 
   /// Returns the default name for linked images (e.g., "a.out").
   const char *getDefaultImageName() const;
@@ -626,14 +642,32 @@ private:
   /// Helper used in BuildJobsForAction.  Doesn't use the cache when building
   /// jobs specifically for the given action, but will use the cache when
   /// building jobs for the Action's inputs.
-  InputInfo BuildJobsForActionNoCache(
+  InputInfoList BuildJobsForActionNoCache(
       Compilation &C, const Action *A, const ToolChain *TC, StringRef BoundArch,
       bool AtTopLevel, bool MultipleArchs, const char *LinkingOutput,
-      std::map<std::pair<const Action *, std::string>, InputInfo>
+      std::map<std::pair<const Action *, std::string>, InputInfoList>
           &CachedResults,
       Action::OffloadKind TargetDeviceOffloadKind) const;
 
 public:
+  ///  Add string to OffloadArchs set for each '--offload-arch=' arg
+  ///
+  /// \param C - The compilation that is being built.
+  /// \param OffloadArchs - The mutable set of strings, one per Offloading arch
+  bool
+  GetTargetInfoFromOffloadArchOpts(Compilation &C,
+                                   std::set<std::string> &OffloadArchs) const;
+
+  ///  Add string to OffloadArchs set for each offloading arch specified
+  ///  with legacy args. Unlike the newer, '--offload-arch' arg, specifying
+  ///  an offload arch with legacy args required three args:
+  ///    '-fopenmp-targets=', '-Xopenmp-target=', and '-march=' .
+  ///
+  /// \param C - The compilation that is being built.
+  /// \param OffloadArchs - The mutable set of strings, one per Offloading arch
+  bool GetTargetInfoFromMarch(Compilation &C,
+                              std::set<std::string> &OffloadArchs) const;
+
   /// GetReleaseVersion - Parse (([0-9]+)(.([0-9]+)(.([0-9]+)?))?)? and
   /// return the grouped values as integers. Numbers which are not
   /// provided are set to 0.

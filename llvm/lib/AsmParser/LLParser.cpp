@@ -133,14 +133,17 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   for (const auto &RAG : ForwardRefAttrGroups) {
     Value *V = RAG.first;
     const std::vector<unsigned> &Attrs = RAG.second;
-    AttrBuilder B;
+    AttrBuilder B(Context);
 
-    for (const auto &Attr : Attrs)
-      B.merge(NumberedAttrBuilders[Attr]);
+    for (const auto &Attr : Attrs) {
+      auto R = NumberedAttrBuilders.find(Attr);
+      if (R != NumberedAttrBuilders.end())
+        B.merge(R->second);
+    }
 
     if (Function *Fn = dyn_cast<Function>(V)) {
       AttributeList AS = Fn->getAttributes();
-      AttrBuilder FnAttrs(AS.getFnAttrs());
+      AttrBuilder FnAttrs(M->getContext(), AS.getFnAttrs());
       AS = AS.removeFnAttributes(Context);
 
       FnAttrs.merge(B);
@@ -156,27 +159,27 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       Fn->setAttributes(AS);
     } else if (CallInst *CI = dyn_cast<CallInst>(V)) {
       AttributeList AS = CI->getAttributes();
-      AttrBuilder FnAttrs(AS.getFnAttrs());
+      AttrBuilder FnAttrs(M->getContext(), AS.getFnAttrs());
       AS = AS.removeFnAttributes(Context);
       FnAttrs.merge(B);
       AS = AS.addFnAttributes(Context, FnAttrs);
       CI->setAttributes(AS);
     } else if (InvokeInst *II = dyn_cast<InvokeInst>(V)) {
       AttributeList AS = II->getAttributes();
-      AttrBuilder FnAttrs(AS.getFnAttrs());
+      AttrBuilder FnAttrs(M->getContext(), AS.getFnAttrs());
       AS = AS.removeFnAttributes(Context);
       FnAttrs.merge(B);
       AS = AS.addFnAttributes(Context, FnAttrs);
       II->setAttributes(AS);
     } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(V)) {
       AttributeList AS = CBI->getAttributes();
-      AttrBuilder FnAttrs(AS.getFnAttrs());
+      AttrBuilder FnAttrs(M->getContext(), AS.getFnAttrs());
       AS = AS.removeFnAttributes(Context);
       FnAttrs.merge(B);
       AS = AS.addFnAttributes(Context, FnAttrs);
       CBI->setAttributes(AS);
     } else if (auto *GV = dyn_cast<GlobalVariable>(V)) {
-      AttrBuilder Attrs(GV->getAttributes());
+      AttrBuilder Attrs(M->getContext(), GV->getAttributes());
       Attrs.merge(B);
       GV->setAttributes(AttributeSet::get(Context,Attrs));
     } else {
@@ -985,17 +988,18 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, LocTy NameLoc,
     return error(AliaseeLoc, "An alias or ifunc must have pointer type");
   unsigned AddrSpace = PTy->getAddressSpace();
 
-  if (IsAlias && !PTy->isOpaqueOrPointeeTypeMatches(Ty)) {
-    return error(
-        ExplicitTypeLoc,
-        typeComparisonErrorMessage(
-            "explicit pointee type doesn't match operand's pointee type", Ty,
-            PTy->getElementType()));
-  }
-
-  if (!IsAlias && !PTy->getElementType()->isFunctionTy()) {
-    return error(ExplicitTypeLoc,
-                 "explicit pointee type should be a function type");
+  if (IsAlias) {
+    if (!PTy->isOpaqueOrPointeeTypeMatches(Ty))
+      return error(
+          ExplicitTypeLoc,
+          typeComparisonErrorMessage(
+              "explicit pointee type doesn't match operand's pointee type", Ty,
+              PTy->getNonOpaquePointerElementType()));
+  } else {
+    if (!PTy->isOpaque() &&
+        !PTy->getNonOpaquePointerElementType()->isFunctionTy())
+      return error(ExplicitTypeLoc,
+                   "explicit pointee type should be a function type");
   }
 
   GlobalValue *GVal = nullptr;
@@ -1209,7 +1213,7 @@ bool LLParser::parseGlobal(const std::string &Name, LocTy NameLoc,
     }
   }
 
-  AttrBuilder Attrs;
+  AttrBuilder Attrs(M->getContext());
   LocTy BuiltinLoc;
   std::vector<unsigned> FwdRefAttrGrps;
   if (parseFnAttributeValuePairs(Attrs, FwdRefAttrGrps, false, BuiltinLoc))
@@ -1238,13 +1242,18 @@ bool LLParser::parseUnnamedAttrGrp() {
   Lex.Lex();
 
   if (parseToken(lltok::equal, "expected '=' here") ||
-      parseToken(lltok::lbrace, "expected '{' here") ||
-      parseFnAttributeValuePairs(NumberedAttrBuilders[VarID], unused, true,
-                                 BuiltinLoc) ||
+      parseToken(lltok::lbrace, "expected '{' here"))
+    return true;
+
+  auto R = NumberedAttrBuilders.find(VarID);
+  if (R == NumberedAttrBuilders.end())
+    R = NumberedAttrBuilders.emplace(VarID, AttrBuilder(M->getContext())).first;
+
+  if (parseFnAttributeValuePairs(R->second, unused, true, BuiltinLoc) ||
       parseToken(lltok::rbrace, "expected end of attribute group"))
     return true;
 
-  if (!NumberedAttrBuilders[VarID].hasAttributes())
+  if (!R->second.hasAttributes())
     return error(AttrGrpLoc, "attribute group has no attributes");
 
   return false;
@@ -1405,14 +1414,14 @@ static inline GlobalValue *createGlobalFwdRef(Module *M, PointerType *PTy) {
                               nullptr, GlobalVariable::NotThreadLocal,
                               PTy->getAddressSpace());
 
-  if (auto *FT = dyn_cast<FunctionType>(PTy->getPointerElementType()))
+  Type *ElemTy = PTy->getNonOpaquePointerElementType();
+  if (auto *FT = dyn_cast<FunctionType>(ElemTy))
     return Function::Create(FT, GlobalValue::ExternalWeakLinkage,
                             PTy->getAddressSpace(), "", M);
   else
-    return new GlobalVariable(*M, PTy->getPointerElementType(), false,
-                              GlobalValue::ExternalWeakLinkage, nullptr, "",
-                              nullptr, GlobalVariable::NotThreadLocal,
-                              PTy->getAddressSpace());
+    return new GlobalVariable(
+        *M, ElemTy, false, GlobalValue::ExternalWeakLinkage, nullptr, "",
+        nullptr, GlobalVariable::NotThreadLocal, PTy->getAddressSpace());
 }
 
 Value *LLParser::checkValidVariableType(LocTy Loc, const Twine &Name, Type *Ty,
@@ -2385,10 +2394,11 @@ bool LLParser::parseParameterList(SmallVectorImpl<ParamInfo> &ArgList,
     // parse the argument.
     LocTy ArgLoc;
     Type *ArgTy = nullptr;
-    AttrBuilder ArgAttrs;
     Value *V;
     if (parseType(ArgTy, ArgLoc))
       return true;
+
+    AttrBuilder ArgAttrs(M->getContext());
 
     if (ArgTy->isMetadataTy()) {
       if (parseMetadataAsValue(V, PFS))
@@ -2506,7 +2516,7 @@ bool LLParser::parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
   } else {
     LocTy TypeLoc = Lex.getLoc();
     Type *ArgTy = nullptr;
-    AttrBuilder Attrs;
+    AttrBuilder Attrs(M->getContext());
     std::string Name;
 
     if (parseType(ArgTy) || parseOptionalParamAttrs(Attrs))
@@ -3592,7 +3602,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
             ExplicitTypeLoc,
             typeComparisonErrorMessage(
                 "explicit pointee type doesn't match operand's pointee type",
-                Ty, BasePointerType->getElementType()));
+                Ty, BasePointerType->getNonOpaquePointerElementType()));
       }
 
       unsigned GEPWidth =
@@ -4567,16 +4577,17 @@ bool LLParser::parseDIStringType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(name, MDStringField, );                                             \
   OPTIONAL(stringLength, MDField, );                                           \
   OPTIONAL(stringLengthExpression, MDField, );                                 \
+  OPTIONAL(stringLocationExpression, MDField, );                               \
   OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
   OPTIONAL(encoding, DwarfAttEncodingField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result = GET_OR_DISTINCT(DIStringType,
-                           (Context, tag.Val, name.Val, stringLength.Val,
-                            stringLengthExpression.Val, size.Val, align.Val,
-                            encoding.Val));
+  Result = GET_OR_DISTINCT(
+      DIStringType,
+      (Context, tag.Val, name.Val, stringLength.Val, stringLengthExpression.Val,
+       stringLocationExpression.Val, size.Val, align.Val, encoding.Val));
   return false;
 }
 
@@ -5628,7 +5639,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine) {
   unsigned Visibility;
   unsigned DLLStorageClass;
   bool DSOLocal;
-  AttrBuilder RetAttrs;
+  AttrBuilder RetAttrs(M->getContext());
   unsigned CC;
   bool HasLinkage;
   Type *RetType = nullptr;
@@ -5691,7 +5702,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine) {
 
   SmallVector<ArgInfo, 8> ArgList;
   bool IsVarArg;
-  AttrBuilder FuncAttrs;
+  AttrBuilder FuncAttrs(M->getContext());
   std::vector<unsigned> FwdRefAttrGrps;
   LocTy BuiltinLoc;
   std::string Section;
@@ -5759,7 +5770,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine) {
     if (FRVI != ForwardRefVals.end()) {
       FwdFn = FRVI->second.first;
       if (!FwdFn->getType()->isOpaque()) {
-        if (!FwdFn->getType()->getPointerElementType()->isFunctionTy())
+        if (!FwdFn->getType()->getNonOpaquePointerElementType()->isFunctionTy())
           return error(FRVI->second.second, "invalid forward reference to "
                                             "function as global value!");
         if (FwdFn->getType() != PFT)
@@ -6414,7 +6425,7 @@ bool LLParser::parseIndirectBr(Instruction *&Inst, PerFunctionState &PFS) {
 ///       OptionalAttrs 'to' TypeAndValue 'unwind' TypeAndValue
 bool LLParser::parseInvoke(Instruction *&Inst, PerFunctionState &PFS) {
   LocTy CallLoc = Lex.getLoc();
-  AttrBuilder RetAttrs, FnAttrs;
+  AttrBuilder RetAttrs(M->getContext()), FnAttrs(M->getContext());
   std::vector<unsigned> FwdRefAttrGrps;
   LocTy NoBuiltinLoc;
   unsigned CC;
@@ -6724,7 +6735,7 @@ bool LLParser::parseUnaryOp(Instruction *&Inst, PerFunctionState &PFS,
 ///       '[' LabelList ']'
 bool LLParser::parseCallBr(Instruction *&Inst, PerFunctionState &PFS) {
   LocTy CallLoc = Lex.getLoc();
-  AttrBuilder RetAttrs, FnAttrs;
+  AttrBuilder RetAttrs(M->getContext()), FnAttrs(M->getContext());
   std::vector<unsigned> FwdRefAttrGrps;
   LocTy NoBuiltinLoc;
   unsigned CC;
@@ -7141,7 +7152,7 @@ bool LLParser::parseFreeze(Instruction *&Inst, PerFunctionState &PFS) {
 ///           OptionalAttrs Type Value ParameterList OptionalAttrs
 bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
                          CallInst::TailCallKind TCK) {
-  AttrBuilder RetAttrs, FnAttrs;
+  AttrBuilder RetAttrs(M->getContext()), FnAttrs(M->getContext());
   std::vector<unsigned> FwdRefAttrGrps;
   LocTy BuiltinLoc;
   unsigned CallAddrSpace;
@@ -7362,7 +7373,7 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
         ExplicitTypeLoc,
         typeComparisonErrorMessage(
             "explicit pointee type doesn't match operand's pointee type", Ty,
-            cast<PointerType>(Val->getType())->getElementType()));
+            Val->getType()->getNonOpaquePointerElementType()));
   }
   SmallPtrSet<Type *, 4> Visited;
   if (!Alignment && !Ty->isSized(&Visited))
@@ -7622,7 +7633,7 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
         ExplicitTypeLoc,
         typeComparisonErrorMessage(
             "explicit pointee type doesn't match operand's pointee type", Ty,
-            BasePointerType->getElementType()));
+            BasePointerType->getNonOpaquePointerElementType()));
   }
 
   SmallVector<Value*, 16> Indices;

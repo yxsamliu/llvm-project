@@ -786,6 +786,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     //
     // Note that we don't want to make the variable non-external
     // because of this, but unique-external linkage suits us.
+
     if (Context.getLangOpts().CPlusPlus && !isFirstInExternCContext(Var) &&
         !IgnoreVarTypeLinkage) {
       LinkageInfo TypeLV = getLVForType(*Var->getType(), computation);
@@ -911,12 +912,6 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   // always be default.
   if (!isExternallyVisible(LV.getLinkage()))
     return LinkageInfo(LV.getLinkage(), DefaultVisibility, false);
-
-  // Mark the symbols as hidden when compiling for the device.
-  // For AMDGCN we get symbol failures for offloading, spec accel 557 570
-  if (Context.getLangOpts().OpenMP && Context.getLangOpts().OpenMPIsDevice &&
-      !Context.getTargetInfo().getTriple().isAMDGCN())
-    LV.mergeVisibility(HiddenVisibility, /*newExplicit=*/false);
 
   return LV;
 }
@@ -1071,6 +1066,7 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
 
   // Finally, merge in information from the class.
   LV.mergeMaybeWithVisibility(classLV, considerClassVisibility);
+
   return LV;
 }
 
@@ -3253,7 +3249,6 @@ bool FunctionDecl::isGlobal() const {
     if (const auto *Namespace = cast<NamespaceDecl>(DC)) {
       if (!Namespace->getDeclName())
         return false;
-      break;
     }
   }
 

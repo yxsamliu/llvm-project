@@ -20,7 +20,9 @@ set(LIBOMPTARGET_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/ompt_buffer_mgr.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/ompt_callback.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/rtl.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/interop.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/omptarget.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/rtl.cpp
 )
 
 set(LIBOMPTARGET_SRC_FILES ${LIBOMPTARGET_SRC_FILES} PARENT_SCOPE)
@@ -32,6 +34,8 @@ add_library(omptarget SHARED ${LIBOMPTARGET_SRC_FILES})
 # Don't override an externally defined RPATH
 if(NOT DEFINED CMAKE_INSTALL_RPATH)
   set_target_properties(omptarget PROPERTIES INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib:$ORIGIN/../../lib" BUILD_RPATH "$ORIGIN")
+else()
+  set_target_properties(omptarget PROPERTIES INSTALL_RPATH ${CMAKE_INSTALL_RPATH} BUILD_RPATH ${CMAKE_INSTALL_RPATH})
 endif()
 if (OPENMP_ENABLE_LIBOMPTARGET_PROFILING)
   # Add LLVMSupport dependency if profiling is enabled.

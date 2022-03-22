@@ -212,17 +212,20 @@ const lldb::ProcessSP &Target::GetProcessSP() const { return m_process_sp; }
 
 lldb::REPLSP Target::GetREPL(Status &err, lldb::LanguageType language,
                              const char *repl_options, bool can_create) {
+  if (language == eLanguageTypeUnknown)
+    language = m_debugger.GetREPLLanguage();
+
   if (language == eLanguageTypeUnknown) {
     LanguageSet repl_languages = Language::GetLanguagesSupportingREPLs();
 
     if (auto single_lang = repl_languages.GetSingularLanguage()) {
       language = *single_lang;
     } else if (repl_languages.Empty()) {
-      err.SetErrorStringWithFormat(
+      err.SetErrorString(
           "LLDB isn't configured with REPL support for any languages.");
       return REPLSP();
     } else {
-      err.SetErrorStringWithFormat(
+      err.SetErrorString(
           "Multiple possible REPL languages.  Please specify a language.");
       return REPLSP();
     }
@@ -1826,13 +1829,14 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
 }
 
 size_t Target::ReadCStringFromMemory(const Address &addr, std::string &out_str,
-                                     Status &error) {
+                                     Status &error, bool force_live_memory) {
   char buf[256];
   out_str.clear();
   addr_t curr_addr = addr.GetLoadAddress(this);
   Address address(addr);
   while (true) {
-    size_t length = ReadCStringFromMemory(address, buf, sizeof(buf), error);
+    size_t length = ReadCStringFromMemory(address, buf, sizeof(buf), error,
+                                          force_live_memory);
     if (length == 0)
       break;
     out_str.append(buf, length);
@@ -1848,7 +1852,8 @@ size_t Target::ReadCStringFromMemory(const Address &addr, std::string &out_str,
 }
 
 size_t Target::ReadCStringFromMemory(const Address &addr, char *dst,
-                                     size_t dst_max_len, Status &result_error) {
+                                     size_t dst_max_len, Status &result_error,
+                                     bool force_live_memory) {
   size_t total_cstr_len = 0;
   if (dst && dst_max_len) {
     result_error.Clear();
@@ -1871,8 +1876,8 @@ size_t Target::ReadCStringFromMemory(const Address &addr, char *dst,
           cache_line_size - (curr_addr % cache_line_size);
       addr_t bytes_to_read =
           std::min<addr_t>(bytes_left, cache_line_bytes_left);
-      size_t bytes_read =
-          ReadMemory(address, curr_dst, bytes_to_read, error, true);
+      size_t bytes_read = ReadMemory(address, curr_dst, bytes_to_read, error,
+                                     force_live_memory);
 
       if (bytes_read == 0) {
         result_error = error;

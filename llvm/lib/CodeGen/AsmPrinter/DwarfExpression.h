@@ -565,7 +565,7 @@ public:
         GVFragmentMap(GVFragmentMap) {
     buildDIExprAST();
   }
-  DIEDwarfExprAST(const DIEDwarfExprAST &) = default;
+  DIEDwarfExprAST(const DIEDwarfExprAST &) = delete;
 
   DIELoc *finalize() {
     traverseAndLower(Root.get());

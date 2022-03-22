@@ -197,7 +197,8 @@ def ext_flexible_array_init : Extension<
 
 // C++20 designated initializers
 def ext_cxx_designated_init : Extension<
-  "designated initializers are a C++20 extension">, InGroup<CXX20Designator>;
+  "designated initializers are a C++20 extension">, InGroup<CXX20Designator>,
+  SuppressInSystemMacro;
 def warn_cxx17_compat_designated_init : Warning<
   "designated initializers are incompatible with C++ standards before C++20">,
   InGroup<CXXPre20CompatPedantic>, DefaultIgnore;
@@ -449,7 +450,7 @@ def warn_decl_shadow :
           "typedef in %2|"
           "type alias in %2|"
           "structured binding}1">,
-  InGroup<Shadow>, DefaultIgnore;
+  InGroup<Shadow>, DefaultIgnore, SuppressInSystemMacro;
 def warn_decl_shadow_uncaptured_local :
   Warning<warn_decl_shadow.Text>,
   InGroup<ShadowUncapturedLocal>, DefaultIgnore;
@@ -1686,9 +1687,6 @@ def err_missing_exception_specification : Error<
 def ext_missing_exception_specification : ExtWarn<
   err_missing_exception_specification.Text>,
   InGroup<DiagGroup<"missing-exception-spec">>;
-def ext_ms_missing_exception_specification : ExtWarn<
-  err_missing_exception_specification.Text>,
-  InGroup<MicrosoftExceptionSpec>;
 def err_noexcept_needs_constant_expression : Error<
   "argument to noexcept specifier must be a constant expression">;
 def err_exception_spec_not_parsed : Error<
@@ -3935,7 +3933,8 @@ def warn_cast_align : Warning<
   "cast from %0 to %1 increases required alignment from %2 to %3">,
   InGroup<CastAlign>, DefaultIgnore;
 def warn_old_style_cast : Warning<
-  "use of old-style cast">, InGroup<OldStyleCast>, DefaultIgnore;
+  "use of old-style cast">, InGroup<OldStyleCast>, DefaultIgnore,
+  SuppressInSystemMacro;
 
 // Separate between casts to void* and non-void* pointers.
 // Some APIs use (abuse) void* for something like a user context,
@@ -5776,7 +5775,7 @@ def err_typecheck_invalid_restrict_invalid_pointee : Error<
 def ext_typecheck_zero_array_size : Extension<
   "zero size arrays are an extension">, InGroup<ZeroLengthArray>;
 def err_typecheck_zero_array_size : Error<
-  "zero-length arrays are not permitted in C++">;
+  "zero-length arrays are not permitted in %select{C++|SYCL device code}0">;
 def err_array_size_non_int : Error<"size of array has non-integer type %0">;
 def err_init_element_not_constant : Error<
   "initializer element is not a compile-time constant">;
@@ -7795,6 +7794,11 @@ def err_expected_class_or_namespace : Error<"%0 is not a class"
   "%select{ or namespace|, namespace, or enumeration}1">;
 def err_invalid_declarator_scope : Error<"cannot define or redeclare %0 here "
   "because namespace %1 does not enclose namespace %2">;
+def err_export_non_namespace_scope_name : Error<
+  "cannot export %0 as it is not at namespace scope">;
+def err_redeclaration_non_exported : Error <
+  "cannot export redeclaration %0 here since the previous declaration is not "
+  "exported">;
 def err_invalid_declarator_global_scope : Error<
   "definition or redeclaration of %0 cannot name the global scope">;
 def err_invalid_declarator_in_function : Error<
@@ -9361,6 +9365,9 @@ def warn_printf_ObjCflags_without_ObjCConversion: Warning<
 def warn_printf_invalid_objc_flag: Warning<
     "'%0' is not a valid object format flag">,
     InGroup<Format>;
+def warn_printf_narg_not_supported : Warning<
+    "'%%n' specifier not supported on this platform">,
+    InGroup<Format>;
 def warn_scanf_scanlist_incomplete : Warning<
   "no closing ']' for '%%[' in scanf format string">,
   InGroup<Format>;
@@ -9540,7 +9547,8 @@ def err_generic_sel_multi_match : Error<
 
 // Blocks
 def err_blocks_disable : Error<"blocks support disabled - compile with -fblocks"
-  " or %select{pick a deployment target that supports them|for OpenCL 2.0}0">;
+  " or %select{pick a deployment target that supports them|for OpenCL C 2.0"
+  " or OpenCL C 3.0 with __opencl_c_device_enqueue feature}0">;
 def err_block_returning_array_function : Error<
   "block cannot return %select{array|function}0 type %1">;
 
@@ -9853,8 +9861,11 @@ def err_constant_integer_arg_type : Error<
   "argument to %0 must be a constant integer">;
 
 def ext_mixed_decls_code : Extension<
-  "ISO C90 forbids mixing declarations and code">,
-  InGroup<DiagGroup<"declaration-after-statement">>;
+  "mixing declarations and code is a C99 extension">,
+  InGroup<DeclarationAfterStatement>;
+def warn_mixed_decls_code : Warning<
+  "mixing declarations and code is incompatible with standards before C99">,
+  InGroup<DeclarationAfterStatement>, DefaultIgnore;
 
 def err_non_local_variable_decl_in_for : Error<
   "declaration of non-local variable in 'for' loop">;
@@ -10500,7 +10511,7 @@ def err_omp_atomic_capture_not_compound_statement : Error<
 def note_omp_atomic_capture: Note<
   "%select{expected assignment expression|expected compound statement|expected exactly two expression statements|expected in right hand side of the first expression}0">;
 def err_omp_atomic_several_clauses : Error<
-  "directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update' or 'capture' clause">;
+  "directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause">;
 def err_omp_several_mem_order_clauses : Error<
   "directive '#pragma omp %0' cannot contain more than one %select{'seq_cst', 'relaxed', |}1'acq_rel', 'acquire' or 'release' clause">;
 def err_omp_atomic_incompatible_mem_order_clause : Error<
@@ -10804,11 +10815,6 @@ def err_omp_non_lvalue_in_map_or_motion_clauses: Error<
   "expected addressable lvalue in '%0' clause">;
 def err_omp_var_expected : Error<
   "expected variable of the '%0' type%select{|, not %2}1">;
-def warn_unknown_declare_variant_isa_trait
-    : Warning<"isa trait '%0' is not known to the current target; verify the "
-              "spelling or consider restricting the context selector with the "
-              "'arch' selector further">,
-      InGroup<SourceUsesOpenMP>;
 def err_omp_non_pointer_type_array_shaping_base : Error<
   "expected expression with a pointer to a complete type as a base of an array "
   "shaping operation">;
@@ -11038,7 +11044,7 @@ def warn_deprecated_coroutine_namespace : Warning<
   "use std::%0 instead">,
   InGroup<DeprecatedExperimentalCoroutine>;
 def err_mixed_use_std_and_experimental_namespace_for_coroutine : Error<
-  "mixed use of std and std::experimental namespaces for "
+  "conflicting mixed use of std and std::experimental namespaces for "
   "coroutine components">;
 def err_implicit_coroutine_std_nothrow_type_not_found : Error<
   "std::nothrow was not found; include <new> before defining a coroutine which "
@@ -11062,8 +11068,6 @@ def err_coroutine_type_missing_specialization : Error<
   "specialization %0">;
 def err_coroutine_promise_incompatible_return_functions : Error<
   "the coroutine promise type %0 declares both 'return_value' and 'return_void'">;
-def err_coroutine_promise_requires_return_function : Error<
-  "the coroutine promise type %0 must declare either 'return_value' or 'return_void'">;
 def note_coroutine_promise_implicit_await_transform_required_here : Note<
   "call to 'await_transform' implicitly required by 'co_await' here">;
 def note_coroutine_promise_suspend_implicitly_required : Note<
@@ -11436,6 +11440,9 @@ def warn_sycl_kernel_num_of_function_params : Warning<
 def warn_sycl_kernel_return_type : Warning<
   "function template with 'sycl_kernel' attribute must have a 'void' return type">,
   InGroup<IgnoredAttributes>;
+def err_sycl_special_type_num_init_method : Error<
+  "types with 'sycl_special_class' attribute must have one and only one '__init' "
+  "method defined">;
 
 def err_bit_int_bad_size : Error<"%select{signed|unsigned}0 _BitInt must "
                                  "have a bit size of at least %select{2|1}0">;
@@ -11459,7 +11466,7 @@ def warn_tcb_enforcement_violation : Warning<
 
 // RISC-V builtin required extension warning
 def err_riscv_builtin_requires_extension : Error<
-  "builtin requires '%0' extension support to be enabled">;
+  "builtin requires at least one of the following extensions support to be enabled : %0">;
 def err_riscv_builtin_invalid_lmul : Error<
   "LMUL argument must be in the range [0,3] or [5,7]">;
 } // end of sema component.

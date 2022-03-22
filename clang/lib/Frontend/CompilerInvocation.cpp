@@ -438,7 +438,7 @@ static T extractMaskValue(T KeyPath) {
     }(EXTRACTOR(KEYPATH));                                                     \
   }
 
-static const StringRef GetInputKindName(InputKind IK);
+static StringRef GetInputKindName(InputKind IK);
 
 static bool FixupInvocation(CompilerInvocation &Invocation,
                             DiagnosticsEngine &Diags, const ArgList &Args,
@@ -1814,6 +1814,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Name;
   }
 
+  if (Opts.PrepareForLTO && Args.hasArg(OPT_mibt_seal))
+    Opts.IBTSeal = 1;
+
   for (auto *A :
        Args.filtered(OPT_mlink_bitcode_file, OPT_mlink_builtin_bitcode)) {
     CodeGenOptions::BitcodeFileToLink F;
@@ -2405,6 +2408,7 @@ static const auto &getFrontendActionTable() {
       {frontend::EmitCodeGenOnly, OPT_emit_codegen_only},
       {frontend::EmitCodeGenOnly, OPT_emit_codegen_only},
       {frontend::EmitObj, OPT_emit_obj},
+      {frontend::ExtractAPI, OPT_extract_api},
 
       {frontend::FixIt, OPT_fixit_EQ},
       {frontend::FixIt, OPT_fixit},
@@ -3291,7 +3295,7 @@ static bool IsInputCompatibleWithStandard(InputKind IK,
 }
 
 /// Get language name for given input kind.
-static const StringRef GetInputKindName(InputKind IK) {
+static StringRef GetInputKindName(InputKind IK) {
   switch (IK.getLanguage()) {
   case Language::C:
     return "C";
@@ -3556,6 +3560,8 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Args, OPT_fclang_abi_compat_EQ, "11.0", SA);
   else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver12)
     GenerateArg(Args, OPT_fclang_abi_compat_EQ, "12.0", SA);
+  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver13)
+    GenerateArg(Args, OPT_fclang_abi_compat_EQ, "13.0", SA);
 
   if (Opts.getSignReturnAddressScope() ==
       LangOptions::SignReturnAddressScopeKind::All)
@@ -3871,9 +3877,19 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_enable_irbuilder);
   bool IsTargetSpecified =
       Opts.OpenMPIsDevice || Args.hasArg(options::OPT_fopenmp_targets_EQ);
-  Opts.OpenMPTargetNewRuntime =
-      Opts.OpenMPIsDevice &&
-      Args.hasArg(options::OPT_fopenmp_target_new_runtime);
+  // Default in Options.td should be true. For AMD, we temporarily override
+  // default to false unless testing with -fopenmp-target-new-runtime
+  if (T.isAMDGCN()) {
+    // FIXME: we may need to change host pass to false when it is
+    // offloading to AMDGCN.  Would require parsing march, offload-arch,
+    Opts.OpenMPTargetNewRuntime = false;
+    if (Args.hasArg(options::OPT_fopenmp_target_new_runtime))
+      Opts.OpenMPTargetNewRuntime = true;
+  } else {
+    Opts.OpenMPTargetNewRuntime = true;
+    if (Args.hasArg(options::OPT_fno_openmp_target_new_runtime))
+      Opts.OpenMPTargetNewRuntime = false;
+  }
 
   Opts.ConvergentFunctions = Opts.ConvergentFunctions || Opts.OpenMPIsDevice;
 
@@ -4058,6 +4074,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         Opts.setClangABICompat(LangOptions::ClangABI::Ver11);
       else if (Major <= 12)
         Opts.setClangABICompat(LangOptions::ClangABI::Ver12);
+      else if (Major <= 13)
+        Opts.setClangABICompat(LangOptions::ClangABI::Ver13);
     } else if (Ver != "latest") {
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();
@@ -4144,6 +4162,7 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::EmitLLVMOnly:
   case frontend::EmitCodeGenOnly:
   case frontend::EmitObj:
+  case frontend::ExtractAPI:
   case frontend::FixIt:
   case frontend::GenerateModule:
   case frontend::GenerateModuleInterface:

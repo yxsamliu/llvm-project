@@ -237,6 +237,7 @@ def Documentation : DiagGroup<"documentation",
 
 def EmptyBody : DiagGroup<"empty-body">;
 def Exceptions : DiagGroup<"exceptions">;
+def DeclarationAfterStatement : DiagGroup<"declaration-after-statement">;
 
 def GNUEmptyInitializer : DiagGroup<"gnu-empty-initializer">;
 def GNUEmptyStruct : DiagGroup<"gnu-empty-struct">;
@@ -538,6 +539,7 @@ def ExplicitInitializeCall : DiagGroup<"explicit-initialize-call">;
 def OrderedCompareFunctionPointers : DiagGroup<"ordered-compare-function-pointers">;
 def Packed : DiagGroup<"packed">;
 def Padded : DiagGroup<"padded">;
+def UnalignedAccess : DiagGroup<"unaligned-access">;
 
 def PessimizingMove : DiagGroup<"pessimizing-move">;
 def ReturnStdMove : DiagGroup<"return-std-move">;
