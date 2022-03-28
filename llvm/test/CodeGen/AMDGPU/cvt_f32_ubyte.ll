@@ -2379,72 +2379,72 @@ define amdgpu_kernel void @cvt_f32_ubyte0_vector() local_unnamed_addr {
 ; VI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-NEXT:    v_mov_b32_e32 v2, -1
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
-; VI-NEXT:    s_mov_b64 s[4:5], exec
+; VI-NEXT:    s_mov_b64 s[8:9], exec
 ; VI-NEXT:  .LBB40_1: ; =>This Inner Loop Header: Depth=1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_readfirstlane_b32 s8, v0
-; VI-NEXT:    v_readfirstlane_b32 s9, v1
-; VI-NEXT:    v_readfirstlane_b32 s10, v2
-; VI-NEXT:    v_readfirstlane_b32 s11, v3
-; VI-NEXT:    v_cmp_eq_u64_e32 vcc, s[8:9], v[0:1]
-; VI-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[10:11], v[2:3]
+; VI-NEXT:    v_readfirstlane_b32 s4, v0
+; VI-NEXT:    v_readfirstlane_b32 s5, v1
+; VI-NEXT:    v_readfirstlane_b32 s6, v2
+; VI-NEXT:    v_readfirstlane_b32 s7, v3
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, s[4:5], v[0:1]
+; VI-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[6:7], v[2:3]
 ; VI-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; VI-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; VI-NEXT:    s_nop 0
-; VI-NEXT:    buffer_load_ubyte v4, off, s[8:11], 0
+; VI-NEXT:    buffer_load_ubyte v4, off, s[4:7], 0
 ; VI-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; VI-NEXT:    s_cbranch_execnz .LBB40_1
 ; VI-NEXT:  ; %bb.2:
-; VI-NEXT:    s_mov_b64 exec, s[4:5]
-; VI-NEXT:    s_mov_b64 s[4:5], exec
+; VI-NEXT:    s_mov_b64 exec, s[8:9]
+; VI-NEXT:    s_mov_b64 s[8:9], exec
 ; VI-NEXT:  .LBB40_3: ; =>This Inner Loop Header: Depth=1
-; VI-NEXT:    v_readfirstlane_b32 s8, v0
-; VI-NEXT:    v_readfirstlane_b32 s9, v1
-; VI-NEXT:    v_readfirstlane_b32 s10, v2
-; VI-NEXT:    v_readfirstlane_b32 s11, v3
-; VI-NEXT:    v_cmp_eq_u64_e32 vcc, s[8:9], v[0:1]
-; VI-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[10:11], v[2:3]
+; VI-NEXT:    v_readfirstlane_b32 s4, v0
+; VI-NEXT:    v_readfirstlane_b32 s5, v1
+; VI-NEXT:    v_readfirstlane_b32 s6, v2
+; VI-NEXT:    v_readfirstlane_b32 s7, v3
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, s[4:5], v[0:1]
+; VI-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[6:7], v[2:3]
 ; VI-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; VI-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; VI-NEXT:    s_nop 0
-; VI-NEXT:    buffer_load_ubyte v5, off, s[8:11], 0 offset:1
+; VI-NEXT:    buffer_load_ubyte v5, off, s[4:7], 0 offset:1
 ; VI-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; VI-NEXT:    s_cbranch_execnz .LBB40_3
 ; VI-NEXT:  ; %bb.4:
-; VI-NEXT:    s_mov_b64 exec, s[4:5]
-; VI-NEXT:    s_mov_b64 s[4:5], exec
+; VI-NEXT:    s_mov_b64 exec, s[8:9]
+; VI-NEXT:    s_mov_b64 s[8:9], exec
 ; VI-NEXT:  .LBB40_5: ; =>This Inner Loop Header: Depth=1
-; VI-NEXT:    v_readfirstlane_b32 s8, v0
-; VI-NEXT:    v_readfirstlane_b32 s9, v1
-; VI-NEXT:    v_readfirstlane_b32 s10, v2
-; VI-NEXT:    v_readfirstlane_b32 s11, v3
-; VI-NEXT:    v_cmp_eq_u64_e32 vcc, s[8:9], v[0:1]
-; VI-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[10:11], v[2:3]
+; VI-NEXT:    v_readfirstlane_b32 s4, v0
+; VI-NEXT:    v_readfirstlane_b32 s5, v1
+; VI-NEXT:    v_readfirstlane_b32 s6, v2
+; VI-NEXT:    v_readfirstlane_b32 s7, v3
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, s[4:5], v[0:1]
+; VI-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[6:7], v[2:3]
 ; VI-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; VI-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; VI-NEXT:    s_nop 0
-; VI-NEXT:    buffer_load_ubyte v6, off, s[8:11], 0 offset:2
+; VI-NEXT:    buffer_load_ubyte v6, off, s[4:7], 0 offset:2
 ; VI-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; VI-NEXT:    s_cbranch_execnz .LBB40_5
 ; VI-NEXT:  ; %bb.6:
-; VI-NEXT:    s_mov_b64 exec, s[4:5]
-; VI-NEXT:    s_mov_b64 s[4:5], exec
+; VI-NEXT:    s_mov_b64 exec, s[8:9]
+; VI-NEXT:    s_mov_b64 s[8:9], exec
 ; VI-NEXT:  .LBB40_7: ; =>This Inner Loop Header: Depth=1
-; VI-NEXT:    v_readfirstlane_b32 s8, v0
-; VI-NEXT:    v_readfirstlane_b32 s9, v1
-; VI-NEXT:    v_readfirstlane_b32 s10, v2
-; VI-NEXT:    v_readfirstlane_b32 s11, v3
-; VI-NEXT:    v_cmp_eq_u64_e32 vcc, s[8:9], v[0:1]
-; VI-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[10:11], v[2:3]
+; VI-NEXT:    v_readfirstlane_b32 s4, v0
+; VI-NEXT:    v_readfirstlane_b32 s5, v1
+; VI-NEXT:    v_readfirstlane_b32 s6, v2
+; VI-NEXT:    v_readfirstlane_b32 s7, v3
+; VI-NEXT:    v_cmp_eq_u64_e32 vcc, s[4:5], v[0:1]
+; VI-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[6:7], v[2:3]
 ; VI-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; VI-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; VI-NEXT:    s_nop 0
-; VI-NEXT:    buffer_load_ubyte v7, off, s[8:11], 0 offset:3
+; VI-NEXT:    buffer_load_ubyte v7, off, s[4:7], 0 offset:3
 ; VI-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; VI-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; VI-NEXT:    s_cbranch_execnz .LBB40_7
 ; VI-NEXT:  ; %bb.8:
-; VI-NEXT:    s_mov_b64 exec, s[4:5]
+; VI-NEXT:    s_mov_b64 exec, s[8:9]
 ; VI-NEXT:    buffer_load_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v7
