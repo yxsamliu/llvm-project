@@ -208,6 +208,11 @@ public:
   unsigned getDeviceManglingNumber(const CXXMethodDecl *CallOperator) override {
     return DeviceCtx->getManglingNumber(CallOperator);
   }
+
+  unsigned getManglingNumber(const TagDecl *TD,
+                             unsigned MSLocalManglingNumber) override {
+    return DeviceCtx->getManglingNumber(TD, MSLocalManglingNumber);
+  }
 };
 
 class MSSYCLNumberingContext : public MicrosoftNumberingContext {
