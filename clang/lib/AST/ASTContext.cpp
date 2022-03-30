@@ -11754,7 +11754,14 @@ void ASTContext::setManglingNumber(const NamedDecl *ND, unsigned Number) {
 
 unsigned ASTContext::getManglingNumber(const NamedDecl *ND) const {
   auto I = MangleNumbers.find(ND);
-  return I != MangleNumbers.end() ? I->second : 1;
+  unsigned Res = I != MangleNumbers.end() ? I->second : 1;
+  if (!LangOpts.CUDA || LangOpts.CUDAIsDevice)
+    return Res;
+
+  auto Cutoff = [](unsigned V) { return V > 1 ? V : 1; };
+  if (CUDANameMangleCtx.MangleDeviceNameInHostCompilation)
+    return Cutoff(Res >> 16);
+  return Cutoff(Res & 0xffff);
 }
 
 void ASTContext::setStaticLocalNumber(const VarDecl *VD, unsigned Number) {

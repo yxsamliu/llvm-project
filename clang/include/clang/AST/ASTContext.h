@@ -677,6 +677,22 @@ public:
     ~CUDAConstantEvalContextRAII() { Ctx.CUDAConstantEvalCtx = SavedCtx; }
   };
 
+  struct CUDANameMangleContext {
+    /// Current name mangling is for device name in host compilation.
+    bool MangleDeviceNameInHostCompilation = false;
+  } CUDANameMangleCtx;
+  struct CUDANameMangleContextRAII {
+    ASTContext &Ctx;
+    CUDANameMangleContext SavedCtx;
+    CUDANameMangleContextRAII(ASTContext &Ctx_,
+                              bool MangleDeviceNameInHostCompilation)
+        : Ctx(Ctx_), SavedCtx(Ctx_.CUDANameMangleCtx) {
+      Ctx_.CUDANameMangleCtx.MangleDeviceNameInHostCompilation =
+          MangleDeviceNameInHostCompilation;
+    }
+    ~CUDANameMangleContextRAII() { Ctx.CUDANameMangleCtx = SavedCtx; }
+  };
+
   /// Returns the dynamic AST node parent map context.
   ParentMapContext &getParentMapContext();
 

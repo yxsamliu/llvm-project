@@ -260,6 +260,8 @@ llvm::FunctionType *CGNVCUDARuntime::getRegisterLinkedBinaryFnTy() const {
 }
 
 std::string CGNVCUDARuntime::getDeviceSideName(const NamedDecl *ND) {
+  ASTContext::CUDANameMangleContextRAII X(
+      CGM.getContext(), /*MangleDeviceNameInHostCompilation=*/true);
   GlobalDecl GD;
   // D could be either a kernel or a variable.
   if (auto *FD = dyn_cast<FunctionDecl>(ND))
