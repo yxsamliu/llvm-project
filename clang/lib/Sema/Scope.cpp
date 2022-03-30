@@ -92,6 +92,14 @@ void Scope::Init(Scope *parent, unsigned flags) {
   Entity = nullptr;
   ErrorTrap.reset();
   NRVO.setPointerAndInt(nullptr, false);
+  if (getenv("DBG_MANGLE")) {
+    llvm::errs() << "\n\nScope::Init this=" << this << "\n";
+    dump();
+    if (Scope *MSLMP = getMSLastManglingParent()) {
+      llvm::errs() << "getMSLastManglingParent=" << MSLMP << '\n';
+      MSLMP->dump();
+    }
+  }
 }
 
 bool Scope::containedInPrototypeScope() const {

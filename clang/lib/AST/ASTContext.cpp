@@ -11748,13 +11748,22 @@ QualType ASTContext::getRealTypeForBitwidth(unsigned DestWidth,
 }
 
 void ASTContext::setManglingNumber(const NamedDecl *ND, unsigned Number) {
+  if (getenv("DBG_MANGLE")) {
+    llvm::errs() << "\nsetManglingNumber " << Number << "\n";
+    ND->dump();
+  }
   if (Number > 1)
     MangleNumbers[ND] = Number;
 }
 
 unsigned ASTContext::getManglingNumber(const NamedDecl *ND) const {
   auto I = MangleNumbers.find(ND);
-  return I != MangleNumbers.end() ? I->second : 1;
+  auto Res = I != MangleNumbers.end() ? I->second : 1;
+  if (getenv("DBG_MANGLE")) {
+    llvm::errs() << "\ngetManglingNumber " << Res << "\n";
+    ND->dump();
+  }
+  return Res;
 }
 
 void ASTContext::setStaticLocalNumber(const VarDecl *VD, unsigned Number) {

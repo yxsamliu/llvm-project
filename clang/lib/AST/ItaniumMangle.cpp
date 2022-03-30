@@ -142,6 +142,12 @@ public:
     }
 
     // Use the canonical number for externally visible decls.
+    if (getenv("DBG_MANGLE")) {
+      ND->dump();
+      llvm::errs() << "isExternallyVisible = " << ND->isExternallyVisible()
+          << " getManglingNumber = " << getASTContext().getManglingNumber(ND)
+          << '\n';
+    }
     if (ND->isExternallyVisible()) {
       unsigned discriminator = getASTContext().getManglingNumber(ND);
       if (discriminator == 1)

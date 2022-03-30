@@ -315,6 +315,12 @@ public:
     if (Scope *MSLMP = getMSLastManglingParent()) {
       MSLMP->MSLastManglingNumber += 1;
       MSCurManglingNumber += 1;
+      if (getenv("DBG_MANGLE")) {
+        llvm::errs() << "\n\nincrementMSManglingNumber this=" << this << "\n";
+        dump();
+        llvm::errs() << "getMSLastManglingParent=" << MSLMP << '\n';
+        MSLMP->dump();
+      }
     }
   }
 
@@ -322,6 +328,12 @@ public:
     if (Scope *MSLMP = getMSLastManglingParent()) {
       MSLMP->MSLastManglingNumber -= 1;
       MSCurManglingNumber -= 1;
+      if (getenv("DBG_MANGLE")) {
+        llvm::errs() << "\n\ndecrementMSManglingNumber this=" << this << "\n";
+        dump();
+        llvm::errs() << "getMSLastManglingParent=" << MSLMP << '\n';
+        MSLMP->dump();
+      }
     }
   }
 
