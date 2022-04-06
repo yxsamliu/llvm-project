@@ -12281,10 +12281,12 @@ operator<<(const StreamingDiagnostic &DB,
 bool ASTContext::mayExternalizeStaticVar(const Decl *D) const {
   bool IsStaticVar =
       isa<VarDecl>(D) && cast<VarDecl>(D)->getStorageClass() == SC_Static;
+  bool InAnonNS = D->isInAnonymousNamespace();
   bool IsExplicitDeviceVar = (D->hasAttr<CUDADeviceAttr>() &&
                               !D->getAttr<CUDADeviceAttr>()->isImplicit()) ||
                              (D->hasAttr<CUDAConstantAttr>() &&
                               !D->getAttr<CUDAConstantAttr>()->isImplicit());
+  bool IsKernel = D->hasAttr<CUDAGlobalAttr>();
   // CUDA/HIP: static managed variables need to be externalized since it is
   // a declaration in IR, therefore cannot have internal linkage.
   return IsStaticVar &&
