@@ -1565,12 +1565,31 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
       // 16 byte accessing via ds_read/write_b128 require 16-byte alignment on
       // gfx8 and older, but  we can do a 8 byte aligned, 16 byte access in a
       // single operation using ds_read2/write2_b64.
-      bool AlignedBy8 = Alignment >= Align(8);
-      if (IsFast)
-        *IsFast = AlignedBy8;
+      RequiredAlignment = Align(8);
 
-      return AlignedBy8;
+      if (Subtarget->hasUnalignedDSAccessEnabled()) {
+        // Naturally aligned access is fastest. However, also report it is Fast
+        // if memory is aligned less than DWORD. A narrow load or store will be
+        // be equally slow as a single ds_read_b128/ds_write_b128, but there
+        // will be more of them, so overall we will pay less penalty issuing a
+        // single instruction.
+        if (IsFast)
+          *IsFast = Alignment >= RequiredAlignment || Alignment < Align(4);
+        return true;
+      }
     }
+
+    if (IsFast) {
+      // FIXME: Lie it is fast if +unaligned-access-mode is passed so that
+      // DS accesses get vectorized. Do this only for sizes below 96 as
+      // b96 and b128 cases already properly handled.
+      // Remove Subtarget check once all sizes properly handled.
+      *IsFast = Alignment >= RequiredAlignment ||
+                (Subtarget->hasUnalignedDSAccessEnabled() && Size < 96);
+    }
+
+    return Alignment >= RequiredAlignment ||
+           Subtarget->hasUnalignedDSAccessEnabled();
   }
 
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS) {
@@ -1639,8 +1658,22 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
     return false;
   }
 
-  return allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AddrSpace,
-                                            Alignment, Flags, IsFast);
+  bool Allow = allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AddrSpace,
+                                                  Alignment, Flags, IsFast);
+
+  if (Allow && IsFast && Subtarget->hasUnalignedDSAccessEnabled() &&
+      (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
+       AddrSpace == AMDGPUAS::REGION_ADDRESS)) {
+    // Lie it is fast if +unaligned-access-mode is passed so that DS accesses
+    // get vectorized. We could use ds_read2_b*/ds_write2_b* instructions on a
+    // misaligned data which is faster than a pair of ds_read_b*/ds_write_b*
+    // which would be equally misaligned.
+    // This is only used by the common passes, selection always calls the
+    // allowsMisalignedMemoryAccessesImpl version.
+    *IsFast = true;
+  }
+
+  return Allow;
 }
 
 EVT SITargetLowering::getOptimalMemOpType(

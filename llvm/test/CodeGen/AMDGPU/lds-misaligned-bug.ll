@@ -48,9 +48,9 @@ bb:
 
 ; GCN-LABEL: test_local_misaligned_v3:
 ; ALIGNED-DAG: ds_read2_b32
-; ALIGNED-DAG: ds_read_b32
+; ALIGNEd-DAG: ds_read_b32
 ; ALIGNED-DAG: ds_write2_b32
-; ALIGNED-DAG: ds_write_b32
+; ALGINED-DAG: ds_write_b32
 ; UNALIGNED-DAG: ds_read_b96
 ; UNALIGNED-DAG: ds_write_b96
 define amdgpu_kernel void @test_local_misaligned_v3(i32 addrspace(3)* %arg) {
