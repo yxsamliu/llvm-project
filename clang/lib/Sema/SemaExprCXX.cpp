@@ -1559,7 +1559,8 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
 
 bool Sema::isUsualDeallocationFunction(const CXXMethodDecl *Method) {
   // [CUDA] Ignore this function, if we can't call it.
-  const FunctionDecl *Caller = dyn_cast<FunctionDecl>(CurContext);
+  const FunctionDecl *Caller =
+      dyn_cast<FunctionDecl>(getCurFunctionDecl(/*AllowLambda=*/true));
   if (getLangOpts().CUDA) {
     auto CallPreference = IdentifyCUDAPreference(Caller, Method);
     // If it's not callable at all, it's not the right function.
@@ -1653,7 +1654,8 @@ namespace {
 
       // In CUDA, determine how much we'd like / dislike to call this.
       if (S.getLangOpts().CUDA)
-        if (auto *Caller = dyn_cast<FunctionDecl>(S.CurContext))
+        if (auto *Caller = dyn_cast<FunctionDecl>(
+                S.getCurFunctionDecl(/*AllowLambda=*/true)))
           CUDAPref = S.IdentifyCUDAPreference(Caller, FD);
     }
 
@@ -2795,7 +2797,9 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
     }
 
     if (getLangOpts().CUDA)
-      EraseUnwantedCUDAMatches(dyn_cast<FunctionDecl>(CurContext), Matches);
+      EraseUnwantedCUDAMatches(
+          dyn_cast<FunctionDecl>(getCurFunctionDecl(/*AllowLambda=*/true)),
+          Matches);
   } else {
     // C++1y [expr.new]p22:
     //   For a non-placement allocation function, the normal deallocation
