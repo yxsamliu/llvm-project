@@ -70,13 +70,12 @@ protected:
   bool FullRate64Ops;
 
   // Dynamically set bits that enable features.
-  bool FlatForGlobal;
-  bool AutoWaitcntBeforeBarrier;
-  bool BackOffBarrier;
-  bool UnalignedScratchAccess;
-  bool UnalignedAccessMode;
-  bool HasApertureRegs;
-  bool SupportsXNACK;
+  bool FlatForGlobal = false;
+  bool AutoWaitcntBeforeBarrier = false;
+  bool UnalignedScratchAccess = false;
+  bool UnalignedAccessMode = false;
+  bool HasApertureRegs = false;
+  bool SupportsXNACK = false;
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
   // for XNACK.
@@ -492,12 +491,6 @@ public:
 
   bool hasAutoWaitcntBeforeBarrier() const {
     return AutoWaitcntBeforeBarrier;
-  }
-
-  /// \returns true if the target supports backing off of s_barrier instructions
-  /// when an exception is raised.
-  bool supportsBackOffBarrier() const {
-    return BackOffBarrier;
   }
 
   bool hasUnalignedBufferAccess() const {
