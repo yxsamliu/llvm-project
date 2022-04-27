@@ -606,6 +606,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  addHIPRuntimeLibArgs(ToolChain, Args, CmdArgs);
+
   if (D.CCCIsCXX() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
                    options::OPT_r)) {

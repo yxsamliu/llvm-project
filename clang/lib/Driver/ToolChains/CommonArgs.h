@@ -23,6 +23,8 @@ namespace tools {
 
 bool needFortranLibs(const Driver &D, const llvm::opt::ArgList &Args);
 
+bool needHIPRuntimeLibs(const Driver &D, const llvm::opt::ArgList &Args);
+
 void addPathIfExists(const Driver &D, const Twine &Path,
                      ToolChain::path_list &Paths);
 
@@ -124,6 +126,9 @@ bool addOpenMPRuntime(llvm::opt::ArgStringList &CmdArgs, const ToolChain &TC,
                       const llvm::opt::ArgList &Args,
                       bool ForceStaticHostRuntime = false,
                       bool IsOffloadingHost = false, bool GompNeedsRT = false);
+
+void addHIPRuntimeLibArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
+                          llvm::opt::ArgStringList &CmdArgs);
 
 const char *getAsNeededOption(const ToolChain &TC, bool as_needed);
 

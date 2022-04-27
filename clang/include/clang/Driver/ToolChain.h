@@ -721,6 +721,11 @@ public:
   virtual void AddFortranStdlibLibArgs(const llvm::opt::ArgList &Args,
                                        llvm::opt::ArgStringList &CmdArgs) const;
 
+  /// Add the system specific linker arguments to use
+  /// for the given HIP runtime library type.
+  virtual void AddHIPRuntimeLibArgs(const llvm::opt::ArgList &Args,
+                                    llvm::opt::ArgStringList &CmdArgs) const {}
+
   /// Get paths of HIP device libraries.
   virtual llvm::SmallVector<BitCodeLibraryInfo, 12>
   getHIPDeviceLibs(const llvm::opt::ArgList &Args) const;

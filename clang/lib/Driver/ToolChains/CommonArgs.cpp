@@ -79,6 +79,18 @@ bool clang::driver::tools::needFortranLibs(const Driver &D,
   return false;
 }
 
+/// \brief Determine if HIP runtime libraies are needed
+bool clang::driver::tools::needHIPRuntimeLibs(const Driver &D,
+                                              const ArgList &Args) {
+  if (Args.hasArg(options::OPT_hip_link) &&
+      !Args.hasArg(options::OPT_nostdlib) &&
+      !Args.hasArg(options::OPT_noHIPRT)) {
+    return true;
+  }
+
+  return false;
+}
+
 /// \brief Determine if Fortran "main" object is needed
 static bool needFortranMain(const Driver &D, const ArgList &Args) {
   return (tools::needFortranLibs(D, Args) &&
@@ -2163,5 +2175,17 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
     if (!FoundBCLibrary)
       D.Diag(diag::err_drv_omp_offload_target_missingbcruntime)
           << LibOmpTargetName << ArchPrefix;
+  }
+}
+void tools::addHIPRuntimeLibArgs(const ToolChain &TC,
+                                 const llvm::opt::ArgList &Args,
+                                 llvm::opt::ArgStringList &CmdArgs) {
+  if (needHIPRuntimeLibs(TC.getDriver(), Args)) {
+    TC.AddHIPRuntimeLibArgs(Args, CmdArgs);
+  } else {
+    // Claim "no HIP libraries" arguments if any
+    for (auto Arg : Args.filtered(options::OPT_noHIPRT)) {
+      Arg->claim();
+    }
   }
 }
