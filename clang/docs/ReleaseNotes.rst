@@ -224,8 +224,11 @@ C++2b Feature Support
 - Implemented `P2360R0: Extend init-statement to allow alias-declaration <https://wg21.link/P2360R0>`_.
 
 
-CUDA Language Changes in Clang
-------------------------------
+CUDA/HIP Language Changes in Clang
+----------------------------------
+
+- Added `__noinline__` as a keyword to avoid diagnostics due to usage of
+ `__attribute__((__noinline__))` in CUDA/HIP programs.
 
 - Clang now supports CUDA versions up to 11.5.
 - Default GPU architecture has been changed from sm_20 to sm_35.
