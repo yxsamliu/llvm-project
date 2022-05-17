@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/Builtins.h"
+#include "BuiltinTargetFeatures.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
@@ -210,4 +211,10 @@ bool Builtin::Context::canBeRedeclared(unsigned ID) const {
   return ID == Builtin::NotBuiltin || ID == Builtin::BI__va_start ||
          (!hasReferenceArgsOrResult(ID) && !hasCustomTypechecking(ID)) ||
          isInStdNamespace(ID);
+}
+
+bool Builtin::evaluateRequiredTargetFeatures(
+    StringRef RequiredFeatures, const llvm::StringMap<bool> &TargetFetureMap) {
+  TargetFeatures TF(TargetFetureMap);
+  return TF.hasRequiredFeatures(RequiredFeatures);
 }

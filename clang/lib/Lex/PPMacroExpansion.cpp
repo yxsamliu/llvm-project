@@ -1639,8 +1639,16 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
             // denotes date of behavior change to support calling arbitrary
             // usual allocation and deallocation functions. Required by libc++
             return 201802;
-          default:
-            return true;
+          default: {
+            StringRef FeatureList(getBuiltinInfo().getRequiredFeatures(II->getBuiltinID()));
+            // Return true if the builtin doesn't have any required features.
+            if (FeatureList.empty())
+              return true;
+            assert(!FeatureList.contains(' ') && "Space in feature list");
+
+            return Builtin::evaluateRequiredTargetFeatures(
+                FeatureList, getTargetInfo().getTargetOpts().FeatureMap);
+          }
           }
           return true;
         } else if (II->getTokenID() != tok::identifier ||
