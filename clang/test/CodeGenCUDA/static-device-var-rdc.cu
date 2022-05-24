@@ -42,7 +42,7 @@
 
 // Check postfix for CUDA.
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple nvptx -fcuda-is-device -cuid=abc \
+// RUN: %clang_cc1 -triple nvptx -fcuda-is-device -cuid=abc \
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - %s | FileCheck \
 // RUN:   -check-prefixes=CUDA %s
 
