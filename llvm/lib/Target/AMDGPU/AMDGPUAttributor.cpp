@@ -147,6 +147,8 @@ public:
     return ST.supportsGetDoorbellID();
   }
 
+    ;
+
 private:
   /// Check if the ConstantExpr \p CE requires the queue pointer.
   static bool visitConstExpr(const ConstantExpr *CE) {

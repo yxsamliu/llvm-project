@@ -14,14 +14,14 @@
 #ifndef LLVM_SUPPORT_TARGETPARSER_H
 #define LLVM_SUPPORT_TARGETPARSER_H
 
+#include "llvm/ADT/StringRef.h"
+#include <cstdint>
 // FIXME: vector is used because that's what clang uses for subtarget feature
 // lists, but SmallVector would probably be better
-#include "llvm/Support/RISCVISAInfo.h"
 #include <vector>
 
 namespace llvm {
 
-class StringRef;
 template <typename T> class SmallVectorImpl;
 class Triple;
 
@@ -86,6 +86,7 @@ enum GPUKind : uint32_t {
   GK_GFX909 = 65,
   GK_GFX90A = 66,
   GK_GFX90C = 67,
+  GK_GFX940 = 68,
 
   GK_GFX1010 = 71,
   GK_GFX1011 = 72,
@@ -171,7 +172,6 @@ void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
 void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
 bool getCPUFeaturesExceptStdExt(CPUKind Kind, std::vector<StringRef> &Features);
 StringRef resolveTuneCPUAlias(StringRef TuneCPU, bool IsRV64);
-StringRef computeDefaultABIFromArch(const llvm::RISCVISAInfo &ISAInfo);
 
 } // namespace RISCV
 

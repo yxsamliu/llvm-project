@@ -13,12 +13,12 @@
 #ifndef LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 #define LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include <utility> // for std::pair
 
 namespace llvm {
+template <typename T> class SmallVectorImpl;
 
 template <typename T> class ArrayRef;
 class Module;
@@ -115,8 +115,7 @@ class CallInst;
 namespace VFABI {
 /// Overwrite the Vector Function ABI variants attribute with the names provide
 /// in \p VariantMappings.
-void setVectorVariantNames(CallInst *CI,
-                           const SmallVector<std::string, 8> &VariantMappings);
+void setVectorVariantNames(CallInst *CI, ArrayRef<std::string> VariantMappings);
 } // End VFABI namespace
 } // End llvm namespace
 

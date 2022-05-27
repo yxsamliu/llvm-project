@@ -469,6 +469,10 @@ public:
                                     bool SNaN = false,
                                     unsigned Depth = 0) const override;
   AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
+  AtomicExpansionKind shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
+  AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
 
   virtual const TargetRegisterClass *
   getRegClassFor(MVT VT, bool isDivergent) const override;
@@ -508,6 +512,9 @@ public:
 
   std::pair<InstructionCost, MVT> getTypeLegalizationCost(const DataLayout &DL,
                                                           Type *Ty) const;
+
+  MachineMemOperand::Flags
+  getTargetMMOFlags(const Instruction &I) const override;
 };
 
 } // End namespace llvm

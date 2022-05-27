@@ -1737,21 +1737,6 @@ bool Option::addOccurrence(unsigned pos, StringRef ArgName, StringRef Value,
   if (!MultiArg)
     NumOccurrences++; // Increment the number of times we have been seen
 
-  switch (getNumOccurrencesFlag()) {
-  case Optional:
-    if (NumOccurrences > 1)
-      return error("may only occur zero or one times!", ArgName);
-    break;
-  case Required:
-    if (NumOccurrences > 1)
-      return error("must occur exactly one time!", ArgName);
-    LLVM_FALLTHROUGH;
-  case OneOrMore:
-  case ZeroOrMore:
-  case ConsumeAfter:
-    break;
-  }
-
   return handleOccurrence(pos, ArgName, Value);
 }
 
@@ -2236,7 +2221,7 @@ protected:
 
 public:
   explicit HelpPrinter(bool showHidden) : ShowHidden(showHidden) {}
-  virtual ~HelpPrinter() {}
+  virtual ~HelpPrinter() = default;
 
   // Invoke the printer.
   void operator=(bool Value) {
@@ -2442,7 +2427,7 @@ public:
 #ifdef PACKAGE_VENDOR
     OS << PACKAGE_VENDOR << " ";
 #else
-    OS << "AOMP-12.0-3 (http://github.com/ROCm-Developer-Tools/aomp):\n Source ID:12.0-3-bebd719ff2bb58a4220658c708f91d486729dbc1\n  ";
+    OS << "LLVM (http://llvm.org/):\n  ";
 #endif
     OS << PACKAGE_NAME << " version " << PACKAGE_VERSION;
 #ifdef LLVM_VERSION_INFO

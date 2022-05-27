@@ -10,7 +10,7 @@
 #include "Symbols.h"
 #include "Target.h"
 #include "lld/Common/ErrorHandler.h"
-#include "llvm/Object/ELF.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
@@ -105,7 +105,8 @@ uint32_t AMDGPU::calcEFlagsV4() const {
 }
 
 uint32_t AMDGPU::calcEFlags() const {
-  assert(!objectFiles.empty());
+  if (objectFiles.empty())
+    return 0;
 
   uint8_t abiVersion = cast<ObjFile<ELF64LE>>(objectFiles[0])->getObj()
       .getHeader().e_ident[EI_ABIVERSION];

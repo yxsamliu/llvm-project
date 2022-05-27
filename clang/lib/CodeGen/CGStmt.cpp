@@ -12,6 +12,7 @@
 
 #include "CGDebugInfo.h"
 #include "CGOpenMPRuntime.h"
+#include "CGOpenMPRuntimeGPU.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
@@ -48,6 +49,133 @@ void CodeGenFunction::EmitStopPoint(const Stmt *S) {
 
     LastStopPoint = Loc;
   }
+}
+
+void CodeGenFunction::EmitNoLoopKernel(const Stmt *S, SourceLocation Loc) {
+  assert(S && "Null statement?");
+
+  if (!HaveInsertPoint())
+    EnsureInsertPoint();
+
+  auto handleForStmt = [](const ForStmt &FStmt, CodeGenFunction *CGFunc) {
+    auto getAddressFromDeclStmt = [](const ForStmt &FStmt,
+                                     CodeGenFunction *CGFunc) {
+      const Stmt *InitStmt = FStmt.getInit();
+      const DeclStmt &InitDeclStmt = cast<DeclStmt>(*InitStmt);
+      const Decl *InitDecl = InitDeclStmt.getSingleDecl();
+      // Do an emit so as to populate the appropriate data structures.
+      CGFunc->EmitAutoVarDecl(cast<VarDecl>(*InitDecl));
+      return CGFunc->GetAddrOfLocalVar(cast<VarDecl>(InitDecl));
+    };
+
+    auto getAddressFromExpr = [](const ForStmt &FStmt,
+                                 CodeGenFunction *CGFunc) {
+      assert(CGFunc->CGM.checkInitExpr(FStmt) && "Check for init expr failed");
+      const Stmt *InitStmt = FStmt.getInit();
+      const Expr *InitExpr = cast<Expr>(InitStmt);
+      const Expr *InitExprLHS = cast<BinaryOperator>(InitExpr)->getLHS();
+      const VarDecl *InitDecl =
+          cast<VarDecl>(cast<DeclRefExpr>(InitExprLHS)->getDecl());
+      if (!CGFunc->hasAddrOfLocalVar(InitDecl))
+        CGFunc->EmitAutoVarDecl(*InitDecl);
+      Address IvAddr = CGFunc->GetAddrOfLocalVar(InitDecl);
+      llvm::Value *InitVal =
+          CGFunc->EmitScalarExpr(cast<BinaryOperator>(InitExpr)->getRHS());
+      CGFunc->Builder.CreateStore(InitVal, IvAddr);
+      return IvAddr;
+    };
+
+    Address IvAddr = CGFunc->CGM.checkDeclStmt(FStmt)
+                         ? getAddressFromDeclStmt(FStmt, CGFunc)
+                         : getAddressFromExpr(FStmt, CGFunc);
+
+    // We generate NoLoop kernel for the device, not the host
+    assert(CGFunc->CGM.getLangOpts().OpenMPIsDevice);
+
+    // Generate myid = workgroup_id * workgroup_size + workitem_id
+    auto &RT =
+        static_cast<CGOpenMPRuntimeGPU &>(CGFunc->CGM.getOpenMPRuntime());
+
+    // workitem_id
+    llvm::Value *GpuThreadId = RT.getGPUThreadID(*CGFunc);
+
+    // workgroup_size
+    llvm::Value *WorkGroupSize = RT.getGPUNumThreads(*CGFunc);
+
+    // workgroup_id
+    llvm::Value *WorkGroupId = RT.getGPUBlockID(*CGFunc);
+
+    llvm::Value *WorkGroup =
+        CGFunc->Builder.CreateMul(WorkGroupId, WorkGroupSize);
+    llvm::Value *GlobalGpuThreadId =
+        CGFunc->Builder.CreateAdd(WorkGroup, GpuThreadId);
+
+    // Generate my_index = my_index + myid. Note that my_index was already
+    // initialized
+    llvm::Value *Gtid = CGFunc->Builder.CreateIntCast(
+        GlobalGpuThreadId, IvAddr.getElementType(), false);
+    llvm::Value *Iv =
+        CGFunc->Builder.CreateAdd(Gtid, CGFunc->Builder.CreateLoad(IvAddr));
+    CGFunc->Builder.CreateStore(Iv, IvAddr);
+
+    // Check the loop increment
+    assert(CGFunc->CGM.checkLoopStep(FStmt) && "Loop incr check failed");
+
+    // Check the loop condition
+    assert(CGFunc->CGM.checkLoopStop(FStmt) && "Loop cond check failed");
+
+    // Now branch to the appropriate code block if my_index is within upper
+    // bound
+    const BinaryOperator &FCondOp = cast<BinaryOperator>(*FStmt.getCond());
+    llvm::Value *RhsVal = CGFunc->EmitScalarExpr(FCondOp.getRHS());
+
+    assert(Iv->getType()->isIntegerTy());
+    llvm::CmpInst::Predicate IvCmpOp;
+    switch (FCondOp.getOpcode()) {
+    case BO_LT:
+      IvCmpOp = llvm::CmpInst::ICMP_ULT;
+      break;
+    case BO_GT:
+      IvCmpOp = llvm::CmpInst::ICMP_UGT;
+      break;
+    case BO_LE:
+      IvCmpOp = llvm::CmpInst::ICMP_ULE;
+      break;
+    case BO_GE:
+      IvCmpOp = llvm::CmpInst::ICMP_UGE;
+      break;
+    case BO_EQ:
+      IvCmpOp = llvm::CmpInst::ICMP_EQ;
+      break;
+    case BO_NE:
+      IvCmpOp = llvm::CmpInst::ICMP_NE;
+      break;
+    default:
+      assert(0 && "Unsupported opcode");
+      break;
+    }
+
+    llvm::Value *IvCmp = CGFunc->Builder.CreateICmp(
+        IvCmpOp, Iv,
+        CGFunc->Builder.CreateIntCast(RhsVal, Iv->getType(), false));
+
+    llvm::BasicBlock *ExecBB = CGFunc->createBasicBlock("omp.kernel.body");
+    llvm::BasicBlock *DoneBB = CGFunc->createBasicBlock("omp.kernel.done");
+    CGFunc->Builder.CreateCondBr(IvCmp, ExecBB, DoneBB);
+
+    // Emit the kernel body block
+    CGFunc->EmitBlock(ExecBB);
+    CGFunc->EmitStmt(FStmt.getBody());
+    CGFunc->EmitBranch(DoneBB);
+
+    CGFunc->EmitBlock(DoneBB);
+    CGFunc->Builder.CreateRetVoid();
+    CGFunc->Builder.ClearInsertionPoint();
+  };
+
+  const ForStmt *CapturedForStmt = CGM.getSingleForStmt(S);
+  assert(CapturedForStmt && "Cannot generate kernel for null captured stmt");
+  handleForStmt(*CapturedForStmt, this);
 }
 
 void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
@@ -396,6 +524,18 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPGenericLoopDirectiveClass:
     EmitOMPGenericLoopDirective(cast<OMPGenericLoopDirective>(*S));
     break;
+  case Stmt::OMPTeamsGenericLoopDirectiveClass:
+    llvm_unreachable("teams loop directive not supported yet.");
+    break;
+  case Stmt::OMPTargetTeamsGenericLoopDirectiveClass:
+    llvm_unreachable("target teams loop directive not supported yet.");
+    break;
+  case Stmt::OMPParallelGenericLoopDirectiveClass:
+    llvm_unreachable("parallel loop directive not supported yet.");
+    break;
+  case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
+    llvm_unreachable("target parallel loop directive not supported yet.");
+    break;
   }
 }
 
@@ -666,19 +806,34 @@ void CodeGenFunction::EmitLabelStmt(const LabelStmt &S) {
 
 void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   bool nomerge = false;
+  bool noinline = false;
+  bool alwaysinline = false;
   const CallExpr *musttail = nullptr;
 
   for (const auto *A : S.getAttrs()) {
-    if (A->getKind() == attr::NoMerge) {
+    switch (A->getKind()) {
+    default:
+      break;
+    case attr::NoMerge:
       nomerge = true;
-    }
-    if (A->getKind() == attr::MustTail) {
+      break;
+    case attr::NoInline:
+      noinline = true;
+      break;
+    case attr::AlwaysInline:
+      alwaysinline = true;
+      break;
+    case attr::MustTail:
       const Stmt *Sub = S.getSubStmt();
       const ReturnStmt *R = cast<ReturnStmt>(Sub);
       musttail = cast<CallExpr>(R->getRetValue()->IgnoreParens());
+      break;
     }
   }
   SaveAndRestore<bool> save_nomerge(InNoMergeAttributedStmt, nomerge);
+  SaveAndRestore<bool> save_noinline(InNoInlineAttributedStmt, noinline);
+  SaveAndRestore<bool> save_alwaysinline(InAlwaysInlineAttributedStmt,
+                                         alwaysinline);
   SaveAndRestore<const CallExpr *> save_musttail(MustTailCall, musttail);
   EmitStmt(S.getSubStmt(), S.getAttrs());
 }
@@ -2121,10 +2276,9 @@ std::pair<llvm::Value*, llvm::Type *> CodeGenFunction::EmitAsmInputLValue(
     if ((Size <= 64 && llvm::isPowerOf2_64(Size)) ||
         getTargetHooks().isScalarizableAsmOperand(*this, Ty)) {
       Ty = llvm::IntegerType::get(getLLVMContext(), Size);
-      Ty = llvm::PointerType::getUnqual(Ty);
 
-      return {Builder.CreateLoad(
-                  Builder.CreateBitCast(InputValue.getAddress(*this), Ty)),
+      return {Builder.CreateLoad(Builder.CreateElementBitCast(
+                  InputValue.getAddress(*this), Ty)),
               nullptr};
     }
   }
@@ -2514,10 +2668,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
           Arg = Builder.CreateZExt(Arg, OutputTy);
         else if (isa<llvm::PointerType>(OutputTy))
           Arg = Builder.CreateZExt(Arg, IntPtrTy);
-        else {
-          assert(OutputTy->isFloatingPointTy() && "Unexpected output type");
+        else if (OutputTy->isFloatingPointTy())
           Arg = Builder.CreateFPExt(Arg, OutputTy);
-        }
       }
       // Deal with the tied operands' constraint code in adjustInlineAsmType.
       ReplaceConstraint = OutputConstraints[Output];
@@ -2713,8 +2865,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     // ResultTypeRequiresCast.size() elements of RegResults.
     if ((i < ResultTypeRequiresCast.size()) && ResultTypeRequiresCast[i]) {
       unsigned Size = getContext().getTypeSize(ResultRegQualTys[i]);
-      Address A = Builder.CreateBitCast(Dest.getAddress(*this),
-                                        ResultRegTypes[i]->getPointerTo());
+      Address A = Builder.CreateElementBitCast(Dest.getAddress(*this),
+                                               ResultRegTypes[i]);
       if (getTargetHooks().isScalarizableAsmOperand(*this, TruncTy)) {
         Builder.CreateStore(Tmp, A);
         continue;
@@ -2723,9 +2875,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       QualType Ty = getContext().getIntTypeForBitwidth(Size, /*Signed*/ false);
       if (Ty.isNull()) {
         const Expr *OutExpr = S.getOutputExpr(i);
-        CGM.Error(
-            OutExpr->getExprLoc(),
-            "impossible constraint in asm: can't store value into a register");
+        CGM.getDiags().Report(OutExpr->getExprLoc(),
+                              diag::err_store_value_to_reg);
         return;
       }
       Dest = MakeAddrLValue(A, Ty);

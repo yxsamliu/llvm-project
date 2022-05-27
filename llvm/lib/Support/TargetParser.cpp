@@ -104,6 +104,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
   {{"gfx909"},    {"gfx909"},  GK_GFX909,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
   {{"gfx90a"},    {"gfx90a"},  GK_GFX90A,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
   {{"gfx90c"},    {"gfx90c"},  GK_GFX90C,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
+  {{"gfx940"},    {"gfx940"},  GK_GFX940,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
   {{"gfx1010"},   {"gfx1010"}, GK_GFX1010, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK},
   {{"gfx1011"},   {"gfx1011"}, GK_GFX1011, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK},
   {{"gfx1012"},   {"gfx1012"}, GK_GFX1012, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK},
@@ -218,6 +219,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX909:  return {9, 0, 9};
   case GK_GFX90A:  return {9, 0, 10};
   case GK_GFX90C:  return {9, 0, 12};
+  case GK_GFX940:  return {9, 4, 0};
   case GK_GFX1010: return {10, 1, 0};
   case GK_GFX1011: return {10, 1, 1};
   case GK_GFX1012: return {10, 1, 2};
@@ -329,21 +331,6 @@ bool getCPUFeaturesExceptStdExt(CPUKind Kind,
     Features.push_back("-64bit");
 
   return true;
-}
-
-StringRef computeDefaultABIFromArch(const llvm::RISCVISAInfo &ISAInfo) {
-  if (ISAInfo.getXLen() == 32) {
-    if (ISAInfo.hasExtension("d"))
-      return "ilp32d";
-    if (ISAInfo.hasExtension("e"))
-      return "ilp32e";
-    return "ilp32";
-  } else if (ISAInfo.getXLen() == 64) {
-    if (ISAInfo.hasExtension("d"))
-      return "lp64d";
-    return "lp64";
-  }
-  llvm_unreachable("Invalid XLEN");
 }
 
 } // namespace RISCV

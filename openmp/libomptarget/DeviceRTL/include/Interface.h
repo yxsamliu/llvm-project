@@ -126,13 +126,15 @@ int omp_get_default_device(void);
 
 int omp_get_num_devices(void);
 
+int omp_get_device_num(void);
+
 int omp_get_num_teams(void);
 
 int omp_get_team_num();
 
 int omp_get_initial_device(void);
 
-void *llvm_omp_get_dynamic_shared();
+void *llvm_omp_target_dynamic_shared_alloc();
 
 /// Synchronization
 ///
@@ -250,6 +252,8 @@ int32_t __kmpc_cancel_barrier(IdentTy *Loc_ref, int32_t TId);
 
 void __kmpc_barrier(IdentTy *Loc_ref, int32_t TId);
 
+void __kmpc_impl_syncthreads();
+
 void __kmpc_barrier_simple_spmd(IdentTy *Loc_ref, int32_t TId);
 
 void __kmpc_barrier_simple_generic(IdentTy *Loc_ref, int32_t TId);
@@ -350,5 +354,15 @@ int32_t __kmpc_shuffle_int32(int32_t val, int16_t delta, int16_t size);
 int64_t __kmpc_shuffle_int64(int64_t val, int16_t delta, int16_t size);
 ///}
 }
+
+/// Extra API exposed by ROCm
+extern "C" {
+int omp_ext_get_warp_id(void);
+int omp_ext_get_lane_id(void);
+int omp_ext_get_master_thread_id(void);
+int omp_ext_get_smid(void);
+int omp_ext_is_spmd_mode(void);
+unsigned long long omp_ext_get_active_threads_mask(void);
+} // extern "C"
 
 #endif

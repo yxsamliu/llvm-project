@@ -537,8 +537,6 @@ declare hidden void @ex() #0
 ; CHECK-NEXT: .cfi_undefined 59
 ; CHECK-NEXT: .cfi_undefined 60
 ; CHECK-NEXT: .cfi_undefined 61
-; CHECK-NEXT: .cfi_undefined 62
-; CHECK-NEXT: .cfi_undefined 63
 
 ; WAVE64: s_or_saveexec_b64 [[EXEC_MASK:s\[[0-9]+:[0-9]+\]]], -1
 ; WAVE32: s_or_saveexec_b32 [[EXEC_MASK:s[0-9]+]], -1

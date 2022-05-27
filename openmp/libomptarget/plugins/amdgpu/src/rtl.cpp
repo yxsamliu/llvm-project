@@ -568,32 +568,33 @@ public:
   static const int Default_WG_Size = getGridValue<64>().GV_Default_WG_Size;
 
   using MemcpyFunc = hsa_status_t (*)(hsa_signal_t, void *, void *, size_t size,
-                                      hsa_agent_t, hsa_amd_memory_pool_t);
+                                      hsa_agent_t, hsa_amd_memory_pool_t,
+                                      bool *userLocked);
   hsa_status_t freesignalpool_memcpy(void *dest, void *src, size_t size,
                                      MemcpyFunc Func, int32_t deviceId,
-                                     hsa_signal_t &signal) {
+                                     hsa_signal_t &signal, bool &userLocked) {
     hsa_agent_t device_agent = HSAAgents[deviceId];
     signal = FreeSignalPool.pop();
     if (signal.handle == 0) {
       return HSA_STATUS_ERROR;
     }
-    hsa_status_t r =
-        Func(signal, dest, src, size, device_agent, HostFineGrainedMemoryPool);
+    hsa_status_t r = Func(signal, dest, src, size, device_agent,
+                          HostFineGrainedMemoryPool, &userLocked);
     return r;
   }
 
   hsa_status_t freesignalpool_memcpy_d2h(void *dest, void *src, size_t size,
-                                         int32_t deviceId,
-                                         hsa_signal_t &signal) {
+                                         int32_t deviceId, hsa_signal_t &signal,
+                                         bool &userLocked) {
     return freesignalpool_memcpy(dest, src, size, impl_memcpy_d2h, deviceId,
-                                 signal);
+                                 signal, userLocked);
   }
 
   hsa_status_t freesignalpool_memcpy_h2d(void *dest, void *src, size_t size,
-                                         int32_t deviceId,
-                                         hsa_signal_t &signal) {
+                                         int32_t deviceId, hsa_signal_t &signal,
+                                         bool &userLocked) {
     return freesignalpool_memcpy(dest, src, size, impl_memcpy_h2d, deviceId,
-                                 signal);
+                                 signal, userLocked);
   }
 
   // Record entry point associated with device
@@ -804,6 +805,12 @@ public:
       TargetAllocTy kind = (HostAllocations.find(ptr) == HostAllocations.end())
                                ? TARGET_ALLOC_DEFAULT
                                : TARGET_ALLOC_HOST;
+      hsa_status_t err = HSA_STATUS_SUCCESS;
+
+      err = unlock_memory(ptr);
+      if (err != HSA_STATUS_SUCCESS)
+        DP("Error when unlocking memory\n");
+
       switch (kind) {
       case TARGET_ALLOC_DEFAULT:
       case TARGET_ALLOC_DEVICE: {
@@ -1104,9 +1111,10 @@ static uint64_t acquire_available_packet_id(hsa_queue_t *queue) {
 // and unlocking of host pointers used in the transfer
 class AMDGPUAsyncInfoDataTy {
 public:
-  AMDGPUAsyncInfoDataTy(){};
-  AMDGPUAsyncInfoDataTy(hsa_signal_t signal, void *hostPtr)
-      : signal(signal), hostPtr(hostPtr) {}
+  AMDGPUAsyncInfoDataTy() : alreadyCompleted(false), userLocked(false){};
+  AMDGPUAsyncInfoDataTy(hsa_signal_t signal, void *hostPtr, bool userLocked)
+      : signal(signal), hostPtr(hostPtr), alreadyCompleted(false),
+        userLocked(userLocked) {}
 
   AMDGPUAsyncInfoDataTy(const AMDGPUAsyncInfoDataTy &) = delete;
   AMDGPUAsyncInfoDataTy(AMDGPUAsyncInfoDataTy &&) = default; // assume noexcept
@@ -1114,25 +1122,38 @@ public:
   AMDGPUAsyncInfoDataTy &operator=(const AMDGPUAsyncInfoDataTy &&tmp) {
     signal = tmp.signal;
     hostPtr = tmp.hostPtr;
+    alreadyCompleted = tmp.alreadyCompleted;
+    userLocked = tmp.userLocked;
     return *this;
   }
 
   inline hsa_signal_t getSignal() const { return signal; }
 
   hsa_status_t waitToComplete() {
+    if (alreadyCompleted)
+      return HSA_STATUS_SUCCESS;
     hsa_signal_value_t init = 1;
     hsa_signal_value_t success = 0;
     hsa_status_t err = wait_for_signal(signal, init, success);
     OMPT_IF_TRACING_ENABLED(recordCopyTimingInNs(signal););
     DeviceInfo.FreeSignalPool.push(signal);
+    alreadyCompleted = true;
     return err;
   }
 
-  hsa_status_t releaseResources() { return hsa_amd_memory_unlock(hostPtr); }
+  hsa_status_t releaseResources() {
+    if (userLocked)
+      return HSA_STATUS_SUCCESS;
+
+    return hsa_amd_memory_unlock(hostPtr);
+  }
 
 private:
   hsa_signal_t signal;
   void *hostPtr; // for delayed unlocking
+  bool alreadyCompleted; // libomptarget might call synchronize multiple times:
+                         // only serve once
+  bool userLocked;       // skip unlocking when user provided locked pointer
 };
 
 // Enable delaying of kernel launch completion check
@@ -1393,8 +1414,9 @@ int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
      (long long unsigned)(Elf64_Addr)HstPtr);
 
   hsa_signal_t signal;
+  bool userLocked;
   err = DeviceInfo.freesignalpool_memcpy_d2h(HstPtr, TgtPtr, (size_t)Size,
-                                             DeviceId, signal);
+                                             DeviceId, signal, userLocked);
 
   if (err != HSA_STATUS_SUCCESS) {
     DP("Error when copying data from device to host. Pointers: "
@@ -1403,7 +1425,7 @@ int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
     return OFFLOAD_FAIL;
   }
 
-  AsyncData = std::move(AMDGPUAsyncInfoDataTy(signal, HstPtr));
+  AsyncData = std::move(AMDGPUAsyncInfoDataTy(signal, HstPtr, userLocked));
   DP("DONE Retrieve data %ld bytes, (tgt:%016llx) -> (hst:%016llx).\n", Size,
      (long long unsigned)(Elf64_Addr)TgtPtr,
      (long long unsigned)(Elf64_Addr)HstPtr);
@@ -1422,8 +1444,9 @@ int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
      (long long unsigned)(Elf64_Addr)HstPtr,
      (long long unsigned)(Elf64_Addr)TgtPtr);
   hsa_signal_t signal;
+  bool userLocked;
   err = DeviceInfo.freesignalpool_memcpy_h2d(TgtPtr, HstPtr, (size_t)Size,
-                                             DeviceId, signal);
+                                             DeviceId, signal, userLocked);
   if (err != HSA_STATUS_SUCCESS) {
     DP("Error when copying data from host to device. Pointers: "
        "host = 0x%016lx, device = 0x%016lx, size = %lld\n",
@@ -1431,7 +1454,7 @@ int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
     return OFFLOAD_FAIL;
   }
 
-  AsyncData = std::move(AMDGPUAsyncInfoDataTy(signal, HstPtr));
+  AsyncData = std::move(AMDGPUAsyncInfoDataTy(signal, HstPtr, userLocked));
   return err;
 }
 
@@ -1459,9 +1482,29 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int WarpSize,
                    EnvironmentVariables Env, int ConstWGSize, int ExecutionMode,
                    int num_teams, int thread_limit, uint64_t loop_tripcount,
                    int DeviceNumTeams) {
+  if (ExecutionMode == llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD ||
+      ExecutionMode ==
+          llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP) {
+    // ConstWGSize is used for communicating any command-line value to
+    // the plugin. ConstWGSize will either be the default workgroup
+    // size or a value set by CodeGen. If the kernel is SPMD, it means
+    // that the number of threads-per-group has not been adjusted by
+    // CodeGen. Since a generic mode may have been changed to
+    // generic_spmd by OpenMPOpt after adjustment of
+    // threads-per-group, we don't use ConstWGSize but instead start
+    // with the default for both generic and generic_spmd in the
+    // plugin so that any adjustment can be done again.
+    threadsPerGroup = ConstWGSize;
+  } else
+    threadsPerGroup = RTLDeviceInfoTy::Default_WG_Size;
 
-  threadsPerGroup = RTLDeviceInfoTy::Default_WG_Size;
-  num_groups = 0;
+  if (ExecutionMode ==
+      llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP) {
+    assert(loop_tripcount &&
+           "No loop exec mode needs a non-zero loop tripcount");
+    num_groups = ((loop_tripcount - 1) / threadsPerGroup) + 1;
+    return;
+  }
 
   int Max_Teams =
       Env.MaxTeamsDefault > 0 ? Env.MaxTeamsDefault : DeviceNumTeams;
@@ -1677,8 +1720,7 @@ int32_t runRegionLocked(int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
    * Set limit based on ThreadsPerGroup and GroupsPerDevice
    */
   int num_groups = 0;
-
-  int threadsPerGroup = RTLDeviceInfoTy::Default_WG_Size;
+  int threadsPerGroup = 0;
 
   getLaunchVals(threadsPerGroup, num_groups, DeviceInfo.WarpSize[device_id],
                 DeviceInfo.Env, KernelInfo->ConstWGSize,
@@ -1711,7 +1753,6 @@ int32_t runRegionLocked(int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
     }
 
     AsyncInfo.createMapEnteringDependencies(queue);
-
     uint64_t packet_id = acquire_available_packet_id(queue);
 
     const uint32_t mask = queue->size - 1; // size is a power of 2
@@ -2135,11 +2176,13 @@ struct device_environment {
         }
 
         hsa_signal_t signal;
-        err = DeviceInfo.freesignalpool_memcpy_h2d(
-            state_ptr, &host_device_env, state_ptr_size, device_id, signal);
+        bool userLocked;
+        err = DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &host_device_env,
+                                                   state_ptr_size, device_id,
+                                                   signal, userLocked);
         if (err == HSA_STATUS_ERROR)
           return err;
-        AMDGPUAsyncInfoDataTy AsyncInfo(signal, &host_device_env);
+        AMDGPUAsyncInfoDataTy AsyncInfo(signal, &host_device_env, userLocked);
         err = AsyncInfo.waitToComplete();
         return err;
       }
@@ -2526,13 +2569,14 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
         // write ptr to device memory so it can be used by later kernels
         hsa_signal_t signal;
+        bool userLocked;
         err = DeviceInfo.freesignalpool_memcpy_h2d(
-            state_ptr, &ptr, sizeof(void *), device_id, signal);
+            state_ptr, &ptr, sizeof(void *), device_id, signal, userLocked);
         if (err != HSA_STATUS_SUCCESS) {
           DP("memcpy install of state_ptr failed\n");
           return NULL;
         }
-        AMDGPUAsyncInfoDataTy AsyncInfo(signal, &ptr);
+        AMDGPUAsyncInfoDataTy AsyncInfo(signal, &ptr, userLocked);
         err = AsyncInfo.waitToComplete();
         if (err != HSA_STATUS_SUCCESS)
           return NULL;
@@ -2595,12 +2639,13 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
         // can access host addresses directly. There is no longer a
         // need for device copies.
         hsa_signal_t signal;
+        bool userLocked;
         err = DeviceInfo.freesignalpool_memcpy_h2d(
-            varptr, e->addr, sizeof(void *), device_id, signal);
+            varptr, e->addr, sizeof(void *), device_id, signal, userLocked);
         if (err != HSA_STATUS_SUCCESS)
           DP("Error when copying USM\n");
 
-        AMDGPUAsyncInfoDataTy AsyncInfo(signal, e->addr);
+        AMDGPUAsyncInfoDataTy AsyncInfo(signal, e->addr, userLocked);
         AsyncInfo.waitToComplete();
 
         DP("Copy linked variable host address (" DPxMOD ")"
@@ -2746,7 +2791,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
          ExecModeVal);
 
       if (ExecModeVal < llvm::omp::OMP_TGT_EXEC_MODE_GENERIC ||
-          ExecModeVal > llvm::omp::OMP_TGT_EXEC_MODE_GENERIC_SPMD) {
+          ExecModeVal > llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP) {
         DP("Error wrong exec_mode value specified in HSA code object file: "
            "%d\n",
            ExecModeVal);
@@ -2791,6 +2836,37 @@ void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *, int32_t kind) {
      (long long unsigned)(Elf64_Addr)ptr);
 
   return ptr;
+}
+
+void *__tgt_rtl_data_lock(int device_id, void *TgtPtr, int64_t size) {
+  void *ptr = TgtPtr;
+  assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
+  hsa_status_t err = HSA_STATUS_SUCCESS;
+
+  err = lock_memory(&ptr, size);
+
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error in tgt_rtl_data_lock\n");
+    return nullptr;
+  }
+
+  DP("Tgt lock data %ld bytes, (tgt:%016llx).\n", size,
+     (long long unsigned)(Elf64_Addr)ptr);
+
+  return ptr;
+}
+
+void __tgt_rtl_data_unlock(int device_id, void *TgtPtr) {
+  assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
+  hsa_status_t err = HSA_STATUS_SUCCESS;
+
+  err = unlock_memory(TgtPtr);
+
+  if (err != HSA_STATUS_SUCCESS)
+    DP("Error in tgt_rtl_data_unlock\n");
+
+  DP("Tgt unlock data (tgt:%016llx).\n",
+     (long long unsigned)(Elf64_Addr)TgtPtr);
 }
 
 int32_t __tgt_rtl_data_submit(int device_id, void *tgt_ptr, void *hst_ptr,
@@ -2849,6 +2925,7 @@ int32_t __tgt_rtl_data_retrieve_async(int device_id, void *hst_ptr,
     // complete
     if (AsyncInfoQueue->needToWaitForKernel())
       AsyncInfoQueue->getKernelInfo().waitToComplete();
+    // OMPT_END for kernel goes here
 
     int32_t rc = dataRetrieve(device_id, hst_ptr, tgt_ptr, size, AsyncData);
     reinterpret_cast<AMDGPUAsyncInfoQueueTy *>(AsyncInfo->Queue)
@@ -3003,6 +3080,28 @@ hsa_status_t device_malloc(void **mem, size_t size, int device_id) {
   return hsa_amd_memory_pool_allocate(MemoryPool, size, 0, mem);
 }
 
+hsa_status_t lock_memory(void **mem, size_t size) {
+  void *lockedPtr = nullptr;
+  hsa_status_t err = HSA_STATUS_SUCCESS;
+
+  if (already_locked(*mem, &err, nullptr))
+    return HSA_STATUS_SUCCESS;
+
+  err = hsa_amd_memory_lock(*mem, size, nullptr, 0, (void **)&lockedPtr);
+  if (err != HSA_STATUS_SUCCESS)
+    return err;
+
+  *mem = lockedPtr;
+  return err;
+}
+
+hsa_status_t unlock_memory(void *mem) {
+  hsa_status_t err = HSA_STATUS_SUCCESS;
+  if (already_locked(mem, &err, nullptr))
+    err = hsa_amd_memory_unlock(mem);
+  return err;
+}
+
 hsa_status_t impl_free(void *mem) { return core::Runtime::Memfree(mem); }
 
 hsa_status_t ftn_assign_wrapper(void *arg0, void *arg1, void *arg2, void *arg3,
@@ -3022,10 +3121,13 @@ hsa_status_t impl_memcpy_no_signal(void *dest, void *src, size_t size,
   hsa_agent_t device_agent = DeviceInfo.HSAAgents[deviceId];
   auto MemoryPool = DeviceInfo.HostFineGrainedMemoryPool;
   hsa_status_t r;
+  bool userLocked;
   if (host2Device)
-    r = impl_memcpy_h2d(sig, dest, src, size, device_agent, MemoryPool);
+    r = impl_memcpy_h2d(sig, dest, src, size, device_agent, MemoryPool,
+                        &userLocked);
   else
-    r = impl_memcpy_d2h(sig, dest, src, size, device_agent, MemoryPool);
+    r = impl_memcpy_d2h(sig, dest, src, size, device_agent, MemoryPool,
+                        &userLocked);
 
   hsa_status_t rc = hsa_signal_destroy(sig);
 
