@@ -1809,7 +1809,9 @@ bool tools::SDLSearch(const Driver &D, const llvm::opt::ArgList &DriverArgs,
     //       libdevice/lib<libname>.bc
     //       lib<libname>.bc
 
-    for (StringRef Base : {LibBcPrefix, LibPrefix}) {
+    llvm::SmallVector<std::string> Prefixes;
+    Prefixes.append({LibBcPrefix, LibPrefix});
+    for (StringRef Base : Prefixes) {
       const auto *Ext = Base.contains(LibBcPrefix) ? ".a" : ".bc";
 
       for (auto Suffix : {Twine(Lib + "-" + Arch + "-" + TargetID).str(),
@@ -1881,8 +1883,14 @@ bool tools::GetSDLFromOffloadArchive(
   for (auto LPath : LibraryPaths) {
     ArchiveOfBundles.clear();
 
-    AOBFileNames.push_back(Twine(LPath + "/libdevice/lib" + Lib + ".a").str());
-    AOBFileNames.push_back(Twine(LPath + "/lib" + Lib + ".a").str());
+    llvm::Triple Triple(D.getTargetTriple());
+    bool IsMSVC = Triple.isWindowsMSVCEnvironment();
+    for (auto Prefix : {"/libdevice/", "/"}) {
+      if (IsMSVC) {
+        AOBFileNames.push_back(Twine(LPath + Prefix + Lib + ".lib").str());
+      }
+      AOBFileNames.push_back(Twine(LPath + Prefix + "lib" + Lib + ".a").str());
+    }
 
     for (auto AOB : AOBFileNames) {
       if (llvm::sys::fs::exists(AOB)) {
