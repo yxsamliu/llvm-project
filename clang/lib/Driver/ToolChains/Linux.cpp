@@ -915,11 +915,11 @@ void Linux::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
 void Linux::AddHIPRuntimeLibArgs(const ArgList &Args,
                                  ArgStringList &CmdArgs) const {
+  // HIP needs compiler-rt for _Float16 conversion functions.
   CmdArgs.append(
       {Args.MakeArgString(StringRef("-L") + RocmInstallation.getLibPath()),
-       "-rpath", Args.MakeArgString(RocmInstallation.getLibPath())});
-
-  CmdArgs.push_back("-lamdhip64");
+       "-rpath", Args.MakeArgString(RocmInstallation.getLibPath()),
+       "-lamdhip64", Args.MakeArgString(getCompilerRT(Args, "builtins"))});
 }
 
 void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,

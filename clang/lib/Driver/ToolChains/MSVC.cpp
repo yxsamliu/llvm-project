@@ -479,9 +479,11 @@ void MSVCToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
 void MSVCToolChain::AddHIPRuntimeLibArgs(const ArgList &Args,
                                          ArgStringList &CmdArgs) const {
+  // HIP needs compiler-rt for _Float16 conversion functions.
   CmdArgs.append({Args.MakeArgString(StringRef("-libpath:") +
                                      RocmInstallation.getLibPath()),
-                  "amdhip64.lib"});
+                  "amdhip64.lib",
+                  Args.MakeArgString(getCompilerRT(Args, "builtins"))});
 }
 
 void MSVCToolChain::printVerboseInfo(raw_ostream &OS) const {
