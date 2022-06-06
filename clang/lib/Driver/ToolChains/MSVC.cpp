@@ -482,6 +482,8 @@ void MSVCToolChain::AddHIPRuntimeLibArgs(const ArgList &Args,
   CmdArgs.append({Args.MakeArgString(StringRef("-libpath:") +
                                      RocmInstallation.getLibPath()),
                   "amdhip64.lib"});
+  CmdArgs.push_back(Args.MakeArgString("clang_rt.builtins-" +
+                                       getTriple().getArchName() + ".lib"));
 }
 
 void MSVCToolChain::printVerboseInfo(raw_ostream &OS) const {

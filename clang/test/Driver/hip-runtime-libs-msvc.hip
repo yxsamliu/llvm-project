@@ -7,4 +7,6 @@
 // RUN:   --rocm-path=%S/Inputs/rocm %t.o 2>&1 \
 // RUN:   | FileCheck %s
 
+// CHECK: "-libpath:{{.*lib.*windows}}"
 // CHECK: "-libpath:{{.*Inputs.*rocm.*lib}}" "amdhip64.lib"
+// CHECK: "clang_rt.builtins-x86_64.lib"

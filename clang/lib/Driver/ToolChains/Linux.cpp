@@ -918,6 +918,8 @@ void Linux::AddHIPRuntimeLibArgs(const ArgList &Args,
        "-rpath", Args.MakeArgString(RocmInstallation.getLibPath())});
 
   CmdArgs.push_back("-lamdhip64");
+  CmdArgs.push_back(
+      Args.MakeArgString("-lclang_rt.builtins-" + getTriple().getArchName()));
 }
 
 void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,

@@ -5,12 +5,12 @@
 // Test HIP runtime lib args specified by --rocm-path.
 // RUN: %clang -### --hip-link -target x86_64-linux-gnu \
 // RUN:   --rocm-path=%S/Inputs/rocm %t.o 2>&1 \
-// RUN:   | FileCheck -check-prefixes=ROCM-PATH %s
+// RUN:   | FileCheck -check-prefixes=ROCM-PATH,COMMON %s
 
 // Test HIP runtime lib args specified by environment variable ROCM_PATH.
 // RUN: env ROCM_PATH=%S/Inputs/rocm %clang -### --hip-link \
 // RUN:   -target x86_64-linux-gnu %t.o 2>&1 \
-// RUN:   | FileCheck -check-prefixes=ROCM-PATH %s
+// RUN:   | FileCheck -check-prefixes=ROCM-PATH,COMMON %s
 
 // Test detecting latest /opt/rocm-{release} directory.
 // RUN: rm -rf %T/opt
@@ -19,7 +19,7 @@
 // RUN: cp -r %S/Inputs/rocm %T/opt/rocm-3.10.0
 // RUN: %clang -### --hip-link -target x86_64-linux-gnu \
 // RUN:   --sysroot=%T %t.o 2>&1 \
-// RUN:   | FileCheck -check-prefixes=ROCM-REL %s
+// RUN:   | FileCheck -check-prefixes=ROCM-REL,COMMON %s
 
 // Test HIP runtime lib is not linked without --hip-link.
 // RUN: %clang -### -target x86_64-linux-gnu \
@@ -36,8 +36,11 @@
 // RUN:   --rocm-path=%S/Inputs/rocm %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefixes=NOHIPRT %s
 
+// COMMON: "-L{{.*}}lib/x86_64-unknown-linux-gnu"
 // ROCM-PATH: "-L[[HIPRT:.*/Inputs/rocm/lib]]" "-rpath" "[[HIPRT]]" "-lamdhip64"
 // ROCM-REL: "-L[[HIPRT:.*/opt/rocm-3.10.0/lib]]" "-rpath" "[[HIPRT]]" "-lamdhip64"
+// COMMON: "-lclang_rt.builtins-x86_64"
 // NOHIPRT-NOT: "-L{{.*/Inputs/rocm/lib}}"
 // NOHIPRT-NOT: "-rpath" "{{.*/Inputs/rocm/lib}}"
 // NOHIPRT-NOT: "-lamdhip64"
+// NOHIPRT-NOT: "-lclang_rt.builtins-x86_64"
