@@ -55,7 +55,7 @@ else()
 endif()
 
 # Install plugin under the lib destination folder.
-install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${RUN_PACKAGE}${OPENMP_INSTALL_LIBDIR}")
 
 target_link_libraries(omptarget.rtl.cuda
   elf_common
