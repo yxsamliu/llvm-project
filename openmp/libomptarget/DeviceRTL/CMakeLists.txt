@@ -18,11 +18,6 @@ if (NOT LIBOMPTARGET_BUILD_DEVICERTL_BCLIB)
   return()
 endif()
 
-if (NOT LIBOMPTARGET_LLVM_INCLUDE_DIRS)
-  libomptarget_say("Not building DeviceRTL: Missing definition for LIBOMPTARGET_LLVM_INCLUDE_DIRS")
-  return()
-endif()
-
 if (LLVM_DIR)
   # Builds that use pre-installed LLVM have LLVM_DIR set.
   find_program(CLANG_TOOL clang PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
@@ -96,7 +91,7 @@ foreach(sm ${nvptx_sm_list})
   endif()
 endforeach()
 
-set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx1030 gfx1031 gfx1036)
+set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx90c gfx940 gfx1010 gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036)
 if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
   set(amdgpu_mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
 endif()
@@ -106,6 +101,16 @@ endif()
 set(LIBOMPTARGET_DEVICE_DEBUG FALSE CACHE BOOL
   "Activate DeviceRTL debug messages.")
 
+set(include_files
+  ${include_directory}/Configuration.h
+  ${include_directory}/Debug.h
+  ${include_directory}/Interface.h
+  ${include_directory}/Mapping.h
+  ${include_directory}/State.h
+  ${include_directory}/Synchronization.h
+  ${include_directory}/Types.h
+  ${include_directory}/Utils.h
+)
 
 set(src_files
   ${source_directory}/Configuration.cpp
@@ -120,6 +125,7 @@ set(src_files
   ${source_directory}/Tasking.cpp
   ${source_directory}/Utils.cpp
   ${source_directory}/Workshare.cpp
+  ${source_directory}/ExtraMapping.cpp
 )
 
 set(clang_opt_flags -O1 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=512)
@@ -161,7 +167,7 @@ function(compileDeviceRTLLibrary target_cpu target_name)
       -Xclang -target-cpu -Xclang ${target_cpu}
       ${target_bc_flags}
       ${infile} -o ${outfile}
-      DEPENDS ${infile}
+      DEPENDS ${infile} ${include_files}
       IMPLICIT_DEPENDS CXX ${infile}
       COMMENT "Building LLVM bitcode ${outfile}"
       VERBATIM
@@ -285,7 +291,7 @@ function(compileDeviceRTLLibrary target_cpu target_name)
 
   set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${bclib_name})
 
-  set(bclib_target_name "omptarget-new-${target_name}-${target_cpu}-bc")
+  set(bclib_target_name "omptarget-${target_name}-${target_cpu}-bc")
 
   add_custom_target(${bclib_target_name} ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name})
 
@@ -293,16 +299,19 @@ function(compileDeviceRTLLibrary target_cpu target_name)
   add_custom_command(TARGET ${bclib_target_name} POST_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
                     ${LIBOMPTARGET_LIBRARY_DIR})
+  add_dependencies("omptarget.devicertl.${target_name}" "${bclib_target_name}")
 
   # Install bitcode library under the lib destination folder.
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name} DESTINATION "${DEVEL_PACKAGE}${OPENMP_INSTALL_LIBDIR}")
 endfunction()
 
 # Generate a Bitcode library for all the compute capabilities the user requested
+add_custom_target(omptarget.devicertl.nvptx)
 foreach(sm ${nvptx_sm_list})
   compileDeviceRTLLibrary(sm_${sm} nvptx -target nvptx64-nvidia-cuda -Xclang -target-feature -Xclang +ptx61 "-D__CUDA_ARCH__=${sm}0")
 endforeach()
 
+add_custom_target(omptarget.devicertl.amdgpu)
 foreach(mcpu ${amdgpu_mcpus})
   compileDeviceRTLLibrary(${mcpu} amdgpu -target amdgcn-amd-amdhsa -D__AMDGCN__ -nogpulib)
 endforeach()

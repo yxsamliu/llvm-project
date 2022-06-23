@@ -48,6 +48,10 @@ int64_t __tgt_rtl_init_requires(int64_t RequiresFlags);
 // return an error code.
 int32_t __tgt_rtl_init_device(int32_t ID);
 
+// Deinitialize the specified device. In case of success return 0; otherwise
+// return an error code.
+int32_t __tgt_rtl_deinit_device(int32_t ID);
+
 // Pass an executable image section described by image to the specified
 // device and prepare an address table of target entities. In case of error,
 // return NULL. Otherwise, return a pointer to the built address table.
@@ -69,6 +73,11 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t ID,
 // to use (e.g. shared, host, device).
 void *__tgt_rtl_data_alloc(int32_t ID, int64_t Size, void *HostPtr,
                            int32_t Kind);
+
+// Lock memory pointed at by TgtPtr of Size bytes. Returns locked pointer.
+void *__tgt_rtl_data_lock(int32_t ID, void *TgtPtr, int64_t Size);
+// Unlock memory pointed at by TgtPtr. Returns nothing.
+void __tgt_rtl_data_unlock(int32_t ID, void *TgtPtr);
 
 // Pass the data content to the target device using the target address. In case
 // of success, return zero. Otherwise, return an error code.

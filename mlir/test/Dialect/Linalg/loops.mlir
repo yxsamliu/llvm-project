@@ -166,7 +166,7 @@ func @dot_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf3
 //       CHECKPARALLEL:   store %[[res]], %{{.*}}[] : memref<f32>
 
 func @fill_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: f32) {
-  linalg.fill(%arg1, %arg0) : f32, memref<?xf32, offset: ?, strides: [1]>
+  linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<?xf32, offset: ?, strides: [1]>)
   return
 }
 // CHECK-LABEL: func @fill_view(
@@ -180,7 +180,7 @@ func @fill_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: f32) {
 //       CHECKPARALLEL:     store %{{.*}}, %{{.*}}[%{{.*}}] : memref<?xf32, #[[$strided1D]]>
 
 func @fill_view0(%arg0: memref<f32>, %arg1: f32) {
-  linalg.fill(%arg1, %arg0) : f32, memref<f32>
+  linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<f32>)
   return
 }
 // CHECK-LABEL: func @fill_view0(%{{.*}}: memref<f32>, %{{.*}}: f32) {
@@ -190,7 +190,7 @@ func @fill_view0(%arg0: memref<f32>, %arg1: f32) {
 //       CHECKPARALLEL:   store %{{.*}}, %{{.*}}[] : memref<f32>
 
 func @fill_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1: f32) {
-  linalg.fill(%arg1, %arg0) : f32, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>
+  linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>)
   return
 }
 // CHECK-LABEL: func @fill_view3(
@@ -508,7 +508,7 @@ func @generic_index_op_1D_reduce(%arg0: memref<?xf32>,
       %i = linalg.index 0 : index
       %0 = arith.constant 0 : index
       %1 = arith.cmpi eq, %0, %i : index
-      %2 = select %1, %b, %c : f32
+      %2 = arith.select %1, %b, %c : f32
       %3 = arith.addf %a, %2 : f32
       linalg.yield %3 : f32
   }
@@ -522,7 +522,7 @@ func @generic_index_op_1D_reduce(%arg0: memref<?xf32>,
 //       CHECK:   %[[a:.*]] = memref.load %[[ARG0]][%[[i]]]
 //       CHECK:   %[[b:.*]] = memref.load %[[ARG1]][]
 //       CHECK:   %[[c:.*]] = memref.load %[[ARG2]][]
-//       CHECK:   %[[d:.*]] = select %{{.*}}, %[[b]], %[[c]]
+//       CHECK:   %[[d:.*]] = arith.select %{{.*}}, %[[b]], %[[c]]
 //       CHECK:   %[[e:.*]] = arith.addf %[[a]], %[[d]]
 //       CHECK:   store %[[e]], %[[ARG2]][]
 
@@ -534,7 +534,7 @@ func @generic_index_op_1D_reduce(%arg0: memref<?xf32>,
 //       CHECKPARALLEL:   %[[a:.*]] = memref.load %[[ARG0]][%[[i]]]
 //       CHECKPARALLEL:   %[[b:.*]] = memref.load %[[ARG1]][]
 //       CHECKPARALLEL:   %[[c:.*]] = memref.load %[[ARG2]][]
-//       CHECKPARALLEL:   %[[d:.*]] = select %{{.*}}, %[[b]], %[[c]]
+//       CHECKPARALLEL:   %[[d:.*]] = arith.select %{{.*}}, %[[b]], %[[c]]
 //       CHECKPARALLEL:   %[[e:.*]] = arith.addf %[[a]], %[[d]]
 //       CHECKPARALLEL:   store %[[e]], %[[ARG2]][]
 

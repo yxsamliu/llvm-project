@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock-matchers.h"
 #include "gmock/gmock-more-matchers.h"
 #include "gmock/gmock.h"
@@ -661,6 +662,80 @@ TEST_F(SymbolCollectorTest, ObjCClassExtensions) {
               UnorderedElementsAre(
                   AllOf(qName("Cat"), declRange(Header.range("catdecl"))),
                   qName("Cat::meow"), qName("Cat::pur")));
+}
+
+TEST_F(SymbolCollectorTest, ObjCFrameworkIncludeHeader) {
+  CollectorOpts.CollectIncludePath = true;
+  auto FrameworksPath = testPath("Frameworks/");
+  std::string FrameworkHeader = R"(
+    __attribute((objc_root_class))
+    @interface NSObject
+    @end
+  )";
+  InMemoryFileSystem->addFile(
+      testPath("Frameworks/Foundation.framework/Headers/NSObject.h"), 0,
+      llvm::MemoryBuffer::getMemBuffer(FrameworkHeader));
+  std::string PrivateFrameworkHeader = R"(
+    #import <Foundation/NSObject.h>
+
+    @interface PrivateClass : NSObject
+    @end
+  )";
+  InMemoryFileSystem->addFile(
+      testPath(
+          "Frameworks/Foundation.framework/PrivateHeaders/NSObject+Private.h"),
+      0, llvm::MemoryBuffer::getMemBuffer(PrivateFrameworkHeader));
+
+  std::string Header = R"(
+    #import <Foundation/NSObject+Private.h>
+    #import <Foundation/NSObject.h>
+
+    @interface Container : NSObject
+    @end
+  )";
+  std::string Main = "";
+  TestFileName = testPath("test.m");
+  runSymbolCollector(Header, Main, {"-F", FrameworksPath, "-xobjective-c++"});
+  EXPECT_THAT(
+      Symbols,
+      UnorderedElementsAre(
+          AllOf(qName("NSObject"), includeHeader("\"Foundation/NSObject.h\"")),
+          AllOf(qName("PrivateClass"),
+                includeHeader("\"Foundation/NSObject+Private.h\"")),
+          AllOf(qName("Container"))));
+
+  // After adding the umbrella headers, we should use that spelling instead.
+  std::string UmbrellaHeader = R"(
+    #import <Foundation/NSObject.h>
+  )";
+  InMemoryFileSystem->addFile(
+      testPath("Frameworks/Foundation.framework/Headers/Foundation.h"), 0,
+      llvm::MemoryBuffer::getMemBuffer(UmbrellaHeader));
+  std::string PrivateUmbrellaHeader = R"(
+    #import <Foundation/NSObject+Private.h>
+  )";
+  InMemoryFileSystem->addFile(
+      testPath("Frameworks/Foundation.framework/PrivateHeaders/"
+               "Foundation_Private.h"),
+      0, llvm::MemoryBuffer::getMemBuffer(PrivateUmbrellaHeader));
+  runSymbolCollector(Header, Main, {"-F", FrameworksPath, "-xobjective-c++"});
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(qName("NSObject"),
+                        includeHeader("\"Foundation/Foundation.h\"")),
+                  AllOf(qName("PrivateClass"),
+                        includeHeader("\"Foundation/Foundation_Private.h\"")),
+                  AllOf(qName("Container"))));
+
+  runSymbolCollector(Header, Main,
+                     {"-iframework", FrameworksPath, "-xobjective-c++"});
+  EXPECT_THAT(
+      Symbols,
+      UnorderedElementsAre(
+          AllOf(qName("NSObject"), includeHeader("<Foundation/Foundation.h>")),
+          AllOf(qName("PrivateClass"),
+                includeHeader("<Foundation/Foundation_Private.h>")),
+          AllOf(qName("Container"))));
 }
 
 TEST_F(SymbolCollectorTest, Locations) {
@@ -1504,15 +1579,22 @@ TEST_F(SymbolCollectorTest, IWYUPragmaWithDoubleQuotes) {
 }
 
 TEST_F(SymbolCollectorTest, SkipIncFileWhenCanonicalizeHeaders) {
-  CollectorOpts.CollectIncludePath = true;
-  CanonicalIncludes Includes;
-  Includes.addMapping(TestHeaderName, "<canonical>");
-  CollectorOpts.Includes = &Includes;
   auto IncFile = testPath("test.inc");
   auto IncURI = URI::create(IncFile).toString();
   InMemoryFileSystem->addFile(IncFile, 0,
                               llvm::MemoryBuffer::getMemBuffer("class X {};"));
-  runSymbolCollector("#include \"test.inc\"\nclass Y {};", /*Main=*/"",
+  llvm::IntrusiveRefCntPtr<FileManager> Files(
+      new FileManager(FileSystemOptions(), InMemoryFileSystem));
+  std::string HeaderCode = "#include \"test.inc\"\nclass Y {};";
+  InMemoryFileSystem->addFile(TestHeaderName, 0,
+                              llvm::MemoryBuffer::getMemBuffer(HeaderCode));
+  auto File = Files->getFileRef(TestHeaderName);
+  ASSERT_THAT_EXPECTED(File, llvm::Succeeded());
+  CanonicalIncludes Includes;
+  Includes.addMapping(*File, "<canonical>");
+  CollectorOpts.CollectIncludePath = true;
+  CollectorOpts.Includes = &Includes;
+  runSymbolCollector(HeaderCode, /*Main=*/"",
                      /*ExtraArgs=*/{"-I", testRoot()});
   EXPECT_THAT(Symbols,
               UnorderedElementsAre(AllOf(qName("X"), declURI(IncURI),

@@ -78,8 +78,6 @@ enum class IdentFlag {
 enum class OMPScheduleType {
   StaticChunked = 33,
   Static = 34, // static unspecialized
-  DistributeChunked = 91,
-  Distribute = 92,
   DynamicChunked = 35,
   GuidedChunked = 36, // guided unspecialized
   Runtime = 37,
@@ -88,6 +86,16 @@ enum class OMPScheduleType {
   StaticBalancedChunked = 45, // static with chunk adjustment (e.g., simd)
   GuidedSimd = 46,            // guided with chunk adjustment
   RuntimeSimd = 47,           // runtime with chunk adjustment
+
+  OrderedStaticChunked = 65,
+  OrderedStatic = 66, // ordered static unspecialized
+  OrderedDynamicChunked = 67,
+  OrderedGuidedChunked = 68,
+  OrderedRuntime = 69,
+  OrderedAuto = 70, // ordered auto
+
+  DistributeChunked = 91, // distribute static chunked
+  Distribute = 92,        // distribute static unspecialized
 
   ModifierMonotonic =
       (1 << 29), // Set if the monotonic schedule modifier was present
@@ -102,7 +110,8 @@ enum OMPTgtExecModeFlags : int8_t {
   OMP_TGT_EXEC_MODE_SPMD = 1 << 1,
   OMP_TGT_EXEC_MODE_GENERIC_SPMD =
       OMP_TGT_EXEC_MODE_GENERIC | OMP_TGT_EXEC_MODE_SPMD,
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue */ OMP_TGT_EXEC_MODE_GENERIC_SPMD)
+  OMP_TGT_EXEC_MODE_SPMD_NO_LOOP = 1 << 2,
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue */ OMP_TGT_EXEC_MODE_SPMD_NO_LOOP)
 };
 
 enum class AddressSpace : unsigned {
@@ -115,6 +124,9 @@ enum class AddressSpace : unsigned {
 
 /// \note This needs to be kept in sync with interop.h enum kmp_interop_type_t.:
 enum class OMPInteropType { Unknown, Target, TargetSync };
+
+/// Atomic compare operations. Currently OpenMP only supports ==, >, and <.
+enum class OMPAtomicCompareOp : unsigned { EQ, MIN, MAX };
 
 } // end namespace omp
 

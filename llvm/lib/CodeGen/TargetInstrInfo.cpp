@@ -32,8 +32,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
-#include <cctype>
 
 using namespace llvm;
 
@@ -41,8 +39,7 @@ static cl::opt<bool> DisableHazardRecognizer(
   "disable-sched-hazard", cl::Hidden, cl::init(false),
   cl::desc("Disable hazard detection during preRA scheduling"));
 
-TargetInstrInfo::~TargetInstrInfo() {
-}
+TargetInstrInfo::~TargetInstrInfo() = default;
 
 const TargetRegisterClass*
 TargetInstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
@@ -874,11 +871,13 @@ void TargetInstrInfo::reassociateOps(
   MachineInstrBuilder MIB1 =
       BuildMI(*MF, Prev.getDebugLoc(), TII->get(Opcode), NewVR)
           .addReg(RegX, getKillRegState(KillX))
-          .addReg(RegY, getKillRegState(KillY));
+          .addReg(RegY, getKillRegState(KillY))
+          .setMIFlags(Prev.getFlags());
   MachineInstrBuilder MIB2 =
       BuildMI(*MF, Root.getDebugLoc(), TII->get(Opcode), RegC)
           .addReg(RegA, getKillRegState(KillA))
-          .addReg(NewVR, getKillRegState(true));
+          .addReg(NewVR, getKillRegState(true))
+          .setMIFlags(Root.getFlags());
 
   setSpecialOperandAttr(Root, Prev, *MIB1, *MIB2);
 
@@ -1400,7 +1399,7 @@ std::string TargetInstrInfo::createMIROperandComment(
   return OS.str();
 }
 
-TargetInstrInfo::PipelinerLoopInfo::~PipelinerLoopInfo() {}
+TargetInstrInfo::PipelinerLoopInfo::~PipelinerLoopInfo() = default;
 
 void TargetInstrInfo::mergeOutliningCandidateAttributes(
     Function &F, std::vector<outliner::Candidate> &Candidates) const {

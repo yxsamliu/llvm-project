@@ -14,7 +14,6 @@
 #define MLIR_DIALECT_VECTOR_IR_VECTOROPS_H
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -103,7 +102,7 @@ void populateVectorTransferLoweringPatterns(
 
 /// These patterns materialize masks for various vector ops such as transfers.
 void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
-                                               bool indexOptimizations);
+                                               bool force32BitVectorIndices);
 
 /// Collect a set of patterns to propagate insert_map/extract_map in the ssa
 /// chain.

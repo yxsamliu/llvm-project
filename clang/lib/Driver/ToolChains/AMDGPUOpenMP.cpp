@@ -287,14 +287,6 @@ const char *AMDGCN::OpenMPLinker::constructLlcCommand(
   LlcArgs.push_back(
       Args.MakeArgString(Twine("-filetype=") + (OutputIsAsm ? "asm" : "obj")));
 
-  // Add the object code version. Example: -mcode-object-version=3
-  unsigned ObjCodeVer =
-    reinterpret_cast<const AMDGPUToolChain &>(getToolChain())
-	  .GetCodeObjectVersion();
-  LlcArgs.push_back(
-    Args.MakeArgString(Twine("--amdhsa-code-object-version=") +
-	               Twine(ObjCodeVer)));
-
   // Get the environment variable ROCM_LLC_ARGS and add to llc.
   Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LLC_ARGS");
   if (OptEnv.hasValue()) {
@@ -531,7 +523,7 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
   for (auto Path :
        RocmInstallation.getRocmDeviceLibPathArg())
     LibraryPaths.push_back(DriverArgs.MakeArgString(Path));
-#if 0 //upstream fixme
+
   // Link the bitcode library late if we're using device LTO.
   if (getDriver().isUsingLTO(/* IsOffload */ true))
     return;
@@ -539,10 +531,9 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
   std::string BitcodeSuffix;
   if (DriverArgs.hasFlag(options::OPT_fopenmp_target_new_runtime,
                          options::OPT_fno_openmp_target_new_runtime, true))
-    BitcodeSuffix = "new-amdgpu-" + GPUArch;
+    BitcodeSuffix = llvm::Twine("new-amdgpu-" + GPUArch).str();
   else
-    BitcodeSuffix = "amdgcn-" + GPUArch;
-#endif
+    BitcodeSuffix = llvm::Twine("amdgcn-" + GPUArch).str();
 
   addDirectoryList(DriverArgs, LibraryPaths, "", "HIP_DEVICE_LIB_PATH");
 

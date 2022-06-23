@@ -424,6 +424,8 @@ private:
   bool HostcallPtr : 1;
   bool HeapPtr : 1;
 
+  bool MayNeedAGPRs : 1;
+
   // The hard-wired high half of the address of the global information table
   // for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since
   // current hardware only allows a 16 bit value.
@@ -504,7 +506,6 @@ public: // FIXME
   Register SGPRForBPSaveRestoreCopy;
   Optional<int> BasePointerSaveIndex;
 
-  Optional<int> ReturnAddressSaveIndex;
   Optional<int> EXECSaveIndex;
 
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg);
@@ -528,13 +529,6 @@ public:
   }
 
   ArrayRef<SGPRSpillVGPR> getSGPRSpillVGPRs() const { return SpillVGPRs; }
-
-  void setSGPRSpillVGPRs(Register NewVGPR, Optional<int> newFI, int Index) {
-    SpillVGPRs[Index].VGPR = NewVGPR;
-    SpillVGPRs[Index].FI = newFI;
-  }
-
-  bool removeVGPRForSGPRSpill(Register ReservedVGPR, MachineFunction &MF);
 
   ArrayRef<MCPhysReg> getAGPRSpillVGPRs() const {
     return SpillAGPR;
@@ -969,6 +963,14 @@ public:
       Occupancy = Limit;
     limitOccupancy(MF);
   }
+
+  bool mayNeedAGPRs() const {
+    return MayNeedAGPRs;
+  }
+
+  // \returns true if a function has a use of AGPRs via inline asm or
+  // has a call which may use it.
+  bool mayUseAGPRs(const MachineFunction &MF) const;
 
   // \returns true if a function needs or may need AGPRs.
   bool usesAGPRs(const MachineFunction &MF) const;

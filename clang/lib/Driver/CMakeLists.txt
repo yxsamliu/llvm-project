@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   ProfileData
   Support
   Object
+  WindowsDriver
   )
 
 if(WIN32)
@@ -27,6 +28,7 @@ add_clang_library(clangDriver
   ToolChain.cpp
   ToolChains/Arch/AArch64.cpp
   ToolChains/Arch/ARM.cpp
+  ToolChains/Arch/CSKY.cpp
   ToolChains/Arch/M68k.cpp
   ToolChains/Arch/Mips.cpp
   ToolChains/Arch/PPC.cpp
@@ -47,6 +49,7 @@ add_clang_library(clangDriver
   ToolChains/CommonArgs.cpp
   ToolChains/Contiki.cpp
   ToolChains/CrossWindows.cpp
+  ToolChains/CSKYToolChain.cpp
   ToolChains/Cuda.cpp
   ToolChains/Darwin.cpp
   ToolChains/DragonFly.cpp

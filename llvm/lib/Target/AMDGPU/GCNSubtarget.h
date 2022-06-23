@@ -70,12 +70,12 @@ protected:
   bool FullRate64Ops;
 
   // Dynamically set bits that enable features.
-  bool FlatForGlobal;
-  bool AutoWaitcntBeforeBarrier;
-  bool UnalignedScratchAccess;
-  bool UnalignedAccessMode;
-  bool HasApertureRegs;
-  bool SupportsXNACK;
+  bool FlatForGlobal = false;
+  bool AutoWaitcntBeforeBarrier = false;
+  bool UnalignedScratchAccess = false;
+  bool UnalignedAccessMode = false;
+  bool HasApertureRegs = false;
+  bool SupportsXNACK = false;
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
   // for XNACK.
@@ -101,6 +101,7 @@ protected:
   bool GFX8Insts;
   bool GFX9Insts;
   bool GFX90AInsts;
+  bool GFX940Insts;
   bool GFX10Insts;
   bool GFX10_3Insts;
   bool GFX7GFX8GFX9Insts;
@@ -123,6 +124,7 @@ protected:
   bool HasDPP8;
   bool Has64BitDPP;
   bool HasPackedFP32Ops;
+  bool HasImageInsts;
   bool HasExtendedImageInsts;
   bool HasR128A16;
   bool HasGFX10A16;
@@ -161,6 +163,7 @@ protected:
   bool FlatScratchInsts;
   bool ScalarFlatScratchInsts;
   bool HasArchitectedFlatScratch;
+  bool EnableFlatScratch;
   bool AddNoCarryInsts;
   bool HasUnpackedD16VMem;
   bool LDSMisalignedBug;
@@ -558,11 +561,18 @@ public:
   // The ST addressing mode means no registers are used, either VGPR or SGPR,
   // but only immediate offset is swizzled and added to the FLAT scratch base.
   bool hasFlatScratchSTMode() const {
-    return hasFlatScratchInsts() && hasGFX10_3Insts();
+    return hasFlatScratchInsts() && (hasGFX10_3Insts() || hasGFX940Insts());
   }
+
+  bool hasFlatScratchSVSMode() const { return GFX940Insts; }
 
   bool hasScalarFlatScratchInsts() const {
     return ScalarFlatScratchInsts;
+  }
+
+  bool enableFlatScratch() const {
+    return flatScratchIsArchitected() ||
+           (EnableFlatScratch && hasFlatScratchInsts());
   }
 
   bool hasGlobalAddTidInsts() const {
@@ -765,8 +775,6 @@ public:
     return true;
   }
 
-  bool enableFlatScratch() const;
-
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            unsigned NumRegionInstrs) const override;
 
@@ -830,7 +838,11 @@ public:
   }
 
   bool hasFmaakFmamkF32Insts() const {
-    return getGeneration() >= GFX10;
+    return getGeneration() >= GFX10 || hasGFX940Insts();
+  }
+
+  bool hasImageInsts() const {
+    return HasImageInsts;
   }
 
   bool hasExtendedImageInsts() const {
@@ -874,6 +886,10 @@ public:
   }
 
   bool hasMadF16() const;
+
+  bool hasMovB64() const { return GFX940Insts; }
+
+  bool hasLshlAddB64() const { return GFX940Insts; }
 
   bool enableSIScheduler() const {
     return EnableSIScheduler;
@@ -943,6 +959,22 @@ public:
     return HasLdsBranchVmemWARHazard;
   }
 
+  // Has one cycle hazard on transcendental instruction feeding a
+  // non transcendental VALU.
+  bool hasTransForwardingHazard() const { return GFX940Insts; }
+
+  // Has one cycle hazard on a VALU instruction partially writing dst with
+  // a shift of result bits feeding another VALU instruction.
+  bool hasDstSelForwardingHazard() const { return GFX940Insts; }
+
+  // Cannot use op_sel with v_dot instructions.
+  bool hasDOTOpSelHazard() const { return GFX940Insts; }
+
+  // Does not have HW interlocs for VALU writing and then reading SGPRs.
+  bool hasVDecCoExecHazard() const {
+    return GFX940Insts;
+  }
+
   bool hasNSAtoVMEMBug() const {
     return HasNSAtoVMEMBug;
   }
@@ -957,6 +989,10 @@ public:
   bool needsAlignedVGPRs() const { return GFX90AInsts; }
 
   bool hasPackedTID() const { return HasPackedTID; }
+
+  // GFX940 is a derivation to GFX90A. hasGFX940Insts() being true implies that
+  // hasGFX90AInsts is also true.
+  bool hasGFX940Insts() const { return GFX940Insts; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
@@ -1104,6 +1140,10 @@ public:
   /// subtarget's specifications, or does not meet number of waves per execution
   /// unit requirement.
   unsigned getMaxNumVGPRs(const Function &F) const;
+
+  unsigned getMaxNumAGPRs(const Function &F) const {
+    return getMaxNumVGPRs(F);
+  }
 
   /// \returns Maximum number of VGPRs that meets number of waves per execution
   /// unit requirement for function \p MF, or number of VGPRs explicitly

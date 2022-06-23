@@ -1242,12 +1242,13 @@ static void **mk_hbw_preferred_hugetlb;
 static void **mk_dax_kmem;
 static void **mk_dax_kmem_all;
 static void **mk_dax_kmem_preferred;
-// Preview of target memory support
 static void *(*kmp_target_alloc_host)(size_t size, int device);
 static void *(*kmp_target_alloc_shared)(size_t size, int device);
 static void *(*kmp_target_alloc_device)(size_t size, int device);
 static void *(*kmp_target_alloc_multi_devices)(size_t size, int num_devices,
                                                int device_nums[]);
+static void *(*kmp_target_lock_mem)(void *ptr, size_t size, int device);
+static void *(*kmp_target_unlock_mem)(void *ptr, int device);
 static void *(*kmp_target_free)(void *ptr, int device);
 static bool __kmp_target_mem_available;
 #define KMP_IS_TARGET_MEM_SPACE(MS)                                            \
@@ -1354,7 +1355,7 @@ void __kmp_fini_memkind() {
   mk_dax_kmem_preferred = NULL;
 #endif
 }
-// Preview of target memory support
+
 void __kmp_init_target_mem() {
   *(void **)(&kmp_target_alloc_host) = KMP_DLSYM("llvm_omp_target_alloc_host");
   *(void **)(&kmp_target_alloc_shared) =
@@ -1362,6 +1363,8 @@ void __kmp_init_target_mem() {
   *(void **)(&kmp_target_alloc_device) =
       KMP_DLSYM("llvm_omp_target_alloc_device");
   *(void **)(&kmp_target_free) = KMP_DLSYM("omp_target_free");
+  *(void **)(&kmp_target_lock_mem) = KMP_DLSYM("llvm_omp_target_lock_mem");
+  *(void **)(&kmp_target_unlock_mem) = KMP_DLSYM("llvm_omp_target_unlock_mem");
   *(void **)(&kmp_target_alloc_multi_devices) =
       KMP_DLSYM("llvm_omp_target_alloc_multi_devices");
   __kmp_target_mem_available = kmp_target_alloc_host &&
@@ -1432,7 +1435,9 @@ omp_allocator_handle_t __kmpc_init_allocator(int gtid, omp_memspace_handle_t ms,
     switch (traits[i].key) {
     case omp_atk_sync_hint:
     case omp_atk_access:
+      break;
     case omp_atk_pinned:
+      al->pinned = true;
       break;
     case omp_atk_alignment:
       __kmp_type_convert(traits[i].value, &(al->alignment));
@@ -1591,6 +1596,8 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
     return NULL;
   if (allocator == omp_null_allocator)
     allocator = __kmp_threads[gtid]->th.th_def_allocator;
+  kmp_int32 default_device =
+      __kmp_threads[gtid]->th.th_current_task->td_icvs.default_device;
 
   al = RCAST(kmp_allocator_t *, allocator);
 
@@ -1606,6 +1613,12 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
     align = algn; // max of allocator trait, parameter and sizeof(void*)
   desc.size_orig = size;
   desc.size_a = size + sz_desc + align;
+
+  bool is_pinned = false;
+  if (allocator > kmp_max_mem_alloc)
+    is_pinned = al->pinned;
+  else if (allocator == ompx_pinned_mem_alloc)
+    is_pinned = true;
 
   if (__kmp_memkind_available) {
     if (allocator < kmp_max_mem_alloc) {
@@ -1632,7 +1645,10 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
         } else if (al->fb == omp_atv_allocator_fb) {
           KMP_ASSERT(al != al->fb_data);
           al = al->fb_data;
-          return __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
+          ptr = __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
+          if (is_pinned && kmp_target_lock_mem)
+            kmp_target_lock_mem(ptr, size, default_device);
+          return ptr;
         } // else ptr == NULL;
       } else {
         // pool has enough space
@@ -1646,7 +1662,10 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
           } else if (al->fb == omp_atv_allocator_fb) {
             KMP_ASSERT(al != al->fb_data);
             al = al->fb_data;
-            return __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
+            ptr = __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
+            if (is_pinned && kmp_target_lock_mem)
+              kmp_target_lock_mem(ptr, size, default_device);
+            return ptr;
           }
         }
       }
@@ -1662,7 +1681,10 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
         } else if (al->fb == omp_atv_allocator_fb) {
           KMP_ASSERT(al != al->fb_data);
           al = al->fb_data;
-          return __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
+          ptr = __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
+          if (is_pinned && kmp_target_lock_mem)
+            kmp_target_lock_mem(ptr, size, default_device);
+          return ptr;
         }
       }
     }
@@ -1679,6 +1701,8 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
           ptr = kmp_target_alloc_shared(size, device);
         else // allocator == llvm_omp_target_device_mem_alloc
           ptr = kmp_target_alloc_device(size, device);
+        if (is_pinned && kmp_target_lock_mem)
+          kmp_target_lock_mem(ptr, size, device);
       }
       return ptr;
     }
@@ -1709,6 +1733,8 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
         ptr =
             kmp_target_alloc_multi_devices(size, ms_t->num_devs, ms_t->devids);
       }
+      if (is_pinned && kmp_target_lock_mem)
+        kmp_target_lock_mem(ptr, size, device);
     }
     return ptr;
   } else if (al->pool_size > 0) {
@@ -1726,7 +1752,10 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
       } else if (al->fb == omp_atv_allocator_fb) {
         KMP_ASSERT(al != al->fb_data);
         al = al->fb_data;
-        return __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
+        ptr = __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
+        if (is_pinned && kmp_target_lock_mem)
+          kmp_target_lock_mem(ptr, size, default_device);
+        return ptr;
       } // else ptr == NULL;
     } else {
       // pool has enough space
@@ -1753,6 +1782,10 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
   desc.ptr_alloc = ptr;
   desc.ptr_align = (void *)addr_align;
   desc.allocator = al;
+
+  if (is_pinned && kmp_target_lock_mem)
+    kmp_target_lock_mem(desc.ptr_align, desc.size_a, default_device);
+
   *((kmp_mem_desc_t *)addr_descr) = desc; // save descriptor contents
   KMP_MB();
 
@@ -1836,11 +1869,12 @@ void ___kmpc_free(int gtid, void *ptr, omp_allocator_handle_t allocator) {
   kmp_uintptr_t addr_align; // address to return to caller
   kmp_uintptr_t addr_descr; // address of memory block descriptor
   bool is_tgt_mem_space =
-      al && (is_tgt_mem_space =
-                 KMP_IS_TARGET_MEM_SPACE(al->memspace) ||
-                 (al->memspace > kmp_max_mem_space &&
-                  KMP_IS_TARGET_MEM_SPACE(
-                      RCAST(kmp_memspace_t *, al->memspace)->memspace)));
+      (allocator > kmp_max_mem_alloc) && al &&
+      (is_tgt_mem_space =
+           KMP_IS_TARGET_MEM_SPACE(al->memspace) ||
+           (al->memspace > kmp_max_mem_space &&
+            KMP_IS_TARGET_MEM_SPACE(
+                RCAST(kmp_memspace_t *, al->memspace)->memspace)));
   if (KMP_IS_TARGET_MEM_ALLOC(allocator) ||
       (allocator > kmp_max_mem_alloc && is_tgt_mem_space)) {
     KMP_DEBUG_ASSERT(kmp_target_free);
@@ -1865,6 +1899,18 @@ void ___kmpc_free(int gtid, void *ptr, omp_allocator_handle_t allocator) {
   al = desc.allocator;
   oal = (omp_allocator_handle_t)al; // cast to void* for comparisons
   KMP_DEBUG_ASSERT(al);
+
+  // if locked, we locked descriptor and user memory: unlock both
+  bool is_pinned = false;
+  if (allocator > kmp_max_mem_alloc)
+    is_pinned = al->pinned;
+  else if (allocator == ompx_pinned_mem_alloc)
+    is_pinned = true;
+  if (is_pinned && kmp_target_unlock_mem) {
+    kmp_int32 default_device =
+        __kmp_threads[gtid]->th.th_current_task->td_icvs.default_device;
+    kmp_target_unlock_mem(desc.ptr_align, default_device);
+  }
 
   if (__kmp_memkind_available) {
     if (oal < kmp_max_mem_alloc) {
