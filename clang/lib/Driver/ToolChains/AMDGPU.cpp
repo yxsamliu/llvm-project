@@ -546,7 +546,7 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                                      const llvm::Triple &Triple,
                                      const llvm::opt::ArgList &Args,
                                      std::vector<StringRef> &Features,
-                                     std::string TcTargetID) {
+                                     StringRef TcTargetID) {
   // Add target ID features to -target-feature options. No diagnostics should
   // be emitted here since invalid target ID is diagnosed at other places.
   StringRef TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
@@ -558,7 +558,7 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
     llvm::StringMap<bool> FeatureMap;
     auto OptionalGpuArch = parseTargetID(Triple, TargetID, &FeatureMap);
     if (OptionalGpuArch) {
-      StringRef GpuArch = OptionalGpuArch.getValue();
+      StringRef GpuArch = *OptionalGpuArch;
       // Iterate through all possible target ID features for the given GPU.
       // If it is mapped to true, add +feature.
       // If it is mapped to false, add -feature.
@@ -744,7 +744,7 @@ AMDGPUToolChain::getParsedTargetID(const llvm::opt::ArgList &DriverArgs) const {
   if (!OptionalGpuArch)
     return {TargetID.str(), None, None};
 
-  return {TargetID.str(), OptionalGpuArch.getValue().str(), FeatureMap};
+  return {TargetID.str(), OptionalGpuArch->str(), FeatureMap};
 }
 
 void AMDGPUToolChain::checkTargetID(
@@ -752,7 +752,7 @@ void AMDGPUToolChain::checkTargetID(
   auto PTID = getParsedTargetID(DriverArgs);
   if (PTID.OptionalTargetID && !PTID.OptionalGPUArch) {
     getDriver().Diag(clang::diag::err_drv_bad_target_id)
-        << PTID.OptionalTargetID.getValue();
+        << *PTID.OptionalTargetID;
   }
 }
 
@@ -877,10 +877,10 @@ void ROCMToolChain::addClangTargetOptions(
       DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
       FastRelaxedMath, CorrectSqrt, ABIVer, false));
 
-  llvm::for_each(BCLibs, [&](StringRef BCFile) {
+  for (StringRef BCFile : BCLibs) {
     CC1Args.push_back("-mlink-builtin-bitcode");
     CC1Args.push_back(DriverArgs.MakeArgString(BCFile));
-  });
+  }
 }
 
 bool RocmInstallationDetector::checkCommonBitcodeLibs(
@@ -917,8 +917,7 @@ RocmInstallationDetector::getCommonBitcodeLibs(
   // offload-arch-specific bitcode files as is done for FORTRAN. Currently,
   // libomptarget-<offload-arch>.bc files is built by compiling headers with
   // __BUILD_MATH_BUILTINS_LIB__ turning static libm functions to extern.
-  if (!isOpenMP)
-    AddBCLib(getOCKLPath());
+  AddBCLib(getOCKLPath());
   AddBCLib(getDenormalsAreZeroPath(DAZ));
   AddBCLib(getUnsafeMathPath(UnsafeMathOpt || FastRelaxedMath));
   AddBCLib(getFiniteOnlyPath(FiniteOnly || FastRelaxedMath));
@@ -930,6 +929,42 @@ RocmInstallationDetector::getCommonBitcodeLibs(
     AddBCLib(ABIVerPath);
 
   return BCLibs;
+}
+
+bool AMDGPUToolChain::shouldSkipSanitizeOption(
+    const ToolChain &TC, const llvm::opt::ArgList &DriverArgs,
+    StringRef TargetID, const llvm::opt::Arg *A) const {
+  // For actions without targetID, do nothing.
+  if (TargetID.empty())
+    return false;
+  Option O = A->getOption();
+  if (!O.matches(options::OPT_fsanitize_EQ))
+    return false;
+
+  if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                          options::OPT_fno_gpu_sanitize, true))
+    return true;
+
+  auto &Diags = TC.getDriver().getDiags();
+
+  // For simplicity, we only allow -fsanitize=address
+  SanitizerMask K = parseSanitizerValue(A->getValue(), /*AllowGroups=*/false);
+  if (K != SanitizerKind::Address)
+    return true;
+
+  llvm::StringMap<bool> FeatureMap;
+  auto OptionalGpuArch = parseTargetID(TC.getTriple(), TargetID, &FeatureMap);
+
+  assert(OptionalGpuArch && "Invalid Target ID");
+  (void)OptionalGpuArch;
+  auto Loc = FeatureMap.find("xnack");
+  if (Loc == FeatureMap.end() || !Loc->second) {
+    Diags.Report(
+        clang::diag::warn_drv_unsupported_option_for_offload_arch_req_feature)
+        << A->getAsString(DriverArgs) << TargetID << "xnack+";
+    return true;
+  }
+  return false;
 }
 
 bool AMDGPUToolChain::shouldSkipArgument(const llvm::opt::Arg *A) const {

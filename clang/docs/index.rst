@@ -42,6 +42,7 @@ Using Clang as a Compiler
    SourceBasedCodeCoverage
    Modules
    MSVCCompatibility
+   MisExpect
    OpenCLSupport
    OpenMPSupport
    SYCLSupport
@@ -88,6 +89,7 @@ Using Clang Tools
    ClangOffloadWrapper
    ClangOffloadBundler
    ClangOffloadWrapper
+   ClangOffloadPackager
 
 Design Documents
 ================

@@ -7,28 +7,27 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 define void @bottom_tested(i16* %p, i32 %n) {
 ; CHECK-LABEL: @bottom_tested(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[N:%.*]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[SMAX]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 2
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i32 [[SMAX]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 2
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 2
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, i16* [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i16* [[TMP5]] to <2 x i16>*
-; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, i16* [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16* [[TMP4]] to <2 x i16>*
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[IF_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -46,43 +45,42 @@ define void @bottom_tested(i16* %p, i32 %n) {
 ;
 ; TAILFOLD-LABEL: @bottom_tested(
 ; TAILFOLD-NEXT:  entry:
-; TAILFOLD-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[N:%.*]], 0
-; TAILFOLD-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 0
-; TAILFOLD-NEXT:    [[TMP1:%.*]] = add nuw i32 [[SMAX]], 1
+; TAILFOLD-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 0)
+; TAILFOLD-NEXT:    [[TMP0:%.*]] = add nuw i32 [[SMAX]], 1
 ; TAILFOLD-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; TAILFOLD:       vector.ph:
-; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 1
+; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP0]], 1
 ; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 2
 ; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
-; TAILFOLD-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP1]], 1
+; TAILFOLD-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP0]], 1
 ; TAILFOLD-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i32 0
 ; TAILFOLD-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; TAILFOLD-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TAILFOLD:       vector.body:
 ; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
 ; TAILFOLD-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE2]] ]
-; TAILFOLD-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; TAILFOLD-NEXT:    [[TMP3:%.*]] = sext <2 x i32> [[VEC_IND]] to <2 x i64>
-; TAILFOLD-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
-; TAILFOLD-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; TAILFOLD-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; TAILFOLD-NEXT:    [[TMP2:%.*]] = sext <2 x i32> [[VEC_IND]] to <2 x i64>
+; TAILFOLD-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
+; TAILFOLD-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; TAILFOLD:       pred.store.if:
-; TAILFOLD-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP3]], i32 0
-; TAILFOLD-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP5]]
-; TAILFOLD-NEXT:    store i16 0, i16* [[TMP6]], align 4
+; TAILFOLD-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP2]], i32 0
+; TAILFOLD-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP4]]
+; TAILFOLD-NEXT:    store i16 0, i16* [[TMP5]], align 4
 ; TAILFOLD-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; TAILFOLD:       pred.store.continue:
-; TAILFOLD-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
-; TAILFOLD-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2]]
+; TAILFOLD-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
+; TAILFOLD-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; TAILFOLD:       pred.store.if1:
-; TAILFOLD-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[TMP3]], i32 1
-; TAILFOLD-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i16, i16* [[P]], i64 [[TMP8]]
-; TAILFOLD-NEXT:    store i16 0, i16* [[TMP9]], align 4
+; TAILFOLD-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP2]], i32 1
+; TAILFOLD-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, i16* [[P]], i64 [[TMP7]]
+; TAILFOLD-NEXT:    store i16 0, i16* [[TMP8]], align 4
 ; TAILFOLD-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; TAILFOLD:       pred.store.continue2:
 ; TAILFOLD-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
 ; TAILFOLD-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
-; TAILFOLD-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; TAILFOLD-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; TAILFOLD-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; TAILFOLD-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; TAILFOLD:       middle.block:
 ; TAILFOLD-NEXT:    br i1 true, label [[IF_END:%.*]], label [[SCALAR_PH]]
 ; TAILFOLD:       scalar.ph:
@@ -118,28 +116,27 @@ if.end:
 define void @early_exit(i16* %p, i32 %n) {
 ; CHECK-LABEL: @early_exit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[N:%.*]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[SMAX]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP1]], 2
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i32 [[SMAX]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 2, i32 [[N_MOD_VF]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 2, i32 [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP4]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, i16* [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i16* [[TMP7]] to <2 x i16>*
-; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i16* [[TMP6]] to <2 x i16>*
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -191,6 +188,80 @@ for.body:
 
 if.end:
   ret void
+}
+
+define i32 @early_exit_with_live_out(i32* %ptr) {
+; CHECK-LABEL: @early_exit_with_live_out(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, i32* [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP2]] to <2 x i32>*
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, <2 x i32>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP2]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> <i32 10, i32 10>, <2 x i32>* [[TMP4]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 998
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 998, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[PTR]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    store i32 10, i32* [[GEP]], align 4
+; CHECK-NEXT:    br label [[LOOP_HEADER]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES_LCSSA:%.*]] = phi i32 [ [[L]], [[LOOP_HEADER]] ]
+; CHECK-NEXT:    ret i32 [[RES_LCSSA]]
+;
+; TAILFOLD-LABEL: @early_exit_with_live_out(
+; TAILFOLD-NEXT:  entry:
+; TAILFOLD-NEXT:    br label [[LOOP_HEADER:%.*]]
+; TAILFOLD:       loop.header:
+; TAILFOLD-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; TAILFOLD-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i64 [[IV]]
+; TAILFOLD-NEXT:    [[L:%.*]] = load i32, i32* [[GEP]], align 4
+; TAILFOLD-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; TAILFOLD-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
+; TAILFOLD-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
+; TAILFOLD:       loop.latch:
+; TAILFOLD-NEXT:    store i32 10, i32* [[GEP]], align 4
+; TAILFOLD-NEXT:    br label [[LOOP_HEADER]]
+; TAILFOLD:       exit:
+; TAILFOLD-NEXT:    [[RES_LCSSA:%.*]] = phi i32 [ [[L]], [[LOOP_HEADER]] ]
+; TAILFOLD-NEXT:    ret i32 [[RES_LCSSA]]
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep = getelementptr i32, i32* %ptr, i64 %iv
+  %l = load i32, i32* %gep
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1000
+  br i1 %ec, label %exit, label %loop.latch
+
+loop.latch:
+  store i32 10, i32* %gep
+  br label %loop.header
+
+exit:
+  %res.lcssa = phi i32 [ %l, %loop.header ]
+  ret i32 %res.lcssa
 }
 
 ; Same as early_exit, but with optsize to prevent the use of
@@ -252,30 +323,28 @@ if.end:
 define void @multiple_unique_exit(i16* %p, i32 %n) {
 ; CHECK-LABEL: @multiple_unique_exit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[N:%.*]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[SMAX]], 2096
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP1]], i32 [[SMAX]], i32 2096
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[UMIN]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP2]], 2
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 0)
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SMAX]], i32 2096)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i32 [[UMIN]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 2, i32 [[N_MOD_VF]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 2, i32 [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, i16* [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i16* [[TMP8]] to <2 x i16>*
-; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i16* [[TMP6]] to <2 x i16>*
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -291,7 +360,7 @@ define void @multiple_unique_exit(i16* %p, i32 %n) {
 ; CHECK-NEXT:    store i16 0, i16* [[B]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 2096
-; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -336,30 +405,28 @@ if.end:
 define i32 @multiple_unique_exit2(i16* %p, i32 %n) {
 ; CHECK-LABEL: @multiple_unique_exit2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[N:%.*]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[SMAX]], 2096
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP1]], i32 [[SMAX]], i32 2096
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[UMIN]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP2]], 2
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 0)
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SMAX]], i32 2096)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i32 [[UMIN]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 2, i32 [[N_MOD_VF]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 2, i32 [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, i16* [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i16* [[TMP8]] to <2 x i16>*
-; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i16* [[TMP6]] to <2 x i16>*
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -375,7 +442,7 @@ define i32 @multiple_unique_exit2(i16* %p, i32 %n) {
 ; CHECK-NEXT:    store i16 0, i16* [[B]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 2096
-; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I]], [[FOR_BODY]] ], [ [[I]], [[FOR_COND]] ]
 ; CHECK-NEXT:    ret i32 [[I_LCSSA]]
@@ -422,30 +489,28 @@ if.end:
 define i32 @multiple_unique_exit3(i16* %p, i32 %n) {
 ; CHECK-LABEL: @multiple_unique_exit3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[N:%.*]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[SMAX]], 2096
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP1]], i32 [[SMAX]], i32 2096
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[UMIN]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP2]], 2
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 0)
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SMAX]], i32 2096)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i32 [[UMIN]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 2, i32 [[N_MOD_VF]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 2, i32 [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, i16* [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i16* [[TMP8]] to <2 x i16>*
-; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i16* [[TMP6]] to <2 x i16>*
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -461,7 +526,7 @@ define i32 @multiple_unique_exit3(i16* %p, i32 %n) {
 ; CHECK-NEXT:    store i16 0, i16* [[B]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 2096
-; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[EXIT:%.*]] = phi i32 [ 0, [[FOR_COND]] ], [ 1, [[FOR_BODY]] ]
 ; CHECK-NEXT:    ret i32 [[EXIT]]
@@ -509,30 +574,28 @@ if.end:
 define i32 @multiple_exit_blocks(i16* %p, i32 %n) {
 ; CHECK-LABEL: @multiple_exit_blocks(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[N:%.*]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[SMAX]], 2096
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP1]], i32 [[SMAX]], i32 2096
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[UMIN]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP2]], 2
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 0)
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SMAX]], i32 2096)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i32 [[UMIN]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 2, i32 [[N_MOD_VF]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 2, i32 [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, i16* [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i16* [[TMP8]] to <2 x i16>*
-; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i16* [[TMP6]] to <2 x i16>*
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -548,7 +611,7 @@ define i32 @multiple_exit_blocks(i16* %p, i32 %n) {
 ; CHECK-NEXT:    store i16 0, i16* [[B]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 2096
-; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END2:%.*]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END2:%.*]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       if.end2:
@@ -600,30 +663,28 @@ if.end2:
 define i32 @multiple_exit_blocks2(i16* %p, i32 %n) {
 ; CHECK-LABEL: @multiple_exit_blocks2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[N:%.*]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[SMAX]], 2096
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP1]], i32 [[SMAX]], i32 2096
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[UMIN]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP2]], 2
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 0)
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SMAX]], i32 2096)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i32 [[UMIN]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 2, i32 [[N_MOD_VF]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 2, i32 [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, i16* [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i16* [[TMP8]] to <2 x i16>*
-; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i16* [[TMP6]] to <2 x i16>*
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -639,7 +700,7 @@ define i32 @multiple_exit_blocks2(i16* %p, i32 %n) {
 ; CHECK-NEXT:    store i16 0, i16* [[B]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 2096
-; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END2:%.*]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END2:%.*]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I]], [[FOR_COND]] ]
 ; CHECK-NEXT:    ret i32 [[I_LCSSA]]
@@ -695,33 +756,28 @@ if.end2:
 define i32 @multiple_exit_blocks3(i16* %p, i32 %n) {
 ; CHECK-LABEL: @multiple_exit_blocks3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[N:%.*]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[SMAX]], 2096
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP1]], i32 [[SMAX]], i32 2096
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[UMIN]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP2]], 2
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 0)
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SMAX]], i32 2096)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i32 [[UMIN]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 2, i32 [[N_MOD_VF]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 2, i32 [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, i16* [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i16* [[TMP8]] to <2 x i16>*
-; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP9]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <2 x i32> [[VEC_IND]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i16* [[TMP6]] to <2 x i16>*
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -737,7 +793,7 @@ define i32 @multiple_exit_blocks3(i16* %p, i32 %n) {
 ; CHECK-NEXT:    store i16 0, i16* [[B]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 2096
-; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END2:%.*]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END2:%.*]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I]], [[FOR_COND]] ]
 ; CHECK-NEXT:    ret i32 [[I_LCSSA]]
@@ -1064,7 +1120,7 @@ define void @scalar_predication(float* %addr) {
 ; CHECK:       pred.store.continue2:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
-; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -1084,7 +1140,7 @@ define void @scalar_predication(float* %addr) {
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    br label [[LOOP_HEADER]], !llvm.loop [[LOOP19:![0-9]+]]
+; CHECK-NEXT:    br label [[LOOP_HEADER]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -1152,7 +1208,7 @@ define i32 @me_reduction(i32* %addr) {
 ; CHECK-NEXT:    [[TMP4]] = add <2 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
-; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP4]])
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
@@ -1171,7 +1227,7 @@ define i32 @me_reduction(i32* %addr) {
 ; CHECK-NEXT:    [[ACCUM_NEXT]] = add i32 [[ACCUM]], [[TMP7]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND2_NOT:%.*]] = icmp eq i64 [[IV]], 400
-; CHECK-NEXT:    br i1 [[EXITCOND2_NOT]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP21:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND2_NOT]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP23:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[LCSSA:%.*]] = phi i32 [ 0, [[LOOP_HEADER]] ], [ [[ACCUM_NEXT]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    ret i32 [[LCSSA]]

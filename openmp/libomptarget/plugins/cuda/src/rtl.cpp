@@ -350,10 +350,15 @@ class DeviceRTLTy {
 
   std::vector<DeviceDataTy> DeviceData;
   std::vector<std::vector<CUmodule>> Modules;
+  std::vector<int> NumberOfTeamProcs;
 
   /// Vector of flags indicating the initalization status of all associated
   /// devices.
   std::vector<bool> InitializedFlags;
+
+  enum class PeerAccessState : uint8_t { Unkown, Yes, No };
+  std::vector<std::vector<PeerAccessState>> PeerAccessMatrix;
+  std::mutex PeerAccessMatrixLock;
 
   /// A class responsible for interacting with device native runtime library to
   /// allocate and free memory.
@@ -517,8 +522,12 @@ public:
 
     DeviceData.resize(NumberOfDevices);
     Modules.resize(NumberOfDevices);
+    NumberOfTeamProcs.resize(NumberOfDevices);
     StreamPool.resize(NumberOfDevices);
     EventPool.resize(NumberOfDevices);
+    PeerAccessMatrix.resize(NumberOfDevices);
+    for (auto &V : PeerAccessMatrix)
+      V.resize(NumberOfDevices, PeerAccessState::Unkown);
 
     // Get environment variables regarding teams
     if (const char *EnvStr = getenv("OMP_TEAM_LIMIT")) {
@@ -576,6 +585,8 @@ public:
   }
 
   int getNumOfDevices() const { return NumberOfDevices; }
+
+  int getNumOfTeamProcs(int devid) const { return NumberOfTeamProcs[devid]; }
 
   void setRequiresFlag(const int64_t Flags) { this->RequiresFlags = Flags; }
 
@@ -643,6 +654,18 @@ public:
     } else {
       DP("Using %d CUDA blocks per grid\n", MaxGridDimX);
       DeviceData[DeviceId].BlocksPerGrid = MaxGridDimX;
+    }
+
+    // Query attributes to for number of SMs for ompx_get_team_procs(devid)
+    int TmpTeamProcs;
+    Err = cuDeviceGetAttribute(
+        &TmpTeamProcs, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, Device);
+    if (Err != CUDA_SUCCESS) {
+      DP("Error: on CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, using %d\n", 16);
+      NumberOfTeamProcs[DeviceId] = 16;
+    } else {
+      DP("Device %d has %d procs for team execution\n", DeviceId, TmpTeamProcs);
+      NumberOfTeamProcs[DeviceId] = TmpTeamProcs;
     }
 
     // We are only exploiting threads along the x axis.
@@ -1014,7 +1037,7 @@ public:
   }
 
   int dataExchange(int SrcDevId, const void *SrcPtr, int DstDevId, void *DstPtr,
-                   int64_t Size, __tgt_async_info *AsyncInfo) const {
+                   int64_t Size, __tgt_async_info *AsyncInfo) {
     assert(AsyncInfo && "AsyncInfo is nullptr");
 
     CUresult Err;
@@ -1022,40 +1045,69 @@ public:
 
     // If they are two devices, we try peer to peer copy first
     if (SrcDevId != DstDevId) {
-      int CanAccessPeer = 0;
-      Err = cuDeviceCanAccessPeer(&CanAccessPeer, SrcDevId, DstDevId);
-      if (Err != CUDA_SUCCESS) {
-        REPORT("Error returned from cuDeviceCanAccessPeer. src = %" PRId32
-               ", dst = %" PRId32 "\n",
+      std::lock_guard<std::mutex> LG(PeerAccessMatrixLock);
+
+      switch (PeerAccessMatrix[SrcDevId][DstDevId]) {
+      case PeerAccessState::No: {
+        REPORT("Peer access from %" PRId32 " to %" PRId32
+               " is not supported. Fall back to D2D memcpy.\n",
                SrcDevId, DstDevId);
+        return memcpyDtoD(SrcPtr, DstPtr, Size, Stream);
+      }
+      case PeerAccessState::Unkown: {
+        int CanAccessPeer = 0;
+        Err = cuDeviceCanAccessPeer(&CanAccessPeer, SrcDevId, DstDevId);
+        if (Err != CUDA_SUCCESS) {
+          REPORT("Error returned from cuDeviceCanAccessPeer. src = %" PRId32
+                 ", dst = %" PRId32 ". Fall back to D2D memcpy.\n",
+                 SrcDevId, DstDevId);
+          CUDA_ERR_STRING(Err);
+          PeerAccessMatrix[SrcDevId][DstDevId] = PeerAccessState::No;
+          return memcpyDtoD(SrcPtr, DstPtr, Size, Stream);
+        }
+
+        if (!CanAccessPeer) {
+          REPORT("P2P access from %d to %d is not supported. Fall back to D2D "
+                 "memcpy.\n",
+                 SrcDevId, DstDevId);
+          PeerAccessMatrix[SrcDevId][DstDevId] = PeerAccessState::No;
+          return memcpyDtoD(SrcPtr, DstPtr, Size, Stream);
+        }
+
+        Err = cuCtxEnablePeerAccess(DeviceData[DstDevId].Context, 0);
+        if (Err != CUDA_SUCCESS) {
+          REPORT("Error returned from cuCtxEnablePeerAccess. src = %" PRId32
+                 ", dst = %" PRId32 ". Fall back to D2D memcpy.\n",
+                 SrcDevId, DstDevId);
+          CUDA_ERR_STRING(Err);
+          PeerAccessMatrix[SrcDevId][DstDevId] = PeerAccessState::No;
+          return memcpyDtoD(SrcPtr, DstPtr, Size, Stream);
+        }
+
+        PeerAccessMatrix[SrcDevId][DstDevId] = PeerAccessState::Yes;
+
+        LLVM_FALLTHROUGH;
+      }
+      case PeerAccessState::Yes: {
+        Err = cuMemcpyPeerAsync(
+            (CUdeviceptr)DstPtr, DeviceData[DstDevId].Context,
+            (CUdeviceptr)SrcPtr, DeviceData[SrcDevId].Context, Size, Stream);
+        if (Err == CUDA_SUCCESS)
+          return OFFLOAD_SUCCESS;
+
+        DP("Error returned from cuMemcpyPeerAsync. src_ptr = " DPxMOD
+           ", src_id =%" PRId32 ", dst_ptr = " DPxMOD ", dst_id =%" PRId32
+           ". Fall back to D2D memcpy.\n",
+           DPxPTR(SrcPtr), SrcDevId, DPxPTR(DstPtr), DstDevId);
         CUDA_ERR_STRING(Err);
+
         return memcpyDtoD(SrcPtr, DstPtr, Size, Stream);
       }
-
-      if (!CanAccessPeer) {
-        DP("P2P memcpy not supported so fall back to D2D memcpy");
-        return memcpyDtoD(SrcPtr, DstPtr, Size, Stream);
+      default:
+        REPORT("Unknown PeerAccessState %d.\n",
+               int(PeerAccessMatrix[SrcDevId][DstDevId]));
+        return OFFLOAD_FAIL;
       }
-
-      Err = cuCtxEnablePeerAccess(DeviceData[DstDevId].Context, 0);
-      if (Err != CUDA_SUCCESS) {
-        REPORT("Error returned from cuCtxEnablePeerAccess. src = %" PRId32
-               ", dst = %" PRId32 "\n",
-               SrcDevId, DstDevId);
-        CUDA_ERR_STRING(Err);
-        return memcpyDtoD(SrcPtr, DstPtr, Size, Stream);
-      }
-
-      Err = cuMemcpyPeerAsync((CUdeviceptr)DstPtr, DeviceData[DstDevId].Context,
-                              (CUdeviceptr)SrcPtr, DeviceData[SrcDevId].Context,
-                              Size, Stream);
-      if (Err == CUDA_SUCCESS)
-        return OFFLOAD_SUCCESS;
-
-      DP("Error returned from cuMemcpyPeerAsync. src_ptr = " DPxMOD
-         ", src_id =%" PRId32 ", dst_ptr = " DPxMOD ", dst_id =%" PRId32 "\n",
-         DPxPTR(SrcPtr), SrcDevId, DPxPTR(DstPtr), DstDevId);
-      CUDA_ERR_STRING(Err);
     }
 
     return memcpyDtoD(SrcPtr, DstPtr, Size, Stream);
@@ -1488,6 +1540,10 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *image) {
 
 int32_t __tgt_rtl_number_of_devices() { return DeviceRTL.getNumOfDevices(); }
 
+int32_t __tgt_rtl_number_of_team_procs(int devid) {
+  return DeviceRTL.getNumOfTeamProcs(devid);
+}
+
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
   DP("Init requires flags to %" PRId64 "\n", RequiresFlags);
   DeviceRTL.setRequiresFlag(RequiresFlags);
@@ -1597,8 +1653,10 @@ int32_t __tgt_rtl_data_exchange_async(int32_t src_dev_id, void *src_ptr,
   assert(DeviceRTL.isValidDeviceId(src_dev_id) && "src_dev_id is invalid");
   assert(DeviceRTL.isValidDeviceId(dst_dev_id) && "dst_dev_id is invalid");
   assert(AsyncInfo && "AsyncInfo is nullptr");
-  // NOTE: We don't need to set context for data exchange as the device contexts
-  // are passed to CUDA function directly.
+
+  if (DeviceRTL.setContext(src_dev_id) != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
+
   return DeviceRTL.dataExchange(src_dev_id, src_ptr, dst_dev_id, dst_ptr, size,
                                 AsyncInfo);
 }
@@ -1733,7 +1791,10 @@ int32_t __tgt_rtl_wait_event(int32_t device_id, void *event_ptr,
   assert(DeviceRTL.isValidDeviceId(device_id) && "device_id is invalid");
   assert(async_info_ptr && "async_info_ptr is nullptr");
   assert(event_ptr && "event is nullptr");
-  // NOTE: We might not need to set context for event sync.
+  // If we don't have a queue we need to set the context.
+  if (!async_info_ptr->Queue &&
+      DeviceRTL.setContext(device_id) != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
   return DeviceRTL.waitEvent(device_id, async_info_ptr, event_ptr);
 }
 

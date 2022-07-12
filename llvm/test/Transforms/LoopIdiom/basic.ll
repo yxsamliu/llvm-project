@@ -1226,13 +1226,12 @@ define void @loop_with_memcpy_stride16(i8* %Src, i64 %Size) {
 ; CHECK-LABEL: @loop_with_memcpy_stride16(
 ; CHECK-NEXT:  bb.nph:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[SRC:%.*]], i64 16
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[SIZE:%.*]], 16
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[SIZE]], i64 16
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[SMAX]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i64 [[TMP3]], 16
-; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* align 1 [[SRC]], i8* align 1 [[SCEVGEP]], i64 [[TMP4]], i1 false)
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[SIZE:%.*]], i64 16)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i64 [[TMP2]], 16
+; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i64(i8* align 1 [[SRC]], i8* align 1 [[SCEVGEP]], i64 [[TMP3]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[STEP:%.*]], [[FOR_BODY]] ], [ 0, [[BB_NPH:%.*]] ]
@@ -1535,6 +1534,49 @@ for.body:                                      ; preds = %entry, %for.body
   %add = add nsw i32 %1, %sum
   %cmp = icmp sgt i32 %index, 1
   br i1 %cmp, label %for.body, label %for.cond.cleanup
+}
+
+; Do not form memmove when there's an aliasing operation, even
+; if the memcpy source and destination are in the same object.
+define void @do_not_form_memmove8(i64* %p) {
+; CHECK-LABEL: @do_not_form_memmove8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i64, i64* [[P:%.*]], i64 1000
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       loop:
+; CHECK-NEXT:    [[X4:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[X13:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[X5:%.*]] = zext i32 [[X4]] to i64
+; CHECK-NEXT:    [[X7:%.*]] = getelementptr inbounds i64, i64* [[P2]], i64 [[X5]]
+; CHECK-NEXT:    [[X8:%.*]] = bitcast i64* [[X7]] to i8*
+; CHECK-NEXT:    store i64 1, i64* [[X7]], align 4
+; CHECK-NEXT:    [[X11:%.*]] = getelementptr inbounds i64, i64* [[P]], i64 [[X5]]
+; CHECK-NEXT:    [[X12:%.*]] = bitcast i64* [[X11]] to i8*
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[X12]], i8* [[X8]], i64 8, i1 false)
+; CHECK-NEXT:    [[X13]] = add i32 [[X4]], 1
+; CHECK-NEXT:    [[X14:%.*]] = icmp eq i32 [[X13]], 44
+; CHECK-NEXT:    br i1 [[X14]], label [[EXIT:%.*]], label [[LOOP]]
+;
+entry:
+  %p2 = getelementptr inbounds i64, i64* %p, i64 1000
+  br label %loop
+
+exit:
+  ret void
+
+loop:
+  %x4 = phi i32 [ 0, %entry ], [ %x13, %loop ]
+  %x5 = zext i32 %x4 to i64
+  %x7 = getelementptr inbounds i64, i64* %p2, i64 %x5
+  %x8 = bitcast i64* %x7 to i8*
+  store i64 1, i64* %x7, align 4
+  %x11 = getelementptr inbounds i64, i64* %p, i64 %x5
+  %x12 = bitcast i64* %x11 to i8*
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %x12, i8* %x8, i64 8, i1 false)
+  %x13 = add i32 %x4, 1
+  %x14 = icmp eq i32 %x13, 44
+  br i1 %x14, label %exit, label %loop
 }
 
 ;; Memcpy formation is still preferred over memmove.

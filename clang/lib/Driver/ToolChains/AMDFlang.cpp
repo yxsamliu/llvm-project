@@ -86,7 +86,7 @@ void AMDFlang::ConstructJob(Compilation &C, const JobAction &JA,
   const InputInfo &Input = Inputs[0];
   types::ID InputType = Input.getType();
   // Check file type sanity
-  assert(types::isFortran(InputType) && "Can only accept Fortran");
+  assert(types::isAcceptedByFlang(InputType) && "Can only accept Fortran");
 
   if (Args.hasArg(options::OPT_fsyntax_only)) {
     // For -fsyntax-only produce temp files only
@@ -374,8 +374,8 @@ void AMDFlang::ConstructJob(Compilation &C, const JobAction &JA,
     CommonCmdArgs.push_back("-x");
     CommonCmdArgs.push_back("120");
 
-    if (!GDwarfArg) // -g without -gdwarf-X produces default (DWARFv4)
-      CommonCmdArgs.push_back("0x1000000");
+    if (!GDwarfArg) // -g without -gdwarf-X produces default (DWARFv5)
+      CommonCmdArgs.push_back("0x2000000");
     else if (GDwarfArg->getOption().matches(options::OPT_gdwarf_2)) // -gdwarf-2
       CommonCmdArgs.push_back("0x200");
     else if (GDwarfArg->getOption().matches(options::OPT_gdwarf_3)) // -gdwarf-3

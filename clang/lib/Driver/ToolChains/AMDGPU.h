@@ -40,7 +40,7 @@ public:
 void getAMDGPUTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                              const llvm::opt::ArgList &Args,
                              std::vector<StringRef> &Features,
-                             std::string TcTargetID = std::string());
+                             StringRef TcTargetID = StringRef());
 
 } // end namespace amdgpu
 } // end namespace tools
@@ -99,6 +99,12 @@ public:
 
   /// Needed for translating LTO options.
   const char *getDefaultLinker() const override { return "ld.lld"; }
+
+  /// Should skip Sanitize options
+  bool shouldSkipSanitizeOption(const ToolChain &TC,
+                                const llvm::opt::ArgList &DriverArgs,
+                                StringRef TargetID,
+                                const llvm::opt::Arg *A) const;
 
   /// Should skip argument.
   bool shouldSkipArgument(const llvm::opt::Arg *Arg) const;

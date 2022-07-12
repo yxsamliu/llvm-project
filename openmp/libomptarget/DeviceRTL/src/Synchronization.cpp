@@ -19,7 +19,7 @@
 #include "Types.h"
 #include "Utils.h"
 
-#pragma omp declare target
+#pragma omp begin declare target device_type(nohost)
 
 using namespace _OMP;
 
@@ -61,6 +61,8 @@ uint32_t atomicCAS(uint32_t *Address, uint32_t Compare, uint32_t Val,
 uint64_t atomicAdd(uint64_t *Address, uint64_t Val, int Ordering) {
   return __atomic_fetch_add(Address, Val, Ordering);
 }
+
+float unsafeAtomicAdd(float *addr, float value);
 ///}
 
 constexpr uint32_t UNSET = 0;
@@ -76,6 +78,22 @@ void unsetLock(omp_lock_t *Lock) {
 int testLock(omp_lock_t *Lock) {
   return atomicAdd((uint32_t *)Lock, 0u, __ATOMIC_SEQ_CST);
 }
+
+// Forward declarations defined to be defined for AMDGCN and NVPTX.
+uint32_t atomicInc(uint32_t *A, uint32_t V, int Ordering);
+void namedBarrierInit();
+void namedBarrier();
+void fenceTeam(int Ordering);
+void fenceKernel(int Ordering);
+void fenceSystem(int Ordering);
+void syncWarp(__kmpc_impl_lanemask_t);
+void syncThreads();
+void syncThreadsAligned() { syncThreads(); }
+void unsetLock(omp_lock_t *);
+int testLock(omp_lock_t *);
+void initLock(omp_lock_t *);
+void destroyLock(omp_lock_t *);
+void setLock(omp_lock_t *);
 
 /// AMDGCN Implementation
 ///
@@ -222,6 +240,57 @@ void setLock(omp_lock_t *Lock) {
   // test_lock will now return true for any thread in the warp
 }
 
+#if defined(__gfx90a__) && __has_builtin(__builtin_amdgcn_is_shared) &&        \
+    __has_builtin(__builtin_amdgcn_is_private) &&                              \
+    __has_builtin(__builtin_amdgcn_ds_atomic_fadd_f32) &&                      \
+    __has_builtin(__builtin_amdgcn_global_atomic_fadd_f32)
+// This function is called for gfx90a only and single precision
+// floating point type
+float unsafeAtomicAdd(float *addr, float value) {
+  if (__builtin_amdgcn_is_shared(
+          (const __attribute__((address_space(0))) void *)addr))
+    return __builtin_amdgcn_ds_atomic_fadd_f32(
+        (const __attribute__((address_space(3))) float *)addr, value);
+  else if (__builtin_amdgcn_is_private(
+               (const __attribute__((address_space(0))) void *)addr)) {
+    float temp = *addr;
+    *addr = temp + value;
+    return temp;
+  }
+  return __builtin_amdgcn_global_atomic_fadd_f32(
+      (const __attribute__((address_space(1))) float *)addr, value);
+}
+#endif // if defined(gfx90a) &&
+
+bool volatile omptarget_workers_done [[clang::loader_uninitialized]];
+#pragma omp allocate(omptarget_workers_done) allocator(omp_pteam_mem_alloc)
+
+bool volatile omptarget_master_ready [[clang::loader_uninitialized]];
+#pragma omp allocate(omptarget_master_ready) allocator(omp_pteam_mem_alloc)
+
+void workersStartBarrier() {
+#ifdef __AMDGCN__
+  synchronize::omptarget_workers_done = true;
+  synchronize::threads();
+  while (!synchronize::omptarget_master_ready)
+    synchronize::threads();
+  synchronize::omptarget_workers_done = false;
+#else
+  synchronize::threads();
+#endif
+}
+
+void workersDoneBarrier() {
+  // This worker termination logic permits full barriers in reductions
+  // by keeping the master thread waiting at another barrier till
+  // all workers are finished.
+#ifdef __AMDGCN__
+  if (mapping::getThreadIdInBlock() == 0)
+    synchronize::omptarget_workers_done = true;
+#endif
+  synchronize::threads();
+}
+
 #pragma omp end declare variant
 ///}
 
@@ -265,6 +334,10 @@ void syncThreads() {
 
 void syncThreadsAligned() { __syncthreads(); }
 
+void workersStartBarrier() { syncThreads(); }
+
+void workersDoneBarrier() { syncThreads(); }
+
 constexpr uint32_t OMP_SPIN = 1000;
 
 void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
@@ -286,6 +359,8 @@ void setLock(omp_lock_t *Lock) {
   } // wait for 0 to be the read value
 }
 
+float unsafeAtomicAdd(float *addr, float value) { return 0.0; }
+
 #pragma omp end declare variant
 ///}
 
@@ -301,6 +376,10 @@ void synchronize::warp(LaneMaskTy Mask) { impl::syncWarp(Mask); }
 void synchronize::threads() { impl::syncThreads(); }
 
 void synchronize::threadsAligned() { impl::syncThreadsAligned(); }
+
+void synchronize::workersStartBarrier() { impl::workersStartBarrier(); }
+
+void synchronize::workersDoneBarrier() { impl::workersDoneBarrier(); }
 
 void fence::team(int Ordering) { impl::fenceTeam(Ordering); }
 
@@ -366,7 +445,7 @@ __attribute__((noinline)) void __kmpc_barrier_simple_generic(IdentTy *Loc,
 
 int32_t __kmpc_master(IdentTy *Loc, int32_t TId) {
   FunctionTracingRAII();
-  return omp_get_team_num() == 0;
+  return omp_get_thread_num() == 0;
 }
 
 void __kmpc_end_master(IdentTy *Loc, int32_t TId) { FunctionTracingRAII(); }
@@ -415,6 +494,10 @@ void omp_set_lock(omp_lock_t *Lock) { impl::setLock(Lock); }
 void omp_unset_lock(omp_lock_t *Lock) { impl::unsetLock(Lock); }
 
 int omp_test_lock(omp_lock_t *Lock) { return impl::testLock(Lock); }
+
+float __kmpc_unsafeAtomicAdd(float *addr, float value) {
+  return impl::unsafeAtomicAdd(addr, value);
+}
 } // extern "C"
 
 #pragma omp end declare target

@@ -1,16 +1,16 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple nvptx -fcuda-is-device \
+// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn -fcuda-is-device \
 // RUN:   -emit-llvm -o - -x hip %s \
 // RUN:   | FileCheck -check-prefixes=DEV,NORDC %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple nvptx -fcuda-is-device \
+// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn -fcuda-is-device \
 // RUN:   -fgpu-rdc -cuid=abc -emit-llvm -o - -x hip %s \
 // RUN:   | FileCheck -check-prefixes=DEV,RDC %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple nvptx \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-gnu-linux \
 // RUN:   -emit-llvm -o - -x hip %s \
 // RUN:   | FileCheck -check-prefixes=HOST,NORDC-H %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple nvptx \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-gnu-linux \
 // RUN:   -fgpu-rdc -cuid=abc -emit-llvm -o - -x hip %s \
 // RUN:   | FileCheck -check-prefixes=HOST,RDC-H %s
-// RUN: %clang_cc1 -triple nvptx -fcuda-is-device \
+// RUN: %clang_cc1 -no-opaque-pointers -triple nvptx -fcuda-is-device \
 // RUN:   -fgpu-rdc -cuid=abc -emit-llvm -o - %s \
 // RUN:   | FileCheck -check-prefixes=CUDA %s
 
