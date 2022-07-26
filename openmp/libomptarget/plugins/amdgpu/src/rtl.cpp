@@ -86,6 +86,8 @@ SmallPoolMgrTy SmallPoolMgr;
 extern "C" {
 uint64_t hostrpc_assign_buffer(hsa_agent_t Agent, hsa_queue_t *ThisQ,
                                uint32_t DeviceId);
+void hostrpcStatInit(const char *);
+void printHostRPCCallCount();
 hsa_status_t hostrpc_init();
 hsa_status_t hostrpc_terminate();
 
@@ -1348,6 +1350,15 @@ void ompt_enable_queue_profiling(int enable) {
   DeviceInfo.enableQueueProfiling(enable);
 }
 
+int32_t __tgt_rtl_deinit_plugin() {
+  printHostRPCCallCount();
+#if fixme
+  if (DeviceInfoState)
+    delete DeviceInfoState;
+#endif
+  return OFFLOAD_SUCCESS;
+}
+
 namespace {
 
 /// Retrieve the libomptarget function for setting timestamps in trace records
@@ -2133,6 +2144,10 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
                 DeviceInfo.ComputeUnits[KernelInfo->DeviceId]);
 
   if (print_kernel_trace >= LAUNCH) {
+    // if host tracing requested, init rpc counters for each kernel launch
+    // TODO: implement same functionality for concurrent kernel launches. (not handled at this point)
+    if (print_kernel_trace >= HOST_SERVICE_TRACING)
+      hostrpcStatInit(KernelInfo->Name);
     // enum modes are SPMD, GENERIC, NONE 0,1,2
     // if doing rtl timing, print to stderr, unless stdout requested.
     bool TraceToStdout = print_kernel_trace & (RTL_TO_STDOUT | RTL_TIMING);
