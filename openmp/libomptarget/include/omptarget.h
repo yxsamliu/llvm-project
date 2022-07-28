@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -241,7 +243,9 @@ struct __tgt_device_info {
 extern "C" {
 #endif
 
+int ompx_get_team_procs(int device_num);
 int omp_get_num_devices(void);
+int omp_get_device_num(void);
 int omp_get_initial_device(void);
 void *omp_target_alloc(size_t size, int device_num);
 void omp_target_free(void *device_ptr, int device_num);

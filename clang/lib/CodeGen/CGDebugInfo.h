@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -540,6 +542,14 @@ public:
 
   /// Emit an @import declaration.
   void EmitImportDecl(const ImportDecl &ID);
+
+  /// DebugInfo isn't attached to string literals by default. While certain
+  /// aspects of debuginfo aren't useful for string literals (like a name), it's
+  /// nice to be able to symbolize the line and column information. This is
+  /// especially useful for sanitizers, as it allows symbolization of
+  /// heap-buffer-overflows on constant strings.
+  void AddStringLiteralDebugInfo(llvm::GlobalVariable *GV,
+                                 const StringLiteral *S);
 
   /// Emit C++ namespace alias.
   llvm::DIImportedEntity *EmitNamespaceAlias(const NamespaceAliasDecl &NA);

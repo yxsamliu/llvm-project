@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -252,17 +254,17 @@ void LLVMContextImpl::setOptPassGate(OptPassGate& OPG) {
 }
 
 bool LLVMContextImpl::hasOpaquePointersValue() {
-  return OpaquePointers.hasValue();
+  return OpaquePointers.has_value();
 }
 
 bool LLVMContextImpl::getOpaquePointers() {
-  if (LLVM_UNLIKELY(!(OpaquePointers.hasValue())))
+  if (LLVM_UNLIKELY(!OpaquePointers))
     OpaquePointers = OpaquePointersCL;
   return *OpaquePointers;
 }
 
 void LLVMContextImpl::setOpaquePointers(bool OP) {
-  assert((!OpaquePointers.hasValue() || OpaquePointers.getValue() == OP) &&
+  assert((!OpaquePointers || OpaquePointers.getValue() == OP) &&
          "Cannot change opaque pointers mode once set");
   OpaquePointers = OP;
 }

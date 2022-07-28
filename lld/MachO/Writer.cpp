@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,6 +22,7 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "UnwindInfoSection.h"
+#include "llvm/Support/Parallel.h"
 
 #include "lld/Common/Arrays.h"
 #include "lld/Common/CommonLinkerContext.h"
@@ -458,9 +461,11 @@ public:
     auto *c = reinterpret_cast<build_version_command *>(buf);
     c->cmd = LC_BUILD_VERSION;
     c->cmdsize = getSize();
+
     c->platform = static_cast<uint32_t>(platformInfo.target.Platform);
     c->minos = encodeVersion(platformInfo.minimum);
     c->sdk = encodeVersion(platformInfo.sdk);
+
     c->ntools = ntools;
     auto *t = reinterpret_cast<build_tool_version *>(&c[1]);
     t->tool = TOOL_LD;
@@ -656,7 +661,7 @@ void Writer::scanRelocations() {
       }
       if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
         if (auto *undefined = dyn_cast<Undefined>(sym))
-          treatUndefinedSymbol(*undefined);
+          treatUndefinedSymbol(*undefined, isec, r.offset);
         // treatUndefinedSymbol() can replace sym with a DylibSymbol; re-check.
         if (!isa<Undefined>(sym) && validateSymbolRelocation(sym, isec, r))
           prepareSymbolRelocation(sym, isec, r);
@@ -767,6 +772,11 @@ template <class LP> void Writer::createLoadCommands() {
     in.header->addLoadCommand(make<LCBuildVersion>(config->platformInfo));
   else
     in.header->addLoadCommand(make<LCMinVersion>(config->platformInfo));
+
+  if (config->secondaryPlatformInfo) {
+    in.header->addLoadCommand(
+        make<LCBuildVersion>(*config->secondaryPlatformInfo));
+  }
 
   // This is down here to match ld64's load command order.
   if (config->outputType == MH_EXECUTE)
@@ -992,8 +1002,14 @@ template <class LP> void Writer::createOutputSections() {
     StringRef segname = it.first.first;
     ConcatOutputSection *osec = it.second;
     assert(segname != segment_names::ld);
-    if (osec->isNeeded())
+    if (osec->isNeeded()) {
+      // See comment in ObjFile::splitEhFrames()
+      if (osec->name == section_names::ehFrame &&
+          segname == segment_names::text)
+        osec->align = target->wordSize;
+
       getOrCreateOutputSegment(segname)->addOutputSection(osec);
+    }
   }
 
   for (SyntheticSection *ssec : syntheticSections) {
@@ -1033,7 +1049,7 @@ void Writer::finalizeAddresses() {
         continue;
       // Other kinds of OutputSections have already been finalized.
       if (auto concatOsec = dyn_cast<ConcatOutputSection>(osec))
-          concatOsec->finalizeContents();
+        concatOsec->finalizeContents();
     }
   }
 
@@ -1124,9 +1140,13 @@ void Writer::openFile() {
 
 void Writer::writeSections() {
   uint8_t *buf = buffer->getBufferStart();
+  std::vector<const OutputSection *> osecs;
   for (const OutputSegment *seg : outputSegments)
-    for (const OutputSection *osec : seg->getSections())
-      osec->writeTo(buf + osec->fileOff);
+    append_range(osecs, seg->getSections());
+
+  parallelForEach(osecs.begin(), osecs.end(), [&](const OutputSection *osec) {
+    osec->writeTo(buf + osec->fileOff);
+  });
 }
 
 // In order to utilize multiple cores, we first split the buffer into chunks,
@@ -1158,13 +1178,16 @@ void Writer::writeUuid() {
 }
 
 void Writer::writeCodeSignature() {
-  if (codeSignatureSection)
+  if (codeSignatureSection) {
+    TimeTraceScope timeScope("Write code signature");
     codeSignatureSection->writeHashes(buffer->getBufferStart());
+  }
 }
 
 void Writer::writeOutputFile() {
   TimeTraceScope timeScope("Write output file");
   openFile();
+  reportPendingUndefinedSymbols();
   if (errorCount())
     return;
   writeSections();
@@ -1187,6 +1210,7 @@ template <class LP> void Writer::run() {
   scanRelocations();
 
   // Do not proceed if there was an undefined symbol.
+  reportPendingUndefinedSymbols();
   if (errorCount())
     return;
 

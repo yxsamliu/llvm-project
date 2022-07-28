@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -222,7 +224,10 @@ public:
 
   /// Returns the code model. The choices are small, kernel, medium, large, and
   /// target default.
-  CodeModel::Model getCodeModel() const;
+  CodeModel::Model getCodeModel() const { return CMModel; }
+
+  /// Set the code model.
+  void setCodeModel(CodeModel::Model CM) { CMModel = CM; }
 
   bool isPositionIndependent() const;
 
@@ -256,6 +261,8 @@ public:
   void setSupportsDebugEntryValues(bool Enable) {
     Options.SupportsDebugEntryValues = Enable;
   }
+
+  void setCFIFixup(bool Enable) { Options.EnableCFIFixup = Enable; }
 
   bool getAIXExtendedAltivecABI() const {
     return Options.EnableAIXExtendedAltivecABI;
@@ -403,6 +410,12 @@ public:
   virtual unsigned getSjLjDataSize() const { return DefaultSjLjDataSize; }
 
   static std::pair<int, int> parseBinutilsVersion(StringRef Version);
+
+  /// getAddressSpaceForPseudoSourceKind - Given the kind of memory
+  /// (e.g. stack) the target returns the corresponding address space.
+  virtual unsigned getAddressSpaceForPseudoSourceKind(unsigned Kind) const {
+    return 0;
+  }
 };
 
 /// This class describes a target machine that is implemented with the LLVM

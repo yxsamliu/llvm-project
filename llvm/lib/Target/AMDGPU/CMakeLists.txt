@@ -1,3 +1,5 @@
+# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
 add_llvm_component_group(AMDGPU)
 
 set(LLVM_TARGET_DEFINITIONS AMDGPU.td)
@@ -57,6 +59,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUFrameLowering.cpp
   AMDGPUGlobalISelUtils.cpp
   AMDGPUHSAMetadataStreamer.cpp
+  AMDGPUInsertDelayAlu.cpp
   AMDGPUInstCombineIntrinsic.cpp
   AMDGPUInstrInfo.cpp
   AMDGPUInstructionSelector.cpp
@@ -76,6 +79,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUMachineModuleInfo.cpp
   AMDGPUMacroFusion.cpp
   AMDGPUMCInstLower.cpp
+  AMDGPUIGroupLP.cpp
   AMDGPUMIRFormatter.cpp
   AMDGPUOpenCLEnqueuedBlockLowering.cpp
   AMDGPUPerfHintAnalysis.cpp
@@ -87,9 +91,11 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUPromoteKernelArguments.cpp
   AMDGPURegBankCombiner.cpp
   AMDGPURegisterBankInfo.cpp
+  AMDGPUReleaseVGPRs.cpp
   AMDGPUReplaceLDSUseWithPointer.cpp
   AMDGPUResourceUsageAnalysis.cpp
   AMDGPURewriteOutArguments.cpp
+  AMDGPUSetWavePriority.cpp
   AMDGPUSubtarget.cpp
   AMDGPUTargetMachine.cpp
   AMDGPUTargetObjectFile.cpp

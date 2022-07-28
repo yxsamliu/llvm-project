@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -138,10 +140,11 @@ struct TypeCloner {
           LLVMGetArrayLength(Src)
         );
       case LLVMPointerTypeKind:
-        return LLVMPointerType(
-          Clone(LLVMGetElementType(Src)),
-          LLVMGetPointerAddressSpace(Src)
-        );
+        if (LLVMPointerTypeIsOpaque(Src))
+          return LLVMPointerTypeInContext(Ctx, LLVMGetPointerAddressSpace(Src));
+        else
+          return LLVMPointerType(Clone(LLVMGetElementType(Src)),
+                                 LLVMGetPointerAddressSpace(Src));
       case LLVMVectorTypeKind:
         return LLVMVectorType(
           Clone(LLVMGetElementType(Src)),
@@ -300,25 +303,16 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
     return LLVMConstNull(TypeCloner(M).Clone(Cst));
   }
 
-  // Try constant array
-  if (LLVMIsAConstantArray(Cst)) {
-    check_value_kind(Cst, LLVMConstantArrayValueKind);
+  // Try constant array or constant data array
+  if (LLVMIsAConstantArray(Cst) || LLVMIsAConstantDataArray(Cst)) {
+    check_value_kind(Cst, LLVMIsAConstantArray(Cst)
+                              ? LLVMConstantArrayValueKind
+                              : LLVMConstantDataArrayValueKind);
     LLVMTypeRef Ty = TypeCloner(M).Clone(Cst);
     unsigned EltCount = LLVMGetArrayLength(Ty);
     SmallVector<LLVMValueRef, 8> Elts;
     for (unsigned i = 0; i < EltCount; i++)
-      Elts.push_back(clone_constant(LLVMGetOperand(Cst, i), M));
-    return LLVMConstArray(LLVMGetElementType(Ty), Elts.data(), EltCount);
-  }
-
-  // Try constant data array
-  if (LLVMIsAConstantDataArray(Cst)) {
-    check_value_kind(Cst, LLVMConstantDataArrayValueKind);
-    LLVMTypeRef Ty = TypeCloner(M).Clone(Cst);
-    unsigned EltCount = LLVMGetArrayLength(Ty);
-    SmallVector<LLVMValueRef, 8> Elts;
-    for (unsigned i = 0; i < EltCount; i++)
-      Elts.push_back(clone_constant(LLVMGetElementAsConstant(Cst, i), M));
+      Elts.push_back(clone_constant(LLVMGetAggregateElement(Cst, i), M));
     return LLVMConstArray(LLVMGetElementType(Ty), Elts.data(), EltCount);
   }
 
@@ -368,25 +362,16 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
     report_fatal_error("ConstantFP is not supported");
   }
 
-  // Try ConstantVector
-  if (LLVMIsAConstantVector(Cst)) {
-    check_value_kind(Cst, LLVMConstantVectorValueKind);
+  // Try ConstantVector or ConstantDataVector
+  if (LLVMIsAConstantVector(Cst) || LLVMIsAConstantDataVector(Cst)) {
+    check_value_kind(Cst, LLVMIsAConstantVector(Cst)
+                              ? LLVMConstantVectorValueKind
+                              : LLVMConstantDataVectorValueKind);
     LLVMTypeRef Ty = TypeCloner(M).Clone(Cst);
     unsigned EltCount = LLVMGetVectorSize(Ty);
     SmallVector<LLVMValueRef, 8> Elts;
     for (unsigned i = 0; i < EltCount; i++)
-      Elts.push_back(clone_constant(LLVMGetOperand(Cst, i), M));
-    return LLVMConstVector(Elts.data(), EltCount);
-  }
-
-  // Try ConstantDataVector
-  if (LLVMIsAConstantDataVector(Cst)) {
-    check_value_kind(Cst, LLVMConstantDataVectorValueKind);
-    LLVMTypeRef Ty = TypeCloner(M).Clone(Cst);
-    unsigned EltCount = LLVMGetVectorSize(Ty);
-    SmallVector<LLVMValueRef, 8> Elts;
-    for (unsigned i = 0; i < EltCount; i++)
-      Elts.push_back(clone_constant(LLVMGetElementAsConstant(Cst, i), M));
+      Elts.push_back(clone_constant(LLVMGetAggregateElement(Cst, i), M));
     return LLVMConstVector(Elts.data(), EltCount);
   }
 
@@ -997,7 +982,7 @@ static void declare_symbols(LLVMModuleRef Src, LLVMModuleRef M) {
     const char *Name = LLVMGetValueName2(Cur, &NameLen);
     if (LLVMGetNamedGlobal(M, Name))
       report_fatal_error("GlobalVariable already cloned");
-    LLVMAddGlobal(M, LLVMGetElementType(TypeCloner(M).Clone(Cur)), Name);
+    LLVMAddGlobal(M, TypeCloner(M).Clone(LLVMGlobalGetValueType(Cur)), Name);
 
     Next = LLVMGetNextGlobal(Cur);
     if (Next == nullptr) {
@@ -1029,7 +1014,8 @@ FunDecl:
     const char *Name = LLVMGetValueName2(Cur, &NameLen);
     if (LLVMGetNamedFunction(M, Name))
       report_fatal_error("Function already cloned");
-    auto Ty = LLVMGetElementType(TypeCloner(M).Clone(Cur));
+    LLVMTypeRef Ty = TypeCloner(M).Clone(LLVMGlobalGetValueType(Cur));
+
     auto F = LLVMAddFunction(M, Name, Ty);
 
     // Copy attributes
@@ -1390,7 +1376,7 @@ NamedMDClone:
   }
 }
 
-int llvm_echo(void) {
+int llvm_echo(bool OpaquePointers) {
   LLVMEnablePrettyStackTrace();
 
   LLVMModuleRef Src = llvm_load_module(false, true);
@@ -1399,6 +1385,7 @@ int llvm_echo(void) {
   size_t ModuleIdentLen;
   const char *ModuleName = LLVMGetModuleIdentifier(Src, &ModuleIdentLen);
   LLVMContextRef Ctx = LLVMContextCreate();
+  LLVMContextSetOpaquePointers(Ctx, OpaquePointers);
   LLVMModuleRef M = LLVMModuleCreateWithNameInContext(ModuleName, Ctx);
 
   LLVMSetSourceFileName(M, SourceFileName, SourceFileLen);

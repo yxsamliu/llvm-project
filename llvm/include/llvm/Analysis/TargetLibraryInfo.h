@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -281,6 +283,13 @@ public:
     // We can inline if the union of the caller and callee's nobuiltin
     // attributes is no stricter than the caller's nobuiltin attributes.
     return B == OverrideAsUnavailable;
+  }
+
+  /// Return true if the function type FTy is valid for the library function
+  /// F, regardless of whether the function is available.
+  bool isValidProtoForLibFunc(const FunctionType &FTy, LibFunc F,
+                              const Module &M) const {
+    return Impl->isValidProtoForLibFunc(FTy, F, M);
   }
 
   /// Searches for a particular function name.

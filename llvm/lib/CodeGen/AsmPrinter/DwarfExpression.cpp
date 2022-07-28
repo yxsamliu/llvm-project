@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -330,6 +332,18 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
       return false;
     }
 
+  // TODO: We should not give up here but the following code needs to be changed
+  //       to deal with multiple (sub)registers first.
+  if (DwarfRegs.size() > 1) {
+    LLVM_DEBUG(dbgs() << "TODO: giving up on debug information due to "
+                         "multi-register usage.\n");
+    DwarfRegs.clear();
+    LocationKind = Unknown;
+    return false;
+  }
+
+  auto Reg = DwarfRegs[0];
+  bool FBReg = isFrameRegister(TRI, MachineReg);
   int SignedOffset = 0;
 
   // Pattern-match combinations for which more efficient representations exist.
@@ -359,9 +373,6 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
       ExprCursor.consume(2);
     }
   }
-
-  auto Reg = DwarfRegs[0];
-  bool FBReg = isFrameRegister(TRI, MachineReg);
 
   if (FBReg)
     addFBReg(SignedOffset);

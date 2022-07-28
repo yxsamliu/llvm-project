@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -602,7 +604,7 @@ struct Allocator {
       CHECK_LE(alloc_beg + sizeof(LargeChunkHeader), chunk_beg);
       reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Set(m);
     }
-    ASAN_MALLOC_HOOK(res, size);
+    RunMallocHooks(res, size);
     return res;
   }
 
@@ -683,7 +685,7 @@ struct Allocator {
       return;
     }
 
-    ASAN_FREE_HOOK(ptr);
+    RunFreeHooks(ptr);
 
     // Must mark the chunk as quarantined before any changes to its metadata.
     // Do not quarantine given chunk if we failed to set CHUNK_QUARANTINE flag.
@@ -1222,19 +1224,6 @@ int __asan_update_allocation_context(void* addr) {
   GET_STACK_TRACE_MALLOC;
   return instance.UpdateAllocationStack((uptr)addr, &stack);
 }
-
-#if !SANITIZER_SUPPORTS_WEAK_HOOKS
-// Provide default (no-op) implementation of malloc hooks.
-SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_malloc_hook,
-                             void *ptr, uptr size) {
-  (void)ptr;
-  (void)size;
-}
-
-SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_free_hook, void *ptr) {
-  (void)ptr;
-}
-#endif
 
 #if SANITIZER_AMDGPU
 DECLARE_REAL(hsa_status_t, hsa_amd_agents_allow_access, uint32_t num_agents,

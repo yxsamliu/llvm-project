@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -42,7 +44,7 @@
 
 using namespace _OMP;
 
-#pragma omp declare target
+#pragma omp begin declare target device_type(nohost)
 
 namespace {
 
@@ -90,7 +92,6 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
     state::DateEnvironmentRAII DERAII(ident);
     ++icv::Level;
     invokeMicrotask(TId, 0, fn, args, nargs);
-    state::exitDataEnvironment();
     return;
   }
 
@@ -158,52 +159,52 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
       break;
     case 16:
       GlobalArgs[15] = args[15];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 15:
       GlobalArgs[14] = args[14];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 14:
       GlobalArgs[13] = args[13];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 13:
       GlobalArgs[12] = args[12];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 12:
       GlobalArgs[11] = args[11];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 11:
       GlobalArgs[10] = args[10];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 10:
       GlobalArgs[9] = args[9];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 9:
       GlobalArgs[8] = args[8];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 8:
       GlobalArgs[7] = args[7];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 7:
       GlobalArgs[6] = args[6];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 6:
       GlobalArgs[5] = args[5];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 5:
       GlobalArgs[4] = args[4];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 4:
       GlobalArgs[3] = args[3];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 3:
       GlobalArgs[2] = args[2];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 2:
       GlobalArgs[1] = args[1];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 1:
       GlobalArgs[0] = args[0];
-      // FALLTHROUGH
+      [[fallthrough]];
     case 0:
       break;
     }
@@ -220,10 +221,21 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
     state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, true, ident);
     state::ValueRAII LevelRAII(icv::Level, 1u, 0u, true, ident);
 
+#ifdef __AMDGCN__
+    synchronize::omptarget_master_ready = true;
+#endif
     // Master signals work to activate workers.
     synchronize::threads();
     // Master waits for workers to signal.
     synchronize::threads();
+#ifdef __AMDGCN__
+    while (!synchronize::omptarget_workers_done)
+      synchronize::threads();
+
+    // Initialize for next parallel region
+    synchronize::omptarget_workers_done = false;
+    synchronize::omptarget_master_ready = false;
+#endif
   }
 
   if (nargs)

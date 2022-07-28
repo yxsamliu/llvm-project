@@ -7,11 +7,11 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
-// Modifications Copyright (c) 2021 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -50,6 +50,9 @@ static void __kmp_init_node(kmp_depnode_t *node) {
   KMP_ATOMIC_ST_RLX(&node->dn.nrefs, 1); // init creates the first reference
 #ifdef KMP_SUPPORT_GRAPH_OUTPUT
   node->dn.id = KMP_ATOMIC_INC(&kmp_node_id_seed);
+#endif
+#if USE_ITT_BUILD && USE_ITT_NOTIFY
+  __itt_sync_create(node, "OMP task dep node", NULL, 0);
 #endif
 }
 

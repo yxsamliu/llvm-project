@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -189,6 +191,10 @@ public:
 
   /// Get the block id of the current thread on the GPU
   llvm::Value *getGPUBlockID(CodeGenFunction &CGF);
+
+  /// Get the complete block size in use on the GPU. If there is a
+  /// partial block, that information is not returned.
+  llvm::Value *getGPUCompleteBlockSize(CodeGenFunction &CGF);
 
   /// Returns whether the current architecture supports fast FP atomics
   bool supportFastFPAtomics() override;

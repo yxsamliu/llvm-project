@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -274,6 +276,7 @@ namespace llvm {
                                 bool AllowParens = false);
     bool parseOptionalDerefAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes);
     bool parseOptionalUWTableKind(UWTableKind &Kind);
+    bool parseAllocKind(AllocFnKind &Kind);
     bool parseScopeAndOrdering(bool IsAtomic, SyncScope::ID &SSID,
                                AtomicOrdering &Ordering);
     bool parseScope(SyncScope::ID &SSID);
@@ -515,6 +518,7 @@ namespace llvm {
     bool parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts,
                                 Optional<unsigned> *InRangeOp = nullptr);
     bool parseOptionalComdat(StringRef GlobalName, Comdat *&C);
+    bool parseSanitizer(GlobalVariable *GV);
     bool parseMetadataAsValue(Value *&V, PerFunctionState &PFS);
     bool parseValueAsMetadata(Metadata *&MD, const Twine &TypeMsg,
                               PerFunctionState *PFS);

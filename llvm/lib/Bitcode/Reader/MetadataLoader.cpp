@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -1232,7 +1234,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     }
 
     MetadataList.assignValue(
-        LocalAsMetadata::get(ValueList.getValueFwdRef(Record[1], Ty, TyID)),
+        LocalAsMetadata::get(ValueList.getValueFwdRef(
+            Record[1], Ty, TyID, /*ConstExprInsertBB*/ nullptr)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1252,8 +1255,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       if (Ty->isMetadataTy())
         Elts.push_back(getMD(Record[i + 1]));
       else if (!Ty->isVoidTy()) {
-        auto *MD = ValueAsMetadata::get(
-            ValueList.getValueFwdRef(Record[i + 1], Ty, TyID));
+        auto *MD = ValueAsMetadata::get(ValueList.getValueFwdRef(
+            Record[i + 1], Ty, TyID, /*ConstExprInsertBB*/ nullptr));
         assert(isa<ConstantAsMetadata>(MD) &&
                "Expected non-function-local metadata");
         Elts.push_back(MD);
@@ -1274,7 +1277,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Invalid record");
 
     MetadataList.assignValue(
-        ValueAsMetadata::get(ValueList.getValueFwdRef(Record[1], Ty, TyID)),
+        ValueAsMetadata::get(ValueList.getValueFwdRef(
+            Record[1], Ty, TyID, /*ConstExprInsertBB*/ nullptr)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1702,6 +1706,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     bool HasThisAdj = true;
     bool HasThrownTypes = true;
     bool HasAnnotations = false;
+    bool HasTargetFuncName = false;
     unsigned OffsetA = 0;
     unsigned OffsetB = 0;
     if (!HasSPFlags) {
@@ -1715,6 +1720,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       HasThrownTypes = Record.size() >= 21;
     } else {
       HasAnnotations = Record.size() >= 19;
+      HasTargetFuncName = Record.size() >= 20;
     }
     Metadata *CUorFn = getMDOrNull(Record[12 + OffsetB]);
     DISubprogram *SP = GET_OR_DISTINCT(
@@ -1739,7 +1745,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
          HasThrownTypes ? getMDOrNull(Record[17 + OffsetB])
                         : nullptr,                          // thrownTypes
          HasAnnotations ? getMDOrNull(Record[18 + OffsetB])
-                        : nullptr                           // annotations
+                        : nullptr, // annotations
+         HasTargetFuncName ? getMDString(Record[19 + OffsetB])
+                           : nullptr // targetFuncName
          ));
     MetadataList.assignValue(SP, NextMetadataNo);
     NextMetadataNo++;
@@ -2078,9 +2086,11 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         Type *Ty = getTypeByID(Elems[0]);
         if (!Ty || !Ty->isFirstClassType())
           return error("Invalid record");
-        Constant *V = ValueList.getConstantFwdRef(Elems[1], Ty, Elems[0]);
+        Value *V = ValueList[Elems[1]];
         if (!V || !isa<ConstantData>(V))
           return error("Invalid record");
+        if (Ty != V->getType())
+          report_fatal_error("Invalid record");
         Builder.append<DIOp::Constant>(cast<ConstantData>(V));
         Elems = Elems.slice(2);
         break;

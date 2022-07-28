@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -212,7 +214,7 @@ static int isVariantApplicableInContextHelper(
       });
 
     Optional<bool> Result = HandleTrait(Property, IsActiveTrait);
-    if (Result.hasValue())
+    if (Result)
       return Result.getValue();
   }
 
@@ -233,7 +235,7 @@ static int isVariantApplicableInContextHelper(
         ConstructMatches->push_back(ConstructIdx - 1);
 
       Optional<bool> Result = HandleTrait(Property, FoundInOrder);
-      if (Result.hasValue())
+      if (Result)
         return Result.getValue();
 
       if (!FoundInOrder) {

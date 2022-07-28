@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 #ifndef SRC_RUNTIME_INCLUDE_INTERNAL_H_
@@ -56,6 +58,7 @@ typedef struct atl_kernel_info_s {
   uint32_t kernel_segment_size;
   uint32_t explicit_argument_count;
   uint32_t implicit_argument_count;
+  std::string kind;
 } atl_kernel_info_t;
 
 typedef struct atl_symbol_info_s {

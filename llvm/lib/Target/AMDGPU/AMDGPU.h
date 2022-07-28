@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 /// \file
 //===----------------------------------------------------------------------===//
@@ -303,6 +305,12 @@ extern char &SIMemoryLegalizerID;
 void initializeSIModeRegisterPass(PassRegistry&);
 extern char &SIModeRegisterID;
 
+void initializeAMDGPUReleaseVGPRsPass(PassRegistry &);
+extern char &AMDGPUReleaseVGPRsID;
+
+void initializeAMDGPUInsertDelayAluPass(PassRegistry &);
+extern char &AMDGPUInsertDelayAluID;
+
 void initializeSIInsertHardClausesPass(PassRegistry &);
 extern char &SIInsertHardClausesID;
 
@@ -334,6 +342,9 @@ extern char &GCNNSAReassignID;
 
 void initializeGCNPreRAOptimizationsPass(PassRegistry &);
 extern char &GCNPreRAOptimizationsID;
+
+FunctionPass *createAMDGPUSetWavePriorityPass();
+void initializeAMDGPUSetWavePriorityPass(PassRegistry &);
 
 namespace AMDGPU {
 enum TargetIndex {

@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -625,6 +627,9 @@ HANDLE_TARGET_OPCODE(G_FABS)
 /// floating point. X and the result must have the same type.  FCOPYSIGN(f32,
 /// f64) is allowed.
 HANDLE_TARGET_OPCODE(G_FCOPYSIGN)
+
+/// Generic test for floating-point class.
+HANDLE_TARGET_OPCODE(G_IS_FPCLASS)
 
 /// Generic FP canonicalize value.
 HANDLE_TARGET_OPCODE(G_FCANONICALIZE)

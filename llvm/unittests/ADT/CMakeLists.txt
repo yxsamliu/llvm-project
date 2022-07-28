@@ -1,3 +1,5 @@
+# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
 set(LLVM_LINK_COMPONENTS
   Support
   )
@@ -22,6 +24,7 @@ add_llvm_unittest(ADTTests
   DenseSetTest.cpp
   DepthFirstIteratorTest.cpp
   DirectedGraphTest.cpp
+  EditDistanceTest.cpp
   EnumeratedArrayTest.cpp
   EquivalenceClassesTest.cpp
   FallibleIteratorTest.cpp

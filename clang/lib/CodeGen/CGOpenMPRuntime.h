@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -784,9 +786,6 @@ private:
   /// Loads all the offload entries information from the host IR
   /// metadata.
   void loadOffloadInfoMetadata();
-
-  /// Returns __tgt_offload_entry type.
-  QualType getTgtOffloadEntryQTy();
 
   /// Start scanning from statement \a S and and emit all target regions
   /// found along the way.

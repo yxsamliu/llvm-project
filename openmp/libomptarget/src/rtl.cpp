@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -176,6 +178,9 @@ void RTLsTy::LoadRTLs() {
 
     if (!(*((void **)&R.is_valid_binary) =
               dlsym(dynlib_handle, "__tgt_rtl_is_valid_binary")))
+      ValidPlugin = false;
+    if (!(*((void **)&R.number_of_team_procs) =
+              dlsym(dynlib_handle, "__tgt_rtl_number_of_team_procs")))
       ValidPlugin = false;
     if (!(*((void **)&R.number_of_devices) =
               dlsym(dynlib_handle, "__tgt_rtl_number_of_devices")))

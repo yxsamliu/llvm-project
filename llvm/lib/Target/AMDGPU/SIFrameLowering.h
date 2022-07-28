@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -10,7 +12,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIFRAMELOWERING_H
 
 #include "AMDGPUFrameLowering.h"
-#include "SIMachineFunctionInfo.h"
+#include "SIRegisterInfo.h"
 
 namespace llvm {
 
@@ -47,6 +49,9 @@ public:
   void processFunctionBeforeFrameFinalized(
     MachineFunction &MF,
     RegScavenger *RS = nullptr) const override;
+
+  void processFunctionBeforeFrameIndicesReplaced(
+      MachineFunction &MF, RegScavenger *RS = nullptr) const override;
 
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF,
@@ -111,7 +116,7 @@ public:
   MachineInstr *buildCFIForSGPRToVGPRSpill(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       const DebugLoc &DL, Register SGPR,
-      ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills) const;
+      ArrayRef<SIRegisterInfo::SpilledReg> VGPRSpills) const;
   /// Create a CFI index describing a spill of a SGPR to VMEM and
   /// build a MachineInstr around it.
   MachineInstr *buildCFIForSGPRToVMEMSpill(MachineBasicBlock &MBB,

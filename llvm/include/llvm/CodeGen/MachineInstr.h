@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -98,7 +100,7 @@ public:
     FmContract   = 1 << 8,              // Instruction supports Fast math
                                         // contraction operations like fma.
     FmAfn        = 1 << 9,              // Instruction may map to Fast math
-                                        // instrinsic approximation.
+                                        // intrinsic approximation.
     FmReassoc    = 1 << 10,             // Instruction supports Fast math
                                         // reassociation of operand order.
     NoUWrap      = 1 << 11,             // Instruction supports binary operator
@@ -596,8 +598,7 @@ public:
 
   /// Return true if operand \p OpIdx is a subregister index.
   bool isOperandSubregIdx(unsigned OpIdx) const {
-    assert(getOperand(OpIdx).getType() == MachineOperand::MO_Immediate &&
-           "Expected MO_Immediate operand type.");
+    assert(getOperand(OpIdx).isImm() && "Expected MO_Immediate operand type.");
     if (isExtractSubreg() && OpIdx == 2)
       return true;
     if (isInsertSubreg() && OpIdx == 3)

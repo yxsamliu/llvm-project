@@ -1,3 +1,5 @@
+# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
 create_subdirectory_options(CLANG TOOL)
 
 add_clang_subdirectory(diagtool)
@@ -10,6 +12,7 @@ add_clang_subdirectory(clang-fuzzer)
 add_clang_subdirectory(clang-import-test)
 add_clang_subdirectory(clang-nvlink-wrapper)
 add_clang_subdirectory(clang-linker-wrapper)
+add_clang_subdirectory(clang-offload-packager)
 add_clang_subdirectory(clang-offload-bundler)
 add_clang_subdirectory(clang-offload-wrapper)
 add_clang_subdirectory(clang-scan-deps)

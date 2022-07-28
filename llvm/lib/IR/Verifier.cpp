@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1693,6 +1695,13 @@ Verifier::visitModuleFlag(const MDNode *Op,
     // These behavior types accept any value.
     break;
 
+  case Module::Min: {
+    Check(mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2)),
+          "invalid value for 'min' module flag (expected constant integer)",
+          Op->getOperand(2));
+    break;
+  }
+
   case Module::Max: {
     Check(mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2)),
           "invalid value for 'max' module flag (expected constant integer)",
@@ -2141,6 +2150,25 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
 
     if (Args.second && !CheckParam("number of elements", *Args.second))
       return;
+  }
+
+  if (Attrs.hasFnAttr(Attribute::AllocKind)) {
+    AllocFnKind K = Attrs.getAllocKind();
+    AllocFnKind Type =
+        K & (AllocFnKind::Alloc | AllocFnKind::Realloc | AllocFnKind::Free);
+    if (!is_contained(
+            {AllocFnKind::Alloc, AllocFnKind::Realloc, AllocFnKind::Free},
+            Type))
+      CheckFailed(
+          "'allockind()' requires exactly one of alloc, realloc, and free");
+    if ((Type == AllocFnKind::Free) &&
+        ((K & (AllocFnKind::Uninitialized | AllocFnKind::Zeroed |
+               AllocFnKind::Aligned)) != AllocFnKind::Unknown))
+      CheckFailed("'allockind(\"free\")' doesn't allow uninitialized, zeroed, "
+                  "or aligned modifiers.");
+    AllocFnKind ZeroedUninit = AllocFnKind::Uninitialized | AllocFnKind::Zeroed;
+    if ((K & ZeroedUninit) == ZeroedUninit)
+      CheckFailed("'allockind()' can't be both zeroed and uninitialized");
   }
 
   if (Attrs.hasFnAttr(Attribute::VScaleRange)) {
@@ -3988,7 +4016,8 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
   auto Op = RMWI.getOperation();
   Type *ElTy = RMWI.getOperand(1)->getType();
   if (Op == AtomicRMWInst::Xchg) {
-    Check(ElTy->isIntegerTy() || ElTy->isFloatingPointTy(),
+    Check(ElTy->isIntegerTy() || ElTy->isFloatingPointTy() ||
+              ElTy->isPointerTy(),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
               " operand must have integer or floating point type!",
           &RMWI, ElTy);
@@ -4930,7 +4959,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
     Optional<RoundingMode> RoundMode =
         convertStrToRoundingMode(cast<MDString>(MD)->getString());
-    Check(RoundMode.hasValue() && RoundMode.getValue() != RoundingMode::Dynamic,
+    Check(RoundMode && *RoundMode != RoundingMode::Dynamic,
           "unsupported rounding mode argument", Call);
     break;
   }
@@ -4966,7 +4995,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::memcpy:
   case Intrinsic::memcpy_inline:
   case Intrinsic::memmove:
-  case Intrinsic::memset: {
+  case Intrinsic::memset:
+  case Intrinsic::memset_inline: {
     const auto *MI = cast<MemIntrinsic>(&Call);
     auto IsValidAlignment = [&](unsigned Alignment) -> bool {
       return Alignment == 0 || isPowerOf2_32(Alignment);
@@ -5560,7 +5590,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     break;
   }
-  case Intrinsic::experimental_vector_insert: {
+  case Intrinsic::vector_insert: {
     Value *Vec = Call.getArgOperand(0);
     Value *SubVec = Call.getArgOperand(1);
     Value *Idx = Call.getArgOperand(2);
@@ -5572,11 +5602,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     ElementCount VecEC = VecTy->getElementCount();
     ElementCount SubVecEC = SubVecTy->getElementCount();
     Check(VecTy->getElementType() == SubVecTy->getElementType(),
-          "experimental_vector_insert parameters must have the same element "
+          "vector_insert parameters must have the same element "
           "type.",
           &Call);
     Check(IdxN % SubVecEC.getKnownMinValue() == 0,
-          "experimental_vector_insert index must be a constant multiple of "
+          "vector_insert index must be a constant multiple of "
           "the subvector's known minimum vector length.");
 
     // If this insertion is not the 'mixed' case where a fixed vector is
@@ -5585,12 +5615,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     if (VecEC.isScalable() == SubVecEC.isScalable()) {
       Check(IdxN < VecEC.getKnownMinValue() &&
                 IdxN + SubVecEC.getKnownMinValue() <= VecEC.getKnownMinValue(),
-            "subvector operand of experimental_vector_insert would overrun the "
+            "subvector operand of vector_insert would overrun the "
             "vector being inserted into.");
     }
     break;
   }
-  case Intrinsic::experimental_vector_extract: {
+  case Intrinsic::vector_extract: {
     Value *Vec = Call.getArgOperand(0);
     Value *Idx = Call.getArgOperand(1);
     unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
@@ -5602,11 +5632,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     ElementCount ResultEC = ResultTy->getElementCount();
 
     Check(ResultTy->getElementType() == VecTy->getElementType(),
-          "experimental_vector_extract result must have the same element "
+          "vector_extract result must have the same element "
           "type as the input vector.",
           &Call);
     Check(IdxN % ResultEC.getKnownMinValue() == 0,
-          "experimental_vector_extract index must be a constant multiple of "
+          "vector_extract index must be a constant multiple of "
           "the result type's known minimum vector length.");
 
     // If this extraction is not the 'mixed' case where a fixed vector is is
@@ -5615,7 +5645,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     if (VecEC.isScalable() == ResultEC.isScalable()) {
       Check(IdxN < VecEC.getKnownMinValue() &&
                 IdxN + ResultEC.getKnownMinValue() <= VecEC.getKnownMinValue(),
-            "experimental_vector_extract would overrun.");
+            "vector_extract would overrun.");
     }
     break;
   }
@@ -5892,10 +5922,10 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
   // match the specification in the intrinsic call table. Thus, no
   // argument type check is needed here.
 
-  Check(FPI.getExceptionBehavior().hasValue(),
+  Check(FPI.getExceptionBehavior().has_value(),
         "invalid exception behavior argument", &FPI);
   if (HasRoundingMD) {
-    Check(FPI.getRoundingMode().hasValue(), "invalid rounding mode argument",
+    Check(FPI.getRoundingMode().has_value(), "invalid rounding mode argument",
           &FPI);
   }
 }
@@ -6137,7 +6167,7 @@ void Verifier::verifyAttachedCallBundle(const CallBase &Call,
 }
 
 void Verifier::verifySourceDebugInfo(const DICompileUnit &U, const DIFile &F) {
-  bool HasSource = F.getSource().hasValue();
+  bool HasSource = F.getSource().has_value();
   if (!HasSourceDebugInfo.count(&U))
     HasSourceDebugInfo[&U] = HasSource;
   CheckDI(HasSource == HasSourceDebugInfo[&U],

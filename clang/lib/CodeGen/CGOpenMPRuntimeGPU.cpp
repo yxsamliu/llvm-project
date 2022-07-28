@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1097,10 +1099,9 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
       if (IsGeneric)
         compileTimeThreadLimit =
             ComputeGenericWorkgroupSize(CGM, compileTimeThreadLimit);
-      std::string AttrVal = llvm::utostr(compileTimeThreadLimit);
       FlatAttr = compileTimeThreadLimit;
       OutlinedFn->addFnAttr("amdgpu-flat-work-group-size",
-                            AttrVal + "," + AttrVal);
+                            "1," + llvm::utostr(compileTimeThreadLimit));
       flatAttrEmitted = true;
     } // end   > 0
   }   // end of amdgcn teams or parallel directive
@@ -1114,10 +1115,9 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
       GenericModeWorkgroupSize =
           ComputeGenericWorkgroupSize(CGM, CmdLineWorkGroupSz);
 
-    std::string FlatAttrVal = llvm::utostr(GenericModeWorkgroupSize);
     FlatAttr = GenericModeWorkgroupSize;
     OutlinedFn->addFnAttr("amdgpu-flat-work-group-size",
-                            FlatAttrVal + "," + FlatAttrVal);
+                          "1," + llvm::utostr(GenericModeWorkgroupSize));
   }
   // Emit a kernel descriptor for runtime.
   setPropertyWorkGroupSize(CGM, OutlinedFn->getName(), FlatAttr);
@@ -1275,11 +1275,10 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
   const Stmt *DirectiveStmt = D.getAssociatedStmt();
   bool Mode = supportsSPMDExecutionMode(CGM.getContext(), D);
   if (Mode) {
-    if (CGM.getLangOpts().OpenMPIsDevice && CGM.getTriple().isAMDGCN() &&
-        CGM.isGeneratingNoLoopKernel(D)) {
-      assert(DirectiveStmt && "Cannot generate kernel for null statement");
-      CGM.setNoLoopKernel(DirectiveStmt);
-    }
+    // For AMDGPU, check if a no-loop kernel should be generated and if so,
+    // set metadata that can be used by codegen
+    if (CGM.getLangOpts().OpenMPIsDevice && CGM.getTriple().isAMDGCN())
+      CGM.checkAndSetNoLoopKernel(D);
     emitSPMDKernel(D, ParentName, OutlinedFn, OutlinedFnID, IsOffloadEntry,
                    CodeGen);
   } else
@@ -1292,6 +1291,7 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
                   ? OMP_TGT_EXEC_MODE_SPMD_NO_LOOP
                   : OMP_TGT_EXEC_MODE_SPMD)
            : OMP_TGT_EXEC_MODE_GENERIC);
+  // Reset no-loop kernel metadata if it exists
   if (Mode && DirectiveStmt && CGM.isNoLoopKernel(DirectiveStmt))
     CGM.resetNoLoopKernel(DirectiveStmt);
   assert(!CGM.isNoLoopKernel(DirectiveStmt) &&
@@ -1335,16 +1335,17 @@ CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
     llvm_unreachable("OpenMP can only handle device code.");
 
   llvm::OpenMPIRBuilder &OMPBuilder = getOMPBuilder();
-  if (!CGM.getLangOpts().OMPHostIRFile.empty()) {
-    OMPBuilder.createGlobalFlag(CGM.getLangOpts().OpenMPTargetDebug,
-                                "__omp_rtl_debug_kind");
-    OMPBuilder.createGlobalFlag(CGM.getLangOpts().OpenMPTeamSubscription,
-                                "__omp_rtl_assume_teams_oversubscription");
-    OMPBuilder.createGlobalFlag(CGM.getLangOpts().OpenMPThreadSubscription,
-                                "__omp_rtl_assume_threads_oversubscription");
-    OMPBuilder.createGlobalFlag(CGM.getLangOpts().OpenMPNoThreadState,
-                                "__omp_rtl_assume_no_thread_state");
-  }
+  if (CGM.getLangOpts().NoGPULib || CGM.getLangOpts().OMPHostIRFile.empty())
+    return;
+
+  OMPBuilder.createGlobalFlag(CGM.getLangOpts().OpenMPTargetDebug,
+                              "__omp_rtl_debug_kind");
+  OMPBuilder.createGlobalFlag(CGM.getLangOpts().OpenMPTeamSubscription,
+                              "__omp_rtl_assume_teams_oversubscription");
+  OMPBuilder.createGlobalFlag(CGM.getLangOpts().OpenMPThreadSubscription,
+                              "__omp_rtl_assume_threads_oversubscription");
+  OMPBuilder.createGlobalFlag(CGM.getLangOpts().OpenMPNoThreadState,
+                              "__omp_rtl_assume_no_thread_state");
 }
 
 void CGOpenMPRuntimeGPU::emitProcBindClause(CodeGenFunction &CGF,
@@ -3796,7 +3797,7 @@ void CGOpenMPRuntimeGPU::emitFunctionProlog(CodeGenFunction &CGF,
     CheckVarsEscapingDeclContext VarChecker(CGF, llvm::None);
     VarChecker.Visit(Body);
     I->getSecond().SecondaryLocalVarData.emplace();
-    DeclToAddrMapTy &Data = I->getSecond().SecondaryLocalVarData.getValue();
+    DeclToAddrMapTy &Data = *I->getSecond().SecondaryLocalVarData;
     for (const ValueDecl *VD : VarChecker.getEscapedDecls()) {
       assert(VD->isCanonicalDecl() && "Expected canonical declaration");
       Data.insert(std::make_pair(VD, MappedVarData()));
@@ -4088,6 +4089,10 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(
       case CudaArch::GFX1034:
       case CudaArch::GFX1035:
       case CudaArch::GFX1036:
+      case CudaArch::GFX1100:
+      case CudaArch::GFX1101:
+      case CudaArch::GFX1102:
+      case CudaArch::GFX1103:
       case CudaArch::Generic:
       case CudaArch::UNUSED:
       case CudaArch::UNKNOWN:
@@ -4168,7 +4173,25 @@ llvm::Value *CGOpenMPRuntimeGPU::getGPUBlockID(CodeGenFunction &CGF) {
   CGBuilderTy &Bld = CGF.Builder;
   llvm::Function *F =
       CGF.CGM.getIntrinsic(llvm::Intrinsic::amdgcn_workgroup_id_x);
-  return Bld.CreateCall(F, llvm::None, "nvptx_block_id");
+  return Bld.CreateCall(F, llvm::None, "gpu_block_id");
+}
+
+llvm::Value *CGOpenMPRuntimeGPU::getGPUCompleteBlockSize(CodeGenFunction &CGF) {
+  // TODO handle kernel specific block size based on thread_limit
+
+  // The following logic does not consider generic kernels, so use this
+  // interface for SPMD kernels only.
+
+  // Honor block-size provided by command-line option. This logic must be kept
+  // in sync with metadata generation
+  unsigned CmdLineWorkGroupSz = CGM.getLangOpts().OpenMPGPUThreadsPerTeam;
+  // Sanitize the workgroup size received from the command line. Its default
+  // value is GV_Default_WG_Size.
+  if (CmdLineWorkGroupSz < CGM.getTarget().getGridValue().GV_Default_WG_Size ||
+      CmdLineWorkGroupSz > CGM.getTarget().getGridValue().GV_Max_WG_Size)
+    CmdLineWorkGroupSz = CGM.getTarget().getGridValue().GV_Default_WG_Size;
+
+  return llvm::ConstantInt::get(CGF.Int32Ty, CmdLineWorkGroupSz);
 }
 
 bool CGOpenMPRuntimeGPU::supportFastFPAtomics() {

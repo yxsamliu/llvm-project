@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -85,6 +87,7 @@ class CGObjCRuntime;
 class CGOpenCLRuntime;
 class CGOpenMPRuntime;
 class CGCUDARuntime;
+class CGHLSLRuntime;
 class CoverageMappingModuleGen;
 class TargetCodeGenInfo;
 
@@ -289,6 +292,12 @@ public:
 
   typedef std::vector<Structor> CtorList;
 
+  /// Nested OpenMP constructs that may use no-loop codegen
+  using NoLoopIntermediateStmts =
+      llvm::SmallVector<const OMPExecutableDirective *, 3>;
+  /// Map top-level construct to the intermediate ones for no-loop codegen
+  using NoLoopKernelMap = llvm::DenseMap<const Stmt *, NoLoopIntermediateStmts>;
+
 private:
   ASTContext &Context;
   const LangOptions &LangOpts;
@@ -318,6 +327,7 @@ private:
   std::unique_ptr<CGOpenCLRuntime> OpenCLRuntime;
   std::unique_ptr<CGOpenMPRuntime> OpenMPRuntime;
   std::unique_ptr<CGCUDARuntime> CUDARuntime;
+  std::unique_ptr<CGHLSLRuntime> HLSLRuntime;
   std::unique_ptr<CGDebugInfo> DebugInfo;
   std::unique_ptr<ObjCEntrypoints> ObjCData;
   llvm::MDNode *NoObjCARCExceptionsMetadata = nullptr;
@@ -325,8 +335,7 @@ private:
   InstrProfStats PGOStats;
   std::unique_ptr<llvm::SanitizerStatReport> SanStats;
 
-  /// A set of OpenMP directives for which no-loop kernels are generated.
-  llvm::SmallPtrSet<const Stmt *, 1> NoLoopKernels;
+  NoLoopKernelMap NoLoopKernels;
 
   // A set of references that have only been seen via a weakref so far. This is
   // used to remove the weak of the reference if we ever see a direct reference
@@ -514,6 +523,7 @@ private:
   void createOpenCLRuntime();
   void createOpenMPRuntime();
   void createCUDARuntime();
+  void createHLSLRuntime();
 
   bool isTriviallyRecursive(const FunctionDecl *F);
   bool shouldEmitFunction(GlobalDecl GD);
@@ -566,6 +576,8 @@ private:
   MetadataTypeMap VirtualMetadataIdMap;
   MetadataTypeMap GeneralizedMetadataIdMap;
 
+  llvm::DenseMap<const llvm::Constant *, llvm::GlobalVariable *> RTTIProxyMap;
+
 public:
   CodeGenModule(ASTContext &C, const HeaderSearchOptions &headersearchopts,
                 const PreprocessorOptions &ppopts,
@@ -610,6 +622,12 @@ public:
   CGCUDARuntime &getCUDARuntime() {
     assert(CUDARuntime != nullptr);
     return *CUDARuntime;
+  }
+
+  /// Return a reference to the configured HLSL runtime.
+  CGHLSLRuntime &getHLSLRuntime() {
+    assert(HLSLRuntime != nullptr);
+    return *HLSLRuntime;
   }
 
   ObjCEntrypoints &getObjCEntrypoints() const {
@@ -791,6 +809,14 @@ public:
 
   void setDSOLocal(llvm::GlobalValue *GV) const;
 
+  bool shouldMapVisibilityToDLLExport(const NamedDecl *D) const {
+    return getLangOpts().hasDefaultVisibilityExportMapping() && D &&
+           (D->getLinkageAndVisibility().getVisibility() ==
+            DefaultVisibility) &&
+           (getLangOpts().isAllDefaultVisibilityExportMapping() ||
+            (getLangOpts().isExplicitDefaultVisibilityExportMapping() &&
+             D->getLinkageAndVisibility().isVisibilityExplicit()));
+  }
   void setDLLImportDLLExport(llvm::GlobalValue *GV, GlobalDecl D) const;
   void setDLLImportDLLExport(llvm::GlobalValue *GV, const NamedDecl *D) const;
   /// Set visibility, dllimport/dllexport and dso_local.
@@ -1299,8 +1325,9 @@ public:
   bool isInNoSanitizeList(SanitizerMask Kind, llvm::Function *Fn,
                           SourceLocation Loc) const;
 
-  bool isInNoSanitizeList(llvm::GlobalVariable *GV, SourceLocation Loc,
-                          QualType Ty, StringRef Category = StringRef()) const;
+  bool isInNoSanitizeList(SanitizerMask Kind, llvm::GlobalVariable *GV,
+                          SourceLocation Loc, QualType Ty,
+                          StringRef Category = StringRef()) const;
 
   /// Imbue XRay attributes to a function, applying the always/never attribute
   /// lists in the process. Returns true if we did imbue attributes this way,
@@ -1358,15 +1385,18 @@ public:
   /// \param D The allocate declaration
   void EmitOMPAllocateDecl(const OMPAllocateDecl *D);
 
+  /// Return the alignment specified in an allocate directive, if present.
+  llvm::Optional<CharUnits> getOMPAllocateAlignment(const VarDecl *VD);
+
   /// Returns whether the given record has hidden LTO visibility and therefore
   /// may participate in (single-module) CFI and whole-program vtable
   /// optimization.
   bool HasHiddenLTOVisibility(const CXXRecordDecl *RD);
 
-  /// Returns whether the given record has public std LTO visibility
-  /// and therefore may not participate in (single-module) CFI and whole-program
-  /// vtable optimization.
-  bool HasLTOVisibilityPublicStd(const CXXRecordDecl *RD);
+  /// Returns whether the given record has public LTO visibility (regardless of
+  /// -lto-whole-program-visibility) and therefore may not participate in
+  /// (single-module) CFI and whole-program vtable optimization.
+  bool AlwaysHasLTOVisibilityPublic(const CXXRecordDecl *RD);
 
   /// Returns the vcall visibility of the given type. This is the scope in which
   /// a virtual function call could be made which ends up being dispatched to a
@@ -1423,6 +1453,9 @@ public:
   std::vector<const CXXRecordDecl *>
   getMostBaseClasses(const CXXRecordDecl *RD);
 
+  llvm::GlobalVariable *
+  GetOrCreateRTTIProxyGlobalVariable(llvm::Constant *Addr);
+
   /// Get the declaration of std::terminate for the platform.
   llvm::FunctionCallee getTerminateFn();
 
@@ -1441,7 +1474,7 @@ public:
   /// \param FN is a pointer to IR function being generated.
   /// \param FD is a pointer to function declaration if any.
   /// \param CGF is a pointer to CodeGenFunction that generates this function.
-  void GenOpenCLArgMetadata(llvm::Function *FN,
+  void GenKernelArgMetadata(llvm::Function *FN,
                             const FunctionDecl *FD = nullptr,
                             CodeGenFunction *CGF = nullptr);
 
@@ -1460,7 +1493,10 @@ public:
   bool stopAutoInit();
 
   /// Print the postfix for externalized static variable or kernels for single
-  /// source offloading languages CUDA and HIP.
+  /// source offloading languages CUDA and HIP. The unique postfix is created
+  /// using either the CUID argument, or the file's UniqueID and active macros.
+  /// The fallback method without a CUID requires that the offloading toolchain
+  /// does not define separate macros via the -cc1 options.
   void printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
                                        const Decl *D) const;
 
@@ -1480,13 +1516,54 @@ public:
   /// Does the loop condition qualify for a NoLoop kernel?
   bool checkLoopStop(const ForStmt &FStmt);
 
-  /// Are we able to generate a NoLoop kernel for this directive?
-  bool isGeneratingNoLoopKernel(const OMPExecutableDirective &D);
+  /// If we are able to generate a NoLoop kernel for this directive, return
+  /// true, otherwise return false. If successful, a map is created from the
+  /// top-level statement to the intermediate statements. For a combined
+  /// construct, there are no intermediate statements. Used for a combined
+  /// construct
+  bool checkAndSetNoLoopKernel(const OMPExecutableDirective &D);
 
-  /// Utility routines for tracking a NoLoop kernel
-  void setNoLoopKernel(const Stmt *S) { NoLoopKernels.insert(S); }
+  /// Given a top-level target construct for no-loop codegen, get the
+  /// intermediate OpenMP constructs
+  const NoLoopIntermediateStmts &getNoLoopStmts(const Stmt *S) {
+    assert(isNoLoopKernel(S));
+    return NoLoopKernels.find(S)->second;
+  }
+
+  /// Erase no-loop related metadata for the input statement
   void resetNoLoopKernel(const Stmt *S) { NoLoopKernels.erase(S); }
-  bool isNoLoopKernel(const Stmt *S) { return NoLoopKernels.contains(S); }
+  /// Are we generating no-loop kernel for the input statement
+  bool isNoLoopKernel(const Stmt *S) {
+    return NoLoopKernels.find(S) != NoLoopKernels.end();
+  }
+
+  /// Move some lazily-emitted states to the NewBuilder. This is especially
+  /// essential for the incremental parsing environment like Clang Interpreter,
+  /// because we'll lose all important information after each repl.
+  void moveLazyEmissionStates(CodeGenModule *NewBuilder) {
+    assert(DeferredDeclsToEmit.empty() &&
+           "Should have emitted all decls deferred to emit.");
+    assert(NewBuilder->DeferredDecls.empty() &&
+           "Newly created module should not have deferred decls");
+    NewBuilder->DeferredDecls = std::move(DeferredDecls);
+
+    assert(NewBuilder->DeferredVTables.empty() &&
+           "Newly created module should not have deferred vtables");
+    NewBuilder->DeferredVTables = std::move(DeferredVTables);
+
+    assert(NewBuilder->MangledDeclNames.empty() &&
+           "Newly created module should not have mangled decl names");
+    assert(NewBuilder->Manglings.empty() &&
+           "Newly created module should not have manglings");
+    NewBuilder->Manglings = std::move(Manglings);
+
+    assert(WeakRefReferences.empty() &&
+           "Not all WeakRefRefs have been applied");
+    NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
+
+    NewBuilder->TBAA = std::move(TBAA);
+  }
+
 
 private:
   llvm::Constant *GetOrCreateLLVMFunction(
@@ -1670,6 +1747,22 @@ private:
 
   llvm::Metadata *CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
                                                StringRef Suffix);
+
+  /// Top level checker for no-loop on the for statement
+  bool isForStmtNoLoopConforming(const Stmt *);
+
+  /// Used for a target construct
+  bool checkAndSetNoLoopTargetConstruct(const OMPExecutableDirective &D);
+
+  /// Are clauses on a combined OpenMP construct compatible with no-loop
+  /// codegen?
+  bool areCombinedClausesNoLoopCompatible(const OMPExecutableDirective &D);
+
+  /// Populate the map used for no-loop codegen
+  void setNoLoopKernel(const Stmt *S,
+                       NoLoopIntermediateStmts IntermediateStmts) {
+    NoLoopKernels[S] = IntermediateStmts;
+  }
 };
 
 }  // end namespace CodeGen

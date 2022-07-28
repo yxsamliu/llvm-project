@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -16,13 +18,14 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -36,6 +39,11 @@ bool TargetFrameLowering::enableCalleeSaveSkip(const MachineFunction &MF) const 
          MF.getFunction().hasFnAttribute(Attribute::NoUnwind) &&
          !MF.getFunction().hasFnAttribute(Attribute::UWTable));
   return false;
+}
+
+bool TargetFrameLowering::enableCFIFixup(MachineFunction &MF) const {
+  return MF.needsFrameMoves() &&
+         !MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
 }
 
 /// Returns the displacement from the frame register to the stack

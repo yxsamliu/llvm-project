@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1323,6 +1325,12 @@ public:
                                 (Flags, CC, TypeArray))
 
   TempDISubroutineType clone() const { return cloneImpl(); }
+  // Returns a new temporary DISubroutineType with updated CC
+  TempDISubroutineType cloneWithCC(uint8_t CC) const {
+    auto NewTy = clone();
+    NewTy->CC = CC;
+    return NewTy;
+  }
 
   uint8_t getCC() const { return CC; }
 
@@ -1874,25 +1882,25 @@ private:
           DISPFlags SPFlags, DICompileUnit *Unit,
           DITemplateParameterArray TemplateParams, DISubprogram *Declaration,
           DINodeArray RetainedNodes, DITypeArray ThrownTypes,
-          DINodeArray Annotations, StorageType Storage,
-          bool ShouldCreate = true) {
+          DINodeArray Annotations, StringRef TargetFuncName,
+          StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name),
                    getCanonicalMDString(Context, LinkageName), File, Line, Type,
                    ScopeLine, ContainingType, VirtualIndex, ThisAdjustment,
                    Flags, SPFlags, Unit, TemplateParams.get(), Declaration,
                    RetainedNodes.get(), ThrownTypes.get(), Annotations.get(),
+                   getCanonicalMDString(Context, TargetFuncName),
                    Storage, ShouldCreate);
   }
-  static DISubprogram *getImpl(LLVMContext &Context, Metadata *Scope,
-                               MDString *Name, MDString *LinkageName,
-                               Metadata *File, unsigned Line, Metadata *Type,
-                               unsigned ScopeLine, Metadata *ContainingType,
-                               unsigned VirtualIndex, int ThisAdjustment,
-                               DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
-                               Metadata *TemplateParams, Metadata *Declaration,
-                               Metadata *RetainedNodes, Metadata *ThrownTypes,
-                               Metadata *Annotations, StorageType Storage,
-                               bool ShouldCreate = true);
+  static DISubprogram *
+  getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
+          MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,
+          unsigned ScopeLine, Metadata *ContainingType, unsigned VirtualIndex,
+          int ThisAdjustment, DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
+          Metadata *TemplateParams, Metadata *Declaration,
+          Metadata *RetainedNodes, Metadata *ThrownTypes, Metadata *Annotations,
+          MDString *TargetFuncName, StorageType Storage,
+          bool ShouldCreate = true);
 
   TempDISubprogram cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getLinkageName(),
@@ -1900,7 +1908,8 @@ private:
                         getContainingType(), getVirtualIndex(),
                         getThisAdjustment(), getFlags(), getSPFlags(),
                         getUnit(), getTemplateParams(), getDeclaration(),
-                        getRetainedNodes(), getThrownTypes(), getAnnotations());
+                        getRetainedNodes(), getThrownTypes(), getAnnotations(),
+                        getTargetFuncName());
   }
 
 public:
@@ -1912,10 +1921,11 @@ public:
        DIFlags Flags, DISPFlags SPFlags, DICompileUnit *Unit,
        DITemplateParameterArray TemplateParams = nullptr,
        DISubprogram *Declaration = nullptr, DINodeArray RetainedNodes = nullptr,
-       DITypeArray ThrownTypes = nullptr, DINodeArray Annotations = nullptr),
+       DITypeArray ThrownTypes = nullptr, DINodeArray Annotations = nullptr,
+       StringRef TargetFuncName = ""),
       (Scope, Name, LinkageName, File, Line, Type, ScopeLine, ContainingType,
        VirtualIndex, ThisAdjustment, Flags, SPFlags, Unit, TemplateParams,
-       Declaration, RetainedNodes, ThrownTypes, Annotations))
+       Declaration, RetainedNodes, ThrownTypes, Annotations, TargetFuncName))
 
   DEFINE_ALL_MDNODE_GET_METHODS(
       DISubprogram,
@@ -1925,10 +1935,10 @@ public:
        DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
        Metadata *TemplateParams = nullptr, Metadata *Declaration = nullptr,
        Metadata *RetainedNodes = nullptr, Metadata *ThrownTypes = nullptr,
-       Metadata *Annotations = nullptr),
+       Metadata *Annotations = nullptr, MDString *TargetFuncName = nullptr),
       (Scope, Name, LinkageName, File, Line, Type, ScopeLine, ContainingType,
        VirtualIndex, ThisAdjustment, Flags, SPFlags, Unit, TemplateParams,
-       Declaration, RetainedNodes, ThrownTypes, Annotations))
+       Declaration, RetainedNodes, ThrownTypes, Annotations, TargetFuncName))
 
   TempDISubprogram clone() const { return cloneImpl(); }
 
@@ -2014,6 +2024,10 @@ public:
   DIType *getContainingType() const {
     return cast_or_null<DIType>(getRawContainingType());
   }
+  void replaceType(DISubroutineType *Ty) {
+    assert(isDistinct() && "Only distinct nodes can mutate");
+    replaceOperandWith(4, Ty);
+  }
 
   DICompileUnit *getUnit() const {
     return cast_or_null<DICompileUnit>(getRawUnit());
@@ -2034,6 +2048,9 @@ public:
   DINodeArray getAnnotations() const {
     return cast_or_null<MDTuple>(getRawAnnotations());
   }
+  StringRef getTargetFuncName() const {
+    return (getRawTargetFuncName()) ? getStringOperand(12) : StringRef();
+  }
 
   Metadata *getRawScope() const { return getOperand(1); }
   MDString *getRawName() const { return getOperandAs<MDString>(2); }
@@ -2053,6 +2070,9 @@ public:
   }
   Metadata *getRawAnnotations() const {
     return getNumOperands() > 11 ? getOperandAs<Metadata>(11) : nullptr;
+  }
+  MDString *getRawTargetFuncName() const {
+    return getNumOperands() > 12 ? getOperandAs<MDString>(12) : nullptr;
   }
 
   void replaceRawLinkageName(MDString *LinkageName) {
@@ -2792,7 +2812,7 @@ public:
   }
 
   /// Return whether this is a piece of an aggregate variable.
-  bool isFragment() const { return getFragmentInfo().hasValue(); }
+  bool isFragment() const { return getFragmentInfo().has_value(); }
 
   /// Return whether this is an implicit location description.
   bool isImplicit() const;
@@ -4068,7 +4088,7 @@ public:
   const DILocation *getInlinedAt() const { return InlinedAt; }
 
   FragmentInfo getFragmentOrDefault() const {
-    return Fragment.getValueOr(DefaultFragment);
+    return Fragment.value_or(DefaultFragment);
   }
 
   static bool isDefaultFragment(const FragmentInfo F) {

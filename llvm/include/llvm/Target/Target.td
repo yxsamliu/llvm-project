@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -279,6 +281,8 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // heuristic. Classes with higher priority values are assigned first. This is
   // useful as it is sometimes beneficial to assign registers to highly
   // constrained classes first. The value has to be in the range [0,63].
+  // Values >= 32 should be used with care since they may overlap with other
+  // fields in the allocator's priority heuristics.
   int AllocationPriority = 0;
 
   // Generate register pressure set for this register class and any class

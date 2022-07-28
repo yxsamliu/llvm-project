@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -501,7 +503,7 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
 
   for (const MachineOperand &MO : MI->operands())
     if (auto MaybeMCOp = LowerMachineOperand(MI, MO))
-      OutMI.addOperand(MaybeMCOp.getValue());
+      OutMI.addOperand(*MaybeMCOp);
 
   // Handle a few special cases to eliminate operand modifiers.
   switch (OutMI.getOpcode()) {
@@ -962,6 +964,12 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     // These are not truly commutable so hide them from the default case.
     break;
 
+  case X86::MASKMOVDQU:
+  case X86::VMASKMOVDQU:
+    if (AsmPrinter.getSubtarget().is64Bit())
+      OutMI.setFlags(X86::IP_HAS_AD_SIZE);
+    break;
+
   default: {
     // If the instruction is a commutable arithmetic instruction we might be
     // able to commute the operands to get a 2 byte VEX prefix.
@@ -1311,7 +1319,7 @@ void X86AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI,
             E = FaultingMI.operands_end();
        I != E; ++I)
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&FaultingMI, *I))
-      MI.addOperand(MaybeOperand.getValue());
+      MI.addOperand(*MaybeOperand);
 
   OutStreamer->AddComment("on-fault: " + HandlerLabel->getName());
   OutStreamer->emitInstruction(MI, getSubtargetInfo());
@@ -1376,7 +1384,7 @@ void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
   MCI.setOpcode(Opcode);
   for (auto &MO : drop_begin(MI.operands(), 2))
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
-      MCI.addOperand(MaybeOperand.getValue());
+      MCI.addOperand(*MaybeOperand);
 
   SmallString<256> Code;
   SmallVector<MCFixup, 4> Fixups;
@@ -1752,7 +1760,7 @@ void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   Ret.setOpcode(OpCode);
   for (auto &MO : drop_begin(MI.operands()))
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
-      Ret.addOperand(MaybeOperand.getValue());
+      Ret.addOperand(*MaybeOperand);
   OutStreamer->emitInstruction(Ret, getSubtargetInfo());
   emitX86Nops(*OutStreamer, 10, Subtarget);
   recordSled(CurSled, MI, SledKind::FUNCTION_EXIT, 2);
@@ -1791,7 +1799,7 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
   OutStreamer->AddComment("TAILCALL");
   for (auto &MO : drop_begin(MI.operands()))
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
-      TC.addOperand(MaybeOperand.getValue());
+      TC.addOperand(*MaybeOperand);
   OutStreamer->emitInstruction(TC, getSubtargetInfo());
 }
 
@@ -1986,34 +1994,34 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
   // Otherwise, use the .seh_ directives for all other Windows platforms.
   switch (MI->getOpcode()) {
   case X86::SEH_PushReg:
-    OutStreamer->EmitWinCFIPushReg(MI->getOperand(0).getImm());
+    OutStreamer->emitWinCFIPushReg(MI->getOperand(0).getImm());
     break;
 
   case X86::SEH_SaveReg:
-    OutStreamer->EmitWinCFISaveReg(MI->getOperand(0).getImm(),
+    OutStreamer->emitWinCFISaveReg(MI->getOperand(0).getImm(),
                                    MI->getOperand(1).getImm());
     break;
 
   case X86::SEH_SaveXMM:
-    OutStreamer->EmitWinCFISaveXMM(MI->getOperand(0).getImm(),
+    OutStreamer->emitWinCFISaveXMM(MI->getOperand(0).getImm(),
                                    MI->getOperand(1).getImm());
     break;
 
   case X86::SEH_StackAlloc:
-    OutStreamer->EmitWinCFIAllocStack(MI->getOperand(0).getImm());
+    OutStreamer->emitWinCFIAllocStack(MI->getOperand(0).getImm());
     break;
 
   case X86::SEH_SetFrame:
-    OutStreamer->EmitWinCFISetFrame(MI->getOperand(0).getImm(),
+    OutStreamer->emitWinCFISetFrame(MI->getOperand(0).getImm(),
                                     MI->getOperand(1).getImm());
     break;
 
   case X86::SEH_PushFrame:
-    OutStreamer->EmitWinCFIPushFrame(MI->getOperand(0).getImm());
+    OutStreamer->emitWinCFIPushFrame(MI->getOperand(0).getImm());
     break;
 
   case X86::SEH_EndPrologue:
-    OutStreamer->EmitWinCFIEndProlog();
+    OutStreamer->emitWinCFIEndProlog();
     break;
 
   default:

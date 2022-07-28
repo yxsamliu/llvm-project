@@ -4,6 +4,8 @@
 #// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 #// See https://llvm.org/LICENSE.txt for license information.
 #// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
 #//
 #//===----------------------------------------------------------------------===//
 #
@@ -32,6 +34,10 @@ if (OPENMP_STANDALONE_BUILD)
   list(APPEND LIBOMPTARGET_LLVM_INCLUDE_DIRS ${LLVM_INCLUDE_DIRS})
   list(APPEND CMAKE_MODULE_PATH ${LLVM_CMAKE_DIR})
   include(AddLLVM)
+  if(TARGET omptarget)
+    message(FATAL_ERROR "CMake target 'omptarget' already exists. "
+                        "Use an LLVM installation that doesn't expose its 'omptarget' target.")
+  endif()
 else()
   # Note that OPENMP_STANDALONE_BUILD is FALSE, when
   # openmp is built with -DLLVM_ENABLE_RUNTIMES="openmp" vs

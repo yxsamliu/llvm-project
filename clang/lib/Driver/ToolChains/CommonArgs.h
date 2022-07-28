@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -125,6 +127,18 @@ bool addOpenMPRuntime(llvm::opt::ArgStringList &CmdArgs, const ToolChain &TC,
                       bool ForceStaticHostRuntime = false,
                       bool IsOffloadingHost = false, bool GompNeedsRT = false);
 
+/// Adds Fortran runtime libraries to \p CmdArgs.
+void addFortranRuntimeLibs(const ToolChain &TC,
+                           llvm::opt::ArgStringList &CmdArgs);
+
+/// Adds the path for the Fortran runtime libraries to \p CmdArgs.
+void addFortranRuntimeLibraryPath(const ToolChain &TC,
+                                  const llvm::opt::ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs);
+
+void addHIPRuntimeLibArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
+                          llvm::opt::ArgStringList &CmdArgs);
+
 const char *getAsNeededOption(const ToolChain &TC, bool as_needed);
 
 llvm::opt::Arg *getLastProfileUseArg(const llvm::opt::ArgList &Args);
@@ -167,8 +181,7 @@ void handleTargetFeaturesGroup(const llvm::opt::ArgList &Args,
                                llvm::opt::OptSpecifier Group);
 
 /// If there are multiple +xxx or -xxx features, keep the last one.
-std::vector<StringRef>
-unifyTargetFeatures(const std::vector<StringRef> &Features);
+SmallVector<StringRef> unifyTargetFeatures(ArrayRef<StringRef> Features);
 
 /// Handles the -save-stats option and returns the filename to save statistics
 /// to.

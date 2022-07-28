@@ -280,7 +280,7 @@ protected:
   Unknown &unknownFromRow(unsigned row);
 
   /// Add a new row to the tableau and the associated data structures. The row
-  /// is initialized to zero.
+  /// is initialized to zero. Returns the index of the added row.
   unsigned addZeroRow(bool makeRestricted = false);
 
   /// Add a new row to the tableau and the associated data structures.
@@ -289,10 +289,6 @@ protected:
   ///
   /// Returns the index of the new Unknown in con.
   unsigned addRow(ArrayRef<int64_t> coeffs, bool makeRestricted = false);
-
-  /// Normalize the given row by removing common factors between the numerator
-  /// and the denominator.
-  void normalizeRow(unsigned row);
 
   /// Swap the two rows/columns in the tableau and associated data structures.
   void swapRows(unsigned i, unsigned j);
@@ -320,16 +316,11 @@ protected:
   /// Return the number of fixed columns, as described in the constructor above,
   /// this is the number of columns beyond those for the variables in var.
   unsigned getNumFixedCols() const { return usingBigM ? 3u : 2u; }
+  unsigned getNumRows() const { return tableau.getNumRows(); }
+  unsigned getNumColumns() const { return tableau.getNumColumns(); }
 
   /// Stores whether or not a big M column is present in the tableau.
   bool usingBigM;
-
-  /// The number of rows in the tableau.
-  unsigned nRow;
-
-  /// The number of columns in the tableau, including the common denominator
-  /// and the constant column.
-  unsigned nCol;
 
   /// The number of redundant rows in the tableau. These are the first
   /// nRedundant rows.
@@ -434,9 +425,9 @@ protected:
   LexSimplexBase(unsigned nVar, unsigned symbolOffset, unsigned nSymbol)
       : SimplexBase(nVar, /*mustUseBigM=*/true, symbolOffset, nSymbol) {}
   explicit LexSimplexBase(const IntegerRelation &constraints)
-      : LexSimplexBase(constraints.getNumIds(),
-                       constraints.getIdKindOffset(IdKind::Symbol),
-                       constraints.getNumSymbolIds()) {
+      : LexSimplexBase(constraints.getNumVars(),
+                       constraints.getVarKindOffset(VarKind::Symbol),
+                       constraints.getNumSymbolVars()) {
     intersectIntegerRelation(constraints);
   }
 
@@ -444,10 +435,9 @@ protected:
   void appendSymbol();
 
   /// Try to move the specified row to column orientation while preserving the
-  /// lexicopositivity of the basis transform. The row must have a negative
-  /// sample value. If this is not possible, return failure. This only occurs
-  /// when the constraints have no solution; the tableau will be marked empty in
-  /// such a case.
+  /// lexicopositivity of the basis transform. The row must have a non-positive
+  /// sample value. If this is not possible, return failure. This occurs when
+  /// the constraints have no solution or the sample value is zero.
   LogicalResult moveRowUnknownToColumn(unsigned row);
 
   /// Given a row that has a non-integer sample value, add an inequality to cut
@@ -484,7 +474,7 @@ public:
       : LexSimplexBase(nVar, /*symbolOffset=*/0, /*nSymbol=*/0) {}
   explicit LexSimplex(const IntegerRelation &constraints)
       : LexSimplexBase(constraints) {
-    assert(constraints.getNumSymbolIds() == 0 &&
+    assert(constraints.getNumSymbolVars() == 0 &&
            "LexSimplex does not support symbols!");
   }
 
@@ -578,14 +568,31 @@ class SymbolicLexSimplex : public LexSimplexBase {
 public:
   /// `constraints` is the set for which the symbolic lexmin will be computed.
   /// `symbolDomain` is the set of values of the symbols for which the lexmin
-  /// will be computed. `symbolDomain` should have a dim id for every symbol in
-  /// `constraints`, and no other ids.
-  SymbolicLexSimplex(const IntegerPolyhedron &constraints,
+  /// will be computed. `symbolDomain` should have a dim var for every symbol in
+  /// `constraints`, and no other vars.
+  SymbolicLexSimplex(const IntegerRelation &constraints,
                      const IntegerPolyhedron &symbolDomain)
-      : LexSimplexBase(constraints), domainPoly(symbolDomain),
-        domainSimplex(symbolDomain) {
-    assert(domainPoly.getNumIds() == constraints.getNumSymbolIds());
-    assert(domainPoly.getNumDimIds() == constraints.getNumSymbolIds());
+      : SymbolicLexSimplex(constraints,
+                           constraints.getVarKindOffset(VarKind::Symbol),
+                           symbolDomain) {
+    assert(constraints.getNumSymbolVars() == symbolDomain.getNumVars());
+  }
+
+  /// An overload to select some other subrange of ids as symbols for lexmin.
+  /// The symbol ids are the range of ids with absolute index
+  /// [symbolOffset, symbolOffset + symbolDomain.getNumVars())
+  /// symbolDomain should only have dim ids.
+  SymbolicLexSimplex(const IntegerRelation &constraints, unsigned symbolOffset,
+                     const IntegerPolyhedron &symbolDomain)
+      : LexSimplexBase(/*nVar=*/constraints.getNumVars(), symbolOffset,
+                       symbolDomain.getNumVars()),
+        domainPoly(symbolDomain), domainSimplex(symbolDomain) {
+    // TODO consider supporting this case. It amounts
+    // to just returning the input constraints.
+    assert(domainPoly.getNumVars() > 0 &&
+           "there must be some non-symbols to optimize!");
+    assert(domainPoly.getNumVars() == domainPoly.getNumDimVars());
+    intersectIntegerRelation(constraints);
   }
 
   /// The lexmin will be stored as a function `lexmin` from symbols to
@@ -593,6 +600,9 @@ public:
   ///
   /// For some values of the symbols, the lexmin may be unbounded.
   /// These parts of the symbol domain will be stored in `unboundedDomain`.
+  ///
+  /// The spaces of the sets in the result are compatible with the symbolDomain
+  /// passed in the SymbolicLexSimplex constructor.
   SymbolicLexMin computeSymbolicIntegerLexMin();
 
 private:
@@ -628,6 +638,10 @@ private:
   /// This is an affine expression in the symbols with integer coefficients.
   /// The last element is the constant term. This ignores the big M coefficient.
   SmallVector<int64_t, 8> getSymbolicSampleNumerator(unsigned row) const;
+
+  /// Get an affine inequality in the symbols with integer coefficients that
+  /// holds iff the symbolic sample of the specified row is non-negative.
+  SmallVector<int64_t, 8> getSymbolicSampleIneq(unsigned row) const;
 
   /// Return whether all the coefficients of the symbolic sample are integers.
   ///
@@ -668,7 +682,7 @@ public:
       : SimplexBase(nVar, /*mustUseBigM=*/false, /*symbolOffset=*/0,
                     /*nSymbol=*/0) {}
   explicit Simplex(const IntegerRelation &constraints)
-      : Simplex(constraints.getNumIds()) {
+      : Simplex(constraints.getNumVars()) {
     intersectIntegerRelation(constraints);
   }
   ~Simplex() override = default;
@@ -711,7 +725,28 @@ public:
   /// the set of solutions does not change if these constraints are removed.
   /// Marks these constraints as redundant. Whether a specific constraint has
   /// been marked redundant can be queried using isMarkedRedundant.
-  void detectRedundant();
+  ///
+  /// The first overload only tries to find redundant constraints with indices
+  /// in the range [offset, offset + count), by scanning constraints from left
+  /// to right in this range. If `count` is not provided, all constraints
+  /// starting at `offset` are scanned, and if neither are provided, all
+  /// constraints are scanned, starting from 0 and going to the last constraint.
+  ///
+  /// As an example, in the set (x) : (x >= 0, x >= 0, x >= 0), calling
+  /// `detectRedundant` with no parameters will result in the first two
+  /// constraints being marked redundant. All copies cannot be marked redundant
+  /// because removing all the constraints changes the set. The first two are
+  /// the ones marked redundant because we scan from left to right. Thus, when
+  /// there is some preference among the constraints as to which should be
+  /// marked redundant with priority when there are multiple possibilities, this
+  /// could be accomplished by succesive calls to detectRedundant(offset,
+  /// count).
+  void detectRedundant(unsigned offset, unsigned count);
+  void detectRedundant(unsigned offset) {
+    assert(offset <= con.size() && "invalid offset!");
+    detectRedundant(offset, con.size() - offset);
+  }
+  void detectRedundant() { detectRedundant(0, con.size()); }
 
   /// Returns a (min, max) pair denoting the minimum and maximum integer values
   /// of the given expression. If no integer value exists, both results will be

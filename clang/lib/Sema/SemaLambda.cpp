@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -182,7 +184,7 @@ Optional<unsigned> clang::getStackIndexOfNearestEnclosingCaptureCapableLambda(
   if (!OptionalStackIndex)
     return NoLambdaIsCaptureCapable;
 
-  const unsigned IndexOfCaptureReadyLambda = OptionalStackIndex.getValue();
+  const unsigned IndexOfCaptureReadyLambda = *OptionalStackIndex;
   assert(((IndexOfCaptureReadyLambda != (FunctionScopes.size() - 1)) ||
           S.getCurGenericLambda()) &&
          "The capture ready lambda for a potential capture can only be the "
@@ -433,7 +435,7 @@ void Sema::handleLambdaNumbering(
     unsigned ManglingNumber, DeviceManglingNumber;
     Decl *ManglingContextDecl;
     std::tie(HasKnownInternalLinkage, ManglingNumber, DeviceManglingNumber,
-             ManglingContextDecl) = Mangling.getValue();
+             ManglingContextDecl) = *Mangling;
     Class->setLambdaMangling(ManglingNumber, ManglingContextDecl,
                              HasKnownInternalLinkage);
     Class->setDeviceLambdaManglingNumber(DeviceManglingNumber);

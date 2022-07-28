@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -19,6 +21,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// Return the number of available physical processors to execute teams
+// supported by the RTL. AMD calls these CUs.  Nvidia calls the SMs.
+int32_t __tgt_rtl_number_of_team_procs(int32_t device_num);
 
 // Return the number of available devices of the type supported by the
 // target RTL.

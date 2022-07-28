@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -27,6 +29,7 @@
 #include "llvm/Analysis/CFLSteensAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/CallPrinter.h"
 #include "llvm/Analysis/CostModel.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DDG.h"
@@ -485,6 +488,17 @@ bool shouldPopulateClassToPassNames() {
          !printAfterPasses().empty();
 }
 
+// A pass for testing -print-on-crash.
+// DO NOT USE THIS EXCEPT FOR TESTING!
+class TriggerCrashPass : public PassInfoMixin<TriggerCrashPass> {
+public:
+  PreservedAnalyses run(Module &, ModuleAnalysisManager &) {
+    abort();
+    return PreservedAnalyses::all();
+  }
+  static StringRef name() { return "TriggerCrashPass"; }
+};
+
 } // namespace
 
 PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
@@ -697,6 +711,10 @@ Expected<bool> parseSinglePassOption(StringRef Params, StringRef OptionName,
 
 Expected<bool> parseInlinerPassOptions(StringRef Params) {
   return parseSinglePassOption(Params, "only-mandatory", "InlinerPass");
+}
+
+Expected<bool> parseCoroSplitPassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "reuse-storage", "CoroSplitPass");
 }
 
 Expected<bool> parseEarlyCSEPassOptions(StringRef Params) {

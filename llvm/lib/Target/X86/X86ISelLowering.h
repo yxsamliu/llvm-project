@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1160,6 +1162,19 @@ namespace llvm {
                                    APInt &UndefElts,
                                    unsigned Depth) const override;
 
+    bool isTargetCanonicalConstantNode(SDValue Op) const override {
+      // Peek through bitcasts/extracts/inserts to see if we have a broadcast
+      // vector from memory.
+      while (Op.getOpcode() == ISD::BITCAST ||
+             Op.getOpcode() == ISD::EXTRACT_SUBVECTOR ||
+             (Op.getOpcode() == ISD::INSERT_SUBVECTOR &&
+              Op.getOperand(0).isUndef()))
+        Op = Op.getOperand(Op.getOpcode() == ISD::INSERT_SUBVECTOR ? 1 : 0);
+
+      return Op.getOpcode() == X86ISD::VBROADCAST_LOAD ||
+             TargetLowering::isTargetCanonicalConstantNode(Op);
+    }
+
     const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const override;
 
     SDValue unwrapAddress(SDValue N) const override;
@@ -1315,6 +1330,9 @@ namespace llvm {
 
     /// Returns true if lowering to a jump table is allowed.
     bool areJTsAllowed(const Function *Fn) const override;
+
+    MVT getPreferredSwitchConditionType(LLVMContext &Context,
+                                        EVT ConditionVT) const override;
 
     /// If true, then instruction selection should
     /// seek to shrink the FP constant of the specified type to a smaller type

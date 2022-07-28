@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -371,16 +373,13 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
       if (!PM->RTLs.NoUSMMapChecks) {
         // even under unified_shared_memory need to check for correctness of
         // use of map clauses. device pointer is same as host ptr in this case
-        Entry =
-            HDTTMap
-                ->emplace(new HostDataToTargetTy(
-		(uintptr_t)HstPtrBase,
-                (uintptr_t)HstPtrBegin,
-                (uintptr_t)HstPtrBegin + Size,
-                (uintptr_t)HstPtrBegin,
-                HasHoldModifier, HstPtrName, /*IsInf=*/true,
-                /*IsUSMAlloc=*/true))
-                .first->HDTT;
+        Entry = HDTTMap
+                    ->emplace(new HostDataToTargetTy(
+                        (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
+                        (uintptr_t)HstPtrBegin + Size, (uintptr_t)HstPtrBegin,
+                        HasHoldModifier, HstPtrName, /*IsInf=*/true,
+                        /*IsUSMAlloc=*/true))
+                    .first->HDTT;
       }
       DP("Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
          "memory\n",
@@ -406,7 +405,7 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
                     HstPtrName))
                 .first->HDTT;
     INFO(OMP_INFOTYPE_MAPPING_CHANGED, DeviceID,
-         "Creating new map entry with HstPtrBase= " DPxMOD
+         "Creating new map entry with HstPtrBase=" DPxMOD
          ", HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD ", Size=%ld, "
          "DynRefCount=%s, HoldRefCount=%s, Name=%s\n",
          DPxPTR(HstPtrBase), DPxPTR(HstPtrBegin), DPxPTR(Ptr), Size,
@@ -598,6 +597,7 @@ void DeviceTy::init() {
   int32_t Ret = RTL->init_device(RTLDeviceID);
   if (Ret != OFFLOAD_SUCCESS)
     return;
+  setTeamProcs(RTL->number_of_team_procs(RTLDeviceID));
 
   IsInit = true;
 }

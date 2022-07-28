@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //==-----------------------------------------------------------------------===//
 
@@ -895,7 +897,7 @@ void SIFrameLowering::emitCFISavedRegSpills(MachineFunction &MF,
     // two lanes in wave64 mode and one lane in wave32 mode, build
     // the corresponding CFI rule.
     if (EXECSaveIndex && !spilledToMemory(MF, *EXECSaveIndex)) {
-      ArrayRef<SIMachineFunctionInfo::SpilledReg> EXECSpill =
+      ArrayRef<SIRegisterInfo::SpilledReg> EXECSpill =
           FuncInfo->getSGPRToVGPRSpills(*EXECSaveIndex);
       assert(EXECSpill.size());
       BuildMI(MBB, MBBI, DL,
@@ -926,7 +928,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     return;
   }
 
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -983,19 +985,13 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
                    MFI.getObjectOffset(*Reg.FI) * ST.getWavefrontSize()));
   }
 
-  // VGPRs used for Whole Wave Mode
-  for (const auto &Reg : FuncInfo->WWMReservedRegs) {
-    auto VGPR = Reg.first;
-    auto FI = Reg.second;
-    if (!FI)
-      continue;
-
+  for (auto ReservedWWM : FuncInfo->wwmAllocation()) {
     if (!ScratchExecCopy)
       ScratchExecCopy =
           buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL, /*IsProlog*/ true);
 
-    buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL, VGPR,
-                     *FI);
+    buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL,
+                     std::get<0>(ReservedWWM), std::get<1>(ReservedWWM));
   }
 
   if (ScratchExecCopy) {
@@ -1069,7 +1065,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     assert(!MFI.isDeadObjectIndex(FramePtrFI));
 
     assert(MFI.getStackID(FramePtrFI) == TargetStackID::SGPRSpill);
-    ArrayRef<SIMachineFunctionInfo::SpilledReg> Spill =
+    ArrayRef<SIRegisterInfo::SpilledReg> Spill =
         FuncInfo->getSGPRToVGPRSpills(FramePtrFI);
     assert(Spill.size() == 1);
 
@@ -1090,7 +1086,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     assert(!MFI.isDeadObjectIndex(BasePtrFI));
 
     assert(MFI.getStackID(BasePtrFI) == TargetStackID::SGPRSpill);
-    ArrayRef<SIMachineFunctionInfo::SpilledReg> Spill =
+    ArrayRef<SIRegisterInfo::SpilledReg> Spill =
         FuncInfo->getSGPRToVGPRSpills(BasePtrFI);
     assert(Spill.size() == 1);
 
@@ -1294,7 +1290,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
     } else {
       // Reload from VGPR spill.
       assert(MFI.getStackID(FramePtrFI) == TargetStackID::SGPRSpill);
-      ArrayRef<SIMachineFunctionInfo::SpilledReg> Spill =
+      ArrayRef<SIRegisterInfo::SpilledReg> Spill =
           FuncInfo->getSGPRToVGPRSpills(FramePtrFI);
       assert(Spill.size() == 1);
       BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_READLANE_B32), FramePtrReg)
@@ -1330,7 +1326,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
     } else {
       // Reload from VGPR spill.
       assert(MFI.getStackID(BasePtrFI) == TargetStackID::SGPRSpill);
-      ArrayRef<SIMachineFunctionInfo::SpilledReg> Spill =
+      ArrayRef<SIRegisterInfo::SpilledReg> Spill =
           FuncInfo->getSGPRToVGPRSpills(BasePtrFI);
       assert(Spill.size() == 1);
       BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_READLANE_B32), BasePtrReg)
@@ -1353,18 +1349,13 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
                        Reg.VGPR, *Reg.FI);
   }
 
-  for (const auto &Reg : FuncInfo->WWMReservedRegs) {
-    auto VGPR = Reg.first;
-    auto FI = Reg.second;
-    if (!FI)
-      continue;
-
+  for (auto ReservedWWM : FuncInfo->wwmAllocation()) {
     if (!ScratchExecCopy)
       ScratchExecCopy =
           buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL, /*IsProlog*/ false);
 
-    buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL, VGPR,
-                       *FI);
+    buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL,
+                       std::get<0>(ReservedWWM), std::get<1>(ReservedWWM));
   }
 
   if (ScratchExecCopy) {
@@ -1417,6 +1408,11 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+
+  if (!FuncInfo->isEntryFunction()) {
+    // Spill VGPRs used for Whole Wave Mode
+    FuncInfo->allocateWWMReservedSpillSlots(MFI, *TRI);
+  }
 
   const bool SpillVGPRToAGPR = ST.hasMAIInsts() && FuncInfo->hasSpilledVGPRs()
                                && EnableSpillVGPRToAGPR;
@@ -1545,6 +1541,32 @@ static void allocateCFISave(MachineFunction &MF, Optional<int> &FI,
     }
   }
   return;
+}
+
+void SIFrameLowering::processFunctionBeforeFrameIndicesReplaced(
+    MachineFunction &MF, RegScavenger *RS) const {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+
+  if (ST.hasMAIInsts() && !ST.hasGFX90AInsts()) {
+    // On gfx908, we had initially reserved highest available VGPR for AGPR
+    // copy. Now since we are done with RA, check if there exist an unused VGPR
+    // which is lower than the eariler reserved VGPR before RA. If one exist,
+    // use it for AGPR copy instead of one reserved before RA.
+    Register VGPRForAGPRCopy = FuncInfo->getVGPRForAGPRCopy();
+    Register UnusedLowVGPR =
+        TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF);
+    if (UnusedLowVGPR && (TRI->getHWRegIndex(UnusedLowVGPR) <
+                          TRI->getHWRegIndex(VGPRForAGPRCopy))) {
+      // Call to setVGPRForAGPRCopy() should happen first before calling
+      // freezeReservedRegs() so that getReservedRegs() can reserve this newly
+      // identified VGPR (for AGPR copy).
+      FuncInfo->setVGPRForAGPRCopy(UnusedLowVGPR);
+      MRI.freezeReservedRegs(MF);
+    }
+  }
 }
 
 // Only report VGPRs to generic code.
@@ -1928,7 +1950,7 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
 MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, Register SGPR,
-    ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills) const {
+    ArrayRef<SIRegisterInfo::SpilledReg> VGPRSpills) const {
   MachineFunction &MF = *MBB.getParent();
   const MCRegisterInfo &MCRI = *MF.getMMI().getContext().getRegisterInfo();
   int DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
@@ -1961,7 +1983,7 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
 
   // TODO: Detect when we can merge multiple adjacent pieces, or even reduce
   // this to a register location description (when all pieces are adjacent).
-  for (SIMachineFunctionInfo::SpilledReg Spill : VGPRSpills) {
+  for (SIRegisterInfo::SpilledReg Spill : VGPRSpills) {
     encodeDwarfRegisterLocation(MCRI.getDwarfRegNum(Spill.VGPR, false),
                                 OSBlock);
     OSBlock << uint8_t(dwarf::DW_OP_bit_piece);

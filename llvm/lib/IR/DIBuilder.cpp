@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -863,14 +865,15 @@ DISubprogram *DIBuilder::createFunction(
     unsigned LineNo, DISubroutineType *Ty, unsigned ScopeLine,
     DINode::DIFlags Flags, DISubprogram::DISPFlags SPFlags,
     DITemplateParameterArray TParams, DISubprogram *Decl,
-    DITypeArray ThrownTypes, DINodeArray Annotations) {
+    DITypeArray ThrownTypes, DINodeArray Annotations,
+    StringRef TargetFuncName) {
   bool IsDefinition = SPFlags & DISubprogram::SPFlagDefinition;
   auto *Node = getSubprogram(
       /*IsDistinct=*/IsDefinition, VMContext, getNonCompileUnitScope(Context),
       Name, LinkageName, File, LineNo, Ty, ScopeLine, nullptr, 0, 0, Flags,
       SPFlags, IsDefinition ? CUNode : nullptr, TParams, Decl,
       MDTuple::getTemporary(VMContext, None).release(), ThrownTypes,
-      Annotations);
+      Annotations, TargetFuncName);
 
   if (IsDefinition)
     AllSubprograms.push_back(Node);

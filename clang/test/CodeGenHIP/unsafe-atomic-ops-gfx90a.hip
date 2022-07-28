@@ -5,13 +5,13 @@
 #define __global__ __attribute__((global))
 #define __device__ __attribute__((device))
 
-// CHECK-LABEL: @_Z15unsafeAtomicAddPff(float* noundef %addr, float noundef %value
+// CHECK-LABEL: @_Z15unsafeAtomicAddPff(ptr noundef %addr, float noundef %value
 __device__ inline float unsafeAtomicAdd(float* addr, float value) {
-  // CHECK: %[[ADDR_ADDR:.*]] = alloca float*, align 8, addrspace(5)
-  // CHECK: %[[ADDR_ADDR_ASCAST:.*]] = addrspacecast float* addrspace(5)* %[[ADDR_ADDR]] to float**
-  // CHECK: %[[ADDR_PTR:.*]] = load float*, float** %[[ADDR_ADDR_ASCAST]], align 8
-  // CHECK: %[[ADDR:.*]] = addrspacecast float* %[[ADDR_PTR]] to float addrspace(3)*
-  // CHECK: call contract float @llvm.amdgcn.ds.fadd.f32(float addrspace(3)* %[[ADDR]]
+  // CHECK: %[[ADDR_ADDR:.*]] = alloca ptr, align 8, addrspace(5)
+  // CHECK: %[[ADDR_ADDR_ASCAST:.*]] = addrspacecast ptr addrspace(5) %[[ADDR_ADDR]] to ptr 
+  // CHECK: %[[ADDR_PTR:.*]] = load ptr, ptr %[[ADDR_ADDR_ASCAST]], align 8
+  // CHECK: %[[ADDR:.*]] = addrspacecast ptr %[[ADDR_PTR]] to ptr addrspace(3)
+  // CHECK: call contract float @llvm.amdgcn.ds.fadd.f32(ptr addrspace(3) %[[ADDR]]
   return __builtin_amdgcn_ds_atomic_fadd_f32(addr, value);
 }
 

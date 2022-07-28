@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -126,8 +128,7 @@ class LLVM_LIBRARY_VISIBILITY OpenMPLinker : public Tool {
 
 void getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                             const llvm::opt::ArgList &Args,
-                            std::vector<StringRef> &Features,
-                            Optional<clang::CudaVersion> Version = None);
+                            std::vector<StringRef> &Features);
 
 } // end namespace NVPTX
 } // end namespace tools

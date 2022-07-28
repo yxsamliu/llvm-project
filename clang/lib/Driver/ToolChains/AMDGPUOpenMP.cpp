@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,6 +19,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/Tool.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
@@ -138,6 +141,19 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
     if (II.isFilename())
       input_count++;
 
+  StringRef disable_fn = Args.MakeArgString(
+      C.getDriver().Dir + "/../lib/disable_dynamic_devmem.ll");
+  // OpenMP default is to disable host assisted device memory management
+  // to avoid host service thread for potential performance concerns.
+  if (llvm::sys::fs::exists(disable_fn) &&
+      Args.hasFlag(options::OPT_fdisable_host_devmem,
+                   options::OPT_fenable_host_devmem, true) &&
+      Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
+                   options::OPT_fno_openmp_target_new_runtime, false)) {
+    input_count++;
+    CmdArgs.push_back(Args.MakeArgString(disable_fn));
+  }
+
   // If more than 1 input or need to link any SDLs, we need a pre-link step.
   if ((input_count > 1) || !CmdArgs.empty()) {
     // ArgStringList CmdArgs;
@@ -185,6 +201,19 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
     libpath = lib_debug_path;
 
   llvm::SmallVector<std::string, 12> BCLibs;
+
+  if (Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
+                   true) &&
+      AMDGPUOpenMPTC.getSanitizerArgs(Args).needsAsanRt()) {
+    std::string AsanRTL(
+        AMDGPUOpenMPTC.getRocmInstallationLoc().getAsanRTLPath());
+    if (AsanRTL.empty()) {
+      AMDGPUOpenMPTC.getDriver().Diag(diag::err_drv_no_asan_rt_lib);
+    } else {
+      BCLibs.push_back(AsanRTL);
+    }
+  }
+
   if (Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
                    options::OPT_fno_openmp_target_new_runtime, false))
     BCLibs.push_back(Args.MakeArgString(libpath + "/libomptarget-new-amdgpu-" +
@@ -401,8 +430,7 @@ void AMDGCN::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
   const toolchains::AMDGPUOpenMPToolChain &AMDGPUOpenMPTC =
       static_cast<const toolchains::AMDGPUOpenMPToolChain &>(TC);
 
-  std::string TargetIDStr = AMDGPUOpenMPTC.getTargetID();
-  StringRef TargetID = StringRef(TargetIDStr);
+  StringRef TargetID = AMDGPUOpenMPTC.getTargetID();
   assert(TargetID.startswith("gfx") && "Unsupported sub arch");
 
   // Prefix for temporary file name.
@@ -454,12 +482,12 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
     Action::OffloadKind DeviceOffloadingKind) const {
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
 
-  std::string TargetIDStr = getTargetID();
-  StringRef TargetID = StringRef(TargetIDStr);
+  std::string TargetIDStr = getTargetID().str();
   if (TargetIDStr.empty()) {
     if (!checkSystemForAMDGPU(DriverArgs, *this, TargetIDStr))
       return;
   }
+  StringRef TargetID = StringRef(TargetIDStr);
   assert((DeviceOffloadingKind == Action::OFK_HIP ||
           DeviceOffloadingKind == Action::OFK_OpenMP) &&
          "Only HIP offloading kinds are supported for GPUs.");
@@ -557,13 +585,19 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
   const OptTable &Opts = getDriver().getOpts();
 
   if (DeviceOffloadKind == Action::OFK_OpenMP) {
-    for (Arg *A : Args)
-      if (!llvm::is_contained(*DAL, A))
+    for (Arg *A : Args) {
+      if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A) &&
+          !llvm::is_contained(*DAL, A))
         DAL->append(A);
+    }
 
-    std::string Arch = DAL->getLastArgValue(options::OPT_march_EQ).str();
-    if (Arch.empty()) {
-      checkSystemForAMDGPU(Args, *this, Arch);
+    if (!DAL->hasArg(options::OPT_march_EQ)) {
+      std::string Arch = BoundArch.str();
+      if (Arch.empty()) {
+        Arch = getTargetID().str(); // arch may have come from --Offload-Arch=
+        if (Arch.empty())
+          checkSystemForAMDGPU(Args, *this, Arch);
+      }
       DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ), Arch);
     }
 

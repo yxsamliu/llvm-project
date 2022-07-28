@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -51,7 +53,10 @@ void CodeGenFunction::EmitStopPoint(const Stmt *S) {
   }
 }
 
-void CodeGenFunction::EmitNoLoopKernel(const Stmt *S, SourceLocation Loc) {
+void CodeGenFunction::EmitNoLoopKernel(
+    const Stmt *S,
+    const CodeGenModule::NoLoopIntermediateStmts &IntermediateStmts,
+    SourceLocation Loc) {
   assert(S && "Null statement?");
 
   if (!HaveInsertPoint())
@@ -100,7 +105,7 @@ void CodeGenFunction::EmitNoLoopKernel(const Stmt *S, SourceLocation Loc) {
     llvm::Value *GpuThreadId = RT.getGPUThreadID(*CGFunc);
 
     // workgroup_size
-    llvm::Value *WorkGroupSize = RT.getGPUNumThreads(*CGFunc);
+    llvm::Value *WorkGroupSize = RT.getGPUCompleteBlockSize(*CGFunc);
 
     // workgroup_id
     llvm::Value *WorkGroupId = RT.getGPUBlockID(*CGFunc);
@@ -173,6 +178,17 @@ void CodeGenFunction::EmitNoLoopKernel(const Stmt *S, SourceLocation Loc) {
     CGFunc->Builder.ClearInsertionPoint();
   };
 
+  // For non-combined constructs, the for loop has to be retrieved from
+  // the intermediate statements
+  if (!IntermediateStmts.empty()) {
+    // For now, we support at most one level of nesting
+    assert(IntermediateStmts.size() == 1);
+    const OMPExecutableDirective *NoLoopDir = IntermediateStmts[0];
+    OMPPrivateScope PrivateScope(*this);
+    EmitOMPPrivateClause(*NoLoopDir, PrivateScope);
+    (void)PrivateScope.Privatize();
+    S = NoLoopDir->getAssociatedStmt();
+  }
   const ForStmt *CapturedForStmt = CGM.getSingleForStmt(S);
   assert(CapturedForStmt && "Cannot generate kernel for null captured stmt");
   handleForStmt(*CapturedForStmt, this);
@@ -442,13 +458,22 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPMasterTaskLoopDirectiveClass:
     EmitOMPMasterTaskLoopDirective(cast<OMPMasterTaskLoopDirective>(*S));
     break;
+  case Stmt::OMPMaskedTaskLoopDirectiveClass:
+    llvm_unreachable("masked taskloop directive not supported yet.");
+    break;
   case Stmt::OMPMasterTaskLoopSimdDirectiveClass:
     EmitOMPMasterTaskLoopSimdDirective(
         cast<OMPMasterTaskLoopSimdDirective>(*S));
     break;
+  case Stmt::OMPMaskedTaskLoopSimdDirectiveClass:
+    llvm_unreachable("masked taskloop simd directive not supported yet.");
+    break;
   case Stmt::OMPParallelMasterTaskLoopDirectiveClass:
     EmitOMPParallelMasterTaskLoopDirective(
         cast<OMPParallelMasterTaskLoopDirective>(*S));
+    break;
+  case Stmt::OMPParallelMaskedTaskLoopDirectiveClass:
+    llvm_unreachable("parallel masked taskloop directive not supported yet.");
     break;
   case Stmt::OMPParallelMasterTaskLoopSimdDirectiveClass:
     EmitOMPParallelMasterTaskLoopSimdDirective(
@@ -535,6 +560,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     break;
   case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
     llvm_unreachable("target parallel loop directive not supported yet.");
+    break;
+  case Stmt::OMPParallelMaskedDirectiveClass:
+    llvm_unreachable("parallel masked directive not supported yet.");
     break;
   }
 }
@@ -2414,6 +2442,9 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
 }
 
 void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
+  // Pop all cleanup blocks at the end of the asm statement.
+  CodeGenFunction::RunCleanupsScope Cleanups(*this);
+
   // Assemble the final asm string.
   std::string AsmString = S.generateAsmString(getContext());
 

@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -64,23 +66,23 @@ static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 static cl::OptionCategory
     ClangOffloadBundlerCategory("clang-offload-bundler options");
 static cl::list<std::string>
-    InputFileNames("input", cl::ZeroOrMore,
+    InputFileNames("input",
                    cl::desc("Input file."
                             " Can be specified multiple times "
                             "for multiple input files."),
                    cl::cat(ClangOffloadBundlerCategory));
 static cl::list<std::string>
-    InputFileNamesDeprecatedOpt("inputs", cl::CommaSeparated, cl::ZeroOrMore,
+    InputFileNamesDeprecatedOpt("inputs", cl::CommaSeparated,
                                 cl::desc("[<input file>,...] (deprecated)"),
                                 cl::cat(ClangOffloadBundlerCategory));
 static cl::list<std::string>
-    OutputFileNames("output", cl::ZeroOrMore,
+    OutputFileNames("output",
                     cl::desc("Output file."
                              " Can be specified multiple times "
                              "for multiple output files."),
                     cl::cat(ClangOffloadBundlerCategory));
 static cl::list<std::string>
-    OutputFileNamesDeprecatedOpt("outputs", cl::CommaSeparated, cl::ZeroOrMore,
+    OutputFileNamesDeprecatedOpt("outputs", cl::CommaSeparated,
                                  cl::desc("[<output file>,...] (deprecated)"),
                                  cl::cat(ClangOffloadBundlerCategory));
 static cl::list<std::string>
@@ -1402,7 +1404,7 @@ static Error UnbundleArchive() {
 
     Optional<StringRef> OptionalCurBundleID = *CurBundleIDOrErr;
     // No device code in this child, skip.
-    if (!OptionalCurBundleID.hasValue())
+    if (!OptionalCurBundleID)
       continue;
     StringRef CodeObject = *OptionalCurBundleID;
 
@@ -1465,7 +1467,7 @@ static Error UnbundleArchive() {
       if (!NextTripleOrErr)
         return NextTripleOrErr.takeError();
 
-      CodeObject = ((*NextTripleOrErr).hasValue()) ? **NextTripleOrErr : "";
+      CodeObject = NextTripleOrErr->value_or("");
     } // End of processing of all bundle entries of this child of input archive.
   }   // End of while over children of input archive.
 

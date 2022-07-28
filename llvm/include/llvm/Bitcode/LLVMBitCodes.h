@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -588,14 +590,15 @@ enum FunctionCodes {
       52, // CATCHSWITCH: [num,args...] or [num,args...,bb]
   // 53 is unused.
   // 54 is unused.
-  FUNC_CODE_OPERAND_BUNDLE = 55, // OPERAND_BUNDLE: [tag#, value...]
-  FUNC_CODE_INST_UNOP = 56,      // UNOP:       [opcode, ty, opval]
-  FUNC_CODE_INST_CALLBR = 57,    // CALLBR:     [attr, cc, norm, transfs,
-                                 //              fnty, fnid, args...]
-  FUNC_CODE_INST_FREEZE = 58,    // FREEZE: [opty, opval]
-  FUNC_CODE_INST_ATOMICRMW = 59, // ATOMICRMW: [ptrty, ptr, valty, val,
-                                 //             operation, align, vol,
-                                 //             ordering, synchscope]
+  FUNC_CODE_OPERAND_BUNDLE = 55,  // OPERAND_BUNDLE: [tag#, value...]
+  FUNC_CODE_INST_UNOP = 56,       // UNOP:       [opcode, ty, opval]
+  FUNC_CODE_INST_CALLBR = 57,     // CALLBR:     [attr, cc, norm, transfs,
+                                  //              fnty, fnid, args...]
+  FUNC_CODE_INST_FREEZE = 58,     // FREEZE: [opty, opval]
+  FUNC_CODE_INST_ATOMICRMW = 59,  // ATOMICRMW: [ptrty, ptr, valty, val,
+                                  //             operation, align, vol,
+                                  //             ordering, synchscope]
+  FUNC_CODE_BLOCKADDR_USERS = 60, // BLOCKADDR_USERS: [value...]
 };
 
 enum UseListCodes {
@@ -685,6 +688,9 @@ enum AttributeKindCodes {
   ATTR_KIND_DISABLE_SANITIZER_INSTRUMENTATION = 78,
   ATTR_KIND_NO_SANITIZE_BOUNDS = 79,
   ATTR_KIND_ALLOC_ALIGN = 80,
+  ATTR_KIND_ALLOCATED_POINTER = 81,
+  ATTR_KIND_ALLOC_KIND = 82,
+  ATTR_KIND_PRESPLIT_COROUTINE = 83,
 };
 
 enum ComdatSelectionKindCodes {

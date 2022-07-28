@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1386,11 +1388,10 @@ bool MachineInstr::isDereferenceableInvariantLoad(AAResults *AA) const {
       continue;
 
     // A load from a constant PseudoSourceValue is invariant.
-    if (const PseudoSourceValue *PSV = MMO->getPseudoValue())
+    if (const PseudoSourceValue *PSV = MMO->getPseudoValue()) {
       if (PSV->isConstant(&MFI))
         continue;
-
-    if (const Value *V = MMO->getValue()) {
+    } else if (const Value *V = MMO->getValue()) {
       // If we have an AliasAnalysis, ask it whether the memory is constant.
       if (AA &&
           AA->pointsToConstantMemory(

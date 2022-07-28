@@ -3,6 +3,8 @@
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ * Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+ * Notified per clause 4(b) of the license.
  *
  *===-----------------------------------------------------------------------===
  */
@@ -63,25 +65,6 @@
 #define _fmaxd __ocml_fmax_f64
 #define _fmaxf __ocml_fmax_f32
 #else
-#include <__clang_hip_libdevice_declares.h>
-#define _ISNANd __ocml_isnan_f64
-#define _ISNANf __ocml_isnan_f32
-#define _ISINFd __ocml_isinf_f64
-#define _ISINFf __ocml_isinf_f32
-#define _ISFINITEd __ocml_isfinite_f64
-#define _ISFINITEf __ocml_isfinite_f32
-#define _COPYSIGNd __ocml_copysign_f64
-#define _COPYSIGNf __ocml_copysign_f32
-#define _SCALBNd __ocml_scalbn_f64
-#define _SCALBNf __ocml_scalbn_f32
-#define _ABSd __ocml_fabs_f64
-#define _ABSf __ocml_fabs_f32
-#define _LOGBd __ocml_logb_f64
-#define _LOGBf __ocml_logb_f32
-#define _fmaxd __ocml_fmax_f64
-#define _fmaxf __ocml_fmax_f32
-#endif
-#ifdef __NVPTX__
 #define _ISNANd __nv_isnand
 #define _ISNANf __nv_isnanf
 #define _ISINFd __nv_isinfd

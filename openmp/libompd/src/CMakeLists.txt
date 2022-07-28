@@ -4,6 +4,8 @@
 #// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 #// See https://llvm.org/LICENSE.txt for license information.
 #// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+#// Notified per clause 4(b) of the license.
 #//
 #//===----------------------------------------------------------------------===//
 #
@@ -13,7 +15,7 @@ cmake_minimum_required(VERSION 3.13.4)
 
 add_library (ompd SHARED TargetValue.cpp omp-debug.cpp omp-state.cpp omp-icv.cpp)
 
-add_dependencies(ompd omp) # ensure generated import library is created first
+target_link_libraries(ompd omp) # ensure generated import library is created first
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 

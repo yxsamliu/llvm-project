@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -623,7 +625,7 @@ template <class ELFT> static void markUsedLocalSymbols() {
   // See MarkLive<ELFT>::resolveReloc().
   if (config->gcSections)
     return;
-  for (ELFFileBase *file : objectFiles) {
+  for (ELFFileBase *file : ctx->objectFiles) {
     ObjFile<ELFT> *f = cast<ObjFile<ELFT>>(file);
     for (InputSectionBase *s : f->getSections()) {
       InputSection *isec = dyn_cast_or_null<InputSection>(s);
@@ -694,7 +696,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   llvm::TimeTraceScope timeScope("Add local symbols");
   if (config->copyRelocs && config->discard != DiscardPolicy::None)
     markUsedLocalSymbols<ELFT>();
-  for (ELFFileBase *file : objectFiles) {
+  for (ELFFileBase *file : ctx->objectFiles) {
     for (Symbol *b : file->getLocalSymbols()) {
       assert(b->isLocal() && "should have been caught in initializeSymbols()");
       auto *dr = dyn_cast<Defined>(b);
@@ -761,6 +763,8 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
 static bool isRelroSection(const OutputSection *sec) {
   if (!config->zRelro)
     return false;
+  if (sec->relro)
+    return true;
 
   uint64_t flags = sec->flags;
 
@@ -1295,7 +1299,7 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
   for (Symbol *sym : symtab->symbols())
     addSym(*sym);
 
-  for (ELFFileBase *file : objectFiles)
+  for (ELFFileBase *file : ctx->objectFiles)
     for (Symbol *sym : file->getLocalSymbols())
       addSym(*sym);
 
@@ -1695,7 +1699,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
 // block sections, input sections can shrink when the jump instructions at
 // the end of the section are relaxed.
 static void fixSymbolsAfterShrinking() {
-  for (InputFile *File : objectFiles) {
+  for (InputFile *File : ctx->objectFiles) {
     parallelForEach(File->getSymbols(), [&](Symbol *Sym) {
       auto *def = dyn_cast<Defined>(Sym);
       if (!def)
@@ -1945,7 +1949,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // ld.bfd traces all DT_NEEDED to emulate the logic of the dynamic linker to
     // catch more cases. That is too much for us. Our approach resembles the one
     // used in ld.gold, achieves a good balance to be useful but not too smart.
-    for (SharedFile *file : sharedFiles) {
+    for (SharedFile *file : ctx->sharedFiles) {
       bool allNeededIsKnown =
           llvm::all_of(file->dtNeeded, [&](StringRef needed) {
             return symtab->soNames.count(CachedHashStringRef(needed));
@@ -2915,7 +2919,7 @@ computeHash(llvm::MutableArrayRef<uint8_t> hashBuf,
   std::unique_ptr<uint8_t[]> hashes(new uint8_t[hashesSize]);
 
   // Compute hash values.
-  parallelForEachN(0, chunks.size(), [&](size_t i) {
+  parallelFor(0, chunks.size(), [&](size_t i) {
     hashFn(hashes.get() + i * hashBuf.size(), chunks[i]);
   });
 

@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1176,7 +1178,10 @@ void CodeGenModule::EmitDeferredVTables() {
   DeferredVTables.clear();
 }
 
-bool CodeGenModule::HasLTOVisibilityPublicStd(const CXXRecordDecl *RD) {
+bool CodeGenModule::AlwaysHasLTOVisibilityPublic(const CXXRecordDecl *RD) {
+  if (RD->hasAttr<LTOVisibilityPublicAttr>() || RD->hasAttr<UuidAttr>())
+    return true;
+
   if (!getCodeGenOpts().LTOVisibilityPublicStd)
     return false;
 
@@ -1201,9 +1206,6 @@ bool CodeGenModule::HasHiddenLTOVisibility(const CXXRecordDecl *RD) {
   if (!isExternallyVisible(LV.getLinkage()))
     return true;
 
-  if (RD->hasAttr<LTOVisibilityPublicAttr>() || RD->hasAttr<UuidAttr>())
-    return false;
-
   if (getTriple().isOSBinFormatCOFF()) {
     if (RD->hasAttr<DLLExportAttr>() || RD->hasAttr<DLLImportAttr>())
       return false;
@@ -1212,7 +1214,7 @@ bool CodeGenModule::HasHiddenLTOVisibility(const CXXRecordDecl *RD) {
       return false;
   }
 
-  return !HasLTOVisibilityPublicStd(RD);
+  return !AlwaysHasLTOVisibilityPublic(RD);
 }
 
 llvm::GlobalObject::VCallVisibility CodeGenModule::GetVCallVisibilityLevel(

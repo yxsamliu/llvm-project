@@ -1,3 +1,5 @@
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //===-RTLs/nec-aurora/src/rtl.cpp - Target RTLs Implementation - C++ -*-======//
 //
 //                     The LLVM Compiler Infrastructure
@@ -178,6 +180,9 @@ static int target_run_function_wait(uint32_t DeviceID, uint64_t FuncAddr,
 // Return the number of available devices of the type supported by the
 // target RTL.
 int32_t __tgt_rtl_number_of_devices(void) { return DeviceInfo.NodeIds.size(); }
+int32_t __tgt_rtl_number_of_team_procs(int device_id) {
+  return DeviceInfo.ProcHandles[device_id].size();
+}
 
 // Return an integer different from zero if the provided device image can be
 // supported by the runtime. The functionality is similar to comparing the

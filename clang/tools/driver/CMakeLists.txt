@@ -1,3 +1,5 @@
+# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
 set( LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Analysis
@@ -31,6 +33,7 @@ add_clang_tool(clang
   DEPENDS
   intrinsics_gen
   ${support_plugins}
+  GENERATE_DRIVER
   )
 
 clang_target_link_libraries(clang

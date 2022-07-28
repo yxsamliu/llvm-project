@@ -7,6 +7,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -1260,7 +1262,7 @@ static bool __kmp_target_mem_available;
    MA == llvm_omp_target_shared_mem_alloc ||                                   \
    MA == llvm_omp_target_device_mem_alloc)
 
-#if KMP_OS_UNIX && KMP_DYNAMIC_LIB
+#if KMP_OS_UNIX && KMP_DYNAMIC_LIB && !KMP_OS_DARWIN
 static inline void chk_kind(void ***pkind) {
   KMP_DEBUG_ASSERT(pkind);
   if (*pkind) // symbol found
@@ -1271,7 +1273,7 @@ static inline void chk_kind(void ***pkind) {
 
 void __kmp_init_memkind() {
 // as of 2018-07-31 memkind does not support Windows*, exclude it for now
-#if KMP_OS_UNIX && KMP_DYNAMIC_LIB
+#if KMP_OS_UNIX && KMP_DYNAMIC_LIB && !KMP_OS_DARWIN
   // use of statically linked memkind is problematic, as it depends on libnuma
   kmp_mk_lib_name = "libmemkind.so";
   h_memkind = dlopen(kmp_mk_lib_name, RTLD_LAZY);

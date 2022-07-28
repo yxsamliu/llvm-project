@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -22,7 +24,7 @@ using namespace _OMP;
 
 namespace {
 
-#pragma omp declare target
+#pragma omp begin declare target device_type(nohost)
 
 void gpu_regular_warp_reduce(void *reduce_data, ShuffleReductFnTy shflFct) {
   for (uint32_t mask = mapping::getWarpSize() / 2; mask > 0; mask /= 2) {
@@ -167,8 +169,8 @@ uint32_t roundToWarpsize(uint32_t s) {
 
 uint32_t kmpcMin(uint32_t x, uint32_t y) { return x < y ? x : y; }
 
-static volatile uint32_t IterCnt = 0;
-static volatile uint32_t Cnt = 0;
+static uint32_t IterCnt = 0;
+static uint32_t Cnt = 0;
 
 } // namespace
 
@@ -211,7 +213,7 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   // to the number of slots in the buffer.
   bool IsMaster = (ThreadId == 0);
   while (IsMaster) {
-    Bound = atomic::load((uint32_t *)&IterCnt, __ATOMIC_SEQ_CST);
+    Bound = atomic::load(&IterCnt, __ATOMIC_SEQ_CST);
     if (TeamId < Bound + num_of_records)
       break;
   }
@@ -228,8 +230,7 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     // Increment team counter.
     // This counter is incremented by all teams in the current
     // BUFFER_SIZE chunk.
-    ChunkTeamCount =
-        atomic::inc((uint32_t *)&Cnt, num_of_records - 1u, __ATOMIC_SEQ_CST);
+    ChunkTeamCount = atomic::inc(&Cnt, num_of_records - 1u, __ATOMIC_SEQ_CST);
   }
   // Synchronize
   if (mapping::isSPMDMode())
@@ -305,8 +306,7 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   if (IsMaster && ChunkTeamCount == num_of_records - 1) {
     // Allow SIZE number of teams to proceed writing their
     // intermediate results to the global buffer.
-    atomic::add((uint32_t *)&IterCnt, uint32_t(num_of_records),
-                __ATOMIC_SEQ_CST);
+    atomic::add(&IterCnt, uint32_t(num_of_records), __ATOMIC_SEQ_CST);
   }
 
   return 0;
@@ -315,6 +315,16 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
 void __kmpc_nvptx_end_reduce(int32_t TId) { FunctionTracingRAII(); }
 
 void __kmpc_nvptx_end_reduce_nowait(int32_t TId) { FunctionTracingRAII(); }
+
+#ifndef FORTRAN_NO_LONGER_NEEDS
+int32_t __kmpc_nvptx_parallel_reduce_nowait_simple_spmd(
+    int32_t TId, int32_t num_vars, uint64_t reduce_size, void *reduce_data,
+    ShuffleReductFnTy shflFct, InterWarpCopyFnTy cpyFct) {
+  FunctionTracingRAII();
+  return nvptx_parallel_reduce_nowait(TId, num_vars, reduce_size, reduce_data,
+                                      shflFct, cpyFct, true, false);
+}
+#endif
 }
 
 #pragma omp end declare target

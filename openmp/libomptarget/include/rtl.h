@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -27,6 +29,7 @@ struct __tgt_bin_desc;
 struct RTLInfoTy {
   typedef int32_t(is_valid_binary_ty)(void *);
   typedef int32_t(is_data_exchangable_ty)(int32_t, int32_t);
+  typedef int32_t(number_of_team_procs_ty)(int32_t);
   typedef int32_t(number_of_devices_ty)();
   typedef int32_t(init_device_ty)(int32_t);
   typedef int32_t(deinit_device_ty)(int32_t);
@@ -88,6 +91,7 @@ struct RTLInfoTy {
   // Functions implemented in the RTL.
   is_valid_binary_ty *is_valid_binary = nullptr;
   is_data_exchangable_ty *is_data_exchangable = nullptr;
+  number_of_team_procs_ty *number_of_team_procs = nullptr;
   number_of_devices_ty *number_of_devices = nullptr;
   init_device_ty *init_device = nullptr;
   deinit_device_ty *deinit_device = nullptr;
@@ -146,7 +150,7 @@ struct RTLsTy {
   int64_t RequiresFlags = OMP_REQ_UNDEFINED;
 
   // Set by OMPX_DISABLE_MAPS environment variable.
-  // When active (default state), maps are ignored by the runtime
+  // When active (default value), maps are ignored by the runtime
   bool NoUSMMapChecks = true;
 
   explicit RTLsTy() = default;

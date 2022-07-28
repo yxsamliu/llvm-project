@@ -1,5 +1,7 @@
+# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
 add_custom_target(UnitTests)
-set_target_properties(UnitTests PROPERTIES FOLDER "Tests")
+set_target_properties(UnitTests PROPERTIES FOLDER "Tests/UnitTests")
 
 function(add_llvm_unittest test_dirname)
   add_unittest(UnitTests ${test_dirname} ${ARGN})

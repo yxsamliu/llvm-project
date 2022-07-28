@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1424,6 +1426,19 @@ public:
   bool isStructural() const {
     return isLiteral() && data().StructuralIfLiteral;
   }
+
+  /// Notify the class that this destructor is now selected.
+  /// 
+  /// Important properties of the class depend on destructor properties. Since
+  /// C++20, it is possible to have multiple destructor declarations in a class
+  /// out of which one will be selected at the end.
+  /// This is called separately from addedMember because it has to be deferred
+  /// to the completion of the class.
+  void addedSelectedDestructor(CXXDestructorDecl *DD);
+
+  /// Notify the class that an eligible SMF has been added.
+  /// This updates triviality and destructor based properties of the class accordingly.
+  void addedEligibleSpecialMemberFunction(const CXXMethodDecl *MD, unsigned SMKind);
 
   /// If this record is an instantiation of a member class,
   /// retrieves the member class from which it was instantiated.

@@ -4,6 +4,8 @@
 #// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 #// See https://llvm.org/LICENSE.txt for license information.
 #// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+#// Notified per clause 4(b) of the license.
 #//
 #//===----------------------------------------------------------------------===//
 #
@@ -46,9 +48,6 @@ include_directories(
   ${LIBOMP_INC_DIR}
   ${LIBOMP_SRC_DIR}/thirdparty/ittnotify
 )
-if(${LIBOMP_USE_HWLOC})
-  include_directories(${LIBOMP_HWLOC_INSTALL_DIR}/include)
-endif()
 
 # Building with time profiling support requires LLVM directory includes.
 if(LIBOMP_PROFILING_SUPPORT)
@@ -159,6 +158,13 @@ else()
     )
   # libomp must be a C++ library such that it can link libLLVMSupport
   set(LIBOMP_LINKER_LANGUAGE CXX)
+endif()
+if(${LIBOMP_USE_HWLOC})
+  target_include_directories(omp
+                             PUBLIC
+			     "$<BUILD_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
+			     "$<INSTALL_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
+  )
 endif()
 
 if(OPENMP_MSVC_NAME_SCHEME)

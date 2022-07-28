@@ -749,6 +749,12 @@ void StmtPrinter::VisitOMPParallelMasterDirective(
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPParallelMaskedDirective(
+    OMPParallelMaskedDirective *Node) {
+  Indent() << "#pragma omp parallel masked";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPParallelSectionsDirective(
     OMPParallelSectionsDirective *Node) {
   Indent() << "#pragma omp parallel sections";
@@ -874,15 +880,33 @@ void StmtPrinter::VisitOMPMasterTaskLoopDirective(
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPMaskedTaskLoopDirective(
+    OMPMaskedTaskLoopDirective *Node) {
+  Indent() << "#pragma omp masked taskloop";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPMasterTaskLoopSimdDirective(
     OMPMasterTaskLoopSimdDirective *Node) {
   Indent() << "#pragma omp master taskloop simd";
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPMaskedTaskLoopSimdDirective(
+    OMPMaskedTaskLoopSimdDirective *Node) {
+  Indent() << "#pragma omp masked taskloop simd";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPParallelMasterTaskLoopDirective(
     OMPParallelMasterTaskLoopDirective *Node) {
   Indent() << "#pragma omp parallel master taskloop";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPParallelMaskedTaskLoopDirective(
+    OMPParallelMaskedTaskLoopDirective *Node) {
+  Indent() << "#pragma omp parallel masked taskloop";
   PrintOMPExecutableDirective(Node);
 }
 

@@ -988,6 +988,11 @@ void StmtProfiler::VisitOMPParallelMasterDirective(
   VisitOMPExecutableDirective(S);
 }
 
+void StmtProfiler::VisitOMPParallelMaskedDirective(
+    const OMPParallelMaskedDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
 void StmtProfiler::VisitOMPParallelSectionsDirective(
     const OMPParallelSectionsDirective *S) {
   VisitOMPExecutableDirective(S);
@@ -1090,13 +1095,28 @@ void StmtProfiler::VisitOMPMasterTaskLoopDirective(
   VisitOMPLoopDirective(S);
 }
 
+void StmtProfiler::VisitOMPMaskedTaskLoopDirective(
+    const OMPMaskedTaskLoopDirective *S) {
+  VisitOMPLoopDirective(S);
+}
+
 void StmtProfiler::VisitOMPMasterTaskLoopSimdDirective(
     const OMPMasterTaskLoopSimdDirective *S) {
   VisitOMPLoopDirective(S);
 }
 
+void StmtProfiler::VisitOMPMaskedTaskLoopSimdDirective(
+    const OMPMaskedTaskLoopSimdDirective *S) {
+  VisitOMPLoopDirective(S);
+}
+
 void StmtProfiler::VisitOMPParallelMasterTaskLoopDirective(
     const OMPParallelMasterTaskLoopDirective *S) {
+  VisitOMPLoopDirective(S);
+}
+
+void StmtProfiler::VisitOMPParallelMaskedTaskLoopDirective(
+    const OMPParallelMaskedTaskLoopDirective *S) {
   VisitOMPLoopDirective(S);
 }
 

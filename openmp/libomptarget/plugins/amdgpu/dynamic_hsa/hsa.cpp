@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -23,8 +25,11 @@ DLWRAP_INTERNAL(hsa_init, 0);
 
 DLWRAP(hsa_status_string, 2);
 DLWRAP(hsa_shut_down, 0);
+DLWRAP(hsa_system_get_info, 2);
 DLWRAP(hsa_agent_get_info, 3);
+DLWRAP(hsa_isa_get_info_alt, 3);
 DLWRAP(hsa_iterate_agents, 2);
+DLWRAP(hsa_agent_iterate_isas, 3);
 DLWRAP(hsa_signal_create, 4);
 DLWRAP(hsa_signal_destroy, 1);
 DLWRAP(hsa_signal_store_relaxed, 2);

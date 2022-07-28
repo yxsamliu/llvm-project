@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -40,7 +42,7 @@ public:
 void getAMDGPUTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                              const llvm::opt::ArgList &Args,
                              std::vector<StringRef> &Features,
-                             std::string TcTargetID = std::string());
+                             StringRef TcTargetID = StringRef());
 
 } // end namespace amdgpu
 } // end namespace tools
@@ -99,6 +101,12 @@ public:
 
   /// Needed for translating LTO options.
   const char *getDefaultLinker() const override { return "ld.lld"; }
+
+  /// Should skip Sanitize options
+  bool shouldSkipSanitizeOption(const ToolChain &TC,
+                                const llvm::opt::ArgList &DriverArgs,
+                                StringRef TargetID,
+                                const llvm::opt::Arg *A) const;
 
   /// Should skip argument.
   bool shouldSkipArgument(const llvm::opt::Arg *Arg) const;

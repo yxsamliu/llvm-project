@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -3997,7 +3999,10 @@ def PMOVMSKBrr : PDI<0xD7, MRMSrcReg, (outs GR32orGR64:$dst), (ins VR128:$src),
 //===---------------------------------------------------------------------===//
 
 let ExeDomain = SSEPackedInt, SchedRW = [SchedWriteVecMoveLS.XMM.MR] in {
-let Uses = [EDI], Predicates = [HasAVX,Not64BitMode] in
+// As VEX does not have separate instruction contexts for address size
+// overrides, VMASKMOVDQU and VMASKMOVDQU64 would have a decode conflict.
+// Prefer VMASKMODDQU64.
+let Uses = [EDI], Predicates = [HasAVX], isAsmParserOnly = 1 in
 def VMASKMOVDQU : VPDI<0xF7, MRMSrcReg, (outs),
            (ins VR128:$src, VR128:$mask),
            "maskmovdqu\t{$mask, $src|$src, $mask}",
@@ -4008,32 +4013,16 @@ def VMASKMOVDQU64 : VPDI<0xF7, MRMSrcReg, (outs),
            (ins VR128:$src, VR128:$mask),
            "maskmovdqu\t{$mask, $src|$src, $mask}",
            [(int_x86_sse2_maskmov_dqu VR128:$src, VR128:$mask, RDI)]>,
-           VEX, VEX_WIG, AdSize64;
-let Uses = [EDI], Predicates = [HasAVX,In64BitMode] in
-def VMASKMOVDQUX32 : VPDI<0xF7, MRMSrcReg, (outs),
-           (ins VR128:$src, VR128:$mask), "",
-           [(int_x86_sse2_maskmov_dqu VR128:$src, VR128:$mask, EDI)]>,
-           VEX, VEX_WIG, AdSize32 {
-  let AsmString = "addr32 vmaskmovdqu\t{$mask, $src|$src, $mask}";
-  let AsmVariantName = "NonParsable";
-}
+           VEX, VEX_WIG;
 
-let Uses = [EDI], Predicates = [UseSSE2,Not64BitMode] in
+let Uses = [EDI], Predicates = [UseSSE2] in
 def MASKMOVDQU : PDI<0xF7, MRMSrcReg, (outs), (ins VR128:$src, VR128:$mask),
            "maskmovdqu\t{$mask, $src|$src, $mask}",
            [(int_x86_sse2_maskmov_dqu VR128:$src, VR128:$mask, EDI)]>;
 let Uses = [RDI], Predicates = [UseSSE2,In64BitMode] in
 def MASKMOVDQU64 : PDI<0xF7, MRMSrcReg, (outs), (ins VR128:$src, VR128:$mask),
            "maskmovdqu\t{$mask, $src|$src, $mask}",
-           [(int_x86_sse2_maskmov_dqu VR128:$src, VR128:$mask, RDI)]>,
-           AdSize64;
-let Uses = [EDI], Predicates = [UseSSE2,In64BitMode] in
-def MASKMOVDQUX32 : PDI<0xF7, MRMSrcReg, (outs), (ins VR128:$src, VR128:$mask),
-           "addr32 maskmovdqu\t{$mask, $src|$src, $mask}",
-           [(int_x86_sse2_maskmov_dqu VR128:$src, VR128:$mask, EDI)]>,
-           AdSize32 {
-  let AsmVariantName = "NonParsable";
-}
+           [(int_x86_sse2_maskmov_dqu VR128:$src, VR128:$mask, RDI)]>;
 
 } // ExeDomain = SSEPackedInt
 

@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -2283,6 +2285,11 @@ bool FastISel::tryToFoldLoad(const LoadInst *LI, const Instruction *FoldInst) {
   // may mean that the instruction got lowered to multiple MIs, or the use of
   // the loaded value ended up being multiple operands of the result.
   if (!MRI.hasOneUse(LoadReg))
+    return false;
+
+  // If the register has fixups, there may be additional uses through a
+  // different alias of the register.
+  if (FuncInfo.RegsWithFixups.contains(LoadReg))
     return false;
 
   MachineRegisterInfo::reg_iterator RI = MRI.reg_begin(LoadReg);

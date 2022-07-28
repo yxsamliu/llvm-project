@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -103,7 +105,7 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
   do {                                                                         \
     if (asan_init_is_running)                                                  \
       return REAL(func)(__VA_ARGS__);                                          \
-    if (SANITIZER_MAC && UNLIKELY(!asan_inited))                               \
+    if (SANITIZER_APPLE && UNLIKELY(!asan_inited))                               \
       return REAL(func)(__VA_ARGS__);                                          \
     ENSURE_ASAN_INITED();                                                      \
   } while (false)
@@ -356,7 +358,7 @@ INTERCEPTOR(_Unwind_Reason_Code, _Unwind_SjLj_RaiseException,
 INTERCEPTOR(char*, index, const char *string, int c)
   ALIAS(WRAPPER_NAME(strchr));
 # else
-#  if SANITIZER_MAC
+#  if SANITIZER_APPLE
 DECLARE_REAL(char*, index, const char *string, int c)
 OVERRIDE_FUNCTION(index, strchr);
 #  else
@@ -410,7 +412,7 @@ INTERCEPTOR(char*, strncat, char *to, const char *from, uptr size) {
 INTERCEPTOR(char *, strcpy, char *to, const char *from) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strcpy);
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
   if (UNLIKELY(!asan_inited))
     return REAL(strcpy)(to, from);
 #endif
@@ -490,7 +492,7 @@ INTERCEPTOR(long, strtol, const char *nptr, char **endptr, int base) {
 INTERCEPTOR(int, atoi, const char *nptr) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, atoi);
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
   if (UNLIKELY(!asan_inited)) return REAL(atoi)(nptr);
 #endif
   ENSURE_ASAN_INITED();
@@ -511,7 +513,7 @@ INTERCEPTOR(int, atoi, const char *nptr) {
 INTERCEPTOR(long, atol, const char *nptr) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, atol);
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
   if (UNLIKELY(!asan_inited)) return REAL(atol)(nptr);
 #endif
   ENSURE_ASAN_INITED();
@@ -564,7 +566,7 @@ static void AtCxaAtexit(void *unused) {
 #if ASAN_INTERCEPT___CXA_ATEXIT
 INTERCEPTOR(int, __cxa_atexit, void (*func)(void *), void *arg,
             void *dso_handle) {
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
   if (UNLIKELY(!asan_inited)) return REAL(__cxa_atexit)(func, arg, dso_handle);
 #endif
   ENSURE_ASAN_INITED();

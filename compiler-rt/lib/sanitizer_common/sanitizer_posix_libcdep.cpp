@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -395,7 +397,7 @@ real_pthread_attr_getstack(void *attr, void **addr, size_t *size);
 } // extern "C"
 
 int my_pthread_attr_getstack(void *attr, void **addr, uptr *size) {
-#if !SANITIZER_GO && !SANITIZER_MAC
+#if !SANITIZER_GO && !SANITIZER_APPLE
   if (&real_pthread_attr_getstack)
     return real_pthread_attr_getstack((pthread_attr_t *)attr, addr,
                                       (size_t *)size);

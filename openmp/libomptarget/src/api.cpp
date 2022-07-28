@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -19,6 +21,15 @@
 #include <cstdlib>
 #include <cstring>
 
+EXTERN int ompx_get_team_procs(int device_num) {
+  TIMESCOPE();
+  PM->RTLsMtx.lock();
+  int TeamProcs = PM->Devices[device_num]->getTeamProcs();
+  PM->RTLsMtx.unlock();
+  DP("Call to ompx_get_team_procs returning %d\n", TeamProcs);
+  return TeamProcs;
+}
+
 EXTERN int omp_get_num_devices(void) {
   TIMESCOPE();
   PM->RTLsMtx.lock();
@@ -30,16 +41,20 @@ EXTERN int omp_get_num_devices(void) {
   return DevicesSize;
 }
 
+EXTERN int omp_get_device_num(void) {
+  TIMESCOPE();
+  int HostDevice = omp_get_initial_device();
+
+  DP("Call to omp_get_device_num returning %d\n", HostDevice);
+
+  return HostDevice;
+}
+
 EXTERN int omp_get_initial_device(void) {
   TIMESCOPE();
   int hostDevice = omp_get_num_devices();
   DP("Call to omp_get_initial_device returning %d\n", hostDevice);
   return hostDevice;
-}
-
-EXTERN int omp_get_device_num(void) {
-  DP("Call to omp_get_device_num returning %d\n", HOST_DEVICE);
-  return HOST_DEVICE;
 }
 
 EXTERN void *omp_target_alloc(size_t size, int device_num) {
@@ -139,8 +154,12 @@ EXTERN int omp_target_is_present(const void *ptr, int device_num) {
   DeviceTy &Device = *PM->Devices[device_num];
   bool IsLast; // not used
   bool IsHostPtr;
+  // omp_target_is_present tests whether a host pointer refers to storage that
+  // is mapped to a given device. However, due to the lack of the storage size,
+  // only check 1 byte. Cannot set size 0 which checks whether the pointer (zero
+  // lengh array) is mapped instead of the referred storage.
   TargetPointerResultTy TPR =
-      Device.getTgtPtrBegin(const_cast<void *>(ptr), 0, IsLast,
+      Device.getTgtPtrBegin(const_cast<void *>(ptr), 1, IsLast,
                             /*UpdateRefCount=*/false,
                             /*UseHoldRefCount=*/false, IsHostPtr);
   int rc = (TPR.TargetPointer != NULL);

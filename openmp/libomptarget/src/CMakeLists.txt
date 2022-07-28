@@ -3,6 +3,8 @@
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
 #
 ##===----------------------------------------------------------------------===##
 #
@@ -45,12 +47,12 @@ if (OPENMP_ENABLE_LIBOMPTARGET_PROFILING)
 endif()
 
 find_library(LLVM_OFFLOAD_ARCH LLVMOffloadArch HINTS ${LLVM_LIBRARY_DIR} REQUIRED)
-find_library(CLANG_CPP clang-cpp HINTS ${LLVM_LIBRARY_DIR} REQUIRED)
 
+target_include_directories(omptarget PRIVATE
+  ${LIBOMPTARGET_INCLUDE_DIR})
 target_link_libraries(omptarget PRIVATE
   ${CMAKE_DL_LIBS}
   ${LLVM_OFFLOAD_ARCH}
-  ${CLANG_CPP}
   "-Wl,--no-allow-shlib-undefined"
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
 

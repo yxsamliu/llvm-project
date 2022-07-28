@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -2699,9 +2701,9 @@ void CodeGenFunction::EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
   if (SanOpts.has(SanitizerKind::CFIVCall))
     EmitVTablePtrCheckForCall(RD, VTable, CodeGenFunction::CFITCK_VCall, Loc);
   else if (CGM.getCodeGenOpts().WholeProgramVTables &&
-           // Don't insert type test assumes if we are forcing public std
+           // Don't insert type test assumes if we are forcing public
            // visibility.
-           !CGM.HasLTOVisibilityPublicStd(RD)) {
+           !CGM.AlwaysHasLTOVisibilityPublic(RD)) {
     llvm::Metadata *MD =
         CGM.CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0));
     llvm::Value *TypeId =

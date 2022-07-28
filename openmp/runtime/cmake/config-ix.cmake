@@ -4,6 +4,8 @@
 #// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 #// See https://llvm.org/LICENSE.txt for license information.
 #// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+# Notified per clause 4(b) of the license.
 #//
 #//===----------------------------------------------------------------------===//
 #
@@ -334,7 +336,8 @@ set(LIBOMP_HAVE_OMPT_SUPPORT ${LIBOMP_HAVE_OMPT_SUPPORT} PARENT_SCOPE)
 
 # Check if HWLOC support is available
 if(${LIBOMP_USE_HWLOC})
-  set(CMAKE_REQUIRED_INCLUDES ${LIBOMP_HWLOC_INSTALL_DIR}/include)
+  find_path(LIBOMP_HWLOC_INCLUDE_DIR NAMES hwloc.h HINTS ${LIBOMP_HWLOC_INSTALL_DIR} PATH_SUFFIXES include)
+  set(CMAKE_REQUIRED_INCLUDES ${LIBOMP_HWLOC_INCLUDE_DIR})
   check_include_file(hwloc.h LIBOMP_HAVE_HWLOC_H)
   set(CMAKE_REQUIRED_INCLUDES)
   find_library(LIBOMP_HWLOC_LIBRARY

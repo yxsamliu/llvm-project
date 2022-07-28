@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -399,10 +401,10 @@ const MCPhysReg *SIRegisterInfo::getCalleeSavedRegs(
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::Cold:
-    return ST.hasGFX90AInsts() ? CSR_AMDGPU_HighRegs_With_AGPRs_SaveList
-                               : CSR_AMDGPU_HighRegs_SaveList;
+    return ST.hasGFX90AInsts() ? CSR_AMDGPU_GFX90AInsts_SaveList
+                               : CSR_AMDGPU_SaveList;
   case CallingConv::AMDGPU_Gfx:
-    return ST.hasGFX90AInsts() ? CSR_AMDGPU_SI_Gfx_With_AGPRs_SaveList
+    return ST.hasGFX90AInsts() ? CSR_AMDGPU_SI_Gfx_GFX90AInsts_SaveList
                                : CSR_AMDGPU_SI_Gfx_SaveList;
   default: {
     // Dummy to not crash RegisterClassInfo.
@@ -423,10 +425,10 @@ const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::Cold:
-    return ST.hasGFX90AInsts() ? CSR_AMDGPU_HighRegs_With_AGPRs_RegMask
-                               : CSR_AMDGPU_HighRegs_RegMask;
+    return ST.hasGFX90AInsts() ? CSR_AMDGPU_GFX90AInsts_RegMask
+                               : CSR_AMDGPU_RegMask;
   case CallingConv::AMDGPU_Gfx:
-    return ST.hasGFX90AInsts() ? CSR_AMDGPU_SI_Gfx_With_AGPRs_RegMask
+    return ST.hasGFX90AInsts() ? CSR_AMDGPU_SI_Gfx_GFX90AInsts_RegMask
                                : CSR_AMDGPU_SI_Gfx_RegMask;
   default:
     return nullptr;
@@ -516,19 +518,19 @@ bool SIRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
 Register SIRegisterInfo::getBaseRegister() const { return AMDGPU::SGPR34; }
 
 const uint32_t *SIRegisterInfo::getAllVGPRRegMask() const {
-  return CSR_AMDGPU_AllVGPRs_RegMask;
+  return AMDGPU_AllVGPRs_RegMask;
 }
 
 const uint32_t *SIRegisterInfo::getAllAGPRRegMask() const {
-  return CSR_AMDGPU_AllAGPRs_RegMask;
+  return AMDGPU_AllAGPRs_RegMask;
 }
 
 const uint32_t *SIRegisterInfo::getAllVectorRegMask() const {
-  return CSR_AMDGPU_AllVectorRegs_RegMask;
+  return AMDGPU_AllVectorRegs_RegMask;
 }
 
 const uint32_t *SIRegisterInfo::getAllAllocatableSRegMask() const {
-  return CSR_AMDGPU_AllAllocatableSRegs_RegMask;
+  return AMDGPU_AllAllocatableSRegs_RegMask;
 }
 
 unsigned SIRegisterInfo::getSubRegFromChannel(unsigned Channel,
@@ -600,7 +602,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   reserveRegisterTuples(Reserved, AMDGPU::TTMP14_TTMP15);
 
   // Reserve null register - it shall never be allocated
-  reserveRegisterTuples(Reserved, AMDGPU::SGPR_NULL);
+  reserveRegisterTuples(Reserved, AMDGPU::SGPR_NULL64);
 
   // Disallow vcc_hi allocation in wave32. It may be allocated but most likely
   // will result in bugs.
@@ -707,12 +709,11 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // On GFX908, in order to guarantee copying between AGPRs, we need a scratch
   // VGPR available at all times.
   if (ST.hasMAIInsts() && !ST.hasGFX90AInsts()) {
-    reserveRegisterTuples(Reserved, AMDGPU::VGPR32);
+    reserveRegisterTuples(Reserved, MFI->getVGPRForAGPRCopy());
   }
 
-  for (auto Reg : MFI->WWMReservedRegs) {
-    reserveRegisterTuples(Reserved, Reg.first);
-  }
+  for (Register Reg : MFI->WWMReservedRegs)
+    reserveRegisterTuples(Reserved, Reg);
 
   // FIXME: Stop using reserved registers for this.
   for (MCPhysReg Reg : MFI->getAGPRSpillVGPRs())
@@ -1603,8 +1604,8 @@ void SIRegisterInfo::buildSpillLoadStore(
       assert(EltSize == 4);
 
       if (!TmpIntermediateVGPR) {
-        assert(MF->getRegInfo().isReserved(AMDGPU::VGPR32));
-        TmpIntermediateVGPR = AMDGPU::VGPR32;
+        TmpIntermediateVGPR = FuncInfo->getVGPRForAGPRCopy();
+        assert(MF->getRegInfo().isReserved(TmpIntermediateVGPR));
       }
       if (IsStore) {
         auto AccRead = BuildMI(MBB, MI, DL,
@@ -1730,8 +1731,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
                                bool OnlyToVGPR, bool NeedsCFI) const {
   SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, RS);
 
-  ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills =
-      SB.MFI.getSGPRToVGPRSpills(Index);
+  ArrayRef<SpilledReg> VGPRSpills = SB.MFI.getSGPRToVGPRSpills(Index);
   bool SpillToVGPR = !VGPRSpills.empty();
   if (OnlyToVGPR && !SpillToVGPR)
     return false;
@@ -1751,7 +1751,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
           SB.NumSubRegs == 1
               ? SB.SuperReg
               : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
-      SIMachineFunctionInfo::SpilledReg Spill = VGPRSpills[i];
+      SpilledReg Spill = VGPRSpills[i];
 
       bool UseKill = SB.IsKill && i == SB.NumSubRegs - 1;
 
@@ -1880,8 +1880,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
                                  bool OnlyToVGPR) const {
   SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, RS);
 
-  ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills =
-      SB.MFI.getSGPRToVGPRSpills(Index);
+  ArrayRef<SpilledReg> VGPRSpills = SB.MFI.getSGPRToVGPRSpills(Index);
   bool SpillToVGPR = !VGPRSpills.empty();
   if (OnlyToVGPR && !SpillToVGPR)
     return false;
@@ -1893,7 +1892,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
               ? SB.SuperReg
               : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
 
-      SIMachineFunctionInfo::SpilledReg Spill = VGPRSpills[i];
+      SpilledReg Spill = VGPRSpills[i];
       auto MIB = BuildMI(*SB.MBB, MI, SB.DL, SB.TII.get(AMDGPU::V_READLANE_B32),
                          SubReg)
                      .addReg(Spill.VGPR)
@@ -3039,8 +3038,7 @@ MCRegister SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const 
 
 const TargetRegisterClass *
 SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
-                                         const RegisterBank &RB,
-                                         const MachineRegisterInfo &MRI) const {
+                                         const RegisterBank &RB) const {
   switch (RB.getID()) {
   case AMDGPU::VGPRRegBankID:
     return getVGPRClassForBitWidth(std::max(32u, Size));
@@ -3062,7 +3060,7 @@ SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
                                          const MachineRegisterInfo &MRI) const {
   const RegClassOrRegBank &RCOrRB = MRI.getRegClassOrRegBank(MO.getReg());
   if (const RegisterBank *RB = RCOrRB.dyn_cast<const RegisterBank*>())
-    return getRegClassForTypeOnBank(MRI.getType(MO.getReg()), *RB, MRI);
+    return getRegClassForTypeOnBank(MRI.getType(MO.getReg()), *RB);
 
   if (const auto *RC = RCOrRB.dyn_cast<const TargetRegisterClass *>())
     return getAllocatableClass(RC);
@@ -3204,6 +3202,7 @@ SIRegisterInfo::getProperlyAlignedRC(const TargetRegisterClass *RC) const {
 bool SIRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
   switch (PhysReg) {
   case AMDGPU::SGPR_NULL:
+  case AMDGPU::SGPR_NULL64:
   case AMDGPU::SRC_SHARED_BASE:
   case AMDGPU::SRC_PRIVATE_BASE:
   case AMDGPU::SRC_SHARED_LIMIT:

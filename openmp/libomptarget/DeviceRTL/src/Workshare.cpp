@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -43,7 +45,7 @@ struct DynamicScheduleTracker {
 #define NOT_FINISHED 1
 #define LAST_CHUNK 2
 
-#pragma omp declare target
+#pragma omp begin declare target device_type(nohost)
 
 // TODO: This variable is a hack inherited from the old runtime.
 static uint64_t SHARED(Cnt);
@@ -139,6 +141,7 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
                        numberOfActiveOMPThreads);
         break;
       }
+      [[fallthrough]];
     } // note: if chunk <=0, use nochunk
     case kmp_sched_static_balanced_chunk: {
       if (chunk > 0) {
@@ -157,6 +160,7 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
           ub = oldUb;
         break;
       }
+      [[fallthrough]];
     } // note: if chunk <=0, use nochunk
     case kmp_sched_static_nochunk: {
       ForStaticNoChunk(lastiter, lb, ub, stride, chunk, gtid,
@@ -168,8 +172,9 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
         ForStaticChunk(lastiter, lb, ub, stride, chunk, omp_get_team_num(),
                        omp_get_num_teams());
         break;
-      } // note: if chunk <=0, use nochunk
-    }
+      }
+      [[fallthrough]];
+    } // note: if chunk <=0, use nochunk
     case kmp_sched_distr_static_nochunk: {
       ForStaticNoChunk(lastiter, lb, ub, stride, chunk, omp_get_team_num(),
                        omp_get_num_teams());
@@ -341,7 +346,7 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
     uint32_t change = utils::popc(active);
     __kmpc_impl_lanemask_t lane_mask_lt = mapping::lanemaskLT();
     unsigned int rank = utils::popc(active & lane_mask_lt);
-    uint64_t warp_res;
+    uint64_t warp_res = 0;
     if (rank == 0) {
       warp_res = atomic::add(&Cnt, change, __ATOMIC_SEQ_CST);
     }
@@ -655,6 +660,31 @@ void __kmpc_for_static_fini(IdentTy *loc, int32_t global_tid) {
 void __kmpc_distribute_static_fini(IdentTy *loc, int32_t global_tid) {
   FunctionTracingRAII();
 }
+
+#ifndef FORTRAN_NO_LONGER_NEEDS
+void __kmpc_for_static_init_4_simple_spmd(int64_t *, int32_t global_tid,
+                                          int32_t schedtype, int32_t *plastiter,
+                                          int32_t *plower, int32_t *pupper,
+                                          int32_t *pstride, int32_t incr,
+                                          int32_t chunk) {
+
+  FunctionTracingRAII();
+  omptarget_nvptx_LoopSupport<int32_t, int32_t>::for_static_init(
+      global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
+      /*IsSPMDExecutionMode=*/true);
+}
+
+void __kmpc_for_static_init_8_simple_spmd(int64_t *, int32_t global_tid,
+                                          int32_t schedtype, int32_t *plastiter,
+                                          int64_t *plower, int64_t *pupper,
+                                          int64_t *pstride, int64_t incr,
+                                          int64_t chunk) {
+  FunctionTracingRAII();
+  omptarget_nvptx_LoopSupport<int64_t, int64_t>::for_static_init(
+      global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
+      /*IsSPMDExecutionMode=*/true);
+}
+#endif
 }
 
 #pragma omp end declare target

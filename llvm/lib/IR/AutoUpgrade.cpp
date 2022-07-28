@@ -3,6 +3,8 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
+// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -748,6 +750,23 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     break;
   }
   case 'e': {
+    if (Name.startswith("experimental.vector.extract.")) {
+      rename(F);
+      Type *Tys[] = {F->getReturnType(), F->arg_begin()->getType()};
+      NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                        Intrinsic::vector_extract, Tys);
+      return true;
+    }
+
+    if (Name.startswith("experimental.vector.insert.")) {
+      rename(F);
+      auto Args = F->getFunctionType()->params();
+      Type *Tys[] = {Args[0], Args[1]};
+      NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                        Intrinsic::vector_insert, Tys);
+      return true;
+    }
+
     SmallVector<StringRef, 2> Groups;
     static const Regex R("^experimental.vector.reduce.([a-z]+)\\.[a-z][0-9]+");
     if (R.match(Name, &Groups)) {
@@ -1032,7 +1051,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   // Remangle our intrinsic since we upgrade the mangling
   auto Result = llvm::Intrinsic::remangleIntrinsicFunction(F);
   if (Result != None) {
-    NewFn = Result.getValue();
+    NewFn = *Result;
     return true;
   }
 
@@ -4077,6 +4096,12 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     Value *Args[4] = {CI->getArgOperand(0), CI->getArgOperand(1),
                       CI->getArgOperand(2), CI->getArgOperand(4)};
     NewCall = Builder.CreateCall(NewFn, Args);
+    AttributeList OldAttrs = CI->getAttributes();
+    AttributeList NewAttrs = AttributeList::get(
+        C, OldAttrs.getFnAttrs(), OldAttrs.getRetAttrs(),
+        {OldAttrs.getParamAttrs(0), OldAttrs.getParamAttrs(1),
+         OldAttrs.getParamAttrs(2), OldAttrs.getParamAttrs(4)});
+    NewCall->setAttributes(NewAttrs);
     auto *MemCI = cast<MemIntrinsic>(NewCall);
     // All mem intrinsics support dest alignment.
     const ConstantInt *Align = cast<ConstantInt>(CI->getArgOperand(3));
@@ -4156,7 +4181,7 @@ Instruction *llvm::UpgradeBitCastInst(unsigned Opc, Value *V, Type *DestTy,
   return nullptr;
 }
 
-Value *llvm::UpgradeBitCastExpr(unsigned Opc, Constant *C, Type *DestTy) {
+Constant *llvm::UpgradeBitCastExpr(unsigned Opc, Constant *C, Type *DestTy) {
   if (Opc != Instruction::BitCast)
     return nullptr;
 
@@ -4390,6 +4415,24 @@ bool llvm::UpgradeModuleFlags(Module &M) {
         }
       }
     }
+
+    // Upgrade branch protection and return address signing module flags. The
+    // module flag behavior for these fields were Error and now they are Min.
+    if (ID->getString() == "branch-target-enforcement" ||
+        ID->getString().startswith("sign-return-address")) {
+      if (auto *Behavior =
+              mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(0))) {
+        if (Behavior->getLimitedValue() == Module::Error) {
+          Type *Int32Ty = Type::getInt32Ty(M.getContext());
+          Metadata *Ops[3] = {
+              ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Module::Min)),
+              Op->getOperand(1), Op->getOperand(2)};
+          ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
+          Changed = true;
+        }
+      }
+    }
+
     // Upgrade Objective-C Image Info Section. Removed the whitespce in the
     // section name so that llvm-lto will not complain about mismatching
     // module flags that is functionally the same.
@@ -4652,4 +4695,16 @@ void llvm::UpgradeAttributes(AttrBuilder &B) {
     if (NullPointerIsValid)
       B.addAttribute(Attribute::NullPointerIsValid);
   }
+}
+
+void llvm::UpgradeOperandBundles(std::vector<OperandBundleDef> &Bundles) {
+
+  // clang.arc.attachedcall bundles are now required to have an operand.
+  // If they don't, it's okay to drop them entirely: when there is an operand,
+  // the "attachedcall" is meaningful and required, but without an operand,
+  // it's just a marker NOP.  Dropping it merely prevents an optimization.
+  erase_if(Bundles, [&](OperandBundleDef &OBD) {
+    return OBD.getTag() == "clang.arc.attachedcall" &&
+           OBD.inputs().empty();
+  });
 }
