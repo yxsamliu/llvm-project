@@ -1354,12 +1354,6 @@ int32_t __tgt_rtl_init_plugin() {
              : OFFLOAD_FAIL;
 }
 
-int32_t __tgt_rtl_deinit_plugin() {
-  if (DeviceInfoState)
-    delete DeviceInfoState;
-  return OFFLOAD_SUCCESS;
-}
-
 /// Global function for enabling/disabling queue profiling, used for OMPT trace
 /// records.
 void ompt_enable_queue_profiling(int enable) {
