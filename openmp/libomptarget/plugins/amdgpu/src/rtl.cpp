@@ -1342,10 +1342,21 @@ public:
 
 pthread_mutex_t SignalPoolT::mutex = PTHREAD_MUTEX_INITIALIZER;
 
-// Putting accesses to DeviceInfo global behind a function call prior
-// to changing to use init_plugin/deinit_plugin calls
-static RTLDeviceInfoTy DeviceInfoState;
-static RTLDeviceInfoTy& DeviceInfo() { return DeviceInfoState; }
+static RTLDeviceInfoTy *DeviceInfoState = nullptr;
+static RTLDeviceInfoTy &DeviceInfo() { return *DeviceInfoState; }
+
+int32_t __tgt_rtl_init_plugin() {
+  DeviceInfoState = new RTLDeviceInfoTy;
+  return (DeviceInfoState && DeviceInfoState->ConstructionSucceeded)
+             ? OFFLOAD_SUCCESS
+             : OFFLOAD_FAIL;
+}
+
+int32_t __tgt_rtl_deinit_plugin() {
+  if (DeviceInfoState)
+    delete DeviceInfoState;
+  return OFFLOAD_SUCCESS;
+}
 
 /// Global function for enabling/disabling queue profiling, used for OMPT trace
 /// records.
