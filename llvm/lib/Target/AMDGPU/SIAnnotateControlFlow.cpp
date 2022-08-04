@@ -59,6 +59,10 @@ class SIAnnotateControlFlow : public FunctionPass {
 
   LoopInfo *LI;
 
+  // Keep track of basic block terminations the condition of which has been
+  // replaced by a call of if intrinsic.
+  DenseSet<BranchInst *> TermWithIfAdded;
+
   void initialize(Module &M, const GCNSubtarget &ST);
 
   bool isUniform(BranchInst *T);
@@ -203,6 +207,10 @@ bool SIAnnotateControlFlow::eraseIfUnused(PHINode *Phi) {
 
 /// Open a new "If" block
 bool SIAnnotateControlFlow::openIf(BranchInst *Term) {
+  if (TermWithIfAdded.contains(Term))
+    return false;
+  TermWithIfAdded.insert(Term);
+
   if (isUniform(Term))
     return false;
 
@@ -358,8 +366,13 @@ bool SIAnnotateControlFlow::runOnFunction(Function &F) {
       if (isTopOfStack(BB))
         Changed |= closeControlFlow(BB);
 
-      if (DT->dominates(Term->getSuccessor(1), BB))
+      if (DT->dominates(Term->getSuccessor(1), BB)) {
         Changed |= handleLoop(Term);
+        continue;
+      }
+
+      if (!TermWithIfAdded.contains(Term))
+        Changed |= openIf(Term);
       continue;
     }
 
@@ -377,10 +390,8 @@ bool SIAnnotateControlFlow::runOnFunction(Function &F) {
     Changed |= openIf(Term);
   }
 
-  if (!Stack.empty()) {
-    // CFG was probably not structured.
-    report_fatal_error("failed to annotate CFG");
-  }
+  for (auto I : Stack)
+    Changed |= closeControlFlow(I.first);
 
   return Changed;
 }

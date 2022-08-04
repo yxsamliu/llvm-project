@@ -142,7 +142,13 @@ define hidden void @blam() {
 ; SI-OPT:       bb6:
 ; SI-OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]])
 ; SI-OPT-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP3]], 3
-; SI-OPT-NEXT:    br i1 [[TMP7]], label [[BB11:%.*]], label [[BB1:%.*]]
+; SI-OPT-NEXT:    [[TMP7A:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP7]])
+; SI-OPT-NEXT:    [[TMP7B:%.*]] = extractvalue { i1, i64 } [[TMP7A]], 0
+; SI-OPT-NEXT:    [[TMP7C:%.*]] = extractvalue { i1, i64 } [[TMP7A]], 1
+; SI-OPT-NEXT:    br i1 [[TMP7B]], label [[BB11:%.*]], label [[BB6_BB1_CRIT_EDGE:%.*]]
+; SI-OPT:       bb6.bb1_crit_edge:
+; SI-OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP7C]])
+; SI-OPT-NEXT:    br label [[BB1:%.*]]
 ; SI-OPT:       bb8:
 ; SI-OPT-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP3]], 1
 ; SI-OPT-NEXT:    [[TMP3:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP9]])
