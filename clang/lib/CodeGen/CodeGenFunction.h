@@ -4851,8 +4851,10 @@ private:
 
   Address getAddressFromDeclStmt(const ForStmt &FStmt);
   Address getAddressFromExpr(const ForStmt &FStmt);
-  Address EmitXteamRedStartingIndex(const ForStmt &FStmt);
-  void EmitXteamRedInc(const Address &NoLoopIvAddr);
+  std::pair<const VarDecl *, Address>
+  EmitXteamRedStartingIndex(const ForStmt &FStmt);
+  void EmitXteamRedInc(const ForStmt &FStmt, const VarDecl *LoopVar,
+                       const Address &NoLoopIvAddr);
 };
 
 
