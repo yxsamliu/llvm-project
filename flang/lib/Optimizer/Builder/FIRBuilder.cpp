@@ -715,7 +715,7 @@ fir::factory::getNonDefaultLowerBounds(fir::FirOpBuilder &builder,
 }
 
 llvm::SmallVector<mlir::Value>
-fir::factory::getNonDeferredLengthParams(const fir::ExtendedValue &exv) {
+fir::factory::getNonDeferredLenParams(const fir::ExtendedValue &exv) {
   return exv.match(
       [&](const fir::CharArrayBoxValue &character)
           -> llvm::SmallVector<mlir::Value> { return {character.getLen()}; },
@@ -1234,8 +1234,11 @@ fir::factory::getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
       [&](mlir::Value value) -> llvm::Optional<std::int64_t> {
     if (auto valInt = fir::factory::getIntIfConstant(value))
       return valInt;
-    else if (auto valOp = mlir::dyn_cast<fir::ConvertOp>(value.getDefiningOp()))
+    auto *definingOp = value.getDefiningOp();
+    if (mlir::isa_and_nonnull<fir::ConvertOp>(definingOp)) {
+      auto valOp = mlir::dyn_cast<fir::ConvertOp>(definingOp);
       return getConstantValue(valOp.getValue());
+    }
     return {};
   };
   if (auto lbInt = getConstantValue(lb)) {

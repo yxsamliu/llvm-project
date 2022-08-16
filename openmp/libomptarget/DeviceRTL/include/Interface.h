@@ -155,9 +155,13 @@ int omp_test_lock(omp_lock_t *Lock);
 /// Tasking
 ///
 ///{
+extern "C" {
 int omp_in_final(void);
 
 int omp_get_max_task_priority(void);
+
+void omp_fulfill_event(uint64_t);
+}
 ///}
 
 /// Misc
@@ -213,6 +217,9 @@ uint32_t __kmpc_get_hardware_num_threads_in_block();
 /// External interface to get the warp size.
 uint32_t __kmpc_get_warp_size();
 
+/// External interface to get the block size
+uint32_t __kmpc_get_hardware_num_blocks();
+
 /// Kernel
 ///
 ///{
@@ -241,6 +248,12 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     void *reduce_data, ShuffleReductFnTy shflFct, InterWarpCopyFnTy cpyFct,
     ListGlobalFnTy lgcpyFct, ListGlobalFnTy lgredFct, ListGlobalFnTy glcpyFct,
     ListGlobalFnTy glredFct);
+///}
+
+/// Cross team helper functions for special case reductions
+///{
+void __kmpc_xteam_sum_d(double, double *);
+void __kmpc_xteam_sum_f(float, float *);
 ///}
 
 /// Synchronization
@@ -306,9 +319,10 @@ uint16_t __kmpc_parallel_level(IdentTy *Loc, uint32_t);
 /// Tasking
 ///
 ///{
+extern "C" {
 TaskDescriptorTy *__kmpc_omp_task_alloc(IdentTy *, uint32_t, int32_t,
-                                        uint32_t TaskSizeInclPrivateValues,
-                                        uint32_t SharedValuesSize,
+                                        uint64_t TaskSizeInclPrivateValues,
+                                        uint64_t SharedValuesSize,
                                         TaskFnTy TaskFn);
 
 int32_t __kmpc_omp_task(IdentTy *Loc, uint32_t TId,
@@ -339,6 +353,12 @@ void __kmpc_taskloop(IdentTy *Loc, uint32_t TId,
                      TaskDescriptorTy *TaskDescriptor, int,
                      uint64_t *LowerBound, uint64_t *UpperBound, int64_t, int,
                      int32_t, uint64_t, void *);
+
+void *__kmpc_task_allow_completion_event(IdentTy *loc_ref,
+                                                uint32_t gtid,
+                                                TaskDescriptorTy *task);
+
+}
 ///}
 
 /// Misc
@@ -355,6 +375,11 @@ int32_t __kmpc_cancel(IdentTy *Loc, int32_t TId, int32_t CancelVal);
 int32_t __kmpc_shuffle_int32(int32_t val, int16_t delta, int16_t size);
 int64_t __kmpc_shuffle_int64(int64_t val, int16_t delta, int16_t size);
 ///}
+
+/// __init_ThreadDSTPtrPtr is defined in Workshare.cpp to initialize
+/// the static LDS global variable ThreadDSTPtrPtr to 0.
+/// It is called in Kernel.cpp at the end of initializeRuntime().
+void __init_ThreadDSTPtrPtr();
 }
 
 /// Extra API exposed by ROCm

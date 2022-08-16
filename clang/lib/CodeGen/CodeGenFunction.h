@@ -3227,9 +3227,19 @@ public:
   ///
   /// This function should be called after ensuring that legality
   /// conditions for a no-loop kernel are met.
-  void EmitNoLoopKernel(const Stmt *S,
+  void EmitNoLoopKernel(const OMPExecutableDirective &D, const Stmt *S,
                         const CodeGenModule::NoLoopIntermediateStmts &,
                         SourceLocation Loc);
+
+  /// EmitSpecRedKernel - For an OpenMP target reduction directive, emit the
+  /// kernel code assuming that related runtime environment variables can be
+  /// ignored.
+  ///
+  /// This function should be called after ensuring that legality
+  /// conditions for an optimized reduction kernel are met.
+  void EmitSpecRedKernel(const OMPExecutableDirective &D, const Stmt *S,
+                         const CodeGenModule::NoLoopIntermediateStmts &,
+                         SourceLocation Loc);
 
   /// EmitSimpleStmt - Try to emit a "simple" statement which does not
   /// necessarily require an insertion point or debug information; typically
@@ -4839,6 +4849,11 @@ private:
   llvm::Value *EmitX86CpuSupports(uint64_t Mask);
   llvm::Value *EmitX86CpuInit();
   llvm::Value *FormResolverCondition(const MultiVersionResolverOption &RO);
+
+  Address getAddressFromDeclStmt(const ForStmt &FStmt);
+  Address getAddressFromExpr(const ForStmt &FStmt);
+  Address EmitSpecRedStartingIndex(const ForStmt &FStmt);
+  void EmitSpecRedInc(const Address &NoLoopIvAddr);
 };
 
 

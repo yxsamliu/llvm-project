@@ -198,7 +198,7 @@ public:
     SDAGSwitchLowering(SelectionDAGBuilder *sdb, FunctionLoweringInfo &funcinfo)
         : SwitchCG::SwitchLowering(funcinfo), SDB(sdb) {}
 
-    virtual void addSuccessorWithProb(
+    void addSuccessorWithProb(
         MachineBasicBlock *Src, MachineBasicBlock *Dst,
         BranchProbability Prob = BranchProbability::getUnknown()) override {
       SDB->addSuccessorWithProb(Src, Dst, Prob);
@@ -529,7 +529,7 @@ private:
   void visitShuffleVector(const User &I);
 
   void visitExtractValue(const ExtractValueInst &I);
-  void visitInsertValue(const User &I);
+  void visitInsertValue(const InsertValueInst &I);
   void visitLandingPad(const LandingPadInst &LP);
 
   void visitGetElementPtr(const User &I);

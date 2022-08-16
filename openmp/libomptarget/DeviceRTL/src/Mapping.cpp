@@ -289,19 +289,24 @@ bool mapping::isGenericMode() { return !isSPMDMode(); }
 ///}
 
 extern "C" {
-__attribute__((noinline)) uint32_t __kmpc_get_hardware_thread_id_in_block() {
+uint32_t __kmpc_get_hardware_thread_id_in_block() {
   FunctionTracingRAII();
   return mapping::getThreadIdInBlock();
 }
 
-__attribute__((noinline)) uint32_t __kmpc_get_hardware_num_threads_in_block() {
+uint32_t __kmpc_get_hardware_num_threads_in_block() {
   FunctionTracingRAII();
   return impl::getNumHardwareThreadsInBlock();
 }
 
-__attribute__((noinline)) uint32_t __kmpc_get_warp_size() {
+uint32_t __kmpc_get_warp_size() {
   FunctionTracingRAII();
   return impl::getWarpSize();
+}
+
+__attribute__((noinline)) uint32_t __kmpc_get_hardware_num_blocks() {
+  FunctionTracingRAII();
+  return impl::getNumberOfBlocks();
 }
 }
 #pragma omp end declare target

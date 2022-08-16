@@ -23,6 +23,7 @@
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <memory>
 #include <type_traits>
@@ -155,6 +156,7 @@ public:
 
   /// Returns a pointer value that represents a null pointer. Calls with
   /// `PointeeType` that are canonically equivalent will return the same result.
+  /// A null `PointeeType` can be used for the pointee of `std::nullptr_t`.
   PointerValue &getOrCreateNullPointerValue(QualType PointeeType);
 
   /// Returns a symbolic boolean value that models a boolean literal equal to
@@ -250,7 +252,20 @@ public:
   /// `Val2` imposed by the flow condition.
   bool equivalentBoolValues(BoolValue &Val1, BoolValue &Val2);
 
+  LLVM_DUMP_METHOD void dumpFlowCondition(AtomicBoolValue &Token);
+
 private:
+  struct NullableQualTypeDenseMapInfo : private llvm::DenseMapInfo<QualType> {
+    static QualType getEmptyKey() {
+      // Allow a NULL `QualType` by using a different value as the empty key.
+      return QualType::getFromOpaquePtr(reinterpret_cast<Type *>(1));
+    }
+
+    using DenseMapInfo::getHashValue;
+    using DenseMapInfo::getTombstoneKey;
+    using DenseMapInfo::isEqual;
+  };
+
   /// Adds all constraints of the flow condition identified by `Token` and all
   /// of its transitive dependencies to `Constraints`. `VisitedTokens` is used
   /// to track tokens of flow conditions that were already visited by recursive
@@ -259,17 +274,18 @@ private:
       AtomicBoolValue &Token, llvm::DenseSet<BoolValue *> &Constraints,
       llvm::DenseSet<AtomicBoolValue *> &VisitedTokens);
 
-  /// Returns the result of satisfiability checking on `Constraints`.
-  /// Possible return values are:
-  /// - `Satisfiable`: There exists a satisfying assignment for `Constraints`.
-  /// - `Unsatisfiable`: There is no satisfying assignment for `Constraints`.
-  /// - `TimedOut`: The solver gives up on finding a satisfying assignment.
+  /// Returns the outcome of satisfiability checking on `Constraints`.
+  /// Possible outcomes are:
+  /// - `Satisfiable`: A satisfying assignment exists and is returned.
+  /// - `Unsatisfiable`: A satisfying assignment does not exist.
+  /// - `TimedOut`: The search for a satisfying assignment was not completed.
   Solver::Result querySolver(llvm::DenseSet<BoolValue *> Constraints);
 
   /// Returns true if the solver is able to prove that there is no satisfying
   /// assignment for `Constraints`
   bool isUnsatisfiable(llvm::DenseSet<BoolValue *> Constraints) {
-    return querySolver(std::move(Constraints)) == Solver::Result::Unsatisfiable;
+    return querySolver(std::move(Constraints)).getStatus() ==
+           Solver::Result::Status::Unsatisfiable;
   }
 
   /// Returns a boolean value as a result of substituting `Val` and its sub
@@ -311,7 +327,8 @@ private:
   // required to initialize the `PointeeLoc` field in `PointerValue`. Consider
   // creating a type-independent `NullPointerValue` without a `PointeeLoc`
   // field.
-  llvm::DenseMap<QualType, PointerValue *> NullPointerVals;
+  llvm::DenseMap<QualType, PointerValue *, NullableQualTypeDenseMapInfo>
+      NullPointerVals;
 
   AtomicBoolValue &TrueVal;
   AtomicBoolValue &FalseVal;
@@ -323,6 +340,10 @@ private:
   llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, DisjunctionValue *>
       DisjunctionVals;
   llvm::DenseMap<BoolValue *, NegationValue *> NegationVals;
+  llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, ImplicationValue *>
+      ImplicationVals;
+  llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, BiconditionalValue *>
+      BiconditionalVals;
 
   // Flow conditions are tracked symbolically: each unique flow condition is
   // associated with a fresh symbolic variable (token), bound to the clause that

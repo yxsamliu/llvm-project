@@ -44,6 +44,7 @@
 #include "flang/Runtime/iostat.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -468,15 +469,33 @@ public:
         [&](const auto &) -> fir::ExtendedValue {
           mlir::Value temp =
               allocate(fir::factory::getExtents(loc, *builder, hexv),
-                       fir::getTypeParams(hexv));
+                       fir::factory::getTypeParams(loc, *builder, hexv));
           return fir::substBase(hexv, temp);
         });
 
+    // Replace all uses of the original with the clone/copy,
+    // esepcially for loop bounds (that uses the variable being privatised)
+    // since loop bounds use old values that need to be fixed by using the
+    // new copied value.
+    // Not able to use replaceAllUsesWith() because uses outside
+    // the loop body should not use the clone.
+    mlir::Region &curRegion = getFirOpBuilder().getRegion();
+    mlir::Value oldVal = fir::getBase(hexv);
+    mlir::Value cloneVal = fir::getBase(exv);
+    for (auto &oper : curRegion.getOps()) {
+      for (unsigned int ii = 0; ii < oper.getNumOperands(); ++ii) {
+        if (oper.getOperand(ii) == oldVal) {
+          oper.setOperand(ii, cloneVal);
+        }
+      }
+    }
     return bindIfNewSymbol(sym, exv);
   }
 
+  // FIXME: Generalize this function, so that lastPrivBlock can be removed
   void
-  copyHostAssociateVar(const Fortran::semantics::Symbol &sym) override final {
+  copyHostAssociateVar(const Fortran::semantics::Symbol &sym,
+                       mlir::Block *lastPrivBlock = nullptr) override final {
     // 1) Fetch the original copy of the variable.
     assert(sym.has<Fortran::semantics::HostAssocDetails>() &&
            "No host-association found");
@@ -493,22 +512,40 @@ public:
     fir::ExtendedValue exv = getExtendedValue(sb);
 
     // 3) Perform the assignment.
-    builder->setInsertionPointAfter(fir::getBase(exv).getDefiningOp());
-    mlir::Location loc = getCurrentLocation();
+    mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
+    if (lastPrivBlock)
+      builder->setInsertionPointToStart(lastPrivBlock);
+    else
+      builder->setInsertionPointAfter(fir::getBase(exv).getDefiningOp());
+
+    fir::ExtendedValue lhs, rhs;
+    if (lastPrivBlock) {
+      // lastprivate case
+      lhs = hexv;
+      rhs = exv;
+    } else {
+      lhs = exv;
+      rhs = hexv;
+    }
+
+    mlir::Location loc = genLocation(sym.name());
     mlir::Type symType = genType(sym);
     if (auto seqTy = symType.dyn_cast<fir::SequenceType>()) {
       Fortran::lower::StatementContext stmtCtx;
-      Fortran::lower::createSomeArrayAssignment(*this, exv, hexv, localSymbols,
+      Fortran::lower::createSomeArrayAssignment(*this, lhs, rhs, localSymbols,
                                                 stmtCtx);
       stmtCtx.finalize();
     } else if (hexv.getBoxOf<fir::CharBoxValue>()) {
-      fir::factory::CharacterExprHelper{*builder, loc}.createAssign(exv, hexv);
+      fir::factory::CharacterExprHelper{*builder, loc}.createAssign(lhs, rhs);
     } else if (hexv.getBoxOf<fir::MutableBoxValue>()) {
       TODO(loc, "firstprivatisation of allocatable variables");
     } else {
-      auto loadVal = builder->create<fir::LoadOp>(loc, fir::getBase(hexv));
-      builder->create<fir::StoreOp>(loc, loadVal, fir::getBase(exv));
+      auto loadVal = builder->create<fir::LoadOp>(loc, fir::getBase(rhs));
+      builder->create<fir::StoreOp>(loc, loadVal, fir::getBase(lhs));
     }
+
+    if (lastPrivBlock)
+      builder->restoreInsertionPoint(insPt);
   }
 
   //===--------------------------------------------------------------------===//
@@ -773,7 +810,7 @@ private:
     Fortran::lower::SymbolBox resultSymBox = lookupSymbol(resultSym);
     mlir::Location loc = toLocation();
     if (!resultSymBox) {
-      mlir::emitError(loc, "failed lowering function return");
+      mlir::emitError(loc, "internal error when processing function return");
       return;
     }
     mlir::Value resultVal = resultSymBox.match(
@@ -1482,7 +1519,7 @@ private:
         auto lp = builder->create<fir::DoLoopOp>(
             loc, lb, ub, by, /*unordered=*/true,
             /*finalCount=*/false, explicitIterSpace.getInnerArgs());
-        if (!loops.empty() || !outermost)
+        if ((!loops.empty() || !outermost) && !lp.getRegionIterArgs().empty())
           builder->create<fir::ResultOp>(loc, lp.getResults());
         explicitIterSpace.setInnerArgs(lp.getRegionIterArgs());
         builder->setInsertionPointToStart(lp.getBody());
@@ -1614,11 +1651,12 @@ private:
     // no collapse requested.
 
     Fortran::lower::pft::Evaluation *curEval = &getEval();
+    const Fortran::parser::OmpClauseList *loopOpClauseList = nullptr;
     if (ompLoop) {
-      const auto &wsLoopOpClauseList = std::get<Fortran::parser::OmpClauseList>(
+      loopOpClauseList = &std::get<Fortran::parser::OmpClauseList>(
           std::get<Fortran::parser::OmpBeginLoopDirective>(ompLoop->t).t);
       int64_t collapseValue =
-          Fortran::lower::getCollapseValue(wsLoopOpClauseList);
+          Fortran::lower::getCollapseValue(*loopOpClauseList);
 
       curEval = &curEval->getFirstNestedEvaluation();
       for (int64_t i = 1; i < collapseValue; i++) {
@@ -1628,6 +1666,10 @@ private:
 
     for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
       genFIR(e);
+
+    if (ompLoop)
+      genOpenMPReduction(*this, *loopOpClauseList);
+
     localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
   }
@@ -1857,56 +1899,56 @@ private:
 
   void genFIR(const Fortran::parser::BlockConstruct &blockConstruct) {
     setCurrentPositionAt(blockConstruct);
-    TODO(toLocation(), "BlockConstruct lowering");
+    TODO(toLocation(), "BlockConstruct implementation");
   }
   void genFIR(const Fortran::parser::BlockStmt &) {
-    TODO(toLocation(), "BlockStmt lowering");
+    TODO(toLocation(), "BlockStmt implementation");
   }
   void genFIR(const Fortran::parser::EndBlockStmt &) {
-    TODO(toLocation(), "EndBlockStmt lowering");
+    TODO(toLocation(), "EndBlockStmt implementation");
   }
 
   void genFIR(const Fortran::parser::ChangeTeamConstruct &construct) {
-    TODO(toLocation(), "ChangeTeamConstruct lowering");
+    TODO(toLocation(), "ChangeTeamConstruct implementation");
   }
   void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {
-    TODO(toLocation(), "ChangeTeamStmt lowering");
+    TODO(toLocation(), "ChangeTeamStmt implementation");
   }
   void genFIR(const Fortran::parser::EndChangeTeamStmt &stmt) {
-    TODO(toLocation(), "EndChangeTeamStmt lowering");
+    TODO(toLocation(), "EndChangeTeamStmt implementation");
   }
 
   void genFIR(const Fortran::parser::CriticalConstruct &criticalConstruct) {
     setCurrentPositionAt(criticalConstruct);
-    TODO(toLocation(), "CriticalConstruct lowering");
+    TODO(toLocation(), "CriticalConstruct implementation");
   }
   void genFIR(const Fortran::parser::CriticalStmt &) {
-    TODO(toLocation(), "CriticalStmt lowering");
+    TODO(toLocation(), "CriticalStmt implementation");
   }
   void genFIR(const Fortran::parser::EndCriticalStmt &) {
-    TODO(toLocation(), "EndCriticalStmt lowering");
+    TODO(toLocation(), "EndCriticalStmt implementation");
   }
 
   void genFIR(const Fortran::parser::SelectRankConstruct &selectRankConstruct) {
     setCurrentPositionAt(selectRankConstruct);
-    TODO(toLocation(), "SelectRankConstruct lowering");
+    TODO(toLocation(), "SelectRankConstruct implementation");
   }
   void genFIR(const Fortran::parser::SelectRankStmt &) {
-    TODO(toLocation(), "SelectRankStmt lowering");
+    TODO(toLocation(), "SelectRankStmt implementation");
   }
   void genFIR(const Fortran::parser::SelectRankCaseStmt &) {
-    TODO(toLocation(), "SelectRankCaseStmt lowering");
+    TODO(toLocation(), "SelectRankCaseStmt implementation");
   }
 
   void genFIR(const Fortran::parser::SelectTypeConstruct &selectTypeConstruct) {
     setCurrentPositionAt(selectTypeConstruct);
-    TODO(toLocation(), "SelectTypeConstruct lowering");
+    TODO(toLocation(), "SelectTypeConstruct implementation");
   }
   void genFIR(const Fortran::parser::SelectTypeStmt &) {
-    TODO(toLocation(), "SelectTypeStmt lowering");
+    TODO(toLocation(), "SelectTypeStmt implementation");
   }
   void genFIR(const Fortran::parser::TypeGuardStmt &) {
-    TODO(toLocation(), "TypeGuardStmt lowering");
+    TODO(toLocation(), "TypeGuardStmt implementation");
   }
 
   //===--------------------------------------------------------------------===//
@@ -2198,7 +2240,7 @@ private:
                     lengthParams.push_back(charBox->getLen());
                   else if (fir::isDerivedWithLenParameters(rhs))
                     TODO(loc, "assignment to derived type allocatable with "
-                              "length parameters");
+                              "LEN parameters");
                   lhsRealloc = fir::factory::genReallocIfNeeded(
                       *builder, loc, *lhsMutableBox,
                       /*shape=*/llvm::None, lengthParams);
@@ -2241,9 +2283,9 @@ private:
               }
               if (lhsIsWholeAllocatable)
                 fir::factory::finalizeRealloc(
-                    *builder, loc, lhsMutableBox.getValue(),
+                    *builder, loc, lhsMutableBox.value(),
                     /*lbounds=*/llvm::None, /*takeLboundsIfRealloc=*/false,
-                    lhsRealloc.getValue());
+                    lhsRealloc.value());
             },
 
             // [2] User defined assignment. If the context is a scalar
@@ -3174,7 +3216,7 @@ private:
 
 Fortran::evaluate::FoldingContext
 Fortran::lower::LoweringBridge::createFoldingContext() const {
-  return {getDefaultKinds(), getIntrinsicTable()};
+  return {getDefaultKinds(), getIntrinsicTable(), getTargetCharacteristics()};
 }
 
 void Fortran::lower::LoweringBridge::lower(
@@ -3199,9 +3241,11 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     mlir::MLIRContext &context,
     const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
     const Fortran::evaluate::IntrinsicProcTable &intrinsics,
+    const Fortran::evaluate::TargetCharacteristics &targetCharacteristics,
     const Fortran::parser::AllCookedSources &cooked, llvm::StringRef triple,
     fir::KindMapping &kindMap)
-    : defaultKinds{defaultKinds}, intrinsics{intrinsics}, cooked{&cooked},
+    : defaultKinds{defaultKinds}, intrinsics{intrinsics},
+      targetCharacteristics{targetCharacteristics}, cooked{&cooked},
       context{context}, kindMap{kindMap} {
   // Register the diagnostic handler.
   context.getDiagEngine().registerHandler([](mlir::Diagnostic &diag) {

@@ -67,6 +67,11 @@ public:
     return simplifyBinOp(Opc, LHS, RHS, FMF, SQ);
   }
 
+  Value *FoldUnOpFMF(Instruction::UnaryOps Opc, Value *V,
+                      FastMathFlags FMF) const override {
+    return simplifyUnOp(Opc, V, FMF, SQ);
+  }
+
   Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
     return simplifyICmpInst(P, LHS, RHS, SQ);
   }
@@ -105,25 +110,6 @@ public:
         cast<VectorType>(V1->getType())->getElementType(), Mask.size(),
         isa<ScalableVectorType>(V1->getType()));
     return simplifyShuffleVectorInst(V1, V2, Mask, RetTy, SQ);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Unary Operators
-  //===--------------------------------------------------------------------===//
-
-  Value *CreateNeg(Constant *C, bool HasNUW = false,
-                   bool HasNSW = false) const override {
-    return ConstFolder.CreateNeg(C, HasNUW, HasNSW);
-  }
-  Value *CreateFNeg(Constant *C) const override {
-    return ConstFolder.CreateFNeg(C);
-  }
-  Value *CreateNot(Constant *C) const override {
-    return ConstFolder.CreateNot(C);
-  }
-
-  Value *CreateUnOp(Instruction::UnaryOps Opc, Constant *C) const override {
-    return ConstFolder.CreateUnOp(Opc, C);
   }
 
   //===--------------------------------------------------------------------===//

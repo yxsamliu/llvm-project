@@ -647,13 +647,14 @@ multiclass sve_int_pfalse<bits<6> opc, string asm> {
   def : Pat<(nxv8i1 immAllZerosV), (!cast<Instruction>(NAME))>;
   def : Pat<(nxv4i1 immAllZerosV), (!cast<Instruction>(NAME))>;
   def : Pat<(nxv2i1 immAllZerosV), (!cast<Instruction>(NAME))>;
+  def : Pat<(nxv1i1 immAllZerosV), (!cast<Instruction>(NAME))>;
 }
 
-class sve_int_ptest<bits<6> opc, string asm>
+class sve_int_ptest<bits<6> opc, string asm, SDPatternOperator op>
 : I<(outs), (ins PPRAny:$Pg, PPR8:$Pn),
   asm, "\t$Pg, $Pn",
   "",
-  []>, Sched<[]> {
+  [(op (nxv16i1 PPRAny:$Pg), (nxv16i1 PPR8:$Pn))]>, Sched<[]> {
   bits<4> Pg;
   bits<4> Pn;
   let Inst{31-24} = 0b00100101;
@@ -1225,6 +1226,23 @@ multiclass sve_int_perm_dup_i<string asm> {
             (!cast<Instruction>(NAME # _D) ZPR:$vec, sve_elm_idx_extdup_d:$index)>;
   def : Pat<(nxv2f64 (splat_vector (f64 (vector_extract (nxv2f64 ZPR:$vec), sve_elm_idx_extdup_d:$index)))),
             (!cast<Instruction>(NAME # _D) ZPR:$vec, sve_elm_idx_extdup_d:$index)>;
+
+  def : Pat<(nxv16i8 (AArch64duplane128 nxv16i8:$Op1, i64:$imm)),
+            (!cast<Instruction>(NAME # _Q) $Op1, $imm)>;
+  def : Pat<(nxv8i16 (AArch64duplane128 nxv8i16:$Op1, i64:$imm)),
+            (!cast<Instruction>(NAME # _Q) $Op1, $imm)>;
+  def : Pat<(nxv4i32 (AArch64duplane128 nxv4i32:$Op1, i64:$imm)),
+            (!cast<Instruction>(NAME # _Q) $Op1, $imm)>;
+  def : Pat<(nxv2i64 (AArch64duplane128 nxv2i64:$Op1, i64:$imm)),
+            (!cast<Instruction>(NAME # _Q) $Op1, $imm)>;
+  def : Pat<(nxv8f16 (AArch64duplane128 nxv8f16:$Op1, i64:$imm)),
+            (!cast<Instruction>(NAME # _Q) $Op1, $imm)>;
+  def : Pat<(nxv4f32 (AArch64duplane128 nxv4f32:$Op1, i64:$imm)),
+            (!cast<Instruction>(NAME # _Q) $Op1, $imm)>;
+  def : Pat<(nxv2f64 (AArch64duplane128 nxv2f64:$Op1, i64:$imm)),
+            (!cast<Instruction>(NAME # _Q) $Op1, $imm)>;
+  def : Pat<(nxv8bf16 (AArch64duplane128 nxv8bf16:$Op1, i64:$imm)),
+            (!cast<Instruction>(NAME # _Q) $Op1, $imm)>;
 }
 
 class sve_int_perm_tbl<bits<2> sz8_64, bits<2> opc, string asm, ZPRRegOp zprty,
@@ -1664,6 +1682,7 @@ multiclass sve_int_pred_log<bits<4> opc, string asm, SDPatternOperator op,
   def : SVE_3_Op_Pat<nxv8i1, op, nxv8i1, nxv8i1, nxv8i1, !cast<Instruction>(NAME)>;
   def : SVE_3_Op_Pat<nxv4i1, op, nxv4i1, nxv4i1, nxv4i1, !cast<Instruction>(NAME)>;
   def : SVE_3_Op_Pat<nxv2i1, op, nxv2i1, nxv2i1, nxv2i1, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Pat<nxv1i1, op, nxv1i1, nxv1i1, nxv1i1, !cast<Instruction>(NAME)>;
   def : SVE_2_Op_AllActive_Pat<nxv16i1, op_nopred, nxv16i1, nxv16i1,
                                !cast<Instruction>(NAME), PTRUE_B>;
   def : SVE_2_Op_AllActive_Pat<nxv8i1, op_nopred, nxv8i1, nxv8i1,
@@ -1671,6 +1690,9 @@ multiclass sve_int_pred_log<bits<4> opc, string asm, SDPatternOperator op,
   def : SVE_2_Op_AllActive_Pat<nxv4i1, op_nopred, nxv4i1, nxv4i1,
                                !cast<Instruction>(NAME), PTRUE_S>;
   def : SVE_2_Op_AllActive_Pat<nxv2i1, op_nopred, nxv2i1, nxv2i1,
+                               !cast<Instruction>(NAME), PTRUE_D>;
+  // Emulate .Q operation using a PTRUE_D when the other lanes don't matter.
+  def : SVE_2_Op_AllActive_Pat<nxv1i1, op_nopred, nxv1i1, nxv1i1,
                                !cast<Instruction>(NAME), PTRUE_D>;
 }
 
@@ -1686,6 +1708,9 @@ multiclass sve_int_pred_log_v2<bits<4> opc, string asm, SDPatternOperator op,
   def : Pat<(nxv4i1 (op_nopred nxv4i1:$Op1, nxv4i1:$Op2)),
             (!cast<Instruction>(NAME) $Op1, $Op1, $Op2)>;
   def : Pat<(nxv2i1 (op_nopred nxv2i1:$Op1, nxv2i1:$Op2)),
+            (!cast<Instruction>(NAME) $Op1, $Op1, $Op2)>;
+  // Emulate .Q operation using a PTRUE_D when the other lanes don't matter.
+  def : Pat<(nxv1i1 (op_nopred nxv1i1:$Op1, nxv1i1:$Op2)),
             (!cast<Instruction>(NAME) $Op1, $Op1, $Op2)>;
 }
 
@@ -2933,8 +2958,7 @@ class sve_int_mlas_vvv_pred<bits<2> sz8_64, bits<1> opc, string asm,
   let ElementSize = zprty.ElementSize;
 }
 
-multiclass sve_int_mlas_vvv_pred<bits<1> opc, string asm, SDPatternOperator op,
-                                 SDPatternOperator outerop, SDPatternOperator mulop> {
+multiclass sve_int_mlas_vvv_pred<bits<1> opc, string asm, SDPatternOperator op> {
   def _B : sve_int_mlas_vvv_pred<0b00, opc, asm, ZPR8>;
   def _H : sve_int_mlas_vvv_pred<0b01, opc, asm, ZPR16>;
   def _S : sve_int_mlas_vvv_pred<0b10, opc, asm, ZPR32>;
@@ -2944,15 +2968,6 @@ multiclass sve_int_mlas_vvv_pred<bits<1> opc, string asm, SDPatternOperator op,
   def : SVE_4_Op_Pat<nxv8i16, op, nxv8i1, nxv8i16, nxv8i16, nxv8i16, !cast<Instruction>(NAME # _H)>;
   def : SVE_4_Op_Pat<nxv4i32, op, nxv4i1, nxv4i32, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _S)>;
   def : SVE_4_Op_Pat<nxv2i64, op, nxv2i1, nxv2i64, nxv2i64, nxv2i64, !cast<Instruction>(NAME # _D)>;
-
-  def : Pat<(outerop nxv16i8:$Op1, (mulop nxv16i1:$pred, nxv16i8:$Op2, nxv16i8:$Op3)),
-            (!cast<Instruction>(NAME # _B) $pred, $Op1, $Op2, $Op3)>;
-  def : Pat<(outerop nxv8i16:$Op1, (mulop nxv8i1:$pred, nxv8i16:$Op2, nxv8i16:$Op3)),
-            (!cast<Instruction>(NAME # _H) $pred, $Op1, $Op2, $Op3)>;
-  def : Pat<(outerop nxv4i32:$Op1, (mulop nxv4i1:$pred, nxv4i32:$Op2, nxv4i32:$Op3)),
-            (!cast<Instruction>(NAME # _S) $pred, $Op1, $Op2, $Op3)>;
-  def : Pat<(outerop nxv2i64:$Op1, (mulop nxv2i1:$pred, nxv2i64:$Op2, nxv2i64:$Op3)),
-            (!cast<Instruction>(NAME # _D) $pred, $Op1, $Op2, $Op3)>;
 }
 
 //===----------------------------------------------------------------------===//

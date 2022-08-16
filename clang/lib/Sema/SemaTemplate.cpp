@@ -20,6 +20,7 @@
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/Stack.h"
@@ -2520,7 +2521,7 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
       continue;
 
     // Cannot make a deduction guide when unparsed arguments are present.
-    if (std::any_of(CD->param_begin(), CD->param_end(), [](ParmVarDecl *P) {
+    if (llvm::any_of(CD->parameters(), [](ParmVarDecl *P) {
           return !P || P->hasUnparsedDefaultArg();
         }))
       continue;
@@ -2695,8 +2696,15 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
   for (TemplateParameterList::iterator NewParam = NewParams->begin(),
                                     NewParamEnd = NewParams->end();
        NewParam != NewParamEnd; ++NewParam) {
-    // Variables used to diagnose redundant default arguments
+    // Whether we've seen a duplicate default argument in the same translation
+    // unit.
     bool RedundantDefaultArg = false;
+    // Whether we've found inconsis inconsitent default arguments in different
+    // translation unit.
+    bool InconsistentDefaultArg = false;
+    // The name of the module which contains the inconsistent default argument.
+    std::string PrevModuleName;
+
     SourceLocation OldDefaultLoc;
     SourceLocation NewDefaultLoc;
 
@@ -2729,7 +2737,16 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         OldDefaultLoc = OldTypeParm->getDefaultArgumentLoc();
         NewDefaultLoc = NewTypeParm->getDefaultArgumentLoc();
         SawDefaultArgument = true;
-        RedundantDefaultArg = true;
+
+        if (!OldTypeParm->getOwningModule() ||
+            isModuleUnitOfCurrentTU(OldTypeParm->getOwningModule()))
+          RedundantDefaultArg = true;
+        else if (!getASTContext().isSameDefaultTemplateArgument(OldTypeParm,
+                                                                NewTypeParm)) {
+          InconsistentDefaultArg = true;
+          PrevModuleName =
+              OldTypeParm->getImportedOwningModule()->getFullModuleName();
+        }
         PreviousDefaultArgLoc = NewDefaultLoc;
       } else if (OldTypeParm && OldTypeParm->hasDefaultArgument()) {
         // Merge the default argument from the old declaration to the
@@ -2774,7 +2791,15 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         OldDefaultLoc = OldNonTypeParm->getDefaultArgumentLoc();
         NewDefaultLoc = NewNonTypeParm->getDefaultArgumentLoc();
         SawDefaultArgument = true;
-        RedundantDefaultArg = true;
+        if (!OldNonTypeParm->getOwningModule() ||
+            isModuleUnitOfCurrentTU(OldNonTypeParm->getOwningModule()))
+          RedundantDefaultArg = true;
+        else if (!getASTContext().isSameDefaultTemplateArgument(
+                     OldNonTypeParm, NewNonTypeParm)) {
+          InconsistentDefaultArg = true;
+          PrevModuleName =
+              OldNonTypeParm->getImportedOwningModule()->getFullModuleName();
+        }
         PreviousDefaultArgLoc = NewDefaultLoc;
       } else if (OldNonTypeParm && OldNonTypeParm->hasDefaultArgument()) {
         // Merge the default argument from the old declaration to the
@@ -2818,7 +2843,15 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         OldDefaultLoc = OldTemplateParm->getDefaultArgument().getLocation();
         NewDefaultLoc = NewTemplateParm->getDefaultArgument().getLocation();
         SawDefaultArgument = true;
-        RedundantDefaultArg = true;
+        if (!OldTemplateParm->getOwningModule() ||
+            isModuleUnitOfCurrentTU(OldTemplateParm->getOwningModule()))
+          RedundantDefaultArg = true;
+        else if (!getASTContext().isSameDefaultTemplateArgument(
+                     OldTemplateParm, NewTemplateParm)) {
+          InconsistentDefaultArg = true;
+          PrevModuleName =
+              OldTemplateParm->getImportedOwningModule()->getFullModuleName();
+        }
         PreviousDefaultArgLoc = NewDefaultLoc;
       } else if (OldTemplateParm && OldTemplateParm->hasDefaultArgument()) {
         // Merge the default argument from the old declaration to the
@@ -2845,12 +2878,31 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
       Invalid = true;
     }
 
+    // [basic.def.odr]/13:
+    //     There can be more than one definition of a
+    //     ...
+    //     default template argument
+    //     ...
+    //     in a program provided that each definition appears in a different
+    //     translation unit and the definitions satisfy the [same-meaning
+    //     criteria of the ODR].
+    //
+    // Simply, the design of modules allows the definition of template default
+    // argument to be repeated across translation unit. Note that the ODR is
+    // checked elsewhere. But it is still not allowed to repeat template default
+    // argument in the same translation unit.
     if (RedundantDefaultArg) {
-      // C++ [temp.param]p12:
-      //   A template-parameter shall not be given default arguments
-      //   by two different declarations in the same scope.
       Diag(NewDefaultLoc, diag::err_template_param_default_arg_redefinition);
       Diag(OldDefaultLoc, diag::note_template_param_prev_default_arg);
+      Invalid = true;
+    } else if (InconsistentDefaultArg) {
+      // We could only diagnose about the case that the OldParam is imported.
+      // The case NewParam is imported should be handled in ASTReader.
+      Diag(NewDefaultLoc,
+           diag::err_template_param_default_arg_inconsistent_redefinition);
+      Diag(OldDefaultLoc,
+           diag::note_template_param_prev_default_arg_in_other_module)
+          << PrevModuleName;
       Invalid = true;
     } else if (MissingDefaultArg && TPC != TPC_FunctionTemplate) {
       // C++ [temp.param]p11:
@@ -4522,7 +4574,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   void *InsertPos = nullptr;
   if (VarTemplateSpecializationDecl *Spec = Template->findSpecialization(
           Converted, InsertPos)) {
-    checkSpecializationVisibility(TemplateNameLoc, Spec);
+    checkSpecializationReachability(TemplateNameLoc, Spec);
     // If we already have a variable template specialization, return it.
     return Spec;
   }
@@ -4643,7 +4695,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
           dyn_cast<VarTemplatePartialSpecializationDecl>(InstantiationPattern))
     Decl->setInstantiationOf(D, InstantiationArgs);
 
-  checkSpecializationVisibility(TemplateNameLoc, Decl);
+  checkSpecializationReachability(TemplateNameLoc, Decl);
 
   assert(Decl && "No variable template specialization?");
   return Decl;
@@ -8656,21 +8708,57 @@ Decl *Sema::ActOnConceptDefinition(Scope *S,
   // Check for conflicting previous declaration.
   DeclarationNameInfo NameInfo(NewDecl->getDeclName(), NameLoc);
   LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
-                        ForVisibleRedeclaration);
+                        forRedeclarationInCurContext());
   LookupName(Previous, S);
-
   FilterLookupForScope(Previous, DC, S, /*ConsiderLinkage=*/false,
                        /*AllowInlineNamespace*/false);
-  if (!Previous.empty()) {
-    auto *Old = Previous.getRepresentativeDecl();
-    Diag(NameLoc, isa<ConceptDecl>(Old) ? diag::err_redefinition :
-         diag::err_redefinition_different_kind) << NewDecl->getDeclName();
-    Diag(Old->getLocation(), diag::note_previous_definition);
-  }
+  bool AddToScope = true;
+  CheckConceptRedefinition(NewDecl, Previous, AddToScope);
 
   ActOnDocumentableDecl(NewDecl);
-  PushOnScopeChains(NewDecl, S);
+  if (AddToScope)
+    PushOnScopeChains(NewDecl, S);
   return NewDecl;
+}
+
+void Sema::CheckConceptRedefinition(ConceptDecl *NewDecl,
+                                    LookupResult &Previous, bool &AddToScope) {
+  AddToScope = true;
+
+  if (Previous.empty())
+    return;
+
+  auto *OldConcept = dyn_cast<ConceptDecl>(Previous.getRepresentativeDecl());
+  if (!OldConcept) {
+    auto *Old = Previous.getRepresentativeDecl();
+    Diag(NewDecl->getLocation(), diag::err_redefinition_different_kind)
+        << NewDecl->getDeclName();
+    notePreviousDefinition(Old, NewDecl->getLocation());
+    AddToScope = false;
+    return;
+  }
+  // Check if we can merge with a concept declaration.
+  bool IsSame = Context.isSameEntity(NewDecl, OldConcept);
+  if (!IsSame) {
+    Diag(NewDecl->getLocation(), diag::err_redefinition_different_concept)
+        << NewDecl->getDeclName();
+    notePreviousDefinition(OldConcept, NewDecl->getLocation());
+    AddToScope = false;
+    return;
+  }
+  if (hasReachableDefinition(OldConcept)) {
+    Diag(NewDecl->getLocation(), diag::err_redefinition)
+        << NewDecl->getDeclName();
+    notePreviousDefinition(OldConcept, NewDecl->getLocation());
+    AddToScope = false;
+    return;
+  }
+  if (!Previous.isSingleResult()) {
+    // FIXME: we should produce an error in case of ambig and failed lookups.
+    //        Other decls (e.g. namespaces) also have this shortcoming.
+    return;
+  }
+  Context.setPrimaryMergedDecl(NewDecl, OldConcept);
 }
 
 /// \brief Strips various properties off an implicit instantiation

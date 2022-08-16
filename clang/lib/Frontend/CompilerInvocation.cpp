@@ -1487,6 +1487,9 @@ void CompilerInvocation::GenerateCodeGenArgs(
   if (Opts.IBTSeal)
     GenerateArg(Args, OPT_mibt_seal, SA);
 
+  if (Opts.FunctionReturnThunks)
+    GenerateArg(Args, OPT_mfunction_return_EQ, "thunk-extern", SA);
+
   for (const auto &F : Opts.LinkBitcodeFiles) {
     bool Builtint = F.LinkFlags == llvm::Linker::Flags::LinkOnlyNeeded &&
                     F.PropagateAttrs && F.Internalize;
@@ -1827,6 +1830,27 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Name;
   }
 
+  if (const Arg *A = Args.getLastArg(OPT_mfunction_return_EQ)) {
+    auto Val = llvm::StringSwitch<llvm::FunctionReturnThunksKind>(A->getValue())
+                   .Case("keep", llvm::FunctionReturnThunksKind::Keep)
+                   .Case("thunk-extern", llvm::FunctionReturnThunksKind::Extern)
+                   .Default(llvm::FunctionReturnThunksKind::Invalid);
+    // SystemZ might want to add support for "expolines."
+    if (!T.isX86())
+      Diags.Report(diag::err_drv_argument_not_allowed_with)
+          << A->getSpelling() << T.getTriple();
+    else if (Val == llvm::FunctionReturnThunksKind::Invalid)
+      Diags.Report(diag::err_drv_invalid_value)
+          << A->getAsString(Args) << A->getValue();
+    else if (Val == llvm::FunctionReturnThunksKind::Extern &&
+             Args.getLastArgValue(OPT_mcmodel_EQ).equals("large"))
+      Diags.Report(diag::err_drv_argument_not_allowed_with)
+          << A->getAsString(Args)
+          << Args.getLastArg(OPT_mcmodel_EQ)->getAsString(Args);
+    else
+      Opts.FunctionReturnThunks = static_cast<unsigned>(Val);
+  }
+
   if (Opts.PrepareForLTO && Args.hasArg(OPT_mibt_seal))
     Opts.IBTSeal = 1;
 
@@ -1904,6 +1928,12 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     Opts.EnableAIXExtendedAltivecABI = O.matches(OPT_mabi_EQ_vec_extabi);
   }
 
+  if (Arg *A = Args.getLastArg(OPT_mabi_EQ_quadword_atomics)) {
+    if (!T.isOSAIX() || T.isPPC32())
+      Diags.Report(diag::err_drv_unsupported_opt_for_target)
+        << A->getSpelling() << T.str();
+  }
+
   bool NeedLocTracking = false;
 
   if (!Opts.OptRecordFile.empty())
@@ -1954,7 +1984,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     } else {
       Opts.DiagnosticsHotnessThreshold = *ResultOrErr;
       if ((!Opts.DiagnosticsHotnessThreshold ||
-           Opts.DiagnosticsHotnessThreshold.getValue() > 0) &&
+           Opts.DiagnosticsHotnessThreshold.value() > 0) &&
           !UsingProfile)
         Diags.Report(diag::warn_drv_diagnostics_hotness_requires_pgo)
             << "-fdiagnostics-hotness-threshold=";
@@ -1971,7 +2001,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     } else {
       Opts.DiagnosticsMisExpectTolerance = *ResultOrErr;
       if ((!Opts.DiagnosticsMisExpectTolerance ||
-           Opts.DiagnosticsMisExpectTolerance.getValue() > 0) &&
+           Opts.DiagnosticsMisExpectTolerance.value() > 0) &&
           !UsingProfile)
         Diags.Report(diag::warn_drv_diagnostics_misexpect_requires_pgo)
             << "-fdiagnostics-misexpect-tolerance=";
@@ -3423,6 +3453,11 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
       GenerateArg(Args, OPT_fopenmp_version_EQ, Twine(Opts.OpenMP), SA);
   }
 
+  if (Opts.OpenMPTargetNewRuntime)
+    GenerateArg(Args, OPT_fopenmp_target_new_runtime, SA);
+  else
+    GenerateArg(Args, OPT_fno_openmp_target_new_runtime, SA);
+
   if (Opts.OpenMPTargetIgnoreEnvVars)
     GenerateArg(Args, OPT_fopenmp_target_ignore_env_vars, SA);
   else
@@ -3817,20 +3852,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_enable_irbuilder);
   bool IsTargetSpecified =
       Opts.OpenMPIsDevice || Args.hasArg(options::OPT_fopenmp_targets_EQ);
-  // Default in Options.td should be true. For AMD, we temporarily override
-  // default to false unless testing with -fopenmp-target-new-runtime
-  if (T.isAMDGCN()) {
-    // FIXME: we may need to change host pass to false when it is
-    // offloading to AMDGCN.  Would require parsing march, offload-arch,
-    Opts.OpenMPTargetNewRuntime = false;
-    if (Args.hasArg(options::OPT_fopenmp_target_new_runtime))
-      Opts.OpenMPTargetNewRuntime = true;
-  } else {
-    Opts.OpenMPTargetNewRuntime = true;
-    if (Args.hasArg(options::OPT_fno_openmp_target_new_runtime))
-      Opts.OpenMPTargetNewRuntime = false;
-  }
-
   Opts.ConvergentFunctions = Opts.ConvergentFunctions || Opts.OpenMPIsDevice;
 
   if (Opts.OpenMP || Opts.OpenMPSimd) {
@@ -3876,6 +3897,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.OpenMPGPUThreadsPerTeam =
       getLastArgIntValue(Args, options::OPT_fopenmp_gpu_threads_per_team_EQ,
                          Opts.OpenMPGPUThreadsPerTeam, Diags);
+
+  Opts.OpenMPTargetNewRuntime =
+      Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
+                   options::OPT_fno_openmp_target_new_runtime, true);
 
   // Turn ON at -O3 (and above) and -Ofast
   Opts.OpenMPTargetIgnoreEnvVars =

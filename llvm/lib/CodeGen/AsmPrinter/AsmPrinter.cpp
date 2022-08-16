@@ -490,7 +490,7 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
   assert(MI && "AsmPrinter didn't require GCModuleInfo?");
-  for (auto &I : *MI)
+  for (const auto &I : *MI)
     if (GCMetadataPrinter *MP = GetOrCreateGCPrinter(*I))
       MP->beginAssembly(M, *MI, *this);
 
@@ -1761,7 +1761,7 @@ static unsigned getNumGlobalVariableUses(const Constant *C) {
     return 1;
 
   unsigned NumUses = 0;
-  for (auto *CU : C->users())
+  for (const auto *CU : C->users())
     NumUses += getNumGlobalVariableUses(dyn_cast<Constant>(CU));
 
   return NumUses;
@@ -1784,7 +1784,7 @@ static bool isGOTEquivalentCandidate(const GlobalVariable *GV,
 
   // To be a got equivalent, at least one of its users need to be a constant
   // expression used by another global variable.
-  for (auto *U : GV->users())
+  for (const auto *U : GV->users())
     NumGOTEquivUsers += getNumGlobalVariableUses(dyn_cast<Constant>(U));
 
   return NumGOTEquivUsers > 0;
@@ -1827,7 +1827,7 @@ void AsmPrinter::emitGlobalGOTEquivs() {
   }
   GlobalGOTEquivs.clear();
 
-  for (auto *GV : FailedCandidates)
+  for (const auto *GV : FailedCandidates)
     emitGlobalVariable(GV);
 }
 
@@ -1846,6 +1846,11 @@ void AsmPrinter::emitGlobalAlias(Module &M, const GlobalAlias &GA) {
   if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
     assert(MAI->hasVisibilityOnlyWithLinkage() &&
            "Visibility should be handled with emitLinkage() on AIX.");
+
+    // Linkage for alias of global variable has been emitted.
+    if (isa<GlobalVariable>(GA.getAliaseeObject()))
+      return;
+
     emitLinkage(&GA, Name);
     // If it's a function, also emit linkage for aliases of function entry
     // point.
@@ -2756,6 +2761,8 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
   // to represent relocations on supported targets. Expressions involving only
   // constant addresses are constant folded instead.
   switch (CE->getOpcode()) {
+  default:
+    break; // Error
   case Instruction::AddrSpaceCast: {
     const Constant *Op = CE->getOperand(0);
     unsigned DstAS = CE->getType()->getPointerAddressSpace();
@@ -2763,24 +2770,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
     if (TM.isNoopAddrSpaceCast(SrcAS, DstAS))
       return lowerConstant(Op);
 
-    // Fallthrough to error.
-    LLVM_FALLTHROUGH;
-  }
-  default: {
-    // If the code isn't optimized, there may be outstanding folding
-    // opportunities. Attempt to fold the expression using DataLayout as a
-    // last resort before giving up.
-    Constant *C = ConstantFoldConstant(CE, getDataLayout());
-    if (C != CE)
-      return lowerConstant(C);
-
-    // Otherwise report the problem to the user.
-    std::string S;
-    raw_string_ostream OS(S);
-    OS << "Unsupported expression in static initializer: ";
-    CE->printAsOperand(OS, /*PrintType=*/false,
-                   !MF ? nullptr : MF->getFunction().getParent());
-    report_fatal_error(Twine(OS.str()));
+    break; // Error
   }
   case Instruction::GetElementPtr: {
     // Generate a symbolic expression for the byte address
@@ -2835,12 +2825,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
         DL.getTypeAllocSize(Op->getType()).getFixedSize())
       return OpExpr;
 
-    // Otherwise the pointer is smaller than the resultant integer, mask off
-    // the high bits so we are sure to get a proper truncation if the input is
-    // a constant expr.
-    unsigned InBits = DL.getTypeAllocSizeInBits(Op->getType());
-    const MCExpr *MaskExpr = MCConstantExpr::create(~0ULL >> (64-InBits), Ctx);
-    return MCBinaryExpr::createAnd(OpExpr, MaskExpr, Ctx);
+    break; // Error
   }
 
   case Instruction::Sub: {
@@ -2885,12 +2870,28 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
     return MCBinaryExpr::createAdd(LHS, RHS, Ctx);
   }
   }
+
+  // If the code isn't optimized, there may be outstanding folding
+  // opportunities. Attempt to fold the expression using DataLayout as a
+  // last resort before giving up.
+  Constant *C = ConstantFoldConstant(CE, getDataLayout());
+  if (C != CE)
+    return lowerConstant(C);
+
+  // Otherwise report the problem to the user.
+  std::string S;
+  raw_string_ostream OS(S);
+  OS << "Unsupported expression in static initializer: ";
+  CE->printAsOperand(OS, /*PrintType=*/false,
+                     !MF ? nullptr : MF->getFunction().getParent());
+  report_fatal_error(Twine(OS.str()));
 }
 
 static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *C,
                                    AsmPrinter &AP,
                                    const Constant *BaseCV = nullptr,
-                                   uint64_t Offset = 0);
+                                   uint64_t Offset = 0,
+                                   AsmPrinter::AliasMapTy *AliasList = nullptr);
 
 static void emitGlobalConstantFP(const ConstantFP *CFP, AsmPrinter &AP);
 static void emitGlobalConstantFP(APFloat APF, Type *ET, AsmPrinter &AP);
@@ -2944,9 +2945,21 @@ static int isRepeatedByteSequence(const Value *V, const DataLayout &DL) {
   return -1;
 }
 
-static void emitGlobalConstantDataSequential(const DataLayout &DL,
-                                             const ConstantDataSequential *CDS,
-                                             AsmPrinter &AP) {
+static void emitGlobalAliasInline(AsmPrinter &AP, uint64_t Offset,
+                                  AsmPrinter::AliasMapTy *AliasList) {
+  if (AliasList) {
+    auto AliasIt = AliasList->find(Offset);
+    if (AliasIt != AliasList->end()) {
+      for (const GlobalAlias *GA : AliasIt->second)
+        AP.OutStreamer->emitLabel(AP.getSymbol(GA));
+      AliasList->erase(Offset);
+    }
+  }
+}
+
+static void emitGlobalConstantDataSequential(
+    const DataLayout &DL, const ConstantDataSequential *CDS, AsmPrinter &AP,
+    AsmPrinter::AliasMapTy *AliasList) {
   // See if we can aggregate this into a .fill, if so, emit it as such.
   int Value = isRepeatedByteSequence(CDS, DL);
   if (Value != -1) {
@@ -2963,17 +2976,20 @@ static void emitGlobalConstantDataSequential(const DataLayout &DL,
   // Otherwise, emit the values in successive locations.
   unsigned ElementByteSize = CDS->getElementByteSize();
   if (isa<IntegerType>(CDS->getElementType())) {
-    for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i) {
+    for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
+      emitGlobalAliasInline(AP, ElementByteSize * I, AliasList);
       if (AP.isVerbose())
         AP.OutStreamer->getCommentOS()
-            << format("0x%" PRIx64 "\n", CDS->getElementAsInteger(i));
-      AP.OutStreamer->emitIntValue(CDS->getElementAsInteger(i),
+            << format("0x%" PRIx64 "\n", CDS->getElementAsInteger(I));
+      AP.OutStreamer->emitIntValue(CDS->getElementAsInteger(I),
                                    ElementByteSize);
     }
   } else {
     Type *ET = CDS->getElementType();
-    for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I)
+    for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
+      emitGlobalAliasInline(AP, ElementByteSize * I, AliasList);
       emitGlobalConstantFP(CDS->getElementAsAPFloat(I), ET, AP);
+    }
   }
 
   unsigned Size = DL.getTypeAllocSize(CDS->getType());
@@ -2986,7 +3002,8 @@ static void emitGlobalConstantDataSequential(const DataLayout &DL,
 
 static void emitGlobalConstantArray(const DataLayout &DL,
                                     const ConstantArray *CA, AsmPrinter &AP,
-                                    const Constant *BaseCV, uint64_t Offset) {
+                                    const Constant *BaseCV, uint64_t Offset,
+                                    AsmPrinter::AliasMapTy *AliasList) {
   // See if we can aggregate some values.  Make sure it can be
   // represented as a series of bytes of the constant value.
   int Value = isRepeatedByteSequence(CA, DL);
@@ -2994,44 +3011,75 @@ static void emitGlobalConstantArray(const DataLayout &DL,
   if (Value != -1) {
     uint64_t Bytes = DL.getTypeAllocSize(CA->getType());
     AP.OutStreamer->emitFill(Bytes, Value);
-  }
-  else {
-    for (unsigned i = 0, e = CA->getNumOperands(); i != e; ++i) {
-      emitGlobalConstantImpl(DL, CA->getOperand(i), AP, BaseCV, Offset);
-      Offset += DL.getTypeAllocSize(CA->getOperand(i)->getType());
+  } else {
+    for (unsigned I = 0, E = CA->getNumOperands(); I != E; ++I) {
+      emitGlobalConstantImpl(DL, CA->getOperand(I), AP, BaseCV, Offset,
+                             AliasList);
+      Offset += DL.getTypeAllocSize(CA->getOperand(I)->getType());
     }
   }
 }
 
+static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP);
+
 static void emitGlobalConstantVector(const DataLayout &DL,
-                                     const ConstantVector *CV, AsmPrinter &AP) {
-  for (unsigned i = 0, e = CV->getType()->getNumElements(); i != e; ++i)
-    emitGlobalConstantImpl(DL, CV->getOperand(i), AP);
+                                     const ConstantVector *CV, AsmPrinter &AP,
+                                     AsmPrinter::AliasMapTy *AliasList) {
+  Type *ElementType = CV->getType()->getElementType();
+  uint64_t ElementSizeInBits = DL.getTypeSizeInBits(ElementType);
+  uint64_t ElementAllocSizeInBits = DL.getTypeAllocSizeInBits(ElementType);
+  uint64_t EmittedSize;
+  if (ElementSizeInBits != ElementAllocSizeInBits) {
+    // If the allocation size of an element is different from the size in bits,
+    // printing each element separately will insert incorrect padding.
+    //
+    // The general algorithm here is complicated; instead of writing it out
+    // here, just use the existing code in ConstantFolding.
+    Type *IntT =
+        IntegerType::get(CV->getContext(), DL.getTypeSizeInBits(CV->getType()));
+    ConstantInt *CI = dyn_cast_or_null<ConstantInt>(ConstantFoldConstant(
+        ConstantExpr::getBitCast(const_cast<ConstantVector *>(CV), IntT), DL));
+    if (!CI) {
+      report_fatal_error(
+          "Cannot lower vector global with unusual element type");
+    }
+    emitGlobalAliasInline(AP, 0, AliasList);
+    emitGlobalConstantLargeInt(CI, AP);
+    EmittedSize = DL.getTypeStoreSize(CV->getType());
+  } else {
+    for (unsigned I = 0, E = CV->getType()->getNumElements(); I != E; ++I) {
+      emitGlobalAliasInline(AP, DL.getTypeAllocSize(CV->getType()) * I, AliasList);
+      emitGlobalConstantImpl(DL, CV->getOperand(I), AP);
+    }
+    EmittedSize =
+        DL.getTypeAllocSize(ElementType) * CV->getType()->getNumElements();
+  }
 
   unsigned Size = DL.getTypeAllocSize(CV->getType());
-  unsigned EmittedSize = DL.getTypeAllocSize(CV->getType()->getElementType()) *
-                         CV->getType()->getNumElements();
   if (unsigned Padding = Size - EmittedSize)
     AP.OutStreamer->emitZeros(Padding);
 }
 
 static void emitGlobalConstantStruct(const DataLayout &DL,
                                      const ConstantStruct *CS, AsmPrinter &AP,
-                                     const Constant *BaseCV, uint64_t Offset) {
+                                     const Constant *BaseCV, uint64_t Offset,
+                                     AsmPrinter::AliasMapTy *AliasList) {
   // Print the fields in successive locations. Pad to align if needed!
   unsigned Size = DL.getTypeAllocSize(CS->getType());
   const StructLayout *Layout = DL.getStructLayout(CS->getType());
   uint64_t SizeSoFar = 0;
-  for (unsigned i = 0, e = CS->getNumOperands(); i != e; ++i) {
-    const Constant *Field = CS->getOperand(i);
+  for (unsigned I = 0, E = CS->getNumOperands(); I != E; ++I) {
+    const Constant *Field = CS->getOperand(I);
 
     // Print the actual field value.
-    emitGlobalConstantImpl(DL, Field, AP, BaseCV, Offset + SizeSoFar);
+    emitGlobalConstantImpl(DL, Field, AP, BaseCV, Offset + SizeSoFar,
+                           AliasList);
 
     // Check if padding is needed and insert one or more 0s.
     uint64_t FieldSize = DL.getTypeAllocSize(Field->getType());
-    uint64_t PadSize = ((i == e-1 ? Size : Layout->getElementOffset(i+1))
-                        - Layout->getElementOffset(i)) - FieldSize;
+    uint64_t PadSize = ((I == E - 1 ? Size : Layout->getElementOffset(I + 1)) -
+                        Layout->getElementOffset(I)) -
+                       FieldSize;
     SizeSoFar += FieldSize + PadSize;
 
     // Insert padding - this may include padding to increase the size of the
@@ -3241,7 +3289,9 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
 
 static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
                                    AsmPrinter &AP, const Constant *BaseCV,
-                                   uint64_t Offset) {
+                                   uint64_t Offset,
+                                   AsmPrinter::AliasMapTy *AliasList) {
+  emitGlobalAliasInline(AP, Offset, AliasList);
   uint64_t Size = DL.getTypeAllocSize(CV->getType());
 
   // Globals with sub-elements such as combinations of arrays and structs
@@ -3281,13 +3331,13 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   }
 
   if (const ConstantDataSequential *CDS = dyn_cast<ConstantDataSequential>(CV))
-    return emitGlobalConstantDataSequential(DL, CDS, AP);
+    return emitGlobalConstantDataSequential(DL, CDS, AP, AliasList);
 
   if (const ConstantArray *CVA = dyn_cast<ConstantArray>(CV))
-    return emitGlobalConstantArray(DL, CVA, AP, BaseCV, Offset);
+    return emitGlobalConstantArray(DL, CVA, AP, BaseCV, Offset, AliasList);
 
   if (const ConstantStruct *CVS = dyn_cast<ConstantStruct>(CV))
-    return emitGlobalConstantStruct(DL, CVS, AP, BaseCV, Offset);
+    return emitGlobalConstantStruct(DL, CVS, AP, BaseCV, Offset, AliasList);
 
   if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(CV)) {
     // Look through bitcasts, which might not be able to be MCExpr'ized (e.g. of
@@ -3306,7 +3356,7 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   }
 
   if (const ConstantVector *V = dyn_cast<ConstantVector>(CV))
-    return emitGlobalConstantVector(DL, V, AP);
+    return emitGlobalConstantVector(DL, V, AP, AliasList);
 
   // Otherwise, it must be a ConstantExpr.  Lower it to an MCExpr, then emit it
   // thread the streamer with EmitValue.
@@ -3322,14 +3372,23 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
 }
 
 /// EmitGlobalConstant - Print a general LLVM constant to the .s file.
-void AsmPrinter::emitGlobalConstant(const DataLayout &DL, const Constant *CV) {
+void AsmPrinter::emitGlobalConstant(const DataLayout &DL, const Constant *CV,
+                                    AliasMapTy *AliasList) {
   uint64_t Size = DL.getTypeAllocSize(CV->getType());
   if (Size)
-    emitGlobalConstantImpl(DL, CV, *this);
+    emitGlobalConstantImpl(DL, CV, *this, nullptr, 0, AliasList);
   else if (MAI->hasSubsectionsViaSymbols()) {
     // If the global has zero size, emit a single byte so that two labels don't
     // look like they are at the same location.
     OutStreamer->emitIntValue(0, 1);
+  }
+  if (!AliasList)
+    return;
+  // TODO: These remaining aliases are not emitted in the correct location. Need
+  // to handle the case where the alias offset doesn't refer to any sub-element.
+  for (auto &AliasPair : *AliasList) {
+    for (const GlobalAlias *GA : AliasPair.second)
+      OutStreamer->emitLabel(getSymbol(GA));
   }
 }
 
@@ -3686,7 +3745,7 @@ void AsmPrinter::emitStackMaps(StackMaps &SM) {
     // No GC strategy, use the default format.
     NeedsDefault = true;
   else
-    for (auto &I : *MI) {
+    for (const auto &I : *MI) {
       if (GCMetadataPrinter *MP = GetOrCreateGCPrinter(*I))
         if (MP->emitStackMaps(SM, *this))
           continue;

@@ -384,7 +384,6 @@ def uimm6gt32 : ImmLeaf<XLenVT, [{
 // Necessary because a frameindex can't be matched directly in a pattern.
 def FrameAddrRegImm : ComplexPattern<iPTR, 2, "SelectFrameAddrRegImm",
                                      [frameindex, or, add]>;
-def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
 def AddrRegImm : ComplexPattern<iPTR, 2, "SelectAddrRegImm">;
 
 // Return the negation of an immediate value.
@@ -1278,6 +1277,13 @@ def : Pat<(setgt GPR:$rs1, simm12_minus1_nonzero:$imm),
           (XORI (SLTI GPR:$rs1, (ImmPlus1 simm12_minus1_nonzero:$imm)), 1)>;
 def : Pat<(setugt GPR:$rs1, simm12_minus1_nonzero:$imm),
           (XORI (SLTIU GPR:$rs1, (ImmPlus1 simm12_minus1_nonzero:$imm)), 1)>;
+
+// If negating a pattern that requires an XORI above, we can fold the XORI with
+// the NEG. The XORI is equivalent to 1-X and negating gives X-1.
+def : Pat<(ineg (setuge GPR:$rs1, GPR:$rs2)), (ADDI (SLTU GPR:$rs1, GPR:$rs2), -1)>;
+def : Pat<(ineg (setule GPR:$rs1, GPR:$rs2)), (ADDI (SLTU GPR:$rs2, GPR:$rs1), -1)>;
+def : Pat<(ineg (setge GPR:$rs1, GPR:$rs2)), (ADDI (SLT GPR:$rs1, GPR:$rs2), -1)>;
+def : Pat<(ineg (setle GPR:$rs1, GPR:$rs2)), (ADDI (SLT GPR:$rs2, GPR:$rs1), -1)>;
 
 def IntCCtoRISCVCC : SDNodeXForm<riscv_selectcc, [{
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();

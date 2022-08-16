@@ -180,6 +180,10 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     llvm_unreachable("Should be handled target independently");
   }
 
+  // FIXME: Enable feature predicate checks once all the test pass.
+  // AMDGPU_MC::verifyInstructionPredicates(MI->getOpcode(),
+  //                                        getSubtargetInfo().getFeatureBits());
+
   if (emitPseudoExpansionLowering(*OutStreamer, MI))
     return;
 

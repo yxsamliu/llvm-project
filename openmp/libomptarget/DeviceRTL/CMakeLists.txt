@@ -20,6 +20,12 @@ if (NOT LIBOMPTARGET_BUILD_DEVICERTL_BCLIB)
   return()
 endif()
 
+# Check to ensure the host system is a supported host architecture.
+if(NOT ${CMAKE_SIZEOF_VOID_P} EQUAL "8")
+  libomptarget_say("Not building DeviceRTL: Runtime does not support 32-bit hosts")
+  return()
+endif()
+
 if (LLVM_DIR)
   # Builds that use pre-installed LLVM have LLVM_DIR set.
   # A standalone or LLVM_ENABLE_RUNTIMES=openmp build takes this route
@@ -81,13 +87,6 @@ else()
   string(REPLACE "," ";" nvptx_sm_list "${LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES}")
 endif()
 
-# If user set LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES to empty, we disable the
-# build.
-if (NOT nvptx_sm_list)
-  libomptarget_say("Not building CUDA offloading DeviceRTL: empty compute capability list")
-  return()
-endif()
-
 # Check all SM values
 foreach(sm ${nvptx_sm_list})
   if (NOT ${sm} IN_LIST all_capabilities)
@@ -130,10 +129,11 @@ set(src_files
   ${source_directory}/Utils.cpp
   ${source_directory}/Workshare.cpp
   ${source_directory}/ExtraMapping.cpp
+  ${source_directory}/Xteam.cpp
 )
 
-set(clang_opt_flags -O1 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=512)
-set(link_opt_flags  -O1        -openmp-opt-disable)
+set(clang_opt_flags -O3 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=512)
+set(link_opt_flags  -O3        -openmp-opt-disable)
 
 # Prepend -I to each list element
 set (LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL "${LIBOMPTARGET_LLVM_INCLUDE_DIRS}")
@@ -327,7 +327,7 @@ endforeach()
 #endif()
 #
 # Set the flags to build the device runtime from clang.
-#set(clang_lib_flags -fopenmp -fopenmp-cuda-mode -foffload-lto -fvisibility=hidden -Xopenmp-target=nvptx64-nvidia-cuda --cuda-feature=+ptx61 -mllvm -openmp-opt-disable -nocudalib -nogpulib -nostdinc -DSHARED_SCRATCHPAD_SIZE=512 -O3)
+#set(clang_lib_flags -fopenmp -fopenmp-cuda-mode -foffload-lto -fvisibility=hidden -Xopenmp-target=nvptx64-nvidia-cuda --cuda-feature=+ptx61 -nocudalib -nogpulib -nostdinc ${clang_opt_flags})
 #foreach(arch ${nvptx_sm_list})
 #  set(clang_lib_flags ${clang_lib_flags} --offload-arch=sm_${arch})
 #endforeach()
@@ -376,3 +376,4 @@ endforeach()
 #target_link_libraries(omptarget.devicertl PRIVATE omptarget.devicertl.all_objs)
 #
 #install(TARGETS omptarget.devicertl ARCHIVE DESTINATION ${OPENMP_INSTALL_LIBDIR})
+

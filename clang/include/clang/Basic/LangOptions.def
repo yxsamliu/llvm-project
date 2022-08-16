@@ -157,7 +157,7 @@ LANGOPT(GNUAsm            , 1, 1, "GNU-style inline assembly")
 LANGOPT(Coroutines        , 1, 0, "C++20 coroutines")
 LANGOPT(DllExportInlines  , 1, 1, "dllexported classes dllexport inline methods")
 LANGOPT(RelaxedTemplateTemplateArgs, 1, 0, "C++17 relaxed matching of template template arguments")
-LANGOPT(Unstable          , 1, 0, "Enable unstable and experimental features")
+LANGOPT(ExperimentalLibrary, 1, 0, "enable unstable and experimental library features")
 
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, "'[[]]' attributes extension for all language standard modes")
 
@@ -197,6 +197,7 @@ VALUE_LANGOPT(DoubleSize            , 32, 0, "width of double")
 VALUE_LANGOPT(LongDoubleSize        , 32, 0, "width of long double")
 LANGOPT(PPCIEEELongDouble            , 1, 0, "use IEEE 754 quadruple-precision for long double")
 LANGOPT(EnableAIXExtendedAltivecABI  , 1, 0, "__EXTABI__  predefined macro")
+LANGOPT(EnableAIXQuadwordAtomicsABI  , 1, 0, "Use 16-byte atomic lock free semantics")
 COMPATIBLE_VALUE_LANGOPT(PICLevel    , 2, 0, "__PIC__ level")
 COMPATIBLE_VALUE_LANGOPT(PIE         , 1, 0, "is pie")
 LANGOPT(ROPI                         , 1, 0, "Read-only position independence")
@@ -250,7 +251,7 @@ LANGOPT(OpenMPCUDANumSMs  , 32, 0, "Number of SMs for CUDA devices.")
 LANGOPT(OpenMPCUDABlocksPerSM  , 32, 0, "Number of blocks per SM for CUDA devices.")
 LANGOPT(OpenMPCUDAReductionBufNum , 32, 1024, "Number of the reduction records in the intermediate reduction buffer used for the teams reductions.")
 LANGOPT(OpenMPGPUThreadsPerTeam, 32, 256, "Number of threads per team for GPUs.")
-LANGOPT(OpenMPTargetNewRuntime , 1, 0, "Use the new bitcode library for OpenMP offloading")
+LANGOPT(OpenMPTargetNewRuntime , 1, 1, "Use the new bitcode library for OpenMP offloading")
 LANGOPT(OpenMPTargetDebug , 32, 0, "Enable debugging in the OpenMP offloading device RTL")
 LANGOPT(OpenMPTargetIgnoreEnvVars , 1, 0, "Generate code assuming that device related environment variables can be ignored.")
 LANGOPT(OpenMPOptimisticCollapse  , 1, 0, "Use at most 32 bits to represent the collapsed loop nest counter.")
@@ -429,6 +430,7 @@ LANGOPT(PaddingOnUnsignedFixedPoint, 1, 0,
 LANGOPT(RegisterStaticDestructors, 1, 1, "Register C++ static destructors")
 
 LANGOPT(MatrixTypes, 1, 0, "Enable or disable the builtin matrix type")
+LANGOPT(StrictFlexArrays, 2, 0, "Rely on strict definition of flexible arrays")
 
 COMPATIBLE_VALUE_LANGOPT(MaxTokens, 32, 0, "Max number of tokens per TU or 0")
 
