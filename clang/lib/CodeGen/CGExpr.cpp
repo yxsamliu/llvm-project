@@ -1746,7 +1746,8 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
   if (EmitScalarRangeCheck(Load, Ty, Loc)) {
     // In order to prevent the optimizer from throwing away the check, don't
     // attach range metadata to the load.
-  } else if (CGM.getCodeGenOpts().OptimizationLevel > 0)
+  } else if (CGM.getCodeGenOpts().OptimizationLevel > 0 &&
+             !(getLangOpts().CUDA && getLangOpts().CUDAIsDevice))
     if (llvm::MDNode *RangeInfo = getRangeForLoadFromType(Ty))
       Load->setMetadata(llvm::LLVMContext::MD_range, RangeInfo);
 
