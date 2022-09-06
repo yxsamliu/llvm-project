@@ -304,13 +304,13 @@ public:
 
   /// Kernel specific metadata used for communicating between CodeGen phases
   /// while generating an optimized reduction kernel
-  struct SpecRedKernelMetadata {
-    const Stmt *SpecRedStmt = nullptr;
-    Address SpecRedLocalAddr = Address::invalid();
+  struct XteamRedKernelMetadata {
+    const Stmt *XteamRedStmt = nullptr;
+    Address XteamRedLocalAddr = Address::invalid();
   };
-  using SpecRedKernelInfo =
-      std::pair<NoLoopIntermediateStmts, SpecRedKernelMetadata>;
-  using SpecRedKernelMap = llvm::DenseMap<const Stmt *, SpecRedKernelInfo>;
+  using XteamRedKernelInfo =
+      std::pair<NoLoopIntermediateStmts, XteamRedKernelMetadata>;
+  using XteamRedKernelMap = llvm::DenseMap<const Stmt *, XteamRedKernelInfo>;
 
 private:
   ASTContext &Context;
@@ -328,6 +328,9 @@ private:
   std::string ModuleNameHash;
   bool CXX20ModuleInits = false;
   std::unique_ptr<CodeGenTBAA> TBAA;
+
+  /// Used by emitParallelCall
+  bool isSPMDExecutionMode = false;
 
   mutable std::unique_ptr<TargetCodeGenInfo> TheTargetCodeGenInfo;
 
@@ -352,7 +355,7 @@ private:
   std::unique_ptr<llvm::SanitizerStatReport> SanStats;
 
   NoLoopKernelMap NoLoopKernels;
-  SpecRedKernelMap SpecRedKernels;
+  XteamRedKernelMap XteamRedKernels;
 
   // A set of references that have only been seen via a weakref so far. This is
   // used to remove the weak of the reference if we ever see a direct reference
@@ -637,6 +640,9 @@ public:
   bool hasObjCRuntime() { return !!ObjCRuntime; }
 
   const std::string &getModuleNameHash() const { return ModuleNameHash; }
+
+  void setIsSPMDExecutionMode(bool isSPMD) { isSPMDExecutionMode = isSPMD; }
+  bool IsSPMDExecutionMode() { return isSPMDExecutionMode; }
 
   /// Return a reference to the configured OpenCL runtime.
   CGOpenCLRuntime &getOpenCLRuntime() {
@@ -1547,15 +1553,19 @@ public:
   const ForStmt *getSingleForStmt(const Stmt *S);
 
   /// Does the loop init qualify for a NoLoop kernel?
-  bool checkDeclStmt(const ForStmt &FStmt);
-  bool checkInitExpr(const ForStmt &FStmt);
-  bool checkLoopInit(const ForStmt &FStmt);
+  const VarDecl *checkDeclStmt(const ForStmt &FStmt);
+  const VarDecl *checkInitExpr(const ForStmt &FStmt);
+  const VarDecl *checkLoopInit(const ForStmt &FStmt);
 
   /// Does the loop increment qualify for a NoLoop kernel?
-  bool checkLoopStep(const ForStmt &FStmt);
+  bool checkLoopStep(const Expr *Inc, const VarDecl *VD);
 
   /// Does the loop condition qualify for a NoLoop kernel?
   bool checkLoopStop(const ForStmt &FStmt);
+
+  /// If the step is a binary expression, extract and return the step.
+  /// If the step is a unary expression, return nullptr.
+  const Expr *getBinaryExprStep(const Expr *Inc, const VarDecl *VD);
 
   /// If we are able to generate a NoLoop kernel for this directive, return
   /// true, otherwise return false. If successful, a map is created from the
@@ -1578,36 +1588,35 @@ public:
     return NoLoopKernels.find(S) != NoLoopKernels.end();
   }
 
-  bool checkAndSetSpecialRedKernel(const OMPExecutableDirective &D);
+  bool checkAndSetXteamRedKernel(const OMPExecutableDirective &D);
 
-  const NoLoopIntermediateStmts &getSpecRedStmts(const Stmt *S) {
-    assert(isSpecRedKernel(S));
-    return SpecRedKernels.find(S)->second.first;
+  const NoLoopIntermediateStmts &getXteamRedStmts(const Stmt *S) {
+    assert(isXteamRedKernel(S));
+    return XteamRedKernels.find(S)->second.first;
   }
 
-  const SpecRedKernelMetadata &getSpecRedKernelMetadata(const Stmt *S) {
-    assert(isSpecRedKernel(S));
-    return SpecRedKernels.find(S)->second.second;
+  const XteamRedKernelMetadata &getXteamRedKernelMetadata(const Stmt *S) {
+    assert(isXteamRedKernel(S));
+    return XteamRedKernels.find(S)->second.second;
   }
 
-  void setSpecRedKernelMetadata(const Stmt *S,
-                                const SpecRedKernelMetadata &MD) {
-    assert(isSpecRedKernel(S));
-    SpecRedKernels.find(S)->second.second = MD;
+  void setXteamRedKernelMetadata(const Stmt *S,
+                                 const XteamRedKernelMetadata &MD) {
+    assert(isXteamRedKernel(S));
+    XteamRedKernels.find(S)->second.second = MD;
   }
 
   /// Erase spec-red related metadata for the input statement
-  void resetSpecRedKernel(const Stmt *S) { SpecRedKernels.erase(S); }
-  /// Are we generating special reduction kernel for the statement
-  bool isSpecRedKernel(const Stmt *S) {
-    return SpecRedKernels.find(S) != SpecRedKernels.end();
+  void resetXteamRedKernel(const Stmt *S) { XteamRedKernels.erase(S); }
+  /// Are we generating xteam reduction kernel for the statement
+  bool isXteamRedKernel(const Stmt *S) {
+    return XteamRedKernels.find(S) != XteamRedKernels.end();
   }
 
   /// Move some lazily-emitted states to the NewBuilder. This is especially
   /// essential for the incremental parsing environment like Clang Interpreter,
   /// because we'll lose all important information after each repl.
   void moveLazyEmissionStates(CodeGenModule *NewBuilder);
-
 
 private:
   llvm::Constant *GetOrCreateLLVMFunction(
@@ -1801,8 +1810,8 @@ private:
   /// Top level checker for no-loop on the for statement
   bool isForStmtNoLoopConforming(const Stmt *);
 
-  /// Top level checker for special reduction of the loop
-  bool isForStmtSpecRedConforming(const Stmt *);
+  /// Top level checker for xteam reduction of the loop
+  bool isForStmtXteamRedConforming(const Stmt *);
 
   /// Used for a target construct
   bool checkAndSetNoLoopTargetConstruct(const OMPExecutableDirective &D);
@@ -1811,11 +1820,11 @@ private:
   /// codegen?
   bool areCombinedClausesNoLoopCompatible(const OMPExecutableDirective &D);
 
-  /// Are clauses on a combined OpenMP construct compatible with special
+  /// Are clauses on a combined OpenMP construct compatible with xteam
   /// reduction codegen?
-  bool areCombinedClausesSpecRedCompatible(const OMPExecutableDirective &D);
+  bool areCombinedClausesXteamRedCompatible(const OMPExecutableDirective &D);
 
-  /// Is the reduction clause compatible with special reduction codegen?
+  /// Is the reduction clause compatible with xteam reduction codegen?
   bool canHandleReductionClause(const OMPExecutableDirective &D);
 
   /// Populate the map used for no-loop codegen
@@ -1824,9 +1833,9 @@ private:
     NoLoopKernels[S] = IntermediateStmts;
   }
 
-  /// Populate the map used for special reduction codegen
-  void setSpecRedKernel(const Stmt *S, SpecRedKernelInfo KI) {
-    SpecRedKernels[S] = KI;
+  /// Populate the map used for xteam reduction codegen
+  void setXteamRedKernel(const Stmt *S, XteamRedKernelInfo KI) {
+    XteamRedKernels[S] = KI;
   }
 };
 

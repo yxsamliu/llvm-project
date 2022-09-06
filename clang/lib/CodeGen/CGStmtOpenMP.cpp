@@ -694,17 +694,16 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
     EmitOMPPrivateClause(D, PrivateScope);
     (void)PrivateScope.Privatize();
 
-    EmitNoLoopKernel(D, D.getAssociatedStmt(),
-                     CGM.getNoLoopStmts(D.getAssociatedStmt()), Loc);
-  } else if (D.hasAssociatedStmt() &&
-             CGM.isSpecRedKernel(CGM.getSingleForStmt(D.getAssociatedStmt()))) {
+    EmitNoLoopKernel(D, Loc);
+  } else if (D.hasAssociatedStmt() && CGM.isXteamRedKernel(CGM.getSingleForStmt(
+                                          D.getAssociatedStmt()))) {
     OMPPrivateScope PrivateScope(*this);
     EmitOMPPrivateClause(D, PrivateScope);
     (void)PrivateScope.Privatize();
 
-    EmitSpecRedKernel(
+    EmitXteamRedKernel(
         D, D.getAssociatedStmt(),
-        CGM.getSpecRedStmts(CGM.getSingleForStmt(D.getAssociatedStmt())), Loc);
+        CGM.getXteamRedStmts(CGM.getSingleForStmt(D.getAssociatedStmt())), Loc);
   } else {
     CapturedStmtInfo->EmitBody(*this, CD->getBody());
   }
@@ -2012,6 +2011,16 @@ void CodeGenFunction::EmitOMPLoopBody(const OMPLoopDirective &D,
   // The end (updates/cleanups).
   EmitBlock(Continue.getBlock());
   BreakContinueStack.pop_back();
+}
+
+void CodeGenFunction::EmitOMPNoLoopBody(const OMPLoopDirective &D) {
+  const Stmt *Body =
+      D.getInnermostCapturedStmt()->getCapturedStmt()->IgnoreContainers();
+  // Emit loop body.
+  emitBody(*this, Body,
+           OMPLoopBasedDirective::tryToFindNextInnerLoop(
+               Body, /*TryImperfectlyNestedLoops=*/true),
+           D.getLoopsNumber());
 }
 
 using EmittedClosureTy = std::pair<llvm::Function *, llvm::Value *>;
@@ -5332,9 +5341,21 @@ void CodeGenFunction::EmitOMPTaskgroupDirective(
 }
 
 void CodeGenFunction::EmitOMPFlushDirective(const OMPFlushDirective &S) {
-  llvm::AtomicOrdering AO = S.getSingleClause<OMPFlushClause>()
-                                ? llvm::AtomicOrdering::NotAtomic
-                                : llvm::AtomicOrdering::AcquireRelease;
+  // assume implicit FlushClause is used and change to AcquireRelease if not
+  // used
+  llvm::AtomicOrdering AO = llvm::AtomicOrdering::NotAtomic;
+  if (!S.getSingleClause<OMPFlushClause>()) {
+    AO = llvm::AtomicOrdering::AcquireRelease;
+    if (S.getSingleClause<OMPSeqCstClause>())
+      AO = llvm::AtomicOrdering::SequentiallyConsistent;
+    else if (S.getSingleClause<OMPAcqRelClause>())
+      AO = llvm::AtomicOrdering::AcquireRelease;
+    else if (S.getSingleClause<OMPAcquireClause>())
+      AO = llvm::AtomicOrdering::Acquire;
+    else if (S.getSingleClause<OMPReleaseClause>())
+      AO = llvm::AtomicOrdering::Release;
+  }
+
   CGM.getOpenMPRuntime().emitFlush(
       *this,
       [&S]() -> ArrayRef<const Expr *> {

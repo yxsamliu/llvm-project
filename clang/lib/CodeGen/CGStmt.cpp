@@ -57,8 +57,8 @@ Address CodeGenFunction::getAddressFromDeclStmt(const ForStmt &FStmt) {
   const Stmt *InitStmt = FStmt.getInit();
   const DeclStmt &InitDeclStmt = cast<DeclStmt>(*InitStmt);
   const Decl *InitDecl = InitDeclStmt.getSingleDecl();
-  // Do an emit so as to populate the appropriate data structures.
-  EmitAutoVarDecl(cast<VarDecl>(*InitDecl));
+  if (!hasAddrOfLocalVar(cast<VarDecl>(InitDecl)))
+    EmitAutoVarDecl(cast<VarDecl>(*InitDecl));
   return GetAddrOfLocalVar(cast<VarDecl>(InitDecl));
 }
 
@@ -78,9 +78,33 @@ Address CodeGenFunction::getAddressFromExpr(const ForStmt &FStmt) {
   return IvAddr;
 }
 
-Address CodeGenFunction::EmitSpecRedStartingIndex(const ForStmt &FStmt) {
-  Address IvAddr = CGM.checkDeclStmt(FStmt) ? getAddressFromDeclStmt(FStmt)
-                                            : getAddressFromExpr(FStmt);
+llvm::Value *CodeGenFunction::applyNoLoopInc(const Expr *Inc,
+                                             const VarDecl *IVDecl,
+                                             llvm::Value *CurrVal) {
+  // If we reach here, it must be a unary increment or a binary
+  // step expression. For a binary expression, generate myid = step * myid
+  const Expr *StepExpr = CGM.getBinaryExprStep(Inc, IVDecl);
+  if (StepExpr == nullptr)
+    return CurrVal; // nothing to do
+  llvm::Value *StepVal = EmitScalarExpr(StepExpr);
+  return Builder.CreateMul(
+      Builder.CreateIntCast(CurrVal, ConvertTypeForMem(StepExpr->getType()),
+                            false),
+      StepVal);
+}
+
+std::pair<const VarDecl *, Address>
+CodeGenFunction::EmitXteamRedStartingIndex(const ForStmt &FStmt) {
+  Address IvAddr = Address::invalid();
+  const VarDecl *LoopVD = CGM.checkDeclStmt(FStmt);
+  if (LoopVD != nullptr)
+    IvAddr = getAddressFromDeclStmt(FStmt);
+  else {
+    LoopVD = CGM.checkInitExpr(FStmt);
+    assert(LoopVD != nullptr &&
+           "Cannot generate reduction kernel with a null loop var");
+    IvAddr = getAddressFromExpr(FStmt);
+  }
 
   // Generate idx = workgroup_id * workgroup_size + workitem_id
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
@@ -89,13 +113,19 @@ Address CodeGenFunction::EmitSpecRedStartingIndex(const ForStmt &FStmt) {
   llvm::Value *GpuThreadId = RT.getGPUThreadID(*this);
 
   // workgroup_size
-  llvm::Value *WorkGroupSize = RT.getSpecRedGUPBlockSize(*this);
+  llvm::Value *WorkGroupSize = RT.getXteamRedBlockSize(*this);
 
   // workgroup_id
   llvm::Value *WorkGroupId = RT.getGPUBlockID(*this);
 
   llvm::Value *WorkGroup = Builder.CreateMul(WorkGroupId, WorkGroupSize);
   llvm::Value *GlobalGpuThreadId = Builder.CreateAdd(WorkGroup, GpuThreadId);
+
+  // Check the loop increment
+  assert(CGM.checkLoopStep(FStmt.getInc(), LoopVD) && "Loop incr check failed");
+
+  // Handle stride
+  GlobalGpuThreadId = applyNoLoopInc(FStmt.getInc(), LoopVD, GlobalGpuThreadId);
 
   // Generate my_index = my_index + myid. Note that my_index was already
   // initialized
@@ -104,15 +134,24 @@ Address CodeGenFunction::EmitSpecRedStartingIndex(const ForStmt &FStmt) {
   llvm::Value *Iv = Builder.CreateAdd(Gtid, Builder.CreateLoad(IvAddr));
   Builder.CreateStore(Iv, IvAddr);
 
-  return IvAddr;
+  return std::make_pair(LoopVD, IvAddr);
 }
 
-void CodeGenFunction::EmitSpecRedInc(const Address &NoLoopIvAddr) {
+void CodeGenFunction::EmitXteamRedInc(const ForStmt &FStmt,
+                                      const VarDecl *LoopVD,
+                                      const Address &NoLoopIvAddr) {
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
-  llvm::Value *BlockSize = RT.getSpecRedGUPBlockSize(*this);
+  llvm::Value *BlockSize = RT.getXteamRedBlockSize(*this);
   llvm::Value *NumBlocks = RT.getGPUNumBlocks(*this);
   // prod = block_size * num_blocks
   llvm::Value *Prod = Builder.CreateMul(BlockSize, NumBlocks);
+
+  // Check the loop increment
+  assert(CGM.checkLoopStep(FStmt.getInc(), LoopVD) && "Loop incr check failed");
+
+  // Handle stride
+  Prod = applyNoLoopInc(FStmt.getInc(), LoopVD, Prod);
+
   // *iv = *iv + prod
   llvm::Value *ProdRes =
       Builder.CreateIntCast(Prod, NoLoopIvAddr.getElementType(), false);
@@ -121,106 +160,113 @@ void CodeGenFunction::EmitSpecRedInc(const Address &NoLoopIvAddr) {
   Builder.CreateStore(NoLoopInc, NoLoopIvAddr);
 }
 
-void CodeGenFunction::EmitNoLoopKernel(
-    const OMPExecutableDirective &D, const Stmt *S,
-    const CodeGenModule::NoLoopIntermediateStmts &IntermediateStmts,
-    SourceLocation Loc) {
-  assert(S && "Null statement?");
-
+void CodeGenFunction::EmitNoLoopKernel(const OMPExecutableDirective &D,
+                                       SourceLocation Loc) {
   if (!HaveInsertPoint())
     EnsureInsertPoint();
 
-  auto handleForStmt = [](const ForStmt &FStmt, CodeGenFunction *CGFunc) {
-    Address IvAddr = CGFunc->CGM.checkDeclStmt(FStmt)
-                         ? CGFunc->getAddressFromDeclStmt(FStmt)
-                         : CGFunc->getAddressFromExpr(FStmt);
+  auto emitNoLoopCodeForDirective = [this](const OMPExecutableDirective &D) {
+    assert(isa<OMPLoopDirective>(D) && "Unexpected directive");
+    const OMPLoopDirective &LD = cast<OMPLoopDirective>(D);
 
-    // We generate NoLoop kernel for the device, not the host
-    assert(CGFunc->CGM.getLangOpts().OpenMPIsDevice);
+    // Emit the original loop indices
+    for (const Expr *CE : LD.counters()) {
+      const auto *CEDecl = cast<VarDecl>(cast<DeclRefExpr>(CE)->getDecl());
+      if (!hasAddrOfLocalVar(CEDecl))
+        EmitVarDecl(*CEDecl);
+    }
 
+    // Emit the preinits
+    const DeclStmt *PreInits = cast_or_null<DeclStmt>(LD.getPreInits());
+    if (PreInits) {
+      for (const auto *I : PreInits->decls()) {
+        EmitVarDecl(cast<VarDecl>(*I));
+      }
+    }
+
+    // Emit the inits of original loop indices
+    for (const Expr *CIE : LD.inits()) {
+      EmitIgnoredExpr(CIE);
+    }
+
+    // Emit the lower and upper bounds
+    const auto *LBDecl =
+        cast<VarDecl>(cast<DeclRefExpr>(LD.getLowerBoundVariable())->getDecl());
+    EmitVarDecl(*LBDecl);
+    const auto *UBDecl =
+        cast<VarDecl>(cast<DeclRefExpr>(LD.getUpperBoundVariable())->getDecl());
+    EmitVarDecl(*UBDecl);
+
+    // Emit the iteration variable of the collapsed loop
+    const auto *IVDecl =
+        cast<VarDecl>(cast<DeclRefExpr>(LD.getIterationVariable())->getDecl());
+    EmitVarDecl(*IVDecl);
+
+    // Emit init of the iteration variable
+    EmitIgnoredExpr(LD.getInit());
+
+    Address IvAddr = GetAddrOfLocalVar(IVDecl);
     // Generate myid = workgroup_id * workgroup_size + workitem_id
-    auto &RT =
-        static_cast<CGOpenMPRuntimeGPU &>(CGFunc->CGM.getOpenMPRuntime());
+    auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
 
     // workitem_id
-    llvm::Value *GpuThreadId = RT.getGPUThreadID(*CGFunc);
+    llvm::Value *GpuThreadId = RT.getGPUThreadID(*this);
 
     // workgroup_size
-    llvm::Value *WorkGroupSize = RT.getGPUCompleteBlockSize(*CGFunc);
+    llvm::Value *WorkGroupSize = RT.getGPUCompleteBlockSize(*this);
 
     // workgroup_id
-    llvm::Value *WorkGroupId = RT.getGPUBlockID(*CGFunc);
+    llvm::Value *WorkGroupId = RT.getGPUBlockID(*this);
 
-    llvm::Value *WorkGroup =
-        CGFunc->Builder.CreateMul(WorkGroupId, WorkGroupSize);
-    llvm::Value *GlobalGpuThreadId =
-        CGFunc->Builder.CreateAdd(WorkGroup, GpuThreadId);
+    llvm::Value *WorkGroup = Builder.CreateMul(WorkGroupId, WorkGroupSize);
+    llvm::Value *GlobalGpuThreadId = Builder.CreateAdd(WorkGroup, GpuThreadId);
+
+    // Check the loop increment
+    assert(CGM.checkLoopStep(LD.getInc(), IVDecl) && "Loop incr check failed");
+
+    // Handle stride
+    GlobalGpuThreadId = applyNoLoopInc(LD.getInc(), IVDecl, GlobalGpuThreadId);
 
     // Generate my_index = my_index + myid. Note that my_index was already
     // initialized
-    llvm::Value *Gtid = CGFunc->Builder.CreateIntCast(
-        GlobalGpuThreadId, IvAddr.getElementType(), false);
-    llvm::Value *Iv =
-        CGFunc->Builder.CreateAdd(Gtid, CGFunc->Builder.CreateLoad(IvAddr));
-    CGFunc->Builder.CreateStore(Iv, IvAddr);
+    llvm::Value *Gtid = Builder.CreateIntCast(GlobalGpuThreadId,
+                                              IvAddr.getElementType(), false);
+    llvm::Value *Iv = Builder.CreateAdd(Gtid, Builder.CreateLoad(IvAddr));
+    Builder.CreateStore(Iv, IvAddr);
 
-    // Check the loop increment
-    assert(CGFunc->CGM.checkLoopStep(FStmt) && "Loop incr check failed");
+    // Emit updates of the original loop indices
+    for (const Expr *UE : LD.updates())
+      EmitIgnoredExpr(UE);
 
-    // Check the loop condition
-    assert(CGFunc->CGM.checkLoopStop(FStmt) && "Loop cond check failed");
+    // Branch to end if original loop condition not satisfied
+    llvm::Value *IvCmp = EvaluateExprAsBool(LD.getCond());
 
-    // Now branch to the appropriate code block if my_index is within upper
-    // bound
-    const BinaryOperator &FCondOp = cast<BinaryOperator>(*FStmt.getCond());
-    llvm::Value *RhsVal = CGFunc->EmitScalarExpr(FCondOp.getRHS());
+    llvm::BasicBlock *ExecBB = createBasicBlock("omp.kernel.body");
+    llvm::BasicBlock *DoneBB = createBasicBlock("omp.kernel.done");
 
-    assert(Iv->getType()->isIntegerTy());
-    llvm::CmpInst::Predicate IvCmpOp;
-    switch (FCondOp.getOpcode()) {
-    case BO_LT:
-      IvCmpOp = llvm::CmpInst::ICMP_ULT;
-      break;
-    case BO_GT:
-      IvCmpOp = llvm::CmpInst::ICMP_UGT;
-      break;
-    case BO_LE:
-      IvCmpOp = llvm::CmpInst::ICMP_ULE;
-      break;
-    case BO_GE:
-      IvCmpOp = llvm::CmpInst::ICMP_UGE;
-      break;
-    case BO_EQ:
-      IvCmpOp = llvm::CmpInst::ICMP_EQ;
-      break;
-    case BO_NE:
-      IvCmpOp = llvm::CmpInst::ICMP_NE;
-      break;
-    default:
-      assert(0 && "Unsupported opcode");
-      break;
-    }
+    Builder.CreateCondBr(IvCmp, ExecBB, DoneBB);
 
-    llvm::Value *IvCmp = CGFunc->Builder.CreateICmp(
-        IvCmpOp, Iv,
-        CGFunc->Builder.CreateIntCast(RhsVal, Iv->getType(), false));
-
-    llvm::BasicBlock *ExecBB = CGFunc->createBasicBlock("omp.kernel.body");
-    llvm::BasicBlock *DoneBB = CGFunc->createBasicBlock("omp.kernel.done");
-    CGFunc->Builder.CreateCondBr(IvCmp, ExecBB, DoneBB);
+    // On a continue in the body, jump to the end.
+    // A break is not allowed in this scope but it would be the end anyways
+    JumpDest Continue = getJumpDestInCurrentScope(DoneBB);
+    BreakContinueStack.push_back(BreakContinue(Continue, Continue));
 
     // Emit the kernel body block
-    CGFunc->EmitBlock(ExecBB);
-    CGFunc->EmitStmt(FStmt.getBody());
-    CGFunc->EmitBranch(DoneBB);
+    EmitBlock(ExecBB);
+    EmitOMPNoLoopBody(LD);
+    EmitBranch(DoneBB);
 
-    CGFunc->EmitBlock(DoneBB);
-    CGFunc->Builder.CreateRetVoid();
-    CGFunc->Builder.ClearInsertionPoint();
+    EmitBlock(DoneBB);
+    Builder.CreateRetVoid();
+    Builder.ClearInsertionPoint();
+    BreakContinueStack.pop_back();
   };
 
+  const Stmt *S = D.getAssociatedStmt();
   // For non-combined constructs, the for loop has to be retrieved from
   // the intermediate statements
+  const CodeGenModule::NoLoopIntermediateStmts &IntermediateStmts =
+      CGM.getNoLoopStmts(S);
   if (!IntermediateStmts.empty()) {
     // For now, we support at most one level of nesting
     assert(IntermediateStmts.size() == 1);
@@ -229,13 +275,13 @@ void CodeGenFunction::EmitNoLoopKernel(
     EmitOMPPrivateClause(*NoLoopDir, PrivateScope);
     (void)PrivateScope.Privatize();
     S = NoLoopDir->getAssociatedStmt();
+    emitNoLoopCodeForDirective(*NoLoopDir);
+  } else {
+    emitNoLoopCodeForDirective(D);
   }
-  const ForStmt *CapturedForStmt = CGM.getSingleForStmt(S);
-  assert(CapturedForStmt && "Cannot generate kernel for null captured stmt");
-  handleForStmt(*CapturedForStmt, this);
 }
 
-void CodeGenFunction::EmitSpecRedKernel(
+void CodeGenFunction::EmitXteamRedKernel(
     const OMPExecutableDirective &D, const Stmt *S,
     const CodeGenModule::NoLoopIntermediateStmts &IntermediateStmts,
     SourceLocation Loc) {
@@ -263,7 +309,7 @@ void CodeGenFunction::EmitSpecRedKernel(
 
   // Create a local aggregator variable and initialize it to 0
   const Expr *LHS = cast<BinaryOperator>(cast<Expr>(BodyStmt))->getLHS();
-  llvm::AllocaInst *SpecRedInst =
+  llvm::AllocaInst *XteamRedInst =
       Builder.CreateAlloca(ConvertTypeForMem(LHS->getType()));
   llvm::Value *InitVal;
 
@@ -272,25 +318,25 @@ void CodeGenFunction::EmitSpecRedKernel(
   assert((LHSType->isFloatTy() || LHSType->isDoubleTy()) && "Unhandled type");
   InitVal = llvm::ConstantFP::getZero(LHSType);
 
-  Address SpecRedAddr(SpecRedInst, LHSType,
-                      getContext().getTypeAlignInChars(LHS->getType()));
-  llvm::StoreInst *SpecRedInstInit = Builder.CreateStore(InitVal, SpecRedAddr);
+  Address XteamRedAddr(XteamRedInst, LHSType,
+                       getContext().getTypeAlignInChars(LHS->getType()));
+  Builder.CreateStore(InitVal, XteamRedAddr);
   // Done local var init to 0
 
-  CodeGenModule::SpecRedKernelMetadata MD;
-  MD.SpecRedStmt = BodyStmt;
-  MD.SpecRedLocalAddr = SpecRedAddr;
-  CGM.setSpecRedKernelMetadata(CapturedForStmt, MD);
+  CodeGenModule::XteamRedKernelMetadata MD;
+  MD.XteamRedStmt = BodyStmt;
+  MD.XteamRedLocalAddr = XteamRedAddr;
+  CGM.setXteamRedKernelMetadata(CapturedForStmt, MD);
 
   EmitStmt(CapturedForStmt);
 
-  // Emit __kmpc_xteam_sum(*spec_red_local_addr, red_var_addr)
+  // Emit __kmpc_xteam_sum(*xteam_red_local_addr, red_var_addr)
   // TODO The following must use the intermediate directive, if present
   const DeclRefExpr *LHSDecl = cast<DeclRefExpr>(LHS);
   assert(LHSDecl);
   Address RedVarAddr = EmitLValue(LHSDecl).getAddress(*this);
   // Pass in RedVarAddr.getPointer to kmpc_xteam_sum
-  RT.getGPUXteamSum(*this, Builder.CreateLoad(SpecRedAddr),
+  RT.getXteamRedSum(*this, Builder.CreateLoad(XteamRedAddr),
                     RedVarAddr.getPointer());
 }
 
@@ -1262,9 +1308,13 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
   LexicalScope ForScope(*this, S.getSourceRange());
 
-  Address SpecRedIvAddr = Address::invalid();
-  if (CGM.getLangOpts().OpenMPIsDevice && CGM.isSpecRedKernel(&S)) {
-    SpecRedIvAddr = EmitSpecRedStartingIndex(S);
+  Address XteamRedIvAddr = Address::invalid();
+  const VarDecl *LoopVar = nullptr;
+  if (CGM.getLangOpts().OpenMPIsDevice && CGM.isXteamRedKernel(&S)) {
+    std::pair<const VarDecl *, Address> LoopVarInfo =
+        EmitXteamRedStartingIndex(S);
+    LoopVar = LoopVarInfo.first;
+    XteamRedIvAddr = LoopVarInfo.second;
   } else {
     // Evaluate the first part before the loop.
     if (S.getInit())
@@ -1349,32 +1399,33 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   }
   incrementProfileCounter(&S);
 
-  const Stmt *SpecRedStmt = nullptr;
-  Address SpecRedLocalAddr = Address::invalid();
+  const Stmt *XteamRedStmt = nullptr;
+  Address XteamRedLocalAddr = Address::invalid();
   {
     // Create a separate cleanup scope for the body, in case it is not
     // a compound statement.
     RunCleanupsScope BodyScope(*this);
-    if (CGM.getLangOpts().OpenMPIsDevice && CGM.isSpecRedKernel(&S)) {
-      const CodeGenModule::SpecRedKernelMetadata &SpecRedKernelMD =
-          CGM.getSpecRedKernelMetadata(&S);
-      SpecRedStmt = SpecRedKernelMD.SpecRedStmt;
-      SpecRedLocalAddr = SpecRedKernelMD.SpecRedLocalAddr;
-      const Expr *RHS = cast<BinaryOperator>(cast<Expr>(SpecRedStmt))->getRHS();
+    if (CGM.getLangOpts().OpenMPIsDevice && CGM.isXteamRedKernel(&S)) {
+      const CodeGenModule::XteamRedKernelMetadata &XteamRedKernelMD =
+          CGM.getXteamRedKernelMetadata(&S);
+      XteamRedStmt = XteamRedKernelMD.XteamRedStmt;
+      XteamRedLocalAddr = XteamRedKernelMD.XteamRedLocalAddr;
+      const Expr *RHS =
+          cast<BinaryOperator>(cast<Expr>(XteamRedStmt))->getRHS();
       llvm::Value *RHSValue = EmitScalarExpr(RHS);
-      // Compute *spec_red_local_addr + rhs_value
-      llvm::Value *SpecRHS =
-          Builder.CreateFAdd(RHSValue, Builder.CreateLoad(SpecRedLocalAddr));
-      // *spec_red_local_addr = *spec_red_local_addr + rhs_value
-      llvm::StoreInst *NewBodyRedStmt =
-          Builder.CreateStore(SpecRHS, SpecRedLocalAddr);
+      // Compute *xteam_red_local_addr + rhs_value
+      llvm::Value *RedRHS =
+          Builder.CreateFAdd(RHSValue, Builder.CreateLoad(XteamRedLocalAddr));
+      // *xteam_red_local_addr = *xteam_red_local_addr + rhs_value
+      Builder.CreateStore(RedRHS, XteamRedLocalAddr);
     } else
       EmitStmt(S.getBody());
   }
 
-  if (CGM.getLangOpts().OpenMPIsDevice && CGM.isSpecRedKernel(&S)) {
+  if (CGM.getLangOpts().OpenMPIsDevice && CGM.isXteamRedKernel(&S)) {
     EmitBlock(Continue.getBlock());
-    EmitSpecRedInc(SpecRedIvAddr); // *iv = *iv + num_teams * num_threads
+    EmitXteamRedInc(S, LoopVar,
+                    XteamRedIvAddr); // *iv = *iv + num_teams * num_threads
   } else {
     // If there is an increment, emit it next.
     if (S.getInc()) {

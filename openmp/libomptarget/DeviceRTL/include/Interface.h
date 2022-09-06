@@ -171,6 +171,48 @@ double omp_get_wtick(void);
 
 double omp_get_wtime(void);
 ///}
+
+/// OpenMP 5.1 Memory Management routines (from libomp)
+/// OpenMP allocator API is currently unimplemented, including traits.
+/// All allocation routines will directly call the global memory allocation
+/// routine and, consequently, omp_free will call device memory deallocation.
+///
+/// {
+omp_allocator_handle_t omp_init_allocator(omp_memspace_handle_t m, int ntraits,
+                                          omp_alloctrait_t traits[]);
+
+void omp_destroy_allocator(omp_allocator_handle_t allocator);
+
+void omp_set_default_allocator(omp_allocator_handle_t a);
+
+omp_allocator_handle_t omp_get_default_allocator(void);
+
+void *omp_alloc(uint64_t size,
+                omp_allocator_handle_t allocator = omp_null_allocator);
+
+void *omp_aligned_alloc(uint64_t align, uint64_t size,
+                        omp_allocator_handle_t allocator = omp_null_allocator);
+
+void *omp_calloc(uint64_t nmemb, uint64_t size,
+                 omp_allocator_handle_t allocator = omp_null_allocator);
+
+void *omp_aligned_calloc(uint64_t align, uint64_t nmemb, uint64_t size,
+                         omp_allocator_handle_t allocator = omp_null_allocator);
+
+void *omp_realloc(void *ptr, uint64_t size,
+                  omp_allocator_handle_t allocator = omp_null_allocator,
+                  omp_allocator_handle_t free_allocator = omp_null_allocator);
+
+void omp_free(void *ptr, omp_allocator_handle_t allocator = omp_null_allocator);
+/// }
+
+/// CUDA exposes a native malloc/free API, while ROCm does not.
+//// Any re-definitions of malloc/free delete the native CUDA
+//// but they are necessary
+#ifdef __AMDGCN__
+void *malloc(uint64_t Size);
+void free(void *Ptr);
+#endif
 }
 
 extern "C" {
@@ -252,8 +294,62 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
 
 /// Cross team helper functions for special case reductions
 ///{
+///   THESE INTERFACES kmpc_xteam_ WILL BE DEPRACATED AND REPLACED WITH BELOW
+///   kmpc_xteamr_
 void __kmpc_xteam_sum_d(double, double *);
 void __kmpc_xteam_sum_f(float, float *);
+void __kmpc_xteam_sum_cd(double _Complex, double _Complex *);
+void __kmpc_xteam_sum_cf(float _Complex, float _Complex *);
+void __kmpc_xteam_sum_i(int, int *);
+void __kmpc_xteam_sum_ui(unsigned int, unsigned int *);
+void __kmpc_xteam_sum_l(long int, long int *);
+void __kmpc_xteam_sum_ul(unsigned long, unsigned long *);
+void __kmpc_xteam_max_d(double, double *);
+void __kmpc_xteam_max_f(float, float *);
+void __kmpc_xteam_max_i(int, int *);
+void __kmpc_xteam_max_ui(unsigned int, unsigned int *);
+void __kmpc_xteam_max_l(long int, long int *);
+void __kmpc_xteam_max_ul(unsigned long, unsigned long *);
+void __kmpc_xteam_min_d(double, double *);
+void __kmpc_xteam_min_f(float, float *);
+void __kmpc_xteam_min_i(int, int *);
+void __kmpc_xteam_min_ui(unsigned int, unsigned int *);
+void __kmpc_xteam_min_l(long int, long int *);
+void __kmpc_xteam_min_ul(unsigned long, unsigned long *);
+
+///  __kmpc_xteamr_<rtype>_<dtype>: Helper functions for Cross Team reductions
+///    arg1: the thread local reduction value.
+///    arg2: pointer to where result is written.
+///    arg3: global array of team values for this reduction instance.
+///    arg4: atomic counter of completed teams for this reduction instance.
+void __kmpc_xteamr_sum_d(double, double *, double *, uint32_t *);
+void __kmpc_xteamr_sum_f(float, float *, float *, uint32_t *);
+void __kmpc_xteamr_sum_cd(double _Complex, double _Complex *, double _Complex *,
+                          uint32_t *);
+void __kmpc_xteamr_sum_cf(float _Complex, float _Complex *, float _Complex *,
+                          uint32_t *);
+void __kmpc_xteamr_sum_i(int, int *, int *, uint32_t *);
+void __kmpc_xteamr_sum_ui(unsigned int, unsigned int *, unsigned int *,
+                          uint32_t *);
+void __kmpc_xteamr_sum_l(long int, long int *, long int *, uint32_t *);
+void __kmpc_xteamr_sum_ul(unsigned long, unsigned long *, unsigned long *,
+                          uint32_t *);
+void __kmpc_xteamr_max_d(double, double *, double *, uint32_t *);
+void __kmpc_xteamr_max_f(float, float *, float *, uint32_t *);
+void __kmpc_xteamr_max_i(int, int *, int *, uint32_t *);
+void __kmpc_xteamr_max_ui(unsigned int, unsigned int *, unsigned int *,
+                          uint32_t *);
+void __kmpc_xteamr_max_l(long int, long int *, long int *, uint32_t *);
+void __kmpc_xteamr_max_ul(unsigned long, unsigned long *, unsigned long *,
+                          uint32_t *);
+void __kmpc_xteamr_min_d(double, double *, double *, uint32_t *);
+void __kmpc_xteamr_min_f(float, float *, float *, uint32_t *);
+void __kmpc_xteamr_min_i(int, int *, int *, uint32_t *);
+void __kmpc_xteamr_min_ui(unsigned int, unsigned int *, unsigned int *,
+                          uint32_t *);
+void __kmpc_xteamr_min_l(long int, long int *, long int *, uint32_t *);
+void __kmpc_xteamr_min_ul(unsigned long, unsigned long *, unsigned long *,
+                          uint32_t *);
 ///}
 
 /// Synchronization
@@ -282,6 +378,12 @@ int32_t __kmpc_single(IdentTy *Loc, int32_t TId);
 void __kmpc_end_single(IdentTy *Loc, int32_t TId);
 
 void __kmpc_flush(IdentTy *Loc);
+
+void __kmpc_flush_acquire(IdentTy *Loc);
+
+void __kmpc_flush_release(IdentTy *Loc);
+
+void __kmpc_flush_acqrel(IdentTy *Loc);
 
 uint64_t __kmpc_warp_active_thread_mask(void);
 

@@ -65,6 +65,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -7033,6 +7034,41 @@ public:
 private:
   bool RejectNoLoop;
 };
+
+/// Ensure no-loop codegen can handle the step. The visitor will reject any
+/// expression that contains the loop index provided
+class NoLoopStepChecker final : public ConstStmtVisitor<NoLoopStepChecker> {
+public:
+  NoLoopStepChecker(const VarDecl *LV) : LoopVar{LV}, UnsupportedStep{false} {}
+  NoLoopStepChecker() = delete;
+
+  bool isUnsupported() const { return UnsupportedStep; }
+
+  void VisitDeclRefExpr(const DeclRefExpr *DRE) {
+    // We do not handle an expression with the loop var
+    if (DRE && DRE->getDecl() == LoopVar) {
+      UnsupportedStep = true;
+      // No need to continue any more
+      return;
+    }
+    for (const Stmt *Child : DRE->children())
+      if (Child)
+        Visit(Child);
+  }
+
+  void VisitStmt(const Stmt *S) {
+    if (!S)
+      return;
+    for (const Stmt *Child : S->children())
+      if (Child)
+        Visit(Child);
+  }
+
+private:
+  const VarDecl *LoopVar;
+  bool UnsupportedStep;
+};
+
 } // namespace
 
 const ForStmt *CodeGenModule::getSingleForStmt(const Stmt *S) {
@@ -7054,54 +7090,186 @@ const ForStmt *CodeGenModule::getSingleForStmt(const Stmt *S) {
   return nullptr;
 }
 
-bool CodeGenModule::checkDeclStmt(const ForStmt &FStmt) {
+const VarDecl *CodeGenModule::checkDeclStmt(const ForStmt &FStmt) {
   const Stmt *InitStmt = FStmt.getInit();
   // We require an explicit init in the construct
   if (!InitStmt)
-    return false;
+    return nullptr;
   if (InitStmt->getStmtClass() != Stmt::DeclStmtClass)
-    return false;
+    return nullptr;
   const DeclStmt &InitDeclStmt = cast<DeclStmt>(*InitStmt);
   if (!InitDeclStmt.isSingleDecl())
-    return false;
-  const Decl &InitDecl = *InitDeclStmt.getSingleDecl();
-  if (InitDecl.getKind() != Decl::Var)
-    return false;
-  if (!cast<VarDecl>(InitDecl).getType()->isIntegerType())
-    return false;
-  return true;
+    return nullptr;
+  const Decl *InitDecl = InitDeclStmt.getSingleDecl();
+  if (InitDecl == nullptr || InitDecl->getKind() != Decl::Var)
+    return nullptr;
+  if (!cast<VarDecl>(InitDecl)->getType()->isIntegerType())
+    return nullptr;
+  return cast<VarDecl>(InitDecl);
 }
 
-bool CodeGenModule::checkInitExpr(const ForStmt &FStmt) {
+const VarDecl *CodeGenModule::checkInitExpr(const ForStmt &FStmt) {
   const Stmt *InitStmt = FStmt.getInit();
   // We require an explicit init in the construct
   if (!InitStmt)
-    return false;
+    return nullptr;
   if (!isa<BinaryOperator>(InitStmt))
-    return false;
+    return nullptr;
   if (cast<BinaryOperator>(InitStmt)->getOpcode() != BO_Assign)
-    return false;
+    return nullptr;
   const Expr *InitExprLHS = cast<BinaryOperator>(InitStmt)->getLHS();
   if (!isa<DeclRefExpr>(InitExprLHS))
-    return false;
+    return nullptr;
   if (!cast<DeclRefExpr>(InitExprLHS)->getType()->isIntegerType())
-    return false;
-  return true;
+    return nullptr;
+  return cast<VarDecl>(cast<DeclRefExpr>(InitExprLHS)->getDecl());
 }
 
-bool CodeGenModule::checkLoopInit(const ForStmt &FStmt) {
-  if (!checkDeclStmt(FStmt) && !checkInitExpr(FStmt))
-    return false;
-  return true;
+const VarDecl *CodeGenModule::checkLoopInit(const ForStmt &FStmt) {
+  const VarDecl *LoopInit = checkDeclStmt(FStmt);
+  if (LoopInit != nullptr)
+    return LoopInit;
+  return checkInitExpr(FStmt);
 }
 
-bool CodeGenModule::checkLoopStep(const ForStmt &FStmt) {
-  const Expr *Inc = FStmt.getInc();
+// Return true if the step is either a unary increment of the provided loop
+// index or a binary add on the loop index. Otherwise return false.
+bool CodeGenModule::checkLoopStep(const Expr *Inc, const VarDecl *VD) {
+  if (Inc == nullptr)
+    return false;
   if (Inc->getStmtClass() == Expr::UnaryOperatorClass &&
-      cast<UnaryOperator>(Inc)->isIncrementOp())
+      cast<UnaryOperator>(Inc)->isIncrementOp()) {
+    const auto *IncDRE =
+        cast<DeclRefExpr>(cast<UnaryOperator>(Inc)->getSubExpr());
+    if (IncDRE == nullptr)
+      return false;
+    const auto *IncVarDecl = cast<VarDecl>(IncDRE->getDecl());
+    if (IncVarDecl == nullptr)
+      return false;
+    if (IncVarDecl != VD)
+      return false;
     return true;
-  // TODO handle binary increment
+  }
+
+  // We support either += or = in the step expression
+  if ((isa<CompoundAssignOperator>(Inc) &&
+       cast<CompoundAssignOperator>(Inc)->getOpcode() == BO_AddAssign) ||
+      (isa<BinaryOperator>(Inc) &&
+       cast<BinaryOperator>(Inc)->getOpcode() == BO_Assign)) {
+    // LHS must be the loop variable
+    const auto *IncDRE = cast<DeclRefExpr>(cast<BinaryOperator>(Inc)->getLHS());
+    if (IncDRE == nullptr)
+      return false;
+    if (!isa<VarDecl>(IncDRE->getDecl()))
+      return false;
+    // The step variable must be the loop variable
+    if (IncDRE->getDecl() != VD)
+      return false;
+    // Found step += val, return true
+    if (isa<CompoundAssignOperator>(Inc) &&
+        cast<CompoundAssignOperator>(Inc)->getOpcode() == BO_AddAssign)
+      return true;
+
+    // If it is an assignment binary operator, analyze it further
+    assert(isa<BinaryOperator>(Inc) &&
+           cast<BinaryOperator>(Inc)->getOpcode() == BO_Assign &&
+           "Unexpected expression in step");
+    const Expr *IncRHS = cast<BinaryOperator>(Inc)->getRHS();
+    // We support binary add operator, operating on the loop variable
+    if (isa<BinaryOperator>(IncRHS) &&
+        cast<BinaryOperator>(IncRHS)->getOpcode() == BO_Add) {
+      const BinaryOperator *IncRHSBinOp = cast<BinaryOperator>(IncRHS);
+      const Expr *LHSIncRHS = IncRHSBinOp->getLHS();
+      const Expr *RHSIncRHS = IncRHSBinOp->getRHS();
+
+      // We support either step = step + val or step = val + step. We don't
+      // currently support more complex expressions. Additionally, make sure
+      // that step does not appear in val.
+      auto checkStep = [VD](const Expr *CheckedExpr) {
+        NoLoopStepChecker Checker(VD);
+        Checker.Visit(CheckedExpr);
+        if (Checker.isUnsupported())
+          return false;
+        return true;
+      };
+
+      if (isa<DeclRefExpr>(LHSIncRHS) &&
+          cast<DeclRefExpr>(LHSIncRHS)->getDecl() == VD) {
+        // Check that VD does not occur in RHSIncRHS
+        return checkStep(RHSIncRHS);
+      }
+      if (isa<DeclRefExpr>(RHSIncRHS) &&
+          cast<DeclRefExpr>(RHSIncRHS)->getDecl() == VD) {
+        // Check that VD does not occur in LHSIncRHS
+        return checkStep(LHSIncRHS);
+      }
+      if (isa<ImplicitCastExpr>(LHSIncRHS) &&
+          isa<DeclRefExpr>(cast<ImplicitCastExpr>(LHSIncRHS)->getSubExpr()) &&
+          cast<DeclRefExpr>(cast<ImplicitCastExpr>(LHSIncRHS)->getSubExpr())
+                  ->getDecl() == VD) {
+        // Visit RHSIncRHS and make sure the loop variable is not present as a
+        // declref
+        return checkStep(RHSIncRHS);
+      }
+      if (isa<ImplicitCastExpr>(RHSIncRHS) &&
+          isa<DeclRefExpr>(cast<ImplicitCastExpr>(RHSIncRHS)->getSubExpr()) &&
+          cast<DeclRefExpr>(cast<ImplicitCastExpr>(RHSIncRHS)->getSubExpr())
+                  ->getDecl() == VD) {
+        // Visit LHSIncRHS and make sure the loop variable is not present as a
+        // declref
+        return checkStep(LHSIncRHS);
+      }
+    }
+  }
   return false;
+}
+
+// If the step is a unary expression, we already ensure it is an increment. So
+// no more processing is required for a unary expression. For a binary
+// expression, return the step.
+const Expr *CodeGenModule::getBinaryExprStep(const Expr *Inc,
+                                             const VarDecl *VD) {
+  if (isa<UnaryOperator>(Inc))
+    return nullptr;
+  // Found step += val, return val
+  if (isa<CompoundAssignOperator>(Inc) &&
+      cast<CompoundAssignOperator>(Inc)->getOpcode() == BO_AddAssign)
+    return cast<BinaryOperator>(Inc)->getRHS();
+
+  // If found step = step + val or step = val + step, return val
+  if (isa<BinaryOperator>(Inc) &&
+      cast<BinaryOperator>(Inc)->getOpcode() == BO_Assign) {
+    const auto *IncRHS = cast<BinaryOperator>(Inc)->getRHS();
+    assert(isa<BinaryOperator>(IncRHS) &&
+           cast<BinaryOperator>(IncRHS)->getOpcode() == BO_Add);
+    // Find the step based on the supported scenario
+    const Expr *StepExpr = nullptr;
+    const BinaryOperator *IncRHSBinOp = cast<BinaryOperator>(IncRHS);
+    const Expr *LHSIncRHS = IncRHSBinOp->getLHS();
+    const Expr *RHSIncRHS = IncRHSBinOp->getRHS();
+    if (isa<DeclRefExpr>(LHSIncRHS) &&
+        cast<DeclRefExpr>(LHSIncRHS)->getDecl() == VD)
+      StepExpr = RHSIncRHS;
+    else if (isa<DeclRefExpr>(RHSIncRHS) &&
+             cast<DeclRefExpr>(RHSIncRHS)->getDecl() == VD)
+      StepExpr = LHSIncRHS;
+    else if (isa<ImplicitCastExpr>(LHSIncRHS) &&
+             isa<DeclRefExpr>(
+                 cast<ImplicitCastExpr>(LHSIncRHS)->getSubExpr()) &&
+             cast<DeclRefExpr>(cast<ImplicitCastExpr>(LHSIncRHS)->getSubExpr())
+                     ->getDecl() == VD)
+      StepExpr = RHSIncRHS;
+    else if (isa<ImplicitCastExpr>(RHSIncRHS) &&
+             isa<DeclRefExpr>(
+                 cast<ImplicitCastExpr>(RHSIncRHS)->getSubExpr()) &&
+             cast<DeclRefExpr>(cast<ImplicitCastExpr>(RHSIncRHS)->getSubExpr())
+                     ->getDecl() == VD)
+      StepExpr = LHSIncRHS;
+    else
+      llvm_unreachable("Unexpected step");
+    return StepExpr;
+  }
+  llvm_unreachable("Unexpected operator type in step computation");
 }
 
 bool CodeGenModule::checkLoopStop(const ForStmt &FStmt) {
@@ -7127,14 +7295,17 @@ bool CodeGenModule::isForStmtNoLoopConforming(const Stmt *OMPStmt) {
   if (FStmt == nullptr)
     return false;
 
-  if (!checkLoopInit(*FStmt) || !checkLoopStep(*FStmt) ||
-      !checkLoopStop(*FStmt))
+  const VarDecl *VD = checkLoopInit(*FStmt);
+  if (VD == nullptr)
+    return false;
+
+  if (!checkLoopStep(FStmt->getInc(), VD) || !checkLoopStop(*FStmt))
     return false;
 
   return true;
 }
 
-bool CodeGenModule::isForStmtSpecRedConforming(const Stmt *OMPStmt) {
+bool CodeGenModule::isForStmtXteamRedConforming(const Stmt *OMPStmt) {
   if (!isForStmtNoLoopConforming(OMPStmt))
     return false;
   const ForStmt *FStmt = getSingleForStmt(OMPStmt);
@@ -7171,7 +7342,6 @@ bool CodeGenModule::areCombinedClausesNoLoopCompatible(
       D.hasClausesOfKind<OMPNumTeamsClause>() ||
       D.hasClausesOfKind<OMPReductionClause>() ||
       D.hasClausesOfKind<OMPSharedClause>() ||
-      D.hasClausesOfKind<OMPCollapseClause>() ||
       D.hasClausesOfKind<OMPDistScheduleClause>() ||
       D.hasClausesOfKind<OMPLastprivateClause>() ||
       D.hasClausesOfKind<OMPOrderClause>() || // concurrent would be ok
@@ -7180,10 +7350,12 @@ bool CodeGenModule::areCombinedClausesNoLoopCompatible(
       D.hasClausesOfKind<OMPOrderedClause>() ||
       D.hasClausesOfKind<OMPScheduleClause>())
     return false;
+  if (!isa<OMPLoopDirective>(D))
+    return false;
   return true;
 }
 
-bool CodeGenModule::areCombinedClausesSpecRedCompatible(
+bool CodeGenModule::areCombinedClausesXteamRedCompatible(
     const OMPExecutableDirective &D) {
   if (D.hasClausesOfKind<OMPDefaultmapClause>() ||
       D.hasClausesOfKind<OMPDependClause>() ||
@@ -7331,8 +7503,7 @@ bool CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
   }
 }
 
-bool CodeGenModule::checkAndSetSpecialRedKernel(
-    const OMPExecutableDirective &D) {
+bool CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
   if (!getLangOpts().OpenMPTargetIgnoreEnvVars ||
       !getLangOpts().OpenMPTargetNewRuntime)
     return false;
@@ -7350,21 +7521,21 @@ bool CodeGenModule::checkAndSetSpecialRedKernel(
 
   // For now, keep the reduction helpers separate. Revisit merging with noloop
   // later
-  if (!areCombinedClausesSpecRedCompatible(D))
+  if (!areCombinedClausesXteamRedCompatible(D))
     return false;
   if (!canHandleReductionClause(D))
     return false;
-  if (!isForStmtSpecRedConforming(AssocStmt))
+  if (!isForStmtXteamRedConforming(AssocStmt))
     return false;
 
   // We don't yet handle intermediate statements but will soon, so keep it ready
   NoLoopIntermediateStmts IntermediateStmts;
-  SpecRedKernelMetadata SpecRedKernelMD;
+  XteamRedKernelMetadata XteamRedKernelMD;
   // Create a map from the ForStmt, the corresponding info will be populated
   // later
   const ForStmt *FStmt = getSingleForStmt(AssocStmt);
   assert(FStmt && "For stmt cannot be null");
-  setSpecRedKernel(FStmt, std::make_pair(IntermediateStmts, SpecRedKernelMD));
+  setXteamRedKernel(FStmt, std::make_pair(IntermediateStmts, XteamRedKernelMD));
 
   // All checks passed
   return true;

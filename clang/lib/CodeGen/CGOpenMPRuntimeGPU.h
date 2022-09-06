@@ -200,10 +200,10 @@ public:
   llvm::Value *getGPUNumBlocks(CodeGenFunction &CGF);
 
   /// Get the number of blocks on the GPU for special reduction
-  llvm::Value *getSpecRedGUPBlockSize(CodeGenFunction &CGF);
+  llvm::Value *getXteamRedBlockSize(CodeGenFunction &CGF);
 
   /// Call cross-team sum
-  llvm::Value *getGPUXteamSum(CodeGenFunction &CGF, llvm::Value *Val,
+  llvm::Value *getXteamRedSum(CodeGenFunction &CGF, llvm::Value *Val,
                               llvm::Value *SumPtr);
 
   /// Returns whether the current architecture supports fast FP atomics
@@ -408,6 +408,11 @@ public:
   /// the predefined allocator and translates it into the corresponding address
   /// space.
   bool hasAllocateAttributeForGlobalVar(const VarDecl *VD, LangAS &AS) override;
+
+  /// Emit flush of the variables specified in 'omp flush' directive.
+  /// \param Vars List of variables to flush.
+  void emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *> Vars,
+                 SourceLocation Loc, llvm::AtomicOrdering AO) override;
 
 private:
   /// Track the execution mode when codegening directives within a target

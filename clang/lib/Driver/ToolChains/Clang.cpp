@@ -747,12 +747,32 @@ static bool shouldEnableVectorizerAtOLevel(const ArgList &Args, bool isSlpVec) {
   return false;
 }
 
+/// Is -Ofast used?
+static bool isOFastUsed(const ArgList &Args) {
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group))
+    if (A->getOption().matches(options::OPT_Ofast))
+      return true;
+  return false;
+}
+
+/// Is -fopenmp-target-fast or -Ofast used
+static bool isTargetFastUsed(const ArgList &Args) {
+  return Args.hasFlag(options::OPT_fopenmp_target_fast,
+                      options::OPT_fno_openmp_target_fast, isOFastUsed(Args));
+}
+
 /// Ignore possibility of runtime environment variables during kernel code
 /// generation at -O3 (and above) and -Ofast
 static bool shouldIgnoreEnvVars(const ArgList &Args) {
+  if (Args.hasFlag(options::OPT_fno_openmp_target_fast,
+                   options::OPT_fopenmp_target_fast, false))
+    return false;
+
+  if (isTargetFastUsed(Args))
+    return true;
+
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    if (A->getOption().matches(options::OPT_O4) ||
-        A->getOption().matches(options::OPT_Ofast))
+    if (A->getOption().matches(options::OPT_O4))
       return true;
 
     if (A->getOption().matches(options::OPT_O0))
@@ -4758,6 +4778,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       if (Triple.isAMDGCN() && IsOpenMPDevice && Args.hasArg(options::OPT_S) &&
           Args.hasArg(options::OPT_emit_llvm)) {
         CmdArgs.push_back("-emit-llvm");
+      } else if (Triple.isAMDGCN() && IsOpenMPDevice &&
+                 Args.hasArg(options::OPT_S)) {
+        CmdArgs.push_back("-S");
       } else {
         CmdArgs.push_back("-emit-llvm-bc");
       }
@@ -6142,6 +6165,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        /*Default=*/false))
         CmdArgs.push_back("-fopenmp-optimistic-collapse");
 
+      if (isTargetFastUsed(Args))
+        CmdArgs.push_back("-fopenmp-target-fast");
+      else
+        CmdArgs.push_back("-fno-openmp-target-fast");
+
       if (Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
                        options::OPT_fno_openmp_target_new_runtime, true))
         CmdArgs.push_back("-fopenmp-target-new-runtime");
@@ -6191,8 +6219,21 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        options::OPT_fno_openmp_assume_threads_oversubscription,
                        /*Default=*/false))
         CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
-      if (Args.hasArg(options::OPT_fopenmp_assume_no_thread_state))
+
+      if (Args.hasFlag(options::OPT_fopenmp_assume_no_thread_state,
+                       options::OPT_fno_openmp_assume_no_thread_state,
+                       isTargetFastUsed(Args)))
         CmdArgs.push_back("-fopenmp-assume-no-thread-state");
+      else
+        CmdArgs.push_back("-fno-openmp-assume-no-thread-state");
+
+      if (Args.hasFlag(options::OPT_fopenmp_assume_no_nested_parallelism,
+                       options::OPT_fno_openmp_assume_no_nested_parallelism,
+                       isTargetFastUsed(Args)))
+        CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
+      else
+        CmdArgs.push_back("-fno-openmp-assume-no-nested-parallelism");
+
       if (Args.hasArg(options::OPT_fopenmp_offload_mandatory))
         CmdArgs.push_back("-fopenmp-offload-mandatory");
       break;
@@ -8625,8 +8666,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
     for (StringRef LibName : BCLibs)
       CmdArgs.push_back(Args.MakeArgString(
-          "--bitcode-library=" + Action::GetOffloadKindName(Action::OFK_OpenMP) +
-          "-" + TC->getTripleString() + "-" + Arch + "=" + LibName));
+          "--bitcode-library=" +
+          Action::GetOffloadKindName(Action::OFK_OpenMP) + "-" +
+          TC->getTripleString() + "-" + Arch + "=" + LibName));
   }
 
   if (D.isUsingLTO(/* IsOffload */ true)) {
