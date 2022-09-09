@@ -12,28 +12,35 @@ define void @f(i32 %arg, ptr %ptr) {
 ; ISA-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; ISA-NEXT:    v_mov_b32_e32 v7, 0
 ; ISA-NEXT:    s_waitcnt lgkmcnt(0)
-; ISA-NEXT:    s_lshr_b32 s6, s5, 1
 ; ISA-NEXT:    s_cmp_lg_u32 s4, 0
-; ISA-NEXT:    s_cselect_b32 s7, -1, 0
-; ISA-NEXT:    s_lshr_b32 s4, 1, s4
-; ISA-NEXT:    v_cndmask_b32_e64 v3, 0, s6, s7
-; ISA-NEXT:    v_cndmask_b32_e64 v4, 0, s4, s7
-; ISA-NEXT:    v_cndmask_b32_e64 v5, 0, s5, s7
-; ISA-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s7
+; ISA-NEXT:    s_cselect_b32 s6, -1, 0
+; ISA-NEXT:    s_and_b32 s6, s6, exec_lo
+; ISA-NEXT:    s_cselect_b32 s6, s5, 0
+; ISA-NEXT:    s_lshr_b32 s7, 1, s4
+; ISA-NEXT:    s_cmp_lg_u32 s4, 0
+; ISA-NEXT:    v_cvt_f32_i32_e32 v0, s6
+; ISA-NEXT:    s_cselect_b32 s8, -1, 0
+; ISA-NEXT:    s_and_b32 s8, s8, exec_lo
+; ISA-NEXT:    s_cselect_b32 s7, s7, 0
+; ISA-NEXT:    s_lshr_b32 s5, s5, 1
+; ISA-NEXT:    s_cmp_lg_u32 s4, 0
+; ISA-NEXT:    v_cvt_f32_ubyte0_e32 v4, s7
+; ISA-NEXT:    s_cselect_b32 s4, -1, 0
+; ISA-NEXT:    v_cndmask_b32_e64 v3, 0, 1.0, s4
+; ISA-NEXT:    s_and_b32 s4, s4, exec_lo
+; ISA-NEXT:    s_cselect_b32 s4, s5, 0
+; ISA-NEXT:    v_cvt_f32_i32_e32 v5, s4
 ; ISA-NEXT:    s_mov_b32 s4, 0
-; ISA-NEXT:    v_cvt_f32_i32_e32 v6, v3
-; ISA-NEXT:    v_cvt_f32_ubyte0_e32 v3, v4
-; ISA-NEXT:    v_cvt_f32_i32_e32 v4, v5
-; ISA-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v6
+; ISA-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v5
 ; ISA-NEXT:  .LBB0_1: ; %bb14
 ; ISA-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ISA-NEXT:    v_mov_b32_e32 v6, v7
 ; ISA-NEXT:    s_and_b32 s5, exec_lo, vcc_lo
 ; ISA-NEXT:    s_or_b32 s4, s5, s4
-; ISA-NEXT:    v_add_f32_e32 v7, v6, v0
+; ISA-NEXT:    v_add_f32_e32 v7, v6, v3
 ; ISA-NEXT:    v_add_f32_e32 v7, v7, v5
-; ISA-NEXT:    v_add_f32_e32 v7, v7, v3
 ; ISA-NEXT:    v_add_f32_e32 v7, v7, v4
+; ISA-NEXT:    v_add_f32_e32 v7, v7, v0
 ; ISA-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
 ; ISA-NEXT:    s_cbranch_execnz .LBB0_1
 ; ISA-NEXT:  ; %bb.2: ; %bb21

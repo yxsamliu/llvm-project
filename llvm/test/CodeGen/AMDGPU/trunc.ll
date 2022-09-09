@@ -117,40 +117,11 @@ define amdgpu_kernel void @sgpr_trunc_i32_to_i1(ptr addrspace(1) %out, i32 %a) {
 }
 
 ; GCN-LABEL: {{^}}s_trunc_i64_to_i1:
-define amdgpu_kernel void @s_trunc_i64_to_i1(ptr addrspace(1) %out, [8 x i32], i64 %x) {
-; SI:    s_load_dwordx2 s[4:5], s[0:1], 0x13
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_bitcmp1_b32 s4, 0
-; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; SI-NEXT:    v_cndmask_b32_e64 v0, -12, 63, s[4:5]
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; SI-NEXT:    s_endpgm
-;
-; VI:    s_load_dwordx2 s[2:3], s[0:1], 0x4c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_bitcmp1_b32 s2, 0
-; VI-NEXT:    s_cselect_b32 s2, 63, -12
-; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    v_mov_b32_e32 v2, s2
-; VI-NEXT:    flat_store_dword v[0:1], v2
-; VI-NEXT:    s_endpgm
-;
-; EG:    ALU 5, @4, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
-; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
-; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     MOV T0.W, literal.x,
-; EG-NEXT:     AND_INT * T1.W, KC0[4].W, 1,
-; EG-NEXT:    63(8.828180e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T0.X, PS, literal.x, PV.W,
-; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
-; EG-NEXT:    -12(nan), 2(2.802597e-45)
+; SI: s_load_dwordx2 s[[[SLO:[0-9]+]]:{{[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0x13
+; VI: s_load_dwordx2 s[[[SLO:[0-9]+]]:{{[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0x4c
+; GCN: s_bitcmp1_b32 s[[SLO]], 0
+; GCN: s_cselect_b32 {{s[0-9]+}}, 63, -12
+define amdgpu_kernel void @s_trunc_i64_to_i1(i32 addrspace(1)* %out, [8 x i32], i64 %x) {
   %trunc = trunc i64 %x to i1
   %sel = select i1 %trunc, i32 63, i32 -12
   store i32 %sel, ptr addrspace(1) %out
