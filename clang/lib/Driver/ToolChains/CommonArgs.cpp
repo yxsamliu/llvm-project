@@ -42,6 +42,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/Arg.h"
@@ -1885,7 +1886,7 @@ bool tools::GetSDLFromOffloadArchive(
     Compilation &C, const Driver &D, const Tool &T, const JobAction &JA,
     const InputInfoList &Inputs, const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args, SmallVector<std::string, 8> LibraryPaths,
-    StringRef Lib, StringRef Arch, StringRef TargetID, bool isBitCodeSDL,
+    StringRef Lib, StringRef Arch, StringRef Target, bool isBitCodeSDL,
     bool postClangLink) {
 
   // We don't support bitcode archive bundles for nvptx
@@ -1893,85 +1894,103 @@ bool tools::GetSDLFromOffloadArchive(
     return false;
 
   bool FoundAOB = false;
-  SmallVector<std::string, 2> AOBFileNames;
   std::string ArchiveOfBundles;
-  for (auto LPath : LibraryPaths) {
-    ArchiveOfBundles.clear();
 
-    llvm::Triple Triple(D.getTargetTriple());
-    bool IsMSVC = Triple.isWindowsMSVCEnvironment();
-    for (auto Prefix : {"/libdevice/", "/"}) {
-      if (IsMSVC)
-        AOBFileNames.push_back(Twine(LPath + Prefix + Lib + ".lib").str());
-      AOBFileNames.push_back(Twine(LPath + Prefix + "lib" + Lib + ".a").str());
+  llvm::Triple Triple(D.getTargetTriple());
+  bool IsMSVC = Triple.isWindowsMSVCEnvironment();
+  auto Ext = IsMSVC ? ".lib" : ".a";
+  if (!Lib.startswith(":") && !Lib.startswith("-l")) {
+    if (llvm::sys::fs::exists(Lib)) {
+      ArchiveOfBundles = Lib.str();
+      FoundAOB = true;
     }
-
-    for (auto AOB : AOBFileNames) {
-      if (llvm::sys::fs::exists(AOB)) {
-        ArchiveOfBundles = AOB;
-        FoundAOB = true;
-        break;
+  } else {
+    if (Lib.startswith("-l"))
+      Lib = Lib.drop_front(2);
+    for (auto LPath : LibraryPaths) {
+      ArchiveOfBundles.clear();
+      SmallVector<std::string, 2> AOBFileNames;
+      auto LibFile =
+          (Lib.startswith(":") ? Lib.drop_front()
+                               : IsMSVC ? Lib + Ext : "lib" + Lib + Ext)
+              .str();
+      for (auto Prefix : {"/libdevice/", "/"}) {
+        auto AOB = Twine(LPath + Prefix + LibFile).str();
+        if (llvm::sys::fs::exists(AOB)) {
+          ArchiveOfBundles = AOB;
+          FoundAOB = true;
+          break;
+        }
       }
+      if (FoundAOB)
+        break;
     }
-
-    if (!FoundAOB)
-      continue;
-
-    StringRef Prefix = isBitCodeSDL ? "libbc-" : "lib";
-    std::string OutputLib = D.GetTemporaryPath(
-        Twine(Prefix + Lib + "-" + Arch + "-" + TargetID).str(), "a");
-
-    C.addTempFile(C.getArgs().MakeArgString(OutputLib));
-
-    ArgStringList CmdArgs;
-    SmallString<128> DeviceTriple;
-    DeviceTriple += Action::GetOffloadKindName(JA.getOffloadingDeviceKind());
-    DeviceTriple += '-';
-    std::string NormalizedTriple = T.getToolChain().getTriple().normalize();
-    DeviceTriple += NormalizedTriple;
-    if (!TargetID.empty()) {
-      DeviceTriple += '-';
-      DeviceTriple += TargetID;
-    }
-
-    std::string UnbundleArg("-unbundle");
-    std::string TypeArg("-type=a");
-    std::string InputArg("-input=" + ArchiveOfBundles);
-    std::string OffloadArg("-targets=" + std::string(DeviceTriple));
-    std::string OutputArg("-output=" + OutputLib);
-
-    const char *UBProgram = DriverArgs.MakeArgString(
-        T.getToolChain().GetProgramPath("clang-offload-bundler"));
-
-    ArgStringList UBArgs;
-    UBArgs.push_back(C.getArgs().MakeArgString(UnbundleArg));
-    UBArgs.push_back(C.getArgs().MakeArgString(TypeArg));
-    UBArgs.push_back(C.getArgs().MakeArgString(InputArg));
-    UBArgs.push_back(C.getArgs().MakeArgString(OffloadArg));
-    UBArgs.push_back(C.getArgs().MakeArgString(OutputArg));
-
-    // Add this flag to not exit from clang-offload-bundler if no compatible
-    // code object is found in heterogenous archive library.
-    std::string AdditionalArgs("-allow-missing-bundles");
-    UBArgs.push_back(C.getArgs().MakeArgString(AdditionalArgs));
-
-    // Add this flag to treat hip and hipv4 offload kinds as compatible with
-    // openmp offload kind while extracting code objects from a heterogenous
-    // archive library. Vice versa is also considered compatible.
-    std::string HipCompatibleArgs("-hip-openmp-compatible");
-    UBArgs.push_back(C.getArgs().MakeArgString(HipCompatibleArgs));
-
-    C.addCommand(std::make_unique<Command>(
-        JA, T, ResponseFileSupport::AtFileCurCP(), UBProgram, UBArgs, Inputs,
-        InputInfo(&JA, C.getArgs().MakeArgString(OutputLib))));
-    if (postClangLink)
-      CC1Args.push_back("-mlink-builtin-bitcode");
-
-    CC1Args.push_back(DriverArgs.MakeArgString(OutputLib));
-    break;
   }
 
-  return FoundAOB;
+  if (!FoundAOB)
+    return false;
+
+  llvm::file_magic Magic;
+  auto EC = llvm::identify_magic(ArchiveOfBundles, Magic);
+  if (EC || Magic != llvm::file_magic::archive)
+    return false;
+
+  StringRef Prefix = isBitCodeSDL ? "libbc-" : "lib";
+  std::string OutputLib =
+      D.GetTemporaryPath(Twine(Prefix + llvm::sys::path::filename(Lib) + "-" +
+                               Arch + "-" + Target)
+                             .str(),
+                         "a");
+
+  C.addTempFile(C.getArgs().MakeArgString(OutputLib));
+
+  ArgStringList CmdArgs;
+  SmallString<128> DeviceTriple;
+  DeviceTriple += Action::GetOffloadKindName(JA.getOffloadingDeviceKind());
+  DeviceTriple += '-';
+  std::string NormalizedTriple = T.getToolChain().getTriple().normalize();
+  DeviceTriple += NormalizedTriple;
+  if (!Target.empty()) {
+    DeviceTriple += '-';
+    DeviceTriple += Target;
+  }
+
+  std::string UnbundleArg("-unbundle");
+  std::string TypeArg("-type=a");
+  std::string InputArg("-input=" + ArchiveOfBundles);
+  std::string OffloadArg("-targets=" + std::string(DeviceTriple));
+  std::string OutputArg("-output=" + OutputLib);
+
+  const char *UBProgram = DriverArgs.MakeArgString(
+      T.getToolChain().GetProgramPath("clang-offload-bundler"));
+
+  ArgStringList UBArgs;
+  UBArgs.push_back(C.getArgs().MakeArgString(UnbundleArg));
+  UBArgs.push_back(C.getArgs().MakeArgString(TypeArg));
+  UBArgs.push_back(C.getArgs().MakeArgString(InputArg));
+  UBArgs.push_back(C.getArgs().MakeArgString(OffloadArg));
+  UBArgs.push_back(C.getArgs().MakeArgString(OutputArg));
+
+  // Add this flag to not exit from clang-offload-bundler if no compatible
+  // code object is found in heterogenous archive library.
+  std::string AdditionalArgs("-allow-missing-bundles");
+  UBArgs.push_back(C.getArgs().MakeArgString(AdditionalArgs));
+
+  // Add this flag to treat hip and hipv4 offload kinds as compatible with
+  // openmp offload kind while extracting code objects from a heterogenous
+  // archive library. Vice versa is also considered compatible.
+  std::string HipCompatibleArgs("-hip-openmp-compatible");
+  UBArgs.push_back(C.getArgs().MakeArgString(HipCompatibleArgs));
+
+  C.addCommand(std::make_unique<Command>(
+      JA, T, ResponseFileSupport::AtFileCurCP(), UBProgram, UBArgs, Inputs,
+      InputInfo(&JA, C.getArgs().MakeArgString(OutputLib))));
+  if (postClangLink)
+    CC1Args.push_back("-mlink-builtin-bitcode");
+
+  CC1Args.push_back(DriverArgs.MakeArgString(OutputLib));
+
+  return true;
 }
 
 // Wrapper function used by driver for adding SDLs during link phase.
@@ -2028,7 +2047,7 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
                                 const InputInfoList *Inputs, const Driver &D,
                                 const llvm::opt::ArgList &DriverArgs,
                                 llvm::opt::ArgStringList &CC1Args,
-                                StringRef Arch, StringRef TargetID,
+                                StringRef Arch, StringRef Target,
                                 bool isBitCodeSDL, bool postClangLink) {
 
   SmallVector<std::string, 8> LibraryPaths;
@@ -2055,20 +2074,27 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
   // Build list of Static Device Libraries SDLs specified by -l option
   llvm::SmallSet<std::string, 16> SDLNames;
   static const StringRef HostOnlyArchives[] = {
-      "omp",     "cudart",        "m",         "gcc", "gcc_s", "pthread",
-      "hip_hcc", "cudart_static", "cudadevrt", "rt",  "dl"};
-  // TODO: Create a comannd line option that a library specified with -l
-  // is host-only to prevent many extraction attempts that create empty
-  // device specific archive libraries (DAL).
+      "omp", "cudart", "m", "gcc", "gcc_s", "pthread", "hip_hcc"};
   for (auto SDLName : DriverArgs.getAllArgValues(options::OPT_l)) {
-    bool found = false;
-    for (auto hostlibname : HostOnlyArchives)
-      if (hostlibname == SDLName) {
-        found = true;
-        continue;
-      }
-    if (!found)
-      SDLNames.insert(SDLName);
+    if (!HostOnlyArchives->contains(SDLName)) {
+      SDLNames.insert(std::string("-l") + SDLName);
+    }
+  }
+
+  for (auto Input : DriverArgs.getAllArgValues(options::OPT_INPUT)) {
+    auto FileName = StringRef(Input);
+    // Clang treats any unknown file types as archives and passes them to the
+    // linker. Files with extension 'lib' are classified as TY_Object by clang
+    // but they are usually archives. It is OK if the file is not really an
+    // archive since GetSDLFromOffloadArchive will check the magic of the file
+    // and only unbundle it if it is really an archive.
+    const StringRef LibFileExt = ".lib";
+    if (!llvm::sys::path::has_extension(FileName) ||
+        types::lookupTypeForExtension(
+            llvm::sys::path::extension(FileName).drop_front()) ==
+            types::TY_INVALID ||
+        llvm::sys::path::extension(FileName) == LibFileExt)
+      SDLNames.insert(Input);
   }
 
   // The search stops as soon as an SDL file is found. The driver then provides
@@ -2078,10 +2104,10 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
   // and may contain bundled object files.
   for (auto SDLName : SDLNames) {
     // This is the only call to SDLSearch
-    if (!SDLSearch(D, DriverArgs, CC1Args, LibraryPaths, SDLName, Arch,
-                   TargetID, isBitCodeSDL, postClangLink)) {
+    if (!SDLSearch(D, DriverArgs, CC1Args, LibraryPaths, SDLName, Arch, Target,
+                   isBitCodeSDL, postClangLink)) {
       GetSDLFromOffloadArchive(*C, D, *T, *JA, *Inputs, DriverArgs, CC1Args,
-                               LibraryPaths, SDLName, Arch, TargetID,
+                               LibraryPaths, SDLName, Arch, Target,
                                isBitCodeSDL, postClangLink);
     }
   }
