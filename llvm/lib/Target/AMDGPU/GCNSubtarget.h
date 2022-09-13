@@ -30,10 +30,9 @@ class GCNTargetMachine;
 
 class GCNSubtarget final : public AMDGPUGenSubtargetInfo,
                            public AMDGPUSubtarget {
-
+public:
   using AMDGPUSubtarget::getMaxWavesPerEU;
 
-public:
   // Following 2 enums are documented at:
   //   - https://llvm.org/docs/AMDGPUUsage.html#trap-handler-abi
   enum class TrapHandlerAbi {
@@ -145,6 +144,7 @@ protected:
   bool HasDot7Insts = false;
   bool HasDot8Insts = false;
   bool HasMAIInsts = false;
+  bool HasFP8Insts = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicFaddRtnInsts = false;
   bool HasAtomicFaddNoRtnInsts = false;
@@ -719,6 +719,10 @@ public:
 
   bool hasMAIInsts() const {
     return HasMAIInsts;
+  }
+
+  bool hasFP8Insts() const {
+    return HasFP8Insts;
   }
 
   bool hasPkFmacF16Inst() const {

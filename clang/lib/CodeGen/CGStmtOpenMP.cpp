@@ -693,8 +693,17 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
     OMPPrivateScope PrivateScope(*this);
     EmitOMPPrivateClause(D, PrivateScope);
     (void)PrivateScope.Privatize();
-    EmitNoLoopKernel(D.getAssociatedStmt(),
-                     CGM.getNoLoopStmts(D.getAssociatedStmt()), Loc);
+
+    EmitNoLoopKernel(D, Loc);
+  } else if (D.hasAssociatedStmt() && CGM.isXteamRedKernel(CGM.getSingleForStmt(
+                                          D.getAssociatedStmt()))) {
+    OMPPrivateScope PrivateScope(*this);
+    EmitOMPPrivateClause(D, PrivateScope);
+    (void)PrivateScope.Privatize();
+
+    EmitXteamRedKernel(
+        D, D.getAssociatedStmt(),
+        CGM.getXteamRedStmts(CGM.getSingleForStmt(D.getAssociatedStmt())), Loc);
   } else {
     CapturedStmtInfo->EmitBody(*this, CD->getBody());
   }
@@ -2004,6 +2013,16 @@ void CodeGenFunction::EmitOMPLoopBody(const OMPLoopDirective &D,
   BreakContinueStack.pop_back();
 }
 
+void CodeGenFunction::EmitOMPNoLoopBody(const OMPLoopDirective &D) {
+  const Stmt *Body =
+      D.getInnermostCapturedStmt()->getCapturedStmt()->IgnoreContainers();
+  // Emit loop body.
+  emitBody(*this, Body,
+           OMPLoopBasedDirective::tryToFindNextInnerLoop(
+               Body, /*TryImperfectlyNestedLoops=*/true),
+           D.getLoopsNumber());
+}
+
 using EmittedClosureTy = std::pair<llvm::Function *, llvm::Value *>;
 
 /// Emit a captured statement and return the function as well as its captured
@@ -2657,11 +2676,12 @@ static void emitOMPSimdRegion(CodeGenFunction &CGF, const OMPLoopDirective &S,
   }
 }
 
-static bool isSupportedByOpenMPIRBuilder(const OMPExecutableDirective &S) {
+static bool isSupportedByOpenMPIRBuilder(const OMPSimdDirective &S) {
   // Check for unsupported clauses
-  if (!S.clauses().empty()) {
-    // Currently no clause is supported
-    return false;
+  for (OMPClause *C : S.clauses()) {
+    // Currently only simdlen clause is supported
+    if (!isa<OMPSimdlenClause>(C))
+      return false;
   }
 
   // Check if we have a statement with the ordered directive.
@@ -2696,7 +2716,6 @@ void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
       // Use the OpenMPIRBuilder if enabled.
       if (UseOMPIRBuilder) {
         // Emit the associated statement and get its loop representation.
-        llvm::DebugLoc DL = SourceLocToDebugLoc(S.getBeginLoc());
         const Stmt *Inner = S.getRawStmt();
         llvm::CanonicalLoopInfo *CLI =
             EmitOMPCollapsedCanonicalLoopNest(Inner, 1);
@@ -2704,7 +2723,15 @@ void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
         llvm::OpenMPIRBuilder &OMPBuilder =
             CGM.getOpenMPRuntime().getOMPBuilder();
         // Add SIMD specific metadata
-        OMPBuilder.applySimd(DL, CLI);
+        llvm::ConstantInt *Simdlen = nullptr;
+        if (const auto *C = S.getSingleClause<OMPSimdlenClause>()) {
+          RValue Len =
+              this->EmitAnyExpr(C->getSimdlen(), AggValueSlot::ignored(),
+                                /*ignoreResult=*/true);
+          auto *Val = cast<llvm::ConstantInt>(Len.getScalarVal());
+          Simdlen = Val;
+        }
+        OMPBuilder.applySimd(CLI, Simdlen);
         return;
       }
     };
@@ -5261,8 +5288,30 @@ void CodeGenFunction::EmitOMPTaskwaitDirective(const OMPTaskwaitDirective &S) {
   CGM.getOpenMPRuntime().emitTaskwaitCall(*this, S.getBeginLoc(), Data);
 }
 
+bool isSupportedByOpenMPIRBuilder(const OMPTaskgroupDirective &T) {
+  return T.clauses().empty();
+}
+
 void CodeGenFunction::EmitOMPTaskgroupDirective(
     const OMPTaskgroupDirective &S) {
+  OMPLexicalScope Scope(*this, S, OMPD_unknown);
+  if (CGM.getLangOpts().OpenMPIRBuilder && isSupportedByOpenMPIRBuilder(S)) {
+    llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+    using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+    InsertPointTy AllocaIP(AllocaInsertPt->getParent(),
+                           AllocaInsertPt->getIterator());
+
+    auto BodyGenCB = [&, this](InsertPointTy AllocaIP,
+                               InsertPointTy CodeGenIP) {
+      Builder.restoreIP(CodeGenIP);
+      EmitStmt(S.getInnermostCapturedStmt()->getCapturedStmt());
+    };
+    CodeGenFunction::CGCapturedStmtInfo CapStmtInfo;
+    if (!CapturedStmtInfo)
+      CapturedStmtInfo = &CapStmtInfo;
+    Builder.restoreIP(OMPBuilder.createTaskgroup(Builder, AllocaIP, BodyGenCB));
+    return;
+  }
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     Action.Enter(CGF);
     if (const Expr *E = S.getReductionRef()) {
@@ -5288,14 +5337,25 @@ void CodeGenFunction::EmitOMPTaskgroupDirective(
     }
     CGF.EmitStmt(S.getInnermostCapturedStmt()->getCapturedStmt());
   };
-  OMPLexicalScope Scope(*this, S, OMPD_unknown);
   CGM.getOpenMPRuntime().emitTaskgroupRegion(*this, CodeGen, S.getBeginLoc());
 }
 
 void CodeGenFunction::EmitOMPFlushDirective(const OMPFlushDirective &S) {
-  llvm::AtomicOrdering AO = S.getSingleClause<OMPFlushClause>()
-                                ? llvm::AtomicOrdering::NotAtomic
-                                : llvm::AtomicOrdering::AcquireRelease;
+  // assume implicit FlushClause is used and change to AcquireRelease if not
+  // used
+  llvm::AtomicOrdering AO = llvm::AtomicOrdering::NotAtomic;
+  if (!S.getSingleClause<OMPFlushClause>()) {
+    AO = llvm::AtomicOrdering::AcquireRelease;
+    if (S.getSingleClause<OMPSeqCstClause>())
+      AO = llvm::AtomicOrdering::SequentiallyConsistent;
+    else if (S.getSingleClause<OMPAcqRelClause>())
+      AO = llvm::AtomicOrdering::AcquireRelease;
+    else if (S.getSingleClause<OMPAcquireClause>())
+      AO = llvm::AtomicOrdering::Acquire;
+    else if (S.getSingleClause<OMPReleaseClause>())
+      AO = llvm::AtomicOrdering::Release;
+  }
+
   CGM.getOpenMPRuntime().emitFlush(
       *this,
       [&S]() -> ArrayRef<const Expr *> {
@@ -6098,18 +6158,26 @@ emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X, RValue Update,
     RMWOp = llvm::AtomicRMWInst::Xor;
     break;
   case BO_LT:
-    RMWOp = X.getType()->hasSignedIntegerRepresentation()
-                ? (IsXLHSInRHSPart ? llvm::AtomicRMWInst::Min
-                                   : llvm::AtomicRMWInst::Max)
-                : (IsXLHSInRHSPart ? llvm::AtomicRMWInst::UMin
-                                   : llvm::AtomicRMWInst::UMax);
+    if (IsInteger)
+      RMWOp = X.getType()->hasSignedIntegerRepresentation()
+                  ? (IsXLHSInRHSPart ? llvm::AtomicRMWInst::Min
+                                     : llvm::AtomicRMWInst::Max)
+                  : (IsXLHSInRHSPart ? llvm::AtomicRMWInst::UMin
+                                     : llvm::AtomicRMWInst::UMax);
+    else
+      RMWOp = IsXLHSInRHSPart ? llvm::AtomicRMWInst::FMin
+                              : llvm::AtomicRMWInst::FMax;
     break;
   case BO_GT:
-    RMWOp = X.getType()->hasSignedIntegerRepresentation()
-                ? (IsXLHSInRHSPart ? llvm::AtomicRMWInst::Max
-                                   : llvm::AtomicRMWInst::Min)
-                : (IsXLHSInRHSPart ? llvm::AtomicRMWInst::UMax
-                                   : llvm::AtomicRMWInst::UMin);
+    if (IsInteger)
+      RMWOp = X.getType()->hasSignedIntegerRepresentation()
+                  ? (IsXLHSInRHSPart ? llvm::AtomicRMWInst::Max
+                                     : llvm::AtomicRMWInst::Min)
+                  : (IsXLHSInRHSPart ? llvm::AtomicRMWInst::UMax
+                                     : llvm::AtomicRMWInst::UMin);
+    else
+      RMWOp = IsXLHSInRHSPart ? llvm::AtomicRMWInst::FMax
+                              : llvm::AtomicRMWInst::FMin;
     break;
   case BO_Assign:
     RMWOp = llvm::AtomicRMWInst::Xchg;

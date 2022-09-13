@@ -470,8 +470,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
   // Sort by offset.
   SmallVector<std::pair<uint64_t, Type *>, 16> TypesVector;
   append_range(TypesVector, Types);
-  sort(TypesVector,
-       [](const auto &A, const auto &B) { return A.first < B.first; });
+  sort(TypesVector, llvm::less_first());
 
   // Check that the types are non-overlapping.
   uint64_t Offset = 0;
@@ -1040,7 +1039,7 @@ static bool tryToOptimizeStoreOfAllocationToGlobal(GlobalVariable *GV,
                                                    CallInst *CI,
                                                    const DataLayout &DL,
                                                    TargetLibraryInfo *TLI) {
-  if (!isAllocRemovable(CI, TLI))
+  if (!isRemovableAlloc(CI, TLI))
     // Must be able to remove the call when we get done..
     return false;
 
@@ -1584,11 +1583,6 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
   }
   Value *StoredOnceValue = GS.getStoredOnceValue();
   if (GS.StoredType == GlobalStatus::StoredOnce && StoredOnceValue) {
-    // Avoid speculating constant expressions that might trap (div/rem).
-    auto *SOVConstant = dyn_cast<Constant>(StoredOnceValue);
-    if (SOVConstant && SOVConstant->canTrap())
-      return Changed;
-
     Function &StoreFn =
         const_cast<Function &>(*GS.StoredOnceStore->getFunction());
     bool CanHaveNonUndefGlobalInitializer =
@@ -1601,6 +1595,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     // This is restricted to address spaces that allow globals to have
     // initializers. NVPTX, for example, does not support initializers for
     // shared memory (AS 3).
+    auto *SOVConstant = dyn_cast<Constant>(StoredOnceValue);
     if (SOVConstant && isa<UndefValue>(GV->getInitializer()) &&
         DL.getTypeAllocSize(SOVConstant->getType()) ==
             DL.getTypeAllocSize(GV->getValueType()) &&

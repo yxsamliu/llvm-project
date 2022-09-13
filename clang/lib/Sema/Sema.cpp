@@ -37,6 +37,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/MultiplexExternalSemaSource.h"
 #include "clang/Sema/ObjCMethodList.h"
+#include "clang/Sema/RISCVIntrinsicManager.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaConsumer.h"
@@ -137,9 +138,9 @@ public:
 
   void reset() { S = nullptr; }
 
-  virtual void FileChanged(SourceLocation Loc, FileChangeReason Reason,
-                           SrcMgr::CharacteristicKind FileType,
-                           FileID PrevFID) override {
+  void FileChanged(SourceLocation Loc, FileChangeReason Reason,
+                   SrcMgr::CharacteristicKind FileType,
+                   FileID PrevFID) override {
     if (!S)
       return;
     switch (Reason) {
@@ -2219,7 +2220,8 @@ operator()(sema::FunctionScopeInfo *Scope) const {
 }
 
 void Sema::PushCompoundScope(bool IsStmtExpr) {
-  getCurFunction()->CompoundScopes.push_back(CompoundScopeInfo(IsStmtExpr));
+  getCurFunction()->CompoundScopes.push_back(
+      CompoundScopeInfo(IsStmtExpr, getCurFPFeatures()));
 }
 
 void Sema::PopCompoundScope() {

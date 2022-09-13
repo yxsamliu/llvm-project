@@ -1436,7 +1436,7 @@ Instruction *InstCombinerImpl::foldICmpWithConstant(ICmpInst &Cmp) {
 
   // icmp(phi(C1, C2, ...), C) -> phi(icmp(C1, C), icmp(C2, C), ...).
   Constant *C = dyn_cast<Constant>(Op1);
-  if (!C || C->canTrap())
+  if (!C)
     return nullptr;
 
   if (auto *Phi = dyn_cast<PHINode>(Op0))
@@ -1551,6 +1551,8 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
   unsigned DstBits = Trunc->getType()->getScalarSizeInBits(),
            SrcBits = X->getType()->getScalarSizeInBits();
   if (Cmp.isEquality() && Trunc->hasOneUse()) {
+    // Canonicalize to a mask and wider compare if the wide type is suitable:
+    // (trunc X to i8) == C --> (X & 0xff) == (zext C)
     if (!X->getType()->isVectorTy() && shouldChangeType(DstBits, SrcBits)) {
       Constant *Mask = ConstantInt::get(X->getType(),
                                         APInt::getLowBitsSet(SrcBits, DstBits));
@@ -1775,11 +1777,16 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
       return new ICmpInst(NewPred, X, Zero);
     }
 
+    APInt NewC2 = *C2;
+    KnownBits Know = computeKnownBits(And->getOperand(0), 0, And);
+    // Set high zeros of C2 to allow matching negated power-of-2.
+    NewC2 = *C2 + APInt::getHighBitsSet(C2->getBitWidth(),
+                                        Know.countMinLeadingZeros());
+
     // Restrict this fold only for single-use 'and' (PR10267).
     // ((%x & C) == 0) --> %x u< (-C)  iff (-C) is power of two.
-    if ((~(*C2) + 1).isPowerOf2()) {
-      Constant *NegBOC =
-          ConstantExpr::getNeg(cast<Constant>(And->getOperand(1)));
+    if (NewC2.isNegatedPowerOf2()) {
+      Constant *NegBOC = ConstantInt::get(And->getType(), -NewC2);
       auto NewPred = isICMP_NE ? ICmpInst::ICMP_UGE : ICmpInst::ICMP_ULT;
       return new ICmpInst(NewPred, X, NegBOC);
     }
@@ -1995,9 +2002,12 @@ Instruction *InstCombinerImpl::foldICmpMulConstant(ICmpInst &Cmp,
                         Constant::getNullValue(Mul->getType()));
   }
 
+  if (MulC->isZero() || !(Mul->hasNoSignedWrap() || Mul->hasNoUnsignedWrap()))
+    return nullptr;
+
   // If the multiply does not wrap, try to divide the compare constant by the
   // multiplication factor.
-  if (Cmp.isEquality() && !MulC->isZero()) {
+  if (Cmp.isEquality()) {
     // (mul nsw X, MulC) == C --> X == C /s MulC
     if (Mul->hasNoSignedWrap() && C.srem(*MulC).isZero()) {
       Constant *NewC = ConstantInt::get(Mul->getType(), C.sdiv(*MulC));
@@ -2010,7 +2020,40 @@ Instruction *InstCombinerImpl::foldICmpMulConstant(ICmpInst &Cmp,
     }
   }
 
-  return nullptr;
+  Constant *NewC = nullptr;
+
+  // FIXME: Add assert that Pred is not equal to ICMP_SGE, ICMP_SLE,
+  // ICMP_UGE, ICMP_ULE.
+
+  if (Mul->hasNoSignedWrap()) {
+    if (MulC->isNegative()) {
+      // MININT / -1 --> overflow.
+      if (C.isMinSignedValue() && MulC->isAllOnes())
+        return nullptr;
+      Pred = ICmpInst::getSwappedPredicate(Pred);
+    }
+    if (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGE)
+      NewC = ConstantInt::get(
+          Mul->getType(),
+          APIntOps::RoundingSDiv(C, *MulC, APInt::Rounding::UP));
+    if (Pred == ICmpInst::ICMP_SLE || Pred == ICmpInst::ICMP_SGT)
+      NewC = ConstantInt::get(
+          Mul->getType(),
+          APIntOps::RoundingSDiv(C, *MulC, APInt::Rounding::DOWN));
+  }
+
+  if (Mul->hasNoUnsignedWrap()) {
+    if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_UGE)
+      NewC = ConstantInt::get(
+          Mul->getType(),
+          APIntOps::RoundingUDiv(C, *MulC, APInt::Rounding::UP));
+    if (Pred == ICmpInst::ICMP_ULE || Pred == ICmpInst::ICMP_UGT)
+      NewC = ConstantInt::get(
+          Mul->getType(),
+          APIntOps::RoundingUDiv(C, *MulC, APInt::Rounding::DOWN));
+  }
+
+  return NewC ? new ICmpInst(Pred, Mul->getOperand(0), NewC) : nullptr;
 }
 
 /// Fold icmp (shl 1, Y), C.
@@ -2228,13 +2271,22 @@ Instruction *InstCombinerImpl::foldICmpShrConstant(ICmpInst &Cmp,
 
   bool IsAShr = Shr->getOpcode() == Instruction::AShr;
   const APInt *ShiftValC;
-  if (match(Shr->getOperand(0), m_APInt(ShiftValC))) {
+  if (match(X, m_APInt(ShiftValC))) {
     if (Cmp.isEquality())
       return foldICmpShrConstConst(Cmp, Shr->getOperand(1), C, *ShiftValC);
 
+    // (ShiftValC >> Y) >s -1 --> Y != 0 with ShiftValC < 0
+    // (ShiftValC >> Y) <s  0 --> Y == 0 with ShiftValC < 0
+    bool TrueIfSigned;
+    if (!IsAShr && ShiftValC->isNegative() &&
+        isSignBitCheck(Pred, C, TrueIfSigned))
+      return new ICmpInst(TrueIfSigned ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE,
+                          Shr->getOperand(1),
+                          ConstantInt::getNullValue(X->getType()));
+
     // If the shifted constant is a power-of-2, test the shift amount directly:
-    // (ShiftValC >> X) >u C --> X <u (LZ(C) - LZ(ShiftValC))
-    // (ShiftValC >> X) <u C --> X >=u (LZ(C-1) - LZ(ShiftValC))
+    // (ShiftValC >> Y) >u C --> X <u (LZ(C) - LZ(ShiftValC))
+    // (ShiftValC >> Y) <u C --> X >=u (LZ(C-1) - LZ(ShiftValC))
     if (!IsAShr && ShiftValC->isPowerOf2() &&
         (Pred == CmpInst::ICMP_UGT || Pred == CmpInst::ICMP_ULT)) {
       bool IsUGT = Pred == CmpInst::ICMP_UGT;
@@ -2965,7 +3017,7 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
     const APInt *C;
     bool TrueIfSigned;
     if (match(Op1, m_APInt(C)) && Bitcast->hasOneUse() &&
-        InstCombiner::isSignBitCheck(Pred, *C, TrueIfSigned)) {
+        isSignBitCheck(Pred, *C, TrueIfSigned)) {
       if (match(BCSrcOp, m_FPExt(m_Value(X))) ||
           match(BCSrcOp, m_FPTrunc(m_Value(X)))) {
         // (bitcast (fpext/fptrunc X)) to iX) < 0 --> (bitcast X to iY) < 0

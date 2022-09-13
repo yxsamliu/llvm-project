@@ -419,8 +419,8 @@ nestedFunctionPM.addPass(std::make_unique<MyFunctionPass>());
 // Nest an op-agnostic pass manager. This will operate on any viable
 // operation, e.g. func.func, spv.func, spv.module, builtin.module, etc.
 OpPassManager &nestedAnyPM = nestedModulePM.nestAny();
-nestedFunctionPM.addPass(createCanonicalizePass());
-nestedFunctionPM.addPass(createCSEPass());
+nestedAnyPM.addPass(createCanonicalizePass());
+nestedAnyPM.addPass(createCSEPass());
 
 // Run the pass manager on the top-level module.
 ModuleOp m = ...;
@@ -1284,9 +1284,9 @@ module {
 #-}
 ```
 
-The configuration dumped can be passed to `mlir-opt` by specifying
-`-run-reproducer` flag. This will result in parsing the configuration of the reproducer
-and adjusting the necessary opt state, e.g. configuring the pass manager, context, etc.
+The configuration dumped can be passed to `mlir-opt`. This will result in
+parsing the configuration of the reproducer and adjusting the necessary opt
+state, e.g. configuring the pass manager, context, etc.
 
 Beyond specifying a filename, one can also register a `ReproducerStreamFactory`
 function that would be invoked in the case of a crash and the reproducer written

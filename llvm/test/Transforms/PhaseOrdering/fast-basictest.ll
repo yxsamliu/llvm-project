@@ -281,7 +281,7 @@ define float @test19(float %a, float %b, float %c) nounwind  {
 
 define float @test19_reassoc_nsz(float %a, float %b, float %c) nounwind  {
 ; CHECK-LABEL: @test19_reassoc_nsz(
-; CHECK-NEXT: [[TMP1:%.*]] = fadd reassoc nsz float [[C:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[C:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[T7:%.*]] = fneg reassoc nsz float [[TMP1]]
 ; CHECK-NEXT:    ret float [[T7]]
 ;

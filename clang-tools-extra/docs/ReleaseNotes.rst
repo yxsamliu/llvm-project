@@ -132,6 +132,16 @@ New checks
 
   Detects confusable Unicode identifiers.
 
+- New :doc:`bugprone-assignment-in-if-condition
+  <clang-tidy/checks/bugprone/assignment-in-if-condition>` check.
+
+  Warns when there is an assignment within an if statement condition expression.
+
+- New :doc:`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check.
+
+  Detects unmodified local variables and suggest adding ``const`` if the transformation is possible.
+
 - New :doc:`modernize-macro-to-enum
   <clang-tidy/checks/modernize/macro-to-enum>` check.
 
@@ -158,6 +168,10 @@ Changes in existing checks
 - Fixed nonsensical suggestion of :doc:`altera-struct-pack-align
   <clang-tidy/checks/altera/struct-pack-align>` check for empty structs.
 
+- Fixed a false positive in :doc:`bugprone-branch-clone
+  <clang-tidy/checks/bugprone/branch-clone>` when the branches
+  involve unknown expressions.
+
 - Fixed some false positives in :doc:`bugprone-infinite-loop
   <clang-tidy/checks/bugprone/infinite-loop>` involving dependent expressions.
 
@@ -174,8 +188,17 @@ Changes in existing checks
 
   - Don't emit an erroneous warning on self-moves.
 
+- Improved :doc:`cert-dcl58-cpp
+  <clang-tidy/checks/cert/dcl58-cpp>` check.
+
+  The check now detects explicit template specializations that are handled specially.
+
 - Made :doc:`cert-oop57-cpp <clang-tidy/checks/cert/oop57-cpp>` more sensitive
   by checking for an arbitrary expression in the second argument of ``memset``.
+
+- Made the fix-it of :doc:`cppcoreguidelines-init-variables
+  <clang-tidy/checks/cppcoreguidelines/init-variables>` use ``false`` to initialize
+  boolean variables.
 
 - Improved :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check.
@@ -206,6 +229,11 @@ Changes in existing checks
   where invalid parameters were implicitly being treated as being unused. 
   This fixes `Issue 56152 <https://github.com/llvm/llvm-project/issues/56152>`_.
 
+- Fixed false positives in :doc:`misc-unused-using-decls
+  <clang-tidy/checks/misc/unused-using-decls>` where `using` statements bringing
+  operators into the scope where incorrectly marked as unused. 
+  This fixes `issue 55095 <https://github.com/llvm/llvm-project/issues/55095>`_.
+
 - Fixed a false positive in :doc:`modernize-deprecated-headers
   <clang-tidy/checks/modernize/deprecated-headers>` involving including
   C header files from C++ files wrapped by ``extern "C" { ... }`` blocks.
@@ -226,6 +254,9 @@ Changes in existing checks
 - Fixed a crash in :doc:`readability-const-return-type
   <clang-tidy/checks/readability/const-return-type>` when a pure virtual function
   overrided has a const return type. Removed the fix for a virtual function.
+
+- Skipped addition of extra parentheses around member accesses (``a.b``) in fix-it for
+  :doc:`readability-container-data-pointer <clang-tidy/checks/readability/container-data-pointer>`.
 
 - Fixed incorrect suggestions for :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` when smart pointers are involved.

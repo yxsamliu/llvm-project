@@ -15,6 +15,7 @@
 #include "UnwrappedLineParser.h"
 #include "FormatToken.h"
 #include "TokenAnnotator.h"
+#include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -538,7 +539,7 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
       break;
     case tok::r_brace:
       if (OpeningBrace) {
-        if (!Style.RemoveBracesLLVM ||
+        if (!Style.RemoveBracesLLVM || Line->InPPDirective ||
             !OpeningBrace->isOneOf(TT_ControlStatementLBrace, TT_ElseLBrace)) {
           return false;
         }
@@ -1910,15 +1911,12 @@ void UnwrappedLineParser::parseStructuralElement(
         break;
 
       auto OneTokenSoFar = [&]() {
-        const UnwrappedLineNode *Tok = &Line->Tokens.front(),
-                                *End = Tok + Line->Tokens.size();
-        while (Tok != End && Tok->Tok->is(tok::comment))
-          ++Tok;
-        // In Verilog, macro invocations start with a backtick which the code
-        // treats as a hash.  Skip it.
-        if (Style.isVerilog() && Tok != End && Tok->Tok->is(tok::hash))
-          ++Tok;
-        return End - Tok == 1;
+        auto I = Line->Tokens.begin(), E = Line->Tokens.end();
+        while (I != E && I->Tok->is(tok::comment))
+          ++I;
+        while (I != E && Style.isVerilog() && I->Tok->is(tok::hash))
+          ++I;
+        return I != E && (++I == E);
       };
       if (OneTokenSoFar()) {
         if (FormatTok->is(tok::colon) && !Line->MustBeDeclaration) {
@@ -2121,6 +2119,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::amp:
     case tok::star:
     case tok::kw_const:
+    case tok::kw_constexpr:
     case tok::comma:
     case tok::less:
     case tok::greater:

@@ -122,6 +122,11 @@ bool MprotectReadOnly(uptr addr, uptr size);
 
 void MprotectMallocZones(void *addr, int prot);
 
+#if SANITIZER_WINDOWS
+// Zero previously mmap'd memory. Currently used only on Windows.
+bool ZeroMmapFixedRegion(uptr fixed_addr, uptr size) WARN_UNUSED_RESULT;
+#endif
+
 #if SANITIZER_LINUX
 // Unmap memory. Currently only used on Linux.
 void UnmapFromTo(uptr from, uptr to);
@@ -1018,7 +1023,6 @@ struct SignalContext {
 };
 
 void InitializePlatformEarly();
-void MaybeReexec();
 
 template <typename Fn>
 class RunOnDestruction {

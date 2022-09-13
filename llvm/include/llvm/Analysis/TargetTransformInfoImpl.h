@@ -163,12 +163,12 @@ public:
   bool preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
                                    AssumptionCache &AC, TargetLibraryInfo *TLI,
                                    DominatorTree *DT,
-                                   const LoopAccessInfo *LAI) const {
+                                   LoopVectorizationLegality *LVL) const {
     return false;
   }
 
-  bool emitGetActiveLaneMask() const {
-    return false;
+  PredicationStyle emitGetActiveLaneMask() const {
+    return PredicationStyle::None;
   }
 
   Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,

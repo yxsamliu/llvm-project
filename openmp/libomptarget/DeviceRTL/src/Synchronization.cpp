@@ -31,6 +31,8 @@ namespace impl {
 ///
 ///{
 /// NOTE: This function needs to be implemented by every target.
+void workersStartBarrier();
+void workersDoneBarrier();
 uint32_t atomicInc(uint32_t *Address, uint32_t Val, int Ordering);
 
 uint32_t atomicLoad(uint32_t *Address, int Ordering) {
@@ -439,8 +441,7 @@ __attribute__((noinline)) void __kmpc_barrier_simple_spmd(IdentTy *Loc,
   synchronize::threadsAligned();
 }
 
-__attribute__((noinline)) void __kmpc_barrier_simple_generic(IdentTy *Loc,
-                                                             int32_t TId) {
+void __kmpc_barrier_simple_generic(IdentTy *Loc, int32_t TId) {
   FunctionTracingRAII();
   synchronize::threads();
 }
@@ -465,6 +466,21 @@ void __kmpc_end_single(IdentTy *Loc, int32_t TId) {
 void __kmpc_flush(IdentTy *Loc) {
   FunctionTracingRAII();
   fence::kernel(__ATOMIC_SEQ_CST);
+}
+
+void __kmpc_flush_acquire(IdentTy *Loc) {
+  FunctionTracingRAII();
+  fence::kernel(__ATOMIC_ACQUIRE);
+}
+
+void __kmpc_flush_release(IdentTy *Loc) {
+  FunctionTracingRAII();
+  fence::kernel(__ATOMIC_RELEASE);
+}
+
+void __kmpc_flush_acqrel(IdentTy *Loc) {
+  FunctionTracingRAII();
+  fence::kernel(__ATOMIC_ACQ_REL);
 }
 
 uint64_t __kmpc_warp_active_thread_mask(void) {

@@ -1,6 +1,7 @@
 #  Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
 #  Notified per clause 4(b) of the license.
 
+
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
 cmake_minimum_required(VERSION 3.13.4)
 
@@ -202,7 +203,7 @@ if(LLVM_CCACHE_BUILD)
       # RULE_LAUNCH_COMPILE should work with Ninja but currently has issues
       # with cmd.exe and some MSVC tools other than cl.exe
       set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
-      set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})     
+      set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
     endif()
   else()
     message(FATAL_ERROR "Unable to find the program ccache. Set LLVM_CCACHE_BUILD to OFF")
@@ -440,7 +441,11 @@ endif()
 
 set(LLVM_ENABLE_ZLIB "ON" CACHE STRING "Use zlib for compression/decompression if available. Can be ON, OFF, or FORCE_ON")
 
+set(LLVM_ENABLE_ZSTD "ON" CACHE STRING "Use zstd for compression/decompression if available. Can be ON, OFF, or FORCE_ON")
+
 set(LLVM_ENABLE_CURL "OFF" CACHE STRING "Use libcurl for the HTTP client if available. Can be ON, OFF, or FORCE_ON")
+
+set(LLVM_ENABLE_HTTPLIB "OFF" CACHE STRING "Use cpp-httplib HTTP server library if available. Can be ON, OFF, or FORCE_ON")
 
 set(LLVM_Z3_INSTALL_DIR "" CACHE STRING "Install directory of the Z3 solver.")
 

@@ -376,6 +376,7 @@ public:
       SelectionDAG &DAG) const override;
   bool shouldSinkOperands(Instruction *I,
                           SmallVectorImpl<Use *> &Ops) const override;
+  bool shouldScalarizeBinop(SDValue VecOp) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
@@ -520,9 +521,7 @@ public:
                     SmallVectorImpl<SDValue> &InVals) const override;
 
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
-                                         Type *Ty) const override {
-    return true;
-  }
+                                         Type *Ty) const override;
   bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
 
@@ -598,6 +597,8 @@ public:
                                           const MachineBasicBlock *MBB,
                                           unsigned uid,
                                           MCContext &Ctx) const override;
+
+  bool isVScaleKnownToBeAPowerOfTwo() const override;
 
 private:
   /// RISCVCCAssignFn - This target-specific function extends the default

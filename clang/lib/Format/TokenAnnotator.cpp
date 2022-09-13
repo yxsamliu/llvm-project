@@ -999,7 +999,8 @@ private:
         FormatToken *Prev = Tok->getPreviousNonComment();
         if (!Prev)
           break;
-        if (Prev->isOneOf(tok::r_paren, tok::kw_noexcept)) {
+        if (Prev->isOneOf(tok::r_paren, tok::kw_noexcept) ||
+            Prev->ClosesRequiresClause) {
           Tok->setType(TT_CtorInitializerColon);
         } else if (Prev->is(tok::kw_try)) {
           // Member initializer list within function try block.
@@ -2317,7 +2318,15 @@ private:
     // After right braces, star tokens are likely to be pointers to struct,
     // union, or class.
     //   struct {} *ptr;
-    if (PrevToken->is(tok::r_brace) && Tok.is(tok::star))
+    // This by itself is not sufficient to distinguish from multiplication
+    // following a brace-initialized expression, as in:
+    // int i = int{42} * 2;
+    // In the struct case, the part of the struct declaration until the `{` and
+    // the `}` are put on separate unwrapped lines; in the brace-initialized
+    // case, the matching `{` is on the same unwrapped line, so check for the
+    // presence of the matching brace to distinguish between those.
+    if (PrevToken->is(tok::r_brace) && Tok.is(tok::star) &&
+        !PrevToken->MatchingParen)
       return TT_PointerOrReference;
 
     // For "} &&"
@@ -4734,7 +4743,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     // the first list element. Otherwise, it should be placed outside of the
     // list.
     return Left.is(BK_BracedInit) ||
-           (Left.is(TT_CtorInitializerColon) &&
+           (Left.is(TT_CtorInitializerColon) && Right.NewlinesBefore > 0 &&
             Style.BreakConstructorInitializers == FormatStyle::BCIS_AfterColon);
   }
   if (Left.is(tok::question) && Right.is(tok::colon))
@@ -4894,8 +4903,10 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   if (Right.is(tok::identifier) && Right.Next && Right.Next->is(TT_DictLiteral))
     return true;
 
-  if (Left.is(TT_CtorInitializerColon))
-    return Style.BreakConstructorInitializers == FormatStyle::BCIS_AfterColon;
+  if (Left.is(TT_CtorInitializerColon)) {
+    return Style.BreakConstructorInitializers == FormatStyle::BCIS_AfterColon &&
+           (!Right.isTrailingComment() || Right.NewlinesBefore > 0);
+  }
   if (Right.is(TT_CtorInitializerColon))
     return Style.BreakConstructorInitializers != FormatStyle::BCIS_AfterColon;
   if (Left.is(TT_CtorInitializerComma) &&

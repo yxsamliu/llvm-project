@@ -3227,9 +3227,17 @@ public:
   ///
   /// This function should be called after ensuring that legality
   /// conditions for a no-loop kernel are met.
-  void EmitNoLoopKernel(const Stmt *S,
-                        const CodeGenModule::NoLoopIntermediateStmts &,
-                        SourceLocation Loc);
+  void EmitNoLoopKernel(const OMPExecutableDirective &D, SourceLocation Loc);
+
+  /// EmitXteamRedKernel - For an OpenMP target reduction directive, emit the
+  /// kernel code assuming that related runtime environment variables can be
+  /// ignored.
+  ///
+  /// This function should be called after ensuring that legality
+  /// conditions for an optimized reduction kernel are met.
+  void EmitXteamRedKernel(const OMPExecutableDirective &D, const Stmt *S,
+                          const CodeGenModule::NoLoopIntermediateStmts &,
+                          SourceLocation Loc);
 
   /// EmitSimpleStmt - Try to emit a "simple" statement which does not
   /// necessarily require an insertion point or debug information; typically
@@ -3673,6 +3681,9 @@ public:
 
   /// Helper for the OpenMP loop directives.
   void EmitOMPLoopBody(const OMPLoopDirective &D, JumpDest LoopExit);
+
+  /// Helper for OpenMP NoLoop kernel CodeGen
+  void EmitOMPNoLoopBody(const OMPLoopDirective &D);
 
   /// Emit code for the worksharing loop-based directive.
   /// \return true, if this construct has any lastprivate clause, false -
@@ -4839,6 +4850,15 @@ private:
   llvm::Value *EmitX86CpuSupports(uint64_t Mask);
   llvm::Value *EmitX86CpuInit();
   llvm::Value *FormResolverCondition(const MultiVersionResolverOption &RO);
+
+  Address getAddressFromDeclStmt(const ForStmt &FStmt);
+  Address getAddressFromExpr(const ForStmt &FStmt);
+  llvm::Value *applyNoLoopInc(const Expr *Inc, const VarDecl *IVDecl,
+                              llvm::Value *CurrVal);
+  std::pair<const VarDecl *, Address>
+  EmitXteamRedStartingIndex(const ForStmt &FStmt);
+  void EmitXteamRedInc(const ForStmt &FStmt, const VarDecl *LoopVar,
+                       const Address &NoLoopIvAddr);
 };
 
 

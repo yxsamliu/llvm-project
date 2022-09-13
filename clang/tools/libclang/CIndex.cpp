@@ -538,7 +538,7 @@ bool CursorVisitor::VisitChildren(CXCursor Cursor) {
             const Optional<bool> V = handleDeclForVisitation(*TL);
             if (!V)
               continue;
-            return V.getValue();
+            return V.value();
           }
         } else if (VisitDeclContext(
                        CXXUnit->getASTContext().getTranslationUnitDecl()))
@@ -643,7 +643,7 @@ bool CursorVisitor::VisitDeclContext(DeclContext *DC) {
     const Optional<bool> V = handleDeclForVisitation(D);
     if (!V)
       continue;
-    return V.getValue();
+    return V.value();
   }
   return false;
 }
@@ -677,7 +677,7 @@ Optional<bool> CursorVisitor::handleDeclForVisitation(const Decl *D) {
   const Optional<bool> V = shouldVisitCursor(Cursor);
   if (!V)
     return None;
-  if (!V.getValue())
+  if (!V.value())
     return false;
   if (Visit(Cursor, true))
     return true;
@@ -1076,7 +1076,7 @@ bool CursorVisitor::VisitObjCContainerDecl(ObjCContainerDecl *D) {
     const Optional<bool> &V = shouldVisitCursor(Cursor);
     if (!V)
       continue;
-    if (!V.getValue())
+    if (!V.value())
       return false;
     if (Visit(Cursor, true))
       return true;
@@ -2189,6 +2189,8 @@ public:
       const OMPParallelMaskedTaskLoopDirective *D);
   void VisitOMPParallelMasterTaskLoopSimdDirective(
       const OMPParallelMasterTaskLoopSimdDirective *D);
+  void VisitOMPParallelMaskedTaskLoopSimdDirective(
+      const OMPParallelMaskedTaskLoopSimdDirective *D);
   void VisitOMPDistributeDirective(const OMPDistributeDirective *D);
   void VisitOMPDistributeParallelForDirective(
       const OMPDistributeParallelForDirective *D);
@@ -3216,6 +3218,11 @@ void EnqueueVisitor::VisitOMPParallelMaskedTaskLoopDirective(
 
 void EnqueueVisitor::VisitOMPParallelMasterTaskLoopSimdDirective(
     const OMPParallelMasterTaskLoopSimdDirective *D) {
+  VisitOMPLoopDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPParallelMaskedTaskLoopSimdDirective(
+    const OMPParallelMaskedTaskLoopSimdDirective *D) {
   VisitOMPLoopDirective(D);
 }
 
@@ -5854,6 +5861,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPParallelMaskedTaskLoopDirective");
   case CXCursor_OMPParallelMasterTaskLoopSimdDirective:
     return cxstring::createRef("OMPParallelMasterTaskLoopSimdDirective");
+  case CXCursor_OMPParallelMaskedTaskLoopSimdDirective:
+    return cxstring::createRef("OMPParallelMaskedTaskLoopSimdDirective");
   case CXCursor_OMPDistributeDirective:
     return cxstring::createRef("OMPDistributeDirective");
   case CXCursor_OMPDistributeParallelForDirective:
@@ -7362,7 +7371,7 @@ AnnotateTokensWorker::PostChildrenActions
 AnnotateTokensWorker::DetermineChildActions(CXCursor Cursor) const {
   PostChildrenActions actions;
 
-  // The DeclRefExpr of CXXOperatorCallExpr refering to the custom operator is
+  // The DeclRefExpr of CXXOperatorCallExpr referring to the custom operator is
   // visited before the arguments to the operator call. For the Call and
   // Subscript operator the range of this DeclRefExpr includes the whole call
   // expression, so that all tokens in that range would be mapped to the
@@ -8249,8 +8258,35 @@ static void getCursorPlatformAvailabilityForDecl(
           deprecated_message, always_unavailable, unavailable_message,
           AvailabilityAttrs);
 
-  if (AvailabilityAttrs.empty())
+  // If no availability attributes are found, inherit the attribute from the
+  // containing decl or the class or category interface decl.
+  if (AvailabilityAttrs.empty()) {
+    const ObjCContainerDecl *CD = nullptr;
+    const DeclContext *DC = D->getDeclContext();
+
+    if (auto *IMD = dyn_cast<ObjCImplementationDecl>(D))
+      CD = IMD->getClassInterface();
+    else if (auto *CatD = dyn_cast<ObjCCategoryDecl>(D))
+      CD = CatD->getClassInterface();
+    else if (auto *IMD = dyn_cast<ObjCCategoryImplDecl>(D))
+      CD = IMD->getCategoryDecl();
+    else if (auto *ID = dyn_cast<ObjCInterfaceDecl>(DC))
+      CD = ID;
+    else if (auto *CatD = dyn_cast<ObjCCategoryDecl>(DC))
+      CD = CatD;
+    else if (auto *IMD = dyn_cast<ObjCImplementationDecl>(DC))
+      CD = IMD->getClassInterface();
+    else if (auto *IMD = dyn_cast<ObjCCategoryImplDecl>(DC))
+      CD = IMD->getCategoryDecl();
+    else if (auto *PD = dyn_cast<ObjCProtocolDecl>(DC))
+      CD = PD;
+
+    if (CD)
+      getCursorPlatformAvailabilityForDecl(
+          CD, always_deprecated, deprecated_message, always_unavailable,
+          unavailable_message, AvailabilityAttrs);
     return;
+  }
 
   llvm::sort(
       AvailabilityAttrs, [](AvailabilityAttr *LHS, AvailabilityAttr *RHS) {

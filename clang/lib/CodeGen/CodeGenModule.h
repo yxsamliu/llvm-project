@@ -49,6 +49,10 @@ class DataLayout;
 class FunctionType;
 class LLVMContext;
 class IndexedInstrProfReader;
+
+namespace vfs {
+class FileSystem;
+}
 }
 
 namespace clang {
@@ -298,9 +302,20 @@ public:
   /// Map top-level construct to the intermediate ones for no-loop codegen
   using NoLoopKernelMap = llvm::DenseMap<const Stmt *, NoLoopIntermediateStmts>;
 
+  /// Kernel specific metadata used for communicating between CodeGen phases
+  /// while generating an optimized reduction kernel
+  struct XteamRedKernelMetadata {
+    const Stmt *XteamRedStmt = nullptr;
+    Address XteamRedLocalAddr = Address::invalid();
+  };
+  using XteamRedKernelInfo =
+      std::pair<NoLoopIntermediateStmts, XteamRedKernelMetadata>;
+  using XteamRedKernelMap = llvm::DenseMap<const Stmt *, XteamRedKernelInfo>;
+
 private:
   ASTContext &Context;
   const LangOptions &LangOpts;
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS; // Only used for debug info.
   const HeaderSearchOptions &HeaderSearchOpts; // Only used for debug info.
   const PreprocessorOptions &PreprocessorOpts; // Only used for debug info.
   const CodeGenOptions &CodeGenOpts;
@@ -311,7 +326,11 @@ private:
   std::unique_ptr<CGCXXABI> ABI;
   llvm::LLVMContext &VMContext;
   std::string ModuleNameHash;
+  bool CXX20ModuleInits = false;
   std::unique_ptr<CodeGenTBAA> TBAA;
+
+  /// Used by emitParallelCall
+  bool isSPMDExecutionMode = false;
 
   mutable std::unique_ptr<TargetCodeGenInfo> TheTargetCodeGenInfo;
 
@@ -336,6 +355,7 @@ private:
   std::unique_ptr<llvm::SanitizerStatReport> SanStats;
 
   NoLoopKernelMap NoLoopKernels;
+  XteamRedKernelMap XteamRedKernels;
 
   // A set of references that have only been seen via a weakref so far. This is
   // used to remove the weak of the reference if we ever see a direct reference
@@ -353,6 +373,20 @@ private:
   std::vector<GlobalDecl> DeferredDeclsToEmit;
   void addDeferredDeclToEmit(GlobalDecl GD) {
     DeferredDeclsToEmit.emplace_back(GD);
+    addEmittedDeferredDecl(GD);
+  }
+
+  /// Decls that were DeferredDecls and have now been emitted.
+  llvm::DenseMap<llvm::StringRef, GlobalDecl> EmittedDeferredDecls;
+
+  void addEmittedDeferredDecl(GlobalDecl GD) {
+    if (!llvm::isa<FunctionDecl>(GD.getDecl()))
+      return;
+    llvm::GlobalVariable::LinkageTypes L = getFunctionLinkage(GD);
+    if (llvm::GlobalValue::isLinkOnceLinkage(L) ||
+        llvm::GlobalValue::isWeakLinkage(L)) {
+      EmittedDeferredDecls[getMangledName(GD)] = GD;
+    }
   }
 
   /// List of alias we have emitted. Used to make sure that what they point to
@@ -579,7 +613,8 @@ private:
   llvm::DenseMap<const llvm::Constant *, llvm::GlobalVariable *> RTTIProxyMap;
 
 public:
-  CodeGenModule(ASTContext &C, const HeaderSearchOptions &headersearchopts,
+  CodeGenModule(ASTContext &C, IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                const HeaderSearchOptions &headersearchopts,
                 const PreprocessorOptions &ppopts,
                 const CodeGenOptions &CodeGenOpts, llvm::Module &M,
                 DiagnosticsEngine &Diags,
@@ -605,6 +640,9 @@ public:
   bool hasObjCRuntime() { return !!ObjCRuntime; }
 
   const std::string &getModuleNameHash() const { return ModuleNameHash; }
+
+  void setIsSPMDExecutionMode(bool isSPMD) { isSPMDExecutionMode = isSPMD; }
+  bool IsSPMDExecutionMode() { return isSPMDExecutionMode; }
 
   /// Return a reference to the configured OpenCL runtime.
   CGOpenCLRuntime &getOpenCLRuntime() {
@@ -707,6 +745,9 @@ public:
 
   ASTContext &getContext() const { return Context; }
   const LangOptions &getLangOpts() const { return LangOpts; }
+  const IntrusiveRefCntPtr<llvm::vfs::FileSystem> &getFileSystem() const {
+    return FS;
+  }
   const HeaderSearchOptions &getHeaderSearchOpts()
     const { return HeaderSearchOpts; }
   const PreprocessorOptions &getPreprocessorOpts()
@@ -1335,9 +1376,15 @@ public:
   bool imbueXRayAttrs(llvm::Function *Fn, SourceLocation Loc,
                       StringRef Category = StringRef()) const;
 
-  /// Returns true if function at the given location should be excluded from
-  /// profile instrumentation.
-  bool isProfileInstrExcluded(llvm::Function *Fn, SourceLocation Loc) const;
+  /// \returns true if \p Fn at \p Loc should be excluded from profile
+  /// instrumentation by the SCL passed by \p -fprofile-list.
+  bool isFunctionBlockedByProfileList(llvm::Function *Fn,
+                                      SourceLocation Loc) const;
+
+  /// \returns true if \p Fn at \p Loc should be excluded from profile
+  /// instrumentation.
+  bool isFunctionBlockedFromProfileInstr(llvm::Function *Fn,
+                                         SourceLocation Loc) const;
 
   SanitizerMetadata *getSanitizerMetadata() {
     return SanitizerMD.get();
@@ -1506,15 +1553,19 @@ public:
   const ForStmt *getSingleForStmt(const Stmt *S);
 
   /// Does the loop init qualify for a NoLoop kernel?
-  bool checkDeclStmt(const ForStmt &FStmt);
-  bool checkInitExpr(const ForStmt &FStmt);
-  bool checkLoopInit(const ForStmt &FStmt);
+  const VarDecl *checkDeclStmt(const ForStmt &FStmt);
+  const VarDecl *checkInitExpr(const ForStmt &FStmt);
+  const VarDecl *checkLoopInit(const ForStmt &FStmt);
 
   /// Does the loop increment qualify for a NoLoop kernel?
-  bool checkLoopStep(const ForStmt &FStmt);
+  bool checkLoopStep(const Expr *Inc, const VarDecl *VD);
 
   /// Does the loop condition qualify for a NoLoop kernel?
   bool checkLoopStop(const ForStmt &FStmt);
+
+  /// If the step is a binary expression, extract and return the step.
+  /// If the step is a unary expression, return nullptr.
+  const Expr *getBinaryExprStep(const Expr *Inc, const VarDecl *VD);
 
   /// If we are able to generate a NoLoop kernel for this directive, return
   /// true, otherwise return false. If successful, a map is created from the
@@ -1537,33 +1588,35 @@ public:
     return NoLoopKernels.find(S) != NoLoopKernels.end();
   }
 
+  bool checkAndSetXteamRedKernel(const OMPExecutableDirective &D);
+
+  const NoLoopIntermediateStmts &getXteamRedStmts(const Stmt *S) {
+    assert(isXteamRedKernel(S));
+    return XteamRedKernels.find(S)->second.first;
+  }
+
+  const XteamRedKernelMetadata &getXteamRedKernelMetadata(const Stmt *S) {
+    assert(isXteamRedKernel(S));
+    return XteamRedKernels.find(S)->second.second;
+  }
+
+  void setXteamRedKernelMetadata(const Stmt *S,
+                                 const XteamRedKernelMetadata &MD) {
+    assert(isXteamRedKernel(S));
+    XteamRedKernels.find(S)->second.second = MD;
+  }
+
+  /// Erase spec-red related metadata for the input statement
+  void resetXteamRedKernel(const Stmt *S) { XteamRedKernels.erase(S); }
+  /// Are we generating xteam reduction kernel for the statement
+  bool isXteamRedKernel(const Stmt *S) {
+    return XteamRedKernels.find(S) != XteamRedKernels.end();
+  }
+
   /// Move some lazily-emitted states to the NewBuilder. This is especially
   /// essential for the incremental parsing environment like Clang Interpreter,
   /// because we'll lose all important information after each repl.
-  void moveLazyEmissionStates(CodeGenModule *NewBuilder) {
-    assert(DeferredDeclsToEmit.empty() &&
-           "Should have emitted all decls deferred to emit.");
-    assert(NewBuilder->DeferredDecls.empty() &&
-           "Newly created module should not have deferred decls");
-    NewBuilder->DeferredDecls = std::move(DeferredDecls);
-
-    assert(NewBuilder->DeferredVTables.empty() &&
-           "Newly created module should not have deferred vtables");
-    NewBuilder->DeferredVTables = std::move(DeferredVTables);
-
-    assert(NewBuilder->MangledDeclNames.empty() &&
-           "Newly created module should not have mangled decl names");
-    assert(NewBuilder->Manglings.empty() &&
-           "Newly created module should not have manglings");
-    NewBuilder->Manglings = std::move(Manglings);
-
-    assert(WeakRefReferences.empty() &&
-           "Not all WeakRefRefs have been applied");
-    NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
-
-    NewBuilder->TBAA = std::move(TBAA);
-  }
-
+  void moveLazyEmissionStates(CodeGenModule *NewBuilder);
 
 private:
   llvm::Constant *GetOrCreateLLVMFunction(
@@ -1620,6 +1673,9 @@ private:
 
   /// Emit the function that initializes C++ thread_local variables.
   void EmitCXXThreadLocalInitFunc();
+
+  /// Emit the function that initializes global variables for a C++ Module.
+  void EmitCXXModuleInitFunc(clang::Module *Primary);
 
   /// Emit the function that initializes C++ globals.
   void EmitCXXGlobalInitFunc();
@@ -1688,6 +1744,9 @@ private:
   /// Emit the llvm.used and llvm.compiler.used metadata.
   void emitLLVMUsed();
 
+  /// For C++20 Itanium ABI, emit the initializers for the module.
+  void EmitModuleInitializers(clang::Module *Primary);
+
   /// Emit the link options introduced by imported modules.
   void EmitModuleLinkOptions();
 
@@ -1751,6 +1810,9 @@ private:
   /// Top level checker for no-loop on the for statement
   bool isForStmtNoLoopConforming(const Stmt *);
 
+  /// Top level checker for xteam reduction of the loop
+  bool isForStmtXteamRedConforming(const Stmt *);
+
   /// Used for a target construct
   bool checkAndSetNoLoopTargetConstruct(const OMPExecutableDirective &D);
 
@@ -1758,10 +1820,22 @@ private:
   /// codegen?
   bool areCombinedClausesNoLoopCompatible(const OMPExecutableDirective &D);
 
+  /// Are clauses on a combined OpenMP construct compatible with xteam
+  /// reduction codegen?
+  bool areCombinedClausesXteamRedCompatible(const OMPExecutableDirective &D);
+
+  /// Is the reduction clause compatible with xteam reduction codegen?
+  bool canHandleReductionClause(const OMPExecutableDirective &D);
+
   /// Populate the map used for no-loop codegen
   void setNoLoopKernel(const Stmt *S,
                        NoLoopIntermediateStmts IntermediateStmts) {
     NoLoopKernels[S] = IntermediateStmts;
+  }
+
+  /// Populate the map used for xteam reduction codegen
+  void setXteamRedKernel(const Stmt *S, XteamRedKernelInfo KI) {
+    XteamRedKernels[S] = KI;
   }
 };
 

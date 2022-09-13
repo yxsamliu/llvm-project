@@ -215,7 +215,7 @@ static int isVariantApplicableInContextHelper(
 
     Optional<bool> Result = HandleTrait(Property, IsActiveTrait);
     if (Result)
-      return Result.getValue();
+      return Result.value();
   }
 
   if (!DeviceSetOnly) {
@@ -236,7 +236,7 @@ static int isVariantApplicableInContextHelper(
 
       Optional<bool> Result = HandleTrait(Property, FoundInOrder);
       if (Result)
-        return Result.getValue();
+        return Result.value();
 
       if (!FoundInOrder) {
         LLVM_DEBUG(dbgs() << "[" << DEBUG_TYPE << "] Construct property "

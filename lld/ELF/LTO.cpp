@@ -178,9 +178,10 @@ static lto::Config createConfig() {
   if (config->ltoEmitAsm)
     c.CGFileType = CGFT_AssemblyFile;
 
-  if (config->saveTemps)
+  if (!config->saveTempsArgs.empty())
     checkError(c.addSaveTemps(config->outputFile.str() + ".",
-                              /*UseInputModulePath*/ true));
+                              /*UseInputModulePath*/ true,
+                              config->saveTempsArgs));
   return c;
 }
 
@@ -365,7 +366,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
       saveBuffer(buf[i], config->ltoObjPath + Twine(i));
   }
 
-  if (config->saveTemps) {
+  if (config->saveTempsArgs.contains("prelink")) {
     if (!buf[0].empty())
       saveBuffer(buf[0], config->outputFile + ".lto.o");
     for (unsigned i = 1; i != maxTasks; ++i)
@@ -382,10 +383,10 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   std::vector<InputFile *> ret;
   for (unsigned i = 0; i != maxTasks; ++i)
     if (!buf[i].empty())
-      ret.push_back(createObjectFile(MemoryBufferRef(buf[i], "lto.tmp")));
+      ret.push_back(createObjFile(MemoryBufferRef(buf[i], "lto.tmp")));
 
   for (std::unique_ptr<MemoryBuffer> &file : files)
     if (file)
-      ret.push_back(createObjectFile(*file));
+      ret.push_back(createObjFile(*file));
   return ret;
 }

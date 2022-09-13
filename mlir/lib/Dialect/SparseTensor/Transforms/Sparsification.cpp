@@ -26,6 +26,7 @@
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TensorEncoding.h"
@@ -115,9 +116,16 @@ struct CodeGen {
 static AffineMap permute(MLIRContext *context, AffineMap m,
                          std::vector<unsigned> &topSort) {
   unsigned sz = topSort.size();
+  assert(m.getNumResults() == sz && "TopoSort/AffineMap size mismatch");
+  // Construct the inverse of `m`; to avoid the asymptotic complexity
+  // of calling `m.getPermutedPosition` repeatedly.
+  SmallVector<unsigned, 4> inv(sz);
+  for (unsigned i = 0; i < sz; i++)
+    inv[i] = m.getDimPosition(i);
+  // Construct the permutation.
   SmallVector<unsigned, 4> perm(sz);
   for (unsigned i = 0; i < sz; i++)
-    perm[i] = m.getPermutedPosition(topSort[i]);
+    perm[i] = inv[topSort[i]];
   return AffineMap::getPermutationMap(perm, context);
 }
 
@@ -300,17 +308,6 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
   return true;
 }
 
-/// Returns true if tensor has an in-place annotation.
-static bool isInPlace(Value val) {
-  if (auto arg = val.dyn_cast<BlockArgument>())
-    if (auto funcOp = dyn_cast<func::FuncOp>(arg.getOwner()->getParentOp()))
-      if (auto attr = funcOp.getArgAttrOfType<BoolAttr>(
-              arg.getArgNumber(),
-              bufferization::BufferizableOpInterface::kInplaceableAttrName))
-        return attr.getValue();
-  return false;
-}
-
 /// Returns true if tensor materializes uninitialized into the computation.
 static bool isMaterializing(Value val) {
   return val.getDefiningOp<linalg::InitTensorOp>() ||
@@ -347,9 +344,8 @@ static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
     return true;
   // A tensor expression with a sparse output tensor that changes its values
   // but not its nonzero structure, an operation called "simply dynamic" in
-  // [Bik96,Ch9], is also admissable without special codegen, provided
-  // the tensor's underlying sparse storage scheme can be modified in-place.
-  if (merger.isSingleCondition(tensor, exp) && isInPlace(lhs->get()))
+  // [Bik96,Ch9], is also admissable without special codegen.
+  if (merger.isSingleCondition(tensor, exp))
     return true;
   // Accept "truly dynamic" if the output tensor materializes uninitialized
   // into the computation and insertions occur in lexicographic index order.
@@ -478,37 +474,19 @@ static Value genOutputBuffer(CodeGen &codegen, OpBuilder &builder,
   OpOperand *lhs = op.getOutputOperand(0);
   Value tensor = lhs->get();
   bool isInit = op.isInitTensor(lhs);
-  // An output tensor that is in-place can simply materialize from the buffer
-  // of the tensor that appears in the outs() clause. For updates, this has
-  // the advantage that only the nonzero value are involved in the computation,
-  // keeping the operation O(nnz). In all other cases, we are forced to zero
-  // out the buffer to enforce the assumption above, which may negatively
-  // impact running complexity (viz. O(n^2 + nnz) vs. O(nnz) for matrices).
+  // An output tensor can simply materialize from the buffer of the tensor that
+  // appears in the outs() clause. For updates, this has the advantage that only
+  // the nonzero value are involved in the computation, keeping the operation
+  // O(nnz). In all other cases, we are forced to zero out the buffer to enforce
+  // the assumption above, which may negatively impact running complexity
+  // (viz. O(n^2 + nnz) vs. O(nnz) for matrices).
   // TODO: use better analysis to avoid zeroing out the buffer?
-  if (isInPlace(tensor)) {
-    Value init =
-        builder.create<bufferization::ToMemrefOp>(loc, denseTp, tensor);
-    if (!isInit) {
-      Value zero = constantZero(builder, loc, denseTp.getElementType());
-      builder.create<linalg::FillOp>(loc, ValueRange{zero}, ValueRange{init});
-    }
-    return init;
-  }
-  // By default, a new buffer is allocated which is either set to zero (when
-  // no updates occur or the tensor materializes into this computation) or
-  // initialized to the value of the tensor defined in the outs() clause.
-  // This is always correct (since it enforces all assumptions above) but
-  // may negatively impact running complexity as explained above.
-  Value alloc = builder.create<memref::AllocOp>(loc, denseTp, args);
-  if (!isInit || isMaterializing(tensor)) {
+  Value init = builder.create<bufferization::ToMemrefOp>(loc, denseTp, tensor);
+  if (!isInit) {
     Value zero = constantZero(builder, loc, denseTp.getElementType());
-    builder.create<linalg::FillOp>(loc, ValueRange{zero}, ValueRange{alloc});
-  } else {
-    Value init =
-        builder.create<bufferization::ToMemrefOp>(loc, denseTp, tensor);
-    builder.create<memref::CopyOp>(loc, init, alloc);
+    builder.create<linalg::FillOp>(loc, ValueRange{zero}, ValueRange{init});
   }
-  return alloc;
+  return init;
 }
 
 /// Local bufferization of all dense and sparse data structures.
@@ -1760,9 +1738,9 @@ public:
 
     // Builds the tensor expression for the Linalg operation in SSA form.
     Optional<unsigned> optExp = merger.buildTensorExpFromLinalg(op);
-    if (!optExp.hasValue())
+    if (!optExp.has_value())
       return failure();
-    unsigned exp = optExp.getValue();
+    unsigned exp = optExp.value();
 
     // Rejects an inadmissable tensor expression.
     OpOperand *sparseOut = nullptr;
@@ -1812,7 +1790,7 @@ private:
       auto convert = rewriter.create<ConvertOp>(tval.getLoc(), dstTp, tval);
       op->setOperand(tensor, convert);
       rewriter.setInsertionPointAfter(op);
-      rewriter.create<ReleaseOp>(tval.getLoc(), convert);
+      rewriter.create<bufferization::DeallocTensorOp>(tval.getLoc(), convert);
       return success();
     }
     // Cannot be resolved with a single conversion.

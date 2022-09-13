@@ -76,6 +76,7 @@ public:
     });
     // Add an empty string for the corresponding sentinel unset attribute.
     T->AttributeValues.push_back("");
+    UniqueAttributeValues.erase("");
     llvm::for_each(UniqueAttributeValues, [&T](llvm::StringRef Name) {
       T->AttributeValues.emplace_back();
       T->AttributeValues.back() = Name.str();
@@ -255,13 +256,18 @@ private:
              "Didn't find the attribute in AttrValues!");
       return It - T.AttributeValues.begin();
     };
-    for (const auto &KV : Spec.Sequence.back().Attributes) {
-      if (KV.first == "guard") {
-        R.Guard = LookupExtensionID(KV.second);
-        continue;
+    for (unsigned I = 0; I < Spec.Sequence.size(); ++I) {
+      for (const auto &KV : Spec.Sequence[I].Attributes) {
+        if (KV.first == "guard") {
+          R.Guarded = true;
+        } else if (KV.first == "recover") {
+          R.Recovery = LookupExtensionID(KV.second);
+          R.RecoveryIndex = I;
+        } else {
+          Diagnostics.push_back(
+              llvm::formatv("Unknown attribute '{0}'", KV.first).str());
+        }
       }
-      Diagnostics.push_back(
-          llvm::formatv("Unknown attribute '{0}'", KV.first).str());
     }
   }
 

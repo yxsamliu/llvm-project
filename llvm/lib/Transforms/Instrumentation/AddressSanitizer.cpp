@@ -103,12 +103,14 @@ static const uint64_t kSmallX86_64ShadowOffsetAlignMask = ~0xFFFULL;
 static const uint64_t kLinuxKasan_ShadowOffset64 = 0xdffffc0000000000;
 static const uint64_t kPPC64_ShadowOffset64 = 1ULL << 44;
 static const uint64_t kSystemZ_ShadowOffset64 = 1ULL << 52;
+static const uint64_t kMIPS_ShadowOffsetN32 = 1ULL << 29;
 static const uint64_t kMIPS32_ShadowOffset32 = 0x0aaa0000;
 static const uint64_t kMIPS64_ShadowOffset64 = 1ULL << 37;
 static const uint64_t kAArch64_ShadowOffset64 = 1ULL << 36;
 static const uint64_t kRISCV64_ShadowOffset64 = 0xd55550000;
 static const uint64_t kFreeBSD_ShadowOffset32 = 1ULL << 30;
 static const uint64_t kFreeBSD_ShadowOffset64 = 1ULL << 46;
+static const uint64_t kFreeBSDAArch64_ShadowOffset64 = 1ULL << 47;
 static const uint64_t kFreeBSDKasan_ShadowOffset64 = 0xdffff7c000000000;
 static const uint64_t kNetBSD_ShadowOffset32 = 1ULL << 30;
 static const uint64_t kNetBSD_ShadowOffset64 = 1ULL << 46;
@@ -478,6 +480,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
                  TargetTriple.getArch() == Triple::ppc64le;
   bool IsSystemZ = TargetTriple.getArch() == Triple::systemz;
   bool IsX86_64 = TargetTriple.getArch() == Triple::x86_64;
+  bool IsMIPSN32ABI = TargetTriple.getEnvironment() == Triple::GNUABIN32;
   bool IsMIPS32 = TargetTriple.isMIPS32();
   bool IsMIPS64 = TargetTriple.isMIPS64();
   bool IsArmOrThumb = TargetTriple.isARM() || TargetTriple.isThumb();
@@ -498,6 +501,8 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
   if (LongSize == 32) {
     if (IsAndroid)
       Mapping.Offset = kDynamicShadowSentinel;
+    else if (IsMIPSN32ABI)
+      Mapping.Offset = kMIPS_ShadowOffsetN32;
     else if (IsMIPS32)
       Mapping.Offset = kMIPS32_ShadowOffset32;
     else if (IsFreeBSD)
@@ -521,6 +526,8 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
       Mapping.Offset = kPPC64_ShadowOffset64;
     else if (IsSystemZ)
       Mapping.Offset = kSystemZ_ShadowOffset64;
+    else if (IsFreeBSD && IsAArch64)
+        Mapping.Offset = kFreeBSDAArch64_ShadowOffset64;
     else if (IsFreeBSD && !IsMIPS64) {
       if (IsKasan)
         Mapping.Offset = kFreeBSDKasan_ShadowOffset64;
@@ -1227,7 +1234,9 @@ bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
        // dynamic alloca instrumentation for them as well.
        !AI.isUsedWithInAlloca() &&
        // swifterror allocas are register promoted by ISel
-       !AI.isSwiftError());
+       !AI.isSwiftError() &&
+       // safe allocas are not interesting
+       !(SSGI && SSGI->isSafe(AI)));
 
   ProcessedAllocas[&AI] = IsInteresting;
   return IsInteresting;
