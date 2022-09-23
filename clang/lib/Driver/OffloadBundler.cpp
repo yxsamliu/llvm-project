@@ -14,10 +14,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "clang/Driver/OffloadBundler.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/TargetID.h"
 #include "clang/Basic/Version.h"
-#include "clang/Driver/OffloadBundler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -117,7 +117,7 @@ bool OffloadTargetInfo::operator==(const OffloadTargetInfo &Target) const {
     TargetID == Target.TargetID;
 }
 
-std::string OffloadTargetInfo::str() {
+std::string OffloadTargetInfo::str() const {
   return Twine(OffloadKind + "-" + Triple.str() + "-" + TargetID).str();
 }
 
@@ -139,6 +139,50 @@ static std::string getDeviceLibraryFileName(StringRef BundleFileName,
   Result += LibName;
   Result += Extension;
   return Result;
+}
+
+/// @brief Checks if a code object \p CodeObjectInfo is compatible with a given
+/// target \p TargetInfo.
+/// @link https://clang.llvm.org/docs/ClangOffloadBundler.html#bundle-entry-id
+bool isCodeObjectCompatible(const OffloadTargetInfo &CodeObjectInfo,
+                            const OffloadTargetInfo &TargetInfo) {
+
+  // Compatible in case of exact match.
+  if (CodeObjectInfo == TargetInfo) {
+    DEBUG_WITH_TYPE("CodeObjectCompatibility",
+                    dbgs() << "Compatible: Exact match: \t[CodeObject: "
+                           << CodeObjectInfo.str()
+                           << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
+    return true;
+  }
+
+  // Incompatible if Kinds or Triples mismatch.
+  if (!CodeObjectInfo.isOffloadKindCompatible(TargetInfo.OffloadKind) ||
+      !CodeObjectInfo.Triple.isCompatibleWith(TargetInfo.Triple)) {
+    DEBUG_WITH_TYPE(
+        "CodeObjectCompatibility",
+        dbgs() << "Incompatible: Kind/Triple mismatch \t[CodeObject: "
+               << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
+               << "]\n");
+    return false;
+  }
+
+  // Incompatible if GPUArch mismatch.
+  if (!clang::isCompatibleTargetID(CodeObjectInfo.TargetID,
+                                   TargetInfo.TargetID)) {
+    DEBUG_WITH_TYPE("CodeObjectCompatibility",
+                    dbgs() << "Incompatible: GPU Arch mismatch \t[CodeObject: "
+                           << CodeObjectInfo.str()
+                           << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
+    return false;
+  }
+
+  DEBUG_WITH_TYPE(
+      "CodeObjectCompatibility",
+      dbgs() << "Compatible: Code Objects are compatible \t[CodeObject: "
+             << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
+             << "]\n");
+  return true;
 }
 
 /// Generic file handler interface.
@@ -972,17 +1016,22 @@ Error OffloadBundler::UnbundleFiles() {
     StringRef CurTriple = **CurTripleOrErr;
     assert(!CurTriple.empty());
 
-    auto Output = Worklist.find(CurTriple);
-    // The file may have more bundles for other targets, that we don't care
-    // about. Therefore, move on to the next triple
+    auto Output = Worklist.begin();
+    for (auto E = Worklist.end(); Output != E; Output++) {
+      if (isCodeObjectCompatible(
+              OffloadTargetInfo(CurTriple, BundlerConfig),
+              OffloadTargetInfo((*Output).first(), BundlerConfig))) {
+        break;
+      }
+    }
+
     if (Output == Worklist.end())
       continue;
-
     // Check if the output file can be opened and copy the bundle to it.
     std::error_code EC;
-    raw_fd_ostream OutputFile(Output->second, EC, sys::fs::OF_None);
+    raw_fd_ostream OutputFile((*Output).second, EC, sys::fs::OF_None);
     if (EC)
-      return createFileError(Output->second, EC);
+      return createFileError((*Output).second, EC);
     if (Error Err = FH->ReadBundle(OutputFile, Input))
       return Err;
     if (Error Err = FH->ReadBundleEnd(Input))
@@ -1051,99 +1100,6 @@ Error OffloadBundler::UnbundleFiles() {
 static Archive::Kind getDefaultArchiveKindForHost() {
   return Triple(sys::getDefaultTargetTriple()).isOSDarwin() ? Archive::K_DARWIN
                                                             : Archive::K_GNU;
-}
-
-/// @brief Checks if a code object \p CodeObjectInfo is compatible with a given
-/// target \p TargetInfo.
-/// @link https://clang.llvm.org/docs/ClangOffloadBundler.html#bundle-entry-id
-bool isCodeObjectCompatible(OffloadTargetInfo &CodeObjectInfo,
-                            OffloadTargetInfo &TargetInfo) {
-
-  // Compatible in case of exact match.
-  if (CodeObjectInfo == TargetInfo) {
-    DEBUG_WITH_TYPE("CodeObjectCompatibility",
-                    dbgs() << "Compatible: Exact match: \t[CodeObject: "
-                           << CodeObjectInfo.str()
-                           << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
-    return true;
-  }
-
-  // Incompatible if Kinds or Triples mismatch.
-  if (!CodeObjectInfo.isOffloadKindCompatible(TargetInfo.OffloadKind) ||
-      !CodeObjectInfo.Triple.isCompatibleWith(TargetInfo.Triple)) {
-    DEBUG_WITH_TYPE(
-        "CodeObjectCompatibility",
-        dbgs() << "Incompatible: Kind/Triple mismatch \t[CodeObject: "
-               << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
-               << "]\n");
-    return false;
-  }
-
-  // Incompatible if Processors mismatch.
-  llvm::StringMap<bool> CodeObjectFeatureMap, TargetFeatureMap;
-  llvm::Optional<StringRef> CodeObjectProc = clang::parseTargetID(
-      CodeObjectInfo.Triple, CodeObjectInfo.TargetID, &CodeObjectFeatureMap);
-  llvm::Optional<StringRef> TargetProc = clang::parseTargetID(
-      TargetInfo.Triple, TargetInfo.TargetID, &TargetFeatureMap);
-
-  // Both TargetProc and CodeObjectProc can't be empty here.
-  if (!TargetProc || !CodeObjectProc ||
-      CodeObjectProc.getValue() != TargetProc.getValue()) {
-    DEBUG_WITH_TYPE("CodeObjectCompatibility",
-                    dbgs() << "Incompatible: Processor mismatch \t[CodeObject: "
-                           << CodeObjectInfo.str()
-                           << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
-    return false;
-  }
-
-  // Incompatible if CodeObject has more features than Target, irrespective of
-  // type or sign of features.
-  if (CodeObjectFeatureMap.getNumItems() > TargetFeatureMap.getNumItems()) {
-    DEBUG_WITH_TYPE("CodeObjectCompatibility",
-                    dbgs() << "Incompatible: CodeObject has more features "
-                              "than target \t[CodeObject: "
-                           << CodeObjectInfo.str()
-                           << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
-    return false;
-  }
-
-  // Compatible if each target feature specified by target is compatible with
-  // target feature of code object. The target feature is compatible if the
-  // code object does not specify it (meaning Any), or if it specifies it
-  // with the same value (meaning On or Off).
-  for (const auto &CodeObjectFeature : CodeObjectFeatureMap) {
-    auto TargetFeature = TargetFeatureMap.find(CodeObjectFeature.getKey());
-    if (TargetFeature == TargetFeatureMap.end()) {
-      DEBUG_WITH_TYPE(
-          "CodeObjectCompatibility",
-          dbgs()
-              << "Incompatible: Value of CodeObject's non-ANY feature is "
-                 "not matching with Target feature's ANY value \t[CodeObject: "
-              << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
-              << "]\n");
-      return false;
-    } else if (TargetFeature->getValue() != CodeObjectFeature.getValue()) {
-      DEBUG_WITH_TYPE(
-          "CodeObjectCompatibility",
-          dbgs() << "Incompatible: Value of CodeObject's non-ANY feature is "
-                    "not matching with Target feature's non-ANY value "
-                    "\t[CodeObject: "
-                 << CodeObjectInfo.str()
-                 << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
-      return false;
-    }
-  }
-
-  // CodeObject is compatible if all features of Target are:
-  //   - either, present in the Code Object's features map with the same sign,
-  //   - or, the feature is missing from CodeObjects's features map i.e. it is
-  //   set to ANY
-  DEBUG_WITH_TYPE(
-      "CodeObjectCompatibility",
-      dbgs() << "Compatible: Target IDs are compatible \t[CodeObject: "
-             << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
-             << "]\n");
-  return true;
 }
 
 /// @brief Computes a list of targets among all given targets which are

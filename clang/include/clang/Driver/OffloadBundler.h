@@ -17,6 +17,7 @@
 #ifndef LLVM_CLANG_DRIVER_OFFLOADBUNDLER_H
 #define LLVM_CLANG_DRIVER_OFFLOADBUNDLER_H
 
+#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Error.h"
 #include <string>
 #include <vector>
@@ -78,7 +79,7 @@ struct OffloadTargetInfo {
   bool isOffloadKindCompatible(const llvm::StringRef TargetOffloadKind) const;
   bool isTripleValid() const;
   bool operator==(const OffloadTargetInfo &Target) const;
-  std::string str();
+  std::string str() const;
 };
 
 } // namespace clang
