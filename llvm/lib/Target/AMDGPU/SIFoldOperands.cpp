@@ -701,7 +701,7 @@ void SIFoldOperands::foldOperand(
     // copy to a MOV.
 
     unsigned MovOp = TII->getMovOpcode(DestRC);
-    if (MovOp == AMDGPU::COPY)
+    if (MovOp == AMDGPU::COPY || MovOp == AMDGPU::PRED_COPY)
       return;
 
     UseMI->setDesc(TII->get(MovOp));
@@ -781,7 +781,8 @@ void SIFoldOperands::foldOperand(
               CopyToVGPR = Src;
             } else {
               auto Tmp = MRI->createVirtualRegister(&AMDGPU::AGPR_32RegClass);
-              BuildMI(MBB, UseMI, DL, TII->get(AMDGPU::COPY), Tmp).add(*Def);
+              BuildMI(MBB, UseMI, DL, TII->get(TII->getCopyOpcode()), Tmp)
+                  .add(*Def);
               B.addReg(Tmp);
             }
           }
@@ -792,7 +793,8 @@ void SIFoldOperands::foldOperand(
               Vgpr = VGPRCopies[CopyToVGPR];
             } else {
               Vgpr = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-              BuildMI(MBB, UseMI, DL, TII->get(AMDGPU::COPY), Vgpr).add(*Def);
+              BuildMI(MBB, UseMI, DL, TII->get(TII->getCopyOpcode()), Vgpr)
+                  .add(*Def);
               VGPRCopies[CopyToVGPR] = Vgpr;
             }
             auto Tmp = MRI->createVirtualRegister(&AMDGPU::AGPR_32RegClass);
@@ -859,7 +861,7 @@ void SIFoldOperands::foldOperand(
         // %sgpr1 = V_READFIRSTLANE_B32 %vgpr
         // =>
         // %sgpr1 = COPY %sgpr0
-        UseMI->setDesc(TII->get(AMDGPU::COPY));
+        UseMI->setDesc(TII->get(TII->getCopyOpcode()));
         UseMI->getOperand(1).setReg(OpToFold.getReg());
         UseMI->getOperand(1).setSubReg(OpToFold.getSubReg());
         UseMI->getOperand(1).setIsKill(false);
@@ -1091,7 +1093,7 @@ bool SIFoldOperands::tryConstantFoldOp(MachineInstr *MI) const {
     if (Src1Val == 0) {
       // y = or x, 0 => y = copy x
       MI->removeOperand(Src1Idx);
-      mutateCopyOp(*MI, TII->get(AMDGPU::COPY));
+      mutateCopyOp(*MI, TII->get(TII->getCopyOpcode()));
     } else if (Src1Val == -1) {
       // y = or x, -1 => y = v_mov_b32 -1
       MI->removeOperand(Src1Idx);
@@ -1111,7 +1113,7 @@ bool SIFoldOperands::tryConstantFoldOp(MachineInstr *MI) const {
     } else if (Src1Val == -1) {
       // y = and x, -1 => y = copy x
       MI->removeOperand(Src1Idx);
-      mutateCopyOp(*MI, TII->get(AMDGPU::COPY));
+      mutateCopyOp(*MI, TII->get(TII->getCopyOpcode()));
     } else
       return false;
 
@@ -1123,7 +1125,7 @@ bool SIFoldOperands::tryConstantFoldOp(MachineInstr *MI) const {
     if (Src1Val == 0) {
       // y = xor x, 0 => y = copy x
       MI->removeOperand(Src1Idx);
-      mutateCopyOp(*MI, TII->get(AMDGPU::COPY));
+      mutateCopyOp(*MI, TII->get(TII->getCopyOpcode()));
       return true;
     }
   }
@@ -1157,7 +1159,7 @@ bool SIFoldOperands::tryFoldCndMask(MachineInstr &MI) const {
 
   LLVM_DEBUG(dbgs() << "Folded " << MI << " into ");
   auto &NewDesc =
-      TII->get(Src0->isReg() ? (unsigned)AMDGPU::COPY : getMovOpc(false));
+      TII->get(Src0->isReg() ? TII->getCopyOpcode() : getMovOpc(false));
   int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
   if (Src2Idx != -1)
     MI.removeOperand(Src2Idx);
@@ -1745,8 +1747,8 @@ bool SIFoldOperands::tryFoldPhiAGPR(MachineInstr &PHI) {
       InsertPt = InsertMBB->getFirstTerminator();
     }
 
-    const unsigned CopyOpc =
-        UseAccVGPRWrite ? AMDGPU::V_ACCVGPR_WRITE_B32_e64 : AMDGPU::COPY;
+    const unsigned CopyOpc = UseAccVGPRWrite ? AMDGPU::V_ACCVGPR_WRITE_B32_e64
+                                             : TII->getCopyOpcode();
     Register NewReg = MRI->createVirtualRegister(ARC);
     MachineInstr *MI = BuildMI(*InsertMBB, InsertPt, PHI.getDebugLoc(),
                                TII->get(CopyOpc), NewReg)
