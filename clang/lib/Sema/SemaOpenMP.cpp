@@ -22682,7 +22682,8 @@ static void checkDeclInTargetContext(SourceLocation SL, SourceRange SR,
       (SemaRef.getCurLambda(/*IgnoreNonLambdaCapturingScope=*/true) ||
        SemaRef.getCurBlock() || SemaRef.getCurCapturedRegion()) &&
       VD->hasGlobalStorage()) {
-    if (!MapTy || *MapTy != OMPDeclareTargetDeclAttr::MT_To) {
+    if (!MapTy || (*MapTy != OMPDeclareTargetDeclAttr::MT_To &&
+                   *MapTy != OMPDeclareTargetDeclAttr::MT_Enter)) {
       // OpenMP 5.0, 2.12.7 declare target Directive, Restrictions
       // If a lambda declaration and definition appears between a
       // declare target directive and the matching end declare target
@@ -22763,8 +22764,11 @@ void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
             IsIndirect = true;
         }
         auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(
-            Context, OMPDeclareTargetDeclAttr::MT_To, DTCI.DT, IndirectE,
-            IsIndirect, Level, SourceRange(DTCI.Loc, DTCI.Loc));
+            Context,
+            getLangOpts().OpenMP >= 52 ? OMPDeclareTargetDeclAttr::MT_Enter
+                                       : OMPDeclareTargetDeclAttr::MT_To,
+            DTCI.DT, IndirectE, IsIndirect, Level,
+            SourceRange(DTCI.Loc, DTCI.Loc));
         D->addAttr(A);
         if (ASTMutationListener *ML = Context.getASTMutationListener())
           ML->DeclarationMarkedOpenMPDeclareTarget(D, A);
