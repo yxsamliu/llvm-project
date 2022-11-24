@@ -12,6 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Frontend/OpenMP/OMPGridValues.h"
+#include "llvm/Object/ELF.h"
+#include "llvm/Object/ELFObjectFile.h"
+
 #include <algorithm>
 #include <assert.h>
 #include <cstdio>
@@ -19,7 +26,6 @@
 #include <cstring>
 #include <dlfcn.h>
 #include <functional>
-#include <libelf.h>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -27,6 +33,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "ELFSymbols.h"
 #include "impl_runtime.h"
 #include "interop_hsa.h"
 
@@ -41,12 +48,13 @@
 #include "print_tracing.h"
 #include "trace.h"
 
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
-#include "llvm/Frontend/OpenMP/OMPGridValues.h"
-
 #include "MemoryManager.h"
 
 #include "utils.h"
+
+using namespace llvm;
+using namespace llvm::object;
+using namespace llvm::ELF;
 
 #ifdef OMPT_SUPPORT
 #include <ompt_device_callbacks.h>
@@ -176,9 +184,10 @@ public:
   uint32_t KernargSegmentSize;
   void *KernargRegion = nullptr;
   std::queue<int> FreeKernargSegments;
+  uint16_t CodeObjectVersion;
 
   uint32_t kernargSizeIncludingImplicit() {
-    return KernargSegmentSize + sizeof(impl_implicit_args_t);
+    return KernargSegmentSize + implicitArgsSize(CodeObjectVersion);
   }
 
   ~KernelArgPool() {
@@ -195,8 +204,10 @@ public:
   KernelArgPool(const KernelArgPool &) = delete;
   KernelArgPool(KernelArgPool &&) = delete;
 
-  KernelArgPool(uint32_t KernargSegmentSize, hsa_amd_memory_pool_t &MemoryPool)
-      : KernargSegmentSize(KernargSegmentSize) {
+  KernelArgPool(uint32_t KernargSegmentSize, hsa_amd_memory_pool_t &MemoryPool,
+                uint16_t CodeObjectVersion)
+      : KernargSegmentSize(KernargSegmentSize),
+        CodeObjectVersion(CodeObjectVersion) {
 
     // impl uses one pool per kernel for all gpus, with a fixed upper size
     // preserving that exact scheme here, including the queue<int>
@@ -230,7 +241,9 @@ public:
   }
 
   void *allocate(uint64_t ArgNum) {
+#if DBG_KERGN_ARGS
     assert((ArgNum * sizeof(void *)) == KernargSegmentSize);
+#endif
     Lock L(&Mutex);
     void *Res = nullptr;
     if (!FreeKernargSegments.empty()) {
@@ -280,16 +293,16 @@ struct KernelTy {
   KernelTy(llvm::omp::OMPTgtExecModeFlags ExecutionMode, int16_t ConstWgSize,
            int32_t DeviceId, void *CallStackAddr, const char *Name,
            uint32_t KernargSegmentSize,
-           hsa_amd_memory_pool_t &KernArgMemoryPool)
+           hsa_amd_memory_pool_t &KernArgMemoryPool, uint16_t CodeObjectVersion)
       : ExecutionMode(ExecutionMode), ConstWGSize(ConstWgSize),
         DeviceId(DeviceId), CallStackAddr(CallStackAddr), Name(Name) {
     DP("Construct kernelinfo: ExecMode %d\n", ExecutionMode);
 
     std::string N(Name);
     if (KernelArgPoolMap.find(N) == KernelArgPoolMap.end()) {
-      KernelArgPoolMap.insert(
-          std::make_pair(N, std::unique_ptr<KernelArgPool>(new KernelArgPool(
-                                KernargSegmentSize, KernArgMemoryPool))));
+      KernelArgPoolMap.insert(std::make_pair(
+          N, std::unique_ptr<KernelArgPool>(new KernelArgPool(
+                 KernargSegmentSize, KernArgMemoryPool, CodeObjectVersion))));
     }
   }
 };
@@ -427,6 +440,7 @@ struct EnvironmentVariables {
   int TeamThreadLimit;
   int MaxTeamsDefault;
   int DynamicMemSize;
+  int MaxHWQueues;
 };
 
 template <uint32_t wavesize>
@@ -457,14 +471,21 @@ struct HSALifetime {
 // Handle scheduling of multiple hsa_queue's per device to
 // multiple threads (one scheduler per device)
 class HSAQueueScheduler {
+
 public:
-  HSAQueueScheduler() : Current(0) {}
+  HSAQueueScheduler(int maxHWQueues) : MaxHWQueues(maxHWQueues), Current(0) {
+    HSAQueues.resize(maxHWQueues);
+  }
 
   HSAQueueScheduler(const HSAQueueScheduler &) = delete;
 
   HSAQueueScheduler(HSAQueueScheduler &&Q) {
+    MaxHWQueues = Q.MaxHWQueues;
+    HSAQueues.resize(MaxHWQueues);
+
     Current = Q.Current.load();
-    for (uint8_t I = 0; I < NUM_QUEUES_PER_DEVICE; I++) {
+
+    for (uint8_t I = 0; I < MaxHWQueues; I++) {
       HSAQueues[I] = Q.HSAQueues[I];
       Q.HSAQueues[I] = nullptr;
     }
@@ -472,7 +493,7 @@ public:
 
   // \return false if any HSA queue creation fails
   bool createQueues(hsa_agent_t HSAAgent, uint32_t QueueSize) {
-    for (uint8_t I = 0; I < NUM_QUEUES_PER_DEVICE; I++) {
+    for (uint8_t I = 0; I < MaxHWQueues; I++) {
       hsa_queue_t *Q = nullptr;
       hsa_status_t Rc =
           hsa_queue_create(HSAAgent, QueueSize, HSA_QUEUE_TYPE_MULTI,
@@ -487,7 +508,7 @@ public:
   }
 
   ~HSAQueueScheduler() {
-    for (uint8_t I = 0; I < NUM_QUEUES_PER_DEVICE; I++) {
+    for (uint8_t I = 0; I < MaxHWQueues; I++) {
       if (HSAQueues[I]) {
         hsa_status_t Err = hsa_queue_destroy(HSAQueues[I]);
         if (Err != HSA_STATUS_SUCCESS)
@@ -499,12 +520,12 @@ public:
   // \return next queue to use for device
   hsa_queue_t *next() {
     return HSAQueues[(Current.fetch_add(1, std::memory_order_relaxed)) %
-                     NUM_QUEUES_PER_DEVICE];
+                     MaxHWQueues];
   }
 
   /// Enable/disable queue profiling for OMPT trace records
   void enableQueueProfiling(int enable) {
-    for (uint8_t i = 0; i < NUM_QUEUES_PER_DEVICE; ++i) {
+    for (uint8_t i = 0; i < MaxHWQueues; ++i) {
       hsa_status_t err =
           hsa_amd_profiling_set_profiler_enabled(HSAQueues[i], enable);
       if (err != HSA_STATUS_SUCCESS)
@@ -513,17 +534,18 @@ public:
   }
 
   // Get the Number of Queues per Device
-  int getNumQueues() { return NUM_QUEUES_PER_DEVICE; }
+  int getNumQueues() { return HSAQueues.size(); }
 
 private:
   // Number of queues per device
-  enum : uint8_t { NUM_QUEUES_PER_DEVICE = 4 };
-  hsa_queue_t *HSAQueues[NUM_QUEUES_PER_DEVICE] = {};
+  int MaxHWQueues;
+  std::vector<hsa_queue_t *> HSAQueues;
   std::atomic<uint8_t> Current;
 };
 
 /// Class containing all the device information
 class RTLDeviceInfoTy : HSALifetime {
+  enum : uint8_t { NUM_QUEUES_PER_DEVICE = 4 };
   std::vector<std::list<FuncOrGblEntryTy>> FuncGblEntries;
 
   struct QueueDeleter {
@@ -563,6 +585,8 @@ public:
   std::vector<int> ThreadsPerGroup;
   std::vector<int> WarpSize;
   std::vector<std::string> GPUName;
+  std::vector<std::string> TargetID;
+  uint16_t CodeObjectVersion;
 
   // OpenMP properties
   std::vector<int> NumTeams;
@@ -576,6 +600,7 @@ public:
 
   // Resource pools
   SignalPoolT FreeSignalPool;
+  std::vector<void *> PreallocatedDeviceHeap;
 
   bool HostcallRequired = false;
 
@@ -960,7 +985,6 @@ public:
            "Unexpected device id!");
     FuncGblEntries[DeviceId].emplace_back();
     FuncOrGblEntryTy &E = FuncGblEntries[DeviceId].back();
-    // KernelArgPoolMap.clear();
     E.Entries.clear();
     E.Table.EntriesBegin = E.Table.EntriesEnd = 0;
   }
@@ -1218,6 +1242,7 @@ public:
     SymbolInfoTable.resize(NumberOfDevices);
     DeviceCoarseGrainedMemoryPools.resize(NumberOfDevices);
     DeviceFineGrainedMemoryPools.resize(NumberOfDevices);
+    PreallocatedDeviceHeap.resize(NumberOfDevices);
 
     Err = setupDevicePools(HSAAgents);
     if (Err != HSA_STATUS_SUCCESS) {
@@ -1238,6 +1263,9 @@ public:
     ompt_device_callbacks.prepare_devices(NumberOfDevices);
 #endif
 
+    // Get environment variable for hardware queues
+    Env.MaxHWQueues = readEnv("GPU_MAX_HW_QUEUES", NUM_QUEUES_PER_DEVICE);
+
     for (int I = 0; I < NumberOfDevices; I++) {
       uint32_t QueueSize = 0;
       {
@@ -1254,7 +1282,7 @@ public:
       }
 
       {
-        HSAQueueScheduler QSched;
+        HSAQueueScheduler QSched(Env.MaxHWQueues);
         if (!QSched.createQueues(HSAAgents[I], QueueSize))
           return;
         HSAQueueSchedulers.emplace_back(std::move(QSched));
@@ -1280,9 +1308,10 @@ public:
 
     // Default state.
     RequiresFlags = OMP_REQ_UNDEFINED;
-
+#if FIX_ISSUE
     for (int I = 0; I < NumberOfDevices; ++I)
       DeviceAllocators.emplace_back(I);
+#endif
     ConstructionSucceeded = true;
   }
 
@@ -1461,17 +1490,29 @@ public:
 
   inline hsa_signal_t getSignal() const { return signal; }
 
-  hsa_status_t waitToComplete() {
+  /// @brief Waits for the Async operation to complete
+  /// @param RetrieveToHost If the HstPtr should be written to from the device
+  /// @return hsa_status_t
+  hsa_status_t waitToComplete(bool RetrieveToHost) {
     if (alreadyCompleted)
       return HSA_STATUS_SUCCESS;
     hsa_signal_value_t init = 1;
     hsa_signal_value_t success = 0;
-    hsa_status_t err = wait_for_signal(signal, init, success);
+    hsa_status_t err = wait_for_signal_data(signal, init, success);
     OMPT_IF_TRACING_ENABLED(recordCopyTimingInNs(signal););
 
+#ifdef OMPTARGET_DEBUG
+    // Catch if clients by mistake pass wrong argument
+    if (!RetrieveToHost && HstPtr != HstOrPoolPtr) {
+      assert(memcmp(HstPtr, HstOrPoolPtr, Size) == 0 &&
+             "Allow no-retrievel iff memory contents are equal.");
+    }
+#endif
+
+    // In case we want to retrieve the data back to host
     // Now that the operation is complete, copy data from PoolPtr
     // to HstPtr if applicable
-    if (HstPtr != HstOrPoolPtr) {
+    if (RetrieveToHost && HstPtr != HstOrPoolPtr) {
       assert(HstPtr != nullptr && HstOrPoolPtr != nullptr &&
              "HstPr and PoolPtr both must be non-null");
       DP("Memcpy %lu bytes from PoolPtr %p to HstPtr %p\n", Size, HstOrPoolPtr,
@@ -1543,7 +1584,7 @@ public:
   hsa_status_t waitToComplete() {
     hsa_signal_value_t init = 1;
     hsa_signal_value_t success = 0;
-    hsa_status_t err = wait_for_signal(signal, init, success);
+    hsa_status_t err = wait_for_signal_kernel(signal, init, success);
     OMPT_IF_TRACING_ENABLED(recordKernelTimingInNs(signal, agent););
     DeviceInfo().FreeSignalPool.push(signal);
     assert(ArgPool);
@@ -1707,9 +1748,8 @@ hsa_status_t AMDGPUAsyncInfoQueueTy::waitForKernelCompletion() {
 void AMDGPUAsyncInfoQueueTy::waitForMapExiting() {
   if (!hasMapExitingInfo)
     return;
-
   for (auto &&s : mapExitingInfo)
-    s.waitToComplete();
+    s.waitToComplete(/*RetrieveToHost*/ true);
 }
 
 hsa_status_t AMDGPUAsyncInfoQueueTy::synchronize() {
@@ -1723,7 +1763,7 @@ hsa_status_t AMDGPUAsyncInfoQueueTy::synchronize() {
   // in absence of kernel and map exiting info, only wait for data submit's
   if (!hasKernelLaunchInfo && hasMapEnteringInfo && !hasMapExitingInfo) {
     for(auto &&enter : mapEnteringInfo) {
-      enter.waitToComplete();
+      enter.waitToComplete(/*RetrieveToHost*/ false);
       enter.releaseResources();
     }
     return HSA_STATUS_SUCCESS;
@@ -1732,7 +1772,7 @@ hsa_status_t AMDGPUAsyncInfoQueueTy::synchronize() {
   // in absence of kernel and map entering info's, only wait for data retrieve's
   if (!hasKernelLaunchInfo && !hasMapEnteringInfo && hasMapExitingInfo) {
     for(auto &&exit : mapExitingInfo) {
-      exit.waitToComplete();
+      exit.waitToComplete(/*RetrieveToHost*/ true);
       exit.releaseResources();
     }
     return HSA_STATUS_SUCCESS;
@@ -1840,7 +1880,6 @@ int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
   DP("Submit data %ld bytes, (hst:%016llx) -> (tgt:%016llx).\n", Size,
      (long long unsigned)(Elf64_Addr)HstPtr,
      (long long unsigned)(Elf64_Addr)TgtPtr);
-
   void *HstOrPoolPtr = prepareHstPtrForDataSubmit(Size, HstPtr);
   assert(HstOrPoolPtr && "HstOrPoolPtr cannot be null");
 
@@ -1880,7 +1919,7 @@ void finiAsyncInfo(__tgt_async_info *AsyncInfo) {
 // Inputs: Max_Teams, MaxWgSize, Warp_Size, ExecutionMode,
 //         EnvTeamLimit, EnvNumTeams, num_teams, thread_limit,
 //         loop_tripcount.
-void getLaunchVals(int &ThreadsPerGroup, int &NumGroups, int WarpSize,
+void getLaunchVals(uint16_t &ThreadsPerGroup, int &NumGroups, int WarpSize,
                    EnvironmentVariables Env, int ConstWGSize, int ExecutionMode,
                    int NumTeams, int ThreadLimit, uint64_t LoopTripcount,
                    int DeviceNumTeams, int DeviceNumCUs) {
@@ -1904,9 +1943,12 @@ void getLaunchVals(int &ThreadsPerGroup, int &NumGroups, int WarpSize,
 
   if (ExecutionMode ==
       llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP) {
-    assert(LoopTripcount &&
-           "No loop exec mode needs a non-zero loop tripcount");
-    NumGroups = ((LoopTripcount - 1) / ThreadsPerGroup) + 1;
+    // Cannot assert a non-zero tripcount. Instead, launch with 1 team
+    // if the tripcount is indeed zero.
+    if (LoopTripcount > 0)
+      NumGroups = ((LoopTripcount - 1) / ThreadsPerGroup) + 1;
+    else
+      NumGroups = 1;
     DP("Final %d NumGroups and %d ThreadsPerGroup\n", NumGroups,
       ThreadsPerGroup);
     return;
@@ -2089,6 +2131,27 @@ void getLaunchVals(int &ThreadsPerGroup, int &NumGroups, int WarpSize,
 #endif
 }
 
+const uint16_t getCodeObjectVersionFromELF(__tgt_device_image *Image) {
+  char *ImageBegin = (char *)Image->ImageStart;
+  size_t ImageSize = (char *)Image->ImageEnd - ImageBegin;
+
+  StringRef Buffer = StringRef(ImageBegin, ImageSize);
+  auto ElfOrErr = ObjectFile::createELFObjectFile(MemoryBufferRef(Buffer, ""),
+                                                  /*InitContent=*/false);
+  if (!ElfOrErr) {
+    REPORT("Failed to load ELF: %s\n", toString(ElfOrErr.takeError()).c_str());
+    return 1;
+  }
+
+  if (const auto *ELFObj = dyn_cast<ELF64LEObjectFile>(ElfOrErr->get())) {
+    auto Header = ELFObj->getELFFile().getHeader();
+    uint16_t Version = (uint8_t)(Header.e_ident[EI_ABIVERSION]);
+    DP("ELFABIVERSION Version: %u\n", Version);
+    return Version;
+  }
+  return 0;
+}
+
 int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
                         ptrdiff_t *TgtOffsets, int32_t ArgNum, int32_t NumTeams,
                         int32_t ThreadLimit, uint64_t LoopTripcount,
@@ -2129,13 +2192,14 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
   const uint32_t SgprSpillCount = KernelInfoEntry.sgpr_spill_count;
   const uint32_t VgprSpillCount = KernelInfoEntry.vgpr_spill_count;
 
+#if DBG_KERGN_ARGS
   assert(ArgNum == (int)KernelInfoEntry.explicit_argument_count);
-
+#endif
   /*
    * Set limit based on ThreadsPerGroup and GroupsPerDevice
    */
   int NumGroups = 0;
-  int ThreadsPerGroup = 0;
+  uint16_t ThreadsPerGroup = 0;
 
   getLaunchVals(ThreadsPerGroup, NumGroups, DeviceInfo().WarpSize[DeviceId],
                 DeviceInfo().Env, KernelInfo->ConstWGSize,
@@ -2175,6 +2239,7 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
     AsyncInfo.createMapEnteringDependencies(Queue);
     uint64_t PacketId = core::acquire_available_packet_id(Queue);
 
+    uint16_t CodeObjectVersion = DeviceInfo().CodeObjectVersion;
     const uint32_t Mask = Queue->size - 1; // size is a power of 2
     hsa_kernel_dispatch_packet_t *Packet =
         (hsa_kernel_dispatch_packet_t *)Queue->base_address + (PacketId & Mask);
@@ -2209,7 +2274,9 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
     }
     {
       if (ArgPool) {
+#if DBG_KERGN_ARGS
         assert(ArgPool->KernargSegmentSize == (ArgNum * sizeof(void *)));
+#endif
         KernArg = ArgPool->allocate(ArgNum);
       }
       if (!KernArg) {
@@ -2222,50 +2289,69 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
         memcpy((char *)KernArg + sizeof(void *) * I, Args[I], sizeof(void *));
       }
 
-      // Initialize implicit arguments. TODO: Which of these can be dropped
-      impl_implicit_args_t *ImplArgs = reinterpret_cast<impl_implicit_args_t *>(
-          static_cast<char *>(KernArg) + ArgPool->KernargSegmentSize);
-      memset(ImplArgs, 0,
-             sizeof(impl_implicit_args_t)); // may not be necessary
-      ImplArgs->offset_x = 0;
-      ImplArgs->offset_y = 0;
-      ImplArgs->offset_z = 0;
+      uint8_t *ImplArgs =
+          static_cast<uint8_t *>(KernArg) + sizeof(void *) * ArgNum;
+      memset(ImplArgs, 0, implicitArgsSize(CodeObjectVersion));
 
+      uint64_t Buffer = 0;
       // assign a hostcall buffer for the selected Q
       if (__atomic_load_n(&DeviceInfo().HostcallRequired, __ATOMIC_ACQUIRE)) {
         // hostrpc_assign_buffer is not thread safe, and this function is
         // under a multiple reader lock, not a writer lock.
         static pthread_mutex_t HostcallInitLock = PTHREAD_MUTEX_INITIALIZER;
         pthread_mutex_lock(&HostcallInitLock);
-        uint64_t Buffer = hostrpc_assign_buffer(DeviceInfo().HSAAgents[DeviceId],
-                                                Queue, DeviceId);
+        Buffer = hostrpc_assign_buffer(DeviceInfo().HSAAgents[DeviceId], Queue,
+                                       DeviceId);
         pthread_mutex_unlock(&HostcallInitLock);
         if (!Buffer) {
           DP("hostrpc_assign_buffer failed, gpu would dereference null and "
              "error\n");
           return OFFLOAD_FAIL;
         }
+      }
 
-        DP("Implicit argument count: %d\n",
-           KernelInfoEntry.implicit_argument_count);
-        if (KernelInfoEntry.implicit_argument_count >= 4) {
-          // Initialise pointer for implicit_argument_count != 0 ABI
-          // Guess that the right implicit argument is at offset 24 after
-          // the explicit arguments. In the future, should be able to read
-          // the offset from msgpack. Clang is not annotating it at present.
-          uint64_t Offset =
-              sizeof(void *) * (KernelInfoEntry.explicit_argument_count + 3);
-          if ((Offset + 8) > ArgPool->kernargSizeIncludingImplicit()) {
-            DP("Bad offset of hostcall: %lu, exceeds kernarg size w/ implicit "
-               "args: %d\n",
-               Offset + 8, ArgPool->kernargSizeIncludingImplicit());
-          } else {
-            memcpy(static_cast<char *>(KernArg) + Offset, &Buffer, 8);
-          }
-        }
+      DP("Implicit argument count: %d\n",
+         KernelInfoEntry.implicit_argument_count);
 
-        // initialise pointer for implicit_argument_count == 0 ABI
-        ImplArgs->hostcall_ptr = Buffer;
+      if (CodeObjectVersion < llvm::ELF::ELFABIVERSION_AMDGPU_HSA_V5) {
+        DP("Setting Hostcall buffer for COV4\n");
+        memcpy(&ImplArgs[IMPLICITARGS::COV4_HOSTCALL_PTR_OFFSET], &Buffer,
+               IMPLICITARGS::HOSTCALL_PTR_SIZE);
+      } else {
+        DP("Setting fields of ImplicitArgs for COV5\n");
+        uint16_t Remainder = 0;
+        uint16_t GridDims = 1;
+        uint32_t NumGroupsYZ = 1;
+        uint16_t ThreadsPerGroupYZ = 0;
+        memcpy(&ImplArgs[IMPLICITARGS::COV5_BLOCK_COUNT_X_OFFSET], &NumGroups,
+               IMPLICITARGS::COV5_BLOCK_COUNT_X_SIZE);
+        memcpy(&ImplArgs[IMPLICITARGS::COV5_BLOCK_COUNT_Y_OFFSET], &NumGroupsYZ,
+               IMPLICITARGS::COV5_BLOCK_COUNT_Y_SIZE);
+        memcpy(&ImplArgs[IMPLICITARGS::COV5_BLOCK_COUNT_Z_OFFSET], &NumGroupsYZ,
+               IMPLICITARGS::COV5_BLOCK_COUNT_Z_SIZE);
+
+        memcpy(&ImplArgs[IMPLICITARGS::COV5_GROUP_SIZE_X_OFFSET],
+               &ThreadsPerGroup, IMPLICITARGS::COV5_GROUP_SIZE_X_SIZE);
+        memcpy(&ImplArgs[IMPLICITARGS::COV5_GROUP_SIZE_Y_OFFSET],
+               &ThreadsPerGroupYZ, IMPLICITARGS::COV5_GROUP_SIZE_Y_SIZE);
+        memcpy(&ImplArgs[IMPLICITARGS::COV5_GROUP_SIZE_Z_OFFSET],
+               &ThreadsPerGroupYZ, IMPLICITARGS::COV5_GROUP_SIZE_Z_SIZE);
+
+        memcpy(&ImplArgs[IMPLICITARGS::COV5_REMAINDER_X_OFFSET], &Remainder,
+               IMPLICITARGS::COV5_REMAINDER_X_SIZE);
+        memcpy(&ImplArgs[IMPLICITARGS::COV5_REMAINDER_Y_OFFSET], &Remainder,
+               IMPLICITARGS::COV5_REMAINDER_Y_SIZE);
+        memcpy(&ImplArgs[IMPLICITARGS::COV5_REMAINDER_Z_OFFSET], &Remainder,
+               IMPLICITARGS::COV5_REMAINDER_Z_SIZE);
+
+        memcpy(&ImplArgs[IMPLICITARGS::COV5_GRID_DIMS_OFFSET], &GridDims,
+               IMPLICITARGS::COV5_GRID_DIMS_SIZE);
+
+        memcpy(&ImplArgs[IMPLICITARGS::COV5_HOSTCALL_PTR_OFFSET], &Buffer,
+               IMPLICITARGS::HOSTCALL_PTR_SIZE);
+        memcpy(&ImplArgs[IMPLICITARGS::COV5_HEAPV1_PTR_OFFSET],
+               &(DeviceInfo().PreallocatedDeviceHeap[DeviceId]),
+               IMPLICITARGS::COV5_HEAPV1_PTR_SIZE);
       }
 
       Packet->kernarg_address = KernArg;
@@ -2297,8 +2383,8 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
 }
 
 bool elfMachineIdIsAmdgcn(__tgt_device_image *Image) {
-  const uint16_t AmdgcnMachineID = 224; // EM_AMDGPU may not be in system elf.h
-  int32_t R = elf_check_machine(Image, AmdgcnMachineID);
+  const uint16_t AmdgcnMachineID = EM_AMDGPU;
+  const int32_t R = elf_check_machine(Image, AmdgcnMachineID);
   if (!R) {
     DP("Supported machine ID not found\n");
   }
@@ -2306,28 +2392,20 @@ bool elfMachineIdIsAmdgcn(__tgt_device_image *Image) {
 }
 
 uint32_t elfEFlags(__tgt_device_image *Image) {
-  char *ImgBegin = (char *)Image->ImageStart;
+  const char *ImgBegin = (char *)Image->ImageStart;
   size_t ImgSize = (char *)Image->ImageEnd - ImgBegin;
 
-  Elf *E = elf_memory(ImgBegin, ImgSize);
-  if (!E) {
-    DP("Unable to get ELF handle: %s!\n", elf_errmsg(-1));
+  StringRef Buffer = StringRef(ImgBegin, ImgSize);
+  auto ElfOrErr = ObjectFile::createELFObjectFile(MemoryBufferRef(Buffer, ""),
+                                                  /*InitContent=*/false);
+  if (!ElfOrErr) {
+    consumeError(ElfOrErr.takeError());
     return 0;
   }
 
-  Elf64_Ehdr *Eh64 = elf64_getehdr(E);
-
-  if (!Eh64) {
-    DP("Unable to get machine ID from ELF file!\n");
-    elf_end(E);
-    return 0;
-  }
-
-  uint32_t Flags = Eh64->e_flags;
-
-  elf_end(E);
-  DP("ELF Flags: 0x%x\n", Flags);
-  return Flags;
+  if (const auto *ELFObj = dyn_cast<ELF64LEObjectFile>(ElfOrErr->get()))
+    return ELFObj->getPlatformFlags();
+  return 0;
 }
 
 template <typename T> bool enforceUpperBound(T *Value, T Upper) {
@@ -2338,128 +2416,53 @@ template <typename T> bool enforceUpperBound(T *Value, T Upper) {
   return Changed;
 }
 
-Elf64_Shdr *findOnlyShtHash(Elf *Elf) {
-  size_t N;
-  int Rc = elf_getshdrnum(Elf, &N);
-  if (Rc != 0) {
-    return nullptr;
-  }
-
-  Elf64_Shdr *Result = nullptr;
-  for (size_t I = 0; I < N; I++) {
-    Elf_Scn *Scn = elf_getscn(Elf, I);
-    if (Scn) {
-      Elf64_Shdr *Shdr = elf64_getshdr(Scn);
-      if (Shdr) {
-        if (Shdr->sh_type == SHT_HASH) {
-          if (Result == nullptr) {
-            Result = Shdr;
-          } else {
-            // multiple SHT_HASH sections not handled
-            return nullptr;
-          }
-        }
-      }
-    }
-  }
-  return Result;
-}
-
-const Elf64_Sym *elfLookup(Elf *Elf, char *Base, Elf64_Shdr *SectionHash,
-                           const char *Symname) {
-
-  assert(SectionHash);
-  size_t SectionSymtabIndex = SectionHash->sh_link;
-  Elf64_Shdr *SectionSymtab =
-      elf64_getshdr(elf_getscn(Elf, SectionSymtabIndex));
-  size_t SectionStrtabIndex = SectionSymtab->sh_link;
-
-  const Elf64_Sym *Symtab =
-      reinterpret_cast<const Elf64_Sym *>(Base + SectionSymtab->sh_offset);
-
-  const uint32_t *Hashtab =
-      reinterpret_cast<const uint32_t *>(Base + SectionHash->sh_offset);
-
-  // Layout:
-  // nbucket
-  // nchain
-  // bucket[nbucket]
-  // chain[nchain]
-  uint32_t Nbucket = Hashtab[0];
-  const uint32_t *Bucket = &Hashtab[2];
-  const uint32_t *Chain = &Hashtab[Nbucket + 2];
-
-  const size_t Max = strlen(Symname) + 1;
-  const uint32_t Hash = elf_hash(Symname);
-  for (uint32_t I = Bucket[Hash % Nbucket]; I != 0; I = Chain[I]) {
-    char *N = elf_strptr(Elf, SectionStrtabIndex, Symtab[I].st_name);
-    if (strncmp(Symname, N, Max) == 0) {
-      return &Symtab[I];
-    }
-  }
-
-  return nullptr;
-}
-
 struct SymbolInfo {
-  void *Addr = nullptr;
+  const void *Addr = nullptr;
   uint32_t Size = UINT32_MAX;
   uint32_t ShType = SHT_NULL;
 };
 
-int getSymbolInfoWithoutLoading(Elf *Elf, char *Base, const char *Symname,
-                                SymbolInfo *Res) {
-  if (elf_kind(Elf) != ELF_K_ELF) {
+int getSymbolInfoWithoutLoading(const ELFObjectFile<ELF64LE> &ELFObj,
+                                StringRef SymName, SymbolInfo *Res) {
+  auto SymOrErr = getELFSymbol(ELFObj, SymName);
+  if (!SymOrErr) {
+    std::string ErrorString = toString(SymOrErr.takeError());
+    DP("Failed ELF lookup: %s\n", ErrorString.c_str());
+    return 1;
+  }
+  if (!*SymOrErr)
+    return 1;
+
+  auto SymSecOrErr = ELFObj.getELFFile().getSection((*SymOrErr)->st_shndx);
+  if (!SymSecOrErr) {
+    std::string ErrorString = toString(SymOrErr.takeError());
+    DP("Failed ELF lookup: %s\n", ErrorString.c_str());
     return 1;
   }
 
-  Elf64_Shdr *SectionHash = findOnlyShtHash(Elf);
-  if (!SectionHash) {
-    return 1;
-  }
-
-  const Elf64_Sym *Sym = elfLookup(Elf, Base, SectionHash, Symname);
-  if (!Sym) {
-    return 1;
-  }
-
-  if (Sym->st_size > UINT32_MAX) {
-    return 1;
-  }
-
-  if (Sym->st_shndx == SHN_UNDEF) {
-    return 1;
-  }
-
-  Elf_Scn *Section = elf_getscn(Elf, Sym->st_shndx);
-  if (!Section) {
-    return 1;
-  }
-
-  Elf64_Shdr *Header = elf64_getshdr(Section);
-  if (!Header) {
-    return 1;
-  }
-
-  Res->Addr = Sym->st_value + Base;
-  Res->Size = static_cast<uint32_t>(Sym->st_size);
-  Res->ShType = Header->sh_type;
+  Res->Addr = (*SymOrErr)->st_value + ELFObj.getELFFile().base();
+  Res->Size = static_cast<uint32_t>((*SymOrErr)->st_size);
+  Res->ShType = static_cast<uint32_t>((*SymSecOrErr)->sh_type);
   return 0;
 }
 
-int getSymbolInfoWithoutLoading(char *Base, size_t ImgSize, const char *Symname,
+int getSymbolInfoWithoutLoading(char *Base, size_t ImgSize, const char *SymName,
                                 SymbolInfo *Res) {
-  Elf *Elf = elf_memory(Base, ImgSize);
-  if (Elf) {
-    int Rc = getSymbolInfoWithoutLoading(Elf, Base, Symname, Res);
-    elf_end(Elf);
-    return Rc;
+  StringRef Buffer = StringRef(Base, ImgSize);
+  auto ElfOrErr = ObjectFile::createELFObjectFile(MemoryBufferRef(Buffer, ""),
+                                                  /*InitContent=*/false);
+  if (!ElfOrErr) {
+    REPORT("Failed to load ELF: %s\n", toString(ElfOrErr.takeError()).c_str());
+    return 1;
   }
+
+  if (const auto *ELFObj = dyn_cast<ELF64LEObjectFile>(ElfOrErr->get()))
+    return getSymbolInfoWithoutLoading(*ELFObj, SymName, Res);
   return 1;
 }
 
 hsa_status_t interopGetSymbolInfo(char *Base, size_t ImgSize,
-                                  const char *SymName, void **VarAddr,
+                                  const char *SymName, const void **VarAddr,
                                   uint32_t *VarSize) {
   SymbolInfo SI;
   int Rc = getSymbolInfoWithoutLoading(Base, ImgSize, SymName, &SI);
@@ -2565,7 +2568,7 @@ struct DeviceEnvironment {
       if (inImage()) {
         DP("Setting global device environment before load (%u bytes)\n",
            SI.Size);
-        uint64_t Offset = (char *)SI.Addr - (char *)Image->ImageStart;
+        uint64_t Offset = (const char *)SI.Addr - (char *)Image->ImageStart;
         void *Pos = (char *)Data + Offset;
         memcpy(Pos, &HostDeviceEnv, SI.Size);
       }
@@ -2604,7 +2607,7 @@ struct DeviceEnvironment {
           return Err;
         AMDGPUAsyncInfoDataTy AsyncInfo(Signal, &HostDeviceEnv, &HostDeviceEnv,
                                         StatePtrSize, UserLocked);
-        Err = AsyncInfo.waitToComplete();
+        Err = AsyncInfo.waitToComplete(/*RetrieveToHost*/ true);
         return Err;
       }
     }
@@ -2772,6 +2775,126 @@ void launchInitFiniKernel(int32_t DeviceId, void *img, const size_t &size,
 }
 } // namespace core
 
+#ifdef newdriver
+static hsa_status_t GetIsaInfo(hsa_isa_t isa, void *data) {
+  hsa_status_t err;
+  uint32_t name_len;
+  err = hsa_isa_get_info_alt(isa, HSA_ISA_INFO_NAME_LENGTH, &name_len);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error getting ISA info length\n");
+    return err;
+  }
+
+  char TargetID[name_len];
+  err = hsa_isa_get_info_alt(isa, HSA_ISA_INFO_NAME, TargetID);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error getting ISA info name\n");
+    return err;
+  }
+
+  auto TripleTargetID = llvm::StringRef(TargetID);
+  if (TripleTargetID.consume_front("amdgcn-amd-amdhsa")) {
+    DeviceInfo().TargetID.push_back(TripleTargetID.ltrim('-').str());
+  }
+  return HSA_STATUS_SUCCESS;
+}
+#endif
+
+/// Parse a TargetID to get processor arch and feature map.
+/// Returns processor subarch.
+/// Returns TargetID features in \p FeatureMap argument.
+/// If the \p TargetID contains feature+, FeatureMap it to true.
+/// If the \p TargetID contains feature-, FeatureMap it to false.
+/// If the \p TargetID does not contain a feature (default), do not map it.
+StringRef parseTargetID(StringRef TargetID, StringMap<bool> &FeatureMap) {
+  if (TargetID.empty())
+    return llvm::StringRef();
+
+  auto ArchFeature = TargetID.split(":");
+  auto Arch = ArchFeature.first;
+  auto Features = ArchFeature.second;
+  if (Features.empty())
+    return Arch;
+
+  if (Features.contains("sramecc+")) {
+    FeatureMap.insert(std::pair<std::string, bool>("sramecc", true));
+  } else if (Features.contains("sramecc-")) {
+    FeatureMap.insert(std::pair<std::string, bool>("sramecc", false));
+  }
+  if (Features.contains("xnack+")) {
+    FeatureMap.insert(std::pair<std::string, bool>("xnack", true));
+  } else if (Features.contains("xnack-")) {
+    FeatureMap.insert(std::pair<std::string, bool>("xnack", false));
+  }
+
+  return Arch;
+}
+
+/// Checks if an image \p ImgInfo is compatible with current
+/// system's environment \p EnvInfo
+bool IsImageCompatibleWithEnv(const char *ImgInfo, std::string EnvInfo) {
+  llvm::StringRef ImgTID(ImgInfo), EnvTID(EnvInfo);
+
+  // Compatible in case of exact match
+  if (ImgTID == EnvTID) {
+    DP("Compatible: Exact match \t[Image: %s]\t:\t[Environment: %s]\n",
+       ImgTID.data(), EnvTID.data());
+    return true;
+  }
+
+  // Incompatible if Archs mismatch.
+  StringMap<bool> ImgMap, EnvMap;
+  StringRef ImgArch = parseTargetID(ImgTID, ImgMap);
+  StringRef EnvArch = parseTargetID(EnvTID, EnvMap);
+
+  // Both EnvArch and ImgArch can't be empty here.
+  if (EnvArch.empty() || ImgArch.empty() || !ImgArch.contains(EnvArch)) {
+    DP("Incompatible: Processor mismatch \t[Image: %s]\t:\t[Environment: %s]\n",
+       ImgTID.data(), EnvTID.data());
+    return false;
+  }
+
+  // Incompatible if image has more features than the environment, irrespective
+  // of type or sign of features.
+  if (ImgMap.size() > EnvMap.size()) {
+    DP("Incompatible: Image has more features than the environment \t[Image: "
+       "%s]\t:\t[Environment: %s]\n",
+       ImgTID.data(), EnvTID.data());
+    return false;
+  }
+
+  // Compatible if each target feature specified by the environment is
+  // compatible with target feature of the image. The target feature is
+  // compatible if the iamge does not specify it (meaning Any), or if it
+  // specifies it with the same value (meaning On or Off).
+  for (const auto &ImgFeature : ImgMap) {
+    auto EnvFeature = EnvMap.find(ImgFeature.first());
+    if (EnvFeature == EnvMap.end()) {
+      DP("Incompatible: Value of Image's non-ANY feature is not matching with "
+         "the Environment feature's ANY value \t[Image: %s]\t:\t[Environment: "
+         "%s]\n",
+         ImgTID.data(), EnvTID.data());
+      return false;
+    } else if (EnvFeature->first() == ImgFeature.first() &&
+               EnvFeature->second != ImgFeature.second) {
+      DP("Incompatible: Value of Image's non-ANY feature is not matching with "
+         "the Environment feature's non-ANY value \t[Image: "
+         "%s]\t:\t[Environment: %s]\n",
+         ImgTID.data(), EnvTID.data());
+      return false;
+    }
+  }
+
+  // Image is compatible if all features of Environment are:
+  //   - either, present in the Image's features map with the same sign,
+  //   - or, the feature is missing from Image's features map i.e. it is
+  //   set to ANY
+  DP("Compatible: Target IDs are compatible \t[Image: %s]\t:\t[Environment: "
+     "%s]\n",
+     ImgTID.data(), EnvTID.data());
+  return true;
+}
+
 extern "C" {
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
   return elfMachineIdIsAmdgcn(Image);
@@ -2780,6 +2903,37 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
 int __tgt_rtl_number_of_team_procs(int DeviceId) {
   return DeviceInfo().ComputeUnits[DeviceId];
 }
+
+int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *image,
+                                       __tgt_image_info *info) {
+  if (!__tgt_rtl_is_valid_binary(image))
+    return false;
+#if FIXME
+  // A subarchitecture was not specified. Assume it is compatible.
+  if (!info->Arch)
+    return true;
+
+  int32_t NumberOfDevices = __tgt_rtl_number_of_devices();
+
+  for (int32_t DeviceId = 0; DeviceId < NumberOfDevices; ++DeviceId) {
+    __tgt_rtl_init_device(DeviceId);
+    hsa_agent_t agent = DeviceInfo().HSAAgents[DeviceId];
+    hsa_status_t err = hsa_agent_iterate_isas(agent, GetIsaInfo, &DeviceId);
+    if (err != HSA_STATUS_SUCCESS) {
+      DP("Error iterating ISAs\n");
+      return false;
+    }
+    if (!IsImageCompatibleWithEnv(info->Arch, DeviceInfo().TargetID[DeviceId]))
+      return false;
+  }
+  DP("Image has Target ID compatible with the current environment: %s\n",
+     info->Arch);
+#endif
+  return true;
+}
+
+int32_t __tgt_rtl_init_plugin() { return OFFLOAD_SUCCESS; }
+int32_t __tgt_rtl_deinit_plugin() { return OFFLOAD_SUCCESS; }
 
 int __tgt_rtl_number_of_devices() {
   // If the construction failed, no methods are safe to call
@@ -2975,6 +3129,40 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
   return Res;
 }
 
+static void preAllocateHeapMemoryForCov5() {
+  void *DevPtr;
+  for (int I = 0; I < DeviceInfo().NumberOfDevices; I++) {
+    DevPtr = nullptr;
+    size_t PreAllocSize = 131072; // 128KB per device
+
+    hsa_amd_memory_pool_t MemoryPool =
+        DeviceInfo().DeviceCoarseGrainedMemoryPools[I];
+    hsa_status_t Err =
+        hsa_amd_memory_pool_allocate(MemoryPool, PreAllocSize, 0, &DevPtr);
+    if (Err != HSA_STATUS_SUCCESS) {
+      DP("Error allocating preallocated heap device memory: %s\n",
+         get_error_string(Err));
+    }
+
+    Err = hsa_amd_agents_allow_access(1, &DeviceInfo().HSAAgents[I], NULL,
+                                      DevPtr);
+    if (Err != HSA_STATUS_SUCCESS) {
+      DP("hsa allow_access_to_all_gpu_agents failed: %s\n",
+         get_error_string(Err));
+    }
+
+    uint64_t Rounded =
+        sizeof(uint32_t) * ((PreAllocSize + 3) / sizeof(uint32_t));
+    Err = hsa_amd_memory_fill(DevPtr, 0, Rounded / sizeof(uint32_t));
+    if (Err != HSA_STATUS_SUCCESS) {
+      DP("Error zero-initializing preallocated heap device memory:%s\n",
+         get_error_string(Err));
+    }
+
+    DeviceInfo().PreallocatedDeviceHeap[I] = DevPtr;
+  }
+}
+
 __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
                                                  __tgt_device_image *Image) {
   // This function loads the device image onto gpu[DeviceId] and does other
@@ -3008,6 +3196,12 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
 
   if (!elfMachineIdIsAmdgcn(Image))
     return NULL;
+
+  DeviceInfo().CodeObjectVersion = getCodeObjectVersionFromELF(Image);
+  if (DeviceInfo().CodeObjectVersion >=
+      llvm::ELF::ELFABIVERSION_AMDGPU_HSA_V5) {
+    preAllocateHeapMemoryForCov5();
+  }
 
   {
     auto Env = DeviceEnvironment(DeviceId, DeviceInfo().NumberOfDevices,
@@ -3133,7 +3327,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
         }
         AMDGPUAsyncInfoDataTy AsyncInfo(Signal, &Ptr, &Ptr, sizeof(void *),
                                         UserLocked);
-        Err = AsyncInfo.waitToComplete();
+        Err = AsyncInfo.waitToComplete(/*RetrieveToHost*/ true);
         if (Err != HSA_STATUS_SUCCESS)
           return NULL;
       }
@@ -3197,13 +3391,13 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
         hsa_signal_t Signal;
         bool UserLocked;
         Err = DeviceInfo().freesignalpoolMemcpyH2D(Varptr, E->addr,
-          sizeof(void *), DeviceId, Signal, UserLocked);
+                                                 sizeof(void *), DeviceId, Signal, UserLocked);
         if (Err != HSA_STATUS_SUCCESS)
           DP("Error when copying USM\n");
 
         AMDGPUAsyncInfoDataTy AsyncInfo(Signal, E->addr, E->addr,
                                         sizeof(void *), UserLocked);
-        AsyncInfo.waitToComplete();
+        AsyncInfo.waitToComplete(/*RetrieveToHost*/ true);
 
         DP("Copy linked variable host address (" DPxMOD ")"
            "to device address (" DPxMOD ")\n",
@@ -3251,7 +3445,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
     KernDescNameStr += "_kern_desc";
     const char *KernDescName = KernDescNameStr.c_str();
 
-    void *KernDescPtr;
+    const void *KernDescPtr;
     uint32_t KernDescSize;
     void *CallStackAddr = nullptr;
     Err = interopGetSymbolInfo((char *)Image->ImageStart, ImgSize, KernDescName,
@@ -3290,7 +3484,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
       WGSizeNameStr += "_wg_size";
       const char *WGSizeName = WGSizeNameStr.c_str();
 
-      void *WGSizePtr;
+      const void *WGSizePtr;
       uint32_t WGSize;
       Err = interopGetSymbolInfo((char *)Image->ImageStart, ImgSize, WGSizeName,
                                  &WGSizePtr, &WGSize);
@@ -3308,8 +3502,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
 
         DP("After loading global for %s WGSize = %d\n", WGSizeName, WGSizeVal);
 
-        if (WGSizeVal < RTLDeviceInfoTy::DefaultWgSize ||
-            WGSizeVal > RTLDeviceInfoTy::MaxWgSize) {
+        if (WGSizeVal < 1 || WGSizeVal > RTLDeviceInfoTy::MaxWgSize) {
           DP("Error wrong WGSize value specified in HSA code object file: "
              "%d\n",
              WGSizeVal);
@@ -3329,7 +3522,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
     ExecModeNameStr += "_exec_mode";
     const char *ExecModeName = ExecModeNameStr.c_str();
 
-    void *ExecModePtr;
+    const void *ExecModePtr;
     uint32_t VarSize;
     Err = interopGetSymbolInfo((char *)Image->ImageStart, ImgSize, ExecModeName,
                                &ExecModePtr, &VarSize);
@@ -3364,7 +3557,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
 
     KernelsList.push_back(KernelTy(ExecModeVal, WGSizeVal, DeviceId,
                                    CallStackAddr, E->name, KernargSegmentSize,
-                                   DeviceInfo().KernArgPool));
+                                   DeviceInfo().KernArgPool,
+                                   DeviceInfo().CodeObjectVersion));
     __tgt_offload_entry Entry = *E;
     Entry.addr = (void *)&KernelsList.back();
     DeviceInfo().addOffloadEntry(DeviceId, Entry);
@@ -3374,25 +3568,38 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
   return DeviceInfo().getOffloadEntriesTable(DeviceId);
 }
 
-void *__tgt_rtl_data_alloc(int DeviceId, int64_t size, void *, int32_t kind) {
-  void *ptr = nullptr;
+void *__tgt_rtl_data_alloc(int DeviceId, int64_t Size, void *, int32_t Kind) {
+  void *Ptr = nullptr;
   assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
 
-  {
-    // We don't have HSA-profiling timestamps for device allocation, so just get
-    // the start and end system timestamps for OMPT
-    OmptTimestampRAII AllocTimestamp;
-    ptr = DeviceInfo().DeviceAllocators[DeviceId].allocate(size, nullptr,
-                                                          (TargetAllocTy)kind);
-  }
-  if (kind == TARGET_ALLOC_SHARED) {
-    __tgt_rtl_set_coarse_grain_mem_region(ptr, size);
+  hsa_amd_memory_pool_t MemoryPool;
+  switch (Kind) {
+  case TARGET_ALLOC_DEFAULT:
+  case TARGET_ALLOC_DEVICE:
+    // GPU memory
+    MemoryPool = DeviceInfo().getDeviceMemoryPool(DeviceId);
+    break;
+  case TARGET_ALLOC_HOST:
+    // non-migratable memory accessible by host and device(s)
+    MemoryPool = DeviceInfo().getHostMemoryPool();
+    break;
+  default:
+    REPORT("Invalid target data allocation kind or requested allocator not "
+           "implemented yet\n");
+    return NULL;
   }
 
-  DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", size,
-     (long long unsigned)(Elf64_Addr)ptr);
+  OmptTimestampRAII AllocTimestamp;
+  hsa_status_t Err = hsa_amd_memory_pool_allocate(MemoryPool, Size, 0, &Ptr);
+ 
+  if (Kind == TARGET_ALLOC_SHARED) {
+    __tgt_rtl_set_coarse_grain_mem_region(Ptr, Size);
+  }
 
-  return ptr;
+  DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", Size,
+     (long long unsigned)(Elf64_Addr)Ptr);
+  Ptr = (Err == HSA_STATUS_SUCCESS) ? Ptr : NULL;
+  return Ptr;
 }
 
 void *__tgt_rtl_data_lock(int DeviceId, void *TgtPtr, int64_t size) {
@@ -3434,7 +3641,7 @@ int32_t __tgt_rtl_data_submit(int DeviceId, void *tgt_ptr, void *hst_ptr,
   if (rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  AsyncData.waitToComplete();
+  AsyncData.waitToComplete(/*RetrieveToHost*/ false);
   AsyncData.releaseResources();
 
   return rc;
@@ -3464,7 +3671,7 @@ int32_t __tgt_rtl_data_retrieve(int DeviceId, void *hst_ptr, void *tgt_ptr,
   if (rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  AsyncData.waitToComplete();
+  AsyncData.waitToComplete(/*RetrieveToHost*/ true);
   AsyncData.releaseResources();
   return rc;
 }
@@ -3493,12 +3700,20 @@ int32_t __tgt_rtl_data_retrieve_async(int DeviceId, void *HstPtr, void *TgtPtr,
     return __tgt_rtl_data_retrieve(DeviceId, HstPtr, TgtPtr, Size);
 }
 
-int32_t __tgt_rtl_data_delete(int DeviceId, void *TgtPtr) {
+int32_t __tgt_rtl_data_delete(int DeviceId, void *TgtPtr, int32_t) {
   assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
   // We don't have HSA-profiling timestamps for device delete, so just get the
   // start and end system timestamps for OMPT
   OmptTimestampRAII DeleteTimestamp;
-  return DeviceInfo().DeviceAllocators[DeviceId].dev_free(TgtPtr);
+  // HSA can free pointers allocated from different types of memory pool.
+  hsa_status_t Err;
+  DP("Tgt free data (tgt:%016llx).\n", (long long unsigned)(Elf64_Addr)TgtPtr);
+  Err = core::Runtime::Memfree(TgtPtr);
+  if (Err != HSA_STATUS_SUCCESS) {
+    DP("Error when freeing CUDA memory\n");
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_run_target_team_region(int32_t DeviceId, void *TgtEntryPtr,

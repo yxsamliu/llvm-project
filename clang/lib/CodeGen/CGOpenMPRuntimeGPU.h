@@ -44,8 +44,6 @@ private:
 
   ExecutionMode getExecutionMode() const;
 
-  bool requiresFullRuntime() const { return RequiresFullRuntime; }
-
   /// Get barrier to synchronize all threads in a block.
   void syncCTAThreads(CodeGenFunction &CGF);
 
@@ -194,7 +192,8 @@ public:
 
   /// Get the complete block size in use on the GPU. If there is a
   /// partial block, that information is not returned.
-  llvm::Value *getGPUCompleteBlockSize(CodeGenFunction &CGF);
+  llvm::Value *getGPUCompleteBlockSize(CodeGenFunction &CGF,
+                                       const OMPExecutableDirective &D);
 
   /// Get the number of blocks on the GPU
   llvm::Value *getGPUNumBlocks(CodeGenFunction &CGF);
@@ -202,9 +201,15 @@ public:
   /// Get the number of blocks on the GPU for special reduction
   llvm::Value *getXteamRedBlockSize(CodeGenFunction &CGF);
 
+  std::pair<llvm::Value *, llvm::Value *>
+  getXteamRedFunctionPtrs(CodeGenFunction &CGF, llvm::Type *RedVarType);
+
   /// Call cross-team sum
   llvm::Value *getXteamRedSum(CodeGenFunction &CGF, llvm::Value *Val,
-                              llvm::Value *SumPtr);
+                              llvm::Value *SumPtr, llvm::Value *DTeamVals,
+                              llvm::Value *DTeamsDonePtr,
+                              llvm::Value *ThreadStartIndex,
+                              llvm::Value *NumTeams);
 
   /// Returns whether the current architecture supports fast FP atomics
   bool supportFastFPAtomics() override;
@@ -212,7 +217,8 @@ public:
   // Emit call to fast FP intrinsics
   std::pair<bool, RValue> emitFastFPAtomicCall(CodeGenFunction &CGF, LValue X,
                                                RValue Update,
-                                               BinaryOperatorKind BO) override;
+                                               BinaryOperatorKind BO,
+                                               bool IsXBinopExpr) override;
 
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.
@@ -420,9 +426,6 @@ private:
   /// target region and used by containing directives such as 'parallel'
   /// to emit optimized code.
   ExecutionMode CurrentExecutionMode = EM_Unknown;
-
-  /// Check if the full runtime is required (default - yes).
-  bool RequiresFullRuntime = true;
 
   /// true if we're emitting the code for the target region and next parallel
   /// region is L0 for sure.

@@ -34,9 +34,9 @@ add_llvm_library(omptarget
   LINK_COMPONENTS
   Support
   Object
-  
+
   LINK_LIBS
-  ${CMAKE_DL_LIBS}
+  PRIVATE
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports"
   #  NO_INSTALL_RPATH
   )
@@ -63,8 +63,7 @@ target_include_directories(omptarget PRIVATE ${LIBOMPTARGET_INCLUDE_DIR})
 target_link_libraries(omptarget PRIVATE
   ${CMAKE_DL_LIBS}
   ${LLVM_OFFLOAD_ARCH}
-  "-Wl,--no-allow-shlib-undefined"
-  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
+  "-Wl,--no-allow-shlib-undefined")
 
 # libomptarget.so needs to be aware of where the plugins live as they
 # are now separated in the build directory.

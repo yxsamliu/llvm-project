@@ -97,6 +97,7 @@ __OMP_STRUCT_TYPE(OffloadEntry, __tgt_offload_entry, Int8Ptr, Int8Ptr, SizeTy,
 __OMP_STRUCT_TYPE(KernelArgs, __tgt_kernel_arguments, Int32, Int32, VoidPtrPtr,
                   VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr, Int64)
 __OMP_STRUCT_TYPE(AsyncInfo, __tgt_async_info, Int8Ptr)
+__OMP_STRUCT_TYPE(DependInfo, kmp_dep_info, SizeTy, SizeTy, Int8)
 
 #undef __OMP_STRUCT_TYPE
 #undef OMP_STRUCT_TYPE
@@ -450,6 +451,13 @@ __OMP_RTL(__tgt_push_mapper_component, false, Void, VoidPtr, VoidPtr, VoidPtr,
 __OMP_RTL(__kmpc_task_allow_completion_event, false, VoidPtr, IdentPtr,
           /* Int */ Int32, /* kmp_task_t */ VoidPtr)
 
+__OMP_RTL(omp_target_alloc, false, VoidPtr, Int64, Int32)
+__OMP_RTL(omp_target_free, false, Void, VoidPtr, Int32)
+__OMP_RTL(omp_target_memcpy, false, Int32, VoidPtr, VoidPtr, Int64, Int64, Int64, Int32, Int32)
+__OMP_RTL(ompx_get_team_procs, false, Int32, Int32)
+__OMP_RTL(omp_get_initial_device, false, Int32,)
+__OMP_RTL(omp_get_default_device, false, Int32,)
+
 /// OpenMP Device runtime functions
 __OMP_RTL(__kmpc_target_init, false, Int32, IdentPtr, Int8, Int1, Int1)
 __OMP_RTL(__kmpc_target_deinit, false, Void, IdentPtr, Int8, Int1)
@@ -494,6 +502,34 @@ __OMP_RTL(__kmpc_unsafeAtomicAdd, false, Float, FloatPtr, Float)
 __OMP_RTL(__kmpc_xteam_sum_f, false, Void, Float, FloatPtr)
 
 __OMP_RTL(__kmpc_xteam_sum_d, false, Void, Double, DoublePtr)
+
+__OMP_RTL(__kmpc_xteam_sum_ui, false, Void, Int32, Int32Ptr)
+
+__OMP_RTL(__kmpc_xteam_sum_ul, false, Void, Int64, Int64Ptr)
+
+__OMP_RTL(__kmpc_rfun_sum_ui, false, Void, DoublePtr, Double)
+
+__OMP_RTL(__kmpc_rfun_sum_lds_ui, false, Void, DoublePtr, DoublePtr)
+
+__OMP_RTL(__kmpc_rfun_sum_ul, false, Void, DoublePtr, Double)
+
+__OMP_RTL(__kmpc_rfun_sum_lds_ul, false, Void, DoublePtr, DoublePtr)
+
+__OMP_RTL(__kmpc_rfun_sum_f, false, Void, DoublePtr, Double)
+
+__OMP_RTL(__kmpc_rfun_sum_lds_f, false, Void, DoublePtr, DoublePtr)
+
+__OMP_RTL(__kmpc_rfun_sum_d, false, Void, DoublePtr, Double)
+
+__OMP_RTL(__kmpc_rfun_sum_lds_d, false, Void, DoublePtr, DoublePtr)
+
+__OMP_RTL(__kmpc_xteamr_ui_16x64, false, Void, Int32, Int32Ptr, Int32Ptr, Int32Ptr, VoidPtr, VoidPtr, Int32, Int64, Int32)
+
+__OMP_RTL(__kmpc_xteamr_ul_16x64, false, Void, Int64, Int64Ptr, Int64Ptr, Int32Ptr, VoidPtr, VoidPtr, Int64, Int64, Int32)
+
+__OMP_RTL(__kmpc_xteamr_f_16x64, false, Void, Float, FloatPtr, FloatPtr, Int32Ptr, VoidPtr, VoidPtr, Float, Int64, Int32)
+
+__OMP_RTL(__kmpc_xteamr_d_16x64, false, Void, Double, DoublePtr, DoublePtr, Int32Ptr, VoidPtr, VoidPtr, Double, Int64, Int32)
 
 __OMP_RTL(__last, false, Void, )
 
@@ -552,11 +588,6 @@ __OMP_ATTRS_SET(InaccessibleArgOnlyAttrs,
                                    EnumAttr(InaccessibleMemOrArgMemOnly),
                                    EnumAttr(WillReturn), EnumAttr(NoFree))
                     : AttributeSet(EnumAttr(NoUnwind)))
-
-__OMP_ATTRS_SET(NoCaptureAttrs,
-                OptimisticAttributes
-                    ? AttributeSet(EnumAttr(NoCapture))
-                    : AttributeSet(EnumAttr(NoCapture)))
 
 __OMP_ATTRS_SET(AlwaysInlineAttrs,
                 OptimisticAttributes
@@ -701,7 +732,7 @@ __OMP_RTL_ATTRS(omp_get_partition_num_places, GetterAttrs, AttributeSet(),
                 ParamAttrs())
 __OMP_RTL_ATTRS(omp_get_partition_place_nums, GetterAttrs, AttributeSet(),
                 ParamAttrs())
-__OMP_RTL_ATTRS(omp_get_wtime, GetterAttrs, AttributeSet(), ParamAttrs())
+__OMP_RTL_ATTRS(omp_get_wtime, GetterArgWriteAttrs, AttributeSet(), ParamAttrs())
 
 __OMP_RTL_ATTRS(omp_set_num_threads, SetterAttrs, AttributeSet(), ParamAttrs())
 __OMP_RTL_ATTRS(omp_set_dynamic, SetterAttrs, AttributeSet(), ParamAttrs())
@@ -938,12 +969,19 @@ __OMP_RTL_ATTRS(__kmpc_doacross_wait, BarrierAttrs, AttributeSet(),
 __OMP_RTL_ATTRS(__kmpc_doacross_fini, BarrierAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs))
 
+__OMP_RTL_ATTRS(omp_target_alloc, AttributeSet(), AttributeSet(), ParamAttrs())
+__OMP_RTL_ATTRS(omp_target_free, AttributeSet(), AttributeSet(), ParamAttrs())
+__OMP_RTL_ATTRS(omp_target_memcpy, AttributeSet(), AttributeSet(), ParamAttrs())
+__OMP_RTL_ATTRS(ompx_get_team_procs, AttributeSet(), AttributeSet(), ParamAttrs())
+__OMP_RTL_ATTRS(omp_get_initial_device, AttributeSet(), AttributeSet(), ParamAttrs())
+__OMP_RTL_ATTRS(omp_get_default_device, AttributeSet(), AttributeSet(), ParamAttrs())
+
 __OMP_RTL_ATTRS(__kmpc_alloc_shared, AttributeSet(
   EnumAttr(NoUnwind),
   EnumAttr(NoSync),
   AllocSizeAttr(0, None)), ReturnPtrAttrs, ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_free_shared, DeviceAllocAttrs, AttributeSet(),
-                ParamAttrs(NoCaptureAttrs))
+                ParamAttrs(AttributeSet(EnumAttr(NoCapture), EnumAttr(AllocatedPointer))))
 
 __OMP_RTL_ATTRS(__kmpc_alloc, DefaultAttrs, ReturnPtrAttrs, ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_aligned_alloc, DefaultAttrs, ReturnPtrAttrs,

@@ -7,7 +7,11 @@
 // Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
-#include <libelf.h>
+
+#include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Object/ELF.h"
+#include "llvm/Object/ELFObjectFile.h"
 
 #include <cassert>
 #include <sstream>
@@ -17,6 +21,11 @@
 #include "rt.h"
 
 #include "msgpack.h"
+
+using namespace llvm;
+using namespace llvm::object;
+using namespace llvm::ELF;
+
 namespace hsa {
 // Wrap HSA iterate API in a shim that allows passing general callables
 template <typename C>
@@ -60,11 +69,22 @@ public:
     HiddenMultiGridSyncArg,
     HiddenHostcallBuffer,
     HiddenHeapV1,
+    HiddenBlockCountX,
+    HiddenBlockCountY,
+    HiddenBlockCountZ,
+    HiddenGroupSizeX,
+    HiddenGroupSizeY,
+    HiddenGroupSizeZ,
+    HiddenRemainderX,
+    HiddenRemainderY,
+    HiddenRemainderZ,
+    HiddenGridDims,
+    HiddenQueuePtr,
     Unknown
   };
 
   KernelArgMD()
-      : name_(std::string()),  size_(0), offset_(0),
+      : name_(std::string()), size_(0), offset_(0),
         valueKind_(ValueKind::Unknown) {}
 
   // fields
@@ -95,7 +115,18 @@ static const std::map<std::string, KernelArgMD::ValueKind> ArgValueKind = {
     {"hidden_multigrid_sync_arg",
      KernelArgMD::ValueKind::HiddenMultiGridSyncArg},
     {"hidden_hostcall_buffer", KernelArgMD::ValueKind::HiddenHostcallBuffer},
-    {"hidden_heap_v1", KernelArgMD::ValueKind::HiddenHeapV1}
+    {"hidden_heap_v1", KernelArgMD::ValueKind::HiddenHeapV1},
+    {"hidden_block_count_x", KernelArgMD::ValueKind::HiddenBlockCountX},
+    {"hidden_block_count_y", KernelArgMD::ValueKind::HiddenBlockCountY},
+    {"hidden_block_count_z", KernelArgMD::ValueKind::HiddenBlockCountZ},
+    {"hidden_group_size_x", KernelArgMD::ValueKind::HiddenGroupSizeX},
+    {"hidden_group_size_y", KernelArgMD::ValueKind::HiddenGroupSizeY},
+    {"hidden_group_size_z", KernelArgMD::ValueKind::HiddenGroupSizeZ},
+    {"hidden_remainder_x", KernelArgMD::ValueKind::HiddenRemainderX},
+    {"hidden_remainder_y", KernelArgMD::ValueKind::HiddenRemainderY},
+    {"hidden_remainder_z", KernelArgMD::ValueKind::HiddenRemainderZ},
+    {"hidden_grid_dims", KernelArgMD::ValueKind::HiddenGridDims},
+    {"hidden_queue_ptr", KernelArgMD::ValueKind::HiddenQueuePtr},
 };
 
 namespace core {
@@ -158,75 +189,79 @@ static bool isImplicit(KernelArgMD::ValueKind value_kind) {
   case KernelArgMD::ValueKind::HiddenMultiGridSyncArg:
   case KernelArgMD::ValueKind::HiddenHostcallBuffer:
   case KernelArgMD::ValueKind::HiddenHeapV1:
+  case KernelArgMD::ValueKind::HiddenBlockCountX:
+  case KernelArgMD::ValueKind::HiddenBlockCountY:
+  case KernelArgMD::ValueKind::HiddenBlockCountZ:
+  case KernelArgMD::ValueKind::HiddenGroupSizeX:
+  case KernelArgMD::ValueKind::HiddenGroupSizeY:
+  case KernelArgMD::ValueKind::HiddenGroupSizeZ:
+  case KernelArgMD::ValueKind::HiddenRemainderX:
+  case KernelArgMD::ValueKind::HiddenRemainderY:
+  case KernelArgMD::ValueKind::HiddenRemainderZ:
+  case KernelArgMD::ValueKind::HiddenGridDims:
+  case KernelArgMD::ValueKind::HiddenQueuePtr:
     return true;
   default:
     return false;
   }
 }
 
-static std::pair<unsigned char *, unsigned char *>
-find_metadata(void *binary, size_t binSize) {
-  std::pair<unsigned char *, unsigned char *> failure = {nullptr, nullptr};
-
-  Elf *e = elf_memory(static_cast<char *>(binary), binSize);
-  if (elf_kind(e) != ELF_K_ELF) {
-    return failure;
+static std::pair<const unsigned char *, const unsigned char *>
+findMetadata(const ELFObjectFile<ELF64LE> &ELFObj) {
+  constexpr std::pair<const unsigned char *, const unsigned char *> Failure = {
+      nullptr, nullptr};
+  const auto &Elf = ELFObj.getELFFile();
+  auto PhdrsOrErr = Elf.program_headers();
+  if (!PhdrsOrErr) {
+    consumeError(PhdrsOrErr.takeError());
+    return Failure;
   }
 
-  size_t numpHdrs;
-  if (elf_getphdrnum(e, &numpHdrs) != 0) {
-    return failure;
-  }
+  for (auto Phdr : *PhdrsOrErr) {
+    if (Phdr.p_type != PT_NOTE)
+      continue;
 
-  Elf64_Phdr *pHdrs = elf64_getphdr(e);
-  for (size_t i = 0; i < numpHdrs; ++i) {
-    Elf64_Phdr pHdr = pHdrs[i];
+    Error Err = Error::success();
+    for (auto Note : Elf.notes(Phdr, Err)) {
+      if (Note.getType() == 7 || Note.getType() == 8)
+        return Failure;
 
-    // Look for the runtime metadata note
-    if (pHdr.p_type == PT_NOTE && pHdr.p_align >= sizeof(int)) {
-      // Iterate over the notes in this segment
-      address ptr = (address)binary + pHdr.p_offset;
-      address segmentEnd = ptr + pHdr.p_filesz;
+      // Code object v2 uses yaml metadata and is no longer supported.
+      if (Note.getType() == NT_AMD_HSA_METADATA && Note.getName() == "AMD")
+        return Failure;
+      // Code object v3 should have AMDGPU metadata.
+      if (Note.getType() == NT_AMDGPU_METADATA && Note.getName() != "AMDGPU")
+        return Failure;
 
-      while (ptr < segmentEnd) {
-        Elf_Note *note = reinterpret_cast<Elf_Note *>(ptr);
-        address name = (address)&note[1];
+      ArrayRef<uint8_t> Desc = Note.getDesc();
+      return {Desc.data(), Desc.data() + Desc.size()};
+    }
 
-        if (note->n_type == 7 || note->n_type == 8) {
-          elf_end(e);
-          return failure;
-        } else if (note->n_type == 10 /* NT_AMD_AMDGPU_HSA_METADATA */ &&
-                   note->n_namesz == sizeof "AMD" &&
-                   !memcmp(name, "AMD", note->n_namesz)) {
-          // code object v2 uses yaml metadata, no longer supported
-          elf_end(e);
-          return failure;
-        } else if (note->n_type == 32 /* NT_AMDGPU_METADATA */ &&
-                   note->n_namesz == sizeof "AMDGPU" &&
-                   !memcmp(name, "AMDGPU", note->n_namesz)) {
-
-          // n_descsz = 485
-          // value is padded to 4 byte alignment, may want to move end up to
-          // match
-          size_t offset = sizeof(uint32_t) * 3 /* fields */
-                          + sizeof("AMDGPU")   /* name */
-                          + 1 /* padding to 4 byte alignment */;
-
-          // Including the trailing padding means both pointers are 4 bytes
-          // aligned, which may be useful later.
-          unsigned char *metadata_start = (unsigned char *)ptr + offset;
-          unsigned char *metadata_end =
-              metadata_start + core::alignUp(note->n_descsz, 4);
-          elf_end(e);
-          return {metadata_start, metadata_end};
-        }
-        ptr += sizeof(*note) + core::alignUp(note->n_namesz, sizeof(int)) +
-               core::alignUp(note->n_descsz, sizeof(int));
-      }
+    if (Err) {
+      consumeError(std::move(Err));
+      return Failure;
     }
   }
-  elf_end(e);
-  return failure;
+
+  return Failure;
+}
+
+static std::pair<const unsigned char *, const unsigned char *>
+find_metadata(void *binary, size_t binSize) {
+  constexpr std::pair<const unsigned char *, const unsigned char *> Failure = {
+      nullptr, nullptr};
+
+  StringRef Buffer = StringRef(static_cast<const char *>(binary), binSize);
+  auto ElfOrErr = ObjectFile::createELFObjectFile(MemoryBufferRef(Buffer, ""),
+                                                  /*InitContent=*/false);
+  if (!ElfOrErr) {
+    consumeError(ElfOrErr.takeError());
+    return Failure;
+  }
+
+  if (const auto *ELFObj = dyn_cast<ELF64LEObjectFile>(ElfOrErr->get()))
+    return findMetadata(*ELFObj);
+  return Failure;
 }
 
 namespace {
@@ -342,7 +377,7 @@ static hsa_status_t get_code_object_custom_metadata(
   // also, the kernel name is not the same as the symbol name -- so a
   // symbol->name map is needed
 
-  std::pair<unsigned char *, unsigned char *> metadata =
+  std::pair<const unsigned char *, const unsigned char *> metadata =
       find_metadata(binary, binSize);
   if (!metadata.first) {
     return HSA_STATUS_ERROR_INVALID_CODE_OBJECT;
@@ -488,8 +523,7 @@ static hsa_status_t get_code_object_custom_metadata(
         size_t new_offset = lcArg.offset_;
         size_t padding = new_offset - offset;
         offset = new_offset;
-        DP("Arg[%lu] \"%s\" (%u, %u)\n", i, lcArg.name_.c_str(), lcArg.size_,
-           lcArg.offset_);
+
         offset += lcArg.size_;
 
         // check if the arg is a hidden/implicit arg
@@ -497,17 +531,21 @@ static hsa_status_t get_code_object_custom_metadata(
         if (!isImplicit(lcArg.valueKind_)) {
           info.explicit_argument_count++;
           kernel_explicit_args_size += lcArg.size_;
+          DP("Explicit Kernel Arg[%lu] \"%s\" (%u, %u)\n", i,
+             lcArg.name_.c_str(), lcArg.size_, lcArg.offset_);
         } else {
           info.implicit_argument_count++;
           hasHiddenArgs = true;
+          DP("Implicit Kernel Arg[%lu] \"%s\" (%u, %u)\n", i,
+             lcArg.name_.c_str(), lcArg.size_, lcArg.offset_);
         }
         kernel_explicit_args_size += padding;
       }
     }
 
-    // TODO: Probably don't want this arithmetic 
+    // TODO: Probably don't want this arithmetic
     info.kernel_segment_size =
-        (hasHiddenArgs ? kernel_explicit_args_size : kernel_segment_size);
+        (!hasHiddenArgs ? kernel_explicit_args_size : kernel_segment_size);
     DP("[%s: kernarg seg size] (%lu --> %u)\n", kernelName.c_str(),
        kernel_segment_size, info.kernel_segment_size);
 

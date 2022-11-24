@@ -801,6 +801,9 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   if (Tag == dwarf::DW_TAG_ptr_to_member_type)
     addDIEEntry(Buffer, dwarf::DW_AT_containing_type,
                 *getOrCreateTypeDIE(cast<DIDerivedType>(DTy)->getClassType()));
+
+  addAccess(Buffer, DTy->getFlags());
+
   // Add source line info if available and TyDesc is not a forward declaration.
   if (!DTy->isForwardDecl())
     addSourceLine(Buffer, DTy);
@@ -1313,6 +1316,12 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
     // Add arguments. Do not add arguments for subprogram definition. They will
     // be handled while processing variables.
+    // FIXME: If no DBG_* intrinsic survives for a param into AsmPrinter then
+    // the argument doesn't get added at all. As an example, the following
+    // produces DWARF without mention of the "d" param:
+    // echo 'struct c {int x; c(const c&)=delete; c(c&&)=delete; }; void \
+    // f(c d) { }' | clang -x c++ - -o - -m32 -O0 -g -emit-llvm -S | \
+    // build/bin/llc -O0 -filetype=obj | build/bin/llvm-dwarfdump -a -
     constructSubprogramArguments(SPDie, Args);
   }
 

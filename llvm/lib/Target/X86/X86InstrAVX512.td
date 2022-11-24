@@ -4692,6 +4692,9 @@ def VMOVZPQILo2PQIZrr : AVX512XSI<0x7E, MRMSrcReg, (outs VR128X:$dst),
 }
 
 let Predicates = [HasAVX512] in {
+  def : Pat<(v4i32 (scalar_to_vector (i32 (anyext GR8:$src)))),
+            (VMOVDI2PDIZrr (i32 (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
+                                              GR8:$src, sub_8bit)))>;
   def : Pat<(v4i32 (X86vzmovl (v4i32 (scalar_to_vector GR32:$src)))),
             (VMOVDI2PDIZrr GR32:$src)>;
 
@@ -9180,12 +9183,29 @@ let ExeDomain = GenericDomain, Uses = [MXCSR], mayRaiseFPException = 1 in {
 
 multiclass avx512_cvtps2ph_sae<X86VectorVTInfo _dest, X86VectorVTInfo _src,
                                SchedWrite Sched> {
-  let hasSideEffects = 0, Uses = [MXCSR] in
-  defm rrb : AVX512_maskable_in_asm<0x1D, MRMDestReg, _dest,
-                   (outs _dest.RC:$dst),
-                   (ins _src.RC:$src1, i32u8imm:$src2),
-                   "vcvtps2ph", "$src2, {sae}, $src1", "$src1, {sae}, $src2", []>,
-                   EVEX_B, AVX512AIi8Base, Sched<[Sched]>;
+  let hasSideEffects = 0, Uses = [MXCSR] in {
+    def rrb : AVX512AIi8<0x1D, MRMDestReg, (outs _dest.RC:$dst),
+              (ins _src.RC:$src1, i32u8imm:$src2),
+              "vcvtps2ph\t{$src2, {sae}, $src1, $dst|$dst, $src1, {sae}, $src2}",
+              [(set _dest.RC:$dst,
+                    (X86cvtps2phSAE (_src.VT _src.RC:$src1), (i32 timm:$src2)))]>,
+              EVEX_B, Sched<[Sched]>;
+    let Constraints = "$src0 = $dst" in
+    def rrbk : AVX512AIi8<0x1D, MRMDestReg, (outs _dest.RC:$dst),
+              (ins _dest.RC:$src0, _src.KRCWM:$mask, _src.RC:$src1, i32u8imm:$src2),
+              "vcvtps2ph\t{$src2, {sae}, $src1, $dst {${mask}}|$dst {${mask}}, $src1, {sae}, $src2}",
+              [(set _dest.RC:$dst,
+                    (X86mcvtps2phSAE (_src.VT _src.RC:$src1), (i32 timm:$src2),
+                                  _dest.RC:$src0, _src.KRCWM:$mask))]>,
+              EVEX_B, Sched<[Sched]>, EVEX_K;
+    def rrbkz : AVX512AIi8<0x1D, MRMDestReg, (outs _dest.RC:$dst),
+              (ins _src.KRCWM:$mask, _src.RC:$src1, i32u8imm:$src2),
+              "vcvtps2ph\t{$src2, {sae}, $src1, $dst {${mask}} {z}|$dst {${mask}} {z}, $src1, {sae}, $src2}",
+              [(set _dest.RC:$dst,
+                    (X86mcvtps2phSAE (_src.VT _src.RC:$src1), (i32 timm:$src2),
+                                  _dest.ImmAllZerosV, _src.KRCWM:$mask))]>,
+              EVEX_B, Sched<[Sched]>, EVEX_KZ;
+}
 }
 
 let Predicates = [HasAVX512] in {
@@ -11652,6 +11672,25 @@ defm VPINSRWZ : avx512_insert_elt_bw<0xC4, "vpinsrw", X86pinsrw, v8i16x_info,
                                      extloadi16>, PD, VEX_WIG;
 defm VPINSRDZ : avx512_insert_elt_dq<0x22, "vpinsrd", v4i32x_info, GR32>;
 defm VPINSRQZ : avx512_insert_elt_dq<0x22, "vpinsrq", v2i64x_info, GR64>, VEX_W;
+
+let Predicates = [HasAVX512, NoBWI] in {
+  def : Pat<(X86pinsrb VR128:$src1,
+                       (i32 (anyext (i8 (bitconvert v8i1:$src2)))),
+                       timm:$src3),
+            (VPINSRBrr VR128:$src1, (i32 (COPY_TO_REGCLASS VK8:$src2, GR32)),
+                       timm:$src3)>;
+}
+
+let Predicates = [HasBWI] in {
+  def : Pat<(X86pinsrb VR128:$src1, (i32 (anyext (i8 GR8:$src2))), timm:$src3),
+            (VPINSRBZrr VR128:$src1, (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
+                        GR8:$src2, sub_8bit), timm:$src3)>;
+  def : Pat<(X86pinsrb VR128:$src1,
+                       (i32 (anyext (i8 (bitconvert v8i1:$src2)))),
+                       timm:$src3),
+            (VPINSRBZrr VR128:$src1, (i32 (COPY_TO_REGCLASS VK8:$src2, GR32)),
+                        timm:$src3)>;
+}
 
 //===----------------------------------------------------------------------===//
 // VSHUFPS - VSHUFPD Operations

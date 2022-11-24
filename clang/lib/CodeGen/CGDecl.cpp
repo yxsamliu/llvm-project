@@ -102,6 +102,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::ObjCTypeParam:
   case Decl::Binding:
   case Decl::UnresolvedUsingIfExists:
+  case Decl::HLSLBuffer:
     llvm_unreachable("Declaration should not be in declstmts!");
   case Decl::Record:    // struct/union/class X;
   case Decl::CXXRecord: // struct/union/class X; [C++]
@@ -128,6 +129,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::OMPRequires:
   case Decl::Empty:
   case Decl::Concept:
+  case Decl::ImplicitConceptSpecialization:
   case Decl::LifetimeExtendedTemporary:
   case Decl::RequiresExprBody:
     // None of these decls require codegen support.
@@ -847,7 +849,7 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
     // If D is pseudo-strong, treat it like __unsafe_unretained here. This means
     // that we omit the retain, and causes non-autoreleased return values to be
     // immediately released.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
 
   case Qualifiers::OCL_ExplicitNone:
@@ -2488,21 +2490,23 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   }
 
   Address DeclPtr = Address::invalid();
-  Address AllocaPtr = Address::invalid();
-  Address DebugAddr = Address::invalid();
+  Address DebugPtr = Address::invalid();
   bool DoStore = false;
   bool IsScalar = hasScalarEvaluationKind(Ty);
   // If we already have a pointer to the argument, reuse the input pointer.
   if (Arg.isIndirect()) {
     // If we have a prettier pointer type at this point, bitcast to that.
-    DeclPtr = DebugAddr = Arg.getIndirectAddress();
+    DeclPtr = Arg.getIndirectAddress();
+    if (auto DebugAddr = Arg.getDebugAddr())
+      DebugPtr = *DebugAddr;
+    else
+      DebugPtr = DeclPtr;
     DeclPtr = Builder.CreateElementBitCast(DeclPtr, ConvertTypeForMem(Ty),
                                            D.getName());
     // Indirect argument is in alloca address space, which may be different
     // from the default address space.
     auto AllocaAS = CGM.getASTAllocaAddressSpace();
     auto *V = DeclPtr.getPointer();
-    AllocaPtr = DeclPtr;
     auto SrcLangAS = getLangOpts().OpenCL ? LangAS::opencl_private : AllocaAS;
     auto DestLangAS =
         getLangOpts().OpenCL ? LangAS::opencl_private : LangAS::Default;
@@ -2537,12 +2541,11 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
             ? CGM.getOpenMPRuntime().getAddressOfLocalVariable(*this, &D)
             : Address::invalid();
     if (getLangOpts().OpenMP && OpenMPLocalAddr.isValid()) {
-      DeclPtr = DebugAddr = OpenMPLocalAddr;
-      AllocaPtr = DeclPtr;
+      DeclPtr = DebugPtr = OpenMPLocalAddr;
     } else {
       // Otherwise, create a temporary to hold the value.
       DeclPtr = CreateMemTemp(Ty, getContext().getDeclAlign(&D),
-                              D.getName() + ".addr", &DebugAddr);
+                              D.getName() + ".addr", &DebugPtr);
     }
     DoStore = true;
   }
@@ -2619,7 +2622,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     if (CGM.getCodeGenOpts().hasReducedDebugInfo() && !CurFuncIsThunk &&
         !NoDebugInfo) {
       llvm::DILocalVariable *DILocalVar = DI->EmitDeclareOfArgVariable(
-          &D, DebugAddr.getPointer(), ArgNo, Builder);
+          &D, DebugPtr.getPointer(), ArgNo, Builder);
       if (const auto *Var = dyn_cast_or_null<ParmVarDecl>(&D))
         DI->getParamDbgMappings().insert({Var, DILocalVar});
     }

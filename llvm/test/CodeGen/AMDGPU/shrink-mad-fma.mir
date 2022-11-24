@@ -249,12 +249,12 @@ body: |
     ; GFX10-LABEL: name: fma_cvv_f16
     ; GFX10: $vgpr0 = IMPLICIT_DEF
     ; GFX10-NEXT: $vgpr1 = IMPLICIT_DEF
-    ; GFX10-NEXT: $vgpr2 = V_FMA_F16_gfx9_e64 0, 18688, 0, $vgpr0, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: $vgpr2 = V_FMAMK_F16 $vgpr0, 18688, $vgpr1, implicit $mode, implicit $exec
     ; GFX10-NEXT: SI_RETURN implicit $vgpr2
     ; GFX11-LABEL: name: fma_cvv_f16
     ; GFX11: $vgpr0 = IMPLICIT_DEF
     ; GFX11-NEXT: $vgpr1 = IMPLICIT_DEF
-    ; GFX11-NEXT: $vgpr2 = V_FMA_F16_gfx9_e64 0, 18688, 0, $vgpr0, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: $vgpr2 = V_FMAMK_F16_t16 $vgpr0, 18688, $vgpr1, implicit $mode, implicit $exec
     ; GFX11-NEXT: SI_RETURN implicit $vgpr2
     $vgpr0 = IMPLICIT_DEF
     $vgpr1 = IMPLICIT_DEF
@@ -269,12 +269,12 @@ body: |
     ; GFX10-LABEL: name: fma_vcv_f16
     ; GFX10: $vgpr0 = IMPLICIT_DEF
     ; GFX10-NEXT: $vgpr1 = IMPLICIT_DEF
-    ; GFX10-NEXT: $vgpr2 = V_FMA_F16_gfx9_e64 0, $vgpr0, 0, 18688, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: $vgpr2 = V_FMAMK_F16 $vgpr0, 18688, $vgpr1, implicit $mode, implicit $exec
     ; GFX10-NEXT: SI_RETURN implicit $vgpr2
     ; GFX11-LABEL: name: fma_vcv_f16
     ; GFX11: $vgpr0 = IMPLICIT_DEF
     ; GFX11-NEXT: $vgpr1 = IMPLICIT_DEF
-    ; GFX11-NEXT: $vgpr2 = V_FMA_F16_gfx9_e64 0, $vgpr0, 0, 18688, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: $vgpr2 = V_FMAMK_F16_t16 $vgpr0, 18688, $vgpr1, implicit $mode, implicit $exec
     ; GFX11-NEXT: SI_RETURN implicit $vgpr2
     $vgpr0 = IMPLICIT_DEF
     $vgpr1 = IMPLICIT_DEF
@@ -289,12 +289,12 @@ body: |
     ; GFX10-LABEL: name: fma_vvc_f16
     ; GFX10: $vgpr0 = IMPLICIT_DEF
     ; GFX10-NEXT: $vgpr1 = IMPLICIT_DEF
-    ; GFX10-NEXT: $vgpr2 = V_FMA_F16_gfx9_e64 0, $vgpr0, 0, $vgpr1, 0, 18688, 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: $vgpr2 = V_FMAAK_F16 $vgpr0, $vgpr1, 18688, implicit $mode, implicit $exec
     ; GFX10-NEXT: SI_RETURN implicit $vgpr2
     ; GFX11-LABEL: name: fma_vvc_f16
     ; GFX11: $vgpr0 = IMPLICIT_DEF
     ; GFX11-NEXT: $vgpr1 = IMPLICIT_DEF
-    ; GFX11-NEXT: $vgpr2 = V_FMA_F16_gfx9_e64 0, $vgpr0, 0, $vgpr1, 0, 18688, 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: $vgpr2 = V_FMAAK_F16_t16 $vgpr0, $vgpr1, 18688, implicit $mode, implicit $exec
     ; GFX11-NEXT: SI_RETURN implicit $vgpr2
     $vgpr0 = IMPLICIT_DEF
     $vgpr1 = IMPLICIT_DEF
@@ -309,12 +309,12 @@ body: |
     ; GFX10-LABEL: name: fma_vsc_f16
     ; GFX10: $vgpr0 = IMPLICIT_DEF
     ; GFX10-NEXT: $sgpr1 = IMPLICIT_DEF
-    ; GFX10-NEXT: $vgpr2 = V_FMA_F16_gfx9_e64 0, $vgpr0, 0, $vgpr1, 0, 18688, 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: $vgpr2 = V_FMAAK_F16 $vgpr0, $vgpr1, 18688, implicit $mode, implicit $exec
     ; GFX10-NEXT: SI_RETURN implicit $vgpr2
     ; GFX11-LABEL: name: fma_vsc_f16
     ; GFX11: $vgpr0 = IMPLICIT_DEF
     ; GFX11-NEXT: $sgpr1 = IMPLICIT_DEF
-    ; GFX11-NEXT: $vgpr2 = V_FMA_F16_gfx9_e64 0, $vgpr0, 0, $vgpr1, 0, 18688, 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: $vgpr2 = V_FMAAK_F16_t16 $vgpr0, $vgpr1, 18688, implicit $mode, implicit $exec
     ; GFX11-NEXT: SI_RETURN implicit $vgpr2
     $vgpr0 = IMPLICIT_DEF
     $sgpr1 = IMPLICIT_DEF

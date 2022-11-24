@@ -792,6 +792,7 @@ multiclass VOPC_Class_Profile_t16<list<SchedReadWrite> sched> {
   def _t16 : VOPC_Class_Profile<sched, f16, i16> {
     let IsTrue16 = 1;
     let Src1RC32 = RegisterOperand<getVregSrcForVT_t16<Src1VT>.ret>;
+    let Src1RC64 = VSrc_b32;
     let Src0DPP = getVregSrcForVT_t16<Src0VT>.ret;
     let Src1DPP = getVregSrcForVT_t16<Src1VT>.ret;
     let Src2DPP = getVregSrcForVT_t16<Src2VT>.ret;
@@ -819,6 +820,7 @@ multiclass VOPC_Class_NoSdst_Profile_t16<list<SchedReadWrite> sched> {
   def _t16 : VOPC_Class_NoSdst_Profile<sched, f16, i16> {
     let IsTrue16 = 1;
     let Src1RC32 = RegisterOperand<getVregSrcForVT_t16<Src1VT>.ret>;
+    let Src1RC64 = VSrc_b32;
     let Src0DPP = getVregSrcForVT_t16<Src0VT>.ret;
     let Src1DPP = getVregSrcForVT_t16<Src1VT>.ret;
     let Src2DPP = getVregSrcForVT_t16<Src2VT>.ret;
@@ -1402,14 +1404,14 @@ let AssemblerPredicate = isGFX11Only in {
         VOPCe<op{7-0}>,
         MnemonicAlias<!if(!empty(pseudo_mnemonic), ps32.Mnemonic,
                           pseudo_mnemonic),
-                      asm_name>,
+                      asm_name, ps32.AsmVariantName>,
         Requires<[isGFX11Plus]>;
       def _e64_gfx11 :
             VOP3_Real<ps64, SIEncodingFamily.GFX11, asm_name>,
             VOP3a_gfx11<{0, op}, ps64.Pfl>,
             MnemonicAlias<!if(!empty(pseudo_mnemonic), ps64.Mnemonic,
                               pseudo_mnemonic),
-                          asm_name>,
+                          asm_name, ps64.AsmVariantName>,
             Requires<[isGFX11Plus]> {
         // Encoding used for VOPC instructions encoded as VOP3 differs from
         // VOP3e by destination name (sdst) as VOPC doesn't have vector dst.
@@ -1566,7 +1568,7 @@ let AssemblerPredicate = isGFX11Only in {
           : VOPC_Real<ps32, SIEncodingFamily.GFX11, asm_name>,
             MnemonicAlias<!if(!empty(pseudo_mnemonic), !subst("_nosdst", "", ps32.Mnemonic),
                               pseudo_mnemonic),
-                          asm_name>,
+                          asm_name, ps32.AsmVariantName>,
             Requires<[isGFX11Plus]>,
             VOPCe<op{7-0}> {
         let AsmString = asm_name # "{_e32} " # ps32.AsmOperands;
@@ -1575,7 +1577,7 @@ let AssemblerPredicate = isGFX11Only in {
           : VOP3_Real<ps64, SIEncodingFamily.GFX11, asm_name>,
             MnemonicAlias<!if(!empty(pseudo_mnemonic), !subst("_nosdst", "", ps64.Mnemonic),
                               pseudo_mnemonic),
-                          asm_name>,
+                          asm_name, ps64.AsmVariantName>,
             Requires<[isGFX11Plus]>,
             VOP3a_gfx11<{0, op}, ps64.Pfl> {
         let Inst{7-0} = ? ; // sdst

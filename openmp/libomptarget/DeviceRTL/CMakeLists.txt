@@ -33,8 +33,8 @@ if (LLVM_DIR)
   find_program(LINK_TOOL llvm-link PATHS ${LLVM_TOOLS_BINARY_DIR}
     NO_DEFAULT_PATH)
   find_program(OPT_TOOL opt PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
-  if ((NOT CLANG_TOOL) OR (NOT LINK_TOOL) OR (NOT OPT_TOOL))
-    libomptarget_say("Not building DeviceRTL. Missing clang: ${CLANG_TOOL}, llvm-link: ${LINK_TOOL} or opt: ${OPT_TOOL}")
+    if ((NOT CLANG_TOOL) OR (NOT LINK_TOOL) OR (NOT OPT_TOOL))
+      libomptarget_say("Not building DeviceRTL. Missing clang: ${CLANG_TOOL}, llvm-link: ${LINK_TOOL} or opt: ${OPT_TOOL}")
     return()
   else()
     libomptarget_say("Building DeviceRTL. Using clang: ${CLANG_TOOL}, llvm-link: ${LINK_TOOL} and opt: ${OPT_TOOL}")
@@ -94,31 +94,29 @@ foreach(sm ${nvptx_sm_list})
   endif()
 endforeach()
 
-set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx90c gfx940 gfx1010 gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036)
+set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx90c gfx940 gfx1010 gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036 gfx1100 gfx1101 gfx1102 gfx1103)
 if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
   set(amdgpu_mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
 endif()
-
-
-# Activate RTL message dumps if requested by the user.
-set(LIBOMPTARGET_DEVICE_DEBUG FALSE CACHE BOOL
-  "Activate DeviceRTL debug messages.")
 
 set(include_files
   ${include_directory}/Configuration.h
   ${include_directory}/Debug.h
   ${include_directory}/Interface.h
+  ${include_directory}/LibC.h
   ${include_directory}/Mapping.h
   ${include_directory}/State.h
   ${include_directory}/Synchronization.h
   ${include_directory}/Types.h
   ${include_directory}/Utils.h
+  ${include_directory}/Xteamr.h
 )
 
 set(src_files
   ${source_directory}/Configuration.cpp
   ${source_directory}/Debug.cpp
   ${source_directory}/Kernel.cpp
+  ${source_directory}/LibC.cpp
   ${source_directory}/Mapping.cpp
   ${source_directory}/Misc.cpp
   ${source_directory}/Parallelism.cpp
@@ -151,12 +149,6 @@ set(bc_flags -S -x c++ -std=c++17 -fvisibility=hidden
              -I${devicertl_base_directory}/../include
              ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}
 )
-
-if(${LIBOMPTARGET_DEVICE_DEBUG})
-  list(APPEND bc_flags -DOMPTARGET_DEBUG=-1)
-else()
-  list(APPEND bc_flags -DOMPTARGET_DEBUG=0)
-endif()
 
 function(compileDeviceRTLLibrary target_cpu target_name)
   set(target_bc_flags ${ARGN})
@@ -202,9 +194,10 @@ function(compileDeviceRTLLibrary target_cpu target_name)
     # non-user library linked. It is linked once in GPU link phase
     # following llvm-link options: --internalize --only-needed
     if(NOT amd_device_libs_found)
-      find_package(AMDDeviceLibs REQUIRED CONFIG PATHS
-        ${CMAKE_BINARY_DIR}/../../tools/ROCMDEVLIBS
-	${CMAKE_INSTALL_PREFIX}
+      find_package(AMDDeviceLibs REQUIRED CONFIG
+        HINTS
+        ${CMAKE_INSTALL_PREFIX}
+        PATHS
         /opt/rocm)
       if(AMDDeviceLibs_DIR)
 	set(amd_device_libs_found ON)
@@ -283,8 +276,13 @@ function(compileDeviceRTLLibrary target_cpu target_name)
       APPEND)
   endif()
   if("${OPT_TOOL}" STREQUAL "$<TARGET_FILE:opt>")
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/opt_${bclib_name}
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
       DEPENDS opt
+      APPEND)
+  endif()
+  if("${EXTRACT_TOOL}" STREQUAL "$<TARGET_FILE:llvm-extract>")
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/extracted_${bclib_name}
+      DEPENDS llvm-extract
       APPEND)
   endif()
   if("${PREP_TOOL}" STREQUAL "$<TARGET_FILE:prep-libomptarget-bc>")
@@ -312,12 +310,12 @@ endfunction()
 # Generate a Bitcode library for all the compute capabilities the user requested
 add_custom_target(omptarget.devicertl.nvptx)
 foreach(sm ${nvptx_sm_list})
-  compileDeviceRTLLibrary(sm_${sm} nvptx -target nvptx64-nvidia-cuda -DLIBOMPTARGET_BC_TARGET -Xclang -target-feature -Xclang +ptx61 "-D__CUDA_ARCH__=${sm}0")
+	 compileDeviceRTLLibrary(sm_${sm} nvptx -target nvptx64-nvidia-cuda -DLIBOMPTARGET_BC_TARGET -Xclang -target-feature -Xclang +ptx61 "-D__CUDA_ARCH__=${sm}0")
 endforeach()
 
 add_custom_target(omptarget.devicertl.amdgpu)
 foreach(mcpu ${amdgpu_mcpus})
-  compileDeviceRTLLibrary(${mcpu} amdgpu -target amdgcn-amd-amdhsa -DLIBOMPTARGET_BC_TARGET -D__AMDGCN__ -nogpulib)
+	  compileDeviceRTLLibrary(${mcpu} amdgpu -target amdgcn-amd-amdhsa -DLIBOMPTARGET_BC_TARGET -D__AMDGCN__ -nogpulib)
 endforeach()
 
 ## FIXME:  the static library build for DeviceRTL needs some fixes

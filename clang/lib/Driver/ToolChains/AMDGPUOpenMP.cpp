@@ -28,6 +28,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TargetParser.h"
+#include "clang/Config/config.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -150,34 +151,29 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
   // (only available in new device rtl)
   if (llvm::sys::fs::exists(disable_fn) &&
       Args.hasFlag(options::OPT_fdisable_host_devmem,
-                   options::OPT_fenable_host_devmem, false) &&
-      Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
-                   options::OPT_fno_openmp_target_new_runtime, true)) {
+                   options::OPT_fenable_host_devmem, false)) {
     input_count++;
     CmdArgs.push_back(Args.MakeArgString(disable_fn));
   }
 
-  // If more than 1 input or need to link any SDLs, we need a pre-link step.
-  if ((input_count > 1) || !CmdArgs.empty()) {
-    // ArgStringList CmdArgs;
-    for (const auto &II : Inputs)
-      if (II.isFilename())
-        CmdArgs.push_back(II.getFilename());
-    CmdArgs.push_back("-o");
-    auto PreLinkFileName =
-        getOutputFileName(C, OutputFilePrefix, "-prelinked", "bc");
-    CmdArgs.push_back(PreLinkFileName);
-    C.addCommand(std::make_unique<Command>(
-        JA, *this, ResponseFileSupport::AtFileCurCP(), Exec, CmdArgs, Inputs,
-        InputInfo(&JA, Args.MakeArgString(PreLinkFileName))));
-    // Output of prelink is only input to last link
-    LastLinkArgs.push_back(Args.MakeArgString(PreLinkFileName));
-  } else {
-    // If only a single input, use it for lastlink input
-    for (const auto &II : Inputs)
-      if (II.isFilename())
-        LastLinkArgs.push_back(II.getFilename());
-  }
+  // Force clang build select link before llvm-link to ensure functions are
+  // marked linkonce_odr so that they can be removed if not used.
+  const char *CbslExec =
+    Args.MakeArgString(getToolChain().GetProgramPath("clang-build-select-link"));
+  CmdArgs.push_back(Args.MakeArgString("-opaque-pointers"));
+  // ArgStringList CmdArgs;
+  for (const auto &II : Inputs)
+    if (II.isFilename())
+      CmdArgs.push_back(II.getFilename());
+  CmdArgs.push_back("-o");
+  auto PreLinkFileName =
+      getOutputFileName(C, OutputFilePrefix, "-prelinked", "bc");
+  CmdArgs.push_back(PreLinkFileName);
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(), CbslExec, CmdArgs, Inputs,
+      InputInfo(&JA, Args.MakeArgString(PreLinkFileName))));
+  // Output of prelink is only input to last link
+  LastLinkArgs.push_back(Args.MakeArgString(PreLinkFileName));
 
   // Last link brings in libomptarget and subset of user-option bc files.
   // This link uses --internalize to internalize libomptarget symbols.
@@ -194,6 +190,7 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
 
   LastLinkArgs.push_back(Args.MakeArgString("--internalize"));
   LastLinkArgs.push_back(Args.MakeArgString("--only-needed"));
+  LastLinkArgs.push_back(Args.MakeArgString("-opaque-pointers"));
   StringRef GPUArch =
       getProcessorFromTargetID(getToolChain().getTriple(), TargetID);
 
@@ -217,16 +214,12 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
     }
   }
 
-  if (Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
-                   options::OPT_fno_openmp_target_new_runtime, true))
-    BCLibs.push_back(Args.MakeArgString(libpath + "/libomptarget-new-amdgpu-" +
-                                        GPUArch + ".bc"));
-  else
-    BCLibs.push_back(Args.MakeArgString(libpath + "/libomptarget-amdgcn-" +
-                                        GPUArch + ".bc"));
+  BCLibs.push_back(Args.MakeArgString(libpath + "/libomptarget-new-amdgpu-" +
+                                      GPUArch + ".bc"));
 
   // Add the generic set of libraries, OpenMP subset only
-  BCLibs.append(AMDGPUOpenMPTC.getCommonDeviceLibNames(Args, GPUArch.str(),
+  BCLibs.append(AMDGPUOpenMPTC.getCommonDeviceLibNames(C.getArgs(),
+                                                       GPUArch.str(),
                                                        /* isOpenMP=*/true));
   llvm::for_each(BCLibs, [&](StringRef BCFile) {
     LastLinkArgs.push_back(Args.MakeArgString(BCFile));
@@ -249,6 +242,13 @@ const char *AMDGCN::OpenMPLinker::constructOptCommand(
   ArgStringList OptArgs;
   // The input to opt is the output from llvm-link.
   OptArgs.push_back(InputFileName);
+
+  unsigned CodeObjVer =
+      getOrCheckAMDGPUCodeObjectVersion(C.getDriver(), C.getArgs(), true);
+  if (CodeObjVer)
+    OptArgs.push_back(Args.MakeArgString(
+        Twine("--amdhsa-code-object-version=") + Twine(CodeObjVer)));
+
   StringRef GPUArch =
       getProcessorFromTargetID(getToolChain().getTriple(), TargetID);
 
@@ -310,6 +310,13 @@ const char *AMDGCN::OpenMPLinker::constructLlcCommand(
   ArgStringList LlcArgs;
   // The input to llc is the output from opt.
   LlcArgs.push_back(InputFileName);
+
+  unsigned CodeObjVer =
+      getOrCheckAMDGPUCodeObjectVersion(C.getDriver(), C.getArgs(), true);
+  if (CodeObjVer)
+    LlcArgs.push_back(Args.MakeArgString(
+        Twine("--amdhsa-code-object-version=") + Twine(CodeObjVer)));
+
   // Pass optimization arg to llc.
   addLLCOptArg(Args, LlcArgs, /*IsLlc=*/true);
   LlcArgs.push_back("-mtriple=amdgcn-amd-amdhsa");
@@ -557,11 +564,7 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
     return;
 
   std::string BitcodeSuffix;
-  if (DriverArgs.hasFlag(options::OPT_fopenmp_target_new_runtime,
-                         options::OPT_fno_openmp_target_new_runtime, true))
-    BitcodeSuffix = llvm::Twine("new-amdgpu-" + GPUArch).str();
-  else
-    BitcodeSuffix = llvm::Twine("amdgcn-" + GPUArch).str();
+  BitcodeSuffix = llvm::Twine("new-amdgpu-" + GPUArch).str();
 
   addDirectoryList(DriverArgs, LibraryPaths, "", "HIP_DEVICE_LIB_PATH");
 
@@ -717,4 +720,25 @@ VersionTuple
 AMDGPUOpenMPToolChain::computeMSVCVersion(const Driver *D,
                                           const ArgList &Args) const {
   return HostTC.computeMSVCVersion(D, Args);
+}
+
+llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
+AMDGPUOpenMPToolChain::getDeviceLibs(const llvm::opt::ArgList &Args) const {
+  if (Args.hasArg(options::OPT_nogpulib))
+    return {};
+
+  if (!RocmInstallation.hasDeviceLibrary()) {
+    getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 0;
+    return {};
+  }
+
+  StringRef GpuArch = getProcessorFromTargetID(
+      getTriple(), Args.getLastArgValue(options::OPT_march_EQ));
+
+  SmallVector<BitCodeLibraryInfo, 12> BCLibs;
+  for (auto BCLib : getCommonDeviceLibNames(Args, GpuArch.str(),
+                                            /*IsOpenMP=*/true))
+    BCLibs.emplace_back(BCLib);
+
+  return BCLibs;
 }

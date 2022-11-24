@@ -284,32 +284,84 @@ class CodeGenModule : public CodeGenTypeCache {
 
 public:
   struct Structor {
-    Structor() : Priority(0), Initializer(nullptr), AssociatedData(nullptr) {}
-    Structor(int Priority, llvm::Constant *Initializer,
+    Structor()
+        : Priority(0), LexOrder(~0u), Initializer(nullptr),
+          AssociatedData(nullptr) {}
+    Structor(int Priority, unsigned LexOrder, llvm::Constant *Initializer,
              llvm::Constant *AssociatedData)
-        : Priority(Priority), Initializer(Initializer),
+        : Priority(Priority), LexOrder(LexOrder), Initializer(Initializer),
           AssociatedData(AssociatedData) {}
     int Priority;
+    unsigned LexOrder;
     llvm::Constant *Initializer;
     llvm::Constant *AssociatedData;
   };
 
   typedef std::vector<Structor> CtorList;
 
-  /// Nested OpenMP constructs that may use no-loop codegen
+  enum NoLoopXteamErr {
+    NxSuccess,
+    NxOptionDisabled,
+    NxUnsupportedDirective,
+    NxUnsupportedSplitDirective,
+    NxNoStmt,
+    NxUnsupportedTargetClause,
+    NxNotLoopDirective,
+    NxNotCapturedStmt,
+    NxNotExecutableStmt,
+    NxUnsupportedNestedSplitDirective,
+    NxSplitConstructImproperlyNested,
+    NxNestedOmpDirective,
+    NxNestedOmpCall,
+    NxNoSingleForStmt,
+    NxUnsupportedLoopInit,
+    NxUnsupportedLoopStop,
+    NxUnsupportedLoopStep,
+    NxGuidedOrRuntimeSched,
+    NxNonUnitStaticChunk,
+    NxNonConcurrentOrder,
+    NxUnsupportedRedType,
+    NxUnsupportedRedIntSize,
+    NxNotScalarRed,
+    NxNotBinOpRed,
+    NxUnsupportedRedOp,
+    NxNoRedVar,
+    NxMultRedVar,
+    NxUnsupportedRedExpr
+  };
+
+  /// Top-level and nested OpenMP directives that may use no-loop codegen.
   using NoLoopIntermediateStmts =
       llvm::SmallVector<const OMPExecutableDirective *, 3>;
-  /// Map top-level construct to the intermediate ones for no-loop codegen
+  /// Map construct statement to the intermediate ones for no-loop codegen
   using NoLoopKernelMap = llvm::DenseMap<const Stmt *, NoLoopIntermediateStmts>;
 
-  /// Kernel specific metadata used for communicating between CodeGen phases
-  /// while generating an optimized reduction kernel
-  struct XteamRedKernelMetadata {
-    const Stmt *XteamRedStmt = nullptr;
-    Address XteamRedLocalAddr = Address::invalid();
+  /// Map a reduction variable to the corresponding metadata. The metadata
+  /// contains
+  // the reduction expression, the coorresponding Xteam local aggregator var,
+  // and the start arg position in the offloading function signature.
+  struct XteamRedVarInfo {
+    XteamRedVarInfo(const Expr *E, Address A, size_t Pos)
+        : RedVarExpr{E}, RedVarAddr{A}, ArgPos{Pos} {}
+    XteamRedVarInfo() = delete;
+    const Expr *RedVarExpr;
+    Address RedVarAddr;
+    size_t ArgPos;
   };
-  using XteamRedKernelInfo =
-      std::pair<NoLoopIntermediateStmts, XteamRedKernelMetadata>;
+  using XteamRedVarMap = llvm::DenseMap<const VarDecl *, XteamRedVarInfo>;
+  //  using XteamRedKernelInfo = std::pair<NoLoopIntermediateStmts,
+  //  XteamRedVarMap>;
+  struct XteamRedKernelInfo {
+    XteamRedKernelInfo(llvm::Value *TSI, llvm::Value *NT,
+                       NoLoopIntermediateStmts Stmts, XteamRedVarMap RVM)
+        : ThreadStartIndex{TSI}, NumTeams{NT}, XteamIntStmts{Stmts},
+          XteamRedVars{RVM} {}
+
+    llvm::Value *ThreadStartIndex;
+    llvm::Value *NumTeams;
+    NoLoopIntermediateStmts XteamIntStmts;
+    XteamRedVarMap XteamRedVars;
+  };
   using XteamRedKernelMap = llvm::DenseMap<const Stmt *, XteamRedKernelInfo>;
 
 private:
@@ -353,6 +405,9 @@ private:
   std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader;
   InstrProfStats PGOStats;
   std::unique_ptr<llvm::SanitizerStatReport> SanStats;
+
+  /// Statement for which Xteam reduction code is being generated currently
+  const Stmt *CurrentXteamRedStmt = nullptr;
 
   NoLoopKernelMap NoLoopKernels;
   XteamRedKernelMap XteamRedKernels;
@@ -1378,13 +1433,14 @@ public:
 
   /// \returns true if \p Fn at \p Loc should be excluded from profile
   /// instrumentation by the SCL passed by \p -fprofile-list.
-  bool isFunctionBlockedByProfileList(llvm::Function *Fn,
-                                      SourceLocation Loc) const;
+  ProfileList::ExclusionType
+  isFunctionBlockedByProfileList(llvm::Function *Fn, SourceLocation Loc) const;
 
   /// \returns true if \p Fn at \p Loc should be excluded from profile
   /// instrumentation.
-  bool isFunctionBlockedFromProfileInstr(llvm::Function *Fn,
-                                         SourceLocation Loc) const;
+  ProfileList::ExclusionType
+  isFunctionBlockedFromProfileInstr(llvm::Function *Fn,
+                                    SourceLocation Loc) const;
 
   SanitizerMetadata *getSanitizerMetadata() {
     return SanitizerMD.get();
@@ -1463,6 +1519,9 @@ public:
   /// Generate a cross-DSO type identifier for MD.
   llvm::ConstantInt *CreateCrossDsoCfiTypeId(llvm::Metadata *MD);
 
+  /// Generate a KCFI type identifier for T.
+  llvm::ConstantInt *CreateKCFITypeId(QualType T);
+
   /// Create a metadata identifier for the given type. This may either be an
   /// MDString (for external identifiers) or a distinct unnamed MDNode (for
   /// internal identifiers).
@@ -1480,6 +1539,12 @@ public:
   /// Create and attach type metadata to the given function.
   void CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                           llvm::Function *F);
+
+  /// Set type metadata to the given function.
+  void setKCFIType(const FunctionDecl *FD, llvm::Function *F);
+
+  /// Emit KCFI type identifier constants and remove unused identifiers.
+  void finalizeKCFITypes();
 
   /// Whether this function's return type has no side effects, and thus may
   /// be trivially discarded if it is unused.
@@ -1547,21 +1612,29 @@ public:
   void printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
                                        const Decl *D) const;
 
+  // Should be called under debug mode for printing analysis result.
+  void emitNxResult(std::string StatusMsg, const OMPExecutableDirective &D,
+                    NoLoopXteamErr Status);
+
+  /// Given the schedule clause, can No-Loop code be generated?
+  NoLoopXteamErr getNoLoopCompatibleSchedStatus(const OMPLoopDirective &LD);
+
+  /// Given the order clause, can No-Loop code be generated?
+  NoLoopXteamErr getNoLoopCompatibleOrderStatus(const OMPLoopDirective &LD);
+
   /// Helper functions for generating a NoLoop kernel
   /// For a captured statement, get the single For statement, if it exists,
   /// otherwise return nullptr.
   const ForStmt *getSingleForStmt(const Stmt *S);
 
   /// Does the loop init qualify for a NoLoop kernel?
-  const VarDecl *checkDeclStmt(const ForStmt &FStmt);
-  const VarDecl *checkInitExpr(const ForStmt &FStmt);
-  const VarDecl *checkLoopInit(const ForStmt &FStmt);
+  const VarDecl *checkLoopInit(const OMPLoopDirective &LD);
 
   /// Does the loop increment qualify for a NoLoop kernel?
   bool checkLoopStep(const Expr *Inc, const VarDecl *VD);
 
   /// Does the loop condition qualify for a NoLoop kernel?
-  bool checkLoopStop(const ForStmt &FStmt);
+  bool checkLoopStop(const OMPLoopDirective &, const ForStmt &);
 
   /// If the step is a binary expression, extract and return the step.
   /// If the step is a unary expression, return nullptr.
@@ -1572,7 +1645,7 @@ public:
   /// top-level statement to the intermediate statements. For a combined
   /// construct, there are no intermediate statements. Used for a combined
   /// construct
-  bool checkAndSetNoLoopKernel(const OMPExecutableDirective &D);
+  NoLoopXteamErr checkAndSetNoLoopKernel(const OMPExecutableDirective &D);
 
   /// Given a top-level target construct for no-loop codegen, get the
   /// intermediate OpenMP constructs
@@ -1588,22 +1661,58 @@ public:
     return NoLoopKernels.find(S) != NoLoopKernels.end();
   }
 
-  bool checkAndSetXteamRedKernel(const OMPExecutableDirective &D);
+  /// If we are able to generate a Xteam reduction kernel for this directive,
+  /// return true, otherwise return false. If successful, metadata for the
+  /// reduction variables are created for subsequent codegen phases to work on.
+  NoLoopXteamErr checkAndSetXteamRedKernel(const OMPExecutableDirective &D);
 
+  /// Given a ForStmt for which Xteam codegen will be done, return the
+  /// intermediate statements for a split directive.
   const NoLoopIntermediateStmts &getXteamRedStmts(const Stmt *S) {
     assert(isXteamRedKernel(S));
-    return XteamRedKernels.find(S)->second.first;
+    return XteamRedKernels.find(S)->second.XteamIntStmts;
   }
 
-  const XteamRedKernelMetadata &getXteamRedKernelMetadata(const Stmt *S) {
+  /// Given a ForStmt for which Xteam codegen will be done, return the
+  /// corresponding metadata
+  XteamRedVarMap &getXteamRedVarMap(const Stmt *S) {
     assert(isXteamRedKernel(S));
-    return XteamRedKernels.find(S)->second.second;
+    return XteamRedKernels.find(S)->second.XteamRedVars;
   }
 
-  void setXteamRedKernelMetadata(const Stmt *S,
-                                 const XteamRedKernelMetadata &MD) {
+  llvm::Value *getXteamRedThreadStartIndex(const Stmt *S) {
     assert(isXteamRedKernel(S));
-    XteamRedKernels.find(S)->second.second = MD;
+    return XteamRedKernels.find(S)->second.ThreadStartIndex;
+  }
+
+  llvm::Value *getXteamRedNumTeams(const Stmt *S) {
+    assert(isXteamRedKernel(S));
+    return XteamRedKernels.find(S)->second.NumTeams;
+  }
+
+  /// Given a ForStmt for which Xteam codegen will be done, update the metadata.
+  /// \p VD is the reduction variable for which metadata is updated.
+  void updateXteamRedVarMap(const Stmt *S, const VarDecl *VD, const Expr *RVE,
+                            Address AggVarAddr) {
+    assert(isXteamRedKernel(S));
+    XteamRedVarMap &RVM = getXteamRedVarMap(S);
+    assert(RVM.find(VD) != RVM.end());
+    RVM.find(VD)->second.RedVarExpr = RVE;
+    RVM.find(VD)->second.RedVarAddr = AggVarAddr;
+    // Another API is used to set ArgPos
+  }
+
+  void updateXteamRedVarArgPos(XteamRedVarInfo *RVInfo, size_t ArgP) {
+    assert(RVInfo);
+    RVInfo->ArgPos = ArgP;
+  }
+
+  void updateXteamRedKernel(const Stmt *S, llvm::Value *ThdIndex,
+                            llvm::Value *NTeams) {
+    assert(isXteamRedKernel(S));
+    auto &KernelInfo = XteamRedKernels.find(S)->second;
+    KernelInfo.ThreadStartIndex = ThdIndex;
+    KernelInfo.NumTeams = NTeams;
   }
 
   /// Erase spec-red related metadata for the input statement
@@ -1612,6 +1721,9 @@ public:
   bool isXteamRedKernel(const Stmt *S) {
     return XteamRedKernels.find(S) != XteamRedKernels.end();
   }
+
+  void setCurrentXteamRedStmt(const Stmt *S) { CurrentXteamRedStmt = S; }
+  const Stmt *getCurrentXteamRedStmt() { return CurrentXteamRedStmt; }
 
   /// Move some lazily-emitted states to the NewBuilder. This is especially
   /// essential for the incremental parsing environment like Clang Interpreter,
@@ -1694,6 +1806,7 @@ private:
 
   // FIXME: Hardcoding priority here is gross.
   void AddGlobalCtor(llvm::Function *Ctor, int Priority = 65535,
+                     unsigned LexOrder = ~0U,
                      llvm::Constant *AssociatedData = nullptr);
   void AddGlobalDtor(llvm::Function *Dtor, int Priority = 65535,
                      bool IsDtorAttrFunc = false);
@@ -1808,34 +1921,36 @@ private:
                                                StringRef Suffix);
 
   /// Top level checker for no-loop on the for statement
-  bool isForStmtNoLoopConforming(const Stmt *);
+  NoLoopXteamErr getNoLoopForStmtStatus(const OMPExecutableDirective &,
+                                        const Stmt *);
 
   /// Top level checker for xteam reduction of the loop
-  bool isForStmtXteamRedConforming(const Stmt *);
+  NoLoopXteamErr getXteamRedForStmtStatus(const OMPExecutableDirective &,
+                                          const Stmt *, const XteamRedVarMap &);
 
   /// Used for a target construct
-  bool checkAndSetNoLoopTargetConstruct(const OMPExecutableDirective &D);
+  NoLoopXteamErr
+  checkAndSetNoLoopTargetConstruct(const OMPExecutableDirective &D);
 
   /// Are clauses on a combined OpenMP construct compatible with no-loop
   /// codegen?
-  bool areCombinedClausesNoLoopCompatible(const OMPExecutableDirective &D);
+  NoLoopXteamErr
+  getNoLoopCombinedClausesStatus(const OMPExecutableDirective &D);
 
   /// Are clauses on a combined OpenMP construct compatible with xteam
   /// reduction codegen?
-  bool areCombinedClausesXteamRedCompatible(const OMPExecutableDirective &D);
+  NoLoopXteamErr
+  getXteamRedCombinedClausesStatus(const OMPExecutableDirective &D);
 
-  /// Is the reduction clause compatible with xteam reduction codegen?
-  bool canHandleReductionClause(const OMPExecutableDirective &D);
+  /// Collect the reduction variables that may satisfy Xteam criteria
+  std::pair<NoLoopXteamErr, CodeGenModule::XteamRedVarMap>
+  collectXteamRedVars(const OMPExecutableDirective &D);
 
   /// Populate the map used for no-loop codegen
   void setNoLoopKernel(const Stmt *S,
                        NoLoopIntermediateStmts IntermediateStmts) {
+    assert(!isNoLoopKernel(S) && "No-Loop already set");
     NoLoopKernels[S] = IntermediateStmts;
-  }
-
-  /// Populate the map used for xteam reduction codegen
-  void setXteamRedKernel(const Stmt *S, XteamRedKernelInfo KI) {
-    XteamRedKernels[S] = KI;
   }
 };
 

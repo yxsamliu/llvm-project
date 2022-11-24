@@ -42,6 +42,16 @@ static cl::opt<bool> EnableRedundantCopyElimination(
     cl::desc("Enable the redundant copy elimination pass"), cl::init(true),
     cl::Hidden);
 
+// FIXME: Unify control over GlobalMerge.
+static cl::opt<cl::boolOrDefault>
+    EnableGlobalMerge("riscv-enable-global-merge", cl::Hidden,
+                      cl::desc("Enable the global merge pass"));
+
+static cl::opt<bool>
+    EnableMachineCombiner("riscv-enable-machine-combiner",
+                          cl::desc("Enable the machine combiner pass"),
+                          cl::init(true), cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
@@ -52,6 +62,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVCodeGenPreparePass(*PR);
   initializeRISCVMergeBaseOffsetOptPass(*PR);
   initializeRISCVSExtWRemovalPass(*PR);
+  initializeRISCVPreRAExpandPseudoPass(*PR);
   initializeRISCVExpandPseudoPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
 }
@@ -204,6 +215,13 @@ bool RISCVPassConfig::addPreISel() {
     // more details.
     addPass(createBarrierNoopPass());
   }
+
+  if (EnableGlobalMerge == cl::BOU_TRUE) {
+    addPass(createGlobalMergePass(TM, /* MaxOffset */ 2047,
+                                  /* OnlyOptimizeForSize */ false,
+                                  /* MergeExternalByDefault */ true));
+  }
+
   return false;
 }
 
@@ -250,12 +268,15 @@ void RISCVPassConfig::addPreEmitPass2() {
 
 void RISCVPassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
+  if (EnableMachineCombiner)
+    addPass(&MachineCombinerID);
 
   if (TM->getTargetTriple().getArch() == Triple::riscv64)
     addPass(createRISCVSExtWRemovalPass());
 }
 
 void RISCVPassConfig::addPreRegAlloc() {
+  addPass(createRISCVPreRAExpandPseudoPass());
   if (TM->getOptLevel() != CodeGenOpt::None)
     addPass(createRISCVMergeBaseOffsetOptPass());
   addPass(createRISCVInsertVSETVLIPass());
