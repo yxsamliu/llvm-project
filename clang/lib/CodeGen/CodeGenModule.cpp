@@ -7740,7 +7740,6 @@ CodeGenModule::NoLoopXteamErr CodeGenModule::getXteamRedCombinedClausesStatus(
   if (D.hasClausesOfKind<OMPDependClause>() ||
       D.hasClausesOfKind<OMPInReductionClause>() ||
       D.hasClausesOfKind<OMPNowaitClause>() ||
-      D.hasClausesOfKind<OMPNumTeamsClause>() ||
       D.hasClausesOfKind<OMPDistScheduleClause>() ||
       D.hasClausesOfKind<OMPLastprivateClause>() ||
       D.hasClausesOfKind<OMPCopyinClause>() ||
