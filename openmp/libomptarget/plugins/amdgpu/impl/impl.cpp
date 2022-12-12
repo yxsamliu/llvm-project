@@ -21,9 +21,13 @@ bool is_locked(void *ptr, hsa_status_t *err_p, void **agentBaseAddress) {
   info.size = sizeof(hsa_amd_pointer_info_t);
   err = hsa_amd_pointer_info(ptr, &info, nullptr, nullptr, nullptr);
 
-  if (err != HSA_STATUS_SUCCESS)
+  if (err_p)
+    *err_p = err;
+
+  if (err != HSA_STATUS_SUCCESS){
     DP("Error when getting pointer info\n");
-  else
+    return is_locked;
+  } else
     is_locked = (info.type == HSA_EXT_POINTER_TYPE_LOCKED);
 
   if (is_locked && agentBaseAddress != nullptr) {
@@ -35,14 +39,22 @@ bool is_locked(void *ptr, hsa_status_t *err_p, void **agentBaseAddress) {
                  (uint64_t)info.hostBaseAddress);
   }
 
-  if (err_p)
-    *err_p = err;
   return is_locked;
 }
 
-hsa_status_t wait_for_signal(hsa_signal_t signal, hsa_signal_value_t init,
-                             hsa_signal_value_t success) {
+template <const uint64_t active_timeout = 0>
+hsa_status_t active_wait_for_signal(hsa_signal_t signal,
+                                    hsa_signal_value_t init,
+                                    hsa_signal_value_t success) {
   hsa_signal_value_t got = init;
+  if (active_timeout) {
+    got = hsa_signal_wait_scacquire(signal, HSA_SIGNAL_CONDITION_NE, init,
+                                    active_timeout, HSA_WAIT_STATE_ACTIVE);
+    if (got == success)
+      return HSA_STATUS_SUCCESS;
+    DP("active_timeout %ld exceeded: switching to HSA_WAIT_STATE_BLOCKED.\n",
+       active_timeout);
+  }
   while (got == init)
     got = hsa_signal_wait_scacquire(signal, HSA_SIGNAL_CONDITION_NE, init,
                                     UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
@@ -50,6 +62,29 @@ hsa_status_t wait_for_signal(hsa_signal_t signal, hsa_signal_value_t init,
     return HSA_STATUS_ERROR;
 
   return HSA_STATUS_SUCCESS;
+}
+
+// 0 = wait in HSA_WAIT_STATE_BLOCKED till complete
+hsa_status_t wait_for_signal(hsa_signal_t signal, hsa_signal_value_t init,
+                             hsa_signal_value_t success) {
+  return active_wait_for_signal<0>(signal, init, success);
+}
+// switch to STATE_BLOCKED after 1 sec
+hsa_status_t wait_for_signal_kernel(hsa_signal_t signal,
+                                    hsa_signal_value_t init,
+                                    hsa_signal_value_t success) {
+  return active_wait_for_signal<1000000>(signal, init, success);
+}
+// switch to STATE_BLOCKED after 3 secs
+hsa_status_t wait_for_signal_data(hsa_signal_t signal, hsa_signal_value_t init,
+                                  hsa_signal_value_t success) {
+  return active_wait_for_signal<3000000>(signal, init, success);
+}
+// Never switch to STATE_BLOCKED, stay in STATE_ACTIVE, not used yet
+hsa_status_t wait_for_signal_active(hsa_signal_t signal,
+                                    hsa_signal_value_t init,
+                                    hsa_signal_value_t success) {
+  return active_wait_for_signal<UINT64_MAX>(signal, init, success);
 }
 
 // host pointer (either src or dest) must be locked via hsa_amd_memory_lock

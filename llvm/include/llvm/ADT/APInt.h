@@ -72,7 +72,7 @@ inline APInt operator-(APInt);
 ///     shifts are defined, but sign extension and ashr is not.  Zero bit values
 ///     compare and hash equal to themselves, and countLeadingZeros returns 0.
 ///
-class LLVM_NODISCARD APInt {
+class [[nodiscard]] APInt {
 public:
   typedef uint64_t WordType;
 
@@ -855,6 +855,26 @@ public:
     APInt R(*this);
     R <<= shiftAmt;
     return R;
+  }
+
+  /// relative logical shift right
+  APInt relativeLShr(int RelativeShift) const {
+    return RelativeShift > 0 ? lshr(RelativeShift) : shl(-RelativeShift);
+  }
+
+  /// relative logical shift left
+  APInt relativeLShl(int RelativeShift) const {
+    return relativeLShr(-RelativeShift);
+  }
+
+  /// relative arithmetic shift right
+  APInt relativeAShr(int RelativeShift) const {
+    return RelativeShift > 0 ? ashr(RelativeShift) : shl(-RelativeShift);
+  }
+
+  /// relative arithmetic shift left
+  APInt relativeAShl(int RelativeShift) const {
+    return relativeAShr(-RelativeShift);
   }
 
   /// Rotate left by rotateAmt.

@@ -448,8 +448,7 @@ void DwarfCompileUnit::addLocationAttribute(
   bool AddToAccelTable = true;
   DIELoc *ActualLoc = new (DIEValueAllocator) DIELoc;
   DIELoc *EmptyLoc = new (DIEValueAllocator) DIELoc;
-  DIEDwarfExprAST ExprAST(*Asm, nullptr, *this, *ActualLoc, Lifetime,
-                          &GVFragmentMap);
+  DIEDwarfExprAST ExprAST(*Asm, *this, *ActualLoc, Lifetime, GVFragmentMap);
   addBlock(*VariableDIE, dwarf::DW_AT_location,
            ExprAST.finalize() ? ActualLoc : EmptyLoc);
 
@@ -571,7 +570,12 @@ void DwarfCompileUnit::attachLowHighPC(DIE &D, const MCSymbol *Begin,
 // scope then create and insert DIEs for these variables.
 DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
   DIE *SPDie = getOrCreateSubprogramDIE(SP, includeMinimalInlineScopes());
+  auto *ContextCU = static_cast<DwarfCompileUnit *>(SPDie->getUnit());
+  return ContextCU->updateSubprogramScopeDIEImpl(SP, SPDie);
+}
 
+DIE &DwarfCompileUnit::updateSubprogramScopeDIEImpl(const DISubprogram *SP,
+                                                    DIE *SPDie) {
   SmallVector<RangeSpan, 2> BB_List;
   // If basic block sections are on, ranges for each basic block section has
   // to be emitted separately.
@@ -673,11 +677,8 @@ void DwarfCompileUnit::constructScopeDIE(LexicalScope *Scope,
 
   // Emit inlined subprograms.
   if (Scope->getParent() && isa<DISubprogram>(DS)) {
-    DIE *ScopeDIE = constructInlinedScopeDIE(Scope);
-    if (!ScopeDIE)
-      return;
-
-    ParentScopeDIE.addChild(ScopeDIE);
+    DIE *ScopeDIE = constructInlinedScopeDIE(Scope, ParentScopeDIE);
+    assert(ScopeDIE && "Scope DIE should not be null.");
     createAndAddScopeChildren(Scope, *ScopeDIE);
     return;
   }
@@ -776,9 +777,8 @@ void DwarfCompileUnit::attachRangesOrLowHighPC(
   attachRangesOrLowHighPC(Die, std::move(List));
 }
 
-// This scope represents inlined body of a function. Construct DIE to
-// represent this concrete inlined copy of the function.
-DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope) {
+DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope,
+                                                DIE &ParentScopeDIE) {
   assert(Scope->getScopeNode());
   auto *DS = Scope->getScopeNode();
   auto *InlinedSP = getDISubprogram(DS);
@@ -788,6 +788,7 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope) {
   assert(OriginDIE && "Unable to find original DIE for an inlined subprogram.");
 
   auto ScopeDIE = DIE::get(DIEValueAllocator, dwarf::DW_TAG_inlined_subroutine);
+  ParentScopeDIE.addChild(ScopeDIE);
   addDIEEntry(*ScopeDIE, dwarf::DW_AT_abstract_origin, *OriginDIE);
 
   attachRangesOrLowHighPC(*ScopeDIE, Scope->getRanges());
@@ -969,15 +970,16 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
 
   // Check if it is a heterogeneous dwarf.
   if (const auto *NDV = dyn_cast<NewDbgVariable>(&DV)) {
-    for (auto &Lifetime : NDV->getLifetimes()) {
+    for (auto &DbgDefProxy : NDV->getDbgDefProxies()) {
       DIELoc *ActualLoc = new (DIEValueAllocator) DIELoc;
       // FIXME(KZHURAVL): Remove EmptyLoc once we implement full lowering
       // support.
       DIELoc *EmptyLoc = new (DIEValueAllocator) DIELoc;
-      DIEDwarfExprAST ExprAST(*Asm, Asm->MF->getSubtarget().getRegisterInfo(),
-                              *this, *ActualLoc, *Lifetime);
-      addBlock(*VariableDie, dwarf::DW_AT_location, ExprAST.finalize() ?
-                                                    ActualLoc : EmptyLoc);
+      DIEDwarfExprAST ExprAST(*Asm, *Asm->MF->getSubtarget().getRegisterInfo(),
+                              *this, *ActualLoc, DbgDefProxy.Lifetime,
+                              DbgDefProxy.Referrer);
+      addBlock(*VariableDie, dwarf::DW_AT_location,
+               ExprAST.finalize() ? ActualLoc : EmptyLoc);
     }
     return VariableDie;
   }
@@ -1159,6 +1161,7 @@ sortLocalVars(SmallVectorImpl<DbgVariable *> &Input) {
 DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
                                                    LexicalScope *Scope) {
   DIE &ScopeDIE = updateSubprogramScopeDIE(Sub);
+  auto *ContextCU = static_cast<DwarfCompileUnit *>(ScopeDIE.getUnit());
 
   if (Scope) {
     assert(!Scope->getInlinedAt());
@@ -1166,8 +1169,10 @@ DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
     // Collect lexical scope children first.
     // ObjectPointer might be a local (non-argument) local variable if it's a
     // block's synthetic this pointer.
-    if (DIE *ObjectPointer = createAndAddScopeChildren(Scope, ScopeDIE))
-      addDIEEntry(ScopeDIE, dwarf::DW_AT_object_pointer, *ObjectPointer);
+    if (DIE *ObjectPointer =
+            ContextCU->createAndAddScopeChildren(Scope, ScopeDIE))
+      ContextCU->addDIEEntry(ScopeDIE, dwarf::DW_AT_object_pointer,
+                             *ObjectPointer);
   }
 
   // If this is a variadic function, add an unspecified parameter.

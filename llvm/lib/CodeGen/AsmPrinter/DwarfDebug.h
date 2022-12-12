@@ -104,10 +104,21 @@ public:
   }
 };
 
+// A pair to capture the arguments of a call to DBG_DEF
+struct DbgDefProxy {
+  const DILifetime &Lifetime;
+  const MachineOperand &Referrer;
+};
+
 //===----------------------------------------------------------------------===//
 // FIXME(KZHURAVL): Write documentation for DbgVariable.
 class DbgVariable : public DbgEntity {
 protected:
+  /// Index of the entry list in DebugLocs.
+  unsigned DebugLocListIndex = ~0u;
+  /// DW_OP_LLVM_tag_offset value from DebugLocs.
+  Optional<uint8_t> DebugLocListTagOffset;
+
   // FIXME(KZHURAVL): Move FrameIndexExpr and getFrameIndexExprs into
   // OldDbgVariable.
   struct FrameIndexExpr {
@@ -152,19 +163,20 @@ public:
   virtual void initializeDbgValue(DbgValueLoc Value) = 0;
   virtual void initializeDbgValue(const MachineInstr *DbgValue) = 0;
   virtual const DIExpression *getSingleExpression() const = 0;
-  virtual void setDebugLocListIndex(unsigned O) = 0;
-  virtual unsigned getDebugLocListIndex() const = 0;
-  virtual void setDebugLocListTagOffset(uint8_t O) = 0;
-  virtual Optional<uint8_t> getDebugLocListTagOffset() const = 0;
+  void setDebugLocListIndex(unsigned O) { DebugLocListIndex = O; }
+  unsigned getDebugLocListIndex() const { return DebugLocListIndex; }
+  void setDebugLocListTagOffset(uint8_t O) { DebugLocListTagOffset = O; }
+  Optional<uint8_t> getDebugLocListTagOffset() const { return DebugLocListTagOffset; }
   virtual const DbgValueLoc *getValueLoc() const = 0;
   virtual ArrayRef<FrameIndexExpr> getFrameIndexExprs() const = 0;
   virtual bool hasFrameIndexExprs() const = 0;
   virtual void addMMIEntry(const DbgVariable &V) = 0;
   virtual bool hasComplexAddress() const = 0;
 
-  virtual void initializeLifetime(const DILifetime *LT) = 0;
-  virtual ArrayRef<const DILifetime*> getLifetimes() const = 0;
-  virtual bool hasLifetimes() const = 0;
+  virtual void initializeDbgDefProxy(const DILifetime &LT,
+                                     const MachineOperand &Referrer) = 0;
+  virtual ArrayRef<DbgDefProxy> getDbgDefProxies() const = 0;
+  virtual bool hasDbgDefProxies() const = 0;
 
   static bool classof(const DbgEntity *N) {
     switch (N->getDbgEntityID()) {
@@ -190,11 +202,6 @@ public:
 ///
 /// Variables that have been optimized out use none of these fields.
 class OldDbgVariable : public DbgVariable {
-  /// Index of the entry list in DebugLocs.
-  unsigned DebugLocListIndex = ~0u;
-  /// DW_OP_LLVM_tag_offset value from DebugLocs.
-  Optional<uint8_t> DebugLocListTagOffset;
-
   /// Single value location description.
   std::unique_ptr<DbgValueLoc> ValueLoc = nullptr;
 
@@ -241,10 +248,6 @@ public:
     return FrameIndexExprs.size() ? FrameIndexExprs[0].Expr : nullptr;
   }
 
-  void setDebugLocListIndex(unsigned O) override { DebugLocListIndex = O; }
-  unsigned getDebugLocListIndex() const override { return DebugLocListIndex; }
-  void setDebugLocListTagOffset(uint8_t O) override { DebugLocListTagOffset = O; }
-  Optional<uint8_t> getDebugLocListTagOffset() const override { return DebugLocListTagOffset; }
   const DbgValueLoc *getValueLoc() const override { return ValueLoc.get(); }
   /// Get the FI entries, sorted by fragment offset.
   ArrayRef<FrameIndexExpr> getFrameIndexExprs() const override;
@@ -260,13 +263,14 @@ public:
     return !FrameIndexExprs.empty();
   }
 
-  void initializeLifetime(const DILifetime *LT) override {
+  void initializeDbgDefProxy(const DILifetime &LT,
+                             const MachineOperand &Referrer) override {
     llvm_unreachable("OldDbgVariable::initializeLifetime is not supported");
   }
-  ArrayRef<const DILifetime*> getLifetimes() const override {
+  ArrayRef<DbgDefProxy> getDbgDefProxies() const override {
     llvm_unreachable("OldDbgVariable::getLifetimes is not supported");
   }
-  bool hasLifetimes() const override {
+  bool hasDbgDefProxies() const override {
     return false; // FIXME(KZHURAVL).
   }
 
@@ -278,7 +282,8 @@ public:
 //===----------------------------------------------------------------------===//
 // FIXME(KZHURAVL): Write documentation for NewDbgVariable.
 class NewDbgVariable : public DbgVariable {
-  mutable SmallVector<const DILifetime*, 1> Lifetimes;
+  /// Records DbgDef referrers.
+  mutable SmallVector<DbgDefProxy, 1> DbgDefProxies;
 
 public:
   NewDbgVariable(const DILocalVariable *V, const DILocation *IA)
@@ -296,18 +301,6 @@ public:
   const DIExpression *getSingleExpression() const override {
     llvm_unreachable("NewDbgVariable::getSingleExpression is not supported");
   }
-  void setDebugLocListIndex(unsigned O) override {
-    llvm_unreachable("NewDbgVariable::setDebugLocListIndex is not supported");
-  }
-  unsigned getDebugLocListIndex() const override {
-    return ~0u; // FIXME(KZHURAVL).
-  }
-  void setDebugLocListTagOffset(uint8_t O) override {
-    llvm_unreachable("NewDbgVariable::setDebugLocListTagOffset is not supported");
-  }
-  Optional<uint8_t> getDebugLocListTagOffset() const override {
-    llvm_unreachable("NewDbgVariable::getDebugLocListTagOffset is not supported");
-  }
   const DbgValueLoc *getValueLoc() const override {
     return nullptr; // FIXME(KZHURAVL).
   }
@@ -324,19 +317,18 @@ public:
     llvm_unreachable("NewDbgVariable::hasComplexAddress is not supported");
   }
 
-  void initializeLifetime(const DILifetime *LT) override {
-    assert(Lifetimes.empty() && "Already initialized?");
-    assert(LT && "Expected valid lifetime");
-    assert(LT->getLocation() && "Expected valid location (expr)");
+  void initializeDbgDefProxy(const DILifetime &LT,
+                             const MachineOperand &Referrer) override {
+    // FIXME: Support more than one DbgDef pair per variable
+    assert(DbgDefProxies.empty() && "Already initialized?");
+    assert(LT.getLocation() && "Expected valid location (expr)");
 
-    Lifetimes.push_back(LT);
+    DbgDefProxies.push_back({LT, Referrer});
   }
-  ArrayRef<const DILifetime*> getLifetimes() const override {
-    return Lifetimes;
+  ArrayRef<DbgDefProxy> getDbgDefProxies() const override {
+    return DbgDefProxies;
   }
-  bool hasLifetimes() const override {
-    return !Lifetimes.empty();
-  }
+  bool hasDbgDefProxies() const override { return !DbgDefProxies.empty(); }
 
   static bool classof(const DbgEntity *N) {
     return N->getDbgEntityID() == NewDbgVariableKind;

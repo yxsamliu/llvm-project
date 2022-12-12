@@ -11,18 +11,17 @@ define amdgpu_kernel void @addrspacecast(i32 addrspace(5)* %ptr.private, i32 add
 ; GFX8V3-LABEL: addrspacecast:
 ; GFX8V3:       ; %bb.0:
 ; GFX8V3-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
-; GFX8V3-NEXT:    s_load_dword s2, s[4:5], 0x44
-; GFX8V3-NEXT:    s_load_dword s3, s[4:5], 0x40
+; GFX8V3-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x40
 ; GFX8V3-NEXT:    v_mov_b32_e32 v4, 1
 ; GFX8V3-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8V3-NEXT:    s_cmp_lg_u32 s0, -1
-; GFX8V3-NEXT:    v_mov_b32_e32 v0, s2
+; GFX8V3-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX8V3-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GFX8V3-NEXT:    v_cndmask_b32_e32 v1, 0, v0, vcc
 ; GFX8V3-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8V3-NEXT:    s_cmp_lg_u32 s1, -1
 ; GFX8V3-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
-; GFX8V3-NEXT:    v_mov_b32_e32 v2, s3
+; GFX8V3-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX8V3-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GFX8V3-NEXT:    v_cndmask_b32_e32 v3, 0, v2, vcc
 ; GFX8V3-NEXT:    v_mov_b32_e32 v2, s1
@@ -37,18 +36,17 @@ define amdgpu_kernel void @addrspacecast(i32 addrspace(5)* %ptr.private, i32 add
 ; GFX8V4-LABEL: addrspacecast:
 ; GFX8V4:       ; %bb.0:
 ; GFX8V4-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
-; GFX8V4-NEXT:    s_load_dword s2, s[4:5], 0x44
-; GFX8V4-NEXT:    s_load_dword s3, s[4:5], 0x40
+; GFX8V4-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x40
 ; GFX8V4-NEXT:    v_mov_b32_e32 v4, 1
 ; GFX8V4-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8V4-NEXT:    s_cmp_lg_u32 s0, -1
-; GFX8V4-NEXT:    v_mov_b32_e32 v0, s2
+; GFX8V4-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX8V4-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GFX8V4-NEXT:    v_cndmask_b32_e32 v1, 0, v0, vcc
 ; GFX8V4-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8V4-NEXT:    s_cmp_lg_u32 s1, -1
 ; GFX8V4-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
-; GFX8V4-NEXT:    v_mov_b32_e32 v2, s3
+; GFX8V4-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX8V4-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GFX8V4-NEXT:    v_cndmask_b32_e32 v3, 0, v2, vcc
 ; GFX8V4-NEXT:    v_mov_b32_e32 v2, s1
@@ -63,17 +61,16 @@ define amdgpu_kernel void @addrspacecast(i32 addrspace(5)* %ptr.private, i32 add
 ; GFX8V5-LABEL: addrspacecast:
 ; GFX8V5:       ; %bb.0:
 ; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX8V5-NEXT:    s_load_dword s2, s[4:5], 0xc8
-; GFX8V5-NEXT:    s_load_dword s3, s[4:5], 0xcc
+; GFX8V5-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0xc8
 ; GFX8V5-NEXT:    v_mov_b32_e32 v4, 1
 ; GFX8V5-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8V5-NEXT:    s_cmp_lg_u32 s0, -1
 ; GFX8V5-NEXT:    v_mov_b32_e32 v0, s2
+; GFX8V5-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8V5-NEXT:    s_cselect_b64 vcc, -1, 0
-; GFX8V5-NEXT:    v_cndmask_b32_e32 v1, 0, v0, vcc
-; GFX8V5-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8V5-NEXT:    s_cmp_lg_u32 s1, -1
-; GFX8V5-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GFX8V5-NEXT:    v_cndmask_b32_e32 v1, 0, v0, vcc
+; GFX8V5-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
 ; GFX8V5-NEXT:    v_mov_b32_e32 v2, s3
 ; GFX8V5-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GFX8V5-NEXT:    v_cndmask_b32_e32 v3, 0, v2, vcc
@@ -477,9 +474,7 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(i64 addrspace(1)* %ptr)  {
 ; GFX9V3:       ; %bb.0:
 ; GFX9V3-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9V3-NEXT:    global_load_ubyte v0, v2, s[6:7] glc
-; GFX9V3-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V3-NEXT:    global_load_ubyte v0, v2, s[8:9] offset:8 glc
-; GFX9V3-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V3-NEXT:    global_load_ubyte v0, v2, s[4:5] glc
 ; GFX9V3-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9V3-NEXT:    s_waitcnt vmcnt(0)
@@ -496,9 +491,7 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(i64 addrspace(1)* %ptr)  {
 ; GFX9V4:       ; %bb.0:
 ; GFX9V4-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9V4-NEXT:    global_load_ubyte v0, v2, s[6:7] glc
-; GFX9V4-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V4-NEXT:    global_load_ubyte v0, v2, s[8:9] offset:8 glc
-; GFX9V4-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V4-NEXT:    global_load_ubyte v0, v2, s[4:5] glc
 ; GFX9V4-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9V4-NEXT:    s_waitcnt vmcnt(0)
@@ -515,9 +508,7 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(i64 addrspace(1)* %ptr)  {
 ; GFX9V5:       ; %bb.0:
 ; GFX9V5-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9V5-NEXT:    global_load_ubyte v0, v2, s[0:1] glc
-; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V5-NEXT:    global_load_ubyte v0, v2, s[6:7] offset:8 glc
-; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V5-NEXT:    global_load_ubyte v0, v2, s[4:5] glc
 ; GFX9V5-NEXT:    ; kill: killed $sgpr0_sgpr1
 ; GFX9V5-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0

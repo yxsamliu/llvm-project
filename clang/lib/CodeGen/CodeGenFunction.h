@@ -573,7 +573,7 @@ public:
       return false;
 
     // C++11 and later guarantees that a thread eventually will do one of the
-    // following (6.9.2.3.1 in C++11):
+    // following (C++11 [intro.multithread]p24 and C++17 [intro.progress]p1):
     // - terminate,
     //  - make a call to a library I/O function,
     //  - perform an access through a volatile glvalue, or
@@ -612,7 +612,7 @@ public:
   const CodeGen::CGBlockInfo *BlockInfo = nullptr;
   llvm::Value *BlockPointer = nullptr;
 
-  llvm::DenseMap<const VarDecl *, FieldDecl *> LambdaCaptureFields;
+  llvm::DenseMap<const ValueDecl *, FieldDecl *> LambdaCaptureFields;
   FieldDecl *LambdaThisCaptureField = nullptr;
 
   /// A mapping from NRVO variables to the flags used to indicate
@@ -1102,7 +1102,7 @@ public:
 
     void ForceCleanup() {
       RunCleanupsScope::ForceCleanup();
-      MappedVars.restore(CGF);
+      restoreMap();
     }
 
     /// Exit scope - all the mapped variables are restored.
@@ -1116,6 +1116,11 @@ public:
       VD = VD->getCanonicalDecl();
       return !VD->isLocalVarDeclOrParm() && CGF.LocalDeclMap.count(VD) > 0;
     }
+
+    /// Restore all mapped variables w/o clean up. This is usefully when we want
+    /// to reference the original variables but don't want the clean up because
+    /// that could emit lifetime end too early, causing backend issue #56913.
+    void restoreMap() { MappedVars.restore(CGF); }
   };
 
   /// Save/restore original map of previously emitted local vars in case when we
@@ -1530,7 +1535,8 @@ public:
   /// If \p StepV is null, the default increment is 1.
   void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr) {
     if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
-        !CurFn->hasFnAttribute(llvm::Attribute::NoProfile))
+        !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
+        !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile))
       PGO.emitCounterIncrement(Builder, S, StepV);
     PGO.setCurrentStmt(S);
   }
@@ -3147,16 +3153,20 @@ public:
     llvm::Value *Value;
     llvm::Type *ElementType;
     unsigned Alignment;
-    ParamValue(llvm::Value *V, llvm::Type *T, unsigned A)
-        : Value(V), ElementType(T), Alignment(A) {}
+    Optional<Address> DebugAddr;
+    ParamValue(llvm::Value *V, llvm::Type *T, unsigned A,
+               Optional<Address> DebugAddr)
+        : Value(V), ElementType(T), Alignment(A), DebugAddr(DebugAddr) {}
+
   public:
     static ParamValue forDirect(llvm::Value *value) {
-      return ParamValue(value, nullptr, 0);
+      return ParamValue(value, nullptr, 0, None);
     }
-    static ParamValue forIndirect(Address addr) {
+    static ParamValue forIndirect(Address addr,
+                                  Optional<Address> DebugAddr = None) {
       assert(!addr.getAlignment().isZero());
       return ParamValue(addr.getPointer(), addr.getElementType(),
-                        addr.getAlignment().getQuantity());
+                        addr.getAlignment().getQuantity(), DebugAddr);
     }
 
     bool isIndirect() const { return Alignment != 0; }
@@ -3171,6 +3181,8 @@ public:
       assert(isIndirect());
       return Address(Value, ElementType, CharUnits::fromQuantity(Alignment));
     }
+
+    Optional<Address> getDebugAddr() const { return DebugAddr; }
   };
 
   /// EmitParmDecl - Emit a ParmVarDecl or an ImplicitParamDecl.
@@ -3236,8 +3248,15 @@ public:
   /// This function should be called after ensuring that legality
   /// conditions for an optimized reduction kernel are met.
   void EmitXteamRedKernel(const OMPExecutableDirective &D, const Stmt *S,
+                          const FunctionArgList &Args,
                           const CodeGenModule::NoLoopIntermediateStmts &,
                           SourceLocation Loc);
+
+  /// Used in No-Loop and Xteam codegen to emit the loop iteration and the
+  /// associated variables. Returns the loop iteration variable and its address.
+  std::pair<const VarDecl *, Address> EmitNoLoopIV(const OMPLoopDirective &LD);
+
+  void EmitXteamRedUpdates(const ForStmt &FStmt);
 
   /// EmitSimpleStmt - Try to emit a "simple" statement which does not
   /// necessarily require an insertion point or debug information; typically
@@ -3371,7 +3390,12 @@ public:
                                      const OMPExecutableDirective &D,
                                      SourceLocation Loc);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
-                                  SmallVectorImpl<llvm::Value *> &CapturedVars);
+                                  SmallVectorImpl<llvm::Value *> &CapturedVars,
+                                  bool GenXteamAllocation = false);
+  void
+  GenerateXteamRedCapturedVars(SmallVectorImpl<llvm::Value *> &CapturedVars,
+                               QualType RedVarQualType,
+                               bool GenXteamAllocation);
   void emitOMPSimpleStore(LValue LVal, RValue RVal, QualType RValTy,
                           SourceLocation Loc);
   /// Perform element by element copying of arrays with type \a
@@ -3603,8 +3627,15 @@ public:
       const OMPTargetTeamsDistributeParallelForSimdDirective &S);
   void EmitOMPTargetTeamsDistributeSimdDirective(
       const OMPTargetTeamsDistributeSimdDirective &S);
-  void EmitOMPGenericLoopDirective(const OMPGenericLoopDirective &S);
+  void EmitOMPGenericLoopDirective(const OMPLoopDirective &S);
+  void EmitOMPParallelGenericLoopDirective(
+      const OMPLoopDirective &S);
+  void EmitOMPTargetParallelGenericLoopDirective(
+      const OMPTargetParallelGenericLoopDirective &S);
+  void EmitOMPTargetTeamsGenericLoopDirective(
+      const OMPTargetTeamsGenericLoopDirective &S);
   void EmitOMPInteropDirective(const OMPInteropDirective &S);
+  void EmitOMPTeamsGenericLoopDirective(const OMPTeamsGenericLoopDirective &S);
 
   /// Emit device code for the target directive.
   static void EmitOMPTargetDeviceFunction(CodeGenModule &CGM,
@@ -3646,6 +3677,10 @@ public:
   static void EmitOMPTargetTeamsDistributeParallelForDeviceFunction(
       CodeGenModule &CGM, StringRef ParentName,
       const OMPTargetTeamsDistributeParallelForDirective &S);
+
+  /// Emit device code for the target teams loop directive.
+  static void EmitOMPTargetTeamsGenericLoopDeviceFunction(CodeGenModule &CGM,
+      StringRef ParentName, const OMPTargetTeamsGenericLoopDirective &S);
 
   /// Emit the Stmt \p S and return its topmost canonical loop, if any.
   /// TODO: The \p Depth paramter is not yet implemented and must be 1. In the
@@ -4236,6 +4271,12 @@ public:
   llvm::Type *getEltType(const SVETypeFlags &TypeFlags);
   llvm::ScalableVectorType *getSVEType(const SVETypeFlags &TypeFlags);
   llvm::ScalableVectorType *getSVEPredType(const SVETypeFlags &TypeFlags);
+  llvm::Value *EmitSVETupleSetOrGet(const SVETypeFlags &TypeFlags,
+                                    llvm::Type *ReturnType,
+                                    ArrayRef<llvm::Value *> Ops);
+  llvm::Value *EmitSVETupleCreate(const SVETypeFlags &TypeFlags,
+                                  llvm::Type *ReturnType,
+                                  ArrayRef<llvm::Value *> Ops);
   llvm::Value *EmitSVEAllTruePred(const SVETypeFlags &TypeFlags);
   llvm::Value *EmitSVEDupX(llvm::Value *Scalar);
   llvm::Value *EmitSVEDupX(llvm::Value *Scalar, llvm::Type *Ty);
@@ -4289,7 +4330,7 @@ public:
   llvm::Value *EmitHexagonBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitRISCVBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                     ReturnValueSlot ReturnValue);
-  bool ProcessOrderScopeAMDGCN(llvm::Value *Order, llvm::Value *Scope,
+  void ProcessOrderScopeAMDGCN(llvm::Value *Order, llvm::Value *Scope,
                                llvm::AtomicOrdering &AO,
                                llvm::SyncScope::ID &SSID);
 
@@ -4444,6 +4485,11 @@ public:
 
   /// EmitLoadOfComplex - Load a complex number from the specified l-value.
   ComplexPairTy EmitLoadOfComplex(LValue src, SourceLocation loc);
+
+  ComplexPairTy EmitPromotedComplexExpr(const Expr *E, QualType PromotionType);
+  llvm::Value *EmitPromotedScalarExpr(const Expr *E, QualType PromotionType);
+  ComplexPairTy EmitPromotedValue(ComplexPairTy result, QualType PromotionType);
+  ComplexPairTy EmitUnPromotedValue(ComplexPairTy result, QualType PromotionType);
 
   Address emitAddrOfRealComponent(Address complex, QualType complexType);
   Address emitAddrOfImagComponent(Address complex, QualType complexType);
@@ -4641,6 +4687,9 @@ public:
   /// Emit a description of a source location in a format suitable for
   /// passing to a runtime sanitizer handler.
   llvm::Constant *EmitCheckSourceLocation(SourceLocation Loc);
+
+  void EmitKCFIOperandBundle(const CGCallee &Callee,
+                             SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
 
   /// Create a basic block that will either trap or call a handler function in
   /// the UBSan runtime with the provided arguments, and create a conditional
@@ -4851,14 +4900,15 @@ private:
   llvm::Value *EmitX86CpuInit();
   llvm::Value *FormResolverCondition(const MultiVersionResolverOption &RO);
 
-  Address getAddressFromDeclStmt(const ForStmt &FStmt);
-  Address getAddressFromExpr(const ForStmt &FStmt);
   llvm::Value *applyNoLoopInc(const Expr *Inc, const VarDecl *IVDecl,
                               llvm::Value *CurrVal);
   std::pair<const VarDecl *, Address>
   EmitXteamRedStartingIndex(const ForStmt &FStmt);
   void EmitXteamRedInc(const ForStmt &FStmt, const VarDecl *LoopVar,
                        const Address &NoLoopIvAddr);
+  void EmitXteamLocalAggregator(const ForStmt *FStmt);
+  void EmitXteamRedSum(const ForStmt *FStmt, const FunctionArgList &Args);
+  bool EmitXteamRedStmt(const Stmt *S);
 };
 
 

@@ -887,7 +887,8 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       if (MI.getOpcode() == AMDGPU::V_MAD_F32_e64 ||
           MI.getOpcode() == AMDGPU::V_FMA_F32_e64 ||
           MI.getOpcode() == AMDGPU::V_MAD_F16_e64 ||
-          MI.getOpcode() == AMDGPU::V_FMA_F16_e64) {
+          MI.getOpcode() == AMDGPU::V_FMA_F16_e64 ||
+          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_e64) {
         shrinkMadFma(MI);
         continue;
       }

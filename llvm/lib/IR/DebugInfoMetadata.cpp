@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 
@@ -35,6 +36,11 @@ cl::opt<bool> EnableFSDiscriminator(
 
 const DIExpression::FragmentInfo DebugVariable::DefaultFragment = {
     std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::min()};
+
+DebugVariable::DebugVariable(const DbgVariableIntrinsic *DII)
+    : Variable(DII->getVariable()),
+      Fragment(DII->getExpression()->getFragmentInfo()),
+      InlinedAt(DII->getDebugLoc().getInlinedAt()) {}
 
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
                        unsigned Column, ArrayRef<Metadata *> MDs,
@@ -357,7 +363,7 @@ void GenericDINode::recalculateHash() {
     }                                                                          \
   } while (false)
 #define DEFINE_GETIMPL_STORE(CLASS, ARGS, OPS)                                 \
-  return storeImpl(new (array_lengthof(OPS), Storage)                          \
+  return storeImpl(new (std::size(OPS), Storage)                               \
                        CLASS(Context, Storage, UNWRAP_ARGS(ARGS), OPS),        \
                    Storage, Context.pImpl->CLASS##s)
 #define DEFINE_GETIMPL_STORE_NO_OPS(CLASS, ARGS)                               \
@@ -365,8 +371,7 @@ void GenericDINode::recalculateHash() {
                        CLASS(Context, Storage, UNWRAP_ARGS(ARGS)),             \
                    Storage, Context.pImpl->CLASS##s)
 #define DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(CLASS, OPS)                   \
-  return storeImpl(new (array_lengthof(OPS), Storage)                          \
-                       CLASS(Context, Storage, OPS),                           \
+  return storeImpl(new (std::size(OPS), Storage) CLASS(Context, Storage, OPS), \
                    Storage, Context.pImpl->CLASS##s)
 #define DEFINE_GETIMPL_STORE_N(CLASS, ARGS, OPS, NUM_OPS)                      \
   return storeImpl(new (NUM_OPS, Storage)                                      \
@@ -878,7 +883,7 @@ DICompileUnit *DICompileUnit::getImpl(
                      Macros,
                      SysRoot,
                      SDK};
-  return storeImpl(new (array_lengthof(Ops), Storage) DICompileUnit(
+  return storeImpl(new (std::size(Ops), Storage) DICompileUnit(
                        Context, Storage, SourceLanguage, IsOptimized,
                        RuntimeVersion, EmissionKind, DWOId, SplitDebugInlining,
                        DebugInfoForProfiling, NameTableKind, RangesBaseAddress,
@@ -1427,7 +1432,10 @@ void DIExpression::appendOffset(SmallVectorImpl<uint64_t> &Ops,
     Ops.push_back(Offset);
   } else if (Offset < 0) {
     Ops.push_back(dwarf::DW_OP_constu);
-    Ops.push_back(-Offset);
+    // Avoid UB when encountering LLONG_MIN, because in 2's complement
+    // abs(LLONG_MIN) is LLONG_MAX+1.
+    uint64_t AbsMinusOne = -(Offset+1);
+    Ops.push_back(AbsMinusOne + 1);
     Ops.push_back(dwarf::DW_OP_minus);
   }
 }
@@ -1643,6 +1651,9 @@ DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
 Optional<DIExpression *> DIExpression::createFragmentExpression(
     const DIExpression *Expr, unsigned OffsetInBits, unsigned SizeInBits) {
   SmallVector<uint64_t, 8> Ops;
+  // Track whether it's safe to split the value at the top of the DWARF stack,
+  // assuming that it'll be used as an implicit location value.
+  bool CanSplitValue = true;
   // Copy over the expression, but leave off any trailing DW_OP_LLVM_fragment.
   if (Expr) {
     for (auto Op : Expr->expr_ops()) {
@@ -1660,7 +1671,23 @@ Optional<DIExpression *> DIExpression::createFragmentExpression(
         //
         // FIXME: We *could* preserve the lowest fragment of a constant offset
         // operation if the offset fits into SizeInBits.
-        return None;
+        CanSplitValue = false;
+        break;
+      case dwarf::DW_OP_deref:
+      case dwarf::DW_OP_deref_size:
+      case dwarf::DW_OP_deref_type:
+      case dwarf::DW_OP_xderef:
+      case dwarf::DW_OP_xderef_size:
+      case dwarf::DW_OP_xderef_type:
+        // Preceeding arithmetic operations have been applied to compute an
+        // address. It's okay to split the value loaded from that address.
+        CanSplitValue = true;
+        break;
+      case dwarf::DW_OP_stack_value:
+        // Bail if this expression computes a value that cannot be split.
+        if (!CanSplitValue)
+          return None;
+        break;
       case dwarf::DW_OP_LLVM_fragment: {
         // Make the new offset point into the existing fragment.
         uint64_t FragmentOffsetInBits = Op.getArg(0);
@@ -1675,6 +1702,7 @@ Optional<DIExpression *> DIExpression::createFragmentExpression(
       Op.appendToVector(Ops);
     }
   }
+  assert((!Expr->isImplicit() || CanSplitValue) && "Expr can't be split");
   assert(Expr && "Unknown DIExpression");
   Ops.push_back(dwarf::DW_OP_LLVM_fragment);
   Ops.push_back(OffsetInBits);
@@ -1780,19 +1808,17 @@ unsigned DIOp::getBitcodeID(const Variant &V) {
   return visit(makeVisitor([](auto &&Op) { return Op.getBitcodeID(); }), V);
 }
 
+namespace llvm {
+namespace DIOp {
 #define HANDLE_OP0(NAME)                                                       \
-  hash_code DIOp::hash_value(const DIOp::NAME &O) {                            \
-    return llvm::hash_value(0);                                                \
-  }
+  hash_code hash_value(const NAME &O) { return llvm::hash_value(0); }
 #define HANDLE_OP1(NAME, TYPE1, NAME1)                                         \
-  hash_code DIOp::hash_value(const DIOp::NAME &O) {                            \
-    return llvm::hash_value(O.NAME1);                                          \
-  }
+  hash_code hash_value(const NAME &O) { return llvm::hash_value(O.NAME1); }
 #define HANDLE_OP2(NAME, TYPE1, NAME1, TYPE2, NAME2)                           \
-  hash_code DIOp::hash_value(const DIOp::NAME &O) {                            \
-    return hash_combine(O.NAME1, O.NAME2);                                     \
-  }
+  hash_code hash_value(const NAME &O) { return hash_combine(O.NAME1, O.NAME2); }
 #include "llvm/IR/DIExprOps.def"
+} // namespace DIOp
+} // namespace llvm
 
 DIExprBuilder::DIExprBuilder(LLVMContext &C) : C(C) {}
 DIExprBuilder::DIExprBuilder(LLVMContext &C,
@@ -1963,7 +1989,7 @@ DILifetime *DILifetime::getImpl(LLVMContext &Context, Metadata *Obj,
                                 Metadata *Loc, ArrayRef<Metadata *> Args,
                                 StorageType Storage) {
   Metadata *Ops[] = {Obj, Loc};
-  return storeImpl(new (array_lengthof(Ops) + Args.size(), Storage)
+  return storeImpl(new (std::size(Ops) + Args.size(), Storage)
                        DILifetime(Context, Storage, Ops, Args),
                    Storage);
 }

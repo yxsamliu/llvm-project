@@ -11,7 +11,7 @@
 #include "NativeRegisterContextLinux_arm.h"
 #include "NativeRegisterContextLinux_arm64.h"
 
-
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -93,6 +93,12 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
   default:
     llvm_unreachable("have no register context for architecture");
   }
+}
+
+llvm::Expected<ArchSpec>
+NativeRegisterContextLinux::DetermineArchitecture(lldb::tid_t tid) {
+  return DetermineArchitectureViaGPR(
+      tid, RegisterInfoPOSIX_arm64::GetGPRSizeStatic());
 }
 
 NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
@@ -278,7 +284,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
     return Status("failed - register wasn't recognized to be a GPR or an FPR, "
                   "write strategy unknown");
 
-  reg_value.SetFromMemoryData(reg_info, src, reg_info->byte_size,
+  reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
                               eByteOrderLittle, error);
 
   return error;

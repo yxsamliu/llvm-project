@@ -332,7 +332,7 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
                       AMDGPU::FLAT_SCR_HI)
     .addReg(FlatScrInitLo, RegState::Kill)
     .addImm(8);
-  LShr->getOperand(3).setIsDead(true); // Mark SCC as dead.
+  LShr->getOperand(3).setIsDead(); // Mark SCC as dead.
 }
 
 // Note SGPRSpill stack IDs should only be used for SGPR spilling to VGPRs, not
@@ -757,22 +757,8 @@ void SIFrameLowering::emitPrologueEntryCFI(MachineBasicBlock &MBB,
            MCCFIInstruction::createLLVMDefAspaceCfa(
                nullptr, MCRI->getDwarfRegNum(StackPtrReg, false), 0, 6));
 
-  static const char PCEncodedInst[] = {
-      dwarf::DW_CFA_expression,
-      16, // PC 64
-      8,  // length
-      static_cast<char>(dwarf::DW_OP_regx),
-      62, // SGPR30
-      static_cast<char>(dwarf::DW_OP_piece),
-      4, // 32 bits
-      static_cast<char>(dwarf::DW_OP_regx),
-      63, // SGPR31
-      static_cast<char>(dwarf::DW_OP_piece),
-      4 // 32 bits
-  };
-  buildCFI(MBB, MBBI, DL,
-           MCCFIInstruction::createEscape(
-               nullptr, StringRef(PCEncodedInst, sizeof(PCEncodedInst))));
+  buildCFIForRegToSGPRPairSpill(MBB, MBBI, DL, AMDGPU::PC_REG,
+                                TRI.getReturnAddressReg(MF));
 
   BitVector IsCalleeSaved(TRI.getNumRegs());
   const MCPhysReg *CSRegs = MRI.getCalleeSavedRegs();
@@ -804,7 +790,7 @@ static Register buildScratchExecCopy(LivePhysRegs &LiveRegs,
                                      MachineFunction &MF,
                                      MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
-                                     DebugLoc DL, bool IsProlog) {
+                                     const DebugLoc &DL, bool IsProlog) {
   Register ScratchExecCopy;
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -943,7 +929,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   MachineBasicBlock::iterator MBBI = MBB.begin();
 
-  // Debug location must be unknown since the first debug location is used
+  // DebugLoc must be unknown since the first instruction with DebugLoc is used
   // to determine the end of the prologue.
   DebugLoc DL;
 
@@ -1234,11 +1220,18 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const MCRegisterInfo *MCRI = MF.getMMI().getContext().getRegisterInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
-  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
   LivePhysRegs LiveRegs;
-  // Copy DebugLoc of the insertion point so that breakpoint on function exit
-  // hits at the beginning of the epilogue.
-  DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
+  // Get the insert location for the epilogue. If there were no terminators in
+  // the block, get the last instruction.
+  MachineBasicBlock::iterator MBBI = MBB.end();
+  DebugLoc DL;
+  if (!MBB.empty()) {
+    MBBI = MBB.getLastNonDebugInstr();
+    if (MBBI != MBB.end())
+      DL = MBBI->getDebugLoc();
+
+    MBBI = MBB.getFirstTerminator();
+  }
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   uint32_t NumBytes = MFI.getStackSize();
@@ -1474,12 +1467,14 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
         // correct register value. But not sure the register value alone is
         for (MachineInstr &MI : MBB) {
           if (MI.isDebugValue() && MI.getOperand(0).isFI() &&
+              !MFI.isFixedObjectIndex(MI.getOperand(0).getIndex()) &&
               SpillFIs[MI.getOperand(0).getIndex()]) {
             MI.getOperand(0).ChangeToRegister(Register(), false /*isDef*/);
           }
           // FIXME: Need to update expression to locate lane of VGPR to which
           // the SGPR was spilled.
           if (MI.isDebugDef() && MI.getDebugOperand(0).isFI() &&
+              !MFI.isFixedObjectIndex(MI.getDebugOperand(0).getIndex()) &&
               SpillFIs[MI.getDebugOperand(0).getIndex()]) {
             MI.getDebugOperand(0).ChangeToRegister(Register(), false /*isDef*/);
           }
@@ -1903,12 +1898,17 @@ static void encodeDwarfRegisterLocation(int DwarfReg, raw_ostream &OS) {
   }
 }
 
+static constexpr unsigned SGPRBitSize = 32;
+static constexpr unsigned SGPRByteSize = SGPRBitSize / 8;
+static constexpr unsigned VGPRLaneBitSize = 32;
+
 MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, const Register SGPR, const Register VGPR,
     const int Lane) const {
-  MachineFunction &MF = *MBB.getParent();
+  const MachineFunction &MF = *MBB.getParent();
   const MCRegisterInfo &MCRI = *MF.getMMI().getContext().getRegisterInfo();
+
   int DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
   int DwarfVGPR = MCRI.getDwarfRegNum(VGPR, false);
 
@@ -1926,20 +1926,17 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
   // require a longer expression E and DWARF defines the result of the
   // evaulation to be the location description on the top of the stack (i.e. the
   // implictly pushed one is just ignored.)
-  SmallString<20> CFIInst;
-  raw_svector_ostream OSCFIInst(CFIInst);
+
   SmallString<20> Block;
   raw_svector_ostream OSBlock(Block);
-
-  OSCFIInst << uint8_t(dwarf::DW_CFA_expression);
-  encodeULEB128(DwarfSGPR, OSCFIInst);
-
   encodeDwarfRegisterLocation(DwarfVGPR, OSBlock);
   OSBlock << uint8_t(dwarf::DW_OP_LLVM_offset_uconst);
-  // FIXME:
-  const unsigned SGPRByteSize = 4;
   encodeULEB128(Lane * SGPRByteSize, OSBlock);
 
+  SmallString<20> CFIInst;
+  raw_svector_ostream OSCFIInst(CFIInst);
+  OSCFIInst << uint8_t(dwarf::DW_CFA_expression);
+  encodeULEB128(DwarfSGPR, OSCFIInst);
   encodeULEB128(Block.size(), OSCFIInst);
   OSCFIInst << Block;
 
@@ -1951,8 +1948,9 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, Register SGPR,
     ArrayRef<SIRegisterInfo::SpilledReg> VGPRSpills) const {
-  MachineFunction &MF = *MBB.getParent();
+  const MachineFunction &MF = *MBB.getParent();
   const MCRegisterInfo &MCRI = *MF.getMMI().getContext().getRegisterInfo();
+
   int DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
 
   // CFI for an SGPR spilled to a multiple lanes of VGPRs is implemented as an
@@ -1973,26 +1971,23 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
   // require a longer expression E and DWARF defines the result of the
   // evaulation to be the location description on the top of the stack (i.e. the
   // implictly pushed one is just ignored.)
-  SmallString<20> CFIInst;
-  raw_svector_ostream OSCFIInst(CFIInst);
+
   SmallString<20> Block;
   raw_svector_ostream OSBlock(Block);
-
-  OSCFIInst << uint8_t(dwarf::DW_CFA_expression);
-  encodeULEB128(DwarfSGPR, OSCFIInst);
-
   // TODO: Detect when we can merge multiple adjacent pieces, or even reduce
   // this to a register location description (when all pieces are adjacent).
   for (SIRegisterInfo::SpilledReg Spill : VGPRSpills) {
     encodeDwarfRegisterLocation(MCRI.getDwarfRegNum(Spill.VGPR, false),
                                 OSBlock);
     OSBlock << uint8_t(dwarf::DW_OP_bit_piece);
-    // FIXME:Can this be a function of the SGPR?
-    const unsigned SGPRBitSize = 32;
     encodeULEB128(SGPRBitSize, OSBlock);
     encodeULEB128(SGPRBitSize * Spill.Lane, OSBlock);
   }
 
+  SmallString<20> CFIInst;
+  raw_svector_ostream OSCFIInst(CFIInst);
+  OSCFIInst << uint8_t(dwarf::DW_CFA_expression);
+  encodeULEB128(DwarfSGPR, OSCFIInst);
   encodeULEB128(Block.size(), OSCFIInst);
   OSCFIInst << Block;
 
@@ -2013,19 +2008,14 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVMEMSpill(
 MachineInstr *SIFrameLowering::buildCFIForVGPRToVMEMSpill(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, unsigned VGPR, int64_t Offset) const {
-  MachineFunction &MF = *MBB.getParent();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const MachineFunction &MF = *MBB.getParent();
   const MCRegisterInfo &MCRI = *MF.getMMI().getContext().getRegisterInfo();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+
   int DwarfVGPR = MCRI.getDwarfRegNum(VGPR, false);
 
-  SmallString<20> CFIInst;
-  raw_svector_ostream OSCFIInst(CFIInst);
   SmallString<20> Block;
   raw_svector_ostream OSBlock(Block);
-
-  OSCFIInst << uint8_t(dwarf::DW_CFA_expression);
-  encodeULEB128(DwarfVGPR, OSCFIInst);
-
   encodeDwarfRegisterLocation(DwarfVGPR, OSBlock);
   OSBlock << uint8_t(dwarf::DW_OP_swap);
   OSBlock << uint8_t(dwarf::DW_OP_LLVM_offset_uconst);
@@ -2035,13 +2025,65 @@ MachineInstr *SIFrameLowering::buildCFIForVGPRToVMEMSpill(
                     ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC, false),
                 OSBlock);
   OSBlock << uint8_t(dwarf::DW_OP_deref_size);
-  OSBlock << uint8_t(ST.getWavefrontSize() / CHAR_BIT);
+  OSBlock << uint8_t(ST.getWavefrontSize() / 8);
   OSBlock << uint8_t(dwarf::DW_OP_LLVM_select_bit_piece);
-  // FIXME: Can this be a function of the VGPR?
-  const unsigned VGPRLaneBitSize = 32;
   encodeULEB128(VGPRLaneBitSize, OSBlock);
   encodeULEB128(ST.getWavefrontSize(), OSBlock);
 
+  SmallString<20> CFIInst;
+  raw_svector_ostream OSCFIInst(CFIInst);
+  OSCFIInst << uint8_t(dwarf::DW_CFA_expression);
+  encodeULEB128(DwarfVGPR, OSCFIInst);
+  encodeULEB128(Block.size(), OSCFIInst);
+  OSCFIInst << Block;
+
+  return buildCFI(MBB, MBBI, DL,
+                  MCCFIInstruction::createEscape(nullptr, OSCFIInst.str()));
+}
+
+MachineInstr *SIFrameLowering::buildCFIForRegToSGPRPairSpill(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    const DebugLoc &DL, const Register Reg, const Register SGPRPair) const {
+  const MachineFunction &MF = *MBB.getParent();
+  const MCRegisterInfo &MCRI = *MF.getMMI().getContext().getRegisterInfo();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIRegisterInfo &TRI = ST.getInstrInfo()->getRegisterInfo();
+
+  int SGPR0 = TRI.getSubReg(SGPRPair, AMDGPU::sub0);
+  int SGPR1 = TRI.getSubReg(SGPRPair, AMDGPU::sub1);
+
+  int DwarfReg = MCRI.getDwarfRegNum(Reg, false);
+  int DwarfSGPR0 = MCRI.getDwarfRegNum(SGPR0, false);
+  int DwarfSGPR1 = MCRI.getDwarfRegNum(SGPR1, false);
+
+  // CFI for a register spilled to a pair of SGPRs is implemented as an
+  // expression(E) rule where E is a composite location description with
+  // multiple parts each referencing SGPR register location storage with a bit
+  // offset of 0. In other words we generate the following DWARF:
+  //
+  // DW_CFA_expression: <Reg>,
+  //    (DW_OP_regx <SGPRPair[0]>) (DW_OP_piece 4)
+  //    (DW_OP_regx <SGPRPair[1]>) (DW_OP_piece 4)
+  //
+  // The memory location description for the current CFA is pushed on the stack
+  // before E is evaluated, but we choose not to drop it as it would require a
+  // longer expression E and DWARF defines the result of the evaulation to be
+  // the location description on the top of the stack (i.e. the implictly
+  // pushed one is just ignored.)
+
+  SmallString<10> Block;
+  raw_svector_ostream OSBlock(Block);
+  encodeDwarfRegisterLocation(DwarfSGPR0, OSBlock);
+  OSBlock << uint8_t(dwarf::DW_OP_piece);
+  encodeULEB128(SGPRByteSize, OSBlock);
+  encodeDwarfRegisterLocation(DwarfSGPR1, OSBlock);
+  OSBlock << uint8_t(dwarf::DW_OP_piece);
+  encodeULEB128(SGPRByteSize, OSBlock);
+
+  SmallString<20> CFIInst;
+  raw_svector_ostream OSCFIInst(CFIInst);
+  OSCFIInst << uint8_t(dwarf::DW_CFA_expression);
+  encodeULEB128(DwarfReg, OSCFIInst);
   encodeULEB128(Block.size(), OSCFIInst);
   OSCFIInst << Block;
 

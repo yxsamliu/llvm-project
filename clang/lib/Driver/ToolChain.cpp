@@ -188,11 +188,11 @@ static const DriverSuffix *FindDriverSuffix(StringRef ProgName, size_t &Pos) {
       {"clang-dxc", "--driver-mode=dxc"},
   };
 
-  for (size_t i = 0; i < llvm::array_lengthof(DriverSuffixes); ++i) {
-    StringRef Suffix(DriverSuffixes[i].Suffix);
+  for (const auto &DS : DriverSuffixes) {
+    StringRef Suffix(DS.Suffix);
     if (ProgName.endswith(Suffix)) {
       Pos = ProgName.size() - Suffix.size();
-      return &DriverSuffixes[i];
+      return &DS;
     }
   }
   return nullptr;
@@ -201,7 +201,7 @@ static const DriverSuffix *FindDriverSuffix(StringRef ProgName, size_t &Pos) {
 /// Normalize the program name from argv[0] by stripping the file extension if
 /// present and lower-casing the string on Windows.
 static std::string normalizeProgramName(llvm::StringRef Argv0) {
-  std::string ProgName = std::string(llvm::sys::path::stem(Argv0));
+  std::string ProgName = std::string(llvm::sys::path::filename(Argv0));
   if (is_style_windows(llvm::sys::path::Style::native)) {
     // Transform to lowercase for case insensitive file systems.
     std::transform(ProgName.begin(), ProgName.end(), ProgName.begin(),
@@ -219,6 +219,13 @@ static const DriverSuffix *parseDriverSuffix(StringRef ProgName, size_t &Pos) {
   // prefix "x86_64-linux". If such a target prefix is found, it may be
   // added via -target as implicit first argument.
   const DriverSuffix *DS = FindDriverSuffix(ProgName, Pos);
+
+  if (!DS && ProgName.endswith(".exe")) {
+    // Try again after stripping the executable suffix:
+    // clang++.exe -> clang++
+    ProgName = ProgName.drop_back(StringRef(".exe").size());
+    DS = FindDriverSuffix(ProgName, Pos);
+  }
 
   if (!DS) {
     // Try again after stripping any trailing version number:
@@ -290,8 +297,9 @@ std::string ToolChain::getInputFilename(const InputInfo &Input) const {
   return Input.getFilename();
 }
 
-bool ToolChain::IsUnwindTablesDefault(const ArgList &Args) const {
-  return false;
+ToolChain::UnwindTableLevel
+ToolChain::getDefaultUnwindTableLevel(const ArgList &Args) const {
+  return UnwindTableLevel::None;
 }
 
 Tool *ToolChain::getClang() const {
@@ -428,6 +436,9 @@ static StringRef getArchNameForCompilerRTLib(const ToolChain &TC,
   const llvm::Triple &Triple = TC.getTriple();
   bool IsWindows = Triple.isOSWindows();
 
+  if (TC.isBareMetal())
+    return Triple.getArchName();
+
   if (TC.getArch() == llvm::Triple::arm || TC.getArch() == llvm::Triple::armeb)
     return (arm::getARMFloatABI(TC, Args) == arm::FloatABI::Hard && !IsWindows)
                ? "armhf"
@@ -465,7 +476,10 @@ StringRef ToolChain::getOSLibName() const {
 
 std::string ToolChain::getCompilerRTPath() const {
   SmallString<128> Path(getDriver().ResourceDir);
-  if (Triple.isOSUnknown()) {
+  if (isBareMetal()) {
+    llvm::sys::path::append(Path, "lib", getOSLibName());
+    Path += SelectedMultilib.gccSuffix();
+  } else if (Triple.isOSUnknown()) {
     llvm::sys::path::append(Path, "lib");
   } else {
     llvm::sys::path::append(Path, "lib", getOSLibName());
@@ -628,13 +642,18 @@ std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD) const {
   // --ld-path= takes precedence over -fuse-ld= and specifies the executable
   // name. -B, COMPILER_PATH and PATH and consulted if the value does not
   // contain a path component separator.
+  // -fuse-ld=lld can be used with --ld-path= to inform clang that the binary
+  // that --ld-path= points to is lld.
   if (const Arg *A = Args.getLastArg(options::OPT_ld_path_EQ)) {
     std::string Path(A->getValue());
     if (!Path.empty()) {
       if (llvm::sys::path::parent_path(Path).empty())
         Path = GetProgramPath(A->getValue());
-      if (llvm::sys::fs::can_execute(Path))
+      if (llvm::sys::fs::can_execute(Path)) {
+        if (LinkerIsLLD)
+          *LinkerIsLLD = UseLinker == "lld";
         return std::string(Path);
+      }
     }
     getDriver().Diag(diag::err_drv_invalid_linker_name) << A->getAsString(Args);
     return GetProgramPath(getDefaultLinker());
@@ -818,6 +837,9 @@ void ToolChain::addActionsFromClangTargetOptions(
 void ToolChain::addClangTargetOptions(
     const ArgList &DriverArgs, ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadKind) const {}
+
+void ToolChain::addClangCC1ASTargetOptions(const ArgList &Args,
+                                           ArgStringList &CC1ASArgs) const {}
 
 void ToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {}
 
@@ -1141,6 +1163,9 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
       getTriple().isAArch64() || getTriple().isRISCV())
     Res |= SanitizerKind::CFIICall;
   if (getTriple().getArch() == llvm::Triple::x86_64 ||
+      getTriple().isAArch64(64))
+    Res |= SanitizerKind::KCFI;
+  if (getTriple().getArch() == llvm::Triple::x86_64 ||
       getTriple().isAArch64(64) || getTriple().isRISCV())
     Res |= SanitizerKind::ShadowCallStack;
   if (getTriple().isAArch64(64))
@@ -1155,7 +1180,7 @@ void ToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                   ArgStringList &CC1Args) const {}
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
-ToolChain::getHIPDeviceLibs(const ArgList &DriverArgs) const {
+ToolChain::getDeviceLibs(const ArgList &DriverArgs) const {
   return {};
 }
 

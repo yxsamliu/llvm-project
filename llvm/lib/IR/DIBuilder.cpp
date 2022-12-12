@@ -32,8 +32,8 @@ static cl::opt<bool>
 
 DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
     : M(m), VMContext(M.getContext()), CUNode(CU), DeclareFn(nullptr),
-      ValueFn(nullptr), LabelFn(nullptr), DefFn(nullptr), KillFn(nullptr),
-      AddrFn(nullptr), AllowUnresolvedNodes(AllowUnresolvedNodes) {
+      ValueFn(nullptr), LabelFn(nullptr), AddrFn(nullptr), DefFn(nullptr),
+      KillFn(nullptr), AllowUnresolvedNodes(AllowUnresolvedNodes) {
   if (CUNode) {
     if (const auto &ETs = CUNode->getEnumTypes())
       AllEnumTypes.assign(ETs.begin(), ETs.end());
@@ -350,11 +350,11 @@ DIBuilder::createReferenceType(unsigned Tag, DIType *RTy, uint64_t SizeInBits,
 DIDerivedType *DIBuilder::createTypedef(DIType *Ty, StringRef Name,
                                         DIFile *File, unsigned LineNo,
                                         DIScope *Context, uint32_t AlignInBits,
+                                        DINode::DIFlags Flags,
                                         DINodeArray Annotations) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_typedef, Name, File,
                             LineNo, getNonCompileUnitScope(Context), Ty, 0,
-                            AlignInBits, 0, None, DINode::FlagZero, nullptr,
-                            Annotations);
+                            AlignInBits, 0, None, Flags, nullptr, Annotations);
 }
 
 DIDerivedType *DIBuilder::createFriend(DIType *Ty, DIType *FriendTy) {

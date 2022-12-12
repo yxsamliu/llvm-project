@@ -24,12 +24,14 @@
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm::omp;
 
+#define NO_LOOP_XTEAM_RED "no-loop-xteam-red"
 
 namespace {
 /// Pre(post)-action for different OpenMP constructs specialized for NVPTX.
@@ -78,30 +80,15 @@ private:
   CGOpenMPRuntimeGPU::ExecutionMode SavedExecMode =
       CGOpenMPRuntimeGPU::EM_Unknown;
   CGOpenMPRuntimeGPU::ExecutionMode &ExecMode;
-  bool SavedRuntimeMode = false;
-  bool *RuntimeMode = nullptr;
 
 public:
-  /// Constructor for Non-SPMD mode.
-  ExecutionRuntimeModesRAII(CGOpenMPRuntimeGPU::ExecutionMode &ExecMode)
+  ExecutionRuntimeModesRAII(CGOpenMPRuntimeGPU::ExecutionMode &ExecMode,
+                            CGOpenMPRuntimeGPU::ExecutionMode EntryMode)
       : ExecMode(ExecMode) {
     SavedExecMode = ExecMode;
-    ExecMode = CGOpenMPRuntimeGPU::EM_NonSPMD;
+    ExecMode = EntryMode;
   }
-  /// Constructor for SPMD mode.
-  ExecutionRuntimeModesRAII(CGOpenMPRuntimeGPU::ExecutionMode &ExecMode,
-                            bool &RuntimeMode, bool FullRuntimeMode)
-      : ExecMode(ExecMode), RuntimeMode(&RuntimeMode) {
-    SavedExecMode = ExecMode;
-    SavedRuntimeMode = RuntimeMode;
-    ExecMode = CGOpenMPRuntimeGPU::EM_SPMD;
-    RuntimeMode = FullRuntimeMode;
-  }
-  ~ExecutionRuntimeModesRAII() {
-    ExecMode = SavedExecMode;
-    if (RuntimeMode)
-      *RuntimeMode = SavedRuntimeMode;
-  }
+  ~ExecutionRuntimeModesRAII() { ExecMode = SavedExecMode; }
 };
 
 /// GPU Configuration:  This information can be derived from cuda registers,
@@ -449,9 +436,8 @@ public:
       markAsEscaped(VD);
     if (isa<OMPCapturedExprDecl>(VD))
       VisitValueDecl(VD);
-    else if (const auto *VarD = dyn_cast<VarDecl>(VD))
-      if (VarD->isInitCapture())
-        VisitValueDecl(VD);
+    else if (VD->isInitCapture())
+      VisitValueDecl(VD);
   }
   void VisitUnaryOperator(const UnaryOperator *E) {
     if (!E)
@@ -678,6 +664,7 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_target:
   case OMPD_target_teams:
     return hasNestedSPMDDirective(Ctx, D);
+  case OMPD_target_teams_loop:
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
   case OMPD_target_parallel_for_simd:
@@ -938,6 +925,7 @@ static bool supportsLightweightRuntime(ASTContext &Ctx,
   case OMPD_target_teams:
   case OMPD_target_parallel:
     return hasNestedLightweightDirective(Ctx, D);
+  case OMPD_target_teams_loop:
   case OMPD_target_parallel_for:
   case OMPD_target_parallel_for_simd:
   case OMPD_target_teams_distribute_parallel_for:
@@ -1013,7 +1001,7 @@ static bool supportsLightweightRuntime(ASTContext &Ctx,
 }
 
 // Create a unique global variable to indicate the flat-work-group-size
-// for this region. Values are [256..1024].
+// for this region. Values are [1..1024].
 static void setPropertyWorkGroupSize(CodeGenModule &CGM, StringRef Name,
                                      int WGSize) {
   auto *GVMode = new llvm::GlobalVariable(
@@ -1052,55 +1040,83 @@ static int ComputeGenericWorkgroupSize(CodeGenModule &CGM, int WorkgroupSize) {
   return WorkgroupSizeWithMaster;
 }
 
+int getWorkGroupSizeSPMDHelper(CodeGenModule &CGM,
+                               const OMPExecutableDirective &D) {
+  // Honor block-size provided by command-line option. This logic must be kept
+  // in sync with metadata generation. If this option is not specified on the
+  // command line then the value used will be the 256.
+  int WorkGroupSz = CGM.getLangOpts().OpenMPGPUThreadsPerTeam;
+
+  // Check block-size provided by thread_limit clause. We start with the
+  // maximum thread limit and lower it if user requests a lower thread limit.
+  int ThreadLimit = CGM.getTarget().getGridValue().GV_Max_WG_Size;
+  const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
+  if (ThreadLimitClause) {
+    Expr *ThreadLimitExpr = ThreadLimitClause->getThreadLimit();
+    clang::Expr::EvalResult Result;
+    if (ThreadLimitExpr->EvaluateAsInt(Result, CGM.getContext())) {
+      int ThreadLimitEval = Result.Val.getInt().getExtValue();
+      if (ThreadLimitEval > 0 && ThreadLimitEval < ThreadLimit)
+        ThreadLimit = ThreadLimitEval;
+    }
+  }
+
+  // If the command line work group size is less than any default or user
+  // specified thread limit then it is honored otherwise the thread limit
+  // determined above will be used.
+  if (WorkGroupSz > ThreadLimit)
+    WorkGroupSz = ThreadLimit;
+
+  // Set the actual number of threads if the user requests a value different
+  // then the default. If the value is greater than the currently computed
+  // thread limit then cap the number of threads to the thread limit.
+  int NumThreads = CGM.getTarget().getGridValue().GV_Default_WG_Size;
+  const auto *NumThreadsClause = D.getSingleClause<OMPNumThreadsClause>();
+  if (NumThreadsClause) {
+    Expr *NumThreadsExpr = NumThreadsClause->getNumThreads();
+    clang::Expr::EvalResult Result;
+    if (NumThreadsExpr->EvaluateAsInt(Result, CGM.getContext())) {
+      NumThreads = Result.Val.getInt().getExtValue();
+      // Cap the number of threads to the current thread limit.
+      if (NumThreads > ThreadLimit)
+        NumThreads = ThreadLimit;
+      // num_threads clause takes precendence over the command line value:
+      WorkGroupSz = NumThreads;
+    }
+  }
+
+  // Sanitize the workgroup size received from the command line. Its default
+  // value is GV_Default_WG_Size.
+  if (WorkGroupSz < 1 || WorkGroupSz > ThreadLimit)
+    WorkGroupSz = CGM.getTarget().getGridValue().GV_Default_WG_Size;
+
+  return WorkGroupSz;
+}
+
 void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
-                                            const OMPExecutableDirective &D,
-                                            llvm::Function *&OutlinedFn,
-                                            bool IsGeneric) {
+                                          const OMPExecutableDirective &D,
+                                          llvm::Function *&OutlinedFn,
+                                          bool IsGeneric) {
   if (!CGM.getTriple().isAMDGCN())
     return;
 
   int FlatAttr = 0;
   bool flatAttrEmitted = false;
-  unsigned CmdLineWorkGroupSz = CGM.getLangOpts().OpenMPGPUThreadsPerTeam;
-  // Sanitize the workgroup size received from the command line. Currently, we
-  // honor it only for SPMD kernels. This logic must be kept in sync with the
-  // amdgpu plugin
-  if (IsGeneric ||
-      CmdLineWorkGroupSz < CGM.getTarget().getGridValue().GV_Default_WG_Size ||
-      CmdLineWorkGroupSz > CGM.getTarget().getGridValue().GV_Max_WG_Size)
-    CmdLineWorkGroupSz = CGM.getTarget().getGridValue().GV_Default_WG_Size;
-  unsigned DefaultWorkGroupSz =
+  unsigned compileTimeThreadLimit =
       CGM.getTarget().getGridValue().GV_Default_WG_Size;
   // If constant ThreadLimit(), set reqd_work_group_size metadata
   if (isOpenMPTeamsDirective(D.getDirectiveKind()) ||
       isOpenMPParallelDirective(D.getDirectiveKind()) ||
-      CmdLineWorkGroupSz != DefaultWorkGroupSz ||
       CGM.isXteamRedKernel(CGM.getSingleForStmt(D.getAssociatedStmt()))) {
-    const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
-    const auto *NumThreadsClause = D.getSingleClause<OMPNumThreadsClause>();
-    int compileTimeThreadLimit = 0;
-    // Only one of thread_limit or num_threads is used, cant do it for both
-    if (ThreadLimitClause && !NumThreadsClause) {
-      Expr *ThreadLimitExpr = ThreadLimitClause->getThreadLimit();
-      clang::Expr::EvalResult Result;
-      if (ThreadLimitExpr->EvaluateAsInt(Result, CGM.getContext()))
-        compileTimeThreadLimit = Result.Val.getInt().getExtValue();
-    } else if (!ThreadLimitClause && NumThreadsClause) {
-      Expr *NumThreadsExpr = NumThreadsClause->getNumThreads();
-      clang::Expr::EvalResult Result;
-      if (NumThreadsExpr->EvaluateAsInt(Result, CGM.getContext()))
-        compileTimeThreadLimit = Result.Val.getInt().getExtValue();
-    } else if (CGM.isXteamRedKernel(
-                   CGM.getSingleForStmt(D.getAssociatedStmt()))) {
-      // Xteam reduction overrides the command-line option for now,
-      // blocksize hardcoded to 1024 for now
-      compileTimeThreadLimit = 1024;
-    } else if (CmdLineWorkGroupSz != DefaultWorkGroupSz) {
-      compileTimeThreadLimit = CmdLineWorkGroupSz;
-    }
+    // Call the work group size calculation for SPMD mode loops.
+    compileTimeThreadLimit = getWorkGroupSizeSPMDHelper(CGM, D);
 
-    // printf("========= WARNING CONSTANT Compile-Time TL: %d\n",
-    //       compileTimeThreadLimit);
+    // Xteam reduction overrides the command-line option and other settings
+    // for now: blocksize hardcoded to 1024.
+    // TODO: remove this restriction.
+    if (CGM.isXteamRedKernel(CGM.getSingleForStmt(D.getAssociatedStmt())))
+      compileTimeThreadLimit = 1024;
+
     // Add kernel metadata if ThreadLimit Clause is compile time constant > 0
     if (compileTimeThreadLimit > 0) {
       if (IsGeneric)
@@ -1117,11 +1133,10 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
   if (!flatAttrEmitted) {
     // When outermost construct does not have teams or parallel
     // workgroup size is still based on mode
-    int GenericModeWorkgroupSize = CmdLineWorkGroupSz;
+    int GenericModeWorkgroupSize = compileTimeThreadLimit;
     if (IsGeneric)
       GenericModeWorkgroupSize =
-          ComputeGenericWorkgroupSize(CGM, CmdLineWorkGroupSz);
-
+          ComputeGenericWorkgroupSize(CGM, compileTimeThreadLimit);
     FlatAttr = GenericModeWorkgroupSize;
     OutlinedFn->addFnAttr("amdgpu-flat-work-group-size",
                           "1," + llvm::utostr(GenericModeWorkgroupSize));
@@ -1136,7 +1151,7 @@ void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
                                              llvm::Constant *&OutlinedFnID,
                                              bool IsOffloadEntry,
                                              const RegionCodeGenTy &CodeGen) {
-  ExecutionRuntimeModesRAII ModeRAII(CurrentExecutionMode);
+  ExecutionRuntimeModesRAII ModeRAII(CurrentExecutionMode, EM_NonSPMD);
   EntryFunctionState EST;
   WrapperFunctionsMap.clear();
 
@@ -1172,7 +1187,7 @@ void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
 void CGOpenMPRuntimeGPU::emitKernelInit(CodeGenFunction &CGF,
                                         EntryFunctionState &EST, bool IsSPMD) {
   CGBuilderTy &Bld = CGF.Builder;
-  Bld.restoreIP(OMPBuilder.createTargetInit(Bld, IsSPMD, requiresFullRuntime()));
+  Bld.restoreIP(OMPBuilder.createTargetInit(Bld, IsSPMD, true));
   IsInTargetMasterThreadRegion = IsSPMD;
   if (!IsSPMD)
     emitGenericVarsProlog(CGF, EST.Loc);
@@ -1185,7 +1200,7 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
     emitGenericVarsEpilog(CGF);
 
   CGBuilderTy &Bld = CGF.Builder;
-  OMPBuilder.createTargetDeinit(Bld, IsSPMD, requiresFullRuntime());
+  OMPBuilder.createTargetDeinit(Bld, IsSPMD, true);
 }
 
 void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,
@@ -1194,10 +1209,7 @@ void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,
                                           llvm::Constant *&OutlinedFnID,
                                           bool IsOffloadEntry,
                                           const RegionCodeGenTy &CodeGen) {
-  ExecutionRuntimeModesRAII ModeRAII(
-      CurrentExecutionMode, RequiresFullRuntime,
-      CGM.getLangOpts().OpenMPCUDAForceFullRuntime ||
-          !supportsLightweightRuntime(CGM.getContext(), D));
+  ExecutionRuntimeModesRAII ModeRAII(CurrentExecutionMode, EM_SPMD);
   EntryFunctionState EST;
 
   // Emit target region as a standalone region.
@@ -1286,11 +1298,19 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
   if (Mode) {
     // For AMDGPU, check if a no-loop or a Xteam reduction kernel should
     // be generated and if so, set metadata that can be used by codegen.
-    if (CGM.getLangOpts().OpenMPIsDevice && CGM.getTriple().isAMDGCN()) {
-      if (!CGM.checkAndSetNoLoopKernel(D))
-        CGM.checkAndSetXteamRedKernel(D);
+    // This check is done regardless of host or device codegen since the
+    // signature of the offloading routine has to match across host and device.
+    if (CGM.getTriple().isAMDGCN()) {
+      assert(CGM.getLangOpts().OpenMPIsDevice && "Unexpected host path");
+      CodeGenModule::NoLoopXteamErr NxStatus = CGM.checkAndSetNoLoopKernel(D);
+      DEBUG_WITH_TYPE(NO_LOOP_XTEAM_RED,
+                      CGM.emitNxResult("[No-Loop]", D, NxStatus));
+      if (NxStatus) {
+        NxStatus = CGM.checkAndSetXteamRedKernel(D);
+        DEBUG_WITH_TYPE(NO_LOOP_XTEAM_RED,
+                        CGM.emitNxResult("[Xteam]", D, NxStatus));
+      }
     }
-
     emitSPMDKernel(D, ParentName, OutlinedFn, OutlinedFnID, IsOffloadEntry,
                    CodeGen);
   } else
@@ -1322,7 +1342,7 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
 
 namespace {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
-/// Enum for accesseing the reserved_2 field of the ident_t struct.
+/// Enum for accessing the reserved_2 field of the ident_t struct.
 enum ModeFlagsTy : unsigned {
   /// Bit set to 1 when in SPMD mode.
   KMP_IDENT_SPMD_MODE = 0x01,
@@ -1339,11 +1359,8 @@ static const ModeFlagsTy UndefinedMode =
 unsigned CGOpenMPRuntimeGPU::getDefaultLocationReserved2Flags() const {
   switch (getExecutionMode()) {
   case EM_SPMD:
-    if (requiresFullRuntime())
-      return KMP_IDENT_SPMD_MODE & (~KMP_IDENT_SIMPLE_RT_MODE);
-    return KMP_IDENT_SPMD_MODE | KMP_IDENT_SIMPLE_RT_MODE;
+    return KMP_IDENT_SPMD_MODE & (~KMP_IDENT_SIMPLE_RT_MODE);
   case EM_NonSPMD:
-    assert(requiresFullRuntime() && "Expected full runtime.");
     return (~KMP_IDENT_SPMD_MODE) & (~KMP_IDENT_SIMPLE_RT_MODE);
   case EM_Unknown:
     return UndefinedMode;
@@ -1746,7 +1763,7 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
                                    CGF.VoidPtrPtrTy),
         llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())};
     if (CGM.getLangOpts().OpenMPNoNestedParallelism &&
-        CGM.getLangOpts().OpenMPTargetNewRuntime && CGM.IsSPMDExecutionMode())
+        CGM.IsSPMDExecutionMode())
       CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                               CGM.getModule(), OMPRTL___kmpc_parallel_spmd),
                           Args);
@@ -3974,7 +3991,7 @@ void CGOpenMPRuntimeGPU::adjustTargetSpecificDataForLambdas(
     else
       VDLVal = CGF.MakeAddrLValue(
           VDAddr, VD->getType().getCanonicalType().getNonReferenceType());
-    llvm::DenseMap<const VarDecl *, FieldDecl *> Captures;
+    llvm::DenseMap<const ValueDecl *, FieldDecl *> Captures;
     FieldDecl *ThisCapture = nullptr;
     RD->getCaptureFields(Captures, ThisCapture);
     if (ThisCapture && CGF.CapturedStmtInfo->isCXXThisExprCaptured()) {
@@ -3986,13 +4003,15 @@ void CGOpenMPRuntimeGPU::adjustTargetSpecificDataForLambdas(
     for (const LambdaCapture &LC : RD->captures()) {
       if (LC.getCaptureKind() != LCK_ByRef)
         continue;
-      const VarDecl *VD = LC.getCapturedVar();
-      if (!CS->capturesVariable(VD))
+      const ValueDecl *VD = LC.getCapturedVar();
+      // FIXME: For now VD is always a VarDecl because OpenMP does not support
+      //  capturing structured bindings in lambdas yet.
+      if (!CS->capturesVariable(cast<VarDecl>(VD)))
         continue;
       auto It = Captures.find(VD);
       assert(It != Captures.end() && "Found lambda capture without field.");
       LValue VarLVal = CGF.EmitLValueForFieldInitialization(VDLVal, It->second);
-      Address VDAddr = CGF.GetAddrOfLocalVar(VD);
+      Address VDAddr = CGF.GetAddrOfLocalVar(cast<VarDecl>(VD));
       if (VD->getType().getCanonicalType()->isReferenceType())
         VDAddr = CGF.EmitLoadOfReferenceLValue(VDAddr,
                                                VD->getType().getCanonicalType())
@@ -4086,6 +4105,9 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(
       case CudaArch::SM_75:
       case CudaArch::SM_80:
       case CudaArch::SM_86:
+      case CudaArch::SM_87:
+      case CudaArch::SM_89:
+      case CudaArch::SM_90:
       case CudaArch::GFX600:
       case CudaArch::GFX601:
       case CudaArch::GFX602:
@@ -4207,22 +4229,16 @@ llvm::Value *CGOpenMPRuntimeGPU::getGPUBlockID(CodeGenFunction &CGF) {
   return Bld.CreateCall(F, llvm::None, "gpu_block_id");
 }
 
-llvm::Value *CGOpenMPRuntimeGPU::getGPUCompleteBlockSize(CodeGenFunction &CGF) {
-  // TODO handle kernel specific block size based on thread_limit
-
+llvm::Value *
+CGOpenMPRuntimeGPU::getGPUCompleteBlockSize(CodeGenFunction &CGF,
+                                            const OMPExecutableDirective &D) {
   // The following logic does not consider generic kernels, so use this
   // interface for SPMD kernels only.
 
-  // Honor block-size provided by command-line option. This logic must be kept
-  // in sync with metadata generation
-  unsigned CmdLineWorkGroupSz = CGM.getLangOpts().OpenMPGPUThreadsPerTeam;
-  // Sanitize the workgroup size received from the command line. Its default
-  // value is GV_Default_WG_Size.
-  if (CmdLineWorkGroupSz < CGM.getTarget().getGridValue().GV_Default_WG_Size ||
-      CmdLineWorkGroupSz > CGM.getTarget().getGridValue().GV_Max_WG_Size)
-    CmdLineWorkGroupSz = CGM.getTarget().getGridValue().GV_Default_WG_Size;
-
-  return llvm::ConstantInt::get(CGF.Int32Ty, CmdLineWorkGroupSz);
+  // Get effects of thread-controlling clauses on the current number of threads
+  // and any command line requests:
+  return llvm::ConstantInt::get(CGF.Int32Ty,
+                                getWorkGroupSizeSPMDHelper(CGM, D));
 }
 
 llvm::Value *CGOpenMPRuntimeGPU::getXteamRedBlockSize(CodeGenFunction &CGF) {
@@ -4231,28 +4247,114 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedBlockSize(CodeGenFunction &CGF) {
 }
 
 llvm::Value *CGOpenMPRuntimeGPU::getGPUNumBlocks(CodeGenFunction &CGF) {
-  ArrayRef<llvm::Value *> Args{};
-  return CGF.EmitRuntimeCall(
-      OMPBuilder.getOrCreateRuntimeFunction(
-          CGM.getModule(), OMPRTL___kmpc_get_hardware_num_blocks),
-      Args);
+  return CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+      CGM.getModule(), OMPRTL___kmpc_get_hardware_num_blocks));
 }
 
-llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(CodeGenFunction &CGF,
-                                                llvm::Value *Val,
-                                                llvm::Value *SumPtr) {
+std::pair<llvm::Value *, llvm::Value *>
+CGOpenMPRuntimeGPU::getXteamRedFunctionPtrs(CodeGenFunction &CGF,
+                                            llvm::Type *RedVarType) {
+  if (RedVarType->isIntegerTy()) {
+    if (RedVarType->getPrimitiveSizeInBits() == 32) {
+      return std::make_pair(
+          OMPBuilder
+              .getOrCreateRuntimeFunction(CGM.getModule(),
+                                          OMPRTL___kmpc_rfun_sum_ui)
+              .getCallee(),
+          OMPBuilder
+              .getOrCreateRuntimeFunction(CGM.getModule(),
+                                          OMPRTL___kmpc_rfun_sum_lds_ui)
+              .getCallee());
+    }
+    if (RedVarType->getPrimitiveSizeInBits() == 64) {
+      return std::make_pair(
+          OMPBuilder
+              .getOrCreateRuntimeFunction(CGM.getModule(),
+                                          OMPRTL___kmpc_rfun_sum_ul)
+              .getCallee(),
+          OMPBuilder
+              .getOrCreateRuntimeFunction(CGM.getModule(),
+                                          OMPRTL___kmpc_rfun_sum_lds_ul)
+              .getCallee());
+    }
+  }
+
+  if (RedVarType->isFloatTy()) {
+    return std::make_pair(OMPBuilder
+                              .getOrCreateRuntimeFunction(
+                                  CGM.getModule(), OMPRTL___kmpc_rfun_sum_f)
+                              .getCallee(),
+                          OMPBuilder
+                              .getOrCreateRuntimeFunction(
+                                  CGM.getModule(), OMPRTL___kmpc_rfun_sum_lds_f)
+                              .getCallee());
+  }
+
+  if (RedVarType->isDoubleTy()) {
+    return std::make_pair(OMPBuilder
+                              .getOrCreateRuntimeFunction(
+                                  CGM.getModule(), OMPRTL___kmpc_rfun_sum_d)
+                              .getCallee(),
+                          OMPBuilder
+                              .getOrCreateRuntimeFunction(
+                                  CGM.getModule(), OMPRTL___kmpc_rfun_sum_lds_d)
+                              .getCallee());
+  }
+  llvm_unreachable("No support for other types currently.");
+}
+
+llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
+    CodeGenFunction &CGF, llvm::Value *Val, llvm::Value *SumPtr,
+    llvm::Value *DTeamVals, llvm::Value *DTeamsDonePtr,
+    llvm::Value *ThreadStartIndex, llvm::Value *NumTeams) {
   // TODO handle more types
   llvm::Type *SumType = Val->getType();
-  assert((SumType->isFloatTy() || SumType->isDoubleTy()) && "Unhandled type");
-  llvm::Value *Args[] = {Val, SumPtr};
+  assert(
+      (SumType->isFloatTy() || SumType->isDoubleTy() ||
+       (SumType->isIntegerTy() && (SumType->getPrimitiveSizeInBits() == 32 ||
+                                   SumType->getPrimitiveSizeInBits() == 64))) &&
+      "Unhandled type");
+
+  llvm::Type *Int32Ty = llvm::Type::getInt32Ty(CGM.getLLVMContext());
+  llvm::Type *Int64Ty = llvm::Type::getInt64Ty(CGM.getLLVMContext());
+
+  std::pair<llvm::Value *, llvm::Value *> RfunPair =
+      getXteamRedFunctionPtrs(CGF, SumType);
+  llvm::Value *ZeroVal = (SumType->isFloatTy() || SumType->isDoubleTy())
+                             ? llvm::ConstantFP::getZero(SumType)
+                             : SumType->getPrimitiveSizeInBits() == 32
+                                   ? llvm::ConstantInt::get(Int32Ty, 0)
+                                   : llvm::ConstantInt::get(Int64Ty, 0);
+
+  llvm::Value *Args[] = {Val,           SumPtr,           DTeamVals,
+                         DTeamsDonePtr, RfunPair.first,   RfunPair.second,
+                         ZeroVal,       ThreadStartIndex, NumTeams};
+
+  if (SumType->isIntegerTy()) {
+    if (SumType->getPrimitiveSizeInBits() == 32) {
+      return CGF.EmitRuntimeCall(
+          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                OMPRTL___kmpc_xteamr_ui_16x64),
+          Args);
+    }
+    if (SumType->getPrimitiveSizeInBits() == 64) {
+      return CGF.EmitRuntimeCall(
+          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                OMPRTL___kmpc_xteamr_ul_16x64),
+          Args);
+    }
+  }
   if (SumType->isFloatTy()) {
-    return CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                                   CGM.getModule(), OMPRTL___kmpc_xteam_sum_f),
-                               Args);
-  } else if (SumType->isDoubleTy()) {
-    return CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                                   CGM.getModule(), OMPRTL___kmpc_xteam_sum_d),
-                               Args);
+    return CGF.EmitRuntimeCall(
+        OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                              OMPRTL___kmpc_xteamr_f_16x64),
+        Args);
+  }
+  if (SumType->isDoubleTy()) {
+    return CGF.EmitRuntimeCall(
+        OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                              OMPRTL___kmpc_xteamr_d_16x64),
+        Args);
   }
   llvm_unreachable("No support for other types currently.");
 }
@@ -4268,18 +4370,28 @@ bool CGOpenMPRuntimeGPU::supportFastFPAtomics() {
     return false;
 }
 
-std::pair<bool, RValue> CGOpenMPRuntimeGPU::emitFastFPAtomicCall(
-    CodeGenFunction &CGF, LValue X, RValue Update, BinaryOperatorKind BO) {
+std::pair<bool, RValue>
+CGOpenMPRuntimeGPU::emitFastFPAtomicCall(CodeGenFunction &CGF, LValue X,
+                                         RValue Update, BinaryOperatorKind BO,
+                                         bool IsXBinopExpr) {
   CGBuilderTy &Bld = CGF.Builder;
   unsigned int IID = -1;
   RValue UpdateFixed = Update;
   switch (BO) {
   case BO_Sub:
     UpdateFixed = RValue::get(Bld.CreateFNeg(Update.getScalarVal()));
-    IID = llvm::Intrinsic::amdgcn_global_atomic_fadd;
+    IID = llvm::Intrinsic::amdgcn_flat_atomic_fadd;
     break;
   case BO_Add:
-    IID = llvm::Intrinsic::amdgcn_global_atomic_fadd;
+    IID = llvm::Intrinsic::amdgcn_flat_atomic_fadd;
+    break;
+  case BO_LT:
+    IID = IsXBinopExpr ? llvm::Intrinsic::amdgcn_flat_atomic_fmax
+                       : llvm::Intrinsic::amdgcn_flat_atomic_fmin;
+    break;
+  case BO_GT:
+    IID = IsXBinopExpr ? llvm::Intrinsic::amdgcn_flat_atomic_fmin
+                       : llvm::Intrinsic::amdgcn_flat_atomic_fmax;
     break;
   default:
     // remaining operations are not supported yet

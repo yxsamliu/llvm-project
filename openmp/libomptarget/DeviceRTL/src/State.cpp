@@ -16,6 +16,7 @@
 #include "Interface.h"
 #include "Synchronization.h"
 #include "Types.h"
+#include "Utils.h"
 
 using namespace _OMP;
 
@@ -49,6 +50,8 @@ namespace {
 // global_allocate uses ockl_dm_alloc to manage a global memory heap
 extern "C" uint64_t __ockl_dm_alloc(uint64_t bufsz);
 extern "C" void __ockl_dm_dealloc(uint64_t ptr);
+extern "C" size_t __ockl_get_local_size(uint32_t dim);
+extern "C" size_t __ockl_get_num_groups(uint32_t dim);
 
 extern "C" {
 void *internal_malloc(uint64_t Size) {
@@ -64,8 +67,9 @@ void internal_free(void *Ptr) { __ockl_dm_dealloc((uint64_t)Ptr); }
 extern "C" {
 #ifdef __AMDGCN__
 void *malloc(uint64_t Size) { return internal_malloc(Size); }
-
 void free(void *Ptr) { internal_free(Ptr); }
+size_t external_get_local_size(uint32_t dim) { return __ockl_get_local_size(dim);}
+size_t external_get_num_groups(uint32_t dim) { return __ockl_get_num_groups(dim);}
 #else
 __attribute__((leaf)) void *malloc(uint64_t Size);
 __attribute__((leaf)) void free(void *Ptr);
@@ -167,7 +171,7 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
 
 void SharedMemorySmartStackTy::pop(void *Ptr, uint32_t Bytes) {
   uint64_t AlignedBytes = utils::align_up(Bytes, Alignment);
-  if (Ptr >= &Data[0] && Ptr < &Data[state::SharedScratchpadSize]) {
+  if (utils::isSharedMemPtr(Ptr)) {
     int TId = mapping::getThreadIdInBlock();
     Usage[TId] -= AlignedBytes;
     return;
@@ -279,6 +283,21 @@ void state::enterDataEnvironment(IdentTy *Ident) {
   unsigned TId = mapping::getThreadIdInBlock();
   ThreadStateTy *NewThreadState =
       static_cast<ThreadStateTy *>(__kmpc_alloc_shared(sizeof(ThreadStateTy)));
+#ifdef FIXME // breaks snap_red nested_par3 nest_call_par2
+  uintptr_t *ThreadStatesBitsPtr = reinterpret_cast<uintptr_t *>(&ThreadStates);
+  if (!atomic::load(ThreadStatesBitsPtr, atomic::seq_cst)) {
+    uint32_t Bytes = sizeof(ThreadStates[0]) * mapping::getBlockSize();
+    void *ThreadStatesPtr =
+        memory::allocGlobal(Bytes, "Thread state array allocation");
+    if (!atomic::cas(ThreadStatesBitsPtr, uintptr_t(0),
+                     reinterpret_cast<uintptr_t>(ThreadStatesPtr),
+                     atomic::seq_cst, atomic::seq_cst))
+      memory::freeGlobal(ThreadStatesPtr,
+                         "Thread state array allocated multiple times");
+    ASSERT(atomic::load(ThreadStatesBitsPtr, atomic::seq_cst) &&
+           "Expected valid thread states bit!");
+  }
+ #endif
   NewThreadState->init(ThreadStates[TId]);
   TeamState.HasThreadState = true;
   ThreadStates[TId] = NewThreadState;
@@ -420,12 +439,12 @@ int omp_is_initial_device(void) { return 0; }
 }
 
 extern "C" {
-void *__kmpc_alloc_shared(uint64_t Bytes) {
+__attribute__((noinline)) void *__kmpc_alloc_shared(uint64_t Bytes) {
   FunctionTracingRAII();
   return memory::allocShared(Bytes, "Frontend alloc shared");
 }
 
-void __kmpc_free_shared(void *Ptr, uint64_t Bytes) {
+__attribute__((noinline)) void __kmpc_free_shared(void *Ptr, uint64_t Bytes) {
   FunctionTracingRAII();
   memory::freeShared(Ptr, Bytes, "Frontend free shared");
 }

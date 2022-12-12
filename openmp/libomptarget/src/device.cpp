@@ -143,7 +143,7 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
 DeviceTy::DeviceTy(RTLInfoTy *RTL)
     : DeviceID(-1), RTL(RTL), RTLDeviceID(-1), IsInit(false), InitFlag(),
       HasPendingGlobals(false), PendingCtorsDtors(), ShadowPtrMap(),
-      PendingGlobalsMtx(), ShadowMtx() {}
+      PendingGlobalsMtx(), ShadowMtx(), ForceSynchronousTargetRegions(false) {}
 
 DeviceTy::~DeviceTy() {
   if (DeviceID == -1 || !(getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE))
@@ -307,6 +307,7 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
 
   void *TargetPointer = nullptr;
   bool IsHostPtr = false;
+  bool IsPresent = true;
   bool IsNew = false;
 
   LookupResult LR = lookupMapping(HDTTMap, HstPtrBegin, Size);
@@ -365,9 +366,12 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
     if (Size) {
       // When allocating under unified_shared_memory, amdgpu plugin
       // can optimize memory access latency by registering allocated
-      // memory as coarse_grain
-      if (HstPtrBegin && RTL->set_coarse_grain_mem_region)
+      // memory as coarse_grain. The usage of coarse grained memory can be overriden 
+      // by setting the env-var OMPX_DISABLE_USM_MAPS=1
+      if (!PM->RTLs.EnableFineGrainedMemory &&
+          (HstPtrBegin && RTL->set_coarse_grain_mem_region)){
         RTL->set_coarse_grain_mem_region(HstPtrBegin, Size);
+      }
 
       if (!PM->RTLs.NoUSMMapChecks) {
         // even under unified_shared_memory need to check for correctness of
@@ -383,6 +387,7 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
       DP("Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
          "memory\n",
          DPxPTR((uintptr_t)HstPtrBegin), Size);
+      IsPresent = false;
       IsHostPtr = true;
       TargetPointer = HstPtrBegin;
     }
@@ -411,6 +416,9 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
          Entry->dynRefCountToStr().c_str(), Entry->holdRefCountToStr().c_str(),
          (HstPtrName) ? getNameFromMapping(HstPtrName).c_str() : "unknown");
     TargetPointer = (void *)Ptr;
+  } else {
+    // This entry is not present and we did not create a new entry for it.
+    IsPresent = false;
   }
 
   // If the target pointer is valid, and we need to transfer data, issue the
@@ -459,7 +467,7 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
     }
   }
 
-  return {{IsNew, IsHostPtr}, Entry, TargetPointer};
+  return {{IsNew, IsHostPtr, IsPresent}, Entry, TargetPointer};
 }
 
 // Used by targetDataBegin, targetDataEnd, targetDataUpdate and target.
@@ -473,6 +481,7 @@ DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
 
   void *TargetPointer = NULL;
   bool IsNew = false;
+  bool IsPresent = true;
   IsHostPtr = false;
   IsLast = false;
   LookupResult LR = lookupMapping(HDTTMap, HstPtrBegin, Size);
@@ -529,11 +538,18 @@ DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
     DP("Get HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
        "memory\n",
        DPxPTR((uintptr_t)HstPtrBegin), Size);
+    IsPresent = false;
     IsHostPtr = true;
+    TargetPointer = HstPtrBegin;
+  } else {
+    // OpenMP Specification v5.2: if a matching list item is not found, the
+    // pointer retains its original value as per firstprivate semantics.
+    IsPresent = false;
+    IsHostPtr = false;
     TargetPointer = HstPtrBegin;
   }
 
-  return {{IsNew, IsHostPtr}, LR.Entry, TargetPointer};
+  return {{IsNew, IsHostPtr, IsPresent}, LR.Entry, TargetPointer};
 }
 
 // Return the target pointer begin (where the data will be moved).
@@ -649,13 +665,14 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   return tgt_ptr;
 }
 
-int32_t DeviceTy::deleteData(void *TgtPtrBegin) {
+int32_t DeviceTy::deleteData(void *TgtPtrBegin, int32_t Kind) {
   // If enabled, trigger OMPT callbacks before and after data delete. A trace
   // record is generated as well.
   OmptInterfaceTargetDataOpRAII delete_raii(ompt_target_data_delete,
                                             /*host ptr=*/nullptr, TgtPtrBegin,
                                             RTLDeviceID, /*Size=*/0);
-  return RTL->data_delete(RTLDeviceID, TgtPtrBegin);
+
+  return RTL->data_delete(RTLDeviceID, TgtPtrBegin, Kind);
 }
 
 // Submit data to device
@@ -679,7 +696,8 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
   OmptInterfaceTargetDataOpRAII submit_raii(ompt_target_data_transfer_to_device,
                                             HstPtrBegin, TgtPtrBegin,
                                             RTLDeviceID, Size);
-  if (ompt_enabled || !AsyncInfo || !RTL->data_submit_async || !RTL->synchronize)
+  if (ForceSynchronousTargetRegions || ompt_enabled || !AsyncInfo ||
+      !RTL->data_submit_async || !RTL->synchronize)
     return RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size);
   return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
                                 AsyncInfo);
@@ -705,7 +723,8 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
   OmptInterfaceTargetDataOpRAII retrieve_raii(
       ompt_target_data_transfer_from_device, HstPtrBegin, TgtPtrBegin,
       RTLDeviceID, Size);
-  if (ompt_enabled || !RTL->data_retrieve_async || !RTL->synchronize)
+  if (ForceSynchronousTargetRegions || ompt_enabled ||
+      !RTL->data_retrieve_async || !RTL->synchronize)
     return RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size);
   return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
                                   AsyncInfo);
@@ -714,7 +733,8 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
 // Copy data from current device to destination device directly
 int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                                int64_t Size, AsyncInfoTy &AsyncInfo) {
-  if (ompt_enabled || !AsyncInfo || !RTL->data_exchange_async || !RTL->synchronize) {
+  if (ForceSynchronousTargetRegions || ompt_enabled || !AsyncInfo ||
+      !RTL->data_exchange_async || !RTL->synchronize) {
     assert(RTL->data_exchange && "RTL->data_exchange is nullptr");
     return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
                               Size);
@@ -727,7 +747,8 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
 int32_t DeviceTy::runRegion(void *TgtEntryPtr, void **TgtVarsPtr,
                             ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
                             AsyncInfoTy &AsyncInfo) {
-  if (ompt_enabled || !RTL->run_region || !RTL->synchronize)
+  if (ForceSynchronousTargetRegions || ompt_enabled || !RTL->run_region ||
+      !RTL->synchronize)
     return RTL->run_region(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
                            TgtVarsSize);
   return RTL->run_region_async(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
@@ -748,7 +769,8 @@ int32_t DeviceTy::runTeamRegion(void *TgtEntryPtr, void **TgtVarsPtr,
                                 int32_t NumTeams, int32_t ThreadLimit,
                                 uint64_t LoopTripCount,
                                 AsyncInfoTy &AsyncInfo) {
-  if (ompt_enabled || !RTL->run_team_region_async || !RTL->synchronize)
+  if (ForceSynchronousTargetRegions || ompt_enabled ||
+      !RTL->run_team_region_async || !RTL->synchronize)
     return RTL->run_team_region(RTLDeviceID, TgtEntryPtr, TgtVarsPtr,
                                 TgtOffsets, TgtVarsSize, NumTeams, ThreadLimit,
                                 LoopTripCount);

@@ -486,9 +486,11 @@ const CGFunctionInfo &
 CodeGenTypes::arrangeObjCMessageSendSignature(const ObjCMethodDecl *MD,
                                               QualType receiverType) {
   SmallVector<CanQualType, 16> argTys;
-  SmallVector<FunctionProtoType::ExtParameterInfo, 4> extParamInfos(2);
+  SmallVector<FunctionProtoType::ExtParameterInfo, 4> extParamInfos(
+      MD->isDirectMethod() ? 1 : 2);
   argTys.push_back(Context.getCanonicalParamType(receiverType));
-  argTys.push_back(Context.getCanonicalParamType(Context.getObjCSelType()));
+  if (!MD->isDirectMethod())
+    argTys.push_back(Context.getCanonicalParamType(Context.getObjCSelType()));
   // FIXME: Kill copy?
   for (const auto *I : MD->parameters()) {
     argTys.push_back(Context.getCanonicalParamType(I->getType()));
@@ -1726,7 +1728,7 @@ CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
 
     case ABIArgInfo::CoerceAndExpand: {
       auto ArgTypesIter = ArgTypes.begin() + FirstIRArg;
-      for (auto EltTy : ArgInfo.getCoerceAndExpandTypeSequence()) {
+      for (auto *EltTy : ArgInfo.getCoerceAndExpandTypeSequence()) {
         *ArgTypesIter++ = EltTy;
       }
       assert(ArgTypesIter == ArgTypes.begin() + FirstIRArg + NumIRArgs);
@@ -1863,7 +1865,11 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
       FuncAttrs.addAttribute("no-nans-fp-math", "true");
     if (LangOpts.ApproxFunc)
       FuncAttrs.addAttribute("approx-func-fp-math", "true");
-    if (LangOpts.UnsafeFPMath)
+    if ((LangOpts.FastMath ||
+         (!LangOpts.FastMath && LangOpts.AllowFPReassoc &&
+          LangOpts.AllowRecip && !LangOpts.FiniteMathOnly &&
+          LangOpts.NoSignedZero && LangOpts.ApproxFunc)) &&
+        LangOpts.getDefaultFPContractMode() != LangOptions::FPModeKind::FPM_Off)
       FuncAttrs.addAttribute("unsafe-fp-math", "true");
     if (CodeGenOpts.SoftFloat)
       FuncAttrs.addAttribute("use-soft-float", "true");
@@ -2261,9 +2267,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   // Add "sample-profile-suffix-elision-policy" attribute for internal linkage
   // functions with -funique-internal-linkage-names.
   if (TargetDecl && CodeGenOpts.UniqueInternalLinkageNames) {
-    if (isa<FunctionDecl>(TargetDecl)) {
-      if (this->getFunctionLinkage(CalleeInfo.getCalleeDecl()) ==
-          llvm::GlobalValue::InternalLinkage)
+    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
+      if (!FD->isExternallyVisible())
         FuncAttrs.addAttribute("sample-profile-suffix-elision-policy",
                                "selected");
     }
@@ -2348,7 +2353,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       RetAttrs.addAttribute(llvm::Attribute::SExt);
     else
       RetAttrs.addAttribute(llvm::Attribute::ZExt);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ABIArgInfo::Direct:
     if (RetAI.getInReg())
       RetAttrs.addAttribute(llvm::Attribute::InReg);
@@ -2483,7 +2488,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         Attrs.addAttribute(llvm::Attribute::SExt);
       else
         Attrs.addAttribute(llvm::Attribute::ZExt);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ABIArgInfo::Direct:
       if (ArgNo == 0 && FI.isChainCall())
         Attrs.addAttribute(llvm::Attribute::Nest);
@@ -2780,6 +2785,9 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
       if (ArgI.getInAllocaIndirect())
         V = Address(Builder.CreateLoad(V), ConvertTypeForMem(Ty),
                     getContext().getTypeAlignInChars(Ty));
+      // FIXME: It seems like we would want to represent inalloca via
+      // ParamValue more directly, so the debug information can reflect it
+      // directly.
       ArgVals.push_back(ParamValue::forIndirect(V));
       break;
     }
@@ -2796,8 +2804,9 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         // may be aliased, copy it to ensure that the parameter variable is
         // mutable and has a unique adress, as C requires.
         Address V = ParamAddr;
+        Address DebugAddr = ParamAddr;
         if (ArgI.getIndirectRealign() || ArgI.isIndirectAliased()) {
-          Address AlignedTemp = CreateMemTemp(Ty, "coerce");
+          Address AlignedTemp = CreateMemTemp(Ty, "coerce", &DebugAddr);
 
           // Copy from the incoming argument pointer to the temporary with the
           // appropriate alignment.
@@ -2811,7 +2820,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
               llvm::ConstantInt::get(IntPtrTy, Size.getQuantity()));
           V = AlignedTemp;
         }
-        ArgVals.push_back(ParamValue::forIndirect(V));
+        ArgVals.push_back(ParamValue::forIndirect(V, DebugAddr));
       } else {
         // Load scalar value from indirect argument.
         llvm::Value *V =
@@ -2888,7 +2897,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
           // Set `align` attribute if any.
           const auto *AVAttr = PVD->getAttr<AlignValueAttr>();
           if (!AVAttr)
-            if (const auto *TOTy = dyn_cast<TypedefType>(OTy))
+            if (const auto *TOTy = OTy->getAs<TypedefType>())
               AVAttr = TOTy->getDecl()->getAttr<AlignValueAttr>();
           if (AVAttr && !SanOpts.has(SanitizerKind::Alignment)) {
             // If alignment-assumption sanitizer is enabled, we do *not* add
@@ -2987,8 +2996,12 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         }
       }
 
+      Address DebugAddr = Address::invalid();
       Address Alloca = CreateMemTemp(Ty, getContext().getDeclAlign(Arg),
-                                     Arg->getName());
+                                     Arg->getName(), &DebugAddr);
+
+      // FIXME: Need to represent this offset via ParamValue to support debug
+      // info?
 
       // Pointer to store into.
       Address Ptr = emitAddressAtOffset(*this, Alloca, ArgI);
@@ -3038,15 +3051,17 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
           V = emitArgumentDemotion(*this, Arg, V);
         ArgVals.push_back(ParamValue::forDirect(V));
       } else {
-        ArgVals.push_back(ParamValue::forIndirect(Alloca));
+        ArgVals.push_back(ParamValue::forIndirect(Alloca, DebugAddr));
       }
       break;
     }
 
     case ABIArgInfo::CoerceAndExpand: {
       // Reconstruct into a temporary.
-      Address alloca = CreateMemTemp(Ty, getContext().getDeclAlign(Arg));
-      ArgVals.push_back(ParamValue::forIndirect(alloca));
+      Address DebugAddr = Address::invalid();
+      Address alloca =
+          CreateMemTemp(Ty, getContext().getDeclAlign(Arg), "tmp", &DebugAddr);
+      ArgVals.push_back(ParamValue::forIndirect(alloca, DebugAddr));
 
       auto coercionType = ArgI.getCoerceAndExpandType();
       alloca = Builder.CreateElementBitCast(alloca, coercionType);
@@ -3069,9 +3084,11 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
       // If this structure was expanded into multiple arguments then
       // we need to create a temporary and reconstruct it from the
       // arguments.
-      Address Alloca = CreateMemTemp(Ty, getContext().getDeclAlign(Arg));
+      Address DebugAddr = Address::invalid();
+      Address Alloca =
+          CreateMemTemp(Ty, getContext().getDeclAlign(Arg), "tmp", &DebugAddr);
       LValue LV = MakeAddrLValue(Alloca, Ty);
-      ArgVals.push_back(ParamValue::forIndirect(Alloca));
+      ArgVals.push_back(ParamValue::forIndirect(Alloca, DebugAddr));
 
       auto FnArgIter = Fn->arg_begin() + FirstIRArg;
       ExpandTypeFromArgs(Ty, LV, FnArgIter);
@@ -3087,7 +3104,9 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
       assert(NumIRArgs == 0);
       // Initialize the local variable appropriately.
       if (!hasScalarEvaluationKind(Ty)) {
-        ArgVals.push_back(ParamValue::forIndirect(CreateMemTemp(Ty)));
+        Address DebugAddr = Address::invalid();
+        Address Alloca = CreateMemTemp(Ty, "tmp", &DebugAddr);
+        ArgVals.push_back(ParamValue::forIndirect(Alloca, DebugAddr));
       } else {
         llvm::Value *U = llvm::UndefValue::get(ConvertType(Arg->getType()));
         ArgVals.push_back(ParamValue::forDirect(U));
@@ -3537,7 +3556,7 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
 
   switch (RetAI.getKind()) {
   case ABIArgInfo::InAlloca:
-    // Aggregrates get evaluated directly into the destination.  Sometimes we
+    // Aggregates get evaluated directly into the destination.  Sometimes we
     // need to return the sret value in a register, though.
     assert(hasAggregateEvaluationKind(RetTy));
     if (RetAI.getInAllocaSRet()) {
@@ -3565,7 +3584,7 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
       break;
     }
     case TEK_Aggregate:
-      // Do nothing; aggregrates get evaluated directly into the destination.
+      // Do nothing; aggregates get evaluated directly into the destination.
       break;
     case TEK_Scalar: {
       LValueBaseInfo BaseInfo;
@@ -4608,7 +4627,7 @@ namespace {
 
 /// Specify given \p NewAlign as the alignment of return value attribute. If
 /// such attribute already exists, re-set it to the maximal one of two options.
-LLVM_NODISCARD llvm::AttributeList
+[[nodiscard]] llvm::AttributeList
 maybeRaiseRetAlignmentAttribute(llvm::LLVMContext &Ctx,
                                 const llvm::AttributeList &Attrs,
                                 llvm::Align NewAlign) {
@@ -4639,7 +4658,7 @@ protected:
 
 public:
   /// If we can, materialize the alignment as an attribute on return value.
-  LLVM_NODISCARD llvm::AttributeList
+  [[nodiscard]] llvm::AttributeList
   TryEmitAsCallSiteAttribute(const llvm::AttributeList &Attrs) {
     if (!AA || OffsetCI || CGF.SanOpts.has(SanitizerKind::Alignment))
       return Attrs;
@@ -5375,6 +5394,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   SmallVector<llvm::OperandBundleDef, 1> BundleList =
       getBundlesForFunclet(CalleePtr);
 
+  if (SanOpts.has(SanitizerKind::KCFI) &&
+      !isa_and_nonnull<FunctionDecl>(TargetDecl))
+    EmitKCFIOperandBundle(ConcreteCallee, BundleList);
+
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
     if (FD->hasAttr<StrictFPAttr>())
       // All calls within a strictfp function are marked strictfp
@@ -5557,7 +5580,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         Builder.CreateStore(elt, eltAddr);
       }
       // FALLTHROUGH
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
 
     case ABIArgInfo::InAlloca:

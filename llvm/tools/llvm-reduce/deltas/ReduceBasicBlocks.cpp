@@ -105,20 +105,25 @@ removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
 static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
-  DenseSet<BasicBlock *> BBsToKeep;
+  DenseSet<BasicBlock *> BBsToKeep, BBsToDelete;
 
-  SmallVector<BasicBlock *> BBsToDelete;
   for (auto &F : Program) {
-    for (auto &BB : F) {
+    if (F.empty())
+      continue;
+
+    // Never try to delete the entry block.
+    for (auto &BB : make_range(++F.begin(), F.end())) {
       if (O.shouldKeep())
         BBsToKeep.insert(&BB);
-      else {
-        BBsToDelete.push_back(&BB);
-        // Remove out-of-chunk BB from successor phi nodes
-        for (auto *Succ : successors(&BB))
-          Succ->removePredecessor(&BB);
-      }
+      else
+        BBsToDelete.insert(&BB);
     }
+  }
+
+  // Remove out-of-chunk BB from successor phi nodes
+  for (auto &BB : BBsToDelete) {
+    for (auto *Succ : successors(BB))
+      Succ->removePredecessor(BB, /*KeepOneInputPHIs=*/true);
   }
 
   // Replace terminators that reference out-of-chunk BBs
@@ -135,19 +140,12 @@ static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
     // Instructions might be referenced in other BBs
     for (auto &I : *BB)
       I.replaceAllUsesWith(getDefaultValue(I.getType()));
-    if (BB->getParent()->size() == 1) {
-      // this is the last basic block of the function, thus we must also make
-      // sure to remove comdat and set linkage to external
-      auto F = BB->getParent();
-      F->deleteBody();
-      F->setComdat(nullptr);
-    } else {
-      BB->eraseFromParent();
-    }
+    // Should not be completely removing the body of a function.
+    assert(BB->getParent()->size() > 1);
+    BB->eraseFromParent();
   }
 }
 
 void llvm::reduceBasicBlocksDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing Basic Blocks...\n";
-  runDeltaPass(Test, extractBasicBlocksFromModule);
+  runDeltaPass(Test, extractBasicBlocksFromModule, "Reducing Basic Blocks");
 }

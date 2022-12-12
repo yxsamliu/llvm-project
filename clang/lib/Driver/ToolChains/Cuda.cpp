@@ -70,6 +70,12 @@ CudaVersion getCudaVersion(uint32_t raw_version) {
     return CudaVersion::CUDA_114;
   if (raw_version < 11060)
     return CudaVersion::CUDA_115;
+  if (raw_version < 11070)
+    return CudaVersion::CUDA_116;
+  if (raw_version < 11080)
+    return CudaVersion::CUDA_117;
+  if (raw_version < 11090)
+    return CudaVersion::CUDA_118;
   return CudaVersion::NEW;
 }
 
@@ -601,7 +607,7 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =
       llvm::sys::path::parent_path(TC.getDriver().Dir);
-  llvm::sys::path::append(DefaultLibPath, "lib" CLANG_LIBDIR_SUFFIX);
+  llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
   CmdArgs.push_back(Args.MakeArgString(Twine("-L") + DefaultLibPath));
 
   for (const auto &II : Inputs) {
@@ -663,6 +669,9 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case CudaVersion::CUDA_##CUDA_VER:                                           \
     PtxFeature = "+ptx" #PTX_VER;                                              \
     break;
+    CASE_CUDA_VERSION(118, 78);
+    CASE_CUDA_VERSION(117, 77);
+    CASE_CUDA_VERSION(116, 76);
     CASE_CUDA_VERSION(115, 75);
     CASE_CUDA_VERSION(114, 74);
     CASE_CUDA_VERSION(113, 73);
@@ -718,8 +727,8 @@ CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
 
 std::string CudaToolChain::getInputFilename(const InputInfo &Input) const {
   // Only object files are changed, for example assembly files keep their .s
-  // extensions. 
-  if (Input.getType() != types::TY_Object)
+  // extensions. If the user requested device-only compilation don't change it.
+  if (Input.getType() != types::TY_Object || getDriver().offloadDeviceOnly())
     return ToolChain::getInputFilename(Input);
 
   // Replace extension for object files with cubin because nvlink relies on

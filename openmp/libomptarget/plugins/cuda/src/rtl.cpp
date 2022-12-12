@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringRef.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -20,8 +22,9 @@
 #include <memory>
 #include <mutex>
 #include <string>
-#include <unordered_map>
 #include <vector>
+
+#include <unordered_map>  
 
 #include "Debug.h"
 #include "DeviceEnvironment.h"
@@ -34,6 +37,8 @@
 #include "MemoryManager.h"
 
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+
+using namespace llvm;
 
 // Utility for retrieving and printing CUDA error string.
 #ifdef OMPTARGET_DEBUG
@@ -161,8 +166,8 @@ struct DeviceDataTy {
   unsigned int BlocksPerGrid = 0;
   unsigned int WarpSize = 0;
   // OpenMP properties
-  int NumTeams = 0;
-  int NumThreads = 0;
+  unsigned int NumTeams = 0;
+  unsigned int NumThreads = 0;
 };
 
 /// Resource allocator where \p T is the resource type.
@@ -327,8 +332,8 @@ class DeviceRTLTy {
   int NumberOfDevices;
   // OpenMP environment properties
   int EnvNumTeams;
-  int EnvTeamLimit;
-  int EnvTeamThreadLimit;
+  unsigned int EnvTeamLimit;
+  unsigned int EnvTeamThreadLimit;
   // OpenMP requires flags
   int64_t RequiresFlags;
   // Amount of dynamic shared memory to use at launch.
@@ -365,8 +370,6 @@ class DeviceRTLTy {
   /// A class responsible for interacting with device native runtime library to
   /// allocate and free memory.
   class CUDADeviceAllocatorTy : public DeviceAllocatorTy {
-    std::unordered_map<void *, TargetAllocTy> HostPinnedAllocs;
-
   public:
     void *allocate(size_t Size, void *, TargetAllocTy Kind) override {
       if (Size == 0)
@@ -389,7 +392,6 @@ class DeviceRTLTy {
         MemAlloc = HostPtr;
         if (!checkResult(Err, "Error returned from cuMemAllocHost\n"))
           return nullptr;
-        HostPinnedAllocs[MemAlloc] = Kind;
         break;
       case TARGET_ALLOC_SHARED:
         CUdeviceptr SharedPtr;
@@ -402,13 +404,10 @@ class DeviceRTLTy {
 
       return MemAlloc;
     }
-    int dev_free(void *TgtPtr) override {
+
+    int free(void *TgtPtr, TargetAllocTy Kind) override {
       CUresult Err;
       // Host pinned memory must be freed differently.
-      TargetAllocTy Kind =
-          (HostPinnedAllocs.find(TgtPtr) == HostPinnedAllocs.end())
-              ? TARGET_ALLOC_DEFAULT
-              : TARGET_ALLOC_HOST;
       switch (Kind) {
       case TARGET_ALLOC_DEFAULT:
       case TARGET_ALLOC_DEVICE:
@@ -562,10 +561,10 @@ public:
       NumInitialStreams = std::stoi(EnvStr);
       DP("Parsed LIBOMPTARGET_NUM_INITIAL_STREAMS=%d\n", NumInitialStreams);
     }
-
+#if FIX_ISSUE
     for (int I = 0; I < NumberOfDevices; ++I)
       DeviceAllocators.emplace_back();
-
+#endif
     // Get the size threshold from environment variable
     std::pair<size_t, bool> Res = MemoryManagerTy::getSizeThresholdFromEnv();
     UseMemoryManager = Res.second;
@@ -1092,7 +1091,7 @@ public:
 
         PeerAccessMatrix[SrcDevId][DstDevId] = PeerAccessState::Yes;
 
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       }
       case PeerAccessState::Yes: {
         Err = cuMemcpyPeerAsync(
@@ -1115,11 +1114,23 @@ public:
     return memcpyDtoD(SrcPtr, DstPtr, Size, Stream);
   }
 
-  int dataDelete(const int DeviceId, void *TgtPtr) {
-    if (UseMemoryManager)
-      return MemoryManagers[DeviceId]->free(TgtPtr);
+  int dataDelete(const int DeviceId, void *TgtPtr, TargetAllocTy Kind) {
+    switch (Kind) {
+    case TARGET_ALLOC_DEFAULT:
+    case TARGET_ALLOC_DEVICE:
+      if (UseMemoryManager)
+        return MemoryManagers[DeviceId]->free(TgtPtr);
+      else
+        return DeviceAllocators[DeviceId].free(TgtPtr, Kind);
+    case TARGET_ALLOC_HOST:
+    case TARGET_ALLOC_SHARED:
+      return DeviceAllocators[DeviceId].free(TgtPtr, Kind);
+    }
 
-    return DeviceAllocators[DeviceId].dev_free(TgtPtr);
+    REPORT("Invalid target data allocation kind or requested allocator not "
+           "implemented yet\n");
+
+    return OFFLOAD_FAIL;
   }
 
   int runTargetTeamRegion(const int DeviceId, void *TgtEntryPtr, void **TgtArgs,
@@ -1160,7 +1171,7 @@ public:
       CudaThreadsPerBlock = DeviceData[DeviceId].NumThreads;
     }
 
-    if (CudaThreadsPerBlock > DeviceData[DeviceId].ThreadsPerBlock) {
+    if ((unsigned)CudaThreadsPerBlock > DeviceData[DeviceId].ThreadsPerBlock) {
       DP("Threads per block capped at device limit %d\n",
          DeviceData[DeviceId].ThreadsPerBlock);
       CudaThreadsPerBlock = DeviceData[DeviceId].ThreadsPerBlock;
@@ -1542,6 +1553,53 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
 
 int32_t __tgt_rtl_number_of_devices() { return DeviceRTL.getNumOfDevices(); }
 
+int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *image,
+                                       __tgt_image_info *info) {
+#if 0
+  if (!__tgt_rtl_is_valid_binary(image))
+=======
+int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *Image,
+                                       __tgt_image_info *Info) {
+  if (!__tgt_rtl_is_valid_binary(Image))
+>>>>>>> 0c40651f690bab7471f4c998b4fb80bc50ac5814
+    return false;
+
+  // A subarchitecture was not specified. Assume it is compatible.
+  if (!Info || !Info->Arch)
+    return true;
+
+  int32_t NumberOfDevices = 0;
+  if (cuDeviceGetCount(&NumberOfDevices) != CUDA_SUCCESS)
+    return false;
+
+  StringRef ArchStr = StringRef(Info->Arch).drop_front(sizeof("sm_") - 1);
+  for (int32_t DeviceId = 0; DeviceId < NumberOfDevices; ++DeviceId) {
+    CUdevice Device;
+    if (cuDeviceGet(&Device, DeviceId) != CUDA_SUCCESS)
+      return false;
+
+    int32_t Major, Minor;
+    if (cuDeviceGetAttribute(&Major,
+                             CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR,
+                             Device) != CUDA_SUCCESS)
+      return false;
+    if (cuDeviceGetAttribute(&Minor,
+                             CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR,
+                             Device) != CUDA_SUCCESS)
+      return false;
+
+    // A cubin generated for a certain compute capability is supported to run on
+    // any GPU with the same major revision and same or higher minor revision.
+    int32_t ImageMajor = ArchStr[0] - '0';
+    int32_t ImageMinor = ArchStr[1] - '0';
+    if (Major != ImageMajor || Minor < ImageMinor)
+      return false;
+  }
+<<<<<<< HEAD
+#endif
+  return false;
+}
+
 int32_t __tgt_rtl_number_of_team_procs(int devid) {
   return DeviceRTL.getNumOfTeamProcs(devid);
 }
@@ -1675,13 +1733,13 @@ int32_t __tgt_rtl_data_exchange(int32_t SrcDevId, void *SrcPtr,
   return __tgt_rtl_synchronize(SrcDevId, &AsyncInfo);
 }
 
-int32_t __tgt_rtl_data_delete(int32_t DeviceId, void *TgtPtr) {
+int32_t __tgt_rtl_data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind) {
   assert(DeviceRTL.isValidDeviceId(DeviceId) && "device_id is invalid");
 
   if (DeviceRTL.setContext(DeviceId) != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return DeviceRTL.dataDelete(DeviceId, TgtPtr);
+  return DeviceRTL.dataDelete(DeviceId, TgtPtr, (TargetAllocTy)Kind);
 }
 
 int32_t __tgt_rtl_run_target_team_region(int32_t DeviceId, void *TgtEntryPtr,
