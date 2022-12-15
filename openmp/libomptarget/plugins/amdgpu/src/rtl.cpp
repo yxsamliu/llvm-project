@@ -1945,6 +1945,8 @@ void getLaunchVals(uint16_t &ThreadsPerGroup, int &NumGroups, int WarpSize,
   if (ExecutionMode == llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD ||
       ExecutionMode ==
           llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP ||
+      ExecutionMode == llvm::omp::OMPTgtExecModeFlags::
+                           OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP ||
       ExecutionMode ==
           llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_XTEAM_RED) {
     // ConstWGSize is used for communicating any command-line value to
@@ -1975,6 +1977,30 @@ void getLaunchVals(uint16_t &ThreadsPerGroup, int &NumGroups, int WarpSize,
 
   // For optimized reduction, we use as many teams as the number of CUs. This
   // must be kept in sync with CodeGen and DeviceRTL.
+  if (ExecutionMode ==
+      llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP) {
+    // Cannot assert a non-zero tripcount. Instead, launch with 1 team
+    // if the tripcount is indeed zero.
+    NumGroups = 1;
+    if (LoopTripcount > 0)
+      NumGroups = ((LoopTripcount - 1) / ThreadsPerGroup) + 1;
+
+    // Honor num_teams clause but lower it if tripcount dictates so.
+    if (NumTeams > 0 &&
+        NumTeams <= static_cast<int>(RTLDeviceInfoTy::HardTeamLimit))
+      NumGroups = std::min(NumTeams, NumGroups);
+    else {
+      // num_teams clause is not specified. Choose lower of tripcount-based
+      // num-groups and a value that maximizes occupancy.
+      int NumWavesInGroup = ThreadsPerGroup / WarpSize;
+      int MaxOccupancyFactor = NumWavesInGroup ? (32 / NumWavesInGroup) : 32;
+      NumGroups = std::min(NumGroups, MaxOccupancyFactor * DeviceNumCUs);
+    }
+    DP("Final %d NumGroups and %d ThreadsPerGroup\n", NumGroups,
+       ThreadsPerGroup);
+    return;
+  }
+
   if (ExecutionMode ==
       llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_XTEAM_RED) {
     // Constrain NumGroups to be lower than ThreadsPerGroup. The following only
