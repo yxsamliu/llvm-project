@@ -5723,7 +5723,7 @@ class OMPMapClause final : public OMPMappableExprListClause<OMPMapClause>,
   size_t numTrailingObjects(OverloadToken<Expr *>) const {
     // There are varlist_size() of expressions, and varlist_size() of
     // user-defined mappers.
-    return 2 * varlist_size();
+    return 2 * varlist_size() + 1;
   }
   size_t numTrailingObjects(OverloadToken<ValueDecl *>) const {
     return getUniqueDeclarationsNum();
@@ -5737,7 +5737,7 @@ private:
   OpenMPMapModifierKind MapTypeModifiers[NumberOfOMPMapClauseModifiers] = {
       OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
       OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
-      OMPC_MAP_MODIFIER_unknown};
+      OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown};
 
   /// Location of map-type-modifiers for the 'map' clause.
   SourceLocation MapTypeModifiersLoc[NumberOfOMPMapClauseModifiers];
@@ -5838,6 +5838,11 @@ private:
   /// Set colon location.
   void setColonLoc(SourceLocation Loc) { ColonLoc = Loc; }
 
+  /// Set iterator modifier.
+  void setIteratorModifier(Expr *IteratorModifier) {
+    getTrailingObjects<Expr *>()[2 * varlist_size()] = IteratorModifier;
+  }
+
 public:
   /// Creates clause with a list of variables \a VL.
   ///
@@ -5850,6 +5855,7 @@ public:
   /// \param ComponentLists Component lists used in the clause.
   /// \param UDMapperRefs References to user-defined mappers associated with
   /// expressions used in the clause.
+  /// \param IteratorModifier Iterator modifier.
   /// \param MapModifiers Map-type-modifiers.
   /// \param MapModifiersLoc Location of map-type-modifiers.
   /// \param UDMQualifierLoc C++ nested name specifier for the associated
@@ -5862,7 +5868,7 @@ public:
   Create(const ASTContext &C, const OMPVarListLocTy &Locs,
          ArrayRef<Expr *> Vars, ArrayRef<ValueDecl *> Declarations,
          MappableExprComponentListsRef ComponentLists,
-         ArrayRef<Expr *> UDMapperRefs,
+         ArrayRef<Expr *> UDMapperRefs, Expr *IteratorModifier,
          ArrayRef<OpenMPMapModifierKind> MapModifiers,
          ArrayRef<SourceLocation> MapModifiersLoc,
          NestedNameSpecifierLoc UDMQualifierLoc, DeclarationNameInfo MapperId,
@@ -5880,6 +5886,11 @@ public:
   /// NumComponents: total number of expression components in the clause.
   static OMPMapClause *CreateEmpty(const ASTContext &C,
                                    const OMPMappableExprListSizeTy &Sizes);
+
+  /// Fetches Expr * of iterator modifier.
+  Expr *getIteratorModifier() {
+    return getTrailingObjects<Expr *>()[2 * varlist_size()];
+  }
 
   /// Fetches mapping kind for the clause.
   OpenMPMapClauseKind getMapType() const LLVM_READONLY { return MapType; }
