@@ -1261,8 +1261,9 @@ static MachineInstrBuilder spillVGPRtoAGPR(const GCNSubtarget &ST,
     // It could result in AGPR spills restored to VGPRs or the other way around,
     // making the src and dst with identical regclasses at this point. It just
     // needs a copy in such cases.
-    auto CopyMIB = BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), Dst)
-                       .addReg(Src, getKillRegState(IsKill));
+    MachineInstrBuilder CopyMIB =
+        MachineInstrBuilder(*MBB.getParent(), TII->buildCopy(MBB, MI, DL, Dst));
+    CopyMIB.addReg(Src, getKillRegState(IsKill));
     CopyMIB->setAsmPrinterFlag(MachineInstr::ReloadReuse);
     if (NeedsCFI)
       TFL->buildCFIForRegToRegSpill(MBB, MI, DL, Src, Dst);
@@ -2604,8 +2605,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                 .addReg(ScaledReg, RegState::Kill)
                 .addImm(Offset);
             if (!IsSALU)
-              BuildMI(*MBB, MI, DL, TII->get(AMDGPU::COPY), ResultReg)
-                  .addReg(ScaledReg, RegState::Kill);
+              TII->buildCopy(*MBB, MI, DL, ResultReg, ScaledReg,
+                             RegState::Kill);
             else
               ResultReg = ScaledReg;
 

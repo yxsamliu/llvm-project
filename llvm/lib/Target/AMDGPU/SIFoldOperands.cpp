@@ -272,9 +272,8 @@ bool SIFoldOperands::updateOperand(FoldCandidate &Fold) const {
     MachineInstr *Inst32 = TII->buildShrunkInst(*MI, Op32);
 
     if (HaveNonDbgCarryUse) {
-      BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::COPY),
-              Dst1.getReg())
-        .addReg(AMDGPU::VCC, RegState::Kill);
+      TII->buildCopy(*MBB, MI, MI->getDebugLoc(), Dst1.getReg(), AMDGPU::VCC,
+                     RegState::Kill);
     }
 
     // Keep the old instruction around to avoid breaking iterators, but
@@ -1765,9 +1764,8 @@ bool SIFoldOperands::tryFoldPhiAGPR(MachineInstr &PHI) {
   // COPY that new register back to the original PhiOut register. This COPY will
   // usually be folded out later.
   MachineBasicBlock *MBB = PHI.getParent();
-  BuildMI(*MBB, MBB->getFirstNonPHI(), PHI.getDebugLoc(),
-          TII->get(AMDGPU::COPY), PhiOut)
-      .addReg(NewReg);
+  TII->buildCopy(*MBB, MBB->getFirstNonPHI(), PHI.getDebugLoc(), PhiOut,
+                 NewReg);
 
   LLVM_DEBUG(dbgs() << "  Done: Folded " << PHI);
   return true;
@@ -1907,9 +1905,8 @@ bool SIFoldOperands::tryOptimizeAGPRPhis(MachineBasicBlock &MBB) {
 
     // Copy back to an AGPR and use that instead of the AGPR subreg in all MOs.
     Register TempAGPR = MRI->createVirtualRegister(ARC);
-    BuildMI(*DefMBB, ++VGPRCopy->getIterator(), Def->getDebugLoc(),
-            TII->get(AMDGPU::COPY), TempAGPR)
-        .addReg(TempVGPR);
+    TII->buildCopy(*DefMBB, ++VGPRCopy->getIterator(), Def->getDebugLoc(),
+                   TempAGPR, TempVGPR);
 
     LLVM_DEBUG(dbgs() << "Caching AGPR into VGPR: " << *VGPRCopy);
     for (MachineOperand *MO : MOs) {
