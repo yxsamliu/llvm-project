@@ -28,10 +28,15 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
-STATISTIC(NumDeadStore,    "Number of dead stores eliminated");
+STATISTIC(NumDeadStore, "Number of dead stores eliminated");
 STATISTIC(NumGlobalCopies, "Number of allocas copied from constant global");
 
-/// isOnlyCopiedFromConstantGlobal - Recursively walk the uses of a (derived)
+static cl::opt<unsigned> MaxCopiedFromConstantUsers(
+    "instcombine-max-copied-from-constant-users", cl::init(128),
+    cl::desc("Maximum users to visit in copy from constant transform"),
+    cl::Hidden);
+
+/// isOnlyCopiedFromConstantMemory - Recursively walk the uses of a (derived)
 /// pointer to an alloca.  Ignore any reads of the pointer, return false if we
 /// see any stores or other unknown uses.  If we see pointer arithmetic, keep
 /// track of whether it moves the pointer (with IsOffset) but otherwise traverse
@@ -54,6 +59,8 @@ isOnlyCopiedFromConstantMemory(AAResults *AA,
     ValueAndIsOffset Elem = Worklist.pop_back_val();
     if (!Visited.insert(Elem).second)
       continue;
+    if (Visited.size() > MaxCopiedFromConstantUsers)
+      return false;
 
     const auto [Value, IsOffset] = Elem;
     for (auto &U : Value->uses()) {
