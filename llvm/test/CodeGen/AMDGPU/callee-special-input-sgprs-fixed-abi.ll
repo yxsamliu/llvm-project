@@ -584,3 +584,6 @@ declare noalias ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind noinline }
 attributes #2 = { nounwind noinline "amdgpu-implicitarg-num-bytes"="0" }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
