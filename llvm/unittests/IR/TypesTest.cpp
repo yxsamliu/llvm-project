@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -61,6 +59,17 @@ TEST(TypesTest, CopyPointerType) {
   PointerType *P2C0 = PointerType::getWithSamePointeeType(P2, 0);
   EXPECT_NE(P2, P2C0);
   EXPECT_FALSE(P2C0->isOpaque());
+}
+
+TEST(TypesTest, TargetExtType) {
+  LLVMContext Context;
+  Type *A = TargetExtType::get(Context, "typea");
+  Type *Aparam = TargetExtType::get(Context, "typea", {}, {0, 1});
+  Type *Aparam2 = TargetExtType::get(Context, "typea", {}, {0, 1});
+  // Opaque types with same parameters are identical...
+  EXPECT_EQ(Aparam, Aparam2);
+  // ... but just having the same name is not enough.
+  EXPECT_NE(A, Aparam);
 }
 
 TEST(TypedPointerType, PrintTest) {

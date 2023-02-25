@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -18,7 +16,7 @@
 #include "Types.h"
 #include "Utils.h"
 
-using namespace _OMP;
+using namespace ompx;
 
 #pragma omp begin declare target device_type(nohost)
 
@@ -243,11 +241,11 @@ void state::TeamStateTy::assertEqual(TeamStateTy &Other) const {
   ASSERT(HasThreadState == Other.HasThreadState);
 }
 
-state::TeamStateTy SHARED(_OMP::state::TeamState);
+state::TeamStateTy SHARED(ompx::state::TeamState);
 
 __attribute__((loader_uninitialized))
-state::ThreadStateTy *_OMP::state::ThreadStates[mapping::MaxThreadsPerTeam];
-#pragma omp allocate(_OMP::state::ThreadStates) allocator(omp_pteam_mem_alloc)
+state::ThreadStateTy *ompx::state::ThreadStates[mapping::MaxThreadsPerTeam];
+#pragma omp allocate(ompx::state::ThreadStates) allocator(omp_pteam_mem_alloc)
 
 namespace {
 
@@ -382,12 +380,7 @@ int omp_get_num_threads(void) {
   return omp_get_level() > 1 ? 1 : state::ParallelTeamSize;
 }
 
-int omp_get_thread_limit(void) {
-  if (__kmpc_is_spmd_exec_mode())
-    return __kmpc_get_hardware_num_threads_in_block();
-
-  return omp_ext_get_master_thread_id();
-}
+int omp_get_thread_limit(void) { return mapping::getBlockSize(); }
 
 int omp_get_num_procs(void) { return mapping::getNumberOfProcessorElements(); }
 

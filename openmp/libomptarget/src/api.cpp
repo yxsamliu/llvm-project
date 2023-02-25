@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -20,6 +18,7 @@
 #include <climits>
 #include <cstdlib>
 #include <cstring>
+#include <mutex>
 
 EXTERN int ompx_get_team_procs(int device_num) {
   if (!deviceIsReady(device_num)) {
@@ -95,14 +94,6 @@ EXTERN void *llvm_omp_target_alloc_multi_devices(size_t size, int num_devices,
   return ptr;
 }
 
-EXTERN void *llvm_omp_target_lock_mem(void *ptr, size_t size, int device_num) {
-  return targetLockExplicit(ptr, size, device_num, __func__);
-}
-
-EXTERN void llvm_omp_target_unlock_mem(void *ptr, int device_num) {
-  targetUnlockExplicit(ptr, device_num, __func__);
-}
-
 EXTERN void omp_target_free(void *Ptr, int DeviceNum) {
   return targetFreeExplicit(Ptr, DeviceNum, TARGET_ALLOC_DEFAULT, __func__);
 }
@@ -121,6 +112,15 @@ EXTERN void llvm_omp_target_free_shared(void *Ptre, int DeviceNum) {
 
 EXTERN void *llvm_omp_target_dynamic_shared_alloc() { return nullptr; }
 EXTERN void *llvm_omp_get_dynamic_shared() { return nullptr; }
+
+EXTERN [[nodiscard]] void *llvm_omp_target_lock_mem(void *Ptr, size_t Size,
+                                                    int DeviceNum) {
+  return targetLockExplicit(Ptr, Size, DeviceNum, __func__);
+}
+
+EXTERN void llvm_omp_target_unlock_mem(void *Ptr, int DeviceNum) {
+  targetUnlockExplicit(Ptr, DeviceNum, __func__);
+}
 
 EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
   TIMESCOPE();
@@ -231,7 +231,7 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
       Rc = SrcDev.retrieveData(Buffer, SrcAddr, Length, AsyncInfo);
     }
     if (Rc == OFFLOAD_SUCCESS) {
-      AsyncInfoTy AsyncInfo(SrcDev);
+      AsyncInfoTy AsyncInfo(DstDev);
       Rc = DstDev.submitData(DstAddr, Buffer, Length, AsyncInfo);
     }
     free(Buffer);
@@ -365,4 +365,53 @@ EXTERN int omp_is_coarse_grain_mem_region(void *ptr, size_t size) {
   if (!Device.RTL->query_coarse_grain_mem_region)
     return 0;
   return Device.RTL->query_coarse_grain_mem_region(ptr, size);
+}
+
+EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
+  TIMESCOPE();
+  DP("Call to omp_get_mapped_ptr with ptr " DPxMOD ", device_num %d.\n",
+     DPxPTR(Ptr), DeviceNum);
+
+  if (!Ptr) {
+    REPORT("Call to omp_get_mapped_ptr with nullptr.\n");
+    return nullptr;
+  }
+
+  if (DeviceNum == omp_get_initial_device()) {
+    REPORT("Device %d is initial device, returning Ptr " DPxMOD ".\n",
+           DeviceNum, DPxPTR(Ptr));
+    return const_cast<void *>(Ptr);
+  }
+
+  int DevicesSize = omp_get_initial_device();
+  {
+    std::lock_guard<std::mutex> LG(PM->RTLsMtx);
+    DevicesSize = PM->Devices.size();
+  }
+  if (DevicesSize <= DeviceNum) {
+    DP("DeviceNum %d is invalid, returning nullptr.\n", DeviceNum);
+    return nullptr;
+  }
+
+  if (!deviceIsReady(DeviceNum)) {
+    REPORT("Device %d is not ready, returning nullptr.\n", DeviceNum);
+    return nullptr;
+  }
+
+  bool IsLast = false;
+  bool IsHostPtr = false;
+  auto &Device = *PM->Devices[DeviceNum];
+  TargetPointerResultTy TPR =
+      Device.getTgtPtrBegin(const_cast<void *>(Ptr), 1, IsLast,
+                            /*UpdateRefCount=*/false,
+                            /*UseHoldRefCount=*/false, IsHostPtr);
+  if (!TPR.isPresent()) {
+    DP("Ptr " DPxMOD "is not present on device %d, returning nullptr.\n",
+       DPxPTR(Ptr), DeviceNum);
+    return nullptr;
+  }
+
+  DP("omp_get_mapped_ptr returns " DPxMOD ".\n", DPxPTR(TPR.TargetPointer));
+
+  return TPR.TargetPointer;
 }

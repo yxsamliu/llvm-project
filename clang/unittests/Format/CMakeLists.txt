@@ -4,7 +4,9 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_unittest(FormatTests
   BracesInserterTest.cpp
+  BracesRemoverTest.cpp
   CleanupTest.cpp
+  ConfigParseTest.cpp
   DefinitionBlockSeparatorTest.cpp
   FormatTest.cpp
   FormatTestComments.cpp
@@ -19,6 +21,7 @@ add_clang_unittest(FormatTests
   FormatTestTableGen.cpp
   FormatTestTextProto.cpp
   FormatTestVerilog.cpp
+  IntegerLiteralSeparatorTest.cpp
   MacroCallReconstructorTest.cpp
   MacroExpanderTest.cpp
   NamespaceEndCommentsFixerTest.cpp

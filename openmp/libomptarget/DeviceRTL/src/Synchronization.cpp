@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -23,7 +21,18 @@
 
 #pragma omp begin declare target device_type(nohost)
 
-using namespace _OMP;
+namespace ompx {
+namespace synchronize {
+bool volatile omptarget_workers_done [[clang::loader_uninitialized]];
+#pragma omp allocate(omptarget_workers_done) allocator(omp_pteam_mem_alloc)
+
+bool volatile omptarget_master_ready [[clang::loader_uninitialized]];
+#pragma omp allocate(omptarget_master_ready) allocator(omp_pteam_mem_alloc)
+
+} // namespace synchronize
+} // namespace ompx
+
+using namespace ompx;
 
 namespace impl {
 
@@ -327,12 +336,6 @@ float unsafeAtomicAdd(float *addr, float value) {
       (const __attribute__((address_space(1))) float *)addr, value);
 }
 #endif // if defined(gfx90a) &&
-
-bool volatile omptarget_workers_done [[clang::loader_uninitialized]];
-#pragma omp allocate(omptarget_workers_done) allocator(omp_pteam_mem_alloc)
-
-bool volatile omptarget_master_ready [[clang::loader_uninitialized]];
-#pragma omp allocate(omptarget_master_ready) allocator(omp_pteam_mem_alloc)
 
 void workersStartBarrier() {
 #ifdef __AMDGCN__

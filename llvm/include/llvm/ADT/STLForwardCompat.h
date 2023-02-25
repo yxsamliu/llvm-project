@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -20,6 +18,8 @@
 #define LLVM_ADT_STLFORWARDCOMPAT_H
 
 #include <array>
+#include "llvm/ADT/Optional.h"
+#include <optional>
 #include <type_traits>
 
 namespace llvm {
@@ -105,6 +105,30 @@ make_array(ArgTs &&...Args) // NOLINT(readability-identifier-naming)
                                               type_identity<ExplicitT>>::type,
                   sizeof...(ArgTs)> {
   return {std::forward<ArgTs>(Args)...};
+}
+
+//===----------------------------------------------------------------------===//
+//     Features from C++23
+//===----------------------------------------------------------------------===//
+
+// TODO: Remove this in favor of std::optional<T>::transform once we switch to
+// C++23.
+template <typename T, typename Function>
+auto transformOptional(const std::optional<T> &O, const Function &F)
+    -> std::optional<decltype(F(*O))> {
+  if (O)
+    return F(*O);
+  return std::nullopt;
+}
+
+// TODO: Remove this in favor of std::optional<T>::transform once we switch to
+// C++23.
+template <typename T, typename Function>
+auto transformOptional(std::optional<T> &&O, const Function &F)
+    -> std::optional<decltype(F(*std::move(O)))> {
+  if (O)
+    return F(*std::move(O));
+  return std::nullopt;
 }
 
 } // namespace llvm

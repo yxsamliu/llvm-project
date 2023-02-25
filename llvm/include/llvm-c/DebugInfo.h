@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -118,6 +116,15 @@ typedef enum {
   LLVMDWARFSourceLanguageFortran08,
   LLVMDWARFSourceLanguageRenderScript,
   LLVMDWARFSourceLanguageBLISS,
+  LLVMDWARFSourceLanguageKotlin,
+  LLVMDWARFSourceLanguageZig,
+  LLVMDWARFSourceLanguageCrystal,
+  LLVMDWARFSourceLanguageC_plus_plus_17,
+  LLVMDWARFSourceLanguageC_plus_plus_20,
+  LLVMDWARFSourceLanguageC17,
+  LLVMDWARFSourceLanguageFortran18,
+  LLVMDWARFSourceLanguageAda2005,
+  LLVMDWARFSourceLanguageAda2012,
   // Vendor extensions:
   LLVMDWARFSourceLanguageMips_Assembler,
   LLVMDWARFSourceLanguageGOOGLE_RenderScript,
@@ -172,9 +179,10 @@ enum {
   LLVMDIStringTypeMetadataKind,
   LLVMDIGenericSubrangeMetadataKind,
   LLVMDIArgListMetadataKind,
+  LLVMDIAssignIDMetadataKind,
   LLVMDIExprMetadataKind,
   LLVMDIFragmentMetadataKind,
-  LLVMDILifetimeMetadataKind
+  LLVMDILifetimeMetadataKind,
 };
 typedef unsigned LLVMMetadataKind;
 

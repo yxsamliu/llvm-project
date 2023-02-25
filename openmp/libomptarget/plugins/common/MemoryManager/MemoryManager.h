@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -35,9 +33,6 @@ public:
   /// allocation.
   virtual void *allocate(size_t Size, void *HstPtr,
                          TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
-
-  /// Delete the pointer \p TgtPtr on the device
-  virtual int dev_free(void *TgtPtr) = 0;
 
   virtual int free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
 };
@@ -142,7 +137,7 @@ class MemoryManagerTy {
   }
 
   /// Deallocate data on device
-  int deleteOnDevice(void *Ptr) const { return DeviceAllocator.dev_free(Ptr); }
+  int deleteOnDevice(void *Ptr) const { return DeviceAllocator.free(Ptr); }
 
   /// This function is called when it tries to allocate memory on device but the
   /// device returns out of memory. It will first free all memory in the

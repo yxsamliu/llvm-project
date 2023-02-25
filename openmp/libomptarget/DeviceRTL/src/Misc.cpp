@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -17,7 +15,7 @@
 
 #pragma omp begin declare target device_type(nohost)
 
-namespace _OMP {
+namespace ompx {
 namespace impl {
 
 double getWTick();
@@ -64,7 +62,7 @@ double getWTime() {
 #pragma omp end declare variant
 
 } // namespace impl
-} // namespace _OMP
+} // namespace ompx
 
 /// Interfaces
 ///
@@ -81,9 +79,9 @@ int32_t __kmpc_cancel(IdentTy *, int32_t, int32_t) {
   return 0;
 }
 
-double omp_get_wtick(void) { return _OMP::impl::getWTick(); }
+double omp_get_wtick(void) { return ompx::impl::getWTick(); }
 
-double omp_get_wtime(void) { return _OMP::impl::getWTime(); }
+double omp_get_wtime(void) { return ompx::impl::getWTime(); }
 }
 
 ///}

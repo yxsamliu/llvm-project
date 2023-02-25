@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -15,7 +13,6 @@
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/ADT/AllocatorList.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -261,8 +258,9 @@ public:
   Token getNext();
 
   void printError(SMLoc Loc, SourceMgr::DiagKind Kind, const Twine &Message,
-                  ArrayRef<SMRange> Ranges = None) {
-    SM.PrintMessage(Loc, Kind, Message, Ranges, /* FixIts= */ None, ShowColors);
+                  ArrayRef<SMRange> Ranges = std::nullopt) {
+    SM.PrintMessage(Loc, Kind, Message, Ranges, /* FixIts= */ std::nullopt,
+                    ShowColors);
   }
 
   void setError(const Twine &Message, StringRef::iterator Position) {
@@ -762,7 +760,7 @@ std::string yaml::escape(StringRef Input, bool EscapePrintable) {
   return EscapedInput;
 }
 
-llvm::Optional<bool> yaml::parseBool(StringRef S) {
+std::optional<bool> yaml::parseBool(StringRef S) {
   switch (S.size()) {
 // FIXME: SWDEV-268185.
 //  case 1:
@@ -785,7 +783,7 @@ llvm::Optional<bool> yaml::parseBool(StringRef S) {
     case 'o':
       if (S[1] == 'n') //[Oo]n
         return true;
-      return None;
+      return std::nullopt;
     case 'N':
       if (S[1] == 'O') // NO
         return false;
@@ -793,9 +791,9 @@ llvm::Optional<bool> yaml::parseBool(StringRef S) {
     case 'n':
       if (S[1] == 'o') //[Nn]o
         return false;
-      return None;
+      return std::nullopt;
     default:
-      return None;
+      return std::nullopt;
     }
   case 3:
     switch (S.front()) {
@@ -806,7 +804,7 @@ llvm::Optional<bool> yaml::parseBool(StringRef S) {
     case 'o':
       if (S.drop_front() == "ff") //[Oo]ff
         return false;
-      return None;
+      return std::nullopt;
     case 'Y':
       if (S.drop_front() == "ES") // YES
         return true;
@@ -814,9 +812,9 @@ llvm::Optional<bool> yaml::parseBool(StringRef S) {
     case 'y':
       if (S.drop_front() == "es") //[Yy]es
         return true;
-      return None;
+      return std::nullopt;
     default:
-      return None;
+      return std::nullopt;
     }
   case 4:
     switch (S.front()) {
@@ -827,9 +825,9 @@ llvm::Optional<bool> yaml::parseBool(StringRef S) {
     case 't':
       if (S.drop_front() == "rue") //[Tt]rue
         return true;
-      return None;
+      return std::nullopt;
     default:
-      return None;
+      return std::nullopt;
     }
   case 5:
     switch (S.front()) {
@@ -840,12 +838,12 @@ llvm::Optional<bool> yaml::parseBool(StringRef S) {
     case 'f':
       if (S.drop_front() == "alse") //[Ff]alse
         return false;
-      return None;
+      return std::nullopt;
     default:
-      return None;
+      return std::nullopt;
     }
   default:
-    return None;
+    return std::nullopt;
   }
 }
 

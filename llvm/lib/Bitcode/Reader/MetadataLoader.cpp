@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,8 +14,6 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -57,6 +53,7 @@
 #include <deque>
 #include <iterator>
 #include <limits>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -224,7 +221,7 @@ Metadata *BitcodeReaderMetadataList::getMetadataFwdRef(unsigned Idx) {
 
   // Create and return a placeholder, which will later be RAUW'd.
   ++NumMDNodeTemporary;
-  Metadata *MD = MDNode::getTemporary(Context, None).release();
+  Metadata *MD = MDNode::getTemporary(Context, std::nullopt).release();
   MetadataPtrs[Idx].reset(MD);
   return MD;
 }
@@ -306,7 +303,7 @@ Metadata *BitcodeReaderMetadataList::upgradeTypeRef(Metadata *MaybeUUID) {
 
   auto &Ref = OldTypeRefs.Unknown[UUID];
   if (!Ref)
-    Ref = MDNode::getTemporary(Context, None);
+    Ref = MDNode::getTemporary(Context, std::nullopt);
   return Ref.get();
 }
 
@@ -323,7 +320,7 @@ Metadata *BitcodeReaderMetadataList::upgradeTypeRefArray(Metadata *MaybeTuple) {
   // resolveTypeRefArrays() will be resolve this forward reference.
   OldTypeRefs.Arrays.emplace_back(
       std::piecewise_construct, std::forward_as_tuple(Tuple),
-      std::forward_as_tuple(MDTuple::getTemporary(Context, None)));
+      std::forward_as_tuple(MDTuple::getTemporary(Context, std::nullopt)));
   return OldTypeRefs.Arrays.back().second.get();
 }
 
@@ -350,7 +347,8 @@ class PlaceholderQueue {
 
 public:
   ~PlaceholderQueue() {
-    assert(empty() && "PlaceholderQueue hasn't been flushed before being destroyed");
+    assert(empty() &&
+           "PlaceholderQueue hasn't been flushed before being destroyed");
   }
   bool empty() const { return PHs.empty(); }
   DistinctMDOperandPlaceholder &getPlaceholderOp(unsigned ID);
@@ -408,7 +406,7 @@ class MetadataLoader::MetadataLoaderImpl {
   BitstreamCursor &Stream;
   LLVMContext &Context;
   Module &TheModule;
-  std::function<Type *(unsigned)> getTypeByID;
+  MetadataLoaderCallbacks Callbacks;
 
   /// Cursor associated with the lazy-loading of Metadata. This is the easy way
   /// to keep around the right "context" (Abbrev list) to be able to jump in
@@ -632,14 +630,15 @@ class MetadataLoader::MetadataLoaderImpl {
     upgradeCUVariables();
   }
 
+  void callMDTypeCallback(Metadata **Val, unsigned TypeID);
+
 public:
   MetadataLoaderImpl(BitstreamCursor &Stream, Module &TheModule,
                      BitcodeReaderValueList &ValueList,
-                     std::function<Type *(unsigned)> getTypeByID,
-                     bool IsImporting)
+                     MetadataLoaderCallbacks Callbacks, bool IsImporting)
       : MetadataList(TheModule.getContext(), Stream.SizeInBytes()),
         ValueList(ValueList), Stream(Stream), Context(TheModule.getContext()),
-        TheModule(TheModule), getTypeByID(std::move(getTypeByID)),
+        TheModule(TheModule), Callbacks(std::move(Callbacks)),
         IsImporting(IsImporting) {}
 
   Error parseMetadata(bool ModuleLevel);
@@ -860,6 +859,7 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       case bitc::METADATA_TEMPLATE_VALUE:
       case bitc::METADATA_GLOBAL_VAR:
       case bitc::METADATA_LOCAL_VAR:
+      case bitc::METADATA_ASSIGN_ID:
       case bitc::METADATA_LABEL:
       case bitc::METADATA_EXPRESSION:
       case bitc::METADATA_OBJC_PROPERTY:
@@ -956,6 +956,14 @@ Expected<bool> MetadataLoader::MetadataLoaderImpl::loadGlobalDeclAttachments() {
       if (Error Err = TempCursor.JumpToBit(CurrentPos))
         return std::move(Err);
     }
+  }
+}
+
+void MetadataLoader::MetadataLoaderImpl::callMDTypeCallback(Metadata **Val,
+                                                            unsigned TypeID) {
+  if (Callbacks.MDType) {
+    (*Callbacks.MDType)(Val, TypeID, Callbacks.GetTypeByID,
+                        Callbacks.GetContainedTypeID);
   }
 }
 
@@ -1218,7 +1226,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // If this isn't a LocalAsMetadata record, we're dropping it.  This used
     // to be legal, but there's no upgrade path.
     auto dropRecord = [&] {
-      MetadataList.assignValue(MDNode::get(Context, None), NextMetadataNo);
+      MetadataList.assignValue(MDNode::get(Context, std::nullopt),
+                               NextMetadataNo);
       NextMetadataNo++;
     };
     if (Record.size() != 2) {
@@ -1227,7 +1236,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     }
 
     unsigned TyID = Record[0];
-    Type *Ty = getTypeByID(TyID);
+    Type *Ty = Callbacks.GetTypeByID(TyID);
     if (Ty->isMetadataTy() || Ty->isVoidTy()) {
       dropRecord();
       break;
@@ -1251,7 +1260,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     SmallVector<Metadata *, 8> Elts;
     for (unsigned i = 0; i != Size; i += 2) {
       unsigned TyID = Record[i];
-      Type *Ty = getTypeByID(TyID);
+      Type *Ty = Callbacks.GetTypeByID(TyID);
       if (!Ty)
         return error("Invalid record");
       if (Ty->isMetadataTy())
@@ -1261,9 +1270,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                                             /*ConstExprInsertBB*/ nullptr);
         if (!V)
           return error("Invalid value reference from old metadata");
-        auto *MD = ValueAsMetadata::get(V);
+        Metadata *MD = ValueAsMetadata::get(V);
         assert(isa<ConstantAsMetadata>(MD) &&
                "Expected non-function-local metadata");
+        callMDTypeCallback(&MD, TyID);
         Elts.push_back(MD);
       } else
         Elts.push_back(nullptr);
@@ -1277,7 +1287,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Invalid record");
 
     unsigned TyID = Record[0];
-    Type *Ty = getTypeByID(TyID);
+    Type *Ty = Callbacks.GetTypeByID(TyID);
     if (Ty->isMetadataTy() || Ty->isVoidTy())
       return error("Invalid record");
 
@@ -1286,7 +1296,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (!V)
       return error("Invalid value reference from metadata");
 
-    MetadataList.assignValue(ValueAsMetadata::get(V), NextMetadataNo);
+    Metadata *MD = ValueAsMetadata::get(V);
+    callMDTypeCallback(&MD, TyID);
+    MetadataList.assignValue(MD, NextMetadataNo);
     NextMetadataNo++;
     break;
   }
@@ -1399,7 +1411,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (IsBigInt) {
       const uint64_t BitWidth = Record[1];
       const size_t NumWords = Record.size() - 3;
-      Value = readWideAPInt(makeArrayRef(&Record[3], NumWords), BitWidth);
+      Value = readWideAPInt(ArrayRef(&Record[3], NumWords), BitWidth);
     } else
       Value = APInt(64, unrotateSign(Record[1]), !IsUnsigned);
 
@@ -1452,7 +1464,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
 
     // DWARF address space is encoded as N->getDWARFAddressSpace() + 1. 0 means
     // that there is no DWARF address space associated with DIDerivedType.
-    Optional<unsigned> DWARFAddressSpace;
+    std::optional<unsigned> DWARFAddressSpace;
     if (Record.size() > 12 && Record[12])
       DWARFAddressSpace = Record[12] - 1;
 
@@ -1615,7 +1627,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Invalid record");
 
     IsDistinct = Record[0];
-    Optional<DIFile::ChecksumInfo<MDString *>> Checksum;
+    std::optional<DIFile::ChecksumInfo<MDString *>> Checksum;
     // The BitcodeWriter writes null bytes into Record[3:4] when the Checksum
     // is not present. This matches up with the old internal representation,
     // and the old encoding for CSK_None in the ChecksumKind. The new
@@ -1625,11 +1637,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       Checksum.emplace(static_cast<DIFile::ChecksumKind>(Record[3]),
                        getMDString(Record[4]));
     MetadataList.assignValue(
-        GET_OR_DISTINCT(
-            DIFile,
-            (Context, getMDString(Record[1]), getMDString(Record[2]), Checksum,
-             Record.size() > 5 ? Optional<MDString *>(getMDString(Record[5]))
-                               : None)),
+        GET_OR_DISTINCT(DIFile,
+                        (Context, getMDString(Record[1]),
+                         getMDString(Record[2]), Checksum,
+                         Record.size() > 5 ? getMDString(Record[5]) : nullptr)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1971,6 +1982,18 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
 
     break;
   }
+  case bitc::METADATA_ASSIGN_ID: {
+    if (Record.size() != 1)
+      return error("Invalid DIAssignID record.");
+
+    IsDistinct = Record[0] & 1;
+    if (!IsDistinct)
+      return error("Invalid DIAssignID record. Must be distinct");
+
+    MetadataList.assignValue(DIAssignID::getDistinct(Context), NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
   case bitc::METADATA_LOCAL_VAR: {
     // 10th field is for the obseleted 'inlinedAt:' field.
     if (Record.size() < 8 || Record.size() > 10)
@@ -2060,7 +2083,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       case DIOp::Referrer::getBitcodeID(): {
         if (Elems.size() < 1)
           return error("Invalid record");
-        Type *Ty = getTypeByID(Elems[0]);
+        Type *Ty = Callbacks.GetTypeByID(Elems[0]);
         if (!Ty || !Ty->isFirstClassType())
           return error("Invalid record");
         Builder.append<DIOp::Referrer>(Ty);
@@ -2070,7 +2093,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       case DIOp::Arg::getBitcodeID(): {
         if (Elems.size() < 2)
           return error("Invalid record");
-        Type *Ty = getTypeByID(Elems[0]);
+        Type *Ty = Callbacks.GetTypeByID(Elems[0]);
         if (!Ty || !Ty->isFirstClassType())
           return error("Invalid record");
         Builder.append<DIOp::Arg>(Elems[1], Ty);
@@ -2080,7 +2103,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       case DIOp::TypeObject::getBitcodeID(): {
         if (Elems.size() < 1)
           return error("Invalid record");
-        Type *Ty = getTypeByID(Elems[0]);
+        Type *Ty = Callbacks.GetTypeByID(Elems[0]);
         if (!Ty || !Ty->isFirstClassType())
           return error("Invalid record");
         Builder.append<DIOp::TypeObject>(Ty);
@@ -2090,7 +2113,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       case DIOp::Constant::getBitcodeID(): {
         if (Elems.size() < 2)
           return error("Invalid record");
-        Type *Ty = getTypeByID(Elems[0]);
+        Type *Ty = Callbacks.GetTypeByID(Elems[0]);
         if (!Ty || !Ty->isFirstClassType())
           return error("Invalid record");
         Value *V = ValueList[Elems[1]];
@@ -2105,7 +2128,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       case DIOp::Convert::getBitcodeID(): {
         if (Elems.size() < 1)
           return error("Invalid record");
-        Type *Ty = getTypeByID(Elems[0]);
+        Type *Ty = Callbacks.GetTypeByID(Elems[0]);
         if (!Ty || !Ty->isFirstClassType())
           return error("Invalid record");
         Builder.append<DIOp::Convert>(Ty);
@@ -2115,7 +2138,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       case DIOp::Reinterpret::getBitcodeID(): {
         if (Elems.size() < 1)
           return error("Invalid record");
-        Type *Ty = getTypeByID(Elems[0]);
+        Type *Ty = Callbacks.GetTypeByID(Elems[0]);
         if (!Ty || !Ty->isFirstClassType())
           return error("Invalid record");
         Builder.append<DIOp::Reinterpret>(Ty);
@@ -2125,7 +2148,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       case DIOp::BitOffset::getBitcodeID(): {
         if (Elems.size() < 1)
           return error("Invalid record");
-        Type *Ty = getTypeByID(Elems[0]);
+        Type *Ty = Callbacks.GetTypeByID(Elems[0]);
         if (!Ty || !Ty->isFirstClassType())
           return error("Invalid record");
         Builder.append<DIOp::BitOffset>(Ty);
@@ -2135,7 +2158,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       case DIOp::ByteOffset::getBitcodeID(): {
         if (Elems.size() < 1)
           return error("Invalid record");
-        Type *Ty = getTypeByID(Elems[0]);
+        Type *Ty = Callbacks.GetTypeByID(Elems[0]);
         if (!Ty || !Ty->isFirstClassType())
           return error("Invalid record");
         Builder.append<DIOp::ByteOffset>(Ty);
@@ -2145,7 +2168,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       case DIOp::Composite::getBitcodeID(): {
         if (Elems.size() < 2)
           return error("Invalid record");
-        Type *Ty = getTypeByID(Elems[0]);
+        Type *Ty = Callbacks.GetTypeByID(Elems[0]);
         if (!Ty || !Ty->isFirstClassType())
           return error("Invalid record");
         Builder.append<DIOp::Composite>(Elems[1], Ty);
@@ -2169,7 +2192,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       case DIOp::Deref::getBitcodeID(): {
         if (Elems.size() < 1)
           return error("Invalid record");
-        Type *Ty = getTypeByID(Elems[0]);
+        Type *Ty = Callbacks.GetTypeByID(Elems[0]);
         if (!Ty || !Ty->isFirstClassType())
           return error("Invalid record");
         Builder.append<DIOp::Deref>(Ty);
@@ -2179,7 +2202,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       case DIOp::PushLane::getBitcodeID(): {
         if (Elems.size() < 1)
           return error("Invalid record");
-        Type *Ty = getTypeByID(Elems[0]);
+        Type *Ty = Callbacks.GetTypeByID(Elems[0]);
         if (!Ty || !Ty->isFirstClassType())
           return error("Invalid record");
         Builder.append<DIOp::PushLane>(Ty);
@@ -2535,9 +2558,9 @@ MetadataLoader::~MetadataLoader() = default;
 MetadataLoader::MetadataLoader(BitstreamCursor &Stream, Module &TheModule,
                                BitcodeReaderValueList &ValueList,
                                bool IsImporting,
-                               std::function<Type *(unsigned)> getTypeByID)
+                               MetadataLoaderCallbacks Callbacks)
     : Pimpl(std::make_unique<MetadataLoaderImpl>(
-          Stream, TheModule, ValueList, std::move(getTypeByID), IsImporting)) {}
+          Stream, TheModule, ValueList, std::move(Callbacks), IsImporting)) {}
 
 Error MetadataLoader::parseMetadata(bool ModuleLevel) {
   return Pimpl->parseMetadata(ModuleLevel);

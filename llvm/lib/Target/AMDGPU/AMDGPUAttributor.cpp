@@ -13,6 +13,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
@@ -20,6 +21,10 @@
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #define DEBUG_TYPE "amdgpu-attributor"
+
+namespace llvm {
+void initializeCycleInfoWrapperPassPass(PassRegistry &);
+}
 
 using namespace llvm;
 
@@ -209,9 +214,10 @@ private:
   DenseMap<const Constant *, uint8_t> ConstantStatus;
 };
 
-struct AAAMDAttributes : public StateWrapper<
-  BitIntegerState<uint16_t, ALL_ARGUMENT_MASK, 0>, AbstractAttribute> {
-  using Base = StateWrapper<BitIntegerState<uint16_t, ALL_ARGUMENT_MASK, 0>,
+struct AAAMDAttributes
+    : public StateWrapper<BitIntegerState<uint32_t, ALL_ARGUMENT_MASK, 0>,
+                          AbstractAttribute> {
+  using Base = StateWrapper<BitIntegerState<uint32_t, ALL_ARGUMENT_MASK, 0>,
                             AbstractAttribute>;
 
   AAAMDAttributes(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
@@ -454,6 +460,12 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       removeAssumedBits(LDS_KERNEL_ID);
     }
 
+    if (isAssumed(DEFAULT_QUEUE) && funcRetrievesDefaultQueue(A))
+      removeAssumedBits(DEFAULT_QUEUE);
+
+    if (isAssumed(COMPLETION_ACTION) && funcRetrievesCompletionAction(A))
+      removeAssumedBits(COMPLETION_ACTION);
+
     return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED
                                        : ChangeStatus::UNCHANGED;
   }
@@ -538,32 +550,43 @@ private:
 
   bool funcRetrievesMultigridSyncArg(Attributor &A) {
     auto Pos = llvm::AMDGPU::getMultigridSyncArgImplicitArgPosition();
-    AA::OffsetAndSize OAS(Pos, 8);
-    return funcRetrievesImplicitKernelArg(A, OAS);
+    AA::RangeTy Range(Pos, 8);
+    return funcRetrievesImplicitKernelArg(A, Range);
   }
 
   bool funcRetrievesHostcallPtr(Attributor &A) {
     auto Pos = llvm::AMDGPU::getHostcallImplicitArgPosition();
-    AA::OffsetAndSize OAS(Pos, 8);
-    return funcRetrievesImplicitKernelArg(A, OAS);
+    AA::RangeTy Range(Pos, 8);
+    return funcRetrievesImplicitKernelArg(A, Range);
+  }
+
+  bool funcRetrievesDefaultQueue(Attributor &A) {
+    auto Pos = llvm::AMDGPU::getDefaultQueueImplicitArgPosition();
+    AA::RangeTy Range(Pos, 8);
+    return funcRetrievesImplicitKernelArg(A, Range);
+  }
+
+  bool funcRetrievesCompletionAction(Attributor &A) {
+    auto Pos = llvm::AMDGPU::getCompletionActionImplicitArgPosition();
+    AA::RangeTy Range(Pos, 8);
+    return funcRetrievesImplicitKernelArg(A, Range);
   }
 
   bool funcRetrievesHeapPtr(Attributor &A) {
     if (AMDGPU::getAmdhsaCodeObjectVersion() != 5)
       return false;
-    AA::OffsetAndSize OAS(AMDGPU::ImplicitArg::HEAP_PTR_OFFSET, 8);
-    return funcRetrievesImplicitKernelArg(A, OAS);
+    AA::RangeTy Range(AMDGPU::ImplicitArg::HEAP_PTR_OFFSET, 8);
+    return funcRetrievesImplicitKernelArg(A, Range);
   }
 
   bool funcRetrievesQueuePtr(Attributor &A) {
     if (AMDGPU::getAmdhsaCodeObjectVersion() != 5)
       return false;
-    AA::OffsetAndSize OAS(AMDGPU::ImplicitArg::QUEUE_PTR_OFFSET, 8);
-    return funcRetrievesImplicitKernelArg(A, OAS);
+    AA::RangeTy Range(AMDGPU::ImplicitArg::QUEUE_PTR_OFFSET, 8);
+    return funcRetrievesImplicitKernelArg(A, Range);
   }
 
-  bool funcRetrievesImplicitKernelArg(Attributor &A,
-                                      AA::OffsetAndSize OAS) {
+  bool funcRetrievesImplicitKernelArg(Attributor &A, AA::RangeTy Range) {
     // Check if this is a call to the implicitarg_ptr builtin and it
     // is used to retrieve the hostcall pointer. The implicit arg for
     // hostcall is not used only if every use of the implicitarg_ptr
@@ -579,7 +602,7 @@ private:
           *this, IRPosition::callsite_returned(Call), DepClassTy::REQUIRED);
 
       return PointerInfoAA.forallInterferingAccesses(
-          OAS, [](const AAPointerInfo::Access &Acc, bool IsExact) {
+          Range, [](const AAPointerInfo::Access &Acc, bool IsExact) {
             return Acc.getRemoteInst()->isDroppable();
           });
     };
@@ -624,7 +647,7 @@ public:
 
   bool runOnModule(Module &M) override {
     SetVector<Function *> Functions;
-    AnalysisGetter AG;
+    AnalysisGetter AG(this);
     for (Function &F : M) {
       if (!F.isIntrinsic())
         Functions.insert(&F);
@@ -655,6 +678,10 @@ public:
     return Change == ChangeStatus::CHANGED;
   }
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<CycleInfoWrapperPass>();
+  }
+
   StringRef getPassName() const override { return "AMDGPU Attributor"; }
   TargetMachine *TM;
   static char ID;
@@ -664,4 +691,8 @@ public:
 char AMDGPUAttributor::ID = 0;
 
 Pass *llvm::createAMDGPUAttributorPass() { return new AMDGPUAttributor(); }
-INITIALIZE_PASS(AMDGPUAttributor, DEBUG_TYPE, "AMDGPU Attributor", false, false)
+INITIALIZE_PASS_BEGIN(AMDGPUAttributor, DEBUG_TYPE, "AMDGPU Attributor", false,
+                      false)
+INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass);
+INITIALIZE_PASS_END(AMDGPUAttributor, DEBUG_TYPE, "AMDGPU Attributor", false,
+                    false)

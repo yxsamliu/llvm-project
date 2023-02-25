@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -19,7 +17,9 @@
 #include "Synchronization.h"
 #include "Types.h"
 
-using namespace _OMP;
+#include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
+
+using namespace ompx;
 
 #pragma omp begin declare target device_type(nohost)
 
@@ -70,10 +70,8 @@ extern "C" {
 /// \param Ident               Source location identification, can be NULL.
 ///
 int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
-                           bool UseGenericStateMachine, bool) {
+                           bool UseGenericStateMachine) {
   FunctionTracingRAII();
-
-  const bool IsSPMD = Mode & OMP_TGT_EXEC_MODE_SPMD;
 #ifdef __AMDGCN__
   if (__kmpc_get_hardware_thread_id_in_block() == 0) {
     synchronize::omptarget_workers_done = false;
@@ -81,6 +79,8 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
   }
   synchronize::threadsAligned();
 #endif
+  const bool IsSPMD =
+      Mode & llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
   if (IsSPMD) {
     inititializeRuntime(/* IsSPMD */ true);
     synchronize::threadsAligned();
@@ -137,9 +137,10 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
 ///
 /// \param Ident Source location identification, can be NULL.
 ///
-void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode, bool) {
+void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode) {
   FunctionTracingRAII();
-  const bool IsSPMD = Mode & OMP_TGT_EXEC_MODE_SPMD;
+  const bool IsSPMD =
+      Mode & llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
   state::assumeInitialState(IsSPMD);
   if (IsSPMD)
     return;
@@ -159,8 +160,7 @@ int32_t __kmpc_target_init_v1(int64_t *, int8_t Mode,
                               int8_t UseGenericStateMachine,
                               int8_t RequiresFullRuntime) {
   FunctionTracingRAII();
-  int32_t res = __kmpc_target_init(nullptr, Mode, UseGenericStateMachine,
-                                   RequiresFullRuntime);
+  int32_t res = __kmpc_target_init(nullptr, Mode, UseGenericStateMachine);
   if (Mode & OMP_TGT_EXEC_MODE_SPMD) {
 
     uint32_t TId = mapping::getThreadIdInBlock();
@@ -201,7 +201,7 @@ void __kmpc_target_deinit_v1(int64_t *, int8_t Mode,
   // otherwise the following assertions and the assumption in
   // __kmpc_target_deinit may not hold.
   synchronize::threadsAligned();
-  __kmpc_target_deinit(nullptr, Mode, RequiresFullRuntime);
+  __kmpc_target_deinit(nullptr, Mode);
 }
 
 #endif

@@ -1,5 +1,3 @@
-# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-# Notified per clause 4(b) of the license.
 add_custom_target(UnitTests)
 set_target_properties(UnitTests PROPERTIES FOLDER "Tests/UnitTests")
 
@@ -26,6 +24,7 @@ add_subdirectory(CodeGen)
 add_subdirectory(DebugInfo)
 add_subdirectory(Debuginfod)
 add_subdirectory(Demangle)
+add_subdirectory(DWARFLinkerParallel)
 add_subdirectory(ExecutionEngine)
 add_subdirectory(FileCheck)
 add_subdirectory(Frontend)
@@ -47,6 +46,7 @@ add_subdirectory(ProfileData)
 add_subdirectory(Support)
 add_subdirectory(TableGen)
 add_subdirectory(Target)
+add_subdirectory(TargetParser)
 add_subdirectory(Testing)
 add_subdirectory(TextAPI)
 add_subdirectory(Transforms)

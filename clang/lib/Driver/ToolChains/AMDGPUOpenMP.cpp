@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -107,13 +105,24 @@ static void addLLCOptArg(const llvm::opt::ArgList &Args,
 
 static bool checkSystemForAMDGPU(const ArgList &Args, const AMDGPUToolChain &TC,
                                  std::string &GPUArch) {
-  if (auto Err = TC.getSystemGPUArch(Args, GPUArch)) {
+  auto CheckError = [&](llvm::Error Err) -> bool {
     std::string ErrMsg =
         llvm::formatv("{0}", llvm::fmt_consume(std::move(Err)));
-    TC.getDriver().Diag(diag::err_drv_undetermined_amdgpu_arch) << ErrMsg;
+    TC.getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
+        << llvm::Triple::getArchTypeName(TC.getArch()) << ErrMsg << "-march";
     return false;
-  }
+  };
 
+  auto ArchsOrErr = TC.getSystemGPUArchs(Args);
+  if (!ArchsOrErr)
+    return CheckError(ArchsOrErr.takeError());
+
+  if (ArchsOrErr->size() > 1)
+    if (!llvm::all_equal(*ArchsOrErr))
+      return CheckError(llvm::createStringError(
+          std::error_code(), "Multiple AMD GPUs found with different archs"));
+
+  GPUArch = ArchsOrErr->front();
   return true;
 }
 } // namespace
@@ -180,10 +189,10 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
   // --internalize ignores the first bc file which came from previous link.
 
   // Get the environment variable ROCM_LINK_ARGS and add to llvm-link.
-  Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LINK_ARGS");
-  if (OptEnv.hasValue()) {
+  std::optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LINK_ARGS");
+  if (OptEnv.has_value()) {
     SmallVector<StringRef, 8> Envs;
-    SplitString(OptEnv.getValue(), Envs);
+    SplitString(OptEnv.value(), Envs);
     for (StringRef Env : Envs)
       LastLinkArgs.push_back(Args.MakeArgString(Env.trim()));
   }
@@ -214,7 +223,7 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
     }
   }
 
-  BCLibs.push_back(Args.MakeArgString(libpath + "/libomptarget-new-amdgpu-" +
+  BCLibs.push_back(Args.MakeArgString(libpath + "/libomptarget-old-amdgpu-" +
                                       GPUArch + ".bc"));
 
   // Add the generic set of libraries, OpenMP subset only
@@ -259,10 +268,10 @@ const char *AMDGCN::OpenMPLinker::constructOptCommand(
   // OptArgs.push_back(Args.MakeArgString("-openmp-opt-disable=1"));
 
   // Get the environment variable ROCM_OPT_ARGS and add to opt.
-  Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_OPT_ARGS");
-  if (OptEnv.hasValue()) {
+  std::optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_OPT_ARGS");
+  if (OptEnv.has_value()) {
     SmallVector<StringRef, 8> Envs;
-    SplitString(OptEnv.getValue(), Envs);
+    SplitString(OptEnv.value(), Envs);
     for (StringRef Env : Envs)
       OptArgs.push_back(Args.MakeArgString(Env.trim()));
   }
@@ -327,10 +336,10 @@ const char *AMDGCN::OpenMPLinker::constructLlcCommand(
       Args.MakeArgString(Twine("-filetype=") + (OutputIsAsm ? "asm" : "obj")));
 
   // Get the environment variable ROCM_LLC_ARGS and add to llc.
-  Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LLC_ARGS");
-  if (OptEnv.hasValue()) {
+  std::optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LLC_ARGS");
+  if (OptEnv.has_value()) {
     SmallVector<StringRef, 8> Envs;
-    SplitString(OptEnv.getValue(), Envs);
+    SplitString(OptEnv.value(), Envs);
     for (StringRef Env : Envs)
       LlcArgs.push_back(Args.MakeArgString(Env.trim()));
   }
@@ -388,10 +397,10 @@ void AMDGCN::OpenMPLinker::constructLldCommand(
 
   LldArgs.push_back(Args.MakeArgString(InputFileName));
   // Get the environment variable ROCM_LLD_ARGS and add to lld.
-  Optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LLD_ARGS");
-  if (OptEnv.hasValue()) {
+  std::optional<std::string> OptEnv = llvm::sys::Process::GetEnv("ROCM_LLD_ARGS");
+  if (OptEnv.has_value()) {
     SmallVector<StringRef, 8> Envs;
-    SplitString(OptEnv.getValue(), Envs);
+    SplitString(OptEnv.value(), Envs);
     for (StringRef Env : Envs)
       LldArgs.push_back(Args.MakeArgString(Env.trim()));
   }
@@ -564,7 +573,7 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
     return;
 
   std::string BitcodeSuffix;
-  BitcodeSuffix = llvm::Twine("new-amdgpu-" + GPUArch).str();
+  BitcodeSuffix = llvm::Twine("old-amdgpu-" + GPUArch).str();
 
   addDirectoryList(DriverArgs, LibraryPaths, "", "HIP_DEVICE_LIB_PATH");
 

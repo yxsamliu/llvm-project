@@ -50,6 +50,7 @@ llvm_canonicalize_cmake_booleans(
   MLIR_RUN_AMX_TESTS
   MLIR_RUN_CUDA_TENSOR_CORE_TESTS
   MLIR_RUN_X86VECTOR_TESTS
+  MLIR_RUN_ARM_SVE_TESTS
   )
 
 configure_lit_site_cfg(
@@ -120,9 +121,13 @@ if(LLVM_BUILD_EXAMPLES)
     toyc-ch3
     toyc-ch4
     toyc-ch5
-    toyc-ch6
-    toyc-ch7
     )
+  if(MLIR_ENABLE_EXECUTION_ENGINE)
+    list(APPEND MLIR_TEST_DEPENDS
+      toyc-ch6
+      toyc-ch7
+    )
+  endif()
 endif()
 
 if(MLIR_ENABLE_SPIRV_CPU_RUNNER)

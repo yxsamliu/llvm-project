@@ -8,8 +8,6 @@
 //
 // See tools/archer/LICENSE.txt for details.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -36,4 +34,4 @@ int main(int argc, char *argv[]) {
 // CHECK:   Previous write of size 4
 // CHECK-NEXT: #0 {{.*}}parallel-simple.c:23
 // CHECK: DONE
-// CHECK: ThreadSanitizer: reported 1 warnings
+// CHECK: ThreadSanitizer: reported {{[1-3]}} warnings

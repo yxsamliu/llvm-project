@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -147,7 +145,7 @@ public:
     static const unsigned Scopes[] = {
         static_cast<unsigned>(WorkGroup), static_cast<unsigned>(Device),
         static_cast<unsigned>(AllSVMDevices), static_cast<unsigned>(SubGroup)};
-    return llvm::makeArrayRef(Scopes);
+    return llvm::ArrayRef(Scopes);
   }
 
   unsigned getFallBackValue() const override {
@@ -199,7 +197,7 @@ public:
         static_cast<unsigned>(SingleThread), static_cast<unsigned>(Wavefront),
         static_cast<unsigned>(Workgroup), static_cast<unsigned>(Agent),
         static_cast<unsigned>(System)};
-    return llvm::makeArrayRef(Scopes);
+    return llvm::ArrayRef(Scopes);
   }
 
   unsigned getFallBackValue() const override {

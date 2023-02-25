@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -102,7 +100,7 @@ void DwarfExpression::addAnd(unsigned Mask) {
 bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
                                     llvm::Register MachineReg,
                                     unsigned MaxSize) {
-  if (!llvm::Register::isPhysicalRegister(MachineReg)) {
+  if (!MachineReg.isPhysical()) {
     if (isFrameRegister(TRI, MachineReg)) {
       DwarfRegs.push_back(Register::createRegister(-1, nullptr));
       return true;
@@ -508,7 +506,7 @@ bool DwarfExpression::addExpression(
   // and not any other parts of the following DWARF expression.
   assert(!IsEmittingEntryValue && "Can't emit entry value around expression");
 
-  Optional<DIExpression::ExprOperand> PrevConvertOp;
+  std::optional<DIExpression::ExprOperand> PrevConvertOp;
 
   while (ExprCursor) {
     auto Op = ExprCursor.take();
@@ -618,7 +616,7 @@ bool DwarfExpression::addExpression(
             emitLegacySExt(PrevConvertOp->getArg(0));
           else if (Encoding == dwarf::DW_ATE_unsigned)
             emitLegacyZExt(PrevConvertOp->getArg(0));
-          PrevConvertOp = None;
+          PrevConvertOp = std::nullopt;
         } else {
           PrevConvertOp = Op;
         }
@@ -775,14 +773,14 @@ size_t DwarfExprAST::Node::getChildrenCount() const {
 Optional<uint8_t> DwarfExprAST::Node::getEquivalentDwarfOp() const {
   return visit<Optional<uint8_t>>(
       makeVisitor(
-          [](DIOp::Arg) { return None; }, [](DIOp::Constant) { return None; },
-          [](DIOp::PushLane) { return None; },
-          [](DIOp::Referrer) { return None; },
-          [](DIOp::TypeObject) { return None; },
-          [](DIOp::AddrOf) { return None; }, [](DIOp::Convert) { return None; },
-          [](DIOp::Deref) { return None; }, [](DIOp::Extend) { return None; },
-          [](DIOp::Read) { return None; },
-          [](DIOp::Reinterpret) { return None; },
+          [](DIOp::Arg) { return std::nullopt; }, [](DIOp::Constant) { return std::nullopt; },
+          [](DIOp::PushLane) { return std::nullopt; },
+          [](DIOp::Referrer) { return std::nullopt; },
+          [](DIOp::TypeObject) { return std::nullopt; },
+          [](DIOp::AddrOf) { return std::nullopt; }, [](DIOp::Convert) { return std::nullopt; },
+          [](DIOp::Deref) { return std::nullopt; }, [](DIOp::Extend) { return std::nullopt; },
+          [](DIOp::Read) { return std::nullopt; },
+          [](DIOp::Reinterpret) { return std::nullopt; },
           [](DIOp::Add) { return dwarf::DW_OP_plus; },
           [](DIOp::BitOffset) { return dwarf::DW_OP_LLVM_bit_offset; },
           [](DIOp::ByteOffset) { return dwarf::DW_OP_LLVM_offset; },
@@ -791,8 +789,8 @@ Optional<uint8_t> DwarfExprAST::Node::getEquivalentDwarfOp() const {
           [](DIOp::Shl) { return dwarf::DW_OP_shl; },
           [](DIOp::Shr) { return dwarf::DW_OP_shr; },
           [](DIOp::Sub) { return dwarf::DW_OP_minus; },
-          [](DIOp::Select) { return None; },
-          [](DIOp::Composite) { return None; }),
+          [](DIOp::Select) { return std::nullopt; },
+          [](DIOp::Composite) { return std::nullopt; }),
       Element);
 }
 
@@ -1100,9 +1098,9 @@ void DwarfExprAST::lowerBitOrByteOffset(DwarfExprAST::Node *OpNode) {
   readToValue(OpNode->getChildren()[1].get(), /*NeedsSwap=*/false);
 
   Optional<uint8_t> DwarfOp = OpNode->getEquivalentDwarfOp();
-  assert(DwarfOp.hasValue() && "Expected equivalent dwarf operation");
+  assert(DwarfOp.has_value() && "Expected equivalent dwarf operation");
 
-  emitDwarfOp(DwarfOp.getValue());
+  emitDwarfOp(DwarfOp.value());
 
   OpNode->setIsLowered();
   // FIXME(KZHURAVL): Is the following result type correct?
@@ -1133,9 +1131,9 @@ void DwarfExprAST::lowerMathOp(DwarfExprAST::Node *OpNode) {
   }
 
   Optional<uint8_t> DwarfOp = OpNode->getEquivalentDwarfOp();
-  assert(DwarfOp.hasValue() && "Expected equivalent dwarf operation");
+  assert(DwarfOp.has_value() && "Expected equivalent dwarf operation");
 
-  emitDwarfOp(DwarfOp.getValue());
+  emitDwarfOp(DwarfOp.value());
   emitDwarfOp(dwarf::DW_OP_stack_value);
 
   OpNode->setIsLowered();

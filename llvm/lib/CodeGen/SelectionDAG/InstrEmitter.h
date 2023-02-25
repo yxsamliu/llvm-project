@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -47,10 +45,8 @@ class LLVM_LIBRARY_VISIBILITY InstrEmitter {
 
   /// EmitCopyFromReg - Generate machine code for an CopyFromReg node or an
   /// implicit physical register output.
-  void EmitCopyFromReg(SDNode *Node, unsigned ResNo,
-                       bool IsClone, bool IsCloned,
-                       Register SrcReg,
-                       DenseMap<SDValue, Register> &VRBaseMap);
+  void EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone,
+                       Register SrcReg, DenseMap<SDValue, Register> &VRBaseMap);
 
   void CreateVirtualRegisters(SDNode *Node,
                               MachineInstrBuilder &MIB,
@@ -131,6 +127,10 @@ public:
   /// Emit a DBG_VALUE $noreg, indicating a variable has no location.
   MachineInstr *EmitDbgNoLocation(SDDbgValue *SD);
 
+  /// Emit a DBG_VALUE_LIST from the operands to SDDbgValue.
+  MachineInstr *EmitDbgValueList(SDDbgValue *SD,
+                                 DenseMap<SDValue, Register> &VRBaseMap);
+
   /// Emit a DBG_VALUE from the operands to SDDbgValue.
   MachineInstr *EmitDbgValueFromSingleOp(SDDbgValue *SD,
                                     DenseMap<SDValue, Register> &VRBaseMap);
@@ -161,8 +161,7 @@ public:
   /// InstrEmitter - Construct an InstrEmitter and set it to start inserting
   /// at the given position in the given block.
   InstrEmitter(const TargetMachine &TM, MachineBasicBlock *mbb,
-               MachineBasicBlock::iterator insertpos,
-               bool UseInstrRefDebugInfo);
+               MachineBasicBlock::iterator insertpos);
 
 private:
   void EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,

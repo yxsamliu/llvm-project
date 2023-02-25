@@ -130,9 +130,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   if (Depth == MaxAnalysisRecursionDepth)
     return nullptr;
 
-  if (isa<ScalableVectorType>(VTy))
-    return nullptr;
-
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I) {
     computeKnownBits(V, Known, Depth, CxtI);
@@ -424,7 +421,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
     if (auto *DstVTy = dyn_cast<VectorType>(VTy)) {
       if (auto *SrcVTy = dyn_cast<VectorType>(I->getOperand(0)->getType())) {
-        if (cast<FixedVectorType>(DstVTy)->getNumElements() !=
+        if (isa<ScalableVectorType>(DstVTy) ||
+            isa<ScalableVectorType>(SrcVTy) ||
+            cast<FixedVectorType>(DstVTy)->getNumElements() !=
             cast<FixedVectorType>(SrcVTy)->getNumElements())
           // Don't touch a bitcast between vectors of different element counts.
           return nullptr;
@@ -797,18 +796,18 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     // UDiv doesn't demand low bits that are zero in the divisor.
     const APInt *SA;
     if (match(I->getOperand(1), m_APInt(SA))) {
-      // If the shift is exact, then it does demand the low bits.
-      if (cast<UDivOperator>(I)->isExact())
-        break;
-
-      // FIXME: Take the demanded mask of the result into account.
+      // TODO: Take the demanded mask of the result into account.
       unsigned RHSTrailingZeros = SA->countTrailingZeros();
       APInt DemandedMaskIn =
           APInt::getHighBitsSet(BitWidth, BitWidth - RHSTrailingZeros);
-      if (SimplifyDemandedBits(I, 0, DemandedMaskIn, LHSKnown, Depth + 1))
+      if (SimplifyDemandedBits(I, 0, DemandedMaskIn, LHSKnown, Depth + 1)) {
+        // We can't guarantee that "exact" is still true after changing the
+        // the dividend.
+        I->dropPoisonGeneratingFlags();
         return I;
+      }
 
-      // Propagate zero bits from the input.
+      // Increase high zero bits from the input.
       Known.Zero.setHighBits(std::min(
           BitWidth, LHSKnown.Zero.countLeadingOnes() + RHSTrailingZeros));
     } else {
@@ -972,10 +971,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       }
       default: {
         // Handle target specific intrinsics
-        Optional<Value *> V = targetSimplifyDemandedUseBitsIntrinsic(
+        std::optional<Value *> V = targetSimplifyDemandedUseBitsIntrinsic(
             *II, DemandedMask, Known, KnownBitsComputed);
         if (V)
-          return V.value();
+          return *V;
         break;
       }
       }
@@ -1697,11 +1696,11 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     }
     default: {
       // Handle target specific intrinsics
-      Optional<Value *> V = targetSimplifyDemandedVectorEltsIntrinsic(
+      std::optional<Value *> V = targetSimplifyDemandedVectorEltsIntrinsic(
           *II, DemandedElts, UndefElts, UndefElts2, UndefElts3,
           simplifyAndSetOp);
       if (V)
-        return V.value();
+        return *V;
       break;
     }
     } // switch on IntrinsicID

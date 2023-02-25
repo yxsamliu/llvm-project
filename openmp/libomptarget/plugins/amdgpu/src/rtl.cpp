@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -12,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
@@ -36,6 +33,7 @@
 #include "impl_runtime.h"
 #include "interop_hsa.h"
 
+#include "UtilitiesRTL.h"
 #include "internal.h"
 #include "rt.h"
 #include "small_pool.h"
@@ -54,6 +52,7 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::ELF;
+using namespace llvm::omp::target::plugin::utils;
 
 #ifdef OMPT_SUPPORT
 #include <ompt_device_callbacks.h>
@@ -1061,9 +1060,10 @@ public:
         if (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) {
           KernArgPool = MemoryPool;
           KernArgPoolSet = true;
+        } else {
+          HostFineGrainedMemoryPool = MemoryPool;
+          FineGrainedMemoryPoolSet = true;
         }
-        HostFineGrainedMemoryPool = MemoryPool;
-        FineGrainedMemoryPoolSet = true;
       }
     }
 
@@ -1136,16 +1136,10 @@ public:
       return ptr;
     }
 
-    int dev_free(void *ptr) override {
+    int free(void *ptr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) override {
       TargetAllocTy kind = (HostAllocations.find(ptr) == HostAllocations.end())
                                ? TARGET_ALLOC_DEFAULT
                                : TARGET_ALLOC_HOST;
-      hsa_status_t err = HSA_STATUS_SUCCESS;
-
-      err = unlock_memory(ptr);
-      if (err != HSA_STATUS_SUCCESS)
-        DP("Error when unlocking memory\n");
-
       switch (kind) {
       case TARGET_ALLOC_DEFAULT:
       case TARGET_ALLOC_DEVICE: {
@@ -1329,8 +1323,11 @@ public:
     // Cleanup by unlocking all the locked pointers from the small pools
     SmallPoolTy::PtrVecTy AllPtrs = SmallPoolMgr.getAllPoolPtrs();
     for (const auto &e : AllPtrs) {
-      hsa_status_t err = HSA_STATUS_SUCCESS;
-      assert(is_locked(e, &err, nullptr));
+      void *agentBasedAddress = nullptr;
+      hsa_status_t err = is_locked(e, &agentBasedAddress);
+      if(err != HSA_STATUS_SUCCESS)
+        continue;
+      assert(agentBasedAddress);
 
       DP("Calling hsa_amd_memory_unlock in RTLDeviceInfoTy dtor for PoolPtr "
          "%p\n",
@@ -1821,8 +1818,13 @@ hsa_status_t AMDGPUAsyncInfoQueueTy::synchronize() {
 
 /// Get a pointer from a small pool, given a host pointer
 void *prepareHstPtrForDataRetrieve(size_t Size, void *HstPtr) {
+  void *agentBasedAddress = nullptr;
+  hsa_status_t err = is_locked(HstPtr, &agentBasedAddress);
   // user-locked data does not need the pool
-  if (is_locked(HstPtr, /*err_p=*/nullptr, /*agentBaseAddress=*/nullptr))
+  if (err != HSA_STATUS_SUCCESS)
+    return nullptr;
+
+  if(agentBasedAddress)
     return HstPtr;
 
   void *PoolPtr = DeviceInfo().getSmallPoolMgr().allocateFromPool(Size, HstPtr);
@@ -1874,8 +1876,13 @@ int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
 /// Get a pointer from a small pool, given a HstPtr. Perform copy-in to the pool
 /// pointer since data transfer will use the pool pointer
 void *prepareHstPtrForDataSubmit(size_t Size, void *HstPtr) {
+  void *agentBasedAddress = nullptr;
+  hsa_status_t err = is_locked(HstPtr, &agentBasedAddress);
   // user-locked data does not need the pool
-  if (is_locked(HstPtr, /*err_p=*/nullptr, /*agentBaseAddress=*/nullptr))
+  if (err != HSA_STATUS_SUCCESS)
+    return nullptr;
+
+  if (agentBasedAddress)
     return HstPtr;
 
   void *PoolPtr = DeviceInfo().getSmallPoolMgr().allocateFromPool(Size, HstPtr);
@@ -1903,9 +1910,10 @@ int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
   assert(HstOrPoolPtr && "HstOrPoolPtr cannot be null");
 
   hsa_signal_t Signal;
-  bool UserLocked;
+  bool UserLocked{false};
   Err = DeviceInfo().freesignalpoolMemcpyH2D(TgtPtr, HstOrPoolPtr, (size_t)Size,
                                            DeviceId, Signal, UserLocked);
+
   if (Err != HSA_STATUS_SUCCESS) {
     DP("Error when copying data from host to device. Pointers: "
        "host = 0x%016lx, device = 0x%016lx, size = %lld\n",
@@ -2591,7 +2599,7 @@ struct DeviceEnvironment {
   // If the symbol is in .data (aomp, rocm) it can be written directly.
   // If it is in .bss, we must wait for it to be allocated space on the
   // gpu (trunk) and initialize after loading.
-  const char *sym() { return "omptarget_device_environment"; }
+  const char *sym() { return "__omp_rtl_device_environment"; }
 
   DeviceEnvironmentTy HostDeviceEnv;
   SymbolInfo SI;
@@ -2634,8 +2642,9 @@ struct DeviceEnvironment {
       if (inImage()) {
         DP("Setting global device environment before load (%u bytes)\n",
            SI.Size);
-        uint64_t Offset = (const char *)SI.Addr - (char *)Image->ImageStart;
-        void *Pos = (char *)Data + Offset;
+        uint64_t Offset = reinterpret_cast<const char *>(SI.Addr) -
+                          reinterpret_cast<const char *>(Image->ImageStart);
+        void *Pos = reinterpret_cast<char *>(Data) + Offset;
         memcpy(Pos, &HostDeviceEnv, SI.Size);
       }
     }
@@ -2698,6 +2707,35 @@ bool imageContainsSymbol(void *Data, size_t Size, const char *Sym) {
   SymbolInfo SI;
   int Rc = getSymbolInfoWithoutLoading((char *)Data, Size, Sym, &SI);
   return (Rc == 0) && (SI.Addr != nullptr);
+}
+
+hsa_status_t lock_memory(void *HostPtr, size_t Size, hsa_agent_t Agent,
+                         void **LockedHostPtr) {
+  hsa_status_t err = is_locked(HostPtr, LockedHostPtr);
+  if (err != HSA_STATUS_SUCCESS)
+    return err;
+
+  // HostPtr is already locked, just return it
+  if (*LockedHostPtr)
+    return HSA_STATUS_SUCCESS;
+
+  hsa_agent_t Agents[1] = {Agent};
+  return hsa_amd_memory_lock(HostPtr, Size, Agents, /*num_agent=*/1,
+                             LockedHostPtr);
+}
+
+hsa_status_t unlock_memory(void *HostPtr) {
+  void *LockedHostPtr = nullptr;
+  hsa_status_t err = is_locked(HostPtr, &LockedHostPtr);
+  if (err != HSA_STATUS_SUCCESS)
+    return err;
+
+  // if LockedHostPtr is nullptr, then HostPtr was not locked
+  if (!LockedHostPtr)
+    return HSA_STATUS_SUCCESS;
+
+  err = hsa_amd_memory_unlock(HostPtr);
+  return err;
 }
 
 } // namespace
@@ -2834,7 +2872,6 @@ void launchInitFiniKernel(int32_t DeviceId, void *img, const size_t &size,
 }
 } // namespace core
 
-#ifdef newdriver
 static hsa_status_t GetIsaInfo(hsa_isa_t isa, void *data) {
   hsa_status_t err;
   uint32_t name_len;
@@ -2857,102 +2894,6 @@ static hsa_status_t GetIsaInfo(hsa_isa_t isa, void *data) {
   }
   return HSA_STATUS_SUCCESS;
 }
-#endif
-
-/// Parse a TargetID to get processor arch and feature map.
-/// Returns processor subarch.
-/// Returns TargetID features in \p FeatureMap argument.
-/// If the \p TargetID contains feature+, FeatureMap it to true.
-/// If the \p TargetID contains feature-, FeatureMap it to false.
-/// If the \p TargetID does not contain a feature (default), do not map it.
-StringRef parseTargetID(StringRef TargetID, StringMap<bool> &FeatureMap) {
-  if (TargetID.empty())
-    return llvm::StringRef();
-
-  auto ArchFeature = TargetID.split(":");
-  auto Arch = ArchFeature.first;
-  auto Features = ArchFeature.second;
-  if (Features.empty())
-    return Arch;
-
-  if (Features.contains("sramecc+")) {
-    FeatureMap.insert(std::pair<std::string, bool>("sramecc", true));
-  } else if (Features.contains("sramecc-")) {
-    FeatureMap.insert(std::pair<std::string, bool>("sramecc", false));
-  }
-  if (Features.contains("xnack+")) {
-    FeatureMap.insert(std::pair<std::string, bool>("xnack", true));
-  } else if (Features.contains("xnack-")) {
-    FeatureMap.insert(std::pair<std::string, bool>("xnack", false));
-  }
-
-  return Arch;
-}
-
-/// Checks if an image \p ImgInfo is compatible with current
-/// system's environment \p EnvInfo
-bool IsImageCompatibleWithEnv(const char *ImgInfo, std::string EnvInfo) {
-  llvm::StringRef ImgTID(ImgInfo), EnvTID(EnvInfo);
-
-  // Compatible in case of exact match
-  if (ImgTID == EnvTID) {
-    DP("Compatible: Exact match \t[Image: %s]\t:\t[Environment: %s]\n",
-       ImgTID.data(), EnvTID.data());
-    return true;
-  }
-
-  // Incompatible if Archs mismatch.
-  StringMap<bool> ImgMap, EnvMap;
-  StringRef ImgArch = parseTargetID(ImgTID, ImgMap);
-  StringRef EnvArch = parseTargetID(EnvTID, EnvMap);
-
-  // Both EnvArch and ImgArch can't be empty here.
-  if (EnvArch.empty() || ImgArch.empty() || !ImgArch.contains(EnvArch)) {
-    DP("Incompatible: Processor mismatch \t[Image: %s]\t:\t[Environment: %s]\n",
-       ImgTID.data(), EnvTID.data());
-    return false;
-  }
-
-  // Incompatible if image has more features than the environment, irrespective
-  // of type or sign of features.
-  if (ImgMap.size() > EnvMap.size()) {
-    DP("Incompatible: Image has more features than the environment \t[Image: "
-       "%s]\t:\t[Environment: %s]\n",
-       ImgTID.data(), EnvTID.data());
-    return false;
-  }
-
-  // Compatible if each target feature specified by the environment is
-  // compatible with target feature of the image. The target feature is
-  // compatible if the iamge does not specify it (meaning Any), or if it
-  // specifies it with the same value (meaning On or Off).
-  for (const auto &ImgFeature : ImgMap) {
-    auto EnvFeature = EnvMap.find(ImgFeature.first());
-    if (EnvFeature == EnvMap.end()) {
-      DP("Incompatible: Value of Image's non-ANY feature is not matching with "
-         "the Environment feature's ANY value \t[Image: %s]\t:\t[Environment: "
-         "%s]\n",
-         ImgTID.data(), EnvTID.data());
-      return false;
-    } else if (EnvFeature->first() == ImgFeature.first() &&
-               EnvFeature->second != ImgFeature.second) {
-      DP("Incompatible: Value of Image's non-ANY feature is not matching with "
-         "the Environment feature's non-ANY value \t[Image: "
-         "%s]\t:\t[Environment: %s]\n",
-         ImgTID.data(), EnvTID.data());
-      return false;
-    }
-  }
-
-  // Image is compatible if all features of Environment are:
-  //   - either, present in the Image's features map with the same sign,
-  //   - or, the feature is missing from Image's features map i.e. it is
-  //   set to ANY
-  DP("Compatible: Target IDs are compatible \t[Image: %s]\t:\t[Environment: "
-     "%s]\n",
-     ImgTID.data(), EnvTID.data());
-  return true;
-}
 
 extern "C" {
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
@@ -2967,7 +2908,7 @@ int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *image,
                                        __tgt_image_info *info) {
   if (!__tgt_rtl_is_valid_binary(image))
     return false;
-#if FIXME
+
   // A subarchitecture was not specified. Assume it is compatible.
   if (!info->Arch)
     return true;
@@ -2982,12 +2923,12 @@ int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *image,
       DP("Error iterating ISAs\n");
       return false;
     }
-    if (!IsImageCompatibleWithEnv(info->Arch, DeviceInfo().TargetID[DeviceId]))
+    if (!isImageCompatibleWithEnv(info, DeviceInfo().TargetID[DeviceId]))
       return false;
   }
   DP("Image has Target ID compatible with the current environment: %s\n",
      info->Arch);
-#endif
+
   return true;
 }
 
@@ -3226,7 +3167,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
   // per-image initialization work. Specifically:
   //
   // - Initialize an DeviceEnvironmentTy instance embedded in the
-  //   image at the symbol "omptarget_device_environment"
+  //   image at the symbol "__omp_rtl_device_environment"
   //   Fields DebugKind, DeviceNum, NumDevices. Used by the deviceRTL.
   //
   // - Allocate a large array per-gpu (could be moved to init_device)
@@ -3642,38 +3583,8 @@ void *__tgt_rtl_data_alloc(int DeviceId, int64_t Size, void *, int32_t Kind) {
   DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", Size,
      (long long unsigned)(Elf64_Addr)Ptr);
   Ptr = (Err == HSA_STATUS_SUCCESS) ? Ptr : NULL;
+
   return Ptr;
-}
-
-void *__tgt_rtl_data_lock(int DeviceId, void *TgtPtr, int64_t size) {
-  void *ptr = TgtPtr;
-  assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
-  hsa_status_t err = HSA_STATUS_SUCCESS;
-
-  err = lock_memory(&ptr, size);
-
-  if (err != HSA_STATUS_SUCCESS) {
-    DP("Error in tgt_rtl_data_lock\n");
-    return nullptr;
-  }
-
-  DP("Tgt lock data %ld bytes, (tgt:%016llx).\n", size,
-     (long long unsigned)(Elf64_Addr)ptr);
-
-  return ptr;
-}
-
-void __tgt_rtl_data_unlock(int DeviceId, void *TgtPtr) {
-  assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
-  hsa_status_t err = HSA_STATUS_SUCCESS;
-
-  err = unlock_memory(TgtPtr);
-
-  if (err != HSA_STATUS_SUCCESS)
-    DP("Error in tgt_rtl_data_unlock\n");
-
-  DP("Tgt unlock data (tgt:%016llx).\n",
-     (long long unsigned)(Elf64_Addr)TgtPtr);
 }
 
 int32_t __tgt_rtl_data_submit(int DeviceId, void *tgt_ptr, void *hst_ptr,
@@ -3775,6 +3686,7 @@ int32_t __tgt_rtl_data_delete(int DeviceId, void *TgtPtr, int32_t) {
     DP("Error when freeing CUDA memory\n");
     return OFFLOAD_FAIL;
   }
+
   return OFFLOAD_SUCCESS;
 }
 
@@ -3910,28 +3822,6 @@ hsa_status_t device_malloc(void **mem, size_t size, int DeviceId) {
   return hsa_amd_memory_pool_allocate(MemoryPool, size, 0, mem);
 }
 
-hsa_status_t lock_memory(void **mem, size_t size) {
-  void *lockedPtr = nullptr;
-  hsa_status_t err = HSA_STATUS_SUCCESS;
-
-  if (is_locked(*mem, &err, nullptr))
-    return HSA_STATUS_SUCCESS;
-
-  err = hsa_amd_memory_lock(*mem, size, nullptr, 0, (void **)&lockedPtr);
-  if (err != HSA_STATUS_SUCCESS)
-    return err;
-
-  *mem = lockedPtr;
-  return err;
-}
-
-hsa_status_t unlock_memory(void *mem) {
-  hsa_status_t err = HSA_STATUS_SUCCESS;
-  if (is_locked(mem, &err, nullptr))
-    err = hsa_amd_memory_unlock(mem);
-  return err;
-}
-
 hsa_status_t impl_free(void *mem) { return core::Runtime::Memfree(mem); }
 
 hsa_status_t ftn_assign_wrapper(void *arg0, void *arg1, void *arg2, void *arg3,
@@ -3976,6 +3866,34 @@ void __tgt_rtl_print_device_info(int32_t DeviceId) {
   // NOTE: We don't need to set context for print device info.
 
   DeviceInfo().printDeviceInfo(DeviceId, DeviceInfo().HSAAgents[DeviceId]);
+}
+
+int32_t __tgt_rtl_data_lock(int32_t DeviceId, void *HostPtr, int64_t Size,
+                            void **LockedHostPtr) {
+  assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
+
+  hsa_agent_t Agent = DeviceInfo().HSAAgents[DeviceId];
+  hsa_status_t err = lock_memory(HostPtr, Size, Agent, LockedHostPtr);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error in tgt_rtl_data_lock\n");
+    return OFFLOAD_FAIL;
+  }
+  DP("Tgt lock host data %ld bytes, (HostPtr:%016llx).\n", Size,
+     (long long unsigned)(Elf64_Addr)*LockedHostPtr);
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t __tgt_rtl_data_unlock(int DeviceId, void *HostPtr) {
+  assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
+  hsa_status_t err = unlock_memory(HostPtr);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error in tgt_rtl_data_unlock\n");
+    return OFFLOAD_FAIL;
+  }
+
+  DP("Tgt unlock data (tgt:%016llx).\n",
+     (long long unsigned)(Elf64_Addr)HostPtr);
+  return OFFLOAD_SUCCESS;
 }
 
 } // extern "C"
