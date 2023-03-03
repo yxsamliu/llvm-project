@@ -89,3 +89,7 @@
 ; RUN: opt -disable-output -passes='default<O1>' < %s
 ; RUN: opt -disable-output -passes='default<O2>' < %s
 ; RUN: opt -disable-output -passes='default<O3>' < %s
+
+;; Test function-attrs
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='cgscc(function-attrs<skip-non-recursive>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-29
+; CHECK-29: cgscc(function-attrs<skip-non-recursive>)
