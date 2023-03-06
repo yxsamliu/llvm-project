@@ -156,3 +156,14 @@
 // RUN:   -mwavefrontsize64 %s 2>&1 | FileCheck --check-prefix=WAVE64 %s
 // WAVE64-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
 // WAVE32-DAG: #define __AMDGCN_WAVEFRONT_SIZE 32
+
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1030 \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-DEFAULT %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1030 -mcumode \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1030 -mno-cumode \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-OFF %s
+// CUMODE-DEFAULT-NOT: #define __AMDGCN_CUMODE_OPTION
+// CUMODE-DEFAULT-NOT: #define __AMDGCN_CUMODE_OPTION
+// CUMODE-ON-DAG: #define __AMDGCN_CUMODE_OPTION 1
+// CUMODE-OFF-DAG: #define __AMDGCN_CUMODE_OPTION 0
