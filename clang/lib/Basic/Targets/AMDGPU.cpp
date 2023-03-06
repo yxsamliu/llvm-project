@@ -487,6 +487,8 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("FP_FAST_FMA");
 
   Builder.defineMacro("__AMDGCN_WAVEFRONT_SIZE", Twine(WavefrontSize));
+  if (CUModeOpt)
+    Builder.defineMacro("__AMDGCN_CUMODE_OPTION", Twine(CUModeOpt.value()));
 }
 
 void AMDGPUTargetInfo::setAuxTarget(const TargetInfo *Aux) {
