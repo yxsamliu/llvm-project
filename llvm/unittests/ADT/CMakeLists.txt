@@ -1,5 +1,3 @@
-# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-# Notified per clause 4(b) of the license.
 set(LLVM_LINK_COMPONENTS
   Support
   )
@@ -51,7 +49,7 @@ add_llvm_unittest(ADTTests
   IteratorTest.cpp
   MappedIteratorTest.cpp
   MapVectorTest.cpp
-  OptionalTest.cpp
+  MoveOnly.cpp
   PackedVectorTest.cpp
   PointerEmbeddedIntTest.cpp
   PointerIntPairTest.cpp
@@ -81,7 +79,6 @@ add_llvm_unittest(ADTTests
   StringSetTest.cpp
   StringSwitchTest.cpp
   TinyPtrVectorTest.cpp
-  TripleTest.cpp
   TwineTest.cpp
   TypeSwitchTest.cpp
   TypeTraitsTest.cpp

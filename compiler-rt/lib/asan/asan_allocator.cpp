@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -178,9 +176,22 @@ class LargeChunkHeader {
                : nullptr;
   }
 
-  void Set(AsanChunk *p) {
+  void Set(AsanChunk *p, DeviceAllocationInfo *da_info = nullptr) {
     if (p) {
       chunk_header = p;
+
+      // remapped_device_page is stored right after chunk_header. We don't
+      // declare it formally in the data structure otherwise some sanity check
+      // will fail for host allocations, where remapped_device_page is really
+      // meaningless.
+      // For device memory, we always have enough space in LargeChunkHeader to
+      // store remapped_device_page because the alignment is always kPageSize_
+      if (da_info) {
+        void **remapped_device_page = reinterpret_cast<void **>(
+            reinterpret_cast<uptr>(&chunk_header) + sizeof(AsanChunk *));
+        *remapped_device_page = da_info->remapped_device_page;
+      }
+
       atomic_store(&magic, kAllocBegMagic, memory_order_release);
       return;
     }
@@ -190,6 +201,14 @@ class LargeChunkHeader {
                                         memory_order_release)) {
       CHECK_EQ(old, kAllocBegMagic);
     }
+  }
+
+  void *GetRemappedDevicePage() const {
+    void **remapped_device_page = reinterpret_cast<void **>(
+      reinterpret_cast<uptr>(&chunk_header) + sizeof(AsanChunk *));
+    return atomic_load(&magic, memory_order_acquire) == kAllocBegMagic
+               ? *remapped_device_page
+               : nullptr;
   }
 };
 
@@ -201,7 +220,13 @@ struct QuarantineCallback {
 
   void Recycle(AsanChunk *m) {
     void *p = get_allocator().GetBlockBegin(m);
+    DeviceAllocationInfo da_info;
     if (p != m) {
+      // For host allocations, GetRemappedDevicePage() doesn't return valid
+      // values for remapped_device_page, but it shouldn't matter because host
+      // memory Deallocate() calls won't use da_info
+      da_info.remapped_device_page =
+        reinterpret_cast<LargeChunkHeader *>(p)->GetRemappedDevicePage();
       // Clear the magic value, as allocator internals may overwrite the
       // contents of deallocated chunk, confusing GetAsanChunk lookup.
       reinterpret_cast<LargeChunkHeader *>(p)->Set(nullptr);
@@ -221,7 +246,7 @@ struct QuarantineCallback {
     thread_stats.real_frees++;
     thread_stats.really_freed += m->UsedSize();
 
-    get_allocator().Deallocate(cache_, p);
+    get_allocator().Deallocate(cache_, p, &da_info);
   }
 
   void *Allocate(uptr size) {
@@ -604,7 +629,7 @@ struct Allocator {
     atomic_store(&m->chunk_state, CHUNK_ALLOCATED, memory_order_release);
     if (alloc_beg != chunk_beg) {
       CHECK_LE(alloc_beg + sizeof(LargeChunkHeader), chunk_beg);
-      reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Set(m);
+      reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Set(m, da_info);
     }
     RunMallocHooks(res, size);
     return res;
@@ -1120,6 +1145,8 @@ uptr PointsIntoChunk(void *p) {
 }
 
 uptr GetUserBegin(uptr chunk) {
+  // FIXME: All usecases provide chunk address, GetAsanChunkByAddrFastLocked is
+  // not needed.
   __asan::AsanChunk *m = __asan::instance.GetAsanChunkByAddrFastLocked(chunk);
   return m ? m->Beg() : 0;
 }
@@ -1177,33 +1204,6 @@ IgnoreObjectResult IgnoreObjectLocked(const void *p) {
     return kIgnoreObjectAlreadyIgnored;
   m->lsan_tag = __lsan::kIgnored;
   return kIgnoreObjectSuccess;
-}
-
-void GetAdditionalThreadContextPtrs(ThreadContextBase *tctx, void *ptrs) {
-  // Look for the arg pointer of threads that have been created or are running.
-  // This is necessary to prevent false positive leaks due to the AsanThread
-  // holding the only live reference to a heap object.  This can happen because
-  // the `pthread_create()` interceptor doesn't wait for the child thread to
-  // start before returning and thus loosing the the only live reference to the
-  // heap object on the stack.
-
-  __asan::AsanThreadContext *atctx =
-      reinterpret_cast<__asan::AsanThreadContext *>(tctx);
-  __asan::AsanThread *asan_thread = atctx->thread;
-
-  // Note ThreadStatusRunning is required because there is a small window where
-  // the thread status switches to `ThreadStatusRunning` but the `arg` pointer
-  // still isn't on the stack yet.
-  if (atctx->status != ThreadStatusCreated &&
-      atctx->status != ThreadStatusRunning)
-    return;
-
-  uptr thread_arg = reinterpret_cast<uptr>(asan_thread->get_arg());
-  if (!thread_arg)
-    return;
-
-  auto ptrsVec = reinterpret_cast<InternalMmapVector<uptr> *>(ptrs);
-  ptrsVec->push_back(thread_arg);
 }
 
 }  // namespace __lsan
@@ -1269,6 +1269,7 @@ hsa_status_t asan_hsa_amd_memory_pool_allocate(
     AmdgpuAllocationInfo aa_info;
     aa_info.alloc_func =
       reinterpret_cast<void *>(asan_hsa_amd_memory_pool_allocate);
+    aa_info.remap_first_device_page = true;
     aa_info.memory_pool = memory_pool;
     aa_info.size = size;
     aa_info.flags = flags;

@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx600 -amdgpu-bypass-slow-div=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mcpu=gfx600 -amdgpu-bypass-slow-div=0 -amdgpu-codegenprepare-expand-div64 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN-IR %s
 
-define amdgpu_kernel void @s_test_udiv_i64(i64 addrspace(1)* %out, i64 %x, i64 %y) {
+define amdgpu_kernel void @s_test_udiv_i64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-LABEL: s_test_udiv_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0xd
@@ -202,7 +202,7 @@ define amdgpu_kernel void @s_test_udiv_i64(i64 addrspace(1)* %out, i64 %x, i64 %
 ; GCN-IR-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GCN-IR-NEXT:    s_endpgm
   %result = udiv i64 %x, %y
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -404,7 +404,7 @@ define i64 @v_test_udiv_i64(i64 %x, i64 %y) {
   ret i64 %result
 }
 
-define amdgpu_kernel void @s_test_udiv24_64(i64 addrspace(1)* %out, i64 %x, i64 %y) {
+define amdgpu_kernel void @s_test_udiv24_64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-LABEL: s_test_udiv24_64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s4, s[0:1], 0xe
@@ -457,7 +457,7 @@ define amdgpu_kernel void @s_test_udiv24_64(i64 addrspace(1)* %out, i64 %x, i64 
   %1 = lshr i64 %x, 40
   %2 = lshr i64 %y, 40
   %result = udiv i64 %1, %2
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -503,7 +503,7 @@ define i64 @v_test_udiv24_i64(i64 %x, i64 %y) {
   ret i64 %result
 }
 
-define amdgpu_kernel void @s_test_udiv32_i64(i64 addrspace(1)* %out, i64 %x, i64 %y) {
+define amdgpu_kernel void @s_test_udiv32_i64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-LABEL: s_test_udiv32_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s4, s[0:1], 0xe
@@ -550,11 +550,11 @@ define amdgpu_kernel void @s_test_udiv32_i64(i64 addrspace(1)* %out, i64 %x, i64
   %1 = lshr i64 %x, 32
   %2 = lshr i64 %y, 32
   %result = udiv i64 %1, %2
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_test_udiv31_i64(i64 addrspace(1)* %out, i64 %x, i64 %y) {
+define amdgpu_kernel void @s_test_udiv31_i64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-LABEL: s_test_udiv31_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s4, s[0:1], 0xe
@@ -607,11 +607,11 @@ define amdgpu_kernel void @s_test_udiv31_i64(i64 addrspace(1)* %out, i64 %x, i64
   %1 = lshr i64 %x, 33
   %2 = lshr i64 %y, 33
   %result = udiv i64 %1, %2
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_test_udiv23_i64(i64 addrspace(1)* %out, i64 %x, i64 %y) {
+define amdgpu_kernel void @s_test_udiv23_i64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-LABEL: s_test_udiv23_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s4, s[0:1], 0xe
@@ -664,11 +664,11 @@ define amdgpu_kernel void @s_test_udiv23_i64(i64 addrspace(1)* %out, i64 %x, i64
   %1 = lshr i64 %x, 41
   %2 = lshr i64 %y, 41
   %result = udiv i64 %1, %2
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_test_udiv24_i48(i48 addrspace(1)* %out, i48 %x, i48 %y) {
+define amdgpu_kernel void @s_test_udiv24_i48(ptr addrspace(1) %out, i48 %x, i48 %y) {
 ; GCN-LABEL: s_test_udiv24_i48:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xd
@@ -877,11 +877,11 @@ define amdgpu_kernel void @s_test_udiv24_i48(i48 addrspace(1)* %out, i48 %x, i48
   %1 = lshr i48 %x, 24
   %2 = lshr i48 %y, 24
   %result = udiv i48 %1, %2
-  store i48 %result, i48 addrspace(1)* %out
+  store i48 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_test_udiv_k_num_i64(i64 addrspace(1)* %out, i64 %x) {
+define amdgpu_kernel void @s_test_udiv_k_num_i64(ptr addrspace(1) %out, i64 %x) {
 ; GCN-LABEL: s_test_udiv_k_num_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1057,7 +1057,7 @@ define amdgpu_kernel void @s_test_udiv_k_num_i64(i64 addrspace(1)* %out, i64 %x)
 ; GCN-IR-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GCN-IR-NEXT:    s_endpgm
   %result = udiv i64 24, %x
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -1330,7 +1330,7 @@ define i64 @v_test_udiv_pow2_k_den_i64(i64 %x) {
   ret i64 %result
 }
 
-define amdgpu_kernel void @s_test_udiv_k_den_i64(i64 addrspace(1)* %out, i64 %x) {
+define amdgpu_kernel void @s_test_udiv_k_den_i64(ptr addrspace(1) %out, i64 %x) {
 ; GCN-LABEL: s_test_udiv_k_den_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0x4f800000
@@ -1504,7 +1504,7 @@ define amdgpu_kernel void @s_test_udiv_k_den_i64(i64 addrspace(1)* %out, i64 %x)
 ; GCN-IR-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GCN-IR-NEXT:    s_endpgm
   %result = udiv i64 %x, 24
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -1683,7 +1683,7 @@ define i64 @v_test_udiv_k_den_i64(i64 %x) {
   ret i64 %result
 }
 
-define amdgpu_kernel void @s_test_udiv24_k_num_i64(i64 addrspace(1)* %out, i64 %x) {
+define amdgpu_kernel void @s_test_udiv24_k_num_i64(ptr addrspace(1) %out, i64 %x) {
 ; GCN-LABEL: s_test_udiv24_k_num_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1727,11 +1727,11 @@ define amdgpu_kernel void @s_test_udiv24_k_num_i64(i64 addrspace(1)* %out, i64 %
 ; GCN-IR-NEXT:    s_endpgm
   %x.shr = lshr i64 %x, 40
   %result = udiv i64 24, %x.shr
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_test_udiv24_k_den_i64(i64 addrspace(1)* %out, i64 %x) {
+define amdgpu_kernel void @s_test_udiv24_k_den_i64(ptr addrspace(1) %out, i64 %x) {
 ; GCN-LABEL: s_test_udiv24_k_den_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1777,7 +1777,7 @@ define amdgpu_kernel void @s_test_udiv24_k_den_i64(i64 addrspace(1)* %out, i64 %
 ; GCN-IR-NEXT:    s_endpgm
   %x.shr = lshr i64 %x, 40
   %result = udiv i64 %x.shr, 23423
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 

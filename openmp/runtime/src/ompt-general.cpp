@@ -7,8 +7,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -691,7 +689,7 @@ OMPT_API_ROUTINE int ompt_get_num_places(void) {
 #else
   if (!KMP_AFFINITY_CAPABLE())
     return 0;
-  return __kmp_affinity_num_masks;
+  return __kmp_affinity.num_masks;
 #endif
 }
 
@@ -707,11 +705,11 @@ OMPT_API_ROUTINE int ompt_get_place_proc_ids(int place_num, int ids_size,
     tmp_ids[j] = 0;
   if (!KMP_AFFINITY_CAPABLE())
     return 0;
-  if (place_num < 0 || place_num >= (int)__kmp_affinity_num_masks)
+  if (place_num < 0 || place_num >= (int)__kmp_affinity.num_masks)
     return 0;
   /* TODO: Is this safe for asynchronous call from signal handler during runtime
    * shutdown? */
-  kmp_affin_mask_t *mask = KMP_CPU_INDEX(__kmp_affinity_masks, place_num);
+  kmp_affin_mask_t *mask = KMP_CPU_INDEX(__kmp_affinity.masks, place_num);
   count = 0;
   KMP_CPU_SET_ITERATE(i, mask) {
     if ((!KMP_CPU_ISSET(i, __kmp_affin_fullMask)) ||

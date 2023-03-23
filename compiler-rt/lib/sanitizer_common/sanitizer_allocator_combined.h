@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -56,7 +54,7 @@ class CombinedAllocator {
   }
 
   void *Allocate(AllocatorCache *cache, uptr size, uptr alignment,
-                 DeviceAllocationInfo* da_info = nullptr) {
+                 DeviceAllocationInfo *da_info = nullptr) {
     // Returning 0 on malloc(0) may break a lot of code.
     if (size == 0)
       size = 1;
@@ -106,7 +104,8 @@ class CombinedAllocator {
     primary_.ForceReleaseToOS();
   }
 
-  void Deallocate(AllocatorCache *cache, void *p) {
+  void Deallocate(AllocatorCache *cache, void *p,
+                  DeviceAllocationInfo *da_info = nullptr) {
     if (!p) return;
     if (primary_.PointerIsMine(p))
       cache->Deallocate(&primary_, primary_.GetSizeClass(p), p);
@@ -114,7 +113,7 @@ class CombinedAllocator {
       secondary_.Deallocate(&stats_, p);
 #if SANITIZER_AMDGPU
     else if (device_.PointerIsMine(p))
-      device_.Deallocate(&stats_, p);
+      device_.Deallocate(&stats_, p, da_info);
 #endif
   }
 
@@ -176,7 +175,7 @@ class CombinedAllocator {
 
   // This function does the same as GetBlockBegin, but is much faster.
   // Must be called with the allocator locked.
-  void *GetBlockBeginFastLocked(void *p) {
+  void *GetBlockBeginFastLocked(const void *p) {
     void *beg;
     if (primary_.PointerIsMine(p))
       return primary_.GetBlockBegin(p);

@@ -3,10 +3,10 @@
 # // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # // See https://llvm.org/LICENSE.txt for details.
 # // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-# // Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-# // Notified per clause 4(b) of the license.
 # //
 # //===----------------------------------------------------------------------===//
+
+set(LLVM_LINK_COMPONENTS Support)
 
 find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
 

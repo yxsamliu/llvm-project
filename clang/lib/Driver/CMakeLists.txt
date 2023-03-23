@@ -1,5 +1,3 @@
-# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-# Notified per clause 4(b) of the license.
 set(LLVM_LINK_COMPONENTS
   BinaryFormat
   MC
@@ -8,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
   ProfileData
   Support
   Object
+  TargetParser
   WindowsDriver
   )
 
@@ -97,6 +96,7 @@ add_clang_library(clangDriver
 
   DEPENDS
   ClangDriverOptions
+  RISCVTargetParserTableGen
 
   LINK_LIBS
   clangBasic

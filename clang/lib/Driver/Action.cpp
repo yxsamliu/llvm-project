@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -27,7 +25,6 @@ const char *Action::getClassName(ActionClass AC) {
     return "offload";
   case PreprocessJobClass: return "preprocessor";
   case PrecompileJobClass: return "precompiler";
-  case HeaderModulePrecompileJobClass: return "header-module-precompiler";
   case ExtractAPIJobClass:
     return "api-extractor";
   case AnalyzeJobClass: return "analyzer";
@@ -251,13 +248,17 @@ OffloadAction::OffloadAction(const HostDependence &HDep,
 
   // Add device inputs and propagate info to the device actions. Do work only if
   // we have dependencies.
-  for (unsigned i = 0, e = DDeps.getActions().size(); i != e; ++i)
+  for (unsigned i = 0, e = DDeps.getActions().size(); i != e; ++i) {
     if (auto *A = DDeps.getActions()[i]) {
       getInputs().push_back(A);
       A->propagateDeviceOffloadInfo(DDeps.getOffloadKinds()[i],
                                     DDeps.getBoundArchs()[i],
                                     DDeps.getToolChains()[i]);
+      // If this action is used to forward single dependency, set the toolchain.
+      if (DDeps.getActions().size() == 1)
+        OffloadingToolChain = DDeps.getToolChains()[i];
     }
+  }
 }
 
 void OffloadAction::doOnHostDependence(const OffloadActionWorkTy &Work) const {
@@ -380,13 +381,6 @@ PrecompileJobAction::PrecompileJobAction(ActionClass Kind, Action *Input,
     : JobAction(Kind, Input, OutputType) {
   assert(isa<PrecompileJobAction>((Action*)this) && "invalid action kind");
 }
-
-void HeaderModulePrecompileJobAction::anchor() {}
-
-HeaderModulePrecompileJobAction::HeaderModulePrecompileJobAction(
-    Action *Input, types::ID OutputType, const char *ModuleName)
-    : PrecompileJobAction(HeaderModulePrecompileJobClass, Input, OutputType),
-      ModuleName(ModuleName) {}
 
 void ExtractAPIJobAction::anchor() {}
 

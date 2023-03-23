@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -60,7 +58,6 @@ public:
     OffloadClass,
     PreprocessJobClass,
     PrecompileJobClass,
-    HeaderModulePrecompileJobClass,
     ExtractAPIJobClass,
     AnalyzeJobClass,
     MigrateJobClass,
@@ -435,29 +432,8 @@ public:
   PrecompileJobAction(Action *Input, types::ID OutputType);
 
   static bool classof(const Action *A) {
-    return A->getKind() == PrecompileJobClass ||
-           A->getKind() == HeaderModulePrecompileJobClass;
+    return A->getKind() == PrecompileJobClass;
   }
-};
-
-class HeaderModulePrecompileJobAction : public PrecompileJobAction {
-  void anchor() override;
-
-  const char *ModuleName;
-
-public:
-  HeaderModulePrecompileJobAction(Action *Input, types::ID OutputType,
-                                  const char *ModuleName);
-
-  static bool classof(const Action *A) {
-    return A->getKind() == HeaderModulePrecompileJobClass;
-  }
-
-  void addModuleHeaderInput(Action *Input) {
-    getInputs().push_back(Input);
-  }
-
-  const char *getModuleName() const { return ModuleName; }
 };
 
 class ExtractAPIJobAction : public JobAction {

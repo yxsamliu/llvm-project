@@ -1,5 +1,3 @@
-# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-# Notified per clause 4(b) of the license.
 # core_files list contains the headers shared by all platforms.
 # Please consider adding new platform specific headers
 # to platform specific lists below.
@@ -35,6 +33,7 @@ set(arm_only_files
 
 set(aarch64_only_files
   arm64intr.h
+  arm_neon_sve_bridge.h
   )
 
 set(cuda_files
@@ -61,6 +60,7 @@ set(hip_files
   __clang_hip_libdevice_declares.h
   __clang_hip_cmath.h
   __clang_hip_math.h
+  __clang_hip_stdlib.h
   __clang_hip_runtime_wrapper.h
   )
 
@@ -74,6 +74,10 @@ set(hlsl_subdir_files
 set(hlsl_files
   ${hlsl_h}
   ${hlsl_subdir_files}
+  )
+
+set(loongarch_files
+  larchintrin.h
   )
 
 set(mips_msa_files
@@ -236,6 +240,7 @@ set(files
   ${cuda_files}
   ${hexagon_files}
   ${hip_files}
+  ${loongarch_files}
   ${mips_msa_files}
   ${opencl_files}
   ${ppc_files}
@@ -250,6 +255,7 @@ set(files
 
 set(cuda_wrapper_files
   cuda_wrappers/algorithm
+  cuda_wrappers/cmath
   cuda_wrappers/complex
   cuda_wrappers/new
 )
@@ -331,10 +337,6 @@ if(ARM IN_LIST LLVM_TARGETS_TO_BUILD OR AArch64 IN_LIST LLVM_TARGETS_TO_BUILD)
   clang_generate_header(-gen-arm-mve-header arm_mve.td arm_mve.h)
   # Generate arm_cde.h
   clang_generate_header(-gen-arm-cde-header arm_cde.td arm_cde.h)
-  # Copy arm_neon_sve_bridge.h
-  copy_header_to_output_dir(${CMAKE_CURRENT_SOURCE_DIR}
-    arm_neon_sve_bridge.h
-  )
 
   # Add headers to target specific lists
   list(APPEND arm_common_generated_files
@@ -350,7 +352,6 @@ if(ARM IN_LIST LLVM_TARGETS_TO_BUILD OR AArch64 IN_LIST LLVM_TARGETS_TO_BUILD)
   list(APPEND aarch64_only_generated_files
     "${CMAKE_CURRENT_BINARY_DIR}/arm_sve.h"
     "${CMAKE_CURRENT_BINARY_DIR}/arm_bf16.h"
-    "${output_dir}/arm_neon_sve_bridge.h"
     )
 endif()
 if(RISCV IN_LIST LLVM_TARGETS_TO_BUILD)
@@ -398,6 +399,7 @@ add_dependencies("clang-resource-headers"
                  "hexagon-resource-headers"
                  "hip-resource-headers"
                  "hlsl-resource-headers"
+                 "loongarch-resource-headers"
                  "mips-resource-headers"
                  "ppc-resource-headers"
                  "ppc-htm-resource-headers"
@@ -421,6 +423,7 @@ add_header_target("aarch64-resource-headers" "${aarch64_only_files};${aarch64_on
 add_header_target("cuda-resource-headers" "${cuda_files};${cuda_wrapper_files}")
 add_header_target("hexagon-resource-headers" "${hexagon_files}")
 add_header_target("hip-resource-headers" "${hip_files}")
+add_header_target("loongarch-resource-headers" "${loongarch_files}")
 add_header_target("mips-resource-headers" "${mips_msa_files}")
 add_header_target("ppc-resource-headers" "${ppc_files};${ppc_wrapper_files}")
 add_header_target("ppc-htm-resource-headers" "${ppc_htm_files}")
@@ -510,6 +513,12 @@ install(
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT hip-resource-headers)
+
+install(
+  FILES ${loongarch_files}
+  DESTINATION ${header_install_dir}
+  EXCLUDE_FROM_ALL
+  COMPONENT loongarch-resource-headers)
 
 install(
   FILES ${mips_msa_files}

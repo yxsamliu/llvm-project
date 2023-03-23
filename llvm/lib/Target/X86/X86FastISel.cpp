@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -3998,8 +3996,9 @@ unsigned X86FastISel::fastEmitInst_rrrr(unsigned MachineInstOpcode,
         .addReg(Op1)
         .addReg(Op2)
         .addReg(Op3);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg).addReg(II.ImplicitDefs[0]);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(II.implicit_defs()[0]);
   }
   return ResultReg;
 }

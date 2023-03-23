@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -17,10 +15,14 @@
 #define _OMPTARGET_H_
 
 #include <deque>
+#include <functional>
 #include <stddef.h>
 #include <stdint.h>
+#include <type_traits>
 
 #include <SourceInfo.h>
+
+#include "llvm/ADT/SmallVector.h"
 
 #define OFFLOAD_SUCCESS (0)
 #define OFFLOAD_FAIL (~0)
@@ -147,6 +149,11 @@ struct __tgt_device_image {
   __tgt_offload_entry *EntriesEnd;   // End of table (non inclusive)
 };
 
+/// This struct contains information about a given image.
+struct __tgt_image_info {
+  const char *Arch;
+};
+
 /// This struct is a record of all the host code that may be offloaded to a
 /// target.
 struct __tgt_bin_desc {
@@ -154,44 +161,6 @@ struct __tgt_bin_desc {
   __tgt_device_image *DeviceImages;  // Array of device images (1 per dev. type)
   __tgt_offload_entry *HostEntriesBegin; // Begin of table with all host entries
   __tgt_offload_entry *HostEntriesEnd;   // End of table (non inclusive)
-};
-
-/// __tgt_image_info:
-///
-/// The information in this struct is provided in the clang-offload-wrapper
-/// as a call to __tgt_register_image_info for each image in the library
-/// of images also created by the clang-offload-wrapper.
-/// __tgt_register_image_info is called for each image BEFORE the single
-/// call to __tgt_register_lib so that image information is available
-/// before they are loaded. clang-offload-wrapper gets this image information
-/// from command line arguments provided by the clang driver when it creates
-/// the call to the __clang-offload-wrapper command.
-/// This architecture allows the binary image (pointed to by ImageStart and
-/// ImageEnd in __tgt_device_image) to remain architecture indenendent.
-/// That is, the architecture independent part of the libomptarget runtime
-/// does not need to peer inside the image to determine if it is loadable
-/// even though in most cases the image is an elf object.
-/// There is one __tgt_image_info for each __tgt_device_image. For backward
-/// compabibility, no changes are allowed to either __tgt_device_image or
-/// __tgt_bin_desc. The absense of __tgt_image_info is the indication that
-/// the runtime is being used on a binary created by an old version of
-/// the compiler.
-///
-struct __tgt_image_info {
-  int32_t version;           // The version of this struct
-  int32_t image_number;      // Image number in image library starting from 0
-  int32_t number_images;     // Number of images, used for initial allocation
-  char *offload_arch;        // e.g. sm_30, sm_70, gfx906, includes features
-  char *compile_opts;        // reserved for future use
-};
-
-/// __tgt_active_offload_env
-///
-/// This structure is created by __tgt_get_active_offload_env and is used
-/// to determine compatibility of the images with the current environment
-/// that is "in play".
-struct __tgt_active_offload_env {
-char *capabilities; // string returned by offload-arch -c
 };
 
 /// This struct contains the offload entries identified by the target runtime
@@ -218,15 +187,29 @@ struct DeviceTy;
 /// associated with a libomptarget layer device. RAII semantics to avoid
 /// mistakes.
 class AsyncInfoTy {
+public:
+  enum class SyncTy { BLOCKING, NON_BLOCKING };
+
+private:
   /// Locations we used in (potentially) asynchronous calls which should live
   /// as long as this AsyncInfoTy object.
   std::deque<void *> BufferLocations;
+
+  /// Post-processing operations executed after a successful synchronization.
+  /// \note the post-processing function should return OFFLOAD_SUCCESS or
+  /// OFFLOAD_FAIL appropriately.
+  using PostProcFuncTy = std::function<int()>;
+  llvm::SmallVector<PostProcFuncTy> PostProcessingFunctions;
 
   __tgt_async_info AsyncInfo;
   DeviceTy &Device;
 
 public:
-  AsyncInfoTy(DeviceTy &Device) : Device(Device) {}
+  /// Synchronization method to be used.
+  SyncTy SyncType;
+
+  AsyncInfoTy(DeviceTy &Device, SyncTy SyncType = SyncTy::BLOCKING)
+      : Device(Device), SyncType(SyncType) {}
   ~AsyncInfoTy() { synchronize(); }
 
   /// Implicit conversion to the __tgt_async_info which is used in the
@@ -235,12 +218,54 @@ public:
 
   /// Synchronize all pending actions.
   ///
+  /// \note synchronization will be performance in a blocking or non-blocking
+  /// manner, depending on the SyncType.
+  ///
+  /// \note if the operations are completed, the registered post-processing
+  /// functions will be executed once and unregistered afterwards.
+  ///
   /// \returns OFFLOAD_FAIL or OFFLOAD_SUCCESS appropriately.
   int synchronize();
 
   /// Return a void* reference with a lifetime that is at least as long as this
   /// AsyncInfoTy object. The location can be used as intermediate buffer.
   void *&getVoidPtrLocation();
+
+  /// Check if all asynchronous operations are completed.
+  ///
+  /// \note if the operations are completed, the registered post-processing
+  /// functions will be executed once and unregistered afterwards.
+  ///
+  /// \returns true if there is no pending asynchronous operations, false
+  /// otherwise.
+  bool isDone();
+
+  /// Add a new post-processing function to be executed after synchronization.
+  ///
+  /// \param[in] Function is a templated function (e.g., function pointers,
+  /// lambdas, std::function) that can be convertible to a PostProcFuncTy (i.e.,
+  /// it must have int() as its function signature).
+  template <typename FuncTy> void addPostProcessingFunction(FuncTy &&Function) {
+    static_assert(std::is_convertible_v<FuncTy, PostProcFuncTy>,
+                  "Invalid post-processing function type. Please check "
+                  "function signature!");
+    PostProcessingFunctions.emplace_back(Function);
+  }
+
+private:
+  /// Run all the post-processing functions sequentially.
+  ///
+  /// \note after a successful execution, all previously registered functions
+  /// are unregistered.
+  ///
+  /// \returns OFFLOAD_FAIL if any post-processing function failed,
+  /// OFFLOAD_SUCCESS otherwise.
+  int32_t runPostProcessing();
+
+  /// Check if the internal asynchronous info queue is empty or not.
+  ///
+  /// \returns true if empty, false otherwise.
+  bool isQueueEmpty() const;
 };
 
 /// This struct is a record of non-contiguous information
@@ -392,6 +417,23 @@ int __tgt_target_kernel_nowait(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                                __tgt_kernel_arguments *Args, int32_t DepNum,
                                void *DepList, int32_t NoAliasDepNum,
                                void *NoAliasDepList);
+
+// Non-blocking synchronization for target nowait regions. This function
+// acquires the asynchronous context from task data of the current task being
+// executed and tries to query for the completion of its operations. If the
+// operations are still pending, the function returns immediately. If the
+// operations are completed, all the post-processing procedures stored in the
+// asynchronous context are executed and the context is removed from the task
+// data.
+void __tgt_target_nowait_query(void **AsyncHandle);
+
+/// Executes a target kernel by replaying recorded kernel arguments and
+/// device memory.
+int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId, void *HostPtr,
+                               void *DeviceMemory, int64_t DeviceMemorySize,
+                               void **TgtArgs, ptrdiff_t *TgtOffsets,
+                               int32_t NumArgs, int32_t NumTeams,
+                               int32_t ThreadLimit, uint64_t LoopTripCount);
 
 void __tgt_set_info_flag(uint32_t);
 

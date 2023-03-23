@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -164,19 +162,19 @@ static int isVariantApplicableInContextHelper(
   // context based on the match kind selected by the user via
   // `implementation={extensions(match_[all,any,none])}'
   auto HandleTrait = [MK](TraitProperty Property,
-                          bool WasFound) -> Optional<bool> /* Result */ {
+                          bool WasFound) -> std::optional<bool> /* Result */ {
     // For kind "any" a single match is enough but we ignore non-matched
     // properties.
     if (MK == MK_ANY) {
       if (WasFound)
         return true;
-      return None;
+      return std::nullopt;
     }
 
     // In "all" or "none" mode we accept a matching or non-matching property
     // respectively and move on. We are not done yet!
     if ((WasFound && MK == MK_ALL) || (!WasFound && MK == MK_NONE))
-      return None;
+      return std::nullopt;
 
     // We missed a property, provide some debug output and indicate failure.
     LLVM_DEBUG({
@@ -213,9 +211,8 @@ static int isVariantApplicableInContextHelper(
         return Ctx.matchesISATrait(RawString);
       });
 
-    Optional<bool> Result = HandleTrait(Property, IsActiveTrait);
-    if (Result)
-      return Result.value();
+    if (std::optional<bool> Result = HandleTrait(Property, IsActiveTrait))
+      return *Result;
   }
 
   if (!DeviceSetOnly) {
@@ -234,9 +231,8 @@ static int isVariantApplicableInContextHelper(
       if (ConstructMatches)
         ConstructMatches->push_back(ConstructIdx - 1);
 
-      Optional<bool> Result = HandleTrait(Property, FoundInOrder);
-      if (Result)
-        return Result.value();
+      if (std::optional<bool> Result = HandleTrait(Property, FoundInOrder))
+        return *Result;
 
       if (!FoundInOrder) {
         LLVM_DEBUG(dbgs() << "[" << DEBUG_TYPE << "] Construct property "

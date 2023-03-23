@@ -7,8 +7,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -271,23 +269,17 @@ kmp_SetThreadGroupAffinity_t __kmp_SetThreadGroupAffinity = NULL;
 #endif /* KMP_OS_WINDOWS */
 
 size_t __kmp_affin_mask_size = 0;
-enum affinity_type __kmp_affinity_type = affinity_default;
-kmp_hw_t __kmp_affinity_gran = KMP_HW_UNKNOWN;
-int __kmp_affinity_gran_levels = -1;
-int __kmp_affinity_dups = TRUE;
 enum affinity_top_method __kmp_affinity_top_method =
     affinity_top_method_default;
-int __kmp_affinity_compact = 0;
-int __kmp_affinity_offset = 0;
-int __kmp_affinity_verbose = FALSE;
-int __kmp_affinity_warnings = TRUE;
-int __kmp_affinity_respect_mask = affinity_respect_mask_default;
-char *__kmp_affinity_proclist = NULL;
-kmp_affin_mask_t *__kmp_affinity_masks = NULL;
-unsigned __kmp_affinity_num_masks = 0;
+
+// Regular thread affinity settings from KMP_AFFINITY
+kmp_affinity_t __kmp_affinity = KMP_AFFINITY_INIT("KMP_AFFINITY");
+// Hidden helper thread affinity settings from KMP_HIDDEN_HELPER_AFFINITY
+kmp_affinity_t __kmp_hh_affinity =
+    KMP_AFFINITY_INIT("KMP_HIDDEN_HELPER_AFFINITY");
+kmp_affinity_t *__kmp_affinities[] = {&__kmp_affinity, &__kmp_hh_affinity};
 
 char *__kmp_cpuinfo_file = NULL;
-bool __kmp_affin_reset = 0;
 
 #endif /* KMP_AFFINITY_SUPPORTED */
 

@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -amdgpu-propagate-attributes-late %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -p amdgpu-propagate-attributes-late %s | FileCheck %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-propagate-attributes-late %s | FileCheck %s
 
 ; CHECK: define internal void @max_flat_1_1024() #0 {
@@ -34,7 +34,7 @@ define internal void @max_flat_64_64() #2 {
   ret void
 }
 
-; CHECK: define internal void @default() #2 {
+; CHECK: define internal void @default() #3 {
 define internal void @default() #3 {
   ret void
 }
@@ -46,4 +46,4 @@ attributes #3 = { noinline }
 
 ; CHECK: attributes #0 = { noinline "amdgpu-flat-work-group-size"="1,1024"
 ; CHECK-NEXT: attributes #1 = { noinline "amdgpu-flat-work-group-size"="1,256"
-; CHECK-NEXT: attributes #2 = { noinline "amdgpu-flat-work-group-size"="1,256"
+; CHECK-NEXT: attributes #2 = { noinline "amdgpu-flat-work-group-size"="64,64"

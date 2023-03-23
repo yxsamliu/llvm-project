@@ -6,7 +6,7 @@
 
 ; RUN: opt --opaque-pointers=0 -thinlto-bc -thinlto-split-lto-unit -o %t.o %s
 
-; RUN: llvm-lto2 run --opaque-pointers=0 -thinlto-distributed-indexes -disable-thinlto-funcattrs=0 %t.o \
+; RUN: llvm-lto2 run -thinlto-distributed-indexes -disable-thinlto-funcattrs=0 %t.o \
 ; RUN:   -whole-program-visibility \
 ; RUN:   -o %t2.index \
 ; RUN:   -r=%t.o,test,px \
@@ -100,7 +100,7 @@ cont2:
   ; CHECK-IR: br i1 {{.*}}, label %trap
 
   ; We still have to call it as virtual.
-  ; CHECK-IR: %call3 = tail call i32 %5
+  ; CHECK-IR: %call3 = tail call i32 {{%[0-9]+}}
   %call3 = tail call i32 %8(%struct.A* nonnull %obj, i32 %call)
   ret i32 %call3
 }

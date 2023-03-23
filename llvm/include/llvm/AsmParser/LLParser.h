@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -23,6 +21,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include <map>
+#include <optional>
 
 namespace llvm {
   class Module;
@@ -34,7 +33,6 @@ namespace llvm {
   class SourceMgr;
   class Type;
   struct MaybeAlign;
-  template <typename T> class Optional;
   class Function;
   class Value;
   class BasicBlock;
@@ -110,6 +108,12 @@ namespace llvm {
 
     SmallVector<Instruction*, 64> InstsWithTBAATag;
 
+    /// DIAssignID metadata does not support temporary RAUW so we cannot use
+    /// the normal metadata forward reference resolution method. Instead,
+    /// non-temporary DIAssignID are attached to instructions (recorded here)
+    /// then replaced later.
+    DenseMap<MDNode *, SmallVector<Instruction *, 2>> TempDIAssignIDAttachments;
+
     // Type resolution handling data structures.  The location is set when we
     // have processed a use of the type but not a definition yet.
     StringMap<std::pair<Type*, LocTy> > NamedTypes;
@@ -175,8 +179,10 @@ namespace llvm {
           Lex(F, SM, Err, Context), M(M), Index(Index), Slots(Slots),
           BlockAddressPFS(nullptr) {}
     bool Run(
-        bool UpgradeDebugInfo, DataLayoutCallbackTy DataLayoutCallback =
-                                   [](StringRef) { return None; });
+        bool UpgradeDebugInfo,
+        DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
+          return std::nullopt;
+        });
 
     bool parseStandaloneConstantValue(Constant *&C, const SlotMapping *Slots);
 
@@ -287,7 +293,7 @@ namespace llvm {
     bool parseOptionalDerefAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes);
     bool parseOptionalUWTableKind(UWTableKind &Kind);
     bool parseAllocKind(AllocFnKind &Kind);
-    Optional<MemoryEffects> parseMemoryAttr();
+    std::optional<MemoryEffects> parseMemoryAttr();
     bool parseScopeAndOrdering(bool IsAtomic, SyncScope::ID &SSID,
                                AtomicOrdering &Ordering);
     bool parseScope(SyncScope::ID &SSID);
@@ -297,7 +303,7 @@ namespace llvm {
     bool parseOptionalCommaAddrSpace(unsigned &AddrSpace, LocTy &Loc,
                                      bool &AteExtraComma);
     bool parseAllocSizeArguments(unsigned &BaseSizeArg,
-                                 Optional<unsigned> &HowManyArg);
+                                 std::optional<unsigned> &HowManyArg);
     bool parseVScaleRangeArguments(unsigned &MinValue, unsigned &MaxValue);
     bool parseIndexList(SmallVectorImpl<unsigned> &Indices,
                         bool &AteExtraComma);
@@ -314,8 +320,8 @@ namespace llvm {
     bool parseTopLevelEntities();
     bool validateEndOfModule(bool UpgradeDebugInfo);
     bool validateEndOfIndex();
-    bool parseTargetDefinitions();
-    bool parseTargetDefinition();
+    bool parseTargetDefinitions(DataLayoutCallbackTy DataLayoutCallback);
+    bool parseTargetDefinition(std::string &TentativeDLStr, LocTy &DLStrLoc);
     bool parseModuleAsm();
     bool parseSourceFileName();
     bool parseUnnamedType();
@@ -402,6 +408,10 @@ namespace llvm {
     void addGlobalValueToIndex(std::string Name, GlobalValue::GUID,
                                GlobalValue::LinkageTypes Linkage, unsigned ID,
                                std::unique_ptr<GlobalValueSummary> Summary);
+    bool parseOptionalAllocs(std::vector<AllocInfo> &Allocs);
+    bool parseMemProfs(std::vector<MIBInfo> &MIBs);
+    bool parseAllocType(uint8_t &AllocType);
+    bool parseOptionalCallsites(std::vector<CallsiteInfo> &Callsites);
 
     // Type Parsing.
     bool parseType(Type *&Result, const Twine &Msg, bool AllowVoid = false);
@@ -426,6 +436,7 @@ namespace llvm {
 
     bool parseArrayVectorType(Type *&Result, bool IsVector);
     bool parseFunctionType(Type *&Result);
+    bool parseTargetExtType(Type *&Result);
 
     // Function Semantic Analysis.
     class PerFunctionState {
@@ -531,7 +542,7 @@ namespace llvm {
     bool parseGlobalValue(Type *Ty, Constant *&C);
     bool parseGlobalTypeAndValue(Constant *&V);
     bool parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts,
-                                Optional<unsigned> *InRangeOp = nullptr);
+                                std::optional<unsigned> *InRangeOp = nullptr);
     bool parseOptionalComdat(StringRef GlobalName, Comdat *&C);
     bool parseSanitizer(GlobalVariable *GV);
     bool parseMetadataAsValue(Value *&V, PerFunctionState &PFS);

@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -63,9 +61,11 @@ TEST(GlobalTest, CreateAddressSpace) {
                          GlobalVariable::NotThreadLocal,
                          1);
 
-  EXPECT_TRUE(Value::MaximumAlignment == 4294967296ULL);
-  Dummy0->setAlignment(Align(4294967296ULL));
-  EXPECT_EQ(Dummy0->getAlignment(), 4294967296ULL);
+  const Align kMaxAlignment(Value::MaximumAlignment);
+  EXPECT_TRUE(kMaxAlignment.value() == 4294967296ULL);
+  Dummy0->setAlignment(kMaxAlignment);
+  EXPECT_TRUE(Dummy0->getAlign());
+  EXPECT_EQ(*Dummy0->getAlign(), kMaxAlignment);
 
   // Make sure the address space isn't dropped when returning this.
   Constant *Dummy1 = M->getOrInsertGlobal("dummy", Int32Ty);

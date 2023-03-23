@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -130,7 +128,7 @@ static void resolveTopLevelMetadata(llvm::Function *Fn,
 
   // Find all llvm.dbg.declare intrinsics and resolve the DILocalVariable nodes
   // they are referencing.
-  for (auto &BB : Fn->getBasicBlockList()) {
+  for (auto &BB : *Fn) {
     for (auto &I : BB) {
       if (auto *DII = dyn_cast<llvm::DbgVariableIntrinsic>(&I)) {
         auto *DILocal = DII->getVariable();
@@ -680,15 +678,23 @@ void CodeGenVTables::addRelativeComponent(ConstantArrayBuilder &builder,
                                       /*position=*/vtableAddressPoint);
 }
 
-bool CodeGenVTables::useRelativeLayout() const {
+static bool UseRelativeLayout(const CodeGenModule &CGM) {
   return CGM.getTarget().getCXXABI().isItaniumFamily() &&
          CGM.getItaniumVTableContext().isRelativeLayout();
 }
 
+bool CodeGenVTables::useRelativeLayout() const {
+  return UseRelativeLayout(CGM);
+}
+
+llvm::Type *CodeGenModule::getVTableComponentType() const {
+  if (UseRelativeLayout(*this))
+    return Int32Ty;
+  return Int8PtrTy;
+}
+
 llvm::Type *CodeGenVTables::getVTableComponentType() const {
-  if (useRelativeLayout())
-    return CGM.Int32Ty;
-  return CGM.Int8PtrTy;
+  return CGM.getVTableComponentType();
 }
 
 static void AddPointerLayoutOffset(const CodeGenModule &CGM,
@@ -904,7 +910,7 @@ llvm::GlobalVariable *CodeGenVTables::GenerateConstructionVTable(
   if (Linkage == llvm::GlobalVariable::AvailableExternallyLinkage)
     Linkage = llvm::GlobalVariable::InternalLinkage;
 
-  unsigned Align = CGM.getDataLayout().getABITypeAlignment(VTType);
+  llvm::Align Align = CGM.getDataLayout().getABITypeAlign(VTType);
 
   // Create the variable that will hold the construction vtable.
   llvm::GlobalVariable *VTable =
@@ -1284,8 +1290,7 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
   if (!getCodeGenOpts().LTOUnit)
     return;
 
-  CharUnits PointerWidth =
-      Context.toCharUnitsFromBits(Context.getTargetInfo().getPointerWidth(0));
+  CharUnits ComponentWidth = GetTargetTypeStoreSize(getVTableComponentType());
 
   typedef std::pair<const CXXRecordDecl *, unsigned> AddressPoint;
   std::vector<AddressPoint> AddressPoints;
@@ -1323,7 +1328,7 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
   ArrayRef<VTableComponent> Comps = VTLayout.vtable_components();
   for (auto AP : AddressPoints) {
     // Create type metadata for the address point.
-    AddVTableTypeMetadata(VTable, PointerWidth * AP.second, AP.first);
+    AddVTableTypeMetadata(VTable, ComponentWidth * AP.second, AP.first);
 
     // The class associated with each address point could also potentially be
     // used for indirect calls via a member function pointer, so we need to
@@ -1336,7 +1341,7 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
           Context.getMemberPointerType(
               Comps[I].getFunctionDecl()->getType(),
               Context.getRecordType(AP.first).getTypePtr()));
-      VTable->addTypeMetadata((PointerWidth * I).getQuantity(), MD);
+      VTable->addTypeMetadata((ComponentWidth * I).getQuantity(), MD);
     }
   }
 

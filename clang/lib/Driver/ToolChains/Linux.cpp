@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -471,16 +469,18 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
   }
   case llvm::Triple::loongarch32: {
     LibDir = "lib32";
-    Loader = ("ld-linux-loongarch-" +
-              tools::loongarch::getLoongArchABI(Args, Triple) + ".so.1")
-                 .str();
+    Loader =
+        ("ld-linux-loongarch-" +
+         tools::loongarch::getLoongArchABI(getDriver(), Args, Triple) + ".so.1")
+            .str();
     break;
   }
   case llvm::Triple::loongarch64: {
     LibDir = "lib64";
-    Loader = ("ld-linux-loongarch-" +
-              tools::loongarch::getLoongArchABI(Args, Triple) + ".so.1")
-                 .str();
+    Loader =
+        ("ld-linux-loongarch-" +
+         tools::loongarch::getLoongArchABI(getDriver(), Args, Triple) + ".so.1")
+            .str();
     break;
   }
   case llvm::Triple::m68k:
@@ -925,9 +925,13 @@ void Linux::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
 void Linux::AddHIPRuntimeLibArgs(const ArgList &Args,
                                  ArgStringList &CmdArgs) const {
-  CmdArgs.append(
-      {Args.MakeArgString(StringRef("-L") + RocmInstallation.getLibPath()),
-       "-rpath", Args.MakeArgString(RocmInstallation.getLibPath())});
+  CmdArgs.push_back(
+      Args.MakeArgString(StringRef("-L") + RocmInstallation.getLibPath()));
+
+  if (Args.hasFlag(options::OPT_offload_add_rpath,
+                   options::OPT_no_offload_add_rpath, false))
+    CmdArgs.append(
+        {"-rpath", Args.MakeArgString(RocmInstallation.getLibPath())});
 
   CmdArgs.push_back("-lamdhip64");
 }
@@ -979,6 +983,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
                          getTriple().getArch() == llvm::Triple::thumb ||
                          getTriple().getArch() == llvm::Triple::armeb ||
                          getTriple().getArch() == llvm::Triple::thumbeb;
+  const bool IsLoongArch64 = getTriple().getArch() == llvm::Triple::loongarch64;
   const bool IsRISCV64 = getTriple().getArch() == llvm::Triple::riscv64;
   const bool IsSystemZ = getTriple().getArch() == llvm::Triple::systemz;
   const bool IsHexagon = getTriple().getArch() == llvm::Triple::hexagon;
@@ -995,19 +1000,22 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   if (IsX86_64 || IsMIPS64 || IsAArch64)
     Res |= SanitizerKind::DataFlow;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsArmArch || IsPowerPC64 ||
-      IsRISCV64 || IsSystemZ || IsHexagon)
+      IsRISCV64 || IsSystemZ || IsHexagon || IsLoongArch64)
     Res |= SanitizerKind::Leak;
-  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64 || IsSystemZ)
+  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64 || IsSystemZ ||
+      IsLoongArch64)
     Res |= SanitizerKind::Thread;
   if (IsX86_64)
     Res |= SanitizerKind::KernelMemory;
   if (IsX86 || IsX86_64)
     Res |= SanitizerKind::Function;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsMIPS || IsArmArch ||
-      IsPowerPC64 || IsHexagon)
+      IsPowerPC64 || IsHexagon || IsLoongArch64)
     Res |= SanitizerKind::Scudo;
-  if (IsX86_64 || IsAArch64) {
+  if (IsX86_64 || IsAArch64 || IsRISCV64) {
     Res |= SanitizerKind::HWAddress;
+  }
+  if (IsX86_64 || IsAArch64) {
     Res |= SanitizerKind::KernelHWAddress;
   }
   return Res;

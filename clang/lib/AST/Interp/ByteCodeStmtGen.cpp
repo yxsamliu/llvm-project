@@ -98,14 +98,15 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
   if (const auto Ctor = dyn_cast<CXXConstructorDecl>(F)) {
     const RecordDecl *RD = Ctor->getParent();
     const Record *R = this->getRecord(RD);
-    assert(R);
+    if (!R)
+      return false;
 
     for (const auto *Init : Ctor->inits()) {
       const Expr *InitExpr = Init->getInit();
       if (const FieldDecl *Member = Init->getMember()) {
         const Record::Field *F = R->getField(Member);
 
-        if (Optional<PrimType> T = this->classify(InitExpr)) {
+        if (std::optional<PrimType> T = this->classify(InitExpr)) {
           if (!this->emitThis(InitExpr))
             return false;
 
@@ -113,6 +114,9 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
             return false;
 
           if (!this->emitInitField(*T, F->Offset, InitExpr))
+            return false;
+
+          if (!this->emitPopPtr(InitExpr))
             return false;
         } else {
           // Non-primitive case. Get a pointer to the field-to-initialize
@@ -203,7 +207,7 @@ bool ByteCodeStmtGen<Emitter>::visitDeclStmt(const DeclStmt *DS) {
   for (auto *D : DS->decls()) {
     // Variable declarator.
     if (auto *VD = dyn_cast<VarDecl>(D)) {
-      if (!visitVarDecl(VD))
+      if (!this->visitVarDecl(VD))
         return false;
       continue;
     }
@@ -229,17 +233,21 @@ bool ByteCodeStmtGen<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
       return this->emitRet(*ReturnType, RS);
     } else {
       // RVO - construct the value in the return location.
+      if (!this->emitRVOPtr(RE))
+        return false;
       if (!this->visitInitializer(RE))
         return false;
+      if (!this->emitPopPtr(RE))
+        return false;
+
       this->emitCleanup();
       return this->emitRetVoid(RS);
     }
-  } else {
-    this->emitCleanup();
-    if (!this->emitRetVoid(RS))
-      return false;
-    return true;
   }
+
+  // Void return.
+  this->emitCleanup();
+  return this->emitRetVoid(RS);
 }
 
 template <class Emitter>
@@ -381,39 +389,6 @@ bool ByteCodeStmtGen<Emitter>::visitContinueStmt(const ContinueStmt *S) {
     return false;
 
   return this->jump(*ContinueLabel);
-}
-
-template <class Emitter>
-bool ByteCodeStmtGen<Emitter>::visitVarDecl(const VarDecl *VD) {
-  if (!VD->hasLocalStorage()) {
-    // No code generation required.
-    return true;
-  }
-
-  // Integers, pointers, primitives.
-  if (Optional<PrimType> T = this->classify(VD->getType())) {
-    const Expr *Init = VD->getInit();
-
-    if (!Init)
-      return false;
-
-    unsigned Offset =
-        this->allocateLocalPrimitive(VD, *T, VD->getType().isConstQualified());
-    // Compile the initializer in its own scope.
-    {
-      ExprScope<Emitter> Scope(this);
-      if (!this->visit(Init))
-        return false;
-    }
-    // Set the value.
-    return this->emitSetLocal(*T, Offset, VD);
-  }
-
-  // Composite types - allocate storage and initialize it.
-  if (Optional<unsigned> Offset = this->allocateLocal(VD))
-    return this->visitLocalInitializer(VD->getInit(), *Offset);
-
-  return this->bail(VD);
 }
 
 namespace clang {

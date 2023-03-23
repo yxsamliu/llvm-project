@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -271,9 +269,9 @@ uint32_t __kmpc_get_hardware_num_blocks();
 int8_t __kmpc_is_spmd_exec_mode();
 
 int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
-                           bool UseGenericStateMachine, bool);
+                           bool UseGenericStateMachine);
 
-void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode, bool);
+void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode);
 
 ///}
 
@@ -424,10 +422,9 @@ uint16_t __kmpc_parallel_level(IdentTy *Loc, uint32_t);
 /// Tasking
 ///
 ///{
-extern "C" {
-TaskDescriptorTy *__kmpc_omp_task_alloc(IdentTy *, uint32_t, int32_t,
-                                        uint64_t TaskSizeInclPrivateValues,
-                                        uint64_t SharedValuesSize,
+TaskDescriptorTy *__kmpc_omp_task_alloc(IdentTy *, int32_t, int32_t,
+                                        size_t TaskSizeInclPrivateValues,
+                                        size_t SharedValuesSize,
                                         TaskFnTy TaskFn);
 
 int32_t __kmpc_omp_task(IdentTy *Loc, uint32_t TId,
@@ -462,9 +459,6 @@ void __kmpc_taskloop(IdentTy *Loc, uint32_t TId,
 void *__kmpc_task_allow_completion_event(IdentTy *loc_ref,
                                                 uint32_t gtid,
                                                 TaskDescriptorTy *task);
-
-}
-///}
 
 /// Misc
 ///

@@ -22,7 +22,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/Optional.h"
 
 namespace clang {
 class QualType;
@@ -45,9 +44,6 @@ protected:
   using LabelTy = typename Emitter::LabelTy;
   using AddrTy = typename Emitter::AddrTy;
 
-  // Reference to a function generating the pointer of an initialized object.s
-  using InitFnRef = std::function<bool()>;
-
   /// Current compilation context.
   Context &Ctx;
   /// Program to link to.
@@ -64,6 +60,7 @@ public:
   bool VisitIntegerLiteral(const IntegerLiteral *E);
   bool VisitParenExpr(const ParenExpr *E);
   bool VisitBinaryOperator(const BinaryOperator *E);
+  bool VisitPointerArithBinOp(const BinaryOperator *E);
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
   bool VisitCallExpr(const CallExpr *E);
   bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *E);
@@ -85,6 +82,7 @@ public:
   bool VisitAbstractConditionalOperator(const AbstractConditionalOperator *E);
   bool VisitStringLiteral(const StringLiteral *E);
   bool VisitCharacterLiteral(const CharacterLiteral *E);
+  bool VisitCompoundAssignOperator(const CompoundAssignOperator *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -105,29 +103,12 @@ protected:
   // If the function does not exist yet, it is compiled.
   const Function *getFunction(const FunctionDecl *FD);
 
-  /// Returns the size int bits of an integer.
-  unsigned getIntWidth(QualType Ty) {
-    auto &ASTContext = Ctx.getASTContext();
-    return ASTContext.getIntWidth(Ty);
-  }
-
-  /// Returns the value of CHAR_BIT.
-  unsigned getCharBit() const {
-    auto &ASTContext = Ctx.getASTContext();
-    return ASTContext.getTargetInfo().getCharWidth();
-  }
-
   /// Classifies a type.
-  llvm::Optional<PrimType> classify(const Expr *E) const {
+  std::optional<PrimType> classify(const Expr *E) const {
     return E->isGLValue() ? PT_Ptr : classify(E->getType());
   }
-  llvm::Optional<PrimType> classify(QualType Ty) const {
+  std::optional<PrimType> classify(QualType Ty) const {
     return Ctx.classify(Ty);
-  }
-
-  /// Checks if a pointer needs adjustment.
-  bool needsAdjust(QualType Ty) const {
-    return true;
   }
 
   /// Classifies a known primitive type
@@ -148,6 +129,8 @@ protected:
   bool visitArrayInitializer(const Expr *Initializer);
   /// Compiles a record initializer.
   bool visitRecordInitializer(const Expr *Initializer);
+  /// Creates and initializes a variable from the given decl.
+  bool visitVarDecl(const VarDecl *VD);
 
   /// Visits an expression and converts it to a boolean.
   bool visitBool(const Expr *E);
@@ -190,8 +173,7 @@ protected:
                                   bool IsExtended = false);
 
   /// Allocates a space storing a local given its type.
-  llvm::Optional<unsigned> allocateLocal(DeclTy &&Decl,
-                                         bool IsExtended = false);
+  std::optional<unsigned> allocateLocal(DeclTy &&Decl, bool IsExtended = false);
 
 private:
   friend class VariableScope<Emitter>;
@@ -227,22 +209,14 @@ private:
                       DerefKind AK, llvm::function_ref<bool(PrimType)> Direct,
                       llvm::function_ref<bool(PrimType)> Indirect);
 
-  /// Emits an APInt constant.
-  bool emitConst(PrimType T, const llvm::APInt &Value, const Expr *E);
+  /// Emits an APSInt constant.
+  bool emitConst(const APSInt &Value, const Expr *E);
+  bool emitConst(const APInt &Value, const Expr *E) {
+    return emitConst(static_cast<APSInt>(Value), E);
+  }
 
   /// Emits an integer constant.
-  template <typename T> bool emitConst(const Expr *E, T Value) {
-    QualType Ty = E->getType();
-    APInt WrappedValue(getIntWidth(Ty), static_cast<uint64_t>(Value),
-                       std::is_signed<T>::value);
-    return emitConst(*Ctx.classify(Ty), WrappedValue, E);
-  }
-
-  /// Emits the initialized pointer.
-  bool emitInitFn() {
-    assert(InitFn && "missing initializer");
-    return (*InitFn)();
-  }
+  template <typename T> bool emitConst(T Value, const Expr *E);
 
   /// Returns the CXXRecordDecl for the type of the given expression,
   /// or nullptr if no such decl exists.
@@ -251,6 +225,12 @@ private:
     if (const auto *RD = T->getPointeeCXXRecordDecl())
       return RD;
     return T->getAsCXXRecordDecl();
+  }
+
+  /// Returns whether we should create a global variable for the
+  /// given VarDecl.
+  bool shouldBeGloballyIndexed(const VarDecl *VD) const {
+    return VD->hasGlobalStorage() || VD->isConstexpr();
   }
 
 protected:
@@ -264,13 +244,10 @@ protected:
   VariableScope<Emitter> *VarScope = nullptr;
 
   /// Current argument index. Needed to emit ArrayInitIndexExpr.
-  llvm::Optional<uint64_t> ArrayIndex;
+  std::optional<uint64_t> ArrayIndex;
 
   /// Flag indicating if return value is to be discarded.
   bool DiscardResult = false;
-
-  /// Expression being initialized.
-  llvm::Optional<InitFnRef> InitFn = {};
 };
 
 extern template class ByteCodeExprGen<ByteCodeEmitter>;
@@ -279,6 +256,11 @@ extern template class ByteCodeExprGen<EvalEmitter>;
 /// Scope chain managing the variable lifetimes.
 template <class Emitter> class VariableScope {
 public:
+  VariableScope(ByteCodeExprGen<Emitter> *Ctx)
+      : Ctx(Ctx), Parent(Ctx->VarScope) {
+    Ctx->VarScope = this;
+  }
+
   virtual ~VariableScope() { Ctx->VarScope = this->Parent; }
 
   void add(const Scope::Local &Local, bool IsExtended) {
@@ -303,11 +285,6 @@ public:
   VariableScope *getParent() { return Parent; }
 
 protected:
-  VariableScope(ByteCodeExprGen<Emitter> *Ctx)
-      : Ctx(Ctx), Parent(Ctx->VarScope) {
-    Ctx->VarScope = this;
-  }
-
   /// ByteCodeExprGen instance.
   ByteCodeExprGen<Emitter> *Ctx;
   /// Link to the parent scope.
@@ -341,7 +318,7 @@ public:
 
 protected:
   /// Index of the scope in the chain.
-  Optional<unsigned> Idx;
+  std::optional<unsigned> Idx;
 };
 
 /// Scope for storage declared in a compound statement.
@@ -361,6 +338,7 @@ public:
   ExprScope(ByteCodeExprGen<Emitter> *Ctx) : LocalScope<Emitter>(Ctx) {}
 
   void addExtended(const Scope::Local &Local) override {
+    assert(this->Parent);
     this->Parent->addLocal(Local);
   }
 };
@@ -376,7 +354,7 @@ public:
 
 private:
   ByteCodeExprGen<Emitter> *Ctx;
-  Optional<uint64_t> OldArrayIndex;
+  std::optional<uint64_t> OldArrayIndex;
 };
 
 } // namespace interp

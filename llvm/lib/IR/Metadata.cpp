@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -19,7 +17,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -84,7 +81,7 @@ static Metadata *canonicalizeMetadataForValue(LLVMContext &Context,
                                               Metadata *MD) {
   if (!MD)
     // !{}
-    return MDNode::get(Context, None);
+    return MDNode::get(Context, std::nullopt);
 
   // Return early if this isn't a single-operand MDNode.
   auto *N = dyn_cast<MDNode>(MD);
@@ -93,7 +90,7 @@ static Metadata *canonicalizeMetadataForValue(LLVMContext &Context,
 
   if (!N->getOperand(0))
     // !{}
-    return MDNode::get(Context, None);
+    return MDNode::get(Context, std::nullopt);
 
   if (auto *C = dyn_cast<ConstantAsMetadata>(N->getOperand(0)))
     // Look through the MDNode.
@@ -1408,14 +1405,11 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
   if (!Value::hasMetadata())
     return; // Nothing to remove!
 
-  if (KnownIDs.empty()) {
-    // Just drop our entry at the store.
-    clearMetadata();
-    return;
-  }
-
   SmallSet<unsigned, 4> KnownSet;
   KnownSet.insert(KnownIDs.begin(), KnownIDs.end());
+
+  // A DIAssignID attachment is debug metadata, don't drop it.
+  KnownSet.insert(LLVMContext::MD_DIAssignID);
 
   auto &MetadataStore = getContext().pImpl->ValueMetadata;
   auto &Info = MetadataStore[this];
@@ -1430,6 +1424,37 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
   }
 }
 
+void Instruction::updateDIAssignIDMapping(DIAssignID *ID) {
+  auto &IDToInstrs = getContext().pImpl->AssignmentIDToInstrs;
+  if (const DIAssignID *CurrentID =
+          cast_or_null<DIAssignID>(getMetadata(LLVMContext::MD_DIAssignID))) {
+    // Nothing to do if the ID isn't changing.
+    if (ID == CurrentID)
+      return;
+
+    // Unmap this instruction from its current ID.
+    auto InstrsIt = IDToInstrs.find(CurrentID);
+    assert(InstrsIt != IDToInstrs.end() &&
+           "Expect existing attachment to be mapped");
+
+    auto &InstVec = InstrsIt->second;
+    auto *InstIt = std::find(InstVec.begin(), InstVec.end(), this);
+    assert(InstIt != InstVec.end() &&
+           "Expect instruction to be mapped to attachment");
+    // The vector contains a ptr to this. If this is the only element in the
+    // vector, remove the ID:vector entry, otherwise just remove the
+    // instruction from the vector.
+    if (InstVec.size() == 1)
+      IDToInstrs.erase(InstrsIt);
+    else
+      InstVec.erase(InstIt);
+  }
+
+  // Map this instruction to the new ID.
+  if (ID)
+    IDToInstrs[ID].push_back(this);
+}
+
 void Instruction::setMetadata(unsigned KindID, MDNode *Node) {
   if (!Node && !hasMetadata())
     return;
@@ -1438,6 +1463,16 @@ void Instruction::setMetadata(unsigned KindID, MDNode *Node) {
   if (KindID == LLVMContext::MD_dbg) {
     DbgLoc = DebugLoc(Node);
     return;
+  }
+
+  // Update DIAssignID to Instruction(s) mapping.
+  if (KindID == LLVMContext::MD_DIAssignID) {
+    // The DIAssignID tracking infrastructure doesn't support RAUWing temporary
+    // nodes with DIAssignIDs. The cast_or_null below would also catch this, but
+    // having a dedicated assert helps make this obvious.
+    assert((!Node || !Node->isTemporary()) &&
+           "Temporary DIAssignIDs are invalid");
+    updateDIAssignIDMapping(cast_or_null<DIAssignID>(Node));
   }
 
   Value::setMetadata(KindID, Node);
@@ -1512,7 +1547,7 @@ bool Instruction::extractProfTotalWeight(uint64_t &TotalVal) const {
        getOpcode() == Instruction::Switch) &&
       "Looking for branch weights on something besides branch");
 
-  return ::extractProfTotalWeight(getMetadata(LLVMContext::MD_prof), TotalVal);
+  return ::extractProfTotalWeight(*this, TotalVal);
 }
 
 void GlobalObject::copyMetadata(const GlobalObject *Other, unsigned Offset) {
@@ -1594,7 +1629,7 @@ DISubprogram *Function::getSubprogram() const {
   return cast_or_null<DISubprogram>(getMetadata(LLVMContext::MD_dbg));
 }
 
-bool Function::isDebugInfoForProfiling() const {
+bool Function::shouldEmitDebugInfoForProfiling() const {
   if (DISubprogram *SP = getSubprogram()) {
     if (DICompileUnit *CU = SP->getUnit()) {
       return CU->getDebugInfoForProfiling();

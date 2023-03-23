@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -19,6 +17,8 @@
 #include "private.h"
 #include "rtl.h"
 
+#include "Utilities.h"
+
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
@@ -27,21 +27,20 @@
 
 #include <mutex>
 #include <string>
-// It's strange we do not have llvm tools for openmp runtime, so we use stat
-#include <sys/stat.h>
 
 using namespace llvm;
 using namespace llvm::sys;
+using namespace llvm::omp::target;
 
 // List of all plugins that can support offloading.
 static const char *RTLNames[] = {
-    /* PowerPC target       */ "libomptarget.rtl.ppc64.so",
-    /* x86_64 target        */ "libomptarget.rtl.x86_64.so",
-    /* CUDA target          */ "libomptarget.rtl.cuda.so",
-    /* AArch64 target       */ "libomptarget.rtl.aarch64.so",
-    /* SX-Aurora VE target  */ "libomptarget.rtl.ve.so",
-    /* AMDGPU target        */ "libomptarget.rtl.amdgpu.so",
-    /* Remote target        */ "libomptarget.rtl.rpc.so",
+    /* PowerPC target       */ "libomptarget.rtl.ppc64",
+    /* x86_64 target        */ "libomptarget.rtl.x86_64",
+    /* CUDA target          */ "libomptarget.rtl.cuda",
+    /* AArch64 target       */ "libomptarget.rtl.aarch64",
+    /* SX-Aurora VE target  */ "libomptarget.rtl.ve",
+    /* AMDGPU target        */ "libomptarget.rtl.amdgpu",
+    /* Remote target        */ "libomptarget.rtl.rpc",
 };
 
 PluginManager *PM;
@@ -85,7 +84,6 @@ __attribute__((constructor(101))) void init() {
 
 __attribute__((destructor(101))) void deinit() {
   DP("Deinit target library!\n");
-
   delete PM;
 
   if (ProfileTraceFile) {
@@ -98,7 +96,6 @@ __attribute__((destructor(101))) void deinit() {
 }
 
 void RTLsTy::loadRTLs() {
-
   // FIXME this is amdgcn specific.
   // Propogate HIP_VISIBLE_DEVICES if set to ROCR_VISIBLE_DEVICES.
   if (char *hipVisDevs = getenv("HIP_VISIBLE_DEVICES")) {
@@ -118,6 +115,8 @@ void RTLsTy::loadRTLs() {
     return;
   }
 
+  DP("Loading RTLs...\n");
+
   // Parse environment variable OMPX_DISABLE_MAPS (if set)
   if (const char *NoMapChecksStr = getenv("OMPX_DISABLE_MAPS"))
     if (NoMapChecksStr)
@@ -131,170 +130,184 @@ void RTLsTy::loadRTLs() {
     }
   }
 
-    DP("Loading RTLs...\n");
+  // Parse environement variable OMPX_APU_MAPS (if set)
+  if (auto *ApuMaps = getenv("OMPX_APU_MAPS")) {
+    auto Value{std::stoi(ApuMaps)};
+    if (Value > 0) {
+      DisableAllocationsForMapsOnApus = true;
+    }
+  }
+
+  DP("Loading RTLs...\n");
+  BoolEnvar NextGenPlugins("LIBOMPTARGET_NEXTGEN_PLUGINS", false);
 
   // Attempt to open all the plugins and, if they exist, check if the interface
   // is correct and if they are supporting any devices.
-  for (auto *Name : RTLNames) {
-    DP("Loading library '%s'...\n", Name);
-        std::string ErrMsg;
-        auto DynLibrary = std::make_unique<sys::DynamicLibrary>(
-            sys::DynamicLibrary::getPermanentLibrary(Name, &ErrMsg));
-
-    if (!DynLibrary->isValid()) {
-      // Library does not exist or cannot be found.
-      DP("Unable to load '%s': %s!\n", Name, ErrMsg.c_str());
-      continue;
-    }
-
-    DP("Successfully loaded library '%s'!\n", Name);
-
+  for (const char *Name : RTLNames) {
     AllRTLs.emplace_back();
 
-    // Retrieve the RTL information from the runtime library.
-    RTLInfoTy &R = AllRTLs.back();
+    RTLInfoTy &RTL = AllRTLs.back();
 
-    // Remove plugin on failure to call optional init_plugin
-    *((void **)&R.init_plugin) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_init_plugin");
-    if (R.init_plugin) {
-      int32_t Rc = R.init_plugin();
-      if (Rc != OFFLOAD_SUCCESS) {
-        DP("Unable to initialize library '%s': %u!\n", Name, Rc);
-        AllRTLs.pop_back();
+    const std::string BaseRTLName(Name);
+    if (NextGenPlugins) {
+      if (attemptLoadRTL(BaseRTLName + ".nextgen.so", RTL))
         continue;
-      }
+
+      DP("Falling back to original plugin...\n");
     }
 
-    bool ValidPlugin = true;
-
-    if (!(*((void **)&R.is_valid_binary) =
-              DynLibrary->getAddressOfSymbol("__tgt_rtl_is_valid_binary")))
-      ValidPlugin = false;
-    if (!(*((void **)&R.number_of_team_procs) =
-              DynLibrary->getAddressOfSymbol("__tgt_rtl_number_of_team_procs")))
-      ValidPlugin = false;
-    if (!(*((void **)&R.number_of_team_procs) =
-              DynLibrary->getAddressOfSymbol("__tgt_rtl_number_of_team_procs")))
-      ValidPlugin = false;
-    if (!(*((void **)&R.number_of_devices) =
-              DynLibrary->getAddressOfSymbol("__tgt_rtl_number_of_devices")))
-      ValidPlugin = false;
-    if (!(*((void **)&R.init_device) =
-              DynLibrary->getAddressOfSymbol("__tgt_rtl_init_device")))
-      ValidPlugin = false;
-    if (!(*((void **)&R.load_binary) =
-              DynLibrary->getAddressOfSymbol("__tgt_rtl_load_binary")))
-      ValidPlugin = false;
-    if (!(*((void **)&R.data_alloc) =
-              DynLibrary->getAddressOfSymbol("__tgt_rtl_data_alloc")))
-      ValidPlugin = false;
-    if (!(*((void **)&R.data_submit) =
-              DynLibrary->getAddressOfSymbol("__tgt_rtl_data_submit")))
-      ValidPlugin = false;
-    if (!(*((void **)&R.data_retrieve) =
-              DynLibrary->getAddressOfSymbol("__tgt_rtl_data_retrieve")))
-      ValidPlugin = false;
-    if (!(*((void **)&R.data_delete) =
-              DynLibrary->getAddressOfSymbol("__tgt_rtl_data_delete")))
-      ValidPlugin = false;
-    if (!(*((void **)&R.run_region) =
-              DynLibrary->getAddressOfSymbol("__tgt_rtl_run_target_region")))
-      ValidPlugin = false;
-    if (!(*((void **)&R.run_team_region) = DynLibrary->getAddressOfSymbol(
-              "__tgt_rtl_run_target_team_region")))
-      ValidPlugin = false;
-
-    // Invalid plugin
-    if (!ValidPlugin) {
-      DP("Invalid plugin as necessary interface is not found.\n");
+    if (!attemptLoadRTL(BaseRTLName + ".so", RTL))
       AllRTLs.pop_back();
-      continue;
-    }
-
-    // No devices are supported by this RTL?
-    if (!(R.NumberOfDevices = R.number_of_devices())) {
-      // The RTL is invalid! Will pop the object from the RTLs list.
-      DP("No devices supported in this RTL\n");
-      AllRTLs.pop_back();
-      continue;
-    }
-
-#ifdef OMPTARGET_DEBUG
-    R.RTLName = Name;
-#endif
-
-    DP("Registering RTL %s supporting %d devices!\n", R.RTLName.c_str(),
-       R.NumberOfDevices);
-
-    // Optional functions
-    *((void **)&R.deinit_plugin) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_deinit_plugin");
-#ifdef fixme
-    *((void **)&R.is_valid_binary_info) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_is_valid_binary_info");
-#endif
-    *((void **)&R.deinit_device) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_deinit_device");
-    *((void **)&R.init_requires) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_init_requires");
-    *((void **)&R.data_submit_async) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_data_submit_async");
-    *((void **)&R.data_retrieve_async) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_data_retrieve_async");
-    *((void **)&R.run_region_async) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_run_target_region_async");
-    *((void **)&R.run_team_region_async) = DynLibrary->getAddressOfSymbol(
-        "__tgt_rtl_run_target_team_region_async");
-    *((void **)&R.synchronize) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_synchronize");
-    *((void **)&R.data_exchange) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_data_exchange");
-    *((void **)&R.data_exchange_async) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_data_exchange_async");
-    *((void **)&R.is_data_exchangable) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_is_data_exchangable");
-    *((void **)&R.register_lib) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_register_lib");
-    *((void **)&R.unregister_lib) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_unregister_lib");
-    *((void **)&R.supports_empty_images) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_supports_empty_images");
-    *((void **)&R.set_info_flag) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_set_info_flag");
-    *((void **)&R.print_device_info) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_print_device_info");
-    *((void **)&R.create_event) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_create_event");
-    *((void **)&R.record_event) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_record_event");
-    *((void **)&R.wait_event) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_wait_event");
-    *((void **)&R.sync_event) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_sync_event");
-    *((void **)&R.destroy_event) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_destroy_event");
-    *((void **)&R.set_coarse_grain_mem_region) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_set_coarse_grain_mem_region");
-    *((void **)&R.query_coarse_grain_mem_region) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_query_coarse_grain_mem_region");
-    *((void **)&R.enable_access_to_all_agents) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_enable_access_to_all_agents");
-    *((void **)&R.release_async_info) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_release_async_info");
-    *((void **)&R.init_async_info) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_init_async_info");
-    *((void **)&R.init_device_info) =
-        DynLibrary->getAddressOfSymbol("__tgt_rtl_init_device_info");
-    *((void **)&R.data_lock) = DynLibrary->getAddressOfSymbol("__tgt_rtl_data_lock");
-    *((void **)&R.data_unlock) = DynLibrary->getAddressOfSymbol("__tgt_rtl_data_unlock");
-
-    R.LibraryHandler = std::move(DynLibrary);
   }
 
   DP("RTLs loaded!\n");
+}
 
-  return;
+bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
+  const char *Name = RTLName.c_str();
+
+  DP("Loading library '%s'...\n", Name);
+
+  std::string ErrMsg;
+  auto DynLibrary = std::make_unique<sys::DynamicLibrary>(
+      sys::DynamicLibrary::getPermanentLibrary(Name, &ErrMsg));
+
+  if (!DynLibrary->isValid()) {
+    // Library does not exist or cannot be found.
+    DP("Unable to load library '%s': %s!\n", Name, ErrMsg.c_str());
+    return false;
+  }
+
+  DP("Successfully loaded library '%s'!\n", Name);
+
+  // Remove plugin on failure to call optional init_plugin
+  *((void **)&RTL.init_plugin) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_init_plugin");
+  if (RTL.init_plugin) {
+    int32_t Rc = RTL.init_plugin();
+    if (Rc != OFFLOAD_SUCCESS) {
+      DP("Unable to initialize library '%s': %u!\n", Name, Rc);
+      return false;
+    }
+  }
+
+  bool ValidPlugin = true;
+
+  if (!(*((void **)&RTL.is_valid_binary) =
+            DynLibrary->getAddressOfSymbol("__tgt_rtl_is_valid_binary")))
+    ValidPlugin = false;
+  if (!(*((void **)&RTL.number_of_devices) =
+            DynLibrary->getAddressOfSymbol("__tgt_rtl_number_of_devices")))
+    ValidPlugin = false;
+  if (!(*((void **)&RTL.number_of_team_procs) =
+              DynLibrary->getAddressOfSymbol("__tgt_rtl_number_of_team_procs")))
+    ValidPlugin = false;
+  if (!(*((void **)&RTL.init_device) =
+            DynLibrary->getAddressOfSymbol("__tgt_rtl_init_device")))
+    ValidPlugin = false;
+  if (!(*((void **)&RTL.load_binary) =
+            DynLibrary->getAddressOfSymbol("__tgt_rtl_load_binary")))
+    ValidPlugin = false;
+  if (!(*((void **)&RTL.data_alloc) =
+            DynLibrary->getAddressOfSymbol("__tgt_rtl_data_alloc")))
+    ValidPlugin = false;
+  if (!(*((void **)&RTL.data_submit) =
+            DynLibrary->getAddressOfSymbol("__tgt_rtl_data_submit")))
+    ValidPlugin = false;
+  if (!(*((void **)&RTL.data_retrieve) =
+            DynLibrary->getAddressOfSymbol("__tgt_rtl_data_retrieve")))
+    ValidPlugin = false;
+  if (!(*((void **)&RTL.data_delete) =
+            DynLibrary->getAddressOfSymbol("__tgt_rtl_data_delete")))
+    ValidPlugin = false;
+  if (!(*((void **)&RTL.run_region) =
+            DynLibrary->getAddressOfSymbol("__tgt_rtl_run_target_region")))
+    ValidPlugin = false;
+  if (!(*((void **)&RTL.run_team_region) =
+            DynLibrary->getAddressOfSymbol("__tgt_rtl_run_target_team_region")))
+    ValidPlugin = false;
+
+  // Invalid plugin
+  if (!ValidPlugin) {
+    DP("Invalid plugin as necessary interface is not found.\n");
+    return false;
+  }
+
+  // No devices are supported by this RTL?
+  if (!(RTL.NumberOfDevices = RTL.number_of_devices())) {
+    // The RTL is invalid! Will pop the object from the RTLs list.
+    DP("No devices supported in this RTL\n");
+    return false;
+  }
+
+#ifdef LIBOMPTARGET_DEBUG
+  RTL.RTLName = Name;
+#endif
+
+  DP("Registering RTL %s supporting %d devices!\n", Name, RTL.NumberOfDevices);
+
+  // Optional functions
+  *((void **)&RTL.deinit_plugin) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_deinit_plugin");
+  *((void **)&RTL.is_valid_binary_info) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_is_valid_binary_info");
+  *((void **)&RTL.deinit_device) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_deinit_device");
+  *((void **)&RTL.init_requires) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_init_requires");
+  *((void **)&RTL.data_submit_async) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_submit_async");
+  *((void **)&RTL.data_retrieve_async) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_retrieve_async");
+  *((void **)&RTL.run_region_async) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_run_target_region_async");
+  *((void **)&RTL.run_team_region_async) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_run_target_team_region_async");
+  *((void **)&RTL.synchronize) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_synchronize");
+  *((void **)&RTL.query_async) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_query_async");
+  *((void **)&RTL.data_exchange) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_exchange");
+  *((void **)&RTL.data_exchange_async) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_exchange_async");
+  *((void **)&RTL.is_data_exchangable) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_is_data_exchangable");
+  *((void **)&RTL.register_lib) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_register_lib");
+  *((void **)&RTL.unregister_lib) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_unregister_lib");
+  *((void **)&RTL.supports_empty_images) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_supports_empty_images");
+  *((void **)&RTL.set_info_flag) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_set_info_flag");
+  *((void **)&RTL.print_device_info) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_print_device_info");
+  *((void **)&RTL.create_event) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_create_event");
+  *((void **)&RTL.record_event) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_record_event");
+  *((void **)&RTL.wait_event) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_wait_event");
+  *((void **)&RTL.sync_event) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_sync_event");
+  *((void **)&RTL.destroy_event) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_destroy_event");
+  *((void **)&RTL.release_async_info) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_release_async_info");
+  *((void **)&RTL.init_async_info) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_init_async_info");
+  *((void **)&RTL.init_device_info) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_init_device_info");
+  *((void **)&RTL.data_lock) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_lock");
+  *((void **)&RTL.data_unlock) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_unlock");
+
+  RTL.LibraryHandler = std::move(DynLibrary);
+
+  // Successfully loaded
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -360,7 +373,6 @@ static void registerGlobalCtorsDtorsForImage(__tgt_bin_desc *Desc,
   }
 }
 
-#ifdef newdriver
 static __tgt_device_image getExecutableImage(__tgt_device_image *Image) {
   StringRef ImageStr(static_cast<char *>(Image->ImageStart),
                      static_cast<char *>(Image->ImageEnd) -
@@ -388,10 +400,10 @@ static __tgt_image_info getImageInfo(__tgt_device_image *Image) {
       object::OffloadBinary::create(MemoryBufferRef(ImageStr, ""));
   if (!BinaryOrErr) {
     consumeError(BinaryOrErr.takeError());
+    return __tgt_image_info{};
   }
-  return __tgt_image_info{};
+  return __tgt_image_info{(*BinaryOrErr)->getArch().data()};
 }
-#endif
 
 void RTLsTy::registerRequires(int64_t Flags) {
   // TODO: add more elaborate check.
@@ -466,30 +478,6 @@ void RTLsTy::initAllRTLs() {
     initRTLonce(R);
 }
 
-/// Query runtime capabilities of this system by calling offload-arch -c
-/// offload_arch_output_buffer is persistant storage returned by this
-/// __tgt_get_active_offload_env.
-static void
-__tgt_get_active_offload_env(__tgt_active_offload_env *active_env,
-                             char *offload_arch_output_buffer,
-                             size_t offload_arch_output_buffer_size) {
-
-  // If OFFLOAD_ARCH_OVERRIDE env varible is present then use its value instead of
-  // querying it using LLVMOffloadArch library.
-  if (char *OffloadArchEnvVar = getenv("OFFLOAD_ARCH_OVERRIDE")) {
-    if (OffloadArchEnvVar) {
-      active_env->capabilities = OffloadArchEnvVar;
-      return;
-    }
-  }
-  // Qget runtime capabilities of this system with libLLVMOffloadArch.a
-  if (int rc = getRuntimeCapabilities(offload_arch_output_buffer,
-                                      offload_arch_output_buffer_size))
-    return;
-  active_env->capabilities = offload_arch_output_buffer;
-  return;
-}
-
 std::vector<std::string> _splitstrings(char *input, const char *sep) {
   std::vector<std::string> split_strings;
   std::string s(input);
@@ -505,71 +493,33 @@ std::vector<std::string> _splitstrings(char *input, const char *sep) {
   return split_strings;
 }
 
-static bool _ImageIsCompatibleWithEnv(__tgt_image_info *img_info,
-                                      __tgt_active_offload_env *active_env) {
-  // get_image_info will return null if no image information was registered.
-  // If no image information, assume application built with old compiler and
-  // check each image.
-  if (!img_info)
-    return true;
-
-  if (!active_env->capabilities)
-    return false;
-
-  // Each runtime requirement for the compiled image is stored in
-  // the img_info->offload_arch (TargetID) string.
-  // Each runtime capability obtained from "offload-arch -c" is stored in
-  // actvie_env->capabilities (TargetID) string.
-  // If every requirement has a matching capability, then the image
-  // is compatible with active environment
-
-  std::vector<std::string> reqs = _splitstrings(img_info->offload_arch, ":");
-  std::vector<std::string> caps = _splitstrings(active_env->capabilities, ":");
-
-  bool is_compatible = true;
-  for (auto req : reqs) {
-    bool missing_capability = true;
-    for (auto capability : caps)
-      if (capability == req)
-        missing_capability = false;
-    if (missing_capability) {
-      DP("Image requires %s but runtime capability %s is missing.\n",
-         img_info->offload_arch, req.c_str());
-      is_compatible = false;
-    }
-  }
-  return is_compatible;
-}
-
-#define MAX_CAPS_STR_SIZE 1024
 void RTLsTy::registerLib(__tgt_bin_desc *Desc) {
 
-  // Get the current active offload environment
-  __tgt_active_offload_env offload_env = { nullptr };
-  // Need a buffer to hold results of offload-arch -c command
-  size_t offload_arch_output_buffer_size = MAX_CAPS_STR_SIZE;
-  std::vector<char> offload_arch_output_buffer;
-  offload_arch_output_buffer.resize(offload_arch_output_buffer_size);
-  __tgt_get_active_offload_env(&offload_env, offload_arch_output_buffer.data(),
-                               offload_arch_output_buffer_size);
-
-  RTLInfoTy *FoundRTL = NULL;
   PM->RTLsMtx.lock();
-  // Register the images with the RTLs that understand them, if any.
-  for (int32_t I = 0; I < Desc->NumDeviceImages; ++I) {
-    // Obtain the image.
-    __tgt_device_image *Img = &Desc->DeviceImages[I];
 
-    // Get corresponding image info offload_arch and check with runtime
-    __tgt_image_info *img_info = __tgt_get_image_info(I);
-    if (!_ImageIsCompatibleWithEnv(img_info, &offload_env))
-      continue;
-    FoundRTL = NULL;
+  // Extract the exectuable image and extra information if availible.
+  for (int32_t i = 0; i < Desc->NumDeviceImages; ++i)
+    PM->Images.emplace_back(getExecutableImage(&Desc->DeviceImages[i]),
+                            getImageInfo(&Desc->DeviceImages[i]));
+
+  for (auto &ImageAndInfo : PM->Images) {
+    // Obtain the image and information that was previously extracted.
+    __tgt_device_image *Img = &ImageAndInfo.first;
+    __tgt_image_info *Info = &ImageAndInfo.second;
+
+    RTLInfoTy *FoundRTL = nullptr;
+
     // Scan the RTLs that have associated images until we find one that supports
     // the current image.
     for (auto &R : AllRTLs) {
 
-      if (!R.is_valid_binary(Img)) {
+      if (R.is_valid_binary_info) {
+        if (!R.is_valid_binary_info(Img, Info)) {
+          DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
+             DPxPTR(Img->ImageStart), R.RTLName.c_str());
+          continue;
+        }
+      } else if (!R.is_valid_binary(Img)) {
         DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
            DPxPTR(Img->ImageStart), R.RTLName.c_str());
         continue;
@@ -615,39 +565,6 @@ void RTLsTy::registerLib(__tgt_bin_desc *Desc) {
   }
   PM->RTLsMtx.unlock();
 
-  if (!FoundRTL) {
-    if (PM->TargetOffloadPolicy == tgt_mandatory)
-      fprintf(stderr, "ERROR:\
-	Runtime capabilities do NOT meet any offload image offload_arch\n\
-	and the OMP_TARGET_OFFLOAD policy is mandatory.  Terminating!\n\
-	Runtime capabilities : %s\n",
-              offload_env.capabilities);
-    else if (PM->TargetOffloadPolicy == tgt_disabled)
-      fprintf(stderr, "WARNING: Offloading is disabled.\n");
-    else
-      fprintf(
-          stderr,
-          "WARNING: Runtime capabilities do NOT meet any image offload_arch.\n\
-	 So device offloading is now disabled.\n\
-	Runtime capabilities : %s\n",
-          offload_env.capabilities);
-    if (PM->TargetOffloadPolicy != tgt_disabled) {
-      for (int32_t i = 0; i < Desc->NumDeviceImages; ++i) {
-        __tgt_image_info *img_info = __tgt_get_image_info(i);
-        if (img_info)
-          fprintf(stderr, "\
-	  Image %d offload_arch : %s\n",
-                  i, img_info->offload_arch);
-        else
-          fprintf(stderr, "\
-	  Image %d has no offload_arch. Could be from older compiler\n",
-                  i);
-      }
-    }
-    if (PM->TargetOffloadPolicy == tgt_mandatory)
-      exit(1);
-  }
-
   DP("Done registering entries!\n");
 }
 
@@ -656,9 +573,10 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
 
   PM->RTLsMtx.lock();
   // Find which RTL understands each image, if any.
-  for (int32_t I = 0; I < Desc->NumDeviceImages; ++I) {
-    // Obtain the image.
-    __tgt_device_image *Img = &Desc->DeviceImages[I];
+
+  for (auto &ImageAndInfo : PM->Images) {
+    // Obtain the image and information that was previously extracted.
+    __tgt_device_image *Img = &ImageAndInfo.first;
 
     RTLInfoTy *FoundRTL = NULL;
 
@@ -668,13 +586,9 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
 
       assert(R->IsUsed && "Expecting used RTLs.");
 
-      if (!R->is_valid_binary(Img)) {
-        DP("Image " DPxMOD " is NOT compatible with RTL " DPxMOD "!\n",
-           DPxPTR(Img->ImageStart), DPxPTR(R->LibraryHandler.get()));
+      // Ensure that we do not use any unused images associated with this RTL.
+      if (!R->UsedImages.contains(Img))
         continue;
-      }
-      DP("Image " DPxMOD " is compatible with RTL " DPxMOD "!\n",
-         DPxPTR(Img->ImageStart), DPxPTR(R->LibraryHandler.get()));
 
       FoundRTL = R;
 

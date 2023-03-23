@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -42,6 +40,12 @@ int32_t __tgt_rtl_number_of_devices(void);
 // lightweight query to determine if the RTL is suitable for an image without
 // having to load the library, which can be expensive.
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image);
+
+// This provides the same functionality as __tgt_rtl_is_valid_binary except we
+// also use additional information to determine if the image is valid. This
+// allows us to determine if an image has a compatible architecture.
+int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *Image,
+                                       __tgt_image_info *Info);
 
 // Return an integer other than zero if the data can be exchaned from SrcDevId
 // to DstDevId. If it is data exchangable, the device plugin should provide
@@ -85,11 +89,6 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t ID,
 // to use (e.g. shared, host, device).
 void *__tgt_rtl_data_alloc(int32_t ID, int64_t Size, void *HostPtr,
                            int32_t Kind);
-
-// Lock memory pointed at by TgtPtr of Size bytes. Returns locked pointer.
-void *__tgt_rtl_data_lock(int32_t ID, void *TgtPtr, int64_t Size);
-// Unlock memory pointed at by TgtPtr. Returns nothing.
-void __tgt_rtl_data_unlock(int32_t ID, void *TgtPtr);
 
 // Pass the data content to the target device using the target address. In case
 // of success, return zero. Otherwise, return an error code.
@@ -161,6 +160,16 @@ int32_t __tgt_rtl_run_target_team_region_async(
 // error code.
 int32_t __tgt_rtl_synchronize(int32_t ID, __tgt_async_info *AsyncInfo);
 
+// Queries for the completion of asynchronous operations. Instead of blocking
+// the calling thread as __tgt_rtl_synchronize, the progress of the operations
+// stored in AsyncInfo->Queue is queried in a non-blocking manner, partially
+// advancing their execution. If all operations are completed, AsyncInfo->Queue
+// is set to nullptr. If there are still pending operations, AsyncInfo->Queue is
+// kept as a valid queue. In any case of success (i.e., successful query
+// with/without completing all operations), return zero. Otherwise, return an
+// error code.
+int32_t __tgt_rtl_query_async(int32_t ID, __tgt_async_info *AsyncInfo);
+
 // Set plugin's internal information flag externally.
 void __tgt_rtl_set_info_flag(uint32_t);
 
@@ -196,6 +205,13 @@ int32_t __tgt_rtl_destroy_event(int32_t ID, void *Event);
 int32_t __tgt_rtl_init_async_info(int32_t ID, __tgt_async_info **AsyncInfoPtr);
 int32_t __tgt_rtl_init_device_info(int32_t ID, __tgt_device_info *DeviceInfoPtr,
                                    const char **ErrStr);
+
+// lock/pin host memory
+int32_t __tgt_rtl_data_lock(int32_t ID, void *HstPtr, int64_t Size,
+                            void **LockedPtr);
+
+// unlock/unpin host memory
+int32_t __tgt_rtl_data_unlock(int32_t ID, void *HstPtr);
 
 #ifdef __cplusplus
 }

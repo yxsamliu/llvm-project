@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -65,8 +63,7 @@ private:
   struct StatesTy {
     StatesTy(uint64_t DRC, uint64_t HRC)
         : DynRefCount(DRC), HoldRefCount(HRC),
-          MayContainAttachedPointers(false), DeleteThreadId(std::thread::id()) {
-    }
+          MayContainAttachedPointers(false) {}
     /// The dynamic reference count is the standard reference count as of OpenMP
     /// 4.5.  The hold reference count is an OpenMP extension for the sake of
     /// OpenACC support.
@@ -105,13 +102,10 @@ private:
     /// should be written as <tt>void *Event[2]</tt>.
     void *Event = nullptr;
 
-    /// The id of the thread responsible for deleting this entry. This thread
-    /// set the reference count to zero *last*. Other threads might reuse the
-    /// entry while it is marked for deletion but not yet deleted (e.g., the
-    /// data is still being moved back). If another thread reuses the entry we
-    /// will have a non-zero reference count *or* the thread will have changed
-    /// this id, effectively taking over deletion responsibility.
-    std::thread::id DeleteThreadId;
+    /// Number of threads currently holding a reference to the entry at a
+    /// targetDataEnd. This is used to ensure that only the last thread that
+    /// references this entry will actually delete it.
+    int32_t DataEndThreadCount = 0;
   };
   // When HostDataToTargetTy is used by std::set, std::set::iterator is const
   // use unique_ptr to make States mutable.
@@ -153,13 +147,17 @@ public:
   /// Returns OFFLOAD_FAIL if something went wrong, OFFLOAD_SUCCESS otherwise.
   int addEventIfNecessary(DeviceTy &Device, AsyncInfoTy &AsyncInfo) const;
 
-  /// Indicate that the current thread expected to delete this entry.
-  void setDeleteThreadId() const {
-    States->DeleteThreadId = std::this_thread::get_id();
+  /// Functions that manages the number of threads referencing the entry in a
+  /// targetDataEnd.
+  void incDataEndThreadCount() { ++States->DataEndThreadCount; }
+
+  [[nodiscard]] int32_t decDataEndThreadCount() {
+    return --States->DataEndThreadCount;
   }
 
-  /// Return the thread id of the thread expected to delete this entry.
-  std::thread::id getDeleteThreadId() const { return States->DeleteThreadId; }
+  [[nodiscard]] int32_t getDataEndThreadCount() const {
+    return States->DataEndThreadCount;
+  }
 
   /// Set the event bound to this data map.
   void setEvent(void *Event) const { States->Event = Event; }
@@ -390,20 +388,37 @@ struct DeviceTy {
   void *getTgtPtrBegin(HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin,
                        int64_t Size);
 
-  TargetPointerResultTy getTgtPtrBegin(void *HstPtrBegin, int64_t Size,
-                                       bool &IsLast, bool UpdateRefCount,
-                                       bool UseHoldRefCount, bool &IsHostPtr,
-                                       bool MustContain = false,
-                                       bool ForceDelete = false);
+  /// Return the target pointer begin (where the data will be moved).
+  /// Used by targetDataBegin, targetDataEnd, targetDataUpdate and target.
+  /// - \p UpdateRefCount and \p UseHoldRefCount controls which and if the entry
+  /// reference counters will be decremented.
+  /// - \p MustContain enforces that the query must not extend beyond an already
+  /// mapped entry to be valid.
+  /// - \p ForceDelete deletes the entry regardless of its reference counting
+  /// (unless it is infinite).
+  /// - \p FromDataEnd tracks the number of threads referencing the entry at
+  /// targetDataEnd for delayed deletion purpose.
+  [[nodiscard]] TargetPointerResultTy
+  getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
+                 bool UpdateRefCount, bool UseHoldRefCount, bool &IsHostPtr,
+                 bool MustContain = false, bool ForceDelete = false,
+                 bool FromDataEnd = false);
 
-  /// Deallocate \p LR and remove the entry. Assume the total reference count is
-  /// zero and the calling thread is the deleting thread for \p LR. \p HDTTMap
-  /// ensure the caller holds exclusive access and can modify the map. Return \c
-  /// OFFLOAD_SUCCESS if the map entry existed, and return \c OFFLOAD_FAIL if
-  /// not. It is the caller's responsibility to skip calling this function if
-  /// the map entry is not expected to exist because \p HstPtrBegin uses shared
-  /// memory.
-  int deallocTgtPtr(HDTTMapAccessorTy &HDTTMap, LookupResult LR, int64_t Size);
+  /// Remove the \p Entry from the data map. Expect the entry's total reference
+  /// count to be zero and the caller thread to be the last one using it. \p
+  /// HDTTMap ensure the caller holds exclusive access and can modify the map.
+  /// Return \c OFFLOAD_SUCCESS if the map entry existed, and return \c
+  /// OFFLOAD_FAIL if not. It is the caller's responsibility to skip calling
+  /// this function if the map entry is not expected to exist because \p
+  /// HstPtrBegin uses shared memory.
+  [[nodiscard]] int eraseMapEntry(HDTTMapAccessorTy &HDTTMap,
+                                  HostDataToTargetTy *Entry, int64_t Size);
+
+  /// Deallocate the \p Entry from the device memory and delete it. Return \c
+  /// OFFLOAD_SUCCESS if the deallocation operations executed successfully, and
+  /// return \c OFFLOAD_FAIL otherwise.
+  [[nodiscard]] int deallocTgtPtrAndEntry(HostDataToTargetTy *Entry,
+                                          int64_t Size);
 
   int associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size);
   int disassociatePtr(void *HstPtrBegin);
@@ -451,6 +466,12 @@ struct DeviceTy {
   /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails.
   int32_t synchronize(AsyncInfoTy &AsyncInfo);
 
+  /// Query for device/queue/event based completion on \p AsyncInfo in a
+  /// non-blocking manner and return OFFLOAD_SUCCESS/OFFLOAD_FAIL when
+  /// succeeds/fails. Must be called multiple times until AsyncInfo is
+  /// completed and AsyncInfo.isDone() returns true.
+  int32_t queryAsync(AsyncInfoTy &AsyncInfo);
+
   /// Calls the corresponding print in the \p RTLDEVID
   /// device RTL to obtain the information of the specific device.
   bool printDeviceInfo(int32_t RTLDevID);
@@ -497,6 +518,10 @@ struct PluginManager {
 
   /// RTLs identified on the host
   RTLsTy RTLs;
+
+  /// Executable images and information extracted from the input images passed
+  /// to the runtime.
+  std::list<std::pair<__tgt_device_image, __tgt_image_info>> Images;
 
   /// Devices associated with RTLs
   std::vector<std::unique_ptr<DeviceTy>> Devices;

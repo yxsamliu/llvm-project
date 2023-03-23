@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,8 +15,6 @@
 #include "clang/Driver/Options.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Util.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Triple.h"
@@ -417,7 +413,7 @@ void Compilation::initCompilationForDiagnostics() {
   TCArgs.clear();
 
   // Redirect stdout/stderr to /dev/null.
-  Redirects = {None, {""}, {""}};
+  Redirects = {std::nullopt, {""}, {""}};
 
   // Temporary files added by diagnostics should be kept.
   ForceKeepTempFiles = true;
@@ -427,6 +423,6 @@ StringRef Compilation::getSysRoot() const {
   return getDriver().SysRoot;
 }
 
-void Compilation::Redirect(ArrayRef<Optional<StringRef>> Redirects) {
+void Compilation::Redirect(ArrayRef<std::optional<StringRef>> Redirects) {
   this->Redirects = Redirects;
 }

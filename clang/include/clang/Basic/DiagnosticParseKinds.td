@@ -1316,6 +1316,7 @@ def warn_pragma_unsupported_extension : Warning<
 def warn_pragma_extension_is_core : Warning<
   "OpenCL extension %0 is core feature or supported optional core feature - ignoring">,
   InGroup<OpenCLCoreFeaturesDiagGroup>, DefaultIgnore;
+def err_modifier_expected_colon : Error<"missing ':' after %0 modifier">;
 
 // OpenCL errors.
 def err_opencl_taking_function_address_parser : Error<
@@ -1341,6 +1342,8 @@ def err_omp_unexpected_directive : Error<
   "unexpected OpenMP directive %select{|'#pragma omp %1'}0">;
 def err_omp_expected_punc : Error<
   "expected ',' or ')' in '%0' %select{clause|directive}1">;
+def warn_clause_expected_string : Warning<
+  "expected string literal in 'clause %0' - ignoring">, InGroup<IgnoredPragmas>;
 def err_omp_unexpected_clause : Error<
   "unexpected OpenMP clause '%0' in directive '#pragma omp %1'">;
 def err_omp_immediate_directive : Error<
@@ -1411,6 +1414,8 @@ def err_omp_mapper_expected_declarator : Error<
   "expected declarator on 'omp declare mapper' directive">;
 def err_omp_unexpected_append_op : Error<
   "unexpected operation specified in 'append_args' clause, expected 'interop'">;
+def err_omp_unexpected_execution_modifier : Error<
+  "unexpected 'execution' modifier in non-executable context">;
 def err_omp_declare_variant_wrong_clause : Error<
   "expected %select{'match'|'match', 'adjust_args', or 'append_args'}0 clause "
   "on 'omp declare variant' directive">;
@@ -1602,6 +1607,11 @@ def err_import_in_wrong_fragment : Error<
 def err_export_empty : Error<"export declaration cannot be empty">;
 }
 
+def ext_offsetof_member_designator : Extension<
+  "using %select{a member access expression|an array subscript expression}0 "
+  "within '%select{__builtin_offsetof|offsetof}1' is a Clang extension">,
+  InGroup<GNUOffsetofExtensions>;
+
 let CategoryName = "Generics Issue" in {
 
 def err_objc_expected_type_parameter : Error<
@@ -1628,9 +1638,8 @@ def warn_deprecated_for_co_await : Warning<
 let CategoryName = "Concepts Issue" in {
 def err_concept_definition_not_identifier : Error<
   "name defined in concept definition must be an identifier">;
-def ext_concept_legacy_bool_keyword : ExtWarn<
-  "ISO C++20 does not permit the 'bool' keyword after 'concept'">,
-  InGroup<DiagGroup<"concepts-ts-compat">>;
+def err_concept_legacy_bool_keyword : Error<
+  "ISO C++ does not permit the 'bool' keyword after 'concept'">;
 def err_placeholder_expected_auto_or_decltype_auto : Error<
   "expected 'auto' or 'decltype(auto)' after concept name">;
 }

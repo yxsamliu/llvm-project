@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -31,6 +29,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
+#include <optional>
 
 using namespace clang;
 using namespace CodeGen;
@@ -1654,7 +1653,7 @@ namespace {
   class DeclAsInlineDebugLocation {
     CGDebugInfo *DI;
     llvm::MDNode *InlinedAt;
-    llvm::Optional<ApplyDebugLocation> Location;
+    std::optional<ApplyDebugLocation> Location;
 
   public:
     DeclAsInlineDebugLocation(CodeGenFunction &CGF, const NamedDecl &Decl)
@@ -1676,7 +1675,7 @@ namespace {
 
   static void EmitSanitizerDtorCallback(
       CodeGenFunction &CGF, StringRef Name, llvm::Value *Ptr,
-      llvm::Optional<CharUnits::QuantityType> PoisonSize = {}) {
+      std::optional<CharUnits::QuantityType> PoisonSize = {}) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
     // Pass in void pointer and size of region as arguments to runtime
     // function
@@ -1810,12 +1809,12 @@ namespace {
    ASTContext &Context;
    EHScopeStack &EHStack;
    const CXXDestructorDecl *DD;
-   llvm::Optional<unsigned> StartIndex;
+   std::optional<unsigned> StartIndex;
 
  public:
    SanitizeDtorCleanupBuilder(ASTContext &Context, EHScopeStack &EHStack,
                               const CXXDestructorDecl *DD)
-       : Context(Context), EHStack(EHStack), DD(DD), StartIndex(llvm::None) {}
+       : Context(Context), EHStack(EHStack), DD(DD), StartIndex(std::nullopt) {}
    void PushCleanupForField(const FieldDecl *Field) {
      if (Field->isZeroSize(Context))
        return;
@@ -1824,15 +1823,15 @@ namespace {
        if (!StartIndex)
          StartIndex = FieldIndex;
      } else if (StartIndex) {
-       EHStack.pushCleanup<SanitizeDtorFieldRange>(
-           NormalAndEHCleanup, DD, StartIndex.value(), FieldIndex);
-       StartIndex = None;
+       EHStack.pushCleanup<SanitizeDtorFieldRange>(NormalAndEHCleanup, DD,
+                                                   *StartIndex, FieldIndex);
+       StartIndex = std::nullopt;
      }
    }
    void End() {
      if (StartIndex)
        EHStack.pushCleanup<SanitizeDtorFieldRange>(NormalAndEHCleanup, DD,
-                                                   StartIndex.value(), -1);
+                                                   *StartIndex, -1);
    }
  };
 } // end anonymous namespace
@@ -2589,7 +2588,7 @@ void CodeGenFunction::InitializeVTablePointer(const VPtr &Vptr) {
       llvm::FunctionType::get(CGM.Int32Ty, /*isVarArg=*/true)
           ->getPointerTo(ProgAS)
           ->getPointerTo(GlobalsAS);
-  // vtable field is is derived from `this` pointer, therefore they should be in
+  // vtable field is derived from `this` pointer, therefore they should be in
   // the same addr space. Note that this might not be LLVM address space 0.
   VTableField = Builder.CreateElementBitCast(VTableField, VTablePtrTy);
   VTableAddressPoint = Builder.CreateBitCast(VTableAddressPoint, VTablePtrTy);

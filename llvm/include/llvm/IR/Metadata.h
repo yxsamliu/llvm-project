@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -20,7 +18,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -1034,15 +1031,15 @@ class MDNode : public Metadata {
     MutableArrayRef<MDOperand> operands() {
       if (IsLarge)
         return getLarge();
-      return makeMutableArrayRef(
+      return MutableArrayRef(
           reinterpret_cast<MDOperand *>(this) - SmallSize, SmallNumOps);
     }
 
     ArrayRef<MDOperand> operands() const {
       if (IsLarge)
         return getLarge();
-      return makeArrayRef(reinterpret_cast<const MDOperand *>(this) - SmallSize,
-                          SmallNumOps);
+      return ArrayRef(reinterpret_cast<const MDOperand *>(this) - SmallSize,
+                      SmallNumOps);
     }
 
     unsigned getNumOperands() const {
@@ -1062,7 +1059,7 @@ class MDNode : public Metadata {
 
 protected:
   MDNode(LLVMContext &Context, unsigned ID, StorageType Storage,
-         ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = None);
+         ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = std::nullopt);
   ~MDNode() = default;
 
   void *operator new(size_t Size, size_t NumOps, StorageType Storage);

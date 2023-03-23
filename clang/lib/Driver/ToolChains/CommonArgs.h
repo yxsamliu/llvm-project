@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -180,6 +178,12 @@ void AddTargetFeature(const llvm::opt::ArgList &Args,
 
 std::string getCPUName(const Driver &D, const llvm::opt::ArgList &Args,
                        const llvm::Triple &T, bool FromAs = false);
+
+void getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
+                       const llvm::opt::ArgList &Args,
+                       llvm::opt::ArgStringList &CmdArgs, bool ForAS,
+                       bool IsAux = false,
+                       const StringRef TcTargetID = StringRef());
 
 /// Iterate \p Args and convert -mxxx to +xxx and -mno-xxx to -xxx and
 /// append it to \p Features.

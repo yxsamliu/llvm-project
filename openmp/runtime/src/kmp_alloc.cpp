@@ -7,8 +7,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -1380,7 +1378,9 @@ void __kmp_init_target_mem() {
       kmp_target_alloc_host && kmp_target_alloc_shared &&
       kmp_target_alloc_device && kmp_target_free_host &&
       kmp_target_free_shared && kmp_target_free_device;
-
+  // lock/pin and unlock/unpin target calls
+  *(void **)(&kmp_target_lock_mem) = KMP_DLSYM("llvm_omp_target_lock_mem");
+  *(void **)(&kmp_target_unlock_mem) = KMP_DLSYM("llvm_omp_target_unlock_mem");
 }
 
 omp_memspace_handle_t
@@ -1413,6 +1413,10 @@ void __kmpc_destroy_memory_space(omp_memspace_handle_t ms) {
   kmp_memspace_t *ms_t = RCAST(kmp_memspace_t *, ms);
   __kmp_free(ms_t->devids);
   __kmp_free(ms_t);
+
+  // lock/pin and unlock/unpin target calls
+  *(void **)(&kmp_target_lock_mem) = KMP_DLSYM("llvm_omp_target_lock_mem");
+  *(void **)(&kmp_target_unlock_mem) = KMP_DLSYM("llvm_omp_target_unlock_mem");
 }
 
 omp_allocator_handle_t __kmpc_init_allocator(int gtid, omp_memspace_handle_t ms,
@@ -1630,6 +1634,9 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
   else if (allocator == ompx_pinned_mem_alloc)
     is_pinned = true;
 
+  // Use default allocator if libmemkind is not available
+  int use_default_allocator = (__kmp_memkind_available) ? false : true;
+
   if (__kmp_memkind_available) {
     if (allocator < kmp_max_mem_alloc) {
       // pre-defined allocator
@@ -1719,11 +1726,25 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
 
     // pre-defined allocator
     if (allocator == omp_high_bw_mem_alloc) {
-      // ptr = NULL;
+      KMP_WARNING(OmpNoAllocator, "omp_high_bw_mem_alloc");
     } else if (allocator == omp_large_cap_mem_alloc) {
-      // warnings?
-    } else {
+      KMP_WARNING(OmpNoAllocator, "omp_large_cap_mem_alloc");
+    } else if (allocator == omp_const_mem_alloc) {
+      KMP_WARNING(OmpNoAllocator, "omp_const_mem_alloc");
+    } else if (allocator == omp_low_lat_mem_alloc) {
+      KMP_WARNING(OmpNoAllocator, "omp_low_lat_mem_alloc");
+    } else if (allocator == omp_cgroup_mem_alloc) {
+      KMP_WARNING(OmpNoAllocator, "omp_cgroup_mem_alloc");
+    } else if (allocator == omp_pteam_mem_alloc) {
+      KMP_WARNING(OmpNoAllocator, "omp_pteam_mem_alloc");
+    } else if (allocator == omp_thread_mem_alloc) {
+      KMP_WARNING(OmpNoAllocator, "omp_thread_mem_alloc");
+    } else { // default allocator requested
+      use_default_allocator = true;
+    }
+    if (use_default_allocator) {
       ptr = __kmp_thread_malloc(__kmp_thread_from_gtid(gtid), desc.size_a);
+      use_default_allocator = false;
     }
   } else if (KMP_IS_TARGET_MEM_SPACE(al->memspace) ||
              (al->memspace > kmp_max_mem_space &&
@@ -1784,6 +1805,9 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
   KE_TRACE(10, ("__kmp_alloc: T#%d %p=alloc(%d)\n", gtid, ptr, desc.size_a));
   if (ptr == NULL)
     return NULL;
+
+  if (is_pinned && kmp_target_lock_mem)
+    kmp_target_lock_mem(ptr, desc.size_a, default_device);
 
   addr = (kmp_uintptr_t)ptr;
   addr_align = (addr + sz_desc + align - 1) & ~(align - 1);
@@ -1911,10 +1935,10 @@ void ___kmpc_free(int gtid, void *ptr, omp_allocator_handle_t allocator) {
     is_pinned = al->pinned;
   else if (allocator == ompx_pinned_mem_alloc)
     is_pinned = true;
-  if (is_pinned && kmp_target_unlock_mem) {
-    kmp_int32 default_device =
+  if (allocator > kmp_max_mem_alloc && kmp_target_unlock_mem && al->pinned) {
+    kmp_int32 device =
         __kmp_threads[gtid]->th.th_current_task->td_icvs.default_device;
-    kmp_target_unlock_mem(desc.ptr_align, default_device);
+    kmp_target_unlock_mem(desc.ptr_alloc, device);
   }
 
   if (__kmp_memkind_available) {

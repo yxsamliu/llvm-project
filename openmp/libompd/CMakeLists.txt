@@ -4,14 +4,14 @@
 #// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 #// See https://llvm.org/LICENSE.txt for license information.
 #// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-#// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-#// Notified per clause 4(b) of the license.
 #//
 #//===----------------------------------------------------------------------===//
 #
 
 find_package (Python3 COMPONENTS Interpreter Development)
 option(LIBOMP_OMPD_GDB_SUPPORT "Build gdb-plugin code that enables OMPD support in GDB." ${Python3_FOUND})
+find_program (GDB_FOUND NAMES "gdb")
+
 
 if(LIBOMP_OMPD_SUPPORT)
     set(OMPD_INCLUDE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/)
@@ -26,8 +26,9 @@ if(LIBOMP_OMPD_SUPPORT)
     if(LIBOMP_OMPD_GDB_SUPPORT)
         find_package(LLVM) # Required for LLVM dynamic library support
         add_subdirectory(gdb-plugin)
-        # temporarily disabled
-        # test/CMakeLists.txt breaks DeviceRTL in LLVM_ENABLE_PROJECTS builds.
-        # add_subdirectory(test)
+		# GDB is required to run the tests
+		if (GDB_FOUND)
+	        add_subdirectory(test)
+		endif()
     endif()
 endif()

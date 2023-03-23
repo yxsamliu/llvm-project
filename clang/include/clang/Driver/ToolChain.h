@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -189,9 +187,9 @@ private:
     EffectiveTriple = std::move(ET);
   }
 
-  mutable llvm::Optional<CXXStdlibType> cxxStdlibType;
-  mutable llvm::Optional<RuntimeLibType> runtimeLibType;
-  mutable llvm::Optional<UnwindLibType> unwindLibType;
+  mutable std::optional<CXXStdlibType> cxxStdlibType;
+  mutable std::optional<RuntimeLibType> runtimeLibType;
+  mutable std::optional<UnwindLibType> unwindLibType;
 
 protected:
   // OpenMP creates a toolchain for each target arch. eg - gfx908
@@ -201,6 +199,10 @@ protected:
 
   ToolChain(const Driver &D, const llvm::Triple &T,
             const llvm::opt::ArgList &Args);
+
+  /// Executes the given \p Executable and returns the stdout.
+  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  executeToolChainProgram(StringRef Executable) const;
 
   void setTripleEnvironment(llvm::Triple::EnvironmentType Env);
 
@@ -727,6 +729,10 @@ public:
   /// This checks for presence of the -Ofast, -ffast-math or -funsafe-math flags.
   bool addFastMathRuntimeIfAvailable(
     const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CmdArgs) const;
+
+  /// getSystemGPUArchs - Use a tool to detect the user's availible GPUs.
+  virtual Expected<SmallVector<std::string>>
+  getSystemGPUArchs(const llvm::opt::ArgList &Args) const;
 
   /// addProfileRTLibs - When -fprofile-instr-profile is specified, try to pass
   /// a suitable profile runtime library to the linker.

@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -175,6 +173,7 @@ def DeleteNonVirtualDtor : DiagGroup<"delete-non-virtual-dtor",
                                       DeleteAbstractNonVirtualDtor]>;
 def AbstractFinalClass : DiagGroup<"abstract-final-class">;
 def FinalDtorNonFinalClass : DiagGroup<"final-dtor-non-final-class">;
+def GNUOffsetofExtensions : DiagGroup<"gnu-offsetof-extensions">;
 
 def CXX11CompatDeprecatedWritableStr :
   DiagGroup<"c++11-compat-deprecated-writable-strings">;
@@ -182,8 +181,12 @@ def CXX11CompatDeprecatedWritableStr :
 def DeprecatedArrayCompare : DiagGroup<"deprecated-array-compare">;
 def DeprecatedAttributes : DiagGroup<"deprecated-attributes">;
 def DeprecatedCommaSubscript : DiagGroup<"deprecated-comma-subscript">;
-def DeprecatedCopy : DiagGroup<"deprecated-copy">;
-def DeprecatedCopyDtor : DiagGroup<"deprecated-copy-dtor">;
+def DeprecatedCopyWithUserProvidedCopy : DiagGroup<"deprecated-copy-with-user-provided-copy">;
+def DeprecatedCopyWithUserProvidedDtor : DiagGroup<"deprecated-copy-with-user-provided-dtor">;
+def DeprecatedCopy : DiagGroup<"deprecated-copy", [DeprecatedCopyWithUserProvidedCopy]>;
+def DeprecatedCopyWithDtor : DiagGroup<"deprecated-copy-with-dtor", [DeprecatedCopyWithUserProvidedDtor]>;
+// For compatibility with GCC.
+def : DiagGroup<"deprecated-copy-dtor", [DeprecatedCopyWithDtor]>;
 def DeprecatedDeclarations : DiagGroup<"deprecated-declarations">;
 def UnavailableDeclarations : DiagGroup<"unavailable-declarations">;
 def UnguardedAvailabilityNew : DiagGroup<"unguarded-availability-new">;
@@ -209,7 +212,7 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
                                           DeprecatedAttributes,
                                           DeprecatedCommaSubscript,
                                           DeprecatedCopy,
-                                          DeprecatedCopyDtor,
+                                          DeprecatedCopyWithDtor,
                                           DeprecatedDeclarations,
                                           DeprecatedDynamicExceptionSpec,
                                           DeprecatedEnumCompare,
@@ -411,6 +414,8 @@ def DanglingField : DiagGroup<"dangling-field">;
 def DanglingInitializerList : DiagGroup<"dangling-initializer-list">;
 def DanglingGsl : DiagGroup<"dangling-gsl">;
 def ReturnStackAddress : DiagGroup<"return-stack-address">;
+// Name of this warning in GCC
+def : DiagGroup<"return-local-addr", [ReturnStackAddress]>;
 def Dangling : DiagGroup<"dangling", [DanglingField,
                                       DanglingInitializerList,
                                       DanglingGsl,
@@ -1135,9 +1140,9 @@ def GNU : DiagGroup<"gnu", [GNUAlignofExpression, GNUAnonymousStruct,
                             GNUFlexibleArrayUnionMember, GNUFoldingConstant,
                             GNUImaginaryConstant, GNUIncludeNext,
                             GNULabelsAsValue, GNULineMarker, GNUNullPointerArithmetic,
-                            GNUPointerArith, RedeclaredClassMember,
-                            GNURedeclaredEnum, GNUStatementExpression,
-                            GNUStaticFloatInit,
+                            GNUOffsetofExtensions, GNUPointerArith,
+                            RedeclaredClassMember, GNURedeclaredEnum,
+                            GNUStatementExpression, GNUStaticFloatInit,
                             GNUStringLiteralOperatorTemplate, GNUUnionCast,
                             GNUVariableSizedTypeNotAtEnd, ZeroLengthArray,
                             GNUZeroLineDirective,
@@ -1264,7 +1269,25 @@ def OpenMP : DiagGroup<"openmp", [
 // Backend warnings.
 def BackendInlineAsm : DiagGroup<"inline-asm">;
 def BackendSourceMgr : DiagGroup<"source-mgr">;
-def BackendFrameLargerThan : DiagGroup<"frame-larger-than">;
+def BackendFrameLargerThan : DiagGroup<"frame-larger-than">{
+ code Documentation = [{
+More fine grained information about the stack layout is available by adding the
+`-Rpass-analysis=stack-frame-layout` command-line flag to the compiler
+invocation.
+
+The diagnostic information can be saved to a file in a machine readable format,
+like YAML by adding the `-foptimization-record-file=<file>` command-line flag.
+
+Results can be filtered by function name by passing 
+`-mllvm -filter-print-funcs=foo`, where `foo` is the target function's name.
+
+   .. code-block: console
+      clang -c a.cpp -Rpass-analysis=stack-frame-layout -mllvm -filter-print-funcs=foo
+
+   .. code-block: console
+      clang -c a.cpp -Rpass-analysis=stack-frame-layout -foptimization-record-file=<file>
+}];
+}
 // Compatibility flag name from old versions of Clang.
 def : DiagGroup<"frame-larger-than=", [BackendFrameLargerThan]>;
 def BackendPlugin : DiagGroup<"backend-plugin">;
@@ -1388,3 +1411,9 @@ def BranchProtection : DiagGroup<"branch-protection">;
 // HLSL diagnostic groups
 // Warnings for HLSL Clang extensions
 def HLSLExtension : DiagGroup<"hlsl-extensions">;
+
+// Warnings and notes related to const_var_decl_type attribute checks
+def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;
+
+// Warnings and fixes to support the "safe buffers" programming model.
+def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage">;

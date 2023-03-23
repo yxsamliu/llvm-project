@@ -13,6 +13,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
@@ -20,6 +21,10 @@
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #define DEBUG_TYPE "amdgpu-attributor"
+
+namespace llvm {
+void initializeCycleInfoWrapperPassPass(PassRegistry &);
+}
 
 using namespace llvm;
 
@@ -149,7 +154,16 @@ public:
     return ST.supportsGetDoorbellID();
   }
 
-    ;
+  std::pair<unsigned, unsigned> getFlatWorkGroupSizes(const Function &F) {
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+    return ST.getFlatWorkGroupSizes(F);
+  }
+
+  std::pair<unsigned, unsigned>
+  getMaximumFlatWorkGroupRange(const Function &F) {
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+    return {ST.getMinFlatWorkGroupSize(), ST.getMaxFlatWorkGroupSize()};
+  }
 
 private:
   /// Check if the ConstantExpr \p CE requires the queue pointer.
@@ -209,9 +223,10 @@ private:
   DenseMap<const Constant *, uint8_t> ConstantStatus;
 };
 
-struct AAAMDAttributes : public StateWrapper<
-  BitIntegerState<uint16_t, ALL_ARGUMENT_MASK, 0>, AbstractAttribute> {
-  using Base = StateWrapper<BitIntegerState<uint16_t, ALL_ARGUMENT_MASK, 0>,
+struct AAAMDAttributes
+    : public StateWrapper<BitIntegerState<uint32_t, ALL_ARGUMENT_MASK, 0>,
+                          AbstractAttribute> {
+  using Base = StateWrapper<BitIntegerState<uint32_t, ALL_ARGUMENT_MASK, 0>,
                             AbstractAttribute>;
 
   AAAMDAttributes(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
@@ -454,6 +469,12 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       removeAssumedBits(LDS_KERNEL_ID);
     }
 
+    if (isAssumed(DEFAULT_QUEUE) && funcRetrievesDefaultQueue(A))
+      removeAssumedBits(DEFAULT_QUEUE);
+
+    if (isAssumed(COMPLETION_ACTION) && funcRetrievesCompletionAction(A))
+      removeAssumedBits(COMPLETION_ACTION);
+
     return getAssumed() != OrigAssumed ? ChangeStatus::CHANGED
                                        : ChangeStatus::UNCHANGED;
   }
@@ -538,32 +559,43 @@ private:
 
   bool funcRetrievesMultigridSyncArg(Attributor &A) {
     auto Pos = llvm::AMDGPU::getMultigridSyncArgImplicitArgPosition();
-    AA::OffsetAndSize OAS(Pos, 8);
-    return funcRetrievesImplicitKernelArg(A, OAS);
+    AA::RangeTy Range(Pos, 8);
+    return funcRetrievesImplicitKernelArg(A, Range);
   }
 
   bool funcRetrievesHostcallPtr(Attributor &A) {
     auto Pos = llvm::AMDGPU::getHostcallImplicitArgPosition();
-    AA::OffsetAndSize OAS(Pos, 8);
-    return funcRetrievesImplicitKernelArg(A, OAS);
+    AA::RangeTy Range(Pos, 8);
+    return funcRetrievesImplicitKernelArg(A, Range);
+  }
+
+  bool funcRetrievesDefaultQueue(Attributor &A) {
+    auto Pos = llvm::AMDGPU::getDefaultQueueImplicitArgPosition();
+    AA::RangeTy Range(Pos, 8);
+    return funcRetrievesImplicitKernelArg(A, Range);
+  }
+
+  bool funcRetrievesCompletionAction(Attributor &A) {
+    auto Pos = llvm::AMDGPU::getCompletionActionImplicitArgPosition();
+    AA::RangeTy Range(Pos, 8);
+    return funcRetrievesImplicitKernelArg(A, Range);
   }
 
   bool funcRetrievesHeapPtr(Attributor &A) {
     if (AMDGPU::getAmdhsaCodeObjectVersion() != 5)
       return false;
-    AA::OffsetAndSize OAS(AMDGPU::ImplicitArg::HEAP_PTR_OFFSET, 8);
-    return funcRetrievesImplicitKernelArg(A, OAS);
+    AA::RangeTy Range(AMDGPU::ImplicitArg::HEAP_PTR_OFFSET, 8);
+    return funcRetrievesImplicitKernelArg(A, Range);
   }
 
   bool funcRetrievesQueuePtr(Attributor &A) {
     if (AMDGPU::getAmdhsaCodeObjectVersion() != 5)
       return false;
-    AA::OffsetAndSize OAS(AMDGPU::ImplicitArg::QUEUE_PTR_OFFSET, 8);
-    return funcRetrievesImplicitKernelArg(A, OAS);
+    AA::RangeTy Range(AMDGPU::ImplicitArg::QUEUE_PTR_OFFSET, 8);
+    return funcRetrievesImplicitKernelArg(A, Range);
   }
 
-  bool funcRetrievesImplicitKernelArg(Attributor &A,
-                                      AA::OffsetAndSize OAS) {
+  bool funcRetrievesImplicitKernelArg(Attributor &A, AA::RangeTy Range) {
     // Check if this is a call to the implicitarg_ptr builtin and it
     // is used to retrieve the hostcall pointer. The implicit arg for
     // hostcall is not used only if every use of the implicitarg_ptr
@@ -579,7 +611,7 @@ private:
           *this, IRPosition::callsite_returned(Call), DepClassTy::REQUIRED);
 
       return PointerInfoAA.forallInterferingAccesses(
-          OAS, [](const AAPointerInfo::Access &Acc, bool IsExact) {
+          Range, [](const AAPointerInfo::Access &Acc, bool IsExact) {
             return Acc.getRemoteInst()->isDroppable();
           });
     };
@@ -607,6 +639,121 @@ AAAMDAttributes &AAAMDAttributes::createForPosition(const IRPosition &IRP,
   llvm_unreachable("AAAMDAttributes is only valid for function position");
 }
 
+/// Propagate amdgpu-flat-work-group-size attribute.
+struct AAAMDFlatWorkGroupSize
+    : public StateWrapper<IntegerRangeState, AbstractAttribute, uint32_t> {
+  using Base = StateWrapper<IntegerRangeState, AbstractAttribute, uint32_t>;
+  AAAMDFlatWorkGroupSize(const IRPosition &IRP, Attributor &A)
+      : Base(IRP, 32) {}
+
+  /// See AbstractAttribute::getState(...).
+  IntegerRangeState &getState() override { return *this; }
+  const IntegerRangeState &getState() const override { return *this; }
+
+  void initialize(Attributor &A) override {
+    Function *F = getAssociatedFunction();
+    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+    unsigned MinGroupSize, MaxGroupSize;
+    std::tie(MinGroupSize, MaxGroupSize) = InfoCache.getFlatWorkGroupSizes(*F);
+    intersectKnown(
+        ConstantRange(APInt(32, MinGroupSize), APInt(32, MaxGroupSize + 1)));
+
+    if (AMDGPU::isEntryFunctionCC(F->getCallingConv()))
+      indicatePessimisticFixpoint();
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    ChangeStatus Change = ChangeStatus::UNCHANGED;
+
+    auto CheckCallSite = [&](AbstractCallSite CS) {
+      Function *Caller = CS.getInstruction()->getFunction();
+      LLVM_DEBUG(dbgs() << "[AAAMDFlatWorkGroupSize] Call " << Caller->getName()
+                        << "->" << getAssociatedFunction()->getName() << '\n');
+
+      const auto &CallerInfo = A.getAAFor<AAAMDFlatWorkGroupSize>(
+          *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
+
+      Change |=
+          clampStateAndIndicateChange(this->getState(), CallerInfo.getState());
+
+      return true;
+    };
+
+    bool AllCallSitesKnown = true;
+    if (!A.checkForAllCallSites(CheckCallSite, *this, true, AllCallSitesKnown))
+      return indicatePessimisticFixpoint();
+
+    return Change;
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    SmallVector<Attribute, 8> AttrList;
+    Function *F = getAssociatedFunction();
+    LLVMContext &Ctx = F->getContext();
+
+    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+    unsigned Min, Max;
+    std::tie(Min, Max) = InfoCache.getMaximumFlatWorkGroupRange(*F);
+
+    // Don't add the attribute if it's the implied default.
+    if (getAssumed().getLower() == Min && getAssumed().getUpper() - 1 == Max)
+      return ChangeStatus::UNCHANGED;
+
+    SmallString<10> Buffer;
+    raw_svector_ostream OS(Buffer);
+    OS << getAssumed().getLower() << ',' << getAssumed().getUpper() - 1;
+
+    AttrList.push_back(
+        Attribute::get(Ctx, "amdgpu-flat-work-group-size", OS.str()));
+    return IRAttributeManifest::manifestAttrs(A, getIRPosition(), AttrList,
+                                              /* ForceReplace */ true);
+  }
+
+  const std::string getAsStr() const override {
+    std::string Str;
+    raw_string_ostream OS(Str);
+    OS << "AMDFlatWorkGroupSize[";
+    OS << getAssumed().getLower() << ',' << getAssumed().getUpper() - 1;
+    OS << ']';
+    return OS.str();
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {}
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAAMDFlatWorkGroupSize &createForPosition(const IRPosition &IRP,
+                                                   Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override {
+    return "AAAMDFlatWorkGroupSize";
+  }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAAMDFlatWorkGroupSize
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+const char AAAMDFlatWorkGroupSize::ID = 0;
+
+AAAMDFlatWorkGroupSize &
+AAAMDFlatWorkGroupSize::createForPosition(const IRPosition &IRP,
+                                          Attributor &A) {
+  if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION)
+    return *new (A.Allocator) AAAMDFlatWorkGroupSize(IRP, A);
+  llvm_unreachable(
+      "AAAMDFlatWorkGroupSize is only valid for function position");
+}
+
 class AMDGPUAttributor : public ModulePass {
 public:
   AMDGPUAttributor() : ModulePass(ID) {}
@@ -624,7 +771,7 @@ public:
 
   bool runOnModule(Module &M) override {
     SetVector<Function *> Functions;
-    AnalysisGetter AG;
+    AnalysisGetter AG(this);
     for (Function &F : M) {
       if (!F.isIntrinsic())
         Functions.insert(&F);
@@ -635,7 +782,8 @@ public:
     AMDGPUInformationCache InfoCache(M, AG, Allocator, nullptr, *TM);
     DenseSet<const char *> Allowed(
         {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
-         &AACallEdges::ID, &AAPointerInfo::ID});
+         &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID, &AACallEdges::ID,
+         &AAPointerInfo::ID, &AAPotentialConstantValues::ID});
 
     AttributorConfig AC(CGUpdater);
     AC.Allowed = &Allowed;
@@ -648,11 +796,18 @@ public:
       if (!F.isIntrinsic()) {
         A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(F));
         A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(F));
+        if (!AMDGPU::isEntryFunctionCC(F.getCallingConv())) {
+          A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(F));
+        }
       }
     }
 
     ChangeStatus Change = A.run();
     return Change == ChangeStatus::CHANGED;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<CycleInfoWrapperPass>();
   }
 
   StringRef getPassName() const override { return "AMDGPU Attributor"; }
@@ -664,4 +819,8 @@ public:
 char AMDGPUAttributor::ID = 0;
 
 Pass *llvm::createAMDGPUAttributorPass() { return new AMDGPUAttributor(); }
-INITIALIZE_PASS(AMDGPUAttributor, DEBUG_TYPE, "AMDGPU Attributor", false, false)
+INITIALIZE_PASS_BEGIN(AMDGPUAttributor, DEBUG_TYPE, "AMDGPU Attributor", false,
+                      false)
+INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass);
+INITIALIZE_PASS_END(AMDGPUAttributor, DEBUG_TYPE, "AMDGPU Attributor", false,
+                    false)

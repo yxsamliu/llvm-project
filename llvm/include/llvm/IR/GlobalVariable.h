@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -64,7 +62,7 @@ public:
                  Constant *Initializer, const Twine &Name = "",
                  GlobalVariable *InsertBefore = nullptr,
                  ThreadLocalMode = NotThreadLocal,
-                 Optional<unsigned> AddressSpace = None,
+                 std::optional<unsigned> AddressSpace = std::nullopt,
                  bool isExternallyInitialized = false);
   GlobalVariable(const GlobalVariable &) = delete;
   GlobalVariable &operator=(const GlobalVariable &) = delete;

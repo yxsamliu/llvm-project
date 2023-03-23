@@ -1,5 +1,3 @@
-# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-# Notified per clause 4(b) of the license.
 include(LLVM-Build)
 
 # `Demangle', `Support' and `TableGen' libraries are added on the top-level
@@ -9,12 +7,14 @@ add_subdirectory(IR)
 add_subdirectory(FuzzMutate)
 add_subdirectory(FileCheck)
 add_subdirectory(InterfaceStub)
+add_subdirectory(IRPrinter)
 add_subdirectory(IRReader)
 add_subdirectory(CodeGen)
 add_subdirectory(BinaryFormat)
 add_subdirectory(Bitcode)
 add_subdirectory(Bitstream)
 add_subdirectory(DWARFLinker)
+add_subdirectory(DWARFLinkerParallel)
 add_subdirectory(Extensions)
 add_subdirectory(Frontend)
 add_subdirectory(Transforms)
@@ -38,6 +38,7 @@ add_subdirectory(AsmParser)
 add_subdirectory(LineEditor)
 add_subdirectory(ProfileData)
 add_subdirectory(Passes)
+add_subdirectory(TargetParser)
 add_subdirectory(TextAPI)
 add_subdirectory(ToolDrivers)
 add_subdirectory(XRay)

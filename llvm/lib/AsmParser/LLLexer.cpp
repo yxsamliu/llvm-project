@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -651,6 +649,9 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(readwrite);
   KEYWORD(argmem);
   KEYWORD(inaccessiblemem);
+  KEYWORD(argmemonly);
+  KEYWORD(inaccessiblememonly);
+  KEYWORD(inaccessiblemem_or_argmemonly);
 
   KEYWORD(type);
   KEYWORD(opaque);
@@ -671,6 +672,8 @@ lltok::Kind LLLexer::LexIdentifier() {
 
   KEYWORD(xchg); KEYWORD(nand); KEYWORD(max); KEYWORD(min); KEYWORD(umax);
   KEYWORD(umin); KEYWORD(fmax); KEYWORD(fmin);
+  KEYWORD(uinc_wrap);
+  KEYWORD(udec_wrap);
 
   KEYWORD(vscale);
   KEYWORD(x);
@@ -771,6 +774,14 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(byte);
   KEYWORD(bit);
   KEYWORD(varFlags);
+  KEYWORD(callsites);
+  KEYWORD(clones);
+  KEYWORD(stackIds);
+  KEYWORD(allocs);
+  KEYWORD(versions);
+  KEYWORD(memProf);
+  KEYWORD(notcold);
+  KEYWORD(notcoldandcold);
 
 #undef KEYWORD
 
@@ -798,10 +809,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   TYPEKEYWORD("token",     Type::getTokenTy(Context));
 
   if (Keyword == "ptr") {
-    // setOpaquePointers() must be called before creating any pointer types.
-    if (!Context.hasSetOpaquePointersValue()) {
-      Context.setOpaquePointers(true);
-    } else if (Context.supportsTypedPointers()) {
+    if (Context.supportsTypedPointers()) {
       Warning("ptr type is only supported in -opaque-pointers mode");
       return lltok::Error;
     }

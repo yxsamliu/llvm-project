@@ -3,8 +3,6 @@
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-// Notified per clause 4(b) of the license.
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,7 +21,6 @@
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
@@ -34,6 +31,8 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <optional>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -323,6 +322,64 @@ std::string noteMessage(const Diag &Main, const DiagBase &Note,
   OS.flush();
   return capitalize(std::move(Result));
 }
+
+void setTags(clangd::Diag &D) {
+  static const auto *DeprecatedDiags = new llvm::DenseSet<unsigned>{
+      diag::warn_access_decl_deprecated,
+      diag::warn_atl_uuid_deprecated,
+      diag::warn_deprecated,
+      diag::warn_deprecated_altivec_src_compat,
+      diag::warn_deprecated_comma_subscript,
+      diag::warn_deprecated_copy,
+      diag::warn_deprecated_copy_with_dtor,
+      diag::warn_deprecated_copy_with_user_provided_copy,
+      diag::warn_deprecated_copy_with_user_provided_dtor,
+      diag::warn_deprecated_def,
+      diag::warn_deprecated_increment_decrement_volatile,
+      diag::warn_deprecated_message,
+      diag::warn_deprecated_redundant_constexpr_static_def,
+      diag::warn_deprecated_register,
+      diag::warn_deprecated_simple_assign_volatile,
+      diag::warn_deprecated_string_literal_conversion,
+      diag::warn_deprecated_this_capture,
+      diag::warn_deprecated_volatile_param,
+      diag::warn_deprecated_volatile_return,
+      diag::warn_deprecated_volatile_structured_binding,
+      diag::warn_opencl_attr_deprecated_ignored,
+      diag::warn_property_method_deprecated,
+      diag::warn_vector_mode_deprecated,
+  };
+  static const auto *UnusedDiags = new llvm::DenseSet<unsigned>{
+      diag::warn_opencl_attr_deprecated_ignored,
+      diag::warn_pragma_attribute_unused,
+      diag::warn_unused_but_set_parameter,
+      diag::warn_unused_but_set_variable,
+      diag::warn_unused_comparison,
+      diag::warn_unused_const_variable,
+      diag::warn_unused_exception_param,
+      diag::warn_unused_function,
+      diag::warn_unused_label,
+      diag::warn_unused_lambda_capture,
+      diag::warn_unused_local_typedef,
+      diag::warn_unused_member_function,
+      diag::warn_unused_parameter,
+      diag::warn_unused_private_field,
+      diag::warn_unused_property_backing_ivar,
+      diag::warn_unused_template,
+      diag::warn_unused_variable,
+  };
+  if (DeprecatedDiags->contains(D.ID)) {
+    D.Tags.push_back(DiagnosticTag::Deprecated);
+  } else if (UnusedDiags->contains(D.ID)) {
+    D.Tags.push_back(DiagnosticTag::Unnecessary);
+  }
+  if (D.Source == Diag::ClangTidy) {
+    if (llvm::StringRef(D.Name).starts_with("misc-unused-"))
+      D.Tags.push_back(DiagnosticTag::Unnecessary);
+    if (llvm::StringRef(D.Name).starts_with("modernize-"))
+      D.Tags.push_back(DiagnosticTag::Deprecated);
+  }
+}
 } // namespace
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const DiagBase &D) {
@@ -525,9 +582,7 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
         Diag.Name = std::string(Name);
       }
       Diag.Source = Diag::Clang;
-      continue;
-    }
-    if (Tidy != nullptr) {
+    } else if (Tidy != nullptr) {
       std::string TidyDiag = Tidy->getCheckName(Diag.ID);
       if (!TidyDiag.empty()) {
         Diag.Name = std::move(TidyDiag);
@@ -545,9 +600,9 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
           CleanMessage(Note.Message);
         for (auto &Fix : Diag.Fixes)
           CleanMessage(Fix.Message);
-        continue;
       }
     }
+    setTags(Diag);
   }
   // Deduplicate clang-tidy diagnostics -- some clang-tidy checks may emit
   // duplicated messages due to various reasons (e.g. the check doesn't handle
@@ -569,7 +624,7 @@ void StoreDiags::BeginSourceFile(const LangOptions &Opts,
 
 void StoreDiags::EndSourceFile() {
   flushLastDiag();
-  LangOpts = None;
+  LangOpts = std::nullopt;
   OrigSrcMgr = nullptr;
 }
 
@@ -851,9 +906,9 @@ llvm::StringRef normalizeSuppressedCode(llvm::StringRef Code) {
   return Code;
 }
 
-llvm::Optional<std::string> getDiagnosticDocURI(Diag::DiagSource Source,
-                                                unsigned ID,
-                                                llvm::StringRef Name) {
+std::optional<std::string> getDiagnosticDocURI(Diag::DiagSource Source,
+                                               unsigned ID,
+                                               llvm::StringRef Name) {
   switch (Source) {
   case Diag::Unknown:
     break;
@@ -870,7 +925,7 @@ llvm::Optional<std::string> getDiagnosticDocURI(Diag::DiagSource Source,
     // '-' in the name.
     std::tie(Module, Check) = Name.split('-');
     if (Module.empty() || Check.empty())
-      return llvm::None;
+      return std::nullopt;
     return ("https://clang.llvm.org/extra/clang-tidy/checks/" + Module + "/" +
             Check + ".html")
         .str();
@@ -884,7 +939,7 @@ llvm::Optional<std::string> getDiagnosticDocURI(Diag::DiagSource Source,
     // However we have no diagnostic codes, which the link should describe!
     break;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 } // namespace clangd

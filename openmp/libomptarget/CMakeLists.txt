@@ -3,8 +3,6 @@
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-# Notified per clause 4(b) of the license.
 #
 ##===----------------------------------------------------------------------===##
 #
@@ -58,6 +56,7 @@ set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} x86_64-pc-linux-gnu-L
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda-oldDriver")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda-LTO")
+set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda-JIT-LTO")
 
 # Once the plugins for the different targets are validated, they will be added to
 # the list of supported targets in the current system.
@@ -85,6 +84,10 @@ if (LIBOMPTARGET_OMPD_SUPPORT)
 endif()
 
 # OMPT support for libomptarget
+# Follow host OMPT support and check if host support has been requested.
+# LIBOMP_HAVE_OMPT_SUPPORT indicates whether host OMPT support has been implemented.
+# LIBOMP_OMPT_SUPPORT indicates whether host OMPT support has been requested (default is ON).
+# LIBOMPTARGET_OMPT_SUPPORT indicates whether target OMPT support has been requested (default is ON).
 set(OMPT_TARGET_DEFAULT FALSE)
 if ((LIBOMP_HAVE_OMPT_SUPPORT) AND (NOT WIN32))
   set (OMPT_TARGET_DEFAULT TRUE)
@@ -153,6 +156,7 @@ set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
 
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins)
+add_subdirectory(plugins-nextgen)
 # Currently device libm functions are created by clang headers.  These do not
 # work for FORTRAN. The libm here  builds a libm device library by turning on
 # __BUILD_MATH_BUILTINS_LIB__ This converts the math functions in the clang

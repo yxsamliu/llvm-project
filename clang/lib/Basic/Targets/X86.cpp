@@ -18,25 +18,26 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/X86TargetParser.h"
+#include <optional>
 
 namespace clang {
 namespace targets {
 
-const Builtin::Info BuiltinInfoX86[] = {
+static constexpr Builtin::Info BuiltinInfoX86[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, HEADER, LANGS, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
 #include "clang/Basic/BuiltinsX86.def"
 
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, HEADER, LANGS, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
 #include "clang/Basic/BuiltinsX86_64.def"
 };
 
@@ -522,6 +523,12 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_Tigerlake:
   case CK_SapphireRapids:
   case CK_Alderlake:
+  case CK_Raptorlake:
+  case CK_Meteorlake:
+  case CK_Sierraforest:
+  case CK_Grandridge:
+  case CK_Graniterapids:
+  case CK_Emeraldrapids:
     // FIXME: Historically, we defined this legacy name, it would be nice to
     // remove it at some point. We've never exposed fine-grained names for
     // recent primary x86 CPUs, and we should keep it that way.
@@ -599,6 +606,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     break;
   case CK_ZNVER3:
     defineCPUMacros(Builder, "znver3");
+    break;
+  case CK_ZNVER4:
+    defineCPUMacros(Builder, "znver4");
     break;
   case CK_Geode:
     defineCPUMacros(Builder, "geode");
@@ -1110,7 +1120,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
 bool X86TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
   return llvm::StringSwitch<bool>(FeatureStr)
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY) .Case(STR, true)
-#include "llvm/Support/X86TargetParser.def"
+#include "llvm/TargetParser/X86TargetParser.def"
       .Default(false);
 }
 
@@ -1119,7 +1129,7 @@ static llvm::X86::ProcessorFeatures getFeature(StringRef Name) {
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY)                                \
   .Case(STR, llvm::X86::FEATURE_##ENUM)
 
-#include "llvm/Support/X86TargetParser.def"
+#include "llvm/TargetParser/X86TargetParser.def"
       ;
   // Note, this function should only be used after ensuring the value is
   // correct, so it asserts if the value is out of range.
@@ -1144,21 +1154,21 @@ bool X86TargetInfo::validateCPUSpecificCPUDispatch(StringRef Name) const {
   return llvm::StringSwitch<bool>(Name)
 #define CPU_SPECIFIC(NAME, TUNE_NAME, MANGLING, FEATURES) .Case(NAME, true)
 #define CPU_SPECIFIC_ALIAS(NEW_NAME, TUNE_NAME, NAME) .Case(NEW_NAME, true)
-#include "llvm/Support/X86TargetParser.def"
+#include "llvm/TargetParser/X86TargetParser.def"
       .Default(false);
 }
 
 static StringRef CPUSpecificCPUDispatchNameDealias(StringRef Name) {
   return llvm::StringSwitch<StringRef>(Name)
 #define CPU_SPECIFIC_ALIAS(NEW_NAME, TUNE_NAME, NAME) .Case(NEW_NAME, NAME)
-#include "llvm/Support/X86TargetParser.def"
+#include "llvm/TargetParser/X86TargetParser.def"
       .Default(Name);
 }
 
 char X86TargetInfo::CPUSpecificManglingCharacter(StringRef Name) const {
   return llvm::StringSwitch<char>(CPUSpecificCPUDispatchNameDealias(Name))
 #define CPU_SPECIFIC(NAME, TUNE_NAME, MANGLING, FEATURES) .Case(NAME, MANGLING)
-#include "llvm/Support/X86TargetParser.def"
+#include "llvm/TargetParser/X86TargetParser.def"
       .Default(0);
 }
 
@@ -1167,7 +1177,7 @@ void X86TargetInfo::getCPUSpecificCPUDispatchFeatures(
   StringRef WholeList =
       llvm::StringSwitch<StringRef>(CPUSpecificCPUDispatchNameDealias(Name))
 #define CPU_SPECIFIC(NAME, TUNE_NAME, MANGLING, FEATURES) .Case(NAME, FEATURES)
-#include "llvm/Support/X86TargetParser.def"
+#include "llvm/TargetParser/X86TargetParser.def"
           .Default("");
   WholeList.split(Features, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
 }
@@ -1176,7 +1186,7 @@ StringRef X86TargetInfo::getCPUSpecificTuneName(StringRef Name) const {
   return llvm::StringSwitch<StringRef>(Name)
 #define CPU_SPECIFIC(NAME, TUNE_NAME, MANGLING, FEATURES) .Case(NAME, TUNE_NAME)
 #define CPU_SPECIFIC_ALIAS(NEW_NAME, TUNE_NAME, NAME) .Case(NEW_NAME, TUNE_NAME)
-#include "llvm/Support/X86TargetParser.def"
+#include "llvm/TargetParser/X86TargetParser.def"
       .Default("");
 }
 
@@ -1189,8 +1199,9 @@ bool X86TargetInfo::validateCpuIs(StringRef FeatureStr) const {
 #define X86_VENDOR(ENUM, STRING) .Case(STRING, true)
 #define X86_CPU_TYPE_ALIAS(ENUM, ALIAS) .Case(ALIAS, true)
 #define X86_CPU_TYPE(ENUM, STR) .Case(STR, true)
+#define X86_CPU_SUBTYPE_ALIAS(ENUM, ALIAS) .Case(ALIAS, true)
 #define X86_CPU_SUBTYPE(ENUM, STR) .Case(STR, true)
-#include "llvm/Support/X86TargetParser.def"
+#include "llvm/TargetParser/X86TargetParser.def"
       .Default(false);
 }
 
@@ -1342,7 +1353,7 @@ bool X86TargetInfo::validateAsmConstraint(
 // | Knights Landing                    |                      64 | https://software.intel.com/en-us/articles/intel-xeon-phi-processor-7200-family-memory-management-optimizations "The Intel® Xeon Phi™ Processor Architecture" |
 // | Knights Mill                       |                      64 | https://software.intel.com/sites/default/files/managed/9e/bc/64-ia-32-architectures-optimization-manual.pdf?countrylabel=Colombia "2.5.5.2 L1 DCache "       |
 // +------------------------------------+-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
-Optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
+std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
   using namespace llvm::X86;
   switch (CPU) {
     // i386
@@ -1403,6 +1414,12 @@ Optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_Rocketlake:
     case CK_IcelakeServer:
     case CK_Alderlake:
+    case CK_Raptorlake:
+    case CK_Meteorlake:
+    case CK_Sierraforest:
+    case CK_Grandridge:
+    case CK_Graniterapids:
+    case CK_Emeraldrapids:
     case CK_KNL:
     case CK_KNM:
     // K7
@@ -1424,6 +1441,7 @@ Optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_ZNVER1:
     case CK_ZNVER2:
     case CK_ZNVER3:
+    case CK_ZNVER4:
     // Deprecated
     case CK_x86_64:
     case CK_x86_64_v2:
@@ -1437,7 +1455,7 @@ Optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     // The following currently have unknown cache line sizes (but they are probably all 64):
     // Core
     case CK_None:
-      return None;
+      return std::nullopt;
   }
   llvm_unreachable("Unknown CPU kind");
 }
@@ -1577,19 +1595,19 @@ void X86TargetInfo::fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) con
 }
 
 ArrayRef<const char *> X86TargetInfo::getGCCRegNames() const {
-  return llvm::makeArrayRef(GCCRegNames);
+  return llvm::ArrayRef(GCCRegNames);
 }
 
 ArrayRef<TargetInfo::AddlRegName> X86TargetInfo::getGCCAddlRegNames() const {
-  return llvm::makeArrayRef(AddlRegNames);
+  return llvm::ArrayRef(AddlRegNames);
 }
 
 ArrayRef<Builtin::Info> X86_32TargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfoX86, clang::X86::LastX86CommonBuiltin -
-                                                Builtin::FirstTSBuiltin + 1);
+  return llvm::ArrayRef(BuiltinInfoX86, clang::X86::LastX86CommonBuiltin -
+                                            Builtin::FirstTSBuiltin + 1);
 }
 
 ArrayRef<Builtin::Info> X86_64TargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfoX86,
-                            X86::LastTSBuiltin - Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfoX86,
+                        X86::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }

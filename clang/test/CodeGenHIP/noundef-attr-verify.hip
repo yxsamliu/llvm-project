@@ -28,7 +28,7 @@ T __shfl_sync(unsigned mask, T val, int src_line, int width=WARP_SIZE)
 }
 
 // CHECK-LABEL: @_Z13shufflekernelv(
-// CHECK: call i32 @_ZL11__shfl_syncIiET_jS0_ii(i32 64, i32 %0, i32 0, i32 64)
+// CHECK: call noundef i32 @_ZL11__shfl_syncIiET_jS0_ii(i32 64, i32 %0, i32 0, i32 64)
 
 __global__ void
 shufflekernel()
