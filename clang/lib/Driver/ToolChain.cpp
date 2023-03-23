@@ -623,8 +623,7 @@ ToolChain::path_list ToolChain::getStdlibPaths() const {
 
 std::string ToolChain::getArchSpecificLibPath() const {
   SmallString<128> Path(getDriver().ResourceDir);
-  llvm::sys::path::append(Path, "lib", getOSLibName(),
-                          llvm::Triple::getArchTypeName(getArch()));
+  llvm::sys::path::append(Path, "lib", getTriple().str());
   return std::string(Path.str());
 }
 

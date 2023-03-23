@@ -1,5 +1,5 @@
 // Test that the driver adds an arch-specific subdirectory in
-// {RESOURCE_DIR}/lib/linux to the search path.
+// {RESOURCE_DIR}/lib/{triple} to the search path.
 //
 // RUN: %clang %s -### 2>&1 -target i386-unknown-linux \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
@@ -11,7 +11,7 @@
 //
 // RUN: %clang %s -### 2>&1 -target i686-unknown-linux \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
-// RUN:   | FileCheck --check-prefixes=FILEPATH,ARCHDIR-i386 %s
+// RUN:   | FileCheck --check-prefixes=FILEPATH,ARCHDIR-i686 %s
 //
 // RUN: %clang %s -### 2>&1 -target i686-unknown-linux \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
@@ -43,10 +43,11 @@
 //
 //
 // FILEPATH: "-x" "c" "[[FILE_PATH:.*]]{{(/|\\\\).*}}.c"
-// ARCHDIR-i386:    -L[[FILE_PATH]]{{(/|\\\\)Inputs(/|\\\\)resource_dir_with_arch_subdir(/|\\\\)lib(/|\\\\)linux(/|\\\\)i386}}
-// ARCHDIR-x86_64:  -L[[FILE_PATH]]{{(/|\\\\)Inputs(/|\\\\)resource_dir_with_arch_subdir(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}
-// ARCHDIR-arm:     -L[[FILE_PATH]]{{(/|\\\\)Inputs(/|\\\\)resource_dir_with_arch_subdir(/|\\\\)lib(/|\\\\)linux(/|\\\\)arm}}
-// ARCHDIR-aarch64: -L[[FILE_PATH]]{{(/|\\\\)Inputs(/|\\\\)resource_dir_with_arch_subdir(/|\\\\)lib(/|\\\\)linux(/|\\\\)aarch64}}
+// ARCHDIR-i386:    -L[[FILE_PATH]]{{(/|\\\\)Inputs(/|\\\\)resource_dir_with_arch_subdir(/|\\\\)lib(/|\\\\)i386-unknown-linux}}
+// ARCHDIR-i686:    -L[[FILE_PATH]]{{(/|\\\\)Inputs(/|\\\\)resource_dir_with_arch_subdir(/|\\\\)lib(/|\\\\)i686-unknown-linux}}
+// ARCHDIR-x86_64:  -L[[FILE_PATH]]{{(/|\\\\)Inputs(/|\\\\)resource_dir_with_arch_subdir(/|\\\\)lib(/|\\\\)x86_64-unknown-linux}}
+// ARCHDIR-arm:     -L[[FILE_PATH]]{{(/|\\\\)Inputs(/|\\\\)resource_dir_with_arch_subdir(/|\\\\)lib(/|\\\\)arm-unknown-linux}}
+// ARCHDIR-aarch64: -L[[FILE_PATH]]{{(/|\\\\)Inputs(/|\\\\)resource_dir_with_arch_subdir(/|\\\\)lib(/|\\\\)aarch64-unknown-linux}}
 //
 // Have a stricter check for no-archdir - that the driver doesn't add any
 // subdirectory from the provided resource directory.
