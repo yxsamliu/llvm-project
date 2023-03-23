@@ -49,7 +49,7 @@
 // RUN: %clang %s -### 2>&1 -target x86_64-linux-android -fsanitize=address \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
 // RUN:     -frtlib-add-rpath \
-// RUN:   | FileCheck --check-prefixes=RESDIR,LIBPATH-X86_64,RPATH-X86_64 %s
+// RUN:   | FileCheck --check-prefixes=RESDIR,LIBPATH-X86_64-ANDROID,RPATH-X86_64-ANDROID %s
 //
 // Add LIBPATH, RPATH for OpenMP
 // RUN: %clang %s -### 2>&1 -target x86_64-linux -fopenmp \
@@ -77,14 +77,17 @@
 
 // RESDIR: "-resource-dir" "[[RESDIR:[^"]*]]"
 //
-// LIBPATH-X86_64: -L[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}
-// RPATH-X86_64:   "-rpath" "[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}"
+// LIBPATH-X86_64: -L[[RESDIR]]{{(/|\\\\)lib(/|\\\\)x86_64-unknown-linux}}
+// RPATH-X86_64:   "-rpath" "[[RESDIR]]{{(/|\\\\)lib(/|\\\\)x86_64-unknown-linux}}"
 //
-// NO-LIBPATH-X86_64-NOT: -L[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}
-// NO-RPATH-X86_64-NOT:   "-rpath" "[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}"
+// LIBPATH-X86_64-ANDROID: -L[[RESDIR]]{{(/|\\\\)lib(/|\\\\)x86_64-unknown-linux-android}}
+// RPATH-X86_64-ANDROID:   "-rpath" "[[RESDIR]]{{(/|\\\\)lib(/|\\\\)x86_64-unknown-linux-android}}"
 //
-// LIBPATH-AARCH64: -L[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)aarch64}}
-// RPATH-AARCH64:   "-rpath" "[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)aarch64}}"
+// NO-LIBPATH-X86_64-NOT: -L[[RESDIR]]{{(/|\\\\)lib(/|\\\\)x86_64-unknown-linux}}
+// NO-RPATH-X86_64-NOT:   "-rpath" "[[RESDIR]]{{(/|\\\\)lib(/|\\\\)x86_64-unknown-linux}}"
+//
+// LIBPATH-AARCH64: -L[[RESDIR]]{{(/|\\\\)lib(/|\\\\)aarch64-unknown-linux}}
+// RPATH-AARCH64:   "-rpath" "[[RESDIR]]{{(/|\\\\)lib(/|\\\\)aarch64-unknown-linux}}"
 //
 // NO-LIBPATH-NOT: "-L{{[^"]*Inputs(/|\\\\)resource_dir}}"
 // NO-RPATH-NOT:   "-rpath" {{.*(/|\\\\)Inputs(/|\\\\)resource_dir}}
