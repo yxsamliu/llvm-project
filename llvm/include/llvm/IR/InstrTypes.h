@@ -25,6 +25,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/OperandTraits.h"
@@ -1406,7 +1407,13 @@ public:
   /// Returns the function called, or null if this is an indirect function
   /// invocation or the function signature does not match the call signature.
   Function *getCalledFunction() const {
-    if (auto *F = dyn_cast_or_null<Function>(getCalledOperand()))
+    Value *V = getCalledOperand();
+    if (!V)
+      return nullptr;
+    if (auto *A = dyn_cast<GlobalAlias>(V))
+      V = A->getAliasee();
+
+    if (auto *F = dyn_cast<Function>(V))
       if (F->getValueType() == getFunctionType())
         return F;
     return nullptr;

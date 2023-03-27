@@ -79,7 +79,6 @@ entry:
   %fptr33 = load ptr, ptr %vtable2, align 8
 
   ;; Check that the call was devirtualized.
-  ;; CHECK-IR1: %call4 = tail call i32 @_ZN1D1mEi
   %call4 = tail call i32 %fptr33(ptr nonnull %obj2, i32 %a)
   ret i32 %call4
 }

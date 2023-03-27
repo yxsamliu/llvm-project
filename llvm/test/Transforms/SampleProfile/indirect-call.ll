@@ -178,10 +178,10 @@ define i32 @foo_direct_i32() #0 !dbg !28 {
 }
 
 ; CHECK-LABEL: @test_direct
-; We should not promote a direct call.
+; We should promote a direct call of alias.
 define void @test_direct() #0 !dbg !22 {
 ; CHECK-NOT: icmp
-; CHECK: call
+; CHECK-NOT: call
   call void @foo_alias(), !dbg !23
   ret void
 }

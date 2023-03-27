@@ -16,6 +16,7 @@
 
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
 #include <cassert>
@@ -217,7 +218,12 @@ public:
   /// return null (if it's an indirect call).
   Function *getCalledFunction() const {
     Value *V = getCalledOperand();
-    return V ? dyn_cast<Function>(V->stripPointerCasts()) : nullptr;
+    if (!V)
+      return nullptr;
+    V = V->stripPointerCasts();
+    if (auto *A = dyn_cast<GlobalAlias>(V))
+      return dyn_cast<Function>(A->getAliasee());
+    return dyn_cast<Function>(V);
   }
 };
 

@@ -4,8 +4,9 @@
 @alias = internal unnamed_addr alias void (ptr), ptr @callee
 
 define internal void @callee(ptr) {
+; CHECK: Function Attrs: nounwind memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@callee
-; CHECK-SAME: (ptr [[TMP0:%.*]]) {
+; CHECK-SAME: (ptr [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
   ret void
@@ -14,7 +15,6 @@ define internal void @callee(ptr) {
 define void @caller(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@caller
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    call void @alias(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call void @alias(ptr %p)
