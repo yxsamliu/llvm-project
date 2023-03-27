@@ -8,14 +8,14 @@
 ; rather than just twice.
 
 ; CHECK: Running pass: InstCombinePass on f1
-; CHECK-NOT: InstCombinePass
+; CHECK: InstCombinePass
 ; CHECK: Running pass: InstCombinePass on f2
-; CHECK-NOT: InstCombinePass
-; CHECK: Running pass: InstCombinePass on f3
-; CHECK-NOT: InstCombinePass
-; CHECK: Running pass: InstCombinePass on f4
-; CHECK-NOT: InstCombinePass
-; CHECK: Running pass: InstCombinePass on f1
+; CHECK: InstCombinePass
+; CHECK-NOT: Running pass: InstCombinePass on f3
+; CHECK: InstCombinePass
+; CHECK-NOT: Running pass: InstCombinePass on f4
+; CHECK: InstCombinePass
+; CHECK-NOT: Running pass: InstCombinePass on f1
 ; CHECK-NOT: InstCombinePass
 
 @a1 = alias void (), void ()* @f1

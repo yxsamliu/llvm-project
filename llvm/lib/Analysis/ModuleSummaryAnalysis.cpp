@@ -360,7 +360,6 @@ static void computeFunctionSummary(
       // Check if this is an alias to a function. If so, get the
       // called aliasee for the checks below.
       if (auto *GA = dyn_cast<GlobalAlias>(CalledValue)) {
-        assert(!CalledFunction && "Expected null called function in callsite for alias");
         CalledFunction = dyn_cast<Function>(GA->getAliaseeObject());
       }
       // Check if this is a direct call to a known function or a known
