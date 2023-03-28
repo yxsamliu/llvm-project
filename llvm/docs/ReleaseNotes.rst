@@ -143,6 +143,36 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
+* Add LLVM APFloat support for AMD fp8 and bf8 (NANOO mode). Fixes SWDEV-371135
+* Add bf16 storage support. Fixes SWDEV-360569
+* Add schedule execution metric for the UnclusteredHighRPStage. Fixes
+SWDEV-360050
+* Improve code object v5 support, add .uniform_work_group_size metadata. Fixes
+SWDEV-231144
+* Remove unnecessary and unwanted metadata associated with code object
+version 5. The compiler conservatively adds metadata if it cannot prove that
+said metadata is not required. The compiler has been extended to better track
+when that metadata is needed. Fixes SWDEV-352586
+* Lower an idempotent atomic operation into an atomic load. Fixes: SWDEV-385135,
+SWDEV-383669, SWDEV-382412, SWDEV-382402
+* Fix an assertion failure when folding into src2 of V_FMAC_F16. Fixes:
+SWDEV-381519
+* Fix warning for signed conversion on LP64. An extraneous warning was emitted;
+update the behavior to match -m32 and GCC behavior. Fixes SWDEV-380227
+* Do not apply schedule metric for regions with spilling. Fixes SWDEV-377300
+* Fix opaque pointer and other bugs in printf of constant strings.
+Fixes SWDEV-376876
+* Fix liveness calculation when a condition register def happens past a newly
+created use. Fixes SWDEV-374514
+* Optimization: cast sub-dword elements to i32 in concat_vectors. Fixes SWDEV-373436
+* Consider the output type to avoid type mismatches. Fixes SWDEV-372188
+* Fix crash when evaluating nested call with value-dependent arg. Fixes SWDEV-366056
+* Extend reordering data of tree entry to support PHInodes to eliminate
+unnecessary unpack and pack instructions. Fixes SWDEV-338973
+* Change HIP driver to default to -nohipwrapperinc for .cui inputs. Fixes
+SWDEV-332537
+* Lower ADD|SUB U64 decomposed pseudos to SDWA. Fixes SWDEV-139113
+
 Changes to the ARM Backend
 --------------------------
 
