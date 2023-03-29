@@ -172,6 +172,9 @@ unnecessary unpack and pack instructions. Fixes SWDEV-338973
 * Change HIP driver to default to -nohipwrapperinc for .cui inputs. Fixes
 SWDEV-332537
 * Lower ADD|SUB U64 decomposed pseudos to SDWA. Fixes SWDEV-139113
+* Add --lto-CGO[0-3] option. Fixes SWDEV-378280
+* Add heterogeneous debug information generation for LDS variables. Fixes:
+SWDEV-313805, SWDEV-385974
 
 Changes to the ARM Backend
 --------------------------
