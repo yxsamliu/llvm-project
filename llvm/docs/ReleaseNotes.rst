@@ -175,6 +175,8 @@ SWDEV-332537
 * Add --lto-CGO[0-3] option. Fixes SWDEV-378280
 * Add heterogeneous debug information generation for LDS variables. Fixes:
 SWDEV-313805, SWDEV-385974
+* Improved SGPR spill handling: Implementation was revised to address the
+  build failures most commonly seen in heavy workloads.
 
 Changes to the ARM Backend
 --------------------------
