@@ -60,14 +60,22 @@ ${error} Set RUNTIMES_BUILD_ALLOW_DARWIN to allow a single darwin triple.")
   endforeach()
 endfunction()
 
+macro(set_enable_per_target_runtime_dir)
+	#May have been set by llvm/CMakeLists.txt.
+	if (NOT DEFINED LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+		# AIX should fold 32-bit & 64-bit arch libraries into a single archive.
+		if (LLVM_TARGET_TRIPLE MATCHES "aix")
+			set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR OFF)
+		else()
+			set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON)
+		endif()
+	endif()
+endmacro()
+
 function(builtin_default_target compiler_rt_path)
   cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
 
-  set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default ON)
-  # AIX should fold 32-bit & 64-bit arch libraries into a single archive.
-  if (LLVM_TARGET_TRIPLE MATCHES "aix")
-    set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default OFF)
-  endif()
+  set_enable_per_target_runtime_dir()
 
   llvm_ExternalProject_Add(builtins
                            ${compiler_rt_path}/lib/builtins
@@ -191,7 +199,7 @@ foreach(entry ${runtimes})
 endforeach()
 
 function(runtime_default_target)
-  cmake_parse_arguments(ARG "" "" "DEPENDS;PREFIXES" ${ARGN})
+  cmake_parse_arguments(ARG "" "" "DEPENDS;CMAKE_ARGS;PREFIXES" ${ARGN})
 
   include(${LLVM_BINARY_DIR}/runtimes/Components.cmake OPTIONAL)
   set(SUB_CHECK_TARGETS ${SUB_CHECK_TARGETS} PARENT_SCOPE)
@@ -217,11 +225,7 @@ function(runtime_default_target)
     list(APPEND test_targets runtimes-test-depends check-runtimes)
   endif()
 
-  set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default ON)
-  # AIX should fold 32-bit & 64-bit arch libraries into a single archive.
-  if (LLVM_TARGET_TRIPLE MATCHES "aix")
-    set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default OFF)
-  endif()
+  set_enable_per_target_runtime_dir()
 
   llvm_ExternalProject_Add(runtimes
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes
@@ -347,6 +351,8 @@ function(runtime_register_target name target)
   if(NOT RUNTIMES_${name}_LLVM_USE_LINKER AND NOT RUNTIMES_${target}_LLVM_USE_LINKER)
     list(APPEND ${name}_extra_args -DLLVM_USE_LINKER=${LLVM_USE_LINKER})
   endif()
+
+  set_enable_per_target_runtime_dir()
 
   llvm_ExternalProject_Add(runtimes-${name}
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes
