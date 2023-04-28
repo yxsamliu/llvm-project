@@ -1151,6 +1151,10 @@ uptr GetUserBegin(uptr chunk) {
   return m ? m->Beg() : 0;
 }
 
+uptr GetUserAddr(uptr chunk) {
+  return chunk;
+}
+
 LsanMetadata::LsanMetadata(uptr chunk) {
   metadata_ = chunk ? reinterpret_cast<void *>(chunk - __asan::kChunkHeaderSize)
                     : nullptr;
@@ -1211,6 +1215,17 @@ IgnoreObjectResult IgnoreObjectLocked(const void *p) {
 // ---------------------- Interface ---------------- {{{1
 using namespace __asan;
 
+const void *AllocationBegin(const void *p) {
+  AsanChunk *m = __asan::instance.GetAsanChunkByAddr((uptr)p);
+  if (!m)
+    return nullptr;
+  if (atomic_load(&m->chunk_state, memory_order_acquire) != CHUNK_ALLOCATED)
+    return nullptr;
+  if (m->UsedSize() == 0)
+    return nullptr;
+  return (const void *)(m->Beg());
+}
+
 // ASan allocator doesn't reserve extra bytes, so normally we would
 // just return "size". We don't want to expose our redzone sizes, etc here.
 uptr __sanitizer_get_estimated_allocated_size(uptr size) {
@@ -1232,6 +1247,10 @@ uptr __sanitizer_get_allocated_size(const void *p) {
     ReportSanitizerGetAllocatedSizeNotOwned(ptr, &stack);
   }
   return allocated_size;
+}
+
+const void *__sanitizer_get_allocated_begin(const void *p) {
+  return AllocationBegin(p);
 }
 
 void __sanitizer_purge_allocator() {
@@ -1260,26 +1279,17 @@ static const size_t kPageSize_ = 4096;
 hsa_status_t asan_hsa_amd_memory_pool_allocate(
   hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags, void **ptr,
   BufferedStackTrace *stack) {
-  // Device memory manager will allocate 2MB slabs which have to be 2MB
-  // aligned. This is hard to achieve with added redzone but not wasting big
-  // chunks of device memory. The current workaround is to bypass the
-  // allocation call to HSA if the allocation size is 2MB
-  static const size_t kSlabSize_ = 2 * 1024 * 1024;
-  if (size != kSlabSize_) {
-    AmdgpuAllocationInfo aa_info;
-    aa_info.alloc_func =
-      reinterpret_cast<void *>(asan_hsa_amd_memory_pool_allocate);
-    aa_info.remap_first_device_page = true;
-    aa_info.memory_pool = memory_pool;
-    aa_info.size = size;
-    aa_info.flags = flags;
-    aa_info.ptr = nullptr;
-    SetErrnoOnNull(*ptr = instance.Allocate(size, kPageSize_, stack,
-                                            FROM_MALLOC, false, &aa_info));
-    return aa_info.status;
-  } else {
-    return REAL(hsa_amd_memory_pool_allocate)(memory_pool, size, flags, ptr);
-  }
+  AmdgpuAllocationInfo aa_info;
+  aa_info.alloc_func =
+    reinterpret_cast<void *>(asan_hsa_amd_memory_pool_allocate);
+  aa_info.remap_first_device_page = true;
+  aa_info.memory_pool = memory_pool;
+  aa_info.size = size;
+  aa_info.flags = flags;
+  aa_info.ptr = nullptr;
+  SetErrnoOnNull(*ptr = instance.Allocate(size, kPageSize_, stack,
+                                          FROM_MALLOC, false, &aa_info));
+  return aa_info.status;
 }
 
 hsa_status_t asan_hsa_amd_memory_pool_free(

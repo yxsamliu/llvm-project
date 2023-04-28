@@ -169,6 +169,8 @@ int testLock(omp_lock_t *);
 void initLock(omp_lock_t *);
 void destroyLock(omp_lock_t *);
 void setLock(omp_lock_t *);
+void unsetCriticalLock(omp_lock_t *);
+void setCriticalLock(omp_lock_t *);
 
 /// AMDGCN Implementation
 ///
@@ -360,6 +362,22 @@ void workersDoneBarrier() {
   synchronize::threads();
 }
 
+void unsetCriticalLock(omp_lock_t *Lock) {
+  (void)atomicExchange((uint32_t *)Lock, UNSET, atomic::acq_rel);
+}
+
+void setCriticalLock(omp_lock_t *Lock) {
+  uint64_t LowestActiveThread = utils::ffs(mapping::activemask()) - 1;
+  if (mapping::getThreadIdInWarp() == LowestActiveThread) {
+    fenceKernel(atomic::release);
+    while (!atomicCAS((uint32_t *)Lock, UNSET, SET, atomic::relaxed,
+                       atomic::relaxed)) {
+      __builtin_amdgcn_s_sleep(32);
+    }
+    fenceKernel(atomic::aquire);
+  }
+}
+
 #pragma omp end declare variant
 ///}
 
@@ -549,6 +567,14 @@ uint32_t atomic::inc(uint32_t *Addr, uint32_t V, atomic::OrderingTy Ordering) {
   return impl::atomicInc(Addr, V, Ordering);
 }
 
+void unsetCriticalLock(omp_lock_t *Lock) {
+  impl::unsetLock(Lock);
+}
+
+void setCriticalLock(omp_lock_t *Lock) {
+  impl::setLock(Lock);
+}
+
 extern "C" {
 void __kmpc_ordered(IdentTy *Loc, int32_t TId) { FunctionTracingRAII(); }
 
@@ -592,6 +618,13 @@ int32_t __kmpc_master(IdentTy *Loc, int32_t TId) {
 
 void __kmpc_end_master(IdentTy *Loc, int32_t TId) { FunctionTracingRAII(); }
 
+int32_t __kmpc_masked(IdentTy *Loc, int32_t TId, int32_t Filter) {
+  FunctionTracingRAII();
+  return omp_get_thread_num() == Filter;
+}
+
+void __kmpc_end_masked(IdentTy *Loc, int32_t TId) { FunctionTracingRAII(); }
+
 int32_t __kmpc_single(IdentTy *Loc, int32_t TId) {
   FunctionTracingRAII();
   return __kmpc_master(Loc, TId);
@@ -634,12 +667,12 @@ void __kmpc_syncwarp(uint64_t Mask) {
 
 void __kmpc_critical(IdentTy *Loc, int32_t TId, CriticalNameTy *Name) {
   FunctionTracingRAII();
-  omp_set_lock(reinterpret_cast<omp_lock_t *>(Name));
+  impl::setCriticalLock(reinterpret_cast<omp_lock_t *>(Name));
 }
 
 void __kmpc_end_critical(IdentTy *Loc, int32_t TId, CriticalNameTy *Name) {
   FunctionTracingRAII();
-  omp_unset_lock(reinterpret_cast<omp_lock_t *>(Name));
+  impl::unsetCriticalLock(reinterpret_cast<omp_lock_t *>(Name));
 }
 
 void omp_init_lock(omp_lock_t *Lock) { impl::initLock(Lock); }

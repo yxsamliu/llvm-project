@@ -465,7 +465,7 @@ public:
       break;
     }
     c->cmdsize = getSize();
-    c->version = encodeVersion(platformInfo.minimum);
+    c->version = encodeVersion(platformInfo.target.MinDeployment);
     c->sdk = encodeVersion(platformInfo.sdk);
   }
 
@@ -490,7 +490,7 @@ public:
     c->cmdsize = getSize();
 
     c->platform = static_cast<uint32_t>(platformInfo.target.Platform);
-    c->minos = encodeVersion(platformInfo.minimum);
+    c->minos = encodeVersion(platformInfo.target.MinDeployment);
     c->sdk = encodeVersion(platformInfo.sdk);
 
     c->ntools = ntools;
@@ -764,7 +764,9 @@ static bool useLCBuildVersion(const PlatformInfo &platformInfo) {
   auto it = llvm::find_if(minVersion, [&](const auto &p) {
     return p.first == platformInfo.target.Platform;
   });
-  return it == minVersion.end() ? true : platformInfo.minimum >= it->second;
+  return it == minVersion.end()
+             ? true
+             : platformInfo.target.MinDeployment >= it->second;
 }
 
 template <class LP> void Writer::createLoadCommands() {
@@ -916,56 +918,6 @@ template <class LP> void Writer::createLoadCommands() {
                               : 0));
 }
 
-#if 0 //<<<<<<< HEAD
-static size_t getSymbolPriority(const SymbolPriorityEntry &entry,
-                                const InputFile *f) {
-  // We don't use toString(InputFile *) here because it returns the full path
-  // for object files, and we only want the basename.
-  StringRef filename;
-  if (f->archiveName.empty())
-    filename = path::filename(f->getName());
-  else
-    filename = saver().save(path::filename(f->archiveName) + "(" +
-                            path::filename(f->getName()) + ")");
-  return std::max(entry.objectFiles.lookup(filename), entry.anyObjectFile);
-}
-
-// Each section gets assigned the priority of the highest-priority symbol it
-// contains.
-static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
-  if (config->callGraphProfileSort)
-    return computeCallGraphProfileOrder();
-  DenseMap<const InputSection *, size_t> sectionPriorities;
-
-  if (config->priorities.empty())
-    return sectionPriorities;
-
-  auto addSym = [&](Defined &sym) {
-    if (sym.isAbsolute())
-      return;
-
-    auto it = config->priorities.find(sym.getName());
-    if (it == config->priorities.end())
-      return;
-
-    SymbolPriorityEntry &entry = it->second;
-    size_t &priority = sectionPriorities[sym.isec];
-    priority =
-        std::max(priority, getSymbolPriority(entry, sym.isec->getFile()));
-  };
-
-  // TODO: Make sure this handles weak symbols correctly.
-  for (const InputFile *file : inputFiles) {
-    if (isa<ObjFile>(file))
-      for (Symbol *sym : file->symbols)
-        if (auto *d = dyn_cast_or_null<Defined>(sym))
-          addSym(*d);
-  }
-
-  return sectionPriorities;
-}
-
-#endif //>>>>>>> 83d59e05b201... Re-land [LLD] Remove global state in lldCommon
 // Sorting only can happen once all outputs have been collected. Here we sort
 // segments, output sections within each segment, and input sections within each
 // output segment.
@@ -1125,9 +1077,10 @@ void Writer::finalizeAddresses() {
     seg->addr = addr;
     assignAddresses(seg);
     // codesign / libstuff checks for segment ordering by verifying that
-    // `fileOff + fileSize == next segment fileOff`. So we call alignTo() before
-    // (instead of after) computing fileSize to ensure that the segments are
-    // contiguous. We handle addr / vmSize similarly for the same reason.
+    // `fileOff + fileSize == next segment fileOff`. So we call
+    // alignToPowerOf2() before (instead of after) computing fileSize to ensure
+    // that the segments are contiguous. We handle addr / vmSize similarly for
+    // the same reason.
     fileOff = alignToPowerOf2(fileOff, pageSize);
     addr = alignToPowerOf2(addr, pageSize);
     seg->vmSize = addr - seg->addr;
@@ -1170,8 +1123,8 @@ void Writer::assignAddresses(OutputSegment *seg) {
   for (OutputSection *osec : seg->getSections()) {
     if (!osec->isNeeded())
       continue;
-    addr = alignTo(addr, osec->align);
-    fileOff = alignTo(fileOff, osec->align);
+    addr = alignToPowerOf2(addr, osec->align);
+    fileOff = alignToPowerOf2(fileOff, osec->align);
     osec->addr = addr;
     osec->fileOff = isZeroFill(osec->flags) ? 0 : fileOff;
     osec->finalize();

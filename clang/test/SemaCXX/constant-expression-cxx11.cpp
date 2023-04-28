@@ -1,5 +1,3 @@
-// XFAIL: * 
-
 // RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected,cxx20_2b,cxx2b    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx11_20,cxx20_2b -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=expected,cxx11_20,cxx11    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
@@ -281,7 +279,7 @@ namespace FunctionPointers {
   constexpr auto Select(int n) -> int (*)(int) {
     return n == 2 ? &Double : n == 3 ? &Triple : n == 4 ? &Quadruple : 0;
   }
-  constexpr int Apply(int (*F)(int), int n) { return F(n); } // expected-note {{subexpression}}
+  constexpr int Apply(int (*F)(int), int n) { return F(n); } // expected-note {{'F' evaluates to a null function pointer}}
 
   static_assert(1 + Apply(Select(4), 5) + Apply(Select(3), 7) == 42, "");
 

@@ -30,6 +30,9 @@ else()
   list(APPEND SCUDO_CFLAGS -O3)
 endif()
 
+append_list_if(COMPILER_RT_HAS_WTHREAD_SAFETY_FLAG -Werror=thread-safety
+  SCUDO_CFLAGS)
+
 set(SCUDO_LINK_FLAGS)
 
 list(APPEND SCUDO_LINK_FLAGS -Wl,-z,defs,-z,now,-z,relro)
@@ -82,6 +85,7 @@ set(SCUDO_HEADERS
   stack_depot.h
   stats.h
   string_utils.h
+  timing.h
   tsd_exclusive.h
   tsd_shared.h
   tsd.h
@@ -104,6 +108,7 @@ set(SCUDO_SOURCES
   report.cpp
   rss_limit_checker.cpp
   string_utils.cpp
+  timing.cpp
   )
 
 # Enable the necessary instruction set for scudo_crc32.cpp, if available.

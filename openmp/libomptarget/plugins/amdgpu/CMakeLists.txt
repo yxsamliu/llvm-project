@@ -27,7 +27,7 @@ if(hsa-runtime64_DIR)
   message("FOUND hsa-runtime64 at ${hsa-runtime64_DIR}")
 endif()
 
-if(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_SYSTEM_NAME MATCHES "Linux")
+if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
   libomptarget_say("Not building AMDGPU plugin: only support AMDGPU in Linux x86_64, ppc64le, or aarch64 hosts")
   return()
 endif()
@@ -92,13 +92,15 @@ add_llvm_library(omptarget.rtl.amdgpu SHARED
   MemoryManager
   ${LIBOMPTARGET_DEP_LIBRARIES}
   ${OPENMP_PTHREAD_LIB}
-  -Wl,--whole-archive hostrpc_services -Wl,--no-whole-archive
+  -Wl,--whole-archive amdgcn_hostexec_services -Wl,--no-whole-archive
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
   ${LDFLAGS_UNDEFINED}
 
   NO_INSTALL_RPATH
 )
-add_dependencies(omptarget.rtl.amdgpu omptarget.devicertl.amdgpu)
+
+add_dependencies(omptarget.rtl.amdgpu omptarget.devicertl.amdgpu )
+add_dependencies(omptarget.rtl.amdgpu amdgcn_hostexec_services)
 
 target_include_directories(
   omptarget.rtl.amdgpu
@@ -129,12 +131,10 @@ set_property(TARGET omptarget.rtl.amdgpu PROPERTY INSTALL_RPATH_USE_LINK_PATH ON
 option(LIBOMPTARGET_FORCE_AMDGPU_TESTS "Build AMDGPU libomptarget tests" OFF)
 if (LIBOMPTARGET_FOUND_AMDGPU_GPU OR LIBOMPTARGET_FORCE_AMDGPU_TESTS)
   # Report to the parent scope that we are building a plugin for amdgpu
-  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} amdgcn-amd-amdhsa amdgcn-amd-amdhsa-oldDriver" PARENT_SCOPE)
-  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} amdgcn-amd-amdhsa amdgcn-amd-amdhsa-LTO" PARENT_SCOPE)
+  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} amdgcn-amd-amdhsa" PARENT_SCOPE)
   list(APPEND LIBOMPTARGET_TESTED_PLUGINS "omptarget.rtl.amdgpu")
   set(LIBOMPTARGET_TESTED_PLUGINS "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
 else()
-  libomptarget_say("Not generating amdgcn test targets as libhsa is not linkable")
+  libomptarget_say("Not generating AMDGPU tests, no supported devices detected. Use 'LIBOMPTARGET_FORCE_AMDGPU_TESTS' to override.")
   return()
 endif()
-

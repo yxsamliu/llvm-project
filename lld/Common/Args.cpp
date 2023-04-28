@@ -14,13 +14,11 @@
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
 using namespace lld;
 
-// TODO(sbc): Remove this once CGOptLevel can be set completely based on bitcode
-// function metadata.
 int lld::args::getCGOptLevel(int optLevelLTO) {
   return std::clamp(optLevelLTO, 2, 3);
 }

@@ -1747,8 +1747,8 @@ bool SIFoldOperands::tryFoldPhiAGPR(MachineInstr &PHI) {
       InsertPt = InsertMBB->getFirstTerminator();
     }
 
-    const unsigned CopyOpc = UseAccVGPRWrite ? AMDGPU::V_ACCVGPR_WRITE_B32_e64
-                                             : TII->getCopyOpcode();
+    const unsigned CopyOpc =
+        UseAccVGPRWrite ? AMDGPU::V_ACCVGPR_WRITE_B32_e64 : TII->getCopyOpcode();
     Register NewReg = MRI->createVirtualRegister(ARC);
     MachineInstr *MI = BuildMI(*InsertMBB, InsertPt, PHI.getDebugLoc(),
                                TII->get(CopyOpc), NewReg)
@@ -1766,8 +1766,9 @@ bool SIFoldOperands::tryFoldPhiAGPR(MachineInstr &PHI) {
   // COPY that new register back to the original PhiOut register. This COPY will
   // usually be folded out later.
   MachineBasicBlock *MBB = PHI.getParent();
-  TII->buildCopy(*MBB, MBB->getFirstNonPHI(), PHI.getDebugLoc(), PhiOut,
-                 NewReg);
+  BuildMI(*MBB, MBB->getFirstNonPHI(), PHI.getDebugLoc(),
+          TII->get(TII->getCopyOpcode()), PhiOut)
+      .addReg(NewReg);
 
   LLVM_DEBUG(dbgs() << "  Done: Folded " << PHI);
   return true;
@@ -1907,8 +1908,9 @@ bool SIFoldOperands::tryOptimizeAGPRPhis(MachineBasicBlock &MBB) {
 
     // Copy back to an AGPR and use that instead of the AGPR subreg in all MOs.
     Register TempAGPR = MRI->createVirtualRegister(ARC);
-    TII->buildCopy(*DefMBB, ++VGPRCopy->getIterator(), Def->getDebugLoc(),
-                   TempAGPR, TempVGPR);
+    BuildMI(*DefMBB, ++VGPRCopy->getIterator(), Def->getDebugLoc(),
+            TII->get(TII->getCopyOpcode()), TempAGPR)
+        .addReg(TempVGPR);
 
     LLVM_DEBUG(dbgs() << "Caching AGPR into VGPR: " << *VGPRCopy);
     for (MachineOperand *MO : MOs) {

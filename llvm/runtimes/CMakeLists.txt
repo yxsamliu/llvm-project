@@ -61,20 +61,21 @@ ${error} Set RUNTIMES_BUILD_ALLOW_DARWIN to allow a single darwin triple.")
 endfunction()
 
 macro(set_enable_per_target_runtime_dir)
-	#May have been set by llvm/CMakeLists.txt.
-	if (NOT DEFINED LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
-		# AIX should fold 32-bit & 64-bit arch libraries into a single archive.
-		if (LLVM_TARGET_TRIPLE MATCHES "aix")
-			set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR OFF)
-		else()
-			set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON)
+  # May have been set by llvm/CMakeLists.txt.
+  if (NOT DEFINED LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+    # AIX should fold 32-bit & 64-bit arch libraries into a single archive.
+    if (LLVM_TARGET_TRIPLE MATCHES "aix")
+      set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR OFF)
+    else()
+      set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON)
+    endif()
 		endif()
-	endif()
 endmacro()
 
 function(builtin_default_target compiler_rt_path)
   cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
 
+  set_enable_per_target_runtime_dir()
   set_enable_per_target_runtime_dir()
 
   llvm_ExternalProject_Add(builtins
@@ -83,7 +84,7 @@ function(builtin_default_target compiler_rt_path)
                            CMAKE_ARGS -DLLVM_LIBRARY_OUTPUT_INTDIR=${LLVM_LIBRARY_DIR}
                                       -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
                                       -DLLVM_DEFAULT_TARGET_TRIPLE=${LLVM_TARGET_TRIPLE}
-                                      -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default}
+                                      -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       ${COMMON_CMAKE_ARGS}
@@ -169,12 +170,6 @@ endif()
 # for all variables that will apply to runtimes.
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)
-  if(projName STREQUAL "libc")
-    # For now, we will use the name "llvmlibc" for the libc project as it is
-    # not a full libc yet. Also, if we leave it as is, the "lib" prefix gets
-    # stripped below and the targets endup having the name "c", "check-c" etc.
-    set(projName "llvmlibc")
-  endif()
   string(REPLACE "-" "_" canon_name ${projName})
   string(TOUPPER ${canon_name} canon_name)
   list(APPEND prefixes ${canon_name})
@@ -186,13 +181,17 @@ foreach(entry ${runtimes})
   if(canon_name STREQUAL "COMPILER_RT")
     list(APPEND prefixes SANITIZER DARWIN)
   endif()
-  if(canon_name STREQUAL "LLVMLIBC")
+  if(canon_name STREQUAL "LIBC")
     list(APPEND prefixes "LLVM_LIBC")
     list(APPEND prefixes "LIBC_")
+    # The `libc` project may require '-DCUDAToolkit_ROOT' in GPU mode.
+    if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
+      list(APPEND prefixes "CUDA")
+    endif()
   endif()
 
   string(FIND ${projName} "lib" LIB_IDX)
-  if(LIB_IDX EQUAL 0)
+  if(LIB_IDX EQUAL 0 AND NOT projName STREQUAL "libc")
     string(SUBSTRING ${projName} 3 -1 projName)
   endif()
   list(APPEND runtime_names ${projName})
@@ -235,13 +234,14 @@ function(runtime_default_target)
                                       -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
                                       -DLLVM_DEFAULT_TARGET_TRIPLE=${LLVM_TARGET_TRIPLE}
                                       -DLLVM_ENABLE_PROJECTS_USED=${LLVM_ENABLE_PROJECTS_USED}
-                                      -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default}
+                                      -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
                                       -DLLVM_BUILD_TOOLS=${LLVM_BUILD_TOOLS}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_CXX_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       ${COMMON_CMAKE_ARGS}
                                       ${RUNTIMES_CMAKE_ARGS}
+                                      ${ARG_CMAKE_ARGS}
                            PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                                                 LLVM_USE_LINKER
                                                 ${ARG_PREFIXES}
@@ -354,6 +354,8 @@ function(runtime_register_target name target)
 
   set_enable_per_target_runtime_dir()
 
+  set_enable_per_target_runtime_dir()
+
   llvm_ExternalProject_Add(runtimes-${name}
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes
                            DEPENDS ${${name}_deps}
@@ -362,7 +364,7 @@ function(runtime_register_target name target)
                                       -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
                                       -DLLVM_DEFAULT_TARGET_TRIPLE=${target}
                                       -DLLVM_ENABLE_PROJECTS_USED=${LLVM_ENABLE_PROJECTS_USED}
-                                      -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
+                                      -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_CXX_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
@@ -390,15 +392,35 @@ if(runtimes)
       list(APPEND extra_deps llvm-link)
     endif()
   endif()
+  if("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND 
+      (LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES))
+    if(TARGET libc-hdrgen)
+      set(libc_tools libc-hdrgen)
+      set(libc_cmake_args "-DLIBC_HDRGEN_EXE=$<TARGET_FILE:libc-hdrgen>"
+                          "-DLLVM_LIBC_FULL_BUILD=ON")
+      list(APPEND extra_deps ${libc_tools})
+    else()
+      # We want to build the libc build tools before we can build the libc
+      # itself. So, the libc project should be included in LLVM_ENABLE_PROJECTS.
+      # This should have been done in llvm/CMakeLists.txt automatically when
+      # "libc" is detected in LLVM_ENABLE_RUNTIMES.
+      message(FATAL_ERROR "libc-hdrgen target missing unexpectedly")
+    endif()
+    if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
+      list(APPEND extra_deps clang-offload-packager nvptx-arch amdgpu-arch)
+    endif()
+  endif()
   if(NOT LLVM_RUNTIME_TARGETS)
     runtime_default_target(
       DEPENDS ${builtins_dep} ${extra_deps}
+      CMAKE_ARGS ${libc_cmake_args}
       PREFIXES ${prefixes})
     set(test_targets check-runtimes)
   else()
     if("default" IN_LIST LLVM_RUNTIME_TARGETS)
       runtime_default_target(
         DEPENDS ${builtins_dep} ${extra_deps}
+        CMAKE_ARGS ${libc_cmake_args}
         PREFIXES ${prefixes})
       list(REMOVE_ITEM LLVM_RUNTIME_TARGETS "default")
     else()
@@ -434,7 +456,8 @@ if(runtimes)
         endif()
       endif()
       runtime_register_target(${name} ${name}
-        DEPENDS ${builtins_dep_name})
+        DEPENDS ${builtins_dep_name} ${libc_tools}
+        CMAKE_ARGS ${libc_cmake_args})
 
       add_dependencies(runtimes runtimes-${name})
       add_dependencies(runtimes-configure runtimes-${name}-configure)
@@ -509,6 +532,7 @@ if(runtimes)
         sanstats
         llvm_gtest_main
         llvm_gtest
+        split-file
       )
     foreach(target ${test_targets} ${SUB_CHECK_TARGETS})
       add_dependencies(${target} ${RUNTIMES_TEST_DEPENDS})

@@ -26,7 +26,7 @@ entry:
   store i32 addrspace(1)* %A, i32 addrspace(1)* addrspace(5)* %A.addr, align 8
   call void @llvm.dbg.def(metadata !21, metadata i32 addrspace(1)* addrspace(5)* %A.addr), !dbg !23
   call void @llvm.dbg.def(metadata !24, metadata i32 addrspace(5)* %B), !dbg !26
-  call void @llvm.dbg.def(metadata !31, metadata i32 addrspace(5)* %C), !dbg !34
+  call void @llvm.dbg.def(metadata !31, metadata ptr addrspace(5) %C), !dbg !34
   store i32 777, i32 addrspace(5)* %B, align 4, !dbg !26
   %0 = load i32, i32 addrspace(5)* %B, align 4, !dbg !27
   %1 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(5)* %A.addr, align 8, !dbg !28
@@ -75,7 +75,7 @@ attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
 !28 = !DILocation(line: 3, column: 4, scope: !11)
 !29 = !DILocation(line: 3, column: 6, scope: !11)
 !30 = !DILocation(line: 4, column: 1, scope: !11)
-!31 = distinct !DILifetime(object: !32, location: !DIExpr(DIOpReferrer(i32 addrspace(5)*), DIOpDeref(i32)))
+!31 = distinct !DILifetime(object: !32, location: !DIExpr(DIOpReferrer(ptr addrspace(5)), DIOpDeref(i32)))
 !32 = !DILocalVariable(name: "C", scope: !11, file: !1, line: 1, type: !33)
 !33 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
 !34 = !DILocation(line: 5, column: 1, scope: !11)

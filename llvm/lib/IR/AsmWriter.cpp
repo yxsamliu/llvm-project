@@ -329,8 +329,12 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::Swift:         Out << "swiftcc"; break;
   case CallingConv::SwiftTail:     Out << "swifttailcc"; break;
   case CallingConv::X86_INTR:      Out << "x86_intrcc"; break;
-  case CallingConv::HHVM:          Out << "hhvmcc"; break;
-  case CallingConv::HHVM_C:        Out << "hhvm_ccc"; break;
+  case CallingConv::DUMMY_HHVM:
+    Out << "hhvmcc";
+    break;
+  case CallingConv::DUMMY_HHVM_C:
+    Out << "hhvm_ccc";
+    break;
   case CallingConv::AMDGPU_VS:     Out << "amdgpu_vs"; break;
   case CallingConv::AMDGPU_LS:     Out << "amdgpu_ls"; break;
   case CallingConv::AMDGPU_HS:     Out << "amdgpu_hs"; break;
@@ -1586,8 +1590,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     Out << CE->getOpcodeName();
     WriteOptimizationInfo(Out, CE);
     if (CE->isCompare())
-      Out << ' ' << CmpInst::getPredicateName(
-                        static_cast<CmpInst::Predicate>(CE->getPredicate()));
+      Out << ' ' << static_cast<CmpInst::Predicate>(CE->getPredicate());
     Out << " (";
 
     std::optional<unsigned> InRangeOp;
@@ -1695,6 +1698,7 @@ struct MDFieldPrinter {
   void printEmissionKind(StringRef Name, DICompileUnit::DebugEmissionKind EK);
   void printNameTableKind(StringRef Name,
                           DICompileUnit::DebugNameTableKind NTK);
+  void printMemorySpace(StringRef Name, dwarf::MemorySpace MS);
   template <class RangeT> void printMetadataList(StringRef Name, RangeT Range);
 };
 
@@ -1823,6 +1827,20 @@ void MDFieldPrinter::printDISPFlags(StringRef Name,
 void MDFieldPrinter::printEmissionKind(StringRef Name,
                                        DICompileUnit::DebugEmissionKind EK) {
   Out << FS << Name << ": " << DICompileUnit::emissionKindString(EK);
+}
+
+void MDFieldPrinter::printMemorySpace(StringRef Name, dwarf::MemorySpace MS) {
+  if (MS == dwarf::DW_MSPACE_LLVM_none)
+    return;
+
+  StringRef MSStr = dwarf::MemorySpaceString(MS);
+
+  Out << FS << Name << ": ";
+  if (MSStr.empty()) {
+    Out << static_cast<unsigned>(MS);
+  } else {
+    Out << MSStr;
+  }
 }
 
 void MDFieldPrinter::printNameTableKind(StringRef Name,
@@ -2043,8 +2061,9 @@ static void writeDIDerivedType(raw_ostream &Out, const DIDerivedType *N,
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printMetadata("extraData", N->getRawExtraData());
   if (const auto &DWARFAddressSpace = N->getDWARFAddressSpace())
-    Printer.printInt("dwarfAddressSpace", *DWARFAddressSpace,
+    Printer.printInt("addressSpace", *DWARFAddressSpace,
                      /* ShouldSkipZero */ false);
+  Printer.printMemorySpace("memorySpace", N->getDWARFMemorySpace());
   Printer.printMetadata("annotations", N->getRawAnnotations());
   Out << ")";
 }
@@ -2286,6 +2305,7 @@ static void writeDIGlobalVariable(raw_ostream &Out, const DIGlobalVariable *N,
   Printer.printBool("isDefinition", N->isDefinition());
   Printer.printMetadata("declaration", N->getRawStaticDataMemberDeclaration());
   Printer.printMetadata("templateParams", N->getRawTemplateParams());
+  Printer.printMemorySpace("memorySpace", N->getDWARFMemorySpace());
   Printer.printInt("align", N->getAlignInBits());
   Printer.printMetadata("annotations", N->getRawAnnotations());
   Out << ")";
@@ -2302,6 +2322,7 @@ static void writeDILocalVariable(raw_ostream &Out, const DILocalVariable *N,
   Printer.printInt("line", N->getLine());
   Printer.printMetadata("type", N->getRawType());
   Printer.printDIFlags("flags", N->getFlags());
+  Printer.printMemorySpace("memorySpace", N->getDWARFMemorySpace());
   Printer.printInt("align", N->getAlignInBits());
   Printer.printMetadata("annotations", N->getRawAnnotations());
   Out << ")";
@@ -4159,7 +4180,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
 
   // Print out the compare instruction predicates
   if (const CmpInst *CI = dyn_cast<CmpInst>(&I))
-    Out << ' ' << CmpInst::getPredicateName(CI->getPredicate());
+    Out << ' ' << CI->getPredicate();
 
   // Print out the atomicrmw operation
   if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(&I))

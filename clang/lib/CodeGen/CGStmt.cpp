@@ -25,6 +25,8 @@
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Assumptions.h"
@@ -69,9 +71,9 @@ llvm::Value *CodeGenFunction::applyNoLoopInc(const Expr *Inc,
 
 std::pair<const VarDecl *, Address>
 CodeGenFunction::EmitBigJumpLoopStartingIndex(const ForStmt &FStmt) {
-  const CodeGenModule::NoLoopIntermediateStmts &Directives =
-      CGM.isXteamRedKernel(&FStmt) ? CGM.getXteamRedStmts(&FStmt)
-                                   : CGM.getBigJumpLoopStmts(&FStmt);
+  const CodeGenModule::OptKernelNestDirectives &Directives =
+      CGM.isXteamRedKernel(&FStmt) ? CGM.getXteamRedNestDirs(&FStmt)
+                                   : CGM.getBigJumpLoopNestDirs(&FStmt);
   assert(Directives.size() > 0 && isa<OMPLoopDirective>(Directives.back()) &&
          "Appropriate directive not found");
   const OMPLoopDirective &LD = *(cast<OMPLoopDirective>(Directives.back()));
@@ -122,9 +124,9 @@ CodeGenFunction::EmitBigJumpLoopStartingIndex(const ForStmt &FStmt) {
 }
 
 void CodeGenFunction::EmitBigJumpLoopUpdates(const ForStmt &FStmt) {
-  const CodeGenModule::NoLoopIntermediateStmts &Directives =
-      CGM.isXteamRedKernel(&FStmt) ? CGM.getXteamRedStmts(&FStmt)
-                                   : CGM.getBigJumpLoopStmts(&FStmt);
+  const CodeGenModule::OptKernelNestDirectives &Directives =
+      CGM.isXteamRedKernel(&FStmt) ? CGM.getXteamRedNestDirs(&FStmt)
+                                   : CGM.getBigJumpLoopNestDirs(&FStmt);
   assert(Directives.size() > 0 && isa<OMPLoopDirective>(Directives.back()) &&
          "Appropriate directive not found");
   const OMPLoopDirective &LD = *(cast<OMPLoopDirective>(Directives.back()));
@@ -136,9 +138,9 @@ void CodeGenFunction::EmitBigJumpLoopUpdates(const ForStmt &FStmt) {
 void CodeGenFunction::EmitBigJumpLoopInc(const ForStmt &FStmt,
                                          const VarDecl *LoopVD,
                                          const Address &NoLoopIvAddr) {
-  const CodeGenModule::NoLoopIntermediateStmts &Directives =
-      CGM.isXteamRedKernel(&FStmt) ? CGM.getXteamRedStmts(&FStmt)
-                                   : CGM.getBigJumpLoopStmts(&FStmt);
+  const CodeGenModule::OptKernelNestDirectives &Directives =
+      CGM.isXteamRedKernel(&FStmt) ? CGM.getXteamRedNestDirs(&FStmt)
+                                   : CGM.getBigJumpLoopNestDirs(&FStmt);
   assert(Directives.size() > 0 && isa<OMPLoopDirective>(Directives.back()) &&
          "Appropriate directive not found");
   const OMPLoopDirective &LD = *(cast<OMPLoopDirective>(Directives.back()));
@@ -210,123 +212,180 @@ CodeGenFunction::EmitNoLoopIV(const OMPLoopDirective &LD) {
   return std::make_pair(IVDecl, GetAddrOfLocalVar(IVDecl));
 }
 
-void CodeGenFunction::EmitNoLoopKernel(const OMPExecutableDirective &D,
-                                       SourceLocation Loc) {
+const CodeGenModule::OptKernelNestDirectives &
+CodeGenModule::getOptKernelDirectives(
+    const ForStmt *CapturedForStmt,
+    llvm::omp::OMPTgtExecModeFlags OptKernelMode) {
+  assert(OptKernelMode ==
+             llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP ||
+         OptKernelMode == llvm::omp::OMPTgtExecModeFlags::
+                              OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP ||
+         OptKernelMode ==
+             llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_XTEAM_RED);
+  if (OptKernelMode ==
+      llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP)
+    return getNoLoopNestDirs(CapturedForStmt);
+  if (OptKernelMode ==
+      llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP)
+    return getBigJumpLoopNestDirs(CapturedForStmt);
+  return getXteamRedNestDirs(CapturedForStmt);
+}
+
+void CodeGenFunction::EmitOptKernel(
+    const OMPExecutableDirective &D, const ForStmt *CapturedForStmt,
+    llvm::omp::OMPTgtExecModeFlags OptKernelMode, SourceLocation Loc,
+    const FunctionArgList *Args) {
   if (!HaveInsertPoint())
     EnsureInsertPoint();
 
-  auto emitNoLoopCodeForDirective = [this](const OMPExecutableDirective &D) {
-    assert(isa<OMPLoopDirective>(D) && "Unexpected directive");
-    const OMPLoopDirective &LD = cast<OMPLoopDirective>(D);
+  assert(CapturedForStmt && "Cannot generate kernel for null captured stmt");
+  const CodeGenModule::OptKernelNestDirectives &NestDirs =
+      CGM.getOptKernelDirectives(CapturedForStmt, OptKernelMode);
 
-    auto IVPair = EmitNoLoopIV(LD);
-    const VarDecl *IVDecl = IVPair.first;
-    Address IvAddr = IVPair.second;
+  // We support at most 3 levels of nesting.
+  assert((NestDirs.size() > 0 && NestDirs.size() < 4) &&
+         "Unexpected number of nested directives for optimized kernel codegen");
 
-    // Generate myid = workgroup_id * workgroup_size + workitem_id
-    auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
-
-    // workitem_id
-    llvm::Value *GpuThreadId = RT.getGPUThreadID(*this);
-
-    // workgroup_size
-    llvm::Value *WorkGroupSize = RT.getGPUCompleteBlockSize(*this, D);
-
-    // workgroup_id
-    llvm::Value *WorkGroupId = RT.getGPUBlockID(*this);
-
-    llvm::Value *WorkGroup = Builder.CreateMul(WorkGroupId, WorkGroupSize);
-    llvm::Value *GlobalGpuThreadId = Builder.CreateAdd(WorkGroup, GpuThreadId);
-
-    // Check the loop increment
-    assert(CGM.checkLoopStep(LD.getInc(), IVDecl) && "Loop incr check failed");
-
-    // Handle stride
-    GlobalGpuThreadId = applyNoLoopInc(LD.getInc(), IVDecl, GlobalGpuThreadId);
-
-    // Generate my_index = my_index + myid. Note that my_index was already
-    // initialized
-    llvm::Value *Gtid = Builder.CreateIntCast(GlobalGpuThreadId,
-                                              IvAddr.getElementType(), false);
-    llvm::Value *Iv = Builder.CreateAdd(Gtid, Builder.CreateLoad(IvAddr));
-    Builder.CreateStore(Iv, IvAddr);
-
-    // Emit updates of the original loop indices
-    for (const Expr *UE : LD.updates())
-      EmitIgnoredExpr(UE);
-
-    // Branch to end if original loop condition not satisfied
-    llvm::Value *IvCmp = EvaluateExprAsBool(LD.getCond());
-
-    llvm::BasicBlock *ExecBB = createBasicBlock("omp.kernel.body");
-    llvm::BasicBlock *DoneBB = createBasicBlock("omp.kernel.done");
-
-    Builder.CreateCondBr(IvCmp, ExecBB, DoneBB);
-
-    // On a continue in the body, jump to the end.
-    // A break is not allowed in this scope but it would be the end anyways
-    JumpDest Continue = getJumpDestInCurrentScope(DoneBB);
-    BreakContinueStack.push_back(BreakContinue(Continue, Continue));
-
-    // Emit the kernel body block
-    EmitBlock(ExecBB);
-    EmitOMPNoLoopBody(LD);
-    EmitBranch(DoneBB);
-
-    EmitBlock(DoneBB);
-    Builder.CreateRetVoid();
-    Builder.ClearInsertionPoint();
-    BreakContinueStack.pop_back();
-  };
-
-  const Stmt *S = D.getAssociatedStmt();
-  // For non-combined constructs, the for loop has to be retrieved from
-  // the intermediate statements
-  const CodeGenModule::NoLoopIntermediateStmts &IntermediateStmts =
-      CGM.getNoLoopStmts(S);
-  assert(IntermediateStmts.size() > 0 &&
-         "At least top-level directive must be present");
-  if (IntermediateStmts.size() > 1) {
-    // For now, we support at most one level of nesting
-    assert(IntermediateStmts.size() == 2);
-    const OMPExecutableDirective *NoLoopDir = IntermediateStmts.back();
+  // No private scope must be destroyed before the kernel codegen is done.
+  if (NestDirs.size() == 1) {
     OMPPrivateScope PrivateScope(*this);
-    EmitOMPPrivateClause(*NoLoopDir, PrivateScope);
+    EmitOMPFirstprivateClause(*NestDirs[0], PrivateScope);
+    EmitOMPPrivateClause(*NestDirs[0], PrivateScope);
     (void)PrivateScope.Privatize();
-    S = NoLoopDir->getAssociatedStmt();
-    emitNoLoopCodeForDirective(*NoLoopDir);
+
+    EmitOptKernelCode(*NestDirs[0], CapturedForStmt, OptKernelMode, Loc, Args);
+  } else if (NestDirs.size() == 2) {
+    OMPPrivateScope PrivateScopeZero(*this);
+    EmitOMPFirstprivateClause(*NestDirs[0], PrivateScopeZero);
+    EmitOMPPrivateClause(*NestDirs[0], PrivateScopeZero);
+    (void)PrivateScopeZero.Privatize();
+
+    OMPPrivateScope PrivateScopeOne(*this);
+    EmitOMPFirstprivateClause(*NestDirs[1], PrivateScopeOne);
+    EmitOMPPrivateClause(*NestDirs[1], PrivateScopeOne);
+    (void)PrivateScopeOne.Privatize();
+
+    EmitOptKernelCode(*NestDirs[1], CapturedForStmt, OptKernelMode, Loc, Args);
   } else {
-    assert((IntermediateStmts.back() == &D) && "Cached directive not the same");
-    emitNoLoopCodeForDirective(D);
+    OMPPrivateScope PrivateScopeZero(*this);
+    EmitOMPFirstprivateClause(*NestDirs[0], PrivateScopeZero);
+    EmitOMPPrivateClause(*NestDirs[0], PrivateScopeZero);
+    (void)PrivateScopeZero.Privatize();
+
+    OMPPrivateScope PrivateScopeOne(*this);
+    EmitOMPFirstprivateClause(*NestDirs[1], PrivateScopeOne);
+    EmitOMPPrivateClause(*NestDirs[1], PrivateScopeOne);
+    (void)PrivateScopeOne.Privatize();
+
+    OMPPrivateScope PrivateScopeTwo(*this);
+    EmitOMPFirstprivateClause(*NestDirs[2], PrivateScopeTwo);
+    EmitOMPPrivateClause(*NestDirs[2], PrivateScopeTwo);
+    (void)PrivateScopeTwo.Privatize();
+
+    EmitOptKernelCode(*NestDirs[2], CapturedForStmt, OptKernelMode, Loc, Args);
   }
 }
 
-void CodeGenFunction::EmitBigJumpLoopKernel(const OMPExecutableDirective &D,
-                                            SourceLocation Loc) {
-  if (!HaveInsertPoint())
-    EnsureInsertPoint();
+void CodeGenFunction::EmitOptKernelCode(
+    const OMPExecutableDirective &D, const ForStmt *CapturedForStmt,
+    llvm::omp::OMPTgtExecModeFlags OptKernelMode, SourceLocation Loc,
+    const FunctionArgList *Args) {
+  assert(OptKernelMode ==
+             llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP ||
+         OptKernelMode == llvm::omp::OMPTgtExecModeFlags::
+                              OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP ||
+         OptKernelMode ==
+             llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_XTEAM_RED);
+  if (OptKernelMode ==
+      llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP)
+    EmitNoLoopCode(D, CapturedForStmt, Loc);
+  else if (OptKernelMode ==
+           llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP)
+    EmitBigJumpLoopCode(D, CapturedForStmt, Loc);
+  else
+    EmitXteamRedCode(D, CapturedForStmt, Loc, Args);
+}
 
-  // We expect one FOR stmt for the OpenMP directive
-  const ForStmt *CapturedForStmt = CGM.getSingleForStmt(D.getAssociatedStmt());
-  assert(CapturedForStmt && "Cannot generate kernel for null captured stmt");
+void CodeGenFunction::EmitNoLoopCode(const OMPExecutableDirective &D,
+                                     const ForStmt *CapturedForStmt,
+                                     SourceLocation Loc) {
+  assert(isa<OMPLoopDirective>(D) && "Unexpected directive");
+  const OMPLoopDirective &LD = cast<OMPLoopDirective>(D);
 
-  // The BigJump loop will be generated during the following statement emit.
+  auto IVPair = EmitNoLoopIV(LD);
+  const VarDecl *IVDecl = IVPair.first;
+  Address IvAddr = IVPair.second;
+
+  // Generate myid = workgroup_id * workgroup_size + workitem_id
+  auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
+
+  // workitem_id
+  llvm::Value *GpuThreadId = RT.getGPUThreadID(*this);
+
+  // workgroup_size
+  assert((CGM.isNoLoopKernel(D) || CGM.isBigJumpLoopKernel(D)) &&
+         "Unexpected optimized kernel type");
+  llvm::Value *WorkGroupSize = llvm::ConstantInt::get(
+      Int32Ty, CGM.isNoLoopKernel(D) ? CGM.getNoLoopBlockSize(D)
+                                     : CGM.getBigJumpLoopBlockSize(D));
+
+  // workgroup_id
+  llvm::Value *WorkGroupId = RT.getGPUBlockID(*this);
+
+  llvm::Value *WorkGroup = Builder.CreateMul(WorkGroupId, WorkGroupSize);
+  llvm::Value *GlobalGpuThreadId = Builder.CreateAdd(WorkGroup, GpuThreadId);
+
+  // Check the loop increment
+  assert(CGM.checkLoopStep(LD.getInc(), IVDecl) && "Loop incr check failed");
+
+  // Handle stride
+  GlobalGpuThreadId = applyNoLoopInc(LD.getInc(), IVDecl, GlobalGpuThreadId);
+
+  // Generate my_index = my_index + myid. Note that my_index was already
+  // initialized
+  llvm::Value *Gtid =
+      Builder.CreateIntCast(GlobalGpuThreadId, IvAddr.getElementType(), false);
+  llvm::Value *Iv = Builder.CreateAdd(Gtid, Builder.CreateLoad(IvAddr));
+  Builder.CreateStore(Iv, IvAddr);
+
+  // Emit updates of the original loop indices
+  for (const Expr *UE : LD.updates())
+    EmitIgnoredExpr(UE);
+
+  // Branch to end if original loop condition not satisfied
+  llvm::Value *IvCmp = EvaluateExprAsBool(LD.getCond());
+
+  llvm::BasicBlock *ExecBB = createBasicBlock("omp.kernel.body");
+  llvm::BasicBlock *DoneBB = createBasicBlock("omp.kernel.done");
+
+  Builder.CreateCondBr(IvCmp, ExecBB, DoneBB);
+
+  // On a continue in the body, jump to the end.
+  // A break is not allowed in this scope but it would be the end anyways
+  JumpDest Continue = getJumpDestInCurrentScope(DoneBB);
+  BreakContinueStack.push_back(BreakContinue(Continue, Continue));
+
+  // Emit the kernel body block
+  EmitBlock(ExecBB);
+  EmitOMPNoLoopBody(LD);
+  EmitBranch(DoneBB);
+
+  EmitBlock(DoneBB);
+  Builder.CreateRetVoid();
+  Builder.ClearInsertionPoint();
+  BreakContinueStack.pop_back();
+}
+
+void CodeGenFunction::EmitBigJumpLoopCode(const OMPExecutableDirective &D,
+                                          const ForStmt *CapturedForStmt,
+                                          SourceLocation Loc) {
   EmitStmt(CapturedForStmt);
 }
 
-void CodeGenFunction::EmitXteamRedKernel(
-    const OMPExecutableDirective &D, const Stmt *S, const FunctionArgList &Args,
-    const CodeGenModule::NoLoopIntermediateStmts &IntermediateStmts,
-    SourceLocation Loc) {
-  assert(S && "Null statement?");
-
-  if (!HaveInsertPoint())
-    EnsureInsertPoint();
-
-  // We expect one FOR stmt for the OpenMP directive
-  const ForStmt *CapturedForStmt = CGM.getSingleForStmt(S);
-  assert(CapturedForStmt && "Cannot generate kernel for null captured stmt");
-
+void CodeGenFunction::EmitXteamRedCode(const OMPExecutableDirective &D,
+                                       const ForStmt *CapturedForStmt,
+                                       SourceLocation Loc,
+                                       const FunctionArgList *Args) {
   // This is the top level ForStmt for which Xteam reduction code is being
   // generated
   CGM.setCurrentXteamRedStmt(CapturedForStmt);
@@ -339,7 +398,7 @@ void CodeGenFunction::EmitXteamRedKernel(
   EmitStmt(CapturedForStmt);
 
   // Now emit the calls to xteam_sum, one for each reduction variable
-  EmitXteamRedSum(CapturedForStmt, Args, CGM.getXteamRedBlockSize(D));
+  EmitXteamRedSum(CapturedForStmt, *Args, CGM.getXteamRedBlockSize(D));
 
   // Xteam codegen done
   CGM.setCurrentXteamRedStmt(nullptr);
@@ -875,7 +934,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
         cast<OMPTargetParallelGenericLoopDirective>(*S));
     break;
   case Stmt::OMPParallelMaskedDirectiveClass:
-    llvm_unreachable("parallel masked directive not supported yet.");
+    EmitOMPParallelMaskedDirective(cast<OMPParallelMaskedDirective>(*S));
     break;
   }
 }
@@ -1483,9 +1542,9 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   const OMPLoopDirective *BigJumpLoopLD = nullptr;
   if (CGM.getLangOpts().OpenMPIsDevice &&
       (CGM.isXteamRedKernel(&S) || CGM.isBigJumpLoopKernel(&S))) {
-    const CodeGenModule::NoLoopIntermediateStmts &Directives =
-        CGM.isXteamRedKernel(&S) ? CGM.getXteamRedStmts(&S)
-                                 : CGM.getBigJumpLoopStmts(&S);
+    const CodeGenModule::OptKernelNestDirectives &Directives =
+        CGM.isXteamRedKernel(&S) ? CGM.getXteamRedNestDirs(&S)
+                                 : CGM.getBigJumpLoopNestDirs(&S);
     assert(Directives.size() > 0 && isa<OMPLoopDirective>(Directives.back()) &&
            "Appropriate directive not found");
     BigJumpLoopLD = cast<OMPLoopDirective>(Directives.back());
@@ -2811,6 +2870,93 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
   }
 }
 
+static void
+EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
+              const llvm::ArrayRef<llvm::Value *> RegResults,
+              const llvm::ArrayRef<llvm::Type *> ResultRegTypes,
+              const llvm::ArrayRef<llvm::Type *> ResultTruncRegTypes,
+              const llvm::ArrayRef<LValue> ResultRegDests,
+              const llvm::ArrayRef<QualType> ResultRegQualTys,
+              const llvm::BitVector &ResultTypeRequiresCast,
+              const llvm::BitVector &ResultRegIsFlagReg) {
+  CGBuilderTy &Builder = CGF.Builder;
+  CodeGenModule &CGM = CGF.CGM;
+  llvm::LLVMContext &CTX = CGF.getLLVMContext();
+
+  assert(RegResults.size() == ResultRegTypes.size());
+  assert(RegResults.size() == ResultTruncRegTypes.size());
+  assert(RegResults.size() == ResultRegDests.size());
+  // ResultRegDests can be also populated by addReturnRegisterOutputs() above,
+  // in which case its size may grow.
+  assert(ResultTypeRequiresCast.size() <= ResultRegDests.size());
+  assert(ResultRegIsFlagReg.size() <= ResultRegDests.size());
+
+  for (unsigned i = 0, e = RegResults.size(); i != e; ++i) {
+    llvm::Value *Tmp = RegResults[i];
+    llvm::Type *TruncTy = ResultTruncRegTypes[i];
+
+    if ((i < ResultRegIsFlagReg.size()) && ResultRegIsFlagReg[i]) {
+      // Target must guarantee the Value `Tmp` here is lowered to a boolean
+      // value.
+      llvm::Constant *Two = llvm::ConstantInt::get(Tmp->getType(), 2);
+      llvm::Value *IsBooleanValue =
+          Builder.CreateCmp(llvm::CmpInst::ICMP_ULT, Tmp, Two);
+      llvm::Function *FnAssume = CGM.getIntrinsic(llvm::Intrinsic::assume);
+      Builder.CreateCall(FnAssume, IsBooleanValue);
+    }
+
+    // If the result type of the LLVM IR asm doesn't match the result type of
+    // the expression, do the conversion.
+    if (ResultRegTypes[i] != TruncTy) {
+
+      // Truncate the integer result to the right size, note that TruncTy can be
+      // a pointer.
+      if (TruncTy->isFloatingPointTy())
+        Tmp = Builder.CreateFPTrunc(Tmp, TruncTy);
+      else if (TruncTy->isPointerTy() && Tmp->getType()->isIntegerTy()) {
+        uint64_t ResSize = CGM.getDataLayout().getTypeSizeInBits(TruncTy);
+        Tmp = Builder.CreateTrunc(
+            Tmp, llvm::IntegerType::get(CTX, (unsigned)ResSize));
+        Tmp = Builder.CreateIntToPtr(Tmp, TruncTy);
+      } else if (Tmp->getType()->isPointerTy() && TruncTy->isIntegerTy()) {
+        uint64_t TmpSize =
+            CGM.getDataLayout().getTypeSizeInBits(Tmp->getType());
+        Tmp = Builder.CreatePtrToInt(
+            Tmp, llvm::IntegerType::get(CTX, (unsigned)TmpSize));
+        Tmp = Builder.CreateTrunc(Tmp, TruncTy);
+      } else if (TruncTy->isIntegerTy()) {
+        Tmp = Builder.CreateZExtOrTrunc(Tmp, TruncTy);
+      } else if (TruncTy->isVectorTy()) {
+        Tmp = Builder.CreateBitCast(Tmp, TruncTy);
+      }
+    }
+
+    LValue Dest = ResultRegDests[i];
+    // ResultTypeRequiresCast elements correspond to the first
+    // ResultTypeRequiresCast.size() elements of RegResults.
+    if ((i < ResultTypeRequiresCast.size()) && ResultTypeRequiresCast[i]) {
+      unsigned Size = CGF.getContext().getTypeSize(ResultRegQualTys[i]);
+      Address A =
+          Builder.CreateElementBitCast(Dest.getAddress(CGF), ResultRegTypes[i]);
+      if (CGF.getTargetHooks().isScalarizableAsmOperand(CGF, TruncTy)) {
+        Builder.CreateStore(Tmp, A);
+        continue;
+      }
+
+      QualType Ty =
+          CGF.getContext().getIntTypeForBitwidth(Size, /*Signed=*/false);
+      if (Ty.isNull()) {
+        const Expr *OutExpr = S.getOutputExpr(i);
+        CGM.getDiags().Report(OutExpr->getExprLoc(),
+                              diag::err_store_value_to_reg);
+        return;
+      }
+      Dest = CGF.MakeAddrLValue(A, Ty);
+    }
+    CGF.EmitStoreThroughLValue(RValue::get(Tmp), Dest);
+  }
+}
+
 void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   // Pop all cleanup blocks at the end of the asm statement.
   CodeGenFunction::RunCleanupsScope Cleanups(*this);
@@ -3111,7 +3257,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   SmallVector<llvm::BasicBlock *, 16> Transfer;
   llvm::BasicBlock *Fallthrough = nullptr;
   bool IsGCCAsmGoto = false;
-  if (const auto *GS =  dyn_cast<GCCAsmStmt>(&S)) {
+  if (const auto *GS = dyn_cast<GCCAsmStmt>(&S)) {
     IsGCCAsmGoto = GS->isAsmGoto();
     if (IsGCCAsmGoto) {
       for (const auto *E : GS->labels()) {
@@ -3205,13 +3351,40 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       FTy, AsmString, Constraints, HasSideEffect,
       /* IsAlignStack */ false, AsmDialect, HasUnwindClobber);
   std::vector<llvm::Value*> RegResults;
+  llvm::CallBrInst *CBR;
+  llvm::DenseMap<llvm::BasicBlock *, SmallVector<llvm::Value *, 4>>
+      CBRRegResults;
   if (IsGCCAsmGoto) {
-    llvm::CallBrInst *Result =
-        Builder.CreateCallBr(IA, Fallthrough, Transfer, Args);
+    CBR = Builder.CreateCallBr(IA, Fallthrough, Transfer, Args);
     EmitBlock(Fallthrough);
-    UpdateAsmCallInst(cast<llvm::CallBase>(*Result), HasSideEffect, false,
-                      ReadOnly, ReadNone, InNoMergeAttributedStmt, S,
-                      ResultRegTypes, ArgElemTypes, *this, RegResults);
+    UpdateAsmCallInst(*CBR, HasSideEffect, false, ReadOnly, ReadNone,
+                      InNoMergeAttributedStmt, S, ResultRegTypes, ArgElemTypes,
+                      *this, RegResults);
+    // Because we are emitting code top to bottom, we don't have enough
+    // information at this point to know precisely whether we have a critical
+    // edge. If we have outputs, split all indirect destinations.
+    if (!RegResults.empty()) {
+      unsigned i = 0;
+      for (llvm::BasicBlock *Dest : CBR->getIndirectDests()) {
+        llvm::Twine SynthName = Dest->getName() + ".split";
+        llvm::BasicBlock *SynthBB = createBasicBlock(SynthName);
+        llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
+        Builder.SetInsertPoint(SynthBB);
+
+        if (ResultRegTypes.size() == 1) {
+          CBRRegResults[SynthBB].push_back(CBR);
+        } else {
+          for (unsigned j = 0, e = ResultRegTypes.size(); j != e; ++j) {
+            llvm::Value *Tmp = Builder.CreateExtractValue(CBR, j, "asmresult");
+            CBRRegResults[SynthBB].push_back(Tmp);
+          }
+        }
+
+        EmitBranch(Dest);
+        EmitBlock(SynthBB);
+        CBR->setIndirectDest(i++, SynthBB);
+      }
+    }
   } else if (HasUnwindClobber) {
     llvm::CallBase *Result = EmitCallOrInvoke(IA, Args, "");
     UpdateAsmCallInst(*Result, HasSideEffect, true, ReadOnly, ReadNone,
@@ -3220,79 +3393,26 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   } else {
     llvm::CallInst *Result =
         Builder.CreateCall(IA, Args, getBundlesForFunclet(IA));
-    UpdateAsmCallInst(cast<llvm::CallBase>(*Result), HasSideEffect, false,
-                      ReadOnly, ReadNone, InNoMergeAttributedStmt, S,
-                      ResultRegTypes, ArgElemTypes, *this, RegResults);
+    UpdateAsmCallInst(*Result, HasSideEffect, false, ReadOnly, ReadNone,
+                      InNoMergeAttributedStmt, S, ResultRegTypes, ArgElemTypes,
+                      *this, RegResults);
   }
 
-  assert(RegResults.size() == ResultRegTypes.size());
-  assert(RegResults.size() == ResultTruncRegTypes.size());
-  assert(RegResults.size() == ResultRegDests.size());
-  // ResultRegDests can be also populated by addReturnRegisterOutputs() above,
-  // in which case its size may grow.
-  assert(ResultTypeRequiresCast.size() <= ResultRegDests.size());
-  assert(ResultRegIsFlagReg.size() <= ResultRegDests.size());
-  for (unsigned i = 0, e = RegResults.size(); i != e; ++i) {
-    llvm::Value *Tmp = RegResults[i];
-    llvm::Type *TruncTy = ResultTruncRegTypes[i];
+  EmitAsmStores(*this, S, RegResults, ResultRegTypes, ResultTruncRegTypes,
+                ResultRegDests, ResultRegQualTys, ResultTypeRequiresCast,
+                ResultRegIsFlagReg);
 
-    if ((i < ResultRegIsFlagReg.size()) && ResultRegIsFlagReg[i]) {
-      // Target must guarantee the Value `Tmp` here is lowered to a boolean
-      // value.
-      llvm::Constant *Two = llvm::ConstantInt::get(Tmp->getType(), 2);
-      llvm::Value *IsBooleanValue =
-          Builder.CreateCmp(llvm::CmpInst::ICMP_ULT, Tmp, Two);
-      llvm::Function *FnAssume = CGM.getIntrinsic(llvm::Intrinsic::assume);
-      Builder.CreateCall(FnAssume, IsBooleanValue);
+  // If this is an asm goto with outputs, repeat EmitAsmStores, but with a
+  // different insertion point; one for each indirect destination and with
+  // CBRRegResults rather than RegResults.
+  if (IsGCCAsmGoto && !CBRRegResults.empty()) {
+    for (llvm::BasicBlock *Succ : CBR->getIndirectDests()) {
+      llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
+      Builder.SetInsertPoint(Succ, --(Succ->end()));
+      EmitAsmStores(*this, S, CBRRegResults[Succ], ResultRegTypes,
+                    ResultTruncRegTypes, ResultRegDests, ResultRegQualTys,
+                    ResultTypeRequiresCast, ResultRegIsFlagReg);
     }
-
-    // If the result type of the LLVM IR asm doesn't match the result type of
-    // the expression, do the conversion.
-    if (ResultRegTypes[i] != ResultTruncRegTypes[i]) {
-
-      // Truncate the integer result to the right size, note that TruncTy can be
-      // a pointer.
-      if (TruncTy->isFloatingPointTy())
-        Tmp = Builder.CreateFPTrunc(Tmp, TruncTy);
-      else if (TruncTy->isPointerTy() && Tmp->getType()->isIntegerTy()) {
-        uint64_t ResSize = CGM.getDataLayout().getTypeSizeInBits(TruncTy);
-        Tmp = Builder.CreateTrunc(Tmp,
-                   llvm::IntegerType::get(getLLVMContext(), (unsigned)ResSize));
-        Tmp = Builder.CreateIntToPtr(Tmp, TruncTy);
-      } else if (Tmp->getType()->isPointerTy() && TruncTy->isIntegerTy()) {
-        uint64_t TmpSize =CGM.getDataLayout().getTypeSizeInBits(Tmp->getType());
-        Tmp = Builder.CreatePtrToInt(Tmp,
-                   llvm::IntegerType::get(getLLVMContext(), (unsigned)TmpSize));
-        Tmp = Builder.CreateTrunc(Tmp, TruncTy);
-      } else if (TruncTy->isIntegerTy()) {
-        Tmp = Builder.CreateZExtOrTrunc(Tmp, TruncTy);
-      } else if (TruncTy->isVectorTy()) {
-        Tmp = Builder.CreateBitCast(Tmp, TruncTy);
-      }
-    }
-
-    LValue Dest = ResultRegDests[i];
-    // ResultTypeRequiresCast elements correspond to the first
-    // ResultTypeRequiresCast.size() elements of RegResults.
-    if ((i < ResultTypeRequiresCast.size()) && ResultTypeRequiresCast[i]) {
-      unsigned Size = getContext().getTypeSize(ResultRegQualTys[i]);
-      Address A = Builder.CreateElementBitCast(Dest.getAddress(*this),
-                                               ResultRegTypes[i]);
-      if (getTargetHooks().isScalarizableAsmOperand(*this, TruncTy)) {
-        Builder.CreateStore(Tmp, A);
-        continue;
-      }
-
-      QualType Ty = getContext().getIntTypeForBitwidth(Size, /*Signed*/ false);
-      if (Ty.isNull()) {
-        const Expr *OutExpr = S.getOutputExpr(i);
-        CGM.getDiags().Report(OutExpr->getExprLoc(),
-                              diag::err_store_value_to_reg);
-        return;
-      }
-      Dest = MakeAddrLValue(A, Ty);
-    }
-    EmitStoreThroughLValue(RValue::get(Tmp), Dest);
   }
 }
 

@@ -38,9 +38,9 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -65,7 +65,7 @@ using namespace llvm::AMDGPU;
 // We want to use these instructions, and using fp32 denormals also causes
 // instructions to run at the double precision rate for the device so it's
 // probably best to just report no single precision denormals.
-static uint32_t getFPMode(AMDGPU::SIModeRegisterDefaults Mode) {
+static uint32_t getFPMode(SIModeRegisterDefaults Mode) {
   return FP_ROUND_MODE_SP(FP_ROUND_ROUND_TO_NEAREST) |
          FP_ROUND_MODE_DP(FP_ROUND_ROUND_TO_NEAREST) |
          FP_DENORM_MODE_SP(Mode.fpDenormModeSPValue()) |
@@ -774,7 +774,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       // There are some rare circumstances where InputAddr is non-zero and
       // InputEna can be set to 0. In this case we default to setting LastEna
       // to 1.
-      LastEna = InputEna ? findLastSet(InputEna) + 1 : 1;
+      LastEna = InputEna ? llvm::Log2_32(InputEna) + 1 : 1;
     }
 
     // FIXME: We should be using the number of registers determined during

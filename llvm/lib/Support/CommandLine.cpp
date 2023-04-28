@@ -208,8 +208,7 @@ public:
     bool HadErrors = false;
     if (O->hasArgStr()) {
       // If it's a DefaultOption, check to make sure it isn't already there.
-      if (O->isDefaultOption() &&
-          SC->OptionsMap.find(O->ArgStr) != SC->OptionsMap.end())
+      if (O->isDefaultOption() && SC->OptionsMap.contains(O->ArgStr))
         return;
 
       // Add argument to the argument map!
@@ -2543,7 +2542,7 @@ public:
 #ifdef PACKAGE_VENDOR
     OS << PACKAGE_VENDOR << " ";
 #else
-    OS << "LLVM (http://llvm.org/):\n  ";
+    OS << "AOMP-16.0-45 (http://github.com/ROCm-Developer-Tools/aomp):\n Source ID:16.0-45-6b875fb548b9ded0f07df02bc2af6e12568504a9\n  ";
 #endif
     OS << PACKAGE_NAME << " version " << PACKAGE_VERSION << "\n  ";
 #if LLVM_IS_DEBUG_BUILD
@@ -2758,7 +2757,7 @@ StringMap<Option *> &cl::getRegisteredOptions(SubCommand &Sub) {
   initCommonOptions();
   auto &Subs = GlobalParser->RegisteredSubCommands;
   (void)Subs;
-  assert(is_contained(Subs, &Sub));
+  assert(Subs.contains(&Sub));
   return Sub.OptionsMap;
 }
 

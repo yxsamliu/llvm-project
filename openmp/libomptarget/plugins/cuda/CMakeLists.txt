@@ -16,7 +16,7 @@ if (NOT LIBOMPTARGET_BUILD_CUDA_PLUGIN)
   return()
 endif()
 
-if (NOT(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
+if (NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
   libomptarget_say("Not building CUDA offloading plugin: only support CUDA in Linux x86_64, ppc64le, or aarch64 hosts.")
   return()
 endif()
@@ -84,7 +84,6 @@ else()
     NO_INSTALL_RPATH
   )
 endif()
-add_dependencies(omptarget.rtl.cuda omptarget.devicertl.nvptx)
 
 # Install plugin under the lib destination folder.
 install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${RUN_PACKAGE}${OPENMP_INSTALL_LIBDIR}")
@@ -108,5 +107,5 @@ if (LIBOMPTARGET_FOUND_NVIDIA_GPU OR LIBOMPTARGET_FORCE_NVIDIA_TESTS)
   list(APPEND LIBOMPTARGET_TESTED_PLUGINS "omptarget.rtl.cuda")
   set(LIBOMPTARGET_TESTED_PLUGINS "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
 else()
-  libomptarget_say("Disabling tests using CUDA plugin as cuda may not be available")
+  libomptarget_say("Not generating NVIDIA tests, no supported devices detected. Use 'LIBOMPTARGET_FORCE_NVIDIA_TESTS' to override.")
 endif()

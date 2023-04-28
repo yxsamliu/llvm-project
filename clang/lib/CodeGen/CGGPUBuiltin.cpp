@@ -99,52 +99,6 @@ llvm::Value *packArgsIntoNVPTXFormatBuffer(CodeGenFunction *CGF,
     return Builder.CreatePointerCast(Alloca, llvm::Type::getInt8PtrTy(Ctx));
   }
 }
-#if 0//<<<<<<< HEAD
-
-bool containsNonScalarVarargs(CodeGenFunction *CGF, CallArgList Args) {
-  return llvm::any_of(llvm::drop_begin(Args), [&](const CallArg &A) {
-    return !A.getRValue(*CGF).isScalar();
-  });
-}
-
-RValue EmitDevicePrintfCallExpr(const CallExpr *E, CodeGenFunction *CGF,
-                                llvm::Function *Decl, bool WithSizeArg) {
-  CodeGenModule &CGM = CGF->CGM;
-  CGBuilderTy &Builder = CGF->Builder;
-  assert(E->getBuiltinCallee() == Builtin::BIprintf);
-  assert(E->getNumArgs() >= 1); // printf always has at least one arg.
-
-  // Uses the same format as nvptx for the argument packing, but also passes
-  // an i32 for the total size of the passed pointer
-  CallArgList Args;
-  CGF->EmitCallArgs(Args,
-                    E->getDirectCallee()->getType()->getAs<FunctionProtoType>(),
-                    E->arguments(), E->getDirectCallee(),
-                    /* ParamsToSkip = */ 0);
-
-  // We don't know how to emit non-scalar varargs.
-  if (containsNonScalarVarargs(CGF, Args)) {
-    CGM.ErrorUnsupported(E, "non-scalar arg to printf");
-    return RValue::get(llvm::ConstantInt::get(CGF->IntTy, 0));
-  }
-
-  auto r = packArgsIntoNVPTXFormatBuffer(CGF, Args);
-  llvm::Value *BufferPtr = r.first;
-
-  llvm::SmallVector<llvm::Value *, 3> Vec = {
-      Args[0].getRValue(*CGF).getScalarVal(), BufferPtr};
-  if (WithSizeArg) {
-    // Passing > 32bit of data as a local alloca doesn't work for nvptx or
-    // amdgpu
-    llvm::Constant *Size =
-        llvm::ConstantInt::get(llvm::Type::getInt32Ty(CGM.getLLVMContext()),
-                               static_cast<uint32_t>(r.second.getFixedValue()));
-
-    Vec.push_back(Size);
-  }
-  return RValue::get(Builder.CreateCall(Decl, Vec));
-}
-#endif//>>>>>>> cdddfac5
 } // namespace
 
 RValue
@@ -209,10 +163,10 @@ CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E,
   return RValue::get(Printf);
 }
 
-// EmitHostrpcVargsFn:
+// EmitHostexecAllocAndExecFns:
 //
-// For printf in an OpenMP Target region on amdgn and for variable argument
-// functions that have a supporting host service function (hostrpc) a struct
+// For printf in an OpenMP Target region on amdgcn and for variable argument
+// functions that have a supporting host service function struct
 // is created to represent the vargs for each call site.
 // The struct contains the length, number of args, an array of 4-byte keys
 // that represent the type of of each arg, an array of aligned "data" values
@@ -241,13 +195,13 @@ CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E,
 // The 4-byte dummy arg 0 is inserted so the next double arg is aligned.
 // The string arguments follows the header, keys, and data args.
 //
-// Before the struct is written, a hostrpc call is is emitted  to allocate
+// Before the struct is written, a hostexec alloc call is emitted to allocate
 // memory for the transfer. Then the struct is emitted.  Then a call
 // to the execute the GPU stub function that initiates the service
 // on the host.  The host runtime passes the buffer to the service routine
 // for processing.
 
-// These static helper functions support EmitHostrpcVargsFn.
+// These static helper functions support EmitHostexecAllocAndExecFns.
 
 // For strings that vary in length at runtime this strlen_max
 // will stop at a provided maximum.
@@ -324,8 +278,8 @@ static llvm::Function *GetVargsFnAllocDeclaration(CodeGenModule &CGM,
 
 // Returns a function pointer to the GPU stub function
 static llvm::Function *
-hostrpcVargsReturnsFnDeclaration(CodeGenModule &CGM, QualType Ty,
-                                 const char *GPUStubFunctionName) {
+hostexecVargsReturnsFnDeclaration(CodeGenModule &CGM, QualType Ty,
+                                  const char *GPUStubFunctionName) {
   auto &M = CGM.getModule();
   llvm::Type *ArgTypes[] = {llvm::PointerType::getUnqual(CGM.Int8Ty),
                             CGM.Int32Ty};
@@ -344,13 +298,14 @@ hostrpcVargsReturnsFnDeclaration(CodeGenModule &CGM, QualType Ty,
 #define PACK_TY_BITLEN(x, y) ((uint32_t)x << 16) | ((uint32_t)y)
 
 // Emit the code to support a host vargs function such as printf.
-RValue CodeGenFunction::EmitHostrpcVargsFn(const CallExpr *E,
-                                           const char *GPUAllocateName,
-                                           const char *GPUStubFunctionName,
-                                           ReturnValueSlot ReturnValue) {
-  assert(getTarget().getTriple().isAMDGCN());
+RValue
+CodeGenFunction::EmitHostexecAllocAndExecFns(const CallExpr *E,
+                                             const char *GPUAllocateName,
+                                             const char *GPUStubFunctionName) {
+  assert(getTarget().getTriple().isAMDGCN() ||
+         getTarget().getTriple().isNVPTX());
   // assert(E->getBuiltinCallee() == Builtin::BIprintf);
-  assert(E->getNumArgs() >= 1); // rpc varfn always has at least one arg.
+  assert(E->getNumArgs() >= 1); // hostexec always has at least one arg.
 
   const llvm::DataLayout &DL = CGM.getDataLayout();
 
@@ -562,6 +517,6 @@ RValue CodeGenFunction::EmitHostrpcVargsFn(const CallExpr *E,
     }
   }
   return RValue::get(Builder.CreateCall(
-      hostrpcVargsReturnsFnDeclaration(CGM, E->getType(), GPUStubFunctionName),
+      hostexecVargsReturnsFnDeclaration(CGM, E->getType(), GPUStubFunctionName),
       {DataStructPtr, BufferLen}));
 }
