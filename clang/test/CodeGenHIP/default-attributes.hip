@@ -48,9 +48,11 @@ __global__ void kernel() {
 //.
 // OPTNONE: !0 = !{i32 4, !"amdgpu_hostcall", i32 1}
 // OPTNONE: !1 = !{i32 1, !"amdgpu_code_object_version", i32 500}
-// OPTNONE: !2 = !{i32 1, !"wchar_size", i32 4}
+// OPTNONE: !2 = !{i32 1, !"amdgpu_printf_kind", !"hostcall"}
+// OPTNONE: !3 = !{i32 1, !"wchar_size", i32 4}
 //.
 // OPT: !0 = !{i32 4, !"amdgpu_hostcall", i32 1}
 // OPT: !1 = !{i32 1, !"amdgpu_code_object_version", i32 500}
-// OPT: !2 = !{i32 1, !"wchar_size", i32 4}
+// OPT: !2 = !{i32 1, !"amdgpu_printf_kind", !"hostcall"}
+// OPT: !3 = !{i32 1, !"wchar_size", i32 4}
 //.
