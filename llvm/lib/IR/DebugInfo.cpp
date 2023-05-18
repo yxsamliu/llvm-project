@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
@@ -43,10 +44,7 @@ using namespace llvm;
 using namespace llvm::at;
 using namespace llvm::dwarf;
 
-/// Finds all intrinsics declaring local variables as living in the memory that
-/// 'V' points to. This may include a mix of dbg.declare and
-/// dbg.addr intrinsics.
-TinyPtrVector<DbgVariableIntrinsic *> llvm::FindDbgAddrUses(Value *V) {
+TinyPtrVector<DbgDeclareInst *> llvm::FindDbgDeclareUses(Value *V) {
   // This function is hot. Check whether the value has any metadata to avoid a
   // DenseMap lookup.
   if (!V->isUsedByMetadata())
@@ -58,22 +56,13 @@ TinyPtrVector<DbgVariableIntrinsic *> llvm::FindDbgAddrUses(Value *V) {
   if (!MDV)
     return {};
 
-  TinyPtrVector<DbgVariableIntrinsic *> Declares;
+  TinyPtrVector<DbgDeclareInst *> Declares;
   for (User *U : MDV->users()) {
-    if (auto *DII = dyn_cast<DbgVariableIntrinsic>(U))
-      if (DII->isAddressOfVariable())
-        Declares.push_back(DII);
+    if (auto *DDI = dyn_cast<DbgDeclareInst>(U))
+      Declares.push_back(DDI);
   }
 
   return Declares;
-}
-
-TinyPtrVector<DbgDeclareInst *> llvm::FindDbgDeclareUses(Value *V) {
-  TinyPtrVector<DbgDeclareInst *> DDIs;
-  for (DbgVariableIntrinsic *DVI : FindDbgAddrUses(V))
-    if (auto *DDI = dyn_cast<DbgDeclareInst>(DVI))
-      DDIs.push_back(DDI);
-  return DDIs;
 }
 
 void llvm::findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V) {
@@ -428,16 +417,80 @@ static bool isDILocationReachable(SmallPtrSetImpl<Metadata *> &Visited,
   for (auto &OpIt : N->operands()) {
     Metadata *Op = OpIt.get();
     if (isDILocationReachable(Visited, Reachable, Op)) {
+      // Don't return just yet as we want to visit all MD's children to
+      // initialize DILocationReachable in stripDebugLocFromLoopID
       Reachable.insert(N);
-      return true;
     }
   }
-  return false;
+  return Reachable.count(N);
+}
+
+static bool isAllDILocation(SmallPtrSetImpl<Metadata *> &Visited,
+                            SmallPtrSetImpl<Metadata *> &AllDILocation,
+                            const SmallPtrSetImpl<Metadata *> &DIReachable,
+                            Metadata *MD) {
+  MDNode *N = dyn_cast_or_null<MDNode>(MD);
+  if (!N)
+    return false;
+  if (isa<DILocation>(N) || AllDILocation.count(N))
+    return true;
+  if (!DIReachable.count(N))
+    return false;
+  if (!Visited.insert(N).second)
+    return false;
+  for (auto &OpIt : N->operands()) {
+    Metadata *Op = OpIt.get();
+    if (Op == MD)
+      continue;
+    if (!isAllDILocation(Visited, AllDILocation, DIReachable, Op)) {
+      return false;
+    }
+  }
+  AllDILocation.insert(N);
+  return true;
+}
+
+static Metadata *
+stripLoopMDLoc(const SmallPtrSetImpl<Metadata *> &AllDILocation,
+               const SmallPtrSetImpl<Metadata *> &DIReachable, Metadata *MD) {
+  if (isa<DILocation>(MD) || AllDILocation.count(MD))
+    return nullptr;
+
+  if (!DIReachable.count(MD))
+    return MD;
+
+  MDNode *N = dyn_cast_or_null<MDNode>(MD);
+  if (!N)
+    return MD;
+
+  SmallVector<Metadata *, 4> Args;
+  bool HasSelfRef = false;
+  for (unsigned i = 0; i < N->getNumOperands(); ++i) {
+    Metadata *A = N->getOperand(i);
+    if (!A) {
+      Args.push_back(nullptr);
+    } else if (A == MD) {
+      assert(i == 0 && "expected i==0 for self-reference");
+      HasSelfRef = true;
+      Args.push_back(nullptr);
+    } else if (Metadata *NewArg =
+                   stripLoopMDLoc(AllDILocation, DIReachable, A)) {
+      Args.push_back(NewArg);
+    }
+  }
+  if (Args.empty() || (HasSelfRef && Args.size() == 1))
+    return nullptr;
+
+  MDNode *NewMD = N->isDistinct() ? MDNode::getDistinct(N->getContext(), Args)
+                                  : MDNode::get(N->getContext(), Args);
+  if (HasSelfRef)
+    NewMD->replaceOperandWith(0, NewMD);
+  return NewMD;
 }
 
 static MDNode *stripDebugLocFromLoopID(MDNode *N) {
   assert(!N->operands().empty() && "Missing self reference?");
-  SmallPtrSet<Metadata *, 8> Visited, DILocationReachable;
+  SmallPtrSet<Metadata *, 8> Visited, DILocationReachable, AllDILocation;
   // If we already visited N, there is nothing to do.
   if (!Visited.insert(N).second)
     return N;
@@ -446,27 +499,27 @@ static MDNode *stripDebugLocFromLoopID(MDNode *N) {
   // MDNode. This loop also initializes DILocationReachable, later
   // needed by updateLoopMetadataDebugLocationsImpl; the use of
   // count_if avoids an early exit.
-  if (!std::count_if(N->op_begin() + 1, N->op_end(),
+  if (!llvm::count_if(llvm::drop_begin(N->operands()),
                      [&Visited, &DILocationReachable](const MDOperand &Op) {
                        return isDILocationReachable(
                                   Visited, DILocationReachable, Op.get());
                      }))
     return N;
 
+  Visited.clear();
   // If there is only the debug location without any actual loop metadata, we
   // can remove the metadata.
   if (llvm::all_of(llvm::drop_begin(N->operands()),
-                   [&Visited, &DILocationReachable](const MDOperand &Op) {
-                     return isDILocationReachable(Visited, DILocationReachable,
-                                                  Op.get());
+                   [&Visited, &AllDILocation,
+                    &DILocationReachable](const MDOperand &Op) {
+                     return isAllDILocation(Visited, AllDILocation,
+                                            DILocationReachable, Op.get());
                    }))
     return nullptr;
 
   return updateLoopMetadataDebugLocationsImpl(
-      N, [&DILocationReachable](Metadata *MD) -> Metadata * {
-        if (isa<DILocation>(MD) || DILocationReachable.count(MD))
-          return nullptr;
-        return MD;
+      N, [&AllDILocation, &DILocationReachable](Metadata *MD) -> Metadata * {
+        return stripLoopMDLoc(AllDILocation, DILocationReachable, MD);
       });
 }
 
@@ -755,7 +808,6 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
       Changed = true;
     }
   };
-  RemoveUses("llvm.dbg.addr");
   RemoveUses("llvm.dbg.declare");
   RemoveUses("llvm.dbg.label");
   RemoveUses("llvm.dbg.value");
@@ -824,7 +876,7 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
 
   // Create a new llvm.dbg.cu, which is equivalent to the one
   // -gline-tables-only would have created.
-  for (auto &NMD : M.getNamedMDList()) {
+  for (auto &NMD : M.named_metadata()) {
     SmallVector<MDNode *, 8> Ops;
     for (MDNode *Op : NMD.operands())
       Ops.push_back(remap(Op));
@@ -950,6 +1002,21 @@ static DINode::DIFlags map_from_llvmDIFlags(LLVMDIFlags Flags) {
 
 static LLVMDIFlags map_to_llvmDIFlags(DINode::DIFlags Flags) {
   return static_cast<LLVMDIFlags>(Flags);
+}
+
+static MemorySpace map_to_llvmMSPACE(LLVMDWARFMemorySpace MS) {
+  switch (MS) {
+#define HANDLE_DW_MSPACE(ID, NAME)                                             \
+  case ID:                                                                     \
+    return DW_MSPACE_LLVM_##NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+  default:
+    if (MemorySpace::DW_MSPACE_LLVM_lo_user <= MS &&
+        MS <= MemorySpace::DW_MSPACE_LLVM_hi_user)
+      return static_cast<MemorySpace>(MS);
+    break;
+  }
+  llvm_unreachable("LLVMDWARFMemorySpace out-of-range");
 }
 
 static DISubprogram::DISPFlags
@@ -1260,12 +1327,12 @@ LLVMDIBuilderCreateBasicType(LLVMDIBuilderRef Builder, const char *Name,
 }
 
 LLVMMetadataRef LLVMDIBuilderCreatePointerType(
-    LLVMDIBuilderRef Builder, LLVMMetadataRef PointeeTy,
-    uint64_t SizeInBits, uint32_t AlignInBits, unsigned AddressSpace,
+    LLVMDIBuilderRef Builder, LLVMMetadataRef PointeeTy, uint64_t SizeInBits,
+    uint32_t AlignInBits, unsigned AddressSpace, LLVMDWARFMemorySpace MS,
     const char *Name, size_t NameLen) {
-  return wrap(unwrap(Builder)->createPointerType(unwrapDI<DIType>(PointeeTy),
-                                         SizeInBits, AlignInBits,
-                                         AddressSpace, {Name, NameLen}));
+  return wrap(unwrap(Builder)->createPointerType(
+      unwrapDI<DIType>(PointeeTy), SizeInBits, AlignInBits, AddressSpace,
+      map_to_llvmMSPACE(MS), {Name, NameLen}));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateStructType(
@@ -1400,11 +1467,13 @@ LLVMDIBuilderCreateQualifiedType(LLVMDIBuilderRef Builder, unsigned Tag,
                                                    unwrapDI<DIType>(Type)));
 }
 
-LLVMMetadataRef
-LLVMDIBuilderCreateReferenceType(LLVMDIBuilderRef Builder, unsigned Tag,
-                                 LLVMMetadataRef Type) {
-  return wrap(unwrap(Builder)->createReferenceType(Tag,
-                                                   unwrapDI<DIType>(Type)));
+LLVMMetadataRef LLVMDIBuilderCreateReferenceType(LLVMDIBuilderRef Builder,
+                                                 unsigned Tag,
+                                                 LLVMMetadataRef Type,
+                                                 unsigned AddressSpace,
+                                                 LLVMDWARFMemorySpace MS) {
+  return wrap(unwrap(Builder)->createReferenceType(
+      Tag, unwrapDI<DIType>(Type), 0, 0, AddressSpace, map_to_llvmMSPACE(MS)));
 }
 
 LLVMMetadataRef
@@ -1465,6 +1534,10 @@ LLVMMetadataRef
 LLVMDIBuilderCreateArtificialType(LLVMDIBuilderRef Builder,
                                   LLVMMetadataRef Type) {
   return wrap(unwrap(Builder)->createArtificialType(unwrapDI<DIType>(Type)));
+}
+
+uint16_t LLVMGetDINodeTag(LLVMMetadataRef MD) {
+  return unwrapDI<DINode>(MD)->getTag();
 }
 
 const char *LLVMDITypeGetName(LLVMMetadataRef DType, size_t *Length) {
@@ -1528,12 +1601,13 @@ LLVMMetadataRef LLVMDIBuilderCreateGlobalVariableExpression(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, const char *Linkage, size_t LinkLen, LLVMMetadataRef File,
     unsigned LineNo, LLVMMetadataRef Ty, LLVMBool LocalToUnit,
-    LLVMMetadataRef Expr, LLVMMetadataRef Decl, uint32_t AlignInBits) {
+    LLVMMetadataRef Expr, LLVMMetadataRef Decl, LLVMDWARFMemorySpace MS,
+    uint32_t AlignInBits) {
   return wrap(unwrap(Builder)->createGlobalVariableExpression(
       unwrapDI<DIScope>(Scope), {Name, NameLen}, {Linkage, LinkLen},
-      unwrapDI<DIFile>(File), LineNo, unwrapDI<DIType>(Ty), LocalToUnit,
-      true, unwrap<DIExpression>(Expr), unwrapDI<MDNode>(Decl),
-      nullptr, AlignInBits));
+      unwrapDI<DIFile>(File), LineNo, unwrapDI<DIType>(Ty), LocalToUnit, true,
+      unwrap<DIExpression>(Expr), unwrapDI<MDNode>(Decl), nullptr,
+      map_to_llvmMSPACE(MS), AlignInBits));
 }
 
 LLVMMetadataRef LLVMDIGlobalVariableExpressionGetVariable(LLVMMetadataRef GVE) {
@@ -1578,11 +1652,11 @@ LLVMMetadataRef LLVMDIBuilderCreateTempGlobalVariableFwdDecl(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, const char *Linkage, size_t LnkLen, LLVMMetadataRef File,
     unsigned LineNo, LLVMMetadataRef Ty, LLVMBool LocalToUnit,
-    LLVMMetadataRef Decl, uint32_t AlignInBits) {
+    LLVMMetadataRef Decl, LLVMDWARFMemorySpace MS, uint32_t AlignInBits) {
   return wrap(unwrap(Builder)->createTempGlobalVariableFwdDecl(
       unwrapDI<DIScope>(Scope), {Name, NameLen}, {Linkage, LnkLen},
       unwrapDI<DIFile>(File), LineNo, unwrapDI<DIType>(Ty), LocalToUnit,
-      unwrapDI<MDNode>(Decl), nullptr, AlignInBits));
+      unwrapDI<MDNode>(Decl), nullptr, map_to_llvmMSPACE(MS), AlignInBits));
 }
 
 LLVMValueRef
@@ -1631,11 +1705,12 @@ LLVMValueRef LLVMDIBuilderInsertDbgValueAtEnd(LLVMDIBuilderRef Builder,
 LLVMMetadataRef LLVMDIBuilderCreateAutoVariable(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, LLVMMetadataRef File, unsigned LineNo, LLVMMetadataRef Ty,
-    LLVMBool AlwaysPreserve, LLVMDIFlags Flags, uint32_t AlignInBits) {
+    LLVMBool AlwaysPreserve, LLVMDIFlags Flags, LLVMDWARFMemorySpace MS,
+    uint32_t AlignInBits) {
   return wrap(unwrap(Builder)->createAutoVariable(
-                  unwrap<DIScope>(Scope), {Name, NameLen}, unwrap<DIFile>(File),
-                  LineNo, unwrap<DIType>(Ty), AlwaysPreserve,
-                  map_from_llvmDIFlags(Flags), AlignInBits));
+      unwrap<DIScope>(Scope), {Name, NameLen}, unwrap<DIFile>(File), LineNo,
+      unwrap<DIType>(Ty), AlwaysPreserve, map_from_llvmDIFlags(Flags),
+      map_to_llvmMSPACE(MS), AlignInBits));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateParameterVariable(
@@ -1918,7 +1993,12 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
   }
 }
 
-void AssignmentTrackingPass::runOnFunction(Function &F) {
+bool AssignmentTrackingPass::runOnFunction(Function &F) {
+  // No value in assignment tracking without optimisations.
+  if (F.hasFnAttribute(Attribute::OptimizeNone))
+    return /*Changed*/ false;
+
+  bool Changed = false;
   // Collect a map of {backing storage : dbg.declares} (currently "backing
   // storage" is limited to Allocas). We'll use this to find dbg.declares to
   // delete after running `trackAssignments`.
@@ -1971,8 +2051,10 @@ void AssignmentTrackingPass::runOnFunction(Function &F) {
       // Delete DDI because the variable location is now tracked using
       // assignment tracking.
       DDI->eraseFromParent();
+      Changed = true;
     }
   }
+  return Changed;
 }
 
 static const char *AssignmentTrackingModuleFlag =
@@ -1995,7 +2077,8 @@ bool llvm::isAssignmentTrackingEnabled(const Module &M) {
 
 PreservedAnalyses AssignmentTrackingPass::run(Function &F,
                                               FunctionAnalysisManager &AM) {
-  runOnFunction(F);
+  if (!runOnFunction(F))
+    return PreservedAnalyses::all();
 
   // Record that this module uses assignment tracking. It doesn't matter that
   // some functons in the module may not use it - the debug info in those
@@ -2011,8 +2094,12 @@ PreservedAnalyses AssignmentTrackingPass::run(Function &F,
 
 PreservedAnalyses AssignmentTrackingPass::run(Module &M,
                                               ModuleAnalysisManager &AM) {
+  bool Changed = false;
   for (auto &F : M)
-    runOnFunction(F);
+    Changed |= runOnFunction(F);
+
+  if (!Changed)
+    return PreservedAnalyses::all();
 
   // Record that this module uses assignment tracking.
   setAssignmentTrackingModuleFlag(M);

@@ -80,7 +80,7 @@ foreach(sm ${nvptx_sm_list})
   endif()
 endforeach()
 
-set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx90c gfx940 gfx1010 gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036 gfx1100 gfx1101 gfx1102 gfx1103)
+set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx90c gfx940 gfx941 gfx942 gfx1010 gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036 gfx1100 gfx1101 gfx1102 gfx1103)
 if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
   set(amdgpu_mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
 endif()
@@ -100,6 +100,7 @@ set(include_files
   ${include_directory}/Types.h
   ${include_directory}/Utils.h
   ${include_directory}/Xteamr.h
+  ${include_directory}/Xteams.h
 )
 
 set(src_files
@@ -119,6 +120,7 @@ set(src_files
   ${source_directory}/ExtraMapping.cpp
   ${source_directory}/Xteamr.cpp
   ${source_directory}/Memory.cpp
+  ${source_directory}/Xteams.cpp
 )
 
 set(clang_opt_flags -O3 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=512)
@@ -222,15 +224,16 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
 
     # Add custom target so targets from other directories
     # can be added as dependencies to ensure libm
-    # and libhostrpc bc files have been built.
+    # and libhostexec bc files have been built.
     add_custom_target(touch-target-${target_cpu} ALL)
     add_dependencies(touch-target-${target_cpu}
       libm-target-${target_cpu}
-      libhostrpc-target-${target_cpu}
+      libhostexec-amdgcn-${target_cpu}.bc
+      #${CMAKE_BINARY_DIR}/libomptarget/hostexec/libhostexec-amdgcn-${target_cpu}.bc
     )
     list(APPEND bc_files
       ${CMAKE_BINARY_DIR}/libm-amdgcn-${target_cpu}.bc
-      ${CMAKE_BINARY_DIR}/libhostrpc-amdgcn-${target_cpu}.bc
+      ${CMAKE_BINARY_DIR}/libomptarget/hostexec/libhostexec-amdgcn-${target_cpu}.bc
     )
     if (EXISTS ${CMAKE_BINARY_DIR}/../../tools/ROCMDEVLIBS)
       add_dependencies(touch-target-${target_cpu}

@@ -368,7 +368,13 @@ def IGLP_OPT : SPseudoInstSI<(outs), (ins i32imm:$mask),
 // SI pseudo instructions. These are used by the CFG structurizer pass
 // and should be lowered to ISA instructions prior to codegen.
 
-let isTerminator = 1 in {
+// As we have enhanced control flow intrinsics to work under unstructured CFG,
+// duplicating such intrinsics can be actually treated as legal. On the contrary,
+// by making them non-duplicable, we are observing better code generation result.
+// So we choose to mark them non-duplicable in hope of getting better code
+// generation as well as simplied CFG during Machine IR optimization stage.
+
+let isTerminator = 1, isNotDuplicable = 1 in {
 
 let OtherPredicates = [EnableLateCFGStructurize] in {
  def SI_NON_UNIFORM_BRCOND_PSEUDO : CFPseudoInstSI <
@@ -418,6 +424,7 @@ def SI_END_CF : CFPseudoInstSI <
   let isAsCheapAsAMove = 1;
   let isReMaterializable = 1;
   let hasSideEffects = 1;
+  let isNotDuplicable = 1; // Not a hard requirement, see long comments above for details.
   let mayLoad = 1; // FIXME: Should not need memory flags
   let mayStore = 1;
 }
@@ -425,6 +432,7 @@ def SI_END_CF : CFPseudoInstSI <
 def SI_IF_BREAK : CFPseudoInstSI <
   (outs SReg_1:$dst), (ins SReg_1:$vcc, SReg_1:$src), []> {
   let Size = 4;
+  let isNotDuplicable = 1; // Not a hard requirement, see long comments above for details.
   let isAsCheapAsAMove = 1;
   let isReMaterializable = 1;
 }
@@ -543,7 +551,7 @@ def SI_RETURN_TO_EPILOG : SPseudoInstSI <
 
 // Return for returning function calls.
 def SI_RETURN : SPseudoInstSI <
-  (outs), (ins), [(AMDGPUret_flag)],
+  (outs), (ins), [(AMDGPUret_glue)],
   "; return"> {
   let isTerminator = 1;
   let isBarrier = 1;
@@ -584,10 +592,9 @@ def SI_CALL : SPseudoInstSI <
   let isConvergent = 1;
 }
 
-// Tail call handling pseudo
-def SI_TCRETURN : SPseudoInstSI <(outs),
-  (ins SReg_64:$src0, unknown:$callee, i32imm:$fpdiff),
-  [(AMDGPUtc_return i64:$src0, tglobaladdr:$callee, i32:$fpdiff)]> {
+class SI_TCRETURN_Pseudo<RegisterClass rc, SDNode sd> : SPseudoInstSI <(outs),
+  (ins rc:$src0, unknown:$callee, i32imm:$fpdiff),
+  [(sd i64:$src0, tglobaladdr:$callee, i32:$fpdiff)]> {
   let Size = 4;
   let FixedSize = 1;
   let isCall = 1;
@@ -600,10 +607,20 @@ def SI_TCRETURN : SPseudoInstSI <(outs),
   let isConvergent = 1;
 }
 
+// Tail call handling pseudo
+def SI_TCRETURN :     SI_TCRETURN_Pseudo<CCR_SGPR_64, AMDGPUtc_return>;
+def SI_TCRETURN_GFX : SI_TCRETURN_Pseudo<Gfx_CCR_SGPR_64, AMDGPUtc_return_gfx>;
+
 // Handle selecting indirect tail calls
 def : GCNPat<
   (AMDGPUtc_return i64:$src0, (i64 0), (i32 timm:$fpdiff)),
-  (SI_TCRETURN SReg_64:$src0, (i64 0), i32imm:$fpdiff)
+  (SI_TCRETURN CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff)
+>;
+
+// Handle selecting indirect tail calls for AMDGPU_gfx
+def : GCNPat<
+  (AMDGPUtc_return_gfx i64:$src0, (i64 0), (i32 timm:$fpdiff)),
+  (SI_TCRETURN_GFX Gfx_CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff)
 >;
 
 def ADJCALLSTACKUP : SPseudoInstSI<
@@ -720,6 +737,10 @@ def S_INDIRECT_REG_WRITE_MOVREL_B32_V3 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V4 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_128>;
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V5 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_160>;
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V8 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_256>;
+def S_INDIRECT_REG_WRITE_MOVREL_B32_V9 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_288>;
+def S_INDIRECT_REG_WRITE_MOVREL_B32_V10 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_320>;
+def S_INDIRECT_REG_WRITE_MOVREL_B32_V11 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_352>;
+def S_INDIRECT_REG_WRITE_MOVREL_B32_V12 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_384>;
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V16 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_512>;
 def S_INDIRECT_REG_WRITE_MOVREL_B32_V32 : S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<SReg_1024>;
 
@@ -2064,48 +2085,53 @@ def BFIImm32 : PatFrag<
   }]
 >;
 
+
 // Definition from ISA doc:
 // (y & x) | (z & ~x)
-def : AMDGPUPat <
+def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<or> (and i32:$y, i32:$x), (and i32:$z, (not i32:$x))),
-  (V_BFI_B32_e64 VSrc_b32:$x, VSrc_b32:$y, VSrc_b32:$z)
+  (V_BFI_B32_e64 (COPY_TO_REGCLASS VSrc_b32:$x, VGPR_32),
+                (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32),
+                (COPY_TO_REGCLASS VSrc_b32:$z, VGPR_32))
 >;
 
 // (y & C) | (z & ~C)
-def : AMDGPUPat <
+def : AMDGPUPatIgnoreCopies <
   (BFIImm32 i32:$x, i32:$y, i32:$z),
   (V_BFI_B32_e64 VSrc_b32:$x, VSrc_b32:$y, VSrc_b32:$z)
 >;
 
 // 64-bit version
-def : AMDGPUPat <
+def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<or> (and i64:$y, i64:$x), (and i64:$z, (not i64:$x))),
   (REG_SEQUENCE VReg_64,
     (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
-               (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)),
-               (i32 (EXTRACT_SUBREG VReg_64:$z, sub0))), sub0,
+              (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)),
+              (i32 (EXTRACT_SUBREG VReg_64:$z, sub0))), sub0,
     (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)),
-               (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)),
-               (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
+              (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)),
+              (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
 >;
 
 // SHA-256 Ch function
 // z ^ (x & (y ^ z))
-def : AMDGPUPat <
+def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<xor> i32:$z, (and i32:$x, (xor i32:$y, i32:$z))),
-  (V_BFI_B32_e64 VSrc_b32:$x, VSrc_b32:$y, VSrc_b32:$z)
+  (V_BFI_B32_e64 (COPY_TO_REGCLASS VSrc_b32:$x, VGPR_32),
+                (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32),
+                (COPY_TO_REGCLASS VSrc_b32:$z, VGPR_32))
 >;
 
 // 64-bit version
-def : AMDGPUPat <
+def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<xor> i64:$z, (and i64:$x, (xor i64:$y, i64:$z))),
   (REG_SEQUENCE VReg_64,
     (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
-               (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)),
-               (i32 (EXTRACT_SUBREG VReg_64:$z, sub0))), sub0,
+              (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)),
+              (i32 (EXTRACT_SUBREG VReg_64:$z, sub0))), sub0,
     (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)),
-               (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)),
-               (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
+              (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)),
+              (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
 >;
 
 def : AMDGPUPat <
@@ -3206,24 +3232,27 @@ def : AMDGPUPat <
 // SHA-256 Ma patterns
 
 // ((x & z) | (y & (x | z))) -> BFI (XOR x, y), z, y
-def : AMDGPUPat <
+def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<or> (and i32:$x, i32:$z),
                         (and i32:$y, (or i32:$x, i32:$z))),
-  (V_BFI_B32_e64 (V_XOR_B32_e64 VSrc_b32:$x, VSrc_b32:$y), VSrc_b32:$z, VSrc_b32:$y)
+  (V_BFI_B32_e64 (V_XOR_B32_e64 (COPY_TO_REGCLASS VSrc_b32:$x, VGPR_32),
+                                (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32)),
+                (COPY_TO_REGCLASS VSrc_b32:$z, VGPR_32),
+                (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32))
 >;
 
-def : AMDGPUPat <
+def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<or> (and i64:$x, i64:$z),
                         (and i64:$y, (or i64:$x, i64:$z))),
   (REG_SEQUENCE VReg_64,
     (V_BFI_B32_e64 (V_XOR_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
                     (i32 (EXTRACT_SUBREG VReg_64:$y, sub0))),
-               (i32 (EXTRACT_SUBREG VReg_64:$z, sub0)),
-               (i32 (EXTRACT_SUBREG VReg_64:$y, sub0))), sub0,
+              (i32 (EXTRACT_SUBREG VReg_64:$z, sub0)),
+              (i32 (EXTRACT_SUBREG VReg_64:$y, sub0))), sub0,
     (V_BFI_B32_e64 (V_XOR_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)),
                     (i32 (EXTRACT_SUBREG VReg_64:$y, sub1))),
-               (i32 (EXTRACT_SUBREG VReg_64:$z, sub1)),
-               (i32 (EXTRACT_SUBREG VReg_64:$y, sub1))), sub1)
+              (i32 (EXTRACT_SUBREG VReg_64:$z, sub1)),
+              (i32 (EXTRACT_SUBREG VReg_64:$y, sub1))), sub1)
 >;
 
 multiclass IntMed3Pat<Instruction med3Inst,
@@ -3507,8 +3536,6 @@ def G_AMDGPU_ATOMIC_CMPXCHG : AMDGPUGenericInstruction {
 }
 
 let Namespace = "AMDGPU" in {
-def G_AMDGPU_ATOMIC_INC : G_ATOMICRMW_OP;
-def G_AMDGPU_ATOMIC_DEC : G_ATOMICRMW_OP;
 def G_AMDGPU_ATOMIC_FMIN : G_ATOMICRMW_OP;
 def G_AMDGPU_ATOMIC_FMAX : G_ATOMICRMW_OP;
 }

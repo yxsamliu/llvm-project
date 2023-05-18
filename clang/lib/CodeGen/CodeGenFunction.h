@@ -333,6 +333,7 @@ public:
   // in this header.
   struct CGCoroInfo {
     std::unique_ptr<CGCoroData> Data;
+    bool InSuspendBlock = false;
     CGCoroInfo();
     ~CGCoroInfo();
   };
@@ -340,6 +341,10 @@ public:
 
   bool isCoroutine() const {
     return CurCoro.Data != nullptr;
+  }
+
+  bool inSuspendBlock() const {
+    return isCoroutine() && CurCoro.InSuspendBlock;
   }
 
   /// CurGD - The GlobalDecl for the current function being compiled.
@@ -3178,7 +3183,8 @@ public:
 
     Address getIndirectAddress() const {
       assert(isIndirect());
-      return Address(Value, ElementType, CharUnits::fromQuantity(Alignment));
+      return Address(Value, ElementType, CharUnits::fromQuantity(Alignment),
+                     KnownNonNull);
     }
 
     std::optional<Address> getDebugAddr() const { return DebugAddr; }
@@ -3232,27 +3238,31 @@ public:
   /// calling EmitBlock, EmitBranch, or EmitStmt.
   void EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs = std::nullopt);
 
-  /// EmitNoLoopKernel - For an OpenMP target directive, emit the
+  /// EmitOptKernel - For an OpenMP target directive, emit the optimized
   /// kernel code assuming that related runtime environment variables
-  /// can be ignored.
-  ///
-  /// This function should be called after ensuring that legality
-  /// conditions for a no-loop kernel are met.
-  void EmitNoLoopKernel(const OMPExecutableDirective &D, SourceLocation Loc);
+  /// can be ignored. This function should be called after ensuring that
+  /// legality conditions for a no-loop kernel are met. There are 3 kinds of
+  /// optimized kernels that may be generated: No-Loop, Big-Jump-Loop, and Xteam
+  /// reduction.
+  void EmitOptKernel(const OMPExecutableDirective &D,
+                     const ForStmt *CapturedForStmt,
+                     llvm::omp::OMPTgtExecModeFlags OptKernelMode,
+                     SourceLocation Loc, const FunctionArgList *Args);
 
-  void EmitBigJumpLoopKernel(const OMPExecutableDirective &D,
-                             SourceLocation Loc);
+  void EmitOptKernelCode(const OMPExecutableDirective &D,
+                         const ForStmt *CapturedForStmt,
+                         llvm::omp::OMPTgtExecModeFlags OptKernelMode,
+                         SourceLocation Loc, const FunctionArgList *Args);
 
-  /// EmitXteamRedKernel - For an OpenMP target reduction directive, emit the
-  /// kernel code assuming that related runtime environment variables can be
-  /// ignored.
-  ///
-  /// This function should be called after ensuring that legality
-  /// conditions for an optimized reduction kernel are met.
-  void EmitXteamRedKernel(const OMPExecutableDirective &D, const Stmt *S,
-                          const FunctionArgList &Args,
-                          const CodeGenModule::NoLoopIntermediateStmts &,
-                          SourceLocation Loc);
+  void EmitNoLoopCode(const OMPExecutableDirective &D,
+                      const ForStmt *CapturedForStmt, SourceLocation Loc);
+
+  void EmitBigJumpLoopCode(const OMPExecutableDirective &D,
+                           const ForStmt *CapturedForStmt, SourceLocation Loc);
+
+  void EmitXteamRedCode(const OMPExecutableDirective &D,
+                        const ForStmt *CapturedForStmt, SourceLocation Loc,
+                        const FunctionArgList *Args);
 
   /// Used in No-Loop and Xteam codegen to emit the loop iteration and the
   /// associated variables. Returns the loop iteration variable and its address.
@@ -3395,6 +3405,7 @@ public:
                                      SourceLocation Loc);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
                                   SmallVectorImpl<llvm::Value *> &CapturedVars,
+                                  const Stmt *XteamRedNestKey,
                                   bool GenXteamAllocation = false);
   void
   GenerateXteamRedCapturedVars(SmallVectorImpl<llvm::Value *> &CapturedVars,
@@ -3641,6 +3652,7 @@ public:
       const OMPTargetTeamsGenericLoopDirective &S);
   void EmitOMPInteropDirective(const OMPInteropDirective &S);
   void EmitOMPTeamsGenericLoopDirective(const OMPTeamsGenericLoopDirective &S);
+  void EmitOMPParallelMaskedDirective(const OMPParallelMaskedDirective &S);
 
   /// Emit device code for the target directive.
   static void EmitOMPTargetDeviceFunction(CodeGenModule &CGM,
@@ -3845,8 +3857,13 @@ public:
   /// an LLVM type of the same size of the lvalue's type.  If the lvalue has a
   /// variable length type, this is not possible.
   ///
-  LValue EmitLValue(const Expr *E);
+  LValue EmitLValue(const Expr *E,
+                    KnownNonNull_t IsKnownNonNull = NotKnownNonNull);
 
+private:
+  LValue EmitLValueHelper(const Expr *E, KnownNonNull_t IsKnownNonNull);
+
+public:
   /// Same as EmitLValue but additionally we generate checking code to
   /// guard against undefined behavior.  This is only suitable when we know
   /// that the address will be used to access the object.
@@ -4200,10 +4217,13 @@ public:
                                        ReturnValueSlot ReturnValue);
   RValue EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E,
                                         ReturnValueSlot ReturnValue);
-
-  RValue EmitHostrpcVargsFn(const CallExpr *E, const char *allocate_name,
-                            const char *execute_name,
-                            ReturnValueSlot ReturnValue);
+  std::vector<std::string> HostexecFns{
+      "printf",        "fprintf",         "hostexec",
+      "hostexec_uint", "hostexec_uint64", "hostexec_int",
+      "hostexec_long", "hostexec_float",  "hostexec_double"};
+  RValue EmitHostexecAllocAndExecFns(const CallExpr *E,
+                                     const char *allocate_name,
+                                     const char *execute_name);
 
   RValue EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                          const CallExpr *E, ReturnValueSlot ReturnValue);
@@ -4862,9 +4882,10 @@ public:
   /// into the address of a local variable.  In such a case, it's quite
   /// reasonable to just ignore the returned alignment when it isn't from an
   /// explicit source.
-  Address EmitPointerWithAlignment(const Expr *Addr,
-                                   LValueBaseInfo *BaseInfo = nullptr,
-                                   TBAAAccessInfo *TBAAInfo = nullptr);
+  Address
+  EmitPointerWithAlignment(const Expr *Addr, LValueBaseInfo *BaseInfo = nullptr,
+                           TBAAAccessInfo *TBAAInfo = nullptr,
+                           KnownNonNull_t IsKnownNonNull = NotKnownNonNull);
 
   /// If \p E references a parameter with pass_object_size info or a constant
   /// array size modifier, emit the object size divided by the size of \p EltTy.

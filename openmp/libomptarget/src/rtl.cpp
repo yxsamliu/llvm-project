@@ -139,7 +139,7 @@ void RTLsTy::loadRTLs() {
   }
 
   DP("Loading RTLs...\n");
-  BoolEnvar NextGenPlugins("LIBOMPTARGET_NEXTGEN_PLUGINS", false);
+  BoolEnvar NextGenPlugins("LIBOMPTARGET_NEXTGEN_PLUGINS", true);
 
   // Attempt to open all the plugins and, if they exist, check if the interface
   // is correct and if they are supporting any devices.
@@ -220,11 +220,11 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
   if (!(*((void **)&RTL.data_delete) =
             DynLibrary->getAddressOfSymbol("__tgt_rtl_data_delete")))
     ValidPlugin = false;
-  if (!(*((void **)&RTL.run_region) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_run_target_region")))
+  if (!(*((void **)&RTL.launch_kernel) =
+            DynLibrary->getAddressOfSymbol("__tgt_rtl_launch_kernel")))
     ValidPlugin = false;
-  if (!(*((void **)&RTL.run_team_region) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_run_target_team_region")))
+  if (!(*((void **)&RTL.launch_kernel_sync) =
+            DynLibrary->getAddressOfSymbol("__tgt_rtl_launch_kernel_sync")))
     ValidPlugin = false;
 
   // Invalid plugin
@@ -259,10 +259,8 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
       DynLibrary->getAddressOfSymbol("__tgt_rtl_data_submit_async");
   *((void **)&RTL.data_retrieve_async) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_data_retrieve_async");
-  *((void **)&RTL.run_region_async) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_run_target_region_async");
-  *((void **)&RTL.run_team_region_async) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_run_target_team_region_async");
+  *((void **)&RTL.launch_kernel_sync) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_launch_kernel_sync");
   *((void **)&RTL.synchronize) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_synchronize");
   *((void **)&RTL.query_async) =
@@ -293,6 +291,12 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
       DynLibrary->getAddressOfSymbol("__tgt_rtl_sync_event");
   *((void **)&RTL.destroy_event) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_destroy_event");
+  *((void **)&RTL.set_coarse_grain_mem_region) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_set_coarse_grain_mem_region");
+  *((void **)&RTL.query_coarse_grain_mem_region) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_query_coarse_grain_mem_region");
+  *((void **)&RTL.enable_access_to_all_agents) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_enable_access_to_all_agents");
   *((void **)&RTL.release_async_info) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_release_async_info");
   *((void **)&RTL.init_async_info) =
@@ -303,6 +307,10 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
       DynLibrary->getAddressOfSymbol("__tgt_rtl_data_lock");
   *((void **)&RTL.data_unlock) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_data_unlock");
+  *((void **)&RTL.data_notify_mapped) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_notify_mapped");
+  *((void **)&RTL.data_notify_unmapped) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_notify_unmapped");
 
   RTL.LibraryHandler = std::move(DynLibrary);
 
@@ -600,9 +608,8 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
         if (Device.PendingCtorsDtors[Desc].PendingCtors.empty()) {
           AsyncInfoTy AsyncInfo(Device);
           for (auto &Dtor : Device.PendingCtorsDtors[Desc].PendingDtors) {
-            int Rc = target(nullptr, Device, Dtor, 0, nullptr, nullptr, nullptr,
-                            nullptr, nullptr, nullptr, 1, 1, 0, true /*team*/,
-                            AsyncInfo);
+            int Rc =
+                target(nullptr, Device, Dtor, CTorDTorKernelArgs, AsyncInfo);
             if (Rc != OFFLOAD_SUCCESS) {
               DP("Running destructor " DPxMOD " failed.\n", DPxPTR(Dtor));
             }
@@ -670,4 +677,12 @@ bool RTLsTy::SystemSupportManagedMemory() {
     if (isHomogeneousSystemOf(it))
       return true;
   return false;
+}
+
+// HACK: These depricated device stubs still needs host versions for fallback
+// FIXME: Deprecate upstream, change test cases to use malloc & free directly
+extern "C" char *global_allocate(uint32_t sz) { return (char *)malloc(sz); }
+extern "C" int global_free(void *ptr) {
+  free(ptr);
+  return 0;
 }

@@ -1,3 +1,4 @@
+
 //===----- CGOpenMPRuntime.h - Interface to OpenMP Runtimes -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -508,21 +509,6 @@ protected:
   ///  kmp_int64 st; // stride
   /// };
   QualType KmpDimTy;
-  /// Type struct __tgt_offload_entry{
-  ///   void      *addr;       // Pointer to the offload entry info.
-  ///                          // (function or global)
-  ///   char      *name;       // Name of the function or global.
-  ///   size_t     size;       // Size of the entry info (0 if it a function).
-  ///   int32_t flags;
-  ///   int32_t reserved;
-  /// };
-  //
-  QualType TgtAttributeStructQTy;
-
-  QualType TgtOffloadEntryQTy;
-  /// Entity that registers the offloading constants that were emitted so
-  /// far.
-  llvm::OffloadEntriesInfoManager OffloadEntriesInfoManager;
 
   bool ShouldMarkAsGlobal = true;
   /// List of the emitted declarations.
@@ -1672,11 +1658,26 @@ public:
   virtual bool supportFastFPAtomics() { return false; }
 
   /// Used for AMDGPU architectures where certain fast FP atomics are defined as
-  /// instrinsic functions
+  /// instrinsic functions.
   virtual std::pair<bool, RValue> emitFastFPAtomicCall(CodeGenFunction &CGF,
                                                        LValue X, RValue Update,
                                                        BinaryOperatorKind BO,
                                                        bool IsXBinopExpr) {
+    return std::make_pair(false, RValue::get(nullptr));
+  }
+
+  /// Return whether the current architecture must emit CAS loop runtime call
+  /// for given type and atomic operation
+  virtual bool mustEmitSafeAtomic(CodeGenFunction &CGF, LValue X, RValue Update,
+                                  BinaryOperatorKind BO) {
+    return false;
+  }
+
+  /// Used for AMDGPU architectures where certain atomics must be lowered
+  /// to a CAS loop.
+  virtual std::pair<bool, RValue> emitAtomicCASLoop(CodeGenFunction &CGF,
+                                                    LValue X, RValue Update,
+                                                    BinaryOperatorKind BO) {
     return std::make_pair(false, RValue::get(nullptr));
   }
 };

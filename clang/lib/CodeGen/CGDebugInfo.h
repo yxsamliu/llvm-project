@@ -56,7 +56,7 @@ class CGDebugInfo {
   friend class ApplyDebugLocation;
   friend class SaveAndRestoreLocation;
   CodeGenModule &CGM;
-  const codegenoptions::DebugInfoKind DebugKind;
+  const llvm::codegenoptions::DebugInfoKind DebugKind;
   bool DebugTypeExtRefs;
   llvm::DIBuilder DBuilder;
   llvm::DICompileUnit *TheCU = nullptr;
@@ -80,6 +80,8 @@ class CGDebugInfo {
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
   llvm::DIType *Id##Ty = nullptr;
 #include "clang/Basic/OpenCLExtensionTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
 
   /// Cache of previously constructed Types.
   llvm::DenseMap<const void *, llvm::TrackingMDRef> TypeCache;
@@ -320,9 +322,15 @@ class CGDebugInfo {
   }
 
   /// Create new bit field member.
-  llvm::DIType *createBitFieldType(const FieldDecl *BitFieldDecl,
-                                   llvm::DIScope *RecordTy,
-                                   const RecordDecl *RD);
+  llvm::DIDerivedType *createBitFieldType(const FieldDecl *BitFieldDecl,
+                                          llvm::DIScope *RecordTy,
+                                          const RecordDecl *RD);
+
+  /// Create an anonnymous zero-size separator for bit-field-decl if needed on
+  /// the target.
+  llvm::DIDerivedType *createBitFieldSeparatorIfNeeded(
+      const FieldDecl *BitFieldDecl, const llvm::DIDerivedType *BitFieldDI,
+      llvm::ArrayRef<llvm::Metadata *> PreviousFieldsDI, const RecordDecl *RD);
 
   /// Helpers for collecting fields of a record.
   /// @{
@@ -487,10 +495,9 @@ public:
 
   /// Emit call to \c llvm.dbg.declare for an argument variable
   /// declaration.
-  llvm::DILocalVariable *EmitDeclareOfArgVariable(const VarDecl *Decl,
-                                                  llvm::Value *AI,
-                                                  unsigned ArgNo,
-                                                  CGBuilderTy &Builder);
+  llvm::DILocalVariable *
+  EmitDeclareOfArgVariable(const VarDecl *Decl, llvm::Value *AI, unsigned ArgNo,
+                           CGBuilderTy &Builder, bool UsePointerValue = false);
 
   /// Emit call to \c llvm.dbg.declare for the block-literal argument
   /// to a block invocation function.
@@ -738,7 +745,8 @@ private:
   llvm::DIGlobalVariableExpression *
   CollectAnonRecordDecls(const RecordDecl *RD, llvm::DIFile *Unit,
                          unsigned LineNo, StringRef LinkageName,
-                         llvm::GlobalVariable *Var, llvm::DIScope *DContext);
+                         llvm::dwarf::MemorySpace MS, llvm::GlobalVariable *Var,
+                         llvm::DIScope *DContext);
 
   /// Return a global variable that represents one of the collection of global
   /// variables created for an anonmyous union (-gheterogeneous-dwarf).
@@ -747,14 +755,10 @@ private:
   /// anonymous decl and create static variables for them. The first
   /// time this is called it needs to be on a union and then from
   /// there we can have additional unnamed fields.
-  llvm::DIGlobalVariable *
-  CollectAnonRecordDeclsForHeterogeneousDwarf(const RecordDecl *RD,
-                                              llvm::DIFile *Unit,
-                                              unsigned LineNo,
-                                              StringRef LinkageName,
-                                              llvm::GlobalVariable *Var,
-                                              llvm::DIScope *DContext);
-
+  llvm::DIGlobalVariable *CollectAnonRecordDeclsForHeterogeneousDwarf(
+      const RecordDecl *RD, llvm::DIFile *Unit, unsigned LineNo,
+      StringRef LinkageName, llvm::dwarf::MemorySpace MS,
+      llvm::GlobalVariable *Var, llvm::DIScope *DContext);
 
   /// Return flags which enable debug info emission for call sites, provided
   /// that it is supported and enabled.

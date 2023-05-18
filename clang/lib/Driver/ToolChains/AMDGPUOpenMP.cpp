@@ -25,7 +25,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include "clang/Config/config.h"
 
 using namespace clang::driver;
@@ -214,8 +214,7 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
   if (Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
                    true) &&
       AMDGPUOpenMPTC.getSanitizerArgs(Args).needsAsanRt()) {
-    std::string AsanRTL(
-        AMDGPUOpenMPTC.getRocmInstallationLoc().getAsanRTLPath());
+    std::string AsanRTL(AMDGPUOpenMPTC.getAsanRTLPath());
     if (AsanRTL.empty()) {
       AMDGPUOpenMPTC.getDriver().Diag(diag::err_drv_no_asan_rt_lib);
     } else {
@@ -479,7 +478,7 @@ AMDGPUOpenMPToolChain::AMDGPUOpenMPToolChain(const Driver &D, const llvm::Triple
                              const Action::OffloadKind OK)
     : ROCMToolChain(D, Triple, Args), HostTC(HostTC), OK(OK) {
   // Lookup binaries into the driver directory, this is used to
-  // discover the clang-offload-bundler executable.
+  // discover the 'amdgpu-arch' executable.
   getProgramPaths().push_back(getDriver().Dir);
 }
 
@@ -565,7 +564,7 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
 
   // Find in --hip-device-lib-path and HIP_LIBRARY_PATH.
   for (auto Path :
-       RocmInstallation.getRocmDeviceLibPathArg())
+       RocmInstallation->getRocmDeviceLibPathArg())
     LibraryPaths.push_back(DriverArgs.MakeArgString(Path));
 
   // Link the bitcode library late if we're using device LTO.
@@ -736,7 +735,7 @@ AMDGPUOpenMPToolChain::getDeviceLibs(const llvm::opt::ArgList &Args) const {
   if (Args.hasArg(options::OPT_nogpulib))
     return {};
 
-  if (!RocmInstallation.hasDeviceLibrary()) {
+  if (!RocmInstallation->hasDeviceLibrary()) {
     getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 0;
     return {};
   }

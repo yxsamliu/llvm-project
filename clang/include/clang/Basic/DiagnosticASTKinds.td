@@ -127,6 +127,8 @@ def note_constexpr_null_subobject : Note<
   "access array element of|perform pointer arithmetic on|"
   "access real component of|"
   "access imaginary component of}0 null pointer">;
+def note_constexpr_null_callee : Note<
+  "'%0' evaluates to a null function pointer">;
 def note_constexpr_function_param_value_unknown : Note<
   "function parameter %0 with unknown value cannot be used in a constant "
   "expression">;
@@ -394,7 +396,7 @@ def warn_fixedpoint_constant_overflow : Warning<
   InGroup<DiagGroup<"fixed-point-overflow">>;
 def warn_constexpr_unscoped_enum_out_of_range : Warning<
   "integer value %0 is outside the valid range of values [%1, %2] for this "
-  "enumeration type">, InGroup<DiagGroup<"enum-constexpr-conversion">>;
+  "enumeration type">, DefaultError, InGroup<DiagGroup<"enum-constexpr-conversion">>;
 
 // This is a temporary diagnostic, and shall be removed once our
 // implementation is complete, and like the preceding constexpr notes belongs

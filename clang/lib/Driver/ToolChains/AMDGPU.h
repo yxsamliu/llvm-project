@@ -16,7 +16,7 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 #include <map>
 
@@ -65,11 +65,11 @@ public:
 
   bool IsMathErrnoDefault() const override { return false; }
   bool isCrossCompiling() const override { return true; }
-  bool isPICDefault() const override { return false; }
+  bool isPICDefault() const override { return true; }
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
     return false;
   }
-  bool isPICDefaultForced() const override { return false; }
+  bool isPICDefaultForced() const override { return true; }
   bool SupportsProfiling() const override { return false; }
 
   llvm::opt::DerivedArgList *

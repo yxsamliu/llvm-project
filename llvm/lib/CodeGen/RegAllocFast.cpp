@@ -138,7 +138,7 @@ namespace {
       /// * An inserted DbgKill, if we encounter the DbgDef before any existing
       /// DbgKill, or if there is no such existing DbgKill.
       ///
-      /// Read as `Optional<MachineInstr>`.
+      /// Read as `std::optional<MachineInstr>`.
       MachineInstr *Live = nullptr;
       /// The existing DbgKill, if one exists and we have also inserted a
       /// DbgKill for a non-stack DbgDef. This is retained until we either:
@@ -147,7 +147,7 @@ namespace {
       /// * Finish allocating the function, at which point we can remove this
       /// "backup" existing DbgDef instruction.
       ///
-      /// Read as `Optional<MachineInstr>`
+      /// Read as `std::optional<MachineInstr>`
       MachineInstr *Dead = nullptr;
       /// Flag to represent the case where we want to eliminate all future
       /// DbgKills we encounter, as we have removed the corresponding DbgDef
@@ -1088,6 +1088,23 @@ void RegAllocFast::defineVirtReg(MachineInstr &MI, unsigned OpNum,
                         << LRI->Reloaded << '\n');
       bool Kill = LRI->LastUse == nullptr;
       spill(SpillBefore, VirtReg, PhysReg, Kill, LRI->LiveOut);
+
+      // We need to place additional spills for each indirect destination of an
+      // INLINEASM_BR.
+      if (MI.getOpcode() == TargetOpcode::INLINEASM_BR) {
+        int FI = StackSlotForVirtReg[VirtReg];
+        const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
+        for (MachineOperand &MO : MI.operands()) {
+          if (MO.isMBB()) {
+            MachineBasicBlock *Succ = MO.getMBB();
+            TII->storeRegToStackSlot(*Succ, Succ->begin(), PhysReg, Kill,
+                FI, &RC, TRI, VirtReg);
+            ++NumStores;
+            Succ->addLiveIn(PhysReg);
+          }
+        }
+      }
+
       LRI->LastUse = nullptr;
     }
     LRI->LiveOut = false;

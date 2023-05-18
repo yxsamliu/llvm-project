@@ -621,7 +621,7 @@ protected:
 
 public:
   /// Create a RegBankSelect pass with the specified \p RunningMode.
-  RegBankSelect(Mode RunningMode = Fast);
+  RegBankSelect(char &PassID = ID, Mode RunningMode = Fast);
 
   StringRef getPassName() const override { return "RegBankSelect"; }
 

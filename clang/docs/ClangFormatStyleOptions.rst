@@ -113,8 +113,10 @@ Disabling Formatting on a Piece of Code
 Clang-format understands also special comments that switch formatting in a
 delimited range. The code between a comment ``// clang-format off`` or
 ``/* clang-format off */`` up to a comment ``// clang-format on`` or
-``/* clang-format on */`` will not be formatted. The comments themselves
-will be formatted (aligned) normally.
+``/* clang-format on */`` will not be formatted. The comments themselves will be
+formatted (aligned) normally. Also, a colon (``:``) and additional text may
+follow ``// clang-format off`` or ``// clang-format on`` to explain why
+clang-format is turned off or back on.
 
 .. code-block:: c++
 
@@ -3373,6 +3375,10 @@ the configuration (without a prefix: ``Auto``).
       Decimal: 3
       Hex: -1
 
+  You can also specify a minimum number of digits (``BinaryMinDigits``,
+  ``DecimalMinDigits``, and ``HexMinDigits``) the integer literal must
+  have in order for the separators to be inserted.
+
   * ``int8_t Binary`` Format separators in binary literals.
 
     .. code-block:: text
@@ -3382,6 +3388,15 @@ the configuration (without a prefix: ``Auto``).
       /*  3: */ b = 0b100'111'101'101;
       /*  4: */ b = 0b1001'1110'1101;
 
+  * ``int8_t BinaryMinDigits`` Format separators in binary literals with a minimum number of digits.
+
+    .. code-block:: text
+
+      // Binary: 3
+      // BinaryMinDigits: 7
+      b1 = 0b101101;
+      b2 = 0b1'101'101;
+
   * ``int8_t Decimal`` Format separators in decimal literals.
 
     .. code-block:: text
@@ -3390,6 +3405,15 @@ the configuration (without a prefix: ``Auto``).
       /*  0: */ d = 184467'440737'0'95505'92ull;
       /*  3: */ d = 18'446'744'073'709'550'592ull;
 
+  * ``int8_t DecimalMinDigits`` Format separators in decimal literals with a minimum number of digits.
+
+    .. code-block:: text
+
+      // Decimal: 3
+      // DecimalMinDigits: 5
+      d1 = 2023;
+      d2 = 10'000;
+
   * ``int8_t Hex`` Format separators in hexadecimal literals.
 
     .. code-block:: text
@@ -3397,6 +3421,16 @@ the configuration (without a prefix: ``Auto``).
       /* -1: */ h = 0xDEADBEEFDEADBEEFuz;
       /*  0: */ h = 0xDEAD'BEEF'DE'AD'BEE'Fuz;
       /*  2: */ h = 0xDE'AD'BE'EF'DE'AD'BE'EFuz;
+
+  * ``int8_t HexMinDigits`` Format separators in hexadecimal literals with a minimum number of
+    digits.
+
+    .. code-block:: text
+
+      // Hex: 2
+      // HexMinDigits: 6
+      h1 = 0xABCDE;
+      h2 = 0xAB'CD'EF;
 
 
 .. _JavaImportGroups:
@@ -3640,6 +3674,49 @@ the configuration (without a prefix: ``Auto``).
 **MacroBlockEnd** (``String``) :versionbadge:`clang-format 3.7` :ref:`¶ <MacroBlockEnd>`
   A regular expression matching macros that end a block.
 
+.. _Macros:
+
+**Macros** (``List of Strings``) :versionbadge:`clang-format 17.0` :ref:`¶ <Macros>`
+  A list of macros of the form ``<definition>=<expansion>`` .
+
+  Code will be parsed with macros expanded, in order to determine how to
+  interpret and format the macro arguments.
+
+  For example, the code:
+
+  .. code-block:: c++
+
+    A(a*b);
+
+  will usually be interpreted as a call to a function A, and the
+  multiplication expression will be formatted as `a * b`.
+
+  If we specify the macro definition:
+
+  .. code-block:: yaml
+
+    Macros:
+    - A(x)=x
+
+  the code will now be parsed as a declaration of the variable b of type a*,
+  and formatted as `a* b` (depending on pointer-binding rules).
+
+  Features and restrictions:
+   * Both function-like macros and object-like macros are supported.
+   * Macro arguments must be used exactly once in the expansion.
+   * No recursive expansion; macros referencing other macros will be
+     ignored.
+   * Overloading by arity is supported: for example, given the macro
+     definitions A=x, A()=y, A(a)=a
+
+
+  .. code-block:: c++
+
+     A; -> x;
+     A(); -> y;
+     A(z); -> z;
+     A(a, b); // will not be expanded.
+
 .. _MaxEmptyLinesToKeep:
 
 **MaxEmptyLinesToKeep** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <MaxEmptyLinesToKeep>`
@@ -3877,6 +3954,23 @@ the configuration (without a prefix: ``Auto``).
     .. code-block:: c++
 
        Constructor() : a(), b()
+
+       Constructor()
+           : aaaaaaaaaaaaaaaaaaaa(), bbbbbbbbbbbbbbbbbbbb(), ddddddddddddd()
+
+       Constructor()
+           : aaaaaaaaaaaaaaaaaaaa(),
+             bbbbbbbbbbbbbbbbbbbb(),
+             cccccccccccccccccccc()
+
+  * ``PCIS_NextLineOnly`` (in configuration: ``NextLineOnly``)
+    Put all constructor initializers on the next line if they fit.
+    Otherwise, put each one on its own line.
+
+    .. code-block:: c++
+
+       Constructor()
+           : a(), b()
 
        Constructor()
            : aaaaaaaaaaaaaaaaaaaa(), bbbbbbbbbbbbbbbbbbbb(), ddddddddddddd()
@@ -4684,6 +4778,18 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      class Foo : Bar {}             vs.     class Foo: Bar {}
 
+.. _SpaceBeforeJsonColon:
+
+**SpaceBeforeJsonColon** (``Boolean``) :versionbadge:`clang-format 17` :ref:`¶ <SpaceBeforeJsonColon>`
+  If ``true``, a space will be add before a JSON colon.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     {                                      {
+       "key" : "value"              vs.       "key": "value"
+     }                                      }
+
 .. _SpaceBeforeParens:
 
 **SpaceBeforeParens** (``SpaceBeforeParensStyle``) :versionbadge:`clang-format 3.5` :ref:`¶ <SpaceBeforeParens>`
@@ -5195,6 +5301,22 @@ the configuration (without a prefix: ``Auto``).
     one tab stop to the next one.
 
 
+
+.. _VerilogBreakBetweenInstancePorts:
+
+**VerilogBreakBetweenInstancePorts** (``Boolean``) :versionbadge:`clang-format 17` :ref:`¶ <VerilogBreakBetweenInstancePorts>`
+  For Verilog, put each port on its own line in module instantiations.
+
+  .. code-block:: c++
+
+     true:
+     ffnand ff1(.q(),
+                .qbar(out1),
+                .clear(in1),
+                .preset(in2));
+
+     false:
+     ffnand ff1(.q(), .qbar(out1), .clear(in1), .preset(in2));
 
 .. _WhitespaceSensitiveMacros:
 
