@@ -2247,8 +2247,11 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     getContext().getFunctionFeatureMap(FeatureMap, GD);
 
     // Produce the canonical string for this set of features.
-    for (const llvm::StringMap<bool>::value_type &Entry : FeatureMap)
+    for (const llvm::StringMap<bool>::value_type &Entry : FeatureMap) {
+      if (getTarget().isReadOnlyFeature(Entry.getKey()))
+        continue;
       Features.push_back((Entry.getValue() ? "+" : "-") + Entry.getKey().str());
+    }
 
     // Now add the target-cpu and target-features to the function.
     // While we populated the feature map above, we still need to
