@@ -759,7 +759,7 @@ using AMDGPUSignalManagerTy = GenericDeviceResourceManagerTy<AMDGPUSignalRef>;
 /// Class holding an HSA queue to submit kernel and barrier packets.
 struct AMDGPUQueueTy {
   /// Create an empty queue.
-  AMDGPUQueueTy() : Queue(nullptr), Mutex(), Busy(false) {}
+  AMDGPUQueueTy() : Queue(nullptr), Mutex() {}
 
   /// Initialize a new queue belonging to a specific agent.
   Error init(hsa_agent_t Agent, int32_t QueueSize) {
@@ -790,6 +790,9 @@ struct AMDGPUQueueTy {
   /// Decrement busy count of the queue object
   void decBusy() { Busy.fetch_sub(1); }
 
+  /// Increase busy count ob the queue object
+  void incBusy() { Busy.fetch_add(1); }
+
   /// Push a kernel launch to the queue. The kernel launch requires an output
   /// signal and can define an optional input signal (nullptr if none).
   Error pushKernelLaunch(const AMDGPUKernelTy &Kernel, void *KernelArgs,
@@ -806,9 +809,6 @@ struct AMDGPUQueueTy {
     // Avoid defining the input dependency if already satisfied.
     if (InputSignal && !InputSignal->load())
       InputSignal = nullptr;
-
-    // Indicate that this queue is now considered busy.
-    Busy.fetch_add(1);
 
     // Add a barrier packet before the kernel packet in case there is a pending
     // preceding operation. The barrier packet will delay the processing of
@@ -857,6 +857,8 @@ struct AMDGPUQueueTy {
     // Push the barrier with the lock acquired.
     return pushBarrierImpl(OutputSignal, InputSignal1, InputSignal2);
   }
+
+  /// Return the pointer to the underlying HSA queue
   hsa_queue_t *getHsaQueue() {
     assert(Queue && "HSA Queue initialized");
     return Queue;
@@ -886,10 +888,8 @@ private:
     Packet->completion_signal = {0};
 
     // Set input and output dependencies if needed.
-    if (OutputSignal) {
+    if (OutputSignal)
       Packet->completion_signal = OutputSignal->get();
-      Busy.fetch_add(1);
-    }
     if (InputSignal1)
       Packet->dep_signal[0] = InputSignal1->get();
     if (InputSignal2)
@@ -2515,7 +2515,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// returned. If no initialized queue is available, but more queues may be
   /// active, the next default-constructed queue is initialized. Otherwise, the
   /// queue is selected in a round-robin fashion.
-  AMDGPUQueueTy &getNextQueue() {
+  AMDGPUQueueTy &getNextQueue(bool shouldTrackBusy = false) {
     static std::atomic<uint32_t> NextQueue(0);
     // For now, simply use a lock.
     // TODO: Improve implementation and get rid of lock if possible
@@ -2527,8 +2527,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     for (auto &Q : Queues)
       if (Q.isBusy())
         NumBusyQueues++;
-      else if (Q.isInitialized())
+      else if (Q.isInitialized()) {
+        if (shouldTrackBusy)
+          Q.incBusy();
         return Q;
+      }
 
     // For now we always take this code path, as no queue is initialized at the
     // beginning, so we need to execute here at least once.
@@ -2548,6 +2551,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     DP("LAZY_QUEUE: Busy: %i Current %i, QueueCount %i\n", NumBusyQueues,
        Current, QueueCount);
     // Now upper limit is number of init-ed queues
+    Queues[Current % QueueCount].incBusy();
     return Queues[Current % QueueCount];
   }
 
@@ -3361,7 +3365,7 @@ Error AMDGPUStreamTy::pushKernelLaunch(const AMDGPUKernelTy &Kernel,
               Agent, OutputSignal, TicksToTime)) return Err;);
 
   // Push the kernel with the output signal and an input signal (optional)
-  auto &Queue = Device.getNextQueue();
+  auto &Queue = Device.getNextQueue(true);
   if (auto Err = Slots[Curr].schedDecrementQueueBusyCount(&Queue))
     return Err;
 
@@ -3391,7 +3395,7 @@ Error AMDGPUStreamTy::waitOnStreamOperation(AMDGPUStreamTy &OtherStream,
     return Err;
 
   // Push a barrier into the queue with both input signals.
-  auto &Queue = Device.getNextQueue();
+  auto &Queue = Device.getNextQueue(true);
   if (auto Err = Slots[Curr].schedDecrementQueueBusyCount(&Queue))
     return Err;
   DP("Using Queue: %p with HSA Queue: %p\n", &Queue, Queue.getHsaQueue());
