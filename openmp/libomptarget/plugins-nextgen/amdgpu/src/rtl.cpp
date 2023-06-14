@@ -1518,8 +1518,6 @@ public:
     return Plugin::check(Status, "Error in hsa_amd_memory_async_copy: %s");
   }
 
-  uint64_t KernelBusyWaitTics; // initialized from AMDGPUDeviceTy
-
   /// Synchronize with the stream. The current thread waits until all operations
   /// are finalized and it performs the pending post actions (i.e., releasing
   /// intermediate buffers).
@@ -1853,6 +1851,23 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   uint64_t KernelBusyWaitTics;
   uint64_t DataBusyWaitTics;
 
+  /// Returns the maximum of HSA queues to create
+  /// This reads a non-cached environment variable, don't call everywhere.
+  uint32_t getMaxNumHsaQueues() const {
+    // In case this environment variable is set: respect it and give it
+    // precendence
+    if (const char *GPUMaxHwQsEnv = getenv("GPU_MAX_HW_QUEUES")) {
+      uint32_t MaxGPUHwQueues = std::atoi(GPUMaxHwQsEnv);
+      if (MaxGPUHwQueues != OMPX_NumQueues)
+        DP("Different numbers of maximum HSA queues specified. Using %u\n",
+           MaxGPUHwQueues);
+
+      return MaxGPUHwQueues;
+    }
+    // Otherwise use the regular environment variable
+    return OMPX_NumQueues;
+  }
+
   /// Initialize the device, its resources and get its properties.
   Error initImpl(GenericPluginTy &Plugin) override {
     // First setup all the memory pools.
@@ -1931,8 +1946,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
 
     // Compute the number of queues and their size.
-    const uint32_t NumQueues = std::min(OMPX_NumQueues.get(), MaxQueues);
+    const uint32_t NumQueues = std::min(getMaxNumHsaQueues(), MaxQueues);
     const uint32_t QueueSize = std::min(OMPX_QueueSize.get(), MaxQueueSize);
+    DP("Using a maximum of %u HSA queues\n", NumQueues);
 
     KernelBusyWaitTics = OMPX_StreamBusyWait;
     DataBusyWaitTics = OMPX_StreamBusyWait;
@@ -2528,6 +2544,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // TODO: Improve implementation and get rid of lock if possible
     std::lock_guard<std::mutex> LG(QueuesLock);
 
+    // The size is the maximum number of queues
+    int MaxNumQueues = Queues.size();
+
     // Determine queues that are busy right now
     // If an idle and already initialized queue is encountered, return it
     int NumBusyQueues = 0;
@@ -2543,7 +2562,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // For now we always take this code path, as no queue is initialized at the
     // beginning, so we need to execute here at least once.
     int QueueCount = NumInitQueues.load();
-    if (QueueCount < OMPX_NumQueues && QueueCount <= NumBusyQueues) {
+    if (QueueCount < MaxNumQueues && QueueCount <= NumBusyQueues) {
       DP("LAZY_QUEUE: Constructing new Queue: %i (Device %i)\n", QueueCount,
          getDeviceId());
       // TODO: Handle errors here: abort? Gracefully? Ignore?
