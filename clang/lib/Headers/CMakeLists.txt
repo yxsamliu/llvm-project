@@ -285,6 +285,7 @@ set(openmp_wrapper_files
   openmp_wrappers/complex_cmath.h
   openmp_wrappers/new
   openmp_wrappers/hip/hip_runtime.h
+  openmp_wrappers/usm/force_usm.h
 )
 
 set(output_dir ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION}/include)
