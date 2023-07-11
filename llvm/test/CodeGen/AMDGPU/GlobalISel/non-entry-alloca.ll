@@ -75,8 +75,8 @@ bb.2:
   store volatile i32 0, ptr addrspace(1) undef
   ret void
 }
-; DEFAULTSIZE: .amdhsa_private_segment_fixed_size 4112
-; DEFAULTSIZE: ; ScratchSize: 4112
+; DEFAULTSIZE: .amdhsa_private_segment_fixed_size 16
+; DEFAULTSIZE: ; ScratchSize: 16
 
 ; ASSUME1024: .amdhsa_private_segment_fixed_size 1040
 ; ASSUME1024: ; ScratchSize: 1040
@@ -137,8 +137,8 @@ bb.1:
   ret void
 }
 
-; DEFAULTSIZE: .amdhsa_private_segment_fixed_size 4160
-; DEFAULTSIZE: ; ScratchSize: 4160
+; DEFAULTSIZE: .amdhsa_private_segment_fixed_size 64
+; DEFAULTSIZE: ; ScratchSize: 64
 
 ; ASSUME1024: .amdhsa_private_segment_fixed_size 1088
 ; ASSUME1024: ; ScratchSize: 1088
