@@ -154,3 +154,27 @@
 // RUN: %clang -### -nogpuinc -nogpulib -mamdgpu-ieee -mno-amdgpu-ieee -ffast-math \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefixes=IEEE-OFF-NEG %s
 // IEEE-OFF-NEG-NOT: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-mamdgpu-ieee"
+/ Check -fno-offload-uniform-block is passed to clang -cc1 but
+// (default) -fno-offload-uniform-block is not.
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib -fno-offload-uniform-block \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=NOUNIBLK %s
+
+// NOUNIBLK: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fno-offload-uniform-block"
+// NOUNIBLK: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-fno-offload-uniform-block"
+
+// RUN: %clang -### -nogpuinc -nogpulib -foffload-uniform-block \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=UNIBLK %s
+
+// UNIBLK: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-foffload-uniform-block"
+// UNIBLK: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-foffload-uniform-block"
+
+// RUN: %clang -### -nogpuinc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=DEFUNIBLK %s
+
+// DEFUNIBLK-NOT: "-f{{(no-)?}}offload-uniform-block"
+
+// Check no warnings for -f[no-]offload-uniform-block.
+
+// RUN: %clang -fdriver-only -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib -fno-offload-uniform-block \
+// RUN:   -foffload-uniform-block --cuda-gpu-arch=gfx906 %s 2>&1 | count 0

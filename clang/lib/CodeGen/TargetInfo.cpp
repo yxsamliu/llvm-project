@@ -9586,14 +9586,12 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
   if (FD)
     setFunctionDeclAttributes(FD, F, M);
 
-  const bool IsHIPKernel =
-      M.getLangOpts().HIP && FD && FD->hasAttr<CUDAGlobalAttr>();
   const bool IsOpenMPkernel =
       M.getLangOpts().OpenMPIsDevice &&
       (F->getCallingConv() == llvm::CallingConv::AMDGPU_KERNEL);
 
   // TODO: This should be moved to language specific attributes instead.
-  if (IsHIPKernel || IsOpenMPkernel)
+  if (IsOpenMPkernel)
     F->addFnAttr("uniform-work-group-size", "true");
 
   if (M.getContext().getTargetInfo().allowAMDGPUUnsafeFPAtomics())
