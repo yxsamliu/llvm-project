@@ -2402,6 +2402,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                llvm::toStringRef(CodeGenOpts.UniformWGSize));
       }
     }
+
+    if (TargetDecl->hasAttr<CUDAGlobalAttr>() &&
+        getLangOpts().OffloadUniformBlock)
+      FuncAttrs.addAttribute("uniform-work-group-size", "true");
   }
 
   // Attach "no-builtins" attributes to:

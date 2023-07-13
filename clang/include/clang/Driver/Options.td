@@ -1089,6 +1089,10 @@ defm hip_kernel_arg_name : BoolFOption<"hip-kernel-arg-name",
   NegFlag<SetFalse, [], "Don't specify">,
   BothFlags<[], " that kernel argument names are preserved (HIP only)">>,
   ShouldParseIf<hip.KeyPath>;
+defm offload_uniform_block : BoolFOption<"offload-uniform-block",
+  LangOpts<"OffloadUniformBlock">, Default<"LangOpts->CUDA">,
+  PosFlag<SetTrue, [CC1Option], "Assume">, NegFlag<SetFalse, [CC1Option], "Don't assume">,
+  BothFlags<[], " that kernels are launched with uniform block sizes (default true for CUDA/HIP and false otherwise)">>;
 def hipspv_pass_plugin_EQ : Joined<["--"], "hipspv-pass-plugin=">,
   Group<Link_Group>, MetaVarName<"<dsopath>">,
   HelpText<"path to a pass plugin for HIP to SPIR-V passes.">;
