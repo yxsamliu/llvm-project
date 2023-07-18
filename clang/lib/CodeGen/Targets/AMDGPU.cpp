@@ -405,8 +405,12 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
       M.getLangOpts().HIP && FD && FD->hasAttr<CUDAGlobalAttr>();
 
   // TODO: This should be moved to language specific attributes instead.
-  if (IsHIPKernel)
+  if (IsHIPKernel) {
     F->addFnAttr("uniform-work-group-size", "true");
+    F->addFnAttr("amdgpu-no-completion-action");
+    F->addFnAttr("amdgpu-no-default-queue");
+    F->addFnAttr("amdgpu-no-multigrid-sync-arg");
+  }
 
   if (M.getContext().getTargetInfo().allowAMDGPUUnsafeFPAtomics())
     F->addFnAttr("amdgpu-unsafe-fp-atomics", "true");
