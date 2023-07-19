@@ -31,6 +31,7 @@ body:             |
     ; GFX11-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     ; GFX11-NEXT: S_WAITCNT 7
     ; GFX11-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX11-NEXT: S_NOP 0
     ; GFX11-NEXT: S_SENDMSG 3, implicit $exec, implicit $m0
     ; GFX11-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -70,6 +71,7 @@ body:             |
     ; GFX11-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     ; GFX11-NEXT: S_WAITCNT 7
     ; GFX11-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX11-NEXT: S_NOP 0
     ; GFX11-NEXT: S_SENDMSG 3, implicit $exec, implicit $m0
     ; GFX11-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -111,6 +113,7 @@ body:             |
     ; GFX11-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     ; GFX11-NEXT: S_WAITCNT 7
     ; GFX11-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX11-NEXT: S_NOP 0
     ; GFX11-NEXT: S_SENDMSG 3, implicit $exec, implicit $m0
     ; GFX11-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -151,6 +154,7 @@ body:             |
     ; GFX11-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     ; GFX11-NEXT: S_WAITCNT 7
     ; GFX11-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX11-NEXT: S_NOP 0
     ; GFX11-NEXT: S_SENDMSG 3, implicit $exec, implicit $m0
     ; GFX11-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -194,6 +198,7 @@ body:             |
     ; GFX11-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     ; GFX11-NEXT: S_WAITCNT 7
     ; GFX11-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX11-NEXT: S_NOP 0
     ; GFX11-NEXT: S_SENDMSG 3, implicit $exec, implicit $m0
     ; GFX11-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec

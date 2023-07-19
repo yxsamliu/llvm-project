@@ -387,6 +387,7 @@ define amdgpu_kernel void @test_div_fmas_f32(ptr addrspace(1) %out, [8 x i32], f
 ; GFX11_W32-NEXT:    v_div_fmas_f32 v0, s5, v0, v1
 ; GFX11_W32-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11_W32-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11_W32-NEXT:    s_nop 0
 ; GFX11_W32-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W32-NEXT:    s_endpgm
 ;
@@ -406,6 +407,7 @@ define amdgpu_kernel void @test_div_fmas_f32(ptr addrspace(1) %out, [8 x i32], f
 ; GFX11_W64-NEXT:    v_div_fmas_f32 v0, s5, v0, v1
 ; GFX11_W64-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11_W64-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11_W64-NEXT:    s_nop 0
 ; GFX11_W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W64-NEXT:    s_endpgm
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 %d)
@@ -496,6 +498,7 @@ define amdgpu_kernel void @test_div_fmas_f32_inline_imm_0(ptr addrspace(1) %out,
 ; GFX11_W32-NEXT:    v_cmp_ne_u32_e64 vcc_lo, 0, s2
 ; GFX11_W32-NEXT:    v_div_fmas_f32 v0, 1.0, s4, v0
 ; GFX11_W32-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11_W32-NEXT:    s_nop 0
 ; GFX11_W32-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W32-NEXT:    s_endpgm
 ;
@@ -513,6 +516,7 @@ define amdgpu_kernel void @test_div_fmas_f32_inline_imm_0(ptr addrspace(1) %out,
 ; GFX11_W64-NEXT:    v_cmp_ne_u32_e64 vcc, 0, s2
 ; GFX11_W64-NEXT:    v_div_fmas_f32 v0, 1.0, s4, v0
 ; GFX11_W64-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11_W64-NEXT:    s_nop 0
 ; GFX11_W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W64-NEXT:    s_endpgm
   %result = call float @llvm.amdgcn.div.fmas.f32(float 1.0, float %b, float %c, i1 %d)
@@ -603,6 +607,7 @@ define amdgpu_kernel void @test_div_fmas_f32_inline_imm_1(ptr addrspace(1) %out,
 ; GFX11_W32-NEXT:    v_cmp_ne_u32_e64 vcc_lo, 0, s2
 ; GFX11_W32-NEXT:    v_div_fmas_f32 v0, s4, 1.0, v0
 ; GFX11_W32-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11_W32-NEXT:    s_nop 0
 ; GFX11_W32-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W32-NEXT:    s_endpgm
 ;
@@ -620,6 +625,7 @@ define amdgpu_kernel void @test_div_fmas_f32_inline_imm_1(ptr addrspace(1) %out,
 ; GFX11_W64-NEXT:    v_cmp_ne_u32_e64 vcc, 0, s2
 ; GFX11_W64-NEXT:    v_div_fmas_f32 v0, s4, 1.0, v0
 ; GFX11_W64-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11_W64-NEXT:    s_nop 0
 ; GFX11_W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W64-NEXT:    s_endpgm
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float 1.0, float %c, i1 %d)
@@ -710,6 +716,7 @@ define amdgpu_kernel void @test_div_fmas_f32_inline_imm_2(ptr addrspace(1) %out,
 ; GFX11_W32-NEXT:    v_cmp_ne_u32_e64 vcc_lo, 0, s2
 ; GFX11_W32-NEXT:    v_div_fmas_f32 v0, s4, v0, 1.0
 ; GFX11_W32-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11_W32-NEXT:    s_nop 0
 ; GFX11_W32-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W32-NEXT:    s_endpgm
 ;
@@ -727,6 +734,7 @@ define amdgpu_kernel void @test_div_fmas_f32_inline_imm_2(ptr addrspace(1) %out,
 ; GFX11_W64-NEXT:    v_cmp_ne_u32_e64 vcc, 0, s2
 ; GFX11_W64-NEXT:    v_div_fmas_f32 v0, s4, v0, 1.0
 ; GFX11_W64-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11_W64-NEXT:    s_nop 0
 ; GFX11_W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W64-NEXT:    s_endpgm
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float 1.0, i1 %d)
@@ -822,6 +830,7 @@ define amdgpu_kernel void @test_div_fmas_f64(ptr addrspace(1) %out, double %a, d
 ; GFX11_W32-NEXT:    v_div_fmas_f64 v[0:1], s[2:3], v[0:1], v[2:3]
 ; GFX11_W32-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11_W32-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX11_W32-NEXT:    s_nop 0
 ; GFX11_W32-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W32-NEXT:    s_endpgm
 ;
@@ -840,6 +849,7 @@ define amdgpu_kernel void @test_div_fmas_f64(ptr addrspace(1) %out, double %a, d
 ; GFX11_W64-NEXT:    v_div_fmas_f64 v[0:1], s[2:3], v[0:1], v[2:3]
 ; GFX11_W64-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11_W64-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX11_W64-NEXT:    s_nop 0
 ; GFX11_W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W64-NEXT:    s_endpgm
   %result = call double @llvm.amdgcn.div.fmas.f64(double %a, double %b, double %c, i1 %d)
@@ -934,6 +944,7 @@ define amdgpu_kernel void @test_div_fmas_f32_cond_to_vcc(ptr addrspace(1) %out, 
 ; GFX11_W32-NEXT:    v_div_fmas_f32 v0, s4, v0, v1
 ; GFX11_W32-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11_W32-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11_W32-NEXT:    s_nop 0
 ; GFX11_W32-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W32-NEXT:    s_endpgm
 ;
@@ -952,6 +963,7 @@ define amdgpu_kernel void @test_div_fmas_f32_cond_to_vcc(ptr addrspace(1) %out, 
 ; GFX11_W64-NEXT:    v_div_fmas_f32 v0, s4, v0, v1
 ; GFX11_W64-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11_W64-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11_W64-NEXT:    s_nop 0
 ; GFX11_W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W64-NEXT:    s_endpgm
   %cmp = icmp eq i32 %i, 0
@@ -1040,6 +1052,7 @@ define amdgpu_kernel void @test_div_fmas_f32_imm_false_cond_to_vcc(ptr addrspace
 ; GFX11_W32-NEXT:    v_div_fmas_f32 v0, s4, v0, v1
 ; GFX11_W32-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11_W32-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11_W32-NEXT:    s_nop 0
 ; GFX11_W32-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W32-NEXT:    s_endpgm
 ;
@@ -1057,6 +1070,7 @@ define amdgpu_kernel void @test_div_fmas_f32_imm_false_cond_to_vcc(ptr addrspace
 ; GFX11_W64-NEXT:    v_div_fmas_f32 v0, s4, v0, v1
 ; GFX11_W64-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11_W64-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11_W64-NEXT:    s_nop 0
 ; GFX11_W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W64-NEXT:    s_endpgm
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 false)
@@ -1144,6 +1158,7 @@ define amdgpu_kernel void @test_div_fmas_f32_imm_true_cond_to_vcc(ptr addrspace(
 ; GFX11_W32-NEXT:    v_div_fmas_f32 v0, s4, v0, v1
 ; GFX11_W32-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11_W32-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11_W32-NEXT:    s_nop 0
 ; GFX11_W32-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W32-NEXT:    s_endpgm
 ;
@@ -1161,6 +1176,7 @@ define amdgpu_kernel void @test_div_fmas_f32_imm_true_cond_to_vcc(ptr addrspace(
 ; GFX11_W64-NEXT:    v_div_fmas_f32 v0, s4, v0, v1
 ; GFX11_W64-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11_W64-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11_W64-NEXT:    s_nop 0
 ; GFX11_W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W64-NEXT:    s_endpgm
   %result = call float @llvm.amdgcn.div.fmas.f32(float %a, float %b, float %c, i1 true)
@@ -1299,6 +1315,7 @@ define amdgpu_kernel void @test_div_fmas_f32_logical_cond_to_vcc(ptr addrspace(1
 ; GFX11_W32-NEXT:    v_div_fmas_f32 v0, v2, v3, v1
 ; GFX11_W32-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11_W32-NEXT:    global_store_b32 v1, v0, s[4:5] offset:8
+; GFX11_W32-NEXT:    s_nop 0
 ; GFX11_W32-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W32-NEXT:    s_endpgm
 ;
@@ -1323,6 +1340,7 @@ define amdgpu_kernel void @test_div_fmas_f32_logical_cond_to_vcc(ptr addrspace(1
 ; GFX11_W64-NEXT:    v_div_fmas_f32 v0, v2, v3, v1
 ; GFX11_W64-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11_W64-NEXT:    global_store_b32 v1, v0, s[4:5] offset:8
+; GFX11_W64-NEXT:    s_nop 0
 ; GFX11_W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W64-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1501,6 +1519,7 @@ define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(ptr addrspace(1) %out, [
 ; GFX11_W32-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11_W32-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11_W32-NEXT:    global_store_b32 v1, v0, s[0:1] offset:8
+; GFX11_W32-NEXT:    s_nop 0
 ; GFX11_W32-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W32-NEXT:    s_endpgm
 ;
@@ -1531,6 +1550,7 @@ define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(ptr addrspace(1) %out, [
 ; GFX11_W64-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11_W64-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11_W64-NEXT:    global_store_b32 v1, v0, s[0:1] offset:8
+; GFX11_W64-NEXT:    s_nop 0
 ; GFX11_W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11_W64-NEXT:    s_endpgm
 entry:

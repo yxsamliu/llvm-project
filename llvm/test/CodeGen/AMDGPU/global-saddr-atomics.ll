@@ -3411,6 +3411,7 @@ define amdgpu_ps void @global_inc_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX11-LABEL: global_inc_saddr_i32_nortn:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_atomic_inc_u32 v0, v1, s[2:3]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
@@ -3428,6 +3429,7 @@ define amdgpu_ps void @global_inc_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX11-LABEL: global_inc_saddr_i32_nortn_neg128:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_atomic_inc_u32 v0, v1, s[2:3] offset:-128
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
@@ -3485,6 +3487,7 @@ define amdgpu_ps void @global_inc_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX11-LABEL: global_inc_saddr_i64_nortn:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_atomic_inc_u64 v0, v[1:2], s[2:3]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
@@ -3502,6 +3505,7 @@ define amdgpu_ps void @global_inc_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX11-LABEL: global_inc_saddr_i64_nortn_neg128:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_atomic_inc_u64 v0, v[1:2], s[2:3] offset:-128
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
@@ -3566,6 +3570,7 @@ define amdgpu_ps void @global_dec_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX11-LABEL: global_dec_saddr_i32_nortn:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_atomic_dec_u32 v0, v1, s[2:3]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
@@ -3583,6 +3588,7 @@ define amdgpu_ps void @global_dec_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX11-LABEL: global_dec_saddr_i32_nortn_neg128:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_atomic_dec_u32 v0, v1, s[2:3] offset:-128
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
@@ -3640,6 +3646,7 @@ define amdgpu_ps void @global_dec_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX11-LABEL: global_dec_saddr_i64_nortn:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_atomic_dec_u64 v0, v[1:2], s[2:3]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
@@ -3657,6 +3664,7 @@ define amdgpu_ps void @global_dec_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX11-LABEL: global_dec_saddr_i64_nortn_neg128:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_atomic_dec_u64 v0, v[1:2], s[2:3] offset:-128
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64

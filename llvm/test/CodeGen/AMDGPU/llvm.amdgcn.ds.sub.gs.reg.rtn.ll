@@ -31,6 +31,7 @@ define amdgpu_gs void @test_sub_32_use(i32 %arg, ptr addrspace(1) %out) {
 ; CHECK-NEXT:    buffer_gl0_inv
 ; CHECK-NEXT:    buffer_gl1_inv
 ; CHECK-NEXT:    global_store_b32 v[1:2], v3, off
+; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-NEXT:    s_endpgm
   %res = call i32 @llvm.amdgcn.ds.sub.gs.reg.rtn.i32(i32 %arg, i32 16)
@@ -64,6 +65,7 @@ define amdgpu_gs void @test_sub_64_use(i32 %arg, ptr addrspace(1) %out) {
 ; CHECK-NEXT:    buffer_gl0_inv
 ; CHECK-NEXT:    buffer_gl1_inv
 ; CHECK-NEXT:    global_store_b64 v[1:2], v[3:4], off
+; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-NEXT:    s_endpgm
   %res = call i64 @llvm.amdgcn.ds.sub.gs.reg.rtn.i64(i32 %arg, i32 32)
