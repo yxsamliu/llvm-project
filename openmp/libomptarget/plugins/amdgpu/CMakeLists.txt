@@ -22,20 +22,20 @@ endif()
 
 # as of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
 find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS
-${CMAKE_INSTALL_PREFIX} /opt/rocm)
+  ${CMAKE_INSTALL_PREFIX} /opt/rocm)
 
 if(hsa-runtime64_DIR)
-message("FOUND hsa-runtime64 at ${hsa-runtime64_DIR}")
+  message("FOUND hsa-runtime64 at ${hsa-runtime64_DIR}")
 endif()
 
 if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
-libomptarget_say("Not building AMDGPU plugin: only support AMDGPU in Linux x86_64, ppc64le, or aarch64 hosts")
-return()
+  libomptarget_say("Not building AMDGPU plugin: only support AMDGPU in Linux x86_64, ppc64le, or aarch64 hosts")
+  return()
 endif()
 
 # libhsakmt.a
-find_library ( HSAKMT_LIB libhsakmt.a REQURIED HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
-get_filename_component ( HSAKMT_LIB_PATH ${HSAKMT_LIB} DIRECTORY )
+find_library (HSAKMT_LIB libhsakmt.a REQURIED HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
+get_filename_component(HSAKMT_LIB_PATH ${HSAKMT_LIB} DIRECTORY)
 link_directories (${HSAKMT_LIB_PATH})
 
 # lib_drm_amdgpu
