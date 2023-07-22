@@ -79,6 +79,12 @@
 #define OMPT_IF_TRACING_ENABLED(stmts)
 #endif
 
+#ifdef OMPT_SUPPORT
+extern bool OmptEnabled;
+extern void OmptCallbackInit();
+extern void setOmptTimestamp(uint64_t Start, uint64_t End);
+extern void setOmptHostToDeviceRate(double Slope, double Offset);
+
 #define CHECK_KMT_ERROR(val) kmtCheck((val), #val, __FILE__, __LINE__)
 template <typename T>
 int kmtCheck(T err, const char *const func, const char *const file,
@@ -89,14 +95,6 @@ int kmtCheck(T err, const char *const func, const char *const file,
   }
   return 0;
 }
-
-#ifdef OMPT_SUPPORT
-extern bool OmptEnabled;
-extern void OmptCallbackInit();
-extern void setOmptTimestamp(uint64_t Start, uint64_t End);
-extern void setOmptHostToDeviceRate(double Slope, double Offset);
-
-
 
 /// HSA system clock frequency
 double TicksToTime = 1.0;
@@ -3009,11 +3007,12 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
 
     for (int i = 0; i < sp.NumNodes; ++i) {
 
-      HsaNodeProperties props;
-      CHECK_KMT_ERROR(hsaKmtGetNodeProperties(i, &props));
+      HsaNodeProperties *props = new HsaNodeProperties();
+      CHECK_KMT_ERROR(hsaKmtGetNodeProperties(i, props));
 
       // Check for 'small' APU system
-      if (props.NumCPUCores && props.NumFComputeCores) {
+      if (props->NumCPUCores && props->NumFComputeCores) {
+        delete props;
         CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
         CHECK_KMT_ERROR(hsaKmtCloseKFD());
         return true;
@@ -3021,22 +3020,25 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
 
       // For an appAPU it is only neccesary to compare GPUs with all connected
       // CPUs.
-      if (props.NumCPUCores) {
+      if (props->NumCPUCores) {
+        delete props;
         continue;
       }
 
       // Retrieving GPU's interconnect graph
-      std::vector<HsaIoLinkProperties> IoLinkProperties(props.NumIOLinks);
-      if (hsaKmtGetNodeIoLinkProperties(i, props.NumIOLinks,
-                                        IoLinkProperties.data())) {
+      HsaIoLinkProperties *IoLinkProperties =
+          new HsaIoLinkProperties[props->NumIOLinks];
+      if (hsaKmtGetNodeIoLinkProperties(i, props->NumIOLinks,
+                                        IoLinkProperties)) {
         DP("Unable to get Node IO Link Information for node %u\n", i);
+        delete[] IoLinkProperties;
         continue;
       }
 
       // Checking connection weight between GPU and CPU.
       // If connection weight is 13 (= KFD_CRAT_INTRA_SOCKET_WEIGHT), we found
       // an AppAPU
-      for (int linkId = 0; linkId < props.NumIOLinks; linkId++) {
+      for (int linkId = 0; linkId < props->NumIOLinks; linkId++) {
         HsaNodeProperties linkProps;
 
         if (hsaKmtGetNodeProperties(IoLinkProperties[linkId].NodeTo,
@@ -3046,11 +3048,15 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
         }
 
         if (linkProps.NumCPUCores && IoLinkProperties[linkId].Weight == 13) {
+          delete[] IoLinkProperties;
+          delete props;
           CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
           CHECK_KMT_ERROR(hsaKmtCloseKFD());
           return true;
         }
       }
+
+      delete props;
     }
 
     CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
@@ -3058,19 +3064,43 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     return false;
   }
 
+#define ALDEBARAN_MAJOR 9
+#define ALDEBARAN_STEPPING 10
+
   bool hasGfx90aDevice() override final {
-    char name[64];
-    const auto &KernelAgents = Plugin::get<AMDGPUPluginTy>().getKernelAgents();
+    CHECK_KMT_ERROR(hsaKmtOpenKFD());
 
-    for (const auto &agent : KernelAgents) {
-      memset(&name, 0, sizeof(char) * 64);
-      hsa_agent_get_info(agent, HSA_AGENT_INFO_NAME, name);
+    HsaSystemProperties sp;
+    int errSys = CHECK_KMT_ERROR(hsaKmtAcquireSystemProperties(&sp));
+    if (errSys) return false;
 
-      llvm::StringRef srName(name);
-      if (srName.equals_insensitive("gfx90a")) {
+    for (int i = 0; i < sp.NumNodes; ++i) {
+
+      HsaNodeProperties *props = new HsaNodeProperties();
+      CHECK_KMT_ERROR(hsaKmtGetNodeProperties(i, props));
+
+      // Ignoring CPUs
+      if (props->NumCPUCores) {
+        delete props;
+        continue;
+      }
+
+      // Checking for Aldebaran arch
+      // Values are taken from:
+      // https://confluence.amd.com/display/ASLC/AMDGPU+Target+Names
+      if (props->EngineId.ui32.Major == ALDEBARAN_MAJOR &&
+          props->EngineId.ui32.Stepping == ALDEBARAN_STEPPING) {
+        delete props;
+        CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
+        CHECK_KMT_ERROR(hsaKmtCloseKFD());
         return true;
       }
+
+      delete props;
     }
+
+    CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
+    CHECK_KMT_ERROR(hsaKmtCloseKFD());
     return false;
   }
 
