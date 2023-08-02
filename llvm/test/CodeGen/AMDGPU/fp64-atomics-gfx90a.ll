@@ -18,7 +18,7 @@ declare double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr %ptr, double %data)
 declare double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr %ptr, double %data)
 declare double @llvm.amdgcn.ds.fadd.f64(ptr addrspace(3) nocapture, double, i32, i32, i1)
 
-define amdgpu_kernel void @buffer_atomic_add_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @buffer_atomic_add_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: buffer_atomic_add_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -65,7 +65,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @buffer_atomic_add_rtn_f64_off4_slc(<4 x i32> inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @buffer_atomic_add_rtn_f64_off4_slc(<4 x i32> %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: buffer_atomic_add_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -101,7 +101,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_buffer_atomic_add_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @raw_buffer_atomic_add_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: raw_buffer_atomic_add_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -148,7 +148,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_buffer_atomic_add_rtn_f64_off4_slc(<4 x i32> inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @raw_buffer_atomic_add_rtn_f64_off4_slc(<4 x i32> %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: raw_buffer_atomic_add_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -184,7 +184,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_buffer_atomic_add_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @struct_buffer_atomic_add_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: struct_buffer_atomic_add_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -231,7 +231,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_buffer_atomic_add_rtn_f64_off4_slc(<4 x i32> inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @struct_buffer_atomic_add_rtn_f64_off4_slc(<4 x i32> %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: struct_buffer_atomic_add_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -267,7 +267,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_buffer_atomic_min_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @raw_buffer_atomic_min_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: raw_buffer_atomic_min_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -314,7 +314,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_buffer_atomic_min_rtn_f64_off4_slc(<4 x i32> inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @raw_buffer_atomic_min_rtn_f64_off4_slc(<4 x i32> %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: raw_buffer_atomic_min_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -350,7 +350,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_buffer_atomic_min_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @struct_buffer_atomic_min_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: struct_buffer_atomic_min_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -397,7 +397,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_buffer_atomic_min_rtn_f64_off4_slc(<4 x i32> inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @struct_buffer_atomic_min_rtn_f64_off4_slc(<4 x i32> %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: struct_buffer_atomic_min_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -433,7 +433,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_buffer_atomic_max_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @raw_buffer_atomic_max_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: raw_buffer_atomic_max_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -480,7 +480,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f64_off4_slc(<4 x i32> inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f64_off4_slc(<4 x i32> %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: raw_buffer_atomic_max_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -516,7 +516,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_buffer_atomic_max_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @struct_buffer_atomic_max_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: struct_buffer_atomic_max_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -563,7 +563,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_buffer_atomic_max_rtn_f64_off4_slc(<4 x i32> inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @struct_buffer_atomic_max_rtn_f64_off4_slc(<4 x i32> %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: struct_buffer_atomic_max_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34

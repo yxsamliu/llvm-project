@@ -1383,8 +1383,6 @@ public:
 
 class GCNUserSGPRUsageInfo {
 public:
-  unsigned getNumUsedUserSGPRs() const;
-
   bool hasImplicitBufferPtr() const { return ImplicitBufferPtr; }
 
   bool hasPrivateSegmentBuffer() const { return PrivateSegmentBuffer; }
@@ -1398,6 +1396,14 @@ public:
   bool hasDispatchID() const { return DispatchID; }
 
   bool hasFlatScratchInit() const { return FlatScratchInit; }
+
+  unsigned getNumKernargPreloadSGPRs() const { return NumKernargPreloadSGPRs; }
+
+  unsigned getNumUsedUserSGPRs() const { return NumUsedUserSGPRs; }
+
+  unsigned getNumFreeUserSGPRs();
+
+  void allocKernargPreloadSGPRs(unsigned NumSGPRs);
 
   enum UserSGPRID : unsigned {
     ImplicitBufferPtrID = 0,
@@ -1436,6 +1442,8 @@ public:
   GCNUserSGPRUsageInfo(const Function &F, const GCNSubtarget &ST);
 
 private:
+  const GCNSubtarget &ST;
+
   // Private memory buffer
   // Compute directly in sgpr[0:1]
   // Other shaders indirect 64-bits at sgpr[0:1]
@@ -1452,6 +1460,10 @@ private:
   bool DispatchID = false;
 
   bool FlatScratchInit = false;
+
+  unsigned NumKernargPreloadSGPRs = 0;
+
+  unsigned NumUsedUserSGPRs = 0;
 };
 
 } // end namespace llvm

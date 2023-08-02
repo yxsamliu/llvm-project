@@ -591,7 +591,7 @@ define protected amdgpu_kernel void @fmax(ptr addrspace(1) %p, ptr addrspace(1) 
   ret void
 }
 
-define protected amdgpu_kernel void @buffer.atomic.swap(<4 x i32> inreg %rsrc, i32 %vindex, ptr addrspace(1) %q) {
+define protected amdgpu_kernel void @buffer.atomic.swap(<4 x i32> %rsrc, i32 %vindex, ptr addrspace(1) %q) {
 ; CHECK-LABEL: buffer.atomic.swap:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
@@ -613,7 +613,7 @@ define protected amdgpu_kernel void @buffer.atomic.swap(<4 x i32> inreg %rsrc, i
   ret void
 }
 
-define protected amdgpu_kernel void @buffer.atomic.add(<4 x i32> inreg %rsrc, i32 %vindex, ptr addrspace(1) %q) {
+define protected amdgpu_kernel void @buffer.atomic.add(<4 x i32> %rsrc, i32 %vindex, ptr addrspace(1) %q) {
 ; CHECK-LABEL: buffer.atomic.add:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
@@ -635,7 +635,7 @@ define protected amdgpu_kernel void @buffer.atomic.add(<4 x i32> inreg %rsrc, i3
   ret void
 }
 
-define protected amdgpu_kernel void @buffer.atomic.sub(<4 x i32> inreg %rsrc, i32 %vindex, ptr addrspace(1) %q) {
+define protected amdgpu_kernel void @buffer.atomic.sub(<4 x i32> %rsrc, i32 %vindex, ptr addrspace(1) %q) {
 ; CHECK-LABEL: buffer.atomic.sub:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
@@ -657,7 +657,7 @@ define protected amdgpu_kernel void @buffer.atomic.sub(<4 x i32> inreg %rsrc, i3
   ret void
 }
 
-define protected amdgpu_kernel void @buffer.atomic.smin(<4 x i32> inreg %rsrc, i32 %vindex, ptr addrspace(1) %q) {
+define protected amdgpu_kernel void @buffer.atomic.smin(<4 x i32> %rsrc, i32 %vindex, ptr addrspace(1) %q) {
 ; CHECK-LABEL: buffer.atomic.smin:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
@@ -679,7 +679,7 @@ define protected amdgpu_kernel void @buffer.atomic.smin(<4 x i32> inreg %rsrc, i
   ret void
 }
 
-define protected amdgpu_kernel void @buffer.atomic.smax(<4 x i32> inreg %rsrc, i32 %vindex, ptr addrspace(1) %q) {
+define protected amdgpu_kernel void @buffer.atomic.smax(<4 x i32> %rsrc, i32 %vindex, ptr addrspace(1) %q) {
 ; CHECK-LABEL: buffer.atomic.smax:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
@@ -701,7 +701,7 @@ define protected amdgpu_kernel void @buffer.atomic.smax(<4 x i32> inreg %rsrc, i
   ret void
 }
 
-define protected amdgpu_kernel void @buffer.atomic.umin(<4 x i32> inreg %rsrc, i32 %vindex, ptr addrspace(1) %q) {
+define protected amdgpu_kernel void @buffer.atomic.umin(<4 x i32> %rsrc, i32 %vindex, ptr addrspace(1) %q) {
 ; CHECK-LABEL: buffer.atomic.umin:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
@@ -723,7 +723,7 @@ define protected amdgpu_kernel void @buffer.atomic.umin(<4 x i32> inreg %rsrc, i
   ret void
 }
 
-define protected amdgpu_kernel void @buffer.atomic.umax(<4 x i32> inreg %rsrc, i32 %vindex, ptr addrspace(1) %q) {
+define protected amdgpu_kernel void @buffer.atomic.umax(<4 x i32> %rsrc, i32 %vindex, ptr addrspace(1) %q) {
 ; CHECK-LABEL: buffer.atomic.umax:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
@@ -745,7 +745,7 @@ define protected amdgpu_kernel void @buffer.atomic.umax(<4 x i32> inreg %rsrc, i
   ret void
 }
 
-define protected amdgpu_kernel void @buffer.atomic.and(<4 x i32> inreg %rsrc, i32 %vindex, ptr addrspace(1) %q) {
+define protected amdgpu_kernel void @buffer.atomic.and(<4 x i32> %rsrc, i32 %vindex, ptr addrspace(1) %q) {
 ; CHECK-LABEL: buffer.atomic.and:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
@@ -767,7 +767,7 @@ define protected amdgpu_kernel void @buffer.atomic.and(<4 x i32> inreg %rsrc, i3
   ret void
 }
 
-define protected amdgpu_kernel void @buffer.atomic.or(<4 x i32> inreg %rsrc, i32 %vindex, ptr addrspace(1) %q) {
+define protected amdgpu_kernel void @buffer.atomic.or(<4 x i32> %rsrc, i32 %vindex, ptr addrspace(1) %q) {
 ; CHECK-LABEL: buffer.atomic.or:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
@@ -789,7 +789,7 @@ define protected amdgpu_kernel void @buffer.atomic.or(<4 x i32> inreg %rsrc, i32
   ret void
 }
 
-define protected amdgpu_kernel void @buffer.atomic.xor(<4 x i32> inreg %rsrc, i32 %vindex, ptr addrspace(1) %q) {
+define protected amdgpu_kernel void @buffer.atomic.xor(<4 x i32> %rsrc, i32 %vindex, ptr addrspace(1) %q) {
 ; CHECK-LABEL: buffer.atomic.xor:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
@@ -811,7 +811,7 @@ define protected amdgpu_kernel void @buffer.atomic.xor(<4 x i32> inreg %rsrc, i3
   ret void
 }
 
-define protected amdgpu_kernel void @buffer.atomic.inc(<4 x i32> inreg %rsrc, i32 %vindex, ptr addrspace(1) %q) {
+define protected amdgpu_kernel void @buffer.atomic.inc(<4 x i32> %rsrc, i32 %vindex, ptr addrspace(1) %q) {
 ; CHECK-LABEL: buffer.atomic.inc:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
@@ -833,7 +833,7 @@ define protected amdgpu_kernel void @buffer.atomic.inc(<4 x i32> inreg %rsrc, i3
   ret void
 }
 
-define protected amdgpu_kernel void @buffer.atomic.dec(<4 x i32> inreg %rsrc, i32 %vindex, ptr addrspace(1) %q) {
+define protected amdgpu_kernel void @buffer.atomic.dec(<4 x i32> %rsrc, i32 %vindex, ptr addrspace(1) %q) {
 ; CHECK-LABEL: buffer.atomic.dec:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
@@ -855,7 +855,7 @@ define protected amdgpu_kernel void @buffer.atomic.dec(<4 x i32> inreg %rsrc, i3
   ret void
 }
 
-define protected amdgpu_kernel void @buffer.atomic.cmpswap(<4 x i32> inreg %rsrc, i32 %vindex, ptr addrspace(1) %q) {
+define protected amdgpu_kernel void @buffer.atomic.cmpswap(<4 x i32> %rsrc, i32 %vindex, ptr addrspace(1) %q) {
 ; CHECK-LABEL: buffer.atomic.cmpswap:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
@@ -878,7 +878,7 @@ define protected amdgpu_kernel void @buffer.atomic.cmpswap(<4 x i32> inreg %rsrc
   ret void
 }
 
-define protected amdgpu_kernel void @buffer.atomic.fadd(<4 x i32> inreg %rsrc, i32 %vindex, ptr addrspace(1) %q) {
+define protected amdgpu_kernel void @buffer.atomic.fadd(<4 x i32> %rsrc, i32 %vindex, ptr addrspace(1) %q) {
 ; CHECK-LABEL: buffer.atomic.fadd:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
@@ -902,7 +902,7 @@ define protected amdgpu_kernel void @buffer.atomic.fadd(<4 x i32> inreg %rsrc, i
   ret void
 }
 
-define protected amdgpu_kernel void @buffer.atomic.fmin(<4 x i32> inreg %rsrc, i32 %vindex, ptr addrspace(1) %q) {
+define protected amdgpu_kernel void @buffer.atomic.fmin(<4 x i32> %rsrc, i32 %vindex, ptr addrspace(1) %q) {
 ; CHECK-LABEL: buffer.atomic.fmin:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
@@ -927,7 +927,7 @@ define protected amdgpu_kernel void @buffer.atomic.fmin(<4 x i32> inreg %rsrc, i
   ret void
 }
 
-define protected amdgpu_kernel void @buffer.atomic.fmax(<4 x i32> inreg %rsrc, i32 %vindex, ptr addrspace(1) %q) {
+define protected amdgpu_kernel void @buffer.atomic.fmax(<4 x i32> %rsrc, i32 %vindex, ptr addrspace(1) %q) {
 ; CHECK-LABEL: buffer.atomic.fmax:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x34
