@@ -1124,6 +1124,7 @@ bool hasA16(const MCSubtargetInfo &STI);
 bool hasG16(const MCSubtargetInfo &STI);
 bool hasPackedD16(const MCSubtargetInfo &STI);
 unsigned getNSAMaxSize(const MCSubtargetInfo &STI);
+unsigned getMaxNumUserSGPRs(const MCSubtargetInfo &STI);
 
 bool isSI(const MCSubtargetInfo &STI);
 bool isCI(const MCSubtargetInfo &STI);
@@ -1150,6 +1151,7 @@ bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 bool hasMAIInsts(const MCSubtargetInfo &STI);
 bool hasVOPD(const MCSubtargetInfo &STI);
 int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
+unsigned hasKernargPreload(const MCSubtargetInfo &STI);
 
 /// Is Reg - scalar register
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);

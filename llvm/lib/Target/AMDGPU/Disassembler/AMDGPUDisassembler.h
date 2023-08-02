@@ -227,6 +227,7 @@ public:
   bool isGFX11Plus() const;
 
   bool hasArchitectedFlatScratch() const;
+  bool hasKernargPreload() const;
 
   bool isMacDPP(MCInst &MI) const;
 };
