@@ -34,8 +34,15 @@ void buildFatBinary(const char *Input, const char *InputPath,
   checkError(Status, "amd_comgr_action_info_set_option_list");
   Status = amd_comgr_create_data_set(&DataFatBin);
   checkError(Status, "amd_comgr_create_data_set");
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
   Status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN,
                                DataAction, DataSetIn, DataFatBin);
+
+#pragma GCC diagnostic pop
+
   checkError(Status, "amd_comgr_do_action");
   amd_comgr_data_t FatBinData;
   Status = amd_comgr_action_data_get_data(
@@ -158,11 +165,11 @@ void sharedObjectTest(amd_comgr_data_kind_t Kind) {
   Status = amd_comgr_set_data(DataObject, Size, Buf);
   checkError(Status, "amd_comgr_set_data");
 
-  amd_comgr_code_object_info_t QueryList1[1] = {"amdgcn-amd-amdhsa--gfx700", 0,
-                                                0};
+  amd_comgr_code_object_info_t QueryList1[1] = {
+      {"amdgcn-amd-amdhsa--gfx700", 0, 0}};
 
-  amd_comgr_code_object_info_t QueryList2[1] = {"amdgcn-amd-amdhsa--gfx803", 0,
-                                                0};
+  amd_comgr_code_object_info_t QueryList2[1] = {
+      {"amdgcn-amd-amdhsa--gfx803", 0, 0}};
 
   Status = amd_comgr_lookup_code_object(DataObject, QueryList1, 1);
   checkError(Status, "amd_comgr_lookup_code_object");
@@ -181,7 +188,7 @@ void sharedObjectTest(amd_comgr_data_kind_t Kind) {
   free(Buf);
 }
 
-int main() {
+int main(void) {
 #ifdef HIP_COMPILER
   createFatBinary("source1.hip", TEST_OBJ_DIR "/source1.hip",
                   TEST_OBJ_DIR "/source1.fatbin");

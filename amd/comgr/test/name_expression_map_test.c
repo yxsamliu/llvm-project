@@ -40,11 +40,11 @@
 #include <string.h>
 
 int main(int argc, char *argv[]) {
-  char *BufSource1, *BufSource2, *BufInclude;
-  size_t SizeSource1, SizeSource2, SizeInclude;
-  amd_comgr_data_t DataSource1, DataSource2, DataInclude;
+  char *BufSource;
+  size_t SizeSource;
+  amd_comgr_data_t DataSource;
   amd_comgr_data_set_t DataSetIn, DataSetBc, DataSetLinked, DataSetReloc,
-      DataSetExec;
+      DataSetExec, DataSetReloc2, DataSetExec2;
   amd_comgr_action_info_t DataAction;
   amd_comgr_status_t Status;
   size_t Count;
@@ -52,47 +52,27 @@ int main(int argc, char *argv[]) {
   size_t CodeGenOptionsCount =
       sizeof(CodeGenOptions) / sizeof(CodeGenOptions[0]);
 
-  SizeSource1 = setBuf(TEST_OBJ_DIR "/source1.cl", &BufSource1);
-  SizeSource2 = setBuf(TEST_OBJ_DIR "/source2.cl", &BufSource2);
-  SizeInclude = setBuf(TEST_OBJ_DIR "/include-a.h", &BufInclude);
+  SizeSource = setBuf(TEST_OBJ_DIR "/name_expression.hip", &BufSource);
 
   Status = amd_comgr_create_data_set(&DataSetIn);
   checkError(Status, "amd_comgr_create_data_set");
 
-  Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_SOURCE, &DataSource1);
+  Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_SOURCE, &DataSource);
   checkError(Status, "amd_comgr_create_data");
-  Status = amd_comgr_set_data(DataSource1, SizeSource1, BufSource1);
+  Status = amd_comgr_set_data(DataSource, SizeSource, BufSource);
   checkError(Status, "amd_comgr_set_data");
-  Status = amd_comgr_set_data_name(DataSource1, "source1.cl");
+  Status = amd_comgr_set_data_name(DataSource, "name_expression.hip");
   checkError(Status, "amd_comgr_set_data_name");
-  Status = amd_comgr_data_set_add(DataSetIn, DataSource1);
-  checkError(Status, "amd_comgr_data_set_add");
-
-  Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_SOURCE, &DataSource2);
-  checkError(Status, "amd_comgr_create_data");
-  Status = amd_comgr_set_data(DataSource2, SizeSource2, BufSource2);
-  checkError(Status, "amd_comgr_set_data");
-  Status = amd_comgr_set_data_name(DataSource2, "source2.cl");
-  checkError(Status, "amd_comgr_set_data_name");
-  Status = amd_comgr_data_set_add(DataSetIn, DataSource2);
-  checkError(Status, "amd_comgr_data_set_add");
-
-  Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_INCLUDE, &DataInclude);
-  checkError(Status, "amd_comgr_create_data");
-  Status = amd_comgr_set_data(DataInclude, SizeInclude, BufInclude);
-  checkError(Status, "amd_comgr_set_data");
-  Status = amd_comgr_set_data_name(DataInclude, "include-a.h");
-  checkError(Status, "amd_comgr_set_data_name");
-  Status = amd_comgr_data_set_add(DataSetIn, DataInclude);
+  Status = amd_comgr_data_set_add(DataSetIn, DataSource);
   checkError(Status, "amd_comgr_data_set_add");
 
   Status = amd_comgr_create_action_info(&DataAction);
   checkError(Status, "amd_comgr_create_action_info");
   Status = amd_comgr_action_info_set_language(DataAction,
-                                              AMD_COMGR_LANGUAGE_OPENCL_1_2);
+                                              AMD_COMGR_LANGUAGE_HIP);
   checkError(Status, "amd_comgr_action_info_set_language");
   Status = amd_comgr_action_info_set_isa_name(DataAction,
-                                              "amdgcn-amd-amdhsa--gfx803");
+                                              "amdgcn-amd-amdhsa--gfx900");
   checkError(Status, "amd_comgr_action_info_set_isa_name");
   Status = amd_comgr_action_info_set_option_list(DataAction, CodeGenOptions,
                                                  CodeGenOptionsCount);
@@ -101,22 +81,11 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_create_data_set(&DataSetBc);
   checkError(Status, "amd_comgr_create_data_set");
 
-  Status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC,
+  Status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC,
                                DataAction, DataSetIn, DataSetBc);
   checkError(Status, "amd_comgr_do_action");
 
-  Status =
-      amd_comgr_action_data_count(DataSetBc, AMD_COMGR_DATA_KIND_BC, &Count);
-  checkError(Status, "amd_comgr_action_data_count");
-
-  if (Count != 2) {
-    printf("AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC Failed: "
-           "produced %zu BC objects (expected 2)\n",
-           Count);
-    exit(1);
-  }
-
-  // Get bitcode mangled names
+  // Check name_expression_map for Bitcodes
   amd_comgr_data_t DataBc;
 
   Status = amd_comgr_action_data_get_data(DataSetBc,
@@ -138,7 +107,7 @@ int main(int argc, char *argv[]) {
     Status = amd_comgr_get_data(DataBc, &bytes_size, bytes);
     checkError(Status, "amd_comgr_get_data");
 
-    const char *bitcode_file = "comgr_mangled.bc";
+    const char *bitcode_file = "comgr_name_expression.bc";
     FILE *file = fopen(bitcode_file, "wb");
 
     if (file)
@@ -152,35 +121,40 @@ int main(int argc, char *argv[]) {
 #endif
 
   size_t numNames;
-  Status = amd_comgr_populate_mangled_names(DataBc, &numNames);
-  checkError(Status, "amd_comgr_populate_mangled_names");
+  Status = amd_comgr_populate_name_expression_map(DataBc, &numNames);
+  checkError(Status, "amd_comgr_populate_name_expression_map");
 
   if (numNames != 2) {
-    printf("amd_populate_mangled_names Failed: "
+    printf("amd_populate_name_expression_map Failed: "
            "produced %zu bitcode names (expected 2)\n",
-           Count);
+           numNames);
     exit(1);
   }
 
-  const char *bcNames[] = {"source1", "source2"};
+  char *nameExpressions[] = {"my_kernel_BOO<static_cast<int>(2+1),float >",
+                             "my_kernel_FOO<static_cast<int>(2+1),float >"};
+  char *symbolNames[] = {"_Z13my_kernel_BOOILi3EfEvPT0_",
+                         "_Z13my_kernel_FOOILi3EfEvPT0_"};
 
   for (size_t I = 0; I < numNames; ++I) {
     size_t Size;
-    Status = amd_comgr_get_mangled_name(DataBc, I, &Size, NULL);
-    checkError(Status, "amd_comgr_get_mangled_name");
+    Status = amd_comgr_map_name_expression_to_symbol_name(
+      DataBc, &Size, nameExpressions[I], NULL);
+    checkError(Status, "amd_map_name_expression_to_symbol_name");
 
-    char *mName = calloc(Size, sizeof(char));
-    Status = amd_comgr_get_mangled_name(DataBc, I, &Size, mName);
-    checkError(Status, "amd_comgr_get_mangled_name");
+    char *symbolName = calloc(Size, sizeof(char));
+    Status = amd_comgr_map_name_expression_to_symbol_name(
+      DataBc, &Size, nameExpressions[I], symbolName);
+    checkError(Status, "amd_map_name_expression_to_symbol_name");
 
-    if (strcmp(mName, bcNames[I])) {
-      printf("amd_get_mangled_name from bc Failed: "
+    if (strcmp(symbolName, symbolNames[I])) {
+      printf("amd_comgr_map_name_expression_to_symbol_name from bc Failed: "
              "produced '%s' (expected '%s')\n",
-             mName, bcNames[I]);
+             symbolName, symbolNames[I]);
       exit(1);
     }
 
-    free(mName);
+    free(symbolName);
   }
 
   Status = amd_comgr_create_data_set(&DataSetLinked);
@@ -240,48 +214,173 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  // Get Mangled Names
+
+  // Check name_expression_map for Code Objects
   amd_comgr_data_t DataExec;
 
   Status = amd_comgr_action_data_get_data(DataSetExec,
                                           AMD_COMGR_DATA_KIND_EXECUTABLE,
                                           0, &DataExec);
+#if 0
+  // write code object
+  {
+    size_t bytes_size = 0;
+    char *bytes = NULL;
 
-  Status = amd_comgr_populate_mangled_names(DataExec, &numNames);
+    Status = amd_comgr_get_data(DataExec, &bytes_size, bytes);
+    checkError(Status, "amd_comgr_get_data");
 
-  if (numNames != 4) {
-    printf("amd_populate_mangled_names Failed: "
-           "produced %zu executable names (expected 4)\n",
+    bytes = (char *) malloc(bytes_size);
+
+    Status = amd_comgr_get_data(DataExec, &bytes_size, bytes);
+    checkError(Status, "amd_comgr_get_data");
+
+    const char *code_object_file = "comgr_name_expression.o";
+    FILE *file = fopen(code_object_file, "wb");
+
+    if (file)
+      fwrite(bytes, bytes_size, 1, file);
+    else
+      return AMD_COMGR_STATUS_ERROR;
+
+    fclose(file);
+    free(bytes);
+  }
+#endif
+
+  Status = amd_comgr_populate_name_expression_map(DataExec, &numNames);
+  checkError(Status, "amd_comgr_populate_name_expression_map");
+
+  if (numNames != 2) {
+    printf("amd_populate_name_expression_map Failed: "
+           "produced %zu code object names (expected 2)\n",
            numNames);
     exit(1);
   }
 
-  const char *execNames[] = {"source1", "source1.kd", "source2", "source2.kd"};
-
   for (size_t I = 0; I < numNames; ++I) {
     size_t Size;
-    Status = amd_comgr_get_mangled_name(DataExec, I, &Size, NULL);
-    checkError(Status, "amd_comgr_get_mangled_name");
+    Status = amd_comgr_map_name_expression_to_symbol_name(
+        DataExec, &Size, nameExpressions[I], NULL);
+    checkError(Status, "amd_map_name_expression_to_symbol_name");
 
-    char *mName = calloc(Size, sizeof(char));
-    Status = amd_comgr_get_mangled_name(DataExec, I, &Size, mName);
-    checkError(Status, "amd_comgr_get_mangled_name");
+    char *symbolName = calloc(Size, sizeof(char));
+    Status = amd_comgr_map_name_expression_to_symbol_name(
+        DataExec, &Size, nameExpressions[I], symbolName);
+    checkError(Status, "amd_map_name_expression_to_symbol_name");
 
-    if (strcmp(mName, execNames[I])) {
-      printf("amd_get_mangled_name from executable Failed: "
+    if (strcmp(symbolName, symbolNames[I])) {
+      printf("amd_comgr_map_name_expression_to_symbol_name from exec Failed: "
              "produced '%s' (expected '%s')\n",
-             mName, execNames[I]);
+             symbolName, symbolNames[I]);
       exit(1);
     }
 
-    free(mName);
+    free(symbolName);
   }
 
-  Status = amd_comgr_release_data(DataSource1);
-  checkError(Status, "amd_comgr_release_data");
-  Status = amd_comgr_release_data(DataSource2);
-  checkError(Status, "amd_comgr_release_data");
-  Status = amd_comgr_release_data(DataInclude);
+  //
+  // Test AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE
+  //
+  Status = amd_comgr_create_data_set(&DataSetReloc2);
+  checkError(Status, "amd_comgr_create_data_set");
+
+  Status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE,
+                               DataAction, DataSetIn, DataSetReloc2);
+  checkError(Status, "amd_comgr_do_action");
+
+  // Check name_expression_map for Bitcodes
+  amd_comgr_data_t DataReloc2;
+
+  Status = amd_comgr_action_data_get_data(
+      DataSetReloc2, AMD_COMGR_DATA_KIND_RELOCATABLE, 0, &DataReloc2);
+  checkError(Status, "amd_comgr_action_data_get_data");
+
+  Status = amd_comgr_create_data_set(&DataSetExec2);
+  checkError(Status, "amd_comgr_create_data_set");
+
+  Status = amd_comgr_action_info_set_option_list(DataAction, NULL, 0);
+  checkError(Status, "amd_comgr_action_info_set_option_list");
+
+  Status = amd_comgr_do_action(AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE,
+                               DataAction, DataSetReloc2, DataSetExec2);
+  checkError(Status, "amd_comgr_do_action");
+
+  Status = amd_comgr_action_data_count(DataSetExec2,
+                                       AMD_COMGR_DATA_KIND_EXECUTABLE, &Count);
+  checkError(Status, "amd_comgr_action_data_count");
+
+  if (Count != 1) {
+    printf("AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE Failed: "
+           "produced %zu executable objects (expected 1)\n",
+           Count);
+    exit(1);
+  }
+
+  // Check name_expression_map for Code Objects
+  amd_comgr_data_t DataExec2;
+
+  Status = amd_comgr_action_data_get_data(
+      DataSetExec2, AMD_COMGR_DATA_KIND_EXECUTABLE, 0, &DataExec2);
+#if 0
+  // write code object
+  {
+    size_t bytes_size = 0;
+    char *bytes = NULL;
+
+    Status = amd_comgr_get_data(DataExec2, &bytes_size, bytes);
+    checkError(Status, "amd_comgr_get_data");
+
+    bytes = (char *) malloc(bytes_size);
+
+    Status = amd_comgr_get_data(DataExec2, &bytes_size, bytes);
+    checkError(Status, "amd_comgr_get_data");
+
+    const char *code_object_file = "comgr_name_expression.o";
+    FILE *file = fopen(code_object_file, "wb");
+
+    if (file)
+      fwrite(bytes, bytes_size, 1, file);
+    else
+      return AMD_COMGR_STATUS_ERROR;
+
+    fclose(file);
+    free(bytes);
+  }
+#endif
+
+  Status = amd_comgr_populate_name_expression_map(DataExec2, &numNames);
+  checkError(Status, "amd_comgr_populate_name_expression_map");
+
+  if (numNames != 2) {
+    printf("amd_populate_name_expression_map Failed: "
+           "produced %zu code object names (expected 2)\n",
+           numNames);
+    exit(1);
+  }
+
+  for (size_t I = 0; I < numNames; ++I) {
+    size_t Size;
+    Status = amd_comgr_map_name_expression_to_symbol_name(
+        DataExec2, &Size, nameExpressions[I], NULL);
+    checkError(Status, "amd_map_name_expression_to_symbol_name");
+
+    char *symbolName = calloc(Size, sizeof(char));
+    Status = amd_comgr_map_name_expression_to_symbol_name(
+        DataExec2, &Size, nameExpressions[I], symbolName);
+    checkError(Status, "amd_map_name_expression_to_symbol_name");
+
+    if (strcmp(symbolName, symbolNames[I])) {
+      printf("amd_comgr_map_name_expression_to_symbol_name from exec Failed: "
+             "produced '%s' (expected '%s')\n",
+             symbolName, symbolNames[I]);
+      exit(1);
+    }
+
+    free(symbolName);
+  }
+
+  Status = amd_comgr_release_data(DataSource);
   checkError(Status, "amd_comgr_release_data");
   Status = amd_comgr_release_data(DataBc);
   checkError(Status, "amd_comgr_release_data");
@@ -297,9 +396,11 @@ int main(int argc, char *argv[]) {
   checkError(Status, "amd_comgr_destroy_data_set");
   Status = amd_comgr_destroy_data_set(DataSetExec);
   checkError(Status, "amd_comgr_destroy_data_set");
+  Status = amd_comgr_destroy_data_set(DataSetReloc2);
+  checkError(Status, "amd_comgr_destroy_data_set");
+  Status = amd_comgr_destroy_data_set(DataSetExec2);
+  checkError(Status, "amd_comgr_destroy_data_set");
   Status = amd_comgr_destroy_action_info(DataAction);
   checkError(Status, "amd_comgr_destroy_action_info");
-  free(BufSource1);
-  free(BufSource2);
-  free(BufInclude);
+  free(BufSource);
 }
