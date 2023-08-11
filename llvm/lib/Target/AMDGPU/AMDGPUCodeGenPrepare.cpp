@@ -1719,6 +1719,7 @@ bool AMDGPUCodeGenPrepare::doInitialization(Module &M) {
 }
 
 bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
+  BreakPhiNodesCache.clear();
   if (skipFunction(F))
     return false;
 
