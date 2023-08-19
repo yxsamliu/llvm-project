@@ -16,6 +16,7 @@
 #include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPUMachineFunction.h"
 #include "AMDGPUTargetMachine.h"
+#include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIModeRegisterDefaults.h"
@@ -420,13 +421,9 @@ private:
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
 
-  // Feature bits required for inputs passed in user SGPRs.
-  bool PrivateSegmentBuffer : 1;
-  bool DispatchPtr : 1;
-  bool QueuePtr : 1;
-  bool KernargSegmentPtr : 1;
-  bool DispatchID : 1;
-  bool FlatScratchInit : 1;
+  // Tracks information about user SGPRs that will be setup by hardware which
+  // will apply to all wavefronts of the grid.
+  GCNUserSGPRUsageInfo UserSGPRInfo;
 
   // Feature bits required for inputs passed in system SGPRs.
   bool WorkGroupIDX : 1; // Always initialized.
@@ -439,11 +436,6 @@ private:
   bool WorkItemIDX : 1; // Always initialized.
   bool WorkItemIDY : 1;
   bool WorkItemIDZ : 1;
-
-  // Private memory buffer
-  // Compute directly in sgpr[0:1]
-  // Other shaders indirect 64-bits at sgpr[0:1]
-  bool ImplicitBufferPtr : 1;
 
   // Pointer to where the ABI inserts special kernel arguments separate from the
   // user arguments. This is an offset from the KernargSegmentPtr.
@@ -586,6 +578,8 @@ public:
   const PrologEpilogSGPRSpillsMap &getPrologEpilogSGPRSpills() const {
     return PrologEpilogSGPRSpills;
   }
+
+  const GCNUserSGPRUsageInfo &getUserSGPRInfo() const { return UserSGPRInfo; }
 
   void addToPrologEpilogSGPRSpills(Register Reg,
                                    PrologEpilogSGPRSaveRestoreInfo SI) {
@@ -770,6 +764,8 @@ public:
     return ArgInfo.WorkGroupInfo.getRegister();
   }
 
+  bool hasLDSKernelId() const { return LDSKernelId; }
+
   // Add special VGPR inputs
   void setWorkItemIDX(ArgDescriptor Arg) {
     ArgInfo.WorkItemIDX = Arg;
@@ -794,30 +790,6 @@ public:
     ArgInfo.PrivateSegmentWaveByteOffset = ArgDescriptor::createRegister(Reg);
   }
 
-  bool hasPrivateSegmentBuffer() const {
-    return PrivateSegmentBuffer;
-  }
-
-  bool hasDispatchPtr() const {
-    return DispatchPtr;
-  }
-
-  bool hasQueuePtr() const {
-    return QueuePtr;
-  }
-
-  bool hasKernargSegmentPtr() const {
-    return KernargSegmentPtr;
-  }
-
-  bool hasDispatchID() const {
-    return DispatchID;
-  }
-
-  bool hasFlatScratchInit() const {
-    return FlatScratchInit;
-  }
-
   bool hasWorkGroupIDX() const {
     return WorkGroupIDX;
   }
@@ -833,8 +805,6 @@ public:
   bool hasWorkGroupInfo() const {
     return WorkGroupInfo;
   }
-
-  bool hasLDSKernelId() const { return LDSKernelId; }
 
   bool hasPrivateSegmentWaveByteOffset() const {
     return PrivateSegmentWaveByteOffset;
@@ -862,10 +832,6 @@ public:
 
   bool hasHeapPtr () const {
     return HeapPtr;
-  }
-
-  bool hasImplicitBufferPtr() const {
-    return ImplicitBufferPtr;
   }
 
   AMDGPUFunctionArgInfo &getArgInfo() {
