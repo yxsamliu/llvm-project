@@ -1508,6 +1508,7 @@ unsigned MachineLICMBase::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
                                 MachineLoop *CurLoop) {
   MachineBasicBlock *SrcBlock = MI->getParent();
 
+  static int count = 0;
   // Disable the instruction hoisting due to block hotness
   if ((DisableHoistingToHotterBlocks == UseBFI::All ||
       (DisableHoistingToHotterBlocks == UseBFI::PGO && HasProfileData)) &&
@@ -1524,6 +1525,17 @@ unsigned MachineLICMBase::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
     if (!MI)
       return HoistResult::NotHoisted;
     HasExtractHoistableLoad = true;
+  }
+
+  if (auto *env = getenv("DB_HOIST")) {
+    int limit = atoi(env);
+    llvm::outs() << "[LCIM] count=" << count << '\n';
+    //    << (count>limit ? " skip" : "hoist") << " MI: "; MI->dump();
+    if (count>limit) {
+      count++;
+      return false;
+    }
+    count++;
   }
 
   // If we have hoisted an instruction that may store, it can only be a constant
