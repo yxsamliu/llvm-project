@@ -29,7 +29,7 @@
 #include "UtilitiesRTL.h"
 #include "omptarget.h"
 
-#include "hsakmt/hsakmt.h"
+#include "hsakmt/hsakmt.h"    
 
 #include "print_tracing.h"
 
@@ -3491,7 +3491,6 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     NoMapChecks = BoolEnvar("OMPX_DISABLE_MAPS", true);
     DisableUsmMaps = BoolEnvar("OMPX_DISABLE_USM_MAPS", false);
     HsaXnack = BoolEnvar("HSA_XNACK", false);
-    IsHsaXnackDefined = HsaXnack.isPresent();
   }
 
   void setUpEnv() override final {
@@ -3647,12 +3646,7 @@ private:
   }
 
   bool IsXnackEnabled() const {
-    // -1 instructs the runtime to query the XNACK status without modifying it.
-    int32_t enable = -1;
-    KMT_EXPECT_SUCCESS(hsaKmtOpenKFD());
-    KMT_EXPECT_SUCCESS(hsaKmtGetXNACKMode(&enable));
-    KMT_EXPECT_SUCCESS(hsaKmtCloseKFD());
-    return (enable > 0);
+    return ((HsaXnack.get()) || (utils::IsXnackEnabledViaKernelParam()));
   }
 
   bool checkForDeviceByGFXName(const llvm::StringRef GfxLookUpName) {
@@ -3705,7 +3699,6 @@ private:
   BoolEnvar NoMapChecks;
   BoolEnvar DisableUsmMaps;
   BoolEnvar HsaXnack;
-  bool IsHsaXnackDefined{false};
 
   // Set by OMPX_APU_MAPS environment variable.
   // If set, maps cause no copy operations. USM is used instead. Allocated
