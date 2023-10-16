@@ -744,6 +744,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                       MVT::i8},
                      Custom);
 
+  setOperationAction(ISD::MUL, MVT::i1, Promote);
+
   setTargetDAGCombine({ISD::ADD,
                        ISD::ADDCARRY,
                        ISD::SUB,
