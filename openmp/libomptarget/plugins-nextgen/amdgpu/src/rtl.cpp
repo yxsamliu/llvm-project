@@ -3430,6 +3430,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     if (auto Err = HostDevice->init())
       return std::move(Err);
 
+#if 0//<<<<<<< HEAD
 #ifdef OMPT_SUPPORT
     ::OmptCallbackInit();
 #endif
@@ -3439,6 +3440,9 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     // check for dGPUs with USM support
     hasGfx90aDevice();
     hasMI300xDevice();
+#else//=======
+    scanForUSMCapableDevices();
+#endif//>>>>>>> 1abd5de10b93 ([OpenMP][MI300] Revised the APU detection algorithm. Only for a GFX942 the last bit of the chip id is used to distinguish between an MI300A and MI300X. There is only a single iteration over the agent vector necessary instead of three, as before.)
 
     readEnvVars();
 
@@ -3468,40 +3472,27 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   uint16_t getMagicElfBits() const override { return ELF::EM_AMDGPU; }
 
   bool hasAPUDevice() override final {
-    if (HasAPUDevice != -1)
-      return HasAPUDevice;
-
     if (!Initialized)
       FATAL_MESSAGE(1, "%s", "hasAPUDevice called on uninitialized plugin");
 
-    HasAPUDevice = checkForDeviceByGFXName("gfx940");
-    return HasAPUDevice;
+    return IsEquippedWithMI300A;
   }
 
 #define ALDEBARAN_MAJOR 9
 #define ALDEBARAN_STEPPING 10
 
   bool hasMI300xDevice() {
-    if (HasMi300xDevice != -1)
-      return HasMi300xDevice;
-
     if (!Initialized)
       FATAL_MESSAGE(1, "%s", "hasMI300xDevice called on uninitialized plugin");
-    // On splinter the MI300X identifies itself as a GFX941. Use GFX name to
-    // distinguish for testing.
-    HasMi300xDevice = checkForDeviceByGFXName("gfx941");
-    return HasMi300xDevice;
+
+    return IsEquippedWithMI300X;
   }
 
   bool hasGfx90aDevice() {
-    if (HasGFX90ADevice != -1)
-      return HasGFX90ADevice;
-
     if (!Initialized)
       FATAL_MESSAGE(1, "%s", "hasGfx90aDevice called on uninitialized plugin");
 
-    HasGFX90ADevice = checkForDeviceByGFXName("gfx90a");
-    return HasGFX90ADevice;
+    return IsEquippedWithGFX90A;
   }
 
   bool hasDGpuWithUsmSupport() override final {
@@ -3734,28 +3725,28 @@ private:
     return ((HsaXnack.get()) || (utils::IsXnackEnabledViaKernelParam()));
   }
 
-  bool checkForDeviceByGFXName(const llvm::StringRef GfxLookUpName,
-                               char mi300Specifier = ' ') {
+  void scanForUSMCapableDevices() {
 
     char GfxName[64];
-
     for (hsa_agent_t GPUAgent : KernelAgents) {
       std::memset((void *)&GfxName, 0, sizeof(char) * 64);
 
       hsa_status_t Status = hsa_agent_get_info(
           GPUAgent, (hsa_agent_info_t)HSA_AGENT_INFO_NAME, GfxName);
 
-      if (Status != HSA_STATUS_SUCCESS)
-        continue;
+      std::string StrGfxName(GfxName);
 
-      llvm::StringRef GfxNameRef = llvm::StringRef(GfxName);
+      std::transform(std::begin(StrGfxName), std::end(StrGfxName),
+                     std::begin(StrGfxName),
+                     [](char c) { return std::tolower(c); });
 
-      if (GfxLookUpName.equals_insensitive(GfxNameRef)) {
-        if (mi300Specifier == ' ')
-          return true;
-
-        // Special handling for MI300. We will have to distinguish between
-        // an MI300A and X
+      if (StrGfxName == "gfx90a") {
+        IsEquippedWithGFX90A = true;
+      } else if (StrGfxName == "gfx940") {
+        IsEquippedWithMI300A = true;
+      } else if (StrGfxName == "gfx941") {
+        IsEquippedWithMI300X = true;
+      } else if (StrGfxName == "gfx942") {
         uint32_t ChipID = 0;
         Status = hsa_agent_get_info(
             GPUAgent, (hsa_agent_info_t)HSA_AMD_AGENT_INFO_CHIP_ID, &ChipID);
@@ -3764,24 +3755,12 @@ private:
           continue;
         }
 
-        bool IsMi300X = ChipID & 0x1;
-
-        switch (mi300Specifier) {
-        case 'A':
-        case 'a':
-          if (!IsMi300X)
-            return true;
-          break;
-        case 'x':
-          if (IsMi300X) // We are looking for a MI300X
-            return true;
-          break;
-        default:
-          FAILURE_MESSAGE("Unknown MI300 specifier!\n");
-        }
+        if (ChipID & 0x1)
+          IsEquippedWithMI300X = true;
+        else
+          IsEquippedWithMI300A = true;
       }
     }
-    return false;
   }
 
   /// Indicate whether the HSA runtime was correctly initialized. Even if there
@@ -3789,13 +3768,9 @@ private:
   /// we can safely call HSA functions (e.g., hsa_shut_down).
   bool Initialized;
 
-  /// Flag that shows if device is a GFX90A AMD GPU
-  int16_t HasGFX90ADevice{-1};
-
-  int16_t HasMi300xDevice{-1};
-
-  /// Flag that shows if device is an APU device
-  int16_t HasAPUDevice{-1};
+  bool IsEquippedWithMI300A{false};
+  bool IsEquippedWithMI300X{false};
+  bool IsEquippedWithGFX90A{false};
 
   BoolEnvar NoMapChecks;
   BoolEnvar DisableUsmMaps;
