@@ -19,6 +19,8 @@ code bases.
 legal comgr-objdump option. However registering this as an LLVM option by Comgr
 prevents other LLVM tools or instances from registering a -h option in the same
 process, which is an issue because -h is a common short form for -help.
+-  Updated default code object version used when linking code object specific
+device library from v4 to v5
 
 New Features
 ------------
@@ -49,6 +51,14 @@ prevented correct execution of
 COMPILE\_SOURCE\_WITH\_DEVICE\_LIBS\_TO\_BC action.
 - Fixed a multi-threading bug where programs would hang when calling Comgr APIs
 like amd\_comgr\_iterate\_symbols() from multiple threads
+- Fixed an issue where providing DataObjects with an empty name to the bitcode
+linking action caused errors when AMD\_COMGR\_SAVE\_TEMPS was enabled, or when
+linking bitcode bundles.
+- Updated to use lld::lldMain() introduced in D110949 instead of the older
+lld::elf::link in Comgr's linkWithLLD()
+- Added -x assembler option to assembly compilation. Before, if an assembly file
+did not end with a .s file extension, it was not handled properly by the Comgr
+ASSEMBLE\_SOURCE\_TO\_RELOCATABLE action.
 
 
 New APIs
@@ -76,6 +86,10 @@ Removed APIs
 
 New Comgr Actions and Data Types
 --------------------------------
+- (Action) AMD\_COMGR\_ACTION\_COMPILE\_SOURCE\_TO\_RELOCATABLE
+  - This action performs compile-to-bitcode, linking device libraries, and
+codegen-to-relocatable in a single step. By doing so, clients are able to defer more
+of the flag handling to toolchain. Currently only supports HIP.
 - (Data Type) AMD\_COMGR\_DATA\_KIND\_BC\_BUNDLE
 - (Data Type) AMD\_COMGR\_DATA\_KIND\_AR\_BUNDLE
   - These data kinds can now be passed to an AMD\_COMGR\_ACTION\_LINK\_BC\_TO\_BC
@@ -104,6 +118,12 @@ metadata querys for code object v2 objects.
 deprecation of code object v3 in LLVM. However, we still test loading and
 metadata querys for code object v3 objects.
 - Revamp symbolizer test to fail on errors, among other improvments
+- Improve linking and unbundling log to correctly store temporary files in /tmp,
+and to output clang-offload-bundler command to allow users to re-create Comgr
+unbundling.
+- Add git branch and commit hash for Comgr, and commit hash for LLVM to log
+output for Comgr actions. This can help us debug issues more quickly in cases
+where reporters provide Comgr logs.
 
 New Targets
 -----------

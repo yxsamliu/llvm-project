@@ -31,42 +31,39 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
  * THE SOFTWARE.
  *
- ******************************************************************************/
+ *******************************************************************************/
+extern const __constant bool __oclc_finite_only_opt;
+extern const __constant bool __oclc_unsafe_math_opt;
+extern const __constant bool __oclc_daz_opt;
+extern const __constant bool __oclc_correctly_rounded_sqrt32;
+extern const __constant bool __oclc_wavefrontsize64;
+extern const __constant int __oclc_ISA_version;
+extern const __constant int __oclc_ABI_version;
 
-#ifndef COMGR_ENV_H
-#define COMGR_ENV_H
+void kernel device_libs(__global float *status) {
 
-#include "llvm/ADT/StringRef.h"
+ if (__oclc_finite_only_opt)            status[0] = 1.0;
+ if (__oclc_unsafe_math_opt)            status[1] = 1.0;
+ if (__oclc_daz_opt)                    status[2] = 1.0;
+ if (__oclc_correctly_rounded_sqrt32)   status[3] = 1.0;
+ if (__oclc_wavefrontsize64)            status[4] = 1.0;
+ if (__oclc_ISA_version)                status[5] = 1.0;
+ if (__oclc_ABI_version)                status[6] = 1.0;
 
-namespace COMGR {
-namespace env {
+ // Math functions to test AMDGPULibCalls Folding optimizations
+ // fold_sincos()
+ float x = 0.25;
+ status[7] = sin(x) + cos(x);
+ status[8] = cos(x) + sin(x);
 
-/// Return whether the environment requests temps be saved.
-bool shouldSaveTemps();
+ // fold_rootn()
+ float y = 725.0;
+ status[9] = rootn(y, 3);
+ status[10] = rootn(y, -1);
+ status[11] = rootn(y, -2);
 
-/// If the environment requests logs be redirected, return the string identifier
-/// of where to redirect. Otherwise return @p None.
-std::optional<llvm::StringRef> getRedirectLogs();
-
-/// Return whether the environment requests verbose logging.
-bool shouldEmitVerboseLogs();
-
-/// Return whether the environment requests time statistics collection.
-bool needTimeStatistics();
-
-/// If environment variable ROCM_PATH is set, return the environment varaible,
-/// otherwise return the default ROCM path.
-llvm::StringRef getROCMPath();
-
-/// If environment variable HIP_PATH is set, return the environment variable,
-/// otherwise return the default HIP path.
-llvm::StringRef getHIPPath();
-
-/// If environment variable LLVM_PATH is set, return the environment variable,
-/// otherwise return the default LLVM path.
-llvm::StringRef getLLVMPath();
-
-} // namespace env
-} // namespace COMGR
-
-#endif // COMGR_ENV_H
+ // fold_pow()
+ float z = 12.16;
+ status[12] = pow(z, (float) 0.5);
+ status[13] = powr(y, (float) 7.23);
+}

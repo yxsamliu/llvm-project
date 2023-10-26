@@ -44,6 +44,7 @@
 #include "comgr-symbol.h"
 #include "comgr-symbolizer.h"
 
+#include "clang/Basic/Version.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -63,6 +64,10 @@
 #define AMD_NOINLINE __declspec(noinline)
 #endif
 #endif
+
+// Needed for stringification of macro expansions for git branch/commit macros
+#define xstringify(x) stringify(x)
+#define stringify(x) #x
 
 using namespace llvm;
 using namespace COMGR;
@@ -173,6 +178,8 @@ dispatchCompilerAction(amd_comgr_action_kind_t ActionKind,
     return Compiler.linkToExecutable();
   case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN:
     return Compiler.compileToFatBin();
+  case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE:
+    return Compiler.compileToRelocatable();
   case AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC:
     return Compiler.compileToBitcode(true);
 
@@ -229,13 +236,15 @@ StringRef getActionKindName(amd_comgr_action_kind_t ActionKind) {
     return "AMD_COMGR_ACTION_DISASSEMBLE_EXECUTABLE_TO_SOURCE";
   case AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE:
     return "AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE";
+  case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE:
+    return "AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE";
   case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN:
     return "AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN";
   case AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC:
     return "AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC";
-  default:
-    return "UNKNOWN_ACTION_KIND";
   }
+
+  llvm_unreachable("invalid action");
 }
 
 static StringRef getLanguageName(amd_comgr_language_t Language) {
@@ -347,7 +356,7 @@ void COMGR::ensureLLVMInitialized() {
   // TODO: remove mutex once LLVM multi-threading issues are resolved
   static std::mutex llvm_init_mutex;
   {
-    std::scoped_lock llvm_init_lock(llvm_init_mutex);
+    std::scoped_lock<std::mutex> llvm_init_lock(llvm_init_mutex);
 
     static bool LLVMInitialized = false;
     if (LLVMInitialized) {
@@ -627,7 +636,7 @@ amd_comgr_status_t AMD_COMGR_API
     return Status;
   }
 
-  MetaP->MetaDoc.reset(MetaDoc.release());
+  MetaP->MetaDoc = std::move(MetaDoc);
   MetaP->MetaDoc->EmitIntegerBooleans = true;
   MetaP->DocNode = MetaP->MetaDoc->Document.getRoot();
 
@@ -1267,7 +1276,7 @@ amd_comgr_status_t AMD_COMGR_API
   // TODO: Remove the scoped lock once updates to LLVM enable thread saftey
   static std::mutex comgr_mutex;
   {
-    std::scoped_lock comgr_lock(comgr_mutex);
+    std::scoped_lock<std::mutex> comgr_lock(comgr_mutex);
 
     ensureLLVMInitialized();
 
@@ -1289,7 +1298,7 @@ amd_comgr_status_t AMD_COMGR_API
     // Pointer to the currently selected log stream.
     raw_ostream *LogP = &LogS;
 
-    if (Optional<StringRef> RedirectLogs = env::getRedirectLogs()) {
+    if (std::optional<StringRef> RedirectLogs = env::getRedirectLogs()) {
       StringRef RedirectLog = *RedirectLogs;
       if (RedirectLog == "stdout") {
         LogP = &outs();
@@ -1324,8 +1333,11 @@ amd_comgr_status_t AMD_COMGR_API
       }
       *LogP << '\n'
         << "\t        Path: " << ActionInfoP->Path << '\n'
-        << "\t    Language: " << getLanguageName(ActionInfoP->Language)
-        << '\n';
+        << "\t    Language: " << getLanguageName(ActionInfoP->Language) << '\n'
+        << " Comgr Branch-Commit: " << xstringify(AMD_COMGR_GIT_BRANCH) << '-'
+        << xstringify(AMD_COMGR_GIT_COMMIT) << '\n'
+        << "\t LLVM Commit: " << clang::getLLVMRevision() << '\n';
+      (*LogP).flush();
     }
 
 
@@ -1345,6 +1357,7 @@ amd_comgr_status_t AMD_COMGR_API
     case AMD_COMGR_ACTION_ASSEMBLE_SOURCE_TO_RELOCATABLE:
     case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_RELOCATABLE:
     case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE:
+    case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE:
     case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN:
     case AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC:
       ActionStatus = dispatchCompilerAction(ActionKind, ActionInfoP, InputSetP,

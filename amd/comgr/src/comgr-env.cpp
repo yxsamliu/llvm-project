@@ -50,7 +50,7 @@ bool shouldSaveTemps() {
   return SaveTemps && StringRef(SaveTemps) != "0";
 }
 
-Optional<StringRef> getRedirectLogs() {
+std::optional<StringRef> getRedirectLogs() {
   static char *RedirectLogs = getenv("AMD_COMGR_REDIRECT_LOGS");
   if (!RedirectLogs || StringRef(RedirectLogs) == "0") {
     return std::nullopt;
@@ -155,6 +155,7 @@ class InstallationDetector {
 public:
   InstallationDetector(StringRef ROCmPath, bool isComgrPath)
       : ROCmInstallPath(ROCmPath) {}
+  virtual ~InstallationDetector() = default;
 
   const StringRef getROCmPath() const { return ROCmInstallPath; }
   void setROCmInstallPath(StringRef Path) { ROCmInstallPath = Path; }
