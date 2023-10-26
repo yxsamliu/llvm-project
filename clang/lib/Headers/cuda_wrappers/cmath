@@ -27,6 +27,12 @@
 #include_next <cmath>
 
 #if defined(_LIBCPP_STD_VER)
+#if !defined(_LIBCPP_CONSTEXPR_SINCE_CXX14)
+#define _LIBCPP_CONSTEXPR_SINCE_CXX14
+#endif
+#if !defined(_LIBCPP_CONSTEXPR_SINCE_CXX20)
+#define _LIBCPP_CONSTEXPR_SINCE_CXX20
+#endif
 
 // libc++ will need long double variants of these functions, but CUDA does not
 // provide them. We'll provide their declarations, which should allow the
