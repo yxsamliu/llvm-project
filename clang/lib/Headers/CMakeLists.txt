@@ -279,6 +279,7 @@ set(files
   )
 
 set(cuda_wrapper_files
+  cuda_wrappers/__verbose_abort
   cuda_wrappers/algorithm
   cuda_wrappers/cmath
   cuda_wrappers/complex
@@ -290,6 +291,7 @@ set(cuda_wrapper_bits_files
   cuda_wrappers/bits/shared_ptr_base.h
   cuda_wrappers/bits/basic_string.h
   cuda_wrappers/bits/basic_string.tcc
+  cuda_wrappers/bits/c++config.h
   cuda_wrappers/bits/move.h
 )
 

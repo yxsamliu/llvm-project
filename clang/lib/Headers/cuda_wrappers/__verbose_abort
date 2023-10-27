@@ -1,0 +1,3 @@
+#pragma clang force_cuda_host_device begin
+#include_next "__verbose_abort"
+#pragma clang force_cuda_host_device end
