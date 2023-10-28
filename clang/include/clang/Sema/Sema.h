@@ -13419,6 +13419,9 @@ public:
 
   static bool isCUDAImplicitHostDeviceFunction(const FunctionDecl *D);
 
+  // Is CUDA host device function by pragma force_cuda_host_device.
+  static bool isCUDAForcedHostDeviceFunction(const FunctionDecl *D);
+
   // CUDA function call preference. Must be ordered numerically from
   // worst to best.
   enum CUDAFunctionPreference {

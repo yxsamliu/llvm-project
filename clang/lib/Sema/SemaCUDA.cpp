@@ -296,6 +296,10 @@ bool Sema::isCUDAImplicitHostDeviceFunction(const FunctionDecl *D) {
   return IsImplicitDevAttr && IsImplicitHostAttr;
 }
 
+bool Sema::isCUDAForcedHostDeviceFunction(const FunctionDecl *D) {
+  return !D->isConstexpr() && isCUDAImplicitHostDeviceFunction(D);
+}
+
 void Sema::EraseUnwantedCUDAMatches(
     const FunctionDecl *Caller,
     SmallVectorImpl<std::pair<DeclAccessPair, FunctionDecl *>> &Matches) {
@@ -702,6 +706,40 @@ void Sema::maybeAddCUDAHostDeviceAttrs(FunctionDecl *NewD,
     return;
   }
 
+  // Get the original declaration if D is a using declaration.
+  // If D has the same signature as NewD, return it, otherwise return nullptr.
+  auto GetMatchingFn = [&](NamedDecl *D) -> FunctionDecl * {
+    if (UsingShadowDecl *Using = dyn_cast<UsingShadowDecl>(D))
+      D = Using->getTargetDecl();
+    FunctionDecl *OldD = D->getAsFunction();
+    if (!OldD)
+      return nullptr;
+    if (IsOverload(NewD, OldD, /* UseMemberUsingDeclRules = */ false,
+                   /* ConsiderCudaAttrs = */ false))
+      return nullptr;
+    return OldD;
+  };
+
+  // In system headers, if there is a previous declaration with forced host
+  // device attributes, propagate it to the new declaration.
+  if (!NewD->isConstexpr() &&
+      getSourceManager().isInSystemHeader(NewD->getLocation()) &&
+      !NewD->hasAttr<CUDAHostAttr>() && !NewD->hasAttr<CUDADeviceAttr>()) {
+    // If D has the same signature as NewD and D is a forced host device
+    // function by pragma.
+    auto IsMatchingForcedHostDeviceFnInSystemHeader = [&](NamedDecl *D) {
+      FunctionDecl *OldD = GetMatchingFn(D);
+      return OldD && getSourceManager().isInSystemHeader(OldD->getLocation()) &&
+             isCUDAForcedHostDeviceFunction(OldD);
+    };
+    auto It =
+        llvm::find_if(Previous, IsMatchingForcedHostDeviceFnInSystemHeader);
+    if (It != Previous.end()) {
+      NewD->addAttr(CUDAHostAttr::CreateImplicit(Context));
+      NewD->addAttr(CUDADeviceAttr::CreateImplicit(Context));
+    }
+  }
+
   if (!getLangOpts().CUDAHostDeviceConstexpr || !NewD->isConstexpr() ||
       NewD->isVariadic() || NewD->hasAttr<CUDAHostAttr>() ||
       NewD->hasAttr<CUDADeviceAttr>() || NewD->hasAttr<CUDAGlobalAttr>())
@@ -710,13 +748,9 @@ void Sema::maybeAddCUDAHostDeviceAttrs(FunctionDecl *NewD,
   // Is D a __device__ function with the same signature as NewD, ignoring CUDA
   // attributes?
   auto IsMatchingDeviceFn = [&](NamedDecl *D) {
-    if (UsingShadowDecl *Using = dyn_cast<UsingShadowDecl>(D))
-      D = Using->getTargetDecl();
-    FunctionDecl *OldD = D->getAsFunction();
+    FunctionDecl *OldD = GetMatchingFn(D);
     return OldD && OldD->hasAttr<CUDADeviceAttr>() &&
-           !OldD->hasAttr<CUDAHostAttr>() &&
-           !IsOverload(NewD, OldD, /* UseMemberUsingDeclRules = */ false,
-                       /* ConsiderCudaAttrs = */ false);
+           !OldD->hasAttr<CUDAHostAttr>();
   };
   auto It = llvm::find_if(Previous, IsMatchingDeviceFn);
   if (It != Previous.end()) {
@@ -941,6 +975,15 @@ void Sema::checkCUDATargetOverload(FunctionDecl *NewFD,
   for (NamedDecl *OldND : Previous) {
     FunctionDecl *OldFD = OldND->getAsFunction();
     if (!OldFD)
+      continue;
+
+    // We allow forced host device functions to override functions without
+    // host/device attributes in system headers.
+    if (isCUDAForcedHostDeviceFunction(NewFD) &&
+        !OldFD->hasAttr<CUDAHostAttr>() && !OldFD->hasAttr<CUDADeviceAttr>() &&
+        !OldFD->hasAttr<CUDAGlobalAttr>() &&
+        getSourceManager().isInSystemHeader(OldFD->getLocation()) &&
+        getSourceManager().isInSystemHeader(NewFD->getLocation()))
       continue;
 
     CUDAFunctionTarget OldTarget = IdentifyCUDATarget(OldFD);
