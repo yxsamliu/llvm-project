@@ -8326,8 +8326,11 @@ unsigned SIInstrInfo::getLiveRangeSplitOpcode(Register SrcReg,
 }
 
 bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI) const {
-  return !MI.isTerminator() && MI.getOpcode() != AMDGPU::COPY &&
-         MI.modifiesRegister(AMDGPU::EXEC, &RI);
+  uint16_t Opc = MI.getOpcode();
+  // FIXME: Copies inserted in the block prolog for live-range split should also
+  // be included.
+  return (isSpillOpcode(Opc) || (!MI.isTerminator() && Opc != AMDGPU::COPY &&
+                                 MI.modifiesRegister(AMDGPU::EXEC, &RI)));
 }
 
 MachineInstrBuilder
