@@ -13814,8 +13814,9 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     VDecl->setInitStyle(VarDecl::ListInit);
   }
 
-  if (LangOpts.OpenMP &&
-      (LangOpts.OpenMPIsTargetDevice || !LangOpts.OMPTargetTriples.empty()) &&
+  if ((LangOpts.CUDA ||
+       (LangOpts.OpenMP && (LangOpts.OpenMPIsTargetDevice ||
+                            !LangOpts.OMPTargetTriples.empty()))) &&
       VDecl->isFileVarDecl())
     DeclsToCheckForDeferredDiags.insert(VDecl);
   CheckCompleteVariableDeclaration(VDecl);

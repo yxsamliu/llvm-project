@@ -1629,10 +1629,14 @@ Sema::Diag(SourceLocation Loc, const PartialDiagnostic &PD, bool DeferHint) {
 bool Sema::hasUncompilableErrorOccurred() const {
   if (getDiagnostics().hasUncompilableErrorOccurred())
     return true;
-  auto *FD = dyn_cast<FunctionDecl>(CurContext);
-  if (!FD)
-    return false;
-  auto Loc = DeviceDeferredDiags.find(FD);
+  Decl *D = dyn_cast<FunctionDecl>(CurContext);
+  if (!D) {
+    if (CurCUDATargetCtx.Kind != CTCK_InitGlobalVar)
+      return false;
+    D = CurCUDATargetCtx.D;
+    assert(D && "Invalid CurCUDATargetCtx for global var init");
+  }
+  auto Loc = DeviceDeferredDiags.find(D);
   if (Loc == DeviceDeferredDiags.end())
     return false;
   for (auto PDAt : Loc->second) {
@@ -1786,8 +1790,8 @@ public:
   }
 
   // Emit any deferred diagnostics for FD
-  void emitDeferredDiags(FunctionDecl *FD, bool ShowCallStack) {
-    auto It = S.DeviceDeferredDiags.find(FD);
+  void emitDeferredDiags(Decl *D, bool ShowCallStack) {
+    auto It = S.DeviceDeferredDiags.find(D);
     if (It == S.DeviceDeferredDiags.end())
       return;
     bool HasWarningOrError = false;
@@ -1807,8 +1811,9 @@ public:
       }
       // Emit the note on the first diagnostic in case too many diagnostics
       // cause the note not emitted.
-      if (FirstDiag && HasWarningOrError && ShowCallStack) {
-        emitCallStackNotes(S, FD);
+      if (FirstDiag && HasWarningOrError && ShowCallStack &&
+          isa<FunctionDecl>(D)) {
+        emitCallStackNotes(S, cast<FunctionDecl>(D));
         FirstDiag = false;
       }
     }
@@ -1831,34 +1836,34 @@ void Sema::emitDeferredDiags() {
 }
 
 // In CUDA, there are some constructs which may appear in semantically-valid
-// code, but trigger errors if we ever generate code for the function in which
-// they appear.  Essentially every construct you're not allowed to use on the
-// device falls into this category, because you are allowed to use these
-// constructs in a __host__ __device__ function, but only if that function is
-// never codegen'ed on the device.
+// code, but trigger errors if we ever generate code for the function or
+// variable initializer in which they appear.  Essentially every construct
+// you're not allowed to use on the device falls into this category, because
+// you are allowed to use these constructs in a __host__ __device__ function
+// or contexpr variable, but only if that function or variable is never
+// codegen'ed on the device.
 //
 // To handle semantic checking for these constructs, we keep track of the set of
-// functions we know will be emitted, either because we could tell a priori that
-// they would be emitted, or because they were transitively called by a
-// known-emitted function.
+// functions or variables we know will be emitted, either because we could tell
+// a priori that they would be emitted, or because they were transitively
+// called or ODR-used by a known-emitted function.
 //
 // We also keep a partial call graph of which not-known-emitted functions call
 // which other not-known-emitted functions.
 //
-// When we see something which is illegal if the current function is emitted
-// (usually by way of CUDADiagIfDeviceCode, CUDADiagIfHostCode, or
-// CheckCUDACall), we first check if the current function is known-emitted.  If
-// so, we immediately output the diagnostic.
+// When we see something which is illegal if the current function or variable
+// is emitted (usually by way of CUDADiagIfDeviceCode, CUDADiagIfHostCode, or
+// CheckCUDACall), we first check if the current function or variable is
+// known-emitted.  If so, we immediately output the diagnostic.
 //
 // Otherwise, we "defer" the diagnostic.  It sits in Sema::DeviceDeferredDiags
-// until we discover that the function is known-emitted, at which point we take
-// it out of this map and emit the diagnostic.
+// until we discover that the function or variable is known-emitted, at which
+// point we take it out of this map and emit the diagnostic.
 
 Sema::SemaDiagnosticBuilder::SemaDiagnosticBuilder(Kind K, SourceLocation Loc,
                                                    unsigned DiagID,
-                                                   const FunctionDecl *Fn,
-                                                   Sema &S)
-    : S(S), Loc(Loc), DiagID(DiagID), Fn(Fn),
+                                                   const Decl *D_, Sema &S)
+    : S(S), Loc(Loc), DiagID(DiagID), D(D_),
       ShowCallStack(K == K_ImmediateWithCallStack || K == K_Deferred) {
   switch (K) {
   case K_Nop:
@@ -1869,22 +1874,23 @@ Sema::SemaDiagnosticBuilder::SemaDiagnosticBuilder(Kind K, SourceLocation Loc,
         ImmediateDiagBuilder(S.Diags.Report(Loc, DiagID), S, DiagID));
     break;
   case K_Deferred:
-    assert(Fn && "Must have a function to attach the deferred diag to.");
-    auto &Diags = S.DeviceDeferredDiags[Fn];
+    assert(D && (isa<FunctionDecl>(D) || isa<VarDecl>(D)) &&
+           "Must have a function/variable to attach the deferred diag to.");
+    auto &Diags = S.DeviceDeferredDiags[D];
     PartialDiagId.emplace(Diags.size());
     Diags.emplace_back(Loc, S.PDiag(DiagID));
     break;
   }
 }
 
-Sema::SemaDiagnosticBuilder::SemaDiagnosticBuilder(SemaDiagnosticBuilder &&D)
-    : S(D.S), Loc(D.Loc), DiagID(D.DiagID), Fn(D.Fn),
-      ShowCallStack(D.ShowCallStack), ImmediateDiag(D.ImmediateDiag),
-      PartialDiagId(D.PartialDiagId) {
+Sema::SemaDiagnosticBuilder::SemaDiagnosticBuilder(SemaDiagnosticBuilder &&DB)
+    : S(DB.S), Loc(DB.Loc), DiagID(DB.DiagID), D(DB.D),
+      ShowCallStack(DB.ShowCallStack), ImmediateDiag(DB.ImmediateDiag),
+      PartialDiagId(DB.PartialDiagId) {
   // Clean the previous diagnostics.
-  D.ShowCallStack = false;
-  D.ImmediateDiag.reset();
-  D.PartialDiagId.reset();
+  DB.ShowCallStack = false;
+  DB.ImmediateDiag.reset();
+  DB.PartialDiagId.reset();
 }
 
 Sema::SemaDiagnosticBuilder::~SemaDiagnosticBuilder() {

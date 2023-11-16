@@ -1809,7 +1809,7 @@ public:
     };
 
     SemaDiagnosticBuilder(Kind K, SourceLocation Loc, unsigned DiagID,
-                          const FunctionDecl *Fn, Sema &S);
+                          const Decl *D, Sema &S);
     SemaDiagnosticBuilder(SemaDiagnosticBuilder &&D);
     SemaDiagnosticBuilder(const SemaDiagnosticBuilder &) = default;
 
@@ -1840,8 +1840,7 @@ public:
       if (Diag.ImmediateDiag)
         *Diag.ImmediateDiag << Value;
       else if (Diag.PartialDiagId)
-        Diag.S.DeviceDeferredDiags[Diag.Fn][*Diag.PartialDiagId].second
-            << Value;
+        Diag.S.DeviceDeferredDiags[Diag.D][*Diag.PartialDiagId].second << Value;
       return Diag;
     }
 
@@ -1854,7 +1853,7 @@ public:
       if (ImmediateDiag)
         *ImmediateDiag << std::move(V);
       else if (PartialDiagId)
-        S.DeviceDeferredDiags[Fn][*PartialDiagId].second << std::move(V);
+        S.DeviceDeferredDiags[D][*PartialDiagId].second << std::move(V);
       return *this;
     }
 
@@ -1863,7 +1862,7 @@ public:
       if (Diag.ImmediateDiag)
         PD.Emit(*Diag.ImmediateDiag);
       else if (Diag.PartialDiagId)
-        Diag.S.DeviceDeferredDiags[Diag.Fn][*Diag.PartialDiagId].second = PD;
+        Diag.S.DeviceDeferredDiags[Diag.D][*Diag.PartialDiagId].second = PD;
       return Diag;
     }
 
@@ -1871,7 +1870,7 @@ public:
       if (ImmediateDiag)
         ImmediateDiag->AddFixItHint(Hint);
       else if (PartialDiagId)
-        S.DeviceDeferredDiags[Fn][*PartialDiagId].second.AddFixItHint(Hint);
+        S.DeviceDeferredDiags[D][*PartialDiagId].second.AddFixItHint(Hint);
     }
 
     friend ExprResult ExprError(const SemaDiagnosticBuilder &) {
@@ -1890,7 +1889,7 @@ public:
     Sema &S;
     SourceLocation Loc;
     unsigned DiagID;
-    const FunctionDecl *Fn;
+    const Decl *D;
     bool ShowCallStack;
 
     // Invariant: At most one of these Optionals has a value.
@@ -13263,10 +13262,10 @@ public:
   bool PopForceCUDAHostDevice();
 
   /// Diagnostics that are emitted only if we discover that the given function
-  /// must be codegen'ed.  Because handling these correctly adds overhead to
-  /// compilation, this is currently only enabled for CUDA compilations.
-  llvm::DenseMap<CanonicalDeclPtr<const FunctionDecl>,
-                 std::vector<PartialDiagnosticAt>>
+  /// or variable must be codegen'ed.  Because handling these correctly adds
+  /// overhead to compilation, this is currently only enabled for CUDA/OpenMP
+  /// compilations.
+  llvm::DenseMap<CanonicalDeclPtr<const Decl>, std::vector<PartialDiagnosticAt>>
       DeviceDeferredDiags;
 
   /// A pair of a canonical FunctionDecl and a SourceLocation.  When used as the
@@ -13388,6 +13387,7 @@ public:
     CTCK_Unknown,       /// Unknown context
     CTCK_InitGlobalVar, /// Function called during global variable
                         /// initialization
+    CTCK_InFunction,    /// In a function
   };
 
   /// Define the current global CUDA host/device context where a function may be
@@ -13404,6 +13404,9 @@ public:
     CUDATargetContextRAII(Sema &S_, CUDATargetContextKind K, Decl *D);
     ~CUDATargetContextRAII() { S.CurCUDATargetCtx = SavedCtx; }
   };
+
+  /// Gets the current CUDA target context.
+  CUDATargetContext getCurrentCUDATargetContext() const;
 
   /// Gets the CUDA target for the current context.
   CUDAFunctionTarget CurrentCUDATarget() {

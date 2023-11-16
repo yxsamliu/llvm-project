@@ -130,6 +130,17 @@ Sema::CUDATargetContextRAII::CUDATargetContextRAII(Sema &S_,
   }
 }
 
+/// Gets the current CUDA target context.
+CUDATargetContext Sema::getCurrentCUDATargetContext() {
+  Decl *D = getCurFunctionDecl(/*AllowLambda=*/true);
+  if (!D) {
+    if (CurCUDATargetCtx.Kind != CTCK_InitGlobalVar)
+      return false;
+    D = CurCUDATargetCtx.D;
+    assert(D && "Invalid CurCUDATargetCtx for global var init");
+  }
+}
+
 /// IdentifyCUDATarget - Determine the CUDA compilation target for this function
 Sema::CUDAFunctionTarget Sema::IdentifyCUDATarget(const FunctionDecl *D,
                                                   bool IgnoreImplicitHDAttr) {
