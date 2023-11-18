@@ -745,6 +745,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   uint32_t queryCoarseGrainMemory(const void *ptr, int64_t size);
   virtual uint32_t queryCoarseGrainMemoryImpl(const void *ptr, int64_t size) { return 0; }
 
+  // Prepopulate GPU page table
+  Error prepopulatePageTable(void *ptr, int64_t size);
+  virtual Error prepopulatePageTableImpl(void *ptr, int64_t size) {
+    return Error::success();
+  }
+
   /// Create an event.
   Error createEvent(void **EventPtrStorage);
   virtual Error createEventImpl(void **EventPtrStorage) = 0;
@@ -937,10 +943,12 @@ struct GenericPluginTy {
   // Returns true if the system is equipped with an APU.
   virtual bool hasAPUDevice() { return false; }
 
-  // Returns true if the system is equipped with a GFX90a
-  virtual bool hasGfx90aDevice() { return false; }
+  // Returns true if the system is equipped with a dGPU that supports USM
+  virtual bool hasDGpuWithUsmSupport() { return false; }
 
   virtual bool AreAllocationsForMapsOnApusDisabled() { return false; }
+
+  virtual bool requestedPrepopulateGPUPageTable() { return false; }
 
   virtual bool IsNoMapsCheck() { return false; }
 
@@ -948,7 +956,7 @@ struct GenericPluginTy {
 
   virtual void setUpEnv() {}
   virtual void
-  checkAndAdjustUsmModeForTargetImage(__tgt_device_image *TgtImage) {}
+  checkAndAdjustUsmModeForTargetImage(const __tgt_device_image *TgtImage) {}
 
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;
