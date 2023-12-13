@@ -549,6 +549,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::DS;
   }
 
+  static bool isLDSDMA(const MachineInstr &MI) {
+    return isVALU(MI) && (isMUBUF(MI) || isFLAT(MI));
+  }
+
+  bool isLDSDMA(uint16_t Opcode) {
+    return isVALU(Opcode) && (isMUBUF(Opcode) || isFLAT(Opcode));
+  }
+
   bool isAlwaysGDS(uint16_t Opcode) const;
 
   static bool isMIMG(const MachineInstr &MI) {
@@ -644,6 +652,10 @@ public:
   bool isAtomic(uint16_t Opcode) const {
     return get(Opcode).TSFlags & (SIInstrFlags::IsAtomicRet |
                                   SIInstrFlags::IsAtomicNoRet);
+  }
+
+  static bool mayWriteLDSThroughDMA(const MachineInstr &MI) {
+    return isLDSDMA(MI) && MI.getOpcode() != AMDGPU::BUFFER_STORE_LDS_DWORD;
   }
 
   static bool isWQM(const MachineInstr &MI) {
