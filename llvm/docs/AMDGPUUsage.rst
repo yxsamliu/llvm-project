@@ -1025,6 +1025,119 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    reduction will be performed using default iterative strategy.
                                                    Intrinsic is currently only implemented for i32.
 
+  llvm.amdgcn.udot2                                Provides direct access to v_dot2_u32_u16 across targets which
+                                                   support such instructions. This performs unsigned dot product
+                                                   with two v2i16 operands, summed with the third i32 operand. The
+                                                   i1 fourth operand is used to clamp the output.
+
+  llvm.amdgcn.udot4                                Provides direct access to v_dot4_u32_u8 across targets which
+                                                   support such instructions. This performs unsigned dot product
+                                                   with two i32 operands (holding a vector of 4 8bit values), summed
+                                                   with the third i32 operand. The i1 fourth operand is used to clamp
+                                                   the output.
+
+  llvm.amdgcn.udot8                                Provides direct access to v_dot8_u32_u4 across targets which
+                                                   support such instructions. This performs unsigned dot product
+                                                   with two i32 operands (holding a vector of 8 4bit values), summed
+                                                   with the third i32 operand. The i1 fourth operand is used to clamp
+                                                   the output.
+
+  llvm.amdgcn.sdot2                                Provides direct access to v_dot2_i32_i16 across targets which
+                                                   support such instructions. This performs signed dot product
+                                                   with two v2i16 operands, summed with the third i32 operand. The
+                                                   i1 fourth operand is used to clamp the output.
+                                                   When applicable (e.g. no clamping), this is lowered into
+                                                   v_dot2c_i32_i16 for targets which support it.
+
+  llvm.amdgcn.sdot4                                Provides direct access to v_dot4_i32_i8 across targets which
+                                                   support such instructions. This performs signed dot product
+                                                   with two i32 operands (holding a vector of 4 8bit values), summed
+                                                   with the third i32 operand. The i1 fourth operand is used to clamp
+                                                   the output.
+                                                   When applicable (i.e. no clamping / operand modifiers), this is lowered
+                                                   into v_dot4c_i32_i8 for targets which support it.
+                                                   RDNA3 does not offer v_dot4_i32_i8, and rather offers
+                                                   v_dot4_i32_iu8 which has operands to hold the signedness of the
+                                                   vector operands. Thus, this intrinsic lowers to the signed version
+                                                   of this instruction for gfx11 targets.
+
+  llvm.amdgcn.sdot8                                Provides direct access to v_dot8_u32_u4 across targets which
+                                                   support such instructions. This performs signed dot product
+                                                   with two i32 operands (holding a vector of 8 4bit values), summed
+                                                   with the third i32 operand. The i1 fourth operand is used to clamp
+                                                   the output.
+                                                   When applicable (i.e. no clamping / operand modifiers), this is lowered
+                                                   into v_dot8c_i32_i4 for targets which support it.
+                                                   RDNA3 does not offer v_dot8_i32_i4, and rather offers
+                                                   v_dot4_i32_iu4 which has operands to hold the signedness of the
+                                                   vector operands. Thus, this intrinsic lowers to the signed version
+                                                   of this instruction for gfx11 targets.
+
+  llvm.amdgcn.sudot4                               Provides direct access to v_dot4_i32_iu8 on gfx11 targets. This performs
+                                                   dot product with two i32 operands (holding a vector of 4 8bit values), summed
+                                                   with the fifth i32 operand. The i1 sixth operand is used to clamp
+                                                   the output. The i1s preceding the vector operands decide the signedness.
+
+  llvm.amdgcn.sudot8                               Provides direct access to v_dot8_i32_iu4 on gfx11 targets. This performs
+                                                   dot product with two i32 operands (holding a vector of 8 4bit values), summed
+                                                   with the fifth i32 operand. The i1 sixth operand is used to clamp
+                                                   the output. The i1s preceding the vector operands decide the signedness.
+
+  llvm.amdgcn.sched_barrier                        Controls the types of instructions that may be allowed to cross the intrinsic
+                                                   during instruction scheduling. The parameter is a mask for the instruction types
+                                                   that can cross the intrinsic.
+
+                                                   - 0x0000: No instructions may be scheduled across sched_barrier.
+                                                   - 0x0001: All, non-memory, non-side-effect producing instructions may be
+                                                     scheduled across sched_barrier, *i.e.* allow ALU instructions to pass.
+                                                   - 0x0002: VALU instructions may be scheduled across sched_barrier.
+                                                   - 0x0004: SALU instructions may be scheduled across sched_barrier.
+                                                   - 0x0008: MFMA/WMMA instructions may be scheduled across sched_barrier.
+                                                   - 0x0010: All VMEM instructions may be scheduled across sched_barrier.
+                                                   - 0x0020: VMEM read instructions may be scheduled across sched_barrier.
+                                                   - 0x0040: VMEM write instructions may be scheduled across sched_barrier.
+                                                   - 0x0080: All DS instructions may be scheduled across sched_barrier.
+                                                   - 0x0100: All DS read instructions may be scheduled accoss sched_barrier.
+                                                   - 0x0200: All DS write instructions may be scheduled across sched_barrier.
+                                                   - 0x0400: All Transcendental (e.g. V_EXP) instructions may be scheduled across sched_barrier.
+
+  llvm.amdgcn.sched_group_barrier                  Creates schedule groups with specific properties to create custom scheduling
+                                                   pipelines. The ordering between groups is enforced by the instruction scheduler.
+                                                   The intrinsic applies to the code that preceeds the intrinsic. The intrinsic
+                                                   takes three values that control the behavior of the schedule groups.
+
+                                                   - Mask : Classify instruction groups using the llvm.amdgcn.sched_barrier mask values.
+                                                   - Size : The number of instructions that are in the group.
+                                                   - SyncID : Order is enforced between groups with matching values.
+
+                                                   The mask can include multiple instruction types. It is undefined behavior to set
+                                                   values beyond the range of valid masks.
+
+                                                   Combining multiple sched_group_barrier intrinsics enables an ordering of specific
+                                                   instruction types during instruction scheduling. For example, the following enforces
+                                                   a sequence of 1 VMEM read, followed by 1 VALU instruction, followed by 5 MFMA
+                                                   instructions.
+
+                                                   |  ``// 1 VMEM read``
+                                                   |  ``__builtin_amdgcn_sched_group_barrier(32, 1, 0)``
+                                                   |  ``// 1 VALU``
+                                                   |  ``__builtin_amdgcn_sched_group_barrier(2, 1, 0)``
+                                                   |  ``// 5 MFMA``
+                                                   |  ``__builtin_amdgcn_sched_group_barrier(8, 5, 0)``
+
+  llvm.amdgcn.iglp_opt                             An **experimental** intrinsic for instruction group level parallelism. The intrinsic
+                                                   implements predefined intruction scheduling orderings. The intrinsic applies to the
+                                                   surrounding scheduling region. The intrinsic takes a value that specifies the
+                                                   strategy.  The compiler implements two strategies.
+
+                                                   0. Interleave DS and MFMA instructions for small GEMM kernels.
+                                                   1. Interleave DS and MFMA instructions for single wave small GEMM kernels.
+
+                                                   Only one iglp_opt intrinsic may be used in a scheduling region. The iglp_opt intrinsic
+                                                   cannot be combined with sched_barrier or sched_group_barrier.
+
+                                                   The iglp_opt strategy implementations are subject to change.
+
   ==============================================   ==========================================================
 
 .. TODO::
