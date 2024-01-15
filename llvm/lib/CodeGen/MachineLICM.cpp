@@ -1527,16 +1527,53 @@ unsigned MachineLICMBase::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
     HasExtractHoistableLoad = true;
   }
 
-  if (auto *env = getenv("DB_HOIST")) {
+if (auto *env = getenv("DB_HOIST")) {
     int limit = atoi(env);
-    llvm::outs() << "[LCIM] count=" << count << '\n';
-    //    << (count>limit ? " skip" : "hoist") << " MI: "; MI->dump();
-    if (count>limit) {
-      count++;
-      return false;
+
+    // Static LLVM file stream object, initialized only once.
+    static std::unique_ptr<llvm::raw_fd_ostream> fileStream;
+    if (!fileStream) {
+        std::string filename = "output_DB_HOIST_" + std::string(env) + ".txt";
+        std::error_code EC;
+        fileStream = std::make_unique<llvm::raw_fd_ostream>(filename, EC);
+        if (EC) {
+            llvm::errs() << "Error opening file " << filename << ": " << EC.message() << "\n";
+            return false;
+        }
+    }
+
+    if (count % 1000 == 0) {
+        *fileStream << "[LCIM] count=" << count << '\n';
+    }
+
+    if (auto *envFocus = getenv("DB_HOIST_FOCUS")) {
+        int focusLimit = atoi(envFocus);
+        if (count == focusLimit) {
+            *fileStream << "[LCIM] Focused output for count=" << count << '\n';
+            *fileStream << *MI << '\n';
+            if (MI->getParent()->getBasicBlock()) {
+                *fileStream << "Machine Basic Block: ";
+                *fileStream << *(MI->getParent()) << "\n";
+                *fileStream << "LLVM Basic Block: ";
+                *fileStream << *(MI->getParent()->getBasicBlock()) << "\n";
+                // Save the LLVM IR of the preheader
+                if (Preheader->getBasicBlock()) {
+                    *fileStream << "Preheader LLVM Basic Block: ";
+                    *fileStream << *(Preheader->getBasicBlock()) << "\n";
+                }
+                *fileStream << "LLVM Function: ";
+                *fileStream << *(MI->getParent()->getBasicBlock()->getParent()) << "\n";
+            }
+        }
+    }
+
+    if (count > limit) {
+        count++;
+        return false;
     }
     count++;
-  }
+}
+
 
   // If we have hoisted an instruction that may store, it can only be a constant
   // store.
