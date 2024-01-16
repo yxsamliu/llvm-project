@@ -882,6 +882,11 @@ CUDA/HIP Language Changes
   that of C++. The standard has now been enhanced to gnu++17, supplanting the
   previously used c++14.
 
+- [HIP Only] add experimental support for offloading select C++ Algorithms,
+  which can be toggled via the ``--hipstdpar`` flag. This is available only for
+  the AMDGPU target at the moment. See the dedicated entry in the `HIP Language
+  support document for details <https://clang.llvm.org/docs/HIPSupport.html>`_
+
 CUDA Support
 ^^^^^^^^^^^^
 - Clang now supports CUDA SDK up to 12.1
