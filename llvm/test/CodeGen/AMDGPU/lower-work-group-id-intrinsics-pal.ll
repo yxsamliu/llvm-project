@@ -33,12 +33,28 @@ define amdgpu_cs void @_amdgpu_cs_main() {
 ; GFX9ARCH-GISEL-NEXT:    buffer_store_dwordx3 v[0:2], off, s[0:3], 0
 ; GFX9ARCH-GISEL-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: _amdgpu_cs_main:
-; GFX12:       ; %bb.0: ; %.entry
-; GFX12-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX12-NEXT:    s_endpgm
+; GFX12-SDAG-LABEL: _amdgpu_cs_main:
+; GFX12-SDAG:       ; %bb.0: ; %.entry
+; GFX12-SDAG-NEXT:    s_and_b32 s0, ttmp7, 0xffff
+; GFX12-SDAG-NEXT:    s_lshr_b32 s1, ttmp7, 16
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, ttmp9 :: v_dual_mov_b32 v1, s0
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, s1
+; GFX12-SDAG-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
+; GFX12-SDAG-NEXT:    s_nop 0
+; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-SDAG-NEXT:    s_endpgm
+;
+; GFX12-GISEL-LABEL: _amdgpu_cs_main:
+; GFX12-GISEL:       ; %bb.0: ; %.entry
+; GFX12-GISEL-NEXT:    s_mov_b32 s0, ttmp9
+; GFX12-GISEL-NEXT:    s_and_b32 s1, ttmp7, 0xffff
+; GFX12-GISEL-NEXT:    s_lshr_b32 s2, ttmp7, 16
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-GISEL-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
+; GFX12-GISEL-NEXT:    s_nop 0
+; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-GISEL-NEXT:    s_endpgm
 .entry:
   %idx = call i32 @llvm.amdgcn.workgroup.id.x()
   %idy = call i32 @llvm.amdgcn.workgroup.id.y()
@@ -112,6 +128,7 @@ define amdgpu_cs void @caller() {
 ;
 ; GFX12-SDAG-LABEL: caller:
 ; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, ttmp9
 ; GFX12-SDAG-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; GFX12-SDAG-NEXT:    s_mov_b32 s0, callee@abs32@lo
 ; GFX12-SDAG-NEXT:    s_mov_b32 s32, 0
@@ -120,6 +137,7 @@ define amdgpu_cs void @caller() {
 ;
 ; GFX12-GISEL-LABEL: caller:
 ; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, ttmp9
 ; GFX12-GISEL-NEXT:    s_mov_b32 s0, callee@abs32@lo
 ; GFX12-GISEL-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; GFX12-GISEL-NEXT:    s_mov_b32 s32, 0
