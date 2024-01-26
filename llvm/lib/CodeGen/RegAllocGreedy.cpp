@@ -72,6 +72,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <fstream>
 #include <utility>
 
 using namespace llvm;
@@ -2706,6 +2707,21 @@ bool RAGreedy::hasVirtRegAlloc() {
 }
 
 bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
+  const char* dbgEnv = std::getenv("DB_REGALLOC");
+  bool debugThisFunction = dbgEnv && mf.getName().equals(dbgEnv);
+  static std::unique_ptr<llvm::raw_fd_ostream> beforeFileStream;
+  if (!beforeFileStream && debugThisFunction) {
+      std::string beforeFilename = "regalloc.before." + mf.getName().str() + ".s";
+      std::error_code beforeEC;
+      beforeFileStream = std::make_unique<llvm::raw_fd_ostream>(beforeFilename, beforeEC);
+
+      if (beforeEC) {
+          llvm::errs() << "Error opening file " << beforeFilename << ": " << beforeEC.message() << "\n";
+          return false;
+      } else {
+          mf.print(*beforeFileStream);
+      }
+  }
   LLVM_DEBUG(dbgs() << "********** GREEDY REGISTER ALLOCATION **********\n"
                     << "********** Function: " << mf.getName() << '\n');
 
@@ -2770,6 +2786,20 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
 
   allocatePhysRegs();
   tryHintsRecoloring();
+
+  static std::unique_ptr<llvm::raw_fd_ostream> afterFileStream;
+  if (!afterFileStream && debugThisFunction) {
+      std::string afterFilename = "regalloc.after." + mf.getName().str() + ".s";
+      std::error_code afterEC;
+      afterFileStream = std::make_unique<llvm::raw_fd_ostream>(afterFilename, afterEC);
+
+      if (afterEC) {
+          llvm::errs() << "Error opening file " << afterFilename << ": " << afterEC.message() << "\n";
+          return false;
+      } else {
+          mf.print(*afterFileStream);
+      }
+  }
 
   if (VerifyEnabled)
     MF->verify(this, "Before post optimization");
