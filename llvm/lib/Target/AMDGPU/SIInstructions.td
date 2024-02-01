@@ -962,6 +962,7 @@ defm SI_SPILL_AV1024 : SI_SPILL_VGPR <AV_1024, 1>;
 let isConvergent = 1 in
 defm SI_SPILL_WWM_V32 : SI_SPILL_VGPR <VGPR_32>;
 
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def SI_PC_ADD_REL_OFFSET : SPseudoInstSI <
   (outs SReg_64:$dst),
   (ins si_ga:$ptr_lo, si_ga:$ptr_hi),
