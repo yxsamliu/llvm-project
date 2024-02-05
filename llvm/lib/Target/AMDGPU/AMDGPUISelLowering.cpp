@@ -550,6 +550,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                        ISD::FSUB,       ISD::FNEG,
                        ISD::FABS,       ISD::AssertZext,
                        ISD::AssertSext, ISD::INTRINSIC_WO_CHAIN});
+  setMaxDivRemBitWidthSupported(64);
 }
 
 bool AMDGPUTargetLowering::mayIgnoreSignedZero(SDValue Op) const {
