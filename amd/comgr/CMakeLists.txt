@@ -1,6 +1,15 @@
 cmake_minimum_required(VERSION 3.13.4)
 
-project(amd_comgr VERSION "2.7.0" LANGUAGES C CXX)
+file(READ "VERSION.txt" comgr_ver_file)
+
+string(REGEX MATCH "#COMGR_VERSION_MAJOR\n([0-9]*)" _ ${comgr_ver_file})
+set (ver_major ${CMAKE_MATCH_1})
+string(REGEX MATCH "#COMGR_VERSION_MINOR\n([0-9]*)" _ ${comgr_ver_file})
+set (ver_minor ${CMAKE_MATCH_1})
+
+message("Comgr Version: ${ver_major}.${ver_minor}.0")
+
+project(amd_comgr VERSION "${ver_major}.${ver_minor}.0" LANGUAGES C CXX)
 set(amd_comgr_NAME "${PROJECT_NAME}")
 
 # Get git branch and commit hash to add to log for easier debugging.
@@ -264,15 +273,19 @@ write_basic_package_version_file("${AMD_COMGR_VERSION_PATH}"
   VERSION "${amd_comgr_VERSION}"
   COMPATIBILITY SameMajorVersion)
 
-install(TARGETS amd_comgr
-  EXPORT amd_comgr_export
-  COMPONENT amd-comgr
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-install(TARGETS amd_comgr
-  COMPONENT asan
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+if(ENABLE_ASAN_PACKAGING)
+  install(TARGETS amd_comgr
+    EXPORT amd_comgr_export
+    COMPONENT asan
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+else()
+  install(TARGETS amd_comgr
+    EXPORT amd_comgr_export
+    COMPONENT amd-comgr
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()
 
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h"
@@ -299,16 +312,19 @@ if(FILE_REORG_BACKWARD_COMPATIBILITY)
   include(comgr-backward-compat.cmake)
 endif()
 
-install(FILES
-  "README.md"
-  "LICENSE.txt"
-  "NOTICES.txt"
-  COMPONENT amd-comgr
-  DESTINATION ${CMAKE_INSTALL_DOCDIR})
-install(FILES
-  "LICENSE.txt"
-  COMPONENT asan
-  DESTINATION ${CMAKE_INSTALL_DOCDIR}-asan)
+if(ENABLE_ASAN_PACKAGING)
+  install(FILES
+    "LICENSE.txt"
+    COMPONENT asan
+    DESTINATION ${CMAKE_INSTALL_DOCDIR}-asan)
+else()
+  install(FILES
+    "README.md"
+    "LICENSE.txt"
+    "NOTICES.txt"
+    COMPONENT amd-comgr
+    DESTINATION ${CMAKE_INSTALL_DOCDIR})
+endif()
 
 # Generate the install-tree package.
 set(AMD_COMGR_PREFIX_CODE "
@@ -425,6 +441,9 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     # Default Case, set to 99999
     set(ROCM_VERSION_FOR_PACKAGE "99999")
   endif()
+
+  # Archive package specific variable
+  set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 
   # Debian package specific variables
   set(CPACK_DEB_COMPONENT_INSTALL ON)

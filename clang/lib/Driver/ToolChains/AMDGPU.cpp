@@ -49,7 +49,7 @@ RocmInstallationDetector::findSPACKPackage(const Candidate &Cand,
                                      FileEnd;
        File != FileEnd && !EC; File.increment(EC)) {
     llvm::StringRef FileName = llvm::sys::path::filename(File->path());
-    if (FileName.startswith(Prefix)) {
+    if (FileName.starts_with(Prefix)) {
       SubDirs.push_back(FileName);
       if (SubDirs.size() > 1)
         break;
@@ -84,13 +84,13 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
        !EC && LI != LE; LI = LI.increment(EC)) {
     StringRef FilePath = LI->path();
     StringRef FileName = llvm::sys::path::filename(FilePath);
-    if (!FileName.endswith(Suffix))
+    if (!FileName.ends_with(Suffix))
       continue;
 
     StringRef BaseName;
-    if (FileName.endswith(Suffix2))
+    if (FileName.ends_with(Suffix2))
       BaseName = FileName.drop_back(Suffix2.size());
-    else if (FileName.endswith(Suffix))
+    else if (FileName.ends_with(Suffix))
       BaseName = FileName.drop_back(Suffix.size());
 
     const StringRef ABIVersionPrefix = "oclc_abi_version_";
@@ -124,7 +124,7 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
       WavefrontSize64.On = FilePath;
     } else if (BaseName == "oclc_wavefrontsize64_off") {
       WavefrontSize64.Off = FilePath;
-    } else if (BaseName.startswith(ABIVersionPrefix)) {
+    } else if (BaseName.starts_with(ABIVersionPrefix)) {
       unsigned ABIVersionNumber;
       if (BaseName.drop_front(ABIVersionPrefix.size())
               .getAsInteger(/*Redex=*/0, ABIVersionNumber))
@@ -134,7 +134,7 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
       // Process all bitcode filenames that look like
       // ocl_isa_version_XXX.amdgcn.bc
       const StringRef DeviceLibPrefix = "oclc_isa_version_";
-      if (!BaseName.startswith(DeviceLibPrefix))
+      if (!BaseName.starts_with(DeviceLibPrefix))
         continue;
 
       StringRef IsaVersionNumber =
@@ -230,7 +230,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
     // <rocm_root>/llvm-amdgpu-<rocm_release_string>-<hash>/bin directory.
     // We only consider the parent directory of llvm-amdgpu package as ROCm
     // installation candidate for SPACK.
-    if (ParentName.startswith("llvm-amdgpu-")) {
+    if (ParentName.starts_with("llvm-amdgpu-")) {
       auto SPACKPostfix =
           ParentName.drop_front(strlen("llvm-amdgpu-")).split('-');
       auto SPACKReleaseStr = SPACKPostfix.first;
@@ -243,7 +243,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
 
     // Some versions of the rocm llvm package install to /opt/rocm/llvm/bin
     // Some versions of the aomp package install to /opt/rocm/aomp/bin
-    if (ParentName == "llvm" || ParentName.startswith("aomp"))
+    if (ParentName == "llvm" || ParentName.starts_with("aomp"))
       ParentDir = llvm::sys::path::parent_path(ParentDir);
     // Some versions of the aomp package install to /opt/rocm/aomp/bin
     // and it seems ParentDir is already pointing to correct place.
@@ -293,7 +293,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
            FileEnd;
        File != FileEnd && !EC; File.increment(EC)) {
     llvm::StringRef FileName = llvm::sys::path::filename(File->path());
-    if (!FileName.startswith("rocm-"))
+    if (!FileName.starts_with("rocm-"))
       continue;
     if (LatestROCm.empty()) {
       LatestROCm = FileName.str();
@@ -546,35 +546,26 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
   }
 
   const auto HandleHipStdPar = [=, &DriverArgs, &CC1Args]() {
-    StringRef Inc = getIncludePath();
-    auto &FS = D.getVFS();
-
-    if (!hasHIPStdParLibrary())
-      if (!HIPStdParPathArg.empty() ||
-          !FS.exists(Inc + "/thrust/system/hip/hipstdpar/hipstdpar_lib.hpp")) {
+    if (!hasHIPStdParLibrary()) {
       D.Diag(diag::err_drv_no_hipstdpar_lib);
       return;
     }
-    if (!HasRocThrustLibrary && !FS.exists(Inc + "/thrust")) {
+    if (!HasRocThrustLibrary &&
+        !D.getVFS().exists(getIncludePath() + "/thrust")) {
       D.Diag(diag::err_drv_no_hipstdpar_thrust_lib);
       return;
     }
-    if (!HasRocPrimLibrary && !FS.exists(Inc + "/rocprim")) {
+    if (!HasRocPrimLibrary &&
+        !D.getVFS().exists(getIncludePath() + "/rocprim")) {
       D.Diag(diag::err_drv_no_hipstdpar_prim_lib);
       return;
     }
+
     const char *ThrustPath;
     if (HasRocThrustLibrary)
       ThrustPath = DriverArgs.MakeArgString(HIPRocThrustPathArg);
     else
-      ThrustPath = DriverArgs.MakeArgString(Inc + "/thrust");
-
-    const char *HIPStdParPath;
-    if (hasHIPStdParLibrary())
-      HIPStdParPath = DriverArgs.MakeArgString(HIPStdParPathArg);
-    else
-      HIPStdParPath = DriverArgs.MakeArgString(StringRef(ThrustPath) +
-                                               "/system/hip/hipstdpar");
+      ThrustPath = DriverArgs.MakeArgString(getIncludePath() + "/thrust");
 
     const char *PrimPath;
     if (HasRocPrimLibrary)
@@ -583,7 +574,7 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
       PrimPath = DriverArgs.MakeArgString(getIncludePath() + "/rocprim");
 
     CC1Args.append({"-idirafter", ThrustPath, "-idirafter", PrimPath,
-                    "-idirafter", HIPStdParPath,
+                    "-idirafter", DriverArgs.MakeArgString(HIPStdParPathArg),
                     "-include", "hipstdpar_lib.hpp"});
   };
 
@@ -615,7 +606,10 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   std::string Linker = getToolChain().GetProgramPath(getShortName());
   ArgStringList CmdArgs;
-    addLinkerCompressDebugSectionsOption(getToolChain(), Args, CmdArgs);
+  CmdArgs.push_back("--no-undefined");
+  CmdArgs.push_back("-shared");
+
+  addLinkerCompressDebugSectionsOption(getToolChain(), Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
   if (C.getDriver().isUsingLTO())
@@ -624,8 +618,6 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   else if (Args.hasArg(options::OPT_mcpu_EQ))
     CmdArgs.push_back(Args.MakeArgString(
         "-plugin-opt=mcpu=" + Args.getLastArgValue(options::OPT_mcpu_EQ)));
-  CmdArgs.push_back("--no-undefined");
-  CmdArgs.push_back("-shared");
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
   C.addCommand(std::make_unique<Command>(
@@ -690,8 +682,9 @@ llvm::SmallVector<std::string, 12> amdgpu::dlr::getCommonDeviceLibNames(
   StringRef LibDeviceFile = RocmInstallation.getLibDeviceFile(CanonArch);
   auto ABIVer = DeviceLibABIVersion::fromCodeObjectVersion(
       getAMDGPUCodeObjectVersion(D, DriverArgs));
+  bool noGPULib = DriverArgs.hasArg(options::OPT_nogpulib);
   if (!RocmInstallation.checkCommonBitcodeLibs(CanonArch, LibDeviceFile,
-                                               ABIVer))
+                                               ABIVer, noGPULib))
     return {};
 
   // If --hip-device-lib is not set, add the default bitcode libraries.
@@ -950,8 +943,9 @@ void ROCMToolChain::addClangTargetOptions(
   StringRef LibDeviceFile = RocmInstallation->getLibDeviceFile(CanonArch);
   auto ABIVer = DeviceLibABIVersion::fromCodeObjectVersion(
       getAMDGPUCodeObjectVersion(getDriver(), DriverArgs));
+  bool noGPULib = DriverArgs.hasArg(options::OPT_nogpulib);
   if (!RocmInstallation->checkCommonBitcodeLibs(CanonArch, LibDeviceFile,
-                                                ABIVer))
+                                                ABIVer, noGPULib))
     return;
 
   bool Wave64 = isWave64(DriverArgs, Kind);
@@ -985,17 +979,20 @@ void ROCMToolChain::addClangTargetOptions(
 
 bool RocmInstallationDetector::checkCommonBitcodeLibs(
     StringRef GPUArch, StringRef LibDeviceFile,
-    DeviceLibABIVersion ABIVer) const {
+    DeviceLibABIVersion ABIVer, bool noGPULib) const {
   if (!hasDeviceLibrary()) {
-    D.Diag(diag::err_drv_no_rocm_device_lib) << 0;
+    if (!noGPULib)
+      D.Diag(diag::err_drv_no_rocm_device_lib) << 0;
     return false;
   }
   if (LibDeviceFile.empty()) {
-    D.Diag(diag::err_drv_no_rocm_device_lib) << 1 << GPUArch;
+    if (!noGPULib)
+      D.Diag(diag::err_drv_no_rocm_device_lib) << 1 << GPUArch;
     return false;
   }
   if (ABIVer.requiresLibrary() && getABIVersionPath(ABIVer).empty()) {
-    D.Diag(diag::err_drv_no_rocm_device_lib) << 2 << ABIVer.toString();
+    if (!noGPULib)
+      D.Diag(diag::err_drv_no_rocm_device_lib) << 2 << ABIVer.toString();
     return false;
   }
   return true;
@@ -1017,7 +1014,8 @@ RocmInstallationDetector::getCommonBitcodeLibs(
   // offload-arch-specific bitcode files as is done for FORTRAN. Currently,
   // libomptarget-<offload-arch>.bc files is built by compiling headers with
   // __BUILD_MATH_BUILTINS_LIB__ turning static libm functions to extern.
-  AddBCLib(getOCKLPath());
+  if (!isOpenMP)
+    AddBCLib(getOCKLPath());
   AddBCLib(getDenormalsAreZeroPath(DAZ));
   AddBCLib(getUnsafeMathPath(UnsafeMathOpt || FastRelaxedMath));
   AddBCLib(getFiniteOnlyPath(FiniteOnly || FastRelaxedMath));
