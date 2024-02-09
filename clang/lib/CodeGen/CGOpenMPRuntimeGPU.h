@@ -169,6 +169,10 @@ public:
                               llvm::Value *ThreadStartIndex,
                               llvm::Value *NumTeams, int BlockSize);
 
+  // Returns whether the hint expressions for an architecture should be
+  // evaluated to decide which kind of atomic ops should be generated.
+  bool needsHintsForFastFPAtomics() override final;
+
   /// Returns whether the current architecture supports fast FP atomics
   bool supportFastFPAtomics() override;
 
