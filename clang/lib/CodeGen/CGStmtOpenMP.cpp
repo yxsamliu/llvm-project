@@ -6311,6 +6311,9 @@ static bool canUseAMDGPUFastFPAtomics(CodeGenFunction &CGF, LValue X,
   if (!Update.isScalar())
     return false;
 
+  if (!X.isSimple())
+    return false;
+
   ASTContext &Context = CGF.getContext();
 
   // Handle fast FP atomics for AMDGPU target (call intrinsic)
@@ -6342,6 +6345,11 @@ static bool canUseAMDGPUFastFPAtomics(CodeGenFunction &CGF, LValue X,
     }
   }
 
+  // Fast FP atomics only work when the Update type is the same as the target X.
+  // If not, rever to atomicxchg and warn the user.
+  bool hasXandUpdateSameType =
+      (Update.getScalarVal()->getType() == X.getAddress(CGF).getElementType());
+
   bool addOpHasAMDGPUFastVersion =
       BO == BO_Add && (Update.getScalarVal()->getType()->isDoubleTy() ||
                        Update.getScalarVal()->getType()->isFloatTy());
@@ -6355,7 +6363,7 @@ static bool canUseAMDGPUFastFPAtomics(CodeGenFunction &CGF, LValue X,
          CGF.CGM.getLangOpts().OpenMPIsTargetDevice &&
          userRequestsAMDGPUFastFPAtomics &&
          (addOpHasAMDGPUFastVersion || minMaxOpHasAMDGPUFastVersion) &&
-         X.isSimple();
+         hasXandUpdateSameType && X.isSimple();
 }
 
 static std::pair<bool, RValue>
