@@ -780,7 +780,7 @@ shouldPragmaUnroll(Loop *L, const PragmaInfo &PInfo,
     return TripCount;
 
   if (PInfo.PragmaEnableUnroll && !TripCount && MaxTripCount &&
-      MaxTripCount <= UnrollMaxUpperBound)
+      MaxTripCount <= UP.MaxUpperBound)
     return MaxTripCount;
 
   // if didn't return until here, should continue to other priorties
