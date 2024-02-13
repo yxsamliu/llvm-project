@@ -148,7 +148,6 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
 
     // Try to preload this argument into user SGPRs.
     if (Arg.hasInRegAttr() && InPreloadSequence && ST.hasKernargPreload() &&
-        !ST.needsKernargPreloadBackwardsCompatibility() &&
         !Arg.getType()->isAggregateType())
       if (PreloadInfo.tryAllocPreloadSGPRs(AllocSize, EltOffset,
                                            LastExplicitArgOffset))

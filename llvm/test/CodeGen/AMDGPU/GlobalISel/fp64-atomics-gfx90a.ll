@@ -105,7 +105,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_ptr_buffer_atomic_add_noret_f64(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @raw_ptr_buffer_atomic_add_noret_f64(ptr addrspace(8) %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: raw_ptr_buffer_atomic_add_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -118,75 +118,10 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_add_noret_f64(ptr addrspace(8) 
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: raw_ptr_buffer_atomic_add_noret_f64:
-; GFX940:         s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:  ; %bb.0: ; %main_body
-; GFX940-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; GFX940-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX940-NEXT:    s_load_dword s8, s[0:1], 0x3c
+; GFX940-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NEXT:    v_mov_b32_e32 v2, s8
@@ -217,7 +152,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_ptr_buffer_atomic_add_rtn_f64_off4_slc(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @raw_ptr_buffer_atomic_add_rtn_f64_off4_slc(ptr addrspace(8) %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: raw_ptr_buffer_atomic_add_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -234,75 +169,10 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_add_rtn_f64_off4_slc(ptr addrsp
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: raw_ptr_buffer_atomic_add_rtn_f64_off4_slc:
-; GFX940:         s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:  ; %bb.0: ; %main_body
-; GFX940-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; GFX940-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX940-NEXT:    s_load_dword s10, s[0:1], 0x3c
+; GFX940-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX940-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x44
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
@@ -318,7 +188,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_buffer_atomic_add_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @struct_buffer_atomic_add_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: struct_buffer_atomic_add_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -331,77 +201,10 @@ define amdgpu_kernel void @struct_buffer_atomic_add_noret_f64(<4 x i32> inreg %r
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: struct_buffer_atomic_add_noret_f64:
-; GFX940:         s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:  ; %bb.0: ; %main_body
-; GFX940-NEXT:    s_mov_b32 s7, s5
-; GFX940-NEXT:    s_mov_b32 s6, s4
-; GFX940-NEXT:    s_mov_b32 s5, s3
-; GFX940-NEXT:    s_mov_b32 s4, s2
+; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX940-NEXT:    s_load_dword s8, s[0:1], 0x3c
+; GFX940-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NEXT:    v_mov_b32_e32 v2, s8
@@ -468,7 +271,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_ptr_buffer_atomic_add_noret_f64(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @struct_ptr_buffer_atomic_add_noret_f64(ptr addrspace(8) %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: struct_ptr_buffer_atomic_add_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -481,75 +284,10 @@ define amdgpu_kernel void @struct_ptr_buffer_atomic_add_noret_f64(ptr addrspace(
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: struct_ptr_buffer_atomic_add_noret_f64:
-; GFX940:         s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:  ; %bb.0: ; %main_body
-; GFX940-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; GFX940-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX940-NEXT:    s_load_dword s8, s[0:1], 0x3c
+; GFX940-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NEXT:    v_mov_b32_e32 v2, s8
@@ -580,7 +318,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_ptr_buffer_atomic_add_rtn_f64_off4_slc(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @struct_ptr_buffer_atomic_add_rtn_f64_off4_slc(ptr addrspace(8) %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: struct_ptr_buffer_atomic_add_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -597,75 +335,10 @@ define amdgpu_kernel void @struct_ptr_buffer_atomic_add_rtn_f64_off4_slc(ptr add
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: struct_ptr_buffer_atomic_add_rtn_f64_off4_slc:
-; GFX940:         s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:  ; %bb.0: ; %main_body
-; GFX940-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; GFX940-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX940-NEXT:    s_load_dword s10, s[0:1], 0x3c
+; GFX940-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX940-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x44
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
@@ -681,7 +354,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_buffer_atomic_min_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @raw_buffer_atomic_min_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: raw_buffer_atomic_min_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -694,77 +367,10 @@ define amdgpu_kernel void @raw_buffer_atomic_min_noret_f64(<4 x i32> inreg %rsrc
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: raw_buffer_atomic_min_noret_f64:
-; GFX940:         s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:  ; %bb.0: ; %main_body
-; GFX940-NEXT:    s_mov_b32 s7, s5
-; GFX940-NEXT:    s_mov_b32 s6, s4
-; GFX940-NEXT:    s_mov_b32 s5, s3
-; GFX940-NEXT:    s_mov_b32 s4, s2
+; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX940-NEXT:    s_load_dword s8, s[0:1], 0x3c
+; GFX940-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NEXT:    v_mov_b32_e32 v2, s8
@@ -831,7 +437,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_ptr_buffer_atomic_min_noret_f64(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @raw_ptr_buffer_atomic_min_noret_f64(ptr addrspace(8) %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: raw_ptr_buffer_atomic_min_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -844,75 +450,10 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_min_noret_f64(ptr addrspace(8) 
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: raw_ptr_buffer_atomic_min_noret_f64:
-; GFX940:         s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:  ; %bb.0: ; %main_body
-; GFX940-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; GFX940-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX940-NEXT:    s_load_dword s8, s[0:1], 0x3c
+; GFX940-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NEXT:    v_mov_b32_e32 v2, s8
@@ -943,7 +484,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_ptr_buffer_atomic_min_rtn_f64_off4_slc(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @raw_ptr_buffer_atomic_min_rtn_f64_off4_slc(ptr addrspace(8) %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: raw_ptr_buffer_atomic_min_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -960,75 +501,10 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_min_rtn_f64_off4_slc(ptr addrsp
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: raw_ptr_buffer_atomic_min_rtn_f64_off4_slc:
-; GFX940:         s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:  ; %bb.0: ; %main_body
-; GFX940-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; GFX940-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX940-NEXT:    s_load_dword s10, s[0:1], 0x3c
+; GFX940-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX940-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x44
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
@@ -1044,7 +520,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_buffer_atomic_min_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @struct_buffer_atomic_min_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: struct_buffer_atomic_min_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -1057,77 +533,10 @@ define amdgpu_kernel void @struct_buffer_atomic_min_noret_f64(<4 x i32> inreg %r
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: struct_buffer_atomic_min_noret_f64:
-; GFX940:         s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:  ; %bb.0: ; %main_body
-; GFX940-NEXT:    s_mov_b32 s7, s5
-; GFX940-NEXT:    s_mov_b32 s6, s4
-; GFX940-NEXT:    s_mov_b32 s5, s3
-; GFX940-NEXT:    s_mov_b32 s4, s2
+; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX940-NEXT:    s_load_dword s8, s[0:1], 0x3c
+; GFX940-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NEXT:    v_mov_b32_e32 v2, s8
@@ -1194,7 +603,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_ptr_buffer_atomic_min_noret_f64(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @struct_ptr_buffer_atomic_min_noret_f64(ptr addrspace(8) %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: struct_ptr_buffer_atomic_min_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -1207,75 +616,10 @@ define amdgpu_kernel void @struct_ptr_buffer_atomic_min_noret_f64(ptr addrspace(
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: struct_ptr_buffer_atomic_min_noret_f64:
-; GFX940:         s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:  ; %bb.0: ; %main_body
-; GFX940-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; GFX940-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX940-NEXT:    s_load_dword s8, s[0:1], 0x3c
+; GFX940-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NEXT:    v_mov_b32_e32 v2, s8
@@ -1306,7 +650,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_ptr_buffer_atomic_min_rtn_f64_off4_slc(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @struct_ptr_buffer_atomic_min_rtn_f64_off4_slc(ptr addrspace(8) %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: struct_ptr_buffer_atomic_min_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -1323,75 +667,10 @@ define amdgpu_kernel void @struct_ptr_buffer_atomic_min_rtn_f64_off4_slc(ptr add
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: struct_ptr_buffer_atomic_min_rtn_f64_off4_slc:
-; GFX940:         s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:  ; %bb.0: ; %main_body
-; GFX940-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; GFX940-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX940-NEXT:    s_load_dword s10, s[0:1], 0x3c
+; GFX940-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX940-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x44
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
@@ -1407,7 +686,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_buffer_atomic_max_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @raw_buffer_atomic_max_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: raw_buffer_atomic_max_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -1420,77 +699,10 @@ define amdgpu_kernel void @raw_buffer_atomic_max_noret_f64(<4 x i32> inreg %rsrc
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: raw_buffer_atomic_max_noret_f64:
-; GFX940:         s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:  ; %bb.0: ; %main_body
-; GFX940-NEXT:    s_mov_b32 s7, s5
-; GFX940-NEXT:    s_mov_b32 s6, s4
-; GFX940-NEXT:    s_mov_b32 s5, s3
-; GFX940-NEXT:    s_mov_b32 s4, s2
+; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX940-NEXT:    s_load_dword s8, s[0:1], 0x3c
+; GFX940-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NEXT:    v_mov_b32_e32 v2, s8
@@ -1557,7 +769,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_ptr_buffer_atomic_max_noret_f64(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @raw_ptr_buffer_atomic_max_noret_f64(ptr addrspace(8) %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: raw_ptr_buffer_atomic_max_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -1570,75 +782,10 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_max_noret_f64(ptr addrspace(8) 
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: raw_ptr_buffer_atomic_max_noret_f64:
-; GFX940:         s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:  ; %bb.0: ; %main_body
-; GFX940-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; GFX940-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX940-NEXT:    s_load_dword s8, s[0:1], 0x3c
+; GFX940-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NEXT:    v_mov_b32_e32 v2, s8
@@ -1669,7 +816,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @raw_ptr_buffer_atomic_max_rtn_f64_off4_slc(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @raw_ptr_buffer_atomic_max_rtn_f64_off4_slc(ptr addrspace(8) %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: raw_ptr_buffer_atomic_max_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -1686,75 +833,10 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_max_rtn_f64_off4_slc(ptr addrsp
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: raw_ptr_buffer_atomic_max_rtn_f64_off4_slc:
-; GFX940:         s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:  ; %bb.0: ; %main_body
-; GFX940-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; GFX940-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX940-NEXT:    s_load_dword s10, s[0:1], 0x3c
+; GFX940-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX940-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x44
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
@@ -1770,7 +852,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_buffer_atomic_max_noret_f64(<4 x i32> inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @struct_buffer_atomic_max_noret_f64(<4 x i32> %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: struct_buffer_atomic_max_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -1783,77 +865,10 @@ define amdgpu_kernel void @struct_buffer_atomic_max_noret_f64(<4 x i32> inreg %r
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: struct_buffer_atomic_max_noret_f64:
-; GFX940:         s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:  ; %bb.0: ; %main_body
-; GFX940-NEXT:    s_mov_b32 s7, s5
-; GFX940-NEXT:    s_mov_b32 s6, s4
-; GFX940-NEXT:    s_mov_b32 s5, s3
-; GFX940-NEXT:    s_mov_b32 s4, s2
+; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX940-NEXT:    s_load_dword s8, s[0:1], 0x3c
+; GFX940-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NEXT:    v_mov_b32_e32 v2, s8
@@ -1920,7 +935,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_ptr_buffer_atomic_max_noret_f64(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex) {
+define amdgpu_kernel void @struct_ptr_buffer_atomic_max_noret_f64(ptr addrspace(8) %rsrc, double %data, i32 %vindex) {
 ; GFX90A-LABEL: struct_ptr_buffer_atomic_max_noret_f64:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -1933,75 +948,10 @@ define amdgpu_kernel void @struct_ptr_buffer_atomic_max_noret_f64(ptr addrspace(
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: struct_ptr_buffer_atomic_max_noret_f64:
-; GFX940:         s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:  ; %bb.0: ; %main_body
-; GFX940-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; GFX940-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX940-NEXT:    s_load_dword s8, s[0:1], 0x3c
+; GFX940-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NEXT:    v_mov_b32_e32 v2, s8
@@ -2032,7 +982,7 @@ main_body:
   ret void
 }
 
-define amdgpu_kernel void @struct_ptr_buffer_atomic_max_rtn_f64_off4_slc(ptr addrspace(8) inreg %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
+define amdgpu_kernel void @struct_ptr_buffer_atomic_max_rtn_f64_off4_slc(ptr addrspace(8) %rsrc, double %data, i32 %vindex, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: struct_ptr_buffer_atomic_max_rtn_f64_off4_slc:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
@@ -2049,75 +999,10 @@ define amdgpu_kernel void @struct_ptr_buffer_atomic_max_rtn_f64_off4_slc(ptr add
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX940-LABEL: struct_ptr_buffer_atomic_max_rtn_f64_off4_slc:
-; GFX940:         s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:    s_nop 0
-; GFX940-NEXT:  ; %bb.0: ; %main_body
-; GFX940-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; GFX940-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
 ; GFX940-NEXT:    s_load_dword s10, s[0:1], 0x3c
+; GFX940-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX940-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x44
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
