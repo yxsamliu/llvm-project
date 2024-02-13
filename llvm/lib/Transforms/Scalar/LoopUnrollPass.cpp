@@ -758,7 +758,7 @@ static unsigned getFullUnrollBoostingFactor(const EstimatedUnrollCost &Cost,
 static std::optional<unsigned>
 shouldPragmaUnroll(Loop *L, const PragmaInfo &PInfo,
                    const unsigned TripMultiple, const unsigned TripCount,
-                   unsigned MaxTripCount, const UnrollCostEstimator UCE,
+                   const UnrollCostEstimator UCE,
                    const TargetTransformInfo::UnrollingPreferences &UP) {
 
   // Using unroll pragma
@@ -778,10 +778,6 @@ shouldPragmaUnroll(Loop *L, const PragmaInfo &PInfo,
 
   if (PInfo.PragmaFullUnroll && TripCount != 0)
     return TripCount;
-
-  if (PInfo.PragmaEnableUnroll && !TripCount && MaxTripCount &&
-      MaxTripCount <= UP.MaxUpperBound)
-    return MaxTripCount;
 
   // if didn't return until here, should continue to other priorties
   return std::nullopt;
@@ -909,7 +905,7 @@ bool llvm::computeUnrollCount(
   // 1st priority is unroll count set by "unroll-count" option.
   // 2nd priority is unroll count set by pragma.
   if (auto UnrollFactor = shouldPragmaUnroll(L, PInfo, TripMultiple, TripCount,
-                                             MaxTripCount, UCE, UP)) {
+                                             UCE, UP)) {
     UP.Count = *UnrollFactor;
 
     if (UserUnrollCount || (PragmaCount > 0)) {
