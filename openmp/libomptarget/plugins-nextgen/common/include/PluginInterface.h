@@ -949,6 +949,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   virtual Error getDeviceStackSize(uint64_t &V) = 0;
 
+  bool isFastReductionEnabled() const { return IsFastReductionEnabled; }
+
 private:
   /// Register offload entry for global variable.
   Error registerGlobalOffloadEntry(DeviceImageTy &DeviceImage,
@@ -1063,6 +1065,8 @@ private:
 
   DeviceMemoryPoolTy DeviceMemoryPool = {nullptr, 0};
   DeviceMemoryPoolTrackingTy DeviceMemoryPoolTracking = {0, 0, ~0U, 0};
+
+  bool IsFastReductionEnabled = false;
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin
