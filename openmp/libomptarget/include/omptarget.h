@@ -98,7 +98,9 @@ enum OpenMPOffloadingDeclareTargetFlags {
   /// Mark the entry kernel as being a global destructor.
   OMP_DECLARE_TARGET_DTOR = 0x04,
   /// Mark the entry global as being an indirectly callable function.
-  OMP_DECLARE_TARGET_INDIRECT = 0x08
+  OMP_DECLARE_TARGET_INDIRECT = 0x08,
+  /// This is an entry corresponding to a requirement to be registered.
+  OMP_REGISTER_REQUIRES = 0x10,
 };
 
 enum TargetAllocTy : int32_t {
