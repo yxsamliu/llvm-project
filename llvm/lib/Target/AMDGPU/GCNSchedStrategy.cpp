@@ -707,7 +707,8 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
     return false;
 
   SavedMutations.swap(DAG.Mutations);
-  DAG.addMutation(createIGroupLPDAGMutation(/*IsPostRA=*/false));
+  DAG.addMutation(createIGroupLPDAGMutation(
+      AMDGPU::SchedulingPhase::PreRAReentry, nullptr));
 
   InitialOccupancy = DAG.MinOccupancy;
   // Aggressivly try to reduce register pressure in the unclustered high RP
@@ -844,7 +845,10 @@ bool GCNSchedStage::initGCNRegion() {
     SavedMutations.swap(DAG.Mutations);
     bool IsInitialStage = StageID == GCNSchedStageID::OccInitialSchedule ||
                           StageID == GCNSchedStageID::ILPInitialSchedule;
-    DAG.addMutation(createIGroupLPDAGMutation(/*IsReentry=*/!IsInitialStage));
+    DAG.addMutation(createIGroupLPDAGMutation(
+        IsInitialStage ? AMDGPU::SchedulingPhase::Initial
+                       : AMDGPU::SchedulingPhase::PreRAReentry,
+        &SavedMutations));
   }
   return true;
 }
@@ -1557,7 +1561,8 @@ void GCNPostScheduleDAGMILive::schedule() {
   if (HasIGLPInstrs) {
     SavedMutations.clear();
     SavedMutations.swap(Mutations);
-    addMutation(createIGroupLPDAGMutation(/*IsReentry=*/true));
+    addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PostRA,
+                                          &SavedMutations));
   }
 
   ScheduleDAGMI::schedule();
