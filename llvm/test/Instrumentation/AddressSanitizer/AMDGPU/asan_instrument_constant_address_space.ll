@@ -8,8 +8,8 @@ target triple = "amdgcn-amd-amdhsa"
 @x8 = addrspace(4) global [2 x i64] zeroinitializer, align 8
 
 define protected amdgpu_kernel void @constant_load(i64 %i) sanitize_address {
-; CHECK-LABEL: define protected amdgpu_kernel void @constant_load(
-; CHECK-SAME: i64 [[I:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-LABEL: define protected amdgpu_kernel void @constant_load
+; CHECK-SAME: (i64 [[I:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [2 x i32], ptr addrspace(4) @x, i64 0, i64 [[I]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(4) [[A]] to i64
@@ -29,7 +29,8 @@ define protected amdgpu_kernel void @constant_load(i64 %i) sanitize_address {
 ; CHECK:       asan.report:
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP13:%.*]], label [[TMP14:%.*]]
 ; CHECK:       13:
-; CHECK-NEXT:    call void @__asan_report_load4(i64 [[TMP0]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    call void @__asan_report_load4(i64 [[TMP0]]) #[[ATTR7:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.amdgcn.s.sleep(i32 0)
 ; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
 ; CHECK-NEXT:    br label [[TMP14]]
 ; CHECK:       14:
@@ -38,8 +39,8 @@ define protected amdgpu_kernel void @constant_load(i64 %i) sanitize_address {
 ; CHECK-NEXT:    [[Q:%.*]] = load i32, ptr addrspace(4) [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
-; RECOV-LABEL: define protected amdgpu_kernel void @constant_load(
-; RECOV-SAME: i64 [[I:%.*]]) #[[ATTR0:[0-9]+]] {
+; RECOV-LABEL: define protected amdgpu_kernel void @constant_load
+; RECOV-SAME: (i64 [[I:%.*]]) #[[ATTR1:[0-9]+]] {
 ; RECOV-NEXT:  entry:
 ; RECOV-NEXT:    [[A:%.*]] = getelementptr inbounds [2 x i32], ptr addrspace(4) @x, i64 0, i64 [[I]]
 ; RECOV-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(4) [[A]] to i64
@@ -55,7 +56,7 @@ define protected amdgpu_kernel void @constant_load(i64 %i) sanitize_address {
 ; RECOV-NEXT:    [[TMP10:%.*]] = and i1 [[TMP5]], [[TMP9]]
 ; RECOV-NEXT:    br i1 [[TMP10]], label [[ASAN_REPORT:%.*]], label [[TMP11:%.*]], !prof [[PROF2:![0-9]+]]
 ; RECOV:       asan.report:
-; RECOV-NEXT:    call void @__asan_report_load4_noabort(i64 [[TMP0]]) #[[ATTR3:[0-9]+]]
+; RECOV-NEXT:    call void @__asan_report_load4_noabort(i64 [[TMP0]]) #[[ATTR4:[0-9]+]]
 ; RECOV-NEXT:    br label [[TMP11]]
 ; RECOV:       11:
 ; RECOV-NEXT:    [[Q:%.*]] = load i32, ptr addrspace(4) [[A]], align 4
@@ -68,8 +69,8 @@ entry:
 }
 
 define protected amdgpu_kernel void @constant_load_8(i64 %i) sanitize_address {
-; CHECK-LABEL: define protected amdgpu_kernel void @constant_load_8(
-; CHECK-SAME: i64 [[I:%.*]]) #[[ATTR0]] {
+; CHECK-LABEL: define protected amdgpu_kernel void @constant_load_8
+; CHECK-SAME: (i64 [[I:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [2 x i64], ptr addrspace(4) @x8, i64 0, i64 [[I]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(4) [[A]] to i64
@@ -84,7 +85,8 @@ define protected amdgpu_kernel void @constant_load_8(i64 %i) sanitize_address {
 ; CHECK:       asan.report:
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP8:%.*]], label [[TMP9:%.*]]
 ; CHECK:       8:
-; CHECK-NEXT:    call void @__asan_report_load8(i64 [[TMP0]]) #[[ATTR5]]
+; CHECK-NEXT:    call void @__asan_report_load8(i64 [[TMP0]]) #[[ATTR7]]
+; CHECK-NEXT:    call void @llvm.amdgcn.s.sleep(i32 0)
 ; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
 ; CHECK-NEXT:    br label [[TMP9]]
 ; CHECK:       9:
@@ -93,8 +95,8 @@ define protected amdgpu_kernel void @constant_load_8(i64 %i) sanitize_address {
 ; CHECK-NEXT:    [[Q:%.*]] = load i64, ptr addrspace(4) [[A]], align 8
 ; CHECK-NEXT:    ret void
 ;
-; RECOV-LABEL: define protected amdgpu_kernel void @constant_load_8(
-; RECOV-SAME: i64 [[I:%.*]]) #[[ATTR0]] {
+; RECOV-LABEL: define protected amdgpu_kernel void @constant_load_8
+; RECOV-SAME: (i64 [[I:%.*]]) #[[ATTR1]] {
 ; RECOV-NEXT:  entry:
 ; RECOV-NEXT:    [[A:%.*]] = getelementptr inbounds [2 x i64], ptr addrspace(4) @x8, i64 0, i64 [[I]]
 ; RECOV-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(4) [[A]] to i64
@@ -105,7 +107,7 @@ define protected amdgpu_kernel void @constant_load_8(i64 %i) sanitize_address {
 ; RECOV-NEXT:    [[TMP5:%.*]] = icmp ne i8 [[TMP4]], 0
 ; RECOV-NEXT:    br i1 [[TMP5]], label [[ASAN_REPORT:%.*]], label [[TMP6:%.*]], !prof [[PROF2]]
 ; RECOV:       asan.report:
-; RECOV-NEXT:    call void @__asan_report_load8_noabort(i64 [[TMP0]]) #[[ATTR3]]
+; RECOV-NEXT:    call void @__asan_report_load8_noabort(i64 [[TMP0]]) #[[ATTR4]]
 ; RECOV-NEXT:    br label [[TMP6]]
 ; RECOV:       6:
 ; RECOV-NEXT:    [[Q:%.*]] = load i64, ptr addrspace(4) [[A]], align 8

@@ -32,7 +32,8 @@ define protected amdgpu_kernel void @generic_store(ptr addrspace(1) %p, i32 %i) 
 ; CHECK:       asan.report:
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[TMP18:%.*]], label [[TMP19:%.*]]
 ; CHECK:       18:
-; CHECK-NEXT:    call void @__asan_report_store4(i64 [[TMP5]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    call void @__asan_report_store4(i64 [[TMP5]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.amdgcn.s.sleep(i32 0)
 ; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
 ; CHECK-NEXT:    br label [[TMP19]]
 ; CHECK:       19:
@@ -109,7 +110,8 @@ define protected amdgpu_kernel void @generic_load(ptr addrspace(1) %p, i32 %i) s
 ; CHECK:       asan.report:
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[TMP18:%.*]], label [[TMP19:%.*]]
 ; CHECK:       18:
-; CHECK-NEXT:    call void @__asan_report_load4(i64 [[TMP5]]) #[[ATTR5]]
+; CHECK-NEXT:    call void @__asan_report_load4(i64 [[TMP5]]) #[[ATTR6]]
+; CHECK-NEXT:    call void @llvm.amdgcn.s.sleep(i32 0)
 ; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
 ; CHECK-NEXT:    br label [[TMP19]]
 ; CHECK:       19:
@@ -181,7 +183,8 @@ define protected amdgpu_kernel void @generic_store_8(ptr addrspace(1) %p) saniti
 ; CHECK:       asan.report:
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP13:%.*]], label [[TMP14:%.*]]
 ; CHECK:       13:
-; CHECK-NEXT:    call void @__asan_report_store8(i64 [[TMP5]]) #[[ATTR5]]
+; CHECK-NEXT:    call void @__asan_report_store8(i64 [[TMP5]]) #[[ATTR6]]
+; CHECK-NEXT:    call void @llvm.amdgcn.s.sleep(i32 0)
 ; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
 ; CHECK-NEXT:    br label [[TMP14]]
 ; CHECK:       14:
@@ -247,7 +250,8 @@ define protected amdgpu_kernel void @generic_load_8(ptr addrspace(1) %p) sanitiz
 ; CHECK:       asan.report:
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP13:%.*]], label [[TMP14:%.*]]
 ; CHECK:       13:
-; CHECK-NEXT:    call void @__asan_report_load8(i64 [[TMP5]]) #[[ATTR5]]
+; CHECK-NEXT:    call void @__asan_report_load8(i64 [[TMP5]]) #[[ATTR6]]
+; CHECK-NEXT:    call void @llvm.amdgcn.s.sleep(i32 0)
 ; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
 ; CHECK-NEXT:    br label [[TMP14]]
 ; CHECK:       14:

@@ -25,7 +25,8 @@ define protected amdgpu_kernel void @global_store(ptr addrspace(1) %p, i32 %i) s
 ; CHECK:       asan.report:
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP13:%.*]], label [[TMP14:%.*]]
 ; CHECK:       13:
-; CHECK-NEXT:    call void @__asan_report_store4(i64 [[TMP0]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    call void @__asan_report_store4(i64 [[TMP0]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.amdgcn.s.sleep(i32 0)
 ; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
 ; CHECK-NEXT:    br label [[TMP14]]
 ; CHECK:       14:
@@ -83,7 +84,8 @@ define protected amdgpu_kernel void @global_load(ptr addrspace(1) %p, i32 %i) sa
 ; CHECK:       asan.report:
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP13:%.*]], label [[TMP14:%.*]]
 ; CHECK:       13:
-; CHECK-NEXT:    call void @__asan_report_load4(i64 [[TMP0]]) #[[ATTR5]]
+; CHECK-NEXT:    call void @__asan_report_load4(i64 [[TMP0]]) #[[ATTR6]]
+; CHECK-NEXT:    call void @llvm.amdgcn.s.sleep(i32 0)
 ; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
 ; CHECK-NEXT:    br label [[TMP14]]
 ; CHECK:       14:
@@ -136,7 +138,8 @@ define protected amdgpu_kernel void @global_store_8(ptr addrspace(1) %p) sanitiz
 ; CHECK:       asan.report:
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP8:%.*]], label [[TMP9:%.*]]
 ; CHECK:       8:
-; CHECK-NEXT:    call void @__asan_report_store8(i64 [[TMP0]]) #[[ATTR5]]
+; CHECK-NEXT:    call void @__asan_report_store8(i64 [[TMP0]]) #[[ATTR6]]
+; CHECK-NEXT:    call void @llvm.amdgcn.s.sleep(i32 0)
 ; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
 ; CHECK-NEXT:    br label [[TMP9]]
 ; CHECK:       9:
@@ -183,7 +186,8 @@ define protected amdgpu_kernel void @global_load_8(ptr addrspace(1) %p) sanitize
 ; CHECK:       asan.report:
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP8:%.*]], label [[TMP9:%.*]]
 ; CHECK:       8:
-; CHECK-NEXT:    call void @__asan_report_load8(i64 [[TMP0]]) #[[ATTR5]]
+; CHECK-NEXT:    call void @__asan_report_load8(i64 [[TMP0]]) #[[ATTR6]]
+; CHECK-NEXT:    call void @llvm.amdgcn.s.sleep(i32 0)
 ; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
 ; CHECK-NEXT:    br label [[TMP9]]
 ; CHECK:       9:

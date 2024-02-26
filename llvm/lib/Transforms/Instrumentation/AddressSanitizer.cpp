@@ -176,6 +176,7 @@ const char kAMDGPUAddressSharedName[] = "llvm.amdgcn.is.shared";
 const char kAMDGPUAddressPrivateName[] = "llvm.amdgcn.is.private";
 const char kAMDGPUBallotName[] = "llvm.amdgcn.ballot.i64";
 const char kAMDGPUUnreachableName[] = "llvm.amdgcn.unreachable";
+const char kAMDGPUSleep[] = "llvm.amdgcn.s.sleep";
 
 // Accesses sizes are powers of two: 1, 2, 4, 8, 16.
 static const size_t kNumberOfAccessSizes = 5;
@@ -1745,8 +1746,16 @@ Instruction *AddressSanitizer::genAMDGPUReportBlock(IRBuilder<> &IRB,
 
   Trm = SplitBlockAndInsertIfThen(Cond, Trm, false);
   IRB.SetInsertPoint(Trm);
-  return IRB.CreateCall(
+  // TODO: Use s_sleep so the return address from asan_report would point to an
+  // instruction with valid debug location. Otherwise it points to end.cf
+  // intrinsic which is currently doesn't have valid debug location and it's not
+  // easy to set it correctly.
+  auto Sleep = IRB.CreateCall(
+      M.getOrInsertFunction(kAMDGPUSleep, IRB.getVoidTy(), IRB.getInt32Ty()),
+      {ConstantInt::get(IRB.getInt32Ty(), 0)});
+  IRB.CreateCall(
       M.getOrInsertFunction(kAMDGPUUnreachableName, IRB.getVoidTy()), {});
+  return Sleep;
 }
 
 void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
