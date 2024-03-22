@@ -50,6 +50,11 @@ static cl::opt<bool>
                           cl::desc("Enable loop iv regalloc heuristic"),
                           cl::init(true));
 
+static cl::opt<bool> MutableInsertionPoint(
+    "enable-mutable-insertion-point",
+    cl::desc("Allow targets to change the copy insertion point"),
+    cl::init(true));
+
 STATISTIC(NumFinished, "Number of splits finished");
 STATISTIC(NumSimple,   "Number of splits that were simple");
 STATISTIC(NumCopies,   "Number of copies inserted for splitting");
@@ -1658,7 +1663,8 @@ void SplitEditor::splitLiveThroughBlock(unsigned MBBNum,
     //
     selectIntv(IntvIn);
     SlotIndex Idx = leaveIntvAtTop(*MBB);
-    assert((!LeaveBefore || Idx <= LeaveBefore) && "Interference");
+    assert((MutableInsertionPoint || (!LeaveBefore || Idx <= LeaveBefore)) &&
+           "Interference");
     (void)Idx;
     return;
   }
@@ -1672,7 +1678,8 @@ void SplitEditor::splitLiveThroughBlock(unsigned MBBNum,
     //
     selectIntv(IntvOut);
     SlotIndex Idx = enterIntvAtEnd(*MBB);
-    assert((!EnterAfter || Idx >= EnterAfter) && "Interference");
+    assert((MutableInsertionPoint || (!EnterAfter || Idx >= EnterAfter)) &&
+           "Interference");
     (void)Idx;
     return;
   }
@@ -1710,8 +1717,10 @@ void SplitEditor::splitLiveThroughBlock(unsigned MBBNum,
     }
     selectIntv(IntvIn);
     useIntv(Start, Idx);
-    assert((!LeaveBefore || Idx <= LeaveBefore) && "Interference");
-    assert((!EnterAfter || Idx >= EnterAfter) && "Interference");
+    assert((MutableInsertionPoint || (!LeaveBefore || Idx <= LeaveBefore)) &&
+           "Interference");
+    assert((MutableInsertionPoint || (!EnterAfter || Idx >= EnterAfter)) &&
+           "Interference");
     return;
   }
 
@@ -1726,12 +1735,14 @@ void SplitEditor::splitLiveThroughBlock(unsigned MBBNum,
   selectIntv(IntvOut);
   SlotIndex Idx = enterIntvAfter(EnterAfter);
   useIntv(Idx, Stop);
-  assert((!EnterAfter || Idx >= EnterAfter) && "Interference");
+  assert((MutableInsertionPoint || (!EnterAfter || Idx >= EnterAfter)) &&
+         "Interference");
 
   selectIntv(IntvIn);
   Idx = leaveIntvBefore(LeaveBefore);
   useIntv(Start, Idx);
-  assert((!LeaveBefore || Idx <= LeaveBefore) && "Interference");
+  assert((MutableInsertionPoint || (!LeaveBefore || Idx <= LeaveBefore)) &&
+         "Interference");
 }
 
 void SplitEditor::splitRegInBlock(const SplitAnalysis::BlockInfo &BI,
@@ -1779,14 +1790,16 @@ void SplitEditor::splitRegInBlock(const SplitAnalysis::BlockInfo &BI,
       selectIntv(IntvIn);
       SlotIndex Idx = leaveIntvAfter(BI.LastInstr);
       useIntv(Start, Idx);
-      assert((!LeaveBefore || Idx <= LeaveBefore) && "Interference");
+      assert((MutableInsertionPoint || (!LeaveBefore || Idx <= LeaveBefore)) &&
+             "Interference");
     } else {
       LLVM_DEBUG(dbgs() << ", spill before last split point.\n");
       selectIntv(IntvIn);
       SlotIndex Idx = leaveIntvBefore(LSP);
       overlapIntv(Idx, BI.LastInstr);
       useIntv(Start, Idx);
-      assert((!LeaveBefore || Idx <= LeaveBefore) && "Interference");
+      assert((MutableInsertionPoint || (!LeaveBefore || Idx <= LeaveBefore)) &&
+             "Interference");
     }
     return;
   }
@@ -1809,7 +1822,8 @@ void SplitEditor::splitRegInBlock(const SplitAnalysis::BlockInfo &BI,
     useIntv(From, To);
     selectIntv(IntvIn);
     useIntv(Start, From);
-    assert((!LeaveBefore || From <= LeaveBefore) && "Interference");
+    assert((MutableInsertionPoint || (!LeaveBefore || From <= LeaveBefore)) &&
+           "Interference");
     return;
   }
 
@@ -1824,7 +1838,8 @@ void SplitEditor::splitRegInBlock(const SplitAnalysis::BlockInfo &BI,
   useIntv(From, To);
   selectIntv(IntvIn);
   useIntv(Start, From);
-  assert((!LeaveBefore || From <= LeaveBefore) && "Interference");
+  assert((MutableInsertionPoint || (!LeaveBefore || From <= LeaveBefore)) &&
+         "Interference");
 }
 
 void SplitEditor::splitRegOutBlock(const SplitAnalysis::BlockInfo &BI,
@@ -1866,7 +1881,8 @@ void SplitEditor::splitRegOutBlock(const SplitAnalysis::BlockInfo &BI,
     selectIntv(IntvOut);
     SlotIndex Idx = enterIntvBefore(std::min(LSP, BI.FirstInstr));
     useIntv(Idx, Stop);
-    assert((!EnterAfter || Idx >= EnterAfter) && "Interference");
+    assert((MutableInsertionPoint || (!EnterAfter || Idx >= EnterAfter)) &&
+           "Interference");
     return;
   }
 
@@ -1882,7 +1898,8 @@ void SplitEditor::splitRegOutBlock(const SplitAnalysis::BlockInfo &BI,
   selectIntv(IntvOut);
   SlotIndex Idx = enterIntvAfter(EnterAfter);
   useIntv(Idx, Stop);
-  assert((!EnterAfter || Idx >= EnterAfter) && "Interference");
+  assert((MutableInsertionPoint || (!EnterAfter || Idx >= EnterAfter)) &&
+         "Interference");
 
   openIntv();
   SlotIndex From = enterIntvBefore(std::min(Idx, BI.FirstInstr));
