@@ -1555,6 +1555,9 @@ private:
   /// Mutex to protect stream's management.
   mutable std::mutex Mutex;
 
+  /// Use synchronous copy back.
+  bool UseSyncCopyBack;
+
   /// Timeout hint for HSA actively waiting for signal value to change
   const uint64_t StreamBusyWaitMicroseconds;
 
@@ -1848,30 +1851,18 @@ public:
     // Consume stream slot and compute dependencies.
     auto [Curr, InputSignal] = consume(OutputSignals[0]);
 
-//
-// For some reason, the kernel completion signal value gets turned to 0
-// when it should be 1. The code we are commenting out causes this signal
-// to be ignored below and the D2H copy process starts too soon.
-// In this fix, we are not resetting the signal value to 1.
-// We are just not ignoring the signal in the asyncMemCopy below.
-//
-// This fix does not solve the random SDMA problem. 
-// We need to understand how this InputSignal value which was a kernel
-// completion signal became 0. More testing is needed.
-//
-    // Avoid defining the input dependency if already satisfied.
-//  if (InputSignal && !InputSignal->load())
-//      fprintf(stderr , " Inputsignal value %ld for signal %p\n",InputSignal->load(),InputSignal);
-//      InputSignal = nullptr;
-
     // Setup the post action for releasing the intermediate buffer.
     if (auto Err = Slots[Curr].schedReleaseBuffer(Inter, MemoryManager))
       return Err;
 
+    // Wait for kernel to finish before scheduling the asynchronous copy.
+    if (UseSyncCopyBack && InputSignal && InputSignal->load())
+      if (auto Err = InputSignal->wait(StreamBusyWaitMicroseconds, RPCHandle))
+        return Err;
+
     // Issue the first step: device to host transfer. Avoid defining the input
     // dependency if already satisfied.
-    if (InputSignal) {
-// fprintf(stderr,"calling utils::asyncMemCopy with InputSignal %p val%ld\n",InputSignal,InputSignal->load());
+    if (InputSignal && InputSignal->load()) {
       hsa_signal_t InputSignalRaw = InputSignal->get();
       if (auto Err = utils::asyncMemCopy(
               UseMultipleSdmaEngines, Inter, Agent, Src, Agent, CopySize, 1,
@@ -2474,10 +2465,14 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_UseMultipleSdmaEngines(
           // setting default to true here appears to solve random sdma problem
             "LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES", true),
+        OMPX_SyncCopyBack("LIBOMPTARGET_SYNC_COPY_BACK", true),
         AMDGPUStreamManager(*this, Agent), AMDGPUEventManager(*this),
         AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice) {}
 
   ~AMDGPUDeviceTy() {}
+
+  /// Return synchronous copy back status variable.
+  bool syncCopyBack() const { return OMPX_SyncCopyBack; }
 
   /// Returns the maximum of HSA queues to create
   /// This reads a non-cached environment variable, don't call everywhere.
@@ -3751,6 +3746,9 @@ private:
   /// Use ROCm 5.7 interface for multiple SDMA engines
   BoolEnvar OMPX_UseMultipleSdmaEngines;
 
+  /// Variable to hold synchronous copy back
+  BoolEnvar OMPX_SyncCopyBack;
+
   /// Stream manager for AMDGPU streams.
   AMDGPUStreamManagerTy AMDGPUStreamManager;
 
@@ -3894,7 +3892,8 @@ AMDGPUStreamTy::AMDGPUStreamTy(AMDGPUDeviceTy &Device)
       // Initialize the std::deque with some empty positions.
       Slots(32), NextSlot(0), SyncCycle(0), RPCHandle(nullptr),
       StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()),
-      UseMultipleSdmaEngines(Device.useMultipleSdmaEngines()) {}
+      UseMultipleSdmaEngines(Device.useMultipleSdmaEngines()),
+      UseSyncCopyBack(Device.syncCopyBack()) {}
 
 /// Class implementing the AMDGPU-specific functionalities of the global
 /// handler.
