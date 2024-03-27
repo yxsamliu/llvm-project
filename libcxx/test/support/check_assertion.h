@@ -14,6 +14,8 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <exception>
+#include <regex>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -23,10 +25,6 @@
 #include <sys/wait.h>
 #include "test_macros.h"
 #include "test_allocator.h"
-
-#ifndef _LIBCPP_VERSION
-# error "This header may only be used for libc++ tests"
-#endif
 
 #if TEST_STD_VER < 11
 # error "C++11 or greater is required to use this header"
@@ -92,8 +90,7 @@ private:
     std::size_t found_at = got_msg.find(msg_);
     if (found_at == std::string_view::npos)
       return false;
-    // Allow any match
-    return true;
+    return found_at == 0 && got_msg.size() == msg_.size();
   }
 private:
   bool is_empty_;
@@ -111,7 +108,7 @@ inline AssertionInfoMatcher& GlobalMatcher() {
 
 struct DeathTest {
   enum ResultKind {
-    RK_DidNotDie, RK_MatchFound, RK_MatchFailure, RK_SetupFailure, RK_Unknown
+    RK_DidNotDie, RK_MatchFound, RK_MatchFailure, RK_Terminate, RK_SetupFailure, RK_Unknown
   };
 
   static const char* ResultKindToString(ResultKind RK) {
@@ -122,6 +119,7 @@ struct DeathTest {
     CASE(RK_SetupFailure);
     CASE(RK_MatchFound);
     CASE(RK_Unknown);
+    CASE(RK_Terminate);
     }
     return "not a result kind";
   }
@@ -236,25 +234,40 @@ private:
   std::string stderr_from_child_;
 };
 
-void std::__libcpp_verbose_abort(char const* format, ...) {
-  // Extract information from the error message. This has to stay synchronized with
-  // how we format assertions in the library.
-  va_list list;
-  va_start(list, format);
-  char const* file = va_arg(list, char const*);
-  int line = va_arg(list, int);
-  char const* expression = va_arg(list, char const*); (void)expression;
-  char const* message = va_arg(list, char const*);
-  va_end(list);
+#ifdef _LIBCPP_VERSION
+void std::__libcpp_verbose_abort(char const* printf_format, ...) {
+  // Extract information from the error message. This has to stay synchronized with how we format assertions in the
+  // library.
+  va_list args;
+  va_start(args, printf_format);
+  char const* message = va_arg(args, char const*);
 
-  if (GlobalMatcher().Matches(file, line, message)) {
+  std::regex message_format("(.*):(\\d+): assertion (.*) failed: (.*)\\n");
+
+  std::cmatch match_result;
+  bool has_match = std::regex_match(message, match_result, message_format);
+  assert(has_match);
+  assert(match_result.size() == 5);
+
+  std::string file = match_result[1];
+  int line         = std::stoi(match_result[2]);
+  // Omitting `expression` in `match_result[3]`
+  std::string failure_reason = match_result[4];
+
+  if (GlobalMatcher().Matches(file.c_str(), line, failure_reason.c_str())) {
     std::exit(DeathTest::RK_MatchFound);
   }
   std::exit(DeathTest::RK_MatchFailure);
 }
+#endif // _LIBCPP_VERSION
+
+[[noreturn]] inline void terminate_handler() {
+  std::exit(DeathTest::RK_Terminate);
+}
 
 template <class Func>
 inline bool ExpectDeath(const char* stmt, Func&& func, AssertionInfoMatcher Matcher) {
+  std::set_terminate(terminate_handler);
   DeathTest DT(Matcher);
   DeathTest::ResultKind RK = DT.Run(func);
   auto OnFailure = [&](const char* msg) {
@@ -272,6 +285,7 @@ inline bool ExpectDeath(const char* stmt, Func&& func, AssertionInfoMatcher Matc
   };
   switch (RK) {
   case DeathTest::RK_MatchFound:
+  case DeathTest::RK_Terminate:
     return true;
   case DeathTest::RK_SetupFailure:
     return OnFailure("child failed to setup test environment");
@@ -292,6 +306,8 @@ inline bool ExpectDeath(const char* stmt, Func&& func) {
 
 /// Assert that the specified expression throws a libc++ debug exception.
 #define EXPECT_DEATH(...) assert((ExpectDeath(#__VA_ARGS__, [&]() { __VA_ARGS__; } )))
+
+#define EXPECT_STD_TERMINATE(...) assert(ExpectDeath(#__VA_ARGS__, __VA_ARGS__))
 
 #define EXPECT_DEATH_MATCHES(Matcher, ...) assert((ExpectDeath(#__VA_ARGS__, [&]() { __VA_ARGS__; }, Matcher)))
 

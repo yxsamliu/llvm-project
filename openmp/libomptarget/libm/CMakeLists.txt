@@ -28,7 +28,7 @@ endif()
 set(optimization_level 2)
 
 # Get list of AMD GPUs to build for
-set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx90c gfx940 gfx941 gfx942 gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036 gfx1100 gfx1101 gfx1102 gfx1103)
+set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx90c gfx940 gfx941 gfx942 gfx1010 gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036 gfx1100 gfx1101 gfx1102 gfx1103 gfx1150 gfx1151)
 if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
   set(amdgpu_mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
 endif()
@@ -45,13 +45,7 @@ endforeach()
 # prepare variables used by build_static_device_bc_lib
 set(triple "amdgcn-amd-amdhsa")
 set(systemarch "amdgcn")
-set(abi_nums "400" "500")
-foreach(abi_num ${abi_nums})
-  if("${abi_num}" STREQUAL "400")
-    set(clang_abi_opt "-mcode-object-version=4")
-  else()
-    set(clang_abi_opt "-mcode-object-version=5")
-  endif()
+
 foreach(mcpu ${amdgpu_mcpus})
   set(cpu_target x86_64-pc-linux-gnu)
   if(${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "ppc64le")
@@ -69,10 +63,9 @@ foreach(mcpu ${amdgpu_mcpus})
     -march=${mcpu}
     --cuda-device-only
     -nocudalib
-    -O${optimization_level}
-    ${clang_abi_opt}
-  )
-  set(libm-bc ${CMAKE_BINARY_DIR}/libm-${abi_num}-${mcpu}.bc)
+    -Xclang -mcode-object-version=none
+    -O${optimization_level} )
+  set(libm-bc ${CMAKE_BINARY_DIR}/libm-${mcpu}.bc)
   set(openmp_c_cmd ${CLANG_TOOL} ${omp_common_args}
       ${CMAKE_CURRENT_SOURCE_DIR}/src/libm.c)
   add_custom_command(
@@ -80,15 +73,13 @@ foreach(mcpu ${amdgpu_mcpus})
     COMMAND ${openmp_c_cmd} -o ${libm-bc}
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/libm.c"
     COMMENT "Built libm file ${libm-bc}")
-  add_custom_target(libm-target-${abi_num}-${mcpu} ALL DEPENDS ${libm-bc})
+  add_custom_target(libm-target-${mcpu} ALL DEPENDS ${libm-bc})
   if("${CLANG_TOOL}" STREQUAL "$<TARGET_FILE:clang")
     add_custom_command(OUTPUT ${libm-bc}
       DEPENDS clang
       APPEND)
   endif()
 endforeach()
-endforeach()
-
 
 #set(nvptx_numbers $ENV{NVPTXGPUS})
 #if(NOT nvptx_numbers)

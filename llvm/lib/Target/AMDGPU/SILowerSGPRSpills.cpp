@@ -277,6 +277,8 @@ void SILowerSGPRSpills::extendWWMVirtRegLiveness(MachineFunction &MF,
       auto MIB = BuildMI(*SaveBlock, *InsertBefore, InsertBefore->getDebugLoc(),
                          TII->get(AMDGPU::IMPLICIT_DEF), Reg);
       MFI->setFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG);
+      // Set SGPR_SPILL asm printer flag
+      MIB->setAsmPrinterFlag(AMDGPU::SGPR_SPILL);
       if (LIS) {
         LIS->InsertMachineInstrInMaps(*MIB);
       }
@@ -351,9 +353,7 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
         int FI = TII->getNamedOperand(MI, AMDGPU::OpName::addr)->getIndex();
         assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
 
-        bool IsCalleeSaveSGPRSpill =
-            std::find(CalleeSavedFIs.begin(), CalleeSavedFIs.end(), FI) !=
-            CalleeSavedFIs.end();
+        bool IsCalleeSaveSGPRSpill = llvm::is_contained(CalleeSavedFIs, FI);
         if (IsCalleeSaveSGPRSpill) {
           // Spill callee-saved SGPRs into physical VGPR lanes.
 
@@ -365,8 +365,8 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
           // regalloc aware CFI generation to insert new CFIs along with the
           // intermediate spills is implemented. There is no such support
           // currently exist in the LLVM compiler.
-          if (FuncInfo->allocateSGPRSpillToVGPRLane(MF, FI, true)) {
-            NewReservedRegs = true;
+          if (FuncInfo->allocateSGPRSpillToVGPRLane(
+                  MF, FI, /*SpillToPhysVGPRLane=*/true)) {
             bool Spilled = TRI->eliminateSGPRToVGPRSpillFrameIndex(
                 MI, FI, nullptr, Indexes, LIS, true);
             if (!Spilled)

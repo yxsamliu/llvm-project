@@ -593,11 +593,10 @@ void PipelineSolver::populateReadyList(
   for (; I != E; ++I) {
     std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
     int CandSGID = *I;
-    SchedGroup *Match;
-    for (auto &SG : SyncPipeline) {
-      if (SG.getSGID() == CandSGID)
-        Match = &SG;
-    }
+    SchedGroup *Match = llvm::find_if(SyncPipeline, [CandSGID](SchedGroup &SG) {
+      return SG.getSGID() == CandSGID;
+    });
+    assert(Match);
 
     if (UseCostHeur) {
       if (Match->isFull()) {
@@ -625,8 +624,6 @@ void PipelineSolver::populateReadyList(
 bool PipelineSolver::solveExact() {
   if (checkOptimal())
     return true;
-
-  if (static_cast<size_t>(CurrSyncGroupIdx) == PipelineInstrs.size())
 
   if (static_cast<size_t>(CurrSyncGroupIdx) == PipelineInstrs.size())
     return false;
@@ -741,11 +738,10 @@ void PipelineSolver::greedyFind(
   for (; I != E; ++I) {
     std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
     int CandSGID = *I;
-    SchedGroup *Match;
-    for (auto &SG : SyncPipeline) {
-      if (SG.getSGID() == CandSGID)
-        Match = &SG;
-    }
+    SchedGroup *Match = llvm::find_if(SyncPipeline, [CandSGID](SchedGroup &SG) {
+      return SG.getSGID() == CandSGID;
+    });
+    assert(Match);
 
     LLVM_DEBUG(dbgs() << "Trying SGID # " << CandSGID << " with Mask "
                       << (int)Match->getMask() << "\n");
@@ -1923,11 +1919,10 @@ private:
 
       // Does the VALU have a DS_WRITE successor that is the same as other
       // VALU already in the group. The V_PERMs will all share 1 DS_W succ
-      return std::any_of(Cache->begin(), Cache->end(), [&SU](SUnit *Elt) {
-        return std::any_of(SU->Succs.begin(), SU->Succs.end(),
-                           [&Elt](const SDep &ThisSucc) {
-                             return ThisSucc.getSUnit() == Elt;
-                           });
+      return llvm::any_of(*Cache, [&SU](SUnit *Elt) {
+        return llvm::any_of(SU->Succs, [&Elt](const SDep &ThisSucc) {
+          return ThisSucc.getSUnit() == Elt;
+        });
       });
     }
 
@@ -2046,10 +2041,9 @@ private:
       auto DAG = SyncPipe[0].DAG;
       // Does the previous DS_WRITE share a V_PERM predecessor with this
       // VMEM_READ
-      return (
-          std::any_of(Cache->begin(), Cache->end(), [&SU, &DAG](SUnit *Elt) {
-            return DAG->IsReachable(const_cast<SUnit *>(SU), Elt);
-          }));
+      return llvm::any_of(*Cache, [&SU, &DAG](SUnit *Elt) {
+        return DAG->IsReachable(const_cast<SUnit *>(SU), Elt);
+      });
     }
     SharesPredWithPrevNthGroup(unsigned Distance, const SIInstrInfo *TII,
                                unsigned SGID, bool NeedsCache = false)

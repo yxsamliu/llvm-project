@@ -151,9 +151,16 @@ bool AMDGPUResourceUsageAnalysis::runOnModule(Module &M) {
 
     SIFunctionResourceInfo &Info = CI.first->second;
     MachineFunction *MF = MMI.getMachineFunction(*F);
-    assert(MF && "function must have been generated already");
-    Info = analyzeResourceUsage(*MF, TM);
-    HasIndirectCall |= Info.HasIndirectCall;
+    // We can only analyze resource usage of functions for which there exists a
+    // machinefunction equivalent. These may not exist as the (codegen) passes
+    // prior to this one are run in CGSCC order which will bypass any local
+    // functions that aren't called.
+    assert((MF || TPC->requiresCodeGenSCCOrder()) &&
+           "function must have been generated already");
+    if (MF) {
+      Info = analyzeResourceUsage(*MF, TM);
+      HasIndirectCall |= Info.HasIndirectCall;
+    }
   }
 
   if (HasIndirectCall)
@@ -346,8 +353,7 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
           IsSGPR = true;
           Width = 1;
         } else if (AMDGPU::VGPR_32RegClass.contains(Reg) ||
-                   AMDGPU::VGPR_LO16RegClass.contains(Reg) ||
-                   AMDGPU::VGPR_HI16RegClass.contains(Reg)) {
+                   AMDGPU::VGPR_16RegClass.contains(Reg)) {
           IsSGPR = false;
           Width = 1;
         } else if (AMDGPU::AGPR_32RegClass.contains(Reg) ||

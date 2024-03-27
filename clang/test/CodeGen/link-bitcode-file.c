@@ -1,7 +1,3 @@
-// XFAIL: *
-// Restore test once https://github.com/llvm/llvm-project/pull/71978 makes it to
-// amd-mainline-open
-
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -DBITCODE -emit-llvm-bc -o %t.bc %s
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -DBITCODE2 -emit-llvm-bc -o %t-2.bc %s
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -mlink-bitcode-file %t.bc \

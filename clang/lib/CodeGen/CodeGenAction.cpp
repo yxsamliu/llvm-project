@@ -1025,16 +1025,8 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   if (BA != Backend_EmitNothing && !OS)
     return nullptr;
 
-  // TODO: Re-enable this function and remove the manual implementation below
-  // once support for linking archives is added to loadLinkModules(). This
-  // support should be added upstream by:
-  //         https://github.com/llvm/llvm-project/pull/71978
-#if LOAD_LINK_FIXED
-   if (loadLinkModules(CI))
-     return nullptr;
-#endif
-
-  // TODO: Remove this redundant code once linkInModules() is re-enabled
+  if (loadLinkModules(CI))
+    return nullptr;
   // Load bitcode modules to link with, if we need to.
   if (LinkModules.empty())
     for (const CodeGenOptions::BitcodeFileToLink &F :
@@ -1139,20 +1131,20 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
   CompilerInstance &CI = getCompilerInstance();
   SourceManager &SM = CI.getSourceManager();
 
+  auto DiagErrors = [&](Error E) -> std::unique_ptr<llvm::Module> {
+    unsigned DiagID =
+        CI.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Error, "%0");
+    handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
+      CI.getDiagnostics().Report(DiagID) << EIB.message();
+    });
+    return {};
+  };
+
   // For ThinLTO backend invocations, ensure that the context
   // merges types based on ODR identifiers. We also need to read
   // the correct module out of a multi-module bitcode file.
   if (!CI.getCodeGenOpts().ThinLTOIndexFile.empty()) {
     VMContext->enableDebugTypeODRUniquing();
-
-    auto DiagErrors = [&](Error E) -> std::unique_ptr<llvm::Module> {
-      unsigned DiagID =
-          CI.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Error, "%0");
-      handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
-        CI.getDiagnostics().Report(DiagID) << EIB.message();
-      });
-      return {};
-    };
 
     Expected<std::vector<BitcodeModule>> BMsOrErr = getBitcodeModuleList(MBRef);
     if (!BMsOrErr)
@@ -1174,16 +1166,38 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
     return std::move(*MOrErr);
   }
 
-  // TODO: See comment on other loadLinkModules() call
-#if LOAD_LINK_FIXED
   // Load bitcode modules to link with, if we need to.
   if (loadLinkModules(CI))
     return nullptr;
-#endif
 
+  // Handle textual IR and bitcode file with one single module.
   llvm::SMDiagnostic Err;
   if (std::unique_ptr<llvm::Module> M = parseIR(MBRef, Err, *VMContext))
     return M;
+
+  // If MBRef is a bitcode with multiple modules (e.g., -fsplit-lto-unit
+  // output), place the extra modules (actually only one, a regular LTO module)
+  // into LinkModules as if we are using -mlink-bitcode-file.
+  Expected<std::vector<BitcodeModule>> BMsOrErr = getBitcodeModuleList(MBRef);
+  if (BMsOrErr && BMsOrErr->size()) {
+    std::unique_ptr<llvm::Module> FirstM;
+    for (auto &BM : *BMsOrErr) {
+      Expected<std::unique_ptr<llvm::Module>> MOrErr =
+          BM.parseModule(*VMContext);
+      if (!MOrErr)
+        return DiagErrors(MOrErr.takeError());
+      if (FirstM)
+        LinkModules.push_back({std::move(*MOrErr), /*PropagateAttrs=*/false,
+                               /*Internalize=*/false, /*LinkFlags=*/{}});
+      else
+        FirstM = std::move(*MOrErr);
+    }
+    if (FirstM)
+      return FirstM;
+  }
+  // If BMsOrErr fails, consume the error and use the error message from
+  // parseIR.
+  consumeError(BMsOrErr.takeError());
 
   // Translate from the diagnostic info to the SourceManager location if
   // available.
@@ -1197,8 +1211,7 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
 
   // Strip off a leading diagnostic code if there is one.
   StringRef Msg = Err.getMessage();
-  if (Msg.startswith("error: "))
-    Msg = Msg.substr(7);
+  Msg.consume_front("error: ");
 
   unsigned DiagID =
       CI.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Error, "%0");

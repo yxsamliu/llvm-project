@@ -1,31 +1,17 @@
-ee2a35ac4ab [X86] Add AVX-NE-CONVERT instruc
-Revert "[X86] Support -march=sierraforest, grandridge,
-Revert "[AMDGPU] Enable OMod on more VOP3 instructions"   # rocrand assert fails
-
-#break nekbone, cxx20 offsetof
-e327b52766ed [C2x] reject type definitions in offsetof
-
-7f12efa88  [X86][FP16] Lower half->i16 into vcvttph2[u]w directly
-
-FP16
-Revert "[X86][MemFold] Update some records for X86MemFoldTables.inc"
-
-SROA breaks MIOpen
-Revert "[SROA] Create additional vector type candidates based on store and load slices"
-Revert "[SROA] Fix bug where CandidateTys is appended while being iterated"
-
-Rana: HipCatch2 and olcTest conformance fails
+revert: breaks MIOpen composableKernel build 
+[clang][Sema] Add -Wswitch-default warning option (#73077)  
+   https://ontrack-internal.amd.com/browse/SWDEV-436625
 Revert "[AMDGPU] __builtin_amdgcn_read_exec_* should be implemented with llvm.amdgcn.ballot"
 
-missing executable in build:
-Revert "[RemarkUtil] Refactor llvm-remarkutil to include size-diff "
+Reverts: breaks ompt tests
+[Libomptarget] Remove __tgt_image_info and use the ELF directly (#75720)
 
-Johannes: breakage
-Revert "[OpenMP] Disable early vectorization of loads/stores in the runtime " 
-  asserts in  snap and MI-Teams
+64f0681e97c6 [Libomptarget] Rework image checking further (#76120) 
 
 
 Revert Complete the implementation of P2361 Unevaluated string literals
 
 Revert "[Parser] Parse string literal arguments of 'avail"
 
+Reverts: breaks HIP tests in wPSDB and nPSDB
+[AMDGPU] Add dynamic LDS size implicit kernel argument t
