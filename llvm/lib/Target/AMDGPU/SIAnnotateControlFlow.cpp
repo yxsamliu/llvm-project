@@ -337,7 +337,10 @@ bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
       // Split edge to make Def dominate Use
       FirstInsertionPt = &*SplitEdge(DefBB, BB, DT, LI)->getFirstInsertionPt();
     }
-    IRBuilder<>(FirstInsertionPt).CreateCall(EndCf, {Exec});
+    IRBuilder<> IRB(FirstInsertionPt);
+    // TODO: Clear dbg location for now as it causes regression in GDB tests.
+    IRB.SetCurrentDebugLocation(DebugLoc());
+    IRB.CreateCall(EndCf, {Exec});
   }
 
   return true;
