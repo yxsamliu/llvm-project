@@ -15,3 +15,14 @@ Revert "[Parser] Parse string literal arguments of 'avail"
 
 Reverts: breaks HIP tests in wPSDB and nPSDB
 [AMDGPU] Add dynamic LDS size implicit kernel argument t
+
+---
+Revert "Recommit "[InstCombine] Expand `foldSelectICmpAndOr` -> `foldSelectICmpAndBinOp` to work for more binops" (3rd Try)"
+
+    Backup fix for SWDEV-454675
+
+    This reverts commit 54ec8bcaf85e3a3341c97640331d58e24ac0d2cd.
+
+contact: Selehov
+---
+
