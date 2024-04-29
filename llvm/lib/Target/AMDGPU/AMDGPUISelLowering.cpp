@@ -302,6 +302,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::f32, MVT::f16, Expand);
   setTruncStoreAction(MVT::v2f32, MVT::v2bf16, Expand);
   setTruncStoreAction(MVT::v2f32, MVT::v2f16, Expand);
+  setTruncStoreAction(MVT::v3f32, MVT::v3bf16, Expand);
   setTruncStoreAction(MVT::v3f32, MVT::v3f16, Expand);
   setTruncStoreAction(MVT::v4f32, MVT::v4bf16, Expand);
   setTruncStoreAction(MVT::v4f32, MVT::v4f16, Expand);
@@ -317,22 +318,27 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
 
   setTruncStoreAction(MVT::v2f64, MVT::v2f32, Expand);
+  setTruncStoreAction(MVT::v2f64, MVT::v2bf16, Expand);
   setTruncStoreAction(MVT::v2f64, MVT::v2f16, Expand);
 
   setTruncStoreAction(MVT::v3i64, MVT::v3i32, Expand);
   setTruncStoreAction(MVT::v3i64, MVT::v3i16, Expand);
   setTruncStoreAction(MVT::v3f64, MVT::v3f32, Expand);
+  setTruncStoreAction(MVT::v3f64, MVT::v3bf16, Expand);
   setTruncStoreAction(MVT::v3f64, MVT::v3f16, Expand);
 
   setTruncStoreAction(MVT::v4i64, MVT::v4i32, Expand);
   setTruncStoreAction(MVT::v4i64, MVT::v4i16, Expand);
   setTruncStoreAction(MVT::v4f64, MVT::v4f32, Expand);
+  setTruncStoreAction(MVT::v4f64, MVT::v4bf16, Expand);
   setTruncStoreAction(MVT::v4f64, MVT::v4f16, Expand);
 
   setTruncStoreAction(MVT::v8f64, MVT::v8f32, Expand);
+  setTruncStoreAction(MVT::v8f64, MVT::v8bf16, Expand);
   setTruncStoreAction(MVT::v8f64, MVT::v8f16, Expand);
 
   setTruncStoreAction(MVT::v16f64, MVT::v16f32, Expand);
+  setTruncStoreAction(MVT::v16f64, MVT::v16bf16, Expand);
   setTruncStoreAction(MVT::v16f64, MVT::v16f16, Expand);
   setTruncStoreAction(MVT::v16i64, MVT::v16i16, Expand);
   setTruncStoreAction(MVT::v16i64, MVT::v16i16, Expand);
