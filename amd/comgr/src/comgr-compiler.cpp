@@ -1076,8 +1076,8 @@ amd_comgr_status_t AMDGPUCompiler::addDeviceLibraries() {
     return AMD_COMGR_STATUS_ERROR;
   }
   Args.push_back(Saver.save(Twine("--rocm-path=") + FakeRocmDir).data());
-  Args.push_back("-mllvm");
-  Args.push_back("-relink-builtin-bitcode-postop");
+  Args.push_back("-Xclang");
+  Args.push_back("-mlink-builtin-bitcode-postopt");
   NoGpuLib = false;
 
   for (auto DeviceLib : getDeviceLibraries()) {
