@@ -9024,7 +9024,7 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
         SmallVector<std::string> Parts{
             "file=" + std::string(UnpackagedFileName),
             "triple=" + TheTriple.str(),
-            "arch=" + getProcessorFromTargetID(TheTriple, TargetID).str(),
+            "arch=" + TargetID.str(),
             "kind=openmp",
         };
 
