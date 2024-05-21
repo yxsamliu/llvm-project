@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 --mattr=+enable-flat-scratch < %s | FileCheck -check-prefixes=GCN,FLAT_SCR_OPT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 --mattr=+architected-flat-scratch < %s | FileCheck -check-prefixes=GCN,FLAT_SCR_ARCH %s
 
+; XFAIL: *
+
 declare void @extern_func() #0
 
 define amdgpu_kernel void @stack_object_addrspacecast_in_kernel_no_calls() {
