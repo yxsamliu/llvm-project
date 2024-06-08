@@ -280,6 +280,10 @@ def : ProcessorModel<"gfx1151", GFX11SpeedModel,
   FeatureISAVersion11_5_1.Features
 >;
 
+def : ProcessorModel<"gfx1152", GFX11SpeedModel,
+  FeatureISAVersion11_5_2.Features
+>;
+
 //===----------------------------------------------------------------------===//
 // GCN GFX12.
 //===----------------------------------------------------------------------===//

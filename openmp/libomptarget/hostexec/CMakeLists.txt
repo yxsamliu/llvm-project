@@ -44,10 +44,10 @@ else()
 endif()
 
    list(APPEND HOSTRPC_ARCHS "amdgcn")
-   add_library(amdgcn_hostexec_services STATIC 
-      services/amdgcn_hostexec.cpp 
-      services/execute_service.cpp 
-      services/devsanitizer.cpp 
+   add_library(amdgcn_hostexec_services STATIC
+      services/amdgcn_hostexec.cpp
+      services/execute_service.cpp
+      services/devsanitizer.cpp
       services/amdgcn_urilocator.cpp
       ${HOSTEXEC_EXTRA_SOURCE}
    )
@@ -72,7 +72,7 @@ endif()
 
 if (LIBOMPTARGET_DEP_CUDA_FOUND)
    list(APPEND HOSTRPC_ARCHS "nvptx")
-   add_library(nvptx_hostexec_services STATIC 
+   add_library(nvptx_hostexec_services STATIC
       services/execute_service.cpp
    )
    target_include_directories(
@@ -100,7 +100,7 @@ else()
   return()
 endif()
 
-set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx90c gfx940 gfx941 gfx942 gfx1010 gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036 gfx1100 gfx1101 gfx1102 gfx1103 gfx1150 gfx1151)
+set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx90c gfx940 gfx941 gfx942 gfx1010 gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036 gfx1100 gfx1101 gfx1102 gfx1103 gfx1150 gfx1151 gfx1152)
 if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
   set(amdgpu_mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
 endif()
@@ -158,23 +158,23 @@ foreach(archname ${HOSTRPC_ARCHS})
 
    foreach(mcpu ${mcpus})
       if (${archname} STREQUAL "amdgcn")
-         set(openmp_device_args 
+         set(openmp_device_args
 	      -I../../runtime/src  # to pickup omp.h, we may need a dependency
 	      -O${optimization_level}
-	      -fopenmp -fopenmp-cuda-mode -mllvm -openmp-opt-disable 
-	      -std=c++17 -fvisibility=hidden 
+	      -fopenmp -fopenmp-cuda-mode -mllvm -openmp-opt-disable
+	      -std=c++17 -fvisibility=hidden
 	      -fopenmp-targets=${triple} -Xopenmp-target=${triple} -march=${mcpu}
          -Xclang -mcode-object-version=none
 	      -c -emit-llvm --offload-device-only -nogpulib)
       endif()
       if (${archname} STREQUAL "nvptx")
-         set(openmp_device_args 
+         set(openmp_device_args
 	      -I../../runtime/src  # to pickup omp.h, we may need a dependency
-	      -fopenmp -fopenmp-cuda-mode -mllvm -openmp-opt-disable 
-	      -std=c++17 -fvisibility=hidden 
+	      -fopenmp -fopenmp-cuda-mode -mllvm -openmp-opt-disable
+	      -std=c++17 -fvisibility=hidden
 	      -fopenmp-targets=${triple} -Xopenmp-target=${triple} -march=${mcpu}
 	      --cuda-feature=+ptx61,+${mcpu}
-	      -c -emit-llvm --offload-device-only -nocudalib -nogpulib 
+	      -c -emit-llvm --offload-device-only -nocudalib -nogpulib
 	      -Wno-unknown-cuda-version)
       endif()
 

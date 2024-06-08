@@ -504,6 +504,12 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                       - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
+     ``gfx1152``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
 
      ``gfx1200``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
@@ -1716,6 +1722,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX942``     0x04c      ``gfx942``
      *reserved*                           0x04d      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1201``    0x04e      ``gfx1201``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1152``    0x055      ``gfx1152``
      ==================================== ========== =============================
 
 Sections
