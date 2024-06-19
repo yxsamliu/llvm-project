@@ -9024,7 +9024,7 @@ bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI) const {
 
   // FIXME: Copies inserted in the block prolog for live-range split should also
   // be included.
-  return (isSpillOpcode(Opc) || (!MI.isTerminator() && Opc != AMDGPU::COPY &&
+  return (isSpill(Opc) || (!MI.isTerminator() && Opc != AMDGPU::COPY &&
                                  MI.modifiesRegister(AMDGPU::EXEC, &RI)));
 }
 

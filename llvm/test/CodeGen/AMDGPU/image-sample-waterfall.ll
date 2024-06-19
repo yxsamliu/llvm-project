@@ -28,7 +28,6 @@ declare <4 x float> @llvm.amdgcn.image.gather4.2d.v4f32.f32(i32, float, float, <
 ; GCN-NEXT: s_nop 0
 ; GCN-NEXT: image_gather4 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, s[[[SREG0]]:[[SREG7]]], {{s\[[0-9]+:[0-9]+\]}} dmask:0x1
 ; GCN-NEXT: s_xor_b64 [[LOOP_MASK:s\[[0-9]+:[0-9]+\]]], exec, [[SAVE]]
-; GCN-NEXT: s_and_b64 {{s\[[0-9]+:[0-9]+\]}}, [[LOOP_MASK]], -1
 ; GCN-NEXT: ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
 ; GCN-NEXT: ; implicit-def: $vgpr8_vgpr9
 ; GCN-NEXT: s_cselect_b64 exec, [[LOOP_MASK]], [[SAVED_EXEC]]
@@ -59,7 +58,6 @@ main_body:
 
 ; GCN-NEXT: image_gather4 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, s[[[SREG0]]:[[SREG3]]] dmask:0x1
 ; GCN-NEXT: s_xor_b64 [[LOOP_MASK:s\[[0-9]+:[0-9]+\]]], exec, [[SAVE]]
-; GCN-NEXT: s_and_b64 {{s\[[0-9]+:[0-9]+\]}}, [[LOOP_MASK]], -1
 ; GCN-NEXT: ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GCN-NEXT: ; implicit-def: $vgpr4_vgpr5
 ; GCN-NEXT: s_cselect_b64 exec, [[LOOP_MASK]], [[SAVED_EXEC]]

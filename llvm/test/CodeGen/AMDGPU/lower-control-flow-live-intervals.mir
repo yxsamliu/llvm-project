@@ -145,14 +145,17 @@ body:             |
   ; CHECK-NEXT:   S_BRANCH %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[V_CMP_NLT_F32_e64_:%[0-9]+]]:sreg_32 = nofpexcept V_CMP_NLT_F32_e64 0, 0, 0, [[COPY]], 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   dead [[COPY2:%[0-9]+]]:sreg_32 = COPY $exec_lo
   ; CHECK-NEXT:   S_CMP_LG_U32_term [[V_CMP_NLT_F32_e64_]], 0, implicit-def $scc
   ; CHECK-NEXT:   $exec_lo = S_CMOV_B32_term [[V_CMP_NLT_F32_e64_]], implicit $scc
-  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.3, implicit $scc
+  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; CHECK-NEXT:   S_BRANCH %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)

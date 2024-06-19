@@ -9,43 +9,41 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    buffer_store_dword v7, off, s[0:3], s32 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    v_writelane_b32 v7, s34, 0
+; CHECK-NEXT:    v_writelane_b32 v7, s36, 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr3 : SGPR spill to VGPR lane
-; CHECK-NEXT:    v_writelane_b32 v7, s35, 1
-; CHECK-NEXT:    v_writelane_b32 v7, s36, 2
-; CHECK-NEXT:    v_writelane_b32 v7, s37, 3
-; CHECK-NEXT:    v_writelane_b32 v7, s38, 4
-; CHECK-NEXT:    v_writelane_b32 v7, s39, 5
-; CHECK-NEXT:    v_writelane_b32 v7, s40, 6
-; CHECK-NEXT:    v_writelane_b32 v7, s41, 7
-; CHECK-NEXT:    v_writelane_b32 v7, s42, 8
-; CHECK-NEXT:    v_writelane_b32 v7, s43, 9
-; CHECK-NEXT:    v_writelane_b32 v7, s44, 10
-; CHECK-NEXT:    v_writelane_b32 v7, s45, 11
-; CHECK-NEXT:    v_writelane_b32 v7, s46, 12
-; CHECK-NEXT:    v_writelane_b32 v7, s47, 13
-; CHECK-NEXT:    v_writelane_b32 v7, s48, 14
-; CHECK-NEXT:    v_writelane_b32 v7, s49, 15
-; CHECK-NEXT:    v_writelane_b32 v7, s50, 16
-; CHECK-NEXT:    v_writelane_b32 v7, s51, 17
-; CHECK-NEXT:    v_writelane_b32 v7, s52, 18
-; CHECK-NEXT:    v_writelane_b32 v7, s53, 19
-; CHECK-NEXT:    v_writelane_b32 v7, s54, 20
-; CHECK-NEXT:    v_writelane_b32 v7, s55, 21
-; CHECK-NEXT:    v_writelane_b32 v7, s56, 22
-; CHECK-NEXT:    v_writelane_b32 v7, s57, 23
-; CHECK-NEXT:    v_writelane_b32 v7, s58, 24
-; CHECK-NEXT:    v_writelane_b32 v7, s59, 25
-; CHECK-NEXT:    v_writelane_b32 v7, s60, 26
-; CHECK-NEXT:    v_writelane_b32 v7, s61, 27
-; CHECK-NEXT:    v_writelane_b32 v7, s62, 28
-; CHECK-NEXT:    v_writelane_b32 v7, s63, 29
-; CHECK-NEXT:    v_writelane_b32 v7, s64, 30
-; CHECK-NEXT:    v_writelane_b32 v7, s65, 31
-; CHECK-NEXT:    v_writelane_b32 v7, s66, 32
-; CHECK-NEXT:    v_writelane_b32 v7, s67, 33
-; CHECK-NEXT:    v_writelane_b32 v7, s30, 34
-; CHECK-NEXT:    v_writelane_b32 v7, s31, 35
+; CHECK-NEXT:    v_writelane_b32 v7, s37, 1
+; CHECK-NEXT:    v_writelane_b32 v7, s38, 2
+; CHECK-NEXT:    v_writelane_b32 v7, s39, 3
+; CHECK-NEXT:    v_writelane_b32 v7, s40, 4
+; CHECK-NEXT:    v_writelane_b32 v7, s41, 5
+; CHECK-NEXT:    v_writelane_b32 v7, s42, 6
+; CHECK-NEXT:    v_writelane_b32 v7, s43, 7
+; CHECK-NEXT:    v_writelane_b32 v7, s44, 8
+; CHECK-NEXT:    v_writelane_b32 v7, s45, 9
+; CHECK-NEXT:    v_writelane_b32 v7, s46, 10
+; CHECK-NEXT:    v_writelane_b32 v7, s47, 11
+; CHECK-NEXT:    v_writelane_b32 v7, s48, 12
+; CHECK-NEXT:    v_writelane_b32 v7, s49, 13
+; CHECK-NEXT:    v_writelane_b32 v7, s50, 14
+; CHECK-NEXT:    v_writelane_b32 v7, s51, 15
+; CHECK-NEXT:    v_writelane_b32 v7, s52, 16
+; CHECK-NEXT:    v_writelane_b32 v7, s53, 17
+; CHECK-NEXT:    v_writelane_b32 v7, s54, 18
+; CHECK-NEXT:    v_writelane_b32 v7, s55, 19
+; CHECK-NEXT:    v_writelane_b32 v7, s56, 20
+; CHECK-NEXT:    v_writelane_b32 v7, s57, 21
+; CHECK-NEXT:    v_writelane_b32 v7, s58, 22
+; CHECK-NEXT:    v_writelane_b32 v7, s59, 23
+; CHECK-NEXT:    v_writelane_b32 v7, s60, 24
+; CHECK-NEXT:    v_writelane_b32 v7, s61, 25
+; CHECK-NEXT:    v_writelane_b32 v7, s62, 26
+; CHECK-NEXT:    v_writelane_b32 v7, s63, 27
+; CHECK-NEXT:    v_writelane_b32 v7, s64, 28
+; CHECK-NEXT:    v_writelane_b32 v7, s65, 29
+; CHECK-NEXT:    v_writelane_b32 v7, s66, 30
+; CHECK-NEXT:    v_writelane_b32 v7, s67, 31
+; CHECK-NEXT:    v_writelane_b32 v7, s30, 32
+; CHECK-NEXT:    v_writelane_b32 v7, s31, 33
 ; CHECK-NEXT:    s_getpc_b64 s[24:25]
 ; CHECK-NEXT:    s_movk_i32 s4, 0xf0
 ; CHECK-NEXT:    s_mov_b32 s5, s24
@@ -113,8 +111,8 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v3, s49, 29
 ; CHECK-NEXT:    s_xor_b64 s[26:27], vcc, exec
 ; CHECK-NEXT:    v_writelane_b32 v3, s50, 30
-; CHECK-NEXT:    s_and_b64 s[34:35], vcc, -1
 ; CHECK-NEXT:    v_writelane_b32 v3, s51, 31
+; CHECK-NEXT:    s_cmp_lg_u64 vcc, 0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mul_f32_e32 v0, v5, v4
 ; CHECK-NEXT:    s_cmov_b64 exec, vcc
@@ -169,56 +167,21 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_mul_f32_e32 v1, v1, v4
 ; CHECK-NEXT:    s_mov_b64 vcc, vcc
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_2
-; CHECK-NEXT:  .LBB0_3: ; %Flow14
-; CHECK-NEXT:    s_or_saveexec_b64 s[20:21], s[26:27]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_readlane_b32 s12, v5, 32
-; CHECK-NEXT:    v_readlane_b32 s13, v5, 33
-; CHECK-NEXT:    v_readlane_b32 s14, v5, 34
-; CHECK-NEXT:    v_readlane_b32 s15, v5, 35
-; CHECK-NEXT:    v_readlane_b32 s16, v5, 36
-; CHECK-NEXT:    v_readlane_b32 s17, v5, 37
-; CHECK-NEXT:    v_readlane_b32 s18, v5, 38
-; CHECK-NEXT:    v_readlane_b32 s19, v5, 39
-; CHECK-NEXT:    v_writelane_b32 v5, s4, 56
-; CHECK-NEXT:    v_writelane_b32 v5, s5, 57
-; CHECK-NEXT:    v_writelane_b32 v5, s6, 58
-; CHECK-NEXT:    v_writelane_b32 v5, s7, 59
-; CHECK-NEXT:    v_writelane_b32 v5, s8, 60
-; CHECK-NEXT:    v_writelane_b32 v5, s9, 61
-; CHECK-NEXT:    v_writelane_b32 v5, s10, 62
-; CHECK-NEXT:    v_writelane_b32 v5, s11, 63
-; CHECK-NEXT:    v_writelane_b32 v5, s52, 40
-; CHECK-NEXT:    v_writelane_b32 v5, s53, 41
-; CHECK-NEXT:    v_writelane_b32 v5, s54, 42
-; CHECK-NEXT:    v_writelane_b32 v5, s55, 43
-; CHECK-NEXT:    v_writelane_b32 v5, s56, 44
-; CHECK-NEXT:    v_writelane_b32 v5, s57, 45
-; CHECK-NEXT:    v_writelane_b32 v5, s58, 46
-; CHECK-NEXT:    v_writelane_b32 v5, s59, 47
-; CHECK-NEXT:    v_writelane_b32 v4, s12, 0
-; CHECK-NEXT:    v_writelane_b32 v5, s60, 48
-; CHECK-NEXT:    v_writelane_b32 v4, s13, 1
-; CHECK-NEXT:    v_writelane_b32 v5, s61, 49
-; CHECK-NEXT:    v_writelane_b32 v4, s14, 2
-; CHECK-NEXT:    v_writelane_b32 v5, s62, 50
-; CHECK-NEXT:    v_writelane_b32 v4, s15, 3
-; CHECK-NEXT:    v_writelane_b32 v5, s63, 51
-; CHECK-NEXT:    v_writelane_b32 v4, s16, 4
-; CHECK-NEXT:    v_writelane_b32 v5, s64, 52
-; CHECK-NEXT:    v_writelane_b32 v4, s17, 5
-; CHECK-NEXT:    v_writelane_b32 v5, s65, 53
-; CHECK-NEXT:    v_writelane_b32 v4, s18, 6
-; CHECK-NEXT:    v_writelane_b32 v5, s66, 54
-; CHECK-NEXT:    v_writelane_b32 v4, s19, 7
-; CHECK-NEXT:    v_writelane_b32 v5, s67, 55
-; CHECK-NEXT:    s_xor_b64 exec, exec, s[20:21]
-; CHECK-NEXT:    s_cbranch_execz .LBB0_10
-; CHECK-NEXT:  ; %bb.4: ; %bb32
-; CHECK-NEXT:    s_and_saveexec_b64 s[8:9], s[24:25]
-; CHECK-NEXT:    s_xor_b64 s[22:23], exec, s[8:9]
-; CHECK-NEXT:    s_cbranch_execz .LBB0_6
-; CHECK-NEXT:  ; %bb.5: ; %bb43
+; CHECK-NEXT:  ; %bb.3: ; %Flow
+; CHECK-NEXT:    ; implicit-def: $vgpr0
+; CHECK-NEXT:    s_or_b64 exec, exec, s[26:27]
+; CHECK-NEXT:  .LBB0_4: ; %Flow14
+; CHECK-NEXT:    s_xor_b64 s[20:21], s[26:27], exec
+; CHECK-NEXT:    s_cmp_lg_u64 s[26:27], 0
+; CHECK-NEXT:    s_cmov_b64 exec, s[26:27]
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_12
+; CHECK-NEXT:  ; %bb.5: ; %bb32
+; CHECK-NEXT:    s_and_b64 s[8:9], s[24:25], exec
+; CHECK-NEXT:    s_xor_b64 s[22:23], s[8:9], exec
+; CHECK-NEXT:    s_cmp_lg_u64 s[8:9], 0
+; CHECK-NEXT:    s_cmov_b64 exec, s[8:9]
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_7
+; CHECK-NEXT:  ; %bb.6: ; %bb43
 ; CHECK-NEXT:    s_mov_b32 s8, 0
 ; CHECK-NEXT:    s_mov_b32 s9, s8
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s8
@@ -252,64 +215,47 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    s_waitcnt vmcnt(1)
 ; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], off, s[8:11], 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_dwordx3 v[6:8], off, s[8:11], 0
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
-; CHECK-NEXT:    buffer_store_dwordx4 v[2:5], off, s[8:11], 0
-; CHECK-NEXT:  .LBB0_6: ; %Flow12
-; CHECK-NEXT:    s_andn2_saveexec_b64 s[4:5], s[22:23]
-; CHECK-NEXT:    s_cbranch_execz .LBB0_9
-; CHECK-NEXT:  ; %bb.7: ; %bb33.preheader
+; CHECK-NEXT:    s_or_b64 exec, exec, s[22:23]
+; CHECK-NEXT:  .LBB0_7: ; %Flow12
+; CHECK-NEXT:    s_xor_b64 s[4:5], s[22:23], exec
+; CHECK-NEXT:    s_cmp_lg_u64 s[22:23], 0
+; CHECK-NEXT:    s_cmov_b64 exec, s[22:23]
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_11
+; CHECK-NEXT:  ; %bb.8: ; %bb33.preheader
 ; CHECK-NEXT:    s_mov_b32 s8, 0
 ; CHECK-NEXT:    s_mov_b32 s6, s8
-; CHECK-NEXT:    v_readlane_b32 s36, v5, 40
 ; CHECK-NEXT:    s_mov_b32 s7, s8
-; CHECK-NEXT:    v_mov_b32_e32 v2, s6
-; CHECK-NEXT:    v_readlane_b32 s37, v5, 41
+; CHECK-NEXT:    v_mov_b32_e32 v1, s6
+; CHECK-NEXT:    v_readlane_b32 s36, v3, 16
 ; CHECK-NEXT:    s_mov_b32 s9, s8
 ; CHECK-NEXT:    s_mov_b32 s10, s8
 ; CHECK-NEXT:    s_mov_b32 s11, s8
-; CHECK-NEXT:    v_mov_b32_e32 v3, s7
-; CHECK-NEXT:    v_readlane_b32 s38, v5, 42
-; CHECK-NEXT:    v_readlane_b32 s39, v5, 43
-; CHECK-NEXT:    v_readlane_b32 s40, v5, 44
-; CHECK-NEXT:    v_readlane_b32 s41, v5, 45
-; CHECK-NEXT:    v_readlane_b32 s42, v5, 46
-; CHECK-NEXT:    v_readlane_b32 s43, v5, 47
-; CHECK-NEXT:    v_readlane_b32 s44, v5, 48
-; CHECK-NEXT:    v_readlane_b32 s45, v5, 49
-; CHECK-NEXT:    v_readlane_b32 s46, v5, 50
-; CHECK-NEXT:    v_readlane_b32 s47, v5, 51
-; CHECK-NEXT:    v_readlane_b32 s48, v5, 52
-; CHECK-NEXT:    v_readlane_b32 s49, v5, 53
-; CHECK-NEXT:    v_readlane_b32 s50, v5, 54
-; CHECK-NEXT:    v_readlane_b32 s51, v5, 55
+; CHECK-NEXT:    v_mov_b32_e32 v2, s7
+; CHECK-NEXT:    v_readlane_b32 s37, v3, 17
+; CHECK-NEXT:    v_readlane_b32 s38, v3, 18
+; CHECK-NEXT:    v_readlane_b32 s39, v3, 19
+; CHECK-NEXT:    v_readlane_b32 s40, v3, 20
+; CHECK-NEXT:    v_readlane_b32 s41, v3, 21
+; CHECK-NEXT:    v_readlane_b32 s42, v3, 22
+; CHECK-NEXT:    v_readlane_b32 s43, v3, 23
+; CHECK-NEXT:    image_sample_lz v4, v[1:2], s[52:59], s[8:11] dmask:0x1
+; CHECK-NEXT:    ; kill: killed $vgpr1_vgpr2
 ; CHECK-NEXT:    s_mov_b64 s[12:13], s[36:37]
+; CHECK-NEXT:    s_and_b64 vcc, exec, 0
+; CHECK-NEXT:    v_readlane_b32 s44, v3, 24
+; CHECK-NEXT:    v_readlane_b32 s45, v3, 25
+; CHECK-NEXT:    image_sample_lz v5, v[1:2], s[36:43], s[8:11] dmask:0x1
+; CHECK-NEXT:    v_readlane_b32 s46, v3, 26
+; CHECK-NEXT:    v_readlane_b32 s47, v3, 27
+; CHECK-NEXT:    v_readlane_b32 s48, v3, 28
+; CHECK-NEXT:    v_readlane_b32 s49, v3, 29
+; CHECK-NEXT:    v_readlane_b32 s50, v3, 30
+; CHECK-NEXT:    v_readlane_b32 s51, v3, 31
 ; CHECK-NEXT:    s_mov_b64 s[14:15], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[16:17], s[40:41]
 ; CHECK-NEXT:    s_mov_b64 s[18:19], s[42:43]
-; CHECK-NEXT:    image_sample_lz v6, v[2:3], s[36:43], s[8:11] dmask:0x1
-; CHECK-NEXT:    v_readlane_b32 s36, v5, 56
-; CHECK-NEXT:    v_readlane_b32 s37, v5, 57
-; CHECK-NEXT:    v_readlane_b32 s38, v5, 58
-; CHECK-NEXT:    v_readlane_b32 s39, v5, 59
-; CHECK-NEXT:    v_readlane_b32 s40, v5, 60
-; CHECK-NEXT:    v_readlane_b32 s41, v5, 61
-; CHECK-NEXT:    v_readlane_b32 s42, v5, 62
-; CHECK-NEXT:    v_readlane_b32 s43, v5, 63
-; CHECK-NEXT:    ; kill: killed $vgpr2_vgpr3
-; CHECK-NEXT:    s_and_b64 vcc, exec, 0
-; CHECK-NEXT:    v_readlane_b32 s44, v4, 0
-; CHECK-NEXT:    v_readlane_b32 s45, v4, 1
-; CHECK-NEXT:    v_readlane_b32 s46, v4, 2
-; CHECK-NEXT:    v_readlane_b32 s47, v4, 3
-; CHECK-NEXT:    image_sample_lz v7, v[2:3], s[36:43], s[8:11] dmask:0x1
-; CHECK-NEXT:    v_readlane_b32 s48, v4, 4
-; CHECK-NEXT:    v_readlane_b32 s49, v4, 5
-; CHECK-NEXT:    v_readlane_b32 s50, v4, 6
-; CHECK-NEXT:    v_readlane_b32 s51, v4, 7
+; CHECK-NEXT:    ; kill: killed $sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59
 ; CHECK-NEXT:    ; kill: killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
-; CHECK-NEXT:    ; kill: killed $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43
 ; CHECK-NEXT:    ; kill: killed $sgpr8_sgpr9_sgpr10 killed $sgpr11
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_sub_f32_e32 v1, v5, v4
@@ -326,42 +272,40 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:  .LBB0_11: ; %Flow13
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[20:21]
 ; CHECK-NEXT:  .LBB0_12: ; %UnifiedReturnBlock
-; CHECK-NEXT:    v_readlane_b32 s30, v7, 34
-; CHECK-NEXT:    v_readlane_b32 s31, v7, 35
-; CHECK-NEXT:    v_readlane_b32 s67, v7, 33
-; CHECK-NEXT:    v_readlane_b32 s66, v7, 32
-; CHECK-NEXT:    v_readlane_b32 s65, v7, 31
-; CHECK-NEXT:    v_readlane_b32 s64, v7, 30
-; CHECK-NEXT:    v_readlane_b32 s63, v7, 29
-; CHECK-NEXT:    v_readlane_b32 s62, v7, 28
-; CHECK-NEXT:    v_readlane_b32 s61, v7, 27
-; CHECK-NEXT:    v_readlane_b32 s60, v7, 26
-; CHECK-NEXT:    v_readlane_b32 s59, v7, 25
-; CHECK-NEXT:    v_readlane_b32 s58, v7, 24
-; CHECK-NEXT:    v_readlane_b32 s57, v7, 23
-; CHECK-NEXT:    v_readlane_b32 s56, v7, 22
-; CHECK-NEXT:    v_readlane_b32 s55, v7, 21
-; CHECK-NEXT:    v_readlane_b32 s54, v7, 20
-; CHECK-NEXT:    v_readlane_b32 s53, v7, 19
-; CHECK-NEXT:    v_readlane_b32 s52, v7, 18
-; CHECK-NEXT:    v_readlane_b32 s51, v7, 17
-; CHECK-NEXT:    v_readlane_b32 s50, v7, 16
-; CHECK-NEXT:    v_readlane_b32 s49, v7, 15
-; CHECK-NEXT:    v_readlane_b32 s48, v7, 14
-; CHECK-NEXT:    v_readlane_b32 s47, v7, 13
-; CHECK-NEXT:    v_readlane_b32 s46, v7, 12
-; CHECK-NEXT:    v_readlane_b32 s45, v7, 11
-; CHECK-NEXT:    v_readlane_b32 s44, v7, 10
-; CHECK-NEXT:    v_readlane_b32 s43, v7, 9
-; CHECK-NEXT:    v_readlane_b32 s42, v7, 8
-; CHECK-NEXT:    v_readlane_b32 s41, v7, 7
-; CHECK-NEXT:    v_readlane_b32 s40, v7, 6
-; CHECK-NEXT:    v_readlane_b32 s39, v7, 5
-; CHECK-NEXT:    v_readlane_b32 s38, v7, 4
-; CHECK-NEXT:    v_readlane_b32 s37, v7, 3
-; CHECK-NEXT:    v_readlane_b32 s36, v7, 2
-; CHECK-NEXT:    v_readlane_b32 s35, v7, 1
-; CHECK-NEXT:    v_readlane_b32 s34, v7, 0
+; CHECK-NEXT:    v_readlane_b32 s30, v7, 32
+; CHECK-NEXT:    v_readlane_b32 s31, v7, 33
+; CHECK-NEXT:    v_readlane_b32 s67, v7, 31
+; CHECK-NEXT:    v_readlane_b32 s66, v7, 30
+; CHECK-NEXT:    v_readlane_b32 s65, v7, 29
+; CHECK-NEXT:    v_readlane_b32 s64, v7, 28
+; CHECK-NEXT:    v_readlane_b32 s63, v7, 27
+; CHECK-NEXT:    v_readlane_b32 s62, v7, 26
+; CHECK-NEXT:    v_readlane_b32 s61, v7, 25
+; CHECK-NEXT:    v_readlane_b32 s60, v7, 24
+; CHECK-NEXT:    v_readlane_b32 s59, v7, 23
+; CHECK-NEXT:    v_readlane_b32 s58, v7, 22
+; CHECK-NEXT:    v_readlane_b32 s57, v7, 21
+; CHECK-NEXT:    v_readlane_b32 s56, v7, 20
+; CHECK-NEXT:    v_readlane_b32 s55, v7, 19
+; CHECK-NEXT:    v_readlane_b32 s54, v7, 18
+; CHECK-NEXT:    v_readlane_b32 s53, v7, 17
+; CHECK-NEXT:    v_readlane_b32 s52, v7, 16
+; CHECK-NEXT:    v_readlane_b32 s51, v7, 15
+; CHECK-NEXT:    v_readlane_b32 s50, v7, 14
+; CHECK-NEXT:    v_readlane_b32 s49, v7, 13
+; CHECK-NEXT:    v_readlane_b32 s48, v7, 12
+; CHECK-NEXT:    v_readlane_b32 s47, v7, 11
+; CHECK-NEXT:    v_readlane_b32 s46, v7, 10
+; CHECK-NEXT:    v_readlane_b32 s45, v7, 9
+; CHECK-NEXT:    v_readlane_b32 s44, v7, 8
+; CHECK-NEXT:    v_readlane_b32 s43, v7, 7
+; CHECK-NEXT:    v_readlane_b32 s42, v7, 6
+; CHECK-NEXT:    v_readlane_b32 s41, v7, 5
+; CHECK-NEXT:    v_readlane_b32 s40, v7, 4
+; CHECK-NEXT:    v_readlane_b32 s39, v7, 3
+; CHECK-NEXT:    v_readlane_b32 s38, v7, 2
+; CHECK-NEXT:    v_readlane_b32 s37, v7, 1
+; CHECK-NEXT:    v_readlane_b32 s36, v7, 0
 ; CHECK-NEXT:    ; kill: killed $vgpr3
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v7, off, s[0:3], s32 ; 4-byte Folded Reload
