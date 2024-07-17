@@ -115,7 +115,6 @@ static cl::opt<VGPRRegisterRegAlloc::FunctionPassCtor, false,
 VGPRRegAlloc("vgpr-regalloc", cl::Hidden, cl::init(&useDefaultRegisterAllocator),
              cl::desc("Register allocator to use for VGPRs"));
 
-
 static void initializeDefaultSGPRRegisterAllocatorOnce() {
   RegisterRegAlloc::FunctionPassCtor Ctor = SGPRRegisterRegAlloc::getDefault();
 
