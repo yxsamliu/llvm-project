@@ -418,13 +418,14 @@ void MCObjectStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                              unsigned Column, unsigned Flags,
                                              unsigned Isa,
                                              unsigned Discriminator,
-                                             StringRef FileName) {
+                                             StringRef FileName,
+                                             StringRef Location) {
   // In case we see two .loc directives in a row, make sure the
   // first one gets a line entry.
   MCDwarfLineEntry::make(this, getCurrentSectionOnly());
 
   this->MCStreamer::emitDwarfLocDirective(FileNo, Line, Column, Flags, Isa,
-                                          Discriminator, FileName);
+                                          Discriminator, FileName, Location);
 }
 
 static const MCExpr *buildSymbolDiff(MCObjectStreamer &OS, const MCSymbol *A,
