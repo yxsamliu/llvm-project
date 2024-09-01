@@ -25,6 +25,9 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/FileSystem.h"
+#include <memory>
 #include <optional>
 
 using namespace llvm;
@@ -337,7 +340,29 @@ uint64_t SDWASrcOperand::getSrcMods(const SIInstrInfo *TII,
 MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
                                                  const GCNSubtarget &ST,
                                                  SDWAOperandsMap *PotentialMatches) {
-  if (PotentialMatches != nullptr) {
+  static std::unique_ptr<llvm::raw_fd_ostream> SDWALogFile;
+  static unsigned UpdateCounter = 0;
+  static int Threshold = -1;
+  static bool ThresholdChecked = false;
+
+  if (!ThresholdChecked) {
+    if (char *ThresholdStr = std::getenv("SDWA_POTENTIAL_MATCH_THRESHOLD")) {
+      Threshold = std::atoi(ThresholdStr);
+    }
+    ThresholdChecked = true;
+
+    // Open the log file if the threshold is set
+    if (Threshold >= 0 && !SDWALogFile) {
+      std::error_code EC;
+      SDWALogFile = std::make_unique<llvm::raw_fd_ostream>("c:/users/taccuser/yaxunl/sdwa_log.txt", EC, llvm::sys::fs::OF_Append);
+      if (EC) {
+        llvm::errs() << "Error opening sdwa_log.txt: " << EC.message() << "\n";
+        Threshold = -1;  // Disable logging if file can't be opened
+      }
+    }
+  }
+  
+    if (PotentialMatches != nullptr) {
     // Fill out the map for all uses if all can be converted
     MachineOperand *Reg = getReplacedOperand();
     if (!Reg->isReg() || !Reg->isDef())
@@ -353,10 +378,36 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
     for (MachineOperand &UseMO : getMRI()->use_nodbg_operands(Reg->getReg())) {
       // Should not get a subregister here
       assert(isSameReg(UseMO, *Reg));
+  
+      // Check if we've reached the threshold
+      if (Threshold >= 0 && UpdateCounter >= (unsigned)Threshold) {
+        break;  // Stop updating if we've reached or exceeded the threshold
+      }
 
       SDWAOperandsMap &potentialMatchesMap = *PotentialMatches;
       MachineInstr *UseMI = UseMO.getParent();
       potentialMatchesMap[UseMI].push_back(this);
+
+      UpdateCounter++;
+
+      if (Threshold >= 0 && SDWALogFile) {
+        *SDWALogFile << "SDWA PotentialMatches update count: " << UpdateCounter << "\n";
+
+        if (UpdateCounter == (unsigned)Threshold) {
+          *SDWALogFile << "Last added operand details:\n";
+          *SDWALogFile << "  Operand: ";
+          this->print(*SDWALogFile);
+          *SDWALogFile << "\n";
+          *SDWALogFile << "  Added to instruction: " << *UseMI << "\n";
+          *SDWALogFile << "  Replaced operand: " << *Reg << "\n";
+          *SDWALogFile << "  Target operand: " << *getTargetOperand() << "\n";
+          *SDWALogFile << "  SrcSel: " << getSrcSel() << ", Abs: " << getAbs() 
+                       << ", Neg: " << getNeg() << ", Sext: " << getSext() << "\n";
+          *SDWALogFile << "----------------------------------------\n";
+          SDWALogFile->flush();
+        }
+      }
+
     }
     return nullptr;
   }
