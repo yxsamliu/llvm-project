@@ -62,9 +62,12 @@ static bool shouldSkipSanitizeOption(const ToolChain &TC,
   auto OptionalGpuArch = parseTargetID(TC.getTriple(), TargetID, &FeatureMap);
 
   assert(OptionalGpuArch && "Invalid Target ID");
-  (void)OptionalGpuArch;
   auto Loc = FeatureMap.find("xnack");
-  if (Loc == FeatureMap.end() || !Loc->second) {
+  auto SupportXnack =
+      llvm::AMDGPU::getArchAttrAMDGCN(
+          llvm::AMDGPU::parseArchAMDGCN(OptionalGpuArch.value())) &
+      llvm::AMDGPU::FEATURE_XNACK;
+  if (!SupportXnack || (Loc != FeatureMap.end() && !Loc->second)) {
     Diags.Report(
         clang::diag::warn_drv_unsupported_option_for_offload_arch_req_feature)
         << A->getAsString(DriverArgs) << TargetID << "xnack+";

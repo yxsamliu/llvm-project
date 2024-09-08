@@ -3,6 +3,11 @@
 // RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=NORDC %s
 
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900 \
+// RUN:   -fsanitize=address \
+// RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm \
+// RUN:   %s 2>&1 | FileCheck -check-prefixes=NORDC %s
+
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
 // RUN:   -fsanitize=address -fno-gpu-sanitize \
 // RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm \
@@ -24,12 +29,12 @@
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=FAIL %s
 
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack- \
-// RUN:   --offload-arch=gfx900:xnack+ --offload-arch=gfx906 -fsanitize=address -fgpu-sanitize \
+// RUN:   --offload-arch=gfx900:xnack+ --offload-arch=gfx1100 -fsanitize=address -fgpu-sanitize \
 // RUN:   -fsanitize=leak -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=XNACK %s
 
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack- \
-// RUN:   --offload-arch=gfx900:xnack+ --offload-arch=gfx906 -fsanitize=address -fgpu-sanitize \
+// RUN:   --offload-arch=gfx900:xnack+ --offload-arch=gfx1100 -fsanitize=address -fgpu-sanitize \
 // RUN:   -fsanitize=leak -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=XNACKNEG %s
 
@@ -38,12 +43,12 @@
 // GPU.
 
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack- \
-// RUN:   --offload-arch=gfx900:xnack+ --offload-arch=gfx906 -fsanitize=address -fno-gpu-sanitize \
+// RUN:   --offload-arch=gfx900:xnack+ --offload-arch=gfx1100 -fsanitize=address -fno-gpu-sanitize \
 // RUN:   -fsanitize=leak -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=NOGPU %s
 
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack- \
-// RUN:   --offload-arch=gfx900:xnack+ --offload-arch=gfx906 -fsanitize=address -fno-gpu-sanitize \
+// RUN:   --offload-arch=gfx900:xnack+ --offload-arch=gfx1100 -fsanitize=address -fno-gpu-sanitize \
 // RUN:   -fsanitize=leak -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=NOGPUNEG %s
 
@@ -64,35 +69,35 @@
 
 // XNACK-DAG: warning: ignoring '-fsanitize=leak' option as it is not currently supported for target 'amdgcn-amd-amdhsa'
 // XNACK-DAG: warning: ignoring '-fsanitize=address' option for offload arch 'gfx900:xnack-' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
-// XNACK-DAG: warning: ignoring '-fsanitize=address' option for offload arch 'gfx906' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
+// XNACK-DAG: warning: ignoring '-fsanitize=address' option for offload arch 'gfx1100' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
 // XNACK-DAG: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-target-feature" "\+xnack".* "-fsanitize=address"}}
 // XNACK-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "-xnack"}}
-// XNACK-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx906"}}
+// XNACK-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx1100"}}
 // XNACK-DAG: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address,leak"}}
 // XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "+xnack".* "-fsanitize=address,leak"}}
 // XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "-xnack".* "-fsanitize=address,leak"}}
-// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx906".* "-fsanitize=address,leak"}}
+// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx1100".* "-fsanitize=address,leak"}}
 // XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "-xnack".* "-fsanitize=address"}}
-// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx906".* "-fsanitize=address"}}
+// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx1100".* "-fsanitize=address"}}
 // XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-target-feature" "-xnack"}}
-// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx906"}}
+// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx1100"}}
 // XNACKNEG-NOT: {{"[^"]*lld(\.exe){0,1}".* ".*hip.bc"}}
 
 // NOGPU-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "\+xnack"}}
 // NOGPU-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "-xnack"}}
-// NOGPU-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx906"}}
+// NOGPU-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx1100"}}
 // NOGPU-DAG: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address,leak"}}
 // NOGPUNEG-NOT: warning: ignoring '-fsanitize=leak' option as it is not currently supported for target 'amdgcn-amd-amdhsa'
 // NOGPUNEG-NOT: warning: ignoring '-fsanitize=address' option for offload arch 'gfx900:xnack-' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
-// NOGPUNEG-NOT: warning: ignoring '-fsanitize=address' option for offload arch 'gfx906' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
+// NOGPUNEG-NOT: warning: ignoring '-fsanitize=address' option for offload arch 'gfx1100' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
 // NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-target-feature" "\+xnack".* "-fsanitize=address"}}
 // NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "\+xnack".* "-fsanitize=address,leak"}}
 // NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "-xnack".* "-fsanitize=address,leak"}}
-// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx906".* "-fsanitize=address,leak"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx1100".* "-fsanitize=address,leak"}}
 // NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "\+xnack".* "-fsanitize=address"}}
 // NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-target-feature" "-xnack".* "-fsanitize=address"}}
-// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx906".* "-fsanitize=address"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx1100".* "-fsanitize=address"}}
 // NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-target-feature" "\+xnack"}}
 // NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-target-feature" "-xnack"}}
-// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx906"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx1100"}}
 // NOGPUNEG-NOT: {{"[^"]*lld(\.exe){0,1}".* ".*hip.bc"}}
