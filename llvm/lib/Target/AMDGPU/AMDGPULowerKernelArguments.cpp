@@ -133,6 +133,7 @@ private:
     F.replaceAllUsesWith(NF);
     F.setCallingConv(CallingConv::C);
     F.clearMetadata();
+    F.setComdat(nullptr);
 
     return NF;
   }
@@ -151,21 +152,43 @@ public:
 
   bool tryAllocPreloadSGPRs(unsigned AllocSize, uint64_t ArgOffset,
                             uint64_t LastExplicitArgOffset) {
+    static bool DBG = getenv("DBG_PRELOAD");
+
+    if (DBG) {
+      llvm::errs() << "tryAllocPreloadSGPRs AllocSize=" << AllocSize
+          << " ArgOffset=" << ArgOffset
+          << " LastExplicitArgOffset=" << LastExplicitArgOffset
+          << "\n";
+    }
     //  Check if this argument may be loaded into the same register as the
     //  previous argument.
     if (ArgOffset - LastExplicitArgOffset < 4 &&
-        !isAligned(Align(4), ArgOffset))
+        !isAligned(Align(4), ArgOffset)) {
+      if (DBG)
+        llvm::errs() << " pre-loaded into the same register as the previous argument\n";
       return true;
+    }
 
     // Pad SGPRs for kernarg alignment.
     ArgOffset = alignDown(ArgOffset, 4);
     unsigned Padding = ArgOffset - LastExplicitArgOffset;
     unsigned PaddingSGPRs = alignTo(Padding, 4) / 4;
     unsigned NumPreloadSGPRs = alignTo(AllocSize, 4) / 4;
-    if (NumPreloadSGPRs + PaddingSGPRs > NumFreeUserSGPRs)
+    if (NumPreloadSGPRs + PaddingSGPRs > NumFreeUserSGPRs) {
+      if (DBG)
+        llvm::errs() << " Padding=" << Padding
+          << " PaddingSGPRs=" << PaddingSGPRs
+          << " NumPreloadSGPRs=" << NumPreloadSGPRs
+          << " NumFreeUserSGPRs=" << NumFreeUserSGPRs
+          << " cannot preload\n";
       return false;
+    }
 
     NumFreeUserSGPRs -= (NumPreloadSGPRs + PaddingSGPRs);
+    if (DBG)
+      llvm::errs() << " can preload. new NumFreeUserSGPRs="
+        << NumFreeUserSGPRs
+        << "\n";
     return true;
   }
 
@@ -284,6 +307,7 @@ static BasicBlock::iterator getInsertPt(BasicBlock &BB) {
 }
 
 static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
+  static bool DBG = getenv("DBG_PRELOAD");
   CallingConv::ID CC = F.getCallingConv();
   if (CC != CallingConv::AMDGPU_KERNEL || F.arg_empty())
     return false;
@@ -315,6 +339,9 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
   bool InPreloadSequence = true;
   PreloadKernelArgInfo PreloadInfo(F, ST);
 
+  if (DBG) {
+    llvm::errs() << "lowerKernelArguments: " << F.getName() << '\n';
+  }
   for (Argument &Arg : F.args()) {
     const bool IsByRef = Arg.hasByRefAttr();
     Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
@@ -334,6 +361,13 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
     if (Arg.hasAttribute("amdgpu-hidden-argument"))
       break;
 
+    if (DBG) {
+      llvm::errs() << "  arg: " << Arg
+          << " Arg.hasInRegAttr()=" << Arg.hasInRegAttr()
+          << " InPreloadSequence=" << InPreloadSequence
+          << " ST.hasKernargPreload()=" << ST.hasKernargPreload()
+          << "\n";
+    }
     // Try to preload this argument into user SGPRs.
     if (Arg.hasInRegAttr() && InPreloadSequence && ST.hasKernargPreload() &&
         !Arg.getType()->isAggregateType())
