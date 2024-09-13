@@ -194,10 +194,7 @@ ABIArgInfo AMDGPUABIInfo::classifyKernelArgumentType(QualType Ty) const {
   // new kind of coercion of the in-memory type when for indirect arguments.
   if (!getContext().getLangOpts().OpenCL && LTy == OrigLTy &&
       isAggregateTypeForABI(Ty)) {
-    return ABIArgInfo::getIndirectAliased(
-        getContext().getTypeAlignInChars(Ty),
-        getContext().getTargetAddressSpace(LangAS::opencl_constant),
-        false /*Realign*/, nullptr /*Padding*/);
+    return ABIArgInfo::getDirect(LTy, 0, nullptr, true /*CanBeFlattened*/);
   }
 
   // If we set CanBeFlattened to true, CodeGen will expand the struct to its
