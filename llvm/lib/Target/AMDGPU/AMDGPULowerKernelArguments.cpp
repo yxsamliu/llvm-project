@@ -133,6 +133,7 @@ private:
     F.replaceAllUsesWith(NF);
     F.setCallingConv(CallingConv::C);
     F.clearMetadata();
+    F.setComdat(nullptr);
 
     return NF;
   }
