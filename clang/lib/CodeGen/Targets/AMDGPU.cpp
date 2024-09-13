@@ -168,8 +168,6 @@ ABIArgInfo AMDGPUABIInfo::classifyReturnType(QualType RetTy) const {
   return DefaultABIInfo::classifyReturnType(RetTy);
 }
 
-/// For kernels all parameters are really passed in a special buffer. It doesn't
-/// make sense to pass anything byval, so everything must be direct.
 ABIArgInfo AMDGPUABIInfo::classifyKernelArgumentType(QualType Ty) const {
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
