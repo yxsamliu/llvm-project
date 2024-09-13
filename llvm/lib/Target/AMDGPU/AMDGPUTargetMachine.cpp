@@ -402,6 +402,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUAtomicOptimizerPass(*PR);
   initializeAMDGPULowerKernelArgumentsPass(*PR);
   initializeAMDGPUPromoteKernelArgumentsPass(*PR);
+  initializeAMDGPUSplitKernelArgumentsPass(*PR);
   initializeAMDGPULowerKernelAttributesPass(*PR);
   initializeAMDGPUOpenCLEnqueuedBlockLoweringPass(*PR);
   initializeAMDGPUPostLegalizerCombinerPass(*PR);
@@ -628,6 +629,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(
   PB.registerPipelineParsingCallback(
       [this](StringRef PassName, ModulePassManager &PM,
              ArrayRef<PassBuilder::PipelineElement>) {
+        if (PassName == "amdgpu-split-kernel-arguments") {
+          PM.addPass(AMDGPUSplitKernelArgumentsPass());
+          return true;
+        }
         if (PassName == "amdgpu-attributor") {
           PM.addPass(AMDGPUAttributorPass(*this));
           return true;
@@ -1092,8 +1097,10 @@ void AMDGPUPassConfig::addIRPasses() {
 
   // AMDGPUAttributor infers lack of llvm.amdgcn.lds.kernel.id calls, so run
   // after their introduction
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
+    addPass(createAMDGPUSplitKernelArgumentsPass());
     addPass(createAMDGPUAttributorLegacyPass());
+  }
 
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addPass(createInferAddressSpacesPass());
