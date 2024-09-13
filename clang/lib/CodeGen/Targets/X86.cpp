@@ -2699,14 +2699,6 @@ ABIArgInfo
 X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
                                     unsigned &neededInt, unsigned &neededSSE,
                                     bool isNamedArg, bool IsRegCall) const {
-  
-  // Check if Ty is a struct type and dump it
-  if (Ty->isStructureType()) {
-    llvm::errs() << "X86_64ABIInfo::classifyArgumentType\n";
-    llvm::errs() << "Struct type detected:\n";
-    Ty.dump();
-  }
-
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
   X86_64ABIInfo::Class Lo, Hi;
@@ -2826,12 +2818,6 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
   // first class struct aggregate with the high and low part: {low, high}
   if (HighPart)
     ResType = GetX86_64ByValArgumentPair(ResType, HighPart, getDataLayout());
-
-  // Check if the function is a HIP kernel and flatten the aggregate argument
-  if (getContext().getLangOpts().HIP && isAggregateTypeForABI(Ty)) {
-    llvm::errs() << "mark aggregate type can be flattened\n";
-    return ABIArgInfo::getDirect(ResType, 0, nullptr, true /*CanBeFlattened*/);
-  }
 
   return ABIArgInfo::getDirect(ResType);
 }
