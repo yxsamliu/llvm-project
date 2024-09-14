@@ -27,12 +27,18 @@ public:
 } // end anonymous namespace
 
 bool AMDGPUSplitKernelArguments::runOnFunction(Function &F) {
-  if (skipFunction(F))
+  LLVM_DEBUG(dbgs() << "Entering AMDGPUSplitKernelArguments::runOnFunction " 
+                    << F.getName() << '\n');
+  if (skipFunction(F)) {
+    LLVM_DEBUG(dbgs() << "skipFunction\n");
     return false;
+  }
 
   CallingConv::ID CC = F.getCallingConv();
-  if (CC != CallingConv::AMDGPU_KERNEL || F.arg_empty())
+  if (CC != CallingConv::AMDGPU_KERNEL || F.arg_empty()) {
+    LLVM_DEBUG(dbgs() << "non-kernel or arg_empty\n");
     return false;
+  }
 
   SmallVector<Argument *, 8> StructArgs;
   SmallVector<Type *, 8> NewArgTypes;
@@ -40,23 +46,43 @@ bool AMDGPUSplitKernelArguments::runOnFunction(Function &F) {
 
   // Collect struct arguments and new argument types
   for (Argument &Arg : F.args()) {
+    LLVM_DEBUG(dbgs() << "Processing argument: " << Arg << "\n");
     if (Arg.use_empty()) {
       NewArgTypes.push_back(Arg.getType());
+      LLVM_DEBUG(dbgs() << "use empty\n");
       continue;
     }
 
-    StructType *ST = dyn_cast<StructType>(Arg.getType());
+    PointerType *PT = dyn_cast<PointerType>(Arg.getType());
+    if (!PT) {
+      NewArgTypes.push_back(Arg.getType());
+      LLVM_DEBUG(dbgs() << "not a pointer\n");
+      continue;
+    }
+    
+    const bool IsByRef = Arg.hasByRefAttr();
+    if (!IsByRef) {
+      NewArgTypes.push_back(Arg.getType());
+      LLVM_DEBUG(dbgs() << "not byref\n");
+      continue;
+    }
+    
+    Type *ArgTy = Arg.getParamByRefType();
+    StructType *ST = dyn_cast<StructType>(ArgTy);
     if (!ST) {
       NewArgTypes.push_back(Arg.getType());
+      LLVM_DEBUG(dbgs() << "not a struct\n");
       continue;
     }
 
     bool AllLoadsOrGEPs = true;
     for (User *U : Arg.users()) {
+      LLVM_DEBUG(dbgs() << "  User: " << *U << "\n");
       if (auto *LI = dyn_cast<LoadInst>(U)) {
         NewArgTypes.push_back(LI->getType());
       } else if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
         for (User *GEPUser : GEP->users()) {
+        LLVM_DEBUG(dbgs() << "    GEP User: " << *GEPUser << "\n");
           if (auto *GEPLoad = dyn_cast<LoadInst>(GEPUser)) {
             NewArgTypes.push_back(GEPLoad->getType());
           } else {
@@ -69,6 +95,7 @@ bool AMDGPUSplitKernelArguments::runOnFunction(Function &F) {
         break;
       }
     }
+    LLVM_DEBUG(dbgs() << "  AllLoadsOrGEPs: " << (AllLoadsOrGEPs ? "true" : "false") << "\n");
 
     if (AllLoadsOrGEPs) {
       StructArgs.push_back(&Arg);
