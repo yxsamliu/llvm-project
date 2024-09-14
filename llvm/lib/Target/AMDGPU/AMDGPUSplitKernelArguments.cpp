@@ -3,6 +3,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -121,7 +122,10 @@ bool AMDGPUSplitKernelArguments::runOnFunction(Function &F) {
 
   // Create new function type
   FunctionType *NewFT = FunctionType::get(F.getReturnType(), NewArgTypes, F.isVarArg());
-  Function *NewF = Function::Create(NewFT, F.getLinkage(), F.getName(), F.getParent());
+  Function *NewF = Function::Create(NewFT, F.getLinkage(), F.getAddressSpace());
+  F.getParent()->getFunctionList().insert(F.getIterator(), NewF);
+  NewF->takeName(&F);
+  LLVM_DEBUG(dbgs() << "New empty function:\n" << *NewF << '\n');
 
   // Transfer function attributes
   NewF->copyAttributesFrom(&F);
@@ -129,31 +133,32 @@ bool AMDGPUSplitKernelArguments::runOnFunction(Function &F) {
   // Set calling convention
   NewF->setCallingConv(F.getCallingConv());
 
-  // Map old arguments to new arguments
-  ValueToValueMapTy VMap;
+  NewF->splice(NewF->begin(), &F);
+  LLVM_DEBUG(dbgs() << "New function after splice:\n" << *NewF << '\n');
+
   auto NewArgIt = NewF->arg_begin();
   for (Argument &Arg : F.args()) {
     if (ArgToLoadsMap.count(&Arg)) {
       for (LoadInst *LI : ArgToLoadsMap[&Arg]) {
-        VMap[LI] = &*NewArgIt++;
+        LI->replaceAllUsesWith(&*NewArgIt);
+        LI->eraseFromParent();
+        NewArgIt->takeName(&Arg);
+        ++NewArgIt;
       }
-      #if 0
       for (GetElementPtrInst *GEP : ArgToGEPsMap[&Arg]) {
-        VMap[GEP] = nullptr;
+        GEP->eraseFromParent();
       }
-      #endif
       UndefValue *UndefArg = UndefValue::get(Arg.getType());
       Arg.replaceAllUsesWith(UndefArg);
-      VMap[&Arg] = UndefArg;
     } else {
-      VMap[&Arg] = &*NewArgIt++;
+      Arg.replaceAllUsesWith(&*NewArgIt);
+      NewArgIt->takeName(&Arg);
+      ++NewArgIt;
     }
   }
 
-  // Clone the function body
-  SmallVector<ReturnInst *, 8> Returns;
-  CloneFunctionInto(NewF, &F, VMap, CloneFunctionChangeType::LocalChangesOnly, Returns);
-  LLVM_DEBUG(dbgs() << "New function:\n" << *NewF << '\n');
+  LLVM_DEBUG(dbgs() << "New function after replace arg:\n" << *NewF << '\n');
+
   // Replace old function with new function
   F.replaceAllUsesWith(NewF);
   F.eraseFromParent();
