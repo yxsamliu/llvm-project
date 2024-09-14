@@ -43,6 +43,7 @@ bool AMDGPUSplitKernelArguments::runOnFunction(Function &F) {
   }
 
   DenseMap<Argument *, SetVector<LoadInst *>> ArgToLoadsMap;
+  DenseMap<Argument *, SetVector<GetElementPtrInst *>> ArgToGEPsMap;
   SmallVector<Argument *, 8> StructArgs;
   SmallVector<Type *, 8> NewArgTypes;
   SmallVector<Value *, 8> NewArgs;
@@ -80,11 +81,13 @@ bool AMDGPUSplitKernelArguments::runOnFunction(Function &F) {
 
     bool AllLoadsOrGEPs = true;
     SetVector<LoadInst *> Loads;
+    SetVector<GetElementPtrInst *> GEPs;
     for (User *U : Arg.users()) {
       LLVM_DEBUG(dbgs() << "  User: " << *U << "\n");
       if (auto *LI = dyn_cast<LoadInst>(U)) {
         Loads.insert(LI);
       } else if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
+        GEPs.insert(GEP);
         for (User *GEPUser : GEP->users()) {
         LLVM_DEBUG(dbgs() << "    GEP User: " << *GEPUser << "\n");
           if (auto *GEPLoad = dyn_cast<LoadInst>(GEPUser)) {
@@ -103,6 +106,8 @@ bool AMDGPUSplitKernelArguments::runOnFunction(Function &F) {
 
     if (AllLoadsOrGEPs) {
       StructArgs.push_back(&Arg);
+      ArgToLoadsMap[&Arg] = Loads;
+      ArgToGEPsMap[&Arg] = GEPs;
       for (LoadInst *LI : Loads) {
         NewArgTypes.push_back(LI->getType());
       }
@@ -132,6 +137,14 @@ bool AMDGPUSplitKernelArguments::runOnFunction(Function &F) {
       for (LoadInst *LI : ArgToLoadsMap[&Arg]) {
         VMap[LI] = &*NewArgIt++;
       }
+      #if 0
+      for (GetElementPtrInst *GEP : ArgToGEPsMap[&Arg]) {
+        VMap[GEP] = nullptr;
+      }
+      #endif
+      UndefValue *UndefArg = UndefValue::get(Arg.getType());
+      Arg.replaceAllUsesWith(UndefArg);
+      VMap[&Arg] = UndefArg;
     } else {
       VMap[&Arg] = &*NewArgIt++;
     }
@@ -140,7 +153,7 @@ bool AMDGPUSplitKernelArguments::runOnFunction(Function &F) {
   // Clone the function body
   SmallVector<ReturnInst *, 8> Returns;
   CloneFunctionInto(NewF, &F, VMap, CloneFunctionChangeType::LocalChangesOnly, Returns);
-
+  LLVM_DEBUG(dbgs() << "New function:\n" << *NewF << '\n');
   // Replace old function with new function
   F.replaceAllUsesWith(NewF);
   F.eraseFromParent();
