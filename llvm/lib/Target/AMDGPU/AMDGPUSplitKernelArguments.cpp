@@ -1,4 +1,6 @@
 #include "AMDGPU.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/InitializePasses.h"
@@ -40,6 +42,7 @@ bool AMDGPUSplitKernelArguments::runOnFunction(Function &F) {
     return false;
   }
 
+  DenseMap<Argument *, SetVector<LoadInst *>> ArgToLoadsMap;
   SmallVector<Argument *, 8> StructArgs;
   SmallVector<Type *, 8> NewArgTypes;
   SmallVector<Value *, 8> NewArgs;
@@ -76,15 +79,16 @@ bool AMDGPUSplitKernelArguments::runOnFunction(Function &F) {
     }
 
     bool AllLoadsOrGEPs = true;
+    SetVector<LoadInst *> Loads;
     for (User *U : Arg.users()) {
       LLVM_DEBUG(dbgs() << "  User: " << *U << "\n");
       if (auto *LI = dyn_cast<LoadInst>(U)) {
-        NewArgTypes.push_back(LI->getType());
+        Loads.insert(LI);
       } else if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
         for (User *GEPUser : GEP->users()) {
         LLVM_DEBUG(dbgs() << "    GEP User: " << *GEPUser << "\n");
           if (auto *GEPLoad = dyn_cast<LoadInst>(GEPUser)) {
-            NewArgTypes.push_back(GEPLoad->getType());
+            Loads.insert(GEPLoad);
           } else {
             AllLoadsOrGEPs = false;
             break;
@@ -99,6 +103,9 @@ bool AMDGPUSplitKernelArguments::runOnFunction(Function &F) {
 
     if (AllLoadsOrGEPs) {
       StructArgs.push_back(&Arg);
+      for (LoadInst *LI : Loads) {
+        NewArgTypes.push_back(LI->getType());
+      }
     } else {
       NewArgTypes.push_back(Arg.getType());
     }
@@ -121,17 +128,9 @@ bool AMDGPUSplitKernelArguments::runOnFunction(Function &F) {
   ValueToValueMapTy VMap;
   auto NewArgIt = NewF->arg_begin();
   for (Argument &Arg : F.args()) {
-    if (std::find(StructArgs.begin(), StructArgs.end(), &Arg) != StructArgs.end()) {
-      for (User *U : Arg.users()) {
-        if (auto *LI = dyn_cast<LoadInst>(U)) {
-          VMap[LI] = &*NewArgIt++;
-        } else if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
-          for (User *GEPUser : GEP->users()) {
-            if (auto *GEPLoad = dyn_cast<LoadInst>(GEPUser)) {
-              VMap[GEPLoad] = &*NewArgIt++;
-            }
-          }
-        }
+    if (ArgToLoadsMap.count(&Arg)) {
+      for (LoadInst *LI : ArgToLoadsMap[&Arg]) {
+        VMap[LI] = &*NewArgIt++;
       }
     } else {
       VMap[&Arg] = &*NewArgIt++;
