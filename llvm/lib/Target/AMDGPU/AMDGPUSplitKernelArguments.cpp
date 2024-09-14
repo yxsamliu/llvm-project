@@ -51,19 +51,27 @@ bool AMDGPUSplitKernelArguments::runOnFunction(Function &F) {
       continue;
     }
 
-    bool AllGEP = true;
+    bool AllLoadsOrGEPs = true;
     for (User *U : Arg.users()) {
-      if (!isa<GetElementPtrInst>(U)) {
-        AllGEP = false;
+      if (auto *LI = dyn_cast<LoadInst>(U)) {
+        NewArgTypes.push_back(LI->getType());
+      } else if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
+        for (User *GEPUser : GEP->users()) {
+          if (auto *GEPLoad = dyn_cast<LoadInst>(GEPUser)) {
+            NewArgTypes.push_back(GEPLoad->getType());
+          } else {
+            AllLoadsOrGEPs = false;
+            break;
+          }
+        }
+      } else {
+        AllLoadsOrGEPs = false;
         break;
       }
     }
 
-    if (AllGEP) {
+    if (AllLoadsOrGEPs) {
       StructArgs.push_back(&Arg);
-      for (Type *EltType : ST->elements()) {
-        NewArgTypes.push_back(EltType);
-      }
     } else {
       NewArgTypes.push_back(Arg.getType());
     }
@@ -87,9 +95,16 @@ bool AMDGPUSplitKernelArguments::runOnFunction(Function &F) {
   auto NewArgIt = NewF->arg_begin();
   for (Argument &Arg : F.args()) {
     if (std::find(StructArgs.begin(), StructArgs.end(), &Arg) != StructArgs.end()) {
-      StructType *ST = cast<StructType>(Arg.getType());
-      for (unsigned i = 0; i < ST->getNumElements(); ++i) {
-        VMap[Arg.user_back()] = &*NewArgIt++;
+      for (User *U : Arg.users()) {
+        if (auto *LI = dyn_cast<LoadInst>(U)) {
+          VMap[LI] = &*NewArgIt++;
+        } else if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
+          for (User *GEPUser : GEP->users()) {
+            if (auto *GEPLoad = dyn_cast<LoadInst>(GEPUser)) {
+              VMap[GEPLoad] = &*NewArgIt++;
+            }
+          }
+        }
       }
     } else {
       VMap[&Arg] = &*NewArgIt++;
