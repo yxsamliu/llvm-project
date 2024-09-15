@@ -732,7 +732,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           return;
 
         FunctionPassManager FPM;
-        FPM.addPass(AMDGPUSplitKernelArgumentsPass());
 
         // Add promote kernel arguments pass to the opt pipeline right before
         // infer address spaces which is needed to do actual address space
@@ -1099,6 +1098,8 @@ void AMDGPUPassConfig::addIRPasses() {
   }
 
   addPass(createAtomicExpandLegacyPass());
+  addPass(createAMDGPUSplitKernelArgumentsPass());
+
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addPass(createAMDGPUPromoteAlloca());

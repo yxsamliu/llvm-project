@@ -35,8 +35,8 @@ private:
 bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
   LLVM_DEBUG(dbgs() << "Entering AMDGPUSplitKernelArguments::processFunction "
                     << F.getName() << '\n');
-  if (skipFunction(F)) {
-    LLVM_DEBUG(dbgs() << "skipFunction\n");
+  if (F.isDeclaration()) {
+    LLVM_DEBUG(dbgs() << "Function is a declaration, skipping\n");
     return false;
   }
 
@@ -46,18 +46,16 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
     return false;
   }
 
-  DenseMap<Argument *, SetVector<LoadInst *>> ArgToLoadsMap;
-  DenseMap<Argument *, SetVector<GetElementPtrInst *>> ArgToGEPsMap;
+  DenseMap<Argument *, SmallVector<LoadInst *, 8>> ArgToLoadsMap;
+  DenseMap<Argument *, SmallVector<GetElementPtrInst *, 8>> ArgToGEPsMap;
   SmallVector<Argument *, 8> StructArgs;
   SmallVector<Type *, 8> NewArgTypes;
-  SmallVector<AttributeSet, 8> NewArgAttrs;
 
   // Collect struct arguments and new argument types
   for (Argument &Arg : F.args()) {
     LLVM_DEBUG(dbgs() << "Processing argument: " << Arg << "\n");
     if (Arg.use_empty()) {
       NewArgTypes.push_back(Arg.getType());
-      NewArgAttrs.push_back(F.getAttributes().getParamAttrs(Arg.getArgNo()));
       LLVM_DEBUG(dbgs() << "use empty\n");
       continue;
     }
@@ -65,7 +63,6 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
     PointerType *PT = dyn_cast<PointerType>(Arg.getType());
     if (!PT) {
       NewArgTypes.push_back(Arg.getType());
-      NewArgAttrs.push_back(F.getAttributes().getParamAttrs(Arg.getArgNo()));
       LLVM_DEBUG(dbgs() << "not a pointer\n");
       continue;
     }
@@ -73,7 +70,6 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
     const bool IsByRef = Arg.hasByRefAttr();
     if (!IsByRef) {
       NewArgTypes.push_back(Arg.getType());
-      NewArgAttrs.push_back(F.getAttributes().getParamAttrs(Arg.getArgNo()));
       LLVM_DEBUG(dbgs() << "not byref\n");
       continue;
     }
@@ -82,24 +78,23 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
     StructType *ST = dyn_cast<StructType>(ArgTy);
     if (!ST) {
       NewArgTypes.push_back(Arg.getType());
-      NewArgAttrs.push_back(F.getAttributes().getParamAttrs(Arg.getArgNo()));
       LLVM_DEBUG(dbgs() << "not a struct\n");
       continue;
     }
 
     bool AllLoadsOrGEPs = true;
-    SetVector<LoadInst *> Loads;
-    SetVector<GetElementPtrInst *> GEPs;
+    SmallVector<LoadInst *, 8> Loads;
+    SmallVector<GetElementPtrInst *, 8> GEPs;
     for (User *U : Arg.users()) {
       LLVM_DEBUG(dbgs() << "  User: " << *U << "\n");
       if (auto *LI = dyn_cast<LoadInst>(U)) {
-        Loads.insert(LI);
+        Loads.push_back(LI);
       } else if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
-        GEPs.insert(GEP);
+        GEPs.push_back(GEP);
         for (User *GEPUser : GEP->users()) {
           LLVM_DEBUG(dbgs() << "    GEP User: " << *GEPUser << "\n");
           if (auto *GEPLoad = dyn_cast<LoadInst>(GEPUser)) {
-            Loads.insert(GEPLoad);
+            Loads.push_back(GEPLoad);
           } else {
             AllLoadsOrGEPs = false;
             break;
@@ -121,17 +116,19 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
       ArgToGEPsMap[&Arg] = GEPs;
       for (LoadInst *LI : Loads) {
         NewArgTypes.push_back(LI->getType());
-        // No attributes for the new scalar arguments
-        NewArgAttrs.push_back(AttributeSet());
       }
     } else {
       NewArgTypes.push_back(Arg.getType());
-      NewArgAttrs.push_back(F.getAttributes().getParamAttrs(Arg.getArgNo()));
     }
   }
 
   if (StructArgs.empty())
     return false;
+
+  // Collect function and return attributes
+  AttributeList OldAttrs = F.getAttributes();
+  AttributeSet FnAttrs = OldAttrs.getFnAttrs();
+  AttributeSet RetAttrs = OldAttrs.getRetAttrs();
 
   // Create new function type
   FunctionType *NewFT =
@@ -141,20 +138,39 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
   F.getParent()->getFunctionList().insert(F.getIterator(), NewF);
   LLVM_DEBUG(dbgs() << "New empty function:\n" << *NewF << '\n');
 
-  // Transfer function attributes
-  NewF->copyAttributesFrom(&F);
-
   // Set calling convention
   NewF->setCallingConv(F.getCallingConv());
 
-  // Transfer parameter attributes
-  for (unsigned i = 0, e = NewArgAttrs.size(); i != e; ++i) {
-    if (NewArgAttrs[i].hasAttributes())
-      NewF->addParamAttrs(i, NewArgAttrs[i]);
+  // Build new parameter attributes
+  SmallVector<AttributeSet, 8> NewArgAttrSets;
+  unsigned NewArgIndex = 0;
+  for (Argument &Arg : F.args()) {
+    if (ArgToLoadsMap.count(&Arg)) {
+      for (LoadInst *LI : ArgToLoadsMap[&Arg]) {
+        // No attributes for the new scalar arguments
+        NewArgAttrSets.push_back(AttributeSet());
+        ++NewArgIndex;
+      }
+    } else {
+      // Copy existing attributes for this argument
+      AttributeSet ArgAttrs = OldAttrs.getParamAttrs(Arg.getArgNo());
+      NewArgAttrSets.push_back(ArgAttrs);
+      ++NewArgIndex;
+    }
   }
 
-  // Map old arguments to new arguments
-  ValueToValueMapTy VMap;
+  // Build the new AttributeList
+  AttributeList NewAttrList = AttributeList::get(
+      F.getContext(), FnAttrs, RetAttrs, NewArgAttrSets);
+
+  // Set the attributes on the new function
+  NewF->setAttributes(NewAttrList);
+
+  // Move the body of the old function to the new function
+  NewF->splice(NewF->begin(), &F);
+
+  // Map old arguments and loads to new arguments
+  DenseMap<Value *, Value *> VMap;
   auto NewArgIt = NewF->arg_begin();
   for (Argument &Arg : F.args()) {
     if (ArgToLoadsMap.count(&Arg)) {
@@ -162,26 +178,43 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
         NewArgIt->setName(LI->getName());
         VMap[LI] = &*NewArgIt++;
       }
-      // Remove loads and GEPs
-      for (LoadInst *LI : ArgToLoadsMap[&Arg]) {
-        LI->eraseFromParent();
-      }
-      for (GetElementPtrInst *GEP : ArgToGEPsMap[&Arg]) {
-        GEP->eraseFromParent();
-      }
-      // Replace uses of the original argument with undef
-      Arg.replaceAllUsesWith(UndefValue::get(Arg.getType()));
+      // After replacing loads, replace uses of Arg with Undef
+      UndefValue *UndefArg = UndefValue::get(Arg.getType());
+      Arg.replaceAllUsesWith(UndefArg);
     } else {
       NewArgIt->setName(Arg.getName());
-      VMap[&Arg] = &*NewArgIt++;
+      Arg.replaceAllUsesWith(&*NewArgIt);
+      ++NewArgIt;
     }
   }
 
-  // Clone the function body
-  SmallVector<ReturnInst *, 8> Returns; // Ignore returns cloned.
-  CloneFunctionInto(NewF, &F, VMap, CloneFunctionChangeType::LocalChangesOnly,
-                    Returns);
-  LLVM_DEBUG(dbgs() << "New function after cloning:\n" << *NewF << '\n');
+  // Replace LoadInsts with new arguments
+  for (auto &Entry : ArgToLoadsMap) {
+    for (LoadInst *LI : Entry.second) {
+      // Replace uses of LoadInst with the corresponding new argument
+      Value *NewArg = VMap[LI];
+      LI->replaceAllUsesWith(NewArg);
+      // Now LI has no uses and can be safely erased
+      LI->eraseFromParent();
+    }
+  }
+
+  // Erase GEPs
+  for (auto &Entry : ArgToGEPsMap) {
+    for (GetElementPtrInst *GEP : Entry.second) {
+      // GEP might have been used by the LoadInsts which are now erased
+      // So GEP should have no uses and can be safely erased
+      if (GEP->use_empty()) {
+        GEP->eraseFromParent();
+      } else {
+        // If GEP still has uses, we need to replace them with Undef
+        GEP->replaceAllUsesWith(UndefValue::get(GEP->getType()));
+        GEP->eraseFromParent();
+      }
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "New function after transformation:\n" << *NewF << '\n');
 
   // Replace old function with new function
   F.replaceAllUsesWith(NewF);
@@ -192,11 +225,22 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
 
 bool AMDGPUSplitKernelArguments::runOnModule(Module &M) {
   bool Changed = false;
+  SmallVector<Function *, 16> FunctionsToProcess;
+
+  // Collect functions to process
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
-    Changed |= processFunction(F);
+    FunctionsToProcess.push_back(&F);
   }
+
+  // Now process the functions
+  for (Function *F : FunctionsToProcess) {
+    if (F->isDeclaration())
+      continue;
+    Changed |= processFunction(*F);
+  }
+
   return Changed;
 }
 
@@ -210,3 +254,15 @@ char AMDGPUSplitKernelArguments::ID = 0;
 ModulePass *llvm::createAMDGPUSplitKernelArgumentsPass() {
   return new AMDGPUSplitKernelArguments();
 }
+
+PreservedAnalyses AMDGPUSplitKernelArgumentsPass::run(Module &M, ModuleAnalysisManager &AM) {
+  AMDGPUSplitKernelArguments Splitter;
+  bool Changed = Splitter.runOnModule(M);
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  // Since we modified the module, we need to report that analyses are invalidated
+  return PreservedAnalyses::none();
+}
+

@@ -123,13 +123,13 @@ struct AMDGPUPromoteKernelArgumentsPass
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-FunctionPass *createAMDGPUSplitKernelArgumentsPass();
+ModulePass *createAMDGPUSplitKernelArgumentsPass();
 void initializeAMDGPUSplitKernelArgumentsPass(PassRegistry &);
 extern char &AMDGPUSplitKernelArgumentsID;
 
 struct AMDGPUSplitKernelArgumentsPass
     : PassInfoMixin<AMDGPUSplitKernelArgumentsPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 ModulePass *createAMDGPULowerKernelAttributesPass();
