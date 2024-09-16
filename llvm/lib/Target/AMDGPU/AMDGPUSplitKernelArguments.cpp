@@ -33,6 +33,7 @@ private:
 } // end anonymous namespace
 
 bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
+  const DataLayout &DL = F.getParent()->getDataLayout();
   LLVM_DEBUG(dbgs() << "Entering AMDGPUSplitKernelArguments::processFunction "
                     << F.getName() << '\n');
   if (F.isDeclaration()) {
@@ -46,16 +47,21 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
     return false;
   }
 
+  SmallVector<std::tuple<unsigned, unsigned, uint64_t>, 8> NewArgMappings;
   DenseMap<Argument *, SmallVector<LoadInst *, 8>> ArgToLoadsMap;
   DenseMap<Argument *, SmallVector<GetElementPtrInst *, 8>> ArgToGEPsMap;
   SmallVector<Argument *, 8> StructArgs;
   SmallVector<Type *, 8> NewArgTypes;
 
   // Collect struct arguments and new argument types
+  unsigned OriginalArgIndex = 0;
+  unsigned NewArgIndex = 0;
   for (Argument &Arg : F.args()) {
     LLVM_DEBUG(dbgs() << "Processing argument: " << Arg << "\n");
     if (Arg.use_empty()) {
       NewArgTypes.push_back(Arg.getType());
+      NewArgMappings.push_back(std::make_tuple(NewArgIndex++, OriginalArgIndex, 0));
+      ++OriginalArgIndex;
       LLVM_DEBUG(dbgs() << "use empty\n");
       continue;
     }
@@ -116,10 +122,25 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
       ArgToGEPsMap[&Arg] = GEPs;
       for (LoadInst *LI : Loads) {
         NewArgTypes.push_back(LI->getType());
+
+        // Compute offset
+        uint64_t Offset = 0;
+        if (auto *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand())) {
+          // Compute the offset using DataLayout
+          APInt OffsetAPInt(DL.getPointerSizeInBits(), 0);
+          if (GEP->accumulateConstantOffset(DL, OffsetAPInt))
+            Offset = OffsetAPInt.getZExtValue();
+        }
+
+        // Map each new argument to the original argument index and offset
+        NewArgMappings.push_back(std::make_tuple(NewArgIndex++, OriginalArgIndex, Offset));
       }
     } else {
       NewArgTypes.push_back(Arg.getType());
+      // Map the new argument to the original argument index and offset 0
+      NewArgMappings.push_back(std::make_tuple(NewArgIndex++, OriginalArgIndex, 0));
     }
+    ++OriginalArgIndex;
   }
 
   if (StructArgs.empty())
@@ -136,14 +157,14 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
   Function *NewF =
       Function::Create(NewFT, F.getLinkage(), F.getAddressSpace(), F.getName());
   F.getParent()->getFunctionList().insert(F.getIterator(), NewF);
-  LLVM_DEBUG(dbgs() << "New empty function:\n" << *NewF << '\n');
+  NewF->takeName(&F);
 
   // Set calling convention
   NewF->setCallingConv(F.getCallingConv());
 
   // Build new parameter attributes
   SmallVector<AttributeSet, 8> NewArgAttrSets;
-  unsigned NewArgIndex = 0;
+  NewArgIndex = 0;
   for (Argument &Arg : F.args()) {
     if (ArgToLoadsMap.count(&Arg)) {
       for (LoadInst *LI : ArgToLoadsMap[&Arg]) {
@@ -165,6 +186,24 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
 
   // Set the attributes on the new function
   NewF->setAttributes(NewAttrList);
+
+  // Add the mapping information as a function attribute
+  // Format: "NewArgIndex1:OriginalArgIndex1:Offset1;NewArgIndex2:OriginalArgIndex2:Offset2;..."
+  std::string MappingStr;
+  for (const auto &Info : NewArgMappings) {
+    unsigned NewArgIdx, OrigArgIdx;
+    uint64_t Offset;
+    std::tie(NewArgIdx, OrigArgIdx, Offset) = Info;
+
+    if (!MappingStr.empty())
+      MappingStr += ";";
+    MappingStr += std::to_string(NewArgIdx) + ":" + std::to_string(OrigArgIdx) + ":" + std::to_string(Offset);
+  }
+
+  // Add the function attribute to the new function
+  NewF->addFnAttr("amdgpu-argument-mapping", MappingStr);
+
+  LLVM_DEBUG(dbgs() << "New empty function:\n" << *NewF << '\n');
 
   // Move the body of the old function to the new function
   NewF->splice(NewF->begin(), &F);
@@ -240,6 +279,7 @@ bool AMDGPUSplitKernelArguments::runOnModule(Module &M) {
       continue;
     Changed |= processFunction(*F);
   }
+  LLVM_DEBUG(dbgs() << "Module after transformation:\n" << M << '\n');
 
   return Changed;
 }
