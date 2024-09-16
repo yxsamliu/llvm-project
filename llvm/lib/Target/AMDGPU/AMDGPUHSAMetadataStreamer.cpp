@@ -316,6 +316,8 @@ void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
   MaybeAlign PointeeAlign;
   Type *Ty = Arg.hasByRefAttr() ? Arg.getParamByRefType() : Arg.getType();
 
+
+
   // FIXME: Need to distinguish in memory alignment from pointer alignment.
   if (auto PtrTy = dyn_cast<PointerType>(Ty)) {
     if (PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
@@ -327,17 +329,48 @@ void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
   Align ArgAlign;
   std::tie(ArgTy, ArgAlign) = getArgumentTypeAlign(Arg, DL);
 
+  unsigned OriginalArgIndex = ArgNo;
+  uint64_t OriginalArgOffset = 0;
+  if (Func->hasFnAttribute("amdgpu-argument-mapping")) {
+    StringRef MappingStr = Func->getFnAttribute("amdgpu-argument-mapping").getValueAsString();
+    SmallVector<StringRef, 8> Mappings;
+    MappingStr.split(Mappings, ';');
+    for (const StringRef &Mapping : Mappings) {
+      SmallVector<StringRef, 3> Elements;
+      Mapping.split(Elements, ':');
+      if (Elements.size() != 3)
+        continue;
+
+      unsigned NewArgIndex = 0;
+      unsigned OrigArgIndex = 0;
+      uint64_t OffsetValue = 0;
+      if (Elements[0].getAsInteger(10, NewArgIndex))
+        continue;
+      if (Elements[1].getAsInteger(10, OrigArgIndex))
+        continue;
+      if (Elements[2].getAsInteger(10, OffsetValue))
+        continue;
+
+      if (NewArgIndex == ArgNo) {
+        OriginalArgIndex = OrigArgIndex;
+        OriginalArgOffset = OffsetValue;
+        break;
+      }
+    }
+  }
+
   emitKernelArg(DL, ArgTy, ArgAlign,
                 getValueKind(ArgTy, TypeQual, BaseTypeName), Offset, Args,
                 PointeeAlign, Name, TypeName, BaseTypeName, ActAccQual,
-                AccQual, TypeQual);
+                AccQual, TypeQual, OriginalArgIndex, OriginalArgOffset);
 }
 
 void MetadataStreamerMsgPackV4::emitKernelArg(
     const DataLayout &DL, Type *Ty, Align Alignment, StringRef ValueKind,
     unsigned &Offset, msgpack::ArrayDocNode Args, MaybeAlign PointeeAlign,
     StringRef Name, StringRef TypeName, StringRef BaseTypeName,
-    StringRef ActAccQual, StringRef AccQual, StringRef TypeQual) {
+    StringRef ActAccQual, StringRef AccQual, StringRef TypeQual,
+    unsigned OriginalArgIndex, uint64_t OriginalArgOffset) {
   auto Arg = Args.getDocument()->getMapNode();
 
   if (!Name.empty())
@@ -377,6 +410,12 @@ void MetadataStreamerMsgPackV4::emitKernelArg(
       Arg[".is_volatile"] = Arg.getDocument()->getNode(true);
     else if (Key == "pipe")
       Arg[".is_pipe"] = Arg.getDocument()->getNode(true);
+  }
+
+  // Add original argument index and offset to the metadata
+  if (OriginalArgIndex != ~0U) {
+    Arg[".original_arg_index"] = Arg.getDocument()->getNode(OriginalArgIndex);
+    Arg[".original_arg_offset"] = Arg.getDocument()->getNode(OriginalArgOffset);
   }
 
   Args.push_back(Arg);
