@@ -1015,17 +1015,30 @@ struct AAAMDGPUNoAGPR
 const char AAAMDGPUNoAGPR::ID = 0;
 
 static void addPreloadKernArgHint(Function &F, TargetMachine &TM) {
+  static bool DBG = getenv("DBG_PRELOAD");
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+  if (DBG) {
+    llvm::errs() << "addPreloadKernArgHint "
+        << "KernargPreloadCount.getValue()=" << KernargPreloadCount.getValue()
+        << " ST.getMaxNumUserSGPRs()=" << ST.getMaxNumUserSGPRs()
+        << "\n";
+  }
   for (unsigned I = 0;
        I < F.arg_size() &&
        I < std::min(KernargPreloadCount.getValue(), ST.getMaxNumUserSGPRs());
        ++I) {
     Argument &Arg = *F.getArg(I);
     // Check for incompatible attributes.
+    if (DBG) {
+      llvm::errs() << "Arg " << I << ": " << Arg << "\n";
+    }
     if (Arg.hasByRefAttr() || Arg.hasNestAttr())
       break;
 
     Arg.addAttr(Attribute::InReg);
+    if (DBG) {
+      llvm::errs() << "added InReg attr\n";
+    }
   }
 }
 

@@ -762,6 +762,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerOptimizerLastEPCallback(
       [this](ModulePassManager &MPM, OptimizationLevel Level) {
         if (Level != OptimizationLevel::O0) {
+          MPM.addPass(AMDGPUSplitKernelArgumentsPass());
           MPM.addPass(AMDGPUAttributorPass(*this));
         }
       });
@@ -775,8 +776,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           PM.addPass(AMDGPUSwLowerLDSPass(*this));
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
-        if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0)
+        if (EnableAMDGPUAttributor && Level != OptimizationLevel::O0) {
+          PM.addPass(AMDGPUSplitKernelArgumentsPass());
           PM.addPass(AMDGPUAttributorPass(*this));
+        }
       });
 
   PB.registerRegClassFilterParsingCallback(
@@ -1098,8 +1101,6 @@ void AMDGPUPassConfig::addIRPasses() {
   }
 
   addPass(createAtomicExpandLegacyPass());
-  addPass(createAMDGPUSplitKernelArgumentsPass());
-
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addPass(createAMDGPUPromoteAlloca());
