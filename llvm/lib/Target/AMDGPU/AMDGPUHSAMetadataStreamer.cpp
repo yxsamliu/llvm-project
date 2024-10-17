@@ -328,7 +328,9 @@ void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
   Align ArgAlign;
   std::tie(ArgTy, ArgAlign) = getArgumentTypeAlign(Arg, DL);
 
-  unsigned OriginalArgIndex = ArgNo;
+  // Assuming the argument is not split from struct-type argument by default,
+  // unless we find it in function attribute amdgpu-argument-mapping.
+  unsigned OriginalArgIndex = ~0U;
   uint64_t OriginalArgOffset = 0;
   if (Func->hasFnAttribute("amdgpu-argument-mapping")) {
     StringRef MappingStr = Func->getFnAttribute("amdgpu-argument-mapping").getValueAsString();
@@ -358,6 +360,11 @@ void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
     }
   }
 
+  if (getenv("DBG_PRELOAD")) {
+    llvm::errs() << "[emitKernelArg] ArgNo=" << ArgNo
+                 << " OriginalArgIndex=" << OriginalArgIndex
+                 << " OriginalArgOffset=" << OriginalArgOffset << "\n";
+  }
   emitKernelArg(DL, ArgTy, ArgAlign,
                 getValueKind(ArgTy, TypeQual, BaseTypeName), Offset, Args,
                 PointeeAlign, Name, TypeName, BaseTypeName, ActAccQual,
@@ -413,6 +420,12 @@ void MetadataStreamerMsgPackV4::emitKernelArg(
 
   // Add original argument index and offset to the metadata
   if (OriginalArgIndex != ~0U) {
+    if (getenv("DBG_PRELOAD")) {
+      llvm::errs() << "[emitKernelArg] emit metadata "
+                   << " OriginalArgIndex=" << OriginalArgIndex
+                   << " OriginalArgOffset=" << OriginalArgOffset << "\n";
+    }
+
     Arg[".original_arg_index"] = Arg.getDocument()->getNode(OriginalArgIndex);
     Arg[".original_arg_offset"] = Arg.getDocument()->getNode(OriginalArgOffset);
   }
