@@ -60,7 +60,9 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
     LLVM_DEBUG(dbgs() << "Processing argument: " << Arg << "\n");
     if (Arg.use_empty()) {
       NewArgTypes.push_back(Arg.getType());
-      NewArgMappings.push_back(std::make_tuple(NewArgIndex++, OriginalArgIndex, 0));
+      NewArgMappings.push_back(
+          std::make_tuple(NewArgIndex, OriginalArgIndex, 0));
+      ++NewArgIndex;
       ++OriginalArgIndex;
       LLVM_DEBUG(dbgs() << "use empty\n");
       continue;
@@ -70,6 +72,12 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
     if (!PT) {
       NewArgTypes.push_back(Arg.getType());
       LLVM_DEBUG(dbgs() << "not a pointer\n");
+      // Include mapping if indices have changed
+      if (NewArgIndex != OriginalArgIndex)
+        NewArgMappings.push_back(
+            std::make_tuple(NewArgIndex, OriginalArgIndex, 0));
+      ++NewArgIndex;
+      ++OriginalArgIndex;
       continue;
     }
 
@@ -77,6 +85,12 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
     if (!IsByRef) {
       NewArgTypes.push_back(Arg.getType());
       LLVM_DEBUG(dbgs() << "not byref\n");
+      // Include mapping if indices have changed
+      if (NewArgIndex != OriginalArgIndex)
+        NewArgMappings.push_back(
+            std::make_tuple(NewArgIndex, OriginalArgIndex, 0));
+      ++NewArgIndex;
+      ++OriginalArgIndex;
       continue;
     }
 
@@ -85,6 +99,12 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
     if (!ST) {
       NewArgTypes.push_back(Arg.getType());
       LLVM_DEBUG(dbgs() << "not a struct\n");
+      // Include mapping if indices have changed
+      if (NewArgIndex != OriginalArgIndex)
+        NewArgMappings.push_back(
+            std::make_tuple(NewArgIndex, OriginalArgIndex, 0));
+      ++NewArgIndex;
+      ++OriginalArgIndex;
       continue;
     }
 
@@ -133,12 +153,17 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
         }
 
         // Map each new argument to the original argument index and offset
-        NewArgMappings.push_back(std::make_tuple(NewArgIndex++, OriginalArgIndex, Offset));
+        NewArgMappings.push_back(
+            std::make_tuple(NewArgIndex, OriginalArgIndex, Offset));
+        ++NewArgIndex;
       }
     } else {
       NewArgTypes.push_back(Arg.getType());
-      // Map the new argument to the original argument index and offset 0
-      NewArgMappings.push_back(std::make_tuple(NewArgIndex++, OriginalArgIndex, 0));
+      // Include mapping if indices have changed
+      if (NewArgIndex != OriginalArgIndex)
+        NewArgMappings.push_back(
+            std::make_tuple(NewArgIndex, OriginalArgIndex, 0));
+      ++NewArgIndex;
     }
     ++OriginalArgIndex;
   }
@@ -188,7 +213,7 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
   NewF->setAttributes(NewAttrList);
 
   // Add the mapping information as a function attribute
-  // Format: "NewArgIndex1:OriginalArgIndex1:Offset1;NewArgIndex2:OriginalArgIndex2:Offset2;..."
+  // Format: "NewArgIndex:OriginalArgIndex:Offset;..."
   std::string MappingStr;
   for (const auto &Info : NewArgMappings) {
     unsigned NewArgIdx, OrigArgIdx;
@@ -197,7 +222,8 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
 
     if (!MappingStr.empty())
       MappingStr += ";";
-    MappingStr += std::to_string(NewArgIdx) + ":" + std::to_string(OrigArgIdx) + ":" + std::to_string(Offset);
+    MappingStr += std::to_string(NewArgIdx) + ":" + std::to_string(OrigArgIdx) +
+                  ":" + std::to_string(Offset);
   }
 
   // Add the function attribute to the new function
