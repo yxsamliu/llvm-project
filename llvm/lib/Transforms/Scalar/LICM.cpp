@@ -215,6 +215,41 @@ using PointersAndHasReadsOutsideSet =
 static SmallVector<PointersAndHasReadsOutsideSet, 0>
 collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L);
 
+// Add at global scope:
+struct LICMDebugControl {
+ int TransformCounter = 0;
+ int TransformLimit = -1;
+ bool Initialized = false;
+
+ void init() {
+   if (!Initialized) {
+     if (const char *EnvVal = std::getenv("LICM_TRANSFORM_LIMIT"))
+       TransformLimit = atoi(EnvVal);
+     Initialized = true;
+   }
+ }
+
+ bool shouldTransform(const Instruction &I) {
+   init();
+   if (!I.getFunction()->getName().contains("_ZN7rocprim6detail16histogram_shared"))
+     return true;
+   if (TransformLimit >= 0 && TransformCounter >= TransformLimit)
+     return false;
+   return true;
+ }
+
+ void logTransform(const Instruction &I, const char* TransformType) {
+   if (I.getFunction()->getName().contains("_ZN7rocprim6detail16histogram_shared")) {
+     errs() << "LICM attempting " << TransformType << " #" << TransformCounter << ": " << I << "\n";
+     TransformCounter++;
+   }
+ }
+};
+
+static LICMDebugControl LICMDebug;
+
+
+// Similarly update other transformation functions
 namespace {
 struct LoopInvariantCodeMotion {
   bool runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI, DominatorTree *DT,
@@ -1169,37 +1204,12 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
 
   MemorySSA *MSSA = MSSAU.getMemorySSA();
 
-  static int LoadHoistCounter = 0;
-  static int LoadHoistLimit = -1;
-  static int LoadSinkCounter = 0;
-  static int LoadSinkLimit = -1;
-  static bool LimitInitialized = false;
-
-  if (!LimitInitialized) {
-    if (const char *EnvVal = std::getenv("LICM_LOAD_HOIST_LIMIT"))
-      LoadHoistLimit = atoi(EnvVal);
-    if (const char *EnvVal = std::getenv("LICM_LOAD_SINK_LIMIT"))
-      LoadSinkLimit = atoi(EnvVal);
-    LimitInitialized = true;
-  }
+  // Use in canSinkOrHoistInst:
+  if (!LICMDebug.shouldTransform(I))
+   return false;
+  LICMDebug.logTransform(I, Flags.getIsSink() ? "sink" : "hoist");
 
   if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-    if (I.getFunction()->getName().contains("_ZN7rocprim6detail16histogram_shared")) {
-      if (!Flags.getIsSink()) {
-        if (LoadHoistLimit >= 0 && LoadHoistCounter >= LoadHoistLimit)
-          return false;
-        errs() << "LICM attempting to hoist load #" << LoadHoistCounter << ": "
-               << *LI << "\n";
-        LoadHoistCounter++;
-      } else {
-        if (LoadSinkLimit >= 0 && LoadSinkCounter >= LoadSinkLimit)
-          return false;
-        errs() << "LICM attempting to sink load #" << LoadSinkCounter << ": "
-               << *LI << "\n";
-        LoadSinkCounter++;
-      }
-    }
-
     if (!LI->isUnordered())
       return false; // Don't sink/hoist volatile or ordered atomic loads!
 
@@ -2906,6 +2916,12 @@ static bool hoistArithmetics(Instruction &I, Loop &L,
                              ICFLoopSafetyInfo &SafetyInfo,
                              MemorySSAUpdater &MSSAU, AssumptionCache *AC,
                              DominatorTree *DT) {
+  // Use in hoistArithmetics:
+  if (!LICMDebug.shouldTransform(I))
+   return false;
+  LICMDebug.logTransform(I, "arithmetic");
+
+
   // Optimize complex patterns, such as (x < INV1 && x < INV2), turning them
   // into (x < min(INV1, INV2)), and hoisting the invariant part of this
   // expression out of the loop.
