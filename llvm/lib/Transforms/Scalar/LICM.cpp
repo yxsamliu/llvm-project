@@ -1169,28 +1169,35 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
 
   MemorySSA *MSSA = MSSAU.getMemorySSA();
 
-  // Add at start of function:
   static int LoadHoistCounter = 0;
   static int LoadHoistLimit = -1;
+  static int LoadSinkCounter = 0;
+  static int LoadSinkLimit = -1;
   static bool LimitInitialized = false;
 
   if (!LimitInitialized) {
     if (const char *EnvVal = std::getenv("LICM_LOAD_HOIST_LIMIT"))
       LoadHoistLimit = atoi(EnvVal);
+    if (const char *EnvVal = std::getenv("LICM_LOAD_SINK_LIMIT"))
+      LoadSinkLimit = atoi(EnvVal);
     LimitInitialized = true;
   }
 
-  // Loads have extra constraints we have to verify before we can hoist them.
   if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-    // Add for target function
-    if (!Flags.getIsSink() &&
-        I.getFunction()->getName().contains("_ZN7rocprim6detail16histogram_shared")) {
-      if (LoadHoistLimit >= 0 && LoadHoistCounter >= LoadHoistLimit)
-        return false;
-
-      errs() << "LICM attempting to hoist load #" << LoadHoistCounter << ": "
-             << *LI << "\n";
-      LoadHoistCounter++;
+    if (I.getFunction()->getName().contains("_ZN7rocprim6detail16histogram_shared")) {
+      if (!Flags.getIsSink()) {
+        if (LoadHoistLimit >= 0 && LoadHoistCounter >= LoadHoistLimit)
+          return false;
+        errs() << "LICM attempting to hoist load #" << LoadHoistCounter << ": "
+               << *LI << "\n";
+        LoadHoistCounter++;
+      } else {
+        if (LoadSinkLimit >= 0 && LoadSinkCounter >= LoadSinkLimit)
+          return false;
+        errs() << "LICM attempting to sink load #" << LoadSinkCounter << ": "
+               << *LI << "\n";
+        LoadSinkCounter++;
+      }
     }
 
     if (!LI->isUnordered())
