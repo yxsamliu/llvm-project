@@ -1168,8 +1168,31 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     return false;
 
   MemorySSA *MSSA = MSSAU.getMemorySSA();
+
+  // Add at start of function:
+  static int LoadHoistCounter = 0;
+  static int LoadHoistLimit = -1;
+  static bool LimitInitialized = false;
+
+  if (!LimitInitialized) {
+    if (const char *EnvVal = std::getenv("LICM_LOAD_HOIST_LIMIT"))
+      LoadHoistLimit = atoi(EnvVal);
+    LimitInitialized = true;
+  }
+
   // Loads have extra constraints we have to verify before we can hoist them.
   if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
+    // Add for target function
+    if (!Flags.getIsSink() &&
+        I.getFunction()->getName().contains("_ZN7rocprim6detail16histogram_shared")) {
+      if (LoadHoistLimit >= 0 && LoadHoistCounter >= LoadHoistLimit)
+        return false;
+
+      errs() << "LICM attempting to hoist load #" << LoadHoistCounter << ": "
+             << *LI << "\n";
+      LoadHoistCounter++;
+    }
+
     if (!LI->isUnordered())
       return false; // Don't sink/hoist volatile or ordered atomic loads!
 
