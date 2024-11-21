@@ -4306,3 +4306,58 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
 void RegisterCoalescer::print(raw_ostream &O, const Module* m) const {
   LIS->print(O);
 }
+
+namespace {
+class RegisterAllocationDebugImpl : public RegisterAllocationDebug {
+ bool Enabled;
+ std::string TargetFunc;
+ const TargetRegisterInfo *TRI;
+ bool InitializedForCurrentFunc;
+
+public:
+ RegisterAllocationDebugImpl()
+   : TRI(nullptr), InitializedForCurrentFunc(false) {
+   if (const char *FuncName = std::getenv("DBG_REGALLOC_FUNC")) {
+     Enabled = true;
+     TargetFunc = FuncName;
+     dbgs() << "Register allocation debugging enabled for function: "
+            << TargetFunc << "\n";
+   } else {
+     Enabled = false;
+   }
+ }
+
+ void initialize(const MachineFunction &MF,
+                const TargetRegisterInfo &TRI) override {
+   this->TRI = &TRI;
+
+   StringRef CurName = MF.getName();
+
+   // Do exact match and debug output
+   InitializedForCurrentFunc = Enabled && (CurName == TargetFunc);
+
+   dbgs() << "Function name check: current=\"" << CurName
+          << "\" target=\"" << TargetFunc
+          << "\" match=" << (InitializedForCurrentFunc ? "yes" : "no") << "\n";
+ }
+
+ void debugAssign(const LiveInterval &LI, MCRegister PhysReg,
+                  const char *Reason = "") override {
+   if (!InitializedForCurrentFunc || !TRI)
+     return;
+
+   dbgs() << "Allocating vreg" << printReg(LI.reg())
+          << " -> " << printReg(PhysReg, TRI);
+   if (Reason && Reason[0])
+     dbgs() << " (" << Reason << ")";
+   dbgs() << "\n";
+ }
+};
+
+static RegisterAllocationDebugImpl RegAllocDebug;
+}
+
+RegisterAllocationDebug &llvm::getRegAllocDebug() {
+  return RegAllocDebug;
+}
+

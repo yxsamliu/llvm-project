@@ -109,6 +109,7 @@ static bool foreachUnit(const TargetRegisterInfo *TRI,
 }
 
 void LiveRegMatrix::assign(const LiveInterval &VirtReg, MCRegister PhysReg) {
+  getRegAllocDebug().debugAssign(VirtReg, PhysReg);
   LLVM_DEBUG(dbgs() << "assigning " << printReg(VirtReg.reg(), TRI) << " to "
                     << printReg(PhysReg, TRI) << ':');
   assert(!VRM->hasPhys(VirtReg.reg()) && "Duplicate VirtReg assignment");

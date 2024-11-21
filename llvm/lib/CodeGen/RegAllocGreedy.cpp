@@ -73,7 +73,7 @@
 #include <cassert>
 #include <cstdint>
 #include <utility>
-
+#include "RegisterCoalescer.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
@@ -402,9 +402,10 @@ MCRegister RAGreedy::tryAssign(const LiveInterval &VirtReg,
   for (auto I = Order.begin(), E = Order.end(); I != E && !PhysReg; ++I) {
     assert(*I);
     if (!Matrix->checkInterference(VirtReg, *I)) {
-      if (I.isHint())
+      if (I.isHint()) {
+        getRegAllocDebug().debugAssign(VirtReg, *I, "from hint");
         return *I;
-      else
+      } else
         PhysReg = *I;
     }
   }
@@ -584,8 +585,10 @@ MCRegister RAGreedy::tryEvict(const LiveInterval &VirtReg,
 
   MCRegister BestPhys = EvictAdvisor->tryFindEvictionCandidate(
       VirtReg, Order, CostPerUseLimit, FixedRegisters);
-  if (BestPhys.isValid())
+  if (BestPhys.isValid()) {
+    getRegAllocDebug().debugAssign(VirtReg, BestPhys, "after eviction");
     evictInterference(VirtReg, BestPhys, NewVRegs);
+  }
   return BestPhys;
 }
 
@@ -2712,6 +2715,8 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
 
   MF = &mf;
   TII = MF->getSubtarget().getInstrInfo();
+  // Create debug tracer - automatically initializes debug context
+  RADebugTracer Tracer(*MF, *TRI);
 
   if (VerifyEnabled)
     MF->verify(this, "Before greedy register allocator", &errs());

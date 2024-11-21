@@ -111,4 +111,32 @@ class TargetRegisterInfo;
 
 } // end namespace llvm
 
+namespace llvm {
+class LiveInterval;
+class TargetRegisterInfo;
+class MachineFunction;
+
+// Debug interface for register allocation
+class RegisterAllocationDebug {
+public:
+  virtual ~RegisterAllocationDebug() = default;
+  virtual void initialize(const MachineFunction &MF,
+                         const TargetRegisterInfo &TRI) = 0;
+  virtual void debugAssign(const LiveInterval &LI, MCRegister PhysReg,
+                          const char *Reason = "") = 0;
+};
+
+// Get the debug handler - implementation provided elsewhere
+RegisterAllocationDebug &getRegAllocDebug();
+
+// RAII helper to set debug context
+class RADebugTracer {
+  RegisterAllocationDebug &Debug;
+public:
+  RADebugTracer(const MachineFunction &MF, const TargetRegisterInfo &TRI)
+    : Debug(getRegAllocDebug()) {
+    Debug.initialize(MF, TRI);
+  }
+};
+} // end namespace llvm
 #endif // LLVM_LIB_CODEGEN_REGISTERCOALESCER_H
