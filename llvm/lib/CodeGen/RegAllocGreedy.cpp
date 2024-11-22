@@ -398,57 +398,115 @@ MCRegister RAGreedy::tryAssign(const LiveInterval &VirtReg,
                                AllocationOrder &Order,
                                SmallVectorImpl<Register> &NewVRegs,
                                const SmallVirtRegSet &FixedRegisters) {
+  // Check if we should trace this register
+  bool ShouldTrace = false;
+  if (const char *TraceRegName = std::getenv("DBG_REGALLOC_REG")) {
+    std::string VRegName;
+    raw_string_ostream OS(VRegName);
+    OS << printReg(VirtReg.reg());
+    if (OS.str() == TraceRegName) {
+      ShouldTrace = true;
+      const TargetRegisterClass *RC = MRI->getRegClass(VirtReg.reg());
+      dbgs() << "\n=== Trying to assign " << printReg(VirtReg.reg())
+             << " class=" << TRI->getRegClassName(RC) << " ===\n";
+    }
+  }
   MCRegister PhysReg;
   for (auto I = Order.begin(), E = Order.end(); I != E && !PhysReg; ++I) {
     assert(*I);
+    if (ShouldTrace) {
+      dbgs() << "Trying " << printReg(*I, TRI) << ": ";
+    }
+
     if (!Matrix->checkInterference(VirtReg, *I)) {
+      if (ShouldTrace)
+        dbgs() << "no interference";
+
       if (I.isHint()) {
+        if (ShouldTrace)
+          dbgs() << ", using hint\n";
         getRegAllocDebug().debugAssign(VirtReg, *I, "from hint");
         return *I;
-      } else
+      } else {
+        if (ShouldTrace)
+          dbgs() << ", available\n";
         PhysReg = *I;
+      }
+    } else {
+      if (ShouldTrace)
+        dbgs() << "has interference\n";
     }
   }
-  if (!PhysReg.isValid())
+
+  if (!PhysReg.isValid()) {
+    if (ShouldTrace)
+      dbgs() << "No available registers found\n";
     return PhysReg;
+  }
 
   // PhysReg is available, but there may be a better choice.
+  if (ShouldTrace)
+    dbgs() << "Found available reg " << printReg(PhysReg, TRI) << ", checking for better options\n";
 
   // If we missed a simple hint, try to cheaply evict interference from the
   // preferred register.
-  if (Register Hint = MRI->getSimpleHint(VirtReg.reg()))
+  if (Register Hint = MRI->getSimpleHint(VirtReg.reg())) {
     if (Order.isHint(Hint)) {
       MCRegister PhysHint = Hint.asMCReg();
-      LLVM_DEBUG(dbgs() << "missed hint " << printReg(PhysHint, TRI) << '\n');
+      if (ShouldTrace) {
+        dbgs() << "Found hint " << printReg(PhysHint, TRI) << "\n";
+        dbgs() << "Checking if hint interference can be evicted\n";
+      }
 
       if (EvictAdvisor->canEvictHintInterference(VirtReg, PhysHint,
                                                  FixedRegisters)) {
+        if (ShouldTrace)
+          dbgs() << "Can evict interference for hint\n";
         evictInterference(VirtReg, PhysHint, NewVRegs);
         return PhysHint;
       }
 
-      // We can also split the virtual register in cold blocks.
-      if (trySplitAroundHintReg(PhysHint, VirtReg, NewVRegs, Order))
-        return 0;
+      if (ShouldTrace)
+        dbgs() << "Trying split around hint reg\n";
 
-      // Record the missed hint, we may be able to recover
-      // at the end if the surrounding allocation changed.
+      // We can also split the virtual register in cold blocks.
+      if (trySplitAroundHintReg(PhysHint, VirtReg, NewVRegs, Order)) {
+        if (ShouldTrace)
+          dbgs() << "Split successful\n";
+        return 0;
+      }
+
+      if (ShouldTrace)
+        dbgs() << "Recording broken hint for possible recovery\n";
       SetOfBrokenHints.insert(&VirtReg);
     }
+  }
 
   // Try to evict interference from a cheaper alternative.
   uint8_t Cost = RegCosts[PhysReg];
+  if (ShouldTrace)
+    dbgs() << "Register " << printReg(PhysReg, TRI) << " has cost " << (unsigned)Cost << "\n";
 
-  // Most registers have 0 additional cost.
-  if (!Cost)
+  if (!Cost) {
+    if (ShouldTrace)
+      dbgs() << "Using zero-cost register " << printReg(PhysReg, TRI) << "\n";
     return PhysReg;
+  }
 
-  LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI) << " is available at cost "
-                    << (unsigned)Cost << '\n');
+  if (ShouldTrace)
+    dbgs() << "Trying to find cheaper alternative to " << printReg(PhysReg, TRI) << "\n";
+
   MCRegister CheapReg = tryEvict(VirtReg, Order, NewVRegs, Cost, FixedRegisters);
+
+  if (ShouldTrace) {
+    if (CheapReg)
+      dbgs() << "Found cheaper reg " << printReg(CheapReg, TRI) << "\n";
+    else
+      dbgs() << "No cheaper alternative found, using " << printReg(PhysReg, TRI) << "\n";
+  }
+
   return CheapReg ? CheapReg : PhysReg;
 }
-
 //===----------------------------------------------------------------------===//
 //                         Interference eviction
 //===----------------------------------------------------------------------===//
