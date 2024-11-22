@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Function.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -127,58 +128,84 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
   RCInfo &RCI = RegClass[RC->getID()];
   auto &STI = MF->getSubtarget();
 
-  // Raw register count, including all reserved regs.
-  unsigned NumRegs = RC->getNumRegs();
+  const char* dbgRC = getenv("DBG_REGALLOC_RC");
+  bool traceThisRC = dbgRC && strcmp(TRI->getRegClassName(RC), dbgRC) == 0;
 
+  if (traceThisRC) {
+    dbgs() << "Computing allocation order for:\n"
+           << "  Function: " << MF->getName() << "\n"
+           << "  Calling Convention: " << MF->getFunction().getCallingConv() << "\n"
+           << "  Register Class: " << TRI->getRegClassName(RC)
+           << " (Size: " << RC->getNumRegs() << " regs)\n";
+  }
+
+  unsigned NumRegs = RC->getNumRegs();
   if (!RCI.Order)
     RCI.Order.reset(new MCPhysReg[NumRegs]);
-
   unsigned N = 0;
   SmallVector<MCPhysReg, 16> CSRAlias;
   uint8_t MinCost = uint8_t(~0u);
   uint8_t LastCost = uint8_t(~0u);
   unsigned LastCostChange = 0;
 
-  // FIXME: Once targets reserve registers instead of removing them from the
-  // allocation order, we can simply use begin/end here.
   ArrayRef<MCPhysReg> RawOrder = RC->getRawAllocationOrder(*MF);
   for (unsigned PhysReg : RawOrder) {
-    // Remove reserved registers from the allocation order.
-    if (Reserved.test(PhysReg))
+    if (Reserved.test(PhysReg)) {
+      if (traceThisRC) {
+        dbgs() << "Skipping reserved register " << printReg(PhysReg, TRI) << "\n";
+      }
       continue;
+    }
+
+    if (traceThisRC) {
+      dbgs() << "Considering register " << printReg(PhysReg, TRI);
+    }
+
     uint8_t Cost = RegCosts[PhysReg];
     MinCost = std::min(MinCost, Cost);
-
     if (getLastCalleeSavedAlias(PhysReg) &&
-        !STI.ignoreCSRForAllocationOrder(*MF, PhysReg))
-      // PhysReg aliases a CSR, save it for later.
+        !STI.ignoreCSRForAllocationOrder(*MF, PhysReg)) {
       CSRAlias.push_back(PhysReg);
-    else {
-      if (Cost != LastCost)
+      if (traceThisRC)
+        dbgs() << " -> added to CSR aliases\n";
+    } else {
+      if (Cost != LastCost) {
         LastCostChange = N;
+        if (traceThisRC)
+          dbgs() << " -> cost change at position " << N << "\n";
+      }
       RCI.Order[N++] = PhysReg;
+      if (traceThisRC)
+        dbgs() << " -> added at position " << (N-1) << "\n";
       LastCost = Cost;
     }
   }
+
   RCI.NumRegs = N + CSRAlias.size();
   assert(RCI.NumRegs <= NumRegs && "Allocation order larger than regclass");
 
-  // CSR aliases go after the volatile registers, preserve the target's order.
+  if (traceThisRC)
+    dbgs() << "Adding CSR aliases:\n";
+
   for (unsigned PhysReg : CSRAlias) {
     uint8_t Cost = RegCosts[PhysReg];
-    if (Cost != LastCost)
+    if (Cost != LastCost) {
       LastCostChange = N;
+      if (traceThisRC)
+        dbgs() << "Cost change at position " << N << "\n";
+    }
     RCI.Order[N++] = PhysReg;
+    if (traceThisRC)
+      dbgs() << "Added " << printReg(PhysReg, TRI)
+             << " at position " << (N-1) << "\n";
     LastCost = Cost;
   }
 
-  // Register allocator stress test.  Clip register class to N registers.
   if (StressRA && RCI.NumRegs > StressRA)
     RCI.NumRegs = StressRA;
 
-  // Check if RC is a proper sub-class.
   if (const TargetRegisterClass *Super =
-          TRI->getLargestLegalSuperClass(RC, *MF))
+        TRI->getLargestLegalSuperClass(RC, *MF))
     if (Super != RC && getNumAllocatableRegs(Super) > RCI.NumRegs)
       RCI.ProperSubClass = true;
 
@@ -186,16 +213,30 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
   RCI.LastCostChange = LastCostChange;
 
   LLVM_DEBUG({
-    dbgs() << "AllocationOrder(" << TRI->getRegClassName(RC) << ") = [";
+    dbgs() << "Final allocation order for:\n"
+           << "  Function: " << MF->getName() << "\n"
+           << "  Calling Convention: " << MF->getFunction().getCallingConv() << "\n"
+           << "  Register Class: " << TRI->getRegClassName(RC)
+           << " (Size: " << RC->getNumRegs() << " regs)\n"
+           << "  Order = [";
     for (unsigned I = 0; I != RCI.NumRegs; ++I)
       dbgs() << ' ' << printReg(RCI.Order[I], TRI);
     dbgs() << (RCI.ProperSubClass ? " ] (sub-class)\n" : " ]\n");
   });
+  if (traceThisRC) {
+    dbgs() << "Final allocation order for:\n"
+           << "  Function: " << MF->getName() << "\n"
+           << "  Calling Convention: " << MF->getFunction().getCallingConv() << "\n"
+           << "  Register Class: " << TRI->getRegClassName(RC)
+           << " (Size: " << RC->getNumRegs() << " regs)\n"
+           << "  Order = [";
+    for (unsigned I = 0; I != RCI.NumRegs; ++I)
+      dbgs() << ' ' << printReg(RCI.Order[I], TRI);
+    dbgs() << (RCI.ProperSubClass ? " ] (sub-class)\n" : " ]\n");
+  }
 
-  // RCI is now up-to-date.
   RCI.Tag = Tag;
 }
-
 /// This is not accurate because two overlapping register sets may have some
 /// nonoverlapping reserved registers. However, computing the allocation order
 /// for all register classes would be too expensive.
