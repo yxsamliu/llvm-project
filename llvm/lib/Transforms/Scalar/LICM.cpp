@@ -217,33 +217,37 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L);
 
 // Add at global scope:
 struct LICMDebugControl {
- int TransformCounter = 0;
- int TransformLimit = -1;
- bool Initialized = false;
+  int TransformCounter = 0;
+  int TransformLimit = -1;
+  bool Initialized = false;
+  std::string TargetFunc;
 
- void init() {
-   if (!Initialized) {
-     if (const char *EnvVal = std::getenv("LICM_TRANSFORM_LIMIT"))
-       TransformLimit = atoi(EnvVal);
-     Initialized = true;
-   }
- }
+  void init() {
+    if (!Initialized) {
+      if (const char *EnvVal = std::getenv("LICM_TRANSFORM_LIMIT"))
+        TransformLimit = atoi(EnvVal);
+      if (const char *FuncName = std::getenv("DBG_LICM_FUNC"))
+        TargetFunc = FuncName;
+      Initialized = true;
+    }
+  }
 
- bool shouldTransform(const Instruction &I) {
-   init();
-   if (!I.getFunction()->getName().contains("_ZN7rocprim6detail16histogram_shared"))
-     return true;
-   if (TransformLimit >= 0 && TransformCounter >= TransformLimit)
-     return false;
-   return true;
- }
+  bool shouldTransform(const Instruction &I) {
+    init();
+    if (TargetFunc.empty() || I.getFunction()->getName().str() != TargetFunc)
+      return true;
+    if (TransformLimit >= 0 && TransformCounter >= TransformLimit)
+      return false;
+    return true;
+  }
 
- void logTransform(const Instruction &I, const char* TransformType) {
-   if (I.getFunction()->getName().contains("_ZN7rocprim6detail16histogram_shared")) {
-     errs() << "LICM attempting " << TransformType << " #" << TransformCounter << ": " << I << "\n";
-     TransformCounter++;
-   }
- }
+  void logTransform(const Instruction &I, const char* TransformType) {
+    if (!TargetFunc.empty() && I.getFunction()->getName().str() == TargetFunc) {
+      errs() << "LICM attempting " << TransformType << " #" << TransformCounter
+             << ": " << I << "\n";
+      TransformCounter++;
+    }
+  }
 };
 
 static LICMDebugControl LICMDebug;
