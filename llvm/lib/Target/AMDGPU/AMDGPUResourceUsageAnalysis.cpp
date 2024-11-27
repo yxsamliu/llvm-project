@@ -470,5 +470,30 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
   Info.NumVGPR = MaxVGPR + 1;
   Info.NumAGPR = MaxAGPR + 1;
 
+  // Inside analyzeResourceUsage function, right before returning Info:
+  const char* dbg_vgpr = std::getenv("DBG_VGPR");
+  if (dbg_vgpr) {
+    llvm::errs() << "Function: " << MF.getName() << ", VGPR Usage: " << Info.NumVGPR << "\n";
+  }
+  // Inside analyzeResourceUsage function, after calculating Info.NumVGPR but before returning:
+  const char* dbg_vgpr_set = std::getenv("DBG_VGPR_SET");
+  if (dbg_vgpr_set) {
+    StringRef settings(dbg_vgpr_set);
+    SmallVector<StringRef, 8> pairs;
+    settings.split(pairs, ',');
+
+    for (StringRef pair : pairs) {
+      SmallVector<StringRef, 2> funcAndVGPR;
+      pair.split(funcAndVGPR, ':');
+      if (funcAndVGPR.size() == 2 && funcAndVGPR[0] == MF.getName()) {
+        unsigned vgprs;
+        if (!funcAndVGPR[1].getAsInteger(10, vgprs)) {
+          Info.NumVGPR = vgprs;
+          llvm::errs() << "Override VGPR count for " << MF.getName()
+                       << " to " << vgprs << "\n";
+        }
+      }
+    }
+  }
   return Info;
 }
