@@ -6,6 +6,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 #define DEBUG_TYPE "amdgpu-split-kernel-arguments"
@@ -13,6 +14,10 @@
 using namespace llvm;
 
 namespace {
+static llvm::cl::opt<bool> DisableSplitKernelArgs(
+    "disable-amdgpu-split-kernel-args",
+    llvm::cl::desc("Disable splitting of AMDGPU kernel arguments"),
+    llvm::cl::init(false));
 
 class AMDGPUSplitKernelArguments : public ModulePass {
 public:
@@ -289,6 +294,8 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
 }
 
 bool AMDGPUSplitKernelArguments::runOnModule(Module &M) {
+  if (DisableSplitKernelArgs)
+    return false;
   bool Changed = false;
   SmallVector<Function *, 16> FunctionsToProcess;
 
