@@ -331,25 +331,18 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
 
   // Replace LoadInsts with new scalar arguments
   for (const LoadInfo &LI : AllLoads) {
-    Argument *NewArg = LoadToNewArgMap[LI.Load];
-    if (NewArg) {
-      LI.Load->replaceAllUsesWith(NewArg);
-      LI.Load->eraseFromParent();
-    }
-  }
-
-  // Erase GEPs associated with split arguments
-  for (const LoadInfo &LI : AllLoads) {
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(LI.Load->getPointerOperand())) {
+    Value *PtrVal = LI.Load->getPointerOperand();
+    // Check if still a GEP
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(PtrVal)) {
       if (GEP->use_empty()) {
         GEP->eraseFromParent();
       } else {
-        // Replace remaining uses with undef and erase
         GEP->replaceAllUsesWith(UndefValue::get(GEP->getType()));
         GEP->eraseFromParent();
       }
     }
   }
+
 
   LLVM_DEBUG(dbgs() << "New function after transformation:\n" << *NewF << '\n');
 
