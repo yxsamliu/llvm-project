@@ -51,7 +51,7 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
     return false;
   }
 
-  // Define a struct to hold load information for sorting
+  // Struct to hold information about loads from split arguments
   struct LoadInfo {
     LoadInst *Load;
     Argument *Arg;
@@ -59,18 +59,25 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
     unsigned OriginalArgIndex;
   };
 
-  SmallVector<LoadInfo, 16> AllLoads;
-  SmallVector<Type *, 8> NewArgTypes;
-  SmallVector<std::tuple<unsigned, unsigned, uint64_t>, 8> NewArgMappings;
+  // Struct to represent final arguments (both non-split and split)
+  struct FinalArgInfo {
+    Type *ArgType;
+    unsigned OrigArgIndex;
+    uint64_t Offset;
+    Argument *OrigArg; // For non-split arguments only (used for attributes)
+    bool IsSplit;
+  };
 
+  SmallVector<LoadInfo, 16> AllLoads;
+  SmallVector<FinalArgInfo, 16> AllFinalArgs;
+
+  // Collect arguments
   unsigned OriginalArgIndex = 0;
-  unsigned NewArgIndex = 0;
   for (Argument &Arg : F.args()) {
     LLVM_DEBUG(dbgs() << "Processing argument: " << Arg << "\n");
     if (Arg.use_empty()) {
-      NewArgTypes.push_back(Arg.getType());
-      NewArgMappings.emplace_back(NewArgIndex, OriginalArgIndex, 0);
-      ++NewArgIndex;
+      // This argument is unused, just keep it as is
+      AllFinalArgs.push_back({Arg.getType(), OriginalArgIndex, 0, &Arg, false});
       ++OriginalArgIndex;
       LLVM_DEBUG(dbgs() << "use empty\n");
       continue;
@@ -78,41 +85,35 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
 
     PointerType *PT = dyn_cast<PointerType>(Arg.getType());
     if (!PT) {
-      NewArgTypes.push_back(Arg.getType());
-      LLVM_DEBUG(dbgs() << "not a pointer\n");
-      if (NewArgIndex != OriginalArgIndex)
-        NewArgMappings.emplace_back(NewArgIndex, OriginalArgIndex, 0);
-      ++NewArgIndex;
+      // Non-pointer argument, keep it as is
+      AllFinalArgs.push_back({Arg.getType(), OriginalArgIndex, 0, &Arg, false});
       ++OriginalArgIndex;
       continue;
     }
 
     const bool IsByRef = Arg.hasByRefAttr();
     if (!IsByRef) {
-      NewArgTypes.push_back(Arg.getType());
-      LLVM_DEBUG(dbgs() << "not byref\n");
-      if (NewArgIndex != OriginalArgIndex)
-        NewArgMappings.emplace_back(NewArgIndex, OriginalArgIndex, 0);
-      ++NewArgIndex;
+      // Pointer but not byref, just keep it
+      AllFinalArgs.push_back({Arg.getType(), OriginalArgIndex, 0, &Arg, false});
       ++OriginalArgIndex;
       continue;
     }
 
+    // By-ref pointer argument. Check if it's a struct we can split
     Type *ArgTy = Arg.getParamByRefType();
     StructType *ST = dyn_cast<StructType>(ArgTy);
     if (!ST) {
-      NewArgTypes.push_back(Arg.getType());
-      LLVM_DEBUG(dbgs() << "not a struct\n");
-      if (NewArgIndex != OriginalArgIndex)
-        NewArgMappings.emplace_back(NewArgIndex, OriginalArgIndex, 0);
-      ++NewArgIndex;
+      // It's a byref pointer to a non-struct type, keep it as is
+      AllFinalArgs.push_back({Arg.getType(), OriginalArgIndex, 0, &Arg, false});
       ++OriginalArgIndex;
       continue;
     }
 
+    // It's a struct argument. Check all uses for loads and GEPs
     bool AllLoadsOrGEPs = true;
     SmallVector<LoadInst *, 8> Loads;
     SmallVector<GetElementPtrInst *, 8> GEPs;
+
     for (User *U : Arg.users()) {
       LLVM_DEBUG(dbgs() << "  User: " << *U << "\n");
       if (auto *LI = dyn_cast<LoadInst>(U)) {
@@ -130,7 +131,6 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
         }
       } else {
         AllLoadsOrGEPs = false;
-        break;
       }
       if (!AllLoadsOrGEPs)
         break;
@@ -139,8 +139,10 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
                       << (AllLoadsOrGEPs ? "true" : "false") << "\n");
 
     if (AllLoadsOrGEPs) {
+      // We'll not add the original struct argument itself.
+      // Instead, we will add each load as a separate argument later.
       for (LoadInst *LI : Loads) {
-        // Compute offset
+        // Compute offset for each load
         uint64_t Offset = 0;
         if (auto *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand())) {
           APInt OffsetAPInt(DL.getPointerSizeInBits(), 0);
@@ -148,60 +150,46 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
             Offset = OffsetAPInt.getZExtValue();
         }
 
-        AllLoads.emplace_back(LoadInfo{LI, &Arg, Offset, OriginalArgIndex});
+        AllLoads.push_back({LI, &Arg, Offset, OriginalArgIndex});
       }
     } else {
       // Argument is not eligible for splitting; keep it as is
-      NewArgTypes.push_back(Arg.getType());
-      if (NewArgIndex != OriginalArgIndex)
-        NewArgMappings.emplace_back(NewArgIndex, OriginalArgIndex, 0);
-      ++NewArgIndex;
+      AllFinalArgs.push_back({Arg.getType(), OriginalArgIndex, 0, &Arg, false});
     }
+
     ++OriginalArgIndex;
   }
 
+  // If we didn't find any argument to split, no changes are needed
   if (AllLoads.empty())
     return false;
 
-  // Sort the loads by OriginalArgIndex and Offset
+  // Sort the loads by OriginalArgIndex and Offset so they appear in proper order
   std::sort(AllLoads.begin(), AllLoads.end(), [](const LoadInfo &A, const LoadInfo &B) {
     if (A.OriginalArgIndex != B.OriginalArgIndex)
       return A.OriginalArgIndex < B.OriginalArgIndex;
     return A.Offset < B.Offset;
   });
 
-  // Rebuild NewArgTypes and NewArgMappings
-  // First, process non-split arguments
-  // Then, append sorted scalar arguments from split struct arguments
+  // Add the split load arguments to AllFinalArgs
+  for (const LoadInfo &LI : AllLoads) {
+    AllFinalArgs.push_back({LI.Load->getType(), LI.OriginalArgIndex, LI.Offset, LI.Arg, true});
+  }
+
+  // Now sort AllFinalArgs by OrigArgIndex, then by Offset
+  std::sort(AllFinalArgs.begin(), AllFinalArgs.end(), [](const FinalArgInfo &A, const FinalArgInfo &B) {
+    if (A.OrigArgIndex != B.OrigArgIndex)
+      return A.OrigArgIndex < B.OrigArgIndex;
+    return A.Offset < B.Offset;
+  });
+
+  // Build final argument arrays
   SmallVector<Type *, 8> FinalNewArgTypes;
   SmallVector<std::tuple<unsigned, unsigned, uint64_t>, 8> FinalNewArgMappings;
   unsigned NewArgIndexFinal = 0;
-  unsigned OriginalArgIndexFinal = 0;
-  for (Argument &Arg : F.args()) {
-    bool IsSplit = false;
-    // Check if this argument was split
-    for (const LoadInfo &LI : AllLoads) {
-      if (LI.Arg == &Arg) {
-        IsSplit = true;
-        break;
-      }
-    }
-
-    if (!IsSplit) {
-      // Argument is not split; add its type
-      FinalNewArgTypes.push_back(Arg.getType());
-      if (NewArgIndexFinal != OriginalArgIndexFinal)
-        FinalNewArgMappings.emplace_back(NewArgIndexFinal, OriginalArgIndexFinal, 0);
-      ++NewArgIndexFinal;
-    }
-    // If split, scalar arguments will be added next
-    ++OriginalArgIndexFinal;
-  }
-
-  // Now, add the sorted loads
-  for (const LoadInfo &LI : AllLoads) {
-    FinalNewArgTypes.push_back(LI.Load->getType());
-    FinalNewArgMappings.emplace_back(NewArgIndexFinal, LI.OriginalArgIndex, LI.Offset);
+  for (auto &FA : AllFinalArgs) {
+    FinalNewArgTypes.push_back(FA.ArgType);
+    FinalNewArgMappings.push_back(std::make_tuple(NewArgIndexFinal, FA.OrigArgIndex, FA.Offset));
     ++NewArgIndexFinal;
   }
 
@@ -222,29 +210,35 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
   NewF->setCallingConv(F.getCallingConv());
 
   // Build new parameter attributes
+  // For non-split arguments, copy existing attributes.
+  // For split arguments, give them default (empty) attributes.
   SmallVector<AttributeSet, 8> NewArgAttrSets;
-  for (Argument &Arg : F.args()) {
-    bool IsSplit = false;
-    for (const LoadInfo &LI : AllLoads) {
-      if (LI.Arg == &Arg) {
-        IsSplit = true;
-        break;
+  {
+    // Map from OrigArgIndex to the original Arg for attribute lookup
+    // Non-split arguments have a direct Arg pointer, split ones have IsSplit=true
+    DenseMap<unsigned, Argument*> OrigIndexToArg;
+    for (auto &FA : AllFinalArgs) {
+      if (!FA.IsSplit && FA.OrigArg)
+        OrigIndexToArg[FA.OrigArgIndex] = FA.OrigArg;
+    }
+
+    for (unsigned i = 0; i < AllFinalArgs.size(); ++i) {
+      auto &FA = AllFinalArgs[i];
+      if (FA.IsSplit) {
+        // Split arguments get default attributes
+        NewArgAttrSets.push_back(AttributeSet());
+      } else {
+        // Non-split argument: copy attributes from the original argument
+        Argument *OrigArg = OrigIndexToArg[FA.OrigArgIndex];
+        if (OrigArg) {
+          AttributeSet ArgAttrs = OldAttrs.getParamAttrs(OrigArg->getArgNo());
+          NewArgAttrSets.push_back(ArgAttrs);
+        } else {
+          // If we can't find an original Arg (shouldn't happen), just default
+          NewArgAttrSets.push_back(AttributeSet());
+        }
       }
     }
-
-    if (!IsSplit) {
-      // Copy existing attributes for this argument
-      AttributeSet ArgAttrs = OldAttrs.getParamAttrs(Arg.getArgNo());
-      NewArgAttrSets.push_back(ArgAttrs);
-      ++NewArgIndex;
-    }
-    // Split arguments' attributes are not copied to scalar arguments
-    // New scalar arguments will receive default (empty) attributes
-  }
-
-  // Add default attributes for the new scalar arguments
-  for (size_t i = 0; i < AllLoads.size(); ++i) {
-    NewArgAttrSets.emplace_back(AttributeSet());
   }
 
   // Build the new AttributeList
@@ -276,64 +270,70 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
   // Move the body of the old function to the new function
   NewF->splice(NewF->begin(), &F);
 
-  // Map old arguments and loads to new arguments
+  // Replace old arguments and loads
   DenseMap<Value *, Value *> VMap;
   DenseMap<LoadInst *, Argument *> LoadToNewArgMap;
 
-  // Iterate over new arguments and map them
+  // Map new arguments back to old arguments/loads
+  // After sorting, we know NewF->arg_begin() matches the order in AllFinalArgs
   auto NewArgIt = NewF->arg_begin();
-  unsigned ArgIdx = 0;
-  for (Argument &Arg : F.args()) {
-    bool IsSplit = false;
-    for (const LoadInfo &LI : AllLoads) {
-      if (LI.Arg == &Arg) {
-        IsSplit = true;
-        break;
+  for (unsigned i = 0; i < AllFinalArgs.size(); ++i, ++NewArgIt) {
+    auto &FA = AllFinalArgs[i];
+    NewArgIt->setName("arg" + std::to_string(i));
+
+    if (FA.IsSplit) {
+      // This corresponds to a load from a split argument
+      // Find the corresponding LoadInfo
+      // We'll match by OrigArgIndex and Offset
+      LoadInst *MatchedLoad = nullptr;
+      for (auto &LI : AllLoads) {
+        if (LI.OriginalArgIndex == FA.OrigArgIndex && LI.Offset == FA.Offset) {
+          MatchedLoad = LI.Load;
+          break;
+        }
       }
-    }
 
-    if (!IsSplit) {
-      NewArgIt->setName(Arg.getName());
-      VMap[&Arg] = &*NewArgIt;
-      ++NewArgIt;
-    }
-    ++ArgIdx;
-  }
-
-  // Then, map split load arguments
-  for (const LoadInfo &LI : AllLoads) {
-    NewArgIt->setName(LI.Load->getName());
-    LoadToNewArgMap[LI.Load] = &*NewArgIt;
-    ++NewArgIt;
-  }
-
-  // Replace original arguments with new arguments
-  for (Argument &Arg : F.args()) {
-    bool IsSplit = false;
-    for (const LoadInfo &LI : AllLoads) {
-      if (LI.Arg == &Arg) {
-        IsSplit = true;
-        break;
-      }
-    }
-
-    if (!IsSplit) {
-      Argument *NewArg = dyn_cast<Argument>(VMap[&Arg]);
-      if (NewArg) {
-        Arg.replaceAllUsesWith(NewArg);
+      if (MatchedLoad) {
+        LoadToNewArgMap[MatchedLoad] = &*NewArgIt;
       }
     } else {
-      // Replace uses of the original struct argument with undef
+      // Non-split argument: replace its uses with this new argument
+      // Find the original argument by OrigArgIndex
+      Argument *OrigArg = FA.OrigArg;
+      if (OrigArg)
+        VMap[OrigArg] = &*NewArgIt;
+    }
+  }
+
+  // Replace non-split arguments
+  for (Argument &Arg : F.args()) {
+    unsigned ArgNo = Arg.getArgNo();
+    // Check if this argument was split
+    bool IsSplit = false;
+    for (auto &LI : AllLoads) {
+      if (LI.Arg == &Arg) {
+        IsSplit = true;
+        break;
+      }
+    }
+
+    if (!IsSplit) {
+      // Replace uses with the new argument
+      if (VMap.find(&Arg) != VMap.end()) {
+        Arg.replaceAllUsesWith(VMap[&Arg]);
+      }
+    } else {
+      // For split arguments, replace original argument uses with undef
       UndefValue *UndefArg = UndefValue::get(Arg.getType());
       Arg.replaceAllUsesWith(UndefArg);
     }
   }
 
-  // Replace LoadInsts with new scalar arguments
-  for (const LoadInfo &LI : AllLoads) {
+  // Erase GEPs associated with split arguments if they exist
+  // If the pointer operand is no longer a GEP, just skip
+  for (auto &LI : AllLoads) {
     Value *PtrVal = LI.Load->getPointerOperand();
-    // Check if still a GEP
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(PtrVal)) {
+    if (auto *GEP = dyn_cast_or_null<GetElementPtrInst>(PtrVal)) {
       if (GEP->use_empty()) {
         GEP->eraseFromParent();
       } else {
@@ -343,15 +343,23 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
     }
   }
 
+  // Replace LoadInst uses with the corresponding new arguments
+  for (auto &Entry : LoadToNewArgMap) {
+    LoadInst *LI = Entry.first;
+    Argument *NewArg = Entry.second;
+    LI->replaceAllUsesWith(NewArg);
+    LI->eraseFromParent();
+  }
 
   LLVM_DEBUG(dbgs() << "New function after transformation:\n" << *NewF << '\n');
 
-  // Replace old function with new function
+  // Replace old function references with the new one
   F.replaceAllUsesWith(NewF);
   F.eraseFromParent();
 
   return true;
 }
+
 
 bool AMDGPUSplitKernelArguments::runOnModule(Module &M) {
   if (DisableSplitKernelArgs)
