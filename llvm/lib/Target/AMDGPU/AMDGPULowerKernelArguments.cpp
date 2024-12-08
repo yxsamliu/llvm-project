@@ -144,10 +144,8 @@ public:
   // Returns the maximum number of user SGPRs that we have available to preload
   // arguments.
   void setInitialFreeUserSGPRsCount() {
-    const unsigned MaxUserSGPRs = ST.getMaxNumUserSGPRs();
     GCNUserSGPRUsageInfo UserSGPRInfo(F, ST);
-
-    NumFreeUserSGPRs = MaxUserSGPRs - UserSGPRInfo.getNumUsedUserSGPRs();
+    NumFreeUserSGPRs = UserSGPRInfo.getNumFreeUserSGPRs();
   }
 
   bool tryAllocPreloadSGPRs(unsigned AllocSize, uint64_t ArgOffset,
@@ -162,13 +160,15 @@ public:
     }
     //  Check if this argument may be loaded into the same register as the
     //  previous argument.
-    if (!isAligned(Align(4), ArgOffset) && AllocSize < 4) {
+    if (ArgOffset - LastExplicitArgOffset < 4 &&
+        !isAligned(Align(4), ArgOffset)) {
       if (DBG)
         llvm::errs() << " pre-loaded into the same register as the previous argument\n";
       return true;
     }
 
     // Pad SGPRs for kernarg alignment.
+    ArgOffset = alignDown(ArgOffset, 4);
     unsigned Padding = ArgOffset - LastExplicitArgOffset;
     unsigned PaddingSGPRs = alignTo(Padding, 4) / 4;
     unsigned NumPreloadSGPRs = alignTo(AllocSize, 4) / 4;
@@ -192,6 +192,7 @@ public:
 
   // Try to allocate SGPRs to preload implicit kernel arguments.
   void tryAllocImplicitArgPreloadSGPRs(uint64_t ImplicitArgsBaseOffset,
+                                       uint64_t LastExplicitArgOffset,
                                        IRBuilder<> &Builder) {
     StringRef Name = Intrinsic::getName(Intrinsic::amdgcn_implicitarg_ptr);
     Function *ImplicitArgPtr = F.getParent()->getFunction(Name);
@@ -237,7 +238,6 @@ public:
     // argument can actually be preloaded.
     std::sort(ImplicitArgLoads.begin(), ImplicitArgLoads.end(), less_second());
 
-    uint64_t LastExplicitArgOffset = ImplicitArgsBaseOffset;
     // If we fail to preload any implicit argument we know we don't have SGPRs
     // to preload any subsequent ones with larger offsets. Find the first
     // argument that we cannot preload.
@@ -251,7 +251,8 @@ public:
                                     LastExplicitArgOffset))
             return true;
 
-          LastExplicitArgOffset = LoadOffset + LoadSize;
+          LastExplicitArgOffset =
+              ImplicitArgsBaseOffset + LoadOffset + LoadSize;
           return false;
         });
 
@@ -510,7 +511,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
         alignTo(ExplicitArgOffset, ST.getAlignmentForImplicitArgPtr()) +
         BaseOffset;
     PreloadInfo.tryAllocImplicitArgPreloadSGPRs(ImplicitArgsBaseOffset,
-                                                Builder);
+                                                ExplicitArgOffset, Builder);
   }
 
   return true;
