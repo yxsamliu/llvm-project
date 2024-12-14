@@ -325,7 +325,7 @@ define hidden i32 @called(i32 %a) noinline {
   ret i32 %sub
 }
 
-define amdgpu_kernel void @call(ptr addrspace(8) inreg %tmp14, i32 inreg %arg) {
+define amdgpu_kernel void @call(ptr addrspace(8) %tmp14, i32 %arg) {
 ; GFX9-O0-LABEL: call:
 ; GFX9-O0:       ; %bb.0:
 ; GFX9-O0-NEXT:    s_mov_b32 s32, 0x400
@@ -560,7 +560,7 @@ define i64 @called_i64(i64 %a) noinline {
   ret i64 %sub
 }
 
-define amdgpu_kernel void @call_i64(ptr addrspace(8) inreg %tmp14, i64 inreg %arg) {
+define amdgpu_kernel void @call_i64(ptr addrspace(8) %tmp14, i64 %arg) {
 ; GFX9-O0-LABEL: call_i64:
 ; GFX9-O0:       ; %bb.0:
 ; GFX9-O0-NEXT:    s_mov_b32 s32, 0x400
@@ -1195,7 +1195,7 @@ define hidden i32 @strict_wwm_called(i32 %a) noinline {
   ret i32 %sub
 }
 
-define amdgpu_kernel void @strict_wwm_call(ptr addrspace(8) inreg %tmp14, i32 inreg %arg) {
+define amdgpu_kernel void @strict_wwm_call(ptr addrspace(8) %tmp14, i32 %arg) {
 ; GFX9-O0-LABEL: strict_wwm_call:
 ; GFX9-O0:       ; %bb.0:
 ; GFX9-O0-NEXT:    s_mov_b32 s32, 0x400
@@ -1430,7 +1430,7 @@ define i64 @strict_wwm_called_i64(i64 %a) noinline {
   ret i64 %sub
 }
 
-define amdgpu_kernel void @strict_wwm_call_i64(ptr addrspace(8) inreg %tmp14, i64 inreg %arg) {
+define amdgpu_kernel void @strict_wwm_call_i64(ptr addrspace(8) %tmp14, i64 %arg) {
 ; GFX9-O0-LABEL: strict_wwm_call_i64:
 ; GFX9-O0:       ; %bb.0:
 ; GFX9-O0-NEXT:    s_mov_b32 s32, 0x400

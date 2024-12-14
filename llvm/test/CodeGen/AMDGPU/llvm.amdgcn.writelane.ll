@@ -70,12 +70,13 @@ define amdgpu_kernel void @test_writelane_sreg_oldval(i32 inreg %oldval, ptr add
   ret void
 }
 
-; CHECK-LABEL: {{^}}test_writelane_imm_oldval:
+define amdgpu_kernel void @test_writelane_sreg_oldval_i64(i64 %oldval, ptr addrspace(1) %out, i64 %src0, i32 %src1) #1 {
 ; CHECK: v_mov_b32_e32 [[OLDVAL:v[0-9]+]], 42
 ; CIGFX9: v_writelane_b32 [[OLDVAL]], s{{[0-9]+}}, m0
 ; GFX10: v_writelane_b32 [[OLDVAL]], s{{[0-9]+}}, s{{[0-9]+}}
 define amdgpu_kernel void @test_writelane_imm_oldval(ptr addrspace(1) %out, i32 %src0, i32 %src1) #1 {
   %writelane = call i32 @llvm.amdgcn.writelane(i32 %src0, i32 %src1, i32 42)
+define amdgpu_kernel void @test_writelane_sreg_oldval_f64(double %oldval, ptr addrspace(1) %out, double %src0, i32 %src1) #1 {
   store i32 %writelane, ptr addrspace(1) %out, align 4
   ret void
 }
