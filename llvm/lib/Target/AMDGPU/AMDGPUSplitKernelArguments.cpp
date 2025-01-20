@@ -1,12 +1,13 @@
 #include "AMDGPU.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 #define DEBUG_TYPE "amdgpu-split-kernel-arguments"
@@ -23,7 +24,13 @@ class AMDGPUSplitKernelArguments : public ModulePass {
 public:
   static char ID;
 
-  AMDGPUSplitKernelArguments() : ModulePass(ID) {}
+  std::string TargetFunction;
+
+  AMDGPUSplitKernelArguments() : ModulePass(ID) {
+    if (const char *EnvVar = std::getenv("DBG_SPLIT_ARG")) {
+      TargetFunction = EnvVar;
+    }
+  }
 
   bool runOnModule(Module &M) override;
 
@@ -33,11 +40,39 @@ public:
 
 private:
   bool processFunction(Function &F);
+  void dumpModuleToFile(Module &M, StringRef Suffix);
 };
 
 } // end anonymous namespace
+void AMDGPUSplitKernelArguments::dumpModuleToFile(Module &M, StringRef Suffix) {
+  std::error_code EC;
+  std::string Filename =
+      (Twine(M.getModuleIdentifier()) + Twine(Suffix) + Twine(".ll")).str();
+  raw_fd_ostream OS(Filename, EC, sys::fs::OF_None);
+
+  if (EC) {
+    errs() << "Error opening file " << Filename << ": " << EC.message() << "\n";
+    return;
+  }
+
+  M.print(OS, nullptr);
+  OS.close();
+
+  if (EC) {
+    errs() << "Error writing to file " << Filename << ": " << EC.message()
+           << "\n";
+    return;
+  }
+}
 
 bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
+  // Check if we should process this function based on env var
+  if (!TargetFunction.empty() && F.getName() != TargetFunction) {
+    LLVM_DEBUG(dbgs() << "Skipping function " << F.getName()
+                      << " as it doesn't match target " << TargetFunction
+                      << "\n");
+    return false;
+  }
   const DataLayout &DL = F.getParent()->getDataLayout();
   LLVM_DEBUG(dbgs() << "Entering AMDGPUSplitKernelArguments::processFunction "
                     << F.getName() << '\n');
@@ -298,6 +333,8 @@ bool AMDGPUSplitKernelArguments::runOnModule(Module &M) {
     return false;
   bool Changed = false;
   SmallVector<Function *, 16> FunctionsToProcess;
+  // Dump initial module state
+  dumpModuleToFile(M, ".pre_split");
 
   // Collect functions to process
   for (Function &F : M) {
@@ -312,7 +349,11 @@ bool AMDGPUSplitKernelArguments::runOnModule(Module &M) {
       continue;
     Changed |= processFunction(*F);
   }
-  LLVM_DEBUG(dbgs() << "Module after transformation:\n" << M << '\n');
+  // Dump final module state if any changes were made
+  if (Changed) {
+    dumpModuleToFile(M, ".post_split");
+  }
+  // LLVM_DEBUG(dbgs() << "Module after transformation:\n" << M << '\n');
 
   return Changed;
 }
