@@ -93,13 +93,24 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
   SmallVector<Argument *, 8> StructArgs;
   SmallVector<Type *, 8> NewArgTypes;
 
+  // Helper function to convert address space if needed
+  auto convertAddressSpace = [](Type *Ty) -> Type * {
+    if (auto *PtrTy = dyn_cast<PointerType>(Ty)) {
+      if (PtrTy->getAddressSpace() == AMDGPUAS::FLAT_ADDRESS) {
+        // Create a new pointer type in the global address space
+        return PointerType::get(PtrTy->getContext(), AMDGPUAS::GLOBAL_ADDRESS);
+      }
+    }
+    return Ty;
+  };
+
   // Collect struct arguments and new argument types
   unsigned OriginalArgIndex = 0;
   unsigned NewArgIndex = 0;
   for (Argument &Arg : F.args()) {
     LLVM_DEBUG(dbgs() << "Processing argument: " << Arg << "\n");
     if (Arg.use_empty()) {
-      NewArgTypes.push_back(Arg.getType());
+      NewArgTypes.push_back(convertAddressSpace(Arg.getType()));
       NewArgMappings.push_back(
           std::make_tuple(NewArgIndex, OriginalArgIndex, 0));
       ++NewArgIndex;
@@ -181,7 +192,8 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
       ArgToLoadsMap[&Arg] = Loads;
       ArgToGEPsMap[&Arg] = GEPs;
       for (LoadInst *LI : Loads) {
-        NewArgTypes.push_back(LI->getType());
+        Type *NewType = convertAddressSpace(LI->getType());
+        NewArgTypes.push_back(NewType);
 
         // Compute offset
         uint64_t Offset = 0;
@@ -198,7 +210,7 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
         ++NewArgIndex;
       }
     } else {
-      NewArgTypes.push_back(Arg.getType());
+      NewArgTypes.push_back(convertAddressSpace(Arg.getType()));
       // Include mapping if indices have changed
       if (NewArgIndex != OriginalArgIndex)
         NewArgMappings.push_back(
@@ -281,14 +293,33 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
     if (ArgToLoadsMap.count(&Arg)) {
       for (LoadInst *LI : ArgToLoadsMap[&Arg]) {
         NewArgIt->setName(LI->getName());
-        VMap[LI] = &*NewArgIt++;
+        Value *NewArg = &*NewArgIt++;
+        // Only insert cast if we're dealing with pointers
+        if (isa<PointerType>(NewArg->getType()) &&
+            isa<PointerType>(LI->getType())) {
+          IRBuilder<> Builder(LI);
+          Value *CastedArg = Builder.CreatePointerBitCastOrAddrSpaceCast(
+              NewArg, LI->getType());
+          VMap[LI] = CastedArg;
+        } else {
+          VMap[LI] = NewArg;
+        }
       }
-      // After replacing loads, replace uses of Arg with Undef
       UndefValue *UndefArg = UndefValue::get(Arg.getType());
       Arg.replaceAllUsesWith(UndefArg);
     } else {
       NewArgIt->setName(Arg.getName());
-      Arg.replaceAllUsesWith(&*NewArgIt);
+      Value *NewArg = &*NewArgIt;
+      // Only insert cast if we're dealing with pointers
+      if (isa<PointerType>(NewArg->getType()) &&
+          isa<PointerType>(Arg.getType())) {
+        IRBuilder<> Builder(&*NewF->begin()->begin());
+        Value *CastedArg =
+            Builder.CreatePointerBitCastOrAddrSpaceCast(NewArg, Arg.getType());
+        Arg.replaceAllUsesWith(CastedArg);
+      } else {
+        Arg.replaceAllUsesWith(NewArg);
+      }
       ++NewArgIt;
     }
   }
