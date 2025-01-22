@@ -235,8 +235,11 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
       Function::Create(NewFT, F.getLinkage(), F.getAddressSpace(), F.getName());
   F.getParent()->getFunctionList().insert(F.getIterator(), NewF);
   NewF->takeName(&F);
-
-  // Set calling convention
+  NewF->setVisibility(F.getVisibility());
+  if (F.hasComdat())
+    NewF->setComdat(F.getComdat());
+  NewF->setDSOLocal(F.isDSOLocal());
+  NewF->setUnnamedAddr(F.getUnnamedAddr());
   NewF->setCallingConv(F.getCallingConv());
 
   // Build new parameter attributes
