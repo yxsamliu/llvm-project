@@ -45,6 +45,8 @@ private:
 
 } // end anonymous namespace
 void AMDGPUSplitKernelArguments::dumpModuleToFile(Module &M, StringRef Suffix) {
+  if (TargetFunction.empty())
+    return;
   std::error_code EC;
   std::string Filename =
       (Twine(M.getModuleIdentifier()) + Twine(Suffix) + Twine(".ll")).str();
