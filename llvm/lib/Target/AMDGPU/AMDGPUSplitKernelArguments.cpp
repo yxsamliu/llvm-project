@@ -295,7 +295,9 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
   for (Argument &Arg : F.args()) {
     if (ArgToLoadsMap.count(&Arg)) {
       for (LoadInst *LI : ArgToLoadsMap[&Arg]) {
-        NewArgIt->setName(LI->getName());
+        std::string OldName = LI->getName().str();
+        LI->setName(OldName + ".old");
+        NewArgIt->setName(OldName);
         Value *NewArg = &*NewArgIt++;
         // Only insert cast if we're dealing with pointers
         if (isa<PointerType>(NewArg->getType()) &&
@@ -311,7 +313,9 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
       UndefValue *UndefArg = UndefValue::get(Arg.getType());
       Arg.replaceAllUsesWith(UndefArg);
     } else {
-      NewArgIt->setName(Arg.getName());
+      std::string OldName = Arg.getName().str();
+      Arg.setName(OldName + ".old");
+      NewArgIt->setName(OldName);
       Value *NewArg = &*NewArgIt;
       // Only insert cast if we're dealing with pointers
       if (isa<PointerType>(NewArg->getType()) &&
