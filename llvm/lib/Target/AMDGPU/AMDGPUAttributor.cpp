@@ -269,8 +269,14 @@ public:
   void
   tryAllocHiddenArgPreloadSGPRs(uint64_t ImplicitArgsBaseOffset,
                                 SmallVectorImpl<Function *> &FunctionsToErase) {
-    Function *ImplicitArgPtr = Intrinsic::getDeclarationIfExists(
-        F.getParent(), Intrinsic::amdgcn_implicitarg_ptr);
+    // Get the mangled name for the intrinsic:
+    std::string IntrName = Intrinsic::getName(Intrinsic::amdgcn_implicitarg_ptr).str();
+    // See if this function is already in the module:
+    Function *ImplicitArgPtr = F.getParent()->getFunction(IntrName);
+    if (!ImplicitArgPtr)
+      ImplicitArgPtr =
+        Intrinsic::getDeclaration(F.getParent(),
+                                  Intrinsic::amdgcn_implicitarg_ptr);
     if (!ImplicitArgPtr)
       return;
 
@@ -1138,7 +1144,7 @@ static void markKernelArgsAsInreg(SetVector<Function *> &Functions,
 
     PreloadKernelArgInfo PreloadInfo(*F, ST);
     uint64_t ExplicitArgOffset = 0;
-    const DataLayout &DL = F->getDataLayout();
+    const DataLayout &DL = F->getParent()->getDataLayout();
     const uint64_t BaseOffset = ST.getExplicitKernelArgOffset();
     unsigned NumPreloadsRequested = KernargPreloadCount;
     unsigned NumPreloadedExplicitArgs = 0;
@@ -1221,8 +1227,6 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM) {
       if (!AMDGPU::isEntryFunctionCC(CC)) {
         A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(F));
         A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(F));
-      } else if (CC == CallingConv::AMDGPU_KERNEL) {
-        addPreloadKernArgHint(F, TM);
       }
     }
   }

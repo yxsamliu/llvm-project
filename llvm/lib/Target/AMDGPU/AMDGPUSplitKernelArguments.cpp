@@ -35,7 +35,7 @@ public:
   bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesNone();
+    //AU.setPreservesNone();
   }
 
 private:

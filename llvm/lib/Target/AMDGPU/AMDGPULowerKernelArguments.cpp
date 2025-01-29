@@ -108,7 +108,6 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
     if (DBG) {
       llvm::errs() << "  arg: " << Arg
           << " Arg.hasInRegAttr()=" << Arg.hasInRegAttr()
-          << " InPreloadSequence=" << InPreloadSequence
           << " ST.hasKernargPreload()=" << ST.hasKernargPreload()
           << "\n";
     }
