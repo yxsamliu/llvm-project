@@ -408,6 +408,24 @@ define amdgpu_kernel void @test_preload_IR_lowering_kernel_4_i16_i16(i16 %arg0, 
   %ext = zext i16 %arg0 to i32
   %ext1 = zext i16 %arg1 to i32
   %add = add i32 %ext, %ext1
+; NO-PRELOAD-SAME: (ptr addrspace(1) captures(none) [[OUT:%.*]], <8 x i32> [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-2-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <8 x i32> [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-ALL-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <8 x i32> [[IN:%.*]]) #[[ATTR0]] {
+; NO-PRELOAD-SAME: (ptr addrspace(1) captures(none) [[OUT:%.*]], <3 x i16> [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-2-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <3 x i16> inreg [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-ALL-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <3 x i16> inreg [[IN:%.*]]) #[[ATTR0]] {
+; NO-PRELOAD-SAME: (ptr addrspace(1) captures(none) [[OUT:%.*]], <3 x i32> [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-2-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <3 x i32> inreg [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-ALL-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <3 x i32> inreg [[IN:%.*]]) #[[ATTR0]] {
+; NO-PRELOAD-SAME: (ptr addrspace(1) captures(none) [[OUT:%.*]], <3 x float> [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-2-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <3 x float> inreg [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-ALL-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <3 x float> inreg [[IN:%.*]]) #[[ATTR0]] {
+; NO-PRELOAD-SAME: (ptr addrspace(1) captures(none) [[OUT:%.*]], <5 x i8> [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-2-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <5 x i8> inreg [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-ALL-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <5 x i8> inreg [[IN:%.*]]) #[[ATTR0]] {
+; NO-PRELOAD-SAME: (ptr addrspace(1) captures(none) [[OUT:%.*]], <5 x double> [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-2-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <5 x double> [[IN:%.*]]) #[[ATTR0]] {
+; PRELOAD-ALL-SAME: (ptr addrspace(1) inreg captures(none) [[OUT:%.*]], <5 x double> [[IN:%.*]]) #[[ATTR0]] {
   store i32 %add, ptr addrspace(1) %out
   ret void
 }
