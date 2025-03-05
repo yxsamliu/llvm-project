@@ -42,6 +42,40 @@ static cl::opt<unsigned> GlobalCullSGPRHazardsMemWaitThreshold(
 
 namespace {
 
+// Insert N s_nop instructions after every GLOBAL_ATOMIC_CMPSWAP_X2.
+static bool insertDebugNOPs(MachineFunction &MF, const SIInstrInfo *TII) {
+  // Check for the environment variable.
+  llvm::errs() << "Enter insertDebugNOPs\n";
+  const char *Env = std::getenv("DBG_CMPSWAP");
+  if (!Env)
+    return false;
+  int NumNops = atoi(Env);
+  if (NumNops <= 0)
+    return false;
+  llvm::errs() << "NumNops=" << NumNops << '\n';
+
+  bool Modified = false;
+  // Iterate over every basic block.
+  for (auto &MBB : MF) {
+    // Use a loop over instructions.
+    for (auto MI = MBB.instr_begin(), E = MBB.instr_end(); MI != E; ++MI) {
+      //MI->dump();
+      if (MI->getOpcode() == AMDGPU::GLOBAL_ATOMIC_CMPSWAP_X2_SADDR_RTN) {
+        llvm::errs() << "found GLOBAL_ATOMIC_CMPSWAP_X2\n";
+        // Insert NumNops s_nop instructions after the current instruction.
+        auto InsertPos = std::next(MI);
+        for (int i = 0; i < NumNops; ++i) {
+          llvm::errs() << "inserted nop\n";
+          BuildMI(MBB, InsertPos, MI->getDebugLoc(), TII->get(AMDGPU::S_NOP))
+              .addImm(1);
+        }
+        Modified = true;
+      }
+    }
+  }
+  return Modified;
+}
+
 class AMDGPUWaitSGPRHazards {
 public:
   const SIInstrInfo *TII;
@@ -397,8 +431,18 @@ public:
 
   bool run(MachineFunction &MF) {
     const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+    TII = ST.getInstrInfo();
+    bool Changed = false;
+
+    // Call our debug helper to insert s_nops after GLOBAL_ATOMIC_CMPSWAP_X2
+    // if the environment variable is set.
+    bool DebugModified = insertDebugNOPs(MF, TII);
+    if (DebugModified)
+      LLVM_DEBUG(dbgs() << "Inserted debug s_nops after GLOBAL_ATOMIC_CMPSWAP_X2\n");
+    Changed = DebugModified;
+
     if (!ST.hasVALUReadSGPRHazard())
-      return false;
+      return Changed;
 
     // Parse settings
     EnableSGPRHazardWaits = GlobalEnableSGPRHazardWaits;
@@ -423,9 +467,8 @@ public:
 
     // Bail if disabled
     if (!EnableSGPRHazardWaits)
-      return false;
+      return Changed;
 
-    TII = ST.getInstrInfo();
     TRI = ST.getRegisterInfo();
     MRI = &MF.getRegInfo();
     DsNopCount = ST.isWave64() ? WAVE64_NOPS : WAVE32_NOPS;
@@ -475,7 +518,6 @@ public:
     LLVM_DEBUG(dbgs() << "Emit s_wait_alu instructions\n");
 
     // Final to emit wait instructions.
-    bool Changed = false;
     for (auto &MBB : MF)
       Changed |= runOnMachineBasicBlock(MBB, true);
 
