@@ -117,6 +117,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
@@ -782,8 +783,21 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
           "Only global arrays can have appending linkage!", GVar);
   }
 
-  if (GV.isDeclarationForLinker())
+  if (GV.isDeclarationForLinker()) {
+    if (GV.hasComdat()) {
+      if (const char *DumpFile = std::getenv("DBG_COMDAT_DUMP_FILE")) {
+        std::error_code EC;
+        llvm::raw_fd_ostream OS(DumpFile, EC, llvm::sys::fs::OF_None);
+        if (!EC) {
+          // Dump the module to the file.
+          M.print(OS, nullptr);
+          OS.close();
+          llvm::errs() << "module dumped to " << DumpFile <<'\n';
+        }
+      }
+    }
     Check(!GV.hasComdat(), "Declaration may not be in a Comdat!", &GV);
+  }
 
   if (GV.hasDLLExportStorageClass()) {
     Check(!GV.hasHiddenVisibility(),

@@ -216,6 +216,16 @@ void GlobalObject::setComdat(Comdat *C) {
   ObjComdat = C;
   if (C)
     C->addUser(this);
+  // If DBG_COMDAT is set, and this global is a function declaration, then error.
+  if (std::getenv("DBG_COMDAT") && C) {
+    if (auto *F = dyn_cast<Function>(this)) {
+      if (F->isDeclaration()) {
+        llvm::errs() << "[setComdat] ";
+        F->dump();
+        //assert(0 && "DBG_COMDAT: Cannot set COMDAT for a function declaration");
+      }
+    }
+  }
 }
 
 StringRef GlobalValue::getPartition() const {

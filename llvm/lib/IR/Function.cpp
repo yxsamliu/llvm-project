@@ -469,6 +469,17 @@ void Function::splice(Function::iterator ToIt, Function *FromF,
     assert(It != FromFEnd && "FromBeginIt not before FromEndIt!");
 #endif // EXPENSIVE_CHECKS
   BasicBlocks.splice(ToIt, FromF->BasicBlocks, FromBeginIt, FromEndIt);
+  // If DBG_COMDAT is set, and after splicing the source function is empty
+  // and it has a COMDAT, then dump its IR.
+  if (std::getenv("DBG_COMDAT") && FromF->empty() && FromF->hasComdat()) {
+    std::string DumpStr;
+    llvm::raw_string_ostream OS(DumpStr);
+    FromF->print(OS);
+    OS.flush();
+    llvm::errs() << "DBG_COMDAT: Function dumped because it became empty and has a COMDAT:\n"
+                 << DumpStr << "\n";
+    assert(0);
+  }
 }
 
 Function::iterator Function::erase(Function::iterator FromIt,
