@@ -240,6 +240,17 @@ Expected<StringRef> createOutputFile(const Twine &Prefix, StringRef Extension) {
   return TempFiles.back();
 }
 
+/// Save \p Buffer to an output file with name \p FileName.
+Error saveOutputFile(StringRef FileName, const MemoryBuffer &Buffer) {
+  Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
+      FileOutputBuffer::create(FileName, Buffer.getBufferSize());
+  if (!OutputOrErr)
+    return OutputOrErr.takeError();
+  std::unique_ptr<FileOutputBuffer> Output = std::move(*OutputOrErr);
+  llvm::copy(Buffer.getBuffer(), Output->getBufferStart());
+  return Output->commit();
+}
+
 /// Execute the command \p ExecutablePath with the arguments \p Args.
 Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args) {
   if (Verbose || DryRun)
@@ -566,6 +577,93 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 }
 } // namespace generic
 
+/// Get output file name for device images. If \p Multiple is true, postfix the
+/// file stem with -{offload_kind}-{triple}-{arch}.
+std::string getDeviceImageFileName(StringRef OutputFileName, OffloadKind Kind,
+                                   StringRef Triple, StringRef Arch,
+                                   bool Multiple) {
+  if (!Multiple)
+    return std::string(OutputFileName);
+  SmallString<128> NewName;
+  StringRef Stem = sys::path::stem(OutputFileName);
+  StringRef Ext = sys::path::extension(OutputFileName);
+  NewName.append(Stem);
+  NewName.push_back('-');
+  NewName.append(getOffloadKindName(Kind));
+  NewName.push_back('-');
+  NewName.append(Triple);
+  NewName.push_back('-');
+  NewName.append(Arch);
+  NewName.append(Ext);
+  return std::string(NewName.str());
+}
+
+Error saveDeviceImages(
+    const MapVector<OffloadKind, SmallVector<OffloadingImage, 0>>
+        &DeviceImagesMap,
+    StringRef OutputFileName, const InputArgList &Args) {
+  for (auto &Entry : DeviceImagesMap) {
+    OffloadKind Kind = Entry.first;
+    const auto &Images = Entry.second;
+    bool Multiple = (Images.size() > 1);
+    for (unsigned i = 0; i < Images.size(); ++i) {
+      StringRef Triple = Images[i].StringData.lookup("triple");
+      StringRef Arch = Images[i].StringData.lookup("arch");
+      std::string FileName =
+          getDeviceImageFileName(OutputFileName, Kind, Triple, Arch, Multiple);
+      if (Error Err = saveOutputFile(FileName, *Images[i].Image))
+        return Err;
+    }
+  }
+  return Error::success();
+}
+
+/// Get output file name for bundled device images. If \p AppendKind is true,
+/// post-fix the stem of the \p OutputFileName with offload kind.
+std::string getBundledDeviceImageFileName(StringRef OutputFileName,
+                                          OffloadKind Kind, bool AppendKind) {
+  if (!AppendKind)
+    return std::string(OutputFileName);
+  SmallString<128> NewName;
+  StringRef Stem = sys::path::stem(OutputFileName);
+  StringRef Ext = sys::path::extension(OutputFileName);
+  NewName.append(Stem);
+  NewName.append("-");
+  NewName.append(getOffloadKindName(Kind));
+  NewName.append(Ext);
+  return std::string(NewName.str());
+}
+
+Error saveBundledDeviceImages(
+    const MapVector<OffloadKind, SmallVector<std::unique_ptr<MemoryBuffer>>>
+        &BundledMap,
+    StringRef OutputFileName, const InputArgList &Args) {
+  unsigned TotalImages = 0;
+  for (auto &Entry : BundledMap)
+    if (!Entry.second.empty())
+      TotalImages++;
+  if (TotalImages == 0)
+    return createStringError("No bundled device images to save");
+
+  bool AppendKind = (TotalImages > 1);
+  for (auto &Entry : BundledMap) {
+    if (Entry.second.empty())
+      continue;
+    std::string FileName =
+        getBundledDeviceImageFileName(OutputFileName, Entry.first, AppendKind);
+    const auto &Buffer = Entry.second.front();
+    Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
+        FileOutputBuffer::create(FileName, Buffer->getBufferSize());
+    if (!OutputOrErr)
+      return OutputOrErr.takeError();
+    std::unique_ptr<FileOutputBuffer> Output = std::move(*OutputOrErr);
+    llvm::copy(Buffer->getBuffer(), Output->getBufferStart());
+    if (Error E = Output->commit())
+      return E;
+  }
+  return Error::success();
+}
+
 Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
                                const ArgList &Args) {
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
@@ -803,6 +901,32 @@ bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
   }
 }
 
+/// Sorts offloading images for each offload kind and bundles them.
+Expected<MapVector<OffloadKind, SmallVector<std::unique_ptr<MemoryBuffer>>>>
+bundleOffloadingImages(
+    MapVector<OffloadKind, SmallVector<OffloadingImage, 0>> &DeviceImagesMap,
+    const InputArgList &Args) {
+  MapVector<OffloadKind, SmallVector<std::unique_ptr<MemoryBuffer>>> BundledMap;
+  for (auto &Entry : DeviceImagesMap) {
+    SmallVector<OffloadingImage, 0> SortedImages;
+    SortedImages.reserve(Entry.second.size());
+    for (auto &Image : Entry.second)
+      SortedImages.push_back(std::move(Image));
+    llvm::sort(SortedImages, [](const OffloadingImage &A,
+                                const OffloadingImage &B) {
+      return A.StringData.lookup("triple") > B.StringData.lookup("triple") ||
+             A.StringData.lookup("arch") > B.StringData.lookup("arch") ||
+             A.TheOffloadKind < B.TheOffloadKind;
+    });
+    auto BundledImagesOrErr =
+        bundleLinkedOutput(SortedImages, Args, Entry.first);
+    if (!BundledImagesOrErr)
+      return BundledImagesOrErr.takeError();
+    BundledMap[Entry.first] = std::move(*BundledImagesOrErr);
+  }
+  return BundledMap;
+}
+
 /// Returns a new ArgList containg arguments used for the device linking phase.
 DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
                              const InputArgList &Args) {
@@ -896,9 +1020,9 @@ Error handleOverrideImages(
 
 /// Transforms all the extracted offloading input files into an image that can
 /// be registered by the runtime.
-Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
-    SmallVectorImpl<SmallVector<OffloadFile>> &LinkerInputFiles,
-    const InputArgList &Args, char **Argv, int Argc) {
+Expected<MapVector<OffloadKind, SmallVector<OffloadingImage, 0>>>
+linkDeviceFiles(SmallVectorImpl<SmallVector<OffloadFile>> &LinkerInputFiles,
+                const InputArgList &Args, char **Argv, int Argc) {
   llvm::TimeTraceScope TimeScope("Handle all device input");
 
   std::mutex ImageMtx;
@@ -975,27 +1099,7 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
   if (Err)
     return std::move(Err);
 
-  // Create a binary image of each offloading image and embed it into a new
-  // object file.
-  SmallVector<StringRef> WrappedOutput;
-  for (auto &[Kind, Input] : Images) {
-    // We sort the entries before bundling so they appear in a deterministic
-    // order in the final binary.
-    llvm::sort(Input, [](OffloadingImage &A, OffloadingImage &B) {
-      return A.StringData["triple"] > B.StringData["triple"] ||
-             A.StringData["arch"] > B.StringData["arch"] ||
-             A.TheOffloadKind < B.TheOffloadKind;
-    });
-    auto BundledImagesOrErr = bundleLinkedOutput(Input, Args, Kind);
-    if (!BundledImagesOrErr)
-      return BundledImagesOrErr.takeError();
-    auto OutputOrErr = wrapDeviceImages(*BundledImagesOrErr, Args, Kind);
-    if (!OutputOrErr)
-      return OutputOrErr.takeError();
-    WrappedOutput.push_back(*OutputOrErr);
-  }
-
-  return WrappedOutput;
+  return Images;
 }
 
 std::optional<std::string> findFile(StringRef Dir, StringRef Root,
@@ -1423,15 +1527,40 @@ int main(int Argc, char **Argv) {
     if (!DeviceInputFiles)
       reportError(DeviceInputFiles.takeError());
 
-    // Link and wrap the device images extracted from the linker input.
-    auto FilesOrErr =
-        linkAndWrapDeviceFiles(*DeviceInputFiles, Args, Argv, Argc);
-    if (!FilesOrErr)
-      reportError(FilesOrErr.takeError());
+    // Link device input files to unbundled device images.
+    auto DeviceImagesMapOrErr =
+        linkDeviceFiles(*DeviceInputFiles, Args, Argv, Argc);
+    if (!DeviceImagesMapOrErr)
+      reportError(DeviceImagesMapOrErr.takeError());
 
-    // Run the host linking job with the rendered arguments.
-    if (Error Err = runLinker(*FilesOrErr, Args))
-      reportError(std::move(Err));
+    if (Args.hasArg(OPT_emit_offloading_images)) {
+      if (Error Err =
+              saveDeviceImages(*DeviceImagesMapOrErr, ExecutableName, Args))
+        reportError(std::move(Err));
+    } else {
+      // Bundle device images into fat binaries.
+      auto BundledMapOrErr =
+          bundleOffloadingImages(*DeviceImagesMapOrErr, Args);
+      if (!BundledMapOrErr)
+        reportError(BundledMapOrErr.takeError());
+      if (Args.hasArg(OPT_emit_bundled_offloading_images)) {
+        if (Error Err =
+                saveBundledDeviceImages(*BundledMapOrErr, ExecutableName, Args))
+          reportError(std::move(Err));
+      } else {
+        SmallVector<StringRef> WrappedOutput;
+        for (auto &Entry : *BundledMapOrErr) {
+          // Wrap bundled device images into a host object file.
+          auto OutOrErr = wrapDeviceImages(Entry.second, Args, Entry.first);
+          if (!OutOrErr)
+            reportError(OutOrErr.takeError());
+          WrappedOutput.push_back(*OutOrErr);
+        }
+        // Link all host object files together.
+        if (Error Err = runLinker(WrappedOutput, Args))
+          reportError(std::move(Err));
+      }
+    }
   }
 
   if (const opt::Arg *Arg = Args.getLastArg(OPT_wrapper_time_trace_eq)) {

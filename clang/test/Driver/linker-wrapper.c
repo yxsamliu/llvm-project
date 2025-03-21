@@ -121,6 +121,36 @@ __attribute__((visibility("protected"), used)) int x;
 // HIP: clang{{.*}} -o [[IMG_GFX908:.+]] --target=amdgcn-amd-amdhsa -mcpu=gfx908
 // HIP: clang-offload-bundler{{.*}}-type=o -bundle-align=4096 -compress -compression-level=6 -targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa--gfx90a,hip-amdgcn-amd-amdhsa--gfx908 -input={{/dev/null|NUL}} -input=[[IMG_GFX90A]] -input=[[IMG_GFX908]] -output={{.*}}.hipfb
 
+// Test --emit-bundled-offloading-images.
+// RUN: clang-offload-packager -o %t.out \
+// RUN:   --image=file=%t.elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx90a \
+// RUN:   --image=file=%t.elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx908
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
+// RUN:   -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --emit-bundled-offloading-images \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=BUNDLE
+
+// BUNDLE: clang{{.*}} -o [[IMG_GFX90A:.+]] --target=amdgcn-amd-amdhsa -mcpu=gfx90a
+// BUNDLE: clang{{.*}} -o [[IMG_GFX908:.+]] --target=amdgcn-amd-amdhsa -mcpu=gfx908
+// BUNDLE: clang-offload-bundler{{.*}}-type=o -bundle-align=4096 -targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa--gfx90a,hip-amdgcn-amd-amdhsa--gfx908 -input={{/dev/null|NUL}} -input=[[IMG_GFX90A]] -input=[[IMG_GFX908]] -output={{.*}}.hipfb
+// BUNDLE-NOT: /usr/bin/ld {{.*}}linker-wrapper.c.tmp.o
+
+// Test --emit-offloading-images.
+// RUN: clang-offload-packager -o %t.out \
+// RUN:   --image=file=%t.elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx90a \
+// RUN:   --image=file=%t.elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx908
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
+// RUN:   -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --emit-offloading-images \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=IMAGE
+
+// IMAGE: clang{{.*}} -o [[IMG_GFX90A:.+]] --target=amdgcn-amd-amdhsa -mcpu=gfx90a
+// IMAGE: clang{{.*}} -o [[IMG_GFX908:.+]] --target=amdgcn-amd-amdhsa -mcpu=gfx908
+// IMAGE-NOT: clang-offload-bundler{{.*}} -targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa--gfx90a,hip-amdgcn-amd-amdhsa--gfx908
+// IMAGE-NOT: /usr/bin/ld {{.*}}linker-wrapper.c.tmp.o
+
 // RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908 \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70

@@ -43,6 +43,10 @@ def compress : Flag<["--"], "compress">,
   Flags<[WrapperOnlyOption]>, HelpText<"Compress bundled files">;
 def compression_level_eq : Joined<["--"], "compression-level=">,
   Flags<[WrapperOnlyOption]>, HelpText<"Specify the compression level (integer)">;
+def emit_offloading_images : Flag<["--"], "emit-offloading-images">,
+  Flags<[WrapperOnlyOption]>, HelpText<"Emit offloading images">;
+def emit_bundled_offloading_images : Flag<["--"], "emit-bundled-offloading-images">,
+  Flags<[WrapperOnlyOption]>, HelpText<"Emit bundled offloading images">;
 
 def wrapper_time_trace_eq : Joined<["--"], "wrapper-time-trace=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<file>">,

@@ -4402,6 +4402,10 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
                    options::OPT_no_offload_new_driver,
                    C.isOffloadingHostKind(Action::OFK_Cuda));
 
+  bool HIPNoRDC =
+      C.isOffloadingHostKind(Action::OFK_HIP) &&
+      !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
+
   // Builder to be used to build offloading actions.
   std::unique_ptr<OffloadingActionBuilder> OffloadBuilder =
       !UseNewOffloadingDriver
@@ -4502,6 +4506,12 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
                                                                 InputArg))
         break;
 
+      if (Phase == phases::Assemble && UseNewOffloadingDriver && HIPNoRDC) {
+        ActionList AL{Current};
+        Current = C.MakeAction<LinkerWrapperJobAction>(AL, types::TY_Object);
+        Current->propagateHostOffloadInfo(C.getActiveOffloadKinds(),
+                                          /*BoundArch=*/nullptr);
+      }
       if (Current->getType() == types::TY_Nothing)
         break;
     }
@@ -4535,7 +4545,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     // Check if this Linker Job should emit a static library.
     if (ShouldEmitStaticLibrary(Args)) {
       LA = C.MakeAction<StaticLibJobAction>(LinkerInputs, types::TY_Image);
-    } else if (UseNewOffloadingDriver ||
+    } else if ((UseNewOffloadingDriver && !HIPNoRDC) ||
                Args.hasArg(options::OPT_offload_link)) {
       LA = C.MakeAction<LinkerWrapperJobAction>(LinkerInputs, types::TY_Image);
       LA->propagateHostOffloadInfo(C.getActiveOffloadKinds(),
@@ -4945,17 +4955,6 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
       }
     }
 
-    // Compiling HIP in non-RDC mode requires linking each action individually.
-    for (Action *&A : DeviceActions) {
-      if ((A->getType() != types::TY_Object &&
-           A->getType() != types::TY_LTO_BC) ||
-          Kind != Action::OFK_HIP ||
-          Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false))
-        continue;
-      ActionList LinkerInput = {A};
-      A = C.MakeAction<LinkJobAction>(LinkerInput, types::TY_Image);
-    }
-
     auto TCAndArch = TCAndArchs.begin();
     for (Action *A : DeviceActions) {
       DDeps.add(*A, *TCAndArch->first, TCAndArch->second.data(), Kind);
@@ -4999,15 +4998,6 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
         C.MakeAction<LinkJobAction>(OffloadActions, types::TY_CUDA_FATBIN);
     DDep.add(*FatbinAction, *C.getSingleOffloadToolChain<Action::OFK_Cuda>(),
              nullptr, Action::OFK_Cuda);
-  } else if (C.isOffloadingHostKind(Action::OFK_HIP) &&
-             !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
-                           false)) {
-    // If we are not in RDC-mode we just emit the final HIP fatbinary for each
-    // translation unit, linking each input individually.
-    Action *FatbinAction =
-        C.MakeAction<LinkJobAction>(OffloadActions, types::TY_HIP_FATBIN);
-    DDep.add(*FatbinAction, *C.getSingleOffloadToolChain<Action::OFK_HIP>(),
-             nullptr, Action::OFK_HIP);
   } else {
     // Package all the offloading actions into a single output that can be
     // embedded in the host and linked.
@@ -5156,8 +5146,10 @@ Action *Driver::ConstructPhaseAction(
         (((Input->getOffloadingToolChain() &&
            Input->getOffloadingToolChain()->getTriple().isAMDGPU()) ||
           TargetDeviceOffloadKind == Action::OFK_HIP) &&
-         (Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
-                       false) ||
+         ((Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                        false) ||
+           Args.hasFlag(options::OPT_offload_new_driver,
+                        options::OPT_no_offload_new_driver, false)) ||
           TargetDeviceOffloadKind == Action::OFK_OpenMP))) {
       types::ID Output =
           Args.hasArg(options::OPT_S) &&
