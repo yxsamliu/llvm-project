@@ -4973,17 +4973,12 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     }
   }
 
-  // HIP code in non-RDC mode will bundle the output if it invoked the linker.
-  bool ShouldBundleHIP =
+  bool HIPNoRDC =
       C.isOffloadingHostKind(Action::OFK_HIP) &&
-      Args.hasFlag(options::OPT_gpu_bundle_output,
-                   options::OPT_no_gpu_bundle_output, true) &&
-      !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false) &&
-      !llvm::any_of(OffloadActions,
-                    [](Action *A) { return A->getType() != types::TY_Image; });
+      !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
 
   // All kinds exit now in device-only mode except for non-RDC mode HIP.
-  if (offloadDeviceOnly() && !ShouldBundleHIP)
+  if (offloadDeviceOnly() && !HIPNoRDC)
     return C.MakeAction<OffloadAction>(DDeps, types::TY_Nothing);
 
   if (OffloadActions.empty())
@@ -5006,10 +5001,6 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     DDep.add(*PackagerAction, *C.getSingleOffloadToolChain<Action::OFK_Host>(),
              nullptr, C.getActiveOffloadKinds());
   }
-
-  // HIP wants '--offload-device-only' to create a fatbinary by default.
-  if (offloadDeviceOnly())
-    return C.MakeAction<OffloadAction>(DDep, types::TY_Nothing);
 
   // If we are unable to embed a single device output into the host, we need to
   // add each device output as a host dependency to ensure they are still built.
