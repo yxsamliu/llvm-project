@@ -57,10 +57,11 @@
 // RUN:        --offload-arch=gfx90a --offload-arch=gfx908 --offload-device-only -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix=MULTI-D-ONLY %s
 //      MULTI-D-ONLY: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[GFX908:.+]]"
-// MULTI-D-ONLY-NEXT: # "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX908]]"], output: "[[GFX908_OUT:.+]]"
 // MULTI-D-ONLY-NEXT: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[GFX90a:.+]]"
-// MULTI-D-ONLY-NEXT: # "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX90a]]"], output: "[[GFX90a_OUT:.+]]"
-//
+// MULTI-D-ONLY-NEXT: # "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[GFX908]]", "[[GFX90a]]"], output: "[[DEV_PKG:.+]]"
+// MULTI-D-ONLY-NEXT: # "x86_64-unknown-linux-gnu" - "clang", inputs: ["{{.*}}hip-binding.hip", "[[DEV_PKG]]"], output: "[[OBJ:.+]]"
+// MULTI-D-ONLY-NEXT: # "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[OBJ]]"], output: "hip-binding.o"
+
 // RUN: not %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-bindings -nogpulib -nogpuinc \
 // RUN:        --no-gpu-bundle-output --offload-arch=gfx90a --offload-arch=gfx908 --offload-device-only -c -o %t %s 2>&1 \
 // RUN: | FileCheck -check-prefix=MULTI-D-ONLY-NO-BUNDLE-O %s
@@ -69,11 +70,11 @@
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-bindings -nogpulib -nogpuinc \
 // RUN:        --gpu-bundle-output --offload-arch=gfx90a --offload-arch=gfx908 --offload-device-only -c -o a.out %s 2>&1 \
 // RUN: | FileCheck -check-prefix=MULTI-D-ONLY-O %s
-//      MULTI-D-ONLY-O: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[GFX908_OBJ:.+]]"
-// MULTI-D-ONLY-O-NEXT: "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX908_OBJ]]"], output: "[[GFX908:.+]]"
-// MULTI-D-ONLY-O-NEXT: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[GFX90A_OBJ:.+]]"
-// MULTI-D-ONLY-O-NEXT: "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX90A_OBJ]]"], output: "[[GFX90A:.+]]"
-// MULTI-D-ONLY-O-NEXT: "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX908]]", "[[GFX90A]]"], output: "a.out"
+//      MULTI-D-ONLY-O: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[GFX908:.+]]"
+// MULTI-D-ONLY-O-NEXT: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[GFX90a:.+]]"
+// MULTI-D-ONLY-O-NEXT: # "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[GFX908]]", "[[GFX90a]]"], output: "[[DEV_PKG:.+]]"
+// MULTI-D-ONLY-O-NEXT: # "x86_64-unknown-linux-gnu" - "clang", inputs: ["{{.*}}hip-binding.hip", "[[DEV_PKG]]"], output: "[[OBJ:.+]]"
+// MULTI-D-ONLY-O-NEXT: # "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[OBJ]]"], output: "a.out"
 
 //
 // Check to ensure that we can use '-fsyntax-only' for HIP output with the new
