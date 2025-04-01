@@ -280,8 +280,8 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
           VMap[LI] = NewArg;
         }
       }
-      UndefValue *UndefArg = UndefValue::get(Arg.getType());
-      Arg.replaceAllUsesWith(UndefArg);
+      PoisonValue *PoisonArg = PoisonValue::get(Arg.getType());
+      Arg.replaceAllUsesWith(PoisonArg);
     } else {
       std::string OldName = Arg.getName().str();
       Arg.setName(OldName + ".old");
@@ -315,7 +315,7 @@ bool AMDGPUSplitKernelArguments::processFunction(Function &F) {
       if (GEP->use_empty()) {
         GEP->eraseFromParent();
       } else {
-        GEP->replaceAllUsesWith(UndefValue::get(GEP->getType()));
+        GEP->replaceAllUsesWith(PoisonValue::get(GEP->getType()));
         GEP->eraseFromParent();
       }
     }
