@@ -51,6 +51,21 @@ using namespace sema;
 
 using AllowedExplicit = Sema::AllowedExplicit;
 
+bool shouldDebugLambda(Sema& S) {
+  if (getenv("DBG_LAMBDA")) {
+    // Try to get the current function declaration.
+    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(S.CurContext)) {
+      // Check if the function is a lambda.
+      if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+        if (isLambdaCallOperator(MD)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 static bool functionHasPassObjectSizeParams(const FunctionDecl *FD) {
   return llvm::any_of(FD->parameters(), [](const ParmVarDecl *P) {
     return P->hasAttr<PassObjectSizeAttr>();
@@ -14363,6 +14378,44 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
   // the UnresolvedLookupExpr was type-dependent.
   if (OverloadResult == OR_Success) {
     const FunctionDecl *FDecl = Best->Function;
+
+    // Assume CurContext is available as the current declaration context.
+    if (getenv("DBG_LAMBDA")) {
+      // Try to get the current function declaration.
+      if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CurContext)) {
+        // Check if the function is a lambda.
+        if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+          if (isLambdaCallOperator(MD)) {
+            llvm::dbgs() << "\nDBG_LAMBDA: Debug dump for lambda caller:\n";
+
+            // Dump the lambda caller.
+            llvm::dbgs() << "Caller (lambda):\n";
+            FD->dump();
+            llvm::dbgs() << "\n";
+
+            // Dump the candidate set.
+            llvm::dbgs() << "Overload Candidate Set (" << CandidateSet.size()
+                         << " candidate(s)):\n";
+            for (const auto &Candidate: CandidateSet) {
+              llvm::dbgs() << "Candidate: ";
+              if (Candidate.Function)
+                Candidate.Function->dump();
+              else
+                llvm::dbgs() << "NULL\n";
+            }
+            llvm::dbgs() << "\n";
+
+            // Dump the call expression.
+            if (FDecl) {
+              llvm::dbgs() << "Best Candidate :\n";
+              FDecl->dump(); // Assuming CallExpr is the call expression to be debugged.
+              llvm::dbgs() << "\n";
+            }
+          }
+        }
+      }
+    }
+
     if (FDecl && FDecl->isTemplateInstantiation() &&
         FDecl->getReturnType()->isUndeducedType()) {
 

@@ -2144,6 +2144,10 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     SourceLocation PrevCaptureLoc = CurHasPreviousCapture ?
         CaptureDefaultLoc : IntroducerRange.getBegin();
 
+    bool Dbg = getenv("DBG_LAMBDA");
+    if (Dbg) {
+      llvm::dbgs() << "\nBuildLambaExpr LSI->Captures.size()=" << LSI->Captures.size() << "\n";
+    }
     for (unsigned I = 0, N = LSI->Captures.size(); I != N; ++I) {
       const Capture &From = LSI->Captures[I];
 
@@ -2318,6 +2322,10 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     maybeAddDeclWithEffects(LSI->CallOperator);
   }
 
+  if (getenv("DBG_LAMBDA")) {
+    //llvm::dbgs() << "Built LambdaExpr:\n";
+    //Lambda->dump();
+  }
   return MaybeBindToTemporary(Lambda);
 }
 

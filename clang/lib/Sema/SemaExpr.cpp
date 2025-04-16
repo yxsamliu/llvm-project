@@ -70,6 +70,8 @@
 using namespace clang;
 using namespace sema;
 
+bool shouldDebugLambda(Sema& S);
+
 bool Sema::CanUseDecl(NamedDecl *D, bool TreatUnavailableAsInvalid) {
   // See if this is an auto-typed variable whose initializer we are parsing.
   if (ParsingInitForAutoVars.count(D))
@@ -17518,6 +17520,14 @@ Sema::PushExpressionEvaluationContext(
   Cleanup.reset();
   if (!MaybeODRUseExprs.empty())
     std::swap(MaybeODRUseExprs, ExprEvalContexts.back().SavedMaybeODRUseExprs);
+
+  if (shouldDebugLambda(*this)) {
+    llvm::dbgs() << "\nDBG: PushExpressionEvaluationContext\nMaybeODRUseExprs:\n";
+    for (const auto& E: MaybeODRUseExprs) {
+      E->dump();
+    }
+  }
+
 }
 
 void
@@ -17988,10 +17998,17 @@ void Sema::PopExpressionEvaluationContext() {
     Cleanup = Rec.ParentCleanup;
     CleanupVarDeclMarking();
     std::swap(MaybeODRUseExprs, Rec.SavedMaybeODRUseExprs);
+
   // Otherwise, merge the contexts together.
   } else {
     Cleanup.mergeFrom(Rec.ParentCleanup);
     MaybeODRUseExprs.insert_range(Rec.SavedMaybeODRUseExprs);
+  }
+  if (shouldDebugLambda(*this)) {
+    llvm::dbgs() << "\nDBG: PopExpressionEvaluationContext\nMaybeODRUseExprs:\n";
+    for (const auto& E: MaybeODRUseExprs) {
+      E->dump();
+    }
   }
 
   // Pop the current expression evaluation context off the stack.
@@ -18007,6 +18024,12 @@ void Sema::DiscardCleanupsInEvaluationContext() {
          ExprCleanupObjects.end());
   Cleanup.reset();
   MaybeODRUseExprs.clear();
+  if (shouldDebugLambda(*this)) {
+    llvm::dbgs() << "\nDBG: DiscardCleanupsInEvaluationContext\nMaybeODRUseExprs:\n";
+    for (const auto& E: MaybeODRUseExprs) {
+      E->dump();
+    }
+  }
 }
 
 ExprResult Sema::HandleExprEvaluationContextForTypeof(Expr *E) {
@@ -18536,6 +18559,15 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
 void Sema::MarkCaptureUsedInEnclosingContext(ValueDecl *Capture,
                                              SourceLocation Loc,
                                              unsigned CapturingScopeIndex) {
+  if (::getenv("DBG_LAMBDA")) {
+    if (const auto *VD = dyn_cast<VarDecl>(Capture)) {
+      if (VD->isConstexpr()) {
+        llvm::dbgs() << "\nDBG: MarkCaptureUsedInEnclosingContext, constexpr variable: " << VD->getName() << "\n";
+        VD->dump();
+      }
+    }
+  }
+
   MarkVarDeclODRUsed(Capture, Loc, *this, &CapturingScopeIndex);
 }
 
@@ -18921,12 +18953,23 @@ static bool captureInLambda(LambdaScopeInfo *LSI, ValueDecl *Var,
     if (Const && !CaptureType->isReferenceType() &&
         !DeclRefType->isFunctionType())
       DeclRefType.addConst();
+    // Insert debug output for constexpr variables captured by copy, if DBG_LAMBDA is set.
   }
 
   // Add the capture.
-  if (BuildAndDiagnose)
+  if (BuildAndDiagnose) {
     LSI->addCapture(Var, /*isBlock=*/false, ByRef, RefersToCapturedVariable,
                     Loc, EllipsisLoc, CaptureType, Invalid);
+    if (::getenv("DBG_LAMBDA")) {
+      if (const auto *VD = dyn_cast<VarDecl>(Var)) {
+        if (VD->isConstexpr()) {
+          llvm::dbgs() << "\nDBG: addCapture, constexpr variable: " << VD->getName() << "\n";
+          VD->dump();
+          assert(0);
+        }
+      }
+    }
+  }
 
   return !Invalid;
 }
@@ -19478,6 +19521,10 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
     S.MaybeODRUseExprs.remove(E);
     if (LambdaScopeInfo *LSI = S.getCurLambda())
       LSI->markVariableExprAsNonODRUsed(E);
+    if (shouldDebugLambda(S)) {
+      llvm::dbgs() << "\nDBG: rebuildPotentialResultsAsNonOdrUsed\nMaybeODRUseExprs.remove:\n";
+      E->dump();
+    }
   };
 
   // C++2a [basic.def.odr]p2:
@@ -19783,6 +19830,12 @@ void Sema::CleanupVarDeclMarking() {
       llvm_unreachable("Unexpected expression");
     }
   }
+  if (shouldDebugLambda(*this)) {
+    llvm::dbgs() << "\nDBG: CleanupVarDeclMarking\nMaybeODRUseExprs:\n";
+    for (const auto& E: MaybeODRUseExprs) {
+      E->dump();
+    }
+  }
 
   assert(MaybeODRUseExprs.empty() &&
          "MarkVarDeclODRUsed failed to cleanup MaybeODRUseExprs?");
@@ -19981,10 +20034,29 @@ static void DoMarkVarDeclReferenced(
   case OdrUseContext::Used:
     // If we might later find that this expression isn't actually an odr-use,
     // delay the marking.
-    if (E && Var->isUsableInConstantExpressions(SemaRef.Context))
+    if (E && Var->isUsableInConstantExpressions(SemaRef.Context)) {
       SemaRef.MaybeODRUseExprs.insert(E);
-    else
+      if (::getenv("DBG_LAMBDA")) {
+        if (const auto *VD = dyn_cast<VarDecl>(Var)) {
+          if (VD->isConstexpr()) {
+            llvm::dbgs() << "\nDBG: MaybeODRUseExprs.insert, constexpr variable: " << VD->getName() << "\n";
+            VD->dump();
+          }
+        }
+      }
+    }
+    else {
+      if (::getenv("DBG_LAMBDA")) {
+        if (const auto *VD = dyn_cast<VarDecl>(Var)) {
+          if (VD->isConstexpr()) {
+            llvm::dbgs() << "\nDBG: MarkVarDeclODRUsed, constexpr variable: " << VD->getName() << "\n";
+            VD->dump();
+          }
+        }
+      }
+
       MarkVarDeclODRUsed(Var, Loc, SemaRef);
+    }
     break;
 
   case OdrUseContext::Dependent:

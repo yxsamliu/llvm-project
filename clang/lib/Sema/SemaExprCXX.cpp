@@ -56,6 +56,8 @@
 using namespace clang;
 using namespace sema;
 
+bool shouldDebugLambda(Sema&);
+
 ParsedType Sema::getInheritingConstructorName(CXXScopeSpec &SS,
                                               SourceLocation NameLoc,
                                               const IdentifierInfo &Name) {
@@ -8168,7 +8170,14 @@ Sema::MaybeCreateExprWithCleanups(ExprResult SubExpr) {
 
 Expr *Sema::MaybeCreateExprWithCleanups(Expr *SubExpr) {
   assert(SubExpr && "subexpression can't be null!");
-
+  if (shouldDebugLambda(*this)) {
+    llvm::dbgs() << "\nDBG: MaybeCreateExprWithCleanups: ";
+    SubExpr->dump();
+    llvm::dbgs() << "MaybeODRUseExprs:\n";
+    for (const auto& E: MaybeODRUseExprs) {
+      E->dump();
+    }
+  }
   CleanupVarDeclMarking();
 
   unsigned FirstCleanup = ExprEvalContexts.back().NumCleanupObjects;
