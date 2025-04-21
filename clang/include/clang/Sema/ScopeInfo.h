@@ -949,6 +949,10 @@ public:
 
   SourceLocation PotentialThisCaptureLocation;
 
+  /// Constexpr local variables that are potentially ODR-used on one side for
+  /// CUDA/HIP.
+  llvm::SmallPtrSet<VarDecl *, 4> CUDAConstexprODRVars;
+
   LambdaScopeInfo(DiagnosticsEngine &Diag)
       : CapturingScopeInfo(Diag, ImpCap_None) {
     Kind = SK_Lambda;

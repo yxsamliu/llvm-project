@@ -18,6 +18,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Overload.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Template.h"
@@ -25,6 +26,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
 using namespace clang;
+
+bool shouldDebugLambda(Sema &S);
 
 SemaCUDA::SemaCUDA(Sema &S) : SemaBase(S) {}
 
@@ -1099,4 +1102,35 @@ std::string SemaCUDA::getConfigureFuncName() const {
 
   // Legacy CUDA kernel configuration call
   return "cudaConfigureCall";
+}
+
+void SemaCUDA::recordPotentialODRUsedVar(MultiExprArg Args,
+                                         OverloadCandidateSet &CandidateSet) {
+  bool DoDebug = shouldDebugLambda(SemaRef);
+  if (auto *LSI = SemaRef.getCurLambda()) {
+    for (unsigned i = 0; i < Args.size(); ++i) {
+      if (auto *DRE = dyn_cast<DeclRefExpr>(Args[i])) {
+        if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+          if (VD->isLocalVarDecl() && VD->isConstexpr()) {
+            bool byValue = false, byRef = false;
+            for (const auto &Cand : CandidateSet) {
+              if (const FunctionDecl *Callee = Cand.Function) {
+                if (i < Callee->getNumParams()) {
+                  QualType PType = Callee->getParamDecl(i)->getType();
+                  (PType->isReferenceType() ? byRef : byValue) = true;
+                }
+              }
+            }
+            if (byValue && byRef)
+              LSI->CUDAConstexprODRVars.insert(VD);
+            if (DoDebug && byValue && byRef)
+              llvm::dbgs() << "DBG WARNING: constexpr variable '"
+                           << VD->getName()
+                           << "' may be captured inconsistently (value vs ref) "
+                              "across overloads.\n";
+          }
+        }
+      }
+    }
+  }
 }

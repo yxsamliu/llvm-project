@@ -18559,7 +18559,7 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
 void Sema::MarkCaptureUsedInEnclosingContext(ValueDecl *Capture,
                                              SourceLocation Loc,
                                              unsigned CapturingScopeIndex) {
-  if (::getenv("DBG_LAMBDA")) {
+  if (shouldDebugLambda(*this)) {
     if (const auto *VD = dyn_cast<VarDecl>(Capture)) {
       if (VD->isConstexpr()) {
         llvm::dbgs() << "\nDBG: MarkCaptureUsedInEnclosingContext, constexpr variable: " << VD->getName() << "\n";
@@ -18953,19 +18953,17 @@ static bool captureInLambda(LambdaScopeInfo *LSI, ValueDecl *Var,
     if (Const && !CaptureType->isReferenceType() &&
         !DeclRefType->isFunctionType())
       DeclRefType.addConst();
-    // Insert debug output for constexpr variables captured by copy, if DBG_LAMBDA is set.
   }
 
   // Add the capture.
   if (BuildAndDiagnose) {
     LSI->addCapture(Var, /*isBlock=*/false, ByRef, RefersToCapturedVariable,
                     Loc, EllipsisLoc, CaptureType, Invalid);
-    if (::getenv("DBG_LAMBDA")) {
+    if (shouldDebugLambda(S)) {
       if (const auto *VD = dyn_cast<VarDecl>(Var)) {
         if (VD->isConstexpr()) {
           llvm::dbgs() << "\nDBG: addCapture, constexpr variable: " << VD->getName() << "\n";
           VD->dump();
-          assert(0);
         }
       }
     }
@@ -19518,11 +19516,28 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
 
   // Mark that this expression does not constitute an odr-use.
   auto MarkNotOdrUsed = [&] {
-    S.MaybeODRUseExprs.remove(E);
-    if (LambdaScopeInfo *LSI = S.getCurLambda())
-      LSI->markVariableExprAsNonODRUsed(E);
+    bool IsCUDAODRUsed = false;
+    LambdaScopeInfo *LSI = S.getCurLambda();
+    if (LSI)
+      if (auto *DRE = dyn_cast<DeclRefExpr>(E))
+        if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+          if (LSI->CUDAConstexprODRVars.count(VD))
+            IsCUDAODRUsed = true;
+
+    if (!IsCUDAODRUsed) {
+      S.MaybeODRUseExprs.remove(E);
+      if (LSI)
+        LSI->markVariableExprAsNonODRUsed(E);
+    }
     if (shouldDebugLambda(S)) {
-      llvm::dbgs() << "\nDBG: rebuildPotentialResultsAsNonOdrUsed\nMaybeODRUseExprs.remove:\n";
+      if (!IsCUDAODRUsed)
+        llvm::dbgs() << "\nDBG: "
+                        "rebuildPotentialResultsAsNonOdrUsed\nMaybeODRUseExprs."
+                        "remove:\n";
+      else
+        llvm::dbgs()
+            << "\nDBG: "
+               "rebuildPotentialResultsAsNonOdrUsed\nCUDAConstexprODRVars:\n";
       E->dump();
     }
   };
@@ -19789,6 +19804,10 @@ ExprResult Sema::CheckLValueToRValueConversionOperand(Expr *E) {
   //   the lvalue-to-rvalue conversion is applied [...]
   if (E->getType().isVolatileQualified() || E->getType()->getAs<RecordType>())
     return E;
+  if (shouldDebugLambda(*this)) {
+    llvm::dbgs() << "\nDBG: CheckLValueToRValueConversionOperand\n";
+    E->dump();
+  }
 
   ExprResult Result =
       rebuildPotentialResultsAsNonOdrUsed(*this, E, NOUR_Constant);
@@ -20036,7 +20055,7 @@ static void DoMarkVarDeclReferenced(
     // delay the marking.
     if (E && Var->isUsableInConstantExpressions(SemaRef.Context)) {
       SemaRef.MaybeODRUseExprs.insert(E);
-      if (::getenv("DBG_LAMBDA")) {
+      if (shouldDebugLambda(SemaRef)) {
         if (const auto *VD = dyn_cast<VarDecl>(Var)) {
           if (VD->isConstexpr()) {
             llvm::dbgs() << "\nDBG: MaybeODRUseExprs.insert, constexpr variable: " << VD->getName() << "\n";
@@ -20046,7 +20065,7 @@ static void DoMarkVarDeclReferenced(
       }
     }
     else {
-      if (::getenv("DBG_LAMBDA")) {
+      if (shouldDebugLambda(SemaRef)) {
         if (const auto *VD = dyn_cast<VarDecl>(Var)) {
           if (VD->isConstexpr()) {
             llvm::dbgs() << "\nDBG: MarkVarDeclODRUsed, constexpr variable: " << VD->getName() << "\n";

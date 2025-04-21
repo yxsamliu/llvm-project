@@ -274,6 +274,11 @@ public:
   /// parameters specified via <<<>>>.
   std::string getConfigureFuncName() const;
 
+  /// Record any constexpr local vars that are potentially ODR-used due to
+  /// passed by reference to a caller on the other side.
+  void recordPotentialODRUsedVar(MultiExprArg Args,
+                                 OverloadCandidateSet &CandidateSet);
+
 private:
   unsigned ForceHostDeviceDepth = 0;
 

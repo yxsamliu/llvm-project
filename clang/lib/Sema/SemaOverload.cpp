@@ -30,6 +30,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
+#include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/Template.h"
@@ -14380,7 +14381,7 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
     const FunctionDecl *FDecl = Best->Function;
 
     // Assume CurContext is available as the current declaration context.
-    if (getenv("DBG_LAMBDA")) {
+    if (shouldDebugLambda(*this)) {
       // Try to get the current function declaration.
       if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CurContext)) {
         // Check if the function is a lambda.
@@ -14391,6 +14392,16 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
             // Dump the lambda caller.
             llvm::dbgs() << "Caller (lambda):\n";
             FD->dump();
+            llvm::dbgs() << "\n";
+
+            // Dump the call arguments.
+            llvm::dbgs() << "Call arguments (" << Args.size() << "):\n";
+            for (Expr *Arg : Args) {
+              if (Arg)
+                Arg->dump();
+              else
+                llvm::dbgs() << "NULL\n";
+            }
             llvm::dbgs() << "\n";
 
             // Dump the candidate set.
@@ -14415,6 +14426,8 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
         }
       }
     }
+
+    CUDA().recordPotentialODRUsedVar(Args, CandidateSet);
 
     if (FDecl && FDecl->isTemplateInstantiation() &&
         FDecl->getReturnType()->isUndeducedType()) {
