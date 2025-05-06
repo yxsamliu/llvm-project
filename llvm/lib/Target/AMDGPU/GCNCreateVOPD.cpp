@@ -16,6 +16,8 @@
 ///
 //
 //===----------------------------------------------------------------------===//
+#include "llvm/Support/raw_ostream.h"
+#include <cstdlib>
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
@@ -48,11 +50,21 @@ private:
     MachineInstr *FirstMI;
     MachineInstr *SecondMI;
   };
+  bool TraceEnabled = false;
+  int TraceCount = 0;
+  llvm::StringRef TraceName;
+  int Limit = -1;
+  int CombineCount = 0;
 
 public:
   const GCNSubtarget *ST = nullptr;
 
   bool doReplace(const SIInstrInfo *SII, VOPDCombineInfo &CI) {
+    // enforce the limit (only if TEST_VAR was set)
+    if (Limit >= 0 && CombineCount >= Limit)
+      return false;
+    ++CombineCount;
+
     auto *FirstMI = CI.FirstMI;
     auto *SecondMI = CI.SecondMI;
     unsigned Opc1 = FirstMI->getOpcode();
@@ -91,6 +103,15 @@ public:
     for (auto CompIdx : VOPD::COMPONENTS)
       VOPDInst.copyImplicitOps(*MI[CompIdx]);
 
+    if (TraceEnabled) {
+      ++TraceCount;
+      errs() << "VOPD Combine #" << TraceCount << " in function '" << TraceName
+             << "':\n";
+      errs() << "  Original1: " << *FirstMI;
+      errs() << "  Original2: " << *SecondMI;
+      errs() << "  Combined:  " << *VOPDInst.getInstr();
+    }
+
     LLVM_DEBUG(dbgs() << "VOPD Fused: " << *VOPDInst << " from\tX: "
                       << *CI.FirstMI << "\tY: " << *CI.SecondMI << "\n");
 
@@ -109,6 +130,16 @@ public:
 
     const SIInstrInfo *SII = ST->getInstrInfo();
     bool Changed = false;
+    if (const char *Env = getenv("DB_VOPD_FUN")) {
+      TraceName = MF.getName();
+      if (TraceName == Env) {
+        TraceEnabled = true;
+        TraceCount = 0;
+      }
+    }
+    // read TEST_VAR limit
+    if (const char *LE = getenv("TEST_VAR"))
+      Limit = std::atoi(LE);
 
     SmallVector<VOPDCombineInfo> ReplaceCandidates;
 
