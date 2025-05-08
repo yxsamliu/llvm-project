@@ -546,6 +546,10 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
     HandleHipStdPar();
 }
 
+bool RocmInstallationDetector::supportsSPIRV() const {
+  return VersionMajorMinor >= llvm::VersionTuple(6, 4);
+}
+
 void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfo &Output,
                                   const InputInfoList &Inputs,

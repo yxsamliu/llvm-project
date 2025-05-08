@@ -108,7 +108,7 @@ enum class OffloadArch {
   LAST,
 
   CudaDefault = OffloadArch::SM_52,
-  HIPDefault = OffloadArch::GFX906,
+  HIPDefault = OffloadArch::AMDGCNSPIRV,
 };
 
 static inline bool IsNVIDIAOffloadArch(OffloadArch A) {

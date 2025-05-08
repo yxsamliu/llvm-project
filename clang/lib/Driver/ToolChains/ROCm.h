@@ -286,6 +286,8 @@ public:
   StringRef getHIPVersionArg() const { return HIPVersionArg; }
 
   StringRef getHIPVersion() const { return DetectedVersion; }
+
+  bool supportsSPIRV() const;
 };
 
 } // end namespace driver

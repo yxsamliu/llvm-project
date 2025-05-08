@@ -3493,6 +3493,27 @@ class OffloadingActionBuilder final {
       for (auto Arch : GpuArchs)
         GpuArchList.push_back(Arch.data());
 
+      // For HIP, try system GPU archs first.
+      if (GpuArchList.empty() && AssociatedOffloadKind == Action::OFK_HIP &&
+          ToolChains.front()->getTriple().isAMDGPU()) {
+        auto GPUsOrErr = ToolChains.front()->getSystemGPUArchs(Args);
+        if (GPUsOrErr) {
+          for (auto &G : *GPUsOrErr)
+            GpuArchList.push_back(Args.MakeArgString(G));
+        } else {
+          llvm::consumeError(GPUsOrErr.takeError());
+#if 0
+          const ToolChain *TC = C.getSingleOffloadToolChain<Action::OFK_HIP>();
+          assert(TC && "No HIP toolchain.");
+
+          const auto &RocmInstallation =
+            static_cast<const toolchains::HIPAMDToolChain *>(TC)->RocmInstallation;
+          if (RocmInstallation.supportsSPIRV())
+#endif
+          GpuArchList.push_back(OffloadArch::AMDGCNSPIRV);
+        }
+      }
+
       // Default to sm_20 which is the lowest common denominator for
       // supported GPUs.  sm_20 code should work correctly, if
       // suboptimally, on all newer GPUs.
@@ -4824,7 +4845,12 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
     if (Kind == Action::OFK_Cuda) {
       Archs.insert(OffloadArchToString(OffloadArch::CudaDefault));
     } else if (Kind == Action::OFK_HIP) {
-      Archs.insert(OffloadArchToString(OffloadArch::HIPDefault));
+      auto GPUsOrErr = TC->getSystemGPUArchs(Args);
+      if (GPUsOrErr && !GPUsOrErr->empty())
+        for (auto A : *GPUsOrErr)
+          Archs.insert(Args.MakeArgStringRef(A));
+      else
+        Archs.insert(OffloadArchToString(OffloadArch::HIPDefault));
     } else if (Kind == Action::OFK_SYCL) {
       Archs.insert(StringRef());
     } else if (Kind == Action::OFK_OpenMP) {
