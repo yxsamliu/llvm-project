@@ -69,8 +69,11 @@ inline void setPredicate(const GCNSubtarget &ST, GlobalVariable *P) {
   P->setLinkage(GlobalValue::PrivateLinkage);
   P->setExternallyInitialized(false);
 
-  if (IsFeature)
+  if (IsFeature) {
     P->setInitializer(ConstantInt::getBool(PTy, ST.checkFeatures(PV)));
+    llvm::errs() << "CheckFeature: " << PV << "\n";
+    llvm::errs() << "Result: " << ST.checkFeatures(PV) << "\n";
+  }
   else
     P->setInitializer(ConstantInt::getBool(PTy, PV == ST.getCPU()));
 }
@@ -123,6 +126,7 @@ std::pair<PreservedAnalyses, bool> handlePredicate(const GCNSubtarget &ST,
 
 PreservedAnalyses
 AMDGPUExpandFeaturePredicatesPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  llvm::errs() << "[AMDGPUExpandFeaturePredicatesPass::run]\n";
   if (M.empty())
     return PreservedAnalyses::all();
 
@@ -153,5 +157,7 @@ AMDGPUExpandFeaturePredicatesPass::run(Module &M, ModuleAnalysisManager &MAM) {
   for (auto &&P : Predicates)
     P->eraseFromParent();
 
+  //llvm::errs() << "After pass:\n";
+  //M.dump();
   return Ret;
 }
