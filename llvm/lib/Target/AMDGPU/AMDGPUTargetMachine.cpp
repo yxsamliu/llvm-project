@@ -813,7 +813,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #include "llvm/Passes/TargetPassRegistry.inc"
 
   PB.registerPipelineEarlySimplificationEPCallback(
-      [](ModulePassManager &PM, OptimizationLevel Level,
+      [this](ModulePassManager &PM, OptimizationLevel Level,
          ThinOrFullLTOPhase Phase) {
         if (!isLTOPreLink(Phase)) {
           // When we are not using -fgpu-rdc, we can run accelerator code
@@ -821,6 +821,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           // eager removal of potentially reachable symbols.
           if (EnableHipStdPar)
             PM.addPass(HipStdParAcceleratorCodeSelectionPass());
+          llvm::errs() << "[registerPipelineEarlySimplificationEPCallback] add AMDGPUExpandFeaturePredicatesPass\n";
+          PM.addPass(AMDGPUExpandFeaturePredicatesPass(*this));
           PM.addPass(AMDGPUPrintfRuntimeBindingPass());
         }
 
