@@ -178,13 +178,28 @@ message("")
 
 option(COMGR_DISABLE_SPIRV "To disable SPIRV in Comgr" OFF)
 
-if (NOT COMGR_DISABLE_SPIRV)
-  # TODO: Explore switching this to CHECK_INCLUDE_FILE_CXX() macro
-  if (NOT EXISTS "${LLVM_INCLUDE_DIRS}/LLVMSPIRVLib/LLVMSPIRVLib.h")
-    message("-- LLVMSPIRVLib/LLVMSPIRVLib.h not found")
-    set(COMGR_DISABLE_SPIRV ON)
+# Default: Assume SPIR-V support is ON if building as an external/in-tree project.
+if(NOT DEFINED COMGR_DISABLE_SPIRV)
+  # If building as an external LLVM project, try to detect the target.
+  if(TARGET LLVMSPIRVLib)
+    set(COMGR_DISABLE_SPIRV OFF)
   else()
-    message("-- LLVMSPIRVLib/LLVMSPIRVLib.h found")
+    # For standalone builds, fall back to header presence check.
+    if (EXISTS "${LLVM_INCLUDE_DIRS}/LLVMSPIRVLib/LLVMSPIRVLib.h")
+      set(COMGR_DISABLE_SPIRV OFF)
+    else()
+      set(COMGR_DISABLE_SPIRV ON)
+    endif()
+  endif()
+endif()
+
+if(COMGR_DISABLE_SPIRV)
+  list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS "COMGR_DISABLE_SPIRV")
+  message("-- Comgr SPIRV Disabled")
+else()
+  message("-- Comgr SPIRV Enabled")
+  if (DEFINED LLVM_INCLUDE_DIRS AND NOT LLVM_INCLUDE_DIRS STREQUAL "")
+    target_include_directories(amd_comgr PRIVATE "${LLVM_INCLUDE_DIRS}/LLVMSPIRVLib")
   endif()
 endif()
 
@@ -195,7 +210,9 @@ else()
   message("-- Comgr SPIRV Enabled")
   target_include_directories(amd_comgr
       PRIVATE
-        "${LLVM_INCLUDE_DIRS}/LLVMSPIRVLib")
+        "${LLVM_INCLUDE_DIRS}/LLVMSPIRVLib"
+        /home/yaxunl/git/llvm/llvm/projects/SPIRV-LLVM-Translator/include)
+#  target_link_libraries(amd_comgr PRIVATE LLVMSPIRVLib)
 endif()
 
 
