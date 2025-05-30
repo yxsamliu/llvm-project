@@ -65,12 +65,14 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/Support/raw_ostream.h"
+#include <fcntl.h>
 
 #include "time-stat/ts-interface.h"
 
 #include <csignal>
 #include <sstream>
-
+#include <fstream>
 LLD_HAS_DRIVER(elf)
 
 using namespace llvm;
@@ -1739,6 +1741,7 @@ amd_comgr_status_t AMDGPUCompiler::codeGenBitcodeToRelocatable() {
   }
 
   Args.push_back("-c");
+  Args.push_back("-O3");
 
   Args.push_back("-mllvm");
   Args.push_back("-amdgpu-internalize-symbols");
@@ -1936,10 +1939,18 @@ static inline const std::unordered_set<std::string_view> ValidSpirvFlags{
     "-O3",
     "--save-temps"};
 
+
 amd_comgr_status_t AMDGPUCompiler::extractSpirvFlags(DataSet *BcSet) {
 
+  std::error_code ec;
+  llvm::raw_fd_ostream debugLog("/home/yaxunl/scripts_shared/tests/extractSpirvFlags.debug.log", ec, llvm::sys::fs::OF_Append);
+  if (ec) {
+    // fallback: abort or print to stderr if file open fails
+    llvm::errs() << "Could not open debug log file: " << ec.message() << "\n";
+    return AMD_COMGR_STATUS_ERROR;
+  }
+
   for (auto *Bc : BcSet->DataObjects) {
-    // Create SPIR-V IR Module from Bitcode Buffer
     SMDiagnostic SMDiag;
     LLVMContext Context;
     Context.setDiagnosticHandler(
@@ -1950,28 +1961,45 @@ amd_comgr_status_t AMDGPUCompiler::extractSpirvFlags(DataSet *BcSet) {
         SMDiag, Context, true);
 
     if (!Mod) {
-      SMDiag.print("SPIR-V Bitcode", LogS, /* ShowColors */ false);
+      debugLog << "Failed to load IR module for: " << Bc->Name << "\n";
+      SMDiag.print("SPIR-V Bitcode", debugLog, /* ShowColors */ false);
       return AMD_COMGR_STATUS_ERROR;
     }
 
-    if (verifyModule(*Mod, &LogS))
+    if (verifyModule(*Mod, &debugLog)) {
+      debugLog << "Module verification failed for: " << Bc->Name << "\n";
       return AMD_COMGR_STATUS_ERROR;
+    }
 
-    // Fetch @llvm.cmdline
-    GlobalVariable *CmdLine = Mod->getNamedGlobal("llvm.cmdline");
+    llvm::GlobalVariable *CmdLine = Mod->getNamedGlobal("llvm.cmdline");
 
-    // Return if no @llvm.cmdline
-    if (!CmdLine)
+    if (!CmdLine) {
+      debugLog << "No @llvm.cmdline found in: " << Bc->Name << "\n";
       return AMD_COMGR_STATUS_SUCCESS;
+    } else {
+      debugLog << "@llvm.cmdline found in: " << Bc->Name << "\n";
+      debugLog << "  address space: " << CmdLine->getAddressSpace() << "\n";
+    }
 
-    if (ConstantDataSequential *CDS =
-            dyn_cast<ConstantDataSequential>(CmdLine->getInitializer())) {
+    llvm::Constant *Init = CmdLine->getInitializer();
+    debugLog << "  Initializer type: ";
+    Init->getType()->print(debugLog);
+    debugLog << "\n";
+    if (auto *CE = llvm::dyn_cast<llvm::ConstantExpr>(Init)) {
+      debugLog << "  Initializer is ConstantExpr with opcode: " << CE->getOpcodeName() << "\n";
+      if (CE->getOpcode() == llvm::Instruction::AddrSpaceCast) {
+        debugLog << "    Unwrapping AddrSpaceCast\n";
+        Init = CE->getOperand(0);
+      }
+    }
 
-      // Add each valid null-terminated '\0' string to Flags
+    if (auto *CDS = llvm::dyn_cast<llvm::ConstantDataSequential>(Init)) {
+      debugLog << "  Initializer is ConstantDataSequential, extracting command-line flags\n";
       std::string Tmp;
-      StringRef CmdLineRaw = CDS->getRawDataValues();
+      llvm::StringRef CmdLineRaw = CDS->getRawDataValues();
       std::stringstream ss(CmdLineRaw.str());
       while (getline(ss, Tmp, '\0')) {
+        debugLog << "    Parsed flag: " << Tmp << "\n";
         if (Tmp == "--hipstdpar" || Tmp == "-amdgpu-enable-hipstdpar") {
           Bc->SpirvFlags.push_back("-mllvm");
           Bc->SpirvFlags.push_back("-amdgpu-enable-hipstdpar");
@@ -1982,15 +2010,16 @@ amd_comgr_status_t AMDGPUCompiler::extractSpirvFlags(DataSet *BcSet) {
           Bc->SpirvFlags.push_back(Saver.save(Tmp.c_str()).data());
         }
       }
+    } else {
+      debugLog << "  Initializer is NOT ConstantDataSequential, extraction skipped.\n";
     }
 
-    // COV5 required for SPIR-V
     Bc->SpirvFlags.push_back("-mcode-object-version=5");
 
     if (env::shouldEmitVerboseLogs()) {
-      LogS << "        SPIR-V Flags: " << Bc->Name << "\n";
+      debugLog << "        SPIR-V Flags: " << Bc->Name << "\n";
       for (auto Flag : Bc->SpirvFlags)
-        LogS << "          " << Flag << "\n";
+        debugLog << "          " << Flag << "\n";
     }
   }
 
@@ -2062,7 +2091,7 @@ AMDGPUCompiler::translateSpirvToBitcodeImpl(DataSet *SpirvInSet,
     if (env::shouldEmitVerboseLogs()) {
       LogS << "SPIR-V Translation: amd-llvm-spirv -r --spirv-target-env=CL2.0 "
            << getFilePath(Input, InputDir) << " "
-           << getFilePath(Output, OutputDir) << " (command line equivalent)\n";
+           << getFilePath(Output, OutputDir) << " (command line equivalent test)\n";
     }
 
     if (env::shouldSaveTemps()) {
@@ -2077,6 +2106,13 @@ AMDGPUCompiler::translateSpirvToBitcodeImpl(DataSet *SpirvInSet,
 }
 
 amd_comgr_status_t AMDGPUCompiler::compileSpirvToRelocatable() {
+  std::error_code ec;
+  llvm::raw_fd_ostream debugLog("/home/yaxunl/scripts_shared/tests/comgr.debug.log", ec, llvm::sys::fs::OF_Append);
+  if (ec) {
+    // fallback: abort or print to stderr if file open fails
+    llvm::errs() << "Could not open debug log file: " << ec.message() << "\n";
+    return AMD_COMGR_STATUS_ERROR;
+  }
   if (auto Status = createTmpDirs()) {
     return Status;
   }
@@ -2091,13 +2127,16 @@ amd_comgr_status_t AMDGPUCompiler::compileSpirvToRelocatable() {
   if (auto Status = amd_comgr_create_data_set(&TranslatedSpirvT))
     return Status;
   DataSet *TranslatedSpirv = DataSet::convert(TranslatedSpirvT);
+  debugLog << "[AMDGPUCompiler::compileSpirvToRelocatable] before translate\n";
 
   if (auto Status = translateSpirvToBitcodeImpl(InSet, TranslatedSpirv))
     return Status;
+  debugLog << "[AMDGPUCompiler::compileSpirvToRelocatable] after translate\n";
 
   // Extract relevant -cc1 flags from @llvm.cmdline
   if (auto Status = extractSpirvFlags(TranslatedSpirv))
     return Status;
+  debugLog << "[AMDGPUCompiler::compileSpirvToRelocatable] after extract flag\n";
 
   // Compile bitcode to relocatable
   if (ActionInfo->IsaName) {
@@ -2113,7 +2152,7 @@ amd_comgr_status_t AMDGPUCompiler::compileSpirvToRelocatable() {
   }
 
   Args.push_back("-c");
-
+  Args.push_back("-O3");
   Args.push_back("-mllvm");
   Args.push_back("-amdgpu-internalize-symbols");
 
