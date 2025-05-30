@@ -813,7 +813,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #include "llvm/Passes/TargetPassRegistry.inc"
 
   PB.registerPipelineEarlySimplificationEPCallback(
-      [this](ModulePassManager &PM, OptimizationLevel Level,
+      [](ModulePassManager &PM, OptimizationLevel Level,
          ThinOrFullLTOPhase Phase) {
         if (!isLTOPreLink(Phase)) {
           // When we are not using -fgpu-rdc, we can run accelerator code
@@ -821,8 +821,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           // eager removal of potentially reachable symbols.
           if (EnableHipStdPar)
             PM.addPass(HipStdParAcceleratorCodeSelectionPass());
-          llvm::errs() << "[registerPipelineEarlySimplificationEPCallback] add AMDGPUExpandFeaturePredicatesPass\n";
-          PM.addPass(AMDGPUExpandFeaturePredicatesPass(*this));
           PM.addPass(AMDGPUPrintfRuntimeBindingPass());
         }
 
@@ -2026,12 +2024,10 @@ AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
 }
 
 void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
-  addPass(AMDGPUExpandFeaturePredicatesPass(TM));
   if (RemoveIncompatibleFunctions && TM.getTargetTriple().isAMDGCN())
     addPass(AMDGPURemoveIncompatibleFunctionsPass(TM));
-  llvm::errs() << "[AMDGPUCodeGenPassBuilder::addIRPasses] add AMDGPUExpandFeaturePredicatesPass\n";
-  addPass(AMDGPUPrintfRuntimeBindingPass());
 
+  addPass(AMDGPUPrintfRuntimeBindingPass());
   if (LowerCtorDtor)
     addPass(AMDGPUCtorDtorLoweringPass());
 
