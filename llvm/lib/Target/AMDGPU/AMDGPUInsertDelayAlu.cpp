@@ -481,26 +481,26 @@ public:
             if (It != State.end()) { DelayForOpY.merge(It->second); ConsumedUnitsForMI.insert(Unit); }
         }
 
-        // Process implicit uses (e.g., VCC) - REMOVED AS PER USER REQUEST
-        // for (const MachineOperand &ImpOp : MI.implicit_operands()) {
-        //     if (ImpOp.isReg() && ImpOp.isUse()) {
-        //         // Assuming VCC is the primary relevant implicit VALU-related dependency
-        //         if (TRI->isSubRegisterEq(AMDGPU::VCC, ImpOp.getReg()) || ImpOp.getReg() == AMDGPU::VCC) {
-        //              for (MCRegUnit Unit : TRI->regunits(ImpOp.getReg())) {
-        //                 auto It = State.find(Unit);
-        //                 if (It != State.end()) {
-        //                     DelayForOpX.merge(It->second); // VCC used by both X and Y
-        //                     DelayForOpY.merge(It->second);
-        //                     ConsumedUnitsForMI.insert(Unit);
-        //                     if(isTrackedInstruction) {
-        //                         dbgs() << "DB_DELAY: Merging DelayInfo for implicit VCC Unit " << printRegUnit(Unit, TRI) << ": ";
-        //                         It->second.dump(); dbgs() << "\n";
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
+        // Process implicit uses (e.g., VCC) - ONLY FOR VOPD
+        for (const MachineOperand &ImpOp : MI.implicit_operands()) {
+            if (ImpOp.isReg() && ImpOp.isUse()) {
+                // Assuming VCC is the primary relevant implicit VALU-related dependency
+                if (TRI->isSubRegisterEq(AMDGPU::VCC, ImpOp.getReg()) || ImpOp.getReg() == AMDGPU::VCC) {
+                     for (MCRegUnit Unit : TRI->regunits(ImpOp.getReg())) {
+                        auto It = State.find(Unit);
+                        if (It != State.end()) {
+                            DelayForOpX.merge(It->second); // VCC used by both X and Y
+                            DelayForOpY.merge(It->second);
+                            ConsumedUnitsForMI.insert(Unit);
+                            if(isTrackedInstruction) {
+                                dbgs() << "DB_DELAY: Merging DelayInfo for implicit VCC Unit " << printRegUnit(Unit, TRI) << ": ";
+                                It->second.dump(); dbgs() << "\n";
+                            }
+                        }
+                    }
+                }
+            }
+        }
         if (isTrackedInstruction) {
             dbgs() << "DB_DELAY: DelayInfo for OpX: "; DelayForOpX.dump(); dbgs() << "\n";
             dbgs() << "DB_DELAY: DelayInfo for OpY: "; DelayForOpY.dump(); dbgs() << "\n";
@@ -526,7 +526,7 @@ public:
             }
           }
         }
-        // Implicit operand handling for non-VOPD was here and is now removed as per user request.
+        // Implicit operand handling for non-VOPD is NOT done here.
 
         if (Emit && !MI.isBundledWithPred()) {
           LastDelayAlu = emitDelayAlu(MI, DelayForMI, LastDelayAlu);
