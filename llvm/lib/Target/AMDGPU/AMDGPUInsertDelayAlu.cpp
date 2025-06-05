@@ -364,8 +364,6 @@ public:
   // Emit an s_delay_alu instruction for VOPD instructions.
   MachineInstr *emitDelayAluForVOPD(MachineInstr &MI,
                                     DelayInfo DelayX, DelayInfo DelayY) {
-    // For now, only consider VALUNum for simplicity.
-    // A full implementation would consider TRANSNum/SALUCycles for X and Y.
     unsigned ValuXDep = (DelayX.VALUNum < DelayInfo::VALU_MAX) ? DelayX.VALUNum : 0;
     unsigned ValuYDep = (DelayY.VALUNum < DelayInfo::VALU_MAX) ? DelayY.VALUNum : 0;
 
@@ -377,24 +375,26 @@ public:
     // ISA: INSTID0 = SIMM16[3:0], INSTSKIP = SIMM16[6:4], INSTID1 = SIMM16[10:7]
     // INSTSKIP_SAME is 0x0 for VOPD (apply INSTID1 to the second op of the same instruction).
 
-    FinalImm = (ValuXDep & 0xF); // instid0 for OpX
-
-    if (ValuYDep != 0) {
-      // If OpY needs delay, set instskip to SAME and add instid1 for OpY.
-      // AMDGPU::DelayAlu::InstSkip::SAME is 0 in AMDGPUDisassembler.
-      FinalImm |= (0x0 << 4); // instskip(SAME)
-      FinalImm |= ((ValuYDep & 0xF) << 7); // instid1 for OpY
+    if (ValuXDep != 0 && ValuYDep != 0) {
+      // Both X and Y need delay
+      FinalImm = (ValuXDep & 0xF);          // instid0 for OpX
+      FinalImm |= (0x0 << 4);               // instskip(SAME)
+      FinalImm |= ((ValuYDep & 0xF) << 7);  // instid1 for OpY
+    } else if (ValuXDep != 0) {
+      // Only X needs delay
+      FinalImm = (ValuXDep & 0xF);          // instid0 for OpX
+                                            // instskip and instid1 remain 0
+    } else { // Only Y needs delay (ValuYDep != 0)
+      FinalImm = (ValuYDep & 0xF);          // instid0 for OpY (originally for X)
+                                            // instskip and instid1 remain 0
     }
-    // If ValuYDep is 0, instskip and instid1 remain 0, meaning only instid0 applies.
 
-    if (FinalImm == 0) return nullptr; // Should be caught by initial check.
+    if (FinalImm == 0) return nullptr; // Should be caught by initial check if logic is sound.
 
     auto &MBB = *MI.getParent();
     MachineInstr *NewDelayAlu =
         BuildMI(MBB, MI, DebugLoc(), SII->get(AMDGPU::S_DELAY_ALU)).addImm(FinalImm);
 
-    // If instid1 is set (meaning FinalImm & 0x780 is true), it's complex and likely not mergeable
-    // with a future simple delay. If only instid0 is set, it might be.
     return (FinalImm & 0x780) ? nullptr : NewDelayAlu;
   }
 
