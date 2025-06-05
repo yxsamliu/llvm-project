@@ -16,6 +16,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/DenseSet.h" // Changed from SmallPtrSet.h
 #include "llvm/Support/raw_ostream.h" // Required for dbgs()
 #include <cstdlib>                    // Required for std::getenv
 
@@ -295,7 +296,7 @@ public:
   // The saved delay state at the end of each basic block.
   DenseMap<MachineBasicBlock *, DelayState> BlockState;
 
-  // Emit an s_delay_alu instruction if necessary before MI.
+  // Emit an s_delay_alu instruction if necessary before MI for non-VOPD.
   MachineInstr *emitDelayAlu(MachineInstr &MI, DelayInfo Delay,
                                MachineInstr *LastDelayAlu) {
     unsigned Imm = 0;
@@ -360,6 +361,44 @@ public:
     return (Imm & 0x780) ? nullptr : NewDelayAlu;
   }
 
+  // Emit an s_delay_alu instruction for VOPD instructions.
+  MachineInstr *emitDelayAluForVOPD(MachineInstr &MI,
+                                    DelayInfo DelayX, DelayInfo DelayY) {
+    // For now, only consider VALUNum for simplicity.
+    // A full implementation would consider TRANSNum/SALUCycles for X and Y.
+    unsigned ValuXDep = (DelayX.VALUNum < DelayInfo::VALU_MAX) ? DelayX.VALUNum : 0;
+    unsigned ValuYDep = (DelayY.VALUNum < DelayInfo::VALU_MAX) ? DelayY.VALUNum : 0;
+
+    if (ValuXDep == 0 && ValuYDep == 0) {
+      return nullptr; // No delay needed
+    }
+
+    unsigned FinalImm = 0;
+    // ISA: INSTID0 = SIMM16[3:0], INSTSKIP = SIMM16[6:4], INSTID1 = SIMM16[10:7]
+    // INSTSKIP_SAME is 0x0 for VOPD (apply INSTID1 to the second op of the same instruction).
+
+    FinalImm = (ValuXDep & 0xF); // instid0 for OpX
+
+    if (ValuYDep != 0) {
+      // If OpY needs delay, set instskip to SAME and add instid1 for OpY.
+      // AMDGPU::DelayAlu::InstSkip::SAME is 0 in AMDGPUDisassembler.
+      FinalImm |= (0x0 << 4); // instskip(SAME)
+      FinalImm |= ((ValuYDep & 0xF) << 7); // instid1 for OpY
+    }
+    // If ValuYDep is 0, instskip and instid1 remain 0, meaning only instid0 applies.
+
+    if (FinalImm == 0) return nullptr; // Should be caught by initial check.
+
+    auto &MBB = *MI.getParent();
+    MachineInstr *NewDelayAlu =
+        BuildMI(MBB, MI, DebugLoc(), SII->get(AMDGPU::S_DELAY_ALU)).addImm(FinalImm);
+
+    // If instid1 is set (meaning FinalImm & 0x780 is true), it's complex and likely not mergeable
+    // with a future simple delay. If only instid0 is set, it might be.
+    return (FinalImm & 0x780) ? nullptr : NewDelayAlu;
+  }
+
+
   bool runOnMachineBasicBlock(MachineBasicBlock &MBB, bool Emit) {
     DelayState State;
     for (auto *Pred : MBB.predecessors())
@@ -385,7 +424,9 @@ public:
         continue;
       }
 
-      bool isTrackedInstruction = DebugThisFunctionForDelay && (MI.getOpcode() == AMDGPU::V_DUAL_CNDMASK_B32_e32_X_CNDMASK_B32_e32_gfx11);
+      bool isTargetVOPD = (MI.getOpcode() == AMDGPU::V_DUAL_CNDMASK_B32_e32_X_CNDMASK_B32_e32_gfx11);
+      bool isTrackedInstruction = DebugThisFunctionForDelay && isTargetVOPD;
+
       if (isTrackedInstruction) {
           VDualCndMaskCounter++;
           dbgs() << "DB_DELAY: Processing V_DUAL_CNDMASK_B32 #" << VDualCndMaskCounter
@@ -395,7 +436,7 @@ public:
           State.dump(TRI);
       }
 
-      DelayType Type = getDelayType(MI.getDesc().TSFlags);
+      DelayType Type = getDelayType(MI.getDesc().TSFlags); // For VOPD, this is VALU
 
       if (instructionWaitsForSGPRWrites(MI)) {
         auto It = State.find(LastSGPRFromVALU);
@@ -406,104 +447,138 @@ public:
         }
       }
 
-      DelayInfo DelayForMI; // Stores the combined delay requirements for MI's uses
+      DenseSet<unsigned> ConsumedUnitsForMI; // Changed from SmallPtrSet
 
-      if (instructionWaitsForVALU(MI)) {
-        if (isTrackedInstruction) {
+      if (instructionWaitsForVALU(MI)) { // True for S_WAITCNT VA_VDST=0, etc. Not for VOPD itself.
+        if (isTrackedInstruction) { // Should not happen for the VOPD itself
             dbgs() << "DB_DELAY: Instruction waits for all VALU. Clearing DelayState.\n";
         }
-        // Forget about all outstanding VALU delays.
-        // TODO: This is overkill since it also forgets about SALU delays.
         State = DelayState();
-      } else if (Type != OTHER) { // This instruction itself is a VALU/TRANS/SALU, check its uses
-        // TODO: Scan implicit uses too?
+      } else if (isTargetVOPD) {
+        DelayInfo DelayForOpX, DelayForOpY;
+
+        // Operands for V_DUAL_CNDMASK_B32_e32_X_CNDMASK_B32_e32_gfx11:
+        // 0: dstX, 1: dstY, 2: src0X (tied to dstX), 3: src1X, 4: src0Y (tied to dstY), 5: src1Y
+        // Implicit uses: VCC (e.g., VCC_LO), EXEC
+
+        // Process OpX sources: MI.getOperand(2), MI.getOperand(3)
+        for (MCRegUnit Unit : TRI->regunits(MI.getOperand(2).getReg())) { // src0X (original value of dstX)
+            auto It = State.find(Unit);
+            if (It != State.end()) { DelayForOpX.merge(It->second); ConsumedUnitsForMI.insert(Unit); }
+        }
+        for (MCRegUnit Unit : TRI->regunits(MI.getOperand(3).getReg())) { // src1X
+            auto It = State.find(Unit);
+            if (It != State.end()) { DelayForOpX.merge(It->second); ConsumedUnitsForMI.insert(Unit); }
+        }
+
+        // Process OpY sources: MI.getOperand(4), MI.getOperand(5)
+        for (MCRegUnit Unit : TRI->regunits(MI.getOperand(4).getReg())) { // src0Y (original value of dstY)
+            auto It = State.find(Unit);
+            if (It != State.end()) { DelayForOpY.merge(It->second); ConsumedUnitsForMI.insert(Unit); }
+        }
+        for (MCRegUnit Unit : TRI->regunits(MI.getOperand(5).getReg())) { // src1Y
+            auto It = State.find(Unit);
+            if (It != State.end()) { DelayForOpY.merge(It->second); ConsumedUnitsForMI.insert(Unit); }
+        }
+
+        // Process implicit uses (e.g., VCC)
+        for (const MachineOperand &ImpOp : MI.implicit_operands()) {
+            if (ImpOp.isReg() && ImpOp.isUse()) {
+                // Assuming VCC is the primary relevant implicit VALU-related dependency
+                if (TRI->isSubRegisterEq(AMDGPU::VCC, ImpOp.getReg()) || ImpOp.getReg() == AMDGPU::VCC) {
+                     for (MCRegUnit Unit : TRI->regunits(ImpOp.getReg())) {
+                        auto It = State.find(Unit);
+                        if (It != State.end()) {
+                            DelayForOpX.merge(It->second); // VCC used by both X and Y
+                            DelayForOpY.merge(It->second);
+                            ConsumedUnitsForMI.insert(Unit);
+                            if(isTrackedInstruction) {
+                                dbgs() << "DB_DELAY: Merging DelayInfo for implicit VCC Unit " << printRegUnit(Unit, TRI) << ": ";
+                                It->second.dump(); dbgs() << "\n";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (isTrackedInstruction) {
+            dbgs() << "DB_DELAY: DelayInfo for OpX: "; DelayForOpX.dump(); dbgs() << "\n";
+            dbgs() << "DB_DELAY: DelayInfo for OpY: "; DelayForOpY.dump(); dbgs() << "\n";
+        }
+
+        if (Emit && !MI.isBundledWithPred()) {
+           MachineInstr* NewDelay = emitDelayAluForVOPD(MI, DelayForOpX, DelayForOpY);
+           if (NewDelay) LastDelayAlu = (NewDelay->getOperand(0).getImm() & 0x780) ? nullptr : NewDelay;
+        }
+
+      } else if (Type != OTHER) { // Non-VOPD VALU/TRANS/SALU
+        DelayInfo DelayForMI;
         for (const auto &Op : MI.explicit_uses()) {
           if (Op.isReg()) {
-            // One of the operands of the writelane is also the output operand.
-            // This creates the insertion of redundant delays. Hence, we have to
-            // ignore this operand.
-            if (MI.getOpcode() == AMDGPU::V_WRITELANE_B32 && Op.isTied())
-              continue;
+            if (MI.getOpcode() == AMDGPU::V_WRITELANE_B32 && Op.isTied()) continue;
             for (MCRegUnit Unit : TRI->regunits(Op.getReg())) {
               auto It = State.find(Unit);
               if (It != State.end()) {
-                if (isTrackedInstruction) {
-                    dbgs() << "DB_DELAY: Merging DelayInfo for used RegUnit " << printRegUnit(Unit, TRI) << ": ";
-                    It->second.dump(); dbgs() << "\n";
-                }
                 DelayForMI.merge(It->second);
-                State.erase(Unit); // Consumed by this instruction
+                ConsumedUnitsForMI.insert(Unit);
               }
             }
           }
         }
-
-        if (SII->isVALU(MI.getOpcode())) {
-          for (const auto &Op : MI.defs()) {
-            Register Reg = Op.getReg();
-            if (AMDGPU::isSGPR(Reg, TRI)) {
-              LastSGPRFromVALU = *TRI->regunits(Reg).begin();
-              break;
+         for (const MachineOperand &ImpOp : MI.implicit_operands()) { // Handle implicit uses for non-VOPD too
+            if (ImpOp.isReg() && ImpOp.isUse()) {
+                 if (TRI->isSubRegisterEq(AMDGPU::VCC, ImpOp.getReg()) || ImpOp.getReg() == AMDGPU::VCC) {
+                     for (MCRegUnit Unit : TRI->regunits(ImpOp.getReg())) {
+                        auto It = State.find(Unit);
+                        if (It != State.end()) {
+                            DelayForMI.merge(It->second);
+                            ConsumedUnitsForMI.insert(Unit);
+                        }
+                    }
+                }
             }
-          }
         }
+
 
         if (Emit && !MI.isBundledWithPred()) {
-          if (isTrackedInstruction) {
-              dbgs() << "DB_DELAY: Considering S_DELAY_ALU for current V_DUAL_CNDMASK_B32.\n";
-              dbgs() << "DB_DELAY: DelayInfo calculated for its uses: "; DelayForMI.dump(); dbgs() << "\n";
-              dbgs() << "DB_DELAY: LastDelayAlu before emitDelayAlu call: ";
-              if (LastDelayAlu) LastDelayAlu->dump(); else dbgs() << "nullptr\n";
-          }
-
-          MachineInstr* ArgLastDelayAlu = LastDelayAlu;
-          unsigned ArgLastDelayAluImm = 0;
-          if (ArgLastDelayAlu) ArgLastDelayAluImm = ArgLastDelayAlu->getOperand(0).getImm();
-
-          MachineInstr* ResultFromEmit = emitDelayAlu(MI, DelayForMI, ArgLastDelayAlu);
-
-          if (isTrackedInstruction) {
-            bool ActionTaken = false;
-            // Check if ArgLastDelayAlu (the one passed in) was modified
-            if (ArgLastDelayAlu && ArgLastDelayAlu->getOperand(0).getImm() != ArgLastDelayAluImm) {
-                dbgs() << "DB_DELAY: Modified existing S_DELAY_ALU (passed as LastDelayAlu):\n";
-                dbgs() << "DB_DELAY: Old Imm: 0x" << Twine::utohexstr(ArgLastDelayAluImm)
-                       << ", New Imm: 0x" << Twine::utohexstr(ArgLastDelayAlu->getOperand(0).getImm()) << "\n";
-                ArgLastDelayAlu->dump();
-                ActionTaken = true;
-            // Check if a new instruction was inserted before MI
-            } else if (MI.getPrevNode() && MI.getPrevNode()->getOpcode() == AMDGPU::S_DELAY_ALU &&
-                       MI.getPrevNode() != ArgLastDelayAlu) {
-                dbgs() << "DB_DELAY: Inserted new S_DELAY_ALU before V_DUAL_CNDMASK_B32:\n";
-                MI.getPrevNode()->dump();
-                ActionTaken = true;
-            }
-
-            if (!ActionTaken) {
-                dbgs() << "DB_DELAY: No S_DELAY_ALU inserted or modified for V_DUAL_CNDMASK_B32 by this call.\n";
-            }
-            dbgs() << "DB_DELAY: emitDelayAlu call returned: ";
-            if (ResultFromEmit) ResultFromEmit->dump(); else dbgs() << "nullptr\n";
-          }
-          LastDelayAlu = ResultFromEmit; // Update LastDelayAlu with the result
+          LastDelayAlu = emitDelayAlu(MI, DelayForMI, LastDelayAlu);
         }
-      } // end if (Type != OTHER) for processing uses and emitting s_delay_alu
+      }
+
+      // Erase consumed units from State *after* all uses by MI (or its parts) have been processed
+      for (unsigned Unit : ConsumedUnitsForMI) {
+        State.erase(Unit);
+      }
 
       // Process defs of the current instruction MI
-      if (Type != OTHER) {
-        // TODO: Scan implicit defs too?
-        for (const auto &Op : MI.defs()) {
-          unsigned Latency = SchedModel->computeOperandLatency(
-              &MI, Op.getOperandNo(), nullptr, 0);
-          if (isTrackedInstruction) {
-              dbgs() << "DB_DELAY: Def operand " << Op.getOperandNo() << " (Reg " << printReg(Op.getReg(), TRI)
-                     << ") has Latency " << Latency << ". Updating State for its RegUnits.\n";
-          }
-          for (MCRegUnit Unit : TRI->regunits(Op.getReg())) {
-            State[Unit] = DelayInfo(Type, Latency);
-            if (isTrackedInstruction) {
-                 dbgs() << "DB_DELAY: State for RegUnit " << printRegUnit(Unit, TRI) << " set to: ";
-                 State[Unit].dump(); dbgs() << "\n";
+      if (Type != OTHER) { // VALU, TRANS, SALU (VOPD is VALU type)
+        if (isTargetVOPD) {
+            // OpX defines MI.getOperand(0), OpY defines MI.getOperand(1)
+            unsigned LatencyX = SchedModel->computeOperandLatency(&MI, MI.getOperand(0).getOperandNo(), nullptr, 0);
+            for (MCRegUnit Unit : TRI->regunits(MI.getOperand(0).getReg()))
+                State[Unit] = DelayInfo(Type, LatencyX);
+
+            unsigned LatencyY = SchedModel->computeOperandLatency(&MI, MI.getOperand(1).getOperandNo(), nullptr, 0);
+            for (MCRegUnit Unit : TRI->regunits(MI.getOperand(1).getReg()))
+                State[Unit] = DelayInfo(Type, LatencyY);
+        } else { // Non-VOPD VALU/TRANS/SALU
+            for (const auto &Op : MI.defs()) {
+              if (Op.isReg()) { // Ensure it's a register definition
+                unsigned Latency = SchedModel->computeOperandLatency(
+                    &MI, Op.getOperandNo(), nullptr, 0);
+                for (MCRegUnit Unit : TRI->regunits(Op.getReg()))
+                  State[Unit] = DelayInfo(Type, Latency);
+              }
+            }
+        }
+        if (SII->isVALU(MI.getOpcode())) { // Including VOPD
+          for (const auto &Op : MI.defs()) {
+            if (Op.isReg()) {
+                Register Reg = Op.getReg();
+                if (AMDGPU::isSGPR(Reg, TRI)) {
+                  LastSGPRFromVALU = *TRI->regunits(Reg).begin();
+                  break;
+                }
             }
           }
         }
@@ -511,10 +586,10 @@ public:
 
       // Advance by the number of cycles it takes to issue this instruction.
       unsigned Cycles = SIInstrInfo::getNumWaitStates(MI);
-      State.advance(Type, Cycles);
+      State.advance(Type, Cycles); // Type is for MI itself
 
       if (isTrackedInstruction) {
-          dbgs() << "DB_DELAY: State AFTER processing MI defs and advancing state by " << Cycles << " cycles (instr type " << Type << "):\n";
+          dbgs() << "DB_DELAY: State AFTER processing MI defs and advancing state by " << Cycles << " cycles (instr type " << (int)Type << "):\n";
           State.dump(TRI);
           dbgs() << "-----\n";
       }
@@ -562,8 +637,8 @@ public:
       WorkList.insert(&MBB);
     while (!WorkList.empty()) {
       auto &MBB = *WorkList.pop_back_val();
-      bool Changed = runOnMachineBasicBlock(MBB, false);
-      if (Changed)
+      bool ChangedFromNonEmit = runOnMachineBasicBlock(MBB, false);
+      if (ChangedFromNonEmit) // Use a different variable name to avoid confusion
         WorkList.insert_range(MBB.successors());
     }
 
@@ -571,10 +646,10 @@ public:
 
     // Make one last pass over all basic blocks to emit s_delay_alu
     // instructions.
-    bool Changed = false;
+    bool ChangedOverall = false; // Use a different variable name
     for (auto &MBB : MF)
-      Changed |= runOnMachineBasicBlock(MBB, true);
-    return Changed;
+      ChangedOverall |= runOnMachineBasicBlock(MBB, true);
+    return ChangedOverall;
   }
 };
 
