@@ -328,6 +328,35 @@ public:
       }
     }
 
+    // ADDED DEBUGGING
+    bool isVOPDContext = (MI.getOpcode() == AMDGPU::V_DUAL_CNDMASK_B32_e32_X_CNDMASK_B32_e32_gfx11);
+    if (DebugThisFunctionForDelay && isVOPDContext) {
+        dbgs() << "DB_DELAY: Inside emitDelayAlu for V_DUAL_CNDMASK (Protecting MI: " << MI << "):\n";
+        dbgs() << "DB_DELAY:   Input DelayInfo was: "; Delay.dump(); dbgs() << "\n";
+        dbgs() << "DB_DELAY:   Final Imm generated: " << Imm << " (0x" << Twine::utohexstr(Imm) << ")\n";
+
+        unsigned instid0 = Imm & 0xf;
+        unsigned instid1 = (Imm >> 7) & 0xf;
+        unsigned skip_val = (Imm >> 4) & 0x7; // Note: skip is usually set when merging, not in initial Imm formation.
+
+        dbgs() << "DB_DELAY:   Decoded Imm: INSTID0(raw=" << instid0 << "), INSTID1(raw=" << instid1 << "), SKIP(raw=" << skip_val << ")\n";
+
+        dbgs() << "DB_DELAY:     INSTID0 meaning: ";
+        if (instid0 <= 3) dbgs() << "VALU_DEP_" << instid0 << "\n";
+        else if (instid0 <= 6) dbgs() << "TRANS_DEP_" << (instid0 - 4) << "\n";
+        else if (instid0 == 7) dbgs() << "Reserved\n";
+        else if (instid0 <= 10) dbgs() << "SALU_CYCLE_DEP_" << (instid0 - 8) << "\n";
+        else dbgs() << "Unknown\n";
+
+        dbgs() << "DB_DELAY:     INSTID1 meaning: ";
+        if (instid1 <= 3) dbgs() << "VALU_DEP_" << instid1 << "\n";
+        else if (instid1 <= 6) dbgs() << "TRANS_DEP_" << (instid1 - 4) << "\n";
+        else if (instid1 == 7) dbgs() << "Reserved\n";
+        else if (instid1 <= 10) dbgs() << "SALU_CYCLE_DEP_" << (instid1 - 8) << "\n";
+        else dbgs() << "Unknown\n";
+    }
+    // END ADDED DEBUGGING
+
     // Don't emit the s_delay_alu instruction if there's nothing to wait for.
     if (!Imm)
       return LastDelayAlu;
@@ -336,20 +365,30 @@ public:
     // try encoding it in the last s_delay_alu that we emitted.
     if (!(Imm & 0x780) && LastDelayAlu) { // If only lower 4 bits (INSTID0) are set
       unsigned Skip = 0;
-      for (auto I = MachineBasicBlock::instr_iterator(LastDelayAlu),
-                E = MachineBasicBlock::instr_iterator(MI);
-           ++I != E;) {
-        if (!I->isBundle() && !I->isMetaInstruction())
-          ++Skip;
+      // For VOPD, the two virtual instructions are back-to-back, so Skip is 0.
+      // For other instructions, calculate the distance.
+      if (MI.getOpcode() !=
+          AMDGPU::V_DUAL_CNDMASK_B32_e32_X_CNDMASK_B32_e32_gfx11) {
+        for (auto I = MachineBasicBlock::instr_iterator(LastDelayAlu),
+                  E = MachineBasicBlock::instr_iterator(MI);
+             ++I != E;) {
+          if (!I->isBundle() && !I->isMetaInstruction())
+            ++Skip;
+        }
       }
+
       if (Skip < 6) { // Max skip is 5 (encoded as 0-5 for skip 0-5)
         MachineOperand &Op = LastDelayAlu->getOperand(0);
-        unsigned LastImm = Op.getImm();
+        unsigned OldImm = Op.getImm();
         // Ensure LastDelayAlu also only had INSTID0 set and no INSTID1/SKIP
-        if ((LastImm & ~0xf) == 0) {
-            LastImm |= (Imm << 7);    // New INSTID0 becomes INSTID1
-            LastImm |= (Skip << 4); // Set skip
-            Op.setImm(LastImm);
+        if ((OldImm & ~0xf) == 0) {
+            unsigned CombinedImm = OldImm;
+            CombinedImm |= (Imm << 7);   // New INSTID0 becomes INSTID1
+            CombinedImm |= (Skip << 4); // Set skip
+            Op.setImm(CombinedImm);
+            if (DebugThisFunctionForDelay && isVOPDContext) {
+                dbgs() << "DB_DELAY:   S_DELAY_ALU merged with previous. Old Imm=" << OldImm << ", New Combined Imm=" << CombinedImm << "\n";
+            }
             return nullptr; // Modified existing, don't return the potential NewDelayAlu
         }
       }
@@ -358,6 +397,9 @@ public:
     auto &MBB = *MI.getParent();
     MachineInstr *NewDelayAlu =
         BuildMI(MBB, MI, DebugLoc(), SII->get(AMDGPU::S_DELAY_ALU)).addImm(Imm);
+    if (DebugThisFunctionForDelay && isVOPDContext) {
+        dbgs() << "DB_DELAY:   New S_DELAY_ALU emitted with Imm=" << Imm << "\n";
+    }
 
     // Remember the s_delay_alu for next time if there is still room in it to
     // encode another delay (i.e., only INSTID0 was set).
@@ -415,55 +457,62 @@ public:
         State = DelayState();
       } else if (isTargetVOPD) {
         DelayInfo DelayForOpX_Emission;
-        DenseSet<unsigned> ConsumedUnitsOpX_Emission;
+        DenseSet<unsigned> ConsumedUnitsOpX_ForStateUpdate;
 
-        // --- Determine Delay for Virtual OpX from current State (for emission) ---
-        for (MCRegUnit Unit : TRI->regunits(MI.getOperand(2).getReg())) { // src0X
+        for (MCRegUnit Unit : TRI->regunits(MI.getOperand(2).getReg())) {
             auto It = State.find(Unit);
-            if (It != State.end()) { DelayForOpX_Emission.merge(It->second); ConsumedUnitsOpX_Emission.insert(Unit); }
+            if (It != State.end()) { DelayForOpX_Emission.merge(It->second); ConsumedUnitsOpX_ForStateUpdate.insert(Unit); }
         }
-        for (MCRegUnit Unit : TRI->regunits(MI.getOperand(3).getReg())) { // src1X
+        for (MCRegUnit Unit : TRI->regunits(MI.getOperand(3).getReg())) {
             auto It = State.find(Unit);
-            if (It != State.end()) { DelayForOpX_Emission.merge(It->second); ConsumedUnitsOpX_Emission.insert(Unit); }
+            if (It != State.end()) { DelayForOpX_Emission.merge(It->second); ConsumedUnitsOpX_ForStateUpdate.insert(Unit); }
         }
         if(isTrackedInstruction) {dbgs() << "DB_DELAY: DelayInfo for OpX Emission (from initial VOPD state): "; DelayForOpX_Emission.dump(); dbgs() << "\n";}
 
         if (Emit && !MI.isBundledWithPred()) {
+           if (DebugThisFunctionForDelay && isTrackedInstruction) {
+               dbgs() << "DB_DELAY: --> Calling emitDelayAlu for VOPD OpX with DelayForOpX_Emission: "; DelayForOpX_Emission.dump(); dbgs() << "\n";
+           }
            LastDelayAlu = emitDelayAlu(MI, DelayForOpX_Emission, LastDelayAlu);
         }
 
-        // --- Create a temporary state to calculate OpY's delay after OpX's virtual execution ---
-        DelayState State_After_OpX_Virtual = State; // Copy current state
-        for (unsigned Unit : ConsumedUnitsOpX_Emission) { State_After_OpX_Virtual.erase(Unit); }
+        DelayState State_For_OpY_EmissionCalc = State;
+        for (unsigned Unit : ConsumedUnitsOpX_ForStateUpdate) { State_For_OpY_EmissionCalc.erase(Unit); }
         unsigned LatencyX_Virtual = SchedModel->computeOperandLatency(&MI, MI.getOperand(0).getOperandNo(), nullptr, 0);
         for (MCRegUnit Unit : TRI->regunits(MI.getOperand(0).getReg())) {
-            State_After_OpX_Virtual[Unit] = DelayInfo(VALU, LatencyX_Virtual);
+            State_For_OpY_EmissionCalc[Unit] = DelayInfo(VALU, LatencyX_Virtual);
         }
-        // If OpX def was SGPR, LastSGPRFromVALU would be updated here if this state was the main one.
-        State_After_OpX_Virtual.advance(VALU, 1); // Simulate OpX execution
-        if(isTrackedInstruction) {dbgs() << "DB_DELAY: Virtual State AFTER OpX (for OpY delay calc):\n"; State_After_OpX_Virtual.dump(TRI);}
+        State_For_OpY_EmissionCalc.advance(VALU, 1);
+        if(isTrackedInstruction) {dbgs() << "DB_DELAY: Temp State for OpY Emission Calc (after virtual OpX):\n"; State_For_OpY_EmissionCalc.dump(TRI);}
 
         DelayInfo DelayForOpY_Emission;
-        DenseSet<unsigned> ConsumedUnitsOpY_Emission; // For OpY's inputs from the virtual state
+        DenseSet<unsigned> ConsumedUnitsOpY_ForStateUpdate;
 
-        // --- Determine Delay for Virtual OpY from the *temporary advanced State_After_OpX_Virtual* (for emission) ---
-        for (MCRegUnit Unit : TRI->regunits(MI.getOperand(4).getReg())) { // src0Y
-            auto It = State_After_OpX_Virtual.find(Unit);
-            if (It != State_After_OpX_Virtual.end()) { DelayForOpY_Emission.merge(It->second); ConsumedUnitsOpY_Emission.insert(Unit); }
+        for (MCRegUnit Unit : TRI->regunits(MI.getOperand(4).getReg())) {
+            auto It = State_For_OpY_EmissionCalc.find(Unit);
+            if (It != State_For_OpY_EmissionCalc.end()) { DelayForOpY_Emission.merge(It->second); ConsumedUnitsOpY_ForStateUpdate.insert(Unit); }
         }
-        for (MCRegUnit Unit : TRI->regunits(MI.getOperand(5).getReg())) { // src1Y
-            auto It = State_After_OpX_Virtual.find(Unit);
-            if (It != State_After_OpX_Virtual.end()) { DelayForOpY_Emission.merge(It->second); ConsumedUnitsOpY_Emission.insert(Unit); }
+        for (MCRegUnit Unit : TRI->regunits(MI.getOperand(5).getReg())) {
+            auto It = State_For_OpY_EmissionCalc.find(Unit);
+            if (It != State_For_OpY_EmissionCalc.end()) { DelayForOpY_Emission.merge(It->second); ConsumedUnitsOpY_ForStateUpdate.insert(Unit); }
         }
-        if(isTrackedInstruction) {dbgs() << "DB_DELAY: DelayInfo for OpY Emission (from state after virtual OpX): "; DelayForOpY_Emission.dump(); dbgs() << "\n";}
+
+        DelayInfo AdjustedDelayForOpY_Emission = DelayForOpY_Emission;
+
+        if(isTrackedInstruction) {
+            dbgs() << "DB_DELAY: Raw DelayInfo for OpY Emission (from state after virtual OpX): "; DelayForOpY_Emission.dump(); dbgs() << "\n";
+            dbgs() << "DB_DELAY: Adjusted DelayInfo for OpY Emission: "; AdjustedDelayForOpY_Emission.dump(); dbgs() << "\n";
+        }
 
         if (Emit && !MI.isBundledWithPred()) {
-           LastDelayAlu = emitDelayAlu(MI, DelayForOpY_Emission, LastDelayAlu);
+           if (DebugThisFunctionForDelay && isTrackedInstruction) {
+               dbgs() << "DB_DELAY: --> Calling emitDelayAlu for VOPD OpY with AdjustedDelayForOpY_Emission: "; AdjustedDelayForOpY_Emission.dump(); dbgs() << "\n";
+           }
+           LastDelayAlu = emitDelayAlu(MI, AdjustedDelayForOpY_Emission, LastDelayAlu);
         }
 
-        // --- Now, update the main 'State' sequentially for actual state propagation ---
-        // 1. OpX actual update on main State
-        for (unsigned Unit : ConsumedUnitsOpX_Emission) { State.erase(Unit); }
+        // --- Main State update proceeds sequentially ---
+        for (unsigned Unit : ConsumedUnitsOpX_ForStateUpdate) { State.erase(Unit); }
         unsigned LatencyX_Actual = SchedModel->computeOperandLatency(&MI, MI.getOperand(0).getOperandNo(), nullptr, 0);
         for (MCRegUnit Unit : TRI->regunits(MI.getOperand(0).getReg())) {
             State[Unit] = DelayInfo(VALU, LatencyX_Actual);
@@ -474,8 +523,7 @@ public:
         State.advance(VALU, 1);
         if(isTrackedInstruction) {dbgs() << "DB_DELAY: Main State AFTER actual OpX exec:\n"; State.dump(TRI);}
 
-        // 2. OpY actual update on main State (which has now seen OpX)
-        for (unsigned Unit : ConsumedUnitsOpY_Emission) { State.erase(Unit); }
+        for (unsigned Unit : ConsumedUnitsOpY_ForStateUpdate) { State.erase(Unit); }
         unsigned LatencyY_Actual = SchedModel->computeOperandLatency(&MI, MI.getOperand(1).getOperandNo(), nullptr, 0);
         for (MCRegUnit Unit : TRI->regunits(MI.getOperand(1).getReg())) {
             State[Unit] = DelayInfo(VALU, LatencyY_Actual);
@@ -500,7 +548,6 @@ public:
 
       if (CurrentMIType != OTHER) {
         DelayInfo DelayForCurrentMI;
-        // Implicit uses are NOT scanned here.
         for (const auto &Op : MI.explicit_uses()) {
           if (Op.isReg()) {
             if (MI.getOpcode() == AMDGPU::V_WRITELANE_B32 && Op.isTied()) continue;
