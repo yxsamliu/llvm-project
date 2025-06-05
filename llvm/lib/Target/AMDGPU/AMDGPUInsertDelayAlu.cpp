@@ -16,6 +16,8 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Support/raw_ostream.h" // Required for dbgs()
+#include <cstdlib>                    // Required for std::getenv
 
 using namespace llvm;
 
@@ -29,6 +31,12 @@ public:
   const TargetRegisterInfo *TRI;
 
   const TargetSchedModel *SchedModel;
+
+  // Debugging state per function run
+  bool DebugThisFunctionForDelay = false;
+  StringRef CurrentFunctionNameForDebug;
+  int VDualCndMaskCounter = 0;
+
 
   // Return true if MI waits for all outstanding VALU instructions to complete.
   static bool instructionWaitsForVALU(const MachineInstr &MI) {
@@ -192,19 +200,35 @@ public:
     }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    void dump() const {
-      if (VALUCycles)
+    void dump() const { // This dump is used by the added debug traces
+      bool HasInfo = false;
+      if (VALUCycles) {
         dbgs() << " VALUCycles=" << (int)VALUCycles;
-      if (VALUNum < VALU_MAX)
+        HasInfo = true;
+      }
+      if (VALUNum < VALU_MAX) {
         dbgs() << " VALUNum=" << (int)VALUNum;
-      if (TRANSCycles)
+        HasInfo = true;
+      }
+      if (TRANSCycles) {
         dbgs() << " TRANSCycles=" << (int)TRANSCycles;
-      if (TRANSNum < TRANS_MAX)
+        HasInfo = true;
+      }
+      if (TRANSNum < TRANS_MAX) {
         dbgs() << " TRANSNum=" << (int)TRANSNum;
-      if (TRANSNumVALU < VALU_MAX)
+        HasInfo = true;
+      }
+      if (TRANSNumVALU < VALU_MAX) {
         dbgs() << " TRANSNumVALU=" << (int)TRANSNumVALU;
-      if (SALUCycles)
+        HasInfo = true;
+      }
+      if (SALUCycles) {
         dbgs() << " SALUCycles=" << (int)SALUCycles;
+        HasInfo = true;
+      }
+      if (!HasInfo) {
+        dbgs() << " (empty)";
+      }
     }
 #endif
   };
@@ -273,7 +297,7 @@ public:
 
   // Emit an s_delay_alu instruction if necessary before MI.
   MachineInstr *emitDelayAlu(MachineInstr &MI, DelayInfo Delay,
-                             MachineInstr *LastDelayAlu) {
+                               MachineInstr *LastDelayAlu) {
     unsigned Imm = 0;
 
     // Wait for a TRANS instruction.
@@ -329,11 +353,11 @@ public:
     }
 
     auto &MBB = *MI.getParent();
-    MachineInstr *DelayAlu =
+    MachineInstr *NewDelayAlu =
         BuildMI(MBB, MI, DebugLoc(), SII->get(AMDGPU::S_DELAY_ALU)).addImm(Imm);
     // Remember the s_delay_alu for next time if there is still room in it to
     // encode another delay.
-    return (Imm & 0x780) ? nullptr : DelayAlu;
+    return (Imm & 0x780) ? nullptr : NewDelayAlu;
   }
 
   bool runOnMachineBasicBlock(MachineBasicBlock &MBB, bool Emit) {
@@ -361,6 +385,16 @@ public:
         continue;
       }
 
+      bool isTrackedInstruction = DebugThisFunctionForDelay && (MI.getOpcode() == AMDGPU::V_DUAL_CNDMASK_B32_e32_X_CNDMASK_B32_e32_gfx11);
+      if (isTrackedInstruction) {
+          VDualCndMaskCounter++;
+          dbgs() << "DB_DELAY: Processing V_DUAL_CNDMASK_B32 #" << VDualCndMaskCounter
+                 << " in function " << CurrentFunctionNameForDebug << "\n";
+          dbgs() << "DB_DELAY: MI: "; MI.dump();
+          dbgs() << "DB_DELAY: State BEFORE processing this MI uses/defs:\n";
+          State.dump(TRI);
+      }
+
       DelayType Type = getDelayType(MI.getDesc().TSFlags);
 
       if (instructionWaitsForSGPRWrites(MI)) {
@@ -372,12 +406,16 @@ public:
         }
       }
 
+      DelayInfo DelayForMI; // Stores the combined delay requirements for MI's uses
+
       if (instructionWaitsForVALU(MI)) {
+        if (isTrackedInstruction) {
+            dbgs() << "DB_DELAY: Instruction waits for all VALU. Clearing DelayState.\n";
+        }
         // Forget about all outstanding VALU delays.
         // TODO: This is overkill since it also forgets about SALU delays.
         State = DelayState();
-      } else if (Type != OTHER) {
-        DelayInfo Delay;
+      } else if (Type != OTHER) { // This instruction itself is a VALU/TRANS/SALU, check its uses
         // TODO: Scan implicit uses too?
         for (const auto &Op : MI.explicit_uses()) {
           if (Op.isReg()) {
@@ -389,8 +427,12 @@ public:
             for (MCRegUnit Unit : TRI->regunits(Op.getReg())) {
               auto It = State.find(Unit);
               if (It != State.end()) {
-                Delay.merge(It->second);
-                State.erase(Unit);
+                if (isTrackedInstruction) {
+                    dbgs() << "DB_DELAY: Merging DelayInfo for used RegUnit " << printRegUnit(Unit, TRI) << ": ";
+                    It->second.dump(); dbgs() << "\n";
+                }
+                DelayForMI.merge(It->second);
+                State.erase(Unit); // Consumed by this instruction
               }
             }
           }
@@ -407,33 +449,77 @@ public:
         }
 
         if (Emit && !MI.isBundledWithPred()) {
-          // TODO: For VALU->SALU delays should we use s_delay_alu or s_nop or
-          // just ignore them?
-          LastDelayAlu = emitDelayAlu(MI, Delay, LastDelayAlu);
-        }
-      }
+          if (isTrackedInstruction) {
+              dbgs() << "DB_DELAY: Considering S_DELAY_ALU for current V_DUAL_CNDMASK_B32.\n";
+              dbgs() << "DB_DELAY: DelayInfo calculated for its uses: "; DelayForMI.dump(); dbgs() << "\n";
+              dbgs() << "DB_DELAY: LastDelayAlu before emitDelayAlu call: ";
+              if (LastDelayAlu) LastDelayAlu->dump(); else dbgs() << "nullptr\n";
+          }
 
+          MachineInstr* ArgLastDelayAlu = LastDelayAlu;
+          unsigned ArgLastDelayAluImm = 0;
+          if (ArgLastDelayAlu) ArgLastDelayAluImm = ArgLastDelayAlu->getOperand(0).getImm();
+
+          MachineInstr* ResultFromEmit = emitDelayAlu(MI, DelayForMI, ArgLastDelayAlu);
+
+          if (isTrackedInstruction) {
+            bool ActionTaken = false;
+            // Check if ArgLastDelayAlu (the one passed in) was modified
+            if (ArgLastDelayAlu && ArgLastDelayAlu->getOperand(0).getImm() != ArgLastDelayAluImm) {
+                dbgs() << "DB_DELAY: Modified existing S_DELAY_ALU (passed as LastDelayAlu):\n";
+                dbgs() << "DB_DELAY: Old Imm: 0x" << Twine::utohexstr(ArgLastDelayAluImm)
+                       << ", New Imm: 0x" << Twine::utohexstr(ArgLastDelayAlu->getOperand(0).getImm()) << "\n";
+                ArgLastDelayAlu->dump();
+                ActionTaken = true;
+            // Check if a new instruction was inserted before MI
+            } else if (MI.getPrevNode() && MI.getPrevNode()->getOpcode() == AMDGPU::S_DELAY_ALU &&
+                       MI.getPrevNode() != ArgLastDelayAlu) {
+                dbgs() << "DB_DELAY: Inserted new S_DELAY_ALU before V_DUAL_CNDMASK_B32:\n";
+                MI.getPrevNode()->dump();
+                ActionTaken = true;
+            }
+
+            if (!ActionTaken) {
+                dbgs() << "DB_DELAY: No S_DELAY_ALU inserted or modified for V_DUAL_CNDMASK_B32 by this call.\n";
+            }
+            dbgs() << "DB_DELAY: emitDelayAlu call returned: ";
+            if (ResultFromEmit) ResultFromEmit->dump(); else dbgs() << "nullptr\n";
+          }
+          LastDelayAlu = ResultFromEmit; // Update LastDelayAlu with the result
+        }
+      } // end if (Type != OTHER) for processing uses and emitting s_delay_alu
+
+      // Process defs of the current instruction MI
       if (Type != OTHER) {
         // TODO: Scan implicit defs too?
         for (const auto &Op : MI.defs()) {
           unsigned Latency = SchedModel->computeOperandLatency(
               &MI, Op.getOperandNo(), nullptr, 0);
-          for (MCRegUnit Unit : TRI->regunits(Op.getReg()))
+          if (isTrackedInstruction) {
+              dbgs() << "DB_DELAY: Def operand " << Op.getOperandNo() << " (Reg " << printReg(Op.getReg(), TRI)
+                     << ") has Latency " << Latency << ". Updating State for its RegUnits.\n";
+          }
+          for (MCRegUnit Unit : TRI->regunits(Op.getReg())) {
             State[Unit] = DelayInfo(Type, Latency);
+            if (isTrackedInstruction) {
+                 dbgs() << "DB_DELAY: State for RegUnit " << printRegUnit(Unit, TRI) << " set to: ";
+                 State[Unit].dump(); dbgs() << "\n";
+            }
+          }
         }
       }
 
       // Advance by the number of cycles it takes to issue this instruction.
-      // TODO: Use a more advanced model that accounts for instructions that
-      // take multiple cycles to issue on a particular pipeline.
       unsigned Cycles = SIInstrInfo::getNumWaitStates(MI);
-      // TODO: In wave64 mode, double the number of cycles for VALU and VMEM
-      // instructions on the assumption that they will usually have to be issued
-      // twice?
       State.advance(Type, Cycles);
 
+      if (isTrackedInstruction) {
+          dbgs() << "DB_DELAY: State AFTER processing MI defs and advancing state by " << Cycles << " cycles (instr type " << Type << "):\n";
+          State.dump(TRI);
+          dbgs() << "-----\n";
+      }
       LLVM_DEBUG(dbgs() << "  State after " << MI; State.dump(TRI););
-    }
+    } // end loop over MI
 
     if (Emit) {
       assert(State == BlockState[&MBB] &&
@@ -452,6 +538,18 @@ public:
     const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
     if (!ST.hasDelayAlu())
       return false;
+
+    // Initialize debugging state for this function run
+    CurrentFunctionNameForDebug = MF.getName();
+    DebugThisFunctionForDelay = false;
+    VDualCndMaskCounter = 0; // Reset counter for each function
+    if (const char *EnvVar = std::getenv("DB_DELAY")) {
+      if (CurrentFunctionNameForDebug == EnvVar) {
+        DebugThisFunctionForDelay = true;
+        dbgs() << "DB_DELAY: Debugging enabled for function: " << EnvVar << "\n";
+      }
+    }
+
 
     SII = ST.getInstrInfo();
     TRI = ST.getRegisterInfo();
@@ -494,7 +592,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
       return false;
-    AMDGPUInsertDelayAlu Impl;
+    AMDGPUInsertDelayAlu Impl; // Impl is created per-function call
     return Impl.run(MF);
   }
 };
@@ -502,8 +600,9 @@ public:
 
 PreservedAnalyses
 AMDGPUInsertDelayAluPass::run(MachineFunction &MF,
-                              MachineFunctionAnalysisManager &MFAM) {
-  if (!AMDGPUInsertDelayAlu().run(MF))
+                               MachineFunctionAnalysisManager &MFAM) {
+  AMDGPUInsertDelayAlu Impl; // Impl is created per-function call
+  if (!Impl.run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
