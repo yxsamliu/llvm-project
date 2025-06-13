@@ -9258,12 +9258,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Args.MakeArgString(Twine("--linker-path=") +
                                        LinkCommand->getExecutable()));
 
-  // We use action type to differentiate two use cases of the linker wrapper.
-  // TY_Image for normal linker wrapper work.
-  // TY_Object for HIP fno-gpu-rdc embedding device binary in a relocatable
-  // object.
-  assert(JA.getType() == types::TY_Object || JA.getType() == types::TY_Image);
-  if (JA.getType() == types::TY_Object) {
+  if (JA.getKind() == Action::RelocatableLinkerWrapperJobClass) {
     CmdArgs.append({"-o", Output.getFilename()});
     for (auto Input : Inputs)
       CmdArgs.push_back(Input.getFilename());

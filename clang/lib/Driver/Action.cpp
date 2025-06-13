@@ -46,6 +46,8 @@ const char *Action::getClassName(ActionClass AC) {
     return "clang-offload-packager";
   case LinkerWrapperJobClass:
     return "clang-linker-wrapper";
+  case RelocatableLinkerWrapperJobClass:
+    return "clang-relocatable-linker-wrapper";
   case StaticLibJobClass:
     return "static-lib-linker";
   case BinaryAnalyzeJobClass:
@@ -451,6 +453,12 @@ void LinkerWrapperJobAction::anchor() {}
 LinkerWrapperJobAction::LinkerWrapperJobAction(ActionList &Inputs,
                                                types::ID Type)
     : JobAction(LinkerWrapperJobClass, Inputs, Type) {}
+
+void RelocatableLinkerWrapperJobAction::anchor() {}
+
+RelocatableLinkerWrapperJobAction::RelocatableLinkerWrapperJobAction(
+    ActionList &Inputs, types::ID Type)
+    : JobAction(RelocatableLinkerWrapperJobClass, Inputs, Type) {}
 
 void StaticLibJobAction::anchor() {}
 

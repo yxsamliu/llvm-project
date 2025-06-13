@@ -73,6 +73,7 @@ public:
     OffloadUnbundlingJobClass,
     OffloadPackagerJobClass,
     LinkerWrapperJobClass,
+    RelocatableLinkerWrapperJobClass,
     StaticLibJobClass,
     BinaryAnalyzeJobClass,
     BinaryTranslatorJobClass,
@@ -651,6 +652,17 @@ public:
 
   static bool classof(const Action *A) {
     return A->getKind() == LinkerWrapperJobClass;
+  }
+};
+
+class RelocatableLinkerWrapperJobAction : public JobAction {
+  void anchor() override;
+
+public:
+  RelocatableLinkerWrapperJobAction(ActionList &Inputs, types::ID Type);
+
+  static bool classof(const Action *A) {
+    return A->getKind() == RelocatableLinkerWrapperJobClass;
   }
 };
 

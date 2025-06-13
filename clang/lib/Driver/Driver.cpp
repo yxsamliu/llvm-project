@@ -4887,7 +4887,8 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
         HostAction->getType() == types::TY_LTO_BC)) &&
       HIPNoRDC && !offloadDeviceOnly()) {
     ActionList AL{HostAction};
-    HostAction = C.MakeAction<LinkerWrapperJobAction>(AL, types::TY_Object);
+    HostAction =
+        C.MakeAction<RelocatableLinkerWrapperJobAction>(AL, types::TY_Object);
     HostAction->propagateHostOffloadInfo(C.getActiveOffloadKinds(),
                                          /*BoundArch=*/nullptr);
     return HostAction;

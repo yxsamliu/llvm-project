@@ -652,6 +652,7 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
   case Action::OffloadPackagerJobClass:
     return getOffloadPackager();
   case Action::LinkerWrapperJobClass:
+  case Action::RelocatableLinkerWrapperJobClass:
     return getLinkerWrapper();
   }
 

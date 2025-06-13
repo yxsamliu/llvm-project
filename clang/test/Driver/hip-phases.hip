@@ -54,8 +54,8 @@
 // NEWR-DAG: [[P12:[0-9]+]]: backend, {[[P11]]}, assembler, (host-[[T]])
 // NEWR-DAG: [[P13:[0-9]+]]: assembler, {[[P12]]}, object, (host-[[T]])
 // OLDN-DAG: [[P14:[0-9]+]]: linker, {[[P13]]}, image, (host-[[T]])
-// NEWN-DAG: [[P14:[0-9]+]]: clang-linker-wrapper, {[[P13]]}, object, (host-[[T]])
-// NEWLTO-DAG: [[P14:[0-9]+]]: clang-linker-wrapper, {[[P13]]}, object, (host-[[T]])
+// NEWN-DAG: [[P14:[0-9]+]]: clang-relocatable-linker-wrapper, {[[P13]]}, object, (host-[[T]])
+// NEWLTO-DAG: [[P14:[0-9]+]]: clang-relocatable-linker-wrapper, {[[P13]]}, object, (host-[[T]])
 // OLDR-DAG: [[P14:[0-9]+]]: linker, {[[P13]], [[P11]]}, image, (host-[[T]])
 // NEWR-DAG: [[P14:[0-9]+]]: clang-linker-wrapper, {[[P13]]}, image, (host-[[T]])
 // NEWN-DAG: [[P15:[0-9]+]]: linker, {[[P14]]}, image
