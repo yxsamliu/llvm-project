@@ -41,6 +41,8 @@
 #include <utility>
 
 using namespace llvm;
+static uint64_t evaluateFixupCounter = 0;
+static std::map<const MCFragment *, uint64_t> fragmentFixupCounts;
 
 namespace llvm {
 class MCSubtargetInfo;
@@ -148,7 +150,13 @@ bool MCAssembler::evaluateFixup(const MCFragment *DF, const MCFixup &Fixup,
                                 bool RecordReloc,
                                 MutableArrayRef<char> Contents) const {
   ++stats::evaluateFixup;
-
+  ++evaluateFixupCounter;
+  fragmentFixupCounts[DF]++;
+    dbgs() << "MCAssembler::evaluateFixup call #" << evaluateFixupCounter << "\n"
+           << "  - Processing MCFragment* DF: " << DF << "\n"
+           << "  - This fragment has been processed " << fragmentFixupCounts[DF] << " times.\n"
+           << "  - Fixup Kind: " << getBackend().getFixupKindInfo(Fixup.getKind()).Name << "\n"
+           << "  - Fixup Offset in Fragment: " << Fixup.getOffset() << "\n";
   // FIXME: This code has some duplication with recordRelocation. We should
   // probably merge the two into a single callback that tries to evaluate a
   // fixup and records a relocation if one is needed.

@@ -22,10 +22,11 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/TargetParser/TargetParser.h"
+#include "llvm/MC/MCInstrInfo.h"        // Required to get instruction names
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
-
+#define LLVM_DEBUG(x) x
 namespace {
 
 class AMDGPUAsmBackend : public MCAsmBackend {
@@ -56,14 +57,34 @@ public:
 } //End anonymous namespace
 
 void AMDGPUAsmBackend::relaxInstruction(MCInst &Inst,
-                                        const MCSubtargetInfo &STI) const {
+                                      const MCSubtargetInfo &STI) const {
+  // --- Start of added debug instrumentation ---
+  //const MCInstrInfo *MII = STI.getTargetMachine().getMCInstrInfo();
+  unsigned OriginalOpcode = Inst.getOpcode();
+
+  LLVM_DEBUG(
+    dbgs() << "AMDGPUAsmBackend::relaxInstruction:\n";
+    Inst.dump();
+//           << "  - Relaxing instruction: " << MII->getName(OriginalOpcode)
+//           << " (Opcode: " << OriginalOpcode << ")\n";
+  );
+  // ---
+
   MCInst Res;
   unsigned RelaxedOpcode = AMDGPU::getSOPPWithRelaxation(Inst.getOpcode());
   Res.setOpcode(RelaxedOpcode);
   Res.addOperand(Inst.getOperand(0));
   Inst = std::move(Res);
-}
 
+  // --- Start of added debug instrumentation ---
+  LLVM_DEBUG(
+    dbgs() << "  - Replaced with:      ";
+  Inst.dump();
+  // << MII->getName(RelaxedOpcode)
+  //         << " (Opcode: " << RelaxedOpcode << ")\n";
+  );
+  // ---
+}
 bool AMDGPUAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
                                             uint64_t Value) const {
   // if the branch target has an offset of x3f this needs to be relaxed to
@@ -112,9 +133,16 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   switch (Fixup.getTargetKind()) {
   case AMDGPU::fixup_si_sopp_br: {
     int64_t BrImm = (SignedValue - 4) / 4;
+    llvm::dbgs() << "adjustFixupValue "
+        << "Offset: " << Fixup.getOffset()
+        << "Expr: "; Fixup.getValue()->dump();
+    llvm::dbgs() << " replace Value: " << SignedValue
+        << " BrImm: " << BrImm << "\n";
 
-    if (Ctx && !isInt<16>(BrImm))
+    if (Ctx && !isInt<16>(BrImm)) {
       Ctx->reportError(Fixup.getLoc(), "branch size exceeds simm16");
+      assert(0);
+    }
 
     return BrImm;
   }

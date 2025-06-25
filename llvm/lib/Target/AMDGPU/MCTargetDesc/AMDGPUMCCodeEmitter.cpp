@@ -450,7 +450,11 @@ void AMDGPUMCCodeEmitter::getSOPPBrEncoding(const MCInst &MI, unsigned OpNo,
   if (MO.isExpr()) {
     const MCExpr *Expr = MO.getExpr();
     MCFixupKind Kind = (MCFixupKind)AMDGPU::fixup_si_sopp_br;
-    Fixups.push_back(MCFixup::create(0, Expr, Kind, MI.getLoc()));
+    MCFixup FixUp = MCFixup::create(0, Expr, Kind, MI.getLoc());
+    llvm::dbgs() << " FixUp created: "
+        << " Offset: " << FixUp.getOffset()
+        << " Expr: "; FixUp.getValue()->dump();
+    Fixups.push_back(FixUp);
     Op = APInt::getZero(96);
   } else {
     getMachineOpValue(MI, MO, Op, Fixups, STI);
