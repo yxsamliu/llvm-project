@@ -77,6 +77,7 @@ set(PROFILE_SOURCES
   InstrProfilingPlatformLinux.c
   InstrProfilingPlatformOther.c
   InstrProfilingPlatformWindows.c
+  InstrProfilingPlatformROCm.c
   InstrProfilingRuntime.cpp
   InstrProfilingUtil.c
   )

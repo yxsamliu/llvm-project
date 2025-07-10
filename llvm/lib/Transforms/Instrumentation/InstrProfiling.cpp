@@ -416,6 +416,10 @@ private:
   /// Create a static initializer for our data, on platforms that need it,
   /// and for any profile output file that was specified.
   void emitInitialization();
+  void createProfileSectionSymbols();
+
+  /// Create HIP device variable registration for profile symbols
+  void createHIPDeviceVariableRegistration();
 };
 
 ///
@@ -994,6 +998,13 @@ bool InstrLowerer::lower() {
   emitVNodes();
   emitNameData();
   emitVTableNames();
+
+  // Create start/stop symbols for device code profile sections
+  createProfileSectionSymbols();
+
+  // Create host shadow variables and registration calls for HIP device profile
+  // symbols
+  createHIPDeviceVariableRegistration();
 
   // Emit runtime hook for the cases where the target does not unconditionally
   // require pulling in profile runtime, and coverage is enabled on code that is
@@ -2165,3 +2176,280 @@ void createProfileSamplingVar(Module &M) {
   appendToCompilerUsed(M, SamplingVar);
 }
 } // namespace llvm
+
+namespace {
+// Create __start_ and __stop_ symbols for profile sections when targeting
+// device code and register them as HIP device variables
+void InstrLowerer::createProfileSectionSymbols() {
+  llvm::errs() << "DEBUG: createProfileSectionSymbols() called\n";
+
+  // Only create symbols for device targets (GPU)
+  if (!isGPUProfTarget(M)) {
+    llvm::errs() << "DEBUG: Not a GPU target, skipping symbol creation\n";
+    return;
+  }
+
+  llvm::errs()
+      << "DEBUG: GPU target detected, creating profile section symbols\n";
+
+  auto createSectionSymbols = [&](StringRef SectionName)
+      -> std::pair<GlobalVariable *, GlobalVariable *> {
+    llvm::errs() << "DEBUG: Creating symbols for section: " << SectionName
+                 << "\n";
+
+    // Follow the exact pattern from offloading::getOffloadEntryArray
+    auto *ZeroInitializer = ConstantAggregateZero::get(
+        ArrayType::get(Type::getInt8Ty(M.getContext()), 0u));
+    auto *EntryType = ArrayType::get(Type::getInt8Ty(M.getContext()), 0);
+    auto Linkage = GlobalValue::ExternalLinkage;
+
+    auto *StartSym =
+        new GlobalVariable(M, EntryType, /*isConstant=*/true, Linkage,
+                           /*Initializer=*/nullptr, "__start_" + SectionName);
+    StartSym->setVisibility(GlobalValue::ProtectedVisibility);
+    llvm::errs() << "DEBUG: Created start symbol: __start_" << SectionName
+                 << " linkage=" << StartSym->getLinkage()
+                 << " visibility=" << StartSym->getVisibility() << "\n";
+
+    auto *StopSym =
+        new GlobalVariable(M, EntryType, /*isConstant=*/true, Linkage,
+                           /*Initializer=*/nullptr, "__stop_" + SectionName);
+    StopSym->setVisibility(GlobalValue::ProtectedVisibility);
+    llvm::errs() << "DEBUG: Created stop symbol: __stop_" << SectionName
+                 << " linkage=" << StopSym->getLinkage()
+                 << " visibility=" << StopSym->getVisibility() << "\n";
+
+    // For ELF (AMDGPU), create dummy variable to force linker to provide
+    // symbols
+    auto *DummyEntry = new GlobalVariable(
+        M, ZeroInitializer->getType(), true, GlobalVariable::InternalLinkage,
+        ZeroInitializer, "__dummy." + SectionName);
+    DummyEntry->setSection(SectionName);
+    DummyEntry->setAlignment(Align(8));
+    CompilerUsedVars.push_back(DummyEntry);
+
+    // Create a struct that holds pointers to the start/stop symbols to keep
+    // them alive
+    unsigned AS = StartSym->getType()->getPointerAddressSpace(); // usually 1
+    auto *Int8PtrTy = PointerType::get(M.getContext(), AS);
+
+    auto *StructTy =
+        StructType::get(M.getContext(), {Int8PtrTy, Int8PtrTy}); // not packed
+
+    // Get addresses of the start/stop symbols using
+    // ConstantExpr::getGetElementPtr
+    auto *StartAddr = ConstantExpr::getGetElementPtr(
+        EntryType, StartSym,
+        {ConstantInt::get(Type::getInt32Ty(M.getContext()), 0)});
+    auto *StopAddr = ConstantExpr::getGetElementPtr(
+        EntryType, StopSym,
+        {ConstantInt::get(Type::getInt32Ty(M.getContext()), 0)});
+
+    // Cast to i8* for the struct
+    auto *StartPtr = ConstantExpr::getBitCast(StartAddr, Int8PtrTy);
+    auto *StopPtr = ConstantExpr::getBitCast(StopAddr, Int8PtrTy);
+
+    auto *StructInit = ConstantStruct::get(StructTy, {StartPtr, StopPtr});
+
+    auto *RefStruct =
+        new GlobalVariable(M, StructTy, true, GlobalVariable::InternalLinkage,
+                           StructInit, "__ref_struct." + SectionName);
+    CompilerUsedVars.push_back(RefStruct);
+
+    llvm::errs() << "DEBUG: Created reference struct with addresses to keep "
+                    "symbols alive\n";
+
+    return std::make_pair(StartSym, StopSym);
+  };
+
+  // Create symbols for the three main profile sections
+  // Store the start/stop symbols for creating the unified structure
+  std::vector<GlobalVariable *> StartSymbols;
+  std::vector<GlobalVariable *> StopSymbols;
+
+  auto createSectionSymbolsAndStore = [&](StringRef SectionName) {
+    auto [StartSym, StopSym] = createSectionSymbols(SectionName);
+    StartSymbols.push_back(StartSym);
+    StopSymbols.push_back(StopSym);
+  };
+
+  createSectionSymbolsAndStore("__llvm_prf_cnts");
+  createSectionSymbolsAndStore("__llvm_prf_data");
+  createSectionSymbolsAndStore("__llvm_prf_names");
+
+  // Create unified structure __llvm_offload_prf containing all start/stop
+  // symbols
+  std::vector<Type *> StructFields;
+  std::vector<Constant *> StructValues;
+
+  // Add all start symbols, then all stop symbols
+  for (auto *StartSym : StartSymbols) {
+    unsigned AS = StartSym->getType()->getPointerAddressSpace(); // usually 1
+    auto *Int8PtrTy = PointerType::get(Type::getInt8Ty(M.getContext()), AS);
+    StructFields.push_back(Int8PtrTy);
+    auto *StartAddr = ConstantExpr::getGetElementPtr(
+        StartSym->getValueType(), StartSym,
+        {ConstantInt::get(Type::getInt32Ty(M.getContext()), 0)});
+    auto *StartPtr = ConstantExpr::getBitCast(StartAddr, Int8PtrTy);
+    StructValues.push_back(StartPtr);
+  }
+  for (auto *StopSym : StopSymbols) {
+    unsigned AS = StopSym->getType()->getPointerAddressSpace(); // usually 1
+    auto *Int8PtrTy = PointerType::get(Type::getInt8Ty(M.getContext()), AS);
+    StructFields.push_back(Int8PtrTy);
+    auto *StopAddr = ConstantExpr::getGetElementPtr(
+        StopSym->getValueType(), StopSym,
+        {ConstantInt::get(Type::getInt32Ty(M.getContext()), 0)});
+    auto *StopPtr = ConstantExpr::getBitCast(StopAddr, Int8PtrTy);
+    StructValues.push_back(StopPtr);
+  }
+
+  auto *UnifiedStructTy = StructType::get(M.getContext(), StructFields);
+  auto *UnifiedStructInit = ConstantStruct::get(UnifiedStructTy, StructValues);
+
+  auto *UnifiedStruct =
+      new GlobalVariable(M, UnifiedStructTy, true, GlobalValue::ExternalLinkage,
+                         UnifiedStructInit, "__llvm_offload_prf");
+  UnifiedStruct->setVisibility(GlobalValue::DefaultVisibility);
+  CompilerUsedVars.push_back(UnifiedStruct);
+
+  llvm::errs() << "DEBUG: Created unified structure __llvm_offload_prf with "
+               << StructFields.size() << " fields\n";
+
+  // llvm::errs() << "DEBUG: Module after creating profile section symbols:\n";
+  // M.dump();
+}
+
+// Create HIP device variable registration for profile symbols
+void InstrLowerer::createHIPDeviceVariableRegistration() {
+  llvm::errs() << "DEBUG: createHIPDeviceVariableRegistration called\n";
+  // Find the existing __hip_register_globals function
+  Function *RegisterGlobalsFunc = M.getFunction("__hip_register_globals");
+  if (!RegisterGlobalsFunc) {
+    llvm::errs() << "DEBUG: No __hip_register_globals function found\n";
+    // No HIP compilation context, skip registration
+    return;
+  }
+  llvm::errs() << "DEBUG: Found __hip_register_globals, proceeding\n";
+
+  // Get or create the __hipRegisterVar declaration
+  auto *VoidTy = Type::getVoidTy(M.getContext());
+  auto *VoidPtrTy = PointerType::getUnqual(M.getContext());
+  auto *Int32Ty = Type::getInt32Ty(M.getContext());
+  auto *Int64Ty = Type::getInt64Ty(M.getContext());
+
+  auto *RegisterVarTy =
+      FunctionType::get(VoidTy,
+                        {VoidPtrTy, VoidPtrTy, VoidPtrTy, VoidPtrTy, Int32Ty,
+                         Int64Ty, Int32Ty, Int32Ty},
+                        false);
+  FunctionCallee RegisterVarFunc =
+      M.getOrInsertFunction("__hipRegisterVar", RegisterVarTy);
+
+  // Profile section names that correspond to device symbols
+  StringRef SectionNames[] = {"__llvm_prf_cnts", "__llvm_prf_data",
+                              "__llvm_prf_names"};
+
+  // Create host shadow variables and registration calls
+  SmallVector<GlobalVariable *, 12> HostShadowVars;
+  SmallVector<Constant *, 12> DeviceNameStrings;
+  auto *ZeroSizedArrayTy = ArrayType::get(Type::getInt8Ty(M.getContext()), 0);
+
+#if 0
+  for (StringRef SectionName : SectionNames) {
+    // Create shadow variables with _offload postfix to avoid conflicts
+
+    // Start symbol shadow variable - these will hold device addresses
+    std::string StartShadowName = ("__start_" + SectionName + "_offload").str();
+    auto *StartShadow = new GlobalVariable(
+        M, ZeroSizedArrayTy, /*isConstant=*/false, GlobalValue::ExternalLinkage,
+        ConstantAggregateZero::get(ZeroSizedArrayTy), StartShadowName);
+    llvm::errs() << "DEBUG: Created shadow variable for " << StartShadowName
+                 << "\n";
+
+    // Stop symbol shadow variable - these will hold device addresses
+    std::string StopShadowName = ("__stop_" + SectionName + "_offload").str();
+    auto *StopShadow = new GlobalVariable(
+        M, ZeroSizedArrayTy, /*isConstant=*/false, GlobalValue::ExternalLinkage,
+        ConstantAggregateZero::get(ZeroSizedArrayTy), StopShadowName);
+    llvm::errs() << "DEBUG: Created shadow variable for " << StopShadowName
+                 << "\n";
+
+    HostShadowVars.push_back(StartShadow);
+    HostShadowVars.push_back(StopShadow);
+
+    // Create device name strings (without _offload postfix - these are the
+    // actual device symbol names)
+    std::string StartDeviceName = ("__start_" + SectionName).str();
+    std::string StopDeviceName = ("__stop_" + SectionName).str();
+
+    auto *StartNameStr =
+        ConstantDataArray::getString(M.getContext(), StartDeviceName, true);
+    auto *StartNameGlobal = new GlobalVariable(
+        M, StartNameStr->getType(), /*isConstant=*/true,
+        GlobalValue::PrivateLinkage, StartNameStr, StartDeviceName + ".name");
+
+    auto *StopNameStr =
+        ConstantDataArray::getString(M.getContext(), StopDeviceName, true);
+    auto *StopNameGlobal = new GlobalVariable(
+        M, StopNameStr->getType(), /*isConstant=*/true,
+        GlobalValue::PrivateLinkage, StopNameStr, StopDeviceName + ".name");
+
+    DeviceNameStrings.push_back(StartNameGlobal);
+    DeviceNameStrings.push_back(StopNameGlobal);
+  }
+#endif
+  // Also create shadow variable for the unified __llvm_offload_prf structure
+  // Create a struct type that matches the device structure (6 pointers)
+  std::string ShadowName = "__llvm_offload_prf";
+  auto *Int8PtrTy = PointerType::get(Type::getInt8Ty(M.getContext()), 0);
+  std::vector<Type *> ShadowStructFields(6, Int8PtrTy); // 6 pointers
+  auto *ShadowStructTy = StructType::get(M.getContext(), ShadowStructFields);
+  auto *ShadowVar = new GlobalVariable(
+      M, ShadowStructTy, /*isConstant=*/false, GlobalValue::ExternalLinkage,
+      ConstantAggregateZero::get(ShadowStructTy), ShadowName);
+  HostShadowVars.push_back(ShadowVar);
+
+  // Create device name string
+  auto *DeviceNameStr =
+      ConstantDataArray::getString(M.getContext(), "__llvm_offload_prf", true);
+  auto *DeviceNameGlobal = new GlobalVariable(
+      M, DeviceNameStr->getType(), /*isConstant=*/true,
+      GlobalValue::PrivateLinkage, DeviceNameStr, "__llvm_offload_prf.name");
+  DeviceNameStrings.push_back(DeviceNameGlobal);
+
+  llvm::errs() << "DEBUG: Created shadow variable for __llvm_offload_prf\n";
+
+  // Insert registration calls into existing __hip_register_globals function
+  BasicBlock &EntryBB = RegisterGlobalsFunc->getEntryBlock();
+  auto *RetInst = EntryBB.getTerminator();
+  IRBuilder<> Builder(RetInst);
+
+  Value *Handle = RegisterGlobalsFunc->getArg(0);
+
+  // Register the __llvm_offload_prf shadow variable
+  if (!HostShadowVars.empty() && !DeviceNameStrings.empty()) {
+    GlobalVariable *HostShadow = HostShadowVars[0]; // __llvm_offload_prf shadow
+    Constant *DeviceName = DeviceNameStrings[0];
+
+    // __hipRegisterVar(handle, host_shadow, device_name, device_name, extern=0,
+    // size=48, constant=0, global=0) - register the unified structure
+    Builder.CreateCall(
+        RegisterVarFunc,
+        {
+            Handle, Builder.CreatePointerCast(HostShadow, VoidPtrTy),
+            Builder.CreatePointerCast(DeviceName, VoidPtrTy),
+            Builder.CreatePointerCast(DeviceName, VoidPtrTy),
+            Builder.getInt32(0),  // extern = 0
+            Builder.getInt64(48), // size = 48 bytes (6 pointers * 8 bytes)
+            Builder.getInt32(0),  // constant = 0
+            Builder.getInt32(0)   // global = 0
+        });
+
+    llvm::errs() << "DEBUG: Registered __llvm_offload_prf with HIP runtime\n";
+  }
+  // llvm::errs() << "DEBUG: Module after registering profile section
+  // symbols:\n"; M.dump();
+}
+
+} // namespace

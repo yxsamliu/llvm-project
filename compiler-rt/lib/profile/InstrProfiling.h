@@ -344,4 +344,24 @@ extern char INSTR_PROF_PROFILE_NAME_VAR[1]; /* __llvm_profile_filename. */
 
 const __llvm_gcov_init_func_struct *__llvm_profile_begin_covinit();
 const __llvm_gcov_init_func_struct *__llvm_profile_end_covinit();
+
+/* A struct to hold the device pointers and sizes for the profile sections. */
+typedef struct HIPProfileSectionInfo {
+  void *CountersBegin;
+  size_t CountersSize;
+  void *DataBegin;
+  size_t DataSize;
+  void *NamesBegin;
+  size_t NamesSize;
+} HIPProfileSectionInfo;
+
+/*!
+ * \brief Register a HIP module's device-side profile data sections.
+ *
+ * This function is called by the host-side instrumentation code to provide
+ * the runtime with the necessary information to collect profile data from
+ * the device.
+ */
+void __llvm_profile_hip_register_module(HIPProfileSectionInfo *Info);
+
 #endif /* PROFILE_INSTRPROFILING_H_ */
