@@ -52,7 +52,8 @@ int __llvm_profile_hip_collect_device_data(void) {
     return -1;
   }
 
-  // Extract start/stop addresses from the copied structure
+  // Extract start/stop addresses directly from the copied structure
+  // These are direct addresses, not pointers to addresses
   void *dev_cnts_begin = host_offload_prf[0];
   void *dev_data_begin = host_offload_prf[1];
   void *dev_names_begin = host_offload_prf[2];
@@ -64,6 +65,11 @@ int __llvm_profile_hip_collect_device_data(void) {
   printf("DEBUG:   cnts: %p - %p\n", dev_cnts_begin, dev_cnts_end);
   printf("DEBUG:   data: %p - %p\n", dev_data_begin, dev_data_end);
   printf("DEBUG:   names: %p - %p\n", dev_names_begin, dev_names_end);
+
+  printf("DEBUG: Expected addresses based on binary analysis:\n");
+  printf("DEBUG:   cnts: 0x4f98 - 0x4fe0 (should match above)\n");
+  printf("DEBUG:   data: 0x4fe0 - 0x50a0 (should match above)\n");
+  printf("DEBUG:   names: 0x17c0 - 0x17f8 (should match above)\n");
 
   // Calculate sizes
   size_t CountersSize = (char *)dev_cnts_end - (char *)dev_cnts_begin;
