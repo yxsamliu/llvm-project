@@ -162,29 +162,53 @@ int __llvm_profile_hip_collect_device_data(void) {
     // Copy the original data to the new buffer
     memcpy(&RelocatedData[i], &OriginalData[i], sizeof(__llvm_profile_data));
 
-    // Calculate device-relative offsets and convert to host pointers
-    // Cast away const to modify the fields
+    // The CounterPtr from the device is a relative offset from the __llvm_profd
+    // variable. We need to reconstruct the absolute address on the host.
     if (OriginalData[i].CounterPtr) {
-      ptrdiff_t CounterOffset =
-          (char *)OriginalData[i].CounterPtr - (char *)dev_cnts_begin;
+      // This is the relative offset stored on the device.
+      ptrdiff_t DeviceCounterPtrOffset = (ptrdiff_t)OriginalData[i].CounterPtr;
+
+      // This is the absolute address of the data struct on the device.
+      void *DeviceDataStructAddr =
+          (char *)dev_data_begin + (i * sizeof(__llvm_profile_data));
+
+      // This is the absolute address of the counters for this function on the
+      // device.
+      void *DeviceCountersAddr =
+          (char *)DeviceDataStructAddr + DeviceCounterPtrOffset;
+
+      // This is the offset of the function's counters from the start of the
+      // global counter section.
+      ptrdiff_t OffsetIntoCountersSection =
+          (char *)DeviceCountersAddr - (char *)dev_cnts_begin;
+
+      if (OffsetIntoCountersSection < 0 ||
+          (size_t)OffsetIntoCountersSection >= CountersSize) {
+        printf("DEBUG: FATAL: Invalid counter offset %td for func %lu\n",
+               OffsetIntoCountersSection, i);
+      }
+
+      // The profraw format expects the CounterPtr to be the offset relative to
+      // the start of the counters section.
       *((IntPtrT *)&RelocatedData[i].CounterPtr) =
-          (IntPtrT)((char *)Counters + CounterOffset);
-      printf("DEBUG: Relocated CounterPtr[%lu]: offset=%td, new_ptr=%p\n", i,
-             CounterOffset, (void *)RelocatedData[i].CounterPtr);
+          (IntPtrT)(OffsetIntoCountersSection);
+
+      printf("DEBUG: Relocated CounterPtr[%lu]: final_offset=%td, "
+             "stored_value=%p\n",
+             i, OffsetIntoCountersSection, (void *)RelocatedData[i].CounterPtr);
     }
 
-    if (OriginalData[i].BitmapPtr) {
-      ptrdiff_t BitmapOffset =
-          (char *)OriginalData[i].BitmapPtr - (char *)dev_cnts_begin;
-      *((IntPtrT *)&RelocatedData[i].BitmapPtr) =
-          (IntPtrT)((char *)Counters + BitmapOffset);
-      printf("DEBUG: Relocated BitmapPtr[%lu]: offset=%td, new_ptr=%p\n", i,
-             BitmapOffset, (void *)RelocatedData[i].BitmapPtr);
-    }
+    // The bitmap section is not currently collected from the device, so we
+    // cannot relocate this pointer. It must be nulled out to prevent the
+    // profile writer from looking for bitmap data that doesn't exist.
+    *((IntPtrT *)&RelocatedData[i].BitmapPtr) = (IntPtrT)NULL;
+
+    // NULL out other pointers that are not being relocated to avoid confusion.
+    // Their raw device values are invalid on the host.
+    *((IntPtrT *)&RelocatedData[i].FunctionPointer) = (IntPtrT)NULL;
+    *((IntPtrT *)&RelocatedData[i].Values) = (IntPtrT)NULL;
 
     // Note: NameRef is a hash, not a pointer, so no relocation needed
-    // Note: FunctionPointer and Values typically don't need relocation for
-    // basic PGO
   }
 
   printf("DEBUG: Pointer relocations completed\n");
