@@ -80,11 +80,44 @@ int __llvm_profile_hip_collect_device_data(void) {
     return -1;
   }
 
+  // Construct the device-specific filename
+  const char *BaseFilename = __llvm_profile_get_filename();
+  if (!BaseFilename) {
+    printf("DEBUG: Failed to get base profile filename\n");
+    free(HostCountersBegin);
+    free(HostDataBegin);
+    free(HostNamesBegin);
+    return -1;
+  }
+
+  const char *TargetInfix = "amdgcn-amd-amdhsa";
+  char *DeviceFilename = NULL;
+  const char *Extension = strrchr(BaseFilename, '.');
+
+  if (Extension) {
+    size_t BaseLen = Extension - BaseFilename;
+    size_t InfixLen = strlen(TargetInfix);
+    size_t ExtLen = strlen(Extension);
+    DeviceFilename = (char *)malloc(BaseLen + 1 + InfixLen + ExtLen + 1);
+    strncpy(DeviceFilename, BaseFilename, BaseLen);
+    DeviceFilename[BaseLen] = '\0';
+    strcat(DeviceFilename, ".");
+    strcat(DeviceFilename, TargetInfix);
+    strcat(DeviceFilename, Extension);
+  } else {
+    DeviceFilename =
+        (char *)malloc(strlen(BaseFilename) + 1 + strlen(TargetInfix) + 1);
+    strcpy(DeviceFilename, BaseFilename);
+    strcat(DeviceFilename, ".");
+    strcat(DeviceFilename, TargetInfix);
+  }
+  free((void *)BaseFilename);
+
   // Manually write the profile data with a proper header
-  const char *Filename = "amdgcn-amd-amdhsa.default.profraw";
-  FILE *File = fopen(Filename, "w");
+  FILE *File = fopen(DeviceFilename, "w");
   if (!File) {
-    printf("DEBUG: Failed to open %s for writing\n", Filename);
+    printf("DEBUG: Failed to open %s for writing\n", DeviceFilename);
+    free(DeviceFilename);
     free(HostCountersBegin);
     free(HostDataBegin);
     free(HostNamesBegin);
@@ -108,6 +141,7 @@ int __llvm_profile_hip_collect_device_data(void) {
           &PaddingBytesAfterVTable, &PaddingBytesAfterVNames) != 0) {
     printf("DEBUG: Failed to get padding sizes\n");
     fclose(File);
+    free(DeviceFilename);
     free(HostCountersBegin);
     free(HostDataBegin);
     free(HostNamesBegin);
@@ -156,8 +190,7 @@ int __llvm_profile_hip_collect_device_data(void) {
   Header.VNamesSize = 0;
   Header.ValueKindLast = 0; // No value profiling
 
-// Write header and data
-write_error:
+  // Write header and data
   if (fwrite(&Header, sizeof(__llvm_profile_header), 1, File) != 1)
     goto write_error_close;
   if (fwrite(HostDataBegin, 1, DataSize, File) != DataSize)
@@ -174,15 +207,17 @@ write_error:
     goto write_error_close;
 
   fclose(File);
+  free(DeviceFilename);
   free(HostCountersBegin);
   free(HostDataBegin);
   free(HostNamesBegin);
-  printf("DEBUG: Successfully wrote profile data to %s\n", Filename);
+  printf("DEBUG: Successfully wrote profile data to %s\n", DeviceFilename);
   return 0;
 
 write_error_close:
-  printf("DEBUG: Failed to write to %s\n", Filename);
+  printf("DEBUG: Failed to write to %s\n", DeviceFilename);
   fclose(File);
+  free(DeviceFilename);
   free(HostCountersBegin);
   free(HostDataBegin);
   free(HostNamesBegin);
