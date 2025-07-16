@@ -73,6 +73,9 @@ static InstrProfKind getProfileKindFromVersion(uint64_t Version) {
 
 static Expected<std::unique_ptr<MemoryBuffer>>
 setupMemoryBuffer(const Twine &Filename, vfs::FileSystem &FS) {
+  if (getenv("DB_PROF"))
+    printf("DB_PROF: loading profile from %s\n",
+           Filename.getSingleStringRef().data());
   auto BufferOrErr = Filename.str() == "-" ? MemoryBuffer::getSTDIN()
                                            : FS.getBufferForFile(Filename);
   if (std::error_code EC = BufferOrErr.getError())
@@ -876,6 +879,13 @@ Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) 
   // Read raw counts and set Record.
   if (Error E = readRawCounts(Record))
     return error(std::move(E));
+
+  if (getenv("DB_PROF")) {
+    printf("DB_PROF: %s: ", Record.Name.data());
+    for (uint64_t Count : Record.Counts)
+      printf("%lu ", Count);
+    printf("\n");
+  }
 
   // Read raw bitmap bytes and set Record.
   if (Error E = readRawBitmapBytes(Record))
