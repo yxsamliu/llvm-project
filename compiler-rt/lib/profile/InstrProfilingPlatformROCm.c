@@ -8,9 +8,9 @@
 
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
-#include <stdio.h>  /* For printf */
-#include <stdlib.h> /* For malloc and free */
-#include <string.h> /* For memcpy */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* Forward declare the HIP API functions. */
 int hipMemcpyFromSymbol(void *dst, const void *symbol, size_t sizeBytes,
@@ -18,22 +18,13 @@ int hipMemcpyFromSymbol(void *dst, const void *symbol, size_t sizeBytes,
 int hipGetSymbolAddress(void **devPtr, const void *symbol);
 int hipMemcpy(void *dest, void *src, size_t len, int kind /*2=DToH*/);
 
-/* Declare the shadow variables for device profile data. */
-/* These are defined in the host-side IR by the instrumentation pass. */
-extern char __start___llvm_prf_cnts_offload;
-extern char __stop___llvm_prf_cnts_offload;
-extern char __start___llvm_prf_data_offload;
-extern char __stop___llvm_prf_data_offload;
-extern char __start___llvm_prf_names_offload;
-extern char __stop___llvm_prf_names_offload;
-extern char xxx;
 extern char __llvm_offload_prf;
 
 /* Collects the device-side profile data and writes it to a file. */
 int __llvm_profile_hip_collect_device_data(void) {
   printf("DEBUG: __llvm_profile_hip_collect_device_data called\n");
-  void *dev_llvm_offload_prf = NULL;
 
+  void *dev_llvm_offload_prf = NULL;
   if (hipGetSymbolAddress(&dev_llvm_offload_prf, &__llvm_offload_prf) != 0) {
     printf("DEBUG: Failed to get __llvm_offload_prf\n");
     return -1;
@@ -63,94 +54,137 @@ int __llvm_profile_hip_collect_device_data(void) {
     return 0;
   }
 
-  // Allocate one contiguous buffer for all sections, mimicking the layout
-  // expected by the profile writer. Layout: [Counters | Data | Names]
-  size_t TotalSize = CountersSize + DataSize + NamesSize;
-  char *Buffer = (char *)malloc(TotalSize);
-  if (!Buffer) {
-    printf("DEBUG: Failed to allocate host memory for contiguous buffer\n");
+  // Allocate host memory for the device sections
+  char *HostCountersBegin = (char *)malloc(CountersSize);
+  char *HostDataBegin = (char *)malloc(DataSize);
+  char *HostNamesBegin = (char *)malloc(NamesSize);
+
+  if (!HostCountersBegin || !HostDataBegin ||
+      (NamesSize > 0 && !HostNamesBegin)) {
+    printf("DEBUG: Failed to allocate host memory for device sections\n");
+    free(HostCountersBegin);
+    free(HostDataBegin);
+    free(HostNamesBegin);
     return -1;
   }
 
-  // Set up pointers to the regions within the contiguous buffer.
-  char *HostCountersBegin = Buffer;
-  char *HostDataBegin = HostCountersBegin + CountersSize;
-  char *HostNamesBegin = HostDataBegin + DataSize;
-
-  // Copy the raw data from the device into the correct regions of our buffer.
-  if (hipMemcpy(HostCountersBegin, dev_cnts_begin, CountersSize, 2 /*DToH*/) !=
-      0) {
-    printf("DEBUG: Failed to copy counters from device\n");
-    free(Buffer);
-    return -1;
-  }
-  if (hipMemcpy(HostDataBegin, dev_data_begin, DataSize, 2 /*DToH*/) != 0) {
-    printf("DEBUG: Failed to copy data from device\n");
-    free(Buffer);
-    return -1;
-  }
-  if (NamesSize > 0 &&
-      hipMemcpy(HostNamesBegin, dev_names_begin, NamesSize, 2 /*DToH*/) != 0) {
-    printf("DEBUG: Failed to copy names from device\n");
-    free(Buffer);
+  // Copy data from device to host
+  if (hipMemcpy(HostCountersBegin, dev_cnts_begin, CountersSize, 2) != 0 ||
+      hipMemcpy(HostDataBegin, dev_data_begin, DataSize, 2) != 0 ||
+      (NamesSize > 0 &&
+       hipMemcpy(HostNamesBegin, dev_names_begin, NamesSize, 2) != 0)) {
+    printf("DEBUG: Failed to copy profile sections from device\n");
+    free(HostCountersBegin);
+    free(HostDataBegin);
+    free(HostNamesBegin);
     return -1;
   }
 
-  // The data is now in the contiguous buffer. We need to relocate the pointers.
+  // Manually write the profile data with a proper header
+  const char *Filename = "amdgcn-amd-amdhsa.default.profraw";
+  FILE *File = fopen(Filename, "w");
+  if (!File) {
+    printf("DEBUG: Failed to open %s for writing\n", Filename);
+    free(HostCountersBegin);
+    free(HostDataBegin);
+    free(HostNamesBegin);
+    return -1;
+  }
+
+  __llvm_profile_header Header;
+  const uint64_t NumData = DataSize / sizeof(__llvm_profile_data);
+  const uint64_t NumCounters = CountersSize / sizeof(uint64_t);
+  const uint64_t NumBitmapBytes = 0;
+  const uint64_t VTableSectionSize = 0;
+  const uint64_t VNamesSize = 0;
+  uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
+      PaddingBytesAfterBitmapBytes, PaddingBytesAfterNames,
+      PaddingBytesAfterVTable, PaddingBytesAfterVNames;
+
+  if (__llvm_profile_get_padding_sizes_for_counters(
+          DataSize, CountersSize, NumBitmapBytes, NamesSize, VTableSectionSize,
+          VNamesSize, &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
+          &PaddingBytesAfterBitmapBytes, &PaddingBytesAfterNames,
+          &PaddingBytesAfterVTable, &PaddingBytesAfterVNames) != 0) {
+    printf("DEBUG: Failed to get padding sizes\n");
+    fclose(File);
+    free(HostCountersBegin);
+    free(HostDataBegin);
+    free(HostNamesBegin);
+    return -1;
+  }
+
+  // Relocate pointers
   __llvm_profile_data *RelocatedData = (__llvm_profile_data *)HostDataBegin;
-  uint64_t NumData = DataSize / sizeof(__llvm_profile_data);
-
   for (uint64_t i = 0; i < NumData; ++i) {
     if (RelocatedData[i].CounterPtr) {
-      // This is the relative offset stored on the device.
       ptrdiff_t DeviceCounterPtrOffset = (ptrdiff_t)RelocatedData[i].CounterPtr;
-      // This is the absolute address of the data struct on the device.
       void *DeviceDataStructAddr =
           (char *)dev_data_begin + (i * sizeof(__llvm_profile_data));
-      // This is the absolute address of the counters for this function on the
-      // device.
       void *DeviceCountersAddr =
           (char *)DeviceDataStructAddr + DeviceCounterPtrOffset;
-      // This is the offset of the function's counters from the start of the
-      // global device counter section.
       ptrdiff_t OffsetIntoCountersSection =
           (char *)DeviceCountersAddr - (char *)dev_cnts_begin;
 
-      // The writer expects an absolute pointer *within the contiguous buffer*.
-      void *AbsoluteHostCounterPtr =
-          (void *)(HostCountersBegin + OffsetIntoCountersSection);
-
-      *((IntPtrT *)&RelocatedData[i].CounterPtr) =
-          (IntPtrT)AbsoluteHostCounterPtr;
+      ptrdiff_t NewRelativeOffset = DataSize + PaddingBytesBeforeCounters +
+                                    OffsetIntoCountersSection -
+                                    (i * sizeof(__llvm_profile_data));
+      *((uint64_t *)&RelocatedData[i].CounterPtr) = NewRelativeOffset;
     }
-
-    // Null out pointers that are not used or not collected.
-    *((IntPtrT *)&RelocatedData[i].BitmapPtr) = (IntPtrT)NULL;
-    *((IntPtrT *)&RelocatedData[i].FunctionPointer) = (IntPtrT)NULL;
-    *((IntPtrT *)&RelocatedData[i].Values) = (IntPtrT)NULL;
+    *((uint64_t *)&RelocatedData[i].BitmapPtr) = 0;
+    *((uint64_t *)&RelocatedData[i].FunctionPointer) = 0;
+    *((uint64_t *)&RelocatedData[i].Values) = 0;
   }
 
-  // Get the target triple from the environment (a simplification).
-  const char *TargetTriple = getenv("LLVM_TARGET_TRIPLE");
-  if (!TargetTriple) {
-    TargetTriple = "amdgcn-amd-amdhsa";
-  }
+  // Populate header
+  Header.Magic = __llvm_profile_get_magic();
+  Header.Version = __llvm_profile_get_version();
+  Header.BinaryIdsSize = 0; // Not supported for device PGO yet
+  Header.NumData = NumData;
+  Header.PaddingBytesBeforeCounters = PaddingBytesBeforeCounters;
+  Header.NumCounters = NumCounters;
+  Header.PaddingBytesAfterCounters = PaddingBytesAfterCounters;
+  Header.NumBitmapBytes = NumBitmapBytes;
+  Header.PaddingBytesAfterBitmapBytes = PaddingBytesAfterBitmapBytes;
+  Header.NamesSize = NamesSize;
+  Header.CountersDelta = DataSize + PaddingBytesBeforeCounters;
+  Header.BitmapDelta =
+      Header.CountersDelta + CountersSize + PaddingBytesAfterCounters;
+  Header.NamesDelta =
+      Header.BitmapDelta + NumBitmapBytes + PaddingBytesAfterBitmapBytes;
+  Header.NumVTables = 0;
+  Header.VNamesSize = 0;
+  Header.ValueKindLast = 0; // No value profiling
 
-  // The version is usually read from the device, but we'll use the default for
-  // now.
-  uint64_t Version = __llvm_profile_get_version();
+// Write header and data
+write_error:
+  if (fwrite(&Header, sizeof(__llvm_profile_header), 1, File) != 1)
+    goto write_error_close;
+  if (fwrite(HostDataBegin, 1, DataSize, File) != DataSize)
+    goto write_error_close;
+  if (PaddingBytesBeforeCounters > 0 &&
+      fseek(File, PaddingBytesBeforeCounters, SEEK_CUR) != 0)
+    goto write_error_close;
+  if (fwrite(HostCountersBegin, 1, CountersSize, File) != CountersSize)
+    goto write_error_close;
+  if (PaddingBytesAfterCounters > 0 &&
+      fseek(File, PaddingBytesAfterCounters, SEEK_CUR) != 0)
+    goto write_error_close;
+  if (fwrite(HostNamesBegin, 1, NamesSize, File) != NamesSize)
+    goto write_error_close;
 
-  // Invoke the writer with the pointers to our contiguous buffer.
-  int result = __llvm_write_custom_profile(
-      TargetTriple, (const __llvm_profile_data *)HostDataBegin,
-      (const __llvm_profile_data *)(HostDataBegin + DataSize),
-      (const char *)HostCountersBegin,
-      (const char *)(HostCountersBegin + CountersSize),
-      (const char *)HostNamesBegin, (const char *)(HostNamesBegin + NamesSize),
-      &Version);
+  fclose(File);
+  free(HostCountersBegin);
+  free(HostDataBegin);
+  free(HostNamesBegin);
+  printf("DEBUG: Successfully wrote profile data to %s\n", Filename);
+  return 0;
 
-  printf("DEBUG: __llvm_write_custom_profile returned %d\n", result);
-
-  free(Buffer);
-  return result;
+write_error_close:
+  printf("DEBUG: Failed to write to %s\n", Filename);
+  fclose(File);
+  free(HostCountersBegin);
+  free(HostDataBegin);
+  free(HostNamesBegin);
+  return -1;
 }

@@ -18,3 +18,4 @@ export LD_LIBRARY_PATH=/home/yaxunl/git/clr/Debug/install/lib
 #AMD_LOG_LEVEL=3 /opt/rocm/bin/rocgdb ./tmp_rovodev_hip_pgo_test_direct
 
 ls *.profraw
+./assert/bin/llvm-profdata show amdgcn-amd-amdhsa.default.profraw --text --all-functions
