@@ -168,6 +168,12 @@ cl::opt<bool> SpeculativeCounterPromotionToLoop(
              " update can be further/iteratively promoted into an acyclic "
              " region."));
 
+cl::opt<unsigned> OffloadNumProfilingThreads(
+    "offload-num-profiling-threads",
+    cl::desc("Number of threads on the offload device to update profile "
+             "counters. This is supported for AMDGPU only."),
+    cl::init(7));
+
 cl::opt<bool> IterativeCounterPromotion(
     "iterative-counter-promotion", cl::init(true),
     cl::desc("Allow counter promotion across the whole loop nest."));
@@ -332,6 +338,9 @@ private:
 
   /// Replace instrprof.increment with an increment of the appropriate value.
   void lowerIncrement(InstrProfIncrementInst *Inc);
+
+  /// AMDGPU specific implementation of lowerIncrement.
+  void lowerIncrementAMDGPU(InstrProfIncrementInst *Inc);
 
   /// Force emitting of name vars for unused functions.
   void lowerCoverageData(GlobalVariable *CoverageNamesVar);
@@ -1209,6 +1218,10 @@ void InstrLowerer::lowerTimestamp(
 }
 
 void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
+  if (TT.isAMDGPU()) {
+    lowerIncrementAMDGPU(Inc);
+    return;
+  }
   auto *Addr = getCounterAddress(Inc);
 
   IRBuilder<> Builder(Inc);
@@ -1224,6 +1237,36 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
     if (isCounterPromotionEnabled())
       PromotionCandidates.emplace_back(cast<Instruction>(Load), Store);
   }
+  Inc->eraseFromParent();
+}
+
+void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
+  IRBuilder<> Builder(Inc);
+  auto *Ty = Type::getInt32Ty(M.getContext());
+  auto *FnTy = FunctionType::get(Ty, false);
+  FunctionCallee F = M.getOrInsertFunction("llvm.amdgcn.workitem.id.x", FnTy);
+
+  auto *ThreadId = Builder.CreateCall(F, {});
+  auto *NumThreads = Builder.getInt32(OffloadNumProfilingThreads);
+  auto *Cond = Builder.CreateICmpULT(ThreadId, NumThreads);
+  auto *OldCounterIdx = Inc->getIndex();
+  auto *NumCountersPerRegion =
+      Builder.getInt32(OffloadNumProfilingThreads + 1);
+  auto *CounterIdxBase = Builder.CreateMul(OldCounterIdx, NumCountersPerRegion);
+  auto *ThreadCounterIdx = Builder.CreateAdd(CounterIdxBase, ThreadId);
+  auto *NonThreadCounterIdx = Builder.CreateAdd(CounterIdxBase, NumThreads);
+  auto *CounterIdx =
+      Builder.CreateSelect(Cond, ThreadCounterIdx, NonThreadCounterIdx);
+
+  auto *Counters = getOrCreateRegionCounters(Inc);
+  Value *Indices[] = {Builder.getInt32(0), CounterIdx};
+  auto *Addr =
+      Builder.CreateInBoundsGEP(Counters->getValueType(), Counters, Indices);
+
+  Value *IncStep = Inc->getStep();
+  Value *Load = Builder.CreateLoad(IncStep->getType(), Addr, "pgocount");
+  auto *Count = Builder.CreateAdd(Load, Inc->getStep());
+  Builder.CreateStore(Count, Addr);
   Inc->eraseFromParent();
 }
 
@@ -1669,6 +1712,8 @@ GlobalVariable *
 InstrLowerer::createRegionCounters(InstrProfCntrInstBase *Inc, StringRef Name,
                                    GlobalValue::LinkageTypes Linkage) {
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
+  if (TT.isAMDGPU())
+    NumCounters *= (OffloadNumProfilingThreads + 1);
   auto &Ctx = M.getContext();
   GlobalVariable *GV;
   if (isa<InstrProfCoverInst>(Inc)) {
