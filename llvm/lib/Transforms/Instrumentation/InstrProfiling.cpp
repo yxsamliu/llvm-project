@@ -1852,6 +1852,8 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   }
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
+  if (TT.isAMDGPU())
+    NumCounters *= (OffloadNumProfilingThreads + 1);
   auto *CounterPtr = PD.RegionCounters;
 
   uint64_t NumBitmapBytes = PD.NumBitmapBytes;
@@ -1871,6 +1873,10 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   Constant *Int16ArrayVals[IPVK_Last + 1];
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
     Int16ArrayVals[Kind] = ConstantInt::get(Int16Ty, PD.NumValueSites[Kind]);
+
+  uint16_t NumOffloadProfilingThreadsVal = 0;
+  if (TT.isAMDGPU())
+    NumOffloadProfilingThreadsVal = OffloadNumProfilingThreads;
 
   if (isGPUProfTarget(M)) {
     Linkage = GlobalValue::ExternalLinkage;
