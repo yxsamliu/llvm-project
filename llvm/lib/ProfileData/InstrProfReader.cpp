@@ -883,10 +883,29 @@ Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) 
     return error(std::move(E));
 
   if (getenv("DB_PROF")) {
-    printf("DB_PROF: %s: ", Record.Name.data());
-    for (uint64_t Count : Record.Counts)
-      printf("%lu ", Count);
-    printf("\n");
+    printf("DB_PROF: FuncName: %s, FuncHash: %lu, NumCounters: %zu, "
+           "NumOffloadProfilingThreads: %u\n",
+           Record.Name.data(), Record.Hash, Record.Counts.size(),
+           Record.NumOffloadProfilingThreads);
+    if (Record.NumOffloadProfilingThreads > 0) {
+      uint16_t NumThreads = Record.NumOffloadProfilingThreads;
+      size_t NumBasicBlocks = Record.Counts.size() / (NumThreads + 1);
+      for (size_t I = 0; I < NumBasicBlocks; ++I) {
+        uint64_t Sum = 0;
+        printf("  BB %zu:", I);
+        for (uint16_t J = 0; J < NumThreads; ++J) {
+          uint64_t Count = Record.Counts[I * (NumThreads + 1) + J];
+          printf(" %lu", Count);
+          Sum += Count;
+        }
+        printf(", Sum: %lu\n", Sum);
+      }
+    } else {
+      printf("  Counters:");
+      for (uint64_t Count : Record.Counts)
+        printf(" %lu", Count);
+      printf("\n");
+    }
   }
 
   // Read raw bitmap bytes and set Record.

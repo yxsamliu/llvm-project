@@ -1371,6 +1371,39 @@ int __llvm_write_custom_profile(const char *Target,
   if (VersionOverride)
     Version = *VersionOverride;
 
+  if (getenv("DB_PROF")) {
+    const __llvm_profile_data *DI = DataBegin;
+    for (; DI < DataEnd; DI++) {
+      uint64_t FuncHash = DI->FuncHash;
+      const char *FuncName = (const char *)__llvm_profile_get_func_name(DI);
+      uint32_t NumCounters = DI->NumCounters;
+      uint16_t NumThreads = DI->NumOffloadProfilingThreads;
+      printf("DB_PROF: FuncName: %s, FuncHash: %lu, NumCounters: %u, "
+             "NumOffloadProfilingThreads: %u\n",
+             FuncName, FuncHash, NumCounters, NumThreads);
+      if (NumThreads > 0) {
+        uint32_t NumBasicBlocks = NumCounters / (NumThreads + 1);
+        for (uint32_t I = 0; I < NumBasicBlocks; ++I) {
+          uint64_t Sum = 0;
+          printf("  BB %u:", I);
+          for (uint16_t J = 0; J < NumThreads; ++J) {
+            uint64_t Count = __llvm_profile_get_counter_value(
+                DI, I * (NumThreads + 1) + J);
+            printf(" %lu", Count);
+            Sum += Count;
+          }
+          printf(", Sum: %lu\n", Sum);
+        }
+      } else {
+        printf("  Counters:");
+        for (uint32_t I = 0; I < NumCounters; ++I) {
+          printf(" %lu", __llvm_profile_get_counter_value(DI, I));
+        }
+        printf("\n");
+      }
+    }
+  }
+
   /* Write custom data to the file */
   ReturnValue =
       lprofWriteDataImpl(&fileWriter, DataBegin, DataEnd, CountersBegin,
