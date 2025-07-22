@@ -883,8 +883,6 @@ struct InstrProfValueSiteRecord {
 
 /// Profiling information for a single function.
 struct InstrProfRecord {
-  StringRef Name;
-  uint64_t Hash;
   std::vector<uint64_t> Counts;
   std::vector<uint8_t> BitmapBytes;
   uint16_t NumOffloadProfilingThreads = 0;
