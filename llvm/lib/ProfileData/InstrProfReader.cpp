@@ -876,6 +876,8 @@ Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) 
   if (Error E = readFuncHash(Record))
     return error(std::move(E));
 
+  Record.NumOffloadProfilingThreads = swap(Data->NumOffloadProfilingThreads);
+
   // Read raw counts and set Record.
   if (Error E = readRawCounts(Record))
     return error(std::move(E));
@@ -962,6 +964,13 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
     if (D + sizeof(uint64_t) >= End)
       return data_type();
     uint64_t Hash = endian::readNext<uint64_t, llvm::endianness::little>(D);
+
+    uint16_t NumOffloadProfilingThreads = 0;
+    if (GET_VERSION(FormatVersion) >= IndexedInstrProf::ProfVersion::Version12) {
+      if (D + sizeof(uint16_t) > End)
+        return data_type();
+      NumOffloadProfilingThreads = endian::readNext<uint16_t, llvm::endianness::little>(D);
+    }
 
     // Initialize number of counters for GET_VERSION(FormatVersion) == 1.
     uint64_t CountsSize = N / sizeof(uint64_t) - 1;

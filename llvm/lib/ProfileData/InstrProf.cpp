@@ -963,35 +963,53 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
     return;
   }
 
-  // Special handling of the first count as the PseudoCount.
-  CountPseudoKind OtherKind = Other.getCountPseudoKind();
-  CountPseudoKind ThisKind = getCountPseudoKind();
-  if (OtherKind != NotPseudo || ThisKind != NotPseudo) {
-    // We don't allow the merge of a profile with pseudo counts and
-    // a normal profile (i.e. without pesudo counts).
-    // Profile supplimenation should be done after the profile merge.
-    if (OtherKind == NotPseudo || ThisKind == NotPseudo) {
-      Warn(instrprof_error::count_mismatch);
+  if (Other.NumOffloadProfilingThreads > 0) {
+    uint64_t NumThreads = Other.NumOffloadProfilingThreads;
+    for (size_t I = 0, E = Other.Counts.size(); I < E; I += NumThreads + 1) {
+      for (size_t J = 0; J < NumThreads; ++J) {
+        bool Overflowed;
+        uint64_t Value = SaturatingMultiplyAdd(Other.Counts[I + J], Weight,
+                                               Counts[I + J], &Overflowed);
+        if (Value > getInstrMaxCountValue()) {
+          Value = getInstrMaxCountValue();
+          Overflowed = true;
+        }
+        Counts[I + J] = Value;
+        if (Overflowed)
+          Warn(instrprof_error::counter_overflow);
+      }
+    }
+  } else {
+    // Special handling of the first count as the PseudoCount.
+    CountPseudoKind OtherKind = Other.getCountPseudoKind();
+    CountPseudoKind ThisKind = getCountPseudoKind();
+    if (OtherKind != NotPseudo || ThisKind != NotPseudo) {
+      // We don't allow the merge of a profile with pseudo counts and
+      // a normal profile (i.e. without pesudo counts).
+      // Profile supplimenation should be done after the profile merge.
+      if (OtherKind == NotPseudo || ThisKind == NotPseudo) {
+        Warn(instrprof_error::count_mismatch);
+        return;
+      }
+      if (OtherKind == PseudoHot || ThisKind == PseudoHot)
+        setPseudoCount(PseudoHot);
+      else
+        setPseudoCount(PseudoWarm);
       return;
     }
-    if (OtherKind == PseudoHot || ThisKind == PseudoHot)
-      setPseudoCount(PseudoHot);
-    else
-      setPseudoCount(PseudoWarm);
-    return;
   }
 
-  for (size_t I = 0, E = Other.Counts.size(); I < E; ++I) {
-    bool Overflowed;
+    for (size_t I = 0, E = Other.Counts.size(); I < E; ++I) {
+      bool Overflowed;
     uint64_t Value =
         SaturatingMultiplyAdd(Other.Counts[I], Weight, Counts[I], &Overflowed);
-    if (Value > getInstrMaxCountValue()) {
-      Value = getInstrMaxCountValue();
-      Overflowed = true;
-    }
-    Counts[I] = Value;
-    if (Overflowed)
-      Warn(instrprof_error::counter_overflow);
+      if (Value > getInstrMaxCountValue()) {
+        Value = getInstrMaxCountValue();
+        Overflowed = true;
+      }
+      Counts[I] = Value;
+      if (Overflowed)
+        Warn(instrprof_error::counter_overflow);
   }
 
   // If the number of bitmap bytes doesn't match we either have bad data
@@ -1020,15 +1038,32 @@ void InstrProfRecord::scaleValueProfData(
 void InstrProfRecord::scale(uint64_t N, uint64_t D,
                             function_ref<void(instrprof_error)> Warn) {
   assert(D != 0 && "D cannot be 0");
-  for (auto &Count : this->Counts) {
-    bool Overflowed;
-    Count = SaturatingMultiply(Count, N, &Overflowed) / D;
-    if (Count > getInstrMaxCountValue()) {
-      Count = getInstrMaxCountValue();
-      Overflowed = true;
+  if (NumOffloadProfilingThreads > 0) {
+    uint64_t NumThreads = NumOffloadProfilingThreads;
+    for (size_t I = 0, E = Counts.size(); I < E; I += NumThreads + 1) {
+      for (size_t J = 0; J < NumThreads; ++J) {
+        bool Overflowed;
+        uint64_t &Count = this->Counts[I + J];
+        Count = SaturatingMultiply(Count, N, &Overflowed) / D;
+        if (Count > getInstrMaxCountValue()) {
+          Count = getInstrMaxCountValue();
+          Overflowed = true;
+        }
+        if (Overflowed)
+          Warn(instrprof_error::counter_overflow);
+      }
     }
-    if (Overflowed)
-      Warn(instrprof_error::counter_overflow);
+  } else {
+    for (auto &Count : this->Counts) {
+      bool Overflowed;
+      Count = SaturatingMultiply(Count, N, &Overflowed) / D;
+      if (Count > getInstrMaxCountValue()) {
+        Count = getInstrMaxCountValue();
+        Overflowed = true;
+      }
+      if (Overflowed)
+        Warn(instrprof_error::counter_overflow);
+    }
   }
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
     scaleValueProfData(Kind, N, D, Warn);

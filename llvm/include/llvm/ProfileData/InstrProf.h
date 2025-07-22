@@ -883,8 +883,11 @@ struct InstrProfValueSiteRecord {
 
 /// Profiling information for a single function.
 struct InstrProfRecord {
+  StringRef Name;
+  uint64_t Hash;
   std::vector<uint64_t> Counts;
   std::vector<uint8_t> BitmapBytes;
+  uint16_t NumOffloadProfilingThreads = 0;
 
   InstrProfRecord() = default;
   InstrProfRecord(std::vector<uint64_t> Counts) : Counts(std::move(Counts)) {}
@@ -1047,6 +1050,7 @@ private:
 struct NamedInstrProfRecord : InstrProfRecord {
   StringRef Name;
   uint64_t Hash;
+  uint16_t NumOffloadProfilingThreads = 0;
 
   // We reserve this bit as the flag for context sensitive profile record.
   static const int CS_FLAG_IN_FUNC_HASH = 60;
