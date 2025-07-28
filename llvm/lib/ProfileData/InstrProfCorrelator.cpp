@@ -300,7 +300,7 @@ void InstrProfCorrelatorImpl<IntPtrT>::addDataProbe(uint64_t NameRef,
       maybeSwap<uint32_t>(NumCounters),
       /*NumValueSites=*/{maybeSwap<uint16_t>(0), maybeSwap<uint16_t>(0)},
       // TODO: MC/DC is not yet supported.
-      /*NumBitmapBytes=*/maybeSwap<uint32_t>(0),
+      /*NumBitmapBytes=*/maybeSwap<uint16_t>(0),
   });
 }
 
