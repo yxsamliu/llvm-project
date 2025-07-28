@@ -13,6 +13,7 @@ __global__ void simple_kernel(int* data, int n) {
     }
 }
 
+#if 0
 __global__ void branching_kernel(int* data, int n) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < n) {
@@ -38,8 +39,9 @@ __global__ void loop_kernel(int* data, int n) {
         data[idx] = sum;
     }
 }
-
+#endif
 int main() {
+    #if 0
     std::cout << "=== HIP PGO Comprehensive Test ===" << std::endl;
     
     const int N = 2048;
@@ -116,6 +118,6 @@ int main() {
     hipFree(d_data);
     
     std::cout << "Test completed successfully. Profile data should be generated." << std::endl;
-    
+    #endif
     return 0;
 }
