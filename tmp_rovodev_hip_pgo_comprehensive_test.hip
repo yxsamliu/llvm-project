@@ -41,7 +41,7 @@ __global__ void loop_kernel(int* data, int n) {
 }
 #endif
 int main() {
-    #if 0
+    //#if 0
     std::cout << "=== HIP PGO Comprehensive Test ===" << std::endl;
     
     const int N = 2048;
@@ -79,17 +79,17 @@ int main() {
     hipLaunchKernelGGL(simple_kernel, grid, block, 0, 0, d_data, N);
     hipDeviceSynchronize();
     
-    hipLaunchKernelGGL(branching_kernel, grid, block, 0, 0, d_data, N);
-    hipDeviceSynchronize();
+    //hipLaunchKernelGGL(branching_kernel, grid, block, 0, 0, d_data, N);
+    //hipDeviceSynchronize();
     
-    hipLaunchKernelGGL(loop_kernel, grid, block, 0, 0, d_data, N);
-    hipDeviceSynchronize();
+    //hipLaunchKernelGGL(loop_kernel, grid, block, 0, 0, d_data, N);
+    //hipDeviceSynchronize();
     
     // Launch kernels multiple times to create hot paths
     for (int iter = 0; iter < 5; iter++) {
         hipLaunchKernelGGL(simple_kernel, grid, block, 0, 0, d_data, N);
         if (iter % 2 == 0) {
-            hipLaunchKernelGGL(branching_kernel, grid, block, 0, 0, d_data, N);
+            //hipLaunchKernelGGL(branching_kernel, grid, block, 0, 0, d_data, N);
         }
     }
     hipDeviceSynchronize();
@@ -118,6 +118,6 @@ int main() {
     hipFree(d_data);
     
     std::cout << "Test completed successfully. Profile data should be generated." << std::endl;
-    #endif
+    //#endif
     return 0;
 }

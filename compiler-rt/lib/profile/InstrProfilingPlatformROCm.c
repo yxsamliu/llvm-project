@@ -207,11 +207,12 @@ int __llvm_profile_hip_collect_device_data(void) {
     goto write_error_close;
 
   fclose(File);
+  if (getenv("DB_PROF"))
+    printf("DEBUG: Successfully wrote profile data to %s\n", DeviceFilename);
   free(DeviceFilename);
   free(HostCountersBegin);
   free(HostDataBegin);
   free(HostNamesBegin);
-  printf("DEBUG: Successfully wrote profile data to %s\n", DeviceFilename);
   return 0;
 
 write_error_close:
