@@ -2380,7 +2380,12 @@ void InstrLowerer::createHIPDeviceVariableRegistration() {
   }
   // Find the existing __hip_module_ctor function
   Function *Ctor = M.getFunction("__hip_module_ctor");
-
+  if (!Ctor) {
+    llvm::errs() << "DEBUG: No __hip_module_ctor function found\n";
+    //M.dump();
+    // No HIP compilation context, skip registration
+    return;
+  }
   // Locate the HIP fat-binary registration call and capture its return value
   Value *Handle = nullptr;
   for (BasicBlock &BB : *Ctor)
@@ -2395,21 +2400,35 @@ void InstrLowerer::createHIPDeviceVariableRegistration() {
     llvm::errs() << "DEBUG: __hipRegisterFatBinary call not found\n";
     return;
   }
+GlobalVariable *FatbinHandleGV = nullptr;
+if (auto *HandleInst = dyn_cast<Instruction>(Handle))
+  for (Instruction *Cur = HandleInst->getNextNode(); Cur;
+       Cur = Cur->getNextNode()) {
+    auto *SI = dyn_cast<StoreInst>(Cur);
+    if (!SI || SI->getValueOperand() != Handle)
+      continue;
+    if (auto *GV = dyn_cast<GlobalVariable>(
+            SI->getPointerOperand()->stripPointerCasts())) {
+      FatbinHandleGV = GV;
+      break;
+    }
+  }
+
+  if (!FatbinHandleGV) {
+    llvm::errs() << "DEBUG: store of __hipRegisterFatBinary call not found\n";
+  }
 
   // Insert the new registration just before the ctor’s return
   ReturnInst *RetInst = nullptr;
-  for (BasicBlock &BB : llvm::reverse(Ctor->getBasicBlockList()))
+  for (auto &BB : llvm::reverse(*Ctor))
     if ((RetInst = dyn_cast<ReturnInst>(BB.getTerminator())))
       break;
-
-  IRBuilder<> Builder(RetInst);
-
-  if (!Ctor) {
-    llvm::errs() << "DEBUG: No __hip_module_ctor function found\n";
-    M.dump();
-    // No HIP compilation context, skip registration
+  if (!RetInst) {
+    llvm::errs() << "DEBUG: No return instruction found in ctor\n";
     return;
   }
+  IRBuilder<> Builder(RetInst);
+
   llvm::errs() << "DEBUG: Found __hip_module_ctor, proceeding\n";
 
   // Get or create the __hipRegisterVar declaration
@@ -2463,22 +2482,24 @@ void InstrLowerer::createHIPDeviceVariableRegistration() {
 
     // __hipRegisterVar(handle, host_shadow, device_name, device_name, extern=0,
     // size=48, constant=0, global=0) - register the unified structure
-    Builder.CreateCall(
-        RegisterVarFunc,
-        {
-            Handle, Builder.CreatePointerCast(HostShadow, VoidPtrTy),
-            Builder.CreatePointerCast(DeviceName, VoidPtrTy),
-            Builder.CreatePointerCast(DeviceName, VoidPtrTy),
-            Builder.getInt32(0),  // extern = 0
-            Builder.getInt64(48), // size = 48 bytes (6 pointers * 8 bytes)
-            Builder.getInt32(0),  // constant = 0
-            Builder.getInt32(0)   // global = 0
-        });
+  Value *HipHandle = FatbinHandleGV
+                        ? Builder.CreateLoad(VoidPtrTy, FatbinHandleGV)
+                        : Handle;
+
+  Builder.CreateCall(RegisterVarFunc,
+                    {HipHandle,
+                      Builder.CreatePointerCast(HostShadowVars[0], VoidPtrTy),
+                      Builder.CreatePointerCast(DeviceNameStrings[0], VoidPtrTy),
+                      Builder.CreatePointerCast(DeviceNameStrings[0], VoidPtrTy),
+                      Builder.getInt32(0),  // extern = 0
+                      Builder.getInt64(48), // size  = 48
+                      Builder.getInt32(0),  // constant = 0
+                      Builder.getInt32(0)});// global   = 0
 
     llvm::errs() << "DEBUG: Registered __llvm_offload_prf with HIP runtime\n";
   }
-  // llvm::errs() << "DEBUG: Module after registering profile section
-  // symbols:\n"; M.dump();
+  llvm::errs() << "DEBUG: Module after registering profile section symbols:\n";
+  M.dump();
 }
 
 } // namespace
