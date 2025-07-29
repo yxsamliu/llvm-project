@@ -2374,14 +2374,43 @@ void InstrLowerer::createProfileSectionSymbols() {
 // Create HIP device variable registration for profile symbols
 void InstrLowerer::createHIPDeviceVariableRegistration() {
   llvm::errs() << "DEBUG: createHIPDeviceVariableRegistration called\n";
-  // Find the existing __hip_register_globals function
-  Function *RegisterGlobalsFunc = M.getFunction("__hip_register_globals");
-  if (!RegisterGlobalsFunc) {
-    llvm::errs() << "DEBUG: No __hip_register_globals function found\n";
+    if (isGPUProfTarget(M)) {
+    llvm::errs() << "DEBUG: GPU target, skipping symbol creation\n";
+    return;
+  }
+  // Find the existing __hip_module_ctor function
+  Function *Ctor = M.getFunction("__hip_module_ctor");
+
+  // Locate the HIP fat-binary registration call and capture its return value
+  Value *Handle = nullptr;
+  for (BasicBlock &BB : *Ctor)
+    for (Instruction &I : BB)
+      if (auto *CB = dyn_cast<CallBase>(&I))
+        if (Function *Callee = CB->getCalledFunction())
+          if (Callee->getName() == "__hipRegisterFatBinary") {
+            Handle = &I;   // call result
+            break;
+          }
+  if (!Handle) {
+    llvm::errs() << "DEBUG: __hipRegisterFatBinary call not found\n";
+    return;
+  }
+
+  // Insert the new registration just before the ctor’s return
+  ReturnInst *RetInst = nullptr;
+  for (BasicBlock &BB : llvm::reverse(Ctor->getBasicBlockList()))
+    if ((RetInst = dyn_cast<ReturnInst>(BB.getTerminator())))
+      break;
+
+  IRBuilder<> Builder(RetInst);
+
+  if (!Ctor) {
+    llvm::errs() << "DEBUG: No __hip_module_ctor function found\n";
+    M.dump();
     // No HIP compilation context, skip registration
     return;
   }
-  llvm::errs() << "DEBUG: Found __hip_register_globals, proceeding\n";
+  llvm::errs() << "DEBUG: Found __hip_module_ctor, proceeding\n";
 
   // Get or create the __hipRegisterVar declaration
   auto *VoidTy = Type::getVoidTy(M.getContext());
@@ -2406,50 +2435,6 @@ void InstrLowerer::createHIPDeviceVariableRegistration() {
   SmallVector<Constant *, 12> DeviceNameStrings;
   auto *ZeroSizedArrayTy = ArrayType::get(Type::getInt8Ty(M.getContext()), 0);
 
-#if 0
-  for (StringRef SectionName : SectionNames) {
-    // Create shadow variables with _offload postfix to avoid conflicts
-
-    // Start symbol shadow variable - these will hold device addresses
-    std::string StartShadowName = ("__start_" + SectionName + "_offload").str();
-    auto *StartShadow = new GlobalVariable(
-        M, ZeroSizedArrayTy, /*isConstant=*/false, GlobalValue::ExternalLinkage,
-        ConstantAggregateZero::get(ZeroSizedArrayTy), StartShadowName);
-    llvm::errs() << "DEBUG: Created shadow variable for " << StartShadowName
-                 << "\n";
-
-    // Stop symbol shadow variable - these will hold device addresses
-    std::string StopShadowName = ("__stop_" + SectionName + "_offload").str();
-    auto *StopShadow = new GlobalVariable(
-        M, ZeroSizedArrayTy, /*isConstant=*/false, GlobalValue::ExternalLinkage,
-        ConstantAggregateZero::get(ZeroSizedArrayTy), StopShadowName);
-    llvm::errs() << "DEBUG: Created shadow variable for " << StopShadowName
-                 << "\n";
-
-    HostShadowVars.push_back(StartShadow);
-    HostShadowVars.push_back(StopShadow);
-
-    // Create device name strings (without _offload postfix - these are the
-    // actual device symbol names)
-    std::string StartDeviceName = ("__start_" + SectionName).str();
-    std::string StopDeviceName = ("__stop_" + SectionName).str();
-
-    auto *StartNameStr =
-        ConstantDataArray::getString(M.getContext(), StartDeviceName, true);
-    auto *StartNameGlobal = new GlobalVariable(
-        M, StartNameStr->getType(), /*isConstant=*/true,
-        GlobalValue::PrivateLinkage, StartNameStr, StartDeviceName + ".name");
-
-    auto *StopNameStr =
-        ConstantDataArray::getString(M.getContext(), StopDeviceName, true);
-    auto *StopNameGlobal = new GlobalVariable(
-        M, StopNameStr->getType(), /*isConstant=*/true,
-        GlobalValue::PrivateLinkage, StopNameStr, StopDeviceName + ".name");
-
-    DeviceNameStrings.push_back(StartNameGlobal);
-    DeviceNameStrings.push_back(StopNameGlobal);
-  }
-#endif
   // Also create shadow variable for the unified __llvm_offload_prf structure
   // Create a struct type that matches the device structure (6 pointers)
   std::string ShadowName = "__llvm_offload_prf";
@@ -2470,13 +2455,6 @@ void InstrLowerer::createHIPDeviceVariableRegistration() {
   DeviceNameStrings.push_back(DeviceNameGlobal);
 
   llvm::errs() << "DEBUG: Created shadow variable for __llvm_offload_prf\n";
-
-  // Insert registration calls into existing __hip_register_globals function
-  BasicBlock &EntryBB = RegisterGlobalsFunc->getEntryBlock();
-  auto *RetInst = EntryBB.getTerminator();
-  IRBuilder<> Builder(RetInst);
-
-  Value *Handle = RegisterGlobalsFunc->getArg(0);
 
   // Register the __llvm_offload_prf shadow variable
   if (!HostShadowVars.empty() && !DeviceNameStrings.empty()) {
