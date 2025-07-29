@@ -2496,10 +2496,10 @@ if (auto *HandleInst = dyn_cast<Instruction>(Handle))
                       Builder.getInt32(0),  // constant = 0
                       Builder.getInt32(0)});// global   = 0
 
-    llvm::errs() << "DEBUG: Registered __llvm_offload_prf with HIP runtime\n";
+    //llvm::errs() << "DEBUG: Registered __llvm_offload_prf with HIP runtime\n";
   }
-  llvm::errs() << "DEBUG: Module after registering profile section symbols:\n";
-  M.dump();
+  //llvm::errs() << "DEBUG: Module after registering profile section symbols:\n";
+  //M.dump();
 }
 
 } // namespace
