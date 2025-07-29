@@ -75,7 +75,7 @@ public:
       M += sizeof(uint64_t); // The size of the Counts vector
       M += ProfRecord.Counts.size() * sizeof(uint64_t);
       M += sizeof(uint64_t); // The size of the Bitmap vector
-      M += ProfRecord.BitmapBytes.size() * sizeof(uint8_t);
+      M += alignTo(ProfRecord.BitmapBytes.size(), sizeof(uint64_t));
 
       // Value data
       M += ValueProfData::getSize(ProfileData.second);
@@ -108,6 +108,10 @@ public:
       LE.write<uint64_t>(ProfRecord.BitmapBytes.size());
       for (uint8_t I : ProfRecord.BitmapBytes)
         LE.write<uint8_t>(I);
+      // Pad with zeros.
+      for (size_t I = ProfRecord.BitmapBytes.size();
+           I < alignTo(ProfRecord.BitmapBytes.size(), sizeof(uint64_t)); ++I)
+        LE.write<uint8_t>(0);
 
       // Write value data
       std::unique_ptr<ValueProfData> VDataPtr =

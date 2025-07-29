@@ -969,9 +969,12 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
                                          offset_type N) {
   using namespace support;
 
+  const unsigned char *OrigD = D;
   // Check if the data is corrupt. If so, don't try to read it.
-  if (N % sizeof(uint64_t))
+  if (N % sizeof(uint64_t)) {
+    fprintf(stderr, "DEBUG: ReadData failed for %s: total data size %lu is not a multiple of 8\n", K.data(), (unsigned long)N);
     return data_type();
+  }
 
   DataBuffer.clear();
   std::vector<uint64_t> CounterBuffer;
@@ -980,28 +983,27 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
   const unsigned char *End = D + N;
   while (D < End) {
     // Read hash.
-    if (D + sizeof(uint64_t) >= End)
+    if (D + sizeof(uint64_t) > End) {
+      fprintf(stderr, "DEBUG: ReadData failed for %s: not enough data for hash. Offset: %ld, End: %ld\n", K.data(), (long)(D - OrigD), (long)N);
       return data_type();
-    uint64_t Hash = endian::readNext<uint64_t, llvm::endianness::little>(D);
-
-    uint16_t NumOffloadProfilingThreads = 0;
-    if (GET_VERSION(FormatVersion) >= IndexedInstrProf::ProfVersion::Version12) {
-      if (D + sizeof(uint16_t) > End)
-        return data_type();
-      NumOffloadProfilingThreads = endian::readNext<uint16_t, llvm::endianness::little>(D);
     }
+    uint64_t Hash = endian::readNext<uint64_t, llvm::endianness::little>(D);
 
     // Initialize number of counters for GET_VERSION(FormatVersion) == 1.
     uint64_t CountsSize = N / sizeof(uint64_t) - 1;
     // If format version is different then read the number of counters.
     if (GET_VERSION(FormatVersion) != IndexedInstrProf::ProfVersion::Version1) {
-      if (D + sizeof(uint64_t) > End)
+      if (D + sizeof(uint64_t) > End) {
+        fprintf(stderr, "DEBUG: ReadData failed for %s: not enough data for CountsSize. Offset: %ld, End: %ld\n", K.data(), (long)(D - OrigD), (long)N);
         return data_type();
+      }
       CountsSize = endian::readNext<uint64_t, llvm::endianness::little>(D);
     }
     // Read counter values.
-    if (D + CountsSize * sizeof(uint64_t) > End)
+    if (D + CountsSize * sizeof(uint64_t) > End) {
+      fprintf(stderr, "DEBUG: ReadData failed for %s: not enough data for counters. Offset: %ld, End: %ld, CountsSize: %lu\n", K.data(), (long)(D - OrigD), (long)N, (unsigned long)CountsSize);
       return data_type();
+    }
 
     CounterBuffer.clear();
     CounterBuffer.reserve(CountsSize);
@@ -1012,17 +1014,25 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
     // Read bitmap bytes for GET_VERSION(FormatVersion) > 10.
     if (GET_VERSION(FormatVersion) > IndexedInstrProf::ProfVersion::Version10) {
       uint64_t BitmapBytes = 0;
-      if (D + sizeof(uint64_t) > End)
+      if (D + sizeof(uint64_t) > End) {
+        fprintf(stderr, "DEBUG: ReadData failed for %s: not enough data for BitmapBytes size. Offset: %ld, End: %ld\n", K.data(), (long)(D - OrigD), (long)N);
         return data_type();
+      }
       BitmapBytes = endian::readNext<uint64_t, llvm::endianness::little>(D);
       // Read bitmap byte values.
-      if (D + BitmapBytes * sizeof(uint8_t) > End)
+      uint64_t PaddedBitmapBytesSize = alignTo(BitmapBytes, sizeof(uint64_t));
+      if (D + PaddedBitmapBytesSize > End) {
+        fprintf(stderr, "DEBUG: ReadData failed for %s: not enough data for bitmap bytes. Offset: %ld, End: %ld, BitmapBytes: %lu, PaddedSize: %lu\n", K.data(), (long)(D - OrigD), (long)N, (unsigned long)BitmapBytes, (unsigned long)PaddedBitmapBytesSize);
         return data_type();
+      }
       BitmapByteBuffer.clear();
       BitmapByteBuffer.reserve(BitmapBytes);
       for (uint64_t J = 0; J < BitmapBytes; ++J)
-        BitmapByteBuffer.push_back(static_cast<uint8_t>(
-            endian::readNext<uint64_t, llvm::endianness::little>(D)));
+        BitmapByteBuffer.push_back(
+            endian::readNext<uint8_t, llvm::endianness::little>(D));
+      // Skip padding.
+      for (uint64_t J = BitmapBytes; J < PaddedBitmapBytesSize; ++J)
+        endian::readNext<uint8_t, llvm::endianness::little>(D);
     }
 
     DataBuffer.emplace_back(K, Hash, std::move(CounterBuffer),
@@ -1031,6 +1041,7 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
     // Read value profiling data.
     if (GET_VERSION(FormatVersion) > IndexedInstrProf::ProfVersion::Version2 &&
         !readValueProfilingData(D, End)) {
+      fprintf(stderr, "DEBUG: ReadData failed for %s: readValueProfilingData failed. Offset: %ld, End: %ld\n", K.data(), (long)(D - OrigD), (long)N);
       DataBuffer.clear();
       return data_type();
     }
