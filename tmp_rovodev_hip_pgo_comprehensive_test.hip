@@ -8,7 +8,7 @@ extern "C" __device__ int xxx = 123;
 // Multiple kernels with different execution patterns to generate diverse profile data
 __global__ void simple_kernel(int* data, int n) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < n) {
+    if (idx < 4) {
         data[idx] = idx * 2;
     }
 }
@@ -44,7 +44,7 @@ int main() {
     //#if 0
     std::cout << "=== HIP PGO Comprehensive Test ===" << std::endl;
     
-    const int N = 2048;
+    const int N = 256;
     std::vector<int> h_data(N);
     int* d_data;
     

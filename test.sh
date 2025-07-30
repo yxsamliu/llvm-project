@@ -36,14 +36,17 @@ export LD_LIBRARY_PATH=/home/yaxunl/git/clr/Debug/install/lib
 #AMD_LOG_LEVEL=3 /opt/rocm/bin/rocgdb ./tmp_rovodev_hip_pgo_test_direct
 
 ls my/*.profraw
-#llvm-profdata show my/*.amdgcn-amd-amdhsa.profraw --text --all-functions
-#llvm-profdata merge -o my.amdgcn-amd-amdhsa.profdata my/*.amdgcn-amd-amdhsa.profraw
-llvm-profdata show my/*_0.profraw --text --all-functions
+
+llvm-profdata show my/*.amdgcn-amd-amdhsa.profraw --text --all-functions
+llvm-profdata merge -o my.amdgcn-amd-amdhsa.profdata my/*.amdgcn-amd-amdhsa.profraw
+llvm-profdata show my.amdgcn-amd-amdhsa.profdata --text --all-functions
+
+#llvm-profdata show my/*_0.profraw --text --all-functions
 llvm-profdata merge -o my.profdata my/*_0.profraw
-llvm-profdata show my.profdata --text --all-functions
+#llvm-profdata show my.profdata --text --all-functions
 
 #assert/bin/clang++ -Wno-unused-value -O2 --hip-path=/home/yaxunl/git/clr/Debug/install -fprofile-instr-use=my.profdata --offload-arch=gfx1100 -save-temps -x hip tmp_rovodev_hip_pgo_comprehensive_test.hip -o tmp_rovodev_hip_pgo_test_direct
-#clang++ -v -mllvm -debug-only=pgo-instrumentation -Wno-unused-value -O2 -fprofile-use=my.profdata --offload-arch=$gfx -save-temps -x hip tmp_rovodev_hip_pgo_comprehensive_test.hip -o tmp_rovodev_hip_pgo_test_direct
+clang++ -mllvm -debug-only=pgo-instrumentation -Wno-unused-value -O2 -fprofile-use=my.profdata --offload-arch=$gfx -save-temps -x hip tmp_rovodev_hip_pgo_comprehensive_test.hip -o tmp_rovodev_hip_pgo_test_direct
 
 #diff tmp_rovodev_hip_pgo_comprehensive_test-hip-amdgcn-amd-amdhsa-gfx1100_orig.s tmp_rovodev_hip_pgo_comprehensive_test-hip-amdgcn-amd-amdhsa-gfx1100.s
 
