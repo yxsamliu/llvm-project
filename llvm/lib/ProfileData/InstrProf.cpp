@@ -965,20 +965,26 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
 
   if (Other.NumOffloadProfilingThreads > 0) {
     uint64_t NumThreads = Other.NumOffloadProfilingThreads;
-    for (size_t I = 0, E = Other.Counts.size(); I < E; I += NumThreads + 1) {
+    uint64_t NumCounters = Other.Counts.size() / (NumThreads + 1);
+    std::vector<uint64_t> NewCounts(NumCounters, 0);
+    for (size_t I = 0; I < NumCounters; ++I) {
+      uint64_t Sum = 0;
       for (size_t J = 0; J < NumThreads; ++J) {
         bool Overflowed;
-        uint64_t Value = SaturatingMultiplyAdd(Other.Counts[I + J], Weight,
-                                               Counts[I + J], &Overflowed);
+        uint64_t Value = SaturatingMultiplyAdd(
+            Other.Counts[I * (NumThreads + 1) + J], Weight, 0UL, &Overflowed);
         if (Value > getInstrMaxCountValue()) {
           Value = getInstrMaxCountValue();
           Overflowed = true;
         }
-        Counts[I + J] = Value;
+        Sum += Value;
         if (Overflowed)
           Warn(instrprof_error::counter_overflow);
       }
+      NewCounts[I] = Sum;
     }
+    Counts = NewCounts;
+    NumOffloadProfilingThreads = 0;
   } else {
     // Special handling of the first count as the PseudoCount.
     CountPseudoKind OtherKind = Other.getCountPseudoKind();
@@ -998,7 +1004,12 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
       return;
     }
   }
-
+  NumOffloadProfilingThreads = Other.NumOffloadProfilingThreads;
+  if (getenv("DB_PROF")) {
+        printf("DB_PROF: InstrProfRecord::merge: "
+               "NumOffloadProfilingThreads: %u Other.NumOffloadProfilingThreads:u\n",
+               NumOffloadProfilingThreads, Other.NumOffloadProfilingThreads);
+        }
     for (size_t I = 0, E = Other.Counts.size(); I < E; ++I) {
       bool Overflowed;
     uint64_t Value =

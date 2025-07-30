@@ -883,8 +883,8 @@ Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) 
     return error(std::move(E));
 
   if (getenv("DB_PROF")) {
-    printf("DB_PROF: FuncName: %s, FuncHash: %lu, NumCounters: %zu, "
-           "NumOffloadProfilingThreads: %u\n",
+    printf("DB_PROF: readNextRecord: %p FuncName: %s, FuncHash: %lu, NumCounters: %zu, "
+           "NumOffloadProfilingThreads: %u\n", &Record,
            Record.Name.data(), Record.Hash, Record.Counts.size(),
            Record.NumOffloadProfilingThreads);
     if (Record.NumOffloadProfilingThreads > 0) {
