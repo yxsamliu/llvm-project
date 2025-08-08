@@ -529,7 +529,7 @@ bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
         Uses.push_back(&U);
 
         auto User = U.getUser();
-        if (isa<GEPOperator, PHINode, SelectInst>(User)) {
+        if (isa<GEPOperator, AddrSpaceCastOperator, PHINode, SelectInst>(User)) {
           if (Pointers.insert(User).second)
             WorkList.push_back(User);
         }
