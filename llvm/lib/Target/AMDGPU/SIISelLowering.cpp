@@ -17249,7 +17249,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
   auto [Kind, Idx, NumRegs] = AMDGPU::parseAsmConstraintPhysReg(Constraint);
   if (Kind != '\0') {
     if (Kind == 'v') {
-      RC = &AMDGPU::VGPR_32RegClass;
+      RC = &AMDGPU::VGPR_32_Lo256RegClass;
     } else if (Kind == 's') {
       RC = &AMDGPU::SGPR_32RegClass;
     } else if (Kind == 'a') {
@@ -17258,7 +17258,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
 
     if (RC) {
       if (NumRegs > 1) {
-        if (Idx >= RC->getNumRegs() || Idx + NumRegs - 1 > RC->getNumRegs())
+        if (Idx >= RC->getNumRegs() || Idx + NumRegs - 1 >= RC->getNumRegs())
           return std::pair(0U, nullptr);
 
         uint32_t Width = NumRegs * 32;
@@ -17269,9 +17269,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
 
         MCRegister Reg = RC->getRegister(Idx);
         if (SIRegisterInfo::isVGPRClass(RC))
-          RC = Subtarget->has1024AddressableVGPRs()
-                   ? TRI->getAlignedLo256VGPRClassForBitWidth(Width)
-                   : TRI->getVGPRClassForBitWidth(Width);
+          RC = TRI->getVGPRClassForBitWidth(Width);
         else if (SIRegisterInfo::isSGPRClass(RC))
           RC = TRI->getSGPRClassForBitWidth(Width);
         else if (SIRegisterInfo::isAGPRClass(RC))
@@ -17293,16 +17291,13 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
         return std::pair(0U, nullptr);
       if (Idx < RC->getNumRegs())
         return std::pair(RC->getRegister(Idx), RC);
+      return std::pair(0U, nullptr);
     }
   }
 
   auto Ret = TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
-  if (Ret.first) {
+  if (Ret.first)
     Ret.second = TRI->getPhysRegBaseClass(Ret.first);
-    if (Subtarget->has1024AddressableVGPRs() && TRI->isVGPRClass(Ret.second))
-      Ret.second = TRI->getAlignedLo256VGPRClassForBitWidth(
-          Ret.second->MC->getSizeInBits());
-  }
 
   return Ret;
 }
