@@ -1990,6 +1990,7 @@ defm : FlatStorePats <FLAT_STORE_DWORDX4, atomic_store_128_flat, v4i32>;
 defm : FlatStorePats <FLAT_STORE_BYTE, atomic_store_8_flat, i32>;
 defm : FlatStorePats <FLAT_STORE_SHORT, atomic_store_16_flat, i32>;
 
+
 foreach as = [ "flat", "global" ] in {
 defm : FlatAtomicPat <"FLAT_ATOMIC_ADD", "atomic_load_add_"#as, i32>;
 defm : FlatAtomicPat <"FLAT_ATOMIC_SUB", "atomic_load_sub_"#as, i32>;
@@ -2459,6 +2460,7 @@ let SubtargetPredicate = HasVmemPrefInsts in {
   // Patterns for forced vector prefetch with rw = 1.
   defm : FlatPrefetchPats<"FLAT_PREFETCH_B8", prefetch_flat, i32imm_one>;
   defm : FlatPrefetchPats<"GLOBAL_PREFETCH_B8", prefetch_global, i32imm_one>;
+
 
   // Patterns for target intrinsics
   defm : FlatIntrPrefetchPats<"FLAT_PREFETCH_B8", int_amdgcn_flat_prefetch>;
