@@ -4,10 +4,18 @@
 
 
 define amdgpu_ps void @flat_discard_b32(ptr %addr) {
-; GFX1300-LABEL: flat_discard_b32:
-; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    flat_discard_b32 v[0:1] offset:32
-; GFX1300-NEXT:    s_endpgm
+; GFX1300-SDAG-LABEL: flat_discard_b32:
+; GFX1300-SDAG:       ; %bb.0: ; %entry
+; GFX1300-SDAG-NEXT:    flat_discard_b32 v[0:1] offset:32 scope:SCOPE_SE
+; GFX1300-SDAG-NEXT:    s_endpgm
+;
+; GFX1300-GISEL-LABEL: flat_discard_b32:
+; GFX1300-GISEL:       ; %bb.0: ; %entry
+; GFX1300-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
+; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1300-GISEL-NEXT:    flat_discard_b32 v[0:1] scope:SCOPE_SE
+; GFX1300-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
   call void @llvm.amdgcn.discard.b32(ptr addrspace(0) %gep, i32 0);
@@ -17,7 +25,7 @@ entry:
 define amdgpu_ps void @global_discard_b32(ptr addrspace(1) %addr) {
 ; GFX1300-LABEL: global_discard_b32:
 ; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    global_discard_b32 v[0:1], off offset:32
+; GFX1300-NEXT:    global_discard_b32 v[0:1], off offset:32 scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
@@ -28,7 +36,7 @@ entry:
 define amdgpu_ps void @global_discard_b32_saddr(ptr addrspace(1) inreg %sbase, i32 %voffset) {
 ; GFX1300-LABEL: global_discard_b32_saddr:
 ; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    global_discard_b32 v0, s[0:1] offset:128
+; GFX1300-NEXT:    global_discard_b32 v0, s[0:1] offset:128 scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 entry:
   %zext.offset = zext i32 %voffset to i64
@@ -39,10 +47,18 @@ entry:
 }
 
 define amdgpu_ps void @flat_discard_b128(ptr %addr) {
-; GFX1300-LABEL: flat_discard_b128:
-; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    flat_discard_b128 v[0:1] offset:32 th:TH_STORE_NT
-; GFX1300-NEXT:    s_endpgm
+; GFX1300-SDAG-LABEL: flat_discard_b128:
+; GFX1300-SDAG:       ; %bb.0: ; %entry
+; GFX1300-SDAG-NEXT:    flat_discard_b128 v[0:1] offset:32 th:TH_STORE_NT scope:SCOPE_SE
+; GFX1300-SDAG-NEXT:    s_endpgm
+;
+; GFX1300-GISEL-LABEL: flat_discard_b128:
+; GFX1300-GISEL:       ; %bb.0: ; %entry
+; GFX1300-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
+; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1300-GISEL-NEXT:    flat_discard_b128 v[0:1] th:TH_STORE_NT scope:SCOPE_SE
+; GFX1300-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
   call void @llvm.amdgcn.discard.b128(ptr addrspace(0) %gep, i32 1);
@@ -52,7 +68,7 @@ entry:
 define amdgpu_ps void @global_discard_b128(ptr addrspace(1) %addr) {
 ; GFX1300-LABEL: global_discard_b128:
 ; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    global_discard_b128 v[0:1], off offset:32
+; GFX1300-NEXT:    global_discard_b128 v[0:1], off offset:32 scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
@@ -63,7 +79,7 @@ entry:
 define amdgpu_ps void @global_discard_b128_saddr(ptr addrspace(1) inreg %sbase, i32 %voffset) {
 ; GFX1300-LABEL: global_discard_b128_saddr:
 ; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    global_discard_b128 v0, s[0:1] offset:128
+; GFX1300-NEXT:    global_discard_b128 v0, s[0:1] offset:128 scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 entry:
   %zext.offset = zext i32 %voffset to i64
@@ -74,10 +90,18 @@ entry:
 }
 
 define amdgpu_ps void @flat_discard_b1024(ptr %addr) {
-; GFX1300-LABEL: flat_discard_b1024:
-; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    flat_discard_b1024 v[0:1] offset:32
-; GFX1300-NEXT:    s_endpgm
+; GFX1300-SDAG-LABEL: flat_discard_b1024:
+; GFX1300-SDAG:       ; %bb.0: ; %entry
+; GFX1300-SDAG-NEXT:    flat_discard_b1024 v[0:1] offset:32 scope:SCOPE_SE
+; GFX1300-SDAG-NEXT:    s_endpgm
+;
+; GFX1300-GISEL-LABEL: flat_discard_b1024:
+; GFX1300-GISEL:       ; %bb.0: ; %entry
+; GFX1300-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
+; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1300-GISEL-NEXT:    flat_discard_b1024 v[0:1] scope:SCOPE_SE
+; GFX1300-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
   call void @llvm.amdgcn.discard.b1024(ptr addrspace(0) %gep, i32 0);
@@ -160,7 +184,7 @@ define amdgpu_kernel void @scratch_discard_b128_saddr(ptr addrspace(5) inreg %sb
 ; GFX1300-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1300-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-SDAG-NEXT:    s_add_co_i32 s0, s0, s1
-; GFX1300-SDAG-NEXT:    scratch_discard_b128 off, s0 offset:-128
+; GFX1300-SDAG-NEXT:    scratch_discard_b128 off, s0 offset:-128 scope:SCOPE_SE
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1300-GISEL-LABEL: scratch_discard_b128_saddr:
@@ -168,7 +192,7 @@ define amdgpu_kernel void @scratch_discard_b128_saddr(ptr addrspace(5) inreg %sb
 ; GFX1300-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1300-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-GISEL-NEXT:    s_add_co_u32 s0, s0, s1
-; GFX1300-GISEL-NEXT:    scratch_discard_b128 off, s0 offset:-128
+; GFX1300-GISEL-NEXT:    scratch_discard_b128 off, s0 offset:-128 scope:SCOPE_SE
 ; GFX1300-GISEL-NEXT:    s_endpgm
 entry:
   %zext.offset = zext i32 %voffset to i64

@@ -5563,11 +5563,18 @@ AMDGPUInstructionSelector::selectFlatOffsetImpl(MachineOperand &Root,
 
   Register PtrBase;
   int64_t ConstOffset;
-  std::tie(PtrBase, ConstOffset) =
+  bool IsInBounds;
+  std::tie(PtrBase, ConstOffset, IsInBounds) =
       getPtrBaseWithConstantOffset(Root.getReg(), *MRI);
 
-  if (ConstOffset == 0 || (FlatVariant == SIInstrFlags::FlatScratch &&
-                           !isFlatScratchBaseLegal(Root.getReg())))
+  // Adding the offset to the base address with an immediate in a FLAT
+  // instruction must not change the memory aperture in which the address falls.
+  // Therefore we can only fold offsets from inbounds GEPs into FLAT
+  // instructions.
+  if (ConstOffset == 0 ||
+      (FlatVariant == SIInstrFlags::FlatScratch &&
+       !isFlatScratchBaseLegal(Root.getReg())) ||
+      (FlatVariant == SIInstrFlags::FLAT && !IsInBounds))
     return Default;
 
   unsigned AddrSpace = (*MI->memoperands_begin())->getAddrSpace();
@@ -5620,7 +5627,8 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
 
   // Match the immediate offset first, which canonically is moved as low as
   // possible.
-  std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(Addr, *MRI);
+  std::tie(PtrBase, ConstOffset, std::ignore) =
+      getPtrBaseWithConstantOffset(Addr, *MRI);
 
   if (ConstOffset != 0) {
     if (NeedIOffset &&
@@ -5852,7 +5860,8 @@ AMDGPUInstructionSelector::selectScratchSAddr(MachineOperand &Root) const {
 
   // Match the immediate offset first, which canonically is moved as low as
   // possible.
-  std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(Addr, *MRI);
+  std::tie(PtrBase, ConstOffset, std::ignore) =
+      getPtrBaseWithConstantOffset(Addr, *MRI);
 
   if (ConstOffset != 0 && isFlatScratchBaseLegal(Addr) &&
       TII.isLegalFLATOffset(ConstOffset, AMDGPUAS::PRIVATE_ADDRESS,
@@ -5928,7 +5937,8 @@ AMDGPUInstructionSelector::selectScratchSVAddr(MachineOperand &Root) const {
 
   // Match the immediate offset first, which canonically is moved as low as
   // possible.
-  std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(Addr, *MRI);
+  std::tie(PtrBase, ConstOffset, std::ignore) =
+      getPtrBaseWithConstantOffset(Addr, *MRI);
 
   Register OrigAddr = Addr;
   if (ConstOffset != 0 &&
@@ -6034,7 +6044,8 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
   const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
   Register PtrBase;
   int64_t ConstOffset;
-  std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(VAddr, *MRI);
+  std::tie(PtrBase, ConstOffset, std::ignore) =
+      getPtrBaseWithConstantOffset(VAddr, *MRI);
   if (ConstOffset != 0) {
     if (TII.isLegalMUBUFImmOffset(ConstOffset) &&
         (!STI.privateMemoryResourceIsRangeChecked() ||
@@ -6273,8 +6284,8 @@ AMDGPUInstructionSelector::selectDS1Addr1OffsetImpl(MachineOperand &Root) const 
 
   Register PtrBase;
   int64_t Offset;
-  std::tie(PtrBase, Offset) =
-    getPtrBaseWithConstantOffset(Root.getReg(), *MRI);
+  std::tie(PtrBase, Offset, std::ignore) =
+      getPtrBaseWithConstantOffset(Root.getReg(), *MRI);
 
   if (Offset) {
     if (isDSOffsetLegal(PtrBase, Offset)) {
@@ -6335,8 +6346,8 @@ AMDGPUInstructionSelector::selectDSReadWrite2Impl(MachineOperand &Root,
 
   Register PtrBase;
   int64_t Offset;
-  std::tie(PtrBase, Offset) =
-    getPtrBaseWithConstantOffset(Root.getReg(), *MRI);
+  std::tie(PtrBase, Offset, std::ignore) =
+      getPtrBaseWithConstantOffset(Root.getReg(), *MRI);
 
   if (Offset) {
     int64_t OffsetValue0 = Offset;
@@ -6357,22 +6368,25 @@ AMDGPUInstructionSelector::selectDSReadWrite2Impl(MachineOperand &Root,
 }
 
 /// If \p Root is a G_PTR_ADD with a G_CONSTANT on the right hand side, return
-/// the base value with the constant offset. There may be intervening copies
-/// between \p Root and the identified constant. Returns \p Root, 0 if this does
-/// not match the pattern.
-std::pair<Register, int64_t>
+/// the base value with the constant offset, and if the offset computation is
+/// known to be inbounds. There may be intervening copies between \p Root and
+/// the identified constant. Returns \p Root, 0, false if this does not match
+/// the pattern.
+std::tuple<Register, int64_t, bool>
 AMDGPUInstructionSelector::getPtrBaseWithConstantOffset(
-  Register Root, const MachineRegisterInfo &MRI) const {
+    Register Root, const MachineRegisterInfo &MRI) const {
   MachineInstr *RootI = getDefIgnoringCopies(Root, MRI);
   if (RootI->getOpcode() != TargetOpcode::G_PTR_ADD)
-    return {Root, 0};
+    return {Root, 0, false};
 
   MachineOperand &RHS = RootI->getOperand(2);
   std::optional<ValueAndVReg> MaybeOffset =
       getIConstantVRegValWithLookThrough(RHS.getReg(), MRI);
   if (!MaybeOffset)
-    return {Root, 0};
-  return {RootI->getOperand(1).getReg(), MaybeOffset->Value.getSExtValue()};
+    return {Root, 0, false};
+  bool IsInBounds = RootI->getFlag(MachineInstr::MIFlag::InBounds);
+  return {RootI->getOperand(1).getReg(), MaybeOffset->Value.getSExtValue(),
+          IsInBounds};
 }
 
 static void addZeroImm(MachineInstrBuilder &MIB) {
@@ -6450,7 +6464,8 @@ AMDGPUInstructionSelector::parseMUBUFAddress(Register Src) const {
   Register PtrBase;
   int64_t Offset;
 
-  std::tie(PtrBase, Offset) = getPtrBaseWithConstantOffset(Src, *MRI);
+  std::tie(PtrBase, Offset, std::ignore) =
+      getPtrBaseWithConstantOffset(Src, *MRI);
   if (isUInt<32>(Offset)) {
     Data.N0 = PtrBase;
     Data.Offset = Offset;
