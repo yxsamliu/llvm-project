@@ -1954,8 +1954,8 @@ let OtherPredicates = [D16PreservesUnusedBits, HasFlatAddressSpace], True16Predi
   defm : FlatLoadPats_D16_t16<FLAT_LOAD_SBYTE_D16_t16, atomic_load_sext_8_flat, i16>;
   defm : FlatStorePats_t16 <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
   defm : FlatStorePats_t16 <FLAT_STORE_SHORT, store_flat, i16>;
-  def  : FlatStorePat <FLAT_STORE_BYTE_t16, atomic_store_8_flat, i16>;
-  def  : FlatStorePat <FLAT_STORE_SHORT_t16, atomic_store_16_flat, i16>;
+  def : FlatStorePat <FLAT_STORE_BYTE_t16, atomic_store_8_flat, i16>;
+  def : FlatStorePat <FLAT_STORE_SHORT_t16, atomic_store_16_flat, i16>;
 } // End let OtherPredicates = [D16PreservesUnusedBits, HasFlatAddressSpace], True16Predicate = UseRealTrue16Insts
 
 defm : FlatLoadPats <FLAT_LOAD_DWORD, atomic_load_nonext_32_flat, i32>;
@@ -3547,6 +3547,7 @@ defm FLAT_LOAD_MONITOR_B128           : VFLAT_Real_AllAddr_gfx1250<0x072>;
 defm GLOBAL_LOAD_MONITOR_B32          : VFLAT_Real_AllAddr_gfx1250<0x070>;
 defm GLOBAL_LOAD_MONITOR_B64          : VFLAT_Real_AllAddr_gfx1250<0x071>;
 defm GLOBAL_LOAD_MONITOR_B128         : VFLAT_Real_AllAddr_gfx1250<0x072>;
+
 defm CLUSTER_LOAD_B32                 : VFLAT_Real_AllAddr_gfx1250<0x067>;
 defm CLUSTER_LOAD_B64                 : VFLAT_Real_AllAddr_gfx1250<0x068>;
 defm CLUSTER_LOAD_B128                : VFLAT_Real_AllAddr_gfx1250<0x069>;
