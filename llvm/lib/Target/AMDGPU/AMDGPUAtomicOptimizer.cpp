@@ -25,6 +25,7 @@
 #include "GCNSubtarget.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -45,6 +46,8 @@ struct ReplacementInfo {
   AtomicRMWInst::BinOp Op;
   unsigned ValIdx;
   bool ValDivergent;
+  unsigned PtrIdx;
+  bool PtrDivergent;
 };
 
 class AMDGPUAtomicOptimizer : public FunctionPass {
@@ -87,7 +90,11 @@ private:
                        BasicBlock *ComputeLoop, BasicBlock *ComputeEnd) const;
 
   void optimizeAtomic(Instruction &I, AtomicRMWInst::BinOp Op, unsigned ValIdx,
-                      bool ValDivergent) const;
+                      bool ValDivergent, unsigned PtrIdx,
+                      bool PtrDivergent) const;
+
+  void optimizeDivergentAddress(Instruction &I, AtomicRMWInst::BinOp Op,
+                                unsigned ValIdx, unsigned PtrIdx) const;
 
 public:
   AMDGPUAtomicOptimizerImpl() = delete;
@@ -159,8 +166,8 @@ bool AMDGPUAtomicOptimizerImpl::run() {
   if (ToReplace.empty())
     return false;
 
-  for (auto &[I, Op, ValIdx, ValDivergent] : ToReplace)
-    optimizeAtomic(*I, Op, ValIdx, ValDivergent);
+  for (auto &[I, Op, ValIdx, ValDivergent, PtrIdx, PtrDivergent] : ToReplace)
+    optimizeAtomic(*I, Op, ValIdx, ValDivergent, PtrIdx, PtrDivergent);
   ToReplace.clear();
   return true;
 }
@@ -219,9 +226,13 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   const unsigned PtrIdx = 0;
   const unsigned ValIdx = 1;
 
-  // If the pointer operand is divergent, then each lane is doing an atomic
-  // operation on a different address, and we cannot optimize that.
-  if (UA.isDivergentUse(I.getOperandUse(PtrIdx))) {
+  const bool PtrDivergent = UA.isDivergentUse(I.getOperandUse(PtrIdx));
+  if (PtrDivergent) {
+    // If the pointer operand is divergent, then each lane is doing an atomic
+    // operation on a different address, and we cannot optimize that.
+    // Except if there are wave_match and exclusive_scan instructions
+    if (ST.hasWaveMatch() && I.getType()->isIntegerTy(32))
+      ToReplace.push_back({&I, Op, ValIdx, false, PtrIdx, true});
     return;
   }
 
@@ -242,7 +253,7 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   // If we get here, we can optimize the atomic using a single wavefront-wide
   // atomic operation to do the calculation for the entire wavefront, so
   // remember the instruction so we can come back to it.
-  ToReplace.push_back({&I, Op, ValIdx, ValDivergent});
+  ToReplace.push_back({&I, Op, ValIdx, ValDivergent, PtrIdx, false});
 }
 
 void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
@@ -307,6 +318,56 @@ void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
     break;
   }
 
+  unsigned OffsetArg;
+  bool IsVOffsetDivergent = true;
+  switch (I.getIntrinsicID()) {
+  default: {
+    OffsetArg = 2;
+    break;
+  }
+  case Intrinsic::amdgcn_struct_buffer_atomic_add:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_add:
+  case Intrinsic::amdgcn_struct_buffer_atomic_sub:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub:
+  case Intrinsic::amdgcn_struct_buffer_atomic_and:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_and:
+  case Intrinsic::amdgcn_struct_buffer_atomic_or:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_or:
+  case Intrinsic::amdgcn_struct_buffer_atomic_xor:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_xor:
+  case Intrinsic::amdgcn_struct_buffer_atomic_smin:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_smin:
+  case Intrinsic::amdgcn_struct_buffer_atomic_umin:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_umin:
+  case Intrinsic::amdgcn_struct_buffer_atomic_smax:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_smax:
+  case Intrinsic::amdgcn_struct_buffer_atomic_umax:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_umax: {
+    OffsetArg = 3;
+    break;
+  }
+  }
+
+  //  Everything except offset should be uniform
+  for (unsigned Idx = 1; Idx < I.getNumOperands(); Idx++) {
+    if (Idx == OffsetArg)
+      continue;
+    if (UA.isDivergentUse(I.getOperandUse(Idx))) {
+      IsVOffsetDivergent = false;
+      break;
+    }
+  }
+
+  // Offset should be divergent
+  if (!UA.isDivergent(I.getOperandUse(OffsetArg)))
+    IsVOffsetDivergent = false;
+
+  if (IsVOffsetDivergent) {
+    if (ST.hasWaveMatch() && I.getType()->isIntegerTy(32))
+      ToReplace.push_back({&I, Op, 0, false, OffsetArg, IsVOffsetDivergent});
+    return;
+  }
+
   const unsigned ValIdx = 0;
 
   const bool ValDivergent = UA.isDivergentUse(I.getOperandUse(ValIdx));
@@ -333,7 +394,7 @@ void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
   // If we get here, we can optimize the atomic using a single wavefront-wide
   // atomic operation to do the calculation for the entire wavefront, so
   // remember the instruction so we can come back to it.
-  ToReplace.push_back({&I, Op, ValIdx, ValDivergent});
+  ToReplace.push_back({&I, Op, ValIdx, ValDivergent, 0, false});
 }
 
 // Use the builder to create the non-atomic counterpart of the specified
@@ -647,10 +708,193 @@ static Value *buildMul(IRBuilder<> &B, Value *LHS, Value *RHS) {
   return (CI && CI->isOne()) ? RHS : B.CreateMul(LHS, RHS);
 }
 
-void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
-                                               AtomicRMWInst::BinOp Op,
-                                               unsigned ValIdx,
-                                               bool ValDivergent) const {
+void AMDGPUAtomicOptimizerImpl::optimizeDivergentAddress(
+    Instruction &I, AtomicRMWInst::BinOp Op, unsigned ValIdx,
+    unsigned PtrIdx) const {
+
+  auto extractDivergentIndex = [&](Value *Ptr) -> Value * {
+    auto *GEP =
+        dyn_cast<GetElementPtrInst>(Ptr);
+    if (!GEP)
+      return nullptr;
+    Value *Index = nullptr;
+    for (Use &Idx : GEP->indices()) {
+      if (UA.isDivergent(Idx)) {
+        if (Index)
+          return nullptr;
+        Index = Idx;
+      }
+    }
+    if (!Index)
+      return nullptr;
+    if (computeKnownBits(Index, DL).countMaxSignificantBits() > 32)
+      return nullptr;
+    return Index;
+  };
+
+  IRBuilder<> B(&I);
+
+  BasicBlock *PixelEntryBB = nullptr;
+  BasicBlock *PixelExitBB = nullptr;
+
+  if (IsPixelShader) {
+    PixelEntryBB = I.getParent();
+    Value *const Cond = B.CreateIntrinsic(Intrinsic::amdgcn_ps_live, {});
+    Instruction *const NonHelperTerminator =
+        SplitBlockAndInsertIfThen(Cond, &I, false, nullptr, &DTU, nullptr);
+    PixelExitBB = I.getParent();
+
+    I.moveBefore(NonHelperTerminator->getIterator());
+    B.SetInsertPoint(&I);
+  }
+
+  Value *Ptr = I.getOperand(PtrIdx);
+  Type *const Ty = I.getType();
+  Value *Index;
+  Value *FullMatchMask;
+
+  Index = extractDivergentIndex(I.getOperand(PtrIdx));
+  if (Index) {
+    if (!Index->getType()->isIntegerTy(32))
+      Index = B.CreateTrunc(Index, B.getInt32Ty());
+    FullMatchMask =
+        B.CreateIntrinsic(Ty, Intrinsic::amdgcn_wave_match_b32, {Index, Index});
+  } else if (PtrIdx == 0 && Ptr->getType()->getPointerAddressSpace() ==
+                                AMDGPUAS::GLOBAL_ADDRESS) {
+    Value *Address =
+        B.CreatePtrToInt(Ptr, B.getInt64Ty());
+    Value *AddressLow32 = B.CreateTrunc(Address, B.getInt32Ty());
+    Value *High32Shifted = B.CreateLShr(Address, 32);
+    Value *AddressHigh32 = B.CreateTrunc(High32Shifted, B.getInt32Ty());
+    Value *LowMask = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_wave_match_b32,
+                                       {AddressLow32, AddressLow32});
+    Value *HighMask = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_wave_match_b32,
+                                        {AddressHigh32, AddressHigh32});
+    FullMatchMask = B.CreateAnd(LowMask, HighMask);
+  } else {
+    FullMatchMask =
+        B.CreateIntrinsic(Ty, Intrinsic::amdgcn_wave_match_b32, {Ptr, Ptr});
+  }
+
+  Value *Src = I.getOperand(ValIdx);
+
+  Value *Exclusive, *Inclusive;
+  switch (Op) {
+  case AtomicRMWInst::Add:
+  case AtomicRMWInst::Sub: {
+    Exclusive = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_exclusive_scan_sum_i32,
+                                  {Src, FullMatchMask, B.getFalse()});
+    break;
+  }
+  case AtomicRMWInst::And: {
+    Exclusive = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_exclusive_scan_and_b32,
+                                  {Src, FullMatchMask});
+    break;
+  }
+  case AtomicRMWInst::Or: {
+    Exclusive = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_exclusive_scan_or_b32,
+                                  {Src, FullMatchMask});
+    break;
+  }
+  case AtomicRMWInst::Xor: {
+    Exclusive = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_exclusive_scan_xor_b32,
+                                  {Src, FullMatchMask});
+    break;
+  }
+  case AtomicRMWInst::Min: {
+    Exclusive = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_exclusive_scan_min_i32,
+                                  {Src, FullMatchMask});
+    break;
+  }
+  case AtomicRMWInst::Max: {
+    Exclusive = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_exclusive_scan_max_i32,
+                                  {Src, FullMatchMask});
+    break;
+  }
+  case AtomicRMWInst::UMin: {
+    Exclusive = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_exclusive_scan_min_u32,
+                                  {Src, FullMatchMask});
+    break;
+  }
+  case AtomicRMWInst::UMax: {
+    Exclusive = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_exclusive_scan_max_u32,
+                                  {Src, FullMatchMask});
+    break;
+  }
+  default:
+    return;
+  }
+  if (Op == AtomicRMWInst::Sub) {
+    Inclusive = buildNonAtomicBinOp(B, AtomicRMWInst::Add, Src, Exclusive);
+  } else {
+    Inclusive = buildNonAtomicBinOp(B, Op, Src, Exclusive);
+  }
+
+  Value *LaneIdx;
+  if (ST.isWave32()) {
+    LaneIdx = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {},
+                                {B.getInt32(-1), B.getInt32(0)});
+  } else {
+    LaneIdx = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {},
+                                {B.getInt32(-1), B.getInt32(0)});
+    LaneIdx = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_hi, {},
+                                {B.getInt32(-1), LaneIdx});
+  }
+
+  Value *LeaderIdx =
+      B.CreateIntrinsic(Ty, Intrinsic::ctlz, {FullMatchMask, B.getTrue()});
+  LeaderIdx = B.CreateSub(B.getInt32(31), LeaderIdx);
+  Value *IsLeader;
+  if (ST.isWave32())
+    IsLeader = B.CreateICmpEQ(LaneIdx, LeaderIdx);
+  else
+    IsLeader = B.CreateICmpEQ(B.CreateAnd(LaneIdx, B.getInt32(31)), LeaderIdx);
+
+  BasicBlock *OriginalBB = I.getParent();
+  Instruction *const SingleLaneTerminator =
+      SplitBlockAndInsertIfThen(IsLeader, &I, false, nullptr, &DTU, nullptr);
+  B.SetInsertPoint(SingleLaneTerminator);
+  Instruction *const NewI = I.clone();
+  B.Insert(NewI);
+  NewI->setOperand(ValIdx, Inclusive);
+
+  B.SetInsertPoint(&I);
+  PHINode *const PHI = B.CreatePHI(Ty, 2);
+  PHI->addIncoming(PoisonValue::get(Ty), OriginalBB);
+  PHI->addIncoming(NewI, SingleLaneTerminator->getParent());
+
+  Value *Permute;
+  if (ST.isWave32())
+    Permute = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_bpermute_b32,
+                                {PHI, LeaderIdx});
+  else {
+    Permute = B.CreateOr(LeaderIdx, B.CreateAnd(LaneIdx, B.getInt32(32)));
+    Permute = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_ds_bpermute,
+                                {PHI, B.CreateMul(LeaderIdx, B.getInt32(4))});
+  }
+  Value *Result = buildNonAtomicBinOp(B, Op, Permute, Exclusive);
+  if (IsPixelShader) {
+    B.SetInsertPoint(PixelExitBB, PixelExitBB->getFirstNonPHIIt());
+
+    PHINode *const PHI = B.CreatePHI(Ty, 2);
+    PHI->addIncoming(PoisonValue::get(Ty), PixelEntryBB);
+    PHI->addIncoming(Result, I.getParent());
+    I.replaceAllUsesWith(PHI);
+  } else {
+    I.replaceAllUsesWith(Result);
+  }
+  I.eraseFromParent();
+  return;
+}
+
+void AMDGPUAtomicOptimizerImpl::optimizeAtomic(
+    Instruction &I, AtomicRMWInst::BinOp Op, unsigned ValIdx, bool ValDivergent,
+    unsigned PtrIdx, bool PtrDivergent) const {
+  if (PtrDivergent) {
+    optimizeDivergentAddress(I, Op, ValIdx, PtrIdx);
+    return;
+  }
+
   // Start building just before the instruction.
   IRBuilder<> B(&I);
 

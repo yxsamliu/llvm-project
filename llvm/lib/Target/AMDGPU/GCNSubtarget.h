@@ -1135,6 +1135,9 @@ public:
 
   bool hasPermlaneUp() const { return getGeneration() >= GFX13; }
 
+  /// \returns true if the subtarget has v_wave_match_b32 instruction
+  bool hasWaveMatch() const { return getGeneration() >= GFX13; }
+
   bool hasDPP() const {
     return HasDPP;
   }
