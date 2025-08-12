@@ -803,7 +803,7 @@ let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
       let OtherPredicates = [HasFP8ConversionInsts, HasFP8E5M3Insts] in
         defm V_CVT_SR_FP8_F32_gfx1250 : VOP3Inst<"v_cvt_sr_fp8_f32_gfx1250", VOP3_CVT_SR_F8_ByteSel_Profile<f32, true>>;
       defm V_CVT_SR_BF8_F32_gfx12 : VOP3Inst<"v_cvt_sr_bf8_f32_gfx12", VOP3_CVT_SR_F8_ByteSel_Profile<f32>>;
-    }
+    } // End SubtargetPredicate = isGFX11Plus
   }
 
   // These instructions have non-standard use of op_sel. In particular they are
@@ -915,7 +915,7 @@ let SubtargetPredicate = isGFX11Plus in {
     def : Cvt_SR_F8_ByteSel_E5M3_Pat<int_amdgcn_cvt_sr_fp8_f32_e5m3, V_CVT_SR_FP8_F32_gfx1250_e64, f32, DSTCLAMP.ENABLE>;
   }
   def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_bf8_f32, V_CVT_SR_BF8_F32_gfx12_e64, f32>;
-}
+} // End SubtargetPredicate = isGFX11Plus
 }
 
 class ThreeOp_i32_Pats <SDPatternOperator op1, SDPatternOperator op2, Instruction inst> : GCNPat <
