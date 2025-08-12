@@ -2151,6 +2151,14 @@ multiclass VOP3P_Real_WMMA_gfx12w64 <bits<8> op, VOP3PWMMA_Profile WMMAP> {
   }
 }
 
+multiclass VOP3P_Real_WMMA_gfx1170_gfx12 <bits<8> op, VOP3PWMMA_Profile WMMAP> :
+  VOP3P_Real_WMMA_gfx1170<op, WMMAP>,
+  VOP3P_Real_WMMA_gfx12<op, WMMAP>;
+
+multiclass VOP3P_Real_WMMA_gfx1170_gfx12w64 <bits<8> op, VOP3PWMMA_Profile WMMAP> :
+  VOP3P_Real_WMMA_gfx1170w64<op, WMMAP>,
+  VOP3P_Real_WMMA_gfx12w64<op, WMMAP>;
+
 multiclass VOP3P_Real_WMMA_gfx1250 <bits<8> op, VOP3PWMMA_Profile WMMAP> {
   let WaveSizePredicate = isWave32, DecoderNamespace = "GFX12" in {
     defm _twoaddr : VOP3P_WMMA_Real_Base <GFX1250Gen, op, WMMAP>;
@@ -2250,14 +2258,6 @@ multiclass VOP3PX2_Real_ScaledWMMA_SrcFormats<bits<8> op, bits<8> LdScaleOp, str
     }
   }
 }
-
-multiclass VOP3P_Real_WMMA_gfx1170_gfx12 <bits<8> op, VOP3PWMMA_Profile WMMAP> :
-  VOP3P_Real_WMMA_gfx1170<op, WMMAP>,
-  VOP3P_Real_WMMA_gfx12<op, WMMAP>;
-
-multiclass VOP3P_Real_WMMA_gfx1170_gfx12w64 <bits<8> op, VOP3PWMMA_Profile WMMAP> :
-  VOP3P_Real_WMMA_gfx1170w64<op, WMMAP>,
-  VOP3P_Real_WMMA_gfx12w64<op, WMMAP>;
 
 defm V_WMMA_F32_16X16X16_F16_w32     : VOP3P_Real_WMMA_gfx1170_gfx12 <0x040, F32_F16_WMMA_w32>;
 defm V_WMMA_F32_16X16X16_BF16_w32    : VOP3P_Real_WMMA_gfx1170_gfx12 <0x041, F32_BF16_WMMA_w32>;
