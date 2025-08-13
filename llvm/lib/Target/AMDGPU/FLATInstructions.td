@@ -1973,6 +1973,7 @@ multiclass GlobalLoadLDSPats_M0<FLAT_Pseudo inst, SDPatternOperator node> {
 }
 
 multiclass DDSLoadLDSPats_M0<FLAT_Pseudo inst, SDPatternOperator node> {
+let WaveSizePredicate = isWave32 in {
   def : FlatLoadLDSSignedPat_M0 <inst, node, i32> {
     let AddedComplexity = 10;
   }
@@ -1980,6 +1981,7 @@ multiclass DDSLoadLDSPats_M0<FLAT_Pseudo inst, SDPatternOperator node> {
   def : GlobalLoadLDSSaddrPat_M0<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, i32, GlobalSAddrNoIOffsetScaleOffsetM0> {
     let AddedComplexity = 11;
   }
+}
 }
 
 multiclass GlobalLoadLDSPats<FLAT_Pseudo inst, SDPatternOperator node> {
@@ -1993,6 +1995,7 @@ multiclass GlobalLoadLDSPats<FLAT_Pseudo inst, SDPatternOperator node> {
 }
 
 multiclass DDSLoadLDSPats<FLAT_Pseudo inst, SDPatternOperator node> {
+let WaveSizePredicate = isWave32 in {
   def : FlatLoadLDSSignedPat <inst, node, i32> {
     let AddedComplexity = 10;
   }
@@ -2000,6 +2003,7 @@ multiclass DDSLoadLDSPats<FLAT_Pseudo inst, SDPatternOperator node> {
   def : GlobalLoadLDSSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, i32, GlobalSAddrNoIOffsetScaleOffset> {
     let AddedComplexity = 11;
   }
+}
 }
 
 multiclass GlobalStoreLDSPats<FLAT_Pseudo inst, SDPatternOperator node> {
@@ -2023,6 +2027,7 @@ multiclass GlobalFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueTyp
 }
 
 multiclass DDSFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
+let WaveSizePredicate = isWave32 in {
   def : FlatLoadSignedPat <inst, node, vt, i32, VGPR_32> {
     let AddedComplexity = 10;
   }
@@ -2030,6 +2035,7 @@ multiclass DDSFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueType v
   def : FlatLoadSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt, i32, SReg_32, GlobalSAddrNoScaleOffset> {
     let AddedComplexity = 11;
   }
+}
 }
 
 multiclass GlobalFLATLoadPats_M0<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
