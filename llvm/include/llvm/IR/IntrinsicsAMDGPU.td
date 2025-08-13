@@ -897,7 +897,7 @@ def int_amdgcn_cvt_scalef32_sr_fp8_f16: AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8Tied
 def int_amdgcn_cvt_scalef32_sr_fp8_f32: AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<llvm_float_ty, "cvt_scalef32_sr_fp8_f32">;
 
 def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
-  [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]
+  [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]
 >, ClangBuiltin<"__builtin_amdgcn_prng_b32">;
 
 def int_amdgcn_bitop3 :
@@ -3092,7 +3092,7 @@ class AMDGPUSWmmacIntrinsicIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Ind
       A,                // %A
       B,                // %B
       LLVMMatchType<0>, // %C
-      Index            // %Sparsity index for A
+      Index             // %Sparsity index for A
     ],
     [IntrNoMem, IntrConvergent, IntrWillReturn]
 >;
@@ -5249,6 +5249,7 @@ def int_amdgcn_swmmac_f16_16x16x128_bf8_fp8 : AMDGPUSWmmacIntrinsicIdxReuse<llvm
 def int_amdgcn_swmmac_f16_16x16x128_bf8_bf8 : AMDGPUSWmmacIntrinsicIdxReuse<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
 def int_amdgcn_swmmac_i32_16x16x128_iu8     : AMDGPUSWmmacIntrinsicABIdx<llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty>;
 }
+
 
 class AMDGPUTensorLoadStore:
   Intrinsic<

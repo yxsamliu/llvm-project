@@ -2155,6 +2155,14 @@ multiclass VOP3P_Real_WMMA_gfx12w64 <bits<8> op, VOP3PWMMA_Profile WMMAP> {
   }
 }
 
+multiclass VOP3P_Real_WMMA_gfx1170_gfx12 <bits<8> op, VOP3PWMMA_Profile WMMAP> :
+  VOP3P_Real_WMMA_gfx1170<op, WMMAP>,
+  VOP3P_Real_WMMA_gfx12<op, WMMAP>;
+
+multiclass VOP3P_Real_WMMA_gfx1170_gfx12w64 <bits<8> op, VOP3PWMMA_Profile WMMAP> :
+  VOP3P_Real_WMMA_gfx1170w64<op, WMMAP>,
+  VOP3P_Real_WMMA_gfx12w64<op, WMMAP>;
+
 multiclass VOP3P_Real_WMMA_gfx1250 <bits<8> op, VOP3PWMMA_Profile WMMAP> {
   let WaveSizePredicate = isWave32, DecoderNamespace = "GFX12" in {
     defm _twoaddr : VOP3P_WMMA_Real_Base <GFX1250Gen, op, WMMAP>;
@@ -2255,14 +2263,6 @@ multiclass VOP3PX2_Real_ScaledWMMA_SrcFormats<bits<8> op, bits<8> LdScaleOp, str
   }
 }
 
-multiclass VOP3P_Real_WMMA_gfx1170_gfx12 <bits<8> op, VOP3PWMMA_Profile WMMAP> :
-  VOP3P_Real_WMMA_gfx1170<op, WMMAP>,
-  VOP3P_Real_WMMA_gfx12<op, WMMAP>;
-
-multiclass VOP3P_Real_WMMA_gfx1170_gfx12w64 <bits<8> op, VOP3PWMMA_Profile WMMAP> :
-  VOP3P_Real_WMMA_gfx1170w64<op, WMMAP>,
-  VOP3P_Real_WMMA_gfx12w64<op, WMMAP>;
-
 defm V_WMMA_F32_16X16X16_F16_w32     : VOP3P_Real_WMMA_gfx1170_gfx12 <0x040, F32_F16_WMMA_w32>;
 defm V_WMMA_F32_16X16X16_BF16_w32    : VOP3P_Real_WMMA_gfx1170_gfx12 <0x041, F32_BF16_WMMA_w32>;
 defm V_WMMA_F16_16X16X16_F16_w32     : VOP3P_Real_WMMA_gfx1170_gfx12 <0x042, F16_F16_WMMA_w32>;
@@ -2337,7 +2337,7 @@ defm V_WMMA_F16_16X16X128_BF8_FP8_w32 : VOP3P_Real_WMMA_gfx1250 <0x086, F16_FP8B
 defm V_WMMA_F16_16X16X128_BF8_BF8_w32 : VOP3P_Real_WMMA_gfx1250 <0x087, F16_FP8BF8X128_WMMA_w32>;
 defm V_WMMA_F32_32X16X128_F4_w32      : VOP3P_Real_WMMA_gfx1250 <0x088, F32_32X16X128_F4_WMMA_w32>;
 
-defm V_WMMA_F32_16X16X128_F8F6F4         : VOP3P_Real_WMMA_gfx1250_SrcFormats<0x033, "F32_16X16X128_F8F6F4">;
+defm V_WMMA_F32_16X16X128_F8F6F4        : VOP3P_Real_WMMA_gfx1250_SrcFormats<0x033, "F32_16X16X128_F8F6F4">;
 defm V_WMMA_SCALE_F32_16X16X128_F8F6F4   : VOP3PX2_Real_ScaledWMMA_SrcFormats<0x033, 0x35, "F32_16X16X128_F8F6F4_SCALE">;
 defm V_WMMA_SCALE16_F32_16X16X128_F8F6F4 : VOP3PX2_Real_ScaledWMMA_SrcFormats<0x033, 0x3a, "F32_16X16X128_F8F6F4_SCALE16">;
 
