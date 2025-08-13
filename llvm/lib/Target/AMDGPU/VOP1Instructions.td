@@ -1072,12 +1072,6 @@ multiclass VOP1_Real_FULL_with_name_gfx1250_gfx13<
   VOP1_Real_FULL_with_name<GFX1250Gen, op, opName, asmName>,
   VOP1_Real_FULL_with_name<GFX13Gen, op, opName, asmName>;
 
-multiclass VOP1_Real_FULL_with_name_gfx11_gfx12_not_gfx1250_gfx13<
-    bits<9> op, string opName, string asmName> :
-  VOP1_Real_FULL_with_name<GFX11Gen, op, opName, asmName>,
-  VOP1_Real_FULL_with_name<GFX12Not12_50Gen, op, opName, asmName>,
-  VOP1_Real_FULL_with_name<GFX13Gen, op, opName, asmName>;
-
 multiclass VOP1_Real_NO_DPP<GFXGen Gen, bits<9> op> :
   VOP1_Real_e32<Gen, op>, VOP1_Real_e64<Gen, op>;
 
@@ -1134,6 +1128,12 @@ multiclass VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<
        VOP1_Real_FULL_with_name<GFX13Gen, op, opName#"_fake16", asmName>;
 }
 
+multiclass VOP1_Real_FULL_with_name_gfx11_gfx12_not_gfx1250_gfx13<bits<9> op, string opName,
+                                                                  string asmName> :
+  VOP1_Real_FULL_with_name<GFX11Gen, op, opName, asmName>,
+  VOP1_Real_FULL_with_name<GFX12Not12_50Gen, op, opName, asmName>,
+  VOP1_Real_FULL_with_name<GFX13Gen, op, opName, asmName>;
+
 multiclass VOP1_Real_OpSelIsDPP<GFXGen Gen, bits<9> op> : VOP1_Real_e32<Gen, op> {
    defvar ps = !cast<VOP_Pseudo>(NAME#"_e64");
    def _e64#Gen.Suffix :
@@ -1145,8 +1145,8 @@ multiclass VOP1_Real_OpSelIsDPP_gfx1250_gfx13<bits<9> op> :
   VOP1_Real_OpSelIsDPP<GFX1250Gen, op>,
   VOP1_Real_OpSelIsDPP<GFX13Gen, op>;
 
-defm V_CVT_F32_FP8      : VOP1_Real_FULL_with_name_gfx11_gfx12_not_gfx1250_gfx13<0x06c, "V_CVT_F32_FP8_OP_SEL", "v_cvt_f32_fp8">;
-defm V_CVT_F32_FP8      : VOP1_Real_FULL_with_name<GFX1250Gen, 0x06c, "V_CVT_F32_FP8_gfx1250", "v_cvt_f32_fp8">;
+defm V_CVT_F32_FP8           : VOP1_Real_FULL_with_name_gfx11_gfx12_not_gfx1250_gfx13<0x06c, "V_CVT_F32_FP8_OP_SEL", "v_cvt_f32_fp8">;
+defm V_CVT_F32_FP8           : VOP1_Real_FULL_with_name<GFX1250Gen, 0x06c, "V_CVT_F32_FP8_gfx1250", "v_cvt_f32_fp8">;
 
 defm V_CVT_F32_BF8      : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13<0x06d, "V_CVT_F32_BF8_OP_SEL", "v_cvt_f32_bf8">;
 
