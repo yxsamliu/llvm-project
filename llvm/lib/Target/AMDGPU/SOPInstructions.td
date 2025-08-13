@@ -1704,8 +1704,8 @@ let SubtargetPredicate = isGFX13Plus in {
 } // End SubtargetPredicate = isGFX13Plus
 
 let SubtargetPredicate = isNotGFX1250Plus in {
-  def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins SWaitCnt:$simm16), "$simm16",
-      [(int_amdgcn_s_waitcnt timm:$simm16)]>;
+def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins SWaitCnt:$simm16), "$simm16",
+    [(int_amdgcn_s_waitcnt timm:$simm16)]>;
 }
 
 // "_soft" waitcnts are waitcnts that are either relaxed into their non-soft
@@ -1818,6 +1818,7 @@ def S_MONITOR_SLEEP : SOPP_Pseudo <"s_monitor_sleep", (ins i16imm:$simm16), "$si
   [(int_amdgcn_s_monitor_sleep timm:$simm16)]> {
   let SubtargetPredicate = isGFX1250Plus;
 }
+
 } // End hasSideEffects
 
 let SubtargetPredicate = HasVGPRIndexMode in {
