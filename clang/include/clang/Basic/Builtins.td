@@ -1276,7 +1276,7 @@ def NondetermenisticValue : Builtin {
 
 def ElementwiseAbs : Builtin {
   let Spellings = ["__builtin_elementwise_abs"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
