@@ -1309,11 +1309,35 @@ bool PGOUseFunc::setInstrumentedCounts(
 
   setupBBInfoEdges(FuncInfo);
 
-  unsigned NumCounters =
-      InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
+  unsigned NumInstrumentedBBs = InstrumentBBs.size();
+  unsigned NumSelects = FuncInfo.SIVisitor.getNumOfSelectInsts();
+  unsigned NumCounters = NumInstrumentedBBs + NumSelects;
   // The number of counters here should match the number of counters
   // in profile. Return if they mismatch.
   if (NumCounters != CountFromProfile.size()) {
+    LLVM_DEBUG({
+      dbgs() << "PGO COUNTER MISMATCH for function " << F.getName() << ":\n";
+      dbgs() << "  Expected counters: " << NumCounters << "\n";
+      dbgs() << "    - From instrumented edges: " << NumInstrumentedBBs
+             << "\n";
+      for (size_t i = 0; i < InstrumentBBs.size(); ++i) {
+        dbgs() << "      " << i << ": " << InstrumentBBs[i]->getName() << "\n";
+      }
+      dbgs() << "    - From select instructions: " << NumSelects << "\n";
+      dbgs() << "  Actual counters from profile: " << CountFromProfile.size()
+             << "\n";
+
+      // Dump module
+      std::error_code EC;
+      std::string Filename = "pgo_mismatch_" + F.getName().str() + ".ll";
+      raw_fd_ostream OS(Filename, EC);
+      if (!EC) {
+        dbgs() << "Dumping module to " << Filename << "\n";
+        M->print(OS, nullptr);
+      } else {
+        dbgs() << "Error opening file " << Filename << " for writing\n";
+      }
+    });
     return false;
   }
   auto *FuncEntry = &*F.begin();
@@ -1321,6 +1345,7 @@ bool PGOUseFunc::setInstrumentedCounts(
   // Set the profile count to the Instrumented BBs.
   uint32_t I = 0;
   for (BasicBlock *InstrBB : InstrumentBBs) {
+
     uint64_t CountValue = CountFromProfile[I++];
     PGOUseBBInfo &Info = getBBInfo(InstrBB);
     // If we reach here, we know that we have some nonzero count

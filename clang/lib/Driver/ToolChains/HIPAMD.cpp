@@ -283,6 +283,19 @@ HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   const OptTable &Opts = getDriver().getOpts();
 
   for (Arg *A : Args) {
+    if (A->getOption().matches(options::OPT_fprofile_use_EQ)) {
+      StringRef ProfileFile = A->getValue();
+      std::string DeviceProfileFile = std::string(ProfileFile);
+      const char *Extension = strrchr(ProfileFile.data(), '.');
+      if (Extension) {
+        size_t BaseLen = Extension - ProfileFile.data();
+        DeviceProfileFile.insert(BaseLen, ".amdgcn-amd-amdhsa");
+      }
+      DAL->AddJoinedArg(A, Opts.getOption(options::OPT_fprofile_instr_use_EQ),
+                        DeviceProfileFile);
+      A->claim();
+      continue;
+    }
     if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A))
       DAL->append(A);
   }

@@ -73,9 +73,13 @@ public:
       const InstrProfRecord &ProfRecord = ProfileData.second;
       M += sizeof(uint64_t); // The function hash
       M += sizeof(uint64_t); // The size of the Counts vector
-      M += ProfRecord.Counts.size() * sizeof(uint64_t);
+      size_t NumCounters = ProfRecord.Counts.size();
+      if (ProfRecord.NumOffloadProfilingThreads > 0) {
+        NumCounters /= (ProfRecord.NumOffloadProfilingThreads + 1);
+      }
+      M += NumCounters * sizeof(uint64_t);
       M += sizeof(uint64_t); // The size of the Bitmap vector
-      M += ProfRecord.BitmapBytes.size() * sizeof(uint64_t);
+      M += alignTo(ProfRecord.BitmapBytes.size(), sizeof(uint64_t));
 
       // Value data
       M += ValueProfData::getSize(ProfileData.second);
@@ -89,7 +93,8 @@ public:
     Out.write(K.data(), N);
   }
 
-  void EmitData(raw_ostream &Out, key_type_ref, data_type_ref V, offset_type) {
+  void EmitData(raw_ostream &Out, key_type_ref K, data_type_ref V,
+                offset_type) {
     using namespace support;
 
     endian::Writer LE(Out, llvm::endianness::little);
@@ -100,14 +105,57 @@ public:
       else
         SummaryBuilder->addRecord(ProfRecord);
 
+      if (getenv("DB_PROF")) {
+        printf(
+            "DB_PROF: EmitData: FuncName: %s, FuncHash: %lu, NumCounters: %zu, "
+            "NumOffloadProfilingThreads: %u\n",
+            K.data(), ProfileData.first, ProfRecord.Counts.size(),
+            ProfRecord.NumOffloadProfilingThreads);
+        if (ProfRecord.NumOffloadProfilingThreads > 0) {
+          uint64_t NumThreads = ProfRecord.NumOffloadProfilingThreads;
+          uint64_t NumCounters = ProfRecord.Counts.size() / (NumThreads + 1);
+          for (size_t I = 0; I < NumCounters; ++I) {
+            uint64_t Sum = 0;
+            printf("  BB %zu:", I);
+            for (size_t J = 0; J < NumThreads; ++J) {
+              uint64_t Count = ProfRecord.Counts[I * (NumThreads + 1) + J];
+              printf(" %lu", Count);
+              Sum += Count;
+            }
+            printf(", Sum: %lu\n", Sum);
+          }
+        } else {
+          printf("  Counters:");
+          for (uint64_t Count : ProfRecord.Counts)
+            printf(" %lu", Count);
+          printf("\n");
+        }
+      }
+
       LE.write<uint64_t>(ProfileData.first); // Function hash
-      LE.write<uint64_t>(ProfRecord.Counts.size());
-      for (uint64_t I : ProfRecord.Counts)
-        LE.write<uint64_t>(I);
+      if (ProfRecord.NumOffloadProfilingThreads > 0) {
+        uint64_t NumThreads = ProfRecord.NumOffloadProfilingThreads;
+        uint64_t NumCounters = ProfRecord.Counts.size() / (NumThreads + 1);
+        LE.write<uint64_t>(NumCounters);
+        for (size_t I = 0; I < NumCounters; ++I) {
+          uint64_t Sum = 0;
+          for (size_t J = 0; J < NumThreads; ++J)
+            Sum += ProfRecord.Counts[I * (NumThreads + 1) + J];
+          LE.write<uint64_t>(Sum);
+        }
+      } else {
+        LE.write<uint64_t>(ProfRecord.Counts.size());
+        for (uint64_t I : ProfRecord.Counts)
+          LE.write<uint64_t>(I);
+      }
 
       LE.write<uint64_t>(ProfRecord.BitmapBytes.size());
-      for (uint64_t I : ProfRecord.BitmapBytes)
-        LE.write<uint64_t>(I);
+      for (uint8_t I : ProfRecord.BitmapBytes)
+        LE.write<uint8_t>(I);
+      // Pad with zeros.
+      for (size_t I = ProfRecord.BitmapBytes.size();
+           I < alignTo(ProfRecord.BitmapBytes.size(), sizeof(uint64_t)); ++I)
+        LE.write<uint8_t>(0);
 
       // Write value data
       std::unique_ptr<ValueProfData> VDataPtr =
@@ -202,6 +250,14 @@ void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
   auto MapWarn = [&](instrprof_error E) {
     Warn(make_error<InstrProfError>(E));
   };
+  if (getenv("DB_PROF")) {
+    printf("DB_PROF: InstrProfWriter::addRecord: %p FuncName: %s, FuncHash: "
+           "%lu, I.NumCounters: %zu, "
+           "I.NumOffloadProfilingThreads: %u\n",
+           &I, Name.data(), Hash, I.Counts.size(),
+           I.NumOffloadProfilingThreads);
+    // assert(0);
+  }
 
   if (NewFunc) {
     // We've never seen a function with this name and hash, add it.
@@ -214,6 +270,13 @@ void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
   }
 
   Dest.sortValueData();
+  if (getenv("DB_PROF")) {
+    printf("DB_PROF: InstrProfWriter::addRecord: FuncName: %s, FuncHash: %lu, "
+           "NumCounters: %zu, "
+           "NumOffloadProfilingThreads: %u\n",
+           Name.data(), Hash, Dest.Counts.size(),
+           Dest.NumOffloadProfilingThreads);
+  }
 }
 
 void InstrProfWriter::addMemProfRecord(

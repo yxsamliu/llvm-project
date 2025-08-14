@@ -817,6 +817,11 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       I.Name = (*Remapper)(I.Name);
     const StringRef FuncName = I.Name;
     bool Reported = false;
+    if (getenv("DB_PROF")) {
+      printf("DB_PROF: loadInput: %p I.Name: %s, I.NumCounters: %zu, "
+             "I.NumOffloadProfilingThreads: %u\n",
+             &I, I.Name.data(), I.Counts.size(), I.NumOffloadProfilingThreads);
+    }
     WC->Writer.addRecord(std::move(I), Input.Weight, [&](Error E) {
       if (Reported) {
         consumeError(std::move(E));

@@ -885,15 +885,20 @@ struct InstrProfValueSiteRecord {
 struct InstrProfRecord {
   std::vector<uint64_t> Counts;
   std::vector<uint8_t> BitmapBytes;
+  uint16_t NumOffloadProfilingThreads = 0;
 
   InstrProfRecord() = default;
-  InstrProfRecord(std::vector<uint64_t> Counts) : Counts(std::move(Counts)) {}
+  InstrProfRecord(std::vector<uint64_t> Counts,
+                  uint16_t NumOffloadProfilingThreads)
+      : Counts(std::move(Counts)),
+        NumOffloadProfilingThreads(NumOffloadProfilingThreads) {}
   InstrProfRecord(std::vector<uint64_t> Counts,
                   std::vector<uint8_t> BitmapBytes)
       : Counts(std::move(Counts)), BitmapBytes(std::move(BitmapBytes)) {}
   InstrProfRecord(InstrProfRecord &&) = default;
   InstrProfRecord(const InstrProfRecord &RHS)
       : Counts(RHS.Counts), BitmapBytes(RHS.BitmapBytes),
+        NumOffloadProfilingThreads(RHS.NumOffloadProfilingThreads),
         ValueData(RHS.ValueData
                       ? std::make_unique<ValueProfData>(*RHS.ValueData)
                       : nullptr) {}
@@ -901,6 +906,7 @@ struct InstrProfRecord {
   InstrProfRecord &operator=(const InstrProfRecord &RHS) {
     Counts = RHS.Counts;
     BitmapBytes = RHS.BitmapBytes;
+    NumOffloadProfilingThreads = RHS.NumOffloadProfilingThreads;
     if (!RHS.ValueData) {
       ValueData = nullptr;
       return *this;
@@ -1047,14 +1053,17 @@ private:
 struct NamedInstrProfRecord : InstrProfRecord {
   StringRef Name;
   uint64_t Hash;
+  // uint16_t NumOffloadProfilingThreads = 0;
 
   // We reserve this bit as the flag for context sensitive profile record.
   static const int CS_FLAG_IN_FUNC_HASH = 60;
 
   NamedInstrProfRecord() = default;
   NamedInstrProfRecord(StringRef Name, uint64_t Hash,
-                       std::vector<uint64_t> Counts)
-      : InstrProfRecord(std::move(Counts)), Name(Name), Hash(Hash) {}
+                       std::vector<uint64_t> Counts,
+                       uint16_t NumOffloadProfilingThreads)
+      : InstrProfRecord(std::move(Counts), NumOffloadProfilingThreads),
+        Name(Name), Hash(Hash) {}
   NamedInstrProfRecord(StringRef Name, uint64_t Hash,
                        std::vector<uint64_t> Counts,
                        std::vector<uint8_t> BitmapBytes)
