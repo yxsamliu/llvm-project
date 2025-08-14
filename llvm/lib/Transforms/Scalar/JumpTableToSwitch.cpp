@@ -22,7 +22,6 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <limits>
 
@@ -149,9 +148,8 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
         std::numeric_limits<uint32_t>::max(), TotalCount);
 
     for (const auto &[G, C] : Targets) {
-      auto It = GuidToCounter.insert({G, C});
+      [[maybe_unused]] auto It = GuidToCounter.insert({G, C});
       assert(It.second);
-      (void)It;
     }
   }
   for (auto [Index, Func] : llvm::enumerate(JT.Funcs)) {
@@ -182,8 +180,14 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
   if (HadProfile && !ProfcheckDisableMetadataFixes) {
     // At least one of the targets must've been taken.
     assert(llvm::any_of(BranchWeights, [](uint64_t V) { return V != 0; }));
-    setProfMetadata(F.getParent(), Switch, BranchWeights,
-                    *llvm::max_element(BranchWeights));
+    // FIXME: this duplicates logic in instrumentation. Note: since there's at
+    // least a nonzero and these are unsigned values, it follows MaxBW != 0.
+    uint64_t MaxBW = *llvm::max_element(BranchWeights);
+    SmallVector<uint32_t> ScaledBranchWeights(
+        llvm::map_range(BranchWeights, [MaxBW](uint64_t V) {
+          return static_cast<uint32_t>(V / MaxBW);
+        }));
+    setBranchWeights(*Switch, ScaledBranchWeights, /*IsExpected=*/false);
   } else
     setExplicitlyUnknownBranchWeights(*Switch);
   if (PHI)
