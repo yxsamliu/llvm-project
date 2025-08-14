@@ -116,6 +116,7 @@
 #include "llvm/Transforms/Utils/MisExpect.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
+#include <cstdlib>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -1307,11 +1308,35 @@ bool PGOUseFunc::setInstrumentedCounts(
 
   setupBBInfoEdges(FuncInfo);
 
-  unsigned NumCounters =
-      InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
+  unsigned NumInstrumentedBBs = InstrumentBBs.size();
+  unsigned NumSelects = FuncInfo.SIVisitor.getNumOfSelectInsts();
+  unsigned NumCounters = NumInstrumentedBBs + NumSelects;
   // The number of counters here should match the number of counters
   // in profile. Return if they mismatch.
   if (NumCounters != CountFromProfile.size()) {
+    LLVM_DEBUG({
+      dbgs() << "PGO COUNTER MISMATCH for function " << F.getName() << ":\n";
+      dbgs() << "  Expected counters: " << NumCounters << "\n";
+      dbgs() << "    - From instrumented edges: " << NumInstrumentedBBs
+             << "\n";
+      for (size_t i = 0; i < InstrumentBBs.size(); ++i) {
+        dbgs() << "      " << i << ": " << InstrumentBBs[i]->getName() << "\n";
+      }
+      dbgs() << "    - From select instructions: " << NumSelects << "\n";
+      dbgs() << "  Actual counters from profile: " << CountFromProfile.size()
+             << "\n";
+
+      // Dump module
+      std::error_code EC;
+      std::string Filename = "pgo_mismatch_" + F.getName().str() + ".ll";
+      raw_fd_ostream OS(Filename, EC);
+      if (!EC) {
+        dbgs() << "Dumping module to " << Filename << "\n";
+        M->print(OS, nullptr);
+      } else {
+        dbgs() << "Error opening file " << Filename << " for writing\n";
+      }
+    });
     return false;
   }
   auto *FuncEntry = &*F.begin();
@@ -1319,6 +1344,7 @@ bool PGOUseFunc::setInstrumentedCounts(
   // Set the profile count to the Instrumented BBs.
   uint32_t I = 0;
   for (BasicBlock *InstrBB : InstrumentBBs) {
+
     uint64_t CountValue = CountFromProfile[I++];
     PGOUseBBInfo &Info = getBBInfo(InstrBB);
     // If we reach here, we know that we have some nonzero count
@@ -1928,8 +1954,33 @@ static bool skipPGOUse(const Function &F) {
                       << " exceed the threshold. Skip PGO.\n");
     return true;
   }
+  static uint64_t NumProcessedFuncs = 0;
+  static long PGOLimit = -1;
+  if (PGOLimit == -1) {
+    if (const char *PGOLimitEnv = getenv("PGO_LIMIT"))
+      PGOLimit = atol(PGOLimitEnv);
+    else
+      PGOLimit = -2; // Not set
+  }
+  if (PGOLimit >= 0 && NumProcessedFuncs >= (uint64_t)PGOLimit) {
+    LLVM_DEBUG(dbgs() << "PGO_LIMIT reached, skipping function " << F.getName()
+                      << "\n");
+    return true;
+  }
+  NumProcessedFuncs++;
+  LLVM_DEBUG(dbgs() << "\nProcessing function " << F.getName() << " "
+                    << NumProcessedFuncs << "\n");
+
+  if (const char *PGODumpFun = getenv("PGO_DUMP_FUN")) {
+    if (F.getName() == PGODumpFun) {
+      F.dump();
+    }
+  }
+
   return false;
 }
+
+
 
 // Return true if we should not instrument this function
 static bool skipPGOGen(const Function &F) {
@@ -2405,18 +2456,30 @@ static std::string getSimpleNodeName(const BasicBlock *Node) {
   return SimpleNodeName;
 }
 
+static int set_prof_metadata_counter = 0;
 void llvm::setProfMetadata(Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
                            uint64_t MaxCount) {
   auto Weights = downscaleWeights(EdgeCounts, MaxCount);
+  static long PGOLimit = -1;
+  if (PGOLimit == -1) {
+    if (const char *PGOLimitEnv = getenv("PGO_MD_LIMIT"))
+      PGOLimit = atol(PGOLimitEnv);
+    else
+      PGOLimit = -2; // Not set
+  }
+  if (PGOLimit > 0 && set_prof_metadata_counter >= (unsigned long)PGOLimit)
+    return;
+  set_prof_metadata_counter++;
 
   LLVM_DEBUG(dbgs() << "Weight is: "; for (const auto &W
                                            : Weights) {
     dbgs() << W << " ";
-  } dbgs() << "\n";);
+  } dbgs() << "(count: " << set_prof_metadata_counter << ")\n");
 
   misexpect::checkExpectAnnotations(*TI, Weights, /*IsFrontend=*/false);
 
   setBranchWeights(*TI, Weights, /*IsExpected=*/false);
+
   if (EmitBranchProbability) {
     std::string BrCondStr = getBranchCondString(TI);
     if (BrCondStr.empty())

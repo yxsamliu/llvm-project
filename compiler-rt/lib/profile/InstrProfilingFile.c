@@ -1198,6 +1198,8 @@ int __llvm_profile_write_file(void) {
   if (rc)
     PROF_ERR("Failed to write file \"%s\": %s\n", Filename, strerror(errno));
 
+  __llvm_profile_hip_collect_device_data();
+
   // Restore SIGKILL.
   if (PDeathSig == 1)
     lprofRestoreSigKill();

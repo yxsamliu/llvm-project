@@ -40,6 +40,8 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -160,6 +162,28 @@ cl::opt<bool> SpeculativeCounterPromotionToLoop(
              "the promotion will be disallowed unless the promoted counter "
              " update can be further/iteratively promoted into an acyclic "
              " region."));
+
+static cl::opt<unsigned> OffloadProfilingThreadBitWidth(
+    "offload-profiling-thread-bitwidth",
+    cl::desc("Bit width that encodes the number of profiling threads on the "
+             "offload device.  The actual thread count used is "
+             "(1 << bitwidth) - 1.  Supported for AMDGPU only."),
+    cl::init(8));
+
+enum class OffloadPGOSamplingMode {
+  PatternOverflow,   // sampling by pattern, overflow slot, non-atomic store
+  AtomicWarpLeader   // no sampling; warp leader uses atomicrmw add 1
+};
+
+static llvm::cl::opt<OffloadPGOSamplingMode> OffloadPGOSampling(
+    "offload-pgo-sampling-mode",
+    llvm::cl::desc("Offload PGO sampling mode"),
+    llvm::cl::values(
+        clEnumValN(OffloadPGOSamplingMode::PatternOverflow, "pattern-overflow",
+                   "Use sampling pattern and overflow slot (default)"),
+        clEnumValN(OffloadPGOSamplingMode::AtomicWarpLeader, "atomic-warp-leader",
+                   "Leader lane only; atomic increment per slot; no overflow slot")),
+    llvm::cl::init(OffloadPGOSamplingMode::AtomicWarpLeader));
 
 cl::opt<bool> IterativeCounterPromotion(
     "iterative-counter-promotion", cl::init(true),
@@ -326,6 +350,9 @@ private:
   /// Replace instrprof.increment with an increment of the appropriate value.
   void lowerIncrement(InstrProfIncrementInst *Inc);
 
+  /// AMDGPU specific implementation of lowerIncrement.
+  void lowerIncrementAMDGPU(InstrProfIncrementInst *Inc);
+
   /// Force emitting of name vars for unused functions.
   void lowerCoverageData(GlobalVariable *CoverageNamesVar);
 
@@ -409,6 +436,16 @@ private:
   /// Create a static initializer for our data, on platforms that need it,
   /// and for any profile output file that was specified.
   void emitInitialization();
+  void createProfileSectionSymbols();
+
+  /// Create HIP device variable registration for profile symbols
+  void createHIPDeviceVariableRegistration();
+
+  /// Create HIP dynamic module registration call
+  void createHIPDynamicModuleRegistration();
+
+  /// Create HIP dynamic module unregistration call
+  void createHIPDynamicModuleUnregistration();
 };
 
 ///
@@ -988,6 +1025,16 @@ bool InstrLowerer::lower() {
   emitNameData();
   emitVTableNames();
 
+  // Create start/stop symbols for device code profile sections
+  createProfileSectionSymbols();
+
+  // Create host shadow variables and registration calls for HIP device profile
+  // symbols
+  createHIPDeviceVariableRegistration();
+
+  createHIPDynamicModuleRegistration();
+  createHIPDynamicModuleUnregistration();
+
   // Emit runtime hook for the cases where the target does not unconditionally
   // require pulling in profile runtime, and coverage is enabled on code that is
   // not eliminated by the front-end, e.g. unused functions with internal
@@ -1191,6 +1238,10 @@ void InstrLowerer::lowerTimestamp(
 }
 
 void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
+  if (TT.isAMDGPU()) {
+    lowerIncrementAMDGPU(Inc);
+    return;
+  }
   auto *Addr = getCounterAddress(Inc);
 
   IRBuilder<> Builder(Inc);
@@ -1206,6 +1257,245 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
     if (isCounterPromotionEnabled())
       PromotionCandidates.emplace_back(cast<Instruction>(Load), Store);
   }
+  Inc->eraseFromParent();
+}
+
+// Lowers an InstrProfIncrementInst for AMDGPU to per-wave aggregated counter updates.
+// It computes a "slot" index based on block and warp-local indices, elects a leader lane,
+// and increments a counter by (Inc->getStep() * number_of_active_lanes) to reflect that
+// only one lane performs the update on behalf of the whole wave.
+//
+// Assumptions:
+// - AMDGPU Wave32 (32 lanes): uses ballot.i32, mbcnt.lo with a full mask, and lane = mbcnt & 31.
+// - OffloadProfilingThreadBitWidth (KSlotBits) >= 5; kWarpBits is 5 for Wave32.
+// - Two modes:
+//   - PatternOverflow: performs a non-atomic RMW, routes to an overflow slot based on sampling.
+//   - AtomicWarpLeader: only the elected leader performs an atomic add.
+// - Inc->getStep() is an LLVM integer-typed Value (often a constant 1), and may not equal 1.
+// - The increment amount in both modes is Inc->getStep() * popcount(activeMask).
+void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
+  IRBuilder<> Builder(Inc);
+  LLVMContext &Context = M.getContext();
+  auto *Int1Ty  = Type::getInt1Ty(Context);
+  auto *Int8Ty  = Type::getInt8Ty(Context);
+  auto *Int16Ty = Type::getInt16Ty(Context);
+  auto *Int32Ty = Type::getInt32Ty(Context);
+  auto *Int64Ty = Type::getInt64Ty(Context);
+
+  // Constants/configuration
+  const unsigned KSlotBits  = OffloadProfilingThreadBitWidth; // must be >= 5 (Wave32)
+  const unsigned KSlots     = 1u << KSlotBits;
+  const unsigned KOverflow  = KSlots - 1u;                    // only used in PatternOverflow mode
+  const unsigned KPattern14 = 0x2A3Fu;                        // only used in PatternOverflow mode
+  const unsigned kWarpBits  = 5u;                             // Wave32 lane width
+
+  if (KSlotBits < kWarpBits)
+    report_fatal_error("OffloadProfilingThreadBitWidth must be >= 5 for wave32");
+
+  // --- Get thread and block identifiers ---
+  FunctionCallee BlockIdxFn =
+      M.getOrInsertFunction("llvm.amdgcn.workgroup.id.x", Int32Ty);
+  Value *BlockIdx = Builder.CreateCall(BlockIdxFn, {}, "BlockIdxX");
+
+  FunctionCallee ThreadIdxFn =
+      M.getOrInsertFunction("llvm.amdgcn.workitem.id.x", Int32Ty);
+  Value *ThreadIdx = Builder.CreateCall(ThreadIdxFn, {}, "ThreadIdxX");
+
+  // --- Get launch-time data from implicit arguments ---
+  FunctionCallee ImplicitArgFn =
+      M.getOrInsertFunction("llvm.amdgcn.implicitarg.ptr", PointerType::get(Context, 4));
+  Value *ImplicitArgPtr = Builder.CreateCall(ImplicitArgFn, {});
+
+  // gridDim.x (i32) at base
+  Value *GridDimX = Builder.CreateLoad(Int32Ty, ImplicitArgPtr, "GridDimX");
+
+  // blockDim.x (i16) at offset 12
+  Value *BlockDimXAddr =
+      Builder.CreateInBoundsGEP(Int8Ty, ImplicitArgPtr,
+                                ConstantInt::get(Int64Ty, 12), "BlockDimXAddr");
+  Value *BlockDimX = Builder.CreateLoad(Int16Ty, BlockDimXAddr, "BlockDimX");
+
+  // --- Optional: 64-bit gid (not used by slot calc, but useful to keep) ---
+  Value *BlockIdx64 = Builder.CreateZExt(BlockIdx, Int64Ty, "BlockIdxX.zext");
+  Value *ThreadIdx64 = Builder.CreateZExt(ThreadIdx, Int64Ty, "ThreadIdxX.zext");
+  Value *BlockDimX64 = Builder.CreateZExt(BlockDimX, Int64Ty, "BlockDimX.zext");
+  Value *Gid = Builder.CreateAdd(Builder.CreateMul(BlockIdx64, BlockDimX64),
+                                 ThreadIdx64, "Gid");
+  (void)Gid;
+
+  // ----------------------------
+  // Common slot computation (Wave32)
+  // ----------------------------
+
+  // lane id via amdgcn.mbcnt.lo (count active lanes below me); lane = & 31
+  auto *MbcntLoTy = FunctionType::get(Int32Ty, {Int32Ty, Int32Ty}, false);
+  FunctionCallee MbcntLoFnByName =
+      M.getOrInsertFunction("llvm.amdgcn.mbcnt.lo", MbcntLoTy);
+  Value *MbcntLo = Builder.CreateCall(
+      MbcntLoFnByName, {ConstantInt::get(Int32Ty, -1), ConstantInt::get(Int32Ty, 0)},
+      "mbcnt.lo");
+  Value *Lane = Builder.CreateAnd(MbcntLo, ConstantInt::get(Int32Ty, 31), "lane");
+
+  // warpLocal = threadIdx.x >> 5
+  Value *WarpLocal = Builder.CreateLShr(ThreadIdx, ConstantInt::get(Int32Ty, kWarpBits),
+                                        "warpLocal");
+
+  // blockBits = (gridDim.x > 1) ? (32 - ctlz(gridDim.x - 1)) : 1
+  Value *GridGt1 = Builder.CreateICmpUGT(GridDimX, ConstantInt::get(Int32Ty, 1), "grid_gt_1");
+  Value *GridDimXMinus1 = Builder.CreateSub(GridDimX, ConstantInt::get(Int32Ty, 1),
+                                            "gridDimX_minus_1");
+  FunctionCallee CtlzI32Fn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::ctlz, {Int32Ty});
+  Value *CtlzVal = Builder.CreateCall(CtlzI32Fn, {GridDimXMinus1, Builder.getFalse()},
+                                      "ctlz_gridDimX_minus_1");
+  Value *BlockBitsCandidate =
+      Builder.CreateSub(ConstantInt::get(Int32Ty, 32), CtlzVal, "blockBits_cand");
+  Value *BlockBits =
+      Builder.CreateSelect(GridGt1, BlockBitsCandidate, ConstantInt::get(Int32Ty, 1),
+                           "blockBits");
+
+  // usedForHi = min(blockBits, KSlotBits - kWarpBits)
+  Value *SlotHiBits = ConstantInt::get(Int32Ty, (int)(KSlotBits - kWarpBits));
+  Value *BlockLtSlotHi = Builder.CreateICmpULT(BlockBits, SlotHiBits);
+  Value *UsedForHi = Builder.CreateSelect(BlockLtSlotHi, BlockBits, SlotHiBits, "usedForHi");
+
+  // sampBits = blockBits - usedForHi
+  Value *SampBits = Builder.CreateSub(BlockBits, UsedForHi, "sampBits");
+  Value *SampBitsIsZero = Builder.CreateICmpEQ(SampBits, ConstantInt::get(Int32Ty, 0),
+                                               "sampBits_is_zero");
+
+  // blockHi = (sampBits == 0) ? blockIdx.x : (blockIdx.x >> sampBits)
+  Value *BlockHiShifted = Builder.CreateLShr(BlockIdx, SampBits, "blockHi_shifted");
+  Value *BlockHi = Builder.CreateSelect(SampBitsIsZero, BlockIdx, BlockHiShifted, "blockHi");
+
+  // slotRaw = (blockHi << 5) | warpLocal
+  Value *SlotRawUpper = Builder.CreateShl(BlockHi, ConstantInt::get(Int32Ty, kWarpBits),
+                                          "slotRaw_upper");
+  Value *SlotRaw = Builder.CreateOr(SlotRawUpper, WarpLocal, "slotRaw");
+
+  // Find warp leader using ballot.i32 + cttz
+  auto *BallotTy = FunctionType::get(Int32Ty, {Int1Ty}, false);
+  FunctionCallee BallotI32ByName =
+      M.getOrInsertFunction("llvm.amdgcn.ballot.i32", BallotTy);
+  Value *ActiveMask = Builder.CreateCall(BallotI32ByName, {ConstantInt::getTrue(Context)},
+                                         "activeMask");
+
+  FunctionCallee CttzI32Fn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::cttz, {Int32Ty});
+  Value *ActiveMaskNonZero =
+      Builder.CreateICmpNE(ActiveMask, ConstantInt::get(Int32Ty, 0), "mask_nz");
+  Value *LeaderLane =
+      Builder.CreateCall(CttzI32Fn, {ActiveMask, ConstantInt::getTrue(Context)}, "leaderLane");
+  Value *IsLeader = Builder.CreateICmpEQ(Lane, LeaderLane, "isLeader");
+  Value *IsLeaderGuarded =
+      Builder.CreateSelect(ActiveMaskNonZero, IsLeader, ConstantInt::getFalse(Context),
+                           "isLeader_guarded");
+
+  // Compute number of active lanes and step * active lanes
+  FunctionCallee CtpopI32Fn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::ctpop, {Int32Ty});
+  Value *NumActive = Builder.CreateCall(CtpopI32Fn, {ActiveMask}, "numActive");
+
+  Value *IncStep = Inc->getStep(); // integer-typed Value (often i64)
+  Value *NumActiveCast =
+      Builder.CreateZExtOrTrunc(NumActive, IncStep->getType(), "numActive.cast");
+  Value *StepTimesActive =
+      Builder.CreateMul(IncStep, NumActiveCast, "step_times_active");
+
+  // ----------------------------
+  // Mode-dependent writer logic
+  // ----------------------------
+
+  Value *Slot = nullptr;
+  Value *IsWriter = nullptr;
+
+  if (OffloadPGOSampling == OffloadPGOSamplingMode::PatternOverflow) {
+    // Sampling mask/pattern over low sampBits of blockIdx.x
+    Value *One32 = ConstantInt::get(Int32Ty, 1);
+    Value *SampMaskShift = Builder.CreateShl(One32, SampBits, "sampMask_shift"); // 1<<sampBits
+    Value *SampMaskMinus1 = Builder.CreateSub(SampMaskShift, One32, "sampMask_minus1");
+    Value *SampMask =
+        Builder.CreateSelect(SampBitsIsZero, ConstantInt::get(Int32Ty, 0), SampMaskMinus1,
+                             "sampMask");
+
+    // sampPat = KPattern14 & sampMask
+    Value *SampPat =
+        Builder.CreateAnd(ConstantInt::get(Int32Ty, KPattern14), SampMask, "sampPat");
+
+    // matched = (sampBits == 0) ? true : ((blockIdx.x & sampMask) == sampPat)
+    Value *BlockMasked = Builder.CreateAnd(BlockIdx, SampMask, "blockMasked");
+    Value *CmpMaskPat = Builder.CreateICmpEQ(BlockMasked, SampPat, "cmp_mask_pat");
+    Value *Matched =
+        Builder.CreateSelect(SampBitsIsZero, ConstantInt::getTrue(Context), CmpMaskPat,
+                             "matched");
+
+    // Only leader writes when matched
+    IsWriter = Builder.CreateAnd(IsLeaderGuarded, Matched, "isWriter");
+
+    // Route to overflow if not writer or slotRaw == KOverflow
+    Value *SlotRawIsOverflow =
+        Builder.CreateICmpEQ(SlotRaw, ConstantInt::get(Int32Ty, KOverflow), "slot_is_overflow");
+    Value *GoodWriter = Builder.CreateAnd(IsWriter, Builder.CreateNot(SlotRawIsOverflow),
+                                          "goodWriter");
+    Slot = Builder.CreateSelect(GoodWriter, SlotRaw, ConstantInt::get(Int32Ty, KOverflow),
+                                "Slot");
+  } else {
+    // AtomicWarpLeader: no sampling, no overflow. Only the leader writes atomically.
+    IsWriter = IsLeaderGuarded;
+    Slot = SlotRaw;
+  }
+
+  // --- Calculate final counter index ---
+  auto *OldCounterIdx = Inc->getIndex();
+  auto *NumSlots = Builder.getInt32(KSlots);
+  auto *CounterIdxBase = Builder.CreateMul(OldCounterIdx, NumSlots);
+  auto *CounterIdx = Builder.CreateAdd(CounterIdxBase, Slot, "CounterIdx");
+
+  // --- Counter address ---
+  auto *Counters = getOrCreateRegionCounters(Inc);
+  Value *Indices[] = {Builder.getInt32(0), CounterIdx};
+  auto *Addr =
+      Builder.CreateInBoundsGEP(Counters->getValueType(), Counters, Indices, "ctr.addr");
+
+  // --- Increment ---
+  if (OffloadPGOSampling == OffloadPGOSamplingMode::PatternOverflow) {
+    // Non-atomic increment by (Inc->getStep() * numActive) (legacy mode)
+    Type *CounterTy = cast<ArrayType>(Counters->getValueType())->getElementType();
+    Value *Load = Builder.CreateLoad(CounterTy, Addr, "pgocount");
+    Value *ProdToCounterTy =
+        Builder.CreateZExtOrTrunc(StepTimesActive, CounterTy, "step_times_active.cast");
+    auto *Count = Builder.CreateAdd(Load, ProdToCounterTy, "pgocount.next");
+    Builder.CreateStore(Count, Addr);
+  } else {
+    // AtomicWarpLeader: only the leader performs atomicrmw add (step * numActive)
+    // Correct control-flow: split block at Inc, create ThenBB, and conditional branch.
+
+    // 1) Split the current block before Inc. The split inserts an unconditional
+    //    branch from CurBB to ContBB; we'll replace it with a conditional branch.
+    BasicBlock *CurBB = Builder.GetInsertBlock();
+    Function *F = CurBB->getParent();
+    BasicBlock *ContBB = CurBB->splitBasicBlock(BasicBlock::iterator(Inc), "atomic_cont");
+
+    // After split, CurBB ends with "br label %atomic_cont".
+    // 2) Create the ThenBB (atomic path).
+    BasicBlock *ThenBB = BasicBlock::Create(Context, "atomic_then", F);
+
+    // 3) Replace the terminator in CurBB with a conditional branch to ThenBB or ContBB.
+    Instruction *OldTerm = CurBB->getTerminator(); // unconditional branch inserted by split
+    OldTerm->eraseFromParent();
+    IRBuilder<> HeadBuilder(CurBB);
+    HeadBuilder.CreateCondBr(IsWriter, ThenBB, ContBB);
+
+    // 4) Emit the atomicrmw in ThenBB, then branch to ContBB.
+    IRBuilder<> ThenBuilder(ThenBB);
+    Type *CounterTy = cast<ArrayType>(Counters->getValueType())->getElementType();
+    Value *ProdToCounterTy =
+        ThenBuilder.CreateZExtOrTrunc(StepTimesActive, CounterTy, "step_times_active.cast");
+    ThenBuilder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, ProdToCounterTy,
+                                MaybeAlign(Align(8)), AtomicOrdering::Monotonic);
+    ThenBuilder.CreateBr(ContBB);
+
+    // 5) Continue in the continuation block and erase the original Inc.
+    Builder.SetInsertPoint(ContBB, ContBB->begin());
+  }
+
   Inc->eraseFromParent();
 }
 
@@ -1649,7 +1939,12 @@ InstrLowerer::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
 GlobalVariable *
 InstrLowerer::createRegionCounters(InstrProfCntrInstBase *Inc, StringRef Name,
                                    GlobalValue::LinkageTypes Linkage) {
+  const unsigned OffloadNumProfilingThreads =
+      (1u << OffloadProfilingThreadBitWidth) - 1;
+
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
+  if (TT.isAMDGPU())
+    NumCounters *= (OffloadNumProfilingThreads + 1);
   auto &Ctx = M.getContext();
   GlobalVariable *GV;
   if (isa<InstrProfCoverInst>(Inc)) {
@@ -1787,6 +2082,9 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   }
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
+  if (TT.isAMDGPU())
+    NumCounters *= (1u << OffloadProfilingThreadBitWidth);
+
   auto *CounterPtr = PD.RegionCounters;
 
   uint64_t NumBitmapBytes = PD.NumBitmapBytes;
@@ -1806,6 +2104,10 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   Constant *Int16ArrayVals[IPVK_Last + 1];
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
     Int16ArrayVals[Kind] = ConstantInt::get(Int16Ty, PD.NumValueSites[Kind]);
+
+  uint16_t NumOffloadProfilingThreadsVal = 0;
+  if (TT.isAMDGPU())
+    NumOffloadProfilingThreadsVal = (1u << OffloadProfilingThreadBitWidth) - 1;
 
   if (isGPUProfTarget(M)) {
     Linkage = GlobalValue::ExternalLinkage;
@@ -1927,6 +2229,106 @@ void InstrLowerer::emitVNodes() {
   // VNodesVar is used by runtime but not referenced via relocation by other
   // sections. Conservatively make it linker retained.
   UsedVars.push_back(VNodesVar);
+}
+
+void InstrLowerer::createHIPDynamicModuleRegistration() {
+  if (isGPUProfTarget(M))
+    return;
+  LLVM_DEBUG(llvm::dbgs() << "Entering createHIPDynamicModuleRegistration\n");
+  StringRef FuncNames[] = {"hipModuleLoad", "hipModuleLoadData",
+                           "hipModuleLoadDataEx"};
+  for (StringRef FuncName : FuncNames) {
+    Function *F = M.getFunction(FuncName);
+    if (!F)
+      continue;
+
+    for (User *U : F->users()) {
+      if (auto *CB = dyn_cast<CallBase>(U)) {
+        Instruction *InsertPt = nullptr;
+        // If the call is an invoke instruction, we should insert the
+        // registration call in the normal destination block.
+        if (auto *Invoke = dyn_cast<InvokeInst>(CB)) {
+          InsertPt = &*Invoke->getNormalDest()->getFirstInsertionPt();
+        } else if (CB->isTerminator()) {
+          // If it's another kind of terminator (e.g., callbr), we don't
+          // know the semantics of the successors, so we conservatively
+          // skip it. The hipModuleLoad* functions are not expected to be
+          // used in other terminator instructions.
+          continue;
+        } else {
+          // This is a normal call instruction, so we can insert after it.
+          InsertPt = CB->getNextNode();
+        }
+
+        // If there's no valid insertion point (e.g., a malformed block),
+        // skip.
+        if (!InsertPt)
+          continue;
+
+        IRBuilder<> Builder(InsertPt);
+        auto *VoidTy = Type::getVoidTy(M.getContext());
+        // The second argument to the registration function is the module handle,
+        // which is an out-parameter (hipModule_t*), so its type in the call
+        // is hipModule_t**.
+        auto *ModuleHandlePtrTy = PointerType::get(M.getContext(), 0);
+        auto *Int32Ty = Type::getInt32Ty(M.getContext());
+        auto *RegisterDynamicModuleTy =
+            FunctionType::get(VoidTy, {Int32Ty, ModuleHandlePtrTy}, false);
+        FunctionCallee RegisterFunc = M.getOrInsertFunction(
+            "__llvm_profile_hip_register_dynamic_module",
+            RegisterDynamicModuleTy);
+
+        // The first argument to the registration function is the return value
+        // of the hipModuleLoad* call (hipError_t, which is i32).
+        Value *ReturnValue = CB;
+        // The second argument is the module handle itself, which is the first
+        // argument to the hipModuleLoad* call.
+        Value *ModuleHandle = CB->getArgOperand(0);
+
+        auto *Call = Builder.CreateCall(RegisterFunc, {ReturnValue, ModuleHandle});
+        LLVM_DEBUG(llvm::dbgs() << "Register HIP module loaded by ";
+                   CB->dump();
+                  llvm::dbgs() << "BB:\n";
+                Call->getParent()->dump(););
+      }
+    }
+  }
+}
+
+void InstrLowerer::createHIPDynamicModuleUnregistration() {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Entering createHIPDynamicModuleUnregistration\n");
+  Function *F = M.getFunction("hipModuleUnload");
+  if (!F)
+    return;
+
+  for (User *U : F->users()) {
+    if (auto *CB = dyn_cast_or_null<CallBase>(U)) {
+      // The insertion point is right before the call to hipModuleUnload.
+      Instruction *InsertPt = CB;
+
+      IRBuilder<> Builder(InsertPt);
+      auto *VoidTy = Type::getVoidTy(M.getContext());
+      auto *VoidPtrTy = PointerType::getUnqual(M.getContext());
+
+      auto *UnregisterDynamicModuleTy =
+          FunctionType::get(VoidTy, {VoidPtrTy}, false);
+      FunctionCallee UnregisterFunc = M.getOrInsertFunction(
+          "__llvm_profile_hip_unregister_dynamic_module",
+          UnregisterDynamicModuleTy);
+
+      // The argument is the module handle, which is the first
+      // argument to the hipModuleUnload call.
+      Value *ModuleHandle = CB->getArgOperand(0);
+      Value *CastedModuleHandle =
+          Builder.CreatePointerCast(ModuleHandle, VoidPtrTy);
+
+      auto *Call = Builder.CreateCall(UnregisterFunc, {CastedModuleHandle});
+      LLVM_DEBUG(llvm::dbgs() << "Unregister HIP module unloaded by ";
+                 CB->dump(); llvm::dbgs() << "BB:\n";
+                 Call->getParent()->dump(););
+    }
+  }
 }
 
 void InstrLowerer::emitNameData() {
@@ -2162,3 +2564,286 @@ void createProfileSamplingVar(Module &M) {
   appendToCompilerUsed(M, SamplingVar);
 }
 } // namespace llvm
+
+namespace {
+// Create __start_ and __stop_ symbols for profile sections when targeting
+// device code and register them as HIP device variables
+void InstrLowerer::createProfileSectionSymbols() {
+  LLVM_DEBUG(llvm::dbgs() << "createProfileSectionSymbols() called\n");
+
+  // Only create symbols for device targets (GPU)
+  if (!isGPUProfTarget(M)) {
+    LLVM_DEBUG(llvm::dbgs() << "Not a GPU target, skipping symbol creation\n");
+    return;
+  }
+
+  LLVM_DEBUG(llvm::dbgs()
+             << "GPU target detected, creating profile section symbols\n");
+
+  auto createSectionSymbols = [&](StringRef SectionName)
+      -> std::pair<GlobalVariable *, GlobalVariable *> {
+    LLVM_DEBUG(llvm::dbgs() << "Creating symbols for section: " << SectionName
+                            << "\n");
+
+    // Follow the exact pattern from offloading::getOffloadEntryArray
+    auto *ZeroInitializer = ConstantAggregateZero::get(
+        ArrayType::get(Type::getInt8Ty(M.getContext()), 0u));
+    auto *EntryType = ArrayType::get(Type::getInt8Ty(M.getContext()), 0);
+    auto Linkage = GlobalValue::ExternalLinkage;
+
+    auto *StartSym =
+        new GlobalVariable(M, EntryType, /*isConstant=*/true, Linkage,
+                           /*Initializer=*/nullptr, "__start_" + SectionName);
+    StartSym->setVisibility(GlobalValue::ProtectedVisibility);
+    LLVM_DEBUG(llvm::dbgs() << "Created start symbol: __start_" << SectionName
+                 << " linkage=" << StartSym->getLinkage()
+                 << " visibility=" << StartSym->getVisibility() << "\n");
+
+    auto *StopSym =
+        new GlobalVariable(M, EntryType, /*isConstant=*/true, Linkage,
+                           /*Initializer=*/nullptr, "__stop_" + SectionName);
+    StopSym->setVisibility(GlobalValue::ProtectedVisibility);
+    LLVM_DEBUG(llvm::dbgs() << "Created stop symbol: __stop_" << SectionName
+                 << " linkage=" << StopSym->getLinkage()
+                 << " visibility=" << StopSym->getVisibility() << "\n");
+
+    // For ELF (AMDGPU), create dummy variable to force linker to provide
+    // symbols
+    auto *DummyEntry = new GlobalVariable(
+        M, ZeroInitializer->getType(), true, GlobalVariable::InternalLinkage,
+        ZeroInitializer, "__dummy." + SectionName);
+    DummyEntry->setSection(SectionName);
+    DummyEntry->setAlignment(Align(8));
+    CompilerUsedVars.push_back(DummyEntry);
+
+    // Create a struct that holds pointers to the start/stop symbols to keep
+    // them alive
+    unsigned AS = StartSym->getType()->getPointerAddressSpace(); // usually 1
+    auto *Int8PtrTy = PointerType::get(M.getContext(), AS);
+
+    auto *StructTy =
+        StructType::get(M.getContext(), {Int8PtrTy, Int8PtrTy}); // not packed
+
+    // Get addresses of the start/stop symbols using
+    // ConstantExpr::getGetElementPtr
+    auto *StartAddr = ConstantExpr::getGetElementPtr(
+        EntryType, StartSym,
+        {ConstantInt::get(Type::getInt32Ty(M.getContext()), 0)});
+    auto *StopAddr = ConstantExpr::getGetElementPtr(
+        EntryType, StopSym,
+        {ConstantInt::get(Type::getInt32Ty(M.getContext()), 0)});
+
+    // Cast to i8* for the struct
+    auto *StartPtr = ConstantExpr::getBitCast(StartAddr, Int8PtrTy);
+    auto *StopPtr = ConstantExpr::getBitCast(StopAddr, Int8PtrTy);
+
+    auto *StructInit = ConstantStruct::get(StructTy, {StartPtr, StopPtr});
+
+    auto *RefStruct =
+        new GlobalVariable(M, StructTy, true, GlobalVariable::InternalLinkage,
+                           StructInit, "__ref_struct." + SectionName);
+    CompilerUsedVars.push_back(RefStruct);
+
+    LLVM_DEBUG(llvm::dbgs() << "Created reference struct with addresses to keep symbols alive\n");
+
+    return std::make_pair(StartSym, StopSym);
+  };
+
+  // Create symbols for the three main profile sections
+  // Store the start/stop symbols for creating the unified structure
+  std::vector<GlobalVariable *> StartSymbols;
+  std::vector<GlobalVariable *> StopSymbols;
+
+  auto createSectionSymbolsAndStore = [&](StringRef SectionName) {
+    auto [StartSym, StopSym] = createSectionSymbols(SectionName);
+    StartSymbols.push_back(StartSym);
+    StopSymbols.push_back(StopSym);
+  };
+
+  createSectionSymbolsAndStore("__llvm_prf_cnts");
+  createSectionSymbolsAndStore("__llvm_prf_data");
+  createSectionSymbolsAndStore("__llvm_prf_names");
+
+  // Create unified structure __llvm_offload_prf containing all start/stop
+  // symbols
+  std::vector<Type *> StructFields;
+  std::vector<Constant *> StructValues;
+
+  // Add all start symbols, then all stop symbols
+  for (auto *StartSym : StartSymbols) {
+    unsigned AS = StartSym->getType()->getPointerAddressSpace(); // usually 1
+    auto *Int8PtrTy = PointerType::get(Type::getInt8Ty(M.getContext()), AS);
+    StructFields.push_back(Int8PtrTy);
+    auto *StartAddr = ConstantExpr::getGetElementPtr(
+        StartSym->getValueType(), StartSym,
+        {ConstantInt::get(Type::getInt32Ty(M.getContext()), 0)});
+    auto *StartPtr = ConstantExpr::getBitCast(StartAddr, Int8PtrTy);
+    StructValues.push_back(StartPtr);
+  }
+  for (auto *StopSym : StopSymbols) {
+    unsigned AS = StopSym->getType()->getPointerAddressSpace(); // usually 1
+    auto *Int8PtrTy = PointerType::get(Type::getInt8Ty(M.getContext()), AS);
+    StructFields.push_back(Int8PtrTy);
+    auto *StopAddr = ConstantExpr::getGetElementPtr(
+        StopSym->getValueType(), StopSym,
+        {ConstantInt::get(Type::getInt32Ty(M.getContext()), 0)});
+    auto *StopPtr = ConstantExpr::getBitCast(StopAddr, Int8PtrTy);
+    StructValues.push_back(StopPtr);
+  }
+
+  auto *UnifiedStructTy = StructType::get(M.getContext(), StructFields);
+  auto *UnifiedStructInit = ConstantStruct::get(UnifiedStructTy, StructValues);
+
+  auto *UnifiedStruct =
+      new GlobalVariable(M, UnifiedStructTy, true, GlobalValue::ExternalLinkage,
+                         UnifiedStructInit, "__llvm_offload_prf");
+  UnifiedStruct->setVisibility(GlobalValue::DefaultVisibility);
+  CompilerUsedVars.push_back(UnifiedStruct);
+
+  LLVM_DEBUG(llvm::dbgs() << "Created unified structure __llvm_offload_prf with "
+               << StructFields.size() << " fields\n");
+
+  // llvm::errs() << "Module after creating profile section symbols:\n";
+  // M.dump();
+}
+
+// Create HIP device variable registration for profile symbols
+void InstrLowerer::createHIPDeviceVariableRegistration() {
+  LLVM_DEBUG(llvm::dbgs() << "createHIPDeviceVariableRegistration called\n");
+  if (isGPUProfTarget(M)) {
+    LLVM_DEBUG(llvm::dbgs() << "GPU target, skipping symbol creation\n");
+    return;
+  }
+  // Find the existing __hip_module_ctor function
+  Function *Ctor = M.getFunction("__hip_module_ctor");
+  if (!Ctor) {
+    LLVM_DEBUG(llvm::dbgs() << "No __hip_module_ctor function found\n");
+    // M.dump();
+    //  No HIP compilation context, skip registration
+    return;
+  }
+
+  // Locate the HIP fat-binary registration call and capture its return value
+  Value *Handle = nullptr;
+  for (BasicBlock &BB : *Ctor)
+    for (Instruction &I : BB)
+      if (auto *CB = dyn_cast<CallBase>(&I))
+        if (Function *Callee = CB->getCalledFunction())
+          if (Callee->getName() == "__hipRegisterFatBinary") {
+            Handle = &I; // call result
+            break;
+          }
+  if (!Handle) {
+    LLVM_DEBUG(llvm::dbgs() << "__hipRegisterFatBinary call not found\n");
+    return;
+  }
+  GlobalVariable *FatbinHandleGV = nullptr;
+  if (auto *HandleInst = dyn_cast<Instruction>(Handle))
+    for (Instruction *Cur = HandleInst->getNextNode(); Cur;
+         Cur = Cur->getNextNode()) {
+      auto *SI = dyn_cast<StoreInst>(Cur);
+      if (!SI || SI->getValueOperand() != Handle)
+        continue;
+      if (auto *GV = dyn_cast<GlobalVariable>(
+              SI->getPointerOperand()->stripPointerCasts())) {
+        FatbinHandleGV = GV;
+        break;
+      }
+    }
+
+  if (!FatbinHandleGV) {
+    LLVM_DEBUG(llvm::dbgs() << "store of __hipRegisterFatBinary call not found\n");
+  }
+
+  // Insert the new registration just before the ctor’s return
+  ReturnInst *RetInst = nullptr;
+  for (auto &BB : llvm::reverse(*Ctor))
+    if ((RetInst = dyn_cast<ReturnInst>(BB.getTerminator())))
+      break;
+  if (!RetInst) {
+    LLVM_DEBUG(llvm::dbgs() << "No return instruction found in ctor\n");
+    return;
+  }
+  IRBuilder<> Builder(RetInst);
+
+  LLVM_DEBUG(llvm::dbgs() << "Found __hip_module_ctor, proceeding\n");
+
+  // Get or create the __hipRegisterVar declaration
+  auto *VoidTy = Type::getVoidTy(M.getContext());
+  auto *VoidPtrTy = PointerType::getUnqual(M.getContext());
+  auto *Int32Ty = Type::getInt32Ty(M.getContext());
+  auto *Int64Ty = Type::getInt64Ty(M.getContext());
+
+  auto *RegisterVarTy =
+      FunctionType::get(VoidTy,
+                        {VoidPtrTy, VoidPtrTy, VoidPtrTy, VoidPtrTy, Int32Ty,
+                         Int64Ty, Int32Ty, Int32Ty},
+                        false);
+  FunctionCallee RegisterVarFunc =
+      M.getOrInsertFunction("__hipRegisterVar", RegisterVarTy);
+
+  // Profile section names that correspond to device symbols
+  StringRef SectionNames[] = {"__llvm_prf_cnts", "__llvm_prf_data",
+                              "__llvm_prf_names"};
+
+  // Create host shadow variables and registration calls
+  SmallVector<GlobalVariable *, 12> HostShadowVars;
+  SmallVector<Constant *, 12> DeviceNameStrings;
+  auto *ZeroSizedArrayTy = ArrayType::get(Type::getInt8Ty(M.getContext()), 0);
+
+  // Also create shadow variable for the unified __llvm_offload_prf structure
+  // Create a struct type that matches the device structure (6 pointers)
+  std::string ShadowName = "__llvm_offload_prf";
+  auto *Int8PtrTy = PointerType::get(Type::getInt8Ty(M.getContext()), 0);
+  std::vector<Type *> ShadowStructFields(6, Int8PtrTy); // 6 pointers
+  auto *ShadowStructTy = StructType::get(M.getContext(), ShadowStructFields);
+  auto *ShadowVar = new GlobalVariable(
+      M, ShadowStructTy, /*isConstant=*/false, GlobalValue::ExternalLinkage,
+      ConstantAggregateZero::get(ShadowStructTy), ShadowName);
+  HostShadowVars.push_back(ShadowVar);
+
+  // Create device name string
+  auto *DeviceNameStr =
+      ConstantDataArray::getString(M.getContext(), "__llvm_offload_prf", true);
+  auto *DeviceNameGlobal = new GlobalVariable(
+      M, DeviceNameStr->getType(), /*isConstant=*/true,
+      GlobalValue::PrivateLinkage, DeviceNameStr, "__llvm_offload_prf.name");
+  DeviceNameStrings.push_back(DeviceNameGlobal);
+
+  LLVM_DEBUG(llvm::dbgs() << "Created shadow variable for __llvm_offload_prf\n");
+
+  // Register the __llvm_offload_prf shadow variable
+  if (!HostShadowVars.empty() && !DeviceNameStrings.empty()) {
+    GlobalVariable *HostShadow = HostShadowVars[0]; // __llvm_offload_prf shadow
+    Constant *DeviceName = DeviceNameStrings[0];
+
+    // __hipRegisterVar(handle, host_shadow, device_name, device_name, extern=0,
+    // size=48, constant=0, global=0) - register the unified structure
+    Value *HipHandle =
+        FatbinHandleGV ? Builder.CreateLoad(VoidPtrTy, FatbinHandleGV) : Handle;
+
+    Builder.CreateCall(
+        RegisterVarFunc,
+        {HipHandle, Builder.CreatePointerCast(HostShadowVars[0], VoidPtrTy),
+         Builder.CreatePointerCast(DeviceNameStrings[0], VoidPtrTy),
+         Builder.CreatePointerCast(DeviceNameStrings[0], VoidPtrTy),
+         Builder.getInt32(0),   // extern = 0
+         Builder.getInt64(48),  // size  = 48
+         Builder.getInt32(0),   // constant = 0
+         Builder.getInt32(0)}); // global   = 0
+
+    // Also register with the profile runtime
+    auto *RegisterShadowVarTy = FunctionType::get(VoidTy, {VoidPtrTy}, false);
+    FunctionCallee RegisterShadowVarFunc = M.getOrInsertFunction(
+        "__llvm_profile_hip_register_shadow_variable", RegisterShadowVarTy);
+    Builder.CreateCall(RegisterShadowVarFunc,
+                       {Builder.CreatePointerCast(HostShadow, VoidPtrTy)});
+
+    // llvm::errs() << "Registered __llvm_offload_prf with HIP
+    // runtime
+  }
+  // llvm::errs() << "Module after registering profile section
+  // symbols:\n"; M.dump();
+}
+
+} // namespace
