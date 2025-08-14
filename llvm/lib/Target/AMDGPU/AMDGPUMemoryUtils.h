@@ -76,8 +76,9 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
 
 /// Check if the passed global variable or private alloca can be allocated
 /// in VGPRs. If so, the set of pointers is filled in with all derived pointers.
+/// Also returns whether the variable must be allocated in VGPRs.
 bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
-                        DenseSet<Value *> &Pointers);
+                        DenseSet<Value *> &Pointers, bool &MustInVGPR);
 
 } // end namespace AMDGPU
 

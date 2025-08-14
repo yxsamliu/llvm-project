@@ -481,39 +481,43 @@ static bool isSupportedMemset(MemSetInst *I, const Value &V, Type *ValueType,
 }
 
 bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
-                        DenseSet<Value *> &Pointers) {
+                        DenseSet<Value *> &Pointers, bool &MustInVGPR) {
 
-  // If multicast is used, and we cannot promote the used variable to VGPRs, it
-  // is a fatal error.
-  bool RejectIsError = false;
+  MustInVGPR = false;
   const auto RejectUser = [&](Instruction *Inst, Twine Msg) {
     LLVM_DEBUG(dbgs() << "  Cannot promote to vgpr: " << Msg << "\n"
                       << "    " << *Inst << "\n");
-    if (RejectIsError)
-      report_fatal_error("Cannot promote multicast allocation to vgpr: " + Msg);
+    if (MustInVGPR)
+      report_fatal_error("Lane-shared variable must be assigned to VGPRs, "
+                         "but cannot be: " +
+                         Msg);
     return false;
+  };
+  // A Lambda function to check if an intrinsic must use laneshared in VGPRs.
+  const auto MustUseLanesharedInVGPR = [&](IntrinsicInst *Intr) {
+    return Intr->getIntrinsicID() == Intrinsic::amdgcn_load_mcast_b32 ||
+           Intr->getIntrinsicID() == Intrinsic::amdgcn_load_mcast_b64 ||
+           Intr->getIntrinsicID() == Intrinsic::amdgcn_load_mcast_b128 ||
+           Intr->getIntrinsicID() ==
+               Intrinsic::amdgcn_spatial_cluster_send_next ||
+           Intr->getIntrinsicID() ==
+               Intrinsic::amdgcn_spatial_cluster_send_prev;
   };
 
   Type *ValueType;
+  bool IsLaneShared = false;
   if (auto *GV = dyn_cast<GlobalVariable>(&V)) {
     assert(GV->getAddressSpace() == AMDGPUAS::LANE_SHARED);
     ValueType = GV->getValueType();
+    IsLaneShared = true;
   } else if (auto *AI = dyn_cast<AllocaInst>(&V)) {
-    if (!AI->isStaticAlloca() ||
-        AI->getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS)
-      return false;
     ValueType = AI->getAllocatedType();
   } else {
     llvm_unreachable("Unexpected promotion candidate!");
   }
 
-  // TODO-GFX13: Do a proper allocation check across _all_ allocatable objects.
-  if (DL.getTypeStoreSize(ValueType) > 4 * (1024 - 64)) {
-    LLVM_DEBUG(dbgs() << "  Cannot promote to vgpr: too large\n");
-    return false;
-  }
-
   // Step 1: Collect all derived pointers and their uses.
+  // Also detect cases in which variables must be allocated in VGPRs.
   SmallVector<const Use *> Uses;
   assert(Pointers.empty());
 
@@ -529,9 +533,14 @@ bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
         Uses.push_back(&U);
 
         auto User = U.getUser();
-        if (isa<GEPOperator, AddrSpaceCastOperator, PHINode, SelectInst>(User)) {
+        if (isa<GEPOperator, AddrSpaceCastOperator, PHINode, SelectInst>(
+                User)) {
           if (Pointers.insert(User).second)
             WorkList.push_back(User);
+        }
+        if (IsLaneShared) {
+          if (auto *Intr = dyn_cast<IntrinsicInst>(User))
+            MustInVGPR |= MustUseLanesharedInVGPR(Intr);
         }
       }
     }
@@ -589,19 +598,11 @@ bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
       return RejectUser(Inst, "cannot handle mem transfer inst yet");
 
     if (auto *Intr = dyn_cast<IntrinsicInst>(Inst)) {
-      if (Intr->getIntrinsicID() == Intrinsic::objectsize) {
+      if (Intr->getIntrinsicID() == Intrinsic::objectsize)
         continue;
-      }
-      if (Intr->getIntrinsicID() == Intrinsic::amdgcn_load_mcast_b32 ||
-          Intr->getIntrinsicID() == Intrinsic::amdgcn_load_mcast_b64 ||
-          Intr->getIntrinsicID() == Intrinsic::amdgcn_load_mcast_b128 ||
-          Intr->getIntrinsicID() ==
-              Intrinsic::amdgcn_spatial_cluster_send_next ||
-          Intr->getIntrinsicID() ==
-              Intrinsic::amdgcn_spatial_cluster_send_prev) {
-        RejectIsError = true;
+
+      if (MustUseLanesharedInVGPR(Intr))
         continue;
-      }
     }
 
     // Ignore assume-like intrinsics and comparisons used in assumes.

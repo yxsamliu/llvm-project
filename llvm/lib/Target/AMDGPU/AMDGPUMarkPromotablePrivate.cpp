@@ -35,11 +35,23 @@ bool AMDGPUMarkPromotablePrivate::runOnFunction(Function &F) {
   const DataLayout &DL = F.getParent()->getDataLayout();
   MDNode *PrivateInVGPRMD = MDNode::get(F.getContext(), {});
   bool Changed = false;
+  unsigned TotalBytesInVGRs = 0;
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
+      AllocaInst *AI = dyn_cast<AllocaInst>(&I);
+      if (!AI || !AI->isStaticAlloca() ||
+          AI->getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS)
+        continue;
+
+      // TODO-GFX13: Need some prioritization among _all_ allocatable objects.
+      unsigned AllocaSize = DL.getTypeStoreSize(AI->getAllocatedType());
+      if (TotalBytesInVGRs + AllocaSize > 4 * (1024 - 64)) {
+        LLVM_DEBUG(dbgs() << "  Cannot promote to vgpr: too large\n");
+        continue;
+      }
       DenseSet<Value *> Pointers;
-      if (auto *AI = dyn_cast<AllocaInst>(&I);
-          AI && AMDGPU::IsPromotableToVGPR(*AI, DL, Pointers)) {
+      bool MustInVGPR = false;
+      if (AMDGPU::IsPromotableToVGPR(*AI, DL, Pointers, MustInVGPR)) {
         AI->setMetadata("amdgpu.promotable.to.vgpr", PrivateInVGPRMD);
         // Set the metadata for all the pointers to this alloca
         // to facilitate the promotion to VGPR during Instruction selection.
@@ -48,6 +60,7 @@ bool AMDGPUMarkPromotablePrivate::runOnFunction(Function &F) {
             Inst->setMetadata("amdgpu.promotable.to.vgpr", PrivateInVGPRMD);
         }
         Changed = true;
+        TotalBytesInVGRs += AllocaSize;
       }
     }
   }

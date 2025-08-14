@@ -48,7 +48,7 @@ public:
 static void assignAbsoluteAddresses(
     SmallVectorImpl<GlobalVariable *> &GVs,
     const VariableFunctionMap &GV2Kernels, CallGraph &CG,
-    uint32_t EndAddress = 1u << 28,
+    DenseSet<GlobalVariable *> &GVsMustInVGPR, uint32_t EndAddress = 1u << 28,
     SmallVectorImpl<GlobalVariable *> *GVsInOverflow = nullptr,
     DenseMap<GlobalVariable *, DenseSet<Value *>> *VGPRPtrSets = nullptr) {
   if (GVs.empty())
@@ -60,11 +60,15 @@ static void assignAbsoluteAddresses(
   bool IsVGPRs = VGPRPtrSets != nullptr;
   auto *IntTy = M.getDataLayout().getIntPtrType(Ctx, AMDGPUAS::LANE_SHARED);
 
-  // Sort the GVs by the number of kernels that use them, so that we assign
+  // Sort the GVs.
+  // The 1st order: GV that must be in VGPR first.
+  // The 2nd Order: by the number of kernels that use them, so that we assign
   // the GVs that are used by more kernels first. This helps pack lane-shared
   // variables that are used by multiple kernels, since we must assign them a
   // module absolute address.
   llvm::stable_sort(GVs, [&](GlobalVariable *A, GlobalVariable *B) {
+    if (GVsMustInVGPR.contains(A) != GVsMustInVGPR.contains(B))
+      return GVsMustInVGPR.contains(A);
     return GV2Kernels.find(A)->second.size() >
            GV2Kernels.find(B)->second.size();
   });
@@ -281,7 +285,7 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
       Function *F = WorkList.pop_back_val();
       for (GlobalVariable *GV : Func2GVs[F])
         GV2Kernels[GV].insert(Kernel);
-      
+
       for (const CallGraphNode::CallRecord &R : *CG[F]) {
         if (Function *Ith = R.second->getFunction()) {
           if (!Seen.contains(Ith)) {
@@ -304,24 +308,38 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
   SmallVector<GlobalVariable *> GVsInVGPR;
   SmallVector<GlobalVariable *> GVsInScratch;
   DenseMap<GlobalVariable *, DenseSet<Value *>> GVPtrSets;
+  DenseSet<GlobalVariable *> GVsMustInVGPR;
   for (auto *GV : LaneSharedGlobals) {
     DenseSet<Value *> Pointers;
-    if (MaxLaneSharedVGPRs > 0 &&
-        IsPromotableToVGPR(*GV, M.getDataLayout(), Pointers)) {
+    bool MustInVGPR = false;
+    bool IsPromotable =
+        IsPromotableToVGPR(*GV, M.getDataLayout(), Pointers, MustInVGPR);
+    if (IsPromotable && MaxLaneSharedVGPRs > 0) {
       GVsInVGPR.push_back(GV);
       GVPtrSets[GV] = std::move(Pointers);
     } else {
       GVsInScratch.push_back(GV);
     }
+    if (MustInVGPR)
+      GVsMustInVGPR.insert(GV);
   }
 
   // Assign VGPRs to GVs and record related metadata. This also records GVs that
   // overflow the available space and must be assigned to scratch.
-  assignAbsoluteAddresses(GVsInVGPR, GV2Kernels, CG, MaxLaneSharedVGPRs * 4,
-                          &GVsInScratch, &GVPtrSets);
+  assignAbsoluteAddresses(GVsInVGPR, GV2Kernels, CG, GVsMustInVGPR,
+                          MaxLaneSharedVGPRs * 4, &GVsInScratch, &GVPtrSets);
 
+  // Check if those GVs in GVsInScratch, raise fatal error if they must be
+  // assigned to VGPRs.
+  for (auto *GV : GVsInScratch) {
+    if (GVsMustInVGPR.contains(GV)) {
+      report_fatal_error("Lane-shared variable must be assigned to VGPRs, "
+                         "but is assigned to scratch: " +
+                         GV->getName());
+    }
+  }
   // Assign remaining GVs to scratch.
-  assignAbsoluteAddresses(GVsInScratch, GV2Kernels, CG);
+  assignAbsoluteAddresses(GVsInScratch, GV2Kernels, CG, GVsMustInVGPR);
 
   return true;
 }
