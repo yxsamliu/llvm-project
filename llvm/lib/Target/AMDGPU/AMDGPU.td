@@ -1228,12 +1228,6 @@ def Feature1024AddressableVGPRs : SubtargetFeature<"1024-addressable-vgprs",
   "Has 1024 addressable VGPRs"
 >;
 
-def FeatureForceVALUThrottle : SubtargetFeature<"force-valu-throttle",
-  "HasForceVALUThrottle",
-  "true",
-  "Always apply VALU throttle to VALU sequences"
->;
-
 def FeatureWaitXcnt : SubtargetFeature<"wait-xcnt",
   "HasWaitXcnt",
   "true",
@@ -2061,7 +2055,7 @@ def FeatureISAVersion12 : FeatureSet<
    Feature1_5xVGPRs,
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureBVHDualAndBVH8Insts
-]>;
+   ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
   [FeatureGFX12,
