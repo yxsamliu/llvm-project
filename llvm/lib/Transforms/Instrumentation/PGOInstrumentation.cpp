@@ -116,6 +116,7 @@
 #include "llvm/Transforms/Utils/MisExpect.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
+#include <cstdlib>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -1955,8 +1956,25 @@ static bool skipPGOUse(const Function &F) {
                       << " exceed the threshold. Skip PGO.\n");
     return true;
   }
+  static uint64_t NumProcessedFuncs = 0;
+  static long PGOLimit = -1;
+  if (PGOLimit == -1) {
+    if (const char *PGOLimitEnv = getenv("PGO_LIMIT"))
+      PGOLimit = atol(PGOLimitEnv);
+    else
+      PGOLimit = -2; // Not set
+  }
+  if (PGOLimit >= 0 && NumProcessedFuncs >= (uint64_t)PGOLimit) {
+    LLVM_DEBUG(dbgs() << "PGO_LIMIT reached, skipping function " << F.getName()
+                      << "\n");
+    return true;
+  }
+  NumProcessedFuncs++;
+  LLVM_DEBUG(dbgs() << "\nProcessing function " << F.getName() << " "
+                    << NumProcessedFuncs << "\n");
   return false;
 }
+
 
 // Return true if we should not instrument this function
 static bool skipPGOGen(const Function &F) {
