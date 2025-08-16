@@ -1972,8 +1972,16 @@ static bool skipPGOUse(const Function &F) {
   NumProcessedFuncs++;
   LLVM_DEBUG(dbgs() << "\nProcessing function " << F.getName() << " "
                     << NumProcessedFuncs << "\n");
+
+  if (const char *PGODumpFun = getenv("PGO_DUMP_FUN")) {
+    if (F.getName() == PGODumpFun) {
+      F.dump();
+    }
+  }
+
   return false;
 }
+
 
 
 // Return true if we should not instrument this function

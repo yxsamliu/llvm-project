@@ -286,74 +286,92 @@ public:
     if (!Message.str().empty())
       OS << Message << "\n";
     OS << "  Number of Basic Blocks: " << BBInfos.size() << "\n";
-    for (auto &BI : BBInfos) {
-      const BasicBlock *BB = BI.first;
+    // Collect and sort BBInfos deterministically by their assigned Index.
+    std::vector<std::pair<const BasicBlock *, const BBInfo *>> SortedBBInfos;
+    SortedBBInfos.reserve(BBInfos.size());
+    for (const auto &BI : BBInfos)
+      SortedBBInfos.emplace_back(BI.first, BI.second.get());
+
+    llvm::sort(SortedBBInfos.begin(), SortedBBInfos.end(),
+              [](const auto &A, const auto &B) {
+                // Primary key: BBInfo Index
+                if (A.second->Index != B.second->Index)
+                  return A.second->Index < B.second->Index;
+                // Secondary key: name string to keep a stable order even if indices tie
+                // (ties shouldn't happen, but this makes ordering explicit).
+                StringRef NameA = A.first ? A.first->getName() : StringRef("FakeNode");
+                StringRef NameB = B.first ? B.first->getName() : StringRef("FakeNode");
+                return NameA < NameB;
+              });
+
+    for (const auto &P : SortedBBInfos) {
+      const BasicBlock *BB = P.first;
+      const BBInfo *Info = P.second;
       OS << "  BB: " << (BB == nullptr ? "FakeNode" : BB->getName()) << "  "
-         << BI.second->infoString() << "\n";
+        << Info->infoString() << "\n";
+    }
+      OS << "  Number of Edges: " << AllEdges.size()
+        << " (*: Instrument, C: CriticalEdge, -: Removed)\n";
+      uint32_t Count = 0;
+      for (auto &EI : AllEdges)
+        OS << "  Edge " << Count++ << ": " << getBBInfo(EI->SrcBB).Index << "-->"
+          << getBBInfo(EI->DestBB).Index << EI->infoString() << "\n";
     }
 
-    OS << "  Number of Edges: " << AllEdges.size()
-       << " (*: Instrument, C: CriticalEdge, -: Removed)\n";
-    uint32_t Count = 0;
-    for (auto &EI : AllEdges)
-      OS << "  Edge " << Count++ << ": " << getBBInfo(EI->SrcBB).Index << "-->"
-         << getBBInfo(EI->DestBB).Index << EI->infoString() << "\n";
-  }
-
-  // Add an edge to AllEdges with weight W.
-  Edge &addEdge(BasicBlock *Src, BasicBlock *Dest, uint64_t W) {
-    uint32_t Index = BBInfos.size();
-    auto Iter = BBInfos.end();
-    bool Inserted;
-    std::tie(Iter, Inserted) = BBInfos.try_emplace(Src);
-    if (Inserted) {
-      // Newly inserted, update the real info.
-      Iter->second = std::make_unique<BBInfo>(Index);
-      Index++;
+    // Add an edge to AllEdges with weight W.
+    Edge &addEdge(BasicBlock *Src, BasicBlock *Dest, uint64_t W) {
+      uint32_t Index = BBInfos.size();
+      auto Iter = BBInfos.end();
+      bool Inserted;
+      std::tie(Iter, Inserted) = BBInfos.try_emplace(Src);
+      if (Inserted) {
+        // Newly inserted, update the real info.
+        Iter->second = std::make_unique<BBInfo>(Index);
+        Index++;
+      }
+      std::tie(Iter, Inserted) = BBInfos.try_emplace(Dest);
+      if (Inserted)
+        // Newly inserted, update the real info.
+        Iter->second = std::make_unique<BBInfo>(Index);
+      AllEdges.emplace_back(new Edge(Src, Dest, W));
+      return *AllEdges.back();
     }
-    std::tie(Iter, Inserted) = BBInfos.try_emplace(Dest);
-    if (Inserted)
-      // Newly inserted, update the real info.
-      Iter->second = std::make_unique<BBInfo>(Index);
-    AllEdges.emplace_back(new Edge(Src, Dest, W));
-    return *AllEdges.back();
-  }
 
-  CFGMST(Function &Func, bool InstrumentFuncEntry, bool InstrumentLoopEntries,
-         BranchProbabilityInfo *BPI = nullptr,
-         BlockFrequencyInfo *BFI = nullptr, LoopInfo *LI = nullptr)
-      : F(Func), BPI(BPI), BFI(BFI), LI(LI),
-        InstrumentFuncEntry(InstrumentFuncEntry),
-        InstrumentLoopEntries(InstrumentLoopEntries) {
-    assert(!(InstrumentLoopEntries && !LI) &&
-           "expected a LoopInfo to instrumenting loop entries");
-    buildEdges();
-    sortEdgesByWeight();
-    computeMinimumSpanningTree();
-    assert(validateLoopEntryInstrumentation() &&
-           "Loop entries should not be in MST when "
-           "InstrumentLoopEntries is on");
-    if (AllEdges.size() > 1 && InstrumentFuncEntry)
-      std::iter_swap(std::move(AllEdges.begin()),
-                     std::move(AllEdges.begin() + AllEdges.size() - 1));
-  }
+    CFGMST(Function &Func, bool InstrumentFuncEntry, bool InstrumentLoopEntries,
+          BranchProbabilityInfo *BPI = nullptr,
+          BlockFrequencyInfo *BFI = nullptr, LoopInfo *LI = nullptr)
+        : F(Func), BPI(BPI), BFI(BFI), LI(LI),
+          InstrumentFuncEntry(InstrumentFuncEntry),
+          InstrumentLoopEntries(InstrumentLoopEntries) {
+      assert(!(InstrumentLoopEntries && !LI) &&
+            "expected a LoopInfo to instrumenting loop entries");
+      buildEdges();
+      sortEdgesByWeight();
+      computeMinimumSpanningTree();
+      assert(validateLoopEntryInstrumentation() &&
+            "Loop entries should not be in MST when "
+            "InstrumentLoopEntries is on");
+      if (AllEdges.size() > 1 && InstrumentFuncEntry)
+        std::iter_swap(std::move(AllEdges.begin()),
+                      std::move(AllEdges.begin() + AllEdges.size() - 1));
+    }
 
-  const std::vector<std::unique_ptr<Edge>> &allEdges() const {
-    return AllEdges;
-  }
+    const std::vector<std::unique_ptr<Edge>> &allEdges() const {
+      return AllEdges;
+    }
 
-  std::vector<std::unique_ptr<Edge>> &allEdges() { return AllEdges; }
+    std::vector<std::unique_ptr<Edge>> &allEdges() { return AllEdges; }
 
-  size_t numEdges() const { return AllEdges.size(); }
+    size_t numEdges() const { return AllEdges.size(); }
 
-  size_t bbInfoSize() const { return BBInfos.size(); }
+    size_t bbInfoSize() const { return BBInfos.size(); }
 
-  // Give BB, return the auxiliary information.
-  BBInfo &getBBInfo(const BasicBlock *BB) const {
-    auto It = BBInfos.find(BB);
-    assert(It->second.get() != nullptr);
-    return *It->second.get();
-  }
+    // Give BB, return the auxiliary information.
+    BBInfo &getBBInfo(const BasicBlock *BB) const {
+      auto It = BBInfos.find(BB);
+      assert(It->second.get() != nullptr);
+      return *It->second.get();
+    }
 
   // Give BB, return the auxiliary information if it's available.
   BBInfo *findBBInfo(const BasicBlock *BB) const {
