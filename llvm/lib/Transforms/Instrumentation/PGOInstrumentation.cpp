@@ -2458,8 +2458,19 @@ static std::string getSimpleNodeName(const BasicBlock *Node) {
   return SimpleNodeName;
 }
 
+static int set_prof_metadata_counter = 0;
 void llvm::setProfMetadata(Module *M, Instruction *TI,
                            ArrayRef<uint64_t> EdgeCounts, uint64_t MaxCount) {
+  static long PGOLimit = -1;
+  if (PGOLimit == -1) {
+    if (const char *PGOLimitEnv = getenv("PGO_MD_LIMIT"))
+      PGOLimit = atol(PGOLimitEnv);
+    else
+      PGOLimit = -2; // Not set
+  }
+  if (PGOLimit > 0 && set_prof_metadata_counter >= (unsigned long)PGOLimit)
+    return;
+  set_prof_metadata_counter++;
   assert(MaxCount > 0 && "Bad max count");
   uint64_t Scale = calculateCountScale(MaxCount);
   SmallVector<unsigned, 4> Weights;
@@ -2469,11 +2480,12 @@ void llvm::setProfMetadata(Module *M, Instruction *TI,
   LLVM_DEBUG(dbgs() << "Weight is: "; for (const auto &W
                                            : Weights) {
     dbgs() << W << " ";
-  } dbgs() << "\n";);
+  } dbgs() << "(count: " << set_prof_metadata_counter << ")\n");
 
   misexpect::checkExpectAnnotations(*TI, Weights, /*IsFrontend=*/false);
 
   setBranchWeights(*TI, Weights, /*IsExpected=*/false);
+
   if (EmitBranchProbability) {
     std::string BrCondStr = getBranchCondString(TI);
     if (BrCondStr.empty())
