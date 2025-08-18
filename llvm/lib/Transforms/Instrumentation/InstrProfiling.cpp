@@ -177,6 +177,21 @@ static cl::opt<unsigned> OffloadProfilingThreadBitWidth(
              "(1 << bitwidth) - 1.  Supported for AMDGPU only."),
     cl::init(8));
 
+enum class OffloadPGOSamplingMode {
+  PatternOverflow,   // sampling by pattern, overflow slot, non-atomic store
+  AtomicWarpLeader   // no sampling; warp leader uses atomicrmw add 1
+};
+
+static llvm::cl::opt<OffloadPGOSamplingMode> OffloadPGOSampling(
+    "offload-pgo-sampling-mode",
+    llvm::cl::desc("Offload PGO sampling mode"),
+    llvm::cl::values(
+        clEnumValN(OffloadPGOSamplingMode::PatternOverflow, "pattern-overflow",
+                   "Use sampling pattern and overflow slot (default)"),
+        clEnumValN(OffloadPGOSamplingMode::AtomicWarpLeader, "atomic-warp-leader",
+                   "Leader lane only; atomic increment per slot; no overflow slot")),
+    llvm::cl::init(OffloadPGOSamplingMode::AtomicWarpLeader));
+
 cl::opt<bool> IterativeCounterPromotion(
     "iterative-counter-promotion", cl::init(true),
     cl::desc("Allow counter promotion across the whole loop nest."));
@@ -1332,31 +1347,28 @@ void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
   auto *Int32Ty = Type::getInt32Ty(Context);
   auto *Int64Ty = Type::getInt64Ty(Context);
 
-  // Constants
-  const unsigned KSlotBits = OffloadProfilingThreadBitWidth;
-  const unsigned KSlots    = 1u << KSlotBits;
-  const unsigned KOverflow = KSlots - 1u;
-  const unsigned KPattern14 = 0x2A3Fu;
+  // Constants/configuration
+  const unsigned KSlotBits  = OffloadProfilingThreadBitWidth; // must be >= 5 (Wave32)
+  const unsigned KSlots     = 1u << KSlotBits;
+  const unsigned KOverflow  = KSlots - 1u;                    // only used in PatternOverflow mode
+  const unsigned KPattern14 = 0x2A3Fu;                        // only used in PatternOverflow mode
+  const unsigned kWarpBits  = 5u;                             // Wave32 lane width
 
-  // Require at least wave32-lane-width bits in slots
-  if (KSlotBits < 5)
+  if (KSlotBits < kWarpBits)
     report_fatal_error("OffloadProfilingThreadBitWidth must be >= 5 for wave32");
 
   // --- Get thread and block identifiers ---
   FunctionCallee BlockIdxFn =
       M.getOrInsertFunction("llvm.amdgcn.workgroup.id.x", Int32Ty);
   Value *BlockIdx = Builder.CreateCall(BlockIdxFn, {}, "BlockIdxX");
-  Value *BlockIdx64 = Builder.CreateZExt(BlockIdx, Int64Ty, "BlockIdxX.zext");
 
   FunctionCallee ThreadIdxFn =
       M.getOrInsertFunction("llvm.amdgcn.workitem.id.x", Int32Ty);
   Value *ThreadIdx = Builder.CreateCall(ThreadIdxFn, {}, "ThreadIdxX");
-  Value *ThreadIdx64 =
-      Builder.CreateZExt(ThreadIdx, Int64Ty, "ThreadIdxX.zext");
 
   // --- Get launch-time data from implicit arguments ---
-  FunctionCallee ImplicitArgFn = M.getOrInsertFunction(
-      "llvm.amdgcn.implicitarg.ptr", PointerType::get(Context, 4));
+  FunctionCallee ImplicitArgFn =
+      M.getOrInsertFunction("llvm.amdgcn.implicitarg.ptr", PointerType::get(Context, 4));
   Value *ImplicitArgPtr = Builder.CreateCall(ImplicitArgFn, {});
 
   // gridDim.x (i32) at base
@@ -1367,113 +1379,179 @@ void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
       Builder.CreateInBoundsGEP(Int8Ty, ImplicitArgPtr,
                                 ConstantInt::get(Int64Ty, 12), "BlockDimXAddr");
   Value *BlockDimX = Builder.CreateLoad(Int16Ty, BlockDimXAddr, "BlockDimX");
-  Value *BlockDimX64 = Builder.CreateZExt(BlockDimX, Int64Ty, "BlockDimX.zext");
 
-  // --- gid = blockIdx.x * blockDim.x + threadIdx.x (64-bit) ---
+  // --- Optional: 64-bit gid (not used by slot calc, but useful to keep) ---
+  Value *BlockIdx64 = Builder.CreateZExt(BlockIdx, Int64Ty, "BlockIdxX.zext");
+  Value *ThreadIdx64 = Builder.CreateZExt(ThreadIdx, Int64Ty, "ThreadIdxX.zext");
+  Value *BlockDimX64 = Builder.CreateZExt(BlockDimX, Int64Ty, "BlockDimX.zext");
   Value *Gid = Builder.CreateAdd(Builder.CreateMul(BlockIdx64, BlockDimX64),
                                  ThreadIdx64, "Gid");
 
   // ----------------------------
-  // New Slot computation (Wave32)
+  // Common slot computation (Wave32)
   // ----------------------------
-  // kWarpBits = 5
-  const unsigned kWarpBits = 5u;
 
-  // lane id via mbcnt.lo (count active lanes below me), then lane = & 31
-  FunctionCallee MbcntLoFn =
-      Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_mbcnt_lo);
-  Value *MbcntLo = Builder.CreateCall(MbcntLoFn,
-                                      {ConstantInt::get(Int32Ty, -1), ConstantInt::get(Int32Ty, 0)},
-                                      "mbcnt.lo");
+  // lane id via amdgcn.mbcnt.lo (count active lanes below me); lane = & 31
+  auto *MbcntLoTy = FunctionType::get(Int32Ty, {Int32Ty, Int32Ty}, false);
+  FunctionCallee MbcntLoFnByName =
+      M.getOrInsertFunction("llvm.amdgcn.mbcnt.lo", MbcntLoTy);
+  Value *MbcntLo = Builder.CreateCall(
+      MbcntLoFnByName, {ConstantInt::get(Int32Ty, -1), ConstantInt::get(Int32Ty, 0)},
+      "mbcnt.lo");
   Value *Lane = Builder.CreateAnd(MbcntLo, ConstantInt::get(Int32Ty, 31), "lane");
 
   // warpLocal = threadIdx.x >> 5
-  Value *WarpLocal = Builder.CreateLShr(ThreadIdx, ConstantInt::get(Int32Ty, kWarpBits), "warpLocal");
+  Value *WarpLocal = Builder.CreateLShr(ThreadIdx, ConstantInt::get(Int32Ty, kWarpBits),
+                                        "warpLocal");
 
   // blockBits = (gridDim.x > 1) ? (32 - ctlz(gridDim.x - 1)) : 1
   Value *GridGt1 = Builder.CreateICmpUGT(GridDimX, ConstantInt::get(Int32Ty, 1), "grid_gt_1");
-  Value *GridDimXMinus1 = Builder.CreateSub(GridDimX, ConstantInt::get(Int32Ty, 1), "gridDimX_minus_1");
-
+  Value *GridDimXMinus1 = Builder.CreateSub(GridDimX, ConstantInt::get(Int32Ty, 1),
+                                            "gridDimX_minus_1");
   FunctionCallee CtlzI32Fn = Intrinsic::getDeclaration(&M, Intrinsic::ctlz, {Int32Ty});
-  // ctlz(x, false) is undefined for x=0; we guard using grid_gt_1 and use 1 otherwise.
-  Value *CtlzVal = Builder.CreateCall(CtlzI32Fn, {GridDimXMinus1, Builder.getFalse()}, "ctlz_gridDimX_minus_1");
-  Value *BlockBitsCandidate = Builder.CreateSub(ConstantInt::get(Int32Ty, 32), CtlzVal, "blockBits_cand");
-  Value *BlockBits = Builder.CreateSelect(GridGt1, BlockBitsCandidate, ConstantInt::get(Int32Ty, 1), "blockBits");
+  Value *CtlzVal = Builder.CreateCall(CtlzI32Fn, {GridDimXMinus1, Builder.getFalse()},
+                                      "ctlz_gridDimX_minus_1");
+  Value *BlockBitsCandidate =
+      Builder.CreateSub(ConstantInt::get(Int32Ty, 32), CtlzVal, "blockBits_cand");
+  Value *BlockBits =
+      Builder.CreateSelect(GridGt1, BlockBitsCandidate, ConstantInt::get(Int32Ty, 1),
+                           "blockBits");
 
-  // slotHiBits = KSlotBits - kWarpBits; usedForHi = min(blockBits, slotHiBits)
+  // usedForHi = min(blockBits, KSlotBits - kWarpBits)
   Value *SlotHiBits = ConstantInt::get(Int32Ty, (int)(KSlotBits - kWarpBits));
   Value *BlockLtSlotHi = Builder.CreateICmpULT(BlockBits, SlotHiBits);
   Value *UsedForHi = Builder.CreateSelect(BlockLtSlotHi, BlockBits, SlotHiBits, "usedForHi");
 
   // sampBits = blockBits - usedForHi
   Value *SampBits = Builder.CreateSub(BlockBits, UsedForHi, "sampBits");
+  Value *SampBitsIsZero = Builder.CreateICmpEQ(SampBits, ConstantInt::get(Int32Ty, 0),
+                                               "sampBits_is_zero");
 
   // blockHi = (sampBits == 0) ? blockIdx.x : (blockIdx.x >> sampBits)
-  Value *SampBitsIsZero = Builder.CreateICmpEQ(SampBits, ConstantInt::get(Int32Ty, 0), "sampBits_is_zero");
   Value *BlockHiShifted = Builder.CreateLShr(BlockIdx, SampBits, "blockHi_shifted");
   Value *BlockHi = Builder.CreateSelect(SampBitsIsZero, BlockIdx, BlockHiShifted, "blockHi");
 
   // slotRaw = (blockHi << 5) | warpLocal
-  Value *SlotRawUpper = Builder.CreateShl(BlockHi, ConstantInt::get(Int32Ty, kWarpBits), "slotRaw_upper");
+  Value *SlotRawUpper = Builder.CreateShl(BlockHi, ConstantInt::get(Int32Ty, kWarpBits),
+                                          "slotRaw_upper");
   Value *SlotRaw = Builder.CreateOr(SlotRawUpper, WarpLocal, "slotRaw");
 
-  // Sampling over low sampBits of blockIdx.x with KPattern14 masked
-  // sampMask = (sampBits == 0) ? 0 : ((1u << sampBits) - 1u)
-  Value *One32 = ConstantInt::get(Int32Ty, 1);
-  Value *SampMaskShift = Builder.CreateShl(One32, SampBits, "sampMask_shift"); // 1 << sampBits
-  Value *SampMaskMinus1 = Builder.CreateSub(SampMaskShift, One32, "sampMask_minus1");
-  Value *SampMask = Builder.CreateSelect(SampBitsIsZero, ConstantInt::get(Int32Ty, 0), SampMaskMinus1, "sampMask");
+  // Find warp leader using ballot.i32 + cttz
+  auto *BallotTy = FunctionType::get(Int32Ty, {Int1Ty}, false);
+  FunctionCallee BallotI32ByName =
+      M.getOrInsertFunction("llvm.amdgcn.ballot.i32", BallotTy);
+  Value *ActiveMask = Builder.CreateCall(BallotI32ByName, {ConstantInt::getTrue(Context)},
+                                         "activeMask");
 
-  // sampPat = KPattern14 & sampMask
-  Value *SampPat = Builder.CreateAnd(ConstantInt::get(Int32Ty, KPattern14), SampMask, "sampPat");
-
-  // matched = (sampBits == 0) ? true : ((blockIdx.x & sampMask) == sampPat)
-  Value *BlockMasked = Builder.CreateAnd(BlockIdx, SampMask, "blockMasked");
-  Value *CmpMaskPat = Builder.CreateICmpEQ(BlockMasked, SampPat, "cmp_mask_pat");
-  Value *Matched = Builder.CreateSelect(SampBitsIsZero, ConstantInt::getTrue(Context), CmpMaskPat, "matched");
-
-  // activeMask = ballot(true) (wave32 => i32)
-  FunctionCallee BallotFn = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_ballot, {Int32Ty});
-  Value *ActiveMask = Builder.CreateCall(BallotFn, {ConstantInt::getTrue(Context)}, "activeMask");
-
-  // leaderLane = cttz(activeMask, true), guard activeMask != 0
   FunctionCallee CttzI32Fn = Intrinsic::getDeclaration(&M, Intrinsic::cttz, {Int32Ty});
-  Value *ActiveMaskNonZero = Builder.CreateICmpNE(ActiveMask, ConstantInt::get(Int32Ty, 0), "mask_nz");
-  Value *LeaderLane = Builder.CreateCall(CttzI32Fn, {ActiveMask, ConstantInt::getTrue(Context)}, "leaderLane");
+  Value *ActiveMaskNonZero =
+      Builder.CreateICmpNE(ActiveMask, ConstantInt::get(Int32Ty, 0), "mask_nz");
+  Value *LeaderLane =
+      Builder.CreateCall(CttzI32Fn, {ActiveMask, ConstantInt::getTrue(Context)}, "leaderLane");
   Value *IsLeader = Builder.CreateICmpEQ(Lane, LeaderLane, "isLeader");
-  Value *IsLeaderGuarded = Builder.CreateSelect(ActiveMaskNonZero, IsLeader, ConstantInt::getFalse(Context), "isLeader_guarded");
+  Value *IsLeaderGuarded =
+      Builder.CreateSelect(ActiveMaskNonZero, IsLeader, ConstantInt::getFalse(Context),
+                           "isLeader_guarded");
 
-  // isWriter = isLeader && matched
-  Value *IsWriter = Builder.CreateAnd(IsLeaderGuarded, Matched, "isWriter");
+  // ----------------------------
+  // Mode-dependent writer logic
+  // ----------------------------
 
-  // Route to overflow if not writer or if slotRaw == KOverflow
-  Value *SlotRawIsOverflow = Builder.CreateICmpEQ(SlotRaw, ConstantInt::get(Int32Ty, KOverflow), "slotRaw_is_overflow");
-  Value *GoodWriter = Builder.CreateAnd(IsWriter, Builder.CreateNot(SlotRawIsOverflow), "goodWriter");
-  Value *Slot = Builder.CreateSelect(GoodWriter,
-                                     SlotRaw,
-                                     ConstantInt::get(Int32Ty, KOverflow),
-                                     "Slot");
+  Value *Slot = nullptr;
+  Value *IsWriter = nullptr;
+
+  if (OffloadPGOSampling == OffloadPGOSamplingMode::PatternOverflow) {
+    // Sampling mask/pattern over low sampBits of blockIdx.x
+    Value *One32 = ConstantInt::get(Int32Ty, 1);
+    Value *SampMaskShift = Builder.CreateShl(One32, SampBits, "sampMask_shift"); // 1<<sampBits
+    Value *SampMaskMinus1 = Builder.CreateSub(SampMaskShift, One32, "sampMask_minus1");
+    Value *SampMask =
+        Builder.CreateSelect(SampBitsIsZero, ConstantInt::get(Int32Ty, 0), SampMaskMinus1,
+                             "sampMask");
+
+    // sampPat = KPattern14 & sampMask
+    Value *SampPat =
+        Builder.CreateAnd(ConstantInt::get(Int32Ty, KPattern14), SampMask, "sampPat");
+
+    // matched = (sampBits == 0) ? true : ((blockIdx.x & sampMask) == sampPat)
+    Value *BlockMasked = Builder.CreateAnd(BlockIdx, SampMask, "blockMasked");
+    Value *CmpMaskPat = Builder.CreateICmpEQ(BlockMasked, SampPat, "cmp_mask_pat");
+    Value *Matched =
+        Builder.CreateSelect(SampBitsIsZero, ConstantInt::getTrue(Context), CmpMaskPat,
+                             "matched");
+
+    // Only leader writes when matched
+    IsWriter = Builder.CreateAnd(IsLeaderGuarded, Matched, "isWriter");
+
+    // Route to overflow if not writer or slotRaw == KOverflow
+    Value *SlotRawIsOverflow =
+        Builder.CreateICmpEQ(SlotRaw, ConstantInt::get(Int32Ty, KOverflow), "slot_is_overflow");
+    Value *GoodWriter = Builder.CreateAnd(IsWriter, Builder.CreateNot(SlotRawIsOverflow),
+                                          "goodWriter");
+    Slot = Builder.CreateSelect(GoodWriter, SlotRaw, ConstantInt::get(Int32Ty, KOverflow),
+                                "Slot");
+  } else {
+    // AtomicWarpLeader: no sampling, no overflow. Only the leader writes atomically.
+    IsWriter = IsLeaderGuarded;
+    Slot = SlotRaw;
+  }
 
   // --- Calculate final counter index ---
-  // used_counter_index = original_counter_indx * num_slots + slot_index
   auto *OldCounterIdx = Inc->getIndex();
   auto *NumSlots = Builder.getInt32(KSlots);
   auto *CounterIdxBase = Builder.CreateMul(OldCounterIdx, NumSlots);
   auto *CounterIdx = Builder.CreateAdd(CounterIdxBase, Slot, "CounterIdx");
 
-  // --- Increment the counter ---
+  // --- Counter address ---
   auto *Counters = getOrCreateRegionCounters(Inc);
   Value *Indices[] = {Builder.getInt32(0), CounterIdx};
   auto *Addr =
-      Builder.CreateInBoundsGEP(Counters->getValueType(), Counters, Indices);
+      Builder.CreateInBoundsGEP(Counters->getValueType(), Counters, Indices, "ctr.addr");
 
-  Value *IncStep = Inc->getStep();
-  Value *Load = Builder.CreateLoad(IncStep->getType(), Addr, "pgocount");
-  auto *Count = Builder.CreateAdd(Load, Inc->getStep());
-  Builder.CreateStore(Count, Addr);
+  // --- Increment ---
+  if (OffloadPGOSampling == OffloadPGOSamplingMode::PatternOverflow) {
+    // Non-atomic increment by Inc->getStep() (legacy mode)
+    Value *IncStep = Inc->getStep();
+    Value *Load = Builder.CreateLoad(IncStep->getType(), Addr, "pgocount");
+    auto *Count = Builder.CreateAdd(Load, IncStep, "pgocount.next");
+    Builder.CreateStore(Count, Addr);
+  } else {
+    // AtomicWarpLeader: only the leader performs atomicrmw add 1
+    // Correct control-flow: split block at Inc, create ThenBB, and conditional branch.
+
+    // 1) Split the current block before Inc. The split inserts an unconditional
+    //    branch from CurBB to ContBB; we'll replace it with a conditional branch.
+    BasicBlock *CurBB = Builder.GetInsertBlock();
+    Function *F = CurBB->getParent();
+    BasicBlock *ContBB = CurBB->splitBasicBlock(BasicBlock::iterator(Inc), "atomic_cont");
+
+    // After split, CurBB ends with "br label %atomic_cont".
+    // 2) Create the ThenBB (atomic path).
+    BasicBlock *ThenBB = BasicBlock::Create(Context, "atomic_then", F);
+
+    // 3) Replace the terminator in CurBB with a conditional branch to ThenBB or ContBB.
+    Instruction *OldTerm = CurBB->getTerminator(); // unconditional branch inserted by split
+    // Remove the old terminator and insert the conditional branch.
+    OldTerm->eraseFromParent();
+    IRBuilder<> HeadBuilder(CurBB);
+    HeadBuilder.CreateCondBr(IsWriter, ThenBB, ContBB);
+
+    // 4) Emit the atomicrmw in ThenBB, then branch to ContBB.
+    IRBuilder<> ThenBuilder(ThenBB);
+    Type *CounterTy = cast<ArrayType>(Counters->getValueType())->getElementType();
+    Value *One = ConstantInt::get(CounterTy, 1);
+    // Use a safe default alignment (8 is common for i64 counters) if you don't
+    // know the exact alignment; you can also omit MaybeAlign to let LLVM infer.
+    ThenBuilder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, One, MaybeAlign(Align(8)),
+                                AtomicOrdering::Monotonic);
+    ThenBuilder.CreateBr(ContBB);
+
+    // 5) Continue in the continuation block and erase the original Inc.
+    Builder.SetInsertPoint(ContBB, ContBB->begin());
+  }
+
   Inc->eraseFromParent();
 }
-
 void InstrLowerer::lowerCoverageData(GlobalVariable *CoverageNamesVar) {
   ConstantArray *Names =
       cast<ConstantArray>(CoverageNamesVar->getInitializer());
@@ -2280,7 +2358,7 @@ void InstrLowerer::createHIPDynamicModuleUnregistration() {
     return;
 
   for (User *U : F->users()) {
-    if (auto *CB = dyn_cast<CallBase>(U)) {
+    if (auto *CB = dyn_cast_or_null<CallBase>(U)) {
       // The insertion point is right before the call to hipModuleUnload.
       Instruction *InsertPt = CB;
 
