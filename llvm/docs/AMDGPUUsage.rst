@@ -2020,6 +2020,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       using dedicated instructions, but may not send the DEALLOC_VGPRS
                                                       message. If a shader has this attribute, then all its callees must
                                                       match its value.
+                                                      An amd_cs_chain CC function with this enabled has an extra symbol
+                                                      prefixed with "_dvgpr$" with the value of the function symbol,
+                                                      offset by one less than the number of dynamic VGPR blocks required
+                                                      by the function encoded in bits 5..3.
 
      "amdgpu-cluster-dims"="x,y,z"                    Specify the cluster workgroup dimensions. A value of "0,0,0" indicates that
                                                       cluster is disabled. A value of "1024,1024,1024" indicates that cluster is enabled,
