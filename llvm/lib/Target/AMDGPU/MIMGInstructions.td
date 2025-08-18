@@ -1841,7 +1841,7 @@ multiclass MIMG_RTS<mimgopc op, string opcode, bit HasVdst, bit IsTraceRay, bit 
       vdata = !if(HasVdst, ?, 0),
       VDataDwords = info.VDataDwords,
       VAddrDwords = info.VAddrDwords in
-        def _gfx13 : VIMAGE_RTS<op.GFX13, opcode, info.num_addrs, !if(IsTraceRay, (ins RsrcReg128Op:$rsrc), (ins)),
+        def _gfx13 : VIMAGE_RTS<op.GFX13, opcode, info.num_addrs, !if(IsTraceRay, (ins SReg_128_XNULL:$rsrc), (ins)),
                                 GFX13Gen, MIMGEncGfx13, info.addr_types, HasVdst, IsTraceRay, isPacket, isPrimOrCoords>;
 }
 
