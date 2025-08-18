@@ -4109,7 +4109,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_FPEXT: {
     unsigned SizeDst = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     unsigned SizeSrc = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
-    if (Subtarget.hasSALUFloatInsts() && SizeDst < 64 && SizeSrc < 64 &&
+    if (Subtarget.hasSALUFloatInsts() && SizeDst != 64 && SizeSrc != 64 &&
         isSALUMapping(MI))
       return getDefaultMappingSOP(MI);
     return getDefaultMappingVOP(MI);
