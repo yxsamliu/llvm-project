@@ -39,6 +39,8 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -1250,41 +1252,95 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
   Inc->eraseFromParent();
 }
 
-void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
-  // This function implements a method for mapping a thread's global ID to a
-  // slot index for PGO counters on AMDGPU. The approach is designed to
-  // minimize collisions between threads from different workgroups.
-  //
-  // The algorithm is as follows:
-  // 1. Calculate the global thread ID (Gid) and the total number of threads.
-  // 2. Determine the number of bits required to represent the total number of
-  //    threads (Bits).
-  // 3. SampleBits is calculated as Bits - KSlotBits. KSlotBits is a
-  //    fixed value.
-  // 4. A SampleMask is created using SampleBits.
-  // 5. A thread is "selected" for profiling if the lower SampleBits of its
-  //    Gid match a predefined Pattern.
-  // 6. For selected threads, the slot index is determined by the upper
-  //    KSlotBits of the Gid.
-  // 7. If a thread is not selected, or if its raw slot index is the overflow
-  //    slot, it is mapped to the overflow slot.
-  //
-  // This ensures that for a given counter, only a subset of threads (those
-  // matching the pattern) will update it, and they will be spread across
-  // different slots based on their global ID, reducing contention.
+// Lower an InstrProfIncrementInst into AMDGPU IR that performs sampled, low-contention
+// counter updates using per-counter slotting and warp-leader writes.
+//
+// Overview:
+// - Expands each original PGO counter into KSlots = 2^KSlotBits physical slots, reserving
+//   the last slot (KOverflow = KSlots - 1) as an overflow bucket.
+// - Computes a slot index per thread based on block/workgroup topology and wave32 lane layout,
+//   but only permits the warp leader to update a slot when a block-level sampling predicate matches.
+// - Routes all non-participating threads (or those mapping to the reserved overflow slot) to
+//   the overflow bucket, reducing contention while preserving aggregate signal.
+//
+// Slot selection and sampling (Wave32):
+// - kWarpBits = 5. Requires OffloadProfilingThreadBitWidth (KSlotBits) >= 5.
+// - The slot index is composed of:
+//     [blockHi (usedForHi bits)] [warpLocal (5 bits)]
+//   where warpLocal = threadIdx.x >> 5 and blockHi is the top usedForHi bits of blockIdx.x.
+// - Let blockBits = ceil(log2(gridDim.x)) if gridDim.x > 1, else 1.
+//   Let slotHiBits = KSlotBits - kWarpBits, usedForHi = min(blockBits, slotHiBits),
+//   and sampBits = blockBits - usedForHi.
+//   Then:
+//     blockHi = (sampBits == 0) ? blockIdx.x : (blockIdx.x >> sampBits)
+//     slotRaw = (blockHi << 5) | warpLocal
+// - Sampling is performed on the low sampBits of blockIdx.x using a fixed pattern KPattern14:
+//     sampMask = (sampBits == 0) ? 0 : ((1 << sampBits) - 1)
+//     matched  = (sampBits == 0) ? true : ((blockIdx.x & sampMask) == (KPattern14 & sampMask))
+// - Only the leading active lane (warp leader) updates when matched is true. The leader is
+//   determined by amdgcn.ballot(true) to get the active-lane mask and cttz to find the least
+//   significant set bit (lane index). The lane id is derived from amdgcn.mbcnt.lo & 31.
+// - If not the leader, or if matched is false, or if slotRaw == KOverflow, the update is routed
+//   to the overflow slot KOverflow.
+//
+// Counter addressing and increment:
+// - The final counter index is: CounterIdx = (OriginalIdx * KSlots) + Slot.
+// - The function loads, adds Inc->getStep(), and stores back the new count at the computed address,
+//   then erases the original InstrProfIncrementInst.
+//
+// Assumptions and constraints:
+// - Target is AMDGPU with Wave32 semantics for the executed kernel path.
+//   - lane width is 32; amdgcn.ballot returns a 32-bit active mask for Wave32 paths used here.
+//   - For Wave64 targets or mixed waves, this code would need adaptation (e.g., kWarpBits = 6,
+//     64-bit ballot handling).
+// - OffloadProfilingThreadBitWidth (KSlotBits) >= 5, so that slot space accommodates lane/warp bits.
+// - Availability and ABI of AMDGPU intrinsics used:
+//   - llvm.amdgcn.workgroup.id.x, llvm.amdgcn.workitem.id.x for block/thread indices.
+//   - llvm.amdgcn.implicitarg.ptr to access the implicit kernel-argument block.
+//   - llvm.ctlz/llvm.cttz for bit introspection.
+//   - llvm.amdgcn.mbcnt.lo and llvm.amdgcn.ballot to compute lane id and active mask.
+// - Implicit argument layout follows AMDGPU ABI:
+//   - gridDim.x (i32) at base of the implicit arg block.
+//   - blockDim.x (i16) at byte offset 12 from the base.
+// - gridDim.x > 0 and at least one active lane exists in each executing wave that reaches this code.
+// - Sampling pattern KPattern14 = 0x2A3F is fixed and truncated to sampBits as needed.
+// - Non-atomic increment: the load/add/store is not atomic. If multiple waves can write the same
+//   slot concurrently, increments may race. To guarantee correctness under concurrency, replace
+//   the sequence with an atomic add or introduce per-wave buffering/aggregation as appropriate.
+// - Overflow slot semantics:
+//   - Consolidates updates from non-selected lanes/blocks and any mapping collision to KOverflow,
+//     trading precision for reduced contention. Consumers must understand that the last slot
+//     aggregates miscellaneous updates and may need special handling.
+// - Behavior with small grids:
+//   - If blockBits <= slotHiBits, sampBits == 0, all blocks match sampling (matched = true).
+//   - slotRaw uses the top existing block bits and the local warp id; non-leader lanes still route
+//     to overflow.
+//
+// Rationale:
+// - By restricting updates to one lane per warp and spreading selected blocks across slots via
+//   high bits of blockIdx.x, we reduce contention on counters and improve scalability while still
+//   capturing representative execution frequency.
+// - The overflow bucket ensures no updates are lost when sampling does not select a block or when
+//   slotRaw would alias the reserved slot.
 
+void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
   IRBuilder<> Builder(Inc);
   LLVMContext &Context = M.getContext();
-  auto *Int8Ty = Type::getInt8Ty(Context);
+  auto *Int1Ty  = Type::getInt1Ty(Context);
+  auto *Int8Ty  = Type::getInt8Ty(Context);
   auto *Int16Ty = Type::getInt16Ty(Context);
   auto *Int32Ty = Type::getInt32Ty(Context);
   auto *Int64Ty = Type::getInt64Ty(Context);
 
-  // Constants from the HIP code example.
+  // Constants
   const unsigned KSlotBits = OffloadProfilingThreadBitWidth;
-  const unsigned KSlots = 1u << KSlotBits;
+  const unsigned KSlots    = 1u << KSlotBits;
   const unsigned KOverflow = KSlots - 1u;
   const unsigned KPattern14 = 0x2A3Fu;
+
+  // Require at least wave32-lane-width bits in slots
+  if (KSlotBits < 5)
+    report_fatal_error("OffloadProfilingThreadBitWidth must be >= 5 for wave32");
 
   // --- Get thread and block identifiers ---
   FunctionCallee BlockIdxFn =
@@ -1303,68 +1359,100 @@ void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
       "llvm.amdgcn.implicitarg.ptr", PointerType::get(Context, 4));
   Value *ImplicitArgPtr = Builder.CreateCall(ImplicitArgFn, {});
 
+  // gridDim.x (i32) at base
   Value *GridDimX = Builder.CreateLoad(Int32Ty, ImplicitArgPtr, "GridDimX");
-  Value *GridDimX64 = Builder.CreateZExt(GridDimX, Int64Ty);
 
+  // blockDim.x (i16) at offset 12
   Value *BlockDimXAddr =
       Builder.CreateInBoundsGEP(Int8Ty, ImplicitArgPtr,
                                 ConstantInt::get(Int64Ty, 12), "BlockDimXAddr");
   Value *BlockDimX = Builder.CreateLoad(Int16Ty, BlockDimXAddr, "BlockDimX");
-  Value *BlockDimX64 = Builder.CreateZExt(BlockDimX, Int64Ty);
+  Value *BlockDimX64 = Builder.CreateZExt(BlockDimX, Int64Ty, "BlockDimX.zext");
 
-  // --- Gid = blockIdx.x * blockDim.x + threadIdx.x ---
+  // --- gid = blockIdx.x * blockDim.x + threadIdx.x (64-bit) ---
   Value *Gid = Builder.CreateAdd(Builder.CreateMul(BlockIdx64, BlockDimX64),
                                  ThreadIdx64, "Gid");
 
-  // --- TotalThreads = gridDim.x * blockDim.x ---
-  Value *TotalThreads =
-      Builder.CreateMul(GridDimX64, BlockDimX64, "TotalThreads");
-  Value *TotalThreadsMinus1 =
-      Builder.CreateSub(TotalThreads, ConstantInt::get(Int64Ty, 1), "TotalThreadsMinus1");
+  // ----------------------------
+  // New Slot computation (Wave32)
+  // ----------------------------
+  // kWarpBits = 5
+  const unsigned kWarpBits = 5u;
 
-  // --- Bits = 64 - ctlz(totalThreads - 1) ---
-  FunctionCallee CtlzFn =
-      Intrinsic::getDeclaration(&M, Intrinsic::ctlz, {Int64Ty});
-  Value *LeadingZeros =
-      Builder.CreateCall(CtlzFn, {TotalThreadsMinus1, Builder.getFalse()},
-                         "LeadingZeros");
-  Value *Bits =
-      Builder.CreateSub(ConstantInt::get(Int64Ty, 64), LeadingZeros, "Bits");
+  // lane id via mbcnt.lo (count active lanes below me), then lane = & 31
+  FunctionCallee MbcntLoFn =
+      Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_mbcnt_lo);
+  Value *MbcntLo = Builder.CreateCall(MbcntLoFn,
+                                      {ConstantInt::get(Int32Ty, -1), ConstantInt::get(Int32Ty, 0)},
+                                      "mbcnt.lo");
+  Value *Lane = Builder.CreateAnd(MbcntLo, ConstantInt::get(Int32Ty, 31), "lane");
 
-  // --- SampleBits = Bits - KSlotBits ---
-  Value *SampleBits = Builder.CreateSub(Bits,
-                                        ConstantInt::get(Int64Ty, KSlotBits),
-                                        "SampleBits");
+  // warpLocal = threadIdx.x >> 5
+  Value *WarpLocal = Builder.CreateLShr(ThreadIdx, ConstantInt::get(Int32Ty, kWarpBits), "warpLocal");
 
-  // --- SampleMask = (1 << SampleBits) - 1 ---
-  Value *One64 = ConstantInt::get(Int64Ty, 1);
-  Value *SampleMask =
-      Builder.CreateSub(Builder.CreateShl(One64, SampleBits), One64,
-                        "SampleMask");
+  // blockBits = (gridDim.x > 1) ? (32 - ctlz(gridDim.x - 1)) : 1
+  Value *GridGt1 = Builder.CreateICmpUGT(GridDimX, ConstantInt::get(Int32Ty, 1), "grid_gt_1");
+  Value *GridDimXMinus1 = Builder.CreateSub(GridDimX, ConstantInt::get(Int32Ty, 1), "gridDimX_minus_1");
 
-  // --- Pattern = KPattern14 & SampleMask ---
-  Value *Pattern =
-      Builder.CreateAnd(ConstantInt::get(Int64Ty, KPattern14), SampleMask,
-                        "Pattern");
+  FunctionCallee CtlzI32Fn = Intrinsic::getDeclaration(&M, Intrinsic::ctlz, {Int32Ty});
+  // ctlz(x, false) is undefined for x=0; we guard using grid_gt_1 and use 1 otherwise.
+  Value *CtlzVal = Builder.CreateCall(CtlzI32Fn, {GridDimXMinus1, Builder.getFalse()}, "ctlz_gridDimX_minus_1");
+  Value *BlockBitsCandidate = Builder.CreateSub(ConstantInt::get(Int32Ty, 32), CtlzVal, "blockBits_cand");
+  Value *BlockBits = Builder.CreateSelect(GridGt1, BlockBitsCandidate, ConstantInt::get(Int32Ty, 1), "blockBits");
 
-  // --- Matched = (((Gid & SampleMask) ^ Pattern) == 0) ---
-  Value *GidMasked = Builder.CreateAnd(Gid, SampleMask, "GidMasked");
-  Value *XorResult = Builder.CreateXor(GidMasked, Pattern, "XorResult");
-  Value *Matched =
-      Builder.CreateICmpEQ(XorResult, ConstantInt::get(Int64Ty, 0), "Matched");
+  // slotHiBits = KSlotBits - kWarpBits; usedForHi = min(blockBits, slotHiBits)
+  Value *SlotHiBits = ConstantInt::get(Int32Ty, (int)(KSlotBits - kWarpBits));
+  Value *BlockLtSlotHi = Builder.CreateICmpULT(BlockBits, SlotHiBits);
+  Value *UsedForHi = Builder.CreateSelect(BlockLtSlotHi, BlockBits, SlotHiBits, "usedForHi");
 
-  // --- SlotRaw = Gid >> SampleBits ---
-  Value *SlotRaw64 = Builder.CreateLShr(Gid, SampleBits, "SlotRaw64");
-  Value *SlotRaw = Builder.CreateTrunc(SlotRaw64, Int32Ty, "SlotRaw");
+  // sampBits = blockBits - usedForHi
+  Value *SampBits = Builder.CreateSub(BlockBits, UsedForHi, "sampBits");
 
-  // --- Slot = (Matched && SlotRaw != KOverflow) ? SlotRaw : KOverflow ---
-  Value *SlotRawNotOverflow =
-      Builder.CreateICmpNE(SlotRaw, ConstantInt::get(Int32Ty, KOverflow),
-                           "SlotRawNotOverflow");
-  Value *GoodSlot = Builder.CreateAnd(Matched, SlotRawNotOverflow, "GoodSlot");
-  Value *Slot =
-      Builder.CreateSelect(GoodSlot, SlotRaw,
-                           ConstantInt::get(Int32Ty, KOverflow), "Slot");
+  // blockHi = (sampBits == 0) ? blockIdx.x : (blockIdx.x >> sampBits)
+  Value *SampBitsIsZero = Builder.CreateICmpEQ(SampBits, ConstantInt::get(Int32Ty, 0), "sampBits_is_zero");
+  Value *BlockHiShifted = Builder.CreateLShr(BlockIdx, SampBits, "blockHi_shifted");
+  Value *BlockHi = Builder.CreateSelect(SampBitsIsZero, BlockIdx, BlockHiShifted, "blockHi");
+
+  // slotRaw = (blockHi << 5) | warpLocal
+  Value *SlotRawUpper = Builder.CreateShl(BlockHi, ConstantInt::get(Int32Ty, kWarpBits), "slotRaw_upper");
+  Value *SlotRaw = Builder.CreateOr(SlotRawUpper, WarpLocal, "slotRaw");
+
+  // Sampling over low sampBits of blockIdx.x with KPattern14 masked
+  // sampMask = (sampBits == 0) ? 0 : ((1u << sampBits) - 1u)
+  Value *One32 = ConstantInt::get(Int32Ty, 1);
+  Value *SampMaskShift = Builder.CreateShl(One32, SampBits, "sampMask_shift"); // 1 << sampBits
+  Value *SampMaskMinus1 = Builder.CreateSub(SampMaskShift, One32, "sampMask_minus1");
+  Value *SampMask = Builder.CreateSelect(SampBitsIsZero, ConstantInt::get(Int32Ty, 0), SampMaskMinus1, "sampMask");
+
+  // sampPat = KPattern14 & sampMask
+  Value *SampPat = Builder.CreateAnd(ConstantInt::get(Int32Ty, KPattern14), SampMask, "sampPat");
+
+  // matched = (sampBits == 0) ? true : ((blockIdx.x & sampMask) == sampPat)
+  Value *BlockMasked = Builder.CreateAnd(BlockIdx, SampMask, "blockMasked");
+  Value *CmpMaskPat = Builder.CreateICmpEQ(BlockMasked, SampPat, "cmp_mask_pat");
+  Value *Matched = Builder.CreateSelect(SampBitsIsZero, ConstantInt::getTrue(Context), CmpMaskPat, "matched");
+
+  // activeMask = ballot(true) (wave32 => i32)
+  FunctionCallee BallotFn = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_ballot, {Int32Ty});
+  Value *ActiveMask = Builder.CreateCall(BallotFn, {ConstantInt::getTrue(Context)}, "activeMask");
+
+  // leaderLane = cttz(activeMask, true), guard activeMask != 0
+  FunctionCallee CttzI32Fn = Intrinsic::getDeclaration(&M, Intrinsic::cttz, {Int32Ty});
+  Value *ActiveMaskNonZero = Builder.CreateICmpNE(ActiveMask, ConstantInt::get(Int32Ty, 0), "mask_nz");
+  Value *LeaderLane = Builder.CreateCall(CttzI32Fn, {ActiveMask, ConstantInt::getTrue(Context)}, "leaderLane");
+  Value *IsLeader = Builder.CreateICmpEQ(Lane, LeaderLane, "isLeader");
+  Value *IsLeaderGuarded = Builder.CreateSelect(ActiveMaskNonZero, IsLeader, ConstantInt::getFalse(Context), "isLeader_guarded");
+
+  // isWriter = isLeader && matched
+  Value *IsWriter = Builder.CreateAnd(IsLeaderGuarded, Matched, "isWriter");
+
+  // Route to overflow if not writer or if slotRaw == KOverflow
+  Value *SlotRawIsOverflow = Builder.CreateICmpEQ(SlotRaw, ConstantInt::get(Int32Ty, KOverflow), "slotRaw_is_overflow");
+  Value *GoodWriter = Builder.CreateAnd(IsWriter, Builder.CreateNot(SlotRawIsOverflow), "goodWriter");
+  Value *Slot = Builder.CreateSelect(GoodWriter,
+                                     SlotRaw,
+                                     ConstantInt::get(Int32Ty, KOverflow),
+                                     "Slot");
 
   // --- Calculate final counter index ---
   // used_counter_index = original_counter_indx * num_slots + slot_index
