@@ -1254,12 +1254,6 @@ def FeatureVGPRIndexingRegisters : SubtargetFeature<"vgpr-indexing-registers",
   "Has index registers for VGPR indexing"
 >;
 
-def FeatureForceVALUThrottle : SubtargetFeature<"force-valu-throttle",
-  "HasForceVALUThrottle",
-  "true",
-  "Always apply VALU throttle to VALU sequences"
->;
-
 def FeatureWaitXcnt : SubtargetFeature<"wait-xcnt",
   "HasWaitXcnt",
   "true",
@@ -2152,7 +2146,7 @@ def FeatureISAVersion12 : FeatureSet<
    Feature1_5xVGPRs,
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureBVHDualAndBVH8Insts
-]>;
+   ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
   [FeatureGFX12,

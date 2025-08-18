@@ -274,7 +274,6 @@ protected:
   bool HasVALUTransUseHazard = false;
   bool HasRequiredExportPriority = false;
   bool HasVmemWriteVgprInOrder = false;
-  bool HasForceVALUThrottle = false;
   bool HasAshrPkInsts = false;
   bool HasMLMathInsts = false;
   bool HasIEEEMinimumMaximumInsts = false;
@@ -1387,8 +1386,6 @@ public:
     return GFX1250Insts && getGeneration() == GFX12;
   }
 
-  bool hasForceVALUThrottle() const { return HasForceVALUThrottle; }
-
   bool hasMLMathInsts() const { return HasMLMathInsts; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
@@ -1805,7 +1802,6 @@ public:
   /// subtarget's specifications, or does not meet number of waves per execution
   /// unit requirement.
   unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
-
 
   bool supportsWave32() const { return getGeneration() >= GFX10; }
 
