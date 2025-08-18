@@ -9,18 +9,21 @@ target datalayout = "A5"
 @col_right = hidden local_unnamed_addr addrspace(3) global <3 x i32> undef, align 16
 @out = hidden local_unnamed_addr addrspace(3) global <8 x i16> undef, align 16
 
-; The LDS GVs above get packed into a struct accessible from the specializations.
-; GV:  %llvm.amdgcn.kernel.main.lds.t = type { <9 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <8 x i16> }
-; GV:  @sem1 = internal addrspace(3) global target("amdgcn.semaphore", 1) poison, !absolute_symbol ![[SEMADDR1:[0-9]+]]
-; GV:  @sem2 = internal addrspace(3) global target("amdgcn.semaphore", 2) poison, !absolute_symbol ![[SEMADDR2:[0-9]+]]
-; GV:  @llvm.amdgcn.kernel.main.lds = internal addrspace(3) global %llvm.amdgcn.kernel.main.lds.t poison, align 64, !absolute_symbol ![[LDSSTRUCT:[0-9]+]]
+; The LDS GVs above get packed into two structs, one module-level and one kernel-level, which are accessible from the specializations.
+; GV: @sem1 = internal addrspace(3) global target("amdgcn.semaphore", 1) poison, !absolute_symbol !0
+; GV: @sem2 = internal addrspace(3) global target("amdgcn.semaphore", 2) poison, !absolute_symbol !1
+; GV: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t poison, align 64, !absolute_symbol !2
+; GV: @llvm.amdgcn.kernel.main.lds = internal addrspace(3) global %llvm.amdgcn.kernel.main.lds.t poison, align 16, !absolute_symbol !3
 
 @sem1 = internal addrspace(3) global target("amdgcn.semaphore", 1) poison
 @sem2 = internal addrspace(3) global target("amdgcn.semaphore", 2) poison
 
+; Function Attrs: convergent nounwind
+declare !callback !38 void @llvm.amdgcn.wavegroup.rank.p0(i32 immarg, ptr) #2
+
 define private amdgpu_kernel void @input(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
 ; CHECK-LABEL: define private amdgpu_kernel void @input(
-; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VEC30:%.*]] = load <3 x i32>, ptr addrspace(1) [[INBUF]], align 16
 ; CHECK-NEXT:    [[LD_P1:%.*]] = getelementptr <3 x i32>, ptr addrspace(1) [[INBUF]], i64 16
@@ -32,13 +35,13 @@ define private amdgpu_kernel void @input(ptr addrspace(1) %inbuf, ptr addrspace(
 ; CHECK-NEXT:    [[WEI31:%.*]] = load <3 x i32>, ptr addrspace(1) [[W_P1]], align 16
 ; CHECK-NEXT:    [[W_P2:%.*]] = getelementptr <3 x i32>, ptr addrspace(1) [[WBUF]], i64 32
 ; CHECK-NEXT:    [[WEI32:%.*]] = load <3 x i32>, ptr addrspace(1) [[W_P2]], align 16
-; CHECK-NEXT:    store <3 x i32> [[VEC30]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 1), align 64
-; CHECK-NEXT:    store <3 x i32> [[VEC31]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 2), align 16
-; CHECK-NEXT:    store <3 x i32> [[VEC32]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 3), align 32
-; CHECK-NEXT:    store <3 x i32> [[WEI30]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, align 64
-; CHECK-NEXT:    [[WEI_P1:%.*]] = getelementptr <3 x i32>, ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i64 12
+; CHECK-NEXT:    store <3 x i32> [[VEC30]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, align 16
+; CHECK-NEXT:    store <3 x i32> [[VEC31]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 1), align 16
+; CHECK-NEXT:    store <3 x i32> [[VEC32]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 2), align 16
+; CHECK-NEXT:    store <3 x i32> [[WEI30]], ptr addrspace(3) @llvm.amdgcn.module.lds, align 64
+; CHECK-NEXT:    [[WEI_P1:%.*]] = getelementptr <3 x i32>, ptr addrspace(3) @llvm.amdgcn.module.lds, i64 12
 ; CHECK-NEXT:    store <3 x i32> [[WEI31]], ptr addrspace(3) [[WEI_P1]], align 64
-; CHECK-NEXT:    [[WEI_P2:%.*]] = getelementptr <3 x i32>, ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i64 24
+; CHECK-NEXT:    [[WEI_P2:%.*]] = getelementptr <3 x i32>, ptr addrspace(3) @llvm.amdgcn.module.lds, i64 24
 ; CHECK-NEXT:    store <3 x i32> [[WEI32]], ptr addrspace(3) [[WEI_P2]], align 64
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1)
 ; CHECK-NEXT:    ret void
@@ -72,15 +75,15 @@ entry:
 
 define private amdgpu_kernel void @compute(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
 ; CHECK-LABEL: define private amdgpu_kernel void @compute(
-; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem1)
-; CHECK-NEXT:    [[VEC30:%.*]] = load <3 x i32>, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 1), align 64
-; CHECK-NEXT:    [[VEC31:%.*]] = load <3 x i32>, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 2), align 16
-; CHECK-NEXT:    [[VEC32:%.*]] = load <3 x i32>, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 3), align 32
-; CHECK-NEXT:    [[WEI:%.*]] = load <9 x i32>, ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, align 64
+; CHECK-NEXT:    [[VEC30:%.*]] = load <3 x i32>, ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, align 16
+; CHECK-NEXT:    [[VEC31:%.*]] = load <3 x i32>, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 1), align 16
+; CHECK-NEXT:    [[VEC32:%.*]] = load <3 x i32>, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 2), align 16
+; CHECK-NEXT:    [[WEI:%.*]] = load <9 x i32>, ptr addrspace(3) @llvm.amdgcn.module.lds, align 64
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> zeroinitializer, <9 x i32> [[WEI]], <3 x i32> [[VEC30]], <3 x i32> [[VEC31]], <3 x i32> [[VEC32]], i32 42, i1 true)
-; CHECK-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 4), align 16, !tbaa [[TBAA3:![0-9]+]]
+; CHECK-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 3), align 16, !tbaa [[TBAA6:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2)
 ; CHECK-NEXT:    ret void
 ;
@@ -98,10 +101,10 @@ entry:
 
 define private amdgpu_kernel void @output(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
 ; CHECK-LABEL: define private amdgpu_kernel void @output(
-; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem2)
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x half>, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 4), align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x half>, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 3), align 16
 ; CHECK-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUTBUF]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -115,9 +118,10 @@ entry:
 ; Function Attrs: convergent mustprogress nofree norecurse nosync nounwind memory(readwrite, argmem: none, inaccessiblemem: none)
 define amdgpu_kernel void @main(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 !reqd_work_group_size !{i32 32, i32 12, i32 1} {
 ; CHECK-LABEL: define amdgpu_kernel void @main(
-; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR1:[0-9]+]] !reqd_work_group_size [[META6:![0-9]+]] {
+; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR2:[0-9]+]] !reqd_work_group_size [[META9:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.main.lds) ], !alias.scope [[META7:![0-9]+]], !noalias [[META10:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.main.lds) ], !alias.scope [[META10:![0-9]+]], !noalias [[META13:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr @input)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr @compute)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 2, ptr @output)
@@ -130,12 +134,57 @@ entry:
   ret void
 }
 
-; Function Attrs: convergent nounwind
-declare !callback !38 void @llvm.amdgcn.wavegroup.rank.p0(i32 immarg, ptr) #2
+
+; Rank specialization example below tests the case where there is another kernel in the module that uses the same addrspace(3) GVs, in which case those
+; GVs get lowered using the module-scope strategy in the amdgpu-lower-module-lds pass.
+define private amdgpu_kernel void @input_kern2(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
+; CHECK-LABEL: define private amdgpu_kernel void @input_kern2(
+; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[IN:%.*]] = load <3 x i32>, ptr addrspace(1) [[INBUF]], align 16
+; CHECK-NEXT:    [[W:%.*]] = load <3 x i32>, ptr addrspace(1) [[WBUF]], align 64
+; CHECK-NEXT:    [[VEC:%.*]] = add <3 x i32> [[W]], [[IN]]
+; CHECK-NEXT:    store <3 x i32> [[VEC]], ptr addrspace(3) @llvm.amdgcn.module.lds, align 64
+; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %in = load <3 x i32>, ptr addrspace(1) %inbuf, align 16
+  %w = load <3 x i32>, ptr addrspace(1) %wbuf, align 64
+  %vec = add <3 x i32> %w, %in
+
+  store <3 x i32> %vec, ptr addrspace(3) @weights, align 64
+
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1)
+  ret void
+}
+
+define amdgpu_kernel void @kern2(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 !reqd_work_group_size !{i32 32, i32 12, i32 1} {
+; CHECK-LABEL: define amdgpu_kernel void @kern2(
+; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR4:[0-9]+]] !reqd_work_group_size [[META9]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr @input_kern2)
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr @input_kern2)
+  ret void
+}
 
 attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) "amdgpu-agpr-alloc"="0" "amdgpu-flat-work-group-size"="1,1024" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-wavegroup-enable" "amdgpu-waves-per-eu"="8,16" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1300" "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-buffer-pk-add-bf16-inst,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-global-pk-add-bf16-inst,+bf16-cvt-insts,+bf16-pk-insts,+bf16-trans-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot7-insts,+dot8-insts,+dpp,+f16bf16-to-fp6bf6-cvt-scale-insts,+f32-to-f16bf16-cvt-sr-insts,+fp8-conversion-insts,+fp8e5m3-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx1250-insts,+gfx1251-gemm-insts,+gfx13-insts,+gfx8-insts,+gfx9-insts,+parallel-bit-insts,+permlane16-swap,+prng-inst,+tanh-insts,+tensor-cvt-lut-insts,+transpose-load-f4f6-insts,+vmem-pref-insts,+wavefrontsize32" "uniform-work-group-size"="true" }
 attributes #1 = { "amdgpu-wavegroup-rank-function" }
 attributes #2 = { convergent nounwind }
+
+; Check that LDS propogates to rank specializations and that it matches the kernel entry functions.
+; LDS Size 128 for main's rank specializations:
+; GV: #[[ATTR:.*]] = { {{.*}}"amdgpu-lds-size"="128"{{.*}} }
+; ... and for main:
+; GV: #[[ATTR:.*]] = { {{.*}}"amdgpu-lds-size"="128"{{.*}} }
+; LDS Size 128 for kern2's rank specializations:
+; GV: #[[ATTR:.*]] = { {{.*}}"amdgpu-lds-size"="64"{{.*}} }
+; ... and for input_kern2:
+; GV: #[[ATTR:.*]] = { {{.*}}"amdgpu-lds-size"="64"{{.*}} }
 
 ; Function Attrs: convergent mustprogress nocallback nofree nosync nounwind willreturn memory(none)
 declare <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half>, <9 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, i32 immarg, i1 immarg) #1
@@ -146,22 +195,5 @@ declare <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32
 !38 = !{!39}
 !39 = !{i64 1, i1 false}
 
-
-; GV: ![[SEMADDR1]] = !{i64 8392976, i64 8392977}
-; GV: ![[SEMADDR2]] = !{i64 8393232, i64 8393233}
-; GV: ![[LDSSTRUCT]] = !{i64 0, i64 1}
-; CHECK: [[TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
-; CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
-; CHECK: [[META5]] = !{!"Simple C++ TBAA"}
-; CHECK: [[META6]] = !{i32 32, i32 12, i32 1}
-; CHECK: [[META7]] = !{[[META8:![0-9]+]]}
-; CHECK: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]]}
-; CHECK: [[META9]] = distinct !{[[META9]]}
-; CHECK: [[META10]] = !{[[META11:![0-9]+]], [[META12:![0-9]+]], [[META13:![0-9]+]], [[META14:![0-9]+]]}
-; CHECK: [[META11]] = distinct !{[[META11]], [[META9]]}
-; CHECK: [[META12]] = distinct !{[[META12]], [[META9]]}
-; CHECK: [[META13]] = distinct !{[[META13]], [[META9]]}
-; CHECK: [[META14]] = distinct !{[[META14]], [[META9]]}
-;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GV: {{.*}}

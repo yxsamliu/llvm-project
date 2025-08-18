@@ -255,7 +255,9 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
 
       while (!WorkList.empty()) {
         Function *F = WorkList.pop_back_val();
-
+        if (F->isDeclaration())
+          continue;
+          
         for (const CallGraphNode::CallRecord &CallRecord : *CG[F]) {
           if (!CallRecord.second)
             continue;

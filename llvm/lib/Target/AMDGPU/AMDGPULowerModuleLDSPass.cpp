@@ -1091,16 +1091,16 @@ public:
   static DenseMap<Function *, SmallDenseSet<Function *>>
   getEntryFunctionToRankSpecializationMap(
       const CallGraph &CG,
-      const DenseMap<Function *, LDSVariableReplacement> &KernelToReplacement) {
+      Module &M) {
 
     DenseMap<Function *, SmallDenseSet<Function *>> RankFuncMap;
-    for (Function *Func : KernelToReplacement.keys()) {
-      if (Func->isDeclaration() || !isKernelLDS(Func))
+    for (Function &Func : M.functions()) {
+      if (Func.isDeclaration() || !isKernelLDS(&Func))
         continue;
-      for (const CallGraphNode::CallRecord &R : *CG[Func]) {
+      for (const CallGraphNode::CallRecord &R : *CG[&Func]) {
         Function *Ith = R.second->getFunction();
         if (Ith && getWavegroupRankFunction(*Ith))
-          RankFuncMap[Func].insert(Ith);
+          RankFuncMap[&Func].insert(Ith);
       }
       
     }
@@ -1222,7 +1222,7 @@ public:
     // calls. Here we collect the mapping of entry kernels to rank
     // specializations.
     DenseMap<Function *, SmallDenseSet<Function *>> RankFuncMap =
-        getEntryFunctionToRankSpecializationMap(CG, KernelToReplacement);
+        getEntryFunctionToRankSpecializationMap(CG, M);
 
     // All kernel frames have been allocated. Calculate and record the
     // addresses.
