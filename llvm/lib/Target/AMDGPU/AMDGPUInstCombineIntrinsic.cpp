@@ -699,6 +699,169 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     break;
   }
+  case Intrinsic::amdgcn_convolve_bf16_bf16_1x1:
+  case Intrinsic::amdgcn_convolve_f16_bf8_fp8_1x1:
+  case Intrinsic::amdgcn_convolve_f16_bf8_bf8_1x1:
+  case Intrinsic::amdgcn_convolve_f16_f16_1x1:
+  case Intrinsic::amdgcn_convolve_f16_fp8_fp8_1x1:
+  case Intrinsic::amdgcn_convolve_f16_fp8_bf8_1x1:
+  case Intrinsic::amdgcn_convolve_f16_iu4_1x1:
+  case Intrinsic::amdgcn_convolve_f16_iu8_1x1:
+  case Intrinsic::amdgcn_convolve_f32_bf16_1x1:
+  case Intrinsic::amdgcn_convolve_f32_bf8_fp8_1x1:
+  case Intrinsic::amdgcn_convolve_f32_bf8_bf8_1x1:
+  case Intrinsic::amdgcn_convolve_f32_f16_1x1:
+  case Intrinsic::amdgcn_convolve_f32_fp8_fp8_1x1:
+  case Intrinsic::amdgcn_convolve_f32_fp8_bf8_1x1:
+  case Intrinsic::amdgcn_convolve_f32_iu4_1x1:
+  case Intrinsic::amdgcn_convolve_f32_iu8_1x1:
+  case Intrinsic::amdgcn_convolve_f32i32_iu4_1x1:
+  case Intrinsic::amdgcn_convolve_f32i32_iu8_1x1:
+  case Intrinsic::amdgcn_convolve_i32_iu4_1x1:
+  case Intrinsic::amdgcn_convolve_i32_iu8_1x1: {
+    // 1x1 convolutions run more efficiently when multiple iterations are
+    // combined into a single instruction.
+    //
+    // Scan for chains of convolve intrinsics that can be improved.
+    SmallVector<IntrinsicInst *, 4> WorkList;
+    WorkList.push_back(&II);
+    unsigned AuxIdx = II.arg_size() - 2;
+    uint64_t Aux = cast<ConstantInt>(II.getArgOperand(AuxIdx))->getZExtValue();
+
+    const uint64_t BaseAux = Aux & ~AUX_ITER_MASK;
+    const bool Clamp =
+        cast<ConstantInt>(II.getArgOperand(AuxIdx + 1))->getZExtValue();
+    uint64_t MaxIter = ((Aux & AUX_ITER_MASK) >> AUX_ITER_SHIFT) + 1;
+    IntrinsicInst *Intr = &II;
+    while (true) {
+      if (!Intr->hasOneUse())
+        break;
+      IntrinsicInst *IntrInst = dyn_cast<IntrinsicInst>(*Intr->user_begin());
+      if (!IntrInst)
+        break;
+      if (IntrInst->getIntrinsicID() != IID)
+        break;
+      assert(IntrInst->getArgOperand(0) == Intr);
+      uint64_t AuxI =
+          cast<ConstantInt>(IntrInst->getArgOperand(AuxIdx))->getZExtValue();
+      if ((AuxI & ~AUX_ITER_MASK) != (Aux & ~AUX_ITER_MASK))
+        break;
+      bool ClampI = cast<ConstantInt>(IntrInst->getArgOperand(AuxIdx + 1))
+                        ->getZExtValue();
+      if (Clamp != ClampI)
+        break;
+      MaxIter += ((AuxI & AUX_ITER_MASK) >> AUX_ITER_SHIFT) + 1;
+      WorkList.push_back(IntrInst);
+      Intr = IntrInst;
+    }
+
+    if (WorkList.size() == 1)
+      break;
+
+    // Find an optimal sequence of iterations-per-intrinsic.
+    SmallVector<unsigned> Iterations;
+    unsigned Last = MaxIter % 4;
+
+    for (unsigned I = 0; I < (MaxIter - Last) / 4; ++I)
+      Iterations.push_back(4);
+
+    if (Last == 1) {
+      Iterations.back() = Iterations.back() - 1;
+      Iterations.push_back(Last + 1);
+    } else if (Last != 0) {
+      Iterations.push_back(Last);
+    }
+
+    if (Iterations.size() == WorkList.size())
+      break;
+
+    // Now that we have a plan for a new sequence of convolves to replace the
+    // chain of convolves that we found, there is no going back. Iterate over
+    // the instructions and replace them as we go.
+    //
+    // We try to keep new intrinsics close to their corresponding place in the
+    // chain for two reasons:
+    //  * For the (expected to be less common) case in which convolves aren't
+    //    right after each other, this limits the amount by which value live
+    //    ranges are extended and is more faithful to the original schedule of
+    //    the program.
+    //  * It should help the quality of debug info.
+    IntegerType *I32 = IC.Builder.getInt32Ty();
+    Value *Accum = II.getOperand(0);
+    unsigned TensorIdx = 2;
+    unsigned WeightIdx = TensorIdx - 1;
+    SmallVector<Value *> Tensors;
+    SmallVector<Value *> Weights;
+
+    auto *IterationsIt = Iterations.begin();
+    for (IntrinsicInst *Inst : WorkList) {
+      IC.Builder.SetInsertPoint(Inst);
+      // Collect tensors and weights from the instruction.
+      uint64_t Aux =
+          cast<ConstantInt>(Inst->getOperand(AuxIdx))->getZExtValue();
+      unsigned IterTmp = ((Aux & AUX_ITER_MASK) >> AUX_ITER_SHIFT) + 1;
+      Value *Weight = Inst->getOperand(WeightIdx);
+      for (unsigned Idx = 0; Idx < IterTmp; ++Idx) {
+        Tensors.push_back(Inst->getOperand(TensorIdx + Idx));
+        Value *W =
+            IterTmp > 1 ? IC.Builder.CreateExtractElement(Weight, Idx) : Weight;
+        Weights.push_back(W);
+      }
+      // "Discharge" the accumulated (tensor, weight) pairs in one or more new
+      // intrinsics based on the plan.
+      assert(IterationsIt != Iterations.end());
+      for (;
+           IterationsIt != Iterations.end() && Tensors.size() >= *IterationsIt;
+           ++IterationsIt) {
+        uint64_t Aux = BaseAux | ((*IterationsIt - 1) << AUX_ITER_SHIFT);
+
+        Value *NewWeights =
+            PoisonValue::get(FixedVectorType::get(I32, *IterationsIt));
+        for (unsigned I = 0; I < *IterationsIt; ++I) {
+          NewWeights =
+              IC.Builder.CreateInsertElement(NewWeights, Weights[I], I);
+        }
+
+        SmallVector<Value *> Args;
+        Args.push_back(Accum);
+        Args.push_back(NewWeights);
+        for (unsigned Idx = 0; Idx < 4; ++Idx) {
+          if (Idx < *IterationsIt)
+            Args.push_back(Tensors[Idx]);
+          else
+            Args.push_back(PoisonValue::get(I32));
+        }
+        Args.push_back(IC.Builder.getInt32(Aux));
+        Args.push_back(IC.Builder.getInt1(Clamp));
+        Accum = IC.Builder.CreateIntrinsic(Inst->getType(),
+                                           Inst->getIntrinsicID(), Args);
+
+        Tensors.erase(Tensors.begin(), Tensors.begin() + *IterationsIt);
+        Weights.erase(Weights.begin(), Weights.begin() + *IterationsIt);
+      }
+      // Replace and erase the original instruction.
+      //
+      // The replacement by Accum may be locally incorrect, but since all the
+      // intrinsics of the original chain (except for the last) have a single
+      // use, only the very last replacement actually matters -- and that one
+      // is guaranteed to be correct.
+      if (Inst != &II) {
+        IC.replaceInstUsesWith(*Inst, Accum);
+        IC.eraseInstFromFunction(*Inst);
+      } else {
+        // Do *not* erase the very first instruction of the chain, since we're
+        // going to return it to signal an IR change to the InstCombine driver
+        // loop. The instruction will be erased as trivially dead.
+        assert(Inst == WorkList[0] && WorkList.size() >= 2);
+      }
+    }
+
+    assert(IterationsIt == Iterations.end());
+    assert(Tensors.empty());
+    assert(Weights.empty());
+
+    return &II;
+  }
   case Intrinsic::amdgcn_sqrt:
   case Intrinsic::amdgcn_rsq:
   case Intrinsic::amdgcn_tanh: {

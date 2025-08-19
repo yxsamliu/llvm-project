@@ -1328,6 +1328,14 @@ enum {
   WAVEGROUPS_PER_WORKGROUP = 4,
 };
 
+// AUX defines.
+
+enum {
+  AUX_ITER_MAX = 3,
+  AUX_ITER_SHIFT = 12,
+  AUX_ITER_MASK = (AUX_ITER_MAX << 12),
+};
+
 } // End namespace llvm
 
 #endif
