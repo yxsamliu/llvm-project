@@ -3216,13 +3216,14 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       applyDefaultMapping(OpdMapper);
       return;
     case Intrinsic::amdgcn_permlane16:
-    case Intrinsic::amdgcn_permlanex16:
+    case Intrinsic::amdgcn_permlanex16: {
       // Doing a waterfall loop over these wouldn't make any sense.
       substituteSimpleCopyRegs(OpdMapper, 2);
       substituteSimpleCopyRegs(OpdMapper, 3);
       constrainOpWithReadfirstlane(B, MI, 4);
       constrainOpWithReadfirstlane(B, MI, 5);
       return;
+    }
     case Intrinsic::amdgcn_permlane_bcast:
     case Intrinsic::amdgcn_permlane_up:
     case Intrinsic::amdgcn_permlane_down:
@@ -4153,7 +4154,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_FPEXT: {
     unsigned SizeDst = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     unsigned SizeSrc = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
-    if (Subtarget.hasSALUFloatInsts() && SizeDst < 64 && SizeSrc < 64 &&
+    if (Subtarget.hasSALUFloatInsts() && SizeDst != 64 && SizeSrc != 64 &&
         isSALUMapping(MI))
       return getDefaultMappingSOP(MI);
     return getDefaultMappingVOP(MI);
@@ -4712,14 +4713,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cvt_scalef32_pk16_bf6_f16:
     case Intrinsic::amdgcn_cvt_scalef32_pk16_fp6_bf16:
     case Intrinsic::amdgcn_cvt_scalef32_pk16_bf6_bf16:
-    case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_fp6_f32:
-    case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_bf6_f32:
-    case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_fp6_f16:
-    case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_bf6_f16:
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_fp8_bf16:
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_bf8_bf16:
-    case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_fp6_bf16:
-    case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_bf6_bf16:
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_fp8_f16:
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_bf8_f16:
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_fp8_f32:
@@ -4842,6 +4837,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk_fp4_f16:
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk_fp4_bf16:
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk_fp4_f32:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_bf6_bf16:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_bf6_f16:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_bf6_f32:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_fp6_bf16:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_fp6_f16:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_fp6_f32:
     case Intrinsic::amdgcn_cvt_scalef32_sr_bf8_bf16:
     case Intrinsic::amdgcn_cvt_scalef32_sr_bf8_f16:
     case Intrinsic::amdgcn_cvt_scalef32_sr_bf8_f32:

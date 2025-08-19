@@ -677,8 +677,6 @@ public:
 
   bool isVCSrc_v2f16() const { return isVCSrc_f16(); }
 
-  bool isVCSrc_v2b32() const { return isVCSrc_b64(); }
-
   bool isVSrc_b32() const {
     return isVCSrc_f32() || isLiteralImm(MVT::i32) || isExpr();
   }
@@ -702,6 +700,8 @@ public:
   bool isVCSrcV2FP32() const { return isVCSrc_f64(); }
 
   bool isVSrc_v2f32() const { return isVSrc_f64() || isLiteralImm(MVT::v2f32); }
+
+  bool isVCSrc_v2b32() const { return isVCSrc_b64(); }
 
   bool isVSrc_v2b32() const { return isVSrc_b64() || isLiteralImm(MVT::v2i32); }
 
@@ -811,7 +811,7 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VReg_256RegClassID, MVT::f64);
   }
 
-   bool isVISrc_512_f64() const {
+  bool isVISrc_512_f64() const {
     return isRegOrInlineNoMods(AMDGPU::VReg_512RegClassID, MVT::f64);
   }
 
@@ -2584,6 +2584,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     [[fallthrough]];
 
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+
     Inst.addOperand(MCOperand::createImm(Lo_32(Val)));
     setImmKindLiteral();
     return;
@@ -5271,6 +5272,7 @@ bool AMDGPUAsmParser::validateDPP(const MCInst &Inst,
       return false;
     }
   }
+
   int Dpp8Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dpp8);
   bool IsDPP = DppCtrlIdx >= 0 || Dpp8Idx >= 0;
 
@@ -9916,10 +9918,9 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
       Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_gfx11 ||
       Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_gfx11 ||
       Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_gfx12 ||
-      Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_gfx13 ||
       Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_gfx12 ||
-      Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_gfx13 ||
-      Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx1250_e64_gfx1250) {
+      Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_gfx13 ||
+      Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_gfx13) {
     Inst.addOperand(MCOperand::createImm(0)); // Placeholder for src2_mods
     Inst.addOperand(Inst.getOperand(0));
   }

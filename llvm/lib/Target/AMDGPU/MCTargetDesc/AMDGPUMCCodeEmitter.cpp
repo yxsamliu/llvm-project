@@ -368,7 +368,6 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
   case AMDGPU::OPERAND_KIMM16:
   case AMDGPU::OPERAND_KIMM64:
     return MO.getImm();
-
   default:
     llvm_unreachable("invalid operand size");
   }

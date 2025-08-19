@@ -2444,7 +2444,7 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
                       << "Update Instr: " << *It);
   }
 
-  // XCnt may be already consumed by a load wait
+  // XCnt may be already consumed by a load wait.
   if (Wait.KmCnt == 0 && Wait.XCnt != ~0u &&
       !ScoreBrackets.hasPendingEvent(SMEM_GROUP))
     Wait.XCnt = ~0u;
