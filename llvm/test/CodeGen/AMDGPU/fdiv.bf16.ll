@@ -82,7 +82,6 @@ define bfloat @v_rcp_bf16_neg(bfloat %x) {
   ret bfloat %fdiv
 }
 
-; TODO: Support lowering to v_rsq_bf16.
 define bfloat @v_rsq_bf16(bfloat %x) {
 ; GFX1250-TRUE16-LABEL: v_rsq_bf16:
 ; GFX1250-TRUE16:       ; %bb.0:
@@ -102,7 +101,6 @@ define bfloat @v_rsq_bf16(bfloat %x) {
   ret bfloat %fdiv
 }
 
-; TODO: Support lowering to v_rsq_bf16.
 define bfloat @v_rsq_bf16_neg(bfloat %x) {
 ; GFX1250-TRUE16-LABEL: v_rsq_bf16_neg:
 ; GFX1250-TRUE16:       ; %bb.0:
@@ -128,7 +126,6 @@ define bfloat @v_rsq_bf16_neg(bfloat %x) {
   ret bfloat %fdiv
 }
 
-; TODO: Support lowering to v_rsq_bf16.
 define <2 x bfloat> @v_rsq_bf16_multi_use(bfloat %x) {
 ; GFX1250-TRUE16-LABEL: v_rsq_bf16_multi_use:
 ; GFX1250-TRUE16:       ; %bb.0:
@@ -157,7 +154,6 @@ define <2 x bfloat> @v_rsq_bf16_multi_use(bfloat %x) {
   ret <2 x bfloat> %r2
 }
 
-; TODO: Support lowering to v_rsq_bf16.
 define bfloat @v_rsq_bf16_missing_contract0(bfloat %x) {
 ; GFX1250-TRUE16-LABEL: v_rsq_bf16_missing_contract0:
 ; GFX1250-TRUE16:       ; %bb.0:
@@ -181,7 +177,6 @@ define bfloat @v_rsq_bf16_missing_contract0(bfloat %x) {
   ret bfloat %fdiv
 }
 
-; TODO: Support lowering to v_rsq_bf16.
 define bfloat @v_rsq_bf16_missing_contract1(bfloat %x) {
 ; GFX1250-TRUE16-LABEL: v_rsq_bf16_missing_contract1:
 ; GFX1250-TRUE16:       ; %bb.0:
@@ -205,7 +200,6 @@ define bfloat @v_rsq_bf16_missing_contract1(bfloat %x) {
   ret bfloat %fdiv
 }
 
-; TODO: Support lowering to v_rsq_bf16.
 define bfloat @v_neg_rsq_bf16_missing_contract1(bfloat %x) {
 ; GFX1250-TRUE16-LABEL: v_neg_rsq_bf16_missing_contract1:
 ; GFX1250-TRUE16:       ; %bb.0:
