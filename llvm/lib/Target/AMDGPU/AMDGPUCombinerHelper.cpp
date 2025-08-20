@@ -10,6 +10,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Target/TargetMachine.h"
@@ -233,9 +234,6 @@ bool AMDGPUCombinerHelper::matchFoldableFneg(MachineInstr &MI,
   case AMDGPU::G_FMAD:
     return mayIgnoreSignedZero(*MatchInfo);
   case AMDGPU::G_FMUL:
-  case AMDGPU::G_FPEXT:
-  case AMDGPU::G_INTRINSIC_TRUNC:
-  case AMDGPU::G_FPTRUNC:
   case AMDGPU::G_FRINT:
   case AMDGPU::G_FNEARBYINT:
   case AMDGPU::G_INTRINSIC_ROUND:
@@ -244,6 +242,11 @@ bool AMDGPUCombinerHelper::matchFoldableFneg(MachineInstr &MI,
   case AMDGPU::G_FCANONICALIZE:
   case AMDGPU::G_AMDGPU_RCP_IFLAG:
     return true;
+  case AMDGPU::G_FPEXT:
+  case AMDGPU::G_INTRINSIC_TRUNC:
+  case AMDGPU::G_FPTRUNC:
+    return isLegalOrBeforeLegalizer(
+        {AMDGPU::G_FNEG, {MRI.getType(MatchInfo->getOperand(1).getReg())}});
   case AMDGPU::G_INTRINSIC:
   case AMDGPU::G_INTRINSIC_CONVERGENT: {
     Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MatchInfo)->getIntrinsicID();

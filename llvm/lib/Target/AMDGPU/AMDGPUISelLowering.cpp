@@ -5177,6 +5177,12 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
       return SDValue();
 
     // (fneg (fp_round x)) -> (fp_round (fneg x))
+    // Check that moving the fneg to the round/trunc src is legal (e.g. if
+    // PackedFP32Ops isn't supported)
+    SDValue truncSrc = N0.getOperand(0);
+    if (!isOperationLegal(ISD::FNEG, truncSrc.getValueType()))
+      return SDValue();
+
     SDValue Neg = DAG.getNode(ISD::FNEG, SL, CvtSrc.getValueType(), CvtSrc);
     return DAG.getNode(ISD::FP_ROUND, SL, VT, Neg, N0.getOperand(1));
   }

@@ -5075,6 +5075,89 @@ define amdgpu_kernel void @fneg_v2f32_scalar(ptr addrspace(1) %a, <2 x float> %x
   ret void
 }
 
+define amdgpu_kernel void @fneg_v2f32_trunc_vector(ptr addrspace(1) %a) {
+; GFX900-LABEL: fneg_v2f32_trunc_vector:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX900-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX900-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1]
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX900-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX900-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GFX900-NEXT:    v_pk_add_f16 v0, v0, 0 neg_lo:[1,0] neg_hi:[1,0]
+; GFX900-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX900-NEXT:    s_endpgm
+;
+; PACKED-SDAG-LABEL: fneg_v2f32_trunc_vector:
+; PACKED-SDAG:       ; %bb.0:
+; PACKED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; PACKED-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; PACKED-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; PACKED-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; PACKED-SDAG-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1]
+; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; PACKED-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; PACKED-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; PACKED-SDAG-NEXT:    v_pack_b32_f16 v0, v0, v1
+; PACKED-SDAG-NEXT:    v_pk_add_f16 v0, v0, 0 neg_lo:[1,0] neg_hi:[1,0]
+; PACKED-SDAG-NEXT:    global_store_dword v2, v0, s[0:1]
+; PACKED-SDAG-NEXT:    s_endpgm
+;
+; PACKED-GISEL-LABEL: fneg_v2f32_trunc_vector:
+; PACKED-GISEL:       ; %bb.0:
+; PACKED-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; PACKED-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; PACKED-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; PACKED-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; PACKED-GISEL-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1]
+; PACKED-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; PACKED-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; PACKED-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; PACKED-GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
+; PACKED-GISEL-NEXT:    v_pk_add_f16 v0, v0, 0 neg_lo:[1,0] neg_hi:[1,0]
+; PACKED-GISEL-NEXT:    global_store_dword v2, v0, s[0:1]
+; PACKED-GISEL-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: fneg_v2f32_trunc_vector:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1250-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 0 neg_lo:[1,1] neg_hi:[1,1]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX1250-NEXT:    v_lshlrev_b32_e32 v1, 3, v2
+; GFX1250-NEXT:    v_pk_add_f16 v0, v0, 0
+; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX1250-NEXT:    s_endpgm
+;
+; GFX13-LABEL: fneg_v2f32_trunc_vector:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX13-NEXT:    v_lshlrev_b32_e32 v1, 3, v2
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX13-NEXT:    v_pk_add_f16 v0, v0, 0 neg_lo:[1,0] neg_hi:[1,0]
+; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13-NEXT:    s_endpgm
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
+  %load = load <2 x float>, ptr addrspace(1) %gep, align 8
+  %trunc = fptrunc <2 x float> %load to <2 x half>
+  %sub = fsub <2 x half> zeroinitializer, %trunc
+  store <2 x half> %sub, ptr addrspace(1) %gep, align 8
+  ret void
+}
+
+
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>)
 declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
