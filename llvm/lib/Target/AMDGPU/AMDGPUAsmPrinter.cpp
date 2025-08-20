@@ -1018,7 +1018,6 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.DynamicCallStack =
       MCBinaryExpr::createOr(GetSymRefExpr(RIK::RIK_HasDynSizedStack),
                              GetSymRefExpr(RIK::RIK_HasRecursion), Ctx);
-  ProgInfo.NamedBarCnt = GetSymRefExpr(RIK::RIK_NumNamedBarrier);
 
   const MCExpr *BarBlkConst = MCConstantExpr::create(4, Ctx);
   const MCExpr *AlignToBlk = AMDGPUMCExpr::createAlignTo(
