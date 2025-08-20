@@ -9,6 +9,7 @@
 ; GCN-NEXT:       .ls:
 ; GCN-NEXT:         .entry_point:    _amdgpu_ls_main
 ; GCN-NEXT:         .entry_point_symbol:    ls_amdpal
+; GCN-NEXT:         .named_bar_cnt: 0
 ; GCN-NEXT:         .scratch_memory_size: 0
 ; GCN:     .registers:
 ; GCN-NEXT:       '0x2d4a (SPI_SHADER_PGM_RSRC1_LS)': 0

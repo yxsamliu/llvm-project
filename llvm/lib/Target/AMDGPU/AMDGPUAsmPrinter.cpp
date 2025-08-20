@@ -1599,6 +1599,8 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
                                   MCConstantExpr::create(16, Ctx), Ctx),
       Ctx);
 
+  MD->setNamedBarCnt(CC, CurrentProgramInfo.NamedBarCnt);
+
   if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS) {
     unsigned ExtraLDSSize = STM.getGeneration() >= AMDGPUSubtarget::GFX11
                                 ? divideCeil(CurrentProgramInfo.LDSBlocks, 2)
@@ -1669,6 +1671,7 @@ void AMDGPUAsmPrinter::emitPALFunctionMetadata(const MachineFunction &MF) {
   MD->setFunctionLdsSize(FnName, CurrentProgramInfo.LDSSize);
   MD->setFunctionNumUsedVgprs(FnName, CurrentProgramInfo.NumVGPRsForWavesPerEU);
   MD->setFunctionNumUsedSgprs(FnName, CurrentProgramInfo.NumSGPRsForWavesPerEU);
+  MD->setFunctionNamedBarCnt(FnName, CurrentProgramInfo.NamedBarCnt);
 }
 
 // This is supposed to be log2(Size)

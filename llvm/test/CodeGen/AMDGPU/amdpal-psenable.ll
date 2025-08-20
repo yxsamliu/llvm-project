@@ -13,6 +13,7 @@
 ; GCN-NEXT:       .ps:
 ; GCN-NEXT:         .entry_point:    _amdgpu_ps_main
 ; GCN-NEXT:         .entry_point_symbol:    amdpal_psenable
+; GCN-NEXT:         .named_bar_cnt: 0
 ; GCN-NEXT:         .scratch_memory_size: 0
 ; GCN:     .registers:
 ; GCN-NEXT:       '0x2c0a (SPI_SHADER_PGM_RSRC1_PS)':

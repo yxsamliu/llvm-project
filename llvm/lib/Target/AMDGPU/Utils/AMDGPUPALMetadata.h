@@ -102,6 +102,8 @@ public:
   void setScratchSize(unsigned CC, unsigned Val);
   void setScratchSize(unsigned CC, const MCExpr *Val, MCContext &Ctx);
 
+  void setNamedBarCnt(unsigned CC, const MCExpr *Val);
+
   // Set the stack frame size of a function in the metadata.
   void setFunctionScratchSize(StringRef FnName, unsigned Val);
 
@@ -121,6 +123,8 @@ public:
   // the shader stage to determine the number of sgprs to allocate.
   void setFunctionNumUsedSgprs(StringRef FnName, unsigned Val);
   void setFunctionNumUsedSgprs(StringRef FnName, const MCExpr *Val);
+
+  void setFunctionNamedBarCnt(StringRef FnName, const MCExpr *Val);
 
   // Set the hardware register bit in PAL metadata to enable wave32 on the
   // shader of the given calling convention.

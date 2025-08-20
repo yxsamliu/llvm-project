@@ -365,6 +365,12 @@ void AMDGPUPALMetadata::setScratchSize(unsigned CC, const MCExpr *Val,
   setHwStage(CC, ".scratch_memory_size", msgpack::Type::UInt, Val);
 }
 
+void AMDGPUPALMetadata::setNamedBarCnt(unsigned CC, const MCExpr *Val) {
+  int64_t IntVal;
+  Val->evaluateAsAbsolute(IntVal);
+  updateHwStageMaximum(CC, ".named_bar_cnt", IntVal);
+}
+
 // Set the stack frame size of a function in the metadata.
 void AMDGPUPALMetadata::setFunctionScratchSize(StringRef FnName, unsigned Val) {
   auto Node = getShaderFunction(FnName);
@@ -402,6 +408,12 @@ void AMDGPUPALMetadata::setFunctionNumUsedSgprs(StringRef FnName,
                                                 const MCExpr *Val) {
   auto Node = getShaderFunction(FnName);
   DelayedExprs.assignDocNode(Node[".sgpr_count"], msgpack::Type::UInt, Val);
+}
+
+void AMDGPUPALMetadata::setFunctionNamedBarCnt(StringRef FnName,
+                                               const MCExpr *Val) {
+  auto Node = getShaderFunction(FnName);
+  DelayedExprs.assignDocNode(Node[".named_bar_cnt"], msgpack::Type::UInt, Val);
 }
 
 // Set the hardware register bit in PAL metadata to enable wave32 on the

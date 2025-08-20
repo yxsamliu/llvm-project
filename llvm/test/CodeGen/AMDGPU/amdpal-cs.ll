@@ -10,6 +10,7 @@
 ; GCN-NEXT:       .cs:
 ; GCN-NEXT:         .entry_point:    _amdgpu_cs_main
 ; GCN-NEXT:         .entry_point_symbol:    cs_amdpal
+; GCN-NEXT:         .named_bar_cnt: 0
 ; GCN-NEXT:         .scratch_memory_size: 0
 ; GCN:     .registers:
 ; GCN-NEXT:       '0x2e12 (COMPUTE_PGM_RSRC1)':
