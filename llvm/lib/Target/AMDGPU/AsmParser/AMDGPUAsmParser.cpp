@@ -5265,10 +5265,10 @@ bool AMDGPUAsmParser::validateDPP(const MCInst &Inst,
     if (!AMDGPU::isLegalDPALU_DPPControl(getSTI(), Opc, DppCtrl) &&
         AMDGPU::isDPALU_DPP(MII.get(Opc), getSTI())) {
       // DP ALU DPP is supported for row_newbcast only on GFX9* and row_share
-      // only on GFX12+.
+      // only on GFX12.
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyDppCtrl, Operands);
-      Error(S, isGFX12Plus() ? "DP ALU dpp only supports row_share"
-                             : "DP ALU dpp only supports row_newbcast");
+      Error(S, isGFX12() ? "DP ALU dpp only supports row_share"
+                         : "DP ALU dpp only supports row_newbcast");
       return false;
     }
   }
