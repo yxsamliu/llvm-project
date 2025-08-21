@@ -1267,77 +1267,19 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
   Inc->eraseFromParent();
 }
 
-// Lower an InstrProfIncrementInst into AMDGPU IR that performs sampled, low-contention
-// counter updates using per-counter slotting and warp-leader writes.
+// Lowers an InstrProfIncrementInst for AMDGPU to per-wave aggregated counter updates.
+// It computes a "slot" index based on block and warp-local indices, elects a leader lane,
+// and increments a counter by (Inc->getStep() * number_of_active_lanes) to reflect that
+// only one lane performs the update on behalf of the whole wave.
 //
-// Overview:
-// - Expands each original PGO counter into KSlots = 2^KSlotBits physical slots, reserving
-//   the last slot (KOverflow = KSlots - 1) as an overflow bucket.
-// - Computes a slot index per thread based on block/workgroup topology and wave32 lane layout,
-//   but only permits the warp leader to update a slot when a block-level sampling predicate matches.
-// - Routes all non-participating threads (or those mapping to the reserved overflow slot) to
-//   the overflow bucket, reducing contention while preserving aggregate signal.
-//
-// Slot selection and sampling (Wave32):
-// - kWarpBits = 5. Requires OffloadProfilingThreadBitWidth (KSlotBits) >= 5.
-// - The slot index is composed of:
-//     [blockHi (usedForHi bits)] [warpLocal (5 bits)]
-//   where warpLocal = threadIdx.x >> 5 and blockHi is the top usedForHi bits of blockIdx.x.
-// - Let blockBits = ceil(log2(gridDim.x)) if gridDim.x > 1, else 1.
-//   Let slotHiBits = KSlotBits - kWarpBits, usedForHi = min(blockBits, slotHiBits),
-//   and sampBits = blockBits - usedForHi.
-//   Then:
-//     blockHi = (sampBits == 0) ? blockIdx.x : (blockIdx.x >> sampBits)
-//     slotRaw = (blockHi << 5) | warpLocal
-// - Sampling is performed on the low sampBits of blockIdx.x using a fixed pattern KPattern14:
-//     sampMask = (sampBits == 0) ? 0 : ((1 << sampBits) - 1)
-//     matched  = (sampBits == 0) ? true : ((blockIdx.x & sampMask) == (KPattern14 & sampMask))
-// - Only the leading active lane (warp leader) updates when matched is true. The leader is
-//   determined by amdgcn.ballot(true) to get the active-lane mask and cttz to find the least
-//   significant set bit (lane index). The lane id is derived from amdgcn.mbcnt.lo & 31.
-// - If not the leader, or if matched is false, or if slotRaw == KOverflow, the update is routed
-//   to the overflow slot KOverflow.
-//
-// Counter addressing and increment:
-// - The final counter index is: CounterIdx = (OriginalIdx * KSlots) + Slot.
-// - The function loads, adds Inc->getStep(), and stores back the new count at the computed address,
-//   then erases the original InstrProfIncrementInst.
-//
-// Assumptions and constraints:
-// - Target is AMDGPU with Wave32 semantics for the executed kernel path.
-//   - lane width is 32; amdgcn.ballot returns a 32-bit active mask for Wave32 paths used here.
-//   - For Wave64 targets or mixed waves, this code would need adaptation (e.g., kWarpBits = 6,
-//     64-bit ballot handling).
-// - OffloadProfilingThreadBitWidth (KSlotBits) >= 5, so that slot space accommodates lane/warp bits.
-// - Availability and ABI of AMDGPU intrinsics used:
-//   - llvm.amdgcn.workgroup.id.x, llvm.amdgcn.workitem.id.x for block/thread indices.
-//   - llvm.amdgcn.implicitarg.ptr to access the implicit kernel-argument block.
-//   - llvm.ctlz/llvm.cttz for bit introspection.
-//   - llvm.amdgcn.mbcnt.lo and llvm.amdgcn.ballot to compute lane id and active mask.
-// - Implicit argument layout follows AMDGPU ABI:
-//   - gridDim.x (i32) at base of the implicit arg block.
-//   - blockDim.x (i16) at byte offset 12 from the base.
-// - gridDim.x > 0 and at least one active lane exists in each executing wave that reaches this code.
-// - Sampling pattern KPattern14 = 0x2A3F is fixed and truncated to sampBits as needed.
-// - Non-atomic increment: the load/add/store is not atomic. If multiple waves can write the same
-//   slot concurrently, increments may race. To guarantee correctness under concurrency, replace
-//   the sequence with an atomic add or introduce per-wave buffering/aggregation as appropriate.
-// - Overflow slot semantics:
-//   - Consolidates updates from non-selected lanes/blocks and any mapping collision to KOverflow,
-//     trading precision for reduced contention. Consumers must understand that the last slot
-//     aggregates miscellaneous updates and may need special handling.
-// - Behavior with small grids:
-//   - If blockBits <= slotHiBits, sampBits == 0, all blocks match sampling (matched = true).
-//   - slotRaw uses the top existing block bits and the local warp id; non-leader lanes still route
-//     to overflow.
-//
-// Rationale:
-// - By restricting updates to one lane per warp and spreading selected blocks across slots via
-//   high bits of blockIdx.x, we reduce contention on counters and improve scalability while still
-//   capturing representative execution frequency.
-// - The overflow bucket ensures no updates are lost when sampling does not select a block or when
-//   slotRaw would alias the reserved slot.
-
+// Assumptions:
+// - AMDGPU Wave32 (32 lanes): uses ballot.i32, mbcnt.lo with a full mask, and lane = mbcnt & 31.
+// - OffloadProfilingThreadBitWidth (KSlotBits) >= 5; kWarpBits is 5 for Wave32.
+// - Two modes:
+//   - PatternOverflow: performs a non-atomic RMW, routes to an overflow slot based on sampling.
+//   - AtomicWarpLeader: only the elected leader performs an atomic add.
+// - Inc->getStep() is an LLVM integer-typed Value (often a constant 1), and may not equal 1.
+// - The increment amount in both modes is Inc->getStep() * popcount(activeMask).
 void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
   IRBuilder<> Builder(Inc);
   LLVMContext &Context = M.getContext();
@@ -1386,6 +1328,7 @@ void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
   Value *BlockDimX64 = Builder.CreateZExt(BlockDimX, Int64Ty, "BlockDimX.zext");
   Value *Gid = Builder.CreateAdd(Builder.CreateMul(BlockIdx64, BlockDimX64),
                                  ThreadIdx64, "Gid");
+  (void)Gid;
 
   // ----------------------------
   // Common slot computation (Wave32)
@@ -1453,6 +1396,16 @@ void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
       Builder.CreateSelect(ActiveMaskNonZero, IsLeader, ConstantInt::getFalse(Context),
                            "isLeader_guarded");
 
+  // Compute number of active lanes and step * active lanes
+  FunctionCallee CtpopI32Fn = Intrinsic::getDeclaration(&M, Intrinsic::ctpop, {Int32Ty});
+  Value *NumActive = Builder.CreateCall(CtpopI32Fn, {ActiveMask}, "numActive");
+
+  Value *IncStep = Inc->getStep(); // integer-typed Value (often i64)
+  Value *NumActiveCast =
+      Builder.CreateZExtOrTrunc(NumActive, IncStep->getType(), "numActive.cast");
+  Value *StepTimesActive =
+      Builder.CreateMul(IncStep, NumActiveCast, "step_times_active");
+
   // ----------------------------
   // Mode-dependent writer logic
   // ----------------------------
@@ -1510,13 +1463,15 @@ void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
 
   // --- Increment ---
   if (OffloadPGOSampling == OffloadPGOSamplingMode::PatternOverflow) {
-    // Non-atomic increment by Inc->getStep() (legacy mode)
-    Value *IncStep = Inc->getStep();
-    Value *Load = Builder.CreateLoad(IncStep->getType(), Addr, "pgocount");
-    auto *Count = Builder.CreateAdd(Load, IncStep, "pgocount.next");
+    // Non-atomic increment by (Inc->getStep() * numActive) (legacy mode)
+    Type *CounterTy = cast<ArrayType>(Counters->getValueType())->getElementType();
+    Value *Load = Builder.CreateLoad(CounterTy, Addr, "pgocount");
+    Value *ProdToCounterTy =
+        Builder.CreateZExtOrTrunc(StepTimesActive, CounterTy, "step_times_active.cast");
+    auto *Count = Builder.CreateAdd(Load, ProdToCounterTy, "pgocount.next");
     Builder.CreateStore(Count, Addr);
   } else {
-    // AtomicWarpLeader: only the leader performs atomicrmw add 1
+    // AtomicWarpLeader: only the leader performs atomicrmw add (step * numActive)
     // Correct control-flow: split block at Inc, create ThenBB, and conditional branch.
 
     // 1) Split the current block before Inc. The split inserts an unconditional
@@ -1531,7 +1486,6 @@ void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
 
     // 3) Replace the terminator in CurBB with a conditional branch to ThenBB or ContBB.
     Instruction *OldTerm = CurBB->getTerminator(); // unconditional branch inserted by split
-    // Remove the old terminator and insert the conditional branch.
     OldTerm->eraseFromParent();
     IRBuilder<> HeadBuilder(CurBB);
     HeadBuilder.CreateCondBr(IsWriter, ThenBB, ContBB);
@@ -1539,11 +1493,10 @@ void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
     // 4) Emit the atomicrmw in ThenBB, then branch to ContBB.
     IRBuilder<> ThenBuilder(ThenBB);
     Type *CounterTy = cast<ArrayType>(Counters->getValueType())->getElementType();
-    Value *One = ConstantInt::get(CounterTy, 1);
-    // Use a safe default alignment (8 is common for i64 counters) if you don't
-    // know the exact alignment; you can also omit MaybeAlign to let LLVM infer.
-    ThenBuilder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, One, MaybeAlign(Align(8)),
-                                AtomicOrdering::Monotonic);
+    Value *ProdToCounterTy =
+        ThenBuilder.CreateZExtOrTrunc(StepTimesActive, CounterTy, "step_times_active.cast");
+    ThenBuilder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, ProdToCounterTy,
+                                MaybeAlign(Align(8)), AtomicOrdering::Monotonic);
     ThenBuilder.CreateBr(ContBB);
 
     // 5) Continue in the continuation block and erase the original Inc.
@@ -1552,6 +1505,7 @@ void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
 
   Inc->eraseFromParent();
 }
+
 void InstrLowerer::lowerCoverageData(GlobalVariable *CoverageNamesVar) {
   ConstantArray *Names =
       cast<ConstantArray>(CoverageNamesVar->getInitializer());
