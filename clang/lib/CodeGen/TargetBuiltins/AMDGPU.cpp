@@ -159,118 +159,253 @@ Value *EmitAMDGPUGridSize(CodeGenFunction &CGF, unsigned Index) {
                   llvm::MDNode::get(CGF.getLLVMContext(), {}));
   return LD;
 }
-// Lowers __builtin_amdgcn_ds_bpermute to the corresponding LLVM intrinsic with
-// careful bit-level coercions of operands and result to match Clang types.
-llvm::Value *emitAMDGCNDsBpermute(clang::CodeGen::CodeGenFunction &CGF,
-                                  const clang::CallExpr *Call) {
-  auto &Builder = CGF.Builder;
+
+// Lower __builtin_amdgcn_ds_bpermute to llvm.amdgcn.ds.bpermute for arbitrary
+// builtin, vector, and aggregate (struct/array/complex) source types.
+// Assumptions:
+// - Return type equals source type (frontend/Sema should enforce).
+// - Semantics are on the object representation (raw bits), including padding.
+// - For payloads > 32 bits, split into 32-bit words, permute each with the same index,
+//   and reassemble.
+// - First-class scalar/vector values whose total size is a multiple of 32 bits use a
+//   register-only path by bitcasting to <N x i32>. Aggregates or odd sizes use a
+//   memory-backed path.
+// - = 32-bit scalars (char/short/int/float/half) follow a fast i32 path for performance.
+llvm::Value *
+emitAMDGCNDsBpermute(clang::CodeGen::CodeGenFunction &CGF,
+                     const clang::CallExpr *Call) {
+  auto &B   = CGF.Builder;
   auto &CGM = CGF.CGM;
   const llvm::DataLayout &DL = CGM.getDataLayout();
 
-  llvm::Type *I32Ty = Builder.getInt32Ty();
+  llvm::Type *I8  = B.getInt8Ty();
+  llvm::Type *I32 = B.getInt32Ty();
+  llvm::Type *I64 = B.getInt64Ty();
 
-  auto GetBitWidth = [&](llvm::Type *Ty) -> unsigned {
+  auto c32 = [&](uint32_t v) { return llvm::ConstantInt::get(I32, v); };
+  auto c64 = [&](uint64_t v) { return llvm::ConstantInt::get(I64, v); };
+
+  // Returns the DL-based bit width of a type.
+  auto getBitWidth = [&](llvm::Type *Ty) -> unsigned {
     return DL.getTypeSizeInBits(Ty).getFixedValue();
   };
 
-  // Coerces arbitrary scalar/vector/pointer to i32 by preserving value/bit
-  // semantics where applicable.
-  auto ToI32Bits = [&](llvm::Value *Val, clang::QualType Qt) -> llvm::Value * {
-    llvm::Type *Ty = Val->getType();
-
-    if (Ty->isIntegerTy()) {
-      unsigned BitWidth = Ty->getIntegerBitWidth();
-      if (BitWidth < 32) {
-        if (Qt->isSignedIntegerType())
-          return Builder.CreateSExt(Val, I32Ty);
-        else
-          return Builder.CreateZExt(Val, I32Ty);
-      } else
-        return Builder.CreateZExtOrTrunc(Val, I32Ty);
-    }
-
+  // Coerces the index to i32 (value semantics).
+  // - Integers: zext/trunc to i32.
+  // - Pointers: ptrtoint to intptr, then zext/trunc to i32.
+  // - Other first-class: bitcast to intN then zext/trunc to i32.
+  auto toI32Index = [&](llvm::Value *IdxVal, clang::QualType IdxQT) -> llvm::Value * {
+    (void)IdxQT; // signedness not relevant for index
+    llvm::Type *Ty = IdxVal->getType();
+    if (Ty->isIntegerTy())
+      return B.CreateZExtOrTrunc(IdxVal, I32);
     if (Ty->isPointerTy()) {
       unsigned PtrBits = DL.getPointerSizeInBits(Ty->getPointerAddressSpace());
-      llvm::Type *IntPtrTy = Builder.getIntNTy(PtrBits);
-      llvm::Value *AsInt = Builder.CreatePtrToInt(Val, IntPtrTy);
-      return Builder.CreateZExtOrTrunc(AsInt, I32Ty);
+      return B.CreateZExtOrTrunc(B.CreatePtrToInt(IdxVal, B.getIntNTy(PtrBits)), I32);
+    }
+    unsigned Bits = getBitWidth(Ty);
+    return B.CreateZExtOrTrunc(B.CreateBitCast(IdxVal, B.getIntNTy(Bits)), I32);
+  };
+
+  // Coerces an arbitrary = 32-bit scalar payload to i32.
+  // - Integers: extend to i32 honoring signedness if narrower; zext/trunc otherwise.
+  // - Pointers: ptrtoint to intptr, then zext/trunc to i32.
+  // - Other first-class scalars (e.g., float, half): bitcast to intN then zext/trunc to i32.
+  auto coercePayloadToI32 = [&](llvm::Value *Val, clang::QualType SrcQT) -> llvm::Value * {
+    llvm::Type *Ty = Val->getType();
+    if (Ty->isIntegerTy()) {
+      unsigned BW = Ty->getIntegerBitWidth();
+      if (BW < 32) {
+        if (SrcQT->isSignedIntegerType())
+          return B.CreateSExt(Val, I32);
+        return B.CreateZExt(Val, I32);
+      }
+      return B.CreateZExtOrTrunc(Val, I32);
+    }
+    if (Ty->isPointerTy()) {
+      unsigned PtrBits = DL.getPointerSizeInBits(Ty->getPointerAddressSpace());
+      return B.CreateZExtOrTrunc(B.CreatePtrToInt(Val, B.getIntNTy(PtrBits)), I32);
+    }
+    unsigned Bits = getBitWidth(Ty);
+    return B.CreateZExtOrTrunc(B.CreateBitCast(Val, B.getIntNTy(Bits)), I32);
+  };
+
+  // Converts an i32 result back to an arbitrary = 32-bit destination type.
+  // - Integer = 32 bits: zext/sext/trunc appropriately using source signedness for narrow types.
+  // - Pointer = 32 bits: zext/trunc to pointer width and inttoptr.
+  // - Other first-class types:
+  //   - If 32 bits: bitcast i32 to destination type.
+  //   - If narrower than 32 bits (e.g., half = 16): first trunc i32 to iN, then bitcast iN to DstTy.
+  auto coerceFromI32ToType = [&](llvm::Value *I32Val,
+                                 llvm::Type *DstTy,
+                                 clang::QualType SrcQT) -> llvm::Value * {
+    if (DstTy->isIntegerTy()) {
+      unsigned DW = DstTy->getIntegerBitWidth();
+      if (DW < 32) {
+        if (SrcQT->isSignedIntegerType())
+          return B.CreateTrunc(B.CreateSExt(I32Val, B.getIntNTy(32)), DstTy);
+        return B.CreateTrunc(B.CreateZExt(I32Val, B.getIntNTy(32)), DstTy);
+      }
+      if (DW == 32)
+        return B.CreateZExtOrTrunc(I32Val, DstTy);
+    }
+    if (DstTy->isPointerTy()) {
+      unsigned PW = DL.getPointerSizeInBits(DstTy->getPointerAddressSpace());
+      llvm::Value *AsInt = I32Val;
+      if (PW != 32)
+        AsInt = B.CreateZExtOrTrunc(I32Val, B.getIntNTy(PW));
+      return B.CreateIntToPtr(AsInt, DstTy);
+    }
+    unsigned BW = getBitWidth(DstTy);
+    if (BW == 32)
+      return B.CreateBitCast(I32Val, DstTy);
+    // General non-integer, non-pointer narrower-than-32 case (e.g. half = 16).
+    llvm::Type *IntBW = B.getIntNTy(BW);
+    llvm::Value *Tr = I32Val;
+    if (BW < 32)
+      Tr = B.CreateTrunc(I32Val, IntBW);
+    else if (BW > 32)
+      Tr = B.CreateZExt(I32Val, IntBW); // should not happen in the fast 32-bit path
+    return B.CreateBitCast(Tr, DstTy);
+  };
+
+  // Returns {wordCount, tailBytes} for a payload size in bits.
+  auto wordCountAndTail = [&](unsigned totalBits) -> std::pair<unsigned, unsigned> {
+    unsigned bytes = totalBits / 8;
+    return {bytes / 4, bytes % 4};
+  };
+
+  // Index as i32
+  llvm::Value *IndexI32 = toI32Index(CGF.EmitScalarExpr(Call->getArg(0)),
+                                     Call->getArg(0)->getType());
+
+  // Underlying intrinsic
+  llvm::Function *Bperm = CGM.getIntrinsic(llvm::Intrinsic::amdgcn_ds_bpermute);
+
+  clang::QualType RetQT = Call->getType();
+  clang::QualType SrcQT = Call->getArg(1)->getType();
+  llvm::Type *RetTy = CGF.ConvertType(RetQT);
+
+  // Check for aggregates (struct/array/complex) from Clang's perspective.
+  bool IsAggregate = RetQT->isAggregateType() || RetQT->isAnyComplexType();
+
+  // Fast path A: = 32-bit scalar payloads (e.g., char/short/int/float/half).
+  // Keep everything in registers.
+  if (!IsAggregate) {
+    llvm::Value *SrcVal = CGF.EmitScalarExpr(Call->getArg(1));
+    unsigned totalBits = getBitWidth(SrcVal->getType());
+    if (totalBits <= 32) {
+      llvm::Value *SrcI32 = coercePayloadToI32(SrcVal, SrcQT);
+      llvm::SmallVector<llvm::Value *, 2> ArgsA{IndexI32, SrcI32};
+      llvm::Value *ResI32 = B.CreateCall(Bperm->getFunctionType(), Bperm, ArgsA);
+      llvm::Value *Res    = coerceFromI32ToType(ResI32, RetTy, SrcQT);
+      return Res;
+    }
+  }
+
+  // Fast path B: First-class scalar/vector whose total size is a multiple of 32 bits.
+  // Bitcast to <N x i32>, permute each lane, bitcast back. Register-only; no memory.
+  if (!IsAggregate) {
+    llvm::Value *SrcVal = CGF.EmitScalarExpr(Call->getArg(1));
+    unsigned totalBits = getBitWidth(SrcVal->getType());
+    auto [words, tail] = wordCountAndTail(totalBits);
+    if (words > 0 && tail == 0) {
+      llvm::Type *I32VecTy = llvm::FixedVectorType::get(I32, words);
+      llvm::Value *AsI32Vec = B.CreateBitCast(SrcVal, I32VecTy);
+
+      llvm::Value *ResVec = llvm::UndefValue::get(I32VecTy);
+      for (unsigned i = 0; i < words; ++i) {
+        llvm::Value *Lane = B.CreateExtractElement(AsI32Vec, c32(i));
+        llvm::SmallVector<llvm::Value *, 2> ArgsB{IndexI32, Lane};
+        llvm::Value *Perm = B.CreateCall(Bperm->getFunctionType(), Bperm, ArgsB);
+        ResVec = B.CreateInsertElement(ResVec, Perm, c32(i));
+      }
+
+      llvm::Value *Res = B.CreateBitCast(ResVec, RetTy);
+      return Res;
+    }
+  }
+
+  // General aggregate/odd-size path:
+  // - Works for structs/arrays/complex and any total size.
+  // - Materialize source to a temp, process 4-byte words (unaligned loads/stores),
+  //   handle tail bytes by packing/unpacking into an i32, and return loaded Value*.
+  auto emitAggregatePath = [&]() -> llvm::Value * {
+    clang::QualType SrcQTLocal = Call->getArg(1)->getType();
+    llvm::Type *SrcTy = CGF.ConvertType(SrcQTLocal);
+
+    clang::CodeGen::Address SrcAddr = CGF.CreateMemTemp(SrcQTLocal, "dsbperm.src");
+    clang::CodeGen::Address DstAddr = CGF.CreateMemTemp(RetQT,       "dsbperm.dst");
+
+    CGF.EmitAnyExprToMem(Call->getArg(1), SrcAddr, SrcQTLocal.getQualifiers(), /*IsInit*/true);
+
+    // i8 views of the buffers (as Address).
+    clang::CodeGen::Address SrcI8Addr = SrcAddr.withElementType(I8);
+    clang::CodeGen::Address DstI8Addr = DstAddr.withElementType(I8);
+
+    auto CU = [&](uint64_t N) { return clang::CharUnits::fromQuantity(N); };
+
+    uint64_t sizeBytes = DL.getTypeAllocSize(SrcTy);
+    uint64_t words     = sizeBytes / 4;
+    uint64_t tail      = sizeBytes % 4;
+
+    for (uint64_t i = 0; i < words; ++i) {
+      uint64_t off = i * 4;
+
+      // Byte GEP, then retag to i32 for word load/store.
+      clang::CodeGen::Address SrcWordI8Addr =
+          B.CreateConstInBoundsByteGEP(SrcI8Addr, CU(off));
+      clang::CodeGen::Address DstWordI8Addr =
+          B.CreateConstInBoundsByteGEP(DstI8Addr, CU(off));
+
+      clang::CodeGen::Address SrcWordI32Addr =
+          SrcWordI8Addr.withElementType(I32);
+      clang::CodeGen::Address DstWordI32Addr =
+          DstWordI8Addr.withElementType(I32);
+
+      auto *Ld = B.CreateLoad(SrcWordI32Addr);
+
+      llvm::SmallVector<llvm::Value *, 2> ArgsWord{IndexI32, Ld};
+      llvm::Value *Perm = B.CreateCall(Bperm->getFunctionType(), Bperm, ArgsWord);
+
+      (void)B.CreateStore(Perm, DstWordI32Addr);
     }
 
-    unsigned Bits = GetBitWidth(Ty);
-    llvm::Type *IntN = Builder.getIntNTy(Bits);
-    llvm::Value *AsInt = Builder.CreateBitCast(Val, IntN);
-    return Builder.CreateZExtOrTrunc(AsInt, I32Ty);
+    if (tail) {
+      uint64_t off = words * 4;
+
+      llvm::Value *Pack = llvm::ConstantInt::get(I32, 0);
+      for (uint64_t b = 0; b < tail; ++b) {
+        clang::CodeGen::Address ByteAddr =
+            B.CreateConstInBoundsByteGEP(SrcI8Addr, CU(off + b));
+        auto *Lb = B.CreateLoad(ByteAddr);
+
+        llvm::Value *Z = B.CreateZExt(Lb, I32);
+        if (b != 0)
+          Z = B.CreateShl(Z, c32(8 * b));
+        Pack = B.CreateOr(Pack, Z);
+      }
+
+      llvm::SmallVector<llvm::Value *, 2> ArgsTail{IndexI32, Pack};
+      llvm::Value *Perm = B.CreateCall(Bperm->getFunctionType(), Bperm, ArgsTail);
+
+      for (uint64_t b = 0; b < tail; ++b) {
+        llvm::Value *Byte = B.CreateTrunc(B.CreateLShr(Perm, c32(8 * b)), I8);
+        clang::CodeGen::Address ByteAddr =
+            B.CreateConstInBoundsByteGEP(DstI8Addr, CU(off + b));
+        (void)B.CreateStore(Byte, ByteAddr);
+      }
+    }
+
+    // Load the final result from the destination temporary and return it as a Value*.
+    auto *Res = B.CreateLoad(DstAddr);
+    return Res;
   };
 
-  // Bit-preserving resize/cast between arbitrary source and destination LLVM
-  // types.
-  auto BitCoerceTo = [&](llvm::Value *Val, llvm::Type *DstTy) -> llvm::Value * {
-    llvm::Type *SrcTy = Val->getType();
-    if (SrcTy == DstTy)
-      return Val;
-
-    unsigned SrcBits = DL.getTypeSizeInBits(SrcTy).getFixedValue();
-    unsigned DstBits = DL.getTypeSizeInBits(DstTy).getFixedValue();
-
-    if (SrcTy->isIntegerTy() && DstTy->isIntegerTy())
-      return Builder.CreateZExtOrTrunc(Val, DstTy);
-
-    if (SrcBits == DstBits)
-      return Builder.CreateBitCast(Val, DstTy);
-
-    llvm::Type *IntSrcTy = Builder.getIntNTy(SrcBits);
-    llvm::Value *AsInt = Val;
-    if (SrcTy->isPointerTy())
-      AsInt = Builder.CreatePtrToInt(Val, IntSrcTy);
-    else if (!SrcTy->isIntegerTy())
-      AsInt = Builder.CreateBitCast(Val, IntSrcTy);
-
-    llvm::Type *IntDstTy = Builder.getIntNTy(DstBits);
-    llvm::Value *Resized = Builder.CreateZExtOrTrunc(AsInt, IntDstTy);
-
-    if (DstTy->isPointerTy())
-      return Builder.CreateIntToPtr(Resized, DstTy);
-
-    return Builder.CreateBitCast(Resized, DstTy);
-  };
-
-  llvm::Value *Index = CGF.EmitScalarExpr(Call->getArg(0));
-  llvm::Value *Source = CGF.EmitScalarExpr(Call->getArg(1));
-
-  llvm::Type *ReturnTy = CGF.ConvertType(Call->getType());
-
-  llvm::Value *IndexI32 = ToI32Bits(Index, Call->getArg(0)->getType());
-
-  llvm::Value *SourceForIntrinsic;
-  llvm::Type *SourceTy = Source->getType();
-
-  if (SourceTy->isDoubleTy()) {
-    llvm::Value *AsFloat = Builder.CreateFPTrunc(Source, Builder.getFloatTy());
-    SourceForIntrinsic = Builder.CreateBitCast(AsFloat, I32Ty);
-  } else
-    SourceForIntrinsic = ToI32Bits(Source, Call->getArg(1)->getType());
-
-  llvm::Function *IntrinsicFn =
-      CGM.getIntrinsic(llvm::Intrinsic::amdgcn_ds_bpermute);
-
-  llvm::Value *Result =
-      Builder.CreateCall(IntrinsicFn, {IndexI32, SourceForIntrinsic});
-
-  if (ReturnTy->isDoubleTy()) {
-    llvm::Value *AsFloat = Builder.CreateBitCast(Result, Builder.getFloatTy());
-    return Builder.CreateFPExt(AsFloat, ReturnTy);
-  }
-
-  if (ReturnTy->isIntegerTy() && ReturnTy->getIntegerBitWidth() > 32) {
-    clang::QualType SourceQt = Call->getArg(1)->getType();
-    if (SourceQt->isSignedIntegerType())
-      return Builder.CreateSExt(Result, ReturnTy);
-    else
-      return Builder.CreateZExt(Result, ReturnTy);
-  }
-
-  return BitCoerceTo(Result, ReturnTy);
+  return emitAggregatePath();
 }
+
+
 
 } // namespace
 
