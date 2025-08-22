@@ -341,18 +341,21 @@ llvm::Value *emitAMDGCNDsBpermute(clang::CodeGen::CodeGenFunction &CGF,
   // - Works for structs/arrays/complex and any total size.
   // - Materialize source to a temp, process 4-byte words (unaligned loads/stores),
   //   handle tail bytes by packing/unpacking into an i32, and return loaded Value*.
+  // General aggregate/odd-size path rewritten to write directly into Dest.
   auto emitAggregatePath = [&]() -> llvm::Value * {
     clang::QualType SrcQTLocal = Call->getArg(1)->getType();
     llvm::Type *SrcTy = CGF.ConvertType(SrcQTLocal);
 
+    // Materialize source to a temp to avoid aliasing with Dest.
     clang::CodeGen::Address SrcAddr = CGF.CreateMemTemp(SrcQTLocal, "dsbperm.src");
-    clang::CodeGen::Address DstAddr = CGF.CreateMemTemp(RetQT,       "dsbperm.dst");
-
     CGF.EmitAnyExprToMem(Call->getArg(1), SrcAddr, SrcQTLocal.getQualifiers(), /*IsInit*/true);
 
+    // Destination is the provided return slot (always available for aggregates/complex).
+    clang::CodeGen::Address DestAddr = Dest.getAddress();
+
     // i8 views of the buffers (as Address).
-    clang::CodeGen::Address SrcI8Addr = SrcAddr.withElementType(I8);
-    clang::CodeGen::Address DstI8Addr = DstAddr.withElementType(I8);
+    clang::CodeGen::Address SrcI8Addr  = SrcAddr.withElementType(I8);
+    clang::CodeGen::Address DstI8Addr  = DestAddr.withElementType(I8);
 
     auto CU = [&](uint64_t N) { return clang::CharUnits::fromQuantity(N); };
 
@@ -379,7 +382,9 @@ llvm::Value *emitAMDGCNDsBpermute(clang::CodeGen::CodeGenFunction &CGF,
       llvm::SmallVector<llvm::Value *, 2> ArgsWord{IndexI32, Ld};
       llvm::Value *Perm = B.CreateCall(Bperm->getFunctionType(), Bperm, ArgsWord);
 
-      (void)B.CreateStore(Perm, DstWordI32Addr);
+      auto *St = B.CreateStore(Perm, DstWordI32Addr);
+      if (Dest.isVolatile())
+        St->setVolatile(true);
     }
 
     if (tail) {
@@ -404,27 +409,16 @@ llvm::Value *emitAMDGCNDsBpermute(clang::CodeGen::CodeGenFunction &CGF,
         llvm::Value *Byte = B.CreateTrunc(B.CreateLShr(Perm, c32(8 * b)), I8);
         clang::CodeGen::Address ByteAddr =
             B.CreateConstInBoundsByteGEP(DstI8Addr, CU(off + b));
-        (void)B.CreateStore(Byte, ByteAddr);
+        auto *St = B.CreateStore(Byte, ByteAddr);
+        if (Dest.isVolatile())
+          St->setVolatile(true);
       }
     }
 
-    // If there is a usable return slot (e.g., sret), copy into it and return a dummy.
-      clang::CodeGen::LValue DestLV =
-          CGF.MakeAddrLValue(Dest.getAddress(), RetQT);
-      clang::CodeGen::LValue SrcLV =
-          CGF.MakeAddrLValue(DstAddr, RetQT);
-
-    if (RetQT->isAnyComplexType()) {
-      auto C = CGF.EmitLoadOfComplex(SrcLV, Call->getExprLoc());
-      CGF.EmitStoreOfComplex(C, DestLV, /*isInit=*/true);
-    } else 
-      CGF.EmitAggregateCopy(DestLV, SrcLV, RetQT,
-                            clang::CodeGen::AggValueSlot::DoesNotOverlap,
-                            /*isVolatile=*/Dest.isVolatile());
-
-      // TEK_Aggregate path: caller uses Dest; returned value is ignored.
-      return CGF.Builder.getTrue();
+    // TEK_Aggregate/TEK_Complex: caller uses Dest; returned value is ignored.
+    return CGF.Builder.getTrue();
   };
+
 
   return emitAggregatePath();
 }

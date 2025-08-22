@@ -208,39 +208,44 @@ extern "C" __device__ float test_template_float_src(int a, float c) {
 // CHECK:   %src = alloca %struct.Outer, align 4, addrspace(5)
 // CHECK:   %idx.addr = alloca i32, align 4, addrspace(5)
 // CHECK:   %dsbperm.src = alloca %struct.Outer, align 4, addrspace(5)
-// CHECK:   %dsbperm.dst = alloca %struct.Outer, align 4, addrspace(5)
 // CHECK:   %retval.ascast = addrspacecast ptr addrspace(5) %retval to ptr
 // CHECK:   %src1 = addrspacecast ptr addrspace(5) %src to ptr
 // CHECK:   %idx.addr.ascast = addrspacecast ptr addrspace(5) %idx.addr to ptr
 // CHECK:   %dsbperm.src.ascast = addrspacecast ptr addrspace(5) %dsbperm.src to ptr
-// CHECK:   %dsbperm.dst.ascast = addrspacecast ptr addrspace(5) %dsbperm.dst to ptr
+// Materialize src aggregate from coerced pieces
+// CHECK:   %[[SRC0_GEP:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %src1, i32 0, i32 0
+// CHECK:   store i32 %src.coerce0, ptr %[[SRC0_GEP]], align 4
+// CHECK:   %[[SRC1_GEP:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %src1, i32 0, i32 1
+// CHECK:   store %struct.Inner %src.coerce1, ptr %[[SRC1_GEP]], align 4
+// CHECK:   %[[SRC2_GEP:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %src1, i32 0, i32 2
+// CHECK:   store i8 %src.coerce2, ptr %[[SRC2_GEP]], align 4
 // CHECK:   store i32 %idx, ptr %idx.addr.ascast, align 4
 // CHECK:   %[[IDX:.*]] = load i32, ptr %idx.addr.ascast, align 4
+// Forward src bytes to source buffer
 // CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dsbperm.src.ascast, ptr align 4 %src1, i64 12, i1 false)
 
-// First 4-byte word at offset 0
+// First 4-byte word at offset 0 -> write directly to retval
 // CHECK:   %[[SRC0:.*]] = getelementptr inbounds i8, ptr %dsbperm.src.ascast, i64 0
-// CHECK:   %[[DST0:.*]] = getelementptr inbounds i8, ptr %dsbperm.dst.ascast, i64 0
+// CHECK:   %[[DST0:.*]] = getelementptr inbounds i8, ptr %retval.ascast, i64 0
 // CHECK:   %[[LD0:.*]] = load i32, ptr %[[SRC0]], align 4
 // CHECK:   %[[P0:.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %[[IDX]], i32 %[[LD0]])
 // CHECK:   store i32 %[[P0]], ptr %[[DST0]], align 4
 
 // Second 4-byte word at offset 4
-// CHECK:   %[[SRC1:.*]] = getelementptr inbounds i8, ptr %dsbperm.src.ascast, i64 4
-// CHECK:   %[[DST1:.*]] = getelementptr inbounds i8, ptr %dsbperm.dst.ascast, i64 4
-// CHECK:   %[[LD1:.*]] = load i32, ptr %[[SRC1]], align 4
+// CHECK:   %[[SRC1B:.*]] = getelementptr inbounds i8, ptr %dsbperm.src.ascast, i64 4
+// CHECK:   %[[DST1:.*]] = getelementptr inbounds i8, ptr %retval.ascast, i64 4
+// CHECK:   %[[LD1:.*]] = load i32, ptr %[[SRC1B]], align 4
 // CHECK:   %[[P1:.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %[[IDX]], i32 %[[LD1]])
 // CHECK:   store i32 %[[P1]], ptr %[[DST1]], align 4
 
 // Third 4-byte word at offset 8 (size is 12 bytes total)
-// CHECK:   %[[SRC2:.*]] = getelementptr inbounds i8, ptr %dsbperm.src.ascast, i64 8
-// CHECK:   %[[DST2:.*]] = getelementptr inbounds i8, ptr %dsbperm.dst.ascast, i64 8
-// CHECK:   %[[LD2:.*]] = load i32, ptr %[[SRC2]], align 4
+// CHECK:   %[[SRC2B:.*]] = getelementptr inbounds i8, ptr %dsbperm.src.ascast, i64 8
+// CHECK:   %[[DST2:.*]] = getelementptr inbounds i8, ptr %retval.ascast, i64 8
+// CHECK:   %[[LD2:.*]] = load i32, ptr %[[SRC2B]], align 4
 // CHECK:   %[[P2:.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %[[IDX]], i32 %[[LD2]])
 // CHECK:   store i32 %[[P2]], ptr %[[DST2]], align 4
 
-// Copy out and return
-// CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %retval.ascast, ptr align 4 %dsbperm.dst.ascast, i64 12, i1 false)
+// Return the aggregate from retval.ascast
 // CHECK:   %[[RES:.*]] = load %struct.Outer, ptr %retval.ascast, align 4
 // CHECK:   ret %struct.Outer %[[RES]]
 extern "C" __device__ Outer test_source_nested(int idx, Outer src) {
@@ -253,23 +258,26 @@ extern "C" __device__ Outer test_source_nested(int idx, Outer src) {
 // CHECK:   %src = alloca %union.U, align 4, addrspace(5)
 // CHECK:   %idx.addr = alloca i32, align 4, addrspace(5)
 // CHECK:   %dsbperm.src = alloca %union.U, align 4, addrspace(5)
-// CHECK:   %dsbperm.dst = alloca %union.U, align 4, addrspace(5)
 // CHECK:   %retval.ascast = addrspacecast ptr addrspace(5) %retval to ptr
 // CHECK:   %src1 = addrspacecast ptr addrspace(5) %src to ptr
 // CHECK:   %idx.addr.ascast = addrspacecast ptr addrspace(5) %idx.addr to ptr
 // CHECK:   %dsbperm.src.ascast = addrspacecast ptr addrspace(5) %dsbperm.src to ptr
-// CHECK:   %dsbperm.dst.ascast = addrspacecast ptr addrspace(5) %dsbperm.dst to ptr
+// Materialize src union from coerced piece
+// CHECK:   %[[COERCE_DST:.*]] = getelementptr inbounds nuw %union.U, ptr %src1, i32 0, i32 0
+// CHECK:   store i32 %src.coerce, ptr %[[COERCE_DST]], align 4
 // CHECK:   store i32 %idx, ptr %idx.addr.ascast, align 4
 // CHECK:   %[[IDX:.*]] = load i32, ptr %idx.addr.ascast, align 4
+// Forward src bytes to source buffer
 // CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dsbperm.src.ascast, ptr align 4 %src1, i64 4, i1 false)
+// Single 4-byte word -> write directly to retval
 // CHECK:   %[[SRC0:.*]] = getelementptr inbounds i8, ptr %dsbperm.src.ascast, i64 0
-// CHECK:   %[[DST0:.*]] = getelementptr inbounds i8, ptr %dsbperm.dst.ascast, i64 0
+// CHECK:   %[[DST0:.*]] = getelementptr inbounds i8, ptr %retval.ascast, i64 0
 // CHECK:   %[[LD0:.*]] = load i32, ptr %[[SRC0]], align 4
 // CHECK:   %[[P0:.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %[[IDX]], i32 %[[LD0]])
 // CHECK:   store i32 %[[P0]], ptr %[[DST0]], align 4
-// CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %retval.ascast, ptr align 4 %dsbperm.dst.ascast, i64 4, i1 false)
-// CHECK:   %[[COERCE:.*]] = getelementptr inbounds{{.*}} %union.U, ptr %retval.ascast, i32 0, i32 0
-// CHECK:   %[[RES:.*]] = load i32, ptr %[[COERCE]], align 4
+// Coerce return from retval
+// CHECK:   %[[COERCE_OUT:.*]] = getelementptr inbounds{{.*}} %union.U, ptr %retval.ascast, i32 0, i32 0
+// CHECK:   %[[RES:.*]] = load i32, ptr %[[COERCE_OUT]], align 4
 // CHECK:   ret i32 %[[RES]]
 extern "C" __device__ U test_source_union(int idx, U src) {
   return __builtin_amdgcn_ds_bpermute(idx, src);
@@ -277,13 +285,23 @@ extern "C" __device__ U test_source_union(int idx, U src) {
 
 // CHECK-LABEL: define{{.*}}{ double, double } @test_source_cdouble(i32 {{[^,]*}}, double noundef %src.coerce0, double noundef %src.coerce1)
 // Materialize the coerced _Complex double argument into the local aggregate
+// CHECK:   %retval = alloca { double, double }, align 8, addrspace(5)
+// CHECK:   %src = alloca { double, double }, align 8, addrspace(5)
+// CHECK:   %idx.addr = alloca i32, align 4, addrspace(5)
+// CHECK:   %agg.tmp = alloca { double, double }, align 8, addrspace(5)
+// CHECK:   %dsbperm.src = alloca { double, double }, align 8, addrspace(5)
+// CHECK:   %retval.ascast = addrspacecast ptr addrspace(5) %retval to ptr
 // CHECK:   %src1 = addrspacecast ptr addrspace(5) %src to ptr
+// CHECK:   %idx.addr.ascast = addrspacecast ptr addrspace(5) %idx.addr to ptr
+// CHECK:   %agg.tmp.ascast = addrspacecast ptr addrspace(5) %agg.tmp to ptr
+// CHECK:   %dsbperm.src.ascast = addrspacecast ptr addrspace(5) %dsbperm.src to ptr
 // CHECK:   %[[SRC0_GEP:.*]] = getelementptr inbounds nuw { double, double }, ptr %src1, i32 0, i32 0
 // CHECK:   store double %src.coerce0, ptr %[[SRC0_GEP]], align 8
 // CHECK:   %[[SRC1_GEP:.*]] = getelementptr inbounds nuw { double, double }, ptr %src1, i32 0, i32 1
 // CHECK:   store double %src.coerce1, ptr %[[SRC1_GEP]], align 8
-
-// Load the real/imag parts from the local aggregate and forward into the source buffer for permutation
+// Load the real/imag parts and forward into the source buffer for permutation
+// CHECK:   store i32 %idx, ptr %idx.addr.ascast, align 4
+// CHECK:   %[[IDX:.*]] = load i32, ptr %idx.addr.ascast, align 4
 // CHECK:   %src1.realp = getelementptr inbounds nuw { double, double }, ptr %src1, i32 0, i32 0
 // CHECK:   %[[SRC_REAL:.*]] = load double, ptr %src1.realp, align 8
 // CHECK:   %src1.imagp = getelementptr inbounds nuw { double, double }, ptr %src1, i32 0, i32 1
@@ -292,41 +310,36 @@ extern "C" __device__ U test_source_union(int idx, U src) {
 // CHECK:   %[[SRCBUF_IMAGP:.*]] = getelementptr inbounds nuw { double, double }, ptr %dsbperm.src.ascast, i32 0, i32 1
 // CHECK:   store double %[[SRC_REAL]], ptr %[[SRCBUF_REALP]], align 8
 // CHECK:   store double %[[SRC_IMAG]], ptr %[[SRCBUF_IMAGP]], align 8
-
-// Split the complex double into 32-bit words and pass each to the intrinsic
+// Split the complex double into 32-bit words and pass each to the intrinsic; write into agg.tmp
 // CHECK:   %[[SRC_I8_0:.*]] = getelementptr inbounds i8, ptr %dsbperm.src.ascast, i64 0
-// CHECK:   %[[DST_I8_0:.*]] = getelementptr inbounds i8, ptr %dsbperm.dst.ascast, i64 0
+// CHECK:   %[[DST_I8_0:.*]] = getelementptr inbounds i8, ptr %agg.tmp.ascast, i64 0
 // CHECK:   %[[LDW0:.*]] = load i32, ptr %[[SRC_I8_0]], align 8
-// CHECK:   %[[P0:.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %{{.*}}, i32 %[[LDW0]])
+// CHECK:   %[[P0:.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %[[IDX]], i32 %[[LDW0]])
 // CHECK:   store i32 %[[P0]], ptr %[[DST_I8_0]], align 8
-
 // CHECK:   %[[SRC_I8_4:.*]] = getelementptr inbounds i8, ptr %dsbperm.src.ascast, i64 4
-// CHECK:   %[[DST_I8_4:.*]] = getelementptr inbounds i8, ptr %dsbperm.dst.ascast, i64 4
+// CHECK:   %[[DST_I8_4:.*]] = getelementptr inbounds i8, ptr %agg.tmp.ascast, i64 4
 // CHECK:   %[[LDW1:.*]] = load i32, ptr %[[SRC_I8_4]], align 4
-// CHECK:   %[[P1:.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %{{.*}}, i32 %[[LDW1]])
+// CHECK:   %[[P1:.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %[[IDX]], i32 %[[LDW1]])
 // CHECK:   store i32 %[[P1]], ptr %[[DST_I8_4]], align 4
-
 // CHECK:   %[[SRC_I8_8:.*]] = getelementptr inbounds i8, ptr %dsbperm.src.ascast, i64 8
-// CHECK:   %[[DST_I8_8:.*]] = getelementptr inbounds i8, ptr %dsbperm.dst.ascast, i64 8
+// CHECK:   %[[DST_I8_8:.*]] = getelementptr inbounds i8, ptr %agg.tmp.ascast, i64 8
 // CHECK:   %[[LDW2:.*]] = load i32, ptr %[[SRC_I8_8]], align 8
-// CHECK:   %[[P2:.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %{{.*}}, i32 %[[LDW2]])
+// CHECK:   %[[P2:.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %[[IDX]], i32 %[[LDW2]])
 // CHECK:   store i32 %[[P2]], ptr %[[DST_I8_8]], align 8
-
 // CHECK:   %[[SRC_I8_12:.*]] = getelementptr inbounds i8, ptr %dsbperm.src.ascast, i64 12
-// CHECK:   %[[DST_I8_12:.*]] = getelementptr inbounds i8, ptr %dsbperm.dst.ascast, i64 12
+// CHECK:   %[[DST_I8_12:.*]] = getelementptr inbounds i8, ptr %agg.tmp.ascast, i64 12
 // CHECK:   %[[LDW3:.*]] = load i32, ptr %[[SRC_I8_12]], align 4
-// CHECK:   %[[P3:.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %{{.*}}, i32 %[[LDW3]])
+// CHECK:   %[[P3:.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %[[IDX]], i32 %[[LDW3]])
 // CHECK:   store i32 %[[P3]], ptr %[[DST_I8_12]], align 4
-
-// Reconstruct the complex double and return it from the function
-// CHECK:   %[[DST_REALP:.*]] = getelementptr inbounds nuw { double, double }, ptr %dsbperm.dst.ascast, i32 0, i32 0
-// CHECK:   %[[DST_REAL:.*]] = load double, ptr %[[DST_REALP]], align 8
-// CHECK:   %[[DST_IMAGP:.*]] = getelementptr inbounds nuw { double, double }, ptr %dsbperm.dst.ascast, i32 0, i32 1
-// CHECK:   %[[DST_IMAG:.*]] = load double, ptr %[[DST_IMAGP]], align 8
-// CHECK:   %[[RET_REALP:.*]] = getelementptr inbounds nuw { double, double }, ptr %agg.tmp.ascast, i32 0, i32 0
-// CHECK:   %[[RET_IMAGP:.*]] = getelementptr inbounds nuw { double, double }, ptr %agg.tmp.ascast, i32 0, i32 1
-// CHECK:   store double %[[DST_REAL]], ptr %[[RET_REALP]], align 8
-// CHECK:   store double %[[DST_IMAG]], ptr %[[RET_IMAGP]], align 8
+// Reconstruct the complex double into retval and return it
+// CHECK:   %[[AGG_REALP:.*]] = getelementptr inbounds nuw { double, double }, ptr %agg.tmp.ascast, i32 0, i32 0
+// CHECK:   %[[AGG_REAL:.*]] = load double, ptr %[[AGG_REALP]], align 8
+// CHECK:   %[[AGG_IMAGP:.*]] = getelementptr inbounds nuw { double, double }, ptr %agg.tmp.ascast, i32 0, i32 1
+// CHECK:   %[[AGG_IMAG:.*]] = load double, ptr %[[AGG_IMAGP]], align 8
+// CHECK:   %[[RET_REALP:.*]] = getelementptr inbounds nuw { double, double }, ptr %retval.ascast, i32 0, i32 0
+// CHECK:   %[[RET_IMAGP:.*]] = getelementptr inbounds nuw { double, double }, ptr %retval.ascast, i32 0, i32 1
+// CHECK:   store double %[[AGG_REAL]], ptr %[[RET_REALP]], align 8
+// CHECK:   store double %[[AGG_IMAG]], ptr %[[RET_IMAGP]], align 8
 // CHECK:   %[[RETVAL_AGG:.*]] = load { double, double }, ptr %retval.ascast, align 8
 // CHECK:   ret { double, double } %[[RETVAL_AGG]]
 extern "C" __device__ _Complex double test_source_cdouble(int idx, _Complex double src) {
