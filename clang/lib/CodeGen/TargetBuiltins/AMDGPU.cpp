@@ -409,7 +409,11 @@ emitAMDGCNDsBpermute(clang::CodeGen::CodeGenFunction &CGF,
     }
 
     // Load the final result from the destination temporary and return it as a Value*.
-    auto *Res = B.CreateLoad(DstAddr);
+    llvm::Value *Res = B.CreateLoad(DstAddr);
+    // For aggregates (struct/array/union), ensure determinism by freezing the value.
+    // freeze turns any undef/poison in padding into a fixed but arbitrary value.
+    if (Res->getType()->isAggregateType())
+      Res = B.CreateFreeze(Res);
     return Res;
   };
 

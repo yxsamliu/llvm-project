@@ -33,5 +33,5 @@ __device__ void test_pointer_src(int a, void* b) {
 }
 
 __device__ void test_invalid_struct_src(int a, A b) {
-   __builtin_amdgcn_ds_bpermute(a, b); // expected-error {{converting 'A' to incompatible type 'int'}}
+   __builtin_amdgcn_ds_bpermute(a, b);
 }

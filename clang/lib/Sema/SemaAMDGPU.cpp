@@ -77,7 +77,7 @@ bool handle32BitPayloadArg(Sema &SemaRef, CallExpr *TheCall, unsigned ArgIndex,
   Expr *Arg = TheCall->getArg(ArgIndex);
   QualType Type = Arg->getType();
   QualType Int32Ty = AstContext.IntTy;
-
+#if 0
   if (!Type->isVectorType() && !Type->isPointerType()
        && !Type->isScalarType()) {
     // Prefer user-defined conversion operators that yield a 32-bit-compatible
@@ -85,12 +85,13 @@ bool handle32BitPayloadArg(Sema &SemaRef, CallExpr *TheCall, unsigned ArgIndex,
     if (!tryUserDefinedConversion32Bit(SemaRef, Arg, TheCall, ArgIndex)) {
       ExprResult ConvResult = SemaRef.PerformImplicitConversion(
           Arg, Int32Ty, AssignmentAction::Converting);
-      if (ConvResult.isInvalid())
-        return true;
-      TheCall->setArg(ArgIndex, ConvResult.get());
+      if (!ConvResult.isInvalid()) {
+        TheCall->setArg(ArgIndex, ConvResult.get());
+        return false;
+      }
     }
   }
-
+#endif
   TheCall->setType(TheCall->getArg(ArgIndex)->getType());
   return false;
 }

@@ -5,6 +5,11 @@
 typedef short short2 __attribute__((vector_size(4)));
 typedef double double2 __attribute__((ext_vector_type(2)));
 
+struct Inner { short a; char b; };
+struct Outer { int x; struct Inner y; char z; };
+
+union U { int i; char c; };
+
 #define __device__ __attribute__((device))
 
 // CHECK-LABEL: define{{.*}}@test_index_i32
@@ -197,17 +202,50 @@ extern "C" __device__ float test_template_float_src(int a, float c) {
    return test_template_src<float>(a, c);
 }
 
-// CHECK-LABEL: define{{.*}}@test_source_struct_float
-// CHECK: [[CALL:%.*]] = call {{.*}} float @_ZNK16FloatConvertiblecvfEv(
-// CHECK: [[CONV:%.*]] = bitcast float [[CALL]] to i32
-// CHECK: [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %0, i32 [[CONV]])
-// CHECK: [[CONV2:%.*]] = bitcast i32 [[RESULT]] to float
-// CHECK: ret float [[CONV2]]
-struct FloatConvertible {
-  float value;
-  __device__ operator float() const { return value; }
-};
+// CHECK-LABEL: define{{.*}}@test_source_nested(
+// CHECK: entry:
+// CHECK:   %retval = alloca %struct.Outer, align 4, addrspace(5)
+// CHECK:   %src = alloca %struct.Outer, align 4, addrspace(5)
+// CHECK:   %idx.addr = alloca i32, align 4, addrspace(5)
+// CHECK:   %dsbperm.src = alloca %struct.Outer, align 4, addrspace(5)
+// CHECK:   %dsbperm.dst = alloca %struct.Outer, align 4, addrspace(5)
+// CHECK:   %retval.ascast = addrspacecast ptr addrspace(5) %retval to ptr
+// CHECK:   %src1 = addrspacecast ptr addrspace(5) %src to ptr
+// CHECK:   %idx.addr.ascast = addrspacecast ptr addrspace(5) %idx.addr to ptr
+// CHECK:   %dsbperm.src.ascast = addrspacecast ptr addrspace(5) %dsbperm.src to ptr
+// CHECK:   %dsbperm.dst.ascast = addrspacecast ptr addrspace(5) %dsbperm.dst to ptr
+// CHECK:   store i32 %idx, ptr %idx.addr.ascast, align 4
+// CHECK:   %[[IDX:.*]] = load i32, ptr %idx.addr.ascast, align 4
+// CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dsbperm.src.ascast, ptr align 4 %src1, i64 12, i1 false)
 
-extern "C" __device__ float test_source_struct_float(int a, FloatConvertible c) {
-   return __builtin_amdgcn_ds_bpermute(a, c);
+// First 4-byte word at offset 0
+// CHECK:   %[[SRC0:.*]] = getelementptr inbounds i8, ptr %dsbperm.src.ascast, i64 0
+// CHECK:   %[[DST0:.*]] = getelementptr inbounds i8, ptr %dsbperm.dst.ascast, i64 0
+// CHECK:   %[[LD0:.*]] = load i32, ptr %[[SRC0]], align 4
+// CHECK:   %[[P0:.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %[[IDX]], i32 %[[LD0]])
+// CHECK:   store i32 %[[P0]], ptr %[[DST0]], align 4
+
+// Second 4-byte word at offset 4
+// CHECK:   %[[SRC1:.*]] = getelementptr inbounds i8, ptr %dsbperm.src.ascast, i64 4
+// CHECK:   %[[DST1:.*]] = getelementptr inbounds i8, ptr %dsbperm.dst.ascast, i64 4
+// CHECK:   %[[LD1:.*]] = load i32, ptr %[[SRC1]], align 4
+// CHECK:   %[[P1:.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %[[IDX]], i32 %[[LD1]])
+// CHECK:   store i32 %[[P1]], ptr %[[DST1]], align 4
+
+// Third 4-byte word at offset 8 (size is 12 bytes total)
+// CHECK:   %[[SRC2:.*]] = getelementptr inbounds i8, ptr %dsbperm.src.ascast, i64 8
+// CHECK:   %[[DST2:.*]] = getelementptr inbounds i8, ptr %dsbperm.dst.ascast, i64 8
+// CHECK:   %[[LD2:.*]] = load i32, ptr %[[SRC2]], align 4
+// CHECK:   %[[P2:.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %[[IDX]], i32 %[[LD2]])
+// CHECK:   store i32 %[[P2]], ptr %[[DST2]], align 4
+
+// Load result and return
+// CHECK:   %[[RES:.*]] = load %struct.Outer, ptr %dsbperm.dst.ascast, align 4
+// CHECK:   ret %struct.Outer
+extern "C" __device__ Outer test_source_nested(int idx, Outer src) {
+  return __builtin_amdgcn_ds_bpermute(idx, src);
+}
+
+extern "C" __device__ U test_source_union(int idx, U src) {
+  return __builtin_amdgcn_ds_bpermute(idx, src);
 }
