@@ -16,12 +16,16 @@ __device__ void test_invalid_index(short2 a, int b) {
    __builtin_amdgcn_ds_bpermute(a, b); // expected-error {{converting 'short2' (vector of 2 'short' values) to incompatible type 'int'}}
 }
 
+__device__ void test_warn_long_index(long a, int b) {
+   __builtin_amdgcn_ds_bpermute(a, b); // expected-warning {{the 64-bit argument will be truncated to 32 bits in this call to __builtin_amdgcn_ds_bpermute}}
+}
+
 __device__ void test_invalid_vector_src(int a, int2 b) {
    __builtin_amdgcn_ds_bpermute(a, b); // expected-error {{the vector or pointer argument to __builtin_amdgcn_ds_bpermute must have a total size of 32 bits or less, but type 'int2' (vector of 2 'int' values) has a size of 64 bits}}
 }
 
 __device__ void test_warn_long_src(int a, long b) {
-   __builtin_amdgcn_ds_bpermute(a, b); // expected-warning {{the 64-bit argument will be truncated to 32 bits in this call to __builtin_amdgcn_ds_bpermute}}
+   __builtin_amdgcn_ds_bpermute(a, b);
 }
 
 __device__ void test_warn_pointer_src(int a, void* b) {

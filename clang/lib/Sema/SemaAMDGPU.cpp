@@ -86,12 +86,7 @@ bool handle32BitPayloadArg(Sema &SemaRef, CallExpr *TheCall, unsigned ArgIndex,
           << BuiltinName << 32 << Type << Size << Arg->getSourceRange();
       return true;
     }
-  } else if (Type->isScalarType()) {
-    uint64_t Size = AstContext.getTypeSize(Type);
-    if (Size > 32)
-      SemaRef.Diag(Arg->getBeginLoc(), diag::warn_amdgcn_builtin_arg_truncation)
-          << Size << 32 << BuiltinName << Arg->getSourceRange();
-  } else {
+  } else if (!Type->isScalarType()) {
     // Prefer user-defined conversion operators that yield a 32-bit-compatible
     // type. If none apply, fall back to an implicit int32 conversion.
     if (!tryUserDefinedConversion32Bit(SemaRef, Arg, TheCall, ArgIndex)) {
