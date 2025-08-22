@@ -105,30 +105,43 @@ extern "C" __device__ unsigned short test_source_ushort(int a, unsigned short c)
 }
 
 // CHECK-LABEL: define{{.*}}@test_source_long
-// CHECK: [[TRUNC:%.*]] = trunc i64 %1 to i32
-// CHECK: [[CALL:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %0, i32 [[TRUNC]])
-// CHECK: [[SEXT:%.*]] = sext i32 [[CALL]] to i64
-// CHECK: ret i64 [[SEXT]]
+// CHECK: [[BC:%.*]] = bitcast i64 {{.*}} to <2 x i32>
+// CHECK: [[LO:%.*]] = extractelement <2 x i32> [[BC]], i32 0
+// CHECK: [[RLO:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %0, i32 [[LO]])
+// CHECK: [[V0:%.*]] = insertelement <2 x i32> undef, i32 [[RLO]], i32 0
+// CHECK: [[HI:%.*]] = extractelement <2 x i32> [[BC]], i32 1
+// CHECK: [[RHI:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %0, i32 [[HI]])
+// CHECK: [[V1:%.*]] = insertelement <2 x i32> [[V0]], i32 [[RHI]], i32 1
+// CHECK: [[RES:%.*]] = bitcast <2 x i32> [[V1]] to i64
+// CHECK: ret i64 [[RES]]
 extern "C" __device__ long test_source_long(int a, long c) {
    return __builtin_amdgcn_ds_bpermute(a, c);
 }
 
 // CHECK-LABEL: define{{.*}}@test_source_ulong
-// CHECK: [[TRUNC:%.*]] = trunc i64 %1 to i32
-// CHECK: [[CALL:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %0, i32 [[TRUNC]])
-// CHECK: [[ZEXT:%.*]] = zext i32 [[CALL]] to i64
-// CHECK: ret i64 [[ZEXT]]
+// CHECK: [[BC:%.*]] = bitcast i64 {{.*}} to <2 x i32>
+// CHECK: [[LO:%.*]] = extractelement <2 x i32> [[BC]], i32 0
+// CHECK: [[RLO:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %0, i32 [[LO]])
+// CHECK: [[V0:%.*]] = insertelement <2 x i32> undef, i32 [[RLO]], i32 0
+// CHECK: [[HI:%.*]] = extractelement <2 x i32> [[BC]], i32 1
+// CHECK: [[RHI:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %0, i32 [[HI]])
+// CHECK: [[V1:%.*]] = insertelement <2 x i32> [[V0]], i32 [[RHI]], i32 1
+// CHECK: [[RES:%.*]] = bitcast <2 x i32> [[V1]] to i64
+// CHECK: ret i64 [[RES]]
 extern "C" __device__ unsigned long test_source_ulong(int a, unsigned long c) {
    return __builtin_amdgcn_ds_bpermute(a, c);
 }
 
 // CHECK-LABEL: define{{.*}}@test_source_double
-// CHECK: [[FPTRUNC:%.*]] = fptrunc contract double %1 to float
-// CHECK: [[BITCAST:%.*]] = bitcast float [[FPTRUNC]] to i32
-// CHECK: [[CALL:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %0, i32 [[BITCAST]])
-// CHECK: [[BITCAST2:%.*]] = bitcast i32 [[CALL]] to float
-// CHECK: [[FPEXT:%.*]] = fpext contract float [[BITCAST2]] to double
-// CHECK: ret double [[FPEXT]]
+// CHECK: [[BC:%.*]] = bitcast double {{.*}} to <2 x i32>
+// CHECK: [[LO:%.*]] = extractelement <2 x i32> [[BC]], i32 0
+// CHECK: [[RLO:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %0, i32 [[LO]])
+// CHECK: [[V0:%.*]] = insertelement <2 x i32> undef, i32 [[RLO]], i32 0
+// CHECK: [[HI:%.*]] = extractelement <2 x i32> [[BC]], i32 1
+// CHECK: [[RHI:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %0, i32 [[HI]])
+// CHECK: [[V1:%.*]] = insertelement <2 x i32> [[V0]], i32 [[RHI]], i32 1
+// CHECK: [[RES:%.*]] = bitcast <2 x i32> [[V1]] to double
+// CHECK: ret double [[RES]]
 extern "C" __device__ double test_source_double(int a, double c) {
    return __builtin_amdgcn_ds_bpermute(a, c);
 }
