@@ -311,17 +311,28 @@ emitAMDGCNDsBpermute(clang::CodeGen::CodeGenFunction &CGF,
     auto [words, tail] = wordCountAndTail(totalBits);
     if (words > 0 && tail == 0) {
       llvm::Type *I32VecTy = llvm::FixedVectorType::get(I32, words);
-      llvm::Value *AsI32Vec = B.CreateBitCast(SrcVal, I32VecTy);
+
+      // Handle pointers by going through intptr first
+      llvm::Value *AsIntN = SrcVal;
+      if (SrcVal->getType()->isPointerTy()) {
+        unsigned PW = DL.getPointerSizeInBits(SrcVal->getType()->getPointerAddressSpace());
+        AsIntN = B.CreatePtrToInt(SrcVal, B.getIntNTy(PW));
+      }
+
+      llvm::Value *AsI32Vec = B.CreateBitCast(AsIntN, I32VecTy);
 
       llvm::Value *ResVec = llvm::UndefValue::get(I32VecTy);
       for (unsigned i = 0; i < words; ++i) {
         llvm::Value *Lane = B.CreateExtractElement(AsI32Vec, c32(i));
-        llvm::SmallVector<llvm::Value *, 2> ArgsB{IndexI32, Lane};
-        llvm::Value *Perm = B.CreateCall(Bperm->getFunctionType(), Bperm, ArgsB);
+        llvm::Value *Perm = B.CreateCall(Bperm->getFunctionType(), Bperm, {IndexI32, Lane});
         ResVec = B.CreateInsertElement(ResVec, Perm, c32(i));
       }
 
-      llvm::Value *Res = B.CreateBitCast(ResVec, RetTy);
+      llvm::Value *ResIntN = B.CreateBitCast(ResVec, AsIntN->getType());
+      llvm::Value *Res = ResIntN;
+      if (RetTy->isPointerTy())
+        Res = B.CreateIntToPtr(ResIntN, RetTy);
+
       return Res;
     }
   }

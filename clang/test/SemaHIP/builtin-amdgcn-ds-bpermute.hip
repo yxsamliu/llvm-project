@@ -20,16 +20,16 @@ __device__ void test_warn_long_index(long a, int b) {
    __builtin_amdgcn_ds_bpermute(a, b); // expected-warning {{the 64-bit argument will be truncated to 32 bits in this call to __builtin_amdgcn_ds_bpermute}}
 }
 
-__device__ void test_invalid_vector_src(int a, int2 b) {
-   __builtin_amdgcn_ds_bpermute(a, b); // expected-error {{the vector or pointer argument to __builtin_amdgcn_ds_bpermute must have a total size of 32 bits or less, but type 'int2' (vector of 2 'int' values) has a size of 64 bits}}
-}
-
-__device__ void test_warn_long_src(int a, long b) {
+__device__ void test_vector_src(int a, int2 b) {
    __builtin_amdgcn_ds_bpermute(a, b);
 }
 
-__device__ void test_warn_pointer_src(int a, void* b) {
-   __builtin_amdgcn_ds_bpermute(a, b); // expected-error {{the vector or pointer argument to __builtin_amdgcn_ds_bpermute must have a total size of 32 bits or less, but type 'void *' has a size of 64 bits}}
+__device__ void test_long_src(int a, long b) {
+   __builtin_amdgcn_ds_bpermute(a, b);
+}
+
+__device__ void test_pointer_src(int a, void* b) {
+   __builtin_amdgcn_ds_bpermute(a, b);
 }
 
 __device__ void test_invalid_struct_src(int a, A b) {

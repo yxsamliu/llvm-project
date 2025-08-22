@@ -146,6 +146,22 @@ extern "C" __device__ double test_source_double(int a, double c) {
    return __builtin_amdgcn_ds_bpermute(a, c);
 }
 
+// CHECK-LABEL: define{{.*}}@test_source_ptr
+// CHECK: [[P2I:%.*]] = ptrtoint ptr {{.*}} to i64
+// CHECK: [[BC:%.*]] = bitcast i64 [[P2I]] to <2 x i32>
+// CHECK: [[LO:%.*]] = extractelement <2 x i32> [[BC]], i32 0
+// CHECK: [[RLO:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %0, i32 [[LO]])
+// CHECK: [[V0:%.*]] = insertelement <2 x i32> undef, i32 [[RLO]], i32 0
+// CHECK: [[HI:%.*]] = extractelement <2 x i32> [[BC]], i32 1
+// CHECK: [[RHI:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %0, i32 [[HI]])
+// CHECK: [[V1:%.*]] = insertelement <2 x i32> [[V0]], i32 [[RHI]], i32 1
+// CHECK: [[I64RES:%.*]] = bitcast <2 x i32> [[V1]] to i64
+// CHECK: [[PRES:%.*]] = inttoptr i64 [[I64RES]] to ptr
+// CHECK: ret ptr [[PRES]]
+extern "C" __device__ void* test_source_ptr(int a, void* c) {
+  return __builtin_amdgcn_ds_bpermute(a, c);
+}
+
 // CHECK-LABEL: define{{.*}}@test_template_float_src
 // CHECK: [[BITCAST:%.*]] = bitcast float %1 to i32
 // CHECK: [[CALL:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %0, i32 [[BITCAST]])
