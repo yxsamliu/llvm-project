@@ -3,6 +3,7 @@
 // RUN:    -fcuda-is-device -emit-llvm -o - %s | FileCheck %s
 
 typedef short short2 __attribute__((vector_size(4)));
+typedef double double2 __attribute__((ext_vector_type(2)));
 
 #define __device__ __attribute__((device))
 
@@ -159,6 +160,26 @@ extern "C" __device__ double test_source_double(int a, double c) {
 // CHECK: [[PRES:%.*]] = inttoptr i64 [[I64RES]] to ptr
 // CHECK: ret ptr [[PRES]]
 extern "C" __device__ void* test_source_ptr(int a, void* c) {
+  return __builtin_amdgcn_ds_bpermute(a, c);
+}
+
+// CHECK-LABEL: define{{.*}}@test_source_double2
+// CHECK: [[BC:%.*]] = bitcast <2 x double> {{.*}} to <4 x i32>
+// CHECK: [[E0:%.*]] = extractelement <4 x i32> [[BC]], i32 0
+// CHECK: [[R0:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %0, i32 [[E0]])
+// CHECK: [[V0:%.*]] = insertelement <4 x i32> undef, i32 [[R0]], i32 0
+// CHECK: [[E1:%.*]] = extractelement <4 x i32> [[BC]], i32 1
+// CHECK: [[R1:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %0, i32 [[E1]])
+// CHECK: [[V1:%.*]] = insertelement <4 x i32> [[V0]], i32 [[R1]], i32 1
+// CHECK: [[E2:%.*]] = extractelement <4 x i32> [[BC]], i32 2
+// CHECK: [[R2:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %0, i32 [[E2]])
+// CHECK: [[V2:%.*]] = insertelement <4 x i32> [[V1]], i32 [[R2]], i32 2
+// CHECK: [[E3:%.*]] = extractelement <4 x i32> [[BC]], i32 3
+// CHECK: [[R3:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %0, i32 [[E3]])
+// CHECK: [[V3:%.*]] = insertelement <4 x i32> [[V2]], i32 [[R3]], i32 3
+// CHECK: [[RES:%.*]] = bitcast <4 x i32> [[V3]] to <2 x double>
+// CHECK: ret <2 x double> [[RES]]
+extern "C" __device__ double2 test_source_double2(int a, double2 c) {
   return __builtin_amdgcn_ds_bpermute(a, c);
 }
 

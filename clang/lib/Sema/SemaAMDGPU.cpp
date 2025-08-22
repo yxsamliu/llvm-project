@@ -78,15 +78,8 @@ bool handle32BitPayloadArg(Sema &SemaRef, CallExpr *TheCall, unsigned ArgIndex,
   QualType Type = Arg->getType();
   QualType Int32Ty = AstContext.IntTy;
 
-  if (Type->isVectorType() || Type->isPointerType()) {
-    uint64_t Size = AstContext.getTypeSize(Type);
-    if (Size > 32) {
-      SemaRef.Diag(Arg->getBeginLoc(),
-                   diag::err_amdgcn_builtin_vector_pointer_arg_size)
-          << BuiltinName << 32 << Type << Size << Arg->getSourceRange();
-      return true;
-    }
-  } else if (!Type->isScalarType()) {
+  if (!Type->isVectorType() && !Type->isPointerType()
+       && !Type->isScalarType()) {
     // Prefer user-defined conversion operators that yield a 32-bit-compatible
     // type. If none apply, fall back to an implicit int32 conversion.
     if (!tryUserDefinedConversion32Bit(SemaRef, Arg, TheCall, ArgIndex)) {
