@@ -772,8 +772,9 @@ void AMDGPUAtomicOptimizerImpl::optimizeDivergentAddress(
                                         {AddressHigh32, AddressHigh32});
     FullMatchMask = B.CreateAnd(LowMask, HighMask);
   } else {
-    FullMatchMask =
-        B.CreateIntrinsic(Ty, Intrinsic::amdgcn_wave_match_b32, {Ptr, Ptr});
+    Value *Address = B.CreatePtrToInt(Ptr, B.getInt32Ty());
+    FullMatchMask = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_wave_match_b32,
+                                      {Address, Address});
   }
 
   Value *Src = I.getOperand(ValIdx);
