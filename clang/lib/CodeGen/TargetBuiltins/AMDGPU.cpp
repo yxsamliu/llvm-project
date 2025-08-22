@@ -408,18 +408,25 @@ llvm::Value *emitAMDGCNDsBpermute(clang::CodeGen::CodeGenFunction &CGF,
       }
     }
 
-    // Wrap both addresses as LValues
-    clang::CodeGen::LValue DestLV =
-        CGF.MakeAddrLValue(Dest.getAddress(), RetQT);
-    clang::CodeGen::LValue SrcLV = CGF.MakeAddrLValue(DstAddr, RetQT);
+    // If there is a usable return slot (e.g., sret), copy into it and return a dummy.
+    if (!Dest.isNull() && !Dest.getAddress().getAlignment().isZero()) {
+      clang::CodeGen::LValue DestLV =
+          CGF.MakeAddrLValue(Dest.getAddress(), RetQT);
+      clang::CodeGen::LValue SrcLV =
+          CGF.MakeAddrLValue(DstAddr, RetQT);
 
-    // Copy full object representation into the final destination.
-    CGF.EmitAggregateCopy(DestLV, SrcLV, RetQT,
-                          clang::CodeGen::AggValueSlot::DoesNotOverlap,
-                          /*isVolatile=*/Dest.isVolatile());
+      CGF.EmitAggregateCopy(DestLV, SrcLV, RetQT,
+                            clang::CodeGen::AggValueSlot::DoesNotOverlap,
+                            /*isVolatile=*/Dest.isVolatile());
 
-    // Return a non-null dummy value; caller ignores it for TEK_Aggregate
-    return CGF.Builder.getTrue();
+      // TEK_Aggregate path: caller uses Dest; returned value is ignored.
+      return CGF.Builder.getTrue();
+    }
+
+    // Otherwise, return the value directly loaded from our temporary.
+    llvm::Type *LoadTy = CGF.ConvertType(RetQT);
+    llvm::Value *Loaded = CGF.Builder.CreateLoad(DstAddr.withElementType(LoadTy));
+    return Loaded;
   };
 
   return emitAggregatePath();
