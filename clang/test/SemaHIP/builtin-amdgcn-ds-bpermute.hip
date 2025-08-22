@@ -32,6 +32,6 @@ __device__ void test_pointer_src(int a, void* b) {
    __builtin_amdgcn_ds_bpermute(a, b);
 }
 
-__device__ void test_invalid_struct_src(int a, A b) {
+__device__ void test_struct_src(int a, A b) {
    __builtin_amdgcn_ds_bpermute(a, b);
 }
