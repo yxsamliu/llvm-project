@@ -239,13 +239,38 @@ extern "C" __device__ float test_template_float_src(int a, float c) {
 // CHECK:   %[[P2:.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %[[IDX]], i32 %[[LD2]])
 // CHECK:   store i32 %[[P2]], ptr %[[DST2]], align 4
 
-// Load result and return
-// CHECK:   %[[RES:.*]] = load %struct.Outer, ptr %dsbperm.dst.ascast, align 4
-// CHECK:   ret %struct.Outer
+// Copy out and return
+// CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %retval.ascast, ptr align 4 %dsbperm.dst.ascast, i64 12, i1 false)
+// CHECK:   %[[RES:.*]] = load %struct.Outer, ptr %retval.ascast, align 4
+// CHECK:   ret %struct.Outer %[[RES]]
 extern "C" __device__ Outer test_source_nested(int idx, Outer src) {
   return __builtin_amdgcn_ds_bpermute(idx, src);
 }
 
+// CHECK-LABEL: define{{.*}}@test_source_union(
+// CHECK: entry:
+// CHECK:   %retval = alloca %union.U, align 4, addrspace(5)
+// CHECK:   %src = alloca %union.U, align 4, addrspace(5)
+// CHECK:   %idx.addr = alloca i32, align 4, addrspace(5)
+// CHECK:   %dsbperm.src = alloca %union.U, align 4, addrspace(5)
+// CHECK:   %dsbperm.dst = alloca %union.U, align 4, addrspace(5)
+// CHECK:   %retval.ascast = addrspacecast ptr addrspace(5) %retval to ptr
+// CHECK:   %src1 = addrspacecast ptr addrspace(5) %src to ptr
+// CHECK:   %idx.addr.ascast = addrspacecast ptr addrspace(5) %idx.addr to ptr
+// CHECK:   %dsbperm.src.ascast = addrspacecast ptr addrspace(5) %dsbperm.src to ptr
+// CHECK:   %dsbperm.dst.ascast = addrspacecast ptr addrspace(5) %dsbperm.dst to ptr
+// CHECK:   store i32 %idx, ptr %idx.addr.ascast, align 4
+// CHECK:   %[[IDX:.*]] = load i32, ptr %idx.addr.ascast, align 4
+// CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dsbperm.src.ascast, ptr align 4 %src1, i64 4, i1 false)
+// CHECK:   %[[SRC0:.*]] = getelementptr inbounds i8, ptr %dsbperm.src.ascast, i64 0
+// CHECK:   %[[DST0:.*]] = getelementptr inbounds i8, ptr %dsbperm.dst.ascast, i64 0
+// CHECK:   %[[LD0:.*]] = load i32, ptr %[[SRC0]], align 4
+// CHECK:   %[[P0:.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 %[[IDX]], i32 %[[LD0]])
+// CHECK:   store i32 %[[P0]], ptr %[[DST0]], align 4
+// CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %retval.ascast, ptr align 4 %dsbperm.dst.ascast, i64 4, i1 false)
+// CHECK:   %[[COERCE:.*]] = getelementptr inbounds{{.*}} %union.U, ptr %retval.ascast, i32 0, i32 0
+// CHECK:   %[[RES:.*]] = load i32, ptr %[[COERCE]], align 4
+// CHECK:   ret i32 %[[RES]]
 extern "C" __device__ U test_source_union(int idx, U src) {
   return __builtin_amdgcn_ds_bpermute(idx, src);
 }
