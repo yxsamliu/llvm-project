@@ -83,6 +83,15 @@ def NVVM_Dialect : Dialect {
     /// are grid constants.
     static StringRef getGridConstantAttrName() { return "nvvm.grid_constant"; }
 
+    /// Get the name of the attribute used to annotate the `.blocksareclusters`
+    /// PTX directive for kernel functions.
+    /// This attribute implies that the grid launch configuration for the
+    /// corresponding kernel function is specifying the number of clusters
+    /// instead of the number of thread blocks. This attribute is only
+    /// allowed for kernel functions and requires nvvm.reqntid and
+    /// nvvm.cluster_dim attributes.
+    static StringRef getBlocksAreClustersAttrName() { return "nvvm.blocksareclusters"; }
+
     /// Verify an attribute from this dialect on the argument at 'argIndex' for
     /// the region at 'regionIndex' on the given operation. Returns failure if
     /// the verification failed, success otherwise. This hook may optionally be
@@ -315,16 +324,19 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
   }];
 
   let arguments = (ins Variadic<AnyType>:$readOnlyArgs, 
+                       Variadic<AnyType>:$readWriteArgs, 
                        StrAttr:$ptxCode,
                        PtxPredicate:$predicate);
                       
   let results = (outs Variadic<AnyType>:$writeOnlyArgs);
-
-  let assemblyFormat = [{ 
-    $ptxCode `(` $readOnlyArgs `)` 
-    (`,` `predicate` `=` $predicate^)? attr-dict 
-    `:` type(operands) 
-    (`->` type($writeOnlyArgs)^)?
+  
+  let assemblyFormat = [{
+    $ptxCode
+    ( `ro` `(` $readOnlyArgs^ `:` type($readOnlyArgs) `)` )?
+    ( `rw` `(` $readWriteArgs^ `:` type($readWriteArgs) `)` )?
+    (`,` `predicate` `=` $predicate^)? 
+    attr-dict
+    ( `->` type($writeOnlyArgs)^ )?
   }];
   
   let extraClassDefinition = [{
@@ -332,6 +344,10 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
       StringRef ptxInstStr = getPtxCode();
       return std::string(ptxInstStr.data());
     }
+  }];
+
+  let extraClassDeclaration = [{
+    bool getAsmValues(RewriterBase &, llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &);
   }];
 }
 
@@ -3057,8 +3073,7 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    void getAsmValues(RewriterBase &rewriter, 
-        llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &asmValues);
+    bool getAsmValues(RewriterBase &, llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &);
   }];
 }
 
