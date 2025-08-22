@@ -171,9 +171,9 @@ Value *EmitAMDGPUGridSize(CodeGenFunction &CGF, unsigned Index) {
 //   register-only path by bitcasting to <N x i32>. Aggregates or odd sizes use a
 //   memory-backed path.
 // - = 32-bit scalars (char/short/int/float/half) follow a fast i32 path for performance.
-llvm::Value *
-emitAMDGCNDsBpermute(clang::CodeGen::CodeGenFunction &CGF,
-                     const clang::CallExpr *Call) {
+llvm::Value *emitAMDGCNDsBpermute(clang::CodeGen::CodeGenFunction &CGF,
+                                  const clang::CallExpr *Call,
+                                  ReturnValueSlot Dest) {
   auto &B   = CGF.Builder;
   auto &CGM = CGF.CGM;
   const llvm::DataLayout &DL = CGM.getDataLayout();
@@ -408,19 +408,22 @@ emitAMDGCNDsBpermute(clang::CodeGen::CodeGenFunction &CGF,
       }
     }
 
-    // Load the final result from the destination temporary and return it as a Value*.
-    llvm::Value *Res = B.CreateLoad(DstAddr);
-    // For aggregates (struct/array/union), ensure determinism by freezing the value.
-    // freeze turns any undef/poison in padding into a fixed but arbitrary value.
-    if (Res->getType()->isAggregateType())
-      Res = B.CreateFreeze(Res);
-    return Res;
+    // Wrap both addresses as LValues
+    clang::CodeGen::LValue DestLV =
+        CGF.MakeAddrLValue(Dest.getAddress(), RetQT);
+    clang::CodeGen::LValue SrcLV = CGF.MakeAddrLValue(DstAddr, RetQT);
+
+    // Copy full object representation into the final destination.
+    CGF.EmitAggregateCopy(DestLV, SrcLV, RetQT,
+                          clang::CodeGen::AggValueSlot::DoesNotOverlap,
+                          /*isVolatile=*/Dest.isVolatile());
+
+    // Return a non-null dummy value; caller ignores it for TEK_Aggregate
+    return CGF.Builder.getTrue();
   };
 
   return emitAggregatePath();
 }
-
-
 
 } // namespace
 
@@ -559,7 +562,8 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
 }
 
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
-                                              const CallExpr *E) {
+                                              const CallExpr *E,
+                                              ReturnValueSlot ReturnValue) {
   llvm::AtomicOrdering AO = llvm::AtomicOrdering::SequentiallyConsistent;
   llvm::SyncScope::ID SSID;
   switch (BuiltinID) {
@@ -606,7 +610,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                                                Intrinsic::amdgcn_ds_swizzle);
 
   case AMDGPU::BI__builtin_amdgcn_ds_bpermute:
-    return emitAMDGCNDsBpermute(*this, E);
+    return emitAMDGCNDsBpermute(*this, E, ReturnValue);
 
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:

@@ -108,7 +108,7 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
     return CGF->EmitPPCBuiltinExpr(BuiltinID, E);
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
-    return CGF->EmitAMDGPUBuiltinExpr(BuiltinID, E);
+    return CGF->EmitAMDGPUBuiltinExpr(BuiltinID, E, ReturnValue);
   case llvm::Triple::systemz:
     return CGF->EmitSystemZBuiltinExpr(BuiltinID, E);
   case llvm::Triple::nvptx:
@@ -125,7 +125,7 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
     if (CGF->getTarget().getTriple().getOS() == llvm::Triple::OSType::AMDHSA)
-      return CGF->EmitAMDGPUBuiltinExpr(BuiltinID, E);
+      return CGF->EmitAMDGPUBuiltinExpr(BuiltinID, E, ReturnValue);
     [[fallthrough]];
   case llvm::Triple::spirv:
     return CGF->EmitSPIRVBuiltinExpr(BuiltinID, E);
