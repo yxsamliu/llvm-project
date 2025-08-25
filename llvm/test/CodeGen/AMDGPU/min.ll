@@ -12,7 +12,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-FAKE16 %s
 
 define amdgpu_kernel void @v_test_imin_sle_i32(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
-;
 ; EG-LABEL: v_test_imin_sle_i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 3, @10, KC0[CB0:0-32], KC1[]
@@ -157,7 +156,6 @@ define amdgpu_kernel void @v_test_imin_sle_i32(ptr addrspace(1) %out, ptr addrsp
 }
 
 define amdgpu_kernel void @s_test_imin_sle_i32(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
-;
 ; EG-LABEL: s_test_imin_sle_i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
@@ -245,7 +243,6 @@ define amdgpu_kernel void @s_test_imin_sle_i32(ptr addrspace(1) %out, i32 %a, i3
 }
 
 define amdgpu_kernel void @s_test_imin_sle_v1i32(ptr addrspace(1) %out, <1 x i32> %a, <1 x i32> %b) #0 {
-;
 ; EG-LABEL: s_test_imin_sle_v1i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
@@ -333,7 +330,6 @@ define amdgpu_kernel void @s_test_imin_sle_v1i32(ptr addrspace(1) %out, <1 x i32
 }
 
 define amdgpu_kernel void @s_test_imin_sle_v4i32(ptr addrspace(1) %out, <4 x i32> %a, <4 x i32> %b) #0 {
-;
 ; EG-LABEL: s_test_imin_sle_v4i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 5, @4, KC0[CB0:0-32], KC1[]
@@ -467,7 +463,6 @@ define amdgpu_kernel void @s_test_imin_sle_v4i32(ptr addrspace(1) %out, <4 x i32
 }
 
 define amdgpu_kernel void @s_test_imin_sle_i8(ptr addrspace(1) %out, [8 x i32], i8 %a, [8 x i32], i8 %b) #0 {
-;
 ; EG-LABEL: s_test_imin_sle_i8:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[], KC1[]
@@ -603,7 +598,6 @@ define amdgpu_kernel void @s_test_imin_sle_i8(ptr addrspace(1) %out, [8 x i32], 
 ; FIXME: Why vector and sdwa for last element?
 
 define amdgpu_kernel void @s_test_imin_sle_v4i8(ptr addrspace(1) %out, [8 x i32], <4 x i8> %a, [8 x i32], <4 x i8> %b) #0 {
-;
 ; EG-LABEL: s_test_imin_sle_v4i8:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @22, KC0[], KC1[]
@@ -877,7 +871,6 @@ define amdgpu_kernel void @s_test_imin_sle_v4i8(ptr addrspace(1) %out, [8 x i32]
 }
 
 define amdgpu_kernel void @s_test_imin_sle_v2i16(ptr addrspace(1) %out, <2 x i16> %a, <2 x i16> %b) #0 {
-;
 ; EG-LABEL: s_test_imin_sle_v2i16:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @14, KC0[], KC1[]
@@ -996,7 +989,6 @@ define amdgpu_kernel void @s_test_imin_sle_v2i16(ptr addrspace(1) %out, <2 x i16
 }
 
 define amdgpu_kernel void @s_test_imin_sle_v4i16(ptr addrspace(1) %out, <4 x i16> %a, <4 x i16> %b) #0 {
-;
 ; EG-LABEL: s_test_imin_sle_v4i16:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 1, @28, KC0[], KC1[]
@@ -1196,7 +1188,6 @@ define amdgpu_kernel void @s_test_imin_sle_v4i16(ptr addrspace(1) %out, <4 x i16
 }
 
 define amdgpu_kernel void @v_test_imin_slt_i32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) #0 {
-;
 ; EG-LABEL: v_test_imin_slt_i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 3, @10, KC0[CB0:0-32], KC1[]
@@ -1341,7 +1332,6 @@ define amdgpu_kernel void @v_test_imin_slt_i32(ptr addrspace(1) %out, ptr addrsp
 }
 
 define amdgpu_kernel void @v_test_imin_slt_i16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) #0 {
-;
 ; EG-LABEL: v_test_imin_slt_i16:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 1, @12, KC0[CB0:0-32], KC1[]
@@ -1520,7 +1510,6 @@ define amdgpu_kernel void @v_test_imin_slt_i16(ptr addrspace(1) %out, ptr addrsp
 }
 
 define amdgpu_kernel void @s_test_imin_slt_i32(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
-;
 ; EG-LABEL: s_test_imin_slt_i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
@@ -1608,7 +1597,6 @@ define amdgpu_kernel void @s_test_imin_slt_i32(ptr addrspace(1) %out, i32 %a, i3
 }
 
 define amdgpu_kernel void @s_test_imin_slt_v2i32(ptr addrspace(1) %out, <2 x i32> %a, <2 x i32> %b) #0 {
-;
 ; EG-LABEL: s_test_imin_slt_v2i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 3, @4, KC0[CB0:0-32], KC1[]
@@ -1716,7 +1704,6 @@ define amdgpu_kernel void @s_test_imin_slt_v2i32(ptr addrspace(1) %out, <2 x i32
 }
 
 define amdgpu_kernel void @s_test_imin_slt_imm_i32(ptr addrspace(1) %out, i32 %a) #0 {
-;
 ; EG-LABEL: s_test_imin_slt_imm_i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
@@ -1811,7 +1798,6 @@ define amdgpu_kernel void @s_test_imin_slt_imm_i32(ptr addrspace(1) %out, i32 %a
 }
 
 define amdgpu_kernel void @s_test_imin_sle_imm_i32(ptr addrspace(1) %out, i32 %a) #0 {
-;
 ; EG-LABEL: s_test_imin_sle_imm_i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
@@ -1906,7 +1892,6 @@ define amdgpu_kernel void @s_test_imin_sle_imm_i32(ptr addrspace(1) %out, i32 %a
 }
 
 define amdgpu_kernel void @v_test_umin_ule_i32(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
-;
 ; EG-LABEL: v_test_umin_ule_i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 3, @10, KC0[CB0:0-32], KC1[]
@@ -2051,7 +2036,6 @@ define amdgpu_kernel void @v_test_umin_ule_i32(ptr addrspace(1) %out, ptr addrsp
 }
 
 define amdgpu_kernel void @v_test_umin_ule_v3i32(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
-;
 ; EG-LABEL: v_test_umin_ule_v3i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 3, @10, KC0[CB0:0-32], KC1[]
@@ -2219,7 +2203,6 @@ define amdgpu_kernel void @v_test_umin_ule_v3i32(ptr addrspace(1) %out, ptr addr
 ; FIXME: Reduce unused packed component to scalar
 
 define amdgpu_kernel void @v_test_umin_ule_v3i16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
-;
 ; EG-LABEL: v_test_umin_ule_v3i16:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 3, @20, KC0[CB0:0-32], KC1[]
@@ -2422,7 +2405,6 @@ define amdgpu_kernel void @v_test_umin_ule_v3i16(ptr addrspace(1) %out, ptr addr
 }
 
 define amdgpu_kernel void @s_test_umin_ule_i32(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
-;
 ; EG-LABEL: s_test_umin_ule_i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
@@ -2510,7 +2492,6 @@ define amdgpu_kernel void @s_test_umin_ule_i32(ptr addrspace(1) %out, i32 %a, i3
 }
 
 define amdgpu_kernel void @v_test_umin_ult_i32(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
-;
 ; EG-LABEL: v_test_umin_ult_i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 3, @10, KC0[CB0:0-32], KC1[]
@@ -2655,7 +2636,6 @@ define amdgpu_kernel void @v_test_umin_ult_i32(ptr addrspace(1) %out, ptr addrsp
 }
 
 define amdgpu_kernel void @v_test_umin_ult_i8(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
-;
 ; EG-LABEL: v_test_umin_ult_i8:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 1, @10, KC0[CB0:0-32], KC1[]
@@ -2817,7 +2797,6 @@ define amdgpu_kernel void @v_test_umin_ult_i8(ptr addrspace(1) %out, ptr addrspa
 }
 
 define amdgpu_kernel void @s_test_umin_ult_i32(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
-;
 ; EG-LABEL: s_test_umin_ult_i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
@@ -2905,7 +2884,6 @@ define amdgpu_kernel void @s_test_umin_ult_i32(ptr addrspace(1) %out, i32 %a, i3
 }
 
 define amdgpu_kernel void @v_test_umin_ult_i32_multi_use(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) #0 {
-;
 ; EG-LABEL: v_test_umin_ult_i32_multi_use:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 1, @10, KC0[CB0:0-32], KC1[]
@@ -3073,7 +3051,6 @@ define amdgpu_kernel void @v_test_umin_ult_i32_multi_use(ptr addrspace(1) %out0,
 }
 
 define amdgpu_kernel void @v_test_umin_ult_i16_multi_use(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) #0 {
-;
 ; EG-LABEL: v_test_umin_ult_i16_multi_use:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 1, @10, KC0[CB0:0-32], KC1[]
@@ -3271,7 +3248,6 @@ define amdgpu_kernel void @v_test_umin_ult_i16_multi_use(ptr addrspace(1) %out0,
 }
 
 define amdgpu_kernel void @s_test_umin_ult_v1i32(ptr addrspace(1) %out, <1 x i32> %a, <1 x i32> %b) #0 {
-;
 ; EG-LABEL: s_test_umin_ult_v1i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
@@ -3359,7 +3335,6 @@ define amdgpu_kernel void @s_test_umin_ult_v1i32(ptr addrspace(1) %out, <1 x i32
 }
 
 define amdgpu_kernel void @s_test_umin_ult_v8i32(ptr addrspace(1) %out, <8 x i32> %a, <8 x i32> %b) #0 {
-;
 ; EG-LABEL: s_test_umin_ult_v8i32:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 13, @4, KC0[CB0:0-32], KC1[]
@@ -3566,7 +3541,6 @@ define amdgpu_kernel void @s_test_umin_ult_v8i32(ptr addrspace(1) %out, <8 x i32
 }
 
 define amdgpu_kernel void @s_test_umin_ult_v8i16(ptr addrspace(1) %out, <8 x i16> %a, <8 x i16> %b) #0 {
-;
 ; EG-LABEL: s_test_umin_ult_v8i16:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 1, @52, KC0[], KC1[]
@@ -3871,7 +3845,6 @@ define amdgpu_kernel void @s_test_umin_ult_v8i16(ptr addrspace(1) %out, <8 x i16
 ; Make sure redundant and removed
 
 define amdgpu_kernel void @simplify_demanded_bits_test_umin_ult_i16(ptr addrspace(1) %out, [8 x i32], i16 zeroext %a, [8 x i32], i16 zeroext %b) #0 {
-;
 ; EG-LABEL: simplify_demanded_bits_test_umin_ult_i16:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[], KC1[]
@@ -4001,7 +3974,6 @@ define amdgpu_kernel void @simplify_demanded_bits_test_umin_ult_i16(ptr addrspac
 ; Make sure redundant sign_extend_inreg removed.
 
 define amdgpu_kernel void @simplify_demanded_bits_test_min_slt_i16(ptr addrspace(1) %out, [8 x i32], i16 signext %a, [8 x i32], i16 signext %b) #0 {
-;
 ; EG-LABEL: simplify_demanded_bits_test_min_slt_i16:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[], KC1[]
@@ -4130,7 +4102,6 @@ define amdgpu_kernel void @simplify_demanded_bits_test_min_slt_i16(ptr addrspace
 }
 
 define amdgpu_kernel void @s_test_imin_sle_i16(ptr addrspace(1) %out, i16 %a, i16 %b) #0 {
-;
 ; EG-LABEL: s_test_imin_sle_i16:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[], KC1[]
@@ -4258,7 +4229,6 @@ define amdgpu_kernel void @s_test_imin_sle_i16(ptr addrspace(1) %out, i16 %a, i1
 ; 64 bit
 
 define amdgpu_kernel void @test_umin_ult_i64(ptr addrspace(1) %out, i64 %a, i64 %b) #0 {
-;
 ; EG-LABEL: test_umin_ult_i64:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 7, @4, KC0[CB0:0-32], KC1[]
@@ -4383,7 +4353,6 @@ define amdgpu_kernel void @test_umin_ult_i64(ptr addrspace(1) %out, i64 %a, i64 
 }
 
 define amdgpu_kernel void @test_umin_ule_i64(ptr addrspace(1) %out, i64 %a, i64 %b) #0 {
-;
 ; EG-LABEL: test_umin_ule_i64:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 7, @4, KC0[CB0:0-32], KC1[]
@@ -4508,7 +4477,6 @@ define amdgpu_kernel void @test_umin_ule_i64(ptr addrspace(1) %out, i64 %a, i64 
 }
 
 define amdgpu_kernel void @test_imin_slt_i64(ptr addrspace(1) %out, i64 %a, i64 %b) #0 {
-;
 ; EG-LABEL: test_imin_slt_i64:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 7, @4, KC0[CB0:0-32], KC1[]
@@ -4633,7 +4601,6 @@ define amdgpu_kernel void @test_imin_slt_i64(ptr addrspace(1) %out, i64 %a, i64 
 }
 
 define amdgpu_kernel void @test_imin_sle_i64(ptr addrspace(1) %out, i64 %a, i64 %b) #0 {
-;
 ; EG-LABEL: test_imin_sle_i64:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 7, @4, KC0[CB0:0-32], KC1[]
@@ -4758,7 +4725,6 @@ define amdgpu_kernel void @test_imin_sle_i64(ptr addrspace(1) %out, i64 %a, i64 
 }
 
 define amdgpu_kernel void @v_test_imin_sle_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
-;
 ; EG-LABEL: v_test_imin_sle_v2i16:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @12, KC0[CB0:0-32], KC1[]
@@ -4933,7 +4899,6 @@ define amdgpu_kernel void @v_test_imin_sle_v2i16(ptr addrspace(1) %out, ptr addr
 ; FIXME: i16 min
 
 define amdgpu_kernel void @v_test_imin_ule_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
-;
 ; EG-LABEL: v_test_imin_ule_v2i16:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @12, KC0[CB0:0-32], KC1[]

@@ -1508,9 +1508,6 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat(ptr addrspace(1) %pt
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:  .LBB36_2:
 ; GFX1250-NEXT:    s_endpgm
-
-
-
 main_body:
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, double 4.0 seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -1584,9 +1581,6 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_agent(ptr addrspace(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:  .LBB37_2:
 ; GFX1250-NEXT:    s_endpgm
-
-
-
 main_body:
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, double 4.0 syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -1662,9 +1656,6 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_system(ptr addrspace
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:  .LBB38_2:
 ; GFX1250-NEXT:    s_endpgm
-
-
-
 main_body:
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, double 4.0 syncscope("one-as") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -1738,9 +1729,6 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_flush(ptr addrspace(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:  .LBB39_2:
 ; GFX1250-NEXT:    s_endpgm
-
-
-
 main_body:
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, double 4.0 syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -1819,9 +1807,6 @@ define double @global_atomic_fadd_f64_rtn_pat_agent(ptr addrspace(1) %ptr, doubl
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-
-
-
 main_body:
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, double 4.0 syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret double %ret
@@ -1935,9 +1920,6 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_agent_safe(ptr addrs
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:  .LBB43_2:
 ; GFX1250-NEXT:    s_endpgm
-
-
-
 main_body:
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, double 4.0 syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -1983,9 +1965,6 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat(ptr %ptr) #1 {
 ; GFX1250-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
-
-
-
 main_body:
   %ret = atomicrmw fadd ptr %ptr, double 4.0 seq_cst, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -2029,9 +2008,6 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_agent(ptr %ptr) #1 {
 ; GFX1250-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
-
-
-
 main_body:
   %ret = atomicrmw fadd ptr %ptr, double 4.0 syncscope("agent") seq_cst, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -2077,9 +2053,6 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_system(ptr %ptr) #1 {
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
-
-
-
 main_body:
   %ret = atomicrmw fadd ptr %ptr, double 4.0 syncscope("one-as") seq_cst, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -2158,9 +2131,6 @@ define double @flat_atomic_fadd_f64_rtn_pat_agent(ptr %ptr) #1 {
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-
-
-
 main_body:
   %ret = atomicrmw fadd ptr %ptr, double 4.0 syncscope("agent") seq_cst, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret double %ret
@@ -2246,9 +2216,6 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_agent_safe(ptr %ptr) {
 ; GFX1250-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
-
-
-
 main_body:
   %ret = atomicrmw fadd ptr %ptr, double 4.0 syncscope("agent") seq_cst, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -2314,9 +2281,6 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat(ptr addrspace(3) %ptr
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:  .LBB51_2:
 ; GFX1250-NEXT:    s_endpgm
-
-
-
 main_body:
   %ret = atomicrmw fadd ptr addrspace(3) %ptr, double 4.0 seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -2382,9 +2346,6 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush(ptr addrspace(3
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:  .LBB52_2:
 ; GFX1250-NEXT:    s_endpgm
-
-
-
 main_body:
   %ret = atomicrmw fadd ptr addrspace(3) %ptr, double 4.0 seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -2450,9 +2411,6 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush_safe(ptr addrsp
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:  .LBB53_2:
 ; GFX1250-NEXT:    s_endpgm
-
-
-
 main_body:
   %ret = atomicrmw fadd ptr addrspace(3) %ptr, double 4.0 seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -2485,9 +2443,6 @@ define double @local_atomic_fadd_f64_rtn_pat(ptr addrspace(3) %ptr, double %data
 ; GFX1250-NEXT:    ds_add_rtn_f64 v[0:1], v0, v[2:3]
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-
-
-
 main_body:
   %ret = atomicrmw fadd ptr addrspace(3) %ptr, double 4.0 seq_cst
   ret double %ret

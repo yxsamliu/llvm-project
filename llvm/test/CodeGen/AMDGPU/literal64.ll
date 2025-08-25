@@ -191,6 +191,28 @@ define amdgpu_ps <2 x float> @v_add_f64_200.0(double %a) {
 
 ; No folding into VOP3
 
+define amdgpu_ps <2 x float> @v_lshl_add_u64(i64 %a) {
+; GCN-SDAG-LABEL: v_lshl_add_u64:
+; GCN-SDAG:       ; %bb.0:
+; GCN-SDAG-NEXT:    s_mov_b64 s[0:1], lit64(0xf12345678)
+; GCN-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 1, s[0:1]
+; GCN-SDAG-NEXT:    ; return to shader part epilog
+;
+; GCN-GISEL-LABEL: v_lshl_add_u64:
+; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    v_mov_b64_e32 v[2:3], lit64(0xf12345678)
+; GCN-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-GISEL-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 1, v[2:3]
+; GCN-GISEL-NEXT:    ; return to shader part epilog
+  %shl = shl i64 %a, 1
+  %add = add i64 %shl, 64729929336
+  %ret = bitcast i64 %add to <2 x float>
+  ret <2 x float> %ret
+}
+
+; No folding into VOP2 promoted to VOP3
+
 define amdgpu_ps <2 x float> @v_fma_f64(double %a, double %b) {
 ; GCN-SDAG-LABEL: v_fma_f64:
 ; GCN-SDAG:       ; %bb.0:
@@ -220,28 +242,6 @@ define amdgpu_ps <2 x float> @v_fma_f64(double %a, double %b) {
   %ret = bitcast double %r3 to <2 x float>
   ret <2 x float> %ret
 }
-
-define amdgpu_ps <2 x float> @v_lshl_add_u64(i64 %a) {
-; GCN-SDAG-LABEL: v_lshl_add_u64:
-; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_mov_b64 s[0:1], lit64(0xf12345678)
-; GCN-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GCN-SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 1, s[0:1]
-; GCN-SDAG-NEXT:    ; return to shader part epilog
-;
-; GCN-GISEL-LABEL: v_lshl_add_u64:
-; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    v_mov_b64_e32 v[2:3], lit64(0xf12345678)
-; GCN-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-GISEL-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 1, v[2:3]
-; GCN-GISEL-NEXT:    ; return to shader part epilog
-  %shl = shl i64 %a, 1
-  %add = add i64 %shl, 64729929336
-  %ret = bitcast i64 %add to <2 x float>
-  ret <2 x float> %ret
-}
-
-; No folding into VOP2 promoted to VOP3
 
 define amdgpu_ps <2 x float> @v_add_neg_f64(double %a) {
 ; GCN-SDAG-LABEL: v_add_neg_f64:
