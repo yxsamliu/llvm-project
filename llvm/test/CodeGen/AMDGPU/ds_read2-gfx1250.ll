@@ -132,8 +132,6 @@ define amdgpu_kernel void @simple_read2_f32_x2_barrier(ptr addrspace(1) %out) #0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_and_b32_e32 v4, 0xffc, v0
 ; GFX1250-NEXT:    ds_load_2addr_b32 v[0:1], v4 offset1:8
-; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_barrier_signal -1
 ; GFX1250-NEXT:    s_barrier_wait -1
 ; GFX1250-NEXT:    ds_load_2addr_b32 v[2:3], v4 offset0:11 offset1:27
@@ -141,6 +139,7 @@ define amdgpu_kernel void @simple_read2_f32_x2_barrier(ptr addrspace(1) %out) #0
 ; GFX1250-NEXT:    v_dual_add_f32 v0, v0, v1 :: v_dual_add_f32 v1, v2, v3
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v4, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
