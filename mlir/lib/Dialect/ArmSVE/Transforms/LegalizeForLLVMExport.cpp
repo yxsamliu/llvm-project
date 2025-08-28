@@ -235,6 +235,7 @@ void mlir::configureArmSVELegalizeForExportTarget(
                     SmmlaIntrOp,
                     UdotIntrOp,
                     UmmlaIntrOp,
+                    UsmmlaIntrOp,
                     WhileLTIntrOp,
                     ZipX2IntrOp,
                     ZipX4IntrOp,
@@ -255,6 +256,7 @@ void mlir::configureArmSVELegalizeForExportTarget(
                       SmmlaOp,
                       UdotOp,
                       UmmlaOp,
+                      UsmmlaOp,
                       ZipX2Op,
                       ZipX4Op,
                       SdotOp>();
