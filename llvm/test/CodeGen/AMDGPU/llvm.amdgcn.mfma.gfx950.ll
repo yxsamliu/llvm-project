@@ -631,18 +631,6 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_f16(<8 x half> %arg0, <8 x hal
 ; VGPRRC-NEXT:    global_store_dwordx4 v[44:45], v[0:3], off sc0 sc1
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
 ; VGPRRC-NEXT:    s_endpgm
-
-
-
-
-
-
-
-
-
-
-
-
 ; AGPR-LABEL: test_mfma_f32_32x32x16_f16:
 ; AGPR:       ; %bb.0:
 ; AGPR-NEXT:    s_load_dwordx8 s[24:31], s[4:5], 0x24
@@ -1028,18 +1016,6 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_f16__flags(<8 x half> %arg0, <
 ; VGPRRC-NEXT:    global_store_dwordx4 v[44:45], v[0:3], off sc0 sc1
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
 ; VGPRRC-NEXT:    s_endpgm
-
-
-
-
-
-
-
-
-
-
-
-
 ; AGPR-LABEL: test_mfma_f32_32x32x16_f16__flags:
 ; AGPR:       ; %bb.0:
 ; AGPR-NEXT:    s_load_dwordx8 s[24:31], s[4:5], 0x24
@@ -3272,21 +3248,6 @@ define amdgpu_kernel void @test_mfma_i32_32x32x32_i8(<4 x i32> %arg0, <4 x i32> 
 ; VGPRRC-NEXT:    global_store_dwordx4 v[8:9], v[0:3], off sc0 sc1
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
 ; VGPRRC-NEXT:    s_endpgm
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ; AGPR-LABEL: test_mfma_i32_32x32x32_i8:
 ; AGPR:       ; %bb.0:
 ; AGPR-NEXT:    s_load_dwordx8 s[24:31], s[4:5], 0x24
@@ -3701,21 +3662,6 @@ define amdgpu_kernel void @test_mfma_i32_32x32x32_i8__flags(<4 x i32> %arg0, <4 
 ; VGPRRC-NEXT:    global_store_dwordx4 v[8:9], v[0:3], off sc0 sc1
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
 ; VGPRRC-NEXT:    s_endpgm
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ; AGPR-LABEL: test_mfma_i32_32x32x32_i8__flags:
 ; AGPR:       ; %bb.0:
 ; AGPR-NEXT:    s_load_dwordx8 s[24:31], s[4:5], 0x24

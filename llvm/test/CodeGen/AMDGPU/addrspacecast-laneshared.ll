@@ -30,9 +30,10 @@ define ptr @laneshared_to_flat(ptr addrspace(10) %ptr) {
 ; GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GISEL-NEXT:    s_wait_rtscnt 0x0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    v_dual_mov_b32 v1, src_flat_scratch_base_lo :: v_dual_mov_b32 v2, src_flat_scratch_base_hi
+; GISEL-NEXT:    s_mov_b64 s[0:1], src_flat_scratch_base_lo
 ; GISEL-NEXT:    v_mbcnt_lo_u32_b32 v3, -1, 0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GISEL-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GISEL-NEXT:    v_add_co_u32 v1, vcc_lo, v0, v1
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v3, 20, v3
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
@@ -52,8 +53,9 @@ define ptr addrspace(10) @flat_to_laneshared(ptr %flat) {
 ; CHECK-NEXT:    s_wait_samplecnt 0x0
 ; CHECK-NEXT:    s_wait_rtscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_mov_b32 s0, src_flat_scratch_base_lo
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[0:1]
-; CHECK-NEXT:    v_subrev_nc_u32_e32 v2, src_flat_scratch_base_lo, v0
+; CHECK-NEXT:    v_subrev_nc_u32_e32 v2, s0, v0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, -1, v2, vcc_lo
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]

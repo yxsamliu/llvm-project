@@ -715,10 +715,7 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
     Old.setSubReg(AMDGPU::NoSubRegister);
   if (MI->isBundled())
     updateReplacedRegInBundle(*MI, *New, Old, TRI, true);
-  if (New->getReg().isPhysical())
-    Old.substPhysReg(New->getReg(), *TRI);
-  else
-    Old.substVirtReg(New->getReg(), New->getSubReg(), *TRI);
+  Old.substVirtReg(New->getReg(), New->getSubReg(), *TRI);
   Old.setIsUndef(New->isUndef());
   return true;
 }
@@ -2001,9 +1998,7 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
   if (!FoldingImm && !OpToFold.isReg())
     return false;
 
-  // Fold virtual registers and constant physical registers.
-  if (OpToFold.isReg() && OpToFold.getReg().isPhysical() &&
-      !TRI->isConstantPhysReg(OpToFold.getReg()))
+  if (OpToFold.isReg() && !OpToFold.getReg().isVirtual())
     return false;
 
   // Prevent folding operands backwards in the function. For example,
