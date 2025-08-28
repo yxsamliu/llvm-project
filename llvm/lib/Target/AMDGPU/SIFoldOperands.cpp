@@ -876,7 +876,7 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
       Op32 = AMDGPU::getVOPe32(MaybeCommutedOpc);
 
       if (TII->pseudoToMCOpcode(Op32) == -1)
-        Op32 = -1;
+        return false;
     }
 
     appendFoldCandidate(FoldList, MI, CommuteOpNo, OpToFold, /*Commuted=*/true,

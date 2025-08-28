@@ -42,11 +42,12 @@ define amdgpu_gs ptr addrspace(4) @v_add_symbol(i64 %arg) {
 ; GFX13-W32:       ; %bb.0:
 ; GFX13-W32-NEXT:    v_lshlrev_b64_e32 v[0:1], 4, v[0:1]
 ; GFX13-W32-NEXT:    s_mov_b64 s[0:1], sym@abs64
-; GFX13-W32-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-W32-NEXT:    v_add_co_u32 v0, vcc_lo, v0, sym@abs64
+; GFX13-W32-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX13-W32-NEXT:    v_add_co_u32 v0, vcc_lo, v0, s0
+; GFX13-W32-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-W32-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
-; GFX13-W32-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-W32-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX13-W32-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX13-W32-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX13-W32-NEXT:    ; return to shader part epilog
 ;
@@ -54,11 +55,12 @@ define amdgpu_gs ptr addrspace(4) @v_add_symbol(i64 %arg) {
 ; GFX13-W64:       ; %bb.0:
 ; GFX13-W64-NEXT:    v_lshlrev_b64_e32 v[0:1], 4, v[0:1]
 ; GFX13-W64-NEXT:    s_mov_b64 s[0:1], sym@abs64
-; GFX13-W64-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-W64-NEXT:    v_add_co_u32 v0, vcc, v0, sym@abs64
+; GFX13-W64-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX13-W64-NEXT:    v_add_co_u32 v0, vcc, v0, s0
+; GFX13-W64-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-W64-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc
-; GFX13-W64-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-W64-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX13-W64-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX13-W64-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX13-W64-NEXT:    ; return to shader part epilog
   %i = getelementptr [2 x <3 x i32>], ptr addrspace(4) @sym, i64 0, i64 %arg
