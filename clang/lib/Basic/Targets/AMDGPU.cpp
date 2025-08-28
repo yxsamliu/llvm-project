@@ -204,7 +204,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     const std::vector<std::string> &FeatureVec) const {
 
   using namespace llvm::AMDGPU;
-  fillAMDGPUFeatureMap(CPU, getTriple(), Features);
+
   if (!TargetInfo::initFeatureMap(Features, Diags, CPU, FeatureVec))
     return false;
 

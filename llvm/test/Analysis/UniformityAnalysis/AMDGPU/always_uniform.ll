@@ -207,6 +207,7 @@ define void @s_memrealtime(ptr addrspace(1) inreg %out) {
   ret void
 }
 
+
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.readfirstlane(i32) #0
 declare i64 @llvm.amdgcn.icmp.i32(i32, i32, i32) #1
