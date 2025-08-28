@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Passes/CodeGenPassBuilder.h"
 #include <optional>
 #include <utility>
 
