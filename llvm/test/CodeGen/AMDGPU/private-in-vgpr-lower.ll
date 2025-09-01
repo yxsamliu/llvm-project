@@ -14,10 +14,10 @@ define amdgpu_kernel void @private_load_store() {
   ;
   ; VIDX-LABEL: name: private_load_store
   ; VIDX: bb.0.entry:
-  ; VIDX-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 124
+  ; VIDX-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 136
   ; VIDX-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_]], 2, implicit-def dead $scc
   ; VIDX-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_]], 0, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
-  ; VIDX-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 128
+  ; VIDX-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 140
   ; VIDX-NEXT:   [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_1]], 2, implicit-def dead $scc
   ; VIDX-NEXT:   V_STORE_IDX [[V_LOAD_IDX]], [[S_LSHR_B32_1]], 0, implicit $exec :: (store (s32) into %ir.p.2, addrspace 5)
   ; VIDX-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 4
@@ -36,8 +36,8 @@ define amdgpu_kernel void @private_load_store() {
   ; SETIDX-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY]], 0, implicit-def $scc
   ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_ADD_I32_]]
   ; SETIDX-NEXT:   BUNDLE implicit-def $stg_dsta, implicit $idx2, implicit $exec, implicit $idx1 {
-  ; SETIDX-NEXT:     $stg_dsta = V_LOAD_IDX $idx2, 31, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
-  ; SETIDX-NEXT:     V_STORE_IDX internal $stg_dsta, $idx1, 32, implicit $exec :: (store (s32) into %ir.p.2, addrspace 5)
+  ; SETIDX-NEXT:     $stg_dsta = V_LOAD_IDX $idx2, 34, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
+  ; SETIDX-NEXT:     V_STORE_IDX internal $stg_dsta, $idx1, 35, implicit $exec :: (store (s32) into %ir.p.2, addrspace 5)
   ; SETIDX-NEXT:   }
   ; SETIDX-NEXT:   BUNDLE implicit-def $stg_dsta, implicit $idx2, implicit $exec, implicit $idx1 {
   ; SETIDX-NEXT:     $stg_dsta = V_LOAD_IDX $idx2, 1, implicit $exec :: (dereferenceable load (s32) from %ir.q.1, addrspace 5)
@@ -45,19 +45,19 @@ define amdgpu_kernel void @private_load_store() {
   ; SETIDX-NEXT:   }
   ; SETIDX-NEXT:   S_ENDPGM 0
 entry:
-  %p = alloca [30 x float], align 4, addrspace(5)
-  %q = alloca [30 x float], align 4, addrspace(5)
+  %p = alloca [33 x float], align 4, addrspace(5)
+  %q = alloca [33 x float], align 4, addrspace(5)
 
-  %p.1 = getelementptr [30 x float], ptr addrspace(5) %p, i64 0, i64 1
+  %p.1 = getelementptr [33 x float], ptr addrspace(5) %p, i64 0, i64 1
   %v = load float, ptr addrspace(5) %p.1, align 4
 
-  %p.2 = getelementptr [30 x float], ptr addrspace(5) %p, i64 0, i64 2
+  %p.2 = getelementptr [33 x float], ptr addrspace(5) %p, i64 0, i64 2
   store float %v, ptr addrspace(5) %p.2, align 4
 
-  %q.1 = getelementptr [30 x float], ptr addrspace(5) %q, i64 0, i64 1
+  %q.1 = getelementptr [33 x float], ptr addrspace(5) %q, i64 0, i64 1
   %w = load float, ptr addrspace(5) %q.1, align 4
 
-  %q.2 = getelementptr [30 x float], ptr addrspace(5) %q, i64 0, i64 2
+  %q.2 = getelementptr [33 x float], ptr addrspace(5) %q, i64 0, i64 2
   store float %w, ptr addrspace(5) %q.2, align 4
 
   ret void

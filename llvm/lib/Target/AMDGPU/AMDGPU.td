@@ -421,6 +421,12 @@ def FeatureGFX9Insts : SubtargetFeature<"gfx9-insts",
   "Additional instructions for GFX9+"
 >;
 
+def FeatureRequiresAlignedVGPRs : SubtargetFeature<"vgpr-align2",
+  "RequiresAlignVGPR",
+  "true",
+  "VGPR and AGPR tuple operands require even alignment"
+>;
+
 def FeatureGFX90AInsts : SubtargetFeature<"gfx90a-insts",
   "GFX90AInsts",
   "true",
@@ -1836,6 +1842,7 @@ def FeatureISAVersion9_0_9 : FeatureSet<
 def FeatureISAVersion9_0_A : FeatureSet<
   !listconcat(FeatureISAVersion9_0_MI_Common.Features,
     [FeatureGFX90AInsts,
+     FeatureRequiresAlignedVGPRs,
      FeatureFmacF64Inst,
      FeatureDPALU_DPP,
      FeaturePackedFP32Ops,
@@ -1858,6 +1865,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
   [FeatureGFX9,
    FeatureGFX90AInsts,
    FeatureGFX940Insts,
+   FeatureRequiresAlignedVGPRs,
    FeatureFmaMixInsts,
    FeatureLDSBankCount32,
    FeatureDLInsts,
@@ -2151,6 +2159,7 @@ def FeatureISAVersion12 : FeatureSet<
 def FeatureISAVersion12_50 : FeatureSet<
   [FeatureGFX12,
    FeatureGFX1250Insts,
+   FeatureRequiresAlignedVGPRs,
    FeatureCUStores,
    FeatureAddressableLocalMemorySize327680,
    FeatureCuMode,

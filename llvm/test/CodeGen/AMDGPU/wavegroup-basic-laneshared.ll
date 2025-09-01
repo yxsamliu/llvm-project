@@ -32,13 +32,13 @@ define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %src, ptr addrspace
 ; CHECK-NEXT:    s_cmp_lg_u32 s6, 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %store
-; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_barrier_signal -1
 ; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, g1[0]
 ; CHECK-NEXT:    v_mov_b32_e32 v2, g1[8]
+; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    global_store_b64 v0, v[1:2], s[2:3] scale_offset scope:SCOPE_SE
 ; CHECK-NEXT:    s_endpgm

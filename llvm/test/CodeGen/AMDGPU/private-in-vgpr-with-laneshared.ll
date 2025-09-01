@@ -9,56 +9,25 @@ define dso_local amdgpu_kernel void @test_wavegroup_entry(i64 %i) "amdgpu-wavegr
 ; CHECK-NEXT:  ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; CHECK-NEXT:    s_mul_i32 s1, s0, 30
+; CHECK-NEXT:    s_mul_i32 s1, s0, 1
 ; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_add_co_u32 s1, s1, 40
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
 ; CHECK-NEXT:    s_load_b32 s0, s[4:5], 0x24
-; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr2
-; CHECK-NEXT:    ; implicit-def: $vgpr3
-; CHECK-NEXT:    ; implicit-def: $vgpr4
-; CHECK-NEXT:    ; implicit-def: $vgpr5
-; CHECK-NEXT:    ; implicit-def: $vgpr6
-; CHECK-NEXT:    ; implicit-def: $vgpr7
-; CHECK-NEXT:    ; implicit-def: $vgpr8
-; CHECK-NEXT:    ; implicit-def: $vgpr9
-; CHECK-NEXT:    ; implicit-def: $vgpr10
-; CHECK-NEXT:    ; implicit-def: $vgpr11
-; CHECK-NEXT:    ; implicit-def: $vgpr12
-; CHECK-NEXT:    ; implicit-def: $vgpr13
-; CHECK-NEXT:    ; implicit-def: $vgpr14
-; CHECK-NEXT:    ; implicit-def: $vgpr15
-; CHECK-NEXT:    ; implicit-def: $vgpr16
-; CHECK-NEXT:    ; implicit-def: $vgpr17
-; CHECK-NEXT:    ; implicit-def: $vgpr18
-; CHECK-NEXT:    ; implicit-def: $vgpr19
-; CHECK-NEXT:    ; implicit-def: $vgpr20
-; CHECK-NEXT:    ; implicit-def: $vgpr21
-; CHECK-NEXT:    ; implicit-def: $vgpr22
-; CHECK-NEXT:    ; implicit-def: $vgpr23
-; CHECK-NEXT:    ; implicit-def: $vgpr24
-; CHECK-NEXT:    ; implicit-def: $vgpr25
-; CHECK-NEXT:    ; implicit-def: $vgpr26
-; CHECK-NEXT:    ; implicit-def: $vgpr27
-; CHECK-NEXT:    ; implicit-def: $vgpr28
-; CHECK-NEXT:    ; implicit-def: $vgpr29
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    s_lshl_b32 s0, s0, 2
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; CHECK-NEXT:    s_lshr_b32 s0, s0, 2
-; CHECK-NEXT:    s_add_co_i32 s2, s0, s1
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx2, s0
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, s2
-; CHECK-NEXT:    s_set_vgpr_frames 0x42 ; vsrc0_idx=2 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_mov_b32_e32 g1[0], g2[0]
-; CHECK-NEXT:    s_add_co_i32 s0, s1, 0
+; CHECK-NEXT:    s_lshl_b32 s1, s0, 2
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_lshr_b32 s1, s1, 2
+; CHECK-NEXT:    s_cmp_eq_u32 s0, 1
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, s1
+; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
+; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, s1, g1[0], s0
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx2, s0
-; CHECK-NEXT:    s_set_vgpr_frames 0x59 ; vsrc0_idx=1 vsrc1_idx=2 vsrc2_idx=1 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_lshl_add_u32 g1[2], g1[0], g2[1], g1[1]
+; CHECK-NEXT:    s_set_vgpr_frames 0x51 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=1 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_lshl_add_u32 g1[2], g1[0], v0, g1[1]
 ; CHECK-NEXT:    s_endpgm
 bb:
   %p = alloca [30 x i32], align 4, addrspace(5)

@@ -17,15 +17,15 @@
 ;
 ; LIVEINS: bb.3.bb3:
 ; LIVEINS-NEXT: successors:
-; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29{{$}}
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
 ;
 ; LIVEINS: bb.4.bb4:
 ; LIVEINS-NEXT: successors:
-; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29{{$}}
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
 ;
 ; LIVEINS: bb.5.exit:
 ; LIVEINS-NEXT: successors:
-; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29{{$}}
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
 ;
 ; LIVEINS: bb.6.ret:
 ; LIVEINS-NEXT: S_ENDPGM 0
@@ -75,19 +75,22 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) {
 ; CHECK-NEXT:    ; implicit-def: $vgpr27
 ; CHECK-NEXT:    ; implicit-def: $vgpr28
 ; CHECK-NEXT:    ; implicit-def: $vgpr29
+; CHECK-NEXT:    ; implicit-def: $vgpr30
+; CHECK-NEXT:    ; implicit-def: $vgpr31
+; CHECK-NEXT:    ; implicit-def: $vgpr32
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; CHECK-NEXT:    v_add_f32_e32 v30, 2.0, v0
+; CHECK-NEXT:    v_add_f32_e32 v33, 2.0, v0
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_mov_b32_e32 g1[1], v30
+; CHECK-NEXT:    v_mov_b32_e32 g1[1], v33
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_5
 ; CHECK-NEXT:  ; %bb.3: ; %bb3
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_5
 ; CHECK-NEXT:  ; %bb.4: ; %bb4
-; CHECK-NEXT:    v_mul_f32_e32 v0, v30, v30
+; CHECK-NEXT:    v_mul_f32_e32 v0, v33, v33
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -108,8 +111,8 @@ entry:
   %out.3 = getelementptr i32, ptr addrspace(5) %out, i32 3
   store i32 3, ptr addrspace(5) %out.3
 
-  %p = alloca [30 x float], align 4, addrspace(5)
-  %p.1 = getelementptr [30 x float], ptr addrspace(5) %p, i32 0, i32 1
+  %p = alloca [33 x float], align 4, addrspace(5)
+  %p.1 = getelementptr [33 x float], ptr addrspace(5) %p, i32 0, i32 1
 
   br i1 undef, label %bb, label %ret
 
@@ -198,6 +201,9 @@ define amdgpu_kernel void @load_without_store(ptr addrspace(5) %out) {
 ; CHECK-NEXT:    ; implicit-def: $vgpr27
 ; CHECK-NEXT:    ; implicit-def: $vgpr28
 ; CHECK-NEXT:    ; implicit-def: $vgpr29
+; CHECK-NEXT:    ; implicit-def: $vgpr30
+; CHECK-NEXT:    ; implicit-def: $vgpr31
+; CHECK-NEXT:    ; implicit-def: $vgpr32
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:12 scope:SCOPE_SE
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
@@ -209,8 +215,8 @@ entry:
   %out.3 = getelementptr i32, ptr addrspace(5) %out, i32 3
   store i32 3, ptr addrspace(5) %out.3
 
-  %p = alloca [30 x float], align 4, addrspace(5)
-  %p.1 = getelementptr [30 x float], ptr addrspace(5) %p, i32 0, i32 1
+  %p = alloca [33 x float], align 4, addrspace(5)
+  %p.1 = getelementptr [33 x float], ptr addrspace(5) %p, i32 0, i32 1
 
   %v = load float, ptr addrspace(5) %p.1, align 4
 
@@ -226,10 +232,10 @@ entry:
 ;
 ; LIVEINS: bb.1.store:
 ; LIVEINS-NEXT: successors:
-; LIVEINS-NXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29{{$}}
+; LIVEINS-NXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
 ;
 ; LIVEINS: bb.2.skip:
-; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29{{$}}
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
 
 define amdgpu_kernel void @bypassed_store(ptr addrspace(5) %out, i32 %x) {
 ; CHECK-LABEL: bypassed_store:
@@ -266,6 +272,9 @@ define amdgpu_kernel void @bypassed_store(ptr addrspace(5) %out, i32 %x) {
 ; CHECK-NEXT:    ; implicit-def: $vgpr27
 ; CHECK-NEXT:    ; implicit-def: $vgpr28
 ; CHECK-NEXT:    ; implicit-def: $vgpr29
+; CHECK-NEXT:    ; implicit-def: $vgpr30
+; CHECK-NEXT:    ; implicit-def: $vgpr31
+; CHECK-NEXT:    ; implicit-def: $vgpr32
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_cmp_eq_u32 s1, 9
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:12 scope:SCOPE_SE
@@ -284,8 +293,8 @@ entry:
   %out.3 = getelementptr i32, ptr addrspace(5) %out, i32 3
   store i32 3, ptr addrspace(5) %out.3
 
-  %p = alloca [30 x float], align 4, addrspace(5)
-  %p.1 = getelementptr [30 x float], ptr addrspace(5) %p, i32 0, i32 1
+  %p = alloca [33 x float], align 4, addrspace(5)
+  %p.1 = getelementptr [33 x float], ptr addrspace(5) %p, i32 0, i32 1
 
   %cond = icmp eq i32 %x, 9
   br i1 %cond, label %skip, label %store
@@ -324,7 +333,7 @@ define amdgpu_kernel void @def_in_nonentry_block(ptr addrspace(5) %out, float %x
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:12 scope:SCOPE_SE
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB3_2
 ; CHECK-NEXT:  ; %bb.1: ; %bb
-; CHECK-NEXT:    v_mov_b32_e32 v30, s1
+; CHECK-NEXT:    v_mov_b32_e32 v33, s1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
@@ -356,18 +365,21 @@ define amdgpu_kernel void @def_in_nonentry_block(ptr addrspace(5) %out, float %x
 ; CHECK-NEXT:    ; implicit-def: $vgpr27
 ; CHECK-NEXT:    ; implicit-def: $vgpr28
 ; CHECK-NEXT:    ; implicit-def: $vgpr29
+; CHECK-NEXT:    ; implicit-def: $vgpr30
+; CHECK-NEXT:    ; implicit-def: $vgpr31
+; CHECK-NEXT:    ; implicit-def: $vgpr32
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_mov_b32_e32 g1[1], v30
-; CHECK-NEXT:    scratch_store_b32 off, v30, s0 offset:28 scope:SCOPE_SE
+; CHECK-NEXT:    v_mov_b32_e32 g1[1], v33
+; CHECK-NEXT:    scratch_store_b32 off, v33, s0 offset:28 scope:SCOPE_SE
 ; CHECK-NEXT:  .LBB3_2: ; %ret
 ; CHECK-NEXT:    s_endpgm
 entry:
   %out.3 = getelementptr i32, ptr addrspace(5) %out, i32 3
   store i32 3, ptr addrspace(5) %out.3
 
-  %p = alloca [30 x float], align 4, addrspace(5)
-  %p.1 = getelementptr [30 x float], ptr addrspace(5) %p, i32 0, i32 1
+  %p = alloca [33 x float], align 4, addrspace(5)
+  %p.1 = getelementptr [33 x float], ptr addrspace(5) %p, i32 0, i32 1
 
   %cond = fcmp ult float %x, 9.0
   br i1 %cond, label %ret, label %bb
@@ -390,19 +402,19 @@ ret:
 ;
 ; LIVEINS: bb.1.loop:
 ; LIVEINS-NEXT: successors:
-; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29{{$}}
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
 ; LIVEINS: V_STORE_IDX
 ; LIVEINS: S_CBRANCH_SCC1 %bb.1,
 ;
 ; LIVEINS: bb.2.exit:
-; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29{{$}}
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
 ; LIVEINS: S_ENDPGM
 
 define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) {
 ; CHECK-LABEL: loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; CHECK-NEXT:    v_mov_b32_e32 v30, 3
+; CHECK-NEXT:    v_mov_b32_e32 v33, 3
 ; CHECK-NEXT:    s_mov_b32 s3, -1
 ; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 0
@@ -436,6 +448,9 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) {
 ; CHECK-NEXT:    ; implicit-def: $vgpr27
 ; CHECK-NEXT:    ; implicit-def: $vgpr28
 ; CHECK-NEXT:    ; implicit-def: $vgpr29
+; CHECK-NEXT:    ; implicit-def: $vgpr30
+; CHECK-NEXT:    ; implicit-def: $vgpr31
+; CHECK-NEXT:    ; implicit-def: $vgpr32
 ; CHECK-NEXT:  .LBB4_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_lshr_b32 s5, s4, 2
@@ -445,7 +460,7 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) {
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_cmp_lt_u32 s3, s1
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_mov_b32_e32 g1[0], v30
+; CHECK-NEXT:    v_mov_b32_e32 g1[0], v33
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB4_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
@@ -454,8 +469,8 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) {
 ; CHECK-NEXT:    scratch_store_b32 off, g1[5], s0
 ; CHECK-NEXT:    s_endpgm
 entry:
-  %p = alloca [30 x i32], align 4, addrspace(5)
-  %p.5 = getelementptr [30 x i32], ptr addrspace(5) %p, i32 0, i32 5
+  %p = alloca [33 x i32], align 4, addrspace(5)
+  %p.5 = getelementptr [33 x i32], ptr addrspace(5) %p, i32 0, i32 5
   br label %loop
 
 loop:
