@@ -1151,7 +1151,14 @@ enum IndexingAccessTypes : unsigned {
 namespace AMDGPU {
 namespace Barrier {
 
-enum Type { CLUSTER_TRAP = -4, CLUSTER = -3, TRAP = -2, WORKGROUP = -1 };
+enum Type {
+  CLUSTER_TRAP = -4,
+  CLUSTER = -3,
+  TRAP = -2,
+  WORKGROUP = -1,
+  NAMED_BARRIER_FIRST = 1,
+  NAMED_BARRIER_LAST = 16,
+};
 
 enum class Scope : unsigned {
   WORKGROUP = 0,
