@@ -718,7 +718,6 @@ def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
   let HasSrc2Mods = 1;
   let HasExtVOP3DPP = 1;
   let HasOpSel = 1;
-  let HasModifiers = 1;
   let HasFP8DstByteSel = 1;
   let HasFP8ByteSel = 0; // It works as a dst-bytesel, but does not have byte_sel operand.
   let AsmVOP3Base = !subst(", $src2_modifiers", "",
