@@ -5542,6 +5542,7 @@ SROA::runOnAlloca(AllocaInst &AI) {
   bool Changed = false;
   bool CFGChanged = false;
 
+  g_debug = AI.hasName() && AI.getName() == "%row_data_v";
   LLVM_DEBUG(dbgs() << "SROA alloca: " << AI << "\n");
   ++NumAllocasAnalyzed;
 
