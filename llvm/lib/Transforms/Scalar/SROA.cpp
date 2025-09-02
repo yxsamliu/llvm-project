@@ -99,6 +99,11 @@
 
 using namespace llvm;
 
+static bool g_debug = false;
+
+#undef LLVM_DEBUG
+#define LLVM_DEBUG(x) if (g_debug) { x; }
+
 #define DEBUG_TYPE "sroa"
 
 STATISTIC(NumAllocasAnalyzed, "Number of allocas analyzed for replacement");
@@ -5677,6 +5682,8 @@ bool SROA::promoteAllocas() {
 }
 
 std::pair<bool /*Changed*/, bool /*CFGChanged*/> SROA::runSROA(Function &F) {
+  g_debug = F.getName() == "_ZN4nbit62INT8_split_embedding_codegen_forward_unweighted_kernel_small_LIiN3c104HalfELm2ELm4ELm8ELm0ELm1ELb1ELb0EEEvN2at27GenericPackedTensorAccessorIhLm1ENS3_17RestrictPtrTraitsElEES6_NS4_IiLm1ES5_iEENS4_IlLm1ES5_iEENS4_IhLm1ES5_iEES7_N10fbgemm_gpu12FixedDivisorENS4_IT_Lm1ES5_iEESD_lliNS4_IT0_Lm2ES5_iEENS4_IhLm2ES5_lEES7_";
+
   LLVM_DEBUG(dbgs() << "SROA function: " << F.getName() << "\n");
 
   const DataLayout &DL = F.getDataLayout();
