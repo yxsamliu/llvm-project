@@ -174,6 +174,9 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       if (LocalDefs.insert(Reg)) {
         if (MO.isDead())
           DeadDefSet.insert(Reg);
+        else if (Reg.isPhysical())
+          for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+            LocalDefsP.set(Unit);
       } else {
         // Re-defined inside the bundle, it's no longer killed.
         KilledDefSet.erase(Reg);
@@ -185,10 +188,6 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       if (MO.isEarlyClobber())
         EarlyClobberDefSet.insert(Reg);
 
-      if (!MO.isDead() && Reg.isPhysical()) {
-        for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-          LocalDefsP.set(Unit);
-      }
     }
 
     // Set FrameSetup/FrameDestroy for the bundle. If any of the instructions
