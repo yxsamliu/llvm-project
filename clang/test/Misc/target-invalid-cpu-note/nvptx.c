@@ -95,5 +95,6 @@
 // CHECK-SAME: {{^}}, gfx1301
 // CHECK-SAME: {{^}}, gfx1302
 // CHECK-SAME: {{^}}, gfx130E
+// CHECK-SAME: {{^}}, gfx1310
 // CHECK-SAME: {{^}}, amdgcnspirv
 // CHECK-SAME: {{$}}

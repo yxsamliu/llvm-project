@@ -2300,6 +2300,8 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureIEEEMinimumMaximumInsts,
 ]>;
 
+defvar FeatureISAVersion13_1 = FeatureISAVersion13;
+
 //===----------------------------------------------------------------------===//
 
 def AMDGPUInstrInfo : InstrInfo {

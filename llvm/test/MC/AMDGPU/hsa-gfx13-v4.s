@@ -293,7 +293,7 @@ wavegroup_kernel:
 // ASM: .byte 13
 
 .byte .amdgcn.gfx_generation_minor
-// ASM: .byte 0
+// ASM: .byte 1
 
 .byte .amdgcn.gfx_generation_stepping
 // ASM: .byte 0
