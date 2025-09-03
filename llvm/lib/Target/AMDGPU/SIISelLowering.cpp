@@ -18066,11 +18066,19 @@ static bool flatInstrMayAccessPrivate(const Instruction *I) {
          !AMDGPU::hasValueInRangeLikeMetadata(*MD, AMDGPUAS::PRIVATE_ADDRESS);
 }
 
+static TargetLowering::AtomicExpansionKind
+getPrivateAtomicExpansionKind(const GCNSubtarget &STI) {
+  // For GAS, lower to flat atomic.
+  return STI.hasGloballyAddressableScratch()
+             ? TargetLowering::AtomicExpansionKind::CustomExpand
+             : TargetLowering::AtomicExpansionKind::NotAtomic;
+}
+
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   unsigned AS = RMW->getPointerAddressSpace();
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
-    return AtomicExpansionKind::NotAtomic;
+    return getPrivateAtomicExpansionKind(*getSubtarget());
 
   // 64-bit flat atomics that dynamically reside in private memory will silently
   // be dropped.
@@ -18081,7 +18089,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   if (AS == AMDGPUAS::FLAT_ADDRESS &&
       DL.getTypeSizeInBits(RMW->getType()) == 64 &&
       flatInstrMayAccessPrivate(RMW))
-    return AtomicExpansionKind::Expand;
+    return AtomicExpansionKind::CustomExpand;
 
   auto ReportUnsafeHWInst = [=](TargetLowering::AtomicExpansionKind Kind) {
     OptimizationRemarkEmitter ORE(RMW->getFunction());
@@ -18156,7 +18164,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
         // does. InstCombine transforms these with 0 to or, so undo that.
         if (Constant *ConstVal = dyn_cast<Constant>(RMW->getValOperand());
             ConstVal && ConstVal->isNullValue())
-          return AtomicExpansionKind::Expand;
+          return AtomicExpansionKind::CustomExpand;
       }
 
       // If the allocation could be in remote, fine-grained memory, the rmw
@@ -18285,9 +18293,9 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
         // fadd.
         if (Subtarget->hasLDSFPAtomicAddF32()) {
           if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
-            return AtomicExpansionKind::Expand;
+            return AtomicExpansionKind::CustomExpand;
           if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
-            return AtomicExpansionKind::Expand;
+            return AtomicExpansionKind::CustomExpand;
         }
       }
     }
@@ -18341,14 +18349,14 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
   return LI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
-             ? AtomicExpansionKind::NotAtomic
+             ? getPrivateAtomicExpansionKind(*getSubtarget())
              : AtomicExpansionKind::None;
 }
 
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   return SI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
-             ? AtomicExpansionKind::NotAtomic
+             ? getPrivateAtomicExpansionKind(*getSubtarget())
              : AtomicExpansionKind::None;
 }
 
@@ -18356,7 +18364,7 @@ TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CmpX) const {
   unsigned AddrSpace = CmpX->getPointerAddressSpace();
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
-    return AtomicExpansionKind::NotAtomic;
+    return getPrivateAtomicExpansionKind(*getSubtarget());
 
   if (AddrSpace != AMDGPUAS::FLAT_ADDRESS || !flatInstrMayAccessPrivate(CmpX))
     return AtomicExpansionKind::None;
@@ -18367,7 +18375,7 @@ SITargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CmpX) const {
 
   // If a 64-bit flat atomic may alias private, we need to avoid using the
   // atomic in the private case.
-  return DL.getTypeSizeInBits(ValTy) == 64 ? AtomicExpansionKind::Expand
+  return DL.getTypeSizeInBits(ValTy) == 64 ? AtomicExpansionKind::CustomExpand
                                            : AtomicExpansionKind::None;
 }
 
@@ -18726,8 +18734,23 @@ void SITargetLowering::emitExpandAtomicAddrSpacePredicate(
   Builder.CreateBr(ExitBB);
 }
 
+static void convertScratchAtomicToFlatAtomic(Instruction *I,
+                                             unsigned PtrOpIdx) {
+  Value *PtrOp = I->getOperand(PtrOpIdx);
+  assert(PtrOp->getType()->getPointerAddressSpace() ==
+         AMDGPUAS::PRIVATE_ADDRESS);
+
+  Type *FlatPtr = PointerType::get(I->getContext(), AMDGPUAS::FLAT_ADDRESS);
+  Value *ASCast = CastInst::CreatePointerCast(PtrOp, FlatPtr, "scratch.ascast",
+                                              I->getIterator());
+  I->setOperand(PtrOpIdx, ASCast);
+}
+
 void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   AtomicRMWInst::BinOp Op = AI->getOperation();
+
+  if (AI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
+    return convertScratchAtomicToFlatAtomic(AI, AI->getPointerOperandIndex());
 
   if (Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Or ||
       Op == AtomicRMWInst::Xor) {
@@ -18751,7 +18774,26 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
 }
 
 void SITargetLowering::emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const {
+  if (CI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
+    return convertScratchAtomicToFlatAtomic(CI, CI->getPointerOperandIndex());
+
   emitExpandAtomicAddrSpacePredicate(CI);
+}
+
+void SITargetLowering::emitExpandAtomicLoad(LoadInst *LI) const {
+  if (LI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
+    return convertScratchAtomicToFlatAtomic(LI, LI->getPointerOperandIndex());
+
+  llvm_unreachable(
+      "Expand Atomic Load only handles SCRATCH -> FLAT conversion");
+}
+
+void SITargetLowering::emitExpandAtomicStore(StoreInst *SI) const {
+  if (SI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
+    return convertScratchAtomicToFlatAtomic(SI, SI->getPointerOperandIndex());
+
+  llvm_unreachable(
+      "Expand Atomic Store only handles SCRATCH -> FLAT conversion");
 }
 
 LoadInst *

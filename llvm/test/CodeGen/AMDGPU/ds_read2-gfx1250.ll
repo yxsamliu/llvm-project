@@ -132,6 +132,7 @@ define amdgpu_kernel void @simple_read2_f32_x2_barrier(ptr addrspace(1) %out) #0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_and_b32_e32 v4, 0xffc, v0
 ; GFX1250-NEXT:    ds_load_2addr_b32 v[0:1], v4 offset1:8
+; GFX1250-NEXT:    s_wait_alu 0xffe3
 ; GFX1250-NEXT:    s_barrier_signal -1
 ; GFX1250-NEXT:    s_barrier_wait -1
 ; GFX1250-NEXT:    ds_load_2addr_b32 v[2:3], v4 offset0:11 offset1:27

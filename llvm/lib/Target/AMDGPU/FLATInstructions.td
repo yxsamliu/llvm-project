@@ -241,7 +241,6 @@ class FLAT_Load_Pseudo<
   let enabled_saddr = EnableSaddr;
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
-  let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
 }
 
 multiclass FLAT_Flat_Load_Pseudo<string opName, RegisterClass regClass, bit HasTiedInput = 0> {
@@ -337,7 +336,6 @@ class FLAT_Global_Load_AddTid_Pseudo <string opName, RegisterClass regClass,
   let enabled_saddr = EnableSaddr;
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
-  let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
 }
 
 multiclass FLAT_Global_Load_AddTid_Pseudo<string opName, RegisterClass regClass,
@@ -570,7 +568,6 @@ class FLAT_Scratch_Load_Pseudo <string opName, RegisterClass regClass,
   let sve = EnableVaddr;
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
-  let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
 }
 
 class FLAT_Scratch_Store_Pseudo <string opName, RegisterClass vdataClass, bit EnableSaddr = 0,
