@@ -1025,6 +1025,9 @@ private:
       AS.DeadUsers.push_back(&I);
   }
 
+  // CHANGE: Added debug output on successful insertUse paths to aid tracing slice creation.
+  // Before: Only warned on zero-size/out-of-bounds and clamping cases.
+  // After: Also logs the final slice interval and whether it is splittable.
   void insertUse(Instruction &I, const APInt &Offset, uint64_t Size,
                  bool IsSplittable = false) {
     // Completely skip uses which have a zero size or start either before or
@@ -1058,6 +1061,10 @@ private:
       EndOffset = AllocSize;
     }
 
+    LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] insertUse: ["
+                      << BeginOffset << "," << EndOffset << ")"
+                      << " splittable=" << (IsSplittable ? "yes" : "no")
+                      << " for: " << I << "\n");
     AS.Slices.push_back(Slice(BeginOffset, EndOffset, U, IsSplittable));
   }
 
@@ -1093,20 +1100,29 @@ private:
     insertUse(I, Offset, Size, IsSplittable);
   }
 
+  // CHANGE: Add debug messages to clarify EscapedReadOnly and scalable-without-vscale aborts.
+  // Before: No reason was printed when IsOffsetKnown was false or scalable without vscale.
+  // After: Print the reason and the instruction.
   void visitLoadInst(LoadInst &LI) {
     assert((!LI.isSimple() || LI.getType()->isSingleValueType()) &&
            "All simple FCA loads should have been pre-split");
 
     // If there is a load with an unknown offset, we can still perform store
     // to load forwarding for other known-offset loads.
-    if (!IsOffsetKnown)
+    if (!IsOffsetKnown) {
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] load with unknown offset; "
+                        << "marking EscapedReadOnly: " << LI << "\n");
       return PI.setEscapedReadOnly(&LI);
+    }
 
     TypeSize Size = DL.getTypeStoreSize(LI.getType());
     if (Size.isScalable()) {
       unsigned VScale = LI.getFunction()->getVScaleValue();
-      if (!VScale)
+      if (!VScale) {
+        LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] scalable load without vscale; "
+                          << "aborting analysis at: " << LI << "\n");
         return PI.setAborted(&LI);
+      }
 
       Size = TypeSize::getFixed(Size.getKnownMinValue() * VScale);
     }
@@ -1115,18 +1131,31 @@ private:
                              LI.isVolatile());
   }
 
+  // CHANGE: Add debug messages to clarify escape on storing the pointer itself,
+  // unknown offset, scalable-without-vscale, and statically OOB store.
+  // Before: No detailed reason was logged.
+  // After: Reasons and the instruction are logged via LLVM_DEBUG.
   void visitStoreInst(StoreInst &SI) {
     Value *ValOp = SI.getValueOperand();
-    if (ValOp == *U)
+    if (ValOp == *U) {
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] store of the alloca pointer itself; "
+                        << "pointer escapes and abort analysis at: " << SI << "\n");
       return PI.setEscapedAndAborted(&SI);
-    if (!IsOffsetKnown)
+    }
+    if (!IsOffsetKnown) {
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] store with unknown offset; "
+                        << "aborting analysis at: " << SI << "\n");
       return PI.setAborted(&SI);
+    }
 
     TypeSize StoreSize = DL.getTypeStoreSize(ValOp->getType());
     if (StoreSize.isScalable()) {
       unsigned VScale = SI.getFunction()->getVScaleValue();
-      if (!VScale)
+      if (!VScale) {
+        LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] scalable store without vscale; "
+                          << "aborting analysis at: " << SI << "\n");
         return PI.setAborted(&SI);
+      }
 
       StoreSize = TypeSize::getFixed(StoreSize.getKnownMinValue() * VScale);
     }
@@ -1141,11 +1170,8 @@ private:
     // FIXME: We should instead consider the pointer to have escaped if this
     // function is being instrumented for addressing bugs or race conditions.
     if (Size > AllocSize || Offset.ugt(AllocSize - Size)) {
-      LLVM_DEBUG(dbgs() << "WARNING: Ignoring " << Size << " byte store @"
-                        << Offset << " which extends past the end of the "
-                        << AllocSize << " byte alloca:\n"
-                        << "    alloca: " << AS.AI << "\n"
-                        << "       use: " << SI << "\n");
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] store statically out of bounds; "
+                        << "treating as dead use at: " << SI << "\n");
       return markAsDead(SI);
     }
 
@@ -1154,16 +1180,26 @@ private:
     handleLoadOrStore(ValOp->getType(), SI, Offset, Size, SI.isVolatile());
   }
 
+  // CHANGE: Add debug for memset zero-length/out-of-bounds dead cases and unknown offset abort.
+  // Before: Silent (no extra context beyond warnings).
+  // After: Log detailed reasons.
   void visitMemSetInst(MemSetInst &II) {
     assert(II.getRawDest() == *U && "Pointer use is not the destination?");
     ConstantInt *Length = dyn_cast<ConstantInt>(II.getLength());
     if ((Length && Length->getValue() == 0) ||
         (IsOffsetKnown && Offset.uge(AllocSize)))
       // Zero-length mem transfer intrinsics can be ignored entirely.
+    {
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] memset zero-length or out-of-bounds; "
+                        << "marking dead: " << II << "\n");
       return markAsDead(II);
+    }
 
-    if (!IsOffsetKnown)
+    if (!IsOffsetKnown) {
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] memset with unknown offset; "
+                        << "aborting analysis at: " << II << "\n");
       return PI.setAborted(&II);
+    }
 
     insertUse(II, Offset,
               Length ? Length->getLimitedValue()
@@ -1171,19 +1207,37 @@ private:
               (bool)Length);
   }
 
+  // CHANGE: Add comprehensive debug breadcrumbs for memtransfer (memcpy/memmove):
+  // - unknown offset aborts,
+  // - OOB side kills,
+  // - self-copy elision,
+  // - intra-alloca offset copy unsplittable,
+  // - first/second side processing.
+  // Before: No detailed reason logs.
+  // After: Detailed LLVM_DEBUG outputs.
   void visitMemTransferInst(MemTransferInst &II) {
     ConstantInt *Length = dyn_cast<ConstantInt>(II.getLength());
     if (Length && Length->getValue() == 0)
       // Zero-length mem transfer intrinsics can be ignored entirely.
+    {
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] memtransfer zero-length; "
+                        << "marking dead: " << II << "\n");
       return markAsDead(II);
+    }
 
     // Because we can visit these intrinsics twice, also check to see if the
     // first time marked this instruction as dead. If so, skip it.
-    if (VisitedDeadInsts.count(&II))
+    if (VisitedDeadInsts.count(&II)) {
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] memtransfer already marked dead previously; "
+                        << "skipping: " << II << "\n");
       return;
+    }
 
-    if (!IsOffsetKnown)
+    if (!IsOffsetKnown) {
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] memtransfer with unknown offset for this operand; "
+                        << "aborting analysis at: " << II << "\n");
       return PI.setAborted(&II);
+    }
 
     // This side of the transfer is completely out-of-bounds, and so we can
     // nuke the entire transfer. However, we also need to nuke the other side
@@ -1191,6 +1245,8 @@ private:
     // FIXME: Yet another place we really should bypass this when
     // instrumenting for ASan.
     if (Offset.uge(AllocSize)) {
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] memtransfer operand out-of-bounds; "
+                        << "killing paired slice if present and marking dead: " << II << "\n");
       SmallDenseMap<Instruction *, unsigned>::iterator MTPI =
           MemTransferSliceMap.find(&II);
       if (MTPI != MemTransferSliceMap.end())
@@ -1205,9 +1261,14 @@ private:
     // source and dest.
     if (*U == II.getRawDest() && *U == II.getRawSource()) {
       // For non-volatile transfers this is a no-op.
-      if (!II.isVolatile())
+      if (!II.isVolatile()) {
+        LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] memtransfer is self-copy with same src/dst "
+                          << "and non-volatile; dead: " << II << "\n");
         return markAsDead(II);
+      }
 
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] volatile self memtransfer; recording unsplittable slice: "
+                        << "offset=" << RawOffset << ", size=" << Size << " at: " << II << "\n");
       return insertUse(II, Offset, Size, /*IsSplittable=*/false);
     }
 
@@ -1224,13 +1285,24 @@ private:
       // Check if the begin offsets match and this is a non-volatile transfer.
       // In that case, we can completely elide the transfer.
       if (!II.isVolatile() && PrevP.beginOffset() == RawOffset) {
+        LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] memtransfer src/dst both to same alloca "
+                          << "at identical offset; eliding non-volatile transfer: " << II << "\n");
         PrevP.kill();
         return markAsDead(II);
       }
 
       // Otherwise we have an offset transfer within the same alloca. We can't
       // split those.
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] memtransfer within same alloca at different offsets; "
+                        << "marking unsplittable. prev-begin=" << PrevP.beginOffset()
+                        << ", cur-begin=" << RawOffset << ", size=" << Size
+                        << ", volatile=" << II.isVolatile() << " at: " << II << "\n");
       PrevP.makeUnsplittable();
+    } else {
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] memtransfer first-side seen; "
+                        << "offset=" << RawOffset << ", size=" << Size
+                        << ", volatile=" << II.isVolatile()
+                        << ", length-const=" << (bool)Length << " at: " << II << "\n");
     }
 
     // Insert the use now that we've fixed up the splittable nature.
@@ -1244,16 +1316,27 @@ private:
   // Disable SRoA for any intrinsics except for lifetime invariants.
   // FIXME: What about debug intrinsics? This matches old behavior, but
   // doesn't make sense.
+  // CHANGE: Add debug to show when droppable intrinsics are recorded,
+  // when lifetime intrinsics create slices, and when unknown offsets abort.
+  // Before: Silent decisions.
+  // After: Reasons logged via LLVM_DEBUG.
   void visitIntrinsicInst(IntrinsicInst &II) {
     if (II.isDroppable()) {
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] droppable intrinsic recorded as DeadUseIfPromotable: "
+                        << II << "\n");
       AS.DeadUseIfPromotable.push_back(U);
       return;
     }
 
-    if (!IsOffsetKnown)
+    if (!IsOffsetKnown) {
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] intrinsic with unknown offset; "
+                        << "aborting at: " << II << "\n");
       return PI.setAborted(&II);
+    }
 
     if (II.isLifetimeStartOrEnd()) {
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] lifetime intrinsic; inserting splittable slice "
+                        << "covering entire alloca for: " << II << "\n");
       insertUse(II, Offset, AllocSize, true);
       return;
     }
@@ -1316,17 +1399,31 @@ private:
     return nullptr;
   }
 
+  // CHANGE: Add debug messages throughout PHI/select handling:
+  // - empty uses -> dead
+  // - catchswitch PHI abort
+  // - fold results (pointer vs non-pointer)
+  // - unknown offset abort
+  // - unsafe downstream user abort
+  // - out-of-bounds operand handling
+  // Before: Silent decisions.
+  // After: Reasons logged via LLVM_DEBUG.
   void visitPHINodeOrSelectInst(Instruction &I) {
     assert(isa<PHINode>(I) || isa<SelectInst>(I));
-    if (I.use_empty())
+    if (I.use_empty()) {
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] PHI/select has no uses; marking dead: " << I << "\n");
       return markAsDead(I);
+    }
 
     // If this is a PHI node before a catchswitch, we cannot insert any non-PHI
     // instructions in this BB, which may be required during rewriting. Bail out
     // on these cases.
     if (isa<PHINode>(I) &&
-        I.getParent()->getFirstInsertionPt() == I.getParent()->end())
+        I.getParent()->getFirstInsertionPt() == I.getParent()->end()) {
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] PHI before a catchswitch (no insertion point); "
+                        << "aborting analysis at: " << I << "\n");
       return PI.setAborted(&I);
+    }
 
     // TODO: We could use simplifyInstruction here to fold PHINodes and
     // SelectInsts. However, doing so requires to change the current
@@ -1337,27 +1434,40 @@ private:
     // %other)" may trap because the select may return the first operand
     // "undef".
     if (Value *Result = foldPHINodeOrSelectInst(I)) {
-      if (Result == *U)
+      if (Result == *U) {
         // If the result of the constant fold will be the pointer, recurse
         // through the PHI/select as if we had RAUW'ed it.
+        LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] folded PHI/select to operand pointer; "
+                          << "recursing through users of: " << I << "\n");
         enqueueUsers(I);
-      else
+      } else {
         // Otherwise the operand to the PHI/select is dead, and we can replace
         // it with poison.
+        LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] folded PHI/select to non-pointer; "
+                          << "marking current operand dead (poisonable): " << I << "\n");
         AS.DeadOperands.push_back(U);
+      }
 
       return;
     }
 
-    if (!IsOffsetKnown)
+    if (!IsOffsetKnown) {
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] PHI/select with unknown offset; "
+                        << "aborting analysis at: " << I << "\n");
       return PI.setAborted(&I);
+    }
 
     // See if we already have computed info on this node.
     uint64_t &Size = PHIOrSelectSizes[&I];
     if (!Size) {
       // This is a new PHI/Select, check for an unsafe use of it.
-      if (Instruction *UnsafeI = hasUnsafePHIOrSelectUse(&I, Size))
+      if (Instruction *UnsafeI = hasUnsafePHIOrSelectUse(&I, Size)) {
+        LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] PHI/select has unsafe downstream use; "
+                          << "aborting at: " << *UnsafeI << " (from: " << I << ")\n");
         return PI.setAborted(UnsafeI);
+      }
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] PHI/select max load/store size discovered: "
+                        << Size << " for: " << I << "\n");
     }
 
     // For PHI and select operands outside the alloca, we can't nuke the entire
@@ -1367,6 +1477,8 @@ private:
     // FIXME: This should instead be escaped in the event we're instrumenting
     // for address sanitization.
     if (Offset.uge(AllocSize)) {
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] PHI/select operand is out-of-bounds; "
+                        << "marking operand dead (poisonable), keeping node: " << I << "\n");
       AS.DeadOperands.push_back(U);
       return;
     }
@@ -1381,12 +1493,17 @@ private:
   /// Disable SROA entirely if there are unhandled users of the alloca.
   void visitInstruction(Instruction &I) { PI.setAborted(&I); }
 
+  // CHANGE: Add debug to record when a call operand is treated as read-only escape.
+  // Before: Silent path when marking EscapedReadOnly.
+  // After: Reason and instruction logged.
   void visitCallBase(CallBase &CB) {
     // If the call operand is read-only and only does a read-only or address
     // capture, then we mark it as EscapedReadOnly.
     if (CB.isDataOperand(U) &&
         !capturesFullProvenance(CB.getCaptureInfo(U->getOperandNo())) &&
         CB.onlyReadsMemory(U->getOperandNo())) {
+      LLVM_DEBUG(dbgs() << "[SROA][AllocaSlices] call operand is read-only and does not capture; "
+                        << "marking EscapedReadOnly at: " << CB << "\n");
       PI.setEscapedReadOnly(&CB);
       return;
     }
@@ -1408,6 +1525,21 @@ AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
     // possibly by just storing the PtrInfo in the AllocaSlices.
     PointerEscapingInstr = PtrI.getEscapingInst() ? PtrI.getEscapingInst()
                                                   : PtrI.getAbortingInst();
+
+    // CHANGE: Add detailed debug to disambiguate escape vs abort and print the offending instruction.
+    // Before: No additional debug here; later printing says "escaped by" regardless.
+    // After: Emit an explicit message noting escape vs abort and the instruction.
+    LLVM_DEBUG({
+      dbgs() << "[SROA][AllocaSlices] stopping slice analysis for alloca: " << AI << "\n";
+      if (PtrI.isEscaped() && PtrI.getEscapingInst())
+        dbgs() << "  Reason: pointer escaped at instruction: "
+               << *PtrI.getEscapingInst() << "\n";
+      else if (PtrI.isAborted() && PtrI.getAbortingInst())
+        dbgs() << "  Reason: analysis aborted at instruction: "
+               << *PtrI.getAbortingInst() << "\n";
+      else
+        dbgs() << "  Reason: unknown (no instruction recorded)\n";
+    });
     assert(PointerEscapingInstr && "Did not track a bad instruction");
     return;
   }
@@ -5542,7 +5674,7 @@ SROA::runOnAlloca(AllocaInst &AI) {
   bool Changed = false;
   bool CFGChanged = false;
 
-  g_debug = AI.hasName() && AI.getName() == "%row_data_v";
+  g_debug = AI.hasName() && AI.getName() == "row_data_v";
   LLVM_DEBUG(dbgs() << "SROA alloca: " << AI << "\n");
   ++NumAllocasAnalyzed;
 
