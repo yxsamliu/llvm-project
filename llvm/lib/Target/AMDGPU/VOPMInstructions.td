@@ -992,7 +992,6 @@ class VOPM_Real <VOPM_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   let IsPacked = 1;
 
   let Constraints     = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
 
 
   // copy relevant pseudo op flags
@@ -1000,7 +999,6 @@ class VOPM_Real <VOPM_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   let OtherPredicates    = ps.OtherPredicates;
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let AsmVariantName     = ps.AsmVariantName;
-  let DisableEncoding    = ps.DisableEncoding;
   let TSFlags            = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;

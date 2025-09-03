@@ -13,12 +13,7 @@ define void @raw_buffer_discard_b32__sgpr_rsrc__vgpr_voffset__sgpr_soffset(<4 x 
   ; GFX13-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX13-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX13-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; GFX13-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX13-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX13-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX13-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX13-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
-  ; GFX13-NEXT:   [[DEF4:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX13-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT: bb.1:
@@ -64,12 +59,7 @@ define void @raw_buffer_discard_b128__sgpr_rsrc__voffset_4095__sgpr_soffset(<4 x
   ; GFX13-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX13-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX13-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; GFX13-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX13-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX13-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX13-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX13-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY1]], %subreg.sub3
-  ; GFX13-NEXT:   [[DEF4:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX13-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT: bb.1:
@@ -116,12 +106,7 @@ define void @raw_buffer_discard_b1024__sgpr_rsrc__vgpr_voffset__sgpr_soffset(<4 
   ; GFX13-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX13-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX13-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; GFX13-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX13-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX13-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX13-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX13-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
-  ; GFX13-NEXT:   [[DEF4:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX13-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT: bb.1:
@@ -169,13 +154,8 @@ define void @raw_struct_buffer_discard_b32__sgpr_rsrc__vgpr_voffset__sgpr_soffse
   ; GFX13-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX13-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX13-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; GFX13-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX13-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX13-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX13-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX13-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY5]], %subreg.sub1, [[COPY4]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; GFX13-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; GFX13-NEXT:   [[DEF4:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX13-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT: bb.1:
@@ -222,12 +202,7 @@ define void @struct_buffer_discard_b128__sgpr_rsrc__voffset_4095__sgpr_soffset(<
   ; GFX13-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX13-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX13-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; GFX13-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX13-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX13-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX13-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX13-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
-  ; GFX13-NEXT:   [[DEF4:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX13-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT: bb.1:
@@ -274,14 +249,9 @@ define void @struct_buffer_discard_b1024__sgpr_rsrc__vgpr_voffset__sgpr_soffset(
   ; GFX13-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX13-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX13-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; GFX13-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX13-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX13-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX13-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX13-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
   ; GFX13-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX13-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE killed [[V_MOV_B32_e32_]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; GFX13-NEXT:   [[DEF4:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX13-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT: bb.1:
