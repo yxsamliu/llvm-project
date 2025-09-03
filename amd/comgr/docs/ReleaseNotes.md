@@ -74,6 +74,7 @@ tests.
 
 New Targets
 -----------
+- gfx1310
 
 Removed Targets
 ---------------
