@@ -1524,31 +1524,41 @@ def VRegSrc_fake16: SrcReg9<VGPR_32_STAGING> {
   let EncoderMethod = "getMachineOpValueT16";
 }
 //===----------------------------------------------------------------------===//
-// VGPRSrc_*
+// VGPROp_* An 8-bit RegisterOperand wrapper for a VGPR
 //===----------------------------------------------------------------------===//
 
-// An 8-bit RegisterOperand wrapper for a VGPR
-class VGPRSrc<RegisterClass regClass> : RegisterOperand<!cast<RegisterClass>(regClass#_STAGING)> {
+class VGPROp<RegisterClass regClass> : RegisterOperand<!cast<RegisterClass>(regClass#_STAGING)> {
   let DecoderMethod = "Decode" # regClass # "RegisterClass";
 }
-def VGPRSrc_32 : VGPRSrc<VGPR_32>;
+class VGPROp_Align2<RegisterClass regClass> : RegisterOperand<!cast<RegisterClass>(regClass#_STAGING#_Align2)> {
+  let DecoderMethod = "Decode" # regClass # "RegisterClass";
+}
+multiclass VGPROp_Aligned<RegisterClass regClass> {
+  def _Align1 : VGPROp<regClass>;
+  def _Align2 : VGPROp_Align2<regClass>;
+}
+// TODO: These cases should use default target alignment
+def VGPROp_32 : VGPROp<VGPR_32>;
 
 foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "512", "576"] in {
-  def VGPRSrc_#size : VGPRSrc<!cast<RegisterClass>("VReg_"#size)>;
+  def VGPROp_#size : VGPROp<!cast<RegisterClass>("VReg_"#size)>;
 }
 
-def VGPRSrc_16_Lo128 : RegisterOperand<VGPR_16_STAGING_Lo128> {
+foreach size = ["64", "96", "128", "256" ] in {
+  defm VGPROp_#size : VGPROp_Aligned<!cast<RegisterClass>("VReg_"#size)>;
+}
+
+def VGPROp_16_Lo128 : RegisterOperand<VGPR_16_STAGING_Lo128> {
   let DecoderMethod = "DecodeVGPR_16_Lo128RegisterClass";
   let EncoderMethod = "getMachineOpValueT16Lo128";
 }
 
-def VGPRSrc_32_Lo128 : RegisterOperand<VGPR_32_STAGING_Lo128> {
+def VGPROp_32_Lo128 : RegisterOperand<VGPR_32_STAGING_Lo128> {
   let DecoderMethod = "DecodeVGPR_32RegisterClass";
 }
 
 // True 16 operands.
-def VGPRSrc_16 : RegisterOperand<VGPR_16_STAGING> {
-  let DecoderMethod = "DecodeVGPR_16RegisterClass";
+def VGPROp_16 : VGPROp<VGPR_16> {
   let EncoderMethod = "getMachineOpValueT16";
 }
 
@@ -1632,6 +1642,7 @@ def AVDst_512 : AVDstOperand<AV_512_STAGING>;
 class AVLdStOperand<RegisterClass regClass>
   : AVOperand<regClass, "decodeAVLdSt">;
 
+// TODO: These cases should use target align variant
 def AVLdSt_32 : AVLdStOperand<AV_32_STAGING>;
 def AVLdSt_64 : AVLdStOperand<AV_64_STAGING>;
 def AVLdSt_96 : AVLdStOperand<AV_96_STAGING>;
@@ -1644,6 +1655,9 @@ def AVLdSt_288 : AVLdStOperand<AV_288_STAGING>;
 def AVLdSt_512 : AVLdStOperand<AV_512_STAGING>;
 def AVLdSt_576 : AVLdStOperand<AV_576_STAGING>;
 def AVLdSt_1024 : AVLdStOperand<AV_1024_STAGING>;
+
+def AVLdSt_96_Align1 : AVLdStOperand<AV_96_STAGING>;
+def AVLdSt_96_Align2 : AVLdStOperand<AV_96_STAGING_Align2>;
 
 //===----------------------------------------------------------------------===//
 //  ACSrc_* Operands with an AGPR or an inline constant
@@ -1662,3 +1676,23 @@ def AISrc_512_f32 : SrcRegOrImmA9 <AReg_512, "OPERAND_REG_INLINE_AC_FP32">;
 def AISrc_512_b32 : SrcRegOrImmA9 <AReg_512, "OPERAND_REG_INLINE_AC_INT32">;
 def AISrc_1024_f32 : SrcRegOrImmA9 <AReg_1024, "OPERAND_REG_INLINE_AC_FP32">;
 def AISrc_1024_b32 : SrcRegOrImmA9 <AReg_1024, "OPERAND_REG_INLINE_AC_INT32">;
+
+//===----------------------------------------------------------------------===//
+//  Tablegen programming utilities
+//===----------------------------------------------------------------------===//
+
+/// Helper function to extract the register class from an
+/// instruction's operand list, which may be a RegisterOperand or a
+/// direct RegisterClass reference.
+class getRegClassFromOp<DAGOperand Op> {
+  SIRegisterClass ret = !if(
+    !isa<RegisterOperand>(Op),
+    !cast<SIRegisterClass>(!cast<RegisterOperand>(Op).RegClass),
+    !cast<SIRegisterClass>(Op));
+}
+
+/// Check if the operand will use a VGPR class.
+class OperandIsVGPR<DAGOperand Op> {
+  defvar reg_class = getRegClassFromOp<Op>.ret;
+  bit ret = !and(reg_class.HasVGPR, !not(reg_class.HasAGPR));
+}
