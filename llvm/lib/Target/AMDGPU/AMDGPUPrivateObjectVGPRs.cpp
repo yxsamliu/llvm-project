@@ -235,7 +235,7 @@ bool AMDGPUPrivateObjectVGPRs::runOnMachineFunction(MachineFunction &MF) {
   // storing lots of empty or nearly empty sets.
   DenseMap<const MachineBasicBlock *, SmallVector<const MDNode *, 4>>
       ReachableObjs;
-  SmallSet<MachineBasicBlock *, 16> Worklist;
+  SmallPtrSet<MachineBasicBlock *, 16> Worklist;
   for (MachineBasicBlock &MBB : MF)
     Worklist.insert(&MBB);
   while (!Worklist.empty()) {

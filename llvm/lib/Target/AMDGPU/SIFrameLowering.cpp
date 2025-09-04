@@ -1258,7 +1258,7 @@ void SIFrameLowering::finalizeIdx0SaveRestores(MachineFunction &MF,
             }
           }
           // Cleanup liveins
-          SmallSet<MachineBasicBlock *, 16> Worklist;
+          SmallPtrSet<MachineBasicBlock *, 16> Worklist;
           Worklist.insert(MI.getParent());
           while (!Worklist.empty()) {
             MachineBasicBlock &MBB = **Worklist.begin();
