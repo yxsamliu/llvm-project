@@ -152,8 +152,8 @@ def v2i32    : VTVec<2,    i32, 72>;  //    2 x i32 vector value
 def v3i32    : VTVec<3,    i32, 73>;  //    3 x i32 vector value
 def v4i32    : VTVec<4,    i32, 74>;  //    4 x i32 vector value
 def v5i32    : VTVec<5,    i32, 75>;  //    5 x i32 vector value
-def v6i32    : VTVec<6,    i32, 76>;  //    6 x f32 vector value
-def v7i32    : VTVec<7,    i32, 77>;  //    7 x f32 vector value
+def v6i32    : VTVec<6,    i32, 76>;  //    6 x i32 vector value
+def v7i32    : VTVec<7,    i32, 77>;  //    7 x i32 vector value
 def v8i32    : VTVec<8,    i32, 78>;  //    8 x i32 vector value
 def v9i32    : VTVec<9,    i32, 79>;  //    9 x i32 vector value
 def v10i32   : VTVec<10,   i32, 80>;  //   10 x i32 vector value
