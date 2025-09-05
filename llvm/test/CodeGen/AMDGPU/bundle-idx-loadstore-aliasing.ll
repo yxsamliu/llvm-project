@@ -1,6 +1,8 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1300 -verify-machineinstrs -debug-only=bundle-indexed-load-store -stop-after=bundle-indexed-load-store < %s 2> %t | FileCheck --check-prefixes=SINGLEBB %s
 ; RUN: FileCheck --check-prefixes=SINGLEBBDBG %s < %t
 ; RUN: FileCheck --check-prefixes=MULTIBBDBG %s < %t
+;
+; REQUIRES: asserts
 
 ; The two tests in this file demonstrate alias analysis (AA) working in two different contexts for the
 ; AMDGPUBundleIdxLdSt pass: the single basic block use case, and the multi basic block use case. In both
