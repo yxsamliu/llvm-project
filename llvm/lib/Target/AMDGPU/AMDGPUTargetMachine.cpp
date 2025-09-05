@@ -22,6 +22,7 @@
 #include "AMDGPUExportKernelRuntimeHandles.h"
 #include "AMDGPUIGroupLP.h"
 #include "AMDGPUISelDAGToDAG.h"
+#include "AMDGPULowerVGPREncoding.h"
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUPreloadKernArgProlog.h"
@@ -605,7 +606,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIAnnotateControlFlowLegacyPass(*PR);
   initializeAMDGPUInsertSingleUseVDSTPass(*PR);
   initializeAMDGPUInsertDelayAluLegacyPass(*PR);
-  initializeAMDGPULowerVGPREncodingPass(*PR);
+  initializeAMDGPULowerVGPREncodingLegacyPass(*PR);
   initializeAMDGPUIdxRegAllocPass(*PR);
   initializeAMDGPUPrivateObjectVGPRsPass(*PR);
   initializeAMDGPUIndexingInfoWrapperPass(*PR);
@@ -1843,7 +1844,7 @@ void GCNPassConfig::addPreEmitPass() {
 
   addPass(&AMDGPUWaitSGPRHazardsLegacyID);
 
-  addPass(&AMDGPULowerVGPREncodingID);
+  addPass(&AMDGPULowerVGPREncodingLegacyID);
 
   if (isPassEnabled(EnableInsertSingleUseVDST, CodeGenOptLevel::Less))
     addPass(&AMDGPUInsertSingleUseVDSTID);
@@ -2437,6 +2438,7 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
   // cases.
   addPass(PostRAHazardRecognizerPass());
   addPass(AMDGPUWaitSGPRHazardsPass());
+  addPass(AMDGPULowerVGPREncodingPass());
 
   if (isPassEnabled(EnableInsertDelayAlu, CodeGenOptLevel::Less)) {
     addPass(AMDGPUInsertDelayAluPass());

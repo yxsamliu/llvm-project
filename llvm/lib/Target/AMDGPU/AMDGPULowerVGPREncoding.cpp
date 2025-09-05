@@ -48,6 +48,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AMDGPULowerVGPREncoding.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
@@ -59,7 +60,7 @@ using namespace llvm;
 
 namespace {
 
-class AMDGPULowerVGPREncoding : public MachineFunctionPass {
+class AMDGPULowerVGPREncoding {
   static constexpr unsigned VSrc0 = 0, VDst = 3;
   static constexpr unsigned OpNum = 7;
 
@@ -155,16 +156,7 @@ class AMDGPULowerVGPREncoding : public MachineFunctionPass {
   };
 
 public:
-  static char ID;
-
-  AMDGPULowerVGPREncoding() : MachineFunctionPass(ID) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool run(MachineFunction &MF);
 
   struct OpMetaInfo {
     uint32_t Indices = 0;
@@ -714,7 +706,7 @@ MachineInstr *AMDGPULowerVGPREncoding::handleClause(MachineInstr *I) {
   return I;
 }
 
-bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
+bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
   if (!ST->has1024AddressableVGPRs())
     return false;
@@ -780,11 +772,38 @@ bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
+class AMDGPULowerVGPREncodingLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  AMDGPULowerVGPREncodingLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return AMDGPULowerVGPREncoding().run(MF);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
 } // namespace
 
-char AMDGPULowerVGPREncoding::ID = 0;
+char AMDGPULowerVGPREncodingLegacy::ID = 0;
 
-char &llvm::AMDGPULowerVGPREncodingID = AMDGPULowerVGPREncoding::ID;
+char &llvm::AMDGPULowerVGPREncodingLegacyID = AMDGPULowerVGPREncodingLegacy::ID;
 
-INITIALIZE_PASS(AMDGPULowerVGPREncoding, DEBUG_TYPE,
+INITIALIZE_PASS(AMDGPULowerVGPREncodingLegacy, DEBUG_TYPE,
                 "AMDGPU Lower VGPR Encoding", false, false)
+
+PreservedAnalyses
+AMDGPULowerVGPREncodingPass::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  if (!AMDGPULowerVGPREncoding().run(MF))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
