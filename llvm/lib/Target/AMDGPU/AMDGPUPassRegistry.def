@@ -37,6 +37,12 @@ MODULE_PASS("amdgpu-sw-lower-lds", AMDGPUSwLowerLDSPass(*this))
 #define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
 #endif
 MODULE_PASS_WITH_PARAMS(
+    "amdgpu-assign-laneshared", "AMDGPUAssignLaneSharedPass",
+    [=](unsigned MaxLSVGPRs) {
+      return AMDGPUAssignLaneSharedPass(MaxLSVGPRs);
+    },
+    parseAMDGPUAssignLaneSharedPassOptions, "")
+MODULE_PASS_WITH_PARAMS(
     "amdgpu-attributor", "AMDGPUAttributorPass",
     [=](AMDGPUAttributorOptions Options) {
       return AMDGPUAttributorPass(*this, Options);

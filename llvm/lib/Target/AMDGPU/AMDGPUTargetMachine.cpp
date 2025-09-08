@@ -877,6 +877,19 @@ parseAMDGPUAttributorPassOptions(StringRef Params) {
   return Result;
 }
 
+Expected<unsigned> parseAMDGPUAssignLaneSharedPassOptions(StringRef Params) {
+  unsigned MaxLSVGPRs = MaxLaneSharedVGPRS;
+  if (!Params.empty()) {
+    if (Params.getAsInteger(0, MaxLSVGPRs))
+      return make_error<StringError>(
+          formatv("invalid AMDGPUAssignLaneShared pass parameter '{0}' ",
+                  Params)
+              .str(),
+          inconvertibleErrorCode());
+  }
+  return MaxLSVGPRs;
+}
+
 void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 #define GET_PASS_REGISTRY "AMDGPUPassRegistry.def"

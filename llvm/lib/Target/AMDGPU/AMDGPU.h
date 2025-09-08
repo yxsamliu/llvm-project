@@ -156,6 +156,9 @@ struct AMDGPUAssignLaneSharedPass : PassInfoMixin<AMDGPUAssignLaneSharedPass> {
   AMDGPUAssignLaneSharedPass(unsigned MaxLS) : MaxLaneSharedVGPRs(MaxLS) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 void initializeAMDGPUMarkPromotablePrivateLegacyPass(PassRegistry &);

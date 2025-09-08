@@ -387,3 +387,10 @@ PreservedAnalyses AMDGPUAssignLaneSharedPass::run(Module &M,
              ? PreservedAnalyses::none()
              : PreservedAnalyses::all();
 }
+
+void AMDGPUAssignLaneSharedPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<AMDGPUAssignLaneSharedPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << '<' << MaxLaneSharedVGPRs << '>';
+}
