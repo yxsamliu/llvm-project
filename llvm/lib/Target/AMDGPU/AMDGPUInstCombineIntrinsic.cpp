@@ -358,6 +358,10 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
                                                ImageDimIntr->CoordStart))
     return std::nullopt;
 
+  // Do not use G16 on buggy hardware.
+  if (OnlyDerivatives && ST->hasG16Bug())
+    return {};
+
   Type *CoordType = FloatCoord ? Type::getHalfTy(II.getContext())
                                : Type::getInt16Ty(II.getContext());
 

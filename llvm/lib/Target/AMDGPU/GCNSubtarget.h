@@ -1919,6 +1919,10 @@ public:
   /// \returns true if the subtarget requires a wait for xcnt before atomic
   /// flat/global stores & rmw.
   bool requiresWaitXCntBeforeAtomicStores() const { return GFX1250Insts && !GFX13Insts; }
+
+  // \returns true if the subtarget has a hardware bug affecting the G16 variant
+  // of IMAGE_SAMPLE instructions.
+  bool hasG16Bug() const { return getGeneration() == GFX13; };
 };
 
 class GCNUserSGPRUsageInfo {
