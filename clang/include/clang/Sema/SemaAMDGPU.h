@@ -15,12 +15,16 @@
 
 #include "clang/AST/ASTFwd.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 namespace clang {
 class AttributeCommonInfo;
+class Expr;
 class ParsedAttr;
 
 class SemaAMDGPU : public SemaBase {
+  llvm::SmallPtrSet<Expr *, 32> ExpandedPredicates;
+
 public:
   SemaAMDGPU(Sema &S);
 
@@ -66,10 +70,18 @@ public:
   void handleAMDGPUNumVGPRAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUMaxNumWorkGroupsAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUFlatWorkGroupSizeAttr(Decl *D, const ParsedAttr &AL);
+<<<<<<< HEAD
   void handleAMDGPUWavegroupKernelAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUSpatialClusterKernelAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUNoRankSpecializationAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUEnableWaspAttr(Decl *D, const ParsedAttr &AL);
+=======
+
+  /// Expand a valid use of the feature identification builtins into its
+  /// corresponding sequence of instructions.
+  Expr *ExpandAMDGPUPredicateBI(CallExpr *CE);
+  bool IsPredicate(Expr *E) const;
+>>>>>>> 345ea781d534c478eb9d70270b8f405b4542839a
 };
 } // namespace clang
 

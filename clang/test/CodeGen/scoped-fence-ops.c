@@ -30,35 +30,6 @@ void fe1a() {
   __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_WRKGRP);
 }
 
-// AMDGCN-LABEL: define hidden void @fe1b(
-// AMDGCN-SAME: i32 noundef [[ORD:%.*]]) #[[ATTR0]] {
-// AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[ORD_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN-NEXT:    [[ORD_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ORD_ADDR]] to ptr
-// AMDGCN-NEXT:    store i32 [[ORD]], ptr [[ORD_ADDR_ASCAST]], align 4
-// AMDGCN-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ORD_ADDR_ASCAST]], align 4
-// AMDGCN-NEXT:    switch i32 [[TMP0]], label %[[ATOMIC_SCOPE_CONTINUE:.*]] [
-// AMDGCN-NEXT:      i32 1, label %[[ACQUIRE:.*]]
-// AMDGCN-NEXT:      i32 2, label %[[ACQUIRE]]
-// AMDGCN-NEXT:      i32 3, label %[[RELEASE:.*]]
-// AMDGCN-NEXT:      i32 4, label %[[ACQREL:.*]]
-// AMDGCN-NEXT:      i32 5, label %[[SEQCST:.*]]
-// AMDGCN-NEXT:    ]
-// AMDGCN:       [[ATOMIC_SCOPE_CONTINUE]]:
-// AMDGCN-NEXT:    ret void
-// AMDGCN:       [[ACQUIRE]]:
-// AMDGCN-NEXT:    fence syncscope("workgroup") acquire
-// AMDGCN-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
-// AMDGCN:       [[RELEASE]]:
-// AMDGCN-NEXT:    fence syncscope("workgroup") release
-// AMDGCN-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
-// AMDGCN:       [[ACQREL]]:
-// AMDGCN-NEXT:    fence syncscope("workgroup") acq_rel
-// AMDGCN-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
-// AMDGCN:       [[SEQCST]]:
-// AMDGCN-NEXT:    fence syncscope("workgroup") seq_cst
-// AMDGCN-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
-//
 // SPIRV-LABEL: define hidden spir_func void @fe1b(
 // SPIRV-SAME: i32 noundef [[ORD:%.*]]) #[[ATTR0]] {
 // SPIRV-NEXT:  [[ENTRY:.*:]]
@@ -119,6 +90,7 @@ void fe1b(int ord) {
   __scoped_atomic_thread_fence(ord, __MEMORY_SCOPE_WRKGRP);
 }
 
+<<<<<<< HEAD
 // AMDGCN-LABEL: define hidden void @fe1c(
 // AMDGCN-SAME: i32 noundef [[SCOPE:%.*]]) #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
@@ -155,6 +127,8 @@ void fe1b(int ord) {
 // AMDGCN-NEXT:    fence syncscope("cluster") release
 // AMDGCN-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
 //
+=======
+>>>>>>> 345ea781d534c478eb9d70270b8f405b4542839a
 // SPIRV-LABEL: define hidden spir_func void @fe1c(
 // SPIRV-SAME: i32 noundef [[SCOPE:%.*]]) #[[ATTR0]] {
 // SPIRV-NEXT:  [[ENTRY:.*:]]
