@@ -4,6 +4,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn--amdpal -mcpu=gfx1200 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefix=DAGISEL64 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn--amdpal -mcpu=gfx1200 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefix=GISEL64 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn--amdpal -mcpu=gfx1250 < %s | FileCheck --check-prefix=GFX1250-DAGISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn--amdpal -mcpu=gfx1250 < %s | FileCheck --check-prefix=GFX1250-DAGISEL %s
 
 ; Make sure the i1 %active is passed through EXEC.
 ; The EXEC mask should be set to -1 for the duration of the function
