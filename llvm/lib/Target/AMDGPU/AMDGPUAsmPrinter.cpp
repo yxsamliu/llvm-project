@@ -591,9 +591,6 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
   }
-  if (isGFX1250(ST) && ST.hasCUStores()) {
-    KernelCodeProperties |= amdhsa::KERNEL_CODE_PROPERTY_USES_CU_STORES;
-  }
 
   // CurrentProgramInfo.DynamicCallStack is a MCExpr and could be
   // un-evaluatable at this point so it cannot be conditionally checked here.

@@ -800,10 +800,6 @@ For example:
                                                   performant than code generated for XNACK replay
                                                   disabled.
 
-     cu-stores       TODO                         On GFX12.5, controls whether ``scope:SCOPE_CU`` stores may be used.
-                                                  This is enabled by default.
-                                                  If disabled, all stores will be done at ``scope:SCOPE_SE`` or greater.
-
      =============== ============================ ==================================================
 
 .. _amdgpu-target-id:
@@ -5305,9 +5301,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      and must be 0,
      >454    1 bit   ENABLE_SGPR_PRIVATE_SEGMENT
                      _SIZE
-     455     1 bit   USES_CU_STORES                  GFX12.5: Whether the ``cu-stores`` target attribute is enabled.
-                                                     If 0, then all stores are ``SCOPE_SE`` or higher.
-     457:456 2 bits                                  Reserved, must be 0.
+     457:455 3 bits                                  Reserved, must be 0.
      458     1 bit   ENABLE_WAVEFRONT_SIZE32         GFX6-GFX9
                                                        Reserved, must be 0.
                                                      GFX10-GFX11
@@ -16854,11 +16848,6 @@ For GFX125x:
     reported.
   * RMW operations can be done locally.
 
-* Stores with ``SCOPE_CU`` report completion when crossing the WGP$, but as it is a
-  write-through cache, the store still needs to reach the data fabric coherence point
-  before becoming visible to wavefronts outside the current work-group.
-  Thus, a ``global_wb`` of ``scope:SCOPE_SE`` or greater, followed by a ``s_wait_storecnt 0x0``
-  is required for synchronization beyond workgroup scope.
 * Some memory operations contain a ``nv`` bit, for "non-volatile", which indicates
   memory that is not expected to change during a kernel's execution.
   This information is propagated to the cache lines for that address
@@ -16897,11 +16886,6 @@ ensure it is coherent with the vector caches. The scalar and vector caches are
 invalidated between kernel dispatches by CP since constant address space data
 may change between kernel dispatch executions. See
 :ref:`amdgpu-amdhsa-memory-spaces`.
-
-Stores that may hit into scratch memory must always be done at ``SCOPE_SE`` or
-greater in order to prevent the wavefront from terminating (and the scratch memory
-region being potentially reallocated to another wavefront) while such stores are
-still in flight.
 
 The code sequences used to implement the memory model for GFX125x are defined in
 table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-table`.
@@ -17445,7 +17429,7 @@ the instruction in the code sequence that references the table.
                                                          2. buffer/global/ds/flat_store
 
      store atomic release      - workgroup    - global   1. | ``s_wait_storecnt 0x0``
-                                              - generic     | ``s_wait_loadcnt 0x0``
+                               - cluster      - generic     | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL, omit ``s_wait_dscnt 0x0``.
@@ -17473,6 +17457,8 @@ the instruction in the code sequence that references the table.
                                                              load/store/load
                                                              atomic/store
                                                              atomic/atomicrmw.
+                                                           - Must happen before the
+                                                             following store.
                                                            - Ensures that all
                                                              memory operations
                                                              have
@@ -17523,9 +17509,9 @@ the instruction in the code sequence that references the table.
                                                              released.
 
                                                          2. ds_store
-     store atomic release      - cluster      - global   1. ``global_wb``
-                               - agent        - generic
-                               - system                      - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+     store atomic release      - agent        - global   1. ``global_wb``
+                               - system       - generic
+                                                             - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
 
                                                          2. | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
@@ -17584,7 +17570,7 @@ the instruction in the code sequence that references the table.
 
                                                          2. buffer/global/ds/flat_atomic
      atomicrmw    release      - workgroup    - global   1. | ``s_wait_storecnt 0x0``
-                                                            | ``s_wait_loadcnt 0x0``
+                               - cluster      - generic     | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL, omit ``s_wait_dscnt 0x0``.
@@ -17664,9 +17650,9 @@ the instruction in the code sequence that references the table.
                                                              released.
 
                                                          2. ds_atomic
-     atomicrmw    release      - cluster      - global   1. ``global_wb``
-                               - agent        - generic
-                               - system                    - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+     atomicrmw    release      - agent        - global   1. ``global_wb``
+                               - system       - generic
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
 
                                                          2. | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
@@ -17720,7 +17706,7 @@ the instruction in the code sequence that references the table.
      fence        release      - singlethread *none*     *none*
                                - wavefront
      fence        release      - workgroup    *none*     1. | ``s_wait_storecnt 0x0``
-                                                            | ``s_wait_loadcnt 0x0``
+                               - cluster                    | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL, omit ``s_wait_dscnt 0x0``.
@@ -17773,9 +17759,9 @@ the instruction in the code sequence that references the table.
                                                              following
                                                              fence-paired-atomic.
 
-     fence        release      - cluster      *none*     1. ``global_wb``
-                               - agent
-                               - system                    - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+     fence        release      - agent        *none*     1. ``global_wb``
+                               - system
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
 
                                                          2. | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
@@ -17842,7 +17828,7 @@ the instruction in the code sequence that references the table.
 
                                                          2. buffer/global/ds/flat_atomic
      atomicrmw    acq_rel      - workgroup    - global   1. | ``s_wait_storecnt 0x0``
-                                                            | ``s_wait_loadcnt 0x0``
+                               - cluster                    | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL, omit ``s_wait_dscnt 0x0``.
@@ -17955,7 +17941,7 @@ the instruction in the code sequence that references the table.
                                                              acquired.
 
      atomicrmw    acq_rel      - workgroup    - generic  1. | ``s_wait_storecnt 0x0``
-                                                            | ``s_wait_loadcnt 0x0``
+                               - cluster                    | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL, omit ``s_wait_loadcnt 0x0``.
@@ -18020,9 +18006,9 @@ the instruction in the code sequence that references the table.
                                                              acquired.
 
 
-     atomicrmw    acq_rel      - cluster      - global   1. ``global_wb``
-                               - agent
-                               - system                    - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+     atomicrmw    acq_rel      - agent        - global   1. ``global_wb``
+                               - system
+                                                           - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
 
                                                          2. | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
@@ -18099,9 +18085,9 @@ the instruction in the code sequence that references the table.
                                                              will not see stale
                                                              global data.
 
-     atomicrmw    acq_rel      - cluster      - generic  1. ``global_wb``
-                               - agent
-                               - system                      - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+     atomicrmw    acq_rel      - agent        - generic  1. ``global_wb``
+                               - system
+                                                             - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
 
                                                          2. | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
@@ -18185,7 +18171,7 @@ the instruction in the code sequence that references the table.
      fence        acq_rel      - singlethread *none*     *none*
                                - wavefront
      fence        acq_rel      - workgroup    *none*     1. | ``s_wait_storecnt 0x0``
-                                                            | ``s_wait_loadcnt 0x0``
+                               - cluster                    | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL and
@@ -18284,9 +18270,9 @@ the instruction in the code sequence that references the table.
                                                              the
                                                              acquire-fence-paired-atomic.
 
-     fence        acq_rel      - cluster      *none*     1.  ``global_wb``
-                               - agent
-                               - system                      - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
+     fence        acq_rel      - agent        *none*     1.  ``global_wb``
+                               - system
+                                                             - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
 
                                                          2. | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
@@ -20468,8 +20454,6 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                   (except      :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
                                                                                   GFX942)
      ``.amdhsa_user_sgpr_private_segment_size``               0                   GFX6-GFX12   Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in
-                                                                                               :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-     ``.amdhsa_uses_cu_stores``                               0                   GFX12.5      Controls USES_CU_STORES in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_wavefront_size32``                             Target              GFX10-GFX12  Controls ENABLE_WAVEFRONT_SIZE32 in
                                                               Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.

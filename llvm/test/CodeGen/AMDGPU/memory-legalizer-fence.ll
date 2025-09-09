@@ -1811,7 +1811,6 @@ define amdgpu_kernel void @cluster_release_fence() {
 ;
 ; GFX1250-LABEL: cluster_release_fence:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_endpgm
@@ -1916,7 +1915,6 @@ define amdgpu_kernel void @cluster_acq_rel_fence() {
 ;
 ; GFX1250-LABEL: cluster_acq_rel_fence:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SE
@@ -2022,7 +2020,6 @@ define amdgpu_kernel void @cluster_seq_cst_fence() {
 ;
 ; GFX1250-LABEL: cluster_seq_cst_fence:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SE
@@ -2211,7 +2208,6 @@ define amdgpu_kernel void @cluster_one_as_release_fence() {
 ;
 ; GFX1250-LABEL: cluster_one_as_release_fence:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_endpgm
@@ -2316,7 +2312,6 @@ define amdgpu_kernel void @cluster_one_as_acq_rel_fence() {
 ;
 ; GFX1250-LABEL: cluster_one_as_acq_rel_fence:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SE
@@ -2422,7 +2417,6 @@ define amdgpu_kernel void @cluster_one_as_seq_cst_fence() {
 ;
 ; GFX1250-LABEL: cluster_one_as_seq_cst_fence:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SE

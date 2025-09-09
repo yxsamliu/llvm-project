@@ -2530,7 +2530,7 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     //  Otherwise in CU mode all waves of a work-group are on the same CU, and
     //  so the L0 does not need to be invalidated.
     //
-    // GFX125x has a shared CU$, so no invalidates are required.
+    // GFX125x has a shared WGP$, so no invalidates are required.
     if (ST.isCuModeEnabled())
       return false;
 
@@ -2575,32 +2575,24 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  // gfx120x:
-  //   global_wb is only necessary at system scope as stores
-  //   can only report completion from L2 onwards.
+  // global_wb is only necessary at system scope as stores
+  // cannot report completion earlier than L2.
   //
-  //   Emitting it for lower scopes is a slow no-op, so we omit it
-  //   for performance.
-  //
-  // gfx125x:
-  //    stores can also report completion from WGP$ so we must emit
-  //    global_wb at cluster & device scope as well to ensure stores
-  //    reached the right cache level.
+  // Emitting it for lower scopes is a slow no-op, so we omit it
+  // for performance.
   switch (Scope) {
   case SIAtomicScope::SYSTEM:
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
         .addImm(AMDGPU::CPol::SCOPE_SYS);
     break;
   case SIAtomicScope::AGENT:
+    // GFX1250 may have >1 L2 per device so we must emit a device scope WB.
     if (ST.hasGFX1250Insts()) {
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
           .addImm(AMDGPU::CPol::SCOPE_DEV);
     }
     break;
   case SIAtomicScope::CLUSTER:
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
-        .addImm(AMDGPU::CPol::SCOPE_SE);
-    break;
   case SIAtomicScope::WORKGROUP:
     // No WB necessary, but we still have to wait.
     break;
@@ -2684,17 +2676,9 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   const unsigned Scope = CPol->getImm() & CPol::SCOPE;
 
   // GFX120x only: Extra waits needed before non-atomic system scope stores.
-  if (!ST.hasGFX1250Insts()) {
-    if (!Atomic && Scope == CPol::SCOPE_SYS)
-      Changed |= insertWaitsBeforeSystemScopeStore(MI.getIterator());
-    return Changed;
-  }
+  if (!ST.hasGFX1250Insts() && !Atomic && Scope == CPol::SCOPE_SYS)
+    Changed |= insertWaitsBeforeSystemScopeStore(MI.getIterator());
 
-  // GFX125x only: Require SCOPE_SE on stores that may hit the scratch address
-  // space, or if the "cu-stores" target feature is disabled.
-  if (Scope == CPol::SCOPE_CU &&
-      (!ST.hasCUStores() || TII->mayAccessScratchThroughFlat(MI)))
-    Changed |= setScope(MI, CPol::SCOPE_SE);
   return Changed;
 }
 

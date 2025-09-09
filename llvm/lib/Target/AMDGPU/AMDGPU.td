@@ -286,12 +286,6 @@ def FeatureSafeCUPrefetch : SubtargetFeature<"safe-cu-prefetch",
   "VMEM CU scope prefetches do not fail on illegal address"
 >;
 
-def FeatureCUStores : SubtargetFeature<"cu-stores",
-  "HasCUStores",
-  "true",
-  "Whether SCOPE_CU stores can be used on GFX12.5"
->;
-
 def FeatureVcmpxExecWARHazard : SubtargetFeature<"vcmpx-exec-war-hazard",
   "HasVcmpxExecWARHazard",
   "true",
@@ -2071,7 +2065,6 @@ def FeatureISAVersion12_50 : FeatureSet<
   [FeatureGFX12,
    FeatureGFX1250Insts,
    FeatureRequiresAlignedVGPRs,
-   FeatureCUStores,
    FeatureAddressableLocalMemorySize327680,
    FeatureCuMode,
    Feature1024AddressableVGPRs,
