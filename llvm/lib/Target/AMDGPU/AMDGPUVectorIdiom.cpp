@@ -81,7 +81,7 @@ static cl::opt<unsigned> AMDGPUVectorIdiomMaxBytes(
 static cl::opt<bool> AMDGPUVectorIdiomEnable(
     "amdgpu-vector-idiom-enable",
     cl::desc("Enable pass AMDGPUVectorIdiom"),
-    cl::init(false));
+    cl::init(true));
 
 // Selects an integer or integer-vector element type matching NBytes, using the
 // minimum proven alignment to decide the widest safe element width.
