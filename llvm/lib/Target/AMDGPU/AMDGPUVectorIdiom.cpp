@@ -173,18 +173,6 @@ struct AMDGPUVectorIdiomImpl {
     if (Sel.isVolatile())
       return false;
 
-    // This is a null check - always use CFG split
-    Value *Cond = Sel.getCondition();
-    ICmpInst *ICmp = dyn_cast<ICmpInst>(Cond);
-    if (ICmp && ICmp->isEquality() &&
-        (isa<ConstantPointerNull>(ICmp->getOperand(0)) ||
-         isa<ConstantPointerNull>(ICmp->getOperand(1)))) {
-      splitCFGForMemcpy(MT, Sel.getCondition(), A, Bv, true);
-      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Null check pattern - "
-                           "using CFG split\n");
-      return true;
-    }
-
     Align DstAlign = MaybeAlign(MT.getDestAlign()).valueOrOne();
     Align AlignAB;
     bool CanSpeculate =
