@@ -48,6 +48,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -106,12 +107,22 @@ static Align minAlign(Align A, Align B) { return A < B ? A : B; }
 // Checks if both pointer operands can be speculatively loaded for N bytes and
 // computes the minimum alignment to use.
 // Notes:
-// - Intentionally conservative: relies on getOrEnforceKnownAlignment.
+// - Intentionally conservative: relies on isDereferenceablePointer and
+//   getOrEnforceKnownAlignment.
 // - AA/TLI are not used for deeper reasoning here.
-static bool bothArmsSafeToSpeculateLoads(Value *A, Value *B, Align &OutAlign,
-                                         const DataLayout &DL,
+static bool bothArmsSafeToSpeculateLoads(Value *A, Value *B, uint64_t Size,
+                                         Align &OutAlign, const DataLayout &DL,
                                          AssumptionCache *AC,
-                                         const DominatorTree *DT) {
+                                         const DominatorTree *DT,
+                                         Instruction *CtxI) {
+  APInt SizeAPInt(DL.getIndexTypeSizeInBits(A->getType()), Size);
+  if (!isDereferenceableAndAlignedPointer(A, Align(1), SizeAPInt, DL, CtxI, AC,
+                                          DT, nullptr) ||
+      !isDereferenceableAndAlignedPointer(B, Align(1), SizeAPInt, DL, CtxI, AC,
+                                          DT, nullptr)) {
+    return false;
+  }
+
   Align AlignA =
       llvm::getOrEnforceKnownAlignment(A, Align(1), DL, nullptr, AC, DT);
   Align AlignB =
@@ -159,10 +170,25 @@ struct AMDGPUVectorIdiomImpl {
     ConstantInt *LenCI = cast<ConstantInt>(MT.getLength());
     uint64_t N = LenCI->getLimitedValue();
 
+    if (Sel.isVolatile())
+      return false;
+
+    // This is a null check - always use CFG split
+    Value *Cond = Sel.getCondition();
+    ICmpInst *ICmp = dyn_cast<ICmpInst>(Cond);
+    if (ICmp && ICmp->isEquality() &&
+        (isa<ConstantPointerNull>(ICmp->getOperand(0)) ||
+         isa<ConstantPointerNull>(ICmp->getOperand(1)))) {
+      splitCFGForMemcpy(MT, Sel.getCondition(), A, Bv, true);
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Null check pattern - "
+                           "using CFG split\n");
+      return true;
+    }
+
     Align DstAlign = MaybeAlign(MT.getDestAlign()).valueOrOne();
     Align AlignAB;
     bool CanSpeculate =
-        bothArmsSafeToSpeculateLoads(A, Bv, AlignAB, DL, AC, DT);
+        bothArmsSafeToSpeculateLoads(A, Bv, N, AlignAB, DL, AC, DT, &MT);
 
     unsigned AS = cast<PointerType>(A->getType())->getAddressSpace();
     assert(AS == cast<PointerType>(Bv->getType())->getAddressSpace() &&
