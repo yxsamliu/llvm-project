@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-vector-idiom -S %s | FileCheck %s
+; RUN: opt -amdgpu-vector-idiom-enable -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-vector-idiom -S %s | FileCheck %s
 
 ; This test verifies the AMDGPUVectorIdiomCombinePass transforms:
 ; 1) memcpy with select-fed source into a value-level select between two loads,

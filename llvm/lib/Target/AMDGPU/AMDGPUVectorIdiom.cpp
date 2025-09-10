@@ -78,6 +78,11 @@ static cl::opt<unsigned> AMDGPUVectorIdiomMaxBytes(
              "(default 32)"),
     cl::init(32));
 
+static cl::opt<bool> AMDGPUVectorIdiomEnable(
+    "amdgpu-vector-idiom-enable",
+    cl::desc("Enable pass AMDGPUVectorIdiom"),
+    cl::init(false));
+
 // Selects an integer or integer-vector element type matching NBytes, using the
 // minimum proven alignment to decide the widest safe element width.
 // Assumptions:
@@ -284,6 +289,9 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
   const DataLayout &DL = F.getParent()->getDataLayout();
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &AC = FAM.getResult<AssumptionAnalysis>(F);
+
+  if (!AMDGPUVectorIdiomEnable)
+    return PreservedAnalyses::all();
 
   SmallVector<CallInst *, 8> Worklist;
   for (Instruction &I : instructions(F)) {
