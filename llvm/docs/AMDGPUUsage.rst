@@ -1507,7 +1507,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - `v_mov_b32 <dest> <old>`
                                                    - `v_mov_b32 <dest> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>`
 
-  :ref:`llvm.prefetch <int_prefetch>`              Implemented on gfx125x, ignored on earlier targets.
+  :ref:`llvm.prefetch <int_prefetch>`              Implemented on gfx1250, ignored on earlier targets.
                                                    First argument is flat, global, or constant address space pointer.
                                                    Any other address space is not supported.
                                                    On gfx125x generates flat_prefetch_b8 or global_prefetch_b8 and brings data to GL2.
