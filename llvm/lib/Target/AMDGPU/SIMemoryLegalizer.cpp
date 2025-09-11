@@ -2678,11 +2678,8 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   const unsigned Scope = CPol->getImm() & CPol::SCOPE;
 
   // GFX12.0 only: Extra waits needed before system scope stores.
-  if (!ST.hasGFX1250Insts()) {
-    if (!Atomic && Scope == CPol::SCOPE_SYS)
-      return insertWaitsBeforeSystemScopeStore(MI);
-    return Changed;
-  }
+  if (!ST.hasGFX1250Insts() && !Atomic && Scope == CPol::SCOPE_SYS)
+    Changed |= insertWaitsBeforeSystemScopeStore(MI.getIterator());
 
   return Changed;
 }
