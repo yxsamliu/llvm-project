@@ -121,7 +121,7 @@ static bool bothArmsSafeToSpeculateLoads(Value *A, Value *B, uint64_t Size,
   Align AlignB =
       llvm::getOrEnforceKnownAlignment(B, Align(1), DL, nullptr, AC, DT);
 
-  if (AlignB.value() < 1)
+  if (AlignB < Align(1))
     return false;
 
   if (!isDereferenceableAndAlignedPointer(A, Align(1), SizeAPInt, DL, CtxI, AC,
@@ -131,7 +131,7 @@ static bool bothArmsSafeToSpeculateLoads(Value *A, Value *B, uint64_t Size,
   Align AlignA =
       llvm::getOrEnforceKnownAlignment(A, Align(1), DL, nullptr, AC, DT);
 
-  if (AlignA.value() < 1)
+  if (AlignA < Align(1))
     return false;
 
   OutAlign = minAlign(AlignA, AlignB);
