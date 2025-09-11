@@ -114,19 +114,24 @@ static bool bothArmsSafeToSpeculateLoads(Value *A, Value *B, uint64_t Size,
                                          const DominatorTree *DT,
                                          Instruction *CtxI) {
   APInt SizeAPInt(DL.getIndexTypeSizeInBits(A->getType()), Size);
-  if (!isDereferenceableAndAlignedPointer(A, Align(1), SizeAPInt, DL, CtxI, AC,
-                                          DT, nullptr) ||
-      !isDereferenceableAndAlignedPointer(B, Align(1), SizeAPInt, DL, CtxI, AC,
-                                          DT, nullptr)) {
+  if (!isDereferenceableAndAlignedPointer(B, Align(1), SizeAPInt, DL, CtxI, AC,
+                                          DT, nullptr))
     return false;
-  }
 
-  Align AlignA =
-      llvm::getOrEnforceKnownAlignment(A, Align(1), DL, nullptr, AC, DT);
   Align AlignB =
       llvm::getOrEnforceKnownAlignment(B, Align(1), DL, nullptr, AC, DT);
 
-  if (AlignA.value() < 1 || AlignB.value() < 1)
+  if (AlignB.value() < 1)
+    return false;
+
+  if (!isDereferenceableAndAlignedPointer(A, Align(1), SizeAPInt, DL, CtxI, AC,
+                                          DT, nullptr))
+    return false;
+
+  Align AlignA =
+      llvm::getOrEnforceKnownAlignment(A, Align(1), DL, nullptr, AC, DT);
+
+  if (AlignA.value() < 1)
     return false;
 
   OutAlign = minAlign(AlignA, AlignB);
