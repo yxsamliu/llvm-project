@@ -31,7 +31,9 @@ class AMDGPUVectorIdiomCombinePass
   unsigned MaxBytes;
 
 public:
-  AMDGPUVectorIdiomCombinePass();
+  /// \p MaxBytes is max memcpy size (in bytes) to transform in
+  /// AMDGPUVectorIdiom
+  AMDGPUVectorIdiomCombinePass(unsigned MaxBytes);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };

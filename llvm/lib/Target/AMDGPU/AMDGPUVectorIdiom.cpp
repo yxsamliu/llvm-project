@@ -71,13 +71,6 @@ using namespace PatternMatch;
 
 namespace {
 
-// Default to 32 bytes since the largest HIP vector types are double4 or long4.
-static cl::opt<unsigned> AMDGPUVectorIdiomMaxBytes(
-    "amdgpu-vector-idiom-max-bytes",
-    cl::desc("Max memcpy size (in bytes) to transform in AMDGPUVectorIdiom "
-             "(default 32)"),
-    cl::init(32));
-
 static cl::opt<bool> AMDGPUVectorIdiomEnable(
     "amdgpu-vector-idiom-enable",
     cl::desc("Enable pass AMDGPUVectorIdiom"),
@@ -277,8 +270,8 @@ struct AMDGPUVectorIdiomImpl {
 
 } // end anonymous namespace
 
-AMDGPUVectorIdiomCombinePass::AMDGPUVectorIdiomCombinePass()
-    : MaxBytes(AMDGPUVectorIdiomMaxBytes) {}
+AMDGPUVectorIdiomCombinePass::AMDGPUVectorIdiomCombinePass(unsigned MaxBytes)
+    : MaxBytes(MaxBytes) {}
 
 // Pass driver that locates small, constant-size, non-volatile memcpy calls
 // where source or destination is a select in the same address space. Applies

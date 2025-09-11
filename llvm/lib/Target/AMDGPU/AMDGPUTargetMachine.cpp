@@ -852,7 +852,9 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
         // Run vector-idiom canonicalization early (after inlining) and before
         // infer-AS / SROA to maximize scalarization opportunities.
-        FPM.addPass(AMDGPUVectorIdiomCombinePass());
+        // Specify 32 bytes since the largest HIP vector types are double4 or
+        // long4.
+        FPM.addPass(AMDGPUVectorIdiomCombinePass(/*MaxBytes=*/32));
 
         // Add infer address spaces pass to the opt pipeline after inlining
         // but before SROA to increase SROA opportunities.
@@ -916,8 +918,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
         if (Level != OptimizationLevel::O0) {
-            PM.addPass(createModuleToFunctionPassAdaptor(
-                AMDGPUVectorIdiomCombinePass()));
+          PM.addPass(createModuleToFunctionPassAdaptor(
+              AMDGPUVectorIdiomCombinePass(/*MaxBytes=*/32)));
           // Do we really need internalization in LTO?
           if (InternalizeSymbols) {
             PM.addPass(InternalizePass(mustPreserveGV));
