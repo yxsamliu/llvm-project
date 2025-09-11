@@ -149,7 +149,7 @@ static Value *castPtrTo(Value *Ptr, unsigned ExpectedAS) {
 }
 
 struct AMDGPUVectorIdiomImpl {
-  unsigned MaxBytes;
+  const unsigned MaxBytes;
 
   AMDGPUVectorIdiomImpl(unsigned MaxBytes) : MaxBytes(MaxBytes) {}
 
@@ -167,8 +167,6 @@ struct AMDGPUVectorIdiomImpl {
     Value *Dst = MT.getRawDest();
     Value *A = Sel.getTrueValue();
     Value *Bv = Sel.getFalseValue();
-    if (!A->getType()->isPointerTy() || !Bv->getType()->isPointerTy())
-      return false;
 
     ConstantInt *LenCI = cast<ConstantInt>(MT.getLength());
     uint64_t N = LenCI->getLimitedValue();
@@ -182,8 +180,6 @@ struct AMDGPUVectorIdiomImpl {
         bothArmsSafeToSpeculateLoads(A, Bv, N, AlignAB, DL, AC, DT, &MT);
 
     unsigned AS = cast<PointerType>(A->getType())->getAddressSpace();
-    assert(AS == cast<PointerType>(Bv->getType())->getAddressSpace() &&
-           "Expected same AS");
 
     if (CanSpeculate) {
       Align MinAlign = std::min(AlignAB, DstAlign);
@@ -219,8 +215,6 @@ struct AMDGPUVectorIdiomImpl {
   bool transformSelectMemcpyDest(MemTransferInst &MT, SelectInst &Sel) {
     Value *DA = Sel.getTrueValue();
     Value *DB = Sel.getFalseValue();
-    if (!DA->getType()->isPointerTy() || !DB->getType()->isPointerTy())
-      return false;
 
     splitCFGForMemcpy(MT, Sel.getCondition(), DA, DB, false);
     LLVM_DEBUG(
