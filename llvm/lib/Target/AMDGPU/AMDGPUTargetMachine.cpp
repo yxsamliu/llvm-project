@@ -2153,8 +2153,6 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
   if (EnableLowerModuleLDS)
     addPass(AMDGPULowerModuleLDSPass(TM));
 
-  addPass(AMDGPUAssignLaneSharedPass(MaxLaneSharedVGPRS));
-
   // Run atomic optimizer before Atomic Expand
   if (TM.getOptLevel() >= CodeGenOptLevel::Less &&
       (AMDGPUAtomicOptimizerStrategy != ScanOptions::None))
@@ -2222,9 +2220,12 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
   // nodes out of the graph, which leads to function-level passes not
   // being run on them, which causes crashes in the resource usage analysis).
   addPass(AMDGPULowerBufferFatPointersPass(TM));
+
   addPass.requireCGSCCOrder();
 
   addPass(AMDGPULowerIntrinsicsPass(TM));
+
+  addPass(AMDGPUAssignLaneSharedPass(MaxLaneSharedVGPRS));
 
   Base::addCodeGenPrepare(addPass);
 
