@@ -1712,8 +1712,8 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
       PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
   SmallString<256> HSOpts_ModuleCachePath;
-  CompilerInstance::normalizeModuleCachePath(
-      PP.getFileManager(), HSOpts.ModuleCachePath, HSOpts_ModuleCachePath);
+  normalizeModuleCachePath(PP.getFileManager(), HSOpts.ModuleCachePath,
+                           HSOpts_ModuleCachePath);
 
   AddString(HSOpts.Sysroot, Record);
   AddString(HSOpts.ResourceDir, Record);
