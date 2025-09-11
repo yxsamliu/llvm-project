@@ -9822,35 +9822,35 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return Subtarget->hasClusters()
                ? getPreloadedValue(DAG, *MFI, VT,
                                    AMDGPUFunctionArgInfo::WORKGROUP_ID_X)
-               : DAG.getUNDEF(VT);
+               : DAG.getPOISON(VT);
   case Intrinsic::amdgcn_cluster_id_y:
     return Subtarget->hasClusters()
                ? getPreloadedValue(DAG, *MFI, VT,
                                    AMDGPUFunctionArgInfo::WORKGROUP_ID_Y)
-               : DAG.getUNDEF(VT);
+               : DAG.getPOISON(VT);
   case Intrinsic::amdgcn_cluster_id_z:
     return Subtarget->hasClusters()
                ? getPreloadedValue(DAG, *MFI, VT,
                                    AMDGPUFunctionArgInfo::WORKGROUP_ID_Z)
-               : DAG.getUNDEF(VT);
+               : DAG.getPOISON(VT);
   case Intrinsic::amdgcn_cluster_workgroup_id_x:
     return Subtarget->hasClusters()
                ? getPreloadedValue(
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X)
-               : DAG.getUNDEF(VT);
+               : DAG.getPOISON(VT);
   case Intrinsic::amdgcn_cluster_workgroup_id_y:
     return Subtarget->hasClusters()
                ? getPreloadedValue(
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y)
-               : DAG.getUNDEF(VT);
+               : DAG.getPOISON(VT);
   case Intrinsic::amdgcn_cluster_workgroup_id_z:
     return Subtarget->hasClusters()
                ? getPreloadedValue(
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z)
-               : DAG.getUNDEF(VT);
+               : DAG.getPOISON(VT);
   case Intrinsic::amdgcn_cluster_workgroup_flat_id:
     return Subtarget->hasClusters()
                ? lowerConstHwRegRead(DAG, Op, AMDGPU::Hwreg::ID_IB_STS2, 21, 4)
@@ -9860,25 +9860,25 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                ? getPreloadedValue(
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X)
-               : DAG.getUNDEF(VT);
+               : DAG.getPOISON(VT);
   case Intrinsic::amdgcn_cluster_workgroup_max_id_y:
     return Subtarget->hasClusters()
                ? getPreloadedValue(
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y)
-               : DAG.getUNDEF(VT);
+               : DAG.getPOISON(VT);
   case Intrinsic::amdgcn_cluster_workgroup_max_id_z:
     return Subtarget->hasClusters()
                ? getPreloadedValue(
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z)
-               : DAG.getUNDEF(VT);
+               : DAG.getPOISON(VT);
   case Intrinsic::amdgcn_cluster_workgroup_max_flat_id:
     return Subtarget->hasClusters()
                ? getPreloadedValue(
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID)
-               : DAG.getUNDEF(VT);
+               : DAG.getPOISON(VT);
   case Intrinsic::amdgcn_wave_id:
     return lowerWaveID(DAG, Op);
   case Intrinsic::amdgcn_lds_kernel_id: {
