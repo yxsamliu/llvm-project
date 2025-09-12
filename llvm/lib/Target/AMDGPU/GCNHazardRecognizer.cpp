@@ -525,8 +525,8 @@ static int getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
                               const MachineInstr *MI, IsExpiredFn IsExpired) {
   DenseSet<const MachineBasicBlock *> Visited;
   return getWaitStatesSince(IsHazard, MI->getParent(),
-                            std::next(MI->getReverseIterator()),
-                            0, IsExpired, Visited);
+                            std::next(MI->getReverseIterator()), 0, IsExpired,
+                            Visited, SIInstrInfo::getNumWaitStates);
 }
 
 int GCNHazardRecognizer::getWaitStatesSince(IsHazardFn IsHazard, int Limit) {
@@ -1195,7 +1195,8 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixVALUPartialForwardingHazard(MI);
   fixVALUTransUseHazard(MI);
   fixVALUTransCoexecutionHazards(MI);
-  fixWMMAHazards(MI);
+  fixWMMAHazards(MI); // fall-through if co-execution is enabled.
+  fixWMMACoexecutionHazards(MI);
   fixShift64HighRegBug(MI);
   fixVALUMaskWriteHazard(MI);
   fixRequiredExportPriority(MI);
@@ -1927,7 +1928,6 @@ bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
   return true;
 }
 
-<<<<<<< HEAD
 static bool isCoexecutableVALUInst(const MachineInstr &MI) {
   return SIInstrInfo::isVALU(MI) && !SIInstrInfo::isTRANS(MI) &&
          !SIInstrInfo::isWMMA(MI) && !SIInstrInfo::isSWMMAC(MI); // What else?
@@ -2104,8 +2104,6 @@ bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
   return true;
 }
 
-=======
->>>>>>> 345ea781d534c478eb9d70270b8f405b4542839a
 bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   if (!ST.hasShift64HighRegBug())
     return false;

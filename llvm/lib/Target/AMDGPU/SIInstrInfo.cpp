@@ -1652,14 +1652,10 @@ static unsigned getSGPRSpillSaveOpcode(unsigned Size, bool NeedsCFI) {
   case 48:
     return AMDGPU::SI_SPILL_S384_SAVE;
   case 64:
-<<<<<<< HEAD
-    return AMDGPU::SI_SPILL_S512_SAVE;
-  case 72:
-    return AMDGPU::SI_SPILL_S576_SAVE;
-=======
     return NeedsCFI ? AMDGPU::SI_SPILL_S512_CFI_SAVE
                     : AMDGPU::SI_SPILL_S512_SAVE;
->>>>>>> 345ea781d534c478eb9d70270b8f405b4542839a
+  case 72:
+    return AMDGPU::SI_SPILL_S576_SAVE;
   case 128:
     return NeedsCFI ? AMDGPU::SI_SPILL_S1024_CFI_SAVE
                     : AMDGPU::SI_SPILL_S1024_SAVE;
@@ -1706,14 +1702,10 @@ static unsigned getVGPRSpillSaveOpcode(unsigned Size, bool NeedsCFI) {
     return NeedsCFI ? AMDGPU::SI_SPILL_V384_CFI_SAVE
                     : AMDGPU::SI_SPILL_V384_SAVE;
   case 64:
-<<<<<<< HEAD
-    return AMDGPU::SI_SPILL_V512_SAVE;
-  case 72:
-    return AMDGPU::SI_SPILL_V576_SAVE;
-=======
     return NeedsCFI ? AMDGPU::SI_SPILL_V512_CFI_SAVE
                     : AMDGPU::SI_SPILL_V512_SAVE;
->>>>>>> 345ea781d534c478eb9d70270b8f405b4542839a
+  case 72:
+    return AMDGPU::SI_SPILL_V576_SAVE;
   case 128:
     return NeedsCFI ? AMDGPU::SI_SPILL_V1024_CFI_SAVE
                     : AMDGPU::SI_SPILL_V1024_SAVE;
@@ -1754,14 +1746,10 @@ static unsigned getAVSpillSaveOpcode(unsigned Size, bool NeedsCFI) {
   case 48:
     return AMDGPU::SI_SPILL_AV384_SAVE;
   case 64:
-<<<<<<< HEAD
-    return AMDGPU::SI_SPILL_AV512_SAVE;
-  case 72:
-    return AMDGPU::SI_SPILL_AV576_SAVE;
-=======
     return NeedsCFI ? AMDGPU::SI_SPILL_AV512_CFI_SAVE
                     : AMDGPU::SI_SPILL_AV512_SAVE;
->>>>>>> 345ea781d534c478eb9d70270b8f405b4542839a
+  case 72:
+    return AMDGPU::SI_SPILL_AV576_SAVE;
   case 128:
     return NeedsCFI ? AMDGPU::SI_SPILL_AV1024_CFI_SAVE
                     : AMDGPU::SI_SPILL_AV1024_SAVE;
