@@ -204,8 +204,46 @@ struct AMDGPUVectorIdiomImpl {
 
     Align DstAlign = MaybeAlign(MT.getDestAlign()).valueOrOne();
     Align AlignAB;
-    bool CanSpeculate =
+    bool CanSpeculate = false;
+
+    const CallBase &CB = MT;
+    const unsigned SrcArgIdx = 1;
+    uint64_t DerefBytes = CB.getParamDereferenceableBytes(SrcArgIdx);
+    bool HasDerefOrNull =
+        CB.paramHasAttr(SrcArgIdx, Attribute::DereferenceableOrNull);
+    bool HasNonNull = CB.paramHasAttr(SrcArgIdx, Attribute::NonNull);
+    MaybeAlign SrcParamAlign = CB.getParamAlign(SrcArgIdx);
+    Align ProvenSrcAlign = SrcParamAlign.value_or(
+        MaybeAlign(MT.getSourceAlign()).valueOrOne());
+
+    if (DerefBytes > 0) {
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] memcpy source param attrs: "
+                        << "dereferenceable(" << DerefBytes << ")"
+                        << (HasDerefOrNull ? " (or null)" : "")
+                        << (HasNonNull ? ", nonnull" : "") << ", align "
+                        << ProvenSrcAlign.value() << "\n");
+      if (DerefBytes >= N && (!HasDerefOrNull || HasNonNull)) {
+        LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Using memcpy source operand "
+                          << "attributes at this use; accepting speculation\n");
+        CanSpeculate = true;
+        AlignAB = ProvenSrcAlign;
+      } else {
+        LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Source param attrs not strong "
+                          << "enough for speculation: need dereferenceable("
+                          << N << ") and nonnull; got dereferenceable("
+                          << DerefBytes << ")"
+                          << (HasDerefOrNull ? " (or null)" : "")
+                          << (HasNonNull ? ", nonnull" : "") << "\n");
+      }
+    } else {
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] memcpy source param has no "
+                        << "dereferenceable bytes attribute; align "
+                        << ProvenSrcAlign.value() << "\n");
+    }    
+    if (!CanSpeculate)
+      CanSpeculate =
           bothArmsSafeToSpeculateLoads(A, Bv, N, AlignAB, DL, AC, DT, &MT);
+   
     unsigned AS = cast<PointerType>(A->getType())->getAddressSpace();
 
     if (CanSpeculate) {
