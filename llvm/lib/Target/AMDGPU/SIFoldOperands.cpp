@@ -24,6 +24,11 @@
 #define DEBUG_TYPE "si-fold-operands"
 using namespace llvm;
 
+static cl::opt<int> SIFoldOperandsPreheaderThreshold(
+    "amdgpu-si-fold-operands-preheader-threshold", cl::init(1000),
+    cl::desc("Threshold for operand folding hazard check. "
+             "Defaults to 1000 MIs, upper limit 10000."));
+
 namespace {
 
 /// Track a value we may want to fold into downstream users, applying
@@ -1134,8 +1139,7 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
   if (UseOpIdx >= Desc.getNumOperands())
     return false;
 
-  // Filter out unhandled pseudos.
-  if (!AMDGPU::isSISrcOperand(Desc, UseOpIdx))
+  if (!AMDGPU::isSISrcInlinableOperand(Desc, UseOpIdx))
     return false;
 
   MachineOperand &UseOp = UseMI->getOperand(UseOpIdx);
@@ -1455,9 +1459,9 @@ void SIFoldOperandsImpl::foldOperand(
       }
 
       if (OpToFold.isReg() && TRI->isSGPRReg(*MRI, OpToFold.getReg())) {
-        if (execMayBeModifiedBeforeUse(*MRI,
-                                       UseMI->getOperand(UseOpIdx).getReg(),
-                                       *OpToFold.DefMI, *UseMI))
+        if (checkIfExecMayBeModifiedBeforeUseAcrossBB(
+                *MRI, UseMI->getOperand(UseOpIdx).getReg(),
+                *OpToFold.DefMI, *UseMI, SIFoldOperandsPreheaderThreshold))
           return;
 
         // %vgpr = COPY %sgpr0

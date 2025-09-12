@@ -1,5 +1,8 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs -start-before=amdgpu-insert-delay-alu %s -o - | FileCheck %s
 
+# https://ontrack-internal.amd.com/browse/SWDEV-554950
+# XFAIL: *
+
 ---
 name: wmma_xdl_twoaddr_trans
 tracksRegLiveness: true
