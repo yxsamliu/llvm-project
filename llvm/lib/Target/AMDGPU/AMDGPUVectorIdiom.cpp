@@ -355,9 +355,6 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &AC = FAM.getResult<AssumptionAnalysis>(F);
 
-  LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Running on function: "
-                    << F.getName() << "\n");
-
   if (!AMDGPUVectorIdiomEnable)
     return PreservedAnalyses::all();
 
@@ -385,16 +382,52 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
       unsigned DstAS = cast<PointerType>(DstV->getType())->getAddressSpace();
       unsigned SrcAS = cast<PointerType>(SrcV->getType())->getAddressSpace();
       Value *LenV = MT->getLength();
+
+      auto dumpPtrForms = [&](StringRef Label, Value *V) {
+        dbgs() << "      " << Label << ": " << *V << "\n";
+
+        // Strip pointer casts only
+        Value *StripCasts = V->stripPointerCasts();
+        if (StripCasts != V)
+          dbgs() << "        - stripCasts: " << *StripCasts << "\n";
+        else
+          dbgs() << "        - stripCasts: (no change)\n";
+
+        // Strip GEPs and casts to the base object (older API: no DataLayout arg)
+        // Optionally increase MaxLookup if you want to chase deeper.
+        Value *Underlying = getUnderlyingObject(V /*, MaxLookup=6*/);
+        if (Underlying != V)
+          dbgs() << "        - underlying: " << *Underlying << "\n";
+        else
+          dbgs() << "        - underlying: (no change)\n";
+      };
+
+      auto dumpSelect = [&](StringRef Which, Value *V) {
+        if (auto *SI = dyn_cast<SelectInst>(V)) {
+          dbgs() << "  - " << Which << " is Select: " << *SI << "\n";
+          dbgs() << "      cond: " << *SI->getCondition() << "\n";
+          Value *T = SI->getTrueValue();
+          Value *Fv = SI->getFalseValue();
+          dumpPtrForms("true", T);
+          dumpPtrForms("false", Fv);
+        }
+      };
+
       dbgs() << "[AMDGPUVectorIdiom] Found memcpy: " << *MT << "\n"
-             << "  - volatile=" << (MT->isVolatile() ? "true" : "false") << "\n"
-             << "  - sameAS=" << (DstAS == SrcAS ? "true" : "false")
-             << " (dstAS=" << DstAS << ", srcAS=" << SrcAS << ")\n"
-             << "  - constLen=" << (isa<ConstantInt>(LenV) ? "true" : "false");
+            << "  in function: " << F.getName() << "\n"
+            << "  - volatile=" << (MT->isVolatile() ? "true" : "false") << "\n"
+            << "  - sameAS=" << (DstAS == SrcAS ? "true" : "false")
+            << " (dstAS=" << DstAS << ", srcAS=" << SrcAS << ")\n"
+            << "  - constLen=" << (isa<ConstantInt>(LenV) ? "true" : "false");
       if (auto *LCI = dyn_cast<ConstantInt>(LenV))
         dbgs() << " (N=" << LCI->getLimitedValue() << ")";
       dbgs() << "\n"
-             << "  - srcIsSelect=" << (isa<SelectInst>(SrcV) ? "true" : "false") << "\n"
-             << "  - dstIsSelect=" << (isa<SelectInst>(DstV) ? "true" : "false") << "\n";
+            << "  - srcIsSelect=" << (isa<SelectInst>(SrcV) ? "true" : "false") << "\n"
+            << "  - dstIsSelect=" << (isa<SelectInst>(DstV) ? "true" : "false") << "\n";
+
+      // Detailed dumps
+      dumpSelect("src", SrcV);
+      dumpSelect("dst", DstV);
     });
 
     if (MT->isVolatile()) {
