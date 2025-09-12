@@ -108,6 +108,9 @@ static Align minAlign(Align A, Align B) { return A < B ? A : B; }
 // - Intentionally conservative: relies on isDereferenceablePointer and
 //   getOrEnforceKnownAlignment.
 // - AA/TLI are not used for deeper reasoning here.
+// Emits verbose LLVM_DEBUG logs explaining why speculation is disallowed.
+// Return false reasons include: either arm not dereferenceable or computed
+// known alignment < 1.
 static bool bothArmsSafeToSpeculateLoads(Value *A, Value *B, uint64_t Size,
                                          Align &OutAlign, const DataLayout &DL,
                                          AssumptionCache *AC,
@@ -115,26 +118,44 @@ static bool bothArmsSafeToSpeculateLoads(Value *A, Value *B, uint64_t Size,
                                          Instruction *CtxI) {
   APInt SizeAPInt(DL.getIndexTypeSizeInBits(A->getType()), Size);
   if (!isDereferenceableAndAlignedPointer(B, Align(1), SizeAPInt, DL, CtxI, AC,
-                                          DT, nullptr))
+                                          DT, nullptr)) {
+    LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Not speculating loads: false arm "
+                      << "(B) not dereferenceable for " << Size
+                      << " bytes at align(1)\n");
+    LLVM_DEBUG(dbgs() << "    false arm (B) value: " << *B << "\n");
     return false;
+  }
 
   Align AlignB =
       llvm::getOrEnforceKnownAlignment(B, Align(1), DL, nullptr, AC, DT);
 
-  if (AlignB < Align(1))
+  if (AlignB < Align(1)) {
+    LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Not speculating loads: known "
+                      << "alignment of false arm (B) < 1: " << AlignB.value() << "\n");
     return false;
+  }
 
   if (!isDereferenceableAndAlignedPointer(A, Align(1), SizeAPInt, DL, CtxI, AC,
-                                          DT, nullptr))
+                                          DT, nullptr)) {
+    LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Not speculating loads: true arm "
+                      << "(A) not dereferenceable for " << Size
+                      << " bytes at align(1)\n");
+    LLVM_DEBUG(dbgs() << "    true arm (A) value: " << *A << "\n");
     return false;
+  }
 
   Align AlignA =
       llvm::getOrEnforceKnownAlignment(A, Align(1), DL, nullptr, AC, DT);
 
-  if (AlignA < Align(1))
+  if (AlignA < Align(1)) {
+    LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Not speculating loads: known "
+                      << "alignment of true arm (A) < 1: " << AlignA.value() << "\n");
     return false;
+  }
 
   OutAlign = minAlign(AlignA, AlignB);
+  LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Speculative loads allowed: "
+                    << "minAlign=" << OutAlign.value() << "\n");
   return true;
 }
 
@@ -163,6 +184,10 @@ struct AMDGPUVectorIdiomImpl {
                                    const DataLayout &DL,
                                    const DominatorTree *DT,
                                    AssumptionCache *AC) {
+    LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Considering memcpy(select-src): "
+                      << MT << "\n");
+    // Note: SelectInst has no volatility, but keep the check for consistency
+    // with original logic; emit a debug message if it ever triggers.
     IRBuilder<> B(&MT);
     Value *Dst = MT.getRawDest();
     Value *A = Sel.getTrueValue();
@@ -171,18 +196,24 @@ struct AMDGPUVectorIdiomImpl {
     ConstantInt *LenCI = cast<ConstantInt>(MT.getLength());
     uint64_t N = LenCI->getLimitedValue();
 
-    if (Sel.isVolatile())
+    if (Sel.isVolatile()) {
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Not rewriting: Select marked "
+                        << "volatile (unexpected) in memcpy source\n");
       return false;
+    }
 
     Align DstAlign = MaybeAlign(MT.getDestAlign()).valueOrOne();
     Align AlignAB;
     bool CanSpeculate =
-        bothArmsSafeToSpeculateLoads(A, Bv, N, AlignAB, DL, AC, DT, &MT);
-
+          bothArmsSafeToSpeculateLoads(A, Bv, N, AlignAB, DL, AC, DT, &MT);
     unsigned AS = cast<PointerType>(A->getType())->getAddressSpace();
 
     if (CanSpeculate) {
       Align MinAlign = std::min(AlignAB, DstAlign);
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Rewriting memcpy(select-src) "
+                        << "with value-level select; N=" << N
+                        << " minAlign=" << MinAlign.value() << "\n");
+
       Type *Ty = getIntOrVecTypeForSize(N, B.getContext(), MinAlign);
 
       Value *PA = castPtrTo(A, AS);
@@ -202,6 +233,8 @@ struct AMDGPUVectorIdiomImpl {
       return true;
     }
 
+    LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Falling back to CFG split for "
+                      << "memcpy(select-src); speculation unsafe\n");
     splitCFGForMemcpy(MT, Sel.getCondition(), A, Bv, true);
     LLVM_DEBUG(
         dbgs()
@@ -215,6 +248,8 @@ struct AMDGPUVectorIdiomImpl {
   bool transformSelectMemcpyDest(MemTransferInst &MT, SelectInst &Sel) {
     Value *DA = Sel.getTrueValue();
     Value *DB = Sel.getFalseValue();
+    LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Rewriting memcpy(select-dst) via "
+                      << "CFG split to avoid speculative stores: " << MT << "\n");
 
     splitCFGForMemcpy(MT, Sel.getCondition(), DA, DB, false);
     LLVM_DEBUG(
@@ -282,6 +317,9 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &AC = FAM.getResult<AssumptionAnalysis>(F);
 
+  LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Running on function: "
+                    << F.getName() << "\n");
+
   if (!AMDGPUVectorIdiomEnable)
     return PreservedAnalyses::all();
 
@@ -298,24 +336,56 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
 
   for (CallInst *CI : Worklist) {
     auto *MT = cast<MemTransferInst>(CI);
-    if (MT->isVolatile())
-      continue;
-
-    ConstantInt *LenCI = dyn_cast<ConstantInt>(MT->getLength());
-    if (!LenCI)
-      continue;
-
-    uint64_t N = LenCI->getLimitedValue();
-    if (N == 0 || N > MaxBytes)
-      continue;
-
     Value *Dst = MT->getRawDest();
     Value *Src = MT->getRawSource();
+    if (!isa<SelectInst>(Src) && !isa<SelectInst>(Dst))
+      continue;
+
+    LLVM_DEBUG({
+      Value *DstV = MT->getRawDest();
+      Value *SrcV = MT->getRawSource();
+      unsigned DstAS = cast<PointerType>(DstV->getType())->getAddressSpace();
+      unsigned SrcAS = cast<PointerType>(SrcV->getType())->getAddressSpace();
+      Value *LenV = MT->getLength();
+      dbgs() << "[AMDGPUVectorIdiom] Found memcpy: " << *MT << "\n"
+             << "  - volatile=" << (MT->isVolatile() ? "true" : "false") << "\n"
+             << "  - sameAS=" << (DstAS == SrcAS ? "true" : "false")
+             << " (dstAS=" << DstAS << ", srcAS=" << SrcAS << ")\n"
+             << "  - constLen=" << (isa<ConstantInt>(LenV) ? "true" : "false");
+      if (auto *LCI = dyn_cast<ConstantInt>(LenV))
+        dbgs() << " (N=" << LCI->getLimitedValue() << ")";
+      dbgs() << "\n"
+             << "  - srcIsSelect=" << (isa<SelectInst>(SrcV) ? "true" : "false") << "\n"
+             << "  - dstIsSelect=" << (isa<SelectInst>(DstV) ? "true" : "false") << "\n";
+    });
+
+    if (MT->isVolatile()) {
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skip: memcpy is volatile\n");
+      continue;
+    }
+
+    ConstantInt *LenCI = dyn_cast<ConstantInt>(MT->getLength());
+    if (!LenCI) {
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skip: memcpy length is not a "
+                        << "constant integer\n");
+      continue;
+    }
+
+    uint64_t N = LenCI->getLimitedValue();
+    if (N == 0 || N > MaxBytes) {
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skip: memcpy size out of range "
+                        << "(N=" << N << ", MaxBytes=" << MaxBytes << ")\n");
+      continue;
+    }
+
 
     unsigned DstAS = cast<PointerType>(Dst->getType())->getAddressSpace();
     unsigned SrcAS = cast<PointerType>(Src->getType())->getAddressSpace();
-    if (DstAS != SrcAS)
+    if (DstAS != SrcAS) {
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skip: address space mismatch "
+                        << "(dstAS=" << DstAS << ", srcAS=" << SrcAS << ")\n");
       continue;
+    }
 
     if (auto *Sel = dyn_cast<SelectInst>(Src)) {
       Changed |= Impl.transformSelectMemcpySource(*MT, *Sel, DL, &DT, &AC);
@@ -325,6 +395,9 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
       Changed |= Impl.transformSelectMemcpyDest(*MT, *Sel);
       continue;
     }
+
+    LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skip: neither source nor "
+                      << "destination is a select of pointers\n");
   }
 
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
