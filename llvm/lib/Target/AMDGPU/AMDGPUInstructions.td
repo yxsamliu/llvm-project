@@ -536,6 +536,7 @@ def atomic_load_sext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_sext_16 node
 def atomic_load_aext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_aext_16 node:$ptr)> {
   let IsAtomic = 1;
 }
+
 } // End let AddressSpaces
 } // End foreach as
 
