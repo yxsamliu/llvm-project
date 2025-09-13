@@ -16,6 +16,10 @@ target datalayout = "A5"
 @sem1 = internal addrspace(3) global target("amdgcn.semaphore", 1) poison
 @sem2 = internal addrspace(3) global target("amdgcn.semaphore", 2) poison
 
+@bar1 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison
+@bar2 = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison
+
+
 define private amdgpu_kernel void @input(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
 ; CHECK-LABEL: input:
 ; CHECK:       ; %bb.0: ; %entry
@@ -91,12 +95,20 @@ entry:
 define private amdgpu_kernel void @compute(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
 ; CHECK-LABEL: compute:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_movk_i32 m0, 0x7001
+; CHECK-NEXT:    s_barrier_signal m0
+; CHECK-NEXT:    s_mov_b32 m0, 1
+; CHECK-NEXT:    s_barrier_join m0
+; CHECK-NEXT:    s_barrier_wait 1
 ; CHECK-NEXT:    s_sema_wait 1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    v_convolve_f16_fp8_fp8 g1[28:31], 0, g1[0:8], g1[16:18], g1[20:22], g1[24:26] aux_data:42 clamp idxs:0x111101
 ; CHECK-NEXT:    s_sema_signal 33
 ; CHECK-NEXT:    s_endpgm
 entry:
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 7)
+  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar1)
+  call void @llvm.amdgcn.s.barrier.wait(i16 1)
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem1)
   %vec30 = load <3 x i32>, ptr addrspace(10) @col_center, align 16
   %vec31 = load <3 x i32>, ptr addrspace(10) @col_left, align 16
@@ -112,7 +124,12 @@ define private amdgpu_kernel void @output(ptr addrspace(1) %inbuf, ptr addrspace
 ; CHECK-LABEL: output:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[0:1], 0x10
+; CHECK-NEXT:    s_movk_i32 m0, 0x7002
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_barrier_signal m0
+; CHECK-NEXT:    s_mov_b32 m0, 2
+; CHECK-NEXT:    s_barrier_join m0
+; CHECK-NEXT:    s_barrier_wait 1
 ; CHECK-NEXT:    s_sema_wait 1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
@@ -120,6 +137,9 @@ define private amdgpu_kernel void @output(ptr addrspace(1) %inbuf, ptr addrspace
 ; CHECK-NEXT:    global_store_b128 v0, g1[28:31], s[0:1]
 ; CHECK-NEXT:    s_endpgm
 entry:
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)
+  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar2)
+  call void @llvm.amdgcn.s.barrier.wait(i16 1)
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem2)
   %0 = load <8 x half>, ptr addrspace(10) @out, align 16
   store <8 x half> %0, ptr addrspace(1) %outbuf, align 16
@@ -173,9 +193,11 @@ attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memor
 attributes #1 = { "amdgpu-wavegroup-rank-function" }
 attributes #2 = { convergent nounwind }
 
+; RANK:         .set main.num_named_barrier, max(0, max(.Linput.num_named_barrier, .Lcompute.num_named_barrier, .Loutput.num_named_barrier))
 ; RANK:         .set main.private_seg_size, max(0, 0+max(.Linput.private_seg_size, .Lcompute.private_seg_size, .Loutput.private_seg_size))
 ; RANK:         .set main.num_vgpr_rank_sum, 0+.Linput.num_vgpr+.Lcompute.num_vgpr+.Loutput.num_vgpr
 ; RANK: ; NumVGPRsForWavesPerEU: 51
+; RANK: ; NamedBarCnt: 1
 
 ; Function Attrs: convergent mustprogress nocallback nofree nosync nounwind willreturn memory(none)
 declare <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half>, <9 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, i32 immarg, i1 immarg) #1
