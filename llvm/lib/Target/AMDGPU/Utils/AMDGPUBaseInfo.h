@@ -1843,7 +1843,7 @@ public:
 
   bool isFixedDims() const { return getKind() == Kind::FixedDims; }
 
-  bool isVariableedDims() const { return getKind() == Kind::VariableDims; }
+  bool isVariableDims() const { return getKind() == Kind::VariableDims; }
 
   void setUnknown() { *this = ClusterDimsAttr(Kind::Unknown); }
 
