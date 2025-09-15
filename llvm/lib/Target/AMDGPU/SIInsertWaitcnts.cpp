@@ -882,11 +882,15 @@ RegInterval
 WaitcntBrackets::getRegIndexingInterval(const MachineInstr *MI,
                                         const MachineRegisterInfo *MRI,
                                         const SIRegisterInfo *TRI) const {
+  // Intervals retrieved from the IndexingAnalysis are in full-width VGPRs, and
+  // so need to be adjusted into 16bit VGPR units. Offset and Size, when queried
+  // from the analysis, are in units of bytes.
   assert(MI->getOpcode() == AMDGPU::V_LOAD_IDX ||
          MI->getOpcode() == AMDGPU::V_STORE_IDX);
-  auto CheckBounds = [&](RegInterval Interval) {
-    auto Size = Interval.second - Interval.first;
-    Interval.first = Interval.first % SQ_MAX_PGM_VGPRS;
+  auto CheckBounds = [&](int VGPR32Begin, int VGPR32End) {
+    RegInterval Interval;
+    auto Size = (VGPR32End - VGPR32Begin) * 2;
+    Interval.first = (VGPR32Begin * 2) % SQ_MAX_PGM_VGPRS;
     Interval.second = Interval.first + Size;
     if (Interval.second > SQ_MAX_PGM_VGPRS) {
       Interval.first = 0;
@@ -896,17 +900,17 @@ WaitcntBrackets::getRegIndexingInterval(const MachineInstr *MI,
   };
   if (auto Info = Context->SII.getPrivateObjectIdxInfo(MI)) {
     if (auto UsedRegs = Info->get().UsedRegs)
-      return CheckBounds(*UsedRegs);
+      return CheckBounds(UsedRegs->first, UsedRegs->second);
     // we don't know the exact vgprs,
     // so best we can do is use the size of the private object
-    RegInterval Interval = {Context->LaneSharedSize + Info->get().Offset / 4,
+    RegInterval Interval = {Context->LaneSharedSize + Info->get().Offset / 2u,
                             0};
-    Interval.second += Interval.first + Info->get().Size / 4;
+    Interval.second += Interval.first + Info->get().Size / 2u;
     return Interval;
   }
   if (auto Info = Context->SII.getLaneSharedIdxInfo(MI)) {
     if (auto UsedRegs = Info->get().UsedRegs)
-      return CheckBounds(*UsedRegs);
+      return CheckBounds(UsedRegs->first, UsedRegs->second);
     // Claim the entire lane-shared range when idx is unknown
     // TODO-GFX13:
     // We want to build an event-queue and apply alias analysis to
@@ -1267,7 +1271,8 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
           continue;
         unsigned RelScore = RegScore - LB - 1;
         if (J < FIRST_LDS_VGPR) {
-          OS << RelScore << ":v" << J << " ";
+          std::string part = J % 2 == 0 ? ".lo" : ".hi";
+          OS << RelScore << ":v" << J / 2 << part << " ";
         } else {
           OS << RelScore << ":ds ";
         }
@@ -3216,13 +3221,18 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   assert(NumVGPRsMax <= SQ_MAX_PGM_VGPRS);
   assert(NumSGPRsMax <= SQ_MAX_PGM_SGPRS);
 
-  LaneSharedSize = MFI->getLaneSharedVGPRSize() / 4u;
+  LaneSharedSize = MFI->getLaneSharedVGPRSize() / 2u;
 
   BlockInfos.clear();
   bool Modified = false;
 
   MachineBasicBlock &EntryBB = MF.front();
   MachineBasicBlock::iterator I = EntryBB.begin();
+
+  LLVM_DEBUG({
+    dbgs() << "*** Begin Function: " << MF.getName() << "\n";
+    dbgs() << " | FullWidth Laneshared VGPRs: " << LaneSharedSize / 2 << "\n\n";
+  });
 
   if (!MFI->isEntryFunction()) {
     // Wait for any outstanding memory operations that the input registers may
