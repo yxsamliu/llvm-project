@@ -955,6 +955,41 @@ public:
     }
   }
 
+  static bool isRTS(const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    case AMDGPU::RTS_READ_RESULT_ALL_STOP:
+    case AMDGPU::RTS_READ_RESULT_ONGOING:
+    case AMDGPU::RTS_FLUSH:
+    case AMDGPU::RTS_RAY_SAVE:
+    case AMDGPU::RTS_RAY_RESTORE:
+    case AMDGPU::RTS_UPDATE_RAY:
+    case AMDGPU::RTS_TRACE_RAY:
+    case AMDGPU::RTS_TRACE_RAY_NONBLOCK:
+    case AMDGPU::RTS_READ_VERTEX:
+    case AMDGPU::RTS_READ_VERTEX_COORDS:
+    case AMDGPU::RTS_READ_PACKET_INFO:
+    case AMDGPU::RTS_READ_PRIM_INFO:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  static bool isSWC(const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    case AMDGPU::SWC_REORDER:
+    case AMDGPU::SWC_FLUSH:
+    case AMDGPU::SWC_REORDER_SWAP:
+    case AMDGPU::SWC_REORDER_SWAP_RESUME:
+    case AMDGPU::SWC_GET_EXCHANGE_STATE:
+    case AMDGPU::SWC_SET_EXCHANGE_STATE:
+    case AMDGPU::SWC_ABORT_EXCHANGE:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   bool isXDL(const MachineInstr &MI) const;
 
   static bool isDGEMM(unsigned Opcode) { return AMDGPU::getMAIIsDGEMM(Opcode); }
