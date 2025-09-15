@@ -9,10 +9,28 @@
 #include "oclc.h"
 #include "ockl.h"
 
+#define HAS_V_BPERMUTE() __oclc_ISA_version >= 13000
+
+__attribute__((target("gfx13-insts,wavefrontsize32"))) static uint
+v_bpermute_u32(uint l, uint v)
+{
+    return __builtin_amdgcn_bpermute_b32(v, l);
+}
+
+static uint
+ds_bpermute_u32(uint l, uint v)
+{
+    return __builtin_amdgcn_ds_bpermute(l << 2, v);
+}
+
 static uint
 bpermute_u32(uint l, uint v)
 {
-    return __builtin_amdgcn_ds_bpermute(l << 2, v);
+    if (HAS_V_BPERMUTE()) {
+        return v_bpermute_u32(l, v);
+    } else {
+        return ds_bpermute_u32(l, v);
+    }
 }
 
 uint

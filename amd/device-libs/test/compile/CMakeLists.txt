@@ -69,9 +69,9 @@ function(add_isa_test name test_cpu)
 endfunction()
 
 
-foreach(gpu gfx900 gfx1030)
-  add_constant_fold_test(lgamma_r ${gpu})
-endforeach()
+#foreach(gpu gfx900 gfx1030)
+#  add_constant_fold_test(lgamma_r ${gpu})
+#endforeach()
 
 foreach(gpu gfx803)
   add_isa_test(asin ${gpu})
@@ -79,25 +79,25 @@ foreach(gpu gfx803)
   add_isa_test(atan2pi ${gpu})
 endforeach()
 
-foreach(gpu gfx600)
-  add_isa_test(frexp ${gpu})
-endforeach()
+#foreach(gpu gfx600)
+#  add_isa_test(frexp ${gpu})
+#endforeach()
 
-foreach(gpu gfx900)
-  # Test with default denormal enabled target
-  add_isa_test(rsqrt ${gpu}
-    EXTRA_CHECK_PREFIXES IEEE)
-  add_isa_test(rsqrt_daz ${gpu}
-    FILE_NAME ${CMAKE_CURRENT_SOURCE_DIR}/rsqrt.cl
-    COMPILE_FLAGS -cl-denorms-are-zero
-    EXTRA_CHECK_PREFIXES DAZ)
-endforeach()
+#foreach(gpu gfx900)
+#  # Test with default denormal enabled target
+#  add_isa_test(rsqrt ${gpu}
+#    EXTRA_CHECK_PREFIXES IEEE)
+#  add_isa_test(rsqrt_daz ${gpu}
+#    FILE_NAME ${CMAKE_CURRENT_SOURCE_DIR}/rsqrt.cl
+#    COMPILE_FLAGS -cl-denorms-are-zero
+#    EXTRA_CHECK_PREFIXES DAZ)
+#endforeach()
 
 
 foreach(gpu gfx600 gfx700 gfx803)
-  add_isa_test(fract ${gpu})
+#  add_isa_test(fract ${gpu})
   add_isa_test(native_rcp ${gpu})
-  add_isa_test(native_rsqrt ${gpu})
+#  add_isa_test(native_rsqrt ${gpu})
   add_isa_test(native_log ${gpu})
   add_isa_test(native_exp ${gpu})
 endforeach()

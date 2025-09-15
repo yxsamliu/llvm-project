@@ -7,4 +7,5 @@
 
 #include "oclc.h"
 
-const __constant int __oclc_ISA_version = 11502;
+// gfx12-5-generic is identical to gfx1250.
+const __constant int __oclc_ISA_version = 12500;
