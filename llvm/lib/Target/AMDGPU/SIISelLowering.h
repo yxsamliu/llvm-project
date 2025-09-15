@@ -65,7 +65,6 @@ private:
   SDValue lowerStackParameter(SelectionDAG &DAG, CCValAssign &VA,
                               const SDLoc &SL, SDValue Chain,
                               const ISD::InputArg &Arg) const;
-
   SDValue lowerWorkGroupId(
       SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
       AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
