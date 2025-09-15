@@ -186,6 +186,174 @@ entry:
   ret void
 }
 
+; This 2nd test does use LDS intead of laneshared
+
+@weights2 = external local_unnamed_addr addrspace(3) global <9 x i32>, align 64
+@col_center2 = external local_unnamed_addr addrspace(3) global <3 x i32>, align 16
+@col_left2 = external local_unnamed_addr addrspace(3) global <3 x i32>, align 16
+@col_right2 = external local_unnamed_addr addrspace(3) global <3 x i32>, align 16
+@out2 = external local_unnamed_addr addrspace(3) global <8 x i16>, align 16
+
+define private amdgpu_kernel void @input2(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
+; CHECK-LABEL: input2:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_clause 0x2
+; CHECK-NEXT:    s_load_b96 s[4:6], s[0:1], 0x0
+; CHECK-NEXT:    s_load_b96 s[8:10], s[0:1], 0x100
+; CHECK-NEXT:    s_load_b96 s[12:14], s[0:1], 0x200
+; CHECK-NEXT:    s_clause 0x2
+; CHECK-NEXT:    s_load_b96 s[16:18], s[2:3], 0x0
+; CHECK-NEXT:    s_load_b96 s[20:22], s[2:3], 0x100
+; CHECK-NEXT:    s_load_b96 s[0:2], s[2:3], 0x200
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_dual_mov_b32 v18, 0 :: v_dual_mov_b32 v0, s4
+; CHECK-NEXT:    v_dual_mov_b32 v3, s8 :: v_dual_mov_b32 v4, s9
+; CHECK-NEXT:    v_dual_mov_b32 v5, s10 :: v_dual_mov_b32 v6, s12
+; CHECK-NEXT:    v_dual_mov_b32 v7, s13 :: v_dual_mov_b32 v8, s14
+; CHECK-NEXT:    v_dual_mov_b32 v1, s5 :: v_dual_mov_b32 v2, s6
+; CHECK-NEXT:    v_dual_mov_b32 v9, s16 :: v_dual_mov_b32 v10, s17
+; CHECK-NEXT:    v_dual_mov_b32 v11, s18 :: v_dual_mov_b32 v12, s20
+; CHECK-NEXT:    v_dual_mov_b32 v13, s21 :: v_dual_mov_b32 v14, s22
+; CHECK-NEXT:    v_dual_mov_b32 v17, s2 :: v_dual_mov_b32 v16, s1
+; CHECK-NEXT:    v_mov_b32_e32 v15, s0
+; CHECK-NEXT:    ds_store_b96 v18, v[3:5] offset:80
+; CHECK-NEXT:    ds_store_b96 v18, v[6:8] offset:96
+; CHECK-NEXT:    ds_store_b96 v18, v[0:2] offset:64
+; CHECK-NEXT:    ds_store_b96 v18, v[9:11]
+; CHECK-NEXT:    ds_store_b96 v18, v[12:14] offset:192
+; CHECK-NEXT:    ds_store_b96 v18, v[15:17] offset:384
+; CHECK-NEXT:    s_sema_signal 17
+; CHECK-NEXT:    s_endpgm
+entry:
+  %vec30 = load <3 x i32>, ptr addrspace(1) %inbuf, align 16
+  %ld.p1 = getelementptr <3 x i32>, ptr addrspace(1) %inbuf, i64 16
+  %vec31 = load <3 x i32>, ptr addrspace(1) %ld.p1, align 16
+  %ld.p2 = getelementptr <3 x i32>, ptr addrspace(1) %inbuf, i64 32
+  %vec32 = load <3 x i32>, ptr addrspace(1) %ld.p2, align 16
+
+  %wei30 = load <3 x i32>, ptr addrspace(1) %wbuf, align 64
+  %w.p1 = getelementptr <3 x i32>, ptr addrspace(1) %wbuf, i64 16
+  %wei31 = load <3 x i32>, ptr addrspace(1) %w.p1, align 16
+  %w.p2 = getelementptr <3 x i32>, ptr addrspace(1) %wbuf, i64 32
+  %wei32 = load <3 x i32>, ptr addrspace(1) %w.p2, align 16
+
+  store <3 x i32> %vec30, ptr addrspace(3) @col_center2, align 16
+  store <3 x i32> %vec31, ptr addrspace(3) @col_left2, align 16
+  store <3 x i32> %vec32, ptr addrspace(3) @col_right2, align 16
+
+  store <3 x i32> %wei30, ptr addrspace(3) @weights2, align 64
+  %wei.p1 = getelementptr <3 x i32>, ptr addrspace(3) @weights2, i64 12
+  store <3 x i32> %wei31, ptr addrspace(3) %wei.p1, align 64
+  %wei.p2 = getelementptr <3 x i32>, ptr addrspace(3) @weights2, i64 24
+  store <3 x i32> %wei32, ptr addrspace(3) %wei.p2, align 64
+
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1)
+  ret void
+}
+
+define private amdgpu_kernel void @compute2(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
+; CHECK-LABEL: compute2:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    v_mov_b32_e32 v18, 0
+; CHECK-NEXT:    s_movk_i32 m0, 0x7001
+; CHECK-NEXT:    s_barrier_signal m0
+; CHECK-NEXT:    s_mov_b32 m0, 1
+; CHECK-NEXT:    s_barrier_join m0
+; CHECK-NEXT:    s_barrier_wait 1
+; CHECK-NEXT:    s_sema_wait 1
+; CHECK-NEXT:    ds_load_b96 v[9:11], v18 offset:80
+; CHECK-NEXT:    ds_load_b96 v[12:14], v18 offset:96
+; CHECK-NEXT:    ds_load_b128 v[0:3], v18
+; CHECK-NEXT:    ds_load_b128 v[4:7], v18 offset:16
+; CHECK-NEXT:    ds_load_b96 v[15:17], v18 offset:64
+; CHECK-NEXT:    ds_load_b32 v8, v18 offset:32
+; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    v_convolve_f16_fp8_fp8 v[0:3], 0, v[0:8], v[15:17], v[9:11], v[12:14] aux_data:42 clamp
+; CHECK-NEXT:    ds_store_b128 v18, v[0:3] offset:112
+; CHECK-NEXT:    s_sema_signal 33
+; CHECK-NEXT:    s_endpgm
+entry:
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 7)
+  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar1)
+  call void @llvm.amdgcn.s.barrier.wait(i16 1)
+  call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem1)
+  %vec30 = load <3 x i32>, ptr addrspace(3) @col_center2, align 16
+  %vec31 = load <3 x i32>, ptr addrspace(3) @col_left2, align 16
+  %vec32 = load <3 x i32>, ptr addrspace(3) @col_right2, align 16
+  %wei = load <9 x i32>, ptr addrspace(3) @weights2, align 64
+  %0 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> zeroinitializer, <9 x i32> %wei, <3 x i32> %vec30, <3 x i32> %vec31, <3 x i32> %vec32, i32 42, i1 true)
+  store <8 x half> %0, ptr addrspace(3) @out2, align 16, !tbaa !4
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2)
+  ret void
+}
+
+define private amdgpu_kernel void @output2(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
+; CHECK-LABEL: output2:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NEXT:    s_movk_i32 m0, 0x7002
+; CHECK-NEXT:    s_load_b64 s[0:1], s[0:1], 0x10
+; CHECK-NEXT:    s_barrier_signal m0
+; CHECK-NEXT:    s_mov_b32 m0, 2
+; CHECK-NEXT:    s_barrier_join m0
+; CHECK-NEXT:    s_barrier_wait 1
+; CHECK-NEXT:    s_sema_wait 1
+; CHECK-NEXT:    ds_load_b128 v[0:3], v4 offset:112
+; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    global_store_b128 v4, v[0:3], s[0:1] scope:SCOPE_SE
+; CHECK-NEXT:    s_endpgm
+entry:
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)
+  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar2)
+  call void @llvm.amdgcn.s.barrier.wait(i16 1)
+  call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem2)
+  %0 = load <8 x half>, ptr addrspace(3) @out2, align 16
+  store <8 x half> %0, ptr addrspace(1) %outbuf, align 16
+  ret void
+}
+
+; Function Attrs: convergent mustprogress nofree norecurse nosync nounwind memory(readwrite, argmem: none, inaccessiblemem: none)
+define amdgpu_kernel void @main2(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 !reqd_work_group_size !{i32 32, i32 12, i32 1} {
+; CHECK-LABEL: main2:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_mul_i32 s4, s3, 0
+; CHECK-NEXT:    s_mul_i32 s33, s3, s2
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s4
+; CHECK-NEXT:    s_add_co_u32 s32, s33, 0
+; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
+; CHECK-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 0
+; CHECK-NEXT:    s_cmp_eq_u32 s3, 0
+; CHECK-NEXT:    s_cbranch_scc0 .LBB7_2
+; CHECK-NEXT:  ; %bb.1:
+; CHECK-NEXT:    s_add_pc_i64 input2@rel64-8
+; CHECK-NEXT:  .LBB7_2: ; %entry
+; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, 19
+; CHECK-NEXT:    s_cmp_eq_u32 s3, 1
+; CHECK-NEXT:    s_cbranch_scc0 .LBB7_4
+; CHECK-NEXT:  ; %bb.3:
+; CHECK-NEXT:    s_add_pc_i64 compute2@rel64-8
+; CHECK-NEXT:  .LBB7_4: ; %entry
+; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, 19
+; CHECK-NEXT:    s_cmp_eq_u32 s3, 2
+; CHECK-NEXT:    s_cbranch_scc0 .LBB7_6
+; CHECK-NEXT:  ; %bb.5:
+; CHECK-NEXT:    s_add_pc_i64 output2@rel64-8
+; CHECK-NEXT:  .LBB7_6: ; %entry
+; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, 5
+; CHECK-NEXT:    s_endpgm
+entry:
+  call void @llvm.amdgcn.wavegroup.rank(i32 0, ptr @input2)
+  call void @llvm.amdgcn.wavegroup.rank(i32 1, ptr @compute2)
+  call void @llvm.amdgcn.wavegroup.rank(i32 2, ptr @output2)
+  ret void
+}
+
 ; Function Attrs: convergent nounwind
 declare !callback !0 void @llvm.amdgcn.wavegroup.rank.p0(i32 immarg, ptr) #2
 

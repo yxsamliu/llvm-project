@@ -263,6 +263,11 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
   DenseSet<GlobalVariable *> FuzzyUsedGVs;
   for (auto &K : Func2GVs) {
     Function *F = K.first;
+    // Ignore functions that are called by wavegroup rank-function,
+    // which looks like a callback by the rank-call intrinsic.
+    if (getWavegroupRankFunction(*F))
+      continue;
+
     if (F->hasAddressTaken(nullptr,
                            /* IgnoreCallbackUses */ false,
                            /* IgnoreAssumeLikeCalls */ false,
