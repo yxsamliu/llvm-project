@@ -95,6 +95,7 @@ attributes #0 = {"amdgpu-flat-work-group-size"="256,256"}
 
 ; KERNEL:      {{^}}amdhsa.kernels:
 ; KERNEL-NEXT:  - .args: []
+; KERNEL-NEXT:    .asymmetric_cluster_clamp: false
 ; KERNEL-NEXT:    .enable_wavegroup: true
 ; KERNEL-NEXT:    .group_segment_fixed_size: 0
 ; KERNEL-NEXT:    .kernarg_segment_align: 4

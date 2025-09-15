@@ -125,6 +125,7 @@ attributes #0 = {"amdgpu-flat-work-group-size"="256,256"}
 ; ISEL-NEXT:         .offset:         0
 ; ISEL-NEXT:         .size:           8
 ; ISEL-NEXT:         .value_kind:     global_buffer
+; ISEL-NEXT:     .asymmetric_cluster_clamp: false
 ; ISEL-NEXT:     .enable_wavegroup: true
 ; ISEL-NEXT:     .group_segment_fixed_size: 0
 ; ISEL-NEXT:     .kernarg_segment_align: 8
@@ -152,6 +153,7 @@ attributes #0 = {"amdgpu-flat-work-group-size"="256,256"}
 ; ISEL-NEXT:         .offset:         0
 ; ISEL-NEXT:         .size:           8
 ; ISEL-NEXT:         .value_kind:     global_buffer
+; ISEL-NEXT:     .asymmetric_cluster_clamp: false
 ; ISEL-NEXT:     .enable_wavegroup: true
 ; ISEL-NEXT:     .group_segment_fixed_size: 0
 ; ISEL-NEXT:     .kernarg_segment_align: 8
@@ -185,6 +187,7 @@ attributes #0 = {"amdgpu-flat-work-group-size"="256,256"}
 ; GISEL-NEXT:        .offset:         0
 ; GISEL-NEXT:        .size:           8
 ; GISEL-NEXT:        .value_kind:     global_buffer
+; GISEL-NEXT:    .asymmetric_cluster_clamp: false
 ; GISEL-NEXT:    .enable_wavegroup: true
 ; GISEL-NEXT:    .group_segment_fixed_size: 0
 ; GISEL-NEXT:    .kernarg_segment_align: 8
@@ -212,6 +215,7 @@ attributes #0 = {"amdgpu-flat-work-group-size"="256,256"}
 ; GISEL-NEXT:        .offset:         0
 ; GISEL-NEXT:        .size:           8
 ; GISEL-NEXT:        .value_kind:     global_buffer
+; GISEL-NEXT:    .asymmetric_cluster_clamp: false
 ; GISEL-NEXT:    .enable_wavegroup: true
 ; GISEL-NEXT:    .group_segment_fixed_size: 0
 ; GISEL-NEXT:    .kernarg_segment_align: 8

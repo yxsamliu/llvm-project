@@ -3382,6 +3382,20 @@ and Z dimensions must be 1.
   }];
 }
 
+def AMDGPUAsymmetricClusterClampKernelDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+This attribute marks a kernel as enabling assymetric cluster clamp.
+
+Clang supports the
+``__attribute__((amdgpu_asymmetric_cluster_clamp_kernel()))`` attribute for the AMDGPU target
+when compiling for a GFX13 offload target. This attribute may be attached to HIP cluster kernel
+function definitions to enable asymmetric cluster clamp.
+
+The cluster dims must be one-dimensional. That is, the number of workgroups per cluster in the Y and Z dimensions must be 1.
+  }];
+}
+
 def AMDGPUNoRankSpecializationDocs : Documentation {
   let Category = DocCatAMDGPUAttributes;
   let Content = [{

@@ -428,6 +428,9 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   if (FD->hasAttr<AMDGPUSpatialClusterKernelAttr>())
     F->addFnAttr("amdgpu-spatial-cluster");
 
+  if (FD->hasAttr<AMDGPUAsymmetricClusterClampKernelAttr>())
+    F->addFnAttr("amdgpu-asymmetric-cluster-clamp");
+
   if (FD->getAttr<AMDGPUNoRankSpecializationAttr>()) {
     F->addFnAttr("amdgpu-no-rank-specialization");
   }

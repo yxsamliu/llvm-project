@@ -520,6 +520,8 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
                                 ProgramInfo.LaneSharedSegmentSize);
     Kern[".spatial_cluster"] =
         AMDGPU::getSpatialClusterEnable(MF.getFunction());
+    Kern[".asymmetric_cluster_clamp"] =
+        AMDGPU::getAsymmetricClusterClampEnable(MF.getFunction());
   }
 
   // FIXME: The metadata treats the minimum as 16?

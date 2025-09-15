@@ -1467,6 +1467,8 @@ std::optional<std::array<uint32_t, 3>> getReqdWorkGroupSize(const Function &F);
 
 bool getSpatialClusterEnable(const Function &F);
 
+bool getAsymmetricClusterClampEnable(const Function &F);
+
 bool hasDynamicVGPR(const Function &F);
 
 // Returns the value of the "amdgpu-dynamic-vgpr-block-size" attribute, or 0 if

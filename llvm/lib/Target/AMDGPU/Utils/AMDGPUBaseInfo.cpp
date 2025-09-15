@@ -2517,6 +2517,10 @@ bool getSpatialClusterEnable(const Function &F) {
   return F.hasFnAttribute("amdgpu-spatial-cluster");
 }
 
+bool getAsymmetricClusterClampEnable(const Function &F) {
+  return F.hasFnAttribute("amdgpu-asymmetric-cluster-clamp");
+}
+
 bool getWavegroupRankFunction(const Function &F) {
   return F.hasFnAttribute("amdgpu-wavegroup-rank-function");
 }

@@ -142,6 +142,7 @@ store:
 ; KERNEL-NEXT:        .offset:         8
 ; KERNEL-NEXT:        .size:           8
 ; KERNEL-NEXT:        .value_kind:     global_buffer
+; KERNEL-NEXT:    .asymmetric_cluster_clamp: false
 ; KERNEL-NEXT:    .enable_wavegroup: true
 ; KERNEL-NEXT:    .group_segment_fixed_size: 0
 ; KERNEL-NEXT:    .kernarg_segment_align: 8

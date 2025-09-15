@@ -7083,6 +7083,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_AMDGPUSpatialClusterKernel:
     S.AMDGPU().handleAMDGPUSpatialClusterKernelAttr(D, AL);
     break;
+  case ParsedAttr::AT_AMDGPUAsymmetricClusterClampKernel:
+    S.AMDGPU().handleAMDGPUAsymmetricClusterClampKernelAttr(D, AL);
+    break;
   case ParsedAttr::AT_AMDGPUNoRankSpecialization:
     S.AMDGPU().handleAMDGPUNoRankSpecializationAttr(D, AL);
     break;

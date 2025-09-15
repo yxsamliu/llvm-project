@@ -2481,6 +2481,12 @@ def AMDGPUSpatialClusterKernel : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel function">;
 }
 
+def AMDGPUAsymmetricClusterClampKernel : InheritableAttr {
+  let Spellings = [Clang<"amdgpu_asymmetric_cluster_clamp_kernel", 0>];
+  let Documentation = [AMDGPUAsymmetricClusterClampKernelDocs];
+  let Subjects = SubjectList<[Function], ErrorDiag, "kernel function">;
+}
+
 def AMDGPUNoRankSpecialization : InheritableAttr {
   let Spellings = [Clang<"amdgpu_no_rank_specialization", 0>];
   let Documentation = [AMDGPUNoRankSpecializationDocs];
