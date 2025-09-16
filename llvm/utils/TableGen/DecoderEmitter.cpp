@@ -226,6 +226,26 @@ struct DecoderTableInfo {
   DecoderTable Table;
   PredicateSet Predicates;
   DecoderSet Decoders;
+
+  void insertPredicate(StringRef Predicate) {
+    Predicates.insert(CachedHashString(Predicate));
+  }
+
+  void insertDecoder(StringRef Decoder) {
+    Decoders.insert(CachedHashString(Decoder));
+  }
+
+  unsigned getPredicateIndex(StringRef Predicate) const {
+    auto I = find(Predicates, Predicate);
+    assert(I != Predicates.end());
+    return std::distance(Predicates.begin(), I);
+  }
+
+  unsigned getDecoderIndex(StringRef Decoder) const {
+    auto I = find(Decoders, Decoder);
+    assert(I != Decoders.end());
+    return std::distance(Decoders.begin(), I);
+  }
 };
 
 using NamespacesHwModesMap = std::map<StringRef, std::set<unsigned>>;
@@ -514,9 +534,6 @@ private:
   unsigned getDecoderIndex(unsigned EncodingID) const;
 
   unsigned getPredicateIndex(StringRef P) const;
-
-  bool emitPredicateMatchAux(const Init &Val, bool ParenIfBinOp,
-                             raw_ostream &OS) const;
 
   bool emitPredicateMatch(raw_ostream &OS, unsigned EncodingID) const;
 
@@ -1090,47 +1107,8 @@ unsigned DecoderTableBuilder::getDecoderIndex(unsigned EncodingID) const {
   // performance concern, we can implement a mangling of the predicate
   // data easily enough with a map back to the actual string. That's
   // overkill for now, though.
-
-  // Make sure the predicate is in the table.
-  DecoderSet &Decoders = TableInfo.Decoders;
-  Decoders.insert(CachedHashString(Decoder));
-  // Now figure out the index for when we write out the table.
-  DecoderSet::const_iterator P = find(Decoders, Decoder.str());
-  return std::distance(Decoders.begin(), P);
-}
-
-// If ParenIfBinOp is true, print a surrounding () if Val uses && or ||.
-bool DecoderTableBuilder::emitPredicateMatchAux(const Init &Val,
-                                                bool ParenIfBinOp,
-                                                raw_ostream &OS) const {
-  if (const auto *D = dyn_cast<DefInit>(&Val)) {
-    if (!D->getDef()->isSubClassOf("SubtargetFeature"))
-      return true;
-    OS << "Bits[" << Target.getName() << "::" << D->getAsString() << "]";
-    return false;
-  }
-  if (const auto *D = dyn_cast<DagInit>(&Val)) {
-    std::string Op = D->getOperator()->getAsString();
-    if (Op == "not" && D->getNumArgs() == 1) {
-      OS << '!';
-      return emitPredicateMatchAux(*D->getArg(0), true, OS);
-    }
-    if ((Op == "any_of" || Op == "all_of") && D->getNumArgs() > 0) {
-      bool Paren = D->getNumArgs() > 1 && std::exchange(ParenIfBinOp, true);
-      if (Paren)
-        OS << '(';
-      ListSeparator LS(Op == "any_of" ? " || " : " && ");
-      for (auto *Arg : D->getArgs()) {
-        OS << LS;
-        if (emitPredicateMatchAux(*Arg, ParenIfBinOp, OS))
-          return true;
-      }
-      if (Paren)
-        OS << ')';
-      return false;
-    }
-  }
-  return true;
+  TableInfo.insertDecoder(Decoder);
+  return TableInfo.getDecoderIndex(Decoder);
 }
 
 // Returns true if there was any predicate emitted.
@@ -1154,12 +1132,8 @@ unsigned DecoderTableBuilder::getPredicateIndex(StringRef Predicate) const {
   // performance concern, we can implement a mangling of the predicate
   // data easily enough with a map back to the actual string. That's
   // overkill for now, though.
-
-  // Make sure the predicate is in the table.
-  TableInfo.Predicates.insert(CachedHashString(Predicate));
-  // Now figure out the index for when we write out the table.
-  PredicateSet::const_iterator P = find(TableInfo.Predicates, Predicate);
-  return (unsigned)(P - TableInfo.Predicates.begin());
+  TableInfo.insertPredicate(Predicate);
+  return TableInfo.getPredicateIndex(Predicate);
 }
 
 void DecoderTableBuilder::emitPredicateTableEntry(unsigned EncodingID) const {
