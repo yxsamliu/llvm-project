@@ -25,7 +25,7 @@ define amdgpu_ps void @v_add_u64(i64 %a, ptr addrspace(1) %out) {
 ; GFX1300-NEXT:    v_add_co_u32 v0, vcc_lo, 0x12345678, v0
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, null, 15, v1, vcc_lo
-; GFX1300-NEXT:    global_store_b64 v[2:3], v[0:1], off scope:SCOPE_SE
+; GFX1300-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX1300-NEXT:    s_endpgm
   %result = add i64 %a, 64729929336
   store i64 %result, ptr addrspace(1) %out, align 8
@@ -53,7 +53,7 @@ define amdgpu_ps void @v_add_neg_u64(i64 %a, ptr addrspace(1) %out) {
 ; GFX1300-NEXT:    v_add_co_u32 v0, vcc_lo, 0xedcba988, v0
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, null, -16, v1, vcc_lo
-; GFX1300-NEXT:    global_store_b64 v[2:3], v[0:1], off scope:SCOPE_SE
+; GFX1300-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX1300-NEXT:    s_endpgm
   %result = sub i64 %a, 64729929336
   store i64 %result, ptr addrspace(1) %out, align 8
@@ -81,7 +81,7 @@ define amdgpu_ps void @v_sub_u64(i64 %a, ptr addrspace(1) %out) {
 ; GFX1300-NEXT:    v_sub_co_u32 v0, vcc_lo, 0x12345678, v0
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1300-NEXT:    v_sub_co_ci_u32_e64 v1, null, 15, v1, vcc_lo
-; GFX1300-NEXT:    global_store_b64 v[2:3], v[0:1], off scope:SCOPE_SE
+; GFX1300-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX1300-NEXT:    s_endpgm
   %result = sub i64 64729929336, %a
   store i64 %result, ptr addrspace(1) %out, align 8
@@ -167,7 +167,7 @@ define void @store_double(ptr addrspace(1) %ptr) {
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, 0x33333333
 ; GFX1300-NEXT:    v_mov_b32_e32 v3, 0x40632333
-; GFX1300-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
+; GFX1300-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
   store double 153.1, ptr addrspace(1) %ptr
   ret void
@@ -266,33 +266,19 @@ define amdgpu_ps i64 @s_and_b64(i64 inreg %a) {
 ; No V_AND_B64 instruction, it has to be split
 
 define amdgpu_ps void @v_and_b64(i64 %a, ptr addrspace(1) %out) {
-; GFX1250-SDAG-LABEL: v_and_b64:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    v_and_b32_e32 v1, 15, v1
-; GFX1250-SDAG-NEXT:    v_and_b32_e32 v0, 0x12345678, v0
-; GFX1250-SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; GFX1250-SDAG-NEXT:    s_endpgm
+; GCN-SDAG-LABEL: v_and_b64:
+; GCN-SDAG:       ; %bb.0:
+; GCN-SDAG-NEXT:    v_and_b32_e32 v1, 15, v1
+; GCN-SDAG-NEXT:    v_and_b32_e32 v0, 0x12345678, v0
+; GCN-SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GCN-SDAG-NEXT:    s_endpgm
 ;
-; GFX1250-GISEL-LABEL: v_and_b64:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v0, 0x12345678, v0
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v1, 15, v1
-; GFX1250-GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off
-; GFX1250-GISEL-NEXT:    s_endpgm
-;
-; GFX1300-SDAG-LABEL: v_and_b64:
-; GFX1300-SDAG:       ; %bb.0:
-; GFX1300-SDAG-NEXT:    v_and_b32_e32 v1, 15, v1
-; GFX1300-SDAG-NEXT:    v_and_b32_e32 v0, 0x12345678, v0
-; GFX1300-SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off scope:SCOPE_SE
-; GFX1300-SDAG-NEXT:    s_endpgm
-;
-; GFX1300-GISEL-LABEL: v_and_b64:
-; GFX1300-GISEL:       ; %bb.0:
-; GFX1300-GISEL-NEXT:    v_and_b32_e32 v0, 0x12345678, v0
-; GFX1300-GISEL-NEXT:    v_and_b32_e32 v1, 15, v1
-; GFX1300-GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off scope:SCOPE_SE
-; GFX1300-GISEL-NEXT:    s_endpgm
+; GCN-GISEL-LABEL: v_and_b64:
+; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    v_and_b32_e32 v0, 0x12345678, v0
+; GCN-GISEL-NEXT:    v_and_b32_e32 v1, 15, v1
+; GCN-GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GCN-GISEL-NEXT:    s_endpgm
   %result = and i64 %a, 64729929336
   store i64 %result, ptr addrspace(1) %out, align 8
   ret void

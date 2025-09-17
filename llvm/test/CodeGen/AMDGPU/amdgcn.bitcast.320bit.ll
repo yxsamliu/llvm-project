@@ -3852,9 +3852,9 @@ define <40 x i8> @bitcast_v10i32_to_v40i8(<10 x i32> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v9.l, v15.h
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v12, v15, v9
 ; GFX13-TRUE16-NEXT:    s_clause 0x2
-; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SE
-; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16 scope:SCOPE_SE
-; GFX13-TRUE16-NEXT:    scratch_store_b64 v0, v[11:12], off offset:32 scope:SCOPE_SE
+; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[1:4], off
+; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
+; GFX13-TRUE16-NEXT:    scratch_store_b64 v0, v[11:12], off offset:32
 ; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-FAKE16-LABEL: bitcast_v10i32_to_v40i8:
@@ -4017,9 +4017,9 @@ define <40 x i8> @bitcast_v10i32_to_v40i8(<10 x i32> %a, i32 %b) {
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v10, v10, v15
 ; GFX13-FAKE16-NEXT:    s_clause 0x2
-; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SE
-; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16 scope:SCOPE_SE
-; GFX13-FAKE16-NEXT:    scratch_store_b64 v0, v[9:10], off offset:32 scope:SCOPE_SE
+; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[1:4], off
+; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
+; GFX13-FAKE16-NEXT:    scratch_store_b64 v0, v[9:10], off offset:32
 ; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -5136,9 +5136,9 @@ define inreg <40 x i8> @bitcast_v10i32_to_v40i8_scalar(<10 x i32> inreg %a, i32 
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    v_dual_mov_b32 v9, s0 :: v_dual_mov_b32 v10, s1
 ; GFX13-NEXT:    s_clause 0x2
-; GFX13-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SE
-; GFX13-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16 scope:SCOPE_SE
-; GFX13-NEXT:    scratch_store_b64 v0, v[9:10], off offset:32 scope:SCOPE_SE
+; GFX13-NEXT:    scratch_store_b128 v0, v[1:4], off
+; GFX13-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
+; GFX13-NEXT:    scratch_store_b64 v0, v[9:10], off offset:32
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX13-NEXT:  .LBB13_4:
 ; GFX13-NEXT:    ; implicit-def: $sgpr62
@@ -12527,9 +12527,9 @@ define <40 x i8> @bitcast_v10f32_to_v40i8(<10 x float> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v9.l, v15.h
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v12, v15, v9
 ; GFX13-TRUE16-NEXT:    s_clause 0x2
-; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SE
-; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16 scope:SCOPE_SE
-; GFX13-TRUE16-NEXT:    scratch_store_b64 v0, v[11:12], off offset:32 scope:SCOPE_SE
+; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[1:4], off
+; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
+; GFX13-TRUE16-NEXT:    scratch_store_b64 v0, v[11:12], off offset:32
 ; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-FAKE16-LABEL: bitcast_v10f32_to_v40i8:
@@ -12692,9 +12692,9 @@ define <40 x i8> @bitcast_v10f32_to_v40i8(<10 x float> %a, i32 %b) {
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v10, v10, v15
 ; GFX13-FAKE16-NEXT:    s_clause 0x2
-; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SE
-; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16 scope:SCOPE_SE
-; GFX13-FAKE16-NEXT:    scratch_store_b64 v0, v[9:10], off offset:32 scope:SCOPE_SE
+; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[1:4], off
+; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
+; GFX13-FAKE16-NEXT:    scratch_store_b64 v0, v[9:10], off offset:32
 ; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -13833,9 +13833,9 @@ define inreg <40 x i8> @bitcast_v10f32_to_v40i8_scalar(<10 x float> inreg %a, i3
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    v_dual_mov_b32 v9, s0 :: v_dual_mov_b32 v10, s1
 ; GFX13-NEXT:    s_clause 0x2
-; GFX13-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SE
-; GFX13-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16 scope:SCOPE_SE
-; GFX13-NEXT:    scratch_store_b64 v0, v[9:10], off offset:32 scope:SCOPE_SE
+; GFX13-NEXT:    scratch_store_b128 v0, v[1:4], off
+; GFX13-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
+; GFX13-NEXT:    scratch_store_b64 v0, v[9:10], off offset:32
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX13-NEXT:  .LBB33_4:
 ; GFX13-NEXT:    ; implicit-def: $sgpr62
@@ -20536,9 +20536,9 @@ define <40 x i8> @bitcast_v20i16_to_v40i8(<20 x i16> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v9.l, v15.h
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v12, v15, v9
 ; GFX13-TRUE16-NEXT:    s_clause 0x2
-; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SE
-; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16 scope:SCOPE_SE
-; GFX13-TRUE16-NEXT:    scratch_store_b64 v0, v[11:12], off offset:32 scope:SCOPE_SE
+; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[1:4], off
+; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
+; GFX13-TRUE16-NEXT:    scratch_store_b64 v0, v[11:12], off offset:32
 ; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-FAKE16-LABEL: bitcast_v20i16_to_v40i8:
@@ -20705,9 +20705,9 @@ define <40 x i8> @bitcast_v20i16_to_v40i8(<20 x i16> %a, i32 %b) {
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v10, v10, v15
 ; GFX13-FAKE16-NEXT:    s_clause 0x2
-; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SE
-; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16 scope:SCOPE_SE
-; GFX13-FAKE16-NEXT:    scratch_store_b64 v0, v[9:10], off offset:32 scope:SCOPE_SE
+; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[1:4], off
+; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
+; GFX13-FAKE16-NEXT:    scratch_store_b64 v0, v[9:10], off offset:32
 ; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -21981,9 +21981,9 @@ define inreg <40 x i8> @bitcast_v20i16_to_v40i8_scalar(<20 x i16> inreg %a, i32 
 ; GFX13-NEXT:    v_or_b32_e32 v1, v1, v12
 ; GFX13-NEXT:    v_or_b32_e32 v2, v2, v17
 ; GFX13-NEXT:    s_clause 0x2
-; GFX13-NEXT:    scratch_store_b128 v0, v[13:16], off scope:SCOPE_SE
-; GFX13-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16 scope:SCOPE_SE
-; GFX13-NEXT:    scratch_store_b64 v0, v[1:2], off offset:32 scope:SCOPE_SE
+; GFX13-NEXT:    scratch_store_b128 v0, v[13:16], off
+; GFX13-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
+; GFX13-NEXT:    scratch_store_b64 v0, v[1:2], off offset:32
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -28053,9 +28053,9 @@ define <40 x i8> @bitcast_v20f16_to_v40i8(<20 x half> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v9.l, v15.h
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v12, v15, v9
 ; GFX13-TRUE16-NEXT:    s_clause 0x2
-; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SE
-; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16 scope:SCOPE_SE
-; GFX13-TRUE16-NEXT:    scratch_store_b64 v0, v[11:12], off offset:32 scope:SCOPE_SE
+; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[1:4], off
+; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
+; GFX13-TRUE16-NEXT:    scratch_store_b64 v0, v[11:12], off offset:32
 ; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-FAKE16-LABEL: bitcast_v20f16_to_v40i8:
@@ -28222,9 +28222,9 @@ define <40 x i8> @bitcast_v20f16_to_v40i8(<20 x half> %a, i32 %b) {
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v10, v10, v15
 ; GFX13-FAKE16-NEXT:    s_clause 0x2
-; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SE
-; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16 scope:SCOPE_SE
-; GFX13-FAKE16-NEXT:    scratch_store_b64 v0, v[9:10], off offset:32 scope:SCOPE_SE
+; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[1:4], off
+; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
+; GFX13-FAKE16-NEXT:    scratch_store_b64 v0, v[9:10], off offset:32
 ; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -29509,9 +29509,9 @@ define inreg <40 x i8> @bitcast_v20f16_to_v40i8_scalar(<20 x half> inreg %a, i32
 ; GFX13-NEXT:    v_or_b32_e32 v1, v1, v12
 ; GFX13-NEXT:    v_or_b32_e32 v2, v2, v17
 ; GFX13-NEXT:    s_clause 0x2
-; GFX13-NEXT:    scratch_store_b128 v0, v[13:16], off scope:SCOPE_SE
-; GFX13-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16 scope:SCOPE_SE
-; GFX13-NEXT:    scratch_store_b64 v0, v[1:2], off offset:32 scope:SCOPE_SE
+; GFX13-NEXT:    scratch_store_b128 v0, v[13:16], off
+; GFX13-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
+; GFX13-NEXT:    scratch_store_b64 v0, v[1:2], off offset:32
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -38564,9 +38564,9 @@ define <40 x i8> @bitcast_v5f64_to_v40i8(<5 x double> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v9.l, v15.h
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v12, v15, v9
 ; GFX13-TRUE16-NEXT:    s_clause 0x2
-; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SE
-; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16 scope:SCOPE_SE
-; GFX13-TRUE16-NEXT:    scratch_store_b64 v0, v[11:12], off offset:32 scope:SCOPE_SE
+; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[1:4], off
+; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
+; GFX13-TRUE16-NEXT:    scratch_store_b64 v0, v[11:12], off offset:32
 ; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-FAKE16-LABEL: bitcast_v5f64_to_v40i8:
@@ -38728,9 +38728,9 @@ define <40 x i8> @bitcast_v5f64_to_v40i8(<5 x double> %a, i32 %b) {
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v10, v10, v15
 ; GFX13-FAKE16-NEXT:    s_clause 0x2
-; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SE
-; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16 scope:SCOPE_SE
-; GFX13-FAKE16-NEXT:    scratch_store_b64 v0, v[9:10], off offset:32 scope:SCOPE_SE
+; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[1:4], off
+; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
+; GFX13-FAKE16-NEXT:    scratch_store_b64 v0, v[9:10], off offset:32
 ; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -39885,9 +39885,9 @@ define inreg <40 x i8> @bitcast_v5f64_to_v40i8_scalar(<5 x double> inreg %a, i32
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX13-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_bitop2_b32 v1, v1, v2 bitop3:0x54
 ; GFX13-NEXT:    s_clause 0x2
-; GFX13-NEXT:    scratch_store_b128 v0, v[12:15], off scope:SCOPE_SE
-; GFX13-NEXT:    scratch_store_b128 v0, v[7:10], off offset:16 scope:SCOPE_SE
-; GFX13-NEXT:    scratch_store_b64 v0, v[1:2], off offset:32 scope:SCOPE_SE
+; GFX13-NEXT:    scratch_store_b128 v0, v[12:15], off
+; GFX13-NEXT:    scratch_store_b128 v0, v[7:10], off offset:16
+; GFX13-NEXT:    scratch_store_b64 v0, v[1:2], off offset:32
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -43969,9 +43969,9 @@ define <40 x i8> @bitcast_v5i64_to_v40i8(<5 x i64> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v9.l, v15.h
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v12, v15, v9
 ; GFX13-TRUE16-NEXT:    s_clause 0x2
-; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SE
-; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16 scope:SCOPE_SE
-; GFX13-TRUE16-NEXT:    scratch_store_b64 v0, v[11:12], off offset:32 scope:SCOPE_SE
+; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[1:4], off
+; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
+; GFX13-TRUE16-NEXT:    scratch_store_b64 v0, v[11:12], off offset:32
 ; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-FAKE16-LABEL: bitcast_v5i64_to_v40i8:
@@ -44141,9 +44141,9 @@ define <40 x i8> @bitcast_v5i64_to_v40i8(<5 x i64> %a, i32 %b) {
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v10, v10, v15
 ; GFX13-FAKE16-NEXT:    s_clause 0x2
-; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SE
-; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16 scope:SCOPE_SE
-; GFX13-FAKE16-NEXT:    scratch_store_b64 v0, v[9:10], off offset:32 scope:SCOPE_SE
+; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[1:4], off
+; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
+; GFX13-FAKE16-NEXT:    scratch_store_b64 v0, v[9:10], off offset:32
 ; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -45255,9 +45255,9 @@ define inreg <40 x i8> @bitcast_v5i64_to_v40i8_scalar(<5 x i64> inreg %a, i32 in
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    v_dual_mov_b32 v9, s0 :: v_dual_mov_b32 v10, s1
 ; GFX13-NEXT:    s_clause 0x2
-; GFX13-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SE
-; GFX13-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16 scope:SCOPE_SE
-; GFX13-NEXT:    scratch_store_b64 v0, v[9:10], off offset:32 scope:SCOPE_SE
+; GFX13-NEXT:    scratch_store_b128 v0, v[1:4], off
+; GFX13-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
+; GFX13-NEXT:    scratch_store_b64 v0, v[9:10], off offset:32
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX13-NEXT:  .LBB79_4:
 ; GFX13-NEXT:    ; implicit-def: $sgpr62

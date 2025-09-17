@@ -309,7 +309,7 @@ define private amdgpu_kernel void @output2(ptr addrspace(1) %inbuf, ptr addrspac
 ; CHECK-NEXT:    ds_load_b128 v[0:3], v4 offset:112
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    global_store_b128 v4, v[0:3], s[0:1] scope:SCOPE_SE
+; CHECK-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)

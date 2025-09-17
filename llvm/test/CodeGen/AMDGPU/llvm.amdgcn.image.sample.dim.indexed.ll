@@ -39,7 +39,7 @@ define amdgpu_ps <4 x float> @sample_1d_tfe(i32 inreg %rsrc, <4 x i32> inreg %sa
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s7
 ; GFX13-NEXT:    image_sample v[0:4], v5, s0, s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D tfe
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    global_store_b32 v6, v4, s[2:3] scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v6, v4, s[2:3]
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32 15, float %s, i32 %rsrc, <4 x i32> %samp, i1 0, i32 1, i32 0)
@@ -260,7 +260,7 @@ define amdgpu_ps <4 x float> @sample_1d_lwe(i32 inreg %rsrc, <4 x i32> inreg %sa
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s7
 ; GFX13-NEXT:    image_sample v[0:4], v5, s0, s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D lwe
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    global_store_b32 v6, v4, s[2:3] scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v6, v4, s[2:3]
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32 15, float %s, i32 %rsrc, <4 x i32> %samp, i1 0, i32 2, i32 0)
@@ -883,7 +883,7 @@ define amdgpu_ps float @sample_c_d_o_2darray_V1_tfe(i32 inreg %rsrc, <4 x i32> i
 ; GFX13-NEXT:    image_sample_c_d_o v[0:1], [v10, v9, v2, v[3:8]], s0, s[8:11] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY tfe
 ; GFX13-NEXT:    s_mov_b32 s6, s5
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    global_store_b32 v11, v1, s[6:7] scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v11, v1, s[6:7]
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {float,i32} @llvm.amdgcn.image.sample.c.d.o.2darray.f32i32.f32.f32(i32 4, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %slice, i32 %rsrc, <4 x i32> %samp, i1 0, i32 1, i32 0)

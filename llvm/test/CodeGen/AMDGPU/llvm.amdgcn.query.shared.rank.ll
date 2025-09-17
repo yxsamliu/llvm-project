@@ -13,7 +13,7 @@ define amdgpu_kernel void @query_shared_rank_uniform(ptr addrspace(11) %ptr, ptr
 ; GFX1300-SDAG-NEXT:    s_ashr_i32 s2, s2, 24
 ; GFX1300-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1300-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1300-GISEL-LABEL: query_shared_rank_uniform:
@@ -26,7 +26,7 @@ define amdgpu_kernel void @query_shared_rank_uniform(ptr addrspace(11) %ptr, ptr
 ; GFX1300-GISEL-NEXT:    s_ashr_i32 s2, s2, 24
 ; GFX1300-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1300-GISEL-NEXT:    flat_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX1300-GISEL-NEXT:    flat_store_b32 v1, v0, s[0:1]
 ; GFX1300-GISEL-NEXT:    s_endpgm
     %result = call i32 @llvm.amdgcn.query.shared.rank(ptr addrspace(11) %ptr)
     store i32 %result, ptr %out
@@ -42,7 +42,7 @@ define amdgpu_kernel void @query_shared_rank(ptr %inout) {
 ; GFX1300-NEXT:    flat_load_b32 v1, v0, s[0:1]
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    v_ashrrev_i32_e32 v1, 24, v1
-; GFX1300-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1300-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1300-NEXT:    s_endpgm
     %ptr = load ptr addrspace(11), ptr %inout
     %result = call i32 @llvm.amdgcn.query.shared.rank(ptr addrspace(11) %ptr)

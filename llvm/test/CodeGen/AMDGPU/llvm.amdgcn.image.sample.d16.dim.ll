@@ -204,7 +204,7 @@ define amdgpu_ps half @image_sample_2d_f16_tfe(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX13-TRUE16-NEXT:    image_sample v[3:4], [v0, v1], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe d16
 ; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v3.l
-; GFX13-TRUE16-NEXT:    global_store_b32 v2, v4, s[12:13] scope:SCOPE_SE
+; GFX13-TRUE16-NEXT:    global_store_b32 v2, v4, s[12:13]
 ; GFX13-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-FAKE16-LABEL: image_sample_2d_f16_tfe:
@@ -217,7 +217,7 @@ define amdgpu_ps half @image_sample_2d_f16_tfe(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX13-FAKE16-NEXT:    s_and_b32 exec_lo, exec_lo, s14
 ; GFX13-FAKE16-NEXT:    image_sample v[0:1], [v3, v2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe d16
 ; GFX13-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-FAKE16-NEXT:    global_store_b32 v4, v1, s[12:13] scope:SCOPE_SE
+; GFX13-FAKE16-NEXT:    global_store_b32 v4, v1, s[12:13]
 ; GFX13-FAKE16-NEXT:    ; return to shader part epilog
 main_body:
   %tex = call {half,i32} @llvm.amdgcn.image.sample.2d.f16i32.f32(i32 1, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 1, i32 0)

@@ -601,9 +601,6 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
   if (AMDGPU::getAsymmetricClusterClampEnable(MF.getFunction()))
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_ASYMMETRIC_CLUSTER_CLAMP;
-  if (isGFX1250Only(ST) && ST.hasCUStores()) {
-    KernelCodeProperties |= amdhsa::KERNEL_CODE_PROPERTY_USES_CU_STORES;
-  }
 
   // CurrentProgramInfo.DynamicCallStack is a MCExpr and could be
   // un-evaluatable at this point so it cannot be conditionally checked here.

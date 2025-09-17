@@ -5,8 +5,8 @@ define amdgpu_ps void @test_permute_pair_2src_interleave_b64(i32 %src0, i32 %src
 ; GFX13-LABEL: test_permute_pair_2src_interleave_b64:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_permute_pair_2src_interleave_b64 v0, v1, v0, v1 aux_data:2
-; GFX13-NEXT:    global_store_b32 v[2:3], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[4:5], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX13-NEXT:    global_store_b32 v[4:5], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.permute.pair.2src.interleave.b64(i32 %src0, i32 %src1, i32 2)
@@ -21,8 +21,8 @@ define amdgpu_ps void @test_permute_pack_tensor_2src_b64(i32 %src0, i32 %src1, p
 ; GFX13-LABEL: test_permute_pack_tensor_2src_b64:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_permute_pack_tensor_2src_b64 v0, v1, v0, v1 aux_data:2
-; GFX13-NEXT:    global_store_b32 v[2:3], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[4:5], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX13-NEXT:    global_store_b32 v[4:5], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.permute.pack.tensor.2src.b64(i32 %src0, i32 %src1, i32 2)

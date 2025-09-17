@@ -9,8 +9,8 @@ define amdgpu_ps void @struct_buffer_load_i8_tfe(i32 %rsrc, ptr addrspace(1) %da
 ; GFX13-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX13-NEXT:    buffer_load_u8 v[5:6], v5, v0, null idxen tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b8 v[1:2], v5, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[3:4], v6, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b8 v[1:2], v5, off
+; GFX13-NEXT:    global_store_b32 v[3:4], v6, off
 ; GFX13-NEXT:    s_endpgm
   %res = call { i8, i32 } @llvm.amdgcn.struct.buffer.load.sl_i8i32s(i32 %rsrc, i32 0, i32 0, i32 0, i32 0)
   %data = extractvalue { i8, i32 } %res, 0
@@ -28,8 +28,8 @@ define amdgpu_ps void @struct_buffer_load_i16_tfe(i32 %rsrc, ptr addrspace(1) %d
 ; GFX13-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX13-NEXT:    buffer_load_u16 v[5:6], v5, v0, null idxen tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b16 v[1:2], v5, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[3:4], v6, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b16 v[1:2], v5, off
+; GFX13-NEXT:    global_store_b32 v[3:4], v6, off
 ; GFX13-NEXT:    s_endpgm
   %res = call { i16, i32 } @llvm.amdgcn.struct.buffer.load.sl_i16i32s(i32 %rsrc, i32 0, i32 0, i32 0, i32 0)
   %data = extractvalue { i16, i32 } %res, 0
@@ -47,8 +47,8 @@ define amdgpu_ps void @struct_buffer_load_f16_tfe(i32 %rsrc, ptr addrspace(1) %d
 ; GFX13-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX13-NEXT:    buffer_load_u16 v[5:6], v5, v0, null idxen tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b16 v[1:2], v5, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[3:4], v6, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b16 v[1:2], v5, off
+; GFX13-NEXT:    global_store_b32 v[3:4], v6, off
 ; GFX13-NEXT:    s_endpgm
   %res = call { half, i32 } @llvm.amdgcn.struct.buffer.load.sl_f16i32s(i32 %rsrc, i32 0, i32 0, i32 0, i32 0)
   %data = extractvalue { half, i32 } %res, 0
@@ -66,8 +66,8 @@ define amdgpu_ps void @struct_buffer_load_i32_tfe(i32 %rsrc, ptr addrspace(1) %d
 ; GFX13-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX13-NEXT:    buffer_load_b32 v[5:6], v5, v0, null idxen tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v[1:2], v5, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[3:4], v6, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[1:2], v5, off
+; GFX13-NEXT:    global_store_b32 v[3:4], v6, off
 ; GFX13-NEXT:    s_endpgm
   %res = call { i32, i32 } @llvm.amdgcn.struct.buffer.load.sl_i32i32s(i32 %rsrc, i32 0, i32 0, i32 0, i32 0)
   %data = extractvalue { i32, i32 } %res, 0
@@ -85,8 +85,8 @@ define amdgpu_ps void @struct_buffer_load_v2i32_tfe(i32 %rsrc, ptr addrspace(1) 
 ; GFX13-NEXT:    v_dual_mov_b32 v6, v5 :: v_dual_mov_b32 v7, v5
 ; GFX13-NEXT:    buffer_load_b64 v[5:7], v5, v0, null idxen tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b64 v[1:2], v[5:6], off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[3:4], v7, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[1:2], v[5:6], off
+; GFX13-NEXT:    global_store_b32 v[3:4], v7, off
 ; GFX13-NEXT:    s_endpgm
   %res = call { <2 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.sl_v2i32i32s(i32 %rsrc, i32 0, i32 0, i32 0, i32 0)
   %data = extractvalue { <2 x i32>, i32 } %res, 0
@@ -104,8 +104,8 @@ define amdgpu_ps void @struct_buffer_load_v2f32_tfe(i32 %rsrc, ptr addrspace(1) 
 ; GFX13-NEXT:    v_dual_mov_b32 v6, v5 :: v_dual_mov_b32 v7, v5
 ; GFX13-NEXT:    buffer_load_b64 v[5:7], v5, v0, null idxen tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b64 v[1:2], v[5:6], off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[3:4], v7, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[1:2], v[5:6], off
+; GFX13-NEXT:    global_store_b32 v[3:4], v7, off
 ; GFX13-NEXT:    s_endpgm
   %res = call { <2 x float>, i32 } @llvm.amdgcn.struct.buffer.load.sl_v2f32i32s(i32 %rsrc, i32 0, i32 0, i32 0, i32 0)
   %data = extractvalue { <2 x float>, i32 } %res, 0
@@ -124,8 +124,8 @@ define amdgpu_ps void @struct_buffer_load_v3i32_tfe(i32 %rsrc, ptr addrspace(1) 
 ; GFX13-NEXT:    v_mov_b32_e32 v8, v5
 ; GFX13-NEXT:    buffer_load_b96 v[5:8], v5, v0, null idxen tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b96 v[1:2], v[5:7], off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[3:4], v8, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b96 v[1:2], v[5:7], off
+; GFX13-NEXT:    global_store_b32 v[3:4], v8, off
 ; GFX13-NEXT:    s_endpgm
   %res = call { <3 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.sl_v3i32i32s(i32 %rsrc, i32 0, i32 0, i32 0, i32 0)
   %data = extractvalue { <3 x i32>, i32 } %res, 0
@@ -144,8 +144,8 @@ define amdgpu_ps void @struct_buffer_load_v3f32_tfe(i32 %rsrc, ptr addrspace(1) 
 ; GFX13-NEXT:    v_mov_b32_e32 v8, v5
 ; GFX13-NEXT:    buffer_load_b96 v[5:8], v5, v0, null idxen tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b96 v[1:2], v[5:7], off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[3:4], v8, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b96 v[1:2], v[5:7], off
+; GFX13-NEXT:    global_store_b32 v[3:4], v8, off
 ; GFX13-NEXT:    s_endpgm
   %res = call { <3 x float>, i32 } @llvm.amdgcn.struct.buffer.load.sl_v3f32i32s(i32 %rsrc, i32 0, i32 0, i32 0, i32 0)
   %data = extractvalue { <3 x float>, i32 } %res, 0
@@ -164,8 +164,8 @@ define amdgpu_ps void @struct_buffer_load_v4i32_tfe(i32 %rsrc, ptr addrspace(1) 
 ; GFX13-NEXT:    v_dual_mov_b32 v8, v5 :: v_dual_mov_b32 v9, v5
 ; GFX13-NEXT:    buffer_load_b128 v[5:9], v5, v0, null idxen tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b128 v[1:2], v[5:8], off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[3:4], v9, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[1:2], v[5:8], off
+; GFX13-NEXT:    global_store_b32 v[3:4], v9, off
 ; GFX13-NEXT:    s_endpgm
   %res = call { <4 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.sl_v4i32i32s(i32 %rsrc, i32 0, i32 0, i32 0, i32 0)
   %data = extractvalue { <4 x i32>, i32 } %res, 0
@@ -184,8 +184,8 @@ define amdgpu_ps void @struct_buffer_load_v4f32_tfe(i32 %rsrc, ptr addrspace(1) 
 ; GFX13-NEXT:    v_dual_mov_b32 v8, v5 :: v_dual_mov_b32 v9, v5
 ; GFX13-NEXT:    buffer_load_b128 v[5:9], v5, v0, null idxen tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b128 v[1:2], v[5:8], off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[3:4], v9, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[1:2], v[5:8], off
+; GFX13-NEXT:    global_store_b32 v[3:4], v9, off
 ; GFX13-NEXT:    s_endpgm
   %res = call { <4 x float>, i32 } @llvm.amdgcn.struct.buffer.load.sl_v4f32i32s(i32 %rsrc, i32 0, i32 0, i32 0, i32 0)
   %data = extractvalue { <4 x float>, i32 } %res, 0

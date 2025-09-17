@@ -24,7 +24,7 @@ define dso_local amdgpu_kernel void @_Z3foov() "amdgpu-wavegroup-enable" !reqd_w
 ; CHECK-NEXT:    scratch_load_u16 v0, off, s0
 ; CHECK-NEXT:    s_mov_b32 s0, 12
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    scratch_store_b16 off, v0, s0 scope:SCOPE_SE
+; CHECK-NEXT:    scratch_store_b16 off, v0, s0
 ; CHECK-NEXT:    s_endpgm
 entry:
   %1 = load <2 x i8>, ptr addrspace(10) getelementptr inbounds (i8, ptr addrspace(10) @vx, i32 20), align 4, !tbaa !4

@@ -25,7 +25,7 @@ define amdgpu_kernel void @wavegroup_kernel_3x64x2(ptr addrspace(1) %p) #0 "amdg
 ; ISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; ISEL-NEXT:    v_or3_b32 v0, v1, v0, v3
 ; ISEL-NEXT:    s_wait_kmcnt 0x0
-; ISEL-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset scope:SCOPE_SE
+; ISEL-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
 ; ISEL-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: wavegroup_kernel_3x64x2:
@@ -53,7 +53,7 @@ define amdgpu_kernel void @wavegroup_kernel_3x64x2(ptr addrspace(1) %p) #0 "amdg
 ; GISEL-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_sub_nc_u32 v2, v2, v3
 ; GISEL-NEXT:    v_or3_b32 v0, v2, v0, v1
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    global_store_b32 v0, v3, s[0:1] scale_offset scope:SCOPE_SE
+; GISEL-NEXT:    global_store_b32 v0, v3, s[0:1] scale_offset
 ; GISEL-NEXT:    s_endpgm
 entry:
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -84,7 +84,7 @@ define amdgpu_kernel void @wavegroup_kernel_128x1x1(ptr addrspace(1) %p) #0 "amd
 ; ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; ISEL-NEXT:    v_lshl_or_b32 v0, s2, 5, v0
 ; ISEL-NEXT:    s_wait_kmcnt 0x0
-; ISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset scope:SCOPE_SE
+; ISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
 ; ISEL-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: wavegroup_kernel_128x1x1:
@@ -103,7 +103,7 @@ define amdgpu_kernel void @wavegroup_kernel_128x1x1(ptr addrspace(1) %p) #0 "amd
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, s2, v0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset scope:SCOPE_SE
+; GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
 ; GISEL-NEXT:    s_endpgm
 entry:
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()

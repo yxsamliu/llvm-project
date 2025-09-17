@@ -72,7 +72,7 @@ define amdgpu_kernel void @bitcast_i8ptr_v16i8ptr(ptr addrspace(1) %out, ptr add
 ; GFX13-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v0, s4
 ; GFX13-NEXT:    v_dual_mov_b32 v1, s5 :: v_dual_mov_b32 v2, s6
 ; GFX13-NEXT:    v_mov_b32_e32 v3, s7
-; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[0:1] scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
 ; GFX13-NEXT:    s_endpgm
 entry:
   %0 = load <16 x i8>, ptr addrspace(1) %in

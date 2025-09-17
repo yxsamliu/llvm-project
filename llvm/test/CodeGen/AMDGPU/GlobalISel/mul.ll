@@ -3499,7 +3499,7 @@ define amdgpu_ps void @s_mul_u64_zext_with_vregs(ptr addrspace(1) %out, ptr addr
 ; GFX1300-NEXT:    global_load_b32 v2, v[2:3], off
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    v_mad_co_u64_u32 v[2:3], null, 0x50, v2, 0
-; GFX1300-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
+; GFX1300-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1300-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %in, align 4
   %ext = zext i32 %val to i64
@@ -3624,7 +3624,7 @@ define amdgpu_kernel void @s_mul_u64_zext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX1300-NEXT:    s_mul_u64 s[2:3], s[2:3], 0x50
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1300-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
-; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
+; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1300-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %in, align 4
   %ext = zext i32 %val to i64
@@ -3712,7 +3712,7 @@ define amdgpu_ps void @s_mul_u64_sext_with_vregs(ptr addrspace(1) %out, ptr addr
 ; GFX1300-NEXT:    global_load_b32 v2, v[2:3], off
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    v_mad_co_i64_i32 v[2:3], null, 0x50, v2, 0
-; GFX1300-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SE
+; GFX1300-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1300-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %in, align 4
   %ext = sext i32 %val to i64
@@ -3851,7 +3851,7 @@ define amdgpu_kernel void @s_mul_u64_sext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1300-NEXT:    s_mul_u64 s[2:3], s[2:3], 0x50
 ; GFX1300-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
-; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
+; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1300-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %in, align 4
   %ext = sext i32 %val to i64

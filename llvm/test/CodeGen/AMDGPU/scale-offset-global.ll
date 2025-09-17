@@ -309,17 +309,11 @@ entry:
 }
 
 define amdgpu_ps void @global_store_b32_idxprom(ptr addrspace(1) align 4 inreg %p, i32 %idx) {
-; GFX1250-LABEL: global_store_b32_idxprom:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    v_mov_b32_e32 v1, 1.0
-; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
-; GFX1250-NEXT:    s_endpgm
-;
-; GFX13-LABEL: global_store_b32_idxprom:
-; GFX13:       ; %bb.0: ; %entry
-; GFX13-NEXT:    v_mov_b32_e32 v1, 1.0
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset scope:SCOPE_SE
-; GFX13-NEXT:    s_endpgm
+; GCN-LABEL: global_store_b32_idxprom:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_mov_b32_e32 v1, 1.0
+; GCN-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
+; GCN-NEXT:    s_endpgm
 entry:
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds float, ptr addrspace(1) %p, i64 %idxprom
@@ -328,17 +322,11 @@ entry:
 }
 
 define amdgpu_ps void @global_store_b16_idxprom(ptr addrspace(1) align 2 inreg %p, i32 %idx) {
-; GFX1250-LABEL: global_store_b16_idxprom:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
-; GFX1250-NEXT:    global_store_b16 v0, v1, s[0:1] scale_offset
-; GFX1250-NEXT:    s_endpgm
-;
-; GFX13-LABEL: global_store_b16_idxprom:
-; GFX13:       ; %bb.0: ; %entry
-; GFX13-NEXT:    v_mov_b32_e32 v1, 1
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1] scale_offset scope:SCOPE_SE
-; GFX13-NEXT:    s_endpgm
+; GCN-LABEL: global_store_b16_idxprom:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_mov_b32_e32 v1, 1
+; GCN-NEXT:    global_store_b16 v0, v1, s[0:1] scale_offset
+; GCN-NEXT:    s_endpgm
 entry:
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds i16, ptr addrspace(1) %p, i64 %idxprom
@@ -357,7 +345,7 @@ define amdgpu_ps void @global_store_b64_idxprom(ptr addrspace(1) align 4 inreg %
 ; GFX13:       ; %bb.0: ; %entry
 ; GFX13-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-NEXT:    v_mov_b32_e32 v2, 0x3ff00000
-; GFX13-NEXT:    global_store_b64 v0, v[1:2], s[0:1] scale_offset scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v0, v[1:2], s[0:1] scale_offset
 ; GFX13-NEXT:    s_endpgm
 entry:
   %idxprom = sext i32 %idx to i64

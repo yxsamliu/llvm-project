@@ -5,7 +5,7 @@
 define amdgpu_ps void @tbuffer_store_d16_x(i32 %rsrc, half %data) {
 ; GFX13-LABEL: tbuffer_store_d16_x:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    tbuffer_store_d16_format_x v1, off, v0, null format:[BUF_FMT_10_10_10_2_SNORM] scope:SCOPE_SE
+; GFX13-NEXT:    tbuffer_store_d16_format_x v1, off, v0, null format:[BUF_FMT_10_10_10_2_SNORM]
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.f16(half %data, i32 %rsrc, i32 0, i32 0, i32 33, i32 0)
@@ -15,7 +15,7 @@ main_body:
 define amdgpu_ps void @tbuffer_store_d16_xy(i32 %rsrc, <2 x half> %data) {
 ; GFX13-LABEL: tbuffer_store_d16_xy:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    tbuffer_store_d16_format_xy v1, off, v0, null format:[BUF_FMT_10_10_10_2_SNORM] scope:SCOPE_SE
+; GFX13-NEXT:    tbuffer_store_d16_format_xy v1, off, v0, null format:[BUF_FMT_10_10_10_2_SNORM]
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.v2f16(<2 x half> %data, i32 %rsrc, i32 0, i32 0, i32 33, i32 0)
@@ -26,12 +26,12 @@ define amdgpu_ps void @tbuffer_store_d16_xyz(i32 %rsrc, <4 x half> %data) {
 ; GFX13-SDAG-LABEL: tbuffer_store_d16_xyz:
 ; GFX13-SDAG:       ; %bb.0: ; %main_body
 ; GFX13-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX13-SDAG-NEXT:    tbuffer_store_d16_format_xyz v[1:2], off, v0, null format:[BUF_FMT_10_10_10_2_SNORM] scope:SCOPE_SE
+; GFX13-SDAG-NEXT:    tbuffer_store_d16_format_xyz v[1:2], off, v0, null format:[BUF_FMT_10_10_10_2_SNORM]
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: tbuffer_store_d16_xyz:
 ; GFX13-GISEL:       ; %bb.0: ; %main_body
-; GFX13-GISEL-NEXT:    tbuffer_store_d16_format_xyz v[1:2], off, v0, null format:[BUF_FMT_10_10_10_2_SNORM] scope:SCOPE_SE
+; GFX13-GISEL-NEXT:    tbuffer_store_d16_format_xyz v[1:2], off, v0, null format:[BUF_FMT_10_10_10_2_SNORM]
 ; GFX13-GISEL-NEXT:    s_endpgm
 main_body:
   %data_subvec = shufflevector <4 x half> %data, <4 x half> undef, <3 x i32> <i32 0, i32 1, i32 2>
@@ -42,7 +42,7 @@ main_body:
 define amdgpu_ps void @tbuffer_store_d16_xyzw(i32 %rsrc, <4 x half> %data) {
 ; GFX13-LABEL: tbuffer_store_d16_xyzw:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    tbuffer_store_d16_format_xyzw v[1:2], off, v0, null format:[BUF_FMT_10_10_10_2_SNORM] scope:SCOPE_SE
+; GFX13-NEXT:    tbuffer_store_d16_format_xyzw v[1:2], off, v0, null format:[BUF_FMT_10_10_10_2_SNORM]
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.tbuffer.store.v4f16(<4 x half> %data, i32 %rsrc, i32 0, i32 0, i32 33, i32 0)

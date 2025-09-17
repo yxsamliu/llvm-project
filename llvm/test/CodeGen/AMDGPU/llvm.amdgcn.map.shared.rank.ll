@@ -11,7 +11,7 @@ define amdgpu_kernel void @map_shared_rank_lds_to_dds_uniform(ptr addrspace(3) %
 ; GFX1300-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1300-SDAG-NEXT:    s_or_b32 s0, s0, s1
 ; GFX1300-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
-; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[2:3] scope:SCOPE_SE
+; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[2:3]
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1300-GISEL-LABEL: map_shared_rank_lds_to_dds_uniform:
@@ -23,7 +23,7 @@ define amdgpu_kernel void @map_shared_rank_lds_to_dds_uniform(ptr addrspace(3) %
 ; GFX1300-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1300-GISEL-NEXT:    s_or_b32 s0, s0, s1
 ; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1300-GISEL-NEXT:    flat_store_b32 v1, v0, s[2:3] scope:SCOPE_SE
+; GFX1300-GISEL-NEXT:    flat_store_b32 v1, v0, s[2:3]
 ; GFX1300-GISEL-NEXT:    s_endpgm
     %result = call ptr addrspace(11) @llvm.amdgcn.map.shared.rank(ptr addrspace(3) %ptr, i32 %rank)
     store ptr addrspace(11) %result, ptr %out
@@ -39,7 +39,7 @@ define amdgpu_kernel void @map_shared_rank_lds_to_dds(ptr %inout, i32 %rank) {
 ; GFX1300-SDAG-NEXT:    flat_load_b32 v1, v0, s[0:1]
 ; GFX1300-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-SDAG-NEXT:    v_lshl_or_b32 v1, s2, 24, v1
-; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1300-GISEL-LABEL: map_shared_rank_lds_to_dds:
@@ -51,7 +51,7 @@ define amdgpu_kernel void @map_shared_rank_lds_to_dds(ptr %inout, i32 %rank) {
 ; GFX1300-GISEL-NEXT:    flat_load_b32 v1, v0, s[0:1]
 ; GFX1300-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-GISEL-NEXT:    v_or_b32_e32 v1, s2, v1
-; GFX1300-GISEL-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1300-GISEL-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1300-GISEL-NEXT:    s_endpgm
     %ptr = load ptr addrspace(3), ptr %inout
     %result = call ptr addrspace(11) @llvm.amdgcn.map.shared.rank(ptr addrspace(3) %ptr, i32 %rank)
@@ -70,7 +70,7 @@ define amdgpu_kernel void @map_shared_rank_dds_to_dds_uniform(ptr addrspace(11) 
 ; GFX1300-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1300-SDAG-NEXT:    s_or_b32 s0, s0, s1
 ; GFX1300-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
-; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[2:3] scope:SCOPE_SE
+; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[2:3]
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1300-GISEL-LABEL: map_shared_rank_dds_to_dds_uniform:
@@ -83,7 +83,7 @@ define amdgpu_kernel void @map_shared_rank_dds_to_dds_uniform(ptr addrspace(11) 
 ; GFX1300-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1300-GISEL-NEXT:    s_or_b32 s0, s0, s1
 ; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1300-GISEL-NEXT:    flat_store_b32 v1, v0, s[2:3] scope:SCOPE_SE
+; GFX1300-GISEL-NEXT:    flat_store_b32 v1, v0, s[2:3]
 ; GFX1300-GISEL-NEXT:    s_endpgm
     %ptr_local = addrspacecast ptr addrspace(11) %ptr to ptr addrspace(3)
     %result = call ptr addrspace(11) @llvm.amdgcn.map.shared.rank(ptr addrspace(3) %ptr_local, i32 %rank)
@@ -102,7 +102,7 @@ define amdgpu_kernel void @map_shared_rank_dds_to_dds(ptr %inout, i32 %rank) {
 ; GFX1300-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
 ; GFX1300-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1300-SDAG-NEXT:    v_perm_b32 v1, v1, s2, 0x70605
-; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1300-GISEL-LABEL: map_shared_rank_dds_to_dds:
@@ -116,7 +116,7 @@ define amdgpu_kernel void @map_shared_rank_dds_to_dds(ptr %inout, i32 %rank) {
 ; GFX1300-GISEL-NEXT:    v_bfe_i32 v1, v1, 0, 24
 ; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1300-GISEL-NEXT:    v_or_b32_e32 v1, s2, v1
-; GFX1300-GISEL-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1300-GISEL-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1300-GISEL-NEXT:    s_endpgm
     %ptr = load ptr addrspace(11), ptr %inout
     %ptr_local = addrspacecast ptr addrspace(11) %ptr to ptr addrspace(3)
@@ -144,7 +144,7 @@ define amdgpu_kernel void @map_shared_rank_flat_to_lds_uniform(ptr  %ptr, i32 %r
 ; GFX1300-SDAG-NEXT:    s_cselect_b32 s1, s1, 0
 ; GFX1300-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s0
 ; GFX1300-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; GFX1300-SDAG-NEXT:    flat_store_b64 v2, v[0:1], s[4:5] scope:SCOPE_SE
+; GFX1300-SDAG-NEXT:    flat_store_b64 v2, v[0:1], s[4:5]
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1300-GISEL-LABEL: map_shared_rank_flat_to_lds_uniform:
@@ -164,7 +164,7 @@ define amdgpu_kernel void @map_shared_rank_flat_to_lds_uniform(ptr  %ptr, i32 %r
 ; GFX1300-GISEL-NEXT:    s_cmp_lg_u32 s2, -1
 ; GFX1300-GISEL-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
 ; GFX1300-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX1300-GISEL-NEXT:    flat_store_b64 v2, v[0:1], s[4:5] scope:SCOPE_SE
+; GFX1300-GISEL-NEXT:    flat_store_b64 v2, v[0:1], s[4:5]
 ; GFX1300-GISEL-NEXT:    s_endpgm
     %cast = addrspacecast ptr %ptr to ptr addrspace(3)
     %result = call ptr addrspace(11) @llvm.amdgcn.map.shared.rank(ptr addrspace(3) %cast, i32 %rank)
@@ -191,7 +191,7 @@ define amdgpu_kernel void @map_shared_rank_flat_to_lds(ptr %inout, i32 %rank) {
 ; GFX1300-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1300-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc_lo
 ; GFX1300-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, s3, vcc_lo
-; GFX1300-SDAG-NEXT:    flat_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
+; GFX1300-SDAG-NEXT:    flat_store_b64 v2, v[0:1], s[0:1]
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1300-GISEL-LABEL: map_shared_rank_flat_to_lds:
@@ -212,7 +212,7 @@ define amdgpu_kernel void @map_shared_rank_flat_to_lds(ptr %inout, i32 %rank) {
 ; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1300-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc_lo
 ; GFX1300-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, s3, vcc_lo
-; GFX1300-GISEL-NEXT:    flat_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
+; GFX1300-GISEL-NEXT:    flat_store_b64 v2, v[0:1], s[0:1]
 ; GFX1300-GISEL-NEXT:    s_endpgm
     %ptr = load ptr, ptr %inout
     %cast = addrspacecast ptr %ptr to ptr addrspace(3)
