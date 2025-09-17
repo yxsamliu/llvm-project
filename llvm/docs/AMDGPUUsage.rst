@@ -16887,6 +16887,14 @@ invalidated between kernel dispatches by CP since constant address space data
 may change between kernel dispatch executions. See
 :ref:`amdgpu-amdhsa-memory-spaces`.
 
+Atomics in the scratch address space are handled as follows:
+
+* Data types <= 32 bits: The instruction is converted into an atomic in the
+  generic (``flat``) address space. All properties of the atomic
+  (atomic ordering, volatility, alignment, etc.) are preserved.
+  Refer to the generic address space code sequences for further information.
+* Data types >32 bits: unsupported and an error is emitted.
+
 The code sequences used to implement the memory model for GFX125x are defined in
 table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-table`.
 
