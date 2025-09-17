@@ -1540,11 +1540,11 @@ multiclass VGPROp_Aligned<RegisterClass regClass> {
 // TODO: These cases should use default target alignment
 def VGPROp_32 : VGPROp<VGPR_32>;
 
-foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "512", "576"] in {
+foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "512", "576", "1024"] in {
   def VGPROp_#size : VGPROp<!cast<RegisterClass>("VReg_"#size)>;
 }
 
-foreach size = ["64", "96", "128", "256" ] in {
+foreach size = ["64", "96", "128", "256", "1024" ] in {
   defm VGPROp_#size : VGPROp_Aligned<!cast<RegisterClass>("VReg_"#size)>;
 }
 
@@ -1564,6 +1564,16 @@ def VGPROp_16 : VGPROp<VGPR_16> {
 
 // For V_LOAD/STORE_IDX only
 def VGPR_IDX_DATA_OP : RegisterOperand<VGPR_IDX_DATA_OP_RC>;
+
+// TODO: These cases should use default target alignment
+//def VGPROp_16 : RegisterOperand<VGPR_16>;
+//def VGPROp_32 : RegisterOperand<VGPR_32>;
+
+//foreach size = ["64", "96", "128", "256", "1024" ] in {
+//  def VGPROp_#size : RegisterOperand<!cast<RegisterClass>("VReg_"#size)>;
+//  def VGPROp_#size#_Align1 : RegisterOperand<!cast<RegisterClass>("VReg_"#size)>;
+//  def VGPROp_#size#_Align2 : RegisterOperand<!cast<RegisterClass>("VReg_"#size#_Align2)>;
+//}
 
 //===----------------------------------------------------------------------===//
 //  ASrc_* Operands with an AccVGPR
@@ -1689,6 +1699,18 @@ class getRegClassFromOp<DAGOperand Op> {
     !isa<RegisterOperand>(Op),
     !cast<SIRegisterClass>(!cast<RegisterOperand>(Op).RegClass),
     !cast<SIRegisterClass>(Op));
+}
+
+/// Check if the operand will use an AV_* class.
+class OperandIsAV<DAGOperand Op> {
+  defvar reg_class = getRegClassFromOp<Op>.ret;
+  bit ret = !and(reg_class.HasAGPR, reg_class.HasVGPR);
+}
+
+/// Check if the operand will use an AGPR class.
+class OperandIsAGPR<DAGOperand Op> {
+  defvar reg_class = getRegClassFromOp<Op>.ret;
+  bit ret = !and(reg_class.HasAGPR, !not(reg_class.HasVGPR));
 }
 
 /// Check if the operand will use a VGPR class.
