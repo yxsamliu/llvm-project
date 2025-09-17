@@ -541,6 +541,7 @@ class VSAMPLE_Sampler_gfx13<mimgopc op, string opcode, RegisterClass DataRC,
                             bit enableDisasm=0>
   : VSAMPLE_Sampler<op.GFX13, opcode, DataRC, (ins RsrcReg256Op:$rsrc), (ins RsrcReg128Op:$samp), num_addrs, GFX13Gen, MIMGEncGfx13, Addr3RC, enableDisasm> {
   let Inst{9-8} = cpol{8-7};
+  let Constraints = "@earlyclobber $vdata";
 }
 
 class VSAMPLE_Sampler_nortn<int op, string opcode, dag RsrcIns, GFXGen gfxGen, MIMGEncoding enc,
