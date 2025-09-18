@@ -131,6 +131,8 @@ struct HardwareLimits {
   DECL(VMEM_READ_ACCESS)         /* vmem read */                               \
   DECL(VMEM_SAMPLER_READ_ACCESS) /* vmem SAMPLER read (gfx12+ only) */         \
   DECL(VMEM_BVH_READ_ACCESS)     /* vmem BVH read (gfx12+ only) */             \
+  DECL(VMEM_IMAGE_READ_ACCESS)   /* vmem VIMAGE read (gfx13+ only) */          \
+  DECL(VMEM_FORMAT_READ_ACCESS)  /* vmem buffer format read (gfx13+ only) */   \
   DECL(VMEM_WRITE_ACCESS)        /* vmem write that is not scratch */          \
   DECL(SCRATCH_WRITE_ACCESS)     /* vmem write that may be scratch */          \
   DECL(VMEM_GROUP)               /* vmem group */                              \
@@ -195,12 +197,11 @@ enum RegisterMapping {
 // their results in order -- so there is no need to insert an s_waitcnt between
 // two instructions of the same type that write the same vgpr.
 enum VmemType {
-  // BUF instructions and MIMG instructions without a sampler.
-  VMEM_NOSAMPLER,
-  // MIMG instructions with a sampler.
-  VMEM_SAMPLER,
-  // BVH instructions
-  VMEM_BVH,
+  VMEM_NOSAMPLER, // BUF instructions and MIMG instructions without a sampler.
+  VMEM_SAMPLER,   // MIMG instructions with a sampler.
+  VMEM_BVH,       // BVH instructions
+  VMEM_FORMATTED, // Buffer formatted instructions (gfx13+).
+  VMEM_IMAGE,     // VIMAGE instructions (gfx13+).
   NUM_VMEM_TYPES
 };
 
@@ -225,26 +226,6 @@ static bool isNormalMode(InstCounterType MaxCounter) {
 
 static bool isExpertMode(InstCounterType MaxCounter) {
   return MaxCounter == NUM_EXPERT_INST_CNTS;
-}
-
-VmemType getVmemType(const MachineInstr &Inst) {
-  assert(updateVMCntOnly(Inst));
-  if (!SIInstrInfo::isImage(Inst))
-    return VMEM_NOSAMPLER;
-  const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Inst.getOpcode());
-  const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
-      AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
-
-  if (BaseInfo->BVH)
-    return VMEM_BVH;
-
-  // We have to make an additional check for isVSAMPLE here since some
-  // instructions don't have a sampler, but are still classified as sampler
-  // instructions for the purposes of e.g. waitcnt.
-  if (BaseInfo->Sampler || BaseInfo->MSAA || SIInstrInfo::isVSAMPLE(Inst))
-    return VMEM_SAMPLER;
-
-  return VMEM_NOSAMPLER;
 }
 
 unsigned &getCounterRef(AMDGPU::Waitcnt &Wait, InstCounterType T) {
@@ -392,11 +373,13 @@ public:
 
     static const unsigned WaitEventMaskForInstPreGFX12[NUM_INST_CNTS] = {
         eventMask({VMEM_ACCESS, VMEM_READ_ACCESS, VMEM_SAMPLER_READ_ACCESS,
+                   VMEM_IMAGE_READ_ACCESS, VMEM_FORMAT_READ_ACCESS,
                    VMEM_BVH_READ_ACCESS}),
         eventMask({SMEM_ACCESS, LDS_ACCESS, GDS_ACCESS, SQ_MESSAGE}),
         eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
                    EXP_POS_ACCESS, EXP_LDS_ACCESS}),
         eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
+        0,
         0,
         0,
         0,
@@ -430,7 +413,8 @@ public:
     assert(ST);
 
     static const unsigned WaitEventMaskForInstGFX12Plus[NUM_INST_CNTS] = {
-        eventMask({VMEM_ACCESS, VMEM_READ_ACCESS}),
+        eventMask({VMEM_ACCESS, VMEM_READ_ACCESS, VMEM_IMAGE_READ_ACCESS,
+                   VMEM_FORMAT_READ_ACCESS}),
         eventMask({LDS_ACCESS, GDS_ACCESS}),
         eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
                    EXP_POS_ACCESS, EXP_LDS_ACCESS}),
@@ -580,6 +564,41 @@ public:
 #endif // NDEBUG
   }
 
+  VmemType getVmemType(const MachineInstr &Inst) const {
+    assert(updateVMCntOnly(Inst));
+    if (!SIInstrInfo::isImage(Inst)) {
+      if (AMDGPU::isGFX13Plus(*ST) &&
+          (SIInstrInfo::isMTBUF(Inst) ||
+           (SIInstrInfo::isMUBUF(Inst) &&
+            AMDGPU::getMUBUFIsFormat(Inst.getOpcode()))))
+        return VMEM_FORMATTED;
+
+      return VMEM_NOSAMPLER;
+    }
+
+    const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Inst.getOpcode());
+    const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
+        AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
+
+    if (BaseInfo->BVH)
+      return VMEM_BVH;
+
+    // We have to make an additional check for isVSAMPLE here since some
+    // instructions don't have a sampler, but are still classified as sampler
+    // instructions for the purposes of e.g. waitcnt.
+    if (BaseInfo->Sampler || BaseInfo->MSAA || SIInstrInfo::isVSAMPLE(Inst))
+      return VMEM_SAMPLER;
+
+    // Image instructions (which Inst should be if this point is reached)
+    // need to be considered their own thing on GFX13+.
+    if (AMDGPU::isGFX13Plus(*ST)) {
+      assert(SIInstrInfo::isVIMAGE(Inst));
+      return VMEM_IMAGE;
+    }
+
+    return VMEM_NOSAMPLER;
+  }
+
   // Return the appropriate VMEM_*_ACCESS type for Inst, which must be a VMEM
   // instruction.
   WaitEventType getVmemWaitEventType(const MachineInstr &Inst) const {
@@ -595,7 +614,8 @@ public:
 
     // Maps VMEM access types to their corresponding WaitEventType.
     static const WaitEventType VmemReadMapping[NUM_VMEM_TYPES] = {
-        VMEM_READ_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS};
+        VMEM_READ_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS,
+        VMEM_FORMAT_READ_ACCESS, VMEM_IMAGE_READ_ACCESS};
 
     assert(SIInstrInfo::isVMEM(Inst));
     // LDS DMA loads are also stores, but on the LDS side. On the VMEM side
@@ -1158,7 +1178,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
           // MUBUF, MTBUF, MIMG, FlatGlobal, and FlatScratch only have VGPR/AGPR
           // defs. That's required for a sane index into `VgprMemTypes` below
           assert(TRI->isVectorRegister(*MRI, Op.getReg()));
-          VmemType V = getVmemType(Inst);
+          VmemType V = Context->getVmemType(Inst);
           unsigned char TypesMask = 1 << V;
           // If instruction can have Point Sample Accel applied, we have to flag
           // this with another potential dependency

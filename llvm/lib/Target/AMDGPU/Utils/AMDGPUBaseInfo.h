@@ -583,6 +583,9 @@ LLVM_READONLY
 bool getMUBUFTfe(unsigned Opc);
 
 LLVM_READONLY
+bool getMUBUFIsFormat(unsigned Opc);
+
+LLVM_READONLY
 bool getSMEMIsBuffer(unsigned Opc);
 
 LLVM_READONLY

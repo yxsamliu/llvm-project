@@ -327,6 +327,7 @@ class MUBUFGetBaseOpcode<string Op> {
 class MUBUF_Pseudo <string opName, dag outs, dag ins,
                     string asmOps, list<dag> pattern=[]> :
   BUF_Pseudo <opName, outs, ins, asmOps, pattern> {
+  bit IsFormat = 0;
 
   Instruction BaseOpcode = !cast<Instruction>(MUBUFGetBaseOpcode<NAME>.ret);
   let MUBUF = 1;
@@ -909,7 +910,7 @@ multiclass MUBUF_Pseudo_Atomics <string opName,
 // MUBUF Instructions
 //===----------------------------------------------------------------------===//
 
-let OtherPredicates = [HasFormattedMUBUFInsts] in
+let OtherPredicates = [HasFormattedMUBUFInsts], IsFormat = 1 in
 defm BUFFER_LOAD_FORMAT_X : MUBUF_Pseudo_Loads_Lds <
   "buffer_load_format_x", f32
 >;
@@ -994,7 +995,7 @@ let TiedSourceNotRead = 1 in {
     "buffer_store_format_d16_xyzw", v4f16
   >;
 } // End OtherPredicates = [HasPackedD16VMem], D16Buf = 1.
-} // End SubtargetPredicate = HasFormattedMUBUFInsts.
+} // End SubtargetPredicate = HasFormattedMUBUFInsts, IsFormat = 1.
 
 defm BUFFER_LOAD_UBYTE : MUBUF_Pseudo_Loads_Lds <
   "buffer_load_ubyte", i32
@@ -1250,7 +1251,7 @@ defm BUFFER_LOAD_SHORT_D16_HI : MUBUF_Pseudo_Loads <
   "buffer_load_short_d16_hi", i32, 1
 >;
 
-let OtherPredicates = [HasFormattedMUBUFInsts] in
+let OtherPredicates = [HasFormattedMUBUFInsts], IsFormat = 1 in
 defm BUFFER_LOAD_FORMAT_D16_HI_X : MUBUF_Pseudo_Loads <
   "buffer_load_format_d16_hi_x", i32
 >;
@@ -1264,7 +1265,7 @@ defm BUFFER_STORE_SHORT_D16_HI : MUBUF_Pseudo_Stores <
   "buffer_store_short_d16_hi", i32
 >;
 
-let OtherPredicates = [HasFormattedMUBUFInsts] in
+let OtherPredicates = [HasFormattedMUBUFInsts], IsFormat = 1 in
 defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Pseudo_Stores <
   "buffer_store_format_d16_hi_x", i32
 >;
@@ -3723,7 +3724,7 @@ def MUBUFInfoTable : GenericTable {
   let CppTypeName = "MUBUFInfo";
   let Fields = [
     "Opcode", "BaseOpcode", "elements", "has_vaddr", "has_srsrc", "has_soffset",
-    "IsBufferInv", "tfe"
+    "IsBufferInv", "tfe", "IsFormat"
   ];
 
   let PrimaryKey = ["Opcode"];

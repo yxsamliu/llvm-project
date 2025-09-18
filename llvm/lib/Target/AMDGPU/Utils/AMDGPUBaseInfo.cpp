@@ -366,6 +366,7 @@ struct MUBUFInfo {
   bool has_soffset;
   bool IsBufferInv;
   bool tfe;
+  bool IsFormat;
 };
 
 struct MTBUFInfo {
@@ -564,6 +565,11 @@ bool getMUBUFIsBufferInv(unsigned Opc) {
 bool getMUBUFTfe(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
   return Info && Info->tfe;
+}
+
+bool getMUBUFIsFormat(unsigned Opc) {
+  const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
+  return Info && Info->IsFormat;
 }
 
 bool getSMEMIsBuffer(unsigned Opc) {
