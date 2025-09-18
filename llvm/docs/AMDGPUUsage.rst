@@ -2482,10 +2482,10 @@ The AMDGPU backend uses the following ELF header:
      *reserved*                                 0x057      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1153``          0x058      ``gfx1153``.
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1170``          0x05d      ``gfx1170``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC``   0x05f      ``gfx9-4-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1251``          0x05a      ``gfx1251``
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC``  0x05b      ``gfx12-5-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1170``          0x05d      ``gfx1170``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC``   0x05f      ``gfx9-4-generic``
      ========================================== ========== =============================
 
 Sections
