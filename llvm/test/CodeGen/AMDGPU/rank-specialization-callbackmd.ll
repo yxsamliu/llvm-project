@@ -6,7 +6,7 @@
 declare void @dummy_a()
 declare void @dummy_b()
 
-define protected amdgpu_kernel void @test() local_unnamed_addr "amdgpu-wavegroup-enable" {
+define protected amdgpu_kernel void @test() local_unnamed_addr "amdgpu-wavegroup-enable" !reqd_work_group_size !{i32 32, i32 4, i32 1} {
 entry:
   %waveId = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
   %is.zero = icmp eq i32 %waveId, 0
@@ -21,6 +21,7 @@ other:
   ret void
 }
 
-; CHECK: declare !callback !0 void @llvm.amdgcn.wavegroup.rank.p0(i32 immarg, ptr)
-; CHECK: !0 = !{!1}
-; CHECK: !1 = !{i64 1, i1 false}
+; CHECK: declare !callback !1 void @llvm.amdgcn.wavegroup.rank.p0(i32 immarg, ptr)
+; CHECK: !0 = !{i32 32, i32 4, i32 1}
+; CHECK: !1 = !{!2}
+; CHECK: !2 = !{i64 1, i1 false}

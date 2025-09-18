@@ -5,10 +5,10 @@ target datalayout = "A5"
 
 ; Dummy function declarations to improve test readability/bloat.
 declare void @dummy_common()
-declare void @dummy_rank1_a()
-declare void @dummy_rank1_b()
+declare void @dummy_rank0_a()
+declare void @dummy_rank0_b()
 
-define amdgpu_kernel void @test_kernel_1() local_unnamed_addr "amdgpu-wavegroup-enable" {
+define amdgpu_kernel void @test_kernel_1() local_unnamed_addr "amdgpu-wavegroup-enable" !reqd_work_group_size !{i32 32, i32 4, i32 1} {
 entry:
   %0 = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
   br label %for.cond
@@ -20,15 +20,15 @@ for.cond:                                         ; preds = %if.end, %entry
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  %cmp4 = icmp eq i32 %0, 1
+  %cmp4 = icmp eq i32 %0, 0
   br i1 %cmp4, label %if.then5, label %if.end7
 
 for.body:                                         ; preds = %for.cond
-  %cmp2 = icmp eq i32 %0, 1
+  %cmp2 = icmp eq i32 %0, 0
   br i1 %cmp2, label %if.then, label %if.end
 
 if.then:                                          ; preds = %for.body
-  call void @dummy_rank1_a()
+  call void @dummy_rank0_a()
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %for.body
@@ -36,17 +36,21 @@ if.end:                                           ; preds = %if.then, %for.body
   br label %for.cond
 
 if.then5:                                         ; preds = %for.cond.cleanup
-  call void @dummy_rank1_b()
+  call void @dummy_rank0_b()
   br label %if.end7
 
 if.end7:                                          ; preds = %if.then5, %for.cond.cleanup
   ret void
 }
+
 
 ; This test makes sure the no-rank-specialization attribute successfully prevents the optimization
 ; from running on the previous kernel
 
-define amdgpu_kernel void @test_kernel_1_disabled() local_unnamed_addr "amdgpu-wavegroup-enable" "amdgpu-no-rank-specialization" {
+declare void @dummy_rank1_a()
+declare void @dummy_rank1_b()
+
+define amdgpu_kernel void @test_kernel_1_disabled() local_unnamed_addr "amdgpu-wavegroup-enable" "amdgpu-no-rank-specialization" !reqd_work_group_size !{i32 32, i32 4, i32 1} {
 entry:
   %0 = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
   br label %for.cond
@@ -81,10 +85,9 @@ if.end7:                                          ; preds = %if.then5, %for.cond
   ret void
 }
 
-declare void @dummy_rank0_a()
 declare void @dummy_ranks16_a()
 
-define amdgpu_kernel void @test_kernel_2() local_unnamed_addr "amdgpu-wavegroup-enable" {
+define amdgpu_kernel void @test_kernel_2() local_unnamed_addr "amdgpu-wavegroup-enable" !reqd_work_group_size !{i32 32, i32 28, i32 1} {
 entry:
   %0 = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
   br label %for.cond
@@ -152,7 +155,7 @@ declare void @dummy_rank6_a()
 declare void @dummy_ranks013_a()
 declare void @dummy_ranks2457_a()
 
-define amdgpu_kernel void @test_kernel_3() local_unnamed_addr "amdgpu-wavegroup-enable" {
+define amdgpu_kernel void @test_kernel_3() local_unnamed_addr "amdgpu-wavegroup-enable" !reqd_work_group_size !{i32 32, i32 32, i32 1} {
 entry:
   %0 = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
   br label %for.cond
@@ -228,7 +231,7 @@ for.inc40:                                        ; preds = %for.cond11, %if.els
 declare void @dummy_ranks0167_a()
 declare void @dummy_ranks2345_a()
 
-define amdgpu_kernel void @test_kernel_4() local_unnamed_addr "amdgpu-wavegroup-enable" {
+define amdgpu_kernel void @test_kernel_4() local_unnamed_addr "amdgpu-wavegroup-enable" !reqd_work_group_size !{i32 32, i32 32, i32 1} {
 entry:
   %0 = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
   br label %for.body
@@ -264,7 +267,7 @@ declare void @dummy_ranks012346_a()
 ; The test case below does not trigger the pass because the current implementation doesn't
 ; handle the %tobool arg of %or.cond. TODO: Explore handling this more complex case.
 
-define amdgpu_kernel void @test_kernel_5() local_unnamed_addr "amdgpu-wavegroup-enable" {
+define amdgpu_kernel void @test_kernel_5() local_unnamed_addr "amdgpu-wavegroup-enable" !reqd_work_group_size !{i32 32, i32 32, i32 1} {
 entry:
   %0 = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
   br label %for.body
@@ -305,7 +308,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 
 ; The intent of this test case is to show an example where %wid feeds an icmp, but
 ; that icmp doesn't feed a conditional branch, so we shouldn't specialize anything.
-define amdgpu_kernel void @test_kernel_6(i32* %base) "amdgpu-wavegroup-enable" {
+define amdgpu_kernel void @test_kernel_6(i32* %base) "amdgpu-wavegroup-enable" !reqd_work_group_size !{i32 32, i32 32, i32 1} {
 entry:
   %wid = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
   %cmp = icmp eq i32 %wid, 0
@@ -325,7 +328,7 @@ declare void @dummy_ranks234567_a()
 ; this i1 doesn't feed a conditional branch. The result is that we can't replace this
 ; i1 with a constant true/false in either kernel.
 
-define amdgpu_kernel void @test_kernel_7(i32* %base) "amdgpu-wavegroup-enable" {
+define amdgpu_kernel void @test_kernel_7(i32* %base) "amdgpu-wavegroup-enable" !reqd_work_group_size !{i32 32, i32 32, i32 1} {
 entry:
   %wid = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
   %cmp1 = icmp uge i32 %wid, 2
@@ -356,7 +359,7 @@ end:
 declare void @dummy_ranks17_a()
 declare void @dummy_ranks023456_a()
 
-define amdgpu_kernel void @test_kernel_8() local_unnamed_addr "amdgpu-wavegroup-enable" {
+define amdgpu_kernel void @test_kernel_8() local_unnamed_addr "amdgpu-wavegroup-enable" !reqd_work_group_size !{i32 32, i32 32, i32 1} {
 entry:
   %0 = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
   br label %for.body
@@ -392,7 +395,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 declare void @dummy_ranks23_a()
 declare void @dummy_ranks014567_a()
 
-define amdgpu_kernel void @test_kernel_9(i32* %base) "amdgpu-wavegroup-enable" {
+define amdgpu_kernel void @test_kernel_9(i32* %base) "amdgpu-wavegroup-enable" !reqd_work_group_size !{i32 32, i32 32, i32 1} {
 entry:
   %wid = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
   %cmp1 = icmp uge i32 %wid, 2
@@ -417,7 +420,7 @@ end:
 declare void @dummy_ranks0123_a()
 declare void @dummy_ranks4567_a()
 
-define amdgpu_kernel void @test_kernel_10() local_unnamed_addr "amdgpu-wavegroup-enable" {
+define amdgpu_kernel void @test_kernel_10() local_unnamed_addr "amdgpu-wavegroup-enable" !reqd_work_group_size !{i32 32, i32 32, i32 1} {
 entry:
   %0 = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
   br label %for.body
@@ -449,21 +452,14 @@ if.end13:                                         ; preds = %for.body5, %if.else
 }
 
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_1(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] !reqd_work_group_size [[META0:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_1.rank_0_2_3_4_5_6_7)
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_1.rank_1)
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 2, ptr nonnull @test_kernel_1.rank_0_2_3_4_5_6_7)
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 3, ptr nonnull @test_kernel_1.rank_0_2_3_4_5_6_7)
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 4, ptr nonnull @test_kernel_1.rank_0_2_3_4_5_6_7)
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 5, ptr nonnull @test_kernel_1.rank_0_2_3_4_5_6_7)
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 6, ptr nonnull @test_kernel_1.rank_0_2_3_4_5_6_7)
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 7, ptr nonnull @test_kernel_1.rank_0_2_3_4_5_6_7)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_1.rank_0)
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_1_disabled(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR1:[0-9]+]] !reqd_work_group_size [[META0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
@@ -492,21 +488,20 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_2(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] !reqd_work_group_size [[META1:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_2.rank_0)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_2.rank_1)
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 2, ptr nonnull @test_kernel_2.rank_2_3_4_5_7)
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 3, ptr nonnull @test_kernel_2.rank_2_3_4_5_7)
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 4, ptr nonnull @test_kernel_2.rank_2_3_4_5_7)
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 5, ptr nonnull @test_kernel_2.rank_2_3_4_5_7)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 2, ptr nonnull @test_kernel_2.rank_2_3_4_5)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 3, ptr nonnull @test_kernel_2.rank_2_3_4_5)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 4, ptr nonnull @test_kernel_2.rank_2_3_4_5)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 5, ptr nonnull @test_kernel_2.rank_2_3_4_5)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 6, ptr nonnull @test_kernel_2.rank_6)
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 7, ptr nonnull @test_kernel_2.rank_2_3_4_5_7)
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_3(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] !reqd_work_group_size [[META2:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_3.rank_0)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_3.rank_1)
@@ -520,7 +515,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_4(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_4.rank_0_1_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_4.rank_0_1_6_7)
@@ -534,7 +529,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_5(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_5.rank_0_2_4_6)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_5.rank_1_3)
@@ -548,7 +543,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_6(
-; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR0]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[WID:%.*]] = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[WID]], 0
@@ -560,7 +555,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_7(
-; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR0]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_7.rank_0_1)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_7.rank_0_1)
@@ -574,7 +569,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_8(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_8.rank_0_2_3_4_5_6)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_8.rank_1_7)
@@ -588,7 +583,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_9(
-; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR0]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_9.rank_0_1_4_5_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_9.rank_0_1_4_5_6_7)
@@ -602,7 +597,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_10(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_10.rank_0_1_2_3)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_10.rank_0_1_2_3)
@@ -615,24 +610,8 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_1.rank_0_2_3_4_5_6_7(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_COND:.*]]
-; CHECK:       [[FOR_COND]]:
-; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[IF_END:.*]] ]
-; CHECK-NEXT:    call void @dummy_common()
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[I_0]], 2
-; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_END]], label %[[IF_END7:.*]]
-; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_0]], 1
-; CHECK-NEXT:    br label %[[FOR_COND]]
-; CHECK:       [[IF_END7]]:
-; CHECK-NEXT:    ret void
-;
-;
-; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_1.rank_1(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_1.rank_0(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3:[0-9]+]] !reqd_work_group_size [[META0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
@@ -641,16 +620,16 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[I_0]], 2
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_THEN]], label %[[IF_THEN5:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    call void @dummy_rank1_a()
+; CHECK-NEXT:    call void @dummy_rank0_a()
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_0]], 1
 ; CHECK-NEXT:    br label %[[FOR_COND]]
 ; CHECK:       [[IF_THEN5]]:
-; CHECK-NEXT:    call void @dummy_rank1_b()
+; CHECK-NEXT:    call void @dummy_rank0_b()
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_2.rank_2_3_4_5_7(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_2.rank_2_3_4_5(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] !reqd_work_group_size [[META1]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
@@ -681,7 +660,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_2.rank_6(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] !reqd_work_group_size [[META1]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
@@ -713,7 +692,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_2.rank_1(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] !reqd_work_group_size [[META1]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
@@ -746,7 +725,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_2.rank_0(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] !reqd_work_group_size [[META1]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
@@ -778,7 +757,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_3.rank_2_4_5_7(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
@@ -795,7 +774,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_3.rank_3(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
@@ -828,7 +807,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_3.rank_6(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
@@ -845,7 +824,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_3.rank_1(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
@@ -879,7 +858,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_3.rank_0(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
@@ -913,7 +892,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_4.rank_2_3_4_5(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP:.*]]:
@@ -928,7 +907,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_4.rank_0_1_6_7(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP:.*]]:
@@ -943,7 +922,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_5.rank_0_2_4_6(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP:.*]]:
@@ -958,7 +937,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_5.rank_1_3(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP:.*]]:
@@ -973,7 +952,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_5.rank_5_7(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP:.*]]:
@@ -995,7 +974,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_7.rank_0_1(
-; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR3]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @dummy_ranks01_a()
 ; CHECK-NEXT:    [[WID:%.*]] = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
@@ -1008,7 +987,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_7.rank_2_3_4_5_6_7(
-; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR3]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @dummy_ranks234567_a()
 ; CHECK-NEXT:    [[WID:%.*]] = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
@@ -1021,7 +1000,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_8.rank_0_2_3_4_5_6(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP:.*]]:
@@ -1036,7 +1015,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_8.rank_1_7(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP:.*]]:
@@ -1051,7 +1030,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_9.rank_0_1_4_5_6_7(
-; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR3]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @dummy_ranks014567_a()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i1, ...) @dummy_common(i1 false)
@@ -1059,7 +1038,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_9.rank_2_3(
-; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR3]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @dummy_ranks23_a()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i1, ...) @dummy_common(i1 true)
@@ -1067,7 +1046,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_10.rank_0_1_2_3(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP:.*]]:
@@ -1082,7 +1061,7 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_10.rank_4_5_6_7(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] !reqd_work_group_size [[META2]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP:.*]]:
@@ -1095,3 +1074,8 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ; CHECK-NEXT:    [[EXITCOND28:%.*]] = icmp eq i32 [[INC15]], 10
 ; CHECK-NEXT:    br i1 [[EXITCOND28]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
 ;
+;.
+; CHECK: [[META0]] = !{i32 32, i32 4, i32 1}
+; CHECK: [[META1]] = !{i32 32, i32 28, i32 1}
+; CHECK: [[META2]] = !{i32 32, i32 32, i32 1}
+;.
