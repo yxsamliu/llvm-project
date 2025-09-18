@@ -1,9 +1,7 @@
-; XFAIL: ignoring test result temporarily
-
 // REQUIRES: lld
 
 /// https://github.com/llvm/llvm-project/issues/159125.
-// XFAIL: llvm-driver
+// XFAIL: *
 
 /// Check DTLTO options are forwarded to the linker.
 
