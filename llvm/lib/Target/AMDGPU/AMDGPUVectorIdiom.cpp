@@ -912,9 +912,21 @@ static bool tryVectorizeHIPVectorLaneLoad(LoadInst *LI, const DataLayout &DL) {
     LLVM_DEBUG(dbgs() << "[AMDGPUVectorRecover][Lane] Recognized HIP vector via base+offset\n");
   }
 
+  // The scalar load result type must match the vector element type. If it does
+  // not, we cannot safely RAUW the scalar load with the extracted element.
+  Type *LaneTy = LI->getType();
+  if (LaneTy != VecTy->getElementType()) {
+    LLVM_DEBUG({
+      dbgs() << "[AMDGPUVectorRecover][Lane] Bail: lane type mismatch. "
+             << "load-ty="; LaneTy->print(dbgs());
+      dbgs() << " vec-elt-ty="; VecTy->getElementType()->print(dbgs()); dbgs() << "\n";
+    });
+    return false;
+  }
   // Emit vector load + extractelement(%lane)
   IRBuilder<> B(LI);
   unsigned AS = cast<PointerType>(A.VecBase->getType())->getAddressSpace();
+  Function *Fn = LI->getFunction();
   Type *VecPtrTy = PointerType::get(VecTy, AS);
   Value *VecPtr = B.CreateBitCast(A.VecBase, VecPtrTy);
 
@@ -925,12 +937,29 @@ static bool tryVectorizeHIPVectorLaneLoad(LoadInst *LI, const DataLayout &DL) {
   VLoad->copyMetadata(*LI);
 
   Value *LaneIdx = A.LaneIdx ? A.LaneIdx : B.getInt32(0);
+  // extractelement requires an i32 index. Normalize any integer index to i32.
+  if (LaneIdx->getType()->isIntegerTy() && LaneIdx->getType() != B.getInt32Ty()) {
+    unsigned BW = LaneIdx->getType()->getIntegerBitWidth();
+    if (BW > 32)
+      LaneIdx = B.CreateTrunc(LaneIdx, B.getInt32Ty());
+    else if (BW < 32)
+      LaneIdx = B.CreateZExt(LaneIdx, B.getInt32Ty());
+  }
+  // If somehow non-integer, bail defensively.
+  if (!LaneIdx->getType()->isIntegerTy(32)) {
+    LLVM_DEBUG(dbgs() << "[AMDGPUVectorRecover][Lane] Bail: non-i32 lane index\n");
+    return false;
+  }
   Value *NewScalar = B.CreateExtractElement(VLoad, LaneIdx);
 
   LLVM_DEBUG({
     dbgs() << "[AMDGPUVectorRecover][Lane] Vectorized lane load via: ";
     VLoad->print(dbgs()); dbgs() << "\n  extract idx: "; LaneIdx->print(dbgs()); dbgs() << "\n";
   });
+
+  // Update debug uses (dbg.value) that reference the old load before erasing it.
+  // DominatorTree is not required for simple direct replacement; pass nullptr.
+  replaceDbgUsesWithUndef(LI);
 
   LI->replaceAllUsesWith(NewScalar);
   LI->eraseFromParent();
@@ -1391,6 +1420,8 @@ static bool matchStructFieldPtr(Value *Ptr, const DataLayout &DL,
     for (unsigned i = 0; i < C.NumElts; ++i) {
       auto *Li = cast<LoadInst>(C.Ops[i]);
       Value *Lane = B.CreateExtractElement(VLoad, B.getInt32(i));
+      // Update dbg.value users that referenced the old lane load.
+      replaceDbgUsesWithUndef(Li);
       Li->replaceAllUsesWith(Lane);
     }
     for (Instruction *I : C.Ops)
@@ -1424,8 +1455,15 @@ static bool matchStructFieldPtr(Value *Ptr, const DataLayout &DL,
       dbgs() << "[AMDGPUVectorRecover]   - replaced with: ";
       VStore->print(dbgs()); dbgs() << '\n';
     });
-    for (Instruction *I : C.Ops)
+    // Stores rarely appear as dbg.value "values", but be defensive and drop any
+    // dbg.uses that may reference them before erasing.
+    for (Instruction *I : C.Ops) {
+      // There is no natural replacement value for a store; if any dbg.uses exist,
+      // they will be dropped by replacing with poison (no DT needed).
+      replaceDbgUsesWithUndef(I);
       I->eraseFromParent();
+    }
+
     LLVM_DEBUG(dbgs() << "[AMDGPUVectorRecover] Store cluster vectorized successfully\n");
     return true;
   }
