@@ -2679,6 +2679,70 @@ class getHasExt <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
                 getHasSDWA<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret);
 }
 
+class getAlign2RegOp<RegisterOperand RC> {
+  RegisterOperand ret =
+    !cond(!eq(RC, VGPROp_16) : VGPROp_16,
+          !eq(RC, VGPROp_32) : VGPROp_32,
+
+          !eq(RC, VGPROp_64) : VGPROp_64_Align2,
+          !eq(RC, VGPROp_64_Align1) : VGPROp_64_Align2,
+          !eq(RC, VGPROp_64_Align2) : VGPROp_64_Align2,
+
+          !eq(RC, VGPROp_96) : VGPROp_96_Align2,
+          !eq(RC, VGPROp_96_Align1) : VGPROp_96_Align2,
+          !eq(RC, VGPROp_96_Align2) : VGPROp_96_Align2,
+
+          !eq(RC, VGPROp_128) : VGPROp_128_Align2,
+          !eq(RC, VGPROp_128_Align1) : VGPROp_128_Align2,
+          !eq(RC, VGPROp_128_Align2) : VGPROp_128_Align2,
+
+          !eq(RC, VGPROp_160) : VGPROp_160_Align2,
+          !eq(RC, VGPROp_160_Align1) : VGPROp_160_Align2,
+          !eq(RC, VGPROp_160_Align2) : VGPROp_160_Align2,
+
+          !eq(RC, VGPROp_1024) : VGPROp_1024_Align2,
+          !eq(RC, VGPROp_1024_Align1) : VGPROp_1024_Align2,
+          !eq(RC, VGPROp_1024_Align2) : VGPROp_1024_Align2,
+
+          !eq(RC, AVLdSt_32) : AVLdSt_32,
+          !eq(RC, AVLdSt_64_Align1) : AVLdSt_64_Align2,
+          !eq(RC, AVLdSt_64) : AVLdSt_64_Align2,
+
+          !eq(RC, AVLdSt_96) : AVLdSt_96_Align2,
+          !eq(RC, AVLdSt_96_Align1) : AVLdSt_96_Align1,
+          !eq(RC, AVLdSt_96_Align1) : AVLdSt_96_Align2,
+
+          !eq(RC, AVLdSt_128) : AVLdSt_128_Align2,
+          !eq(RC, AVLdSt_128_Align1) : AVLdSt_128_Align2,
+          !eq(RC, AVLdSt_128_Align2) : AVLdSt_128_Align2,
+
+          !eq(RC, AVLdSt_160) : AVLdSt_160_Align2,
+          !eq(RC, AVLdSt_160_Align1) : AVLdSt_160_Align2,
+          !eq(RC, AVLdSt_160_Align2) : AVLdSt_160_Align2);
+}
+
+class getEquivalentAGPROperand<RegisterOperand RC> {
+  defvar Size = RC.RegClass.Size;
+  RegisterOperand ret =
+    !cond(!eq(Size, 32)   : RegisterOperand<AGPR_32>,
+          !eq(Size, 64)   : RegisterOperand<AReg_64>,
+          !eq(Size, 96)   : RegisterOperand<AReg_96>,
+          !eq(Size, 128)  : RegisterOperand<AReg_128>,
+          !eq(Size, 160)  : RegisterOperand<AReg_160>,
+          !eq(Size, 1024) : RegisterOperand<AReg_1024>);
+}
+
+class getEquivalentVGPROperand<RegisterOperand RC> {
+  defvar Size = RC.RegClass.Size;
+  RegisterOperand ret =
+    !cond(!eq(Size, 32)   : VGPROp_32,
+          !eq(Size, 64)   : VGPROp_64,
+          !eq(Size, 96)   : VGPROp_96,
+          !eq(Size, 128)  : VGPROp_128,
+          !eq(Size, 160)  : VGPROp_160,
+          !eq(Size, 1024) : VGPROp_1024);
+}
+
 // Return an AGPR+VGPR operand class for the given VGPR register class.
 // In case of a SGPR register class, just return the register operand.
 class getLdStRegisterOperand<RegisterClass RC> {
@@ -2705,28 +2769,6 @@ class getLdStRegisterOperand<RegisterClass RC> {
           !eq(RC.Size, 576)  : AVLdSt_576,
           !eq(RC.Size, 1024) : AVLdSt_1024);
 }
-
-class getEquivalentAGPRClass<RegisterClass RC> {
-  RegisterClass ret =
-    !cond(!eq(RC.Size, 32)   : AGPR_32,
-          !eq(RC.Size, 64)   : AReg_64,
-          !eq(RC.Size, 96)   : AReg_96,
-          !eq(RC.Size, 128)  : AReg_128,
-          !eq(RC.Size, 160)  : AReg_160,
-          !eq(RC.Size, 1024) : AReg_1024);
-}
-
-class getEquivalentAGPROperand<RegisterOperand RC> {
-  defvar Size = RC.RegClass.Size;
-  RegisterOperand ret =
-    !cond(!eq(Size, 32)   : RegisterOperand<AGPR_32>,
-          !eq(Size, 64)   : RegisterOperand<AReg_64>,
-          !eq(Size, 96)   : RegisterOperand<AReg_96>,
-          !eq(Size, 128)  : RegisterOperand<AReg_128>,
-          !eq(Size, 160)  : RegisterOperand<AReg_160>,
-          !eq(Size, 1024) : RegisterOperand<AReg_1024>);
-}
-
 
 class getHasVOP3DPP <ValueType DstVT = i32, ValueType Src0VT = i32,
                  ValueType Src1VT = i32, ValueType Src2VT = i32> {

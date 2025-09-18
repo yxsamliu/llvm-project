@@ -754,7 +754,7 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
   SmallVector<Register, 4> DataRegs;
   for (unsigned I = 0; I < NumStores; I++) {
     Register DataReg = MRI->createVirtualRegister(
-        TRI->getAllocatableClass(TII->getRegClass(II, 0, TRI, *MF)));
+        TRI->getAllocatableClass(TII->getRegClass(II, 0, TRI)));
     CoreMIB.addDef(DataReg);
     DataRegs.push_back(DataReg);
   }

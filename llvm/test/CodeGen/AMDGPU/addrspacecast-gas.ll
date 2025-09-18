@@ -121,12 +121,13 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast_nonnull(ptr addrspa
 ; GFX1250-GISEL-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_lshlrev_b32 v2, 20, v2
+; GFX1250-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, s2, v0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v2, v1, vcc_lo
-; GFX1250-GISEL-NEXT:    flat_store_b32 v[0:1], v3 scope:SCOPE_SYS
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-GISEL-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-GISEL-NEXT:    s_endpgm
 ;
@@ -152,8 +153,7 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast_nonnull(ptr addrspa
 ; GFX1300-GISEL-NEXT:    s_load_b32 s2, s[4:5], 0x24
 ; GFX1300-GISEL-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX1300-GISEL-NEXT:    s_mov_b64 s[0:1], src_flat_scratch_base_lo
-; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v3, 0
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX1300-GISEL-NEXT:    v_mbcnt_hi_u32_b32 v2, -1, v0
 ; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v1, s1
@@ -162,7 +162,8 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast_nonnull(ptr addrspa
 ; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1300-GISEL-NEXT:    v_add_co_u32 v0, vcc, s2, v0
 ; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v2, v1, vcc
-; GFX1300-GISEL-NEXT:    flat_store_b32 v[0:1], v3 scope:SCOPE_SYS
+; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1300-GISEL-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX1300-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1300-GISEL-NEXT:    s_endpgm
   %stof = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p5(ptr addrspace(5) %ptr)

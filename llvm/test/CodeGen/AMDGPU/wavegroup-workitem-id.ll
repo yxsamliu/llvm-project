@@ -50,10 +50,11 @@ define amdgpu_kernel void @wavegroup_kernel_3x64x2(ptr addrspace(1) %p) #0 "amdg
 ; GISEL-NEXT:    v_mul_lo_u32 v4, v2, 3
 ; GISEL-NEXT:    v_dual_lshlrev_b32 v3, 6, v3 :: v_dual_sub_nc_u32 v0, v0, v4
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_sub_nc_u32 v2, v2, v3
+; GISEL-NEXT:    v_sub_nc_u32_e32 v2, v2, v3
 ; GISEL-NEXT:    v_or3_b32 v0, v2, v0, v1
+; GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    global_store_b32 v0, v3, s[0:1] scale_offset
+; GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
 ; GISEL-NEXT:    s_endpgm
 entry:
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -98,10 +99,10 @@ define amdgpu_kernel void @wavegroup_kernel_128x1x1(ptr addrspace(1) %p) #0 "amd
 ; GISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
 ; GISEL-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GISEL-NEXT:    s_bfe_u32 s2, ttmp8, 0x50019
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-NEXT:    s_lshl_b32 s2, s2, 5
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, s2, v0
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
+; GISEL-NEXT:    v_add_nc_u32_e32 v0, s2, v0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
 ; GISEL-NEXT:    s_endpgm

@@ -1757,6 +1757,7 @@ entry:
   ret void
 }
 
+
 define amdgpu_kernel void @cluster_acquire_fence() {
 ; GFX6-LABEL: cluster_acquire_fence:
 ; GFX6:       ; %bb.0: ; %entry

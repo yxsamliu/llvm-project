@@ -1123,8 +1123,8 @@ defm VReg_192 : VRegClass_STAGING<6, Reg192Types.types, (add VGPR_192)>;
 defm VReg_224 : VRegClass_STAGING<7, Reg224Types.types, (add VGPR_224)>;
 defm VReg_256 : VRegClass_STAGING<8, Reg256Types.types, (add VGPR_256)>;
 defm VReg_288 : VRegClass_STAGING<9, Reg288Types.types, (add VGPR_288)>;
-defm VReg_320 : VRegClass<10, Reg320Types.types, (add VGPR_320)>;
-defm VReg_352 : VRegClass<11, Reg352Types.types, (add VGPR_352)>;
+defm VReg_320 : VRegClass_STAGING<10, Reg320Types.types, (add VGPR_320)>;
+defm VReg_352 : VRegClass_STAGING<11, Reg352Types.types, (add VGPR_352)>;
 defm VReg_384 : VRegClass_STAGING<12, Reg384Types.types, (add VGPR_384)>;
 defm VReg_576 : VRegClass_STAGING<18, Reg576Types.types, (add VGPR_576)>;
 
@@ -1540,11 +1540,11 @@ multiclass VGPROp_Aligned<RegisterClass regClass> {
 // TODO: These cases should use default target alignment
 def VGPROp_32 : VGPROp<VGPR_32>;
 
-foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "512", "576", "1024"] in {
+foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "320", "352", "384", "512", "576", "1024"] in {
   def VGPROp_#size : VGPROp<!cast<RegisterClass>("VReg_"#size)>;
 }
 
-foreach size = ["64", "96", "128", "256", "1024" ] in {
+foreach size = ["64", "96", "128", "160", "256", "1024" ] in {
   defm VGPROp_#size : VGPROp_Aligned<!cast<RegisterClass>("VReg_"#size)>;
 }
 
@@ -1654,20 +1654,13 @@ class AVLdStOperand<RegisterClass regClass>
 
 // TODO: These cases should use target align variant
 def AVLdSt_32 : AVLdStOperand<AV_32_STAGING>;
-def AVLdSt_64 : AVLdStOperand<AV_64_STAGING>;
-def AVLdSt_96 : AVLdStOperand<AV_96_STAGING>;
-def AVLdSt_128 : AVLdStOperand<AV_128_STAGING>;
-def AVLdSt_160 : AVLdStOperand<AV_160_STAGING>;
-def AVLdSt_192 : AVLdStOperand<AV_192_STAGING>;
-def AVLdSt_224 : AVLdStOperand<AV_224_STAGING>;
-def AVLdSt_256 : AVLdStOperand<AV_256_STAGING>;
-def AVLdSt_288 : AVLdStOperand<AV_288_STAGING>;
-def AVLdSt_512 : AVLdStOperand<AV_512_STAGING>;
-def AVLdSt_576 : AVLdStOperand<AV_576_STAGING>;
-def AVLdSt_1024 : AVLdStOperand<AV_1024_STAGING>;
+foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "512", "576", "1024" ] in {
+  // TODO: These cases should use target align variant
+  def AVLdSt_#size : AVLdStOperand<!cast<RegisterClass>("AV_"#size#"_STAGING")>;
 
-def AVLdSt_96_Align1 : AVLdStOperand<AV_96_STAGING>;
-def AVLdSt_96_Align2 : AVLdStOperand<AV_96_STAGING_Align2>;
+  def AVLdSt_#size#_Align1 : AVLdStOperand<!cast<RegisterClass>("AV_"#size#"_STAGING")>;
+  def AVLdSt_#size#_Align2 : AVLdStOperand<!cast<RegisterClass>("AV_"#size#"_STAGING_Align2")>;
+}
 
 //===----------------------------------------------------------------------===//
 //  ACSrc_* Operands with an AGPR or an inline constant
@@ -1717,4 +1710,28 @@ class OperandIsAGPR<DAGOperand Op> {
 class OperandIsVGPR<DAGOperand Op> {
   defvar reg_class = getRegClassFromOp<Op>.ret;
   bit ret = !and(reg_class.HasVGPR, !not(reg_class.HasAGPR));
+}
+
+class VDstOperandIsAV<dag OperandList> {
+  bit ret = OperandIsAV<!getdagarg<DAGOperand>(OperandList, "vdst")>.ret;
+}
+
+class VDstOperandIsAGPR<dag OperandList> {
+  bit ret = OperandIsAGPR<!getdagarg<DAGOperand>(OperandList, "vdst")>.ret;
+}
+
+class Data0OperandIsAV<dag OperandList> {
+  bit ret = OperandIsAV<!getdagarg<DAGOperand>(OperandList, "data0")>.ret;
+}
+
+class Data0OperandIsAGPR<dag OperandList> {
+  bit ret = OperandIsAGPR<!getdagarg<DAGOperand>(OperandList, "data0")>.ret;
+}
+
+class VDataOperandIsAV<dag OperandList> {
+  bit ret = OperandIsAV<!getdagarg<DAGOperand>(OperandList, "vdata")>.ret;
+}
+
+class VDataOperandIsAGPR<dag OperandList> {
+  bit ret = OperandIsAGPR<!getdagarg<DAGOperand>(OperandList, "vdata")>.ret;
 }

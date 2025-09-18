@@ -474,10 +474,6 @@ public:
                              SIAtomicScope Scope,
                              SIAtomicAddrSpace AddrSpace) const override;
 
-  bool enableStoreCacheBypass(const MachineBasicBlock::iterator &MI,
-                              SIAtomicScope Scope,
-                              SIAtomicAddrSpace AddrSpace) const override;
-
   bool enableRMWCacheBypass(const MachineBasicBlock::iterator &MI,
                             SIAtomicScope Scope,
                             SIAtomicAddrSpace AddrSpace) const override;
@@ -1410,41 +1406,6 @@ bool SIGfx90ACacheControl::enableLoadCacheBypass(
   return Changed;
 }
 
-bool SIGfx90ACacheControl::enableStoreCacheBypass(
-    const MachineBasicBlock::iterator &MI,
-    SIAtomicScope Scope,
-    SIAtomicAddrSpace AddrSpace) const {
-  assert(!MI->mayLoad() && MI->mayStore());
-  bool Changed = false;
-
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
-    switch (Scope) {
-    case SIAtomicScope::SYSTEM:
-    case SIAtomicScope::AGENT:
-      /// Do not set glc for store atomic operations as they implicitly write
-      /// through the L1 cache.
-      break;
-    case SIAtomicScope::WORKGROUP:
-    case SIAtomicScope::WAVEFRONT:
-    case SIAtomicScope::SINGLETHREAD:
-      // No cache to bypass. Store atomics implicitly write through the L1
-      // cache.
-      break;
-    default:
-      llvm_unreachable("Unsupported synchronization scope");
-    }
-  }
-
-  /// The scratch address space does not need the global memory caches
-  /// to be bypassed as all memory operations by the same thread are
-  /// sequentially consistent, and no other thread can access scratch
-  /// memory.
-
-  /// Other address spaces do not have a cache.
-
-  return Changed;
-}
-
 bool SIGfx90ACacheControl::enableRMWCacheBypass(
     const MachineBasicBlock::iterator &MI,
     SIAtomicScope Scope,
@@ -2252,7 +2213,8 @@ bool SIGfx10CacheControl::insertBarrierStart(
   // mode. This is because a CU mode release fence does not emit any wait, which
   // is fine when only dealing with vmem, but isn't sufficient in the presence
   // of barriers which do not go through vmem.
-  if (!ST.isCuModeEnabled())
+  // GFX12.5 does not require this additional wait.
+  if (!ST.isCuModeEnabled() || ST.hasGFX1250Insts())
     return false;
 
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
@@ -2446,14 +2408,14 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
         STORECnt |= true;
       break;
     case SIAtomicScope::WORKGROUP:
-      // GFX120x:
+      // GFX12.0:
       //   In WGP mode the waves of a work-group can be executing on either CU
       //   of the WGP. Therefore need to wait for operations to complete to
       //   ensure they are visible to waves in the other CU as the L0 is per CU.
       //   Otherwise in CU mode and all waves of a work-group are on the same CU
       //   which shares the same L0.
       //
-      // GFX125x:
+      // GFX12.5:
       //   CU$ has two ports. To ensure operations are visible at the workgroup
       //   level, we need to ensure all operations in this port have completed
       //   so the other SIMDs in the WG can see them. There is no ordering
@@ -2566,13 +2528,13 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     ScopeImm = AMDGPU::CPol::SCOPE_SE;
     break;
   case SIAtomicScope::WORKGROUP:
-    // GFX12:
+    // GFX12.0:
     //  In WGP mode the waves of a work-group can be executing on either CU of
     //  the WGP. Therefore we need to invalidate the L0 which is per CU.
     //  Otherwise in CU mode all waves of a work-group are on the same CU, and
     //  so the L0 does not need to be invalidated.
     //
-    // GFX125x has a shared WGP$, so no invalidates are required.
+    // GFX12.5 has a shared WGP$, so no invalidates are required.
     if (isWorkGroupSharingL0())
       return false;
 
@@ -2617,7 +2579,8 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  // global_wb is only necessary at system scope as stores
+  // global_wb is only necessary at system scope for GFX12.0,
+  // they're also necessary at device scope for GFX12.5 as stores
   // cannot report completion earlier than L2.
   //
   // Emitting it for lower scopes is a slow no-op, so we omit it
@@ -2628,7 +2591,7 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
         .addImm(AMDGPU::CPol::SCOPE_SYS);
     break;
   case SIAtomicScope::AGENT:
-    // GFX1250 may have >1 L2 per device so we must emit a device scope WB.
+    // GFX12.5 may have >1 L2 per device so we must emit a device scope WB.
     if (ST.hasGFX1250Insts()) {
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
           .addImm(AMDGPU::CPol::SCOPE_DEV);
@@ -2705,7 +2668,7 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   const bool IsRMW = (MI.mayLoad() && MI.mayStore());
   bool Changed = false;
 
-  // GFX125x only: xcnt wait is needed before flat and global atomics stores/rmw
+  // GFX12.5 only: xcnt wait is needed before flat and global atomics stores/rmw
   if (Atomic && ST.requiresWaitXCntBeforeAtomicStores() && TII->isFLAT(MI)) {
     MachineBasicBlock &MBB = *MI.getParent();
     BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(S_WAIT_XCNT_soft)).addImm(0);
@@ -2721,7 +2684,7 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
     return Changed;
   const unsigned Scope = CPol->getImm() & CPol::SCOPE;
 
-  // GFX120x only: Extra waits needed before non-atomic system scope stores.
+  // GFX12.0 only: Extra waits needed before system scope stores.
   if (!ST.hasGFX1250Insts() && !Atomic && Scope == CPol::SCOPE_SYS)
     Changed |= insertWaitsBeforeSystemScopeStore(MI.getIterator());
 

@@ -1507,13 +1507,16 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
   return IsWave32 ? 1024 : 512;
 }
 
-unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
+unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) {
+  const auto &Features = STI->getFeatureBits();
+  if (Features.test(Feature1024AddressableVGPRs))
+    return Features.test(FeatureWavefrontSize32) ? 1024 : 512;
+  return 256;
+}
 
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI,
                                 unsigned DynamicVGPRBlockSize) {
   const auto &Features = STI->getFeatureBits();
-  if (Features.test(FeatureGFX1250Insts))
-    return Features.test(FeatureWavefrontSize32) ? 1024 : 512;
   if (Features.test(FeatureGFX90AInsts))
     return 512;
 
@@ -3055,6 +3058,8 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_224_Align2RegClassID:
   case AMDGPU::AV_224RegClassID:
   case AMDGPU::AV_224_Align2RegClassID:
+  case AMDGPU::AV_224_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_224_STAGINGRegClassID:
   case AMDGPU::VReg_224_Lo256_Align2RegClassID:
     return 224;
   case AMDGPU::SGPR_256RegClassID:
@@ -3091,6 +3096,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::SGPR_320RegClassID:
   case AMDGPU::SReg_320RegClassID:
   case AMDGPU::VReg_320RegClassID:
+  case AMDGPU::VReg_320_STAGINGRegClassID:
   case AMDGPU::AReg_320RegClassID:
   case AMDGPU::VReg_320_Align2RegClassID:
   case AMDGPU::AReg_320_Align2RegClassID:
@@ -3101,6 +3107,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::SGPR_352RegClassID:
   case AMDGPU::SReg_352RegClassID:
   case AMDGPU::VReg_352RegClassID:
+  case AMDGPU::VReg_352_STAGINGRegClassID:
   case AMDGPU::AReg_352RegClassID:
   case AMDGPU::VReg_352_Align2RegClassID:
   case AMDGPU::AReg_352_Align2RegClassID:
@@ -3111,6 +3118,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::SGPR_384RegClassID:
   case AMDGPU::SReg_384RegClassID:
   case AMDGPU::VReg_384RegClassID:
+  case AMDGPU::VReg_384_STAGINGRegClassID:
   case AMDGPU::AReg_384RegClassID:
   case AMDGPU::VReg_384_Align2RegClassID:
   case AMDGPU::AReg_384_Align2RegClassID:
@@ -3464,8 +3472,11 @@ bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
 
 bool isLegalSMRDEncodedSignedOffset(const MCSubtargetInfo &ST,
                                     int64_t EncodedOffset, bool IsBuffer) {
-  if (isGFX12Plus(ST))
+  if (isGFX12Plus(ST)) {
+    if (IsBuffer && EncodedOffset < 0)
+      return false;
     return isInt<24>(EncodedOffset);
+  }
 
   return !IsBuffer && hasSMRDSignedImmOffset(ST) && isInt<21>(EncodedOffset);
 }

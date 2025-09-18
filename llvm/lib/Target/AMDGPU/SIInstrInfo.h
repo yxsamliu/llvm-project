@@ -815,9 +815,11 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::Spill;
   }
 
-  static bool isSpill(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::Spill;
+  static bool isSpill(const MCInstrDesc &Desc) {
+    return Desc.TSFlags & SIInstrFlags::Spill;
   }
+
+  static bool isSpill(const MachineInstr &MI) { return isSpill(MI.getDesc()); }
 
   static bool isWWMRegSpillOpcode(uint16_t Opcode) {
     return Opcode == AMDGPU::SI_SPILL_WWM_V32_SAVE ||
@@ -1649,10 +1651,9 @@ public:
   /// Return true if this opcode should not be used by codegen.
   bool isAsmOnlyOpcode(int MCOp) const;
 
-  const TargetRegisterClass *getRegClass(const MCInstrDesc &TID, unsigned OpNum,
-                                         const TargetRegisterInfo *TRI,
-                                         const MachineFunction &MF)
-    const override;
+  const TargetRegisterClass *
+  getRegClass(const MCInstrDesc &TID, unsigned OpNum,
+              const TargetRegisterInfo *TRI) const override;
 
   const TargetRegisterClass *
   getRegClassForBlockOp(const TargetRegisterInfo *TRI,

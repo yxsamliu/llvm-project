@@ -433,51 +433,9 @@ static DecodeStatus decodeOperandVOPDDstY(MCInst &Inst, unsigned Val,
   return addOperand(Inst, DAsm->decodeVOPDDstYOp(Inst, Val));
 }
 
-static bool IsAGPROperand(const MCInst &Inst, int OpIdx,
-                          const MCRegisterInfo *MRI) {
-  if (OpIdx < 0)
-    return false;
-
-  const MCOperand &Op = Inst.getOperand(OpIdx);
-  if (!Op.isReg())
-    return false;
-
-  MCRegister Sub = MRI->getSubReg(Op.getReg(), AMDGPU::sub0);
-  auto Reg = Sub ? Sub : Op.getReg();
-  return Reg >= AMDGPU::AGPR0 && Reg <= AMDGPU::AGPR255;
-}
-
 static DecodeStatus decodeAVLdSt(MCInst &Inst, unsigned Imm, unsigned Opw,
                                  const MCDisassembler *Decoder) {
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
-  if (!DAsm->isGFX90A()) {
-    Imm &= 511;
-  } else {
-    // If atomic has both vdata and vdst their register classes are tied.
-    // The bit is decoded along with the vdst, first operand. We need to
-    // change register class to AGPR if vdst was AGPR.
-    // If a DS instruction has both data0 and data1 their register classes
-    // are also tied.
-    unsigned Opc = Inst.getOpcode();
-    uint64_t TSFlags = DAsm->getMCII()->get(Opc).TSFlags;
-    AMDGPU::OpName DataName = (TSFlags & SIInstrFlags::DS)
-                                  ? AMDGPU::OpName::data0
-                                  : AMDGPU::OpName::vdata;
-    const MCRegisterInfo *MRI = DAsm->getContext().getRegisterInfo();
-    int DataIdx = AMDGPU::getNamedOperandIdx(Opc, DataName);
-    if ((int)Inst.getNumOperands() == DataIdx) {
-      int DstIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst);
-      if (IsAGPROperand(Inst, DstIdx, MRI))
-        Imm |= 512;
-    }
-
-    if (TSFlags & SIInstrFlags::DS) {
-      int Data2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data1);
-      if ((int)Inst.getNumOperands() == Data2Idx &&
-          IsAGPROperand(Inst, DataIdx, MRI))
-        Imm |= 512;
-    }
-  }
   return addOperand(Inst, DAsm->decodeSrcOp(Opw, Imm | 256));
 }
 
@@ -962,6 +920,18 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       auto *TFEIter = MI.begin();
       std::advance(TFEIter, TFEOpIdx);
       MI.insert(TFEIter, MCOperand::createImm(0));
+    }
+  }
+
+  // Validate buffer instruction offsets for GFX12+ - must not be a negative.
+  if (isGFX12Plus() && isBufferInstruction(MI)) {
+    int OffsetIdx =
+        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::offset);
+    if (OffsetIdx != -1) {
+      uint32_t Imm = MI.getOperand(OffsetIdx).getImm();
+      int64_t SignedOffset = SignExtend64<24>(Imm);
+      if (SignedOffset < 0)
+        return MCDisassembler::Fail;
     }
   }
 
@@ -3002,6 +2972,20 @@ const MCExpr *AMDGPUDisassembler::createConstantSymbolExpr(StringRef Id,
       Ctx.reportWarning(SMLoc(), "unsupported redefinition of " + Id);
   }
   return MCSymbolRefExpr::create(Sym, Ctx);
+}
+
+bool AMDGPUDisassembler::isBufferInstruction(const MCInst &MI) const {
+  const uint64_t TSFlags = MCII->get(MI.getOpcode()).TSFlags;
+
+  // Check for MUBUF and MTBUF instructions
+  if (TSFlags & (SIInstrFlags::MTBUF | SIInstrFlags::MUBUF))
+    return true;
+
+  // Check for SMEM buffer instructions (S_BUFFER_* instructions)
+  if ((TSFlags & SIInstrFlags::SMRD) && AMDGPU::getSMEMIsBuffer(MI.getOpcode()))
+    return true;
+
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
