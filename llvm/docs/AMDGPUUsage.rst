@@ -2574,10 +2574,10 @@ The AMDGPU backend uses the following ELF header:
      *reserved*                                 0x057      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1153``          0x058      ``gfx1153``.
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1170``          0x05d      ``gfx1170``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC``   0x05f      ``gfx9-4-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1251``          0x05a      ``gfx1251``
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC``  0x05b      ``gfx12-5-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1170``          0x05d      ``gfx1170``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC``   0x05f      ``gfx9-4-generic``
      ========================================== ========== =============================
 
 Sections
@@ -17257,6 +17257,14 @@ ensure it is coherent with the vector caches. The scalar and vector caches are
 invalidated between kernel dispatches by CP since constant address space data
 may change between kernel dispatch executions. See
 :ref:`amdgpu-amdhsa-memory-spaces`.
+
+Atomics in the scratch address space are handled as follows:
+
+* Data types <= 32 bits: The instruction is converted into an atomic in the
+  generic (``flat``) address space. All properties of the atomic
+  (atomic ordering, volatility, alignment, etc.) are preserved.
+  Refer to the generic address space code sequences for further information.
+* Data types >32 bits: unsupported and an error is emitted.
 
 The code sequences used to implement the memory model for GFX125x are defined in
 table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-table`.

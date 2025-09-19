@@ -384,6 +384,7 @@ StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
   auto ProcKind = T.isAMDGCN() ? parseArchAMDGCN(Arch) : parseArchR600(Arch);
   if (ProcKind == GK_NONE)
     return StringRef();
+
   return T.isAMDGCN() ? getArchNameAMDGCN(ProcKind) : getArchNameR600(ProcKind);
 }
 

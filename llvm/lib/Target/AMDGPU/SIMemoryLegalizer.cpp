@@ -2668,14 +2668,15 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   const bool IsRMW = (MI.mayLoad() && MI.mayStore());
   bool Changed = false;
 
-  // GFX12.5 only: xcnt wait is needed before flat and global atomics stores/rmw
+  // GFX12.5 only: xcnt wait is needed before flat and global atomics
+  // stores/rmw.
   if (Atomic && ST.requiresWaitXCntBeforeAtomicStores() && TII->isFLAT(MI)) {
     MachineBasicBlock &MBB = *MI.getParent();
     BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(S_WAIT_XCNT_soft)).addImm(0);
     Changed = true;
   }
 
-  // Remaining fixes do not apply to RMWs
+  // Remaining fixes do not apply to RMWs.
   if (IsRMW)
     return Changed;
 
