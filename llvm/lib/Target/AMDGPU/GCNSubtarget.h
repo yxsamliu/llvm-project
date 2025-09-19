@@ -1920,6 +1920,16 @@ public:
   // \returns true if the subtarget has a hardware bug affecting the G16 variant
   // of IMAGE_SAMPLE instructions.
   bool hasG16Bug() const { return getGeneration() == GFX13; };
+
+  /// \returns the number of significant bits in the immediate field of the
+  /// S_NOP instruction.
+  unsigned getSNopBits() const {
+    if (getGeneration() >= AMDGPUSubtarget::GFX12)
+      return 7;
+    if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+      return 4;
+    return 3;
+  }
 };
 
 class GCNUserSGPRUsageInfo {
