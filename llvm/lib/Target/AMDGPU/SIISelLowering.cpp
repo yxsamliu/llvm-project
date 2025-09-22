@@ -10366,7 +10366,7 @@ SDValue SITargetLowering::lowerWavegroupID(SelectionDAG &DAG,
   MVT VT = MVT::i32;
   SDValue TTMP8 = DAG.getCopyFromReg(DAG.getEntryNode(), SL, AMDGPU::TTMP8, VT);
   constexpr unsigned WavegroupCount = 4;
-  constexpr unsigned WavegroupCountBits = CTLog2<WavegroupCount>();
+  constexpr unsigned WavegroupCountBits = ConstantLog2<WavegroupCount>();
   return DAG.getNode(AMDGPUISD::BFE_U32, SL, VT, TTMP8,
                      DAG.getConstant(25, SL, VT),
                      DAG.getConstant(WavegroupCountBits, SL, VT));

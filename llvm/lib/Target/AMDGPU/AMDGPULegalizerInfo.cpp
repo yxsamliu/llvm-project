@@ -7834,7 +7834,7 @@ bool AMDGPULegalizerInfo::legalizeWavegroupID(MachineInstr &MI,
   auto TTMP8 = B.buildCopy(S32, Register(AMDGPU::TTMP8));
   auto LSB = B.buildConstant(S32, 25);
   constexpr unsigned WavegroupCount = 4;
-  constexpr unsigned WavegroupCountBits = CTLog2<WavegroupCount>();
+  constexpr unsigned WavegroupCountBits = ConstantLog2<WavegroupCount>();
   auto Width = B.buildConstant(S32, WavegroupCountBits);
   B.buildUbfx(DstReg, TTMP8, LSB, Width);
   MI.eraseFromParent();
