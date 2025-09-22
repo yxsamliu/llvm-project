@@ -1,10 +1,7 @@
 // REQUIRES: lld
 
 /// https://github.com/llvm/llvm-project/issues/159125.
-/// XFAIL: llvm-driver
-
-/// Temporarily ignoring dtlto.c test result
-// XFAIL: *
+// XFAIL: llvm-driver
 
 /// Check DTLTO options are forwarded to the linker.
 
