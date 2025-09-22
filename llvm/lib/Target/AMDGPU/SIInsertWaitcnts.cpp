@@ -132,6 +132,7 @@ struct HardwareLimits {
   DECL(LDS_ACCESS)               /* lds read & write */                        \
   DECL(GDS_ACCESS)               /* gds read & write */                        \
   DECL(SQ_MESSAGE)               /* send message */                            \
+  DECL(SCC_WRITE)                /* write to SCC from barrier */               \
   DECL(SMEM_ACCESS)              /* scalar-memory read & write */              \
   DECL(SMEM_GROUP)               /* scalar-memory group */                     \
   DECL(EXP_GPR_LOCK)             /* export holding on its data src */          \
@@ -167,6 +168,7 @@ static constexpr StringLiteral WaitEventTypeName[] = {
 //  0                .. SQ_MAX_PGM_VGPRS-1               real VGPRs
 //  SQ_MAX_PGM_VGPRS .. NUM_ALL_VGPRS-1                  extra VGPR-like slots
 //  NUM_ALL_VGPRS    .. NUM_ALL_VGPRS+SQ_MAX_PGM_SGPRS-1 real SGPRs
+//  NUM_ALL_VGPRS+SQ_MAX_PGM_SGPRS ..                    SCC
 // We reserve a fixed number of VGPR slots in the scoring tables for
 // special tokens like SCMEM_LDS (needed for buffer load to LDS).
 enum RegisterMapping {
@@ -181,6 +183,9 @@ enum RegisterMapping {
   FIRST_LDS_VGPR = SQ_MAX_PGM_VGPRS, // Extra slots for LDS stores.
   NUM_LDS_VGPRS = 9,                 // One more than the stores we track.
   NUM_ALL_VGPRS = SQ_MAX_PGM_VGPRS + NUM_LDS_VGPRS, // Where SGPRs start.
+  NUM_ALL_ALLOCATABLE = NUM_ALL_VGPRS + SQ_MAX_PGM_SGPRS,
+  // Remaining non-allocatable registers
+  SCC = NUM_ALL_ALLOCATABLE
 };
 
 // Enumerate different types of result-returning VMEM operations. Although
@@ -429,7 +434,7 @@ public:
         eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
         eventMask({VMEM_SAMPLER_READ_ACCESS}),
         eventMask({VMEM_BVH_READ_ACCESS}),
-        eventMask({SMEM_ACCESS, SQ_MESSAGE}),
+        eventMask({SMEM_ACCESS, SQ_MESSAGE, SCC_WRITE}),
         eventMask({VMEM_GROUP, SMEM_GROUP}),
         eventMask({VGPR_CSMACC_WRITE, VGPR_DPMACC_WRITE, VGPR_TRANS_WRITE,
                    VGPR_XDL_WRITE}),
@@ -628,6 +633,7 @@ public:
                             WaitcntBrackets &ScoreBrackets);
   void setSchedulingMode(MachineBasicBlock &MBB, MachineInstr &MI,
                          bool ExpertMode) const;
+  static bool asynchronouslyWritesSCC(unsigned Opcode);
 };
 
 // This objects maintains the current score brackets of each wait counter, and
@@ -668,7 +674,12 @@ public:
   unsigned getRegScore(int GprNo, InstCounterType T) const {
     if (GprNo < NUM_ALL_VGPRS)
       return VgprScores[T][GprNo];
-    return SgprScores[getSgprScoresIdx(T)][GprNo - NUM_ALL_VGPRS];
+
+    if (GprNo < NUM_ALL_ALLOCATABLE)
+      return SgprScores[getSgprScoresIdx(T)][GprNo - NUM_ALL_VGPRS];
+
+    assert(GprNo == SCC);
+    return SCCScore;
   }
 
   bool merge(const WaitcntBrackets &Other);
@@ -689,6 +700,7 @@ public:
                      AMDGPU::Waitcnt &Wait) const {
     determineWait(T, {RegNo, RegNo + 1}, Wait);
   }
+  void tryClearSCCWriteEvent(MachineInstr *Inst);
 
   void applyWaitcnt(const AMDGPU::Waitcnt &Wait);
   void applyWaitcnt(InstCounterType T, unsigned Count);
@@ -828,6 +840,10 @@ private:
   // Row 0 represents the score for either DS_CNT or KM_CNT and row 1 keeps the
   // X_CNT score.
   unsigned SgprScores[2][SQ_MAX_PGM_SGPRS] = {{0}};
+  // Reg score for SCC.
+  unsigned SCCScore = 0;
+  // The unique instruction that has an SCC write pending, if there is one.
+  const MachineInstr *PendingSCCWrite = nullptr;
   // Bitmask of the VmemTypes of VMEM instructions that might have a pending
   // write to each vgpr.
   unsigned char VgprVmemTypes[NUM_ALL_VGPRS] = {0};
@@ -863,6 +879,9 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
                                             const MachineRegisterInfo *MRI,
                                             const SIRegisterInfo *TRI,
                                             const MachineOperand &Op) const {
+  if (Op.getReg() == AMDGPU::SCC)
+    return {SCC, SCC + 1};
+
   if (!TRI->isInAllocatableClass(Op.getReg()))
     return {-1, -1};
 
@@ -916,9 +935,12 @@ void WaitcntBrackets::setScoreByInterval(RegInterval Interval,
     if (RegNo < NUM_ALL_VGPRS) {
       VgprUB = std::max(VgprUB, RegNo);
       VgprScores[CntTy][RegNo] = Score;
-    } else {
+    } else if (RegNo < NUM_ALL_ALLOCATABLE) {
       SgprUB = std::max(SgprUB, RegNo - NUM_ALL_VGPRS);
       SgprScores[getSgprScoresIdx(CntTy)][RegNo - NUM_ALL_VGPRS] = Score;
+    } else {
+      assert(RegNo == SCC);
+      SCCScore = Score;
     }
   }
 }
@@ -1145,6 +1167,11 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       if (Slot)
         setRegScore(FIRST_LDS_VGPR, T, CurrScore);
     }
+
+    if (Context->asynchronouslyWritesSCC(Inst.getOpcode())) {
+      setRegScore(SCC, T, CurrScore);
+      PendingSCCWrite = &Inst;
+    }
   }
 }
 
@@ -1219,6 +1246,8 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
           OS << RelScore << ":s" << J << " ";
         }
       }
+      if (T == KM_CNT && SCCScore > 0)
+        OS << SCCScore << ":scc ";
     }
     OS << '\n';
   }
@@ -1310,6 +1339,24 @@ void WaitcntBrackets::determineWait(InstCounterType T, RegInterval Interval,
         addWait(Wait, T, NeededWait);
       }
     }
+  }
+}
+
+void WaitcntBrackets::tryClearSCCWriteEvent(MachineInstr *Inst) {
+  // S_BARRIER_WAIT on the same barrier guarantees that the pending write to
+  // SCC has landed
+  if (PendingSCCWrite &&
+      PendingSCCWrite->getOpcode() == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM &&
+      PendingSCCWrite->getOperand(0).getImm() == Inst->getOperand(0).getImm()) {
+    unsigned SCC_WRITE_PendingEvent = 1 << SCC_WRITE;
+    // If this SCC_WRITE is the only pending KM_CNT event, clear counter.
+    if ((PendingEvents & Context->WaitEventMaskForInst[KM_CNT]) ==
+        SCC_WRITE_PendingEvent) {
+      setScoreLB(KM_CNT, getScoreUB(KM_CNT));
+    }
+
+    PendingEvents &= ~SCC_WRITE_PendingEvent;
+    PendingSCCWrite = nullptr;
   }
 }
 
@@ -2090,6 +2137,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
                                       Wait);
         }
       }
+    } else if (MI.getOpcode() == AMDGPU::S_BARRIER_WAIT) {
+      ScoreBrackets.tryClearSCCWriteEvent(&MI);
     } else {
       // FIXME: Should not be relying on memoperands.
       // Look at the source operands of every instruction to see if
@@ -2182,6 +2231,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
             ScoreBrackets.determineWait(EXP_CNT, Interval, Wait);
           }
           ScoreBrackets.determineWait(DS_CNT, Interval, Wait);
+        } else if (Op.getReg() == AMDGPU::SCC) {
+          ScoreBrackets.determineWait(KM_CNT, Interval, Wait);
         } else {
           ScoreBrackets.determineWait(SmemAccessCounter, Interval, Wait);
         }
@@ -2580,6 +2631,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_POS_ACCESS, Inst);
     else
       ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_GPR_LOCK, Inst);
+  } else if (asynchronouslyWritesSCC(Inst.getOpcode())) {
+    ScoreBrackets->updateByEvent(TII, TRI, MRI, SCC_WRITE, Inst);
   } else {
     switch (Inst.getOpcode()) {
     case AMDGPU::S_SENDMSG:
@@ -2590,9 +2643,6 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       break;
     case AMDGPU::S_MEMTIME:
     case AMDGPU::S_MEMREALTIME:
-    case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0:
-    case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM:
-    case AMDGPU::S_BARRIER_LEAVE:
     case AMDGPU::S_GET_BARRIER_STATE_M0:
     case AMDGPU::S_GET_BARRIER_STATE_IMM:
       ScoreBrackets->updateByEvent(TII, TRI, MRI, SMEM_ACCESS, Inst);
@@ -2659,6 +2709,19 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
     if (T == DS_CNT)
       StrictDom |= mergeScore(M, LastGDS, Other.LastGDS);
 
+    if (T == KM_CNT) {
+      StrictDom |= mergeScore(M, SCCScore, Other.SCCScore);
+      if (Other.hasPendingEvent(SCC_WRITE)) {
+        unsigned OldEventsHasSCCWrite = OldEvents & (1 << SCC_WRITE);
+        if (!OldEventsHasSCCWrite) {
+          PendingSCCWrite = Other.PendingSCCWrite;
+        } else {
+          if (PendingSCCWrite != Other.PendingSCCWrite)
+            PendingSCCWrite = nullptr;
+        }
+      }
+    }
+
     for (int J = 0; J <= VgprUB; J++)
       StrictDom |= mergeScore(M, VgprScores[T][J], Other.VgprScores[T][J]);
 
@@ -2698,6 +2761,12 @@ void SIInsertWaitcnts::setSchedulingMode(MachineBasicBlock &MBB,
   BuildMI(MBB, MI, DebugLoc(), TII->get(AMDGPU::S_SETREG_IMM32_B32))
       .addImm(ExpertMode ? 2 : 0)
       .addImm(EncodedReg);
+}
+
+bool SIInsertWaitcnts::asynchronouslyWritesSCC(unsigned Opcode) {
+  return Opcode == AMDGPU::S_BARRIER_LEAVE ||
+         Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM ||
+         Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0;
 }
 
 // Generate s_waitcnt instructions where needed.
