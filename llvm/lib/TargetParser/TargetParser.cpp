@@ -180,6 +180,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx120E"},   {"gfx120E"}, GK_GFX120E, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx120F"},   {"gfx120F"}, GK_GFX120F, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1250"},   {"gfx1250"}, GK_GFX1250, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+    {{"gfx1251"},   {"gfx1251"}, GK_GFX1251, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
 
     {{"gfx9-generic"},      {"gfx9-generic"},    GK_GFX9_GENERIC,    FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
     {{"gfx10-1-generic"},   {"gfx10-1-generic"}, GK_GFX10_1_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
@@ -340,6 +341,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX120E: return {12, 0, 0xFFFE};
   case GK_GFX120F: return {12, 0, 0xFFFF};
   case GK_GFX1250: return {12, 5, 0};
+  case GK_GFX1251: return {12, 5, 1};
 
   // Generic targets return the lowest common denominator
   // within their family. That is, the ISA that is the most
@@ -414,6 +416,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
                                  StringMap<bool> &Features) {
   AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
   switch (Kind) {
+  case GK_GFX1251:
   case GK_GFX1250:
     Features["ci-insts"] = true;
     Features["dot7-insts"] = true;
