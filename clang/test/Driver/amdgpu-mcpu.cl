@@ -177,7 +177,6 @@
 // GFX1250:   "-target-cpu" "gfx1250"
 // GFX1251:   "-target-cpu" "gfx1251"
 
-
 // GFX9_GENERIC:      "-target-cpu" "gfx9-generic"
 // GFX9_4_GENERIC:    "-target-cpu" "gfx9-4-generic"
 // GFX10_1_GENERIC:   "-target-cpu" "gfx10-1-generic"
