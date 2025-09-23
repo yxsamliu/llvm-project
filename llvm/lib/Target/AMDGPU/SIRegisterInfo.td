@@ -1111,7 +1111,9 @@ multiclass VRegClass<int numRegs, list<ValueType> regTypes, dag regList, dag ext
 
     // Aligned register tuples starting with low 256 vgprs
     def _Lo256_Align2 : VRegClassBase<numRegs, regTypes,
-        (add (trunc (decimate regList, 2), !div(!sub(258, numRegs), 2)), extraRegList)>;
+        (add (trunc (decimate regList, 2), !div(!sub(258, numRegs), 2)), extraRegList)> {
+      let RegTupleAlignUnits = 2;
+     }
   }
 }
 
