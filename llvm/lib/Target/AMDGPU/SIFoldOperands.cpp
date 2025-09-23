@@ -714,7 +714,8 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
   // Verify the register is compatible with the operand.
   if (const TargetRegisterClass *OpRC =
           TII->getRegClass(MI->getDesc(), Fold.UseOpNo, TRI)) {
-    const TargetRegisterClass *NewRC = MRI->getRegClass(New->getReg());
+    const TargetRegisterClass *NewRC =
+        TRI->getRegClassForReg(*MRI, New->getReg());
     const TargetRegisterClass *ConstrainRC =
         TRI->findCommonRegClass(OpRC, Old.getSubReg(), NewRC, New->getSubReg());
     if (!ConstrainRC)
@@ -733,8 +734,12 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
     Old.setSubReg(AMDGPU::NoSubRegister);
   if (MI->isBundled())
     updateReplacedRegInBundle(*MI, *New, Old, TRI, true);
-  Old.substVirtReg(New->getReg(), New->getSubReg(), *TRI);
-  Old.setIsUndef(New->isUndef());
+  if (New->getReg().isPhysical()) {
+    Old.substPhysReg(New->getReg(), *TRI);
+  } else {
+    Old.substVirtReg(New->getReg(), New->getSubReg(), *TRI);
+    Old.setIsUndef(New->isUndef());
+  }
   return true;
 }
 
@@ -2009,7 +2014,9 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
   if (!FoldingImm && !OpToFold.isReg())
     return false;
 
-  if (OpToFold.isReg() && !OpToFold.getReg().isVirtual())
+  // Fold virtual registers and constant physical registers.
+  if (OpToFold.isReg() && OpToFold.getReg().isPhysical() &&
+      !TRI->isConstantPhysReg(OpToFold.getReg()))
     return false;
 
   // Prevent folding operands backwards in the function. For example,
