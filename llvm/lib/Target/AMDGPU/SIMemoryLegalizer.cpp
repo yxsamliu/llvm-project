@@ -621,7 +621,11 @@ protected:
   bool setAtomicScope(const MachineBasicBlock::iterator &MI,
                       SIAtomicScope Scope, SIAtomicAddrSpace AddrSpace) const;
 
-  virtual bool isWorkGroupSharingL0() const { return ST.isCuModeEnabled(); }
+  bool isWorkGroupSharingL0() const {
+    if (ST.getGeneration() >= AMDGPUSubtarget::GFX13)
+      return true;
+    return ST.isCuModeEnabled();
+  }
 
 public:
   SIGfx12CacheControl(const GCNSubtarget &ST) : SIGfx11CacheControl(ST) {
@@ -669,14 +673,6 @@ public:
                             SIAtomicAddrSpace AddrSpace) const override {
     return setAtomicScope(MI, Scope, AddrSpace);
   }
-};
-
-class SIGfx13CacheControl : public SIGfx12CacheControl {
-protected:
-  bool isWorkGroupSharingL0() const override { return true; }
-
-public:
-  SIGfx13CacheControl(const GCNSubtarget &ST) : SIGfx12CacheControl(ST) {}
 
   bool setCFS(const MachineBasicBlock::iterator &MI,
               unsigned CFSBits) const override;
@@ -1038,15 +1034,12 @@ std::unique_ptr<SICacheControl> SICacheControl::create(const GCNSubtarget &ST) {
     return std::make_unique<SIGfx10CacheControl>(ST);
   if (Generation < AMDGPUSubtarget::GFX12)
     return std::make_unique<SIGfx11CacheControl>(ST);
-  if (Generation < AMDGPUSubtarget::GFX13)
-    return std::make_unique<SIGfx12CacheControl>(ST);
-  // The latest generation
-  return std::make_unique<SIGfx13CacheControl>(ST);
+  // GFX12+ uses unified cache control.
+  return std::make_unique<SIGfx12CacheControl>(ST);
 }
 
 bool SIGfx6CacheControl::enableLoadCacheBypass(
-    const MachineBasicBlock::iterator &MI,
-    SIAtomicScope Scope,
+    const MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
     SIAtomicAddrSpace AddrSpace) const {
   assert(MI->mayLoad() && !MI->mayStore());
   bool Changed = false;
@@ -2746,8 +2739,11 @@ bool SIGfx12CacheControl::setAtomicScope(const MachineBasicBlock::iterator &MI,
   return Changed;
 }
 
-bool SIGfx13CacheControl::setCFS(const MachineBasicBlock::iterator &MI,
+bool SIGfx12CacheControl::setCFS(const MachineBasicBlock::iterator &MI,
                                  unsigned CFSBits) const {
+  if (ST.getGeneration() < AMDGPUSubtarget::GFX13)
+    return false;
+
   auto CoreMI = &*MI;
   if (MI->isBundle()) {
     CoreMI = SIInstrInfo::bundleWithGPRIndexing(*MI);
