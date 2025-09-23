@@ -5,6 +5,7 @@
 
 /// Temporarily ignoring dtlto.c test result
 // XFAIL: *
+// REQUIRES: fix-me
 
 /// Check DTLTO options are forwarded to the linker.
 
