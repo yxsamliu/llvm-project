@@ -1461,6 +1461,12 @@ def FeatureLdsBarrierArriveAtomic : SubtargetFeature< "lds-barrier-arrive-atomic
   "Has LDS barrier-arrive atomic instructions"
 >;
 
+def Feature45BitNumRecordsBufferResource : SubtargetFeature< "45-bit-num-records-buffer-resource",
+  "Has45BitNumRecordsBufferResource",
+  "true",
+  "The buffer resource (V#) supports 45-bit num_records"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -2141,6 +2147,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureMadU32Inst,
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
+   Feature45BitNumRecordsBufferResource,
 ]>;
 
 def FeatureISAVersion12_51 : FeatureSet<
