@@ -830,6 +830,12 @@ struct AMDGPUVectorIdiomImpl {
                         << maxTransformations << ")\n");
       return false;
     }
+
+    // Skip groups where the base pointer is a PHI node to avoid dominance issues
+    if (isa<PHINode>(Group.BasePtr)) {
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skipping group with PHI node base pointer\n");
+      return false;
+    }
     
     LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Vectorizing accumulator group with "
                       << Group.Loads.size() << " loads and " << Group.Stores.size() 
@@ -861,7 +867,8 @@ struct AMDGPUVectorIdiomImpl {
           }
         }
         if (!FoundExistingGEP) {
-          LoadPtr = B.CreateGEP(B.getInt8Ty(), Group.BasePtr, B.getInt64(Group.StartOffset));
+          // Create GEP later when we have the correct insertion point
+          LoadPtr = nullptr;
         }
       }
 
@@ -873,6 +880,40 @@ struct AMDGPUVectorIdiomImpl {
         }
       }
 
+      // Check if all loads are in the same basic block
+      BasicBlock *LoadBB = EarliestLoad->getParent();
+      for (auto *LI : Group.Loads) {
+        if (LI->getParent() != LoadBB) {
+          LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Loads span multiple basic blocks, skipping\n");
+          return false;
+        }
+      }
+
+      // Find a safe insertion point that respects PHI nodes
+      Instruction *InsertPt = EarliestLoad;
+      // If there are PHI nodes in the basic block, insert after them
+      if (LoadBB->front().getOpcode() == Instruction::PHI) {
+        // Use iterator to find first non-PHI instruction
+        BasicBlock::iterator It = LoadBB->begin();
+        while (It != LoadBB->end() && isa<PHINode>(*It))
+          ++It;
+        if (It != LoadBB->end()) {
+          InsertPt = &*It;
+          // Make sure we're not inserting before the earliest load
+          if (InsertPt->comesBefore(EarliestLoad)) {
+            InsertPt = EarliestLoad;
+          }
+        }
+      }
+
+      // Set the IRBuilder insertion point
+      B.SetInsertPoint(InsertPt);
+
+      // Create GEP if needed now that we have the correct insertion point
+      if (!LoadPtr && Group.StartOffset > 0) {
+        LoadPtr = B.CreateGEP(B.getInt8Ty(), Group.BasePtr, B.getInt64(Group.StartOffset));
+      }
+
       // Create vector load
       Type *VecType = FixedVectorType::get(Type::getFloatTy(B.getContext()), Group.Loads.size());
       // Use the alignment of the first load in the group (at StartOffset)
@@ -881,18 +922,12 @@ struct AMDGPUVectorIdiomImpl {
         LoadAlign = Group.Loads[0]->getAlign();
       }
       Value *VecLoad = B.CreateAlignedLoad(VecType, LoadPtr, LoadAlign);
-      
-      // Move GEP and vector load to just before the earliest load
-      if (auto *LoadPtrInst = dyn_cast<Instruction>(LoadPtr)) {
-        LoadPtrInst->moveBefore(EarliestLoad);
-      }
-      cast<Instruction>(VecLoad)->moveBefore(EarliestLoad);
 
       // Replace individual loads with extractelement
       for (size_t i = 0; i < Group.Loads.size(); i++) {
+        // Set insertion point right after the vector load
+        B.SetInsertPoint(cast<Instruction>(VecLoad)->getNextNode());
         Value *Extract = B.CreateExtractElement(VecLoad, B.getInt32(i));
-        // Move extractelement right after the vector load
-        cast<Instruction>(Extract)->moveAfter(cast<Instruction>(VecLoad));
         Group.Loads[i]->replaceAllUsesWith(Extract);
         if (!Group.Loads[i]->isTerminator()) {
           Group.Loads[i]->eraseFromParent();
@@ -925,7 +960,8 @@ struct AMDGPUVectorIdiomImpl {
           }
         }
         if (!FoundExistingGEP) {
-          StorePtr = B.CreateGEP(B.getInt8Ty(), Group.BasePtr, B.getInt64(Group.StartOffset));
+          // Create GEP later when we have the correct insertion point
+          StorePtr = nullptr;
         }
       }
 
@@ -937,17 +973,27 @@ struct AMDGPUVectorIdiomImpl {
         }
       }
 
+      // Check if all stores are in the same basic block
+      BasicBlock *StoreBB = LatestStore->getParent();
+      for (auto *SI : Group.Stores) {
+        if (SI->getParent() != StoreBB) {
+          LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Stores span multiple basic blocks, skipping\n");
+          return false;
+        }
+      }
+
       // Collect store values
       SmallVector<Value*, 4> StoreValues;
       for (auto *SI : Group.Stores) {
         StoreValues.push_back(SI->getValueOperand());
       }
 
-      // Move the StorePtr GEP if it was created, right after the latest store
-      Instruction *PrevInst = LatestStore;
-      if (auto *StorePtrInst = dyn_cast<Instruction>(StorePtr)) {
-        StorePtrInst->moveAfter(LatestStore);
-        PrevInst = StorePtrInst;
+      // Set insertion point after the latest store
+      B.SetInsertPoint(LatestStore->getNextNode());
+
+      // Create GEP if needed now that we have the correct insertion point
+      if (!StorePtr && Group.StartOffset > 0) {
+        StorePtr = B.CreateGEP(B.getInt8Ty(), Group.BasePtr, B.getInt64(Group.StartOffset));
       }
 
       // Create vector from individual values
@@ -955,17 +1001,10 @@ struct AMDGPUVectorIdiomImpl {
       Value *VecValue = UndefValue::get(VecType);
       for (size_t i = 0; i < StoreValues.size(); i++) {
         VecValue = B.CreateInsertElement(VecValue, StoreValues[i], B.getInt32(i));
-        // Move insertElement after the previous instruction to maintain order
-        if (auto *InsertInst = dyn_cast<Instruction>(VecValue)) {
-          InsertInst->moveAfter(PrevInst);
-          PrevInst = InsertInst;
-        }
       }
 
       // Create vector store
-      Instruction *VecStore = B.CreateAlignedStore(VecValue, StorePtr, Group.MinAlign);
-      // Move vector store after the vector creation
-      VecStore->moveAfter(PrevInst);
+      B.CreateAlignedStore(VecValue, StorePtr, Group.MinAlign);
 
       // Remove individual stores (but not terminators)
       for (auto *SI : Group.Stores) {
@@ -1002,8 +1041,8 @@ struct AMDGPUVectorIdiomImpl {
       // when instructions are erased
       for (auto it = Groups.rbegin(); it != Groups.rend(); ++it) {
         AccumulatorGroup &Group = *it;
-        // Create IRBuilder at the end of the basic block to avoid issues with instruction erasure
-        IRBuilder<> B(BB.getTerminator());
+        // Create IRBuilder without a specific insertion point - we'll set it as needed
+        IRBuilder<> B(BB.getContext());
         Changed |= vectorizeAccumulatorGroup(Group, B);
       }
     }
