@@ -383,9 +383,16 @@ static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCSubtargetInfo &STI,
   if (Idx < 0x100)
     return Reg;
 
+  unsigned RegNo = Idx % 0x100;
   const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
-  Idx %= 0x100;
-  return RC->getRegister(Idx);
+  if (RC->getID() == AMDGPU::VGPR_16RegClassID) {
+    // This class has 2048 registers with interleaved lo16 and hi16.
+    RegNo *= 2;
+    if (Enc & AMDGPU::HWEncoding::IS_HI16)
+      ++RegNo;
+  }
+
+  return RC->getRegister(RegNo);
 }
 
 static unsigned getIdxLocFromTable(unsigned OpNo, const MCInstrDesc &Desc) {
