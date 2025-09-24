@@ -1087,7 +1087,6 @@ multiclass VOP1_Real_OpSelIsDPP_gfx1250<bits<9> op> : VOP1_Real_e32<GFX1250Gen, 
         VOP3OpSelIsDPP_gfx12<{0, 1, 1, op{6-0}}, ps.Pfl>;
 }
 
-
 defm V_CVT_F32_FP8           : VOP1_Real_FULL_with_name_gfx11_gfx12_not_gfx1250<0x06c, "V_CVT_F32_FP8_OP_SEL", "v_cvt_f32_fp8">;
 defm V_CVT_F32_FP8           : VOP1_Real_FULL_with_name<GFX1250Gen, 0x06c, "V_CVT_F32_FP8_gfx1250", "v_cvt_f32_fp8">;
 
