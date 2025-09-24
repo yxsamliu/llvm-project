@@ -416,11 +416,16 @@ class getBUFVDataRegisterOperand<int Size, bit isTFE> {
   RegisterOperand ret = !if(isTFE, tfeVDataOp, VDataOp);
 }
 
+class getBUFVDataRegisterOperandForOp<RegisterOperand Op, bit isTFE> {
+  defvar Size = !cast<RegisterClass>(Op.RegClass).Size;
+  RegisterOperand ret = getBUFVDataRegisterOperand<Size, isTFE>.ret;
+}
+
 class getMUBUFInsDA<list<RegisterOperand> vdataList,
                     list<RegisterClass> vaddrList, bit isTFE, bit hasRestrictedSOffset, DAGOperand RsrcRC=SReg_128_XNULL> {
   RegisterOperand vdataClass = !if(!empty(vdataList), ?, !head(vdataList));
   RegisterClass vaddrClass = !if(!empty(vaddrList), ?, !head(vaddrList));
-  RegisterOperand vdata_op = getBUFVDataRegisterOperand<vdataClass.RegClass.Size, isTFE>.ret;
+  RegisterOperand vdata_op = getBUFVDataRegisterOperandForOp<vdataClass, isTFE>.ret;
 
   dag SOffset = !if(hasRestrictedSOffset, (ins SReg_32:$soffset), (ins SCSrc_b32:$soffset));
   dag NonVaddrInputs = !con((ins RsrcRC:$srsrc), SOffset, (ins Offset:$offset, CPol_0:$cpol, i1imm_0:$swz));

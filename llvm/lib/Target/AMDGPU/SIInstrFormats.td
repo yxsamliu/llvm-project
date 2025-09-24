@@ -324,7 +324,7 @@ def CPolBit {
   int SCAL = 9;
 }
 
-class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst"> {
+class VOPDstOperand <RegisterClassLike rc> : RegisterOperand <rc, "printVOPDst"> {
   let DecoderMethod = "Decode" # !subst("_STAGING", "", !cast<string>(rc)) # "RegisterClass";
 }
 
