@@ -202,7 +202,7 @@ bool SemaAMDGPU::checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore) {
   if (AS != llvm::AMDGPUAS::FLAT_ADDRESS &&
       AS != llvm::AMDGPUAS::GLOBAL_ADDRESS) {
     Fail = true;
-    Diag(TheCall->getBeginLoc(), diag::err_amdgcn_group_atomic_invalid_as)
+    Diag(TheCall->getBeginLoc(), diag::err_amdgcn_coop_atomic_invalid_as)
         << PtrArg->getSourceRange();
   }
 
