@@ -34133,146 +34133,39 @@ define <32 x i32> @bitcast_v64bf16_to_v32i32(<64 x bfloat> %a, i32 %b) {
 ; GFX13-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-NEXT:    s_cbranch_execz .LBB18_2
 ; GFX13-NEXT:  ; %bb.1: ; %cmp.true
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v15
-; GFX13-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v14
-; GFX13-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v13
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_add_f32 v15, 0x40c00000, v15
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v14, 0x40c00000, v14
-; GFX13-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v10
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_4) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v15, v15, v32
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v12
-; GFX13-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v14, v14, v33
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v11
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_lshlrev_b32 v11, 16, v11
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_add_f32_e32 v12, 0x40c00000, v12
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_lshlrev_b32 v10, 16, v10
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v9
-; GFX13-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_dual_add_f32 v11, 0x40c00000, v11 :: v_dual_add_f32 v10, 0x40c00000, v10
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_add_f32 v13, 0x40c00000, v13
-; GFX13-NEXT:    v_dual_add_f32 v35, 0x40c00000, v35 :: v_dual_add_f32 v36, 0x40c00000, v36
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-NEXT:    v_add_f32_e32 v9, 0x40c00000, v9
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v12, v12, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v11, v11, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v8
-; GFX13-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v7
-; GFX13-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v13, v13, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v10, v10, v35
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v9, v9, v36
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v6
-; GFX13-NEXT:    v_add_f32_e32 v32, 0x40c00000, v32
-; GFX13-NEXT:    v_dual_add_f32 v8, 0x40c00000, v8 :: v_dual_add_f32 v33, 0x40c00000, v33
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v7, 0x40c00000, v7 :: v_dual_add_f32 v34, 0x40c00000, v34
-; GFX13-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v5
-; GFX13-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v4
-; GFX13-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v6, 0x40c00000, v6 :: v_dual_add_f32 v35, 0x40c00000, v35
-; GFX13-NEXT:    v_dual_add_f32 v5, 0x40c00000, v5 :: v_dual_add_f32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v8, v8, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v7, v7, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v3
-; GFX13-NEXT:    v_dual_add_f32 v4, 0x40c00000, v4 :: v_dual_lshlrev_b32 v3, 16, v3
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v2
-; GFX13-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v6, v6, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v5, v5, v35
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v1
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_lshlrev_b32 v1, 16, v1
-; GFX13-NEXT:    v_add_f32_e32 v3, 0x40c00000, v3
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v4, v4, v36
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v2, 0x40c00000, v2
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v0
-; GFX13-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX13-NEXT:    v_pk_add_bf16 v15, 0x40c0, v15 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v14, 0x40c0, v14 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v13, 0x40c0, v13 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v12, 0x40c0, v12 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v11, 0x40c0, v11 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v10, 0x40c0, v10 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v9, 0x40c0, v9 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v8, 0x40c0, v8 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v7, 0x40c0, v7 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v6, 0x40c0, v6 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v5, 0x40c0, v5 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v4, 0x40c0, v4 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v3, 0x40c0, v3 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v2, 0x40c0, v2 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v1, 0x40c0, v1 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v0, 0x40c0, v0 op_sel_hi:[0,1]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v31
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_lshlrev_b32 v31, 16, v31
-; GFX13-NEXT:    v_add_f32_e32 v1, 0x40c00000, v1
-; GFX13-NEXT:    v_dual_add_f32 v35, 0x40c00000, v35 :: v_dual_add_f32 v0, 0x40c00000, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v31, 0x40c00000, v31 :: v_dual_add_f32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v3, v3, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v2, v2, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v30
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v29
-; GFX13-NEXT:    v_dual_lshlrev_b32 v30, 16, v30 :: v_dual_lshlrev_b32 v29, 16, v29
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v1, v1, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v35
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v31, v31, v36
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v28
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_add_f32 v29, 0x40c00000, v29
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v30, 0x40c00000, v30
-; GFX13-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v27
-; GFX13-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v26
-; GFX13-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_add_f32 v35, 0x40c00000, v35
-; GFX13-NEXT:    v_dual_add_f32 v28, 0x40c00000, v28 :: v_dual_add_f32 v27, 0x40c00000, v27
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-NEXT:    v_add_f32_e32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v30, v30, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v29, v29, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v25
-; GFX13-NEXT:    v_dual_add_f32 v26, 0x40c00000, v26 :: v_dual_lshlrev_b32 v25, 16, v25
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v24
-; GFX13-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v28, v28, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v27, v27, v35
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v23
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_lshlrev_b32 v23, 16, v23
-; GFX13-NEXT:    v_add_f32_e32 v25, 0x40c00000, v25
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v26, v26, v36
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v24, 0x40c00000, v24
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v22
-; GFX13-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v21
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_lshlrev_b32 v21, 16, v21
-; GFX13-NEXT:    v_add_f32_e32 v23, 0x40c00000, v23
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v35, 0x40c00000, v35 :: v_dual_add_f32 v22, 0x40c00000, v22
-; GFX13-NEXT:    v_dual_add_f32 v21, 0x40c00000, v21 :: v_dual_add_f32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v25, v25, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v24, v24, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v20
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v19
-; GFX13-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v23, v23, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v22, v22, v35
-; GFX13-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v21, v21, v36
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v18
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v20, 0x40c00000, v20
-; GFX13-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v17
-; GFX13-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v16
-; GFX13-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_add_f32 v19, 0x40c00000, v19
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_add_f32 v35, 0x40c00000, v35
-; GFX13-NEXT:    v_dual_add_f32 v18, 0x40c00000, v18 :: v_dual_add_f32 v17, 0x40c00000, v17
-; GFX13-NEXT:    v_add_f32_e32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_add_f32_e32 v16, 0x40c00000, v16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v20, v20, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v19, v19, v33
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v18, v18, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v17, v17, v35
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v16, v16, v36
+; GFX13-NEXT:    v_pk_add_bf16 v31, 0x40c0, v31 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v30, 0x40c0, v30 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v29, 0x40c0, v29 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v28, 0x40c0, v28 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v27, 0x40c0, v27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v26, 0x40c0, v26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v25, 0x40c0, v25 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v24, 0x40c0, v24 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v23, 0x40c0, v23 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v22, 0x40c0, v22 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v21, 0x40c0, v21 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v20, 0x40c0, v20 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v19, 0x40c0, v19 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v18, 0x40c0, v18 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v17, 0x40c0, v17 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v16, 0x40c0, v16 op_sel_hi:[0,1]
 ; GFX13-NEXT:  .LBB18_2: ; %end
 ; GFX13-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
@@ -37047,267 +36940,480 @@ define inreg <32 x i32> @bitcast_v64bf16_to_v32i32_scalar(<64 x bfloat> inreg %a
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    s_xor_saveexec_b32 s4, -1
-; GFX13-NEXT:    scratch_store_b32 off, v32, s32 ; 4-byte Folded Spill
-; GFX13-NEXT:    s_mov_b32 exec_lo, s4
-; GFX13-NEXT:    v_writelane_b32 v32, s36, 0
 ; GFX13-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v14
-; GFX13-NEXT:    v_readfirstlane_b32 s56, v2
-; GFX13-NEXT:    v_readfirstlane_b32 s57, v3
-; GFX13-NEXT:    v_readfirstlane_b32 s58, v4
-; GFX13-NEXT:    v_writelane_b32 v32, s37, 1
-; GFX13-NEXT:    v_readfirstlane_b32 s59, v5
-; GFX13-NEXT:    v_readfirstlane_b32 s60, v6
-; GFX13-NEXT:    v_readfirstlane_b32 s61, v7
-; GFX13-NEXT:    v_readfirstlane_b32 s62, v8
-; GFX13-NEXT:    v_writelane_b32 v32, s38, 2
-; GFX13-NEXT:    v_readfirstlane_b32 s63, v9
-; GFX13-NEXT:    s_mov_b32 s47, s23
-; GFX13-NEXT:    s_mov_b32 s46, s22
-; GFX13-NEXT:    s_mov_b32 s45, s21
-; GFX13-NEXT:    v_writelane_b32 v32, s39, 3
-; GFX13-NEXT:    s_mov_b32 s44, s20
-; GFX13-NEXT:    s_mov_b32 s43, s19
-; GFX13-NEXT:    s_mov_b32 s42, s18
-; GFX13-NEXT:    s_mov_b32 s41, s17
-; GFX13-NEXT:    v_writelane_b32 v32, s48, 4
-; GFX13-NEXT:    s_mov_b32 s48, s24
-; GFX13-NEXT:    s_mov_b32 s40, s16
-; GFX13-NEXT:    s_mov_b32 s39, s3
-; GFX13-NEXT:    s_mov_b32 s38, s2
-; GFX13-NEXT:    v_writelane_b32 v32, s49, 5
-; GFX13-NEXT:    s_mov_b32 s49, s25
-; GFX13-NEXT:    s_mov_b32 s37, s1
-; GFX13-NEXT:    s_mov_b32 s36, s0
-; GFX13-NEXT:    s_mov_b32 s0, 0
-; GFX13-NEXT:    v_writelane_b32 v32, s50, 6
-; GFX13-NEXT:    s_mov_b32 s50, s26
-; GFX13-NEXT:    s_and_b32 s1, vcc_lo, exec_lo
-; GFX13-NEXT:    v_writelane_b32 v32, s51, 7
-; GFX13-NEXT:    s_mov_b32 s51, s27
-; GFX13-NEXT:    v_writelane_b32 v32, s52, 8
-; GFX13-NEXT:    s_mov_b32 s52, s28
-; GFX13-NEXT:    v_writelane_b32 v32, s53, 9
-; GFX13-NEXT:    s_mov_b32 s53, s29
-; GFX13-NEXT:    v_writelane_b32 v32, s54, 10
-; GFX13-NEXT:    v_readfirstlane_b32 s54, v0
-; GFX13-NEXT:    v_writelane_b32 v32, s55, 11
-; GFX13-NEXT:    v_readfirstlane_b32 s55, v1
-; GFX13-NEXT:    v_writelane_b32 v32, s64, 12
-; GFX13-NEXT:    v_readfirstlane_b32 s64, v10
-; GFX13-NEXT:    v_writelane_b32 v32, s65, 13
-; GFX13-NEXT:    v_readfirstlane_b32 s65, v11
-; GFX13-NEXT:    v_writelane_b32 v32, s66, 14
-; GFX13-NEXT:    v_readfirstlane_b32 s66, v12
-; GFX13-NEXT:    v_writelane_b32 v32, s67, 15
-; GFX13-NEXT:    v_readfirstlane_b32 s67, v13
-; GFX13-NEXT:    s_cbranch_scc0 .LBB19_3
-; GFX13-NEXT:  ; %bb.1: ; %Flow
-; GFX13-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
-; GFX13-NEXT:    s_cbranch_vccnz .LBB19_4
+; GFX13-NEXT:    s_clause 0x2f
+; GFX13-NEXT:    scratch_store_b32 off, v40, s32 offset:188
+; GFX13-NEXT:    scratch_store_b32 off, v41, s32 offset:184
+; GFX13-NEXT:    scratch_store_b32 off, v42, s32 offset:180
+; GFX13-NEXT:    scratch_store_b32 off, v43, s32 offset:176
+; GFX13-NEXT:    scratch_store_b32 off, v44, s32 offset:172
+; GFX13-NEXT:    scratch_store_b32 off, v45, s32 offset:168
+; GFX13-NEXT:    scratch_store_b32 off, v46, s32 offset:164
+; GFX13-NEXT:    scratch_store_b32 off, v47, s32 offset:160
+; GFX13-NEXT:    scratch_store_b32 off, v56, s32 offset:156
+; GFX13-NEXT:    scratch_store_b32 off, v57, s32 offset:152
+; GFX13-NEXT:    scratch_store_b32 off, v58, s32 offset:148
+; GFX13-NEXT:    scratch_store_b32 off, v59, s32 offset:144
+; GFX13-NEXT:    scratch_store_b32 off, v60, s32 offset:140
+; GFX13-NEXT:    scratch_store_b32 off, v61, s32 offset:136
+; GFX13-NEXT:    scratch_store_b32 off, v62, s32 offset:132
+; GFX13-NEXT:    scratch_store_b32 off, v63, s32 offset:128
+; GFX13-NEXT:    scratch_store_b32 off, v72, s32 offset:124
+; GFX13-NEXT:    scratch_store_b32 off, v73, s32 offset:120
+; GFX13-NEXT:    scratch_store_b32 off, v74, s32 offset:116
+; GFX13-NEXT:    scratch_store_b32 off, v75, s32 offset:112
+; GFX13-NEXT:    scratch_store_b32 off, v76, s32 offset:108
+; GFX13-NEXT:    scratch_store_b32 off, v77, s32 offset:104
+; GFX13-NEXT:    scratch_store_b32 off, v78, s32 offset:100
+; GFX13-NEXT:    scratch_store_b32 off, v79, s32 offset:96
+; GFX13-NEXT:    scratch_store_b32 off, v88, s32 offset:92
+; GFX13-NEXT:    scratch_store_b32 off, v89, s32 offset:88
+; GFX13-NEXT:    scratch_store_b32 off, v90, s32 offset:84
+; GFX13-NEXT:    scratch_store_b32 off, v91, s32 offset:80
+; GFX13-NEXT:    scratch_store_b32 off, v92, s32 offset:76
+; GFX13-NEXT:    scratch_store_b32 off, v93, s32 offset:72
+; GFX13-NEXT:    scratch_store_b32 off, v94, s32 offset:68
+; GFX13-NEXT:    scratch_store_b32 off, v95, s32 offset:64
+; GFX13-NEXT:    scratch_store_b32 off, v104, s32 offset:60
+; GFX13-NEXT:    scratch_store_b32 off, v105, s32 offset:56
+; GFX13-NEXT:    scratch_store_b32 off, v106, s32 offset:52
+; GFX13-NEXT:    scratch_store_b32 off, v107, s32 offset:48
+; GFX13-NEXT:    scratch_store_b32 off, v108, s32 offset:44
+; GFX13-NEXT:    scratch_store_b32 off, v109, s32 offset:40
+; GFX13-NEXT:    scratch_store_b32 off, v110, s32 offset:36
+; GFX13-NEXT:    scratch_store_b32 off, v111, s32 offset:32
+; GFX13-NEXT:    scratch_store_b32 off, v120, s32 offset:28
+; GFX13-NEXT:    scratch_store_b32 off, v121, s32 offset:24
+; GFX13-NEXT:    scratch_store_b32 off, v122, s32 offset:20
+; GFX13-NEXT:    scratch_store_b32 off, v123, s32 offset:16
+; GFX13-NEXT:    scratch_store_b32 off, v124, s32 offset:12
+; GFX13-NEXT:    scratch_store_b32 off, v125, s32 offset:8
+; GFX13-NEXT:    scratch_store_b32 off, v126, s32 offset:4
+; GFX13-NEXT:    scratch_store_b32 off, v127, s32
+; GFX13-NEXT:    v_dual_mov_b32 v31, v13 :: v_dual_mov_b32 v30, v12
+; GFX13-NEXT:    v_dual_mov_b32 v29, v11 :: v_dual_mov_b32 v28, v10
+; GFX13-NEXT:    v_dual_mov_b32 v27, v9 :: v_dual_mov_b32 v26, v8
+; GFX13-NEXT:    v_dual_mov_b32 v25, v7 :: v_dual_mov_b32 v126, v6
+; GFX13-NEXT:    v_dual_mov_b32 v127, v5 :: v_dual_mov_b32 v119, v4
+; GFX13-NEXT:    v_dual_mov_b32 v120, v3 :: v_dual_mov_b32 v121, v2
+; GFX13-NEXT:    v_dual_mov_b32 v122, v1 :: v_dual_mov_b32 v123, v0
+; GFX13-NEXT:    v_dual_mov_b32 v124, s28 :: v_dual_mov_b32 v125, s29
+; GFX13-NEXT:    s_mov_b32 s4, 0
+; GFX13-NEXT:    s_and_b32 s5, vcc_lo, exec_lo
+; GFX13-NEXT:    s_cbranch_scc0 .LBB19_4
+; GFX13-NEXT:  ; %bb.1: ; %cmp.false
+; GFX13-NEXT:    v_dual_mov_b32 v37, s2 :: v_dual_mov_b32 v3, s3
+; GFX13-NEXT:    v_dual_mov_b32 v97, s22 :: v_dual_mov_b32 v32, s0
+; GFX13-NEXT:    v_mov_b32_e32 v34, s1
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:320
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:336
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:352
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:368
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:384
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:400
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:416
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:432
+; GFX13-NEXT:    v_dual_mov_b32 v4, s16 :: v_dual_mov_b32 v76, s20
+; GFX13-NEXT:    v_mov_b32_e32 v86, s21
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:448
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:464
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:480
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:496
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:512
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:528
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:544
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:560
+; GFX13-NEXT:    v_mov_b32_e32 v5, s17
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:576
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:592
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:608
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:624
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:640
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:656
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:672
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:688
+; GFX13-NEXT:    v_dual_mov_b32 v6, s18 :: v_dual_mov_b32 v67, s19
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:704
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:720
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:736
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:752
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:768
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:784
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:800
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:816
+; GFX13-NEXT:    v_dual_mov_b32 v11, s23 :: v_dual_mov_b32 v12, s24
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:832
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:848
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:864
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:880
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:896
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:912
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:928
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:944
+; GFX13-NEXT:    v_mov_b32_e32 v13, s25
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:960
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:976
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:992
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:1008
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:1024
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:1040
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1056
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1072
+; GFX13-NEXT:    v_mov_b32_e32 v14, s26
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1088
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1104
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1120
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:1136
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:1152
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:1168
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1184
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1200
+; GFX13-NEXT:    v_mov_b32_e32 v15, s27
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:192
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:208
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:224
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:240
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:256
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:272
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:288
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:304
+; GFX13-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s4
+; GFX13-NEXT:    s_cbranch_vccnz .LBB19_3
 ; GFX13-NEXT:  .LBB19_2: ; %cmp.true
-; GFX13-NEXT:    s_and_b32 s0, s51, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s51, 16
-; GFX13-NEXT:    s_and_b32 s2, s50, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s50, 16
-; GFX13-NEXT:    s_and_b32 s4, s49, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s49, 16
-; GFX13-NEXT:    s_and_b32 s6, s48, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s48, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v15, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v14, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v13, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v12, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s47, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s47, 16
-; GFX13-NEXT:    s_and_b32 s2, s46, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s46, 16
-; GFX13-NEXT:    s_and_b32 s4, s45, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s45, 16
-; GFX13-NEXT:    s_and_b32 s6, s44, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s44, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v11, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v10, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v9, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v8, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s43, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s43, 16
-; GFX13-NEXT:    s_and_b32 s2, s42, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s42, 16
-; GFX13-NEXT:    s_and_b32 s4, s41, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s41, 16
-; GFX13-NEXT:    s_and_b32 s6, s40, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s40, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v7, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v6, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v5, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v4, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s39, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s39, 16
-; GFX13-NEXT:    s_and_b32 s2, s38, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s38, 16
-; GFX13-NEXT:    s_and_b32 s4, s37, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s37, 16
-; GFX13-NEXT:    s_and_b32 s6, s36, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s36, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v3, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v2, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v1, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v0, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s67, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s67, 16
-; GFX13-NEXT:    s_and_b32 s2, s66, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s66, 16
-; GFX13-NEXT:    s_and_b32 s4, s65, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s65, 16
-; GFX13-NEXT:    s_and_b32 s6, s64, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s64, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v31, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v30, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v29, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v28, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s63, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s63, 16
-; GFX13-NEXT:    s_and_b32 s2, s62, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s62, 16
-; GFX13-NEXT:    s_and_b32 s4, s61, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s61, 16
-; GFX13-NEXT:    s_and_b32 s6, s60, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s60, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v27, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v26, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v25, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v24, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s59, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s59, 16
-; GFX13-NEXT:    s_and_b32 s2, s58, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s58, 16
-; GFX13-NEXT:    s_and_b32 s4, s57, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s57, 16
-; GFX13-NEXT:    s_and_b32 s6, s56, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s56, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v23, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v22, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v21, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v20, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s55, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s55, 16
-; GFX13-NEXT:    s_and_b32 s2, s54, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s54, 16
-; GFX13-NEXT:    s_and_b32 s4, s53, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s53, 16
-; GFX13-NEXT:    s_and_b32 s6, s52, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s52, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v19, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v18, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v17, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v16, s7, s6
-; GFX13-NEXT:    s_branch .LBB19_5
-; GFX13-NEXT:  .LBB19_3:
-; GFX13-NEXT:    s_branch .LBB19_2
-; GFX13-NEXT:  .LBB19_4:
-; GFX13-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
-; GFX13-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
-; GFX13-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
-; GFX13-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
-; GFX13-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
-; GFX13-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
-; GFX13-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
-; GFX13-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
-; GFX13-NEXT:    v_dual_mov_b32 v16, s52 :: v_dual_mov_b32 v17, s53
-; GFX13-NEXT:    v_dual_mov_b32 v18, s54 :: v_dual_mov_b32 v19, s55
-; GFX13-NEXT:    v_dual_mov_b32 v20, s56 :: v_dual_mov_b32 v21, s57
-; GFX13-NEXT:    v_dual_mov_b32 v22, s58 :: v_dual_mov_b32 v23, s59
-; GFX13-NEXT:    v_dual_mov_b32 v24, s60 :: v_dual_mov_b32 v25, s61
-; GFX13-NEXT:    v_dual_mov_b32 v26, s62 :: v_dual_mov_b32 v27, s63
-; GFX13-NEXT:    v_dual_mov_b32 v28, s64 :: v_dual_mov_b32 v29, s65
-; GFX13-NEXT:    v_dual_mov_b32 v30, s66 :: v_dual_mov_b32 v31, s67
-; GFX13-NEXT:  .LBB19_5: ; %end
-; GFX13-NEXT:    v_readlane_b32 s67, v32, 15
-; GFX13-NEXT:    v_readlane_b32 s66, v32, 14
-; GFX13-NEXT:    v_readlane_b32 s65, v32, 13
-; GFX13-NEXT:    v_readlane_b32 s64, v32, 12
-; GFX13-NEXT:    v_readlane_b32 s55, v32, 11
-; GFX13-NEXT:    v_readlane_b32 s54, v32, 10
-; GFX13-NEXT:    v_readlane_b32 s53, v32, 9
-; GFX13-NEXT:    v_readlane_b32 s52, v32, 8
-; GFX13-NEXT:    v_readlane_b32 s51, v32, 7
-; GFX13-NEXT:    v_readlane_b32 s50, v32, 6
-; GFX13-NEXT:    v_readlane_b32 s49, v32, 5
-; GFX13-NEXT:    v_readlane_b32 s48, v32, 4
-; GFX13-NEXT:    v_readlane_b32 s39, v32, 3
-; GFX13-NEXT:    v_readlane_b32 s38, v32, 2
-; GFX13-NEXT:    v_readlane_b32 s37, v32, 1
-; GFX13-NEXT:    v_readlane_b32 s36, v32, 0
-; GFX13-NEXT:    s_xor_saveexec_b32 s0, -1
-; GFX13-NEXT:    scratch_load_b32 v32, off, s32 ; 4-byte Folded Reload
-; GFX13-NEXT:    s_mov_b32 exec_lo, s0
+; GFX13-NEXT:    v_pk_add_bf16 v15, 0x40c0, s27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v126, 0x40c0, v126 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v127, 0x40c0, v127 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v119, 0x40c0, v119 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v120, 0x40c0, v120 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:192
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:208
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:224
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:240
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:256
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:272
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:288
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:304
+; GFX13-NEXT:    v_pk_add_bf16 v14, 0x40c0, s26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v121, 0x40c0, v121 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v122, 0x40c0, v122 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v123, 0x40c0, v123 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v125, 0x40c0, v125 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v124, 0x40c0, v124 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v97, 0x40c0, s22 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v86, 0x40c0, s21 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v76, 0x40c0, s20 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v67, 0x40c0, s19 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v37, 0x40c0, s2 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v34, 0x40c0, s1 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v32, 0x40c0, s0 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v31, 0x40c0, v31 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v30, 0x40c0, v30 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v29, 0x40c0, v29 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v28, 0x40c0, v28 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v27, 0x40c0, v27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v26, 0x40c0, v26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v25, 0x40c0, v25 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1088
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1104
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1120
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:1136
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:1152
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:1168
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1184
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1200
+; GFX13-NEXT:    v_pk_add_bf16 v13, 0x40c0, s25 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:960
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:976
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:992
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:1008
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:1024
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:1040
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1056
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1072
+; GFX13-NEXT:    v_pk_add_bf16 v12, 0x40c0, s24 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:832
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:848
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:864
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:880
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:896
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:912
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:928
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:944
+; GFX13-NEXT:    v_pk_add_bf16 v11, 0x40c0, s23 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v6, 0x40c0, s18 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:704
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:720
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:736
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:752
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:768
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:784
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:800
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:816
+; GFX13-NEXT:    v_pk_add_bf16 v5, 0x40c0, s17 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:576
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:592
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:608
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:624
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:640
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:656
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:672
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:688
+; GFX13-NEXT:    v_pk_add_bf16 v4, 0x40c0, s16 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:448
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:464
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:480
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:496
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:512
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:528
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:544
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:560
+; GFX13-NEXT:    v_pk_add_bf16 v3, 0x40c0, s3 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:320
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:336
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:352
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:368
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:384
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:400
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:416
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:432
+; GFX13-NEXT:  .LBB19_3: ; %end
+; GFX13-NEXT:    v_dual_mov_b32 v0, v32 :: v_dual_mov_b32 v1, v34
+; GFX13-NEXT:    v_mov_b32_e32 v2, v37
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:320 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:336 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:352 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:368 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:384 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:400 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:416 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:432 th:TH_LOAD_LU
+; GFX13-NEXT:    v_dual_mov_b32 v8, v76 :: v_dual_mov_b32 v9, v86
+; GFX13-NEXT:    v_dual_mov_b32 v17, v125 :: v_dual_mov_b32 v18, v123
+; GFX13-NEXT:    v_dual_mov_b32 v19, v122 :: v_dual_mov_b32 v20, v121
+; GFX13-NEXT:    v_dual_mov_b32 v21, v120 :: v_dual_mov_b32 v22, v119
+; GFX13-NEXT:    v_dual_mov_b32 v23, v127 :: v_dual_mov_b32 v24, v126
+; GFX13-NEXT:    v_dual_mov_b32 v7, v67 :: v_dual_mov_b32 v16, v124
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    v_mov_b32_e32 v3, v35
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:448 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:464 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:480 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:496 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:512 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:528 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:544 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:560 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x6
+; GFX13-NEXT:    v_mov_b32_e32 v4, v36
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:576 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:592 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:608 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:624 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:640 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:656 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:672 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:688 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x6
+; GFX13-NEXT:    v_mov_b32_e32 v5, v37
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:704 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:720 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:736 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:752 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:768 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:784 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:800 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:816 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x6
+; GFX13-NEXT:    v_mov_b32_e32 v6, v38
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:832 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:848 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:864 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:880 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:896 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:912 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:928 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:944 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x4
+; GFX13-NEXT:    v_dual_mov_b32 v10, v97 :: v_dual_mov_b32 v12, v44
+; GFX13-NEXT:    s_clause 0x3
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:960 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:976 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:992 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:1008 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:1024 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:1040 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:1056 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:1072 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x4
+; GFX13-NEXT:    v_mov_b32_e32 v13, v45
+; GFX13-NEXT:    s_clause 0x3
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1088 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1104 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:1120 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:1136 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:1152 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:1168 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:1184 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:1200 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x4
+; GFX13-NEXT:    v_mov_b32_e32 v14, v46
+; GFX13-NEXT:    s_clause 0x3
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:192 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:208 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:224 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:240 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:256 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:272 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:288 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:304 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x4
+; GFX13-NEXT:    v_mov_b32_e32 v15, v47
+; GFX13-NEXT:    s_clause 0x1f
+; GFX13-NEXT:    scratch_load_b32 v127, off, s32
+; GFX13-NEXT:    scratch_load_b32 v126, off, s32 offset:4
+; GFX13-NEXT:    scratch_load_b32 v125, off, s32 offset:8
+; GFX13-NEXT:    scratch_load_b32 v124, off, s32 offset:12
+; GFX13-NEXT:    scratch_load_b32 v123, off, s32 offset:16
+; GFX13-NEXT:    scratch_load_b32 v122, off, s32 offset:20
+; GFX13-NEXT:    scratch_load_b32 v121, off, s32 offset:24
+; GFX13-NEXT:    scratch_load_b32 v120, off, s32 offset:28
+; GFX13-NEXT:    scratch_load_b32 v111, off, s32 offset:32
+; GFX13-NEXT:    scratch_load_b32 v110, off, s32 offset:36
+; GFX13-NEXT:    scratch_load_b32 v109, off, s32 offset:40
+; GFX13-NEXT:    scratch_load_b32 v108, off, s32 offset:44
+; GFX13-NEXT:    scratch_load_b32 v107, off, s32 offset:48
+; GFX13-NEXT:    scratch_load_b32 v106, off, s32 offset:52
+; GFX13-NEXT:    scratch_load_b32 v105, off, s32 offset:56
+; GFX13-NEXT:    scratch_load_b32 v104, off, s32 offset:60
+; GFX13-NEXT:    scratch_load_b32 v95, off, s32 offset:64
+; GFX13-NEXT:    scratch_load_b32 v94, off, s32 offset:68
+; GFX13-NEXT:    scratch_load_b32 v93, off, s32 offset:72
+; GFX13-NEXT:    scratch_load_b32 v92, off, s32 offset:76
+; GFX13-NEXT:    scratch_load_b32 v91, off, s32 offset:80
+; GFX13-NEXT:    scratch_load_b32 v90, off, s32 offset:84
+; GFX13-NEXT:    scratch_load_b32 v89, off, s32 offset:88
+; GFX13-NEXT:    scratch_load_b32 v88, off, s32 offset:92
+; GFX13-NEXT:    scratch_load_b32 v79, off, s32 offset:96
+; GFX13-NEXT:    scratch_load_b32 v78, off, s32 offset:100
+; GFX13-NEXT:    scratch_load_b32 v77, off, s32 offset:104
+; GFX13-NEXT:    scratch_load_b32 v76, off, s32 offset:108
+; GFX13-NEXT:    scratch_load_b32 v75, off, s32 offset:112
+; GFX13-NEXT:    scratch_load_b32 v74, off, s32 offset:116
+; GFX13-NEXT:    scratch_load_b32 v73, off, s32 offset:120
+; GFX13-NEXT:    scratch_load_b32 v72, off, s32 offset:124
+; GFX13-NEXT:    s_wait_loadcnt 0x20
+; GFX13-NEXT:    s_clause 0xf
+; GFX13-NEXT:    scratch_load_b32 v63, off, s32 offset:128
+; GFX13-NEXT:    scratch_load_b32 v62, off, s32 offset:132
+; GFX13-NEXT:    scratch_load_b32 v61, off, s32 offset:136
+; GFX13-NEXT:    scratch_load_b32 v60, off, s32 offset:140
+; GFX13-NEXT:    scratch_load_b32 v59, off, s32 offset:144
+; GFX13-NEXT:    scratch_load_b32 v58, off, s32 offset:148
+; GFX13-NEXT:    scratch_load_b32 v57, off, s32 offset:152
+; GFX13-NEXT:    scratch_load_b32 v56, off, s32 offset:156
+; GFX13-NEXT:    scratch_load_b32 v47, off, s32 offset:160
+; GFX13-NEXT:    scratch_load_b32 v46, off, s32 offset:164
+; GFX13-NEXT:    scratch_load_b32 v45, off, s32 offset:168
+; GFX13-NEXT:    scratch_load_b32 v44, off, s32 offset:172
+; GFX13-NEXT:    scratch_load_b32 v43, off, s32 offset:176
+; GFX13-NEXT:    scratch_load_b32 v42, off, s32 offset:180
+; GFX13-NEXT:    scratch_load_b32 v41, off, s32 offset:184
+; GFX13-NEXT:    scratch_load_b32 v40, off, s32 offset:188
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+; GFX13-NEXT:  .LBB19_4:
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79_vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91
+; GFX13-NEXT:    v_dual_mov_b32 v33, v31 :: v_dual_mov_b32 v35, v30
+; GFX13-NEXT:    v_dual_mov_b32 v36, v29 :: v_dual_mov_b32 v38, v28
+; GFX13-NEXT:    v_dual_mov_b32 v39, v27 :: v_dual_mov_b32 v48, v26
+; GFX13-NEXT:    v_mov_b32_e32 v49, v25
+; GFX13-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+; GFX13-NEXT:    ; implicit-def: $vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79_vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95_vgpr96_vgpr97_vgpr98_vgpr99
+; GFX13-NEXT:    ; implicit-def: $vgpr77_vgpr78_vgpr79_vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95_vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_dual_mov_b32 v28, v38 :: v_dual_mov_b32 v29, v36
+; GFX13-NEXT:    v_dual_mov_b32 v26, v48 :: v_dual_mov_b32 v25, v49
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-NEXT:    v_dual_mov_b32 v27, v39 :: v_dual_mov_b32 v30, v35
+; GFX13-NEXT:    v_mov_b32_e32 v31, v33
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64
+; GFX13-NEXT:    ; implicit-def: $vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95_vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118
+; GFX13-NEXT:    ; implicit-def: $vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66
+; GFX13-NEXT:    s_branch .LBB19_2
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
 
@@ -79405,146 +79511,39 @@ define <32 x float> @bitcast_v64bf16_to_v32f32(<64 x bfloat> %a, i32 %b) {
 ; GFX13-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-NEXT:    s_cbranch_execz .LBB42_2
 ; GFX13-NEXT:  ; %bb.1: ; %cmp.true
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v15
-; GFX13-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v14
-; GFX13-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v13
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_add_f32 v15, 0x40c00000, v15
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v14, 0x40c00000, v14
-; GFX13-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v10
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_4) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v15, v15, v32
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v12
-; GFX13-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v14, v14, v33
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v11
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_lshlrev_b32 v11, 16, v11
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_add_f32_e32 v12, 0x40c00000, v12
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_lshlrev_b32 v10, 16, v10
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v9
-; GFX13-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_dual_add_f32 v11, 0x40c00000, v11 :: v_dual_add_f32 v10, 0x40c00000, v10
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_add_f32 v13, 0x40c00000, v13
-; GFX13-NEXT:    v_dual_add_f32 v35, 0x40c00000, v35 :: v_dual_add_f32 v36, 0x40c00000, v36
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-NEXT:    v_add_f32_e32 v9, 0x40c00000, v9
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v12, v12, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v11, v11, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v8
-; GFX13-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v7
-; GFX13-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v13, v13, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v10, v10, v35
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v9, v9, v36
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v6
-; GFX13-NEXT:    v_add_f32_e32 v32, 0x40c00000, v32
-; GFX13-NEXT:    v_dual_add_f32 v8, 0x40c00000, v8 :: v_dual_add_f32 v33, 0x40c00000, v33
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v7, 0x40c00000, v7 :: v_dual_add_f32 v34, 0x40c00000, v34
-; GFX13-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v5
-; GFX13-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v4
-; GFX13-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v6, 0x40c00000, v6 :: v_dual_add_f32 v35, 0x40c00000, v35
-; GFX13-NEXT:    v_dual_add_f32 v5, 0x40c00000, v5 :: v_dual_add_f32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v8, v8, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v7, v7, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v3
-; GFX13-NEXT:    v_dual_add_f32 v4, 0x40c00000, v4 :: v_dual_lshlrev_b32 v3, 16, v3
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v2
-; GFX13-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v6, v6, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v5, v5, v35
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v1
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_lshlrev_b32 v1, 16, v1
-; GFX13-NEXT:    v_add_f32_e32 v3, 0x40c00000, v3
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v4, v4, v36
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v2, 0x40c00000, v2
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v0
-; GFX13-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX13-NEXT:    v_pk_add_bf16 v15, 0x40c0, v15 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v14, 0x40c0, v14 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v13, 0x40c0, v13 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v12, 0x40c0, v12 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v11, 0x40c0, v11 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v10, 0x40c0, v10 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v9, 0x40c0, v9 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v8, 0x40c0, v8 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v7, 0x40c0, v7 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v6, 0x40c0, v6 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v5, 0x40c0, v5 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v4, 0x40c0, v4 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v3, 0x40c0, v3 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v2, 0x40c0, v2 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v1, 0x40c0, v1 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v0, 0x40c0, v0 op_sel_hi:[0,1]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v31
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_lshlrev_b32 v31, 16, v31
-; GFX13-NEXT:    v_add_f32_e32 v1, 0x40c00000, v1
-; GFX13-NEXT:    v_dual_add_f32 v35, 0x40c00000, v35 :: v_dual_add_f32 v0, 0x40c00000, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v31, 0x40c00000, v31 :: v_dual_add_f32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v3, v3, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v2, v2, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v30
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v29
-; GFX13-NEXT:    v_dual_lshlrev_b32 v30, 16, v30 :: v_dual_lshlrev_b32 v29, 16, v29
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v1, v1, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v35
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v31, v31, v36
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v28
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_add_f32 v29, 0x40c00000, v29
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v30, 0x40c00000, v30
-; GFX13-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v27
-; GFX13-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v26
-; GFX13-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_add_f32 v35, 0x40c00000, v35
-; GFX13-NEXT:    v_dual_add_f32 v28, 0x40c00000, v28 :: v_dual_add_f32 v27, 0x40c00000, v27
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-NEXT:    v_add_f32_e32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v30, v30, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v29, v29, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v25
-; GFX13-NEXT:    v_dual_add_f32 v26, 0x40c00000, v26 :: v_dual_lshlrev_b32 v25, 16, v25
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v24
-; GFX13-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v28, v28, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v27, v27, v35
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v23
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_lshlrev_b32 v23, 16, v23
-; GFX13-NEXT:    v_add_f32_e32 v25, 0x40c00000, v25
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v26, v26, v36
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v24, 0x40c00000, v24
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v22
-; GFX13-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v21
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_lshlrev_b32 v21, 16, v21
-; GFX13-NEXT:    v_add_f32_e32 v23, 0x40c00000, v23
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v35, 0x40c00000, v35 :: v_dual_add_f32 v22, 0x40c00000, v22
-; GFX13-NEXT:    v_dual_add_f32 v21, 0x40c00000, v21 :: v_dual_add_f32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v25, v25, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v24, v24, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v20
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v19
-; GFX13-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v23, v23, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v22, v22, v35
-; GFX13-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v21, v21, v36
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v18
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v20, 0x40c00000, v20
-; GFX13-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v17
-; GFX13-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v16
-; GFX13-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_add_f32 v19, 0x40c00000, v19
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_add_f32 v35, 0x40c00000, v35
-; GFX13-NEXT:    v_dual_add_f32 v18, 0x40c00000, v18 :: v_dual_add_f32 v17, 0x40c00000, v17
-; GFX13-NEXT:    v_add_f32_e32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_add_f32_e32 v16, 0x40c00000, v16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v20, v20, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v19, v19, v33
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v18, v18, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v17, v17, v35
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v16, v16, v36
+; GFX13-NEXT:    v_pk_add_bf16 v31, 0x40c0, v31 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v30, 0x40c0, v30 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v29, 0x40c0, v29 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v28, 0x40c0, v28 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v27, 0x40c0, v27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v26, 0x40c0, v26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v25, 0x40c0, v25 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v24, 0x40c0, v24 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v23, 0x40c0, v23 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v22, 0x40c0, v22 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v21, 0x40c0, v21 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v20, 0x40c0, v20 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v19, 0x40c0, v19 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v18, 0x40c0, v18 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v17, 0x40c0, v17 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v16, 0x40c0, v16 op_sel_hi:[0,1]
 ; GFX13-NEXT:  .LBB42_2: ; %end
 ; GFX13-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
@@ -82319,267 +82318,480 @@ define inreg <32 x float> @bitcast_v64bf16_to_v32f32_scalar(<64 x bfloat> inreg 
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    s_xor_saveexec_b32 s4, -1
-; GFX13-NEXT:    scratch_store_b32 off, v32, s32 ; 4-byte Folded Spill
-; GFX13-NEXT:    s_mov_b32 exec_lo, s4
-; GFX13-NEXT:    v_writelane_b32 v32, s36, 0
 ; GFX13-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v14
-; GFX13-NEXT:    v_readfirstlane_b32 s56, v2
-; GFX13-NEXT:    v_readfirstlane_b32 s57, v3
-; GFX13-NEXT:    v_readfirstlane_b32 s58, v4
-; GFX13-NEXT:    v_writelane_b32 v32, s37, 1
-; GFX13-NEXT:    v_readfirstlane_b32 s59, v5
-; GFX13-NEXT:    v_readfirstlane_b32 s60, v6
-; GFX13-NEXT:    v_readfirstlane_b32 s61, v7
-; GFX13-NEXT:    v_readfirstlane_b32 s62, v8
-; GFX13-NEXT:    v_writelane_b32 v32, s38, 2
-; GFX13-NEXT:    v_readfirstlane_b32 s63, v9
-; GFX13-NEXT:    s_mov_b32 s47, s23
-; GFX13-NEXT:    s_mov_b32 s46, s22
-; GFX13-NEXT:    s_mov_b32 s45, s21
-; GFX13-NEXT:    v_writelane_b32 v32, s39, 3
-; GFX13-NEXT:    s_mov_b32 s44, s20
-; GFX13-NEXT:    s_mov_b32 s43, s19
-; GFX13-NEXT:    s_mov_b32 s42, s18
-; GFX13-NEXT:    s_mov_b32 s41, s17
-; GFX13-NEXT:    v_writelane_b32 v32, s48, 4
-; GFX13-NEXT:    s_mov_b32 s48, s24
-; GFX13-NEXT:    s_mov_b32 s40, s16
-; GFX13-NEXT:    s_mov_b32 s39, s3
-; GFX13-NEXT:    s_mov_b32 s38, s2
-; GFX13-NEXT:    v_writelane_b32 v32, s49, 5
-; GFX13-NEXT:    s_mov_b32 s49, s25
-; GFX13-NEXT:    s_mov_b32 s37, s1
-; GFX13-NEXT:    s_mov_b32 s36, s0
-; GFX13-NEXT:    s_mov_b32 s0, 0
-; GFX13-NEXT:    v_writelane_b32 v32, s50, 6
-; GFX13-NEXT:    s_mov_b32 s50, s26
-; GFX13-NEXT:    s_and_b32 s1, vcc_lo, exec_lo
-; GFX13-NEXT:    v_writelane_b32 v32, s51, 7
-; GFX13-NEXT:    s_mov_b32 s51, s27
-; GFX13-NEXT:    v_writelane_b32 v32, s52, 8
-; GFX13-NEXT:    s_mov_b32 s52, s28
-; GFX13-NEXT:    v_writelane_b32 v32, s53, 9
-; GFX13-NEXT:    s_mov_b32 s53, s29
-; GFX13-NEXT:    v_writelane_b32 v32, s54, 10
-; GFX13-NEXT:    v_readfirstlane_b32 s54, v0
-; GFX13-NEXT:    v_writelane_b32 v32, s55, 11
-; GFX13-NEXT:    v_readfirstlane_b32 s55, v1
-; GFX13-NEXT:    v_writelane_b32 v32, s64, 12
-; GFX13-NEXT:    v_readfirstlane_b32 s64, v10
-; GFX13-NEXT:    v_writelane_b32 v32, s65, 13
-; GFX13-NEXT:    v_readfirstlane_b32 s65, v11
-; GFX13-NEXT:    v_writelane_b32 v32, s66, 14
-; GFX13-NEXT:    v_readfirstlane_b32 s66, v12
-; GFX13-NEXT:    v_writelane_b32 v32, s67, 15
-; GFX13-NEXT:    v_readfirstlane_b32 s67, v13
-; GFX13-NEXT:    s_cbranch_scc0 .LBB43_3
-; GFX13-NEXT:  ; %bb.1: ; %Flow
-; GFX13-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
-; GFX13-NEXT:    s_cbranch_vccnz .LBB43_4
+; GFX13-NEXT:    s_clause 0x2f
+; GFX13-NEXT:    scratch_store_b32 off, v40, s32 offset:188
+; GFX13-NEXT:    scratch_store_b32 off, v41, s32 offset:184
+; GFX13-NEXT:    scratch_store_b32 off, v42, s32 offset:180
+; GFX13-NEXT:    scratch_store_b32 off, v43, s32 offset:176
+; GFX13-NEXT:    scratch_store_b32 off, v44, s32 offset:172
+; GFX13-NEXT:    scratch_store_b32 off, v45, s32 offset:168
+; GFX13-NEXT:    scratch_store_b32 off, v46, s32 offset:164
+; GFX13-NEXT:    scratch_store_b32 off, v47, s32 offset:160
+; GFX13-NEXT:    scratch_store_b32 off, v56, s32 offset:156
+; GFX13-NEXT:    scratch_store_b32 off, v57, s32 offset:152
+; GFX13-NEXT:    scratch_store_b32 off, v58, s32 offset:148
+; GFX13-NEXT:    scratch_store_b32 off, v59, s32 offset:144
+; GFX13-NEXT:    scratch_store_b32 off, v60, s32 offset:140
+; GFX13-NEXT:    scratch_store_b32 off, v61, s32 offset:136
+; GFX13-NEXT:    scratch_store_b32 off, v62, s32 offset:132
+; GFX13-NEXT:    scratch_store_b32 off, v63, s32 offset:128
+; GFX13-NEXT:    scratch_store_b32 off, v72, s32 offset:124
+; GFX13-NEXT:    scratch_store_b32 off, v73, s32 offset:120
+; GFX13-NEXT:    scratch_store_b32 off, v74, s32 offset:116
+; GFX13-NEXT:    scratch_store_b32 off, v75, s32 offset:112
+; GFX13-NEXT:    scratch_store_b32 off, v76, s32 offset:108
+; GFX13-NEXT:    scratch_store_b32 off, v77, s32 offset:104
+; GFX13-NEXT:    scratch_store_b32 off, v78, s32 offset:100
+; GFX13-NEXT:    scratch_store_b32 off, v79, s32 offset:96
+; GFX13-NEXT:    scratch_store_b32 off, v88, s32 offset:92
+; GFX13-NEXT:    scratch_store_b32 off, v89, s32 offset:88
+; GFX13-NEXT:    scratch_store_b32 off, v90, s32 offset:84
+; GFX13-NEXT:    scratch_store_b32 off, v91, s32 offset:80
+; GFX13-NEXT:    scratch_store_b32 off, v92, s32 offset:76
+; GFX13-NEXT:    scratch_store_b32 off, v93, s32 offset:72
+; GFX13-NEXT:    scratch_store_b32 off, v94, s32 offset:68
+; GFX13-NEXT:    scratch_store_b32 off, v95, s32 offset:64
+; GFX13-NEXT:    scratch_store_b32 off, v104, s32 offset:60
+; GFX13-NEXT:    scratch_store_b32 off, v105, s32 offset:56
+; GFX13-NEXT:    scratch_store_b32 off, v106, s32 offset:52
+; GFX13-NEXT:    scratch_store_b32 off, v107, s32 offset:48
+; GFX13-NEXT:    scratch_store_b32 off, v108, s32 offset:44
+; GFX13-NEXT:    scratch_store_b32 off, v109, s32 offset:40
+; GFX13-NEXT:    scratch_store_b32 off, v110, s32 offset:36
+; GFX13-NEXT:    scratch_store_b32 off, v111, s32 offset:32
+; GFX13-NEXT:    scratch_store_b32 off, v120, s32 offset:28
+; GFX13-NEXT:    scratch_store_b32 off, v121, s32 offset:24
+; GFX13-NEXT:    scratch_store_b32 off, v122, s32 offset:20
+; GFX13-NEXT:    scratch_store_b32 off, v123, s32 offset:16
+; GFX13-NEXT:    scratch_store_b32 off, v124, s32 offset:12
+; GFX13-NEXT:    scratch_store_b32 off, v125, s32 offset:8
+; GFX13-NEXT:    scratch_store_b32 off, v126, s32 offset:4
+; GFX13-NEXT:    scratch_store_b32 off, v127, s32
+; GFX13-NEXT:    v_dual_mov_b32 v31, v13 :: v_dual_mov_b32 v30, v12
+; GFX13-NEXT:    v_dual_mov_b32 v29, v11 :: v_dual_mov_b32 v28, v10
+; GFX13-NEXT:    v_dual_mov_b32 v27, v9 :: v_dual_mov_b32 v26, v8
+; GFX13-NEXT:    v_dual_mov_b32 v25, v7 :: v_dual_mov_b32 v126, v6
+; GFX13-NEXT:    v_dual_mov_b32 v127, v5 :: v_dual_mov_b32 v119, v4
+; GFX13-NEXT:    v_dual_mov_b32 v120, v3 :: v_dual_mov_b32 v121, v2
+; GFX13-NEXT:    v_dual_mov_b32 v122, v1 :: v_dual_mov_b32 v123, v0
+; GFX13-NEXT:    v_dual_mov_b32 v124, s28 :: v_dual_mov_b32 v125, s29
+; GFX13-NEXT:    s_mov_b32 s4, 0
+; GFX13-NEXT:    s_and_b32 s5, vcc_lo, exec_lo
+; GFX13-NEXT:    s_cbranch_scc0 .LBB43_4
+; GFX13-NEXT:  ; %bb.1: ; %cmp.false
+; GFX13-NEXT:    v_dual_mov_b32 v37, s2 :: v_dual_mov_b32 v3, s3
+; GFX13-NEXT:    v_dual_mov_b32 v97, s22 :: v_dual_mov_b32 v32, s0
+; GFX13-NEXT:    v_mov_b32_e32 v34, s1
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:320
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:336
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:352
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:368
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:384
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:400
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:416
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:432
+; GFX13-NEXT:    v_dual_mov_b32 v4, s16 :: v_dual_mov_b32 v76, s20
+; GFX13-NEXT:    v_mov_b32_e32 v86, s21
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:448
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:464
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:480
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:496
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:512
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:528
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:544
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:560
+; GFX13-NEXT:    v_mov_b32_e32 v5, s17
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:576
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:592
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:608
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:624
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:640
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:656
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:672
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:688
+; GFX13-NEXT:    v_dual_mov_b32 v6, s18 :: v_dual_mov_b32 v67, s19
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:704
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:720
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:736
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:752
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:768
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:784
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:800
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:816
+; GFX13-NEXT:    v_dual_mov_b32 v11, s23 :: v_dual_mov_b32 v12, s24
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:832
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:848
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:864
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:880
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:896
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:912
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:928
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:944
+; GFX13-NEXT:    v_mov_b32_e32 v13, s25
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:960
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:976
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:992
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:1008
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:1024
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:1040
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1056
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1072
+; GFX13-NEXT:    v_mov_b32_e32 v14, s26
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1088
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1104
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1120
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:1136
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:1152
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:1168
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1184
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1200
+; GFX13-NEXT:    v_mov_b32_e32 v15, s27
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:192
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:208
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:224
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:240
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:256
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:272
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:288
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:304
+; GFX13-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s4
+; GFX13-NEXT:    s_cbranch_vccnz .LBB43_3
 ; GFX13-NEXT:  .LBB43_2: ; %cmp.true
-; GFX13-NEXT:    s_and_b32 s0, s51, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s51, 16
-; GFX13-NEXT:    s_and_b32 s2, s50, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s50, 16
-; GFX13-NEXT:    s_and_b32 s4, s49, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s49, 16
-; GFX13-NEXT:    s_and_b32 s6, s48, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s48, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v15, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v14, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v13, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v12, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s47, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s47, 16
-; GFX13-NEXT:    s_and_b32 s2, s46, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s46, 16
-; GFX13-NEXT:    s_and_b32 s4, s45, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s45, 16
-; GFX13-NEXT:    s_and_b32 s6, s44, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s44, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v11, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v10, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v9, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v8, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s43, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s43, 16
-; GFX13-NEXT:    s_and_b32 s2, s42, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s42, 16
-; GFX13-NEXT:    s_and_b32 s4, s41, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s41, 16
-; GFX13-NEXT:    s_and_b32 s6, s40, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s40, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v7, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v6, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v5, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v4, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s39, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s39, 16
-; GFX13-NEXT:    s_and_b32 s2, s38, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s38, 16
-; GFX13-NEXT:    s_and_b32 s4, s37, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s37, 16
-; GFX13-NEXT:    s_and_b32 s6, s36, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s36, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v3, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v2, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v1, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v0, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s67, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s67, 16
-; GFX13-NEXT:    s_and_b32 s2, s66, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s66, 16
-; GFX13-NEXT:    s_and_b32 s4, s65, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s65, 16
-; GFX13-NEXT:    s_and_b32 s6, s64, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s64, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v31, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v30, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v29, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v28, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s63, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s63, 16
-; GFX13-NEXT:    s_and_b32 s2, s62, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s62, 16
-; GFX13-NEXT:    s_and_b32 s4, s61, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s61, 16
-; GFX13-NEXT:    s_and_b32 s6, s60, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s60, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v27, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v26, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v25, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v24, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s59, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s59, 16
-; GFX13-NEXT:    s_and_b32 s2, s58, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s58, 16
-; GFX13-NEXT:    s_and_b32 s4, s57, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s57, 16
-; GFX13-NEXT:    s_and_b32 s6, s56, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s56, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v23, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v22, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v21, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v20, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s55, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s55, 16
-; GFX13-NEXT:    s_and_b32 s2, s54, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s54, 16
-; GFX13-NEXT:    s_and_b32 s4, s53, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s53, 16
-; GFX13-NEXT:    s_and_b32 s6, s52, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s52, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v19, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v18, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v17, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v16, s7, s6
-; GFX13-NEXT:    s_branch .LBB43_5
-; GFX13-NEXT:  .LBB43_3:
-; GFX13-NEXT:    s_branch .LBB43_2
-; GFX13-NEXT:  .LBB43_4:
-; GFX13-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
-; GFX13-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
-; GFX13-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
-; GFX13-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
-; GFX13-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
-; GFX13-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
-; GFX13-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
-; GFX13-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
-; GFX13-NEXT:    v_dual_mov_b32 v16, s52 :: v_dual_mov_b32 v17, s53
-; GFX13-NEXT:    v_dual_mov_b32 v18, s54 :: v_dual_mov_b32 v19, s55
-; GFX13-NEXT:    v_dual_mov_b32 v20, s56 :: v_dual_mov_b32 v21, s57
-; GFX13-NEXT:    v_dual_mov_b32 v22, s58 :: v_dual_mov_b32 v23, s59
-; GFX13-NEXT:    v_dual_mov_b32 v24, s60 :: v_dual_mov_b32 v25, s61
-; GFX13-NEXT:    v_dual_mov_b32 v26, s62 :: v_dual_mov_b32 v27, s63
-; GFX13-NEXT:    v_dual_mov_b32 v28, s64 :: v_dual_mov_b32 v29, s65
-; GFX13-NEXT:    v_dual_mov_b32 v30, s66 :: v_dual_mov_b32 v31, s67
-; GFX13-NEXT:  .LBB43_5: ; %end
-; GFX13-NEXT:    v_readlane_b32 s67, v32, 15
-; GFX13-NEXT:    v_readlane_b32 s66, v32, 14
-; GFX13-NEXT:    v_readlane_b32 s65, v32, 13
-; GFX13-NEXT:    v_readlane_b32 s64, v32, 12
-; GFX13-NEXT:    v_readlane_b32 s55, v32, 11
-; GFX13-NEXT:    v_readlane_b32 s54, v32, 10
-; GFX13-NEXT:    v_readlane_b32 s53, v32, 9
-; GFX13-NEXT:    v_readlane_b32 s52, v32, 8
-; GFX13-NEXT:    v_readlane_b32 s51, v32, 7
-; GFX13-NEXT:    v_readlane_b32 s50, v32, 6
-; GFX13-NEXT:    v_readlane_b32 s49, v32, 5
-; GFX13-NEXT:    v_readlane_b32 s48, v32, 4
-; GFX13-NEXT:    v_readlane_b32 s39, v32, 3
-; GFX13-NEXT:    v_readlane_b32 s38, v32, 2
-; GFX13-NEXT:    v_readlane_b32 s37, v32, 1
-; GFX13-NEXT:    v_readlane_b32 s36, v32, 0
-; GFX13-NEXT:    s_xor_saveexec_b32 s0, -1
-; GFX13-NEXT:    scratch_load_b32 v32, off, s32 ; 4-byte Folded Reload
-; GFX13-NEXT:    s_mov_b32 exec_lo, s0
+; GFX13-NEXT:    v_pk_add_bf16 v15, 0x40c0, s27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v126, 0x40c0, v126 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v127, 0x40c0, v127 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v119, 0x40c0, v119 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v120, 0x40c0, v120 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:192
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:208
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:224
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:240
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:256
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:272
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:288
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:304
+; GFX13-NEXT:    v_pk_add_bf16 v14, 0x40c0, s26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v121, 0x40c0, v121 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v122, 0x40c0, v122 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v123, 0x40c0, v123 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v125, 0x40c0, v125 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v124, 0x40c0, v124 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v97, 0x40c0, s22 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v86, 0x40c0, s21 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v76, 0x40c0, s20 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v67, 0x40c0, s19 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v37, 0x40c0, s2 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v34, 0x40c0, s1 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v32, 0x40c0, s0 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v31, 0x40c0, v31 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v30, 0x40c0, v30 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v29, 0x40c0, v29 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v28, 0x40c0, v28 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v27, 0x40c0, v27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v26, 0x40c0, v26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v25, 0x40c0, v25 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1088
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1104
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1120
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:1136
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:1152
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:1168
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1184
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1200
+; GFX13-NEXT:    v_pk_add_bf16 v13, 0x40c0, s25 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:960
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:976
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:992
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:1008
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:1024
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:1040
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1056
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1072
+; GFX13-NEXT:    v_pk_add_bf16 v12, 0x40c0, s24 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:832
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:848
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:864
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:880
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:896
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:912
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:928
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:944
+; GFX13-NEXT:    v_pk_add_bf16 v11, 0x40c0, s23 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v6, 0x40c0, s18 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:704
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:720
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:736
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:752
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:768
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:784
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:800
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:816
+; GFX13-NEXT:    v_pk_add_bf16 v5, 0x40c0, s17 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:576
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:592
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:608
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:624
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:640
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:656
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:672
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:688
+; GFX13-NEXT:    v_pk_add_bf16 v4, 0x40c0, s16 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:448
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:464
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:480
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:496
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:512
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:528
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:544
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:560
+; GFX13-NEXT:    v_pk_add_bf16 v3, 0x40c0, s3 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:320
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:336
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:352
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:368
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:384
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:400
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:416
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:432
+; GFX13-NEXT:  .LBB43_3: ; %end
+; GFX13-NEXT:    v_dual_mov_b32 v0, v32 :: v_dual_mov_b32 v1, v34
+; GFX13-NEXT:    v_mov_b32_e32 v2, v37
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:320 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:336 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:352 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:368 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:384 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:400 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:416 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:432 th:TH_LOAD_LU
+; GFX13-NEXT:    v_dual_mov_b32 v8, v76 :: v_dual_mov_b32 v9, v86
+; GFX13-NEXT:    v_dual_mov_b32 v17, v125 :: v_dual_mov_b32 v18, v123
+; GFX13-NEXT:    v_dual_mov_b32 v19, v122 :: v_dual_mov_b32 v20, v121
+; GFX13-NEXT:    v_dual_mov_b32 v21, v120 :: v_dual_mov_b32 v22, v119
+; GFX13-NEXT:    v_dual_mov_b32 v23, v127 :: v_dual_mov_b32 v24, v126
+; GFX13-NEXT:    v_dual_mov_b32 v7, v67 :: v_dual_mov_b32 v16, v124
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    v_mov_b32_e32 v3, v35
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:448 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:464 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:480 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:496 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:512 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:528 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:544 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:560 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x6
+; GFX13-NEXT:    v_mov_b32_e32 v4, v36
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:576 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:592 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:608 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:624 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:640 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:656 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:672 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:688 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x6
+; GFX13-NEXT:    v_mov_b32_e32 v5, v37
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:704 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:720 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:736 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:752 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:768 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:784 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:800 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:816 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x6
+; GFX13-NEXT:    v_mov_b32_e32 v6, v38
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:832 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:848 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:864 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:880 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:896 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:912 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:928 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:944 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x4
+; GFX13-NEXT:    v_dual_mov_b32 v10, v97 :: v_dual_mov_b32 v12, v44
+; GFX13-NEXT:    s_clause 0x3
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:960 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:976 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:992 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:1008 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:1024 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:1040 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:1056 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:1072 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x4
+; GFX13-NEXT:    v_mov_b32_e32 v13, v45
+; GFX13-NEXT:    s_clause 0x3
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1088 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1104 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:1120 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:1136 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:1152 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:1168 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:1184 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:1200 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x4
+; GFX13-NEXT:    v_mov_b32_e32 v14, v46
+; GFX13-NEXT:    s_clause 0x3
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:192 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:208 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:224 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:240 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:256 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:272 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:288 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:304 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x4
+; GFX13-NEXT:    v_mov_b32_e32 v15, v47
+; GFX13-NEXT:    s_clause 0x1f
+; GFX13-NEXT:    scratch_load_b32 v127, off, s32
+; GFX13-NEXT:    scratch_load_b32 v126, off, s32 offset:4
+; GFX13-NEXT:    scratch_load_b32 v125, off, s32 offset:8
+; GFX13-NEXT:    scratch_load_b32 v124, off, s32 offset:12
+; GFX13-NEXT:    scratch_load_b32 v123, off, s32 offset:16
+; GFX13-NEXT:    scratch_load_b32 v122, off, s32 offset:20
+; GFX13-NEXT:    scratch_load_b32 v121, off, s32 offset:24
+; GFX13-NEXT:    scratch_load_b32 v120, off, s32 offset:28
+; GFX13-NEXT:    scratch_load_b32 v111, off, s32 offset:32
+; GFX13-NEXT:    scratch_load_b32 v110, off, s32 offset:36
+; GFX13-NEXT:    scratch_load_b32 v109, off, s32 offset:40
+; GFX13-NEXT:    scratch_load_b32 v108, off, s32 offset:44
+; GFX13-NEXT:    scratch_load_b32 v107, off, s32 offset:48
+; GFX13-NEXT:    scratch_load_b32 v106, off, s32 offset:52
+; GFX13-NEXT:    scratch_load_b32 v105, off, s32 offset:56
+; GFX13-NEXT:    scratch_load_b32 v104, off, s32 offset:60
+; GFX13-NEXT:    scratch_load_b32 v95, off, s32 offset:64
+; GFX13-NEXT:    scratch_load_b32 v94, off, s32 offset:68
+; GFX13-NEXT:    scratch_load_b32 v93, off, s32 offset:72
+; GFX13-NEXT:    scratch_load_b32 v92, off, s32 offset:76
+; GFX13-NEXT:    scratch_load_b32 v91, off, s32 offset:80
+; GFX13-NEXT:    scratch_load_b32 v90, off, s32 offset:84
+; GFX13-NEXT:    scratch_load_b32 v89, off, s32 offset:88
+; GFX13-NEXT:    scratch_load_b32 v88, off, s32 offset:92
+; GFX13-NEXT:    scratch_load_b32 v79, off, s32 offset:96
+; GFX13-NEXT:    scratch_load_b32 v78, off, s32 offset:100
+; GFX13-NEXT:    scratch_load_b32 v77, off, s32 offset:104
+; GFX13-NEXT:    scratch_load_b32 v76, off, s32 offset:108
+; GFX13-NEXT:    scratch_load_b32 v75, off, s32 offset:112
+; GFX13-NEXT:    scratch_load_b32 v74, off, s32 offset:116
+; GFX13-NEXT:    scratch_load_b32 v73, off, s32 offset:120
+; GFX13-NEXT:    scratch_load_b32 v72, off, s32 offset:124
+; GFX13-NEXT:    s_wait_loadcnt 0x20
+; GFX13-NEXT:    s_clause 0xf
+; GFX13-NEXT:    scratch_load_b32 v63, off, s32 offset:128
+; GFX13-NEXT:    scratch_load_b32 v62, off, s32 offset:132
+; GFX13-NEXT:    scratch_load_b32 v61, off, s32 offset:136
+; GFX13-NEXT:    scratch_load_b32 v60, off, s32 offset:140
+; GFX13-NEXT:    scratch_load_b32 v59, off, s32 offset:144
+; GFX13-NEXT:    scratch_load_b32 v58, off, s32 offset:148
+; GFX13-NEXT:    scratch_load_b32 v57, off, s32 offset:152
+; GFX13-NEXT:    scratch_load_b32 v56, off, s32 offset:156
+; GFX13-NEXT:    scratch_load_b32 v47, off, s32 offset:160
+; GFX13-NEXT:    scratch_load_b32 v46, off, s32 offset:164
+; GFX13-NEXT:    scratch_load_b32 v45, off, s32 offset:168
+; GFX13-NEXT:    scratch_load_b32 v44, off, s32 offset:172
+; GFX13-NEXT:    scratch_load_b32 v43, off, s32 offset:176
+; GFX13-NEXT:    scratch_load_b32 v42, off, s32 offset:180
+; GFX13-NEXT:    scratch_load_b32 v41, off, s32 offset:184
+; GFX13-NEXT:    scratch_load_b32 v40, off, s32 offset:188
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+; GFX13-NEXT:  .LBB43_4:
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79_vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91
+; GFX13-NEXT:    v_dual_mov_b32 v33, v31 :: v_dual_mov_b32 v35, v30
+; GFX13-NEXT:    v_dual_mov_b32 v36, v29 :: v_dual_mov_b32 v38, v28
+; GFX13-NEXT:    v_dual_mov_b32 v39, v27 :: v_dual_mov_b32 v48, v26
+; GFX13-NEXT:    v_mov_b32_e32 v49, v25
+; GFX13-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+; GFX13-NEXT:    ; implicit-def: $vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79_vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95_vgpr96_vgpr97_vgpr98_vgpr99
+; GFX13-NEXT:    ; implicit-def: $vgpr77_vgpr78_vgpr79_vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95_vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_dual_mov_b32 v28, v38 :: v_dual_mov_b32 v29, v36
+; GFX13-NEXT:    v_dual_mov_b32 v26, v48 :: v_dual_mov_b32 v25, v49
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-NEXT:    v_dual_mov_b32 v27, v39 :: v_dual_mov_b32 v30, v35
+; GFX13-NEXT:    v_mov_b32_e32 v31, v33
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64
+; GFX13-NEXT:    ; implicit-def: $vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95_vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118
+; GFX13-NEXT:    ; implicit-def: $vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66
+; GFX13-NEXT:    s_branch .LBB43_2
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
 
@@ -122524,146 +122736,39 @@ define <16 x i64> @bitcast_v64bf16_to_v16i64(<64 x bfloat> %a, i32 %b) {
 ; GFX13-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-NEXT:    s_cbranch_execz .LBB62_2
 ; GFX13-NEXT:  ; %bb.1: ; %cmp.true
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v15
-; GFX13-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v14
-; GFX13-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v13
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_add_f32 v15, 0x40c00000, v15
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v14, 0x40c00000, v14
-; GFX13-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v10
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_4) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v15, v15, v32
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v12
-; GFX13-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v14, v14, v33
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v11
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_lshlrev_b32 v11, 16, v11
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_add_f32_e32 v12, 0x40c00000, v12
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_lshlrev_b32 v10, 16, v10
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v9
-; GFX13-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_dual_add_f32 v11, 0x40c00000, v11 :: v_dual_add_f32 v10, 0x40c00000, v10
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_add_f32 v13, 0x40c00000, v13
-; GFX13-NEXT:    v_dual_add_f32 v35, 0x40c00000, v35 :: v_dual_add_f32 v36, 0x40c00000, v36
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-NEXT:    v_add_f32_e32 v9, 0x40c00000, v9
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v12, v12, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v11, v11, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v8
-; GFX13-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v7
-; GFX13-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v13, v13, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v10, v10, v35
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v9, v9, v36
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v6
-; GFX13-NEXT:    v_add_f32_e32 v32, 0x40c00000, v32
-; GFX13-NEXT:    v_dual_add_f32 v8, 0x40c00000, v8 :: v_dual_add_f32 v33, 0x40c00000, v33
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v7, 0x40c00000, v7 :: v_dual_add_f32 v34, 0x40c00000, v34
-; GFX13-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v5
-; GFX13-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v4
-; GFX13-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v6, 0x40c00000, v6 :: v_dual_add_f32 v35, 0x40c00000, v35
-; GFX13-NEXT:    v_dual_add_f32 v5, 0x40c00000, v5 :: v_dual_add_f32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v8, v8, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v7, v7, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v3
-; GFX13-NEXT:    v_dual_add_f32 v4, 0x40c00000, v4 :: v_dual_lshlrev_b32 v3, 16, v3
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v2
-; GFX13-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v6, v6, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v5, v5, v35
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v1
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_lshlrev_b32 v1, 16, v1
-; GFX13-NEXT:    v_add_f32_e32 v3, 0x40c00000, v3
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v4, v4, v36
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v2, 0x40c00000, v2
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v0
-; GFX13-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX13-NEXT:    v_pk_add_bf16 v15, 0x40c0, v15 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v14, 0x40c0, v14 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v13, 0x40c0, v13 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v12, 0x40c0, v12 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v11, 0x40c0, v11 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v10, 0x40c0, v10 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v9, 0x40c0, v9 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v8, 0x40c0, v8 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v7, 0x40c0, v7 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v6, 0x40c0, v6 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v5, 0x40c0, v5 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v4, 0x40c0, v4 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v3, 0x40c0, v3 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v2, 0x40c0, v2 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v1, 0x40c0, v1 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v0, 0x40c0, v0 op_sel_hi:[0,1]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v31
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_lshlrev_b32 v31, 16, v31
-; GFX13-NEXT:    v_add_f32_e32 v1, 0x40c00000, v1
-; GFX13-NEXT:    v_dual_add_f32 v35, 0x40c00000, v35 :: v_dual_add_f32 v0, 0x40c00000, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v31, 0x40c00000, v31 :: v_dual_add_f32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v3, v3, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v2, v2, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v30
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v29
-; GFX13-NEXT:    v_dual_lshlrev_b32 v30, 16, v30 :: v_dual_lshlrev_b32 v29, 16, v29
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v1, v1, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v35
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v31, v31, v36
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v28
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_add_f32 v29, 0x40c00000, v29
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v30, 0x40c00000, v30
-; GFX13-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v27
-; GFX13-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v26
-; GFX13-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_add_f32 v35, 0x40c00000, v35
-; GFX13-NEXT:    v_dual_add_f32 v28, 0x40c00000, v28 :: v_dual_add_f32 v27, 0x40c00000, v27
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-NEXT:    v_add_f32_e32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v30, v30, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v29, v29, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v25
-; GFX13-NEXT:    v_dual_add_f32 v26, 0x40c00000, v26 :: v_dual_lshlrev_b32 v25, 16, v25
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v24
-; GFX13-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v28, v28, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v27, v27, v35
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v23
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_lshlrev_b32 v23, 16, v23
-; GFX13-NEXT:    v_add_f32_e32 v25, 0x40c00000, v25
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v26, v26, v36
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v24, 0x40c00000, v24
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v22
-; GFX13-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v21
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_lshlrev_b32 v21, 16, v21
-; GFX13-NEXT:    v_add_f32_e32 v23, 0x40c00000, v23
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v35, 0x40c00000, v35 :: v_dual_add_f32 v22, 0x40c00000, v22
-; GFX13-NEXT:    v_dual_add_f32 v21, 0x40c00000, v21 :: v_dual_add_f32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v25, v25, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v24, v24, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v20
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v19
-; GFX13-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v23, v23, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v22, v22, v35
-; GFX13-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v21, v21, v36
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v18
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v20, 0x40c00000, v20
-; GFX13-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v17
-; GFX13-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v16
-; GFX13-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_add_f32 v19, 0x40c00000, v19
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_add_f32 v35, 0x40c00000, v35
-; GFX13-NEXT:    v_dual_add_f32 v18, 0x40c00000, v18 :: v_dual_add_f32 v17, 0x40c00000, v17
-; GFX13-NEXT:    v_add_f32_e32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_add_f32_e32 v16, 0x40c00000, v16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v20, v20, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v19, v19, v33
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v18, v18, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v17, v17, v35
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v16, v16, v36
+; GFX13-NEXT:    v_pk_add_bf16 v31, 0x40c0, v31 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v30, 0x40c0, v30 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v29, 0x40c0, v29 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v28, 0x40c0, v28 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v27, 0x40c0, v27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v26, 0x40c0, v26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v25, 0x40c0, v25 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v24, 0x40c0, v24 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v23, 0x40c0, v23 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v22, 0x40c0, v22 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v21, 0x40c0, v21 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v20, 0x40c0, v20 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v19, 0x40c0, v19 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v18, 0x40c0, v18 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v17, 0x40c0, v17 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v16, 0x40c0, v16 op_sel_hi:[0,1]
 ; GFX13-NEXT:  .LBB62_2: ; %end
 ; GFX13-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
@@ -125438,267 +125543,480 @@ define inreg <16 x i64> @bitcast_v64bf16_to_v16i64_scalar(<64 x bfloat> inreg %a
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    s_xor_saveexec_b32 s4, -1
-; GFX13-NEXT:    scratch_store_b32 off, v32, s32 ; 4-byte Folded Spill
-; GFX13-NEXT:    s_mov_b32 exec_lo, s4
-; GFX13-NEXT:    v_writelane_b32 v32, s36, 0
 ; GFX13-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v14
-; GFX13-NEXT:    v_readfirstlane_b32 s56, v2
-; GFX13-NEXT:    v_readfirstlane_b32 s57, v3
-; GFX13-NEXT:    v_readfirstlane_b32 s58, v4
-; GFX13-NEXT:    v_writelane_b32 v32, s37, 1
-; GFX13-NEXT:    v_readfirstlane_b32 s59, v5
-; GFX13-NEXT:    v_readfirstlane_b32 s60, v6
-; GFX13-NEXT:    v_readfirstlane_b32 s61, v7
-; GFX13-NEXT:    v_readfirstlane_b32 s62, v8
-; GFX13-NEXT:    v_writelane_b32 v32, s38, 2
-; GFX13-NEXT:    v_readfirstlane_b32 s63, v9
-; GFX13-NEXT:    s_mov_b32 s47, s23
-; GFX13-NEXT:    s_mov_b32 s46, s22
-; GFX13-NEXT:    s_mov_b32 s45, s21
-; GFX13-NEXT:    v_writelane_b32 v32, s39, 3
-; GFX13-NEXT:    s_mov_b32 s44, s20
-; GFX13-NEXT:    s_mov_b32 s43, s19
-; GFX13-NEXT:    s_mov_b32 s42, s18
-; GFX13-NEXT:    s_mov_b32 s41, s17
-; GFX13-NEXT:    v_writelane_b32 v32, s48, 4
-; GFX13-NEXT:    s_mov_b32 s48, s24
-; GFX13-NEXT:    s_mov_b32 s40, s16
-; GFX13-NEXT:    s_mov_b32 s39, s3
-; GFX13-NEXT:    s_mov_b32 s38, s2
-; GFX13-NEXT:    v_writelane_b32 v32, s49, 5
-; GFX13-NEXT:    s_mov_b32 s49, s25
-; GFX13-NEXT:    s_mov_b32 s37, s1
-; GFX13-NEXT:    s_mov_b32 s36, s0
-; GFX13-NEXT:    s_mov_b32 s0, 0
-; GFX13-NEXT:    v_writelane_b32 v32, s50, 6
-; GFX13-NEXT:    s_mov_b32 s50, s26
-; GFX13-NEXT:    s_and_b32 s1, vcc_lo, exec_lo
-; GFX13-NEXT:    v_writelane_b32 v32, s51, 7
-; GFX13-NEXT:    s_mov_b32 s51, s27
-; GFX13-NEXT:    v_writelane_b32 v32, s52, 8
-; GFX13-NEXT:    s_mov_b32 s52, s28
-; GFX13-NEXT:    v_writelane_b32 v32, s53, 9
-; GFX13-NEXT:    s_mov_b32 s53, s29
-; GFX13-NEXT:    v_writelane_b32 v32, s54, 10
-; GFX13-NEXT:    v_readfirstlane_b32 s54, v0
-; GFX13-NEXT:    v_writelane_b32 v32, s55, 11
-; GFX13-NEXT:    v_readfirstlane_b32 s55, v1
-; GFX13-NEXT:    v_writelane_b32 v32, s64, 12
-; GFX13-NEXT:    v_readfirstlane_b32 s64, v10
-; GFX13-NEXT:    v_writelane_b32 v32, s65, 13
-; GFX13-NEXT:    v_readfirstlane_b32 s65, v11
-; GFX13-NEXT:    v_writelane_b32 v32, s66, 14
-; GFX13-NEXT:    v_readfirstlane_b32 s66, v12
-; GFX13-NEXT:    v_writelane_b32 v32, s67, 15
-; GFX13-NEXT:    v_readfirstlane_b32 s67, v13
-; GFX13-NEXT:    s_cbranch_scc0 .LBB63_3
-; GFX13-NEXT:  ; %bb.1: ; %Flow
-; GFX13-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
-; GFX13-NEXT:    s_cbranch_vccnz .LBB63_4
+; GFX13-NEXT:    s_clause 0x2f
+; GFX13-NEXT:    scratch_store_b32 off, v40, s32 offset:188
+; GFX13-NEXT:    scratch_store_b32 off, v41, s32 offset:184
+; GFX13-NEXT:    scratch_store_b32 off, v42, s32 offset:180
+; GFX13-NEXT:    scratch_store_b32 off, v43, s32 offset:176
+; GFX13-NEXT:    scratch_store_b32 off, v44, s32 offset:172
+; GFX13-NEXT:    scratch_store_b32 off, v45, s32 offset:168
+; GFX13-NEXT:    scratch_store_b32 off, v46, s32 offset:164
+; GFX13-NEXT:    scratch_store_b32 off, v47, s32 offset:160
+; GFX13-NEXT:    scratch_store_b32 off, v56, s32 offset:156
+; GFX13-NEXT:    scratch_store_b32 off, v57, s32 offset:152
+; GFX13-NEXT:    scratch_store_b32 off, v58, s32 offset:148
+; GFX13-NEXT:    scratch_store_b32 off, v59, s32 offset:144
+; GFX13-NEXT:    scratch_store_b32 off, v60, s32 offset:140
+; GFX13-NEXT:    scratch_store_b32 off, v61, s32 offset:136
+; GFX13-NEXT:    scratch_store_b32 off, v62, s32 offset:132
+; GFX13-NEXT:    scratch_store_b32 off, v63, s32 offset:128
+; GFX13-NEXT:    scratch_store_b32 off, v72, s32 offset:124
+; GFX13-NEXT:    scratch_store_b32 off, v73, s32 offset:120
+; GFX13-NEXT:    scratch_store_b32 off, v74, s32 offset:116
+; GFX13-NEXT:    scratch_store_b32 off, v75, s32 offset:112
+; GFX13-NEXT:    scratch_store_b32 off, v76, s32 offset:108
+; GFX13-NEXT:    scratch_store_b32 off, v77, s32 offset:104
+; GFX13-NEXT:    scratch_store_b32 off, v78, s32 offset:100
+; GFX13-NEXT:    scratch_store_b32 off, v79, s32 offset:96
+; GFX13-NEXT:    scratch_store_b32 off, v88, s32 offset:92
+; GFX13-NEXT:    scratch_store_b32 off, v89, s32 offset:88
+; GFX13-NEXT:    scratch_store_b32 off, v90, s32 offset:84
+; GFX13-NEXT:    scratch_store_b32 off, v91, s32 offset:80
+; GFX13-NEXT:    scratch_store_b32 off, v92, s32 offset:76
+; GFX13-NEXT:    scratch_store_b32 off, v93, s32 offset:72
+; GFX13-NEXT:    scratch_store_b32 off, v94, s32 offset:68
+; GFX13-NEXT:    scratch_store_b32 off, v95, s32 offset:64
+; GFX13-NEXT:    scratch_store_b32 off, v104, s32 offset:60
+; GFX13-NEXT:    scratch_store_b32 off, v105, s32 offset:56
+; GFX13-NEXT:    scratch_store_b32 off, v106, s32 offset:52
+; GFX13-NEXT:    scratch_store_b32 off, v107, s32 offset:48
+; GFX13-NEXT:    scratch_store_b32 off, v108, s32 offset:44
+; GFX13-NEXT:    scratch_store_b32 off, v109, s32 offset:40
+; GFX13-NEXT:    scratch_store_b32 off, v110, s32 offset:36
+; GFX13-NEXT:    scratch_store_b32 off, v111, s32 offset:32
+; GFX13-NEXT:    scratch_store_b32 off, v120, s32 offset:28
+; GFX13-NEXT:    scratch_store_b32 off, v121, s32 offset:24
+; GFX13-NEXT:    scratch_store_b32 off, v122, s32 offset:20
+; GFX13-NEXT:    scratch_store_b32 off, v123, s32 offset:16
+; GFX13-NEXT:    scratch_store_b32 off, v124, s32 offset:12
+; GFX13-NEXT:    scratch_store_b32 off, v125, s32 offset:8
+; GFX13-NEXT:    scratch_store_b32 off, v126, s32 offset:4
+; GFX13-NEXT:    scratch_store_b32 off, v127, s32
+; GFX13-NEXT:    v_dual_mov_b32 v31, v13 :: v_dual_mov_b32 v30, v12
+; GFX13-NEXT:    v_dual_mov_b32 v29, v11 :: v_dual_mov_b32 v28, v10
+; GFX13-NEXT:    v_dual_mov_b32 v27, v9 :: v_dual_mov_b32 v26, v8
+; GFX13-NEXT:    v_dual_mov_b32 v25, v7 :: v_dual_mov_b32 v126, v6
+; GFX13-NEXT:    v_dual_mov_b32 v127, v5 :: v_dual_mov_b32 v119, v4
+; GFX13-NEXT:    v_dual_mov_b32 v120, v3 :: v_dual_mov_b32 v121, v2
+; GFX13-NEXT:    v_dual_mov_b32 v122, v1 :: v_dual_mov_b32 v123, v0
+; GFX13-NEXT:    v_dual_mov_b32 v124, s28 :: v_dual_mov_b32 v125, s29
+; GFX13-NEXT:    s_mov_b32 s4, 0
+; GFX13-NEXT:    s_and_b32 s5, vcc_lo, exec_lo
+; GFX13-NEXT:    s_cbranch_scc0 .LBB63_4
+; GFX13-NEXT:  ; %bb.1: ; %cmp.false
+; GFX13-NEXT:    v_dual_mov_b32 v37, s2 :: v_dual_mov_b32 v3, s3
+; GFX13-NEXT:    v_dual_mov_b32 v97, s22 :: v_dual_mov_b32 v32, s0
+; GFX13-NEXT:    v_mov_b32_e32 v34, s1
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:320
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:336
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:352
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:368
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:384
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:400
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:416
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:432
+; GFX13-NEXT:    v_dual_mov_b32 v4, s16 :: v_dual_mov_b32 v76, s20
+; GFX13-NEXT:    v_mov_b32_e32 v86, s21
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:448
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:464
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:480
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:496
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:512
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:528
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:544
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:560
+; GFX13-NEXT:    v_mov_b32_e32 v5, s17
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:576
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:592
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:608
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:624
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:640
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:656
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:672
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:688
+; GFX13-NEXT:    v_dual_mov_b32 v6, s18 :: v_dual_mov_b32 v67, s19
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:704
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:720
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:736
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:752
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:768
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:784
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:800
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:816
+; GFX13-NEXT:    v_dual_mov_b32 v11, s23 :: v_dual_mov_b32 v12, s24
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:832
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:848
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:864
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:880
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:896
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:912
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:928
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:944
+; GFX13-NEXT:    v_mov_b32_e32 v13, s25
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:960
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:976
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:992
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:1008
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:1024
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:1040
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1056
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1072
+; GFX13-NEXT:    v_mov_b32_e32 v14, s26
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1088
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1104
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1120
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:1136
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:1152
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:1168
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1184
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1200
+; GFX13-NEXT:    v_mov_b32_e32 v15, s27
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:192
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:208
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:224
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:240
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:256
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:272
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:288
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:304
+; GFX13-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s4
+; GFX13-NEXT:    s_cbranch_vccnz .LBB63_3
 ; GFX13-NEXT:  .LBB63_2: ; %cmp.true
-; GFX13-NEXT:    s_and_b32 s0, s51, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s51, 16
-; GFX13-NEXT:    s_and_b32 s2, s50, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s50, 16
-; GFX13-NEXT:    s_and_b32 s4, s49, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s49, 16
-; GFX13-NEXT:    s_and_b32 s6, s48, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s48, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v15, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v14, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v13, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v12, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s47, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s47, 16
-; GFX13-NEXT:    s_and_b32 s2, s46, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s46, 16
-; GFX13-NEXT:    s_and_b32 s4, s45, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s45, 16
-; GFX13-NEXT:    s_and_b32 s6, s44, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s44, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v11, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v10, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v9, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v8, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s43, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s43, 16
-; GFX13-NEXT:    s_and_b32 s2, s42, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s42, 16
-; GFX13-NEXT:    s_and_b32 s4, s41, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s41, 16
-; GFX13-NEXT:    s_and_b32 s6, s40, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s40, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v7, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v6, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v5, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v4, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s39, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s39, 16
-; GFX13-NEXT:    s_and_b32 s2, s38, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s38, 16
-; GFX13-NEXT:    s_and_b32 s4, s37, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s37, 16
-; GFX13-NEXT:    s_and_b32 s6, s36, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s36, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v3, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v2, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v1, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v0, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s67, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s67, 16
-; GFX13-NEXT:    s_and_b32 s2, s66, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s66, 16
-; GFX13-NEXT:    s_and_b32 s4, s65, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s65, 16
-; GFX13-NEXT:    s_and_b32 s6, s64, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s64, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v31, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v30, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v29, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v28, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s63, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s63, 16
-; GFX13-NEXT:    s_and_b32 s2, s62, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s62, 16
-; GFX13-NEXT:    s_and_b32 s4, s61, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s61, 16
-; GFX13-NEXT:    s_and_b32 s6, s60, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s60, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v27, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v26, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v25, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v24, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s59, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s59, 16
-; GFX13-NEXT:    s_and_b32 s2, s58, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s58, 16
-; GFX13-NEXT:    s_and_b32 s4, s57, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s57, 16
-; GFX13-NEXT:    s_and_b32 s6, s56, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s56, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v23, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v22, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v21, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v20, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s55, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s55, 16
-; GFX13-NEXT:    s_and_b32 s2, s54, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s54, 16
-; GFX13-NEXT:    s_and_b32 s4, s53, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s53, 16
-; GFX13-NEXT:    s_and_b32 s6, s52, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s52, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v19, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v18, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v17, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v16, s7, s6
-; GFX13-NEXT:    s_branch .LBB63_5
-; GFX13-NEXT:  .LBB63_3:
-; GFX13-NEXT:    s_branch .LBB63_2
-; GFX13-NEXT:  .LBB63_4:
-; GFX13-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
-; GFX13-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
-; GFX13-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
-; GFX13-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
-; GFX13-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
-; GFX13-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
-; GFX13-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
-; GFX13-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
-; GFX13-NEXT:    v_dual_mov_b32 v16, s52 :: v_dual_mov_b32 v17, s53
-; GFX13-NEXT:    v_dual_mov_b32 v18, s54 :: v_dual_mov_b32 v19, s55
-; GFX13-NEXT:    v_dual_mov_b32 v20, s56 :: v_dual_mov_b32 v21, s57
-; GFX13-NEXT:    v_dual_mov_b32 v22, s58 :: v_dual_mov_b32 v23, s59
-; GFX13-NEXT:    v_dual_mov_b32 v24, s60 :: v_dual_mov_b32 v25, s61
-; GFX13-NEXT:    v_dual_mov_b32 v26, s62 :: v_dual_mov_b32 v27, s63
-; GFX13-NEXT:    v_dual_mov_b32 v28, s64 :: v_dual_mov_b32 v29, s65
-; GFX13-NEXT:    v_dual_mov_b32 v30, s66 :: v_dual_mov_b32 v31, s67
-; GFX13-NEXT:  .LBB63_5: ; %end
-; GFX13-NEXT:    v_readlane_b32 s67, v32, 15
-; GFX13-NEXT:    v_readlane_b32 s66, v32, 14
-; GFX13-NEXT:    v_readlane_b32 s65, v32, 13
-; GFX13-NEXT:    v_readlane_b32 s64, v32, 12
-; GFX13-NEXT:    v_readlane_b32 s55, v32, 11
-; GFX13-NEXT:    v_readlane_b32 s54, v32, 10
-; GFX13-NEXT:    v_readlane_b32 s53, v32, 9
-; GFX13-NEXT:    v_readlane_b32 s52, v32, 8
-; GFX13-NEXT:    v_readlane_b32 s51, v32, 7
-; GFX13-NEXT:    v_readlane_b32 s50, v32, 6
-; GFX13-NEXT:    v_readlane_b32 s49, v32, 5
-; GFX13-NEXT:    v_readlane_b32 s48, v32, 4
-; GFX13-NEXT:    v_readlane_b32 s39, v32, 3
-; GFX13-NEXT:    v_readlane_b32 s38, v32, 2
-; GFX13-NEXT:    v_readlane_b32 s37, v32, 1
-; GFX13-NEXT:    v_readlane_b32 s36, v32, 0
-; GFX13-NEXT:    s_xor_saveexec_b32 s0, -1
-; GFX13-NEXT:    scratch_load_b32 v32, off, s32 ; 4-byte Folded Reload
-; GFX13-NEXT:    s_mov_b32 exec_lo, s0
+; GFX13-NEXT:    v_pk_add_bf16 v15, 0x40c0, s27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v126, 0x40c0, v126 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v127, 0x40c0, v127 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v119, 0x40c0, v119 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v120, 0x40c0, v120 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:192
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:208
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:224
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:240
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:256
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:272
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:288
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:304
+; GFX13-NEXT:    v_pk_add_bf16 v14, 0x40c0, s26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v121, 0x40c0, v121 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v122, 0x40c0, v122 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v123, 0x40c0, v123 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v125, 0x40c0, v125 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v124, 0x40c0, v124 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v97, 0x40c0, s22 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v86, 0x40c0, s21 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v76, 0x40c0, s20 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v67, 0x40c0, s19 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v37, 0x40c0, s2 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v34, 0x40c0, s1 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v32, 0x40c0, s0 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v31, 0x40c0, v31 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v30, 0x40c0, v30 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v29, 0x40c0, v29 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v28, 0x40c0, v28 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v27, 0x40c0, v27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v26, 0x40c0, v26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v25, 0x40c0, v25 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1088
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1104
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1120
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:1136
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:1152
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:1168
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1184
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1200
+; GFX13-NEXT:    v_pk_add_bf16 v13, 0x40c0, s25 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:960
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:976
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:992
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:1008
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:1024
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:1040
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1056
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1072
+; GFX13-NEXT:    v_pk_add_bf16 v12, 0x40c0, s24 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:832
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:848
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:864
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:880
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:896
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:912
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:928
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:944
+; GFX13-NEXT:    v_pk_add_bf16 v11, 0x40c0, s23 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v6, 0x40c0, s18 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:704
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:720
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:736
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:752
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:768
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:784
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:800
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:816
+; GFX13-NEXT:    v_pk_add_bf16 v5, 0x40c0, s17 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:576
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:592
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:608
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:624
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:640
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:656
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:672
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:688
+; GFX13-NEXT:    v_pk_add_bf16 v4, 0x40c0, s16 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:448
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:464
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:480
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:496
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:512
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:528
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:544
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:560
+; GFX13-NEXT:    v_pk_add_bf16 v3, 0x40c0, s3 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:320
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:336
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:352
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:368
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:384
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:400
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:416
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:432
+; GFX13-NEXT:  .LBB63_3: ; %end
+; GFX13-NEXT:    v_dual_mov_b32 v0, v32 :: v_dual_mov_b32 v1, v34
+; GFX13-NEXT:    v_mov_b32_e32 v2, v37
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:320 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:336 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:352 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:368 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:384 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:400 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:416 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:432 th:TH_LOAD_LU
+; GFX13-NEXT:    v_dual_mov_b32 v8, v76 :: v_dual_mov_b32 v9, v86
+; GFX13-NEXT:    v_dual_mov_b32 v17, v125 :: v_dual_mov_b32 v18, v123
+; GFX13-NEXT:    v_dual_mov_b32 v19, v122 :: v_dual_mov_b32 v20, v121
+; GFX13-NEXT:    v_dual_mov_b32 v21, v120 :: v_dual_mov_b32 v22, v119
+; GFX13-NEXT:    v_dual_mov_b32 v23, v127 :: v_dual_mov_b32 v24, v126
+; GFX13-NEXT:    v_dual_mov_b32 v7, v67 :: v_dual_mov_b32 v16, v124
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    v_mov_b32_e32 v3, v35
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:448 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:464 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:480 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:496 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:512 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:528 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:544 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:560 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x6
+; GFX13-NEXT:    v_mov_b32_e32 v4, v36
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:576 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:592 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:608 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:624 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:640 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:656 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:672 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:688 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x6
+; GFX13-NEXT:    v_mov_b32_e32 v5, v37
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:704 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:720 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:736 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:752 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:768 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:784 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:800 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:816 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x6
+; GFX13-NEXT:    v_mov_b32_e32 v6, v38
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:832 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:848 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:864 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:880 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:896 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:912 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:928 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:944 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x4
+; GFX13-NEXT:    v_dual_mov_b32 v10, v97 :: v_dual_mov_b32 v12, v44
+; GFX13-NEXT:    s_clause 0x3
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:960 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:976 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:992 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:1008 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:1024 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:1040 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:1056 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:1072 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x4
+; GFX13-NEXT:    v_mov_b32_e32 v13, v45
+; GFX13-NEXT:    s_clause 0x3
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1088 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1104 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:1120 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:1136 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:1152 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:1168 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:1184 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:1200 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x4
+; GFX13-NEXT:    v_mov_b32_e32 v14, v46
+; GFX13-NEXT:    s_clause 0x3
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:192 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:208 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:224 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:240 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:256 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:272 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:288 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:304 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x4
+; GFX13-NEXT:    v_mov_b32_e32 v15, v47
+; GFX13-NEXT:    s_clause 0x1f
+; GFX13-NEXT:    scratch_load_b32 v127, off, s32
+; GFX13-NEXT:    scratch_load_b32 v126, off, s32 offset:4
+; GFX13-NEXT:    scratch_load_b32 v125, off, s32 offset:8
+; GFX13-NEXT:    scratch_load_b32 v124, off, s32 offset:12
+; GFX13-NEXT:    scratch_load_b32 v123, off, s32 offset:16
+; GFX13-NEXT:    scratch_load_b32 v122, off, s32 offset:20
+; GFX13-NEXT:    scratch_load_b32 v121, off, s32 offset:24
+; GFX13-NEXT:    scratch_load_b32 v120, off, s32 offset:28
+; GFX13-NEXT:    scratch_load_b32 v111, off, s32 offset:32
+; GFX13-NEXT:    scratch_load_b32 v110, off, s32 offset:36
+; GFX13-NEXT:    scratch_load_b32 v109, off, s32 offset:40
+; GFX13-NEXT:    scratch_load_b32 v108, off, s32 offset:44
+; GFX13-NEXT:    scratch_load_b32 v107, off, s32 offset:48
+; GFX13-NEXT:    scratch_load_b32 v106, off, s32 offset:52
+; GFX13-NEXT:    scratch_load_b32 v105, off, s32 offset:56
+; GFX13-NEXT:    scratch_load_b32 v104, off, s32 offset:60
+; GFX13-NEXT:    scratch_load_b32 v95, off, s32 offset:64
+; GFX13-NEXT:    scratch_load_b32 v94, off, s32 offset:68
+; GFX13-NEXT:    scratch_load_b32 v93, off, s32 offset:72
+; GFX13-NEXT:    scratch_load_b32 v92, off, s32 offset:76
+; GFX13-NEXT:    scratch_load_b32 v91, off, s32 offset:80
+; GFX13-NEXT:    scratch_load_b32 v90, off, s32 offset:84
+; GFX13-NEXT:    scratch_load_b32 v89, off, s32 offset:88
+; GFX13-NEXT:    scratch_load_b32 v88, off, s32 offset:92
+; GFX13-NEXT:    scratch_load_b32 v79, off, s32 offset:96
+; GFX13-NEXT:    scratch_load_b32 v78, off, s32 offset:100
+; GFX13-NEXT:    scratch_load_b32 v77, off, s32 offset:104
+; GFX13-NEXT:    scratch_load_b32 v76, off, s32 offset:108
+; GFX13-NEXT:    scratch_load_b32 v75, off, s32 offset:112
+; GFX13-NEXT:    scratch_load_b32 v74, off, s32 offset:116
+; GFX13-NEXT:    scratch_load_b32 v73, off, s32 offset:120
+; GFX13-NEXT:    scratch_load_b32 v72, off, s32 offset:124
+; GFX13-NEXT:    s_wait_loadcnt 0x20
+; GFX13-NEXT:    s_clause 0xf
+; GFX13-NEXT:    scratch_load_b32 v63, off, s32 offset:128
+; GFX13-NEXT:    scratch_load_b32 v62, off, s32 offset:132
+; GFX13-NEXT:    scratch_load_b32 v61, off, s32 offset:136
+; GFX13-NEXT:    scratch_load_b32 v60, off, s32 offset:140
+; GFX13-NEXT:    scratch_load_b32 v59, off, s32 offset:144
+; GFX13-NEXT:    scratch_load_b32 v58, off, s32 offset:148
+; GFX13-NEXT:    scratch_load_b32 v57, off, s32 offset:152
+; GFX13-NEXT:    scratch_load_b32 v56, off, s32 offset:156
+; GFX13-NEXT:    scratch_load_b32 v47, off, s32 offset:160
+; GFX13-NEXT:    scratch_load_b32 v46, off, s32 offset:164
+; GFX13-NEXT:    scratch_load_b32 v45, off, s32 offset:168
+; GFX13-NEXT:    scratch_load_b32 v44, off, s32 offset:172
+; GFX13-NEXT:    scratch_load_b32 v43, off, s32 offset:176
+; GFX13-NEXT:    scratch_load_b32 v42, off, s32 offset:180
+; GFX13-NEXT:    scratch_load_b32 v41, off, s32 offset:184
+; GFX13-NEXT:    scratch_load_b32 v40, off, s32 offset:188
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+; GFX13-NEXT:  .LBB63_4:
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79_vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91
+; GFX13-NEXT:    v_dual_mov_b32 v33, v31 :: v_dual_mov_b32 v35, v30
+; GFX13-NEXT:    v_dual_mov_b32 v36, v29 :: v_dual_mov_b32 v38, v28
+; GFX13-NEXT:    v_dual_mov_b32 v39, v27 :: v_dual_mov_b32 v48, v26
+; GFX13-NEXT:    v_mov_b32_e32 v49, v25
+; GFX13-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+; GFX13-NEXT:    ; implicit-def: $vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79_vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95_vgpr96_vgpr97_vgpr98_vgpr99
+; GFX13-NEXT:    ; implicit-def: $vgpr77_vgpr78_vgpr79_vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95_vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_dual_mov_b32 v28, v38 :: v_dual_mov_b32 v29, v36
+; GFX13-NEXT:    v_dual_mov_b32 v26, v48 :: v_dual_mov_b32 v25, v49
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-NEXT:    v_dual_mov_b32 v27, v39 :: v_dual_mov_b32 v30, v35
+; GFX13-NEXT:    v_mov_b32_e32 v31, v33
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64
+; GFX13-NEXT:    ; implicit-def: $vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95_vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118
+; GFX13-NEXT:    ; implicit-def: $vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66
+; GFX13-NEXT:    s_branch .LBB63_2
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
 
@@ -165436,146 +165754,39 @@ define <16 x double> @bitcast_v64bf16_to_v16f64(<64 x bfloat> %a, i32 %b) {
 ; GFX13-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-NEXT:    s_cbranch_execz .LBB78_2
 ; GFX13-NEXT:  ; %bb.1: ; %cmp.true
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v15
-; GFX13-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v14
-; GFX13-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v13
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_add_f32 v15, 0x40c00000, v15
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v14, 0x40c00000, v14
-; GFX13-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v10
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_4) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v15, v15, v32
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v12
-; GFX13-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v14, v14, v33
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v11
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_lshlrev_b32 v11, 16, v11
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_add_f32_e32 v12, 0x40c00000, v12
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_lshlrev_b32 v10, 16, v10
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v9
-; GFX13-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_dual_add_f32 v11, 0x40c00000, v11 :: v_dual_add_f32 v10, 0x40c00000, v10
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_add_f32 v13, 0x40c00000, v13
-; GFX13-NEXT:    v_dual_add_f32 v35, 0x40c00000, v35 :: v_dual_add_f32 v36, 0x40c00000, v36
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-NEXT:    v_add_f32_e32 v9, 0x40c00000, v9
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v12, v12, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v11, v11, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v8
-; GFX13-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v7
-; GFX13-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v13, v13, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v10, v10, v35
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v9, v9, v36
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v6
-; GFX13-NEXT:    v_add_f32_e32 v32, 0x40c00000, v32
-; GFX13-NEXT:    v_dual_add_f32 v8, 0x40c00000, v8 :: v_dual_add_f32 v33, 0x40c00000, v33
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v7, 0x40c00000, v7 :: v_dual_add_f32 v34, 0x40c00000, v34
-; GFX13-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v5
-; GFX13-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v4
-; GFX13-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v6, 0x40c00000, v6 :: v_dual_add_f32 v35, 0x40c00000, v35
-; GFX13-NEXT:    v_dual_add_f32 v5, 0x40c00000, v5 :: v_dual_add_f32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v8, v8, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v7, v7, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v3
-; GFX13-NEXT:    v_dual_add_f32 v4, 0x40c00000, v4 :: v_dual_lshlrev_b32 v3, 16, v3
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v2
-; GFX13-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v6, v6, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v5, v5, v35
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v1
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_lshlrev_b32 v1, 16, v1
-; GFX13-NEXT:    v_add_f32_e32 v3, 0x40c00000, v3
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v4, v4, v36
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v2, 0x40c00000, v2
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v0
-; GFX13-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX13-NEXT:    v_pk_add_bf16 v15, 0x40c0, v15 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v14, 0x40c0, v14 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v13, 0x40c0, v13 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v12, 0x40c0, v12 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v11, 0x40c0, v11 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v10, 0x40c0, v10 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v9, 0x40c0, v9 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v8, 0x40c0, v8 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v7, 0x40c0, v7 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v6, 0x40c0, v6 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v5, 0x40c0, v5 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v4, 0x40c0, v4 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v3, 0x40c0, v3 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v2, 0x40c0, v2 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v1, 0x40c0, v1 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v0, 0x40c0, v0 op_sel_hi:[0,1]
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v31
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_lshlrev_b32 v31, 16, v31
-; GFX13-NEXT:    v_add_f32_e32 v1, 0x40c00000, v1
-; GFX13-NEXT:    v_dual_add_f32 v35, 0x40c00000, v35 :: v_dual_add_f32 v0, 0x40c00000, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v31, 0x40c00000, v31 :: v_dual_add_f32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v3, v3, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v2, v2, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v30
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v29
-; GFX13-NEXT:    v_dual_lshlrev_b32 v30, 16, v30 :: v_dual_lshlrev_b32 v29, 16, v29
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v1, v1, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v35
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v31, v31, v36
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v28
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_add_f32 v29, 0x40c00000, v29
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v30, 0x40c00000, v30
-; GFX13-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v27
-; GFX13-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v26
-; GFX13-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_add_f32 v35, 0x40c00000, v35
-; GFX13-NEXT:    v_dual_add_f32 v28, 0x40c00000, v28 :: v_dual_add_f32 v27, 0x40c00000, v27
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-NEXT:    v_add_f32_e32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v30, v30, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v29, v29, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v25
-; GFX13-NEXT:    v_dual_add_f32 v26, 0x40c00000, v26 :: v_dual_lshlrev_b32 v25, 16, v25
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v24
-; GFX13-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v28, v28, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v27, v27, v35
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v23
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_lshlrev_b32 v23, 16, v23
-; GFX13-NEXT:    v_add_f32_e32 v25, 0x40c00000, v25
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v26, v26, v36
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v24, 0x40c00000, v24
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v22
-; GFX13-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v21
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_lshlrev_b32 v21, 16, v21
-; GFX13-NEXT:    v_add_f32_e32 v23, 0x40c00000, v23
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_add_f32 v35, 0x40c00000, v35 :: v_dual_add_f32 v22, 0x40c00000, v22
-; GFX13-NEXT:    v_dual_add_f32 v21, 0x40c00000, v21 :: v_dual_add_f32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v25, v25, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v24, v24, v33
-; GFX13-NEXT:    v_and_b32_e32 v32, 0xffff0000, v20
-; GFX13-NEXT:    v_and_b32_e32 v33, 0xffff0000, v19
-; GFX13-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v23, v23, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v22, v22, v35
-; GFX13-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v21, v21, v36
-; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff0000, v18
-; GFX13-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v20, 0x40c00000, v20
-; GFX13-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff0000, v17
-; GFX13-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff0000, v16
-; GFX13-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
-; GFX13-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_add_f32 v19, 0x40c00000, v19
-; GFX13-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_add_f32 v35, 0x40c00000, v35
-; GFX13-NEXT:    v_dual_add_f32 v18, 0x40c00000, v18 :: v_dual_add_f32 v17, 0x40c00000, v17
-; GFX13-NEXT:    v_add_f32_e32 v36, 0x40c00000, v36
-; GFX13-NEXT:    v_add_f32_e32 v16, 0x40c00000, v16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v20, v20, v32
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v19, v19, v33
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v18, v18, v34
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v17, v17, v35
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v16, v16, v36
+; GFX13-NEXT:    v_pk_add_bf16 v31, 0x40c0, v31 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v30, 0x40c0, v30 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v29, 0x40c0, v29 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v28, 0x40c0, v28 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v27, 0x40c0, v27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v26, 0x40c0, v26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v25, 0x40c0, v25 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v24, 0x40c0, v24 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v23, 0x40c0, v23 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v22, 0x40c0, v22 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v21, 0x40c0, v21 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v20, 0x40c0, v20 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v19, 0x40c0, v19 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v18, 0x40c0, v18 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v17, 0x40c0, v17 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v16, 0x40c0, v16 op_sel_hi:[0,1]
 ; GFX13-NEXT:  .LBB78_2: ; %end
 ; GFX13-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
@@ -168350,267 +168561,480 @@ define inreg <16 x double> @bitcast_v64bf16_to_v16f64_scalar(<64 x bfloat> inreg
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    s_xor_saveexec_b32 s4, -1
-; GFX13-NEXT:    scratch_store_b32 off, v32, s32 ; 4-byte Folded Spill
-; GFX13-NEXT:    s_mov_b32 exec_lo, s4
-; GFX13-NEXT:    v_writelane_b32 v32, s36, 0
 ; GFX13-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v14
-; GFX13-NEXT:    v_readfirstlane_b32 s56, v2
-; GFX13-NEXT:    v_readfirstlane_b32 s57, v3
-; GFX13-NEXT:    v_readfirstlane_b32 s58, v4
-; GFX13-NEXT:    v_writelane_b32 v32, s37, 1
-; GFX13-NEXT:    v_readfirstlane_b32 s59, v5
-; GFX13-NEXT:    v_readfirstlane_b32 s60, v6
-; GFX13-NEXT:    v_readfirstlane_b32 s61, v7
-; GFX13-NEXT:    v_readfirstlane_b32 s62, v8
-; GFX13-NEXT:    v_writelane_b32 v32, s38, 2
-; GFX13-NEXT:    v_readfirstlane_b32 s63, v9
-; GFX13-NEXT:    s_mov_b32 s47, s23
-; GFX13-NEXT:    s_mov_b32 s46, s22
-; GFX13-NEXT:    s_mov_b32 s45, s21
-; GFX13-NEXT:    v_writelane_b32 v32, s39, 3
-; GFX13-NEXT:    s_mov_b32 s44, s20
-; GFX13-NEXT:    s_mov_b32 s43, s19
-; GFX13-NEXT:    s_mov_b32 s42, s18
-; GFX13-NEXT:    s_mov_b32 s41, s17
-; GFX13-NEXT:    v_writelane_b32 v32, s48, 4
-; GFX13-NEXT:    s_mov_b32 s48, s24
-; GFX13-NEXT:    s_mov_b32 s40, s16
-; GFX13-NEXT:    s_mov_b32 s39, s3
-; GFX13-NEXT:    s_mov_b32 s38, s2
-; GFX13-NEXT:    v_writelane_b32 v32, s49, 5
-; GFX13-NEXT:    s_mov_b32 s49, s25
-; GFX13-NEXT:    s_mov_b32 s37, s1
-; GFX13-NEXT:    s_mov_b32 s36, s0
-; GFX13-NEXT:    s_mov_b32 s0, 0
-; GFX13-NEXT:    v_writelane_b32 v32, s50, 6
-; GFX13-NEXT:    s_mov_b32 s50, s26
-; GFX13-NEXT:    s_and_b32 s1, vcc_lo, exec_lo
-; GFX13-NEXT:    v_writelane_b32 v32, s51, 7
-; GFX13-NEXT:    s_mov_b32 s51, s27
-; GFX13-NEXT:    v_writelane_b32 v32, s52, 8
-; GFX13-NEXT:    s_mov_b32 s52, s28
-; GFX13-NEXT:    v_writelane_b32 v32, s53, 9
-; GFX13-NEXT:    s_mov_b32 s53, s29
-; GFX13-NEXT:    v_writelane_b32 v32, s54, 10
-; GFX13-NEXT:    v_readfirstlane_b32 s54, v0
-; GFX13-NEXT:    v_writelane_b32 v32, s55, 11
-; GFX13-NEXT:    v_readfirstlane_b32 s55, v1
-; GFX13-NEXT:    v_writelane_b32 v32, s64, 12
-; GFX13-NEXT:    v_readfirstlane_b32 s64, v10
-; GFX13-NEXT:    v_writelane_b32 v32, s65, 13
-; GFX13-NEXT:    v_readfirstlane_b32 s65, v11
-; GFX13-NEXT:    v_writelane_b32 v32, s66, 14
-; GFX13-NEXT:    v_readfirstlane_b32 s66, v12
-; GFX13-NEXT:    v_writelane_b32 v32, s67, 15
-; GFX13-NEXT:    v_readfirstlane_b32 s67, v13
-; GFX13-NEXT:    s_cbranch_scc0 .LBB79_3
-; GFX13-NEXT:  ; %bb.1: ; %Flow
-; GFX13-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
-; GFX13-NEXT:    s_cbranch_vccnz .LBB79_4
+; GFX13-NEXT:    s_clause 0x2f
+; GFX13-NEXT:    scratch_store_b32 off, v40, s32 offset:188
+; GFX13-NEXT:    scratch_store_b32 off, v41, s32 offset:184
+; GFX13-NEXT:    scratch_store_b32 off, v42, s32 offset:180
+; GFX13-NEXT:    scratch_store_b32 off, v43, s32 offset:176
+; GFX13-NEXT:    scratch_store_b32 off, v44, s32 offset:172
+; GFX13-NEXT:    scratch_store_b32 off, v45, s32 offset:168
+; GFX13-NEXT:    scratch_store_b32 off, v46, s32 offset:164
+; GFX13-NEXT:    scratch_store_b32 off, v47, s32 offset:160
+; GFX13-NEXT:    scratch_store_b32 off, v56, s32 offset:156
+; GFX13-NEXT:    scratch_store_b32 off, v57, s32 offset:152
+; GFX13-NEXT:    scratch_store_b32 off, v58, s32 offset:148
+; GFX13-NEXT:    scratch_store_b32 off, v59, s32 offset:144
+; GFX13-NEXT:    scratch_store_b32 off, v60, s32 offset:140
+; GFX13-NEXT:    scratch_store_b32 off, v61, s32 offset:136
+; GFX13-NEXT:    scratch_store_b32 off, v62, s32 offset:132
+; GFX13-NEXT:    scratch_store_b32 off, v63, s32 offset:128
+; GFX13-NEXT:    scratch_store_b32 off, v72, s32 offset:124
+; GFX13-NEXT:    scratch_store_b32 off, v73, s32 offset:120
+; GFX13-NEXT:    scratch_store_b32 off, v74, s32 offset:116
+; GFX13-NEXT:    scratch_store_b32 off, v75, s32 offset:112
+; GFX13-NEXT:    scratch_store_b32 off, v76, s32 offset:108
+; GFX13-NEXT:    scratch_store_b32 off, v77, s32 offset:104
+; GFX13-NEXT:    scratch_store_b32 off, v78, s32 offset:100
+; GFX13-NEXT:    scratch_store_b32 off, v79, s32 offset:96
+; GFX13-NEXT:    scratch_store_b32 off, v88, s32 offset:92
+; GFX13-NEXT:    scratch_store_b32 off, v89, s32 offset:88
+; GFX13-NEXT:    scratch_store_b32 off, v90, s32 offset:84
+; GFX13-NEXT:    scratch_store_b32 off, v91, s32 offset:80
+; GFX13-NEXT:    scratch_store_b32 off, v92, s32 offset:76
+; GFX13-NEXT:    scratch_store_b32 off, v93, s32 offset:72
+; GFX13-NEXT:    scratch_store_b32 off, v94, s32 offset:68
+; GFX13-NEXT:    scratch_store_b32 off, v95, s32 offset:64
+; GFX13-NEXT:    scratch_store_b32 off, v104, s32 offset:60
+; GFX13-NEXT:    scratch_store_b32 off, v105, s32 offset:56
+; GFX13-NEXT:    scratch_store_b32 off, v106, s32 offset:52
+; GFX13-NEXT:    scratch_store_b32 off, v107, s32 offset:48
+; GFX13-NEXT:    scratch_store_b32 off, v108, s32 offset:44
+; GFX13-NEXT:    scratch_store_b32 off, v109, s32 offset:40
+; GFX13-NEXT:    scratch_store_b32 off, v110, s32 offset:36
+; GFX13-NEXT:    scratch_store_b32 off, v111, s32 offset:32
+; GFX13-NEXT:    scratch_store_b32 off, v120, s32 offset:28
+; GFX13-NEXT:    scratch_store_b32 off, v121, s32 offset:24
+; GFX13-NEXT:    scratch_store_b32 off, v122, s32 offset:20
+; GFX13-NEXT:    scratch_store_b32 off, v123, s32 offset:16
+; GFX13-NEXT:    scratch_store_b32 off, v124, s32 offset:12
+; GFX13-NEXT:    scratch_store_b32 off, v125, s32 offset:8
+; GFX13-NEXT:    scratch_store_b32 off, v126, s32 offset:4
+; GFX13-NEXT:    scratch_store_b32 off, v127, s32
+; GFX13-NEXT:    v_dual_mov_b32 v31, v13 :: v_dual_mov_b32 v30, v12
+; GFX13-NEXT:    v_dual_mov_b32 v29, v11 :: v_dual_mov_b32 v28, v10
+; GFX13-NEXT:    v_dual_mov_b32 v27, v9 :: v_dual_mov_b32 v26, v8
+; GFX13-NEXT:    v_dual_mov_b32 v25, v7 :: v_dual_mov_b32 v126, v6
+; GFX13-NEXT:    v_dual_mov_b32 v127, v5 :: v_dual_mov_b32 v119, v4
+; GFX13-NEXT:    v_dual_mov_b32 v120, v3 :: v_dual_mov_b32 v121, v2
+; GFX13-NEXT:    v_dual_mov_b32 v122, v1 :: v_dual_mov_b32 v123, v0
+; GFX13-NEXT:    v_dual_mov_b32 v124, s28 :: v_dual_mov_b32 v125, s29
+; GFX13-NEXT:    s_mov_b32 s4, 0
+; GFX13-NEXT:    s_and_b32 s5, vcc_lo, exec_lo
+; GFX13-NEXT:    s_cbranch_scc0 .LBB79_4
+; GFX13-NEXT:  ; %bb.1: ; %cmp.false
+; GFX13-NEXT:    v_dual_mov_b32 v37, s2 :: v_dual_mov_b32 v3, s3
+; GFX13-NEXT:    v_dual_mov_b32 v97, s22 :: v_dual_mov_b32 v32, s0
+; GFX13-NEXT:    v_mov_b32_e32 v34, s1
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:320
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:336
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:352
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:368
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:384
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:400
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:416
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:432
+; GFX13-NEXT:    v_dual_mov_b32 v4, s16 :: v_dual_mov_b32 v76, s20
+; GFX13-NEXT:    v_mov_b32_e32 v86, s21
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:448
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:464
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:480
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:496
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:512
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:528
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:544
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:560
+; GFX13-NEXT:    v_mov_b32_e32 v5, s17
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:576
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:592
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:608
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:624
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:640
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:656
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:672
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:688
+; GFX13-NEXT:    v_dual_mov_b32 v6, s18 :: v_dual_mov_b32 v67, s19
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:704
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:720
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:736
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:752
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:768
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:784
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:800
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:816
+; GFX13-NEXT:    v_dual_mov_b32 v11, s23 :: v_dual_mov_b32 v12, s24
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:832
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:848
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:864
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:880
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:896
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:912
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:928
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:944
+; GFX13-NEXT:    v_mov_b32_e32 v13, s25
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:960
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:976
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:992
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:1008
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:1024
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:1040
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1056
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1072
+; GFX13-NEXT:    v_mov_b32_e32 v14, s26
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1088
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1104
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1120
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:1136
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:1152
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:1168
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1184
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1200
+; GFX13-NEXT:    v_mov_b32_e32 v15, s27
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:192
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:208
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:224
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:240
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:256
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:272
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:288
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:304
+; GFX13-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s4
+; GFX13-NEXT:    s_cbranch_vccnz .LBB79_3
 ; GFX13-NEXT:  .LBB79_2: ; %cmp.true
-; GFX13-NEXT:    s_and_b32 s0, s51, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s51, 16
-; GFX13-NEXT:    s_and_b32 s2, s50, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s50, 16
-; GFX13-NEXT:    s_and_b32 s4, s49, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s49, 16
-; GFX13-NEXT:    s_and_b32 s6, s48, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s48, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v15, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v14, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v13, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v12, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s47, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s47, 16
-; GFX13-NEXT:    s_and_b32 s2, s46, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s46, 16
-; GFX13-NEXT:    s_and_b32 s4, s45, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s45, 16
-; GFX13-NEXT:    s_and_b32 s6, s44, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s44, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v11, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v10, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v9, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v8, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s43, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s43, 16
-; GFX13-NEXT:    s_and_b32 s2, s42, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s42, 16
-; GFX13-NEXT:    s_and_b32 s4, s41, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s41, 16
-; GFX13-NEXT:    s_and_b32 s6, s40, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s40, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v7, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v6, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v5, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v4, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s39, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s39, 16
-; GFX13-NEXT:    s_and_b32 s2, s38, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s38, 16
-; GFX13-NEXT:    s_and_b32 s4, s37, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s37, 16
-; GFX13-NEXT:    s_and_b32 s6, s36, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s36, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v3, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v2, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v1, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v0, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s67, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s67, 16
-; GFX13-NEXT:    s_and_b32 s2, s66, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s66, 16
-; GFX13-NEXT:    s_and_b32 s4, s65, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s65, 16
-; GFX13-NEXT:    s_and_b32 s6, s64, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s64, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v31, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v30, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v29, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v28, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s63, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s63, 16
-; GFX13-NEXT:    s_and_b32 s2, s62, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s62, 16
-; GFX13-NEXT:    s_and_b32 s4, s61, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s61, 16
-; GFX13-NEXT:    s_and_b32 s6, s60, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s60, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v27, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v26, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v25, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v24, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s59, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s59, 16
-; GFX13-NEXT:    s_and_b32 s2, s58, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s58, 16
-; GFX13-NEXT:    s_and_b32 s4, s57, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s57, 16
-; GFX13-NEXT:    s_and_b32 s6, s56, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s56, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v23, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v22, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v21, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v20, s7, s6
-; GFX13-NEXT:    s_and_b32 s0, s55, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s55, 16
-; GFX13-NEXT:    s_and_b32 s2, s54, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s54, 16
-; GFX13-NEXT:    s_and_b32 s4, s53, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s53, 16
-; GFX13-NEXT:    s_and_b32 s6, s52, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s52, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v19, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v18, s3, s2
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v17, s5, s4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v16, s7, s6
-; GFX13-NEXT:    s_branch .LBB79_5
-; GFX13-NEXT:  .LBB79_3:
-; GFX13-NEXT:    s_branch .LBB79_2
-; GFX13-NEXT:  .LBB79_4:
-; GFX13-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v1, s37
-; GFX13-NEXT:    v_dual_mov_b32 v2, s38 :: v_dual_mov_b32 v3, s39
-; GFX13-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v5, s41
-; GFX13-NEXT:    v_dual_mov_b32 v6, s42 :: v_dual_mov_b32 v7, s43
-; GFX13-NEXT:    v_dual_mov_b32 v8, s44 :: v_dual_mov_b32 v9, s45
-; GFX13-NEXT:    v_dual_mov_b32 v10, s46 :: v_dual_mov_b32 v11, s47
-; GFX13-NEXT:    v_dual_mov_b32 v12, s48 :: v_dual_mov_b32 v13, s49
-; GFX13-NEXT:    v_dual_mov_b32 v14, s50 :: v_dual_mov_b32 v15, s51
-; GFX13-NEXT:    v_dual_mov_b32 v16, s52 :: v_dual_mov_b32 v17, s53
-; GFX13-NEXT:    v_dual_mov_b32 v18, s54 :: v_dual_mov_b32 v19, s55
-; GFX13-NEXT:    v_dual_mov_b32 v20, s56 :: v_dual_mov_b32 v21, s57
-; GFX13-NEXT:    v_dual_mov_b32 v22, s58 :: v_dual_mov_b32 v23, s59
-; GFX13-NEXT:    v_dual_mov_b32 v24, s60 :: v_dual_mov_b32 v25, s61
-; GFX13-NEXT:    v_dual_mov_b32 v26, s62 :: v_dual_mov_b32 v27, s63
-; GFX13-NEXT:    v_dual_mov_b32 v28, s64 :: v_dual_mov_b32 v29, s65
-; GFX13-NEXT:    v_dual_mov_b32 v30, s66 :: v_dual_mov_b32 v31, s67
-; GFX13-NEXT:  .LBB79_5: ; %end
-; GFX13-NEXT:    v_readlane_b32 s67, v32, 15
-; GFX13-NEXT:    v_readlane_b32 s66, v32, 14
-; GFX13-NEXT:    v_readlane_b32 s65, v32, 13
-; GFX13-NEXT:    v_readlane_b32 s64, v32, 12
-; GFX13-NEXT:    v_readlane_b32 s55, v32, 11
-; GFX13-NEXT:    v_readlane_b32 s54, v32, 10
-; GFX13-NEXT:    v_readlane_b32 s53, v32, 9
-; GFX13-NEXT:    v_readlane_b32 s52, v32, 8
-; GFX13-NEXT:    v_readlane_b32 s51, v32, 7
-; GFX13-NEXT:    v_readlane_b32 s50, v32, 6
-; GFX13-NEXT:    v_readlane_b32 s49, v32, 5
-; GFX13-NEXT:    v_readlane_b32 s48, v32, 4
-; GFX13-NEXT:    v_readlane_b32 s39, v32, 3
-; GFX13-NEXT:    v_readlane_b32 s38, v32, 2
-; GFX13-NEXT:    v_readlane_b32 s37, v32, 1
-; GFX13-NEXT:    v_readlane_b32 s36, v32, 0
-; GFX13-NEXT:    s_xor_saveexec_b32 s0, -1
-; GFX13-NEXT:    scratch_load_b32 v32, off, s32 ; 4-byte Folded Reload
-; GFX13-NEXT:    s_mov_b32 exec_lo, s0
+; GFX13-NEXT:    v_pk_add_bf16 v15, 0x40c0, s27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v126, 0x40c0, v126 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v127, 0x40c0, v127 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v119, 0x40c0, v119 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v120, 0x40c0, v120 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:192
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:208
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:224
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:240
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:256
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:272
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:288
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:304
+; GFX13-NEXT:    v_pk_add_bf16 v14, 0x40c0, s26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v121, 0x40c0, v121 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v122, 0x40c0, v122 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v123, 0x40c0, v123 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v125, 0x40c0, v125 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v124, 0x40c0, v124 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v97, 0x40c0, s22 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v86, 0x40c0, s21 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v76, 0x40c0, s20 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v67, 0x40c0, s19 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v37, 0x40c0, s2 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v34, 0x40c0, s1 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v32, 0x40c0, s0 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v31, 0x40c0, v31 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v30, 0x40c0, v30 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v29, 0x40c0, v29 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v28, 0x40c0, v28 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v27, 0x40c0, v27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v26, 0x40c0, v26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v25, 0x40c0, v25 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1088
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1104
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1120
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:1136
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:1152
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:1168
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1184
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1200
+; GFX13-NEXT:    v_pk_add_bf16 v13, 0x40c0, s25 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:960
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:976
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:992
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:1008
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:1024
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:1040
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1056
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1072
+; GFX13-NEXT:    v_pk_add_bf16 v12, 0x40c0, s24 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:832
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:848
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:864
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:880
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:896
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:912
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:928
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:944
+; GFX13-NEXT:    v_pk_add_bf16 v11, 0x40c0, s23 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v6, 0x40c0, s18 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:704
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:720
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:736
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:752
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:768
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:784
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:800
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:816
+; GFX13-NEXT:    v_pk_add_bf16 v5, 0x40c0, s17 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:576
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:592
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:608
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:624
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:640
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:656
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:672
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:688
+; GFX13-NEXT:    v_pk_add_bf16 v4, 0x40c0, s16 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:448
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:464
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:480
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:496
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:512
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:528
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:544
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:560
+; GFX13-NEXT:    v_pk_add_bf16 v3, 0x40c0, s3 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:320
+; GFX13-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:336
+; GFX13-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:352
+; GFX13-NEXT:    scratch_store_b128 off, v[12:15], s32 offset:368
+; GFX13-NEXT:    scratch_store_b128 off, v[16:19], s32 offset:384
+; GFX13-NEXT:    scratch_store_b128 off, v[20:23], s32 offset:400
+; GFX13-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:416
+; GFX13-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:432
+; GFX13-NEXT:  .LBB79_3: ; %end
+; GFX13-NEXT:    v_dual_mov_b32 v0, v32 :: v_dual_mov_b32 v1, v34
+; GFX13-NEXT:    v_mov_b32_e32 v2, v37
+; GFX13-NEXT:    s_clause 0x7
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:320 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:336 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:352 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:368 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:384 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:400 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:416 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:432 th:TH_LOAD_LU
+; GFX13-NEXT:    v_dual_mov_b32 v8, v76 :: v_dual_mov_b32 v9, v86
+; GFX13-NEXT:    v_dual_mov_b32 v17, v125 :: v_dual_mov_b32 v18, v123
+; GFX13-NEXT:    v_dual_mov_b32 v19, v122 :: v_dual_mov_b32 v20, v121
+; GFX13-NEXT:    v_dual_mov_b32 v21, v120 :: v_dual_mov_b32 v22, v119
+; GFX13-NEXT:    v_dual_mov_b32 v23, v127 :: v_dual_mov_b32 v24, v126
+; GFX13-NEXT:    v_dual_mov_b32 v7, v67 :: v_dual_mov_b32 v16, v124
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    v_mov_b32_e32 v3, v35
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:448 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:464 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:480 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:496 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:512 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:528 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:544 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:560 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x6
+; GFX13-NEXT:    v_mov_b32_e32 v4, v36
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:576 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:592 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:608 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:624 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:640 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:656 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:672 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:688 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x6
+; GFX13-NEXT:    v_mov_b32_e32 v5, v37
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:704 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:720 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:736 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:752 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:768 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:784 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:800 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:816 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x6
+; GFX13-NEXT:    v_mov_b32_e32 v6, v38
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:832 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:848 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:864 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:880 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:896 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:912 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:928 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:944 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x4
+; GFX13-NEXT:    v_dual_mov_b32 v10, v97 :: v_dual_mov_b32 v12, v44
+; GFX13-NEXT:    s_clause 0x3
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:960 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:976 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:992 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:1008 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:1024 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:1040 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:1056 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:1072 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x4
+; GFX13-NEXT:    v_mov_b32_e32 v13, v45
+; GFX13-NEXT:    s_clause 0x3
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1088 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1104 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:1120 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:1136 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:1152 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:1168 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:1184 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:1200 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x4
+; GFX13-NEXT:    v_mov_b32_e32 v14, v46
+; GFX13-NEXT:    s_clause 0x3
+; GFX13-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:192 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:208 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:224 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b128 v[44:47], off, s32 offset:240 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[48:51], off, s32 offset:256 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[52:55], off, s32 offset:272 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[56:59], off, s32 offset:288 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x7
+; GFX13-NEXT:    scratch_load_b128 v[60:63], off, s32 offset:304 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GFX13-NEXT:    s_wait_loadcnt 0x4
+; GFX13-NEXT:    v_mov_b32_e32 v15, v47
+; GFX13-NEXT:    s_clause 0x1f
+; GFX13-NEXT:    scratch_load_b32 v127, off, s32
+; GFX13-NEXT:    scratch_load_b32 v126, off, s32 offset:4
+; GFX13-NEXT:    scratch_load_b32 v125, off, s32 offset:8
+; GFX13-NEXT:    scratch_load_b32 v124, off, s32 offset:12
+; GFX13-NEXT:    scratch_load_b32 v123, off, s32 offset:16
+; GFX13-NEXT:    scratch_load_b32 v122, off, s32 offset:20
+; GFX13-NEXT:    scratch_load_b32 v121, off, s32 offset:24
+; GFX13-NEXT:    scratch_load_b32 v120, off, s32 offset:28
+; GFX13-NEXT:    scratch_load_b32 v111, off, s32 offset:32
+; GFX13-NEXT:    scratch_load_b32 v110, off, s32 offset:36
+; GFX13-NEXT:    scratch_load_b32 v109, off, s32 offset:40
+; GFX13-NEXT:    scratch_load_b32 v108, off, s32 offset:44
+; GFX13-NEXT:    scratch_load_b32 v107, off, s32 offset:48
+; GFX13-NEXT:    scratch_load_b32 v106, off, s32 offset:52
+; GFX13-NEXT:    scratch_load_b32 v105, off, s32 offset:56
+; GFX13-NEXT:    scratch_load_b32 v104, off, s32 offset:60
+; GFX13-NEXT:    scratch_load_b32 v95, off, s32 offset:64
+; GFX13-NEXT:    scratch_load_b32 v94, off, s32 offset:68
+; GFX13-NEXT:    scratch_load_b32 v93, off, s32 offset:72
+; GFX13-NEXT:    scratch_load_b32 v92, off, s32 offset:76
+; GFX13-NEXT:    scratch_load_b32 v91, off, s32 offset:80
+; GFX13-NEXT:    scratch_load_b32 v90, off, s32 offset:84
+; GFX13-NEXT:    scratch_load_b32 v89, off, s32 offset:88
+; GFX13-NEXT:    scratch_load_b32 v88, off, s32 offset:92
+; GFX13-NEXT:    scratch_load_b32 v79, off, s32 offset:96
+; GFX13-NEXT:    scratch_load_b32 v78, off, s32 offset:100
+; GFX13-NEXT:    scratch_load_b32 v77, off, s32 offset:104
+; GFX13-NEXT:    scratch_load_b32 v76, off, s32 offset:108
+; GFX13-NEXT:    scratch_load_b32 v75, off, s32 offset:112
+; GFX13-NEXT:    scratch_load_b32 v74, off, s32 offset:116
+; GFX13-NEXT:    scratch_load_b32 v73, off, s32 offset:120
+; GFX13-NEXT:    scratch_load_b32 v72, off, s32 offset:124
+; GFX13-NEXT:    s_wait_loadcnt 0x20
+; GFX13-NEXT:    s_clause 0xf
+; GFX13-NEXT:    scratch_load_b32 v63, off, s32 offset:128
+; GFX13-NEXT:    scratch_load_b32 v62, off, s32 offset:132
+; GFX13-NEXT:    scratch_load_b32 v61, off, s32 offset:136
+; GFX13-NEXT:    scratch_load_b32 v60, off, s32 offset:140
+; GFX13-NEXT:    scratch_load_b32 v59, off, s32 offset:144
+; GFX13-NEXT:    scratch_load_b32 v58, off, s32 offset:148
+; GFX13-NEXT:    scratch_load_b32 v57, off, s32 offset:152
+; GFX13-NEXT:    scratch_load_b32 v56, off, s32 offset:156
+; GFX13-NEXT:    scratch_load_b32 v47, off, s32 offset:160
+; GFX13-NEXT:    scratch_load_b32 v46, off, s32 offset:164
+; GFX13-NEXT:    scratch_load_b32 v45, off, s32 offset:168
+; GFX13-NEXT:    scratch_load_b32 v44, off, s32 offset:172
+; GFX13-NEXT:    scratch_load_b32 v43, off, s32 offset:176
+; GFX13-NEXT:    scratch_load_b32 v42, off, s32 offset:180
+; GFX13-NEXT:    scratch_load_b32 v41, off, s32 offset:184
+; GFX13-NEXT:    scratch_load_b32 v40, off, s32 offset:188
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+; GFX13-NEXT:  .LBB79_4:
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79_vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91
+; GFX13-NEXT:    v_dual_mov_b32 v33, v31 :: v_dual_mov_b32 v35, v30
+; GFX13-NEXT:    v_dual_mov_b32 v36, v29 :: v_dual_mov_b32 v38, v28
+; GFX13-NEXT:    v_dual_mov_b32 v39, v27 :: v_dual_mov_b32 v48, v26
+; GFX13-NEXT:    v_mov_b32_e32 v49, v25
+; GFX13-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+; GFX13-NEXT:    ; implicit-def: $vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79_vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95_vgpr96_vgpr97_vgpr98_vgpr99
+; GFX13-NEXT:    ; implicit-def: $vgpr77_vgpr78_vgpr79_vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95_vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_dual_mov_b32 v28, v38 :: v_dual_mov_b32 v29, v36
+; GFX13-NEXT:    v_dual_mov_b32 v26, v48 :: v_dual_mov_b32 v25, v49
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-NEXT:    v_dual_mov_b32 v27, v39 :: v_dual_mov_b32 v30, v35
+; GFX13-NEXT:    v_mov_b32_e32 v31, v33
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; kill: killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+; GFX13-NEXT:    ; implicit-def: $vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64
+; GFX13-NEXT:    ; implicit-def: $vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95_vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118
+; GFX13-NEXT:    ; implicit-def: $vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66
+; GFX13-NEXT:    s_branch .LBB79_2
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
 
@@ -199571,61 +199995,45 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-TRUE16-NEXT:    s_clause 0x29
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v40, s32 offset:164
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v41, s32 offset:160
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v42, s32 offset:156
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v43, s32 offset:152
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v44, s32 offset:148
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v45, s32 offset:144
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v46, s32 offset:140
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v47, s32 offset:136
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v56, s32 offset:132
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v57, s32 offset:128
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v58, s32 offset:124
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v59, s32 offset:120
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v60, s32 offset:116
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v61, s32 offset:112
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v62, s32 offset:108
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v63, s32 offset:104
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v72, s32 offset:100
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v73, s32 offset:96
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v74, s32 offset:92
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v75, s32 offset:88
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v76, s32 offset:84
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v77, s32 offset:80
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v78, s32 offset:76
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v79, s32 offset:72
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v88, s32 offset:68
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v89, s32 offset:64
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v90, s32 offset:60
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v91, s32 offset:56
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v92, s32 offset:52
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v93, s32 offset:48
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v94, s32 offset:44
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v95, s32 offset:40
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v104, s32 offset:36
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v105, s32 offset:32
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v106, s32 offset:28
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v107, s32 offset:24
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v108, s32 offset:20
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v109, s32 offset:16
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v110, s32 offset:12
+; GFX13-TRUE16-NEXT:    s_clause 0x19
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v40, s32 offset:100
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v41, s32 offset:96
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v42, s32 offset:92
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v43, s32 offset:88
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v44, s32 offset:84
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v45, s32 offset:80
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v46, s32 offset:76
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v47, s32 offset:72
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v56, s32 offset:68
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v57, s32 offset:64
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v58, s32 offset:60
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v59, s32 offset:56
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v60, s32 offset:52
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v61, s32 offset:48
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v62, s32 offset:44
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v63, s32 offset:40
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v72, s32 offset:36
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v73, s32 offset:32
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v74, s32 offset:28
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v75, s32 offset:24
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v76, s32 offset:20
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v77, s32 offset:16
+; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v78, s32 offset:12
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v33, off, s32 offset:8
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v32, off, s32 offset:4
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v31, off, s32
-; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr77_lo16
+; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr78_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr67_lo16
+; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr77_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr76_lo16
-; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr74_lo16
-; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr72_lo16
+; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr73_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr66_lo16
+; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr63_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr62_lo16
-; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr61_lo16
-; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr58_lo16
+; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr59_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr65_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr57_lo16
-; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr47_lo16
+; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr56_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr46_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr64_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr43_lo16
@@ -199644,17 +200052,17 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr96_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr86_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr37_lo16
-; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr80_lo16
-; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr71_lo16
-; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr78_lo16
-; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr69_lo16
+; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr83_lo16
+; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr82_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr75_lo16
-; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr73_lo16
-; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr63_lo16
+; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr69_lo16
+; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr74_lo16
+; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr72_lo16
+; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr61_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr68_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr60_lo16
-; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr59_lo16
-; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr56_lo16
+; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr58_lo16
+; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr47_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr52_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr45_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr44_lo16
@@ -199673,9 +200081,9 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr87_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr85_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr84_lo16
-; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr83_lo16
-; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr82_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr81_lo16
+; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr80_lo16
+; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr71_lo16
 ; GFX13-TRUE16-NEXT:    ; implicit-def: $vgpr34_lo16
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x2
 ; GFX13-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v33
@@ -199696,30 +200104,30 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[51:52], 24, v[11:12]
 ; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[34:35], 24, v[29:30]
 ; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[68:69], 24, v[19:20]
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v71, 24, v16 :: v_dual_lshrrev_b32 v80, 8, v16
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v82, 24, v16 :: v_dual_lshrrev_b32 v83, 8, v16
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v86, 8, v15 :: v_dual_lshrrev_b32 v96, 24, v14
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v97, 8, v14 :: v_dual_lshrrev_b32 v99, 8, v13
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v102, 24, v12 :: v_dual_lshrrev_b32 v103, 8, v12
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v114, 8, v11 :: v_dual_lshrrev_b32 v116, 24, v10
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v117, 8, v10 :: v_dual_lshrrev_b32 v119, 8, v9
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v42, 24, v8 :: v_dual_lshrrev_b32 v43, 8, v8
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v46, 8, v7 :: v_dual_lshrrev_b32 v47, 24, v6
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v57, 8, v6 :: v_dual_lshrrev_b32 v58, 8, v5
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v61, 24, v4 :: v_dual_lshrrev_b32 v62, 8, v4
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v72, 8, v3 :: v_dual_lshrrev_b32 v74, 24, v2
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v76, 8, v2 :: v_dual_lshrrev_b32 v77, 8, v1
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v81, 24, v32 :: v_dual_lshrrev_b32 v82, 8, v32
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v83, 8, v31 :: v_dual_lshrrev_b32 v84, 24, v30
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v46, 8, v7 :: v_dual_lshrrev_b32 v56, 24, v6
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v57, 8, v6 :: v_dual_lshrrev_b32 v59, 8, v5
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v62, 24, v4 :: v_dual_lshrrev_b32 v63, 8, v4
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v73, 8, v3 :: v_dual_lshrrev_b32 v76, 24, v2
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v77, 8, v2 :: v_dual_lshrrev_b32 v78, 8, v1
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v71, 24, v32 :: v_dual_lshrrev_b32 v80, 8, v32
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v81, 8, v31 :: v_dual_lshrrev_b32 v84, 24, v30
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v85, 8, v30 :: v_dual_lshrrev_b32 v87, 8, v29
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v98, 24, v28 :: v_dual_lshrrev_b32 v100, 8, v28
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v101, 8, v27 :: v_dual_lshrrev_b32 v112, 24, v26
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v113, 8, v26 :: v_dual_lshrrev_b32 v115, 8, v25
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v118, 24, v24 :: v_dual_lshrrev_b32 v40, 8, v24
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v41, 8, v23 :: v_dual_lshrrev_b32 v44, 24, v22
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v45, 8, v22 :: v_dual_lshrrev_b32 v56, 8, v21
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v59, 24, v20 :: v_dual_lshrrev_b32 v60, 8, v20
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v63, 8, v19 :: v_dual_lshrrev_b32 v73, 24, v18
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v75, 8, v18 :: v_dual_lshrrev_b32 v78, 8, v17
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v45, 8, v22 :: v_dual_lshrrev_b32 v47, 8, v21
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v58, 24, v20 :: v_dual_lshrrev_b32 v60, 8, v20
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v61, 8, v19 :: v_dual_lshrrev_b32 v72, 24, v18
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v74, 8, v18 :: v_dual_lshrrev_b32 v75, 8, v17
 ; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[54:55], 24, v[9:10]
 ; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[35:36], 24, v[27:28]
 ; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[38:39], 24, v[25:26]
@@ -199730,323 +200138,117 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-TRUE16-NEXT:    s_cbranch_execz .LBB90_4
 ; GFX13-TRUE16-NEXT:  ; %bb.3: ; %cmp.true
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v70, 0xffff0000, v18
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v33, 0xffff0000, v20
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v73, 0xffff0000, v17
-; GFX13-TRUE16-NEXT:    v_dual_lshlrev_b32 v17, 16, v17 :: v_dual_lshlrev_b32 v36, 16, v19
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v34, 0xffff0000, v22
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v69, 0x40c00000, v33
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v35, 0xffff0000, v19
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v19, 16, v22
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v63, 0x40c00000, v20
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v20, 0xffff0000, v21
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v21, 16, v21
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v22, 0xffff0000, v24
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v33, 0x40c00000, v34 :: v_dual_lshlrev_b32 v24, 16, v24
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v34, 0x40c00000, v19 :: v_dual_add_f32 v37, 0x40c00000, v20
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v38, 0x40c00000, v22
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v20, 0x40c00000, v21 :: v_dual_add_f32 v39, 0x40c00000, v24
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v75, 0x40c00000, v36
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v36, 0xffff0000, v26
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v19, 0x40c00000, v35
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v35, 0xffff0000, v23
-; GFX13-TRUE16-NEXT:    v_dual_lshlrev_b32 v23, 16, v23 :: v_dual_lshlrev_b32 v26, 16, v26
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v21, v20, v37
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v37, 0xffff0000, v25
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v80, 0xffff0000, v3
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v103, 0xffff0000, v13
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v49, 0x40c00000, v26 :: v_dual_lshlrev_b32 v26, 16, v28
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v35, 0x40c00000, v35
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v48, 0x40c00000, v23 :: v_dual_lshlrev_b32 v23, 16, v25
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v25, 0xffff0000, v28
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v28, 0xffff0000, v27
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v37, 0x40c00000, v37 :: v_dual_add_f32 v50, 0x40c00000, v23
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v51, 0x40c00000, v25 :: v_dual_add_f32 v52, 0x40c00000, v26
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v23, v48, v35
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v35, 0xffff0000, v30
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v54, 0x40c00000, v27
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v25, v50, v37
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v37, 0xffff0000, v29
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v55, 0x40c00000, v30
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v8, 0x40c0, v8 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v7, 0x40c0, v7 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v6, 0x40c0, v6 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v5, 0x40c0, v5 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v4, 0x40c0, v4 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v3, 0x40c0, v3 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x1
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v32, 0x40c0, v32 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v30, 0xffff0000, v31
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v31, 16, v31
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v53, 0x40c00000, v28 :: v_dual_add_f32 v64, 0x40c00000, v29
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v66, 0x40c00000, v30 :: v_dual_lshlrev_b32 v29, 16, v32
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v67, 0x40c00000, v31
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v27, v54, v53
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v53, 0xffff0000, v32
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v32, 0xffff0000, v2
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v37, 0x40c00000, v37
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v31, v67, v66
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v66, 0xffff0000, v4
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v65, 0x40c00000, v29 :: v_dual_add_f32 v68, 0x40c00000, v32
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v29, v64, v37
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v37, 0xffff0000, v1
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v35, 0x40c00000, v35 :: v_dual_lshlrev_b32 v2, 16, v2
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v53, 0x40c00000, v53 :: v_dual_lshlrev_b32 v4, 16, v4
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v81, 0x40c00000, v1
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v3
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v71, 0x40c00000, v2 :: v_dual_add_f32 v80, 0x40c00000, v80
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_4) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v37, 0x40c00000, v37 :: v_dual_add_f32 v82, 0x40c00000, v4
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v3, 0xffff0000, v6
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v4, 16, v6
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v6, 0xffff0000, v5
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v83, 0x40c00000, v1 :: v_dual_add_f32 v84, 0x40c00000, v3
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v1, v81, v37
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v86, 0x40c00000, v6 :: v_dual_add_f32 v87, 0x40c00000, v5
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v3, v83, v80
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v37, 0xffff0000, v8
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v80, 0xffff0000, v7
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v5, v87, v86
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v86, 0xffff0000, v10
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v96, 0x40c00000, v8
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v8, 0xffff0000, v9
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v97, 0x40c00000, v7
-; GFX13-TRUE16-NEXT:    v_dual_lshlrev_b32 v7, 16, v10 :: v_dual_lshlrev_b32 v9, 16, v9
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v37, 0x40c00000, v37 :: v_dual_add_f32 v80, 0x40c00000, v80
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v10, 0xffff0000, v12
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v98, 0x40c00000, v7 :: v_dual_add_f32 v99, 0x40c00000, v8
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v100, 0x40c00000, v9 :: v_dual_add_f32 v101, 0x40c00000, v10
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v102, 0x40c00000, v12
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v7, v97, v80
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v80, 0xffff0000, v11
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v9, v100, v99
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v99, 0xffff0000, v14
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v66, 0x40c00000, v66
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v32, v65, v53
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v30, v55, v35
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v85, 0x40c00000, v4 :: v_dual_add_f32 v86, 0x40c00000, v86
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v112, 0x40c00000, v11 :: v_dual_lshlrev_b32 v11, 16, v13
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v99, 0x40c00000, v99 :: v_dual_add_f32 v80, 0x40c00000, v80
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v113, 0x40c00000, v14
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v103, 0x40c00000, v103 :: v_dual_lshlrev_b32 v14, 16, v16
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v13, 0xffff0000, v16
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v16, 0xffff0000, v15
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v36, 0x40c00000, v36 :: v_dual_lshlrev_b32 v15, 16, v15
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v28, v52, v51
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v22, v34, v33
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v8, v96, v37
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v109, v33, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v110, v34, s0
-; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[33:34], 24, v[31:32]
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v6, v85, v84
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v114, 0x40c00000, v11 :: v_dual_add_f32 v115, 0x40c00000, v13
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v116, 0x40c00000, v14 :: v_dual_add_f32 v117, 0x40c00000, v16
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v118, 0x40c00000, v15
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v89, v35, s0
-; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[34:35], 24, v[29:30]
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v26, v49, v36
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v4, v82, v66
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v12, v102, v101
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v11, v112, v80
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v95, v36, s0
-; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[35:36], 24, v[27:28]
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v2, v71, v68
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v45, v66, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v56, v68, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v36, v20, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v79, v65, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v91, v64, s0
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v31, 0x40c0, v31 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v2, 0x40c0, v2 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v1, 0x40c0, v1 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v20, 0x40c0, v20 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v19, 0x40c0, v19 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v30, 0x40c0, v30 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v29, 0x40c0, v29 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v12, 0x40c0, v12 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v14, 0x40c0, v14 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v16, 0x40c0, v16 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v15, 0x40c0, v15 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v13, 0x40c0, v13 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v11, 0x40c0, v11 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v18, 0x40c0, v18 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v17, 0x40c0, v17 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v22, 0x40c0, v22 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v21, 0x40c0, v21 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v24, 0x40c0, v24 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v23, 0x40c0, v23 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v26, 0x40c0, v26 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v25, 0x40c0, v25 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v28, 0x40c0, v28 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v27, 0x40c0, v27 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v10, 0x40c0, v10 op_sel_hi:[0,1]
+; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v9, 0x40c0, v9 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[64:65], 24, v[7:8]
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v16, v116, v115
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v15, v118, v117
 ; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[65:66], 24, v[5:6]
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v88, v67, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v92, v51, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v93, v52, s0
-; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[51:52], 24, v[11:12]
 ; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[66:67], 24, v[3:4]
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v59, v71, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v60, v81, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v78, v53, s0
 ; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[67:68], 24, v[1:2]
-; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[52:53], 24, v[21:22]
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v61, 24, v4 :: v_dual_lshrrev_b32 v62, 8, v4
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v4.h, v45.l
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v72, 8, v3 :: v_dual_lshrrev_b32 v74, 24, v2
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v76, 8, v2 :: v_dual_lshrrev_b32 v77, 8, v1
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v56.l
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v45, 8, v22 :: v_dual_lshrrev_b32 v56, 8, v21
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v19, v75, v19
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v20, v63, v69
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v21.l, v36.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v36, v63, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v24, v39, v38
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v14, v113, v99
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v13, v114, v103
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v40, v37, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v106, v38, s0
+; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[33:34], 24, v[31:32]
 ; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[37:38], 24, v[15:16]
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v107, v39, s0
-; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[38:39], 24, v[25:26]
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v59.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v60.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v39, v69, s0
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v59, 24, v20 :: v_dual_lshrrev_b32 v60, 8, v20
-; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[68:69], 24, v[19:20]
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v20.l, v36.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v36, v75, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v104, v49, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v108, v48, s0
 ; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[48:49], 24, v[13:14]
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v105, v50, s0
-; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[49:50], 24, v[23:24]
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v20.h, v39.l
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v63, 8, v19
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v19.l, v36.l
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v36, 0x40c00000, v70 :: v_dual_add_f32 v39, 0x40c00000, v73
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v50, 0x40c00000, v17 :: v_dual_add_f32 v53, 0x40c00000, v18
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v10, v98, v86
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v103, v115, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v115, v116, s0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v17, v50, v39
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v18, v53, v36
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v36, v36, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v116, v118, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v99, v99, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v113, v113, s0
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v73, 24, v18 :: v_dual_lshrrev_b32 v75, 8, v18
-; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[69:70], 24, v[17:18]
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v18.h, v36.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v36, v53, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v114, v114, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v101, v101, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v117, v102, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v112, v112, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v118, v86, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v98, v98, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v100, v100, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v41, v96, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v44, v97, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v84, v84, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v85, v85, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v87, v87, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v82, v82, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v83, v83, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v90, v55, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v94, v54, s0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v18.l, v36.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v36, v50, s0
+; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[51:52], 24, v[11:12]
+; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[34:35], 24, v[29:30]
+; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[68:69], 24, v[19:20]
 ; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[54:55], 24, v[9:10]
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v71, 24, v16 :: v_dual_lshrrev_b32 v80, 8, v16
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v16.h, v103.l
+; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[35:36], 24, v[27:28]
+; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[38:39], 24, v[25:26]
+; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[49:50], 24, v[23:24]
+; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[52:53], 24, v[21:22]
+; GFX13-TRUE16-NEXT:    v_lshrrev_b64 v[69:70], 24, v[17:18]
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v82, 24, v16 :: v_dual_lshrrev_b32 v83, 8, v16
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v86, 8, v15 :: v_dual_lshrrev_b32 v96, 24, v14
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v16.l, v115.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v15.l, v116.l
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v97, 8, v14
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v14.h, v99.l
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v99, 8, v13
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v14.l, v113.l
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v97, 8, v14 :: v_dual_lshrrev_b32 v99, 8, v13
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v102, 24, v12 :: v_dual_lshrrev_b32 v103, 8, v12
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v13.l, v114.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v12.h, v101.l
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v114, 8, v11 :: v_dual_lshrrev_b32 v116, 24, v10
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v12.l, v117.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v11.l, v112.l
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v117, 8, v10 :: v_dual_lshrrev_b32 v119, 8, v9
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v10.h, v118.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v10.l, v98.l
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v42, 24, v8 :: v_dual_lshrrev_b32 v43, 8, v8
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v9.l, v100.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v8.h, v40.l
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v46, 8, v7 :: v_dual_lshrrev_b32 v47, 24, v6
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v8.l, v41.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v44.l
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v57, 8, v6 :: v_dual_lshrrev_b32 v58, 8, v5
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v6.h, v84.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v85.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v87.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v82.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v83.l
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v81, 24, v32 :: v_dual_lshrrev_b32 v82, 8, v32
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v32.h, v78.l
-; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v83, 8, v31 :: v_dual_lshrrev_b32 v84, 24, v30
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v32.l, v79.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v31.l, v88.l
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v46, 8, v7 :: v_dual_lshrrev_b32 v56, 24, v6
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v57, 8, v6 :: v_dual_lshrrev_b32 v59, 8, v5
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v62, 24, v4 :: v_dual_lshrrev_b32 v63, 8, v4
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v73, 8, v3 :: v_dual_lshrrev_b32 v76, 24, v2
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v77, 8, v2 :: v_dual_lshrrev_b32 v78, 8, v1
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v71, 24, v32 :: v_dual_lshrrev_b32 v80, 8, v32
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v81, 8, v31 :: v_dual_lshrrev_b32 v84, 24, v30
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v85, 8, v30 :: v_dual_lshrrev_b32 v87, 8, v29
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v30.h, v89.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v30.l, v90.l
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v98, 24, v28 :: v_dual_lshrrev_b32 v100, 8, v28
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v29.l, v91.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v28.h, v92.l
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v101, 8, v27 :: v_dual_lshrrev_b32 v112, 24, v26
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v28.l, v93.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v27.l, v94.l
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v113, 8, v26 :: v_dual_lshrrev_b32 v115, 8, v25
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v26.h, v95.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v26.l, v104.l
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v118, 24, v24 :: v_dual_lshrrev_b32 v40, 8, v24
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v25.l, v105.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v24.h, v106.l
 ; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v41, 8, v23 :: v_dual_lshrrev_b32 v44, 24, v22
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v24.l, v107.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v23.l, v108.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v22.h, v109.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v22.l, v110.l
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v78, 8, v17
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v17.l, v36.l
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v45, 8, v22 :: v_dual_lshrrev_b32 v47, 8, v21
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v58, 24, v20 :: v_dual_lshrrev_b32 v60, 8, v20
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v61, 8, v19 :: v_dual_lshrrev_b32 v72, 24, v18
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v74, 8, v18 :: v_dual_lshrrev_b32 v75, 8, v17
 ; GFX13-TRUE16-NEXT:  .LBB90_4: ; %end
 ; GFX13-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v67.l
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.h, 8, v77.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.h, 8, v78.l
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v36.h, 0
 ; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.l, 8, v34.l
 ; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.l, 8, v33.l
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v1.h, v1.h, v33.h, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v36.l, v1.l, v34.h, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v36.h
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v76.l
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.h, 8, v72.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v77.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.h, 8, v73.l
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v29.h, v29.h, v34.l, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.l, 8, v84.l
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v1, v36, v1
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v36.l, v2.l, v33.h, 0xff bitop3:0xec
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v2.l, 8, v74.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v2.l, 8, v76.l
 ; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v66.l
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v30.h, v30.h, v34.l, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v31.h, v31.h, v33.l, 0xff bitop3:0xec
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.l, 8, v82.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.l, 8, v80.l
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v2.h, v2.h, v2.l, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v36.h
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v3.h, v3.h, v33.h, 0xff bitop3:0xec
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v62.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v63.l
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v2, v36, v2
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v36.l, v3.l, v34.h, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v36.h
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.h, 8, v61.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.h, 8, v62.l
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v3, v36, v3
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v36.l, v4.l, v33.h, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_3)
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v4.h, v4.h, v34.h, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v36.h
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v58.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v59.l
 ; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.h, 8, v65.l
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v4, v36, v4
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
@@ -200054,7 +200256,7 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v5.h, v5.h, v34.h, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v36.h
 ; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v57.l
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.h, 8, v47.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.h, 8, v56.l
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v5, v36, v5
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v36.l, v6.l, v33.h, 0xff bitop3:0xec
@@ -200130,14 +200332,14 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_3)
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v15.h, v15.h, v34.h, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v15.l, v36.h
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v80.l
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.h, 8, v71.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v83.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.h, 8, v82.l
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v15, v36, v15
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v36.l, v16.l, v33.h, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v16.h, v16.h, v34.h, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v16.l, v36.h
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v78.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v75.l
 ; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.h, 8, v69.l
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v16, v36, v16
@@ -200145,14 +200347,14 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_3)
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v17.h, v17.h, v34.h, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v17.l, v36.h
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v75.l
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.h, 8, v73.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v74.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.h, 8, v72.l
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v17, v36, v17
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v36.l, v18.l, v33.h, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v18.h, v18.h, v34.h, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v18.l, v36.h
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v63.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v61.l
 ; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.h, 8, v68.l
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v18, v36, v18
@@ -200161,13 +200363,13 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v19.h, v19.h, v34.h, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v19.l, v36.h
 ; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v60.l
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.h, 8, v59.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.h, 8, v58.l
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v19, v36, v19
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v36.l, v20.l, v33.h, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v20.h, v20.h, v34.h, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v20.l, v36.h
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v56.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v47.l
 ; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v34.h, 8, v52.l
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v20, v36, v20
@@ -200237,12 +200439,12 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v29, v36, v29
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v36.l, v30.l, v33.h, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v30.l, v36.h
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v83.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v81.l
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v30, v36, v30
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v36.l, v31.l, v33.h, 0xff bitop3:0xec
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v31.l, v36.h
-; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v81.l
+; GFX13-TRUE16-NEXT:    v_lshlrev_b16 v33.h, 8, v71.l
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX13-TRUE16-NEXT:    v_or_b32_e32 v31, v36, v31
 ; GFX13-TRUE16-NEXT:    v_bitop3_b16 v36.l, v32.l, v33.l, 0xff bitop3:0xec
@@ -200257,46 +200459,30 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[21:24], off offset:80
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[25:28], off offset:96
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 v0, v[29:32], off offset:112
-; GFX13-TRUE16-NEXT:    s_clause 0x26
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v110, off, s32 offset:12
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v109, off, s32 offset:16
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v108, off, s32 offset:20
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v107, off, s32 offset:24
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v106, off, s32 offset:28
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v105, off, s32 offset:32
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v104, off, s32 offset:36
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v95, off, s32 offset:40
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v94, off, s32 offset:44
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v93, off, s32 offset:48
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v92, off, s32 offset:52
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v91, off, s32 offset:56
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v90, off, s32 offset:60
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v89, off, s32 offset:64
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v88, off, s32 offset:68
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v79, off, s32 offset:72
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v78, off, s32 offset:76
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v77, off, s32 offset:80
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v76, off, s32 offset:84
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v75, off, s32 offset:88
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v74, off, s32 offset:92
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v73, off, s32 offset:96
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v72, off, s32 offset:100
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v63, off, s32 offset:104
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v62, off, s32 offset:108
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v61, off, s32 offset:112
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v60, off, s32 offset:116
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v59, off, s32 offset:120
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v58, off, s32 offset:124
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v57, off, s32 offset:128
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v56, off, s32 offset:132
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v47, off, s32 offset:136
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v46, off, s32 offset:140
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v45, off, s32 offset:144
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v44, off, s32 offset:148
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v43, off, s32 offset:152
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v42, off, s32 offset:156
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v41, off, s32 offset:160
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v40, off, s32 offset:164
+; GFX13-TRUE16-NEXT:    s_clause 0x16
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v78, off, s32 offset:12
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v77, off, s32 offset:16
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v76, off, s32 offset:20
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v75, off, s32 offset:24
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v74, off, s32 offset:28
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v73, off, s32 offset:32
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v72, off, s32 offset:36
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v63, off, s32 offset:40
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v62, off, s32 offset:44
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v61, off, s32 offset:48
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v60, off, s32 offset:52
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v59, off, s32 offset:56
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v58, off, s32 offset:60
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v57, off, s32 offset:64
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v56, off, s32 offset:68
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v47, off, s32 offset:72
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v46, off, s32 offset:76
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v45, off, s32 offset:80
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v44, off, s32 offset:84
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v43, off, s32 offset:88
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v42, off, s32 offset:92
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v41, off, s32 offset:96
+; GFX13-TRUE16-NEXT:    scratch_load_b32 v40, off, s32 offset:100
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -200307,7 +200493,7 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) {
 ; GFX13-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-FAKE16-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-FAKE16-NEXT:    s_clause 0x32
+; GFX13-FAKE16-NEXT:    s_clause 0x34
 ; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v40, s32 offset:200
 ; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v41, s32 offset:196
 ; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v42, s32 offset:192
@@ -200359,104 +200545,102 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) {
 ; GFX13-FAKE16-NEXT:    scratch_load_b32 v33, off, s32 offset:8
 ; GFX13-FAKE16-NEXT:    scratch_load_b32 v32, off, s32 offset:4
 ; GFX13-FAKE16-NEXT:    scratch_load_b32 v31, off, s32
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr46
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr43
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr69
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr44
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr93
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr42
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr127
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr126
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr68
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr124
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr90
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr123
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr122
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr110
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr65
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr120
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr78
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr109
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr107
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr108
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr64
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr105
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr63
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr95
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr40
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr41
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr51
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr94
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr56
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr92
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr91
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr88
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr48
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr89
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr79
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr76
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr73
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr75
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr74
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr72
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr58
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr60
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr59
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr80
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr47
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr81
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr77
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr45
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr82
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr83
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr71
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr62
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr125
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr84
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr85
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr121
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr61
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr111
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr86
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr87
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr106
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr57
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr104
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr96
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr97
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr119
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr118
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr98
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr117
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr99
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr116
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr100
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr101
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr115
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr114
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr102
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr103
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr113
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr112
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr53
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr50
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr66
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr54
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr38
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr37
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr36
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr35
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr34
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    scratch_store_b64 off, v[49:50], s32 offset:212
+; GFX13-FAKE16-NEXT:    ; meta instruction
+; GFX13-FAKE16-NEXT:    scratch_store_b64 off, v[49:50], s32 offset:204
 ; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x2
 ; GFX13-FAKE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v33
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr33
-; GFX13-FAKE16-NEXT:    ; kill: killed $vgpr33
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr33
-; GFX13-FAKE16-NEXT:    ; kill: killed $vgpr33
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr33
-; GFX13-FAKE16-NEXT:    ; kill: killed $vgpr33
-; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr33
-; GFX13-FAKE16-NEXT:    ; kill: killed $vgpr33
 ; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr33
 ; GFX13-FAKE16-NEXT:    ; kill: killed $vgpr33
 ; GFX13-FAKE16-NEXT:    ; implicit-def: $vgpr33
@@ -200469,593 +200653,433 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) {
 ; GFX13-FAKE16-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX13-FAKE16-NEXT:    s_cbranch_execz .LBB90_2
 ; GFX13-FAKE16-NEXT:  ; %bb.1: ; %cmp.false
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v59, 24, v16 :: v_dual_lshrrev_b32 v33, 16, v16
-; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v79, 24, v12
-; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x1
-; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v112, 24, v32
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v116, 24, v28 :: v_dual_lshrrev_b32 v75, 8, v14
-; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v33, s32 offset:212 ; 4-byte Folded Spill
-; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v33, 16, v14
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[64:65], 24, v[7:8]
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[50:51], 24, v[15:16]
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[53:54], 24, v[13:14]
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[65:66], 24, v[5:6]
-; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v33, s32 offset:220 ; 4-byte Folded Spill
-; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v33, 16, v12
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v33, 24, v16 :: v_dual_lshrrev_b32 v35, 16, v15
 ; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[68:69], 24, v[3:4]
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v60, 8, v16 :: v_dual_lshrrev_b32 v58, 16, v15
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v72, 8, v15 :: v_dual_lshrrev_b32 v74, 24, v14
-; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v33, s32 offset:228 ; 4-byte Folded Spill
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v33, 16, v32 :: v_dual_lshrrev_b32 v115, 8, v30
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v73, 16, v13 :: v_dual_lshrrev_b32 v76, 8, v13
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v89, 8, v12 :: v_dual_lshrrev_b32 v88, 16, v11
-; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v33, s32 offset:204 ; 4-byte Folded Spill
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v33, 16, v30 :: v_dual_lshrrev_b32 v91, 8, v11
-; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v92, 24, v10
-; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v119, 8, v26
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v56, 16, v10 :: v_dual_lshrrev_b32 v94, 8, v10
-; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v33, s32 offset:208 ; 4-byte Folded Spill
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v33, 16, v28 :: v_dual_lshrrev_b32 v41, 16, v9
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v40, 8, v9 :: v_dual_lshrrev_b32 v95, 24, v8
-; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v63, 16, v8
-; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v33, s32 offset:216 ; 4-byte Folded Spill
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v33, 16, v26 :: v_dual_lshrrev_b32 v105, 8, v8
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v108, 16, v7 :: v_dual_lshrrev_b32 v107, 8, v7
-; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v109, 24, v6
-; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v33, s32 offset:224 ; 4-byte Folded Spill
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[69:70], 24, v[1:2]
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v83, 8, v17 :: v_dual_lshrrev_b32 v87, 24, v14
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-FAKE16-NEXT:    v_mov_b32_e32 v70, v35
 ; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[33:34], 24, v[31:32]
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[34:35], 24, v[29:30]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[35:36], 24, v[31:32]
+; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v33, s32 offset:220 ; 4-byte Folded Spill
+; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v33, 8, v16
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[64:65], 24, v[7:8]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[65:66], 24, v[5:6]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[50:51], 24, v[15:16]
+; GFX13-FAKE16-NEXT:    scratch_store_b64 off, v[35:36], s32 offset:204 ; 8-byte Folded Spill
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[35:36], 24, v[29:30]
+; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v33, s32 offset:224 ; 4-byte Folded Spill
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v33, 8, v15 :: v_dual_lshrrev_b32 v84, 16, v14
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[53:54], 24, v[13:14]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[66:67], 24, v[17:18]
+; GFX13-FAKE16-NEXT:    scratch_store_b64 off, v[35:36], s32 offset:212 ; 8-byte Folded Spill
 ; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[35:36], 24, v[27:28]
 ; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[36:37], 24, v[25:26]
 ; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[37:38], 24, v[23:24]
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v78, 16, v6 :: v_dual_lshrrev_b32 v120, 8, v6
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v110, 16, v5 :: v_dual_lshrrev_b32 v122, 8, v5
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v123, 24, v4 :: v_dual_lshrrev_b32 v90, 16, v4
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v124, 8, v4 :: v_dual_lshrrev_b32 v126, 16, v3
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v127, 8, v3 :: v_dual_lshrrev_b32 v42, 24, v2
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v93, 16, v2 :: v_dual_lshrrev_b32 v44, 8, v2
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v43, 16, v1 :: v_dual_lshrrev_b32 v46, 8, v1
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v113, 8, v32 :: v_dual_lshrrev_b32 v103, 16, v31
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v102, 8, v31 :: v_dual_lshrrev_b32 v114, 24, v30
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v101, 16, v29 :: v_dual_lshrrev_b32 v100, 8, v29
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v99, 8, v28 :: v_dual_lshrrev_b32 v117, 16, v27
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v98, 8, v27 :: v_dual_lshrrev_b32 v118, 24, v26
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v97, 16, v25 :: v_dual_lshrrev_b32 v96, 8, v25
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v104, 24, v24 :: v_dual_lshrrev_b32 v57, 16, v24
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v106, 8, v24 :: v_dual_lshrrev_b32 v87, 16, v23
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v86, 8, v23 :: v_dual_lshrrev_b32 v111, 24, v22
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v61, 16, v22 :: v_dual_lshrrev_b32 v121, 8, v22
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v85, 16, v21 :: v_dual_lshrrev_b32 v84, 8, v21
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v125, 24, v20 :: v_dual_lshrrev_b32 v62, 16, v20
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v71, 8, v20 :: v_dual_lshrrev_b32 v83, 16, v19
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v82, 8, v19 :: v_dual_lshrrev_b32 v45, 24, v18
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v77, 16, v18 :: v_dual_lshrrev_b32 v81, 8, v18
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v47, 16, v17 :: v_dual_lshrrev_b32 v80, 8, v17
+; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v33, s32 offset:228 ; 4-byte Folded Spill
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v99, 8, v14 :: v_dual_lshrrev_b32 v96, 16, v13
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v102, 8, v13 :: v_dual_lshrrev_b32 v115, 24, v12
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v114, 16, v12 :: v_dual_lshrrev_b32 v119, 8, v12
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v116, 16, v11 :: v_dual_lshrrev_b32 v41, 8, v11
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v43, 24, v10 :: v_dual_lshrrev_b32 v40, 16, v10
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v57, 8, v10 :: v_dual_lshrrev_b32 v46, 16, v9
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v60, 8, v9 :: v_dual_lshrrev_b32 v73, 24, v8
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v62, 16, v8 :: v_dual_lshrrev_b32 v75, 8, v8
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v78, 16, v7 :: v_dual_lshrrev_b32 v77, 8, v7
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v89, 24, v6 :: v_dual_lshrrev_b32 v90, 16, v6
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v92, 8, v6 :: v_dual_lshrrev_b32 v91, 16, v5
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v104, 8, v5 :: v_dual_lshrrev_b32 v107, 24, v4
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v109, 16, v4 :: v_dual_lshrrev_b32 v110, 8, v4
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v120, 16, v3 :: v_dual_lshrrev_b32 v121, 8, v3
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v124, 24, v2 :: v_dual_lshrrev_b32 v125, 16, v2
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v80, 8, v2 :: v_dual_lshrrev_b32 v71, 16, v1
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v82, 8, v1 :: v_dual_lshrrev_b32 v86, 24, v32
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v85, 16, v32 :: v_dual_lshrrev_b32 v98, 8, v32
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v97, 16, v31 :: v_dual_lshrrev_b32 v101, 8, v31
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v103, 24, v30 :: v_dual_lshrrev_b32 v100, 16, v30
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v113, 8, v30 :: v_dual_lshrrev_b32 v112, 16, v29
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v118, 8, v29 :: v_dual_lshrrev_b32 v42, 24, v28
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v117, 16, v28 :: v_dual_lshrrev_b32 v44, 8, v28
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v45, 16, v27 :: v_dual_lshrrev_b32 v56, 8, v27
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v59, 24, v26 :: v_dual_lshrrev_b32 v47, 16, v26
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v61, 8, v26 :: v_dual_lshrrev_b32 v58, 16, v25
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v63, 8, v25 :: v_dual_lshrrev_b32 v76, 24, v24
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v72, 16, v24 :: v_dual_lshrrev_b32 v79, 8, v24
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v74, 16, v23 :: v_dual_lshrrev_b32 v88, 8, v23
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v94, 24, v22 :: v_dual_lshrrev_b32 v93, 16, v22
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v105, 8, v22 :: v_dual_lshrrev_b32 v95, 16, v21
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v108, 8, v21 :: v_dual_lshrrev_b32 v111, 24, v20
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v106, 16, v20 :: v_dual_lshrrev_b32 v123, 8, v20
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v122, 16, v19 :: v_dual_lshrrev_b32 v127, 8, v19
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v33, 24, v18 :: v_dual_lshrrev_b32 v126, 16, v18
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v81, 8, v18 :: v_dual_lshrrev_b32 v34, 16, v17
 ; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[48:49], 24, v[11:12]
 ; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[51:52], 24, v[9:10]
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[69:70], 24, v[1:2]
 ; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[38:39], 24, v[21:22]
 ; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[54:55], 24, v[19:20]
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[66:67], 24, v[17:18]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v67, 16, v16
 ; GFX13-FAKE16-NEXT:  .LBB90_2: ; %Flow
 ; GFX13-FAKE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-FAKE16-NEXT:    s_cbranch_execz .LBB90_4
 ; GFX13-FAKE16-NEXT:  ; %bb.3: ; %cmp.true
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v33, 0xffff0000, v18
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v34, 0xffff0000, v17
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v35, 0xffff0000, v19
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v36, 0xffff0000, v21
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v37, 0xffff0000, v23
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_lshlrev_b32 v18, 16, v18
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v38, 0xffff0000, v25
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v39, 0xffff0000, v27
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v48, 0xffff0000, v29
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v18, 0x40c00000, v18 :: v_dual_lshlrev_b32 v17, 16, v17
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v34, 0x40c00000, v34
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x1
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v32, 0x40c0, v32 op_sel_hi:[0,1]
 ; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v49, 0xffff0000, v31
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v50, 0xffff0000, v1
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v17, 0x40c00000, v17
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v51, 0xffff0000, v3
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v52, 0xffff0000, v5
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v53, 0xffff0000, v7
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v54, 0xffff0000, v9
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v80, v17, v34
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v34, 0xffff0000, v20
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v20, 16, v20 :: v_dual_lshlrev_b32 v19, 16, v19
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v55, 0xffff0000, v11
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v35, 0x40c00000, v35 :: v_dual_add_f32 v34, 0x40c00000, v34
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v20, 0x40c00000, v20 :: v_dual_add_f32 v19, 0x40c00000, v19
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v64, 0xffff0000, v13
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v65, 0xffff0000, v15
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v81, v18, v33
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v83, v20, v34
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v82, v19, v35
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v35, 0xffff0000, v22
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v62, v34, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v77, v33, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v20, v20, s0
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v35, 0x40c00000, v35 :: v_dual_add_f32 v22, 0x40c00000, v22
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v36, 0x40c00000, v36 :: v_dual_lshlrev_b32 v21, 16, v21
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v19, v19, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v61, v35, s0
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v85, v22, v35
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v21, 0x40c00000, v21
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v22, v22, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v18, v18, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v17, v17, s0
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v84, v21, v36
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v36, 0xffff0000, v24
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v21, v21, s0
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v37, 0x40c00000, v37
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v23, 0x40c00000, v23 :: v_dual_add_f32 v36, 0x40c00000, v36
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v24, 0x40c00000, v24 :: v_dual_lshrrev_b32 v111, 24, v85
-; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v121, 8, v85
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v86, v23, v37
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v37, 0xffff0000, v26
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v87, v24, v36
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v57, v36, s0
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v24, v24, s0
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v37, 0x40c00000, v37
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v23, v23, s0
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v104, 24, v87 :: v_dual_lshrrev_b32 v106, 8, v87
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v26, 0x40c00000, v26 :: v_dual_lshlrev_b32 v25, 16, v25
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v38, 0x40c00000, v38 :: v_dual_lshrrev_b32 v125, 24, v83
-; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v71, 8, v83
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v97, v26, v37
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v25, 0x40c00000, v25
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v37, v37, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v26, v26, s0
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v39, 0x40c00000, v39
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v96, v25, v38
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v38, 0xffff0000, v28
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v27, 0x40c00000, v27 :: v_dual_lshlrev_b32 v28, 16, v28
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v25, v25, s0
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v38, 0x40c00000, v38 :: v_dual_lshlrev_b32 v29, 16, v29
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v28, 0x40c00000, v28
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v98, v27, v39
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v39, 0xffff0000, v30
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v48, 0x40c00000, v48 :: v_dual_add_f32 v29, 0x40c00000, v29
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v99, v28, v38
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v39, 0x40c00000, v39 :: v_dual_add_f32 v30, 0x40c00000, v30
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v38, v38, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v28, v28, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v27, v27, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v100, v29, v48
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v48, 0xffff0000, v32
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v32, 16, v32 :: v_dual_lshlrev_b32 v31, 16, v31
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v101, v30, v39
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v39, v39, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v30, v30, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v29, v29, s0
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v48, 0x40c00000, v48 :: v_dual_add_f32 v49, 0x40c00000, v49
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_add_f32 v31, 0x40c00000, v31
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v50, 0x40c00000, v50 :: v_dual_lshlrev_b32 v1, 16, v1
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v103, v32, v48
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v102, v31, v49
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v49, 0xffff0000, v2
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v1, 0x40c00000, v1 :: v_dual_lshlrev_b32 v2, 16, v2
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v48, v48, s0
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[33:34], 24, v[102:103]
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v49, 0x40c00000, v49 :: v_dual_add_f32 v2, 0x40c00000, v2
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v112, v1, v50
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v50, 0xffff0000, v4
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[34:35], 24, v[100:101]
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v113, v2, v49
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[35:36], 24, v[98:99]
-; GFX13-FAKE16-NEXT:    s_clause 0x3
-; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v48, s32 offset:204
-; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v37, s32 offset:224
-; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v38, s32 offset:216
-; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v39, s32 offset:208
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v50, 0x40c00000, v50 :: v_dual_add_f32 v51, 0x40c00000, v51
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v4, 0x40c00000, v4 :: v_dual_add_f32 v3, 0x40c00000, v3
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v52, 0x40c00000, v52 :: v_dual_lshlrev_b32 v5, 16, v5
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v53, 0x40c00000, v53
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_4) | instid1(VALU_DEP_3)
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v114, v3, v51
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v51, 0xffff0000, v6
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v5, 0x40c00000, v5 :: v_dual_lshlrev_b32 v6, 16, v6
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v7, 0x40c00000, v7
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v51, 0x40c00000, v51 :: v_dual_add_f32 v6, 0x40c00000, v6
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v116, v5, v52
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v52, 0xffff0000, v8
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v118, v7, v53
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v53, 0xffff0000, v10
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v52, 0x40c00000, v52
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v8, 0x40c00000, v8
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v54, 0x40c00000, v54 :: v_dual_add_f32 v9, 0x40c00000, v9
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v53, 0x40c00000, v53 :: v_dual_add_f32 v10, 0x40c00000, v10
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v55, 0x40c00000, v55
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v40, v9, v54
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v54, 0xffff0000, v12
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v11, 0x40c00000, v11 :: v_dual_lshlrev_b32 v12, 16, v12
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v64, 0x40c00000, v64 :: v_dual_lshlrev_b32 v13, 16, v13
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v54, 0x40c00000, v54
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v12, 0x40c00000, v12
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v42, v11, v55
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v55, 0xffff0000, v14
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v13, 0x40c00000, v13 :: v_dual_lshlrev_b32 v14, 16, v14
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v65, 0x40c00000, v65
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v55, 0x40c00000, v55 :: v_dual_add_f32 v14, 0x40c00000, v14
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v44, v13, v64
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v64, 0xffff0000, v16
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v15, 0x40c00000, v15 :: v_dual_lshlrev_b32 v16, 16, v16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v119, v8, v52
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v43, v12, v54
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v64, 0x40c00000, v64
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v16, 0x40c00000, v16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v45, v14, v55
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v55, v55, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v54, v54, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v115, v4, v50
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v47, v16, v64
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v64, v64, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v117, v6, v51
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v46, v15, v65
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v41, v10, v53
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[36:37], 24, v[96:97]
-; GFX13-FAKE16-NEXT:    s_clause 0x2
-; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v64, s32 offset:212
-; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v55, s32 offset:220
-; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v54, s32 offset:228
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[64:65], 24, v[118:119]
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v56, v53, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v78, v51, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v90, v50, s0
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[50:51], 24, v[46:47]
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[53:54], 24, v[44:45]
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[68:69], 24, v[114:115]
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v63, v52, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v93, v49, s0
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[48:49], 24, v[42:43]
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[69:70], 24, v[112:113]
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v16, v16, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v15, v15, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v14, v14, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v13, v13, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v12, v12, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v11, v11, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v10, v10, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v9, v9, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v8, v8, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v7, v7, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v6, v6, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v5, v5, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v4, v4, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v3, v3, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v2, v2, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v1, v1, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v32, v32, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v31, v31, s0
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v59, 24, v47 :: v_dual_lshrrev_b32 v60, 8, v47
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v58, 16, v46 :: v_dual_lshrrev_b32 v72, 8, v46
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v74, 24, v45 :: v_dual_lshrrev_b32 v75, 8, v45
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v73, 16, v44 :: v_dual_lshrrev_b32 v76, 8, v44
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v79, 24, v43 :: v_dual_lshrrev_b32 v89, 8, v43
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v88, 16, v42 :: v_dual_lshrrev_b32 v91, 8, v42
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v92, 24, v41 :: v_dual_lshrrev_b32 v94, 8, v41
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v95, 24, v119 :: v_dual_lshrrev_b32 v105, 8, v119
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[65:66], 24, v[116:117]
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[37:38], 24, v[86:87]
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[51:52], 24, v[40:41]
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[38:39], 24, v[84:85]
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[54:55], 24, v[82:83]
-; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[66:67], 24, v[80:81]
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v41, 16, v40 :: v_dual_lshrrev_b32 v40, 8, v40
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v108, 16, v118 :: v_dual_lshrrev_b32 v107, 8, v118
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v109, 24, v117 :: v_dual_lshrrev_b32 v120, 8, v117
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v110, 16, v116 :: v_dual_lshrrev_b32 v122, 8, v116
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v123, 24, v115 :: v_dual_lshrrev_b32 v124, 8, v115
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v126, 16, v114 :: v_dual_lshrrev_b32 v127, 8, v114
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v42, 24, v113 :: v_dual_lshrrev_b32 v44, 8, v113
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v43, 16, v112 :: v_dual_lshrrev_b32 v46, 8, v112
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v112, 24, v103 :: v_dual_lshrrev_b32 v113, 8, v103
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v103, 16, v102 :: v_dual_lshrrev_b32 v102, 8, v102
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v114, 24, v101 :: v_dual_lshrrev_b32 v115, 8, v101
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v101, 16, v100 :: v_dual_lshrrev_b32 v100, 8, v100
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v116, 24, v99 :: v_dual_lshrrev_b32 v99, 8, v99
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v117, 16, v98 :: v_dual_lshrrev_b32 v98, 8, v98
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v118, 24, v97 :: v_dual_lshrrev_b32 v119, 8, v97
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v97, 16, v96 :: v_dual_lshrrev_b32 v96, 8, v96
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v87, 16, v86 :: v_dual_lshrrev_b32 v86, 8, v86
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v85, 16, v84 :: v_dual_lshrrev_b32 v84, 8, v84
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v83, 16, v82 :: v_dual_lshrrev_b32 v82, 8, v82
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v45, 24, v81 :: v_dual_lshrrev_b32 v81, 8, v81
-; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v47, 16, v80 :: v_dual_lshrrev_b32 v80, 8, v80
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v31, 0x40c0, v31 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v30, 0x40c0, v30 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v29, 0x40c0, v29 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v16, 0x40c0, v16 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v8, 0x40c0, v8 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[33:34], 24, v[31:32]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v7, 0x40c0, v7 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v6, 0x40c0, v6 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v5, 0x40c0, v5 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v18, 0x40c0, v18 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v17, 0x40c0, v17 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    scratch_store_b64 off, v[33:34], s32 offset:204 ; 8-byte Folded Spill
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[33:34], 24, v[29:30]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[64:65], 24, v[7:8]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v4, 0x40c0, v4 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v3, 0x40c0, v3 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[65:66], 24, v[5:6]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v2, 0x40c0, v2 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    scratch_store_b64 off, v[33:34], s32 offset:212 ; 8-byte Folded Spill
+; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v33, 24, v16
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v1, 0x40c0, v1 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[66:67], 24, v[17:18]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v15, 0x40c0, v15 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v67, 16, v16
+; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v33, s32 offset:220 ; 4-byte Folded Spill
+; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v33, 8, v16
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v28, 0x40c0, v28 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v27, 0x40c0, v27 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v26, 0x40c0, v26 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v25, 0x40c0, v25 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v24, 0x40c0, v24 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v23, 0x40c0, v23 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v14, 0x40c0, v14 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v13, 0x40c0, v13 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[68:69], 24, v[3:4]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v20, 0x40c0, v20 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v19, 0x40c0, v19 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v22, 0x40c0, v22 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v21, 0x40c0, v21 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v10, 0x40c0, v10 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v9, 0x40c0, v9 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v12, 0x40c0, v12 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_pk_add_bf16 v11, 0x40c0, v11 op_sel_hi:[0,1]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[69:70], 24, v[1:2]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v70, 16, v15
+; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v33, s32 offset:224 ; 4-byte Folded Spill
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v33, 8, v15 :: v_dual_lshrrev_b32 v87, 24, v14
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[35:36], 24, v[27:28]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[36:37], 24, v[25:26]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[50:51], 24, v[15:16]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[53:54], 24, v[13:14]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[37:38], 24, v[23:24]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[48:49], 24, v[11:12]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[51:52], 24, v[9:10]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[38:39], 24, v[21:22]
+; GFX13-FAKE16-NEXT:    v_lshrrev_b64 v[54:55], 24, v[19:20]
+; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v33, s32 offset:228 ; 4-byte Folded Spill
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v84, 16, v14 :: v_dual_lshrrev_b32 v99, 8, v14
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v96, 16, v13 :: v_dual_lshrrev_b32 v102, 8, v13
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v115, 24, v12 :: v_dual_lshrrev_b32 v114, 16, v12
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v119, 8, v12 :: v_dual_lshrrev_b32 v116, 16, v11
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v41, 8, v11 :: v_dual_lshrrev_b32 v43, 24, v10
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v40, 16, v10 :: v_dual_lshrrev_b32 v57, 8, v10
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v46, 16, v9 :: v_dual_lshrrev_b32 v60, 8, v9
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v73, 24, v8 :: v_dual_lshrrev_b32 v62, 16, v8
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v75, 8, v8 :: v_dual_lshrrev_b32 v78, 16, v7
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v77, 8, v7 :: v_dual_lshrrev_b32 v89, 24, v6
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v90, 16, v6 :: v_dual_lshrrev_b32 v92, 8, v6
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v91, 16, v5 :: v_dual_lshrrev_b32 v104, 8, v5
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v107, 24, v4 :: v_dual_lshrrev_b32 v109, 16, v4
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v110, 8, v4 :: v_dual_lshrrev_b32 v120, 16, v3
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v121, 8, v3 :: v_dual_lshrrev_b32 v124, 24, v2
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v125, 16, v2 :: v_dual_lshrrev_b32 v80, 8, v2
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v71, 16, v1 :: v_dual_lshrrev_b32 v82, 8, v1
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v86, 24, v32 :: v_dual_lshrrev_b32 v85, 16, v32
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v98, 8, v32 :: v_dual_lshrrev_b32 v97, 16, v31
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v101, 8, v31 :: v_dual_lshrrev_b32 v103, 24, v30
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v100, 16, v30 :: v_dual_lshrrev_b32 v113, 8, v30
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v112, 16, v29 :: v_dual_lshrrev_b32 v118, 8, v29
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v42, 24, v28 :: v_dual_lshrrev_b32 v117, 16, v28
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v44, 8, v28 :: v_dual_lshrrev_b32 v45, 16, v27
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v56, 8, v27 :: v_dual_lshrrev_b32 v59, 24, v26
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v47, 16, v26 :: v_dual_lshrrev_b32 v61, 8, v26
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v58, 16, v25 :: v_dual_lshrrev_b32 v63, 8, v25
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v76, 24, v24 :: v_dual_lshrrev_b32 v72, 16, v24
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v79, 8, v24 :: v_dual_lshrrev_b32 v74, 16, v23
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v88, 8, v23 :: v_dual_lshrrev_b32 v94, 24, v22
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v93, 16, v22 :: v_dual_lshrrev_b32 v105, 8, v22
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v95, 16, v21 :: v_dual_lshrrev_b32 v108, 8, v21
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v111, 24, v20 :: v_dual_lshrrev_b32 v106, 16, v20
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v123, 8, v20 :: v_dual_lshrrev_b32 v122, 16, v19
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v127, 8, v19 :: v_dual_lshrrev_b32 v33, 24, v18
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v126, 16, v18 :: v_dual_lshrrev_b32 v81, 8, v18
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v34, 16, v17 :: v_dual_lshrrev_b32 v83, 8, v17
 ; GFX13-FAKE16-NEXT:  .LBB90_4: ; %end
 ; GFX13-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v39, 8, v46
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v49, 8, v44
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v52, 8, v95
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v39, 8, v82
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v49, 8, v80
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v52, 8, v73
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v51, 8, v51
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v55, 8, v94
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v55, 8, v57
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v1, v1, v39, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v2, v2, v49, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v39, 8, v69
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v49, 8, v42
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v51, v41, v51, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v49, 8, v124
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v51, v46, v51, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v39, v43, v39, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v49, v93, v49, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v39, v71, v39, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v49, v125, v49, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v10, v10, v55, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v48, 8, v48
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v55, 8, v79
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v55, 8, v115
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v39, 16, v39 :: v_dual_lshlrev_b32 v49, 16, v49
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v10, 0xffff, v10
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v48, v88, v48, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v48, v116, v48, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v1, v1, v39
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v2, v2, v49
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v39, 8, v68
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v49, 8, v127
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v39, v126, v39, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v49, 8, v121
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v39, v120, v39, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v3, v3, v49, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v49, 8, v120
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v49, 8, v92
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v39, 16, v39
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v6, v6, v49, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v49, 8, v109
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v49, 8, v89
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v3, v3, v39
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v39, 8, v124
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v49, v78, v49, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v39, 8, v110
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v49, v90, v49, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v6, 0xffff, v6
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v4, v4, v39, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v39, 8, v123
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v39, 8, v107
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v49, 16, v49
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v39, v90, v39, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v39, v109, v39, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v6, v6, v49
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v49, 8, v107
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v49, 8, v77
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v39, 16, v39
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v7, v7, v49, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v49, 8, v105
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v49, 8, v75
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v4, v4, v39
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v39, 8, v122
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v39, 8, v104
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v8, v8, v49, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v49, v63, v52, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v52, 8, v40
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v49, v62, v52, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v52, 8, v60
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v5, v5, v39, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v39, 8, v65
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v8, 0xffff, v8
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v49, 16, v49
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v9, v9, v52, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v5, 0xffff, v5
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v39, v110, v39, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v52, 8, v89
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v39, v91, v39, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v52, 8, v119
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v8, v8, v49
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v49, 8, v92
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v49, 8, v43
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v9, 0xffff, v9
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v39, 16, v39
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v12, v12, v52, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v49, v56, v49, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v49, v40, v49, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v5, v5, v39
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v39, 8, v64
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v12, 0xffff, v12
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v49, 16, v49
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v39, v108, v39, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v39, v78, v39, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v39, 16, v39
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v7, v7, v39
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v39, 16, v51
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v51, 8, v91
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v11, v11, v51, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    scratch_load_b32 v51, off, s32 offset:228 th:TH_LOAD_LU ; 4-byte Folded Reload
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v51, 8, v41
 ; GFX13-FAKE16-NEXT:    s_clause 0x1
 ; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[1:4], off
 ; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[5:8], off offset:16
-; GFX13-FAKE16-NEXT:    v_or_b32_e32 v2, v10, v49
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v8, 8, v87
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v6, 8, v53
-; GFX13-FAKE16-NEXT:    scratch_load_b32 v10, off, s32 offset:220 th:TH_LOAD_LU ; 4-byte Folded Reload
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v8, 8, v74
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v11, 0xffff, v11
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v5, 8, v76
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v6, v73, v6, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_or_b32_e32 v1, v9, v39
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v9, 8, v72
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v7, 8, v75
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v5, v13, v5, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v13, 8, v80
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v9, v15, v9, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    scratch_load_b32 v15, off, s32 offset:212 th:TH_LOAD_LU ; 4-byte Folded Reload
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v7, v14, v7, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v14, 8, v66
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v5, 0xffff, v5
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v9, 0xffff, v9
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v13, v17, v13, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v14, v47, v14, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_or_b32_e32 v5, v5, v6
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v17, 8, v38
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v13, 0xffff, v13
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v17, v85, v17, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
-; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x2
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v51, v51, v55, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v11, v11, v51, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v51, v114, v55, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v48, 16, v48
-; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x1
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v8, v10, v8, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v8, v84, v8, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_or_b32_e32 v2, v10, v49
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v11, 0xffff, v11
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v51, 16, v51
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v10, 8, v50
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v8, 16, v8 :: v_dual_bitop2_b32 v4, v12, v51 bitop3:0x54
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v12, 8, v59
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v10, v58, v10, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v6, v96, v6, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_or_b32_e32 v1, v9, v39
+; GFX13-FAKE16-NEXT:    scratch_load_b32 v9, off, s32 offset:228 th:TH_LOAD_LU ; 4-byte Folded Reload
+; GFX13-FAKE16-NEXT:    v_or_b32_e32 v4, v12, v51
+; GFX13-FAKE16-NEXT:    scratch_load_b32 v12, off, s32 offset:220 th:TH_LOAD_LU ; 4-byte Folded Reload
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v10, v70, v10, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v3, v11, v48
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v11, 8, v60
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v14, 16, v14 :: v_dual_bitop2_b32 v6, v7, v8 bitop3:0x54
-; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v12, v15, v12, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    scratch_load_b32 v11, off, s32 offset:224 th:TH_LOAD_LU ; 4-byte Folded Reload
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v5, 8, v102
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v7, 8, v99
+; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v6, 16, v6 :: v_dual_lshlrev_b32 v8, 16, v8
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v11, v16, v11, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v15, 8, v125
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v16, 8, v84
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v12, 16, v12 :: v_dual_bitop2_b32 v7, v9, v10 bitop3:0x54
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v5, v13, v5, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v7, v14, v7, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v13, 8, v83
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v14, 8, v66
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v5, 0xffff, v5
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v7, 0xffff, v7
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v13, v17, v13, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v14, v34, v14, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v17, 8, v38
+; GFX13-FAKE16-NEXT:    v_or_b32_e32 v5, v5, v6
+; GFX13-FAKE16-NEXT:    v_or_b32_e32 v6, v7, v8
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v13, 0xffff, v13
+; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v17, v95, v17, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x2
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v9, 8, v9
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x1
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v12, 8, v12
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v11, 8, v11
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v9, v15, v9, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v12, v67, v12, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v15, 8, v111
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v11, v16, v11, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v9, 0xffff, v9
+; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v15, v106, v15, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v16, 8, v108
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v11, 0xffff, v11
+; GFX13-FAKE16-NEXT:    v_or_b32_e32 v7, v9, v10
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v10, 8, v81
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v15, v62, v15, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v9, v13, v14
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v13, 8, v54
-; GFX13-FAKE16-NEXT:    v_or_b32_e32 v8, v11, v12
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v12, 8, v82
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v11, 8, v45
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v14, 8, v71
+; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v15, 16, v15 :: v_dual_bitop2_b32 v8, v11, v12 bitop3:0x54
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v12, 8, v127
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v11, 8, v33
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v14, 8, v123
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v10, v18, v10, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v18, 8, v121
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v18, 8, v105
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v12, v19, v12, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v19, 8, v111
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v11, v77, v11, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v13, v83, v13, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v19, 8, v94
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v11, v126, v11, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v13, v122, v13, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v14, v20, v14, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v16, v21, v16, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v18, v22, v18, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v19, v61, v19, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v19, v93, v19, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v10, 0xffff, v10
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v12, 0xffff, v12
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v14, 0xffff, v14
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v16, 0xffff, v16
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v18, 0xffff, v18
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v20, 8, v36
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v22, 8, v59
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v10, v10, v11
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v11, v12, v13
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v12, v14, v15
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v16, v21, v16, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_or_b32_e32 v14, v18, v19
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v19, 8, v96
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v20, 8, v36
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v15, 8, v86
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v16, 0xffff, v16
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v18, 8, v104
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v19, v25, v19, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    scratch_load_b32 v25, off, s32 offset:224 th:TH_LOAD_LU ; 4-byte Folded Reload
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v20, v97, v20, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v15, 8, v88
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v20, v58, v20, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v13, v16, v17
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v17, 8, v106
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v16, 8, v37
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v17, 8, v79
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v22, v47, v22, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_or_b32_e32 v14, v18, v19
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v18, 8, v76
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v19, 8, v63
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v15, v23, v15, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v23, 8, v98
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v18, v57, v18, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v16, v74, v16, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v17, v24, v17, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v18, v72, v18, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v19, v25, v19, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v23, 8, v56
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v24, 8, v35
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v16, v87, v16, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v23, v27, v23, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v15, 0xffff, v15
+; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v17, 0xffff, v17
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v24, v117, v24, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v16, 16, v16 :: v_dual_lshlrev_b32 v18, 16, v18
+; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v19, 0xffff, v19
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v22, 8, v118
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v23, v27, v23, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v24, v45, v24, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v23, 0xffff, v23
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v27, 8, v33
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v15, v15, v16
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v16, v17, v18
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v23, 0xffff, v23
+; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v17, v19, v20
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v21, 8, v119
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v27, v103, v27, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_or_b32_e32 v19, v23, v24
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v24, 8, v115
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v20, 8, v99
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v21, v26, v21, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v23, 8, v34
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v26, 8, v102
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v24, v30, v24, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v20, 8, v44
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v21, 8, v61
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v22, 16, v22 :: v_dual_bitop2_b32 v19, v23, v24 bitop3:0x54
+; GFX13-FAKE16-NEXT:    scratch_load_b64 v[23:24], off, s32 offset:212 th:TH_LOAD_LU ; 8-byte Folded Reload
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v20, v28, v20, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    scratch_load_b64 v[27:28], off, s32 offset:204 th:TH_LOAD_LU ; 8-byte Folded Reload
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v21, v26, v21, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v25, 8, v103
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x1
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v24, 8, v113
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v26, 8, v101
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v28, 8, v98
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v21, 0xffff, v21
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v28, 8, v113
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v23, v101, v23, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v25, v100, v25, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v24, v30, v24, 0xff bitop3:0xec
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v26, v31, v26, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v28, v32, v28, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v25, 16, v25 :: v_dual_bitop2_b32 v18, v21, v22 bitop3:0x54
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v22, 8, v118
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v21, 8, v42
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v20, 0xffff, v20
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v24, 0xffff, v24
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v28, v32, v28, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v26, 0xffff, v26
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
-; GFX13-FAKE16-NEXT:    scratch_load_b32 v30, off, s32 offset:208 th:TH_LOAD_LU ; 4-byte Folded Reload
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v28, 0xffff, v28
-; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x1
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v22, v25, v22, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    scratch_load_b32 v25, off, s32 offset:216 th:TH_LOAD_LU ; 4-byte Folded Reload
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX13-FAKE16-NEXT:    v_or_b32_e32 v18, v21, v22
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v21, 8, v116
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v22, 8, v100
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v22, v29, v22, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v29, 8, v112
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_2)
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v29, 8, v86
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v21, v117, v21, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v28, 0xffff, v28
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v22, 0xffff, v22
-; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v21, v25, v21, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v25, 8, v114
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v29, v85, v29, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v21, 16, v21
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_2)
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v25, v30, v25, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    scratch_load_b32 v30, off, s32 offset:204 th:TH_LOAD_LU ; 4-byte Folded Reload
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v20, v20, v21
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v25, 16, v25 :: v_dual_bitop2_b32 v21, v22, v23 bitop3:0x54
-; GFX13-FAKE16-NEXT:    v_or_b32_e32 v23, v26, v27
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v23, 8, v23
+; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v27, 8, v27
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v23, v112, v23, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    v_bitop3_b16 v27, v97, v27, 0xff bitop3:0xec
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v23, 16, v23 :: v_dual_lshlrev_b32 v29, 16, v29
+; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX13-FAKE16-NEXT:    v_or_b32_e32 v21, v22, v23
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v22, v24, v25
-; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-FAKE16-NEXT:    v_bitop3_b16 v29, v30, v29, 0xff bitop3:0xec
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
+; GFX13-FAKE16-NEXT:    v_or_b32_e32 v23, v26, v27
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v24, v28, v29
 ; GFX13-FAKE16-NEXT:    s_clause 0x5
 ; GFX13-FAKE16-NEXT:    scratch_store_b128 v0, v[1:4], off offset:32
@@ -208003,7 +208027,7 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX13-NEXT:    v_readfirstlane_b32 s5, v14
 ; GFX13-NEXT:    v_writelane_b32 v127, s37, 5
 ; GFX13-NEXT:    v_writelane_b32 v126, s101, 5
-; GFX13-NEXT:    s_mov_b32 s98, 0
+; GFX13-NEXT:    s_mov_b32 s99, 0
 ; GFX13-NEXT:    s_and_b32 s42, vcc_lo, exec_lo
 ; GFX13-NEXT:    s_clause 0x2b
 ; GFX13-NEXT:    scratch_store_b32 off, v40, s32 offset:172
@@ -208085,423 +208109,257 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX13-NEXT:  ; %bb.1: ; %cmp.false
 ; GFX13-NEXT:    s_lshr_b32 s42, s27, 16
 ; GFX13-NEXT:    s_lshr_b64 s[74:75], s[0:1], 24
-; GFX13-NEXT:    v_writelane_b32 v124, s42, 9
+; GFX13-NEXT:    v_writelane_b32 v125, s42, 8
 ; GFX13-NEXT:    s_lshr_b32 s42, s27, 8
 ; GFX13-NEXT:    s_lshr_b32 s43, s27, 24
-; GFX13-NEXT:    v_writelane_b32 v125, s42, 8
-; GFX13-NEXT:    s_lshr_b32 s42, s26, 16
 ; GFX13-NEXT:    s_lshr_b32 s34, s5, 24
-; GFX13-NEXT:    s_lshr_b32 s99, s5, 16
-; GFX13-NEXT:    s_lshr_b32 s36, s5, 8
+; GFX13-NEXT:    s_lshr_b32 s35, s5, 16
 ; GFX13-NEXT:    v_writelane_b32 v125, s42, 7
-; GFX13-NEXT:    s_lshr_b32 s42, s26, 8
-; GFX13-NEXT:    s_lshr_b32 s35, s4, 16
-; GFX13-NEXT:    s_lshr_b32 s37, s4, 8
-; GFX13-NEXT:    s_lshr_b32 s38, s7, 24
+; GFX13-NEXT:    s_lshr_b32 s42, s26, 16
+; GFX13-NEXT:    s_lshr_b32 s37, s5, 8
+; GFX13-NEXT:    s_lshr_b32 s36, s4, 16
+; GFX13-NEXT:    s_lshr_b32 s38, s4, 8
 ; GFX13-NEXT:    v_writelane_b32 v125, s42, 6
-; GFX13-NEXT:    s_lshr_b32 s42, s25, 24
-; GFX13-NEXT:    s_lshr_b32 s100, s7, 16
-; GFX13-NEXT:    s_lshr_b32 s48, s7, 8
-; GFX13-NEXT:    s_lshr_b32 s39, s6, 16
+; GFX13-NEXT:    s_lshr_b32 s42, s26, 8
+; GFX13-NEXT:    s_lshr_b32 s39, s7, 24
+; GFX13-NEXT:    s_lshr_b32 s48, s7, 16
+; GFX13-NEXT:    s_lshr_b32 s50, s7, 8
 ; GFX13-NEXT:    v_writelane_b32 v125, s42, 5
-; GFX13-NEXT:    s_lshr_b32 s42, s25, 16
-; GFX13-NEXT:    s_lshr_b32 s49, s6, 8
-; GFX13-NEXT:    v_writelane_b32 v124, s42, 8
-; GFX13-NEXT:    s_lshr_b32 s42, s25, 8
-; GFX13-NEXT:    s_lshr_b32 s50, s9, 24
+; GFX13-NEXT:    s_lshr_b32 s42, s25, 24
+; GFX13-NEXT:    s_lshr_b32 s49, s6, 16
+; GFX13-NEXT:    s_lshr_b32 s51, s6, 8
+; GFX13-NEXT:    s_lshr_b32 s52, s9, 24
 ; GFX13-NEXT:    v_writelane_b32 v125, s42, 4
-; GFX13-NEXT:    s_lshr_b32 s42, s24, 16
-; GFX13-NEXT:    s_lshr_b32 s101, s9, 16
-; GFX13-NEXT:    s_lshr_b32 s52, s9, 8
-; GFX13-NEXT:    s_lshr_b32 s51, s8, 16
+; GFX13-NEXT:    s_lshr_b32 s42, s25, 16
+; GFX13-NEXT:    s_lshr_b32 s53, s9, 16
+; GFX13-NEXT:    s_lshr_b32 s55, s9, 8
+; GFX13-NEXT:    s_lshr_b32 s54, s8, 16
 ; GFX13-NEXT:    v_writelane_b32 v125, s42, 3
-; GFX13-NEXT:    s_lshr_b32 s42, s24, 8
-; GFX13-NEXT:    s_lshr_b32 s53, s8, 8
-; GFX13-NEXT:    s_lshr_b32 s54, s11, 24
-; GFX13-NEXT:    s_lshr_b32 s102, s11, 16
+; GFX13-NEXT:    s_lshr_b32 s42, s25, 8
+; GFX13-NEXT:    s_lshr_b32 s64, s8, 8
+; GFX13-NEXT:    s_lshr_b32 s65, s11, 24
+; GFX13-NEXT:    s_lshr_b32 s66, s11, 16
 ; GFX13-NEXT:    v_writelane_b32 v125, s42, 2
-; GFX13-NEXT:    s_lshr_b32 s42, s23, 24
-; GFX13-NEXT:    s_lshr_b32 s64, s11, 8
-; GFX13-NEXT:    s_lshr_b32 s55, s10, 16
-; GFX13-NEXT:    s_lshr_b32 s65, s10, 8
+; GFX13-NEXT:    s_lshr_b32 s42, s24, 16
+; GFX13-NEXT:    s_lshr_b32 s68, s11, 8
+; GFX13-NEXT:    s_lshr_b32 s67, s10, 16
+; GFX13-NEXT:    s_lshr_b32 s69, s10, 8
 ; GFX13-NEXT:    v_writelane_b32 v125, s42, 1
-; GFX13-NEXT:    s_lshr_b32 s42, s23, 16
-; GFX13-NEXT:    s_lshr_b32 s66, s13, 24
-; GFX13-NEXT:    v_writelane_b32 v124, s42, 7
-; GFX13-NEXT:    s_lshr_b32 s42, s23, 8
-; GFX13-NEXT:    s_lshr_b32 s103, s13, 16
+; GFX13-NEXT:    s_lshr_b32 s42, s24, 8
+; GFX13-NEXT:    s_lshr_b32 s70, s13, 24
+; GFX13-NEXT:    s_lshr_b32 s71, s13, 16
+; GFX13-NEXT:    s_lshr_b32 s81, s13, 8
 ; GFX13-NEXT:    v_writelane_b32 v125, s42, 0
-; GFX13-NEXT:    s_lshr_b32 s42, s22, 16
-; GFX13-NEXT:    s_lshr_b32 s68, s13, 8
+; GFX13-NEXT:    s_lshr_b32 s42, s23, 24
+; GFX13-NEXT:    s_lshr_b32 s80, s12, 16
 ; GFX13-NEXT:    v_writelane_b32 v124, s42, 31
-; GFX13-NEXT:    s_lshr_b32 s42, s22, 8
-; GFX13-NEXT:    s_lshr_b32 s67, s12, 16
-; GFX13-NEXT:    s_lshr_b32 s69, s12, 8
-; GFX13-NEXT:    s_lshr_b32 s70, s15, 24
+; GFX13-NEXT:    s_lshr_b32 s42, s23, 16
+; GFX13-NEXT:    s_lshr_b32 s82, s12, 8
+; GFX13-NEXT:    s_lshr_b32 s83, s15, 24
+; GFX13-NEXT:    s_lshr_b32 s84, s15, 16
 ; GFX13-NEXT:    v_writelane_b32 v124, s42, 30
-; GFX13-NEXT:    s_lshr_b32 s42, s21, 24
-; GFX13-NEXT:    s_lshr_b32 s104, s15, 16
-; GFX13-NEXT:    s_lshr_b32 s80, s15, 8
-; GFX13-NEXT:    s_lshr_b32 s71, s14, 16
+; GFX13-NEXT:    s_lshr_b32 s42, s23, 8
+; GFX13-NEXT:    s_lshr_b32 s86, s15, 8
+; GFX13-NEXT:    s_lshr_b32 s85, s14, 16
+; GFX13-NEXT:    s_lshr_b32 s87, s14, 8
 ; GFX13-NEXT:    v_writelane_b32 v124, s42, 29
-; GFX13-NEXT:    s_lshr_b32 s42, s21, 16
-; GFX13-NEXT:    s_lshr_b32 s81, s14, 8
-; GFX13-NEXT:    s_lshr_b32 s82, s41, 24
-; GFX13-NEXT:    s_lshr_b32 vcc_hi, s41, 16
-; GFX13-NEXT:    v_writelane_b32 v124, s42, 6
-; GFX13-NEXT:    s_lshr_b32 s42, s21, 8
-; GFX13-NEXT:    s_lshr_b32 s84, s41, 8
-; GFX13-NEXT:    s_lshr_b32 s83, s40, 16
-; GFX13-NEXT:    s_lshr_b32 s85, s40, 8
+; GFX13-NEXT:    s_lshr_b32 s42, s22, 16
+; GFX13-NEXT:    s_lshr_b32 s96, s41, 24
+; GFX13-NEXT:    s_lshr_b32 s97, s41, 16
+; GFX13-NEXT:    s_lshr_b32 s100, s41, 8
 ; GFX13-NEXT:    v_writelane_b32 v124, s42, 28
-; GFX13-NEXT:    s_lshr_b32 s42, s20, 16
-; GFX13-NEXT:    s_lshr_b32 s86, s29, 24
-; GFX13-NEXT:    s_lshr_b32 s96, s29, 8
-; GFX13-NEXT:    s_lshr_b32 s87, s28, 16
+; GFX13-NEXT:    s_lshr_b32 s42, s22, 8
+; GFX13-NEXT:    s_lshr_b32 s98, s40, 16
+; GFX13-NEXT:    s_lshr_b32 s101, s40, 8
+; GFX13-NEXT:    s_lshr_b32 s102, s29, 24
 ; GFX13-NEXT:    v_writelane_b32 v124, s42, 27
-; GFX13-NEXT:    s_lshr_b32 s42, s20, 8
-; GFX13-NEXT:    s_lshr_b32 s97, s28, 8
+; GFX13-NEXT:    s_lshr_b32 s42, s21, 24
+; GFX13-NEXT:    s_lshr_b32 s103, s29, 16
+; GFX13-NEXT:    s_lshr_b32 vcc_hi, s29, 8
+; GFX13-NEXT:    s_lshr_b32 s104, s28, 16
+; GFX13-NEXT:    v_writelane_b32 v124, s42, 26
+; GFX13-NEXT:    s_lshr_b32 s42, s21, 16
 ; GFX13-NEXT:    s_lshr_b64 s[72:73], s[26:27], 24
 ; GFX13-NEXT:    s_lshr_b64 s[62:63], s[24:25], 24
-; GFX13-NEXT:    v_writelane_b32 v124, s42, 26
-; GFX13-NEXT:    s_lshr_b32 s42, s19, 24
 ; GFX13-NEXT:    s_lshr_b64 s[60:61], s[22:23], 24
+; GFX13-NEXT:    v_writelane_b32 v124, s42, 25
+; GFX13-NEXT:    s_lshr_b32 s42, s21, 8
 ; GFX13-NEXT:    s_lshr_b64 s[58:59], s[20:21], 24
 ; GFX13-NEXT:    s_lshr_b64 s[56:57], s[18:19], 24
-; GFX13-NEXT:    v_writelane_b32 v124, s42, 25
-; GFX13-NEXT:    s_lshr_b32 s42, s19, 16
 ; GFX13-NEXT:    s_lshr_b64 s[46:47], s[16:17], 24
+; GFX13-NEXT:    v_writelane_b32 v124, s42, 24
+; GFX13-NEXT:    s_lshr_b32 s42, s20, 16
 ; GFX13-NEXT:    s_lshr_b64 s[44:45], s[2:3], 24
 ; GFX13-NEXT:    s_lshr_b64 s[76:77], s[4:5], 24
-; GFX13-NEXT:    v_writelane_b32 v124, s42, 5
-; GFX13-NEXT:    s_lshr_b32 s42, s19, 8
 ; GFX13-NEXT:    s_lshr_b64 s[78:79], s[6:7], 24
+; GFX13-NEXT:    v_writelane_b32 v124, s42, 23
+; GFX13-NEXT:    s_lshr_b32 s42, s20, 8
 ; GFX13-NEXT:    s_lshr_b64 s[88:89], s[8:9], 24
 ; GFX13-NEXT:    s_lshr_b64 s[90:91], s[10:11], 24
-; GFX13-NEXT:    v_writelane_b32 v124, s42, 24
-; GFX13-NEXT:    s_lshr_b32 s42, s18, 16
 ; GFX13-NEXT:    s_lshr_b64 s[92:93], s[12:13], 24
+; GFX13-NEXT:    v_writelane_b32 v124, s42, 22
+; GFX13-NEXT:    s_lshr_b32 s42, s19, 24
 ; GFX13-NEXT:    s_lshr_b64 s[94:95], s[14:15], 24
 ; GFX13-NEXT:    s_lshr_b64 s[30:31], s[40:41], 24
-; GFX13-NEXT:    v_writelane_b32 v124, s42, 23
-; GFX13-NEXT:    s_lshr_b32 s42, s18, 8
-; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    v_writelane_b32 v124, s42, 22
-; GFX13-NEXT:    s_lshr_b32 s42, s17, 24
 ; GFX13-NEXT:    v_writelane_b32 v124, s42, 21
-; GFX13-NEXT:    s_lshr_b32 s42, s17, 16
+; GFX13-NEXT:    s_lshr_b32 s42, s19, 16
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    v_writelane_b32 v124, s42, 4
-; GFX13-NEXT:    s_lshr_b32 s42, s17, 8
 ; GFX13-NEXT:    v_writelane_b32 v124, s42, 20
-; GFX13-NEXT:    s_lshr_b32 s42, s16, 16
-; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    s_lshr_b32 s42, s19, 8
 ; GFX13-NEXT:    v_writelane_b32 v124, s42, 19
-; GFX13-NEXT:    s_lshr_b32 s42, s16, 8
-; GFX13-NEXT:    v_writelane_b32 v124, s42, 18
-; GFX13-NEXT:    s_lshr_b32 s42, s3, 24
+; GFX13-NEXT:    s_lshr_b32 s42, s18, 16
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    v_writelane_b32 v124, s42, 18
+; GFX13-NEXT:    s_lshr_b32 s42, s18, 8
 ; GFX13-NEXT:    v_writelane_b32 v124, s42, 17
-; GFX13-NEXT:    s_lshr_b32 s42, s3, 16
-; GFX13-NEXT:    v_writelane_b32 v124, s42, 3
-; GFX13-NEXT:    s_lshr_b32 s42, s3, 8
+; GFX13-NEXT:    s_lshr_b32 s42, s17, 24
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX13-NEXT:    v_writelane_b32 v124, s42, 16
-; GFX13-NEXT:    s_lshr_b32 s42, s2, 16
+; GFX13-NEXT:    s_lshr_b32 s42, s17, 16
 ; GFX13-NEXT:    v_writelane_b32 v124, s42, 15
-; GFX13-NEXT:    s_lshr_b32 s42, s2, 8
+; GFX13-NEXT:    s_lshr_b32 s42, s17, 8
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX13-NEXT:    v_writelane_b32 v124, s42, 14
-; GFX13-NEXT:    s_lshr_b32 s42, s1, 24
+; GFX13-NEXT:    s_lshr_b32 s42, s16, 16
 ; GFX13-NEXT:    v_writelane_b32 v124, s42, 13
-; GFX13-NEXT:    s_lshr_b32 s42, s1, 16
+; GFX13-NEXT:    s_lshr_b32 s42, s16, 8
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX13-NEXT:    v_writelane_b32 v124, s42, 2
-; GFX13-NEXT:    s_lshr_b32 s42, s1, 8
 ; GFX13-NEXT:    v_writelane_b32 v124, s42, 12
-; GFX13-NEXT:    s_lshr_b32 s42, s0, 16
-; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    s_lshr_b32 s42, s3, 24
 ; GFX13-NEXT:    v_writelane_b32 v124, s42, 11
-; GFX13-NEXT:    s_lshr_b32 s42, s0, 8
+; GFX13-NEXT:    s_lshr_b32 s42, s3, 16
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX13-NEXT:    v_writelane_b32 v124, s42, 10
-; GFX13-NEXT:    s_lshr_b32 s42, s29, 16
+; GFX13-NEXT:    s_lshr_b32 s42, s3, 8
+; GFX13-NEXT:    v_writelane_b32 v124, s42, 9
+; GFX13-NEXT:    s_lshr_b32 s42, s2, 16
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    v_writelane_b32 v124, s42, 8
+; GFX13-NEXT:    s_lshr_b32 s42, s2, 8
+; GFX13-NEXT:    v_writelane_b32 v124, s42, 7
+; GFX13-NEXT:    s_lshr_b32 s42, s1, 24
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    v_writelane_b32 v124, s42, 6
+; GFX13-NEXT:    s_lshr_b32 s42, s1, 16
+; GFX13-NEXT:    v_writelane_b32 v124, s42, 5
+; GFX13-NEXT:    s_lshr_b32 s42, s1, 8
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    v_writelane_b32 v124, s42, 4
+; GFX13-NEXT:    s_lshr_b32 s42, s0, 16
+; GFX13-NEXT:    v_writelane_b32 v124, s42, 3
+; GFX13-NEXT:    s_lshr_b32 s42, s0, 8
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_writelane_b32 v124, s42, 2
+; GFX13-NEXT:    s_lshr_b32 s42, s28, 8
 ; GFX13-NEXT:    v_writelane_b32 v124, s74, 0
 ; GFX13-NEXT:    v_writelane_b32 v124, s75, 1
 ; GFX13-NEXT:    s_lshr_b64 s[74:75], s[28:29], 24
-; GFX13-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s98
+; GFX13-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s99
 ; GFX13-NEXT:    s_cbranch_vccnz .LBB91_4
 ; GFX13-NEXT:  .LBB91_2: ; %cmp.true
-; GFX13-NEXT:    s_and_b32 s42, s29, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s43, s29, 16
-; GFX13-NEXT:    s_add_f32 s29, s42, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s42, s43, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s43, s28, 0xffff0000
-; GFX13-NEXT:    s_and_b32 s63, s18, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s18, s18, 16
-; GFX13-NEXT:    s_add_f32 s44, s43, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s43, s41, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s45, s41, 16
-; GFX13-NEXT:    s_add_f32 s63, s63, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s18, s18, 0x40c00000
-; GFX13-NEXT:    s_lshl_b32 s28, s28, 16
-; GFX13-NEXT:    s_add_f32 s41, s43, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s43, s45, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s45, s40, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s40, s40, 16
-; GFX13-NEXT:    s_add_f32 s28, s28, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s45, s45, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s40, s40, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v50, s18, s63
-; GFX13-NEXT:    s_and_b32 s63, s20, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s20, s20, 16
-; GFX13-NEXT:    s_and_b32 s73, s22, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s22, s22, 16
-; GFX13-NEXT:    s_add_f32 s63, s63, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s20, s20, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s73, s73, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s22, s22, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v20, s28, s44
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v22, s40, s45
-; GFX13-NEXT:    s_and_b32 s44, s15, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s45, s15, 16
-; GFX13-NEXT:    s_add_f32 s15, s44, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s44, s45, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s45, s14, 0xffff0000
-; GFX13-NEXT:    s_and_b32 s74, s27, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s27, s27, 16
-; GFX13-NEXT:    s_and_b32 s75, s26, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s26, s26, 16
-; GFX13-NEXT:    s_and_b32 s59, s4, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s4, s4, 16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v68, s20, s63
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v81, s22, s73
-; GFX13-NEXT:    s_and_b32 s63, s25, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s25, s25, 16
-; GFX13-NEXT:    s_and_b32 s73, s24, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s24, s24, 16
-; GFX13-NEXT:    s_add_f32 s46, s45, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s45, s13, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s47, s13, 16
-; GFX13-NEXT:    s_and_b32 s58, s5, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s5, s5, 16
-; GFX13-NEXT:    s_add_f32 s74, s74, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s27, s27, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s75, s75, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s26, s26, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s59, s59, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s63, s63, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s25, s25, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s73, s73, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s24, s24, 0x40c00000
-; GFX13-NEXT:    s_lshl_b32 s14, s14, 16
-; GFX13-NEXT:    s_add_f32 s13, s45, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s45, s47, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s47, s12, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s12, s12, 16
-; GFX13-NEXT:    s_add_f32 s58, s58, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s14, s14, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s47, s47, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s12, s12, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v87, s27, s74
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v86, s26, s75
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v34, s4, s59
-; GFX13-NEXT:    s_and_b32 s59, s0, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s0, s0, 16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v85, s25, s63
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v84, s24, s73
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v35, s5, s58
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v24, s14, s46
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v26, s12, s47
-; GFX13-NEXT:    s_and_b32 s46, s11, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s47, s11, 16
-; GFX13-NEXT:    v_lshrrev_b64 v[13:14], 24, v[86:87]
-; GFX13-NEXT:    s_add_f32 s11, s46, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s46, s47, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s47, s10, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s10, s10, 16
-; GFX13-NEXT:    s_and_b32 s61, s2, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s2, s2, 16
-; GFX13-NEXT:    v_lshrrev_b64 v[14:15], 24, v[84:85]
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v1, s58, s0
-; GFX13-NEXT:    v_lshrrev_b32_e32 v15, 24, v35
-; GFX13-NEXT:    s_add_f32 s56, s47, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s10, s10, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s61, s61, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s47, s9, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s57, s9, 16
-; GFX13-NEXT:    s_add_f32 s9, s47, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s47, s57, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s57, s8, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s8, s8, 16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v21, s42, s29
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v28, s10, s56
-; GFX13-NEXT:    s_and_b32 s56, s7, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s7, s7, 16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v36, s2, s61
-; GFX13-NEXT:    s_and_b32 s61, s16, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s16, s16, 16
+; GFX13-NEXT:    v_pk_add_bf16 v29, 0x40c0, s25 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v28, 0x40c0, s24 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v25, 0x40c0, s27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v24, 0x40c0, s26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v20, 0x40c0, s29 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v19, 0x40c0, s28 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v6, 0x40c0, s5 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v5, 0x40c0, s4 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v2, 0x40c0, s23 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v1, 0x40c0, s22 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v4, 0x40c0, s21 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v3, 0x40c0, s20 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v35, 0x40c0, s19 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v34, 0x40c0, s18 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v37, 0x40c0, s17 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v36, 0x40c0, s16 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v49, 0x40c0, s3 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v48, 0x40c0, s2 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_lshrrev_b64 v[50:51], 24, v[24:25]
+; GFX13-NEXT:    v_lshrrev_b64 v[64:65], 24, v[28:29]
+; GFX13-NEXT:    v_pk_add_bf16 v54, 0x40c0, s1 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v53, 0x40c0, s0 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_lshrrev_b64 v[65:66], 24, v[1:2]
+; GFX13-NEXT:    v_lshrrev_b64 v[21:22], 24, v[5:6]
+; GFX13-NEXT:    v_lshrrev_b64 v[51:52], 24, v[19:20]
+; GFX13-NEXT:    v_pk_add_bf16 v8, 0x40c0, s7 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_lshrrev_b64 v[66:67], 24, v[3:4]
+; GFX13-NEXT:    v_lshrrev_b32_e32 v52, 24, v6
+; GFX13-NEXT:    v_lshrrev_b64 v[67:68], 24, v[34:35]
+; GFX13-NEXT:    v_lshrrev_b64 v[68:69], 24, v[36:37]
+; GFX13-NEXT:    v_lshrrev_b64 v[69:70], 24, v[48:49]
+; GFX13-NEXT:    v_lshrrev_b64 v[70:71], 24, v[53:54]
+; GFX13-NEXT:    v_lshrrev_b32_e32 v71, 16, v8
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    scratch_store_b32 off, v1, s32 offset:184
-; GFX13-NEXT:    scratch_store_b32 off, v15, s32 offset:200
-; GFX13-NEXT:    v_lshrrev_b32_e32 v15, 8, v35
-; GFX13-NEXT:    s_add_f32 s57, s57, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s8, s8, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v1, s5, s0
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s61, s61, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s16, s16, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s59, s59, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v30, s8, s57
-; GFX13-NEXT:    s_and_b32 s57, s6, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s6, s6, 16
-; GFX13-NEXT:    s_and_b32 s72, s23, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s23, s23, 16
-; GFX13-NEXT:    scratch_store_b32 off, v15, s32 offset:204 ; 4-byte Folded Spill
-; GFX13-NEXT:    v_lshrrev_b64 v[15:16], 24, v[20:21]
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v38, s16, s61
-; GFX13-NEXT:    s_and_b32 s61, s21, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s21, s21, 16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v16, s7, s0
-; GFX13-NEXT:    scratch_store_b32 off, v1, s32 offset:176 ; 4-byte Folded Spill
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v1, s4, s0
-; GFX13-NEXT:    s_add_f32 s56, s56, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s62, s19, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s19, s19, 16
-; GFX13-NEXT:    s_add_f32 s72, s72, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s23, s23, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v48, s0, s59
-; GFX13-NEXT:    s_and_b32 s59, s17, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s17, s17, 16
-; GFX13-NEXT:    s_add_f32 s61, s61, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s21, s21, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s62, s62, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s19, s19, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s59, s59, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s17, s17, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s57, s57, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v82, s23, s72
-; GFX13-NEXT:    scratch_store_b32 off, v16, s32 offset:192 ; 4-byte Folded Spill
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v16, s6, s0
-; GFX13-NEXT:    scratch_store_b32 off, v1, s32 offset:180 ; 4-byte Folded Spill
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v1, s56, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v69, s21, s61
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v51, s19, s62
-; GFX13-NEXT:    s_and_b32 s60, s3, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s3, s3, 16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v39, s17, s59
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v32, s6, s57
-; GFX13-NEXT:    s_and_b32 s57, s1, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v33, s7, s56
-; GFX13-NEXT:    s_add_f32 s60, s60, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    scratch_store_b32 off, v1, s32 offset:188 ; 4-byte Folded Spill
-; GFX13-NEXT:    v_lshrrev_b64 v[1:2], 24, v[81:82]
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v31, s47, s9
-; GFX13-NEXT:    s_add_f32 s57, s57, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    v_lshrrev_b64 v[2:3], 24, v[68:69]
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v29, s46, s11
-; GFX13-NEXT:    v_lshrrev_b64 v[3:4], 24, v[50:51]
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v27, s45, s13
-; GFX13-NEXT:    v_lshrrev_b64 v[4:5], 24, v[38:39]
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v25, s44, s15
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v37, s3, s60
-; GFX13-NEXT:    v_lshrrev_b64 v[5:6], 24, v[34:35]
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v23, s43, s41
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v49, s1, s57
-; GFX13-NEXT:    v_lshrrev_b64 v[6:7], 24, v[32:33]
-; GFX13-NEXT:    v_lshrrev_b64 v[7:8], 24, v[30:31]
-; GFX13-NEXT:    v_lshrrev_b64 v[8:9], 24, v[28:29]
-; GFX13-NEXT:    v_lshrrev_b64 v[9:10], 24, v[26:27]
-; GFX13-NEXT:    v_lshrrev_b64 v[17:18], 24, v[36:37]
-; GFX13-NEXT:    v_lshrrev_b64 v[10:11], 24, v[24:25]
-; GFX13-NEXT:    v_lshrrev_b64 v[18:19], 24, v[48:49]
-; GFX13-NEXT:    v_lshrrev_b64 v[11:12], 24, v[22:23]
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v66, s74, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v55, s27, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v67, s26, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v64, s63, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v53, s25, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v54, s24, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v83, s72, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v70, s23, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v80, s22, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v99, s61, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v100, s21, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v113, s20, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v42, s62, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v117, s19, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v119, s18, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v56, s59, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v44, s17, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v47, s16, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v61, s60, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v57, s3, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v60, s2, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v73, s57, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v62, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v63, s0, s0
-; GFX13-NEXT:    v_dual_lshrrev_b32 v72, 24, v87 :: v_dual_lshrrev_b32 v74, 8, v87
-; GFX13-NEXT:    v_dual_lshrrev_b32 v75, 16, v86 :: v_dual_lshrrev_b32 v76, 8, v86
-; GFX13-NEXT:    v_dual_lshrrev_b32 v77, 24, v85 :: v_dual_lshrrev_b32 v78, 8, v85
-; GFX13-NEXT:    v_dual_lshrrev_b32 v79, 16, v84 :: v_dual_lshrrev_b32 v88, 8, v84
-; GFX13-NEXT:    v_dual_lshrrev_b32 v89, 24, v82 :: v_dual_lshrrev_b32 v90, 8, v82
-; GFX13-NEXT:    v_dual_lshrrev_b32 v91, 16, v81 :: v_dual_lshrrev_b32 v92, 8, v81
-; GFX13-NEXT:    v_dual_lshrrev_b32 v93, 24, v69 :: v_dual_lshrrev_b32 v94, 8, v69
-; GFX13-NEXT:    v_dual_lshrrev_b32 v104, 16, v68 :: v_dual_lshrrev_b32 v95, 8, v68
-; GFX13-NEXT:    v_dual_lshrrev_b32 v105, 24, v51 :: v_dual_lshrrev_b32 v106, 8, v51
-; GFX13-NEXT:    v_dual_lshrrev_b32 v107, 16, v50 :: v_dual_lshrrev_b32 v108, 8, v50
-; GFX13-NEXT:    v_dual_lshrrev_b32 v109, 24, v39 :: v_dual_lshrrev_b32 v110, 8, v39
-; GFX13-NEXT:    v_dual_lshrrev_b32 v111, 16, v38 :: v_dual_lshrrev_b32 v120, 8, v38
-; GFX13-NEXT:    v_dual_lshrrev_b32 v121, 24, v37 :: v_dual_lshrrev_b32 v122, 8, v37
-; GFX13-NEXT:    v_dual_lshrrev_b32 v123, 16, v36 :: v_dual_lshrrev_b32 v36, 8, v36
-; GFX13-NEXT:    v_dual_lshrrev_b32 v37, 24, v49 :: v_dual_lshrrev_b32 v38, 8, v49
-; GFX13-NEXT:    v_dual_lshrrev_b32 v39, 16, v48 :: v_dual_lshrrev_b32 v12, 8, v48
-; GFX13-NEXT:    v_dual_lshrrev_b32 v49, 16, v34 :: v_dual_lshrrev_b32 v34, 8, v34
-; GFX13-NEXT:    v_dual_lshrrev_b32 v50, 24, v33 :: v_dual_lshrrev_b32 v33, 8, v33
-; GFX13-NEXT:    v_dual_lshrrev_b32 v51, 16, v32 :: v_dual_lshrrev_b32 v32, 8, v32
-; GFX13-NEXT:    v_dual_lshrrev_b32 v52, 24, v31 :: v_dual_lshrrev_b32 v31, 8, v31
-; GFX13-NEXT:    v_dual_lshrrev_b32 v65, 16, v30 :: v_dual_lshrrev_b32 v30, 8, v30
-; GFX13-NEXT:    v_dual_lshrrev_b32 v68, 24, v29 :: v_dual_lshrrev_b32 v69, 8, v29
-; GFX13-NEXT:    v_dual_lshrrev_b32 v71, 16, v28 :: v_dual_lshrrev_b32 v81, 8, v28
-; GFX13-NEXT:    v_dual_lshrrev_b32 v85, 24, v27 :: v_dual_lshrrev_b32 v87, 8, v27
-; GFX13-NEXT:    v_dual_lshrrev_b32 v96, 16, v26 :: v_dual_lshrrev_b32 v98, 8, v26
-; GFX13-NEXT:    v_dual_lshrrev_b32 v102, 24, v25 :: v_dual_lshrrev_b32 v112, 8, v25
-; GFX13-NEXT:    v_dual_lshrrev_b32 v114, 16, v24 :: v_dual_lshrrev_b32 v115, 8, v24
-; GFX13-NEXT:    v_dual_lshrrev_b32 v118, 24, v23 :: v_dual_lshrrev_b32 v40, 8, v23
-; GFX13-NEXT:    v_dual_lshrrev_b32 v41, 16, v22 :: v_dual_lshrrev_b32 v43, 8, v22
-; GFX13-NEXT:    v_dual_lshrrev_b32 v45, 24, v21 :: v_dual_lshrrev_b32 v46, 8, v21
-; GFX13-NEXT:    v_dual_lshrrev_b32 v58, 16, v20 :: v_dual_lshrrev_b32 v59, 8, v20
-; GFX13-NEXT:    scratch_store_b32 off, v16, s32 offset:196 ; 4-byte Folded Spill
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v35, s9, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v16, s47, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v48, s8, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v24, s11, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v22, s46, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v23, s10, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v28, s13, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v25, s45, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v26, s12, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v84, s15, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v27, s44, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v29, s14, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v101, s41, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v82, s43, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v86, s40, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v116, s29, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v97, s42, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v103, s28, s0
+; GFX13-NEXT:    scratch_store_b64 off, v[21:22], s32 offset:184
+; GFX13-NEXT:    scratch_store_b32 off, v52, s32 offset:176
+; GFX13-NEXT:    v_dual_lshrrev_b32 v52, 16, v6 :: v_dual_lshrrev_b32 v80, 8, v8
+; GFX13-NEXT:    v_pk_add_bf16 v7, 0x40c0, s6 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v12, 0x40c0, s11 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v11, 0x40c0, s10 op_sel_hi:[0,1]
+; GFX13-NEXT:    scratch_store_b32 off, v52, s32 offset:180 ; 4-byte Folded Spill
+; GFX13-NEXT:    v_dual_lshrrev_b32 v52, 8, v6 :: v_dual_lshrrev_b32 v81, 16, v7
+; GFX13-NEXT:    v_pk_add_bf16 v14, 0x40c0, s13 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v13, 0x40c0, s12 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v18, 0x40c0, s41 op_sel_hi:[0,1]
+; GFX13-NEXT:    scratch_store_b32 off, v52, s32 offset:192 ; 4-byte Folded Spill
+; GFX13-NEXT:    v_dual_lshrrev_b32 v52, 16, v5 :: v_dual_lshrrev_b32 v82, 8, v7
+; GFX13-NEXT:    v_pk_add_bf16 v17, 0x40c0, s40 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v16, 0x40c0, s15 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v15, 0x40c0, s14 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v10, 0x40c0, s9 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v9, 0x40c0, s8 op_sel_hi:[0,1]
+; GFX13-NEXT:    scratch_store_b32 off, v52, s32 offset:196 ; 4-byte Folded Spill
+; GFX13-NEXT:    v_lshrrev_b32_e32 v52, 8, v5
+; GFX13-NEXT:    v_lshrrev_b64 v[30:31], 24, v[11:12]
+; GFX13-NEXT:    v_lshrrev_b64 v[31:32], 24, v[13:14]
+; GFX13-NEXT:    v_lshrrev_b64 v[22:23], 24, v[7:8]
+; GFX13-NEXT:    v_lshrrev_b64 v[26:27], 24, v[9:10]
+; GFX13-NEXT:    v_lshrrev_b64 v[32:33], 24, v[15:16]
+; GFX13-NEXT:    v_lshrrev_b64 v[38:39], 24, v[17:18]
+; GFX13-NEXT:    v_dual_lshrrev_b32 v57, 24, v25 :: v_dual_lshrrev_b32 v58, 16, v25
+; GFX13-NEXT:    v_dual_lshrrev_b32 v59, 8, v25 :: v_dual_lshrrev_b32 v60, 16, v24
+; GFX13-NEXT:    v_dual_lshrrev_b32 v61, 8, v24 :: v_dual_lshrrev_b32 v63, 24, v29
+; GFX13-NEXT:    v_dual_lshrrev_b32 v62, 16, v29 :: v_dual_lshrrev_b32 v72, 8, v29
+; GFX13-NEXT:    v_dual_lshrrev_b32 v73, 16, v28 :: v_dual_lshrrev_b32 v74, 8, v28
+; GFX13-NEXT:    v_dual_lshrrev_b32 v76, 24, v2 :: v_dual_lshrrev_b32 v75, 16, v2
+; GFX13-NEXT:    v_dual_lshrrev_b32 v77, 8, v2 :: v_dual_lshrrev_b32 v78, 16, v1
+; GFX13-NEXT:    v_dual_lshrrev_b32 v79, 8, v1 :: v_dual_lshrrev_b32 v89, 24, v4
+; GFX13-NEXT:    v_dual_lshrrev_b32 v88, 16, v4 :: v_dual_lshrrev_b32 v90, 8, v4
+; GFX13-NEXT:    v_dual_lshrrev_b32 v92, 16, v3 :: v_dual_lshrrev_b32 v91, 8, v3
+; GFX13-NEXT:    v_dual_lshrrev_b32 v95, 24, v35 :: v_dual_lshrrev_b32 v94, 16, v35
+; GFX13-NEXT:    v_dual_lshrrev_b32 v93, 8, v35 :: v_dual_lshrrev_b32 v104, 16, v34
+; GFX13-NEXT:    v_dual_lshrrev_b32 v105, 8, v34 :: v_dual_lshrrev_b32 v107, 24, v37
+; GFX13-NEXT:    v_dual_lshrrev_b32 v106, 16, v37 :: v_dual_lshrrev_b32 v108, 8, v37
+; GFX13-NEXT:    v_dual_lshrrev_b32 v109, 16, v36 :: v_dual_lshrrev_b32 v110, 8, v36
+; GFX13-NEXT:    v_dual_lshrrev_b32 v120, 24, v49 :: v_dual_lshrrev_b32 v111, 16, v49
+; GFX13-NEXT:    v_dual_lshrrev_b32 v121, 8, v49 :: v_dual_lshrrev_b32 v122, 16, v48
+; GFX13-NEXT:    v_dual_lshrrev_b32 v123, 8, v48 :: v_dual_lshrrev_b32 v27, 24, v54
+; GFX13-NEXT:    v_dual_lshrrev_b32 v23, 16, v54 :: v_dual_lshrrev_b32 v21, 8, v54
+; GFX13-NEXT:    v_dual_lshrrev_b32 v33, 16, v53 :: v_dual_lshrrev_b32 v39, 8, v53
+; GFX13-NEXT:    v_lshrrev_b32_e32 v83, 24, v10
+; GFX13-NEXT:    scratch_store_b32 off, v52, s32 offset:200 ; 4-byte Folded Spill
+; GFX13-NEXT:    v_dual_lshrrev_b32 v52, 24, v8 :: v_dual_lshrrev_b32 v84, 16, v10
+; GFX13-NEXT:    v_dual_lshrrev_b32 v85, 8, v10 :: v_dual_lshrrev_b32 v86, 16, v9
+; GFX13-NEXT:    v_dual_lshrrev_b32 v87, 8, v9 :: v_dual_lshrrev_b32 v96, 24, v12
+; GFX13-NEXT:    v_dual_lshrrev_b32 v97, 16, v12 :: v_dual_lshrrev_b32 v98, 8, v12
+; GFX13-NEXT:    v_dual_lshrrev_b32 v99, 16, v11 :: v_dual_lshrrev_b32 v100, 8, v11
+; GFX13-NEXT:    v_dual_lshrrev_b32 v101, 24, v14 :: v_dual_lshrrev_b32 v102, 16, v14
+; GFX13-NEXT:    v_dual_lshrrev_b32 v103, 8, v14 :: v_dual_lshrrev_b32 v112, 16, v13
+; GFX13-NEXT:    v_dual_lshrrev_b32 v113, 8, v13 :: v_dual_lshrrev_b32 v114, 24, v16
+; GFX13-NEXT:    v_dual_lshrrev_b32 v115, 16, v16 :: v_dual_lshrrev_b32 v116, 8, v16
+; GFX13-NEXT:    v_dual_lshrrev_b32 v117, 16, v15 :: v_dual_lshrrev_b32 v118, 8, v15
+; GFX13-NEXT:    v_dual_lshrrev_b32 v119, 24, v18 :: v_dual_lshrrev_b32 v40, 16, v18
+; GFX13-NEXT:    v_dual_lshrrev_b32 v41, 8, v18 :: v_dual_lshrrev_b32 v42, 16, v17
+; GFX13-NEXT:    v_dual_lshrrev_b32 v43, 8, v17 :: v_dual_lshrrev_b32 v44, 24, v20
+; GFX13-NEXT:    v_dual_lshrrev_b32 v45, 16, v20 :: v_dual_lshrrev_b32 v46, 8, v20
+; GFX13-NEXT:    v_dual_lshrrev_b32 v47, 16, v19 :: v_dual_lshrrev_b32 v56, 8, v19
+; GFX13-NEXT:    scratch_store_b32 off, v52, s32 offset:204 ; 4-byte Folded Spill
 ; GFX13-NEXT:    s_branch .LBB91_5
 ; GFX13-NEXT:  .LBB91_3:
 ; GFX13-NEXT:    ; implicit-def: $sgpr42
 ; GFX13-NEXT:    ; kill: killed $sgpr42
-; GFX13-NEXT:    s_mov_b32 s98, -1
+; GFX13-NEXT:    s_mov_b32 s99, -1
 ; GFX13-NEXT:    ; implicit-def: $sgpr42
 ; GFX13-NEXT:    ; kill: killed $sgpr42
 ; GFX13-NEXT:    ; implicit-def: $sgpr44
@@ -208511,45 +208369,45 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX13-NEXT:    ; implicit-def: $sgpr60
 ; GFX13-NEXT:    ; implicit-def: $sgpr62
 ; GFX13-NEXT:    ; implicit-def: $sgpr72
-; GFX13-NEXT:    ; implicit-def: $sgpr97
-; GFX13-NEXT:    ; implicit-def: $sgpr87
+; GFX13-NEXT:    ; implicit-def: $sgpr104
 ; GFX13-NEXT:    ; implicit-def: $sgpr74
-; GFX13-NEXT:    ; implicit-def: $sgpr96
-; GFX13-NEXT:    ; implicit-def: $sgpr86
-; GFX13-NEXT:    ; implicit-def: $sgpr85
-; GFX13-NEXT:    ; implicit-def: $sgpr83
-; GFX13-NEXT:    ; implicit-def: $sgpr84
 ; GFX13-NEXT:    ; implicit-def: $vcc_hi
+; GFX13-NEXT:    ; implicit-def: $sgpr103
+; GFX13-NEXT:    ; implicit-def: $sgpr102
+; GFX13-NEXT:    ; implicit-def: $sgpr101
+; GFX13-NEXT:    ; implicit-def: $sgpr98
+; GFX13-NEXT:    ; implicit-def: $sgpr100
+; GFX13-NEXT:    ; implicit-def: $sgpr97
+; GFX13-NEXT:    ; implicit-def: $sgpr96
+; GFX13-NEXT:    ; implicit-def: $sgpr87
+; GFX13-NEXT:    ; implicit-def: $sgpr85
+; GFX13-NEXT:    ; implicit-def: $sgpr86
+; GFX13-NEXT:    ; implicit-def: $sgpr84
+; GFX13-NEXT:    ; implicit-def: $sgpr83
 ; GFX13-NEXT:    ; implicit-def: $sgpr82
+; GFX13-NEXT:    ; implicit-def: $sgpr80
 ; GFX13-NEXT:    ; implicit-def: $sgpr81
 ; GFX13-NEXT:    ; implicit-def: $sgpr71
-; GFX13-NEXT:    ; implicit-def: $sgpr80
-; GFX13-NEXT:    ; implicit-def: $sgpr104
 ; GFX13-NEXT:    ; implicit-def: $sgpr70
 ; GFX13-NEXT:    ; implicit-def: $sgpr69
 ; GFX13-NEXT:    ; implicit-def: $sgpr67
 ; GFX13-NEXT:    ; implicit-def: $sgpr68
-; GFX13-NEXT:    ; implicit-def: $sgpr103
 ; GFX13-NEXT:    ; implicit-def: $sgpr66
 ; GFX13-NEXT:    ; implicit-def: $sgpr65
-; GFX13-NEXT:    ; implicit-def: $sgpr55
 ; GFX13-NEXT:    ; implicit-def: $sgpr64
-; GFX13-NEXT:    ; implicit-def: $sgpr102
 ; GFX13-NEXT:    ; implicit-def: $sgpr54
+; GFX13-NEXT:    ; implicit-def: $sgpr55
 ; GFX13-NEXT:    ; implicit-def: $sgpr53
-; GFX13-NEXT:    ; implicit-def: $sgpr51
 ; GFX13-NEXT:    ; implicit-def: $sgpr52
-; GFX13-NEXT:    ; implicit-def: $sgpr101
-; GFX13-NEXT:    ; implicit-def: $sgpr50
+; GFX13-NEXT:    ; implicit-def: $sgpr51
 ; GFX13-NEXT:    ; implicit-def: $sgpr49
-; GFX13-NEXT:    ; implicit-def: $sgpr39
+; GFX13-NEXT:    ; implicit-def: $sgpr50
 ; GFX13-NEXT:    ; implicit-def: $sgpr48
-; GFX13-NEXT:    ; implicit-def: $sgpr100
+; GFX13-NEXT:    ; implicit-def: $sgpr39
 ; GFX13-NEXT:    ; implicit-def: $sgpr38
+; GFX13-NEXT:    ; implicit-def: $sgpr36
 ; GFX13-NEXT:    ; implicit-def: $sgpr37
 ; GFX13-NEXT:    ; implicit-def: $sgpr35
-; GFX13-NEXT:    ; implicit-def: $sgpr36
-; GFX13-NEXT:    ; implicit-def: $sgpr99
 ; GFX13-NEXT:    ; implicit-def: $sgpr34
 ; GFX13-NEXT:    ; implicit-def: $sgpr30
 ; GFX13-NEXT:    ; implicit-def: $sgpr94
@@ -208639,498 +208497,487 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX13-NEXT:    ; implicit-def: $sgpr42
 ; GFX13-NEXT:    s_branch .LBB91_2
 ; GFX13-NEXT:  .LBB91_4:
-; GFX13-NEXT:    v_dual_mov_b32 v1, s6 :: v_dual_mov_b32 v63, s0
+; GFX13-NEXT:    v_dual_mov_b32 v53, s0 :: v_dual_mov_b32 v54, s1
 ; GFX13-NEXT:    v_readlane_b32 s0, v124, 2
-; GFX13-NEXT:    v_dual_mov_b32 v103, s28 :: v_dual_mov_b32 v97, s29
-; GFX13-NEXT:    scratch_store_b32 off, v1, s32 offset:196 ; 4-byte Folded Spill
-; GFX13-NEXT:    v_dual_mov_b32 v1, s7 :: v_dual_mov_b32 v62, s1
-; GFX13-NEXT:    v_dual_mov_b32 v86, s40 :: v_dual_mov_b32 v82, s41
-; GFX13-NEXT:    v_mov_b32_e32 v60, s2
-; GFX13-NEXT:    scratch_store_b32 off, v1, s32 offset:192 ; 4-byte Folded Spill
-; GFX13-NEXT:    v_dual_mov_b32 v1, s4 :: v_dual_mov_b32 v29, s14
-; GFX13-NEXT:    v_dual_mov_b32 v27, s15 :: v_dual_mov_b32 v57, s3
-; GFX13-NEXT:    v_dual_mov_b32 v26, s12 :: v_dual_mov_b32 v25, s13
-; GFX13-NEXT:    scratch_store_b32 off, v1, s32 offset:180 ; 4-byte Folded Spill
-; GFX13-NEXT:    v_dual_mov_b32 v1, s5 :: v_dual_mov_b32 v73, s0
+; GFX13-NEXT:    v_dual_mov_b32 v21, s39 :: v_dual_mov_b32 v22, s76
+; GFX13-NEXT:    v_dual_mov_b32 v26, s88 :: v_dual_mov_b32 v19, s28
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_4) | instid1(VALU_DEP_3)
+; GFX13-NEXT:    v_dual_mov_b32 v20, s29 :: v_dual_mov_b32 v39, s0
+; GFX13-NEXT:    scratch_store_b32 off, v21, s32 offset:204 ; 4-byte Folded Spill
 ; GFX13-NEXT:    v_readlane_b32 s0, v124, 3
-; GFX13-NEXT:    v_dual_mov_b32 v23, s10 :: v_dual_mov_b32 v22, s11
-; GFX13-NEXT:    scratch_store_b32 off, v1, s32 offset:176 ; 4-byte Folded Spill
-; GFX13-NEXT:    v_dual_mov_b32 v1, s100 :: v_dual_mov_b32 v61, s0
+; GFX13-NEXT:    v_dual_mov_b32 v21, s38 :: v_dual_mov_b32 v17, s40
+; GFX13-NEXT:    v_dual_mov_b32 v18, s41 :: v_dual_mov_b32 v15, s14
+; GFX13-NEXT:    v_dual_mov_b32 v16, s15 :: v_dual_mov_b32 v33, s0
+; GFX13-NEXT:    scratch_store_b32 off, v21, s32 offset:200 ; 4-byte Folded Spill
+; GFX13-NEXT:    v_mov_b32_e32 v21, s36
 ; GFX13-NEXT:    v_readlane_b32 s0, v124, 4
-; GFX13-NEXT:    v_dual_mov_b32 v48, s8 :: v_dual_mov_b32 v16, s9
-; GFX13-NEXT:    scratch_store_b32 off, v1, s32 offset:188 ; 4-byte Folded Spill
-; GFX13-NEXT:    v_dual_mov_b32 v1, s99 :: v_dual_mov_b32 v56, s0
+; GFX13-NEXT:    v_dual_mov_b32 v13, s12 :: v_dual_mov_b32 v14, s13
+; GFX13-NEXT:    v_dual_mov_b32 v11, s10 :: v_dual_mov_b32 v12, s11
+; GFX13-NEXT:    scratch_store_b32 off, v21, s32 offset:196 ; 4-byte Folded Spill
+; GFX13-NEXT:    v_dual_mov_b32 v21, s37 :: v_dual_mov_b32 v9, s8
+; GFX13-NEXT:    v_dual_mov_b32 v10, s9 :: v_dual_mov_b32 v7, s6
+; GFX13-NEXT:    v_mov_b32_e32 v8, s7
+; GFX13-NEXT:    scratch_store_b32 off, v21, s32 offset:192 ; 4-byte Folded Spill
+; GFX13-NEXT:    v_dual_mov_b32 v21, s35 :: v_dual_mov_b32 v5, s4
+; GFX13-NEXT:    v_dual_mov_b32 v6, s5 :: v_dual_mov_b32 v48, s2
+; GFX13-NEXT:    v_mov_b32_e32 v49, s3
+; GFX13-NEXT:    scratch_store_b32 off, v21, s32 offset:180 ; 4-byte Folded Spill
+; GFX13-NEXT:    v_dual_mov_b32 v21, s34 :: v_dual_mov_b32 v36, s16
+; GFX13-NEXT:    v_dual_mov_b32 v37, s17 :: v_dual_mov_b32 v34, s18
+; GFX13-NEXT:    v_mov_b32_e32 v35, s19
+; GFX13-NEXT:    scratch_store_b32 off, v21, s32 offset:176 ; 4-byte Folded Spill
+; GFX13-NEXT:    v_mov_b32_e32 v21, s0
 ; GFX13-NEXT:    v_readlane_b32 s0, v124, 5
-; GFX13-NEXT:    v_dual_mov_b32 v47, s16 :: v_dual_mov_b32 v44, s17
-; GFX13-NEXT:    scratch_store_b32 off, v1, s32 offset:184 ; 4-byte Folded Spill
-; GFX13-NEXT:    v_dual_mov_b32 v119, s18 :: v_dual_mov_b32 v117, s19
-; GFX13-NEXT:    v_mov_b32_e32 v42, s0
+; GFX13-NEXT:    v_dual_mov_b32 v3, s20 :: v_dual_mov_b32 v4, s21
+; GFX13-NEXT:    v_dual_mov_b32 v1, s22 :: v_dual_mov_b32 v2, s23
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_3)
+; GFX13-NEXT:    v_mov_b32_e32 v23, s0
 ; GFX13-NEXT:    v_readlane_b32 s0, v124, 6
-; GFX13-NEXT:    v_dual_mov_b32 v113, s20 :: v_dual_mov_b32 v100, s21
-; GFX13-NEXT:    v_dual_mov_b32 v80, s22 :: v_dual_mov_b32 v70, s23
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v99, s0
+; GFX13-NEXT:    v_dual_mov_b32 v28, s24 :: v_dual_mov_b32 v29, s25
+; GFX13-NEXT:    v_dual_mov_b32 v24, s26 :: v_dual_mov_b32 v25, s27
+; GFX13-NEXT:    v_mov_b32_e32 v27, s0
 ; GFX13-NEXT:    v_readlane_b32 s0, v124, 7
-; GFX13-NEXT:    v_dual_mov_b32 v54, s24 :: v_dual_mov_b32 v53, s25
-; GFX13-NEXT:    v_dual_mov_b32 v116, s42 :: v_dual_mov_b32 v101, vcc_hi
-; GFX13-NEXT:    v_mov_b32_e32 v83, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 8
-; GFX13-NEXT:    v_dual_mov_b32 v84, s104 :: v_dual_mov_b32 v28, s103
-; GFX13-NEXT:    v_dual_mov_b32 v24, s102 :: v_dual_mov_b32 v35, s101
+; GFX13-NEXT:    v_dual_mov_b32 v56, s42 :: v_dual_mov_b32 v47, s104
+; GFX13-NEXT:    v_dual_mov_b32 v46, vcc_hi :: v_dual_mov_b32 v45, s103
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_mov_b32 v64, s0 :: v_dual_mov_b32 v67, s26
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 9
-; GFX13-NEXT:    v_dual_mov_b32 v55, s27 :: v_dual_mov_b32 v59, s97
-; GFX13-NEXT:    v_dual_mov_b32 v58, s87 :: v_dual_mov_b32 v46, s96
-; GFX13-NEXT:    v_dual_mov_b32 v45, s86 :: v_dual_mov_b32 v66, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 10
-; GFX13-NEXT:    v_dual_mov_b32 v1, s36 :: v_dual_mov_b32 v43, s85
-; GFX13-NEXT:    v_dual_mov_b32 v41, s83 :: v_dual_mov_b32 v40, s84
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_mov_b32 v118, s82 :: v_dual_mov_b32 v12, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 11
-; GFX13-NEXT:    scratch_store_b32 off, v1, s32 offset:204 ; 4-byte Folded Spill
-; GFX13-NEXT:    v_dual_mov_b32 v1, s34 :: v_dual_mov_b32 v115, s81
-; GFX13-NEXT:    v_dual_mov_b32 v114, s71 :: v_dual_mov_b32 v39, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 12
-; GFX13-NEXT:    v_dual_mov_b32 v112, s80 :: v_dual_mov_b32 v102, s70
-; GFX13-NEXT:    v_dual_mov_b32 v98, s69 :: v_dual_mov_b32 v96, s67
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v38, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 13
-; GFX13-NEXT:    v_dual_mov_b32 v87, s68 :: v_dual_mov_b32 v85, s66
-; GFX13-NEXT:    v_dual_mov_b32 v81, s65 :: v_dual_mov_b32 v71, s55
-; GFX13-NEXT:    v_mov_b32_e32 v37, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 14
-; GFX13-NEXT:    v_dual_mov_b32 v69, s64 :: v_dual_mov_b32 v68, s54
-; GFX13-NEXT:    v_dual_mov_b32 v30, s53 :: v_dual_mov_b32 v65, s51
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v36, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 15
-; GFX13-NEXT:    v_dual_mov_b32 v31, s52 :: v_dual_mov_b32 v52, s50
-; GFX13-NEXT:    v_dual_mov_b32 v32, s49 :: v_dual_mov_b32 v51, s39
 ; GFX13-NEXT:    v_mov_b32_e32 v123, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 16
-; GFX13-NEXT:    v_dual_mov_b32 v33, s48 :: v_dual_mov_b32 v50, s38
-; GFX13-NEXT:    v_dual_mov_b32 v34, s37 :: v_dual_mov_b32 v49, s35
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 8
+; GFX13-NEXT:    v_dual_mov_b32 v44, s102 :: v_dual_mov_b32 v43, s101
+; GFX13-NEXT:    v_dual_mov_b32 v42, s98 :: v_dual_mov_b32 v41, s100
 ; GFX13-NEXT:    v_mov_b32_e32 v122, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 17
-; GFX13-NEXT:    scratch_store_b32 off, v1, s32 offset:200 ; 4-byte Folded Spill
-; GFX13-NEXT:    v_dual_mov_b32 v13, s72 :: v_dual_mov_b32 v14, s62
-; GFX13-NEXT:    v_dual_mov_b32 v1, s60 :: v_dual_mov_b32 v2, s58
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 9
+; GFX13-NEXT:    v_dual_mov_b32 v40, s97 :: v_dual_mov_b32 v119, s96
+; GFX13-NEXT:    v_dual_mov_b32 v118, s87 :: v_dual_mov_b32 v117, s85
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_3)
 ; GFX13-NEXT:    v_mov_b32_e32 v121, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 18
-; GFX13-NEXT:    v_dual_mov_b32 v3, s56 :: v_dual_mov_b32 v4, s46
-; GFX13-NEXT:    v_dual_mov_b32 v5, s76 :: v_dual_mov_b32 v6, s78
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 10
+; GFX13-NEXT:    v_dual_mov_b32 v116, s86 :: v_dual_mov_b32 v115, s84
+; GFX13-NEXT:    v_dual_mov_b32 v114, s83 :: v_dual_mov_b32 v113, s82
+; GFX13-NEXT:    v_mov_b32_e32 v111, s0
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 11
+; GFX13-NEXT:    v_dual_mov_b32 v112, s80 :: v_dual_mov_b32 v103, s81
+; GFX13-NEXT:    v_dual_mov_b32 v102, s71 :: v_dual_mov_b32 v101, s70
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_3)
 ; GFX13-NEXT:    v_mov_b32_e32 v120, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 19
-; GFX13-NEXT:    v_dual_mov_b32 v7, s88 :: v_dual_mov_b32 v8, s90
-; GFX13-NEXT:    v_dual_mov_b32 v9, s92 :: v_dual_mov_b32 v10, s94
-; GFX13-NEXT:    v_mov_b32_e32 v111, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 20
-; GFX13-NEXT:    v_dual_mov_b32 v11, s30 :: v_dual_mov_b32 v15, s74
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX13-NEXT:    v_dual_mov_b32 v72, s43 :: v_dual_mov_b32 v110, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 21
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 12
+; GFX13-NEXT:    v_dual_mov_b32 v100, s69 :: v_dual_mov_b32 v99, s67
+; GFX13-NEXT:    v_dual_mov_b32 v98, s68 :: v_dual_mov_b32 v97, s66
+; GFX13-NEXT:    v_mov_b32_e32 v110, s0
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 13
+; GFX13-NEXT:    v_dual_mov_b32 v96, s65 :: v_dual_mov_b32 v87, s64
+; GFX13-NEXT:    v_dual_mov_b32 v86, s54 :: v_dual_mov_b32 v85, s55
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_3)
 ; GFX13-NEXT:    v_mov_b32_e32 v109, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 22
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 14
+; GFX13-NEXT:    v_dual_mov_b32 v84, s53 :: v_dual_mov_b32 v83, s52
+; GFX13-NEXT:    v_dual_mov_b32 v82, s51 :: v_dual_mov_b32 v81, s49
 ; GFX13-NEXT:    v_mov_b32_e32 v108, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 23
-; GFX13-NEXT:    v_mov_b32_e32 v107, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 24
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 15
+; GFX13-NEXT:    v_dual_mov_b32 v80, s50 :: v_dual_mov_b32 v71, s48
+; GFX13-NEXT:    v_dual_mov_b32 v50, s72 :: v_dual_mov_b32 v64, s62
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_3)
 ; GFX13-NEXT:    v_mov_b32_e32 v106, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 25
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 16
+; GFX13-NEXT:    v_dual_mov_b32 v65, s60 :: v_dual_mov_b32 v66, s58
+; GFX13-NEXT:    v_dual_mov_b32 v67, s56 :: v_dual_mov_b32 v68, s46
+; GFX13-NEXT:    v_mov_b32_e32 v107, s0
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 17
+; GFX13-NEXT:    scratch_store_b64 off, v[22:23], s32 offset:184 ; 8-byte Folded Spill
+; GFX13-NEXT:    v_dual_mov_b32 v22, s78 :: v_dual_mov_b32 v30, s90
+; GFX13-NEXT:    v_dual_mov_b32 v31, s92 :: v_dual_mov_b32 v32, s94
 ; GFX13-NEXT:    v_mov_b32_e32 v105, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 26
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX13-NEXT:    v_mov_b32_e32 v95, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 27
-; GFX13-NEXT:    v_mov_b32_e32 v104, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 28
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 18
+; GFX13-NEXT:    v_dual_mov_b32 v38, s30 :: v_dual_mov_b32 v51, s74
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_dual_mov_b32 v57, s43 :: v_dual_mov_b32 v104, s0
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 19
+; GFX13-NEXT:    v_mov_b32_e32 v93, s0
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 20
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_mov_b32_e32 v94, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 29
-; GFX13-NEXT:    v_mov_b32_e32 v93, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 30
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 21
+; GFX13-NEXT:    v_mov_b32_e32 v95, s0
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 22
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX13-NEXT:    v_mov_b32_e32 v92, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v124, 31
 ; GFX13-NEXT:    v_mov_b32_e32 v91, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v125, 0
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 23
+; GFX13-NEXT:    v_mov_b32_e32 v92, s0
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 24
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_mov_b32_e32 v90, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v125, 1
-; GFX13-NEXT:    v_mov_b32_e32 v89, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v125, 2
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 25
 ; GFX13-NEXT:    v_mov_b32_e32 v88, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v125, 3
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 26
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_mov_b32_e32 v89, s0
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 27
 ; GFX13-NEXT:    v_mov_b32_e32 v79, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v125, 4
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 28
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_mov_b32_e32 v78, s0
-; GFX13-NEXT:    v_readlane_b32 s0, v125, 5
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 29
 ; GFX13-NEXT:    v_mov_b32_e32 v77, s0
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 30
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_mov_b32_e32 v75, s0
+; GFX13-NEXT:    v_readlane_b32 s0, v124, 31
+; GFX13-NEXT:    v_mov_b32_e32 v76, s0
+; GFX13-NEXT:    v_readlane_b32 s0, v125, 0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_mov_b32_e32 v74, s0
+; GFX13-NEXT:    v_readlane_b32 s0, v125, 1
+; GFX13-NEXT:    v_mov_b32_e32 v73, s0
+; GFX13-NEXT:    v_readlane_b32 s0, v125, 2
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_mov_b32_e32 v72, s0
+; GFX13-NEXT:    v_readlane_b32 s0, v125, 3
+; GFX13-NEXT:    v_mov_b32_e32 v62, s0
+; GFX13-NEXT:    v_readlane_b32 s0, v125, 4
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_mov_b32_e32 v63, s0
+; GFX13-NEXT:    v_readlane_b32 s0, v125, 5
+; GFX13-NEXT:    v_mov_b32_e32 v61, s0
 ; GFX13-NEXT:    v_readlane_b32 s0, v125, 6
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX13-NEXT:    v_mov_b32_e32 v76, s0
+; GFX13-NEXT:    v_mov_b32_e32 v60, s0
 ; GFX13-NEXT:    v_readlane_b32 s0, v125, 7
-; GFX13-NEXT:    v_mov_b32_e32 v75, s0
+; GFX13-NEXT:    v_mov_b32_e32 v59, s0
 ; GFX13-NEXT:    v_readlane_b32 s0, v125, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v74, s0
+; GFX13-NEXT:    v_mov_b32_e32 v58, s0
 ; GFX13-NEXT:    v_readlane_b32 s0, v124, 0
-; GFX13-NEXT:    v_mov_b32_e32 v17, s44
+; GFX13-NEXT:    v_mov_b32_e32 v69, s44
 ; GFX13-NEXT:    v_readlane_b32 s1, v124, 1
-; GFX13-NEXT:    v_mov_b32_e32 v18, s0
+; GFX13-NEXT:    v_mov_b32_e32 v70, s0
 ; GFX13-NEXT:  .LBB91_5: ; %end
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_dual_lshlrev_b32 v18, 8, v18 :: v_dual_lshlrev_b32 v12, 8, v12
-; GFX13-NEXT:    v_and_b32_e32 v19, 0xff, v63
-; GFX13-NEXT:    v_and_b32_e32 v100, 0xff, v100
-; GFX13-NEXT:    v_and_b32_e32 v80, 0xff, v80
-; GFX13-NEXT:    v_lshlrev_b32_e32 v20, 8, v38
-; GFX13-NEXT:    v_and_b32_e32 v38, 0xff, v42
-; GFX13-NEXT:    v_or_b32_e32 v12, v19, v12
-; GFX13-NEXT:    v_and_b32_e32 v19, 0xff, v39
-; GFX13-NEXT:    v_and_b32_e32 v83, 0xff, v83
-; GFX13-NEXT:    v_lshlrev_b32_e32 v21, 8, v37
-; GFX13-NEXT:    v_and_b32_e32 v70, 0xff, v70
-; GFX13-NEXT:    v_and_b32_e32 v12, 0xffff, v12
-; GFX13-NEXT:    v_or_b32_e32 v18, v19, v18
-; GFX13-NEXT:    v_and_b32_e32 v19, 0xff, v62
-; GFX13-NEXT:    v_and_b32_e32 v29, 0xff, v29
-; GFX13-NEXT:    v_and_b32_e32 v27, 0xff, v27
-; GFX13-NEXT:    v_and_b32_e32 v25, 0xff, v25
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-NEXT:    v_dual_lshlrev_b32 v18, 16, v18 :: v_dual_bitop2_b32 v19, v19, v20 bitop3:0x54
-; GFX13-NEXT:    v_and_b32_e32 v20, 0xff, v73
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_dual_lshlrev_b32 v52, 8, v70 :: v_dual_lshlrev_b32 v39, 8, v39
+; GFX13-NEXT:    v_and_b32_e32 v53, 0xff, v53
+; GFX13-NEXT:    v_and_b32_e32 v33, 0xff, v33
 ; GFX13-NEXT:    v_and_b32_e32 v23, 0xff, v23
-; GFX13-NEXT:    v_and_b32_e32 v22, 0xff, v22
+; GFX13-NEXT:    v_dual_lshlrev_b32 v21, 8, v21 :: v_dual_lshlrev_b32 v27, 8, v27
+; GFX13-NEXT:    v_or_b32_e32 v39, v53, v39
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-NEXT:    v_or_b32_e32 v33, v33, v52
+; GFX13-NEXT:    v_and_b32_e32 v52, 0xff, v54
+; GFX13-NEXT:    v_and_b32_e32 v3, 0xff, v3
+; GFX13-NEXT:    v_or_b32_e32 v23, v23, v27
+; GFX13-NEXT:    v_and_b32_e32 v27, 0xffff, v39
+; GFX13-NEXT:    v_lshlrev_b32_e32 v33, 16, v33
+; GFX13-NEXT:    v_or_b32_e32 v21, v52, v21
+; GFX13-NEXT:    v_and_b32_e32 v4, 0xff, v4
+; GFX13-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
+; GFX13-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; GFX13-NEXT:    v_or_b32_e32 v52, v27, v33
+; GFX13-NEXT:    v_and_b32_e32 v21, 0xffff, v21
+; GFX13-NEXT:    v_and_b32_e32 v27, 0xff, v122
+; GFX13-NEXT:    v_and_b32_e32 v2, 0xff, v2
+; GFX13-NEXT:    v_and_b32_e32 v29, 0xff, v29
 ; GFX13-NEXT:    v_and_b32_e32 v24, 0xff, v24
-; GFX13-NEXT:    v_and_b32_e32 v19, 0xffff, v19
-; GFX13-NEXT:    v_or_b32_e32 v20, v20, v21
-; GFX13-NEXT:    v_or_b32_e32 v18, v12, v18
-; GFX13-NEXT:    v_and_b32_e32 v12, 0xff, v60
+; GFX13-NEXT:    v_or_b32_e32 v53, v21, v23
+; GFX13-NEXT:    v_lshlrev_b32_e32 v21, 8, v123
+; GFX13-NEXT:    v_and_b32_e32 v23, 0xff, v48
+; GFX13-NEXT:    v_and_b32_e32 v25, 0xff, v25
+; GFX13-NEXT:    v_and_b32_e32 v19, 0xff, v19
+; GFX13-NEXT:    v_and_b32_e32 v17, 0xff, v17
+; GFX13-NEXT:    v_and_b32_e32 v18, 0xff, v18
+; GFX13-NEXT:    v_or_b32_e32 v21, v23, v21
+; GFX13-NEXT:    v_lshlrev_b32_e32 v23, 8, v69
+; GFX13-NEXT:    v_and_b32_e32 v15, 0xff, v15
+; GFX13-NEXT:    v_and_b32_e32 v16, 0xff, v16
+; GFX13-NEXT:    v_and_b32_e32 v13, 0xff, v13
+; GFX13-NEXT:    v_and_b32_e32 v14, 0xff, v14
+; GFX13-NEXT:    v_dual_lshlrev_b32 v27, 8, v120 :: v_dual_bitop2_b32 v23, v27, v23 bitop3:0x54
+; GFX13-NEXT:    v_and_b32_e32 v11, 0xff, v11
+; GFX13-NEXT:    v_and_b32_e32 v12, 0xff, v12
+; GFX13-NEXT:    v_and_b32_e32 v9, 0xff, v9
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
+; GFX13-NEXT:    v_and_b32_e32 v21, 0xffff, v21
+; GFX13-NEXT:    v_and_b32_e32 v7, 0xff, v7
+; GFX13-NEXT:    v_and_b32_e32 v8, 0xff, v8
+; GFX13-NEXT:    v_and_b32_e32 v5, 0xff, v5
+; GFX13-NEXT:    v_and_b32_e32 v6, 0xff, v6
+; GFX13-NEXT:    v_dual_lshlrev_b32 v23, 8, v121 :: v_dual_bitop2_b32 v54, v21, v23 bitop3:0x54
+; GFX13-NEXT:    v_and_b32_e32 v21, 0xff, v49
 ; GFX13-NEXT:    v_readlane_b32 s104, v126, 8
 ; GFX13-NEXT:    v_readlane_b32 s103, v126, 7
-; GFX13-NEXT:    v_dual_lshlrev_b32 v20, 16, v20 :: v_dual_lshlrev_b32 v17, 8, v17
 ; GFX13-NEXT:    v_readlane_b32 s102, v126, 6
 ; GFX13-NEXT:    v_readlane_b32 s101, v126, 5
+; GFX13-NEXT:    v_or_b32_e32 v21, v21, v23
+; GFX13-NEXT:    v_and_b32_e32 v23, 0xff, v111
 ; GFX13-NEXT:    v_readlane_b32 s100, v126, 4
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_4) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_or_b32_e32 v19, v19, v20
-; GFX13-NEXT:    v_dual_lshlrev_b32 v20, 8, v36 :: v_dual_lshlrev_b32 v21, 8, v121
 ; GFX13-NEXT:    v_readlane_b32 s99, v126, 3
 ; GFX13-NEXT:    v_readlane_b32 s98, v126, 2
-; GFX13-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
-; GFX13-NEXT:    v_or_b32_e32 v12, v12, v20
-; GFX13-NEXT:    v_and_b32_e32 v20, 0xff, v123
 ; GFX13-NEXT:    v_readlane_b32 s97, v126, 1
+; GFX13-NEXT:    v_or_b32_e32 v23, v23, v27
+; GFX13-NEXT:    v_and_b32_e32 v27, 0xff, v109
 ; GFX13-NEXT:    v_readlane_b32 s96, v126, 0
 ; GFX13-NEXT:    v_readlane_b32 s87, v127, 31
-; GFX13-NEXT:    v_and_b32_e32 v12, 0xffff, v12
-; GFX13-NEXT:    v_or_b32_e32 v17, v20, v17
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-NEXT:    v_dual_lshlrev_b32 v33, 8, v108 :: v_dual_lshlrev_b32 v23, 16, v23
+; GFX13-NEXT:    v_and_b32_e32 v21, 0xffff, v21
 ; GFX13-NEXT:    v_readlane_b32 s86, v127, 30
 ; GFX13-NEXT:    v_readlane_b32 s85, v127, 29
 ; GFX13-NEXT:    v_readlane_b32 s84, v127, 28
 ; GFX13-NEXT:    v_readlane_b32 s83, v127, 27
-; GFX13-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
+; GFX13-NEXT:    v_dual_lshlrev_b32 v21, 8, v110 :: v_dual_bitop2_b32 v55, v21, v23 bitop3:0x54
+; GFX13-NEXT:    v_and_b32_e32 v23, 0xff, v36
+; GFX13-NEXT:    v_lshlrev_b32_e32 v36, 8, v107
 ; GFX13-NEXT:    v_readlane_b32 s82, v127, 26
 ; GFX13-NEXT:    v_readlane_b32 s81, v127, 25
 ; GFX13-NEXT:    v_readlane_b32 s80, v127, 24
+; GFX13-NEXT:    v_dual_lshlrev_b32 v23, 8, v68 :: v_dual_bitop2_b32 v21, v23, v21 bitop3:0x54
 ; GFX13-NEXT:    v_readlane_b32 s71, v127, 23
-; GFX13-NEXT:    v_or_b32_e32 v20, v12, v17
-; GFX13-NEXT:    v_and_b32_e32 v12, 0xff, v57
-; GFX13-NEXT:    v_lshlrev_b32_e32 v17, 8, v122
-; GFX13-NEXT:    v_lshlrev_b32_e32 v36, 8, v110
 ; GFX13-NEXT:    v_readlane_b32 s70, v127, 22
 ; GFX13-NEXT:    v_readlane_b32 s69, v127, 21
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-NEXT:    v_and_b32_e32 v21, 0xffff, v21
+; GFX13-NEXT:    v_or_b32_e32 v23, v27, v23
+; GFX13-NEXT:    v_and_b32_e32 v27, 0xff, v37
 ; GFX13-NEXT:    v_readlane_b32 s68, v127, 20
-; GFX13-NEXT:    v_or_b32_e32 v12, v12, v17
-; GFX13-NEXT:    v_and_b32_e32 v17, 0xff, v61
 ; GFX13-NEXT:    v_readlane_b32 s67, v127, 19
 ; GFX13-NEXT:    v_readlane_b32 s66, v127, 18
 ; GFX13-NEXT:    v_readlane_b32 s65, v127, 17
-; GFX13-NEXT:    v_and_b32_e32 v12, 0xffff, v12
-; GFX13-NEXT:    v_or_b32_e32 v17, v17, v21
+; GFX13-NEXT:    v_or_b32_e32 v27, v27, v33
+; GFX13-NEXT:    v_and_b32_e32 v33, 0xff, v106
 ; GFX13-NEXT:    v_readlane_b32 s64, v127, 16
 ; GFX13-NEXT:    v_readlane_b32 s55, v127, 15
 ; GFX13-NEXT:    v_readlane_b32 s54, v127, 14
+; GFX13-NEXT:    v_and_b32_e32 v27, 0xffff, v27
+; GFX13-NEXT:    v_or_b32_e32 v33, v33, v36
 ; GFX13-NEXT:    v_readlane_b32 s53, v127, 13
-; GFX13-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
 ; GFX13-NEXT:    v_readlane_b32 s52, v127, 12
 ; GFX13-NEXT:    v_readlane_b32 s51, v127, 11
 ; GFX13-NEXT:    v_readlane_b32 s50, v127, 10
+; GFX13-NEXT:    v_dual_lshlrev_b32 v33, 16, v33 :: v_dual_lshlrev_b32 v23, 16, v23
 ; GFX13-NEXT:    v_readlane_b32 s49, v127, 9
-; GFX13-NEXT:    v_or_b32_e32 v21, v12, v17
-; GFX13-NEXT:    v_and_b32_e32 v12, 0xff, v47
-; GFX13-NEXT:    v_dual_lshlrev_b32 v17, 8, v120 :: v_dual_lshlrev_b32 v37, 8, v109
-; GFX13-NEXT:    v_readlane_b32 s48, v127, 8
-; GFX13-NEXT:    v_lshlrev_b32_e32 v3, 8, v3
-; GFX13-NEXT:    v_readlane_b32 s39, v127, 7
+; GFX13-NEXT:    v_lshlrev_b32_e32 v36, 8, v66
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_dual_lshlrev_b32 v37, 8, v90 :: v_dual_bitop2_b32 v107, v27, v33 bitop3:0x54
+; GFX13-NEXT:    v_dual_lshlrev_b32 v21, 8, v105 :: v_dual_bitop2_b32 v106, v21, v23 bitop3:0x54
+; GFX13-NEXT:    v_and_b32_e32 v23, 0xff, v34
+; GFX13-NEXT:    v_and_b32_e32 v27, 0xff, v104
+; GFX13-NEXT:    v_lshlrev_b32_e32 v33, 8, v93
+; GFX13-NEXT:    v_and_b32_e32 v34, 0xff, v94
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-NEXT:    v_or_b32_e32 v12, v12, v17
-; GFX13-NEXT:    v_and_b32_e32 v17, 0xff, v111
+; GFX13-NEXT:    v_dual_lshlrev_b32 v39, 8, v76 :: v_dual_bitop2_b32 v21, v23, v21 bitop3:0x54
+; GFX13-NEXT:    v_lshlrev_b32_e32 v23, 8, v67
+; GFX13-NEXT:    v_readlane_b32 s48, v127, 8
+; GFX13-NEXT:    v_readlane_b32 s39, v127, 7
 ; GFX13-NEXT:    v_readlane_b32 s38, v127, 6
 ; GFX13-NEXT:    v_readlane_b32 s37, v127, 5
+; GFX13-NEXT:    v_or_b32_e32 v23, v27, v23
+; GFX13-NEXT:    v_and_b32_e32 v27, 0xff, v35
+; GFX13-NEXT:    v_lshlrev_b32_e32 v35, 8, v95
+; GFX13-NEXT:    v_and_b32_e32 v21, 0xffff, v21
 ; GFX13-NEXT:    v_readlane_b32 s36, v127, 4
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_dual_lshlrev_b32 v23, 16, v23 :: v_dual_bitop2_b32 v27, v27, v33 bitop3:0x54
+; GFX13-NEXT:    v_or_b32_e32 v33, v34, v35
+; GFX13-NEXT:    v_lshlrev_b32_e32 v34, 8, v91
+; GFX13-NEXT:    v_and_b32_e32 v35, 0xff, v92
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_or_b32_e32 v108, v21, v23
+; GFX13-NEXT:    v_and_b32_e32 v27, 0xffff, v27
+; GFX13-NEXT:    v_dual_lshlrev_b32 v33, 16, v33 :: v_dual_bitop2_b32 v3, v3, v34 bitop3:0x54
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_or_b32_e32 v34, v35, v36
+; GFX13-NEXT:    v_and_b32_e32 v23, 0xff, v88
+; GFX13-NEXT:    v_lshlrev_b32_e32 v35, 8, v65
+; GFX13-NEXT:    v_dual_lshlrev_b32 v33, 8, v79 :: v_dual_bitop2_b32 v109, v27, v33 bitop3:0x54
+; GFX13-NEXT:    v_lshlrev_b32_e32 v27, 8, v89
+; GFX13-NEXT:    v_dual_lshlrev_b32 v21, 16, v34 :: v_dual_bitop2_b32 v4, v4, v37 bitop3:0x54
+; GFX13-NEXT:    v_and_b32_e32 v34, 0xff, v78
+; GFX13-NEXT:    v_lshlrev_b32_e32 v36, 8, v77
+; GFX13-NEXT:    v_and_b32_e32 v37, 0xff, v75
+; GFX13-NEXT:    v_or_b32_e32 v23, v23, v27
+; GFX13-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; GFX13-NEXT:    v_or_b32_e32 v27, v34, v35
+; GFX13-NEXT:    v_or_b32_e32 v2, v2, v36
+; GFX13-NEXT:    v_and_b32_e32 v4, 0xffff, v4
+; GFX13-NEXT:    v_dual_lshlrev_b32 v36, 8, v61 :: v_dual_lshlrev_b32 v48, 8, v51
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-NEXT:    v_dual_lshlrev_b32 v27, 16, v27 :: v_dual_bitop2_b32 v1, v1, v33 bitop3:0x54
+; GFX13-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
+; GFX13-NEXT:    v_or_b32_e32 v33, v37, v39
+; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff, v2
+; GFX13-NEXT:    v_or_b32_e32 v24, v24, v36
+; GFX13-NEXT:    v_and_b32_e32 v34, 0xffff, v1
+; GFX13-NEXT:    v_or_b32_e32 v1, v3, v21
+; GFX13-NEXT:    v_and_b32_e32 v21, 0xff, v28
+; GFX13-NEXT:    v_dual_lshlrev_b32 v28, 8, v64 :: v_dual_lshlrev_b32 v33, 16, v33
+; GFX13-NEXT:    v_or_b32_e32 v2, v4, v23
+; GFX13-NEXT:    v_dual_lshlrev_b32 v23, 8, v74 :: v_dual_bitop2_b32 v3, v34, v27 bitop3:0x54
+; GFX13-NEXT:    v_and_b32_e32 v27, 0xff, v73
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_4) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_dual_lshlrev_b32 v35, 8, v63 :: v_dual_bitop2_b32 v4, v35, v33 bitop3:0x54
+; GFX13-NEXT:    v_lshlrev_b32_e32 v33, 8, v72
+; GFX13-NEXT:    v_and_b32_e32 v34, 0xff, v62
+; GFX13-NEXT:    v_or_b32_e32 v21, v21, v23
+; GFX13-NEXT:    v_dual_lshlrev_b32 v36, 8, v57 :: v_dual_bitop2_b32 v23, v27, v28 bitop3:0x54
+; GFX13-NEXT:    v_or_b32_e32 v27, v29, v33
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-NEXT:    v_or_b32_e32 v28, v34, v35
+; GFX13-NEXT:    v_and_b32_e32 v29, 0xff, v60
+; GFX13-NEXT:    v_dual_lshlrev_b32 v33, 8, v50 :: v_dual_lshlrev_b32 v34, 8, v59
+; GFX13-NEXT:    v_and_b32_e32 v35, 0xff, v58
+; GFX13-NEXT:    v_lshlrev_b32_e32 v37, 8, v56
+; GFX13-NEXT:    v_and_b32_e32 v39, 0xff, v47
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_or_b32_e32 v29, v29, v33
+; GFX13-NEXT:    v_dual_lshlrev_b32 v23, 16, v23 :: v_dual_bitop2_b32 v25, v25, v34 bitop3:0x54
+; GFX13-NEXT:    v_or_b32_e32 v19, v19, v37
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-NEXT:    v_or_b32_e32 v34, v39, v48
+; GFX13-NEXT:    v_or_b32_e32 v33, v35, v36
+; GFX13-NEXT:    v_and_b32_e32 v21, 0xffff, v21
+; GFX13-NEXT:    v_and_b32_e32 v27, 0xffff, v27
+; GFX13-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
+; GFX13-NEXT:    v_and_b32_e32 v24, 0xffff, v24
+; GFX13-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
+; GFX13-NEXT:    v_and_b32_e32 v25, 0xffff, v25
+; GFX13-NEXT:    v_and_b32_e32 v19, 0xffff, v19
+; GFX13-NEXT:    v_dual_lshlrev_b32 v37, 16, v34 :: v_dual_lshlrev_b32 v36, 16, v33
+; GFX13-NEXT:    v_dual_lshlrev_b32 v23, 8, v44 :: v_dual_bitop2_b32 v33, v21, v23 bitop3:0x54
+; GFX13-NEXT:    v_or_b32_e32 v34, v27, v28
+; GFX13-NEXT:    v_dual_lshlrev_b32 v27, 8, v38 :: v_dual_bitop2_b32 v35, v24, v29 bitop3:0x54
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-NEXT:    v_dual_lshlrev_b32 v28, 8, v41 :: v_dual_bitop2_b32 v36, v25, v36 bitop3:0x54
+; GFX13-NEXT:    v_or_b32_e32 v48, v19, v37
+; GFX13-NEXT:    v_and_b32_e32 v19, 0xff, v20
+; GFX13-NEXT:    v_lshlrev_b32_e32 v20, 8, v46
+; GFX13-NEXT:    v_and_b32_e32 v21, 0xff, v45
+; GFX13-NEXT:    v_lshlrev_b32_e32 v24, 8, v43
+; GFX13-NEXT:    v_and_b32_e32 v25, 0xff, v42
+; GFX13-NEXT:    v_dual_lshlrev_b32 v37, 8, v114 :: v_dual_bitop2_b32 v18, v18, v28 bitop3:0x54
+; GFX13-NEXT:    v_or_b32_e32 v19, v19, v20
+; GFX13-NEXT:    v_or_b32_e32 v20, v21, v23
+; GFX13-NEXT:    v_dual_lshlrev_b32 v24, 8, v119 :: v_dual_bitop2_b32 v17, v17, v24 bitop3:0x54
+; GFX13-NEXT:    v_dual_lshlrev_b32 v28, 8, v32 :: v_dual_bitop2_b32 v21, v25, v27 bitop3:0x54
+; GFX13-NEXT:    v_and_b32_e32 v23, 0xff, v40
+; GFX13-NEXT:    v_lshlrev_b32_e32 v25, 8, v118
+; GFX13-NEXT:    v_and_b32_e32 v27, 0xff, v117
+; GFX13-NEXT:    v_lshlrev_b32_e32 v29, 8, v116
+; GFX13-NEXT:    v_and_b32_e32 v32, 0xff, v115
+; GFX13-NEXT:    v_or_b32_e32 v23, v23, v24
+; GFX13-NEXT:    v_or_b32_e32 v15, v15, v25
+; GFX13-NEXT:    v_or_b32_e32 v24, v27, v28
+; GFX13-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
+; GFX13-NEXT:    v_and_b32_e32 v17, 0xffff, v17
+; GFX13-NEXT:    v_lshlrev_b32_e32 v21, 16, v21
+; GFX13-NEXT:    v_and_b32_e32 v19, 0xffff, v19
+; GFX13-NEXT:    v_and_b32_e32 v18, 0xffff, v18
+; GFX13-NEXT:    v_or_b32_e32 v25, v32, v37
+; GFX13-NEXT:    v_and_b32_e32 v15, 0xffff, v15
+; GFX13-NEXT:    v_dual_lshlrev_b32 v24, 16, v24 :: v_dual_lshlrev_b32 v23, 16, v23
+; GFX13-NEXT:    v_or_b32_e32 v16, v16, v29
+; GFX13-NEXT:    v_or_b32_e32 v49, v19, v20
+; GFX13-NEXT:    v_or_b32_e32 v50, v17, v21
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-NEXT:    v_or_b32_e32 v15, v15, v24
+; GFX13-NEXT:    v_dual_lshlrev_b32 v17, 8, v113 :: v_dual_bitop2_b32 v51, v18, v23 bitop3:0x54
+; GFX13-NEXT:    v_and_b32_e32 v18, 0xff, v112
+; GFX13-NEXT:    v_lshlrev_b32_e32 v19, 8, v31
+; GFX13-NEXT:    v_dual_lshlrev_b32 v20, 8, v103 :: v_dual_lshlrev_b32 v25, 16, v25
+; GFX13-NEXT:    v_and_b32_e32 v21, 0xff, v102
+; GFX13-NEXT:    v_lshlrev_b32_e32 v23, 8, v101
+; GFX13-NEXT:    v_and_b32_e32 v16, 0xffff, v16
+; GFX13-NEXT:    v_dual_lshlrev_b32 v24, 8, v100 :: v_dual_bitop2_b32 v13, v13, v17 bitop3:0x54
+; GFX13-NEXT:    v_or_b32_e32 v17, v18, v19
+; GFX13-NEXT:    v_or_b32_e32 v14, v14, v20
+; GFX13-NEXT:    v_or_b32_e32 v18, v21, v23
+; GFX13-NEXT:    v_and_b32_e32 v19, 0xff, v99
+; GFX13-NEXT:    v_lshlrev_b32_e32 v20, 8, v30
+; GFX13-NEXT:    v_lshlrev_b32_e32 v21, 8, v98
+; GFX13-NEXT:    v_and_b32_e32 v27, 0xff, v86
+; GFX13-NEXT:    v_dual_lshlrev_b32 v26, 8, v26 :: v_dual_bitop2_b32 v11, v11, v24 bitop3:0x54
+; GFX13-NEXT:    v_and_b32_e32 v23, 0xff, v97
+; GFX13-NEXT:    v_dual_lshlrev_b32 v24, 8, v96 :: v_dual_bitop2_b32 v16, v16, v25 bitop3:0x54
+; GFX13-NEXT:    v_dual_lshlrev_b32 v18, 16, v18 :: v_dual_lshlrev_b32 v25, 8, v87
+; GFX13-NEXT:    v_or_b32_e32 v19, v19, v20
+; GFX13-NEXT:    v_or_b32_e32 v12, v12, v21
+; GFX13-NEXT:    v_or_b32_e32 v21, v27, v26
+; GFX13-NEXT:    v_dual_lshlrev_b32 v17, 16, v17 :: v_dual_bitop2_b32 v20, v23, v24 bitop3:0x54
+; GFX13-NEXT:    v_and_b32_e32 v13, 0xffff, v13
+; GFX13-NEXT:    v_and_b32_e32 v14, 0xffff, v14
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_lshlrev_b32_e32 v21, 16, v21
+; GFX13-NEXT:    v_dual_lshlrev_b32 v20, 16, v20 :: v_dual_bitop2_b32 v9, v9, v25 bitop3:0x54
+; GFX13-NEXT:    v_and_b32_e32 v11, 0xffff, v11
+; GFX13-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
+; GFX13-NEXT:    v_and_b32_e32 v12, 0xffff, v12
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-NEXT:    v_and_b32_e32 v9, 0xffff, v9
+; GFX13-NEXT:    v_or_b32_e32 v17, v13, v17
+; GFX13-NEXT:    v_dual_lshlrev_b32 v23, 8, v80 :: v_dual_bitop2_b32 v18, v14, v18 bitop3:0x54
+; GFX13-NEXT:    v_or_b32_e32 v11, v11, v19
+; GFX13-NEXT:    v_dual_lshlrev_b32 v22, 8, v22 :: v_dual_bitop2_b32 v12, v12, v20 bitop3:0x54
+; GFX13-NEXT:    v_or_b32_e32 v13, v9, v21
+; GFX13-NEXT:    v_and_b32_e32 v9, 0xff, v10
+; GFX13-NEXT:    v_lshlrev_b32_e32 v10, 8, v85
+; GFX13-NEXT:    v_and_b32_e32 v14, 0xff, v84
+; GFX13-NEXT:    v_dual_lshlrev_b32 v19, 8, v83 :: v_dual_lshlrev_b32 v20, 8, v82
+; GFX13-NEXT:    v_and_b32_e32 v21, 0xff, v81
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    scratch_store_b128 v0, v[52:55], off
+; GFX13-NEXT:    scratch_store_b128 v0, v[106:109], off offset:16
+; GFX13-NEXT:    v_or_b32_e32 v8, v8, v23
+; GFX13-NEXT:    s_clause 0x2
+; GFX13-NEXT:    scratch_load_b64 v[23:24], off, s32 offset:184 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b32 v25, off, s32 offset:180 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b32 v26, off, s32 offset:176 th:TH_LOAD_LU
+; GFX13-NEXT:    v_or_b32_e32 v7, v7, v20
+; GFX13-NEXT:    scratch_load_b32 v20, off, s32 offset:204 th:TH_LOAD_LU ; 4-byte Folded Reload
+; GFX13-NEXT:    v_or_b32_e32 v9, v9, v10
+; GFX13-NEXT:    v_or_b32_e32 v10, v14, v19
+; GFX13-NEXT:    v_or_b32_e32 v14, v21, v22
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    scratch_load_b32 v22, off, s32 offset:196 th:TH_LOAD_LU
+; GFX13-NEXT:    scratch_load_b32 v21, off, s32 offset:200 th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x5
+; GFX13-NEXT:    scratch_load_b32 v24, off, s32 offset:192 th:TH_LOAD_LU ; 4-byte Folded Reload
 ; GFX13-NEXT:    v_readlane_b32 s35, v127, 3
-; GFX13-NEXT:    v_or_b32_e32 v4, v17, v4
-; GFX13-NEXT:    v_and_b32_e32 v17, 0xff, v44
 ; GFX13-NEXT:    v_readlane_b32 s34, v127, 2
 ; GFX13-NEXT:    v_readlane_b32 s31, v127, 1
 ; GFX13-NEXT:    v_readlane_b32 s30, v127, 0
-; GFX13-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; GFX13-NEXT:    v_or_b32_e32 v17, v17, v36
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xff, v56
-; GFX13-NEXT:    v_dual_lshlrev_b32 v39, 8, v105 :: v_dual_lshlrev_b32 v2, 8, v2
-; GFX13-NEXT:    v_lshlrev_b32_e32 v14, 8, v14
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_and_b32_e32 v17, 0xffff, v17
-; GFX13-NEXT:    v_or_b32_e32 v36, v36, v37
-; GFX13-NEXT:    v_dual_lshlrev_b32 v13, 8, v13 :: v_dual_lshlrev_b32 v11, 8, v11
-; GFX13-NEXT:    v_dual_lshlrev_b32 v10, 8, v10 :: v_dual_lshlrev_b32 v9, 8, v9
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; GFX13-NEXT:    v_lshlrev_b32_e32 v37, 16, v36
-; GFX13-NEXT:    v_and_b32_e32 v12, 0xffff, v12
-; GFX13-NEXT:    v_dual_lshlrev_b32 v8, 8, v8 :: v_dual_lshlrev_b32 v6, 8, v6
-; GFX13-NEXT:    v_dual_lshlrev_b32 v5, 8, v5 :: v_dual_bitop2_b32 v36, v12, v4 bitop3:0x54
-; GFX13-NEXT:    v_and_b32_e32 v4, 0xff, v119
-; GFX13-NEXT:    v_lshlrev_b32_e32 v12, 8, v108
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX13-NEXT:    v_or_b32_e32 v4, v4, v12
-; GFX13-NEXT:    v_and_b32_e32 v12, 0xff, v107
-; GFX13-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_or_b32_e32 v3, v12, v3
-; GFX13-NEXT:    v_or_b32_e32 v37, v17, v37
-; GFX13-NEXT:    v_and_b32_e32 v12, 0xff, v117
-; GFX13-NEXT:    v_lshlrev_b32_e32 v17, 8, v106
-; GFX13-NEXT:    v_dual_lshlrev_b32 v117, 8, v94 :: v_dual_lshlrev_b32 v3, 16, v3
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-NEXT:    v_or_b32_e32 v12, v12, v17
-; GFX13-NEXT:    v_or_b32_e32 v17, v38, v39
-; GFX13-NEXT:    v_and_b32_e32 v38, 0xff, v113
-; GFX13-NEXT:    v_lshlrev_b32_e32 v39, 8, v95
-; GFX13-NEXT:    v_and_b32_e32 v113, 0xff, v104
-; GFX13-NEXT:    v_and_b32_e32 v12, 0xffff, v12
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_lshlrev_b32 v17, 16, v17 :: v_dual_bitop2_b32 v119, v38, v39 bitop3:0x54
-; GFX13-NEXT:    v_or_b32_e32 v2, v113, v2
-; GFX13-NEXT:    v_or_b32_e32 v38, v4, v3
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_dual_lshlrev_b32 v113, 8, v90 :: v_dual_bitop2_b32 v39, v12, v17 bitop3:0x54
-; GFX13-NEXT:    v_lshlrev_b32_e32 v17, 8, v93
-; GFX13-NEXT:    v_dual_lshlrev_b32 v2, 16, v2 :: v_dual_bitop2_b32 v100, v100, v117 bitop3:0x54
-; GFX13-NEXT:    v_and_b32_e32 v12, 0xff, v99
-; GFX13-NEXT:    v_dual_lshlrev_b32 v99, 8, v92 :: v_dual_lshlrev_b32 v1, 8, v1
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_and_b32_e32 v4, 0xffff, v100
-; GFX13-NEXT:    v_and_b32_e32 v100, 0xff, v91
-; GFX13-NEXT:    v_or_b32_e32 v12, v12, v17
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_lshlrev_b32 v117, 8, v89 :: v_dual_bitop2_b32 v17, v80, v99 bitop3:0x54
-; GFX13-NEXT:    v_and_b32_e32 v3, 0xffff, v119
-; GFX13-NEXT:    v_dual_lshlrev_b32 v12, 16, v12 :: v_dual_bitop2_b32 v1, v100, v1 bitop3:0x54
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_or_b32_e32 v80, v83, v117
-; GFX13-NEXT:    v_and_b32_e32 v17, 0xffff, v17
-; GFX13-NEXT:    v_or_b32_e32 v70, v70, v113
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-NEXT:    v_dual_lshlrev_b32 v83, 16, v1 :: v_dual_bitop2_b32 v1, v3, v2 bitop3:0x54
-; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    scratch_store_b128 v0, v[18:21], off
-; GFX13-NEXT:    scratch_store_b128 v0, v[36:39], off offset:16
-; GFX13-NEXT:    v_dual_lshlrev_b32 v36, 8, v77 :: v_dual_bitop2_b32 v2, v4, v12 bitop3:0x54
-; GFX13-NEXT:    v_dual_lshlrev_b32 v38, 8, v76 :: v_dual_bitop2_b32 v3, v17, v83 bitop3:0x54
-; GFX13-NEXT:    v_and_b32_e32 v12, 0xff, v54
-; GFX13-NEXT:    v_lshlrev_b32_e32 v17, 8, v88
-; GFX13-NEXT:    v_and_b32_e32 v18, 0xff, v79
-; GFX13-NEXT:    v_and_b32_e32 v19, 0xff, v53
-; GFX13-NEXT:    v_lshlrev_b32_e32 v20, 8, v78
-; GFX13-NEXT:    v_and_b32_e32 v21, 0xff, v64
-; GFX13-NEXT:    v_and_b32_e32 v37, 0xff, v67
-; GFX13-NEXT:    v_dual_lshlrev_b32 v53, 8, v59 :: v_dual_bitop2_b32 v14, v18, v14 bitop3:0x54
-; GFX13-NEXT:    v_and_b32_e32 v54, 0xff, v58
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-NEXT:    v_or_b32_e32 v18, v21, v36
-; GFX13-NEXT:    v_or_b32_e32 v12, v12, v17
-; GFX13-NEXT:    v_dual_lshlrev_b32 v36, 8, v74 :: v_dual_bitop2_b32 v17, v19, v20 bitop3:0x54
-; GFX13-NEXT:    v_dual_lshlrev_b32 v38, 8, v72 :: v_dual_bitop2_b32 v19, v37, v38 bitop3:0x54
-; GFX13-NEXT:    v_and_b32_e32 v20, 0xff, v75
-; GFX13-NEXT:    v_and_b32_e32 v21, 0xff, v55
-; GFX13-NEXT:    v_and_b32_e32 v37, 0xff, v66
-; GFX13-NEXT:    v_lshlrev_b32_e32 v15, 8, v15
-; GFX13-NEXT:    v_and_b32_e32 v70, 0xffff, v70
-; GFX13-NEXT:    v_lshlrev_b32_e32 v80, 16, v80
-; GFX13-NEXT:    v_and_b32_e32 v39, 0xff, v103
-; GFX13-NEXT:    v_or_b32_e32 v13, v20, v13
-; GFX13-NEXT:    v_or_b32_e32 v20, v21, v36
-; GFX13-NEXT:    v_or_b32_e32 v15, v54, v15
-; GFX13-NEXT:    v_or_b32_e32 v21, v37, v38
-; GFX13-NEXT:    v_dual_lshlrev_b32 v14, 16, v14 :: v_dual_bitop2_b32 v4, v70, v80 bitop3:0x54
-; GFX13-NEXT:    v_and_b32_e32 v17, 0xffff, v17
-; GFX13-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
-; GFX13-NEXT:    v_and_b32_e32 v12, 0xffff, v12
-; GFX13-NEXT:    v_and_b32_e32 v19, 0xffff, v19
-; GFX13-NEXT:    v_or_b32_e32 v36, v39, v53
-; GFX13-NEXT:    v_lshlrev_b32_e32 v37, 16, v13
-; GFX13-NEXT:    v_and_b32_e32 v20, 0xffff, v20
-; GFX13-NEXT:    v_dual_lshlrev_b32 v38, 16, v15 :: v_dual_lshlrev_b32 v21, 16, v21
-; GFX13-NEXT:    v_or_b32_e32 v12, v12, v14
-; GFX13-NEXT:    v_or_b32_e32 v13, v17, v18
-; GFX13-NEXT:    v_or_b32_e32 v14, v19, v37
-; GFX13-NEXT:    v_and_b32_e32 v18, 0xff, v97
-; GFX13-NEXT:    v_dual_lshlrev_b32 v53, 8, v40 :: v_dual_bitop2_b32 v15, v20, v21 bitop3:0x54
-; GFX13-NEXT:    v_lshlrev_b32_e32 v19, 8, v46
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff, v36
-; GFX13-NEXT:    v_and_b32_e32 v20, 0xff, v116
-; GFX13-NEXT:    v_dual_lshlrev_b32 v21, 8, v45 :: v_dual_lshlrev_b32 v37, 8, v43
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_or_b32_e32 v18, v18, v19
-; GFX13-NEXT:    v_and_b32_e32 v39, 0xff, v82
-; GFX13-NEXT:    v_and_b32_e32 v54, 0xff, v84
-; GFX13-NEXT:    v_or_b32_e32 v19, v20, v21
-; GFX13-NEXT:    v_or_b32_e32 v17, v36, v38
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xff, v86
-; GFX13-NEXT:    v_and_b32_e32 v38, 0xff, v41
-; GFX13-NEXT:    v_dual_lshlrev_b32 v53, 8, v112 :: v_dual_bitop2_b32 v21, v39, v53 bitop3:0x54
-; GFX13-NEXT:    v_and_b32_e32 v39, 0xff, v114
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_or_b32_e32 v20, v36, v37
-; GFX13-NEXT:    v_or_b32_e32 v11, v38, v11
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xff, v101
-; GFX13-NEXT:    v_lshlrev_b32_e32 v37, 8, v118
-; GFX13-NEXT:    v_lshlrev_b32_e32 v55, 8, v102
-; GFX13-NEXT:    v_and_b32_e32 v18, 0xffff, v18
-; GFX13-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
-; GFX13-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
-; GFX13-NEXT:    v_lshlrev_b32_e32 v38, 8, v115
-; GFX13-NEXT:    v_and_b32_e32 v20, 0xffff, v20
-; GFX13-NEXT:    v_or_b32_e32 v36, v36, v37
-; GFX13-NEXT:    v_or_b32_e32 v37, v54, v55
-; GFX13-NEXT:    v_or_b32_e32 v18, v18, v19
-; GFX13-NEXT:    v_or_b32_e32 v29, v29, v38
-; GFX13-NEXT:    v_dual_lshlrev_b32 v11, 8, v98 :: v_dual_bitop2_b32 v19, v20, v11 bitop3:0x54
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-NEXT:    v_dual_lshlrev_b32 v37, 16, v37 :: v_dual_bitop2_b32 v10, v39, v10 bitop3:0x54
-; GFX13-NEXT:    v_or_b32_e32 v27, v27, v53
-; GFX13-NEXT:    v_and_b32_e32 v21, 0xffff, v21
-; GFX13-NEXT:    v_lshlrev_b32_e32 v36, 16, v36
-; GFX13-NEXT:    v_and_b32_e32 v29, 0xffff, v29
-; GFX13-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
-; GFX13-NEXT:    v_and_b32_e32 v27, 0xffff, v27
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_or_b32_e32 v20, v21, v36
-; GFX13-NEXT:    v_and_b32_e32 v21, 0xff, v96
-; GFX13-NEXT:    v_dual_lshlrev_b32 v29, 8, v81 :: v_dual_bitop2_b32 v36, v29, v10 bitop3:0x54
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-NEXT:    v_or_b32_e32 v37, v27, v37
-; GFX13-NEXT:    v_and_b32_e32 v10, 0xff, v26
-; GFX13-NEXT:    v_lshlrev_b32_e32 v26, 8, v87
-; GFX13-NEXT:    v_and_b32_e32 v27, 0xff, v28
-; GFX13-NEXT:    v_lshlrev_b32_e32 v28, 8, v85
-; GFX13-NEXT:    v_or_b32_e32 v9, v21, v9
-; GFX13-NEXT:    v_dual_lshlrev_b32 v29, 8, v30 :: v_dual_bitop2_b32 v23, v23, v29 bitop3:0x54
-; GFX13-NEXT:    v_and_b32_e32 v30, 0xff, v65
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-NEXT:    v_or_b32_e32 v21, v27, v28
-; GFX13-NEXT:    v_dual_lshlrev_b32 v27, 8, v68 :: v_dual_bitop2_b32 v10, v10, v11 bitop3:0x54
-; GFX13-NEXT:    v_dual_lshlrev_b32 v9, 16, v9 :: v_dual_bitop2_b32 v11, v25, v26 bitop3:0x54
-; GFX13-NEXT:    v_and_b32_e32 v25, 0xff, v71
-; GFX13-NEXT:    v_lshlrev_b32_e32 v26, 8, v69
-; GFX13-NEXT:    v_lshlrev_b32_e32 v21, 16, v21
-; GFX13-NEXT:    v_and_b32_e32 v28, 0xff, v48
-; GFX13-NEXT:    v_and_b32_e32 v11, 0xffff, v11
-; GFX13-NEXT:    v_dual_lshlrev_b32 v7, 8, v7 :: v_dual_bitop2_b32 v8, v25, v8 bitop3:0x54
-; GFX13-NEXT:    v_or_b32_e32 v22, v22, v26
-; GFX13-NEXT:    v_or_b32_e32 v24, v24, v27
-; GFX13-NEXT:    v_and_b32_e32 v10, 0xffff, v10
-; GFX13-NEXT:    v_and_b32_e32 v23, 0xffff, v23
-; GFX13-NEXT:    v_dual_lshlrev_b32 v8, 16, v8 :: v_dual_bitop2_b32 v7, v30, v7 bitop3:0x54
-; GFX13-NEXT:    v_and_b32_e32 v22, 0xffff, v22
-; GFX13-NEXT:    v_dual_lshlrev_b32 v11, 8, v31 :: v_dual_bitop2_b32 v39, v11, v21 bitop3:0x54
-; GFX13-NEXT:    v_dual_lshlrev_b32 v21, 8, v52 :: v_dual_bitop2_b32 v25, v28, v29 bitop3:0x54
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_dual_lshlrev_b32 v24, 16, v24 :: v_dual_lshlrev_b32 v26, 16, v7
-; GFX13-NEXT:    v_or_b32_e32 v38, v10, v9
-; GFX13-NEXT:    v_or_b32_e32 v7, v23, v8
-; GFX13-NEXT:    v_and_b32_e32 v25, 0xffff, v25
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-NEXT:    v_or_b32_e32 v8, v22, v24
-; GFX13-NEXT:    v_and_b32_e32 v10, 0xff, v16
-; GFX13-NEXT:    v_and_b32_e32 v16, 0xff, v35
-; GFX13-NEXT:    v_and_b32_e32 v24, 0xff, v51
-; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    scratch_load_b32 v22, off, s32 offset:196 th:TH_LOAD_LU
-; GFX13-NEXT:    scratch_load_b32 v28, off, s32 offset:204 th:TH_LOAD_LU
-; GFX13-NEXT:    v_lshlrev_b32_e32 v23, 8, v32
-; GFX13-NEXT:    s_clause 0x2
-; GFX13-NEXT:    scratch_load_b32 v30, off, s32 offset:200 th:TH_LOAD_LU
-; GFX13-NEXT:    scratch_load_b32 v29, off, s32 offset:184 th:TH_LOAD_LU
-; GFX13-NEXT:    scratch_load_b32 v27, off, s32 offset:176 th:TH_LOAD_LU
-; GFX13-NEXT:    v_or_b32_e32 v6, v24, v6
-; GFX13-NEXT:    v_or_b32_e32 v10, v10, v11
-; GFX13-NEXT:    v_or_b32_e32 v11, v16, v21
-; GFX13-NEXT:    v_or_b32_e32 v9, v25, v26
-; GFX13-NEXT:    scratch_load_b32 v25, off, s32 offset:192 th:TH_LOAD_LU ; 4-byte Folded Reload
-; GFX13-NEXT:    v_lshlrev_b32_e32 v26, 8, v33
-; GFX13-NEXT:    scratch_load_b32 v24, off, s32 offset:180 th:TH_LOAD_LU ; 4-byte Folded Reload
-; GFX13-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX13-NEXT:    v_and_b32_e32 v10, 0xffff, v10
-; GFX13-NEXT:    s_wait_loadcnt 0x6
-; GFX13-NEXT:    v_and_b32_e32 v22, 0xff, v22
+; GFX13-NEXT:    v_dual_lshlrev_b32 v23, 8, v23 :: v_dual_lshlrev_b32 v19, 16, v14
+; GFX13-NEXT:    v_and_b32_e32 v14, 0xff, v71
 ; GFX13-NEXT:    s_wait_loadcnt 0x5
-; GFX13-NEXT:    v_lshlrev_b32_e32 v28, 8, v28
-; GFX13-NEXT:    s_wait_loadcnt 0x3
-; GFX13-NEXT:    v_and_b32_e32 v29, 0xff, v29
-; GFX13-NEXT:    v_dual_lshlrev_b32 v23, 8, v50 :: v_dual_bitop2_b32 v16, v22, v23 bitop3:0x54
-; GFX13-NEXT:    s_wait_loadcnt 0x2
-; GFX13-NEXT:    v_and_b32_e32 v27, 0xff, v27
-; GFX13-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
-; GFX13-NEXT:    s_wait_loadcnt 0x1
 ; GFX13-NEXT:    v_and_b32_e32 v25, 0xff, v25
+; GFX13-NEXT:    s_wait_loadcnt 0x3
+; GFX13-NEXT:    v_dual_lshlrev_b32 v20, 8, v20 :: v_dual_lshlrev_b32 v26, 8, v26
+; GFX13-NEXT:    v_and_b32_e32 v9, 0xffff, v9
+; GFX13-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
+; GFX13-NEXT:    s_wait_loadcnt 0x2
+; GFX13-NEXT:    v_and_b32_e32 v22, 0xff, v22
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_and_b32_e32 v24, 0xff, v24
-; GFX13-NEXT:    v_or_b32_e32 v10, v10, v11
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_dual_lshlrev_b32 v21, 8, v21 :: v_dual_lshlrev_b32 v24, 8, v24
+; GFX13-NEXT:    v_or_b32_e32 v14, v14, v20
+; GFX13-NEXT:    v_and_b32_e32 v7, 0xffff, v7
+; GFX13-NEXT:    v_and_b32_e32 v8, 0xffff, v8
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_3) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_or_b32_e32 v5, v5, v21
+; GFX13-NEXT:    v_or_b32_e32 v6, v6, v24
 ; GFX13-NEXT:    v_or_b32_e32 v21, v25, v26
-; GFX13-NEXT:    v_lshlrev_b32_e32 v25, 8, v34
-; GFX13-NEXT:    v_and_b32_e32 v26, 0xff, v49
-; GFX13-NEXT:    v_and_b32_e32 v16, 0xffff, v16
-; GFX13-NEXT:    v_and_b32_e32 v22, 0xffff, v21
-; GFX13-NEXT:    scratch_load_b32 v21, off, s32 offset:188 th:TH_LOAD_LU ; 4-byte Folded Reload
-; GFX13-NEXT:    v_or_b32_e32 v5, v26, v5
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX13-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_and_b32_e32 v21, 0xff, v21
-; GFX13-NEXT:    v_dual_lshlrev_b32 v30, 8, v30 :: v_dual_bitop2_b32 v21, v21, v23 bitop3:0x54
-; GFX13-NEXT:    v_or_b32_e32 v23, v24, v25
-; GFX13-NEXT:    v_or_b32_e32 v24, v27, v28
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_lshlrev_b32 v26, 16, v21 :: v_dual_bitop2_b32 v25, v29, v30 bitop3:0x54
-; GFX13-NEXT:    v_or_b32_e32 v21, v16, v6
-; GFX13-NEXT:    v_and_b32_e32 v24, 0xffff, v24
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_lshlrev_b32_e32 v25, 16, v25
-; GFX13-NEXT:    v_and_b32_e32 v23, 0xffff, v23
-; GFX13-NEXT:    v_or_b32_e32 v22, v22, v26
-; GFX13-NEXT:    v_or_b32_e32 v24, v24, v25
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_or_b32_e32 v23, v23, v5
+; GFX13-NEXT:    v_dual_lshlrev_b32 v22, 16, v14 :: v_dual_bitop2_b32 v20, v22, v23 bitop3:0x54
+; GFX13-NEXT:    v_and_b32_e32 v23, 0xffff, v5
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX13-NEXT:    v_and_b32_e32 v24, 0xffff, v6
+; GFX13-NEXT:    v_dual_lshlrev_b32 v21, 16, v21 :: v_dual_lshlrev_b32 v20, 16, v20
+; GFX13-NEXT:    v_or_b32_e32 v14, v9, v10
+; GFX13-NEXT:    v_or_b32_e32 v5, v7, v19
+; GFX13-NEXT:    v_or_b32_e32 v6, v8, v22
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-NEXT:    v_or_b32_e32 v8, v24, v21
+; GFX13-NEXT:    v_or_b32_e32 v7, v23, v20
 ; GFX13-NEXT:    s_clause 0x5
 ; GFX13-NEXT:    scratch_store_b128 v0, v[1:4], off offset:32
-; GFX13-NEXT:    scratch_store_b128 v0, v[12:15], off offset:48
-; GFX13-NEXT:    scratch_store_b128 v0, v[17:20], off offset:64
-; GFX13-NEXT:    scratch_store_b128 v0, v[36:39], off offset:80
-; GFX13-NEXT:    scratch_store_b128 v0, v[7:10], off offset:96
-; GFX13-NEXT:    scratch_store_b128 v0, v[21:24], off offset:112
+; GFX13-NEXT:    scratch_store_b128 v0, v[33:36], off offset:48
+; GFX13-NEXT:    scratch_store_b128 v0, v[48:51], off offset:64
+; GFX13-NEXT:    scratch_store_b128 v0, v[15:18], off offset:80
+; GFX13-NEXT:    scratch_store_b128 v0, v[11:14], off offset:96
+; GFX13-NEXT:    scratch_store_b128 v0, v[5:8], off offset:112
 ; GFX13-NEXT:    s_clause 0x2b
 ; GFX13-NEXT:    scratch_load_b32 v123, off, s32
 ; GFX13-NEXT:    scratch_load_b32 v122, off, s32 offset:4
@@ -269042,513 +268889,61 @@ define <64 x half> @bitcast_v64bf16_to_v64f16(<64 x bfloat> %a, i32 %b) {
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX13-TRUE16-LABEL: bitcast_v64bf16_to_v64f16:
-; GFX13-TRUE16:       ; %bb.0:
-; GFX13-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-TRUE16-NEXT:    s_wait_expcnt 0x0
-; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
-; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-TRUE16-NEXT:    s_clause 0x1
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v32, off, s32 offset:4
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v31, off, s32
-; GFX13-TRUE16-NEXT:    s_mov_b32 s0, exec_lo
-; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x1
-; GFX13-TRUE16-NEXT:    v_cmpx_ne_u32_e32 0, v32
-; GFX13-TRUE16-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX13-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
-; GFX13-TRUE16-NEXT:    s_cbranch_execz .LBB100_2
-; GFX13-TRUE16-NEXT:  ; %bb.1: ; %cmp.true
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v32, 0xffff0000, v16
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v33, 0xffff0000, v17
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v36, 0xffff0000, v18
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_lshlrev_b32 v35, 16, v17
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v33, 0x40c00000, v33 :: v_dual_add_f32 v34, 0x40c00000, v16
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v38, 0xffff0000, v22
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v16, v32, s0
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v48, 0xffff0000, v23
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v32, v33, s0
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v33, 0x40c00000, v35
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v17, v34, s0
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v34, 0x40c00000, v36
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v35, 0xffff0000, v19
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v37, 0x40c00000, v18 :: v_dual_lshlrev_b32 v36, 16, v19
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v18, v33, s0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v19, v34, s0
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v34, 0x40c00000, v35 :: v_dual_add_f32 v35, 0x40c00000, v36
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v33, v37, s0
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v36, 0xffff0000, v20
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v37, 16, v20
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v20, v34, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v34, v35, s0
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v35, 0xffff0000, v21
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v36, 0x40c00000, v36 :: v_dual_lshlrev_b32 v21, 16, v21
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v37, 0x40c00000, v37 :: v_dual_add_f32 v38, 0x40c00000, v38
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v39, 0x40c00000, v35
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v35, v36, s0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_4) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v36, v37, s0
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v37, 0x40c00000, v21
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v21, v39, s0
-; GFX13-TRUE16-NEXT:    v_dual_lshlrev_b32 v39, 16, v22 :: v_dual_lshlrev_b32 v49, 16, v24
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v50, 0x40c00000, v23
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v22, v37, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v37, v38, s0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_3) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v38, 0x40c00000, v39 :: v_dual_add_f32 v39, 0x40c00000, v48
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v48, 0xffff0000, v24
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v51, 0xffff0000, v27
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v54, 16, v29
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v23, v38, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v24, v39, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v38, v50, s0
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v39, 0x40c00000, v48 :: v_dual_lshlrev_b32 v50, 16, v25
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v48, 0x40c00000, v49
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v49, 0xffff0000, v25
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v51, 0x40c00000, v51 :: v_dual_add_f32 v50, 0x40c00000, v50
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v25, v39, s0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_4) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v39, v48, s0
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v48, 0xffff0000, v26
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v49, 0x40c00000, v49 :: v_dual_lshlrev_b32 v26, 16, v26
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v53, 0xffff0000, v28
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v52, 0x40c00000, v48
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v48, v49, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v49, v50, s0
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v50, 0x40c00000, v26 :: v_dual_add_f32 v55, 0x40c00000, v28
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v26, v52, s0
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v52, 16, v27
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v64, 0xffff0000, v0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v27, v50, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v50, v51, s0
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v51, 0x40c00000, v52 :: v_dual_add_f32 v52, 0x40c00000, v53
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v53, 0xffff0000, v29
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v50.h, v27.l
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v0, 0x40c00000, v0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v28, v51, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v29, v52, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v51, v55, s0
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v52, 0x40c00000, v53 :: v_dual_lshlrev_b32 v55, 16, v30
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v53, 0x40c00000, v54
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v54, 0xffff0000, v30
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v69, v0, s0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v55, 0x40c00000, v55
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v30, v52, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v52, v53, s0
-; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v53, 0xffff0000, v31
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v54, 0x40c00000, v54 :: v_dual_lshlrev_b32 v31, 16, v31
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v68, v55, s0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v52.h, v30.l
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v53, 0x40c00000, v53
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v67, v54, s0
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v31, 0x40c00000, v31 :: v_dual_add_f32 v54, 0x40c00000, v64
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v51.h, v29.l
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v66, v53, s0
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v53, 0xffff0000, v1
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v65, v31, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v64, v54, s0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v39.h, v25.l
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v31, 0x40c00000, v53
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v53, 0xffff0000, v2
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v1, 0x40c00000, v1 :: v_dual_lshlrev_b32 v2, 16, v2
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v38.h, v24.l
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v70, v31, s0
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v0, 0x40c00000, v53
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v2, 0x40c00000, v2
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v71, v1, s0
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff0000, v3
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v80, v0, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v81, v2, s0
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff0000, v4
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_3) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v1, 0x40c00000, v1 :: v_dual_add_f32 v2, 0x40c00000, v3
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v4, 0xffff0000, v5
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v48.h, v23.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v82, v1, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v83, v2, s0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v37.h, v22.l
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v2, 0x40c00000, v4
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v0, 0x40c00000, v0 :: v_dual_add_f32 v1, 0x40c00000, v3
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v3, 0xffff0000, v6
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v4, 16, v7
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v53, v2, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v55, v0, s0
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v5
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v54, v1, s0
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v6
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v5, 0xffff0000, v13
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v53.h, v28.l
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v0, 0x40c00000, v0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v34.h, v20.l
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v1, 0x40c00000, v1
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v5, 0x40c00000, v5
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v33.h, v19.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v6, v0, s0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v35.h, v18.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v31, v1, s0
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v15
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v2, 0x40c00000, v3
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v3, 0xffff0000, v7
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v5, v5, s0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v32.h, v17.l
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v1, 0x40c00000, v1
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v7, v2, s0
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v2, 0x40c00000, v4
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v4, 0xffff0000, v14
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v0, 0x40c00000, v3
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v3, 0xffff0000, v15
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v29, v52.l, v52.h
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v85, v2, s0
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v28, v51.l, v51.h
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v84, v0, s0
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff0000, v8
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v2, 0x40c00000, v3 :: v_dual_lshlrev_b32 v3, 16, v14
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v27, v53.h, v50.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v26, v50.h, v26.l
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_4) | instid1(VALU_DEP_3)
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v86, 0x40c00000, v0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v0, v1, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v1, v2, s0
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v2, 0x40c00000, v3 :: v_dual_add_f32 v3, 0x40c00000, v4
-; GFX13-TRUE16-NEXT:    v_dual_lshlrev_b32 v4, 16, v8 :: v_dual_lshlrev_b32 v8, 16, v13
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v15, v0.l, v1.l
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v2, v2, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v3, v3, s0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v87, 0x40c00000, v4
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v8, 0x40c00000, v8
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v4, 16, v9
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v2.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v3.l
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v2, 0xffff0000, v12
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v12
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v4, 0x40c00000, v4
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v86, v86, s0
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v14, v0.l, v1.l
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff0000, v9
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v1, 0x40c00000, v3 :: v_dual_add_f32 v2, 0x40c00000, v2
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v3, v8, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v4, v4, s0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v8, 0x40c00000, v0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v12, v1, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v13, v2, s0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v3.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v5.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v25, v49.l, v48.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v12.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v13.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v24, v39.l, v39.h
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v13, v0.l, v1.l
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff0000, v11
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v11
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v12, v2.l, v3.l
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v10
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v3, 0xffff0000, v10
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v0, 0x40c00000, v0 :: v_dual_add_f32 v1, 0x40c00000, v1
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v5, v8, s0
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v2, 0x40c00000, v2 :: v_dual_add_f32 v3, 0x40c00000, v3
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v8, v0, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v1, v1, s0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v9, v4.l, v5.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v2, v2, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v3, v3, s0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v31.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v8.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v8, v87, s0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v7.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v31.l, v6.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v10, v2.l, v3.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v11, v0.l, v1.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v8.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v86.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v85.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v84.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v6, v4.l, v5.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v5, v31.l, v53.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v8, v0.l, v1.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v4, v54.l, v55.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v83.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v82.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v53.l, v71.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v54.l, v70.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v7, v2.l, v3.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v81.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v31.l, v80.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v55.l, v69.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v3, v0.l, v1.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v1, v53.l, v54.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v53.l, v68.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v54.l, v67.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v2, v2.l, v31.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v0, v55.l, v64.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v31, v65.l, v66.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v23, v38.l, v38.h
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v30, v53.l, v54.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v22, v48.h, v37.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v21, v37.h, v21.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v20, v36.l, v35.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v19, v34.l, v34.h
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v18, v33.l, v33.h
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v17, v35.h, v32.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v16, v32.h, v16.l
-; GFX13-TRUE16-NEXT:  .LBB100_2: ; %end
-; GFX13-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX13-FAKE16-LABEL: bitcast_v64bf16_to_v64f16:
-; GFX13-FAKE16:       ; %bb.0:
-; GFX13-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-FAKE16-NEXT:    s_wait_expcnt 0x0
-; GFX13-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-FAKE16-NEXT:    s_wait_rtscnt 0x0
-; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-FAKE16-NEXT:    s_clause 0x1
-; GFX13-FAKE16-NEXT:    scratch_load_b32 v32, off, s32 offset:4
-; GFX13-FAKE16-NEXT:    scratch_load_b32 v31, off, s32
-; GFX13-FAKE16-NEXT:    s_mov_b32 s0, exec_lo
-; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x1
-; GFX13-FAKE16-NEXT:    v_cmpx_ne_u32_e32 0, v32
-; GFX13-FAKE16-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX13-FAKE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
-; GFX13-FAKE16-NEXT:    s_cbranch_execz .LBB100_2
-; GFX13-FAKE16-NEXT:  ; %bb.1: ; %cmp.true
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v32, 0xffff0000, v16
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v35, 0xffff0000, v18
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v33, 0xffff0000, v17
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_lshlrev_b32 v17, 16, v17
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v34, 0x40c00000, v16 :: v_dual_add_f32 v35, 0x40c00000, v35
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v18, 16, v18 :: v_dual_lshlrev_b32 v38, 16, v19
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v36, 0xffff0000, v19
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v33, 0x40c00000, v33
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v16, v32, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v32, v34, s0
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v34, 0x40c00000, v17 :: v_dual_add_f32 v37, 0x40c00000, v18
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v36, 0x40c00000, v36
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v18, v35, s0
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v35, 0xffff0000, v20
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v17, v33, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v33, v34, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v34, v37, s0
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v37, 0xffff0000, v21
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v21, 16, v21
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v19, v36, s0
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v36, 0x40c00000, v38
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v38, 0x40c00000, v35 :: v_dual_add_f32 v37, 0x40c00000, v37
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v39, 0xffff0000, v22
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v35, v36, s0
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v36, 0x40c00000, v20
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v20, v38, s0
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v38, 0x40c00000, v21
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v80, 0xffff0000, v8
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v81, 0xffff0000, v15
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v21, v37, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v37, v38, s0
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v38, 0x40c00000, v39
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v39, 0xffff0000, v23
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v80, 0x40c00000, v80 :: v_dual_lshlrev_b32 v23, 16, v23
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v82, 0xffff0000, v14
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v81, 0x40c00000, v81 :: v_dual_lshlrev_b32 v14, 16, v14
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v15, 0x40c00000, v15
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v39, 0x40c00000, v39
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v50, 0x40c00000, v23
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v82, 0x40c00000, v82
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v81, v81, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v15, v15, s0
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v49, 0xffff0000, v24
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v23, v39, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v39, v50, s0
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v50, 0xffff0000, v25
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v48, 0x40c00000, v22 :: v_dual_lshlrev_b32 v25, 16, v25
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v14, 0x40c00000, v14
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v83, 0xffff0000, v12
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v15, v15, v81
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v81, 0xffff0000, v13
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v13, 16, v13 :: v_dual_lshlrev_b32 v12, 16, v12
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v22, v38, s0
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v51, 0x40c00000, v25
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v38, v48, s0
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v48, 0x40c00000, v49 :: v_dual_lshlrev_b32 v49, 16, v24
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v53, 0xffff0000, v29
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v50, 0x40c00000, v50
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v81, 0x40c00000, v81 :: v_dual_lshlrev_b32 v8, 16, v8
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v82, v82, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v14, v14, s0
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v13, 0x40c00000, v13
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v83, 0x40c00000, v83 :: v_dual_add_f32 v12, 0x40c00000, v12
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v52, 0xffff0000, v28
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v53, 0x40c00000, v53
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v25, v50, s0
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v50, 0xffff0000, v27
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v24, v48, s0
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v48, 0x40c00000, v49
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v49, 0xffff0000, v26
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v26, 16, v26 :: v_dual_lshlrev_b32 v28, 16, v28
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v54, 0xffff0000, v30
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v64, 0xffff0000, v0
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v66, 0xffff0000, v2
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v70, 0xffff0000, v6
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v14, v14, v82
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v82, 0xffff0000, v9
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v81, v81, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v13, v13, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v83, v83, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v12, v12, s0
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v26, 0x40c00000, v26 :: v_dual_lshlrev_b32 v29, 16, v29
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v52, 0x40c00000, v52
-; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v55, 0xffff0000, v31
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v54, 0x40c00000, v54 :: v_dual_lshlrev_b32 v31, 16, v31
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v64, 0x40c00000, v64
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v65, 0xffff0000, v1
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v1, 16, v1 :: v_dual_lshlrev_b32 v0, 16, v0
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v67, 0xffff0000, v3
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v68, 0xffff0000, v4
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v2, 0x40c00000, v2
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v69, 0xffff0000, v5
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v71, 0xffff0000, v7
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v70, 0x40c00000, v70 :: v_dual_lshlrev_b32 v7, 16, v7
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v82, 0x40c00000, v82
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v8, 0x40c00000, v8 :: v_dual_lshlrev_b32 v9, 16, v9
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v13, v13, v81
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v81, 0xffff0000, v10
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v12, v12, v83
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v83, 0xffff0000, v11
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v11, 16, v11 :: v_dual_lshlrev_b32 v10, 16, v10
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v81, 0x40c00000, v81
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v49, 0x40c00000, v49 :: v_dual_add_f32 v50, 0x40c00000, v50
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v29, 0x40c00000, v29
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v27, 0x40c00000, v27 :: v_dual_add_f32 v28, 0x40c00000, v28
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v55, 0x40c00000, v55
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v31, 0x40c00000, v31 :: v_dual_add_f32 v30, 0x40c00000, v30
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v65, 0x40c00000, v65
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v1, 0x40c00000, v1 :: v_dual_add_f32 v0, 0x40c00000, v0
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v67, 0x40c00000, v67 :: v_dual_add_f32 v66, 0x40c00000, v66
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v3, 0x40c00000, v3 :: v_dual_add_f32 v68, 0x40c00000, v68
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v69, 0x40c00000, v69 :: v_dual_add_f32 v4, 0x40c00000, v4
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v5, 0x40c00000, v5
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v71, 0x40c00000, v71 :: v_dual_add_f32 v6, 0x40c00000, v6
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v7, 0x40c00000, v7
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v83, 0x40c00000, v83 :: v_dual_add_f32 v10, 0x40c00000, v10
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v11, 0x40c00000, v11
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v9, 0x40c00000, v9
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v36, v36, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v48, v48, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v51, v51, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v49, v49, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v26, v26, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v50, v50, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v27, v27, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v52, v52, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v28, v28, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v53, v53, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v29, v29, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v54, v54, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v30, v30, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v55, v55, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v31, v31, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v64, v64, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v65, v65, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v1, v1, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v66, v66, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v2, v2, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v67, v67, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v3, v3, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v68, v68, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v4, v4, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v69, v69, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v5, v5, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v70, v70, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v6, v6, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v71, v71, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v80, v80, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v82, v82, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v81, v81, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v83, v83, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v11, v11, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v10, v10, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v9, v9, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v8, v8, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v7, v7, s0
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v11, v11, v83
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v10, v10, v81
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v9, v9, v82
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v8, v8, v80
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v7, v7, v71
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v6, v6, v70
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v5, v5, v69
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v4, v4, v68
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v3, v3, v67
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v2, v2, v66
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v1, v1, v65
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v64
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v31, v31, v55
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v30, v30, v54
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v29, v29, v53
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v28, v28, v52
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v27, v27, v50
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v26, v26, v49
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v25, v51, v25
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v24, v48, v24
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v23, v39, v23
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v22, v38, v22
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v21, v37, v21
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v20, v36, v20
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v19, v35, v19
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v18, v34, v18
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v17, v33, v17
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v16, v32, v16
-; GFX13-FAKE16-NEXT:  .LBB100_2: ; %end
-; GFX13-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX13-LABEL: bitcast_v64bf16_to_v64f16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    scratch_load_b32 v32, off, s32 offset:4
+; GFX13-NEXT:    scratch_load_b32 v31, off, s32
+; GFX13-NEXT:    s_mov_b32 s0, exec_lo
+; GFX13-NEXT:    s_wait_loadcnt 0x1
+; GFX13-NEXT:    v_cmpx_ne_u32_e32 0, v32
+; GFX13-NEXT:    s_xor_b32 s0, exec_lo, s0
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; GFX13-NEXT:    s_cbranch_execz .LBB100_2
+; GFX13-NEXT:  ; %bb.1: ; %cmp.true
+; GFX13-NEXT:    v_pk_add_bf16 v15, 0x40c0, v15 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v14, 0x40c0, v14 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v13, 0x40c0, v13 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v12, 0x40c0, v12 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v11, 0x40c0, v11 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v10, 0x40c0, v10 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v9, 0x40c0, v9 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v8, 0x40c0, v8 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v7, 0x40c0, v7 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v6, 0x40c0, v6 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v5, 0x40c0, v5 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v4, 0x40c0, v4 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v3, 0x40c0, v3 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v2, 0x40c0, v2 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v1, 0x40c0, v1 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v0, 0x40c0, v0 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    v_pk_add_bf16 v31, 0x40c0, v31 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v30, 0x40c0, v30 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v29, 0x40c0, v29 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v28, 0x40c0, v28 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v27, 0x40c0, v27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v26, 0x40c0, v26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v25, 0x40c0, v25 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v24, 0x40c0, v24 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v23, 0x40c0, v23 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v22, 0x40c0, v22 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v21, 0x40c0, v21 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v20, 0x40c0, v20 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v19, 0x40c0, v19 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v18, 0x40c0, v18 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v17, 0x40c0, v17 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v16, 0x40c0, v16 op_sel_hi:[0,1]
+; GFX13-NEXT:  .LBB100_2: ; %end
+; GFX13-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
 
@@ -272761,645 +272156,78 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; GFX11-NEXT:    v_dual_mov_b32 v14, s26 :: v_dual_mov_b32 v15, s27
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX13-TRUE16-LABEL: bitcast_v64bf16_to_v64f16_scalar:
-; GFX13-TRUE16:       ; %bb.0:
-; GFX13-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-TRUE16-NEXT:    s_wait_expcnt 0x0
-; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
-; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-TRUE16-NEXT:    s_or_saveexec_b32 s4, -1
-; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v40, s32 ; 4-byte Folded Spill
-; GFX13-TRUE16-NEXT:    s_mov_b32 exec_lo, s4
-; GFX13-TRUE16-NEXT:    v_writelane_b32 v40, s36, 0
-; GFX13-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v14
-; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s40, v2
-; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s41, v3
-; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s42, v4
-; GFX13-TRUE16-NEXT:    v_writelane_b32 v40, s37, 1
-; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s43, v5
-; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s44, v6
-; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s45, v7
-; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s46, v8
-; GFX13-TRUE16-NEXT:    v_writelane_b32 v40, s38, 2
-; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s38, v0
-; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s47, v9
-; GFX13-TRUE16-NEXT:    s_mov_b32 s37, s29
-; GFX13-TRUE16-NEXT:    s_mov_b32 s36, s28
-; GFX13-TRUE16-NEXT:    v_writelane_b32 v40, s39, 3
-; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s39, v1
-; GFX13-TRUE16-NEXT:    s_mov_b32 s15, s3
-; GFX13-TRUE16-NEXT:    s_mov_b32 s14, s2
-; GFX13-TRUE16-NEXT:    s_mov_b32 s13, s1
-; GFX13-TRUE16-NEXT:    v_writelane_b32 v40, s48, 4
-; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s48, v10
-; GFX13-TRUE16-NEXT:    s_mov_b32 s12, s0
-; GFX13-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX13-TRUE16-NEXT:    s_and_b32 s1, vcc_lo, exec_lo
-; GFX13-TRUE16-NEXT:    v_writelane_b32 v40, s49, 5
-; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s49, v11
-; GFX13-TRUE16-NEXT:    v_writelane_b32 v40, s50, 6
-; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s50, v12
-; GFX13-TRUE16-NEXT:    v_writelane_b32 v40, s51, 7
-; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s51, v13
-; GFX13-TRUE16-NEXT:    s_cbranch_scc0 .LBB101_3
-; GFX13-TRUE16-NEXT:  ; %bb.1: ; %Flow
-; GFX13-TRUE16-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
-; GFX13-TRUE16-NEXT:    s_cbranch_vccnz .LBB101_4
-; GFX13-TRUE16-NEXT:  .LBB101_2: ; %cmp.true
-; GFX13-TRUE16-NEXT:    s_and_b32 s0, s36, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s1, s36, 16
-; GFX13-TRUE16-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_and_b32 s2, s37, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v16, s0, s0
-; GFX13-TRUE16-NEXT:    s_and_b32 s3, s39, 0xffff0000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v17, s1, s0
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s0, s37, 16
-; GFX13-TRUE16-NEXT:    s_and_b32 s1, s38, 0xffff0000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v18, s2, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s2, s38, 16
-; GFX13-TRUE16-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v19, s0, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s0, s3, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_and_b32 s3, s41, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_and_b32 s5, s50, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s4, s49, 16
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v20, s1, s0
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s1, s39, 16
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v32, s2, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v33, s0, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s0, s1, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_and_b32 s1, s40, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s2, s40, 16
-; GFX13-TRUE16-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v34, s0, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s0, s3, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_and_b32 s3, s43, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v35, s1, s0
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s1, s41, 16
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v36, s2, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v21, s0, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s0, s1, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_and_b32 s1, s42, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s2, s42, 16
-; GFX13-TRUE16-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v22, s0, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s0, s3, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_and_b32 s3, s45, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_and_b32 s6, s18, 0xffff0000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v23, s1, s0
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s1, s43, 16
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v24, s2, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v25, s0, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s0, s1, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_and_b32 s1, s44, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s2, s44, 16
-; GFX13-TRUE16-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v37, s0, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s0, s3, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s9, s20, 16
-; GFX13-TRUE16-NEXT:    s_and_b32 s10, s20, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s20, s25, 16
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v38, s1, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v39, s2, s0
-; GFX13-TRUE16-NEXT:    s_and_b32 s1, s46, 0xffff0000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v48, s0, s0
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s0, s46, 16
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s2, s45, 16
-; GFX13-TRUE16-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s3, s0, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s0, s2, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_and_b32 s2, s48, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_and_b32 s7, s19, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v26, s1, s0
-; GFX13-TRUE16-NEXT:    s_and_b32 s1, s47, 0xffff0000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v27, s3, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s3, s47, 16
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v29, s2, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v65, s4, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v28, s1, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s1, s3, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s3, s48, 16
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s4, s51, 16
-; GFX13-TRUE16-NEXT:    s_add_f32 s2, s3, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_and_b32 s3, s49, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v55, s2, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s2, s5, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_and_b32 s5, s12, 0xffff0000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v64, s3, s0
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s3, s50, 16
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v54, s2, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s2, s3, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_and_b32 s3, s51, 0xffff0000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v51, s4, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v53, s2, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s2, s5, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_and_b32 s5, s14, 0xffff0000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v52, s3, s0
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s3, s12, 16
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v50, s2, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s2, s3, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_and_b32 s3, s13, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s4, s13, 16
-; GFX13-TRUE16-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v66, s2, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s2, s5, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s5, s16, 16
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v67, s3, s0
-; GFX13-TRUE16-NEXT:    s_and_b32 s3, s15, 0xffff0000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v69, s2, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s2, s3, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s3, s15, 16
-; GFX13-TRUE16-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v6, s2, s0
-; GFX13-TRUE16-NEXT:    s_and_b32 s2, s16, 0xffff0000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v68, s4, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v31, s3, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_and_b32 s3, s17, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s4, s14, 16
-; GFX13-TRUE16-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v30, s2, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s2, s5, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s5, s17, 16
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v49, s3, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s3, s5, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s5, s18, 16
-; GFX13-TRUE16-NEXT:    s_and_b32 s18, s25, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s8, s19, 16
-; GFX13-TRUE16-NEXT:    s_add_f32 s18, s18, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_and_b32 s11, s21, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s12, s21, 16
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s13, s22, 16
-; GFX13-TRUE16-NEXT:    s_and_b32 s14, s22, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_and_b32 s15, s23, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s16, s23, 16
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s19, s24, 16
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v5, s18, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s18, s20, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_and_b32 s20, s26, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s21, s26, 16
-; GFX13-TRUE16-NEXT:    s_lshl_b32 s22, s27, 16
-; GFX13-TRUE16-NEXT:    s_and_b32 s23, s27, 0xffff0000
-; GFX13-TRUE16-NEXT:    s_add_f32 s19, s19, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s22, s22, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s23, s23, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s21, s21, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s20, s20, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_and_b32 s17, s24, 0xffff0000
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v0, s22, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v1, s23, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v2, s21, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v3, s20, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v4, s18, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v7, s19, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s12, s12, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s13, s13, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s15, s15, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s16, s16, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s17, s17, 0x40c00000
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v15, v0.l, v1.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v14, v2.l, v3.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v2, s16, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v1, s17, s0
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v13, v4.l, v5.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v3, s15, s0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v7.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v4, s13, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v5, s12, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s8, s8, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s9, s9, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s11, s11, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s14, s14, 0x40c00000
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v12, v0.l, v1.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v11, v2.l, v3.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v3, s11, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v1, s14, s0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v4.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v5.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v4, s9, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v5, s8, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s10, s10, 0x40c00000
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v10, v0.l, v1.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v9, v2.l, v3.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v3, s7, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v1, s10, s0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v4.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v5.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v4, s5, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v5, s3, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v70, s2, s0
-; GFX13-TRUE16-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-TRUE16-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v8, v0.l, v1.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v7, v2.l, v3.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v4.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v1, s6, s0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v5.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v49.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v70.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v49.l, v6.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v70, s4, s0
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v6, v0.l, v1.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v5, v2.l, v3.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v4, v4.l, v30.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v3, v31.l, v49.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v70.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v69.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v30.l, v68.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v31.l, v67.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v49.l, v66.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v49.h, v29.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v2, v0.l, v1.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v50.h, v28.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v1, v30.l, v31.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v0, v49.l, v50.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v30, v53.l, v54.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v49.l, v65.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v50.l, v64.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v53, s0, s0
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v31, v51.l, v52.l
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v52, s1, s0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v51.l, v55.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v51.h, v27.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v29, v49.l, v50.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v49.l, v53.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v37.h, v25.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v38.h, v24.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v39.h, v23.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v48.h, v22.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v32.h, v20.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v33.h, v19.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v34.h, v18.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v35.h, v17.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v28, v51.l, v49.h
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v27, v52.l, v50.h
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v26, v51.h, v26.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v25, v49.l, v48.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v24, v39.l, v38.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v23, v37.l, v37.h
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v22, v38.h, v39.h
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v21, v48.h, v21.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v20, v36.l, v35.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v19, v34.l, v33.l
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v18, v32.l, v32.h
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v17, v33.h, v34.h
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v16, v35.h, v16.l
-; GFX13-TRUE16-NEXT:    s_branch .LBB101_5
-; GFX13-TRUE16-NEXT:  .LBB101_3:
-; GFX13-TRUE16-NEXT:    s_branch .LBB101_2
-; GFX13-TRUE16-NEXT:  .LBB101_4:
-; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v16, s36 :: v_dual_mov_b32 v17, s37
-; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v0, s12 :: v_dual_mov_b32 v1, s13
-; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v18, s38 :: v_dual_mov_b32 v19, s39
-; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v20, s40 :: v_dual_mov_b32 v21, s41
-; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v22, s42 :: v_dual_mov_b32 v23, s43
-; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v24, s44 :: v_dual_mov_b32 v25, s45
-; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v26, s46 :: v_dual_mov_b32 v27, s47
-; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v28, s48 :: v_dual_mov_b32 v29, s49
-; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v30, s50 :: v_dual_mov_b32 v31, s51
-; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v2, s14 :: v_dual_mov_b32 v3, s15
-; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v4, s16 :: v_dual_mov_b32 v5, s17
-; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v6, s18 :: v_dual_mov_b32 v7, s19
-; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v8, s20 :: v_dual_mov_b32 v9, s21
-; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v10, s22 :: v_dual_mov_b32 v11, s23
-; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v12, s24 :: v_dual_mov_b32 v13, s25
-; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v14, s26 :: v_dual_mov_b32 v15, s27
-; GFX13-TRUE16-NEXT:  .LBB101_5: ; %end
-; GFX13-TRUE16-NEXT:    v_readlane_b32 s51, v40, 7
-; GFX13-TRUE16-NEXT:    v_readlane_b32 s50, v40, 6
-; GFX13-TRUE16-NEXT:    v_readlane_b32 s49, v40, 5
-; GFX13-TRUE16-NEXT:    v_readlane_b32 s48, v40, 4
-; GFX13-TRUE16-NEXT:    v_readlane_b32 s39, v40, 3
-; GFX13-TRUE16-NEXT:    v_readlane_b32 s38, v40, 2
-; GFX13-TRUE16-NEXT:    v_readlane_b32 s37, v40, 1
-; GFX13-TRUE16-NEXT:    v_readlane_b32 s36, v40, 0
-; GFX13-TRUE16-NEXT:    s_or_saveexec_b32 s0, -1
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v40, off, s32 ; 4-byte Folded Reload
-; GFX13-TRUE16-NEXT:    s_mov_b32 exec_lo, s0
-; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX13-FAKE16-LABEL: bitcast_v64bf16_to_v64f16_scalar:
-; GFX13-FAKE16:       ; %bb.0:
-; GFX13-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-FAKE16-NEXT:    s_wait_expcnt 0x0
-; GFX13-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-FAKE16-NEXT:    s_wait_rtscnt 0x0
-; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-FAKE16-NEXT:    s_or_saveexec_b32 s4, -1
-; GFX13-FAKE16-NEXT:    scratch_store_b32 off, v40, s32 ; 4-byte Folded Spill
-; GFX13-FAKE16-NEXT:    s_mov_b32 exec_lo, s4
-; GFX13-FAKE16-NEXT:    v_writelane_b32 v40, s36, 0
-; GFX13-FAKE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v14
-; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s40, v2
-; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s41, v3
-; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s42, v4
-; GFX13-FAKE16-NEXT:    v_writelane_b32 v40, s37, 1
-; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s43, v5
-; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s44, v6
-; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s45, v7
-; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s46, v8
-; GFX13-FAKE16-NEXT:    v_writelane_b32 v40, s38, 2
-; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s38, v0
-; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s47, v9
-; GFX13-FAKE16-NEXT:    s_mov_b32 s37, s29
-; GFX13-FAKE16-NEXT:    s_mov_b32 s36, s28
-; GFX13-FAKE16-NEXT:    v_writelane_b32 v40, s39, 3
-; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s39, v1
-; GFX13-FAKE16-NEXT:    s_mov_b32 s15, s3
-; GFX13-FAKE16-NEXT:    s_mov_b32 s14, s2
-; GFX13-FAKE16-NEXT:    s_mov_b32 s13, s1
-; GFX13-FAKE16-NEXT:    v_writelane_b32 v40, s48, 4
-; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s48, v10
-; GFX13-FAKE16-NEXT:    s_mov_b32 s12, s0
-; GFX13-FAKE16-NEXT:    s_mov_b32 s0, 0
-; GFX13-FAKE16-NEXT:    s_and_b32 s1, vcc_lo, exec_lo
-; GFX13-FAKE16-NEXT:    v_writelane_b32 v40, s49, 5
-; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s49, v11
-; GFX13-FAKE16-NEXT:    v_writelane_b32 v40, s50, 6
-; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s50, v12
-; GFX13-FAKE16-NEXT:    v_writelane_b32 v40, s51, 7
-; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s51, v13
-; GFX13-FAKE16-NEXT:    s_cbranch_scc0 .LBB101_3
-; GFX13-FAKE16-NEXT:  ; %bb.1: ; %Flow
-; GFX13-FAKE16-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
-; GFX13-FAKE16-NEXT:    s_cbranch_vccnz .LBB101_4
-; GFX13-FAKE16-NEXT:  .LBB101_2: ; %cmp.true
-; GFX13-FAKE16-NEXT:    s_and_b32 s0, s36, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s1, s36, 16
-; GFX13-FAKE16-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s2, s37, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s4, s47, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v16, s0, s0
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s0, s37, 16
-; GFX13-FAKE16-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v32, s1, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s1, s38, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s5, s16, 16
-; GFX13-FAKE16-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v17, s2, s0
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s2, s38, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v33, s0, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s0, s2, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s2, s39, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_and_b32 s6, s17, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_and_b32 s9, s20, 0xffff0000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v18, s1, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s1, s2, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s2, s39, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v34, s0, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s0, s2, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s2, s40, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s10, s20, 16
-; GFX13-FAKE16-NEXT:    s_and_b32 s11, s21, 0xffff0000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v19, s1, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s1, s2, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s2, s40, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v35, s0, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s0, s2, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s2, s41, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_and_b32 s20, s26, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v20, s1, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s1, s2, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s2, s41, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v36, s0, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s0, s2, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s2, s42, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_add_f32 s20, s20, 0x40c00000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v21, s1, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s1, s2, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s2, s42, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v37, s0, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s0, s2, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s2, s43, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_and_b32 s7, s19, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s8, s19, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v22, s1, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s1, s2, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s2, s43, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v38, s0, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s0, s2, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s2, s44, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s19, s25, 16
-; GFX13-FAKE16-NEXT:    s_add_f32 s11, s11, 0x40c00000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v23, s1, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s1, s2, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s2, s44, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v39, s0, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s0, s2, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s2, s45, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_add_f32 s19, s19, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v24, s1, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s1, s2, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s2, s46, 0xffff0000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v48, s0, s0
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s0, s45, 16
-; GFX13-FAKE16-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v25, s1, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s1, s47, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_add_f32 s8, s8, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_add_f32 s3, s1, 0x40c00000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v26, s2, s0
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s2, s46, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v64, s5, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s1, s2, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_add_f32 s2, s4, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s4, s48, 0xffff0000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v27, s3, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s3, s4, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s4, s48, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v49, s2, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s2, s4, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s4, s49, 0xffff0000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v28, s3, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s3, s4, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s4, s49, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v50, s2, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s2, s4, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s4, s50, 0xffff0000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v29, s3, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s3, s4, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s4, s50, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v51, s2, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s2, s4, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s4, s51, 0xffff0000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v30, s3, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s3, s4, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s4, s51, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v52, s2, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s2, s4, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s4, s12, 0xffff0000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v31, s3, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s3, s4, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s4, s12, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v53, s2, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s2, s4, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s4, s13, 0xffff0000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, s3, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s3, s4, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s4, s13, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v54, s2, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s2, s4, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s4, s14, 0xffff0000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v1, s3, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s3, s4, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s4, s15, 0xffff0000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v55, s2, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s2, s4, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s4, s14, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v2, s3, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s3, s4, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_and_b32 s4, s16, 0xffff0000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v3, s2, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s2, s15, 16
-; GFX13-FAKE16-NEXT:    s_and_b32 s15, s24, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s12, s21, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v4, s4, s0
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s4, s17, 16
-; GFX13-FAKE16-NEXT:    s_and_b32 s13, s22, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s14, s22, 16
-; GFX13-FAKE16-NEXT:    s_and_b32 s16, s23, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s17, s23, 16
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s21, s26, 16
-; GFX13-FAKE16-NEXT:    s_and_b32 s22, s27, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s23, s27, 16
-; GFX13-FAKE16-NEXT:    s_add_f32 s15, s15, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_add_f32 s22, s22, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_add_f32 s23, s23, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_add_f32 s21, s21, 0x40c00000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v5, s6, s0
-; GFX13-FAKE16-NEXT:    s_and_b32 s5, s18, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s6, s18, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v6, s15, s0
-; GFX13-FAKE16-NEXT:    s_and_b32 s15, s25, 0xffff0000
-; GFX13-FAKE16-NEXT:    s_lshl_b32 s18, s24, 16
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v7, s20, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v8, s22, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v9, s23, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v10, s21, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s16, s16, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_add_f32 s17, s17, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_add_f32 s15, s15, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_add_f32 s18, s18, 0x40c00000
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v12, s19, s0
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v15, v9, v8
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v11, s15, s0
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v14, v10, v7
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v7, s18, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v8, s16, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v9, s17, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s12, s12, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_add_f32 s13, s13, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_add_f32 s14, s14, 0x40c00000
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v13, v12, v11
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v12, v7, v6
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v10, s13, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v6, s14, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v7, s11, s0
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v11, v9, v8
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v8, s12, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s9, s9, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_add_f32 s10, s10, 0x40c00000
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v10, v6, v10
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v66, s7, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v65, s9, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v6, s10, s0
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v9, v8, v7
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v7, s8, s0
-; GFX13-FAKE16-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-FAKE16-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v8, v6, v65
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v65, s4, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v67, s5, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v6, s6, s0
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v7, v7, v66
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v66, s2, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v68, s3, s0
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v31, v53, v31
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v30, v52, v30
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v52, s1, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v53, s0, s0
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v6, v6, v67
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v5, v65, v5
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v4, v64, v4
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v3, v66, v3
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v2, v68, v2
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v1, v55, v1
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v0, v54, v0
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v29, v51, v29
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v28, v50, v28
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v27, v49, v27
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v26, v52, v26
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v25, v53, v25
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v24, v48, v24
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v23, v39, v23
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v22, v38, v22
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v21, v37, v21
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v20, v36, v20
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v19, v35, v19
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v18, v34, v18
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v17, v33, v17
-; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v16, v32, v16
-; GFX13-FAKE16-NEXT:    s_branch .LBB101_5
-; GFX13-FAKE16-NEXT:  .LBB101_3:
-; GFX13-FAKE16-NEXT:    s_branch .LBB101_2
-; GFX13-FAKE16-NEXT:  .LBB101_4:
-; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v16, s36 :: v_dual_mov_b32 v17, s37
-; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v0, s12 :: v_dual_mov_b32 v1, s13
-; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v18, s38 :: v_dual_mov_b32 v19, s39
-; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v20, s40 :: v_dual_mov_b32 v21, s41
-; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v22, s42 :: v_dual_mov_b32 v23, s43
-; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v24, s44 :: v_dual_mov_b32 v25, s45
-; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v26, s46 :: v_dual_mov_b32 v27, s47
-; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v28, s48 :: v_dual_mov_b32 v29, s49
-; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v30, s50 :: v_dual_mov_b32 v31, s51
-; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v2, s14 :: v_dual_mov_b32 v3, s15
-; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v4, s16 :: v_dual_mov_b32 v5, s17
-; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v6, s18 :: v_dual_mov_b32 v7, s19
-; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v8, s20 :: v_dual_mov_b32 v9, s21
-; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v10, s22 :: v_dual_mov_b32 v11, s23
-; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v12, s24 :: v_dual_mov_b32 v13, s25
-; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v14, s26 :: v_dual_mov_b32 v15, s27
-; GFX13-FAKE16-NEXT:  .LBB101_5: ; %end
-; GFX13-FAKE16-NEXT:    v_readlane_b32 s51, v40, 7
-; GFX13-FAKE16-NEXT:    v_readlane_b32 s50, v40, 6
-; GFX13-FAKE16-NEXT:    v_readlane_b32 s49, v40, 5
-; GFX13-FAKE16-NEXT:    v_readlane_b32 s48, v40, 4
-; GFX13-FAKE16-NEXT:    v_readlane_b32 s39, v40, 3
-; GFX13-FAKE16-NEXT:    v_readlane_b32 s38, v40, 2
-; GFX13-FAKE16-NEXT:    v_readlane_b32 s37, v40, 1
-; GFX13-FAKE16-NEXT:    v_readlane_b32 s36, v40, 0
-; GFX13-FAKE16-NEXT:    s_or_saveexec_b32 s0, -1
-; GFX13-FAKE16-NEXT:    scratch_load_b32 v40, off, s32 ; 4-byte Folded Reload
-; GFX13-FAKE16-NEXT:    s_mov_b32 exec_lo, s0
-; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX13-LABEL: bitcast_v64bf16_to_v64f16_scalar:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v14
+; GFX13-NEXT:    v_dual_mov_b32 v31, v13 :: v_dual_mov_b32 v30, v12
+; GFX13-NEXT:    v_dual_mov_b32 v29, v11 :: v_dual_mov_b32 v28, v10
+; GFX13-NEXT:    v_dual_mov_b32 v27, v9 :: v_dual_mov_b32 v26, v8
+; GFX13-NEXT:    v_dual_mov_b32 v25, v7 :: v_dual_mov_b32 v24, v6
+; GFX13-NEXT:    v_dual_mov_b32 v23, v5 :: v_dual_mov_b32 v22, v4
+; GFX13-NEXT:    v_dual_mov_b32 v21, v3 :: v_dual_mov_b32 v20, v2
+; GFX13-NEXT:    v_dual_mov_b32 v19, v1 :: v_dual_mov_b32 v18, v0
+; GFX13-NEXT:    v_dual_mov_b32 v16, s28 :: v_dual_mov_b32 v17, s29
+; GFX13-NEXT:    s_mov_b32 s15, s3
+; GFX13-NEXT:    s_mov_b32 s14, s2
+; GFX13-NEXT:    s_mov_b32 s13, s1
+; GFX13-NEXT:    s_mov_b32 s12, s0
+; GFX13-NEXT:    s_mov_b32 s0, 0
+; GFX13-NEXT:    s_and_b32 s1, vcc_lo, exec_lo
+; GFX13-NEXT:    s_cbranch_scc0 .LBB101_3
+; GFX13-NEXT:  ; %bb.1: ; %Flow
+; GFX13-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
+; GFX13-NEXT:    s_cbranch_vccnz .LBB101_4
+; GFX13-NEXT:  .LBB101_2: ; %cmp.true
+; GFX13-NEXT:    v_pk_add_bf16 v15, 0x40c0, s27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v14, 0x40c0, s26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v13, 0x40c0, s25 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v12, 0x40c0, s24 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v11, 0x40c0, s23 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v10, 0x40c0, s22 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v9, 0x40c0, s21 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v8, 0x40c0, s20 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v7, 0x40c0, s19 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v6, 0x40c0, s18 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v5, 0x40c0, s17 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v4, 0x40c0, s16 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v3, 0x40c0, s15 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v2, 0x40c0, s14 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v1, 0x40c0, s13 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v0, 0x40c0, s12 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v31, 0x40c0, v31 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v30, 0x40c0, v30 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v29, 0x40c0, v29 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v28, 0x40c0, v28 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v27, 0x40c0, v27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v26, 0x40c0, v26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v25, 0x40c0, v25 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v24, 0x40c0, v24 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v23, 0x40c0, v23 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v22, 0x40c0, v22 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v21, 0x40c0, v21 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v20, 0x40c0, v20 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v19, 0x40c0, v19 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v18, 0x40c0, v18 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v17, 0x40c0, v17 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v16, 0x40c0, v16 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+; GFX13-NEXT:  .LBB101_3:
+; GFX13-NEXT:    s_branch .LBB101_2
+; GFX13-NEXT:  .LBB101_4:
+; GFX13-NEXT:    v_dual_mov_b32 v0, s12 :: v_dual_mov_b32 v1, s13
+; GFX13-NEXT:    v_dual_mov_b32 v2, s14 :: v_dual_mov_b32 v3, s15
+; GFX13-NEXT:    v_dual_mov_b32 v4, s16 :: v_dual_mov_b32 v5, s17
+; GFX13-NEXT:    v_dual_mov_b32 v6, s18 :: v_dual_mov_b32 v7, s19
+; GFX13-NEXT:    v_dual_mov_b32 v8, s20 :: v_dual_mov_b32 v9, s21
+; GFX13-NEXT:    v_dual_mov_b32 v10, s22 :: v_dual_mov_b32 v11, s23
+; GFX13-NEXT:    v_dual_mov_b32 v12, s24 :: v_dual_mov_b32 v13, s25
+; GFX13-NEXT:    v_dual_mov_b32 v14, s26 :: v_dual_mov_b32 v15, s27
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
 
@@ -280012,447 +278840,61 @@ define <64 x i16> @bitcast_v64bf16_to_v64i16(<64 x bfloat> %a, i32 %b) {
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX13-TRUE16-LABEL: bitcast_v64bf16_to_v64i16:
-; GFX13-TRUE16:       ; %bb.0:
-; GFX13-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-TRUE16-NEXT:    s_wait_expcnt 0x0
-; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
-; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-TRUE16-NEXT:    s_clause 0x1
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v32, off, s32 offset:4
-; GFX13-TRUE16-NEXT:    scratch_load_b32 v31, off, s32
-; GFX13-TRUE16-NEXT:    s_mov_b32 s0, exec_lo
-; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x1
-; GFX13-TRUE16-NEXT:    v_cmpx_ne_u32_e32 0, v32
-; GFX13-TRUE16-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX13-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
-; GFX13-TRUE16-NEXT:    s_cbranch_execz .LBB104_2
-; GFX13-TRUE16-NEXT:  ; %bb.1: ; %cmp.true
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v69, 0xffff0000, v5
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v70, 0xffff0000, v6
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v71, 0xffff0000, v7
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v80, 0xffff0000, v8
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v82, 0xffff0000, v14
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v69, 0x40c00000, v69 :: v_dual_lshlrev_b32 v6, 16, v6
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v51, 0xffff0000, v27
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v36, 0xffff0000, v20
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v6, 0x40c00000, v6 :: v_dual_add_f32 v7, 0x40c00000, v7
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v81, 16, v15
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v15, 0xffff0000, v15
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v8, 0x40c00000, v8
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v82, 0x40c00000, v82 :: v_dual_add_f32 v81, 0x40c00000, v81
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v15, 0x40c00000, v15 :: v_dual_lshlrev_b32 v20, 16, v20
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v14, 0x40c00000, v14
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v82, v82, s0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v81, v81, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v83, v15, s0
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v38, 0xffff0000, v22
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v39, 0xffff0000, v23
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v15.l, v81.l
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v81, 0xffff0000, v13
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v14, v14, s0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v14.h, v82.l
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v82, 0xffff0000, v12
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v13, 0x40c00000, v13 :: v_dual_lshlrev_b32 v12, 16, v12
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v81, 0x40c00000, v81
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v51, 0x40c00000, v51 :: v_dual_add_f32 v82, 0x40c00000, v82
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v12, 0x40c00000, v12
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v52, 0xffff0000, v28
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v81, v81, s0
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v53, 0xffff0000, v29
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
-; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v55, 0xffff0000, v31
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v64, 0xffff0000, v0
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v65, 0xffff0000, v1
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v84, 0xffff0000, v9
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v82, v82, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v13, v13, s0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v13.h, v81.l
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v81, 0xffff0000, v11
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v12, v12, s0
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v32, 0xffff0000, v16
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v33, 0xffff0000, v17
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v34, 0xffff0000, v18
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v35, 0xffff0000, v19
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v36, 0x40c00000, v36
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v37, 0xffff0000, v21
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v22, 0x40c00000, v22 :: v_dual_lshlrev_b32 v21, 16, v21
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v48, 0xffff0000, v24
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v39, 0x40c00000, v39 :: v_dual_lshlrev_b32 v24, 16, v24
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v49, 0xffff0000, v25
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v25, 16, v25
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v50, 0xffff0000, v26
-; GFX13-TRUE16-NEXT:    v_dual_lshlrev_b32 v26, 16, v26 :: v_dual_lshlrev_b32 v27, 16, v27
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v54, 0xffff0000, v30
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v28, 0x40c00000, v28 :: v_dual_add_f32 v29, 0x40c00000, v29
-; GFX13-TRUE16-NEXT:    v_dual_lshlrev_b32 v30, 16, v30 :: v_dual_lshlrev_b32 v31, 16, v31
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v55, 0x40c00000, v55 :: v_dual_add_f32 v0, 0x40c00000, v0
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v66, 0xffff0000, v2
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v65, 0x40c00000, v65 :: v_dual_lshlrev_b32 v2, 16, v2
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v67, 0xffff0000, v3
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v68, 0xffff0000, v4
-; GFX13-TRUE16-NEXT:    v_dual_lshlrev_b32 v4, 16, v4 :: v_dual_lshlrev_b32 v5, 16, v5
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v15.h, v83.l
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v83, 0x40c00000, v84
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v12.h, v82.l
-; GFX13-TRUE16-NEXT:    v_lshlrev_b32_e32 v82, 16, v10
-; GFX13-TRUE16-NEXT:    v_and_b32_e32 v10, 0xffff0000, v10
-; GFX13-TRUE16-NEXT:    v_dual_lshlrev_b32 v16, 16, v16 :: v_dual_lshlrev_b32 v17, 16, v17
-; GFX13-TRUE16-NEXT:    v_dual_lshlrev_b32 v18, 16, v18 :: v_dual_lshlrev_b32 v19, 16, v19
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v82, 0x40c00000, v82 :: v_dual_lshlrev_b32 v9, 16, v9
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_add_f32 v33, 0x40c00000, v33
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v34, 0x40c00000, v34 :: v_dual_add_f32 v35, 0x40c00000, v35
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v20, 0x40c00000, v20 :: v_dual_add_f32 v37, 0x40c00000, v37
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v21, 0x40c00000, v21 :: v_dual_add_f32 v38, 0x40c00000, v38
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v23, 0x40c00000, v23 :: v_dual_add_f32 v48, 0x40c00000, v48
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v24, 0x40c00000, v24 :: v_dual_add_f32 v49, 0x40c00000, v49
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v25, 0x40c00000, v25 :: v_dual_add_f32 v50, 0x40c00000, v50
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v26, 0x40c00000, v26 :: v_dual_add_f32 v27, 0x40c00000, v27
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v52, 0x40c00000, v52 :: v_dual_add_f32 v53, 0x40c00000, v53
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v54, 0x40c00000, v54
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v30, 0x40c00000, v30 :: v_dual_add_f32 v31, 0x40c00000, v31
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v64, 0x40c00000, v64 :: v_dual_add_f32 v1, 0x40c00000, v1
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v66, 0x40c00000, v66
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v2, 0x40c00000, v2 :: v_dual_add_f32 v67, 0x40c00000, v67
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v3, 0x40c00000, v3 :: v_dual_add_f32 v68, 0x40c00000, v68
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v4, 0x40c00000, v4 :: v_dual_add_f32 v5, 0x40c00000, v5
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v70, 0x40c00000, v70 :: v_dual_add_f32 v71, 0x40c00000, v71
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v80, 0x40c00000, v80 :: v_dual_add_f32 v11, 0x40c00000, v11
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v10, 0x40c00000, v10 :: v_dual_add_f32 v81, 0x40c00000, v81
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v16, 0x40c00000, v16 :: v_dual_add_f32 v17, 0x40c00000, v17
-; GFX13-TRUE16-NEXT:    v_dual_add_f32 v18, 0x40c00000, v18 :: v_dual_add_f32 v19, 0x40c00000, v19
-; GFX13-TRUE16-NEXT:    v_add_f32_e32 v9, 0x40c00000, v9
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v32, v32, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v33, v33, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v34, v34, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v35, v35, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v36, v36, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v37, v37, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v38, v38, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v39, v39, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v48, v48, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v49, v49, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v50, v50, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v51, v51, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v52, v52, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v53, v53, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v54, v54, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v55, v55, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v64, v64, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v65, v65, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v66, v66, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v67, v67, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v68, v68, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v69, v69, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v70, v70, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v71, v71, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v80, v80, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v83, v83, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v81, v81, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v82, v82, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v84, v10, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v16, v16, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v17, v17, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v18, v18, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v19, v19, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v20, v20, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v21, v21, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v22, v22, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v23, v23, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v24, v24, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v25, v25, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v26, v26, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v27, v27, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v28, v28, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v29, v29, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v30, v30, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v31, v31, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v1, v1, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v2, v2, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v3, v3, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v4, v4, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v5, v5, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v6, v6, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v7, v7, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v8, v8, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v11, v11, s0
-; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v9, v9, s0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v11.h, v81.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v10.l, v82.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v10.h, v84.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v9.h, v83.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v8.h, v80.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v71.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v6.h, v70.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v5.h, v69.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v4.h, v68.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v3.h, v67.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v66.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v65.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v64.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v31.h, v55.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v30.h, v54.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v29.h, v53.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v28.h, v52.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v27.h, v51.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v26.h, v50.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v25.h, v49.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v24.h, v48.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v23.h, v39.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v22.h, v38.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v21.h, v37.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v20.h, v36.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v19.h, v35.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v18.h, v34.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v17.h, v33.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v16.h, v32.l
-; GFX13-TRUE16-NEXT:  .LBB104_2: ; %end
-; GFX13-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX13-FAKE16-LABEL: bitcast_v64bf16_to_v64i16:
-; GFX13-FAKE16:       ; %bb.0:
-; GFX13-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-FAKE16-NEXT:    s_wait_expcnt 0x0
-; GFX13-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-FAKE16-NEXT:    s_wait_rtscnt 0x0
-; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-FAKE16-NEXT:    s_clause 0x1
-; GFX13-FAKE16-NEXT:    scratch_load_b32 v32, off, s32 offset:4
-; GFX13-FAKE16-NEXT:    scratch_load_b32 v31, off, s32
-; GFX13-FAKE16-NEXT:    s_mov_b32 s0, exec_lo
-; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x1
-; GFX13-FAKE16-NEXT:    v_cmpx_ne_u32_e32 0, v32
-; GFX13-FAKE16-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX13-FAKE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
-; GFX13-FAKE16-NEXT:    s_cbranch_execz .LBB104_2
-; GFX13-FAKE16-NEXT:  ; %bb.1: ; %cmp.true
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v32, 16, v16 :: v_dual_lshlrev_b32 v33, 16, v17
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v16, 0xffff0000, v16
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v17, 0xffff0000, v17
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v38, 0xffff0000, v19
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v32, 0x40c00000, v32 :: v_dual_lshlrev_b32 v35, 16, v18
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v34, 0x40c00000, v16 :: v_dual_add_f32 v33, 0x40c00000, v33
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v18, 0xffff0000, v18
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v16, v32, s0
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v36, 16, v19
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v32, v34, s0
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v34, 0x40c00000, v17 :: v_dual_add_f32 v35, 0x40c00000, v35
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v37, 0x40c00000, v18 :: v_dual_add_f32 v36, 0x40c00000, v36
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v17, v33, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v33, v34, s0
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v18, v35, s0
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v35, 16, v20
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v34, v37, s0
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v20, 0xffff0000, v20
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v37, 16, v21
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v19, v36, s0
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v36, 0x40c00000, v38
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v38, 0x40c00000, v35
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v21, 0xffff0000, v21
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v37, 0x40c00000, v37
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v39, 16, v22
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v35, v36, s0
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v36, 0x40c00000, v20
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v20, v38, s0
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v38, 0x40c00000, v21
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v22, 0xffff0000, v22
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v21, v37, s0
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v49, 16, v24
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v80, 16, v8 :: v_dual_lshlrev_b32 v81, 16, v15
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v37, v38, s0
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v38, 0x40c00000, v39
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v39, 16, v23
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v23, 0xffff0000, v23
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v48, 0x40c00000, v22
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v15, 0xffff0000, v15
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v22, v38, s0
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v39, 0x40c00000, v39
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v50, 0x40c00000, v23
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v38, v48, s0
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v48, 0x40c00000, v49
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v49, 0xffff0000, v24
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v80, 0x40c00000, v80 :: v_dual_add_f32 v81, 0x40c00000, v81
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v15, 0x40c00000, v15 :: v_dual_lshlrev_b32 v82, 16, v14
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v14, 0xffff0000, v14
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v23, v39, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v24, v48, s0
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v48, 0x40c00000, v49 :: v_dual_lshlrev_b32 v49, 16, v26
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v39, v50, s0
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v50, 16, v25
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v25, 0xffff0000, v25
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v82, 0x40c00000, v82 :: v_dual_lshlrev_b32 v83, 16, v12
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v14, 0x40c00000, v14
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v81, v81, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v15, v15, s0
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v51, 0x40c00000, v25 :: v_dual_add_f32 v50, 0x40c00000, v50
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v53, 16, v29
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v82, v82, s0
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-FAKE16-NEXT:    v_perm_b32 v15, v15, v81, 0x5040100
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v81, 16, v13
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v14, v14, s0
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v13, 0xffff0000, v13
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v12, 0xffff0000, v12
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v25, v50, s0
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v50, 16, v27 :: v_dual_lshlrev_b32 v52, 16, v28
-; GFX13-FAKE16-NEXT:    v_perm_b32 v14, v14, v82, 0x5040100
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v83, 0x40c00000, v83 :: v_dual_lshlrev_b32 v82, 16, v9
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v81, 0x40c00000, v81 :: v_dual_add_f32 v12, 0x40c00000, v12
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v13, 0x40c00000, v13 :: v_dual_add_f32 v82, 0x40c00000, v82
-; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v52, 0x40c00000, v52 :: v_dual_lshlrev_b32 v55, 16, v31
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v31, 0xffff0000, v31
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v54, 16, v30 :: v_dual_lshlrev_b32 v64, 16, v0
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v66, 16, v2
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v8, 0xffff0000, v8
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v81, v81, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v13, v13, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v83, v83, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v12, v12, s0
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v26, 0xffff0000, v26
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v27, 0xffff0000, v27
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v28, 0xffff0000, v28
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v29, 0xffff0000, v29
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v30, 0xffff0000, v30
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v31, 0x40c00000, v31 :: v_dual_add_f32 v54, 0x40c00000, v54
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v65, 16, v1
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff0000, v1
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v0, 0x40c00000, v0 :: v_dual_lshlrev_b32 v67, 16, v3
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff0000, v2
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v3, 0xffff0000, v3
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v68, 16, v4 :: v_dual_lshlrev_b32 v69, 16, v5
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v4, 0xffff0000, v4
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v5, 0xffff0000, v5
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v70, 16, v6 :: v_dual_lshlrev_b32 v71, 16, v7
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v6, 0xffff0000, v6
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v7, 0xffff0000, v7
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v8, 0x40c00000, v8
-; GFX13-FAKE16-NEXT:    v_perm_b32 v13, v13, v81, 0x5040100
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v81, 16, v10
-; GFX13-FAKE16-NEXT:    v_perm_b32 v12, v12, v83, 0x5040100
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v10, 0xffff0000, v10
-; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v83, 16, v11
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v11, 0xffff0000, v11
-; GFX13-FAKE16-NEXT:    v_and_b32_e32 v9, 0xffff0000, v9
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v49, 0x40c00000, v49 :: v_dual_add_f32 v26, 0x40c00000, v26
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v53, 0x40c00000, v53 :: v_dual_add_f32 v50, 0x40c00000, v50
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v29, 0x40c00000, v29
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v27, 0x40c00000, v27 :: v_dual_add_f32 v28, 0x40c00000, v28
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v55, 0x40c00000, v55 :: v_dual_add_f32 v30, 0x40c00000, v30
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v65, 0x40c00000, v65 :: v_dual_add_f32 v64, 0x40c00000, v64
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v1, 0x40c00000, v1 :: v_dual_add_f32 v66, 0x40c00000, v66
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v67, 0x40c00000, v67 :: v_dual_add_f32 v2, 0x40c00000, v2
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v3, 0x40c00000, v3 :: v_dual_add_f32 v68, 0x40c00000, v68
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v69, 0x40c00000, v69 :: v_dual_add_f32 v4, 0x40c00000, v4
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v5, 0x40c00000, v5 :: v_dual_add_f32 v70, 0x40c00000, v70
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v71, 0x40c00000, v71 :: v_dual_add_f32 v6, 0x40c00000, v6
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v7, 0x40c00000, v7
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v81, 0x40c00000, v81
-; GFX13-FAKE16-NEXT:    v_dual_add_f32 v11, 0x40c00000, v11 :: v_dual_add_f32 v10, 0x40c00000, v10
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v83, 0x40c00000, v83
-; GFX13-FAKE16-NEXT:    v_add_f32_e32 v9, 0x40c00000, v9
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v36, v36, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v48, v48, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v51, v51, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v49, v49, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v26, v26, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v50, v50, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v27, v27, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v52, v52, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v28, v28, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v53, v53, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v29, v29, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v54, v54, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v30, v30, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v55, v55, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v31, v31, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v64, v64, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v65, v65, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v1, v1, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v66, v66, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v2, v2, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v67, v67, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v3, v3, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v68, v68, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v4, v4, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v69, v69, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v5, v5, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v70, v70, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v6, v6, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v71, v71, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v80, v80, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v82, v82, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v81, v81, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v83, v83, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v11, v11, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v10, v10, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v9, v9, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v8, v8, s0
-; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v7, v7, s0
-; GFX13-FAKE16-NEXT:    v_perm_b32 v11, v11, v83, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v10, v10, v81, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v9, v9, v82, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v8, v8, v80, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v7, v7, v71, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v6, v6, v70, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v5, v5, v69, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v4, v4, v68, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v3, v3, v67, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v2, v2, v66, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v1, v1, v65, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v0, v0, v64, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v31, v31, v55, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v30, v30, v54, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v29, v29, v53, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v28, v28, v52, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v27, v27, v50, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v26, v26, v49, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v25, v51, v25, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v24, v48, v24, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v23, v39, v23, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v22, v38, v22, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v21, v37, v21, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v20, v36, v20, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v19, v35, v19, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v18, v34, v18, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v17, v33, v17, 0x5040100
-; GFX13-FAKE16-NEXT:    v_perm_b32 v16, v32, v16, 0x5040100
-; GFX13-FAKE16-NEXT:  .LBB104_2: ; %end
-; GFX13-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX13-LABEL: bitcast_v64bf16_to_v64i16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    scratch_load_b32 v32, off, s32 offset:4
+; GFX13-NEXT:    scratch_load_b32 v31, off, s32
+; GFX13-NEXT:    s_mov_b32 s0, exec_lo
+; GFX13-NEXT:    s_wait_loadcnt 0x1
+; GFX13-NEXT:    v_cmpx_ne_u32_e32 0, v32
+; GFX13-NEXT:    s_xor_b32 s0, exec_lo, s0
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; GFX13-NEXT:    s_cbranch_execz .LBB104_2
+; GFX13-NEXT:  ; %bb.1: ; %cmp.true
+; GFX13-NEXT:    v_pk_add_bf16 v15, 0x40c0, v15 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v14, 0x40c0, v14 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v13, 0x40c0, v13 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v12, 0x40c0, v12 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v11, 0x40c0, v11 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v10, 0x40c0, v10 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v9, 0x40c0, v9 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v8, 0x40c0, v8 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v7, 0x40c0, v7 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v6, 0x40c0, v6 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v5, 0x40c0, v5 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v4, 0x40c0, v4 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v3, 0x40c0, v3 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v2, 0x40c0, v2 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v1, 0x40c0, v1 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v0, 0x40c0, v0 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    v_pk_add_bf16 v31, 0x40c0, v31 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v30, 0x40c0, v30 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v29, 0x40c0, v29 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v28, 0x40c0, v28 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v27, 0x40c0, v27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v26, 0x40c0, v26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v25, 0x40c0, v25 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v24, 0x40c0, v24 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v23, 0x40c0, v23 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v22, 0x40c0, v22 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v21, 0x40c0, v21 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v20, 0x40c0, v20 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v19, 0x40c0, v19 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v18, 0x40c0, v18 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v17, 0x40c0, v17 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v16, 0x40c0, v16 op_sel_hi:[0,1]
+; GFX13-NEXT:  .LBB104_2: ; %end
+; GFX13-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
 
@@ -283442,314 +281884,63 @@ define inreg <64 x i16> @bitcast_v64bf16_to_v64i16_scalar(<64 x bfloat> inreg %a
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    s_or_saveexec_b32 s4, -1
-; GFX13-NEXT:    scratch_store_b32 off, v40, s32 ; 4-byte Folded Spill
-; GFX13-NEXT:    s_mov_b32 exec_lo, s4
-; GFX13-NEXT:    v_writelane_b32 v40, s36, 0
 ; GFX13-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v14
-; GFX13-NEXT:    v_readfirstlane_b32 s40, v2
-; GFX13-NEXT:    v_readfirstlane_b32 s41, v3
-; GFX13-NEXT:    v_readfirstlane_b32 s42, v4
-; GFX13-NEXT:    v_writelane_b32 v40, s37, 1
-; GFX13-NEXT:    v_readfirstlane_b32 s43, v5
-; GFX13-NEXT:    v_readfirstlane_b32 s44, v6
-; GFX13-NEXT:    v_readfirstlane_b32 s45, v7
-; GFX13-NEXT:    v_readfirstlane_b32 s46, v8
-; GFX13-NEXT:    v_writelane_b32 v40, s38, 2
-; GFX13-NEXT:    v_readfirstlane_b32 s38, v0
-; GFX13-NEXT:    v_readfirstlane_b32 s47, v9
-; GFX13-NEXT:    s_mov_b32 s37, s29
-; GFX13-NEXT:    s_mov_b32 s36, s28
-; GFX13-NEXT:    v_writelane_b32 v40, s39, 3
-; GFX13-NEXT:    v_readfirstlane_b32 s39, v1
+; GFX13-NEXT:    v_dual_mov_b32 v31, v13 :: v_dual_mov_b32 v30, v12
+; GFX13-NEXT:    v_dual_mov_b32 v29, v11 :: v_dual_mov_b32 v28, v10
+; GFX13-NEXT:    v_dual_mov_b32 v27, v9 :: v_dual_mov_b32 v26, v8
+; GFX13-NEXT:    v_dual_mov_b32 v25, v7 :: v_dual_mov_b32 v24, v6
+; GFX13-NEXT:    v_dual_mov_b32 v23, v5 :: v_dual_mov_b32 v22, v4
+; GFX13-NEXT:    v_dual_mov_b32 v21, v3 :: v_dual_mov_b32 v20, v2
+; GFX13-NEXT:    v_dual_mov_b32 v19, v1 :: v_dual_mov_b32 v18, v0
+; GFX13-NEXT:    v_dual_mov_b32 v16, s28 :: v_dual_mov_b32 v17, s29
 ; GFX13-NEXT:    s_mov_b32 s15, s3
 ; GFX13-NEXT:    s_mov_b32 s14, s2
 ; GFX13-NEXT:    s_mov_b32 s13, s1
-; GFX13-NEXT:    v_writelane_b32 v40, s48, 4
-; GFX13-NEXT:    v_readfirstlane_b32 s48, v10
 ; GFX13-NEXT:    s_mov_b32 s12, s0
 ; GFX13-NEXT:    s_mov_b32 s0, 0
 ; GFX13-NEXT:    s_and_b32 s1, vcc_lo, exec_lo
-; GFX13-NEXT:    v_writelane_b32 v40, s49, 5
-; GFX13-NEXT:    v_readfirstlane_b32 s49, v11
-; GFX13-NEXT:    v_writelane_b32 v40, s50, 6
-; GFX13-NEXT:    v_readfirstlane_b32 s50, v12
-; GFX13-NEXT:    v_writelane_b32 v40, s51, 7
-; GFX13-NEXT:    v_readfirstlane_b32 s51, v13
 ; GFX13-NEXT:    s_cbranch_scc0 .LBB105_3
 ; GFX13-NEXT:  ; %bb.1: ; %Flow
 ; GFX13-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GFX13-NEXT:    s_cbranch_vccnz .LBB105_4
 ; GFX13-NEXT:  .LBB105_2: ; %cmp.true
-; GFX13-NEXT:    s_and_b32 s0, s36, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s1, s36, 16
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s2, s37, 0xffff0000
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v16, s0, s0
-; GFX13-NEXT:    s_and_b32 s3, s39, 0xffff0000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v18, s1, s0
-; GFX13-NEXT:    s_lshl_b32 s0, s37, 16
-; GFX13-NEXT:    s_and_b32 s1, s38, 0xffff0000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v17, s2, s0
-; GFX13-NEXT:    s_add_f32 s0, s0, 0x40c00000
-; GFX13-NEXT:    s_lshl_b32 s2, s38, 16
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v19, s0, s0
-; GFX13-NEXT:    s_add_f32 s0, s3, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s3, s41, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s4, s48, 16
-; GFX13-NEXT:    s_and_b32 s5, s12, 0xffff0000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v32, s1, s0
-; GFX13-NEXT:    s_lshl_b32 s1, s39, 16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v20, s2, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v33, s0, s0
-; GFX13-NEXT:    s_add_f32 s0, s1, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s1, s40, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s2, s40, 16
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v35, s0, s0
-; GFX13-NEXT:    s_add_f32 s0, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s3, s43, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s6, s16, 16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v34, s1, s0
-; GFX13-NEXT:    s_lshl_b32 s1, s41, 16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v36, s2, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v21, s0, s0
-; GFX13-NEXT:    s_add_f32 s0, s1, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s1, s42, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s2, s42, 16
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v23, s0, s0
-; GFX13-NEXT:    s_add_f32 s0, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s3, s45, 0xffff0000
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v22, s1, s0
-; GFX13-NEXT:    s_lshl_b32 s1, s43, 16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v24, s2, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v37, s0, s0
-; GFX13-NEXT:    s_add_f32 s0, s1, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s1, s44, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s2, s44, 16
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v25, s0, s0
-; GFX13-NEXT:    s_add_f32 s0, s3, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s9, s20, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s10, s20, 16
-; GFX13-NEXT:    s_lshl_b32 s20, s25, 16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v38, s1, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v48, s2, s0
-; GFX13-NEXT:    s_and_b32 s1, s46, 0xffff0000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v39, s0, s0
-; GFX13-NEXT:    s_lshl_b32 s0, s46, 16
-; GFX13-NEXT:    s_lshl_b32 s2, s45, 16
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s3, s0, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s0, s2, 0x40c00000
-; GFX13-NEXT:    s_lshl_b32 s2, s47, 16
-; GFX13-NEXT:    s_add_f32 s20, s20, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v26, s1, s0
-; GFX13-NEXT:    s_and_b32 s1, s47, 0xffff0000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v27, s3, s0
-; GFX13-NEXT:    s_add_f32 s1, s1, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s3, s48, 0xffff0000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v28, s2, s0
-; GFX13-NEXT:    s_lshl_b32 s2, s49, 16
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v49, s1, s0
-; GFX13-NEXT:    s_add_f32 s1, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v50, s3, s0
-; GFX13-NEXT:    s_and_b32 s3, s49, 0xffff0000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v29, s1, s0
-; GFX13-NEXT:    s_and_b32 s1, s50, 0xffff0000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v51, s2, s0
-; GFX13-NEXT:    s_lshl_b32 s2, s50, 16
-; GFX13-NEXT:    s_add_f32 s4, s1, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s1, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s2, s2, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s3, s51, 0xffff0000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v30, s4, s0
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_lshl_b32 s4, s51, 16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v0, s2, s0
-; GFX13-NEXT:    s_add_f32 s2, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v31, s3, s0
-; GFX13-NEXT:    s_lshl_b32 s3, s12, 16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v52, s2, s0
-; GFX13-NEXT:    s_add_f32 s2, s3, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s3, s13, 0xffff0000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v1, s4, s0
-; GFX13-NEXT:    s_lshl_b32 s4, s13, 16
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s5, s14, 0xffff0000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v2, s2, s0
-; GFX13-NEXT:    s_add_f32 s2, s5, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v53, s3, s0
-; GFX13-NEXT:    s_lshl_b32 s3, s14, 16
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v54, s4, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v55, s2, s0
-; GFX13-NEXT:    s_add_f32 s2, s3, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s3, s15, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s4, s15, 16
-; GFX13-NEXT:    s_and_b32 s5, s16, 0xffff0000
-; GFX13-NEXT:    s_and_b32 s13, s22, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s14, s22, 16
-; GFX13-NEXT:    s_lshl_b32 s22, s27, 16
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s22, s22, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v3, s3, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v4, s4, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v64, s5, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v5, s6, s0
-; GFX13-NEXT:    s_and_b32 s3, s17, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s4, s17, 16
-; GFX13-NEXT:    s_and_b32 s5, s18, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s6, s18, 16
-; GFX13-NEXT:    s_and_b32 s15, s23, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s16, s23, 16
-; GFX13-NEXT:    s_and_b32 s17, s24, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s18, s24, 16
-; GFX13-NEXT:    s_lshl_b32 s23, s26, 16
-; GFX13-NEXT:    s_and_b32 s24, s27, 0xffff0000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v6, s22, s0
-; GFX13-NEXT:    s_add_f32 s23, s23, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s24, s24, 0x40c00000
-; GFX13-NEXT:    s_and_b32 s7, s19, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s8, s19, 16
-; GFX13-NEXT:    s_and_b32 s11, s21, 0xffff0000
-; GFX13-NEXT:    s_lshl_b32 s12, s21, 16
-; GFX13-NEXT:    s_and_b32 s19, s25, 0xffff0000
-; GFX13-NEXT:    s_and_b32 s21, s26, 0xffff0000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v7, s23, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v8, s20, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v9, s24, s0
-; GFX13-NEXT:    v_and_b32_e32 v6, 0xffff, v6
-; GFX13-NEXT:    s_add_f32 s18, s18, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s19, s19, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s21, s21, 0x40c00000
-; GFX13-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v11, s18, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v12, s19, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v10, s21, s0
-; GFX13-NEXT:    v_lshl_or_b32 v15, v9, 16, v6
-; GFX13-NEXT:    v_and_b32_e32 v6, 0xffff, v8
-; GFX13-NEXT:    s_add_f32 s14, s14, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s16, s16, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s17, s17, 0x40c00000
-; GFX13-NEXT:    v_lshl_or_b32 v14, v10, 16, v7
-; GFX13-NEXT:    v_and_b32_e32 v9, 0xffff, v11
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v7, s16, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v8, s17, s0
-; GFX13-NEXT:    v_lshl_or_b32 v13, v12, 16, v6
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v6, s14, s0
-; GFX13-NEXT:    s_add_f32 s12, s12, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s13, s13, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s15, s15, 0x40c00000
-; GFX13-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX13-NEXT:    v_lshl_or_b32 v12, v8, 16, v9
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v8, s12, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v10, s15, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v9, s13, s0
-; GFX13-NEXT:    v_and_b32_e32 v6, 0xffff, v6
-; GFX13-NEXT:    s_add_f32 s8, s8, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s10, s10, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s11, s11, 0x40c00000
-; GFX13-NEXT:    v_lshl_or_b32 v11, v10, 16, v7
-; GFX13-NEXT:    v_and_b32_e32 v8, 0xffff, v8
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v7, s10, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v65, s11, s0
-; GFX13-NEXT:    v_lshl_or_b32 v10, v9, 16, v6
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v6, s8, s0
-; GFX13-NEXT:    s_add_f32 s6, s6, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s7, s7, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s9, s9, 0x40c00000
-; GFX13-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX13-NEXT:    v_lshl_or_b32 v9, v65, 16, v8
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v65, s7, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v66, s9, s0
-; GFX13-NEXT:    v_and_b32_e32 v6, 0xffff, v6
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v67, s6, s0
-; GFX13-NEXT:    s_add_f32 s4, s4, 0x40c00000
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v70, s2, s0
-; GFX13-NEXT:    v_lshl_or_b32 v8, v66, 16, v7
-; GFX13-NEXT:    v_lshl_or_b32 v7, v65, 16, v6
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v66, s4, s0
-; GFX13-NEXT:    v_and_b32_e32 v65, 0xffff, v67
-; GFX13-NEXT:    v_and_b32_e32 v67, 0xffff, v5
-; GFX13-NEXT:    s_add_f32 s3, s3, 0x40c00000
-; GFX13-NEXT:    s_add_f32 s5, s5, 0x40c00000
-; GFX13-NEXT:    v_and_b32_e32 v66, 0xffff, v66
-; GFX13-NEXT:    v_and_b32_e32 v69, 0xffff, v4
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v68, s3, s0
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v6, s5, s0
-; GFX13-NEXT:    v_lshl_or_b32 v4, v64, 16, v67
-; GFX13-NEXT:    v_and_b32_e32 v64, 0xffff, v70
-; GFX13-NEXT:    v_and_b32_e32 v54, 0xffff, v54
-; GFX13-NEXT:    v_lshl_or_b32 v5, v68, 16, v66
-; GFX13-NEXT:    v_lshl_or_b32 v6, v6, 16, v65
-; GFX13-NEXT:    v_and_b32_e32 v65, 0xffff, v2
-; GFX13-NEXT:    v_and_b32_e32 v66, 0xffff, v1
-; GFX13-NEXT:    v_lshl_or_b32 v2, v55, 16, v64
-; GFX13-NEXT:    v_lshl_or_b32 v1, v53, 16, v54
-; GFX13-NEXT:    v_and_b32_e32 v53, 0xffff, v29
-; GFX13-NEXT:    v_and_b32_e32 v54, 0xffff, v28
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v64, s0, s0
-; GFX13-NEXT:    v_and_b32_e32 v67, 0xffff, v0
-; GFX13-NEXT:    v_lshl_or_b32 v0, v52, 16, v65
-; GFX13-NEXT:    v_cvt_pk_bf16_f32 v52, s1, s0
-; GFX13-NEXT:    v_and_b32_e32 v51, 0xffff, v51
-; GFX13-NEXT:    v_and_b32_e32 v55, 0xffff, v27
-; GFX13-NEXT:    v_lshl_or_b32 v28, v50, 16, v53
-; GFX13-NEXT:    v_lshl_or_b32 v27, v49, 16, v54
-; GFX13-NEXT:    v_and_b32_e32 v49, 0xffff, v64
-; GFX13-NEXT:    v_and_b32_e32 v48, 0xffff, v48
-; GFX13-NEXT:    v_and_b32_e32 v50, 0xffff, v25
-; GFX13-NEXT:    v_lshl_or_b32 v29, v52, 16, v51
-; GFX13-NEXT:    v_and_b32_e32 v51, 0xffff, v24
-; GFX13-NEXT:    v_and_b32_e32 v52, 0xffff, v23
-; GFX13-NEXT:    v_lshl_or_b32 v25, v39, 16, v49
-; GFX13-NEXT:    v_lshl_or_b32 v24, v38, 16, v48
-; GFX13-NEXT:    v_lshl_or_b32 v23, v37, 16, v50
-; GFX13-NEXT:    v_and_b32_e32 v36, 0xffff, v36
-; GFX13-NEXT:    v_and_b32_e32 v35, 0xffff, v35
-; GFX13-NEXT:    v_and_b32_e32 v37, 0xffff, v20
-; GFX13-NEXT:    v_and_b32_e32 v38, 0xffff, v19
-; GFX13-NEXT:    v_and_b32_e32 v39, 0xffff, v18
-; GFX13-NEXT:    v_lshl_or_b32 v3, v3, 16, v69
-; GFX13-NEXT:    v_lshl_or_b32 v31, v31, 16, v66
-; GFX13-NEXT:    v_lshl_or_b32 v30, v30, 16, v67
-; GFX13-NEXT:    v_lshl_or_b32 v26, v26, 16, v55
-; GFX13-NEXT:    v_lshl_or_b32 v22, v22, 16, v51
-; GFX13-NEXT:    v_lshl_or_b32 v21, v21, 16, v52
-; GFX13-NEXT:    v_lshl_or_b32 v20, v34, 16, v36
-; GFX13-NEXT:    v_lshl_or_b32 v19, v33, 16, v35
-; GFX13-NEXT:    v_lshl_or_b32 v18, v32, 16, v37
-; GFX13-NEXT:    v_lshl_or_b32 v17, v17, 16, v38
-; GFX13-NEXT:    v_lshl_or_b32 v16, v16, 16, v39
-; GFX13-NEXT:    s_branch .LBB105_5
+; GFX13-NEXT:    v_pk_add_bf16 v15, 0x40c0, s27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v14, 0x40c0, s26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v13, 0x40c0, s25 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v12, 0x40c0, s24 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v11, 0x40c0, s23 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v10, 0x40c0, s22 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v9, 0x40c0, s21 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v8, 0x40c0, s20 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v7, 0x40c0, s19 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v6, 0x40c0, s18 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v5, 0x40c0, s17 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v4, 0x40c0, s16 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v3, 0x40c0, s15 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v2, 0x40c0, s14 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v1, 0x40c0, s13 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v0, 0x40c0, s12 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v31, 0x40c0, v31 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v30, 0x40c0, v30 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v29, 0x40c0, v29 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v28, 0x40c0, v28 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v27, 0x40c0, v27 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v26, 0x40c0, v26 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v25, 0x40c0, v25 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v24, 0x40c0, v24 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v23, 0x40c0, v23 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v22, 0x40c0, v22 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v21, 0x40c0, v21 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v20, 0x40c0, v20 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v19, 0x40c0, v19 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v18, 0x40c0, v18 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v17, 0x40c0, v17 op_sel_hi:[0,1]
+; GFX13-NEXT:    v_pk_add_bf16 v16, 0x40c0, v16 op_sel_hi:[0,1]
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX13-NEXT:  .LBB105_3:
 ; GFX13-NEXT:    s_branch .LBB105_2
 ; GFX13-NEXT:  .LBB105_4:
-; GFX13-NEXT:    v_dual_mov_b32 v16, s36 :: v_dual_mov_b32 v17, s37
 ; GFX13-NEXT:    v_dual_mov_b32 v0, s12 :: v_dual_mov_b32 v1, s13
-; GFX13-NEXT:    v_dual_mov_b32 v18, s38 :: v_dual_mov_b32 v19, s39
-; GFX13-NEXT:    v_dual_mov_b32 v20, s40 :: v_dual_mov_b32 v21, s41
-; GFX13-NEXT:    v_dual_mov_b32 v22, s42 :: v_dual_mov_b32 v23, s43
-; GFX13-NEXT:    v_dual_mov_b32 v24, s44 :: v_dual_mov_b32 v25, s45
-; GFX13-NEXT:    v_dual_mov_b32 v26, s46 :: v_dual_mov_b32 v27, s47
-; GFX13-NEXT:    v_dual_mov_b32 v28, s48 :: v_dual_mov_b32 v29, s49
-; GFX13-NEXT:    v_dual_mov_b32 v30, s50 :: v_dual_mov_b32 v31, s51
 ; GFX13-NEXT:    v_dual_mov_b32 v2, s14 :: v_dual_mov_b32 v3, s15
 ; GFX13-NEXT:    v_dual_mov_b32 v4, s16 :: v_dual_mov_b32 v5, s17
 ; GFX13-NEXT:    v_dual_mov_b32 v6, s18 :: v_dual_mov_b32 v7, s19
@@ -283757,19 +281948,6 @@ define inreg <64 x i16> @bitcast_v64bf16_to_v64i16_scalar(<64 x bfloat> inreg %a
 ; GFX13-NEXT:    v_dual_mov_b32 v10, s22 :: v_dual_mov_b32 v11, s23
 ; GFX13-NEXT:    v_dual_mov_b32 v12, s24 :: v_dual_mov_b32 v13, s25
 ; GFX13-NEXT:    v_dual_mov_b32 v14, s26 :: v_dual_mov_b32 v15, s27
-; GFX13-NEXT:  .LBB105_5: ; %end
-; GFX13-NEXT:    v_readlane_b32 s51, v40, 7
-; GFX13-NEXT:    v_readlane_b32 s50, v40, 6
-; GFX13-NEXT:    v_readlane_b32 s49, v40, 5
-; GFX13-NEXT:    v_readlane_b32 s48, v40, 4
-; GFX13-NEXT:    v_readlane_b32 s39, v40, 3
-; GFX13-NEXT:    v_readlane_b32 s38, v40, 2
-; GFX13-NEXT:    v_readlane_b32 s37, v40, 1
-; GFX13-NEXT:    v_readlane_b32 s36, v40, 0
-; GFX13-NEXT:    s_or_saveexec_b32 s0, -1
-; GFX13-NEXT:    scratch_load_b32 v40, off, s32 ; 4-byte Folded Reload
-; GFX13-NEXT:    s_mov_b32 exec_lo, s0
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
