@@ -2779,8 +2779,12 @@ bool SIFoldOperandsImpl::tryFoldDynamicIdxOffset(MachineOperand *IdxOpnd,
                 .addImm(0);
       } else {
         IdxReg = SMovImmZero->getOperand(0).getReg();
+        for (auto &UseMO : MRI->use_nodbg_operands(IdxReg)) {
+          UseMO.setIsKill(false);
+        }
       }
       IdxOpnd->setReg(IdxReg);
+      IdxOpnd->setIsKill(true);
       IdxOpnd->setSubReg(AMDGPU::NoSubRegister);
       if (MRI->use_nodbg_empty(DefMI->getOperand(0).getReg())) {
         DefMI->eraseFromParent();

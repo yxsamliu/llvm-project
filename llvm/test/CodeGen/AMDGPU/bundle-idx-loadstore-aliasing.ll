@@ -33,8 +33,8 @@ define dso_local amdgpu_kernel void @amdgcn_aa_singlebb() "amdgpu-wavegroup-enab
 ; SINGLEBBDBG:  *** Created bundle from
 ; SINGLEBBDBG-NEXT:         $stg_srca = V_LOAD_IDX [[S_MOV_B32_]]:sgpr_32, 55, implicit $exec :: (dereferenceable load (s32) from `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @weights, i32 220)`, addrspace 10)
 ; SINGLEBBDBG-NEXT:         $stg_dsta = nsw V_ADD_U32_e64 internal killed $stg_srca, killed [[V_LOAD_IDX_]]:vgpr_32, 0, implicit $exec
-; SINGLEBBDBG-NEXT:         V_STORE_IDX internal $stg_dsta, [[S_MOV_B32_]]:sgpr_32, 272, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @out, i32 64)`, align 64, addrspace 10)
-; SINGLEBBDBG-NEXT: BB.0 :: V_STORE_IDX internal $stg_dsta, [[S_MOV_B32_]]:sgpr_32, 272, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @out, i32 64)`, align 64, addrspace 10)
+; SINGLEBBDBG-NEXT:         V_STORE_IDX internal $stg_dsta, killed [[S_MOV_B32_]]:sgpr_32, 272, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @out, i32 64)`, align 64, addrspace 10)
+; SINGLEBBDBG-NEXT: BB.0 :: V_STORE_IDX internal $stg_dsta, killed [[S_MOV_B32_]]:sgpr_32, 272, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @out, i32 64)`, align 64, addrspace 10)
 ; SINGLEBBDBG-NEXT: BB.0 :: S_ENDPGM 0
 ; SINGLEBB-LABEL: name:            amdgcn_aa_singlebb
 ; SINGLEBB: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
@@ -47,10 +47,10 @@ define dso_local amdgpu_kernel void @amdgcn_aa_singlebb() "amdgpu-wavegroup-enab
 ; SINGLEBB-NEXT:      $stg_dsta = V_MOV_B32_e32 7, implicit $exec
 ; SINGLEBB-NEXT:      V_STORE_IDX internal $stg_dsta, [[S_MOV_B32_]], 48, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @weights, i32 192)`, align 64, addrspace 10)
 ; SINGLEBB-NEXT:    }
-; SINGLEBB-NEXT:    BUNDLE implicit-def dead $stg_srca, implicit-def $stg_dsta, implicit [[S_MOV_B32_]], implicit $exec, implicit killed [[V_LOAD_IDX_]] {
+; SINGLEBB-NEXT:    BUNDLE implicit-def dead $stg_srca, implicit-def $stg_dsta, implicit killed [[S_MOV_B32_]], implicit $exec, implicit killed [[V_LOAD_IDX_]] {
 ; SINGLEBB-NEXT:      $stg_srca = V_LOAD_IDX [[S_MOV_B32_]], 55, implicit $exec :: (dereferenceable load (s32) from `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @weights, i32 220)`, addrspace 10)
 ; SINGLEBB-NEXT:      $stg_dsta = nsw V_ADD_U32_e64 internal killed $stg_srca, killed [[V_LOAD_IDX_]], 0, implicit $exec
-; SINGLEBB-NEXT:      V_STORE_IDX internal $stg_dsta, [[S_MOV_B32_]], 272, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @out, i32 64)`, align 64, addrspace 10)
+; SINGLEBB-NEXT:      V_STORE_IDX internal $stg_dsta, killed [[S_MOV_B32_]], 272, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @out, i32 64)`, align 64, addrspace 10)
 ; SINGLEBB-NEXT:    }
 ; SINGLEBB-NEXT:    S_ENDPGM 0
 entry:
@@ -67,7 +67,7 @@ define dso_local amdgpu_kernel void @amdgcn_aa_multibb() "amdgpu-wavegroup-enabl
 ; MULTIBBDBG: ===== AMDGPUBundleIdxLdSt :: Sinking Phase =====
 ;     Skip first kernel.
 ; MULTIBBDBG: ===== AMDGPUBundleIdxLdSt :: Sinking Phase =====
-; MULTIBBDBG:  *** Conflict with V_STORE_IDX [[V_STORE_IDX_:%[0-9]+]]:vgpr_32, %43:sgpr_32, 50, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @weights, i32 200)`, align 8, addrspace 10)
+; MULTIBBDBG:  *** Conflict with V_STORE_IDX [[V_STORE_IDX_:%[0-9]+]]:vgpr_32, killed %43:sgpr_32, 50, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @weights, i32 200)`, align 8, addrspace 10)
 ; MULTIBBDBG: BB.2 :: [[V_STORE_IDX_]]:vgpr_32 = V_MOV_B32_e32 5, implicit $exec
 ; MULTIBBDBG-NEXT:  *** Found 1 use(s)
 ; MULTIBBDBG-NEXT:  *** Use is in MI's current block. Leaving a copy in block 2

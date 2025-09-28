@@ -486,7 +486,7 @@ body:             |
     ; ALLOC-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
     ; ALLOC-NEXT: }
     ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 0
-    ; ALLOC-NEXT: V_STORE_IDX [[V_MAX_U32_e64_]], $idx2, 5, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: V_STORE_IDX [[V_MAX_U32_e64_]], killed $idx2, 5, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[V_LOAD_IDX]], implicit $exec, implicit $idx1 {
     ; ALLOC-NEXT:   $stg_dsta = V_MIN_U32_e64 12345, [[V_LOAD_IDX]], implicit $exec
     ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 16, implicit $exec :: (store (s32), addrspace 10)
