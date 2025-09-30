@@ -1289,7 +1289,9 @@ unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
   // workloads. By default, gfx shaders have the LDS size set to 128 KiB to
   // maintain compatibility with older GFX architectures
   //
-  if (STI->getFeatureBits().test(FeatureLocalMemorySizeLimit131072))
+  if (STI->getFeatureBits().test(FeatureLocalMemorySizeLimit65536))
+    BytesPerCU = 65536;
+  else if (STI->getFeatureBits().test(FeatureLocalMemorySizeLimit131072))
     BytesPerCU = 131072;
 
   // Get addressable LDS as long as no artificial limits are applied.

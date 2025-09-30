@@ -28,6 +28,9 @@ class SubtargetFeatureLocalMemorySizeLimit <int Value> : SubtargetFeature<
   "Artificial limit on local memory (LDS), specified in bytes"
 >;
 
+// Limit max LDS for shaders to 64KiB.
+def FeatureLocalMemorySizeLimit65536 : SubtargetFeatureLocalMemorySizeLimit<65536>;
+
 // By default, shaders have the LDS size set to 128 KiB to
 // maintain compatibility with older GFX architectures
 def FeatureLocalMemorySizeLimit131072 : SubtargetFeatureLocalMemorySizeLimit<131072>;
