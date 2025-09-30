@@ -82,7 +82,7 @@ protected:
   unsigned MaxWavesPerEU = 10;
   unsigned LocalMemorySize = 0;
   unsigned AddressableLocalMemorySize = 0;
-  unsigned DefaultLocalMemorySize = 0;
+  unsigned LocalMemorySizeLimit = 0;
   char WavefrontSizeLog2 = 0;
 
 public:
@@ -327,12 +327,7 @@ public:
   //  For GFX13+ memory is shared between LDS and VectorCache. LDS can be set
   //  to multiple values based on the split ratio. For now we will use default
   //  value set by HW after the reset.
-  unsigned getLocalMemorySize() const {
-    if (DefaultLocalMemorySize != 0)
-      return DefaultLocalMemorySize;
-
-    return LocalMemorySize;
-  }
+  unsigned getLocalMemorySize() const { return LocalMemorySize; }
 
   /// Return the maximum number of bytes of LDS that can be allocated to a
   /// single workgroup.

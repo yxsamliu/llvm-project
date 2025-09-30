@@ -18,17 +18,19 @@ def FeatureFMA : SubtargetFeature<"fmaf",
   "Enable single precision FMA (not as fast as mul+add, but fused)"
 >;
 
-// GFX13+ has common memory for LDS and VectorCache which can be split in different ratios.
-// After the reset LDS is set to default value which can be different than
-// total addressable LDS.
-class SubtargetFeatureDefaultLocalMemorySize <int Value> : SubtargetFeature<
-  "defaultlocalmemorysize"#Value,
-  "DefaultLocalMemorySize",
+// Starting with GFX13, memory is shared between LDS and the Vector Cache.
+// The LDS size can be configured to multiple values based on the split ratio.
+// As a result, different artificial limitations may apply.
+class SubtargetFeatureLocalMemorySizeLimit <int Value> : SubtargetFeature<
+  "local-memory-size-limit-"#Value,
+  "LocalMemorySizeLimit",
   !cast<string>(Value),
-  "Default size of local memory (in bytes) after reset"
+  "Artificial limit on local memory (LDS), specified in bytes"
 >;
 
-def FeatureDefaultLocalMemorySize131072 : SubtargetFeatureDefaultLocalMemorySize<131072>;
+// By default, shaders have the LDS size set to 128 KiB to
+// maintain compatibility with older GFX architectures
+def FeatureLocalMemorySizeLimit131072 : SubtargetFeatureLocalMemorySizeLimit<131072>;
 
 // Addressable local memory size is the maximum number of bytes of LDS that can
 // be allocated to a single workgroup.

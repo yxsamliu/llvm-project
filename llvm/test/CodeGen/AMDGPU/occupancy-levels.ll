@@ -19,8 +19,12 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1153 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1030,GFX1030W64 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W32 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300W32 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300W64 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300W32,GFX1300W32WG %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300W64,GFX1300W64WG %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=-cumode < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300W32,GFX1300W32WG %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64,-cumode < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300W64,GFX1300W64WG %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+cumode < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300W32,GFX1300W32CU %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64,+cumode < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300W64,GFX1300W64CU %s
 
 ; GCN-LABEL: {{^}}max_occupancy:
 ; GFX9:       ; Occupancy: 10
@@ -432,7 +436,8 @@ define amdgpu_kernel void @used_lds_13112() {
 ; GFX1100W64: ; Occupancy: 4{{$}}
 ; GFX1100W32: ; Occupancy: 8{{$}}
 ; GFX1300W64: ; Occupancy: 4{{$}}
-; GFX1300W32: ; Occupancy: 8{{$}}
+; GFX1300W32WG: ; Occupancy: 8{{$}}
+; GFX1300W32CU: ; Occupancy: 7{{$}}
 @lds8252 = internal addrspace(3) global [8252 x i8] poison, align 4
 define amdgpu_kernel void @used_lds_8252_max_group_size_64() #3 {
   store volatile i8 1, ptr addrspace(3) @lds8252
@@ -445,8 +450,10 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_64() #3 {
 ; GFX10W32:   ; Occupancy: 12{{$}}
 ; GFX1100W64: ; Occupancy: 8{{$}}
 ; GFX1100W32: ; Occupancy: 12{{$}}
-; GFX1300W64: ; Occupancy: 8{{$}}
-; GFX1300W32: ; Occupancy: 12{{$}}
+; GFX1300W64WG: ; Occupancy: 8{{$}}
+; GFX1300W64CU: ; Occupancy: 7{{$}}
+; GFX1300W32WG: ; Occupancy: 12{{$}}
+; GFX1300W32CU: ; Occupancy: 11{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_96() #4 {
   store volatile i8 1, ptr addrspace(3) @lds8252
   ret void
@@ -458,8 +465,10 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_96() #4 {
 ; GFX10W32:   ; Occupancy: 15{{$}}
 ; GFX1100W64: ; Occupancy: 8{{$}}
 ; GFX1100W32: ; Occupancy: 15{{$}}
-; GFX1300W64: ; Occupancy: 8{{$}}
-; GFX1300W32: ; Occupancy: 15{{$}}
+; GFX1300W64WG: ; Occupancy: 8{{$}}
+; GFX1300W64CU: ; Occupancy: 7{{$}}
+; GFX1300W32WG: ; Occupancy: 15{{$}}
+; GFX1300W32CU: ; Occupancy: 14{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_128() #5 {
   store volatile i8 1, ptr addrspace(3) @lds8252
   ret void
@@ -472,7 +481,8 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_128() #5 {
 ; GFX1030W32: ; Occupancy: 15{{$}}
 ; GFX1100W64: ; Occupancy: 12{{$}}
 ; GFX1100W32: ; Occupancy: 15{{$}}
-; GFX1300W64: ; Occupancy: 12{{$}}
+; GFX1300W64WG: ; Occupancy: 12{{$}}
+; GFX1300W64CU: ; Occupancy: 11{{$}}
 ; GFX1300W32: ; Occupancy: 15{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_192() #6 {
   store volatile i8 1, ptr addrspace(3) @lds8252
@@ -486,7 +496,8 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_192() #6 {
 ; GFX1030W32: ; Occupancy: 16{{$}}
 ; GFX1100W64: ; Occupancy: 15{{$}}
 ; GFX1100W32: ; Occupancy: 16{{$}}
-; GFX1300W64: ; Occupancy: 15{{$}}
+; GFX1300W64WG: ; Occupancy: 15{{$}}
+; GFX1300W64CU: ; Occupancy: 14{{$}}
 ; GFX1300W32: ; Occupancy: 16{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_256() #7 {
   store volatile i8 1, ptr addrspace(3) @lds8252

@@ -2272,7 +2272,7 @@ def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
    FeatureGFX1250Insts,
    FeatureAddressableLocalMemorySize196608,
-   FeatureDefaultLocalMemorySize131072,
+   FeatureLocalMemorySizeLimit131072,
    Feature1024AddressableVGPRs,
    Feature64BitLiterals,
    FeatureLDSBankCount32,

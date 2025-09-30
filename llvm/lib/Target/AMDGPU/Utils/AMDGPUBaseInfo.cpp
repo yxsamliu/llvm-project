@@ -1249,33 +1249,63 @@ unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
 }
 
 unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
-  // For GFX13+ memory is shared between LDS and VectorCache. LDS can be set
-  // to multiple values based on the split ratio. For now we will use default
-  // value set by HW after the reset.
-  if (STI->getFeatureBits().test(FeatureDefaultLocalMemorySize131072))
-    return 131072;
-
   unsigned BytesPerCU = getAddressableLocalMemorySize(STI);
 
-  // "Per CU" really means "per whatever functional block the waves of a
-  // workgroup must share". So the effective local memory size is doubled in
-  // WGP mode on gfx10.
-  if (isGFX10Plus(*STI) && !STI->getFeatureBits().test(FeatureCuMode))
+  bool CUMode = STI->getFeatureBits().test(FeatureCuMode);
+
+  if (isGFX10Plus(*STI) && !isGFX13Plus(*STI) && !CUMode) {
+    // "Per CU" really means "per whatever functional block the waves of a
+    // workgroup must share". So the effective local memory size is doubled in
+    // WGP mode on gfx10.
     BytesPerCU *= 2;
+  }
 
   return BytesPerCU;
 }
 
-unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
+// Get max allowed by hardware addressable LDS.
+static unsigned getMaxHWAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
     return 32768;
   if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
     return 65536;
   if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
     return 163840;
+  if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize196608))
+    return 196608;
   if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
     return 327680;
   return 32768;
+}
+
+// Get addressable LDS based on GFX and WGP/CU mode.
+unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
+  unsigned BytesPerCU = 0;
+
+  // Check for any artificial LDS limits.
+  // Starting with GFX13, memory is shared between LDS and the Vector Cache.
+  // The LDS size can be configured to multiple values based on the split ratio.
+  // As a result, different artificial limitations may apply for graphics
+  // workloads. By default, gfx shaders have the LDS size set to 128 KiB to
+  // maintain compatibility with older GFX architectures
+  //
+  if (STI->getFeatureBits().test(FeatureLocalMemorySizeLimit131072))
+    BytesPerCU = 131072;
+
+  // Get addressable LDS as long as no artificial limits are applied.
+  if (BytesPerCU == 0)
+    BytesPerCU = getMaxHWAddressableLocalMemorySize(STI);
+
+  bool CUMode = STI->getFeatureBits().test(FeatureCuMode);
+  // GFX13 allows allocation of the maximum available LDS memory.
+  // In WGP mode, the LDS size is equal to the addressable LDS.
+  // In CU mode (half-WGP), each CU is assigned to a separate segment of LDS
+  // memory which eliminates bank conflicts and reduces the effective LDS
+  // size by two.
+  if (isGFX13Plus(*STI) && CUMode)
+    BytesPerCU /= 2;
+
+  return BytesPerCU;
 }
 
 unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
