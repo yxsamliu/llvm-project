@@ -1,8 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
-// https://ontrack-internal.amd.com/browse/SWDEV-555344
-// XFAIL: *
-
 llvm.func @rocdl_special_regs() -> i32 {
   // CHECK-LABEL: rocdl_special_regs
   // CHECK: call i32 @llvm.amdgcn.workitem.id.x()

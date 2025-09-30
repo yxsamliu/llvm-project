@@ -669,7 +669,7 @@ def ROCDL_RawPtrBufferAtomicFaddOp : ROCDL_RawPtrBufferAtomicNoRet<"fadd">;
 // Raw buffer load/store intrinsics
 
 def ROCDL_RawBufferLoadOp :
-  ROCDL_IntrOp<"raw.buffer.load", [0], [], [], 1>,
+  ROCDL_IntrOp<"raw.buffer.load", [0], [0], [], 1>,
   Arguments<(ins LLVM_Type:$rsrc,
                  LLVM_Type:$offset,
                  LLVM_Type:$soffset,
@@ -678,7 +678,7 @@ def ROCDL_RawBufferLoadOp :
 }
 
 def ROCDL_RawBufferStoreOp :
-  ROCDL_IntrOp<"raw.buffer.store", [], [0], [], 0>,
+  ROCDL_IntrOp<"raw.buffer.store", [], [0, 1], [], 0>,
   Arguments<(ins LLVM_Type:$vdata,
                  LLVM_Type:$rsrc,
                  LLVM_Type:$offset,
@@ -688,7 +688,7 @@ def ROCDL_RawBufferStoreOp :
 }
 
 def ROCDL_RawBufferAtomicCmpSwap :
-  ROCDL_IntrOp<"raw.buffer.atomic.cmpswap", [], [0], [AllTypesMatch<["res", "src", "cmp"]>], 1>,
+  ROCDL_IntrOp<"raw.buffer.atomic.cmpswap", [], [0, 2], [AllTypesMatch<["res", "src", "cmp"]>], 1>,
   Arguments<(ins LLVM_Type:$src,
                  LLVM_Type:$cmp,
                  LLVM_Type:$rsrc,
@@ -704,7 +704,7 @@ def ROCDL_RawBufferAtomicCmpSwap :
 // MI-100 and MI-200 buffer atomic floating point add intrinsic
 
 def ROCDL_RawBufferAtomicFAddOp :
-  ROCDL_IntrOp<"raw.buffer.atomic.fadd", [], [0], [], 0>,
+  ROCDL_IntrOp<"raw.buffer.atomic.fadd", [], [0, 1], [], 0>,
   Arguments<(ins LLVM_Type:$vdata,
                  LLVM_Type:$rsrc,
                  LLVM_Type:$offset,
@@ -717,7 +717,7 @@ def ROCDL_RawBufferAtomicFAddOp :
 // Buffer atomic floating point max intrinsic. GFX9 does not support fp32.
 
 def ROCDL_RawBufferAtomicFMaxOp :
-  ROCDL_IntrOp<"raw.buffer.atomic.fmax", [], [0], [], 0>,
+  ROCDL_IntrOp<"raw.buffer.atomic.fmax", [], [0, 1], [], 0>,
   Arguments<(ins LLVM_Type:$vdata,
                  LLVM_Type:$rsrc,
                  LLVM_Type:$offset,
@@ -730,7 +730,7 @@ def ROCDL_RawBufferAtomicFMaxOp :
 // Buffer atomic signed integer max intrinsic.
 
 def ROCDL_RawBufferAtomicSMaxOp :
-  ROCDL_IntrOp<"raw.buffer.atomic.smax", [], [0], [], 0>,
+  ROCDL_IntrOp<"raw.buffer.atomic.smax", [], [0, 1], [], 0>,
   Arguments<(ins LLVM_Type:$vdata,
                  LLVM_Type:$rsrc,
                  LLVM_Type:$offset,
@@ -743,7 +743,7 @@ def ROCDL_RawBufferAtomicSMaxOp :
 // Buffer atomic unsigned integer min intrinsic.
 
 def ROCDL_RawBufferAtomicUMinOp :
-  ROCDL_IntrOp<"raw.buffer.atomic.umin", [], [0], [], 0>,
+  ROCDL_IntrOp<"raw.buffer.atomic.umin", [], [0, 1], [], 0>,
   Arguments<(ins LLVM_Type:$vdata,
                  LLVM_Type:$rsrc,
                  LLVM_Type:$offset,
