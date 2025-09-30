@@ -277,6 +277,14 @@ bool CodeGenAction::beginSourceFileAction() {
                               ci.getInvocation().getLangOpts().OpenMPVersion);
   }
 
+  if (ci.getInvocation().getLangOpts().FastRealMod) {
+    auto mod = lb.getModule();
+    mod.getOperation()->setAttr(
+        mlir::StringAttr::get(mod.getContext(),
+                              llvm::Twine{"fir.fast_real_mod"}),
+        mlir::BoolAttr::get(mod.getContext(), true));
+  }
+
   // Create a parse tree and lower it to FIR
   parseAndLowerTree(ci, lb);
 
@@ -306,6 +314,10 @@ bool CodeGenAction::beginSourceFileAction() {
       Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
   opts.doConcurrentMappingKind =
       ci.getInvocation().getCodeGenOpts().getDoConcurrentMapping();
+  opts.enableOffloadGlobalFiltering =
+      ci.getInvocation().getCodeGenOpts().OffloadGlobalFiltering;
+  opts.deferDescMap =
+      ci.getInvocation().getCodeGenOpts().DeferDescriptorMapping;
 
   if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None &&
       !isOpenMPEnabled) {

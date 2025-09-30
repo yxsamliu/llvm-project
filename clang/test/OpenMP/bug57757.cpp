@@ -32,24 +32,46 @@ void foo() {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 16
 // CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META13:![0-9]+]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4, !tbaa [[INT_TBAA16:![0-9]+]], !alias.scope [[META13]], !noalias [[META17:![0-9]+]]
+// CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META16:![0-9]+]])
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4, !tbaa [[INT_TBAA18:![0-9]+]], !alias.scope [[META13]], !noalias [[META16]]
 // CHECK-NEXT:    switch i32 [[TMP3]], [[DOTOMP_OUTLINED__EXIT:label %.*]] [
 // CHECK-NEXT:      i32 0, [[DOTUNTIED_JMP__I:label %.*]]
 // CHECK-NEXT:      i32 1, [[DOTUNTIED_NEXT__I:label %.*]]
 // CHECK-NEXT:    ]
 // CHECK:       [[_UNTIED_JMP__I:.*:]]
-// CHECK-NEXT:    store i32 1, ptr [[TMP2]], align 4, !tbaa [[INT_TBAA16]], !alias.scope [[META13]], !noalias [[META17]]
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @__kmpc_omp_task(ptr nonnull @[[GLOB1]], i32 [[TMP0]], ptr nonnull [[TMP1]]), !noalias [[META13]]
+// CHECK-NEXT:    store i32 1, ptr [[TMP2]], align 4, !tbaa [[INT_TBAA18]], !alias.scope [[META13]], !noalias [[META16]]
+// CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @__kmpc_omp_task(ptr nonnull @[[GLOB1]], i32 [[TMP0]], ptr nonnull [[TMP1]]), !noalias [[META19:![0-9]+]]
 // CHECK-NEXT:    br [[DOTOMP_OUTLINED__EXIT]]
 // CHECK:       [[_UNTIED_NEXT__I:.*:]]
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 40
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 52
 // CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 48
-// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP5]], align 8, !tbaa [[ANYPTR_TBAA19:![0-9]+]], !noalias [[META13]]
-// CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP7]], align 8, !tbaa [[INT_TBAA16]], !noalias [[META13]]
-// CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr [[TMP6]], align 4, !tbaa [[FLOAT_TBAA20:![0-9]+]], !noalias [[META13]]
-// CHECK-NEXT:    tail call void [[TMP8]](i32 noundef [[TMP9]], float noundef [[TMP10]]) #[[ATTR2:[0-9]+]], !noalias [[META13]]
+// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP5]], align 8, !tbaa [[ANYPTR_TBAA20:![0-9]+]], !alias.scope [[META16]], !noalias [[META13]]
+// CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP7]], align 8, !tbaa [[INT_TBAA18]], !alias.scope [[META16]], !noalias [[META13]]
+// CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr [[TMP6]], align 4, !tbaa [[FLOAT_TBAA21:![0-9]+]], !alias.scope [[META16]], !noalias [[META13]]
+// CHECK-NEXT:    tail call void [[TMP8]](i32 noundef [[TMP9]], float noundef [[TMP10]]) #[[ATTR2:[0-9]+]], !noalias [[META19]]
 // CHECK-NEXT:    br [[DOTOMP_OUTLINED__EXIT]]
 // CHECK:       [[_OMP_OUTLINED__EXIT:.*:]]
 // CHECK-NEXT:    ret i32 0
 //
+//.
+// CHECK: [[ANYPTR_TBAA3]] = !{[[META4:![0-9]+]], [[META6:![0-9]+]], i64 40}
+// CHECK: [[META4]] = !{!"_ZTS24kmp_task_t_with_privates", [[META5:![0-9]+]], i64 0, [[META10:![0-9]+]], i64 40}
+// CHECK: [[META5]] = !{!"_ZTS10kmp_task_t", [[META6]], i64 0, [[META6]], i64 8, [[META9:![0-9]+]], i64 16, [[META7:![0-9]+]], i64 24, [[META7]], i64 32}
+// CHECK: [[META6]] = !{!"any pointer", [[META7]], i64 0}
+// CHECK: [[META7]] = !{!"omnipotent char", [[META8:![0-9]+]], i64 0}
+// CHECK: [[META8]] = !{!"Simple C++ TBAA"}
+// CHECK: [[META9]] = !{!"int", [[META7]], i64 0}
+// CHECK: [[META10]] = !{!"_ZTS15.kmp_privates.t", [[META6]], i64 0, [[META9]], i64 8, [[META11:![0-9]+]], i64 12}
+// CHECK: [[META11]] = !{!"float", [[META7]], i64 0}
+// CHECK: [[INT_TBAA12]] = !{[[META4]], [[META9]], i64 16}
+// CHECK: [[META13]] = !{[[META14:![0-9]+]]}
+// CHECK: [[META14]] = distinct !{[[META14]], [[META15:![0-9]+]], !".omp_outlined.: %.part_id."}
+// CHECK: [[META15]] = distinct !{[[META15]], !".omp_outlined."}
+// CHECK: [[META16]] = !{[[META17:![0-9]+]]}
+// CHECK: [[META17]] = distinct !{[[META17]], [[META15]], !".omp_outlined.: %.privates."}
+// CHECK: [[INT_TBAA18]] = !{[[META9]], [[META9]], i64 0}
+// CHECK: [[META19]] = !{[[META14]], [[META17]]}
+// CHECK: [[ANYPTR_TBAA20]] = !{[[META6]], [[META6]], i64 0}
+// CHECK: [[FLOAT_TBAA21]] = !{[[META11]], [[META11]], i64 0}
+//.

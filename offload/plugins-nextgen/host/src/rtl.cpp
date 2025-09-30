@@ -45,6 +45,16 @@
 // The number of devices in this plugin.
 #define NUM_DEVICES 4
 
+// The ELF ID should be defined at compile-time by the build system.
+#ifndef TARGET_ELF_ID
+#define TARGET_ELF_ID EM_NONE
+#endif
+
+// The target triple should be defined at compile-time by the build system.
+#ifndef LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE
+#define LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE ""
+#endif
+
 namespace llvm {
 namespace omp {
 namespace target {
@@ -240,7 +250,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory. Use std::malloc in all cases.
-  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override {
+  void *allocate(size_t Size, void *, TargetAllocTy Kind) override {
     if (Size == 0)
       return nullptr;
 
@@ -257,9 +267,9 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Free the memory. Use std::free in all cases.
-  Error free(void *TgtPtr, TargetAllocTy Kind) override {
+  int free(void *TgtPtr, TargetAllocTy Kind) override {
     std::free(TgtPtr);
-    return Plugin::success();
+    return OFFLOAD_SUCCESS;
   }
 
   /// This plugin does nothing to lock buffers. Do not return an error, just
