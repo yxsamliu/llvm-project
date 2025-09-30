@@ -1713,8 +1713,6 @@ def VOP3PMadMixBF16Mods : ComplexPattern<untyped, 2, "SelectVOP3PMadMixBF16Mods"
 def VINTERPMods  : ComplexPattern<untyped, 2, "SelectVINTERPMods">;
 def VINTERPModsHi  : ComplexPattern<untyped, 2, "SelectVINTERPModsHi">;
 
-def Ignore : ComplexPattern<untyped, 0, "SelectIgnore">;
-
 //===----------------------------------------------------------------------===//
 // SI assembler operands
 //===----------------------------------------------------------------------===//
