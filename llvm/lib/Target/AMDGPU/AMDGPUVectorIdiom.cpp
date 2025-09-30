@@ -53,6 +53,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -311,6 +312,10 @@ struct AMDGPUVectorIdiomImpl {
                         << "with value-level select; N=" << N
                         << " minAlign=" << MinAlign.value() << '\n');
 
+      // Transfer debug info from the original memcpy to the new instructions
+      DebugLoc OriginalDebugLoc = MT.getDebugLoc();
+      B.SetCurrentDebugLocation(OriginalDebugLoc);
+
       Type *Ty = getIntOrVecTypeForSize(N, B.getContext(), MinAlign);
 
       LoadInst *LA = B.CreateAlignedLoad(Ty, A, MinAlign);
@@ -372,6 +377,9 @@ struct AMDGPUVectorIdiomImpl {
                          Value *FalsePtr, bool IsSource) {
     CFGChanged = true;
 
+    // Transfer debug info from the original memcpy to the new instructions
+    DebugLoc OriginalDebugLoc = MT.getDebugLoc();
+
     Function *F = MT.getFunction();
     BasicBlock *Cur = MT.getParent();
     BasicBlock *ThenBB = BasicBlock::Create(F->getContext(), "memcpy.then", F);
@@ -381,11 +389,13 @@ struct AMDGPUVectorIdiomImpl {
 
     Cur->getTerminator()->eraseFromParent();
     IRBuilder<> B(Cur);
+    B.SetCurrentDebugLocation(OriginalDebugLoc);
     B.CreateCondBr(Cond, ThenBB, ElseBB);
 
     ConstantInt *LenCI = cast<ConstantInt>(MT.getLength());
 
     IRBuilder<> BT(ThenBB);
+    BT.SetCurrentDebugLocation(OriginalDebugLoc);
     if (IsSource) {
       (void)BT.CreateMemCpy(MT.getRawDest(), MT.getDestAlign(), TruePtr,
                             MT.getSourceAlign(), LenCI, MT.isVolatile());
@@ -396,6 +406,7 @@ struct AMDGPUVectorIdiomImpl {
     BT.CreateBr(JoinBB);
 
     IRBuilder<> BE(ElseBB);
+    BE.SetCurrentDebugLocation(OriginalDebugLoc);
     if (IsSource) {
       (void)BE.CreateMemCpy(MT.getRawDest(), MT.getDestAlign(), FalsePtr,
                             MT.getSourceAlign(), LenCI, MT.isVolatile());
