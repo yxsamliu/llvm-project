@@ -2031,8 +2031,8 @@ let SubtargetPredicate = isGFX12Plus in {
 
 class RtsTraceRayPat<VIMAGE_RTS inst, SDPatternOperator node, ValueType vdata_vt = isVoid> : GCNPat<
   !if(!ne(vdata_vt, isVoid),
-      (vdata_vt:$vdata (node i32:$ray_initial_data, v3i32:$ray_initial_flags, (Ignore), v4f32:$ray_origin, v4f32:$ray_direction, v4i32:$rsrc)),
-      (node i32:$ray_initial_data, v3i32:$ray_initial_flags, (Ignore), v4f32:$ray_origin, v4f32:$ray_direction, v4i32:$rsrc)),
+      (vdata_vt:$vdata (node i32:$ray_initial_data, v3i32:$ray_initial_flags, srcvalue, v4f32:$ray_origin, v4f32:$ray_direction, v4i32:$rsrc)),
+      (node i32:$ray_initial_data, v3i32:$ray_initial_flags, srcvalue, v4f32:$ray_origin, v4f32:$ray_direction, v4i32:$rsrc)),
   (inst $ray_initial_data, $ray_initial_flags, $ray_origin, $ray_direction, $rsrc, (i1 1))
 >;
 
