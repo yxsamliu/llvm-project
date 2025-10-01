@@ -19,16 +19,24 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1153 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1030,GFX1030W64 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W32 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS128,GFX1300W32,GFX1300W32WG-LDS128 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS128,GFX1300W64,GFX1300W64-LDS128,GFX1300W64WG-LDS128 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=-cumode < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS128,GFX1300W32,GFX1300W32-LDS128,GFX1300W32WG-LDS128 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64,-cumode < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS128,GFX1300W64,GFX1300W64-LDS128,GFX1300W64WG-LDS128 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+cumode < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS128,GFX1300W32,GFX1300W32-LDS128,GFX1300W32CU-LDS128 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64,+cumode < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS128,GFX1300W64,GFX1300W64-LDS128,GFX1300W64CU-LDS128 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=-cumode,+local-memory-size-limit-65536,-local-memory-size-limit-131072 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS64,GFX1300W32,GFX1300W32WG-LDS64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64,-cumode,+local-memory-size-limit-65536,-local-memory-size-limit-131072 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS64,GFX1300W64,GFX1300W64-LDS64,GFX1300W64WG-LDS64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+cumode,+local-memory-size-limit-65536,-local-memory-size-limit-131072 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS64,GFX1300W32,GFX1300W32CU-LDS64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64,+cumode,+local-memory-size-limit-65536,-local-memory-size-limit-131072 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS64,GFX1300W64,GFX1300W64-LDS64,GFX1300W64CU-LDS64 %s
+
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS192,GFX1300W32,GFX1300W32WG-LDS192 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS192,GFX1300W64,GFX1300W64-LDS192,GFX1300W64WG-LDS192 %s
+
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=-cumode < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS192,GFX1300W32,GFX1300W32WG-LDS192 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64,-cumode < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS192,GFX1300W64,GFX1300W64-LDS192,GFX1300W64WG-LDS192 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+cumode < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS192,GFX1300W32,GFX1300W32CU-LDS192 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64,+cumode < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS192,GFX1300W64,GFX1300W64-LDS192,GFX1300W64CU-LDS192 %s
+
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=-cumode,+local-memory-size-limit-131072 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS128,GFX1300W32,GFX1300W32-LDS128,GFX1300W32WG-LDS128 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64,-cumode,+local-memory-size-limit-131072 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS128,GFX1300W64,GFX1300W64-LDS128,GFX1300W64WG-LDS128 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+cumode,+local-memory-size-limit-131072 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS128,GFX1300W32,GFX1300W32-LDS128,GFX1300W32CU-LDS128 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64,+cumode,+local-memory-size-limit-131072 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS128,GFX1300W64,GFX1300W64-LDS128,GFX1300W64CU-LDS128 %s
+
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=-cumode,+local-memory-size-limit-65536 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS64,GFX1300W32,GFX1300W32WG-LDS64 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64,-cumode,+local-memory-size-limit-65536 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS64,GFX1300W64,GFX1300W64-LDS64,GFX1300W64WG-LDS64 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+cumode,+local-memory-size-limit-65536 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS64,GFX1300W32,GFX1300W32CU-LDS64 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64,+cumode,+local-memory-size-limit-65536 < %s | FileCheck --check-prefixes=GCN,GFX1300,GFX1300-LDS64,GFX1300W64,GFX1300W64-LDS64,GFX1300W64CU-LDS64 %s
 
 ; GCN-LABEL: {{^}}max_occupancy:
 ; GFX9:       ; Occupancy: 10
@@ -440,10 +448,13 @@ define amdgpu_kernel void @used_lds_13112() {
 ; GFX1100W64: ; Occupancy: 4{{$}}
 ; GFX1100W32: ; Occupancy: 8{{$}}
 
+; GFX1300W64-LDS192:   ; Occupancy: 6{{$}}
 ; GFX1300W64-LDS128:   ; Occupancy: 4{{$}}
 ; GFX1300W64-LDS64:    ; Occupancy: 2{{$}}
+; GFX1300W32WG-LDS192: ; Occupancy: 12{{$}}
 ; GFX1300W32WG-LDS128: ; Occupancy: 8{{$}}
 ; GFX1300W32WG-LDS64:  ; Occupancy: 4{{$}}
+; GFX1300W32CU-LDS192: ; Occupancy: 11{{$}}
 ; GFX1300W32CU-LDS128: ; Occupancy: 7{{$}}
 ; GFX1300W32CU-LDS64:  ; Occupancy: 3{{$}}
 @lds8252 = internal addrspace(3) global [8252 x i8] poison, align 4
@@ -459,12 +470,16 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_64() #3 {
 ; GFX1100W64: ; Occupancy: 8{{$}}
 ; GFX1100W32: ; Occupancy: 12{{$}}
 
+; GFX1300W64WG-LDS192: ; Occupancy: 12{{$}}
 ; GFX1300W64WG-LDS128: ; Occupancy: 8{{$}}
 ; GFX1300W64WG-LDS64 : ; Occupancy: 4{{$}}
+; GFX1300W64CU-LDS192: ; Occupancy: 11{{$}}
 ; GFX1300W64CU-LDS128: ; Occupancy: 7{{$}}
 ; GFX1300W64CU-LDS64:  ; Occupancy: 3{{$}}
+; GFX1300W32WG-LDS192: ; Occupancy: 16{{$}}
 ; GFX1300W32WG-LDS128: ; Occupancy: 12{{$}}
 ; GFX1300W32WG-LDS64:  ; Occupancy: 6{{$}}
+; GFX1300W32CU-LDS192: ; Occupancy: 15{{$}}
 ; GFX1300W32CU-LDS128: ; Occupancy: 11{{$}}
 ; GFX1300W32CU-LDS64:  ; Occupancy: 5{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_96() #4 {
@@ -479,12 +494,16 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_96() #4 {
 ; GFX1100W64: ; Occupancy: 8{{$}}
 ; GFX1100W32: ; Occupancy: 15{{$}}
 
+; GFX1300W64WG-LDS192: ; Occupancy: 12{{$}}
 ; GFX1300W64WG-LDS128: ; Occupancy: 8{{$}}
 ; GFX1300W64WG-LDS64:  ; Occupancy: 4{{$}}
+; GFX1300W64CU-LDS192: ; Occupancy: 11{{$}}
 ; GFX1300W64CU-LDS128: ; Occupancy: 7{{$}}
 ; GFX1300W64CU-LDS64:  ; Occupancy: 3{{$}}
+; GFX1300W32WG-LDS192: ; Occupancy: 16{{$}}
 ; GFX1300W32WG-LDS128: ; Occupancy: 15{{$}}
 ; GFX1300W32WG-LDS64:  ; Occupancy: 7{{$}}
+; GFX1300W32CU-LDS192: ; Occupancy: 16{{$}}
 ; GFX1300W32CU-LDS128: ; Occupancy: 14{{$}}
 ; GFX1300W32CU-LDS64:  ; Occupancy: 6{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_128() #5 {
@@ -500,8 +519,10 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_128() #5 {
 ; GFX1100W64: ; Occupancy: 12{{$}}
 ; GFX1100W32: ; Occupancy: 15{{$}}
 
+; GFX1300W64WG-LDS192: ; Occupancy: 16{{$}}
 ; GFX1300W64WG-LDS128: ; Occupancy: 12{{$}}
 ; GFX1300W64WG-LDS64:  ; Occupancy: 6{{$}}
+; GFX1300W64CU-LDS192: ; Occupancy: 15{{$}}
 ; GFX1300W64CU-LDS128: ; Occupancy: 11{{$}}
 ; GFX1300W64CU-LDS64:  ; Occupancy: 5{{$}}
 ; GFX1300W32-LDS128:   ; Occupancy: 15{{$}}
@@ -520,8 +541,10 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_192() #6 {
 ; GFX1100W64: ; Occupancy: 15{{$}}
 ; GFX1100W32: ; Occupancy: 16{{$}}
 
+; GFX1300W64WG-LDS192: ; Occupancy: 16{{$}}
 ; GFX1300W64WG-LDS128: ; Occupancy: 15{{$}}
 ; GFX1300W64WG-LDS64 : ; Occupancy: 7{{$}}
+; GFX1300W64CU-LDS192: ; Occupancy: 16{{$}}
 ; GFX1300W64CU-LDS128: ; Occupancy: 14{{$}}
 ; GFX1300W64CU-LDS64:  ; Occupancy: 6{{$}}
 ; GFX1300W32-LDS128:   ; Occupancy: 16{{$}}
@@ -563,6 +586,7 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_1024() #9 {
 ; GFX9:       ; Occupancy: 2{{$}}
 ; GFX10:      ; Occupancy: 4{{$}}
 ; GFX1100:    ; Occupancy: 4{{$}}
+; GFX1300-LDS192: ; Occupancy: 6{{$}}
 ; GFX1300-LDS128: ; Occupancy: 4{{$}}
 ; GFX1300-LDS64:  ; Occupancy: 2{{$}}
 define amdgpu_kernel void @used_lds_8252_max_group_size_32() #10 {
