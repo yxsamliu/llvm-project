@@ -383,11 +383,11 @@ def aarch64mfp8 : ValueType<8,  267>;  // 8-bit value in FPR (AArch64)
 def c64 : VTCheriCapability<64, 268>;   // 64-bit CHERI capability value
 def c128 : VTCheriCapability<128, 269>; // 128-bit CHERI capability value
 
+let isNormalValueType = false in {
 // Pseudo valuetype mapped to the current CHERI capability pointer size.
 // Should only be used in TableGen.
 def cPTR : VTAny<503>;
 
-let isNormalValueType = false in {
 def token      : ValueType<0, 504>;  // TokenTy
 def MetadataVT : ValueType<0, 505> { // Metadata
   let LLVMName = "Metadata";
