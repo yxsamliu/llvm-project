@@ -1677,12 +1677,14 @@ def S_BARRIER_WAIT : SOPP_Pseudo <"s_barrier_wait", (ins i16imm:$simm16), "$simm
 
 let SchedRW = [WriteBarrier], isConvergent = 1 in {
   let SubtargetPredicate = isGFX12Only in
-  def S_BARRIER_LEAVE : SOPP_Pseudo <"s_barrier_leave", (ins)> {
+  def S_BARRIER_LEAVE : SOPP_Pseudo <"s_barrier_leave",
+    (ins), "", [(int_amdgcn_s_barrier_leave (i16 srcvalue))] > {
     let simm16 = 0;
     let fixed_imm = 1;
     let Defs = [SCC];
   }
 
+  let SubtargetPredicate = isGFX13Plus in
   def S_BARRIER_LEAVE_IMM : SOPP_Pseudo <"s_barrier_leave",
     (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_barrier_leave timm:$simm16)]>;
 }
