@@ -1210,11 +1210,21 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
     def : AMDGPUMnemonicAliasMIMG<asmAlias, asmDefault, isGFX13Only>;
 }
 
+class MIMGBaseOpcodeAtomic<bit isX2 = 0> : MIMGBaseOpcode {
+  let IsAtomicRet = 1;
+  let Atomic = 1;
+  let AtomicX2 = isX2;
+  let NoReturn = 0;
+}
+
 // This defines all Reals, but does not define MIMGBaseOpcode.
 multiclass MIMG_Atomic_Base <MIMGBaseOpcode BaseOpc, mimgopc op, string asm,
                              bit isCmpSwap = 0, bit isFP = 0,
-                             string renamed = ""> { // 64-bit atomics
-  let IsAtomicRet = 1 , BaseOpcode = BaseOpc in {
+                             string renamed = "", bit defBaseOpcode = 1> {
+  if defBaseOpcode then
+    def "" : MIMGBaseOpcodeAtomic<isCmpSwap>;
+
+  let IsAtomicRet = 1, BaseOpcode = BaseOpc in {
     // _V* variants have different dst size, but the size is encoded implicitly,
     // using dmask and tfe. Only 32-bit variant is registered with disassembler.
     // Other variants are reconstructed by disassembler using dmask and tfe.
@@ -1237,23 +1247,14 @@ multiclass MIMG_Atomic_Base <MIMGBaseOpcode BaseOpc, mimgopc op, string asm,
   }
 }
 
-class MIMGBaseOpcodeAtomic : MIMGBaseOpcode {
-  let IsAtomicRet = 1;
-  let Atomic = 1;
-  let AtomicX2 = 0;
-}
 
 multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
                         string renamed = ""> { // 64-bit atomics
-  let AtomicX2 = isCmpSwap in
-  def "" : MIMGBaseOpcodeAtomic;
-
-  defm "": MIMG_Atomic_Base <!cast<MIMGBaseOpcode>(NAME), op, asm, isCmpSwap,
-                             isFP, renamed>;
+  defm "" : MIMG_Atomic_Base<!cast<MIMGBaseOpcode>(NAME), op, asm, isCmpSwap, isFP, renamed>;
 }
+
 multiclass MIMG_Atomic_With_Payload<mimgopc op, string asm, MIMGBaseOpcode BaseOpc = !cast<MIMGBaseOpcode>(NAME)> {
-  let AtomicX2 = 1 in
-  def "": MIMGBaseOpcodeAtomic;
+  def "": MIMGBaseOpcodeAtomic<1>;
 
   let mayLoad = 1, mayStore = 1, hasPostISelHook = 0, DisableWQM = 1,
       VDataDwords = 4, VAddrDwords = 4, FPAtomic = 0, IsAtomicRet = 1,
@@ -1266,9 +1267,9 @@ multiclass MIMG_Atomic_Renamed <mimgopc op, string asm, string renamed,
   : MIMG_Atomic <op, asm, isCmpSwap, isFP, renamed>;
 
 multiclass MIMG_Atomic_With_Alias <mimgopc op, string asm, string alias,
-                                   bit isCmpSwap = 0, bit isFP = 0> {
-  defm "": MIMG_Atomic_Base <!cast<MIMGBaseOpcode>(NAME), op, alias, isCmpSwap,
-                             isFP, asm>;
+                                   bit isCmpSwap = 0, bit isFP = 0,
+                                   bit defBaseOpcode = op.HAS_GFX12> {
+  defm "" : MIMG_Atomic_Base<!cast<MIMGBaseOpcode>(NAME), op, alias, isCmpSwap, isFP, asm, defBaseOpcode>;
 }
 
 class MIMG_Sampler_Helper <mimgopc op, string asm, RegisterOperand dst_rc,
@@ -1890,11 +1891,9 @@ let AssemblerPredicate = isGFX12Plus in {
   def : AMDGPUMnemonicAlias<"image_atomic_fmax", "image_atomic_max_flt">;
 }
 
-def IMAGE_ATOMIC_MIN_FLT : MIMGBaseOpcodeAtomic;
 defm IMAGE_ATOMIC_MIN_FLT       : MIMG_Atomic_With_Alias <mimgopc<MIMG.NOP, 0x84, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_min_flt", "image_atomic_min_num_flt", 0, 1>;
 defm IMAGE_ATOMIC_MIN_FLT       : MIMG_Atomic_With_Alias <mimgopc<0x1e, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_min_num_flt", "image_atomic_min_flt", 0, 1>;
 
-def IMAGE_ATOMIC_MAX_FLT : MIMGBaseOpcodeAtomic;
 defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<MIMG.NOP, 0x85, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_flt", "image_atomic_max_num_flt", 0, 1>;
 defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<0x1f, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_num_flt", "image_atomic_max_flt", 0, 1>;
 
