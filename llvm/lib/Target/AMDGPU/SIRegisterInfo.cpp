@@ -35,16 +35,12 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
   cl::ReallyHidden,
   cl::init(true));
 
-<<<<<<< HEAD
-std::array<std::vector<int16_t>, 36> SIRegisterInfo::RegSplitParts;
-=======
 static cl::opt<bool> EnableSpillCFISavedRegs(
     "amdgpu-spill-cfi-saved-regs",
     cl::desc("Enable spilling the registers required for CFI emission"),
     cl::ReallyHidden, cl::init(false), cl::ZeroOrMore);
 
-std::array<std::vector<int16_t>, 32> SIRegisterInfo::RegSplitParts;
->>>>>>> 99c741ea473ad47aef50e4be1e6be094741151b2
+std::array<std::vector<int16_t>, 36> SIRegisterInfo::RegSplitParts;
 std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
 
 // Map numbers of DWORDs to indexes in SubRegFromChannelTable.
