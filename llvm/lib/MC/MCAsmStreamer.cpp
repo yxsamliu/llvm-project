@@ -35,7 +35,9 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include <algorithm>
 #include <optional>
 
@@ -60,6 +62,10 @@ class MCAsmStreamer final : public MCStreamer {
   bool IsVerboseAsm = false;
   bool ShowInst = false;
   bool UseDwarfDirectory = false;
+
+  // Debug helper: when LLVM_CATCH_LABEL matches a label just emitted, set this
+  // flag to dump the very next instruction that gets printed.
+  bool CatchNextInst = false;
 
   void EmitRegisterName(int64_t Register);
   void PrintQuotedString(StringRef Data, raw_ostream &OS) const;
@@ -591,6 +597,32 @@ void MCAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   OS << MAI->getLabelSuffix();
 
   EmitEOL();
+
+  // If requested, print a notification when a specific label is emitted.
+  // This is a generic catch-all that triggers even when we don't have MBB
+  // context (e.g., MC-layer generated temporaries like .LtmpN).
+  if (auto Env = sys::Process::GetEnv("LLVM_CATCH_LABEL")) {
+    StringRef Want = StringRef(*Env).trim();
+    if (!Want.empty()) {
+      StringRef Actual = Symbol->getName();
+      auto StripPriv = [&](StringRef S) -> StringRef {
+        StringRef GL = MAI->getPrivateGlobalPrefix();
+        if (!GL.empty() && S.starts_with(GL))
+          S = S.drop_front(GL.size());
+        StringRef LL = MAI->getPrivateLabelPrefix();
+        if (!LL.empty() && S.starts_with(LL))
+          S = S.drop_front(LL.size());
+        return S;
+      };
+      if (Actual == Want || StripPriv(Actual) == Want ||
+          Actual == StripPriv(Want) || StripPriv(Actual) == StripPriv(Want)) {
+        errs() << "[LLVM] LLVM_CATCH_LABEL matched (no MBB context): "
+               << Actual << "\n";
+        // Arm printing of the next instruction.
+        CatchNextInst = true;
+      }
+    }
+  }
 }
 
 void MCAsmStreamer::emitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) {
@@ -1767,6 +1799,46 @@ void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                           unsigned Isa, unsigned Discriminator,
                                           StringRef FileName,
                                           StringRef Comment) {
+  // Debug logging and assertion for .loc, gated by LLVM_CATCH_SRC_LOC.
+#ifndef NDEBUG
+  if (auto Env = sys::Process::GetEnv("LLVM_CATCH_SRC_LOC")) {
+    // Parse once per call; low overhead and simple.
+    StringRef S = StringRef(*Env).trim();
+    size_t P1 = S.find(':');
+    size_t P2 = S.npos;
+    if (P1 != StringRef::npos)
+      P2 = S.find(':', P1 + 1);
+    if (P1 != StringRef::npos && P2 != StringRef::npos) {
+      StringRef WantFile = S.take_front(P1).trim();
+      StringRef WantLineS = S.substr(P1 + 1, P2 - P1 - 1).trim();
+      StringRef WantColS = S.substr(P2 + 1).trim();
+      unsigned WantLine = 0, WantCol = 0;
+      bool BadL = WantLineS.getAsInteger(10, WantLine);
+      bool BadC = WantColS.getAsInteger(10, WantCol);
+
+      // Resolve FileNo to basename via MCContext's line table if possible; fall
+      // back to the provided FileName parameter.
+      StringRef ActualFileBase;
+      if (const auto &Files = getContext().getMCDwarfFiles(getContext().getDwarfCompileUnitID());
+          FileNo < Files.size() && !Files[FileNo].Name.empty()) {
+        ActualFileBase = sys::path::filename(Files[FileNo].Name);
+      } else if (!FileName.empty()) {
+        ActualFileBase = sys::path::filename(FileName);
+      } else {
+        ActualFileBase = "<unknown>";
+      }
+
+      errs() << "[LLVM] .loc: " << ActualFileBase << ":" << Line << ":"
+             << Column << " (fileNo=" << FileNo << ")\n";
+
+      if (!WantFile.empty() && !BadL && !BadC) {
+        if (ActualFileBase == WantFile && Line == WantLine && Column == WantCol)
+          assert(false && "LLVM_CATCH_SRC_LOC matched .loc");
+      }
+    }
+  }
+#endif
+
   // If target doesn't support .loc/.file directive, we need to record the lines
   // same way like we do in object mode.
   if (MAI->isAIX()) {
@@ -2551,6 +2623,20 @@ void MCAsmStreamer::emitInstruction(const MCInst &Inst,
     getTargetStreamer()->prettyPrintAsm(*InstPrinter, 0, Inst, STI, OS);
   else
     InstPrinter->printInst(&Inst, 0, "", STI, OS);
+
+  // If a previous matching label asked us to catch the next instruction, print
+  // it on stderr now and reset the flag. This prints the instruction as seen in
+  // assembly (not the MCInst dump), mirroring the .s output line.
+  if (CatchNextInst) {
+    SmallString<128> Line;
+    raw_svector_ostream Tmp(Line);
+    if (getTargetStreamer())
+      getTargetStreamer()->prettyPrintAsm(*InstPrinter, 0, Inst, STI, Tmp);
+    else
+      InstPrinter->printInst(&Inst, 0, "", STI, Tmp);
+    errs() << "[LLVM] after label: " << Tmp.str() << "\n";
+    CatchNextInst = false;
+  }
 
   StringRef Comments = CommentToEmit;
   if (Comments.size() && Comments.back() != '\n')

@@ -115,6 +115,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/VCSRevision.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -179,6 +180,42 @@ static cl::opt<bool> PrintLatency(
     "asm-print-latency",
     cl::desc("Print instruction latencies as verbose asm comments"), cl::Hidden,
     cl::init(false));
+
+// Emit-time helper: if LLVM_CATCH_LABEL matches the given symbol name, dump the
+// provided MBB (when available) to stderr. This allows catching arbitrary
+// assembler labels (e.g. .Ltmp123) and seeing the corresponding MBB.
+static bool AP_CatchNextMI = false;
+static void maybeDumpMBBForLabel(AsmPrinter &AP,
+                                 const MachineBasicBlock *CurMBB,
+                                 const MCSymbol *Sym) {
+  (void)AP;
+  (void)CurMBB;
+  (void)Sym;
+  auto Env = sys::Process::GetEnv("LLVM_CATCH_LABEL");
+  if (!Env || Env->empty())
+    return;
+
+  StringRef Want = StringRef(*Env).trim();
+  if (Want.empty())
+    return;
+
+  StringRef Actual = Sym->getName();
+  auto StripPriv = [&](StringRef S) -> StringRef {
+    StringRef Prefix = AP.MAI->getPrivateLabelPrefix();
+    if (!Prefix.empty() && S.starts_with(Prefix))
+      return S.drop_front(Prefix.size());
+    return S;
+  };
+
+  if (Actual == Want || StripPriv(Actual) == Want ||
+      Actual == StripPriv(Want) || StripPriv(Actual) == StripPriv(Want)) {
+    errs() << "[LLVM] LLVM_CATCH_LABEL matched: " << Actual << "\n";
+    if (CurMBB)
+      CurMBB->print(errs());
+    // Ask the AsmPrinter loop to print the very next MachineInstr emitted.
+    AP_CatchNextMI = true;
+  }
+}
 
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
@@ -1880,9 +1917,11 @@ void AsmPrinter::emitFunctionBody() {
         HasAnyRealCode = true;
       }
 
-      // If there is a pre-instruction symbol, emit a label for it here.
-      if (MCSymbol *S = MI.getPreInstrSymbol())
+      // If there is a pre-instruction symbol, allow catching it, then emit.
+      if (MCSymbol *S = MI.getPreInstrSymbol()) {
+        maybeDumpMBBForLabel(*this, &MBB, S);
         OutStreamer->emitLabel(S);
+      }
 
       if (MDNode *MD = MI.getPCSections())
         emitPCSectionsLabel(*MF, *MD);
@@ -1892,6 +1931,12 @@ void AsmPrinter::emitFunctionBody() {
 
       if (isVerbose())
         emitComments(MI, STI, OutStreamer->getCommentOS());
+
+      if (AP_CatchNextMI) {
+        errs() << "[LLVM] next MachineInstr after label:\n";
+        MI.print(errs());
+        AP_CatchNextMI = false;
+      }
 
       switch (MI.getOpcode()) {
       case TargetOpcode::CFI_INSTRUCTION:
@@ -1972,6 +2017,12 @@ void AsmPrinter::emitFunctionBody() {
         break;
       default:
         emitInstruction(&MI);
+        // If a label was matched at the MC layer (no MBB context), we may have
+        // printed the next MCInst already, but there is not a reliable way to
+        // align that with a MachineInstr here if the label didn't originate
+        // from a MachineInstr boundary. However, when the label is attached as
+        // a pre/post-instruction symbol, the AP_CatchNextMI mechanism above
+        // prints the MachineInstr before this switch. No action needed here.
 
         auto CountInstruction = [&](const MachineInstr &MI) {
           // Skip Meta instructions inside bundles.
@@ -1995,9 +2046,11 @@ void AsmPrinter::emitFunctionBody() {
         break;
       }
 
-      // If there is a post-instruction symbol, emit a label for it here.
-      if (MCSymbol *S = MI.getPostInstrSymbol())
+      // If there is a post-instruction symbol, allow catching it, then emit.
+      if (MCSymbol *S = MI.getPostInstrSymbol()) {
+        maybeDumpMBBForLabel(*this, &MBB, S);
         OutStreamer->emitLabel(S);
+      }
 
       for (auto &Handler : Handlers)
         Handler->endInstruction();
@@ -4321,6 +4374,8 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   if (shouldEmitLabelForBasicBlock(MBB)) {
     if (isVerbose() && MBB.hasLabelMustBeEmitted())
       OutStreamer->AddComment("Label of block must be emitted");
+    // Catch labels for this MBB if requested.
+    maybeDumpMBBForLabel(*this, &MBB, MBB.getSymbol());
     OutStreamer->emitLabel(MBB.getSymbol());
   } else {
     if (isVerbose()) {
@@ -4332,6 +4387,8 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
 
   if (MBB.isEHCatchretTarget() &&
       MAI->getExceptionHandlingType() == ExceptionHandling::WinEH) {
+    // Allow catching the synthetic EH catchret label as well.
+    maybeDumpMBBForLabel(*this, &MBB, MBB.getEHCatchretSymbol());
     OutStreamer->emitLabel(MBB.getEHCatchretSymbol());
   }
 

@@ -21,6 +21,9 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <numeric>
 #include <optional>
@@ -33,6 +36,57 @@ cl::opt<bool> EnableFSDiscriminator(
     "enable-fs-discriminator", cl::Hidden,
     cl::desc("Enable adding flow sensitive discriminators"));
 } // namespace llvm
+
+#ifndef NDEBUG
+namespace {
+struct CatchSrcLocConfig {
+  bool Enabled = false;
+  std::string FileBaseName;
+  unsigned Line = 0;
+  unsigned Col = 0;
+  std::string OriginalEnv;
+};
+
+static CatchSrcLocConfig &getCatchSrcLocConfig() {
+  static CatchSrcLocConfig Config;
+  static bool Initialized = false;
+  if (Initialized)
+    return Config;
+  Initialized = true;
+
+  if (auto Env = sys::Process::GetEnv("LLVM_CATCH_SRC_LOC")) {
+    StringRef S = *Env;
+    S = S.trim();
+    size_t P1 = S.find(':');
+    if (P1 == StringRef::npos)
+      return Config;
+    size_t P2 = S.find(':', P1 + 1);
+    if (P2 == StringRef::npos)
+      return Config;
+
+    StringRef FilePart = S.take_front(P1).trim();
+    StringRef LinePart = S.substr(P1 + 1, P2 - P1 - 1).trim();
+    StringRef ColPart = S.substr(P2 + 1).trim();
+
+    unsigned Line = 0, Col = 0;
+    bool LineBad = LinePart.getAsInteger(10, Line);
+    bool ColBad = ColPart.getAsInteger(10, Col);
+    if (!FilePart.empty() && !LineBad && !ColBad) {
+      Config.Enabled = true;
+      Config.FileBaseName = FilePart.str();
+      Config.Line = Line;
+      Config.Col = Col;
+      Config.OriginalEnv = S.str();
+      errs() << "[LLVM] LLVM_CATCH_SRC_LOC=" << Config.OriginalEnv
+             << " (file='" << Config.FileBaseName << "' line=" << Config.Line
+             << " col=" << Config.Col << ")\n";
+    }
+  }
+
+  return Config;
+}
+} // end anonymous namespace
+#endif // NDEBUG
 
 uint32_t DIType::getAlignInBits() const {
   return (getTag() == dwarf::DW_TAG_LLVM_ptrauth_type ? 0 : SubclassData32);
@@ -83,6 +137,27 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
                                 StorageType Storage, bool ShouldCreate) {
   // Fixup column.
   adjustColumn(Column);
+
+#ifndef NDEBUG
+  // If requested via LLVM_CATCH_SRC_LOC, assert when a matching DILocation
+  // is requested (regardless of uniquing/creation) to help locate creators.
+  if (const auto &Cfg = getCatchSrcLocConfig(); Cfg.Enabled) {
+    if (auto *LocalScope = dyn_cast_or_null<DILocalScope>(Scope)) {
+      StringRef Base;
+      if (auto *F = LocalScope->getFile())
+        Base = F->getFilename();
+      else
+        Base = "<no-file>";
+
+      bool Match = (Base == Cfg.FileBaseName && Line == Cfg.Line &&
+                    Column == Cfg.Col);
+      errs() << "[LLVM] DILocation request: " << Base << ":" << Line << ":"
+             << Column << (Match ? " [MATCH]\n" : "\n");
+      if (Match)
+        assert(false && "LLVM_CATCH_SRC_LOC matched DILocation");
+    }
+  }
+#endif
 
   if (Storage == Uniqued) {
     if (auto *N = getUniqued(Context.pImpl->DILocations,

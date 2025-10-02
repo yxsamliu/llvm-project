@@ -49,6 +49,9 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Process.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -2276,6 +2279,46 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
         Scope = PrevInstLoc.getScope();
         Column = PrevInstLoc.getCol();
       }
+
+#ifndef NDEBUG
+      if (auto Env = sys::Process::GetEnv("LLVM_CATCH_SRC_LOC")) {
+        StringRef S = StringRef(*Env).trim();
+        size_t P1 = S.find(':');
+        size_t P2 = S.npos;
+        if (P1 != StringRef::npos)
+          P2 = S.find(':', P1 + 1);
+        if (P1 != StringRef::npos && P2 != StringRef::npos) {
+          StringRef WantFile = S.take_front(P1).trim();
+          StringRef WantLineS = S.substr(P1 + 1, P2 - P1 - 1).trim();
+          StringRef WantColS = S.substr(P2 + 1).trim();
+          unsigned WantLine = 0, WantCol = 0;
+          bool BadL = WantLineS.getAsInteger(10, WantLine);
+          bool BadC = WantColS.getAsInteger(10, WantCol);
+          StringRef Base = "<unknown>";
+          if (auto *DIS = dyn_cast_or_null<DIScope>(Scope)) {
+            if (auto *F = DIS->getFile())
+              Base = F->getFilename();
+          }
+          const char *Reason = UnknownLocations == Enable
+                                   ? "UnknownLocations"
+                                   : (PrevLabel ? "PrevLabel"
+                                                : "BlockBoundary");
+          errs() << "[LLVM] emit line-0 .loc: " << Base << ":0:" << Column
+                 << " reason=" << Reason;
+          if (PrevInstLoc) {
+            SmallString<128> PrevStr;
+            raw_svector_ostream POS(PrevStr);
+            PrevInstLoc.print(POS);
+            errs() << " prev=" << PrevStr;
+          }
+          errs() << " fn=" << MI->getMF()->getFunction().getName() << "\n";
+          if (!BadL && !BadC && !WantFile.empty()) {
+            if (Base == WantFile && WantLine == 0 && Column == WantCol)
+              errs() << "[LLVM] (matches LLVM_CATCH_SRC_LOC)\n";
+          }
+        }
+      }
+#endif
       recordSourceLine(/*Line=*/0, Column, Scope, /*Flags=*/0);
     }
     return;
