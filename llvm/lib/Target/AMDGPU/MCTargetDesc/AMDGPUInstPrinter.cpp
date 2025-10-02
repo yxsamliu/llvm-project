@@ -82,8 +82,13 @@ void AMDGPUInstPrinter::printFP64ImmOperand(const MCInst *MI, unsigned OpNo,
                                             const MCSubtargetInfo &STI,
                                             raw_ostream &O) {
   // KIMM64
-  uint64_t Imm = MI->getOperand(OpNo).getImm();
-  printLiteral64(Imm, STI, O, /*IsFP=*/true);
+  const MCOperand &Op = MI->getOperand(OpNo);
+  if (Op.isExpr()) {
+    MAI.printExpr(O, *Op.getExpr());
+    return;
+  }
+
+  printLiteral64(Op.getImm(), O, /*IsFP=*/true);
 }
 
 void AMDGPUInstPrinter::printGlobalSReg32(const MCInst *MI, unsigned OpNo,
@@ -382,9 +387,16 @@ static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCSubtargetInfo &STI,
   if (Idx < 0x100)
     return Reg;
 
+  unsigned RegNo = Idx % 0x100;
   const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
-  Idx %= 0x100;
-  return RC->getRegister(Idx);
+  if (RC->getID() == AMDGPU::VGPR_16RegClassID) {
+    // This class has 2048 registers with interleaved lo16 and hi16.
+    RegNo *= 2;
+    if (Enc & AMDGPU::HWEncoding::IS_HI16)
+      ++RegNo;
+  }
+
+  return RC->getRegister(RegNo);
 }
 
 static unsigned getIdxLocFromTable(unsigned OpNo, const MCInstrDesc &Desc) {
@@ -506,7 +518,6 @@ void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, unsigned Opc,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O,
                                         const MCRegisterInfo &MRI) {
-
   if (MIA)
     Reg = getRegFromMIA(Reg, OpNo, MII.get(Opc), MRI,
                         *static_cast<const AMDGPUMCInstrAnalysis *>(MIA));
@@ -810,24 +821,15 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
            STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     O << "0.15915494309189532";
   else
-    printLiteral64(Imm, STI, O, IsFP);
+    printLiteral64(Imm, O, IsFP);
 }
 
-void AMDGPUInstPrinter::printLiteral64(uint64_t Imm, const MCSubtargetInfo &STI,
-                                       raw_ostream &O, bool IsFP) {
-  // This part needs to align with AMDGPUOperand::addLiteralImmOperand.
-  if (IsFP) {
-    if (STI.hasFeature(AMDGPU::Feature64BitLiterals) && Lo_32(Imm))
-      O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
-    else
-      O << formatHex(static_cast<uint64_t>(Hi_32(Imm)));
-  } else {
-    if (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-        (!isInt<32>(Imm) || !isUInt<32>(Imm)))
-      O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
-    else
-      O << formatHex(static_cast<uint64_t>(Imm));
-  }
+void AMDGPUInstPrinter::printLiteral64(uint64_t Imm, raw_ostream &O,
+                                       bool IsFP) {
+  if (IsFP && Lo_32(Imm) == 0)
+    O << formatHex(static_cast<uint64_t>(Hi_32(Imm)));
+  else
+    O << formatHex(Imm);
 }
 
 void AMDGPUInstPrinter::printBLGP(const MCInst *MI, unsigned OpNo,

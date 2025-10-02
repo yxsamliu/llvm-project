@@ -55,7 +55,7 @@ define void @select_undef_n1(ptr addrspace(1) %a, i32 %c) {
 ; GFX13-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_mov_b32_e32 v2, 1.0
-; GFX13-NEXT:    global_store_b32 v[0:1], v2, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %cc = icmp eq i32 %c, 0
   %sel = select i1 %cc, float 1.000000e+00, float poison
@@ -80,7 +80,7 @@ define void @select_undef_n2(ptr addrspace(1) %a, i32 %c) {
 ; GFX13-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_mov_b32_e32 v2, 1.0
-; GFX13-NEXT:    global_store_b32 v[0:1], v2, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %cc = icmp eq i32 %c, 0
   %sel = select i1 %cc, float poison, float 1.000000e+00

@@ -34,7 +34,7 @@ define hidden void @shuffle6766(ptr addrspace(1) %in0, ptr addrspace(1) %in1, pt
 ; GFX13-NEXT:    global_load_b32 v0, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v0, 0x6060706
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %vec1 = load <4 x i8>, ptr addrspace(1) %in1, align 4
@@ -77,7 +77,7 @@ define hidden void @shuffle3744(ptr addrspace(1) %in0, ptr addrspace(1) %in1, pt
 ; GFX13-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v1, 0x307
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %vec1 = load <4 x i8>, ptr addrspace(1) %in1, align 4
@@ -117,7 +117,7 @@ define hidden void @shuffle4445(ptr addrspace(1) %in0, ptr addrspace(1) %in1, pt
 ; GFX13-NEXT:    global_load_b32 v0, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v0, 0x5040404
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %vec1 = load <4 x i8>, ptr addrspace(1) %in1, align 4
@@ -157,7 +157,7 @@ define hidden void @shuffle0101(ptr addrspace(1) %in0, ptr addrspace(1) %in1, pt
 ; GFX13-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v0, 0x5040504
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %vec1 = load <4 x i8>, ptr addrspace(1) %in1, align 4
@@ -200,7 +200,7 @@ define hidden void @shuffle1004(ptr addrspace(1) %in0, ptr addrspace(1) %in1, pt
 ; GFX13-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v1, 0x40405
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %vec1 = load <4 x i8>, ptr addrspace(1) %in1, align 4
@@ -246,7 +246,7 @@ define hidden void @shuffle7533(ptr addrspace(0) %in0, ptr addrspace(0) %in1, pt
 ; GFX13-NEXT:    flat_load_b32 v1, v[2:3]
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v1, v0, 0x3030507
-; GFX13-NEXT:    flat_store_b32 v[4:5], v0 scope:SCOPE_SE
+; GFX13-NEXT:    flat_store_b32 v[4:5], v0
 ; GFX13-NEXT:    s_wait_dscnt 0x0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(0) %in0, align 4
@@ -288,7 +288,7 @@ define hidden void @shuffle7767(ptr addrspace(0) %in0, ptr addrspace(0) %in1, pt
 ; GFX13-NEXT:    flat_load_b32 v0, v[2:3]
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v0, 0x7060707
-; GFX13-NEXT:    flat_store_b32 v[4:5], v0 scope:SCOPE_SE
+; GFX13-NEXT:    flat_store_b32 v[4:5], v0
 ; GFX13-NEXT:    s_wait_dscnt 0x0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(0) %in0, align 4
@@ -423,7 +423,7 @@ define hidden void @shuffle5047(ptr addrspace(5) %in0, ptr addrspace(5) %in1, pt
 ; GFX13-NEXT:    scratch_load_b32 v1, v1, off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v1, v0, 0x7040005
-; GFX13-NEXT:    scratch_store_b32 v2, v0, off scope:SCOPE_SE
+; GFX13-NEXT:    scratch_store_b32 v2, v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(5) %in0, align 4
   %vec1 = load <4 x i8>, ptr addrspace(5) %in1, align 4
@@ -466,7 +466,7 @@ define hidden void @shuffle3546(ptr addrspace(1) %in0, ptr addrspace(1) %in1, pt
 ; GFX13-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v1, 0x2000107
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %vec1 = load <4 x i8>, ptr addrspace(1) %in1, align 4
@@ -507,7 +507,7 @@ define hidden void @shuffle7330ud2(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX13-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v0, 0x4070706
-; GFX13-NEXT:    global_store_b32 v[2:3], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 7, i32 3, i32 3, i32 0>
@@ -545,7 +545,7 @@ define hidden void @shuffle5341ud2(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX13-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_alignbit_b32 v0, v0, v0, 16
-; GFX13-NEXT:    global_store_b32 v[2:3], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 5, i32 3, i32 4, i32 1>
@@ -584,7 +584,7 @@ define hidden void @shuffle6106ud2(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX13-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v0, 0x5040504
-; GFX13-NEXT:    global_store_b32 v[2:3], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 6, i32 1, i32 0, i32 6>
@@ -624,7 +624,7 @@ define hidden void @shuffle4327ud2(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX13-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v0, 0x7060706
-; GFX13-NEXT:    global_store_b32 v[2:3], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 4, i32 3, i32 2, i32 7>
@@ -663,7 +663,7 @@ define hidden void @shuffle3263ud2(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX13-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v0, 0x7060607
-; GFX13-NEXT:    global_store_b32 v[2:3], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 6, i32 3>
@@ -702,7 +702,7 @@ define hidden void @shuffle2763ud2(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX13-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v0, 0x7060706
-; GFX13-NEXT:    global_store_b32 v[2:3], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 2, i32 7, i32 6, i32 3>
@@ -741,7 +741,7 @@ define hidden void @shuffle1327ud2(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX13-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v0, 0x7060705
-; GFX13-NEXT:    global_store_b32 v[2:3], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 1, i32 3, i32 2, i32 7>
@@ -780,7 +780,7 @@ define hidden void @shuffle0605ud2(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX13-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v0, 0x5040504
-; GFX13-NEXT:    global_store_b32 v[2:3], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 0, i32 6, i32 0, i32 5>
@@ -826,7 +826,7 @@ define hidden void @insertUsesOr(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX13-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %vec1 = load <4 x i8>, ptr addrspace(1) %in1, align 4
@@ -900,7 +900,7 @@ define hidden void @addUsesOr(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %
 ; GFX13-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %vec1 = load <4 x i8>, ptr addrspace(1) %in1, align 4
@@ -1009,7 +1009,7 @@ define amdgpu_kernel void @shuffle8i8(ptr addrspace(1) %in0, ptr addrspace(1) %i
 ; GFX13-NEXT:    s_or_b32 s0, s0, s2
 ; GFX13-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s1
 ; GFX13-NEXT:    v_mov_b32_e32 v1, s0
-; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[4:5] scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
 ; GFX13-NEXT:    s_endpgm
 bb:
   %vec0 = load <8 x i8>, ptr addrspace(1) %in0
@@ -1096,7 +1096,7 @@ define hidden void @add(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %elt, p
 ; GFX13-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %vec1 = load <4 x i8>, ptr addrspace(1) %in1, align 4
@@ -1182,7 +1182,7 @@ define hidden void @add_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %el
 ; GFX13-NEXT:    v_bitop3_b16 v0, v0, v1, 0xff bitop3:0xec
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -1266,8 +1266,8 @@ define hidden void @add_store(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %
 ; GFX13-NEXT:    v_bitop3_b16 v1, v1, v2, 0xff bitop3:0xec
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX13-NEXT:    global_store_b32 v[5:6], v1, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %vec1 = load <4 x i8>, ptr addrspace(1) %in1, align 4
@@ -1369,8 +1369,8 @@ define hidden void @add_store_div_16(ptr addrspace(1) %in0, ptr addrspace(1) %in
 ; GFX13-NEXT:    v_bitop3_b16 v1, v1, v2, 0xff bitop3:0xec
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX13-NEXT:    global_store_b32 v[5:6], v1, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -1482,8 +1482,8 @@ define hidden void @add_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX13-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_or_b32_e32 v2, v2, v3
-; GFX13-NEXT:    global_store_b32 v[5:6], v2, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v2, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -1585,8 +1585,8 @@ define hidden void @and_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX13-NEXT:    v_or_b32_e32 v1, v1, v3
-; GFX13-NEXT:    global_store_b32 v[5:6], v1, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -1693,8 +1693,8 @@ define hidden void @ashr_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX13-NEXT:    v_or_b32_e32 v1, v2, v1
-; GFX13-NEXT:    global_store_b32 v[5:6], v1, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -1764,8 +1764,8 @@ define hidden void @bc_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i
 ; GFX13-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v1, v0, 0x7060104
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -1842,8 +1842,8 @@ define hidden void @eve_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX13-NEXT:    v_lshrrev_b32_e32 v2, 24, v0
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v1, v0, 0x1020305
-; GFX13-NEXT:    global_store_b8 v[9:10], v2, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b8 v[9:10], v2, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -1945,8 +1945,8 @@ define hidden void @ive_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; GFX13-NEXT:    v_or_b32_e32 v2, v3, v2
-; GFX13-NEXT:    global_store_b32 v[5:6], v2, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v2, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -2048,8 +2048,8 @@ define hidden void @lhsr_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX13-NEXT:    v_or_b32_e32 v1, v1, v3
-; GFX13-NEXT:    global_store_b32 v[5:6], v1, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -2161,8 +2161,8 @@ define hidden void @mul_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX13-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_or_b32_e32 v2, v2, v3
-; GFX13-NEXT:    global_store_b32 v[5:6], v2, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v2, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -2267,8 +2267,8 @@ define hidden void @or_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i
 ; GFX13-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_or_b32_e32 v1, v3, v1
-; GFX13-NEXT:    global_store_b32 v[5:6], v1, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -2513,8 +2513,8 @@ define hidden void @sdiv_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX13-NEXT:    v_or_b32_e32 v1, v3, v1
-; GFX13-NEXT:    global_store_b32 v[5:6], v1, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -2608,8 +2608,8 @@ define hidden void @sext_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-NEXT:    v_perm_b32 v1, v0, v4, 0x5040100
 ; GFX13-NEXT:    v_perm_b32 v0, v9, v9, 0x5040100
-; GFX13-NEXT:    global_store_b64 v[7:8], v[0:1], off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[5:6], v2, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[7:8], v[0:1], off
+; GFX13-NEXT:    global_store_b32 v[5:6], v2, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -2714,8 +2714,8 @@ define hidden void @shl_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX13-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_or_b32_e32 v2, v3, v2
-; GFX13-NEXT:    global_store_b32 v[5:6], v2, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v2, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -2812,8 +2812,8 @@ define hidden void @sitofp_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX13-NEXT:    v_cvt_f32_i32_e32 v2, v0
 ; GFX13-NEXT:    v_cvt_f32_i32_e32 v0, v11
-; GFX13-NEXT:    global_store_b128 v[7:8], v[0:3], off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[5:6], v4, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[7:8], v[0:3], off
+; GFX13-NEXT:    global_store_b32 v[5:6], v4, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -3093,8 +3093,8 @@ define hidden void @srem_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX13-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_or_b32_e32 v2, v3, v2
-; GFX13-NEXT:    global_store_b32 v[5:6], v2, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v2, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -3204,8 +3204,8 @@ define hidden void @sub_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX13-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_or_b32_e32 v1, v3, v1
-; GFX13-NEXT:    global_store_b32 v[5:6], v1, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -3274,7 +3274,7 @@ define hidden void @sv_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i
 ; GFX13-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v1, 0x50705
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -3380,8 +3380,8 @@ define hidden void @trunc_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_bitop3_b16 v2, v3, v4, v2 bitop3:0xfe
 ; GFX13-NEXT:    v_bitop3_b16 v2, v2, 15, v9 bitop3:0xc8
-; GFX13-NEXT:    global_store_b8 v[7:8], v2, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b8 v[7:8], v2, off
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -3582,8 +3582,8 @@ define hidden void @udiv(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %elt, 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX13-NEXT:    v_or_b32_e32 v1, v1, v3
-; GFX13-NEXT:    global_store_b32 v[5:6], v1, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -3669,8 +3669,8 @@ define hidden void @uitofp_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in
 ; GFX13-NEXT:    v_cvt_f32_ubyte1_e32 v1, v9
 ; GFX13-NEXT:    v_cvt_f32_ubyte0_e32 v0, v4
 ; GFX13-NEXT:    v_perm_b32 v4, v4, v9, 0x5020104
-; GFX13-NEXT:    global_store_b128 v[7:8], v[0:3], off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[5:6], v4, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[7:8], v[0:3], off
+; GFX13-NEXT:    global_store_b32 v[5:6], v4, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -3903,8 +3903,8 @@ define hidden void @urem_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX13-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_or_b32_e32 v1, v1, v3
-; GFX13-NEXT:    global_store_b32 v[5:6], v1, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -4017,8 +4017,8 @@ define hidden void @xor_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX13-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_or_b32_e32 v2, v2, v3
-; GFX13-NEXT:    global_store_b32 v[5:6], v2, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v2, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -4115,8 +4115,8 @@ define hidden void @zext_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX13-NEXT:    v_perm_b32 v0, v1, v3, 0x5040100
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX13-NEXT:    v_perm_b32 v1, v9, v10, 0x5040100
-; GFX13-NEXT:    global_store_b64 v[7:8], v[0:1], off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[5:6], v2, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[7:8], v[0:1], off
+; GFX13-NEXT:    global_store_b32 v[5:6], v2, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr <4 x i8>, ptr addrspace(1) %in0, i32 %tid
@@ -4155,7 +4155,7 @@ define void @Source16Bit(i16 %in, <2 x i16> %reg) {
 ; GFX13-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v1, 0x3050204
-; GFX13-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %elt0 = extractelement <2 x i16> %reg, i32 1
@@ -4209,7 +4209,7 @@ define hidden void @extract3744(ptr addrspace(1) %in0, ptr addrspace(1) %in1, pt
 ; GFX13-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v1, 0x3070404
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %vec2 = load <4 x i8>, ptr addrspace(1) %in1, align 4
@@ -4267,7 +4267,7 @@ define hidden void @extract_perm_3744(ptr addrspace(1) %in0, ptr addrspace(1) %i
 ; GFX13-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v1, 0x3070404
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %vec2 = load <4 x i8>, ptr addrspace(1) %in1, align 4
@@ -4314,7 +4314,7 @@ define hidden void @extract1347_v2i16(ptr addrspace(1) %in0, ptr addrspace(1) %i
 ; GFX13-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v1, v0, 0x1030407
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <2 x i16>, ptr addrspace(1) %in0, align 4
   %vec2 = load <2 x i16>, ptr addrspace(1) %in1, align 4
@@ -4385,7 +4385,7 @@ define hidden void @fshri16_8(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr 
 ; GFX13-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v1, v0, 0x30407
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <2 x i16>, ptr addrspace(1) %in0, align 4
   %vec2 = load <2 x i16>, ptr addrspace(1) %in1, align 4
@@ -4439,7 +4439,7 @@ define hidden void @fshri16_16(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr
 ; GFX13-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v1, v0, 0x3020706
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <2 x i16>, ptr addrspace(1) %in0, align 4
   %vec2 = load <2 x i16>, ptr addrspace(1) %in1, align 4
@@ -4493,7 +4493,7 @@ define hidden void @fshri16_24(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr
 ; GFX13-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v1, v0, 0x30407
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <2 x i16>, ptr addrspace(1) %in0, align 4
   %vec2 = load <2 x i16>, ptr addrspace(1) %in1, align 4
@@ -4547,7 +4547,7 @@ define hidden void @fshri16_32(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr
 ; GFX13-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v1, v0, 0x3020706
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <2 x i16>, ptr addrspace(1) %in0, align 4
   %vec2 = load <2 x i16>, ptr addrspace(1) %in1, align 4
@@ -4601,7 +4601,7 @@ define hidden void @fshri16_88(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr
 ; GFX13-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v1, v0, 0x30407
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <2 x i16>, ptr addrspace(1) %in0, align 4
   %vec2 = load <2 x i16>, ptr addrspace(1) %in1, align 4
@@ -4657,7 +4657,7 @@ define hidden void @fshli16_1347(ptr addrspace(1) %in0, ptr addrspace(1) %in1, p
 ; GFX13-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v1, v0, 0x30407
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <2 x i16>, ptr addrspace(1) %in0, align 4
   %vec2 = load <2 x i16>, ptr addrspace(1) %in1, align 4
@@ -4711,7 +4711,7 @@ define hidden void @fshli16_16(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr
 ; GFX13-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v1, v0, 0x1000504
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <2 x i16>, ptr addrspace(1) %in0, align 4
   %vec2 = load <2 x i16>, ptr addrspace(1) %in1, align 4
@@ -4765,7 +4765,7 @@ define hidden void @fshli16_24(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr
 ; GFX13-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v1, v0, 0x30407
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <2 x i16>, ptr addrspace(1) %in0, align 4
   %vec2 = load <2 x i16>, ptr addrspace(1) %in1, align 4
@@ -4819,7 +4819,7 @@ define hidden void @fshli16_32(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr
 ; GFX13-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v1, v0, 0x1000504
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <2 x i16>, ptr addrspace(1) %in0, align 4
   %vec2 = load <2 x i16>, ptr addrspace(1) %in1, align 4
@@ -4873,7 +4873,7 @@ define hidden void @fshli16_88(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr
 ; GFX13-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v1, v0, 0x30407
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <2 x i16>, ptr addrspace(1) %in0, align 4
   %vec2 = load <2 x i16>, ptr addrspace(1) %in1, align 4
@@ -4951,7 +4951,7 @@ define hidden void @shlbase(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr ad
 ; GFX13-NEXT:    v_lshl_or_b32 v0, v0, v2, v0
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_or3_b32 v0, v0, v3, v1
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %vec2 = load <4 x i8>, ptr addrspace(1) %in1, align 4
@@ -5037,7 +5037,7 @@ define hidden void @extractbase(ptr addrspace(1) %in0, ptr addrspace(1) %in1, pt
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_lshl_or_b32 v0, v0, 8, v0
 ; GFX13-NEXT:    v_or3_b32 v0, v0, v2, v1
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %vec2 = load <4 x i8>, ptr addrspace(1) %in1, align 4
@@ -5094,7 +5094,7 @@ define hidden void @extract_hilo(ptr addrspace(1) %in0, ptr addrspace(1) %in1, p
 ; GFX13-NEXT:    global_load_b32 v0, v[0:1], off offset:4
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v2, 0x3060505
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <8 x i8>, ptr addrspace(1) %in0, align 4
   %vec2 = load <8 x i8>, ptr addrspace(1) %in1, align 4
@@ -5150,7 +5150,7 @@ define hidden void @extract_lohi(ptr addrspace(1) %in0, ptr addrspace(1) %in1, p
 ; GFX13-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v2, 0x70404
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <8 x i8>, ptr addrspace(1) %in0, align 4
   %vec2 = load <8 x i8>, ptr addrspace(1) %in1, align 4
@@ -5206,7 +5206,7 @@ define hidden void @extract_hihi(ptr addrspace(1) %in0, ptr addrspace(1) %in1, p
 ; GFX13-NEXT:    global_load_b32 v0, v[0:1], off offset:4
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v2, 0x2070505
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <8 x i8>, ptr addrspace(1) %in0, align 4
   %vec2 = load <8 x i8>, ptr addrspace(1) %in1, align 4
@@ -5259,7 +5259,7 @@ define hidden void @extract_v8i8(ptr addrspace(1) %in0, ptr addrspace(1) %out0) 
 ; GFX13-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v1, v0, 0x1070404
-; GFX13-NEXT:    global_store_b32 v[2:3], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <8 x i8>, ptr addrspace(1) %in0, align 4
   %v1e4 = extractelement <8 x i8> %vec1, i64 4
@@ -5311,7 +5311,7 @@ define hidden void @extract_v256i8(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX13-NEXT:    global_load_b32 v0, v[0:1], off offset:252
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v0, 0x6050707
-; GFX13-NEXT:    global_store_b32 v[2:3], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <256 x i8>, ptr addrspace(1) %in0, align 4
   %v1e4 = extractelement <256 x i8> %vec1, i64 255
@@ -5387,7 +5387,7 @@ define hidden void @extract_3src(ptr addrspace(1) %in0, ptr addrspace(1) %in1, p
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_lshl_or_b32 v0, v0, 8, v0
 ; GFX13-NEXT:    v_or3_b32 v0, v0, v1, v2
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec1 = load <8 x i8>, ptr addrspace(1) %in0, align 4
   %vec2 = load <8 x i8>, ptr addrspace(1) %in1, align 4
@@ -5458,9 +5458,9 @@ define hidden void @extract_v6i16(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX13-NEXT:    s_wait_loadcnt 0x1
 ; GFX13-NEXT:    global_load_d16_hi_b16 v3, v[0:1], off offset:6
 ; GFX13-NEXT:    s_wait_loadcnt 0x1
-; GFX13-NEXT:    global_store_b32 v[4:5], v2, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v2, off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v[6:7], v3, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[6:7], v3, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec = load <6 x i16>, ptr addrspace(1) %in0, align 2
   %el0 = extractelement <6 x i16> %vec, i32 0
@@ -5512,8 +5512,8 @@ define hidden void @extract_v7i16(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[6:7], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
+; GFX13-NEXT:    global_store_b32 v[6:7], v1, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec = load <7 x i16>, ptr addrspace(1) %in0, align 2
   %el0 = extractelement <7 x i16> %vec, i32 0
@@ -5587,8 +5587,8 @@ define hidden void @extract_v13i8(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-NEXT:    v_perm_b32 v1, v1, v2, 0x5040c00
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v3, 0x5040c03
-; GFX13-NEXT:    global_store_b32 v[4:5], v1, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[6:7], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v1, off
+; GFX13-NEXT:    global_store_b32 v[6:7], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec = load <13 x i8>, ptr addrspace(1) %in0, align 2
   %el0 = extractelement <13 x i8> %vec, i32 0
@@ -5659,8 +5659,8 @@ define hidden void @extract_v13i64(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v1, v12, v13, 0x1000504
 ; GFX13-NEXT:    v_perm_b32 v0, v10, v0, 0x1000504
-; GFX13-NEXT:    global_store_b32 v[4:5], v1, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[6:7], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v1, off
+; GFX13-NEXT:    global_store_b32 v[6:7], v0, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec = load <13 x i64>, ptr addrspace(1) %in0, align 2
   %el0 = extractelement <13 x i64> %vec, i32 0
@@ -5720,7 +5720,7 @@ define hidden void @trunc_vector(ptr addrspace(1) %in0, ptr addrspace(1) %in1, p
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    global_load_d16_hi_b16 v2, v[0:1], off offset:4
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    global_store_b32 v[4:5], v2, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[4:5], v2, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec = load <2 x i32>, ptr addrspace(1) %in0, align 2
   %tvec = trunc <2 x i32> %vec to <2 x i16>

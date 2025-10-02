@@ -57,7 +57,7 @@ define protected amdgpu_kernel void @test_large_shared_vgpr(ptr addrspace(1) nou
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset scope:SCOPE_SE
+; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
 ; CHECK-NEXT:    s_endpgm
 entry:
   %2 = tail call i32 @llvm.amdgcn.workgroup.id.x()

@@ -194,7 +194,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x(ptr addrspace(1) %out) #1 {
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test_workgroup_max_id_x:
@@ -204,7 +204,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x(ptr addrspace(1) %out) #1 {
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-GISEL-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.cluster.workgroup.max.id.x()
   store i32 %id, ptr addrspace(1) %out
@@ -385,7 +385,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x_optimized(ptr addrspace(1) %o
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 4
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test_workgroup_max_id_x_optimized:
@@ -393,7 +393,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x_optimized(ptr addrspace(1) %o
 ; GFX13-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, 4 :: v_dual_mov_b32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-GISEL-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.cluster.workgroup.max.id.x()
   store i32 %id, ptr addrspace(1) %out
@@ -584,7 +584,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y(ptr addrspace(1) %out) #1 {
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test_workgroup_max_id_y:
@@ -594,7 +594,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y(ptr addrspace(1) %out) #1 {
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-GISEL-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.cluster.workgroup.max.id.y()
   store i32 %id, ptr addrspace(1) %out
@@ -775,7 +775,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y_optimized(ptr addrspace(1) %o
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 5
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test_workgroup_max_id_y_optimized:
@@ -783,7 +783,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y_optimized(ptr addrspace(1) %o
 ; GFX13-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, 5 :: v_dual_mov_b32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-GISEL-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.cluster.workgroup.max.id.y()
   store i32 %id, ptr addrspace(1) %out
@@ -974,7 +974,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z(ptr addrspace(1) %out) #1 {
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test_workgroup_max_id_z:
@@ -984,7 +984,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z(ptr addrspace(1) %out) #1 {
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-GISEL-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.cluster.workgroup.max.id.z()
   store i32 %id, ptr addrspace(1) %out
@@ -1165,7 +1165,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z_optimized(ptr addrspace(1) %o
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 6
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test_workgroup_max_id_z_optimized:
@@ -1173,7 +1173,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z_optimized(ptr addrspace(1) %o
 ; GFX13-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, 6 :: v_dual_mov_b32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-GISEL-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.cluster.workgroup.max.id.z()
   store i32 %id, ptr addrspace(1) %out

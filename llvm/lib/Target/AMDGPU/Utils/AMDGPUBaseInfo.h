@@ -583,6 +583,9 @@ LLVM_READONLY
 bool getMUBUFTfe(unsigned Opc);
 
 LLVM_READONLY
+bool getMUBUFIsFormat(unsigned Opc);
+
+LLVM_READONLY
 bool getSMEMIsBuffer(unsigned Opc);
 
 LLVM_READONLY
@@ -1467,6 +1470,8 @@ std::optional<std::array<uint32_t, 3>> getReqdWorkGroupSize(const Function &F);
 
 bool getSpatialClusterEnable(const Function &F);
 
+bool getAsymmetricClusterClampEnable(const Function &F);
+
 bool hasDynamicVGPR(const Function &F);
 
 // Returns the value of the "amdgpu-dynamic-vgpr-block-size" attribute, or 0 if
@@ -1569,6 +1574,7 @@ constexpr bool mayTailCallThisCC(CallingConv::ID CC) {
   switch (CC) {
   case CallingConv::C:
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_Gfx_WholeWave:
     return true;
   default:
     return canGuaranteeTCO(CC);
@@ -1624,6 +1630,11 @@ bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 bool hasMAIInsts(const MCSubtargetInfo &STI);
 bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
+
+inline bool supportsWave32(const MCSubtargetInfo &STI) {
+  return AMDGPU::isGFX10Plus(STI) && !AMDGPU::isGFX1250Only(STI);
+}
+
 int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
 unsigned hasKernargPreload(const MCSubtargetInfo &STI);
 bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
@@ -1780,6 +1791,9 @@ bool isInlinableLiteralV2F16(uint32_t Literal);
 LLVM_READNONE
 bool isValid32BitLiteral(uint64_t Val, bool IsFP64);
 
+LLVM_READNONE
+int64_t encode32BitLiteral(int64_t Imm, OperandType Type);
+
 bool isArgPassedInSGPR(const Argument *Arg);
 
 bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);
@@ -1885,7 +1899,7 @@ public:
 
   bool isFixedDims() const { return getKind() == Kind::FixedDims; }
 
-  bool isVariableedDims() const { return getKind() == Kind::VariableDims; }
+  bool isVariableDims() const { return getKind() == Kind::VariableDims; }
 
   void setUnknown() { *this = ClusterDimsAttr(Kind::Unknown); }
 

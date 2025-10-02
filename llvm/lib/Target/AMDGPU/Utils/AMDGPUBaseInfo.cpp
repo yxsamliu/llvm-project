@@ -25,7 +25,6 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <optional>
@@ -366,6 +365,7 @@ struct MUBUFInfo {
   bool has_soffset;
   bool IsBufferInv;
   bool tfe;
+  bool IsFormat;
 };
 
 struct MTBUFInfo {
@@ -566,6 +566,11 @@ bool getMUBUFTfe(unsigned Opc) {
   return Info && Info->tfe;
 }
 
+bool getMUBUFIsFormat(unsigned Opc) {
+  const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
+  return Info && Info->IsFormat;
+}
+
 bool getSMEMIsBuffer(unsigned Opc) {
   const SMInfo *Info = getSMEMOpcodeHelper(Opc);
   return Info && Info->IsBuffer;
@@ -740,6 +745,7 @@ bool isMAC(unsigned Opc) {
          Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx11 ||
          Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx12 ||
          Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx12 ||
+         Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx13 ||
          Opc == AMDGPU::V_FMAC_F16_fake16_e64_gfx13 ||
          Opc == AMDGPU::V_DOT2C_F32_F16_e64_vi ||
          Opc == AMDGPU::V_DOT2C_F32_BF16_e64_vi ||
@@ -1243,33 +1249,65 @@ unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
 }
 
 unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
-  // For GFX13+ memory is shared between LDS and VectorCache. LDS can be set
-  // to multiple values based on the split ratio. For now we will use default
-  // value set by HW after the reset.
-  if (STI->getFeatureBits().test(FeatureDefaultLocalMemorySize131072))
-    return 131072;
-
   unsigned BytesPerCU = getAddressableLocalMemorySize(STI);
 
-  // "Per CU" really means "per whatever functional block the waves of a
-  // workgroup must share". So the effective local memory size is doubled in
-  // WGP mode on gfx10.
-  if (isGFX10Plus(*STI) && !STI->getFeatureBits().test(FeatureCuMode))
+  bool CUMode = STI->getFeatureBits().test(FeatureCuMode);
+
+  if (isGFX10Plus(*STI) && !isGFX13Plus(*STI) && !CUMode) {
+    // "Per CU" really means "per whatever functional block the waves of a
+    // workgroup must share". So the effective local memory size is doubled in
+    // WGP mode on gfx10.
     BytesPerCU *= 2;
+  }
 
   return BytesPerCU;
 }
 
-unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
+// Get max allowed by hardware addressable LDS.
+static unsigned getMaxHWAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
     return 32768;
   if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
     return 65536;
   if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
     return 163840;
+  if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize196608))
+    return 196608;
   if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
     return 327680;
   return 32768;
+}
+
+// Get addressable LDS based on GFX and WGP/CU mode.
+unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
+  unsigned BytesPerCU = 0;
+
+  // Check for any artificial LDS limits.
+  // Starting with GFX13, memory is shared between LDS and the Vector Cache.
+  // The LDS size can be configured to multiple values based on the split ratio.
+  // As a result, different artificial limitations may apply for graphics
+  // workloads. By default, gfx shaders have the LDS size set to 128 KiB to
+  // maintain compatibility with older GFX architectures
+  //
+  if (STI->getFeatureBits().test(FeatureLocalMemorySizeLimit65536))
+    BytesPerCU = 65536;
+  else if (STI->getFeatureBits().test(FeatureLocalMemorySizeLimit131072))
+    BytesPerCU = 131072;
+
+  // Get addressable LDS as long as no artificial limits are applied.
+  if (BytesPerCU == 0)
+    BytesPerCU = getMaxHWAddressableLocalMemorySize(STI);
+
+  bool CUMode = STI->getFeatureBits().test(FeatureCuMode);
+  // GFX13 allows allocation of the maximum available LDS memory.
+  // In WGP mode, the LDS size is equal to the addressable LDS.
+  // In CU mode (half-WGP), each CU is assigned to a separate segment of LDS
+  // memory which eliminates bank conflicts and reduces the effective LDS
+  // size by two.
+  if (isGFX13Plus(*STI) && CUMode)
+    BytesPerCU /= 2;
+
+  return BytesPerCU;
 }
 
 unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
@@ -1501,13 +1539,16 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
   return IsWave32 ? 1024 : 512;
 }
 
-unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
+unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) {
+  const auto &Features = STI->getFeatureBits();
+  if (Features.test(Feature1024AddressableVGPRs))
+    return Features.test(FeatureWavefrontSize32) ? 1024 : 512;
+  return 256;
+}
 
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI,
                                 unsigned DynamicVGPRBlockSize) {
   const auto &Features = STI->getFeatureBits();
-  if (Features.test(FeatureGFX1250Insts))
-    return Features.test(FeatureWavefrontSize32) ? 1024 : 512;
   if (Features.test(FeatureGFX90AInsts))
     return 512;
 
@@ -2517,6 +2558,10 @@ bool getSpatialClusterEnable(const Function &F) {
   return F.hasFnAttribute("amdgpu-spatial-cluster");
 }
 
+bool getAsymmetricClusterClampEnable(const Function &F) {
+  return F.hasFnAttribute("amdgpu-asymmetric-cluster-clamp");
+}
+
 bool getWavegroupRankFunction(const Function &F) {
   return F.hasFnAttribute("amdgpu-wavegroup-rank-function");
 }
@@ -3045,6 +3090,8 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_224_Align2RegClassID:
   case AMDGPU::AV_224RegClassID:
   case AMDGPU::AV_224_Align2RegClassID:
+  case AMDGPU::AV_224_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_224_STAGINGRegClassID:
   case AMDGPU::VReg_224_Lo256_Align2RegClassID:
     return 224;
   case AMDGPU::SGPR_256RegClassID:
@@ -3081,6 +3128,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::SGPR_320RegClassID:
   case AMDGPU::SReg_320RegClassID:
   case AMDGPU::VReg_320RegClassID:
+  case AMDGPU::VReg_320_STAGINGRegClassID:
   case AMDGPU::AReg_320RegClassID:
   case AMDGPU::VReg_320_Align2RegClassID:
   case AMDGPU::AReg_320_Align2RegClassID:
@@ -3091,6 +3139,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::SGPR_352RegClassID:
   case AMDGPU::SReg_352RegClassID:
   case AMDGPU::VReg_352RegClassID:
+  case AMDGPU::VReg_352_STAGINGRegClassID:
   case AMDGPU::AReg_352RegClassID:
   case AMDGPU::VReg_352_Align2RegClassID:
   case AMDGPU::AReg_352_Align2RegClassID:
@@ -3101,6 +3150,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::SGPR_384RegClassID:
   case AMDGPU::SReg_384RegClassID:
   case AMDGPU::VReg_384RegClassID:
+  case AMDGPU::VReg_384_STAGINGRegClassID:
   case AMDGPU::AReg_384RegClassID:
   case AMDGPU::VReg_384_Align2RegClassID:
   case AMDGPU::AReg_384_Align2RegClassID:
@@ -3384,6 +3434,34 @@ bool isValid32BitLiteral(uint64_t Val, bool IsFP64) {
   return isUInt<32>(Val) || isInt<32>(Val);
 }
 
+int64_t encode32BitLiteral(int64_t Imm, OperandType Type) {
+  switch (Type) {
+  default:
+    break;
+  case OPERAND_REG_IMM_BF16:
+  case OPERAND_REG_IMM_FP16:
+  case OPERAND_REG_INLINE_C_BF16:
+  case OPERAND_REG_INLINE_C_FP16:
+    return Imm & 0xffff;
+  case OPERAND_INLINE_SPLIT_BARRIER_INT32:
+  case OPERAND_REG_IMM_FP32:
+  case OPERAND_REG_IMM_INT32:
+  case OPERAND_REG_IMM_V2BF16:
+  case OPERAND_REG_IMM_V2FP16:
+  case OPERAND_REG_IMM_V2FP32:
+  case OPERAND_REG_IMM_V2INT16:
+  case OPERAND_REG_IMM_V2INT32:
+  case OPERAND_REG_INLINE_AC_FP32:
+  case OPERAND_REG_INLINE_AC_INT32:
+  case OPERAND_REG_INLINE_C_FP32:
+  case OPERAND_REG_INLINE_C_INT32:
+    return Lo_32(Imm);
+  case OPERAND_REG_IMM_FP64:
+    return Hi_32(Imm);
+  }
+  return Imm;
+}
+
 bool isArgPassedInSGPR(const Argument *A) {
   const Function *F = A->getParent();
 
@@ -3454,8 +3532,11 @@ bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
 
 bool isLegalSMRDEncodedSignedOffset(const MCSubtargetInfo &ST,
                                     int64_t EncodedOffset, bool IsBuffer) {
-  if (isGFX12Plus(ST))
+  if (isGFX12Plus(ST)) {
+    if (IsBuffer && EncodedOffset < 0)
+      return false;
     return isInt<24>(EncodedOffset);
+  }
 
   return !IsBuffer && hasSMRDSignedImmOffset(ST) && isInt<21>(EncodedOffset);
 }
@@ -3609,7 +3690,16 @@ MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
   const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
   if (!RC)
     return AMDGPU::NoRegister;
-  return RC->getRegister(Idx | (MSBs << 8));
+
+  Idx |= MSBs << 8;
+  if (RC->getID() == AMDGPU::VGPR_16RegClassID) {
+    // This class has 2048 registers with interleaved lo16 and hi16.
+    Idx *= 2;
+    if (Enc & AMDGPU::HWEncoding::IS_HI16)
+      ++Idx;
+  }
+
+  return RC->getRegister(Idx);
 }
 
 std::pair<const AMDGPU::OpName *, const AMDGPU::OpName *>

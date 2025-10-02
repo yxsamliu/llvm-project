@@ -3382,6 +3382,20 @@ and Z dimensions must be 1.
   }];
 }
 
+def AMDGPUAsymmetricClusterClampKernelDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+This attribute marks a kernel as enabling assymetric cluster clamp.
+
+Clang supports the
+``__attribute__((amdgpu_asymmetric_cluster_clamp_kernel()))`` attribute for the AMDGPU target
+when compiling for a GFX13 offload target. This attribute may be attached to HIP cluster kernel
+function definitions to enable asymmetric cluster clamp.
+
+The cluster dims must be one-dimensional. That is, the number of workgroups per cluster in the Y and Z dimensions must be 1.
+  }];
+}
+
 def AMDGPUNoRankSpecializationDocs : Documentation {
   let Category = DocCatAMDGPUAttributes;
   let Content = [{
@@ -3812,33 +3826,33 @@ functions intended for different purposes have distinct CFI identities.
 
   // Header file - define convenience macros
   #define __cfi_salt(s) __attribute__((cfi_salt(s)))
-  
+
   // Typedef for regular function pointers
   typedef int (*fptr_t)(void);
-  
-  // Typedef for salted function pointers  
+
+  // Typedef for salted function pointers
   typedef int (*fptr_salted_t)(void) __cfi_salt("pepper");
-  
+
   struct widget_ops {
     fptr_t init;          // Regular CFI
     fptr_salted_t exec;   // Salted CFI
     fptr_t cleanup;       // Regular CFI
   };
-  
+
   // Function implementations
   static int widget_init(void) { return 0; }
   static int widget_exec(void) __cfi_salt("pepper") { return 1; }
   static int widget_cleanup(void) { return 0; }
-  
+
   static struct widget_ops ops = {
     .init = widget_init,      // OK - compatible types
     .exec = widget_exec,      // OK - both use "pepper" salt
     .cleanup = widget_cleanup // OK - compatible types
   };
-  
+
   // Using C++11 attribute syntax
   void secure_callback(void) [[clang::cfi_salt("secure")]];
-  
+
   // This would cause a compilation error:
   // fptr_t bad_ptr = widget_exec;  // Error: incompatible types
 
@@ -3846,11 +3860,11 @@ functions intended for different purposes have distinct CFI identities.
 
 * The salt string can contain non-NULL ASCII characters, including spaces and
   quotes
-* This attribute only applies to function types; using it on non-function 
+* This attribute only applies to function types; using it on non-function
   types will generate a warning
-* All declarations and definitions of the same function must use identical 
+* All declarations and definitions of the same function must use identical
   salt values
-* The attribute affects type compatibility during compilation and CFI hash 
+* The attribute affects type compatibility during compilation and CFI hash
   generation during code generation
   }];
 }
@@ -6779,7 +6793,7 @@ if omitted.``Section`` defaults  to the ``-fpatchable-function-entry`` section n
 set, or to ``__patchable_function_entries`` otherwise.
 
 This attribute is only supported on
-aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64 targets.
+aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64/ppc64le targets.
 For ppc/ppc64 targets, AIX is still not supported.
 }];
 }
@@ -8437,6 +8451,23 @@ flag.
   }];
 }
 
+def DocHLSLSemantics : DocumentationCategory<"HLSL Semantics"> {
+  let Content = [{
+A semantic is a string attached to a shader input or output that conveys
+information about the intended use of a parameter. Semantics are required on
+all variables passed between shader stages. The syntax for adding a semantic
+to a shader variable is shown here (Variable Syntax (DirectX HLSL)).
+
+In general, data passed between pipeline stages is completely generic and is
+not uniquely interpreted by the system; arbitrary semantics are allowed which
+have no special meaning. Parameters (in Direct3D 10 and later) which contain
+these special semantics are referred to as System-Value Semantics.
+
+More information is available here:
+https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics
+  }];
+}
+
 def WaveSizeDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -8674,7 +8705,7 @@ randomized.
 }
 
 def HLSLSV_GroupThreadIDDocs : Documentation {
-  let Category = DocCatFunction;
+  let Category = DocHLSLSemantics;
   let Content = [{
 The ``SV_GroupThreadID`` semantic, when applied to an input parameter, specifies which
 individual thread within a thread group is executing in. This attribute is
@@ -8685,7 +8716,7 @@ The full documentation is available here: https://docs.microsoft.com/en-us/windo
 }
 
 def HLSLSV_GroupIDDocs : Documentation {
-  let Category = DocCatFunction;
+  let Category = DocHLSLSemantics;
   let Content = [{
 The ``SV_GroupID`` semantic, when applied to an input parameter, specifies which
 thread group a shader is executing in. This attribute is only supported in compute shaders.
@@ -8695,7 +8726,7 @@ The full documentation is available here: https://docs.microsoft.com/en-us/windo
 }
 
 def HLSLSV_GroupIndexDocs : Documentation {
-  let Category = DocCatFunction;
+  let Category = DocHLSLSemantics;
   let Content = [{
 The ``SV_GroupIndex`` semantic, when applied to an input parameter, specifies a
 data binding to map the group index to the specified parameter. This attribute
@@ -8752,7 +8783,7 @@ The full documentation is available here: https://learn.microsoft.com/en-us/wind
 }
 
 def HLSLSV_DispatchThreadIDDocs : Documentation {
-  let Category = DocCatFunction;
+  let Category = DocHLSLSemantics;
   let Content = [{
 The ``SV_DispatchThreadID`` semantic, when applied to an input parameter,
 specifies a data binding to map the global thread offset within the Dispatch
@@ -8767,7 +8798,7 @@ The full documentation is available here: https://docs.microsoft.com/en-us/windo
 }
 
 def HLSLSV_PositionDocs : Documentation {
-  let Category = DocCatFunction;
+  let Category = DocHLSLSemantics;
   let Content = [{
 The ``SV_Position`` semantic, when applied to an input parameter in a pixel
 shader, contains the location of the pixel center (x, y) in screen space.

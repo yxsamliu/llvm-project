@@ -163,7 +163,7 @@ BUILTIN(__builtin_amdgcn_qsad_pk_u16_u8, "WUiWUiUiWUi", "nc")
 BUILTIN(__builtin_amdgcn_mqsad_pk_u16_u8, "WUiWUiUiWUi", "nc")
 BUILTIN(__builtin_amdgcn_mqsad_u32_u8, "V4UiWUiUiV4Ui", "nc")
 
-BUILTIN(__builtin_amdgcn_make_buffer_rsrc, "Qbv*sii", "nc")
+BUILTIN(__builtin_amdgcn_make_buffer_rsrc, "Qbv*sWii", "nc")
 BUILTIN(__builtin_amdgcn_raw_buffer_store_b8, "vUcQbiiIi", "n")
 BUILTIN(__builtin_amdgcn_raw_buffer_store_b16, "vUsQbiiIi", "n")
 BUILTIN(__builtin_amdgcn_raw_buffer_store_b32, "vUiQbiiIi", "n")
@@ -382,6 +382,31 @@ BUILTIN(__builtin_amdgcn_set_fpenv, "vWUi", "n")
 // to the ME.
 BUILTIN(__builtin_amdgcn_processor_is, "QccC*", "nctu")
 BUILTIN(__builtin_amdgcn_is_invocable, "Qc", "nctu")
+
+//===----------------------------------------------------------------------===//
+
+// Wave Reduction builtins.
+
+//===----------------------------------------------------------------------===//
+
+BUILTIN(__builtin_amdgcn_wave_reduce_add_u32, "ZUiZUiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_sub_u32, "ZUiZUiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_min_i32, "ZiZiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_min_u32, "ZUiZUiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_max_i32, "ZiZiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_max_u32, "ZUiZUiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_and_b32, "ZiZiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_or_b32, "ZiZiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_xor_b32, "ZiZiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_add_u64, "WUiWUiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_sub_u64, "WUiWUiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_min_i64, "WiWiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_min_u64, "WUiWUiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_max_i64, "WiWiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_max_u64, "WUiWUiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_and_b64, "WiWiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_or_b64, "WiWiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_xor_b64, "WiWiZi", "nc")
 
 //===----------------------------------------------------------------------===//
 // R600-NI only builtins.
@@ -862,7 +887,7 @@ TARGET_BUILTIN(__builtin_amdgcn_swmmac_f16_16x16x64_f16, "V8hIbV16hIbV32hV8hiIbI
 // GFX1251 WMMA builtins
 TARGET_BUILTIN(__builtin_amdgcn_wmma_f64_16x16x4_f64, "V8dIbV2dIbV2dIsV8d", "nc", "gfx1251-gemm-insts,wavefrontsize32")
 
-// GFX12.5 128/256B cooperative atomics
+// GFX12.5 128B cooperative atomics
 TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_load_32x4B,  "ii*IicC*",  "nc", "gfx1250-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_store_32x4B, "vi*iIicC*", "nc", "gfx1250-insts,wavefrontsize32")
 

@@ -251,7 +251,7 @@ define amdgpu_kernel void @test_fmin3_olt_0_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX13-NEXT:    s_mov_b32 s8, s0
 ; GFX13-NEXT:    s_mov_b32 s9, s1
 ; GFX13-NEXT:    v_min3_num_f32 v0, v0, v1, v2
-; GFX13-NEXT:    buffer_store_b32 v0, off, s[8:11], null scope:SCOPE_SE
+; GFX13-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX13-NEXT:    s_endpgm
   %a = load volatile float, ptr addrspace(1) %aptr, align 4
   %b = load volatile float, ptr addrspace(1) %bptr, align 4
@@ -501,7 +501,7 @@ define amdgpu_kernel void @test_fmin3_olt_1_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX13-NEXT:    s_mov_b32 s8, s0
 ; GFX13-NEXT:    s_mov_b32 s9, s1
 ; GFX13-NEXT:    v_min3_num_f32 v0, v2, v0, v1
-; GFX13-NEXT:    buffer_store_b32 v0, off, s[8:11], null scope:SCOPE_SE
+; GFX13-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX13-NEXT:    s_endpgm
   %a = load volatile float, ptr addrspace(1) %aptr, align 4
   %b = load volatile float, ptr addrspace(1) %bptr, align 4
@@ -878,7 +878,7 @@ define amdgpu_kernel void @test_fmin3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX13-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX13-TRUE16-NEXT:    s_mov_b32 s9, s1
 ; GFX13-TRUE16-NEXT:    v_min3_num_f16 v0.l, v0.l, v1.l, v2.l
-; GFX13-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null scope:SCOPE_SE
+; GFX13-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null
 ; GFX13-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-FAKE16-LABEL: test_fmin3_olt_0_f16:
@@ -908,7 +908,7 @@ define amdgpu_kernel void @test_fmin3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX13-FAKE16-NEXT:    s_mov_b32 s8, s0
 ; GFX13-FAKE16-NEXT:    s_mov_b32 s9, s1
 ; GFX13-FAKE16-NEXT:    v_min3_num_f16 v0, v0, v1, v2
-; GFX13-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null scope:SCOPE_SE
+; GFX13-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null
 ; GFX13-FAKE16-NEXT:    s_endpgm
   %a = load volatile half, ptr addrspace(1) %aptr, align 2
   %b = load volatile half, ptr addrspace(1) %bptr, align 2
@@ -1286,7 +1286,7 @@ define amdgpu_kernel void @test_fmin3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX13-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX13-TRUE16-NEXT:    s_mov_b32 s9, s1
 ; GFX13-TRUE16-NEXT:    v_min3_num_f16 v0.l, v0.l, v1.l, v2.l
-; GFX13-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null scope:SCOPE_SE
+; GFX13-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null
 ; GFX13-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-FAKE16-LABEL: test_fmin3_olt_1_f16:
@@ -1316,7 +1316,7 @@ define amdgpu_kernel void @test_fmin3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX13-FAKE16-NEXT:    s_mov_b32 s8, s0
 ; GFX13-FAKE16-NEXT:    s_mov_b32 s9, s1
 ; GFX13-FAKE16-NEXT:    v_min3_num_f16 v0, v2, v0, v1
-; GFX13-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null scope:SCOPE_SE
+; GFX13-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null
 ; GFX13-FAKE16-NEXT:    s_endpgm
   %a = load volatile half, ptr addrspace(1) %aptr, align 2
   %b = load volatile half, ptr addrspace(1) %bptr, align 2
@@ -1698,7 +1698,7 @@ define amdgpu_kernel void @test_fmin3_olt_0_f64(ptr addrspace(1) %out, ptr addrs
 ; GFX13-NEXT:    v_min_num_f64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX13-NEXT:    v_max_num_f64_e32 v[2:3], v[4:5], v[4:5]
 ; GFX13-NEXT:    v_min_num_f64_e32 v[0:1], v[0:1], v[2:3]
-; GFX13-NEXT:    buffer_store_b64 v[0:1], off, s[8:11], null scope:SCOPE_SE
+; GFX13-NEXT:    buffer_store_b64 v[0:1], off, s[8:11], null
 ; GFX13-NEXT:    s_endpgm
   %a = load volatile double, ptr addrspace(1) %aptr, align 4
   %b = load volatile double, ptr addrspace(1) %bptr, align 4
@@ -1974,7 +1974,7 @@ define amdgpu_kernel void @test_fmin3_olt_1_f64(ptr addrspace(1) %out, ptr addrs
 ; GFX13-NEXT:    v_min_num_f64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX13-NEXT:    v_max_num_f64_e32 v[2:3], v[4:5], v[4:5]
 ; GFX13-NEXT:    v_min_num_f64_e32 v[0:1], v[2:3], v[0:1]
-; GFX13-NEXT:    buffer_store_b64 v[0:1], off, s[8:11], null scope:SCOPE_SE
+; GFX13-NEXT:    buffer_store_b64 v[0:1], off, s[8:11], null
 ; GFX13-NEXT:    s_endpgm
   %a = load volatile double, ptr addrspace(1) %aptr, align 4
   %b = load volatile double, ptr addrspace(1) %bptr, align 4

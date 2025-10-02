@@ -112,12 +112,13 @@ public:
   Constant *&operator[](unsigned I) { return Values[I]; }
 };
 
-static std::string getRankMaskSuffix(RankMask Mask) {
+static std::string getRankMaskSuffix(RankMask Mask,
+                                     unsigned LargestActiveRank) {
   std::string S;
   llvm::raw_string_ostream OS(S);
   OS << ".rank";
   for (unsigned I = 0, E = Mask.size(); I != E; ++I) {
-    if (Mask[I])
+    if (Mask[I] && I <= LargestActiveRank)
       OS << '_' << I;
   }
   return S;
@@ -203,6 +204,14 @@ public:
   const RankMask &operator[](unsigned I) const { return Masks[I]; }
 };
 
+bool specializationNotNeeded(RankMask Mask, unsigned LargestActiveRank) {
+  for (unsigned I = 0, E = Mask.size(); I != E; ++I) {
+    if (Mask[I] && I <= LargestActiveRank)
+      return false;
+  }
+  return true;
+}
+
 class AMDGPURankSpecializationImpl {
   Value *WaveID = nullptr;
 
@@ -218,7 +227,7 @@ class AMDGPURankSpecializationImpl {
   DisjointMaskSet DisjointMasks;
 
   void analyzeWaveIDUsers();
-  void buildSpecializations(Function &Kernel);
+  void buildSpecializations(Function &Kernel, unsigned LargestActiveRank);
 
 public:
   AMDGPURankSpecializationImpl()
@@ -229,13 +238,18 @@ public:
 // Build clones of Kernel and in each, set wave-ID to the pre-determined value
 // represented in the disjoint set. After cloning, create an entry kernel which
 // routes waves to their corresponding specialization using the intrinsic.
-void AMDGPURankSpecializationImpl::buildSpecializations(Function &Kernel) {
+// LargestActiveRank is the highest rank number implied by reqd_work_group_size,
+// 0-indexed.
+void AMDGPURankSpecializationImpl::buildSpecializations(
+    Function &Kernel, unsigned LargestActiveRank) {
 
   SmallVector<Function *> Specializations;
   ValueToValueMapTy VMap;
   SmallDenseMap<unsigned, Function *> RankToSpecialization;
   for (unsigned i = 0; i != DisjointMasks.size(); ++i) {
     RankMask Mask = DisjointMasks[i];
+    if (specializationNotNeeded(Mask, LargestActiveRank))
+      continue;
 
     VMap.clear();
 
@@ -243,7 +257,8 @@ void AMDGPURankSpecializationImpl::buildSpecializations(Function &Kernel) {
     FunctionType *FTy = Kernel.getFunctionType();
     Function *Specialization = Function::Create(
         FTy, Kernel.getLinkage(), /* AddressSpace= */ 0,
-        Kernel.getName() + getRankMaskSuffix(Mask), Kernel.getParent());
+        Kernel.getName() + getRankMaskSuffix(Mask, LargestActiveRank),
+        Kernel.getParent());
 
     Specializations.push_back(Specialization);
 
@@ -296,7 +311,7 @@ void AMDGPURankSpecializationImpl::buildSpecializations(Function &Kernel) {
     }
 
     // Keep track of which rank gets mapped to which specialization.
-    for (unsigned r = 0; r < MAX_WAVES_PER_WAVEGROUP; r++)
+    for (unsigned r = 0; r <= LargestActiveRank; r++)
       if (Mask.test(r))
         RankToSpecialization[r] = Specialization;
   }
@@ -314,7 +329,7 @@ void AMDGPURankSpecializationImpl::buildSpecializations(Function &Kernel) {
 
   Builder.SetInsertPoint(Entry);
 
-  for (unsigned r = 0; r < MAX_WAVES_PER_WAVEGROUP; r++) {
+  for (unsigned r = 0; r <= LargestActiveRank; r++) {
     // Intrinsic handles proper set up of calls to rank funcs.
     auto *Callee = Builder.CreateIntrinsic(
         Builder.getVoidTy(), Intrinsic::amdgcn_wavegroup_rank,
@@ -476,7 +491,9 @@ void AMDGPURankSpecializationImpl::analyzeWaveIDUsers() {
 bool AMDGPURankSpecializationImpl::run(Module &M) {
   SmallVector<Function *> Kernels;
   for (Function &F : M.functions()) {
-    if (AMDGPU::getWavegroupEnable(F) && AMDGPU::getRankSpecializationEnable(F))
+    if (AMDGPU::getWavegroupEnable(F) &&
+        AMDGPU::getRankSpecializationEnable(F) &&
+        F.hasMetadata("reqd_work_group_size"))
       Kernels.push_back(&F);
   }
 
@@ -487,6 +504,31 @@ bool AMDGPURankSpecializationImpl::run(Module &M) {
     if (!WaveID)
       continue;
 
+    unsigned WorkgroupSize = 0;
+    // Get required workgroup size, and use to determine max number of ranks. If
+    // workgroup size is malformed, skip rank-specialization.
+    if (llvm::MDNode *ReqdSize = F->getMetadata("reqd_work_group_size")) {
+      if (ReqdSize->getNumOperands() == 3) {
+        auto *X =
+            llvm::mdconst::extract<llvm::ConstantInt>(ReqdSize->getOperand(0));
+        auto *Y =
+            llvm::mdconst::extract<llvm::ConstantInt>(ReqdSize->getOperand(1));
+        auto *Z =
+            llvm::mdconst::extract<llvm::ConstantInt>(ReqdSize->getOperand(2));
+
+        unsigned SX = X->getZExtValue();
+        unsigned SY = Y->getZExtValue();
+        unsigned SZ = Z->getZExtValue();
+
+        WorkgroupSize = SX * SY * SZ;
+
+        assert(WorkgroupSize % 128 == 0);
+      } else
+        continue;
+    }
+    if (!WorkgroupSize)
+      continue;
+
     DisjointMasks = DisjointMaskSet(MAX_WAVES_PER_WAVEGROUP);
     I1Masks.clear();
     analyzeWaveIDUsers();
@@ -494,7 +536,8 @@ bool AMDGPURankSpecializationImpl::run(Module &M) {
     if (DisjointMasks.size() == 1)
       continue; // No specialization needed
 
-    buildSpecializations(*F);
+    buildSpecializations(*F, WorkgroupSize / 128 - 1);
+
     Changed = true;
   }
 

@@ -5127,7 +5127,7 @@ define amdgpu_kernel void @compute_mad(ptr addrspace(4) %i18, ptr addrspace(4) %
 ; GFX1300-NEXT:    v_add_co_u32 v1, vcc_lo, s0, v2
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1300-NEXT:    v_add_co_ci_u32_e64 v2, null, s1, v3, vcc_lo
-; GFX1300-NEXT:    global_store_b32 v[1:2], v0, off scope:SCOPE_SE
+; GFX1300-NEXT:    global_store_b32 v[1:2], v0, off
 ; GFX1300-NEXT:    s_endpgm
 bb:
   %i = tail call i32 @llvm.amdgcn.workitem.id.x(), !range !0

@@ -14,8 +14,8 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %out, i32 %x) {
 ; CHECK-NEXT:    ; implicit-def: $vgpr32
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:20 scope:SCOPE_SE
-; CHECK-NEXT:    scratch_store_b32 off, v1, s0 offset:28 scope:SCOPE_SE
+; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:20
+; CHECK-NEXT:    scratch_store_b32 off, v1, s0 offset:28
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[34], v0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[1], v1

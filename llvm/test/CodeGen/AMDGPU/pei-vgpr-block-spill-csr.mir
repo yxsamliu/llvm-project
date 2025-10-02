@@ -232,6 +232,7 @@ machineFunctionInfo:
 body: |
   bb.0:
     liveins: $sgpr30_sgpr31
+<<<<<<< HEAD
     ; CHECK-LABEL: name: multiple_blocks
     ; CHECK: liveins: $sgpr30_sgpr31, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135, $vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239_vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247_vgpr248_vgpr249_vgpr250_vgpr251_vgpr252_vgpr253_vgpr254_vgpr255_vgpr256_vgpr257_vgpr258_vgpr259_vgpr260_vgpr261_vgpr262_vgpr263
     ; CHECK-NEXT: {{  $}}
@@ -249,6 +250,8 @@ body: |
     ; CHECK-NEXT: $m0 = S_MOV_B32 3
     ; CHECK-NEXT: $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr42, implicit $vgpr43, implicit $vgpr44, implicit $vgpr45, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63 :: (load (s1024) from %stack.0, align 4, addrspace 5)
     ; CHECK-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
+=======
+>>>>>>> 5df11fceebba9416e72b57d3ef9f6698f2fc5f8d
     ; W32-LABEL: name: multiple_blocks
     ; W32: liveins: $sgpr30_sgpr31, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135, $vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239_vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247_vgpr248_vgpr249_vgpr250_vgpr251_vgpr252_vgpr253_vgpr254_vgpr255_vgpr256_vgpr257_vgpr258_vgpr259_vgpr260_vgpr261_vgpr262_vgpr263
     ; W32-NEXT: {{  $}}

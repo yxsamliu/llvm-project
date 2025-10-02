@@ -74,7 +74,7 @@ define amdgpu_kernel void @vbuffer_mubuf_CFS128B(ptr addrspace(1) %out, <4 x i32
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-NEXT:    s_endpgm
   %val = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> %src, i32 %offset, i32 %soffset, i32 128)
   store i32 %val, ptr addrspace(1) %out
@@ -93,7 +93,7 @@ define amdgpu_kernel void @vbuffer_mubuf_CFS64B(ptr addrspace(1) %out, <4 x i32>
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-NEXT:    s_endpgm
   %val = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> %src, i32 %offset, i32 %soffset, i32 256)
   store i32 %val, ptr addrspace(1) %out
@@ -112,7 +112,7 @@ define amdgpu_kernel void @vbuffer_mubuf_CFS32B(ptr addrspace(1) %out, <4 x i32>
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-NEXT:    s_endpgm
   %val = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> %src, i32 %offset, i32 %soffset, i32 384)
   store i32 %val, ptr addrspace(1) %out
@@ -185,7 +185,7 @@ define amdgpu_kernel void @flat_CFS128B(ptr %addr) {
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX13-SDAG-NEXT:    flat_discard_b32 v[0:1] offset:32 scope:SCOPE_SE cfs:CFS_128B
+; GFX13-SDAG-NEXT:    flat_discard_b32 v[0:1] offset:32 cfs:CFS_128B
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: flat_CFS128B:
@@ -196,7 +196,7 @@ define amdgpu_kernel void @flat_CFS128B(ptr %addr) {
 ; GFX13-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX13-GISEL-NEXT:    flat_discard_b32 v[0:1] scope:SCOPE_SE cfs:CFS_128B
+; GFX13-GISEL-NEXT:    flat_discard_b32 v[0:1] cfs:CFS_128B
 ; GFX13-GISEL-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
   call void @llvm.amdgcn.discard.b32(ptr addrspace(0) %gep, i32 128);
@@ -209,7 +209,7 @@ define amdgpu_kernel void @flat_CFS64B(ptr %addr) {
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX13-SDAG-NEXT:    flat_discard_b32 v[0:1] offset:32 scope:SCOPE_SE cfs:CFS_64B
+; GFX13-SDAG-NEXT:    flat_discard_b32 v[0:1] offset:32 cfs:CFS_64B
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: flat_CFS64B:
@@ -220,7 +220,7 @@ define amdgpu_kernel void @flat_CFS64B(ptr %addr) {
 ; GFX13-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX13-GISEL-NEXT:    flat_discard_b32 v[0:1] scope:SCOPE_SE cfs:CFS_64B
+; GFX13-GISEL-NEXT:    flat_discard_b32 v[0:1] cfs:CFS_64B
 ; GFX13-GISEL-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
   call void @llvm.amdgcn.discard.b32(ptr addrspace(0) %gep, i32 256);
@@ -233,7 +233,7 @@ define amdgpu_kernel void @vflat_CFS32B(ptr %addr) {
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX13-SDAG-NEXT:    flat_discard_b32 v[0:1] offset:32 scope:SCOPE_SE cfs:CFS_32B
+; GFX13-SDAG-NEXT:    flat_discard_b32 v[0:1] offset:32 cfs:CFS_32B
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: vflat_CFS32B:
@@ -244,7 +244,7 @@ define amdgpu_kernel void @vflat_CFS32B(ptr %addr) {
 ; GFX13-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX13-GISEL-NEXT:    flat_discard_b32 v[0:1] scope:SCOPE_SE cfs:CFS_32B
+; GFX13-GISEL-NEXT:    flat_discard_b32 v[0:1] cfs:CFS_32B
 ; GFX13-GISEL-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
   call void @llvm.amdgcn.discard.b32(ptr addrspace(0) %gep, i32 384);
@@ -257,7 +257,7 @@ define amdgpu_kernel void @vglobal_CFS128B(ptr addrspace(1) %ptr) {
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_discard_b32 v0, s[0:1] offset:512 scope:SCOPE_SE cfs:CFS_128B
+; GFX13-NEXT:    global_discard_b32 v0, s[0:1] offset:512 cfs:CFS_128B
 ; GFX13-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 128
   tail call void @llvm.amdgcn.discard.b32(ptr addrspace(1) %gep, i32 128)
@@ -270,7 +270,7 @@ define amdgpu_kernel void @vglobal_CFS64B(ptr addrspace(1) %ptr) {
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_discard_b32 v0, s[0:1] offset:512 scope:SCOPE_SE cfs:CFS_64B
+; GFX13-NEXT:    global_discard_b32 v0, s[0:1] offset:512 cfs:CFS_64B
 ; GFX13-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 128
   tail call void @llvm.amdgcn.discard.b32(ptr addrspace(1) %gep, i32 256)
@@ -283,7 +283,7 @@ define amdgpu_kernel void @vglobal_CFS32B(ptr addrspace(1) %ptr) {
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_discard_b32 v0, s[0:1] offset:512 scope:SCOPE_SE cfs:CFS_32B
+; GFX13-NEXT:    global_discard_b32 v0, s[0:1] offset:512 cfs:CFS_32B
 ; GFX13-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 128
   tail call void @llvm.amdgcn.discard.b32(ptr addrspace(1) %gep, i32 384)
@@ -293,7 +293,7 @@ define amdgpu_kernel void @vglobal_CFS32B(ptr addrspace(1) %ptr) {
 define amdgpu_ps void @vscratch_CFS128B(ptr addrspace(5) %ptr) {
 ; GFX13-LABEL: vscratch_CFS128B:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    scratch_discard_b32 v0, off offset:32 scope:SCOPE_SE cfs:CFS_128B
+; GFX13-NEXT:    scratch_discard_b32 v0, off offset:32 cfs:CFS_128B
 ; GFX13-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(5) %ptr, i32 4
   call void @llvm.amdgcn.discard.b32(ptr addrspace(5) %gep, i32 128);
@@ -303,7 +303,7 @@ define amdgpu_ps void @vscratch_CFS128B(ptr addrspace(5) %ptr) {
 define amdgpu_ps void @vscratch_CFS64B(ptr addrspace(5) %ptr) {
 ; GFX13-LABEL: vscratch_CFS64B:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    scratch_discard_b32 v0, off offset:32 scope:SCOPE_SE cfs:CFS_64B
+; GFX13-NEXT:    scratch_discard_b32 v0, off offset:32 cfs:CFS_64B
 ; GFX13-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(5) %ptr, i32 4
   call void @llvm.amdgcn.discard.b32(ptr addrspace(5) %gep, i32 256);
@@ -313,7 +313,7 @@ define amdgpu_ps void @vscratch_CFS64B(ptr addrspace(5) %ptr) {
 define amdgpu_ps void @vscratch_CFS32B(ptr addrspace(5) %ptr) {
 ; GFX13-LABEL: vscratch_CFS32B:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    scratch_discard_b32 v0, off offset:32 scope:SCOPE_SE cfs:CFS_32B
+; GFX13-NEXT:    scratch_discard_b32 v0, off offset:32 cfs:CFS_32B
 ; GFX13-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(5) %ptr, i32 4
   call void @llvm.amdgcn.discard.b32(ptr addrspace(5) %gep, i32 384);
@@ -388,9 +388,9 @@ define amdgpu_kernel void @vsample_CFS128B(ptr addrspace(1) %out, i32 inreg %src
 ; GFX13-NEXT:    s_load_b96 s[8:10], s[4:5], 0x24
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v0, s6
-; GFX13-NEXT:    v_mov_b32_e32 v1, s7
-; GFX13-NEXT:    image_gather4 v[0:3], [v0, v1], s10, s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D cfs:CFS_128B
+; GFX13-NEXT:    v_dual_mov_b32 v4, s6 :: v_dual_mov_b32 v5, s7
+; GFX13-NEXT:    image_gather4 v[0:3], [v4, v5], s10, s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D cfs:CFS_128B
+; GFX13-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[8:9] scope:SCOPE_SYS
 ; GFX13-NEXT:    s_wait_storecnt 0x0
@@ -408,9 +408,9 @@ define amdgpu_kernel void @vsample_CFS64B(ptr addrspace(1) %out, i32 inreg %src,
 ; GFX13-NEXT:    s_load_b96 s[8:10], s[4:5], 0x24
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v0, s6
-; GFX13-NEXT:    v_mov_b32_e32 v1, s7
-; GFX13-NEXT:    image_gather4 v[0:3], [v0, v1], s10, s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D cfs:CFS_64B
+; GFX13-NEXT:    v_dual_mov_b32 v4, s6 :: v_dual_mov_b32 v5, s7
+; GFX13-NEXT:    image_gather4 v[0:3], [v4, v5], s10, s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D cfs:CFS_64B
+; GFX13-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[8:9] scope:SCOPE_SYS
 ; GFX13-NEXT:    s_wait_storecnt 0x0
@@ -428,9 +428,9 @@ define amdgpu_kernel void @vsample_CFS32B(ptr addrspace(1) %out, i32 inreg %src,
 ; GFX13-NEXT:    s_load_b96 s[8:10], s[4:5], 0x24
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v0, s6
-; GFX13-NEXT:    v_mov_b32_e32 v1, s7
-; GFX13-NEXT:    image_gather4 v[0:3], [v0, v1], s10, s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D cfs:CFS_32B
+; GFX13-NEXT:    v_dual_mov_b32 v4, s6 :: v_dual_mov_b32 v5, s7
+; GFX13-NEXT:    image_gather4 v[0:3], [v4, v5], s10, s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D cfs:CFS_32B
+; GFX13-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[8:9] scope:SCOPE_SYS
 ; GFX13-NEXT:    s_wait_storecnt 0x0
