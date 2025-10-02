@@ -301,6 +301,10 @@ protected:
   bool enableNamedBit(const MachineBasicBlock::iterator MI,
                       AMDGPU::CPol::CPol Bit) const;
 
+  /// Check if any atomic operation on AS can affect memory accessible via the
+  /// global address space.
+  bool canAffectGlobalAddrSpace(SIAtomicAddrSpace AS) const;
+
 public:
 
   /// Create a cache control for the subtarget \p ST.
@@ -474,10 +478,6 @@ public:
                              SIAtomicScope Scope,
                              SIAtomicAddrSpace AddrSpace) const override;
 
-  bool enableStoreCacheBypass(const MachineBasicBlock::iterator &MI,
-                              SIAtomicScope Scope,
-                              SIAtomicAddrSpace AddrSpace) const override;
-
   bool enableRMWCacheBypass(const MachineBasicBlock::iterator &MI,
                             SIAtomicScope Scope,
                             SIAtomicAddrSpace AddrSpace) const override;
@@ -625,7 +625,11 @@ protected:
   bool setAtomicScope(const MachineBasicBlock::iterator &MI,
                       SIAtomicScope Scope, SIAtomicAddrSpace AddrSpace) const;
 
-  virtual bool isWorkGroupSharingL0() const { return ST.isCuModeEnabled(); }
+  bool isWorkGroupSharingL0() const {
+    if (ST.getGeneration() >= AMDGPUSubtarget::GFX13)
+      return true;
+    return ST.isCuModeEnabled();
+  }
 
 public:
   SIGfx12CacheControl(const GCNSubtarget &ST) : SIGfx11CacheControl(ST) {
@@ -673,14 +677,6 @@ public:
                             SIAtomicAddrSpace AddrSpace) const override {
     return setAtomicScope(MI, Scope, AddrSpace);
   }
-};
-
-class SIGfx13CacheControl : public SIGfx12CacheControl {
-protected:
-  bool isWorkGroupSharingL0() const override { return true; }
-
-public:
-  SIGfx13CacheControl(const GCNSubtarget &ST) : SIGfx12CacheControl(ST) {}
 
   bool setCFS(const MachineBasicBlock::iterator &MI,
               unsigned CFSBits) const override;
@@ -1027,6 +1023,15 @@ bool SICacheControl::enableNamedBit(const MachineBasicBlock::iterator MI,
   return true;
 }
 
+bool SICacheControl::canAffectGlobalAddrSpace(SIAtomicAddrSpace AS) const {
+  assert((!ST.hasGloballyAddressableScratch() ||
+          (AS & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE ||
+          (AS & SIAtomicAddrSpace::SCRATCH) == SIAtomicAddrSpace::NONE) &&
+         "scratch instructions should already be replaced by flat "
+         "instructions if GloballyAddressableScratch is enabled");
+  return (AS & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE;
+}
+
 /* static */
 std::unique_ptr<SICacheControl> SICacheControl::create(const GCNSubtarget &ST) {
   GCNSubtarget::Generation Generation = ST.getGeneration();
@@ -1042,20 +1047,17 @@ std::unique_ptr<SICacheControl> SICacheControl::create(const GCNSubtarget &ST) {
     return std::make_unique<SIGfx10CacheControl>(ST);
   if (Generation < AMDGPUSubtarget::GFX12)
     return std::make_unique<SIGfx11CacheControl>(ST);
-  if (Generation < AMDGPUSubtarget::GFX13)
-    return std::make_unique<SIGfx12CacheControl>(ST);
-  // The latest generation
-  return std::make_unique<SIGfx13CacheControl>(ST);
+  // GFX12+ uses unified cache control.
+  return std::make_unique<SIGfx12CacheControl>(ST);
 }
 
 bool SIGfx6CacheControl::enableLoadCacheBypass(
-    const MachineBasicBlock::iterator &MI,
-    SIAtomicScope Scope,
+    const MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
     SIAtomicAddrSpace AddrSpace) const {
   assert(MI->mayLoad() && !MI->mayStore());
   bool Changed = false;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -1278,7 +1280,7 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -1338,7 +1340,7 @@ bool SIGfx7CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -1375,7 +1377,7 @@ bool SIGfx90ACacheControl::enableLoadCacheBypass(
   assert(MI->mayLoad() && !MI->mayStore());
   bool Changed = false;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -1410,41 +1412,6 @@ bool SIGfx90ACacheControl::enableLoadCacheBypass(
   return Changed;
 }
 
-bool SIGfx90ACacheControl::enableStoreCacheBypass(
-    const MachineBasicBlock::iterator &MI,
-    SIAtomicScope Scope,
-    SIAtomicAddrSpace AddrSpace) const {
-  assert(!MI->mayLoad() && MI->mayStore());
-  bool Changed = false;
-
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
-    switch (Scope) {
-    case SIAtomicScope::SYSTEM:
-    case SIAtomicScope::AGENT:
-      /// Do not set glc for store atomic operations as they implicitly write
-      /// through the L1 cache.
-      break;
-    case SIAtomicScope::WORKGROUP:
-    case SIAtomicScope::WAVEFRONT:
-    case SIAtomicScope::SINGLETHREAD:
-      // No cache to bypass. Store atomics implicitly write through the L1
-      // cache.
-      break;
-    default:
-      llvm_unreachable("Unsupported synchronization scope");
-    }
-  }
-
-  /// The scratch address space does not need the global memory caches
-  /// to be bypassed as all memory operations by the same thread are
-  /// sequentially consistent, and no other thread can access scratch
-  /// memory.
-
-  /// Other address spaces do not have a cache.
-
-  return Changed;
-}
-
 bool SIGfx90ACacheControl::enableRMWCacheBypass(
     const MachineBasicBlock::iterator &MI,
     SIAtomicScope Scope,
@@ -1452,7 +1419,7 @@ bool SIGfx90ACacheControl::enableRMWCacheBypass(
   assert(MI->mayLoad() && MI->mayStore());
   bool Changed = false;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -1561,7 +1528,7 @@ bool SIGfx90ACacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
       // Ensures that following loads will not see stale remote VMEM data or
@@ -1625,7 +1592,7 @@ bool SIGfx90ACacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
       // Inserting a "S_WAITCNT vmcnt(0)" before is not required because the
@@ -1668,7 +1635,7 @@ bool SIGfx940CacheControl::enableLoadCacheBypass(
   assert(MI->mayLoad() && !MI->mayStore());
   bool Changed = false;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
       // Set SC bits to indicate system scope.
@@ -1712,7 +1679,7 @@ bool SIGfx940CacheControl::enableStoreCacheBypass(
   assert(!MI->mayLoad() && MI->mayStore());
   bool Changed = false;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
       // Set SC bits to indicate system scope.
@@ -1752,7 +1719,7 @@ bool SIGfx940CacheControl::enableRMWCacheBypass(
   assert(MI->mayLoad() && MI->mayStore());
   bool Changed = false;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
       // Set SC1 bit to indicate system scope.
@@ -1830,7 +1797,7 @@ bool SIGfx940CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
       // Ensures that following loads will not see stale remote VMEM data or
@@ -1914,7 +1881,7 @@ bool SIGfx940CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
       // Inserting a "S_WAITCNT vmcnt(0)" before is not required because the
@@ -1971,7 +1938,7 @@ bool SIGfx10CacheControl::enableLoadCacheBypass(
   assert(MI->mayLoad() && !MI->mayStore());
   bool Changed = false;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -2203,7 +2170,7 @@ bool SIGfx10CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -2252,7 +2219,8 @@ bool SIGfx10CacheControl::insertBarrierStart(
   // mode. This is because a CU mode release fence does not emit any wait, which
   // is fine when only dealing with vmem, but isn't sufficient in the presence
   // of barriers which do not go through vmem.
-  if (!ST.isCuModeEnabled())
+  // GFX12.5 does not require this additional wait.
+  if (!ST.isCuModeEnabled() || ST.hasGFX1250Insts())
     return false;
 
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
@@ -2267,7 +2235,7 @@ bool SIGfx11CacheControl::enableLoadCacheBypass(
   assert(MI->mayLoad() && !MI->mayStore());
   bool Changed = false;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -2446,14 +2414,14 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
         STORECnt |= true;
       break;
     case SIAtomicScope::WORKGROUP:
-      // GFX120x:
+      // GFX12.0:
       //   In WGP mode the waves of a work-group can be executing on either CU
       //   of the WGP. Therefore need to wait for operations to complete to
       //   ensure they are visible to waves in the other CU as the L0 is per CU.
       //   Otherwise in CU mode and all waves of a work-group are on the same CU
       //   which shares the same L0.
       //
-      // GFX125x:
+      // GFX12.5:
       //   CU$ has two ports. To ensure operations are visible at the workgroup
       //   level, we need to ensure all operations in this port have completed
       //   so the other SIMDs in the WG can see them. There is no ordering
@@ -2551,7 +2519,7 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   /// memory.
 
   /// Other address spaces do not have a cache.
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) == SIAtomicAddrSpace::NONE)
+  if (!canAffectGlobalAddrSpace(AddrSpace))
     return false;
 
   AMDGPU::CPol::CPol ScopeImm = AMDGPU::CPol::SCOPE_DEV;
@@ -2566,13 +2534,13 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     ScopeImm = AMDGPU::CPol::SCOPE_SE;
     break;
   case SIAtomicScope::WORKGROUP:
-    // GFX12:
+    // GFX12.0:
     //  In WGP mode the waves of a work-group can be executing on either CU of
     //  the WGP. Therefore we need to invalidate the L0 which is per CU.
     //  Otherwise in CU mode all waves of a work-group are on the same CU, and
     //  so the L0 does not need to be invalidated.
     //
-    // GFX125x has a shared CU$, so no invalidates are required.
+    // GFX12.5 has a shared WGP$, so no invalidates are required.
     if (isWorkGroupSharingL0())
       return false;
 
@@ -2602,6 +2570,8 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
                                         SIAtomicAddrSpace AddrSpace,
                                         bool IsCrossAddrSpaceOrdering,
                                         Position Pos) const {
+  bool Changed = false;
+
   MachineBasicBlock &MBB = *MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
 
@@ -2609,61 +2579,52 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   // writeback as all memory operations by the same thread are
   // sequentially consistent, and no other thread can access scratch
   // memory.
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
+    if (Pos == Position::AFTER)
+      ++MI;
 
-  // Other address spaces do not have a cache.
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) == SIAtomicAddrSpace::NONE)
-    return false;
-
-  if (Pos == Position::AFTER)
-    ++MI;
-
-  // gfx120x:
-  //   global_wb is only necessary at system scope as stores
-  //   can only report completion from L2 onwards.
-  //
-  //   Emitting it for lower scopes is a slow no-op, so we omit it
-  //   for performance.
-  //
-  // gfx125x:
-  //    stores can also report completion from WGP$ so we must emit
-  //    global_wb at cluster & device scope as well to ensure stores
-  //    reached the right cache level.
-  switch (Scope) {
-  case SIAtomicScope::SYSTEM:
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
-        .addImm(AMDGPU::CPol::SCOPE_SYS);
-    break;
-  case SIAtomicScope::AGENT:
-    if (ST.hasGFX1250Insts()) {
+    // global_wb is only necessary at system scope for GFX12.0,
+    // they're also necessary at device scope for GFX12.5 as stores
+    // cannot report completion earlier than L2.
+    //
+    // Emitting it for lower scopes is a slow no-op, so we omit it
+    // for performance.
+    switch (Scope) {
+    case SIAtomicScope::SYSTEM:
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
-          .addImm(AMDGPU::CPol::SCOPE_DEV);
+          .addImm(AMDGPU::CPol::SCOPE_SYS);
+      Changed = true;
+      break;
+    case SIAtomicScope::AGENT:
+      // GFX12.5 may have >1 L2 per device so we must emit a device scope WB.
+      if (ST.hasGFX1250Insts()) {
+        BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
+            .addImm(AMDGPU::CPol::SCOPE_DEV);
+        Changed = true;
+      }
+      break;
+    case SIAtomicScope::CLUSTER:
+    case SIAtomicScope::WORKGROUP:
+      // No WB necessary, but we still have to wait.
+    case SIAtomicScope::WAVEFRONT:
+    case SIAtomicScope::SINGLETHREAD:
+      // No WB or wait necessary here, but insertWait takes care of that.
+      break;
+    default:
+      llvm_unreachable("Unsupported synchronization scope");
     }
-    break;
-  case SIAtomicScope::CLUSTER:
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
-        .addImm(AMDGPU::CPol::SCOPE_SE);
-    break;
-  case SIAtomicScope::WORKGROUP:
-    // No WB necessary, but we still have to wait.
-    break;
-  case SIAtomicScope::WAVEFRONT:
-  case SIAtomicScope::SINGLETHREAD:
-    // No WB or wait necessary here.
-    return false;
-  default:
-    llvm_unreachable("Unsupported synchronization scope");
-  }
 
-  if (Pos == Position::AFTER)
-    --MI;
+    if (Pos == Position::AFTER)
+      --MI;
+  }
 
   // We always have to wait for previous memory operations (load/store) to
   // complete, whether we inserted a WB or not. If we inserted a WB (storecnt),
   // we of course need to wait for that as well.
-  insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
-             IsCrossAddrSpaceOrdering, Pos, AtomicOrdering::Release);
+  Changed |= insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
+                        IsCrossAddrSpaceOrdering, Pos, AtomicOrdering::Release);
 
-  return true;
+  return Changed;
 }
 
 bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
@@ -2713,14 +2674,15 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   const bool IsRMW = (MI.mayLoad() && MI.mayStore());
   bool Changed = false;
 
-  // GFX125x only: xcnt wait is needed before flat and global atomics stores/rmw
+  // GFX12.5 only: xcnt wait is needed before flat and global atomics
+  // stores/rmw.
   if (Atomic && ST.requiresWaitXCntBeforeAtomicStores() && TII->isFLAT(MI)) {
     MachineBasicBlock &MBB = *MI.getParent();
     BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(S_WAIT_XCNT_soft)).addImm(0);
     Changed = true;
   }
 
-  // Remaining fixes do not apply to RMWs
+  // Remaining fixes do not apply to RMWs.
   if (IsRMW)
     return Changed;
 
@@ -2729,18 +2691,10 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
     return Changed;
   const unsigned Scope = CPol->getImm() & CPol::SCOPE;
 
-  // GFX120x only: Extra waits needed before non-atomic system scope stores.
-  if (!ST.hasGFX1250Insts()) {
-    if (!Atomic && Scope == CPol::SCOPE_SYS)
-      Changed |= insertWaitsBeforeSystemScopeStore(MI.getIterator());
-    return Changed;
-  }
+  // GFX12.0 only: Extra waits needed before system scope stores.
+  if (!ST.hasGFX1250Insts() && !Atomic && Scope == CPol::SCOPE_SYS)
+    Changed |= insertWaitsBeforeSystemScopeStore(MI.getIterator());
 
-  // GFX125x only: Require SCOPE_SE on stores that may hit the scratch address
-  // space, or if the "cu-stores" target feature is disabled.
-  if (Scope == CPol::SCOPE_CU &&
-      (!ST.hasCUStores() || TII->mayAccessScratchThroughFlat(MI)))
-    Changed |= setScope(MI, CPol::SCOPE_SE);
   return Changed;
 }
 
@@ -2762,7 +2716,7 @@ bool SIGfx12CacheControl::setAtomicScope(const MachineBasicBlock::iterator &MI,
                                          SIAtomicAddrSpace AddrSpace) const {
   bool Changed = false;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
       Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SYS);
@@ -2798,8 +2752,11 @@ bool SIGfx12CacheControl::setAtomicScope(const MachineBasicBlock::iterator &MI,
   return Changed;
 }
 
-bool SIGfx13CacheControl::setCFS(const MachineBasicBlock::iterator &MI,
+bool SIGfx12CacheControl::setCFS(const MachineBasicBlock::iterator &MI,
                                  unsigned CFSBits) const {
+  if (ST.getGeneration() < AMDGPUSubtarget::GFX13)
+    return false;
+
   auto CoreMI = &*MI;
   if (MI->isBundle()) {
     CoreMI = SIInstrInfo::bundleWithGPRIndexing(*MI);

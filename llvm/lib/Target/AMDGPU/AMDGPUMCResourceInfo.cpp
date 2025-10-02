@@ -397,6 +397,7 @@ void MCResourceInfo::gatherResourceInfo(
 
   const MCExpr *RankSumExpr = MCConstantExpr::create(0, OutContext);
   SmallVector<const MCExpr *, 8> PrivSegExprs;
+  SmallVector<const MCExpr *, 8> NumNamedBarExprs;
   for (auto MI : FRI.WavegroupRankCalls) {
     auto Callee = MI->getOperand(1).getGlobal();
     auto CalleeSym = TM.getSymbol(Callee);
@@ -412,10 +413,28 @@ void MCResourceInfo::gatherResourceInfo(
                   Callee->hasLocalLinkage());
     PrivSegExprs.push_back(
         MCSymbolRefExpr::create(CalleePrivSegSym, OutContext));
+    // Named barrier formula, take the max.
+    MCSymbol *CalleeNamedBarSym =
+        getSymbol(CalleeSym->getName(), RIK_NumNamedBarrier, OutContext,
+                  Callee->hasLocalLinkage());
+    NumNamedBarExprs.push_back(
+        MCSymbolRefExpr::create(CalleeNamedBarSym, OutContext));
   }
   MCSymbol *RankSumSym =
       getSymbol(FnSym->getName(), RIK_NumVGPRRankSum, OutContext, IsLocal);
   RankSumSym->setVariableValue(RankSumExpr);
+  // Adjust the NumNamedBarrier.
+  if (!NumNamedBarExprs.empty()) {
+    const AMDGPUMCExpr *TransitiveExpr =
+        AMDGPUMCExpr::createMax(NumNamedBarExprs, OutContext);
+    // Take the max between the regular-callee-based expr and rank-callee-based
+    // expr.
+    MCSymbol *Sym =
+        getSymbol(FnSym->getName(), RIK_NumNamedBarrier, OutContext, IsLocal);
+    const MCExpr *MaxExpr = Sym->getVariableValue();
+    MaxExpr = AMDGPUMCExpr::createMax({MaxExpr, TransitiveExpr}, OutContext);
+    Sym->setVariableValue(MaxExpr);
+  }
   // Adjust the PrivateSegSize.
   if (!PrivSegExprs.empty()) {
     const MCExpr *LocalConstExpr =

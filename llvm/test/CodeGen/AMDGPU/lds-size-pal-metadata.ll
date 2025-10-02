@@ -59,7 +59,7 @@ define amdgpu_gfx void @f2(i32 %a, ptr addrspace(1) %ptr) {
 ; PAL-GFX13-NEXT:    s_wait_samplecnt 0x0
 ; PAL-GFX13-NEXT:    s_wait_rtscnt 0x0
 ; PAL-GFX13-NEXT:    s_wait_kmcnt 0x0
-; PAL-GFX13-NEXT:    global_store_b32 v[1:2], v0, off scope:SCOPE_SE
+; PAL-GFX13-NEXT:    global_store_b32 v[1:2], v0, off
 ; PAL-GFX13-NEXT:    s_set_pc_i64 s[30:31]
   store i32 %a, ptr addrspace(1) %ptr
   ret void

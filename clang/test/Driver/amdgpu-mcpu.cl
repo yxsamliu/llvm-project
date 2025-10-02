@@ -186,7 +186,6 @@
 // GFX130E:   "-target-cpu" "gfx130E"
 // GFX1310:   "-target-cpu" "gfx1310"
 
-
 // GFX9_GENERIC:      "-target-cpu" "gfx9-generic"
 // GFX9_4_GENERIC:    "-target-cpu" "gfx9-4-generic"
 // GFX10_1_GENERIC:   "-target-cpu" "gfx10-1-generic"

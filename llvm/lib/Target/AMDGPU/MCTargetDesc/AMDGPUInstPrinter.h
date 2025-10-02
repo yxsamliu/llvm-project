@@ -99,8 +99,7 @@ private:
                         raw_ostream &O);
   void printImmediate64(uint64_t Imm, const MCSubtargetInfo &STI,
                         raw_ostream &O, bool IsFP);
-  void printLiteral64(uint64_t Imm, const MCSubtargetInfo &STI, raw_ostream &O,
-                      bool IsFP);
+  void printLiteral64(uint64_t Imm, raw_ostream &O, bool IsFP);
   void printOperand(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
   void printRegularOperand(const MCInst *MI, unsigned OpNo,

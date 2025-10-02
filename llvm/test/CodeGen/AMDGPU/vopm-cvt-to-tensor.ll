@@ -8,7 +8,7 @@ define amdgpu_ps void @test_cvt_to_tensor_i4_f32_4x2x16(<4 x float> %acc_in, i8 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_i4_f32 v0, v[0:3], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i4.f32.v4f32(<4 x float> %acc_in, i8 %scale,
@@ -27,7 +27,7 @@ define amdgpu_ps void @test_cvt_to_tensor_i4_f16_8x4x8(<8 x half> %acc_in, i8 %s
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_i4_f16 v[0:1], v[0:3], s0 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call <2 x i32> @llvm.amdgcn.cvt.to.tensor.i4.f16.double.v8f16(<8 x half> %acc_in, i8 %scale,
@@ -46,7 +46,7 @@ define amdgpu_ps void @test_cvt_to_tensor_i4_f16_4x4x8(<4 x half> %acc_in, i8 %s
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_i4_f16 v0, v[0:1], s0 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i4.f16.v4f16(<4 x half> %acc_in, i8 %scale,
@@ -65,7 +65,7 @@ define amdgpu_ps void @test_cvt_to_tensor_i4_f16_4x4x16(<8 x half> %acc_in, i8 %
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_i4_f16 v0, v[0:3], s0 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i4.f16.v8f16(<8 x half> %acc_in, i8 %scale,
@@ -84,7 +84,7 @@ define amdgpu_ps void @test_cvt_to_tensor_i4_f16_4x2x16(<4 x half> %acc_in, i8 %
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_i4_f16 v0, v[0:1], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i4.f16.v4f16(<4 x half> %acc_in, i8 %scale,
@@ -103,7 +103,7 @@ define amdgpu_ps void @test_cvt_to_tensor_i4_bf16_8x4x8(<8 x bfloat> %acc_in, i8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_i4_bf16 v[0:1], v[0:3], s0 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call <2 x i32> @llvm.amdgcn.cvt.to.tensor.i4.bf16.double.v8bf16(<8 x bfloat> %acc_in, i8 %scale,
@@ -122,7 +122,7 @@ define amdgpu_ps void @test_cvt_to_tensor_i4_bf16_4x4x8(<4 x bfloat> %acc_in, i8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_i4_bf16 v0, v[0:1], s0 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i4.bf16.v4bf16(<4 x bfloat> %acc_in, i8 %scale,
@@ -141,7 +141,7 @@ define amdgpu_ps void @test_cvt_to_tensor_i4_bf16_4x4x16(<8 x bfloat> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_i4_bf16 v0, v[0:3], s0 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i4.bf16.v8bf16(<8 x bfloat> %acc_in, i8 %scale,
@@ -160,7 +160,7 @@ define amdgpu_ps void @test_cvt_to_tensor_i4_bf16_4x2x16(<4 x bfloat> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_i4_bf16 v0, v[0:1], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i4.bf16.v4bf16(<4 x bfloat> %acc_in, i8 %scale,
@@ -179,7 +179,7 @@ define amdgpu_ps void @test_cvt_to_tensor_u4_f32_4x2x16(<4 x float> %acc_in, i8 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_u4_f32 v0, v[0:3], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u4.f32.v4f32(<4 x float> %acc_in, i8 %scale,
@@ -198,7 +198,7 @@ define amdgpu_ps void @test_cvt_to_tensor_u4_f16_8x4x8(<8 x half> %acc_in, i8 %s
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_u4_f16 v[0:1], v[0:3], s0 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call <2 x i32> @llvm.amdgcn.cvt.to.tensor.u4.f16.double.v8f16(<8 x half> %acc_in, i8 %scale,
@@ -217,7 +217,7 @@ define amdgpu_ps void @test_cvt_to_tensor_u4_f16_4x4x8(<4 x half> %acc_in, i8 %s
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_u4_f16 v0, v[0:1], s0 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u4.f16.v4f16(<4 x half> %acc_in, i8 %scale,
@@ -236,7 +236,7 @@ define amdgpu_ps void @test_cvt_to_tensor_u4_f16_4x4x16(<8 x half> %acc_in, i8 %
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_u4_f16 v0, v[0:3], s0 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u4.f16.v8f16(<8 x half> %acc_in, i8 %scale,
@@ -255,7 +255,7 @@ define amdgpu_ps void @test_cvt_to_tensor_u4_f16_4x2x16(<4 x half> %acc_in, i8 %
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_u4_f16 v0, v[0:1], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u4.f16.v4f16(<4 x half> %acc_in, i8 %scale,
@@ -274,7 +274,7 @@ define amdgpu_ps void @test_cvt_to_tensor_u4_bf16_8x4x8(<8 x bfloat> %acc_in, i8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_u4_bf16 v[0:1], v[0:3], s0 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call <2 x i32> @llvm.amdgcn.cvt.to.tensor.u4.bf16.double.v8bf16(<8 x bfloat> %acc_in, i8 %scale,
@@ -293,7 +293,7 @@ define amdgpu_ps void @test_cvt_to_tensor_u4_bf16_4x4x8(<4 x bfloat> %acc_in, i8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_u4_bf16 v0, v[0:1], s0 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u4.bf16.v4bf16(<4 x bfloat> %acc_in, i8 %scale,
@@ -312,7 +312,7 @@ define amdgpu_ps void @test_cvt_to_tensor_u4_bf16_4x4x16(<8 x bfloat> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_u4_bf16 v0, v[0:3], s0 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u4.bf16.v8bf16(<8 x bfloat> %acc_in, i8 %scale,
@@ -331,7 +331,7 @@ define amdgpu_ps void @test_cvt_to_tensor_u4_bf16_4x2x16(<4 x bfloat> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_u4_bf16 v0, v[0:1], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u4.bf16.v4bf16(<4 x bfloat> %acc_in, i8 %scale,
@@ -350,7 +350,7 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_f32_4x2x16(<4 x float> %acc_in, i8 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_i8_f32 v0, v[0:3], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i8.f32.v4f32(<4 x float> %acc_in, i8 %scale,
@@ -369,7 +369,7 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_f16_8x4x8(<8 x half> %acc_in, i8 %s
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_i8_f16 v[0:1], v[0:3], s0 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call <2 x i32> @llvm.amdgcn.cvt.to.tensor.i8.f16.double.v8f16(<8 x half> %acc_in, i8 %scale,
@@ -388,7 +388,7 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_f16_4x4x8(<4 x half> %acc_in, i8 %s
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_i8_f16 v0, v[0:1], s0 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i8.f16.v4f16(<4 x half> %acc_in, i8 %scale,
@@ -407,8 +407,8 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_f16_4x4x16(<8 x half> %acc_in, i8 %
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_i8_f16 v0, v1, v[0:3], s0 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.i8.f16.scatter2.v8f16(<8 x half> %acc_in, i8 %scale,
@@ -430,7 +430,7 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_f16_4x2x16(<4 x half> %acc_in, i8 %
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_i8_f16 v0, v[0:1], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i8.f16.v4f16(<4 x half> %acc_in, i8 %scale,
@@ -449,7 +449,7 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_bf16_8x4x8(<8 x bfloat> %acc_in, i8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_i8_bf16 v[0:1], v[0:3], s0 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call <2 x i32> @llvm.amdgcn.cvt.to.tensor.i8.bf16.double.v8bf16(<8 x bfloat> %acc_in, i8 %scale,
@@ -468,7 +468,7 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_bf16_4x4x8(<4 x bfloat> %acc_in, i8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_i8_bf16 v0, v[0:1], s0 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i8.bf16.v4bf16(<4 x bfloat> %acc_in, i8 %scale,
@@ -487,8 +487,8 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_bf16_4x4x16(<8 x bfloat> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_i8_bf16 v0, v1, v[0:3], s0 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.i8.bf16.scatter2.v8bf16(<8 x bfloat> %acc_in, i8 %scale,
@@ -510,7 +510,7 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_bf16_4x2x16(<4 x bfloat> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_i8_bf16 v0, v[0:1], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.i8.bf16.v4bf16(<4 x bfloat> %acc_in, i8 %scale,
@@ -529,7 +529,7 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_f32_4x2x16(<4 x float> %acc_in, i8 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_u8_f32 v0, v[0:3], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u8.f32.v4f32(<4 x float> %acc_in, i8 %scale,
@@ -548,7 +548,7 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_f16_8x4x8(<8 x half> %acc_in, i8 %s
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_u8_f16 v[0:1], v[0:3], s0 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call <2 x i32> @llvm.amdgcn.cvt.to.tensor.u8.f16.double.v8f16(<8 x half> %acc_in, i8 %scale,
@@ -567,7 +567,7 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_f16_4x4x8(<4 x half> %acc_in, i8 %s
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_u8_f16 v0, v[0:1], s0 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u8.f16.v4f16(<4 x half> %acc_in, i8 %scale,
@@ -586,8 +586,8 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_f16_4x4x16(<8 x half> %acc_in, i8 %
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_u8_f16 v0, v1, v[0:3], s0 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.u8.f16.scatter2.v8f16(<8 x half> %acc_in, i8 %scale,
@@ -609,7 +609,7 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_f16_4x2x16(<4 x half> %acc_in, i8 %
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_u8_f16 v0, v[0:1], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u8.f16.v4f16(<4 x half> %acc_in, i8 %scale,
@@ -628,7 +628,7 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_bf16_8x4x8(<8 x bfloat> %acc_in, i8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_u8_bf16 v[0:1], v[0:3], s0 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call <2 x i32> @llvm.amdgcn.cvt.to.tensor.u8.bf16.double.v8bf16(<8 x bfloat> %acc_in, i8 %scale,
@@ -647,7 +647,7 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_bf16_4x4x8(<4 x bfloat> %acc_in, i8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_u8_bf16 v0, v[0:1], s0 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u8.bf16.v4bf16(<4 x bfloat> %acc_in, i8 %scale,
@@ -666,8 +666,8 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_bf16_4x4x16(<8 x bfloat> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_u8_bf16 v0, v1, v[0:3], s0 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.u8.bf16.scatter2.v8bf16(<8 x bfloat> %acc_in, i8 %scale,
@@ -689,7 +689,7 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_bf16_4x2x16(<4 x bfloat> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_u8_bf16 v0, v[0:1], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.u8.bf16.v4bf16(<4 x bfloat> %acc_in, i8 %scale,
@@ -708,7 +708,7 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_f32_4x2x16(<4 x float> %acc_in, i8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_fp8_f32 v0, v[0:3], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.fp8.f32.v4f32(<4 x float> %acc_in, i8 %scale,
@@ -727,7 +727,7 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_f16_8x4x8(<8 x half> %acc_in, i8 %
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_fp8_f16 v[0:1], v[0:3], s0 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call <2 x i32> @llvm.amdgcn.cvt.to.tensor.fp8.f16.double.v8f16(<8 x half> %acc_in, i8 %scale,
@@ -746,7 +746,7 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_f16_4x4x8(<4 x half> %acc_in, i8 %
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_fp8_f16 v0, v[0:1], s0 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.fp8.f16.v4f16(<4 x half> %acc_in, i8 %scale,
@@ -765,8 +765,8 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_f16_4x4x16(<8 x half> %acc_in, i8 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_fp8_f16 v0, v1, v[0:3], s0 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.fp8.f16.scatter2.v8f16(<8 x half> %acc_in, i8 %scale,
@@ -788,7 +788,7 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_f16_4x2x16(<4 x half> %acc_in, i8 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_fp8_f16 v0, v[0:1], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.fp8.f16.v4f16(<4 x half> %acc_in, i8 %scale,
@@ -807,7 +807,7 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_bf16_8x4x8(<8 x bfloat> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_fp8_bf16 v[0:1], v[0:3], s0 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call <2 x i32> @llvm.amdgcn.cvt.to.tensor.fp8.bf16.double.v8bf16(<8 x bfloat> %acc_in, i8 %scale,
@@ -826,7 +826,7 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_bf16_4x4x8(<4 x bfloat> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_fp8_bf16 v0, v[0:1], s0 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.fp8.bf16.v4bf16(<4 x bfloat> %acc_in, i8 %scale,
@@ -845,8 +845,8 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_bf16_4x4x16(<8 x bfloat> %acc_in, 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_fp8_bf16 v0, v1, v[0:3], s0 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.fp8.bf16.scatter2.v8bf16(<8 x bfloat> %acc_in, i8 %scale,
@@ -868,7 +868,7 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_bf16_4x2x16(<4 x bfloat> %acc_in, 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_fp8_bf16 v0, v[0:1], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.fp8.bf16.v4bf16(<4 x bfloat> %acc_in, i8 %scale,
@@ -887,7 +887,7 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_f32_4x2x16(<4 x float> %acc_in, i8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_bf8_f32 v0, v[0:3], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.bf8.f32.v4f32(<4 x float> %acc_in, i8 %scale,
@@ -906,7 +906,7 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_f16_8x4x8(<8 x half> %acc_in, i8 %
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_bf8_f16 v[0:1], v[0:3], s0 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call <2 x i32> @llvm.amdgcn.cvt.to.tensor.bf8.f16.double.v8f16(<8 x half> %acc_in, i8 %scale,
@@ -925,7 +925,7 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_f16_4x4x8(<4 x half> %acc_in, i8 %
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_bf8_f16 v0, v[0:1], s0 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.bf8.f16.v4f16(<4 x half> %acc_in, i8 %scale,
@@ -944,8 +944,8 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_f16_4x4x16(<8 x half> %acc_in, i8 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_bf8_f16 v0, v1, v[0:3], s0 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.bf8.f16.scatter2.v8f16(<8 x half> %acc_in, i8 %scale,
@@ -967,7 +967,7 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_f16_4x2x16(<4 x half> %acc_in, i8 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_bf8_f16 v0, v[0:1], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.bf8.f16.v4f16(<4 x half> %acc_in, i8 %scale,
@@ -986,7 +986,7 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_bf16_8x4x8(<8 x bfloat> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_bf8_bf16 v[0:1], v[0:3], s0 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call <2 x i32> @llvm.amdgcn.cvt.to.tensor.bf8.bf16.double.v8bf16(<8 x bfloat> %acc_in, i8 %scale,
@@ -1005,7 +1005,7 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_bf16_4x4x8(<4 x bfloat> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_bf8_bf16 v0, v[0:1], s0 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.bf8.bf16.v4bf16(<4 x bfloat> %acc_in, i8 %scale,
@@ -1024,8 +1024,8 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_bf16_4x4x16(<8 x bfloat> %acc_in, 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_bf8_bf16 v0, v1, v[0:3], s0 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.bf8.bf16.scatter2.v8bf16(<8 x bfloat> %acc_in, i8 %scale,
@@ -1047,7 +1047,7 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_bf16_4x2x16(<4 x bfloat> %acc_in, 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_bf8_bf16 v0, v[0:1], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.bf8.bf16.v4bf16(<4 x bfloat> %acc_in, i8 %scale,
@@ -1066,8 +1066,8 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_f32_4x2x16(<4 x float> %acc_in, i8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_f16_f32 v0, v1, v[0:3], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.f32.scatter2.v4f32(<4 x float> %acc_in, i8 %scale,
@@ -1089,8 +1089,8 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_f16_8x4x8(<8 x half> %acc_in, i8 %
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_f16_f16 v[0:1], v[2:3], v[0:3], s0 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b64 v[7:8], v[2:3], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
+; GFX13-NEXT:    global_store_b64 v[7:8], v[2:3], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <4 x half>, <4 x half> } @llvm.amdgcn.cvt.to.tensor.f16.f16.scatter2.double.v8f16(<8 x half> %acc_in, i8 %scale,
@@ -1112,8 +1112,8 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_f16_4x4x8(<4 x half> %acc_in, i8 %
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_f16_f16 v0, v1, v[0:1], s0 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[5:6], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.f16.scatter2.v4f16(<4 x half> %acc_in, i8 %scale,
@@ -1135,10 +1135,10 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_f16_4x4x16(<8 x half> %acc_in, i8 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_f16_f16 v0, v1, v2, v3, v[0:3], s0 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v1, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[9:10], v2, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[11:12], v3, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
+; GFX13-NEXT:    global_store_b32 v[9:10], v2, off
+; GFX13-NEXT:    global_store_b32 v[11:12], v3, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.f16.scatter4.v8f16(<8 x half> %acc_in, i8 %scale,
@@ -1164,8 +1164,8 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_f16_4x2x16(<4 x half> %acc_in, i8 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_f16_f16 v0, v1, v[0:1], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[5:6], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.f16.scatter2.v4f16(<4 x half> %acc_in, i8 %scale,
@@ -1187,8 +1187,8 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_bf16_8x4x8(<8 x bfloat> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_f16_bf16 v[0:1], v[2:3], v[0:3], s0 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b64 v[7:8], v[2:3], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
+; GFX13-NEXT:    global_store_b64 v[7:8], v[2:3], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <4 x half>, <4 x half> } @llvm.amdgcn.cvt.to.tensor.f16.bf16.scatter2.double.v8bf16(<8 x bfloat> %acc_in, i8 %scale,
@@ -1210,8 +1210,8 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_bf16_4x4x8(<4 x bfloat> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_f16_bf16 v0, v1, v[0:1], s0 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[5:6], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.bf16.scatter2.v4bf16(<4 x bfloat> %acc_in, i8 %scale,
@@ -1233,10 +1233,10 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_bf16_4x4x16(<8 x bfloat> %acc_in, 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_f16_bf16 v0, v1, v2, v3, v[0:3], s0 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v1, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[9:10], v2, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[11:12], v3, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
+; GFX13-NEXT:    global_store_b32 v[9:10], v2, off
+; GFX13-NEXT:    global_store_b32 v[11:12], v3, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.bf16.scatter4.v8bf16(<8 x bfloat> %acc_in, i8 %scale,
@@ -1262,8 +1262,8 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_bf16_4x2x16(<4 x bfloat> %acc_in, 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_f16_bf16 v0, v1, v[0:1], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[5:6], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.bf16.scatter2.v4bf16(<4 x bfloat> %acc_in, i8 %scale,
@@ -1285,8 +1285,8 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_f32_4x2x16(<4 x float> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_bf16_f32 v0, v1, v[0:3], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.f32.scatter2.v4f32(<4 x float> %acc_in, i8 %scale,
@@ -1308,8 +1308,8 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_f16_8x4x8(<8 x half> %acc_in, i8 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_bf16_f16 v[0:1], v[2:3], v[0:3], s0 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b64 v[7:8], v[2:3], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
+; GFX13-NEXT:    global_store_b64 v[7:8], v[2:3], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <4 x bfloat>, <4 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.f16.scatter2.double.v8f16(<8 x half> %acc_in, i8 %scale,
@@ -1331,8 +1331,8 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_f16_4x4x8(<4 x half> %acc_in, i8 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_bf16_f16 v0, v1, v[0:1], s0 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[5:6], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.f16.scatter2.v4f16(<4 x half> %acc_in, i8 %scale,
@@ -1354,10 +1354,10 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_f16_4x4x16(<8 x half> %acc_in, i8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_bf16_f16 v0, v1, v2, v3, v[0:3], s0 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v1, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[9:10], v2, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[11:12], v3, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
+; GFX13-NEXT:    global_store_b32 v[9:10], v2, off
+; GFX13-NEXT:    global_store_b32 v[11:12], v3, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.f16.scatter4.v8f16(<8 x half> %acc_in, i8 %scale,
@@ -1383,8 +1383,8 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_f16_4x2x16(<4 x half> %acc_in, i8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_bf16_f16 v0, v1, v[0:1], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[5:6], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.f16.scatter2.v4f16(<4 x half> %acc_in, i8 %scale,
@@ -1406,8 +1406,8 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_bf16_8x4x8(<8 x bfloat> %acc_in, 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_bf16_bf16 v[0:1], v[2:3], v[0:3], s0 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b64 v[7:8], v[2:3], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
+; GFX13-NEXT:    global_store_b64 v[7:8], v[2:3], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <4 x bfloat>, <4 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.bf16.scatter2.double.v8bf16(<8 x bfloat> %acc_in, i8 %scale,
@@ -1429,8 +1429,8 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_bf16_4x4x8(<4 x bfloat> %acc_in, 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_bf16_bf16 v0, v1, v[0:1], s0 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[5:6], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.bf16.scatter2.v4bf16(<4 x bfloat> %acc_in, i8 %scale,
@@ -1452,10 +1452,10 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_bf16_4x4x16(<8 x bfloat> %acc_in,
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_bf16_bf16 v0, v1, v2, v3, v[0:3], s0 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v1, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[9:10], v2, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[11:12], v3, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
+; GFX13-NEXT:    global_store_b32 v[9:10], v2, off
+; GFX13-NEXT:    global_store_b32 v[11:12], v3, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %quad = call { <2 x bfloat>, <2 x bfloat>, <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.bf16.scatter4.v8bf16(<8 x bfloat> %acc_in, i8 %scale,
@@ -1481,8 +1481,8 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_bf16_4x2x16(<4 x bfloat> %acc_in,
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_bf16_bf16 v0, v1, v[0:1], s0 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[5:6], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { <2 x bfloat>, <2 x bfloat> } @llvm.amdgcn.cvt.to.tensor.bf16.bf16.scatter2.v4bf16(<4 x bfloat> %acc_in, i8 %scale,
@@ -1504,7 +1504,7 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_fp8_f32_4x2x16(<4 x float> %acc_in,
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_sr_fp8_f32 v0, v[0:3], s0, v7 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.sr.fp8.f32.v4f32(<4 x float> %acc_in, i8 %scale, <2 x i16> %rand,
@@ -1523,7 +1523,7 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_fp8_f16_8x4x8(<8 x half> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_sr_fp8_f16 v[0:1], v[0:3], s0, v7 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call <2 x i32> @llvm.amdgcn.cvt.to.tensor.sr.fp8.f16.double.v8f16(<8 x half> %acc_in, i8 %scale, <2 x i16> %rand,
@@ -1542,7 +1542,7 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_fp8_f16_4x4x8(<4 x half> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_sr_fp8_f16 v0, v[0:1], s0, v5 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.sr.fp8.f16.v4f16(<4 x half> %acc_in, i8 %scale, <2 x i16> %rand,
@@ -1561,8 +1561,8 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_fp8_f16_4x4x16(<8 x half> %acc_in, 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_sr_fp8_f16 v0, v1, v[0:3], s0, v9 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.sr.fp8.f16.scatter2.v8f16(<8 x half> %acc_in, i8 %scale, <2 x i16> %rand,
@@ -1584,7 +1584,7 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_fp8_f16_4x2x16(<4 x half> %acc_in, 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_sr_fp8_f16 v0, v[0:1], s0, v5 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.sr.fp8.f16.v4f16(<4 x half> %acc_in, i8 %scale, <2 x i16> %rand,
@@ -1603,7 +1603,7 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_fp8_bf16_8x4x8(<8 x bfloat> %acc_in
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_sr_fp8_bf16 v[0:1], v[0:3], s0, v7 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call <2 x i32> @llvm.amdgcn.cvt.to.tensor.sr.fp8.bf16.double.v8bf16(<8 x bfloat> %acc_in, i8 %scale, <2 x i16> %rand,
@@ -1622,7 +1622,7 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_fp8_bf16_4x4x8(<4 x bfloat> %acc_in
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_sr_fp8_bf16 v0, v[0:1], s0, v5 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.sr.fp8.bf16.v4bf16(<4 x bfloat> %acc_in, i8 %scale, <2 x i16> %rand,
@@ -1641,8 +1641,8 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_fp8_bf16_4x4x16(<8 x bfloat> %acc_i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_sr_fp8_bf16 v0, v1, v[0:3], s0, v9 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.sr.fp8.bf16.scatter2.v8bf16(<8 x bfloat> %acc_in, i8 %scale, <2 x i16> %rand,
@@ -1664,7 +1664,7 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_fp8_bf16_4x2x16(<4 x bfloat> %acc_i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_sr_fp8_bf16 v0, v[0:1], s0, v5 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.sr.fp8.bf16.v4bf16(<4 x bfloat> %acc_in, i8 %scale, <2 x i16> %rand,
@@ -1683,7 +1683,7 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_bf8_f32_4x2x16(<4 x float> %acc_in,
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_sr_bf8_f32 v0, v[0:3], s0, v7 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.sr.bf8.f32.v4f32(<4 x float> %acc_in, i8 %scale, <2 x i16> %rand,
@@ -1702,7 +1702,7 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_bf8_f16_8x4x8(<8 x half> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_sr_bf8_f16 v[0:1], v[0:3], s0, v7 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call <2 x i32> @llvm.amdgcn.cvt.to.tensor.sr.bf8.f16.double.v8f16(<8 x half> %acc_in, i8 %scale, <2 x i16> %rand,
@@ -1721,7 +1721,7 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_bf8_f16_4x4x8(<4 x half> %acc_in, i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_sr_bf8_f16 v0, v[0:1], s0, v5 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.sr.bf8.f16.v4f16(<4 x half> %acc_in, i8 %scale, <2 x i16> %rand,
@@ -1740,8 +1740,8 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_bf8_f16_4x4x16(<8 x half> %acc_in, 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_sr_bf8_f16 v0, v1, v[0:3], s0, v9 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.sr.bf8.f16.scatter2.v8f16(<8 x half> %acc_in, i8 %scale, <2 x i16> %rand,
@@ -1763,7 +1763,7 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_bf8_f16_4x2x16(<4 x half> %acc_in, 
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_sr_bf8_f16 v0, v[0:1], s0, v5 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.sr.bf8.f16.v4f16(<4 x half> %acc_in, i8 %scale, <2 x i16> %rand,
@@ -1782,7 +1782,7 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_bf8_bf16_8x4x8(<8 x bfloat> %acc_in
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_sr_bf8_bf16 v[0:1], v[0:3], s0, v7 clamp
-; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call <2 x i32> @llvm.amdgcn.cvt.to.tensor.sr.bf8.bf16.double.v8bf16(<8 x bfloat> %acc_in, i8 %scale, <2 x i16> %rand,
@@ -1801,7 +1801,7 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_bf8_bf16_4x4x8(<4 x bfloat> %acc_in
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_sr_bf8_bf16 v0, v[0:1], s0, v5 aux_data:1 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.sr.bf8.bf16.v4bf16(<4 x bfloat> %acc_in, i8 %scale, <2 x i16> %rand,
@@ -1820,8 +1820,8 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_bf8_bf16_4x4x16(<8 x bfloat> %acc_i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX13-NEXT:    v_cvt_to_tensor_sr_bf8_bf16 v0, v1, v[0:3], s0, v9 aux_data:2 clamp
-; GFX13-NEXT:    global_store_b32 v[5:6], v0, off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[7:8], v1, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
+; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %pair = call { i32, i32 } @llvm.amdgcn.cvt.to.tensor.sr.bf8.bf16.scatter2.v8bf16(<8 x bfloat> %acc_in, i8 %scale, <2 x i16> %rand,
@@ -1843,7 +1843,7 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_bf8_bf16_4x2x16(<4 x bfloat> %acc_i
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX13-NEXT:    v_cvt_to_tensor_sr_bf8_bf16 v0, v[0:1], s0, v5 aux_data:3 clamp
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %dest = call i32 @llvm.amdgcn.cvt.to.tensor.sr.bf8.bf16.v4bf16(<4 x bfloat> %acc_in, i8 %scale, <2 x i16> %rand,

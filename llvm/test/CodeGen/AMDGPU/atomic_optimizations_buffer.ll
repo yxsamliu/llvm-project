@@ -305,7 +305,7 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX13W64-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX13W64-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
 ; GFX13W64-NEXT:    s_wait_kmcnt 0x0
-; GFX13W64-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13W64-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13W64-NEXT:    s_endpgm
 ;
 ; GFX13W32-LABEL: add_i32_constant:
@@ -334,7 +334,7 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX13W32-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX13W32-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
 ; GFX13W32-NEXT:    s_wait_kmcnt 0x0
-; GFX13W32-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13W32-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13W32-NEXT:    s_endpgm
 entry:
   %old = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add(i32 5, ptr addrspace(8) %inout, i32 0, i32 0, i32 0)
@@ -643,7 +643,7 @@ define amdgpu_kernel void @add_i32_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX13W64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13W64-NEXT:    v_mad_co_u64_u32 v[0:1], null, s6, v0, s[2:3]
 ; GFX13W64-NEXT:    v_mov_b32_e32 v1, 0
-; GFX13W64-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13W64-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13W64-NEXT:    s_endpgm
 ;
 ; GFX13W32-LABEL: add_i32_uniform:
@@ -673,7 +673,7 @@ define amdgpu_kernel void @add_i32_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX13W32-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13W32-NEXT:    v_mad_co_u64_u32 v[0:1], null, s0, v0, s[4:5]
 ; GFX13W32-NEXT:    v_mov_b32_e32 v1, 0
-; GFX13W32-NEXT:    global_store_b32 v1, v0, s[2:3] scope:SCOPE_SE
+; GFX13W32-NEXT:    global_store_b32 v1, v0, s[2:3]
 ; GFX13W32-NEXT:    s_endpgm
 entry:
   %old = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add(i32 %additive, ptr addrspace(8) %inout, i32 0, i32 0, i32 0)
@@ -1101,7 +1101,7 @@ define amdgpu_kernel void @add_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX13W64-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX13W64-NEXT:    v_add_nc_u32_e32 v0, s2, v0
 ; GFX13W64-NEXT:    s_wait_kmcnt 0x0
-; GFX13W64-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13W64-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13W64-NEXT:    s_endpgm
 ;
 ; GFX13W32-LABEL: add_i32_varying_vdata:
@@ -1142,7 +1142,7 @@ define amdgpu_kernel void @add_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX13W32-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13W32-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, s2, v0
 ; GFX13W32-NEXT:    s_wait_kmcnt 0x0
-; GFX13W32-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13W32-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13W32-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1596,7 +1596,7 @@ define amdgpu_kernel void @struct_add_i32_varying_vdata(ptr addrspace(1) %out, p
 ; GFX13W64-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX13W64-NEXT:    v_add_nc_u32_e32 v0, s2, v0
 ; GFX13W64-NEXT:    s_wait_kmcnt 0x0
-; GFX13W64-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13W64-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13W64-NEXT:    s_endpgm
 ;
 ; GFX13W32-LABEL: struct_add_i32_varying_vdata:
@@ -1639,7 +1639,7 @@ define amdgpu_kernel void @struct_add_i32_varying_vdata(ptr addrspace(1) %out, p
 ; GFX13W32-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13W32-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, s2, v0
 ; GFX13W32-NEXT:    s_wait_kmcnt 0x0
-; GFX13W32-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13W32-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13W32-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1785,7 +1785,7 @@ define amdgpu_kernel void @add_i32_varying_offset(ptr addrspace(1) %out, ptr add
 ; GFX13W64-NEXT:    s_wait_dscnt 0x0
 ; GFX13W64-NEXT:    v_add_nc_u32_e32 v0, v1, v0
 ; GFX13W64-NEXT:    s_wait_kmcnt 0x0
-; GFX13W64-NEXT:    global_store_b32 v2, v0, s[0:1] scope:SCOPE_SE
+; GFX13W64-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX13W64-NEXT:    s_endpgm
 ;
 ; GFX13W32-LABEL: add_i32_varying_offset:
@@ -1815,7 +1815,7 @@ define amdgpu_kernel void @add_i32_varying_offset(ptr addrspace(1) %out, ptr add
 ; GFX13W32-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13W32-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_add_nc_u32 v0, v1, v0
 ; GFX13W32-NEXT:    s_wait_kmcnt 0x0
-; GFX13W32-NEXT:    global_store_b32 v2, v0, s[0:1] scope:SCOPE_SE
+; GFX13W32-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX13W32-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
@@ -2121,7 +2121,7 @@ define amdgpu_kernel void @sub_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX13W64-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX13W64-NEXT:    v_sub_nc_u32_e32 v0, s2, v0
 ; GFX13W64-NEXT:    s_wait_kmcnt 0x0
-; GFX13W64-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13W64-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13W64-NEXT:    s_endpgm
 ;
 ; GFX13W32-LABEL: sub_i32_constant:
@@ -2150,7 +2150,7 @@ define amdgpu_kernel void @sub_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX13W32-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13W32-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_sub_nc_u32 v0, s2, v0
 ; GFX13W32-NEXT:    s_wait_kmcnt 0x0
-; GFX13W32-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13W32-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13W32-NEXT:    s_endpgm
 entry:
   %old = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.sub(i32 5, ptr addrspace(8) %inout, i32 0, i32 0, i32 0)
@@ -2466,7 +2466,7 @@ define amdgpu_kernel void @sub_i32_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX13W64-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13W64-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX13W64-NEXT:    v_sub_nc_u32_e32 v0, s2, v0
-; GFX13W64-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13W64-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13W64-NEXT:    s_endpgm
 ;
 ; GFX13W32-LABEL: sub_i32_uniform:
@@ -2496,7 +2496,7 @@ define amdgpu_kernel void @sub_i32_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX13W32-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX13W32-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13W32-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_sub_nc_u32 v0, s0, v0
-; GFX13W32-NEXT:    global_store_b32 v1, v0, s[2:3] scope:SCOPE_SE
+; GFX13W32-NEXT:    global_store_b32 v1, v0, s[2:3]
 ; GFX13W32-NEXT:    s_endpgm
 entry:
   %old = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.sub(i32 %subitive, ptr addrspace(8) %inout, i32 0, i32 0, i32 0)
@@ -2926,7 +2926,7 @@ define amdgpu_kernel void @sub_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX13W64-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX13W64-NEXT:    v_sub_nc_u32_e32 v0, s2, v0
 ; GFX13W64-NEXT:    s_wait_kmcnt 0x0
-; GFX13W64-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13W64-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13W64-NEXT:    s_endpgm
 ;
 ; GFX13W32-LABEL: sub_i32_varying_vdata:
@@ -2967,7 +2967,7 @@ define amdgpu_kernel void @sub_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX13W32-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13W32-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_sub_nc_u32 v0, s2, v0
 ; GFX13W32-NEXT:    s_wait_kmcnt 0x0
-; GFX13W32-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX13W32-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13W32-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
@@ -3113,7 +3113,7 @@ define amdgpu_kernel void @sub_i32_varying_offset(ptr addrspace(1) %out, ptr add
 ; GFX13W64-NEXT:    s_wait_dscnt 0x0
 ; GFX13W64-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GFX13W64-NEXT:    s_wait_kmcnt 0x0
-; GFX13W64-NEXT:    global_store_b32 v2, v0, s[0:1] scope:SCOPE_SE
+; GFX13W64-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX13W64-NEXT:    s_endpgm
 ;
 ; GFX13W32-LABEL: sub_i32_varying_offset:
@@ -3143,7 +3143,7 @@ define amdgpu_kernel void @sub_i32_varying_offset(ptr addrspace(1) %out, ptr add
 ; GFX13W32-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13W32-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_sub_nc_u32 v0, v1, v0
 ; GFX13W32-NEXT:    s_wait_kmcnt 0x0
-; GFX13W32-NEXT:    global_store_b32 v2, v0, s[0:1] scope:SCOPE_SE
+; GFX13W32-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX13W32-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()

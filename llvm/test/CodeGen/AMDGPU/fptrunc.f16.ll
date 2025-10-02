@@ -249,7 +249,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16(
 ; GFX13-SDAG-FAKE16-NEXT:    s_mov_b32 s5, s1
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b16 v0, off, s[4:7], null scope:SCOPE_SE
+; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b16 v0, off, s[4:7], null
 ; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-FAKE16-LABEL: fptrunc_f32_to_f16:
@@ -263,7 +263,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16(
 ; GFX13-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX13-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX13-GISEL-FAKE16-NEXT:    s_mov_b32 s2, -1
-; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null scope:SCOPE_SE
+; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX13-GISEL-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) {
@@ -503,7 +503,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_afn(ptr addrspace(1) %r,
 ; GFX13-SDAG-FAKE16-NEXT:    s_mov_b32 s5, s1
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b16 v0, off, s[4:7], null scope:SCOPE_SE
+; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b16 v0, off, s[4:7], null
 ; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-FAKE16-LABEL: fptrunc_f32_to_f16_afn:
@@ -517,7 +517,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_afn(ptr addrspace(1) %r,
 ; GFX13-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX13-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX13-GISEL-FAKE16-NEXT:    s_mov_b32 s2, -1
-; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null scope:SCOPE_SE
+; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX13-GISEL-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %a) {
 entry:
@@ -1416,7 +1416,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX13-SDAG-FAKE16-NEXT:    s_or_b32 s2, s2, s3
 ; GFX13-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
-; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b16 v0, off, s[4:7], null scope:SCOPE_SE
+; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b16 v0, off, s[4:7], null
 ; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-FAKE16-LABEL: fptrunc_f64_to_f16:
@@ -1473,7 +1473,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; GFX13-GISEL-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX13-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX13-GISEL-FAKE16-NEXT:    s_mov_b32 s2, -1
-; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null scope:SCOPE_SE
+; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX13-GISEL-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) {
@@ -1732,7 +1732,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16_afn(
 ; GFX13-SDAG-FAKE16-NEXT:    v_cvt_f32_f64_e32 v0, v[0:1]
 ; GFX13-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b16 v0, off, s[4:7], null scope:SCOPE_SE
+; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b16 v0, off, s[4:7], null
 ; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-FAKE16-LABEL: fptrunc_f64_to_f16_afn:
@@ -1746,7 +1746,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16_afn(
 ; GFX13-GISEL-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX13-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null scope:SCOPE_SE
+; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX13-GISEL-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) {
@@ -2013,7 +2013,7 @@ define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
 ; GFX13-SDAG-FAKE16-NEXT:    s_mov_b32 s5, s1
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
-; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b32 v0, off, s[4:7], null scope:SCOPE_SE
+; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b32 v0, off, s[4:7], null
 ; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-FAKE16-LABEL: fptrunc_v2f32_to_v2f16:
@@ -2027,7 +2027,7 @@ define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
 ; GFX13-GISEL-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX13-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-FAKE16-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
-; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], null scope:SCOPE_SE
+; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], null
 ; GFX13-GISEL-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) {
@@ -3607,7 +3607,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX13-SDAG-FAKE16-NEXT:    s_pack_ll_b32_b16 s2, s3, s2
 ; GFX13-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
-; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b32 v0, off, s[4:7], null scope:SCOPE_SE
+; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b32 v0, off, s[4:7], null
 ; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-FAKE16-LABEL: fptrunc_v2f64_to_v2f16:
@@ -3710,7 +3710,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX13-GISEL-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX13-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX13-GISEL-FAKE16-NEXT:    s_mov_b32 s2, -1
-; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], null scope:SCOPE_SE
+; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], null
 ; GFX13-GISEL-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) {
@@ -4016,7 +4016,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16_afn(
 ; GFX13-SDAG-FAKE16-NEXT:    v_cvt_f32_f64_e32 v0, v[0:1]
 ; GFX13-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-FAKE16-NEXT:    v_cvt_pk_f16_f32 v0, v0, v2
-; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b32 v0, off, s[4:7], null scope:SCOPE_SE
+; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b32 v0, off, s[4:7], null
 ; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-FAKE16-LABEL: fptrunc_v2f64_to_v2f16_afn:
@@ -4034,7 +4034,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16_afn(
 ; GFX13-GISEL-FAKE16-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX13-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], null scope:SCOPE_SE
+; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], null
 ; GFX13-GISEL-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) {
@@ -4279,7 +4279,7 @@ define amdgpu_kernel void @fneg_fptrunc_f32_to_f16(
 ; GFX13-SDAG-FAKE16-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GFX13-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b16 v0, off, s[4:7], null scope:SCOPE_SE
+; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b16 v0, off, s[4:7], null
 ; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-FAKE16-LABEL: fneg_fptrunc_f32_to_f16:
@@ -4294,7 +4294,7 @@ define amdgpu_kernel void @fneg_fptrunc_f32_to_f16(
 ; GFX13-GISEL-FAKE16-NEXT:    s_cvt_f16_f32 s2, s2
 ; GFX13-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX13-GISEL-FAKE16-NEXT:    s_mov_b32 s2, -1
-; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null scope:SCOPE_SE
+; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX13-GISEL-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) {
@@ -4540,7 +4540,7 @@ define amdgpu_kernel void @fabs_fptrunc_f32_to_f16(
 ; GFX13-SDAG-FAKE16-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
 ; GFX13-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b16 v0, off, s[4:7], null scope:SCOPE_SE
+; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b16 v0, off, s[4:7], null
 ; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-FAKE16-LABEL: fabs_fptrunc_f32_to_f16:
@@ -4555,7 +4555,7 @@ define amdgpu_kernel void @fabs_fptrunc_f32_to_f16(
 ; GFX13-GISEL-FAKE16-NEXT:    s_cvt_f16_f32 s2, s2
 ; GFX13-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX13-GISEL-FAKE16-NEXT:    s_mov_b32 s2, -1
-; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null scope:SCOPE_SE
+; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX13-GISEL-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) {
@@ -4801,7 +4801,7 @@ define amdgpu_kernel void @fneg_fabs_fptrunc_f32_to_f16(
 ; GFX13-SDAG-FAKE16-NEXT:    v_or_b32_e32 v0, 0x80000000, v0
 ; GFX13-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b16 v0, off, s[4:7], null scope:SCOPE_SE
+; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b16 v0, off, s[4:7], null
 ; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-FAKE16-LABEL: fneg_fabs_fptrunc_f32_to_f16:
@@ -4816,7 +4816,7 @@ define amdgpu_kernel void @fneg_fabs_fptrunc_f32_to_f16(
 ; GFX13-GISEL-FAKE16-NEXT:    s_cvt_f16_f32 s2, s2
 ; GFX13-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX13-GISEL-FAKE16-NEXT:    s_mov_b32 s2, -1
-; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null scope:SCOPE_SE
+; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX13-GISEL-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) #0 {
@@ -5070,7 +5070,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ; GFX13-SDAG-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX13-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b32 v0, off, s[4:7], null scope:SCOPE_SE
+; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b32 v0, off, s[4:7], null
 ; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-FAKE16-LABEL: fptrunc_f32_to_f16_zext_i32:
@@ -5085,7 +5085,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ; GFX13-GISEL-FAKE16-NEXT:    s_and_b32 s2, 0xffff, s2
 ; GFX13-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX13-GISEL-FAKE16-NEXT:    s_mov_b32 s2, -1
-; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], null scope:SCOPE_SE
+; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], null
 ; GFX13-GISEL-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) #0 {
@@ -5343,7 +5343,7 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ; GFX13-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-SDAG-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX13-SDAG-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b32 v0, off, s[4:7], null scope:SCOPE_SE
+; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b32 v0, off, s[4:7], null
 ; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-FAKE16-LABEL: fptrunc_fabs_f32_to_f16_zext_i32:
@@ -5360,7 +5360,7 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ; GFX13-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX13-GISEL-FAKE16-NEXT:    s_mov_b32 s2, -1
-; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], null scope:SCOPE_SE
+; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], null
 ; GFX13-GISEL-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) #0 {
@@ -5624,7 +5624,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_sext_i32(
 ; GFX13-SDAG-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX13-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-SDAG-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
-; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b32 v0, off, s[4:7], null scope:SCOPE_SE
+; GFX13-SDAG-FAKE16-NEXT:    buffer_store_b32 v0, off, s[4:7], null
 ; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-FAKE16-LABEL: fptrunc_f32_to_f16_sext_i32:
@@ -5639,7 +5639,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_sext_i32(
 ; GFX13-GISEL-FAKE16-NEXT:    s_sext_i32_i16 s2, s2
 ; GFX13-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX13-GISEL-FAKE16-NEXT:    s_mov_b32 s2, -1
-; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], null scope:SCOPE_SE
+; GFX13-GISEL-FAKE16-NEXT:    buffer_store_b32 v0, off, s[0:3], null
 ; GFX13-GISEL-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a) #0 {

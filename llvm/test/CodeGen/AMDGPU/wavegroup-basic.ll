@@ -45,7 +45,7 @@ define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %p) #0 "amdgpu-wave
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_or3_b32 v0, s2, v0, v0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset scope:SCOPE_SE
+; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
 ; CHECK-NEXT:    s_endpgm
 entry:
   %wg_x = call i32 @llvm.amdgcn.workgroup.id.x()
@@ -111,6 +111,7 @@ attributes #0 = {"amdgpu-flat-work-group-size"="256,256"}
 ; KERNEL-NEXT:        .offset:         0
 ; KERNEL-NEXT:        .size:           8
 ; KERNEL-NEXT:        .value_kind:     global_buffer
+; KERNEL-NEXT:    .asymmetric_cluster_clamp: false
 ; KERNEL-NEXT:    .enable_wavegroup: true
 ; KERNEL-NEXT:    .group_segment_fixed_size: 0
 ; KERNEL-NEXT:    .kernarg_segment_align: 8

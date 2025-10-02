@@ -59,10 +59,12 @@ private:
                                      Align Alignment,
                                      ImplicitParameter Param) const;
 
+  SDValue convertABITypeToValueType(SelectionDAG &DAG, SDValue Val,
+                                    CCValAssign &VA, const SDLoc &SL) const;
+
   SDValue lowerStackParameter(SelectionDAG &DAG, CCValAssign &VA,
                               const SDLoc &SL, SDValue Chain,
                               const ISD::InputArg &Arg) const;
-
   SDValue lowerWorkGroupId(
       SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
       AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
@@ -286,6 +288,9 @@ public:
 
   bool shouldPreservePtrArith(const Function &F, EVT PtrVT) const override;
 
+  bool canTransformPtrArithOutOfBounds(const Function &F,
+                                       EVT PtrVT) const override;
+
 private:
   // Analyze a combined offset from an amdgcn_s_buffer_load intrinsic and store
   // the three offsets (voffset, soffset and instoffset) into the SDValue[3]
@@ -467,6 +472,7 @@ public:
   SDValue lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerROTR(SDValue Op, SelectionDAG &DAG) const;
 
   Register getRegisterByName(const char* RegName, LLT VT,
                              const MachineFunction &MF) const override;

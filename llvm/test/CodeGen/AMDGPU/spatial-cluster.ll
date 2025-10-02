@@ -22,11 +22,11 @@ define amdgpu_kernel void @set_and_is_chain() "amdgpu-cluster-dims"="4,1,1" "amd
 ; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
-; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 12, 1), -1
-; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 12, 1)
-; CHECK-NEXT:    s_getreg_b32 s1, hwreg(HW_REG_MODE, 13, 1)
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 12, 1), s0
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 13, 1), s1
+; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 1), -1
+; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_MODE, 12, 1)
+; CHECK-NEXT:    s_getreg_b32 s1, hwreg(HW_REG_WAVE_MODE, 13, 1)
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_WAVE_MODE, 12, 1), s0
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_WAVE_MODE, 13, 1), s1
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.spatial.cluster.set.chain.start(i1 true)

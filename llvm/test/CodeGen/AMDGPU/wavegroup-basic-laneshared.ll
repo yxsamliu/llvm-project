@@ -40,7 +40,7 @@ define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %src, ptr addrspace
 ; CHECK-NEXT:    v_mov_b32_e32 v2, g1[8]
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    global_store_b64 v0, v[1:2], s[2:3] scale_offset scope:SCOPE_SE
+; CHECK-NEXT:    global_store_b64 v0, v[1:2], s[2:3] scale_offset
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .LBB0_2: ; %load
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
@@ -142,6 +142,7 @@ store:
 ; KERNEL-NEXT:        .offset:         8
 ; KERNEL-NEXT:        .size:           8
 ; KERNEL-NEXT:        .value_kind:     global_buffer
+; KERNEL-NEXT:    .asymmetric_cluster_clamp: false
 ; KERNEL-NEXT:    .enable_wavegroup: true
 ; KERNEL-NEXT:    .group_segment_fixed_size: 0
 ; KERNEL-NEXT:    .kernarg_segment_align: 8

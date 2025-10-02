@@ -251,7 +251,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX13-NEXT:    s_mov_b32 s8, s0
 ; GFX13-NEXT:    s_mov_b32 s9, s1
 ; GFX13-NEXT:    v_max3_num_f32 v0, v0, v1, v2
-; GFX13-NEXT:    buffer_store_b32 v0, off, s[8:11], null scope:SCOPE_SE
+; GFX13-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX13-NEXT:    s_endpgm
   %a = load volatile  float, ptr addrspace(1) %aptr, align 4
   %b = load volatile float, ptr addrspace(1) %bptr, align 4
@@ -501,7 +501,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX13-NEXT:    s_mov_b32 s8, s0
 ; GFX13-NEXT:    s_mov_b32 s9, s1
 ; GFX13-NEXT:    v_max3_num_f32 v0, v2, v0, v1
-; GFX13-NEXT:    buffer_store_b32 v0, off, s[8:11], null scope:SCOPE_SE
+; GFX13-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX13-NEXT:    s_endpgm
   %a = load volatile float, ptr addrspace(1) %aptr, align 4
   %b = load volatile float, ptr addrspace(1) %bptr, align 4
@@ -878,7 +878,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX13-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX13-TRUE16-NEXT:    s_mov_b32 s9, s1
 ; GFX13-TRUE16-NEXT:    v_max3_num_f16 v0.l, v0.l, v1.l, v2.l
-; GFX13-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null scope:SCOPE_SE
+; GFX13-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null
 ; GFX13-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-FAKE16-LABEL: test_fmax3_olt_0_f16:
@@ -908,7 +908,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX13-FAKE16-NEXT:    s_mov_b32 s8, s0
 ; GFX13-FAKE16-NEXT:    s_mov_b32 s9, s1
 ; GFX13-FAKE16-NEXT:    v_max3_num_f16 v0, v0, v1, v2
-; GFX13-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null scope:SCOPE_SE
+; GFX13-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null
 ; GFX13-FAKE16-NEXT:    s_endpgm
   %a = load volatile half, ptr addrspace(1) %aptr, align 2
   %b = load volatile half, ptr addrspace(1) %bptr, align 2
@@ -1286,7 +1286,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX13-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX13-TRUE16-NEXT:    s_mov_b32 s9, s1
 ; GFX13-TRUE16-NEXT:    v_max3_num_f16 v0.l, v0.l, v1.l, v2.l
-; GFX13-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null scope:SCOPE_SE
+; GFX13-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null
 ; GFX13-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-FAKE16-LABEL: test_fmax3_olt_1_f16:
@@ -1316,7 +1316,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX13-FAKE16-NEXT:    s_mov_b32 s8, s0
 ; GFX13-FAKE16-NEXT:    s_mov_b32 s9, s1
 ; GFX13-FAKE16-NEXT:    v_max3_num_f16 v0, v2, v0, v1
-; GFX13-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null scope:SCOPE_SE
+; GFX13-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null
 ; GFX13-FAKE16-NEXT:    s_endpgm
   %a = load volatile half, ptr addrspace(1) %aptr, align 2
   %b = load volatile half, ptr addrspace(1) %bptr, align 2

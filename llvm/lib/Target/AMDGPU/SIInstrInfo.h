@@ -252,7 +252,7 @@ public:
     return ST;
   }
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI) const override;
 
   bool isIgnorableUse(const MachineOperand &MO) const override;
 
@@ -832,9 +832,11 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::Spill;
   }
 
-  static bool isSpill(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::Spill;
+  static bool isSpill(const MCInstrDesc &Desc) {
+    return Desc.TSFlags & SIInstrFlags::Spill;
   }
+
+  static bool isSpill(const MachineInstr &MI) { return isSpill(MI.getDesc()); }
 
   static bool isWWMRegSpillOpcode(uint16_t Opcode) {
     return Opcode == AMDGPU::SI_SPILL_WWM_V32_SAVE ||
@@ -966,6 +968,41 @@ public:
     case AMDGPU::V_SEND_VGPR_NEXT_B32_LANESHARED:
     case AMDGPU::V_SEND_VGPR_PREV_B32:
     case AMDGPU::V_SEND_VGPR_PREV_B32_LANESHARED:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  static bool isRTS(const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    case AMDGPU::RTS_READ_RESULT_ALL_STOP:
+    case AMDGPU::RTS_READ_RESULT_ONGOING:
+    case AMDGPU::RTS_FLUSH:
+    case AMDGPU::RTS_RAY_SAVE:
+    case AMDGPU::RTS_RAY_RESTORE:
+    case AMDGPU::RTS_UPDATE_RAY:
+    case AMDGPU::RTS_TRACE_RAY:
+    case AMDGPU::RTS_TRACE_RAY_NONBLOCK:
+    case AMDGPU::RTS_READ_VERTEX:
+    case AMDGPU::RTS_READ_VERTEX_COORDS:
+    case AMDGPU::RTS_READ_PACKET_INFO:
+    case AMDGPU::RTS_READ_PRIM_INFO:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  static bool isSWC(const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    case AMDGPU::SWC_REORDER:
+    case AMDGPU::SWC_FLUSH:
+    case AMDGPU::SWC_REORDER_SWAP:
+    case AMDGPU::SWC_REORDER_SWAP_RESUME:
+    case AMDGPU::SWC_GET_EXCHANGE_STATE:
+    case AMDGPU::SWC_SET_EXCHANGE_STATE:
+    case AMDGPU::SWC_ABORT_EXCHANGE:
       return true;
     default:
       return false;
@@ -1284,6 +1321,8 @@ public:
                          const MachineOperand &MO) const {
     return isImmOperandLegal(MI.getDesc(), OpNo, MO);
   }
+
+  bool isNeverCoissue(MachineInstr &MI) const;
 
   /// Check if this immediate value can be used for AV_MOV_B64_IMM_PSEUDO.
   bool isLegalAV64PseudoImm(uint64_t Imm) const;
@@ -1631,10 +1670,9 @@ public:
   /// Return true if this opcode should not be used by codegen.
   bool isAsmOnlyOpcode(int MCOp) const;
 
-  const TargetRegisterClass *getRegClass(const MCInstrDesc &TID, unsigned OpNum,
-                                         const TargetRegisterInfo *TRI,
-                                         const MachineFunction &MF)
-    const override;
+  const TargetRegisterClass *
+  getRegClass(const MCInstrDesc &TID, unsigned OpNum,
+              const TargetRegisterInfo *TRI) const override;
 
   const TargetRegisterClass *
   getRegClassForBlockOp(const TargetRegisterInfo *TRI,

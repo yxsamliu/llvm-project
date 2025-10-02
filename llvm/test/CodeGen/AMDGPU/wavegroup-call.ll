@@ -19,7 +19,7 @@ define void @callee() {
 ; CHECK-NEXT:    s_wait_samplecnt 0x0
 ; CHECK-NEXT:    s_wait_rtscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    scratch_store_b32 off, v41, s32 scope:SCOPE_SE ; 4-byte Folded Spill
+; CHECK-NEXT:    scratch_store_b32 off, v41, s32 ; 4-byte Folded Spill
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; clobber v41
 ; CHECK-NEXT:    ;;#ASMEND
@@ -95,6 +95,7 @@ attributes #0 = {"amdgpu-flat-work-group-size"="256,256"}
 
 ; KERNEL:      {{^}}amdhsa.kernels:
 ; KERNEL-NEXT:  - .args: []
+; KERNEL-NEXT:    .asymmetric_cluster_clamp: false
 ; KERNEL-NEXT:    .enable_wavegroup: true
 ; KERNEL-NEXT:    .group_segment_fixed_size: 0
 ; KERNEL-NEXT:    .kernarg_segment_align: 4

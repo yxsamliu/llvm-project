@@ -9,18 +9,18 @@ target triple = "amdgcn-amd-amdhsa"
 define amdgpu_kernel void @addrspacecast_dds_to_flat(ptr %inout) {
 ; GFX1300-LABEL: addrspacecast_dds_to_flat:
 ; GFX1300:       ; %bb.0:
-; GFX1300-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1300-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1300-NEXT:    s_mov_b64 s[2:3], src_shared_base
+; GFX1300-NEXT:    s_mov_b64 s[0:1], src_shared_base
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    flat_load_b32 v0, v2, s[0:1]
+; GFX1300-NEXT:    flat_load_b32 v0, v2, s[2:3]
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u32_e32 v1, 0x80000000, v0
 ; GFX1300-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v0
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1300-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc_lo
-; GFX1300-NEXT:    v_cndmask_b32_e64 v1, 0, s3, vcc_lo
-; GFX1300-NEXT:    flat_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
+; GFX1300-NEXT:    v_cndmask_b32_e64 v1, 0, s1, vcc_lo
+; GFX1300-NEXT:    flat_store_b64 v2, v[0:1], s[2:3]
 ; GFX1300-NEXT:    s_endpgm
   %ptr = load ptr addrspace(11), ptr %inout
   %cast = addrspacecast ptr addrspace(11) %ptr to ptr
@@ -31,15 +31,15 @@ define amdgpu_kernel void @addrspacecast_dds_to_flat(ptr %inout) {
 define amdgpu_kernel void @addrspacecast_dds_to_flat_nonnull(ptr %inout) {
 ; GFX1300-LABEL: addrspacecast_dds_to_flat_nonnull:
 ; GFX1300:       ; %bb.0:
-; GFX1300-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX1300-NEXT:    s_mov_b64 s[2:3], src_shared_base
+; GFX1300-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24
+; GFX1300-NEXT:    s_mov_b64 s[0:1], src_shared_base
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1300-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s3
+; GFX1300-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s1
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    flat_load_b32 v0, v2, s[0:1]
+; GFX1300-NEXT:    flat_load_b32 v0, v2, s[2:3]
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u32_e32 v0, 0x80000000, v0
-; GFX1300-NEXT:    flat_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
+; GFX1300-NEXT:    flat_store_b64 v2, v[0:1], s[2:3]
 ; GFX1300-NEXT:    s_endpgm
   %ptr = load ptr addrspace(11), ptr %inout, !nonnull !{}
   %cast = addrspacecast ptr addrspace(11) %ptr to ptr
@@ -50,30 +50,30 @@ define amdgpu_kernel void @addrspacecast_dds_to_flat_nonnull(ptr %inout) {
 define amdgpu_kernel void @addrspacecast_dds_to_flat_uniform(ptr %inout, ptr addrspace(11) %ptr) {
 ; GFX1300-SDAG-LABEL: addrspacecast_dds_to_flat_uniform:
 ; GFX1300-SDAG:       ; %bb.0:
+; GFX1300-SDAG-NEXT:    s_mov_b64 s[2:3], src_shared_base
 ; GFX1300-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX1300-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-SDAG-NEXT:    s_add_co_i32 s4, s2, 0x80000000
 ; GFX1300-SDAG-NEXT:    s_cmp_lg_u32 s2, -1
-; GFX1300-SDAG-NEXT:    s_mov_b64 s[2:3], src_shared_base
 ; GFX1300-SDAG-NEXT:    s_cselect_b32 s2, s4, 0
 ; GFX1300-SDAG-NEXT:    s_cselect_b32 s3, s3, 0
 ; GFX1300-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1300-SDAG-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-SDAG-NEXT:    flat_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
+; GFX1300-SDAG-NEXT:    flat_store_b64 v2, v[0:1], s[0:1]
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1300-GISEL-LABEL: addrspacecast_dds_to_flat_uniform:
 ; GFX1300-GISEL:       ; %bb.0:
 ; GFX1300-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
-; GFX1300-GISEL-NEXT:    s_mov_b64 s[4:5], src_shared_base
+; GFX1300-GISEL-NEXT:    s_mov_b64 s[6:7], src_shared_base
 ; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1300-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-GISEL-NEXT:    s_add_co_u32 s4, s2, 0x80000000
+; GFX1300-GISEL-NEXT:    s_add_co_u32 s6, s2, 0x80000000
 ; GFX1300-GISEL-NEXT:    s_cmp_lg_u32 s2, -1
-; GFX1300-GISEL-NEXT:    s_cselect_b64 s[2:3], s[4:5], 0
+; GFX1300-GISEL-NEXT:    s_cselect_b64 s[2:3], s[6:7], 0
 ; GFX1300-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1300-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
-; GFX1300-GISEL-NEXT:    flat_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
+; GFX1300-GISEL-NEXT:    flat_store_b64 v2, v[0:1], s[0:1]
 ; GFX1300-GISEL-NEXT:    s_endpgm
   %cast = addrspacecast ptr addrspace(11) %ptr to ptr
   store ptr %cast, ptr %inout
@@ -92,7 +92,7 @@ define amdgpu_kernel void @addrspacecast_flat_to_dds(ptr %inout) {
 ; GFX1300-NEXT:    v_add_nc_u32_e32 v3, 0x80000000, v0
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1300-NEXT:    v_cndmask_b32_e32 v0, -1, v3, vcc_lo
-; GFX1300-NEXT:    flat_store_b32 v2, v0, s[0:1] scope:SCOPE_SE
+; GFX1300-NEXT:    flat_store_b32 v2, v0, s[0:1]
 ; GFX1300-NEXT:    s_endpgm
   %ptr = load ptr, ptr %inout
   %cast = addrspacecast ptr %ptr to ptr addrspace(11)
@@ -109,7 +109,7 @@ define amdgpu_kernel void @addrspacecast_flat_to_dds_nonnull(ptr %inout) {
 ; GFX1300-SDAG-NEXT:    flat_load_b32 v1, v0, s[0:1]
 ; GFX1300-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-SDAG-NEXT:    v_add_nc_u32_e32 v1, 0x80000000, v1
-; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1300-GISEL-LABEL: addrspacecast_flat_to_dds_nonnull:
@@ -120,7 +120,7 @@ define amdgpu_kernel void @addrspacecast_flat_to_dds_nonnull(ptr %inout) {
 ; GFX1300-GISEL-NEXT:    flat_load_b64 v[0:1], v2, s[0:1]
 ; GFX1300-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-GISEL-NEXT:    v_add_nc_u32_e32 v0, 0x80000000, v0
-; GFX1300-GISEL-NEXT:    flat_store_b32 v2, v0, s[0:1] scope:SCOPE_SE
+; GFX1300-GISEL-NEXT:    flat_store_b32 v2, v0, s[0:1]
 ; GFX1300-GISEL-NEXT:    s_endpgm
   %ptr = load ptr, ptr %inout, !nonnull !{}
   %cast = addrspacecast ptr %ptr to ptr addrspace(11)
@@ -138,7 +138,7 @@ define amdgpu_kernel void @addrspacecast_flat_to_dds_uniform(ptr %inout, ptr %pt
 ; GFX1300-SDAG-NEXT:    s_cselect_b32 s2, s4, -1
 ; GFX1300-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1300-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1300-GISEL-LABEL: addrspacecast_flat_to_dds_uniform:
@@ -151,7 +151,7 @@ define amdgpu_kernel void @addrspacecast_flat_to_dds_uniform(ptr %inout, ptr %pt
 ; GFX1300-GISEL-NEXT:    s_cselect_b32 s2, s4, -1
 ; GFX1300-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1300-GISEL-NEXT:    flat_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX1300-GISEL-NEXT:    flat_store_b32 v1, v0, s[0:1]
 ; GFX1300-GISEL-NEXT:    s_endpgm
   %cast = addrspacecast ptr %ptr to ptr addrspace(11)
   store ptr addrspace(11) %cast, ptr %inout
@@ -167,7 +167,7 @@ define amdgpu_kernel void @addrspacecast_dds_to_lds(ptr %inout) {
 ; GFX1300-NEXT:    flat_load_b32 v1, v0, s[0:1]
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    v_bfe_i32 v1, v1, 0, 24
-; GFX1300-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1300-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1300-NEXT:    s_endpgm
   %ptr = load ptr addrspace(11), ptr %inout
   %cast = addrspacecast ptr addrspace(11) %ptr to ptr addrspace(3)
@@ -183,7 +183,7 @@ define amdgpu_kernel void @addrspacecast_dds_to_lds_uniform(ptr %inout, ptr addr
 ; GFX1300-SDAG-NEXT:    s_bfe_i32 s2, s2, 0x180000
 ; GFX1300-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1300-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1300-GISEL-LABEL: addrspacecast_dds_to_lds_uniform:
@@ -194,7 +194,7 @@ define amdgpu_kernel void @addrspacecast_dds_to_lds_uniform(ptr %inout, ptr addr
 ; GFX1300-GISEL-NEXT:    s_bfe_i32 s2, s2, 0x180000
 ; GFX1300-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1300-GISEL-NEXT:    flat_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX1300-GISEL-NEXT:    flat_store_b32 v1, v0, s[0:1]
 ; GFX1300-GISEL-NEXT:    s_endpgm
   %cast = addrspacecast ptr addrspace(11) %ptr to ptr addrspace(3)
   store ptr addrspace(3) %cast, ptr %inout
@@ -211,7 +211,7 @@ define amdgpu_kernel void @addrspacecast_lds_to_dds(ptr %inout) {
 ; GFX1300-SDAG-NEXT:    flat_load_b32 v1, v0, s[0:1]
 ; GFX1300-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-SDAG-NEXT:    v_lshl_or_b32 v1, s2, 24, v1
-; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1300-GISEL-LABEL: addrspacecast_lds_to_dds:
@@ -225,7 +225,7 @@ define amdgpu_kernel void @addrspacecast_lds_to_dds(ptr %inout) {
 ; GFX1300-GISEL-NEXT:    flat_load_b32 v1, v0, s[0:1]
 ; GFX1300-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-GISEL-NEXT:    v_or_b32_e32 v1, s2, v1
-; GFX1300-GISEL-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1300-GISEL-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1300-GISEL-NEXT:    s_endpgm
   %ptr = load ptr addrspace(3), ptr %inout
   %cast = addrspacecast ptr addrspace(3) %ptr to ptr addrspace(11)
@@ -243,7 +243,7 @@ define amdgpu_kernel void @addrspacecast_lds_to_dds_uniform(ptr %inout, ptr addr
 ; GFX1300-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-SDAG-NEXT:    s_or_b32 s2, s2, s3
 ; GFX1300-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1300-SDAG-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1300-GISEL-LABEL: addrspacecast_lds_to_dds_uniform:
@@ -256,7 +256,7 @@ define amdgpu_kernel void @addrspacecast_lds_to_dds_uniform(ptr %inout, ptr addr
 ; GFX1300-GISEL-NEXT:    s_or_b32 s2, s2, s3
 ; GFX1300-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1300-GISEL-NEXT:    flat_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
+; GFX1300-GISEL-NEXT:    flat_store_b32 v1, v0, s[0:1]
 ; GFX1300-GISEL-NEXT:    s_endpgm
   %cast = addrspacecast ptr addrspace(3) %ptr to ptr addrspace(11)
   store ptr addrspace(11) %cast, ptr %inout

@@ -73,7 +73,7 @@ attributes #0 = { "amdgpu-wavegroup-enable" }
 !28 = !{i32 1, !"amdgpu_printf_kind", !"hostcall"}
 !29 = !{i32 2, !"Debug Info Version", i32 3}
 !30 = !{i32 1, !"wchar_size", i32 4}
-!31 = !{i32 128, i32 1, i32 1}
+!31 = !{i32 128, i32 8, i32 1}
 
 ; Check that a new DISubprogram got created during cloning for each of the specializations.
 ;.
@@ -113,7 +113,7 @@ attributes #0 = { "amdgpu-wavegroup-enable" }
 ; CHECK: [[META28]] = !{[[META29:![0-9]+]]}
 ; CHECK: [[META29]] = !DISubrange(count: 18)
 ; CHECK: [[META30]] = !{}
-; CHECK: [[META31]] = !{i32 128, i32 1, i32 1}
+; CHECK: [[META31]] = !{i32 128, i32 8, i32 1}
 ; CHECK: [[META32:![0-9]+]] = distinct !DISubprogram(name: "test_kernel", linkageName: "test_kernel.rank_0_1", scope: [[META5]], file: [[META5]], line: 29, type: [[META6]], scopeLine: 30, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META8]], retainedNodes: [[META30]])
 ; CHECK: [[META33:![0-9]+]] = distinct !DISubprogram(name: "test_kernel", linkageName: "test_kernel.rank_2_3_4_5_6_7", scope: [[META5]], file: [[META5]], line: 29, type: [[META6]], scopeLine: 30, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META8]], retainedNodes: [[META30]])
 ; CHECK: [[META34:![0-9]+]] = !{[[META35:![0-9]+]]}

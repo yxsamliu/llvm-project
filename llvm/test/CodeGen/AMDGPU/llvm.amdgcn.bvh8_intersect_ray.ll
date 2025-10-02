@@ -39,8 +39,8 @@ define amdgpu_ps <10 x float> @image_bvh8_intersect_ray(i64 %node_ptr, float %ra
 ; GFX13-SDAG-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX13-SDAG-NEXT:    image_bvh8_intersect_ray v[0:9], [v[0:1], v[2:3], v[16:18], v[19:21], v9], s[0:3]
 ; GFX13-SDAG-NEXT:    s_wait_rtscnt 0x0
-; GFX13-SDAG-NEXT:    global_store_b96 v[10:11], v[16:18], off scope:SCOPE_SE
-; GFX13-SDAG-NEXT:    global_store_b96 v[12:13], v[19:21], off scope:SCOPE_SE
+; GFX13-SDAG-NEXT:    global_store_b96 v[10:11], v[16:18], off
+; GFX13-SDAG-NEXT:    global_store_b96 v[12:13], v[19:21], off
 ; GFX13-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-GISEL-LABEL: image_bvh8_intersect_ray:
@@ -51,8 +51,8 @@ define amdgpu_ps <10 x float> @image_bvh8_intersect_ray(i64 %node_ptr, float %ra
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX13-GISEL-NEXT:    image_bvh8_intersect_ray v[0:9], [v[0:1], v[2:3], v[14:16], v[17:19], v9], s[0:3]
 ; GFX13-GISEL-NEXT:    s_wait_rtscnt 0x0
-; GFX13-GISEL-NEXT:    global_store_b96 v[10:11], v[14:16], off scope:SCOPE_SE
-; GFX13-GISEL-NEXT:    global_store_b96 v[12:13], v[17:19], off scope:SCOPE_SE
+; GFX13-GISEL-NEXT:    global_store_b96 v[10:11], v[14:16], off
+; GFX13-GISEL-NEXT:    global_store_b96 v[12:13], v[17:19], off
 ; GFX13-GISEL-NEXT:    ; return to shader part epilog
 main_body:
   %ray_origin0 = insertelement <3 x float> poison, float %ray_origin_x, i32 0
@@ -104,8 +104,8 @@ define amdgpu_ps <10 x float> @image_bvh8_intersect_ray_1(i64 %node_ptr, float %
 ; GFX13-SDAG-NEXT:    v_mov_b32_e32 v3, 1
 ; GFX13-SDAG-NEXT:    image_bvh8_intersect_ray v[0:9], [v[0:1], v[2:3], v[16:18], v[19:21], v9], s[0:3]
 ; GFX13-SDAG-NEXT:    s_wait_rtscnt 0x0
-; GFX13-SDAG-NEXT:    global_store_b96 v[10:11], v[16:18], off scope:SCOPE_SE
-; GFX13-SDAG-NEXT:    global_store_b96 v[12:13], v[19:21], off scope:SCOPE_SE
+; GFX13-SDAG-NEXT:    global_store_b96 v[10:11], v[16:18], off
+; GFX13-SDAG-NEXT:    global_store_b96 v[12:13], v[19:21], off
 ; GFX13-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-GISEL-LABEL: image_bvh8_intersect_ray_1:
@@ -116,8 +116,8 @@ define amdgpu_ps <10 x float> @image_bvh8_intersect_ray_1(i64 %node_ptr, float %
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v3, 1
 ; GFX13-GISEL-NEXT:    image_bvh8_intersect_ray v[0:9], [v[0:1], v[2:3], v[14:16], v[17:19], v9], s[0:3]
 ; GFX13-GISEL-NEXT:    s_wait_rtscnt 0x0
-; GFX13-GISEL-NEXT:    global_store_b96 v[10:11], v[14:16], off scope:SCOPE_SE
-; GFX13-GISEL-NEXT:    global_store_b96 v[12:13], v[17:19], off scope:SCOPE_SE
+; GFX13-GISEL-NEXT:    global_store_b96 v[10:11], v[14:16], off
+; GFX13-GISEL-NEXT:    global_store_b96 v[12:13], v[17:19], off
 ; GFX13-GISEL-NEXT:    ; return to shader part epilog
 main_body:
   %ray_origin0 = insertelement <3 x float> poison, float %ray_origin_x, i32 0

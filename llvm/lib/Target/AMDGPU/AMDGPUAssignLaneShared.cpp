@@ -23,6 +23,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
 using namespace AMDGPU;
@@ -191,15 +192,27 @@ static Function *findUseFunction(User *U) {
 bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
   // Validate spatial cluster kernels.
   for (auto &F : M.functions()) {
-    if (getSpatialClusterEnable(F)) {
-      if (!getWavegroupEnable(F))
-        report_fatal_error("Spatial cluster kernel is not wavegroup kernel");
+    if (getSpatialClusterEnable(F) && !getWavegroupEnable(F)) {
+      F.getContext().diagnose(DiagnosticInfoGeneric(
+          "Spatial cluster kernel is not wavegroup kernel"));
+      return false;
+    }
+    if (getSpatialClusterEnable(F) || getAsymmetricClusterClampEnable(F)) {
+      std::string kernelStr = getSpatialClusterEnable(F)
+                                  ? "Spatial cluster kernel"
+                                  : "Asymmetric cluster clamp kernel";
       AMDGPU::ClusterDimsAttr ClusterDims = AMDGPU::ClusterDimsAttr::get(F);
-      if (!ClusterDims.isFixedDims())
-        report_fatal_error("Spatial cluster kernel has non fixed cluster dims");
+      if (!ClusterDims.isFixedDims()) {
+        F.getContext().diagnose(DiagnosticInfoGeneric(
+            llvm::formatv("{0} has non fixed cluster dims", kernelStr)));
+        return false;
+      }
       auto &Dims = ClusterDims.getDims();
-      if (Dims[1] != 1 || Dims[2] != 1)
-        report_fatal_error("Spatial cluster kernel is not 1D");
+      if (Dims[1] != 1 || Dims[2] != 1) {
+        F.getContext().diagnose(
+            DiagnosticInfoGeneric(llvm::formatv("{0} is not 1D", kernelStr)));
+        return false;
+      }
     }
   }
   // Collect all lane-shared global variables.
@@ -250,6 +263,11 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
   DenseSet<GlobalVariable *> FuzzyUsedGVs;
   for (auto &K : Func2GVs) {
     Function *F = K.first;
+    // Ignore functions that are called by wavegroup rank-function,
+    // which looks like a callback by the rank-call intrinsic.
+    if (getWavegroupRankFunction(*F))
+      continue;
+
     if (F->hasAddressTaken(nullptr,
                            /* IgnoreCallbackUses */ false,
                            /* IgnoreAssumeLikeCalls */ false,

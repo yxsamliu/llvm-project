@@ -5,7 +5,7 @@ define amdgpu_ps void @test_permute_pair_gensgpr_b32_inreg(i32 %src0, i64 inreg 
 ; GFX13-LABEL: test_permute_pair_gensgpr_b32_inreg:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_permute_pair_gensgpr_b32 v0, v0, s[0:1]
-; GFX13-NEXT:    global_store_b32 v[1:2], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[1:2], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call i32 @llvm.amdgcn.permute.pair.gensgpr.b32(i32 %src0, i64 %src1)
@@ -20,7 +20,7 @@ define amdgpu_ps void @test_permute_pair_gensgpr_b32(i32 %src0, i64 %src1, ptr a
 ; GFX13-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_permute_pair_gensgpr_b32 v0, v0, s[0:1]
-; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call i32 @llvm.amdgcn.permute.pair.gensgpr.b32(i32 %src0, i64 %src1)
@@ -32,7 +32,7 @@ define amdgpu_ps void @test_permute_pair_bcast_b32(i32 %src0, ptr addrspace(1) %
 ; GFX13-LABEL: test_permute_pair_bcast_b32:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_permute_pair_bcast_b32 v0, v0 aux_data:2
-; GFX13-NEXT:    global_store_b32 v[1:2], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[1:2], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call i32 @llvm.amdgcn.permute.pair.bcast.b32(i32 %src0, i32 2)
@@ -44,7 +44,7 @@ define amdgpu_ps void @test_permute_pair_2src_rotate_group_b32(i32 %src0, i32 %s
 ; GFX13-LABEL: test_permute_pair_2src_rotate_group_b32:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_permute_pair_2src_rotate_group_b32 v0, v0, v1 aux_data:2
-; GFX13-NEXT:    global_store_b32 v[2:3], v0, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
   %res = call i32 @llvm.amdgcn.permute.pair.2src.rotate.group.b32(i32 %src0, i32 %src1, i32 2)

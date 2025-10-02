@@ -72,6 +72,8 @@ public:
   void handleAMDGPUFlatWorkGroupSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUWavegroupKernelAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUSpatialClusterKernelAttr(Decl *D, const ParsedAttr &AL);
+  void handleAMDGPUAsymmetricClusterClampKernelAttr(Decl *D,
+                                                    const ParsedAttr &AL);
   void handleAMDGPUNoRankSpecializationAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUEnableWaspAttr(Decl *D, const ParsedAttr &AL);
 

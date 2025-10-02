@@ -149,7 +149,7 @@ define amdgpu_kernel void @truncstore_arg_v16i32_to_v16i8(ptr addrspace(1) %out,
 ; GFX13-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v0, s4
 ; GFX13-NEXT:    v_dual_mov_b32 v1, s5 :: v_dual_mov_b32 v2, s3
 ; GFX13-NEXT:    v_mov_b32_e32 v3, s2
-; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[0:1] scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
 ; GFX13-NEXT:    s_endpgm
   %trunc = trunc <16 x i32> %in to <16 x i8>
   store <16 x i8> %trunc, ptr addrspace(1) %out
@@ -305,7 +305,7 @@ define amdgpu_kernel void @truncstore_arg_v16i64_to_v16i8(ptr addrspace(1) %out,
 ; GFX13-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v0, s5
 ; GFX13-NEXT:    v_dual_mov_b32 v1, s4 :: v_dual_mov_b32 v2, s3
 ; GFX13-NEXT:    v_mov_b32_e32 v3, s2
-; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[0:1] scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
 ; GFX13-NEXT:    s_endpgm
   %trunc = trunc <16 x i64> %in to <16 x i8>
   store <16 x i8> %trunc, ptr addrspace(1) %out
@@ -377,7 +377,7 @@ define void @truncstore_v5i32_to_v5i1(ptr addrspace(1) %out, <5 x i32> %val) {
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_bitop3_b16 v2, v2, v5, v4 bitop3:0xfe
 ; GFX13-NEXT:    v_bitop3_b16 v2, v2, 31, v3 bitop3:0xc8
-; GFX13-NEXT:    global_store_b8 v[0:1], v2, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b8 v[0:1], v2, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %trunc = trunc <5 x i32> %val to <5 x i1>
   store <5 x i1> %trunc, ptr addrspace(1) %out
@@ -439,8 +439,8 @@ define void @truncstore_v5i32_to_v5i8(ptr addrspace(1) %out, <5 x i32> %val) {
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b8 v[0:1], v6, off offset:4 scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[0:1], v2, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b8 v[0:1], v6, off offset:4
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %trunc = trunc <5 x i32> %val to <5 x i8>
   store <5 x i8> %trunc, ptr addrspace(1) %out
@@ -521,7 +521,7 @@ define void @truncstore_v6i32_to_v6i1(ptr addrspace(1) %out, <6 x i32> %val) {
 ; GFX13-NEXT:    v_bitop3_b16 v2, v2, v6, v5 bitop3:0xfe
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_bitop3_b16 v2, v2, 63, v3 bitop3:0xc8
-; GFX13-NEXT:    global_store_b8 v[0:1], v2, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b8 v[0:1], v2, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %trunc = trunc <6 x i32> %val to <6 x i1>
   store <6 x i1> %trunc, ptr addrspace(1) %out
@@ -590,8 +590,8 @@ define void @truncstore_v6i32_to_v6i8(ptr addrspace(1) %out, <6 x i32> %val) {
 ; GFX13-NEXT:    v_bitop3_b16 v4, v6, v4, 0xff bitop3:0xec
 ; GFX13-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b16 v[0:1], v4, off offset:4 scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b32 v[0:1], v2, off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b16 v[0:1], v4, off offset:4
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %trunc = trunc <6 x i32> %val to <6 x i8>
   store <6 x i8> %trunc, ptr addrspace(1) %out
@@ -641,7 +641,7 @@ define void @truncstore_v6i32_to_v6i16(ptr addrspace(1) %out, <6 x i32> %val) {
 ; GFX13-NEXT:    v_perm_b32 v6, v7, v6, 0x5040100
 ; GFX13-NEXT:    v_perm_b32 v5, v5, v4, 0x5040100
 ; GFX13-NEXT:    v_perm_b32 v4, v3, v2, 0x5040100
-; GFX13-NEXT:    global_store_b96 v[0:1], v[4:6], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b96 v[0:1], v[4:6], off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %trunc = trunc <6 x i32> %val to <6 x i16>
   store <6 x i16> %trunc, ptr addrspace(1) %out
@@ -705,8 +705,8 @@ define void @truncstore_v10i32_to_v10i16(ptr addrspace(1) %out, <10 x i32> %val)
 ; GFX13-NEXT:    v_perm_b32 v8, v9, v8, 0x5040100
 ; GFX13-NEXT:    v_perm_b32 v5, v3, v2, 0x5040100
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    global_store_b32 v[0:1], v4, off offset:16 scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b128 v[0:1], v[5:8], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[0:1], v4, off offset:16
+; GFX13-NEXT:    global_store_b128 v[0:1], v[5:8], off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %trunc = trunc <10 x i32> %val to <10 x i16>
   store <10 x i16> %trunc, ptr addrspace(1) %out
@@ -794,9 +794,9 @@ define void @truncstore_v18i32_to_v18i16(ptr addrspace(1) %out, <18 x i32> %val)
 ; GFX13-NEXT:    v_perm_b32 v8, v9, v8, 0x5040100
 ; GFX13-NEXT:    v_perm_b32 v5, v3, v2, 0x5040100
 ; GFX13-NEXT:    s_clause 0x2
-; GFX13-NEXT:    global_store_b32 v[0:1], v4, off offset:32 scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b128 v[0:1], v[13:16], off offset:16 scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b128 v[0:1], v[5:8], off scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b32 v[0:1], v4, off offset:32
+; GFX13-NEXT:    global_store_b128 v[0:1], v[13:16], off offset:16
+; GFX13-NEXT:    global_store_b128 v[0:1], v[5:8], off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %trunc = trunc <18 x i32> %val to <18 x i16>
   store <18 x i16> %trunc, ptr addrspace(1) %out
@@ -974,11 +974,11 @@ define void @truncstore_v36i32_to_v36i16(ptr addrspace(1) %out, <36 x i32> %val)
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_perm_b32 v2, v34, v37, 0x5040100
 ; GFX13-NEXT:    s_clause 0x4
-; GFX13-NEXT:    global_store_b128 v[0:1], v[13:16], off offset:16 scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b128 v[0:1], v[5:8], off scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b128 v[0:1], v[17:20], off offset:48 scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b128 v[0:1], v[9:12], off offset:32 scope:SCOPE_SE
-; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off offset:64 scope:SCOPE_SE
+; GFX13-NEXT:    global_store_b128 v[0:1], v[13:16], off offset:16
+; GFX13-NEXT:    global_store_b128 v[0:1], v[5:8], off
+; GFX13-NEXT:    global_store_b128 v[0:1], v[17:20], off offset:48
+; GFX13-NEXT:    global_store_b128 v[0:1], v[9:12], off offset:32
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off offset:64
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %trunc = trunc <36 x i32> %val to <36 x i16>
   store <36 x i16> %trunc, ptr addrspace(1) %out
