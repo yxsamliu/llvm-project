@@ -1084,10 +1084,6 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
           DBuilder.createBasicType(Name, Width, llvm::dwarf::DW_ATE_boolean);  \
     return SingletonId;                                                        \
   }
-<<<<<<< HEAD
-
-=======
->>>>>>> 5df11fceebba9416e72b57d3ef9f6698f2fc5f8d
 #include "clang/Basic/AMDGPUTypes.def"
   case BuiltinType::UChar:
   case BuiltinType::Char_U:

@@ -458,8 +458,6 @@ static Value *GetOrInsertAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
 
   return CGF.Builder.CreateLoad(
       RawAddress(P, PTy, CharUnits::One(), KnownNonNull));
-<<<<<<< HEAD
-=======
 }
 
 static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID) {
@@ -494,7 +492,6 @@ static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID) {
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_xor_b64:
     return Intrinsic::amdgcn_wave_reduce_xor;
   }
->>>>>>> 5df11fceebba9416e72b57d3ef9f6698f2fc5f8d
 }
 
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,

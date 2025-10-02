@@ -588,10 +588,6 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
 #define AMDGPU_FEATURE_PREDICATE_TYPE(Name, Id, SingletonId, Width, Align)     \
   case BuiltinType::Id:                                                        \
     return ConvertType(getContext().getLogicalOperationType());
-<<<<<<< HEAD
-
-=======
->>>>>>> 5df11fceebba9416e72b57d3ef9f6698f2fc5f8d
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"

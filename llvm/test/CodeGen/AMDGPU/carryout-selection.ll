@@ -3490,28 +3490,16 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1300-NEXT:    s_cvt_f32_u32 s7, s5
 ; GFX1300-NEXT:    s_sub_nc_u64 s[10:11], 0, s[4:5]
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_3)
-<<<<<<< HEAD
-; GFX1300-NEXT:    s_fmamk_f32 s0, s1, 0x4f800000, s0
-; GFX1300-NEXT:    v_s_rcp_f32 s0, s0
-=======
 ; GFX1300-NEXT:    s_fmamk_f32 s6, s7, 0x4f800000, s6
 ; GFX1300-NEXT:    v_s_rcp_f32 s6, s6
->>>>>>> 5df11fceebba9416e72b57d3ef9f6698f2fc5f8d
 ; GFX1300-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX1300-NEXT:    s_mul_f32 s6, s6, 0x5f7ffffc
 ; GFX1300-NEXT:    s_mul_f32 s7, s6, 0x2f800000
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
-<<<<<<< HEAD
-; GFX1300-NEXT:    s_trunc_f32 s1, s1
-; GFX1300-NEXT:    s_fmamk_f32 s0, s1, 0xcf800000, s0
-; GFX1300-NEXT:    s_cvt_u32_f32 s5, s1
-; GFX1300-NEXT:    s_mov_b32 s1, 0
-=======
 ; GFX1300-NEXT:    s_trunc_f32 s7, s7
 ; GFX1300-NEXT:    s_fmamk_f32 s6, s7, 0xcf800000, s6
 ; GFX1300-NEXT:    s_cvt_u32_f32 s9, s7
 ; GFX1300-NEXT:    s_mov_b32 s7, 0
->>>>>>> 5df11fceebba9416e72b57d3ef9f6698f2fc5f8d
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX1300-NEXT:    s_cvt_u32_f32 s8, s6
 ; GFX1300-NEXT:    s_mul_u64 s[12:13], s[10:11], s[8:9]

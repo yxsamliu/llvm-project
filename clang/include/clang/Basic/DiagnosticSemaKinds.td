@@ -13672,10 +13672,6 @@ def warn_acc_var_referenced_lacks_op
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
-<<<<<<< HEAD
-
-=======
->>>>>>> 5df11fceebba9416e72b57d3ef9f6698f2fc5f8d
 def err_amdgcn_processor_is_arg_not_literal
     : Error<"the argument to __builtin_amdgcn_processor_is must be a string "
             "literal">;

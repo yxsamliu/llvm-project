@@ -78,11 +78,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; PEI-GFX90A-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
   ; PEI-GFX90A-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; PEI-GFX90A-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 32899081 /* reguse:AGPR_32 */, undef renamable $agpr0
-<<<<<<< HEAD
-  ; PEI-GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 41156618 /* regdef:VReg_128_Align2 */, def renamable $vgpr0_vgpr1_vgpr2_vgpr3
-=======
   ; PEI-GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 41746442 /* regdef:VReg_128_Align2 */, def renamable $vgpr0_vgpr1_vgpr2_vgpr3
->>>>>>> 5df11fceebba9416e72b57d3ef9f6698f2fc5f8d
   ; PEI-GFX90A-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3 = COPY killed renamable $vgpr0_vgpr1_vgpr2_vgpr3, implicit $exec
   ; PEI-GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 36503562 /* regdef:VReg_64_Align2 */, def renamable $vgpr2_vgpr3
   ; PEI-GFX90A-NEXT:   GLOBAL_STORE_DWORDX4 undef renamable $vgpr0_vgpr1, killed renamable $agpr0_agpr1_agpr2_agpr3, 0, 0, implicit $exec :: (volatile store (s128) into `ptr addrspace(1) poison`, addrspace 1)

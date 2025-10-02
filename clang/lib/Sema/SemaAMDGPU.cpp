@@ -540,8 +540,6 @@ void SemaAMDGPU::handleAMDGPUSpatialClusterKernelAttr(Decl *D,
   D->addAttr(Addr);
 }
 
-<<<<<<< HEAD
-=======
 void SemaAMDGPU::handleAMDGPUAsymmetricClusterClampKernelAttr(
     Decl *D, const ParsedAttr &AL) {
   auto *Addr = ::new (getASTContext())
@@ -549,7 +547,6 @@ void SemaAMDGPU::handleAMDGPUAsymmetricClusterClampKernelAttr(
   D->addAttr(Addr);
 }
 
->>>>>>> 5df11fceebba9416e72b57d3ef9f6698f2fc5f8d
 void SemaAMDGPU::handleAMDGPUNoRankSpecializationAttr(Decl *D,
                                                       const ParsedAttr &AL) {
   auto *Addr = ::new (getASTContext())
