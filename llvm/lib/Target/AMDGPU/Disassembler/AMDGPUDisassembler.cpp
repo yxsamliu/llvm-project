@@ -512,7 +512,9 @@ void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
 
     if (Imm == AMDGPU::EncValues::LITERAL_CONST) {
       Op = decodeLiteralConstant(
-          Desc, OpDesc, OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_FP64);
+          Desc, OpDesc,
+          OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_FP64 ||
+              OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP64);
       continue;
     }
 
@@ -1601,7 +1603,8 @@ MCOperand AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
       UseLit64 = !isInt<32>(Val) || !isUInt<32>(Val);
     else if (OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_FP64 ||
              OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_C_FP64 ||
-             OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_AC_FP64)
+             OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_AC_FP64 ||
+             OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP64)
       UseLit64 = Lo_32(Val) != 0;
   }
 
@@ -1632,7 +1635,8 @@ AMDGPUDisassembler::decodeLiteral64Constant(const MCInst &Inst) const {
   } else {
     assert(OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_FP64 ||
            OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_C_FP64 ||
-           OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_AC_FP64);
+           OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_AC_FP64 ||
+           OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP64);
     UseLit64 = Lo_32(Literal64) != 0;
   }
 
