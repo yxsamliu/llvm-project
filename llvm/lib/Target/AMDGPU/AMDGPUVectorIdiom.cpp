@@ -35,7 +35,8 @@
 // Transformations:
 // - Source-select memcpy: attempt speculative loads -> value select -> single
 // store.
-//   Fallback is CFG split with two memcpy calls.
+//   Fallback materializes branch-local load/store sequences to avoid
+//   speculative memory operations and downstream PHI users of the condition.
 // - Destination-select memcpy: always CFG split to avoid speculative stores.
 //
 // Run this pass early, before SROA.
@@ -53,6 +54,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -80,6 +82,12 @@ static cl::opt<bool>
     AMDGPUVectorIdiomEnable("amdgpu-vector-idiom-enable",
                             cl::desc("Enable pass AMDGPUVectorIdiom"),
                             cl::init(true));
+
+static cl::opt<bool> AMDGPUVectorIdiomSpeculateLoads(
+    "amdgpu-vector-idiom-speculate-loads",
+    cl::desc(
+        "Allow AMDGPU vector idiom to speculate loads when both arms look safe"),
+    cl::init(false));
 
 // Static counter to track transformations performed across all instances
 static std::atomic<unsigned> TransformationCounter{0};
@@ -142,6 +150,7 @@ static Type *getIntOrVecTypeForSize(uint64_t NBytes, LLVMContext &Ctx,
 }
 
 static Align minAlign(Align A, Align B) { return A < B ? A : B; }
+static Align maxAlign(Align A, Align B) { return A > B ? A : B; }
 
 // Checks if the underlying object of a memcpy operand is an alloca.
 // This helps focus on scratch memory optimizations by filtering out
@@ -306,7 +315,7 @@ struct AMDGPUVectorIdiomImpl {
       CanSpeculate =
           bothArmsSafeToSpeculateLoads(A, Bv, N, AlignAB, DL, AC, DT, &MT);
 
-    if (CanSpeculate) {
+    if (CanSpeculate && AMDGPUVectorIdiomSpeculateLoads) {
       Align MinAlign = std::min(AlignAB, DstAlign);
       LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Rewriting memcpy(select-src) "
                         << "with value-level select; N=" << N
@@ -332,14 +341,9 @@ struct AMDGPUVectorIdiomImpl {
       return true;
     }
 
-    LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Falling back to CFG split for "
-                      << "memcpy(select-src); speculation unsafe\n");
-    splitCFGForMemcpy(MT, Sel.getCondition(), A, Bv, true);
-    incrementTransformationCounter();
-    LLVM_DEBUG(
-        dbgs()
-        << "[AMDGPUVectorIdiom] Rewrote memcpy(select-src) by CFG split\n");
-    return true;
+    LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Falling back to branch-local "
+                      << "loads/stores for memcpy(select-src)\n");
+    return rewriteMemcpySourcePerBranch(MT, Sel, DL, DT, AC);
   }
 
   // Rewrites memcpy when the destination is a select of pointers. To avoid
@@ -417,6 +421,248 @@ struct AMDGPUVectorIdiomImpl {
     BE.CreateBr(JoinBB);
 
     MT.eraseFromParent();
+  }
+
+  Value *resolveValueForPred(Value *V, BasicBlock *Pred, BasicBlock *JoinBB,
+                             const DominatorTree *DT) {
+    if (auto *Phi = dyn_cast<PHINode>(V)) {
+      if (Phi->getParent() == JoinBB)
+        return Phi->getIncomingValueForBlock(Pred);
+      return nullptr;
+    }
+
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      if (I->getParent() == JoinBB)
+        return nullptr;
+      if (DT && !DT->dominates(I->getParent(), Pred))
+        return nullptr;
+    }
+
+    return V;
+  }
+
+  Value *maybeCastPointer(IRBuilder<> &B, Value *Ptr, Type *Ty) {
+    auto *PtrTy = cast<PointerType>(Ptr->getType());
+    PointerType *DesiredPtrTy = Ty->getPointerTo(PtrTy->getAddressSpace());
+    if (PtrTy == DesiredPtrTy)
+      return Ptr;
+    return B.CreateBitCast(Ptr, DesiredPtrTy);
+  }
+
+  bool rewriteMemcpySourceViaExistingDiamond(MemCpyInst &MT, SelectInst &Sel,
+                                             const DataLayout &DL,
+                                             const DominatorTree *DT,
+                                             AssumptionCache *AC) {
+    if (!DT) {
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Existing diamond rewrite: no DT\n");
+      return false;
+    }
+
+    BasicBlock *JoinBB = MT.getParent();
+    SmallVector<BasicBlock *, 4> Preds(pred_begin(JoinBB), pred_end(JoinBB));
+    if (Preds.empty()) {
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Existing diamond rewrite: join has no predecessors\n");
+      return false;
+    }
+
+    Value *Cond = Sel.getCondition();
+    BranchInst *CondBr = nullptr;
+    for (User *U : Cond->users()) {
+      auto *BI = dyn_cast<BranchInst>(U);
+      if (!BI || !BI->isConditional())
+        continue;
+      if (BI->getCondition() != Cond)
+        continue;
+      if (!DT->dominates(BI->getParent(), JoinBB))
+        continue;
+      CondBr = BI;
+      break;
+    }
+
+    if (!CondBr) {
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Existing diamond rewrite: no matching branch for condition\n");
+      return false;
+    }
+
+    BasicBlock *TrueEdgeBase = CondBr->getSuccessor(0);
+    BasicBlock *FalseEdgeBase = CondBr->getSuccessor(1);
+
+    struct ClassifiedPred {
+      BasicBlock *Pred;
+      bool IsTrueArm;
+    };
+
+    SmallVector<ClassifiedPred, 4> Classified;
+    Classified.reserve(Preds.size());
+
+    for (BasicBlock *Pred : Preds) {
+      bool OnTrue = DT->dominates(TrueEdgeBase, Pred);
+      bool OnFalse = DT->dominates(FalseEdgeBase, Pred);
+      if (!OnTrue && !OnFalse) {
+        LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Existing diamond rewrite: predecessor not dominated by branch arm\n");
+        return false;
+      }
+      // Defensive: if both dominate (should not normally happen), refuse.
+      if (OnTrue && OnFalse) {
+        LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Existing diamond rewrite: predecessor dominated by both arms\n");
+        return false;
+      }
+      Classified.push_back({Pred, OnTrue});
+    }
+
+    bool HaveTrue = llvm::any_of(Classified, [](const ClassifiedPred &CP){ return CP.IsTrueArm; });
+    bool HaveFalse = llvm::any_of(Classified, [](const ClassifiedPred &CP){ return !CP.IsTrueArm; });
+    if (!HaveTrue || !HaveFalse) {
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Existing diamond rewrite: missing true or false arm reaching join\n");
+      return false;
+    }
+
+    ConstantInt *LenCI = cast<ConstantInt>(MT.getLength());
+    uint64_t N = LenCI->getLimitedValue();
+
+    auto computePointerAlign = [&](Value *Ptr) {
+      Align Known =
+          getOrEnforceKnownAlignment(Ptr, Align(1), DL, nullptr, AC, DT);
+      Align CopyAlign = MaybeAlign(MT.getSourceAlign()).valueOrOne();
+      return maxAlign(Known, CopyAlign);
+    };
+
+    // Compute conservative alignment across all true/false predecessors to pick the element type.
+    Align TrueMinAlign = Align(64); // start high, will take min
+    Align FalseMinAlign = Align(64);
+    Value *DstVal = MT.getRawDest();
+
+    // We will also resolve and emit per predecessor.
+    struct ResolvedPath {
+      BasicBlock *Pred;
+      Value *SrcPtr;
+      Value *DstPtr;
+      Align SrcAlign;
+    };
+    SmallVector<ResolvedPath, 8> Paths;
+    Paths.reserve(Classified.size());
+
+    for (const ClassifiedPred &CP : Classified) {
+      Value *SrcBase = CP.IsTrueArm ? Sel.getTrueValue() : Sel.getFalseValue();
+      Value *SrcPtr = resolveValueForPred(SrcBase, CP.Pred, JoinBB, DT);
+      if (!SrcPtr) {
+        LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Existing diamond rewrite: unable to resolve source pointer for predecessor\n");
+        return false;
+      }
+      Value *DstPtr = resolveValueForPred(DstVal, CP.Pred, JoinBB, DT);
+      if (!DstPtr) {
+        LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Existing diamond rewrite: unable to resolve destination pointer for predecessor\n");
+        return false;
+      }
+      Align SrcAlign = computePointerAlign(SrcPtr);
+      if (CP.IsTrueArm)
+        TrueMinAlign = minAlign(TrueMinAlign, SrcAlign);
+      else
+        FalseMinAlign = minAlign(FalseMinAlign, SrcAlign);
+      Paths.push_back({CP.Pred, SrcPtr, DstPtr, SrcAlign});
+    }
+
+    Align DstAlign = MaybeAlign(MT.getDestAlign()).valueOrOne();
+    Align CommonSrcAlign = minAlign(TrueMinAlign, FalseMinAlign);
+    Align MinAlignForType = minAlign(CommonSrcAlign, DstAlign);
+
+    LLVMContext &Ctx = JoinBB->getContext();
+    Type *Ty = getIntOrVecTypeForSize(N, Ctx, MinAlignForType);
+
+    auto emitPath = [&](const ResolvedPath &P) {
+      IRBuilder<> B(P.Pred->getTerminator());
+      B.SetCurrentDebugLocation(MT.getDebugLoc());
+      Value *CastSrc = maybeCastPointer(B, P.SrcPtr, Ty);
+      Value *CastDst = maybeCastPointer(B, P.DstPtr, Ty);
+      LoadInst *Loaded = B.CreateAlignedLoad(Ty, CastSrc, P.SrcAlign);
+      (void)B.CreateAlignedStore(Loaded, CastDst, DstAlign);
+    };
+
+    for (const ResolvedPath &P : Paths)
+      emitPath(P);
+
+    MT.eraseFromParent();
+    if (Sel.use_empty())
+      Sel.eraseFromParent();
+    incrementTransformationCounter();
+    return true;
+  }
+
+  // Creates diamond-shaped control flow when we cannot reuse an existing one.
+  // Sinks the load/store rewrite into the branch bodies so that the join block
+  // no longer needs a phi fed by the original select condition.
+  bool rewriteMemcpySourceWithNewDiamond(MemCpyInst &MT, SelectInst &Sel,
+                                         const DataLayout &DL,
+                                         const DominatorTree *DT,
+                                         AssumptionCache *AC) {
+    CFGChanged = true;
+
+    DebugLoc OriginalDebugLoc = MT.getDebugLoc();
+    Function *F = MT.getFunction();
+    BasicBlock *Cur = MT.getParent();
+    BasicBlock *ThenBB =
+        BasicBlock::Create(F->getContext(), "memcpy.src.then", F);
+    BasicBlock *ElseBB =
+        BasicBlock::Create(F->getContext(), "memcpy.src.else", F);
+    BasicBlock *JoinBB = Cur->splitBasicBlock(BasicBlock::iterator(&MT),
+                                             "memcpy.src.join");
+
+    Cur->getTerminator()->eraseFromParent();
+    IRBuilder<> B(Cur);
+    B.SetCurrentDebugLocation(OriginalDebugLoc);
+    B.CreateCondBr(Sel.getCondition(), ThenBB, ElseBB);
+
+    ConstantInt *LenCI = cast<ConstantInt>(MT.getLength());
+    uint64_t N = LenCI->getLimitedValue();
+
+    Value *Dst = MT.getRawDest();
+    Align DstAlign = MaybeAlign(MT.getDestAlign()).valueOrOne();
+
+    auto computePointerAlign = [&](Value *Ptr) {
+      Align Known =
+          getOrEnforceKnownAlignment(Ptr, Align(1), DL, nullptr, AC, DT);
+      Align CopyAlign = MaybeAlign(MT.getSourceAlign()).valueOrOne();
+      return maxAlign(Known, CopyAlign);
+    };
+
+    Align AlignTrue = computePointerAlign(Sel.getTrueValue());
+    Align AlignFalse = computePointerAlign(Sel.getFalseValue());
+    Align CommonSrcAlign = minAlign(AlignTrue, AlignFalse);
+    Align MinAlignForType = minAlign(CommonSrcAlign, DstAlign);
+
+    LLVMContext &Ctx = F->getContext();
+    Type *Ty = getIntOrVecTypeForSize(N, Ctx, MinAlignForType);
+
+    IRBuilder<> BT(ThenBB);
+    BT.SetCurrentDebugLocation(OriginalDebugLoc);
+    Value *TruePtr = maybeCastPointer(BT, Sel.getTrueValue(), Ty);
+    LoadInst *LA = BT.CreateAlignedLoad(Ty, TruePtr, CommonSrcAlign);
+    StoreInst *STA = BT.CreateAlignedStore(LA, Dst, DstAlign);
+    (void)STA;
+    BT.CreateBr(JoinBB);
+
+    IRBuilder<> BE(ElseBB);
+    BE.SetCurrentDebugLocation(OriginalDebugLoc);
+    Value *FalsePtr = maybeCastPointer(BE, Sel.getFalseValue(), Ty);
+    LoadInst *LB = BE.CreateAlignedLoad(Ty, FalsePtr, CommonSrcAlign);
+    StoreInst *STB = BE.CreateAlignedStore(LB, Dst, DstAlign);
+    (void)STB;
+    BE.CreateBr(JoinBB);
+
+    MT.eraseFromParent();
+    if (Sel.use_empty())
+      Sel.eraseFromParent();
+    incrementTransformationCounter();
+    return true;
+  }
+
+  bool rewriteMemcpySourcePerBranch(MemCpyInst &MT, SelectInst &Sel,
+                                    const DataLayout &DL,
+                                    const DominatorTree *DT,
+                                    AssumptionCache *AC) {
+    if (rewriteMemcpySourceViaExistingDiamond(MT, Sel, DL, DT, AC))
+      return true;
+    return rewriteMemcpySourceWithNewDiamond(MT, Sel, DL, DT, AC);
   }
 };
 
