@@ -1474,6 +1474,12 @@ def Feature45BitNumRecordsBufferResource : SubtargetFeature< "45-bit-num-records
   "The buffer resource (V#) supports 45-bit num_records"
 >;
 
+def FeatureCluster : SubtargetFeature< "cluster",
+  "HasCluster",
+  "true",
+  "Has cluster support"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -2157,6 +2163,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    Feature45BitNumRecordsBufferResource,
    FeatureSupportsXNACK,
    FeatureXNACK,
+   FeatureCluster,
 ]>;
 
 def FeatureISAVersion12_51 : FeatureSet<
