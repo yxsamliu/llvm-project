@@ -94,6 +94,7 @@
 #include "llvm/Transforms/Scalar/Sink.h"
 #include "llvm/Transforms/Scalar/StraightLineStrengthReduce.h"
 #include "llvm/Transforms/Scalar/StructurizeCFG.h"
+#include "llvm/Transforms/Scalar/SROA.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/FixIrreducible.h"
 #include "llvm/Transforms/Utils/LCSSA.h"
@@ -850,12 +851,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
             EnablePromoteKernelArguments)
           FPM.addPass(AMDGPUPromoteKernelArgumentsPass());
 
-        // Run vector-idiom canonicalization early (after inlining) and before
-        // infer-AS / SROA to maximize scalarization opportunities.
-        // Specify 32 bytes since the largest HIP vector types are double4 or
-        // long4.
-        FPM.addPass(AMDGPUVectorIdiomCombinePass(/*MaxBytes=*/32));
-
         // Add infer address spaces pass to the opt pipeline after inlining
         // but before SROA to increase SROA opportunities.
         FPM.addPass(InferAddressSpacesPass());
@@ -872,6 +867,20 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         }
 
         PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
+      });
+
+  // Move vector-idiom after SimplifyCFG/InstCombine by inserting it late in
+  // the scalar optimizer pipeline, so canonical CFG/boolean forms are seen
+  // before we materialize branch-local load/stores.
+  // Place vector-idiom as early as possible after initial SimplifyCFG/InstCombine
+  // but before the first SROA in the default O3 function pipeline. The Peephole
+  // EP runs after an early SimplifyCFG/InstCombine group and before the first
+  // SROA, so hook there.
+  PB.registerPeepholeEPCallback(
+      [](FunctionPassManager &FPM, OptimizationLevel Level) {
+        if (Level == OptimizationLevel::O0)
+          return;
+        FPM.addPass(AMDGPUVectorIdiomCombinePass(/*MaxBytes=*/32));
       });
 
   // FIXME: Why is AMDGPUAttributor not in CGSCC?
