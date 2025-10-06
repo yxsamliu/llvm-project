@@ -122,6 +122,12 @@ namespace llvm {
 /// Disable running mem2reg during SROA in order to test or debug SROA.
 static cl::opt<bool> SROASkipMem2Reg("sroa-skip-mem2reg", cl::init(false),
                                      cl::Hidden);
+/// Maximum struct size in bytes to canonicalize homogeneous structs to vectors.
+/// 0 disables the transformation to avoid regressions by default.
+static cl::opt<unsigned> SROAMaxStructToVectorBytes(
+    "sroa-max-struct-to-vector-bytes", cl::init(0), cl::Hidden,
+    cl::desc("Max struct size in bytes to canonicalize homogeneous structs to "
+             "fixed vectors (0=disable)"));
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 } // namespace llvm
 
@@ -5262,6 +5268,42 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     // FIXME: We might want to defer PHI speculation until after here.
     // FIXME: return nullptr;
   } else {
+    // Canonicalize homogeneous, tightly-packed 2- or 4-field structs to
+    // a fixed-width vector type when the DataLayout proves bitwise identity.
+    if (SROAMaxStructToVectorBytes) {
+      if (auto *STy = dyn_cast<StructType>(SliceTy)) {
+        unsigned NumElts = STy->getNumElements();
+        if (NumElts == 2 || NumElts == 4) {
+          Type *EltTy = STy->getNumElements() > 0 ? STy->getElementType(0) : nullptr;
+          bool AllSame = EltTy && VectorType::isValidElementType(EltTy);
+          for (unsigned I = 1; AllSame && I < NumElts; ++I)
+            if (STy->getElementType(I) != EltTy)
+              AllSame = false;
+          if (AllSame) {
+            const StructLayout *SL = DL.getStructLayout(STy);
+            TypeSize EltTS = DL.getTypeAllocSize(EltTy);
+            if (!EltTS.isFixed())
+              return nullptr; // bail: scalable types not supported here
+            const uint64_t EltSize = EltTS.getFixedValue();
+            const uint64_t StructSize = SL->getSizeInBytes();
+            if (StructSize != 0 && StructSize <= SROAMaxStructToVectorBytes) {
+              bool TightlyPacked = (StructSize == NumElts * EltSize);
+              if (TightlyPacked) {
+                for (unsigned I = 0; I < NumElts; ++I) {
+                  if (SL->getElementOffset(I) != I * EltSize) {
+                    TightlyPacked = false;
+                    break;
+                  }
+                }
+              }
+              if (TightlyPacked)
+                SliceTy = FixedVectorType::get(EltTy, NumElts);
+            }
+          }
+        }
+      }
+    }
+
     // Make sure the alignment is compatible with P.beginOffset().
     const Align Alignment = commonAlignment(AI.getAlign(), P.beginOffset());
     // If we will get at least this much alignment from the type alone, leave
