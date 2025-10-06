@@ -865,13 +865,14 @@ void AMDGPUAtomicOptimizerImpl::optimizeDivergentAddress(
   PHI->addIncoming(NewI, SingleLaneTerminator->getParent());
 
   Value *Permute;
-  if (ST.isWave32())
+  if (ST.isWave32()) {
     Permute = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_bpermute_b32,
                                 {PHI, LeaderIdx});
-  else {
-    Permute = B.CreateOr(LeaderIdx, B.CreateAnd(LaneIdx, B.getInt32(32)));
+  } else {
+    LeaderIdx = B.CreateOr(LeaderIdx, B.CreateAnd(LaneIdx, B.getInt32(32)));
+    // V_BPERMUTE_B32 is wave32-only so use DS_BPERMUTE_B32 instead.
     Permute = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_ds_bpermute,
-                                {PHI, B.CreateMul(LeaderIdx, B.getInt32(4))});
+                                {B.CreateMul(LeaderIdx, B.getInt32(4)), PHI});
   }
   Value *Result = buildNonAtomicBinOp(B, Op, Permute, Exclusive);
   if (IsPixelShader) {
@@ -885,7 +886,6 @@ void AMDGPUAtomicOptimizerImpl::optimizeDivergentAddress(
     I.replaceAllUsesWith(Result);
   }
   I.eraseFromParent();
-  return;
 }
 
 void AMDGPUAtomicOptimizerImpl::optimizeAtomic(
