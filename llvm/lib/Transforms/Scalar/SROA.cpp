@@ -78,6 +78,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
@@ -122,6 +123,12 @@ namespace llvm {
 /// Disable running mem2reg during SROA in order to test or debug SROA.
 static cl::opt<bool> SROASkipMem2Reg("sroa-skip-mem2reg", cl::init(false),
                                      cl::Hidden);
+/// Maximum struct size in bytes to canonicalize homogeneous structs to vectors.
+/// 0 disables the transformation to avoid regressions by default.
+static cl::opt<unsigned> SROAMaxStructToVectorBytes(
+    "sroa-max-struct-to-vector-bytes", cl::init(0), cl::Hidden,
+    cl::desc("Max struct size in bytes to canonicalize homogeneous structs to "
+             "fixed vectors (0=disable)"));
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 } // namespace llvm
 
@@ -3656,6 +3663,22 @@ private:
     // them into two categories: split intrinsics and unsplit intrinsics.
 
     LLVM_DEBUG(dbgs() << "    original: " << II << "\n");
+    if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+      errs() << "[SROA memcpy enter] Function: "
+             << II.getFunction()->getName() << ", BB: %"
+             << II.getParent()->getName() << "\n";
+      errs() << "  memcpy-like: " << II << "\n";
+      errs() << "  length: ";
+      if (auto *LenCI = dyn_cast<ConstantInt>(II.getLength()))
+        errs() << LenCI->getZExtValue();
+      else
+        errs() << "non-constant";
+      errs() << ", srcAS="
+             << II.getRawSource()->getType()->getPointerAddressSpace()
+             << ", dstAS="
+             << II.getRawDest()->getType()->getPointerAddressSpace()
+             << "\n";
+    }
 
     AAMDNodes AATags = II.getAAMetadata();
 
@@ -3672,6 +3695,20 @@ private:
     // memcpy, and so simply updating the pointers is the necessary for us to
     // update both source and dest of a single call.
     if (!IsSplittable) {
+      // Optional decision tracing for memcpy with select/phi source
+      if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+        Value *RawSrcTrace = II.getRawSource();
+        Value *SrcStrippedTrace = RawSrcTrace ? RawSrcTrace->stripPointerCasts() : nullptr;
+        bool SourceIsSelectionTrace = SrcStrippedTrace &&
+                                      (isa<SelectInst>(SrcStrippedTrace) || isa<PHINode>(SrcStrippedTrace));
+        if (SourceIsSelectionTrace) {
+          errs() << "[SROA memcpy decision] Function: "
+                 << II.getFunction()->getName() << ", BB: %"
+                 << II.getParent()->getName() << "\n";
+          errs() << "  memcpy: " << II << "\n";
+          errs() << "  IsSplittable: no -> keep memcpy and adjust pointer (unsplit)\n";
+        }
+      }
       Value *AdjustedPtr = getNewAllocaSlicePtr(IRB, OldPtr->getType());
       if (IsDest) {
         // Update the address component of linked dbg.assigns.
@@ -3706,6 +3743,43 @@ private:
              DL.getTypeStoreSize(NewAI.getAllocatedType()).getFixedValue() ||
          !DL.typeSizeEqualsStoreSize(NewAI.getAllocatedType()) ||
          !NewAI.getAllocatedType()->isSingleValueType());
+    if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+      errs() << "  analysis: IsSplittable=" << (IsSplittable ? "yes" : "no")
+             << ", VecTy=" << (VecTy ? "yes" : "no")
+             << ", IntTy=" << (IntTy ? "yes" : "no")
+             << ", EmitMemCpy=" << (EmitMemCpy ? "yes" : "no") << "\n";
+    }
+
+    // Optional decision tracing for memcpy with select/phi source
+    if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+      Value *RawSrcTrace = II.getRawSource();
+      Value *SrcStrippedTrace = RawSrcTrace ? RawSrcTrace->stripPointerCasts() : nullptr;
+      bool SourceIsSelectionTrace = SrcStrippedTrace &&
+                                    (isa<SelectInst>(SrcStrippedTrace) || isa<PHINode>(SrcStrippedTrace));
+      if (SourceIsSelectionTrace) {
+        errs() << "[SROA memcpy decision] Function: "
+               << II.getFunction()->getName() << ", BB: %"
+               << II.getParent()->getName() << "\n";
+        errs() << "  memcpy: " << II << "\n";
+        errs() << "  IsSplittable: yes\n";
+        errs() << "  VecTy: " << (VecTy ? "yes" : "no")
+               << ", IntTy: " << (IntTy ? "yes" : "no") << "\n";
+        errs() << "  Offsets: Begin=" << BeginOffset
+               << ", End=" << EndOffset
+               << ", NewAllocaBegin=" << NewAllocaBeginOffset
+               << ", NewAllocaEnd=" << NewAllocaEndOffset
+               << ", SliceSize=" << SliceSize << "\n";
+        errs() << "  AllocTy=" << *NewAI.getAllocatedType() << "\n";
+        errs() << "  AllocTySize="
+               << DL.getTypeStoreSize(NewAI.getAllocatedType()).getFixedValue()
+               << ", TypeSizeEqualsStoreSize="
+               << (DL.typeSizeEqualsStoreSize(NewAI.getAllocatedType()) ? "yes" : "no")
+               << ", IsSingleValueType="
+               << (NewAI.getAllocatedType()->isSingleValueType() ? "yes" : "no")
+               << "\n";
+        errs() << "  EmitMemCpy computed: " << (EmitMemCpy ? "yes" : "no") << "\n";
+      }
+    }
 
     // If we're just going to emit a memcpy, the alloca hasn't changed, and the
     // size hasn't been shrunk based on analysis of the viable range, this is
@@ -3744,6 +3818,17 @@ private:
         commonAlignment(OtherAlign, OtherOffset.zextOrTrunc(64).getZExtValue());
 
     if (EmitMemCpy) {
+      if (sys::Process::GetEnv("LLVM_DBG_MEMCPY"))
+        errs() << "  path: keep memcpy (emit memcpy)\n";
+      if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+        Value *RawSrcTrace = II.getRawSource();
+        Value *SrcStrippedTrace = RawSrcTrace ? RawSrcTrace->stripPointerCasts() : nullptr;
+        bool SourceIsSelectionTrace = SrcStrippedTrace &&
+                                      (isa<SelectInst>(SrcStrippedTrace) || isa<PHINode>(SrcStrippedTrace));
+        if (SourceIsSelectionTrace) {
+          errs() << "  Decision: keep memcpy (adjusted pointers)\n";
+        }
+      }
       // Compute the other pointer, folding as much as possible to produce
       // a single, simple GEP in most cases.
       OtherPtr = getAdjustedPtr(IRB, DL, OtherPtr, OtherOffset, OtherPtrTy,
@@ -3828,9 +3913,14 @@ private:
     }
 
     Value *Src;
+    // For optional debug reporting, keep track of any created loads.
+    LoadInst *DbgLoad1 = nullptr;
+    LoadInst *DbgLoad2 = nullptr;
+
     if (VecTy && !IsWholeAlloca && !IsDest) {
-      Src = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                  NewAI.getAlign(), "load");
+      DbgLoad1 = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
+                                       NewAI.getAlign(), "load");
+      Src = DbgLoad1;
       Src = extractVector(IRB, Src, BeginIndex, EndIndex, "vec");
     } else if (IntTy && !IsWholeAlloca && !IsDest) {
       Src = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
@@ -3847,11 +3937,14 @@ private:
         Load->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
                                                    Load->getType(), DL));
       Src = Load;
+      DbgLoad1 = Load;
     }
 
     if (VecTy && !IsWholeAlloca && IsDest) {
-      Value *Old = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                         NewAI.getAlign(), "oldload");
+      LoadInst *OldLoad = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
+                                                NewAI.getAlign(), "oldload");
+      Value *Old = OldLoad;
+      DbgLoad2 = OldLoad;
       Src = insertVector(IRB, Old, Src, BeginIndex, "vec");
     } else if (IntTy && !IsWholeAlloca && IsDest) {
       Value *Old = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
@@ -3864,6 +3957,17 @@ private:
 
     StoreInst *Store = cast<StoreInst>(
         IRB.CreateAlignedStore(Src, DstPtr, DstAlign, II.isVolatile()));
+    if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+      Value *RawSrcTrace = II.getRawSource();
+      Value *SrcStrippedTrace = RawSrcTrace ? RawSrcTrace->stripPointerCasts() : nullptr;
+      bool SourceIsSelectionTrace = SrcStrippedTrace &&
+                                    (isa<SelectInst>(SrcStrippedTrace) || isa<PHINode>(SrcStrippedTrace));
+      if (SourceIsSelectionTrace && !EmitMemCpy) {
+        errs() << "  Decision: rewrite to "
+               << (isa<VectorType>(Store->getValueOperand()->getType()) ? "vector" : "scalar")
+               << " load/store\n";
+      }
+    }
     Store->copyMetadata(II, {LLVMContext::MD_mem_parallel_loop_access,
                              LLVMContext::MD_access_group});
     if (AATags)
@@ -3883,6 +3987,42 @@ private:
     }
 
     LLVM_DEBUG(dbgs() << "          to: " << *Store << "\n");
+    if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+      errs() << "  path: rewrite memcpy to load/store\n";
+      errs() << "  memcpy: " << II << "\n";
+      if (DbgLoad1)
+        errs() << "  new load: " << *DbgLoad1 << "\n";
+      if (DbgLoad2 && DbgLoad2 != DbgLoad1)
+        errs() << "  new load: " << *DbgLoad2 << "\n";
+      errs() << "  new store: " << *Store << "\n";
+    }
+
+    // If requested via environment, report memcpy-to-vector load/store rewrites.
+    // We only print when a vector load or store was produced.
+    if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+      // Restrict logging to cases where memcpy source is a selection-like node.
+      // We treat either a select or a PHI (common CFG-selected pointer) as selection.
+      Value *RawSrc = II.getRawSource();
+      Value *SrcStripped = RawSrc ? RawSrc->stripPointerCasts() : nullptr;
+      bool SourceIsSelection = SrcStripped && (isa<SelectInst>(SrcStripped) || isa<PHINode>(SrcStripped));
+
+      bool CreatedVectorLoad =
+          (DbgLoad1 && isa<VectorType>(DbgLoad1->getType())) ||
+          (DbgLoad2 && isa<VectorType>(DbgLoad2->getType()));
+      bool CreatedVectorStore = isa<VectorType>(Store->getValueOperand()->getType());
+      if (SourceIsSelection && (CreatedVectorLoad || CreatedVectorStore)) {
+        errs() << "[SROA memcpy->vector] Function: "
+               << II.getFunction()->getName() << ", BB: %"
+               << II.getParent()->getName() << "\n";
+        errs() << "  memcpy: " << II << "\n";
+        if (DbgLoad1 && isa<VectorType>(DbgLoad1->getType()))
+          errs() << "  new vector load: " << *DbgLoad1 << "\n";
+        if (DbgLoad2 && isa<VectorType>(DbgLoad2->getType()))
+          errs() << "  new vector load: " << *DbgLoad2 << "\n";
+        if (CreatedVectorStore)
+          errs() << "  new vector store: " << *Store << "\n";
+      }
+    }
     return !II.isVolatile();
   }
 
@@ -4305,11 +4445,65 @@ private:
   }
 
   bool visitBitCastInst(BitCastInst &BC) {
+    // Optional tracing: if this bitcast feeds a memcpy/memmove, log it even
+    // when the memcpy doesn't directly use the alloca slice pointer.
+    if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+      for (User *U : BC.users()) {
+        if (auto *MTI = dyn_cast<MemTransferInst>(U)) {
+          Value *RawSrc = MTI->getRawSource();
+          Value *RawDst = MTI->getRawDest();
+          Value *SrcStripped = RawSrc ? RawSrc->stripPointerCasts() : nullptr;
+          Value *DstStripped = RawDst ? RawDst->stripPointerCasts() : nullptr;
+          errs() << "[SROA memcpy via-derived] Function: "
+                 << BC.getFunction()->getName() << ", BB: %"
+                 << (MTI->getParent() ? MTI->getParent()->getName() : StringRef("")) << "\n";
+          errs() << "  user:   " << *MTI << "\n";
+          errs() << "  source: " << *RawSrc << "  (raw==this="
+                 << (RawSrc == &BC ? "yes" : "no")
+                 << ", stripped==this="
+                 << (SrcStripped == &BC ? "yes" : "no") << ")\n";
+          errs() << "  dest:   " << *RawDst << "  (raw==this="
+                 << (RawDst == &BC ? "yes" : "no")
+                 << ", stripped==this="
+                 << (DstStripped == &BC ? "yes" : "no") << ")\n";
+          errs() << "  addrspaces: srcAS="
+                 << RawSrc->getType()->getPointerAddressSpace() << ", dstAS="
+                 << RawDst->getType()->getPointerAddressSpace() << "\n";
+        }
+      }
+    }
     enqueueUsers(BC);
     return false;
   }
 
   bool visitAddrSpaceCastInst(AddrSpaceCastInst &ASC) {
+    // Optional tracing: if this addrspacecast feeds a memcpy/memmove, log it
+    // even when the memcpy doesn't directly use the alloca slice pointer.
+    if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+      for (User *U : ASC.users()) {
+        if (auto *MTI = dyn_cast<MemTransferInst>(U)) {
+          Value *RawSrc = MTI->getRawSource();
+          Value *RawDst = MTI->getRawDest();
+          Value *SrcStripped = RawSrc ? RawSrc->stripPointerCasts() : nullptr;
+          Value *DstStripped = RawDst ? RawDst->stripPointerCasts() : nullptr;
+          errs() << "[SROA memcpy via-derived] Function: "
+                 << ASC.getFunction()->getName() << ", BB: %"
+                 << (MTI->getParent() ? MTI->getParent()->getName() : StringRef("")) << "\n";
+          errs() << "  user:   " << *MTI << "\n";
+          errs() << "  source: " << *RawSrc << "  (raw==this="
+                 << (RawSrc == &ASC ? "yes" : "no")
+                 << ", stripped==this="
+                 << (SrcStripped == &ASC ? "yes" : "no") << ")\n";
+          errs() << "  dest:   " << *RawDst << "  (raw==this="
+                 << (RawDst == &ASC ? "yes" : "no")
+                 << ", stripped==this="
+                 << (DstStripped == &ASC ? "yes" : "no") << ")\n";
+          errs() << "  addrspaces: srcAS="
+                 << RawSrc->getType()->getPointerAddressSpace() << ", dstAS="
+                 << RawDst->getType()->getPointerAddressSpace() << "\n";
+        }
+      }
+    }
     enqueueUsers(ASC);
     return false;
   }
@@ -4519,11 +4713,65 @@ private:
   }
 
   bool visitPHINode(PHINode &PN) {
+    // Optional tracing: if this PHI feeds a memcpy/memmove, log it even when
+    // the memcpy doesn't directly use the alloca slice pointer.
+    if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+      for (User *U : PN.users()) {
+        if (auto *MTI = dyn_cast<MemTransferInst>(U)) {
+          Value *RawSrc = MTI->getRawSource();
+          Value *RawDst = MTI->getRawDest();
+          Value *SrcStripped = RawSrc ? RawSrc->stripPointerCasts() : nullptr;
+          Value *DstStripped = RawDst ? RawDst->stripPointerCasts() : nullptr;
+          errs() << "[SROA memcpy via-derived] Function: "
+                 << PN.getFunction()->getName() << ", BB: %"
+                 << (MTI->getParent() ? MTI->getParent()->getName() : StringRef("")) << "\n";
+          errs() << "  user:   " << *MTI << "\n";
+          errs() << "  source: " << *RawSrc << "  (raw==this="
+                 << (RawSrc == &PN ? "yes" : "no")
+                 << ", stripped==this="
+                 << (SrcStripped == &PN ? "yes" : "no") << ")\n";
+          errs() << "  dest:   " << *RawDst << "  (raw==this="
+                 << (RawDst == &PN ? "yes" : "no")
+                 << ", stripped==this="
+                 << (DstStripped == &PN ? "yes" : "no") << ")\n";
+          errs() << "  addrspaces: srcAS="
+                 << RawSrc->getType()->getPointerAddressSpace() << ", dstAS="
+                 << RawDst->getType()->getPointerAddressSpace() << "\n";
+        }
+      }
+    }
     enqueueUsers(PN);
     return false;
   }
 
   bool visitSelectInst(SelectInst &SI) {
+    // Optional tracing: if this select feeds a memcpy/memmove, log it even
+    // when the memcpy doesn't directly use the alloca slice pointer.
+    if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+      for (User *U : SI.users()) {
+        if (auto *MTI = dyn_cast<MemTransferInst>(U)) {
+          Value *RawSrc = MTI->getRawSource();
+          Value *RawDst = MTI->getRawDest();
+          Value *SrcStripped = RawSrc ? RawSrc->stripPointerCasts() : nullptr;
+          Value *DstStripped = RawDst ? RawDst->stripPointerCasts() : nullptr;
+          errs() << "[SROA memcpy via-derived] Function: "
+                 << SI.getFunction()->getName() << ", BB: %"
+                 << (MTI->getParent() ? MTI->getParent()->getName() : StringRef("")) << "\n";
+          errs() << "  user:   " << *MTI << "\n";
+          errs() << "  source: " << *RawSrc << "  (raw==this="
+                 << (RawSrc == &SI ? "yes" : "no")
+                 << ", stripped==this="
+                 << (SrcStripped == &SI ? "yes" : "no") << ")\n";
+          errs() << "  dest:   " << *RawDst << "  (raw==this="
+                 << (RawDst == &SI ? "yes" : "no")
+                 << ", stripped==this="
+                 << (DstStripped == &SI ? "yes" : "no") << ")\n";
+          errs() << "  addrspaces: srcAS="
+                 << RawSrc->getType()->getPointerAddressSpace() << ", dstAS="
+                 << RawDst->getType()->getPointerAddressSpace() << "\n";
+        }
+      }
+    }
     enqueueUsers(SI);
     return false;
   }
@@ -5191,6 +5439,38 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 /// promoted.
 AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
                                    Partition &P) {
+  // Optional tracing for struct or array-of-struct allocas: log alloca def and
+  // current partition information.
+  if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+    Type *AllocatedTy = AI.getAllocatedType();
+    bool IsStruct = isa<StructType>(AllocatedTy);
+    bool IsArrayOfStruct = isa<ArrayType>(AllocatedTy) &&
+                           isa<StructType>(cast<ArrayType>(AllocatedTy)->getElementType());
+    if (IsStruct || IsArrayOfStruct) {
+      errs() << "[SROA alloca] Function: " << AI.getFunction()->getName() << "\n";
+      errs() << "  alloca: " << AI << "\n";
+      errs() << "  allocated type: " << *AllocatedTy << "\n";
+      // Recursively print nested struct type definitions referenced by this type.
+      SmallPtrSet<Type *, 8> Visited;
+      std::function<void(Type *)> PrintNested;
+      PrintNested = [&](Type *Ty) {
+        if (!Ty || !Visited.insert(Ty).second)
+          return;
+        if (auto *ST = dyn_cast<StructType>(Ty)) {
+          errs() << "    struct def: " << *ST << "\n";
+          for (Type *Elt : ST->elements())
+            PrintNested(Elt);
+        } else if (auto *AT = dyn_cast<ArrayType>(Ty)) {
+          PrintNested(AT->getElementType());
+        }
+      };
+      PrintNested(AllocatedTy);
+      errs() << "[SROA partition] offsets: [" << P.beginOffset() << ", "
+             << P.endOffset() << ") size=" << (P.endOffset() - P.beginOffset())
+             << "\n";
+    }
+  }
+
   // Try to compute a friendly type for this partition of the alloca. This
   // won't always succeed, in which case we fall back to a legal integer type
   // or an i8 array of an appropriate size.
@@ -5249,6 +5529,59 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   if (VecTy)
     SliceTy = VecTy;
 
+  // Optional debug: report the chosen SliceTy and whether vector promotion is viable.
+  if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+    errs() << "[SROA slice] SliceTy: " << *SliceTy
+           << ", VecTy: " << (VecTy ? "yes" : "no") << "\n";
+  }
+
+  // Canonicalize homogeneous, tightly-packed 2- or 4-field structs to
+  // a fixed-width vector type when the DataLayout proves bitwise identity.
+  // Do this BEFORE the alloca reuse fast-path so that we don't miss
+  // opportunities to vectorize memcpy on allocas whose SliceTy initially
+  // equals the allocated type.
+  if (SROAMaxStructToVectorBytes) {
+    if (auto *STy = dyn_cast<StructType>(SliceTy)) {
+      unsigned NumElts = STy->getNumElements();
+      if (NumElts == 2 || NumElts == 4) {
+        Type *EltTy = STy->getNumElements() > 0 ? STy->getElementType(0) : nullptr;
+        bool AllSame = EltTy && VectorType::isValidElementType(EltTy);
+        for (unsigned I = 1; AllSame && I < NumElts; ++I)
+          if (STy->getElementType(I) != EltTy)
+            AllSame = false;
+        if (AllSame) {
+          const StructLayout *SL = DL.getStructLayout(STy);
+          TypeSize EltTS = DL.getTypeAllocSize(EltTy);
+          if (!EltTS.isFixed())
+            return nullptr; // bail: scalable types not supported here
+          const uint64_t EltSize = EltTS.getFixedValue();
+          const uint64_t StructSize = SL->getSizeInBytes();
+          if (StructSize != 0 && StructSize <= SROAMaxStructToVectorBytes) {
+            bool TightlyPacked = (StructSize == NumElts * EltSize);
+            if (TightlyPacked) {
+              for (unsigned I = 0; I < NumElts; ++I) {
+                if (SL->getElementOffset(I) != I * EltSize) {
+                  TightlyPacked = false;
+                  break;
+                }
+              }
+            }
+            if (TightlyPacked) {
+              Type *OldSliceTy = SliceTy;
+              Type *NewSliceTy = FixedVectorType::get(EltTy, NumElts);
+              if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+                errs() << "[SROA struct->vector] SliceTy change\n";
+                errs() << "  old: " << *OldSliceTy << "\n";
+                errs() << "  new: " << *NewSliceTy << "\n";
+              }
+              SliceTy = NewSliceTy;
+            }
+          }
+        }
+      }
+    }
+  }
+
   // Check for the case where we're going to rewrite to a new alloca of the
   // exact same type as the original, and with the same access offsets. In that
   // case, re-use the existing alloca, but still run through the rewriter to
@@ -5257,11 +5590,17 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // out-of-bounds access (e.g. @PR35657 function in SROA/basictest.ll).
   AllocaInst *NewAI;
   if (SliceTy == AI.getAllocatedType() && P.beginOffset() == 0) {
+    if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+      errs() << "[SROA reuse] SliceTy equals allocated type; reusing original alloca\n";
+      errs() << "  SliceTy: " << *SliceTy << "\n";
+      errs() << "  AllocTy: " << *AI.getAllocatedType() << "\n";
+    }
     NewAI = &AI;
     // FIXME: We should be able to bail at this point with "nothing changed".
     // FIXME: We might want to defer PHI speculation until after here.
     // FIXME: return nullptr;
   } else {
+
     // Make sure the alignment is compatible with P.beginOffset().
     const Align Alignment = commonAlignment(AI.getAlign(), P.beginOffset());
     // If we will get at least this much alignment from the type alone, leave
@@ -5377,6 +5716,40 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     Worklist.insert(NewAI);
   }
 
+  if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+    Type *AllocatedTy = AI.getAllocatedType();
+    bool IsStruct = isa<StructType>(AllocatedTy);
+    bool IsArrayOfStruct = isa<ArrayType>(AllocatedTy) &&
+                           isa<StructType>(cast<ArrayType>(AllocatedTy)->getElementType());
+    if (IsStruct || IsArrayOfStruct) {
+      bool Eliminated = Promotable && PHIUsers.empty() && SelectUsers.empty();
+      errs() << "[SROA partition result] offsets: [" << P.beginOffset() << ", "
+             << P.endOffset() << ") size=" << (P.endOffset() - P.beginOffset())
+             << ", new-alloca-ty: " << *NewAI->getAllocatedType()
+             << ", eliminated=" << (Eliminated ? "yes" : "no") << "\n";
+      // If the result type is (array of) struct, recursively dump nested struct defs.
+      Type *NewTy = NewAI->getAllocatedType();
+      bool NewIsStruct = isa<StructType>(NewTy);
+      bool NewIsArrayOfStruct = isa<ArrayType>(NewTy) &&
+                                isa<StructType>(cast<ArrayType>(NewTy)->getElementType());
+      if (NewIsStruct || NewIsArrayOfStruct) {
+        SmallPtrSet<Type *, 8> Visited;
+        std::function<void(Type *)> PrintNested;
+        PrintNested = [&](Type *Ty) {
+          if (!Ty || !Visited.insert(Ty).second)
+            return;
+          if (auto *ST = dyn_cast<StructType>(Ty)) {
+            errs() << "    struct def: " << *ST << "\n";
+            for (Type *Elt : ST->elements())
+              PrintNested(Elt);
+          } else if (auto *AT = dyn_cast<ArrayType>(Ty)) {
+            PrintNested(AT->getElementType());
+          }
+        };
+        PrintNested(NewTy);
+      }
+    }
+  }
   return NewAI;
 }
 
@@ -6059,8 +6432,14 @@ PreservedAnalyses SROAPass::run(Function &F, FunctionAnalysisManager &AM) {
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  if (sys::Process::GetEnv("LLVM_DBG_MEMCPY"))
+    errs() << "[SROA run] start F=" << F.getName() << "\n";
   auto [Changed, CFGChanged] =
       SROA(&F.getContext(), &DTU, &AC, PreserveCFG).runSROA(F);
+  if (sys::Process::GetEnv("LLVM_DBG_MEMCPY"))
+    errs() << "[SROA run] done  F=" << F.getName()
+           << ", Changed=" << (Changed ? "yes" : "no")
+           << ", CFGChanged=" << (CFGChanged ? "yes" : "no") << "\n";
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
