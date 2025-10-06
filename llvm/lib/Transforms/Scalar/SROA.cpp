@@ -78,6 +78,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
@@ -3319,6 +3320,20 @@ private:
     // memcpy, and so simply updating the pointers is the necessary for us to
     // update both source and dest of a single call.
     if (!IsSplittable) {
+      // Optional decision tracing for memcpy with select/phi source
+      if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+        Value *RawSrcTrace = II.getRawSource();
+        Value *SrcStrippedTrace = RawSrcTrace ? RawSrcTrace->stripPointerCasts() : nullptr;
+        bool SourceIsSelectionTrace = SrcStrippedTrace &&
+                                      (isa<SelectInst>(SrcStrippedTrace) || isa<PHINode>(SrcStrippedTrace));
+        if (SourceIsSelectionTrace) {
+          errs() << "[SROA memcpy decision] Function: "
+                 << II.getFunction()->getName() << ", BB: %"
+                 << II.getParent()->getName() << "\n";
+          errs() << "  memcpy: " << II << "\n";
+          errs() << "  IsSplittable: no -> keep memcpy and adjust pointer (unsplit)\n";
+        }
+      }
       Value *AdjustedPtr = getNewAllocaSlicePtr(IRB, OldPtr->getType());
       if (IsDest) {
         // Update the address component of linked dbg.assigns.
@@ -3355,6 +3370,37 @@ private:
              DL.getTypeStoreSize(NewAI.getAllocatedType()).getFixedValue() ||
          !DL.typeSizeEqualsStoreSize(NewAI.getAllocatedType()) ||
          !NewAI.getAllocatedType()->isSingleValueType());
+
+    // Optional decision tracing for memcpy with select/phi source
+    if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+      Value *RawSrcTrace = II.getRawSource();
+      Value *SrcStrippedTrace = RawSrcTrace ? RawSrcTrace->stripPointerCasts() : nullptr;
+      bool SourceIsSelectionTrace = SrcStrippedTrace &&
+                                    (isa<SelectInst>(SrcStrippedTrace) || isa<PHINode>(SrcStrippedTrace));
+      if (SourceIsSelectionTrace) {
+        errs() << "[SROA memcpy decision] Function: "
+               << II.getFunction()->getName() << ", BB: %"
+               << II.getParent()->getName() << "\n";
+        errs() << "  memcpy: " << II << "\n";
+        errs() << "  IsSplittable: yes\n";
+        errs() << "  VecTy: " << (VecTy ? "yes" : "no")
+               << ", IntTy: " << (IntTy ? "yes" : "no") << "\n";
+        errs() << "  Offsets: Begin=" << BeginOffset
+               << ", End=" << EndOffset
+               << ", NewAllocaBegin=" << NewAllocaBeginOffset
+               << ", NewAllocaEnd=" << NewAllocaEndOffset
+               << ", SliceSize=" << SliceSize << "\n";
+        errs() << "  AllocTy=" << *NewAI.getAllocatedType() << "\n";
+        errs() << "  AllocTySize="
+               << DL.getTypeStoreSize(NewAI.getAllocatedType()).getFixedValue()
+               << ", TypeSizeEqualsStoreSize="
+               << (DL.typeSizeEqualsStoreSize(NewAI.getAllocatedType()) ? "yes" : "no")
+               << ", IsSingleValueType="
+               << (NewAI.getAllocatedType()->isSingleValueType() ? "yes" : "no")
+               << "\n";
+        errs() << "  EmitMemCpy computed: " << (EmitMemCpy ? "yes" : "no") << "\n";
+      }
+    }
 
     // If we're just going to emit a memcpy, the alloca hasn't changed, and the
     // size hasn't been shrunk based on analysis of the viable range, this is
@@ -3394,6 +3440,15 @@ private:
         commonAlignment(OtherAlign, OtherOffset.zextOrTrunc(64).getZExtValue());
 
     if (EmitMemCpy) {
+      if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+        Value *RawSrcTrace = II.getRawSource();
+        Value *SrcStrippedTrace = RawSrcTrace ? RawSrcTrace->stripPointerCasts() : nullptr;
+        bool SourceIsSelectionTrace = SrcStrippedTrace &&
+                                      (isa<SelectInst>(SrcStrippedTrace) || isa<PHINode>(SrcStrippedTrace));
+        if (SourceIsSelectionTrace) {
+          errs() << "  Decision: keep memcpy (adjusted pointers)\n";
+        }
+      }
       // Compute the other pointer, folding as much as possible to produce
       // a single, simple GEP in most cases.
       OtherPtr = getAdjustedPtr(IRB, DL, OtherPtr, OtherOffset, OtherPtrTy,
@@ -3478,9 +3533,14 @@ private:
     }
 
     Value *Src;
+    // For optional debug reporting, keep track of any created loads.
+    LoadInst *DbgLoad1 = nullptr;
+    LoadInst *DbgLoad2 = nullptr;
+
     if (VecTy && !IsWholeAlloca && !IsDest) {
-      Src = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                  NewAI.getAlign(), "load");
+      DbgLoad1 = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
+                                       NewAI.getAlign(), "load");
+      Src = DbgLoad1;
       Src = extractVector(IRB, Src, BeginIndex, EndIndex, "vec");
     } else if (IntTy && !IsWholeAlloca && !IsDest) {
       Src = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
@@ -3497,11 +3557,14 @@ private:
         Load->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
                                                    Load->getType(), DL));
       Src = Load;
+      DbgLoad1 = Load;
     }
 
     if (VecTy && !IsWholeAlloca && IsDest) {
-      Value *Old = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                         NewAI.getAlign(), "oldload");
+      LoadInst *OldLoad = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
+                                                NewAI.getAlign(), "oldload");
+      Value *Old = OldLoad;
+      DbgLoad2 = OldLoad;
       Src = insertVector(IRB, Old, Src, BeginIndex, "vec");
     } else if (IntTy && !IsWholeAlloca && IsDest) {
       Value *Old = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
@@ -3514,6 +3577,17 @@ private:
 
     StoreInst *Store = cast<StoreInst>(
         IRB.CreateAlignedStore(Src, DstPtr, DstAlign, II.isVolatile()));
+    if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+      Value *RawSrcTrace = II.getRawSource();
+      Value *SrcStrippedTrace = RawSrcTrace ? RawSrcTrace->stripPointerCasts() : nullptr;
+      bool SourceIsSelectionTrace = SrcStrippedTrace &&
+                                    (isa<SelectInst>(SrcStrippedTrace) || isa<PHINode>(SrcStrippedTrace));
+      if (SourceIsSelectionTrace && !EmitMemCpy) {
+        errs() << "  Decision: rewrite to "
+               << (isa<VectorType>(Store->getValueOperand()->getType()) ? "vector" : "scalar")
+               << " load/store\n";
+      }
+    }
     Store->copyMetadata(II, {LLVMContext::MD_mem_parallel_loop_access,
                              LLVMContext::MD_access_group});
     if (AATags)
@@ -3533,6 +3607,33 @@ private:
     }
 
     LLVM_DEBUG(dbgs() << "          to: " << *Store << "\n");
+
+    // If requested via environment, report memcpy-to-vector load/store rewrites.
+    // We only print when a vector load or store was produced.
+    if (sys::Process::GetEnv("LLVM_DBG_MEMCPY")) {
+      // Restrict logging to cases where memcpy source is a selection-like node.
+      // We treat either a select or a PHI (common CFG-selected pointer) as selection.
+      Value *RawSrc = II.getRawSource();
+      Value *SrcStripped = RawSrc ? RawSrc->stripPointerCasts() : nullptr;
+      bool SourceIsSelection = SrcStripped && (isa<SelectInst>(SrcStripped) || isa<PHINode>(SrcStripped));
+
+      bool CreatedVectorLoad =
+          (DbgLoad1 && isa<VectorType>(DbgLoad1->getType())) ||
+          (DbgLoad2 && isa<VectorType>(DbgLoad2->getType()));
+      bool CreatedVectorStore = isa<VectorType>(Store->getValueOperand()->getType());
+      if (SourceIsSelection && (CreatedVectorLoad || CreatedVectorStore)) {
+        errs() << "[SROA memcpy->vector] Function: "
+               << II.getFunction()->getName() << ", BB: %"
+               << II.getParent()->getName() << "\n";
+        errs() << "  memcpy: " << II << "\n";
+        if (DbgLoad1 && isa<VectorType>(DbgLoad1->getType()))
+          errs() << "  new vector load: " << *DbgLoad1 << "\n";
+        if (DbgLoad2 && isa<VectorType>(DbgLoad2->getType()))
+          errs() << "  new vector load: " << *DbgLoad2 << "\n";
+        if (CreatedVectorStore)
+          errs() << "  new vector store: " << *Store << "\n";
+      }
+    }
     return !II.isVolatile();
   }
 
