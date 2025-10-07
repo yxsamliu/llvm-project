@@ -1277,6 +1277,13 @@ def V_PK_VOP2_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64, VOP3_PACKED> {
   let Src1RC64 = VSrc_v2f64;
 }
 
+def V_PK_VOP3_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64_V2F64, VOP3_PACKED> {
+  let HasOpSel = 0;
+  let Src0RC64 = VSrc_v2f64;
+  let Src1RC64 = VSrc_v2f64;
+  let Src2RC64 = VSrc_v2f64;
+}
+
 let isCommutable = 1, isReMaterializable = 1 in {
   let SubtargetPredicate = HasPackedFP32Ops in {
     defm V_PK_FMA_F32 : VOP3PInst<"v_pk_fma_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fma>;
@@ -1302,6 +1309,7 @@ let isCommutable = 1, isReMaterializable = 1 in {
   }
 
   let SubtargetPredicate = HasPackedFP64Ops, SchedRW = [WriteDouble] in {
+    defm V_PK_FMA_F64 : VOP3PInst<"v_pk_fma_f64", V_PK_VOP3_F64_Profile, any_fma>;
     defm V_PK_MUL_F64 : VOP3PInst<"v_pk_mul_f64", V_PK_VOP2_F64_Profile, any_fmul>;
     defm V_PK_ADD_F64 : VOP3PInst<"v_pk_add_f64", V_PK_VOP2_F64_Profile, any_fadd>;
   } // End SubtargetPredicate = HasPackedFP64Ops, SchedRW = [WriteDouble]
@@ -2513,6 +2521,7 @@ defm V_FMA_MIXHI_BF16   : VOP3P_Realtriple<GFX1250Gen, 0x3f>;
 defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3P_Real_gfx1250<0x35>;
 defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3P_Real_gfx1250<0x3a>;
 
+defm V_PK_FMA_F64 : VOP3P_Real_gfx1250<0x3b>;
 defm V_PK_MUL_F64 : VOP3P_Real_gfx1250<0x3c>;
 defm V_PK_ADD_F64 : VOP3P_Real_gfx1250<0x4b>;
 

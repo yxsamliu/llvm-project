@@ -3449,7 +3449,7 @@ def : GCNPat<
 
 // If fcanonicalize's operand is implicitly canonicalized, we only need a copy.
 let AddedComplexity = 8 in {
-foreach vt = [f16, v2f16, f32, v2f32, f64] in {
+foreach vt = [f16, v2f16, f32, v2f32, f64, v2f64] in {
   def : GCNPat<
     (fcanonicalize (vt is_canonicalized:$src)),
     (COPY vt:$src)
@@ -3515,6 +3515,18 @@ let SubtargetPredicate = HasPackedFP32Ops in {
 def : GCNPat<
   (fcanonicalize (v2f32 (VOP3PMods v2f32:$src, i32:$src_mods))),
   (V_PK_MUL_F32 0, (i64 CONST.FP32_ONE), $src_mods, $src)
+>;
+}
+
+// We cannot just do (v2i64 CONST.FP64_ONE) as tablegen asserts that resulting
+// value it bigger than 64-bit. This REG_SEQUENCE shall be foldable into the
+// v_pk_mul_f64 as inline immediate 1.0.
+let SubtargetPredicate = HasPackedFP64Ops in {
+def : GCNPat<
+  (fcanonicalize (v2f64 (VOP3PMods v2f64:$src, i32:$src_mods))),
+  (V_PK_MUL_F64 0, (v2i64 (REG_SEQUENCE SGPR_128, (S_MOV_B64_IMM_PSEUDO CONST.FP64_ONE), sub0_sub1,
+                                                  (S_MOV_B64_IMM_PSEUDO CONST.FP64_ONE), sub2_sub3)),
+                $src_mods, $src)
 >;
 }
 
