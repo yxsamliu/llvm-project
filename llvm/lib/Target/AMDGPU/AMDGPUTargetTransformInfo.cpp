@@ -391,7 +391,7 @@ unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
     return 8 * ST->getMaxPrivateElementSize();
 
   if (AddrSpace == AMDGPUAS::LANE_SHARED)
-    return 32;
+    return 18 * 32; // Max possible operand size.
 
   // Common to flat, global, local and region. Assume for unknown addrspace.
   return 128;
