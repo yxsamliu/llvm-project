@@ -1565,8 +1565,11 @@ define amdgpu_kernel void @fma_vector_vector_neg_scalar_lo_scalar_hi(ptr addrspa
 ; GFX1251-GISEL-NEXT:    ds_load_b64 v[10:11], v10 offset:16
 ; GFX1251-GISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[8:11], v[8:11], v[8:11]
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1251-GISEL-NEXT:    v_xor_b32_e32 v9, 0x80000000, v9
+; GFX1251-GISEL-NEXT:    v_xor_b32_e32 v11, 0x80000000, v11
 ; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1251-GISEL-NEXT:    v_pk_fma_f64 v[0:3], v[0:3], v[4:7], v[8:11] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GFX1251-GISEL-NEXT:    v_pk_fma_f64 v[0:3], v[0:3], v[4:7], v[8:11]
 ; GFX1251-GISEL-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1251-GISEL-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
 ; GFX1251-GISEL-NEXT:    s_endpgm

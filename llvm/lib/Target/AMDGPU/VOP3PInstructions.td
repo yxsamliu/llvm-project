@@ -114,12 +114,14 @@ multiclass VOP3_VOP3PInst_t16<string OpName, VOP3P_Mix_Profile P> {
 
 def V_PK_VOP2_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64, VOP3_PACKED> {
   let HasOpSel = 0;
+  let HasOMod = 0;
   let Src0RC64 = VSrc_v2f64;
   let Src1RC64 = VSrc_v2f64;
 }
 
 def V_PK_VOP3_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64_V2F64, VOP3_PACKED> {
   let HasOpSel = 0;
+  let HasOMod = 0;
   let Src0RC64 = VSrc_v2f64;
   let Src1RC64 = VSrc_v2f64;
   let Src2RC64 = VSrc_v2f64;

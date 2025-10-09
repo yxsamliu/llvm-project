@@ -3577,11 +3577,9 @@ multiclass SelectCanonicalizeAsMax<
     let OtherPredicates = f16_preds;
   }
 
-  // V_PK_MAX_NUM_F64 does not support op_sel and cannot use VOP3PMods.
-  // TODO: Implement VOP3PModsNeg which only selects FNEG.
   def : GCNPat<
-    (fcanonicalize (v2f64 v2f64:$src)),
-    (V_PK_MAX_NUM_F64 0, $src, 0, $src)> {
+    (fcanonicalize (v2f64 (VOP3PMods v2f64:$src, i32:$src_mods))),
+    (V_PK_MAX_NUM_F64 $src_mods, $src, $src_mods, $src)> {
     let OtherPredicates = !listconcat(f64_preds, [HasPackedFP64Ops]);
   }
 }
