@@ -2,11 +2,11 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize32,+real-true16 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX13,W32 --strict-whitespace --implicit-check-not=error %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64,+real-true16 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX13,W64 --strict-whitespace --implicit-check-not=error %s
 
-v_ashr_pk_i8_i32 v1, v2, v3, v4 clamp
-// GFX13: :[[@LINE-1]]:33: error: invalid operand for instruction
+v_ashr_pk_i8_i32 v1.l, v2, v3, v4 clamp
+// GFX13: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_ashr_pk_u8_i32 v1, v2, v3, v4 clamp
-// GFX13: :[[@LINE-1]]:33: error: invalid operand for instruction
+v_ashr_pk_u8_i32 v1.l, v2, v3, v4 clamp
+// GFX13: :[[@LINE-1]]:35: error: invalid operand for instruction
 
 v_ashrrev_i64 v[4:5], v2, v[6:7] dpp8:[7,6,5,4,3,2,1,0]
 // GFX13: :[[@LINE-1]]:34: error: not a valid operand.
