@@ -2056,6 +2056,9 @@ void AsmPrinter::emitFunctionBody() {
       case TargetOpcode::MEMBARRIER:
         OutStreamer->emitRawComment("MEMBARRIER");
         break;
+      case TargetOpcode::PROVENANCE_END:
+        OutStreamer->emitRawComment("PROVENANCE_END");
+        break;
       case TargetOpcode::JUMP_TABLE_DEBUG_INFO:
         // This instruction is only used to note jump table debug info, it's
         // purely meta information.

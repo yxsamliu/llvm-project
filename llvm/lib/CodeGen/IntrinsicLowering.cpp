@@ -453,8 +453,13 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     // Discard region information.
     CI->replaceAllUsesWith(PoisonValue::get(CI->getType()));
     break;
+  case Intrinsic::experimental_provenance_begin:
+    // Discard provenance information.
+    CI->replaceAllUsesWith(CI->getArgOperand(0));
+    break;
   case Intrinsic::invariant_end:
   case Intrinsic::lifetime_end:
+  case Intrinsic::experimental_provenance_end:
     // Discard region information.
     break;
   }

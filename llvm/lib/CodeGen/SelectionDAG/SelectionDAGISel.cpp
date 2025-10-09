@@ -2529,6 +2529,12 @@ void SelectionDAGISel::Select_FAKE_USE(SDNode *N) {
                        N->getOperand(1), N->getOperand(0));
 }
 
+// Use the generic target PROVENANCE_END target opcode. The chain operand
+// must come last, because InstrEmitter::AddOperand() requires it.
+void SelectionDAGISel::Select_PROVENANCE_END(SDNode *N) {
+  CurDAG->SelectNodeTo(N, TargetOpcode::PROVENANCE_END, N->getValueType(0));
+}
+
 void SelectionDAGISel::Select_FREEZE(SDNode *N) {
   // TODO: We don't have FREEZE pseudo-instruction in MachineInstr-level now.
   // If FREEZE instruction is added later, the code below must be changed as
@@ -3303,6 +3309,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     return;
   case ISD::FAKE_USE:
     Select_FAKE_USE(NodeToMatch);
+    return;
+  case ISD::PROVENANCE_END:
+    Select_PROVENANCE_END(NodeToMatch);
     return;
   case ISD::FREEZE:
     Select_FREEZE(NodeToMatch);

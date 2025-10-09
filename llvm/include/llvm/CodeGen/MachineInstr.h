@@ -1442,6 +1442,10 @@ public:
 
   bool isFakeUse() const { return getOpcode() == TargetOpcode::FAKE_USE; }
 
+  bool isProvenanceEnd() const {
+    return getOpcode() == TargetOpcode::PROVENANCE_END;
+  }
+
   /// Return true if the instruction behaves like a copy.
   /// This does not include native copy instructions.
   bool isCopyLike() const {

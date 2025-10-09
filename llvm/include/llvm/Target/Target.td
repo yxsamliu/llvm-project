@@ -1538,6 +1538,16 @@ def ICALL_BRANCH_FUNNEL : StandardPseudoInstruction {
   let AsmString = "";
   let hasSideEffects = true;
 }
+
+def PROVENANCE_END : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let AsmString = "";
+  let hasSideEffects = true;
+  let mayStore = true;
+  let isMeta = true;
+}
+
 def MEMBARRIER : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins);
