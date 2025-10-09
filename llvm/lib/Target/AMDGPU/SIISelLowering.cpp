@@ -858,10 +858,17 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                          Custom);
     }
     if (Subtarget->hasPackedFP64Ops()) {
-      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA}, MVT::v2f64, Legal);
-      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA},
-                         {MVT::v4f64, MVT::v8f64, MVT::v16f64, MVT::v32f64},
-                         Custom);
+      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FMINNUM_IEEE,
+                          ISD::FMAXNUM_IEEE, ISD::FCANONICALIZE},
+                         MVT::v2f64, Legal);
+      setOperationAction(
+          {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+          MVT::v2f64, Custom);
+      setOperationAction(
+          {ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE,
+           ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM,
+           ISD::FCANONICALIZE},
+          {MVT::v4f64, MVT::v8f64, MVT::v16f64, MVT::v32f64}, Custom);
     }
   }
 
@@ -6631,7 +6638,8 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
          VT == MVT::v8bf16 || VT == MVT::v16i16 || VT == MVT::v16f16 ||
          VT == MVT::v16bf16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
          VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16 ||
-         VT == MVT::v32bf16);
+         VT == MVT::v32bf16 || VT == MVT::v4f64 || VT == MVT::v8f64 ||
+         VT == MVT::v16f64 || VT == MVT::v32f64);
 
   auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
 

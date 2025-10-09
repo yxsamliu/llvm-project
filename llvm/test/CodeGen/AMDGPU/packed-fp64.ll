@@ -1555,10 +1555,6 @@ define amdgpu_kernel void @fma_vector_vector_neg_scalar_lo_scalar_hi(ptr addrspa
 ; GFX1251-GISEL-LABEL: fma_vector_vector_neg_scalar_lo_scalar_hi:
 ; GFX1251-GISEL:       ; %bb.0: ; %bb
 ; GFX1251-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX1251-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1251-GISEL-NEXT:    s_mov_b64 s[4:5], 1.0
-; GFX1251-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1251-GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
 ; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-GISEL-NEXT:    v_dual_mov_b32 v6, s2 :: v_dual_mov_b32 v10, s3
 ; GFX1251-GISEL-NEXT:    ds_load_b64 v[0:1], v6
@@ -1568,7 +1564,7 @@ define amdgpu_kernel void @fma_vector_vector_neg_scalar_lo_scalar_hi(ptr addrspa
 ; GFX1251-GISEL-NEXT:    ds_load_b64 v[8:9], v10
 ; GFX1251-GISEL-NEXT:    ds_load_b64 v[10:11], v10 offset:16
 ; GFX1251-GISEL-NEXT:    s_wait_dscnt 0x0
-; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[8:11], s[4:7], v[8:11]
+; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[8:11], v[8:11], v[8:11]
 ; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1251-GISEL-NEXT:    v_pk_fma_f64 v[0:3], v[0:3], v[4:7], v[8:11] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1251-GISEL-NEXT:    v_mov_b32_e32 v4, 0

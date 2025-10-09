@@ -3518,18 +3518,6 @@ def : GCNPat<
 >;
 }
 
-// We cannot just do (v2i64 CONST.FP64_ONE) as tablegen asserts that resulting
-// value it bigger than 64-bit. This REG_SEQUENCE shall be foldable into the
-// v_pk_mul_f64 as inline immediate 1.0.
-let SubtargetPredicate = HasPackedFP64Ops in {
-def : GCNPat<
-  (fcanonicalize (v2f64 (VOP3PMods v2f64:$src, i32:$src_mods))),
-  (V_PK_MUL_F64 0, (v2i64 (REG_SEQUENCE SGPR_128, (S_MOV_B64_IMM_PSEUDO CONST.FP64_ONE), sub0_sub1,
-                                                  (S_MOV_B64_IMM_PSEUDO CONST.FP64_ONE), sub2_sub3)),
-                $src_mods, $src)
->;
-}
-
 // TODO: Handle fneg like other types.
 let SubtargetPredicate = isNotGFX12Plus in {
 def : GCNPat<
@@ -3587,6 +3575,14 @@ multiclass SelectCanonicalizeAsMax<
     (V_PK_MAX_F16 $src_mods, $src, $src_mods, $src, DSTCLAMP.NONE)> {
     // FIXME: Should have VOP3P subtarget predicate
     let OtherPredicates = f16_preds;
+  }
+
+  // V_PK_MAX_NUM_F64 does not support op_sel and cannot use VOP3PMods.
+  // TODO: Implement VOP3PModsNeg which only selects FNEG.
+  def : GCNPat<
+    (fcanonicalize (v2f64 v2f64:$src)),
+    (V_PK_MAX_NUM_F64 0, $src, 0, $src)> {
+    let OtherPredicates = !listconcat(f64_preds, [HasPackedFP64Ops]);
   }
 }
 

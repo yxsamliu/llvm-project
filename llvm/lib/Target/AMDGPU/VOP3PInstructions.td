@@ -112,6 +112,19 @@ multiclass VOP3_VOP3PInst_t16<string OpName, VOP3P_Mix_Profile P> {
     }
 }
 
+def V_PK_VOP2_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64, VOP3_PACKED> {
+  let HasOpSel = 0;
+  let Src0RC64 = VSrc_v2f64;
+  let Src1RC64 = VSrc_v2f64;
+}
+
+def V_PK_VOP3_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64_V2F64, VOP3_PACKED> {
+  let HasOpSel = 0;
+  let Src0RC64 = VSrc_v2f64;
+  let Src1RC64 = VSrc_v2f64;
+  let Src2RC64 = VSrc_v2f64;
+}
+
 let isReMaterializable = 1 in {
 let isCommutable = 1 in {
 defm V_PK_MAD_I16 : VOP3PInst<"v_pk_mad_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16>>;
@@ -133,6 +146,11 @@ defm V_PK_MIN_I16 : VOP3PInst<"v_pk_min_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I1
 defm V_PK_MIN_U16 : VOP3PInst<"v_pk_min_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, umin>;
 defm V_PK_MAX_I16 : VOP3PInst<"v_pk_max_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, smax>;
 defm V_PK_MAX_U16 : VOP3PInst<"v_pk_max_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, umax>;
+
+let SubtargetPredicate = HasPackedFP64Ops, SchedRW = [WriteDouble] in {
+defm V_PK_MAX_NUM_F64 : VOP3PInst<"v_pk_max_num_f64", V_PK_VOP2_F64_Profile, fmaxnum_like>;
+defm V_PK_MIN_NUM_F64 : VOP3PInst<"v_pk_min_num_f64", V_PK_VOP2_F64_Profile, fminnum_like>;
+}
 
 let SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0 in {
 defm V_PK_MAXIMUM_F16 : VOP3PInst<"v_pk_maximum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>, fmaximum>;
@@ -1269,19 +1287,6 @@ def MAIInstInfoTable : GenericTable {
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getMAIInstInfoHelper";
-}
-
-def V_PK_VOP2_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64, VOP3_PACKED> {
-  let HasOpSel = 0;
-  let Src0RC64 = VSrc_v2f64;
-  let Src1RC64 = VSrc_v2f64;
-}
-
-def V_PK_VOP3_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64_V2F64, VOP3_PACKED> {
-  let HasOpSel = 0;
-  let Src0RC64 = VSrc_v2f64;
-  let Src1RC64 = VSrc_v2f64;
-  let Src2RC64 = VSrc_v2f64;
 }
 
 let isCommutable = 1, isReMaterializable = 1 in {
@@ -2521,9 +2526,11 @@ defm V_FMA_MIXHI_BF16   : VOP3P_Realtriple<GFX1250Gen, 0x3f>;
 defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3P_Real_gfx1250<0x35>;
 defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3P_Real_gfx1250<0x3a>;
 
-defm V_PK_FMA_F64 : VOP3P_Real_gfx1250<0x3b>;
-defm V_PK_MUL_F64 : VOP3P_Real_gfx1250<0x3c>;
-defm V_PK_ADD_F64 : VOP3P_Real_gfx1250<0x4b>;
+defm V_PK_FMA_F64     : VOP3P_Real_gfx1250<0x3b>;
+defm V_PK_MUL_F64     : VOP3P_Real_gfx1250<0x3c>;
+defm V_PK_ADD_F64     : VOP3P_Real_gfx1250<0x4b>;
+defm V_PK_MAX_NUM_F64 : VOP3P_Real_gfx1250<0x4e>;
+defm V_PK_MIN_NUM_F64 : VOP3P_Real_gfx1250<0x4f>;
 
 let AssemblerPredicate = isGFX1250Plus in
 def : AMDGPUMnemonicAlias<"v_fma_mix_f32_f16",  "v_fma_mix_f32">;
