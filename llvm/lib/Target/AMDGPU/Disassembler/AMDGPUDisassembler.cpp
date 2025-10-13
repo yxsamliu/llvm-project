@@ -543,6 +543,7 @@ void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
       case AMDGPU::OPERAND_REG_INLINE_C_FP64:
       case AMDGPU::OPERAND_REG_INLINE_C_INT64:
       case AMDGPU::OPERAND_REG_IMM_V2FP64:
+      case AMDGPU::OPERAND_REG_IMM_V2INT64:
         Imm = getInlineImmVal64(Imm);
         break;
       default:
@@ -1605,7 +1606,8 @@ MCOperand AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
   bool UseLit64 = false;
   if (CanUse64BitLiterals) {
     if (OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_INT64 ||
-        OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_C_INT64)
+        OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_C_INT64 ||
+        OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_V2INT64)
       UseLit64 = false;
     else if (OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_FP64 ||
              OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_C_FP64 ||
@@ -1636,7 +1638,8 @@ AMDGPUDisassembler::decodeLiteral64Constant(const MCInst &Inst) const {
   const MCInstrDesc &Desc = MCII->get(Inst.getOpcode());
   const MCOperandInfo &OpDesc = Desc.operands()[Inst.getNumOperands()];
   if (OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_INT64 ||
-      OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_C_INT64) {
+      OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_C_INT64 ||
+      OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_V2INT64) {
     UseLit64 = false;
   } else {
     assert(OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_FP64 ||
