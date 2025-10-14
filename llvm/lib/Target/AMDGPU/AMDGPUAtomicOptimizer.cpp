@@ -737,6 +737,10 @@ void AMDGPUAtomicOptimizerImpl::optimizeDivergentAddress(
         dyn_cast<GetElementPtrInst>(Ptr);
     if (!GEP)
       return nullptr;
+
+    if (UA.isDivergent(GEP->getPointerOperand()))
+      return nullptr;
+
     Value *Index = nullptr;
     for (Use &Idx : GEP->indices()) {
       if (UA.isDivergent(Idx)) {
@@ -769,20 +773,22 @@ void AMDGPUAtomicOptimizerImpl::optimizeDivergentAddress(
   }
 
   Value *Ptr = I.getOperand(PtrIdx);
+  const bool Is64bit =
+      Ptr->getType()->isPointerTy() &&
+      DL.getPointerSizeInBits(Ptr->getType()->getPointerAddressSpace()) == 64;
   Type *const Ty = I.getType();
-  Value *Index;
+  Value *Index = nullptr;
   Value *FullMatchMask;
 
-  Index = extractDivergentIndex(I.getOperand(PtrIdx));
+  if (Is64bit)
+    Index = extractDivergentIndex(I.getOperand(PtrIdx));
+
   if (Index) {
-    if (!Index->getType()->isIntegerTy(32))
-      Index = B.CreateTrunc(Index, B.getInt32Ty());
+    Index = B.CreateTrunc(Index, B.getInt32Ty());
     FullMatchMask =
         B.CreateIntrinsic(Ty, Intrinsic::amdgcn_wave_match_b32, {Index, Index});
-  } else if (PtrIdx == 0 && Ptr->getType()->getPointerAddressSpace() ==
-                                AMDGPUAS::GLOBAL_ADDRESS) {
-    Value *Address =
-        B.CreatePtrToInt(Ptr, B.getInt64Ty());
+  } else if (Is64bit) {
+    Value *Address = B.CreatePtrToInt(Ptr, B.getInt64Ty());
     Value *AddressLow32 = B.CreateTrunc(Address, B.getInt32Ty());
     Value *High32Shifted = B.CreateLShr(Address, 32);
     Value *AddressHigh32 = B.CreateTrunc(High32Shifted, B.getInt32Ty());
