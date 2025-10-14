@@ -46,6 +46,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/ADT/StringRef.h"
+#include <cstdlib>
 #include <climits>
 #include <limits>
 #include <optional>
@@ -2024,14 +2026,46 @@ bool CallAnalyzer::allowSizeGrowth(CallBase &Call) {
 
 bool InlineCostCallAnalyzer::isColdCallSite(CallBase &Call,
                                             BlockFrequencyInfo *CallerBFI) {
+  // Optional debugging: controlled by env var LLVM_DBG_COLD. When set to a
+  // callee name, we will print to errs() the reasoning used to classify this
+  // callsite as cold or not.
+  const char *LLVMDbgColdEnv = std::getenv("LLVM_DBG_COLD");
+  const Function *EnvMatchedCallee = nullptr;
+  bool ShouldDbg = false;
+  if (LLVMDbgColdEnv) {
+    const Value *CalleeOp = Call.getCalledOperand();
+    if (CalleeOp)
+      CalleeOp = CalleeOp->stripPointerCasts();
+    if (const Function *CF = dyn_cast_or_null<Function>(CalleeOp)) {
+      if (CF->getName() == LLVMDbgColdEnv) {
+        ShouldDbg = true;
+        EnvMatchedCallee = CF;
+      }
+    }
+  }
+
   // If global profile summary is available, then callsite's coldness is
   // determined based on that.
-  if (PSI && PSI->hasProfileSummary())
-    return PSI->isColdCallSite(Call, CallerBFI);
+  if (PSI && PSI->hasProfileSummary()) {
+    bool R = PSI->isColdCallSite(Call, CallerBFI);
+    if (ShouldDbg) {
+      errs() << "LLVM_DBG_COLD: isColdCallSite callee='"
+             << EnvMatchedCallee->getName()
+             << "' path='profile-summary' result=" << (R ? "true" : "false")
+             << "\n";
+    }
+    return R;
+  }
 
   // Otherwise we need BFI to be available.
-  if (!CallerBFI)
+  if (!CallerBFI) {
+    if (ShouldDbg) {
+      errs() << "LLVM_DBG_COLD: isColdCallSite callee='"
+             << EnvMatchedCallee->getName()
+             << "' path='no-bfi' result=false\n";
+    }
     return false;
+  }
 
   // Determine if the callsite is cold relative to caller's entry. We could
   // potentially cache the computation of scaled entry frequency, but the added
@@ -2042,7 +2076,18 @@ bool InlineCostCallAnalyzer::isColdCallSite(CallBase &Call,
   auto CallSiteFreq = CallerBFI->getBlockFreq(CallSiteBB);
   auto CallerEntryFreq =
       CallerBFI->getBlockFreq(&(Call.getCaller()->getEntryBlock()));
-  return CallSiteFreq < CallerEntryFreq * ColdProb;
+  bool R = CallSiteFreq < CallerEntryFreq * ColdProb;
+  if (ShouldDbg) {
+    BlockFrequency ThresholdBF = CallerEntryFreq * ColdProb;
+    errs() << "LLVM_DBG_COLD: isColdCallSite callee='"
+           << EnvMatchedCallee->getName() << "' path='bfi' "
+           << "callsite_freq=" << CallSiteFreq.getFrequency() << " "
+           << "caller_entry_freq=" << CallerEntryFreq.getFrequency() << " "
+           << "cold_prob_percent=" << ColdCallSiteRelFreq << " "
+           << "threshold=" << ThresholdBF.getFrequency() << " "
+           << "result=" << (R ? "true" : "false") << "\n";
+  }
+  return R;
 }
 
 std::optional<int>
