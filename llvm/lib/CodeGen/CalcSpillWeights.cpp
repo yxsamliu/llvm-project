@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <tuple>
@@ -234,10 +235,17 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  const bool SpillDbg = sys::Process::GetEnv("LLVM_DBG_SPILL").has_value();
   MachineBasicBlock *MBB = nullptr;
   float TotalWeight = 0;
   unsigned NumInstr = 0; // Number of instructions using LI
   SmallPtrSet<MachineInstr *, 8> Visited;
+
+  if (SpillDbg) {
+    errs() << "[spill-weight] begin " << printReg(LI.reg(), &TRI)
+           << " size=" << LI.getSize()
+           << " isLocalSplit=" << (Start && End) << '\n';
+  }
 
   std::pair<unsigned, Register> TargetHint = MRI.getRegAllocationHint(LI.reg());
 
@@ -355,6 +363,15 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
         Weight *= 3;
 
       TotalWeight += Weight;
+
+      if (SpillDbg) {
+        errs() << "[spill-weight]  MI " << LIS.getInstructionIndex(*MI)
+               << " for " << printReg(LI.reg(), &TRI)
+               << " in BB#" << MI->getParent()->getNumber()
+               << " reads=" << Reads << " writes=" << Writes
+               << " instrWeight=" << Weight
+               << " totalWeight=" << TotalWeight << '\n';
+      }
     }
 
     // Get allocation hints from copies.
@@ -418,7 +435,18 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
   const TargetRegisterClass *RC = MRI.getRegClass(LI.reg());
   TotalWeight *= TRI.getSpillWeightScaleFactor(RC);
 
+  float Normalized;
   if (IsLocalSplitArtifact)
-    return normalize(TotalWeight, Start->distance(*End), NumInstr);
-  return normalize(TotalWeight, LI.getSize(), NumInstr);
+    Normalized = normalize(TotalWeight, Start->distance(*End), NumInstr);
+  else
+    Normalized = normalize(TotalWeight, LI.getSize(), NumInstr);
+
+  if (SpillDbg) {
+    errs() << "[spill-weight] final " << printReg(LI.reg(), &TRI)
+           << " totalWeight=" << TotalWeight
+           << " numInstr=" << NumInstr
+           << " normalized=" << Normalized << '\n';
+  }
+
+  return Normalized;
 }

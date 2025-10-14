@@ -66,6 +66,7 @@
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -2660,6 +2661,10 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
   if (Stage < RS_Split) {
     ExtraInfo->setStage(VirtReg, RS_Split);
     LLVM_DEBUG(dbgs() << "wait for second round\n");
+    if (sys::Process::GetEnv("LLVM_DBG_SPILL")) {
+      errs() << "[spill] defer " << printReg(VirtReg.reg(), TRI)
+             << ": set stage RS_Split (first round)\n";
+    }
     NewVRegs.push_back(VirtReg.reg());
     return MCRegister();
   }
@@ -2668,6 +2673,46 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
     // Try splitting VirtReg or interferences.
     unsigned NewVRegSizeBefore = NewVRegs.size();
     MCRegister PhysReg = trySplit(VirtReg, Order, NewVRegs, FixedRegisters);
+    if (sys::Process::GetEnv("LLVM_DBG_SPILL") &&
+        NewVRegs.size() > NewVRegSizeBefore) {
+      errs() << "[spill] split " << printReg(VirtReg.reg(), TRI) << " ->";
+      for (size_t I = NewVRegSizeBefore; I < NewVRegs.size(); ++I)
+        errs() << ' ' << printReg(NewVRegs[I], TRI);
+      errs() << "\n";
+      // Dump liveness and MI details for all new child intervals.
+      auto dumpChild = [&](Register R) {
+        LiveInterval &ChildLI = LIS->getInterval(R);
+        errs() << "[spill]   liveness for " << printReg(R, TRI)
+               << ": defs:";
+        for (const VNInfo *VNI : ChildLI.valnos)
+          errs() << ' ' << VNI->def;
+        errs() << " | uses:";
+        for (const MachineInstr &MI : MRI->use_instructions(R)) {
+          errs() << ' ' << LIS->getInstructionIndex(MI);
+          if (MI.isDebugInstr()) errs() << "(dbg)";
+        }
+        errs() << " | segments:";
+        for (const LiveRange::Segment &S : ChildLI)
+          errs() << " [" << S.start << ',' << S.end << "]";
+        errs() << "\n";
+        for (const VNInfo *VNI : ChildLI.valnos) {
+          if (const MachineInstr *DefMI = LIS->getInstructionFromIndex(VNI->def)) {
+            errs() << "[spill]     def " << VNI->def << ": ";
+            DefMI->print(errs());
+            errs() << "\n";
+          }
+        }
+        for (const MachineInstr &MI : MRI->use_instructions(R)) {
+          errs() << "[spill]     use " << LIS->getInstructionIndex(MI);
+          if (MI.isDebugInstr()) errs() << " (dbg)";
+          errs() << ": ";
+          MI.print(errs());
+          errs() << "\n";
+        }
+      };
+      for (size_t I = NewVRegSizeBefore; I < NewVRegs.size(); ++I)
+        dumpChild(NewVRegs[I]);
+    }
     if (PhysReg || (NewVRegs.size() - NewVRegSizeBefore))
       return PhysReg;
   }
@@ -2675,14 +2720,56 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
   // If we couldn't allocate a register from spilling, there is probably some
   // invalid inline assembly. The base class will report it.
   if (Stage >= RS_Done || !VirtReg.isSpillable()) {
-    return tryLastChanceRecoloring(VirtReg, Order, NewVRegs, FixedRegisters,
-                                   RecolorStack, Depth);
+    if (sys::Process::GetEnv("LLVM_DBG_SPILL")) {
+      errs() << "[spill] last-chance recolor for "
+             << printReg(VirtReg.reg(), TRI) << "\n";
+    }
+    MCRegister Recolored = tryLastChanceRecoloring(
+        VirtReg, Order, NewVRegs, FixedRegisters, RecolorStack, Depth);
+    if (sys::Process::GetEnv("LLVM_DBG_SPILL") && Recolored) {
+      errs() << "[spill] recolor assigned " << printReg(VirtReg.reg(), TRI)
+             << " -> " << printReg(Recolored, TRI) << "\n";
+    }
+    return Recolored;
   }
 
   // Finally spill VirtReg itself.
   NamedRegionTimer T("spill", "Spiller", TimerGroupName,
                      TimerGroupDescription, TimePassesIsEnabled);
   LiveRangeEdit LRE(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+  // Optional debug: print spill candidate details when LLVM_DBG_SPILL is set.
+  if (sys::Process::GetEnv("LLVM_DBG_SPILL")) {
+    errs() << "[spill] Spill decision for " << printReg(VirtReg.reg(), TRI)
+           << " weight=" << VirtReg.weight() << "\n";
+    // Dump basic def/use context around current interval.
+    errs() << "[spill]  defs:";
+    for (const VNInfo *VNI : VirtReg.valnos)
+      errs() << ' ' << VNI->def;
+    errs() << " | uses:";
+    for (const MachineInstr &MI : MRI->use_instructions(VirtReg.reg())) {
+      errs() << ' ' << LIS->getInstructionIndex(MI);
+      if (MI.isDebugInstr()) errs() << "(dbg)";
+    }
+    errs() << " | segments:";
+    for (const LiveRange::Segment &S : VirtReg)
+      errs() << " [" << S.start << "," << S.end << "]";
+    errs() << "\n";
+
+    for (const VNInfo *VNI : VirtReg.valnos) {
+      if (const MachineInstr *DefMI = LIS->getInstructionFromIndex(VNI->def)) {
+        errs() << "[spill]    def " << VNI->def << ": ";
+        DefMI->print(errs());
+        errs() << "\n";
+      }
+    }
+    for (const MachineInstr &MI : MRI->use_instructions(VirtReg.reg())) {
+      errs() << "[spill]    use " << LIS->getInstructionIndex(MI);
+      if (MI.isDebugInstr()) errs() << " (dbg)";
+      errs() << ": ";
+      MI.print(errs());
+      errs() << "\n";
+    }
+  }
   spiller().spill(LRE, &Order);
   ExtraInfo->setStage(NewVRegs.begin(), NewVRegs.end(), RS_Done);
 

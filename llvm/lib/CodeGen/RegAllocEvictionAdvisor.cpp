@@ -13,7 +13,9 @@
 #include "AllocationOrder.h"
 #include "RegAllocGreedy.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
@@ -22,6 +24,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Process.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -188,6 +192,53 @@ RegAllocEvictionAdvisor::RegAllocEvictionAdvisor(const MachineFunction &MF,
                           MF.getSubtarget().enableRALocalReassignment(
                               MF.getTarget().getOptLevel())) {}
 
+// Environment gated debug printing for spill/eviction decisions.
+static inline bool isSpillDebugEnabled() {
+  if (auto Env = sys::Process::GetEnv("LLVM_DBG_SPILL"))
+    return !Env->empty() && *Env != "0";
+  return false;
+}
+
+// Print a concise summary of a virtual register's live interval: defs and
+// liveness segments in SlotIndex space. Uses are represented implicitly by the
+// segments that cover them.
+static inline void dumpVirtRegLiveness(const LiveInterval &LI,
+                                       const LiveIntervals *LIS,
+                                       const MachineRegisterInfo *MRI,
+                                       const TargetRegisterInfo *TRI) {
+  errs() << "[spill]   liveness for " << printReg(LI.reg(), nullptr)
+         << ": defs:";
+  for (const VNInfo *VNI : LI.valnos)
+    errs() << ' ' << VNI->def;
+  errs() << " | uses:";
+  for (const MachineInstr &MI : MRI->use_instructions(LI.reg())) {
+    errs() << ' ' << LIS->getInstructionIndex(MI);
+    if (MI.isDebugInstr()) errs() << "(dbg)";
+  }
+  errs() << " | segments:";
+  for (const LiveRange::Segment &S : LI)
+    errs() << " [" << S.start << ',' << S.end << "]";
+  errs() << '\n';
+
+  // Print each def/use instruction for precise context.
+  for (const VNInfo *VNI : LI.valnos) {
+    if (!VNI->def.isValid())
+      continue;
+    if (const MachineInstr *DefMI = LIS->getInstructionFromIndex(VNI->def)) {
+      errs() << "[spill]     def " << VNI->def << ": ";
+      DefMI->print(errs());
+      errs() << '\n';
+    }
+  }
+  for (const MachineInstr &MI : MRI->use_instructions(LI.reg())) {
+    errs() << "[spill]     use " << LIS->getInstructionIndex(MI);
+    if (MI.isDebugInstr()) errs() << " (dbg)";
+    errs() << ": ";
+    MI.print(errs());
+    errs() << '\n';
+  }
+}
+
 /// shouldEvict - determine if A should evict the assigned live range B. The
 /// eviction policy defined by this function together with the allocation order
 /// defined by enqueue() decides which registers ultimately end up being split
@@ -241,9 +292,19 @@ bool DefaultEvictionAdvisor::canEvictHintInterference(
 bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
     const LiveInterval &VirtReg, MCRegister PhysReg, bool IsHint,
     EvictionCost &MaxCost, const SmallVirtRegSet &FixedRegisters) const {
+  if (isSpillDebugEnabled()) {
+    errs() << "[spill] Evaluate eviction for "
+           << printReg(VirtReg.reg(), TRI) << " -> "
+           << printReg(PhysReg, TRI) << (IsHint ? " (hint)" : "") << '\n';
+    dumpVirtRegLiveness(VirtReg, LIS, MRI, TRI);
+  }
   // It is only possible to evict virtual register interference.
   if (Matrix->checkInterference(VirtReg, PhysReg) > LiveRegMatrix::IK_VirtReg)
-    return false;
+    {
+      if (isSpillDebugEnabled())
+        errs() << "[spill]  reject: fixed interference present\n";
+      return false;
+    }
 
   bool IsLocal = VirtReg.empty() || LIS->intervalIsInOneMBB(VirtReg);
 
@@ -261,8 +322,12 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
     LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
     // If there is 10 or more interferences, chances are one is heavier.
     const auto &Interferences = Q.interferingVRegs(EvictInterferenceCutoff);
-    if (Interferences.size() >= EvictInterferenceCutoff)
+    if (Interferences.size() >= EvictInterferenceCutoff) {
+      if (isSpillDebugEnabled())
+        errs() << "[spill]  reject: too many interferences ("
+               << Interferences.size() << ") for unit " << Unit << "\n";
       return false;
+    }
 
     // Check if any interfering live range is heavier than MaxWeight.
     for (const LiveInterval *Intf : reverse(Interferences)) {
@@ -272,12 +337,20 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
       // Do not allow eviction of a virtual register if we are in the middle
       // of last-chance recoloring and this virtual register is one that we
       // have scavenged a physical register for.
-      if (FixedRegisters.count(Intf->reg()))
+      if (FixedRegisters.count(Intf->reg())) {
+        if (isSpillDebugEnabled())
+          errs() << "[spill]   reject cand " << printReg(Intf->reg(), TRI)
+                 << ": fixed during last-chance recoloring\n";
         return false;
+      }
 
       // Never evict spill products. They cannot split or spill.
-      if (RA.getExtraInfo().getStage(*Intf) == RS_Done)
+      if (RA.getExtraInfo().getStage(*Intf) == RS_Done) {
+        if (isSpillDebugEnabled())
+          errs() << "[spill]   reject cand " << printReg(Intf->reg(), TRI)
+                 << ": spill product (RS_Done)\n";
         return false;
+      }
       // Once a live range becomes small enough, it is urgent that we find a
       // register for it. This is indicated by an infinite spill weight. These
       // urgent live ranges get to evict almost anything.
@@ -292,12 +365,20 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
                    MRI->getRegClass(Intf->reg())));
       // Only evict older cascades or live ranges without a cascade.
       unsigned IntfCascade = RA.getExtraInfo().getCascade(Intf->reg());
-      if (Cascade == IntfCascade)
+      if (Cascade == IntfCascade) {
+        if (isSpillDebugEnabled())
+          errs() << "[spill]   reject cand " << printReg(Intf->reg(), TRI)
+                 << ": same cascade as requester\n";
         return false;
+      }
 
       if (Cascade < IntfCascade) {
-        if (!Urgent)
+        if (!Urgent) {
+          if (isSpillDebugEnabled())
+            errs() << "[spill]   reject cand " << printReg(Intf->reg(), TRI)
+                   << ": newer cascade and not urgent\n";
           return false;
+        }
         // We permit breaking cascades for urgent evictions. It should be the
         // last resort, though, so make it really expensive.
         Cost.BrokenHints += 10 * MRI->getRegClass(Intf->reg())->getCopyCost();
@@ -309,24 +390,51 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
         Cost.BrokenHints += MRI->getRegClass(Intf->reg())->getCopyCost();
 
       Cost.MaxWeight = std::max(Cost.MaxWeight, Intf->weight());
+      if (isSpillDebugEnabled()) {
+        errs() << "[spill]   cand " << printReg(Intf->reg(), TRI)
+               << ": interim cost={brokenHints=" << Cost.BrokenHints
+               << ", maxWeight=" << Cost.MaxWeight << "}\n";
+      }
       // Abort if this would be too expensive.
-      if (Cost >= MaxCost)
+      if (Cost >= MaxCost) {
+        if (isSpillDebugEnabled())
+          errs() << "[spill]   reject: cost exceeds max (brokenHints="
+                 << Cost.BrokenHints << ", maxWeight=" << Cost.MaxWeight
+                 << ") vs limit (brokenHints=" << MaxCost.BrokenHints
+                 << ", maxWeight=" << MaxCost.MaxWeight << ")\n";
         return false;
+      }
       if (Urgent)
         continue;
       // Apply the eviction policy for non-urgent evictions.
-      if (!shouldEvict(VirtReg, IsHint, *Intf, BreaksHint))
+      if (!shouldEvict(VirtReg, IsHint, *Intf, BreaksHint)) {
+        if (isSpillDebugEnabled())
+          errs() << "[spill]   reject cand " << printReg(Intf->reg(), TRI)
+                 << ": policy says do not evict (A.weight=" << VirtReg.weight()
+                 << ", B.weight=" << Intf->weight() << ")\n";
         return false;
+      }
       // If !MaxCost.isMax(), then we're just looking for a cheap register.
       // Evicting another local live range in this case could lead to suboptimal
       // coloring.
       if (!MaxCost.isMax() && IsLocal && LIS->intervalIsInOneMBB(*Intf) &&
           (!EnableLocalReassign || !canReassign(*Intf, PhysReg))) {
+        if (isSpillDebugEnabled())
+          errs() << "[spill]   reject cand " << printReg(Intf->reg(), TRI)
+                 << ": local and not cheap to evict under current limit\n";
         return false;
       }
     }
   }
   MaxCost = Cost;
+  if (isSpillDebugEnabled()) {
+    errs() << "[spill]  success: can evict for "
+           << printReg(VirtReg.reg(), TRI) << " on "
+           << printReg(PhysReg, TRI) << ", cost = {brokenHints="
+           << MaxCost.BrokenHints << ", maxWeight=" << MaxCost.MaxWeight
+           << "}\n";
+    dumpVirtRegLiveness(VirtReg, LIS, MRI, TRI);
+  }
   return true;
 }
 
@@ -349,12 +457,27 @@ MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
     BestCost.MaxWeight = VirtReg.weight();
   }
 
+  // Aggregate physregs that are immediately rejected due to fixed interference
+  // so we can report them once instead of spamming one line per physreg.
+  SmallVector<MCRegister, 16> FixedInterferenceRegs;
+
   for (auto I = Order.begin(), E = Order.getOrderLimitEnd(OrderLimit); I != E;
        ++I) {
     MCRegister PhysReg = *I;
     assert(PhysReg);
-    if (!canAllocatePhysReg(CostPerUseLimit, PhysReg) ||
-        !canEvictInterferenceBasedOnCost(VirtReg, PhysReg, false, BestCost,
+    if (!canAllocatePhysReg(CostPerUseLimit, PhysReg))
+      continue;
+
+    // Fast-path: if interference is from fixed entities (physregs/regmasks),
+    // record and skip detailed per-physreg debug to avoid verbosity.
+    if (Matrix->checkInterference(VirtReg, PhysReg) >
+        LiveRegMatrix::IK_VirtReg) {
+      if (isSpillDebugEnabled())
+        FixedInterferenceRegs.push_back(PhysReg);
+      continue;
+    }
+
+    if (!canEvictInterferenceBasedOnCost(VirtReg, PhysReg, false, BestCost,
                                          FixedRegisters))
       continue;
 
@@ -364,6 +487,24 @@ MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
     // Stop if the hint can be used.
     if (I.isHint())
       break;
+  }
+  if (isSpillDebugEnabled()) {
+    if (!FixedInterferenceRegs.empty()) {
+      dumpVirtRegLiveness(VirtReg, LIS, MRI, TRI);
+      errs() << "[spill] fixed interference for "
+             << printReg(VirtReg.reg(), TRI) << ": ";
+      for (MCRegister R : FixedInterferenceRegs)
+        errs() << printReg(R, TRI) << ' ';
+      errs() << '\n';
+    }
+    if (BestPhys)
+      errs() << "[spill] choose physreg " << printReg(BestPhys, TRI)
+             << " for " << printReg(VirtReg.reg(), TRI) << " with cost {"
+             << "brokenHints=" << BestCost.BrokenHints
+             << ", maxWeight=" << BestCost.MaxWeight << "}\n";
+    else
+      errs() << "[spill] no evictable physreg found for "
+             << printReg(VirtReg.reg(), TRI) << "\n";
   }
   return BestPhys;
 }
