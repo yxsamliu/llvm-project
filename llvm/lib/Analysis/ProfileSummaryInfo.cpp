@@ -21,6 +21,8 @@
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cstdlib>
 #include <optional>
 using namespace llvm;
 
@@ -223,13 +225,49 @@ bool ProfileSummaryInfo::isHotCallSite(const CallBase &CB,
 
 bool ProfileSummaryInfo::isColdCallSite(const CallBase &CB,
                                         BlockFrequencyInfo *BFI) const {
+  // Optional debugging: controlled by env var LLVM_DBG_COLD. When set to a
+  // callee name, we will print to errs() the reasoning used to classify this
+  // callsite as cold or not when profile summary is available.
+  const char *LLVMDbgColdEnv = std::getenv("LLVM_DBG_COLD");
+  const Function *EnvMatchedCallee = nullptr;
+  bool ShouldDbg = false;
+  if (LLVMDbgColdEnv) {
+    const Value *CalleeOp = CB.getCalledOperand();
+    if (CalleeOp)
+      CalleeOp = CalleeOp->stripPointerCasts();
+    if (const Function *CF = dyn_cast_or_null<Function>(CalleeOp)) {
+      if (CF->getName() == LLVMDbgColdEnv) {
+        ShouldDbg = true;
+        EnvMatchedCallee = CF;
+      }
+    }
+  }
+
   auto C = getProfileCount(CB, BFI);
-  if (C)
-    return isColdCount(*C);
+  if (C) {
+    bool R = isColdCount(*C);
+    if (ShouldDbg) {
+      errs() << "LLVM_DBG_COLD: PSI::isColdCallSite callee='"
+             << EnvMatchedCallee->getName() << "' has_count=true "
+             << "count=" << *C << " threshold="
+             << getOrCompColdCountThreshold() << " result="
+             << (R ? "true" : "false") << "\n";
+    }
+    return R;
+  }
 
   // In SamplePGO, if the caller has been sampled, and there is no profile
   // annotated on the callsite, we consider the callsite as cold.
-  return hasSampleProfile() && CB.getCaller()->hasProfileData();
+  bool R = hasSampleProfile() && CB.getCaller()->hasProfileData();
+  if (ShouldDbg) {
+    errs() << "LLVM_DBG_COLD: PSI::isColdCallSite callee='"
+           << EnvMatchedCallee->getName() << "' has_count=false "
+           << "has_sample_profile=" << (hasSampleProfile() ? "true" : "false")
+           << " caller_has_profile_data="
+           << (CB.getCaller()->hasProfileData() ? "true" : "false")
+           << " result=" << (R ? "true" : "false") << "\n";
+  }
+  return R;
 }
 
 bool ProfileSummaryInfo::hasPartialSampleProfile() const {
