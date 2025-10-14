@@ -1267,16 +1267,11 @@ def VS_64_Lo256 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32,
 } // End GeneratePressureSet = 0
 
 // TODO-GFX13: Accept VCC and TTMP as SGPR index registers.
-def RsrcReg128 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, [v4i32]), 32, (add VGPR_32_Lo256, SGPR_32, SReg_128_XNULL)> {
+def RsrcReg32 : SIRegisterClass<"AMDGPU", Reg32Types.types, 32, (add VGPR_32_Lo256, SGPR_32)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
 }
 
-// TODO-GFX13: Accept VCC and TTMP as SGPR index registers.
-def RsrcReg256 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, [v8i32]), 32, (add VGPR_32_Lo256, SGPR_32, SReg_256_XNULL)> {
-  let isAllocatable = 0;
-  let HasVGPR = 1;
-}
 
 // Define a register tuple class, along with one requiring an even
 // aligned base register.
@@ -1361,14 +1356,16 @@ class RegOrImmOperand <RegisterClass RegClass, string OperandTypeName>
     let ParserMatchClass = RegImmMatcher<NAME, PredicateMethod, DiagnosticString>;
 }
 
-def RsrcReg256Op : RegisterOperand<RsrcReg256> {
-  let DecoderMethod = "decodeRsrcReg256";
-  let EncoderMethod = "getMachineOpValueRsrcRegOp";
+// Class does not contain any 256 bit values but for disassembler purposes allows decoding to SReg_256
+def RsrcReg256Op : RegisterOperand<RsrcReg32> {
+   let DecoderMethod = "decodeRsrcReg256";
+   let EncoderMethod = "getMachineOpValueRsrcRegOp";
 }
 
-def RsrcReg128Op : RegisterOperand<RsrcReg128> {
-  let DecoderMethod = "decodeRsrcReg128";
-  let EncoderMethod = "getMachineOpValueRsrcRegOp";
+// Class does not contain any 128 bit values but for disassembler purposes allows decoding to SReg_128
+def RsrcReg128Op : RegisterOperand<RsrcReg32> {
+   let DecoderMethod = "decodeRsrcReg128";
+   let EncoderMethod = "getMachineOpValueRsrcRegOp";
 }
 
 // V_LOAD/STORE_IDX indexing operand

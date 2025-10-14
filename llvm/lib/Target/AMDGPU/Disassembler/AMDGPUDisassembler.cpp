@@ -1433,11 +1433,22 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   if (TFEIdx != -1 && MI.getOperand(TFEIdx).getImm())
     DstSize += 1;
 
-  if (DstSize == Info->VDataDwords && AddrSize == Info->VAddrDwords)
-    return;
+  MCRegister RsrcReg = MI.getOperand(RsrcIdx).getReg();
+  MCRegisterClass RsrcReg_RC = MRI.getRegClass(AMDGPU::RsrcReg32RegClassID);
 
+  bool IsIndexedRsrc = RsrcReg_RC.contains(RsrcReg);
+  const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
+      AMDGPU::getMIMGBaseOpcode(MI.getOpcode());
+  bool IsIndexedSamp = false;
+  if (IsVSample && !BaseInfo->MSAA) {
+    int SampIdx =
+        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::samp);
+    MCRegister SampReg = MI.getOperand(SampIdx).getReg();
+    IsIndexedSamp = RsrcReg_RC.contains(SampReg);
+  }
   int NewOpcode =
-      AMDGPU::getMIMGOpcode(Info->BaseOpcode, Info->MIMGEncoding, DstSize, AddrSize);
+      AMDGPU::getMIMGOpcode(Info->BaseOpcode, Info->MIMGEncoding, DstSize,
+                            AddrSize, IsIndexedRsrc, IsIndexedSamp);
   if (NewOpcode == -1)
     return;
 

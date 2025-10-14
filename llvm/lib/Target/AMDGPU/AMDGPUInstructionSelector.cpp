@@ -2161,8 +2161,19 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
 
   int Opcode = -1;
   if (IsGFX13Plus) {
-    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx13,
-                                   NumVDataDwords, NumVAddrDwords);
+    Register RsrcReg = MI.getOperand(ArgOffset + Intr->RsrcIndex).getReg();
+    LLT RsrcTy = MRI->getType(RsrcReg);
+    constexpr LLT S32 = LLT::scalar(32);
+    bool IndexedRsrc = RsrcTy == S32;
+    bool IndexedSamp = false;
+    if (BaseOpcode->Sampler) {
+      Register SampReg = MI.getOperand(ArgOffset + Intr->SampIndex).getReg();
+      LLT SampTy = MRI->getType(SampReg);
+      IndexedSamp = SampTy == S32;
+    }
+    Opcode =
+        AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx13, NumVDataDwords,
+                              NumVAddrDwords, IndexedRsrc, IndexedSamp);
   } else if (IsGFX12Plus) {
     Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx12,
                                    NumVDataDwords, NumVAddrDwords);

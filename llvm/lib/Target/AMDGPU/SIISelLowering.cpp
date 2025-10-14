@@ -10126,10 +10126,12 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       !(IsGFX13Plus && RsrcVT == MVT::i32))
     return Op;
   Ops.push_back(Rsrc);
+  bool IsSampIndexed = false;
   if (BaseOpcode->Sampler) {
     SDValue Samp = Op.getOperand(ArgOffset + Intr->SampIndex);
     EVT SampVT = Samp.getValueType();
-    if (SampVT != MVT::v4i32 && !(IsGFX13Plus && SampVT == MVT::i32))
+    IsSampIndexed = IsGFX13Plus && SampVT == MVT::i32;
+    if (SampVT != MVT::v4i32 && !IsSampIndexed)
       return Op;
     Ops.push_back(Samp);
   }
@@ -10167,26 +10169,30 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       UseNSA ? VAddrs.size() : VAddr.getValueType().getSizeInBits() / 32;
   int Opcode = -1;
 
+  bool IndexedRsrc = IsGFX13Plus && RsrcVT == MVT::i32;
   if (IsGFX13) {
-    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx13,
-                                   NumVDataDwords, NumVAddrDwords);
+    Opcode =
+        AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx13, NumVDataDwords,
+                              NumVAddrDwords, IndexedRsrc, IsSampIndexed);
   } else if (IsGFX12Plus) {
-    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx12,
-                                   NumVDataDwords, NumVAddrDwords);
+    Opcode =
+        AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx12, NumVDataDwords,
+                              NumVAddrDwords, IndexedRsrc, IsSampIndexed);
   } else if (IsGFX11Plus) {
-    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode,
-                                   UseNSA ? AMDGPU::MIMGEncGfx11NSA
-                                          : AMDGPU::MIMGEncGfx11Default,
-                                   NumVDataDwords, NumVAddrDwords);
+    Opcode = AMDGPU::getMIMGOpcode(
+        IntrOpcode,
+        UseNSA ? AMDGPU::MIMGEncGfx11NSA : AMDGPU::MIMGEncGfx11Default,
+        NumVDataDwords, NumVAddrDwords, IndexedRsrc, IsSampIndexed);
   } else if (IsGFX10Plus) {
-    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode,
-                                   UseNSA ? AMDGPU::MIMGEncGfx10NSA
-                                          : AMDGPU::MIMGEncGfx10Default,
-                                   NumVDataDwords, NumVAddrDwords);
+    Opcode = AMDGPU::getMIMGOpcode(
+        IntrOpcode,
+        UseNSA ? AMDGPU::MIMGEncGfx10NSA : AMDGPU::MIMGEncGfx10Default,
+        NumVDataDwords, NumVAddrDwords, IndexedRsrc, IsSampIndexed);
   } else {
     if (Subtarget->hasGFX90AInsts()) {
       Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx90a,
-                                     NumVDataDwords, NumVAddrDwords);
+                                     NumVDataDwords, NumVAddrDwords,
+                                     IndexedRsrc, IsSampIndexed);
       if (Opcode == -1) {
         DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
             DAG.getMachineFunction().getFunction(),
@@ -10207,11 +10213,13 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     }
     if (Opcode == -1 &&
         Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
-      Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx8,
-                                     NumVDataDwords, NumVAddrDwords);
+      Opcode =
+          AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx8, NumVDataDwords,
+                                NumVAddrDwords, IndexedRsrc, IsSampIndexed);
     if (Opcode == -1)
-      Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx6,
-                                     NumVDataDwords, NumVAddrDwords);
+      Opcode =
+          AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx6, NumVDataDwords,
+                                NumVAddrDwords, IndexedRsrc, IsSampIndexed);
   }
   if (Opcode == -1)
     return Op;
