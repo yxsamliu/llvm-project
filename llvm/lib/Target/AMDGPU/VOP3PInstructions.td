@@ -160,15 +160,14 @@ defm V_PK_MAX_NUM_F64 : VOP3PInst<"v_pk_max_num_f64", V_PK_VOP2_F64_Profile, fma
 defm V_PK_MIN_NUM_F64 : VOP3PInst<"v_pk_min_num_f64", V_PK_VOP2_F64_Profile, fminnum_like>;
 }
 
-let SubtargetPredicate = HasPackedU64Ops, SchedRW = [WriteDoubleAdd] in {
+let SubtargetPredicate = HasPackedU64Ops, SchedRW = [WriteDoubleAdd] in
 defm V_PK_ADD_NC_U64 : VOP3PInst<"v_pk_add_nc_u64", V_PK_VOP2_I64_Profile, add>;
-}
 
 let SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0 in {
 defm V_PK_MAXIMUM_F16 : VOP3PInst<"v_pk_maximum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>, fmaximum>;
 defm V_PK_MINIMUM_F16 : VOP3PInst<"v_pk_minimum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>, fminimum>;
 } // End SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0
-}
+} // End isCommutable = 1
 
 defm V_PK_SUB_U16 : VOP3PInst<"v_pk_sub_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>>;
 defm V_PK_SUB_I16 : VOP3PInst<"v_pk_sub_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, sub>;
@@ -176,6 +175,10 @@ defm V_PK_SUB_I16 : VOP3PInst<"v_pk_sub_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I1
 defm V_PK_LSHLREV_B16 : VOP3PInst<"v_pk_lshlrev_b16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, clshl_rev_16>;
 defm V_PK_ASHRREV_I16 : VOP3PInst<"v_pk_ashrrev_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, cashr_rev_16>;
 defm V_PK_LSHRREV_B16 : VOP3PInst<"v_pk_lshrrev_b16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, clshr_rev_16>;
+
+let SubtargetPredicate = HasPackedU64Ops, SchedRW = [WriteDoubleAdd] in {
+defm V_PK_SUB_NC_U64 : VOP3PInst<"v_pk_sub_nc_u64", V_PK_VOP2_I64_Profile, sub>;
+}
 } // End isReMaterializable = 1
 
 let SubtargetPredicate = HasVOP3PInsts in {
@@ -2536,6 +2539,7 @@ defm V_PK_FMA_F64     : VOP3P_Real_gfx1250<0x3b>;
 defm V_PK_MUL_F64     : VOP3P_Real_gfx1250<0x3c>;
 defm V_PK_ADD_F64     : VOP3P_Real_gfx1250<0x4b>;
 defm V_PK_ADD_NC_U64  : VOP3P_Real_gfx1250<0x4c>;
+defm V_PK_SUB_NC_U64  : VOP3P_Real_gfx1250<0x4d>;
 defm V_PK_MAX_NUM_F64 : VOP3P_Real_gfx1250<0x4e>;
 defm V_PK_MIN_NUM_F64 : VOP3P_Real_gfx1250<0x4f>;
 
