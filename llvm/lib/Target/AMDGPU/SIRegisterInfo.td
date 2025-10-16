@@ -1237,7 +1237,7 @@ def VS_64 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32,
 }
 
 def VS_64_Align2 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32,
-                                   (add VReg_64_Align2, SReg_64_Encodable)> {
+                                   (add VReg_64_STAGING_Align2, SReg_64_Encodable)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let HasSGPR = 1;
