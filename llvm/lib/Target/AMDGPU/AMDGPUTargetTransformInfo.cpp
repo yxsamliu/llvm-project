@@ -334,7 +334,10 @@ GCNTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(32);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    return TypeSize::getFixed(ST->hasPackedFP32Ops() ? 64 : 32);
+    return TypeSize::getFixed((ST->hasPackedFP64Ops() || ST->hasPackedU64Ops())
+                                  ? 128
+                              : ST->hasPackedFP32Ops() ? 64
+                                                       : 32);
   case TargetTransformInfo::RGK_ScalableVector:
     return TypeSize::getScalable(0);
   }
@@ -353,7 +356,10 @@ unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   return (ElemWidth == 8 && ST->has16BitInsts())       ? 4
          : (ElemWidth == 16 && ST->has16BitInsts())    ? 2
          : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
-                                                       : 1;
+         : (ElemWidth == 64 &&
+            (ST->hasPackedFP64Ops() || ST->hasPackedU64Ops()))
+             ? 2
+             : 1;
 }
 
 unsigned GCNTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,
