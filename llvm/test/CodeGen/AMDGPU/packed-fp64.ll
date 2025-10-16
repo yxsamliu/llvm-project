@@ -665,3 +665,427 @@ define amdgpu_kernel void @fadd_v2_v_fneg_hi2(ptr addrspace(1) %a, double %x, do
   store <2 x double> %add, ptr addrspace(1) %gep, align 8
   ret void
 }
+
+define amdgpu_kernel void @fmul_v2_vv(ptr addrspace(1) %a) {
+; GFX1251-LABEL: fmul_v2_vv:
+; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1251-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1251-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-NEXT:    global_load_b128 v[0:3], v4, s[0:1] scale_offset
+; GFX1251-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-NEXT:    v_pk_mul_f64 v[0:3], v[0:3], v[0:3]
+; GFX1251-NEXT:    global_store_b128 v4, v[0:3], s[0:1] scale_offset
+; GFX1251-NEXT:    s_endpgm
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds <2 x double>, ptr addrspace(1) %a, i32 %id
+  %load = load <2 x double>, ptr addrspace(1) %gep, align 8
+  %mul = fmul <2 x double> %load, %load
+  store <2 x double> %mul, ptr addrspace(1) %gep, align 8
+  ret void
+}
+
+define amdgpu_kernel void @fmul_v2_vs(ptr addrspace(1) %a, <2 x double> %x) {
+; GFX1251-LABEL: fmul_v2_vs:
+; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_clause 0x1
+; GFX1251-NEXT:    s_load_b64 s[6:7], s[4:5], 0x24
+; GFX1251-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX1251-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1251-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-NEXT:    global_load_b128 v[0:3], v4, s[6:7] scale_offset
+; GFX1251-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-NEXT:    v_pk_mul_f64 v[0:3], v[0:3], s[0:3]
+; GFX1251-NEXT:    global_store_b128 v4, v[0:3], s[6:7] scale_offset
+; GFX1251-NEXT:    s_endpgm
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds <2 x double>, ptr addrspace(1) %a, i32 %id
+  %load = load <2 x double>, ptr addrspace(1) %gep, align 8
+  %mul = fmul <2 x double> %load, %x
+  store <2 x double> %mul, ptr addrspace(1) %gep, align 8
+  ret void
+}
+
+define amdgpu_kernel void @fmul_v4_vs(ptr addrspace(1) %a, <4 x double> %x) {
+; GFX1251-LABEL: fmul_v4_vs:
+; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_load_b64 s[8:9], s[4:5], 0x24
+; GFX1251-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1251-NEXT:    s_wait_xcnt 0x0
+; GFX1251-NEXT:    s_load_b256 s[0:7], s[4:5], 0x44
+; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-NEXT:    v_lshlrev_b32_e32 v8, 5, v0
+; GFX1251-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-NEXT:    s_clause 0x1
+; GFX1251-NEXT:    global_load_b128 v[0:3], v8, s[8:9]
+; GFX1251-NEXT:    global_load_b128 v[4:7], v8, s[8:9] offset:16
+; GFX1251-NEXT:    s_wait_loadcnt 0x1
+; GFX1251-NEXT:    v_pk_mul_f64 v[0:3], v[0:3], s[0:3]
+; GFX1251-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-NEXT:    v_pk_mul_f64 v[4:7], v[4:7], s[4:7]
+; GFX1251-NEXT:    s_clause 0x1
+; GFX1251-NEXT:    global_store_b128 v8, v[0:3], s[8:9]
+; GFX1251-NEXT:    global_store_b128 v8, v[4:7], s[8:9] offset:16
+; GFX1251-NEXT:    s_endpgm
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds <4 x double>, ptr addrspace(1) %a, i32 %id
+  %load = load <4 x double>, ptr addrspace(1) %gep, align 16
+  %mul = fmul <4 x double> %load, %x
+  store <4 x double> %mul, ptr addrspace(1) %gep, align 16
+  ret void
+}
+
+define amdgpu_kernel void @fmul_v32_vs(ptr addrspace(1) %a, <32 x double> %x) {
+; GFX1251-SDAG-LABEL: fmul_v32_vs:
+; GFX1251-SDAG:       ; %bb.0:
+; GFX1251-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1251-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1251-SDAG-NEXT:    s_load_b512 s[8:23], s[4:5], 0x164
+; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-SDAG-NEXT:    v_lshlrev_b32_e32 v40, 8, v0
+; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-SDAG-NEXT:    s_clause 0xc
+; GFX1251-SDAG-NEXT:    global_load_b128 v[36:39], v40, s[0:1] offset:96
+; GFX1251-SDAG-NEXT:    global_load_b128 v[32:35], v40, s[0:1] offset:112
+; GFX1251-SDAG-NEXT:    global_load_b128 v[0:3], v40, s[0:1] offset:64
+; GFX1251-SDAG-NEXT:    global_load_b128 v[4:7], v40, s[0:1] offset:80
+; GFX1251-SDAG-NEXT:    global_load_b128 v[16:19], v40, s[0:1] offset:128
+; GFX1251-SDAG-NEXT:    global_load_b128 v[28:31], v40, s[0:1] offset:144
+; GFX1251-SDAG-NEXT:    global_load_b128 v[12:15], v40, s[0:1] offset:160
+; GFX1251-SDAG-NEXT:    global_load_b128 v[24:27], v40, s[0:1] offset:176
+; GFX1251-SDAG-NEXT:    global_load_b128 v[8:11], v40, s[0:1] offset:192
+; GFX1251-SDAG-NEXT:    global_load_b128 v[20:23], v40, s[0:1] offset:208
+; GFX1251-SDAG-NEXT:    global_load_b128 v[42:45], v40, s[0:1] offset:224
+; GFX1251-SDAG-NEXT:    global_load_b128 v[46:49], v40, s[0:1] offset:240
+; GFX1251-SDAG-NEXT:    global_load_b128 v[50:53], v40, s[0:1] offset:16
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0xa
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[0:3], v[0:3], s[8:11]
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x9
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[4:7], v[4:7], s[12:15]
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[36:39], v[36:39], s[16:19]
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[32:35], v[32:35], s[20:23]
+; GFX1251-SDAG-NEXT:    s_clause 0x4
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[36:39], s[0:1] offset:96
+; GFX1251-SDAG-NEXT:    global_load_b128 v[36:39], v40, s[0:1] offset:32
+; GFX1251-SDAG-NEXT:    global_load_b128 v[54:57], v40, s[0:1] offset:48
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[32:35], s[0:1] offset:112
+; GFX1251-SDAG-NEXT:    global_load_b128 v[32:35], v40, s[0:1]
+; GFX1251-SDAG-NEXT:    s_clause 0x2
+; GFX1251-SDAG-NEXT:    s_load_b512 s[52:67], s[4:5], 0x1a4
+; GFX1251-SDAG-NEXT:    s_load_b512 s[36:51], s[4:5], 0x1e4
+; GFX1251-SDAG-NEXT:    s_load_b512 s[16:31], s[4:5], 0x124
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0xa
+; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[28:31], v[28:31], s[56:59]
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[16:19], v[16:19], s[52:55]
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x8
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[24:27], v[24:27], s[64:67]
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[12:15], v[12:15], s[60:63]
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x6
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[20:23], v[20:23], s[40:43]
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[8:11], v[8:11], s[36:39]
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x4
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[46:49], v[46:49], s[48:51]
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[42:45], v[42:45], s[44:47]
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x3
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[50:53], v[50:53], s[20:23]
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x2
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[36:39], v[36:39], s[24:27]
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x1
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[54:57], v[54:57], s[28:31]
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[32:35], v[32:35], s[16:19]
+; GFX1251-SDAG-NEXT:    s_clause 0xd
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[0:3], s[0:1] offset:64
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[4:7], s[0:1] offset:80
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[36:39], s[0:1] offset:32
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[54:57], s[0:1] offset:48
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[32:35], s[0:1]
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[50:53], s[0:1] offset:16
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[42:45], s[0:1] offset:224
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[46:49], s[0:1] offset:240
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[8:11], s[0:1] offset:192
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[20:23], s[0:1] offset:208
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[12:15], s[0:1] offset:160
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[24:27], s[0:1] offset:176
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[16:19], s[0:1] offset:128
+; GFX1251-SDAG-NEXT:    global_store_b128 v40, v[28:31], s[0:1] offset:144
+; GFX1251-SDAG-NEXT:    s_endpgm
+;
+; GFX1251-GISEL-LABEL: fmul_v32_vs:
+; GFX1251-GISEL:       ; %bb.0:
+; GFX1251-GISEL-NEXT:    s_load_b64 s[24:25], s[4:5], 0x24
+; GFX1251-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1251-GISEL-NEXT:    s_load_b512 s[8:23], s[4:5], 0x124
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-GISEL-NEXT:    v_lshlrev_b32_e32 v56, 8, v0
+; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-GISEL-NEXT:    s_clause 0xd
+; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v56, s[24:25]
+; GFX1251-GISEL-NEXT:    global_load_b128 v[4:7], v56, s[24:25] offset:16
+; GFX1251-GISEL-NEXT:    global_load_b128 v[8:11], v56, s[24:25] offset:32
+; GFX1251-GISEL-NEXT:    global_load_b128 v[12:15], v56, s[24:25] offset:48
+; GFX1251-GISEL-NEXT:    global_load_b128 v[16:19], v56, s[24:25] offset:64
+; GFX1251-GISEL-NEXT:    global_load_b128 v[20:23], v56, s[24:25] offset:80
+; GFX1251-GISEL-NEXT:    global_load_b128 v[24:27], v56, s[24:25] offset:96
+; GFX1251-GISEL-NEXT:    global_load_b128 v[28:31], v56, s[24:25] offset:112
+; GFX1251-GISEL-NEXT:    global_load_b128 v[32:35], v56, s[24:25] offset:128
+; GFX1251-GISEL-NEXT:    global_load_b128 v[36:39], v56, s[24:25] offset:144
+; GFX1251-GISEL-NEXT:    global_load_b128 v[40:43], v56, s[24:25] offset:160
+; GFX1251-GISEL-NEXT:    global_load_b128 v[44:47], v56, s[24:25] offset:176
+; GFX1251-GISEL-NEXT:    global_load_b128 v[48:51], v56, s[24:25] offset:192
+; GFX1251-GISEL-NEXT:    global_load_b128 v[52:55], v56, s[24:25] offset:208
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0xb
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[8:11], v[8:11], s[16:19]
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0xa
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[12:15], v[12:15], s[20:23]
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[0:3], v[0:3], s[8:11]
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[4:7], v[4:7], s[12:15]
+; GFX1251-GISEL-NEXT:    s_clause 0x3
+; GFX1251-GISEL-NEXT:    global_store_b128 v56, v[0:3], s[24:25]
+; GFX1251-GISEL-NEXT:    global_store_b128 v56, v[4:7], s[24:25] offset:16
+; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v56, s[24:25] offset:224
+; GFX1251-GISEL-NEXT:    global_load_b128 v[4:7], v56, s[24:25] offset:240
+; GFX1251-GISEL-NEXT:    s_clause 0x1
+; GFX1251-GISEL-NEXT:    s_load_b512 s[52:67], s[4:5], 0x164
+; GFX1251-GISEL-NEXT:    s_load_b512 s[36:51], s[4:5], 0x1a4
+; GFX1251-GISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1251-GISEL-NEXT:    s_load_b512 s[0:15], s[4:5], 0x1e4
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0xb
+; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[16:19], v[16:19], s[52:55]
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0xa
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[20:23], v[20:23], s[56:59]
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x9
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[24:27], v[24:27], s[60:63]
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x8
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[28:31], v[28:31], s[64:67]
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x7
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[32:35], v[32:35], s[36:39]
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x6
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[36:39], v[36:39], s[40:43]
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x5
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[40:43], v[40:43], s[44:47]
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x4
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[44:47], v[44:47], s[48:51]
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x3
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[48:51], v[48:51], s[0:3]
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x2
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[52:55], v[52:55], s[4:7]
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x1
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[0:3], v[0:3], s[8:11]
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[4:7], v[4:7], s[12:15]
+; GFX1251-GISEL-NEXT:    s_clause 0xd
+; GFX1251-GISEL-NEXT:    global_store_b128 v56, v[8:11], s[24:25] offset:32
+; GFX1251-GISEL-NEXT:    global_store_b128 v56, v[12:15], s[24:25] offset:48
+; GFX1251-GISEL-NEXT:    global_store_b128 v56, v[16:19], s[24:25] offset:64
+; GFX1251-GISEL-NEXT:    global_store_b128 v56, v[20:23], s[24:25] offset:80
+; GFX1251-GISEL-NEXT:    global_store_b128 v56, v[24:27], s[24:25] offset:96
+; GFX1251-GISEL-NEXT:    global_store_b128 v56, v[28:31], s[24:25] offset:112
+; GFX1251-GISEL-NEXT:    global_store_b128 v56, v[32:35], s[24:25] offset:128
+; GFX1251-GISEL-NEXT:    global_store_b128 v56, v[36:39], s[24:25] offset:144
+; GFX1251-GISEL-NEXT:    global_store_b128 v56, v[40:43], s[24:25] offset:160
+; GFX1251-GISEL-NEXT:    global_store_b128 v56, v[44:47], s[24:25] offset:176
+; GFX1251-GISEL-NEXT:    global_store_b128 v56, v[48:51], s[24:25] offset:192
+; GFX1251-GISEL-NEXT:    global_store_b128 v56, v[52:55], s[24:25] offset:208
+; GFX1251-GISEL-NEXT:    global_store_b128 v56, v[0:3], s[24:25] offset:224
+; GFX1251-GISEL-NEXT:    global_store_b128 v56, v[4:7], s[24:25] offset:240
+; GFX1251-GISEL-NEXT:    s_endpgm
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds <32 x double>, ptr addrspace(1) %a, i32 %id
+  %load = load <32 x double>, ptr addrspace(1) %gep, align 128
+  %mul = fmul <32 x double> %load, %x
+  store <32 x double> %mul, ptr addrspace(1) %gep, align 128
+  ret void
+}
+
+define amdgpu_kernel void @fmul_v2_v_imm(ptr addrspace(1) %a) {
+; GFX1251-SDAG-LABEL: fmul_v2_v_imm:
+; GFX1251-SDAG:       ; %bb.0:
+; GFX1251-SDAG-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
+; GFX1251-SDAG-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1251-SDAG-NEXT:    s_mov_b32 s0, 0
+; GFX1251-SDAG-NEXT:    s_mov_b32 s1, 0x40590000
+; GFX1251-SDAG-NEXT:    s_mov_b32 s2, s0
+; GFX1251-SDAG-NEXT:    s_mov_b32 s3, s1
+; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-SDAG-NEXT:    global_load_b128 v[0:3], v4, s[4:5] scale_offset
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[0:3], v[0:3], s[0:3]
+; GFX1251-SDAG-NEXT:    global_store_b128 v4, v[0:3], s[4:5] scale_offset
+; GFX1251-SDAG-NEXT:    s_endpgm
+;
+; GFX1251-GISEL-LABEL: fmul_v2_v_imm:
+; GFX1251-GISEL:       ; %bb.0:
+; GFX1251-GISEL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
+; GFX1251-GISEL-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1251-GISEL-NEXT:    s_mov_b64 s[0:1], 0x4059000000000000
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1251-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v4, s[4:5] scale_offset
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[0:3], v[0:3], s[0:3]
+; GFX1251-GISEL-NEXT:    global_store_b128 v4, v[0:3], s[4:5] scale_offset
+; GFX1251-GISEL-NEXT:    s_endpgm
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds <2 x double>, ptr addrspace(1) %a, i32 %id
+  %load = load <2 x double>, ptr addrspace(1) %gep, align 8
+  %mul = fmul <2 x double> %load, <double 100.0, double 100.0>
+  store <2 x double> %mul, ptr addrspace(1) %gep, align 8
+  ret void
+}
+
+define amdgpu_kernel void @fmul_v2_v_v_splat(ptr addrspace(1) %a) {
+; GFX1251-SDAG-LABEL: fmul_v2_v_v_splat:
+; GFX1251-SDAG:       ; %bb.0:
+; GFX1251-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1251-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1251-SDAG-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, v0
+; GFX1251-SDAG-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-SDAG-NEXT:    global_load_b128 v[4:7], v0, s[0:1] scale_offset
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[2:5], v[4:7], v[0:3]
+; GFX1251-SDAG-NEXT:    global_store_b128 v0, v[2:5], s[0:1] scale_offset
+; GFX1251-SDAG-NEXT:    s_endpgm
+;
+; GFX1251-GISEL-LABEL: fmul_v2_v_v_splat:
+; GFX1251-GISEL:       ; %bb.0:
+; GFX1251-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1251-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1251-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
+; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-GISEL-NEXT:    global_load_b128 v[4:7], v0, s[0:1] scale_offset
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[2:5], v[4:7], v[0:3]
+; GFX1251-GISEL-NEXT:    global_store_b128 v0, v[2:5], s[0:1] scale_offset
+; GFX1251-GISEL-NEXT:    s_endpgm
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds <2 x double>, ptr addrspace(1) %a, i32 %id
+  %load = load <2 x double>, ptr addrspace(1) %gep, align 8
+  %id.1 = zext i32 %id to i64
+  %fid = bitcast i64 %id.1 to double
+  %tmp1 = insertelement <2 x double> poison, double %fid, i64 0
+  %k = insertelement <2 x double> %tmp1, double %fid, i64 1
+  %mul = fmul <2 x double> %load, %k
+  store <2 x double> %mul, ptr addrspace(1) %gep, align 8
+  ret void
+}
+
+define amdgpu_kernel void @fmul_v2_v_lit_splat(ptr addrspace(1) %a) {
+; GFX1251-SDAG-LABEL: fmul_v2_v_lit_splat:
+; GFX1251-SDAG:       ; %bb.0:
+; GFX1251-SDAG-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
+; GFX1251-SDAG-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1251-SDAG-NEXT:    s_mov_b32 s0, 0
+; GFX1251-SDAG-NEXT:    s_mov_b32 s1, 0x40100000
+; GFX1251-SDAG-NEXT:    s_mov_b32 s2, s0
+; GFX1251-SDAG-NEXT:    s_mov_b32 s3, s1
+; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-SDAG-NEXT:    global_load_b128 v[0:3], v4, s[4:5] scale_offset
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[0:3], v[0:3], s[0:3]
+; GFX1251-SDAG-NEXT:    global_store_b128 v4, v[0:3], s[4:5] scale_offset
+; GFX1251-SDAG-NEXT:    s_endpgm
+;
+; GFX1251-GISEL-LABEL: fmul_v2_v_lit_splat:
+; GFX1251-GISEL:       ; %bb.0:
+; GFX1251-GISEL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
+; GFX1251-GISEL-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1251-GISEL-NEXT:    s_mov_b64 s[0:1], 4.0
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1251-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v4, s[4:5] scale_offset
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[0:3], v[0:3], s[0:3]
+; GFX1251-GISEL-NEXT:    global_store_b128 v4, v[0:3], s[4:5] scale_offset
+; GFX1251-GISEL-NEXT:    s_endpgm
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds <2 x double>, ptr addrspace(1) %a, i32 %id
+  %load = load <2 x double>, ptr addrspace(1) %gep, align 8
+  %mul = fmul <2 x double> %load, <double 4.0, double 4.0>
+  store <2 x double> %mul, ptr addrspace(1) %gep, align 8
+  ret void
+}
+
+define amdgpu_kernel void @fmul_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
+; GFX1251-SDAG-LABEL: fmul_v2_v_unfoldable_lit:
+; GFX1251-SDAG:       ; %bb.0:
+; GFX1251-SDAG-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
+; GFX1251-SDAG-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1251-SDAG-NEXT:    s_mov_b32 s0, 0
+; GFX1251-SDAG-NEXT:    s_mov_b32 s3, 0x40080000
+; GFX1251-SDAG-NEXT:    s_mov_b32 s1, 0x40100000
+; GFX1251-SDAG-NEXT:    s_mov_b32 s2, s0
+; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-SDAG-NEXT:    global_load_b128 v[0:3], v4, s[4:5] scale_offset
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[0:3], v[0:3], s[0:3]
+; GFX1251-SDAG-NEXT:    global_store_b128 v4, v[0:3], s[4:5] scale_offset
+; GFX1251-SDAG-NEXT:    s_endpgm
+;
+; GFX1251-GISEL-LABEL: fmul_v2_v_unfoldable_lit:
+; GFX1251-GISEL:       ; %bb.0:
+; GFX1251-GISEL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
+; GFX1251-GISEL-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1251-GISEL-NEXT:    s_mov_b64 s[2:3], 0x4008000000000000
+; GFX1251-GISEL-NEXT:    s_mov_b64 s[0:1], 4.0
+; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v4, s[4:5] scale_offset
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[0:3], v[0:3], s[0:3]
+; GFX1251-GISEL-NEXT:    global_store_b128 v4, v[0:3], s[4:5] scale_offset
+; GFX1251-GISEL-NEXT:    s_endpgm
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds <2 x double>, ptr addrspace(1) %a, i32 %id
+  %load = load <2 x double>, ptr addrspace(1) %gep, align 8
+  %mul = fmul <2 x double> %load, <double 4.0, double 3.0>
+  store <2 x double> %mul, ptr addrspace(1) %gep, align 8
+  ret void
+}
+
+define amdgpu_kernel void @fmul_v2_v_fneg(ptr addrspace(1) %a, double %x) {
+; GFX1251-SDAG-LABEL: fmul_v2_v_fneg:
+; GFX1251-SDAG:       ; %bb.0:
+; GFX1251-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1251-SDAG-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-SDAG-NEXT:    global_load_b128 v[0:3], v4, s[0:1] scale_offset
+; GFX1251-SDAG-NEXT:    s_xor_b32 s5, s3, 0x80000000
+; GFX1251-SDAG-NEXT:    s_mov_b32 s4, s2
+; GFX1251-SDAG-NEXT:    s_mov_b32 s6, s2
+; GFX1251-SDAG-NEXT:    s_mov_b32 s7, s5
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-SDAG-NEXT:    v_pk_mul_f64 v[0:3], v[0:3], s[4:7]
+; GFX1251-SDAG-NEXT:    global_store_b128 v4, v[0:3], s[0:1] scale_offset
+; GFX1251-SDAG-NEXT:    s_endpgm
+;
+; GFX1251-GISEL-LABEL: fmul_v2_v_fneg:
+; GFX1251-GISEL:       ; %bb.0:
+; GFX1251-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1251-GISEL-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
+; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v8, s[0:1] scale_offset
+; GFX1251-GISEL-NEXT:    v_max_num_f64_e64 v[4:5], -s[2:3], -s[2:3]
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[6:7], v[4:5]
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-GISEL-NEXT:    v_pk_mul_f64 v[0:3], v[0:3], v[4:7]
+; GFX1251-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[0:1] scale_offset
+; GFX1251-GISEL-NEXT:    s_endpgm
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds <2 x double>, ptr addrspace(1) %a, i32 %id
+  %load = load <2 x double>, ptr addrspace(1) %gep, align 8
+  %fneg = fsub double -0.0, %x
+  %tmp1 = insertelement <2 x double> poison, double %fneg, i64 0
+  %k = insertelement <2 x double> %tmp1, double %fneg, i64 1
+  %mul = fmul <2 x double> %load, %k
+  store <2 x double> %mul, ptr addrspace(1) %gep, align 8
+  ret void
+}

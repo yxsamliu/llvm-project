@@ -978,7 +978,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   if (ST.hasPackedFP64Ops()) {
-    // FIXME: Just FADD is handled currently
+    // FIXME: Just FADD and FMUL are handled currently
     FPOpActions.legalFor({V2S64});
     FPOpActions.clampMaxNumElementsStrict(0, S64, 2);
   }
