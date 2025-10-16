@@ -141,6 +141,7 @@ protected:
   bool HasDPALU_DPP = false;
   bool HasDPPSrc1SGPR = false;
   bool HasPackedFP32Ops = false;
+  bool HasPackedFP64Ops = false;
   bool HasImageInsts = false;
   bool HasExtendedImageInsts = false;
   bool HasR128A16 = false;
@@ -1163,6 +1164,8 @@ public:
   bool hasPackedFP32Ops() const {
     return HasPackedFP32Ops;
   }
+
+  bool hasPackedFP64Ops() const { return HasPackedFP64Ops; }
 
   // Has V_PK_MOV_B32 opcode
   bool hasPkMovB32() const {

@@ -1275,6 +1275,12 @@ def MAIInstInfoTable : GenericTable {
   let PrimaryKeyName = "getMAIInstInfoHelper";
 }
 
+def V_PK_VOP2_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64, VOP3_PACKED> {
+  let HasOpSel = 0;
+  let Src0RC64 = VSrc_v2f64;
+  let Src1RC64 = VSrc_v2f64;
+}
+
 let isCommutable = 1, isReMaterializable = 1 in {
   let SubtargetPredicate = HasPackedFP32Ops in {
     defm V_PK_FMA_F32 : VOP3PInst<"v_pk_fma_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fma>;
@@ -1298,6 +1304,10 @@ let isCommutable = 1, isReMaterializable = 1 in {
     let True16Predicate = UseFakeTrue16Insts in
     defm V_MAX_BF16_PSEUDO : VOP3Inst <"v_max_bf16", VOP_BF16_BF16_BF16>;
   }
+
+  let SubtargetPredicate = HasPackedFP64Ops, SchedRW = [WriteDouble] in {
+    defm V_PK_ADD_F64 : VOP3PInst<"v_pk_add_f64", V_PK_VOP2_F64_Profile, any_fadd>;
+  } // End SubtargetPredicate = HasPackedFP64Ops, SchedRW = [WriteDouble]
 } // End isCommutable = 1, isReMaterializable = 1
 
 def : AMDGPUMnemonicAlias<"v_accvgpr_read",  "v_accvgpr_read_b32">;
@@ -2515,6 +2525,8 @@ defm V_FMA_MIXHI_BF16   : VOP3P_Realtriple_gfx1250_gfx13<0x3f>;
 
 defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3P_Real_gfx1250<0x35>;
 defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3P_Real_gfx1250<0x3a>;
+
+defm V_PK_ADD_F64 : VOP3P_Real_gfx1250<0x4b>;
 
 let AssemblerPredicate = isGFX1250Plus in
 def : AMDGPUMnemonicAlias<"v_fma_mix_f32_f16",  "v_fma_mix_f32">;

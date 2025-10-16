@@ -977,6 +977,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     FPOpActions.clampMaxNumElementsStrict(0, S32, 2);
   }
 
+  if (ST.hasPackedFP64Ops()) {
+    // FIXME: Just FADD is handled currently
+    FPOpActions.legalFor({V2S64});
+    FPOpActions.clampMaxNumElementsStrict(0, S64, 2);
+  }
+
   auto &MinNumMaxNum = getActionDefinitionsBuilder(
       {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM, G_FMINNUM_IEEE,
        G_FMAXNUM_IEEE});

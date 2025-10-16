@@ -2967,6 +2967,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
   case AMDGPU::OPERAND_REG_IMM_V2FP32:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+  case AMDGPU::OPERAND_REG_IMM_V2FP64:
     return true;
   default:
     return false;
@@ -3459,6 +3460,7 @@ int64_t encode32BitLiteral(int64_t Imm, OperandType Type) {
   case OPERAND_REG_INLINE_C_INT32:
     return Lo_32(Imm);
   case OPERAND_REG_IMM_FP64:
+  case AMDGPU::OPERAND_REG_IMM_V2FP64:
     return Hi_32(Imm);
   }
   return Imm;
