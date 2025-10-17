@@ -730,6 +730,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     S32, S64, S16, V2S16
   };
 
+  const std::initializer_list<LLT> FPTypesPK16_64 = {
+    S32, S64, S16, V2S16, V2S64
+  };
+
   const LLT MinScalarFPTy = ST.has16BitInsts() ? S16 : S32;
 
   // s1 for VCC branches, s32 for SCC branches.
@@ -978,7 +982,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   if (ST.hasPackedFP64Ops()) {
-    // FIXME: Just FADD and FMUL are handled currently
     FPOpActions.legalFor({V2S64});
     FPOpActions.clampMaxNumElementsStrict(0, S64, 2);
   }
@@ -987,7 +990,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM, G_FMINNUM_IEEE,
        G_FMAXNUM_IEEE});
 
-  if (ST.hasVOP3PInsts()) {
+  if (ST.hasPackedFP64Ops()) {
+    MinNumMaxNum.customFor(FPTypesPK16_64)
+        .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
+        .clampMaxNumElements(0, S16, 2)
+        .clampMaxNumElements(0, S64, 2)
+        .clampScalar(0, S16, S64)
+        .scalarize(0);
+  } else if (ST.hasVOP3PInsts()) {
     MinNumMaxNum.customFor(FPTypesPK16)
       .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
       .clampMaxNumElements(0, S16, 2)
