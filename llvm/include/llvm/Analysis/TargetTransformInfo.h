@@ -1815,13 +1815,15 @@ public:
   /// SizeInBytes loads or has a better vector factor.
   LLVM_ABI unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
                                         unsigned ChainSizeInBytes,
-                                        VectorType *VecTy) const;
+                                        VectorType *VecTy,
+                                        unsigned AddrSpace) const;
 
   /// \returns The new vector factor value if the target doesn't support \p
   /// SizeInBytes stores or has a better vector factor.
   LLVM_ABI unsigned getStoreVectorFactor(unsigned VF, unsigned StoreSize,
                                          unsigned ChainSizeInBytes,
-                                         VectorType *VecTy) const;
+                                         VectorType *VecTy,
+                                         unsigned AddrSpace) const;
 
   /// \returns True if the target prefers fixed width vectorization if the
   /// loop vectorizer's cost-model assigns an equal cost to the fixed and
