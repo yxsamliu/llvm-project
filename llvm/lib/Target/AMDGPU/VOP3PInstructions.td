@@ -531,6 +531,15 @@ def : GCNPat<
       (i32 (EXTRACT_SUBREG $src1, sub2)), sub1)),
     (v2i64 (as_i64imm (i32 0)))))
 >;
+
+def : GCNPat<
+  (ThreeOpFrag<cshl_64_oneuse, add> v2i64:$src0, v2i64:$src1, v2i64:$src2),
+  (V_PK_LSHL_ADD_U64 VSrc_v2b64:$src0,
+    (v2i32 (REG_SEQUENCE VReg_64,
+      (i32 (EXTRACT_SUBREG $src1, sub0)), sub0,
+      (i32 (EXTRACT_SUBREG $src1, sub2)), sub1)),
+    VSrc_v2b64:$src2)
+>;
 } // End SubtargetPredicate = HasPackedU64Ops
 
 // Defines patterns that extract signed 4bit from each Idx[0].
