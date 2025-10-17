@@ -1503,20 +1503,6 @@ def FeatureParallelBitInsts : SubtargetFeature< "parallel-bit-insts",
   "Has v_pdep_b32 and v_pext_b32 instructions"
 >;
 
-// FIXME: Remove after all users are migrated to attribute.
-def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
-  "DynamicVGPR",
-  "true",
-  "Enable dynamic VGPR mode"
->;
-
-// FIXME: Remove after all users are migrated to attribute.
-def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32",
-  "DynamicVGPRBlockSize32",
-  "true",
-  "Use a block size of 32 for dynamic VGPR allocation (default is 16)"
->;
-
 // Enable the use of SCRATCH_STORE/LOAD_BLOCK instructions for saving and
 // restoring the callee-saved registers.
 def FeatureUseBlockVGPROpsForCSR : SubtargetFeature<"block-vgpr-csr",
