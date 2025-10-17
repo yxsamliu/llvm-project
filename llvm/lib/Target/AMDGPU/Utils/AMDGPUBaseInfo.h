@@ -341,7 +341,7 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI,
 /// \returns Minimum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.
 unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
-                        unsigned DynamicVGPRBlockSize);
+                        unsigned DynamicVGPRBlockSize, unsigned NumExcludedVGPRs);
 
 /// \returns Maximum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.

@@ -564,7 +564,7 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F,
 
   std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
   return getBaseMaxNumVGPRs(
-      F, {getMinNumVGPRs(Waves.second, DynamicVGPRBlockSize),
+      F, {getMinNumVGPRs(Waves.second, DynamicVGPRBlockSize, NumExcludedVGPRs),
           getMaxNumVGPRs(Waves.first, DynamicVGPRBlockSize, NumExcludedVGPRs)});
 }
 

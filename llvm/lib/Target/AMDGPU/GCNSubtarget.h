@@ -1754,21 +1754,19 @@ public:
 
   /// \returns the minimum number of VGPRs that will prevent achieving more than
   /// the specified number of waves \p WavesPerEU.
-  unsigned getMinNumVGPRs(unsigned WavesPerEU,
-                          unsigned DynamicVGPRBlockSize) const {
-    return AMDGPU::IsaInfo::getMinNumVGPRs(this, WavesPerEU,
-                                           DynamicVGPRBlockSize);
+  unsigned getMinNumVGPRs(unsigned WavesPerEU, unsigned DynamicVGPRBlockSize,
+                          unsigned NumExcludedVGPRs = 0) const {
+    return AMDGPU::IsaInfo::getMinNumVGPRs(
+        this, WavesPerEU, DynamicVGPRBlockSize, NumExcludedVGPRs);
   }
 
   /// \returns the maximum number of VGPRs that can be used and still achieved
   /// at least the specified number of waves \p WavesPerEU.
   /// The NumExcludedVGPRs is for the lane-shared VGPRs in wavegroup mode.
-  unsigned getMaxNumVGPRs(unsigned WavesPerEU,
-                          unsigned DynamicVGPRBlockSize,
+  unsigned getMaxNumVGPRs(unsigned WavesPerEU, unsigned DynamicVGPRBlockSize,
                           unsigned NumExcludedVGPRs = 0) const {
-    return AMDGPU::IsaInfo::getMaxNumVGPRs(this, WavesPerEU,
-                                           DynamicVGPRBlockSize,
-                                           NumExcludedVGPRs);
+    return AMDGPU::IsaInfo::getMaxNumVGPRs(
+        this, WavesPerEU, DynamicVGPRBlockSize, NumExcludedVGPRs);
   }
 
   /// \returns max num VGPRs. This is the common utility function
