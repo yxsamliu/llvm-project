@@ -11,9 +11,20 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
+#include <limits>
+#include <string>
 #include <vector>
 
 namespace llvm {
+
+class BasicBlock;
+class Function;
+class Loop;
+class Instruction;
+class MachineFunction;
+class MachineFunction;
+class Module;
+class Instruction;
 
 enum class ChangePrinter {
   None,
@@ -60,6 +71,34 @@ bool isFilterPassesEmpty();
 
 // Returns true if we should print the function.
 bool isFunctionInPrintList(StringRef FunctionName);
+
+struct SourceLocFilterSpec {
+  std::string RawFile;
+  std::string NormalizedFile;
+  std::string Basename;
+  bool IsWildcard = false;
+  bool MatchBasenameOnly = false;
+  bool HasFile = false;
+  bool HasLineRange = false;
+  bool HasColumnRange = false;
+  unsigned LineBegin = 0;
+  unsigned LineEnd = std::numeric_limits<unsigned>::max();
+  unsigned ColBegin = 0;
+  unsigned ColEnd = std::numeric_limits<unsigned>::max();
+
+  bool matches(unsigned Line, unsigned Column) const;
+};
+
+bool isSourceLocationFilteringEnabled();
+// Enable or disable source location filtering for the current thread's
+// debug-printing context. This allows filtering to affect only debugging
+// outputs (e.g. -print-before/-print-after) while leaving normal output
+// (-o) unaffected.
+void setSourceLocationFilteringDebugMode(bool Enabled);
+bool instructionMatchesRequestedSourceLocation(const Instruction &I);
+bool functionContainsRequestedSourceLocation(const Function &F);
+bool moduleContainsRequestedSourceLocation(const Module &M);
+bool loopContainsRequestedSourceLocation(const Loop &L);
 
 // Ensure temporary files exist, creating or re-using them.  \p FD contains
 // file descriptors (-1 indicates that the file should be created) and

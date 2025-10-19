@@ -48,6 +48,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRPrintingPasses.h"
+#include "llvm/IR/PrintPasses.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -4256,47 +4257,69 @@ void AssemblyWriter::printArgument(const Argument *Arg, AttributeSet Attrs) {
 /// printBasicBlock - This member is called for each basic block in a method.
 void AssemblyWriter::printBasicBlock(const BasicBlock *BB) {
   bool IsEntryBlock = BB->getParent() && BB->isEntryBlock();
-  if (BB->hasName()) {              // Print out the label if it exists...
-    Out << "\n";
-    printLLVMName(Out, BB->getName(), LabelPrefix);
-    Out << ':';
-  } else if (!IsEntryBlock) {
-    Out << "\n";
-    int Slot = Machine.getLocalSlot(BB);
-    if (Slot != -1)
-      Out << Slot << ":";
-    else
-      Out << "<badref>:";
-  }
-
-  if (!IsEntryBlock) {
-    // Output predecessors for the block.
-    Out.PadToColumn(50);
-    Out << ";";
-    if (pred_empty(BB)) {
-      Out << " No predecessors!";
-    } else {
-      Out << " preds = ";
-      ListSeparator LS;
-      for (const BasicBlock *Pred : predecessors(BB)) {
-        Out << LS;
-        writeOperand(Pred, false);
+  // Determine whether this block contains any instruction that matches the
+  // requested source location filter (if enabled). When there are no matching
+  // instructions, suppress printing the basic block label and predecessor list
+  // to avoid noisy empty blocks in filtered output.
+  const bool UseSrcFilter = isSourceLocationFilteringEnabled();
+  bool HasMatchingInst = true;
+  if (UseSrcFilter) {
+    HasMatchingInst = false;
+    for (const Instruction &I : *BB) {
+      if (instructionMatchesRequestedSourceLocation(I)) {
+        HasMatchingInst = true;
+        break;
       }
     }
   }
 
-  Out << "\n";
+  if (!UseSrcFilter || HasMatchingInst) {
+    if (BB->hasName()) { // Print out the label if it exists...
+      Out << "\n";
+      printLLVMName(Out, BB->getName(), LabelPrefix);
+      Out << ':';
+    } else if (!IsEntryBlock) {
+      Out << "\n";
+      int Slot = Machine.getLocalSlot(BB);
+      if (Slot != -1)
+        Out << Slot << ":";
+      else
+        Out << "<badref>:";
+    }
 
-  if (AnnotationWriter) AnnotationWriter->emitBasicBlockStartAnnot(BB, Out);
+    if (!IsEntryBlock) {
+      // Output predecessors for the block.
+      Out.PadToColumn(50);
+      Out << ";";
+      if (pred_empty(BB)) {
+        Out << " No predecessors!";
+      } else {
+        Out << " preds = ";
+        ListSeparator LS;
+        for (const BasicBlock *Pred : predecessors(BB)) {
+          Out << LS;
+          writeOperand(Pred, false);
+        }
+      }
+    }
+
+    Out << "\n";
+
+    if (AnnotationWriter)
+      AnnotationWriter->emitBasicBlockStartAnnot(BB, Out);
+  }
 
   // Output all of the instructions in the basic block...
   for (const Instruction &I : *BB) {
+    if (UseSrcFilter && !instructionMatchesRequestedSourceLocation(I))
+      continue;
     for (const DbgRecord &DR : I.getDbgRecordRange())
       printDbgRecordLine(DR);
     printInstructionLine(I);
   }
 
-  if (AnnotationWriter) AnnotationWriter->emitBasicBlockEndAnnot(BB, Out);
+  if ((!UseSrcFilter || HasMatchingInst) && AnnotationWriter)
+    AnnotationWriter->emitBasicBlockEndAnnot(BB, Out);
 }
 
 /// printInstructionLine - Print an instruction and a newline character.

@@ -35,11 +35,14 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
+#include <limits>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -202,23 +205,42 @@ const Module *unwrapModule(Any IR, bool Force = false) {
 void printIR(raw_ostream &OS, const Function *F) {
   if (!isFunctionInPrintList(F->getName()))
     return;
+  // If source-location filtering is enabled, skip entire function if
+  // it contains no matching instructions. Otherwise, rely on AsmWriter
+  // to emit only matching instructions.
+  if (isSourceLocationFilteringEnabled() &&
+      !functionContainsRequestedSourceLocation(*F))
+    return;
   OS << *F;
 }
 
 void printIR(raw_ostream &OS, const Module *M) {
-  if (isFunctionInPrintList("*") || forcePrintModuleIR()) {
+  // When source-location filtering is enabled, avoid whole-module printing
+  // unless explicitly forced. This prevents dumping unrelated globals,
+  // types, and metadata.
+  const bool PreferFunctionGranularity = isSourceLocationFilteringEnabled();
+  if ((isFunctionInPrintList("*") && !PreferFunctionGranularity) ||
+      forcePrintModuleIR()) {
+    // If source-location filtering is enabled and the module contains no
+    // matching instruction, omit printing entirely.
+    if (isSourceLocationFilteringEnabled() &&
+        !moduleContainsRequestedSourceLocation(*M))
+      return;
     M->print(OS, nullptr);
-  } else {
-    for (const auto &F : M->functions()) {
-      printIR(OS, &F);
-    }
+    return;
   }
+
+  for (const auto &F : M->functions())
+    printIR(OS, &F);
 }
 
 void printIR(raw_ostream &OS, const LazyCallGraph::SCC *C) {
   for (const LazyCallGraph::Node &N : *C) {
     const Function &F = N.getFunction();
     if (!F.isDeclaration() && isFunctionInPrintList(F.getName())) {
+      if (isSourceLocationFilteringEnabled() &&
+          !functionContainsRequestedSourceLocation(F))
+        continue;
       F.print(OS);
     }
   }
@@ -227,6 +249,9 @@ void printIR(raw_ostream &OS, const LazyCallGraph::SCC *C) {
 void printIR(raw_ostream &OS, const Loop *L) {
   const Function *F = L->getHeader()->getParent();
   if (!isFunctionInPrintList(F->getName()))
+    return;
+  if (isSourceLocationFilteringEnabled() &&
+      !loopContainsRequestedSourceLocation(*L))
     return;
   printLoop(const_cast<Loop &>(*L), OS);
 }
@@ -274,20 +299,64 @@ bool sccContainsFilterPrintFunc(const LazyCallGraph::SCC &C) {
 }
 
 bool shouldPrintIR(Any IR) {
-  if (const auto *M = unwrapIR<Module>(IR))
-    return moduleContainsFilterPrintFunc(*M);
+  // Respect function name filters first.
+  if (const auto *M = unwrapIR<Module>(IR)) {
+    if (!moduleContainsFilterPrintFunc(*M))
+      return false;
+    // If source-location filtering is enabled, only print when the module
+    // contains at least one instruction matching the requested locations.
+    if (isSourceLocationFilteringEnabled() &&
+        !moduleContainsRequestedSourceLocation(*M))
+      return false;
+    return true;
+  }
 
-  if (const auto *F = unwrapIR<Function>(IR))
-    return isFunctionInPrintList(F->getName());
+  if (const auto *F = unwrapIR<Function>(IR)) {
+    if (!isFunctionInPrintList(F->getName()))
+      return false;
+    if (isSourceLocationFilteringEnabled() &&
+        !functionContainsRequestedSourceLocation(*F))
+      return false;
+    return true;
+  }
 
-  if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR))
-    return sccContainsFilterPrintFunc(*C);
+  if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
+    if (!sccContainsFilterPrintFunc(*C))
+      return false;
+    if (isSourceLocationFilteringEnabled()) {
+      // Require at least one function in the SCC to contain a matching
+      // instruction.
+      bool AnyMatches = false;
+      for (const auto &N : *C) {
+        const Function &F = N.getFunction();
+        if (functionContainsRequestedSourceLocation(F)) {
+          AnyMatches = true;
+          break;
+        }
+      }
+      if (!AnyMatches)
+        return false;
+    }
+    return true;
+  }
 
-  if (const auto *L = unwrapIR<Loop>(IR))
-    return isFunctionInPrintList(L->getHeader()->getParent()->getName());
+  if (const auto *L = unwrapIR<Loop>(IR)) {
+    if (!isFunctionInPrintList(L->getHeader()->getParent()->getName()))
+      return false;
+    if (isSourceLocationFilteringEnabled() &&
+        !loopContainsRequestedSourceLocation(*L))
+      return false;
+    return true;
+  }
 
-  if (const auto *MF = unwrapIR<MachineFunction>(IR))
-    return isFunctionInPrintList(MF->getName());
+  if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
+    if (!isFunctionInPrintList(MF->getName()))
+      return false;
+    if (isSourceLocationFilteringEnabled() &&
+        !functionContainsRequestedSourceLocation(MF->getFunction()))
+      return false;
+    return true;
+  }
   llvm_unreachable("Unknown wrapped IR type");
 }
 
@@ -404,7 +473,9 @@ void ChangeReporter<T>::saveIRBeforePass(Any IR, StringRef PassID,
 
   // Save the IR representation on the stack.
   T &Data = BeforeStack.back();
+  setSourceLocationFilteringDebugMode(true);
   generateIRRepresentation(IR, PassID, Data);
+  setSourceLocationFilteringDebugMode(false);
 }
 
 template <typename T>
@@ -425,7 +496,9 @@ void ChangeReporter<T>::handleIRAfterPass(Any IR, StringRef PassID,
     T &Before = BeforeStack.back();
     // Create the after rep
     T After;
+    setSourceLocationFilteringDebugMode(true);
     generateIRRepresentation(IR, PassID, After);
+    setSourceLocationFilteringDebugMode(false);
 
     // Was there a change in IR?
     if (Before == After) {
@@ -515,7 +588,9 @@ void IRChangedPrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
 void IRChangedPrinter::generateIRRepresentation(Any IR, StringRef PassID,
                                                 std::string &Output) {
   raw_string_ostream OS(Output);
+  setSourceLocationFilteringDebugMode(true);
   unwrapAndPrint(OS, IR);
+  setSourceLocationFilteringDebugMode(false);
   OS.str();
 }
 
@@ -872,6 +947,8 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
   if (!shouldPrintBeforePass(PassID) && !shouldPrintBeforeCurrentPassNumber())
     return;
 
+  // Enable source-location filtering for debug printing only.
+  setSourceLocationFilteringDebugMode(true);
   auto WriteIRToStream = [&](raw_ostream &Stream) {
     Stream << "; *** IR Dump Before ";
     if (shouldPrintBeforeSomePassNumber())
@@ -890,6 +967,7 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
   } else {
     WriteIRToStream(dbgs());
   }
+  setSourceLocationFilteringDebugMode(false);
 }
 
 void PrintIRInstrumentation::printAfterPass(StringRef PassID, Any IR) {
@@ -907,6 +985,7 @@ void PrintIRInstrumentation::printAfterPass(StringRef PassID, Any IR) {
       (!shouldPrintAfterPass(PassID) && !shouldPrintAfterCurrentPassNumber()))
     return;
 
+  setSourceLocationFilteringDebugMode(true);
   auto WriteIRToStream = [&](raw_ostream &Stream, const StringRef IRName) {
     Stream << "; *** IR Dump After ";
     if (shouldPrintAfterSomePassNumber())
@@ -926,6 +1005,7 @@ void PrintIRInstrumentation::printAfterPass(StringRef PassID, Any IR) {
   } else {
     WriteIRToStream(dbgs(), IRName);
   }
+  setSourceLocationFilteringDebugMode(false);
 }
 
 void PrintIRInstrumentation::printAfterPassInvalidated(StringRef PassID) {
@@ -960,9 +1040,13 @@ void PrintIRInstrumentation::printAfterPassInvalidated(StringRef PassID) {
     llvm::raw_fd_ostream DumpIRFileStream{
         prepareDumpIRFileDescriptor(DumpIRFilename),
         /*shouldClose=*/true};
+    setSourceLocationFilteringDebugMode(true);
     WriteIRToStream(DumpIRFileStream, M, IRName);
+    setSourceLocationFilteringDebugMode(false);
   } else {
+    setSourceLocationFilteringDebugMode(true);
     WriteIRToStream(dbgs(), M, IRName);
+    setSourceLocationFilteringDebugMode(false);
   }
 }
 
@@ -1516,7 +1600,9 @@ InLineChangePrinter::~InLineChangePrinter() = default;
 void InLineChangePrinter::generateIRRepresentation(Any IR,
                                                    StringRef PassID,
                                                    IRDataT<EmptyData> &D) {
+  setSourceLocationFilteringDebugMode(true);
   IRComparer<EmptyData>::analyzeIR(IR, D);
+  setSourceLocationFilteringDebugMode(false);
 }
 
 void InLineChangePrinter::handleAfter(StringRef PassID, std::string &Name,
