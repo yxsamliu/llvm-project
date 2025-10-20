@@ -202,17 +202,18 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
       return false;
     }
     if (getSpatialClusterEnable(F) || getAsymmetricClusterClampEnable(F)) {
+      // Check that fixed dims are 1D.
+      // Non-fixed dims will be checked at dispatch time.
       std::string kernelStr = getSpatialClusterEnable(F)
                                   ? "Spatial cluster kernel"
                                   : "Asymmetric cluster clamp kernel";
       AMDGPU::ClusterDimsAttr ClusterDims = AMDGPU::ClusterDimsAttr::get(F);
       if (!ClusterDims.isFixedDims()) {
-        F.getContext().diagnose(DiagnosticInfoGeneric(
-            llvm::formatv("{0} has non fixed cluster dims", kernelStr)));
-        return false;
+        continue;
       }
       auto &Dims = ClusterDims.getDims();
-      if (Dims[1] != 1 || Dims[2] != 1) {
+      if (Dims[0] * Dims[1] != 1 && Dims[0] * Dims[2] != 1 &&
+          Dims[1] * Dims[2] != 1) {
         F.getContext().diagnose(
             DiagnosticInfoGeneric(llvm::formatv("{0} is not 1D", kernelStr)));
         return false;
