@@ -123,6 +123,9 @@ AST Dumping Potentially Breaking Changes
 
     ``__atomic_test_and_set(p, 0)``
 
+- Pretty-printing of templates with inherited (i.e. specified in a previous
+  redeclaration) default arguments has been fixed.
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 - Members of anonymous unions/structs are now injected as ``IndirectFieldDecl``
@@ -159,6 +162,10 @@ C++23 Feature Support
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+
+- Clang now normalizes constraints before checking whether they are satisfied, as mandated by the standard.
+  As a result, Clang no longer incorrectly diagnoses substitution failures in template arguments only
+  used in concept-ids, and produces better diagnostics for satisfaction failure. (#GH61811) (#GH135190)
 
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -245,6 +252,8 @@ Non-comprehensive list of changes in this release
   specifiers, it also must be used within a template context.
 
 - ``__builtin_assume_dereferenceable`` now accepts non-constant size operands.
+
+- Fixed a crash when the second argument to ``__builtin_assume_aligned`` was not constant (#GH161314)
 
 New Compiler Flags
 ------------------
@@ -448,6 +457,7 @@ Bug Fixes to AST Handling
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed missing diagnostics of ``diagnose_if`` on templates involved in initialization. (#GH160776)
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

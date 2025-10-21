@@ -2161,8 +2161,19 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
 
   int Opcode = -1;
   if (IsGFX13Plus) {
-    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx13,
-                                   NumVDataDwords, NumVAddrDwords);
+    Register RsrcReg = MI.getOperand(ArgOffset + Intr->RsrcIndex).getReg();
+    LLT RsrcTy = MRI->getType(RsrcReg);
+    constexpr LLT S32 = LLT::scalar(32);
+    bool IndexedRsrc = RsrcTy == S32;
+    bool IndexedSamp = false;
+    if (BaseOpcode->Sampler) {
+      Register SampReg = MI.getOperand(ArgOffset + Intr->SampIndex).getReg();
+      LLT SampTy = MRI->getType(SampReg);
+      IndexedSamp = SampTy == S32;
+    }
+    Opcode =
+        AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx13, NumVDataDwords,
+                              NumVAddrDwords, IndexedRsrc, IndexedSamp);
   } else if (IsGFX12Plus) {
     Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx12,
                                    NumVDataDwords, NumVAddrDwords);
@@ -4868,6 +4879,13 @@ std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3PModsImpl(
     Mods ^= SISrcMods::NEG_HI;
   else if (Stat.second == SrcStatus::IS_LO_NEG)
     Mods ^= SISrcMods::NEG;
+
+  // 64-bit VOP3P instructions do not have OPSEL or ABS.
+  // TODO: Select NEG_LO and NEG_HI modifiers from BUILD_VECTOR.
+  if (MRI.getType(RootReg).getSizeInBits() == 128) {
+    Mods |= SISrcMods::OP_SEL_1; // Just the default, OPSEL unsupported.
+    return {Stat.first, Mods};
+  }
 
   MachineInstr *MI = MRI.getVRegDef(Stat.first);
 
