@@ -341,7 +341,7 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI,
 /// \returns Minimum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.
 unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
-                        unsigned DynamicVGPRBlockSize);
+                        unsigned DynamicVGPRBlockSize, unsigned NumExcludedVGPRs);
 
 /// \returns Maximum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.
@@ -518,7 +518,8 @@ const MIMGG16MappingInfo *getMIMGG16MappingInfo(unsigned G);
 
 LLVM_READONLY
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
-                  unsigned VDataDwords, unsigned VAddrDwords);
+                  unsigned VDataDwords, unsigned VAddrDwords,
+                  bool IndexedRsrc = false, bool IndexedSamp = false);
 
 LLVM_READONLY
 int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels);
@@ -535,6 +536,8 @@ struct MIMGInfo {
   uint8_t VDataDwords;
   uint8_t VAddrDwords;
   uint8_t VAddrOperands;
+  uint8_t IndexedRsrc;
+  uint8_t IndexedSamp;
 };
 
 LLVM_READONLY
@@ -1713,6 +1716,7 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+  case AMDGPU::OPERAND_REG_IMM_V2FP64:
   case AMDGPU::OPERAND_KIMM64:
     return 8;
 

@@ -475,11 +475,11 @@ v_cvt_f16_fp8 v1, 2
 v_cvt_f16_fp8 v1, 0x1234
 // GFX13: v_cvt_f16_fp8_e32 v1, 0x1234            ; encoding: [0xff,0xee,0x02,0x7e,0x34,0x12,0x00,0x00]
 
-v_cvt_f32_bf16 v5, v1
-// GFX13: v_cvt_f32_bf16_e32 v5, v1               ; encoding: [0x01,0xe5,0x0a,0x7e]
+v_cvt_f32_bf16 v5, v1.l
+// GFX13: v_cvt_f32_bf16_e32 v5, v1.l             ; encoding: [0x01,0xe5,0x0a,0x7e]
 
-v_cvt_f32_bf16 v5, v127
-// GFX13: v_cvt_f32_bf16_e32 v5, v127             ; encoding: [0x7f,0xe5,0x0a,0x7e]
+v_cvt_f32_bf16 v5, v127.l
+// GFX13: v_cvt_f32_bf16_e32 v5, v127.l           ; encoding: [0x7f,0xe5,0x0a,0x7e]
 
 v_cvt_f32_bf16 v5, s1
 // GFX13: v_cvt_f32_bf16_e32 v5, s1               ; encoding: [0x01,0xe4,0x0a,0x7e]
@@ -519,6 +519,9 @@ v_cvt_f32_bf16 v5, src_scc
 
 v_cvt_f32_bf16 v127, 0x8000
 // GFX13: v_cvt_f32_bf16_e32 v127, 0x8000         ; encoding: [0xff,0xe4,0xfe,0x7e,0x00,0x80,0x00,0x00]
+
+v_cvt_f32_bf16 v5, v127.h
+// GFX13: v_cvt_f32_bf16_e32 v5, v127.h           ; encoding: [0xff,0xe5,0x0a,0x7e]
 
 v_cvt_f32_bf8_e32 v1, s3
 // GFX13: v_cvt_f32_bf8_e32 v1, s3                ; encoding: [0x03,0xda,0x02,0x7e]

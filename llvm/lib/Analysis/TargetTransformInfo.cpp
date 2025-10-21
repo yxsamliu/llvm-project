@@ -1393,15 +1393,19 @@ bool TargetTransformInfo::isElementTypeLegalForScalableVector(Type *Ty) const {
 unsigned TargetTransformInfo::getLoadVectorFactor(unsigned VF,
                                                   unsigned LoadSize,
                                                   unsigned ChainSizeInBytes,
-                                                  VectorType *VecTy) const {
-  return TTIImpl->getLoadVectorFactor(VF, LoadSize, ChainSizeInBytes, VecTy);
+                                                  VectorType *VecTy,
+                                                  unsigned AddrSpace) const {
+  return TTIImpl->getLoadVectorFactor(VF, LoadSize, ChainSizeInBytes, VecTy,
+                                      AddrSpace);
 }
 
 unsigned TargetTransformInfo::getStoreVectorFactor(unsigned VF,
                                                    unsigned StoreSize,
                                                    unsigned ChainSizeInBytes,
-                                                   VectorType *VecTy) const {
-  return TTIImpl->getStoreVectorFactor(VF, StoreSize, ChainSizeInBytes, VecTy);
+                                                   VectorType *VecTy,
+                                                   unsigned AddrSpace) const {
+  return TTIImpl->getStoreVectorFactor(VF, StoreSize, ChainSizeInBytes, VecTy,
+                                       AddrSpace);
 }
 
 bool TargetTransformInfo::preferFixedOverScalableIfEqualCost(

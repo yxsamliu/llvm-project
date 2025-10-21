@@ -702,11 +702,12 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
 
   bool IsLoadChain = isa<LoadInst>(C[0].Inst);
   auto GetVectorFactor = [&](unsigned VF, unsigned LoadStoreSize,
-                             unsigned ChainSizeBytes, VectorType *VecTy) {
+                             unsigned ChainSizeBytes, VectorType *VecTy,
+                             unsigned AS) {
     return IsLoadChain ? TTI.getLoadVectorFactor(VF, LoadStoreSize,
-                                                 ChainSizeBytes, VecTy)
+                                                 ChainSizeBytes, VecTy, AS)
                        : TTI.getStoreVectorFactor(VF, LoadStoreSize,
-                                                  ChainSizeBytes, VecTy);
+                                                  ChainSizeBytes, VecTy, AS);
   };
 
 #ifndef NDEBUG
@@ -758,8 +759,8 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
       unsigned VF = 8 * VecRegBytes / VecElemBits;
 
       // Check that TTI is happy with this vectorization factor.
-      unsigned TargetVF = GetVectorFactor(VF, VecElemBits,
-                                          VecElemBits * NumVecElems / 8, VecTy);
+      unsigned TargetVF = GetVectorFactor(
+          VF, VecElemBits, VecElemBits * NumVecElems / 8, VecTy, AS);
       if (TargetVF != VF && TargetVF < NumVecElems) {
         LLVM_DEBUG(
             dbgs() << "LSV: splitChainByAlignment discarding candidate chain "
@@ -1492,7 +1493,8 @@ Vectorizer::collectEquivalenceClasses(BasicBlock::iterator Begin,
 
     // No point in looking at these if they're too big to vectorize.
     if (TySize > VecRegSize / 2 ||
-        (VecTy && TTI.getLoadVectorFactor(VF, TySize, TySize / 8, VecTy) == 0))
+        (VecTy &&
+         TTI.getLoadVectorFactor(VF, TySize, TySize / 8, VecTy, AS) == 0))
       continue;
 
     Ret[{GetUnderlyingObject(Ptr), AS,
