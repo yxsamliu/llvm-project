@@ -119,6 +119,7 @@ struct MissingFeatures {
   static bool opCallLandingPad() { return false; }
   static bool opCallContinueBlock() { return false; }
   static bool opCallChain() { return false; }
+  static bool opCallExceptionAttr() { return false; }
 
   // CXXNewExpr
   static bool exprNewNullCheck() { return false; }
@@ -256,6 +257,7 @@ struct MissingFeatures {
   static bool generateDebugInfo() { return false; }
   static bool globalViewIndices() { return false; }
   static bool globalViewIntLowering() { return false; }
+  static bool handleBuiltinICEArguments() { return false; }
   static bool hip() { return false; }
   static bool incrementProfileCounter() { return false; }
   static bool innermostEHScope() { return false; }
