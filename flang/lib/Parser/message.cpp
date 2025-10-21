@@ -477,31 +477,15 @@ void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
   }
   std::stable_sort(sorted.begin(), sorted.end(),
       [](const Message *x, const Message *y) { return x->SortBefore(*y); });
-  std::vector<const Message *> msgsWithLastLocation;
+  const Message *lastMsg{nullptr};
   std::size_t errorsEmitted{0};
   for (const Message *msg : sorted) {
-    bool shouldSkipMsg{false};
-    // Don't emit two identical messages for the same location.
-    // At the same location, messages are sorted by the order they were
-    // added to the Messages buffer, which is a decent proxy for the
-    // causality of the messages.
-    if (!msgsWithLastLocation.empty()) {
-      if (msgsWithLastLocation[0]->AtSameLocation(*msg)) {
-        for (const Message *msgAtThisLocation : msgsWithLastLocation) {
-          if (*msg == *msgAtThisLocation) {
-            shouldSkipMsg = true; // continue loop over sorted messages
-            break;
-          }
-        }
-      } else {
-        msgsWithLastLocation.clear();
-      }
-    }
-    if (shouldSkipMsg) {
+    if (lastMsg && *msg == *lastMsg) {
+      // Don't emit two identical messages for the same location
       continue;
     }
-    msgsWithLastLocation.push_back(msg);
     msg->Emit(o, allCooked, echoSourceLines, hintFlagPtr);
+    lastMsg = msg;
     if (warningsAreErrors || msg->IsFatal()) {
       ++errorsEmitted;
     }

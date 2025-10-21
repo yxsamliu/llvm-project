@@ -48,7 +48,10 @@ ElementwiseKind getKind(Operation *op) {
       .Case([](SquareOp) { return ElementwiseKind::square; })
       .Case([](TanhOp) { return ElementwiseKind::tanh; })
       .Case([](ErfOp) { return ElementwiseKind::erf; })
-      .DefaultUnreachable("unhandled case in named to elementwise");
+      .Default([&](Operation *op) {
+        llvm_unreachable("unhandled case in named to elementwise");
+        return ElementwiseKind::sub;
+      });
 }
 
 template <typename NamedOpTy>

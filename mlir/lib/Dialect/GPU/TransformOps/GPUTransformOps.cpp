@@ -847,7 +847,9 @@ getThreadIdBuilder(std::optional<TransformOpInterface> transformOp,
             return GpuLaneIdBuilder(ctx, warpSize, useLinearMapping,
                                     *maybeMaskingAttr);
           })
-          .DefaultUnreachable("unknown mapping attribute");
+          .Default([&](DeviceMappingAttrInterface) -> GpuIdBuilder {
+            llvm_unreachable("unknown mapping attribute");
+          });
   return DiagnosedSilenceableFailure::success();
 }
 

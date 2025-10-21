@@ -15,7 +15,7 @@ namespace llvm {
 
 class MCAsmInfoELF : public MCAsmInfo {
   virtual void anchor();
-  MCSection *getStackSection(MCContext &Ctx, bool Exec) const override;
+  MCSection *getNonexecutableStackSection(MCContext &Ctx) const override;
   void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
                             raw_ostream &) const final;
   bool useCodeAlign(const MCSection &Sec) const final;

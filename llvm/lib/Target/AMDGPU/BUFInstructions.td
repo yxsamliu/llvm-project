@@ -227,8 +227,7 @@ class MTBUF_Load_Pseudo <string opName,
                  getMTBUFAsmOps<addrKind>.ret,
                  pattern>,
     MTBUF_SetupAddr<addrKind> {
-  defvar suffix = !if(!eq(RsrcRC, SReg_128_XNULL), "", "_indexed");
-  let PseudoInstr = opName # suffix # "_" # getAddrName<addrKind>.ret;
+  let PseudoInstr = opName # "_" # getAddrName<addrKind>.ret;
   let mayLoad = 1;
   let mayStore = 0;
   let elements = elems;
@@ -275,8 +274,7 @@ class MTBUF_Store_Pseudo <string opName,
                  getMTBUFAsmOps<addrKind>.ret,
                  pattern>,
     MTBUF_SetupAddr<addrKind> {
-  defvar suffix = !if(!eq(RsrcRC, SReg_128_XNULL), "", "_indexed");
-  let PseudoInstr = opName # suffix # "_" # getAddrName<addrKind>.ret;
+  let PseudoInstr = opName # "_" # getAddrName<addrKind>.ret;
   let mayLoad = 0;
   let mayStore = 1;
   let elements = elems;
@@ -512,8 +510,7 @@ class MUBUF_Load_Pseudo <string opName,
                  getMUBUFAsmOps<addrKind, !or(isLds, isLdsOpc), isLds, isTFE>.ret,
                  pattern>,
     MUBUF_SetupAddr<addrKind> {
-  defvar suffix = !if(!eq(RsrcRC, SReg_128_XNULL), "", "_indexed");
-  let PseudoInstr = opName # suffix # !if(isLds, "_lds", "") # !if(isTFE, "_tfe", "") #
+  let PseudoInstr = opName # !if(isLds, "_lds", "") # !if(isTFE, "_tfe", "") #
                     "_" # getAddrName<addrKind>.ret;
   let AsmMatchConverter = "cvtMubuf";
 
@@ -610,8 +607,7 @@ class MUBUF_Discard_Pseudo <string opName, int addrKind, DAGOperand RsrcRC>
                 []>,
    MUBUF_SetupAddr<addrKind> {
 
-  defvar suffix = !if(!eq(RsrcRC, SReg_128_XNULL), "", "_indexed");
-  let PseudoInstr = opName # suffix # "_" # getAddrName<addrKind>.ret;
+  let PseudoInstr = opName # "_" # getAddrName<addrKind>.ret;
   let mayStore = 1;
   let has_vdata = 0;
   let tfe = 0;
@@ -655,8 +651,7 @@ class MUBUF_Store_Pseudo <string opName,
                  getMUBUFAsmOps<addrKind, 0, 0, isTFE>.ret,
                  pattern>,
     MUBUF_SetupAddr<addrKind> {
-  defvar suffix = !if(!eq(RsrcRC, SReg_128_XNULL), "", "_indexed");
-  let PseudoInstr = opName # suffix # "_" # !if(isTFE, "_tfe", "") #
+  let PseudoInstr = opName # "_" # !if(isTFE, "_tfe", "") #
                     getAddrName<addrKind>.ret;
   let mayLoad = 0;
   let mayStore = 1;
@@ -793,8 +788,7 @@ class MUBUF_AtomicNoRet_Pseudo<string opName, int addrKind,
                         getMUBUFAtomicIns<addrKind, vdataClass, 0, hasRestrictedSOffset, RsrcRC>.ret,
                         getMUBUFAsmOps<addrKind>.ret,
                         pattern> {
-  defvar suffix = !if(!eq(RsrcRC, SReg_128_XNULL), "", "_indexed");
-  let PseudoInstr = opName # suffix # "_" # getAddrName<addrKind>.ret;
+  let PseudoInstr = opName # "_" # getAddrName<addrKind>.ret;
   let glc_value = 0;
   let dlc_value = 0;
   let sccb_value = 0;
@@ -811,8 +805,7 @@ class MUBUF_AtomicRet_Pseudo<string opName, int addrKind,
                         getMUBUFAtomicIns<addrKind, vdata_op, 1, hasRestrictedSOffset, RsrcRC>.ret,
                         getMUBUFAsmOps<addrKind>.ret,
                         pattern> {
-  defvar suffix = !if(!eq(RsrcRC, SReg_128_XNULL), "", "_indexed");
-  let PseudoInstr = opName # suffix # "_rtn_" # getAddrName<addrKind>.ret;
+  let PseudoInstr = opName # "_rtn_" # getAddrName<addrKind>.ret;
   let glc_value = 1;
   let dlc_value = 0;
   let sccb_value = 0;
@@ -2636,19 +2629,17 @@ multiclass VBUFFER_MTBUF_Real_gfx12<bits<4> op, string real_name> {
   }
 }
 
-class VBUFFER_Real_gfx13<bits<8> op, BUF_Pseudo ps, string real_name, bit isIndexed> :
+class VBUFFER_Real_gfx13<bits<8> op, BUF_Pseudo ps, string real_name> :
     VBUFFER_Real<op, ps, real_name>,
     SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX13> {
   let Inst{9-8} = cpol{8-7};
   let AssemblerPredicate = isGFX13Only;
   let DecoderNamespace = "GFX13";
-  let Inst{49-48} = !if(isIndexed, !if(ps.has_srsrc, srsrc{8-7}, ?), 0x0);
-  let Inst{47-41} = !if(ps.has_srsrc, srsrc{6-0}, ?);
 }
 
-multiclass VBUFFER_MUBUF_Real_gfx13<bits<8> op, string real_name, bit isIndexed = 0> {
+multiclass VBUFFER_MUBUF_Real_gfx13<bits<8> op, string real_name> {
   defvar ps = !cast<MUBUF_Pseudo>(NAME);
-  def _gfx13 : VBUFFER_Real_gfx13<op, ps, real_name, isIndexed> {
+  def _gfx13 : VBUFFER_Real_gfx13<op, ps, real_name> {
     // Set the format field to be 1 to avoid round-trip issues, as some tools
     // print BUF_FMT_INVALID for format 0.
     let Inst{61-55} = 0b0000001;
@@ -2658,14 +2649,12 @@ multiclass VBUFFER_MUBUF_Real_gfx13<bits<8> op, string real_name, bit isIndexed 
   def _gfx13_format : VBUFFER_Real<op, ps, real_name> {
     let AsmVariantName = "NonParsable";
     let DecoderNamespace = "GFX13";
-    let Inst{49-48} = !if(isIndexed, !if(ps.has_srsrc, srsrc{8-7}, ?), 0x0);
-    let Inst{47-41} = !if(ps.has_srsrc, srsrc{6-0}, ?);
   }
 }
 
-multiclass VBUFFER_MTBUF_Real_gfx13<bits<8> op, string real_name, bit isIndexed = 0> {
+multiclass VBUFFER_MTBUF_Real_gfx13<bits<8> op, string real_name> {
   defvar ps = !cast<MTBUF_Pseudo>(NAME);
-  def _gfx13 : VBUFFER_Real_gfx13<op, ps, real_name, isIndexed> {
+  def _gfx13 : VBUFFER_Real_gfx13<op, ps, real_name> {
     bits<7> format;
     let Inst{61-55} = format;
   }
@@ -2680,10 +2669,8 @@ class Mnem_gfx13 <string mnemonic, string real_name> :
 
 multiclass MUBUF_Real_AllAddr_gfx13<bits<8> op, string real_name = get_BUF_ps<NAME>.Mnemonic> {
   foreach mode = ["_BOTHEN", "_IDXEN", "_OFFEN", "_OFFSET"] in {
-    defm _VBUFFER # mode : VBUFFER_MUBUF_Real_gfx13<op, real_name>;
-    defm _TFE_VBUFFER # mode : VBUFFER_MUBUF_Real_gfx13<op, real_name>;
-    defm _VBUFFER_indexed # mode : VBUFFER_MUBUF_Real_gfx13<op, real_name, 1>;
-    defm _TFE_VBUFFER_indexed # mode : VBUFFER_MUBUF_Real_gfx13<op, real_name, 1>;
+    defm _VBUFFER_indexed # mode : VBUFFER_MUBUF_Real_gfx13<op, real_name>;
+    defm _TFE_VBUFFER_indexed # mode : VBUFFER_MUBUF_Real_gfx13<op, real_name>;
   }
   defvar ps = get_BUF_ps<NAME>;
   if !ne(ps.Mnemonic, real_name) then
@@ -2694,8 +2681,7 @@ multiclass MUBUF_Real_Atomics_gfx13<bits<8> op, string real_name = get_BUF_ps<NA
                                     string extra_alias = real_name> {
   foreach mode = ["_BOTHEN", "_IDXEN", "_OFFEN", "_OFFSET"] in {
     foreach rtn = ["", "_RTN"] in {
-      defm _VBUFFER # mode # rtn : VBUFFER_MUBUF_Real_gfx13<op, real_name>;
-      defm _VBUFFER_indexed # mode # rtn : VBUFFER_MUBUF_Real_gfx13<op, real_name, 1>;
+      defm _VBUFFER_indexed # mode # rtn : VBUFFER_MUBUF_Real_gfx13<op, real_name>;
     }
   }
   defvar ps = get_BUF_ps<NAME>;
@@ -2707,8 +2693,7 @@ multiclass MUBUF_Real_Atomics_gfx13<bits<8> op, string real_name = get_BUF_ps<NA
 
 multiclass MUBUF_Real_Discard_gfx13<bits<8> op, string real_name = get_BUF_ps<NAME # _VBUFFER>.Mnemonic> {
   foreach mode = ["_BOTHEN", "_IDXEN", "_OFFEN", "_OFFSET"] in {
-    defm _VBUFFER # mode : VBUFFER_MUBUF_Real_gfx13<op, real_name>;
-    defm _VBUFFER_indexed # mode : VBUFFER_MUBUF_Real_gfx13<op, real_name, 1>;
+    defm _VBUFFER_indexed # mode : VBUFFER_MUBUF_Real_gfx13<op, real_name>;
   }
 }
 
@@ -3199,8 +3184,7 @@ class Base_MTBUF_Real_gfx6_gfx7_gfx10<bits<3> op, MTBUF_Pseudo ps, int ef> :
 
 multiclass MTBUF_Real_AllAddr_gfx13_Impl<bits<8> op, string real_name> {
   foreach mode = ["_BOTHEN", "_IDXEN", "_OFFEN", "_OFFSET"] in {
-    defm _VBUFFER # mode : VBUFFER_MTBUF_Real_gfx13<op, real_name>;
-    defm _VBUFFER_indexed # mode : VBUFFER_MTBUF_Real_gfx13<op, real_name, 1>;
+    defm _VBUFFER_indexed # mode : VBUFFER_MTBUF_Real_gfx13<op, real_name>;
   }
   defvar ps = get_BUF_ps<NAME>;
   if !ne(ps.Mnemonic, real_name) then

@@ -154,7 +154,7 @@ void NodePrinter::print(Type type) {
       })
       .Case([&](TypeType) { os << "Type"; })
       .Case([&](ValueType) { os << "Value"; })
-      .DefaultUnreachable("unknown AST type");
+      .Default([](Type) { llvm_unreachable("unknown AST type"); });
 }
 
 void NodePrinter::print(const Node *node) {
@@ -182,7 +182,7 @@ void NodePrinter::print(const Node *node) {
           const VariableDecl,
 
           const Module>([&](auto derivedNode) { this->printImpl(derivedNode); })
-      .DefaultUnreachable("unknown AST node");
+      .Default([](const Node *) { llvm_unreachable("unknown AST node"); });
   elementIndentStack.pop_back();
 }
 

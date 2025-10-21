@@ -243,7 +243,7 @@ static void getTreePredicates(std::vector<PositionalPredicate> &predList,
       .Case<OperandPosition, OperandGroupPosition>([&](auto *pos) {
         getOperandTreePredicates(predList, val, builder, inputs, pos);
       })
-      .DefaultUnreachable("unexpected position kind");
+      .Default([](auto *) { llvm_unreachable("unexpected position kind"); });
 }
 
 static void getAttributePredicates(pdl::AttributeOp op,

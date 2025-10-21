@@ -315,7 +315,7 @@ LogicalResult LoadOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
             op, op.getType(), subViewOp.getSource(), sourceIndices,
             op.getTranspose(), op.getNumTiles());
       })
-      .DefaultUnreachable("unexpected operation");
+      .Default([](Operation *) { llvm_unreachable("unexpected operation."); });
   return success();
 }
 
@@ -367,7 +367,7 @@ LogicalResult LoadOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
             op, op.getType(), expandShapeOp.getViewSource(), sourceIndices,
             op.getMask(), op.getPassThru());
       })
-      .DefaultUnreachable("unexpected operation");
+      .Default([](Operation *) { llvm_unreachable("unexpected operation."); });
   return success();
 }
 
@@ -415,7 +415,7 @@ LogicalResult LoadOpOfCollapseShapeOpFolder<OpTy>::matchAndRewrite(
             op, op.getType(), collapseShapeOp.getViewSource(), sourceIndices,
             op.getMask(), op.getPassThru());
       })
-      .DefaultUnreachable("unexpected operation");
+      .Default([](Operation *) { llvm_unreachable("unexpected operation."); });
   return success();
 }
 
@@ -482,7 +482,7 @@ LogicalResult StoreOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
             op, op.getSrc(), subViewOp.getSource(), sourceIndices,
             op.getLeadDimension(), op.getTransposeAttr());
       })
-      .DefaultUnreachable("unexpected operation");
+      .Default([](Operation *) { llvm_unreachable("unexpected operation."); });
   return success();
 }
 
@@ -535,7 +535,7 @@ LogicalResult StoreOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
             op, expandShapeOp.getViewSource(), sourceIndices, op.getMask(),
             op.getValueToStore());
       })
-      .DefaultUnreachable("unexpected operation");
+      .Default([](Operation *) { llvm_unreachable("unexpected operation."); });
   return success();
 }
 
@@ -584,7 +584,7 @@ LogicalResult StoreOpOfCollapseShapeOpFolder<OpTy>::matchAndRewrite(
             op, collapseShapeOp.getViewSource(), sourceIndices, op.getMask(),
             op.getValueToStore());
       })
-      .DefaultUnreachable("unexpected operation");
+      .Default([](Operation *) { llvm_unreachable("unexpected operation."); });
   return success();
 }
 

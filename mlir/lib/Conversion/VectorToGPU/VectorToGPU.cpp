@@ -386,7 +386,7 @@ namespace {
 // to MMA matmul.
 struct PrepareContractToGPUMMA
     : public OpRewritePattern<vector::ContractionOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override {
@@ -450,7 +450,7 @@ struct PrepareContractToGPUMMA
 // Shared Memory to registers.
 struct CombineTransferReadOpTranspose final
     : public OpRewritePattern<vector::TransposeOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::TransposeOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::TransposeOp op,
                                 PatternRewriter &rewriter) const override {

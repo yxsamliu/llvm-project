@@ -841,6 +841,14 @@ public:
     return 1;
   }
 
+  virtual InstructionCost getVPMemoryOpCost(unsigned Opcode, Type *Src,
+                                            Align Alignment,
+                                            unsigned AddressSpace,
+                                            TTI::TargetCostKind CostKind,
+                                            const Instruction *I) const {
+    return 1;
+  }
+
   virtual InstructionCost
   getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                         unsigned AddressSpace,
@@ -1074,15 +1082,13 @@ public:
 
   virtual unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
                                        unsigned ChainSizeInBytes,
-                                       VectorType *VecTy,
-                                       unsigned AddrSpace) const {
+                                       VectorType *VecTy) const {
     return VF;
   }
 
   virtual unsigned getStoreVectorFactor(unsigned VF, unsigned StoreSize,
                                         unsigned ChainSizeInBytes,
-                                        VectorType *VecTy,
-                                        unsigned AddrSpace) const {
+                                        VectorType *VecTy) const {
     return VF;
   }
 

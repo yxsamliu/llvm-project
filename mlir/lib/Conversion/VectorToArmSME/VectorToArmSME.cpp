@@ -44,7 +44,7 @@ namespace {
 ///   arm_sme.tile_load ... layout<vertical>
 struct TransferReadToArmSMELowering
     : public OpRewritePattern<vector::TransferReadOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::TransferReadOp transferReadOp,
                                 PatternRewriter &rewriter) const final {
@@ -120,7 +120,7 @@ struct TransferReadToArmSMELowering
 ///     : memref<?x?xi8>, vector<[16]x[16]xi8>
 struct TransferWriteToArmSMELowering
     : public OpRewritePattern<vector::TransferWriteOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::TransferWriteOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const final {
@@ -157,7 +157,7 @@ struct TransferWriteToArmSMELowering
 
 /// Conversion pattern for vector.load.
 struct VectorLoadToArmSMELowering : public OpRewritePattern<vector::LoadOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::LoadOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::LoadOp load,
                                 PatternRewriter &rewriter) const override {
@@ -173,7 +173,7 @@ struct VectorLoadToArmSMELowering : public OpRewritePattern<vector::LoadOp> {
 
 /// Conversion pattern for vector.store.
 struct VectorStoreToArmSMELowering : public OpRewritePattern<vector::StoreOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::StoreOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::StoreOp store,
                                 PatternRewriter &rewriter) const override {
@@ -208,7 +208,7 @@ struct VectorStoreToArmSMELowering : public OpRewritePattern<vector::StoreOp> {
 /// Supports scalar, 0-d vector, and 1-d vector broadcasts.
 struct BroadcastOpToArmSMELowering
     : public OpRewritePattern<vector::BroadcastOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::BroadcastOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::BroadcastOp broadcastOp,
                                 PatternRewriter &rewriter) const final {
@@ -279,7 +279,7 @@ struct BroadcastOpToArmSMELowering
 /// implementation, perhaps with tile <-> vector (MOVA) ops.
 struct TransposeOpToArmSMELowering
     : public OpRewritePattern<vector::TransposeOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::TransposeOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const final {
@@ -372,7 +372,7 @@ struct TransposeOpToArmSMELowering
 struct VectorOuterProductToArmSMELowering
     : public OpRewritePattern<vector::OuterProductOp> {
 
-  using Base::Base;
+  using OpRewritePattern<vector::OuterProductOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::OuterProductOp outerProductOp,
                                 PatternRewriter &rewriter) const override {
@@ -451,7 +451,7 @@ struct VectorOuterProductToArmSMELowering
 /// ```
 struct VectorExtractToArmSMELowering
     : public OpRewritePattern<vector::ExtractOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::ExtractOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
@@ -507,7 +507,7 @@ struct VectorExtractToArmSMELowering
 /// ```
 struct VectorInsertToArmSMELowering
     : public OpRewritePattern<vector::InsertOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::InsertOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::InsertOp insertOp,
                                 PatternRewriter &rewriter) const override {
@@ -568,7 +568,7 @@ struct VectorInsertToArmSMELowering
 ///  }
 ///  ```
 struct VectorPrintToArmSMELowering : public OpRewritePattern<vector::PrintOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::PrintOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::PrintOp printOp,
                                 PatternRewriter &rewriter) const override {
@@ -623,7 +623,7 @@ struct VectorPrintToArmSMELowering : public OpRewritePattern<vector::PrintOp> {
 ///  ```
 struct FoldTransferWriteOfExtractTileSlice
     : public OpRewritePattern<vector::TransferWriteOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::TransferWriteOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const final {
@@ -679,7 +679,7 @@ struct FoldTransferWriteOfExtractTileSlice
 /// ```
 struct ExtractFromCreateMaskToPselLowering
     : public OpRewritePattern<vector::ExtractOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::ExtractOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
@@ -734,7 +734,7 @@ struct ExtractFromCreateMaskToPselLowering
 // Convert all `vector.splat` to `vector.broadcast`. There is a path from
 // `vector.broadcast` to ArmSME via another pattern.
 struct ConvertSplatToBroadcast : public OpRewritePattern<vector::SplatOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::SplatOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::SplatOp splatOp,
                                 PatternRewriter &rewriter) const final {

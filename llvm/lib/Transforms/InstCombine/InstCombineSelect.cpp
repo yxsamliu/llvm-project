@@ -17,7 +17,6 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OverflowInstAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -43,7 +42,6 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <cassert>
-#include <optional>
 #include <utility>
 
 #define DEBUG_TYPE "instcombine"
@@ -52,9 +50,6 @@
 using namespace llvm;
 using namespace PatternMatch;
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-}
 
 /// Replace a select operand based on an equality comparison with the identity
 /// constant of a binop.
@@ -1453,16 +1448,10 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     return nullptr;
   };
 
-  bool CanReplaceCmpLHSWithRHS = canReplacePointersIfEqual(CmpLHS, CmpRHS, DL);
-  if (CanReplaceCmpLHSWithRHS) {
-    if (Instruction *R = ReplaceOldOpWithNewOp(CmpLHS, CmpRHS))
-      return R;
-  }
-  bool CanReplaceCmpRHSWithLHS = canReplacePointersIfEqual(CmpRHS, CmpLHS, DL);
-  if (CanReplaceCmpRHSWithLHS) {
-    if (Instruction *R = ReplaceOldOpWithNewOp(CmpRHS, CmpLHS))
-      return R;
-  }
+  if (Instruction *R = ReplaceOldOpWithNewOp(CmpLHS, CmpRHS))
+    return R;
+  if (Instruction *R = ReplaceOldOpWithNewOp(CmpRHS, CmpLHS))
+    return R;
 
   auto *FalseInst = dyn_cast<Instruction>(FalseVal);
   if (!FalseInst)
@@ -1477,14 +1466,12 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
   // Example:
   // (X == 42) ? 43 : (X + 1) --> (X == 42) ? (X + 1) : (X + 1) --> X + 1
   SmallVector<Instruction *> DropFlags;
-  if ((CanReplaceCmpLHSWithRHS &&
-       simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, SQ,
-                              /* AllowRefinement */ false,
-                              &DropFlags) == TrueVal) ||
-      (CanReplaceCmpRHSWithLHS &&
-       simplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, SQ,
-                              /* AllowRefinement */ false,
-                              &DropFlags) == TrueVal)) {
+  if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, SQ,
+                             /* AllowRefinement */ false,
+                             &DropFlags) == TrueVal ||
+      simplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, SQ,
+                             /* AllowRefinement */ false,
+                             &DropFlags) == TrueVal) {
     for (Instruction *I : DropFlags) {
       I->dropPoisonGeneratingAnnotations();
       Worklist.add(I);
@@ -4505,21 +4492,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   auto FoldSelectWithAndOrCond = [&](bool IsAnd, Value *A,
                                      Value *B) -> Instruction * {
     if (Value *V = simplifySelectInst(B, TrueVal, FalseVal,
-                                      SQ.getWithInstruction(&SI))) {
-      Value *NewTrueVal = IsAnd ? V : TrueVal;
-      Value *NewFalseVal = IsAnd ? FalseVal : V;
-
-      // If the True and False values don't change, then preserve the branch
-      // metadata of the original select as the net effect of this change is to
-      // simplify the conditional.
-      Instruction *MDFrom = nullptr;
-      if (NewTrueVal == TrueVal && NewFalseVal == FalseVal &&
-          !ProfcheckDisableMetadataFixes) {
-        MDFrom = &SI;
-      }
-      return SelectInst::Create(A, NewTrueVal, NewFalseVal, "", nullptr,
-                                MDFrom);
-    }
+                                      SQ.getWithInstruction(&SI)))
+      return SelectInst::Create(A, IsAnd ? V : TrueVal, IsAnd ? FalseVal : V);
 
     // Is (select B, T, F) a SPF?
     if (CondVal->hasOneUse() && SelType->isIntOrIntVectorTy()) {

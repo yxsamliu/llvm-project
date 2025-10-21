@@ -143,11 +143,7 @@ struct CUFComputeSharedMemoryOffsetsAndSize
       auto sharedMemType = fir::SequenceType::get(sharedMemSize, i8Ty);
       std::string sharedMemGlobalName =
           (funcOp.getName() + llvm::Twine(cudaSharedMemSuffix)).str();
-      // Dynamic shared memory needs an external linkage while static shared
-      // memory needs an internal linkage.
-      mlir::StringAttr linkage = nbDynamicSharedVariables > 0
-                                     ? builder.createExternalLinkage()
-                                     : builder.createInternalLinkage();
+      mlir::StringAttr linkage = builder.createInternalLinkage();
       builder.setInsertionPointToEnd(gpuMod.getBody());
       llvm::SmallVector<mlir::NamedAttribute> attrs;
       auto globalOpName = mlir::OperationName(fir::GlobalOp::getOperationName(),

@@ -875,17 +875,14 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
           storeScatterOp,
           "Some vector operands have no layouts, using defaults instead.");
     }
-    // Distributed store payload type according to the lane layout.
-    VectorType distPayloadTyByWarpOp = distStoreVecByWarpOpOrFailure.value();
-    // Expected distributed payload type is always 1D.
-    VectorType expectedPayloadTy =
-        VectorType::get({distPayloadTyByWarpOp.getNumElements()},
-                        distPayloadTyByWarpOp.getElementType());
+    VectorType distPayloadTy = distStoreVecByWarpOpOrFailure.value();
+    VectorType expectedPayloadTy = VectorType::get(
+        {distPayloadTy.getNumElements()}, distPayloadTy.getElementType());
 
     SmallVector<size_t> newRetIndices;
     SmallVector<Value> operands = storeScatterOp->getOperands();
     SmallVector<Type> operandTypesToYield = {
-        distPayloadTyByWarpOp, operands[1].getType(),
+        expectedPayloadTy, operands[1].getType(),
         distOffsetsByWarpOpOrFailure.value(),
         distMaskByWarpOpOrFailure.value()};
 
@@ -893,11 +890,8 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
         rewriter, warpOp, operands, operandTypesToYield, newRetIndices);
     SmallVector<Value> newStoreScatterOpOperands = llvm::map_to_vector(
         newRetIndices, [&](size_t idx) { return newWarpOp.getResult(idx); });
-    // The payload operand may need type adjustment due to mismatch between warp
-    // distributed type and expected SIMT type.
+
     rewriter.setInsertionPointAfter(newWarpOp);
-    newStoreScatterOpOperands[0] = resolveDistributedTy(
-        newStoreScatterOpOperands[0], expectedPayloadTy, rewriter);
     xegpu::StoreScatterOp newOp = xegpu::StoreScatterOp::create(
         rewriter, newWarpOp.getLoc(), TypeRange{}, newStoreScatterOpOperands,
         storeScatterOp->getAttrs());
@@ -982,11 +976,8 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
         distMaskByWarpOpOrFailure.value()};
 
     const unsigned operandIdx = producedByLastLoad->getOperandNumber();
-    VectorType distResultTy =
+    VectorType loadVecTy =
         cast<VectorType>(warpOp.getResult(operandIdx).getType());
-    // Distributed load op will always be 1D.
-    VectorType loadVecTy = VectorType::get({distResultTy.getNumElements()},
-                                           distResultTy.getElementType());
 
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, operands, operandTypesToYield, newRetIndices);
@@ -1000,16 +991,13 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
         loadGatherOp->getAttrs());
     xegpu::removeLayoutAttrs(newOp);
     Value distributedVal = newWarpOp.getResult(operandIdx);
-    // Resolve the output type and replace all uses.
-    rewriter.replaceAllUsesWith(
-        distributedVal,
-        resolveDistributedTy(newOp.getResult(), distResultTy, rewriter));
+    rewriter.replaceAllUsesWith(distributedVal, newOp->getResult(0));
     return success();
   }
 };
 
 /// Helper to rewrite a 2D VectorMultiReductionOp into a sequence of 1D
-/// VectorReductionOps. We also insert layouts for the newly created ops.
+/// VectorReductionOps.
 static Value lowerToVectorReductions(TypedValue<VectorType> src,
                                      TypedValue<VectorType> acc,
                                      vector::CombiningKind kind,
@@ -1026,9 +1014,6 @@ static Value lowerToVectorReductions(TypedValue<VectorType> src,
   Value reductionResult = arith::ConstantOp::create(
       rewriter, loc, acc.getType(),
       DenseElementsAttr::get(acc.getType(), zeroAttr));
-  // Reduction result should have the same layout as the accumulator.
-  xegpu::setDistributeLayoutAttr(cast<OpResult>(reductionResult),
-                                 xegpu::getDistributeLayoutAttr(acc));
   // For each slice of the source, extract the slice vector, do a reduction
   // and, insert the reduced value back to the result vector.
   for (int i = 0; i < nSlices; ++i) {
@@ -1044,23 +1029,13 @@ static Value lowerToVectorReductions(TypedValue<VectorType> src,
         vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,
                                               sliceSizes, {1, 1});
     int64_t nSliceElements = extractOp.getResult().getType().getNumElements();
-    vector::ShapeCastOp slice = vector::ShapeCastOp::create(
+    Value slice = vector::ShapeCastOp::create(
         rewriter, loc,
         VectorType::get({nSliceElements}, sourceType.getElementType()),
         extractOp.getResult());
-    // Shape cast is currently handled in xegpu side. So layouts must be
-    // retained during lowering. Shape cast output has the same layout as the
-    // accumulator. Shape cast source has the same layout as the original
-    // reduction source.
-    // TODO: other ops generated here may also need layout attributes.
-    xegpu::setDistributeLayoutAttr(slice->getOpOperand(0),
-                                   xegpu::getDistributeLayoutAttr(src));
-    xegpu::setDistributeLayoutAttr(slice->getOpResult(0),
-                                   xegpu::getDistributeLayoutAttr(acc));
-    // Extract and reduction results in scalars, so no result layout is needed.
     Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, i);
-    Value reduction = vector::ReductionOp::create(
-        rewriter, loc, kind, slice.getResult(), accExtract);
+    Value reduction =
+        vector::ReductionOp::create(rewriter, loc, kind, slice, accExtract);
     reductionResult =
         vector::InsertOp::create(rewriter, loc, reduction, reductionResult, i);
   }
@@ -1132,7 +1107,7 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
       return failure();
     auto reductionOp =
         cast<vector::MultiDimReductionOp>(yieldOperand->get().getDefiningOp());
-    unsigned operandIdx = yieldOperand->getOperandNumber();
+    unsigned operandNumber = yieldOperand->getOperandNumber();
     VectorType sourceType = reductionOp.getSourceVectorType();
     // Only 2D vectors are supported.
     if (sourceType.getRank() != 2)
@@ -1146,7 +1121,7 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
           warpOp, "Only 1 reduction dimension is supported.");
     int64_t reductionDim = reductionDims[0];
     VectorType distributedResultType =
-        cast<VectorType>(warpOp.getResult(operandIdx).getType());
+        cast<VectorType>(warpOp.getResult(operandNumber).getType());
     VectorType resultType = cast<VectorType>(reductionOp.getType());
     xegpu::DistributeLayoutAttr sourceLayout =
         xegpu::getDistributeLayoutAttr(reductionOp.getSource());
@@ -1209,7 +1184,7 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
           cast<TypedValue<VectorType>>(newWarpOp->getResult(newRetIndices[1])),
           reductionOp.getKind(), reductionDim, reductionOp.getLoc(), rewriter);
       // Replace the warp op result with the final result.
-      rewriter.replaceAllUsesWith(newWarpOp.getResult(operandIdx), result);
+      rewriter.replaceAllUsesWith(reductionOp.getResult(), result);
       return success();
     }
     // For non-lane-local case, we simply rewrite the MultiReductionOp in terms
@@ -1242,7 +1217,7 @@ struct VectorShapeCastDistribution : public gpu::WarpDistributionPattern {
     auto resultDistTy =
         cast<VectorType>(warpOp.getResult(operandNumber).getType());
     xegpu::DistributeLayoutAttr sourceLayout =
-        xegpu::getDistributeLayoutAttr(shapeCastOp->getOpOperand(0));
+        xegpu::getDistributeLayoutAttr(shapeCastOp.getSource());
     xegpu::DistributeLayoutAttr resultLayout =
         xegpu::getDistributeLayoutAttr(shapeCastOp.getResult());
     if (!sourceLayout || !resultLayout)
@@ -1428,6 +1403,11 @@ namespace {
 struct XeGPUSubgroupDistributePass final
     : public xegpu::impl::XeGPUSubgroupDistributeBase<
           XeGPUSubgroupDistributePass> {
+  XeGPUSubgroupDistributePass() = default;
+  XeGPUSubgroupDistributePass(const XeGPUSubgroupDistributePass &other) =
+      default;
+  XeGPUSubgroupDistributePass(xegpu::XeGPUSubgroupDistributeOptions options)
+      : XeGPUSubgroupDistributeBase(options) {}
   void runOnOperation() override;
 };
 } // namespace
@@ -1535,9 +1515,10 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
     return laneVal;
   };
 
-  vector::populateDistributeReduction(
-      patterns, warpReduction,
-      /*pattern benefit=*/regularPatternBenefit);
+  if (enableSGReductions)
+    vector::populateDistributeReduction(
+        patterns, warpReduction,
+        /*pattern benefit=*/regularPatternBenefit);
 
   vector::populatePropagateWarpVectorDistributionPatterns(
       patterns, distributionFn, shuffleFn,

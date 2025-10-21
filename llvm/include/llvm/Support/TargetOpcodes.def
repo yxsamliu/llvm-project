@@ -229,10 +229,6 @@ HANDLE_TARGET_OPCODE(FAKE_USE)
 // barrier, but does not correspond to any generated instruction.
 HANDLE_TARGET_OPCODE(MEMBARRIER)
 
-/// Represents the barrier for provenance of its pointer operand. It will
-/// generate a no-op.
-HANDLE_TARGET_OPCODE(PROVENANCE_END)
-
 // Provides information about what jump table the following indirect branch is
 // using.
 HANDLE_TARGET_OPCODE(JUMP_TABLE_DEBUG_INFO)

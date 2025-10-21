@@ -465,16 +465,11 @@ public:
       return nullptr;
 
     if (Value *Result = ConstantEmitter(CGF).tryEmitConstantExpr(E)) {
-      if (E->isGLValue()) {
-        // This was already converted to an rvalue when it was constant
-        // evaluated.
-        if (E->hasAPValueResult() && !E->getAPValueResult().isLValue())
-          return Result;
+      if (E->isGLValue())
         return CGF.EmitLoadOfScalar(
             Address(Result, CGF.convertTypeForLoadStore(E->getType()),
                     CGF.getContext().getTypeAlignInChars(E->getType())),
             /*Volatile*/ false, E->getType(), E->getExprLoc());
-      }
       return Result;
     }
     return Visit(E->getSubExpr());

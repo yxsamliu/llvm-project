@@ -5,8 +5,6 @@
 // XFAIL: target=arm64ec-pc-windows-msvc
 // These intrinsics are not yet implemented for Arm64EC.
 
-#include "system_reserved_names.h"
-
 #if defined(i386) || defined(__x86_64__)
 
 #ifdef __SSE4_2__

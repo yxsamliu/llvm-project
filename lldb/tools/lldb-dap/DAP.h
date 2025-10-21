@@ -78,9 +78,11 @@ enum DAPBroadcasterBits {
 
 enum class ReplMode { Variable = 0, Command, Auto };
 
-using DAPTransport = lldb_private::transport::JSONTransport<ProtocolDescriptor>;
+using DAPTransport =
+    lldb_private::Transport<protocol::Request, protocol::Response,
+                            protocol::Event>;
 
-struct DAP final : public DAPTransport::MessageHandler {
+struct DAP final : private DAPTransport::MessageHandler {
   /// Path to the lldb-dap binary itself.
   static llvm::StringRef debug_adapter_path;
 

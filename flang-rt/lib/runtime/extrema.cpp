@@ -397,12 +397,9 @@ template <TypeCategory CAT, bool IS_MAX,
     template <typename, bool, bool> class COMPARE>
 struct DoPartialMaxOrMinLocHelper {
   template <int KIND> struct Functor {
-    // NVCC inlines more aggressively which causes too many specializations of
-    // this function to be inlined causing compiler timeouts. Set as
-    // noinline to allow compilation to complete.
-    RT_API_ATTRS RT_DEVICE_NOINLINE void operator()(const char *intrinsic,
-        Descriptor &result, const Descriptor &x, int kind, int dim,
-        const Descriptor *mask, bool back, Terminator &terminator) const {
+    RT_API_ATTRS void operator()(const char *intrinsic, Descriptor &result,
+        const Descriptor &x, int kind, int dim, const Descriptor *mask,
+        bool back, Terminator &terminator) const {
       DoPartialMaxOrMinLoc<CAT, KIND, IS_MAX, COMPARE>(
           intrinsic, result, x, kind, dim, mask, back, terminator);
     }

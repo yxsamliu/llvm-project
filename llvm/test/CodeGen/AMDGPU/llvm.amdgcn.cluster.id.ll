@@ -13,11 +13,14 @@ declare i32 @llvm.amdgcn.cluster.id.z() #0
 define amdgpu_kernel void @test_cluster_id_x(ptr addrspace(1) %out) {
 ; CHECK-UNKNOWN-LABEL: test_cluster_id_x:
 ; CHECK-UNKNOWN:       ; %bb.0:
-; CHECK-UNKNOWN-NEXT:    s_load_b64 s[2:3], s[0:1], 0x24
+; CHECK-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; CHECK-UNKNOWN-NEXT:    v_dual_mov_b32 v0, ttmp9 :: v_dual_mov_b32 v1, 0
 ; CHECK-UNKNOWN-NEXT:    s_wait_kmcnt 0x0
-; CHECK-UNKNOWN-NEXT:    global_store_b32 v1, v0, s[2:3]
+; CHECK-UNKNOWN-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; CHECK-UNKNOWN-NEXT:    s_endpgm
+; CHECK-UNKNOWN: COMPUTE_PGM_RSRC2:TGID_X_EN: 1
+; CHECK-UNKNOWN: COMPUTE_PGM_RSRC2:TGID_Y_EN: 0
+; CHECK-UNKNOWN: COMPUTE_PGM_RSRC2:TGID_Z_EN: 0
 ;
 ; CHECK-MESA3D-LABEL: test_cluster_id_x:
 ; CHECK-MESA3D:         .amd_kernel_code_t
@@ -67,7 +70,7 @@ define amdgpu_kernel void @test_cluster_id_x(ptr addrspace(1) %out) {
 ; CHECK-MESA3D-NEXT:     is_ptr64 = 1
 ; CHECK-MESA3D-NEXT:     is_dynamic_callstack = 0
 ; CHECK-MESA3D-NEXT:     is_debug_enabled = 0
-; CHECK-MESA3D-NEXT:     is_xnack_enabled = 1
+; CHECK-MESA3D-NEXT:     is_xnack_enabled = 0
 ; CHECK-MESA3D-NEXT:     workitem_private_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     workgroup_group_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     gds_segment_byte_size = 0
@@ -97,11 +100,14 @@ define amdgpu_kernel void @test_cluster_id_x(ptr addrspace(1) %out) {
 ;
 ; CHECK-G-UNKNOWN-LABEL: test_cluster_id_x:
 ; CHECK-G-UNKNOWN:       ; %bb.0:
-; CHECK-G-UNKNOWN-NEXT:    s_load_b64 s[2:3], s[0:1], 0x24
+; CHECK-G-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; CHECK-G-UNKNOWN-NEXT:    v_dual_mov_b32 v0, ttmp9 :: v_dual_mov_b32 v1, 0
 ; CHECK-G-UNKNOWN-NEXT:    s_wait_kmcnt 0x0
-; CHECK-G-UNKNOWN-NEXT:    global_store_b32 v1, v0, s[2:3]
+; CHECK-G-UNKNOWN-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; CHECK-G-UNKNOWN-NEXT:    s_endpgm
+; CHECK-G-UNKNOWN: COMPUTE_PGM_RSRC2:TGID_X_EN: 1
+; CHECK-G-UNKNOWN: COMPUTE_PGM_RSRC2:TGID_Y_EN: 0
+; CHECK-G-UNKNOWN: COMPUTE_PGM_RSRC2:TGID_Z_EN: 0
 ;
 ; CHECK-G-MESA3D-LABEL: test_cluster_id_x:
 ; CHECK-G-MESA3D:         .amd_kernel_code_t
@@ -151,7 +157,7 @@ define amdgpu_kernel void @test_cluster_id_x(ptr addrspace(1) %out) {
 ; CHECK-G-MESA3D-NEXT:     is_ptr64 = 1
 ; CHECK-G-MESA3D-NEXT:     is_dynamic_callstack = 0
 ; CHECK-G-MESA3D-NEXT:     is_debug_enabled = 0
-; CHECK-G-MESA3D-NEXT:     is_xnack_enabled = 1
+; CHECK-G-MESA3D-NEXT:     is_xnack_enabled = 0
 ; CHECK-G-MESA3D-NEXT:     workitem_private_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     workgroup_group_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     gds_segment_byte_size = 0
@@ -194,11 +200,14 @@ define amdgpu_kernel void @test_cluster_id_x(ptr addrspace(1) %out) {
 define amdgpu_kernel void @test_cluster_id_y(ptr addrspace(1) %out) #1 {
 ; CHECK-UNKNOWN-LABEL: test_cluster_id_y:
 ; CHECK-UNKNOWN:       ; %bb.0:
-; CHECK-UNKNOWN-NEXT:    s_load_b64 s[2:3], s[0:1], 0x24
+; CHECK-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; CHECK-UNKNOWN-NEXT:    v_dual_mov_b32 v0, ttmp7 :: v_dual_mov_b32 v1, 0
 ; CHECK-UNKNOWN-NEXT:    s_wait_kmcnt 0x0
-; CHECK-UNKNOWN-NEXT:    global_store_b32 v1, v0, s[2:3]
+; CHECK-UNKNOWN-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; CHECK-UNKNOWN-NEXT:    s_endpgm
+; CHECK-UNKNOWN: COMPUTE_PGM_RSRC2:TGID_X_EN: 1
+; CHECK-UNKNOWN: COMPUTE_PGM_RSRC2:TGID_Y_EN: 1
+; CHECK-UNKNOWN: COMPUTE_PGM_RSRC2:TGID_Z_EN: 0
 ;
 ; CHECK-MESA3D-LABEL: test_cluster_id_y:
 ; CHECK-MESA3D:         .amd_kernel_code_t
@@ -248,7 +257,7 @@ define amdgpu_kernel void @test_cluster_id_y(ptr addrspace(1) %out) #1 {
 ; CHECK-MESA3D-NEXT:     is_ptr64 = 1
 ; CHECK-MESA3D-NEXT:     is_dynamic_callstack = 0
 ; CHECK-MESA3D-NEXT:     is_debug_enabled = 0
-; CHECK-MESA3D-NEXT:     is_xnack_enabled = 1
+; CHECK-MESA3D-NEXT:     is_xnack_enabled = 0
 ; CHECK-MESA3D-NEXT:     workitem_private_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     workgroup_group_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     gds_segment_byte_size = 0
@@ -278,11 +287,14 @@ define amdgpu_kernel void @test_cluster_id_y(ptr addrspace(1) %out) #1 {
 ;
 ; CHECK-G-UNKNOWN-LABEL: test_cluster_id_y:
 ; CHECK-G-UNKNOWN:       ; %bb.0:
-; CHECK-G-UNKNOWN-NEXT:    s_load_b64 s[2:3], s[0:1], 0x24
+; CHECK-G-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; CHECK-G-UNKNOWN-NEXT:    v_dual_mov_b32 v0, ttmp7 :: v_dual_mov_b32 v1, 0
 ; CHECK-G-UNKNOWN-NEXT:    s_wait_kmcnt 0x0
-; CHECK-G-UNKNOWN-NEXT:    global_store_b32 v1, v0, s[2:3]
+; CHECK-G-UNKNOWN-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; CHECK-G-UNKNOWN-NEXT:    s_endpgm
+; CHECK-G-UNKNOWN: COMPUTE_PGM_RSRC2:TGID_X_EN: 1
+; CHECK-G-UNKNOWN: COMPUTE_PGM_RSRC2:TGID_Y_EN: 1
+; CHECK-G-UNKNOWN: COMPUTE_PGM_RSRC2:TGID_Z_EN: 0
 ;
 ; CHECK-G-MESA3D-LABEL: test_cluster_id_y:
 ; CHECK-G-MESA3D:         .amd_kernel_code_t
@@ -332,7 +344,7 @@ define amdgpu_kernel void @test_cluster_id_y(ptr addrspace(1) %out) #1 {
 ; CHECK-G-MESA3D-NEXT:     is_ptr64 = 1
 ; CHECK-G-MESA3D-NEXT:     is_dynamic_callstack = 0
 ; CHECK-G-MESA3D-NEXT:     is_debug_enabled = 0
-; CHECK-G-MESA3D-NEXT:     is_xnack_enabled = 1
+; CHECK-G-MESA3D-NEXT:     is_xnack_enabled = 0
 ; CHECK-G-MESA3D-NEXT:     workitem_private_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     workgroup_group_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     gds_segment_byte_size = 0
@@ -383,14 +395,16 @@ define amdgpu_kernel void @test_cluster_id_y(ptr addrspace(1) %out) #1 {
 define amdgpu_kernel void @test_cluster_id_z(ptr addrspace(1) %out) #1 {
 ; CHECK-UNKNOWN-LABEL: test_cluster_id_z:
 ; CHECK-UNKNOWN:       ; %bb.0:
-; CHECK-UNKNOWN-NEXT:    s_load_b64 s[2:3], s[0:1], 0x24
-; CHECK-UNKNOWN-NEXT:    s_wait_xcnt 0x0
-; CHECK-UNKNOWN-NEXT:    s_lshr_b32 s0, ttmp7, 16
+; CHECK-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; CHECK-UNKNOWN-NEXT:    s_lshr_b32 s2, ttmp7, 16
 ; CHECK-UNKNOWN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-UNKNOWN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
+; CHECK-UNKNOWN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; CHECK-UNKNOWN-NEXT:    s_wait_kmcnt 0x0
-; CHECK-UNKNOWN-NEXT:    global_store_b32 v0, v1, s[2:3]
+; CHECK-UNKNOWN-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; CHECK-UNKNOWN-NEXT:    s_endpgm
+; CHECK-UNKNOWN: COMPUTE_PGM_RSRC2:TGID_X_EN: 1
+; CHECK-UNKNOWN: COMPUTE_PGM_RSRC2:TGID_Y_EN: 0
+; CHECK-UNKNOWN: COMPUTE_PGM_RSRC2:TGID_Z_EN: 1
 ;
 ; CHECK-MESA3D-LABEL: test_cluster_id_z:
 ; CHECK-MESA3D:         .amd_kernel_code_t
@@ -440,7 +454,7 @@ define amdgpu_kernel void @test_cluster_id_z(ptr addrspace(1) %out) #1 {
 ; CHECK-MESA3D-NEXT:     is_ptr64 = 1
 ; CHECK-MESA3D-NEXT:     is_dynamic_callstack = 0
 ; CHECK-MESA3D-NEXT:     is_debug_enabled = 0
-; CHECK-MESA3D-NEXT:     is_xnack_enabled = 1
+; CHECK-MESA3D-NEXT:     is_xnack_enabled = 0
 ; CHECK-MESA3D-NEXT:     workitem_private_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     workgroup_group_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     gds_segment_byte_size = 0
@@ -472,14 +486,16 @@ define amdgpu_kernel void @test_cluster_id_z(ptr addrspace(1) %out) #1 {
 ;
 ; CHECK-G-UNKNOWN-LABEL: test_cluster_id_z:
 ; CHECK-G-UNKNOWN:       ; %bb.0:
-; CHECK-G-UNKNOWN-NEXT:    s_load_b64 s[2:3], s[0:1], 0x24
-; CHECK-G-UNKNOWN-NEXT:    s_wait_xcnt 0x0
-; CHECK-G-UNKNOWN-NEXT:    s_lshr_b32 s0, ttmp7, 16
+; CHECK-G-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; CHECK-G-UNKNOWN-NEXT:    s_lshr_b32 s2, ttmp7, 16
 ; CHECK-G-UNKNOWN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-G-UNKNOWN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s0
+; CHECK-G-UNKNOWN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; CHECK-G-UNKNOWN-NEXT:    s_wait_kmcnt 0x0
-; CHECK-G-UNKNOWN-NEXT:    global_store_b32 v1, v0, s[2:3]
+; CHECK-G-UNKNOWN-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; CHECK-G-UNKNOWN-NEXT:    s_endpgm
+; CHECK-G-UNKNOWN: COMPUTE_PGM_RSRC2:TGID_X_EN: 1
+; CHECK-G-UNKNOWN: COMPUTE_PGM_RSRC2:TGID_Y_EN: 0
+; CHECK-G-UNKNOWN: COMPUTE_PGM_RSRC2:TGID_Z_EN: 1
 ;
 ; CHECK-G-MESA3D-LABEL: test_cluster_id_z:
 ; CHECK-G-MESA3D:         .amd_kernel_code_t
@@ -529,7 +545,7 @@ define amdgpu_kernel void @test_cluster_id_z(ptr addrspace(1) %out) #1 {
 ; CHECK-G-MESA3D-NEXT:     is_ptr64 = 1
 ; CHECK-G-MESA3D-NEXT:     is_dynamic_callstack = 0
 ; CHECK-G-MESA3D-NEXT:     is_debug_enabled = 0
-; CHECK-G-MESA3D-NEXT:     is_xnack_enabled = 1
+; CHECK-G-MESA3D-NEXT:     is_xnack_enabled = 0
 ; CHECK-G-MESA3D-NEXT:     workitem_private_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     workgroup_group_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     gds_segment_byte_size = 0

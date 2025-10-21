@@ -115,7 +115,7 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
       return BarAddr.value();
     }
 
-    if (AMDGPU::isLDSSemaphore(GV)) {
+    if (TargetExtType *TTy = AMDGPU::isLDSSemaphore(GV)) {
       // TODO-GFX13: Diagnose trying to allocate more than the 5 semaphores
       // supported by hardware.
       std::optional<unsigned> SemAddr =

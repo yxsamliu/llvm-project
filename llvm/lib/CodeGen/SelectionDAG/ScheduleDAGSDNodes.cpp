@@ -111,11 +111,15 @@ SUnit *ScheduleDAGSDNodes::Clone(SUnit *Old) {
 static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
                                       const TargetRegisterInfo *TRI,
                                       const TargetInstrInfo *TII,
+                                      const TargetLowering &TLI,
                                       MCRegister &PhysReg, int &Cost) {
   if (Op != 2 || User->getOpcode() != ISD::CopyToReg)
     return;
 
   Register Reg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
+  if (TLI.checkForPhysRegDependency(Def, User, Op, TRI, TII, PhysReg, Cost))
+    return;
+
   if (Reg.isVirtual())
     return;
 
@@ -132,7 +136,7 @@ static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
   if (PhysReg) {
     const TargetRegisterClass *RC =
         TRI->getMinimalPhysRegClass(Reg, Def->getSimpleValueType(ResNo));
-    Cost = RC->expensiveOrImpossibleToCopy() ? -1 : RC->getCopyCost();
+    Cost = RC->getCopyCost();
   }
 }
 
@@ -486,7 +490,8 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
         MCRegister PhysReg;
         int Cost = 1;
         // Determine if this is a physical register dependency.
-        CheckForPhysRegDependency(OpN, N, i, TRI, TII, PhysReg, Cost);
+        const TargetLowering &TLI = DAG->getTargetLoweringInfo();
+        CheckForPhysRegDependency(OpN, N, i, TRI, TII, TLI, PhysReg, Cost);
         assert((!PhysReg || !isChain) && "Chain dependence via physreg data?");
         // FIXME: See ScheduleDAGSDNodes::EmitCopyFromReg. For now, scheduler
         // emits a copy from the physical register to a virtual register unless

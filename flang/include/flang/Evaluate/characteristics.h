@@ -251,8 +251,7 @@ struct DummyDataObject {
       std::optional<std::string> *warning = nullptr) const;
   static std::optional<DummyDataObject> Characterize(
       const semantics::Symbol &, FoldingContext &);
-  bool CanBePassedViaImplicitInterface(
-      std::string *whyNot = nullptr, bool checkCUDA = true) const;
+  bool CanBePassedViaImplicitInterface(std::string *whyNot = nullptr) const;
   bool IsPassedByDescriptor(bool isBindC) const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
@@ -308,8 +307,7 @@ struct DummyArgument {
   void SetOptional(bool = true);
   common::Intent GetIntent() const;
   void SetIntent(common::Intent);
-  bool CanBePassedViaImplicitInterface(
-      std::string *whyNot = nullptr, bool checkCUDA = true) const;
+  bool CanBePassedViaImplicitInterface(std::string *whyNot = nullptr) const;
   bool IsTypelessIntrinsicDummy() const;
   bool IsCompatibleWith(const DummyArgument &, std::string *whyNot = nullptr,
       std::optional<std::string> *warning = nullptr) const;
@@ -404,8 +402,7 @@ struct Procedure {
     return !attrs.test(Attr::ImplicitInterface);
   }
   std::optional<int> FindPassIndex(std::optional<parser::CharBlock>) const;
-  bool CanBeCalledViaImplicitInterface(
-      std::string *whyNot = nullptr, bool checkCUDA = true) const;
+  bool CanBeCalledViaImplicitInterface(std::string *whyNot = nullptr) const;
   bool CanOverride(const Procedure &, std::optional<int> passIndex) const;
   bool IsCompatibleWith(const Procedure &, bool ignoreImplicitVsExplicit,
       std::string *whyNot = nullptr, const SpecificIntrinsic * = nullptr,

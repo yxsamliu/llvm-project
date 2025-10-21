@@ -475,7 +475,7 @@ static LogicalResult lowerToScatteredStoreOp(vector::TransferWriteOp writeOp,
 }
 
 struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
@@ -546,7 +546,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
 
 struct TransferWriteLowering
     : public OpRewritePattern<vector::TransferWriteOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::TransferWriteOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const override {
@@ -597,7 +597,7 @@ struct TransferWriteLowering
 };
 
 struct GatherLowering : public OpRewritePattern<vector::GatherOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::GatherOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::GatherOp gatherOp,
                                 PatternRewriter &rewriter) const override {
@@ -632,7 +632,7 @@ struct GatherLowering : public OpRewritePattern<vector::GatherOp> {
 };
 
 struct ScatterLowering : public OpRewritePattern<vector::ScatterOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::ScatterOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ScatterOp scatterOp,
                                 PatternRewriter &rewriter) const override {
@@ -662,7 +662,7 @@ struct ScatterLowering : public OpRewritePattern<vector::ScatterOp> {
 };
 
 struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::LoadOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::LoadOp loadOp,
                                 PatternRewriter &rewriter) const override {
@@ -694,7 +694,7 @@ struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
 };
 
 struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::StoreOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::StoreOp storeOp,
                                 PatternRewriter &rewriter) const override {
@@ -727,7 +727,7 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
 };
 
 struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
-  using Base::Base;
+  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {

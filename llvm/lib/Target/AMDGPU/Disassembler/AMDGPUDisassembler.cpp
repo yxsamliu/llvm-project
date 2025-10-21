@@ -586,9 +586,7 @@ void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
 
     if (Imm == AMDGPU::EncValues::LITERAL_CONST) {
       Op = decodeLiteralConstant(
-          Desc, OpDesc,
-          OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_FP64 ||
-              OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP64);
+          Desc, OpDesc, OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_FP64);
       continue;
     }
 
@@ -614,7 +612,6 @@ void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
       case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
       case AMDGPU::OPERAND_REG_INLINE_C_FP64:
       case AMDGPU::OPERAND_REG_INLINE_C_INT64:
-      case AMDGPU::OPERAND_REG_IMM_V2FP64:
         Imm = getInlineImmVal64(Imm);
         break;
       default:
@@ -1436,22 +1433,11 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   if (TFEIdx != -1 && MI.getOperand(TFEIdx).getImm())
     DstSize += 1;
 
-  MCRegister RsrcReg = MI.getOperand(RsrcIdx).getReg();
-  MCRegisterClass RsrcReg_RC = MRI.getRegClass(AMDGPU::RsrcReg32RegClassID);
+  if (DstSize == Info->VDataDwords && AddrSize == Info->VAddrDwords)
+    return;
 
-  bool IsIndexedRsrc = RsrcReg_RC.contains(RsrcReg);
-  const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
-      AMDGPU::getMIMGBaseOpcode(MI.getOpcode());
-  bool IsIndexedSamp = false;
-  if (IsVSample && !BaseInfo->MSAA) {
-    int SampIdx =
-        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::samp);
-    MCRegister SampReg = MI.getOperand(SampIdx).getReg();
-    IsIndexedSamp = RsrcReg_RC.contains(SampReg);
-  }
   int NewOpcode =
-      AMDGPU::getMIMGOpcode(Info->BaseOpcode, Info->MIMGEncoding, DstSize,
-                            AddrSize, IsIndexedRsrc, IsIndexedSamp);
+      AMDGPU::getMIMGOpcode(Info->BaseOpcode, Info->MIMGEncoding, DstSize, AddrSize);
   if (NewOpcode == -1)
     return;
 
@@ -1729,8 +1715,7 @@ MCOperand AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
       UseLit64 = !isInt<32>(Val) || !isUInt<32>(Val);
     else if (OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_FP64 ||
              OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_C_FP64 ||
-             OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_AC_FP64 ||
-             OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP64)
+             OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_AC_FP64)
       UseLit64 = Lo_32(Val) != 0;
   }
 
@@ -1761,8 +1746,7 @@ AMDGPUDisassembler::decodeLiteral64Constant(const MCInst &Inst) const {
   } else {
     assert(OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_FP64 ||
            OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_C_FP64 ||
-           OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_AC_FP64 ||
-           OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP64);
+           OpDesc.OperandType == AMDGPU::OPERAND_REG_INLINE_AC_FP64);
     UseLit64 = Lo_32(Literal64) != 0;
   }
 
@@ -2509,10 +2493,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   KdStream << Indent << ".amdhsa_reserve_vcc " << 0 << '\n';
   if (!hasArchitectedFlatScratch())
     KdStream << Indent << ".amdhsa_reserve_flat_scratch " << 0 << '\n';
-  bool ReservedXnackMask = STI.hasFeature(AMDGPU::FeatureXNACK);
-  assert(!ReservedXnackMask || STI.hasFeature(AMDGPU::FeatureSupportsXNACK));
-  KdStream << Indent << ".amdhsa_reserve_xnack_mask " << ReservedXnackMask
-           << '\n';
+  KdStream << Indent << ".amdhsa_reserve_xnack_mask " << 0 << '\n';
 
   if (!isGFX13Plus()) {
     uint32_t GranulatedWavefrontSGPRCount =

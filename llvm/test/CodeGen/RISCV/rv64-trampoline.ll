@@ -78,10 +78,3 @@ define i64 @test0(i64 %n, ptr %p) nounwind {
   ret i64 %ret
 
 }
-
-; Check for the explicitly emitted .note.GNU-stack section (ELF only) in the
-; presence of trampolines.
-; UTC_ARGS: --disable
-; RV64-LINUX:         .section        ".note.GNU-stack","x",@progbits
-; RV64:               .section        ".note.GNU-stack","x",@progbits
-; UTC_ARGS: --enable

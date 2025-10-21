@@ -27,8 +27,6 @@ std::unique_ptr<MetadataRewriter> createPseudoProbeRewriter(BinaryContext &);
 
 std::unique_ptr<MetadataRewriter> createSDTRewriter(BinaryContext &);
 
-std::unique_ptr<MetadataRewriter> createGNUPropertyRewriter(BinaryContext &);
-
 } // namespace bolt
 } // namespace llvm
 

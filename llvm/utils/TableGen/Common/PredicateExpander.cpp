@@ -14,7 +14,7 @@
 #include "CodeGenSchedule.h" // Definition of STIPredicateFunction.
 #include "llvm/TableGen/Record.h"
 
-using namespace llvm;
+namespace llvm {
 
 void PredicateExpander::expandTrue(raw_ostream &OS) { OS << "true"; }
 void PredicateExpander::expandFalse(raw_ostream &OS) { OS << "false"; }
@@ -553,3 +553,5 @@ void STIPredicateExpander::expandSTIPredicate(raw_ostream &OS,
     expandEpilogue(OS, Fn);
   }
 }
+
+} // namespace llvm

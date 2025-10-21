@@ -458,7 +458,7 @@ std::optional<DummyDataObject> DummyDataObject::Characterize(
 }
 
 bool DummyDataObject::CanBePassedViaImplicitInterface(
-    std::string *whyNot, bool checkCUDA) const {
+    std::string *whyNot) const {
   if ((attrs &
           Attrs{Attr::Allocatable, Attr::Asynchronous, Attr::Optional,
               Attr::Pointer, Attr::Target, Attr::Value, Attr::Volatile})
@@ -482,7 +482,7 @@ bool DummyDataObject::CanBePassedViaImplicitInterface(
       *whyNot = "a dummy argument is polymorphic";
     }
     return false; // 15.4.2.2(3)(f)
-  } else if (checkCUDA && cudaDataAttr) {
+  } else if (cudaDataAttr) {
     if (whyNot) {
       *whyNot = "a dummy argument has a CUDA data attribute";
     }
@@ -1012,10 +1012,9 @@ common::Intent DummyArgument::GetIntent() const {
       u);
 }
 
-bool DummyArgument::CanBePassedViaImplicitInterface(
-    std::string *whyNot, bool checkCUDA) const {
+bool DummyArgument::CanBePassedViaImplicitInterface(std::string *whyNot) const {
   if (const auto *object{std::get_if<DummyDataObject>(&u)}) {
-    return object->CanBePassedViaImplicitInterface(whyNot, checkCUDA);
+    return object->CanBePassedViaImplicitInterface(whyNot);
   } else if (const auto *proc{std::get_if<DummyProcedure>(&u)}) {
     return proc->CanBePassedViaImplicitInterface(whyNot);
   } else {
@@ -1502,8 +1501,7 @@ std::optional<Procedure> Procedure::FromActuals(const ProcedureDesignator &proc,
   return callee;
 }
 
-bool Procedure::CanBeCalledViaImplicitInterface(
-    std::string *whyNot, bool checkCUDA) const {
+bool Procedure::CanBeCalledViaImplicitInterface(std::string *whyNot) const {
   if (attrs.test(Attr::Elemental)) {
     if (whyNot) {
       *whyNot = "the procedure is elemental";
@@ -1526,7 +1524,7 @@ bool Procedure::CanBeCalledViaImplicitInterface(
     return false;
   } else {
     for (const DummyArgument &arg : dummyArguments) {
-      if (!arg.CanBePassedViaImplicitInterface(whyNot, checkCUDA)) {
+      if (!arg.CanBePassedViaImplicitInterface(whyNot)) {
         return false;
       }
     }

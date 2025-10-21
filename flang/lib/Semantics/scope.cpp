@@ -143,13 +143,12 @@ void Scope::add_crayPointer(const SourceName &name, Symbol &pointer) {
   crayPointers_.emplace(name, pointer);
 }
 
-Symbol &Scope::MakeCommonBlock(SourceName name, SourceName location) {
+Symbol &Scope::MakeCommonBlock(const SourceName &name) {
   const auto it{commonBlocks_.find(name)};
   if (it != commonBlocks_.end()) {
     return *it->second;
   } else {
-    Symbol &symbol{MakeSymbol(
-        name, Attrs{}, CommonBlockDetails{name.empty() ? location : name})};
+    Symbol &symbol{MakeSymbol(name, Attrs{}, CommonBlockDetails{})};
     commonBlocks_.emplace(name, symbol);
     return symbol;
   }

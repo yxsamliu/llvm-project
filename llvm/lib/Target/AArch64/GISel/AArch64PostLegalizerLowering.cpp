@@ -556,7 +556,8 @@ void applyVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
   unsigned NewOpc =
       Opc == TargetOpcode::G_ASHR ? AArch64::G_VASHR : AArch64::G_VLSHR;
   MachineIRBuilder MIB(MI);
-  MIB.buildInstr(NewOpc, {MI.getOperand(0)}, {MI.getOperand(1)}).addImm(Imm);
+  auto ImmDef = MIB.buildConstant(LLT::scalar(32), Imm);
+  MIB.buildInstr(NewOpc, {MI.getOperand(0)}, {MI.getOperand(1), ImmDef});
   MI.eraseFromParent();
 }
 

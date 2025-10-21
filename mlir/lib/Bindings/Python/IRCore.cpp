@@ -2046,9 +2046,6 @@ PyInsertionPoint::PyInsertionPoint(PyOperationBase &beforeOperationBase)
     : refOperation(beforeOperationBase.getOperation().getRef()),
       block((*refOperation)->getBlock()) {}
 
-PyInsertionPoint::PyInsertionPoint(PyOperationRef beforeOperationRef)
-    : refOperation(beforeOperationRef), block((*refOperation)->getBlock()) {}
-
 void PyInsertionPoint::insert(PyOperationBase &operationBase) {
   PyOperation &operation = operationBase.getOperation();
   if (operation.isAttached())

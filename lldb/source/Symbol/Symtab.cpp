@@ -289,7 +289,7 @@ void Symtab::InitNameIndexes() {
     std::vector<Language *> languages;
     Language::ForEach([&languages](Language *l) {
       languages.push_back(l);
-      return IterationAction::Continue;
+      return true;
     });
 
     auto &name_to_index = GetNameToSymbolIndexMap(lldb::eFunctionNameTypeNone);

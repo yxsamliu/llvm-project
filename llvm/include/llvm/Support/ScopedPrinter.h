@@ -284,11 +284,9 @@ public:
     startLine() << Label << ": " << (Value ? "Yes" : "No") << '\n';
   }
 
-  template <typename T, typename... TArgs>
-  void printVersion(StringRef Label, T MajorVersion, TArgs... MinorVersions) {
+  template <typename... T> void printVersion(StringRef Label, T... Version) {
     startLine() << Label << ": ";
-    getOStream() << MajorVersion;
-    ((getOStream() << '.' << MinorVersions), ...);
+    printVersionInternal(Version...);
     getOStream() << "\n";
   }
 
@@ -456,6 +454,16 @@ public:
   virtual raw_ostream &getOStream() { return OS; }
 
 private:
+  template <typename T> void printVersionInternal(T Value) {
+    getOStream() << Value;
+  }
+
+  template <typename S, typename T, typename... TArgs>
+  void printVersionInternal(S Value, T Value2, TArgs... Args) {
+    getOStream() << Value << ".";
+    printVersionInternal(Value2, Args...);
+  }
+
   static bool flagName(const FlagEntry &LHS, const FlagEntry &RHS) {
     return LHS.Name < RHS.Name;
   }

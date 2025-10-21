@@ -14,12 +14,10 @@
 #define CLANG_CIR_DIALECT_IR_CIRTYPES_TD
 
 include "clang/CIR/Dialect/IR/CIRDialect.td"
-include "clang/CIR/Dialect/IR/CIREnumAttr.td"
 include "clang/CIR/Dialect/IR/CIRTypeConstraints.td"
 include "clang/CIR/Interfaces/CIRTypeInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
-include "mlir/IR/EnumAttr.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Types
@@ -228,53 +226,31 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
 ]> {
   let summary = "CIR pointer type";
   let description = [{
-    The `!cir.ptr` type is a typed pointer type. It is used to represent
-    pointers to objects in C/C++. The type of the pointed-to object is given by
-    the `pointee` parameter. The `addrSpace` parameter is an optional address
-    space attribute that specifies the address space of the pointer. If not
-    specified, the pointer is assumed to be in the default address space.
+    The `!cir.ptr` type represents C and C++ pointer types and C++ reference
+    types, other than pointers-to-members.  The `pointee` type is the type
+    pointed to.
 
-    The `!cir.ptr` type can point to any type, including fundamental types,
-    records, arrays, vectors, functions, and other pointers. It can also point
-    to incomplete types, such as incomplete records.
-
-    Examples:
-
-    ```mlir
-    !cir.ptr<!cir.int<u, 8>>
-    !cir.ptr<!cir.float>
-    !cir.ptr<!cir.record<struct "MyStruct">>
-    !cir.ptr<!cir.int<u, 8>, target_address_space(1)>
-    !cir.ptr<!cir.record<struct "MyStruct">, target_address_space(5)>
-    ```
+    TODO(CIR): The address space attribute is not yet implemented.
   }];
 
-  let parameters = (ins
-    "mlir::Type":$pointee,
-    OptionalParameter<
-        "cir::TargetAddressSpaceAttr">:$addrSpace
-  );
+  let parameters = (ins "mlir::Type":$pointee);
 
-  let skipDefaultBuilders = 1;
   let builders = [
-    TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$pointee,
-       CArg<"cir::TargetAddressSpaceAttr", "nullptr">:$addrSpace), [{
-        return $_get(pointee.getContext(), pointee, addrSpace);
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$pointee), [{
+      return $_get(pointee.getContext(), pointee);
     }]>,
-    TypeBuilder<(ins
-      "mlir::Type":$pointee,
-      CArg<"cir::TargetAddressSpaceAttr", "nullptr">:$addrSpace), [{
-        return $_get($_ctxt, pointee, addrSpace);
+    TypeBuilder<(ins "mlir::Type":$pointee), [{
+      return $_get($_ctxt, pointee);
     }]>
   ];
 
   let assemblyFormat = [{
-    `<`
-      $pointee
-      ( `,` ` ` custom<TargetAddressSpace>($addrSpace)^ )?
-    `>`
+    `<` $pointee  `>`
   }];
+
+  let genVerifyDecl = 1;
+
+  let skipDefaultBuilders = 1;
 
   let extraClassDeclaration = [{
     template <typename ...Types>

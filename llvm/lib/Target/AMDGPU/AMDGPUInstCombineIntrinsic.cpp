@@ -730,8 +730,6 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     SmallVector<IntrinsicInst *, 4> WorkList;
     WorkList.push_back(&II);
     unsigned AuxIdx = II.arg_size() - 2;
-    unsigned TensorIdx = 2;
-    unsigned WeightIdx = TensorIdx - 1;
     uint64_t Aux = cast<ConstantInt>(II.getArgOperand(AuxIdx))->getZExtValue();
 
     const uint64_t BaseAux = Aux & ~AUX_ITER_MASK;
@@ -739,66 +737,6 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         cast<ConstantInt>(II.getArgOperand(AuxIdx + 1))->getZExtValue();
     uint64_t MaxIter = ((Aux & AUX_ITER_MASK) >> AUX_ITER_SHIFT) + 1;
     IntrinsicInst *Intr = &II;
-
-    auto GetConstantOffset = [this](LoadInst *Load,
-                                    int64_t &GEPOffset) -> Value * {
-      if (Load->getPointerAddressSpace() != AMDGPUAS::LANE_SHARED)
-        return nullptr;
-
-      APInt Offset(32, 0);
-      if (auto *GEP = dyn_cast<GEPOperator>(Load->getOperand(0))) {
-        if (GEP->accumulateConstantOffset(DL, Offset)) {
-          GEPOffset = Offset.getSExtValue();
-          return GEP->getPointerOperand();
-        }
-        return nullptr;
-      }
-
-      GEPOffset = 0;
-      return Load->getPointerOperand();
-    };
-
-    auto CompareWeights = [&](IntrinsicInst *Prev, IntrinsicInst *Curr,
-                              unsigned WeightSize) {
-      Value *PrevW = Prev->getOperand(WeightIdx);
-      Value *CurrW = Curr->getOperand(WeightIdx);
-
-      LoadInst *PrevLoad = nullptr;
-      // If a combine happened in a previous iteration, we can encounter an
-      // insertelement instruction from a lane-shared load. We'll consider that
-      // load here as a heuristic that helps avoid combining intrinsics that
-      // were previously left uncombined because they would block bundling
-      // of the convolve with the lane-shared access.
-      if (auto *IE = dyn_cast<InsertElementInst>(PrevW)) {
-        auto *NewElt = IE->getOperand(1);
-        PrevLoad = dyn_cast<LoadInst>(NewElt);
-      } else {
-        PrevLoad = dyn_cast<LoadInst>(PrevW);
-      }
-      auto *CurrLoad = dyn_cast<LoadInst>(CurrW);
-
-      // Both weights are not loads, we're ok to continue.
-      if (!PrevLoad && !CurrLoad)
-        return true;
-
-      // Both weights are loads, try to look through GEPs to see if they are
-      // loading from consecutive addresses.
-      if (PrevLoad && CurrLoad) {
-        int64_t PrevOffset = 0;
-        int64_t CurrOffset = 0;
-        if (GetConstantOffset(PrevLoad, PrevOffset) ==
-            GetConstantOffset(CurrLoad, CurrOffset)) {
-          return CurrOffset - PrevOffset == WeightSize;
-        }
-        // Only allow direct loads from pointers that are not lane shared.
-        return true;
-      }
-
-      return false;
-    };
-
-    Value *Weight = Intr->getOperand(WeightIdx);
-    unsigned WeightSize = Weight->getType()->getScalarSizeInBits() / 8;
     while (true) {
       if (!Intr->hasOneUse())
         break;
@@ -816,16 +754,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
                         ->getZExtValue();
       if (Clamp != ClampI)
         break;
-
-      if (!CompareWeights(Intr, IntrInst, WeightSize))
-        break;
-
       MaxIter += ((AuxI & AUX_ITER_MASK) >> AUX_ITER_SHIFT) + 1;
       WorkList.push_back(IntrInst);
       Intr = IntrInst;
     }
 
-    if (WorkList.size() <= 1)
+    if (WorkList.size() == 1)
       break;
 
     // Find an optimal sequence of iterations-per-intrinsic.
@@ -858,6 +792,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     //  * It should help the quality of debug info.
     IntegerType *I32 = IC.Builder.getInt32Ty();
     Value *Accum = II.getOperand(0);
+    unsigned TensorIdx = 2;
+    unsigned WeightIdx = TensorIdx - 1;
     SmallVector<Value *> Tensors;
     SmallVector<Value *> Weights;
 

@@ -3628,7 +3628,7 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
   if (chars) {
     std::string whyNot;
     if (treatExternalAsImplicit &&
-        !chars->CanBeCalledViaImplicitInterface(&whyNot, /*checkCUDA=*/false)) {
+        !chars->CanBeCalledViaImplicitInterface(&whyNot)) {
       if (auto *msg{Say(callSite,
               "References to the procedure '%s' require an explicit interface"_err_en_US,
               DEREF(procSymbol).name())};

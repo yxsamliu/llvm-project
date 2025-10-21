@@ -393,9 +393,8 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) const {
     }
   }
 
-  unsigned NewOpcode = AMDGPU::getMIMGOpcode(
-      Info->BaseOpcode, NewEncoding, Info->VDataDwords, NewAddrDwords,
-      Info->IndexedRsrc, Info->IndexedSamp);
+  unsigned NewOpcode = AMDGPU::getMIMGOpcode(Info->BaseOpcode, NewEncoding,
+                                             Info->VDataDwords, NewAddrDwords);
   MI.setDesc(TII->get(NewOpcode));
   MI.getOperand(VAddr0Idx).setReg(RC->getRegister(VgprBase));
   MI.getOperand(VAddr0Idx).setIsUndef(IsUndef);

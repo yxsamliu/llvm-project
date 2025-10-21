@@ -2177,9 +2177,10 @@ cloneAsInsertSlices(RewriterBase &rewriter,
               auto clonedOp = cloneAsInsertSlice(rewriter, op);
               clonedSlices.push_back(clonedOp);
             })
-        // Assert here assuming this has already been checked.
-        .DefaultUnreachable(
-            "unexpected slice type while cloning as insert slice");
+        .Default([&](Operation *op) {
+          // Assert here assuming this has already been checked.
+          assert(0 && "unexpected slice type while cloning as insert slice");
+        });
   }
   return clonedSlices;
 }

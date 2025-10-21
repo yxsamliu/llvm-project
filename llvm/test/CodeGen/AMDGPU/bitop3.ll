@@ -5,10 +5,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-- -mcpu=gfx1250 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1250,GFX1250-SDAG,GFX1250-SDAG-TRUE16,GFX1250-TRUE16 %s
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-- -mcpu=gfx1250 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1250,GFX1250-GISEL,GFX1250-GISEL-FAKE16,GFX1250-FAKE16 %s
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-- -mcpu=gfx1250 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1250,GFX1250-GISEL,GFX1250-GISEL-TRUE16,GFX1250-TRUE16 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-- -mcpu=gfx1300 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1250,GFX1250-SDAG,GFX1250-SDAG-FAKE16,GFX1250-FAKE16 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-- -mcpu=gfx1300 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1250,GFX1250-SDAG,GFX1250-SDAG-TRUE16,GFX1250-TRUE16 %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-- -mcpu=gfx1300 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1250,GFX1250-GISEL,GFX1250-GISEL-FAKE16,GFX1250-FAKE16 %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-- -mcpu=gfx1250 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1250,GFX1250-GISEL,GFX1250-GISEL-TRUE16,GFX1250-TRUE16 %s
 
 ; ========= Single bit functions =========
 

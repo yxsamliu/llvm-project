@@ -37,6 +37,15 @@ struct DXILIntrinsicSelect {
   SmallVector<const Record *> ArgSelectRecords;
 };
 
+static StringRef StripIntrinArgSelectTypePrefix(StringRef Type) {
+  StringRef Prefix = "IntrinArgSelect_";
+  if (!Type.starts_with(Prefix)) {
+    PrintFatalError("IntrinArgSelectType definintion must be prefixed with "
+                    "'IntrinArgSelect_'");
+  }
+  return Type.substr(Prefix.size());
+}
+
 struct DXILOperationDesc {
   std::string OpName; // name of DXIL operation
   int OpCode;         // ID of DXIL operation
@@ -56,15 +65,6 @@ struct DXILOperationDesc {
   DXILOperationDesc(const Record *);
 };
 } // end anonymous namespace
-
-static StringRef stripIntrinArgSelectTypePrefix(StringRef Type) {
-  StringRef Prefix = "IntrinArgSelect_";
-  if (!Type.starts_with(Prefix)) {
-    PrintFatalError("IntrinArgSelectType definintion must be prefixed with "
-                    "'IntrinArgSelect_'");
-  }
-  return Type.substr(Prefix.size());
-}
 
 /// In-place sort TableGen records of class with a field
 ///    Version dxil_version
@@ -449,7 +449,7 @@ static void emitDXILIntrinsicMap(ArrayRef<DXILOperationDesc> Ops,
             ArgSelect->getValueAsDef("type")->getNameInitAsString();
         int Value = ArgSelect->getValueAsInt("value");
         OS << "(IntrinArgSelect{"
-           << "IntrinArgSelect::Type::" << stripIntrinArgSelectTypePrefix(Type)
+           << "IntrinArgSelect::Type::" << StripIntrinArgSelectTypePrefix(Type)
            << "," << Value << "}), ";
       }
       OS << ")\n";
@@ -466,7 +466,7 @@ static void emitDXILIntrinsicArgSelectTypes(const RecordKeeper &Records,
   OS << "#ifdef DXIL_OP_INTRINSIC_ARG_SELECT_TYPE\n";
   for (const Record *Records :
        Records.getAllDerivedDefinitions("IntrinArgSelectType")) {
-    StringRef StrippedName = stripIntrinArgSelectTypePrefix(Records->getName());
+    StringRef StrippedName = StripIntrinArgSelectTypePrefix(Records->getName());
     OS << "DXIL_OP_INTRINSIC_ARG_SELECT_TYPE(" << StrippedName << ")\n";
   }
   OS << "#undef DXIL_OP_INTRINSIC_ARG_SELECT_TYPE\n";

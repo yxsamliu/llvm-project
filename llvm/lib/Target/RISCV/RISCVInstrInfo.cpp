@@ -1364,7 +1364,7 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
       RS->scavengeRegisterBackwards(RISCV::GPRRegClass, MI.getIterator(),
                                     /*RestoreAfter=*/false, /*SpAdj=*/0,
                                     /*AllowSpill=*/false);
-  if (TmpGPR.isValid())
+  if (TmpGPR != RISCV::NoRegister)
     RS->setRegUsed(TmpGPR);
   else {
     // The case when there is no scavenged register needs special handling.
@@ -3021,7 +3021,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
       ErrInfo = "Invalid operand type for VL operand";
       return false;
     }
-    if (Op.isReg() && Op.getReg().isValid()) {
+    if (Op.isReg() && Op.getReg() != RISCV::NoRegister) {
       const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
       auto *RC = MRI.getRegClass(Op.getReg());
       if (!RISCV::GPRRegClass.hasSubClassEq(RC)) {

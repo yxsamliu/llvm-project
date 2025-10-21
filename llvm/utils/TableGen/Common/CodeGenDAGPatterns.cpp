@@ -246,14 +246,16 @@ bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
   return true;
 }
 
-raw_ostream &llvm::operator<<(raw_ostream &OS, const MachineValueTypeSet &T) {
+namespace llvm {
+raw_ostream &operator<<(raw_ostream &OS, const MachineValueTypeSet &T) {
   T.writeToStream(OS);
   return OS;
 }
-raw_ostream &llvm::operator<<(raw_ostream &OS, const TypeSetByHwMode &T) {
+raw_ostream &operator<<(raw_ostream &OS, const TypeSetByHwMode &T) {
   T.writeToStream(OS);
   return OS;
 }
+} // namespace llvm
 
 LLVM_DUMP_METHOD
 void TypeSetByHwMode::dump() const { dbgs() << *this << '\n'; }

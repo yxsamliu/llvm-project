@@ -89,7 +89,10 @@ static ParameterElement *getEncapsulatedParameterElement(FormatElement *el) {
       .Case<ParameterElement>([&](auto param) { return param; })
       .Case<RefDirective>(
           [&](auto ref) { return cast<ParameterElement>(ref->getArg()); })
-      .DefaultUnreachable("unexpected struct element type");
+      .Default([&](auto el) {
+        assert(false && "unexpected struct element type");
+        return nullptr;
+      });
 }
 
 /// Shorthand functions that can be used with ranged-based conditions.

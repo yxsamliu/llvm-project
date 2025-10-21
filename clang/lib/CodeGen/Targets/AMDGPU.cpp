@@ -435,8 +435,9 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     F->addFnAttr("amdgpu-no-rank-specialization");
   }
 
-  if (FD->hasAttr<AMDGPUEnableWaspAttr>())
+  if (const auto *Attr = FD->getAttr<AMDGPUEnableWaspAttr>()) {
     F->addFnAttr("amdgpu-enable-wasp");
+  }
 
   if (auto *Attr = FD->getAttr<CUDAClusterDimsAttr>()) {
     uint32_t X =

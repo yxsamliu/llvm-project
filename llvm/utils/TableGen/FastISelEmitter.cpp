@@ -52,9 +52,11 @@ struct InstructionMemo {
   InstructionMemo(const InstructionMemo &Other) = delete;
   InstructionMemo(InstructionMemo &&Other) = default;
 };
+} // End anonymous namespace
 
 /// ImmPredicateSet - This uniques predicates (represented as a string) and
 /// gives them unique (small) integer ID's that start at 0.
+namespace {
 class ImmPredicateSet {
   DenseMap<TreePattern *, unsigned> ImmIDs;
   std::vector<TreePredicateFn> PredsByName;
@@ -75,10 +77,12 @@ public:
   iterator begin() const { return PredsByName.begin(); }
   iterator end() const { return PredsByName.end(); }
 };
+} // End anonymous namespace
 
 /// OperandsSignature - This class holds a description of a list of operand
 /// types. It has utility methods for emitting text based on the operands.
 ///
+namespace {
 struct OperandsSignature {
   class OpKind {
     enum { OK_Reg, OK_FP, OK_Imm, OK_Invalid = -1 };
@@ -362,7 +366,9 @@ struct OperandsSignature {
       Opnd.printManglingSuffix(OS, ImmPredicates, StripImmCodes);
   }
 };
+} // End anonymous namespace
 
+namespace {
 class FastISelMap {
   // A multimap is needed instead of a "plain" map because the key is
   // the instruction's complexity (an int) and they are not unique.

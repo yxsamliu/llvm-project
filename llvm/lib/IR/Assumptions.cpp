@@ -20,8 +20,9 @@
 
 using namespace llvm;
 
-static bool hasAssumption(const Attribute &A,
-                          const KnownAssumptionString &AssumptionStr) {
+namespace {
+bool hasAssumption(const Attribute &A,
+                   const KnownAssumptionString &AssumptionStr) {
   if (!A.isValid())
     return false;
   assert(A.isStringAttribute() && "Expected a string attribute!");
@@ -32,7 +33,7 @@ static bool hasAssumption(const Attribute &A,
   return llvm::is_contained(Strings, AssumptionStr);
 }
 
-static DenseSet<StringRef> getAssumptions(const Attribute &A) {
+DenseSet<StringRef> getAssumptions(const Attribute &A) {
   if (!A.isValid())
     return DenseSet<StringRef>();
   assert(A.isStringAttribute() && "Expected a string attribute!");
@@ -46,8 +47,8 @@ static DenseSet<StringRef> getAssumptions(const Attribute &A) {
 }
 
 template <typename AttrSite>
-static bool addAssumptionsImpl(AttrSite &Site,
-                               const DenseSet<StringRef> &Assumptions) {
+bool addAssumptionsImpl(AttrSite &Site,
+                        const DenseSet<StringRef> &Assumptions) {
   if (Assumptions.empty())
     return false;
 
@@ -63,6 +64,7 @@ static bool addAssumptionsImpl(AttrSite &Site,
 
   return true;
 }
+} // namespace
 
 bool llvm::hasAssumption(const Function &F,
                          const KnownAssumptionString &AssumptionStr) {

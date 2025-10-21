@@ -2957,7 +2957,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     AtomicOrdering Order = LdSt.getMMO().getSuccessOrdering();
 
     // Need special instructions for atomics that affect ordering.
-    if (isStrongerThanMonotonic(Order)) {
+    if (Order != AtomicOrdering::NotAtomic &&
+        Order != AtomicOrdering::Unordered &&
+        Order != AtomicOrdering::Monotonic) {
       assert(!isa<GZExtLoad>(LdSt));
       assert(MemSizeInBytes <= 8 &&
              "128-bit atomics should already be custom-legalized");

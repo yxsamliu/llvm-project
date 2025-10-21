@@ -23,17 +23,16 @@
 namespace lldb_private::mcp {
 
 class ProtocolServerMCP : public ProtocolServer {
-
+  using ReadHandleUP = MainLoopBase::ReadHandleUP;
+  using TransportUP = std::unique_ptr<lldb_protocol::mcp::MCPTransport>;
   using ServerUP = std::unique_ptr<lldb_protocol::mcp::Server>;
-
-  using ReadHandleUP = MainLoop::ReadHandleUP;
 
 public:
   ProtocolServerMCP();
-  ~ProtocolServerMCP() override;
+  virtual ~ProtocolServerMCP() override;
 
-  llvm::Error Start(ProtocolServer::Connection connection) override;
-  llvm::Error Stop() override;
+  virtual llvm::Error Start(ProtocolServer::Connection connection) override;
+  virtual llvm::Error Stop() override;
 
   static void Initialize();
   static void Terminate();
@@ -57,18 +56,19 @@ private:
 
   bool m_running = false;
 
+  lldb_protocol::mcp::ServerInfoHandle m_server_info_handle;
   lldb_private::MainLoop m_loop;
   std::thread m_loop_thread;
   std::mutex m_mutex;
   size_t m_client_count = 0;
 
   std::unique_ptr<Socket> m_listener;
-  std::vector<ReadHandleUP> m_accept_handles;
 
-  ServerUP m_server;
-  lldb_protocol::mcp::ServerInfoHandle m_server_info_handle;
+  std::vector<ReadHandleUP> m_listen_handlers;
+  std::map<lldb_protocol::mcp::MCPTransport *,
+           std::tuple<ServerUP, ReadHandleUP, TransportUP>>
+      m_instances;
 };
-
 } // namespace lldb_private::mcp
 
 #endif

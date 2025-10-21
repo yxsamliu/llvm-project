@@ -1096,8 +1096,10 @@ static Value memsetGetStored(MemsetIntr op, const MemorySlot &slot,
         Value intVal = buildMemsetValue(type.getWidth());
         return LLVM::BitcastOp::create(builder, op.getLoc(), type, intVal);
       })
-      .DefaultUnreachable(
-          "getStored should not be called on memset to unsupported type");
+      .Default([](Type) -> Value {
+        llvm_unreachable(
+            "getStored should not be called on memset to unsupported type");
+      });
 }
 
 template <class MemsetIntr>

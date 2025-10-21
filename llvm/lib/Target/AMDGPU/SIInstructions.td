@@ -3550,7 +3550,7 @@ def : GCNPat<
 
 // If fcanonicalize's operand is implicitly canonicalized, we only need a copy.
 let AddedComplexity = 8 in {
-foreach vt = [f16, v2f16, f32, v2f32, f64, v2f64] in {
+foreach vt = [f16, v2f16, f32, v2f32, f64] in {
   def : GCNPat<
     (fcanonicalize (vt is_canonicalized:$src)),
     (COPY vt:$src)
@@ -3676,12 +3676,6 @@ multiclass SelectCanonicalizeAsMax<
     (V_PK_MAX_F16 $src_mods, $src, $src_mods, $src, DSTCLAMP.NONE)> {
     // FIXME: Should have VOP3P subtarget predicate
     let OtherPredicates = f16_preds;
-  }
-
-  def : GCNPat<
-    (fcanonicalize (v2f64 (VOP3PMods v2f64:$src, i32:$src_mods))),
-    (V_PK_MAX_NUM_F64 $src_mods, $src, $src_mods, $src)> {
-    let OtherPredicates = !listconcat(f64_preds, [HasPackedFP64Ops]);
   }
 }
 

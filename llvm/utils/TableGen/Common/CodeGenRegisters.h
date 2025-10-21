@@ -359,7 +359,7 @@ public:
   StringRef Namespace;
   SmallVector<ValueTypeByHwMode, 4> VTs;
   RegSizeInfoByHwMode RSI;
-  uint8_t CopyCost;
+  int CopyCost;
   bool Allocatable;
   StringRef AltOrderSelect;
   uint8_t AllocationPriority;

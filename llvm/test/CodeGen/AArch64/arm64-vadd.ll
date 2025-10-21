@@ -1103,12 +1103,20 @@ define <2 x i64> @ssubl2_duplhs(i32 %lhs, <4 x i32> %rhs) {
 }
 
 define <8 x i8> @addhn8b_natural(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: addhn8b_natural:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    addhn v0.8b, v0.8h, v1.8h
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: addhn8b_natural:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr q0, [x0]
+; CHECK-SD-NEXT:    ldr q1, [x1]
+; CHECK-SD-NEXT:    addhn v0.8b, v0.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: addhn8b_natural:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr q0, [x0]
+; CHECK-GI-NEXT:    ldr q1, [x1]
+; CHECK-GI-NEXT:    add v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    shrn v0.8b, v0.8h, #8
+; CHECK-GI-NEXT:    ret
         %tmp1 = load <8 x i16>, ptr %A
         %tmp2 = load <8 x i16>, ptr %B
         %sum = add <8 x i16> %tmp1, %tmp2
@@ -1118,12 +1126,20 @@ define <8 x i8> @addhn8b_natural(ptr %A, ptr %B) nounwind {
 }
 
 define <4 x i16> @addhn4h_natural(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: addhn4h_natural:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    addhn v0.4h, v0.4s, v1.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: addhn4h_natural:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr q0, [x0]
+; CHECK-SD-NEXT:    ldr q1, [x1]
+; CHECK-SD-NEXT:    addhn v0.4h, v0.4s, v1.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: addhn4h_natural:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr q0, [x0]
+; CHECK-GI-NEXT:    ldr q1, [x1]
+; CHECK-GI-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-GI-NEXT:    ret
         %tmp1 = load <4 x i32>, ptr %A
         %tmp2 = load <4 x i32>, ptr %B
         %sum = add <4 x i32> %tmp1, %tmp2
@@ -1133,12 +1149,20 @@ define <4 x i16> @addhn4h_natural(ptr %A, ptr %B) nounwind {
 }
 
 define <2 x i32> @addhn2s_natural(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: addhn2s_natural:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    addhn v0.2s, v0.2d, v1.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: addhn2s_natural:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr q0, [x0]
+; CHECK-SD-NEXT:    ldr q1, [x1]
+; CHECK-SD-NEXT:    addhn v0.2s, v0.2d, v1.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: addhn2s_natural:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr q0, [x0]
+; CHECK-GI-NEXT:    ldr q1, [x1]
+; CHECK-GI-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    shrn v0.2s, v0.2d, #32
+; CHECK-GI-NEXT:    ret
         %tmp1 = load <2 x i64>, ptr %A
         %tmp2 = load <2 x i64>, ptr %B
         %sum = add <2 x i64> %tmp1, %tmp2
@@ -1148,13 +1172,22 @@ define <2 x i32> @addhn2s_natural(ptr %A, ptr %B) nounwind {
 }
 
 define <16 x i8> @addhn2_16b_natural(<8 x i8> %low, ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: addhn2_16b_natural:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    ldr q2, [x1]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    addhn2 v0.16b, v1.8h, v2.8h
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: addhn2_16b_natural:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr q1, [x0]
+; CHECK-SD-NEXT:    ldr q2, [x1]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    addhn2 v0.16b, v1.8h, v2.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: addhn2_16b_natural:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr q1, [x0]
+; CHECK-GI-NEXT:    ldr q2, [x1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    add v1.8h, v1.8h, v2.8h
+; CHECK-GI-NEXT:    shrn2 v0.16b, v1.8h, #8
+; CHECK-GI-NEXT:    ret
         %tmp1 = load <8 x i16>, ptr %A
         %tmp2 = load <8 x i16>, ptr %B
         %sum = add <8 x i16> %tmp1, %tmp2
@@ -1165,13 +1198,22 @@ define <16 x i8> @addhn2_16b_natural(<8 x i8> %low, ptr %A, ptr %B) nounwind {
 }
 
 define <8 x i16> @addhn2_8h_natural(<4 x i16> %low, ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: addhn2_8h_natural:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    ldr q2, [x1]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    addhn2 v0.8h, v1.4s, v2.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: addhn2_8h_natural:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr q1, [x0]
+; CHECK-SD-NEXT:    ldr q2, [x1]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    addhn2 v0.8h, v1.4s, v2.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: addhn2_8h_natural:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr q1, [x0]
+; CHECK-GI-NEXT:    ldr q2, [x1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-GI-NEXT:    shrn2 v0.8h, v1.4s, #16
+; CHECK-GI-NEXT:    ret
         %tmp1 = load <4 x i32>, ptr %A
         %tmp2 = load <4 x i32>, ptr %B
         %sum = add <4 x i32> %tmp1, %tmp2
@@ -1182,13 +1224,22 @@ define <8 x i16> @addhn2_8h_natural(<4 x i16> %low, ptr %A, ptr %B) nounwind {
 }
 
 define <4 x i32> @addhn2_4s_natural(<2 x i32> %low, ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: addhn2_4s_natural:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    ldr q2, [x1]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    addhn2 v0.4s, v1.2d, v2.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: addhn2_4s_natural:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr q1, [x0]
+; CHECK-SD-NEXT:    ldr q2, [x1]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    addhn2 v0.4s, v1.2d, v2.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: addhn2_4s_natural:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr q1, [x0]
+; CHECK-GI-NEXT:    ldr q2, [x1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    add v1.2d, v1.2d, v2.2d
+; CHECK-GI-NEXT:    shrn2 v0.4s, v1.2d, #32
+; CHECK-GI-NEXT:    ret
         %tmp1 = load <2 x i64>, ptr %A
         %tmp2 = load <2 x i64>, ptr %B
         %sum = add <2 x i64> %tmp1, %tmp2
@@ -1199,13 +1250,22 @@ define <4 x i32> @addhn2_4s_natural(<2 x i32> %low, ptr %A, ptr %B) nounwind {
 }
 
 define <4 x i32> @addhn_addhn2_4s(ptr %A, ptr %B, ptr %C, ptr %D) nounwind {
-; CHECK-LABEL: addhn_addhn2_4s:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    ldr q2, [x1]
-; CHECK-NEXT:    addhn v0.2s, v1.2d, v2.2d
-; CHECK-NEXT:    addhn2 v0.4s, v1.2d, v2.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: addhn_addhn2_4s:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr q1, [x0]
+; CHECK-SD-NEXT:    ldr q2, [x1]
+; CHECK-SD-NEXT:    addhn v0.2s, v1.2d, v2.2d
+; CHECK-SD-NEXT:    addhn2 v0.4s, v1.2d, v2.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: addhn_addhn2_4s:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr q0, [x0]
+; CHECK-GI-NEXT:    ldr q1, [x1]
+; CHECK-GI-NEXT:    add v1.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    shrn v0.2s, v1.2d, #32
+; CHECK-GI-NEXT:    shrn2 v0.4s, v1.2d, #32
+; CHECK-GI-NEXT:    ret
             %tmp1 = load <2 x i64>, ptr %A
             %tmp2 = load <2 x i64>, ptr %B
             %sum1 = add <2 x i64> %tmp1, %tmp2
@@ -1221,12 +1281,20 @@ define <4 x i32> @addhn_addhn2_4s(ptr %A, ptr %B, ptr %C, ptr %D) nounwind {
 }
 
 define <8 x i8> @subhn8b_natural(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: subhn8b_natural:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    subhn v0.8b, v0.8h, v1.8h
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: subhn8b_natural:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr q0, [x0]
+; CHECK-SD-NEXT:    ldr q1, [x1]
+; CHECK-SD-NEXT:    subhn v0.8b, v0.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: subhn8b_natural:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr q0, [x0]
+; CHECK-GI-NEXT:    ldr q1, [x1]
+; CHECK-GI-NEXT:    sub v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    shrn v0.8b, v0.8h, #8
+; CHECK-GI-NEXT:    ret
         %tmp1 = load <8 x i16>, ptr %A
         %tmp2 = load <8 x i16>, ptr %B
         %diff = sub <8 x i16> %tmp1, %tmp2
@@ -1236,12 +1304,20 @@ define <8 x i8> @subhn8b_natural(ptr %A, ptr %B) nounwind {
 }
 
 define <4 x i16> @subhn4h_natural(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: subhn4h_natural:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    subhn v0.4h, v0.4s, v1.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: subhn4h_natural:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr q0, [x0]
+; CHECK-SD-NEXT:    ldr q1, [x1]
+; CHECK-SD-NEXT:    subhn v0.4h, v0.4s, v1.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: subhn4h_natural:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr q0, [x0]
+; CHECK-GI-NEXT:    ldr q1, [x1]
+; CHECK-GI-NEXT:    sub v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-GI-NEXT:    ret
         %tmp1 = load <4 x i32>, ptr %A
         %tmp2 = load <4 x i32>, ptr %B
         %diff = sub <4 x i32> %tmp1, %tmp2
@@ -1251,12 +1327,20 @@ define <4 x i16> @subhn4h_natural(ptr %A, ptr %B) nounwind {
 }
 
 define <2 x i32> @subhn2s_natural(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: subhn2s_natural:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    subhn v0.2s, v0.2d, v1.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: subhn2s_natural:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr q0, [x0]
+; CHECK-SD-NEXT:    ldr q1, [x1]
+; CHECK-SD-NEXT:    subhn v0.2s, v0.2d, v1.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: subhn2s_natural:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr q0, [x0]
+; CHECK-GI-NEXT:    ldr q1, [x1]
+; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    shrn v0.2s, v0.2d, #32
+; CHECK-GI-NEXT:    ret
         %tmp1 = load <2 x i64>, ptr %A
         %tmp2 = load <2 x i64>, ptr %B
         %diff = sub <2 x i64> %tmp1, %tmp2
@@ -1266,13 +1350,22 @@ define <2 x i32> @subhn2s_natural(ptr %A, ptr %B) nounwind {
 }
 
 define <16 x i8> @subhn2_16b_natural(<8 x i8> %low, ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: subhn2_16b_natural:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    ldr q2, [x1]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    subhn2 v0.16b, v1.8h, v2.8h
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: subhn2_16b_natural:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr q1, [x0]
+; CHECK-SD-NEXT:    ldr q2, [x1]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    subhn2 v0.16b, v1.8h, v2.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: subhn2_16b_natural:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr q1, [x0]
+; CHECK-GI-NEXT:    ldr q2, [x1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    sub v1.8h, v1.8h, v2.8h
+; CHECK-GI-NEXT:    shrn2 v0.16b, v1.8h, #8
+; CHECK-GI-NEXT:    ret
         %tmp1 = load <8 x i16>, ptr %A
         %tmp2 = load <8 x i16>, ptr %B
         %diff = sub <8 x i16> %tmp1, %tmp2
@@ -1283,13 +1376,22 @@ define <16 x i8> @subhn2_16b_natural(<8 x i8> %low, ptr %A, ptr %B) nounwind {
 }
 
 define <8 x i16> @subhn2_8h_natural(<4 x i16> %low, ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: subhn2_8h_natural:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    ldr q2, [x1]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    subhn2 v0.8h, v1.4s, v2.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: subhn2_8h_natural:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr q1, [x0]
+; CHECK-SD-NEXT:    ldr q2, [x1]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    subhn2 v0.8h, v1.4s, v2.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: subhn2_8h_natural:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr q1, [x0]
+; CHECK-GI-NEXT:    ldr q2, [x1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    sub v1.4s, v1.4s, v2.4s
+; CHECK-GI-NEXT:    shrn2 v0.8h, v1.4s, #16
+; CHECK-GI-NEXT:    ret
         %tmp1 = load <4 x i32>, ptr %A
         %tmp2 = load <4 x i32>, ptr %B
         %diff = sub <4 x i32> %tmp1, %tmp2
@@ -1300,13 +1402,22 @@ define <8 x i16> @subhn2_8h_natural(<4 x i16> %low, ptr %A, ptr %B) nounwind {
 }
 
 define <4 x i32> @subhn2_4s_natural(<2 x i32> %low, ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: subhn2_4s_natural:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    ldr q2, [x1]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    subhn2 v0.4s, v1.2d, v2.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: subhn2_4s_natural:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr q1, [x0]
+; CHECK-SD-NEXT:    ldr q2, [x1]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    subhn2 v0.4s, v1.2d, v2.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: subhn2_4s_natural:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr q1, [x0]
+; CHECK-GI-NEXT:    ldr q2, [x1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    sub v1.2d, v1.2d, v2.2d
+; CHECK-GI-NEXT:    shrn2 v0.4s, v1.2d, #32
+; CHECK-GI-NEXT:    ret
         %tmp1 = load <2 x i64>, ptr %A
         %tmp2 = load <2 x i64>, ptr %B
         %diff = sub <2 x i64> %tmp1, %tmp2
@@ -1317,12 +1428,20 @@ define <4 x i32> @subhn2_4s_natural(<2 x i32> %low, ptr %A, ptr %B) nounwind {
 }
 
 define <16 x i8> @neg_narrow_i8(<16 x i16> %a) {
-; CHECK-LABEL: neg_narrow_i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.2d, #0xffffffffffffffff
-; CHECK-NEXT:    subhn v0.8b, v2.8h, v0.8h
-; CHECK-NEXT:    subhn2 v0.16b, v2.8h, v1.8h
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: neg_narrow_i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v2.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    subhn v0.8b, v2.8h, v0.8h
+; CHECK-SD-NEXT:    subhn2 v0.16b, v2.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neg_narrow_i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    mvn v1.16b, v1.16b
+; CHECK-GI-NEXT:    shrn v0.8b, v0.8h, #8
+; CHECK-GI-NEXT:    shrn2 v0.16b, v1.8h, #8
+; CHECK-GI-NEXT:    ret
   %not.i = xor <16 x i16> %a, splat (i16 -1)
   %s = lshr <16 x i16> %not.i, splat (i16 8)
   %vshrn_n = trunc nuw <16 x i16> %s to <16 x i8>
@@ -1330,12 +1449,20 @@ define <16 x i8> @neg_narrow_i8(<16 x i16> %a) {
 }
 
 define <8 x i16> @neg_narrow_i16(<8 x i32> %a) {
-; CHECK-LABEL: neg_narrow_i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.2d, #0xffffffffffffffff
-; CHECK-NEXT:    subhn v0.4h, v2.4s, v0.4s
-; CHECK-NEXT:    subhn2 v0.8h, v2.4s, v1.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: neg_narrow_i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v2.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    subhn v0.4h, v2.4s, v0.4s
+; CHECK-SD-NEXT:    subhn2 v0.8h, v2.4s, v1.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neg_narrow_i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    mvn v1.16b, v1.16b
+; CHECK-GI-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-GI-NEXT:    shrn2 v0.8h, v1.4s, #16
+; CHECK-GI-NEXT:    ret
   %not.i = xor <8 x i32> %a, splat (i32 -1)
   %s = lshr <8 x i32> %not.i, splat (i32 16)
   %vshrn_n = trunc nuw <8 x i32> %s to <8 x i16>
@@ -1343,12 +1470,20 @@ define <8 x i16> @neg_narrow_i16(<8 x i32> %a) {
 }
 
 define <4 x i32> @neg_narrow_i32(<4 x i64> %a) {
-; CHECK-LABEL: neg_narrow_i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.2d, #0xffffffffffffffff
-; CHECK-NEXT:    subhn v0.2s, v2.2d, v0.2d
-; CHECK-NEXT:    subhn2 v0.4s, v2.2d, v1.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: neg_narrow_i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v2.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    subhn v0.2s, v2.2d, v0.2d
+; CHECK-SD-NEXT:    subhn2 v0.4s, v2.2d, v1.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neg_narrow_i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    mvn v1.16b, v1.16b
+; CHECK-GI-NEXT:    shrn v0.2s, v0.2d, #32
+; CHECK-GI-NEXT:    shrn2 v0.4s, v1.2d, #32
+; CHECK-GI-NEXT:    ret
   %not.i = xor <4 x i64> %a, splat (i64 -1)
   %s = lshr <4 x i64> %not.i, splat (i64 32)
   %vshrn_n = trunc nuw <4 x i64> %s to <4 x i32>

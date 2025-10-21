@@ -192,7 +192,7 @@ static void replaceIndexOpsByInductionVariables(RewriterBase &rewriter,
         .Case([&](affine::AffineForOp affineForOp) {
           allIvs.push_back(affineForOp.getInductionVar());
         })
-        .DefaultUnreachable("unexpected op");
+        .Default([&](Operation *op) { assert(false && "unexpected op"); });
   }
   assert(linalgOp.getNumLoops() == allIvs.size() &&
          "expected the number of loops and induction variables to match");

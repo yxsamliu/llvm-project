@@ -1639,7 +1639,6 @@ struct CommonStmt {
   BOILERPLATE(CommonStmt);
   CommonStmt(std::optional<Name> &&, std::list<CommonBlockObject> &&,
       std::list<Block> &&);
-  CharBlock source;
   std::list<Block> blocks;
 };
 

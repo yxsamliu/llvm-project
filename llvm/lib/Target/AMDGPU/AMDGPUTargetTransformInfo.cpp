@@ -358,11 +358,7 @@ unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
 
 unsigned GCNTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,
                                          unsigned ChainSizeInBytes,
-                                         VectorType *VecTy,
-                                         unsigned AddrSpace) const {
-  if (AddrSpace == AMDGPUAS::LANE_SHARED)
-    return VF;
-
+                                         VectorType *VecTy) const {
   unsigned VecRegBitWidth = VF * LoadSize;
   if (VecRegBitWidth > 128 && VecTy->getScalarSizeInBits() < 32)
     // TODO: Support element-size less than 32bit?
@@ -372,12 +368,8 @@ unsigned GCNTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,
 }
 
 unsigned GCNTTIImpl::getStoreVectorFactor(unsigned VF, unsigned StoreSize,
-                                          unsigned ChainSizeInBytes,
-                                          VectorType *VecTy,
-                                          unsigned AddrSpace) const {
-  if (AddrSpace == AMDGPUAS::LANE_SHARED)
-    return VF;
-
+                                             unsigned ChainSizeInBytes,
+                                             VectorType *VecTy) const {
   unsigned VecRegBitWidth = VF * StoreSize;
   if (VecRegBitWidth > 128)
     return 128 / StoreSize;
@@ -399,7 +391,7 @@ unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
     return 8 * ST->getMaxPrivateElementSize();
 
   if (AddrSpace == AMDGPUAS::LANE_SHARED)
-    return 18 * 32; // Max possible operand size.
+    return 32;
 
   // Common to flat, global, local and region. Assume for unknown addrspace.
   return 128;

@@ -124,11 +124,11 @@ public:
   unsigned getMinVectorRegisterBitWidth() const override;
   unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const override;
   unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
-                               unsigned ChainSizeInBytes, VectorType *VecTy,
-                               unsigned AddrSpace) const override;
+                               unsigned ChainSizeInBytes,
+                               VectorType *VecTy) const override;
   unsigned getStoreVectorFactor(unsigned VF, unsigned StoreSize,
-                                unsigned ChainSizeInBytes, VectorType *VecTy,
-                                unsigned AddrSpace) const override;
+                                unsigned ChainSizeInBytes,
+                                VectorType *VecTy) const override;
   unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const override;
 
   bool isLegalToVectorizeMemChain(unsigned ChainSizeInBytes, Align Alignment,

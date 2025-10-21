@@ -21,7 +21,7 @@ target datalayout = "A5"
 ; Function Attrs: convergent nounwind
 declare !callback !38 void @llvm.amdgcn.wavegroup.rank.p0(i32 immarg, ptr) #2
 
-define private amdgpu_kernel void @input(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #1 {
+define private amdgpu_kernel void @input(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
 ; CHECK-LABEL: define private amdgpu_kernel void @input(
 ; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -73,7 +73,7 @@ entry:
   ret void
 }
 
-define private amdgpu_kernel void @compute(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #1 {
+define private amdgpu_kernel void @compute(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
 ; CHECK-LABEL: define private amdgpu_kernel void @compute(
 ; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -99,7 +99,7 @@ entry:
   ret void
 }
 
-define private amdgpu_kernel void @output(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #1 {
+define private amdgpu_kernel void @output(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
 ; CHECK-LABEL: define private amdgpu_kernel void @output(
 ; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -116,7 +116,7 @@ entry:
 }
 
 ; Function Attrs: convergent mustprogress nofree norecurse nosync nounwind memory(readwrite, argmem: none, inaccessiblemem: none)
-define amdgpu_kernel void @main(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) !reqd_work_group_size !{i32 32, i32 12, i32 1} {
+define amdgpu_kernel void @main(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 !reqd_work_group_size !{i32 32, i32 12, i32 1} {
 ; CHECK-LABEL: define amdgpu_kernel void @main(
 ; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR2:[0-9]+]] !reqd_work_group_size [[META9:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -137,7 +137,7 @@ entry:
 
 ; Rank specialization example below tests the case where there is another kernel in the module that uses the same addrspace(3) GVs, in which case those
 ; GVs get lowered using the module-scope strategy in the amdgpu-lower-module-lds pass.
-define private amdgpu_kernel void @input_kern2(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #1 {
+define private amdgpu_kernel void @input_kern2(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
 ; CHECK-LABEL: define private amdgpu_kernel void @input_kern2(
 ; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -159,7 +159,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @kern2(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) !reqd_work_group_size !{i32 32, i32 12, i32 1} {
+define amdgpu_kernel void @kern2(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 !reqd_work_group_size !{i32 32, i32 12, i32 1} {
 ; CHECK-LABEL: define amdgpu_kernel void @kern2(
 ; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR4:[0-9]+]] !reqd_work_group_size [[META9]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -172,6 +172,7 @@ entry:
   ret void
 }
 
+attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) "amdgpu-agpr-alloc"="0" "amdgpu-flat-work-group-size"="1,1024" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-wavegroup-enable" "amdgpu-waves-per-eu"="8,16" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1300" "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-buffer-pk-add-bf16-inst,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-global-pk-add-bf16-inst,+bf16-cvt-insts,+bf16-pk-insts,+bf16-trans-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot7-insts,+dot8-insts,+dpp,+f16bf16-to-fp6bf6-cvt-scale-insts,+f32-to-f16bf16-cvt-sr-insts,+fp8-conversion-insts,+fp8e5m3-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx1250-insts,+gfx1251-gemm-insts,+gfx13-insts,+gfx8-insts,+gfx9-insts,+parallel-bit-insts,+permlane16-swap,+prng-inst,+tanh-insts,+tensor-cvt-lut-insts,+transpose-load-f4f6-insts,+vmem-pref-insts,+wavefrontsize32" "uniform-work-group-size"="true" }
 attributes #1 = { "amdgpu-wavegroup-rank-function" }
 attributes #2 = { convergent nounwind }
 
@@ -184,6 +185,9 @@ attributes #2 = { convergent nounwind }
 ; GV: #[[ATTR:.*]] = { {{.*}}"amdgpu-lds-size"="64"{{.*}} }
 ; ... and for input_kern2:
 ; GV: #[[ATTR:.*]] = { {{.*}}"amdgpu-lds-size"="64"{{.*}} }
+
+; Function Attrs: convergent mustprogress nocallback nofree nosync nounwind willreturn memory(none)
+declare <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half>, <9 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, i32 immarg, i1 immarg) #1
 
 !4 = !{!5, !5, i64 0}
 !5 = !{!"omnipotent char", !6, i64 0}

@@ -1551,6 +1551,12 @@ public:
       OperandValueInfo OpdInfo = {OK_AnyValue, OP_None},
       const Instruction *I = nullptr) const;
 
+  /// \return The cost of VP Load and Store instructions.
+  LLVM_ABI InstructionCost getVPMemoryOpCost(
+      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      const Instruction *I = nullptr) const;
+
   /// \return The cost of masked Load and Store instructions.
   LLVM_ABI InstructionCost getMaskedMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
@@ -1809,15 +1815,13 @@ public:
   /// SizeInBytes loads or has a better vector factor.
   LLVM_ABI unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
                                         unsigned ChainSizeInBytes,
-                                        VectorType *VecTy,
-                                        unsigned AddrSpace) const;
+                                        VectorType *VecTy) const;
 
   /// \returns The new vector factor value if the target doesn't support \p
   /// SizeInBytes stores or has a better vector factor.
   LLVM_ABI unsigned getStoreVectorFactor(unsigned VF, unsigned StoreSize,
                                          unsigned ChainSizeInBytes,
-                                         VectorType *VecTy,
-                                         unsigned AddrSpace) const;
+                                         VectorType *VecTy) const;
 
   /// \returns True if the target prefers fixed width vectorization if the
   /// loop vectorizer's cost-model assigns an equal cost to the fixed and

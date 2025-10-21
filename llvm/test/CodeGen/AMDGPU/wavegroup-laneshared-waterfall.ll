@@ -6,7 +6,7 @@ target datalayout = "A5"
 @large_shared_vgpr = linkonce_odr hidden local_unnamed_addr addrspace(10) global [768 x i32] zeroinitializer, align 16
 
 ; Function Attrs: convergent mustprogress nofree norecurse nounwind
-define protected amdgpu_kernel void @test_large_shared_vgpr(ptr addrspace(1) noundef readonly captures(none) %0, ptr addrspace(1) noundef writeonly captures(none) %1) local_unnamed_addr #0 !reqd_work_group_size !13 {
+define protected amdgpu_kernel void @test_large_shared_vgpr(ptr addrspace(1) noundef readonly captures(none) %0, ptr addrspace(1) noundef writeonly captures(none) %1) local_unnamed_addr #11 !reqd_work_group_size !13 {
 ; CHECK-LABEL: test_large_shared_vgpr:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
@@ -83,6 +83,6 @@ entry:
   ret void
 }
 
-attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-queue-ptr" "amdgpu-wavegroup-enable" }
+attributes #11 = { convergent mustprogress nofree norecurse nounwind "amdgpu-agpr-alloc"="0" "amdgpu-flat-work-group-size"="256,256" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-wavegroup-enable" "amdgpu-waves-per-eu"="2,16" "approx-func-fp-math"="true" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1301" "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-buffer-pk-add-bf16-inst,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-global-pk-add-bf16-inst,+bf16-cvt-insts,+bf16-pk-insts,+bf16-trans-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot7-insts,+dot8-insts,+dpp,+f16bf16-to-fp6bf6-cvt-scale-insts,+f32-to-f16bf16-cvt-sr-insts,+fp8-conversion-insts,+fp8e5m3-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx1250-insts,+gfx1251-gemm-insts,+gfx13-insts,+gfx8-insts,+gfx9-insts,+parallel-bit-insts,+permlane16-swap,+prng-inst,+tanh-insts,+tensor-cvt-lut-insts,+transpose-load-f4f6-insts,+wavefrontsize32" "uniform-work-group-size"="true" "unsafe-fp-math"="true" }
 
 !13 = !{i32 256, i32 1, i32 1}

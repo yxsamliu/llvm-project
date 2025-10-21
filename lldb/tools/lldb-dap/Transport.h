@@ -22,18 +22,11 @@
 
 namespace lldb_dap {
 
-struct ProtocolDescriptor {
-  using Id = protocol::Id;
-  using Req = protocol::Request;
-  using Resp = protocol::Response;
-  using Evt = protocol::Event;
-};
-
 /// A transport class that performs the Debug Adapter Protocol communication
 /// with the client.
 class Transport final
-    : public lldb_private::transport::HTTPDelimitedJSONTransport<
-          ProtocolDescriptor> {
+    : public lldb_private::HTTPDelimitedJSONTransport<
+          protocol::Request, protocol::Response, protocol::Event> {
 public:
   Transport(llvm::StringRef client_name, lldb_dap::Log *log,
             lldb::IOObjectSP input, lldb::IOObjectSP output);

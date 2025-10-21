@@ -2610,7 +2610,7 @@ public:
     Language::ForEach([&](Language *lang) {
       if (const char *help = lang->GetLanguageSpecificTypeLookupHelp())
         stream.Printf("%s\n", help);
-      return IterationAction::Continue;
+      return true;
     });
 
     m_cmd_help_long = std::string(stream.GetString());
@@ -2649,7 +2649,7 @@ public:
              (m_command_options.m_language == eLanguageTypeUnknown))) {
       Language::ForEach([&](Language *lang) {
         languages.push_back(lang);
-        return IterationAction::Continue;
+        return true;
       });
     } else {
       languages.push_back(Language::FindPlugin(m_command_options.m_language));

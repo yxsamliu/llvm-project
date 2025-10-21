@@ -22,6 +22,8 @@
 #include <string>
 #include <vector>
 
+struct InstructionSpecifier;
+
 namespace llvm {
 class Record;
 #define X86_INSTR_MRM_MAPPING                                                  \
@@ -177,8 +179,6 @@ enum { ExplicitREX2 = 1, ExplicitEVEX = 3 };
 
 namespace X86Disassembler {
 class DisassemblerTables;
-struct InstructionSpecifier;
-
 /// Extract common fields of a single X86 instruction from a CodeGenInstruction
 struct RecognizableInstrBase {
   /// The OpPrefix field from the record

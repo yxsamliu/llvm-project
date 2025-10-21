@@ -4716,7 +4716,10 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
             info.HasNoWait = updateDataOp.getNowait();
             return success();
           })
-          .DefaultUnreachable("unexpected operation");
+          .Default([&](Operation *op) {
+            llvm_unreachable("unexpected operation");
+            return failure();
+          });
 
   if (failed(result))
     return failure();
@@ -5309,7 +5312,9 @@ extractHostEvalClauses(omp::TargetOp targetOp, Value &numThreads,
             (void)found;
             assert(found && "unsupported host_eval use");
           })
-          .DefaultUnreachable("unsupported host_eval use");
+          .Default([](Operation *) {
+            llvm_unreachable("unsupported host_eval use");
+          });
     }
   }
 }

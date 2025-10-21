@@ -309,11 +309,9 @@ unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
-                  unsigned VDataDwords, unsigned VAddrDwords, bool IndexedRsrc,
-                  bool IndexedSamp) {
+                  unsigned VDataDwords, unsigned VAddrDwords) {
   const MIMGInfo *Info =
-      getMIMGOpcodeHelper(BaseOpcode, MIMGEncoding, VDataDwords, VAddrDwords,
-                          IndexedRsrc, IndexedSamp);
+      getMIMGOpcodeHelper(BaseOpcode, MIMGEncoding, VDataDwords, VAddrDwords);
   return Info ? Info->Opcode : -1;
 }
 
@@ -324,9 +322,9 @@ const MIMGBaseOpcodeInfo *getMIMGBaseOpcode(unsigned Opc) {
 
 int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels) {
   const MIMGInfo *OrigInfo = getMIMGInfo(Opc);
-  const MIMGInfo *NewInfo = getMIMGOpcodeHelper(
-      OrigInfo->BaseOpcode, OrigInfo->MIMGEncoding, NewChannels,
-      OrigInfo->VAddrDwords, OrigInfo->IndexedRsrc, OrigInfo->IndexedSamp);
+  const MIMGInfo *NewInfo =
+      getMIMGOpcodeHelper(OrigInfo->BaseOpcode, OrigInfo->MIMGEncoding,
+                          NewChannels, OrigInfo->VAddrDwords);
   return NewInfo ? NewInfo->Opcode : -1;
 }
 
@@ -1495,6 +1493,11 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
   if (DynamicVGPRBlockSize != 0)
     return DynamicVGPRBlockSize;
 
+  // Temporarily check the subtarget feature, until we fully switch to using
+  // attributes.
+  if (STI->getFeatureBits().test(FeatureDynamicVGPR))
+    return STI->getFeatureBits().test(FeatureDynamicVGPRBlockSize32) ? 32 : 16;
+
   bool IsWave32 = EnableWavefrontSize32
                       ? *EnableWavefrontSize32
                       : STI->getFeatureBits().test(FeatureWavefrontSize32);
@@ -1549,7 +1552,10 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI,
   if (Features.test(FeatureGFX90AInsts))
     return 512;
 
-  if (DynamicVGPRBlockSize != 0)
+  // Temporarily check the subtarget feature, until we fully switch to using
+  // attributes.
+  if (DynamicVGPRBlockSize != 0 ||
+      STI->getFeatureBits().test(FeatureDynamicVGPR))
     // On GFX12 we can allocate at most 8 blocks of VGPRs.
     return 8 * getVGPRAllocGranule(STI, DynamicVGPRBlockSize);
   return getAddressableNumArchVGPRs(STI);
@@ -1600,14 +1606,14 @@ unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
 }
 
 unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
-                        unsigned DynamicVGPRBlockSize, unsigned NumExcludedVGPRs) {
+                        unsigned DynamicVGPRBlockSize) {
   assert(WavesPerEU != 0);
 
   unsigned MaxWavesPerEU = getMaxWavesPerEU(STI);
   if (WavesPerEU >= MaxWavesPerEU)
     return 0;
 
-  unsigned TotNumVGPRs = getTotalNumVGPRs(STI) - NumExcludedVGPRs;
+  unsigned TotNumVGPRs = getTotalNumVGPRs(STI);
   unsigned AddrsableNumVGPRs =
       getAddressableNumVGPRs(STI, DynamicVGPRBlockSize);
   unsigned Granule = getVGPRAllocGranule(STI, DynamicVGPRBlockSize);
@@ -1619,7 +1625,7 @@ unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
   unsigned MinWavesPerEU = getNumWavesPerEUWithNumVGPRs(STI, AddrsableNumVGPRs,
                                                         DynamicVGPRBlockSize);
   if (WavesPerEU < MinWavesPerEU)
-    return getMinNumVGPRs(STI, MinWavesPerEU, DynamicVGPRBlockSize, NumExcludedVGPRs);
+    return getMinNumVGPRs(STI, MinWavesPerEU, DynamicVGPRBlockSize);
 
   unsigned MaxNumVGPRsNext = alignDown(TotNumVGPRs / (WavesPerEU + 1), Granule);
   unsigned MinNumVGPRs = 1 + std::min(MaxNumVGPRs - Granule, MaxNumVGPRsNext);
@@ -2959,7 +2965,6 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
   case AMDGPU::OPERAND_REG_IMM_V2FP32:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-  case AMDGPU::OPERAND_REG_IMM_V2FP64:
     return true;
   default:
     return false;
@@ -3452,7 +3457,6 @@ int64_t encode32BitLiteral(int64_t Imm, OperandType Type) {
   case OPERAND_REG_INLINE_C_INT32:
     return Lo_32(Imm);
   case OPERAND_REG_IMM_FP64:
-  case AMDGPU::OPERAND_REG_IMM_V2FP64:
     return Hi_32(Imm);
   }
   return Imm;

@@ -419,7 +419,6 @@ findBaseObject(const Constant *C, DenseSet<const GlobalAlias *> &Aliases,
     case Instruction::PtrToAddr:
     case Instruction::PtrToInt:
     case Instruction::BitCast:
-    case Instruction::AddrSpaceCast:
     case Instruction::GetElementPtr:
       return findBaseObject(CE->getOperand(0), Aliases, Op);
     default:

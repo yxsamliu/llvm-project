@@ -604,7 +604,9 @@ static Operation *materializeTiledShape(OpBuilder &builder, Location loc,
                             builder, loc, valueToTile, sliceParams.offsets,
                             sliceParams.sizes, sliceParams.strides);
                       })
-                      .DefaultUnreachable("Unexpected shaped type");
+                      .Default([](ShapedType) -> Operation * {
+                        llvm_unreachable("Unexpected shaped type");
+                      });
   return sliceOp;
 }
 

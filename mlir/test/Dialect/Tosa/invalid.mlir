@@ -573,61 +573,64 @@ func.func @test_avg_pool2d_zero_dim_input(%arg0: tensor<1x0x?x9xf32>, %arg1: ten
 
 // -----
 
-module {
+func.func @test_variable_unranked(%arg0: tensor<2x4x8xi8>) -> () {
   tosa.variable @stored_var : tensor<*xi8>
   // expected-error@+1 {{custom op 'tosa.variable' expected ranked type}}
+  return
 }
 
 // -----
 
-module {
+func.func @test_variable_unranked_initial_value(%arg0: tensor<2x4x8xi8>) -> () {
   // expected-error@+1 {{elements literal type must have static shape}}
   tosa.variable @stored_var = dense<0> : tensor<*xi8>
   // expected-error@+1 {{custom op 'tosa.variable' expected attribute}}
+  return
 }
 
 // -----
 
-module {
+func.func @test_variable_duplicates(%arg0: tensor<2x4x8xi8>) -> () {
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
-  func.func @test_variable_read_type(%arg0: tensor<2x4x8xi8>) -> () {
-    // expected-error@+1 {{'tosa.variable_read' op require same element type for 'output1' ('i16') and the input tensor ('i8')}}
-    %0 = tosa.variable_read @stored_var : tensor<2x4x8xi16>
-    return
-  }
+  // expected-error@+1 {{'tosa.variable' op illegal to have multiple declaration of 'stored_var'}}
+  tosa.variable @stored_var = dense<3> : tensor<1x4x8xi8>
+  return
 }
 
 // -----
 
-module {
+func.func @test_variable_read_type(%arg0: tensor<2x4x8xi8>) -> () {
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
-  func.func @test_variable_read_shape(%arg0: tensor<2x4x8xi8>) -> () {
-    // expected-error@+1 {{'tosa.variable_read' op require same element type for 'output1' ('i32') and the input tensor ('i8'}}
-    %0 = tosa.variable_read @stored_var : tensor<1x4x8xi32>
-    return
-  }
+  // expected-error@+1 {{'tosa.variable_read' op require same element type for 'output1' ('i16') and the input tensor ('i8')}}
+  %0 = tosa.variable_read @stored_var : tensor<2x4x8xi16>
+  return
 }
 
 // -----
 
-module {
+func.func @test_variable_read_shape(%arg0: tensor<2x4x8xi8>) -> () {
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
-  func.func @test_variable_write_type(%arg0: tensor<2x4x8xi16>) -> () {
-    // expected-error@+1 {{'tosa.variable_write' op require same element type for 'input1' ('i16') and the input tensor ('i8')}}
-    tosa.variable_write @stored_var, %arg0 : tensor<2x4x8xi16>
-    return
-  }
+  // expected-error@+1 {{'tosa.variable_read' op require same element type for 'output1' ('i32') and the input tensor ('i8'}}
+  %0 = tosa.variable_read @stored_var : tensor<1x4x8xi32>
+  return
 }
 
 // -----
 
-module {
+func.func @test_variable_write_type(%arg0: tensor<2x4x8xi16>) -> () {
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
-  func.func @test_variable_write_shape(%arg0: tensor<1x4x8xi8>) -> () {
-    // expected-error@+1 {{'tosa.variable_write' op require same shapes for 'input1' ('tensor<1x4x8xi8>') and the input tensor ('tensor<2x4x8xi8>')}}
-    tosa.variable_write @stored_var, %arg0 : tensor<1x4x8xi8>
-    return
-  }
+  // expected-error@+1 {{'tosa.variable_write' op require same element type for 'input1' ('i16') and the input tensor ('i8')}}
+  tosa.variable_write @stored_var, %arg0 : tensor<2x4x8xi16>
+  return
+}
+
+// -----
+
+func.func @test_variable_write_shape(%arg0: tensor<1x4x8xi8>) -> () {
+  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
+  // expected-error@+1 {{'tosa.variable_write' op require same shapes for 'input1' ('tensor<1x4x8xi8>') and the input tensor ('tensor<2x4x8xi8>')}}
+  tosa.variable_write @stored_var, %arg0 : tensor<1x4x8xi8>
+  return
 }
 
 // -----

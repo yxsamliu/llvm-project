@@ -197,7 +197,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::SEHLeaveStmtClass:
   case Stmt::SYCLKernelCallStmtClass:
   case Stmt::CoroutineBodyStmtClass:
-    return emitCoroutineBody(cast<CoroutineBodyStmt>(*s));
   case Stmt::CoreturnStmtClass:
   case Stmt::CXXTryStmtClass:
   case Stmt::IndirectGotoStmtClass:

@@ -268,7 +268,6 @@ class CDE_Vec_Instr<bit acc, dag oops, dag iops, string asm, string cstr,
                      !con(iops, (ins vpred:$vp)), asm,
                      !strconcat(cstr, vpred.vpred_constraint)>,
     CDE_RequiresQReg {
-  bits<0> vp;
 }
 
 

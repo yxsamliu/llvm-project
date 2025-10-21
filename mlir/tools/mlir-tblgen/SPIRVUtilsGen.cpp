@@ -50,6 +50,7 @@ using mlir::tblgen::EnumCase;
 using mlir::tblgen::EnumInfo;
 using mlir::tblgen::NamedAttribute;
 using mlir::tblgen::NamedTypeConstraint;
+using mlir::tblgen::NamespaceEmitter;
 using mlir::tblgen::Operator;
 
 //===----------------------------------------------------------------------===//
@@ -260,7 +261,7 @@ static void emitInterfaceDecl(const Availability &availability,
       std::string(formatv("{0}Traits", interfaceName));
 
   StringRef cppNamespace = availability.getInterfaceClassNamespace();
-  llvm::NamespaceEmitter nsEmitter(os, cppNamespace);
+  NamespaceEmitter nsEmitter(os, cppNamespace);
   os << "class " << interfaceName << ";\n\n";
 
   // Emit the traits struct containing the concept and model declarations.

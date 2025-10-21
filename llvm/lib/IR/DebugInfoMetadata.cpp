@@ -1768,7 +1768,6 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_bregx:
     case dwarf::DW_OP_push_object_address:
     case dwarf::DW_OP_over:
-    case dwarf::DW_OP_rot:
     case dwarf::DW_OP_consts:
     case dwarf::DW_OP_eq:
     case dwarf::DW_OP_ne:
@@ -1776,8 +1775,6 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_ge:
     case dwarf::DW_OP_lt:
     case dwarf::DW_OP_le:
-    case dwarf::DW_OP_neg:
-    case dwarf::DW_OP_abs:
       break;
     }
   }

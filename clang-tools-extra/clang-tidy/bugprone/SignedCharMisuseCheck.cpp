@@ -21,12 +21,12 @@ static constexpr int UnsignedASCIIUpperBound = 127;
 SignedCharMisuseCheck::SignedCharMisuseCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      CharTypedefsToIgnoreList(Options.get("CharTypedefsToIgnore", "")),
+      CharTypdefsToIgnoreList(Options.get("CharTypdefsToIgnore", "")),
       DiagnoseSignedUnsignedCharComparisons(
           Options.get("DiagnoseSignedUnsignedCharComparisons", true)) {}
 
 void SignedCharMisuseCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "CharTypedefsToIgnore", CharTypedefsToIgnoreList);
+  Options.store(Opts, "CharTypdefsToIgnore", CharTypdefsToIgnoreList);
   Options.store(Opts, "DiagnoseSignedUnsignedCharComparisons",
                 DiagnoseSignedUnsignedCharComparisons);
 }
@@ -39,7 +39,7 @@ BindableMatcher<clang::Stmt> SignedCharMisuseCheck::charCastExpression(
   // (e.g. typedef char sal_Int8). In this case, we don't need to
   // worry about the misinterpretation of char values.
   const auto IntTypedef = qualType(hasDeclaration(typedefDecl(
-      hasAnyName(utils::options::parseStringList(CharTypedefsToIgnoreList)))));
+      hasAnyName(utils::options::parseStringList(CharTypdefsToIgnoreList)))));
 
   auto CharTypeExpr = expr();
   if (IsSigned) {

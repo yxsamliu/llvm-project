@@ -236,8 +236,6 @@ public:
       MachineInstr &RegSeq,
       SmallVectorImpl<std::pair<MachineOperand *, unsigned>> &Srcs) const;
 
-  int isSubcopy(MachineInstr &MI) const;
-
   bool tryFoldRegSeqSplat(MachineInstr *UseMI, unsigned UseOpIdx,
                           int64_t SplatVal,
                           const TargetRegisterClass *SplatRC) const;
@@ -271,7 +269,6 @@ public:
                                MachineInstr *&SMovImmZero);
   bool tryFoldDynamicIdxMI(MachineInstr &MI, MachineInstr *&SMovImmZero);
   bool trySplitVStIdxRegSeq(MachineInstr &MI);
-  bool trySplitVLdIdxMultiRegSeq(MachineInstr &MI);
 
   bool tryOptimizeAGPRPhis(MachineBasicBlock &MBB);
 
@@ -734,8 +731,7 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
         return false;
     }
 
-    if (New->getReg().isVirtual() &&
-        !MRI->constrainRegClass(New->getReg(), ConstrainRC)) {
+    if (!MRI->constrainRegClass(New->getReg(), ConstrainRC)) {
       LLVM_DEBUG(dbgs() << "Cannot constrain " << printReg(New->getReg(), TRI)
                         << TRI->getRegClassName(ConstrainRC) << '\n');
       return false;
@@ -949,9 +945,7 @@ static MachineOperand *lookUpCopyChain(const SIInstrInfo &TII,
   for (MachineInstr *SubDef = MRI.getVRegDef(SrcReg);
        SubDef && TII.isFoldableCopy(*SubDef);
        SubDef = MRI.getVRegDef(Sub->getReg())) {
-    unsigned SrcIdx = TII.getFoldableCopySrcIdx(*SubDef);
-    MachineOperand &SrcOp = SubDef->getOperand(SrcIdx);
-
+    MachineOperand &SrcOp = SubDef->getOperand(1);
     if (SrcOp.isImm())
       return &SrcOp;
     if (!SrcOp.isReg() || SrcOp.getReg().isPhysical())
@@ -2810,135 +2804,6 @@ bool SIFoldOperandsImpl::tryFoldDynamicIdxOffset(MachineOperand *IdxOpnd,
   return false;
 }
 
-// Return the subregister offset when MI is a REG_SEQUENCE or a copy-like
-// instruction. Return -1 otherwise.
-int SIFoldOperandsImpl::isSubcopy(MachineInstr &MI) const {
-  // Check dst is virtual and not a subregister.
-  const MachineOperand &Dst = MI.getOperand(0);
-  if (!Dst.isReg() || !Dst.getReg().isVirtual() ||
-      Dst.getSubReg() != AMDGPU::NoSubRegister)
-    return -1;
-
-  if (MI.isCopyLike()) {
-    // Check src.
-    const MachineOperand &Src = MI.getOperand(1);
-    int Offset = 0;
-    if (Src.getSubReg() != AMDGPU::NoSubRegister)
-      Offset = TRI->getSubRegIdxOffset(Src.getSubReg());
-    if (Offset % REG_SEQ_CONCAT_UNIT != 0)
-      return -1;
-    return Offset;
-  }
-
-  if (!MI.isRegSequence())
-    return -1;
-
-  // Collect and check src operands.
-  SmallVector<std::pair<unsigned, MachineOperand *>, 8> SrcOpnds;
-  for (unsigned I = 1, E = MI.getNumExplicitOperands(); I != E; I += 2) {
-    MachineOperand &SrcOp = MI.getOperand(I);
-    if (SrcOp.getSubReg() == AMDGPU::NoSubRegister)
-      return -1;
-    unsigned SubRegIdx = MI.getOperand(I + 1).getImm();
-    SrcOpnds.emplace_back(SubRegIdx, &SrcOp);
-  }
-  llvm::sort(SrcOpnds, [&](const auto &A, const auto &B) {
-    return TRI->getSubRegIdxOffset(A.first) < TRI->getSubRegIdxOffset(B.first);
-  });
-  Register InReg = SrcOpnds[0].second->getReg();
-  unsigned SubRegIdx = SrcOpnds[0].second->getSubReg();
-  int Offset = TRI->getSubRegIdxOffset(SubRegIdx);
-  if (Offset % REG_SEQ_CONCAT_UNIT != 0)
-    return -1;
-  int Size = TRI->getSubRegIdxSize(SubRegIdx);
-  // Check all the SrcOpnds are using the same register and
-  // are consecutive subregisters.
-  for (unsigned I = 1, E = SrcOpnds.size(); I != E; ++I) {
-    MachineOperand *Op = SrcOpnds[I].second;
-    if (Op->getReg() != InReg)
-      return -1;
-    if (Op->getSubReg() == AMDGPU::NoSubRegister)
-      return -1;
-    int SubOffset = TRI->getSubRegIdxOffset(Op->getSubReg());
-    if (SubOffset != Size + Offset)
-      return -1;
-    Size += TRI->getSubRegIdxSize(Op->getSubReg());
-  }
-
-  return Offset;
-}
-
-// When the return value of V_LOAD_IDX is only consumed by multiple
-// REG_SEQUENCEs, each of which are consecutive subregisters of that
-// return value, split the V_LOAD_IDX into several V_LOAD_IDXs without
-// REG_SEQUENCE. This enables the bundling, and reduces the number of
-// vgpr copies.
-bool SIFoldOperandsImpl::trySplitVLdIdxMultiRegSeq(MachineInstr &MI) {
-  assert(MI.getOpcode() == AMDGPU::V_LOAD_IDX);
-  MachineOperand *DataOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::data_op);
-  assert(DataOpnd);
-
-  Register DataReg = DataOpnd->getReg();
-  if (!DataReg.isVirtual())
-    return false;
-
-  // Collect all users of the DataReg, all non-dbg users must be
-  // REG_SEQUENCEs.
-  SmallVector<std::pair<MachineInstr *, int>, 8> SubcopyMIs;
-  for (auto &UseMI : MRI->use_nodbg_instructions(DataReg)) {
-    int Offset = isSubcopy(UseMI);
-    if (Offset < 0)
-      return false;
-    SubcopyMIs.push_back({&UseMI, Offset});
-  }
-
-  // Generate a V_LOAD_IDX for each sub-copy user.
-  LLVM_DEBUG(dbgs() << "Splitting " << MI);
-  Register VirtualIDX = TII->getNamedOperand(MI, AMDGPU::OpName::idx)->getReg();
-  int64_t Offset = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
-  auto *MMO = *MI.memoperands_begin();
-  assert(MMO);
-  auto &MMOPtrInfo = MMO->getPointerInfo();
-  auto *MBB = MI.getParent();
-  MachineFunction *MF = MBB->getParent();
-
-  for (auto &[Subcopy, SubOffset] : SubcopyMIs) {
-    // Need to adjust the v_load_idx offset.
-    assert(Offset + SubOffset / REG_SEQ_CONCAT_UNIT <
-           ST->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()));
-    MachineOperand &DefMO = Subcopy->getOperand(0);
-
-    auto NewLd =
-        BuildMI(*MBB, MI, Subcopy->getDebugLoc(), TII->get(AMDGPU::V_LOAD_IDX))
-            .add(DefMO)
-            .addReg(VirtualIDX)
-            .addImm(Offset + SubOffset / REG_SEQ_CONCAT_UNIT);
-    // Need to adjust the size and offset in MMO.
-    const TargetRegisterClass *RC = MRI->getRegClass(DefMO.getReg());
-    if (DefMO.getSubReg() != AMDGPU::NoSubRegister) {
-      RC = TRI->getSubRegisterClass(RC, DefMO.getSubReg());
-    }
-    assert(RC);
-    MachinePointerInfo NewPtrI = MMOPtrInfo.getWithOffset(SubOffset / 8);
-    NewLd->addMemOperand(
-        *MF,
-        MF->getMachineMemOperand(MMO, NewPtrI, TRI->getRegSizeInBits(*RC) / 8));
-    LLVM_DEBUG(dbgs() << "  Created: " << *NewLd);
-  }
-  // Existing SubcopyMIs should be dead. We cannot erase them due to MBB
-  // iterator. We need to null the src operands in order to erase the original
-  // V_LOAD_IDX instruction.
-  for ([[maybe_unused]] auto &[Subcopy, _] : SubcopyMIs) {
-    for (unsigned I = 0, E = Subcopy->getNumExplicitOperands(); I != E; ++I) {
-      MachineOperand &Opnd = Subcopy->getOperand(I);
-      if (Opnd.isReg())
-        Opnd.setReg(AMDGPU::NoRegister);
-    }
-  }
-  MI.eraseFromParent();
-  return true;
-}
-
 // When the data-operand of V_STORE_IDX is a REG_SEQUENCE of concatenation,
 // split it into several V_STORE_IDXs without REG_SEQUENCE. This enables the
 // bundling, and reduces the number of vgpr copies.
@@ -3004,8 +2869,6 @@ bool SIFoldOperandsImpl::tryFoldDynamicIdxMI(MachineInstr &MI,
 
     if (MI.getOpcode() == AMDGPU::V_STORE_IDX)
       Changed |= trySplitVStIdxRegSeq(MI);
-    else
-      Changed |= trySplitVLdIdxMultiRegSeq(MI);
   }
   else if (SIInstrInfo::mustHaveLanesharedResult(MI)) {
     MachineOperand *IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx),
@@ -3138,14 +3001,6 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
     MachineOperand *CurrentKnownM0Val = nullptr;
     MachineInstr *SMovImmZero = nullptr;
     for (auto &MI : make_early_inc_range(*MBB)) {
-      // Remove dead instructions due to earlier folding.
-      if ((MI.isCopyLike() || MI.isRegSequence()) &&
-          MI.getOperand(0).getReg() == AMDGPU::NoRegister) {
-        MI.eraseFromParent();
-        Changed = true;
-        continue;
-      }
-
       Changed |= tryFoldCndMask(MI);
 
       if (tryFoldZeroHighBits(MI)) {

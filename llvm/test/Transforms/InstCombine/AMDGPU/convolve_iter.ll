@@ -21,12 +21,12 @@ define <8 x half> @convolve_iter3_1(<3 x i32> %weights_0, i32 %weights_1, i32 %t
 ; CHECK-SAME: <3 x i32> [[WEIGHTS_0:%.*]], i32 [[WEIGHTS_1:%.*]], i32 [[TENSOR_0:%.*]], i32 [[TENSOR_1:%.*]], i32 [[TENSOR_2:%.*]], i32 [[TENSOR_3:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <3 x i32> [[WEIGHTS_0]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <3 x i32> [[WEIGHTS_0]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <3 x i32> [[WEIGHTS_0]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[TMP8]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP3]], i64 2
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[WEIGHTS_1]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v4i32.i32(<8 x half> zeroinitializer, <4 x i32> [[TMP7]], i32 [[TENSOR_0]], i32 [[TENSOR_1]], i32 [[TENSOR_2]], i32 [[TENSOR_3]], i32 12290, i1 true)
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <3 x i32> [[WEIGHTS_0]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[TMP8]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[TMP5]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[WEIGHTS_1]], i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v4i32.i32(<8 x half> zeroinitializer, <4 x i32> [[TMP3]], i32 [[TENSOR_0]], i32 [[TENSOR_1]], i32 [[TENSOR_2]], i32 [[TENSOR_3]], i32 12290, i1 true)
 ; CHECK-NEXT:    ret <8 x half> [[TMP2]]
 ;
   %1 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> zeroinitializer, <3 x i32> %weights_0, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef, i32 8194, i1 true)
@@ -161,16 +161,16 @@ define <8 x half> @convolve_iter7(i32 %weights_0, i32 %weights_1, i32 %weights_2
 define <8 x half> @convolve_iter8(i32 %weights_0, i32 %weights_1, i32 %weights_2, i32 %weights_3, i32 %weights_4, i32 %weights_5, i32 %weights_6, i32 %weights_7, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 %tensor_3, i32 %tensor_4, i32 %tensor_5, i32 %tensor_6, i32 %tensor_7) {
 ; CHECK-LABEL: define <8 x half> @convolve_iter8(
 ; CHECK-SAME: i32 [[WEIGHTS_0:%.*]], i32 [[WEIGHTS_1:%.*]], i32 [[WEIGHTS_2:%.*]], i32 [[WEIGHTS_3:%.*]], i32 [[WEIGHTS_4:%.*]], i32 [[WEIGHTS_5:%.*]], i32 [[WEIGHTS_6:%.*]], i32 [[WEIGHTS_7:%.*]], i32 [[TENSOR_0:%.*]], i32 [[TENSOR_1:%.*]], i32 [[TENSOR_2:%.*]], i32 [[TENSOR_3:%.*]], i32 [[TENSOR_4:%.*]], i32 [[TENSOR_5:%.*]], i32 [[TENSOR_6:%.*]], i32 [[TENSOR_7:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[WEIGHTS_0]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[WEIGHTS_1]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[WEIGHTS_2]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[WEIGHTS_3]], i64 3
-; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v4i32.i32(<8 x half> zeroinitializer, <4 x i32> [[TMP4]], i32 [[TENSOR_0]], i32 [[TENSOR_1]], i32 [[TENSOR_2]], i32 [[TENSOR_3]], i32 12290, i1 true)
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> poison, i32 [[WEIGHTS_4]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[WEIGHTS_5]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[WEIGHTS_6]], i64 2
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[WEIGHTS_7]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v4i32.i32(<8 x half> [[TMP5]], <4 x i32> [[TMP9]], i32 [[TENSOR_4]], i32 [[TENSOR_5]], i32 [[TENSOR_6]], i32 [[TENSOR_7]], i32 12290, i1 true)
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[WEIGHTS_0]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[WEIGHTS_1]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[WEIGHTS_2]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[WEIGHTS_3]], i64 3
+; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v4i32.i32(<8 x half> zeroinitializer, <4 x i32> [[TMP8]], i32 [[TENSOR_0]], i32 [[TENSOR_1]], i32 [[TENSOR_2]], i32 [[TENSOR_3]], i32 12290, i1 true)
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> poison, i32 [[WEIGHTS_4]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[WEIGHTS_5]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[WEIGHTS_6]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[WEIGHTS_7]], i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v4i32.i32(<8 x half> [[TMP9]], <4 x i32> [[TMP4]], i32 [[TENSOR_4]], i32 [[TENSOR_5]], i32 [[TENSOR_6]], i32 [[TENSOR_7]], i32 12290, i1 true)
 ; CHECK-NEXT:    ret <8 x half> [[TMP2]]
 ;
   %1 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> zeroinitializer, i32 %weights_0, i32 %tensor_0, i32 undef, i32 undef, i32 undef, i32 2, i1 true)
@@ -213,183 +213,4 @@ define <8 x half> @convolve_iter10(i32 %weights_0, i32 %weights_1, i32 %weights_
   %9 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> %8, i32 %weights_8, i32 %tensor_8, i32 undef, i32 undef, i32 undef, i32 2, i1 true)
   %10 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> %9, i32 %weights_9, i32 %tensor_9, i32 undef, i32 undef, i32 undef, i32 2, i1 true)
   ret <8 x half> %10
-}
-
-@ls_storage = external hidden local_unnamed_addr addrspace(10) global [560 x i32], align 16
-
-define void @convolve_ls_gep(){
-; CHECK-LABEL: define void @convolve_ls_gep(
-; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    store <8 x half> zeroinitializer, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1152), align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(10) @ls_storage, align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1156), align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 96), align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP3]], i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> zeroinitializer, <2 x i32> [[TMP6]], i32 [[TMP2]], i32 [[TMP4]], i32 poison, i32 poison, i32 4098, i1 true)
-; CHECK-NEXT:    store <8 x half> [[TMP7]], ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-; CHECK-NEXT:    ret void
-;
-  store <8 x half> zeroinitializer, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-  %1 = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1152), align 16
-  %2 = load i32, ptr addrspace(10) @ls_storage, align 4
-  %3 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> zeroinitializer, i32 %1, i32 %2, i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-  %4 = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1156), align 4
-  %5 = getelementptr inbounds nuw i8, ptr addrspace(10) @ls_storage, i32 96
-  %6 = load i32, ptr addrspace(10) %5, align 4
-  %7 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> %3, i32 %4, i32 %6, i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-  store <8 x half> %7, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-  ret void
-}
-
-define void @convolve_ls_gep_non_constant(i32 %offset1, i32 %offset2) {
-; CHECK-LABEL: define void @convolve_ls_gep_non_constant(
-; CHECK-SAME: i32 [[OFFSET1:%.*]], i32 [[OFFSET2:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <8 x half> zeroinitializer, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(10) @ls_storage, i32 [[OFFSET1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(10) [[PTR]], align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(10) @ls_storage, align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> zeroinitializer, i32 [[TMP1]], i32 [[TMP2]], i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(10) @ls_storage, i32 [[OFFSET2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(10) [[PTR1]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 96), align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> [[TMP5]], i32 [[TMP3]], i32 [[TMP4]], i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-; CHECK-NEXT:    store <8 x half> [[TMP7]], ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-; CHECK-NEXT:    ret void
-;
-  store <8 x half> zeroinitializer, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-  %ptr = getelementptr inbounds nuw i8, ptr addrspace(10) @ls_storage, i32 %offset1
-  %1 = load i32, ptr addrspace(10) %ptr, align 16
-  %2 = load i32, ptr addrspace(10) @ls_storage, align 4
-  %3 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> zeroinitializer, i32 %1, i32 %2, i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-  %ptr1 = getelementptr inbounds nuw i8, ptr addrspace(10) @ls_storage, i32 %offset2
-  %4 = load i32, ptr addrspace(10) %ptr1, align 4
-  %5 = getelementptr inbounds nuw i8, ptr addrspace(10) @ls_storage, i32 96
-  %6 = load i32, ptr addrspace(10) %5, align 4
-  %7 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> %3, i32 %4, i32 %6, i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-  store <8 x half> %7, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-  ret void
-}
-
-define void @convolve_ls_gep_non_consecutive() {
-; CHECK-LABEL: define void @convolve_ls_gep_non_consecutive(
-; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    store <8 x half> zeroinitializer, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1152), align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(10) @ls_storage, align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> zeroinitializer, i32 [[TMP1]], i32 [[TMP2]], i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1157), align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 96), align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> [[TMP3]], i32 [[TMP4]], i32 [[TMP5]], i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-; CHECK-NEXT:    store <8 x half> [[TMP6]], ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-; CHECK-NEXT:    ret void
-;
-  store <8 x half> zeroinitializer, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-  %1 = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1152), align 16
-  %2 = load i32, ptr addrspace(10) @ls_storage, align 4
-  %3 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> zeroinitializer, i32 %1, i32 %2, i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-  %4 = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1157), align 4
-  %5 = getelementptr inbounds nuw i8, ptr addrspace(10) @ls_storage, i32 96
-  %6 = load i32, ptr addrspace(10) %5, align 4
-  %7 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> %3, i32 %4, i32 %6, i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-  store <8 x half> %7, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-  ret void
-}
-
-define void @convolve_ls_non_ls(i32 %weights_1, i32 %tensor_1) {
-; CHECK-LABEL: define void @convolve_ls_non_ls(
-; CHECK-SAME: i32 [[WEIGHTS_1:%.*]], i32 [[TENSOR_1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <8 x half> zeroinitializer, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1152), align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(10) @ls_storage, align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1156), align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 96), align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[TMP4]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> zeroinitializer, <2 x i32> [[TMP6]], i32 [[TMP2]], i32 [[TMP5]], i32 poison, i32 poison, i32 4098, i1 true)
-; CHECK-NEXT:    [[TMP7:%.*]] = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> [[TMP9]], i32 [[WEIGHTS_1]], i32 [[TENSOR_1]], i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-; CHECK-NEXT:    store <8 x half> [[TMP7]], ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-; CHECK-NEXT:    ret void
-;
-  store <8 x half> zeroinitializer, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-  %1 = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1152), align 16
-  %2 = load i32, ptr addrspace(10) @ls_storage, align 4
-  %3 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> zeroinitializer, i32 %1, i32 %2, i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-  %4 = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1156), align 4
-  %5 = getelementptr inbounds nuw i8, ptr addrspace(10) @ls_storage, i32 96
-  %6 = load i32, ptr addrspace(10) %5, align 4
-  %7 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> %3, i32 %4, i32 %6, i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-  %8 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> %7, i32 %weights_1, i32 %tensor_1, i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-  store <8 x half> %8, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-  ret void
-}
-
-define void @convolve_ls_no_gep_non_ls(i32 %weights_1, i32 %tensor_1, i32 %tensor_2) {
-; CHECK-LABEL: define void @convolve_ls_no_gep_non_ls(
-; CHECK-SAME: i32 [[WEIGHTS_1:%.*]], i32 [[TENSOR_1:%.*]], i32 [[TENSOR_2:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <8 x half> zeroinitializer, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(10) @ls_storage, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> zeroinitializer, i32 [[TMP1]], i32 [[TENSOR_1]], i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> [[TMP2]], i32 [[WEIGHTS_1]], i32 [[TENSOR_2]], i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-; CHECK-NEXT:    store <8 x half> [[TMP3]], ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-; CHECK-NEXT:    ret void
-;
-  store <8 x half> zeroinitializer, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-  %1 = load i32, ptr addrspace(10) @ls_storage, align 4
-  %2 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> zeroinitializer, i32 %1, i32 %tensor_1, i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-  %3 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> %2, i32 %weights_1, i32 %tensor_2, i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-  store <8 x half> %3, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-  ret void
-}
-
-define void @convolve_base_then_offset(){
-; CHECK-LABEL: define void @convolve_base_then_offset(
-; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    store <8 x half> zeroinitializer, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(10) @ls_storage, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 92), align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 4), align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 96), align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP3]], i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> zeroinitializer, <2 x i32> [[TMP6]], i32 [[TMP2]], i32 [[TMP4]], i32 poison, i32 poison, i32 4098, i1 true)
-; CHECK-NEXT:    store <8 x half> [[TMP7]], ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-; CHECK-NEXT:    ret void
-;
-  store <8 x half> zeroinitializer, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-  %1 = load i32, ptr addrspace(10) @ls_storage, align 4
-  %2 = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 92), align 16
-  %3 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> zeroinitializer, i32 %1, i32 %2, i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-  %4 = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 4), align 4
-  %5 = getelementptr inbounds nuw i8, ptr addrspace(10) @ls_storage, i32 96
-  %6 = load i32, ptr addrspace(10) %5, align 4
-  %7 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> %3, i32 %4, i32 %6, i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-  store <8 x half> %7, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-  ret void
-}
-
-define void @convolve_base_then_wrong_offset(){
-; CHECK-LABEL: define void @convolve_base_then_wrong_offset(
-; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    store <8 x half> zeroinitializer, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(10) @ls_storage, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 92), align 16
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> zeroinitializer, i32 [[TMP1]], i32 [[TMP2]], i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 6), align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 96), align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> [[TMP5]], i32 [[TMP3]], i32 [[TMP4]], i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-; CHECK-NEXT:    store <8 x half> [[TMP7]], ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-; CHECK-NEXT:    ret void
-;
-  store <8 x half> zeroinitializer, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-  %1 = load i32, ptr addrspace(10) @ls_storage, align 4
-  %2 = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 92), align 16
-  %3 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> zeroinitializer, i32 %1, i32 %2, i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-  %4 = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 6), align 4
-  %5 = getelementptr inbounds nuw i8, ptr addrspace(10) @ls_storage, i32 96
-  %6 = load i32, ptr addrspace(10) %5, align 4
-  %7 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> %3, i32 %4, i32 %6, i32 undef, i32 undef, i32 undef, i32 2, i1 true)
-  store <8 x half> %7, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
-  ret void
 }

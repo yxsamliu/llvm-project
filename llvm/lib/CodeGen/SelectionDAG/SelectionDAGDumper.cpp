@@ -84,7 +84,6 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
 #endif
   case ISD::PREFETCH:                   return "Prefetch";
   case ISD::MEMBARRIER:                 return "MemBarrier";
-  case ISD::PROVENANCE_END:             return "ProvenanceEnd";
   case ISD::ATOMIC_FENCE:               return "AtomicFence";
   case ISD::ATOMIC_CMP_SWAP:            return "AtomicCmpSwap";
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS: return "AtomicCmpSwapWithSuccess";
@@ -1062,24 +1061,13 @@ static void DumpNodes(const SDNode *N, unsigned indent, const SelectionDAG *G) {
   N->dump(G);
 }
 
-LLVM_DUMP_METHOD void SelectionDAG::dump(bool Sorted) const {
+LLVM_DUMP_METHOD void SelectionDAG::dump() const {
   dbgs() << "SelectionDAG has " << AllNodes.size() << " nodes:\n";
 
-  auto dumpEachNode = [this](const SDNode &N) {
+  for (const SDNode &N : allnodes()) {
     if (!N.hasOneUse() && &N != getRoot().getNode() &&
         (!shouldPrintInline(N, this) || N.use_empty()))
       DumpNodes(&N, 2, this);
-  };
-
-  if (Sorted) {
-    SmallVector<const SDNode *> SortedNodes;
-    SortedNodes.reserve(AllNodes.size());
-    getTopologicallyOrderedNodes(SortedNodes);
-    for (const SDNode *N : SortedNodes)
-      dumpEachNode(*N);
-  } else {
-    for (const SDNode &N : allnodes())
-      dumpEachNode(N);
   }
 
   if (getRoot().getNode()) DumpNodes(getRoot().getNode(), 2, this);

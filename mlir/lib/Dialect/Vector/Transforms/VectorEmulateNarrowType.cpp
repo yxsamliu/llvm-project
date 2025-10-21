@@ -796,7 +796,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
                                currentSourceIndex, remainingElements, 0);
 
       // Generate back mask.
-      auto maskValues = SmallVector<bool>(emulatedPerContainerElem, false);
+      auto maskValues = SmallVector<bool>(emulatedPerContainerElem, 0);
       std::fill_n(maskValues.begin(), remainingElements, 1);
       auto backMask = arith::ConstantOp::create(
           rewriter, loc,

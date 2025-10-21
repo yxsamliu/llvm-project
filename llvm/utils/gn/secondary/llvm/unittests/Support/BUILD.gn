@@ -56,7 +56,6 @@ unittest("SupportTests") {
     "InstructionCostTest.cpp",
     "InterleavedRangeTest.cpp",
     "JSONTest.cpp",
-    "JobserverTest.cpp",
     "KnownBitsTest.cpp",
     "LEB128Test.cpp",
     "LineIteratorTest.cpp",
