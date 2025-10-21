@@ -562,29 +562,9 @@ Value *AMDGPUAtomicOptimizerImpl::buildShiftRight(IRBuilder<> &B, Value *V,
                      {Identity, V, B.getInt32(DPP::WAVE_SHR1), B.getInt32(0xf),
                       B.getInt32(0xf), B.getFalse()});
   } else if (ST.hasPermlaneUp() && ST.isWave32()) {
-    unsigned BitWidth = AtomicTy->getPrimitiveSizeInBits();
-    Type *IntTy = B.getIntNTy(BitWidth);
-    Value *IntV = B.CreateBitCast(V, IntTy);
-    if (BitWidth == 32) {
-      IntV = B.CreateIntrinsic(
-          IntTy, Intrinsic::amdgcn_permlane_up,
-          {IntV, B.getInt32(1), B.getInt32(ST.getWavefrontSize())});
-    } else {
-      assert(BitWidth == 64);
-      Value *LowVal = B.CreateTrunc(IntV, B.getInt32Ty());
-      Value *HighVal = B.CreateTrunc(B.CreateLShr(IntV, 32), B.getInt32Ty());
-      Value *ShiftedLow = B.CreateIntrinsic(
-          B.getInt32Ty(), Intrinsic::amdgcn_permlane_up,
-          {LowVal, B.getInt32(1), B.getInt32(ST.getWavefrontSize())});
-      Value *ShiftedHigh = B.CreateIntrinsic(
-          B.getInt32Ty(), Intrinsic::amdgcn_permlane_up,
-          {HighVal, B.getInt32(1), B.getInt32(ST.getWavefrontSize())});
-      ShiftedLow = B.CreateZExt(ShiftedLow, B.getInt64Ty());
-      ShiftedHigh = B.CreateZExt(ShiftedHigh, B.getInt64Ty());
-      ShiftedHigh = B.CreateShl(ShiftedHigh, 32);
-      IntV = B.CreateOr(ShiftedLow, ShiftedHigh);
-    }
-    V = B.CreateBitCast(IntV, AtomicTy);
+    V = B.CreateIntrinsic(
+        AtomicTy, Intrinsic::amdgcn_permlane_up,
+        {V, B.getInt32(1), B.getInt32(ST.getWavefrontSize())});
     V = B.CreateIntrinsic(AtomicTy, Intrinsic::amdgcn_writelane,
                           {Identity, B.getInt32(0), V});
   } else {
