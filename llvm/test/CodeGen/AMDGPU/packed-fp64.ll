@@ -42,6 +42,22 @@ define amdgpu_kernel void @fadd_v2_vs(ptr addrspace(1) %a, <2 x double> %x) {
   ret void
 }
 
+define amdgpu_kernel void @fadd_v2_ss(ptr addrspace(1) %a, <2 x double> %x, <2 x double> %y) {
+; GFX1251-LABEL: fadd_v2_ss:
+; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_clause 0x1
+; GFX1251-NEXT:    s_load_b256 s[8:15], s[4:5], 0x34
+; GFX1251-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1251-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1251-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-NEXT:    v_pk_add_f64 v[0:3], s[8:11], s[12:15]
+; GFX1251-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX1251-NEXT:    s_endpgm
+  %add = fadd <2 x double> %x, %y
+  store <2 x double> %add, ptr addrspace(1) %a, align 8
+  ret void
+}
+
 define amdgpu_kernel void @fadd_v4_vs(ptr addrspace(1) %a, <4 x double> %x) {
 ; GFX1251-LABEL: fadd_v4_vs:
 ; GFX1251:       ; %bb.0:
@@ -704,6 +720,22 @@ define amdgpu_kernel void @fmul_v2_vs(ptr addrspace(1) %a, <2 x double> %x) {
   ret void
 }
 
+define amdgpu_kernel void @fmul_v2_ss(ptr addrspace(1) %a, <2 x double> %x, <2 x double> %y) {
+; GFX1251-LABEL: fmul_v2_ss:
+; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_clause 0x1
+; GFX1251-NEXT:    s_load_b256 s[8:15], s[4:5], 0x34
+; GFX1251-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1251-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1251-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-NEXT:    v_pk_mul_f64 v[0:3], s[8:11], s[12:15]
+; GFX1251-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX1251-NEXT:    s_endpgm
+  %mul = fmul <2 x double> %x, %y
+  store <2 x double> %mul, ptr addrspace(1) %a, align 8
+  ret void
+}
+
 define amdgpu_kernel void @fmul_v4_vs(ptr addrspace(1) %a, <4 x double> %x) {
 ; GFX1251-LABEL: fmul_v4_vs:
 ; GFX1251:       ; %bb.0:
@@ -1123,6 +1155,41 @@ define amdgpu_kernel void @fma_v2_vs(ptr addrspace(1) %a, <2 x double> %x) {
   %load = load <2 x double>, ptr addrspace(1) %gep, align 8
   %fma = tail call <2 x double> @llvm.fma.v2f64(<2 x double> %load, <2 x double> %x, <2 x double> %x)
   store <2 x double> %fma, ptr addrspace(1) %gep, align 8
+  ret void
+}
+
+define amdgpu_kernel void @fma_v2_ss(ptr addrspace(1) %a, <2 x double> %x, <2 x double> %y, <2 x double> %z) {
+; GFX1251-SDAG-LABEL: fma_v2_ss:
+; GFX1251-SDAG:       ; %bb.0:
+; GFX1251-SDAG-NEXT:    s_clause 0x2
+; GFX1251-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x54
+; GFX1251-SDAG-NEXT:    s_load_b256 s[8:15], s[4:5], 0x34
+; GFX1251-SDAG-NEXT:    s_load_b64 s[6:7], s[4:5], 0x24
+; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-SDAG-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v0, s0
+; GFX1251-SDAG-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v2, s2
+; GFX1251-SDAG-NEXT:    v_mov_b32_e32 v3, s3
+; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-SDAG-NEXT:    v_pk_fma_f64 v[0:3], s[8:11], s[12:15], v[0:3]
+; GFX1251-SDAG-NEXT:    global_store_b128 v4, v[0:3], s[6:7]
+; GFX1251-SDAG-NEXT:    s_endpgm
+;
+; GFX1251-GISEL-LABEL: fma_v2_ss:
+; GFX1251-GISEL:       ; %bb.0:
+; GFX1251-GISEL-NEXT:    s_clause 0x2
+; GFX1251-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x54
+; GFX1251-GISEL-NEXT:    s_load_b256 s[8:15], s[4:5], 0x34
+; GFX1251-GISEL-NEXT:    s_load_b64 s[6:7], s[4:5], 0x24
+; GFX1251-GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-GISEL-NEXT:    v_pk_fma_f64 v[0:3], s[8:11], s[12:15], v[0:3]
+; GFX1251-GISEL-NEXT:    global_store_b128 v4, v[0:3], s[6:7]
+; GFX1251-GISEL-NEXT:    s_endpgm
+  %fma = tail call <2 x double> @llvm.fma.v2f64(<2 x double> %x, <2 x double> %y, <2 x double> %z)
+  store <2 x double> %fma, ptr addrspace(1) %a, align 8
   ret void
 }
 
