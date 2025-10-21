@@ -1337,6 +1337,10 @@ enum NodeType {
   /// MEMBARRIER - Compiler barrier only; generate a no-op.
   MEMBARRIER,
 
+  /// PROVENANCE_END - Its purpose is to act as a barrier for provenance
+  /// of its pointer operand. It will generate a no-op.
+  PROVENANCE_END,
+
   /// OUTCHAIN = ATOMIC_FENCE(INCHAIN, ordering, scope)
   /// This corresponds to the fence instruction. It takes an input chain, and
   /// two integer constants: an AtomicOrdering and a SynchronizationScope.

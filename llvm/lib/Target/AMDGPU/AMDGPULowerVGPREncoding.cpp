@@ -564,7 +564,9 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(
     }
 
     // VOPM will not read or write the MODE register.
-    if (AMDGPU::isVOPMPseudo(CoreMI->getOpcode()))
+    // VNBR can encode all VGPRs.
+    if (AMDGPU::isVOPMPseudo(CoreMI->getOpcode()) ||
+        AMDGPU::isVNBR(CoreMI->getOpcode()))
       continue;
 
     std::optional<unsigned> MSBits;
