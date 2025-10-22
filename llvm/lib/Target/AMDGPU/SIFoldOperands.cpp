@@ -89,9 +89,7 @@ struct FoldableDef {
 
   bool isImm() const { return Kind == MachineOperand::MO_Immediate; }
 
-  bool isFI() const {
-    return Kind == MachineOperand::MO_FrameIndex;
-  }
+  bool isFI() const { return Kind == MachineOperand::MO_FrameIndex; }
 
   int getFI() const {
     assert(isFI());
@@ -260,6 +258,7 @@ public:
   bool tryFoldRegSequence(MachineInstr &MI);
   bool tryFoldPhiAGPR(MachineInstr &MI);
   bool tryFoldLoad(MachineInstr &MI);
+  bool tryFoldMiscCombinations(MachineInstr &MI);
 
   bool tryOptimizeAGPRPhis(MachineBasicBlock &MBB);
 
@@ -653,7 +652,7 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
     if (HaveNonDbgCarryUse) {
       BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::COPY),
               Dst1.getReg())
-        .addReg(AMDGPU::VCC, RegState::Kill);
+          .addReg(AMDGPU::VCC, RegState::Kill);
     }
 
     // Keep the old instruction around to avoid breaking iterators, but
@@ -1425,7 +1424,7 @@ void SIFoldOperandsImpl::foldOperand(
     if (UseOpc == AMDGPU::V_READFIRSTLANE_B32 ||
         (UseOpc == AMDGPU::V_READLANE_B32 &&
          (int)UseOpIdx ==
-         AMDGPU::getNamedOperandIdx(UseOpc, AMDGPU::OpName::src0))) {
+             AMDGPU::getNamedOperandIdx(UseOpc, AMDGPU::OpName::src0))) {
       // %vgpr = V_MOV_B32 imm
       // %sgpr = V_READFIRSTLANE_B32 %vgpr
       // =>
@@ -1652,8 +1651,7 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
   }
 
   int32_t Src1Val = static_cast<int32_t>(*Src1Imm);
-  if (Opc == AMDGPU::V_OR_B32_e64 ||
-      Opc == AMDGPU::V_OR_B32_e32 ||
+  if (Opc == AMDGPU::V_OR_B32_e64 || Opc == AMDGPU::V_OR_B32_e32 ||
       Opc == AMDGPU::S_OR_B32) {
     if (Src1Val == 0) {
       // y = or x, 0 => y = copy x
@@ -2127,8 +2125,7 @@ SIFoldOperandsImpl::isClamp(const MachineInstr &MI) const {
     // Make sure sources are identical.
     const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
     const MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
-    if (!Src0->isReg() || !Src1->isReg() ||
-        Src0->getReg() != Src1->getReg() ||
+    if (!Src0->isReg() || !Src1->isReg() || Src0->getReg() != Src1->getReg() ||
         Src0->getSubReg() != Src1->getSubReg() ||
         Src0->getSubReg() != AMDGPU::NoSubRegister)
       return nullptr;
@@ -2137,10 +2134,10 @@ SIFoldOperandsImpl::isClamp(const MachineInstr &MI) const {
     if (TII->hasModifiersSet(MI, AMDGPU::OpName::omod))
       return nullptr;
 
-    unsigned Src0Mods
-      = TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm();
-    unsigned Src1Mods
-      = TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers)->getImm();
+    unsigned Src0Mods =
+        TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm();
+    unsigned Src1Mods =
+        TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers)->getImm();
 
     // Having a 0 op_sel_hi would require swizzling the output in the source
     // instruction, which we can't do.
@@ -2387,7 +2384,7 @@ bool SIFoldOperandsImpl::tryFoldRegSequence(MachineInstr &MI) {
       !MRI->hasOneNonDBGUse(Reg))
     return false;
 
-  SmallVector<std::pair<MachineOperand*, unsigned>, 32> Defs;
+  SmallVector<std::pair<MachineOperand *, unsigned>, 32> Defs;
   if (!getRegSeqInit(Defs, Reg))
     return false;
 
@@ -2780,6 +2777,64 @@ bool SIFoldOperandsImpl::tryOptimizeAGPRPhis(MachineBasicBlock &MBB) {
   return Changed;
 }
 
+// If there is a pattern like this:
+// %0:vreg = REG_SEQUENCE %1:vgpr_32, %subreg.sub0, %2:vgpr_32, %subreg.sub1,
+// %3:sgpr_32 = V_READFIRSTLANE_B32 %0.sub0:vreg
+// %4:sgpr_32 = V_READFIRSTLANE_B32 %0.sub1:vreg
+
+// =>
+
+// %0:vreg = REG_SEQUENCE %1:vgpr_32, %subreg.sub0, %2:vgpr_32, %subreg.sub1,
+// %3:sgpr_32 = V_READFIRSTLANE_B32 %1:vgpr_32
+// %4:sgpr_32 = V_READFIRSTLANE_B32 %2:vgpr_32
+
+// This allows the second pass through si-fold-operands to fold READFIRSTLANEs
+// into COPYs.
+bool SIFoldOperandsImpl::tryFoldMiscCombinations(MachineInstr &MI) {
+  MachineOperand *SrcMO = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
+  if (!SrcMO->isReg())
+    return false;
+
+  bool FoundRegSeqWithRFLSrc = false;
+  unsigned SrcReg = SrcMO->getReg();
+  unsigned SubRegIdx = SrcMO->getSubReg();
+  auto It = MI.getIterator();
+  auto Begin = MI.getParent()->begin();
+  for (; It != Begin; --It) {
+    MachineInstr &PrevMI = *std::prev(It);
+    for (const MachineOperand &DefOp : PrevMI.defs()) {
+      if (!DefOp.isReg())
+        break;
+      unsigned DefReg = DefOp.getReg();
+      if (DefReg && TRI->regsOverlap(DefReg, SrcReg)) {
+        if (!PrevMI.isRegSequence())
+          break;
+
+        for (unsigned i = 1; i + 1 < PrevMI.getNumOperands(); i += 2) {
+          MachineOperand &PrevMO = PrevMI.getOperand(i);
+
+          const MachineOperand &SubRegMO = PrevMI.getOperand(i + 1);
+          if (SubRegMO.isImm() && (SubRegMO.getImm() == SubRegIdx)) {
+            SrcMO->setReg(PrevMO.getReg());
+            SrcMO->setSubReg(PrevMO.getSubReg());
+            if (PrevMO.isKill()) {
+              PrevMO.setIsKill(false);
+              SrcMO->setIsKill(true);
+            }
+            FoundRegSeqWithRFLSrc = true;
+            break;
+          }
+        }
+      }
+    }
+    if (FoundRegSeqWithRFLSrc)
+      break;
+  }
+  LLVM_DEBUG(dbgs() << "Folded " << MI);
+
+  return FoundRegSeqWithRFLSrc;
+}
+
 bool SIFoldOperandsImpl::run(MachineFunction &MF) {
   this->MF = &MF;
   MRI = &MF.getRegInfo();
@@ -2823,6 +2878,11 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
 
       if (TII->isFoldableCopy(MI)) {
         Changed |= tryFoldFoldableCopy(MI, CurrentKnownM0Val);
+        continue;
+      }
+      unsigned UseOpc = MI.getOpcode();
+      if (UseOpc == AMDGPU::V_READFIRSTLANE_B32) {
+        Changed |= tryFoldMiscCombinations(MI);
         continue;
       }
 
