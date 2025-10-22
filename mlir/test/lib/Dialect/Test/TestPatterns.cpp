@@ -143,7 +143,8 @@ public:
 
   LogicalResult matchAndRewrite(TestCommutative2Op op,
                                 PatternRewriter &rewriter) const override {
-    auto operand = op->getOperand(0).getDefiningOp<TestCommutative2Op>();
+    auto operand =
+        dyn_cast_or_null<TestCommutative2Op>(op->getOperand(0).getDefiningOp());
     if (!operand)
       return failure();
     Attribute constInput;
