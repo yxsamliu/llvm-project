@@ -1199,6 +1199,92 @@ body:             |
 ...
 
 ---
+name:            two-bundles-interleave
+machineFunctionInfo:
+  laneSharedVGPRSize: 1000
+  stackPtrOffsetReg: '$sgpr32'
+  frameOffsetReg: '$sgpr33'
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    ; GCN-LABEL: name: two-bundles-interleave
+    ; GCN: liveins: $sgpr0_sgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    ; GCN-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 8, 0
+    ; GCN-NEXT: [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 -1, 0, implicit $exec
+    ; GCN-NEXT: [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 3, [[V_MBCNT_LO_U32_B32_e64_]], implicit $exec
+    ; GCN-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[V_LSHLREV_B32_e64_]], 8, implicit $exec
+    ; GCN-NEXT: [[V_LSHLREV_B32_e64_1:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 2, [[V_AND_B32_e64_]], implicit $exec
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+    ; GCN-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[S_LOAD_DWORDX2_IMM]], implicit [[V_LSHLREV_B32_e64_1]], implicit $exec, implicit [[S_MOV_B32_]] {
+    ; GCN-NEXT:   $stg_dsta = GLOBAL_LOAD_DWORDX4_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_LSHLREV_B32_e64_1]], 80, 0, implicit $exec :: (load (s128), addrspace 1)
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_MOV_B32_]], 28, implicit $exec :: (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @0, i32 96)` + 16, basealign 32, addrspace 10)
+    ; GCN-NEXT: }
+    ; GCN-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[S_LOAD_DWORDX2_IMM]], implicit [[V_LSHLREV_B32_e64_1]], implicit $exec, implicit [[S_MOV_B32_]] {
+    ; GCN-NEXT:   $stg_dsta = GLOBAL_LOAD_DWORDX4_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_LSHLREV_B32_e64_1]], 64, 0, implicit $exec :: (load (s128), addrspace 1)
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_MOV_B32_]], 24, implicit $exec :: (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @1, i32 96)`, align 32, addrspace 10)
+    ; GCN-NEXT: }
+    ; GCN-NEXT: SI_RETURN
+    ;
+    ; ALLOC-LABEL: name: two-bundles-interleave
+    ; ALLOC: liveins: $sgpr0_sgpr1
+    ; ALLOC-NEXT: {{  $}}
+    ; ALLOC-NEXT: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    ; ALLOC-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 8, 0
+    ; ALLOC-NEXT: [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 -1, 0, implicit $exec
+    ; ALLOC-NEXT: [[V_LSHLREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 3, [[V_MBCNT_LO_U32_B32_e64_]], implicit $exec
+    ; ALLOC-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 8, [[V_LSHLREV_B32_e32_]], implicit $exec
+    ; ALLOC-NEXT: [[V_LSHLREV_B32_e32_1:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e32 2, [[V_AND_B32_e32_]], implicit $exec
+    ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 0
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[S_LOAD_DWORDX2_IMM]], implicit [[V_LSHLREV_B32_e32_1]], implicit $exec, implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_dsta = GLOBAL_LOAD_DWORDX4_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_LSHLREV_B32_e32_1]], 80, 0, implicit $exec :: (load (s128), addrspace 1)
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 28, implicit $exec :: (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @0, i32 96)` + 16, basealign 32, addrspace 10)
+    ; ALLOC-NEXT: }
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[S_LOAD_DWORDX2_IMM]], implicit [[V_LSHLREV_B32_e32_1]], implicit $exec, implicit $idx1 {
+    ; ALLOC-NEXT:   $stg_dsta = GLOBAL_LOAD_DWORDX4_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_LSHLREV_B32_e32_1]], 64, 0, implicit $exec :: (load (s128), addrspace 1)
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 24, implicit $exec :: (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @1, i32 96)`, align 32, addrspace 10)
+    ; ALLOC-NEXT: }
+    ; ALLOC-NEXT: SI_RETURN
+    ;
+    ; LOWERED-LABEL: name: two-bundles-interleave
+    ; LOWERED: liveins: $sgpr0_sgpr1
+    ; LOWERED-NEXT: {{  $}}
+    ; LOWERED-NEXT: S_WAIT_LOADCNT_DSCNT 0
+    ; LOWERED-NEXT: S_WAIT_EXPCNT 0
+    ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
+    ; LOWERED-NEXT: S_WAIT_BVHCNT 0
+    ; LOWERED-NEXT: S_WAIT_KMCNT 0
+    ; LOWERED-NEXT: renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr0_sgpr1, 8, 0
+    ; LOWERED-NEXT: renamable $vgpr0 = V_MBCNT_LO_U32_B32_e64 -1, 0, implicit $exec
+    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 0
+    ; LOWERED-NEXT: renamable $vgpr0 = V_LSHLREV_B32_e32 3, killed $vgpr0, implicit $exec
+    ; LOWERED-NEXT: renamable $vgpr0 = V_AND_B32_e32 8, killed $vgpr0, implicit $exec
+    ; LOWERED-NEXT: renamable $vgpr0 = nuw nsw V_LSHLREV_B32_e32 2, killed $vgpr0, implicit $exec
+    ; LOWERED-NEXT: S_WAIT_KMCNT 0
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 64
+    ; LOWERED-NEXT: undef $vgpr28_vgpr29_vgpr30_vgpr31 = GLOBAL_LOAD_DWORDX4_SADDR renamable $sgpr0_sgpr1, renamable $vgpr0, 80, 0, <0x{{[0-9a-f]+}}>, implicit $exec :: (load (s128), addrspace 1)
+    ; LOWERED-NEXT: undef $vgpr24_vgpr25_vgpr26_vgpr27 = GLOBAL_LOAD_DWORDX4_SADDR killed renamable $sgpr0_sgpr1, killed renamable $vgpr0, 64, 0, <0x{{[0-9a-f]+}}>, implicit $exec :: (load (s128), addrspace 1)
+    ; LOWERED-NEXT: S_WAIT_LOADCNT 0
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
+    ; LOWERED-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31
+    %0:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %1:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM %0(p4), 8, 0
+    %4:vgpr_32 = V_MBCNT_LO_U32_B32_e64 -1, 0, implicit $exec
+    %6:vgpr_32 = V_LSHLREV_B32_e64 3, %4, implicit $exec
+    %8:vgpr_32 = V_AND_B32_e64 %6, 8, implicit $exec
+    %10:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 2, %8, implicit $exec
+    %11:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %1, %10, 80, 0, implicit $exec :: (load (s128), addrspace 1)
+    %12:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %1, %10, 64, 0, implicit $exec :: (load (s128), addrspace 1)
+    %16:sgpr_32 = S_MOV_B32 0
+    V_STORE_IDX %11, %16, 28, implicit $exec :: (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @0, i32 96)` + 16, basealign 32, addrspace 10)
+    V_STORE_IDX %12, %16, 24, implicit $exec :: (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @0, i32 96)`, align 32, addrspace 10)
+    SI_RETURN
+
+...
+---
 name:            same-bb-wide-load-store
 machineFunctionInfo:
   laneSharedVGPRSize: 1000
