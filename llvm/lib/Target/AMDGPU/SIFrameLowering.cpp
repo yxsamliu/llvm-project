@@ -12,17 +12,12 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
-<<<<<<< HEAD
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/CodeGen/LiveRegUnits.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineInstrBundle.h"
-=======
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
->>>>>>> 51ec013937a0ce38847cd0ec03ebf5ba0dcb0041
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Target/TargetMachine.h"
@@ -56,7 +51,6 @@ static MCRegister findUnusedRegister(MachineRegisterInfo &MRI,
   return MCRegister();
 }
 
-<<<<<<< HEAD
 // Allocate a scratch register for use at a single point in the program,
 // tracking available live units.
 static MCRegister allocScratchRegister(MachineRegisterInfo &MRI,
@@ -70,7 +64,8 @@ static MCRegister allocScratchRegister(MachineRegisterInfo &MRI,
   }
 
   llvm_unreachable("unable to find a scratch register");
-=======
+}
+
 static bool needsFrameMoves(const MachineFunction &MF) {
   // FIXME: There are some places in the compiler which are sensitive to the CFI
   // pseudos and so using MachineFunction::needsFrameMoves has the unintended
@@ -142,7 +137,6 @@ void SIFrameLowering::emitDefCFA(MachineBasicBlock &MBB,
                  : MCCFIInstruction::createDefCfaRegister(nullptr,
                                                           DwarfStackPtrReg));
   buildCFI(MBB, MBBI, DL, CFIInst, Flags);
->>>>>>> 51ec013937a0ce38847cd0ec03ebf5ba0dcb0041
 }
 
 // Find a scratch register that we can use in the prologue. We avoid using

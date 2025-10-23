@@ -477,7 +477,6 @@ void SemaAMDGPU::handleAMDGPUMaxNumWorkGroupsAttr(Decl *D,
   addAMDGPUMaxNumWorkGroupsAttr(D, AL, AL.getArgAsExpr(0), YExpr, ZExpr);
 }
 
-<<<<<<< HEAD
 void SemaAMDGPU::handleAMDGPUWavegroupKernelAttr(Decl *D,
                                                  const ParsedAttr &AL) {
   uint32_t NumWavegroups = 0;
@@ -561,7 +560,6 @@ void SemaAMDGPU::handleAMDGPUEnableWaspAttr(Decl *D, const ParsedAttr &AL) {
   D->addAttr(Addr);
 }
 
-=======
 Expr *SemaAMDGPU::ExpandAMDGPUPredicateBI(CallExpr *CE) {
   ASTContext &Ctx = getASTContext();
   QualType BoolTy = Ctx.getLogicalOperationType();
@@ -638,5 +636,4 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBI(CallExpr *CE) {
 bool SemaAMDGPU::IsPredicate(Expr *E) const {
   return ExpandedPredicates.contains(E);
 }
->>>>>>> 51ec013937a0ce38847cd0ec03ebf5ba0dcb0041
 } // namespace clang

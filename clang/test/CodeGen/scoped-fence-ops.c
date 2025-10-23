@@ -90,7 +90,6 @@ void fe1b(int ord) {
   __scoped_atomic_thread_fence(ord, __MEMORY_SCOPE_WRKGRP);
 }
 
-<<<<<<< HEAD
 // AMDGCN-LABEL: define hidden void @fe1c(
 // AMDGCN-SAME: i32 noundef [[SCOPE:%.*]]) #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
@@ -127,8 +126,6 @@ void fe1b(int ord) {
 // AMDGCN-NEXT:    fence syncscope("cluster") release
 // AMDGCN-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
 //
-=======
->>>>>>> 51ec013937a0ce38847cd0ec03ebf5ba0dcb0041
 // SPIRV-LABEL: define hidden spir_func void @fe1c(
 // SPIRV-SAME: i32 noundef [[SCOPE:%.*]]) #[[ATTR0]] {
 // SPIRV-NEXT:  [[ENTRY:.*:]]
