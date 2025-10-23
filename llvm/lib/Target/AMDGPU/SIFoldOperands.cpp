@@ -2815,6 +2815,10 @@ bool SIFoldOperandsImpl::tryFoldMiscCombinations(MachineInstr &MI) {
 
           const MachineOperand &SubRegMO = PrevMI.getOperand(i + 1);
           if (SubRegMO.isImm() && (SubRegMO.getImm() == SubRegIdx)) {
+            const TargetRegisterClass *SrcRC = getRegOpRC(*MRI, *TRI, *SrcMO);
+            const TargetRegisterClass *PrevRC = getRegOpRC(*MRI, *TRI, PrevMO);
+            if (!TRI->getCommonSubClass(SrcRC, PrevRC))
+              continue;
             SrcMO->setReg(PrevMO.getReg());
             SrcMO->setSubReg(PrevMO.getSubReg());
             if (PrevMO.isKill()) {
