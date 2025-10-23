@@ -86,10 +86,14 @@ static void assignAbsoluteAddresses(
       Address = std::max(Address, Kernel2Offset[Kernel]);
 
     uint32_t Align = std::max<uint32_t>(GV->getAlignment(), 4u);
-    Address = alignTo(Address, Align);
+    // Set the max alignment to 8. It is not fully packed for a GV using 3
+    // vgprs, for example. However, it is a safe choice for now since there are
+    // cases in which operands require even-aligned vgpr-address.
+    Address = alignTo(Address, std::min(Align, 8u));
 
-    // Determine the size of the variable.
-    uint32_t GVBytes = DL.getTypeAllocSize(GV->getValueType());
+    // Determine the size of the variable, aligned to 4 bytes.
+    uint32_t GVBytes =
+        llvm::alignTo(DL.getTypeStoreSize(GV->getValueType()), 4u);
     if (Address + GVBytes > EndAddress) {
       if (!GVsInOverflow) {
         report_fatal_error("Lane-shared variable exceeds the maximum address "
@@ -198,17 +202,18 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
       return false;
     }
     if (getSpatialClusterEnable(F) || getAsymmetricClusterClampEnable(F)) {
+      // Check that fixed dims are 1D.
+      // Non-fixed dims will be checked at dispatch time.
       std::string kernelStr = getSpatialClusterEnable(F)
                                   ? "Spatial cluster kernel"
                                   : "Asymmetric cluster clamp kernel";
       AMDGPU::ClusterDimsAttr ClusterDims = AMDGPU::ClusterDimsAttr::get(F);
       if (!ClusterDims.isFixedDims()) {
-        F.getContext().diagnose(DiagnosticInfoGeneric(
-            llvm::formatv("{0} has non fixed cluster dims", kernelStr)));
-        return false;
+        continue;
       }
       auto &Dims = ClusterDims.getDims();
-      if (Dims[1] != 1 || Dims[2] != 1) {
+      if (Dims[0] * Dims[1] != 1 && Dims[0] * Dims[2] != 1 &&
+          Dims[1] * Dims[2] != 1) {
         F.getContext().diagnose(
             DiagnosticInfoGeneric(llvm::formatv("{0} is not 1D", kernelStr)));
         return false;

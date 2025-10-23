@@ -390,8 +390,7 @@ let SchedRW = [Write64Bit] in {
 } // End SchedRW = [Write64Bit]
 } // End isReMaterializable = 1
 
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in
+let True16Predicate = NotUseRealTrue16Insts in
 def : GCNPat<
   (i32 (DivergentUnaryFrag<sext> i16:$src)),
   (i32 (V_BFE_I32_e64 i16:$src, (i32 0), (i32 0x10)))
@@ -504,8 +503,7 @@ def V_INTERP_P1LV_F16 : VOP3Interp <"v_interp_p1lv_f16", VOP3_INTERP16<[f32, f32
 
 } // End SubtargetPredicate = Has16BitInsts, isCommutable = 1
 
-foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-let True16Predicate = p in
+let True16Predicate = NotUseRealTrue16Insts in
 def : GCNPat<
   (i64 (DivergentUnaryFrag<sext> i16:$src)),
     (REG_SEQUENCE VReg_64,
@@ -1181,8 +1179,8 @@ class PermlaneVarPat<SDPatternOperator permlane,
 >;
 
 class PermlaneNoDppPat3Src<SDPatternOperator permlane,
-  Instruction inst> : GCNPat<
-  (permlane i32:$src0, i32:$src1, i32:$src2),
+  Instruction inst, ValueType vt> : GCNPat<
+  (vt (permlane vt:$src0, i32:$src1, i32:$src2)),
   (inst VGPR_32:$src0, SCSrc_b32:$src1, SCSrc_b32:$src2)
 >;
 
@@ -1585,10 +1583,12 @@ let SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32 in {
   defm V_PERMLANE_XOR_B32     : VOP3Inst<"v_permlane_xor_b32",     VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32_I32>>;
   defm V_PERMLANE_IDX_GEN_B32 : VOP3Inst<"v_permlane_idx_gen_b32", VOP3_PERMLANE_NOOPSEL_Profile<VOP_I32_I32_I32>>;
 
-  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_bcast,   V_PERMLANE_BCAST_B32_e64>;
-  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_up,      V_PERMLANE_UP_B32_e64>;
-  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_down,    V_PERMLANE_DOWN_B32_e64>;
-  def : PermlaneNoDppPat3Src<int_amdgcn_permlane_xor,     V_PERMLANE_XOR_B32_e64>;
+  foreach vt = Reg32Types.types in {
+    def : PermlaneNoDppPat3Src<int_amdgcn_permlane_bcast,   V_PERMLANE_BCAST_B32_e64, vt>;
+    def : PermlaneNoDppPat3Src<int_amdgcn_permlane_up,      V_PERMLANE_UP_B32_e64,    vt>;
+    def : PermlaneNoDppPat3Src<int_amdgcn_permlane_down,    V_PERMLANE_DOWN_B32_e64,  vt>;
+    def : PermlaneNoDppPat3Src<int_amdgcn_permlane_xor,     V_PERMLANE_XOR_B32_e64,   vt>;
+  }
   def : PermlaneNoDppPat2Src<int_amdgcn_permlane_idx_gen, V_PERMLANE_IDX_GEN_B32_e64>;
 } // End SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32
 
@@ -1973,27 +1973,41 @@ let SubtargetPredicate = HasPseudoScalarTrans in {
 
 let HasModifiers = 1 in
 def ASHR_PK_I8_Profile : VOP3_Profile<VOP_I16_I32_I32_I32, VOP3_OPSEL_ONLY>;
+def ASHR_PK_I8_Profile_t16 : VOP3_Profile_True16<VOP_I16_I32_I32_I32, VOP3_OPSEL_ONLY>;
+def ASHR_PK_I8_Profile_fake16 : VOP3_Profile_Fake16<VOP_I16_I32_I32_I32, VOP3_OPSEL_ONLY>;
 
 let SubtargetPredicate = HasAshrPkInsts, isReMaterializable = 1 in {
-  defm V_ASHR_PK_I8_I32 : VOP3Inst<"v_ashr_pk_i8_i32", ASHR_PK_I8_Profile, int_amdgcn_ashr_pk_i8_i32>;
-  defm V_ASHR_PK_U8_I32 : VOP3Inst<"v_ashr_pk_u8_i32", ASHR_PK_I8_Profile, int_amdgcn_ashr_pk_u8_i32>;
+  defm V_ASHR_PK_I8_I32:  VOP3Inst_t16_with_profiles <"v_ashr_pk_i8_i32", ASHR_PK_I8_Profile,
+                                                      ASHR_PK_I8_Profile_t16, ASHR_PK_I8_Profile_fake16,
+                                                      int_amdgcn_ashr_pk_i8_i32>;
+  defm V_ASHR_PK_U8_I32:  VOP3Inst_t16_with_profiles <"v_ashr_pk_u8_i32", ASHR_PK_I8_Profile,
+                                                      ASHR_PK_I8_Profile_t16, ASHR_PK_I8_Profile_fake16,
+                                                      int_amdgcn_ashr_pk_u8_i32>;
 } // End SubtargetPredicate = HasAshrPkInsts, isReMaterializable = 1
 
-class AshrPkI8Pat<VOP3_Pseudo inst, int lo, int hi>: GCNPat<
+class AshrPkI8Pat<VOP3_Pseudo inst, int lo, int hi, bit true16 = 0>: GCNPat<
     (i32 (or (i32 (shl (i32 (AMDGPUsmed3 (i32 (sra i32:$src1, i32:$src2)), (i32 lo), (i32 hi))), (i32 8))),
              (i32 (and (i32 (AMDGPUsmed3 (i32 (sra i32:$src0, i32:$src2)), (i32 lo), (i32 hi))), (i32 255))))),
-    (inst 0, VSrc_b32:$src0, 0,  VSrc_b32:$src1, 0, VSrc_b32:$src2, 0 )
+    true16HelperReg32FromSrc16<(inst 0, VSrc_b32:$src0, 0,  VSrc_b32:$src1, 0, VSrc_b32:$src2, 0 ), true16>.ret
 >;
 
-class AshrPkU8Pat<VOP3_Pseudo inst, int lo, int hi>: GCNPat<
+class AshrPkU8Pat<VOP3_Pseudo inst, int lo, int hi, bit true16 = 0>: GCNPat<
     (i32 (or (i32 (shl (i32 (AMDGPUsmed3 (i32 (sra i32:$src1, i32:$src2)), (i32 lo), (i32 hi))), (i32 8))),
              (i32 (AMDGPUsmed3 (i32 (sra i32:$src0, i32:$src2)), (i32 lo), (i32 hi))))),
-    (inst 0, VSrc_b32:$src0, 0,  VSrc_b32:$src1, 0, VSrc_b32:$src2, 0 )
+    true16HelperReg32FromSrc16<(inst 0, VSrc_b32:$src0, 0,  VSrc_b32:$src1, 0, VSrc_b32:$src2, 0 ), true16>.ret
 >;
 
-let SubtargetPredicate = HasAshrPkInsts in {
+let SubtargetPredicate = HasAshrPkInsts, True16Predicate = NotHasTrue16BitInsts in {
   def : AshrPkI8Pat<V_ASHR_PK_I8_I32_e64, -128, 127>;
   def : AshrPkU8Pat<V_ASHR_PK_U8_I32_e64, 0, 255>;
+}
+let SubtargetPredicate = HasAshrPkInsts, True16Predicate = UseFakeTrue16Insts in {
+  def : AshrPkI8Pat<V_ASHR_PK_I8_I32_fake16_e64, -128, 127>;
+  def : AshrPkU8Pat<V_ASHR_PK_U8_I32_fake16_e64, 0, 255>;
+}
+let SubtargetPredicate = HasAshrPkInsts, True16Predicate = UseRealTrue16Insts in {
+  def : AshrPkI8Pat<V_ASHR_PK_I8_I32_t16_e64, -128, 127, 1>;
+  def : AshrPkU8Pat<V_ASHR_PK_U8_I32_t16_e64, 0, 255, 1>;
 }
 
 def VOP_WAVE_MATCH_B32 : VOP3_Profile<VOP_I32_I32_I32> {
@@ -2414,8 +2428,8 @@ defm V_PERM_PK16_B4_U4               : VOP3Only_Real_Base_gfx1250_gfx13<0x23f, 0
 defm V_PERM_PK16_B6_U4               : VOP3Only_Real_Base_gfx1250_gfx13<0x242, 0x349>;
 defm V_PERM_PK16_B8_U4               : VOP3Only_Real_Base_gfx1250_gfx13<0x243, 0x34a>;
 defm V_LSHL_ADD_U64                  : VOP3Only_Realtriple_gfx1250_DPP8_gfx13<0x252>;
-defm V_ASHR_PK_I8_I32                : VOP3Only_Realtriple_gfx1250_gfx13<0x290>;
-defm V_ASHR_PK_U8_I32                : VOP3Only_Realtriple_gfx1250_gfx13<0x291>;
+defm V_ASHR_PK_I8_I32                : VOP3Only_Realtriple_t16_and_fake16_gfx1250_gfx13<0x290, 0x290>;
+defm V_ASHR_PK_U8_I32                : VOP3Only_Realtriple_t16_and_fake16_gfx1250_gfx13<0x291, 0x291>;
 defm V_CVT_SCALE_PK8_F16_FP4         : VOP3Only_ScaleSel_Real_gfx1250_gfx13<0x29f, 0x2bd>;
 defm V_CVT_SCALE_PK8_BF16_FP4        : VOP3Only_ScaleSel_Real_gfx1250_gfx13<0x2a0, 0x2ba>;
 defm V_CVT_SCALE_PK8_F32_FP4         : VOP3Only_ScaleSel_Real_gfx1250_gfx13<0x2a1, 0x2c0>;

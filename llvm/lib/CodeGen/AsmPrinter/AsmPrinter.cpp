@@ -473,11 +473,9 @@ bool AsmPrinter::doInitialization(Module &M) {
   AddrLabelSymbols = nullptr;
 
   // Initialize TargetLoweringObjectFile.
-  const_cast<TargetLoweringObjectFile&>(getObjFileLowering())
-    .Initialize(OutContext, TM);
+  TM.getObjFileLowering()->Initialize(OutContext, TM);
 
-  const_cast<TargetLoweringObjectFile &>(getObjFileLowering())
-      .getModuleMetadata(M);
+  TM.getObjFileLowering()->getModuleMetadata(M);
 
   // On AIX, we delay emitting any section information until
   // after emitting the .file pseudo-op. This allows additional
@@ -2099,6 +2097,9 @@ void AsmPrinter::emitFunctionBody() {
       case TargetOpcode::MEMBARRIER:
         OutStreamer->emitRawComment("MEMBARRIER");
         break;
+      case TargetOpcode::PROVENANCE_END:
+        OutStreamer->emitRawComment("PROVENANCE_END");
+        break;
       case TargetOpcode::JUMP_TABLE_DEBUG_INFO:
         // This instruction is only used to note jump table debug info, it's
         // purely meta information.
@@ -2909,9 +2910,11 @@ bool AsmPrinter::doFinalization(Module &M) {
   // If we don't have any trampolines, then we don't require stack memory
   // to be executable. Some targets have a directive to declare this.
   Function *InitTrampolineIntrinsic = M.getFunction("llvm.init.trampoline");
-  if (!InitTrampolineIntrinsic || InitTrampolineIntrinsic->use_empty())
-    if (MCSection *S = MAI->getNonexecutableStackSection(OutContext))
-      OutStreamer->switchSection(S);
+  bool HasTrampolineUses =
+      InitTrampolineIntrinsic && !InitTrampolineIntrinsic->use_empty();
+  MCSection *S = MAI->getStackSection(OutContext, /*Exec=*/HasTrampolineUses);
+  if (S)
+    OutStreamer->switchSection(S);
 
   if (TM.Options.EmitAddrsig) {
     // Emit address-significance attributes for all globals.

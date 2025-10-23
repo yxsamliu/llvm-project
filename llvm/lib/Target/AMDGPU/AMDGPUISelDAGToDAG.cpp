@@ -4414,6 +4414,14 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
     Src = Src.getOperand(0);
   }
 
+  // 64-bit VOP3P instructions do not have OPSEL or ABS.
+  // TODO: Select NEG_LO and NEG_HI modifiers from BUILD_VECTOR.
+  if (Src.getValueSizeInBits() == 128) {
+    Mods |= SISrcMods::OP_SEL_1; // Just the default, OPSEL unsupported.
+    SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+    return true;
+  }
+
   if (Src.getOpcode() == ISD::BUILD_VECTOR && Src.getNumOperands() == 2 &&
       (!IsDOT || !Subtarget->hasDOTOpSelHazard())) {
     unsigned VecMods = Mods;
@@ -5288,8 +5296,6 @@ bool AMDGPUDAGToDAGISel::SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1,
   Tbl = CurDAG->getTargetConstant(TTbl, SDLoc(In), MVT::i32);
   return true;
 }
-
-bool AMDGPUDAGToDAGISel::SelectIgnore(SDValue In) const { return true; }
 
 SDValue AMDGPUDAGToDAGISel::getHi16Elt(SDValue In) const {
   if (In.isUndef())
