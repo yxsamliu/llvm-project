@@ -29,6 +29,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
@@ -1433,6 +1434,20 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT,
   LoopPreds.clear();
   LoopConds.clear();
   FlowSet.clear();
+
+  // In case where the pointer appeared after amdgpu-assing-laneshared
+      // pass, check if it possibly points to global variable
+  for (BasicBlock *BB : R->blocks()) {
+    for (Instruction &I : *BB) {
+      if (!isa<PHINode>(&I) || I.hasMetadata("laneshared-in-vgpr"))
+        continue;
+
+      for (auto It = I.op_begin(); It != I.op_end(); ++It)
+        if (GlobalVariable::classof(It->get()))
+          I.setMetadata("laneshared-in-vgpr",
+                        MDNode::get(I.getModule()->getContext(), {}));
+    }
+  }
 
   return true;
 }

@@ -141,6 +141,7 @@ protected:
   bool HasDPALU_DPP = false;
   bool HasDPPSrc1SGPR = false;
   bool HasPackedFP32Ops = false;
+  bool HasPackedFP64Ops = false;
   bool HasImageInsts = false;
   bool HasExtendedImageInsts = false;
   bool HasR128A16 = false;
@@ -300,6 +301,8 @@ protected:
   bool HasGloballyAddressableScratch = false;
 
   bool Has45BitNumRecordsBufferResource = false;
+
+  bool HasCluster = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1164,6 +1167,8 @@ public:
     return HasPackedFP32Ops;
   }
 
+  bool hasPackedFP64Ops() const { return HasPackedFP64Ops; }
+
   // Has V_PK_MOV_B32 opcode
   bool hasPkMovB32() const {
     return GFX90AInsts;
@@ -1751,21 +1756,19 @@ public:
 
   /// \returns the minimum number of VGPRs that will prevent achieving more than
   /// the specified number of waves \p WavesPerEU.
-  unsigned getMinNumVGPRs(unsigned WavesPerEU,
-                          unsigned DynamicVGPRBlockSize) const {
-    return AMDGPU::IsaInfo::getMinNumVGPRs(this, WavesPerEU,
-                                           DynamicVGPRBlockSize);
+  unsigned getMinNumVGPRs(unsigned WavesPerEU, unsigned DynamicVGPRBlockSize,
+                          unsigned NumExcludedVGPRs = 0) const {
+    return AMDGPU::IsaInfo::getMinNumVGPRs(
+        this, WavesPerEU, DynamicVGPRBlockSize, NumExcludedVGPRs);
   }
 
   /// \returns the maximum number of VGPRs that can be used and still achieved
   /// at least the specified number of waves \p WavesPerEU.
   /// The NumExcludedVGPRs is for the lane-shared VGPRs in wavegroup mode.
-  unsigned getMaxNumVGPRs(unsigned WavesPerEU,
-                          unsigned DynamicVGPRBlockSize,
+  unsigned getMaxNumVGPRs(unsigned WavesPerEU, unsigned DynamicVGPRBlockSize,
                           unsigned NumExcludedVGPRs = 0) const {
-    return AMDGPU::IsaInfo::getMaxNumVGPRs(this, WavesPerEU,
-                                           DynamicVGPRBlockSize,
-                                           NumExcludedVGPRs);
+    return AMDGPU::IsaInfo::getMaxNumVGPRs(
+        this, WavesPerEU, DynamicVGPRBlockSize, NumExcludedVGPRs);
   }
 
   /// \returns max num VGPRs. This is the common utility function
@@ -1904,7 +1907,7 @@ public:
   bool hasUnalignedDS2Bug() const { return GFX1250Insts; }
 
   /// \returns true if the subtarget supports clusters of workgroups.
-  bool hasClusters() const { return GFX1250Insts; }
+  bool hasClusters() const { return HasCluster; }
 
   unsigned getBarrierMemberCountShift() const {
     return getGeneration() >= GFX13 ? 12 : 16;

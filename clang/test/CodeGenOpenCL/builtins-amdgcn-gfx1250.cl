@@ -1295,7 +1295,7 @@ void test_permlane16_swap(global uint2* out, uint old, uint src) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SRC2_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.bcast(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.bcast.i32(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
 // CHECK-NEXT:    ret void
@@ -1321,7 +1321,7 @@ void test_permlane_bcast(global uint* out, uint src0, uint src1, uint src2) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SRC2_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.down(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.down.i32(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
 // CHECK-NEXT:    ret void
@@ -1347,7 +1347,7 @@ void test_permlane_down(global uint* out, uint src0, uint src1, uint src2) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SRC2_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.up(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.up.i32(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
 // CHECK-NEXT:    ret void
@@ -1373,7 +1373,7 @@ void test_permlane_up(global uint* out, uint src0, uint src1, uint src2) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC0_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC1_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[SRC2_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.xor(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.permlane.xor.i32(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
 // CHECK-NEXT:    ret void

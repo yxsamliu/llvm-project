@@ -361,10 +361,12 @@ def S_XNOR_SAVEEXEC_B64 : SOP1_64 <"s_xnor_saveexec_b64">;
 
 } // End hasSideEffects = 1, Uses = [EXEC], Defs = [EXEC, SCC]
 
+let Defs = [SCC] in {
 def S_QUADMASK_B32 : SOP1_32 <"s_quadmask_b32",
   [(set i32:$sdst, (int_amdgcn_s_quadmask i32:$src0))]>;
 def S_QUADMASK_B64 : SOP1_64 <"s_quadmask_b64",
   [(set i64:$sdst, (int_amdgcn_s_quadmask i64:$src0))]>;
+}
 
 let Uses = [M0] in {
 def S_MOVRELS_B32 : SOP1_32R <"s_movrels_b32">;
@@ -1677,12 +1679,14 @@ def S_BARRIER_WAIT : SOPP_Pseudo <"s_barrier_wait", (ins i16imm:$simm16), "$simm
 
 let SchedRW = [WriteBarrier], isConvergent = 1 in {
   let SubtargetPredicate = isGFX12Only in
-  def S_BARRIER_LEAVE : SOPP_Pseudo <"s_barrier_leave", (ins)> {
+  def S_BARRIER_LEAVE : SOPP_Pseudo <"s_barrier_leave",
+    (ins), "", [(int_amdgcn_s_barrier_leave (i16 srcvalue))] > {
     let simm16 = 0;
     let fixed_imm = 1;
     let Defs = [SCC];
   }
 
+  let SubtargetPredicate = isGFX13Plus in
   def S_BARRIER_LEAVE_IMM : SOPP_Pseudo <"s_barrier_leave",
     (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_barrier_leave timm:$simm16)]>;
 }

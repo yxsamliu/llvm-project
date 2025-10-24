@@ -7599,6 +7599,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     DAG.setRoot(Res);
     return;
   }
+  case Intrinsic::experimental_provenance_begin:
+    setValue(&I, getValue(I.getArgOperand(0)));
+    break;
   case Intrinsic::invariant_start:
     // Discard region information.
     setValue(&I,
@@ -7706,6 +7709,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
 
+  case Intrinsic::experimental_provenance_end: {
+    SDValue Ops[] = {getRoot()};
+    DAG.setRoot(DAG.getNode(ISD::PROVENANCE_END, sdl, MVT::Other, Ops));
+    return;
+  }
   case Intrinsic::fake_use: {
     Value *V = I.getArgOperand(0);
     SDValue Ops[2];
@@ -8096,10 +8104,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::vector_partial_reduce_add: {
-    if (!TLI.shouldExpandPartialReductionIntrinsic(cast<IntrinsicInst>(&I))) {
-      visitTargetIntrinsic(I, Intrinsic);
-      return;
-    }
     SDValue Acc = getValue(I.getOperand(0));
     SDValue Input = getValue(I.getOperand(1));
     setValue(&I,

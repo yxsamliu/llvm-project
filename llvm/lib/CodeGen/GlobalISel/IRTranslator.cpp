@@ -2215,6 +2215,10 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     MIRBuilder.buildInstr(Op).addFrameIndex(getOrCreateFrameIndex(*AI));
     return true;
   }
+  case Intrinsic::experimental_provenance_end: {
+    MIRBuilder.buildInstr(TargetOpcode::PROVENANCE_END, {}, {});
+    return true;
+  }
   case Intrinsic::fake_use: {
     SmallVector<llvm::SrcOp, 4> VRegs;
     for (const auto &Arg : CI.args())
@@ -2365,6 +2369,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                            MachineInstr::copyFlagsFromInstruction(CI));
     return true;
   }
+  case Intrinsic::modf: {
+    ArrayRef<Register> VRegs = getOrCreateVRegs(CI);
+    MIRBuilder.buildModf(VRegs[0], VRegs[1],
+                         getOrCreateVReg(*CI.getArgOperand(0)),
+                         MachineInstr::copyFlagsFromInstruction(CI));
+    return true;
+  }
   case Intrinsic::sincos: {
     ArrayRef<Register> VRegs = getOrCreateVRegs(CI);
     MIRBuilder.buildFSincos(VRegs[0], VRegs[1],
@@ -2445,6 +2456,12 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                           : TargetOpcode::G_CTLZ_ZERO_UNDEF;
     MIRBuilder.buildInstr(Opcode, {getOrCreateVReg(CI)},
                           {getOrCreateVReg(*CI.getArgOperand(0))});
+    return true;
+  }
+  case Intrinsic::experimental_provenance_begin: {
+    // Drop the intrinsic, but forward the value.
+    MIRBuilder.buildCopy(getOrCreateVReg(CI),
+                         getOrCreateVReg(*CI.getArgOperand(0)));
     return true;
   }
   case Intrinsic::invariant_start: {

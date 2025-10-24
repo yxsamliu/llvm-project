@@ -18,12 +18,12 @@ target datalayout = "A5"
 define amdgpu_kernel void @_Z36test_amdgcn_convolve_f16_fp8_3x3_4x4v() "amdgpu-wavegroup-enable" !reqd_work_group_size !{i32 32, i32 12, i32 1} {
   ; CHECK-LABEL: name: _Z36test_amdgcn_convolve_f16_fp8_3x3_4x4v
   ; CHECK: bb.0.entry:
-  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 64
-  ; CHECK-NEXT:   [[SCRATCH_LOAD_DWORDX3_SADDR:%[0-9]+]]:vreg_96 = SCRATCH_LOAD_DWORDX3_SADDR killed [[S_MOV_B32_]], 0, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s96) from @col_center, align 64, addrspace 10)
-  ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 80
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 40
+  ; CHECK-NEXT:   [[SCRATCH_LOAD_DWORDX3_SADDR:%[0-9]+]]:vreg_96 = SCRATCH_LOAD_DWORDX3_SADDR killed [[S_MOV_B32_]], 0, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s96) from @col_center, align 32, addrspace 10)
+  ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 56
   ; CHECK-NEXT:   [[SCRATCH_LOAD_DWORDX3_SADDR1:%[0-9]+]]:vreg_96 = SCRATCH_LOAD_DWORDX3_SADDR killed [[S_MOV_B32_1]], 0, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s96) from @col_left, align 16, addrspace 10)
-  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 96
-  ; CHECK-NEXT:   [[SCRATCH_LOAD_DWORDX3_SADDR2:%[0-9]+]]:vreg_96 = SCRATCH_LOAD_DWORDX3_SADDR killed [[S_MOV_B32_2]], 0, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s96) from @col_right, align 32, addrspace 10)
+  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 72
+  ; CHECK-NEXT:   [[SCRATCH_LOAD_DWORDX3_SADDR2:%[0-9]+]]:vreg_96 = SCRATCH_LOAD_DWORDX3_SADDR killed [[S_MOV_B32_2]], 0, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s96) from @col_right, align 64, addrspace 10)
   ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 32
   ; CHECK-NEXT:   [[SCRATCH_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD_SADDR killed [[S_MOV_B32_3]], 0, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s32) from @weights + 32, align 32, addrspace 10)
   ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 16
@@ -47,21 +47,21 @@ define amdgpu_kernel void @_Z36test_amdgcn_convolve_f16_fp8_3x3_4x4v() "amdgpu-w
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1, [[COPY10]], %subreg.sub2, [[COPY11]], %subreg.sub3
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vreg_288 = COPY [[REG_SEQUENCE]]
   ; CHECK-NEXT:   [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_:%[0-9]+]]:vreg_128 = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 killed [[REG_SEQUENCE1]], killed [[COPY12]], killed [[SCRATCH_LOAD_DWORDX3_SADDR]], killed [[SCRATCH_LOAD_DWORDX3_SADDR1]], killed [[SCRATCH_LOAD_DWORDX3_SADDR2]], 42, -1, 0, 0, implicit $exec
-  ; CHECK-NEXT:   [[S_MOV_B32_7:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 112
+  ; CHECK-NEXT:   [[S_MOV_B32_7:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 88
   ; CHECK-NEXT:   SCRATCH_STORE_DWORDX4_SADDR killed [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_]], killed [[S_MOV_B32_7]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s128) into @out, !tbaa !7, addrspace 10)
   ; CHECK-NEXT:   S_ENDPGM 0
   ;
   ; VIDX-LABEL: name: _Z36test_amdgcn_convolve_f16_fp8_3x3_4x4v
   ; VIDX: bb.0.entry:
-  ; VIDX-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 64
+  ; VIDX-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 40
   ; VIDX-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_]], 2, implicit-def dead $scc
-  ; VIDX-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vreg_96 = V_LOAD_IDX [[S_LSHR_B32_]], 0, implicit $exec :: (dereferenceable load (s96) from @col_center, align 64, addrspace 10)
-  ; VIDX-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 80
+  ; VIDX-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vreg_96 = V_LOAD_IDX [[S_LSHR_B32_]], 0, implicit $exec :: (dereferenceable load (s96) from @col_center, align 32, addrspace 10)
+  ; VIDX-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 56
   ; VIDX-NEXT:   [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_1]], 2, implicit-def dead $scc
   ; VIDX-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vreg_96 = V_LOAD_IDX [[S_LSHR_B32_1]], 0, implicit $exec :: (dereferenceable load (s96) from @col_left, align 16, addrspace 10)
-  ; VIDX-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 96
+  ; VIDX-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 72
   ; VIDX-NEXT:   [[S_LSHR_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_2]], 2, implicit-def dead $scc
-  ; VIDX-NEXT:   [[V_LOAD_IDX2:%[0-9]+]]:vreg_96 = V_LOAD_IDX [[S_LSHR_B32_2]], 0, implicit $exec :: (dereferenceable load (s96) from @col_right, align 32, addrspace 10)
+  ; VIDX-NEXT:   [[V_LOAD_IDX2:%[0-9]+]]:vreg_96 = V_LOAD_IDX [[S_LSHR_B32_2]], 0, implicit $exec :: (dereferenceable load (s96) from @col_right, align 64, addrspace 10)
   ; VIDX-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
   ; VIDX-NEXT:   [[S_LSHR_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_3]], 2, implicit-def dead $scc
   ; VIDX-NEXT:   [[V_LOAD_IDX3:%[0-9]+]]:vreg_288 = V_LOAD_IDX [[S_LSHR_B32_3]], 0, implicit $exec :: (dereferenceable load (s288) from @weights, align 268435456, addrspace 10)
@@ -72,7 +72,7 @@ define amdgpu_kernel void @_Z36test_amdgcn_convolve_f16_fp8_3x3_4x4v() "amdgpu-w
   ; VIDX-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_4]]
   ; VIDX-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; VIDX-NEXT:   [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_:%[0-9]+]]:vreg_128 = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 killed [[REG_SEQUENCE]], killed [[V_LOAD_IDX3]], killed [[V_LOAD_IDX]], killed [[V_LOAD_IDX1]], killed [[V_LOAD_IDX2]], 42, -1, 0, 0, implicit $exec
-  ; VIDX-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 112
+  ; VIDX-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 88
   ; VIDX-NEXT:   [[S_LSHR_B32_4:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_5]], 2, implicit-def dead $scc
   ; VIDX-NEXT:   V_STORE_IDX [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_]], [[S_LSHR_B32_4]], 0, implicit $exec :: (store (s128) into @out, !tbaa !7, addrspace 10)
   ; VIDX-NEXT:   S_ENDPGM 0
@@ -89,7 +89,7 @@ entry:
 ; Function Attrs: convergent mustprogress nocallback nofree nosync nounwind willreturn memory(none)
 declare <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half>, <9 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, i32 immarg, i1 immarg) #1
 
-; VGPR: ; NumVgprs: 32
+; VGPR: ; NumVgprs: 26
 ; VGPR: ; NumVGPRsForWavesPerEU: 32
 
 !4 = !{!5, !5, i64 0}

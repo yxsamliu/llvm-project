@@ -721,6 +721,12 @@ def FeaturePackedFP32Ops : SubtargetFeature<"packed-fp32-ops",
   "Support packed fp32 instructions"
 >;
 
+def FeaturePackedFP64Ops : SubtargetFeature<"packed-fp64-ops",
+  "HasPackedFP64Ops",
+  "true",
+  "Support packed fp64 instructions"
+>;
+
 def FeatureR128A16 : SubtargetFeature<"r128-a16",
   "HasR128A16",
   "true",
@@ -1497,20 +1503,6 @@ def FeatureParallelBitInsts : SubtargetFeature< "parallel-bit-insts",
   "Has v_pdep_b32 and v_pext_b32 instructions"
 >;
 
-// FIXME: Remove after all users are migrated to attribute.
-def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
-  "DynamicVGPR",
-  "true",
-  "Enable dynamic VGPR mode"
->;
-
-// FIXME: Remove after all users are migrated to attribute.
-def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32",
-  "DynamicVGPRBlockSize32",
-  "true",
-  "Use a block size of 32 for dynamic VGPR allocation (default is 16)"
->;
-
 // Enable the use of SCRATCH_STORE/LOAD_BLOCK instructions for saving and
 // restoring the callee-saved registers.
 def FeatureUseBlockVGPROpsForCSR : SubtargetFeature<"block-vgpr-csr",
@@ -1546,6 +1538,12 @@ def Feature45BitNumRecordsBufferResource : SubtargetFeature< "45-bit-num-records
   "Has45BitNumRecordsBufferResource",
   "true",
   "The buffer resource (V#) supports 45-bit num_records"
+>;
+
+def FeatureCluster : SubtargetFeature< "cluster",
+  "HasCluster",
+  "true",
+  "Has cluster support"
 >;
 
 // Dummy feature used to disable assembler instructions.
@@ -2252,12 +2250,16 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
    Feature45BitNumRecordsBufferResource,
+   FeatureSupportsXNACK,
+   FeatureXNACK,
+   FeatureCluster,
 ]>;
 
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50.Features,
   [FullRate64Ops,
    FeatureDPALU_DPP,
+   FeaturePackedFP64Ops,
    FeatureGFX1251GEMMInsts])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -2272,7 +2274,6 @@ def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
    FeatureGFX1250Insts,
    FeatureAddressableLocalMemorySize196608,
-   FeatureLocalMemorySizeLimit131072,
    Feature1024AddressableVGPRs,
    Feature64BitLiterals,
    FeatureLDSBankCount32,
@@ -2327,6 +2328,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBVHDualAndBVH8Insts,
    FeatureWMMA128bInsts,
    FeatureIEEEMinimumMaximumInsts,
+   FeatureCluster,
 ]>;
 
 defvar FeatureISAVersion13_1 = FeatureISAVersion13;
@@ -2832,6 +2834,8 @@ def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()
 // only allow 32-bit registers in operands and use low halves thereof.
 def UseRealTrue16Insts : True16PredicateClass<"Subtarget->useRealTrue16Insts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts)>;
+def NotUseRealTrue16Insts : True16PredicateClass<"!Subtarget->useRealTrue16Insts()">,
+  AssemblerPredicate<(not (all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts))>;
 def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() && "
                                               "!Subtarget->useRealTrue16Insts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
@@ -2887,6 +2891,9 @@ def HasDPALU_DPP : Predicate<"Subtarget->hasDPALU_DPP()">,
 
 def HasPackedFP32Ops : Predicate<"Subtarget->hasPackedFP32Ops()">,
   AssemblerPredicate<(all_of FeaturePackedFP32Ops)>;
+
+def HasPackedFP64Ops : Predicate<"Subtarget->hasPackedFP64Ops()">,
+  AssemblerPredicate<(all_of FeaturePackedFP64Ops)>;
 
 def HasPkMovB32 : Predicate<"Subtarget->hasPkMovB32()">,
   AssemblerPredicate<(all_of FeatureGFX90AInsts)>;

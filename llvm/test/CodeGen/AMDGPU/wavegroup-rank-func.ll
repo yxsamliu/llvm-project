@@ -45,18 +45,20 @@ define private amdgpu_kernel void @input(ptr addrspace(1) %inbuf, ptr addrspace(
 ; CHECK-NEXT:    v_dual_mov_b32 v10, s17 :: v_dual_mov_b32 v11, s18
 ; CHECK-NEXT:    v_dual_mov_b32 v16, s1 :: v_dual_mov_b32 v15, s0
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_mov_b32_e32 g1[20], v3
-; CHECK-NEXT:    v_mov_b32_e32 g1[21], v4
-; CHECK-NEXT:    v_mov_b32_e32 g1[22], v5
-; CHECK-NEXT:    v_mov_b32_e32 g1[24], v6
-; CHECK-NEXT:    v_mov_b32_e32 g1[25], v7
-; CHECK-NEXT:    v_mov_b32_e32 g1[26], v8
-; CHECK-NEXT:    v_mov_b32_e32 g1[16], v0
-; CHECK-NEXT:    v_mov_b32_e32 g1[17], v1
-; CHECK-NEXT:    v_mov_b32_e32 g1[18], v2
+; CHECK-NEXT:    v_mov_b32_e32 g1[14], v3
+; CHECK-NEXT:    v_mov_b32_e32 g1[15], v4
+; CHECK-NEXT:    v_mov_b32_e32 g1[16], v5
+; CHECK-NEXT:    v_mov_b32_e32 g1[18], v6
+; CHECK-NEXT:    v_mov_b32_e32 g1[19], v7
+; CHECK-NEXT:    v_mov_b32_e32 g1[20], v8
+; CHECK-NEXT:    v_mov_b32_e32 g1[10], v0
+; CHECK-NEXT:    v_mov_b32_e32 g1[11], v1
+; CHECK-NEXT:    v_mov_b32_e32 g1[12], v2
 ; CHECK-NEXT:    v_mov_b32_e32 g1[0], v9
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; CHECK-NEXT:    v_mov_b32_e32 g1[1], v10
 ; CHECK-NEXT:    v_mov_b32_e32 g1[2], v11
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; CHECK-NEXT:    v_mov_b32_e32 g1[48], v12
 ; CHECK-NEXT:    v_mov_b32_e32 g1[49], v13
 ; CHECK-NEXT:    v_mov_b32_e32 g1[50], v14
@@ -102,7 +104,7 @@ define private amdgpu_kernel void @compute(ptr addrspace(1) %inbuf, ptr addrspac
 ; CHECK-NEXT:    s_barrier_wait 1
 ; CHECK-NEXT:    s_sema_wait 1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    v_convolve_f16_fp8_fp8 g1[28:31], 0, g1[0:8], g1[16:18], g1[20:22], g1[24:26] aux_data:42 clamp idxs:0x111101
+; CHECK-NEXT:    v_convolve_f16_fp8_fp8 g1[22:25], 0, g1[0:8], g1[10:12], g1[14:16], g1[18:20] aux_data:42 clamp idxs:0x111101
 ; CHECK-NEXT:    s_sema_signal 33
 ; CHECK-NEXT:    s_endpgm
 entry:
@@ -134,7 +136,7 @@ define private amdgpu_kernel void @output(ptr addrspace(1) %inbuf, ptr addrspace
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    global_store_b128 v0, g1[28:31], s[0:1]
+; CHECK-NEXT:    global_store_b128 v0, g1[22:25], s[0:1]
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)
@@ -154,12 +156,12 @@ define amdgpu_kernel void @main(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf,
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s4, s3, 0
 ; CHECK-NEXT:    s_mul_i32 s33, s3, s2
-; CHECK-NEXT:    s_add_co_u32 s4, s4, 32
+; CHECK-NEXT:    s_add_co_u32 s4, s4, 26
 ; CHECK-NEXT:    s_add_co_u32 s32, s33, 0
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s4
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
 ; CHECK-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 32
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 26
 ; CHECK-NEXT:    s_cmp_eq_u32 s3, 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB3_2
 ; CHECK-NEXT:  ; %bb.1:
@@ -189,10 +191,10 @@ entry:
 ; RANK:         .set main.num_named_barrier, max(0, max(.Linput.num_named_barrier, .Lcompute.num_named_barrier, .Loutput.num_named_barrier))
 ; RANK:         .set main.private_seg_size, max(0, 0+max(.Linput.private_seg_size, .Lcompute.private_seg_size, .Loutput.private_seg_size))
 ; RANK:         .set main.num_vgpr_rank_sum, 0+.Linput.num_vgpr+.Lcompute.num_vgpr+.Loutput.num_vgpr
-; RANK: ; NumVGPRsForWavesPerEU: 51
+; RANK: ; NumVGPRsForWavesPerEU: 45
 ; RANK: ; NamedBarCnt: 1
 
-; This 2nd test does use LDS intead of laneshared
+; This 2nd test uses LDS intead of laneshared. Idx0 should start from zero in prolog.
 
 @weights2 = external local_unnamed_addr addrspace(3) global <9 x i32>, align 64
 @col_center2 = external local_unnamed_addr addrspace(3) global <3 x i32>, align 16
@@ -363,12 +365,9 @@ entry:
 ; Function Attrs: convergent nounwind
 declare !callback !0 void @llvm.amdgcn.wavegroup.rank.p0(i32 immarg, ptr) #2
 
-attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) "amdgpu-agpr-alloc"="0" "amdgpu-flat-work-group-size"="1,1024" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-wavegroup-enable" "amdgpu-waves-per-eu"="8,16" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1300" "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-buffer-pk-add-bf16-inst,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-global-pk-add-bf16-inst,+bf16-cvt-insts,+bf16-pk-insts,+bf16-trans-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot7-insts,+dot8-insts,+dpp,+f16bf16-to-fp6bf6-cvt-scale-insts,+f32-to-f16bf16-cvt-sr-insts,+fp8-conversion-insts,+fp8e5m3-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx1250-insts,+gfx1251-gemm-insts,+gfx13-insts,+gfx8-insts,+gfx9-insts,+parallel-bit-insts,+permlane16-swap,+prng-inst,+tanh-insts,+tensor-cvt-lut-insts,+transpose-load-f4f6-insts,+vmem-pref-insts,+wavefrontsize32" "uniform-work-group-size"="true" }
+attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-queue-ptr" "amdgpu-wavegroup-enable" }
 attributes #1 = { "amdgpu-wavegroup-rank-function" }
 attributes #2 = { convergent nounwind }
-
-; Function Attrs: convergent mustprogress nocallback nofree nosync nounwind willreturn memory(none)
-declare <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half>, <9 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, i32 immarg, i1 immarg) #1
 
 !0 = !{!1}
 !1 = !{i64 1, i1 false}

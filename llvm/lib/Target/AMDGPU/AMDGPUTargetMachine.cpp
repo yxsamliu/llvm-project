@@ -1461,6 +1461,11 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
   if (TM->getTargetTriple().isAMDGCN() && EnableLowerKernelArguments)
     addPass(createAMDGPULowerKernelArgumentsPass());
 
+  TargetPassConfig::addCodeGenPrepare();
+
+  if (isPassEnabled(EnableLoadStoreVectorizer))
+    addPass(createLoadStoreVectorizerPass());
+
   if (TM->getTargetTriple().isAMDGCN()) {
     // This lowering has been placed after codegenprepare to take advantage of
     // address mode matching (which is why it isn't put with the LDS lowerings).
@@ -1469,15 +1474,6 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
     // but has been put before switch lowering and CFG flattening so that those
     // passes can run on the more optimized control flow this pass creates in
     // many cases.
-    //
-    // FIXME: This should ideally be put after the LoadStoreVectorizer.
-    // However, due to some annoying facts about ResourceUsageAnalysis,
-    // (especially as exercised in the resource-usage-dead-function test),
-    // we need all the function passes codegenprepare all the way through
-    // said resource usage analysis to run on the call graph produced
-    // before codegenprepare runs (because codegenprepare will knock some
-    // nodes out of the graph, which leads to function-level passes not
-    // being run on them, which causes crashes in the resource usage analysis).
     addPass(createAMDGPULowerBufferFatPointersPass());
     addPass(createAMDGPULowerIntrinsicsLegacyPass());
     // Another module pass.
@@ -1486,11 +1482,6 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
     // function-level passes into a CGSCCPassManager.
     addPass(new DummyCGSCCPass());
   }
-
-  TargetPassConfig::addCodeGenPrepare();
-
-  if (isPassEnabled(EnableLoadStoreVectorizer))
-    addPass(createLoadStoreVectorizerPass());
 
   // LowerSwitch pass may introduce unreachable blocks that can
   // cause unexpected behavior for subsequent passes. Placing it
@@ -2215,6 +2206,11 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
   if (EnableLowerKernelArguments)
     addPass(AMDGPULowerKernelArgumentsPass(TM));
 
+  Base::addCodeGenPrepare(addPass);
+
+  if (isPassEnabled(EnableLoadStoreVectorizer))
+    addPass(LoadStoreVectorizerPass());
+
   // This lowering has been placed after codegenprepare to take advantage of
   // address mode matching (which is why it isn't put with the LDS lowerings).
   // It could be placed anywhere before uniformity annotations (an analysis
@@ -2222,15 +2218,6 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
   // but has been put before switch lowering and CFG flattening so that those
   // passes can run on the more optimized control flow this pass creates in
   // many cases.
-  //
-  // FIXME: This should ideally be put after the LoadStoreVectorizer.
-  // However, due to some annoying facts about ResourceUsageAnalysis,
-  // (especially as exercised in the resource-usage-dead-function test),
-  // we need all the function passes codegenprepare all the way through
-  // said resource usage analysis to run on the call graph produced
-  // before codegenprepare runs (because codegenprepare will knock some
-  // nodes out of the graph, which leads to function-level passes not
-  // being run on them, which causes crashes in the resource usage analysis).
   addPass(AMDGPULowerBufferFatPointersPass(TM));
 
   addPass.requireCGSCCOrder();
@@ -2238,11 +2225,6 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
   addPass(AMDGPULowerIntrinsicsPass(TM));
 
   addPass(AMDGPUAssignLaneSharedPass(MaxLaneSharedVGPRS));
-
-  Base::addCodeGenPrepare(addPass);
-
-  if (isPassEnabled(EnableLoadStoreVectorizer))
-    addPass(LoadStoreVectorizerPass());
 
   // LowerSwitch pass may introduce unreachable blocks that can cause unexpected
   // behavior for subsequent passes. Placing it here seems better that these
