@@ -1708,6 +1708,11 @@ class FlatLoadPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType v
   (inst $vaddr, $offset, (i32 0))
 >;
 
+class FlatLoadPat_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (FlatOffset i64:$vaddr, i32:$offset))),
+  (EXTRACT_SUBREG (inst $vaddr, $offset), lo16)
+>;
+
 class FlatSignedLoadPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), vt:$in),
   (inst $vaddr, $offset, 0, $in)
@@ -1716,6 +1721,11 @@ class FlatSignedLoadPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType
 class FlatSignedLoadPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset))),
   (inst $vaddr, $offset, (i32 0))
+>;
+
+class FlatSignedLoadPat_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset))),
+  (EXTRACT_SUBREG (inst $vaddr, $offset, (i32 0)), lo16)
 >;
 
 class GlobalLoadSaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
@@ -1731,6 +1741,11 @@ class FlatLoadSaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType 
 class FlatLoadSaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol))),
   (inst $saddr, $voffset, $offset, $cpol)
+>;
+
+class FlatLoadSaddrPat_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol))),
+  (EXTRACT_SUBREG (inst $saddr, $voffset, $offset, $cpol), lo16)
 >;
 
 class FlatLoadLDSSignedPat_M0 <FLAT_Pseudo inst, SDPatternOperator node,
@@ -1771,6 +1786,11 @@ class GlobalStoreLDSSaddrPat <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat
 class GlobalLoadSaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol))),
   (inst $saddr, $voffset, $offset, $cpol)
+>;
+
+class GlobalLoadSaddrPat_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol))),
+  (EXTRACT_SUBREG (inst $saddr, $voffset, $offset, $cpol), lo16)
 >;
 
 class FlatLoadSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt,
@@ -1957,6 +1977,11 @@ class ScratchLoadSignedPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, Va
   (inst $vaddr, $offset, 0)
 >;
 
+class ScratchLoadSignedPat_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (ScratchOffset (i32 VGPR_32:$vaddr), i32:$offset))),
+  (EXTRACT_SUBREG (inst $vaddr, $offset), lo16)
+>;
+
 class ScratchStoreSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (node vt:$data, (ScratchOffset (i32 VGPR_32:$vaddr), i32:$offset)),
   (inst getVregSrcForVT<vt>.ret:$data, $vaddr, $offset)
@@ -1975,6 +2000,11 @@ class ScratchLoadSaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueTy
 class ScratchLoadSaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (ScratchSAddr (i32 SGPR_32:$saddr), i32:$offset))),
   (inst $saddr, $offset, 0)
+>;
+
+class ScratchLoadSaddrPat_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (ScratchSAddr (i32 SGPR_32:$saddr), i32:$offset))),
+  (EXTRACT_SUBREG (inst $saddr, $offset), lo16)
 >;
 
 class ScratchStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
@@ -2002,6 +2032,11 @@ class ScratchLoadSVaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueT
 class ScratchLoadSVaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset, CPol:$cpol))),
   (inst $vaddr, $saddr, $offset, $cpol)
+>;
+
+class ScratchLoadSVaddrPat_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset, CPol:$cpol))),
+  (EXTRACT_SUBREG (inst $vaddr, $saddr, $offset, $cpol), lo16)
 >;
 
 multiclass GlobalLoadLDSPats_M0<FLAT_Pseudo inst, SDPatternOperator node> {
@@ -2132,6 +2167,16 @@ multiclass GlobalFLATLoadPats_D16_t16<string inst, SDPatternOperator node, Value
   }
 }
 
+multiclass GlobalFLATLoadPats_t16<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
+  def : FlatSignedLoadPat_t16<inst, node, vt> {
+    let AddedComplexity = 10;
+  }
+
+  def : GlobalLoadSaddrPat_t16<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let AddedComplexity = 11;
+  }
+}
+
 multiclass GlobalFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
                                ValueType vt> {
   def : FlatStoreSignedPat <inst, node, vt> {
@@ -2240,7 +2285,7 @@ multiclass ScratchFLATStorePats<FLAT_Pseudo inst, string node,
   }
 }
 
-multiclass ScratchFLATStorePats_t16<string inst, string node,
+multiclass ScratchFLATStorePats_D16_t16<string inst, string node,
                                ValueType vt> {
   def : ScratchStoreSignedPat <!cast<FLAT_Pseudo>(inst#"_t16"), !cast<SDPatternOperator>(node), vt> {
     let AddedComplexity = 25;
@@ -2286,6 +2331,21 @@ multiclass ScratchFLATLoadPats_D16_t16<string inst, string node, ValueType vt> {
   }
 }
 
+multiclass ScratchFLATLoadPats_t16<string inst, string node, ValueType vt> {
+  def : ScratchLoadSignedPat_t16 <!cast<FLAT_Pseudo>(inst), !cast<SDPatternOperator>(node), vt> {
+    let AddedComplexity = 25;
+  }
+
+  def : ScratchLoadSaddrPat_t16<!cast<FLAT_Pseudo>(inst#"_SADDR"), !cast<SDPatternOperator>(node), vt> {
+    let AddedComplexity = 26;
+  }
+
+  def : ScratchLoadSVaddrPat_t16<!cast<FLAT_Pseudo>(inst#"_SVS"), !cast<SDPatternOperator>(node), vt> {
+    let SubtargetPredicate = HasFlatScratchSVSMode;
+    let AddedComplexity = 27;
+  }
+}
+
 multiclass FlatLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
   def : FlatLoadPat <inst, node, vt> {
     let OtherPredicates = [HasFlatAddressSpace];
@@ -2310,6 +2370,17 @@ multiclass FlatLoadPats_D16_t16<FLAT_Pseudo inst, SDPatternOperator node, ValueT
   def : FlatLoadPat_D16_t16 <inst, node, vt>;
 
   def : FlatLoadSaddrPat_D16_t16<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let AddedComplexity = 9;
+    let SubtargetPredicate = HasFlatGVSMode;
+  }
+}
+
+multiclass FlatLoadPats_t16<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
+  def : FlatLoadPat_t16 <inst, node, vt> {
+    let OtherPredicates = [HasFlatAddressSpace];
+  }
+
+  def : FlatLoadSaddrPat_t16<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
     let AddedComplexity = 9;
     let SubtargetPredicate = HasFlatGVSMode;
   }
@@ -2365,6 +2436,17 @@ let True16Predicate = NotUseRealTrue16Insts in {
   defm : FlatStorePats <FLAT_STORE_SHORT, atomic_store_16_flat, i16>;
 }
 
+let True16Predicate = UseTrue16WithSramECC in {
+  defm : FlatLoadPats_t16 <FLAT_LOAD_UBYTE, extloadi8_flat, i16>;
+  defm : FlatLoadPats_t16 <FLAT_LOAD_UBYTE, zextloadi8_flat, i16>;
+  defm : FlatLoadPats_t16 <FLAT_LOAD_SBYTE, sextloadi8_flat, i16>;
+  defm : FlatLoadPats_t16 <FLAT_LOAD_USHORT, load_flat, i16>;
+  defm : FlatLoadPats_t16 <FLAT_LOAD_UBYTE, atomic_load_aext_8_flat, i16>;
+  defm : FlatLoadPats_t16 <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i16>;
+  defm : FlatLoadPats_t16 <FLAT_LOAD_USHORT, atomic_load_nonext_16_flat, i16>;
+  defm : FlatLoadPats_t16 <FLAT_LOAD_SBYTE, atomic_load_sext_8_flat, i16>;
+}
+
 let OtherPredicates = [D16PreservesUnusedBits, HasFlatAddressSpace], True16Predicate = UseRealTrue16Insts in {
   defm : FlatLoadPats_D16_t16<FLAT_LOAD_UBYTE_D16_t16, extloadi8_flat, i16>;
   defm : FlatLoadPats_D16_t16<FLAT_LOAD_UBYTE_D16_t16, zextloadi8_flat, i16>;
@@ -2374,11 +2456,14 @@ let OtherPredicates = [D16PreservesUnusedBits, HasFlatAddressSpace], True16Predi
   defm : FlatLoadPats_D16_t16<FLAT_LOAD_UBYTE_D16_t16, atomic_load_zext_8_flat, i16>;
   defm : FlatLoadPats_D16_t16<FLAT_LOAD_SHORT_D16_t16, atomic_load_nonext_16_flat, i16>;
   defm : FlatLoadPats_D16_t16<FLAT_LOAD_SBYTE_D16_t16, atomic_load_sext_8_flat, i16>;
+} // End let OtherPredicates = [D16PreservesUnusedBits, HasFlatAddressSpace], True16Predicate = UseRealTrue16Insts
+
+let OtherPredicates = [D16PreservesUnusedBits], True16Predicate = UseRealTrue16Insts in {
   defm : FlatStorePats_t16 <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
   defm : FlatStorePats_t16 <FLAT_STORE_SHORT, store_flat, i16>;
   defm : FlatStorePats_t16 <FLAT_STORE_BYTE, atomic_store_8_flat, i16>;
   defm : FlatStorePats_t16 <FLAT_STORE_SHORT, atomic_store_16_flat, i16>;
-} // End let OtherPredicates = [D16PreservesUnusedBits, HasFlatAddressSpace], True16Predicate = UseRealTrue16Insts
+}
 
 defm : FlatLoadPats <FLAT_LOAD_DWORD, atomic_load_nonext_32_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_DWORDX2, atomic_load_nonext_64_flat, i64>;
@@ -2508,6 +2593,20 @@ defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_nonext_16_global, i16
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i16>;
 }
 
+let True16Predicate = UseTrue16WithSramECC in {
+defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_UBYTE, extloadi8_global, i16>;
+defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_UBYTE, zextloadi8_global, i16>;
+defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_SBYTE, sextloadi8_global, i16>;
+defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_SSHORT, atomic_load_sext_16_global, i32>;
+defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i32>;
+defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_USHORT, load_global, i16>;
+defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_UBYTE, atomic_load_aext_8_global, i16>;
+defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_UBYTE, atomic_load_zext_8_global, i16>;
+defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_SBYTE, atomic_load_sext_8_global, i16>;
+defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_USHORT, atomic_load_nonext_16_global, i16>;
+defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i16>;
+}
+
 let OtherPredicates = [D16PreservesUnusedBits], True16Predicate = UseRealTrue16Insts in {
 defm : GlobalFLATLoadPats_D16_t16<"GLOBAL_LOAD_UBYTE_D16", extloadi8_global, i16>;
 defm : GlobalFLATLoadPats_D16_t16<"GLOBAL_LOAD_UBYTE_D16", zextloadi8_global, i16>;
@@ -2562,6 +2661,13 @@ defm : GlobalFLATStorePats <GLOBAL_STORE_BYTE, truncstorei8_global, i16>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_SHORT, store_global, i16>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_BYTE, atomic_store_8_global, i16>;
 defm : GlobalFLATStorePats <GLOBAL_STORE_SHORT, atomic_store_16_global, i16>;
+}
+
+let OtherPredicates = [HasFlatGlobalInsts], True16Predicate =  UseRealTrue16Insts in {
+defm : GlobalFLATStorePats_D16_t16 <"GLOBAL_STORE_BYTE", truncstorei8_global, i16>;
+defm : GlobalFLATStorePats_D16_t16 <"GLOBAL_STORE_SHORT", store_global, i16>;
+defm : GlobalFLATStorePats_D16_t16 <"GLOBAL_STORE_BYTE", atomic_store_8_global, i16>;
+defm : GlobalFLATStorePats_D16_t16 <"GLOBAL_STORE_SHORT", atomic_store_16_global, i16>;
 }
 
 let OtherPredicates = [HasD16LoadStore] in {
@@ -2750,13 +2856,23 @@ foreach as = [ "private", "laneshared" ] in {
   defm : ScratchFLATStorePats <SCRATCH_STORE_BYTE, "truncstorei8_"#as, i16>;
   }
 
-  let True16Predicate = UseRealTrue16Insts in {
+  let True16Predicate = UseTrue16WithSramECC in {
+  defm : ScratchFLATLoadPats_t16 <"SCRATCH_LOAD_UBYTE", "extloadi8_"#as, i16>;
+  defm : ScratchFLATLoadPats_t16 <"SCRATCH_LOAD_UBYTE", "zextloadi8_"#as, i16>;
+  defm : ScratchFLATLoadPats_t16 <"SCRATCH_LOAD_SBYTE", "sextloadi8_"#as, i16>;
+  defm : ScratchFLATLoadPats_t16 <"SCRATCH_LOAD_USHORT", "load_"#as, i16>;
+  }
+
+  let OtherPredicates = [D16PreservesUnusedBits], True16Predicate = UseRealTrue16Insts in {
   defm : ScratchFLATLoadPats_D16_t16<"SCRATCH_LOAD_UBYTE_D16", "extloadi8_"#as, i16>;
   defm : ScratchFLATLoadPats_D16_t16<"SCRATCH_LOAD_UBYTE_D16", "zextloadi8_"#as, i16>;
   defm : ScratchFLATLoadPats_D16_t16<"SCRATCH_LOAD_SBYTE_D16", "sextloadi8_"#as, i16>;
   defm : ScratchFLATLoadPats_D16_t16<"SCRATCH_LOAD_SHORT_D16", "load_"#as, i16>;
-  defm : ScratchFLATStorePats_t16 <"SCRATCH_STORE_SHORT", "store_"#as, i16>;
-  defm : ScratchFLATStorePats_t16 <"SCRATCH_STORE_BYTE", "truncstorei8_"#as, i16>;
+  } // End OtherPredicates = [D16PreservesUnusedBits], True16Predicate = UseRealTrue16Insts
+
+  let True16Predicate = UseRealTrue16Insts in {
+  defm : ScratchFLATStorePats_D16_t16 <"SCRATCH_STORE_SHORT", "store_"#as, i16>;
+  defm : ScratchFLATStorePats_D16_t16 <"SCRATCH_STORE_BYTE", "truncstorei8_"#as, i16>;
   } // End True16Predicate = UseRealTrue16Insts
 
   foreach vt = VReg_64.RegTypes in {

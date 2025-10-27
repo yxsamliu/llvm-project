@@ -18,7 +18,7 @@ define amdgpu_ps void @test_cvt_pk_bf8_f16_v(<2 x half> %a, ptr addrspace(1) %ou
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
 ; GFX1250-SDAG-REAL16-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_bf8_f16_e64 v0.l, v0
-; GFX1250-SDAG-REAL16-NEXT:    flat_store_b16 v[2:3], v0
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_pk_bf8_f16_v:
@@ -32,7 +32,7 @@ define amdgpu_ps void @test_cvt_pk_bf8_f16_v(<2 x half> %a, ptr addrspace(1) %ou
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
 ; GFX1250-GISEL-REAL16-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_bf8_f16_e64 v0.l, v0
-; GFX1250-GISEL-REAL16-NEXT:    flat_store_b16 v[4:5], v0
+; GFX1250-GISEL-REAL16-NEXT:    global_store_b16 v[4:5], v0, off
 ; GFX1250-GISEL-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_pk_bf8_f16_v:
@@ -62,7 +62,7 @@ define amdgpu_ps void @test_cvt_pk_bf8_f16_s(<2 x half> inreg %a, ptr addrspace(
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_pk_bf8_f16_s:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_bf8_f16_e64 v2.l, s0
-; GFX1250-SDAG-REAL16-NEXT:    flat_store_b16 v[0:1], v2
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_pk_bf8_f16_s:
@@ -74,7 +74,7 @@ define amdgpu_ps void @test_cvt_pk_bf8_f16_s(<2 x half> inreg %a, ptr addrspace(
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_pk_bf8_f16_s:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_bf8_f16_e64 v2.l, s0
-; GFX1250-GISEL-REAL16-NEXT:    flat_store_b16 v[0:1], v2
+; GFX1250-GISEL-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-GISEL-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_pk_bf8_f16_s:
@@ -103,7 +103,7 @@ define amdgpu_ps void @test_cvt_pk_bf8_f16_l(ptr addrspace(1) %out) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_pk_bf8_f16_l:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_bf8_f16_e64 v2.l, 0x56400000
-; GFX1250-SDAG-REAL16-NEXT:    flat_store_b16 v[0:1], v2
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_pk_bf8_f16_l:
@@ -115,7 +115,7 @@ define amdgpu_ps void @test_cvt_pk_bf8_f16_l(ptr addrspace(1) %out) {
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_pk_bf8_f16_l:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_bf8_f16_e64 v2.l, 0x56400000
-; GFX1250-GISEL-REAL16-NEXT:    flat_store_b16 v[0:1], v2
+; GFX1250-GISEL-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-GISEL-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_pk_bf8_f16_l:
@@ -145,7 +145,7 @@ define amdgpu_ps void @test_cvt_pk_fp8_f16_v(<2 x half> %a, ptr addrspace(1) %ou
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
 ; GFX1250-SDAG-REAL16-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_fp8_f16_e64 v0.l, v0
-; GFX1250-SDAG-REAL16-NEXT:    flat_store_b16 v[2:3], v0
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_pk_fp8_f16_v:
@@ -159,7 +159,7 @@ define amdgpu_ps void @test_cvt_pk_fp8_f16_v(<2 x half> %a, ptr addrspace(1) %ou
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
 ; GFX1250-GISEL-REAL16-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_fp8_f16_e64 v0.l, v0
-; GFX1250-GISEL-REAL16-NEXT:    flat_store_b16 v[4:5], v0
+; GFX1250-GISEL-REAL16-NEXT:    global_store_b16 v[4:5], v0, off
 ; GFX1250-GISEL-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_pk_fp8_f16_v:
@@ -189,7 +189,7 @@ define amdgpu_ps void @test_cvt_pk_fp8_f16_s(<2 x half> inreg %a, ptr addrspace(
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_pk_fp8_f16_s:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_fp8_f16_e64 v2.l, s0
-; GFX1250-SDAG-REAL16-NEXT:    flat_store_b16 v[0:1], v2
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_pk_fp8_f16_s:
@@ -201,7 +201,7 @@ define amdgpu_ps void @test_cvt_pk_fp8_f16_s(<2 x half> inreg %a, ptr addrspace(
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_pk_fp8_f16_s:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_fp8_f16_e64 v2.l, s0
-; GFX1250-GISEL-REAL16-NEXT:    flat_store_b16 v[0:1], v2
+; GFX1250-GISEL-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-GISEL-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_pk_fp8_f16_s:
@@ -230,7 +230,7 @@ define amdgpu_ps void @test_cvt_pk_fp8_f16_l(ptr addrspace(1) %out) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_pk_fp8_f16_l:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_fp8_f16_e64 v2.l, 0x56400000
-; GFX1250-SDAG-REAL16-NEXT:    flat_store_b16 v[0:1], v2
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_pk_fp8_f16_l:
@@ -242,7 +242,7 @@ define amdgpu_ps void @test_cvt_pk_fp8_f16_l(ptr addrspace(1) %out) {
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_pk_fp8_f16_l:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_fp8_f16_e64 v2.l, 0x56400000
-; GFX1250-GISEL-REAL16-NEXT:    flat_store_b16 v[0:1], v2
+; GFX1250-GISEL-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-GISEL-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_pk_fp8_f16_l:

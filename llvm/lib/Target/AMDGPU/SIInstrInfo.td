@@ -1949,6 +1949,8 @@ class getVregSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 1> {
         1                 : VGPROp_32);
 }
 
+// Returns a concrete vgpr register class to use for a value type VT,
+// which exists separately from a real instruction use.
 class getVregClassForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 1> {
   RegisterClass ret =
   !cond(!eq(VT.Size, 512) : VReg_512,
@@ -2800,7 +2802,6 @@ class getLdStRegisterOperand<RegisterClass RC> {
           !eq(RC.Size, 576)  : AVLdSt_576,
           !eq(RC.Size, 1024) : AVLdSt_1024);
 }
-
 
 class getHasVOP3DPP <ValueType DstVT = i32, ValueType Src0VT = i32,
                  ValueType Src1VT = i32, ValueType Src2VT = i32> {

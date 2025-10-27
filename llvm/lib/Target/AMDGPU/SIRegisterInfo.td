@@ -1341,6 +1341,22 @@ def VGPR_IDX_IDX_OP_RC : SIRegisterClass<"AMDGPU", [i32], 32,
   let HasSGPR = 1;
 }
 
+// Class does not contain any 256 bit values but for disassembler purposes allows decoding to SReg_256
+def RsrcReg256Op : RegisterOperand<RsrcReg32> {
+   let DecoderMethod = "decodeRsrcReg256";
+   let EncoderMethod = "getMachineOpValueRsrcRegOp";
+}
+
+// Class does not contain any 128 bit values but for disassembler purposes allows decoding to SReg_128
+def RsrcReg128Op : RegisterOperand<RsrcReg32> {
+   let DecoderMethod = "decodeRsrcReg128";
+   let EncoderMethod = "getMachineOpValueRsrcRegOp";
+}
+
+// V_LOAD/STORE_IDX indexing operand
+def VGPR_IDX_IDX_OP : RegisterOperand<VGPR_IDX_IDX_OP_RC> {
+}
+
 //===----------------------------------------------------------------------===//
 //
 //  AlignTarget classes. Artifical classes to swap between
@@ -1438,22 +1454,6 @@ class RegOrImmOperand <RegisterClassLike RegClass, string OperandTypeName>
     string PredicateMethod = "is"#NAME;
     string DiagnosticString = "";
     let ParserMatchClass = RegImmMatcher<NAME, PredicateMethod, DiagnosticString>;
-}
-
-// Class does not contain any 256 bit values but for disassembler purposes allows decoding to SReg_256
-def RsrcReg256Op : RegisterOperand<RsrcReg32> {
-   let DecoderMethod = "decodeRsrcReg256";
-   let EncoderMethod = "getMachineOpValueRsrcRegOp";
-}
-
-// Class does not contain any 128 bit values but for disassembler purposes allows decoding to SReg_128
-def RsrcReg128Op : RegisterOperand<RsrcReg32> {
-   let DecoderMethod = "decodeRsrcReg128";
-   let EncoderMethod = "getMachineOpValueRsrcRegOp";
-}
-
-// V_LOAD/STORE_IDX indexing operand
-def VGPR_IDX_IDX_OP : RegisterOperand<VGPR_IDX_IDX_OP_RC> {
 }
 
 //===----------------------------------------------------------------------===//
