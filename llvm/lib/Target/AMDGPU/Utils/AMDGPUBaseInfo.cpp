@@ -3207,10 +3207,11 @@ unsigned getRegBitWidth(const MCRegisterClass &RC) {
   return getRegBitWidth(RC.getID());
 }
 
-unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
-                           unsigned OpNo) {
+unsigned getRegOperandSize(const MCSubtargetInfo *STI, const MCInstrInfo *MII,
+                           const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned RCID = Desc.operands()[OpNo].RegClass;
+  unsigned RCID = MII->getOpRegClassID(
+      Desc.operands()[OpNo], STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo));
   return getRegBitWidth(RCID) / 8;
 }
 
@@ -3836,17 +3837,20 @@ bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned Opcode,
   return false;
 }
 
-bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
+bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
+                             const MCSubtargetInfo &ST) {
   for (auto OpName : {OpName::vdst, OpName::src0, OpName::src1, OpName::src2}) {
     int Idx = getNamedOperandIdx(OpDesc.getOpcode(), OpName);
     if (Idx == -1)
       continue;
 
-    auto RC = OpDesc.operands()[Idx].RegClass;
-    if (RC == AMDGPU::VReg_64RegClassID ||
-        RC == AMDGPU::VReg_64_STAGINGRegClassID ||
-        RC == AMDGPU::VReg_64_Align2RegClassID ||
-        RC == AMDGPU::VReg_64_STAGING_Align2RegClassID)
+    const MCOperandInfo &OpInfo = OpDesc.operands()[Idx];
+    int16_t RegClass = MII.getOpRegClassID(
+        OpInfo, ST.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
+    if (RegClass == AMDGPU::VReg_64RegClassID ||
+        RegClass == AMDGPU::VReg_64_STAGINGRegClassID ||
+        RegClass == AMDGPU::VReg_64_Align2RegClassID ||
+        RegClass == AMDGPU::VReg_64_STAGING_Align2RegClassID)
       return true;
   }
 
@@ -3873,14 +3877,15 @@ bool isDPALU_DPP32BitOpc(unsigned Opc) {
   }
 }
 
-bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
+bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
+                 const MCSubtargetInfo &ST) {
   if (!ST.hasFeature(AMDGPU::FeatureDPALU_DPP))
     return false;
 
   if (isDPALU_DPP32BitOpc(OpDesc.getOpcode()))
     return ST.hasFeature(AMDGPU::FeatureGFX1250Insts);
 
-  return hasAny64BitVGPROperands(OpDesc);
+  return hasAny64BitVGPROperands(OpDesc, MII, ST);
 }
 
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {

@@ -3022,6 +3022,9 @@ def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
 def HasMAIInsts : Predicate<"Subtarget->hasMAIInsts()">,
   AssemblerPredicate<(all_of FeatureMAIInsts)>;
 
+def NotHasMAIInsts : Predicate<"!Subtarget->hasMAIInsts()">,
+  AssemblerPredicate<(all_of (not FeatureMAIInsts))>;
+
 def HasSMemRealTime : Predicate<"Subtarget->hasSMemRealTime()">,
   AssemblerPredicate<(all_of FeatureSMemRealTime)>;
 
@@ -3239,6 +3242,20 @@ def HasUnalignedDS2Bug : Predicate<"Subtarget->hasUnalignedDS2Bug()">,
 
 def NotHasUnalignedDS2Bug : Predicate<"!Subtarget->hasUnalignedDS2Bug()">,
  AssemblerPredicate<(not FeatureGFX1250Insts)>;
+
+def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
+                      AssemblerPredicate<(all_of FeatureRequiresAlignedVGPRs)>;
+
+//===----------------------------------------------------------------------===//
+// HwModes
+//===----------------------------------------------------------------------===//
+
+// gfx90a-gfx950. Has AGPRs, and also the align2 VGPR/AGPR requirement
+def AVAlign2LoadStoreMode : HwMode<[HasMAIInsts, NeedsAlignedVGPRs]>;
+
+// gfx1250, has alignment requirement but no AGPRs.
+def AlignedVGPRNoAGPRMode : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs]>;
+
 
 // Include AMDGPU TD files
 include "SISchedule.td"

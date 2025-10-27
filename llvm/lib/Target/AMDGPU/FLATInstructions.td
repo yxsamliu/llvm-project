@@ -238,7 +238,7 @@ class FLAT_Load_Pseudo<
     : FLAT_Pseudo<opName, (outs), (ins), ""> {
 
   RegisterClass SaddrRC = SReg_64_XEXEC_XNULL;
-  RegisterClass VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64);
+  RegisterClassLike VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64_STAGING_AlignTarget);
   let OutOperandList = (outs vdata_op:$vdst);
   let InOperandList = !con(
       !if(EnableSaddr, (ins SaddrRC:$saddr), (ins)),
@@ -296,7 +296,7 @@ multiclass FLAT_Flat_Load_Pseudo_t16<string opName> {
 class FLAT_Store_Pseudo <string opName, RegisterOperand vdataClass,
   bit HasSaddr = 0, bit EnableSaddr = 0, bit HasVaddr = 1,
   RegisterClass SaddrRC = SReg_64_XEXEC_XNULL,
-  RegisterClass VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64)> : FLAT_Pseudo<
+  RegisterClassLike VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64_STAGING_AlignTarget)> : FLAT_Pseudo<
   opName,
   (outs),
   !con(!if(HasVaddr, (ins VaddrRC:$vaddr), (ins)), (ins vdataClass:$vdata), !if(EnableSaddr, (ins SaddrRC:$saddr), (ins)),
@@ -462,7 +462,7 @@ class FLAT_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0, bit IsAsync = 0>
 class FLAT_Global_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0, bit IsAsync = 0>
   : FLAT_Load_LDS_Pseudo<opName, EnableSaddr, IsAsync> {
   let InOperandList = !con(!if(IsAsync, (ins VGPR_32:$vdst), (ins)),
-                           !if(EnableSaddr, (ins SReg_64:$saddr, VGPR_32:$vaddr), (ins VReg_64:$vaddr)),
+                           !if(EnableSaddr, (ins SReg_64:$saddr, VGPR_32:$vaddr), (ins VReg_64_STAGING_AlignTarget:$vaddr)),
                            (ins flat_offset:$offset, CPol_0:$cpol));
   let is_flat_global = 1;
 }
@@ -492,7 +492,7 @@ class FLAT_Global_STORE_LDS_Pseudo <string opName, bit EnableSaddr = 0> : FLAT_P
   opName,
   (outs ),
   !con(
-      !if(EnableSaddr, (ins SReg_64:$saddr, VGPR_32:$vaddr), (ins VReg_64:$vaddr)), (ins VGPR_32:$vdata),
+      !if(EnableSaddr, (ins SReg_64:$saddr, VGPR_32:$vaddr), (ins VReg_64_STAGING_AlignTarget:$vaddr)), (ins VGPR_32:$vdata),
       (ins flat_offset:$offset, CPol_0:$cpol)),
   " $vaddr, $vdata"#!if(EnableSaddr, ", $saddr", ", off")#"$offset$cpol"> {
   let VM_CNT = 0;
@@ -620,7 +620,7 @@ class FLAT_SWC<string opName, bit HasVdst, bit HasAddr, bit IsDivergent> : FLAT_
   let IsNeverUniform = IsDivergent;
 }
 
-class FLAT_Prefetch_Pseudo<string opName, dag addr = (ins VReg_64:$vaddr), string asm = " $vaddr"> :
+class FLAT_Prefetch_Pseudo<string opName, dag addr = (ins VReg_64_STAGING_AlignTarget:$vaddr), string asm = " $vaddr"> :
   FLAT_Pseudo<opName, (outs), !con(addr, (ins flat_offset:$offset, CPol_0:$cpol)), asm#"$offset$cpol"> {
   let has_vdst = 0;
   let has_data = 0;
@@ -642,7 +642,7 @@ multiclass FLAT_Flat_Prefetch_Pseudo<string opName> {
 
 multiclass FLAT_Global_Prefetch_Pseudo<string opName> {
   let is_flat_global = 1, has_saddr = 1 in {
-    def "" : FLAT_Prefetch_Pseudo<opName, (ins VReg_64:$vaddr), " $vaddr, off">,
+    def "" : FLAT_Prefetch_Pseudo<opName, (ins VReg_64_STAGING_AlignTarget:$vaddr), " $vaddr, off">,
       GlobalSaddrTable<0, opName>;
     def _SADDR : FLAT_Prefetch_Pseudo<opName, (ins SReg_64:$saddr, VGPR_32:$vaddr), " $vaddr, $saddr">,
       GlobalSaddrTable<1, opName> {
@@ -903,7 +903,7 @@ multiclass FLAT_Atomic_Pseudo_NO_RTN<
   RegisterOperand data_op = vdst_op> {
   def "" : FLAT_AtomicNoRet_Pseudo <opName,
     (outs),
-    (ins VReg_64:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_0:$cpol),
+    (ins VReg_64_STAGING_AlignTarget:$vaddr, data_op:$vdata, flat_offset:$offset, CPol_0:$cpol),
     " $vaddr, $vdata$offset$cpol">,
     GlobalSaddrTable<0, opName> {
     let FPAtomic = data_vt.isFP;
@@ -935,7 +935,7 @@ multiclass FLAT_Atomic_Pseudo_RTN<
 
   def _RTN : FLAT_AtomicRet_Pseudo <opName,
     (outs vdst_op_vgpr:$vdst),
-    (ins VReg_64:$vaddr, data_op_vgpr:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
+    (ins VReg_64_STAGING_AlignTarget:$vaddr, data_op_vgpr:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
     " $vdst, $vaddr, $vdata$offset$cpol">,
     GlobalSaddrTable<0, opName#"_rtn"> {
     let FPAtomic = data_vt.isFP;
@@ -960,7 +960,7 @@ multiclass FLAT_Atomic_Pseudo_RTN<
 
   def _RTN_agpr : FLAT_AtomicRet_Pseudo <opName,
     (outs vdst_op_agpr:$vdst),
-    (ins VReg_64:$vaddr, data_op_agpr:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
+    (ins VReg_64_STAGING_AlignTarget:$vaddr, data_op_agpr:$vdata, flat_offset:$offset, CPol_GLC1:$cpol),
     " $vdst, $vaddr, $vdata$offset$cpol">,
     GlobalSaddrTable<0, opName#"_rtn_agpr"> {
     let FPAtomic = data_vt.isFP;
@@ -988,7 +988,7 @@ class FLAT_Global_Atomic_Pseudo_NO_RTN<
   bit EnableSaddr = 0,
   bit HasVaddr = 1,
   RegisterClass SaddrRC = SReg_64_XEXEC_XNULL,
-  RegisterClass VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64)> :
+  RegisterClassLike VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64_STAGING_AlignTarget)> :
     FLAT_AtomicNoRet_Pseudo <opName,
       (outs),
       !con(!if(HasVaddr, (ins VaddrRC:$vaddr), (ins)), (ins data_op:$vdata),
@@ -1021,10 +1021,10 @@ class FLAT_Global_Atomic_Pseudo_RTN<
   bit IsVGPR = false,
   bit HasVaddr = 1,
   RegisterClass SaddrRC = SReg_64_XEXEC_XNULL,
-  RegisterClass VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64)> :
+  RegisterClassLike VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64_STAGING_AlignTarget)> :
     FLAT_AtomicRet_Pseudo <opName, (outs), (ins), "">, GlobalSaddrTable<EnableSaddr, opName#"_rtn"#!if(IsVGPR, "", "_agpr")> {
 
-  defvar IsSGPR = !cast<SIRegisterClass>(vdst_op.RegClass).HasSGPR;
+  defvar IsSGPR = !cast<SIRegisterClassLike>(vdst_op.RegClass).HasSGPR;
   defvar vdst_rc = !if(IsSGPR, vdst_op, !if(IsVGPR, getEquivalentVGPROperand<vdst_op>.ret, getEquivalentAGPROperand<vdst_op>.ret));
   defvar data_rc = !if(IsSGPR, data_op, !if(IsVGPR, getEquivalentVGPROperand<data_op>.ret, getEquivalentAGPROperand<data_op>.ret));
 
@@ -1566,7 +1566,7 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot12_50 in {
 }
 
 let WaveSizePredicate = isWave32, SubtargetPredicate = HasTransposeLoadF4F6Insts in {
-  defm GLOBAL_LOAD_TR6_B96 : FLAT_Global_Load_Pseudo <"global_load_tr6_b96", VGPROp_96>;
+  defm GLOBAL_LOAD_TR6_B96 : FLAT_Global_Load_Pseudo <"global_load_tr6_b96", VGPROp_96_Align1>;
   defm GLOBAL_LOAD_TR4_B64 : FLAT_Global_Load_Pseudo <"global_load_tr4_b64", VGPROp_64>;
 }
 
@@ -1851,7 +1851,7 @@ multiclass FlatAtomicNoRtnPatBase <string base_inst_name, string node, ValueType
 
   let AddedComplexity = 1 in
   def : GCNPat <(vt (noRtnNode (FlatOffset i64:$vaddr, i32:$offset), data_vt:$data)),
-    (inst VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)> {
+    (inst VReg_64_STAGING_AlignTarget:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)> {
     let SubtargetPredicate = inst.SubtargetPredicate;
     let OtherPredicates = inst.OtherPredicates;
   }
@@ -1880,7 +1880,7 @@ multiclass FlatAtomicRtnPatBase <string inst_name, string node, ValueType vt,
   defvar rtnNode = !cast<SDPatternOperator>(node);
 
   def : GCNPat <(vt (rtnNode (FlatOffset i64:$vaddr, i32:$offset), data_vt:$data)),
-    (inst VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)> {
+    (inst VReg_64_STAGING_AlignTarget:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)> {
     let SubtargetPredicate = inst.SubtargetPredicate;
     let OtherPredicates = inst.OtherPredicates;
   }
@@ -1924,7 +1924,7 @@ multiclass FlatAtomicIntrPat <string inst, string node, ValueType vt,
 class FlatSignedAtomicPatBase <FLAT_Pseudo inst, SDPatternOperator node,
                                ValueType vt, ValueType data_vt = vt> : GCNPat <
   (vt (node (GlobalOffset i64:$vaddr, i32:$offset), data_vt:$data)),
-  (inst VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)> {
+  (inst VReg_64_STAGING_AlignTarget:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)> {
   let SubtargetPredicate = inst.SubtargetPredicate;
   let OtherPredicates = inst.OtherPredicates;
 }
