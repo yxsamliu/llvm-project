@@ -76,6 +76,10 @@ body:             |
     ; GCN-NEXT: v_add3_u32_e64_dpp v0, v1 /*v257*/, v0, v2 /*v258*/ quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
     $vgpr0 = V_ADD3_U32_e64_dpp $vgpr0, $vgpr257, $vgpr0, undef $vgpr258, 1, 15, 15, 1, implicit $exec
 
+    ; VNBR (MSBs are ignored)
+    ; GCN-NEXT: v_send_vgpr_prev_b32 v500, v600, v257 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:0
+    $vgpr500, $vgpr600 = V_SEND_VGPR_PREV_B32 $vgpr257, 1, 1, 2, 1, 0, implicit $mode, implicit $exec
+
     ; DS (addr, data0, and data1 operands)
 
     ; GCN-NEXT: s_set_vgpr_frames 0x1400
@@ -808,6 +812,27 @@ body:             |
     ; GCN-NEXT: v_mov_b32_e32 g3[0] /*g3[256]*/, v6
     ; GCN-NEXT: v_mov_b32_e32 g3[1] /*g3[257]*/, v7
     V_STORE_IDX undef $vgpr4_vgpr5_vgpr6_vgpr7, $idx3, 254, implicit $exec :: (store (s128), addrspace 10)
+
+    ; Test that VNBR instructions can ignore MSBs when the idx regs are the same
+    ; GCN-NEXT: s_set_vgpr_frames 0x44
+    ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+    ; GCN-NEXT: v_send_vgpr_next_b32 g1[301], g1[300], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:0
+    BUNDLE implicit-def dead $stg_dsta, implicit-def dead $stg_dstb, implicit renamable $vgpr0, implicit $mode, implicit $exec, implicit $idx1, implicit $idx1 {
+      $stg_dsta, $stg_dstb = V_SEND_VGPR_NEXT_B32 renamable $vgpr0, 1, 1, 2, 1, 0, implicit $mode, implicit $exec
+      V_STORE_IDX internal $stg_dstb, $idx1, 300, implicit $exec :: (store (s32), addrspace 10)
+      V_STORE_IDX internal $stg_dsta, $idx1, 301, implicit $exec :: (store (s32), addrspace 10)
+    }
+    ; GCN-NEXT: s_set_vgpr_frames 0x40c4
+    ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=3 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=1
+    ; GCN-NEXT: v_mov_b32_e32 g3[0] /*g3[256]*/, v6
+    ; GCN-NEXT: v_mov_b32_e32 g3[1] /*g3[257]*/, v7
+    V_STORE_IDX undef $vgpr6_vgpr7, $idx3, 256, implicit $exec :: (store (s64), addrspace 10)
+    ; GCN-NEXT: v_send_vgpr_next_b32 g3[301], g1[300], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:0
+    BUNDLE implicit-def dead $stg_dsta, implicit-def dead $stg_dstb, implicit renamable $vgpr0, implicit $mode, implicit $exec, implicit $idx1, implicit $idx1 {
+      $stg_dsta, $stg_dstb = V_SEND_VGPR_NEXT_B32 renamable $vgpr0, 1, 1, 2, 1, 0, implicit $mode, implicit $exec
+      V_STORE_IDX internal $stg_dstb, $idx1, 300, implicit $exec :: (store (s32), addrspace 10)
+      V_STORE_IDX internal $stg_dsta, $idx3, 301, implicit $exec :: (store (s32), addrspace 10)
+    }
 
     ; TODO-GFX13 tests with idx bits
     ; Tuple crossing the 256 boundary

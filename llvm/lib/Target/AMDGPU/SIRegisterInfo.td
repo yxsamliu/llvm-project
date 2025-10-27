@@ -91,16 +91,23 @@ class SIReg <string n, bits<10> regIdx = 0, bit isVGPR = 0,
   int Index = !cast<int>(regIdx);
 }
 
-// For register classes that use TSFlags.
-class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
-  : RegisterClass <n, rTypes, Align, rList> {
+class SIRegisterClassLike<int BW = 0, bit V = false,
+                          bit A = false,
+                          bit S = false> {
+  // Bitwidth of the register
+  field int Size = BW;
+
   // For vector register classes.
-  field bit HasVGPR = 0;
-  field bit HasAGPR = 0;
+  field bit HasVGPR = V;
+  field bit HasAGPR = A;
 
   // For scalar register classes.
-  field bit HasSGPR = 0;
+  field bit HasSGPR = S;
+}
 
+// For register classes that use TSFlags.
+class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
+  : RegisterClass <n, rTypes, Align, rList>, SIRegisterClassLike {
   // Alignment of the first register in tuple (in 32-bit units).
   field int RegTupleAlignUnits = 1;
 
@@ -1077,7 +1084,8 @@ class VRegClassBase<int numRegs, list<ValueType> regTypes, dag regList> :
 // Define a register tuple class, along with one requiring an even
 // aligned base register.
 multiclass VRegClass<int numRegs, list<ValueType> regTypes, dag regList, dag extraRegList = (add)> {
-  let HasVGPR = 1, BaseClassPriority = 1 in {
+  let HasVGPR = 1, BaseClassPriority = 1,
+      DecoderMethod = "DecodeVReg_"#!mul(numRegs, 32)#"RegisterClass" in {
     // Define the regular class.
     def "" : VRegClassBase<numRegs, regTypes, (add regList, extraRegList)> {
       let BaseClassOrder = !mul(numRegs, 32);
@@ -1125,7 +1133,8 @@ defm VReg_1024 : VRegClass_STAGING<32, Reg1024Types.types, (add VGPR_1024)>;
 }
 
 multiclass ARegClass<int numRegs, list<ValueType> regTypes, dag regList> {
-  let CopyCost = !add(numRegs, numRegs, 1), HasAGPR = 1, BaseClassPriority = 1 in {
+  let CopyCost = !add(numRegs, numRegs, 1), HasAGPR = 1, BaseClassPriority = 1,
+        DecoderMethod = "DecodeAReg_"#!mul(numRegs, 32)#"RegisterClass" in {
     // Define the regular class.
     def "" : VRegClassBase<numRegs, regTypes, regList> {
       let BaseClassOrder = !mul(numRegs, 32);
@@ -1303,9 +1312,9 @@ defm AV_192 : AVRegClass_STAGING<6, VReg_192.RegTypes, (add VGPR_192), (add AGPR
 defm AV_224 : AVRegClass_STAGING<7, VReg_224.RegTypes, (add VGPR_224), (add AGPR_224)>;
 defm AV_256 : AVRegClass_STAGING<8, VReg_256.RegTypes, (add VGPR_256), (add AGPR_256)>;
 defm AV_288 : AVRegClass_STAGING<9, VReg_288.RegTypes, (add VGPR_288), (add AGPR_288)>;
-defm AV_320 : AVRegClass<10, VReg_320.RegTypes, (add VGPR_320), (add AGPR_320)>;
-defm AV_352 : AVRegClass<11, VReg_352.RegTypes, (add VGPR_352), (add AGPR_352)>;
-defm AV_384 : AVRegClass<12, VReg_384.RegTypes, (add VGPR_384), (add AGPR_384)>;
+defm AV_320 : AVRegClass_STAGING<10, VReg_320.RegTypes, (add VGPR_320), (add AGPR_320)>;
+defm AV_352 : AVRegClass_STAGING<11, VReg_352.RegTypes, (add VGPR_352), (add AGPR_352)>;
+defm AV_384 : AVRegClass_STAGING<12, VReg_384.RegTypes, (add VGPR_384), (add AGPR_384)>;
 defm AV_576 : AVRegClass_STAGING<18, VReg_576.RegTypes, (add VGPR_576), (add AGPR_576)>;
 
 let GlobalPriority = true in {
@@ -1332,27 +1341,6 @@ def VGPR_IDX_IDX_OP_RC : SIRegisterClass<"AMDGPU", [i32], 32,
   let HasSGPR = 1;
 }
 
-//===----------------------------------------------------------------------===//
-//  Register operands
-//===----------------------------------------------------------------------===//
-
-class RegImmMatcher<string name, string predicate, string diagnosticString>
-    : AsmOperandClass {
-  let Name = name;
-  let PredicateMethod = predicate;
-  let DiagnosticString = diagnosticString;
-  let RenderMethod = "addRegOrImmOperands";
-}
-
-class RegOrImmOperand <RegisterClass RegClass, string OperandTypeName>
-  : RegisterOperand<RegClass> {
-    let OperandNamespace = "AMDGPU";
-    let OperandType = OperandTypeName;
-    string PredicateMethod = "is"#NAME;
-    string DiagnosticString = "";
-    let ParserMatchClass = RegImmMatcher<NAME, PredicateMethod, DiagnosticString>;
-}
-
 // Class does not contain any 256 bit values but for disassembler purposes allows decoding to SReg_256
 def RsrcReg256Op : RegisterOperand<RsrcReg32> {
    let DecoderMethod = "decodeRsrcReg256";
@@ -1367,6 +1355,105 @@ def RsrcReg128Op : RegisterOperand<RsrcReg32> {
 
 // V_LOAD/STORE_IDX indexing operand
 def VGPR_IDX_IDX_OP : RegisterOperand<VGPR_IDX_IDX_OP_RC> {
+}
+
+//===----------------------------------------------------------------------===//
+//
+//  AlignTarget classes. Artifical classes to swap between
+//  even-aligned and any-aligned classes depending on subtarget.
+//
+//===----------------------------------------------------------------------===//
+
+def AV_LdSt_32_Target : RegClassByHwMode<
+    [DefaultMode, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode],
+    [VGPR_32, AV_32, VGPR_32]>, SIRegisterClassLike<32, true, true> {
+  let DecoderMethod = "decodeAVLdSt";
+}
+
+def AV_LdSt_32_STAGING_Target : RegClassByHwMode<
+    [DefaultMode, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode],
+    [VGPR_32_STAGING, AV_32_STAGING, VGPR_32_STAGING]>, SIRegisterClassLike<32, true, true> {
+  let DecoderMethod = "decodeAVLdSt";
+}
+
+foreach RegSize = [ 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 512, 576, 1024 ] in {
+  def VReg_#RegSize#_STAGING_AlignTarget : SIRegisterClassLike<RegSize, true>,
+    RegClassByHwMode<
+      [DefaultMode, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode],
+      [!cast<RegisterClass>("VReg_"#RegSize#_STAGING),
+       !cast<RegisterClass>("VReg_"#RegSize#_STAGING_Align2),
+       !cast<RegisterClass>("VReg_"#RegSize#_STAGING_Align2)]> {
+     let DecoderMethod = "DecodeVReg_"#RegSize#"RegisterClass";
+   }
+
+  def AReg_#RegSize#_AlignTarget : SIRegisterClassLike<RegSize, false, true>,
+    RegClassByHwMode<
+      [DefaultMode, AVAlign2LoadStoreMode, /*Unused combination*/],
+      [!cast<RegisterClass>("AReg_"#RegSize),
+       !cast<RegisterClass>("AReg_"#RegSize#_Align2)
+       /*Unused combination*/]> {
+     let DecoderMethod = "DecodeAReg_"#RegSize#"RegisterClass";
+   }
+
+  def AV_#RegSize#_STAGING_AlignTarget : SIRegisterClassLike<RegSize, true, true>,
+    RegClassByHwMode<
+      [DefaultMode, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode],
+      [!cast<RegisterClass>("AV_"#RegSize#_STAGING),
+       !cast<RegisterClass>("AV_"#RegSize#_STAGING_Align2),
+       !cast<RegisterClass>("VReg_"#RegSize#_STAGING_Align2)]> {
+     let DecoderMethod = "DecodeAV_"#RegSize#"RegisterClass";
+  }
+
+  def AV_LdSt_#RegSize#_STAGING_AlignTarget : SIRegisterClassLike<RegSize, true, true>,
+    RegClassByHwMode<
+      [DefaultMode, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode],
+      [!cast<RegisterClass>("VReg_"#RegSize#_STAGING),
+       !cast<RegisterClass>("AV_"#RegSize#_STAGING_Align2),
+       !cast<RegisterClass>("VReg_"#RegSize#_STAGING_Align2)]> {
+    let DecoderMethod = "decodeAVLdSt";
+  }
+
+  def AV_LdSt_#RegSize#_STAGING_Align2 : SIRegisterClassLike<RegSize, true, true>,
+    RegClassByHwMode<
+      [DefaultMode, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode],
+      [!cast<RegisterClass>("VReg_"#RegSize#_STAGING_Align2),
+       !cast<RegisterClass>("AV_"#RegSize#_STAGING_Align2),
+       !cast<RegisterClass>("VReg_"#RegSize#_STAGING_Align2)]> {
+    let DecoderMethod = "decodeAVLdSt";
+  }
+
+  def AV_LdSt_#RegSize#_STAGING_Align1 : SIRegisterClassLike<RegSize, true, true>,
+    RegClassByHwMode<
+        [DefaultMode, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode],
+        [!cast<RegisterClass>("VReg_"#RegSize#_STAGING),
+         !cast<RegisterClass>("AV_"#RegSize#_STAGING),
+         !cast<RegisterClass>("VReg_"#RegSize#_STAGING)]> {
+    let DecoderMethod = "decodeAVLdSt";
+  }
+}
+
+def VS_64_STAGING_AlignTarget : SIRegisterClassLike<64, true, false, true>,
+  RegClassByHwMode<
+      [DefaultMode, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode],
+      [VS_64, VS_64_Align2, VS_64_Align2]> {
+  let DecoderMethod = "decodeSrcRegOrImm9";
+}
+
+class RegImmMatcher<string name, string predicate, string diagnosticString>
+    : AsmOperandClass {
+  let Name = name;
+  let PredicateMethod = predicate;
+  let DiagnosticString = diagnosticString;
+  let RenderMethod = "addRegOrImmOperands";
+}
+
+class RegOrImmOperand <RegisterClassLike RegClass, string OperandTypeName>
+  : RegisterOperand<RegClass> {
+    let OperandNamespace = "AMDGPU";
+    let OperandType = OperandTypeName;
+    string PredicateMethod = "is"#NAME;
+    string DiagnosticString = "";
+    let ParserMatchClass = RegImmMatcher<NAME, PredicateMethod, DiagnosticString>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1420,14 +1507,18 @@ def GSrcSimple : RegOrImmOperand<VS_32, "OPERAND_REG_INLINE_C_INT32"> {
 }
 
 //===----------------------------------------------------------------------===//
+//  Register operands
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
 //  SSrc_* Operands with an SGPR, a 32-bit immediate, or 64-bit immediate
 //  if supported by target.
 //===----------------------------------------------------------------------===//
 
-class SrcRegOrImm9<RegisterClass regClass, string operandType>
+class SrcRegOrImm9<RegisterClassLike regClass, string operandType>
     : RegOrImmOperand<regClass, operandType> {
   string DecoderMethodName = "decodeSrcRegOrImm9";
-  let DecoderMethod = DecoderMethodName # "<" # regClass.Size # ">";
+  let DecoderMethod = DecoderMethodName # "<" # !cast<SIRegisterClassLike>(regClass).Size # ">";
 }
 
 class SrcRegOrImm9_t16<string operandType, RegisterClass regClass = VS_16>
@@ -1488,12 +1579,12 @@ def VSrc_f32 : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_FP32">;
 def VSrc_v2b16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_V2INT16">;
 def VSrc_v2bf16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_V2BF16">;
 def VSrc_v2f16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_V2FP16">;
-def VSrc_b64 : SrcRegOrImm9 <VS_64, "OPERAND_REG_IMM_INT64">;
-def VSrc_f64 : SrcRegOrImm9 <VS_64, "OPERAND_REG_IMM_FP64"> {
+def VSrc_b64 : SrcRegOrImm9 <VS_64_STAGING_AlignTarget, "OPERAND_REG_IMM_INT64">;
+def VSrc_f64 : SrcRegOrImm9 <VS_64_STAGING_AlignTarget, "OPERAND_REG_IMM_FP64"> {
   let DecoderMethod = "decodeOperand_VSrc_f64";
 }
-def VSrc_v2b32 : SrcRegOrImm9 <VS_64, "OPERAND_REG_IMM_V2INT32">;
-def VSrc_v2f32 : SrcRegOrImm9 <VS_64, "OPERAND_REG_IMM_V2FP32">;
+def VSrc_v2b32 : SrcRegOrImm9 <VS_64_STAGING_AlignTarget, "OPERAND_REG_IMM_V2INT32">;
+def VSrc_v2f32 : SrcRegOrImm9 <VS_64_STAGING_AlignTarget, "OPERAND_REG_IMM_V2FP32">;
 def VSrc_v2f64 : SrcRegOrImm9 <VS_128, "OPERAND_REG_IMM_V2FP64">;
 
 def VSrc_NoInline_v2f16  : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_NOINLINE_V2FP16">;
@@ -1504,22 +1595,22 @@ def VSrc_NoInline_v2f16  : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_NOINLINE_V2FP16
 
 // This is for operands with the enum(9), VSrc encoding restriction,
 // but only allows VGPRs.
-class SrcReg9<RegisterClass regClass> : RegisterOperand<regClass> {
-  let DecoderMethod = "decodeSrcReg9<" # regClass.Size # ">";
+class SrcReg9<RegisterClassLike regClass> : RegisterOperand<regClass> {
+  let DecoderMethod = "decodeSrcReg9<" # !cast<SIRegisterClassLike>(regClass).Size # ">";
 }
 
 def VRegSrc_32   : SrcReg9<VGPR_32_STAGING>;
-def VRegSrc_64   : SrcReg9<VReg_64_STAGING>;
-def VRegSrc_96   : SrcReg9<VReg_96_STAGING>;
-def VRegSrc_128  : SrcReg9<VReg_128_STAGING>;
-def VRegSrc_160  : SrcReg9<VReg_160_STAGING>;
-def VRegSrc_192  : SrcReg9<VReg_192_STAGING>;
-def VRegSrc_256  : SrcReg9<VReg_256_STAGING>;
-def VRegSrc_288  : SrcReg9<VReg_288_STAGING>;
-def VRegSrc_384  : SrcReg9<VReg_384_STAGING>;
-def VRegSrc_512  : SrcReg9<VReg_512_STAGING>;
-def VRegSrc_576  : SrcReg9<VReg_576_STAGING>;
-def VRegSrc_1024 : SrcReg9<VReg_1024_STAGING>;
+def VRegSrc_64   : SrcReg9<VReg_64_STAGING_AlignTarget>;
+def VRegSrc_96   : SrcReg9<VReg_96_STAGING_AlignTarget>;
+def VRegSrc_128  : SrcReg9<VReg_128_STAGING_AlignTarget>;
+def VRegSrc_160  : SrcReg9<VReg_160_STAGING_AlignTarget>;
+def VRegSrc_192  : SrcReg9<VReg_192_STAGING_AlignTarget>;
+def VRegSrc_256  : SrcReg9<VReg_256_STAGING_AlignTarget>;
+def VRegSrc_288  : SrcReg9<VReg_288_STAGING_AlignTarget>;
+def VRegSrc_384  : SrcReg9<VReg_384_STAGING_AlignTarget>;
+def VRegSrc_512  : SrcReg9<VReg_512_STAGING_AlignTarget>;
+def VRegSrc_576  : SrcReg9<VReg_576_STAGING_AlignTarget>;
+def VRegSrc_1024 : SrcReg9<VReg_1024_STAGING_AlignTarget>;
 def VRegOrLdsSrc_32 : SrcReg9<VRegOrLds_32>;
 
 // True 16 Operands
@@ -1537,22 +1628,28 @@ def VRegSrc_fake16: SrcReg9<VGPR_32_STAGING> {
 class VGPROp<RegisterClass regClass> : RegisterOperand<!cast<RegisterClass>(regClass#_STAGING)> {
   let DecoderMethod = "Decode" # regClass # "RegisterClass";
 }
-class VGPROp_Align2<RegisterClass regClass> : RegisterOperand<!cast<RegisterClass>(regClass#_STAGING#_Align2)> {
-  let DecoderMethod = "Decode" # regClass # "RegisterClass";
-}
-multiclass VGPROp_Aligned<RegisterClass regClass> {
-  def _Align1 : VGPROp<regClass>;
-  def _Align2 : VGPROp_Align2<regClass>;
+multiclass VGPROp_Aligned<string regClass> {
+  let DecoderMethod = "Decode" # regClass # "RegisterClass" in {
+    // Target default alignment
+    def "" : RegisterOperand<!cast<RegisterClassLike>(regClass#_STAGING#_AlignTarget)>;
+
+    // No alignment requirement
+    def _Align1 : RegisterOperand<!cast<RegisterClassLike>(regClass#_STAGING)>;
+
+    // Always even alignment requirement
+    def _Align2 : RegisterOperand<!cast<RegisterClassLike>(regClass#_STAGING#_Align2)>;
+  }
 }
 // TODO: These cases should use default target alignment
+// True 16 operands.
+def VGPROp_16 : VGPROp<VGPR_16> {
+  let EncoderMethod = "getMachineOpValueT16";
+}
+
 def VGPROp_32 : VGPROp<VGPR_32>;
 
 foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "320", "352", "384", "512", "576", "1024"] in {
-  def VGPROp_#size : VGPROp<!cast<RegisterClass>("VReg_"#size)>;
-}
-
-foreach size = ["64", "96", "128", "160", "256", "1024" ] in {
-  defm VGPROp_#size : VGPROp_Aligned<!cast<RegisterClass>("VReg_"#size)>;
+  defm VGPROp_#size : VGPROp_Aligned<"VReg_"#size>;
 }
 
 def VGPROp_16_Lo128 : RegisterOperand<VGPR_16_STAGING_Lo128> {
@@ -1564,31 +1661,17 @@ def VGPROp_32_Lo128 : RegisterOperand<VGPR_32_STAGING_Lo128> {
   let DecoderMethod = "DecodeVGPR_32RegisterClass";
 }
 
-// True 16 operands.
-def VGPROp_16 : VGPROp<VGPR_16> {
-  let EncoderMethod = "getMachineOpValueT16";
-}
-
 // For V_LOAD/STORE_IDX only
 def VGPR_IDX_DATA_OP : RegisterOperand<VGPR_IDX_DATA_OP_RC>;
 
-// TODO: These cases should use default target alignment
-//def VGPROp_16 : RegisterOperand<VGPR_16>;
-//def VGPROp_32 : RegisterOperand<VGPR_32>;
-
-//foreach size = ["64", "96", "128", "256", "1024" ] in {
-//  def VGPROp_#size : RegisterOperand<!cast<RegisterClass>("VReg_"#size)>;
-//  def VGPROp_#size#_Align1 : RegisterOperand<!cast<RegisterClass>("VReg_"#size)>;
-//  def VGPROp_#size#_Align2 : RegisterOperand<!cast<RegisterClass>("VReg_"#size#_Align2)>;
-//}
 
 //===----------------------------------------------------------------------===//
 //  ASrc_* Operands with an AccVGPR
 //===----------------------------------------------------------------------===//
 
-class AVOperand<RegisterClass regClass, string decoder>
+class AVOperand<RegisterClassLike regClass, string decoder>
     : RegisterOperand<regClass> {
-  let DecoderMethod = decoder # "<" # regClass.Size # ">";
+  let DecoderMethod = decoder # "<" # !cast<SIRegisterClassLike>(regClass).Size # ">";
   let EncoderMethod = "getAVOperandEncoding";
 }
 
@@ -1603,13 +1686,13 @@ def VCSrc_bf16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_INLINE_C_BF16">;
 def VCSrc_f16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_INLINE_C_FP16">;
 def VCSrc_b32 : SrcRegOrImm9 <VS_32, "OPERAND_REG_INLINE_C_INT32">;
 def VCSrc_f32 : SrcRegOrImm9 <VS_32, "OPERAND_REG_INLINE_C_FP32">;
-def VCSrc_b64 : SrcRegOrImm9 <VS_64, "OPERAND_REG_INLINE_C_INT64">;
-def VCSrc_f64 : SrcRegOrImm9 <VS_64, "OPERAND_REG_INLINE_C_FP64">;
+def VCSrc_b64 : SrcRegOrImm9 <VS_64_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_INT64">;
+def VCSrc_f64 : SrcRegOrImm9 <VS_64_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_FP64">;
 def VCSrc_v2b16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_INLINE_C_V2INT16">;
 def VCSrc_v2bf16: SrcRegOrImm9 <VS_32, "OPERAND_REG_INLINE_C_V2BF16">;
 def VCSrc_v2f16 : SrcRegOrImm9 <VS_32, "OPERAND_REG_INLINE_C_V2FP16">;
 def VCSrc_b32_Lo256 : SrcRegOrImm9 <VS_32_Lo256, "OPERAND_REG_INLINE_C_INT32">;
-def VCSrc_v2b32 : SrcRegOrImm9 <VS_64, "OPERAND_REG_INLINE_C_V2INT32">;
+def VCSrc_v2b32 : SrcRegOrImm9 <VS_64_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_V2INT32">;
 def VCSrc_b64_Lo256 : SrcRegOrImm9 <VS_64_Lo256, "OPERAND_REG_INLINE_C_INT64">;
 
 // True 16 Operands
@@ -1620,72 +1703,80 @@ def VCSrcT_f16 : SrcRegOrImm9_t16 <"OPERAND_REG_INLINE_C_FP16">;
 //  VISrc_* Operands with a VGPR or an inline constant
 //===----------------------------------------------------------------------===//
 
-def VISrc_64_bf16 : SrcRegOrImm9 <VReg_64_STAGING, "OPERAND_REG_INLINE_C_BF16">;
-def VISrc_64_f16 : SrcRegOrImm9 <VReg_64_STAGING, "OPERAND_REG_INLINE_C_FP16">;
-def VISrc_64_b32 : SrcRegOrImm9 <VReg_64_STAGING, "OPERAND_REG_INLINE_C_INT32">;
-def VISrc_64_f64 : SrcRegOrImm9 <VReg_64_STAGING, "OPERAND_REG_INLINE_C_FP64">;
-def VISrc_128_bf16 : SrcRegOrImm9 <VReg_128_STAGING, "OPERAND_REG_INLINE_C_BF16">;
-def VISrc_128_f16 : SrcRegOrImm9 <VReg_128_STAGING, "OPERAND_REG_INLINE_C_FP16">;
-def VISrc_128_b32 : SrcRegOrImm9 <VReg_128_STAGING, "OPERAND_REG_INLINE_C_INT32">;
-def VISrc_128_f32 : SrcRegOrImm9 <VReg_128_STAGING, "OPERAND_REG_INLINE_C_FP32">;
-def VISrc_256_b32 : SrcRegOrImm9 <VReg_256_STAGING, "OPERAND_REG_INLINE_C_INT32">;
-def VISrc_256_f32 : SrcRegOrImm9 <VReg_256_STAGING, "OPERAND_REG_INLINE_C_FP32">;
-def VISrc_256_f64 : SrcRegOrImm9 <VReg_256_STAGING, "OPERAND_REG_INLINE_C_FP64">;
-def VISrc_512_b32 : SrcRegOrImm9 <VReg_512_STAGING, "OPERAND_REG_INLINE_C_INT32">;
-def VISrc_512_f32 : SrcRegOrImm9 <VReg_512_STAGING, "OPERAND_REG_INLINE_C_FP32">;
-def VISrc_512_f64 : SrcRegOrImm9 <VReg_512_STAGING, "OPERAND_REG_INLINE_C_FP64">;
-def VISrc_1024_b32 : SrcRegOrImm9 <VReg_1024_STAGING, "OPERAND_REG_INLINE_C_INT32">;
-def VISrc_1024_f32 : SrcRegOrImm9 <VReg_1024_STAGING, "OPERAND_REG_INLINE_C_FP32">;
+def VISrc_64_bf16 : SrcRegOrImm9 <VReg_64_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_BF16">;
+def VISrc_64_f16 : SrcRegOrImm9 <VReg_64_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_FP16">;
+def VISrc_64_b32 : SrcRegOrImm9 <VReg_64_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_INT32">;
+def VISrc_64_f64 : SrcRegOrImm9 <VReg_64_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_FP64">;
+def VISrc_128_bf16 : SrcRegOrImm9 <VReg_128_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_BF16">;
+def VISrc_128_f16 : SrcRegOrImm9 <VReg_128_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_FP16">;
+def VISrc_128_b32 : SrcRegOrImm9 <VReg_128_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_INT32">;
+def VISrc_128_f32 : SrcRegOrImm9 <VReg_128_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_FP32">;
+def VISrc_256_b32 : SrcRegOrImm9 <VReg_256_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_INT32">;
+def VISrc_256_f32 : SrcRegOrImm9 <VReg_256_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_FP32">;
+def VISrc_256_f64 : SrcRegOrImm9 <VReg_256_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_FP64">;
+def VISrc_512_b32 : SrcRegOrImm9 <VReg_512_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_INT32">;
+def VISrc_512_f32 : SrcRegOrImm9 <VReg_512_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_FP32">;
+def VISrc_512_f64 : SrcRegOrImm9 <VReg_512_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_FP64">;
+def VISrc_1024_b32 : SrcRegOrImm9 <VReg_1024_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_INT32">;
+def VISrc_1024_f32 : SrcRegOrImm9 <VReg_1024_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_FP32">;
 
 //===----------------------------------------------------------------------===//
 //  AVSrc_*, AVDst_*, AVLdSt_* Operands with an AGPR or VGPR
 //===----------------------------------------------------------------------===//
 
-class AVSrcOperand<RegisterClass regClass>
+class AVSrcOperand<RegisterClassLike regClass>
   : AVOperand<regClass, "decodeSrcAV10">;
 
 def AVSrc_32 : AVSrcOperand<AV_32_STAGING>;
-def AVSrc_64 : AVSrcOperand<AV_64_STAGING>;
-def AVSrc_128 : AVSrcOperand<AV_128_STAGING>;
-def AVSrc_192 : AVSrcOperand<AV_192_STAGING>;
-def AVSrc_256 : AVSrcOperand<AV_256_STAGING>;
+def AVSrc_64 : AVSrcOperand<AV_64_STAGING_AlignTarget>;
+def AVSrc_128 : AVSrcOperand<AV_128_STAGING_AlignTarget>;
+def AVSrc_192 : AVSrcOperand<AV_192_STAGING_AlignTarget>;
+def AVSrc_256 : AVSrcOperand<AV_256_STAGING_AlignTarget>;
 
-class AVDstOperand<RegisterClass regClass>
+def AVSrc_64_Align2 : AVSrcOperand<AV_64_Align2>;
+def AVSrc_128_Align2 : AVSrcOperand<AV_128_Align2>;
+def AVSrc_192_Align2 : AVSrcOperand<AV_192_Align2>;
+def AVSrc_256_Align2 : AVSrcOperand<AV_256_Align2>;
+
+class AVDstOperand<RegisterClassLike regClass>
   : AVOperand<regClass, "decodeAV10">;
 
 def AVDst_128 : AVDstOperand<AV_128_STAGING>;
 def AVDst_256 : AVDstOperand<AV_256_STAGING>;
 def AVDst_512 : AVDstOperand<AV_512_STAGING>;
-class AVLdStOperand<RegisterClass regClass>
+
+def AVDst_128_Align2 : AVDstOperand<AV_128_STAGING_Align2>;
+def AVDst_256_Align2 : AVDstOperand<AV_256_STAGING_Align2>;
+def AVDst_512_Align2 : AVDstOperand<AV_512_STAGING_Align2>;
+
+class AVLdStOperand<RegisterClassLike regClass>
   : AVOperand<regClass, "decodeAVLdSt">;
 
-// TODO: These cases should use target align variant
-def AVLdSt_32 : AVLdStOperand<AV_32_STAGING>;
-foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "512", "576", "1024" ] in {
-  // TODO: These cases should use target align variant
-  def AVLdSt_#size : AVLdStOperand<!cast<RegisterClass>("AV_"#size#"_STAGING")>;
+def AVLdSt_32 : AVLdStOperand<AV_LdSt_32_STAGING_Target>;
 
-  def AVLdSt_#size#_Align1 : AVLdStOperand<!cast<RegisterClass>("AV_"#size#"_STAGING")>;
-  def AVLdSt_#size#_Align2 : AVLdStOperand<!cast<RegisterClass>("AV_"#size#"_STAGING_Align2")>;
+foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "512", "576", "1024" ] in {
+  def AVLdSt_#size : AVLdStOperand<!cast<RegisterClassLike>("AV_LdSt_"#size#_STAGING_AlignTarget)>;
+  def AVLdSt_#size#_Align1 : AVLdStOperand<!cast<RegisterClassLike>("AV_LdSt_"#size#_STAGING_Align1)>;
+  def AVLdSt_#size#_Align2 : AVLdStOperand<!cast<RegisterClassLike>("AV_LdSt_"#size#_STAGING_Align2)>;
 }
 
 //===----------------------------------------------------------------------===//
 //  ACSrc_* Operands with an AGPR or an inline constant
 //===----------------------------------------------------------------------===//
 
-class SrcRegOrImmA9<RegisterClass regClass, string operandType>
+class SrcRegOrImmA9<RegisterClassLike regClass, string operandType>
     : RegOrImmOperand<regClass, operandType> {
-  let DecoderMethod = "decodeSrcRegOrImmA9<" # regClass.Size # ">";
+  let DecoderMethod = "decodeSrcRegOrImmA9<" # !cast<SIRegisterClassLike>(regClass).Size # ">";
 }
 
-def AISrc_64_f64 : SrcRegOrImmA9 <AReg_64, "OPERAND_REG_INLINE_AC_FP64">;
-def AISrc_128_f32 : SrcRegOrImmA9 <AReg_128, "OPERAND_REG_INLINE_AC_FP32">;
-def AISrc_128_b32 : SrcRegOrImmA9 <AReg_128, "OPERAND_REG_INLINE_AC_INT32">;
-def AISrc_256_f64 : SrcRegOrImmA9 <AReg_256, "OPERAND_REG_INLINE_AC_FP64">;
-def AISrc_512_f32 : SrcRegOrImmA9 <AReg_512, "OPERAND_REG_INLINE_AC_FP32">;
-def AISrc_512_b32 : SrcRegOrImmA9 <AReg_512, "OPERAND_REG_INLINE_AC_INT32">;
-def AISrc_1024_f32 : SrcRegOrImmA9 <AReg_1024, "OPERAND_REG_INLINE_AC_FP32">;
-def AISrc_1024_b32 : SrcRegOrImmA9 <AReg_1024, "OPERAND_REG_INLINE_AC_INT32">;
+def AISrc_64_f64 : SrcRegOrImmA9 <AReg_64_AlignTarget, "OPERAND_REG_INLINE_AC_FP64">;
+def AISrc_128_f32 : SrcRegOrImmA9 <AReg_128_AlignTarget, "OPERAND_REG_INLINE_AC_FP32">;
+def AISrc_128_b32 : SrcRegOrImmA9 <AReg_128_AlignTarget, "OPERAND_REG_INLINE_AC_INT32">;
+def AISrc_256_f64 : SrcRegOrImmA9 <AReg_256_AlignTarget, "OPERAND_REG_INLINE_AC_FP64">;
+def AISrc_512_f32 : SrcRegOrImmA9 <AReg_512_AlignTarget, "OPERAND_REG_INLINE_AC_FP32">;
+def AISrc_512_b32 : SrcRegOrImmA9 <AReg_512_AlignTarget, "OPERAND_REG_INLINE_AC_INT32">;
+def AISrc_1024_f32 : SrcRegOrImmA9 <AReg_1024_AlignTarget, "OPERAND_REG_INLINE_AC_FP32">;
+def AISrc_1024_b32 : SrcRegOrImmA9 <AReg_1024_AlignTarget, "OPERAND_REG_INLINE_AC_INT32">;
 
 //===----------------------------------------------------------------------===//
 //  Tablegen programming utilities
@@ -1695,10 +1786,10 @@ def AISrc_1024_b32 : SrcRegOrImmA9 <AReg_1024, "OPERAND_REG_INLINE_AC_INT32">;
 /// instruction's operand list, which may be a RegisterOperand or a
 /// direct RegisterClass reference.
 class getRegClassFromOp<DAGOperand Op> {
-  SIRegisterClass ret = !if(
+  SIRegisterClassLike ret = !if(
     !isa<RegisterOperand>(Op),
-    !cast<SIRegisterClass>(!cast<RegisterOperand>(Op).RegClass),
-    !cast<SIRegisterClass>(Op));
+    !cast<SIRegisterClassLike>(!cast<RegisterOperand>(Op).RegClass),
+    !cast<SIRegisterClassLike>(Op));
 }
 
 /// Check if the operand will use an AV_* class.
