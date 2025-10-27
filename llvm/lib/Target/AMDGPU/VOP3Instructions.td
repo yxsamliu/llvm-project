@@ -2000,9 +2000,26 @@ class VOP_EXCLUSIVE_SCAN<VOPProfile p, VOP3Features f> : VOP3_Profile<p, f> {
   let HasExtVOP3DPP = 0;
 }
 
+class VOP_EXCLUSIVE_SCAN_t16<VOPProfile p, VOP3Features f> : VOP3_Profile_True16<p, f> {
+  let HasExtVOP3DPP = 0;
+}
+
+class VOP_EXCLUSIVE_SCAN_fake16<VOPProfile p, VOP3Features f> : VOP3_Profile_Fake16<p, f> {
+  let HasExtVOP3DPP = 0;
+}
+
 multiclass V_EXCLUSIVE_SCAN<VOPProfile p, SDPatternOperator node, VOP3Features f = VOP3_REGULAR> {
   let SubtargetPredicate = HasExclusiveScanInsts in
   defm NAME : VOP3Inst<!tolower(NAME), VOP_EXCLUSIVE_SCAN<p, f>, node>;
+}
+
+multiclass V_EXCLUSIVE_SCAN_t16<VOPProfile p, SDPatternOperator node, VOP3Features f = VOP3_OPSEL_ONLY> {
+  let SubtargetPredicate = HasExclusiveScanInsts in {
+  let True16Predicate = UseRealTrue16Insts in
+  defm _t16 : VOP3Inst<!tolower(NAME#"_t16"), VOP_EXCLUSIVE_SCAN_t16<p, f>, node>;
+  let True16Predicate = UseFakeTrue16Insts in
+  defm _fake16 : VOP3Inst<!tolower(NAME#"_fake16"), VOP_EXCLUSIVE_SCAN_fake16<p, f>, node>;
+  }
 }
 
 defm V_EXCLUSIVE_SCAN_SUM_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_sum_i32, VOP3_CLAMP>;
@@ -2010,12 +2027,12 @@ defm V_EXCLUSIVE_SCAN_SUM_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exc
 defm V_EXCLUSIVE_SCAN_XOR_B32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_xor_b32>;
 defm V_EXCLUSIVE_SCAN_OR_B32  : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_or_b32>;
 defm V_EXCLUSIVE_SCAN_AND_B32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_and_b32>;
-defm V_EXCLUSIVE_SCAN_MIN_I16 : V_EXCLUSIVE_SCAN<VOP_I16_I16_I32, int_amdgcn_exclusive_scan_min_i16>;
-defm V_EXCLUSIVE_SCAN_MIN_U16 : V_EXCLUSIVE_SCAN<VOP_I16_I16_I32, int_amdgcn_exclusive_scan_min_u16>;
+defm V_EXCLUSIVE_SCAN_MIN_I16 : V_EXCLUSIVE_SCAN_t16<VOP_I16_I16_I32, int_amdgcn_exclusive_scan_min_i16>;
+defm V_EXCLUSIVE_SCAN_MIN_U16 : V_EXCLUSIVE_SCAN_t16<VOP_I16_I16_I32, int_amdgcn_exclusive_scan_min_u16>;
 defm V_EXCLUSIVE_SCAN_MIN_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_min_i32>;
 defm V_EXCLUSIVE_SCAN_MIN_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_min_u32>;
-defm V_EXCLUSIVE_SCAN_MAX_I16 : V_EXCLUSIVE_SCAN<VOP_I16_I16_I32, int_amdgcn_exclusive_scan_max_i16>;
-defm V_EXCLUSIVE_SCAN_MAX_U16 : V_EXCLUSIVE_SCAN<VOP_I16_I16_I32, int_amdgcn_exclusive_scan_max_u16>;
+defm V_EXCLUSIVE_SCAN_MAX_I16 : V_EXCLUSIVE_SCAN_t16<VOP_I16_I16_I32, int_amdgcn_exclusive_scan_max_i16>;
+defm V_EXCLUSIVE_SCAN_MAX_U16 : V_EXCLUSIVE_SCAN_t16<VOP_I16_I16_I32, int_amdgcn_exclusive_scan_max_u16>;
 defm V_EXCLUSIVE_SCAN_MAX_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_max_i32>;
 defm V_EXCLUSIVE_SCAN_MAX_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_max_u32>;
 
@@ -2114,13 +2131,13 @@ defm V_EXCLUSIVE_SCAN_XOR_B32 : VOP3_Real_Base<GFX13Gen, 0x244>;
 defm V_EXCLUSIVE_SCAN_OR_B32  : VOP3_Real_Base<GFX13Gen, 0x245>;
 defm V_EXCLUSIVE_SCAN_AND_B32 : VOP3_Real_Base<GFX13Gen, 0x246>;
 defm V_EXCLUSIVE_SCAN_MIN_I32 : VOP3_Real_Base<GFX13Gen, 0x247>;
-defm V_EXCLUSIVE_SCAN_MIN_I16 : VOP3_Real_Base<GFX13Gen, 0x248>;
+defm V_EXCLUSIVE_SCAN_MIN_I16 : VOP3Only_Real_with_name_t16_and_fake16_gfx13<0x248>;
 defm V_EXCLUSIVE_SCAN_MAX_I32 : VOP3_Real_Base<GFX13Gen, 0x249>;
-defm V_EXCLUSIVE_SCAN_MAX_I16 : VOP3_Real_Base<GFX13Gen, 0x24a>;
+defm V_EXCLUSIVE_SCAN_MAX_I16 : VOP3Only_Real_with_name_t16_and_fake16_gfx13<0x24a>;
 defm V_EXCLUSIVE_SCAN_MIN_U32 : VOP3_Real_Base<GFX13Gen, 0x24b>;
-defm V_EXCLUSIVE_SCAN_MIN_U16 : VOP3_Real_Base<GFX13Gen, 0x24c>;
+defm V_EXCLUSIVE_SCAN_MIN_U16 : VOP3Only_Real_with_name_t16_and_fake16_gfx13<0x24c>;
 defm V_EXCLUSIVE_SCAN_MAX_U32 : VOP3_Real_Base<GFX13Gen, 0x24d>;
-defm V_EXCLUSIVE_SCAN_MAX_U16 : VOP3_Real_Base<GFX13Gen, 0x24e>;
+defm V_EXCLUSIVE_SCAN_MAX_U16 : VOP3Only_Real_with_name_t16_and_fake16_gfx13<0x24e>;
 defm V_MINMAX_NUM_F32         : VOP3_Realtriple_with_name_gfx12_gfx13<0x268, 0x268, "V_MINMAX_F32", "v_minmax_num_f32">;
 defm V_MAXMIN_NUM_F32         : VOP3_Realtriple_with_name_gfx12_gfx13<0x269, 0x269, "V_MAXMIN_F32", "v_maxmin_num_f32">;
 defm V_MINMAX_NUM_F16         : VOP3_Realtriple_t16_and_fake16_gfx12_gfx13<0x26a, 0x26a, "v_minmax_num_f16", "V_MINMAX_F16", "v_minmax_f16">;

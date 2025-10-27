@@ -2358,6 +2358,12 @@ multiclass VOP3_Real_with_name_gfx11_gfx12_gfx13<bits<10> op, string opName,
   VOP3_Real_with_name<GFX12Gen, op, opName, asmName>,
   VOP3_Real_with_name<GFX13Gen, op, opName, asmName>;
 
+multiclass VOP3Only_Real_with_name_t16_and_fake16_gfx13<bits<10> op, string asmName=!tolower(NAME),
+                                     string opName=NAME, string pseudo_mnemonic = ""> {
+  defm _t16: VOP3_Real_with_name<GFX13Gen, op, opName#"_t16", asmName, pseudo_mnemonic, 1>;
+  defm _fake16: VOP3_Real_with_name<GFX13Gen, op, opName#"_fake16", asmName, pseudo_mnemonic, 1>;
+}
+
 //===----------------------------------------------------------------------===//
 
 include "VOPCInstructions.td"
