@@ -610,17 +610,23 @@ v_rsq_f32 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_rsq_f32 v255, v255 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX13: v_rsq_f32_dpp v255, v255 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0x5c,0xfe,0x7f,0xff,0x00,0x00,0x00]
 
-v_sat_pk4_i4_i8 v1, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: v_sat_pk4_i4_i8_dpp v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xe6,0x02,0x7e,0x02,0x77,0x39,0x05]
+v_sat_pk4_i4_i8 v1.l, v2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_sat_pk4_i4_i8_dpp v1.l, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xe6,0x02,0x7e,0x02,0x77,0x39,0x05]
 
-v_sat_pk4_i4_i8 v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX13: v_sat_pk4_i4_i8_dpp v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xe6,0x02,0x7e,0x02,0x77,0x39,0x05]
+v_sat_pk4_i4_i8 v1.l, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_sat_pk4_i4_i8_dpp v1.l, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xe6,0x02,0x7e,0x02,0x77,0x39,0x05]
 
-v_sat_pk4_u4_u8 v1, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: v_sat_pk4_u4_u8_dpp v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xe8,0x02,0x7e,0x02,0x77,0x39,0x05]
+v_sat_pk4_i4_i8 v1.h, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_sat_pk4_i4_i8_dpp v1.h, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xe6,0x02,0x7f,0x02,0x77,0x39,0x05]
 
-v_sat_pk4_u4_u8 v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX13: v_sat_pk4_u4_u8_dpp v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xe8,0x02,0x7e,0x02,0x77,0x39,0x05]
+v_sat_pk4_u4_u8 v1.l, v2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_sat_pk4_u4_u8_dpp v1.l, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xe8,0x02,0x7e,0x02,0x77,0x39,0x05]
+
+v_sat_pk4_u4_u8 v1.l, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_sat_pk4_u4_u8_dpp v1.l, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xe8,0x02,0x7e,0x02,0x77,0x39,0x05]
+
+v_sat_pk4_u4_u8 v1.h, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_sat_pk4_u4_u8_dpp v1.h, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xe8,0x02,0x7f,0x02,0x77,0x39,0x05]
 
 v_sat_pk_u8_i16 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX13: v_sat_pk_u8_i16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xc4,0x0a,0x7e,0x01,0x77,0x39,0x05]
