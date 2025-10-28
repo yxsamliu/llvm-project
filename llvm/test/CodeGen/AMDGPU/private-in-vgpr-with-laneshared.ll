@@ -4,8 +4,8 @@
 @exchange = external local_unnamed_addr addrspace(10) global [40 x i32], align 4
 define dso_local amdgpu_kernel void @test_wavegroup_entry(i64 %i) "amdgpu-wavegroup-enable" !reqd_work_group_size !{i32 128, i32 1, i32 1} {
 ; CHECK-LABEL: test_wavegroup_entry:
-; CHECK:       test_wavegroup_entry$local:
-; CHECK-NEXT:    .type test_wavegroup_entry$local,@function
+; CHECK:       .Ltest_wavegroup_entry$local:
+; CHECK-NEXT:    .type .Ltest_wavegroup_entry$local,@function
 ; CHECK-NEXT:  ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
