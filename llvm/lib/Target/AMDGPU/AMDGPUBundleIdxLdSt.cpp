@@ -118,6 +118,7 @@ private:
   const TargetInstrInfo *TII = nullptr;
   const SIInstrInfo *STI = nullptr;
   const GCNSubtarget *ST = nullptr;
+  const MCSubtargetInfo *MCSTI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   AliasAnalysis *AA = nullptr;
   MachineCycleInfo *CI = nullptr;
@@ -875,7 +876,8 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     }
 
     if (ST->needsAlignedVGPRs() && MI->getOpcode() != AMDGPU::V_LOAD_IDX &&
-        AMDGPU::getRegOperandSize(TRI, MI->getDesc(), Def.getOperandNo()) > 4) {
+        AMDGPU::getRegOperandSize(MCSTI, TII, MI->getDesc(),
+                                  Def.getOperandNo()) > 4) {
       // Do not bundle instructions with odd offsets to ensure proper register
       // alignment.
       unsigned Offset =
@@ -976,7 +978,8 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
       continue;
 
     if (ST->needsAlignedVGPRs() &&
-        AMDGPU::getRegOperandSize(TRI, MI->getDesc(), Use.getOperandNo()) > 4) {
+        AMDGPU::getRegOperandSize(MCSTI, TII, MI->getDesc(),
+                                  Use.getOperandNo()) > 4) {
       // Do not bundle instructions with odd offsets to ensure proper register
       // alignment.
       unsigned Offset =
@@ -1095,6 +1098,7 @@ bool AMDGPUBundleIdxLdSt::runOnMachineFunction(MachineFunction &MF) {
   STI = ST->getInstrInfo();
   TII = MF.getSubtarget().getInstrInfo();
   MRI = &MF.getRegInfo();
+  MCSTI = MF.getTarget().getMCSubtargetInfo();
 
   bool Changed = false;
   LLVM_DEBUG(

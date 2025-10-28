@@ -325,7 +325,7 @@ def CPolBit {
 }
 
 class VOPDstOperand <RegisterClassLike rc> : RegisterOperand <rc, "printVOPDst"> {
-  let DecoderMethod = "Decode" # !subst("_STAGING", "", !cast<string>(rc)) # "RegisterClass";
+  let DecoderMethod = "Decode" # !subst("_AlignTarget", "", !subst("_STAGING", "", !cast<string>(rc))) # "RegisterClass";
 }
 
 def VOPDstOperand_VGPR_32_Lo128 : VOPDstOperand <VGPR_32_STAGING_Lo128> {

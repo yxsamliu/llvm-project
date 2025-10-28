@@ -5003,6 +5003,7 @@ def HLSLResourceBinding: InheritableAttr {
       std::optional<unsigned> SlotNumber;
       unsigned SpaceNumber;
       std::optional<unsigned> ImplicitBindingOrderID;
+      std::optional<unsigned> ImplicitCounterBindingOrderID;
 
   public:
       void setBinding(RegisterType RT, std::optional<unsigned> SlotNum, unsigned SpaceNum) {
@@ -5034,6 +5035,17 @@ def HLSLResourceBinding: InheritableAttr {
       uint32_t getImplicitBindingOrderID() const {
         assert(hasImplicitBindingOrderID() && "attribute does not have implicit binding order id");
         return ImplicitBindingOrderID.value();
+      }
+      void setImplicitCounterBindingOrderID(uint32_t Value) {
+        assert(!hasImplicitCounterBindingOrderID() && "attribute already has implicit counter binding order id");
+        ImplicitCounterBindingOrderID = Value;
+      }
+      bool hasImplicitCounterBindingOrderID() const {
+        return ImplicitCounterBindingOrderID.has_value();
+      }
+      uint32_t getImplicitCounterBindingOrderID() const {
+        assert(hasImplicitCounterBindingOrderID() && "attribute does not have implicit counter binding order id");
+        return ImplicitCounterBindingOrderID.value();
       }
   }];
 }
