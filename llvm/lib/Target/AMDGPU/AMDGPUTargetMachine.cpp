@@ -514,6 +514,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURegBankCombinerPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUPromoteAllocaToVectorPass(*PR);
+  initializeAMDGPULDSBufferingLegacyPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
   initializeAMDGPULateCodeGenPrepareLegacyPass(*PR);
   initializeAMDGPURemoveIncompatibleFunctionsLegacyPass(*PR);
@@ -1278,6 +1279,8 @@ void AMDGPUPassConfig::addIRPasses() {
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addPass(createAMDGPUPromoteAlloca());
+    // Run per-thread LDS buffering after promote-alloca to use leftover LDS.
+    addPass(createAMDGPULDSBufferingLegacyPass());
 
     if (isPassEnabled(EnableScalarIRPasses))
       addStraightLineScalarOptimizationPasses();
@@ -2062,6 +2065,8 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addPass(AMDGPUPromoteAllocaPass(TM));
+    // Run per-thread LDS buffering after promote-alloca to use leftover LDS.
+    addPass(AMDGPULDSBufferingPass(TM));
     if (isPassEnabled(EnableScalarIRPasses))
       addStraightLineScalarOptimizationPasses(addPass);
 
