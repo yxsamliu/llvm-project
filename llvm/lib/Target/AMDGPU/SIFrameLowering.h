@@ -102,10 +102,9 @@ private:
       Register PreloadedPrivateBufferReg, Register ScratchRsrcReg,
       Register ScratchWaveOffsetReg) const;
 
-<<<<<<< HEAD
   void finalizeIdx0SaveRestores(MachineFunction &MF, bool EntryFunction,
                                 Register TmpWavegroupReg) const;
-=======
+
   void emitPrologueEntryCFI(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI,
                             const DebugLoc &DL) const;
@@ -114,7 +113,6 @@ private:
                   DebugLoc const &DL, Register StackPtrReg,
                   bool AspaceAlreadyDefined,
                   MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const;
->>>>>>> a78b5f2bf58d9c79427802f302fee1ee615a1937
 
 public:
   bool requiresStackPointerReference(const MachineFunction &MF) const;

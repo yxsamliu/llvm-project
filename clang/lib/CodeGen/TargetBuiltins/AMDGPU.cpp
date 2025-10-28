@@ -385,7 +385,6 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
   Inst->setMetadata(LLVMContext::MD_mmra, MMRAMetadata::getMD(Ctx, MMRAs));
 }
 
-<<<<<<< HEAD
 // Get layout of a *convolve* builtin.
 static std::optional<unsigned> getConvolveLayout(unsigned BuiltinID) {
 
@@ -518,7 +517,8 @@ static std::optional<unsigned> getCvtToTensorDefaultLayout(unsigned BuiltinID) {
   default:
     return std::nullopt;
   }
-=======
+}
+
 static Value *GetOrInsertAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
   auto PTy = IntegerType::getInt1Ty(CGF.getLLVMContext());
 
@@ -529,7 +529,6 @@ static Value *GetOrInsertAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
 
   return CGF.Builder.CreateLoad(
       RawAddress(P, PTy, CharUnits::One(), KnownNonNull));
->>>>>>> a78b5f2bf58d9c79427802f302fee1ee615a1937
 }
 
 static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID) {

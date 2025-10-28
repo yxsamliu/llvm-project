@@ -1075,14 +1075,12 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
           DBuilder.createBasicType(Name, Width, llvm::dwarf::DW_ATE_unsigned); \
     return SingletonId;                                                        \
   }
-<<<<<<< HEAD
 #define AMDGPU_SEMAPHORE_TYPE(Name, Id, SingletonId, Width, Align, Rank)       \
   case BuiltinType::Id:                                                        \
     if (!SingletonId)                                                          \
       SingletonId =                                                            \
           DBuilder.createBasicType(Name, Width, llvm::dwarf::DW_ATE_unsigned); \
     return SingletonId;
-=======
 #define AMDGPU_FEATURE_PREDICATE_TYPE(Name, Id, SingletonId, Width, Align)     \
   case BuiltinType::Id: {                                                      \
     if (!SingletonId)                                                          \
@@ -1090,7 +1088,6 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
           DBuilder.createBasicType(Name, Width, llvm::dwarf::DW_ATE_boolean);  \
     return SingletonId;                                                        \
   }
->>>>>>> a78b5f2bf58d9c79427802f302fee1ee615a1937
 #include "clang/Basic/AMDGPUTypes.def"
   case BuiltinType::UChar:
   case BuiltinType::Char_U:
