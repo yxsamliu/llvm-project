@@ -255,8 +255,12 @@ class NSAHelper {
 }
 
 class MIMGNSAHelper<int num_addrs,
-                    list<RegisterClass> addr_types=!listsplat(VGPR_32, num_addrs)>
-  : NSAHelper<> {
+                    list<RegisterOperand> addr_types_in=[]>
+    : NSAHelper<> {
+  list<RegisterOperand> addr_types =
+    !if(!empty(addr_types_in), !listsplat(VGPROp_32, num_addrs),
+        addr_types_in);
+
   list<string> AddrAsmNames = !foreach(i, !range(num_addrs), "vaddr" # i);
   let AddrIns = !dag(ins, addr_types, AddrAsmNames);
   let AddrAsm = "[$" # !interleave(AddrAsmNames, ", $") # "]";
@@ -353,7 +357,7 @@ class MIMG_gfx11<int op, dag outs, string dns = "">
 // Base class for all NSA MIMG instructions.
 // Note that 1-dword addresses always use non-NSA variants.
 class MIMG_nsa_gfx11<int op, dag outs, int num_addrs, string dns="",
-                     list<RegisterClass> addr_types=[],
+                     list<RegisterOperand> addr_types=[],
                      RegisterOperand LastAddrRC = VGPROp_32>
   : MIMG<outs, dns>, MIMGe_gfx11<op> {
   let SubtargetPredicate = isGFX11Only;
@@ -373,7 +377,7 @@ class MIMG_nsa_gfx11<int op, dag outs, int num_addrs, string dns="",
 }
 
 class VIMAGE<int op, dag outs, int num_addrs, Predicate pred,
-             MIMGEncoding encoding, string dns="", list<RegisterClass> addr_types=[]>
+             MIMGEncoding encoding, string dns="", list<RegisterOperand> addr_types=[]>
   : MIMG<outs, dns>, VIMAGEe<op> {
   let MIMG = 0;
   let VIMAGE = 1;
@@ -1709,12 +1713,12 @@ class MIMG_IntersectRay_Helper<bit Is64, bit IsA16, bit isDual, bit isBVH8> {
   int VAddrDwords = !srl(Size, 5);
 
   int GFX11PlusNSAAddrs = !if(IsA16, 4, 5);
-  RegisterClass node_ptr_type = !if(Is64, VReg_64, VGPR_32);
-  list<RegisterClass> GFX11PlusAddrTypes =
-     !cond(isBVH8 : [node_ptr_type, VReg_64, VReg_96, VReg_96, VGPR_32],
-           isDual : [node_ptr_type, VReg_64, VReg_96, VReg_96, VReg_64],
-           IsA16  : [node_ptr_type, VGPR_32, VReg_96, VReg_96],
-           true   : [node_ptr_type, VGPR_32, VReg_96, VReg_96, VReg_96]);
+  RegisterOperand node_ptr_type = !if(Is64, VGPROp_64, VGPROp_32);
+  list<RegisterOperand> GFX11PlusAddrTypes =
+     !cond(isBVH8 : [node_ptr_type, VGPROp_64, VGPROp_96, VGPROp_96, VGPROp_32],
+           isDual : [node_ptr_type, VGPROp_64, VGPROp_96, VGPROp_96, VGPROp_64],
+           IsA16  : [node_ptr_type, VGPROp_32, VGPROp_96, VGPROp_96],
+           true   : [node_ptr_type, VGPROp_32, VGPROp_96, VGPROp_96, VGPROp_96]);
 }
 
 class MIMG_IntersectRay_gfx10<mimgopc op, string opcode, RegisterOperand AddrRC>
@@ -1740,7 +1744,7 @@ class MIMG_IntersectRay_gfx11<mimgopc op, string opcode, RegisterOperand AddrRC>
 }
 
 class MIMG_IntersectRay_nsa_gfx11<mimgopc op, string opcode, int num_addrs,
-                                  list<RegisterClass> addr_types>
+                                  list<RegisterOperand> addr_types>
     : MIMG_nsa_gfx11<op.GFX11, (outs VReg_128:$vdata), num_addrs, "GFX11",
                      addr_types> {
   let InOperandList = !con(nsah.AddrIns, (ins SReg_128_XNULL:$srsrc, A16:$a16));
@@ -1749,7 +1753,7 @@ class MIMG_IntersectRay_nsa_gfx11<mimgopc op, string opcode, int num_addrs,
 
 class VIMAGE_IntersectRay<int op, string opcode, int num_addrs, dag RsrcIns, Predicate pred, MIMGEncoding encoding,
                                 bit isDual, bit isBVH8,
-                                list<RegisterClass> addr_types, string dns>
+                                list<RegisterOperand> addr_types, string dns>
     : VIMAGE<op, !if(!or(isDual, isBVH8),
                                  (outs VReg_320:$vdata, VReg_96:$ray_origin_out,
                                        VReg_96:$ray_dir_out),
@@ -1766,7 +1770,7 @@ class VIMAGE_IntersectRay<int op, string opcode, int num_addrs, dag RsrcIns, Pre
 }
 
 class VIMAGE_IntersectRay_gfx12<mimgopc op, string opcode, int num_addrs,
-                                bit isDual, bit isBVH8, list<RegisterClass> addr_types>
+                                bit isDual, bit isBVH8, list<RegisterOperand> addr_types>
   : VIMAGE_IntersectRay<op.GFX12, opcode, num_addrs, (ins SReg_128_XNULL:$rsrc), isGFX12Only, MIMGEncGfx12, isDual, isBVH8, addr_types, "GFX12">;
 
 multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit IsA16,
@@ -1838,17 +1842,17 @@ multiclass MIMG_MSAA_Load <mimgopc op, string asm> {
 }
 
 class VIMAGE_RTS_Helper<bit HasVdst, bit IsTraceRay, bit isPacket, bit isPrimOrCoords> {
-  list<RegisterClass> addr_types =
-    !cond(IsTraceRay : [VGPR_32, VReg_96, VReg_128, VReg_128],
-          isPacket :   [VGPR_32, VGPR_32],
-          true     :   [VGPR_32, VGPR_32, VGPR_32]);
+  list<RegisterOperand> addr_types =
+    !cond(IsTraceRay : [VGPROp_32, VGPROp_96, VGPROp_128, VGPROp_128],
+          isPacket :   [VGPROp_32, VGPROp_32],
+          true     :   [VGPROp_32, VGPROp_32, VGPROp_32]);
   int num_addrs = !size(addr_types);
   int VAddrDwords = !if(IsTraceRay, 11, !if(isPacket, 2, 3));
   int VDataDwords = !if(HasVdst, !if(IsTraceRay, 1, !if(isPacket, 1, !if(isPrimOrCoords, 3, 9))), 0);
 }
 
 class VIMAGE_RTS<int op, string opcode, int num_addrs, dag RsrcIns, GFXGen gfxGen, MIMGEncoding encoding,
-                 list<RegisterClass> addr_types, bit HasVdst, bit IsTraceRay, bit isPacket, bit isPrimOrCoords>
+                 list<RegisterOperand> addr_types, bit HasVdst, bit IsTraceRay, bit isPacket, bit isPrimOrCoords>
     : VIMAGE<op,
              !cond(!not(HasVdst)  : (outs),
                    IsTraceRay     : (outs VGPR_32:$vdata),
