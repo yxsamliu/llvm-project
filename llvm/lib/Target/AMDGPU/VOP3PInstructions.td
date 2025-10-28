@@ -172,7 +172,7 @@ defm V_PK_MAX_NUM_F64 : VOP3PInst<"v_pk_max_num_f64", V_PK_VOP2_F64_Profile, fma
 defm V_PK_MIN_NUM_F64 : VOP3PInst<"v_pk_min_num_f64", V_PK_VOP2_F64_Profile, fminnum_like>;
 }
 
-let SubtargetPredicate = HasPackedU64Ops, SchedRW = [WriteDoubleAdd] in
+let SubtargetPredicate = HasPackedU64Ops, SchedRW = [Write64Bit] in
 defm V_PK_ADD_NC_U64 : VOP3PInst<"v_pk_add_nc_u64", V_PK_VOP2_I64_Profile, add>;
 
 let SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0 in {
@@ -188,12 +188,10 @@ defm V_PK_LSHLREV_B16 : VOP3PInst<"v_pk_lshlrev_b16", VOP3P_Profile<VOP_V2I16_V2
 defm V_PK_ASHRREV_I16 : VOP3PInst<"v_pk_ashrrev_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, cashr_rev_16>;
 defm V_PK_LSHRREV_B16 : VOP3PInst<"v_pk_lshrrev_b16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, clshr_rev_16>;
 
-let SubtargetPredicate = HasPackedU64Ops in {
-let SchedRW = [WriteDoubleAdd] in
+let SubtargetPredicate = HasPackedU64Ops, SchedRW = [Write64Bit] in {
 defm V_PK_SUB_NC_U64 : VOP3PInst<"v_pk_sub_nc_u64", V_PK_VOP2_I64_Profile, sub>;
-let SchedRW = [WriteDouble] in
 defm V_PK_LSHL_ADD_U64 : VOP3PInst<"v_pk_lshl_add_u64", V_PK_LSHL_ADD_U64_Profile>;
-} // End SubtargetPredicate = HasPackedU64Ops
+} // End SubtargetPredicate = HasPackedU64Ops, , SchedRW = [Write64Bit]
 } // End isReMaterializable = 1
 
 let SubtargetPredicate = HasVOP3PInsts in {
