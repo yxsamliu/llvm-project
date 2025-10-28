@@ -360,7 +360,7 @@ def : ProcessorModel<"gfx1251", GFX1251SpeedModel,
 >;
 
 def : ProcessorModel<"gfx1260", GFX1250SpeedModel,
-  FeatureISAVersion12_50.Features
+  FeatureISAVersion12_60.Features
 >;
 
 // [gfx1250, gfx1251]

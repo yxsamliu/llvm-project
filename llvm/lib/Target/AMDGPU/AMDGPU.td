@@ -540,6 +540,12 @@ def FeatureGFX1250Insts : SubtargetFeature<"gfx1250-insts",
   "Additional instructions for GFX1250+"
 >;
 
+def FeatureGFX1260Insts : SubtargetFeature<"gfx1260-insts",
+  "GFX1260Insts",
+  "true",
+  "Specific instructions for GFX1260"
+>;
+
 def FeatureGFX13Insts : SubtargetFeature<"gfx13-insts",
   "GFX13Insts",
   "true",
@@ -2270,6 +2276,10 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12_50.Features,
     [FeatureRequiresCOV6])>;
 
+def FeatureISAVersion12_60: FeatureSet<
+  !listconcat(FeatureISAVersion12_50.Features,
+    [FeatureGFX1260Insts])>;
+
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
    FeatureGFX1250Insts,
@@ -2490,6 +2500,20 @@ def isGFX6GFX7GFX8GFX9GFX10 :
 def isNotGFX12Plus :
   Predicate<"Subtarget->getGeneration() <= AMDGPUSubtarget::GFX11">,
   AssemblerPredicate<(all_of (not FeatureGFX12Insts))>;
+
+def isNotGFX1260 :
+  Predicate<"!Subtarget->hasGFX1260Insts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX1260Insts))>;
+
+def isGFX9PlusNotGFX1260 :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9 &&"
+            "!Subtarget->hasGFX1260Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureGFX1260Insts))>;
+
+def isGFX7PlusNotGFX1260 :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS &&"
+            "!Subtarget->hasGFX1260Insts()">,
+  AssemblerPredicate<(all_of FeatureCIInsts, (not FeatureGFX1260Insts))>;
 
 def isGFX7GFX8GFX9GFX10 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
