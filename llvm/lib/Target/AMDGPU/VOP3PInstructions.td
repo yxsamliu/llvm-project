@@ -522,6 +522,17 @@ def : ThreeOp_OpSelClampPats<smin, smin, V_PK_MIN3_I16>;
 def : ThreeOp_OpSelClampPats<umin, umin, V_PK_MIN3_U16>;
 }
 
+let SubtargetPredicate = HasPackedU64Ops in {
+def : GCNPat<
+  (v2i64 (DivergentBinFrag<cshl_64> v2i64:$src0, v2i64:$src1)),
+  (v2i64 (V_PK_LSHL_ADD_U64 $src0,
+    (v2i32 (REG_SEQUENCE VReg_64,
+      (i32 (EXTRACT_SUBREG $src1, sub0)), sub0,
+      (i32 (EXTRACT_SUBREG $src1, sub2)), sub1)),
+    (v2i64 (as_i64imm (i32 0)))))
+>;
+} // End SubtargetPredicate = HasPackedU64Ops
+
 // Defines patterns that extract signed 4bit from each Idx[0].
 foreach Idx = [[0,28],[4,24],[8,20],[12,16],[16,12],[20,8],[24,4]] in
   def ExtractSigned4bit_#Idx[0] : PatFrag<(ops node:$src),
