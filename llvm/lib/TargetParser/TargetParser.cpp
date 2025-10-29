@@ -468,6 +468,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
       Features["parallel-bit-insts"] = true;
       Features["f32-to-f16bf16-cvt-sr-insts"] = true;
       Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
+      Features["clusters"] = true;
       break;
   case GK_GFX1251:
     Features["gfx1251-gemm-insts"] = true;
