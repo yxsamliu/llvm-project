@@ -1233,11 +1233,10 @@ void SIFrameLowering::finalizeIdx0SaveRestores(MachineFunction &MF,
       // Rewrite unnecessary Idx0 base computations
       if (Idx0UK == Idx0UsageKind::EntryNonWavegroupUsage &&
           MI.getOpcode() == AMDGPU::S_SET_GPR_IDX_U32) {
-        if (MachineInstr *Adder = FuncInfo->getIdx0PrivateComputations().lookup(&MI)) {
-          MachineOperand &Use = MI.getOperand(1);
-          Register UseReg = Use.getReg();
+        if (MachineInstr *Adder =
+                FuncInfo->getIdx0PrivateComputations().lookup(&MI)) {
           Register DefReg = Adder->getOperand(0).getReg();
-          assert(UseReg == DefReg &&
+          assert(MI.getOperand(1).getReg() == DefReg &&
                  "Setter is not using the result of the idx0 computation");
           MachineOperand RealIdxUse = Adder->getOperand(1);
           MachineOperand Idx0MO = Adder->getOperand(2);

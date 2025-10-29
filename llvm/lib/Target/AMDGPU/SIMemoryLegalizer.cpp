@@ -2684,11 +2684,8 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
 
 bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   // Only required on gfx120x.
-  auto CoreMI = &MI;
-  if (MI.isBundle()) {
-    CoreMI = SIInstrInfo::bundleWithGPRIndexing(MI);
-    assert(CoreMI);
-  }
+  if (MI.isBundle())
+    assert(SIInstrInfo::bundleWithGPRIndexing(MI));
 
   assert(MI.mayStore() && "Not a Store inst");
   const bool IsRMW = (MI.mayLoad() && MI.mayStore());

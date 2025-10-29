@@ -6310,8 +6310,9 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
                              Register SAddrReg) {
     MachineBasicBlock *LoopBB = InsPt->getParent();
     int Offset = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
-    int CPol = TII->getNamedOperand(MI, AMDGPU::OpName::cpol)->getImm();
-    assert((CPol & AMDGPU::CPol::SCAL) == 0 && "missing scale-offset support");
+    assert((TII->getNamedOperand(MI, AMDGPU::OpName::cpol)->getImm() &
+            AMDGPU::CPol::SCAL) == 0 &&
+           "missing scale-offset support");
     Register IdxReg = MRI.createVirtualRegister(MRI.getRegClass(SAddrReg));
     // index should be in the unit of dword
     BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::S_LSHR_B32), IdxReg)
