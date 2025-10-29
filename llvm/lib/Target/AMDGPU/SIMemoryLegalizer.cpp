@@ -25,6 +25,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/TargetParser/TargetParser.h"
 
@@ -278,6 +279,12 @@ public:
   /// rmw operation, "std::nullopt" otherwise.
   std::optional<SIMemOpInfo>
   getAtomicCmpxchgOrRmwInfo(const MachineInstr *MI) const;
+
+  /// \returns DMA to LDS info if \p MI is as a direct-to/from-LDS load/store,
+  /// along with an indication of whether this is a load or store. If it is not
+  /// a direct-to-LDS operation, returns std::nullopt.
+  std::optional<SIMemOpInfo>
+  getLDSDMAInfo(const MachineInstr *MI) const;
 };
 
 class SICacheControl {
@@ -719,6 +726,9 @@ private:
   /// instructions are added/deleted or \p MI is modified, false otherwise.
   bool expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
                                 MachineBasicBlock::iterator &MI);
+  /// Expands LDS DMA operation \p MI. Returns true if instructions are
+  /// added/deleted or \p MI is modified, false otherwise.
+  bool expandLDSDMA(const SIMemOpInfo &MOI, MachineBasicBlock::iterator &MI);
 
 public:
   SIMemoryLegalizer(const MachineModuleInfo &MMI) : MMI(MMI) {};
@@ -851,6 +861,9 @@ SIAtomicAddrSpace SIMemOpAccess::toSIAtomicAddrSpace(unsigned AS) const {
     return SIAtomicAddrSpace::GDS;
   if (AS == AMDGPUAS::LANE_SHARED)
     return SIAtomicAddrSpace::LANESHARED;
+  if (AS == AMDGPUAS::BUFFER_FAT_POINTER || AS == AMDGPUAS::BUFFER_RESOURCE ||
+      AS == AMDGPUAS::BUFFER_STRIDED_POINTER)
+    return SIAtomicAddrSpace::GLOBAL;
 
   return SIAtomicAddrSpace::OTHER;
 }
@@ -1009,6 +1022,16 @@ SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(const MachineInstr *MI) const {
   return constructFromMIWithMMO(MI);
 }
 
+std::optional<SIMemOpInfo>
+SIMemOpAccess::getLDSDMAInfo(const MachineInstr *MI) const {
+  assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
+
+  if (!SIInstrInfo::isLDSDMA(*MI))
+    return std::nullopt;
+
+  return constructFromMIWithMMO(MI);
+}
+
 SICacheControl::SICacheControl(const GCNSubtarget &ST) : ST(ST) {
   TII = ST.getInstrInfo();
   IV = getIsaVersion(ST.getCPU());
@@ -1121,7 +1144,7 @@ bool SIGfx6CacheControl::enableVolatileAndOrNonTemporal(
   // Only handle load and store, not atomic read-modify-write insructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
   // be used for cache control.
-  assert(MI->mayLoad() ^ MI->mayStore());
+  assert((MI->mayLoad() ^ MI->mayStore()) || SIInstrInfo::isLDSDMA(*MI));
 
   // Only update load and store, not LLVM IR atomic read-modify-write
   // instructions. The latter are always marked as volatile so cannot sensibly
@@ -1451,7 +1474,7 @@ bool SIGfx90ACacheControl::enableVolatileAndOrNonTemporal(
   // Only handle load and store, not atomic read-modify-write insructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
   // be used for cache control.
-  assert(MI->mayLoad() ^ MI->mayStore());
+  assert((MI->mayLoad() ^ MI->mayStore()) || SIInstrInfo::isLDSDMA(*MI));
 
   // Only update load and store, not LLVM IR atomic read-modify-write
   // instructions. The latter are always marked as volatile so cannot sensibly
@@ -1755,7 +1778,7 @@ bool SIGfx940CacheControl::enableVolatileAndOrNonTemporal(
   // Only handle load and store, not atomic read-modify-write insructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
   // be used for cache control.
-  assert(MI->mayLoad() ^ MI->mayStore());
+  assert((MI->mayLoad() ^ MI->mayStore()) || SIInstrInfo::isLDSDMA(*MI));
 
   // Only update load and store, not LLVM IR atomic read-modify-write
   // instructions. The latter are always marked as volatile so cannot sensibly
@@ -1990,7 +2013,7 @@ bool SIGfx10CacheControl::enableVolatileAndOrNonTemporal(
   // Only handle load and store, not atomic read-modify-write insructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
   // be used for cache control.
-  assert(MI->mayLoad() ^ MI->mayStore());
+  assert((MI->mayLoad() ^ MI->mayStore()) || SIInstrInfo::isLDSDMA(*MI));
 
   // Only update load and store, not LLVM IR atomic read-modify-write
   // instructions. The latter are always marked as volatile so cannot sensibly
@@ -2288,7 +2311,7 @@ bool SIGfx11CacheControl::enableVolatileAndOrNonTemporal(
   // Only handle load and store, not atomic read-modify-write insructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
   // be used for cache control.
-  assert(MI->mayLoad() ^ MI->mayStore());
+  assert((MI->mayLoad() ^ MI->mayStore()) || SIInstrInfo::isLDSDMA(*MI));
 
   // Only update load and store, not LLVM IR atomic read-modify-write
   // instructions. The latter are always marked as volatile so cannot sensibly
@@ -2997,6 +3020,23 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(
   return Changed;
 }
 
+bool SIMemoryLegalizer::expandLDSDMA(const SIMemOpInfo &MOI,
+                                     MachineBasicBlock::iterator &MI) {
+  assert(MI->mayLoad() && MI->mayStore());
+
+  // The volatility or nontemporal-ness of the operation is a
+  // function of the global memory, not the LDS.
+  SIMemOp OpKind =
+      SIInstrInfo::mayWriteLDSThroughDMA(*MI) ? SIMemOp::LOAD : SIMemOp::STORE;
+
+  // Handle volatile and/or nontemporal markers on direct-to-LDS loads and
+  // stores. The operation is treated as a volatile/nontemporal store
+  // to its second argument.
+  return CC->enableVolatileAndOrNonTemporal(
+      MI, MOI.getInstrAddrSpace(), OpKind, MOI.isVolatile(),
+      MOI.isNonTemporal(), MOI.isLastUse());
+}
+
 bool SIMemoryLegalizerLegacy::runOnMachineFunction(MachineFunction &MF) {
   const MachineModuleInfo &MMI =
       getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
@@ -3058,14 +3098,17 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
       if (!(CoreMI->getDesc().TSFlags & SIInstrFlags::maybeAtomic))
         continue;
 
-      if (const auto &MOI = MOA.getLoadInfo(CoreMI))
+      if (const auto &MOI = MOA.getLoadInfo(CoreMI)) {
         Changed |= expandLoad(*MOI, MI);
-      else if (const auto &MOI = MOA.getStoreInfo(CoreMI)) {
+      } else if (const auto &MOI = MOA.getStoreInfo(CoreMI)) {
         Changed |= expandStore(*MOI, MI);
-      } else if (const auto &MOI = MOA.getAtomicFenceInfo(CoreMI))
+      } else if (const auto &MOI = MOA.getLDSDMAInfo(CoreMI)) {
+        Changed |= expandLDSDMA(*MOI, MI);
+      } else if (const auto &MOI = MOA.getAtomicFenceInfo(CoreMI)) {
         Changed |= expandAtomicFence(*MOI, MI);
-      else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(CoreMI))
+      } else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(CoreMI)) {
         Changed |= expandAtomicCmpxchgOrRmw(*MOI, MI);
+      }
     }
   }
 
