@@ -931,6 +931,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
            ISD::FCANONICALIZE},
           {MVT::v4f64, MVT::v8f64, MVT::v16f64, MVT::v32f64}, Custom);
     }
+
+    if (Subtarget->hasPackedU64Ops()) {
+      setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL}, MVT::v2i64, Legal);
+      setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL},
+                         {MVT::v4i64, MVT::v8i64, MVT::v16i64, MVT::v32i64},
+                         Custom);
+    }
   }
 
   setOperationAction({ISD::FNEG, ISD::FABS}, MVT::v4f16, Custom);
@@ -7312,7 +7319,8 @@ SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
          VT == MVT::v16bf16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
          VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16 ||
          VT == MVT::v32bf16 || VT == MVT::v4f64 || VT == MVT::v8f64 ||
-         VT == MVT::v16f64 || VT == MVT::v32f64);
+         VT == MVT::v16f64 || VT == MVT::v32f64 || VT == MVT::v4i64 ||
+         VT == MVT::v8i64 || VT == MVT::v16i64 || VT == MVT::v32i64);
 
   auto [Lo0, Hi0] = DAG.SplitVectorOperand(Op.getNode(), 0);
   auto [Lo1, Hi1] = DAG.SplitVectorOperand(Op.getNode(), 1);
@@ -19425,7 +19433,7 @@ Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   return CacheLineAlign;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static bool isCopyFromRegOfInlineAsm(const SDNode *N) {
   assert(N->getOpcode() == ISD::CopyFromReg);
   do {

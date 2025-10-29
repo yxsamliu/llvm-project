@@ -296,6 +296,9 @@ extern char &AMDGPUPrivateObjectVGPRsID;
 void initializeAMDGPUIndexingInfoWrapperPass(PassRegistry &);
 extern char &AMDGPUIndexingInfoWrapperID;
 
+void initializeAMDGPURegPressAnalysisPass(PassRegistry &);
+extern char &AMDGPURegPressAnalysisID;
+
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca();
 void initializeAMDGPUPromoteAllocaPass(PassRegistry&);

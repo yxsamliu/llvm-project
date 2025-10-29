@@ -757,7 +757,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   if (ST.hasVOP3PInsts() && ST.hasAddNoCarry() && ST.hasIntClamp()) {
     // Full set of gfx9 features.
-    if (ST.hasScalarAddSub64()) {
+    if (ST.hasPackedU64Ops()) {
+      getActionDefinitionsBuilder({G_ADD, G_SUB})
+          .legalFor({S64, S32, S16, V2S16, V2S64})
+          .clampMaxNumElementsStrict(0, S16, 2)
+          .clampMaxNumElementsStrict(0, S64, 2)
+          .scalarize(0)
+          .minScalar(0, S16)
+          .widenScalarToNextMultipleOf(0, 32)
+          .maxScalar(0, S32);
+    } else if (ST.hasScalarAddSub64()) {
       getActionDefinitionsBuilder({G_ADD, G_SUB})
           .legalFor({S64, S32, S16, V2S16})
           .clampMaxNumElementsStrict(0, S16, 2)
@@ -3676,7 +3685,7 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
 
   const bool IsFiniteOnly =
       (MI.getFlag(MachineInstr::FmNoNans) || TM.Options.NoNaNsFPMath) &&
-      (MI.getFlag(MachineInstr::FmNoInfs) || TM.Options.NoInfsFPMath);
+      MI.getFlag(MachineInstr::FmNoInfs);
 
   if (!IsFiniteOnly) {
     // Expand isfinite(x) => fabs(x) < inf
@@ -3965,9 +3974,7 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
 
   R = B.buildSelect(Ty, Underflow, Zero, R);
 
-  const auto &Options = MF.getTarget().Options;
-
-  if (!(Flags & MachineInstr::FmNoInfs) && !Options.NoInfsFPMath) {
+  if (!(Flags & MachineInstr::FmNoInfs)) {
     auto OverflowCheckConst =
         B.buildFConstant(Ty, IsExp10 ? 0x1.344136p+5f : 0x1.62e430p+6f);
 

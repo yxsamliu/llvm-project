@@ -48,6 +48,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
+#include "llvm/Transforms/Utils/SSAUpdaterBulk.h"
 #include <cassert>
 #include <utility>
 
@@ -322,7 +323,7 @@ class StructurizeCFG {
 
   void collectInfos();
 
-  void insertConditions(bool Loops);
+  void insertConditions(bool Loops, SSAUpdaterBulk &PhiInserter);
 
   void simplifyConditions();
 
@@ -672,10 +673,9 @@ void StructurizeCFG::collectInfos() {
 }
 
 /// Insert the missing branch conditions
-void StructurizeCFG::insertConditions(bool Loops) {
+void StructurizeCFG::insertConditions(bool Loops, SSAUpdaterBulk &PhiInserter) {
   BranchVector &Conds = Loops ? LoopConds : Conditions;
   Value *Default = Loops ? BoolTrue : BoolFalse;
-  SSAUpdater PhiInserter;
 
   for (BranchInst *Term : Conds) {
     assert(Term->isConditional());
@@ -684,8 +684,9 @@ void StructurizeCFG::insertConditions(bool Loops) {
     BasicBlock *SuccTrue = Term->getSuccessor(0);
     BasicBlock *SuccFalse = Term->getSuccessor(1);
 
-    PhiInserter.Initialize(Boolean, "");
-    PhiInserter.AddAvailableValue(Loops ? SuccFalse : Parent, Default);
+    unsigned Variable = PhiInserter.AddVariable("", Boolean);
+    PhiInserter.AddAvailableValue(Variable, Loops ? SuccFalse : Parent,
+                                  Default);
 
     BBPredicates &Preds = Loops ? LoopPreds[SuccFalse] : Predicates[SuccTrue];
 
@@ -698,7 +699,7 @@ void StructurizeCFG::insertConditions(bool Loops) {
         ParentInfo = PI;
         break;
       }
-      PhiInserter.AddAvailableValue(BB, PI.Pred);
+      PhiInserter.AddAvailableValue(Variable, BB, PI.Pred);
       Dominator.addAndRememberBlock(BB);
     }
 
@@ -707,9 +708,9 @@ void StructurizeCFG::insertConditions(bool Loops) {
       CondBranchWeights::setMetadata(*Term, ParentInfo.Weights);
     } else {
       if (!Dominator.resultIsRememberedBlock())
-        PhiInserter.AddAvailableValue(Dominator.result(), Default);
+        PhiInserter.AddAvailableValue(Variable, Dominator.result(), Default);
 
-      Term->setCondition(PhiInserter.GetValueInMiddleOfBlock(Parent));
+      PhiInserter.AddUse(Variable, &Term->getOperandUse(0));
     }
   }
 }
@@ -1415,8 +1416,12 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT,
   orderNodes();
   collectInfos();
   createFlow();
-  insertConditions(false);
-  insertConditions(true);
+
+  SSAUpdaterBulk PhiInserter;
+  insertConditions(false, PhiInserter);
+  insertConditions(true, PhiInserter);
+  PhiInserter.RewriteAndOptimizeAllUses(*DT);
+
   setPhiValues();
   simplifyHoistedPhis();
   simplifyConditions();

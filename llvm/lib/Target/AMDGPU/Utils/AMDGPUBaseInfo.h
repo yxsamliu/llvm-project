@@ -1724,6 +1724,7 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
   case AMDGPU::OPERAND_REG_IMM_V2FP64:
+  case AMDGPU::OPERAND_REG_IMM_V2INT64:
   case AMDGPU::OPERAND_KIMM64:
     return 8;
 
@@ -1771,9 +1772,6 @@ bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
 bool isInlinableLiteralFP16(int16_t Literal, bool HasInv2Pi);
-
-LLVM_READNONE
-bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
 bool isInlinableLiteralI16(int32_t Literal, bool HasInv2Pi);

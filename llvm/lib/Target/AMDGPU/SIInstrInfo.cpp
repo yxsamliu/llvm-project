@@ -883,22 +883,16 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       return;
     }
 
-    if (DestReg == AMDGPU::VCC_LO) {
-      if (AMDGPU::SReg_32RegClass.contains(SrcReg)) {
-        BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::VCC_LO)
-          .addReg(SrcReg, getKillRegState(KillSrc));
-      } else {
+    if (!AMDGPU::SReg_32RegClass.contains(SrcReg)) {
+      if (DestReg == AMDGPU::VCC_LO) {
         // FIXME: Hack until VReg_1 removed.
         assert(AMDGPU::VGPR_32RegClass.contains(SrcReg));
         BuildMI(MBB, MI, DL, get(AMDGPU::V_CMP_NE_U32_e32))
-          .addImm(0)
-          .addReg(SrcReg, getKillRegState(KillSrc));
+            .addImm(0)
+            .addReg(SrcReg, getKillRegState(KillSrc));
+        return;
       }
 
-      return;
-    }
-
-    if (!AMDGPU::SReg_32RegClass.contains(SrcReg)) {
       reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc);
       return;
     }
@@ -916,22 +910,16 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       return;
     }
 
-    if (DestReg == AMDGPU::VCC) {
-      if (AMDGPU::SReg_64RegClass.contains(SrcReg)) {
-        BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B64), AMDGPU::VCC)
-          .addReg(SrcReg, getKillRegState(KillSrc));
-      } else {
+    if (!AMDGPU::SReg_64_EncodableRegClass.contains(SrcReg)) {
+      if (DestReg == AMDGPU::VCC) {
         // FIXME: Hack until VReg_1 removed.
         assert(AMDGPU::VGPR_32RegClass.contains(SrcReg));
         BuildMI(MBB, MI, DL, get(AMDGPU::V_CMP_NE_U32_e32))
-          .addImm(0)
-          .addReg(SrcReg, getKillRegState(KillSrc));
+            .addImm(0)
+            .addReg(SrcReg, getKillRegState(KillSrc));
+        return;
       }
 
-      return;
-    }
-
-    if (!AMDGPU::SReg_64_EncodableRegClass.contains(SrcReg)) {
       reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc);
       return;
     }
@@ -4615,6 +4603,7 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
   case AMDGPU::OPERAND_REG_IMM_V2FP64:
+  case AMDGPU::OPERAND_REG_IMM_V2INT64:
     return AMDGPU::isInlinableLiteral64(Imm, ST.hasInv2PiInlineImm());
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
@@ -5115,6 +5104,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     case AMDGPU::OPERAND_REG_IMM_V2INT32:
     case AMDGPU::OPERAND_REG_IMM_V2BF16:
     case AMDGPU::OPERAND_REG_IMM_V2FP64:
+    case AMDGPU::OPERAND_REG_IMM_V2INT64:
       break;
     case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
       break;
@@ -6418,11 +6408,13 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
 
   if (MO->isImm()) {
     uint64_t Imm = MO->getImm();
-    bool Is64BitFPOp = OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_FP64;
+    bool Is64BitFPOp = OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_FP64 ||
+                       OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP64;
     bool Is64BitOp = Is64BitFPOp ||
                      OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_INT64 ||
                      OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2INT32 ||
-                     OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP32;
+                     OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP32 ||
+                     OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2INT64;
     if (Is64BitOp &&
         !AMDGPU::isInlinableLiteral64(Imm, ST.hasInv2PiInlineImm())) {
       if (!AMDGPU::isValid32BitLiteral(Imm, Is64BitFPOp) &&
@@ -9836,10 +9828,12 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
           default:
             break;
           case AMDGPU::OPERAND_REG_IMM_FP64:
+          case AMDGPU::OPERAND_REG_IMM_V2FP64:
             if (!AMDGPU::isValid32BitLiteral(Op.getImm(), true))
               LiteralSize = 8;
             break;
           case AMDGPU::OPERAND_REG_IMM_INT64:
+          case AMDGPU::OPERAND_REG_IMM_V2INT64:
             if (!Op.isImm() || !AMDGPU::isValid32BitLiteral(Op.getImm(), false))
               LiteralSize = 8;
             break;

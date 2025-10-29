@@ -727,6 +727,12 @@ def FeaturePackedFP64Ops : SubtargetFeature<"packed-fp64-ops",
   "Support packed fp64 instructions"
 >;
 
+def FeaturePackedU64Ops : SubtargetFeature<"packed-u64-ops",
+  "HasPackedU64Ops",
+  "true",
+  "Support packed uint64 instructions"
+>;
+
 def FeatureR128A16 : SubtargetFeature<"r128-a16",
   "HasR128A16",
   "true",
@@ -2260,6 +2266,7 @@ def FeatureISAVersion12_51 : FeatureSet<
   [FullRate64Ops,
    FeatureDPALU_DPP,
    FeaturePackedFP64Ops,
+   FeaturePackedU64Ops,
    FeatureGFX1251GEMMInsts])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -2897,6 +2904,9 @@ def HasPackedFP32Ops : Predicate<"Subtarget->hasPackedFP32Ops()">,
 
 def HasPackedFP64Ops : Predicate<"Subtarget->hasPackedFP64Ops()">,
   AssemblerPredicate<(all_of FeaturePackedFP64Ops)>;
+
+def HasPackedU64Ops : Predicate<"Subtarget->hasPackedU64Ops()">,
+  AssemblerPredicate<(all_of FeaturePackedU64Ops)>;
 
 def HasPkMovB32 : Predicate<"Subtarget->hasPkMovB32()">,
   AssemblerPredicate<(all_of FeatureGFX90AInsts)>;
