@@ -42,6 +42,22 @@ define amdgpu_kernel void @add_v2_vs(ptr addrspace(1) %a, <2 x i64> %x) {
   ret void
 }
 
+define amdgpu_kernel void @add_v2_ss(ptr addrspace(1) %a, <2 x i64> %x, <2 x i64> %y) {
+; GFX1251-LABEL: add_v2_ss:
+; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_clause 0x1
+; GFX1251-NEXT:    s_load_b256 s[8:15], s[4:5], 0x34
+; GFX1251-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1251-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1251-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-NEXT:    v_pk_add_nc_u64 v[0:3], s[8:11], s[12:15]
+; GFX1251-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX1251-NEXT:    s_endpgm
+  %add = add <2 x i64> %x, %y
+  store <2 x i64> %add, ptr addrspace(1) %a, align 8
+  ret void
+}
+
 define amdgpu_kernel void @add_v4_vs(ptr addrspace(1) %a, <4 x i64> %x) {
 ; GFX1251-LABEL: add_v4_vs:
 ; GFX1251:       ; %bb.0:
@@ -495,6 +511,22 @@ define amdgpu_kernel void @sub_v2_vs(ptr addrspace(1) %a, <2 x i64> %x) {
   %load = load <2 x i64>, ptr addrspace(1) %gep, align 8
   %sub = sub <2 x i64> %load, %x
   store <2 x i64> %sub, ptr addrspace(1) %gep, align 8
+  ret void
+}
+
+define amdgpu_kernel void @sub_v2_ss(ptr addrspace(1) %a, <2 x i64> %x, <2 x i64> %y) {
+; GFX1251-LABEL: sub_v2_ss:
+; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_clause 0x1
+; GFX1251-NEXT:    s_load_b256 s[8:15], s[4:5], 0x34
+; GFX1251-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1251-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1251-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-NEXT:    v_pk_sub_nc_u64 v[0:3], s[8:11], s[12:15]
+; GFX1251-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX1251-NEXT:    s_endpgm
+  %sub = sub <2 x i64> %x, %y
+  store <2 x i64> %sub, ptr addrspace(1) %a, align 8
   ret void
 }
 
