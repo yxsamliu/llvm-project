@@ -922,12 +922,14 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
                                   "Unexpected MI which produces a values and "
                                   "stores but does not load");
     if (MILoads) {
-      MachineBasicBlock::iterator I = MI->getIterator(),
+      MachineBasicBlock::instr_iterator I = MI->getIterator(),
                                   E = Worklist[0].MI->getIterator();
       unsigned OwnDefIdx = 1;
       for (++I; I != E; ++I) {
+        if (I->isBundle())
+          continue;
         // Ignore own defs
-        if (OwnDefIdx < Worklist.size() && I == Worklist[OwnDefIdx].MI) {
+        if (OwnDefIdx < Worklist.size() && &*I == Worklist[OwnDefIdx].MI) {
           OwnDefIdx++;
           continue;
         }
