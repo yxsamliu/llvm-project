@@ -43,7 +43,7 @@ namespace {
 static cl::opt<bool>
     EnableLDSBuffering("amdgpu-lds-buffering-enable",
                        cl::desc("Enable per-thread LDS buffering of globals"),
-                       cl::init(false));
+                       cl::init(true));
 
 static cl::opt<unsigned> LDSBufferingMaxBytes(
     "amdgpu-lds-buffering-max-bytes",
