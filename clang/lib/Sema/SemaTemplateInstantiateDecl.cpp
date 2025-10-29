@@ -713,30 +713,15 @@ static void instantiateDependentCUDAClusterDimsAttr(
   EnterExpressionEvaluationContext Unevaluated(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
-  Expr *XExpr = nullptr;
-  Expr *YExpr = nullptr;
-  Expr *ZExpr = nullptr;
+  auto SubstElt = [&S, &TemplateArgs](Expr *E) {
+    return E ? S.SubstExpr(E, TemplateArgs).get() : nullptr;
+  };
 
-  if (Attr.getX()) {
-    ExprResult ResultX = S.SubstExpr(Attr.getX(), TemplateArgs);
-    if (ResultX.isUsable())
-      XExpr = ResultX.getAs<Expr>();
-  }
+  Expr *XExpr = SubstElt(Attr.getX());
+  Expr *YExpr = SubstElt(Attr.getY());
+  Expr *ZExpr = SubstElt(Attr.getZ());
 
-  if (Attr.getY()) {
-    ExprResult ResultY = S.SubstExpr(Attr.getY(), TemplateArgs);
-    if (ResultY.isUsable())
-      YExpr = ResultY.getAs<Expr>();
-  }
-
-  if (Attr.getZ()) {
-    ExprResult ResultZ = S.SubstExpr(Attr.getZ(), TemplateArgs);
-    if (ResultZ.isUsable())
-      ZExpr = ResultZ.getAs<Expr>();
-  }
-
-  if (XExpr)
-    S.addClusterDimsAttr(New, Attr, XExpr, YExpr, ZExpr);
+  S.addClusterDimsAttr(New, Attr, XExpr, YExpr, ZExpr);
 }
 
 // This doesn't take any template parameters, but we have a custom action that

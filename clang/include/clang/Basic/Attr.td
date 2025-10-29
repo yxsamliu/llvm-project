@@ -1580,18 +1580,18 @@ def HIPLaneShared : InheritableAttr {
 }
 
 def CUDAClusterDims : InheritableAttr {
-  let Spellings = [GNU<"cluster_dims">, Declspec<"__cluster_dims__">];
-  let Args = [ExprArgument<"X">, ExprArgument<"Y", 1>, ExprArgument<"Z", 1>];
-  let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
+  let Spellings = [GNU<"cluster_dims">];
+  let Args = [ExprArgument<"X">, ExprArgument<"Y", /*opt=*/1>, ExprArgument<"Z", /*opt=*/1>];
+  let Subjects = SubjectList<[ObjCMethod, FunctionLike]>;
   let LangOpts = [CUDA];
-  let Documentation = [Undocumented];
+  let Documentation = [CUDAClusterDimsAttrDoc];
 }
 
 def CUDANoCluster : InheritableAttr {
-  let Spellings = [GNU<"no_cluster">, Declspec<"__no_cluster__">];
-  let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
+  let Spellings = [GNU<"no_cluster">];
+  let Subjects = SubjectList<[ObjCMethod, FunctionLike]>;
   let LangOpts = [CUDA];
-  let Documentation = [Undocumented];
+  let Documentation = [CUDANoClusterAttrDoc];
 }
 
 def : MutualExclusions<[CUDAClusterDims, CUDANoCluster]>;

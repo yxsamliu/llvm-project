@@ -342,9 +342,6 @@ static bool requiresAMDGPUProtectedVisibility(const Decl *D,
 
 void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     const FunctionDecl *FD, llvm::Function *F, CodeGenModule &M) const {
-  llvm::StringMap<bool> TargetFetureMap;
-  M.getContext().getFunctionFeatureMap(TargetFetureMap, FD);
-
   const auto *ReqdWGS =
       M.getLangOpts().OpenCL ? FD->getAttr<ReqdWorkGroupSizeAttr>() : nullptr;
   const bool IsOpenCLKernel =
@@ -439,17 +436,12 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     F->addFnAttr("amdgpu-enable-wasp");
 
   if (auto *Attr = FD->getAttr<CUDAClusterDimsAttr>()) {
-    uint32_t X =
-        Attr->getX()->EvaluateKnownConstInt(M.getContext()).getExtValue();
-    uint32_t Y =
-        Attr->getY()
-            ? Attr->getY()->EvaluateKnownConstInt(M.getContext()).getExtValue()
-            : 1;
-    uint32_t Z =
-        Attr->getZ()
-            ? Attr->getZ()->EvaluateKnownConstInt(M.getContext()).getExtValue()
-            : 1;
-
+    auto GetExprVal = [&](const auto &E) {
+      return E ? E->EvaluateKnownConstInt(M.getContext()).getExtValue() : 1;
+    };
+    unsigned X = GetExprVal(Attr->getX());
+    unsigned Y = GetExprVal(Attr->getY());
+    unsigned Z = GetExprVal(Attr->getZ());
     llvm::SmallString<32> AttrVal;
     llvm::raw_svector_ostream OS(AttrVal);
     OS << X << ',' << Y << ',' << Z;
@@ -457,8 +449,10 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   }
 
   // OpenCL doesn't support cluster feature.
-  if ((IsOpenCLKernel && TargetFetureMap.lookup("gfx1250-insts")) ||
-      FD->getAttr<CUDANoClusterAttr>())
+  const TargetInfo &TTI = M.getContext().getTargetInfo();
+  if ((IsOpenCLKernel &&
+       TTI.hasFeatureEnabled(TTI.getTargetOpts().FeatureMap, "clusters")) ||
+      FD->hasAttr<CUDANoClusterAttr>())
     F->addFnAttr("amdgpu-cluster-dims", "0,0,0");
 }
 
