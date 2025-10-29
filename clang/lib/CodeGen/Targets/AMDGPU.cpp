@@ -471,9 +471,11 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     return;
 
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
-  if (FD)
+  if (FD) {
     setFunctionDeclAttributes(FD, F, M);
-
+    if (FD->hasAttr<DeviceKernelAttr>() && !M.getLangOpts().OpenCL)
+      F->setCallingConv(getDeviceKernelCallingConv());
+  }
   if (!getABIInfo().getCodeGenOpts().EmitIEEENaNCompliantInsts)
     F->addFnAttr("amdgpu-ieee", "false");
 }
@@ -540,6 +542,10 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
   case SyncScope::WavefrontScope:
     Name = "wavefront";
     break;
+  case SyncScope::HIPCluster:
+  case SyncScope::ClusterScope:
+    Name = "cluster";
+    break;
   case SyncScope::HIPWorkgroup:
   case SyncScope::OpenCLWorkGroup:
   case SyncScope::WorkgroupScope:
@@ -555,9 +561,6 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
   case SyncScope::OpenCLAllSVMDevices:
     Name = "";
     break;
-  case SyncScope::HIPCluster:
-  case SyncScope::ClusterScope:
-    Name = "cluster";
   }
 
   // OpenCL assumes by default that atomic scopes are per-address space for
@@ -689,7 +692,7 @@ llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
   // kernel address (only the kernel descriptor).
   auto *F = llvm::Function::Create(FT, llvm::GlobalValue::InternalLinkage, Name,
                                    &Mod);
-  F->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
+  F->setCallingConv(getDeviceKernelCallingConv());
 
   llvm::AttrBuilder KernelAttrs(C);
   // FIXME: The invoke isn't applying the right attributes either

@@ -9,10 +9,10 @@ typedef int    v7i   __attribute__((ext_vector_type(7)));
 
 
 // CHECK-GFX1300-LABEL: define dso_local amdgpu_kernel void @test_global_tiled_load_half_b64(
-// CHECK-GFX1300-SAME: ptr addrspace(1) noundef align 4 captures(none) [[PTR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] !kernel_arg_addr_space [[META4:![0-9]+]] !kernel_arg_access_qual [[META5:![0-9]+]] !kernel_arg_type [[META6:![0-9]+]] !kernel_arg_base_type [[META6]] !kernel_arg_type_qual [[META7:![0-9]+]] {
+// CHECK-GFX1300-SAME: ptr addrspace(1) noundef align 4 captures(none) [[PTR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] !kernel_arg_addr_space [[META8:![0-9]+]] !kernel_arg_access_qual [[META9:![0-9]+]] !kernel_arg_type [[META10:![0-9]+]] !kernel_arg_base_type [[META10]] !kernel_arg_type_qual [[META11:![0-9]+]] {
 // CHECK-GFX1300-NEXT:  [[ENTRY:.*:]]
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.global.tiled.load.half.b64(ptr addrspace(1) align 4 [[PTR]])
-// CHECK-GFX1300-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[PTR]], align 4, !tbaa [[TBAA8:![0-9]+]]
+// CHECK-GFX1300-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[PTR]], align 4, !tbaa [[TBAA4:![0-9]+]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void kernel test_global_tiled_load_half_b64(global int* ptr)
@@ -21,7 +21,7 @@ void kernel test_global_tiled_load_half_b64(global int* ptr)
 }
 
 // CHECK-GFX1300-LABEL: define dso_local amdgpu_kernel void @test_global_tiled_load_b64(
-// CHECK-GFX1300-SAME: ptr addrspace(1) noundef align 8 captures(none) [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META4]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META12:![0-9]+]] !kernel_arg_base_type [[META13:![0-9]+]] !kernel_arg_type_qual [[META7]] {
+// CHECK-GFX1300-SAME: ptr addrspace(1) noundef align 8 captures(none) [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META8]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META12:![0-9]+]] !kernel_arg_base_type [[META13:![0-9]+]] !kernel_arg_type_qual [[META11]] {
 // CHECK-GFX1300-NEXT:  [[ENTRY:.*:]]
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.global.tiled.load.b64(ptr addrspace(1) align 8 [[PTR]])
 // CHECK-GFX1300-NEXT:    store <2 x i32> [[TMP0]], ptr addrspace(1) [[PTR]], align 8, !tbaa [[TBAA14:![0-9]+]]
@@ -33,7 +33,7 @@ void kernel test_global_tiled_load_b64(global v2i* ptr)
 }
 
 // CHECK-GFX1300-LABEL: define dso_local amdgpu_kernel void @test_global_tiled_load_vst2_b64(
-// CHECK-GFX1300-SAME: ptr addrspace(1) noundef align 16 captures(none) [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META4]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META15:![0-9]+]] !kernel_arg_base_type [[META16:![0-9]+]] !kernel_arg_type_qual [[META7]] {
+// CHECK-GFX1300-SAME: ptr addrspace(1) noundef align 16 captures(none) [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META8]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META15:![0-9]+]] !kernel_arg_base_type [[META16:![0-9]+]] !kernel_arg_type_qual [[META11]] {
 // CHECK-GFX1300-NEXT:  [[ENTRY:.*:]]
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr addrspace(1) [[PTR]], align 16, !tbaa [[TBAA14]], !amdgpu.noclobber [[META17:![0-9]+]]
 // CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = tail call <3 x i32> @llvm.amdgcn.global.tiled.load.vst2.b64(ptr addrspace(1) align 16 [[PTR]], <3 x i32> [[TMP0]])
@@ -46,10 +46,10 @@ void kernel test_global_tiled_load_vst2_b64(global v3i* ptr)
 }
 
 // CHECK-GFX1300-LABEL: define dso_local amdgpu_kernel void @test_global_tiled_load_qtr_b128(
-// CHECK-GFX1300-SAME: ptr addrspace(1) noundef align 4 captures(none) [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META4]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META6]] !kernel_arg_base_type [[META6]] !kernel_arg_type_qual [[META7]] {
+// CHECK-GFX1300-SAME: ptr addrspace(1) noundef align 4 captures(none) [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META8]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META10]] !kernel_arg_base_type [[META10]] !kernel_arg_type_qual [[META11]] {
 // CHECK-GFX1300-NEXT:  [[ENTRY:.*:]]
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.global.tiled.load.qtr.b128(ptr addrspace(1) align 4 [[PTR]])
-// CHECK-GFX1300-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[PTR]], align 4, !tbaa [[TBAA8]]
+// CHECK-GFX1300-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[PTR]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
 void kernel test_global_tiled_load_qtr_b128(global int* ptr)
@@ -58,7 +58,7 @@ void kernel test_global_tiled_load_qtr_b128(global int* ptr)
 }
 
 // CHECK-GFX1300-LABEL: define dso_local amdgpu_kernel void @test_global_tiled_load_half_b128(
-// CHECK-GFX1300-SAME: ptr addrspace(1) noundef align 8 captures(none) [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META4]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META12]] !kernel_arg_base_type [[META13]] !kernel_arg_type_qual [[META7]] {
+// CHECK-GFX1300-SAME: ptr addrspace(1) noundef align 8 captures(none) [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META8]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META12]] !kernel_arg_base_type [[META13]] !kernel_arg_type_qual [[META11]] {
 // CHECK-GFX1300-NEXT:  [[ENTRY:.*:]]
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.global.tiled.load.half.b128(ptr addrspace(1) align 8 [[PTR]])
 // CHECK-GFX1300-NEXT:    store <2 x i32> [[TMP0]], ptr addrspace(1) [[PTR]], align 8, !tbaa [[TBAA14]]
@@ -70,7 +70,7 @@ void kernel test_global_tiled_load_half_b128(global v2i* ptr)
 }
 
 // CHECK-GFX1300-LABEL: define dso_local amdgpu_kernel void @test_global_tiled_load_half_vst2_b128(
-// CHECK-GFX1300-SAME: ptr addrspace(1) noundef align 16 captures(none) [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META4]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META15]] !kernel_arg_base_type [[META16]] !kernel_arg_type_qual [[META7]] {
+// CHECK-GFX1300-SAME: ptr addrspace(1) noundef align 16 captures(none) [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META8]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META15]] !kernel_arg_base_type [[META16]] !kernel_arg_type_qual [[META11]] {
 // CHECK-GFX1300-NEXT:  [[ENTRY:.*:]]
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr addrspace(1) [[PTR]], align 16, !tbaa [[TBAA14]], !amdgpu.noclobber [[META17]]
 // CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = tail call <3 x i32> @llvm.amdgcn.global.tiled.load.half.vst2.b128(ptr addrspace(1) align 16 [[PTR]], <3 x i32> [[TMP0]])
@@ -83,7 +83,7 @@ void kernel test_global_tiled_load_half_vst2_b128(global v3i* ptr)
 }
 
 // CHECK-GFX1300-LABEL: define dso_local amdgpu_kernel void @test_global_tiled_load_b128(
-// CHECK-GFX1300-SAME: ptr addrspace(1) noundef align 16 captures(none) [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META4]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META18:![0-9]+]] !kernel_arg_base_type [[META19:![0-9]+]] !kernel_arg_type_qual [[META7]] {
+// CHECK-GFX1300-SAME: ptr addrspace(1) noundef align 16 captures(none) [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META8]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META18:![0-9]+]] !kernel_arg_base_type [[META19:![0-9]+]] !kernel_arg_type_qual [[META11]] {
 // CHECK-GFX1300-NEXT:  [[ENTRY:.*:]]
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.global.tiled.load.b128(ptr addrspace(1) align 16 [[PTR]])
 // CHECK-GFX1300-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[PTR]], align 16, !tbaa [[TBAA14]]
@@ -95,7 +95,7 @@ void kernel test_global_tiled_load_b128(global v4i* ptr)
 }
 
 // CHECK-GFX1300-LABEL: define dso_local amdgpu_kernel void @test_global_tiled_load_vst2_b128(
-// CHECK-GFX1300-SAME: ptr addrspace(1) noundef align 32 captures(none) [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META4]] !kernel_arg_access_qual [[META5]] !kernel_arg_type [[META20:![0-9]+]] !kernel_arg_base_type [[META21:![0-9]+]] !kernel_arg_type_qual [[META7]] {
+// CHECK-GFX1300-SAME: ptr addrspace(1) noundef align 32 captures(none) [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META8]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META20:![0-9]+]] !kernel_arg_base_type [[META21:![0-9]+]] !kernel_arg_type_qual [[META11]] {
 // CHECK-GFX1300-NEXT:  [[ENTRY:.*:]]
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = load <7 x i32>, ptr addrspace(1) [[PTR]], align 32, !tbaa [[TBAA14]], !amdgpu.noclobber [[META17]]
 // CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = tail call <7 x i32> @llvm.amdgcn.global.tiled.load.vst2.b128(ptr addrspace(1) align 32 [[PTR]], <7 x i32> [[TMP0]])
@@ -107,17 +107,17 @@ void kernel test_global_tiled_load_vst2_b128(global v7i* ptr)
    *ptr = __builtin_amdgcn_global_tiled_load_vst2_b128(ptr, *ptr);
 }
 //.
-// CHECK-GFX1300: [[META4]] = !{i32 1}
-// CHECK-GFX1300: [[META5]] = !{!"none"}
-// CHECK-GFX1300: [[META6]] = !{!"int*"}
-// CHECK-GFX1300: [[META7]] = !{!""}
-// CHECK-GFX1300: [[TBAA8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
-// CHECK-GFX1300: [[META9]] = !{!"int", [[META10:![0-9]+]], i64 0}
-// CHECK-GFX1300: [[META10]] = !{!"omnipotent char", [[META11:![0-9]+]], i64 0}
-// CHECK-GFX1300: [[META11]] = !{!"Simple C/C++ TBAA"}
+// CHECK-GFX1300: [[TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
+// CHECK-GFX1300: [[META5]] = !{!"int", [[META6:![0-9]+]], i64 0}
+// CHECK-GFX1300: [[META6]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
+// CHECK-GFX1300: [[META7]] = !{!"Simple C/C++ TBAA"}
+// CHECK-GFX1300: [[META8]] = !{i32 1}
+// CHECK-GFX1300: [[META9]] = !{!"none"}
+// CHECK-GFX1300: [[META10]] = !{!"int*"}
+// CHECK-GFX1300: [[META11]] = !{!""}
 // CHECK-GFX1300: [[META12]] = !{!"v2i*"}
 // CHECK-GFX1300: [[META13]] = !{!"int __attribute__((ext_vector_type(2)))*"}
-// CHECK-GFX1300: [[TBAA14]] = !{[[META10]], [[META10]], i64 0}
+// CHECK-GFX1300: [[TBAA14]] = !{[[META6]], [[META6]], i64 0}
 // CHECK-GFX1300: [[META15]] = !{!"v3i*"}
 // CHECK-GFX1300: [[META16]] = !{!"int __attribute__((ext_vector_type(3)))*"}
 // CHECK-GFX1300: [[META17]] = !{}
