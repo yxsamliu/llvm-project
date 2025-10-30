@@ -760,9 +760,8 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
     DataRegs.push_back(DataReg);
   }
   unsigned OpsToCopy = II.getNumOperands() - NumStores;
-  unsigned NumStoreOps = 2 * NumStores;
   unsigned NumMIOps = MI.getNumExplicitOperands();
-  assert(OpsToCopy + NumStoreOps == NumMIOps &&
+  assert(OpsToCopy + 2 * NumStores == NumMIOps &&
          "Unexpected number of operands in laneshared pseudo");
   for (unsigned I = 0, E = OpsToCopy; I < E; ++I) {
     CoreMIB.add(MI.getOperand(I));

@@ -95,6 +95,8 @@ private:
 };
 
 class SIInstrInfo final : public AMDGPUGenInstrInfo {
+  struct ThreeAddressUpdates;
+
 private:
   const SIRegisterInfo RI;
   const GCNSubtarget &ST;
@@ -196,6 +198,9 @@ private:
                   StringRef &ErrInfo) const;
 
   bool resultDependsOnExec(const MachineInstr &MI) const;
+
+  MachineInstr *convertToThreeAddressImpl(MachineInstr &MI,
+                                          ThreeAddressUpdates &Updates) const;
 
 protected:
   /// If the specific machine instruction is a instruction that moves/copies
@@ -721,6 +726,52 @@ public:
     switch (Opcode) {
     case AMDGPU::V_LOAD_IDX:
     case AMDGPU::V_STORE_IDX:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  static bool setsSCCifResultIsNonZero(const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    case AMDGPU::S_ABSDIFF_I32:
+    case AMDGPU::S_ABS_I32:
+    case AMDGPU::S_AND_B32:
+    case AMDGPU::S_AND_B64:
+    case AMDGPU::S_ANDN2_B32:
+    case AMDGPU::S_ANDN2_B64:
+    case AMDGPU::S_ASHR_I32:
+    case AMDGPU::S_ASHR_I64:
+    case AMDGPU::S_BCNT0_I32_B32:
+    case AMDGPU::S_BCNT0_I32_B64:
+    case AMDGPU::S_BCNT1_I32_B32:
+    case AMDGPU::S_BCNT1_I32_B64:
+    case AMDGPU::S_BFE_I32:
+    case AMDGPU::S_BFE_I64:
+    case AMDGPU::S_BFE_U32:
+    case AMDGPU::S_BFE_U64:
+    case AMDGPU::S_LSHL_B32:
+    case AMDGPU::S_LSHL_B64:
+    case AMDGPU::S_LSHR_B32:
+    case AMDGPU::S_LSHR_B64:
+    case AMDGPU::S_NAND_B32:
+    case AMDGPU::S_NAND_B64:
+    case AMDGPU::S_NOR_B32:
+    case AMDGPU::S_NOR_B64:
+    case AMDGPU::S_NOT_B32:
+    case AMDGPU::S_NOT_B64:
+    case AMDGPU::S_OR_B32:
+    case AMDGPU::S_OR_B64:
+    case AMDGPU::S_ORN2_B32:
+    case AMDGPU::S_ORN2_B64:
+    case AMDGPU::S_QUADMASK_B32:
+    case AMDGPU::S_QUADMASK_B64:
+    case AMDGPU::S_WQM_B32:
+    case AMDGPU::S_WQM_B64:
+    case AMDGPU::S_XNOR_B32:
+    case AMDGPU::S_XNOR_B64:
+    case AMDGPU::S_XOR_B32:
+    case AMDGPU::S_XOR_B64:
       return true;
     default:
       return false;
@@ -1707,7 +1758,7 @@ public:
                            unsigned *PredCost = nullptr) const override;
 
   InstructionUniformity
-  getInstructionUniformity(const MachineInstr &MI) const override final;
+  getInstructionUniformity(const MachineInstr &MI) const final;
 
   InstructionUniformity
   getGenericInstructionUniformity(const MachineInstr &MI) const;
