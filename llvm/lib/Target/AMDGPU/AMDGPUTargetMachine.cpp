@@ -1360,6 +1360,9 @@ void AMDGPUPassConfig::addIRPasses() {
       isPassEnabled(EnableImageIntrinsicOptimizer))
     addPass(createAMDGPUImageIntrinsicOptimizerPass(&TM));
 
+  if (EnableUniformIntrinsicCombine)
+    addPass(createAMDGPUUniformIntrinsicCombineLegacyPass());
+
   // This can be disabled by passing ::Disable here or on the command line
   // with --expand-variadics-override=disable.
   addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
@@ -2124,6 +2127,8 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
   if (isPassEnabled(EnableImageIntrinsicOptimizer))
     addPass(AMDGPUImageIntrinsicOptimizerPass(TM));
 
+  if (EnableUniformIntrinsicCombine)
+    addPass(AMDGPUUniformIntrinsicCombinePass());
   // This can be disabled by passing ::Disable here or on the command line
   // with --expand-variadics-override=disable.
   addPass(ExpandVariadicsPass(ExpandVariadicsMode::Lowering));
