@@ -1859,10 +1859,10 @@ class VIMAGE_RTS<int op, string opcode, int num_addrs, dag RsrcIns, GFXGen gfxGe
                  list<RegisterOperand> addr_types, bit HasVdst, bit IsTraceRay, bit isPacket, bit isPrimOrCoords>
     : VIMAGE<op,
              !cond(!not(HasVdst)  : (outs),
-                   IsTraceRay     : (outs VGPR_32:$vdata),
-                   isPacket       : (outs VGPR_32:$vdata),
-                   isPrimOrCoords : (outs VReg_96:$vdata),
-                   true           : (outs VReg_288:$vdata)),
+                   IsTraceRay     : (outs VGPROp_32:$vdata),
+                   isPacket       : (outs VGPROp_32:$vdata),
+                   isPrimOrCoords : (outs VGPROp_96:$vdata),
+                   true           : (outs VGPROp_288:$vdata)),
              num_addrs, gfxGen.AssemblerPredicate, encoding, gfxGen.DecoderNamespace, addr_types>{
   let InOperandList = !con(nsah.AddrIns, RsrcIns, (ins R128A16:$r128));
   let AsmString = opcode#!if(HasVdst, " $vdata, ", " ")#nsah.AddrAsm#!if(IsTraceRay, ", $rsrc", ", null")#"$r128";
