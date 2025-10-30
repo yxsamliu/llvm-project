@@ -510,7 +510,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["atomic-fmin-fmax-global-f32"] = true;
     Features["atomic-fmin-fmax-global-f64"] = true;
     Features["wavefrontsize32"] = true;
-    Features["cluster"] = true;
+    Features["clusters"] = true;
     break;
   case GK_GFX120F:
   case GK_GFX120E:

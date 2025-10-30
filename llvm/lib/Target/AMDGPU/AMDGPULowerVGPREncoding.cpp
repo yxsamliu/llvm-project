@@ -177,6 +177,7 @@ private:
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
   SIMachineFunctionInfo *MFI;
+  const MCSubtargetInfo *STI;
 
   /// Most recent s_set_* instruction.
   MachineInstr *MostRecentModeSet;
@@ -521,7 +522,7 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(
           continue;
 
         // Replace CoreOp with a new register of the correct width and offset
-        size_t ByteSize = AMDGPU::getRegOperandSize(TRI, CoreMI->getDesc(),
+        size_t ByteSize = AMDGPU::getRegOperandSize(STI, TII, CoreMI->getDesc(),
                                                     CoreOp->getOperandNo());
         int OffsetIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::offset);
         assert(OffsetIdx != -1 && "Malformed V_LOAD/STORE_IDX instruction");
@@ -716,6 +717,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
   TII = ST->getInstrInfo();
   TRI = ST->getRegisterInfo();
   MFI = MF.getInfo<SIMachineFunctionInfo>();
+  STI = MF.getTarget().getMCSubtargetInfo();
 
   bool Changed = false;
   ClauseLen = ClauseRemaining = 0;

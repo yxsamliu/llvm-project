@@ -1435,8 +1435,8 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT,
   LoopConds.clear();
   FlowSet.clear();
 
-  // In case where the pointer appeared after amdgpu-assing-laneshared
-      // pass, check if it possibly points to global variable
+  // In the case where the pointer appeared after amdgpu-assign-laneshared pass,
+  // check if it possibly points to global variable.
   for (BasicBlock *BB : R->blocks()) {
     for (Instruction &I : *BB) {
       if (!isa<PHINode>(&I) || I.hasMetadata("laneshared-in-vgpr"))
