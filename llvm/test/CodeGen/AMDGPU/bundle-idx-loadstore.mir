@@ -2452,6 +2452,7 @@ body:             |
   ; LOWERED-NEXT:   $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
   ; LOWERED-NEXT:   S_SET_VGPR_FRAMES 4
   ; LOWERED-NEXT:   renamable $vgpr0 = V_MAX_U32_e64 12345, undef $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
+  ; LOWERED-NEXT:   S_SET_VGPR_FRAMES 0
   ; LOWERED-NEXT: {{  $}}
   ; LOWERED-NEXT: bb.2:
   ; LOWERED-NEXT:   S_ENDPGM 0
@@ -2546,6 +2547,7 @@ body:             |
   ; LOWERED-NEXT:   $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
   ; LOWERED-NEXT:   S_SET_VGPR_FRAMES 64
   ; LOWERED-NEXT:   undef $vgpr0 = V_MAX_U32_e64 12345, killed $sgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
+  ; LOWERED-NEXT:   S_SET_VGPR_FRAMES 0
   ; LOWERED-NEXT: {{  $}}
   ; LOWERED-NEXT: bb.2:
   ; LOWERED-NEXT:   S_ENDPGM 0
@@ -2659,6 +2661,7 @@ body:             |
   ; LOWERED-NEXT:   $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
   ; LOWERED-NEXT:   S_SET_VGPR_FRAMES 68
   ; LOWERED-NEXT:   undef $vgpr0 = V_MAX_U32_e64 12345, undef $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
+  ; LOWERED-NEXT:   S_SET_VGPR_FRAMES 0
   ; LOWERED-NEXT: {{  $}}
   ; LOWERED-NEXT: bb.3:
   ; LOWERED-NEXT:   S_ENDPGM 0
@@ -2802,6 +2805,7 @@ body:             |
   ; LOWERED-NEXT:   $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
   ; LOWERED-NEXT:   S_SET_VGPR_FRAMES 64
   ; LOWERED-NEXT:   $vgpr0 = V_MOV_B32_e32 $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
+  ; LOWERED-NEXT:   S_SET_VGPR_FRAMES 0
   ; LOWERED-NEXT: {{  $}}
   ; LOWERED-NEXT: bb.3:
   ; LOWERED-NEXT:   liveins: $sgpr0, $vgpr0
@@ -3111,6 +3115,7 @@ body:             |
   ; LOWERED-NEXT:   $vgpr4 = V_MOV_B32_e32 undef $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
   ; LOWERED-NEXT:   $vgpr5 = V_MOV_B32_e32 undef $vgpr1, <0x{{[0-9a-f]+}}>, implicit $exec
   ; LOWERED-NEXT:   $vgpr6 = V_MOV_B32_e32 undef $vgpr2, <0x{{[0-9a-f]+}}>, implicit $exec
+  ; LOWERED-NEXT:   S_SET_VGPR_FRAMES 0
   ; LOWERED-NEXT: {{  $}}
   ; LOWERED-NEXT: bb.2:
   ; LOWERED-NEXT:   liveins: $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $vgpr4_vgpr5_vgpr6, $vgpr0_vgpr1_vgpr2_vgpr3
@@ -3257,6 +3262,7 @@ body:             |
   ; LOWERED-NEXT:   renamable $sgpr0 = S_LSHL_B32 renamable $sgpr1, 1, implicit-def dead $scc
   ; LOWERED-NEXT:   $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
   ; LOWERED-NEXT:   undef $vgpr0 = V_MAX_U32_e64 23456, killed $sgpr1, <0x{{[0-9a-f]+}}>, implicit $exec
+  ; LOWERED-NEXT:   S_SET_VGPR_FRAMES 0
   ; LOWERED-NEXT: {{  $}}
   ; LOWERED-NEXT: bb.2:
   ; LOWERED-NEXT:   S_ENDPGM 0
