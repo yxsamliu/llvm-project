@@ -266,12 +266,24 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
                               ? EncodeType::SET_VGPR_FRAMES
                               : EncodeType::SET_VGPR_MSB;
 
+  // Record previous mode into high 8 bits of the SET_VGPR_MSB immediate.
+  int64_t OldModeBits = (encodeType == EncodeType::SET_VGPR_MSB)
+                            ? CurrentMode.encode(encodeType) << 8
+                            : 0;
+
   bool Rewritten = false;
   if (!CurrentMode.update(NewMode, Rewritten))
     return false;
 
   if (MostRecentModeSet && !Rewritten) {
-    MostRecentModeSet->getOperand(0).setImm(CurrentMode.encode(encodeType));
+    MachineOperand &Op = MostRecentModeSet->getOperand(0);
+
+    // Carry old mode bits from the existing instruction.
+    OldModeBits = (encodeType == EncodeType::SET_VGPR_MSB)
+                      ? OldModeBits = Op.getImm() & 0xff00
+                      : 0;
+
+    Op.setImm(CurrentMode.encode(encodeType) | OldModeBits);
     return true;
   }
 
@@ -280,7 +292,7 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
                               TII->get(ST->hasVGPRIndexingRegisters()
                                            ? AMDGPU::S_SET_VGPR_FRAMES
                                            : AMDGPU::S_SET_VGPR_MSB))
-                          .addImm(NewMode.encode(encodeType));
+                          .addImm(NewMode.encode(encodeType) | OldModeBits);
 
   CurrentMode = NewMode;
   return true;
