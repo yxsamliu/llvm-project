@@ -3016,6 +3016,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_64_STAGINGRegClassID:
   case AMDGPU::AV_64_Align2RegClassID:
   case AMDGPU::AV_64_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_64_Lo256RegClassID:
   case AMDGPU::VReg_64_Lo256_Align2RegClassID:
   case AMDGPU::VReg_64_STAGING_Lo256_Align2RegClassID:
   case AMDGPU::VS_64_Lo256RegClassID:
@@ -3032,6 +3033,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_96_STAGINGRegClassID:
   case AMDGPU::AV_96_Align2RegClassID:
   case AMDGPU::AV_96_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_96_Lo256RegClassID:
   case AMDGPU::VReg_96_Lo256_Align2RegClassID:
   case AMDGPU::VReg_96_STAGING_Lo256_Align2RegClassID:
     return 96;
@@ -3048,6 +3050,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_128_Align2RegClassID:
   case AMDGPU::SReg_128_XNULLRegClassID:
   case AMDGPU::AV_128_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_128_Lo256RegClassID:
   case AMDGPU::VReg_128_Lo256_Align2RegClassID:
   case AMDGPU::VReg_128_STAGING_Lo256_Align2RegClassID:
     return 128;
@@ -3063,6 +3066,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_160_STAGINGRegClassID:
   case AMDGPU::AV_160_Align2RegClassID:
   case AMDGPU::AV_160_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_160_Lo256RegClassID:
   case AMDGPU::VReg_160_Lo256_Align2RegClassID:
   case AMDGPU::VReg_160_STAGING_Lo256_Align2RegClassID:
     return 160;
@@ -3078,6 +3082,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_192_STAGINGRegClassID:
   case AMDGPU::AV_192_Align2RegClassID:
   case AMDGPU::AV_192_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_192_Lo256RegClassID:
   case AMDGPU::VReg_192_Lo256_Align2RegClassID:
   case AMDGPU::VReg_192_STAGING_Lo256_Align2RegClassID:
     return 192;
@@ -3091,6 +3096,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_224_Align2RegClassID:
   case AMDGPU::AV_224_STAGING_Align2RegClassID:
   case AMDGPU::VReg_224_STAGINGRegClassID:
+  case AMDGPU::VReg_224_Lo256RegClassID:
   case AMDGPU::VReg_224_Lo256_Align2RegClassID:
     return 224;
   case AMDGPU::SGPR_256RegClassID:
@@ -3106,6 +3112,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_256_Align2RegClassID:
   case AMDGPU::SReg_256_XNULLRegClassID:
   case AMDGPU::AV_256_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_256_Lo256RegClassID:
   case AMDGPU::VReg_256_Lo256_Align2RegClassID:
   case AMDGPU::VReg_256_STAGING_Lo256_Align2RegClassID:
     return 256;
@@ -3121,6 +3128,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_288_STAGINGRegClassID:
   case AMDGPU::AV_288_Align2RegClassID:
   case AMDGPU::AV_288_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_288_Lo256RegClassID:
   case AMDGPU::VReg_288_Lo256_Align2RegClassID:
   case AMDGPU::VReg_288_STAGING_Lo256_Align2RegClassID:
     return 288;
@@ -3133,6 +3141,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_320_Align2RegClassID:
   case AMDGPU::AV_320RegClassID:
   case AMDGPU::AV_320_Align2RegClassID:
+  case AMDGPU::VReg_320_Lo256RegClassID:
   case AMDGPU::VReg_320_Lo256_Align2RegClassID:
     return 320;
   case AMDGPU::SGPR_352RegClassID:
@@ -3144,6 +3153,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_352_Align2RegClassID:
   case AMDGPU::AV_352RegClassID:
   case AMDGPU::AV_352_Align2RegClassID:
+  case AMDGPU::VReg_352_Lo256RegClassID:
   case AMDGPU::VReg_352_Lo256_Align2RegClassID:
     return 352;
   case AMDGPU::SGPR_384RegClassID:
@@ -3155,6 +3165,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_384_Align2RegClassID:
   case AMDGPU::AV_384RegClassID:
   case AMDGPU::AV_384_Align2RegClassID:
+  case AMDGPU::VReg_384_Lo256RegClassID:
   case AMDGPU::VReg_384_Lo256_Align2RegClassID:
     return 384;
   case AMDGPU::SGPR_512RegClassID:
@@ -3169,6 +3180,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_512_STAGINGRegClassID:
   case AMDGPU::AV_512_Align2RegClassID:
   case AMDGPU::AV_512_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_512_Lo256RegClassID:
   case AMDGPU::VReg_512_Lo256_Align2RegClassID:
   case AMDGPU::VReg_512_STAGING_Lo256_Align2RegClassID:
     return 512;
@@ -3184,6 +3196,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_576_STAGINGRegClassID:
   case AMDGPU::AV_576_Align2RegClassID:
   case AMDGPU::AV_576_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_576_Lo256RegClassID:
   case AMDGPU::VReg_576_Lo256_Align2RegClassID:
   case AMDGPU::VReg_576_STAGING_Lo256_Align2RegClassID:
     return 576;
@@ -3199,6 +3212,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_1024_STAGINGRegClassID:
   case AMDGPU::AV_1024_Align2RegClassID:
   case AMDGPU::AV_1024_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_1024_Lo256RegClassID:
   case AMDGPU::VReg_1024_Lo256_Align2RegClassID:
   case AMDGPU::VReg_1024_STAGING_Lo256_Align2RegClassID:
     return 1024;

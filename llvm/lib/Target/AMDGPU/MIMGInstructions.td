@@ -387,8 +387,11 @@ class VIMAGE<int op, dag outs, int num_addrs, Predicate pred,
   let MIMGEncoding = encoding;
   let VAddrOperands = num_addrs;
 
-  MIMGNSAHelper nsah = !if(!empty(addr_types),
-                           MIMGNSAHelper<num_addrs>,
+  // No VIMAGE instruction that has all VGPR32 operands for vaddr fields also
+  // uses more than 4 vaddr fields. So we can reuse PartialNSAHelper with limit
+  // of 4 and set VGPROp_32_Lo256 for the fourth field. For instructions with
+  // custom addr types (i.e. raytracing ones) we can use MIMGNSAHelper.
+  NSAHelper nsah = !if(!empty(addr_types), PartialNSAHelper<num_addrs, 4, VGPROp_32_Lo256>,
                            MIMGNSAHelper<num_addrs, addr_types>);
   dag AddrIns = nsah.AddrIns;
   string AddrAsm = !if(!eq(num_addrs, 1), "$vaddr0", nsah.AddrAsm);
@@ -551,14 +554,14 @@ class VSAMPLE_Sampler_gfx12<mimgopc op, string opcode, RegisterOperand DataRC,
   : VSAMPLE_Sampler<op.GFX12, opcode, DataRC, (ins SReg_256_XNULL:$rsrc), (ins SReg_128_XNULL:$samp), num_addrs, GFX12Gen, MIMGEncGfx12, Addr3RC, enableDisasm>;
 
 class VSAMPLE_Sampler_gfx13_Base<mimgopc op, string opcode, RegisterOperand DataRC, DAGOperand RsrcRC, DAGOperand SampRC,
-                                 int num_addrs, RegisterOperand Addr3RC = VGPROp_32, bit enableDisasm=0>
+                                 int num_addrs, RegisterOperand Addr3RC = VGPROp_32_Lo256, bit enableDisasm=0>
   : VSAMPLE_Sampler<op.GFX13, opcode, DataRC, (ins RsrcRC:$rsrc), (ins SampRC:$samp), num_addrs, GFX13Gen, MIMGEncGfx13, Addr3RC, enableDisasm> {
   let Inst{9-8} = cpol{8-7};
   let Constraints = "@earlyclobber $vdata";
 }
 
 multiclass VSAMPLE_Sampler_gfx13<mimgopc op, string opcode, RegisterOperand DataRC,
-                                 int num_addrs, RegisterOperand Addr3RC = VGPROp_32,
+                                 int num_addrs, RegisterOperand Addr3RC = VGPROp_32_Lo256,
                                  bit enableDisasm=0>{
   let IndexedRsrc = 1, IndexedSamp = 1 in
   def _indexed_gfx13 : VSAMPLE_Sampler_gfx13_Base<op, opcode, DataRC, RsrcReg256Op, RsrcReg128Op, num_addrs, Addr3RC, enableDisasm>;
@@ -596,7 +599,7 @@ class VSAMPLE_Sampler_nortn_gfx12<mimgopc op, string opcode,
   : VSAMPLE_Sampler_nortn<op.GFX12, opcode, (ins SReg_256_XNULL:$rsrc), GFX12Gen, MIMGEncGfx12, num_addrs, Addr3RC, enableDisasm>;
 
 class VSAMPLE_Sampler_nortn_gfx13<mimgopc op, string opcode,
-                            int num_addrs, RegisterOperand Addr3RC = VGPROp_32,
+                            int num_addrs, RegisterOperand Addr3RC = VGPROp_32_Lo256,
                             bit enableDisasm=0>
   : VSAMPLE_Sampler_nortn<op.GFX13, opcode, (ins RsrcReg256Op:$rsrc), GFX13Gen, MIMGEncGfx13, num_addrs, Addr3RC, enableDisasm>;
 
@@ -632,7 +635,7 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
     if op.HAS_GFX13 then {
       if isVSample then {
         let samp = 0 in
-          defm _V1 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 1, VGPROp_32>;
+          defm _V1 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 1>;
       }
       else {
         defm _V1 : VIMAGE_NoSampler_gfx13<op, asm, dst_rc, 1>;
@@ -665,7 +668,7 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
     if op.HAS_GFX13 then {
       if isVSample then {
         let samp = 0 in
-          defm _V2 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 2, VGPROp_32>;
+          defm _V2 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 2>;
       }
       else {
         defm _V2 : VIMAGE_NoSampler_gfx13<op, asm, dst_rc, 2>;
@@ -698,7 +701,7 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
     if op.HAS_GFX13 then {
       if isVSample then {
         let samp = 0 in
-          defm _V3 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 3, VGPROp_32>;
+          defm _V3 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 3>;
       }
       else {
         defm _V3 : VIMAGE_NoSampler_gfx13<op, asm, dst_rc, 3>;
@@ -733,7 +736,7 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
     if op.HAS_GFX13 then {
       if isVSample then {
         let samp = 0 in
-          defm _V4 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 4, VGPROp_32, enableDisasm>;
+          defm _V4 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 4, VGPROp_32_Lo256, enableDisasm>;
       }
       else {
         defm _V4 : VIMAGE_NoSampler_gfx13<op, asm, dst_rc, 4, enableDisasm>;
@@ -1423,8 +1426,9 @@ class MIMG_Sampler_nortn_nsa_gfx11<mimgopc op, string opcode,
   let vdata = 0;
 }
 
-class MIMGAddrSize<int dw, bit enable_disasm, int AddrDW = dw> {
+class MIMGAddrSize<int dw, bit enable_disasm, int AddrDWIn = dw> {
   int NumWords = dw;
+  int AddrDW = AddrDWIn;
 
   RegisterOperand RegClass = !if(!le(AddrDW, 0), ?,
                            !if(!eq(AddrDW, 1), VGPROp_32,
@@ -1450,6 +1454,27 @@ class MIMGAddrSize<int dw, bit enable_disasm, int AddrDW = dw> {
 class LastVAddrSize <int dw, int max_idx, bit enable_disasm>
   : MIMGAddrSize<dw, enable_disasm,
                  !if(!gt(dw, max_idx), !sub(dw, max_idx), 0)>;
+
+class LastVAddrSize_gfx13 <int dw, int max_idx, bit enable_disasm>
+  : MIMGAddrSize<dw, enable_disasm,
+                 !if(!gt(dw, max_idx), !sub(dw, max_idx), 0)> {
+  let RegClass = !cond(
+    !le(AddrDW, 0)        : ?,
+    !eq(AddrDW, 1)        : VGPROp_32_Lo256,
+    !eq(AddrDW, 2)        : VGPROp_64_Lo256,
+    !eq(AddrDW, 3)        : VGPROp_96_Lo256,
+    !eq(AddrDW, 4)        : VGPROp_128_Lo256,
+    !eq(AddrDW, 5)        : VGPROp_160_Lo256,
+    !eq(AddrDW, 6)        : VGPROp_192_Lo256,
+    !eq(AddrDW, 7)        : VGPROp_224_Lo256,
+    !eq(AddrDW, 8)        : VGPROp_256_Lo256,
+    !eq(AddrDW, 9)        : VGPROp_288_Lo256,
+    !eq(AddrDW, 10)       : VGPROp_320_Lo256,
+    !eq(AddrDW, 11)       : VGPROp_352_Lo256,
+    !eq(AddrDW, 12)       : VGPROp_384_Lo256,
+    !le(AddrDW, 16)       : VGPROp_512_Lo256,
+    1                     : ?);
+}
 
 // Return whether x is in lst.
 class isIntInList<int x, list<int> lst> {
@@ -1531,6 +1556,13 @@ class MIMG_Sampler_AddrSizes<AMDGPUSampleVariant sample, bit isG16,
                    !listconcat(lhs, [LastVAddrSize<dw, !sub(nsa_max_addr, 1),
                                                    !eq(dw, EnableDisasmNum)>]),
                    lhs));
+
+  list<LastVAddrSize_gfx13> PartialNSAInstrs_gfx13 =
+        !foldl([]<LastVAddrSize_gfx13>, PossibleVariants, lhs, dw,
+               !if(isIntInList<dw, AllNumAddrWords>.ret,
+                   !listconcat(lhs, [LastVAddrSize_gfx13<dw, !sub(nsa_max_addr, 1),
+                                                   !eq(dw, EnableDisasmNum)>]),
+                   lhs));
 }
 
 multiclass MIMG_Sampler_Src_Helper <mimgopc op, string asm,
@@ -1585,6 +1617,10 @@ multiclass MIMG_Sampler_Src_Helper <mimgopc op, string asm,
         def _V # addr.NumWords # _gfx12
           : VSAMPLE_Sampler_gfx12<op, asm, dst_rc, addr.NumWords, addr.RegClass, !and(enableDisasm, addr.Disassemble)>;
       }
+    }
+  }
+  foreach addr = MIMG_Sampler_AddrSizes<sample, isG16, 4/*MaxNSASize*/, 1>.PartialNSAInstrs_gfx13 in {
+    let VAddrDwords = addr.NumWords in {
       if op.HAS_GFX13 then {
         defm _V # addr.NumWords
           : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, addr.NumWords, addr.RegClass, !and(enableDisasm, addr.Disassemble)>;
@@ -1647,6 +1683,10 @@ multiclass MIMG_Sampler_NoReturn <mimgopc op, AMDGPUSampleVariant sample, bit wq
           def _V # addr.NumWords # _gfx12
             : VSAMPLE_Sampler_nortn_gfx12<op, asm, addr.NumWords, addr.RegClass>;
         }
+      }
+    }
+    foreach addr = MIMG_Sampler_AddrSizes<sample, isG16, 4/*MaxNSASize*/, 1>.PartialNSAInstrs_gfx13 in {
+      let VAddrDwords = addr.NumWords in {
         if op.HAS_GFX13 then {
           def _V # addr.NumWords # _gfx13
             : VSAMPLE_Sampler_nortn_gfx13<op, asm, addr.NumWords, addr.RegClass>;
@@ -1847,7 +1887,7 @@ multiclass MIMG_MSAA_Load <mimgopc op, string asm> {
 
 class VIMAGE_RTS_Helper<bit HasVdst, bit IsTraceRay, bit isPacket, bit isPrimOrCoords> {
   list<RegisterOperand> addr_types =
-    !cond(IsTraceRay : [VGPROp_32, VGPROp_96, VGPROp_128, VGPROp_128],
+    !cond(IsTraceRay : [VGPROp_32, VGPROp_96, VGPROp_128, VGPROp_128_Lo256],
           isPacket :   [VGPROp_32, VGPROp_32],
           true     :   [VGPROp_32, VGPROp_32, VGPROp_32]);
   int num_addrs = !size(addr_types);

@@ -862,6 +862,9 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     MachineOperand *UseOfMI = &*MRI->use_nodbg_begin(DefReg);
     if (UseOfMI->getSubReg() != 0)
       continue;
+    if (auto *RC = TII->getRegClass(MI->getDesc(), Def.getOperandNo(), TRI);
+        RC && !RC->contains(AMDGPU::STG_SRCA))
+      continue;
     MachineInstr *StoreMI = UseOfMI->getParent();
     if (StoreMI->getOpcode() != AMDGPU::V_STORE_IDX)
       continue;
@@ -957,6 +960,9 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
       return rejectUser(MI);
     Register UseReg = Use.getReg();
     if (!UseReg.isVirtual())
+      continue;
+    if (auto *RC = TII->getRegClass(MI->getDesc(), Use.getOperandNo(), TRI);
+        RC && !RC->contains(AMDGPU::STG_SRCA))
       continue;
     MachineInstr *LoadMI = MRI->getVRegDef(UseReg);
     if (!LoadMI)

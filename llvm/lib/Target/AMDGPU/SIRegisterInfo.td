@@ -1091,6 +1091,12 @@ multiclass VRegClass<int numRegs, list<ValueType> regTypes, dag regList, dag ext
       let BaseClassOrder = !mul(numRegs, 32);
     }
 
+    // Register tuples starting with low 256 vgprs
+    def _Lo256 : VRegClassBase<numRegs, regTypes,
+        (add (trunc regList, 256), extraRegList)> {
+      let BaseClassOrder = !mul(numRegs, 32);
+    }
+
     // Define 2-aligned variant
     def _Align2 : VRegClassBase<numRegs, regTypes, (add (decimate regList, 2), extraRegList)> {
       // Give aligned class higher priority in base class resolution
@@ -1210,6 +1216,7 @@ def VS_32_Lo128 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2
   let Size = 32;
 }
 
+// FIXME-GFX13: Perhaps should not have STAGING registers. Appears only used on gfx125X
 def VS_32_Lo256 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
                                   (add VGPR_32_STAGING_Lo256, SReg_32, LDS_DIRECT)> {
   let isAllocatable = 0;
@@ -1641,6 +1648,12 @@ multiclass VGPROp_Aligned<string regClass> {
     def _Align2 : RegisterOperand<!cast<RegisterClassLike>(regClass#_STAGING#_Align2)>;
   }
 }
+
+// Should not have staging registers, used for GFX13 MIMG VAddr3+
+class VGPROp_Lo256<RegisterClass regClass> : RegisterOperand<!cast<RegisterClass>(regClass#_Lo256)> {
+  let DecoderMethod = "Decode" # regClass # "RegisterClass";
+}
+
 // TODO: These cases should use default target alignment
 // True 16 operands.
 def VGPROp_16 : VGPROp<VGPR_16> {
@@ -1651,6 +1664,7 @@ def VGPROp_32 : VGPROp<VGPR_32>;
 
 foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "320", "352", "384", "512", "576", "1024"] in {
   defm VGPROp_#size : VGPROp_Aligned<"VReg_"#size>;
+  def VGPROp_#size#_Lo256 : VGPROp_Lo256<!cast<RegisterClass>("VReg_"#size)>;
 }
 
 def VGPROp_16_Lo128 : RegisterOperand<VGPR_16_STAGING_Lo128> {
@@ -1659,6 +1673,10 @@ def VGPROp_16_Lo128 : RegisterOperand<VGPR_16_STAGING_Lo128> {
 }
 
 def VGPROp_32_Lo128 : RegisterOperand<VGPR_32_STAGING_Lo128> {
+  let DecoderMethod = "DecodeVGPR_32RegisterClass";
+}
+// Should not have staging registers, used for GFX13 MIMG VAddr3+
+def VGPROp_32_Lo256 : RegisterOperand<VGPR_32_Lo256> {
   let DecoderMethod = "DecodeVGPR_32RegisterClass";
 }
 
