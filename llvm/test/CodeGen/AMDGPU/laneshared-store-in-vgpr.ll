@@ -84,6 +84,7 @@ define private amdgpu_kernel void @_Z11wasp_kernelPiPKii_0_rank(ptr addrspace(1)
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1300-NEXT:    global_load_b32 g1[1], v[0:1], off offset:4
+; GFX1300-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1300-NEXT:  .LBB0_8:
 ; GFX1300-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.barrier.signal(i32 -1)
