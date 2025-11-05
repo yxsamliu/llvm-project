@@ -171,6 +171,7 @@ protected:
   bool HasFP8ConversionInsts = false;
   bool HasWMMA128bInsts = false;
   bool HasWMMA256bInsts = false;
+  bool HasWMMA2048bInsts = false;
   bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
@@ -912,6 +913,8 @@ public:
   bool hasWMMA256bInsts() const { return HasWMMA256bInsts; }
 
   bool hasWMMA128bInsts() const { return HasWMMA128bInsts; }
+
+  bool hasWMMA2048bInsts() const { return HasWMMA2048bInsts; }
 
   bool isGFX1170() const {
     return getGeneration() == GFX11 && hasWMMA128bInsts();

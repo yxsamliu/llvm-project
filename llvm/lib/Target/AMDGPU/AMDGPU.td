@@ -933,6 +933,12 @@ def FeatureWMMA128bInsts : SubtargetFeature<"wmma-128b-insts",
   "Has WMMA instructions where A and B matrices do not have duplicated data"
 >;
 
+def FeatureWMMA2048bInsts : SubtargetFeature<"wmma-2048b-insts",
+  "HasWMMA2048bInsts",
+  "true",
+  "Has WMMA instructions where A, B, C, or D matrix can be 2048-bits"
+>;
+
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
   "HasPkFmacF16Inst",
   "true",
@@ -2301,7 +2307,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
 
 def FeatureISAVersion12_60 : FeatureSet<
   !listconcat(FeatureISAVersion12_50.Features,
-    [])>;
+    [FeatureWMMA2048bInsts])>;
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
@@ -3086,6 +3092,9 @@ def HasWMMA256bInsts : Predicate<"Subtarget->hasWMMA256bInsts()">,
 
 def HasWMMA128bInsts : Predicate<"Subtarget->hasWMMA128bInsts()">,
   AssemblerPredicate<(all_of FeatureWMMA128bInsts)>;
+
+def HasWMMA2048bInsts : Predicate<"Subtarget->hasWMMA2048bInsts()">,
+  AssemblerPredicate<(all_of FeatureWMMA2048bInsts)>;
 
 def HasFP8E5M3Insts : Predicate<"Subtarget->hasFP8E5M3Insts()">,
   AssemblerPredicate<(all_of FeatureFP8E5M3Insts)>;

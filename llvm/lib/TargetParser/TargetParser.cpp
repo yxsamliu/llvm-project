@@ -472,12 +472,15 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
       Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
       Features["clusters"] = true;
       break;
+  case GK_GFX1260:
   case GK_GFX1251:
-    Features["gfx1251-gemm-insts"] = true;
+    if (Kind == GK_GFX1260)
+      Features["wmma-2048b-insts"] = true;
+    else if (Kind == GK_GFX1251)
+      Features["gfx1251-gemm-insts"] = true;
     [[fallthrough]];
   case GK_GFX1250:
   case GK_GFX12_5_GENERIC:
-  case GK_GFX1260:
     Features["ci-insts"] = true;
     Features["dot7-insts"] = true;
     Features["dot8-insts"] = true;
