@@ -503,6 +503,12 @@ def FeatureSemaphores : SubtargetFeature<"semaphores",
   "Has s_sema_* instructions"
 >;
 
+def FeatureWavegroups : SubtargetFeature<"wavegroups",
+  "HasWavegroups",
+  "true",
+  "Has wavegroups"
+>;
+
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
@@ -550,7 +556,7 @@ def FeatureGFX13Insts : SubtargetFeature<"gfx13-insts",
   "GFX13Insts",
   "true",
   "Additional instructions for GFX13+",
-  [FeatureSemaphores]
+  [FeatureSemaphores, FeatureWavegroups]
 >;
 
 def FeatureGFX10_3Insts : SubtargetFeature<"gfx10-3-insts",
@@ -3213,6 +3219,10 @@ def HasVGPRIndexingRegisters : Predicate<"Subtarget->hasVGPRIndexingRegisters()"
 def HasSemaphores :
   Predicate<"Subtarget->hasSemaphores()">,
   AssemblerPredicate<(all_of FeatureSemaphores)>;
+
+def HasWavegroups :
+  Predicate<"Subtarget->hasWavegroups()">,
+  AssemblerPredicate<(all_of FeatureWavegroups)>;
 
 def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
   AssemblerPredicate<(all_of FeatureWaitXcnt)>;
