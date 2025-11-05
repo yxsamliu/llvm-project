@@ -497,6 +497,12 @@ def FeatureCvtPkF16F32Inst : SubtargetFeature<"cvt-pk-f16-f32-inst",
   "Has cvt_pk_f16_f32 instruction"
 >;
 
+def FeatureSemaphores : SubtargetFeature<"semaphores",
+  "HasSemaphores",
+  "true",
+  "Has s_sema_* instructions"
+>;
+
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
@@ -543,7 +549,8 @@ def FeatureGFX1250Insts : SubtargetFeature<"gfx1250-insts",
 def FeatureGFX13Insts : SubtargetFeature<"gfx13-insts",
   "GFX13Insts",
   "true",
-  "Additional instructions for GFX13+"
+  "Additional instructions for GFX13+",
+  [FeatureSemaphores]
 >;
 
 def FeatureGFX10_3Insts : SubtargetFeature<"gfx10-3-insts",
@@ -3190,6 +3197,10 @@ def Has1024AddressableVGPRs : Predicate<"Subtarget->has1024AddressableVGPRs()">,
 
 def HasVGPRIndexingRegisters : Predicate<"Subtarget->hasVGPRIndexingRegisters()">,
   AssemblerPredicate<(all_of FeatureVGPRIndexingRegisters)>;
+
+def HasSemaphores :
+  Predicate<"Subtarget->hasSemaphores()">,
+  AssemblerPredicate<(all_of FeatureSemaphores)>;
 
 def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
   AssemblerPredicate<(all_of FeatureWaitXcnt)>;

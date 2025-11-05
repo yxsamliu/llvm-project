@@ -196,6 +196,8 @@ protected:
   bool HasEmulatedSystemScopeAtomics = false;
   bool HasDefaultComponentBroadcast = false;
   bool HasXF32Insts = false;
+  bool HasSemaphores = false;
+
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
   /// indicates a lack of S_CLAUSE support.
@@ -1465,6 +1467,7 @@ public:
 
   /// \returns true if the target has instructions with xf32 format support.
   bool hasXF32Insts() const { return HasXF32Insts; }
+  bool hasSemaphores() const { return HasSemaphores; }
 
   bool hasBitOp3Insts() const { return HasBitOp3Insts; }
 
