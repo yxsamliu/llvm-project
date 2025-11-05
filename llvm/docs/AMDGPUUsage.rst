@@ -919,6 +919,7 @@ supported for the ``amdgcn`` target.
      Buffer Strided Pointer (experimental) 9               *TODO*
      Lane-shared                           10              *TODO*      Shared VGPR      32      0xFFFFFFFF
      Distributed                           11              *TODO*      DDS              32      0xFFFFFFFF
+     *reserved for downstream use (LLPC)*  12
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
 
