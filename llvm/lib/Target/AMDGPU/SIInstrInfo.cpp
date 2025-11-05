@@ -7955,7 +7955,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     }
     legalizeOperands(*NewInstr, MDT);
     int SCCIdx = Inst.findRegisterDefOperandIdx(AMDGPU::SCC, /*TRI=*/nullptr);
-    MachineOperand SCCOp = Inst.getOperand(SCCIdx);
+    const MachineOperand &SCCOp = Inst.getOperand(SCCIdx);
     addSCCDefUsersToVALUWorklist(SCCOp, Inst, Worklist, CondReg);
     Inst.eraseFromParent();
     return;
@@ -7995,7 +7995,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     legalizeOperandsVALUt16(*NewInstr, MRI);
     legalizeOperands(*NewInstr, MDT);
     int SCCIdx = Inst.findRegisterDefOperandIdx(AMDGPU::SCC, /*TRI=*/nullptr);
-    MachineOperand SCCOp = Inst.getOperand(SCCIdx);
+    const MachineOperand &SCCOp = Inst.getOperand(SCCIdx);
     addSCCDefUsersToVALUWorklist(SCCOp, Inst, Worklist, CondReg);
     Inst.eraseFromParent();
     return;
@@ -8193,7 +8193,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
                                    AMDGPU::OpName::src0_modifiers) >= 0)
       NewInstr.addImm(0);
     if (AMDGPU::hasNamedOperand(NewOpcode, AMDGPU::OpName::src0)) {
-      MachineOperand Src = Inst.getOperand(1);
+      const MachineOperand &Src = Inst.getOperand(1);
       NewInstr->addOperand(Src);
     }
 
@@ -9209,7 +9209,7 @@ void SIInstrInfo::movePackToVALU(SIInstrWorklist &Worklist,
   addUsersToMoveToVALUWorklist(ResultReg, MRI, Worklist);
 }
 
-void SIInstrInfo::addSCCDefUsersToVALUWorklist(MachineOperand &Op,
+void SIInstrInfo::addSCCDefUsersToVALUWorklist(const MachineOperand &Op,
                                                MachineInstr &SCCDefInst,
                                                SIInstrWorklist &Worklist,
                                                Register NewCond) const {
