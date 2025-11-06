@@ -733,6 +733,12 @@ def FeaturePackedFP64Ops : SubtargetFeature<"packed-fp64-ops",
   "Support packed fp64 instructions"
 >;
 
+def FeaturePackedU64Ops : SubtargetFeature<"packed-u64-ops",
+  "HasPackedU64Ops",
+  "true",
+  "Support packed uint64 instructions"
+>;
+
 def FeatureR128A16 : SubtargetFeature<"r128-a16",
   "HasR128A16",
   "true",
@@ -931,6 +937,12 @@ def FeatureWMMA128bInsts : SubtargetFeature<"wmma-128b-insts",
   "HasWMMA128bInsts",
   "true",
   "Has WMMA instructions where A and B matrices do not have duplicated data"
+>;
+
+def FeatureWMMA2048bInsts : SubtargetFeature<"wmma-2048b-insts",
+  "HasWMMA2048bInsts",
+  "true",
+  "Has WMMA instructions where A, B, C, or D matrix can be 2048-bits"
 >;
 
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
@@ -1528,6 +1540,18 @@ def FeatureAddSubU64Insts
 def FeatureMadU32Inst : SubtargetFeature<"mad-u32-inst", "HasMadU32Inst",
                                          "true", "Has v_mad_u32 instruction">;
 
+def FeatureAddMinMaxInsts : SubtargetFeature<"add-min-max-insts",
+  "HasAddMinMaxInsts",
+  "true",
+  "Has v_add_{min|max}_{i|u}32 instructions"
+>;
+
+def FeaturePkAddMinMaxInsts : SubtargetFeature<"pk-add-min-max-insts",
+  "HasPkAddMinMaxInsts",
+  "true",
+  "Has v_pk_add_{min|max}_{i|u}16 instructions"
+>;
+
 def FeatureMemToLDSLoad : SubtargetFeature<"vmem-to-lds-load-insts",
   "HasVMemToLDSLoad",
   "true",
@@ -1546,10 +1570,17 @@ def Feature45BitNumRecordsBufferResource : SubtargetFeature< "45-bit-num-records
   "The buffer resource (V#) supports 45-bit num_records"
 >;
 
-def FeatureCluster : SubtargetFeature< "cluster",
-  "HasCluster",
+def FeatureClusters : SubtargetFeature< "clusters",
+  "HasClusters",
   "true",
-  "Has cluster support"
+  "Has clusters of workgroups support"
+>;
+
+def FeatureWaitsBeforeSystemScopeStores : SubtargetFeature<
+  "waits-before-system-scope-stores",
+  "RequiresWaitsBeforeSystemScopeStores",
+  "true",
+  "Target requires waits for loads and atomics before system scope stores"
 >;
 
 // Dummy feature used to disable assembler instructions.
@@ -2186,7 +2217,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureMaxHardClauseLength32,
    Feature1_5xVGPRs,
    FeatureMemoryAtomicFAddF32DenormalSupport,
-   FeatureBVHDualAndBVH8Insts
+   FeatureBVHDualAndBVH8Insts,
+   FeatureWaitsBeforeSystemScopeStores,
    ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2253,12 +2285,14 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
    FeatureMadU32Inst,
+   FeatureAddMinMaxInsts,
+   FeaturePkAddMinMaxInsts,
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
    Feature45BitNumRecordsBufferResource,
    FeatureSupportsXNACK,
    FeatureXNACK,
-   FeatureCluster,
+   FeatureClusters,
 ]>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2266,6 +2300,7 @@ def FeatureISAVersion12_51 : FeatureSet<
   [FullRate64Ops,
    FeatureDPALU_DPP,
    FeaturePackedFP64Ops,
+   FeaturePackedU64Ops,
    FeatureGFX1251GEMMInsts])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -2276,9 +2311,10 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12_50.Features,
     [FeatureRequiresCOV6])>;
 
-def FeatureISAVersion12_60: FeatureSet<
+def FeatureISAVersion12_60 : FeatureSet<
   !listconcat(FeatureISAVersion12_50.Features,
-    [FeatureGFX1260Insts])>;
+    [FeatureGFX1260Insts,
+     FeatureWMMA2048bInsts])>;
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
@@ -2338,7 +2374,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBVHDualAndBVH8Insts,
    FeatureWMMA128bInsts,
    FeatureIEEEMinimumMaximumInsts,
-   FeatureCluster,
+   FeatureClusters,
 ]>;
 
 defvar FeatureISAVersion13_1 = FeatureISAVersion13;
@@ -2866,6 +2902,9 @@ def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() &&
   // FIXME When we default to RealTrue16 instead of Fake, change the line as follows.
   // AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
 
+def UseTrue16WithSramECC : True16PredicateClass<"Subtarget->useRealTrue16Insts() && "
+                                                "!Subtarget->d16PreservesUnusedBits()">;
+
 def HasD16Writes32BitVgpr: Predicate<"Subtarget->hasD16Writes32BitVgpr()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, FeatureD16Writes32BitVgpr)>;
 def NotHasD16Writes32BitVgpr: Predicate<"!Subtarget->hasD16Writes32BitVgpr()">,
@@ -2919,6 +2958,9 @@ def HasPackedFP32Ops : Predicate<"Subtarget->hasPackedFP32Ops()">,
 def HasPackedFP64Ops : Predicate<"Subtarget->hasPackedFP64Ops()">,
   AssemblerPredicate<(all_of FeaturePackedFP64Ops)>;
 
+def HasPackedU64Ops : Predicate<"Subtarget->hasPackedU64Ops()">,
+  AssemblerPredicate<(all_of FeaturePackedU64Ops)>;
+
 def HasPkMovB32 : Predicate<"Subtarget->hasPkMovB32()">,
   AssemblerPredicate<(all_of FeatureGFX90AInsts)>;
 
@@ -2932,11 +2974,11 @@ def HasFmaakFmamkF64Insts :
 
 def HasAddMinMaxInsts :
   Predicate<"Subtarget->hasAddMinMaxInsts()">,
-  AssemblerPredicate<(all_of FeatureGFX1250Insts, (not FeatureGFX13Insts))>;
+  AssemblerPredicate<(any_of FeatureAddMinMaxInsts)>;
 
 def HasPkAddMinMaxInsts :
   Predicate<"Subtarget->hasPkAddMinMaxInsts()">,
-  AssemblerPredicate<(all_of FeatureGFX1250Insts, (not FeatureGFX13Insts))>;
+  AssemblerPredicate<(any_of FeaturePkAddMinMaxInsts)>;
 
 def HasPkMinMax3Insts :
   Predicate<"Subtarget->hasPkMinMax3Insts()">,
@@ -3046,6 +3088,9 @@ def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
 def HasMAIInsts : Predicate<"Subtarget->hasMAIInsts()">,
   AssemblerPredicate<(all_of FeatureMAIInsts)>;
 
+def NotHasMAIInsts : Predicate<"!Subtarget->hasMAIInsts()">,
+  AssemblerPredicate<(all_of (not FeatureMAIInsts))>;
+
 def HasSMemRealTime : Predicate<"Subtarget->hasSMemRealTime()">,
   AssemblerPredicate<(all_of FeatureSMemRealTime)>;
 
@@ -3068,6 +3113,9 @@ def HasWMMA256bInsts : Predicate<"Subtarget->hasWMMA256bInsts()">,
 
 def HasWMMA128bInsts : Predicate<"Subtarget->hasWMMA128bInsts()">,
   AssemblerPredicate<(all_of FeatureWMMA128bInsts)>;
+
+def HasWMMA2048bInsts : Predicate<"Subtarget->hasWMMA2048bInsts()">,
+  AssemblerPredicate<(all_of FeatureWMMA2048bInsts)>;
 
 def HasFP8E5M3Insts : Predicate<"Subtarget->hasFP8E5M3Insts()">,
   AssemblerPredicate<(all_of FeatureFP8E5M3Insts)>;
@@ -3263,6 +3311,20 @@ def HasUnalignedDS2Bug : Predicate<"Subtarget->hasUnalignedDS2Bug()">,
 
 def NotHasUnalignedDS2Bug : Predicate<"!Subtarget->hasUnalignedDS2Bug()">,
  AssemblerPredicate<(not FeatureGFX1250Insts)>;
+
+def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
+                      AssemblerPredicate<(all_of FeatureRequiresAlignedVGPRs)>;
+
+//===----------------------------------------------------------------------===//
+// HwModes
+//===----------------------------------------------------------------------===//
+
+// gfx90a-gfx950. Has AGPRs, and also the align2 VGPR/AGPR requirement
+def AVAlign2LoadStoreMode : HwMode<[HasMAIInsts, NeedsAlignedVGPRs]>;
+
+// gfx1250, has alignment requirement but no AGPRs.
+def AlignedVGPRNoAGPRMode : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs]>;
+
 
 // Include AMDGPU TD files
 include "SISchedule.td"

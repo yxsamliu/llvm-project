@@ -1710,12 +1710,7 @@ static bool isValidRegPrefix(char C) {
   return C == 'v' || C == 's' || C == 'a';
 }
 
-std::tuple<char, unsigned, unsigned>
-parseAsmConstraintPhysReg(StringRef Constraint) {
-  StringRef RegName = Constraint;
-  if (!RegName.consume_front("{") || !RegName.consume_back("}"))
-    return {};
-
+std::tuple<char, unsigned, unsigned> parseAsmPhysRegName(StringRef RegName) {
   char Kind = RegName.front();
   if (!isValidRegPrefix(Kind))
     return {};
@@ -1740,6 +1735,14 @@ parseAsmConstraintPhysReg(StringRef Constraint) {
   }
 
   return {};
+}
+
+std::tuple<char, unsigned, unsigned>
+parseAsmConstraintPhysReg(StringRef Constraint) {
+  StringRef RegName = Constraint;
+  if (!RegName.consume_front("{") || !RegName.consume_back("}"))
+    return {};
+  return parseAsmPhysRegName(RegName);
 }
 
 std::pair<unsigned, unsigned>
@@ -2960,6 +2963,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_IMM_V2FP32:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
   case AMDGPU::OPERAND_REG_IMM_V2FP64:
+  case AMDGPU::OPERAND_REG_IMM_V2INT64:
     return true;
   default:
     return false;
@@ -3012,6 +3016,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_64_STAGINGRegClassID:
   case AMDGPU::AV_64_Align2RegClassID:
   case AMDGPU::AV_64_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_64_Lo256RegClassID:
   case AMDGPU::VReg_64_Lo256_Align2RegClassID:
   case AMDGPU::VReg_64_STAGING_Lo256_Align2RegClassID:
   case AMDGPU::VS_64_Lo256RegClassID:
@@ -3028,6 +3033,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_96_STAGINGRegClassID:
   case AMDGPU::AV_96_Align2RegClassID:
   case AMDGPU::AV_96_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_96_Lo256RegClassID:
   case AMDGPU::VReg_96_Lo256_Align2RegClassID:
   case AMDGPU::VReg_96_STAGING_Lo256_Align2RegClassID:
     return 96;
@@ -3044,6 +3050,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_128_Align2RegClassID:
   case AMDGPU::SReg_128_XNULLRegClassID:
   case AMDGPU::AV_128_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_128_Lo256RegClassID:
   case AMDGPU::VReg_128_Lo256_Align2RegClassID:
   case AMDGPU::VReg_128_STAGING_Lo256_Align2RegClassID:
     return 128;
@@ -3059,6 +3066,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_160_STAGINGRegClassID:
   case AMDGPU::AV_160_Align2RegClassID:
   case AMDGPU::AV_160_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_160_Lo256RegClassID:
   case AMDGPU::VReg_160_Lo256_Align2RegClassID:
   case AMDGPU::VReg_160_STAGING_Lo256_Align2RegClassID:
     return 160;
@@ -3074,6 +3082,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_192_STAGINGRegClassID:
   case AMDGPU::AV_192_Align2RegClassID:
   case AMDGPU::AV_192_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_192_Lo256RegClassID:
   case AMDGPU::VReg_192_Lo256_Align2RegClassID:
   case AMDGPU::VReg_192_STAGING_Lo256_Align2RegClassID:
     return 192;
@@ -3087,6 +3096,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_224_Align2RegClassID:
   case AMDGPU::AV_224_STAGING_Align2RegClassID:
   case AMDGPU::VReg_224_STAGINGRegClassID:
+  case AMDGPU::VReg_224_Lo256RegClassID:
   case AMDGPU::VReg_224_Lo256_Align2RegClassID:
     return 224;
   case AMDGPU::SGPR_256RegClassID:
@@ -3102,6 +3112,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_256_Align2RegClassID:
   case AMDGPU::SReg_256_XNULLRegClassID:
   case AMDGPU::AV_256_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_256_Lo256RegClassID:
   case AMDGPU::VReg_256_Lo256_Align2RegClassID:
   case AMDGPU::VReg_256_STAGING_Lo256_Align2RegClassID:
     return 256;
@@ -3117,6 +3128,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_288_STAGINGRegClassID:
   case AMDGPU::AV_288_Align2RegClassID:
   case AMDGPU::AV_288_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_288_Lo256RegClassID:
   case AMDGPU::VReg_288_Lo256_Align2RegClassID:
   case AMDGPU::VReg_288_STAGING_Lo256_Align2RegClassID:
     return 288;
@@ -3129,6 +3141,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_320_Align2RegClassID:
   case AMDGPU::AV_320RegClassID:
   case AMDGPU::AV_320_Align2RegClassID:
+  case AMDGPU::VReg_320_Lo256RegClassID:
   case AMDGPU::VReg_320_Lo256_Align2RegClassID:
     return 320;
   case AMDGPU::SGPR_352RegClassID:
@@ -3140,6 +3153,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_352_Align2RegClassID:
   case AMDGPU::AV_352RegClassID:
   case AMDGPU::AV_352_Align2RegClassID:
+  case AMDGPU::VReg_352_Lo256RegClassID:
   case AMDGPU::VReg_352_Lo256_Align2RegClassID:
     return 352;
   case AMDGPU::SGPR_384RegClassID:
@@ -3151,6 +3165,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_384_Align2RegClassID:
   case AMDGPU::AV_384RegClassID:
   case AMDGPU::AV_384_Align2RegClassID:
+  case AMDGPU::VReg_384_Lo256RegClassID:
   case AMDGPU::VReg_384_Lo256_Align2RegClassID:
     return 384;
   case AMDGPU::SGPR_512RegClassID:
@@ -3165,6 +3180,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_512_STAGINGRegClassID:
   case AMDGPU::AV_512_Align2RegClassID:
   case AMDGPU::AV_512_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_512_Lo256RegClassID:
   case AMDGPU::VReg_512_Lo256_Align2RegClassID:
   case AMDGPU::VReg_512_STAGING_Lo256_Align2RegClassID:
     return 512;
@@ -3180,6 +3196,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_576_STAGINGRegClassID:
   case AMDGPU::AV_576_Align2RegClassID:
   case AMDGPU::AV_576_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_576_Lo256RegClassID:
   case AMDGPU::VReg_576_Lo256_Align2RegClassID:
   case AMDGPU::VReg_576_STAGING_Lo256_Align2RegClassID:
     return 576;
@@ -3195,6 +3212,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_1024_STAGINGRegClassID:
   case AMDGPU::AV_1024_Align2RegClassID:
   case AMDGPU::AV_1024_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_1024_Lo256RegClassID:
   case AMDGPU::VReg_1024_Lo256_Align2RegClassID:
   case AMDGPU::VReg_1024_STAGING_Lo256_Align2RegClassID:
     return 1024;
@@ -3207,10 +3225,11 @@ unsigned getRegBitWidth(const MCRegisterClass &RC) {
   return getRegBitWidth(RC.getID());
 }
 
-unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
-                           unsigned OpNo) {
+unsigned getRegOperandSize(const MCSubtargetInfo *STI, const MCInstrInfo *MII,
+                           const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned RCID = Desc.operands()[OpNo].RegClass;
+  unsigned RCID = MII->getOpRegClassID(
+      Desc.operands()[OpNo], STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo));
   return getRegBitWidth(RCID) / 8;
 }
 
@@ -3429,7 +3448,7 @@ bool isValid32BitLiteral(uint64_t Val, bool IsFP64) {
   return isUInt<32>(Val) || isInt<32>(Val);
 }
 
-int64_t encode32BitLiteral(int64_t Imm, OperandType Type) {
+int64_t encode32BitLiteral(int64_t Imm, OperandType Type, bool IsLit) {
   switch (Type) {
   default:
     break;
@@ -3453,7 +3472,7 @@ int64_t encode32BitLiteral(int64_t Imm, OperandType Type) {
     return Lo_32(Imm);
   case OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_IMM_V2FP64:
-    return Hi_32(Imm);
+    return IsLit ? Imm : Hi_32(Imm);
   }
   return Imm;
 }
@@ -3836,17 +3855,20 @@ bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned Opcode,
   return false;
 }
 
-bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
+bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
+                             const MCSubtargetInfo &ST) {
   for (auto OpName : {OpName::vdst, OpName::src0, OpName::src1, OpName::src2}) {
     int Idx = getNamedOperandIdx(OpDesc.getOpcode(), OpName);
     if (Idx == -1)
       continue;
 
-    auto RC = OpDesc.operands()[Idx].RegClass;
-    if (RC == AMDGPU::VReg_64RegClassID ||
-        RC == AMDGPU::VReg_64_STAGINGRegClassID ||
-        RC == AMDGPU::VReg_64_Align2RegClassID ||
-        RC == AMDGPU::VReg_64_STAGING_Align2RegClassID)
+    const MCOperandInfo &OpInfo = OpDesc.operands()[Idx];
+    int16_t RegClass = MII.getOpRegClassID(
+        OpInfo, ST.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
+    if (RegClass == AMDGPU::VReg_64RegClassID ||
+        RegClass == AMDGPU::VReg_64_STAGINGRegClassID ||
+        RegClass == AMDGPU::VReg_64_Align2RegClassID ||
+        RegClass == AMDGPU::VReg_64_STAGING_Align2RegClassID)
       return true;
   }
 
@@ -3873,14 +3895,15 @@ bool isDPALU_DPP32BitOpc(unsigned Opc) {
   }
 }
 
-bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
+bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
+                 const MCSubtargetInfo &ST) {
   if (!ST.hasFeature(AMDGPU::FeatureDPALU_DPP))
     return false;
 
   if (isDPALU_DPP32BitOpc(OpDesc.getOpcode()))
     return ST.hasFeature(AMDGPU::FeatureGFX1250Insts);
 
-  return hasAny64BitVGPROperands(OpDesc);
+  return hasAny64BitVGPROperands(OpDesc, MII, ST);
 }
 
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {

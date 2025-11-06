@@ -75,7 +75,13 @@ void AMDGPUInstPrinter::printU16ImmDecOperand(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printU32ImmOperand(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
-  O << formatHex(MI->getOperand(OpNo).getImm() & 0xffffffff);
+  const MCOperand &Op = MI->getOperand(OpNo);
+  if (Op.isExpr()) {
+    MAI.printExpr(O, *Op.getExpr());
+    return;
+  }
+
+  O << formatHex(Op.getImm() & 0xffffffff);
 }
 
 void AMDGPUInstPrinter::printFP64ImmOperand(const MCInst *MI, unsigned OpNo,
@@ -924,9 +930,11 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     // Check if operand register class contains register used.
     // Intention: print disassembler message when invalid code is decoded,
     // for example sgpr register used in VReg or VISrc(VReg or imm) operand.
-    int RCID = Desc.operands()[OpNo].RegClass;
+    const MCOperandInfo &OpInfo = Desc.operands()[OpNo];
+    int16_t RCID = MII.getOpRegClassID(
+        OpInfo, STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
     if (RCID != -1) {
-      const MCRegisterClass RC = MRI.getRegClass(RCID);
+      const MCRegisterClass &RC = MRI.getRegClass(RCID);
       auto Reg = mc2PseudoReg(Op.getReg());
       if (!RC.contains(Reg) && !isInlineValue(Reg)) {
         O << "/*Invalid register, operand has \'" << MRI.getRegClassName(&RC)
@@ -950,6 +958,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       break;
     case AMDGPU::OPERAND_REG_IMM_INT64:
     case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+    case AMDGPU::OPERAND_REG_IMM_V2INT64:
       printImmediate64(Op.getImm(), STI, O, false);
       break;
     case AMDGPU::OPERAND_REG_IMM_FP64:
@@ -1174,7 +1183,7 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
 
   if (!AMDGPU::isLegalDPALU_DPPControl(STI, MI->getOpcode(), Imm) &&
-      AMDGPU::isDPALU_DPP(Desc, STI)) {
+      AMDGPU::isDPALU_DPP(Desc, MII, STI)) {
     O << " /* DP ALU dpp only supports "
       << (isGFX12(STI) ? "row_share" : "row_newbcast") << " */";
     return;
@@ -1427,6 +1436,17 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
     int ModIdx = AMDGPU::getNamedOperandIdx(Opc, SrcMod);
     Ops[NumOps++] =
         (ModIdx != -1) ? MI->getOperand(ModIdx).getImm() : DefaultValue;
+  }
+
+  // Some instructions, e.g. v_interp_p2_f16 in GFX9, have src0, src2, but no
+  // src1.
+  if (NumOps == 1 && AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src2) &&
+      !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src1)) {
+    Ops[NumOps++] = DefaultValue; // Set src1_modifiers to default.
+    int Mod2Idx =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers);
+    assert(Mod2Idx != -1);
+    Ops[NumOps++] = MI->getOperand(Mod2Idx).getImm();
   }
 
   const bool HasDst =

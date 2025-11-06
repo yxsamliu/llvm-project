@@ -405,7 +405,7 @@ class VOP_MADAK <ValueType vt> : VOP_MADK_Base<vt> {
   field dag Ins32 = !if(!eq(vt.Size, 32),
                         (ins VSrc_f32:$src0, VGPR_32:$src1, ImmOpType:$imm),
                         !if(!eq(vt.Size, 64),
-                            (ins VSrc_f64:$src0, VReg_64:$src1, ImmOpType:$imm),
+                            (ins VSrc_f64:$src0, VReg_64_STAGING_AlignTarget:$src1, ImmOpType:$imm),
                             (ins VSrc_f16:$src0, VGPR_32:$src1, ImmOpType:$imm)));
   field dag InsVOPDX = (ins VSrc_f32:$src0X, VGPR_32:$vsrc1X, ImmOpType:$imm);
   let InsVOPDX_immX = (ins VSrc_f32:$src0X, VGPR_32:$vsrc1X, ImmOpType:$immX);

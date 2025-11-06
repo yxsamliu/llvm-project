@@ -3,6 +3,10 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-SDAG-FAKE16 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL-REAL16 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL-FAKE16 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1300 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX13-REAL16,GFX13-SDAG-REAL16 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1300 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX13-FAKE16,GFX13-SDAG-FAKE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1300 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX13-REAL16,GFX13-GISEL-REAL16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1300 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX13-FAKE16,GFX13-GISEL-FAKE16 %s
 
 declare i16 @llvm.amdgcn.cvt.pk.bf8.f16(<2 x half>)
 declare i16 @llvm.amdgcn.cvt.pk.fp8.f16(<2 x half>)
@@ -13,30 +17,42 @@ define amdgpu_ps void @test_cvt_pk_bf8_f16_v(<2 x half> %a, ptr addrspace(1) %ou
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_pk_bf8_f16_v:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
 ; GFX1250-SDAG-REAL16-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_bf8_f16 v0.l, v0
-; GFX1250-SDAG-REAL16-NEXT:    flat_store_b16 v[2:3], v0
+; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_bf8_f16_e64 v0.l, v0
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_pk_bf8_f16_v:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
 ; GFX1250-SDAG-FAKE16-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_pk_bf8_f16 v0, v0
+; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_pk_bf8_f16_e64 v0, v0
 ; GFX1250-SDAG-FAKE16-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX1250-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_pk_bf8_f16_v:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
 ; GFX1250-GISEL-REAL16-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_bf8_f16 v0.l, v0
-; GFX1250-GISEL-REAL16-NEXT:    flat_store_b16 v[4:5], v0
+; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_bf8_f16_e64 v0.l, v0
+; GFX1250-GISEL-REAL16-NEXT:    global_store_b16 v[4:5], v0, off
 ; GFX1250-GISEL-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_pk_bf8_f16_v:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
 ; GFX1250-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_bf8_f16 v0, v0
+; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_bf8_f16_e64 v0, v0
 ; GFX1250-GISEL-FAKE16-NEXT:    global_store_b16 v[4:5], v0, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-REAL16-LABEL: test_cvt_pk_bf8_f16_v:
+; GFX13-REAL16:       ; %bb.0:
+; GFX13-REAL16-NEXT:    v_cvt_pk_bf8_f16_e32 v0.l, v0
+; GFX13-REAL16-NEXT:    global_store_b16 v[1:2], v0, off
+; GFX13-REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: test_cvt_pk_bf8_f16_v:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    v_cvt_pk_bf8_f16_e32 v0, v0
+; GFX13-FAKE16-NEXT:    global_store_b16 v[1:2], v0, off
+; GFX13-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i16 @llvm.amdgcn.cvt.pk.bf8.f16(<2 x half> %a)
   store i16 %cvt, ptr addrspace(1) %out
   ret void
@@ -45,27 +61,39 @@ define amdgpu_ps void @test_cvt_pk_bf8_f16_v(<2 x half> %a, ptr addrspace(1) %ou
 define amdgpu_ps void @test_cvt_pk_bf8_f16_s(<2 x half> inreg %a, ptr addrspace(1) %out) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_pk_bf8_f16_s:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_bf8_f16 v2.l, s0
-; GFX1250-SDAG-REAL16-NEXT:    flat_store_b16 v[0:1], v2
+; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_bf8_f16_e64 v2.l, s0
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_pk_bf8_f16_s:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_pk_bf8_f16 v2, s0
+; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_pk_bf8_f16_e64 v2, s0
 ; GFX1250-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_pk_bf8_f16_s:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_bf8_f16 v2.l, s0
-; GFX1250-GISEL-REAL16-NEXT:    flat_store_b16 v[0:1], v2
+; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_bf8_f16_e64 v2.l, s0
+; GFX1250-GISEL-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-GISEL-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_pk_bf8_f16_s:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_bf8_f16 v2, s0
+; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_bf8_f16_e64 v2, s0
 ; GFX1250-GISEL-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-REAL16-LABEL: test_cvt_pk_bf8_f16_s:
+; GFX13-REAL16:       ; %bb.0:
+; GFX13-REAL16-NEXT:    v_cvt_pk_bf8_f16_e32 v2.l, s0
+; GFX13-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: test_cvt_pk_bf8_f16_s:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    v_cvt_pk_bf8_f16_e32 v2, s0
+; GFX13-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i16 @llvm.amdgcn.cvt.pk.bf8.f16(<2 x half> %a)
   store i16 %cvt, ptr addrspace(1) %out
   ret void
@@ -74,27 +102,39 @@ define amdgpu_ps void @test_cvt_pk_bf8_f16_s(<2 x half> inreg %a, ptr addrspace(
 define amdgpu_ps void @test_cvt_pk_bf8_f16_l(ptr addrspace(1) %out) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_pk_bf8_f16_l:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_bf8_f16 v2.l, 0x56400000
-; GFX1250-SDAG-REAL16-NEXT:    flat_store_b16 v[0:1], v2
+; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_bf8_f16_e64 v2.l, 0x56400000
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_pk_bf8_f16_l:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_pk_bf8_f16 v2, 0x56400000
+; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_pk_bf8_f16_e64 v2, 0x56400000
 ; GFX1250-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_pk_bf8_f16_l:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_bf8_f16 v2.l, 0x56400000
-; GFX1250-GISEL-REAL16-NEXT:    flat_store_b16 v[0:1], v2
+; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_bf8_f16_e64 v2.l, 0x56400000
+; GFX1250-GISEL-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-GISEL-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_pk_bf8_f16_l:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_bf8_f16 v2, 0x56400000
+; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_bf8_f16_e64 v2, 0x56400000
 ; GFX1250-GISEL-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-REAL16-LABEL: test_cvt_pk_bf8_f16_l:
+; GFX13-REAL16:       ; %bb.0:
+; GFX13-REAL16-NEXT:    v_cvt_pk_bf8_f16_e32 v2.l, 0x56400000
+; GFX13-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: test_cvt_pk_bf8_f16_l:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    v_cvt_pk_bf8_f16_e32 v2, 0x56400000
+; GFX13-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i16 @llvm.amdgcn.cvt.pk.bf8.f16(<2 x half> <half 0.0, half 100.0>)
   store i16 %cvt, ptr addrspace(1) %out
   ret void
@@ -104,30 +144,42 @@ define amdgpu_ps void @test_cvt_pk_fp8_f16_v(<2 x half> %a, ptr addrspace(1) %ou
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_pk_fp8_f16_v:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
 ; GFX1250-SDAG-REAL16-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_fp8_f16 v0.l, v0
-; GFX1250-SDAG-REAL16-NEXT:    flat_store_b16 v[2:3], v0
+; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_fp8_f16_e64 v0.l, v0
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_pk_fp8_f16_v:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
 ; GFX1250-SDAG-FAKE16-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_pk_fp8_f16 v0, v0
+; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_pk_fp8_f16_e64 v0, v0
 ; GFX1250-SDAG-FAKE16-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX1250-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_pk_fp8_f16_v:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
 ; GFX1250-GISEL-REAL16-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_fp8_f16 v0.l, v0
-; GFX1250-GISEL-REAL16-NEXT:    flat_store_b16 v[4:5], v0
+; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_fp8_f16_e64 v0.l, v0
+; GFX1250-GISEL-REAL16-NEXT:    global_store_b16 v[4:5], v0, off
 ; GFX1250-GISEL-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_pk_fp8_f16_v:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
 ; GFX1250-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_fp8_f16 v0, v0
+; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_fp8_f16_e64 v0, v0
 ; GFX1250-GISEL-FAKE16-NEXT:    global_store_b16 v[4:5], v0, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-REAL16-LABEL: test_cvt_pk_fp8_f16_v:
+; GFX13-REAL16:       ; %bb.0:
+; GFX13-REAL16-NEXT:    v_cvt_pk_fp8_f16_e32 v0.l, v0
+; GFX13-REAL16-NEXT:    global_store_b16 v[1:2], v0, off
+; GFX13-REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: test_cvt_pk_fp8_f16_v:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    v_cvt_pk_fp8_f16_e32 v0, v0
+; GFX13-FAKE16-NEXT:    global_store_b16 v[1:2], v0, off
+; GFX13-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i16 @llvm.amdgcn.cvt.pk.fp8.f16(<2 x half> %a)
   store i16 %cvt, ptr addrspace(1) %out
   ret void
@@ -136,27 +188,39 @@ define amdgpu_ps void @test_cvt_pk_fp8_f16_v(<2 x half> %a, ptr addrspace(1) %ou
 define amdgpu_ps void @test_cvt_pk_fp8_f16_s(<2 x half> inreg %a, ptr addrspace(1) %out) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_pk_fp8_f16_s:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_fp8_f16 v2.l, s0
-; GFX1250-SDAG-REAL16-NEXT:    flat_store_b16 v[0:1], v2
+; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_fp8_f16_e64 v2.l, s0
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_pk_fp8_f16_s:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_pk_fp8_f16 v2, s0
+; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_pk_fp8_f16_e64 v2, s0
 ; GFX1250-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_pk_fp8_f16_s:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_fp8_f16 v2.l, s0
-; GFX1250-GISEL-REAL16-NEXT:    flat_store_b16 v[0:1], v2
+; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_fp8_f16_e64 v2.l, s0
+; GFX1250-GISEL-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-GISEL-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_pk_fp8_f16_s:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_fp8_f16 v2, s0
+; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_fp8_f16_e64 v2, s0
 ; GFX1250-GISEL-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-REAL16-LABEL: test_cvt_pk_fp8_f16_s:
+; GFX13-REAL16:       ; %bb.0:
+; GFX13-REAL16-NEXT:    v_cvt_pk_fp8_f16_e32 v2.l, s0
+; GFX13-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: test_cvt_pk_fp8_f16_s:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    v_cvt_pk_fp8_f16_e32 v2, s0
+; GFX13-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i16 @llvm.amdgcn.cvt.pk.fp8.f16(<2 x half> %a)
   store i16 %cvt, ptr addrspace(1) %out
   ret void
@@ -165,27 +229,39 @@ define amdgpu_ps void @test_cvt_pk_fp8_f16_s(<2 x half> inreg %a, ptr addrspace(
 define amdgpu_ps void @test_cvt_pk_fp8_f16_l(ptr addrspace(1) %out) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_pk_fp8_f16_l:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_fp8_f16 v2.l, 0x56400000
-; GFX1250-SDAG-REAL16-NEXT:    flat_store_b16 v[0:1], v2
+; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_fp8_f16_e64 v2.l, 0x56400000
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_pk_fp8_f16_l:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_pk_fp8_f16 v2, 0x56400000
+; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_pk_fp8_f16_e64 v2, 0x56400000
 ; GFX1250-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_pk_fp8_f16_l:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_fp8_f16 v2.l, 0x56400000
-; GFX1250-GISEL-REAL16-NEXT:    flat_store_b16 v[0:1], v2
+; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_fp8_f16_e64 v2.l, 0x56400000
+; GFX1250-GISEL-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-GISEL-REAL16-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_pk_fp8_f16_l:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_fp8_f16 v2, 0x56400000
+; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_fp8_f16_e64 v2, 0x56400000
 ; GFX1250-GISEL-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-REAL16-LABEL: test_cvt_pk_fp8_f16_l:
+; GFX13-REAL16:       ; %bb.0:
+; GFX13-REAL16-NEXT:    v_cvt_pk_fp8_f16_e32 v2.l, 0x56400000
+; GFX13-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: test_cvt_pk_fp8_f16_l:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    v_cvt_pk_fp8_f16_e32 v2, 0x56400000
+; GFX13-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i16 @llvm.amdgcn.cvt.pk.fp8.f16(<2 x half> <half 0.0, half 100.0>)
   store i16 %cvt, ptr addrspace(1) %out
   ret void
@@ -219,6 +295,18 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_byte0(half %a, i32 %sr, i32 %old, ptr
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1
 ; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-REAL16-LABEL: test_cvt_sr_bf8_f16_byte0:
+; GFX13-REAL16:       ; %bb.0:
+; GFX13-REAL16-NEXT:    v_cvt_sr_bf8_f16 v2, v0.l, v1
+; GFX13-REAL16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: test_cvt_sr_bf8_f16_byte0:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1
+; GFX13-FAKE16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.bf8.f16(half %a, i32 %sr, i32 %old, i32 0)
   store i32 %cvt, ptr addrspace(1) %out
   ret void
@@ -252,6 +340,18 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_byte1(half %a, i32 %sr, i32 %old, ptr
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1 byte_sel:1
 ; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-REAL16-LABEL: test_cvt_sr_bf8_f16_byte1:
+; GFX13-REAL16:       ; %bb.0:
+; GFX13-REAL16-NEXT:    v_cvt_sr_bf8_f16 v2, v0.l, v1 byte_sel:1
+; GFX13-REAL16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: test_cvt_sr_bf8_f16_byte1:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1 byte_sel:1
+; GFX13-FAKE16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.bf8.f16(half %a, i32 %sr, i32 %old, i32 1)
   store i32 %cvt, ptr addrspace(1) %out
   ret void
@@ -285,6 +385,18 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_byte2(half %a, i32 %sr, i32 %old, ptr
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1 byte_sel:2
 ; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-REAL16-LABEL: test_cvt_sr_bf8_f16_byte2:
+; GFX13-REAL16:       ; %bb.0:
+; GFX13-REAL16-NEXT:    v_cvt_sr_bf8_f16 v2, v0.l, v1 byte_sel:2
+; GFX13-REAL16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: test_cvt_sr_bf8_f16_byte2:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1 byte_sel:2
+; GFX13-FAKE16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.bf8.f16(half %a, i32 %sr, i32 %old, i32 2)
   store i32 %cvt, ptr addrspace(1) %out
   ret void
@@ -318,6 +430,18 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_byte3(half %a, i32 %sr, i32 %old, ptr
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1 byte_sel:3
 ; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-REAL16-LABEL: test_cvt_sr_bf8_f16_byte3:
+; GFX13-REAL16:       ; %bb.0:
+; GFX13-REAL16-NEXT:    v_cvt_sr_bf8_f16 v2, v0.l, v1 byte_sel:3
+; GFX13-REAL16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: test_cvt_sr_bf8_f16_byte3:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1 byte_sel:3
+; GFX13-FAKE16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.bf8.f16(half %a, i32 %sr, i32 %old, i32 3)
   store i32 %cvt, ptr addrspace(1) %out
   ret void
@@ -357,6 +481,28 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_hi_byte0(<2 x half> %a, i32 %sr, i32 
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1
 ; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-SDAG-REAL16-LABEL: test_cvt_sr_bf8_f16_hi_byte0:
+; GFX13-SDAG-REAL16:       ; %bb.0:
+; GFX13-SDAG-REAL16-NEXT:    v_cvt_sr_bf8_f16 v2, v0.h, v1
+; GFX13-SDAG-REAL16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-SDAG-REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: test_cvt_sr_bf8_f16_hi_byte0:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1
+; GFX13-FAKE16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-GISEL-REAL16-LABEL: test_cvt_sr_bf8_f16_hi_byte0:
+; GFX13-GISEL-REAL16:       ; %bb.0:
+; GFX13-GISEL-REAL16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX13-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-GISEL-REAL16-NEXT:    v_cvt_sr_bf8_f16 v2, v0.l, v1
+; GFX13-GISEL-REAL16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-GISEL-REAL16-NEXT:    s_endpgm
   %a.1 = extractelement <2 x half> %a, i32 1
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.bf8.f16(half %a.1, i32 %sr, i32 %old, i32 0)
   store i32 %cvt, ptr addrspace(1) %out
@@ -391,6 +537,18 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_byte0(half %a, i32 %sr, i32 %old, ptr
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1
 ; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-REAL16-LABEL: test_cvt_sr_fp8_f16_byte0:
+; GFX13-REAL16:       ; %bb.0:
+; GFX13-REAL16-NEXT:    v_cvt_sr_fp8_f16 v2, v0.l, v1
+; GFX13-REAL16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: test_cvt_sr_fp8_f16_byte0:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1
+; GFX13-FAKE16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.fp8.f16(half %a, i32 %sr, i32 %old, i32 0)
   store i32 %cvt, ptr addrspace(1) %out
   ret void
@@ -424,6 +582,18 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_byte1(half %a, i32 %sr, i32 %old, ptr
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1 byte_sel:1
 ; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-REAL16-LABEL: test_cvt_sr_fp8_f16_byte1:
+; GFX13-REAL16:       ; %bb.0:
+; GFX13-REAL16-NEXT:    v_cvt_sr_fp8_f16 v2, v0.l, v1 byte_sel:1
+; GFX13-REAL16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: test_cvt_sr_fp8_f16_byte1:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1 byte_sel:1
+; GFX13-FAKE16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.fp8.f16(half %a, i32 %sr, i32 %old, i32 1)
   store i32 %cvt, ptr addrspace(1) %out
   ret void
@@ -457,6 +627,18 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_byte2(half %a, i32 %sr, i32 %old, ptr
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1 byte_sel:2
 ; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-REAL16-LABEL: test_cvt_sr_fp8_f16_byte2:
+; GFX13-REAL16:       ; %bb.0:
+; GFX13-REAL16-NEXT:    v_cvt_sr_fp8_f16 v2, v0.l, v1 byte_sel:2
+; GFX13-REAL16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: test_cvt_sr_fp8_f16_byte2:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1 byte_sel:2
+; GFX13-FAKE16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.fp8.f16(half %a, i32 %sr, i32 %old, i32 2)
   store i32 %cvt, ptr addrspace(1) %out
   ret void
@@ -490,6 +672,18 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_byte3(half %a, i32 %sr, i32 %old, ptr
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1 byte_sel:3
 ; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-REAL16-LABEL: test_cvt_sr_fp8_f16_byte3:
+; GFX13-REAL16:       ; %bb.0:
+; GFX13-REAL16-NEXT:    v_cvt_sr_fp8_f16 v2, v0.l, v1 byte_sel:3
+; GFX13-REAL16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: test_cvt_sr_fp8_f16_byte3:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1 byte_sel:3
+; GFX13-FAKE16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.fp8.f16(half %a, i32 %sr, i32 %old, i32 3)
   store i32 %cvt, ptr addrspace(1) %out
   ret void
@@ -529,6 +723,28 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_hi_byte0(<2 x half> %a, i32 %sr, i32 
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1
 ; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-SDAG-REAL16-LABEL: test_cvt_sr_fp8_f16_hi_byte0:
+; GFX13-SDAG-REAL16:       ; %bb.0:
+; GFX13-SDAG-REAL16-NEXT:    v_cvt_sr_fp8_f16 v2, v0.h, v1
+; GFX13-SDAG-REAL16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-SDAG-REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: test_cvt_sr_fp8_f16_hi_byte0:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1
+; GFX13-FAKE16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-GISEL-REAL16-LABEL: test_cvt_sr_fp8_f16_hi_byte0:
+; GFX13-GISEL-REAL16:       ; %bb.0:
+; GFX13-GISEL-REAL16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX13-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-GISEL-REAL16-NEXT:    v_cvt_sr_fp8_f16 v2, v0.l, v1
+; GFX13-GISEL-REAL16-NEXT:    global_store_b32 v[3:4], v2, off
+; GFX13-GISEL-REAL16-NEXT:    s_endpgm
   %a.1 = extractelement <2 x half> %a, i32 1
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.fp8.f16(half %a.1, i32 %sr, i32 %old, i32 0)
   store i32 %cvt, ptr addrspace(1) %out
@@ -537,3 +753,5 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_hi_byte0(<2 x half> %a, i32 %sr, i32 
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GFX1250: {{.*}}
+; GFX13-GISEL-FAKE16: {{.*}}
+; GFX13-SDAG-FAKE16: {{.*}}

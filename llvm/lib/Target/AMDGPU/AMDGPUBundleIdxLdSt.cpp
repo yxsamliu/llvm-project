@@ -118,6 +118,7 @@ private:
   const TargetInstrInfo *TII = nullptr;
   const SIInstrInfo *STI = nullptr;
   const GCNSubtarget *ST = nullptr;
+  const MCSubtargetInfo *MCSTI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   AliasAnalysis *AA = nullptr;
   MachineCycleInfo *CI = nullptr;
@@ -759,9 +760,8 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
     DataRegs.push_back(DataReg);
   }
   unsigned OpsToCopy = II.getNumOperands() - NumStores;
-  unsigned NumStoreOps = 2 * NumStores;
   unsigned NumMIOps = MI.getNumExplicitOperands();
-  assert(OpsToCopy + NumStoreOps == NumMIOps &&
+  assert(OpsToCopy + 2 * NumStores == NumMIOps &&
          "Unexpected number of operands in laneshared pseudo");
   for (unsigned I = 0, E = OpsToCopy; I < E; ++I) {
     CoreMIB.add(MI.getOperand(I));
@@ -862,6 +862,9 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     MachineOperand *UseOfMI = &*MRI->use_nodbg_begin(DefReg);
     if (UseOfMI->getSubReg() != 0)
       continue;
+    if (auto *RC = TII->getRegClass(MI->getDesc(), Def.getOperandNo(), TRI);
+        RC && !RC->contains(AMDGPU::STG_SRCA))
+      continue;
     MachineInstr *StoreMI = UseOfMI->getParent();
     if (StoreMI->getOpcode() != AMDGPU::V_STORE_IDX)
       continue;
@@ -875,7 +878,8 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     }
 
     if (ST->needsAlignedVGPRs() && MI->getOpcode() != AMDGPU::V_LOAD_IDX &&
-        AMDGPU::getRegOperandSize(TRI, MI->getDesc(), Def.getOperandNo()) > 4) {
+        AMDGPU::getRegOperandSize(MCSTI, TII, MI->getDesc(),
+                                  Def.getOperandNo()) > 4) {
       // Do not bundle instructions with odd offsets to ensure proper register
       // alignment.
       unsigned Offset =
@@ -920,12 +924,14 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
                                   "Unexpected MI which produces a values and "
                                   "stores but does not load");
     if (MILoads) {
-      MachineBasicBlock::iterator I = MI->getIterator(),
+      MachineBasicBlock::instr_iterator I = MI->getIterator(),
                                   E = Worklist[0].MI->getIterator();
       unsigned OwnDefIdx = 1;
       for (++I; I != E; ++I) {
+        if (I->isBundle())
+          continue;
         // Ignore own defs
-        if (OwnDefIdx < Worklist.size() && I == Worklist[OwnDefIdx].MI) {
+        if (OwnDefIdx < Worklist.size() && &*I == Worklist[OwnDefIdx].MI) {
           OwnDefIdx++;
           continue;
         }
@@ -955,6 +961,9 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     Register UseReg = Use.getReg();
     if (!UseReg.isVirtual())
       continue;
+    if (auto *RC = TII->getRegClass(MI->getDesc(), Use.getOperandNo(), TRI);
+        RC && !RC->contains(AMDGPU::STG_SRCA))
+      continue;
     MachineInstr *LoadMI = MRI->getVRegDef(UseReg);
     if (!LoadMI)
       continue;
@@ -976,7 +985,8 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
       continue;
 
     if (ST->needsAlignedVGPRs() &&
-        AMDGPU::getRegOperandSize(TRI, MI->getDesc(), Use.getOperandNo()) > 4) {
+        AMDGPU::getRegOperandSize(MCSTI, TII, MI->getDesc(),
+                                  Use.getOperandNo()) > 4) {
       // Do not bundle instructions with odd offsets to ensure proper register
       // alignment.
       unsigned Offset =
@@ -1095,6 +1105,7 @@ bool AMDGPUBundleIdxLdSt::runOnMachineFunction(MachineFunction &MF) {
   STI = ST->getInstrInfo();
   TII = MF.getSubtarget().getInstrInfo();
   MRI = &MF.getRegInfo();
+  MCSTI = MF.getTarget().getMCSubtargetInfo();
 
   bool Changed = false;
   LLVM_DEBUG(

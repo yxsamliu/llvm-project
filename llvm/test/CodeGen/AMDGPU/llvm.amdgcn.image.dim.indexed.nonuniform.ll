@@ -253,14 +253,14 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(i32 %rsrc, ptr addrspace(1) i
 ; GFX13-LABEL: load_2darraymsaa_tfe:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v0 :: v_dual_mov_b32 v10, 0
-; GFX13-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v6, v3
-; GFX13-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v8, v1
+; GFX13-NEXT:    v_dual_mov_b32 v8, v4 :: v_dual_mov_b32 v5, v3
+; GFX13-NEXT:    v_dual_mov_b32 v6, v2 :: v_dual_mov_b32 v7, v1
 ; GFX13-NEXT:    v_dual_mov_b32 v11, v10 :: v_dual_mov_b32 v12, v10
 ; GFX13-NEXT:    v_dual_mov_b32 v13, v10 :: v_dual_mov_b32 v14, v10
 ; GFX13-NEXT:    v_dual_mov_b32 v0, v10 :: v_dual_mov_b32 v1, v11
 ; GFX13-NEXT:    v_dual_mov_b32 v2, v12 :: v_dual_mov_b32 v3, v13
 ; GFX13-NEXT:    v_mov_b32_e32 v4, v14
-; GFX13-NEXT:    image_load v[0:4], [v8, v7, v6, v5], v9 dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY tfe
+; GFX13-NEXT:    image_load v[0:4], [v7, v6, v5, v8], v9 dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    global_store_b32 v10, v4, s[0:1]
 ; GFX13-NEXT:    ; return to shader part epilog

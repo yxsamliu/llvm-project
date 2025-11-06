@@ -1042,6 +1042,13 @@ bool isReadOnlySegment(const GlobalValue *GV);
 bool shouldEmitConstantsToTextSection(const Triple &TT);
 
 /// Returns a valid charcode or 0 in the first entry if this is a valid physical
+/// register name. Followed by the start register number, and the register
+/// width. Does not validate the number of registers exists in the class. Unlike
+/// parseAsmConstraintPhysReg, this does not expect the name to be wrapped in
+/// "{}".
+std::tuple<char, unsigned, unsigned> parseAsmPhysRegName(StringRef TupleString);
+
+/// Returns a valid charcode or 0 in the first entry if this is a valid physical
 /// register constraint. Followed by the start register number, and the register
 /// width. Does not validate the number of registers exists in the class.
 std::tuple<char, unsigned, unsigned>
@@ -1692,8 +1699,8 @@ unsigned getRegBitWidth(unsigned RCID);
 unsigned getRegBitWidth(const MCRegisterClass &RC);
 
 /// Get size of register operand
-unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
-                           unsigned OpNo);
+unsigned getRegOperandSize(const MCSubtargetInfo *STI, const MCInstrInfo *MII,
+                           const MCInstrDesc &Desc, unsigned OpNo);
 
 LLVM_READNONE
 inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
@@ -1717,6 +1724,7 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
   case AMDGPU::OPERAND_REG_IMM_V2FP64:
+  case AMDGPU::OPERAND_REG_IMM_V2INT64:
   case AMDGPU::OPERAND_KIMM64:
     return 8;
 
@@ -1766,9 +1774,6 @@ LLVM_READNONE
 bool isInlinableLiteralFP16(int16_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
-bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi);
-
-LLVM_READNONE
 bool isInlinableLiteralI16(int32_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
@@ -1796,7 +1801,7 @@ LLVM_READNONE
 bool isValid32BitLiteral(uint64_t Val, bool IsFP64);
 
 LLVM_READNONE
-int64_t encode32BitLiteral(int64_t Imm, OperandType Type);
+int64_t encode32BitLiteral(int64_t Imm, OperandType Type, bool IsLit);
 
 bool isArgPassedInSGPR(const Argument *Arg);
 
@@ -1846,13 +1851,15 @@ bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned Opcode,
                              unsigned DC);
 
 /// \returns true if an instruction may have a 64-bit VGPR operand.
-bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc);
+bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc,
+                             const MCSubtargetInfo &ST);
 
 /// \returns true if an instruction is a DP ALU DPP without any 64-bit operands.
 bool isDPALU_DPP32BitOpc(unsigned Opc);
 
 /// \returns true if an instruction is a DP ALU DPP.
-bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST);
+bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
+                 const MCSubtargetInfo &ST);
 
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);

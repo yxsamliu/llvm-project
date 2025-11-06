@@ -19,22 +19,22 @@ v_exclusive_scan_and_b32_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
 v_exclusive_scan_and_b32_dpp v5, v3, v1 row_share:1
 // GFX13-ERR: :[[@LINE-1]]:1: error: dpp variant of this instruction is not supported
 
-v_exclusive_scan_max_i16 v5, v3, -v1
-// GFX13-ERR: :[[@LINE-1]]:34: error: not a valid operand.
+v_exclusive_scan_max_i16 v5.l, v3.l, -v1
+// GFX13-ERR: :[[@LINE-1]]:38: error: not a valid operand.
 
-v_exclusive_scan_max_i16 v5, v3, v1 clamp
-// GFX13-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
+v_exclusive_scan_max_i16 v5.l, v3.l, v1 clamp
+// GFX13-ERR: :[[@LINE-1]]:41: error: invalid operand for instruction
 
-v_exclusive_scan_max_i16 v5, v3, v1 mul:2
-// GFX13-ERR: :[[@LINE-1]]:37: error: not a valid operand.
+v_exclusive_scan_max_i16 v5.l, v3.l, v1 mul:2
+// GFX13-ERR: :[[@LINE-1]]:41: error: not a valid operand.
 
-v_exclusive_scan_max_i16 v5, v3, |v1|
-// GFX13-ERR: :[[@LINE-1]]:34: error: not a valid operand.
+v_exclusive_scan_max_i16 v5.l, v3.l, |v1|
+// GFX13-ERR: :[[@LINE-1]]:38: error: not a valid operand.
 
-v_exclusive_scan_max_i16_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
+v_exclusive_scan_max_i16_dpp v5.l, v3.l, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX13-ERR: :[[@LINE-1]]:1: error: dpp variant of this instruction is not supported
 
-v_exclusive_scan_max_i16_dpp v5, v3, v1 row_share:1
+v_exclusive_scan_max_i16_dpp v5.l, v3.l, v1 row_share:1
 // GFX13-ERR: :[[@LINE-1]]:1: error: dpp variant of this instruction is not supported
 
 v_exclusive_scan_max_i32 v5, v3, -v1
@@ -55,22 +55,22 @@ v_exclusive_scan_max_i32_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
 v_exclusive_scan_max_i32_dpp v5, v3, v1 row_share:1
 // GFX13-ERR: :[[@LINE-1]]:1: error: dpp variant of this instruction is not supported
 
-v_exclusive_scan_max_u16 v5, v3, -v1
-// GFX13-ERR: :[[@LINE-1]]:34: error: not a valid operand.
+v_exclusive_scan_max_u16 v5.l, v3.l, -v1
+// GFX13-ERR: :[[@LINE-1]]:38: error: not a valid operand.
 
-v_exclusive_scan_max_u16 v5, v3, v1 clamp
-// GFX13-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
+v_exclusive_scan_max_u16 v5.l, v3.l, v1 clamp
+// GFX13-ERR: :[[@LINE-1]]:41: error: invalid operand for instruction
 
-v_exclusive_scan_max_u16 v5, v3, v1 mul:2
-// GFX13-ERR: :[[@LINE-1]]:37: error: not a valid operand.
+v_exclusive_scan_max_u16 v5.l, v3.l, v1 mul:2
+// GFX13-ERR: :[[@LINE-1]]:41: error: not a valid operand.
 
-v_exclusive_scan_max_u16 v5, v3, |v1|
-// GFX13-ERR: :[[@LINE-1]]:34: error: not a valid operand.
+v_exclusive_scan_max_u16 v5.l, v3.l, |v1|
+// GFX13-ERR: :[[@LINE-1]]:38: error: not a valid operand.
 
-v_exclusive_scan_max_u16_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
+v_exclusive_scan_max_u16_dpp v5.l, v3.l, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX13-ERR: :[[@LINE-1]]:1: error: dpp variant of this instruction is not supported
 
-v_exclusive_scan_max_u16_dpp v5, v3, v1 row_share:1
+v_exclusive_scan_max_u16_dpp v5.l, v3.l, v1 row_share:1
 // GFX13-ERR: :[[@LINE-1]]:1: error: dpp variant of this instruction is not supported
 
 v_exclusive_scan_max_u32 v5, v3, -v1
@@ -91,22 +91,22 @@ v_exclusive_scan_max_u32_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
 v_exclusive_scan_max_u32_dpp v5, v3, v1 row_share:1
 // GFX13-ERR: :[[@LINE-1]]:1: error: dpp variant of this instruction is not supported
 
-v_exclusive_scan_min_i16 v5, v3, -v1
-// GFX13-ERR: :[[@LINE-1]]:34: error: not a valid operand.
+v_exclusive_scan_min_i16 v5.l, v3.l, -v1
+// GFX13-ERR: :[[@LINE-1]]:38: error: not a valid operand.
 
-v_exclusive_scan_min_i16 v5, v3, v1 clamp
-// GFX13-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
+v_exclusive_scan_min_i16 v5.l, v3.l, v1 clamp
+// GFX13-ERR: :[[@LINE-1]]:41: error: invalid operand for instruction
 
-v_exclusive_scan_min_i16 v5, v3, v1 mul:2
-// GFX13-ERR: :[[@LINE-1]]:37: error: not a valid operand.
+v_exclusive_scan_min_i16 v5.l, v3.l, v1 mul:2
+// GFX13-ERR: :[[@LINE-1]]:41: error: not a valid operand.
 
-v_exclusive_scan_min_i16 v5, v3, |v1|
-// GFX13-ERR: :[[@LINE-1]]:34: error: not a valid operand.
+v_exclusive_scan_min_i16 v5.l, v3.l, |v1|
+// GFX13-ERR: :[[@LINE-1]]:38: error: not a valid operand.
 
-v_exclusive_scan_min_i16_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
+v_exclusive_scan_min_i16_dpp v5.l, v3.l, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX13-ERR: :[[@LINE-1]]:1: error: dpp variant of this instruction is not supported
 
-v_exclusive_scan_min_i16_dpp v5, v3, v1 row_share:1
+v_exclusive_scan_min_i16_dpp v5.l, v3.l, v1 row_share:1
 // GFX13-ERR: :[[@LINE-1]]:1: error: dpp variant of this instruction is not supported
 
 v_exclusive_scan_min_i32 v5, v3, -v1
@@ -127,22 +127,22 @@ v_exclusive_scan_min_i32_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
 v_exclusive_scan_min_i32_dpp v5, v3, v1 row_share:1
 // GFX13-ERR: :[[@LINE-1]]:1: error: dpp variant of this instruction is not supported
 
-v_exclusive_scan_min_u16 v5, v3, -v1
-// GFX13-ERR: :[[@LINE-1]]:34: error: not a valid operand.
+v_exclusive_scan_min_u16 v5.l, v3.l, -v1
+// GFX13-ERR: :[[@LINE-1]]:38: error: not a valid operand.
 
-v_exclusive_scan_min_u16 v5, v3, v1 clamp
-// GFX13-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
+v_exclusive_scan_min_u16 v5.l, v3.l, v1 clamp
+// GFX13-ERR: :[[@LINE-1]]:41: error: invalid operand for instruction
 
-v_exclusive_scan_min_u16 v5, v3, v1 mul:2
-// GFX13-ERR: :[[@LINE-1]]:37: error: not a valid operand.
+v_exclusive_scan_min_u16 v5.l, v3.l, v1 mul:2
+// GFX13-ERR: :[[@LINE-1]]:41: error: not a valid operand.
 
-v_exclusive_scan_min_u16 v5, v3, |v1|
-// GFX13-ERR: :[[@LINE-1]]:34: error: not a valid operand.
+v_exclusive_scan_min_u16 v5.l, v3.l, |v1|
+// GFX13-ERR: :[[@LINE-1]]:38: error: not a valid operand.
 
-v_exclusive_scan_min_u16_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
+v_exclusive_scan_min_u16_dpp v5.l, v3.l, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX13-ERR: :[[@LINE-1]]:1: error: dpp variant of this instruction is not supported
 
-v_exclusive_scan_min_u16_dpp v5, v3, v1 row_share:1
+v_exclusive_scan_min_u16_dpp v5.l, v3.l, v1 row_share:1
 // GFX13-ERR: :[[@LINE-1]]:1: error: dpp variant of this instruction is not supported
 
 v_exclusive_scan_min_u32 v5, v3, -v1

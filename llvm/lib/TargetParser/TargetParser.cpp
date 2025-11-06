@@ -470,13 +470,17 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
       Features["parallel-bit-insts"] = true;
       Features["f32-to-f16bf16-cvt-sr-insts"] = true;
       Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
+      Features["clusters"] = true;
       break;
+  case GK_GFX1260:
   case GK_GFX1251:
-    Features["gfx1251-gemm-insts"] = true;
+    if (Kind == GK_GFX1260)
+      Features["wmma-2048b-insts"] = true;
+    else if (Kind == GK_GFX1251)
+      Features["gfx1251-gemm-insts"] = true;
     [[fallthrough]];
   case GK_GFX1250:
   case GK_GFX12_5_GENERIC:
-  case GK_GFX1260:
     Features["ci-insts"] = true;
     Features["dot7-insts"] = true;
     Features["dot8-insts"] = true;
@@ -502,6 +506,8 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["fp8e5m3-insts"] = true;
     Features["permlane16-swap"] = true;
     Features["ashr-pk-insts"] = true;
+    Features["add-min-max-insts"] = true;
+    Features["pk-add-min-max-insts"] = true;
     Features["atomic-buffer-pk-add-bf16-inst"] = true;
     Features["vmem-pref-insts"] = true;
     Features["atomic-fadd-rtn-insts"] = true;
@@ -513,7 +519,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["atomic-fmin-fmax-global-f32"] = true;
     Features["atomic-fmin-fmax-global-f64"] = true;
     Features["wavefrontsize32"] = true;
-    Features["cluster"] = true;
+    Features["clusters"] = true;
     break;
   case GK_GFX120F:
   case GK_GFX120E:

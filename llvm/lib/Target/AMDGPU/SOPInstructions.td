@@ -897,9 +897,10 @@ def S_CBRANCH_G_FORK : SOP2_Pseudo <
   let SubtargetPredicate = isGFX6GFX7GFX8GFX9;
 }
 
-let Defs = [SCC] in {
-def S_ABSDIFF_I32 : SOP2_32 <"s_absdiff_i32">;
-} // End Defs = [SCC]
+let isCommutable = 1, Defs = [SCC] in
+def S_ABSDIFF_I32 : SOP2_32 <"s_absdiff_i32",
+  [(set i32:$sdst, (UniformUnaryFrag<abs> (sub_oneuse i32:$src0, i32:$src1)))]
+>;
 
 let SubtargetPredicate = isGFX8GFX9 in {
   def S_RFE_RESTORE_B64 : SOP2_Pseudo <
@@ -2204,6 +2205,20 @@ let WaveSizePredicate = isWave64 in {
 def : GCNPat<
   (i1 (not (or_oneuse i1:$src0, i1:$src1))),
   (S_NOR_B64 i1:$src0, i1:$src1)
+>;
+}
+
+// v2i64 shl is legal, we need a way to select scalar code
+let SubtargetPredicate = HasPackedU64Ops in {
+def : GCNPat<
+  (v2i64 (UniformBinFrag<cshl_64> v2i64:$src0, v2i64:$src1)),
+  (v2i64 (REG_SEQUENCE SReg_128,
+    (i64 (COPY_TO_REGCLASS
+           (S_LSHL_B64 (i64 (EXTRACT_SUBREG $src0, sub0_sub1)),
+                       (i32 (EXTRACT_SUBREG $src1, sub0))), SGPR_64)), sub0_sub1,
+    (i64 (COPY_TO_REGCLASS
+           (S_LSHL_B64 (i64 (EXTRACT_SUBREG $src0, sub2_sub3)),
+                       (i32 (EXTRACT_SUBREG $src1, sub2))), SGPR_64)), sub2_sub3))
 >;
 }
 

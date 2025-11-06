@@ -7,8 +7,8 @@ target datalayout = "A5"
 
 define dso_local amdgpu_kernel void @_Z3foov() local_unnamed_addr "amdgpu-wavegroup-enable" !reqd_work_group_size !{i32 128, i32 1, i32 1} {
 ; CHECK-LABEL: _Z3foov:
-; CHECK:       _Z3foov$local:
-; CHECK-NEXT:    .type _Z3foov$local,@function
+; CHECK:       .L_Z3foov$local:
+; CHECK-NEXT:    .type .L_Z3foov$local,@function
 ; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)

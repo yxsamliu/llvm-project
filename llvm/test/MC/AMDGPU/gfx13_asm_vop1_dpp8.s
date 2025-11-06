@@ -49,14 +49,17 @@ v_clz_i32_u32 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_clz_i32_u32 v255, v255 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX13: v_clz_i32_u32_dpp v255, v255 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0x72,0xfe,0x7f,0xff,0x00,0x00,0x00]
 
-v_cos_bf16 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: v_cos_bf16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xfe,0x0a,0x7e,0x01,0x77,0x39,0x05]
+v_cos_bf16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_cos_bf16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xfe,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_cos_bf16 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX13: v_cos_bf16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xfe,0x0a,0x7e,0x01,0x77,0x39,0x05]
+v_cos_bf16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_cos_bf16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xfe,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_cos_bf16 v127, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX13: v_cos_bf16_dpp v127, v127 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfe,0xfe,0x7e,0x7f,0x00,0x00,0x00]
+v_cos_bf16 v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX13: v_cos_bf16_dpp v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfe,0xfe,0x7e,0x7f,0x00,0x00,0x00]
+
+v_cos_bf16 v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX13: v_cos_bf16_dpp v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfe,0xfe,0x7f,0xff,0x00,0x00,0x00]
 
 v_cos_f16 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX13: v_cos_f16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xc2,0x0a,0x7e,0x01,0x77,0x39,0x05]
@@ -84,6 +87,30 @@ v_ctz_i32_b32 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
 
 v_ctz_i32_b32 v255, v255 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX13: v_ctz_i32_b32_dpp v255, v255 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0x74,0xfe,0x7f,0xff,0x00,0x00,0x00]
+
+v_cvt_pk_bf8_f16 v1.h, v1 op_sel:[0,1] dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_cvt_pk_bf8_f16_e64_dpp v1.h, v1 op_sel:[0,1] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x01,0x40,0xad,0xd5,0xe9,0x00,0x00,0x00,0x01,0x77,0x39,0x05]
+
+v_cvt_pk_bf8_f16 v1.l, v2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_cvt_pk_bf8_f16_dpp v1.l, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x5a,0x02,0x7e,0x02,0x77,0x39,0x05]
+
+v_cvt_pk_fp8_f16 v1.h, v1 op_sel:[0,1] dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_cvt_pk_fp8_f16_e64_dpp v1.h, v1 op_sel:[0,1] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x01,0x40,0xac,0xd5,0xe9,0x00,0x00,0x00,0x01,0x77,0x39,0x05]
+
+v_cvt_pk_fp8_f16 v1.l, v2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_cvt_pk_fp8_f16_dpp v1.l, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x58,0x02,0x7e,0x02,0x77,0x39,0x05]
+
+v_cvt_pk_f16_bf8 v1, v2.l dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_cvt_pk_f16_bf8_dpp v1, v2.l dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xec,0x02,0x7e,0x02,0x77,0x39,0x05]
+
+v_cvt_pk_f16_bf8 v1, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_cvt_pk_f16_bf8_dpp v1, v2.h dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xec,0x02,0x7e,0x82,0x77,0x39,0x05]
+
+v_cvt_pk_f16_fp8 v1, v2.l dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_cvt_pk_f16_fp8_dpp v1, v2.l dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xea,0x02,0x7e,0x02,0x77,0x39,0x05]
+
+v_cvt_pk_f16_fp8 v1, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_cvt_pk_f16_fp8_dpp v1, v2.h dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xea,0x02,0x7e,0x82,0x77,0x39,0x05]
 
 v_cvt_f16_bf8 v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX13: v_cvt_f16_bf8_dpp v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xf0,0x02,0x7e,0x02,0x77,0x39,0x05]
@@ -319,14 +346,17 @@ v_cvt_u32_u16 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_cvt_u32_u16 v255, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX13: v_cvt_u32_u16_dpp v255, v127 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xd6,0xfe,0x7f,0x7f,0x00,0x00,0x00]
 
-v_exp_bf16 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: v_exp_bf16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xfa,0x0a,0x7e,0x01,0x77,0x39,0x05]
+v_exp_bf16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_exp_bf16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xfa,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_exp_bf16 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX13: v_exp_bf16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xfa,0x0a,0x7e,0x01,0x77,0x39,0x05]
+v_exp_bf16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_exp_bf16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xfa,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_exp_bf16 v127, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX13: v_exp_bf16_dpp v127, v127 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfa,0xfe,0x7e,0x7f,0x00,0x00,0x00]
+v_exp_bf16 v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX13: v_exp_bf16_dpp v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfa,0xfe,0x7e,0x7f,0x00,0x00,0x00]
+
+v_exp_bf16 v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX13: v_exp_bf16_dpp v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfa,0xfe,0x7f,0xff,0x00,0x00,0x00]
 
 v_exp_f16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
 // GFX13: v_exp_f16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xb0,0x0a,0x7e,0x01,0x77,0x39,0x05]
@@ -451,14 +481,17 @@ v_frexp_mant_f32 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_frexp_mant_f32 v255, v255 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX13: v_frexp_mant_f32_dpp v255, v255 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0x80,0xfe,0x7f,0xff,0x00,0x00,0x00]
 
-v_log_bf16 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: v_log_bf16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xf8,0x0a,0x7e,0x01,0x77,0x39,0x05]
+v_log_bf16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_log_bf16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xf8,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_log_bf16 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX13: v_log_bf16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xf8,0x0a,0x7e,0x01,0x77,0x39,0x05]
+v_log_bf16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_log_bf16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xf8,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_log_bf16 v127, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX13: v_log_bf16_dpp v127, v127 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xf8,0xfe,0x7e,0x7f,0x00,0x00,0x00]
+v_log_bf16 v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX13: v_log_bf16_dpp v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xf8,0xfe,0x7e,0x7f,0x00,0x00,0x00]
+
+v_log_bf16 v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX13: v_log_bf16_dpp v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xf8,0xfe,0x7f,0xff,0x00,0x00,0x00]
 
 v_log_f16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
 // GFX13: v_log_f16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xae,0x0a,0x7e,0x01,0x77,0x39,0x05]
@@ -577,17 +610,23 @@ v_rsq_f32 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_rsq_f32 v255, v255 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX13: v_rsq_f32_dpp v255, v255 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0x5c,0xfe,0x7f,0xff,0x00,0x00,0x00]
 
-v_sat_pk4_i4_i8 v1, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: v_sat_pk4_i4_i8_dpp v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xe6,0x02,0x7e,0x02,0x77,0x39,0x05]
+v_sat_pk4_i4_i8 v1.l, v2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_sat_pk4_i4_i8_dpp v1.l, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xe6,0x02,0x7e,0x02,0x77,0x39,0x05]
 
-v_sat_pk4_i4_i8 v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX13: v_sat_pk4_i4_i8_dpp v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xe6,0x02,0x7e,0x02,0x77,0x39,0x05]
+v_sat_pk4_i4_i8 v1.l, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_sat_pk4_i4_i8_dpp v1.l, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xe6,0x02,0x7e,0x02,0x77,0x39,0x05]
 
-v_sat_pk4_u4_u8 v1, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: v_sat_pk4_u4_u8_dpp v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xe8,0x02,0x7e,0x02,0x77,0x39,0x05]
+v_sat_pk4_i4_i8 v1.h, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_sat_pk4_i4_i8_dpp v1.h, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xe6,0x02,0x7f,0x02,0x77,0x39,0x05]
 
-v_sat_pk4_u4_u8 v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX13: v_sat_pk4_u4_u8_dpp v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xe8,0x02,0x7e,0x02,0x77,0x39,0x05]
+v_sat_pk4_u4_u8 v1.l, v2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_sat_pk4_u4_u8_dpp v1.l, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xe8,0x02,0x7e,0x02,0x77,0x39,0x05]
+
+v_sat_pk4_u4_u8 v1.l, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_sat_pk4_u4_u8_dpp v1.l, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xe8,0x02,0x7e,0x02,0x77,0x39,0x05]
+
+v_sat_pk4_u4_u8 v1.h, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_sat_pk4_u4_u8_dpp v1.h, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xe8,0x02,0x7f,0x02,0x77,0x39,0x05]
 
 v_sat_pk_u8_i16 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX13: v_sat_pk_u8_i16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xc4,0x0a,0x7e,0x01,0x77,0x39,0x05]
@@ -598,14 +637,17 @@ v_sat_pk_u8_i16 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_sat_pk_u8_i16 v127, v255 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX13: v_sat_pk_u8_i16_dpp v127, v255 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xc4,0xfe,0x7e,0xff,0x00,0x00,0x00]
 
-v_sin_bf16 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: v_sin_bf16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xfc,0x0a,0x7e,0x01,0x77,0x39,0x05]
+v_sin_bf16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_sin_bf16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xfc,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_sin_bf16 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX13: v_sin_bf16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xfc,0x0a,0x7e,0x01,0x77,0x39,0x05]
+v_sin_bf16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_sin_bf16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xfc,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_sin_bf16 v127, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX13: v_sin_bf16_dpp v127, v127 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfc,0xfe,0x7e,0x7f,0x00,0x00,0x00]
+v_sin_bf16 v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX13: v_sin_bf16_dpp v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfc,0xfe,0x7e,0x7f,0x00,0x00,0x00]
+
+v_sin_bf16 v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX13: v_sin_bf16_dpp v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfc,0xfe,0x7f,0xff,0x00,0x00,0x00]
 
 v_sin_f16 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX13: v_sin_f16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xc0,0x0a,0x7e,0x01,0x77,0x39,0x05]
@@ -625,14 +667,17 @@ v_sin_f32 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_sin_f32 v255, v255 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX13: v_sin_f32_dpp v255, v255 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0x6a,0xfe,0x7f,0xff,0x00,0x00,0x00]
 
-v_sqrt_bf16 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: v_sqrt_bf16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xf4,0x0a,0x7e,0x01,0x77,0x39,0x05]
+v_sqrt_bf16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_sqrt_bf16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xf4,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_sqrt_bf16 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX13: v_sqrt_bf16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xf4,0x0a,0x7e,0x01,0x77,0x39,0x05]
+v_sqrt_bf16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_sqrt_bf16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xf4,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_sqrt_bf16 v127, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX13: v_sqrt_bf16_dpp v127, v127 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xf4,0xfe,0x7e,0x7f,0x00,0x00,0x00]
+v_sqrt_bf16 v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX13: v_sqrt_bf16_dpp v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xf4,0xfe,0x7e,0x7f,0x00,0x00,0x00]
+
+v_sqrt_bf16 v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX13: v_sqrt_bf16_dpp v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xf4,0xfe,0x7f,0xff,0x00,0x00,0x00]
 
 v_sqrt_f16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
 // GFX13: v_sqrt_f16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xaa,0x0a,0x7e,0x01,0x77,0x39,0x05]
@@ -664,41 +709,53 @@ v_prng_b32 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_prng_b32 v255, v255 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX13: v_prng_b32_dpp v255, v255 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0x96,0xfe,0x7f,0xff,0x00,0x00,0x00]
 
-v_rcp_bf16 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: v_rcp_bf16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xf2,0x0a,0x7e,0x01,0x77,0x39,0x05]
+v_rcp_bf16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_rcp_bf16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xf2,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_rcp_bf16 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX13: v_rcp_bf16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xf2,0x0a,0x7e,0x01,0x77,0x39,0x05]
+v_rcp_bf16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_rcp_bf16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xf2,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_rcp_bf16 v127, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX13: v_rcp_bf16_dpp v127, v127 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xf2,0xfe,0x7e,0x7f,0x00,0x00,0x00]
+v_rcp_bf16 v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX13: v_rcp_bf16_dpp v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xf2,0xfe,0x7e,0x7f,0x00,0x00,0x00]
 
-v_rsq_bf16 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: v_rsq_bf16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xf6,0x0a,0x7e,0x01,0x77,0x39,0x05]
+v_rcp_bf16 v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX13: v_rcp_bf16_dpp v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xf2,0xfe,0x7f,0xff,0x00,0x00,0x00]
 
-v_rsq_bf16 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX13: v_rsq_bf16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xf6,0x0a,0x7e,0x01,0x77,0x39,0x05]
+v_rsq_bf16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_rsq_bf16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xf6,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_rsq_bf16 v127, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX13: v_rsq_bf16_dpp v127, v127 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xf6,0xfe,0x7e,0x7f,0x00,0x00,0x00]
+v_rsq_bf16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_rsq_bf16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0xf6,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_tanh_bf16 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: v_tanh_bf16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x94,0x0a,0x7e,0x01,0x77,0x39,0x05]
+v_rsq_bf16 v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX13: v_rsq_bf16_dpp v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xf6,0xfe,0x7e,0x7f,0x00,0x00,0x00]
 
-v_tanh_bf16 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX13: v_tanh_bf16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0x94,0x0a,0x7e,0x01,0x77,0x39,0x05]
+v_rsq_bf16 v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX13: v_rsq_bf16_dpp v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xf6,0xfe,0x7f,0xff,0x00,0x00,0x00]
 
-v_tanh_bf16 v127, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX13: v_tanh_bf16_dpp v127, v127 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0x94,0xfe,0x7e,0x7f,0x00,0x00,0x00]
+v_tanh_bf16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_tanh_bf16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x94,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_tanh_f16 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: v_tanh_f16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x3e,0x0a,0x7e,0x01,0x77,0x39,0x05]
+v_tanh_bf16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_tanh_bf16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0x94,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
-v_tanh_f16 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX13: v_tanh_f16_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0x3e,0x0a,0x7e,0x01,0x77,0x39,0x05]
+v_tanh_bf16 v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX13: v_tanh_bf16_dpp v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0x94,0xfe,0x7e,0x7f,0x00,0x00,0x00]
 
-v_tanh_f16 v127, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX13: v_tanh_f16_dpp v127, v127 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0x3e,0xfe,0x7e,0x7f,0x00,0x00,0x00]
+v_tanh_bf16 v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX13: v_tanh_bf16_dpp v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0x94,0xfe,0x7f,0xff,0x00,0x00,0x00]
+
+v_tanh_f16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: v_tanh_f16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x3e,0x0a,0x7e,0x01,0x77,0x39,0x05]
+
+v_tanh_f16 v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX13: v_tanh_f16_dpp v5.l, v1.l dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0x3e,0x0a,0x7e,0x01,0x77,0x39,0x05]
+
+v_tanh_f16 v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX13: v_tanh_f16_dpp v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0x3e,0xfe,0x7e,0x7f,0x00,0x00,0x00]
+
+v_tanh_f16 v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX13: v_tanh_f16_dpp v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0x3e,0xfe,0x7f,0xff,0x00,0x00,0x00]
 
 v_tanh_f32 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX13: v_tanh_f32_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x3c,0x0a,0x7e,0x01,0x77,0x39,0x05]

@@ -60,7 +60,6 @@ private:
 
 protected:
   // Basic subtarget description.
-  Triple TargetTriple;
   AMDGPU::IsaInfo::AMDGPUTargetID TargetID;
   unsigned Gen = INVALID;
   InstrItineraryData InstrItins;
@@ -143,6 +142,7 @@ protected:
   bool HasDPPSrc1SGPR = false;
   bool HasPackedFP32Ops = false;
   bool HasPackedFP64Ops = false;
+  bool HasPackedU64Ops = false;
   bool HasImageInsts = false;
   bool HasExtendedImageInsts = false;
   bool HasR128A16 = false;
@@ -172,6 +172,7 @@ protected:
   bool HasFP8ConversionInsts = false;
   bool HasWMMA128bInsts = false;
   bool HasWMMA256bInsts = false;
+  bool HasWMMA2048bInsts = false;
   bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
@@ -292,6 +293,8 @@ protected:
   bool HasSGPRVMEM = false;
   bool HasParallelBitInsts = false;
   bool HasMadU32Inst = false;
+  bool HasAddMinMaxInsts = false;
+  bool HasPkAddMinMaxInsts = false;
   bool HasPointSampleAccel = false;
   bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
@@ -303,7 +306,8 @@ protected:
 
   bool Has45BitNumRecordsBufferResource = false;
 
-  bool HasCluster = false;
+  bool HasClusters = false;
+  bool RequiresWaitsBeforeSystemScopeStores = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -911,6 +915,8 @@ public:
 
   bool hasWMMA128bInsts() const { return HasWMMA128bInsts; }
 
+  bool hasWMMA2048bInsts() const { return HasWMMA2048bInsts; }
+
   bool isGFX1170() const {
     return getGeneration() == GFX11 && hasWMMA128bInsts();
   }
@@ -1169,6 +1175,8 @@ public:
   }
 
   bool hasPackedFP64Ops() const { return HasPackedFP64Ops; }
+
+  bool hasPackedU64Ops() const { return HasPackedU64Ops; }
 
   // Has V_PK_MOV_B32 opcode
   bool hasPkMovB32() const {
@@ -1630,10 +1638,10 @@ public:
   bool hasIntMinMax64() const { return GFX1250Insts && !GFX13Insts; }
 
   // \returns true if the target has V_ADD_{MIN|MAX}_{I|U}32 instructions.
-  bool hasAddMinMaxInsts() const { return GFX1250Insts && !GFX13Insts; }
+  bool hasAddMinMaxInsts() const { return HasAddMinMaxInsts; }
 
   // \returns true if the target has V_PK_ADD_{MIN|MAX}_{I|U}16 instructions.
-  bool hasPkAddMinMaxInsts() const { return GFX1250Insts && !GFX13Insts; }
+  bool hasPkAddMinMaxInsts() const { return HasPkAddMinMaxInsts; }
 
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
   bool hasPkMinMax3Insts() const { return GFX1250Insts && !GFX13Insts; }
@@ -1910,7 +1918,7 @@ public:
   bool hasUnalignedDS2Bug() const { return GFX1250Insts; }
 
   /// \returns true if the subtarget supports clusters of workgroups.
-  bool hasClusters() const { return HasCluster; }
+  bool hasClusters() const { return HasClusters; }
 
   unsigned getBarrierMemberCountShift() const {
     return getGeneration() >= GFX13 ? 12 : 16;
@@ -1944,6 +1952,10 @@ public:
   /// num_records.
   bool has45BitNumRecordsBufferResource() const {
     return Has45BitNumRecordsBufferResource;
+  }
+
+  bool requiresWaitsBeforeSystemScopeStores() const {
+    return RequiresWaitsBeforeSystemScopeStores;
   }
 };
 

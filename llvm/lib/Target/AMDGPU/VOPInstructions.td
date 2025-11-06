@@ -429,6 +429,13 @@ class VOP3a_ScaleSel_gfx1250_gfx13<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx1
   let Inst{14-11} = scale_sel;
 }
 
+class VOP3Interp_OpSel_gfx9<bits<10> op, VOPProfile p> : VOP3Interp_vi<op, p> {
+  let Inst{11} = src0_modifiers{2};
+  // There's no src1
+  let Inst{13} = src2_modifiers{2};
+  let Inst{14} = !if(p.HasDst,  src0_modifiers{3}, 0);
+}
+
 class VOP3Interp_gfx10<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
   bits<6> attr;
   bits<2> attrchan;
@@ -2350,6 +2357,12 @@ multiclass VOP3_Real_with_name_gfx11_gfx12_gfx13<bits<10> op, string opName,
   VOP3_Real_with_name<GFX11Gen, op, opName, asmName>,
   VOP3_Real_with_name<GFX12Gen, op, opName, asmName>,
   VOP3_Real_with_name<GFX13Gen, op, opName, asmName>;
+
+multiclass VOP3Only_Real_with_name_t16_and_fake16_gfx13<bits<10> op, string asmName=!tolower(NAME),
+                                     string opName=NAME, string pseudo_mnemonic = ""> {
+  defm _t16: VOP3_Real_with_name<GFX13Gen, op, opName#"_t16", asmName, pseudo_mnemonic, 1>;
+  defm _fake16: VOP3_Real_with_name<GFX13Gen, op, opName#"_fake16", asmName, pseudo_mnemonic, 1>;
+}
 
 //===----------------------------------------------------------------------===//
 

@@ -71,7 +71,7 @@ public:
   void compute(const MachineFunction &MF);
 
 private:
-  const SIRegisterInfo &TRI;
+  [[maybe_unused]] const SIRegisterInfo &TRI;
   MachineRegisterInfo &MRI;
   SIMachineFunctionInfo &MFI;
   std::unordered_map<const MachineInstr *, AMDGPULaneSharedIdxInfo>
@@ -213,9 +213,7 @@ void AnalysisImpl::analyzeIdxInst(const MachineInstr &MI) {
       // Peel away the idx0 s_add to get the real imm value, if there is one.
       GprIdxImmedVals[Idx] = {};
       if (MachineInstr *Adder = MFI.getIdx0PrivateComputations().lookup(&MI)) {
-        Register UseReg = MI.getOperand(1).getReg();
-        Register DefReg = Adder->getOperand(0).getReg();
-        assert(UseReg == DefReg &&
+        assert(MI.getOperand(1).getReg() == Adder->getOperand(0).getReg() &&
                "Setter is not using the result of the idx0 computation");
         MachineOperand RealIdxUse = Adder->getOperand(1);
         MachineOperand Idx0MO = Adder->getOperand(2);
