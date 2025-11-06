@@ -84,8 +84,8 @@ private:
                                 unsigned &SrcStagingRegIdx);
   Register computeNewIdxForPrivateObject(MachineRegisterInfo &MRI,
                                          MachineInstr &MI);
-  void updatePrivateObjectNewRegs(MachineRegisterInfo *MRI,
-                                  MachineOperand *IdxOp, MachineInstr *LdStMI);
+  bool updatePrivateObjectNewRegs(MachineRegisterInfo *MRI,
+                                  MachineInstr *LdStMI);
   SmallVector<BundleItem, 4>::iterator
   tryGetDefInsertPt(SmallVector<BundleItem, 4> &Worklist,
                     MachineInstr *StoreMI);
@@ -124,10 +124,10 @@ private:
   MachineCycleInfo *CI = nullptr;
   SIMachineFunctionInfo *MFI = nullptr;
 
-  // (Object, original idx reg) to new-idx-reg mapping
+  // (original idx reg) to new-idx-reg mapping
   // Private-in-vgpr objects need a new idx reg that is calculated with idx0 as
   // the offset.
-  DenseMap<std::pair<const MDNode *, unsigned>, unsigned> PrivateObjectNewRegs;
+  DenseMap<unsigned, unsigned> PrivateObjectNewRegs;
 };
 
 bool sideEffectConflict(MachineInstr &MIa, MachineInstr &MIb) {
@@ -621,17 +621,24 @@ AMDGPUBundleIdxLdSt::computeNewIdxForPrivateObject(MachineRegisterInfo &MRI,
   return NewIdxReg;
 }
 
-void AMDGPUBundleIdxLdSt::updatePrivateObjectNewRegs(MachineRegisterInfo *MRI,
-                                                     MachineOperand *IdxOp,
+bool AMDGPUBundleIdxLdSt::updatePrivateObjectNewRegs(MachineRegisterInfo *MRI,
                                                      MachineInstr *LdStMI) {
+  if (LdStMI->getOpcode() != AMDGPU::V_STORE_IDX &&
+      LdStMI->getOpcode() != AMDGPU::V_LOAD_IDX)
+    return false;
   // Ensure a private object indexing vgprs is calculating the idx
   // relative to idx0.
-  if (const MDNode *Obj = getAMDGPUPromotedPrivateObject(*LdStMI)) {
-    unsigned &NewReg = PrivateObjectNewRegs[{Obj, IdxOp->getReg()}];
+  assert(LdStMI->hasOneMemOperand());
+  MachineMemOperand *MMO = *LdStMI->memoperands_begin();
+  if (MMO->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS) {
+    MachineOperand *IdxOp = STI->getNamedOperand(*LdStMI, AMDGPU::OpName::idx);
+    unsigned &NewReg = PrivateObjectNewRegs[IdxOp->getReg()];
     if (!NewReg)
       NewReg = computeNewIdxForPrivateObject(*MRI, *LdStMI);
     IdxOp->setReg(NewReg);
+    return true;
   }
+  return false;
 }
 
 SmallVector<BundleItem, 4>::iterator
@@ -892,7 +899,6 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     assert(AMDGPU::STG_DSTA + DstCount <= AMDGPU::STG_DSTB &&
            "Exceeded the max amount of dst staging regs");
     MachineOperand *IdxOp = STI->getNamedOperand(*StoreMI, AMDGPU::OpName::idx);
-    updatePrivateObjectNewRegs(MRI, IdxOp, StoreMI);
     // If the idx operand to V_STORE_IDX is defined by CoreMI,
     // we can't bundle.
     if (MI->definesRegister(IdxOp->getReg(), TRI)) {
@@ -1020,7 +1026,6 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
       continue;
 
     MachineOperand *IdxOp = STI->getNamedOperand(*LoadMI, AMDGPU::OpName::idx);
-    updatePrivateObjectNewRegs(MRI, IdxOp, LoadMI);
     if (!IdxList.count(IdxOp->getReg())) {
       // If a bundle would use more than 4 indexes, or if a bundle is
       // using idx0 already through a private vgpr Op, then it can't use idx0
@@ -1120,8 +1125,16 @@ bool AMDGPUBundleIdxLdSt::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "===== AMDGPUBundleIdxLdSt :: Sinking Phase =====\n");
   Changed |= sinkLoadsAndCoreMIs(MF);
 
-  LLVM_DEBUG(dbgs() << "===== AMDGPUBundleIdxLdSt :: Bundling Phase =====\n");
   MFI = MF.getInfo<SIMachineFunctionInfo>();
+  LLVM_DEBUG(
+      dbgs() << "===== AMDGPUBundleIdxLdSt :: Private Objects Phase =====\n");
+  for (MachineBasicBlock &MBB : MF) {
+    auto Iter = make_early_inc_range(MBB);
+    for (auto &MI : Iter)
+      Changed |= updatePrivateObjectNewRegs(MRI, &MI);
+  }
+
+  LLVM_DEBUG(dbgs() << "===== AMDGPUBundleIdxLdSt :: Bundling Phase =====\n");
   PrivateObjectNewRegs.clear();
   for (MachineBasicBlock &MBB : MF) {
     auto Iter = make_early_inc_range(MBB);
