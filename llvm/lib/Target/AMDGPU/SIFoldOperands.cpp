@@ -746,10 +746,9 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
 
   // Rework once the VS_16 register class is updated to include proper
   // 16-bit SGPRs instead of 32-bit ones.
+  assert(!MI->isBundled());
   if (Old.getSubReg() == AMDGPU::lo16 && TRI->isSGPRReg(*MRI, New->getReg()))
     Old.setSubReg(AMDGPU::NoSubRegister);
-  if (MI->isBundled())
-    updateReplacedRegInBundle(*MI, *New, Old, TRI, true);
   if (New->getReg().isPhysical()) {
     Old.substPhysReg(New->getReg(), *TRI);
   } else {
@@ -1228,6 +1227,12 @@ void SIFoldOperandsImpl::foldOperand(
     SmallVectorImpl<MachineInstr *> &CopiesToReplace) const {
   const MachineOperand *UseOp = &UseMI->getOperand(UseOpIdx);
 
+  // Avoid folding into bundled instructions. We run fold operands before
+  // bundling, so the optimization potential of running it again later against
+  // bundles is small, and this helps avoid tied subregister uses in bundles.
+  if (UseMI->isBundled())
+    return;
+
   if (!isUseSafeToFold(*UseMI, *UseOp))
     return;
 
@@ -1519,9 +1524,6 @@ void SIFoldOperandsImpl::foldOperand(
         // %sgpr1 = V_READFIRSTLANE_B32 %vgpr
         // =>
         // %sgpr1 = COPY %sgpr0
-        if (UseMI->isBundled())
-          updateReplacedRegInBundle(*UseMI, *OpToFold.OpToFold, UseMI->getOperand(1),
-                                    TRI);
         UseMI->setDesc(TII->get(AMDGPU::COPY));
         UseMI->getOperand(1).setReg(OpToFold.getReg());
         UseMI->getOperand(1).setSubReg(OpToFold.getSubReg());
