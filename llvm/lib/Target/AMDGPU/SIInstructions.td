@@ -1342,6 +1342,21 @@ def V_LOAD_IDX : VPseudoInstSI <
     let UseNamedOperandTable = 1;
     let hasSideEffects = 0;
 }
+
+// Used for byte or short loads.
+// It lowers into V_BFE_U32 + V_LOAD_IDX
+// Only bitoffset of 0, 8, 16, or 24 bits are supported.
+// Only bitsize of 8 or 16 bits are supported.
+def V_LOAD_IDX_BITS
+    : VPseudoInstSI<(outs VGPR_IDX_DATA_OP:$data_op),
+                    (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset,
+                        SSrc_b32:$bitsize, SSrc_b32:$bitoffset)> {
+  let mayLoad = 1;
+  let VALU = 1;
+  let UseNamedOperandTable = 1;
+  let hasSideEffects = 0;
+}
+
 def V_STORE_IDX : VPseudoInstSI <
   (outs),
   (ins VGPR_IDX_DATA_OP:$data_op, VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
@@ -1349,6 +1364,19 @@ def V_STORE_IDX : VPseudoInstSI <
     let VALU = 1;
     let UseNamedOperandTable = 1;
     let hasSideEffects = 0;
+}
+
+// Used for byte or short stores.
+// Only bitoffset of 0, 8, 16, or 24 bits are supported.
+// Only bitsize of 8 or 16 bits are supported.
+def V_STORE_IDX_BITS
+    : VPseudoInstSI<(outs), (ins VGPR_IDX_DATA_OP:$data_op,
+                                VGPR_IDX_IDX_OP:$idx, i32imm:$offset,
+                                SSrc_b32:$bitsize, SSrc_b32:$bitoffset)> {
+  let mayStore = 1;
+  let VALU = 1;
+  let UseNamedOperandTable = 1;
+  let hasSideEffects = 0;
 }
 
 //===----------------------------------------------------------------------===//
