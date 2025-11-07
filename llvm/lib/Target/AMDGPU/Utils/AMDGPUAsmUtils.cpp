@@ -220,7 +220,7 @@ static constexpr CustomOperand Operands[] = {
   {{"HW_REG_PERF_SNAPSHOT_DATA"},     ID_PERF_SNAPSHOT_DATA_gfx11,    isGFX11},
 
   // Register numbers reused in GFX13+
-  {{"HW_REG_WAVE_GROUP_INFO"},        ID_WAVE_GROUP_INFO,             isGFX13Plus},
+  {{"HW_REG_WAVE_GROUP_INFO"},        ID_WAVE_GROUP_INFO,             hasWavegroups},
 
   {{"HW_REG_IB_STS2"},                ID_IB_STS2,                     isGFX1250Only},
   {{"HW_REG_SHADER_CYCLES"},          ID_SHADER_CYCLES,               isGFX10_3_GFX11},

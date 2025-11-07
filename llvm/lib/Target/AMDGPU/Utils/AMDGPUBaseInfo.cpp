@@ -2727,6 +2727,10 @@ bool isGFX13(const MCSubtargetInfo &STI) {
 
 bool isGFX13Plus(const MCSubtargetInfo &STI) { return isGFX13(STI); }
 
+bool hasWavegroups(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeatureWavegroups);
+}
+
 bool supportsWGP(const MCSubtargetInfo &STI) {
   if (isGFX1250Only(STI))
     return false;
