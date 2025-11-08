@@ -23,7 +23,7 @@ define amdgpu_gs void @main(i32 %arg, i32 %arg1) {
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX13-FAKE16-NEXT:    ds_store_b64 v2, v[0:1] offset:28
 bb:
-  %i = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 undef)
+  %i = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 poison)
   %i2 = call nsz arcp <3 x half> @llvm.amdgcn.struct.buffer.load.format.v3f16(i32 %arg, i32 %arg1, i32 0, i32 0, i32 0)
   %i3 = bitcast <3 x half> %i2 to <3 x i16>
   %i4 = extractelement <3 x i16> %i3, i32 1

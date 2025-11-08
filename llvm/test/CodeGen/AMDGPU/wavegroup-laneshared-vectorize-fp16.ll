@@ -28,7 +28,7 @@ define amdgpu_kernel void @vectorize() "amdgpu-wavegroup-enable" !reqd_work_grou
   ; CHECK-NEXT:   S_ENDPGM 0
 entry:
   %4 = load half, ptr addrspace(10) @weights, align 4, !tbaa !12
-  %vecins = insertelement <36 x half> <half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef>, half %4, i64 0
+  %vecins = insertelement <36 x half> <half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison>, half %4, i64 0
   %5 = load half, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @weights, i32 2), align 2, !tbaa !12
   %vecins.1 = insertelement <36 x half> %vecins, half %5, i64 1
   %6 = load half, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @weights, i32 4), align 4, !tbaa !12

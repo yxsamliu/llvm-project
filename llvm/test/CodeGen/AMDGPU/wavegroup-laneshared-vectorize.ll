@@ -28,7 +28,7 @@ define amdgpu_kernel void @vectorize() "amdgpu-wavegroup-enable" !reqd_work_grou
   ; CHECK-NEXT:   S_ENDPGM 0
 entry:
   %6 = load i32, ptr addrspace(10) @weights, align 4
-  %vecins = insertelement <9 x i32> undef, i32 %6, i64 0
+  %vecins = insertelement <9 x i32> poison, i32 %6, i64 0
   %7 = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @weights, i32 4), align 4, !tbaa !5
   %vecins.1 = insertelement <9 x i32> %vecins, i32 %7, i64 1
   %8 = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @weights, i32 8), align 4, !tbaa !5
