@@ -50,6 +50,8 @@ MIR_FUNC_RE = re.compile(
     flags=(re.M | re.S),
 )
 
+MD_PTR_RE = re.compile(r"\<0x[a-f0-9]+\>", re.IGNORECASE)
+
 
 def build_function_info_dictionary(
     test, raw_tool_output, triple, prefixes, func_dict, verbose
