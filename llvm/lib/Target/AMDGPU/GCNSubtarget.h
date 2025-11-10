@@ -173,6 +173,13 @@ protected:
   bool HasWMMA128bInsts = false;
   bool HasWMMA256bInsts = false;
   bool HasWMMA2048bInsts = false;
+  bool HasV_CUBEInsts = false;
+  bool HasV_LERPInsts = false;
+  bool HasV_SADInsts = false;
+  bool HasV_QSADInsts = false;
+  bool HasV_CVT_NORMInsts = false;
+  bool HasV_CVT_PKNORM_VOP2Insts = false;
+  bool HasV_CVT_PKNORM_VOP3Insts = false;
   bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
@@ -916,6 +923,20 @@ public:
   bool hasWMMA128bInsts() const { return HasWMMA128bInsts; }
 
   bool hasWMMA2048bInsts() const { return HasWMMA2048bInsts; }
+
+  bool hasV_CUBEInsts() const { return HasV_CUBEInsts; }
+
+  bool hasV_LERPInsts() const { return HasV_LERPInsts; }
+
+  bool hasV_SADInsts() const { return HasV_SADInsts; }
+
+  bool hasV_QSADInsts() const { return HasV_QSADInsts; }
+
+  bool hasV_CVT_NORMInsts() const { return HasV_CVT_NORMInsts; }
+
+  bool hasV_CVT_PKNORM_VOP2Insts() const { return HasV_CVT_PKNORM_VOP2Insts; }
+
+  bool hasV_CVT_PKNORM_VOP3Insts() const { return HasV_CVT_PKNORM_VOP3Insts; }
 
   bool isGFX1170() const {
     return getGeneration() == GFX11 && hasWMMA128bInsts();

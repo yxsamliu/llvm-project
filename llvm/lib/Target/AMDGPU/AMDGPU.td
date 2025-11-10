@@ -945,6 +945,48 @@ def FeatureWMMA2048bInsts : SubtargetFeature<"wmma-2048b-insts",
   "Has WMMA instructions where A, B, C, or D matrix can be 2048-bits"
 >;
 
+def FeatureV_CUBEInsts : SubtargetFeature<"V_CUBE-Insts",
+  "HasV_CUBEInsts",
+  "true",
+  "Has V_CUBE instructions"
+>; 
+
+def FeatureV_LERPInsts : SubtargetFeature<"V_LERP-insts",
+  "HasV_LERPInsts",
+  "true",
+  "Has V_LERP instructions"
+>; 
+
+def FeatureV_SADInsts : SubtargetFeature<"V_SAD-insts",
+  "HasV_SADInsts",
+  "true",
+  "Has V_SAD instructions"
+>; 
+
+def FeatureV_QSADInsts : SubtargetFeature<"V_QSAD-insts",
+  "HasV_QSADInsts",
+  "true",
+  "Has WMMA instructions where A, B, C, or D matrix can be 2048-bits"
+>; 
+
+def FeatureV_CVT_NORMInsts : SubtargetFeature<"V_CVT_NORM-insts",
+  "HasV_CVT_NORMInsts",
+  "true",
+  "Has V_CVT_NORM instructions"
+>;
+
+def FeatureV_CVT_PKNORM_VOP2Insts : SubtargetFeature<"V_CVT_PKNORM-VOP2-insts",
+  "HasV_CVT_PKNORM_VOP2Insts",
+  "true",
+  "Has V_CVT_NORM VOP2 instructions"
+>;
+
+def FeatureV_CVT_PKNORM_VOP3Insts : SubtargetFeature<"V_CVT_PKNORM-VOP3-insts",
+  "HasV_CVT_PKNORM_VOP3Insts",
+  "true",
+  "Has V_CVT_NORM VOP3 instructions"
+>;
+
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
   "HasPkFmacF16Inst",
   "true",
@@ -1604,7 +1646,8 @@ def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   FeatureTrigReducedRange, FeatureExtendedImageInsts, FeatureImageInsts,
   FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
-  FeatureVmemWriteVgprInOrder
+  FeatureVmemWriteVgprInOrder, FeatureV_CUBEInsts, FeatureV_LERPInsts,
+  FeatureV_SADInsts, FeatureV_CVT_PKNORM_VOP2Insts
   ]
 >;
 
@@ -1618,7 +1661,8 @@ def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   FeatureImageInsts, FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
   FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts,
-  FeatureVmemWriteVgprInOrder
+  FeatureVmemWriteVgprInOrder, FeatureV_CUBEInsts, FeatureV_LERPInsts,
+  FeatureV_SADInsts, FeatureV_QSADInsts, FeatureV_CVT_PKNORM_VOP2Insts
   ]
 >;
 
@@ -1634,7 +1678,9 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
    FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureFastDenormalF32,
    FeatureUnalignedBufferAccess, FeatureImageInsts, FeatureGDS, FeatureGWS,
-   FeatureDefaultComponentZero, FeatureVmemWriteVgprInOrder
+   FeatureDefaultComponentZero, FeatureVmemWriteVgprInOrder, FeatureV_CUBEInsts, 
+   FeatureV_LERPInsts, FeatureV_SADInsts, FeatureV_QSADInsts, 
+   FeatureV_CVT_PKNORM_VOP2Insts
   ]
 >;
 
@@ -1653,7 +1699,10 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureSupportsXNACK,
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
    FeatureUnalignedDSAccess, FeatureNegativeScratchOffsetBug, FeatureGWS,
-   FeatureDefaultComponentZero,FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad
+   FeatureDefaultComponentZero,FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad, 
+   FeatureV_CUBEInsts, FeatureV_LERPInsts, FeatureV_SADInsts, FeatureV_QSADInsts, 
+   FeatureV_CVT_NORMInsts, FeatureV_CVT_PKNORM_VOP2Insts, 
+   FeatureV_CVT_PKNORM_VOP3Insts
   ]
 >;
 
@@ -1677,7 +1726,10 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureDefaultComponentZero, FeatureMaxHardClauseLength63,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts,
-   FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad
+   FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad, FeatureV_CUBEInsts, 
+   FeatureV_LERPInsts, FeatureV_SADInsts, FeatureV_QSADInsts, 
+   FeatureV_CVT_NORMInsts, FeatureV_CVT_PKNORM_VOP2Insts, 
+   FeatureV_CVT_PKNORM_VOP3Insts
   ]
 >;
 
@@ -1700,7 +1752,9 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureUnalignedDSAccess, FeatureGDS, FeatureGWS,
    FeatureDefaultComponentZero, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
-   FeatureVmemWriteVgprInOrder
+   FeatureVmemWriteVgprInOrder, FeatureV_CUBEInsts, FeatureV_LERPInsts,
+   FeatureV_SADInsts, FeatureV_QSADInsts, FeatureV_CVT_NORMInsts, 
+   FeatureV_CVT_PKNORM_VOP2Insts, FeatureV_CVT_PKNORM_VOP3Insts
   ]
 >;
 
@@ -1747,7 +1801,10 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
-   FeatureExclusiveScanInsts, FeatureSWC, FeatureParallelBitInsts,
+   FeatureExclusiveScanInsts, FeatureSWC, FeatureParallelBitInsts, 
+   FeatureV_CUBEInsts, FeatureV_LERPInsts, FeatureV_SADInsts, 
+   FeatureV_QSADInsts, FeatureV_CVT_NORMInsts, FeatureV_CVT_PKNORM_VOP2Insts, 
+   FeatureV_CVT_PKNORM_VOP3Insts
   ]
 >;
 
@@ -2219,9 +2276,16 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureBVHDualAndBVH8Insts,
    FeatureWaitsBeforeSystemScopeStores,
+   FeatureV_CUBEInsts, 
+   FeatureV_LERPInsts, 
+   FeatureV_SADInsts,
+   FeatureV_QSADInsts, 
+   FeatureV_CVT_NORMInsts, 
+   FeatureV_CVT_PKNORM_VOP2Insts, 
+   FeatureV_CVT_PKNORM_VOP3Insts
    ]>;
 
-def FeatureISAVersion12_50 : FeatureSet<
+def FeatureISAVersion12_50_base : FeatureSet<
   [FeatureGFX12,
    FeatureGFX1250Insts,
    FeatureRequiresAlignedVGPRs,
@@ -2295,6 +2359,16 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureClusters,
 ]>;
 
+def FeatureISAVersion12_50 : FeatureSet<
+  !listconcat(FeatureISAVersion12_50_base.Features,
+  [FeatureV_CUBEInsts, 
+   FeatureV_LERPInsts, 
+   FeatureV_SADInsts, 
+   FeatureV_QSADInsts, 
+   FeatureV_CVT_NORMInsts, 
+   FeatureV_CVT_PKNORM_VOP2Insts, 
+   FeatureV_CVT_PKNORM_VOP3Insts])>;
+
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50.Features,
   [FullRate64Ops,
@@ -2312,7 +2386,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
     [FeatureRequiresCOV6])>;
 
 def FeatureISAVersion12_60 : FeatureSet<
-  !listconcat(FeatureISAVersion12_50.Features,
+  !listconcat(FeatureISAVersion12_50_base.Features,
     [FeatureGFX1260Insts,
      FeatureWMMA2048bInsts])>;
 
@@ -2536,20 +2610,6 @@ def isGFX6GFX7GFX8GFX9GFX10 :
 def isNotGFX12Plus :
   Predicate<"Subtarget->getGeneration() <= AMDGPUSubtarget::GFX11">,
   AssemblerPredicate<(all_of (not FeatureGFX12Insts))>;
-
-def isNotGFX1260 :
-  Predicate<"!Subtarget->hasGFX1260Insts()">,
-  AssemblerPredicate<(all_of (not FeatureGFX1260Insts))>;
-
-def isGFX9PlusNotGFX1260 :
-  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9 &&"
-            "!Subtarget->hasGFX1260Insts()">,
-  AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureGFX1260Insts))>;
-
-def isGFX7PlusNotGFX1260 :
-  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS &&"
-            "!Subtarget->hasGFX1260Insts()">,
-  AssemblerPredicate<(all_of FeatureCIInsts, (not FeatureGFX1260Insts))>;
 
 def isGFX7GFX8GFX9GFX10 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
@@ -3116,6 +3176,27 @@ def HasWMMA128bInsts : Predicate<"Subtarget->hasWMMA128bInsts()">,
 
 def HasWMMA2048bInsts : Predicate<"Subtarget->hasWMMA2048bInsts()">,
   AssemblerPredicate<(all_of FeatureWMMA2048bInsts)>;
+
+def HasV_CUBEInsts : Predicate<"Subtarget->hasV_CUBEInsts()">,
+  AssemblerPredicate<(all_of FeatureV_CUBEInsts)>;
+
+def HasV_LERPInsts : Predicate<"Subtarget->hasV_LERPInsts()">,
+  AssemblerPredicate<(all_of FeatureV_LERPInsts)>;
+
+def HasV_SADInsts : Predicate<"Subtarget->hasV_SADInsts()">,
+  AssemblerPredicate<(all_of FeatureV_SADInsts)>;
+
+def HasV_QSADInsts : Predicate<"Subtarget->hasV_QSADInsts()">,
+  AssemblerPredicate<(all_of FeatureV_QSADInsts)>;
+
+def HasV_CVT_NORMInsts : Predicate<"Subtarget->hasV_CVT_NORMInsts()">,
+  AssemblerPredicate<(all_of FeatureV_CVT_NORMInsts)>;
+
+def HasV_CVT_PKNORM_VOP2Insts : Predicate<"Subtarget->hasV_CVT_PKNORM_VOP2Insts()">,
+  AssemblerPredicate<(all_of FeatureV_CVT_PKNORM_VOP2Insts)>;
+
+def HasV_CVT_PKNORM_VOP3Insts : Predicate<"Subtarget->hasV_CVT_PKNORM_VOP3Insts()">,
+  AssemblerPredicate<(all_of FeatureV_CVT_PKNORM_VOP3Insts)>;
 
 def HasFP8E5M3Insts : Predicate<"Subtarget->hasFP8E5M3Insts()">,
   AssemblerPredicate<(all_of FeatureFP8E5M3Insts)>;
