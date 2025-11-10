@@ -157,6 +157,11 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   // Collect functions whose address has escaped
   DenseSet<Function *> AddressTakenFuncs;
   for (Function &F : M.functions()) {
+    // Ignore functions that are called by wavegroup rank-function,
+    // which looks like a callback by the rank-call intrinsic.
+    if (getWavegroupRankFunction(F))
+      continue;
+
     if (!isKernelLDS(&F))
       if (F.hasAddressTaken(nullptr,
                             /* IgnoreCallbackUses */ false,
