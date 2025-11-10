@@ -649,8 +649,8 @@ define amdgpu_kernel void @v_shl_v32i64(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GFX1250-NEXT:    global_load_b128 v[58:61], v20, s[2:3] offset:496
 ; GFX1250-NEXT:    global_load_b128 v[62:65], v20, s[2:3] offset:480
 ; GFX1250-NEXT:    global_load_b128 v[66:69], v20, s[2:3] offset:16
-; GFX1250-NEXT:    global_load_b128 v[70:73], v20, s[2:3] offset:272
 ; GFX1250-NEXT:    global_load_b128 v[74:77], v20, s[2:3] offset:48
+; GFX1250-NEXT:    global_load_b128 v[70:73], v20, s[2:3] offset:272
 ; GFX1250-NEXT:    s_wait_loadcnt 0x11
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[2:3], v2, v[6:7]
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[0:1], v0, v[4:5]
@@ -672,24 +672,22 @@ define amdgpu_kernel void @v_shl_v32i64(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[30:31], v38, v[42:43]
 ; GFX1250-NEXT:    s_wait_loadcnt 0xa
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[40:41], v52, v[48:49]
-; GFX1250-NEXT:    v_lshlrev_b64_e32 v[38:39], v50, v[46:47]
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_load_b128 v[42:45], v20, s[2:3] offset:32
-; GFX1250-NEXT:    global_load_b128 v[50:53], v20, s[2:3]
-; GFX1250-NEXT:    s_wait_loadcnt 0x9
-; GFX1250-NEXT:    v_lshlrev_b64_e32 v[48:49], v60, v[56:57]
-; GFX1250-NEXT:    v_lshlrev_b64_e32 v[46:47], v58, v[54:55]
-; GFX1250-NEXT:    s_wait_loadcnt 0x8
+; GFX1250-NEXT:    s_wait_loadcnt 0x6
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[18:19], v64, v[18:19]
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[16:17], v62, v[16:17]
+; GFX1250-NEXT:    global_load_b128 v[62:65], v20, s[2:3] offset:288
+; GFX1250-NEXT:    v_lshlrev_b64_e32 v[38:39], v50, v[46:47]
+; GFX1250-NEXT:    v_lshlrev_b64_e32 v[48:49], v60, v[56:57]
+; GFX1250-NEXT:    v_lshlrev_b64_e32 v[46:47], v58, v[54:55]
 ; GFX1250-NEXT:    global_load_b128 v[54:57], v20, s[2:3] offset:256
-; GFX1250-NEXT:    s_wait_loadcnt 0x7
+; GFX1250-NEXT:    s_wait_loadcnt 0x5
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[60:61], v72, v[68:69]
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[58:59], v70, v[66:67]
-; GFX1250-NEXT:    s_clause 0x2
-; GFX1250-NEXT:    global_load_b128 v[62:65], v20, s[2:3] offset:288
+; GFX1250-NEXT:    s_clause 0x3
 ; GFX1250-NEXT:    global_load_b128 v[66:69], v20, s[2:3] offset:64
 ; GFX1250-NEXT:    global_load_b128 v[70:73], v20, s[2:3] offset:320
+; GFX1250-NEXT:    global_load_b128 v[42:45], v20, s[2:3] offset:32
+; GFX1250-NEXT:    global_load_b128 v[50:53], v20, s[2:3]
 ; GFX1250-NEXT:    s_wait_loadcnt 0x8
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[24:25], v24, v[76:77]
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[22:23], v22, v[74:75]
@@ -701,15 +699,15 @@ define amdgpu_kernel void @v_shl_v32i64(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GFX1250-NEXT:    global_load_b128 v[74:77], v20, s[2:3] offset:112
 ; GFX1250-NEXT:    global_load_b128 v[78:81], v20, s[2:3] offset:96
 ; GFX1250-NEXT:    global_load_b128 v[82:85], v20, s[2:3] offset:352
-; GFX1250-NEXT:    s_wait_loadcnt 0x7
-; GFX1250-NEXT:    v_lshlrev_b64_e32 v[52:53], v56, v[52:53]
-; GFX1250-NEXT:    v_lshlrev_b64_e32 v[50:51], v54, v[50:51]
 ; GFX1250-NEXT:    s_wait_loadcnt 0x6
-; GFX1250-NEXT:    v_lshlrev_b64_e32 v[44:45], v64, v[44:45]
-; GFX1250-NEXT:    s_wait_loadcnt 0x4
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[68:69], v72, v[68:69]
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[66:67], v70, v[66:67]
+; GFX1250-NEXT:    s_wait_loadcnt 0x5
+; GFX1250-NEXT:    v_lshlrev_b64_e32 v[44:45], v64, v[44:45]
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[42:43], v62, v[42:43]
+; GFX1250-NEXT:    s_wait_loadcnt 0x4
+; GFX1250-NEXT:    v_lshlrev_b64_e32 v[52:53], v56, v[52:53]
+; GFX1250-NEXT:    v_lshlrev_b64_e32 v[50:51], v54, v[50:51]
 ; GFX1250-NEXT:    s_wait_loadcnt 0x2
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[36:37], v36, v[76:77]
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[34:35], v34, v[74:75]
@@ -785,13 +783,13 @@ define amdgpu_kernel void @v_shl_v32i64(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GFX1251-NEXT:    global_load_b128 v[50:53], v44, s[2:3] offset:320
 ; GFX1251-NEXT:    s_wait_loadcnt 0x7
 ; GFX1251-NEXT:    v_dual_mov_b32 v9, v10 :: v_dual_mov_b32 v37, v38
+; GFX1251-NEXT:    s_wait_loadcnt 0x6
+; GFX1251-NEXT:    v_mov_b32_e32 v63, v64
 ; GFX1251-NEXT:    v_pk_lshl_add_u64 v[24:27], v[32:35], v[24:25], 0
 ; GFX1251-NEXT:    v_pk_lshl_add_u64 v[28:31], v[40:43], v[28:29], 0
 ; GFX1251-NEXT:    s_clause 0x1
 ; GFX1251-NEXT:    global_load_b128 v[32:35], v44, s[2:3] offset:368
 ; GFX1251-NEXT:    global_load_b128 v[40:43], v44, s[2:3] offset:352
-; GFX1251-NEXT:    s_wait_loadcnt 0x8
-; GFX1251-NEXT:    v_mov_b32_e32 v63, v64
 ; GFX1251-NEXT:    s_wait_loadcnt 0x7
 ; GFX1251-NEXT:    v_pk_lshl_add_u64 v[10:13], v[66:69], v[12:13], 0
 ; GFX1251-NEXT:    s_clause 0x1

@@ -35,11 +35,11 @@ define amdgpu_kernel void @private_load_store() {
   ; BUNDLE-NEXT:   [[COPY:%[0-9]+]]:sreg_32_xm0_xexec = COPY $idx0
   ; BUNDLE-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
   ; BUNDLE-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_MOV_B32_]], [[COPY]], implicit-def $scc
-  ; BUNDLE-NEXT:   BUNDLE implicit-def $stg_dsta, implicit [[S_ADD_I32_]], implicit $exec {
+  ; BUNDLE-NEXT:   BUNDLE implicit-def $stg_dsta, implicit [[S_ADD_I32_]], implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5), (store (s32) into %ir.p.2, addrspace 5) {
   ; BUNDLE-NEXT:     $stg_dsta = V_LOAD_IDX [[S_ADD_I32_]], 34, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
   ; BUNDLE-NEXT:     V_STORE_IDX internal $stg_dsta, [[S_ADD_I32_]], 35, implicit $exec :: (store (s32) into %ir.p.2, addrspace 5)
   ; BUNDLE-NEXT:   }
-  ; BUNDLE-NEXT:   BUNDLE implicit-def $stg_dsta, implicit killed [[S_ADD_I32_]], implicit $exec {
+  ; BUNDLE-NEXT:   BUNDLE implicit-def $stg_dsta, implicit killed [[S_ADD_I32_]], implicit $exec :: (dereferenceable load (s32) from %ir.q.1, addrspace 5), (store (s32) into %ir.q.2, addrspace 5) {
   ; BUNDLE-NEXT:     $stg_dsta = V_LOAD_IDX [[S_ADD_I32_]], 1, implicit $exec :: (dereferenceable load (s32) from %ir.q.1, addrspace 5)
   ; BUNDLE-NEXT:     V_STORE_IDX internal $stg_dsta, killed [[S_ADD_I32_]], 2, implicit $exec :: (store (s32) into %ir.q.2, addrspace 5)
   ; BUNDLE-NEXT:   }
@@ -51,11 +51,11 @@ define amdgpu_kernel void @private_load_store() {
   ; SETIDX-NEXT:   [[COPY:%[0-9]+]]:sreg_32_xm0_xexec = COPY $idx0
   ; SETIDX-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY]], 0, implicit-def $scc
   ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_ADD_I32_]]
-  ; SETIDX-NEXT:   BUNDLE implicit-def $stg_dsta, implicit $idx1, implicit $exec {
+  ; SETIDX-NEXT:   BUNDLE implicit-def $stg_dsta, implicit $idx1, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5), (store (s32) into %ir.p.2, addrspace 5) {
   ; SETIDX-NEXT:     $stg_dsta = V_LOAD_IDX $idx1, 34, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
   ; SETIDX-NEXT:     V_STORE_IDX internal $stg_dsta, $idx1, 35, implicit $exec :: (store (s32) into %ir.p.2, addrspace 5)
   ; SETIDX-NEXT:   }
-  ; SETIDX-NEXT:   BUNDLE implicit-def $stg_dsta, implicit killed $idx1, implicit $exec {
+  ; SETIDX-NEXT:   BUNDLE implicit-def $stg_dsta, implicit killed $idx1, implicit $exec :: (dereferenceable load (s32) from %ir.q.1, addrspace 5), (store (s32) into %ir.q.2, addrspace 5) {
   ; SETIDX-NEXT:     $stg_dsta = V_LOAD_IDX $idx1, 1, implicit $exec :: (dereferenceable load (s32) from %ir.q.1, addrspace 5)
   ; SETIDX-NEXT:     V_STORE_IDX internal $stg_dsta, killed $idx1, 2, implicit $exec :: (store (s32) into %ir.q.2, addrspace 5)
   ; SETIDX-NEXT:   }
@@ -156,7 +156,7 @@ define dso_local amdgpu_kernel void @private_fail_bundle(ptr addrspace(1) nounde
   ; BUNDLE-NEXT:   V_STORE_IDX [[COPY2]], [[S_ADD_I32_1]], 0, implicit $exec :: (store (s32) into %ir.arrayidx, addrspace 5)
   ; BUNDLE-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
   ; BUNDLE-NEXT:   [[S_ADD_I32_2:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_MOV_B32_]], [[COPY]], implicit-def $scc
-  ; BUNDLE-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit [[S_ADD_I32_2]], implicit $exec, implicit killed [[V_MOV_B32_e32_]], implicit killed [[REG_SEQUENCE]] {
+  ; BUNDLE-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit [[S_ADD_I32_2]], implicit $exec, implicit killed [[V_MOV_B32_e32_]], implicit killed [[REG_SEQUENCE]] :: (dereferenceable load (s32) from %ir.my_array, addrspace 5), (store (s32) into %ir.1, addrspace 1) {
   ; BUNDLE-NEXT:     $stg_srca = V_LOAD_IDX [[S_ADD_I32_2]], 0, implicit $exec :: (dereferenceable load (s32) from %ir.my_array, addrspace 5)
   ; BUNDLE-NEXT:     GLOBAL_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], internal killed $stg_srca, killed [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s32) into %ir.1, addrspace 1)
   ; BUNDLE-NEXT:   }
@@ -185,7 +185,7 @@ define dso_local amdgpu_kernel void @private_fail_bundle(ptr addrspace(1) nounde
   ; SETIDX-NEXT:   V_STORE_IDX [[COPY2]], $idx1, 0, implicit $exec :: (store (s32) into %ir.arrayidx, addrspace 5)
   ; SETIDX-NEXT:   [[S_ADD_I32_2:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY]], 0, implicit-def $scc
   ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_ADD_I32_2]]
-  ; SETIDX-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit $idx1, implicit $exec, implicit killed [[V_MOV_B32_e32_]], implicit killed [[REG_SEQUENCE]] {
+  ; SETIDX-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit $idx1, implicit $exec, implicit killed [[V_MOV_B32_e32_]], implicit killed [[REG_SEQUENCE]] :: (dereferenceable load (s32) from %ir.my_array, addrspace 5), (store (s32) into %ir.1, addrspace 1) {
   ; SETIDX-NEXT:     $stg_srca = V_LOAD_IDX $idx1, 0, implicit $exec :: (dereferenceable load (s32) from %ir.my_array, addrspace 5)
   ; SETIDX-NEXT:     GLOBAL_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], internal killed $stg_srca, killed [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s32) into %ir.1, addrspace 1)
   ; SETIDX-NEXT:   }
