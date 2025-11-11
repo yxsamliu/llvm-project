@@ -2285,7 +2285,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureVCVTPKNORMVOP3Insts
    ]>;
 
-def FeatureISAVersion12_50_base : FeatureSet<
+def FeatureISAVersion12_50_Common : FeatureSet<
   [FeatureGFX12,
    FeatureGFX1250Insts,
    FeatureRequiresAlignedVGPRs,
@@ -2360,7 +2360,7 @@ def FeatureISAVersion12_50_base : FeatureSet<
 ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
-  !listconcat(FeatureISAVersion12_50_base.Features,
+  !listconcat(FeatureISAVersion12_50_Common.Features,
   [FeatureVCUBEInsts, 
    FeatureVLERPInsts, 
    FeatureVSADInsts, 
@@ -2386,7 +2386,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
     [FeatureRequiresCOV6])>;
 
 def FeatureISAVersion12_60 : FeatureSet<
-  !listconcat(FeatureISAVersion12_50_base.Features,
+  !listconcat(FeatureISAVersion12_50_Common.Features,
     [FeatureGFX1260Insts,
      FeatureWMMA2048bInsts])>;
 
