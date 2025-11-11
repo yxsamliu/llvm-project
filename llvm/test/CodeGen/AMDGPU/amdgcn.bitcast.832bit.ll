@@ -7737,53 +7737,97 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v8
-; GFX13-TRUE16-NEXT:    s_clause 0x2c
+; GFX13-TRUE16-NEXT:    s_clause 0x2c ; 180-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v40, s32 offset:176
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v41, s32 offset:172
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v42, s32 offset:168
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v43, s32 offset:164
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v44, s32 offset:160
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v45, s32 offset:156
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v46, s32 offset:152
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v47, s32 offset:148
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v56, s32 offset:144
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v57, s32 offset:140
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v58, s32 offset:136
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v59, s32 offset:132
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v60, s32 offset:128
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v61, s32 offset:124
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v62, s32 offset:120
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v63, s32 offset:116
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v72, s32 offset:112
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v73, s32 offset:108
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v74, s32 offset:104
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v75, s32 offset:100
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v76, s32 offset:96
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v77, s32 offset:92
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v78, s32 offset:88
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v79, s32 offset:84
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v88, s32 offset:80
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v89, s32 offset:76
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v90, s32 offset:72
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v91, s32 offset:68
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v92, s32 offset:64
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v93, s32 offset:60
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v94, s32 offset:56
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v95, s32 offset:52
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v104, s32 offset:48
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v105, s32 offset:44
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v106, s32 offset:40
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v107, s32 offset:36
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v108, s32 offset:32
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v109, s32 offset:28
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v110, s32 offset:24
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v111, s32 offset:20
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v123, s32 offset:16
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v124, s32 offset:12
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v125, s32 offset:8
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v126, s32 offset:4
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v127, s32
+; GFX13-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v8
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v96, v7 :: v_dual_mov_b32 v98, v6
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v99, v5 :: v_dual_mov_b32 v126, v4
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v127, v3 :: v_dual_mov_b32 v123, v2
@@ -7831,7 +7875,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v0, s40 :: v_dual_mov_b32 v46, s13
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v62, s14 :: v_dual_mov_b32 v79, s15
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v97, s16
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:180
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:196
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:212
@@ -7841,7 +7885,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:276
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:292
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, s0
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:308
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:324
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:340
@@ -7851,7 +7895,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:404
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:420
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v2, s1
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:436
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:452
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:468
@@ -7861,7 +7905,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:532
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:548
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v3, s2
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:564
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:580
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:596
@@ -7871,7 +7915,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:660
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:676
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v4, s3
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:692
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:708
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:724
@@ -7881,7 +7925,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:788
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:804
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v5, s4
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:820
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:836
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:852
@@ -7891,7 +7935,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:916
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:932
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v6, s5
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:948
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:964
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:980
@@ -7901,7 +7945,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1044
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1060
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v7, s6
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1076
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1092
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1108
@@ -7911,7 +7955,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1172
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1188
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v8, s7
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1204
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1220
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1236
@@ -7921,7 +7965,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1300
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1316
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v9, s8
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1332
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1348
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1364
@@ -7931,7 +7975,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1428
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1444
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v10, s9
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1460
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1476
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1492
@@ -7941,7 +7985,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1556
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1572
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v11, s10
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1588
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1604
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1620
@@ -7951,7 +7995,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1684
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1700
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v12, s11
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1716
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1732
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1748
@@ -7961,7 +8005,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1812
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1828
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v13, s12
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1844
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1860
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1876
@@ -7978,7 +8022,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v124, v124, 3 op_sel_hi:[1,0]
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v123, v123, 3 op_sel_hi:[1,0]
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v127, v127, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:180
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:196
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:212
@@ -7996,7 +8040,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v62, s14, 3 op_sel_hi:[1,0]
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v79, s15, 3 op_sel_hi:[1,0]
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v97, s16, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:308
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:324
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:340
@@ -8006,7 +8050,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:404
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:420
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v2, s1, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:436
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:452
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:468
@@ -8016,7 +8060,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:532
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:548
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v3, s2, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:564
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:580
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:596
@@ -8026,7 +8070,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:660
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:676
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v4, s3, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:692
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:708
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:724
@@ -8036,7 +8080,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:788
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:804
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v5, s4, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:820
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:836
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:852
@@ -8046,7 +8090,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:916
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:932
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v6, s5, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:948
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:964
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:980
@@ -8056,7 +8100,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1044
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1060
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v7, s6, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1076
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1092
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1108
@@ -8066,7 +8110,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1172
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1188
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v8, s7, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1204
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1220
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1236
@@ -8076,7 +8120,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1300
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1316
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v9, s8, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1332
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1348
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1364
@@ -8086,7 +8130,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1428
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1444
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v10, s9, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1460
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1476
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1492
@@ -8096,7 +8140,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1556
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1572
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v11, s10, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1588
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1604
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1620
@@ -8106,7 +8150,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1684
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1700
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v12, s11, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1716
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1732
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1748
@@ -8116,7 +8160,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1812
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1828
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v13, s12, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1844
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1860
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1876
@@ -8126,7 +8170,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1940
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1956
 ; GFX13-TRUE16-NEXT:  .LBB15_3: ; %end
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[0:3], off, s32 offset:180 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[4:7], off, s32 offset:196 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[8:11], off, s32 offset:212 th:TH_LOAD_LU
@@ -8148,7 +8192,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[21:24], off, s32 offset:388 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[25:28], off, s32 offset:404 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:420 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -8166,7 +8210,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[22:25], off, s32 offset:516 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[26:29], off, s32 offset:532 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:548 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -8184,7 +8228,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[23:26], off, s32 offset:644 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[27:30], off, s32 offset:660 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:676 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -8202,7 +8246,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[24:27], off, s32 offset:772 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[28:31], off, s32 offset:788 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:804 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -8219,7 +8263,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[25:28], off, s32 offset:900 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:916 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:932 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -8236,7 +8280,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[26:29], off, s32 offset:1028 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:1044 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[34:37], off, s32 offset:1060 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -8253,7 +8297,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[27:30], off, s32 offset:1156 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:1172 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[35:38], off, s32 offset:1188 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -8270,12 +8314,12 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[28:31], off, s32 offset:1284 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1300 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1316 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v8, v16
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[9:12], off, s32 offset:1332 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[13:16], off, s32 offset:1348 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -8287,12 +8331,12 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:1412 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:1428 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[37:40], off, s32 offset:1444 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v9, v18
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[10:13], off, s32 offset:1460 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[14:17], off, s32 offset:1476 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -8304,12 +8348,12 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:1540 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[34:37], off, s32 offset:1556 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[38:41], off, s32 offset:1572 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v10, v20
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[11:14], off, s32 offset:1588 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[15:18], off, s32 offset:1604 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -8321,12 +8365,12 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:1668 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[35:38], off, s32 offset:1684 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[39:42], off, s32 offset:1700 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v11, v22
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[12:15], off, s32 offset:1716 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[16:19], off, s32 offset:1732 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -8338,12 +8382,12 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1796 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1812 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:1828 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x4
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v12, v24
-; GFX13-TRUE16-NEXT:    s_clause 0x2
+; GFX13-TRUE16-NEXT:    s_clause 0x2 ; 48-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[13:16], off, s32 offset:1844 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[17:20], off, s32 offset:1860 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[21:24], off, s32 offset:1876 th:TH_LOAD_LU
@@ -8354,7 +8398,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:1924 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[37:40], off, s32 offset:1940 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[41:44], off, s32 offset:1956 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -8367,7 +8411,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v23, v99 :: v_dual_mov_b32 v24, v98
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x4
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v25, v96 :: v_dual_mov_b32 v14, v46
-; GFX13-TRUE16-NEXT:    s_clause 0x27
+; GFX13-TRUE16-NEXT:    s_clause 0x27 ; 160-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v127, off, s32
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v126, off, s32 offset:4
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v125, off, s32 offset:8
@@ -8409,7 +8453,7 @@ define inreg <26 x i32> @bitcast_v52i16_to_v26i32_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v46, off, s32 offset:152
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v45, off, s32 offset:156
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x28
-; GFX13-TRUE16-NEXT:    s_clause 0x4
+; GFX13-TRUE16-NEXT:    s_clause 0x4 ; 20-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v44, off, s32 offset:160
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v43, off, s32 offset:164
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v42, off, s32 offset:168
@@ -13927,53 +13971,97 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v8
-; GFX13-TRUE16-NEXT:    s_clause 0x2c
+; GFX13-TRUE16-NEXT:    s_clause 0x2c ; 180-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v40, s32 offset:176
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v41, s32 offset:172
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v42, s32 offset:168
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v43, s32 offset:164
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v44, s32 offset:160
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v45, s32 offset:156
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v46, s32 offset:152
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v47, s32 offset:148
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v56, s32 offset:144
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v57, s32 offset:140
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v58, s32 offset:136
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v59, s32 offset:132
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v60, s32 offset:128
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v61, s32 offset:124
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v62, s32 offset:120
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v63, s32 offset:116
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v72, s32 offset:112
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v73, s32 offset:108
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v74, s32 offset:104
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v75, s32 offset:100
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v76, s32 offset:96
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v77, s32 offset:92
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v78, s32 offset:88
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v79, s32 offset:84
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v88, s32 offset:80
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v89, s32 offset:76
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v90, s32 offset:72
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v91, s32 offset:68
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v92, s32 offset:64
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v93, s32 offset:60
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v94, s32 offset:56
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v95, s32 offset:52
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v104, s32 offset:48
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v105, s32 offset:44
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v106, s32 offset:40
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v107, s32 offset:36
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v108, s32 offset:32
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v109, s32 offset:28
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v110, s32 offset:24
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v111, s32 offset:20
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v123, s32 offset:16
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v124, s32 offset:12
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v125, s32 offset:8
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v126, s32 offset:4
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v127, s32
+; GFX13-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v8
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v96, v7 :: v_dual_mov_b32 v98, v6
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v99, v5 :: v_dual_mov_b32 v126, v4
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v127, v3 :: v_dual_mov_b32 v123, v2
@@ -14021,7 +14109,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v0, s40 :: v_dual_mov_b32 v46, s13
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v62, s14 :: v_dual_mov_b32 v79, s15
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v97, s16
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:180
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:196
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:212
@@ -14031,7 +14119,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:276
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:292
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, s0
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:308
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:324
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:340
@@ -14041,7 +14129,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:404
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:420
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v2, s1
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:436
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:452
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:468
@@ -14051,7 +14139,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:532
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:548
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v3, s2
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:564
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:580
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:596
@@ -14061,7 +14149,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:660
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:676
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v4, s3
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:692
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:708
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:724
@@ -14071,7 +14159,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:788
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:804
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v5, s4
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:820
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:836
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:852
@@ -14081,7 +14169,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:916
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:932
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v6, s5
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:948
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:964
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:980
@@ -14091,7 +14179,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1044
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1060
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v7, s6
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1076
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1092
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1108
@@ -14101,7 +14189,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1172
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1188
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v8, s7
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1204
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1220
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1236
@@ -14111,7 +14199,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1300
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1316
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v9, s8
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1332
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1348
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1364
@@ -14121,7 +14209,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1428
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1444
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v10, s9
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1460
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1476
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1492
@@ -14131,7 +14219,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1556
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1572
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v11, s10
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1588
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1604
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1620
@@ -14141,7 +14229,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1684
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1700
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v12, s11
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1716
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1732
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1748
@@ -14151,7 +14239,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1812
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1828
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v13, s12
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1844
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1860
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1876
@@ -14168,7 +14256,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v124, 0x200, v124 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v123, 0x200, v123 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v127, 0x200, v127 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:180
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:196
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:212
@@ -14186,7 +14274,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v62, 0x200, s14 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v79, 0x200, s15 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v97, 0x200, s16 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:308
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:324
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:340
@@ -14196,7 +14284,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:404
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:420
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v2, 0x200, s1 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:436
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:452
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:468
@@ -14206,7 +14294,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:532
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:548
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v3, 0x200, s2 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:564
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:580
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:596
@@ -14216,7 +14304,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:660
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:676
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v4, 0x200, s3 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:692
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:708
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:724
@@ -14226,7 +14314,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:788
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:804
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v5, 0x200, s4 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:820
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:836
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:852
@@ -14236,7 +14324,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:916
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:932
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v6, 0x200, s5 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:948
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:964
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:980
@@ -14246,7 +14334,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1044
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1060
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v7, 0x200, s6 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1076
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1092
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1108
@@ -14256,7 +14344,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1172
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1188
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v8, 0x200, s7 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1204
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1220
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1236
@@ -14266,7 +14354,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1300
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1316
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v9, 0x200, s8 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1332
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1348
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1364
@@ -14276,7 +14364,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1428
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1444
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v10, 0x200, s9 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1460
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1476
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1492
@@ -14286,7 +14374,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1556
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1572
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v11, 0x200, s10 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1588
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1604
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1620
@@ -14296,7 +14384,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1684
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1700
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v12, 0x200, s11 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1716
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1732
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1748
@@ -14306,7 +14394,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1812
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1828
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v13, 0x200, s12 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1844
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1860
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1876
@@ -14316,7 +14404,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1940
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1956
 ; GFX13-TRUE16-NEXT:  .LBB19_3: ; %end
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[0:3], off, s32 offset:180 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[4:7], off, s32 offset:196 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[8:11], off, s32 offset:212 th:TH_LOAD_LU
@@ -14338,7 +14426,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[21:24], off, s32 offset:388 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[25:28], off, s32 offset:404 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:420 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -14356,7 +14444,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[22:25], off, s32 offset:516 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[26:29], off, s32 offset:532 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:548 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -14374,7 +14462,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[23:26], off, s32 offset:644 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[27:30], off, s32 offset:660 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:676 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -14392,7 +14480,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[24:27], off, s32 offset:772 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[28:31], off, s32 offset:788 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:804 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -14409,7 +14497,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[25:28], off, s32 offset:900 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:916 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:932 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -14426,7 +14514,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[26:29], off, s32 offset:1028 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:1044 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[34:37], off, s32 offset:1060 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -14443,7 +14531,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[27:30], off, s32 offset:1156 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:1172 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[35:38], off, s32 offset:1188 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -14460,12 +14548,12 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[28:31], off, s32 offset:1284 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1300 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1316 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v8, v16
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[9:12], off, s32 offset:1332 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[13:16], off, s32 offset:1348 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -14477,12 +14565,12 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:1412 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:1428 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[37:40], off, s32 offset:1444 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v9, v18
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[10:13], off, s32 offset:1460 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[14:17], off, s32 offset:1476 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -14494,12 +14582,12 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:1540 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[34:37], off, s32 offset:1556 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[38:41], off, s32 offset:1572 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v10, v20
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[11:14], off, s32 offset:1588 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[15:18], off, s32 offset:1604 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -14511,12 +14599,12 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:1668 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[35:38], off, s32 offset:1684 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[39:42], off, s32 offset:1700 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v11, v22
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[12:15], off, s32 offset:1716 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[16:19], off, s32 offset:1732 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -14528,12 +14616,12 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1796 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1812 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:1828 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x4
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v12, v24
-; GFX13-TRUE16-NEXT:    s_clause 0x2
+; GFX13-TRUE16-NEXT:    s_clause 0x2 ; 48-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[13:16], off, s32 offset:1844 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[17:20], off, s32 offset:1860 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[21:24], off, s32 offset:1876 th:TH_LOAD_LU
@@ -14544,7 +14632,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:1924 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[37:40], off, s32 offset:1940 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[41:44], off, s32 offset:1956 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -14557,7 +14645,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v23, v99 :: v_dual_mov_b32 v24, v98
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x4
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v25, v96 :: v_dual_mov_b32 v14, v46
-; GFX13-TRUE16-NEXT:    s_clause 0x27
+; GFX13-TRUE16-NEXT:    s_clause 0x27 ; 160-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v127, off, s32
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v126, off, s32 offset:4
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v125, off, s32 offset:8
@@ -14599,7 +14687,7 @@ define inreg <26 x i32> @bitcast_v52f16_to_v26i32_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v46, off, s32 offset:152
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v45, off, s32 offset:156
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x28
-; GFX13-TRUE16-NEXT:    s_clause 0x4
+; GFX13-TRUE16-NEXT:    s_clause 0x4 ; 20-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v44, off, s32 offset:160
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v43, off, s32 offset:164
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v42, off, s32 offset:168
@@ -21557,53 +21645,97 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v8
-; GFX13-TRUE16-NEXT:    s_clause 0x2c
+; GFX13-TRUE16-NEXT:    s_clause 0x2c ; 180-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v40, s32 offset:176
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v41, s32 offset:172
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v42, s32 offset:168
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v43, s32 offset:164
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v44, s32 offset:160
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v45, s32 offset:156
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v46, s32 offset:152
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v47, s32 offset:148
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v56, s32 offset:144
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v57, s32 offset:140
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v58, s32 offset:136
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v59, s32 offset:132
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v60, s32 offset:128
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v61, s32 offset:124
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v62, s32 offset:120
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v63, s32 offset:116
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v72, s32 offset:112
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v73, s32 offset:108
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v74, s32 offset:104
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v75, s32 offset:100
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v76, s32 offset:96
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v77, s32 offset:92
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v78, s32 offset:88
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v79, s32 offset:84
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v88, s32 offset:80
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v89, s32 offset:76
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v90, s32 offset:72
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v91, s32 offset:68
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v92, s32 offset:64
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v93, s32 offset:60
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v94, s32 offset:56
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v95, s32 offset:52
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v104, s32 offset:48
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v105, s32 offset:44
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v106, s32 offset:40
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v107, s32 offset:36
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v108, s32 offset:32
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v109, s32 offset:28
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v110, s32 offset:24
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v111, s32 offset:20
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v123, s32 offset:16
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v124, s32 offset:12
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v125, s32 offset:8
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v126, s32 offset:4
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v127, s32
+; GFX13-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v8
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v96, v7 :: v_dual_mov_b32 v98, v6
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v99, v5 :: v_dual_mov_b32 v126, v4
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v127, v3 :: v_dual_mov_b32 v123, v2
@@ -21651,7 +21783,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v0, s40 :: v_dual_mov_b32 v46, s13
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v62, s14 :: v_dual_mov_b32 v79, s15
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v97, s16
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:180
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:196
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:212
@@ -21661,7 +21793,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:276
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:292
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, s0
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:308
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:324
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:340
@@ -21671,7 +21803,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:404
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:420
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v2, s1
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:436
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:452
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:468
@@ -21681,7 +21813,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:532
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:548
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v3, s2
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:564
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:580
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:596
@@ -21691,7 +21823,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:660
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:676
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v4, s3
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:692
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:708
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:724
@@ -21701,7 +21833,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:788
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:804
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v5, s4
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:820
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:836
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:852
@@ -21711,7 +21843,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:916
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:932
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v6, s5
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:948
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:964
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:980
@@ -21721,7 +21853,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1044
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1060
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v7, s6
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1076
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1092
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1108
@@ -21731,7 +21863,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1172
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1188
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v8, s7
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1204
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1220
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1236
@@ -21741,7 +21873,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1300
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1316
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v9, s8
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1332
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1348
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1364
@@ -21751,7 +21883,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1428
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1444
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v10, s9
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1460
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1476
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1492
@@ -21761,7 +21893,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1556
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1572
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v11, s10
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1588
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1604
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1620
@@ -21771,7 +21903,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1684
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1700
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v12, s11
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1716
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1732
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1748
@@ -21781,7 +21913,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1812
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1828
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v13, s12
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1844
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1860
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1876
@@ -21798,7 +21930,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v124, v124, 3 op_sel_hi:[1,0]
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v123, v123, 3 op_sel_hi:[1,0]
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v127, v127, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:180
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:196
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:212
@@ -21816,7 +21948,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v62, s14, 3 op_sel_hi:[1,0]
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v79, s15, 3 op_sel_hi:[1,0]
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v97, s16, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:308
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:324
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:340
@@ -21826,7 +21958,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:404
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:420
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v2, s1, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:436
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:452
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:468
@@ -21836,7 +21968,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:532
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:548
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v3, s2, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:564
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:580
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:596
@@ -21846,7 +21978,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:660
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:676
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v4, s3, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:692
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:708
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:724
@@ -21856,7 +21988,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:788
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:804
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v5, s4, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:820
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:836
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:852
@@ -21866,7 +21998,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:916
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:932
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v6, s5, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:948
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:964
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:980
@@ -21876,7 +22008,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1044
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1060
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v7, s6, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1076
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1092
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1108
@@ -21886,7 +22018,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1172
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1188
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v8, s7, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1204
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1220
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1236
@@ -21896,7 +22028,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1300
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1316
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v9, s8, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1332
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1348
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1364
@@ -21906,7 +22038,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1428
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1444
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v10, s9, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1460
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1476
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1492
@@ -21916,7 +22048,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1556
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1572
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v11, s10, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1588
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1604
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1620
@@ -21926,7 +22058,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1684
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1700
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v12, s11, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1716
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1732
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1748
@@ -21936,7 +22068,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1812
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1828
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v13, s12, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1844
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1860
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1876
@@ -21946,7 +22078,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1940
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1956
 ; GFX13-TRUE16-NEXT:  .LBB31_3: ; %end
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[0:3], off, s32 offset:180 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[4:7], off, s32 offset:196 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[8:11], off, s32 offset:212 th:TH_LOAD_LU
@@ -21968,7 +22100,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[21:24], off, s32 offset:388 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[25:28], off, s32 offset:404 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:420 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -21986,7 +22118,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[22:25], off, s32 offset:516 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[26:29], off, s32 offset:532 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:548 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -22004,7 +22136,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[23:26], off, s32 offset:644 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[27:30], off, s32 offset:660 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:676 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -22022,7 +22154,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[24:27], off, s32 offset:772 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[28:31], off, s32 offset:788 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:804 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -22039,7 +22171,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[25:28], off, s32 offset:900 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:916 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:932 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -22056,7 +22188,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[26:29], off, s32 offset:1028 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:1044 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[34:37], off, s32 offset:1060 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -22073,7 +22205,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[27:30], off, s32 offset:1156 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:1172 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[35:38], off, s32 offset:1188 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -22090,12 +22222,12 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[28:31], off, s32 offset:1284 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1300 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1316 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v8, v16
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[9:12], off, s32 offset:1332 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[13:16], off, s32 offset:1348 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -22107,12 +22239,12 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:1412 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:1428 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[37:40], off, s32 offset:1444 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v9, v18
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[10:13], off, s32 offset:1460 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[14:17], off, s32 offset:1476 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -22124,12 +22256,12 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:1540 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[34:37], off, s32 offset:1556 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[38:41], off, s32 offset:1572 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v10, v20
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[11:14], off, s32 offset:1588 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[15:18], off, s32 offset:1604 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -22141,12 +22273,12 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:1668 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[35:38], off, s32 offset:1684 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[39:42], off, s32 offset:1700 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v11, v22
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[12:15], off, s32 offset:1716 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[16:19], off, s32 offset:1732 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -22158,12 +22290,12 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1796 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1812 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:1828 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x4
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v12, v24
-; GFX13-TRUE16-NEXT:    s_clause 0x2
+; GFX13-TRUE16-NEXT:    s_clause 0x2 ; 48-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[13:16], off, s32 offset:1844 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[17:20], off, s32 offset:1860 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[21:24], off, s32 offset:1876 th:TH_LOAD_LU
@@ -22174,7 +22306,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:1924 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[37:40], off, s32 offset:1940 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[41:44], off, s32 offset:1956 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -22187,7 +22319,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v23, v99 :: v_dual_mov_b32 v24, v98
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x4
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v25, v96 :: v_dual_mov_b32 v14, v46
-; GFX13-TRUE16-NEXT:    s_clause 0x27
+; GFX13-TRUE16-NEXT:    s_clause 0x27 ; 160-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v127, off, s32
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v126, off, s32 offset:4
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v125, off, s32 offset:8
@@ -22229,7 +22361,7 @@ define inreg <26 x float> @bitcast_v52i16_to_v26f32_scalar(<52 x i16> inreg %a, 
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v46, off, s32 offset:152
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v45, off, s32 offset:156
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x28
-; GFX13-TRUE16-NEXT:    s_clause 0x4
+; GFX13-TRUE16-NEXT:    s_clause 0x4 ; 20-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v44, off, s32 offset:160
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v43, off, s32 offset:164
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v42, off, s32 offset:168
@@ -27905,53 +28037,97 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v8
-; GFX13-TRUE16-NEXT:    s_clause 0x2c
+; GFX13-TRUE16-NEXT:    s_clause 0x2c ; 180-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v40, s32 offset:176
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v41, s32 offset:172
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v42, s32 offset:168
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v43, s32 offset:164
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v44, s32 offset:160
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v45, s32 offset:156
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v46, s32 offset:152
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v47, s32 offset:148
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v56, s32 offset:144
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v57, s32 offset:140
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v58, s32 offset:136
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v59, s32 offset:132
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v60, s32 offset:128
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v61, s32 offset:124
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v62, s32 offset:120
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v63, s32 offset:116
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v72, s32 offset:112
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v73, s32 offset:108
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v74, s32 offset:104
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v75, s32 offset:100
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v76, s32 offset:96
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v77, s32 offset:92
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v78, s32 offset:88
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v79, s32 offset:84
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v88, s32 offset:80
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v89, s32 offset:76
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v90, s32 offset:72
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v91, s32 offset:68
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v92, s32 offset:64
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v93, s32 offset:60
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v94, s32 offset:56
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v95, s32 offset:52
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v104, s32 offset:48
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v105, s32 offset:44
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v106, s32 offset:40
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v107, s32 offset:36
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v108, s32 offset:32
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v109, s32 offset:28
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v110, s32 offset:24
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v111, s32 offset:20
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v123, s32 offset:16
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v124, s32 offset:12
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v125, s32 offset:8
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v126, s32 offset:4
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v127, s32
+; GFX13-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v8
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v96, v7 :: v_dual_mov_b32 v98, v6
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v99, v5 :: v_dual_mov_b32 v126, v4
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v127, v3 :: v_dual_mov_b32 v123, v2
@@ -27999,7 +28175,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v0, s40 :: v_dual_mov_b32 v46, s13
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v62, s14 :: v_dual_mov_b32 v79, s15
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v97, s16
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:180
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:196
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:212
@@ -28009,7 +28185,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:276
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:292
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, s0
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:308
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:324
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:340
@@ -28019,7 +28195,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:404
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:420
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v2, s1
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:436
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:452
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:468
@@ -28029,7 +28205,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:532
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:548
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v3, s2
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:564
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:580
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:596
@@ -28039,7 +28215,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:660
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:676
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v4, s3
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:692
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:708
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:724
@@ -28049,7 +28225,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:788
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:804
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v5, s4
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:820
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:836
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:852
@@ -28059,7 +28235,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:916
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:932
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v6, s5
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:948
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:964
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:980
@@ -28069,7 +28245,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1044
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1060
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v7, s6
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1076
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1092
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1108
@@ -28079,7 +28255,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1172
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1188
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v8, s7
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1204
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1220
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1236
@@ -28089,7 +28265,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1300
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1316
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v9, s8
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1332
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1348
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1364
@@ -28099,7 +28275,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1428
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1444
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v10, s9
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1460
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1476
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1492
@@ -28109,7 +28285,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1556
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1572
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v11, s10
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1588
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1604
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1620
@@ -28119,7 +28295,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1684
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1700
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v12, s11
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1716
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1732
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1748
@@ -28129,7 +28305,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1812
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1828
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v13, s12
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1844
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1860
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1876
@@ -28146,7 +28322,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v124, 0x200, v124 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v123, 0x200, v123 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v127, 0x200, v127 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:180
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:196
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:212
@@ -28164,7 +28340,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v62, 0x200, s14 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v79, 0x200, s15 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v97, 0x200, s16 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:308
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:324
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:340
@@ -28174,7 +28350,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:404
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:420
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v2, 0x200, s1 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:436
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:452
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:468
@@ -28184,7 +28360,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:532
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:548
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v3, 0x200, s2 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:564
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:580
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:596
@@ -28194,7 +28370,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:660
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:676
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v4, 0x200, s3 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:692
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:708
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:724
@@ -28204,7 +28380,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:788
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:804
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v5, 0x200, s4 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:820
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:836
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:852
@@ -28214,7 +28390,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:916
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:932
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v6, 0x200, s5 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:948
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:964
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:980
@@ -28224,7 +28400,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1044
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1060
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v7, 0x200, s6 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1076
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1092
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1108
@@ -28234,7 +28410,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1172
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1188
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v8, 0x200, s7 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1204
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1220
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1236
@@ -28244,7 +28420,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1300
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1316
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v9, 0x200, s8 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1332
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1348
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1364
@@ -28254,7 +28430,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1428
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1444
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v10, 0x200, s9 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1460
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1476
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1492
@@ -28264,7 +28440,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1556
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1572
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v11, 0x200, s10 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1588
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1604
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1620
@@ -28274,7 +28450,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1684
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1700
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v12, 0x200, s11 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1716
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1732
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1748
@@ -28284,7 +28460,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1812
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1828
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v13, 0x200, s12 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1844
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1860
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1876
@@ -28294,7 +28470,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1940
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1956
 ; GFX13-TRUE16-NEXT:  .LBB35_3: ; %end
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[0:3], off, s32 offset:180 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[4:7], off, s32 offset:196 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[8:11], off, s32 offset:212 th:TH_LOAD_LU
@@ -28316,7 +28492,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[21:24], off, s32 offset:388 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[25:28], off, s32 offset:404 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:420 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -28334,7 +28510,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[22:25], off, s32 offset:516 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[26:29], off, s32 offset:532 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:548 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -28352,7 +28528,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[23:26], off, s32 offset:644 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[27:30], off, s32 offset:660 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:676 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -28370,7 +28546,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[24:27], off, s32 offset:772 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[28:31], off, s32 offset:788 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:804 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -28387,7 +28563,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[25:28], off, s32 offset:900 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:916 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:932 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -28404,7 +28580,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[26:29], off, s32 offset:1028 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:1044 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[34:37], off, s32 offset:1060 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -28421,7 +28597,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[27:30], off, s32 offset:1156 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:1172 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[35:38], off, s32 offset:1188 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -28438,12 +28614,12 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[28:31], off, s32 offset:1284 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1300 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1316 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v8, v16
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[9:12], off, s32 offset:1332 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[13:16], off, s32 offset:1348 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -28455,12 +28631,12 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:1412 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:1428 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[37:40], off, s32 offset:1444 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v9, v18
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[10:13], off, s32 offset:1460 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[14:17], off, s32 offset:1476 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -28472,12 +28648,12 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:1540 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[34:37], off, s32 offset:1556 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[38:41], off, s32 offset:1572 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v10, v20
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[11:14], off, s32 offset:1588 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[15:18], off, s32 offset:1604 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -28489,12 +28665,12 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:1668 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[35:38], off, s32 offset:1684 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[39:42], off, s32 offset:1700 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v11, v22
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[12:15], off, s32 offset:1716 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[16:19], off, s32 offset:1732 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -28506,12 +28682,12 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1796 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1812 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:1828 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x4
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v12, v24
-; GFX13-TRUE16-NEXT:    s_clause 0x2
+; GFX13-TRUE16-NEXT:    s_clause 0x2 ; 48-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[13:16], off, s32 offset:1844 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[17:20], off, s32 offset:1860 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[21:24], off, s32 offset:1876 th:TH_LOAD_LU
@@ -28522,7 +28698,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:1924 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[37:40], off, s32 offset:1940 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[41:44], off, s32 offset:1956 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -28535,7 +28711,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v23, v99 :: v_dual_mov_b32 v24, v98
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x4
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v25, v96 :: v_dual_mov_b32 v14, v46
-; GFX13-TRUE16-NEXT:    s_clause 0x27
+; GFX13-TRUE16-NEXT:    s_clause 0x27 ; 160-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v127, off, s32
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v126, off, s32 offset:4
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v125, off, s32 offset:8
@@ -28577,7 +28753,7 @@ define inreg <26 x float> @bitcast_v52f16_to_v26f32_scalar(<52 x half> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v46, off, s32 offset:152
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v45, off, s32 offset:156
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x28
-; GFX13-TRUE16-NEXT:    s_clause 0x4
+; GFX13-TRUE16-NEXT:    s_clause 0x4 ; 20-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v44, off, s32 offset:160
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v43, off, s32 offset:164
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v42, off, s32 offset:168
@@ -34458,53 +34634,97 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v8
-; GFX13-TRUE16-NEXT:    s_clause 0x2c
+; GFX13-TRUE16-NEXT:    s_clause 0x2c ; 180-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v40, s32 offset:176
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v41, s32 offset:172
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v42, s32 offset:168
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v43, s32 offset:164
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v44, s32 offset:160
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v45, s32 offset:156
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v46, s32 offset:152
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v47, s32 offset:148
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v56, s32 offset:144
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v57, s32 offset:140
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v58, s32 offset:136
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v59, s32 offset:132
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v60, s32 offset:128
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v61, s32 offset:124
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v62, s32 offset:120
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v63, s32 offset:116
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v72, s32 offset:112
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v73, s32 offset:108
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v74, s32 offset:104
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v75, s32 offset:100
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v76, s32 offset:96
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v77, s32 offset:92
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v78, s32 offset:88
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v79, s32 offset:84
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v88, s32 offset:80
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v89, s32 offset:76
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v90, s32 offset:72
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v91, s32 offset:68
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v92, s32 offset:64
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v93, s32 offset:60
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v94, s32 offset:56
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v95, s32 offset:52
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v104, s32 offset:48
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v105, s32 offset:44
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v106, s32 offset:40
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v107, s32 offset:36
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v108, s32 offset:32
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v109, s32 offset:28
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v110, s32 offset:24
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v111, s32 offset:20
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v123, s32 offset:16
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v124, s32 offset:12
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v125, s32 offset:8
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v126, s32 offset:4
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v127, s32
+; GFX13-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v8
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v96, v7 :: v_dual_mov_b32 v98, v6
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v99, v5 :: v_dual_mov_b32 v126, v4
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v127, v3 :: v_dual_mov_b32 v123, v2
@@ -34552,7 +34772,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v0, s40 :: v_dual_mov_b32 v46, s13
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v62, s14 :: v_dual_mov_b32 v79, s15
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v97, s16
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:180
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:196
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:212
@@ -34562,7 +34782,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:276
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:292
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, s0
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:308
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:324
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:340
@@ -34572,7 +34792,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:404
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:420
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v2, s1
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:436
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:452
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:468
@@ -34582,7 +34802,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:532
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:548
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v3, s2
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:564
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:580
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:596
@@ -34592,7 +34812,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:660
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:676
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v4, s3
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:692
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:708
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:724
@@ -34602,7 +34822,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:788
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:804
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v5, s4
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:820
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:836
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:852
@@ -34612,7 +34832,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:916
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:932
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v6, s5
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:948
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:964
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:980
@@ -34622,7 +34842,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1044
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1060
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v7, s6
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1076
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1092
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1108
@@ -34632,7 +34852,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1172
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1188
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v8, s7
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1204
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1220
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1236
@@ -34642,7 +34862,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1300
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1316
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v9, s8
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1332
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1348
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1364
@@ -34652,7 +34872,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1428
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1444
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v10, s9
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1460
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1476
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1492
@@ -34662,7 +34882,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1556
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1572
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v11, s10
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1588
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1604
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1620
@@ -34672,7 +34892,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1684
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1700
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v12, s11
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1716
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1732
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1748
@@ -34682,7 +34902,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1812
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1828
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v13, s12
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1844
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1860
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1876
@@ -34699,7 +34919,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v124, v124, 3 op_sel_hi:[1,0]
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v123, v123, 3 op_sel_hi:[1,0]
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v127, v127, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:180
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:196
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:212
@@ -34717,7 +34937,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v62, s14, 3 op_sel_hi:[1,0]
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v79, s15, 3 op_sel_hi:[1,0]
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v97, s16, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:308
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:324
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:340
@@ -34727,7 +34947,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:404
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:420
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v2, s1, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:436
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:452
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:468
@@ -34737,7 +34957,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:532
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:548
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v3, s2, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:564
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:580
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:596
@@ -34747,7 +34967,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:660
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:676
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v4, s3, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:692
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:708
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:724
@@ -34757,7 +34977,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:788
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:804
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v5, s4, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:820
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:836
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:852
@@ -34767,7 +34987,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:916
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:932
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v6, s5, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:948
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:964
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:980
@@ -34777,7 +34997,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1044
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1060
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v7, s6, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1076
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1092
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1108
@@ -34787,7 +35007,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1172
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1188
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v8, s7, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1204
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1220
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1236
@@ -34797,7 +35017,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1300
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1316
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v9, s8, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1332
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1348
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1364
@@ -34807,7 +35027,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1428
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1444
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v10, s9, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1460
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1476
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1492
@@ -34817,7 +35037,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1556
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1572
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v11, s10, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1588
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1604
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1620
@@ -34827,7 +35047,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1684
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1700
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v12, s11, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1716
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1732
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1748
@@ -34837,7 +35057,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1812
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1828
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v13, s12, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1844
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1860
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1876
@@ -34847,7 +35067,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1940
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1956
 ; GFX13-TRUE16-NEXT:  .LBB43_3: ; %end
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[0:3], off, s32 offset:180 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[4:7], off, s32 offset:196 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[8:11], off, s32 offset:212 th:TH_LOAD_LU
@@ -34869,7 +35089,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[21:24], off, s32 offset:388 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[25:28], off, s32 offset:404 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:420 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -34887,7 +35107,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[22:25], off, s32 offset:516 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[26:29], off, s32 offset:532 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:548 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -34905,7 +35125,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[23:26], off, s32 offset:644 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[27:30], off, s32 offset:660 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:676 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -34923,7 +35143,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[24:27], off, s32 offset:772 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[28:31], off, s32 offset:788 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:804 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -34940,7 +35160,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[25:28], off, s32 offset:900 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:916 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:932 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -34957,7 +35177,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[26:29], off, s32 offset:1028 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:1044 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[34:37], off, s32 offset:1060 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -34974,7 +35194,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[27:30], off, s32 offset:1156 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:1172 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[35:38], off, s32 offset:1188 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -34991,12 +35211,12 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[28:31], off, s32 offset:1284 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1300 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1316 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v8, v16
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[9:12], off, s32 offset:1332 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[13:16], off, s32 offset:1348 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -35008,12 +35228,12 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:1412 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:1428 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[37:40], off, s32 offset:1444 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v9, v18
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[10:13], off, s32 offset:1460 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[14:17], off, s32 offset:1476 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -35025,12 +35245,12 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:1540 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[34:37], off, s32 offset:1556 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[38:41], off, s32 offset:1572 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v10, v20
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[11:14], off, s32 offset:1588 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[15:18], off, s32 offset:1604 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -35042,12 +35262,12 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:1668 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[35:38], off, s32 offset:1684 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[39:42], off, s32 offset:1700 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v11, v22
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[12:15], off, s32 offset:1716 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[16:19], off, s32 offset:1732 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -35059,12 +35279,12 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1796 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1812 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:1828 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x4
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v12, v24
-; GFX13-TRUE16-NEXT:    s_clause 0x2
+; GFX13-TRUE16-NEXT:    s_clause 0x2 ; 48-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[13:16], off, s32 offset:1844 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[17:20], off, s32 offset:1860 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[21:24], off, s32 offset:1876 th:TH_LOAD_LU
@@ -35075,7 +35295,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:1924 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[37:40], off, s32 offset:1940 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[41:44], off, s32 offset:1956 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -35088,7 +35308,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v23, v99 :: v_dual_mov_b32 v24, v98
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x4
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v25, v96 :: v_dual_mov_b32 v14, v46
-; GFX13-TRUE16-NEXT:    s_clause 0x27
+; GFX13-TRUE16-NEXT:    s_clause 0x27 ; 160-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v127, off, s32
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v126, off, s32 offset:4
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v125, off, s32 offset:8
@@ -35130,7 +35350,7 @@ define inreg <13 x i64> @bitcast_v52i16_to_v13i64_scalar(<52 x i16> inreg %a, i3
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v46, off, s32 offset:152
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v45, off, s32 offset:156
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x28
-; GFX13-TRUE16-NEXT:    s_clause 0x4
+; GFX13-TRUE16-NEXT:    s_clause 0x4 ; 20-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v44, off, s32 offset:160
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v43, off, s32 offset:164
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v42, off, s32 offset:168
@@ -40690,53 +40910,97 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v8
-; GFX13-TRUE16-NEXT:    s_clause 0x2c
+; GFX13-TRUE16-NEXT:    s_clause 0x2c ; 180-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v40, s32 offset:176
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v41, s32 offset:172
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v42, s32 offset:168
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v43, s32 offset:164
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v44, s32 offset:160
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v45, s32 offset:156
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v46, s32 offset:152
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v47, s32 offset:148
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v56, s32 offset:144
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v57, s32 offset:140
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v58, s32 offset:136
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v59, s32 offset:132
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v60, s32 offset:128
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v61, s32 offset:124
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v62, s32 offset:120
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v63, s32 offset:116
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v72, s32 offset:112
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v73, s32 offset:108
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v74, s32 offset:104
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v75, s32 offset:100
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v76, s32 offset:96
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v77, s32 offset:92
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v78, s32 offset:88
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v79, s32 offset:84
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v88, s32 offset:80
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v89, s32 offset:76
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v90, s32 offset:72
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v91, s32 offset:68
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v92, s32 offset:64
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v93, s32 offset:60
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v94, s32 offset:56
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v95, s32 offset:52
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v104, s32 offset:48
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v105, s32 offset:44
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v106, s32 offset:40
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v107, s32 offset:36
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v108, s32 offset:32
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v109, s32 offset:28
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v110, s32 offset:24
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v111, s32 offset:20
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v123, s32 offset:16
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v124, s32 offset:12
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v125, s32 offset:8
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v126, s32 offset:4
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v127, s32
+; GFX13-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v8
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v96, v7 :: v_dual_mov_b32 v98, v6
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v99, v5 :: v_dual_mov_b32 v126, v4
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v127, v3 :: v_dual_mov_b32 v123, v2
@@ -40784,7 +41048,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v0, s40 :: v_dual_mov_b32 v46, s13
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v62, s14 :: v_dual_mov_b32 v79, s15
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v97, s16
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:180
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:196
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:212
@@ -40794,7 +41058,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:276
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:292
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, s0
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:308
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:324
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:340
@@ -40804,7 +41068,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:404
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:420
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v2, s1
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:436
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:452
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:468
@@ -40814,7 +41078,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:532
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:548
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v3, s2
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:564
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:580
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:596
@@ -40824,7 +41088,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:660
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:676
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v4, s3
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:692
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:708
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:724
@@ -40834,7 +41098,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:788
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:804
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v5, s4
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:820
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:836
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:852
@@ -40844,7 +41108,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:916
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:932
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v6, s5
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:948
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:964
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:980
@@ -40854,7 +41118,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1044
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1060
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v7, s6
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1076
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1092
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1108
@@ -40864,7 +41128,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1172
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1188
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v8, s7
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1204
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1220
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1236
@@ -40874,7 +41138,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1300
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1316
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v9, s8
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1332
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1348
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1364
@@ -40884,7 +41148,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1428
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1444
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v10, s9
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1460
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1476
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1492
@@ -40894,7 +41158,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1556
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1572
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v11, s10
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1588
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1604
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1620
@@ -40904,7 +41168,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1684
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1700
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v12, s11
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1716
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1732
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1748
@@ -40914,7 +41178,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1812
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1828
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v13, s12
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1844
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1860
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1876
@@ -40931,7 +41195,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v124, 0x200, v124 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v123, 0x200, v123 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v127, 0x200, v127 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:180
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:196
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:212
@@ -40949,7 +41213,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v62, 0x200, s14 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v79, 0x200, s15 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v97, 0x200, s16 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:308
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:324
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:340
@@ -40959,7 +41223,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:404
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:420
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v2, 0x200, s1 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:436
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:452
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:468
@@ -40969,7 +41233,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:532
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:548
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v3, 0x200, s2 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:564
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:580
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:596
@@ -40979,7 +41243,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:660
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:676
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v4, 0x200, s3 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:692
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:708
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:724
@@ -40989,7 +41253,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:788
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:804
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v5, 0x200, s4 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:820
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:836
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:852
@@ -40999,7 +41263,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:916
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:932
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v6, 0x200, s5 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:948
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:964
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:980
@@ -41009,7 +41273,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1044
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1060
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v7, 0x200, s6 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1076
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1092
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1108
@@ -41019,7 +41283,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1172
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1188
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v8, 0x200, s7 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1204
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1220
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1236
@@ -41029,7 +41293,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1300
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1316
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v9, 0x200, s8 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1332
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1348
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1364
@@ -41039,7 +41303,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1428
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1444
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v10, 0x200, s9 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1460
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1476
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1492
@@ -41049,7 +41313,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1556
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1572
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v11, 0x200, s10 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1588
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1604
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1620
@@ -41059,7 +41323,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1684
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1700
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v12, 0x200, s11 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1716
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1732
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1748
@@ -41069,7 +41333,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1812
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1828
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v13, 0x200, s12 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1844
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1860
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1876
@@ -41079,7 +41343,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1940
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1956
 ; GFX13-TRUE16-NEXT:  .LBB47_3: ; %end
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[0:3], off, s32 offset:180 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[4:7], off, s32 offset:196 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[8:11], off, s32 offset:212 th:TH_LOAD_LU
@@ -41101,7 +41365,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[21:24], off, s32 offset:388 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[25:28], off, s32 offset:404 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:420 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -41119,7 +41383,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[22:25], off, s32 offset:516 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[26:29], off, s32 offset:532 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:548 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -41137,7 +41401,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[23:26], off, s32 offset:644 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[27:30], off, s32 offset:660 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:676 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -41155,7 +41419,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[24:27], off, s32 offset:772 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[28:31], off, s32 offset:788 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:804 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -41172,7 +41436,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[25:28], off, s32 offset:900 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:916 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:932 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -41189,7 +41453,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[26:29], off, s32 offset:1028 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:1044 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[34:37], off, s32 offset:1060 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -41206,7 +41470,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[27:30], off, s32 offset:1156 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:1172 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[35:38], off, s32 offset:1188 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -41223,12 +41487,12 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[28:31], off, s32 offset:1284 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1300 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1316 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v8, v16
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[9:12], off, s32 offset:1332 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[13:16], off, s32 offset:1348 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -41240,12 +41504,12 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:1412 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:1428 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[37:40], off, s32 offset:1444 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v9, v18
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[10:13], off, s32 offset:1460 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[14:17], off, s32 offset:1476 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -41257,12 +41521,12 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:1540 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[34:37], off, s32 offset:1556 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[38:41], off, s32 offset:1572 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v10, v20
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[11:14], off, s32 offset:1588 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[15:18], off, s32 offset:1604 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -41274,12 +41538,12 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:1668 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[35:38], off, s32 offset:1684 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[39:42], off, s32 offset:1700 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v11, v22
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[12:15], off, s32 offset:1716 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[16:19], off, s32 offset:1732 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -41291,12 +41555,12 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1796 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1812 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:1828 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x4
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v12, v24
-; GFX13-TRUE16-NEXT:    s_clause 0x2
+; GFX13-TRUE16-NEXT:    s_clause 0x2 ; 48-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[13:16], off, s32 offset:1844 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[17:20], off, s32 offset:1860 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[21:24], off, s32 offset:1876 th:TH_LOAD_LU
@@ -41307,7 +41571,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:1924 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[37:40], off, s32 offset:1940 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[41:44], off, s32 offset:1956 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -41320,7 +41584,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v23, v99 :: v_dual_mov_b32 v24, v98
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x4
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v25, v96 :: v_dual_mov_b32 v14, v46
-; GFX13-TRUE16-NEXT:    s_clause 0x27
+; GFX13-TRUE16-NEXT:    s_clause 0x27 ; 160-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v127, off, s32
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v126, off, s32 offset:4
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v125, off, s32 offset:8
@@ -41362,7 +41626,7 @@ define inreg <13 x i64> @bitcast_v52f16_to_v13i64_scalar(<52 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v46, off, s32 offset:152
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v45, off, s32 offset:156
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x28
-; GFX13-TRUE16-NEXT:    s_clause 0x4
+; GFX13-TRUE16-NEXT:    s_clause 0x4 ; 20-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v44, off, s32 offset:160
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v43, off, s32 offset:164
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v42, off, s32 offset:168
@@ -46362,53 +46626,97 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v8
-; GFX13-TRUE16-NEXT:    s_clause 0x2c
+; GFX13-TRUE16-NEXT:    s_clause 0x2c ; 180-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v40, s32 offset:176
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v41, s32 offset:172
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v42, s32 offset:168
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v43, s32 offset:164
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v44, s32 offset:160
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v45, s32 offset:156
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v46, s32 offset:152
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v47, s32 offset:148
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v56, s32 offset:144
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v57, s32 offset:140
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v58, s32 offset:136
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v59, s32 offset:132
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v60, s32 offset:128
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v61, s32 offset:124
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v62, s32 offset:120
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v63, s32 offset:116
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v72, s32 offset:112
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v73, s32 offset:108
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v74, s32 offset:104
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v75, s32 offset:100
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v76, s32 offset:96
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v77, s32 offset:92
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v78, s32 offset:88
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v79, s32 offset:84
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v88, s32 offset:80
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v89, s32 offset:76
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v90, s32 offset:72
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v91, s32 offset:68
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v92, s32 offset:64
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v93, s32 offset:60
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v94, s32 offset:56
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v95, s32 offset:52
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v104, s32 offset:48
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v105, s32 offset:44
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v106, s32 offset:40
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v107, s32 offset:36
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v108, s32 offset:32
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v109, s32 offset:28
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v110, s32 offset:24
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v111, s32 offset:20
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v123, s32 offset:16
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v124, s32 offset:12
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v125, s32 offset:8
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v126, s32 offset:4
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v127, s32
+; GFX13-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v8
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v96, v7 :: v_dual_mov_b32 v98, v6
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v99, v5 :: v_dual_mov_b32 v126, v4
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v127, v3 :: v_dual_mov_b32 v123, v2
@@ -46456,7 +46764,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v0, s40 :: v_dual_mov_b32 v46, s13
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v62, s14 :: v_dual_mov_b32 v79, s15
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v97, s16
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:180
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:196
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:212
@@ -46466,7 +46774,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:276
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:292
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, s0
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:308
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:324
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:340
@@ -46476,7 +46784,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:404
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:420
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v2, s1
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:436
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:452
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:468
@@ -46486,7 +46794,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:532
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:548
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v3, s2
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:564
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:580
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:596
@@ -46496,7 +46804,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:660
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:676
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v4, s3
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:692
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:708
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:724
@@ -46506,7 +46814,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:788
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:804
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v5, s4
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:820
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:836
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:852
@@ -46516,7 +46824,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:916
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:932
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v6, s5
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:948
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:964
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:980
@@ -46526,7 +46834,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1044
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1060
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v7, s6
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1076
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1092
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1108
@@ -46536,7 +46844,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1172
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1188
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v8, s7
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1204
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1220
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1236
@@ -46546,7 +46854,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1300
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1316
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v9, s8
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1332
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1348
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1364
@@ -46556,7 +46864,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1428
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1444
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v10, s9
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1460
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1476
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1492
@@ -46566,7 +46874,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1556
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1572
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v11, s10
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1588
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1604
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1620
@@ -46576,7 +46884,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1684
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1700
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v12, s11
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1716
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1732
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1748
@@ -46586,7 +46894,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1812
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1828
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v13, s12
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1844
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1860
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1876
@@ -46603,7 +46911,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v124, v124, 3 op_sel_hi:[1,0]
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v123, v123, 3 op_sel_hi:[1,0]
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v127, v127, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:180
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:196
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:212
@@ -46621,7 +46929,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v62, s14, 3 op_sel_hi:[1,0]
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v79, s15, 3 op_sel_hi:[1,0]
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v97, s16, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:308
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:324
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:340
@@ -46631,7 +46939,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:404
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:420
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v2, s1, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:436
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:452
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:468
@@ -46641,7 +46949,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:532
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:548
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v3, s2, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:564
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:580
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:596
@@ -46651,7 +46959,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:660
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:676
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v4, s3, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:692
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:708
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:724
@@ -46661,7 +46969,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:788
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:804
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v5, s4, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:820
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:836
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:852
@@ -46671,7 +46979,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:916
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:932
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v6, s5, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:948
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:964
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:980
@@ -46681,7 +46989,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1044
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1060
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v7, s6, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1076
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1092
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1108
@@ -46691,7 +46999,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1172
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1188
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v8, s7, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1204
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1220
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1236
@@ -46701,7 +47009,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1300
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1316
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v9, s8, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1332
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1348
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1364
@@ -46711,7 +47019,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1428
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1444
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v10, s9, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1460
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1476
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1492
@@ -46721,7 +47029,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1556
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1572
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v11, s10, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1588
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1604
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1620
@@ -46731,7 +47039,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1684
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1700
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v12, s11, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1716
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1732
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1748
@@ -46741,7 +47049,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1812
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1828
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v13, s12, 3 op_sel_hi:[1,0]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1844
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1860
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1876
@@ -46751,7 +47059,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1940
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1956
 ; GFX13-TRUE16-NEXT:  .LBB51_3: ; %end
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[0:3], off, s32 offset:180 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[4:7], off, s32 offset:196 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[8:11], off, s32 offset:212 th:TH_LOAD_LU
@@ -46773,7 +47081,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[21:24], off, s32 offset:388 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[25:28], off, s32 offset:404 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:420 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -46791,7 +47099,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[22:25], off, s32 offset:516 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[26:29], off, s32 offset:532 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:548 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -46809,7 +47117,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[23:26], off, s32 offset:644 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[27:30], off, s32 offset:660 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:676 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -46827,7 +47135,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[24:27], off, s32 offset:772 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[28:31], off, s32 offset:788 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:804 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -46844,7 +47152,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[25:28], off, s32 offset:900 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:916 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:932 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -46861,7 +47169,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[26:29], off, s32 offset:1028 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:1044 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[34:37], off, s32 offset:1060 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -46878,7 +47186,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[27:30], off, s32 offset:1156 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:1172 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[35:38], off, s32 offset:1188 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -46895,12 +47203,12 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[28:31], off, s32 offset:1284 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1300 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1316 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v8, v16
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[9:12], off, s32 offset:1332 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[13:16], off, s32 offset:1348 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -46912,12 +47220,12 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:1412 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:1428 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[37:40], off, s32 offset:1444 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v9, v18
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[10:13], off, s32 offset:1460 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[14:17], off, s32 offset:1476 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -46929,12 +47237,12 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:1540 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[34:37], off, s32 offset:1556 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[38:41], off, s32 offset:1572 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v10, v20
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[11:14], off, s32 offset:1588 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[15:18], off, s32 offset:1604 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -46946,12 +47254,12 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:1668 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[35:38], off, s32 offset:1684 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[39:42], off, s32 offset:1700 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v11, v22
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[12:15], off, s32 offset:1716 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[16:19], off, s32 offset:1732 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -46963,12 +47271,12 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1796 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1812 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:1828 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x4
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v12, v24
-; GFX13-TRUE16-NEXT:    s_clause 0x2
+; GFX13-TRUE16-NEXT:    s_clause 0x2 ; 48-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[13:16], off, s32 offset:1844 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[17:20], off, s32 offset:1860 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[21:24], off, s32 offset:1876 th:TH_LOAD_LU
@@ -46979,7 +47287,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:1924 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[37:40], off, s32 offset:1940 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[41:44], off, s32 offset:1956 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -46992,7 +47300,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v23, v99 :: v_dual_mov_b32 v24, v98
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x4
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v25, v96 :: v_dual_mov_b32 v14, v46
-; GFX13-TRUE16-NEXT:    s_clause 0x27
+; GFX13-TRUE16-NEXT:    s_clause 0x27 ; 160-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v127, off, s32
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v126, off, s32 offset:4
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v125, off, s32 offset:8
@@ -47034,7 +47342,7 @@ define inreg <13 x double> @bitcast_v52i16_to_v13f64_scalar(<52 x i16> inreg %a,
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v46, off, s32 offset:152
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v45, off, s32 offset:156
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x28
-; GFX13-TRUE16-NEXT:    s_clause 0x4
+; GFX13-TRUE16-NEXT:    s_clause 0x4 ; 20-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v44, off, s32 offset:160
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v43, off, s32 offset:164
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v42, off, s32 offset:168
@@ -52737,53 +53045,97 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v8
-; GFX13-TRUE16-NEXT:    s_clause 0x2c
+; GFX13-TRUE16-NEXT:    s_clause 0x2c ; 180-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v40, s32 offset:176
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v41, s32 offset:172
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v42, s32 offset:168
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v43, s32 offset:164
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v44, s32 offset:160
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v45, s32 offset:156
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v46, s32 offset:152
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v47, s32 offset:148
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v56, s32 offset:144
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v57, s32 offset:140
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v58, s32 offset:136
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v59, s32 offset:132
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v60, s32 offset:128
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v61, s32 offset:124
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v62, s32 offset:120
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v63, s32 offset:116
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v72, s32 offset:112
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v73, s32 offset:108
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v74, s32 offset:104
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v75, s32 offset:100
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v76, s32 offset:96
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v77, s32 offset:92
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v78, s32 offset:88
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v79, s32 offset:84
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v88, s32 offset:80
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v89, s32 offset:76
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v90, s32 offset:72
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v91, s32 offset:68
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v92, s32 offset:64
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v93, s32 offset:60
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v94, s32 offset:56
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v95, s32 offset:52
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v104, s32 offset:48
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v105, s32 offset:44
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v106, s32 offset:40
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v107, s32 offset:36
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v108, s32 offset:32
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v109, s32 offset:28
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v110, s32 offset:24
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v111, s32 offset:20
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v123, s32 offset:16
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v124, s32 offset:12
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v125, s32 offset:8
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v126, s32 offset:4
+; GFX13-TRUE16-NEXT:    ; meta instruction
 ; GFX13-TRUE16-NEXT:    scratch_store_b32 off, v127, s32
+; GFX13-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v8
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v96, v7 :: v_dual_mov_b32 v98, v6
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v99, v5 :: v_dual_mov_b32 v126, v4
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v127, v3 :: v_dual_mov_b32 v123, v2
@@ -52831,7 +53183,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v0, s40 :: v_dual_mov_b32 v46, s13
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v62, s14 :: v_dual_mov_b32 v79, s15
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v97, s16
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:180
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:196
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:212
@@ -52841,7 +53193,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:276
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:292
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, s0
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:308
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:324
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:340
@@ -52851,7 +53203,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:404
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:420
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v2, s1
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:436
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:452
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:468
@@ -52861,7 +53213,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:532
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:548
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v3, s2
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:564
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:580
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:596
@@ -52871,7 +53223,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:660
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:676
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v4, s3
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:692
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:708
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:724
@@ -52881,7 +53233,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:788
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:804
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v5, s4
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:820
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:836
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:852
@@ -52891,7 +53243,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:916
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:932
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v6, s5
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:948
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:964
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:980
@@ -52901,7 +53253,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1044
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1060
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v7, s6
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1076
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1092
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1108
@@ -52911,7 +53263,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1172
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1188
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v8, s7
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1204
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1220
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1236
@@ -52921,7 +53273,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1300
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1316
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v9, s8
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1332
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1348
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1364
@@ -52931,7 +53283,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1428
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1444
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v10, s9
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1460
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1476
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1492
@@ -52941,7 +53293,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1556
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1572
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v11, s10
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1588
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1604
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1620
@@ -52951,7 +53303,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1684
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1700
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v12, s11
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1716
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1732
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1748
@@ -52961,7 +53313,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1812
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1828
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v13, s12
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1844
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1860
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1876
@@ -52978,7 +53330,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v124, 0x200, v124 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v123, 0x200, v123 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v127, 0x200, v127 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:180
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:196
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:212
@@ -52996,7 +53348,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v62, 0x200, s14 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v79, 0x200, s15 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v97, 0x200, s16 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:308
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:324
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:340
@@ -53006,7 +53358,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:404
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:420
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v2, 0x200, s1 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:436
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:452
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:468
@@ -53016,7 +53368,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:532
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:548
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v3, 0x200, s2 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:564
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:580
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:596
@@ -53026,7 +53378,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:660
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:676
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v4, 0x200, s3 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:692
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:708
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:724
@@ -53036,7 +53388,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:788
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:804
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v5, 0x200, s4 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:820
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:836
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:852
@@ -53046,7 +53398,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:916
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:932
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v6, 0x200, s5 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:948
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:964
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:980
@@ -53056,7 +53408,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1044
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1060
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v7, 0x200, s6 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1076
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1092
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1108
@@ -53066,7 +53418,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1172
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1188
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v8, 0x200, s7 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1204
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1220
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1236
@@ -53076,7 +53428,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1300
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1316
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v9, 0x200, s8 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1332
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1348
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1364
@@ -53086,7 +53438,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1428
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1444
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v10, 0x200, s9 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1460
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1476
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1492
@@ -53096,7 +53448,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1556
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1572
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v11, 0x200, s10 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1588
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1604
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1620
@@ -53106,7 +53458,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1684
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1700
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v12, 0x200, s11 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1716
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1732
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1748
@@ -53116,7 +53468,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1812
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1828
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v13, 0x200, s12 op_sel_hi:[0,1]
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Spill
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:1844
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[4:7], s32 offset:1860
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s32 offset:1876
@@ -53126,7 +53478,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[24:27], s32 offset:1940
 ; GFX13-TRUE16-NEXT:    scratch_store_b128 off, v[28:31], s32 offset:1956
 ; GFX13-TRUE16-NEXT:  .LBB55_3: ; %end
-; GFX13-TRUE16-NEXT:    s_clause 0x7
+; GFX13-TRUE16-NEXT:    s_clause 0x7 ; 128-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[0:3], off, s32 offset:180 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[4:7], off, s32 offset:196 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[8:11], off, s32 offset:212 th:TH_LOAD_LU
@@ -53148,7 +53500,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[21:24], off, s32 offset:388 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[25:28], off, s32 offset:404 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:420 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -53166,7 +53518,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[22:25], off, s32 offset:516 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[26:29], off, s32 offset:532 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:548 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -53184,7 +53536,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[23:26], off, s32 offset:644 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[27:30], off, s32 offset:660 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:676 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -53202,7 +53554,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[24:27], off, s32 offset:772 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[28:31], off, s32 offset:788 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:804 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -53219,7 +53571,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[25:28], off, s32 offset:900 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:916 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:932 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -53236,7 +53588,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[26:29], off, s32 offset:1028 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:1044 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[34:37], off, s32 offset:1060 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -53253,7 +53605,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[27:30], off, s32 offset:1156 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:1172 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[35:38], off, s32 offset:1188 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -53270,12 +53622,12 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[28:31], off, s32 offset:1284 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1300 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1316 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v8, v16
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[9:12], off, s32 offset:1332 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[13:16], off, s32 offset:1348 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -53287,12 +53639,12 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[29:32], off, s32 offset:1412 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:1428 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[37:40], off, s32 offset:1444 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v9, v18
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[10:13], off, s32 offset:1460 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[14:17], off, s32 offset:1476 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -53304,12 +53656,12 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[30:33], off, s32 offset:1540 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[34:37], off, s32 offset:1556 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[38:41], off, s32 offset:1572 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v10, v20
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[11:14], off, s32 offset:1588 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[15:18], off, s32 offset:1604 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -53321,12 +53673,12 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[31:34], off, s32 offset:1668 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[35:38], off, s32 offset:1684 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[39:42], off, s32 offset:1700 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v11, v22
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[12:15], off, s32 offset:1716 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[16:19], off, s32 offset:1732 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
@@ -53338,12 +53690,12 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[32:35], off, s32 offset:1796 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[36:39], off, s32 offset:1812 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[40:43], off, s32 offset:1828 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x4
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v12, v24
-; GFX13-TRUE16-NEXT:    s_clause 0x2
+; GFX13-TRUE16-NEXT:    s_clause 0x2 ; 48-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[13:16], off, s32 offset:1844 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[17:20], off, s32 offset:1860 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[21:24], off, s32 offset:1876 th:TH_LOAD_LU
@@ -53354,7 +53706,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[33:36], off, s32 offset:1924 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; GFX13-TRUE16-NEXT:    s_clause 0x1
+; GFX13-TRUE16-NEXT:    s_clause 0x1 ; 32-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[37:40], off, s32 offset:1940 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    scratch_load_b128 v[41:44], off, s32 offset:1956 th:TH_LOAD_LU
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x7
@@ -53367,7 +53719,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v23, v99 :: v_dual_mov_b32 v24, v98
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x4
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v25, v96 :: v_dual_mov_b32 v14, v46
-; GFX13-TRUE16-NEXT:    s_clause 0x27
+; GFX13-TRUE16-NEXT:    s_clause 0x27 ; 160-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v127, off, s32
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v126, off, s32 offset:4
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v125, off, s32 offset:8
@@ -53409,7 +53761,7 @@ define inreg <13 x double> @bitcast_v52f16_to_v13f64_scalar(<52 x half> inreg %a
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v46, off, s32 offset:152
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v45, off, s32 offset:156
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x28
-; GFX13-TRUE16-NEXT:    s_clause 0x4
+; GFX13-TRUE16-NEXT:    s_clause 0x4 ; 20-byte Folded Reload
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v44, off, s32 offset:160
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v43, off, s32 offset:164
 ; GFX13-TRUE16-NEXT:    scratch_load_b32 v42, off, s32 offset:168
