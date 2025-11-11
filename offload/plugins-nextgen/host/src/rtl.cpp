@@ -45,6 +45,19 @@
 // The number of devices in this plugin.
 #define NUM_DEVICES 4
 
+// The ELF ID should be defined at compile-time by the build system.
+#ifndef TARGET_ELF_ID
+#define TARGET_ELF_ID EM_NONE
+#endif
+
+// The target triple should be defined at compile-time by the build system.
+#ifndef LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE
+#define LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE ""
+#endif
+
+extern std::unique_ptr<llvm::omp::target::plugin::GenericProfilerTy>
+getProfilerToAttach();
+
 namespace llvm {
 namespace omp {
 namespace target {
@@ -380,6 +393,9 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return Info;
   }
 
+  /// This plugin should not setup the device environment or memory pool.
+  virtual bool shouldSetupDeviceMemoryPool() const override { return false; };
+
   /// Getters and setters for stack size and heap size not relevant.
   Error getDeviceStackSize(uint64_t &Value) override {
     Value = 0;
@@ -388,6 +404,11 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error setDeviceStackSize(uint64_t Value) override {
     return Plugin::success();
   }
+  Error getDeviceHeapSize(uint64_t &Value) override {
+    Value = 0;
+    return Plugin::success();
+  }
+  Error setDeviceHeapSize(uint64_t Value) override { return Plugin::success(); }
 
 private:
   /// Grid values for Generic ELF64 plugins.

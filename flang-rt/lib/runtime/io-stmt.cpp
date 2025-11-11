@@ -1112,8 +1112,8 @@ ChildListIoStatementState<DIR>::ChildListIoStatementState(
   if constexpr (DIR == Direction::Input) {
     if (const auto *listInput{child.parent()
                 .get_if<ListDirectedStatementState<Direction::Input>>()}) {
-      this->set_eatComma(listInput->eatComma());
       this->namelistGroup_ = listInput->namelistGroup();
+      this->set_eatComma(listInput->eatComma());
       if (auto *childListInput{child.parent()
                   .get_if<ChildListIoStatementState<Direction::Input>>()}) {
         // Child list input whose parent is child list input: can advance

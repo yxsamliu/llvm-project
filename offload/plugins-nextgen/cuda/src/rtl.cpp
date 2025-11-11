@@ -36,6 +36,9 @@
 
 using namespace error;
 
+extern std::unique_ptr<llvm::omp::target::plugin::GenericProfilerTy>
+getProfilerToAttach();
+
 namespace llvm {
 namespace omp {
 namespace target {
@@ -1235,6 +1238,11 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Info;
   }
 
+  virtual bool shouldSetupDeviceMemoryPool() const override {
+    /// We use the CUDA malloc for now.
+    return false;
+  }
+
   /// Getters and setters for stack and heap sizes.
   Error getDeviceStackSize(uint64_t &Value) override {
     return getCtxLimit(CU_LIMIT_STACK_SIZE, Value);
@@ -1242,7 +1250,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
   Error setDeviceStackSize(uint64_t Value) override {
     return setCtxLimit(CU_LIMIT_STACK_SIZE, Value);
   }
-  bool hasDeviceHeapSize() override { return true; }
   Error getDeviceHeapSize(uint64_t &Value) override {
     return getCtxLimit(CU_LIMIT_MALLOC_HEAP_SIZE, Value);
   }
@@ -1325,7 +1332,7 @@ private:
     }
 
     // Sort the created array to be in priority order.
-    llvm::sort(Funcs, [=](auto X, auto Y) { return X.second < Y.second; });
+    llvm::sort(Funcs, [=](auto x, auto y) { return x.second < y.second; });
 
     // Allocate a buffer to store all of the known constructor / destructor
     // functions in so we can iterate them on the device.
@@ -1608,6 +1615,24 @@ struct CUDAPluginTy final : public GenericPluginTy {
     // run on any GPU with the same major revision and same or higher minor
     // revision.
     return Major == ImageMajor && Minor >= ImageMinor;
+  }
+  bool IsSystemSupportingManagedMemory() override final {
+    assert(getNumDevices());
+
+    CUdevice Device;
+    CUresult Res = cuDeviceGet(&Device, 0);
+
+    if (Res != CUDA_SUCCESS)
+      return false;
+
+    int HasManagedMemorySupport = false;
+    Res = cuDeviceGetAttribute(&HasManagedMemorySupport,
+                               CU_DEVICE_ATTRIBUTE_MANAGED_MEMORY, Device);
+
+    if (Res != CUDA_SUCCESS)
+      return false;
+
+    return HasManagedMemorySupport;
   }
 };
 

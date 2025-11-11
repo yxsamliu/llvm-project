@@ -41,6 +41,7 @@ inititializeRuntime(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
   synchronize::init(IsSPMD);
   mapping::init(IsSPMD);
   state::init(IsSPMD, KernelEnvironment, KernelLaunchEnvironment);
+  allocator::init(IsSPMD, KernelEnvironment);
   workshare::init(IsSPMD);
 }
 
@@ -157,6 +158,8 @@ void __kmpc_target_deinit() {
     ASSERT(WorkFn == nullptr, nullptr);
   }
 }
+
+void __kmpc_specialized_kernel_init() { mapping::init(/*IsSPMD=*/true); }
 
 int8_t __kmpc_is_spmd_exec_mode() { return mapping::isSPMDMode(); }
 }

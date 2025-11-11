@@ -185,6 +185,11 @@ public:
                     const InputInfo &Output, const InputInfoList &Inputs,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
+  void ConstructOpaqueJob(Compilation &C, const JobAction &JA,
+                          const InputInfo &Output, const InputInfoList &Inputs,
+                          const llvm::opt::ArgList &TCArgs,
+                          const llvm::Triple &TheTriple,
+                          const char *LinkingOutput) const;
 };
 
 // Calculate the output path of the module file when compiling a module unit
