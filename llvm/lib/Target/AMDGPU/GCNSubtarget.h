@@ -173,13 +173,13 @@ protected:
   bool HasWMMA128bInsts = false;
   bool HasWMMA256bInsts = false;
   bool HasWMMA2048bInsts = false;
-  bool HasV_CUBEInsts = false;
-  bool HasV_LERPInsts = false;
-  bool HasV_SADInsts = false;
-  bool HasV_QSADInsts = false;
-  bool HasV_CVT_NORMInsts = false;
-  bool HasV_CVT_PKNORM_VOP2Insts = false;
-  bool HasV_CVT_PKNORM_VOP3Insts = false;
+  bool HasVCUBEInsts = false;
+  bool HasVLERPInsts = false;
+  bool HasVSADInsts = false;
+  bool HasVQSADInsts = false;
+  bool HasVCVTNORMInsts = false;
+  bool HasVCVTPKNORMVOP2Insts = false;
+  bool HasVCVTPKNORMVOP3Insts = false;
   bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
@@ -924,19 +924,19 @@ public:
 
   bool hasWMMA2048bInsts() const { return HasWMMA2048bInsts; }
 
-  bool hasV_CUBEInsts() const { return HasV_CUBEInsts; }
+  bool hasVCUBEInsts() const { return HasVCUBEInsts; }
 
-  bool hasV_LERPInsts() const { return HasV_LERPInsts; }
+  bool hasVLERPInsts() const { return HasVLERPInsts; }
 
-  bool hasV_SADInsts() const { return HasV_SADInsts; }
+  bool hasVSADInsts() const { return HasVSADInsts; }
 
-  bool hasV_QSADInsts() const { return HasV_QSADInsts; }
+  bool hasVQSADInsts() const { return HasVQSADInsts; }
 
-  bool hasV_CVT_NORMInsts() const { return HasV_CVT_NORMInsts; }
+  bool hasVCVTNORMInsts() const { return HasVCVTNORMInsts; }
 
-  bool hasV_CVT_PKNORM_VOP2Insts() const { return HasV_CVT_PKNORM_VOP2Insts; }
+  bool hasVCVTPKNORMVOP2Insts() const { return HasVCVTPKNORMVOP2Insts; }
 
-  bool hasV_CVT_PKNORM_VOP3Insts() const { return HasV_CVT_PKNORM_VOP3Insts; }
+  bool hasVCVTPKNORMVOP3Insts() const { return HasVCVTPKNORMVOP3Insts; }
 
   bool isGFX1170() const {
     return getGeneration() == GFX11 && hasWMMA128bInsts();
