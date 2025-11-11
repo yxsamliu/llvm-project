@@ -403,10 +403,6 @@ define void @load_mcast_b32_vaddr_imm_mask_local(ptr addrspace(3) %addr, ptr add
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_mov_b32 s0, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, 7
-=======
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, 7
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -434,10 +430,6 @@ define void @load_mcast_b32_vaddr_imm_mask_dstgep_local(ptr addrspace(3) %addr, 
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_mov_b32 s0, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, 7
-=======
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, 7
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -466,10 +458,6 @@ define void @load_mcast_b32_vaddr_imm_mask_dst2_local(ptr addrspace(3) %addr, pt
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_mov_b32 s0, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, 7
-=======
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, 7
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -503,10 +491,6 @@ define void @load_mcast_b32_vaddr_imm_mask_comp_local(ptr addrspace(3) %addr, pt
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_mov_b32 s0, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, 7
-=======
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, 7
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -535,13 +519,8 @@ define void @load_mcast_b32_saddr_local(ptr addrspace(3) inreg %addr, ptr addrsp
 ; CHECK-NEXT:    s_mov_b32 s2, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, s1
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-=======
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, s1
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    ds_load_mcast_b32 g1[0], v2 offset:16
 ; CHECK-NEXT:    s_wait_dscnt 0x0
@@ -568,13 +547,8 @@ define void @load_mcast_monitor_b32_saddr_scale_offset_local(ptr addrspace(3) in
 ; CHECK-NEXT:    s_mov_b32 s2, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    v_lshl_add_u32 v2, v2, 2, s0
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, s1
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-=======
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, s1
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    ds_load_mcast_b32 g1[0], v2
 ; CHECK-NEXT:    s_wait_dscnt 0x0
@@ -629,10 +603,6 @@ define void @load_mcast_b64_vaddr_imm_mask_local(ptr addrspace(3) %addr, ptr add
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_mov_b32 s0, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, 0x10007
-=======
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, 0x10007
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -661,13 +631,8 @@ define void @load_mcast_b64_saddr_local(ptr addrspace(3) inreg %addr, ptr addrsp
 ; CHECK-NEXT:    s_mov_b32 s2, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, s1
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-=======
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, s1
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    ds_load_mcast_b64 g1[0:1], v2 offset:32
 ; CHECK-NEXT:    s_wait_dscnt 0x0
@@ -694,13 +659,8 @@ define void @load_mcast_monitor_b64_saddr_scale_offset_local(ptr addrspace(3) in
 ; CHECK-NEXT:    s_mov_b32 s2, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    v_lshl_add_u32 v2, v2, 3, s0
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, s1
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-=======
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, s1
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    ds_load_mcast_b64 g1[0:1], v2
 ; CHECK-NEXT:    s_wait_dscnt 0x0
@@ -755,10 +715,6 @@ define void @load_mcast_b128_vaddr_imm_mask_local(ptr addrspace(3) %addr, ptr ad
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_mov_b32 s0, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, 15
-=======
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, 15
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -787,13 +743,8 @@ define void @load_mcast_b128_saddr_local(ptr addrspace(3) inreg %addr, ptr addrs
 ; CHECK-NEXT:    s_mov_b32 s2, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, s1
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-=======
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, s1
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    ds_load_mcast_b128 g1[0:3], v2 offset:64
 ; CHECK-NEXT:    s_wait_dscnt 0x0
@@ -849,10 +800,6 @@ define void @load_mcast_b32_vaddr_imm_mask_distributed(ptr addrspace(11) %addr, 
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_mov_b32 s0, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, 7
-=======
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, 7
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -880,10 +827,6 @@ define void @load_mcast_b32_vaddr_imm_mask_dstgep_distributed(ptr addrspace(11) 
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_mov_b32 s0, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, 7
-=======
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, 7
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -912,10 +855,6 @@ define void @load_mcast_b32_vaddr_imm_mask_dst2_distributed(ptr addrspace(11) %a
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_mov_b32 s0, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, 7
-=======
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, 7
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -949,10 +888,6 @@ define void @load_mcast_b32_vaddr_imm_mask_comp_distributed(ptr addrspace(11) %a
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_mov_b32 s0, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, 7
-=======
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, 7
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -981,13 +916,8 @@ define void @load_mcast_b32_saddr_distributed(ptr addrspace(11) inreg %addr, ptr
 ; CHECK-NEXT:    s_mov_b32 s2, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, s1
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-=======
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, s1
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    dds_load_mcast_b32 g1[0], v2, s0 offset:16 th:TH_LOAD_NT_HT scope:SCOPE_DEV
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
@@ -1015,13 +945,8 @@ define void @load_mcast_monitor_b32_saddr_scale_offset_distributed(ptr addrspace
 ; CHECK-NEXT:    s_mov_b32 s2, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, s1
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-=======
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, s1
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    dds_load_mcast_b32 g1[0], v2, s0 th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
@@ -1076,10 +1001,6 @@ define void @load_mcast_b64_vaddr_imm_mask_distributed(ptr addrspace(11) %addr, 
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_mov_b32 s0, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, 0x10007
-=======
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, 0x10007
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -1108,13 +1029,8 @@ define void @load_mcast_b64_saddr_distributed(ptr addrspace(11) inreg %addr, ptr
 ; CHECK-NEXT:    s_mov_b32 s2, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, s1
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-=======
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, s1
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    dds_load_mcast_b64 g1[0:1], v2, s0 offset:32 th:TH_LOAD_NT_HT scope:SCOPE_DEV
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
@@ -1141,13 +1057,8 @@ define void @load_mcast_monitor_b64_saddr_scale_offset_distributed(ptr addrspace
 ; CHECK-NEXT:    s_mov_b32 s2, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 3, v2
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, s1
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-=======
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, s1
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    dds_load_mcast_b64 g1[0:1], v2, s0 th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
@@ -1202,10 +1113,6 @@ define void @load_mcast_b128_vaddr_imm_mask_distributed(ptr addrspace(11) %addr,
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_mov_b32 s0, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, 15
-=======
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, 15
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -1234,13 +1141,8 @@ define void @load_mcast_b128_saddr_distributed(ptr addrspace(11) inreg %addr, pt
 ; CHECK-NEXT:    s_mov_b32 s2, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
-<<<<<<< HEAD
-; CHECK-NEXT:    s_mov_b32 m0, s1
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-=======
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, s1
->>>>>>> 836f9adf547c185d19e1a3c52029c66b1a6720c4
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    dds_load_mcast_b128 g1[0:3], v2, s0 offset:64 th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
