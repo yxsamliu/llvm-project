@@ -497,6 +497,18 @@ def FeatureCvtPkF16F32Inst : SubtargetFeature<"cvt-pk-f16-f32-inst",
   "Has cvt_pk_f16_f32 instruction"
 >;
 
+def FeatureSemaphores : SubtargetFeature<"semaphores",
+  "HasSemaphores",
+  "true",
+  "Has s_sema_* instructions"
+>;
+
+def FeatureWavegroups : SubtargetFeature<"wavegroups",
+  "HasWavegroups",
+  "true",
+  "Has wavegroups"
+>;
+
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
@@ -543,7 +555,8 @@ def FeatureGFX1250Insts : SubtargetFeature<"gfx1250-insts",
 def FeatureGFX13Insts : SubtargetFeature<"gfx13-insts",
   "GFX13Insts",
   "true",
-  "Additional instructions for GFX13+"
+  "Additional instructions for GFX13+",
+  [FeatureSemaphores, FeatureWavegroups]
 >;
 
 def FeatureGFX10_3Insts : SubtargetFeature<"gfx10-3-insts",
@@ -725,6 +738,12 @@ def FeaturePackedFP64Ops : SubtargetFeature<"packed-fp64-ops",
   "HasPackedFP64Ops",
   "true",
   "Support packed fp64 instructions"
+>;
+
+def FeaturePackedU64Ops : SubtargetFeature<"packed-u64-ops",
+  "HasPackedU64Ops",
+  "true",
+  "Support packed uint64 instructions"
 >;
 
 def FeatureR128A16 : SubtargetFeature<"r128-a16",
@@ -1522,6 +1541,18 @@ def FeatureAddSubU64Insts
 def FeatureMadU32Inst : SubtargetFeature<"mad-u32-inst", "HasMadU32Inst",
                                          "true", "Has v_mad_u32 instruction">;
 
+def FeatureAddMinMaxInsts : SubtargetFeature<"add-min-max-insts",
+  "HasAddMinMaxInsts",
+  "true",
+  "Has v_add_{min|max}_{i|u}32 instructions"
+>;
+
+def FeaturePkAddMinMaxInsts : SubtargetFeature<"pk-add-min-max-insts",
+  "HasPkAddMinMaxInsts",
+  "true",
+  "Has v_pk_add_{min|max}_{i|u}16 instructions"
+>;
+
 def FeatureMemToLDSLoad : SubtargetFeature<"vmem-to-lds-load-insts",
   "HasVMemToLDSLoad",
   "true",
@@ -1544,6 +1575,13 @@ def FeatureClusters : SubtargetFeature< "clusters",
   "HasClusters",
   "true",
   "Has clusters of workgroups support"
+>;
+
+def FeatureWaitsBeforeSystemScopeStores : SubtargetFeature<
+  "waits-before-system-scope-stores",
+  "RequiresWaitsBeforeSystemScopeStores",
+  "true",
+  "Target requires waits for loads and atomics before system scope stores"
 >;
 
 // Dummy feature used to disable assembler instructions.
@@ -2180,7 +2218,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureMaxHardClauseLength32,
    Feature1_5xVGPRs,
    FeatureMemoryAtomicFAddF32DenormalSupport,
-   FeatureBVHDualAndBVH8Insts
+   FeatureBVHDualAndBVH8Insts,
+   FeatureWaitsBeforeSystemScopeStores,
    ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2247,6 +2286,8 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
    FeatureMadU32Inst,
+   FeatureAddMinMaxInsts,
+   FeaturePkAddMinMaxInsts,
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
    Feature45BitNumRecordsBufferResource,
@@ -2260,6 +2301,7 @@ def FeatureISAVersion12_51 : FeatureSet<
   [FullRate64Ops,
    FeatureDPALU_DPP,
    FeaturePackedFP64Ops,
+   FeaturePackedU64Ops,
    FeatureGFX1251GEMMInsts])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -2898,6 +2940,9 @@ def HasPackedFP32Ops : Predicate<"Subtarget->hasPackedFP32Ops()">,
 def HasPackedFP64Ops : Predicate<"Subtarget->hasPackedFP64Ops()">,
   AssemblerPredicate<(all_of FeaturePackedFP64Ops)>;
 
+def HasPackedU64Ops : Predicate<"Subtarget->hasPackedU64Ops()">,
+  AssemblerPredicate<(all_of FeaturePackedU64Ops)>;
+
 def HasPkMovB32 : Predicate<"Subtarget->hasPkMovB32()">,
   AssemblerPredicate<(all_of FeatureGFX90AInsts)>;
 
@@ -2911,11 +2956,11 @@ def HasFmaakFmamkF64Insts :
 
 def HasAddMinMaxInsts :
   Predicate<"Subtarget->hasAddMinMaxInsts()">,
-  AssemblerPredicate<(all_of FeatureGFX1250Insts, (not FeatureGFX13Insts))>;
+  AssemblerPredicate<(any_of FeatureAddMinMaxInsts)>;
 
 def HasPkAddMinMaxInsts :
   Predicate<"Subtarget->hasPkAddMinMaxInsts()">,
-  AssemblerPredicate<(all_of FeatureGFX1250Insts, (not FeatureGFX13Insts))>;
+  AssemblerPredicate<(any_of FeaturePkAddMinMaxInsts)>;
 
 def HasPkMinMax3Insts :
   Predicate<"Subtarget->hasPkMinMax3Insts()">,
@@ -3158,6 +3203,14 @@ def Has1024AddressableVGPRs : Predicate<"Subtarget->has1024AddressableVGPRs()">,
 
 def HasVGPRIndexingRegisters : Predicate<"Subtarget->hasVGPRIndexingRegisters()">,
   AssemblerPredicate<(all_of FeatureVGPRIndexingRegisters)>;
+
+def HasSemaphores :
+  Predicate<"Subtarget->hasSemaphores()">,
+  AssemblerPredicate<(all_of FeatureSemaphores)>;
+
+def HasWavegroups :
+  Predicate<"Subtarget->hasWavegroups()">,
+  AssemblerPredicate<(all_of FeatureWavegroups)>;
 
 def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
   AssemblerPredicate<(all_of FeatureWaitXcnt)>;

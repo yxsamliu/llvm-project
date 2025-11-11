@@ -8380,13 +8380,9 @@ define void @v_bitcast_v4i8_to_v2bf16(i32 %cond, ptr addrspace(1) %out, <4 x i8>
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v4.l
 ; GFX11-TRUE16-NEXT:    v_and_b16 v3.l, 0xff, v5.l
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v3.h, 8, v6.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v4.h, 0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_or_b16 v4.l, v0.l, v0.h
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v3.l, v3.h
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v4.h
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v0, v4, v0
 ; GFX11-TRUE16-NEXT:  .LBB68_2: ; %end
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    global_store_b32 v[1:2], v0, off
@@ -10341,33 +10337,22 @@ define void @v_bitcast_v12i8_to_v6bf16(i32 %cond, ptr addrspace(1) %out, <12 x i
 ; GFX11-TRUE16-NEXT:  ; %bb.1: ; %if
 ; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v3.l
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v4.l
-; GFX11-TRUE16-NEXT:    v_and_b16 v3.l, 0xff, v5.l
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v3.h, 8, v6.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v4.h, 0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_or_b16 v4.l, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v7.l
-; GFX11-TRUE16-NEXT:    v_or_b16 v5.h, v3.l, v3.h
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_3) | instid1(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v4.h
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v8.l
-; GFX11-TRUE16-NEXT:    v_and_b16 v3.l, 0xff, v9.l
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v3.h, 8, v10.l
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v15, v4, v5
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_or_b16 v4.l, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v11.l
-; GFX11-TRUE16-NEXT:    v_or_b16 v5.h, v3.l, v3.h
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v12.l
-; GFX11-TRUE16-NEXT:    v_and_b16 v3.l, 0xff, v13.l
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v3.h, 8, v14.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v16, v4, v5
-; GFX11-TRUE16-NEXT:    v_or_b16 v4.l, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v4.h
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v3.l, v3.h
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v17, v4, v0
+; GFX11-TRUE16-NEXT:    v_and_b16 v3.l, 0xff, v7.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v3.h, 8, v8.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v4.l, 0xff, v9.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v4.h, 8, v10.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v15.l, v0.l, v0.h
+; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v5.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v6.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v5.l, 0xff, v11.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v5.h, 8, v12.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v6.l, 0xff, v13.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v6.h, 8, v14.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v15.h, v0.l, v0.h
+; GFX11-TRUE16-NEXT:    v_or_b16 v16.l, v3.l, v3.h
+; GFX11-TRUE16-NEXT:    v_or_b16 v16.h, v4.l, v4.h
+; GFX11-TRUE16-NEXT:    v_or_b16 v17.l, v5.l, v5.h
+; GFX11-TRUE16-NEXT:    v_or_b16 v17.h, v6.l, v6.h
 ; GFX11-TRUE16-NEXT:  .LBB87_2: ; %end
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    global_store_b96 v[1:2], v[15:17], off
@@ -11535,40 +11520,26 @@ define void @v_bitcast_v16i8_to_v8bf16(i32 %cond, ptr addrspace(1) %out, <16 x i
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v4.l
 ; GFX11-TRUE16-NEXT:    v_and_b16 v3.l, 0xff, v5.l
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v3.h, 8, v6.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v4.h, 0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_or_b16 v4.l, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v7.l
-; GFX11-TRUE16-NEXT:    v_or_b16 v5.h, v3.l, v3.h
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_3) | instid1(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v4.h
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v8.l
-; GFX11-TRUE16-NEXT:    v_and_b16 v3.l, 0xff, v9.l
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v3.h, 8, v10.l
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v19, v4, v5
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_or_b16 v4.l, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v11.l
-; GFX11-TRUE16-NEXT:    v_or_b16 v5.h, v3.l, v3.h
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v12.l
-; GFX11-TRUE16-NEXT:    v_and_b16 v3.l, 0xff, v13.l
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v3.h, 8, v14.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v20, v4, v5
-; GFX11-TRUE16-NEXT:    v_or_b16 v4.l, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v15.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_3) | instid1(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_or_b16 v5.h, v3.l, v3.h
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v16.l
-; GFX11-TRUE16-NEXT:    v_and_b16 v3.l, 0xff, v17.l
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v3.h, 8, v18.l
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v21, v4, v5
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_or_b16 v4.l, v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v4.h
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v3.l, v3.h
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v22, v4, v0
+; GFX11-TRUE16-NEXT:    v_and_b16 v4.l, 0xff, v7.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v4.h, 8, v8.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v19.l, v0.l, v0.h
+; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v9.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v19.h, v3.l, v3.h
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v10.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v20.l, v4.l, v4.h
+; GFX11-TRUE16-NEXT:    v_and_b16 v3.l, 0xff, v11.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v3.h, 8, v12.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v4.l, 0xff, v13.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v4.h, 8, v14.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v5.l, 0xff, v15.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v5.h, 8, v16.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v6.l, 0xff, v17.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v6.h, 8, v18.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v20.h, v0.l, v0.h
+; GFX11-TRUE16-NEXT:    v_or_b16 v21.l, v3.l, v3.h
+; GFX11-TRUE16-NEXT:    v_or_b16 v21.h, v4.l, v4.h
+; GFX11-TRUE16-NEXT:    v_or_b16 v22.l, v5.l, v5.h
+; GFX11-TRUE16-NEXT:    v_or_b16 v22.h, v6.l, v6.h
 ; GFX11-TRUE16-NEXT:  .LBB96_2: ; %end
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    global_store_b128 v[1:2], v[19:22], off
@@ -22896,11 +22867,19 @@ define void @v_bitcast_v32f32_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <32 x
 ; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:44 ; 4-byte Folded Reload
 ; VI-NEXT:    s_movk_i32 s4, 0x70
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, s4, v1
 ; VI-NEXT:    v_addc_u32_e32 v4, vcc, 0, v2, vcc
 ; VI-NEXT:    s_movk_i32 s4, 0x60
-; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(8)
 ; VI-NEXT:    flat_store_dwordx4 v[3:4], v[17:20]
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, s4, v1
 ; VI-NEXT:    v_addc_u32_e32 v4, vcc, 0, v2, vcc
@@ -22912,14 +22891,6 @@ define void @v_bitcast_v32f32_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <32 x
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v2, vcc
 ; VI-NEXT:    flat_store_dwordx4 v[3:4], v[9:12]
 ; VI-NEXT:    flat_store_dwordx4 v[0:1], v[5:8]
-; VI-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:44 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -23066,7 +23037,7 @@ define void @v_bitcast_v32f32_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <32 x
 ; GFX11-LABEL: v_bitcast_v32f32_to_v64bf16:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Spill
 ; GFX11-NEXT:    scratch_store_b32 off, v40, s32 offset:76
 ; GFX11-NEXT:    ; meta instruction
 ; GFX11-NEXT:    scratch_store_b32 off, v41, s32 offset:72
@@ -23170,7 +23141,7 @@ define void @v_bitcast_v32f32_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <32 x
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[43:46], off offset:96
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[39:42], off offset:80
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[35:38], off offset:64
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Reload
 ; GFX11-NEXT:    scratch_load_b32 v63, off, s32 offset:16
 ; GFX11-NEXT:    scratch_load_b32 v62, off, s32 offset:20
 ; GFX11-NEXT:    scratch_load_b32 v61, off, s32 offset:24
@@ -23862,11 +23833,19 @@ define void @v_bitcast_v32i32_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <32 x
 ; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:44 ; 4-byte Folded Reload
 ; VI-NEXT:    s_movk_i32 s4, 0x70
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, s4, v1
 ; VI-NEXT:    v_addc_u32_e32 v4, vcc, 0, v2, vcc
 ; VI-NEXT:    s_movk_i32 s4, 0x60
-; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(8)
 ; VI-NEXT:    flat_store_dwordx4 v[3:4], v[17:20]
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, s4, v1
 ; VI-NEXT:    v_addc_u32_e32 v4, vcc, 0, v2, vcc
@@ -23878,14 +23857,6 @@ define void @v_bitcast_v32i32_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <32 x
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v2, vcc
 ; VI-NEXT:    flat_store_dwordx4 v[3:4], v[9:12]
 ; VI-NEXT:    flat_store_dwordx4 v[0:1], v[5:8]
-; VI-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:44 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -24032,7 +24003,7 @@ define void @v_bitcast_v32i32_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <32 x
 ; GFX11-LABEL: v_bitcast_v32i32_to_v64bf16:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Spill
 ; GFX11-NEXT:    scratch_store_b32 off, v40, s32 offset:76
 ; GFX11-NEXT:    ; meta instruction
 ; GFX11-NEXT:    scratch_store_b32 off, v41, s32 offset:72
@@ -24136,7 +24107,7 @@ define void @v_bitcast_v32i32_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <32 x
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[43:46], off offset:96
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[39:42], off offset:80
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[35:38], off offset:64
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Reload
 ; GFX11-NEXT:    scratch_load_b32 v63, off, s32 offset:16
 ; GFX11-NEXT:    scratch_load_b32 v62, off, s32 offset:20
 ; GFX11-NEXT:    scratch_load_b32 v61, off, s32 offset:24
@@ -25020,11 +24991,19 @@ define void @v_bitcast_v64i16_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <64 x
 ; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:44 ; 4-byte Folded Reload
 ; VI-NEXT:    s_movk_i32 s4, 0x70
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, s4, v1
 ; VI-NEXT:    v_addc_u32_e32 v4, vcc, 0, v2, vcc
 ; VI-NEXT:    s_movk_i32 s4, 0x60
-; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(8)
 ; VI-NEXT:    flat_store_dwordx4 v[3:4], v[17:20]
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, s4, v1
 ; VI-NEXT:    v_addc_u32_e32 v4, vcc, 0, v2, vcc
@@ -25036,14 +25015,6 @@ define void @v_bitcast_v64i16_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <64 x
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v2, vcc
 ; VI-NEXT:    flat_store_dwordx4 v[3:4], v[9:12]
 ; VI-NEXT:    flat_store_dwordx4 v[0:1], v[5:8]
-; VI-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:44 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -25190,7 +25161,7 @@ define void @v_bitcast_v64i16_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <64 x
 ; GFX11-LABEL: v_bitcast_v64i16_to_v64bf16:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Spill
 ; GFX11-NEXT:    scratch_store_b32 off, v40, s32 offset:76
 ; GFX11-NEXT:    ; meta instruction
 ; GFX11-NEXT:    scratch_store_b32 off, v41, s32 offset:72
@@ -25294,7 +25265,7 @@ define void @v_bitcast_v64i16_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <64 x
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[43:46], off offset:96
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[39:42], off offset:80
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[35:38], off offset:64
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Reload
 ; GFX11-NEXT:    scratch_load_b32 v63, off, s32 offset:16
 ; GFX11-NEXT:    scratch_load_b32 v62, off, s32 offset:20
 ; GFX11-NEXT:    scratch_load_b32 v61, off, s32 offset:24
@@ -26243,11 +26214,19 @@ define void @v_bitcast_v64f16_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <64 x
 ; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:44 ; 4-byte Folded Reload
 ; VI-NEXT:    s_movk_i32 s4, 0x70
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, s4, v1
 ; VI-NEXT:    v_addc_u32_e32 v4, vcc, 0, v2, vcc
 ; VI-NEXT:    s_movk_i32 s4, 0x60
-; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(8)
 ; VI-NEXT:    flat_store_dwordx4 v[3:4], v[17:20]
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, s4, v1
 ; VI-NEXT:    v_addc_u32_e32 v4, vcc, 0, v2, vcc
@@ -26259,14 +26238,6 @@ define void @v_bitcast_v64f16_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <64 x
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v2, vcc
 ; VI-NEXT:    flat_store_dwordx4 v[3:4], v[9:12]
 ; VI-NEXT:    flat_store_dwordx4 v[0:1], v[5:8]
-; VI-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:44 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -26413,7 +26384,7 @@ define void @v_bitcast_v64f16_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <64 x
 ; GFX11-LABEL: v_bitcast_v64f16_to_v64bf16:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Spill
 ; GFX11-NEXT:    scratch_store_b32 off, v40, s32 offset:76
 ; GFX11-NEXT:    ; meta instruction
 ; GFX11-NEXT:    scratch_store_b32 off, v41, s32 offset:72
@@ -26517,7 +26488,7 @@ define void @v_bitcast_v64f16_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <64 x
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[43:46], off offset:96
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[39:42], off offset:80
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[35:38], off offset:64
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Reload
 ; GFX11-NEXT:    scratch_load_b32 v63, off, s32 offset:16
 ; GFX11-NEXT:    scratch_load_b32 v62, off, s32 offset:20
 ; GFX11-NEXT:    scratch_load_b32 v61, off, s32 offset:24
@@ -28478,7 +28449,6 @@ define void @v_bitcast_v128i8_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <128 
 ; VI-NEXT:    v_addc_u32_e32 v4, vcc, 0, v2, vcc
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 64, v1
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v2, vcc
-; VI-NEXT:    flat_store_dwordx4 v[3:4], v[51:54]
 ; VI-NEXT:    flat_store_dwordx4 v[0:1], v[47:50]
 ; VI-NEXT:    buffer_load_dword v63, off, s[0:3], s32 offset:400 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v62, off, s[0:3], s32 offset:404 ; 4-byte Folded Reload
@@ -28496,6 +28466,7 @@ define void @v_bitcast_v128i8_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <128 
 ; VI-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:452 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:456 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:460 ; 4-byte Folded Reload
+; VI-NEXT:    flat_store_dwordx4 v[3:4], v[51:54]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -29206,7 +29177,7 @@ define void @v_bitcast_v128i8_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <128 
 ; GFX11-TRUE16-LABEL: v_bitcast_v128i8_to_v64bf16:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    s_clause 0xe
+; GFX11-TRUE16-NEXT:    s_clause 0xe ; 60-byte Folded Spill
 ; GFX11-TRUE16-NEXT:    scratch_store_b32 off, v40, s32 offset:456
 ; GFX11-TRUE16-NEXT:    ; meta instruction
 ; GFX11-TRUE16-NEXT:    scratch_store_b32 off, v41, s32 offset:452
@@ -29582,7 +29553,7 @@ define void @v_bitcast_v128i8_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <128 
 ; GFX11-TRUE16-NEXT:    global_store_b128 v[1:2], v[55:58], off offset:96
 ; GFX11-TRUE16-NEXT:    global_store_b128 v[1:2], v[51:54], off offset:80
 ; GFX11-TRUE16-NEXT:    global_store_b128 v[1:2], v[47:50], off offset:64
-; GFX11-TRUE16-NEXT:    s_clause 0xe
+; GFX11-TRUE16-NEXT:    s_clause 0xe ; 60-byte Folded Reload
 ; GFX11-TRUE16-NEXT:    scratch_load_b32 v62, off, s32 offset:400
 ; GFX11-TRUE16-NEXT:    scratch_load_b32 v61, off, s32 offset:404
 ; GFX11-TRUE16-NEXT:    scratch_load_b32 v60, off, s32 offset:408
@@ -29604,7 +29575,7 @@ define void @v_bitcast_v128i8_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <128 
 ; GFX11-FAKE16-LABEL: v_bitcast_v128i8_to_v64bf16:
 ; GFX11-FAKE16:       ; %bb.0: ; %entry
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    s_clause 0x1f
+; GFX11-FAKE16-NEXT:    s_clause 0x1f ; 128-byte Folded Spill
 ; GFX11-FAKE16-NEXT:    scratch_store_b32 off, v40, s32 offset:600
 ; GFX11-FAKE16-NEXT:    ; meta instruction
 ; GFX11-FAKE16-NEXT:    scratch_store_b32 off, v41, s32 offset:596
@@ -29668,7 +29639,7 @@ define void @v_bitcast_v128i8_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <128 
 ; GFX11-FAKE16-NEXT:    scratch_store_b32 off, v94, s32 offset:480
 ; GFX11-FAKE16-NEXT:    ; meta instruction
 ; GFX11-FAKE16-NEXT:    scratch_store_b32 off, v95, s32 offset:476
-; GFX11-FAKE16-NEXT:    s_clause 0x12
+; GFX11-FAKE16-NEXT:    s_clause 0x12 ; 76-byte Folded Spill
 ; GFX11-FAKE16-NEXT:    scratch_store_b32 off, v104, s32 offset:472
 ; GFX11-FAKE16-NEXT:    ; meta instruction
 ; GFX11-FAKE16-NEXT:    scratch_store_b32 off, v105, s32 offset:468
@@ -30084,7 +30055,7 @@ define void @v_bitcast_v128i8_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <128 
 ; GFX11-FAKE16-NEXT:    global_store_b128 v[1:2], v[55:58], off offset:96
 ; GFX11-FAKE16-NEXT:    global_store_b128 v[1:2], v[51:54], off offset:80
 ; GFX11-FAKE16-NEXT:    global_store_b128 v[1:2], v[47:50], off offset:64
-; GFX11-FAKE16-NEXT:    s_clause 0x1f
+; GFX11-FAKE16-NEXT:    s_clause 0x1f ; 128-byte Folded Reload
 ; GFX11-FAKE16-NEXT:    scratch_load_b32 v138, off, s32 offset:400
 ; GFX11-FAKE16-NEXT:    scratch_load_b32 v137, off, s32 offset:404
 ; GFX11-FAKE16-NEXT:    scratch_load_b32 v136, off, s32 offset:408
@@ -30117,7 +30088,7 @@ define void @v_bitcast_v128i8_to_v64bf16(i32 %cond, ptr addrspace(1) %out, <128 
 ; GFX11-FAKE16-NEXT:    scratch_load_b32 v77, off, s32 offset:516
 ; GFX11-FAKE16-NEXT:    scratch_load_b32 v76, off, s32 offset:520
 ; GFX11-FAKE16-NEXT:    scratch_load_b32 v75, off, s32 offset:524
-; GFX11-FAKE16-NEXT:    s_clause 0x12
+; GFX11-FAKE16-NEXT:    s_clause 0x12 ; 76-byte Folded Reload
 ; GFX11-FAKE16-NEXT:    scratch_load_b32 v74, off, s32 offset:528
 ; GFX11-FAKE16-NEXT:    scratch_load_b32 v73, off, s32 offset:532
 ; GFX11-FAKE16-NEXT:    scratch_load_b32 v72, off, s32 offset:536
@@ -30683,11 +30654,19 @@ define void @v_bitcast_v64bf16_to_v64i16(i32 %cond, ptr addrspace(1) %out, <64 x
 ; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:44 ; 4-byte Folded Reload
 ; VI-NEXT:    s_movk_i32 s4, 0x70
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, s4, v1
 ; VI-NEXT:    v_addc_u32_e32 v4, vcc, 0, v2, vcc
 ; VI-NEXT:    s_movk_i32 s4, 0x60
-; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(8)
 ; VI-NEXT:    flat_store_dwordx4 v[3:4], v[17:20]
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, s4, v1
 ; VI-NEXT:    v_addc_u32_e32 v4, vcc, 0, v2, vcc
@@ -30699,14 +30678,6 @@ define void @v_bitcast_v64bf16_to_v64i16(i32 %cond, ptr addrspace(1) %out, <64 x
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v2, vcc
 ; VI-NEXT:    flat_store_dwordx4 v[3:4], v[9:12]
 ; VI-NEXT:    flat_store_dwordx4 v[0:1], v[5:8]
-; VI-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:44 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -30853,7 +30824,7 @@ define void @v_bitcast_v64bf16_to_v64i16(i32 %cond, ptr addrspace(1) %out, <64 x
 ; GFX11-LABEL: v_bitcast_v64bf16_to_v64i16:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Spill
 ; GFX11-NEXT:    scratch_store_b32 off, v40, s32 offset:76
 ; GFX11-NEXT:    ; meta instruction
 ; GFX11-NEXT:    scratch_store_b32 off, v41, s32 offset:72
@@ -30957,7 +30928,7 @@ define void @v_bitcast_v64bf16_to_v64i16(i32 %cond, ptr addrspace(1) %out, <64 x
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[43:46], off offset:96
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[39:42], off offset:80
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[35:38], off offset:64
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Reload
 ; GFX11-NEXT:    scratch_load_b32 v63, off, s32 offset:16
 ; GFX11-NEXT:    scratch_load_b32 v62, off, s32 offset:20
 ; GFX11-NEXT:    scratch_load_b32 v61, off, s32 offset:24
@@ -32032,11 +32003,19 @@ define void @v_bitcast_v64bf16_to_v64f16(i32 %cond, ptr addrspace(1) %out, <64 x
 ; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:100 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:104 ; 4-byte Folded Reload
 ; VI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:108 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
+; VI-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:44 ; 4-byte Folded Reload
 ; VI-NEXT:    s_movk_i32 s4, 0x70
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, s4, v1
 ; VI-NEXT:    v_addc_u32_e32 v4, vcc, 0, v2, vcc
 ; VI-NEXT:    s_movk_i32 s4, 0x60
-; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(8)
 ; VI-NEXT:    flat_store_dwordx4 v[3:4], v[17:20]
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, s4, v1
 ; VI-NEXT:    v_addc_u32_e32 v4, vcc, 0, v2, vcc
@@ -32048,14 +32027,6 @@ define void @v_bitcast_v64bf16_to_v64f16(i32 %cond, ptr addrspace(1) %out, <64 x
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v2, vcc
 ; VI-NEXT:    flat_store_dwordx4 v[3:4], v[9:12]
 ; VI-NEXT:    flat_store_dwordx4 v[0:1], v[5:8]
-; VI-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
-; VI-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:44 ; 4-byte Folded Reload
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -32202,7 +32173,7 @@ define void @v_bitcast_v64bf16_to_v64f16(i32 %cond, ptr addrspace(1) %out, <64 x
 ; GFX11-LABEL: v_bitcast_v64bf16_to_v64f16:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Spill
 ; GFX11-NEXT:    scratch_store_b32 off, v40, s32 offset:76
 ; GFX11-NEXT:    ; meta instruction
 ; GFX11-NEXT:    scratch_store_b32 off, v41, s32 offset:72
@@ -32306,7 +32277,7 @@ define void @v_bitcast_v64bf16_to_v64f16(i32 %cond, ptr addrspace(1) %out, <64 x
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[43:46], off offset:96
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[39:42], off offset:80
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[35:38], off offset:64
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Reload
 ; GFX11-NEXT:    scratch_load_b32 v63, off, s32 offset:16
 ; GFX11-NEXT:    scratch_load_b32 v62, off, s32 offset:20
 ; GFX11-NEXT:    scratch_load_b32 v61, off, s32 offset:24
@@ -33009,7 +32980,7 @@ define void @v_bitcast_v64bf16_to_v128i8(i32 %cond, ptr addrspace(1) %out, <64 x
 ; GFX11-LABEL: v_bitcast_v64bf16_to_v128i8:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Spill
 ; GFX11-NEXT:    scratch_store_b32 off, v40, s32 offset:76
 ; GFX11-NEXT:    ; meta instruction
 ; GFX11-NEXT:    scratch_store_b32 off, v41, s32 offset:72
@@ -33111,7 +33082,7 @@ define void @v_bitcast_v64bf16_to_v128i8(i32 %cond, ptr addrspace(1) %out, <64 x
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[43:46], off offset:32
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[39:42], off offset:16
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[35:38], off
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Reload
 ; GFX11-NEXT:    scratch_load_b32 v63, off, s32 offset:16
 ; GFX11-NEXT:    scratch_load_b32 v62, off, s32 offset:20
 ; GFX11-NEXT:    scratch_load_b32 v61, off, s32 offset:24
@@ -33814,7 +33785,7 @@ define void @v_bitcast_v64bf16_to_v16i64(i32 %cond, ptr addrspace(1) %out, <64 x
 ; GFX11-LABEL: v_bitcast_v64bf16_to_v16i64:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Spill
 ; GFX11-NEXT:    scratch_store_b32 off, v40, s32 offset:76
 ; GFX11-NEXT:    ; meta instruction
 ; GFX11-NEXT:    scratch_store_b32 off, v41, s32 offset:72
@@ -33916,7 +33887,7 @@ define void @v_bitcast_v64bf16_to_v16i64(i32 %cond, ptr addrspace(1) %out, <64 x
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[43:46], off offset:32
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[39:42], off offset:16
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[35:38], off
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Reload
 ; GFX11-NEXT:    scratch_load_b32 v63, off, s32 offset:16
 ; GFX11-NEXT:    scratch_load_b32 v62, off, s32 offset:20
 ; GFX11-NEXT:    scratch_load_b32 v61, off, s32 offset:24
@@ -34619,7 +34590,7 @@ define void @v_bitcast_v64bf16_to_v16f64(i32 %cond, ptr addrspace(1) %out, <64 x
 ; GFX11-LABEL: v_bitcast_v64bf16_to_v16f64:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Spill
 ; GFX11-NEXT:    scratch_store_b32 off, v40, s32 offset:76
 ; GFX11-NEXT:    ; meta instruction
 ; GFX11-NEXT:    scratch_store_b32 off, v41, s32 offset:72
@@ -34721,7 +34692,7 @@ define void @v_bitcast_v64bf16_to_v16f64(i32 %cond, ptr addrspace(1) %out, <64 x
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[43:46], off offset:32
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[39:42], off offset:16
 ; GFX11-NEXT:    global_store_b128 v[1:2], v[35:38], off
-; GFX11-NEXT:    s_clause 0xf
+; GFX11-NEXT:    s_clause 0xf ; 64-byte Folded Reload
 ; GFX11-NEXT:    scratch_load_b32 v63, off, s32 offset:16
 ; GFX11-NEXT:    scratch_load_b32 v62, off, s32 offset:20
 ; GFX11-NEXT:    scratch_load_b32 v61, off, s32 offset:24

@@ -10,7 +10,7 @@ define amdgpu_cs void @test_swc_reorder(i64 %arg){
 ; GFX13-NEXT:    export prim v0, off, off, off done
 ; GFX13-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.swc.reorder(i64 %arg)
-  call void @llvm.amdgcn.exp.i32(i32 20, i32 1, i32 %ret, i32 undef, i32 undef, i32 undef, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.i32(i32 20, i32 1, i32 %ret, i32 poison, i32 poison, i32 poison, i1 true, i1 false)
   ret void
 }
 
@@ -34,7 +34,7 @@ define amdgpu_cs void @test_swc_reorder_swap(i64 %arg){
 ; GFX13-NEXT:    export prim v0, off, off, off done
 ; GFX13-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.swc.reorder.swap(i64 %arg)
-  call void @llvm.amdgcn.exp.i32(i32 20, i32 1, i32 %ret, i32 undef, i32 undef, i32 undef, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.i32(i32 20, i32 1, i32 %ret, i32 poison, i32 poison, i32 poison, i1 true, i1 false)
   ret void
 }
 
@@ -46,7 +46,7 @@ define amdgpu_cs void @test_swc_reorder_swap_resume(){
 ; GFX13-NEXT:    export prim v0, off, off, off done
 ; GFX13-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.swc.reorder.swap.resume()
-  call void @llvm.amdgcn.exp.i32(i32 20, i32 1, i32 %ret, i32 undef, i32 undef, i32 undef, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.i32(i32 20, i32 1, i32 %ret, i32 poison, i32 poison, i32 poison, i1 true, i1 false)
   ret void
 }
 
@@ -58,7 +58,7 @@ define amdgpu_cs void @test_swc_get_exchange_state(){
 ; GFX13-NEXT:    export prim v0, off, off, off done
 ; GFX13-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.swc.get.exchange.state()
-  call void @llvm.amdgcn.exp.i32(i32 20, i32 1, i32 %ret, i32 undef, i32 undef, i32 undef, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.i32(i32 20, i32 1, i32 %ret, i32 poison, i32 poison, i32 poison, i1 true, i1 false)
   ret void
 }
 

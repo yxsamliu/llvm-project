@@ -12,7 +12,7 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %i.024 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %promotealloca23 = phi <10 x float> [ undef, %entry ], [ %1, %for.body ]
+  %promotealloca23 = phi <10 x float> [ poison, %entry ], [ %1, %for.body ]
   %arrayidx = getelementptr inbounds [70 x float], ptr addrspace(10) @exchange, i32 17, i32 %i.024
   ; CHECK: [[SFR0:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 %1, 2, implicit-def dead $scc
   ; CHECK-NEXT: [[ADD0:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[SFR0]], 1190, implicit-def dead $scc

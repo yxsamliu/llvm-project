@@ -7,6 +7,10 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=-real-true16 %s -o - | FileCheck %s -check-prefixes=GFX1250-SDAG-FAKE16
 ; xUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=+real-true16 %s -o - | FileCheck %s -check-prefixes=GFX1250-GI-TRUE16
 ; xUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=-real-true16 %s -o - | FileCheck %s -check-prefixes=GFX1250-GI-FAKE16
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1300 -mattr=+real-true16 %s -o - | FileCheck %s -check-prefixes=GFX13-SDAG-TRUE16
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1300 -mattr=-real-true16 %s -o - | FileCheck %s -check-prefixes=GFX13-SDAG-FAKE16
+; xUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1300 -mattr=+real-true16 %s -o - | FileCheck %s -check-prefixes=GFX13-GI-TRUE16
+; xUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1300 -mattr=-real-true16 %s -o - | FileCheck %s -check-prefixes=GFX13-GI-FAKE16
 
 define bfloat @v_exp2_bf16(bfloat %in) {
 ; GFX1200-SDAG-TRUE16-LABEL: v_exp2_bf16:
@@ -79,6 +83,26 @@ define bfloat @v_exp2_bf16(bfloat %in) {
 ; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_exp_bf16_e32 v0, v0
 ; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-TRUE16-LABEL: v_exp2_bf16:
+; GFX13-SDAG-TRUE16:       ; %bb.0:
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    v_exp_bf16_e32 v0.l, v0.l
+; GFX13-SDAG-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-FAKE16-LABEL: v_exp2_bf16:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_exp_bf16_e32 v0, v0
+; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %result = call bfloat @llvm.exp2.bf16(bfloat %in)
   ret bfloat %result
 }
@@ -156,6 +180,26 @@ define bfloat @v_exp2_fabs_bf16(bfloat %in) {
 ; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_exp_bf16_e64 v0, |v0|
 ; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-TRUE16-LABEL: v_exp2_fabs_bf16:
+; GFX13-SDAG-TRUE16:       ; %bb.0:
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    v_exp_bf16_e64 v0.l, |v0.l|
+; GFX13-SDAG-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-FAKE16-LABEL: v_exp2_fabs_bf16:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_exp_bf16_e64 v0, |v0|
+; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %fabs = call bfloat @llvm.fabs.bf16(bfloat %in)
   %result = call bfloat @llvm.exp2.bf16(bfloat %fabs)
   ret bfloat %result
@@ -234,6 +278,26 @@ define bfloat @v_exp2_fneg_fabs_bf16(bfloat %in) {
 ; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_exp_bf16_e64 v0, -|v0|
 ; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-TRUE16-LABEL: v_exp2_fneg_fabs_bf16:
+; GFX13-SDAG-TRUE16:       ; %bb.0:
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    v_exp_bf16_e64 v0.l, -|v0.l|
+; GFX13-SDAG-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-FAKE16-LABEL: v_exp2_fneg_fabs_bf16:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_exp_bf16_e64 v0, -|v0|
+; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %fabs = call bfloat @llvm.fabs.bf16(bfloat %in)
   %fneg.fabs = fneg bfloat %fabs
   %result = call bfloat @llvm.exp2.bf16(bfloat %fneg.fabs)
@@ -313,6 +377,26 @@ define bfloat @v_exp2_fneg_bf16(bfloat %in) {
 ; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_exp_bf16_e64 v0, -v0
 ; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-TRUE16-LABEL: v_exp2_fneg_bf16:
+; GFX13-SDAG-TRUE16:       ; %bb.0:
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    v_exp_bf16_e64 v0.l, -v0.l
+; GFX13-SDAG-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-FAKE16-LABEL: v_exp2_fneg_bf16:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_exp_bf16_e64 v0, -v0
+; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %fneg = fneg bfloat %in
   %result = call bfloat @llvm.exp2.bf16(bfloat %fneg)
   ret bfloat %result
@@ -389,6 +473,26 @@ define bfloat @v_exp2_bf16_fast(bfloat %in) {
 ; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_exp_bf16_e32 v0, v0
 ; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-TRUE16-LABEL: v_exp2_bf16_fast:
+; GFX13-SDAG-TRUE16:       ; %bb.0:
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    v_exp_bf16_e32 v0.l, v0.l
+; GFX13-SDAG-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-FAKE16-LABEL: v_exp2_bf16_fast:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_exp_bf16_e32 v0, v0
+; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %result = call fast bfloat @llvm.exp2.bf16(bfloat %in)
   ret bfloat %result
 }
@@ -503,6 +607,31 @@ define <2 x bfloat> @v_exp2_v2bf16(<2 x bfloat> %in) {
 ; GFX1250-SDAG-FAKE16-NEXT:    v_nop
 ; GFX1250-SDAG-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-TRUE16-LABEL: v_exp2_v2bf16:
+; GFX13-SDAG-TRUE16:       ; %bb.0:
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    v_exp_bf16_e32 v0.h, v0.h
+; GFX13-SDAG-TRUE16-NEXT:    v_exp_bf16_e32 v0.l, v0.l
+; GFX13-SDAG-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-FAKE16-LABEL: v_exp2_v2bf16:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX13-SDAG-FAKE16-NEXT:    v_exp_bf16_e32 v0, v0
+; GFX13-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX13-SDAG-FAKE16-NEXT:    v_exp_bf16_e32 v1, v1
+; GFX13-SDAG-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %result = call <2 x bfloat> @llvm.exp2.v2bf16(<2 x bfloat> %in)
   ret <2 x bfloat> %result
 }
@@ -624,6 +753,36 @@ define <2 x bfloat> @v_exp2_fabs_v2bf16(<2 x bfloat> %in) {
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
 ; GFX1250-SDAG-FAKE16-NEXT:    v_perm_b32 v0, v0, v1, 0x5040100
 ; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-TRUE16-LABEL: v_exp2_fabs_v2bf16:
+; GFX13-SDAG-TRUE16:       ; %bb.0:
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v0
+; GFX13-SDAG-TRUE16-NEXT:    v_bfe_u32 v2, v0, 16, 15
+; GFX13-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-SDAG-TRUE16-NEXT:    v_exp_bf16_e32 v0.l, v1.l
+; GFX13-SDAG-TRUE16-NEXT:    v_exp_bf16_e32 v0.h, v2.l
+; GFX13-SDAG-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-FAKE16-LABEL: v_exp2_fabs_v2bf16:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v0
+; GFX13-SDAG-FAKE16-NEXT:    v_bfe_u32 v0, v0, 16, 15
+; GFX13-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-SDAG-FAKE16-NEXT:    v_exp_bf16_e32 v1, v1
+; GFX13-SDAG-FAKE16-NEXT:    v_exp_bf16_e32 v0, v0
+; GFX13-SDAG-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX13-SDAG-FAKE16-NEXT:    v_perm_b32 v0, v0, v1, 0x5040100
+; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %fabs = call <2 x bfloat> @llvm.fabs.v2bf16(<2 x bfloat> %in)
   %result = call <2 x bfloat> @llvm.exp2.v2bf16(<2 x bfloat> %fabs)
   ret <2 x bfloat> %result
@@ -755,6 +914,36 @@ define <2 x bfloat> @v_exp2_fneg_fabs_v2bf16(<2 x bfloat> %in) {
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
 ; GFX1250-SDAG-FAKE16-NEXT:    v_perm_b32 v0, v0, v1, 0x5040100
 ; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-TRUE16-LABEL: v_exp2_fneg_fabs_v2bf16:
+; GFX13-SDAG-TRUE16:       ; %bb.0:
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v0
+; GFX13-SDAG-TRUE16-NEXT:    v_bfe_u32 v2, v0, 16, 15
+; GFX13-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-SDAG-TRUE16-NEXT:    v_exp_bf16_e64 v0.l, -v1.l
+; GFX13-SDAG-TRUE16-NEXT:    v_exp_bf16_e64 v0.h, -v2.l
+; GFX13-SDAG-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-FAKE16-LABEL: v_exp2_fneg_fabs_v2bf16:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v0
+; GFX13-SDAG-FAKE16-NEXT:    v_bfe_u32 v0, v0, 16, 15
+; GFX13-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-SDAG-FAKE16-NEXT:    v_exp_bf16_e64 v1, -v1
+; GFX13-SDAG-FAKE16-NEXT:    v_exp_bf16_e64 v0, -v0
+; GFX13-SDAG-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX13-SDAG-FAKE16-NEXT:    v_perm_b32 v0, v0, v1, 0x5040100
+; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %fabs = call <2 x bfloat> @llvm.fabs.v2bf16(<2 x bfloat> %in)
   %fneg.fabs = fneg <2 x bfloat> %fabs
   %result = call <2 x bfloat> @llvm.exp2.v2bf16(<2 x bfloat> %fneg.fabs)
@@ -877,6 +1066,31 @@ define <2 x bfloat> @v_exp2_fneg_v2bf16(<2 x bfloat> %in) {
 ; GFX1250-SDAG-FAKE16-NEXT:    v_nop
 ; GFX1250-SDAG-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-TRUE16-LABEL: v_exp2_fneg_v2bf16:
+; GFX13-SDAG-TRUE16:       ; %bb.0:
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    v_exp_bf16_e64 v0.h, -v0.h
+; GFX13-SDAG-TRUE16-NEXT:    v_exp_bf16_e64 v0.l, -v0.l
+; GFX13-SDAG-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-FAKE16-LABEL: v_exp2_fneg_v2bf16:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX13-SDAG-FAKE16-NEXT:    v_exp_bf16_e64 v0, -v0
+; GFX13-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX13-SDAG-FAKE16-NEXT:    v_exp_bf16_e64 v1, -v1
+; GFX13-SDAG-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %fneg = fneg <2 x bfloat> %in
   %result = call <2 x bfloat> @llvm.exp2.v2bf16(<2 x bfloat> %fneg)
   ret <2 x bfloat> %result
@@ -992,6 +1206,31 @@ define <2 x bfloat> @v_exp2_v2bf16_fast(<2 x bfloat> %in) {
 ; GFX1250-SDAG-FAKE16-NEXT:    v_nop
 ; GFX1250-SDAG-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-TRUE16-LABEL: v_exp2_v2bf16_fast:
+; GFX13-SDAG-TRUE16:       ; %bb.0:
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    v_exp_bf16_e32 v0.h, v0.h
+; GFX13-SDAG-TRUE16-NEXT:    v_exp_bf16_e32 v0.l, v0.l
+; GFX13-SDAG-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-FAKE16-LABEL: v_exp2_v2bf16_fast:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX13-SDAG-FAKE16-NEXT:    v_exp_bf16_e32 v0, v0
+; GFX13-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX13-SDAG-FAKE16-NEXT:    v_exp_bf16_e32 v1, v1
+; GFX13-SDAG-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %result = call fast <2 x bfloat> @llvm.exp2.v2bf16(<2 x bfloat> %in)
   ret <2 x bfloat> %result
 }

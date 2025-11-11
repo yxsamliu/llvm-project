@@ -1369,16 +1369,13 @@ void SIFrameLowering::emitCSRSpillStores(MachineFunction &MF,
 
   StoreWWMRegisters(WWMCalleeSavedRegs);
   if (FuncInfo->isWholeWaveFunction()) {
-    // SI_WHOLE_WAVE_FUNC_SETUP has outlived its purpose, so we can remove
-    // it now. If we have already saved some WWM CSR registers, then the EXEC is
-    // already -1 and we don't need to do anything else. Otherwise, set EXEC to
-    // -1 here.
+    // If we have already saved some WWM CSR registers, then the EXEC is already
+    // -1 and we don't need to do anything else. Otherwise, set EXEC to -1 here.
     if (!ScratchExecCopy)
       buildScratchExecCopy(LiveUnits, MF, MBB, MBBI, DL, /*IsProlog*/ true,
                            /*EnableInactiveLanes*/ true);
     else if (WWMCalleeSavedRegs.empty())
       EnableAllLanes();
-    TII->getWholeWaveFunctionSetup(MF)->eraseFromParent();
   } else if (ScratchExecCopy) {
     // FIXME: Split block and make terminator.
     BuildMI(MBB, MBBI, DL, TII->get(LMC.MovOpc), LMC.ExecReg)
@@ -1453,8 +1450,8 @@ void SIFrameLowering::finalizeIdx0SaveRestores(MachineFunction &MF,
                                                Register TmpWavegroupReg) const {
   // Modify idx0 save/restores to be aware of wavegroup state
   // Convert the save COPY to use TmpWavegroupReg, to a GETREG, or remove it
-  // entirely Restore private base to 0 if in EntryNonWavegroupUsageConvert. and
-  // cleanup the extra setter used as an idx0 def.
+  // entirely. Restore private base to 0 if in EntryNonWavegroupUsage. Convert
+  // and cleanup the extra setter used as an idx0 def.
   // TODO-GFX13: Optimize idx0 save/restore placement(s)
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -1463,20 +1460,19 @@ void SIFrameLowering::finalizeIdx0SaveRestores(MachineFunction &MF,
       determineIdx0Usage(FuncInfo, EntryFunction, TmpWavegroupReg);
   if (Idx0UK == Idx0UsageKind::NoUsage)
     return;
+  SmallPtrSet<MachineInstr *, 16> InstrsToErase;
   for (MachineBasicBlock &MBB : MF) {
     MachineBasicBlock::iterator BundleMBBI = nullptr;
-    SmallPtrSet<MachineInstr *, 16> InstrsToErase;
     for (MachineBasicBlock::reverse_iterator I = MBB.rbegin(), E = MBB.rend();
          I != E; ++I) {
       MachineInstr &MI = (*I);
-      // Rewrite unnecessary Idx0 base computations
+      // Rewrite unnecessary Idx0 base computations, idx0 is known to be 0
       if (Idx0UK == Idx0UsageKind::EntryNonWavegroupUsage &&
           MI.getOpcode() == AMDGPU::S_SET_GPR_IDX_U32) {
-        if (MachineInstr *Adder = FuncInfo->getIdx0PrivateComputations().lookup(&MI)) {
-          MachineOperand &Use = MI.getOperand(1);
-          Register UseReg = Use.getReg();
+        if (MachineInstr *Adder =
+                FuncInfo->getIdx0PrivateComputations().lookup(&MI)) {
           Register DefReg = Adder->getOperand(0).getReg();
-          assert(UseReg == DefReg &&
+          assert(MI.getOperand(1).getReg() == DefReg &&
                  "Setter is not using the result of the idx0 computation");
           MachineOperand RealIdxUse = Adder->getOperand(1);
           MachineOperand Idx0MO = Adder->getOperand(2);
@@ -1511,6 +1507,7 @@ void SIFrameLowering::finalizeIdx0SaveRestores(MachineFunction &MF,
             MBB.removeLiveIn(DefReg);
             Worklist.insert_range(MBB.predecessors());
           }
+          FuncInfo->getIdx0PrivateComputations().erase(&MI);
           InstrsToErase.insert(Adder);
         }
       }
@@ -1558,10 +1555,13 @@ void SIFrameLowering::finalizeIdx0SaveRestores(MachineFunction &MF,
         }
       }
     }
-    for (auto MI : InstrsToErase) {
-      MI->eraseFromParent();
-    }
   }
+  for (auto MI : InstrsToErase) {
+    MI->eraseFromParent();
+  }
+  assert(FuncInfo->getIdx0PrivateComputations().size() == 0 ||
+         Idx0UK != Idx0UsageKind::EntryNonWavegroupUsage &&
+             "All idx0 computations should be cleaned up.");
 }
 
 void SIFrameLowering::emitCSRSpillRestores(
@@ -1838,6 +1838,11 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
          "Needed to save BP but didn't save it anywhere");
 
   assert((HasBP || !BPSaved) && "Saved BP but didn't need it");
+
+  if (FuncInfo->isWholeWaveFunction()) {
+    // SI_WHOLE_WAVE_FUNC_SETUP has outlived its purpose.
+    TII->getWholeWaveFunctionSetup(MF)->eraseFromParent();
+  }
 
   finalizeIdx0SaveRestores(MF, false, false);
 }
@@ -2716,7 +2721,9 @@ bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
     return MFI.getStackSize() != 0;
   }
   return AMDGPU::getWavegroupEnable(MF.getFunction()) ||
-         frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
+         (frameTriviallyRequiresSP(MFI) &&
+          !MF.getInfo<SIMachineFunctionInfo>()->isChainFunction()) ||
+         MFI.isFrameAddressTaken() ||
          MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
              MF) ||
          mayReserveScratchForCWSR(MF) ||

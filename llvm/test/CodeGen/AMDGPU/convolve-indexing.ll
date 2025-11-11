@@ -1357,7 +1357,7 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f32_iu4_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_iu4_1x1_4x2_iter_1
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu4.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu4.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -1391,7 +1391,7 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f16_iu4_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_iu4_1x1_4x2_iter_1
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -1425,7 +1425,7 @@ bb:
   %weights = load i32, ptr addrspace(10) @weights_var_f16_iu4_1x1_4x4_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_iu4_1x1_4x4_iter_1
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (2 << 0 | 0 << 3 | 0 << 12)
               i32 2,
               ;   CLAMP
@@ -1459,7 +1459,7 @@ bb:
   %weights = load i32, ptr addrspace(10) @weights_var_f16_iu4_1x1_8x4_iter_1
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_iu4_1x1_8x4_iter_1
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> undef, <2 x i32> undef, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> poison, <2 x i32> poison, <2 x i32> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (0 << 0 | 0 << 3 | 0 << 12)
               i32 0,
               ;   CLAMP
@@ -1493,7 +1493,7 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_i32_iu4_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_i32_iu4_1x1_4x2_iter_1
 
-  %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu4.1x1.v4i32.v4i32.v2i32.i32(<4 x i32> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu4.1x1.v4i32.v4i32.v2i32.i32(<4 x i32> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -1527,7 +1527,7 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f32i32_iu4_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32i32_iu4_1x1_4x2_iter_1
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu4.1x1.v4f32.v4i32.v2i32.i32(<4 x i32> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu4.1x1.v4f32.v4i32.v2i32.i32(<4 x i32> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -1563,7 +1563,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_iu4_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_iu4_1x1_4x2_iter_2
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu4.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu4.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -1599,7 +1599,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_iu4_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_iu4_1x1_4x2_iter_2
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -1635,7 +1635,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_iu4_1x1_4x4_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_iu4_1x1_4x4_iter_2
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (2 << 0 | 0 << 3 | 1 << 12)
               i32 4098,
               ;   CLAMP
@@ -1671,7 +1671,7 @@ bb:
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_iu4_1x1_8x4_iter_2
   %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_iu4_1x1_8x4_iter_2
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> undef, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> poison, <2 x i32> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (0 << 0 | 0 << 3 | 1 << 12)
               i32 4096,
               ;   CLAMP
@@ -1707,7 +1707,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_i32_iu4_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_i32_iu4_1x1_4x2_iter_2
 
-  %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu4.1x1.v4i32.v4i32.v4i32.i32(<4 x i32> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu4.1x1.v4i32.v4i32.v4i32.i32(<4 x i32> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -1743,7 +1743,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32i32_iu4_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32i32_iu4_1x1_4x2_iter_2
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu4.1x1.v4f32.v4i32.v4i32.i32(<4 x i32> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu4.1x1.v4f32.v4i32.v4i32.i32(<4 x i32> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -1781,7 +1781,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_iu4_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32_iu4_1x1_4x2_iter_3
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu4.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu4.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -1819,7 +1819,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_iu4_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_iu4_1x1_4x2_iter_3
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -1857,7 +1857,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_iu4_1x1_4x4_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_iu4_1x1_4x4_iter_3
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (2 << 0 | 0 << 3 | 2 << 12)
               i32 8194,
               ;   CLAMP
@@ -1895,7 +1895,7 @@ bb:
   %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_iu4_1x1_8x4_iter_3
   %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_iu4_1x1_8x4_iter_3
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu4.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (0 << 0 | 0 << 3 | 2 << 12)
               i32 8192,
               ;   CLAMP
@@ -1933,7 +1933,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_i32_iu4_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_i32_iu4_1x1_4x2_iter_3
 
-  %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu4.1x1.v4i32.v4i32.v6i32.i32(<4 x i32> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu4.1x1.v4i32.v4i32.v6i32.i32(<4 x i32> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -1971,7 +1971,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32i32_iu4_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu4_1x1_4x2_iter_3
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu4.1x1.v4f32.v4i32.v6i32.i32(<4 x i32> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu4.1x1.v4f32.v4i32.v6i32.i32(<4 x i32> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -2239,7 +2239,7 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f32_iu8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_iu8_1x1_4x2_iter_1
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -2273,7 +2273,7 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f16_iu8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_iu8_1x1_4x2_iter_1
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -2307,7 +2307,7 @@ bb:
   %weights = load i32, ptr addrspace(10) @weights_var_f16_iu8_1x1_4x4_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_iu8_1x1_4x4_iter_1
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (2 << 0 | 0 << 3 | 0 << 12)
               i32 2,
               ;   CLAMP
@@ -2341,7 +2341,7 @@ bb:
   %weights = load i32, ptr addrspace(10) @weights_var_f16_iu8_1x1_8x4_iter_1
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_iu8_1x1_8x4_iter_1
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> undef, <2 x i32> undef, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> poison, <2 x i32> poison, <2 x i32> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (0 << 0 | 0 << 3 | 0 << 12)
               i32 0,
               ;   CLAMP
@@ -2375,7 +2375,7 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_i32_iu8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_i32_iu8_1x1_4x2_iter_1
 
-  %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu8.1x1.v4i32.v4i32.v2i32.i32(<4 x i32> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu8.1x1.v4i32.v4i32.v2i32.i32(<4 x i32> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -2409,7 +2409,7 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f32i32_iu8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32i32_iu8_1x1_4x2_iter_1
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu8.1x1.v4f32.v4i32.v2i32.i32(<4 x i32> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu8.1x1.v4f32.v4i32.v2i32.i32(<4 x i32> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -2445,7 +2445,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_iu8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_iu8_1x1_4x2_iter_2
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu8.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu8.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -2481,7 +2481,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_iu8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_iu8_1x1_4x2_iter_2
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -2517,7 +2517,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_iu8_1x1_4x4_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_iu8_1x1_4x4_iter_2
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (2 << 0 | 0 << 3 | 1 << 12)
               i32 4098,
               ;   CLAMP
@@ -2553,7 +2553,7 @@ bb:
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_iu8_1x1_8x4_iter_2
   %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_iu8_1x1_8x4_iter_2
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> undef, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> poison, <2 x i32> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (0 << 0 | 0 << 3 | 1 << 12)
               i32 4096,
               ;   CLAMP
@@ -2589,7 +2589,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_i32_iu8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_i32_iu8_1x1_4x2_iter_2
 
-  %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu8.1x1.v4i32.v4i32.v4i32.i32(<4 x i32> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu8.1x1.v4i32.v4i32.v4i32.i32(<4 x i32> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -2625,7 +2625,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32i32_iu8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32i32_iu8_1x1_4x2_iter_2
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu8.1x1.v4f32.v4i32.v4i32.i32(<4 x i32> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu8.1x1.v4f32.v4i32.v4i32.i32(<4 x i32> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -2663,7 +2663,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_iu8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32_iu8_1x1_4x2_iter_3
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu8.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.iu8.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -2701,7 +2701,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_iu8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_iu8_1x1_4x2_iter_3
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -2739,7 +2739,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_iu8_1x1_4x4_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_iu8_1x1_4x4_iter_3
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (2 << 0 | 0 << 3 | 2 << 12)
               i32 8194,
               ;   CLAMP
@@ -2777,7 +2777,7 @@ bb:
   %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_iu8_1x1_8x4_iter_3
   %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_iu8_1x1_8x4_iter_3
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.iu8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (0 << 0 | 0 << 3 | 2 << 12)
               i32 8192,
               ;   CLAMP
@@ -2815,7 +2815,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_i32_iu8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_i32_iu8_1x1_4x2_iter_3
 
-  %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu8.1x1.v4i32.v4i32.v6i32.i32(<4 x i32> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <4 x i32> @llvm.amdgcn.convolve.i32.iu8.1x1.v4i32.v4i32.v6i32.i32(<4 x i32> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -2853,7 +2853,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32i32_iu8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32i32_iu8_1x1_4x2_iter_3
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu8.1x1.v4f32.v4i32.v6i32.i32(<4 x i32> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32i32.iu8.1x1.v4f32.v4i32.v6i32.i32(<4 x i32> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -3123,7 +3123,7 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f32_fp8_fp8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_fp8_fp8_1x1_4x2_iter_1
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.fp8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.fp8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -3157,7 +3157,7 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f16_fp8_fp8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_fp8_fp8_1x1_4x2_iter_1
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -3191,7 +3191,7 @@ bb:
   %weights = load i32, ptr addrspace(10) @weights_var_f16_fp8_fp8_1x1_4x4_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_fp8_fp8_1x1_4x4_iter_1
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (2 << 0 | 0 << 3 | 0 << 12)
               i32 2,
               ;   CLAMP
@@ -3225,7 +3225,7 @@ bb:
   %weights = load i32, ptr addrspace(10) @weights_var_f16_fp8_fp8_1x1_8x4_iter_1
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_fp8_fp8_1x1_8x4_iter_1
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> undef, <2 x i32> undef, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> poison, <2 x i32> poison, <2 x i32> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (0 << 0 | 0 << 3 | 0 << 12)
               i32 0,
               ;   CLAMP
@@ -3261,7 +3261,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_fp8_fp8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_fp8_fp8_1x1_4x2_iter_2
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.fp8.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.fp8.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -3297,7 +3297,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_fp8_fp8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_fp8_fp8_1x1_4x2_iter_2
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -3333,7 +3333,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_fp8_fp8_1x1_4x4_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_fp8_fp8_1x1_4x4_iter_2
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (2 << 0 | 0 << 3 | 1 << 12)
               i32 4098,
               ;   CLAMP
@@ -3369,7 +3369,7 @@ bb:
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_fp8_fp8_1x1_8x4_iter_2
   %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_fp8_fp8_1x1_8x4_iter_2
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> undef, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> poison, <2 x i32> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (0 << 0 | 0 << 3 | 1 << 12)
               i32 4096,
               ;   CLAMP
@@ -3407,7 +3407,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_fp8_fp8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32_fp8_fp8_1x1_4x2_iter_3
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.fp8.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.fp8.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -3445,7 +3445,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_fp8_fp8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_fp8_fp8_1x1_4x2_iter_3
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -3483,7 +3483,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_fp8_fp8_1x1_4x4_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_fp8_fp8_1x1_4x4_iter_3
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (2 << 0 | 0 << 3 | 2 << 12)
               i32 8194,
               ;   CLAMP
@@ -3521,7 +3521,7 @@ bb:
   %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_fp8_fp8_1x1_8x4_iter_3
   %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_fp8_fp8_1x1_8x4_iter_3
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (0 << 0 | 0 << 3 | 2 << 12)
               i32 8192,
               ;   CLAMP
@@ -3711,7 +3711,7 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f32_fp8_bf8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_fp8_bf8_1x1_4x2_iter_1
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.bf8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.bf8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -3745,7 +3745,7 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f16_fp8_bf8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_fp8_bf8_1x1_4x2_iter_1
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -3779,7 +3779,7 @@ bb:
   %weights = load i32, ptr addrspace(10) @weights_var_f16_fp8_bf8_1x1_4x4_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_fp8_bf8_1x1_4x4_iter_1
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (2 << 0 | 0 << 3 | 0 << 12)
               i32 2,
               ;   CLAMP
@@ -3813,7 +3813,7 @@ bb:
   %weights = load i32, ptr addrspace(10) @weights_var_f16_fp8_bf8_1x1_8x4_iter_1
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_fp8_bf8_1x1_8x4_iter_1
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> undef, <2 x i32> undef, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> poison, <2 x i32> poison, <2 x i32> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (0 << 0 | 0 << 3 | 0 << 12)
               i32 0,
               ;   CLAMP
@@ -3849,7 +3849,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_fp8_bf8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_fp8_bf8_1x1_4x2_iter_2
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.bf8.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.bf8.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -3885,7 +3885,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_fp8_bf8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_fp8_bf8_1x1_4x2_iter_2
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -3921,7 +3921,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_fp8_bf8_1x1_4x4_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_fp8_bf8_1x1_4x4_iter_2
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (2 << 0 | 0 << 3 | 1 << 12)
               i32 4098,
               ;   CLAMP
@@ -3957,7 +3957,7 @@ bb:
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_fp8_bf8_1x1_8x4_iter_2
   %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_fp8_bf8_1x1_8x4_iter_2
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> undef, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> poison, <2 x i32> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (0 << 0 | 0 << 3 | 1 << 12)
               i32 4096,
               ;   CLAMP
@@ -3995,7 +3995,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_fp8_bf8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32_fp8_bf8_1x1_4x2_iter_3
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.bf8.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.fp8.bf8.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -4033,7 +4033,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_fp8_bf8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_fp8_bf8_1x1_4x2_iter_3
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -4071,7 +4071,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_fp8_bf8_1x1_4x4_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_fp8_bf8_1x1_4x4_iter_3
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (2 << 0 | 0 << 3 | 2 << 12)
               i32 8194,
               ;   CLAMP
@@ -4109,7 +4109,7 @@ bb:
   %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_fp8_bf8_1x1_8x4_iter_3
   %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_fp8_bf8_1x1_8x4_iter_3
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.fp8.bf8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (0 << 0 | 0 << 3 | 2 << 12)
               i32 8192,
               ;   CLAMP
@@ -4299,7 +4299,7 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f32_bf8_fp8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_bf8_fp8_1x1_4x2_iter_1
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.fp8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.fp8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -4333,7 +4333,7 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f16_bf8_fp8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_bf8_fp8_1x1_4x2_iter_1
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -4367,7 +4367,7 @@ bb:
   %weights = load i32, ptr addrspace(10) @weights_var_f16_bf8_fp8_1x1_4x4_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_bf8_fp8_1x1_4x4_iter_1
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (2 << 0 | 0 << 3 | 0 << 12)
               i32 2,
               ;   CLAMP
@@ -4401,7 +4401,7 @@ bb:
   %weights = load i32, ptr addrspace(10) @weights_var_f16_bf8_fp8_1x1_8x4_iter_1
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_bf8_fp8_1x1_8x4_iter_1
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> undef, <2 x i32> undef, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> poison, <2 x i32> poison, <2 x i32> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (0 << 0 | 0 << 3 | 0 << 12)
               i32 0,
               ;   CLAMP
@@ -4437,7 +4437,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_bf8_fp8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_bf8_fp8_1x1_4x2_iter_2
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.fp8.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.fp8.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -4473,7 +4473,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_bf8_fp8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_bf8_fp8_1x1_4x2_iter_2
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -4509,7 +4509,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_bf8_fp8_1x1_4x4_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_bf8_fp8_1x1_4x4_iter_2
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (2 << 0 | 0 << 3 | 1 << 12)
               i32 4098,
               ;   CLAMP
@@ -4545,7 +4545,7 @@ bb:
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_bf8_fp8_1x1_8x4_iter_2
   %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_bf8_fp8_1x1_8x4_iter_2
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> undef, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> poison, <2 x i32> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (0 << 0 | 0 << 3 | 1 << 12)
               i32 4096,
               ;   CLAMP
@@ -4583,7 +4583,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_bf8_fp8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32_bf8_fp8_1x1_4x2_iter_3
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.fp8.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.fp8.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -4621,7 +4621,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_bf8_fp8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_bf8_fp8_1x1_4x2_iter_3
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -4659,7 +4659,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_bf8_fp8_1x1_4x4_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_bf8_fp8_1x1_4x4_iter_3
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (2 << 0 | 0 << 3 | 2 << 12)
               i32 8194,
               ;   CLAMP
@@ -4697,7 +4697,7 @@ bb:
   %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_bf8_fp8_1x1_8x4_iter_3
   %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_bf8_fp8_1x1_8x4_iter_3
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.fp8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (0 << 0 | 0 << 3 | 2 << 12)
               i32 8192,
               ;   CLAMP
@@ -4887,7 +4887,7 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f32_bf8_bf8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_bf8_bf8_1x1_4x2_iter_1
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.bf8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.bf8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -4921,7 +4921,7 @@ bb:
   %weights = load <2 x i32>, ptr addrspace(10) @weights_var_f16_bf8_bf8_1x1_4x2_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_bf8_bf8_1x1_4x2_iter_1
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -4955,7 +4955,7 @@ bb:
   %weights = load i32, ptr addrspace(10) @weights_var_f16_bf8_bf8_1x1_4x4_iter_1
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_bf8_bf8_1x1_4x4_iter_1
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 undef, i32 undef, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.i32(<8 x half> %acc_in, i32 %weights, i32 %tensor_0, i32 poison, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (2 << 0 | 0 << 3 | 0 << 12)
               i32 2,
               ;   CLAMP
@@ -4989,7 +4989,7 @@ bb:
   %weights = load i32, ptr addrspace(10) @weights_var_f16_bf8_bf8_1x1_8x4_iter_1
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_bf8_bf8_1x1_8x4_iter_1
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> undef, <2 x i32> undef, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> poison, <2 x i32> poison, <2 x i32> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (0 << 0 | 0 << 3 | 0 << 12)
               i32 0,
               ;   CLAMP
@@ -5025,7 +5025,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f32_bf8_bf8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_bf8_bf8_1x1_4x2_iter_2
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.bf8.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.bf8.1x1.v4f32.v4f32.v4i32.i32(<4 x float> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -5061,7 +5061,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_bf8_bf8_1x1_4x2_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_bf8_bf8_1x1_4x2_iter_2
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v4f16.v4f16.v4i32.i32(<4 x half> %acc_in, <4 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -5097,7 +5097,7 @@ bb:
   %tensor_0 = load i32, ptr addrspace(10) @tensor_0_var_f16_bf8_bf8_1x1_4x4_iter_2
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_bf8_bf8_1x1_4x4_iter_2
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 undef, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v2i32.i32(<8 x half> %acc_in, <2 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 poison, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (2 << 0 | 0 << 3 | 1 << 12)
               i32 4098,
               ;   CLAMP
@@ -5133,7 +5133,7 @@ bb:
   %tensor_0 = load <2 x i32>, ptr addrspace(10) @tensor_0_var_f16_bf8_bf8_1x1_8x4_iter_2
   %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_bf8_bf8_1x1_8x4_iter_2
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> undef, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> %acc_in, i32 %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> poison, <2 x i32> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (0 << 0 | 0 << 3 | 1 << 12)
               i32 4096,
               ;   CLAMP
@@ -5171,7 +5171,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f32_bf8_bf8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f32_bf8_bf8_1x1_4x2_iter_3
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.bf8.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf8.bf8.1x1.v4f32.v4f32.v6i32.i32(<4 x float> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -5209,7 +5209,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_bf8_bf8_1x1_4x2_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_bf8_bf8_1x1_4x2_iter_3
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v4f16.v4f16.v6i32.i32(<4 x half> %acc_in, <6 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -5247,7 +5247,7 @@ bb:
   %tensor_1 = load i32, ptr addrspace(10) @tensor_1_var_f16_bf8_bf8_1x1_4x4_iter_3
   %tensor_2 = load i32, ptr addrspace(10) @tensor_2_var_f16_bf8_bf8_1x1_4x4_iter_3
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v3i32.i32(<8 x half> %acc_in, <3 x i32> %weights, i32 %tensor_0, i32 %tensor_1, i32 %tensor_2, i32 poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (2 << 0 | 0 << 3 | 2 << 12)
               i32 8194,
               ;   CLAMP
@@ -5285,7 +5285,7 @@ bb:
   %tensor_1 = load <2 x i32>, ptr addrspace(10) @tensor_1_var_f16_bf8_bf8_1x1_8x4_iter_3
   %tensor_2 = load <2 x i32>, ptr addrspace(10) @tensor_2_var_f16_bf8_bf8_1x1_8x4_iter_3
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.bf8.bf8.1x1.v8f16.v8f16.v2i32.v2i32(<8 x half> %acc_in, <2 x i32> %weights, <2 x i32> %tensor_0, <2 x i32> %tensor_1, <2 x i32> %tensor_2, <2 x i32> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (0 << 0 | 0 << 3 | 2 << 12)
               i32 8192,
               ;   CLAMP
@@ -5475,7 +5475,7 @@ bb:
   %weights = load <4 x half>, ptr addrspace(10) @weights_var_f32_f16_1x1_4x2_iter_1
   %tensor_0 = load <2 x half>, ptr addrspace(10) @tensor_0_var_f32_f16_1x1_4x2_iter_1
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v4f16.v2f16(<4 x float> %acc_in, <4 x half> %weights, <2 x half> %tensor_0, <2 x half> undef, <2 x half> undef, <2 x half> undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v4f16.v2f16(<4 x float> %acc_in, <4 x half> %weights, <2 x half> %tensor_0, <2 x half> poison, <2 x half> poison, <2 x half> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -5509,7 +5509,7 @@ bb:
   %weights = load <4 x half>, ptr addrspace(10) @weights_var_f16_f16_1x1_4x2_iter_1
   %tensor_0 = load <2 x half>, ptr addrspace(10) @tensor_0_var_f16_f16_1x1_4x2_iter_1
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v4f16.v4f16.v4f16.v2f16(<4 x half> %acc_in, <4 x half> %weights, <2 x half> %tensor_0, <2 x half> undef, <2 x half> undef, <2 x half> undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v4f16.v4f16.v4f16.v2f16(<4 x half> %acc_in, <4 x half> %weights, <2 x half> %tensor_0, <2 x half> poison, <2 x half> poison, <2 x half> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -5543,7 +5543,7 @@ bb:
   %weights = load <2 x half>, ptr addrspace(10) @weights_var_f16_f16_1x1_4x4_iter_1
   %tensor_0 = load <2 x half>, ptr addrspace(10) @tensor_0_var_f16_f16_1x1_4x4_iter_1
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v2f16.v2f16(<8 x half> %acc_in, <2 x half> %weights, <2 x half> %tensor_0, <2 x half> undef, <2 x half> undef, <2 x half> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v2f16.v2f16(<8 x half> %acc_in, <2 x half> %weights, <2 x half> %tensor_0, <2 x half> poison, <2 x half> poison, <2 x half> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (2 << 0 | 0 << 3 | 0 << 12)
               i32 2,
               ;   CLAMP
@@ -5577,7 +5577,7 @@ bb:
   %weights = load <2 x half>, ptr addrspace(10) @weights_var_f16_f16_1x1_8x4_iter_1
   %tensor_0 = load <4 x half>, ptr addrspace(10) @tensor_0_var_f16_f16_1x1_8x4_iter_1
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v2f16.v4f16(<8 x half> %acc_in, <2 x half> %weights, <4 x half> %tensor_0, <4 x half> undef, <4 x half> undef, <4 x half> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v2f16.v4f16(<8 x half> %acc_in, <2 x half> %weights, <4 x half> %tensor_0, <4 x half> poison, <4 x half> poison, <4 x half> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (0 << 0 | 0 << 3 | 0 << 12)
               i32 0,
               ;   CLAMP
@@ -5613,7 +5613,7 @@ bb:
   %tensor_0 = load <2 x half>, ptr addrspace(10) @tensor_0_var_f32_f16_1x1_4x2_iter_2
   %tensor_1 = load <2 x half>, ptr addrspace(10) @tensor_1_var_f32_f16_1x1_4x2_iter_2
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v8f16.v2f16(<4 x float> %acc_in, <8 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> undef, <2 x half> undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v8f16.v2f16(<4 x float> %acc_in, <8 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> poison, <2 x half> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -5649,7 +5649,7 @@ bb:
   %tensor_0 = load <2 x half>, ptr addrspace(10) @tensor_0_var_f16_f16_1x1_4x2_iter_2
   %tensor_1 = load <2 x half>, ptr addrspace(10) @tensor_1_var_f16_f16_1x1_4x2_iter_2
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v4f16.v4f16.v8f16.v2f16(<4 x half> %acc_in, <8 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> undef, <2 x half> undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v4f16.v4f16.v8f16.v2f16(<4 x half> %acc_in, <8 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> poison, <2 x half> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -5685,7 +5685,7 @@ bb:
   %tensor_0 = load <2 x half>, ptr addrspace(10) @tensor_0_var_f16_f16_1x1_4x4_iter_2
   %tensor_1 = load <2 x half>, ptr addrspace(10) @tensor_1_var_f16_f16_1x1_4x4_iter_2
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v4f16.v2f16(<8 x half> %acc_in, <4 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> undef, <2 x half> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v4f16.v2f16(<8 x half> %acc_in, <4 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> poison, <2 x half> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (2 << 0 | 0 << 3 | 1 << 12)
               i32 4098,
               ;   CLAMP
@@ -5721,7 +5721,7 @@ bb:
   %tensor_0 = load <4 x half>, ptr addrspace(10) @tensor_0_var_f16_f16_1x1_8x4_iter_2
   %tensor_1 = load <4 x half>, ptr addrspace(10) @tensor_1_var_f16_f16_1x1_8x4_iter_2
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v2f16.v4f16(<8 x half> %acc_in, <2 x half> %weights, <4 x half> %tensor_0, <4 x half> %tensor_1, <4 x half> undef, <4 x half> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v2f16.v4f16(<8 x half> %acc_in, <2 x half> %weights, <4 x half> %tensor_0, <4 x half> %tensor_1, <4 x half> poison, <4 x half> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (0 << 0 | 0 << 3 | 1 << 12)
               i32 4096,
               ;   CLAMP
@@ -5759,7 +5759,7 @@ bb:
   %tensor_1 = load <2 x half>, ptr addrspace(10) @tensor_1_var_f32_f16_1x1_4x2_iter_3
   %tensor_2 = load <2 x half>, ptr addrspace(10) @tensor_2_var_f32_f16_1x1_4x2_iter_3
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v16f16.v2f16(<4 x float> %acc_in, <16 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v16f16.v2f16(<4 x float> %acc_in, <16 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -5797,7 +5797,7 @@ bb:
   %tensor_1 = load <2 x half>, ptr addrspace(10) @tensor_1_var_f16_f16_1x1_4x2_iter_3
   %tensor_2 = load <2 x half>, ptr addrspace(10) @tensor_2_var_f16_f16_1x1_4x2_iter_3
 
-  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v4f16.v4f16.v16f16.v2f16(<4 x half> %acc_in, <16 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> undef,
+  %dst = call <4 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v4f16.v4f16.v16f16.v2f16(<4 x half> %acc_in, <16 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -5835,7 +5835,7 @@ bb:
   %tensor_1 = load <2 x half>, ptr addrspace(10) @tensor_1_var_f16_f16_1x1_4x4_iter_3
   %tensor_2 = load <2 x half>, ptr addrspace(10) @tensor_2_var_f16_f16_1x1_4x4_iter_3
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v6f16.v2f16(<8 x half> %acc_in, <6 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v6f16.v2f16(<8 x half> %acc_in, <6 x half> %weights, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (2 << 0 | 0 << 3 | 2 << 12)
               i32 8194,
               ;   CLAMP
@@ -5873,7 +5873,7 @@ bb:
   %tensor_1 = load <4 x half>, ptr addrspace(10) @tensor_1_var_f16_f16_1x1_8x4_iter_3
   %tensor_2 = load <4 x half>, ptr addrspace(10) @tensor_2_var_f16_f16_1x1_8x4_iter_3
 
-  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v4f16.v4f16(<8 x half> %acc_in, <4 x half> %weights, <4 x half> %tensor_0, <4 x half> %tensor_1, <4 x half> %tensor_2, <4 x half> undef,
+  %dst = call <8 x half> @llvm.amdgcn.convolve.f16.f16.1x1.v8f16.v8f16.v4f16.v4f16(<8 x half> %acc_in, <4 x half> %weights, <4 x half> %tensor_0, <4 x half> %tensor_1, <4 x half> %tensor_2, <4 x half> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (0 << 0 | 0 << 3 | 2 << 12)
               i32 8192,
               ;   CLAMP
@@ -6063,7 +6063,7 @@ bb:
   %weights = load <4 x bfloat>, ptr addrspace(10) @weights_var_f32_bf16_1x1_4x2_iter_1
   %tensor_0 = load <2 x bfloat>, ptr addrspace(10) @tensor_0_var_f32_bf16_1x1_4x2_iter_1
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf16.1x1.v4f32.v4f32.v4bf16.v2bf16(<4 x float> %acc_in, <4 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> undef, <2 x bfloat> undef, <2 x bfloat> undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf16.1x1.v4f32.v4f32.v4bf16.v2bf16(<4 x float> %acc_in, <4 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> poison, <2 x bfloat> poison, <2 x bfloat> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -6097,7 +6097,7 @@ bb:
   %weights = load <4 x bfloat>, ptr addrspace(10) @weights_var_bf16_bf16_1x1_4x2_iter_1
   %tensor_0 = load <2 x bfloat>, ptr addrspace(10) @tensor_0_var_bf16_bf16_1x1_4x2_iter_1
 
-  %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v4bf16.v4bf16.v4bf16.v2bf16(<4 x bfloat> %acc_in, <4 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> undef, <2 x bfloat> undef, <2 x bfloat> undef,
+  %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v4bf16.v4bf16.v4bf16.v2bf16(<4 x bfloat> %acc_in, <4 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> poison, <2 x bfloat> poison, <2 x bfloat> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_1) == (3 << 0 | 0 << 3 | 0 << 12)
               i32 3,
               ;   CLAMP
@@ -6131,7 +6131,7 @@ bb:
   %weights = load <2 x bfloat>, ptr addrspace(10) @weights_var_bf16_bf16_1x1_4x4_iter_1
   %tensor_0 = load <2 x bfloat>, ptr addrspace(10) @tensor_0_var_bf16_bf16_1x1_4x4_iter_1
 
-  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v2bf16.v2bf16(<8 x bfloat> %acc_in, <2 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> undef, <2 x bfloat> undef, <2 x bfloat> undef,
+  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v2bf16.v2bf16(<8 x bfloat> %acc_in, <2 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> poison, <2 x bfloat> poison, <2 x bfloat> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (2 << 0 | 0 << 3 | 0 << 12)
               i32 2,
               ;   CLAMP
@@ -6165,7 +6165,7 @@ bb:
   %weights = load <2 x bfloat>, ptr addrspace(10) @weights_var_bf16_bf16_1x1_8x4_iter_1
   %tensor_0 = load <4 x bfloat>, ptr addrspace(10) @tensor_0_var_bf16_bf16_1x1_8x4_iter_1
 
-  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v2bf16.v4bf16(<8 x bfloat> %acc_in, <2 x bfloat> %weights, <4 x bfloat> %tensor_0, <4 x bfloat> undef, <4 x bfloat> undef, <4 x bfloat> undef,
+  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v2bf16.v4bf16(<8 x bfloat> %acc_in, <2 x bfloat> %weights, <4 x bfloat> %tensor_0, <4 x bfloat> poison, <4 x bfloat> poison, <4 x bfloat> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_1) == (0 << 0 | 0 << 3 | 0 << 12)
               i32 0,
               ;   CLAMP
@@ -6201,7 +6201,7 @@ bb:
   %tensor_0 = load <2 x bfloat>, ptr addrspace(10) @tensor_0_var_f32_bf16_1x1_4x2_iter_2
   %tensor_1 = load <2 x bfloat>, ptr addrspace(10) @tensor_1_var_f32_bf16_1x1_4x2_iter_2
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf16.1x1.v4f32.v4f32.v8bf16.v2bf16(<4 x float> %acc_in, <8 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> undef, <2 x bfloat> undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf16.1x1.v4f32.v4f32.v8bf16.v2bf16(<4 x float> %acc_in, <8 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> poison, <2 x bfloat> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -6237,7 +6237,7 @@ bb:
   %tensor_0 = load <2 x bfloat>, ptr addrspace(10) @tensor_0_var_bf16_bf16_1x1_4x2_iter_2
   %tensor_1 = load <2 x bfloat>, ptr addrspace(10) @tensor_1_var_bf16_bf16_1x1_4x2_iter_2
 
-  %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v4bf16.v4bf16.v8bf16.v2bf16(<4 x bfloat> %acc_in, <8 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> undef, <2 x bfloat> undef,
+  %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v4bf16.v4bf16.v8bf16.v2bf16(<4 x bfloat> %acc_in, <8 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> poison, <2 x bfloat> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_2) == (3 << 0 | 0 << 3 | 1 << 12)
               i32 4099,
               ;   CLAMP
@@ -6273,7 +6273,7 @@ bb:
   %tensor_0 = load <2 x bfloat>, ptr addrspace(10) @tensor_0_var_bf16_bf16_1x1_4x4_iter_2
   %tensor_1 = load <2 x bfloat>, ptr addrspace(10) @tensor_1_var_bf16_bf16_1x1_4x4_iter_2
 
-  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v4bf16.v2bf16(<8 x bfloat> %acc_in, <4 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> undef, <2 x bfloat> undef,
+  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v4bf16.v2bf16(<8 x bfloat> %acc_in, <4 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> poison, <2 x bfloat> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (2 << 0 | 0 << 3 | 1 << 12)
               i32 4098,
               ;   CLAMP
@@ -6309,7 +6309,7 @@ bb:
   %tensor_0 = load <4 x bfloat>, ptr addrspace(10) @tensor_0_var_bf16_bf16_1x1_8x4_iter_2
   %tensor_1 = load <4 x bfloat>, ptr addrspace(10) @tensor_1_var_bf16_bf16_1x1_8x4_iter_2
 
-  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v2bf16.v4bf16(<8 x bfloat> %acc_in, <2 x bfloat> %weights, <4 x bfloat> %tensor_0, <4 x bfloat> %tensor_1, <4 x bfloat> undef, <4 x bfloat> undef,
+  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v2bf16.v4bf16(<8 x bfloat> %acc_in, <2 x bfloat> %weights, <4 x bfloat> %tensor_0, <4 x bfloat> %tensor_1, <4 x bfloat> poison, <4 x bfloat> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_2) == (0 << 0 | 0 << 3 | 1 << 12)
               i32 4096,
               ;   CLAMP
@@ -6347,7 +6347,7 @@ bb:
   %tensor_1 = load <2 x bfloat>, ptr addrspace(10) @tensor_1_var_f32_bf16_1x1_4x2_iter_3
   %tensor_2 = load <2 x bfloat>, ptr addrspace(10) @tensor_2_var_f32_bf16_1x1_4x2_iter_3
 
-  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf16.1x1.v4f32.v4f32.v16bf16.v2bf16(<4 x float> %acc_in, <16 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> undef,
+  %dst = call <4 x float> @llvm.amdgcn.convolve.f32.bf16.1x1.v4f32.v4f32.v16bf16.v2bf16(<4 x float> %acc_in, <16 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -6385,7 +6385,7 @@ bb:
   %tensor_1 = load <2 x bfloat>, ptr addrspace(10) @tensor_1_var_bf16_bf16_1x1_4x2_iter_3
   %tensor_2 = load <2 x bfloat>, ptr addrspace(10) @tensor_2_var_bf16_bf16_1x1_4x2_iter_3
 
-  %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v4bf16.v4bf16.v16bf16.v2bf16(<4 x bfloat> %acc_in, <16 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> undef,
+  %dst = call <4 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v4bf16.v4bf16.v16bf16.v2bf16(<4 x bfloat> %acc_in, <16 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x2 | CONV_FILTER_1x1 | CONV_ITER_3) == (3 << 0 | 0 << 3 | 2 << 12)
               i32 8195,
               ;   CLAMP
@@ -6423,7 +6423,7 @@ bb:
   %tensor_1 = load <2 x bfloat>, ptr addrspace(10) @tensor_1_var_bf16_bf16_1x1_4x4_iter_3
   %tensor_2 = load <2 x bfloat>, ptr addrspace(10) @tensor_2_var_bf16_bf16_1x1_4x4_iter_3
 
-  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v6bf16.v2bf16(<8 x bfloat> %acc_in, <6 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> undef,
+  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v6bf16.v2bf16(<8 x bfloat> %acc_in, <6 x bfloat> %weights, <2 x bfloat> %tensor_0, <2 x bfloat> %tensor_1, <2 x bfloat> %tensor_2, <2 x bfloat> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_4x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (2 << 0 | 0 << 3 | 2 << 12)
               i32 8194,
               ;   CLAMP
@@ -6461,7 +6461,7 @@ bb:
   %tensor_1 = load <4 x bfloat>, ptr addrspace(10) @tensor_1_var_bf16_bf16_1x1_8x4_iter_3
   %tensor_2 = load <4 x bfloat>, ptr addrspace(10) @tensor_2_var_bf16_bf16_1x1_8x4_iter_3
 
-  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v4bf16.v4bf16(<8 x bfloat> %acc_in, <4 x bfloat> %weights, <4 x bfloat> %tensor_0, <4 x bfloat> %tensor_1, <4 x bfloat> %tensor_2, <4 x bfloat> undef,
+  %dst = call <8 x bfloat> @llvm.amdgcn.convolve.bf16.bf16.1x1.v8bf16.v8bf16.v4bf16.v4bf16(<8 x bfloat> %acc_in, <4 x bfloat> %weights, <4 x bfloat> %tensor_0, <4 x bfloat> %tensor_1, <4 x bfloat> %tensor_2, <4 x bfloat> poison,
               ;   AUX_DATA: (PIXEL_SHAPE_8x4 | CONV_FILTER_1x1 | CONV_ITER_3) == (0 << 0 | 0 << 3 | 2 << 12)
               i32 8192,
               ;   CLAMP

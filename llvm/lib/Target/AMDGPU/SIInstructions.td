@@ -1365,6 +1365,21 @@ def V_LOAD_IDX : VPseudoInstSI <
     let UseNamedOperandTable = 1;
     let hasSideEffects = 0;
 }
+
+// Used for byte or short loads.
+// It lowers into V_BFE_U32 + V_LOAD_IDX
+// Only bitoffset of 0, 8, 16, or 24 bits are supported.
+// Only bitsize of 8 or 16 bits are supported.
+def V_LOAD_IDX_BITS
+    : VPseudoInstSI<(outs VGPR_IDX_DATA_OP:$data_op),
+                    (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset,
+                        SSrc_b32:$bitsize, SSrc_b32:$bitoffset)> {
+  let mayLoad = 1;
+  let VALU = 1;
+  let UseNamedOperandTable = 1;
+  let hasSideEffects = 0;
+}
+
 def V_STORE_IDX : VPseudoInstSI <
   (outs),
   (ins VGPR_IDX_DATA_OP:$data_op, VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
@@ -1372,6 +1387,19 @@ def V_STORE_IDX : VPseudoInstSI <
     let VALU = 1;
     let UseNamedOperandTable = 1;
     let hasSideEffects = 0;
+}
+
+// Used for byte or short stores.
+// Only bitoffset of 0, 8, 16, or 24 bits are supported.
+// Only bitsize of 8 or 16 bits are supported.
+def V_STORE_IDX_BITS
+    : VPseudoInstSI<(outs), (ins VGPR_IDX_DATA_OP:$data_op,
+                                VGPR_IDX_IDX_OP:$idx, i32imm:$offset,
+                                SSrc_b32:$bitsize, SSrc_b32:$bitoffset)> {
+  let mayStore = 1;
+  let VALU = 1;
+  let UseNamedOperandTable = 1;
+  let hasSideEffects = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2213,6 +2241,19 @@ def : GCNPat <
                                  SReg_32)), sub1))
 >;
 
+def : GCNPat <
+  (UniformUnaryFrag<fneg> (v2f64 SGPR_128:$src)),
+  (v2f64 (REG_SEQUENCE SGPR_128,
+         (i32 (EXTRACT_SUBREG $src, sub0)), sub0,
+         (i32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG $src, sub1)),
+                                           (i32 (S_MOV_B32 (i32 0x80000000)))),
+                                 SReg_32)), sub1,
+         (i32 (EXTRACT_SUBREG $src, sub2)), sub2,
+         (i32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG $src, sub3)),
+                                           (i32 (S_MOV_B32 (i32 0x80000000)))),
+                                 SReg_32)), sub3))
+>;
+
 // FIXME: Use S_BITSET0_B32/B64?
 def : GCNPat <
   (UniformUnaryFrag<fabs> (f64 SReg_64:$src)),
@@ -2345,11 +2386,19 @@ def : GCNPat <
 
 def : GCNPat <
   (DivergentUnaryFrag<fneg> (v2f32 VReg_64:$src)),
-  (V_PK_ADD_F32 11 /* OP_SEL_1 | NEG_LO | HEG_HI */, VReg_64:$src,
-                11 /* OP_SEL_1 | NEG_LO | HEG_HI */, (i64 0),
+  (V_PK_ADD_F32 !or(SRCMODS.OP_SEL_1, SRCMODS.NEG, SRCMODS.NEG_HI), VReg_64:$src,
+                !or(SRCMODS.OP_SEL_1, SRCMODS.NEG, SRCMODS.NEG_HI), (i64 0),
                 0, 0, 0, 0, 0)
 > {
   let SubtargetPredicate = HasPackedFP32Ops;
+}
+
+def : GCNPat <
+  (DivergentUnaryFrag<fneg> (v2f64 VReg_128:$src)),
+  (V_PK_ADD_F64 !or(SRCMODS.NEG, SRCMODS.NEG_HI), VReg_128:$src,
+                !or(SRCMODS.NEG, SRCMODS.NEG_HI), (v2i64 (as_i64imm (i32 0))))
+> {
+  let SubtargetPredicate = HasPackedFP64Ops;
 }
 
 foreach fp16vt = [f16, bf16] in {
@@ -3605,30 +3654,6 @@ def : GCNPat<
 >;
 } // End True16Predicate
 
-let True16Predicate = UseRealTrue16Insts in {
-def : GCNPat<
-  (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
-  (V_MUL_F16_t16_e64 0, (i16 CONST.FP16_ONE), $src_mods, $src, 0/*Clamp*/, /*omod*/0, /*opsel*/0)
->;
-
-def : GCNPat<
-  (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
-  (V_MUL_F16_t16_e64 0, (i16 CONST.FP16_NEG_ONE), $src_mods, $src, 0/*Clamp*/, /*omod*/0, /*opsel*/0)
->;
-} // End True16Predicate
-
-let True16Predicate = UseFakeTrue16Insts in {
-def : GCNPat<
-  (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
-  (V_MUL_F16_fake16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src)
->;
-
-def : GCNPat<
-  (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
-  (V_MUL_F16_fake16_e64 0, (i32 CONST.FP16_NEG_ONE), $src_mods, $src)
->;
-} // End True16Predicate
-
 def : GCNPat<
   (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
   (V_PK_MUL_F16 0, (i32 CONST.FP16_ONE), $src_mods, $src, DSTCLAMP.NONE)
@@ -3855,6 +3880,23 @@ def : GCNPat <
 } // End True16Predicate = ...
 } // End foreach Ty = ...
 } // End AddedComplexity = 1
+
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat<
+  (i32 (DivergentBinFrag<or>
+    (i32 (zext i16:$src_lo)),
+    (i32 (bitconvert (v2i16 (build_vector (i16 0), (i16 VGPR_16:$src_hi)))))
+  )),
+  (REG_SEQUENCE VGPR_32, $src_lo, lo16, $src_hi, hi16)
+>;
+def : GCNPat<
+  (i32 (DivergentBinFrag<or>
+    (i32 (bitconvert (v2i16 (build_vector (i16 0), (i16 VGPR_16:$src_hi))))),
+    (i32 (zext i16:$src_lo))
+  )),
+  (REG_SEQUENCE VGPR_32, $src_lo, lo16, $src_hi, hi16)
+>;
+}
 
 let True16Predicate = UseRealTrue16Insts in
 def : GCNPat <

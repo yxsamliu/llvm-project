@@ -168,7 +168,7 @@ bool AMDGPUMCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
 
 void AMDGPUMCInstrAnalysis::updateState(const MCInst &Inst, uint64_t Addr) {
   if (Inst.getOpcode() == AMDGPU::S_SET_VGPR_MSB_gfx12)
-    VgprMSBs = Inst.getOperand(0).getImm();
+    VgprMSBs = Inst.getOperand(0).getImm() & 0xff;
   else if (Inst.getOpcode() == AMDGPU::S_SET_VGPR_FRAMES_gfx13) {
     VgprMSBs = Inst.getOperand(0).getImm() >> 8;
     VgprIDXs = Inst.getOperand(0).getImm() & 0xff;
