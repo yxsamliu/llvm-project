@@ -43,15 +43,15 @@ enum class SyncScope {
   SystemScope,
   DeviceScope,
   WorkgroupScope,
+  ClusterScope,
   WavefrontScope,
   SingleScope,
-  ClusterScope,
   HIPSingleThread,
   HIPWavefront,
   HIPWorkgroup,
+  HIPCluster,
   HIPAgent,
   HIPSystem,
-  HIPCluster,
   OpenCLWorkGroup,
   OpenCLDevice,
   OpenCLAllSVMDevices,
@@ -67,24 +67,24 @@ inline llvm::StringRef getAsString(SyncScope S) {
     return "device_scope";
   case SyncScope::WorkgroupScope:
     return "workgroup_scope";
+  case SyncScope::ClusterScope:
+    return "cluster_scope";
   case SyncScope::WavefrontScope:
     return "wavefront_scope";
   case SyncScope::SingleScope:
     return "single_scope";
-  case SyncScope::ClusterScope:
-    return "cluster_scope";
   case SyncScope::HIPSingleThread:
     return "hip_singlethread";
   case SyncScope::HIPWavefront:
     return "hip_wavefront";
   case SyncScope::HIPWorkgroup:
     return "hip_workgroup";
+  case SyncScope::HIPCluster:
+    return "hip_cluster";
   case SyncScope::HIPAgent:
     return "hip_agent";
   case SyncScope::HIPSystem:
     return "hip_system";
-  case SyncScope::HIPCluster:
-    return "hip_cluster";
   case SyncScope::OpenCLWorkGroup:
     return "opencl_workgroup";
   case SyncScope::OpenCLDevice:
@@ -180,6 +180,8 @@ public:
   /// The enum values match the pre-defined macros
   /// __HIP_MEMORY_SCOPE_*, which are used to define memory_scope_*
   /// enums in hip-c.h.
+  /// These may be present in pch files or bitcode so preserve existing values
+  /// when adding a new ID.
   enum ID {
     SingleThread = 1,
     Wavefront = 2,
@@ -187,7 +189,9 @@ public:
     Agent = 4,
     System = 5,
     Cluster = 6,
-    Last = Cluster
+    End,
+    Last = End - 1,
+    Count = Last
   };
 
   AtomicScopeHIPModel() {}
@@ -200,12 +204,14 @@ public:
       return SyncScope::HIPWavefront;
     case Workgroup:
       return SyncScope::HIPWorkgroup;
+    case Cluster:
+      return SyncScope::HIPCluster;
     case Agent:
       return SyncScope::HIPAgent;
     case System:
       return SyncScope::HIPSystem;
-    case Cluster:
-      return SyncScope::HIPCluster;
+    case End:
+      break;
     }
     llvm_unreachable("Invalid language sync scope value");
   }
@@ -216,11 +222,12 @@ public:
   }
 
   ArrayRef<unsigned> getRuntimeValues() const override {
-    static_assert(Last == Cluster, "Does not include all sync scopes");
     static const unsigned Scopes[] = {
         static_cast<unsigned>(SingleThread), static_cast<unsigned>(Wavefront),
-        static_cast<unsigned>(Workgroup),    static_cast<unsigned>(Agent),
-        static_cast<unsigned>(System),       static_cast<unsigned>(Cluster)};
+        static_cast<unsigned>(Workgroup),    static_cast<unsigned>(Cluster),
+        static_cast<unsigned>(System),       static_cast<unsigned>(Agent)};
+    static_assert(sizeof(Scopes) / sizeof(Scopes[0]) == Count,
+                  "Does not include all sync scopes");
     return llvm::ArrayRef(Scopes);
   }
 
@@ -232,7 +239,9 @@ public:
 /// Defines the generic atomic scope model.
 class AtomicScopeGenericModel : public AtomicScopeModel {
 public:
-  /// The enum values match predefined built-in macros __ATOMIC_SCOPE_*.
+  /// The enum values match predefined built-in macros __MEMORY_SCOPE_*.
+  /// These may be present in pch files or bitcode so preserve existing values
+  /// when adding a new ID.
   enum ID {
     System = 0,
     Device = 1,
@@ -240,7 +249,8 @@ public:
     Wavefront = 3,
     Single = 4,
     Cluster = 5,
-    Last = Cluster
+    Count,
+    Last = Count - 1
   };
 
   AtomicScopeGenericModel() = default;
@@ -253,12 +263,14 @@ public:
       return SyncScope::SystemScope;
     case Workgroup:
       return SyncScope::WorkgroupScope;
+    case Cluster:
+      return SyncScope::ClusterScope;
     case Wavefront:
       return SyncScope::WavefrontScope;
     case Single:
       return SyncScope::SingleScope;
-    case Cluster:
-      return SyncScope::ClusterScope;
+    case Count:
+      break;
     }
     llvm_unreachable("Invalid language sync scope value");
   }
@@ -268,11 +280,12 @@ public:
   }
 
   ArrayRef<unsigned> getRuntimeValues() const override {
-    static_assert(Last == Cluster, "Does not include all sync scopes");
     static const unsigned Scopes[] = {
-        static_cast<unsigned>(Device),    static_cast<unsigned>(System),
-        static_cast<unsigned>(Workgroup), static_cast<unsigned>(Wavefront),
-        static_cast<unsigned>(Single),    static_cast<unsigned>(Cluster)};
+        static_cast<unsigned>(System),    static_cast<unsigned>(Device),
+        static_cast<unsigned>(Workgroup), static_cast<unsigned>(Cluster),
+        static_cast<unsigned>(Wavefront), static_cast<unsigned>(Single)};
+    static_assert(sizeof(Scopes) / sizeof(Scopes[0]) == Count,
+                  "Does not include all sync scopes");
     return llvm::ArrayRef(Scopes);
   }
 

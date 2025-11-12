@@ -731,8 +731,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       MachineOperand &Op = MI->getOperand(1);
       auto Callee =
           cast<Function>(Op.getGlobal()->stripPointerCastsAndAliases());
-
-      Op.ChangeToMCSymbol(RI.getSymbol(Callee->getName(),
+      auto CalleeSym = TM.getSymbol(Callee);
+      Op.ChangeToMCSymbol(RI.getSymbol(CalleeSym->getName(),
                                        MCResourceInfo::RIK_NumVGPR, OutContext,
                                        Callee->hasLocalLinkage()),
                           SIInstrInfo::MO_NUM_VGPRS);

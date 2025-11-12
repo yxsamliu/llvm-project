@@ -210,6 +210,7 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_V2BF16,
   OPERAND_REG_IMM_V2FP16,
   OPERAND_REG_IMM_V2INT16,
+  OPERAND_REG_IMM_V2INT64,
   OPERAND_REG_IMM_NOINLINE_V2FP16,
   OPERAND_REG_IMM_V2INT32,
   OPERAND_REG_IMM_V2FP32,
@@ -435,6 +436,9 @@ enum CPol {
   // Volatile (used to preserve/signal operation volatility for buffer
   // operations not a real instruction bit)
   VOLATILE = 1 << 31,
+  // The set of "cache policy" bits used for compiler features that
+  // do not correspond to handware features.
+  VIRTUAL_BITS = VOLATILE,
 };
 
 } // namespace CPol

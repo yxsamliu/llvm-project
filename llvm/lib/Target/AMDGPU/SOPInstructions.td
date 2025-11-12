@@ -897,9 +897,10 @@ def S_CBRANCH_G_FORK : SOP2_Pseudo <
   let SubtargetPredicate = isGFX6GFX7GFX8GFX9;
 }
 
-let Defs = [SCC] in {
-def S_ABSDIFF_I32 : SOP2_32 <"s_absdiff_i32">;
-} // End Defs = [SCC]
+let isCommutable = 1, Defs = [SCC] in
+def S_ABSDIFF_I32 : SOP2_32 <"s_absdiff_i32",
+  [(set i32:$sdst, (UniformUnaryFrag<abs> (sub_oneuse i32:$src0, i32:$src1)))]
+>;
 
 let SubtargetPredicate = isGFX8GFX9 in {
   def S_RFE_RESTORE_B64 : SOP2_Pseudo <
@@ -1960,17 +1961,24 @@ def s_sema_wait_imm : ImmLeaf<
   }]>
 >;
 
-let SubtargetPredicate = isGFX13Plus, hasSideEffects = 1 in {
+let SubtargetPredicate = HasVGPRIndexingRegisters, hasSideEffects = 1 in {
   // In GFX13+ the MSBs and the index registers are stored in
   // SQ_WAVE_GPR_MSB_IDX0 and SQ_WAVE_GPR_IDX123, so
   // S_SET_VGPR_FRAMES does not write to SQ_WAVE_MODE.
   def S_SET_VGPR_FRAMES : SOPP_Pseudo<"s_set_vgpr_frames" , (ins i16imm:$simm16), "$simm16">;
+}
 
+let SubtargetPredicate = HasSemaphores, hasSideEffects = 1 in {
   def S_SEMA_SIGNAL       : SOPP_Pseudo<"s_sema_signal", (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_sema_signal s_sema_signal_imm:$simm16)]>;
   def S_SEMA_WAIT         : SOPP_Pseudo<"s_sema_wait", (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_sema_wait s_sema_wait_imm:$simm16)]>;
   def S_SEMA_SET_LIMIT    : SOPP_Pseudo<"s_sema_set_limit", (ins i16imm:$simm16), "$simm16">;
   def S_SEMA_SIGNAL_AFTER : SOPP_Pseudo<"s_sema_signal_after", (ins i16imm:$simm16), "$simm16">;
-  def S_INST_AUTO_PREFETCH_MODE : SOPP_Pseudo<"s_inst_auto_prefetch_mode", (ins s16imm:$simm16), "$simm16", [(int_amdgcn_s_inst_auto_prefetch_mode timm:$simm16)]>;
+}
+
+let SubtargetPredicate = isGFX13Plus, hasSideEffects = 1 in {
+  def S_INST_AUTO_PREFETCH_MODE : SOPP_Pseudo<"s_inst_auto_prefetch_mode",
+    (ins s16imm:$simm16), "$simm16",
+    [(int_amdgcn_s_inst_auto_prefetch_mode timm:$simm16)]>;
 }
 
 def s_sema_set_state_imm : ImmLeaf<
@@ -2204,6 +2212,20 @@ let WaveSizePredicate = isWave64 in {
 def : GCNPat<
   (i1 (not (or_oneuse i1:$src0, i1:$src1))),
   (S_NOR_B64 i1:$src0, i1:$src1)
+>;
+}
+
+// v2i64 shl is legal, we need a way to select scalar code
+let SubtargetPredicate = HasPackedU64Ops in {
+def : GCNPat<
+  (v2i64 (UniformBinFrag<cshl_64> v2i64:$src0, v2i64:$src1)),
+  (v2i64 (REG_SEQUENCE SReg_128,
+    (i64 (COPY_TO_REGCLASS
+           (S_LSHL_B64 (i64 (EXTRACT_SUBREG $src0, sub0_sub1)),
+                       (i32 (EXTRACT_SUBREG $src1, sub0))), SGPR_64)), sub0_sub1,
+    (i64 (COPY_TO_REGCLASS
+           (S_LSHL_B64 (i64 (EXTRACT_SUBREG $src0, sub2_sub3)),
+                       (i32 (EXTRACT_SUBREG $src1, sub2))), SGPR_64)), sub2_sub3))
 >;
 }
 

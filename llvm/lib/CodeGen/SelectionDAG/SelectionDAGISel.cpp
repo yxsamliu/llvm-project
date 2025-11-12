@@ -2556,6 +2556,11 @@ void SelectionDAGISel::Select_PROVENANCE_END(SDNode *N) {
   CurDAG->SelectNodeTo(N, TargetOpcode::PROVENANCE_END, N->getValueType(0));
 }
 
+void SelectionDAGISel::Select_RELOC_NONE(SDNode *N) {
+  CurDAG->SelectNodeTo(N, TargetOpcode::RELOC_NONE, N->getValueType(0),
+                       N->getOperand(1), N->getOperand(0));
+}
+
 void SelectionDAGISel::Select_FREEZE(SDNode *N) {
   // TODO: We don't have FREEZE pseudo-instruction in MachineInstr-level now.
   // If FREEZE instruction is added later, the code below must be changed as
@@ -3333,6 +3338,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     return;
   case ISD::PROVENANCE_END:
     Select_PROVENANCE_END(NodeToMatch);
+    return;
+  case ISD::RELOC_NONE:
+    Select_RELOC_NONE(NodeToMatch);
     return;
   case ISD::FREEZE:
     Select_FREEZE(NodeToMatch);

@@ -675,10 +675,7 @@ define <2 x i16> @shuffle_v2i16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: shuffle_v2i16_rebroadcast:
@@ -698,10 +695,7 @@ define <2 x i16> @shuffle_v2i16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-TRUE16-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-TRUE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
 ; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-FAKE16-LABEL: shuffle_v2i16_rebroadcast:
@@ -746,10 +740,8 @@ define <4 x i16> @shuffle_v4i16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -772,10 +764,8 @@ define <4 x i16> @shuffle_v4i16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-TRUE16-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-TRUE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -827,10 +817,8 @@ define <8 x i16> @shuffle_v8i16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, v0
@@ -857,10 +845,8 @@ define <8 x i16> @shuffle_v8i16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-TRUE16-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-TRUE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v2, v0
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -922,10 +908,8 @@ define <16 x i16> @shuffle_v16i16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, v0
@@ -960,10 +944,8 @@ define <16 x i16> @shuffle_v16i16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-TRUE16-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-TRUE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v2, v0
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v0
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, v0
@@ -1045,10 +1027,8 @@ define <32 x i16> @shuffle_v32i16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, v0
@@ -1099,10 +1079,8 @@ define <32 x i16> @shuffle_v32i16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-TRUE16-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-TRUE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v2, v0
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v0
 ; GFX13-TRUE16-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, v0

@@ -489,21 +489,21 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
 
      **GCN GFX11.5 (RDNA 3.5)** [AMD-GCN-GFX11-RDNA3.5]_
      -----------------------------------------------------------------------------------------------------------------------
-     ``gfx1150``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+     ``gfx1150``                 ``amdgcn``   APU   - cumode          - Architected                   Radeon 890M
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
                                                                       - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
-     ``gfx1151``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+     ``gfx1151``                 ``amdgcn``   APU   - cumode          - Architected                   Radeon 8060S
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
                                                                       - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
-     ``gfx1152``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+     ``gfx1152``                 ``amdgcn``   APU   - cumode          - Architected                   Radeon 860M
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
                                                                       - Packed
@@ -920,6 +920,7 @@ supported for the ``amdgcn`` target.
      Buffer Strided Pointer (experimental) 9               *TODO*
      Lane-shared                           10              *TODO*      Shared VGPR      32      0xFFFFFFFF
      Distributed                           11              *TODO*      DDS              32      0xFFFFFFFF
+     *reserved for downstream use (LLPC)*  12
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
 
@@ -1597,6 +1598,85 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    wavegroup within the spatial cluster. Otherwise the return value is undefined.
                                                    The next neighbor has an id one greater, and the previous has one less.
 
+  llvm.amdgcn.global.load.b128                 This intrinsic is supported on gfx942, gfx950.
+  
+                                                   Signature:
+                                                   
+                                                   .. code-block:: llvm
+                                                      
+                                                      <4 x i32> @llvm.amdgcn.raw.load.store.b128(
+                                                          ptr addrspace(1), ; source
+                                                          metadata)         ; scope    - e.g. '!0' where '!0 = !{!"wavegroup"}'
+
+                                                   Reads the value from the source address with cache behavior
+                                                   specified by the scope.
+
+                                                   For gfc942 and gfx950 devices, this emits a
+                                                   ``global_load_dwordx4`` instruction with the appropriate
+                                                   ``SC0`` and ``SC1`` bits set.
+
+                                                   Valid values for scope are
+                                                   
+                                                   ===================== =============================================================
+                                                   scope                 architecture name
+                                                   ===================== =============================================================
+                                                   ``"wavefront"``       wave
+                                                   
+                                                   ``"workgroup"``       group
+                                                   
+                                                   ``"agent"``           device
+                                                   
+                                                   ``""`` (empty string) system
+                                                   ===================== =============================================================
+ 
+                                                   For semantics on gfx942, see Table 47 in section 9.1.10
+                                                   "Memory Scope and Temporal Controls" of the "AMD Instinct
+                                                   MI300" Instruction Set Architecture Reference.
+                                                   
+                                                   For semantics on gfx950, see Table 49 in section 9.1.10
+                                                   "Memory Scope and Temporal Controls" of the CDNA4
+                                                   Instruction Set Architecture Reference.
+                                                                                                      
+  llvm.amdgcn.global.store.b128                This intrinsic is supported on gfx942, gfx950.
+  
+                                                   Signature:
+                                                   
+                                                   .. code-block:: llvm
+                                                      
+                                                      void @llvm.amdgcn.global.store.b128(
+                                                          ptr addrspace(1), ; destination
+                                                          <4 x i32>,        ; value
+                                                          metadata)         ; scope    - e.g. '!0' where '!0 = !{!"wavegroup"}'
+
+                                                   Writes the value to the destination address with cache
+                                                   behavior specified by the scope.
+
+                                                   For gfc942 and gfx950 devices, this emits a
+                                                   ``global_store_dwordx4`` instruction with the appropriate
+                                                   ``SC0`` and ``SC1`` bits set.
+
+                                                   Valid values for scope are
+                                                   
+                                                   ===================== =============================================================
+                                                   scope                 architecture name
+                                                   ===================== =============================================================
+                                                   ``"wavefront"``       wave
+                                                   
+                                                   ``"workgroup"``       group
+                                                   
+                                                   ``"agent"``           device
+                                                   
+                                                   ``""`` (empty string) system
+                                                   ===================== =============================================================
+ 
+                                                   For semantics on gfx942, see Table 48 in section 9.1.10
+                                                   "Memory Scope and Temporal Controls" of the "AMD Instinct
+                                                   MI300" Instruction Set Architecture Reference.
+                                                   
+                                                   For semantics on gfx950, see Table 50 in section 9.1.10
+                                                   "Memory Scope and Temporal Controls" of the CDNA4
+                                                   Instruction Set Architecture Reference.
+                                                                                                      
   ==============================================   ==========================================================
 
 .. TODO::
@@ -4241,7 +4321,7 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                 "Image", or "Pipe". This may be
                                                 more restrictive than indicated
                                                 by "AccQual" to reflect what the
-                                                kernel actual does. If not
+                                                kernel actually does. If not
                                                 present then the runtime must
                                                 assume what is implied by
                                                 "AccQual" and "IsConst". Values
@@ -5593,8 +5673,8 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      ``COMPUTE_PGM_RSRC1.PRIORITY``.
      13:12   2 bits  FLOAT_ROUND_MODE_32             Wavefront starts execution
                                                      with specified rounding
-                                                     mode for single (32
-                                                     bit) floating point
+                                                     mode for single (32-bit)
+                                                     floating point
                                                      precision floating point
                                                      operations.
 
@@ -5930,7 +6010,7 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                      Wavefront starts execution
                                                      with memory violation
-                                                     exceptions exceptions
+                                                     exceptions
                                                      enabled which are generated
                                                      when a memory violation has
                                                      occurred for this wavefront from
@@ -6173,7 +6253,7 @@ The fields used by CP for code objects before V3 also match those specified in
      FLOAT_DENORM_MODE_FLUSH_NONE           3     No Flush
      ====================================== ===== ====================================
 
-  Denormal flushing is sign respecting. i.e. the behavior expected by
+  Denormal flushing is sign respecting, i.e., the behavior expected by
   ``"denormal-fp-math"="preserve-sign"``. The behavior is undefined with
   ``"denormal-fp-math"="positive-zero"``
 
@@ -6694,6 +6774,13 @@ operations.
 
 ``buffer/global/flat_load/store/atomic`` instructions to global memory are
 termed vector memory operations.
+
+``global_load_lds`` or ``buffer/global_load`` instructions with the `lds` flag
+are LDS DMA loads. They interact with caches as if the loaded data were
+being loaded to registers and not to LDS, and so therefore support the same
+cache modifiers. They cannot be performed atomically. They implement volatile
+(via aux/cpol bit 31) and nontemporal (via metadata) as if they were loads
+from the global address space.
 
 Private address space uses ``buffer_load/store`` using the scratch V#
 (GFX6-GFX8), or ``scratch_load/store`` (GFX9-GFX11). Since only a single thread
@@ -13582,9 +13669,6 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
      store atomic release      - workgroup    - global   1. s_waitcnt lgkmcnt(0) &
                                               - generic     vmcnt(0) & vscnt(0)
 
-                                                           - If CU wavefront execution
-                                                             mode, omit vmcnt(0) and
-                                                             vscnt(0).
                                                            - If OpenCL, omit
                                                              lgkmcnt(0).
                                                            - Could be split into
@@ -13630,8 +13714,6 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                          2. buffer/global/flat_store
      store atomic release      - workgroup    - local    1. s_waitcnt vmcnt(0) & vscnt(0)
 
-                                                           - If CU wavefront execution
-                                                             mode, omit.
                                                            - If OpenCL, omit.
                                                            - Could be split into
                                                              separate s_waitcnt
@@ -13719,9 +13801,6 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
      atomicrmw    release      - workgroup    - global   1. s_waitcnt lgkmcnt(0) &
                                               - generic     vmcnt(0) & vscnt(0)
 
-                                                           - If CU wavefront execution
-                                                             mode, omit vmcnt(0) and
-                                                             vscnt(0).
                                                            - If OpenCL, omit lgkmcnt(0).
                                                            - Could be split into
                                                              separate s_waitcnt
@@ -13766,8 +13845,6 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                          2. buffer/global/flat_atomic
      atomicrmw    release      - workgroup    - local    1. s_waitcnt vmcnt(0) & vscnt(0)
 
-                                                           - If CU wavefront execution
-                                                             mode, omit.
                                                            - If OpenCL, omit.
                                                            - Could be split into
                                                              separate s_waitcnt
@@ -13851,9 +13928,6 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
      fence        release      - workgroup    *none*     1. s_waitcnt lgkmcnt(0) &
                                                             vmcnt(0) & vscnt(0)
 
-                                                           - If CU wavefront execution
-                                                             mode, omit vmcnt(0) and
-                                                             vscnt(0).
                                                            - If OpenCL and
                                                              address space is
                                                              not generic, omit
@@ -13980,9 +14054,6 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
      atomicrmw    acq_rel      - workgroup    - global   1. s_waitcnt lgkmcnt(0) &
                                                             vmcnt(0) & vscnt(0)
 
-                                                           - If CU wavefront execution
-                                                             mode, omit vmcnt(0) and
-                                                             vscnt(0).
                                                            - If OpenCL, omit
                                                              lgkmcnt(0).
                                                            - Must happen after
@@ -14034,8 +14105,6 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                          2. buffer/global_atomic
                                                          3. s_waitcnt vm/vscnt(0)
 
-                                                           - If CU wavefront execution
-                                                             mode, omit.
                                                            - Use vmcnt(0) if atomic with
                                                              return and vscnt(0) if
                                                              atomic with no-return.
@@ -14060,8 +14129,6 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
 
      atomicrmw    acq_rel      - workgroup    - local    1. s_waitcnt vmcnt(0) & vscnt(0)
 
-                                                           - If CU wavefront execution
-                                                             mode, omit.
                                                            - If OpenCL, omit.
                                                            - Could be split into
                                                              separate s_waitcnt
@@ -14121,9 +14188,6 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
      atomicrmw    acq_rel      - workgroup    - generic  1. s_waitcnt lgkmcnt(0) &
                                                             vmcnt(0) & vscnt(0)
 
-                                                           - If CU wavefront execution
-                                                             mode, omit vmcnt(0) and
-                                                             vscnt(0).
                                                            - If OpenCL, omit lgkmcnt(0).
                                                            - Could be split into
                                                              separate s_waitcnt
@@ -14169,9 +14233,9 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                          3. s_waitcnt lgkmcnt(0) &
                                                             vmcnt(0) & vscnt(0)
 
-                                                           - If CU wavefront execution
-                                                             mode, omit vmcnt(0) and
-                                                             vscnt(0).
+                                                           - If atomic with return, omit
+                                                             vscnt(0), if atomic with
+                                                             no-return, omit vmcnt(0).
                                                            - If OpenCL, omit lgkmcnt(0).
                                                            - Must happen before
                                                              the following
@@ -14344,9 +14408,6 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
      fence        acq_rel      - workgroup    *none*     1. s_waitcnt lgkmcnt(0) &
                                                             vmcnt(0) & vscnt(0)
 
-                                                           - If CU wavefront execution
-                                                             mode, omit vmcnt(0) and
-                                                             vscnt(0).
                                                            - If OpenCL and
                                                              address space is
                                                              not generic, omit
@@ -14576,9 +14637,6 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
      load atomic  seq_cst      - workgroup    - global   1. s_waitcnt lgkmcnt(0) &
                                               - generic     vmcnt(0) & vscnt(0)
 
-                                                           - If CU wavefront execution
-                                                             mode, omit vmcnt(0) and
-                                                             vscnt(0).
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0), s_waitcnt
@@ -14687,8 +14745,6 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
 
                                                          1. s_waitcnt vmcnt(0) & vscnt(0)
 
-                                                           - If CU wavefront execution
-                                                             mode, omit.
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0) and s_waitcnt
@@ -15690,8 +15746,6 @@ the instruction in the code sequence that references the table.
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
-                                                            | **CU wavefront execution mode:**
-                                                            | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL, omit ``s_wait_dscnt 0x0``.
                                                            - The waits can be
@@ -15736,8 +15790,6 @@ the instruction in the code sequence that references the table.
                                                             | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
-                                                            | ``s_wait_dscnt 0x0``
-                                                            | **CU wavefront execution mode:**
                                                             | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL, omit.
@@ -15832,8 +15884,6 @@ the instruction in the code sequence that references the table.
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
-                                                            | **CU wavefront execution mode:**
-                                                            | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL, omit ``s_wait_dscnt 0x0``.
                                                            - If OpenCL and CU wavefront
@@ -15882,8 +15932,6 @@ the instruction in the code sequence that references the table.
                                                             | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
-                                                            | ``s_wait_dscnt 0x0``
-                                                            | **CU wavefront execution mode:**
                                                             | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL, omit all.
@@ -15975,8 +16023,6 @@ the instruction in the code sequence that references the table.
                                                             | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
-                                                            | ``s_wait_dscnt 0x0``
-                                                            | **CU wavefront execution mode:**
                                                             | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL, omit ``s_wait_dscnt 0x0``.
@@ -16107,8 +16153,6 @@ the instruction in the code sequence that references the table.
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
-                                                            | **CU wavefront execution mode:**
-                                                            | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL, omit ``s_wait_dscnt 0x0``.
                                                            - Must happen after
@@ -16165,8 +16209,6 @@ the instruction in the code sequence that references the table.
                                                             | **Atomic without return:**
                                                             | ``s_wait_storecnt 0x0``
 
-                                                           - If CU wavefront execution
-                                                             mode, omit.
                                                            - Must happen before
                                                              the following
                                                              ``global_inv``.
@@ -16190,8 +16232,6 @@ the instruction in the code sequence that references the table.
                                                             | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
-                                                            | ``s_wait_dscnt 0x0``
-                                                            | **CU wavefront execution mode:**
                                                             | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL, omit.
@@ -16253,8 +16293,6 @@ the instruction in the code sequence that references the table.
                                                             | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
-                                                            | ``s_wait_dscnt 0x0``
-                                                            | **CU wavefront execution mode:**
                                                             | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL, omit ``s_wait_loadcnt 0x0``.
@@ -16507,8 +16545,6 @@ the instruction in the code sequence that references the table.
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
-                                                            | **CU wavefront execution mode:**
-                                                            | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL and
                                                              address space is
@@ -16737,8 +16773,6 @@ the instruction in the code sequence that references the table.
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
-                                                            | **CU wavefront execution mode:**
-                                                            | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL, omit
                                                              ``s_wait_dscnt 0x0``
@@ -16844,8 +16878,6 @@ the instruction in the code sequence that references the table.
                                                             | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
-                                                            | ``s_wait_dscnt 0x0``
-                                                            | **CU wavefront execution mode:**
                                                             | ``s_wait_dscnt 0x0``
 
                                                            - If OpenCL, omit all.
@@ -17183,7 +17215,7 @@ For GFX125x:
 * Some memory operations contain a ``nv`` bit, for "non-volatile", which indicates
   memory that is not expected to change during a kernel's execution.
   This information is propagated to the cache lines for that address
-  (refered to as ``$nv``).
+  (referred to as ``$nv``).
 
   * When ``nv=0`` reads hit dirty ``$nv=1`` data in cache, the hardware will
     writeback the data to the next level in the hierarchy and then subsequently read
@@ -19326,7 +19358,7 @@ On entry to a function:
 #. All other registers are unspecified.
 #. Any necessary ``s_waitcnt`` has been performed to ensure memory is available
    to the function.
-#. Use pass-by-reference (byref) in stead of pass-by-value (byval) for struct
+#. Use pass-by-reference (byref) instead of pass-by-value (byval) for struct
    arguments in C ABI. Callee is responsible for allocating stack memory and
    copying the value of the struct if modified. Note that the backend still
    supports byval for struct arguments.
@@ -20572,7 +20604,7 @@ from the value of the ``-mcpu`` option that is passed to the assembler.
 .amdgpu_hsa_kernel (name)
 +++++++++++++++++++++++++
 
-This directives specifies that the symbol with given name is a kernel entry
+This directive specifies that the symbol with given name is a kernel entry
 point (label) and the object should contain corresponding symbol of type
 STT_AMDGPU_HSA_KERNEL.
 

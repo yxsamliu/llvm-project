@@ -95,11 +95,12 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) {
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_add_f32_e64 g1[1], v0, 2.0
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:  .LBB0_5: ; %exit
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    scratch_load_b32 v0, off, s0 offset:28
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    scratch_store_b32 off, g1[1], s0
-; CHECK-NEXT:    scratch_load_b32 v0, off, s0 offset:28
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, 7, v0
@@ -284,6 +285,7 @@ define amdgpu_kernel void @bypassed_store(ptr addrspace(5) %out, i32 %x) {
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[1], 1.0
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:  .LBB2_2: ; %skip
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -328,6 +330,7 @@ define amdgpu_kernel void @def_in_nonentry_block(ptr addrspace(5) %out, float %x
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 3
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_cmp_nge_f32 s1, 0x41100000
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:12
@@ -372,6 +375,7 @@ define amdgpu_kernel void @def_in_nonentry_block(ptr addrspace(5) %out, float %x
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_mov_b32_e32 g1[1], v33
 ; CHECK-NEXT:    scratch_store_b32 off, v33, s0 offset:28
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:  .LBB3_2: ; %ret
 ; CHECK-NEXT:    s_endpgm
 entry:
@@ -456,9 +460,9 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) {
 ; CHECK-NEXT:    s_lshr_b32 s5, s4, 2
 ; CHECK-NEXT:    s_add_co_i32 s3, s3, 1
 ; CHECK-NEXT:    s_add_co_i32 s4, s4, 4
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, s5
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_cmp_lt_u32 s3, s1
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, s5
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[0], v33
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0

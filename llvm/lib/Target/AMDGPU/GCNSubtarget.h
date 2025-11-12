@@ -60,7 +60,6 @@ private:
 
 protected:
   // Basic subtarget description.
-  Triple TargetTriple;
   AMDGPU::IsaInfo::AMDGPUTargetID TargetID;
   unsigned Gen = INVALID;
   InstrItineraryData InstrItins;
@@ -142,6 +141,7 @@ protected:
   bool HasDPPSrc1SGPR = false;
   bool HasPackedFP32Ops = false;
   bool HasPackedFP64Ops = false;
+  bool HasPackedU64Ops = false;
   bool HasImageInsts = false;
   bool HasExtendedImageInsts = false;
   bool HasR128A16 = false;
@@ -196,6 +196,9 @@ protected:
   bool HasEmulatedSystemScopeAtomics = false;
   bool HasDefaultComponentBroadcast = false;
   bool HasXF32Insts = false;
+  bool HasSemaphores = false;
+  bool HasWavegroups = false;
+
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
   /// indicates a lack of S_CLAUSE support.
@@ -291,6 +294,8 @@ protected:
   bool HasSGPRVMEM = false;
   bool HasParallelBitInsts = false;
   bool HasMadU32Inst = false;
+  bool HasAddMinMaxInsts = false;
+  bool HasPkAddMinMaxInsts = false;
   bool HasPointSampleAccel = false;
   bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
@@ -303,6 +308,7 @@ protected:
   bool Has45BitNumRecordsBufferResource = false;
 
   bool HasClusters = false;
+  bool RequiresWaitsBeforeSystemScopeStores = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1169,6 +1175,8 @@ public:
 
   bool hasPackedFP64Ops() const { return HasPackedFP64Ops; }
 
+  bool hasPackedU64Ops() const { return HasPackedU64Ops; }
+
   // Has V_PK_MOV_B32 opcode
   bool hasPkMovB32() const {
     return GFX90AInsts;
@@ -1460,6 +1468,10 @@ public:
 
   /// \returns true if the target has instructions with xf32 format support.
   bool hasXF32Insts() const { return HasXF32Insts; }
+  bool hasSemaphores() const { return HasSemaphores; }
+
+  /// \returns true if the target supports Wavegroups.
+  bool hasWavegroups() const { return HasWavegroups; }
 
   bool hasBitOp3Insts() const { return HasBitOp3Insts; }
 
@@ -1627,10 +1639,10 @@ public:
   bool hasIntMinMax64() const { return GFX1250Insts && !GFX13Insts; }
 
   // \returns true if the target has V_ADD_{MIN|MAX}_{I|U}32 instructions.
-  bool hasAddMinMaxInsts() const { return GFX1250Insts && !GFX13Insts; }
+  bool hasAddMinMaxInsts() const { return HasAddMinMaxInsts; }
 
   // \returns true if the target has V_PK_ADD_{MIN|MAX}_{I|U}16 instructions.
-  bool hasPkAddMinMaxInsts() const { return GFX1250Insts && !GFX13Insts; }
+  bool hasPkAddMinMaxInsts() const { return HasPkAddMinMaxInsts; }
 
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
   bool hasPkMinMax3Insts() const { return GFX1250Insts && !GFX13Insts; }
@@ -1651,9 +1663,6 @@ public:
   bool needsKernArgPreloadProlog() const {
     return hasKernargPreload() && !GFX1250Insts;
   }
-
-  /// \returns true if the target supports Wavegroups.
-  bool hasWavegroups() const { return GFX13Insts; }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
@@ -1941,6 +1950,10 @@ public:
   /// num_records.
   bool has45BitNumRecordsBufferResource() const {
     return Has45BitNumRecordsBufferResource;
+  }
+
+  bool requiresWaitsBeforeSystemScopeStores() const {
+    return RequiresWaitsBeforeSystemScopeStores;
   }
 };
 
