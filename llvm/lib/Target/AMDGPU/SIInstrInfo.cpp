@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUMachineInstrs.h"
 #include "GCNHazardRecognizer.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
@@ -179,12 +180,13 @@ bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
     return false;
   }
 
+  if (isa<AMDGPUMI::VLoadStoreIdxInst>(MI))
+    return true;
+
   switch (MI.getOpcode()) {
   default:
     break;
   case AMDGPU::V_READFIRSTLANE_B32:
-  case AMDGPU::V_LOAD_IDX:
-  case AMDGPU::V_STORE_IDX:
     return true;
   }
 
@@ -528,17 +530,15 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     return true;
   }
 
-  if (isVLdStIdx(Opc)) {
-    BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::idx);
-    OffsetOp = getNamedOperand(LdSt, AMDGPU::OpName::offset);
+  if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&LdSt)) {
+    BaseOp = &LdStIdx->getIdxOp();
+    OffsetOp = &LdStIdx->getOffsetOp();
 
     BaseOps.push_back(BaseOp);
     Offset = OffsetOp->getImm() * 4; // Offset has units of dwords.
 
     // Get appropriate operand, and compute width accordingly.
-    DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data_op);
-    MachineMemOperand *LdStMMO = LdSt.memoperands()[DataOpIdx];
-    Width = LdStMMO->getSize();
+    Width = LocationSize::precise(LdStIdx->getBitWidth() / 8);
     return true;
   }
 
@@ -3960,8 +3960,10 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   if (MIa.hasOrderedMemoryRef() || MIb.hasOrderedMemoryRef())
     return false;
 
-  if (isVLdStIdx(MIa.getOpcode()) || isVLdStIdx(MIb.getOpcode())) {
-    if (isVLdStIdx(MIa.getOpcode()) && isVLdStIdx(MIb.getOpcode())) {
+  const bool isLdStIdxA = isa<AMDGPUMI::VLoadStoreIdxInst>(MIa);
+  const bool isLdStIdxB = isa<AMDGPUMI::VLoadStoreIdxInst>(MIb);
+  if (isLdStIdxA || isLdStIdxB) {
+    if (isLdStIdxA && isLdStIdxB) {
       return checkInstOffsetsDoNotOverlap(MIa, MIb);
     }
     return true;
@@ -5070,9 +5072,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     return false;
   }
 
-  if ((MI.getOpcode() == AMDGPU::V_LOAD_IDX ||
-       MI.getOpcode() == AMDGPU::V_STORE_IDX) &&
-      MI.memoperands_empty()) {
+  if (isa<AMDGPUMI::VLoadStoreIdxInst>(MI) && MI.memoperands_empty()) {
     ErrInfo = "missing memory operand from v_load/store_idx.";
     return false;
   }
@@ -6890,8 +6890,7 @@ void SIInstrInfo::legalizeOperandsFLAT(MachineRegisterInfo &MRI,
 
 void SIInstrInfo::legalizeOperandsVLdStIdx(MachineRegisterInfo &MRI,
                                            MachineInstr &MI,
-                                           unsigned OpNo) const {
-  MachineOperand &Idx = MI.getOperand(OpNo);
+                                           MachineOperand &Idx) const {
   if (Idx.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Idx.getReg())))
     Idx.setReg(readlaneVGPRToSGPR(Idx.getReg(), MI, MRI));
 }
@@ -7258,9 +7257,8 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     switch (MI.getOpcode()) {
     case AMDGPU::V_SEND_VGPR_NEXT_B32_LANESHARED:
     case AMDGPU::V_SEND_VGPR_PREV_B32_LANESHARED: {
-      unsigned OpNoRefl =
-          AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::idx_refl);
-      legalizeOperandsVLdStIdx(MRI, MI, OpNoRefl);
+      MachineOperand *Refl = getNamedOperand(MI, AMDGPU::OpName::idx_refl);
+      legalizeOperandsVLdStIdx(MRI, MI, *Refl);
       [[fallthrough]];
     }
     case AMDGPU::CLUSTER_LOAD_B32_LANESHARED:
@@ -7278,9 +7276,8 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     case AMDGPU::DDS_LOAD_MCAST_B32_LANESHARED_SADDR:
     case AMDGPU::DDS_LOAD_MCAST_B64_LANESHARED_SADDR:
     case AMDGPU::DDS_LOAD_MCAST_B128_LANESHARED_SADDR: {
-      unsigned OpNo =
-          AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::idx);
-      legalizeOperandsVLdStIdx(MRI, MI, OpNo);
+      MachineOperand *Idx = getNamedOperand(MI, AMDGPU::OpName::idx);
+      legalizeOperandsVLdStIdx(MRI, MI, *Idx);
       break;
     }
     default:
@@ -7296,8 +7293,8 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
-  if (isVLdStIdx(MI.getOpcode())) {
-    legalizeOperandsVLdStIdx(MRI, MI, 1);
+  if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+    legalizeOperandsVLdStIdx(MRI, MI, LdStIdx->getIdxOp());
     return CreatedBB;
   }
 
@@ -9799,12 +9796,12 @@ MachineInstr *SIInstrInfo::bundleWithGPRIndexing(MachineInstr &MI) {
     if (I->isDebugInstr() || isWaitcnt(I->getOpcode()))
       continue;
 
-    if (I->getOpcode() == AMDGPU::V_STORE_IDX) {
+    if (isa<AMDGPUMI::VStoreIdxInst>(I)) {
       if (!CoreMI) {
         CoreMI = &*I;
       }
       Cnt++;
-    } else if (I->getOpcode() == AMDGPU::V_LOAD_IDX) {
+    } else if (isa<AMDGPUMI::VLoadIdxInst>(I)) {
       assert(!CoreMI);
       Cnt++;
     } else if (!CoreMI) {
@@ -9816,7 +9813,7 @@ MachineInstr *SIInstrInfo::bundleWithGPRIndexing(MachineInstr &MI) {
   return Cnt ? CoreMI : nullptr;
 }
 
-const MachineInstr *
+const AMDGPUMI::VLoadStoreIdxInst *
 SIInstrInfo::getBundledIndexingInst(const MachineInstr &MI,
                                     const MachineOperand &Op) {
   if (!MI.isBundled())
@@ -9831,17 +9828,19 @@ SIInstrInfo::getBundledIndexingInst(const MachineInstr &MI,
     auto I = MI.getIterator();
     auto E = MI.getParent()->instr_end();
     while (++I != E && I->isInsideBundle()) {
-      if (I->getOpcode() == AMDGPU::V_STORE_IDX &&
-          I->getOperand(0).getReg() == RegNo)
-        return &*I;
+      if (auto *St = dyn_cast<AMDGPUMI::VStoreIdxInst>(I)) {
+        if (St->getDataOp().getReg() == RegNo)
+          return St;
+      }
     }
   } else if (Op.isUse() && Op.isInternalRead()) {
     auto I = MI.getReverseIterator();
     auto E = MI.getParent()->instr_rend();
     while (++I != E && I->isInsideBundle()) {
-      if (I->getOpcode() == AMDGPU::V_LOAD_IDX &&
-          I->getOperand(0).getReg() == RegNo)
-        return &*I;
+      if (auto *Ld = dyn_cast<AMDGPUMI::VLoadIdxInst>(&*I)) {
+        if (Ld->getDataOp().getReg() == RegNo)
+          return Ld;
+      }
     }
   }
   return nullptr;
@@ -10890,7 +10889,7 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
     return InstructionUniformity::Default;
   }
 
-  if (MI.getOpcode() == AMDGPU::V_LOAD_IDX)
+  if (isa<AMDGPUMI::VLoadIdxInst>(MI))
     return InstructionUniformity::NeverUniform;
 
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();

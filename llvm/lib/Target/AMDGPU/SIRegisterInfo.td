@@ -1330,6 +1330,9 @@ defm AV_1024 : AVRegClass_STAGING<32, VReg_1024.RegTypes, (add VGPR_1024), (add 
 }
 
 // Allow any width of VGPR. Only used for the data operand of V_LOAD/STORE_IDX.
+//
+// TODO: Remove this register class. Its existence has surprising indirect
+//       effects on seemingly unrelated test cases.
 def VGPR_IDX_DATA_OP_RC
     : SIRegisterClass<"AMDGPU",
                       Reg16Types.types,
@@ -1679,9 +1682,6 @@ def VGPROp_32_Lo128 : RegisterOperand<VGPR_32_STAGING_Lo128> {
 def VGPROp_32_Lo256 : RegisterOperand<VGPR_32_Lo256> {
   let DecoderMethod = "DecodeVGPR_32RegisterClass";
 }
-
-// For V_LOAD/STORE_IDX only
-def VGPR_IDX_DATA_OP : RegisterOperand<VGPR_IDX_DATA_OP_RC>;
 
 
 //===----------------------------------------------------------------------===//

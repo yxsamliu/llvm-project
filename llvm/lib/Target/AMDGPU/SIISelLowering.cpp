@@ -16,6 +16,7 @@
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUMachineInstrs.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -6249,6 +6250,7 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
                                             const GCNSubtarget &ST) {
   const SIInstrInfo *TII = ST.getInstrInfo();
   MachineFunction *MF = MBB.getParent();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const DebugLoc &DL = MI.getDebugLoc();
@@ -6345,10 +6347,13 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
   case AMDGPU::SCRATCH_LOAD_DWORDX16_SADDR:
   case AMDGPU::SCRATCH_LOAD_DWORDX18_SADDR: {
     Register Dst = MI.getOperand(0).getReg();
+    unsigned BitWidth = TRI->getRegSizeInBits(Dst, MRI);
     Register VirtualIDX;
     int Offset;
     std::tie(VirtualIDX, Offset) = EmitIdxSAddr(MI);
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_LOAD_IDX), Dst)
+    BuildMI(MBB, MI, DL,
+            TII->get(AMDGPUMI::VLoadIdxInst::getOpcodeForBitWidth(BitWidth)),
+            Dst)
         .addReg(VirtualIDX)
         .addImm(Offset)
         .setMemRefs(MI.memoperands());
@@ -6367,10 +6372,13 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
   case AMDGPU::SCRATCH_LOAD_DWORDX16_ST:
   case AMDGPU::SCRATCH_LOAD_DWORDX18_ST: {
     Register Dst = MI.getOperand(0).getReg();
+    unsigned BitWidth = TRI->getRegSizeInBits(Dst, MRI);
     Register VirtualIDX;
     int Offset;
     std::tie(VirtualIDX, Offset) = EmitIdxST(MI);
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_LOAD_IDX), Dst)
+    BuildMI(MBB, MI, DL,
+            TII->get(AMDGPUMI::VLoadIdxInst::getOpcodeForBitWidth(BitWidth)),
+            Dst)
         .addReg(VirtualIDX)
         .addImm(Offset)
         .setMemRefs(MI.memoperands());
@@ -6388,12 +6396,14 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
   case AMDGPU::SCRATCH_STORE_DWORDX9_SADDR:
   case AMDGPU::SCRATCH_STORE_DWORDX16_SADDR:
   case AMDGPU::SCRATCH_STORE_DWORDX18_SADDR: {
-    Register Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
+    Register Data = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
+    unsigned BitWidth = TRI->getRegSizeInBits(Data, MRI);
     Register VirtualIDX;
     int Offset;
     std::tie(VirtualIDX, Offset) = EmitIdxSAddr(MI);
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_STORE_IDX))
-        .addReg(Dst)
+    BuildMI(MBB, MI, DL,
+            TII->get(AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(BitWidth)))
+        .addReg(Data)
         .addReg(VirtualIDX)
         .addImm(Offset)
         .setMemRefs(MI.memoperands());
@@ -6412,12 +6422,14 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
   case AMDGPU::SCRATCH_STORE_DWORDX9_ST:
   case AMDGPU::SCRATCH_STORE_DWORDX16_ST:
   case AMDGPU::SCRATCH_STORE_DWORDX18_ST: {
-    Register Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
+    Register Data = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
+    unsigned BitWidth = TRI->getRegSizeInBits(Data, MRI);
     Register VirtualIDX;
     int Offset;
     std::tie(VirtualIDX, Offset) = EmitIdxST(MI);
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_STORE_IDX))
-        .addReg(Dst)
+    BuildMI(MBB, MI, DL,
+            TII->get(AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(BitWidth)))
+        .addReg(Data)
         .addReg(VirtualIDX)
         .addImm(Offset)
         .setMemRefs(MI.memoperands());
@@ -6437,13 +6449,16 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
   case AMDGPU::SCRATCH_LOAD_DWORDX16:
   case AMDGPU::SCRATCH_LOAD_DWORDX18: {
     Register Dst = MI.getOperand(0).getReg();
+    unsigned BitWidth = TRI->getRegSizeInBits(Dst, MRI);
     Register SGPRIdxReg;
     auto InsPt = extractIdxFromVGPR(TII, MBB, MI, SGPRIdxReg);
     Register VirtualIDX;
     int Offset;
     std::tie(VirtualIDX, Offset) = adjustIdxOffset(MI, InsPt, SGPRIdxReg);
     MachineBasicBlock *LoopBB = InsPt->getParent();
-    BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::V_LOAD_IDX), Dst)
+    BuildMI(*LoopBB, InsPt, DL,
+            TII->get(AMDGPUMI::VLoadIdxInst::getOpcodeForBitWidth(BitWidth)),
+            Dst)
         .addReg(VirtualIDX)
         .addImm(Offset)
         .setMemRefs(MI.memoperands());
@@ -6461,16 +6476,17 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
   case AMDGPU::SCRATCH_STORE_DWORDX9:
   case AMDGPU::SCRATCH_STORE_DWORDX16:
   case AMDGPU::SCRATCH_STORE_DWORDX18: {
-    Register Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
-
+    Register Data = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
+    unsigned BitWidth = TRI->getRegSizeInBits(Data, MRI);
     Register SGPRIdxReg;
     auto InsPt = extractIdxFromVGPR(TII, MBB, MI, SGPRIdxReg);
     Register VirtualIDX;
     int Offset;
     std::tie(VirtualIDX, Offset) = adjustIdxOffset(MI, InsPt, SGPRIdxReg);
     MachineBasicBlock *LoopBB = InsPt->getParent();
-    BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::V_STORE_IDX))
-        .addReg(Dst)
+    BuildMI(*LoopBB, InsPt, DL,
+            TII->get(AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(BitWidth)))
+        .addReg(Data)
         .addReg(VirtualIDX)
         .addImm(Offset)
         .setMemRefs(MI.memoperands());

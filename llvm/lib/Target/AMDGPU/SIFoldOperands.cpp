@@ -10,6 +10,7 @@
 
 #include "SIFoldOperands.h"
 #include "AMDGPU.h"
+#include "AMDGPUMachineInstrs.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
@@ -270,8 +271,8 @@ public:
   bool tryFoldDynamicIdxOffset(MachineOperand *Idx, MachineOperand *Offset,
                                MachineInstr *&SMovImmZero);
   bool tryFoldDynamicIdxMI(MachineInstr &MI, MachineInstr *&SMovImmZero);
-  bool trySplitVStIdxRegSeq(MachineInstr &MI);
-  bool trySplitVLdIdxMultiRegSeq(MachineInstr &MI);
+  bool trySplitVStIdxRegSeq(AMDGPUMI::VStoreIdxInst &MI);
+  bool trySplitVLdIdxMultiRegSeq(AMDGPUMI::VLoadIdxInst &MI);
   bool tryFoldRegSeqVLdIdx(MachineInstr &MI);
   bool tryFoldMiscCombinations(MachineInstr &MI);
 
@@ -2555,27 +2556,27 @@ bool SIFoldOperandsImpl::tryFoldRegSeqVLdIdx(MachineInstr &MI) {
   MachineOperand *IdxOp = nullptr;
   unsigned RegSeqOffset = 0;
   unsigned VLdIdxOffset = 0;
-  SmallVector<MachineInstr *, 8> VLdIdxMIs;
+  SmallVector<AMDGPUMI::VLoadIdxInst *, 8> VLdIdxMIs;
   for (auto &[SubRegIdx, SrcOp] : SrcOpnds) {
     if (!SrcOp->isReg() || !SrcOp->getReg().isVirtual())
       return false;
     // Only used by this reg-sequence.
     if (!MRI->hasOneNonDBGUser(SrcOp->getReg()))
       return false;
-    MachineInstr *Def = MRI->getVRegDef(SrcOp->getReg());
-    if (!Def || Def->getOpcode() != AMDGPU::V_LOAD_IDX)
+    auto *Def = dyn_cast_or_null<AMDGPUMI::VLoadIdxInst>(
+        MRI->getVRegDef(SrcOp->getReg()));
+    if (!Def)
       return false;
     // Check the idx-operand.
-    MachineOperand *DefIdxOp = TII->getNamedOperand(*Def, AMDGPU::OpName::idx);
+    MachineOperand *DefIdxOp = &Def->getIdxOp();
     if (!IdxOp)
       IdxOp = DefIdxOp;
     else if (IdxOp->getReg() != DefIdxOp->getReg() ||
              IdxOp->getSubReg() != DefIdxOp->getSubReg())
       return false;
     // Check the offset. First check the v_load_idx.
-    MachineOperand *DefOffsetOp =
-        TII->getNamedOperand(*Def, AMDGPU::OpName::offset);
-    assert(DefOffsetOp && DefOffsetOp->isImm());
+    MachineOperand *DefOffsetOp = &Def->getOffsetOp();
+    assert(DefOffsetOp->isImm());
     unsigned ThisVLdIdxOffset = DefOffsetOp->getImm();
     if (SrcOp->getSubReg())
       ThisVLdIdxOffset +=
@@ -2595,10 +2596,8 @@ bool SIFoldOperandsImpl::tryFoldRegSeqVLdIdx(MachineInstr &MI) {
   assert(!VLdIdxMIs.empty());
   // Create a new v_load_idx to replace the reg-sequence.
   auto *LeadMI = VLdIdxMIs.front();
-  Register VirtualIDX =
-      TII->getNamedOperand(*LeadMI, AMDGPU::OpName::idx)->getReg();
-  int64_t Offset =
-      TII->getNamedOperand(*LeadMI, AMDGPU::OpName::offset)->getImm();
+  Register VirtualIDX = LeadMI->getIdxOp().getReg();
+  int64_t Offset = LeadMI->getOffsetOp().getImm();
   auto *MMO = *LeadMI->memoperands_begin();
   assert(MMO);
   auto &MMOPtrInfo = MMO->getPointerInfo();
@@ -2606,20 +2605,22 @@ bool SIFoldOperandsImpl::tryFoldRegSeqVLdIdx(MachineInstr &MI) {
   MachineFunction *MF = MBB->getParent();
 
   MachineOperand &DefMO = MI.getOperand(0);
-
-  auto NewLd = BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::V_LOAD_IDX))
-                   .add(DefMO)
-                   .addReg(VirtualIDX)
-                   .addImm(Offset);
-  // Need to adjust the load size in MMO.
   const TargetRegisterClass *DstRC = MRI->getRegClass(DefMO.getReg());
   if (DefMO.getSubReg() != AMDGPU::NoSubRegister) {
     DstRC = TRI->getSubRegisterClass(DstRC, DefMO.getSubReg());
   }
   assert(DstRC);
-  NewLd->addMemOperand(
-      *MF, MF->getMachineMemOperand(MMO, MMOPtrInfo,
-                                    TRI->getRegSizeInBits(*DstRC) / 8));
+  unsigned Size = TRI->getRegSizeInBits(*DstRC);
+
+  auto NewLd =
+      BuildMI(*MBB, MI, MI.getDebugLoc(),
+              TII->get(AMDGPUMI::VLoadIdxInst::getOpcodeForBitWidth(Size)))
+          .add(DefMO)
+          .addReg(VirtualIDX)
+          .addImm(Offset);
+  // Need to adjust the load size in MMO.
+  NewLd->addMemOperand(*MF,
+                       MF->getMachineMemOperand(MMO, MMOPtrInfo, Size / 8));
   LLVM_DEBUG(dbgs() << "Folded: " << MI << "  Created: " << *NewLd);
 
   for (auto SubVLdIdx : VLdIdxMIs) {
@@ -2960,9 +2961,8 @@ int SIFoldOperandsImpl::isSubcopy(MachineInstr &MI) const {
 // return value, split the V_LOAD_IDX into several V_LOAD_IDXs without
 // REG_SEQUENCE. This enables the bundling, and reduces the number of
 // vgpr copies.
-bool SIFoldOperandsImpl::trySplitVLdIdxMultiRegSeq(MachineInstr &MI) {
-  assert(MI.getOpcode() == AMDGPU::V_LOAD_IDX);
-  MachineOperand *DataOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::data_op);
+bool SIFoldOperandsImpl::trySplitVLdIdxMultiRegSeq(AMDGPUMI::VLoadIdxInst &MI) {
+  MachineOperand *DataOpnd = &MI.getDataOp();
   assert(DataOpnd);
 
   Register DataReg = DataOpnd->getReg();
@@ -2981,8 +2981,8 @@ bool SIFoldOperandsImpl::trySplitVLdIdxMultiRegSeq(MachineInstr &MI) {
 
   // Generate a V_LOAD_IDX for each sub-copy user.
   LLVM_DEBUG(dbgs() << "Splitting " << MI);
-  Register VirtualIDX = TII->getNamedOperand(MI, AMDGPU::OpName::idx)->getReg();
-  int64_t Offset = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
+  Register VirtualIDX = MI.getIdxOp().getReg();
+  int64_t Offset = MI.getOffsetOp().getImm();
   auto *MMO = *MI.memoperands_begin();
   assert(MMO);
   auto &MMOPtrInfo = MMO->getPointerInfo();
@@ -2994,22 +2994,22 @@ bool SIFoldOperandsImpl::trySplitVLdIdxMultiRegSeq(MachineInstr &MI) {
     assert(Offset + SubOffset / REG_SEQ_CONCAT_UNIT <
            ST->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()));
     MachineOperand &DefMO = Subcopy->getOperand(0);
-
-    auto NewLd =
-        BuildMI(*MBB, MI, Subcopy->getDebugLoc(), TII->get(AMDGPU::V_LOAD_IDX))
-            .add(DefMO)
-            .addReg(VirtualIDX)
-            .addImm(Offset + SubOffset / REG_SEQ_CONCAT_UNIT);
-    // Need to adjust the size and offset in MMO.
     const TargetRegisterClass *RC = MRI->getRegClass(DefMO.getReg());
     if (DefMO.getSubReg() != AMDGPU::NoSubRegister) {
       RC = TRI->getSubRegisterClass(RC, DefMO.getSubReg());
     }
     assert(RC);
+    unsigned Size = TRI->getRegSizeInBits(*RC);
+
+    auto NewLd =
+        BuildMI(*MBB, MI, Subcopy->getDebugLoc(),
+                TII->get(AMDGPUMI::VLoadIdxInst::getOpcodeForBitWidth(Size)))
+            .add(DefMO)
+            .addReg(VirtualIDX)
+            .addImm(Offset + SubOffset / REG_SEQ_CONCAT_UNIT);
+    // Need to adjust the size and offset in MMO.
     MachinePointerInfo NewPtrI = MMOPtrInfo.getWithOffset(SubOffset / 8);
-    NewLd->addMemOperand(
-        *MF,
-        MF->getMachineMemOperand(MMO, NewPtrI, TRI->getRegSizeInBits(*RC) / 8));
+    NewLd->addMemOperand(*MF, MF->getMachineMemOperand(MMO, NewPtrI, Size / 8));
     LLVM_DEBUG(dbgs() << "  Created: " << *NewLd);
   }
   // Existing SubcopyMIs should be dead. We cannot erase them due to MBB
@@ -3029,9 +3029,8 @@ bool SIFoldOperandsImpl::trySplitVLdIdxMultiRegSeq(MachineInstr &MI) {
 // When the data-operand of V_STORE_IDX is a REG_SEQUENCE of concatenation,
 // split it into several V_STORE_IDXs without REG_SEQUENCE. This enables the
 // bundling, and reduces the number of vgpr copies.
-bool SIFoldOperandsImpl::trySplitVStIdxRegSeq(MachineInstr &MI) {
-  assert(MI.getOpcode() == AMDGPU::V_STORE_IDX);
-  MachineOperand *DataOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::data_op);
+bool SIFoldOperandsImpl::trySplitVStIdxRegSeq(AMDGPUMI::VStoreIdxInst &MI) {
+  MachineOperand *DataOpnd = &MI.getDataOp();
   assert(DataOpnd);
 
   Register DataReg = DataOpnd->getReg();
@@ -3048,8 +3047,8 @@ bool SIFoldOperandsImpl::trySplitVStIdxRegSeq(MachineInstr &MI) {
 
   LLVM_DEBUG(dbgs() << "Splitting " << *RegSeqMI << " from " << MI);
 
-  Register VirtualIDX = TII->getNamedOperand(MI, AMDGPU::OpName::idx)->getReg();
-  int64_t Offset = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
+  Register VirtualIDX = MI.getIdxOp().getReg();
+  int64_t Offset = MI.getOffsetOp().getImm();
   auto *MMO = *MI.memoperands_begin();
   assert(MMO);
   auto &MMOPtrInfo = MMO->getPointerInfo();
@@ -3059,14 +3058,17 @@ bool SIFoldOperandsImpl::trySplitVStIdxRegSeq(MachineInstr &MI) {
   for (auto &[Op, SubIdx] : Srcs) {
     // Need to adjust the v_store_idx offset.
     int64_t SubOffset = TRI->getSubRegIdxOffset(SubIdx);
-    assert(TRI->getSubRegIdxOffset(SubIdx) % REG_SEQ_CONCAT_UNIT == 0);
+    int64_t SubSize = TRI->getSubRegIdxSize(SubIdx);
+    assert(SubOffset % REG_SEQ_CONCAT_UNIT == 0);
     assert(Offset + SubOffset / REG_SEQ_CONCAT_UNIT <
            ST->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()));
-    auto NewSt = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-                         TII->get(AMDGPU::V_STORE_IDX))
-                     .addReg(Op->getReg())
-                     .addReg(VirtualIDX)
-                     .addImm(Offset + SubOffset / REG_SEQ_CONCAT_UNIT);
+    auto NewSt =
+        BuildMI(
+            *MI.getParent(), MI, MI.getDebugLoc(),
+            TII->get(AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(SubSize)))
+            .addReg(Op->getReg())
+            .addReg(VirtualIDX)
+            .addImm(Offset + SubOffset / REG_SEQ_CONCAT_UNIT);
     // Need to adjust the size and offset in MMO.
     MachinePointerInfo NewPtrI = MMOPtrInfo.getWithOffset(SubOffset / 8);
     NewSt->addMemOperand(
@@ -3084,17 +3086,16 @@ bool SIFoldOperandsImpl::trySplitVStIdxRegSeq(MachineInstr &MI) {
 bool SIFoldOperandsImpl::tryFoldDynamicIdxMI(MachineInstr &MI,
                                              MachineInstr *&SMovImmZero) {
   bool Changed = false;
-  if (SIInstrInfo::isVLdStIdx(MI.getOpcode())) {
-    MachineOperand *IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx),
-                   *OffOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::offset);
+  if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+    MachineOperand *IdxOpnd = &LdStIdx->getIdxOp();
+    MachineOperand *OffOpnd = &LdStIdx->getOffsetOp();
     Changed |= tryFoldDynamicIdxOffset(IdxOpnd, OffOpnd, SMovImmZero);
 
-    if (MI.getOpcode() == AMDGPU::V_STORE_IDX)
-      Changed |= trySplitVStIdxRegSeq(MI);
+    if (auto *StIdx = dyn_cast<AMDGPUMI::VStoreIdxInst>(LdStIdx))
+      Changed |= trySplitVStIdxRegSeq(*StIdx);
     else
-      Changed |= trySplitVLdIdxMultiRegSeq(MI);
-  }
-  else if (SIInstrInfo::mustHaveLanesharedResult(MI)) {
+      Changed |= trySplitVLdIdxMultiRegSeq(cast<AMDGPUMI::VLoadIdxInst>(MI));
+  } else if (SIInstrInfo::mustHaveLanesharedResult(MI)) {
     MachineOperand *IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx),
                    *OffOpnd =
                        TII->getNamedOperand(MI, AMDGPU::OpName::dyn_offset),

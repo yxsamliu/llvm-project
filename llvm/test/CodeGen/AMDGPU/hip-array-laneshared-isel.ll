@@ -184,7 +184,7 @@ define amdgpu_kernel void @_Z3foov() noinline optnone "amdgpu-wavegroup-enable" 
   ; VIDX-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32 = S_AND_SAVEEXEC_B32 killed [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; VIDX-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xm0 = S_LSHR_B32 [[V_READFIRSTLANE_B32_]], 2, implicit-def dead $scc
   ; VIDX-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xm0 = S_ADD_I32 [[S_LSHR_B32_]], 1190, implicit-def dead $scc
-  ; VIDX-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_ADD_I32_]], 0, implicit $exec :: (load (s32) from %ir.arrayidx, addrspace 10)
+  ; VIDX-NEXT:   [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[S_ADD_I32_]], 0, implicit $exec :: (load (s32) from %ir.arrayidx, addrspace 10)
   ; VIDX-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; VIDX-NEXT:   S_CBRANCH_EXECNZ %bb.11, implicit $exec
   ; VIDX-NEXT: {{  $}}
@@ -205,7 +205,7 @@ define amdgpu_kernel void @_Z3foov() noinline optnone "amdgpu-wavegroup-enable" 
   ; VIDX-NEXT:   [[S_MOV_B32_7:%[0-9]+]]:sreg_32 = S_MOV_B32 10
   ; VIDX-NEXT:   [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32_e64 killed [[V_ADD_U32_e64_]], killed [[S_MOV_B32_7]], implicit $exec
   ; VIDX-NEXT:   [[V_SUB_U32_e64_:%[0-9]+]]:vgpr_32 = V_SUB_U32_e64 [[SCRATCH_LOAD_DWORD_SADDR1]], killed [[V_MUL_LO_U32_e64_]], 0, implicit $exec
-  ; VIDX-NEXT:   SCRATCH_STORE_DWORD_SVS killed [[V_LOAD_IDX]], killed [[V_SUB_U32_e64_]], %stack.0.array.ascast, 0, 512, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.arrayidx2, addrspace 5)
+  ; VIDX-NEXT:   SCRATCH_STORE_DWORD_SVS killed [[V_LOAD_IDX_B32_]], killed [[V_SUB_U32_e64_]], %stack.0.array.ascast, 0, 512, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.arrayidx2, addrspace 5)
   ; VIDX-NEXT:   S_BRANCH %bb.4
   ; VIDX-NEXT: {{  $}}
   ; VIDX-NEXT: bb.3.Flow1:
@@ -281,7 +281,7 @@ define amdgpu_kernel void @_Z3foov() noinline optnone "amdgpu-wavegroup-enable" 
   ; VIDX-NEXT:   [[V_CMP_EQ_U32_e64_1:%[0-9]+]]:sreg_32 = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_1]], [[V_LSHLREV_B32_e64_1]], implicit $exec
   ; VIDX-NEXT:   [[S_AND_SAVEEXEC_B32_1:%[0-9]+]]:sreg_32 = S_AND_SAVEEXEC_B32 killed [[V_CMP_EQ_U32_e64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; VIDX-NEXT:   [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xm0 = S_LSHR_B32 [[V_READFIRSTLANE_B32_1]], 2, implicit-def dead $scc
-  ; VIDX-NEXT:   V_STORE_IDX [[SCRATCH_LOAD_DWORD_SVS]], [[S_LSHR_B32_1]], 350, implicit $exec :: (store (s32) into %ir.arrayidx11, addrspace 10)
+  ; VIDX-NEXT:   V_STORE_IDX_B32 [[SCRATCH_LOAD_DWORD_SVS]], [[S_LSHR_B32_1]], 350, implicit $exec :: (store (s32) into %ir.arrayidx11, addrspace 10)
   ; VIDX-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_1]], implicit-def $scc
   ; VIDX-NEXT:   S_CBRANCH_EXECNZ %bb.14, implicit $exec
   ; VIDX-NEXT: {{  $}}

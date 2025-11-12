@@ -1331,16 +1331,28 @@ def : GCNPat <
 // Indexed Instructions
 //===----------------------------------------------------------------------===//
 
-// The units of $idx and $offset are in DWORDS.
-// is_laneshared == 0 if the access is to a dynamically accessed private array.
-// That case and laneshared have different fence semantics.
-def V_LOAD_IDX : VPseudoInstSI <
-  (outs VGPR_IDX_DATA_OP:$data_op),
-  (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
-    let mayLoad = 1;
-    let VALU = 1;
-    let UseNamedOperandTable = 1;
-    let hasSideEffects = 0;
+foreach rc = [VGPR_32_STAGING, VReg_64_STAGING, VReg_96_STAGING,
+              VReg_128_STAGING, VReg_160_STAGING, VReg_192_STAGING,
+              VReg_224_STAGING, VReg_256_STAGING, VReg_288_STAGING,
+              VReg_320_STAGING, VReg_352_STAGING, VReg_384_STAGING,
+              VReg_512_STAGING, VReg_576_STAGING, VReg_1024_STAGING] in {
+  // The units of $idx and $offset are in DWORDS.
+  def V_LOAD_IDX_B#rc.Size : VPseudoInstSI <
+    (outs rc:$data_op),
+    (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
+      let mayLoad = 1;
+      let VALU = 1;
+      let UseNamedOperandTable = 1;
+      let hasSideEffects = 0;
+  }
+  def V_STORE_IDX_B#rc.Size : VPseudoInstSI <
+    (outs),
+    (ins rc:$data_op, VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
+      let mayStore = 1;
+      let VALU = 1;
+      let UseNamedOperandTable = 1;
+      let hasSideEffects = 0;
+  }
 }
 
 // Used for byte or short loads.
@@ -1348,7 +1360,7 @@ def V_LOAD_IDX : VPseudoInstSI <
 // Only bitoffset of 0, 8, 16, or 24 bits are supported.
 // Only bitsize of 8 or 16 bits are supported.
 def V_LOAD_IDX_BITS
-    : VPseudoInstSI<(outs VGPR_IDX_DATA_OP:$data_op),
+    : VPseudoInstSI<(outs VGPR_32:$data_op),
                     (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset,
                         SSrc_b32:$bitsize, SSrc_b32:$bitoffset)> {
   let mayLoad = 1;
@@ -1357,20 +1369,11 @@ def V_LOAD_IDX_BITS
   let hasSideEffects = 0;
 }
 
-def V_STORE_IDX : VPseudoInstSI <
-  (outs),
-  (ins VGPR_IDX_DATA_OP:$data_op, VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
-    let mayStore = 1;
-    let VALU = 1;
-    let UseNamedOperandTable = 1;
-    let hasSideEffects = 0;
-}
-
 // Used for byte or short stores.
 // Only bitoffset of 0, 8, 16, or 24 bits are supported.
 // Only bitsize of 8 or 16 bits are supported.
 def V_STORE_IDX_BITS
-    : VPseudoInstSI<(outs), (ins VGPR_IDX_DATA_OP:$data_op,
+    : VPseudoInstSI<(outs), (ins VGPR_32:$data_op,
                                 VGPR_IDX_IDX_OP:$idx, i32imm:$offset,
                                 SSrc_b32:$bitsize, SSrc_b32:$bitoffset)> {
   let mayStore = 1;

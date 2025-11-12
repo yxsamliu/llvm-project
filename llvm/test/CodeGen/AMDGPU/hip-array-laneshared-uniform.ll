@@ -65,55 +65,55 @@ define amdgpu_kernel void @_Z3foov() "amdgpu-wavegroup-enable" {
   ; CHECK-NEXT:   [[S_SUB_I32_:%[0-9]+]]:sreg_32 = S_SUB_I32 killed [[COPY6]], killed [[S_MUL_I32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[PHI1]], 2, implicit-def dead $scc
   ; CHECK-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_LSHR_B32_]], 1190, implicit-def dead $scc
-  ; CHECK-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_ADD_I32_]], 0, implicit $exec :: (load (s32) from %ir.scevgep7, !tbaa !6, addrspace 10)
+  ; CHECK-NEXT:   [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[S_ADD_I32_]], 0, implicit $exec :: (load (s32) from %ir.scevgep7, !tbaa !6, addrspace 10)
   ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 9
   ; CHECK-NEXT:   S_CMP_EQ_U32 [[S_SUB_I32_]], killed [[S_MOV_B32_4]], implicit-def $scc
   ; CHECK-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_CSELECT_B32_]]
-  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI11]], 0, [[V_LOAD_IDX]], killed [[COPY7]], implicit $exec
+  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI11]], 0, [[V_LOAD_IDX_B32_]], killed [[COPY7]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 8
   ; CHECK-NEXT:   S_CMP_EQ_U32 [[S_SUB_I32_]], killed [[S_MOV_B32_5]], implicit-def $scc
   ; CHECK-NEXT:   [[S_CSELECT_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_CSELECT_B32_1]]
-  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI10]], 0, [[V_LOAD_IDX]], killed [[COPY8]], implicit $exec
+  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI10]], 0, [[V_LOAD_IDX_B32_]], killed [[COPY8]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 7
   ; CHECK-NEXT:   S_CMP_EQ_U32 [[S_SUB_I32_]], killed [[S_MOV_B32_6]], implicit-def $scc
   ; CHECK-NEXT:   [[S_CSELECT_B32_2:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_CSELECT_B32_2]]
-  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_2:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI9]], 0, [[V_LOAD_IDX]], killed [[COPY9]], implicit $exec
+  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_2:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI9]], 0, [[V_LOAD_IDX_B32_]], killed [[COPY9]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_7:%[0-9]+]]:sreg_32 = S_MOV_B32 6
   ; CHECK-NEXT:   S_CMP_EQ_U32 [[S_SUB_I32_]], killed [[S_MOV_B32_7]], implicit-def $scc
   ; CHECK-NEXT:   [[S_CSELECT_B32_3:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_CSELECT_B32_3]]
-  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_3:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI8]], 0, [[V_LOAD_IDX]], killed [[COPY10]], implicit $exec
+  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_3:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI8]], 0, [[V_LOAD_IDX_B32_]], killed [[COPY10]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_8:%[0-9]+]]:sreg_32 = S_MOV_B32 5
   ; CHECK-NEXT:   S_CMP_EQ_U32 [[S_SUB_I32_]], killed [[S_MOV_B32_8]], implicit-def $scc
   ; CHECK-NEXT:   [[S_CSELECT_B32_4:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_CSELECT_B32_4]]
-  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_4:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI7]], 0, [[V_LOAD_IDX]], killed [[COPY11]], implicit $exec
+  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_4:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI7]], 0, [[V_LOAD_IDX_B32_]], killed [[COPY11]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_9:%[0-9]+]]:sreg_32 = S_MOV_B32 4
   ; CHECK-NEXT:   S_CMP_EQ_U32 [[S_SUB_I32_]], [[S_MOV_B32_9]], implicit-def $scc
   ; CHECK-NEXT:   [[S_CSELECT_B32_5:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_CSELECT_B32_5]]
-  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_5:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI6]], 0, [[V_LOAD_IDX]], killed [[COPY12]], implicit $exec
+  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_5:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI6]], 0, [[V_LOAD_IDX_B32_]], killed [[COPY12]], implicit $exec
   ; CHECK-NEXT:   S_CMP_EQ_U32 [[S_SUB_I32_]], [[S_MOV_B32_2]], implicit-def $scc
   ; CHECK-NEXT:   [[S_CSELECT_B32_6:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_CSELECT_B32_6]]
-  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_6:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI5]], 0, [[V_LOAD_IDX]], killed [[COPY13]], implicit $exec
+  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_6:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI5]], 0, [[V_LOAD_IDX_B32_]], killed [[COPY13]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_10:%[0-9]+]]:sreg_32 = S_MOV_B32 2
   ; CHECK-NEXT:   S_CMP_EQ_U32 [[S_SUB_I32_]], killed [[S_MOV_B32_10]], implicit-def $scc
   ; CHECK-NEXT:   [[S_CSELECT_B32_7:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_CSELECT_B32_7]]
-  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_7:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI4]], 0, [[V_LOAD_IDX]], killed [[COPY14]], implicit $exec
+  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_7:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI4]], 0, [[V_LOAD_IDX_B32_]], killed [[COPY14]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_11:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; CHECK-NEXT:   S_CMP_EQ_U32 [[S_SUB_I32_]], killed [[S_MOV_B32_11]], implicit-def $scc
   ; CHECK-NEXT:   [[S_CSELECT_B32_8:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_CSELECT_B32_8]]
-  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_8:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI3]], 0, [[V_LOAD_IDX]], killed [[COPY15]], implicit $exec
+  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_8:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI3]], 0, [[V_LOAD_IDX_B32_]], killed [[COPY15]], implicit $exec
   ; CHECK-NEXT:   S_CMP_EQ_U32 [[S_SUB_I32_]], [[S_MOV_B32_1]], implicit-def $scc
   ; CHECK-NEXT:   [[S_CSELECT_B32_9:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_CSELECT_B32_9]]
-  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_9:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI2]], 0, [[V_LOAD_IDX]], killed [[COPY16]], implicit $exec
+  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_9:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI2]], 0, [[V_LOAD_IDX_B32_]], killed [[COPY16]], implicit $exec
   ; CHECK-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:vreg_320 = REG_SEQUENCE [[V_CNDMASK_B32_e64_9]], %subreg.sub0, [[V_CNDMASK_B32_e64_8]], %subreg.sub1, [[V_CNDMASK_B32_e64_7]], %subreg.sub2, [[V_CNDMASK_B32_e64_6]], %subreg.sub3, [[V_CNDMASK_B32_e64_5]], %subreg.sub4, [[V_CNDMASK_B32_e64_4]], %subreg.sub5, [[V_CNDMASK_B32_e64_3]], %subreg.sub6, [[V_CNDMASK_B32_e64_2]], %subreg.sub7, [[V_CNDMASK_B32_e64_1]], %subreg.sub8, [[V_CNDMASK_B32_e64_]], %subreg.sub9
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:vreg_320 = COPY [[REG_SEQUENCE5]]
   ; CHECK-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = nuw nsw S_ADD_I32 [[PHI1]], [[S_MOV_B32_9]], implicit-def dead $scc
@@ -225,7 +225,7 @@ define amdgpu_kernel void @_Z3foov() "amdgpu-wavegroup-enable" {
   ; CHECK-NEXT:   [[COPY43:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_CSELECT_B32_18]]
   ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_18:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, killed [[V_CNDMASK_B32_e64_17]], 0, killed [[COPY42]], killed [[COPY43]], implicit $exec
   ; CHECK-NEXT:   [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[PHI14]], 2, implicit-def dead $scc
-  ; CHECK-NEXT:   V_STORE_IDX [[V_CNDMASK_B32_e64_18]], [[S_LSHR_B32_1]], 350, implicit $exec :: (store (s32) into %ir.scevgep, !tbaa !6, addrspace 10)
+  ; CHECK-NEXT:   V_STORE_IDX_B32 [[V_CNDMASK_B32_e64_18]], [[S_LSHR_B32_1]], 350, implicit $exec :: (store (s32) into %ir.scevgep, !tbaa !6, addrspace 10)
   ; CHECK-NEXT:   [[S_ADD_I32_2:%[0-9]+]]:sreg_32 = nuw nsw S_ADD_I32 [[PHI14]], [[S_MOV_B32_19]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B64_3:%[0-9]+]]:sreg_64 = S_MOV_B64 1
   ; CHECK-NEXT:   [[S_ADD_U64_9:%[0-9]+]]:sreg_64 = S_ADD_U64 [[PHI13]], killed [[S_MOV_B64_3]]

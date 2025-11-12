@@ -44,14 +44,14 @@ define amdgpu_kernel void @_Z37test_amdgcn_wmma_f32_16x16x16_f16_w32v() "amdgpu-
   ; VIDX: bb.0.entry:
   ; VIDX-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
   ; VIDX-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_]], 2, implicit-def dead $scc
-  ; VIDX-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vreg_128 = V_LOAD_IDX [[S_LSHR_B32_]], 0, implicit $exec :: (dereferenceable load (s128) from @a, align 268435456, !tbaa !5, addrspace 10)
+  ; VIDX-NEXT:   [[V_LOAD_IDX_B128_:%[0-9]+]]:vreg_128 = V_LOAD_IDX_B128 [[S_LSHR_B32_]], 0, implicit $exec :: (dereferenceable load (s128) from @a, align 268435456, !tbaa !5, addrspace 10)
   ; VIDX-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 16
   ; VIDX-NEXT:   [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_1]], 2, implicit-def dead $scc
-  ; VIDX-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vreg_128 = V_LOAD_IDX [[S_LSHR_B32_1]], 0, implicit $exec :: (dereferenceable load (s128) from @b, !tbaa !5, addrspace 10)
-  ; VIDX-NEXT:   early-clobber %10:vreg_256 = contract V_WMMA_F32_16X16X16_F16_threeaddr killed [[V_LOAD_IDX]], killed [[V_LOAD_IDX1]], 0, 0, 0, 0, implicit $exec
+  ; VIDX-NEXT:   [[V_LOAD_IDX_B128_1:%[0-9]+]]:vreg_128 = V_LOAD_IDX_B128 [[S_LSHR_B32_1]], 0, implicit $exec :: (dereferenceable load (s128) from @b, !tbaa !5, addrspace 10)
+  ; VIDX-NEXT:   early-clobber %10:vreg_256 = contract V_WMMA_F32_16X16X16_F16_threeaddr killed [[V_LOAD_IDX_B128_]], killed [[V_LOAD_IDX_B128_1]], 0, 0, 0, 0, implicit $exec
   ; VIDX-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 32
   ; VIDX-NEXT:   [[S_LSHR_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_2]], 2, implicit-def dead $scc
-  ; VIDX-NEXT:   V_STORE_IDX %10, [[S_LSHR_B32_2]], 0, implicit $exec :: (store (s256) into @out, !tbaa !5, addrspace 10)
+  ; VIDX-NEXT:   V_STORE_IDX_B256 %10, [[S_LSHR_B32_2]], 0, implicit $exec :: (store (s256) into @out, !tbaa !5, addrspace 10)
   ; VIDX-NEXT:   S_ENDPGM 0
 entry:
   %0 = load <8 x half>, ptr addrspace(10) @a, align 16, !tbaa !4
