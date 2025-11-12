@@ -2087,10 +2087,13 @@ foreach vt = Reg1024Types.types in {
 
 // If denormals are not enabled, it only impacts the compare of the
 // inputs. The output result is not flushed.
-class ClampPat<Instruction inst, ValueType vt> : GCNPat <
+class ClampPat<Instruction inst, ValueType vt, bit fix16SrcWithInst32 = 0> : GCNPat <
   (vt (AMDGPUclamp (VOP3Mods vt:$src0, i32:$src0_modifiers))),
-  (inst i32:$src0_modifiers, vt:$src0,
-        i32:$src0_modifiers, vt:$src0, DSTCLAMP.ENABLE, DSTOMOD.NONE)
+  true16HelperReg16FromSrc32<(inst i32:$src0_modifiers,
+                              true16HelperReg32FromSrc16<(vt $src0), fix16SrcWithInst32>.ret,
+                              i32:$src0_modifiers,
+                              true16HelperReg32FromSrc16<(vt $src0), fix16SrcWithInst32>.ret,
+                              DSTCLAMP.ENABLE, DSTOMOD.NONE), fix16SrcWithInst32>.ret
 >;
 
 def : ClampPat<V_MAX_F32_e64, f32>;
@@ -2104,9 +2107,10 @@ let SubtargetPredicate = UseRealTrue16Insts in
 def : ClampPat<V_MAX_F16_t16_e64, f16>;
 let SubtargetPredicate = UseFakeTrue16Insts in
 def : ClampPat<V_MAX_F16_fake16_e64, f16>;
-// FIXME-TRUE16: Pseudo expansion of this won't work with True16.
-let True16Predicate = UseFakeTrue16Insts in
+let SubtargetPredicate = UseFakeTrue16Insts in
 def : ClampPat<V_MAX_BF16_PSEUDO_e64, bf16>;
+let SubtargetPredicate = UseRealTrue16Insts in
+def : ClampPat<V_MAX_BF16_PSEUDO_e64, bf16, 1>;
 
 let SubtargetPredicate = HasVOP3PInsts in {
 def : GCNPat <

@@ -3668,6 +3668,10 @@ class true16HelperReg32FromSrc16<dag op, bit true16, bit ishi16 = 0> {
                 op);
 }
 
+class true16HelperReg16FromSrc32<dag op, bit true16, bit ishi16 = 0> {
+  dag ret = !if(true16,!if(ishi16, (EXTRACT_SUBREG op, hi16), (EXTRACT_SUBREG op, lo16)), op);
+}
+
 include "SIInstructions.td"
 
 include "DSInstructions.td"
