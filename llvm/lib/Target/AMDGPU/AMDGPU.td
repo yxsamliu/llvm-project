@@ -552,6 +552,12 @@ def FeatureGFX1250Insts : SubtargetFeature<"gfx1250-insts",
   "Additional instructions for GFX1250+"
 >;
 
+def FeatureGFX1260Insts : SubtargetFeature<"gfx1260-insts",
+  "GFX1260Insts",
+  "true",
+  "Additional instructions for GFX1260+"
+>;
+
 def FeatureGFX13Insts : SubtargetFeature<"gfx13-insts",
   "GFX13Insts",
   "true",
@@ -2320,7 +2326,8 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
 
 def FeatureISAVersion12_60 : FeatureSet<
   !listconcat(FeatureISAVersion12_50.Features,
-    [FeatureWMMA2048bInsts])>;
+    [FeatureGFX1260Insts,
+     FeatureWMMA2048bInsts])>;
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
@@ -2732,6 +2739,10 @@ def isGFX12PlusNot12_50 :
 def isGFX125xOnly :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && Subtarget->hasGFX1250Insts()">,
   AssemblerPredicate<(all_of FeatureGFX1250Insts, (not FeatureGFX13Insts))>;
+
+def isGFX1260Only :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && Subtarget->hasGFX1260Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX1260Insts)>;
 
 def isGFX1250Plus :
   Predicate<"Subtarget->hasGFX1250Insts()">,

@@ -475,6 +475,8 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
       Features["wavegroups"] = true;
       break;
   case GK_GFX1260:
+    Features["gfx1260-insts"] = true;
+    [[fallthrough]];
   case GK_GFX1251:
     if (Kind == GK_GFX1260)
       Features["wmma-2048b-insts"] = true;

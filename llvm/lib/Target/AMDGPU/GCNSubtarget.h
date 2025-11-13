@@ -114,6 +114,7 @@ protected:
   bool GFX11Insts = false;
   bool GFX12Insts = false;
   bool GFX1250Insts = false;
+  bool GFX1260Insts = false;
   bool GFX13Insts = false;
   bool GFX10_3Insts = false;
   bool GFX7GFX8GFX9Insts = false;
@@ -1620,6 +1621,8 @@ public:
   bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
 
   bool hasGFX1250Insts() const { return GFX1250Insts; }
+
+  bool hasGFX1260Insts() const { return GFX1260Insts; }
 
   bool hasGFX13Insts() const { return GFX13Insts; }
 
