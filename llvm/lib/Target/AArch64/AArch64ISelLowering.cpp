@@ -1921,6 +1921,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     if (Subtarget->hasSVE2p1() || Subtarget->hasSME2()) {
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
                                 MVT::nxv8f16, Legal);
+      // We can use SVE2p1 fdot to emulate the fixed-length variant.
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v4f32,
+                                MVT::v8f16, Custom);
     }
   }
 
@@ -18555,7 +18558,7 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
   case MVT::f64:
     return true;
   case MVT::bf16:
-    return VT.isScalableVector() && Subtarget->hasSVEB16B16() &&
+    return VT.isScalableVector() && Subtarget->hasBF16() &&
            Subtarget->isNonStreamingSVEorSME2Available();
   default:
     break;

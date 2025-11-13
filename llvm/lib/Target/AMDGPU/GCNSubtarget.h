@@ -1052,8 +1052,6 @@ public:
     return true;
   }
 
-  bool enableTerminalRule() const override { return true; }
-
   bool useAA() const override;
 
   bool enableSubRegLiveness() const override {
