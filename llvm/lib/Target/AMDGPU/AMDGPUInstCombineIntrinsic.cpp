@@ -392,6 +392,13 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
       });
 }
 
+static bool isVNBRSendNonSignalling(const IntrinsicInst &II) {
+  const Value *Sema = II.getOperand(2);
+  const Value *SemaRefl = II.getOperand(4);
+  return isa<ConstantPointerNull>(Sema->stripPointerCasts()) && 
+         isa<ConstantPointerNull>(SemaRefl->stripPointerCasts());
+}
+
 bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
                                            const Value *Op0, const Value *Op1,
                                            InstCombiner &IC) const {
@@ -643,6 +650,62 @@ std::optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
   switch (IID) {
+  case Intrinsic::amdgcn_spatial_cluster_signal_next:
+  case Intrinsic::amdgcn_spatial_cluster_signal_prev: {
+    // Look backwards for a matching non-signaling send.
+    // Check data defs to make sure those don't become invalid.
+    SmallVector<Value *> DataOpds;
+    BasicBlock *BB = II.getParent();
+    auto It = BasicBlock::iterator(&II);
+    Intrinsic::ID SignalIID = II.getIntrinsicID();
+    Intrinsic::ID SendIID =
+        (SignalIID == Intrinsic::amdgcn_spatial_cluster_signal_next)
+            ? Intrinsic::amdgcn_spatial_cluster_send_next
+            : Intrinsic::amdgcn_spatial_cluster_send_prev;
+    while (It != BB->begin()) {
+      --It;
+      IntrinsicInst *IntrInst = dyn_cast<IntrinsicInst>(&*It);
+      if (IntrInst) {
+        auto ID = IntrInst->getIntrinsicID();
+        bool isSignal = ID == Intrinsic::amdgcn_spatial_cluster_signal_next ||
+                        ID == Intrinsic::amdgcn_spatial_cluster_signal_prev;
+        if (isSignal && ID != SignalIID) {
+          // Can always move past a signal in the opposite direction.
+          continue;
+        }
+        if (ID == SignalIID) {
+          // Don't move past a signal in the same direction.
+          break;
+        }
+        bool isVNBRSend = ID == Intrinsic::amdgcn_spatial_cluster_send_next ||
+                          ID == Intrinsic::amdgcn_spatial_cluster_send_prev;
+        if (isVNBRSend && ID != SendIID) {
+          // Can always move past a send in the opposite direction
+          continue;
+        }
+        if (ID == SendIID) {
+          if (!isVNBRSendNonSignalling(*IntrInst))
+            // Fail due to already signalling semaphores.
+            break;
+          SmallVector<Value *> Args;
+          Args.push_back(IntrInst->getArgOperand(0)); // Data
+          Args.push_back(IntrInst->getArgOperand(1)); // Dst
+          Args.push_back(II.getArgOperand(0));        // Sema
+          Args.push_back(IntrInst->getArgOperand(3)); // Dst_refl
+          Args.push_back(II.getArgOperand(1));        // Sema_refl
+          Args.push_back(IntrInst->getArgOperand(5)); // Flags
+          Function *F = Intrinsic::getDeclarationIfExists(II.getModule(), SendIID);
+          auto Intr = CallInst::Create(F, Args);
+          IC.replaceInstUsesWith(*IntrInst, Intr);
+          IC.eraseInstFromFunction(*IntrInst);
+          return Intr;
+        }
+      }
+      if (It->mayHaveSideEffects())
+        break;
+    }
+    return std::nullopt;
+  }
   case Intrinsic::amdgcn_rcp: {
     Value *Src = II.getArgOperand(0);
     if (isa<PoisonValue>(Src))
