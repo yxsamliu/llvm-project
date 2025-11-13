@@ -2727,6 +2727,10 @@ bool isGFX13(const MCSubtargetInfo &STI) {
 
 bool isGFX13Plus(const MCSubtargetInfo &STI) { return isGFX13(STI); }
 
+bool hasWavegroups(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeatureWavegroups);
+}
+
 bool supportsWGP(const MCSubtargetInfo &STI) {
   if (isGFX1250Only(STI))
     return false;
@@ -3678,7 +3682,7 @@ const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
       AMDGPU::VReg_256RegClassID, AMDGPU::VReg_288RegClassID,
       AMDGPU::VReg_320RegClassID, AMDGPU::VReg_352RegClassID,
       AMDGPU::VReg_384RegClassID, AMDGPU::VReg_512RegClassID,
-      AMDGPU::VReg_1024RegClassID};
+      AMDGPU::VReg_576RegClassID, AMDGPU::VReg_1024RegClassID};
 
   for (unsigned RCID : VGPRClasses) {
     const MCRegisterClass &RC = MRI.getRegClass(RCID);

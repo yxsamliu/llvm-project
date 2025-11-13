@@ -475,6 +475,7 @@ private:
   void Select_UNDEF(SDNode *N);
   void Select_FAKE_USE(SDNode *N);
   void Select_PROVENANCE_END(SDNode *N);
+  void Select_RELOC_NONE(SDNode *N);
   void CannotYetSelect(SDNode *N);
 
   void Select_FREEZE(SDNode *N);

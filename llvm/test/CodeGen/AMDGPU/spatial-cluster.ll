@@ -171,15 +171,16 @@ define void @send_next_prev_non_kernel(i32 %i1, ptr addrspace(1) %p) {
 ; CHECK-NEXT:    s_ashr_i32 s1, s0, 31
 ; CHECK-NEXT:    v_send_vgpr_prev_b32 g1[0], g1[1], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:0
 ; CHECK-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; CHECK-NEXT:    s_set_vgpr_frames 0x41 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    v_mov_b32_e32 g1[8], g1[0]
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_add_co_u32 v1, vcc_lo, v1, s0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v2, null, s1, v2, vcc_lo
+; CHECK-NEXT:    s_set_vgpr_frames 0x41 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    v_mov_b32_e32 g1[9], g1[0]
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    global_store_b32 v[1:2], g1[0], off
-; CHECK-NEXT:    s_set_vgpr_frames 0x41 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_mov_b32_e32 g1[8], g1[0]
-; CHECK-NEXT:    v_mov_b32_e32 g1[9], g1[0]
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
 entry:

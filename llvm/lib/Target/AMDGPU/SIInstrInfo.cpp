@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUMachineInstrs.h"
 #include "GCNHazardRecognizer.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
@@ -179,12 +180,13 @@ bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
     return false;
   }
 
+  if (isa<AMDGPUMI::VLoadStoreIdxInst>(MI))
+    return true;
+
   switch (MI.getOpcode()) {
   default:
     break;
   case AMDGPU::V_READFIRSTLANE_B32:
-  case AMDGPU::V_LOAD_IDX:
-  case AMDGPU::V_STORE_IDX:
     return true;
   }
 
@@ -528,17 +530,15 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     return true;
   }
 
-  if (isVLdStIdx(Opc)) {
-    BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::idx);
-    OffsetOp = getNamedOperand(LdSt, AMDGPU::OpName::offset);
+  if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&LdSt)) {
+    BaseOp = &LdStIdx->getIdxOp();
+    OffsetOp = &LdStIdx->getOffsetOp();
 
     BaseOps.push_back(BaseOp);
     Offset = OffsetOp->getImm() * 4; // Offset has units of dwords.
 
     // Get appropriate operand, and compute width accordingly.
-    DataOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data_op);
-    MachineMemOperand *LdStMMO = LdSt.memoperands()[DataOpIdx];
-    Width = LdStMMO->getSize();
+    Width = LocationSize::precise(LdStIdx->getBitWidth() / 8);
     return true;
   }
 
@@ -3960,14 +3960,19 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   if (MIa.hasOrderedMemoryRef() || MIb.hasOrderedMemoryRef())
     return false;
 
-  if (isVLdStIdx(MIa.getOpcode()) || isVLdStIdx(MIb.getOpcode())) {
-    if (isVLdStIdx(MIa.getOpcode()) && isVLdStIdx(MIb.getOpcode())) {
+  const bool isLdStIdxA = isa<AMDGPUMI::VLoadStoreIdxInst>(MIa);
+  const bool isLdStIdxB = isa<AMDGPUMI::VLoadStoreIdxInst>(MIb);
+  if (isLdStIdxA || isLdStIdxB) {
+    if (isLdStIdxA && isLdStIdxB) {
       return checkInstOffsetsDoNotOverlap(MIa, MIb);
     }
     return true;
   }
 
   if (isLDSDMA(MIa) || isLDSDMA(MIb))
+    return false;
+
+  if (MIa.isBundle() || MIb.isBundle())
     return false;
 
   // TODO: Should we check the address space from the MachineMemOperand? That
@@ -5067,9 +5072,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     return false;
   }
 
-  if ((MI.getOpcode() == AMDGPU::V_LOAD_IDX ||
-       MI.getOpcode() == AMDGPU::V_STORE_IDX) &&
-      MI.memoperands_empty()) {
+  if (isa<AMDGPUMI::VLoadStoreIdxInst>(MI) && MI.memoperands_empty()) {
     ErrInfo = "missing memory operand from v_load/store_idx.";
     return false;
   }
@@ -6887,8 +6890,7 @@ void SIInstrInfo::legalizeOperandsFLAT(MachineRegisterInfo &MRI,
 
 void SIInstrInfo::legalizeOperandsVLdStIdx(MachineRegisterInfo &MRI,
                                            MachineInstr &MI,
-                                           unsigned OpNo) const {
-  MachineOperand &Idx = MI.getOperand(OpNo);
+                                           MachineOperand &Idx) const {
   if (Idx.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Idx.getReg())))
     Idx.setReg(readlaneVGPRToSGPR(Idx.getReg(), MI, MRI));
 }
@@ -7255,9 +7257,8 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     switch (MI.getOpcode()) {
     case AMDGPU::V_SEND_VGPR_NEXT_B32_LANESHARED:
     case AMDGPU::V_SEND_VGPR_PREV_B32_LANESHARED: {
-      unsigned OpNoRefl =
-          AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::idx_refl);
-      legalizeOperandsVLdStIdx(MRI, MI, OpNoRefl);
+      MachineOperand *Refl = getNamedOperand(MI, AMDGPU::OpName::idx_refl);
+      legalizeOperandsVLdStIdx(MRI, MI, *Refl);
       [[fallthrough]];
     }
     case AMDGPU::CLUSTER_LOAD_B32_LANESHARED:
@@ -7275,9 +7276,8 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     case AMDGPU::DDS_LOAD_MCAST_B32_LANESHARED_SADDR:
     case AMDGPU::DDS_LOAD_MCAST_B64_LANESHARED_SADDR:
     case AMDGPU::DDS_LOAD_MCAST_B128_LANESHARED_SADDR: {
-      unsigned OpNo =
-          AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::idx);
-      legalizeOperandsVLdStIdx(MRI, MI, OpNo);
+      MachineOperand *Idx = getNamedOperand(MI, AMDGPU::OpName::idx);
+      legalizeOperandsVLdStIdx(MRI, MI, *Idx);
       break;
     }
     default:
@@ -7293,8 +7293,8 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
-  if (isVLdStIdx(MI.getOpcode())) {
-    legalizeOperandsVLdStIdx(MRI, MI, 1);
+  if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+    legalizeOperandsVLdStIdx(MRI, MI, LdStIdx->getIdxOp());
     return CreatedBB;
   }
 
@@ -9796,12 +9796,12 @@ MachineInstr *SIInstrInfo::bundleWithGPRIndexing(MachineInstr &MI) {
     if (I->isDebugInstr() || isWaitcnt(I->getOpcode()))
       continue;
 
-    if (I->getOpcode() == AMDGPU::V_STORE_IDX) {
+    if (isa<AMDGPUMI::VStoreIdxInst>(I)) {
       if (!CoreMI) {
         CoreMI = &*I;
       }
       Cnt++;
-    } else if (I->getOpcode() == AMDGPU::V_LOAD_IDX) {
+    } else if (isa<AMDGPUMI::VLoadIdxInst>(I)) {
       assert(!CoreMI);
       Cnt++;
     } else if (!CoreMI) {
@@ -9813,7 +9813,7 @@ MachineInstr *SIInstrInfo::bundleWithGPRIndexing(MachineInstr &MI) {
   return Cnt ? CoreMI : nullptr;
 }
 
-const MachineInstr *
+const AMDGPUMI::VLoadStoreIdxInst *
 SIInstrInfo::getBundledIndexingInst(const MachineInstr &MI,
                                     const MachineOperand &Op) {
   if (!MI.isBundled())
@@ -9828,17 +9828,19 @@ SIInstrInfo::getBundledIndexingInst(const MachineInstr &MI,
     auto I = MI.getIterator();
     auto E = MI.getParent()->instr_end();
     while (++I != E && I->isInsideBundle()) {
-      if (I->getOpcode() == AMDGPU::V_STORE_IDX &&
-          I->getOperand(0).getReg() == RegNo)
-        return &*I;
+      if (auto *St = dyn_cast<AMDGPUMI::VStoreIdxInst>(I)) {
+        if (St->getDataOp().getReg() == RegNo)
+          return St;
+      }
     }
   } else if (Op.isUse() && Op.isInternalRead()) {
     auto I = MI.getReverseIterator();
     auto E = MI.getParent()->instr_rend();
     while (++I != E && I->isInsideBundle()) {
-      if (I->getOpcode() == AMDGPU::V_LOAD_IDX &&
-          I->getOperand(0).getReg() == RegNo)
-        return &*I;
+      if (auto *Ld = dyn_cast<AMDGPUMI::VLoadIdxInst>(&*I)) {
+        if (Ld->getDataOp().getReg() == RegNo)
+          return Ld;
+      }
     }
   }
   return nullptr;
@@ -10517,7 +10519,7 @@ static bool followSubRegDef(MachineInstr &MI,
 }
 
 MachineInstr *llvm::getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
-                                     MachineRegisterInfo &MRI) {
+                                     const MachineRegisterInfo &MRI) {
   assert(MRI.isSSA());
   if (!P.Reg.isVirtual())
     return nullptr;
@@ -10887,7 +10889,7 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
     return InstructionUniformity::Default;
   }
 
-  if (MI.getOpcode() == AMDGPU::V_LOAD_IDX)
+  if (isa<AMDGPUMI::VLoadIdxInst>(MI))
     return InstructionUniformity::NeverUniform;
 
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
@@ -11014,6 +11016,8 @@ bool SIInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
 static bool optimizeSCC(MachineInstr *SCCValid, MachineInstr *SCCRedefine,
                         const SIRegisterInfo &RI) {
   MachineInstr *KillsSCC = nullptr;
+  if (SCCValid->getParent() != SCCRedefine->getParent())
+    return false;
   for (MachineInstr &MI : make_range(std::next(SCCValid->getIterator()),
                                      SCCRedefine->getIterator())) {
     if (MI.modifiesRegister(AMDGPU::SCC, &RI))
@@ -11058,8 +11062,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (CmpValue != 0)
       return false;
 
-    MachineInstr *Def = MRI->getUniqueVRegDef(SrcReg);
-    if (!Def || Def->getParent() != CmpInstr.getParent())
+    MachineInstr *Def = MRI->getVRegDef(SrcReg);
+    if (!Def)
       return false;
 
     // For S_OP that set SCC = DST!=0, do the transformation
@@ -11078,6 +11082,32 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (!optimizeSCC(Def, &CmpInstr, RI))
       return false;
 
+    // If s_or_b32 result, sY, is unused (i.e. it is effectively a 64-bit
+    // s_cmp_lg of a register pair) and the inputs are the hi and lo-halves of a
+    // 64-bit foldableSelect then delete s_or_b32 in the sequence:
+    //    sX = s_cselect_b64 (non-zero imm), 0
+    //    sLo = copy sX.sub0
+    //    sHi = copy sX.sub1
+    //    sY = s_or_b32 sLo, sHi
+    if (Def->getOpcode() == AMDGPU::S_OR_B32 &&
+        MRI->use_nodbg_empty(Def->getOperand(0).getReg())) {
+      const MachineOperand &OrOpnd1 = Def->getOperand(1);
+      const MachineOperand &OrOpnd2 = Def->getOperand(2);
+      if (OrOpnd1.isReg() && OrOpnd2.isReg()) {
+        MachineInstr *Def1 = MRI->getVRegDef(OrOpnd1.getReg());
+        MachineInstr *Def2 = MRI->getVRegDef(OrOpnd2.getReg());
+        if (Def1 && Def1->getOpcode() == AMDGPU::COPY && Def2 &&
+            Def2->getOpcode() == AMDGPU::COPY && Def1->getOperand(1).isReg() &&
+            Def2->getOperand(1).isReg() &&
+            Def1->getOperand(1).getSubReg() == AMDGPU::sub0 &&
+            Def2->getOperand(1).getSubReg() == AMDGPU::sub1 &&
+            Def1->getOperand(1).getReg() == Def2->getOperand(1).getReg()) {
+          MachineInstr *Select = MRI->getVRegDef(Def1->getOperand(1).getReg());
+          if (Select && foldableSelect(*Select))
+            optimizeSCC(Select, Def, RI);
+        }
+      }
+    }
     return true;
   };
 
@@ -11107,8 +11137,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     // s_cmp_lg_i32 (s_and_b32 $src, 1 << n), 1 << n => s_bitcmp0_b32 $src, n
     // s_cmp_lg_u64 (s_and_b64 $src, 1 << n), 1 << n => s_bitcmp0_b64 $src, n
 
-    MachineInstr *Def = MRI->getUniqueVRegDef(SrcReg);
-    if (!Def || Def->getParent() != CmpInstr.getParent())
+    MachineInstr *Def = MRI->getVRegDef(SrcReg);
+    if (!Def)
       return false;
 
     if (Def->getOpcode() != AMDGPU::S_AND_B32 &&

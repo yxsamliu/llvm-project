@@ -1331,24 +1331,55 @@ def : GCNPat <
 // Indexed Instructions
 //===----------------------------------------------------------------------===//
 
-// The units of $idx and $offset are in DWORDS.
-// is_laneshared == 0 if the access is to a dynamically accessed private array.
-// That case and laneshared have different fence semantics.
-def V_LOAD_IDX : VPseudoInstSI <
-  (outs VGPR_IDX_DATA_OP:$data_op),
-  (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
-    let mayLoad = 1;
-    let VALU = 1;
-    let UseNamedOperandTable = 1;
-    let hasSideEffects = 0;
+foreach rc = [VGPR_32_STAGING, VReg_64_STAGING, VReg_96_STAGING,
+              VReg_128_STAGING, VReg_160_STAGING, VReg_192_STAGING,
+              VReg_224_STAGING, VReg_256_STAGING, VReg_288_STAGING,
+              VReg_320_STAGING, VReg_352_STAGING, VReg_384_STAGING,
+              VReg_512_STAGING, VReg_576_STAGING, VReg_1024_STAGING] in {
+  // The units of $idx and $offset are in DWORDS.
+  def V_LOAD_IDX_B#rc.Size : VPseudoInstSI <
+    (outs rc:$data_op),
+    (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
+      let mayLoad = 1;
+      let VALU = 1;
+      let UseNamedOperandTable = 1;
+      let hasSideEffects = 0;
+  }
+  def V_STORE_IDX_B#rc.Size : VPseudoInstSI <
+    (outs),
+    (ins rc:$data_op, VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
+      let mayStore = 1;
+      let VALU = 1;
+      let UseNamedOperandTable = 1;
+      let hasSideEffects = 0;
+  }
 }
-def V_STORE_IDX : VPseudoInstSI <
-  (outs),
-  (ins VGPR_IDX_DATA_OP:$data_op, VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
-    let mayStore = 1;
-    let VALU = 1;
-    let UseNamedOperandTable = 1;
-    let hasSideEffects = 0;
+
+// Used for byte or short loads.
+// It lowers into V_BFE_U32 + V_LOAD_IDX
+// Only bitoffset of 0, 8, 16, or 24 bits are supported.
+// Only bitsize of 8 or 16 bits are supported.
+def V_LOAD_IDX_BITS
+    : VPseudoInstSI<(outs VGPR_32:$data_op),
+                    (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset,
+                        SSrc_b32:$bitsize, SSrc_b32:$bitoffset)> {
+  let mayLoad = 1;
+  let VALU = 1;
+  let UseNamedOperandTable = 1;
+  let hasSideEffects = 0;
+}
+
+// Used for byte or short stores.
+// Only bitoffset of 0, 8, 16, or 24 bits are supported.
+// Only bitsize of 8 or 16 bits are supported.
+def V_STORE_IDX_BITS
+    : VPseudoInstSI<(outs), (ins VGPR_32:$data_op,
+                                VGPR_IDX_IDX_OP:$idx, i32imm:$offset,
+                                SSrc_b32:$bitsize, SSrc_b32:$bitoffset)> {
+  let mayStore = 1;
+  let VALU = 1;
+  let UseNamedOperandTable = 1;
+  let hasSideEffects = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2056,10 +2087,13 @@ foreach vt = Reg1024Types.types in {
 
 // If denormals are not enabled, it only impacts the compare of the
 // inputs. The output result is not flushed.
-class ClampPat<Instruction inst, ValueType vt> : GCNPat <
+class ClampPat<Instruction inst, ValueType vt, bit fix16SrcWithInst32 = 0> : GCNPat <
   (vt (AMDGPUclamp (VOP3Mods vt:$src0, i32:$src0_modifiers))),
-  (inst i32:$src0_modifiers, vt:$src0,
-        i32:$src0_modifiers, vt:$src0, DSTCLAMP.ENABLE, DSTOMOD.NONE)
+  true16HelperReg16FromSrc32<(inst i32:$src0_modifiers,
+                              true16HelperReg32FromSrc16<(vt $src0), fix16SrcWithInst32>.ret,
+                              i32:$src0_modifiers,
+                              true16HelperReg32FromSrc16<(vt $src0), fix16SrcWithInst32>.ret,
+                              DSTCLAMP.ENABLE, DSTOMOD.NONE), fix16SrcWithInst32>.ret
 >;
 
 def : ClampPat<V_MAX_F32_e64, f32>;
@@ -2073,9 +2107,10 @@ let SubtargetPredicate = UseRealTrue16Insts in
 def : ClampPat<V_MAX_F16_t16_e64, f16>;
 let SubtargetPredicate = UseFakeTrue16Insts in
 def : ClampPat<V_MAX_F16_fake16_e64, f16>;
-// FIXME-TRUE16: Pseudo expansion of this won't work with True16.
-let True16Predicate = UseFakeTrue16Insts in
+let SubtargetPredicate = UseFakeTrue16Insts in
 def : ClampPat<V_MAX_BF16_PSEUDO_e64, bf16>;
+let SubtargetPredicate = UseRealTrue16Insts in
+def : ClampPat<V_MAX_BF16_PSEUDO_e64, bf16, 1>;
 
 let SubtargetPredicate = HasVOP3PInsts in {
 def : GCNPat <

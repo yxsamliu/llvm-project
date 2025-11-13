@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMachineInstrs.h"
 #include "AMDGPUVGPRIndexingAnalysis.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
@@ -96,9 +97,8 @@ bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
     if (MI.getOpcode() == TargetOpcode::BUNDLE) {
       ActiveBundleIdxUses.reset();
       continue;
-    } else if (MI.getOpcode() == AMDGPU::V_LOAD_IDX ||
-               MI.getOpcode() == AMDGPU::V_STORE_IDX) {
-      auto IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx);
+    } else if (auto *LdSt = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+      auto IdxOpnd = &LdSt->getIdxOp();
       auto SRegIdx = IdxOpnd->getReg();
       auto DefMI = MRI->getVRegDef(SRegIdx);
       Changed = true;
@@ -215,12 +215,11 @@ bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
       // Count the remaining local-uses of the virtual-sreg-idx
       int Cnt = 0;
       for (MachineInstr &Use : MRI->use_instructions(SRegIdx)) {
-        if (Use.getParent() == &MBB &&
-            (Use.getOpcode() == AMDGPU::V_LOAD_IDX ||
-             Use.getOpcode() == AMDGPU::V_STORE_IDX) &&
-            TII->getNamedOperand(Use, AMDGPU::OpName::idx)->getReg() ==
-                SRegIdx) {
-          Cnt++;
+        if (Use.getParent() == &MBB) {
+          if (auto *LdSt = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&Use)) {
+            if (LdSt->getIdxOp().getReg() == SRegIdx)
+              Cnt++;
+          }
         }
       }
       IdxInfo[FreeIdx].UseCnt = Cnt;

@@ -27,6 +27,10 @@
 
 namespace llvm {
 
+namespace AMDGPUMI {
+class VLoadStoreIdxInst;
+}
+
 class APInt;
 class GCNSubtarget;
 class LiveVariables;
@@ -716,16 +720,6 @@ public:
     case AMDGPU::SCRATCH_LOAD_BLOCK_SADDR:
     case AMDGPU::SCRATCH_STORE_BLOCK_SVS:
     case AMDGPU::SCRATCH_LOAD_BLOCK_SVS:
-      return true;
-    default:
-      return false;
-    }
-  }
-
-  static bool isVLdStIdx(uint16_t Opcode) {
-    switch (Opcode) {
-    case AMDGPU::V_LOAD_IDX:
-    case AMDGPU::V_STORE_IDX:
       return true;
     default:
       return false;
@@ -1538,7 +1532,7 @@ public:
   void legalizeOperandsSMRD(MachineRegisterInfo &MRI, MachineInstr &MI) const;
   void legalizeOperandsFLAT(MachineRegisterInfo &MRI, MachineInstr &MI) const;
   void legalizeOperandsVLdStIdx(MachineRegisterInfo &MRI, MachineInstr &MI,
-                                unsigned OpNo) const;
+                                MachineOperand &Idx) const;
 
   void legalizeGenericOperand(MachineBasicBlock &InsertMBB,
                               MachineBasicBlock::iterator I,
@@ -1636,10 +1630,10 @@ public:
   /// instruction if true. In case it is just a v_load_idx bundled
   /// with v_store_idx, return the v_store_idx as the core.
   static MachineInstr *bundleWithGPRIndexing(MachineInstr &MI);
-  /// Starting for a core instruction in bundle, find the corresponding
+  /// Starting from a core instruction in bundle, find the corresponding
   /// v_load/store_idx that is the source/dest of its operand
-  static const MachineInstr *getBundledIndexingInst(const MachineInstr &MI,
-                                                    const MachineOperand &Op);
+  static const AMDGPUMI::VLoadStoreIdxInst *
+  getBundledIndexingInst(const MachineInstr &MI, const MachineOperand &Op);
 
   unsigned getInstBundleSize(const MachineInstr &MI) const;
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
@@ -1816,7 +1810,7 @@ TargetInstrInfo::RegSubRegPair getRegSequenceSubReg(MachineInstr &MI,
 /// skipping copy like instructions and subreg-manipulation pseudos.
 /// Following another subreg of a reg:subreg isn't supported.
 MachineInstr *getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
-                               MachineRegisterInfo &MRI);
+                               const MachineRegisterInfo &MRI);
 
 /// \brief Return false if EXEC is not changed between the def of \p VReg at \p
 /// DefMI and the use at \p UseMI. Should be run on SSA. Currently does not

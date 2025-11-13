@@ -16,6 +16,7 @@
 
 #include "AMDGPUVGPRIndexingAnalysis.h"
 #include "AMDGPU.h"
+#include "AMDGPUMachineInstrs.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -135,8 +136,7 @@ llvm::getAMDGPUPrivateObjectNodeInfo(const MDNode *Obj) {
 }
 
 const MDNode *llvm::getAMDGPUPromotedPrivateObject(const MachineInstr &MI) {
-  if (MI.getOpcode() != AMDGPU::V_LOAD_IDX &&
-      MI.getOpcode() != AMDGPU::V_STORE_IDX)
+  if (!isa<AMDGPUMI::VLoadStoreIdxInst>(MI))
     return nullptr;
 
   const MachineMemOperand *MMO = *MI.memoperands_begin();
@@ -225,11 +225,8 @@ void AnalysisImpl::analyzeIdxInst(const MachineInstr &MI) {
           GprIdxImmedVals[Idx] = RealIdxUse.getImm();
       }
     }
-  } else if (MI.getOpcode() == AMDGPU::V_STORE_IDX ||
-             MI.getOpcode() == AMDGPU::V_LOAD_IDX) {
-    auto IdxSrcIdx =
-        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::idx);
-    unsigned Idx = MI.getOperand(IdxSrcIdx).getReg() - AMDGPU::IDX0;
+  } else if (auto *LdSt = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+    unsigned Idx = LdSt->getIdxOp().getReg() - AMDGPU::IDX0;
     assert(MI.hasOneMemOperand());
     const MachineMemOperand *MMO = *MI.memoperands_begin();
     bool IsLaneShared = MMO->getAddrSpace() == AMDGPUAS::LANE_SHARED;

@@ -24,6 +24,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMachineInstrs.h"
 #include "AMDGPUVGPRIndexingAnalysis.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -705,7 +706,7 @@ public:
   bool merge(const WaitcntBrackets &Other);
 
   // Get the vgpr range that v_load/store_idx access
-  RegInterval getRegIndexingInterval(const MachineInstr *MI,
+  RegInterval getRegIndexingInterval(const AMDGPUMI::VLoadStoreIdxInst *MI,
                                      const MachineRegisterInfo *MRI,
                                      const SIRegisterInfo *TRI) const;
 
@@ -896,14 +897,12 @@ public:
 } // end anonymous namespace
 
 RegInterval
-WaitcntBrackets::getRegIndexingInterval(const MachineInstr *MI,
+WaitcntBrackets::getRegIndexingInterval(const AMDGPUMI::VLoadStoreIdxInst *MI,
                                         const MachineRegisterInfo *MRI,
                                         const SIRegisterInfo *TRI) const {
   // Intervals retrieved from the IndexingAnalysis are in full-width VGPRs, and
   // so need to be adjusted into 16bit VGPR units. Offset and Size, when queried
   // from the analysis, are in units of bytes.
-  assert(MI->getOpcode() == AMDGPU::V_LOAD_IDX ||
-         MI->getOpcode() == AMDGPU::V_STORE_IDX);
   auto CheckBounds = [&](int VGPR32Begin, int VGPR32End) {
     RegInterval Interval;
     auto Size = (VGPR32End - VGPR32Begin) * 2;
@@ -1158,13 +1157,15 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
       setScoreByOperand(&Inst, Op, T, CurrScore);
   } else if (T == VA_VDST || T == VM_VSRC) {
     // Handle the register-interval written by v_store_idx.
-    if (T == VA_VDST && Inst.getOpcode() == AMDGPU::V_STORE_IDX) {
-      RegInterval Interval = getRegIndexingInterval(&Inst, MRI, TRI);
-      setScoreByInterval(Interval, T, CurrScore);
+    if (T == VA_VDST) {
+      if (auto *St = dyn_cast<AMDGPUMI::VStoreIdxInst>(&Inst)) {
+        RegInterval Interval = getRegIndexingInterval(St, MRI, TRI);
+        setScoreByInterval(Interval, T, CurrScore);
+      }
     }
     // v_load_idx not bundled with some vmem instr should not have VM_VSRC
     // event.
-    assert(T != VM_VSRC || Inst.getOpcode() != AMDGPU::V_LOAD_IDX);
+    assert(T != VM_VSRC || !isa<AMDGPUMI::VLoadIdxInst>(Inst));
     // Match the score to the VGPR destination or source registers as
     // appropriate
     for (const MachineOperand &Op : Inst.operands()) {
@@ -2236,11 +2237,10 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       }
     } else if (Opc == AMDGPU::S_BARRIER_WAIT) {
       ScoreBrackets.tryClearSCCWriteEvent(&MI);
-    } else if (MI.getOpcode() == AMDGPU::V_LOAD_IDX) {
+    } else if (auto *Ld = dyn_cast<AMDGPUMI::VLoadIdxInst>(&MI)) {
       // Determine waitcnt due to RAW.
       // On the load-side, try to resolve gpr-indexing.
-      RegInterval Interval =
-          ScoreBrackets.getRegIndexingInterval(&MI, MRI, TRI);
+      RegInterval Interval = ScoreBrackets.getRegIndexingInterval(Ld, MRI, TRI);
       // TODO-GFX13: when the interval is too large due to dynamic indexing,
       // we need to calculate waitcnt using event-queue and alias analysis.
         ScoreBrackets.determineWait(VA_VDST, Interval, Wait);
@@ -2258,7 +2258,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         ++It;
         if (It->findRegisterUseOperandIdx(MI.getOperand(0).getReg(), TRI,
                                           false) >= 0) {
-          NeedCheck = (It->getOpcode() == AMDGPU::V_STORE_IDX);
+          NeedCheck = isa<AMDGPUMI::VStoreIdxInst>(It);
           break;
         }
       }
@@ -2272,7 +2272,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         }
         ScoreBrackets.determineWait(DS_CNT, Interval, Wait);
       }
-    } else if (MI.getOpcode() == AMDGPU::V_STORE_IDX) {
+    } else if (auto *St = dyn_cast<AMDGPUMI::VStoreIdxInst>(&MI)) {
       // Skip processing a bundled v_store_idx here.
       if (!MI.isBundled()) {
         // Look into waitcnt due to RAW dependence.
@@ -2285,7 +2285,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         ScoreBrackets.clearVgprVmemTypes(Interval);
         ScoreBrackets.determineWait(DS_CNT, Interval, Wait);
         // Determine waitcnt due to WAR or WAW dependence
-        Interval = ScoreBrackets.getRegIndexingInterval(&MI, MRI, TRI);
+        Interval = ScoreBrackets.getRegIndexingInterval(St, MRI, TRI);
         ScoreBrackets.determineWait(VA_VDST, Interval, Wait);
         ScoreBrackets.determineWait(VM_VSRC, Interval, Wait);
         ScoreBrackets.determineWait(EXP_CNT, Interval, Wait);
@@ -2346,7 +2346,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         // Also skip the source operand coming from v_load_idx in bundle.
         // Those operands are handled when we process the v_load_idx.
         if (auto VLDST = TII->getBundledIndexingInst(MI, Op)) {
-          if (VLDST->getOpcode() == AMDGPU::V_LOAD_IDX)
+          if (isa<AMDGPUMI::VLoadIdxInst>(VLDST))
             continue;
         }
 
@@ -2487,8 +2487,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // We do allow s_waitcnt in bundle, however, it is better to
   // put the s_waitcnt out of bundle when possible.
   auto InsertPt = MI.getIterator();
-  if (MI.isBundled() && (MI.getOpcode() == AMDGPU::V_STORE_IDX ||
-                         MI.getOpcode() == AMDGPU::V_LOAD_IDX))
+  if (MI.isBundled() && isa<AMDGPUMI::VLoadStoreIdxInst>(MI))
     InsertPt = getBundleStart(MI.getIterator());
   return generateWaitcnt(Wait, InsertPt, *MI.getParent(), ScoreBrackets,
                          OldWaitcntInstr);
@@ -2569,7 +2568,7 @@ SIInsertWaitcnts::getSoftwareHazardEventType(const MachineInstr &Inst) const {
     // The vgpr written by the v_store_idx does not triggers an event
     // when it is bundled because it is processed as an indirect-operand
     // of other instructions.
-    if (Inst.getOpcode() == AMDGPU::V_STORE_IDX && Inst.isBundled())
+    if (Inst.isBundled() && isa<AMDGPUMI::VStoreIdxInst>(Inst))
       return {};
     return VGPR_CSMACC_WRITE;
   }
