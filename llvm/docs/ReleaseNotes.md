@@ -103,6 +103,8 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
+* Initial support for gfx1260
+
 Changes to the ARM Backend
 --------------------------
 
