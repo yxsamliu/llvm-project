@@ -205,6 +205,9 @@ protected:
   bool HasEmulatedSystemScopeAtomics = false;
   bool HasDefaultComponentBroadcast = false;
   bool HasXF32Insts = false;
+  bool HasSemaphores = false;
+  bool HasWavegroups = false;
+
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
   /// indicates a lack of S_CLAUSE support.
@@ -1490,6 +1493,10 @@ public:
 
   /// \returns true if the target has instructions with xf32 format support.
   bool hasXF32Insts() const { return HasXF32Insts; }
+  bool hasSemaphores() const { return HasSemaphores; }
+
+  /// \returns true if the target supports Wavegroups.
+  bool hasWavegroups() const { return HasWavegroups; }
 
   bool hasBitOp3Insts() const { return HasBitOp3Insts; }
 
@@ -1683,9 +1690,6 @@ public:
   bool needsKernArgPreloadProlog() const {
     return hasKernargPreload() && !GFX1250Insts;
   }
-
-  /// \returns true if the target supports Wavegroups.
-  bool hasWavegroups() const { return GFX13Insts; }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {

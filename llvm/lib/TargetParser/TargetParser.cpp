@@ -471,8 +471,12 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
       Features["f32-to-f16bf16-cvt-sr-insts"] = true;
       Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
       Features["clusters"] = true;
+      Features["semaphores"] = true;
+      Features["wavegroups"] = true;
       break;
   case GK_GFX1260:
+    Features["gfx1260-insts"] = true;
+    [[fallthrough]];
   case GK_GFX1251:
     if (Kind == GK_GFX1260)
       Features["wmma-2048b-insts"] = true;

@@ -1961,12 +1961,14 @@ def s_sema_wait_imm : ImmLeaf<
   }]>
 >;
 
-let SubtargetPredicate = isGFX13Plus, hasSideEffects = 1 in {
+let SubtargetPredicate = HasVGPRIndexingRegisters, hasSideEffects = 1 in {
   // In GFX13+ the MSBs and the index registers are stored in
   // SQ_WAVE_GPR_MSB_IDX0 and SQ_WAVE_GPR_IDX123, so
   // S_SET_VGPR_FRAMES does not write to SQ_WAVE_MODE.
   def S_SET_VGPR_FRAMES : SOPP_Pseudo<"s_set_vgpr_frames" , (ins i16imm:$simm16), "$simm16">;
+}
 
+let SubtargetPredicate = HasSemaphores, hasSideEffects = 1 in {
   def S_SEMA_SIGNAL       : SOPP_Pseudo<"s_sema_signal", (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_sema_signal s_sema_signal_imm:$simm16)]>;
   def S_SEMA_WAIT         : SOPP_Pseudo<"s_sema_wait", (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_sema_wait s_sema_wait_imm:$simm16)]>;
   def S_SEMA_SET_LIMIT    : SOPP_Pseudo<"s_sema_set_limit", (ins i16imm:$simm16), "$simm16">;

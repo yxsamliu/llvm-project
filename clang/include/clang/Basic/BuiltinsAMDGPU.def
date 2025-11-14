@@ -180,7 +180,7 @@ BUILTIN(__builtin_amdgcn_raw_buffer_load_b128, "V4UiQbiiIi", "n")
 BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_add_i32, "iiQbiiIi", "")
 
 TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f32, "ffQbiiIi", "", "atomic-fadd-rtn-insts")
-TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16, "V2hV2hQbiiIi", "t", "atomic-buffer-global-pk-add-f16-insts")
+TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16, "V2hV2hQbiiIi", "", "atomic-buffer-global-pk-add-f16-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f32, "ffQbiiIi", "", "atomic-fmin-fmax-global-f32")
 TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f32, "ffQbiiIi", "", "atomic-fmin-fmax-global-f32")
@@ -905,8 +905,8 @@ TARGET_BUILTIN(__builtin_amdgcn_cooperative_atomic_store_8x16B, "vV4i*V4iIicC*",
 // GFX13+ only builtins.
 //===----------------------------------------------------------------------===//
 
-TARGET_BUILTIN(__builtin_amdgcn_wavegroup_id, "Ui", "nc", "gfx13-insts")
-TARGET_BUILTIN(__builtin_amdgcn_wave_id_in_wavegroup, "Ui", "nc", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_wavegroup_id, "Ui", "nc", "wavegroups")
+TARGET_BUILTIN(__builtin_amdgcn_wave_id_in_wavegroup, "Ui", "nc", "wavegroups")
 
 TARGET_BUILTIN(__builtin_amdgcn_permute_pair_2src_rotate_group_b32, "UiUiUiIi", "nc", "gfx13-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_bpermute_b32, "UiUiUi", "nc", "gfx13-insts,wavefrontsize32")
@@ -916,10 +916,10 @@ TARGET_BUILTIN(__builtin_amdgcn_permute_pair_bcast_b32, "UiUiIi", "nc", "gfx13-i
 TARGET_BUILTIN(__builtin_amdgcn_permute_pair_2src_interleave_b64, "UiUi*UiUiIi", "nc", "gfx13-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_permute_pack_tensor_2src_b64, "UiUi*UiUiIi", "nc", "gfx13-insts,wavefrontsize32")
 
-TARGET_BUILTIN(__builtin_amdgcn_s_sema_set_state, "vv*Ui", "n", "gfx13-insts")
-TARGET_BUILTIN(__builtin_amdgcn_s_sema_set_limit, "vv*Ui", "n", "gfx13-insts")
-TARGET_BUILTIN(__builtin_amdgcn_s_sema_signal, "vv*", "n", "gfx13-insts")
-TARGET_BUILTIN(__builtin_amdgcn_s_sema_wait, "vv*", "n", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_s_sema_set_state, "vv*Ui", "n", "semaphores")
+TARGET_BUILTIN(__builtin_amdgcn_s_sema_set_limit, "vv*Ui", "n", "semaphores")
+TARGET_BUILTIN(__builtin_amdgcn_s_sema_signal, "vv*", "n", "semaphores")
+TARGET_BUILTIN(__builtin_amdgcn_s_sema_wait, "vv*", "n", "semaphores")
 
 TARGET_BUILTIN(__builtin_amdgcn_s_wakeup_barrier, "vv*", "n", "gfx13-insts")
 

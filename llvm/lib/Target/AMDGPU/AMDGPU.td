@@ -497,6 +497,18 @@ def FeatureCvtPkF16F32Inst : SubtargetFeature<"cvt-pk-f16-f32-inst",
   "Has cvt_pk_f16_f32 instruction"
 >;
 
+def FeatureSemaphores : SubtargetFeature<"semaphores",
+  "HasSemaphores",
+  "true",
+  "Has s_sema_* instructions"
+>;
+
+def FeatureWavegroups : SubtargetFeature<"wavegroups",
+  "HasWavegroups",
+  "true",
+  "Has wavegroups"
+>;
+
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
@@ -543,13 +555,14 @@ def FeatureGFX1250Insts : SubtargetFeature<"gfx1250-insts",
 def FeatureGFX1260Insts : SubtargetFeature<"gfx1260-insts",
   "GFX1260Insts",
   "true",
-  "Specific instructions for GFX1260"
+  "Additional instructions for GFX1260+"
 >;
 
 def FeatureGFX13Insts : SubtargetFeature<"gfx13-insts",
   "GFX13Insts",
   "true",
-  "Additional instructions for GFX13+"
+  "Additional instructions for GFX13+",
+  [FeatureSemaphores, FeatureWavegroups]
 >;
 
 def FeatureGFX10_3Insts : SubtargetFeature<"gfx10-3-insts",
@@ -2801,6 +2814,10 @@ def isGFX125xOnly :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && Subtarget->hasGFX1250Insts()">,
   AssemblerPredicate<(all_of FeatureGFX1250Insts, (not FeatureGFX13Insts))>;
 
+def isGFX1260Only :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && Subtarget->hasGFX1260Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX1260Insts)>;
+
 def isGFX1250Plus :
   Predicate<"Subtarget->hasGFX1250Insts()">,
   AssemblerPredicate<(all_of FeatureGFX1250Insts)>;
@@ -3305,6 +3322,14 @@ def Has1024AddressableVGPRs : Predicate<"Subtarget->has1024AddressableVGPRs()">,
 
 def HasVGPRIndexingRegisters : Predicate<"Subtarget->hasVGPRIndexingRegisters()">,
   AssemblerPredicate<(all_of FeatureVGPRIndexingRegisters)>;
+
+def HasSemaphores :
+  Predicate<"Subtarget->hasSemaphores()">,
+  AssemblerPredicate<(all_of FeatureSemaphores)>;
+
+def HasWavegroups :
+  Predicate<"Subtarget->hasWavegroups()">,
+  AssemblerPredicate<(all_of FeatureWavegroups)>;
 
 def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
   AssemblerPredicate<(all_of FeatureWaitXcnt)>;
