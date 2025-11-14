@@ -243,6 +243,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::GFX1250:
       case OffloadArch::GFX1251:
       case OffloadArch::GFX12_5_GENERIC:
+      case OffloadArch::GFX1260:
       case OffloadArch::GFX1300:
       case OffloadArch::GFX1301:
       case OffloadArch::GFX1302:
