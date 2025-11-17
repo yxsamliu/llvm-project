@@ -6008,7 +6008,9 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        roundup(lds-size / (128 * 4))
                                                      GFX950
                                                        roundup(lds-size / (320 * 4))
-                                                     GFX125*-GFX13
+                                                     GFX125*
+                                                       roundup(lds-size / (512 * 4))
+                                                     GFX13
                                                        roundup(lds-size / (256 * 4))
 
      24      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    Wavefront starts execution
