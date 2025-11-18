@@ -45,9 +45,9 @@ body:             |
     ; CHECK-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 369, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @15, i32 1476)`, addrspace 10)
     ; CHECK-NEXT: }
     $idx1 = S_SET_GPR_IDX_U32 0
-    BUNDLE implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def %49, implicit $idx1, implicit $exec :: (dereferenceable load (s32) from `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @_ZZ24mlof_ifblock_fullfuse_r2E7ls_data, i32 2272)`, align 32, addrspace 10), (dereferenceable load (s128) from `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @_ZZ24mlof_ifblock_fullfuse_r2E7ls_data, i32 64)`, align 64, addrspace 10) {
-      $stg_srcb = V_LOAD_IDX_B32 $idx1, 568, implicit $exec :: (dereferenceable load (s32) from `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @_ZZ24mlof_ifblock_fullfuse_r2E7ls_data, i32 2272)`, align 32, addrspace 10)
-      $stg_srca = V_LOAD_IDX_B128 $idx1, 16, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @_ZZ24mlof_ifblock_fullfuse_r2E7ls_data, i32 64)`, align 64, addrspace 10)
+    BUNDLE implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def %49, implicit $idx1, implicit $exec :: (dereferenceable load (s32) from `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @LS, i32 2272)`, align 32, addrspace 10), (dereferenceable load (s128) from `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @LS, i32 64)`, align 64, addrspace 10) {
+      $stg_srcb = V_LOAD_IDX_B32 $idx1, 568, implicit $exec :: (dereferenceable load (s32) from `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @LS, i32 2272)`, align 32, addrspace 10)
+      $stg_srca = V_LOAD_IDX_B128 $idx1, 16, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @LS, i32 64)`, align 64, addrspace 10)
       %49:vreg_128 = contract V_SCALE_BIAS_ACTIVATE_F32 internal $stg_srca, 1065353216, internal $stg_srcb, 131, -1, 0, 0, implicit $exec
     }
     %51:vgpr_32, %52:vgpr_32 = V_CVT_TO_TENSOR_F16_F32_4x2x16 %49, 0, 3, -1, 0, 0, implicit $exec
@@ -55,17 +55,17 @@ body:             |
     %55:vgpr_32 = contract nofpexcept V_PK_MAX_F16 8, %51, 8, %51, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     %58:vgpr_32 = contract nofpexcept V_PK_MUL_F16 0, 12902, 8, %52, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     %59:vgpr_32 = contract nofpexcept V_PK_MAX_F16 8, %52, 8, %52, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-    BUNDLE implicit-def dead $stg_dsta, implicit %55, implicit %54, implicit $mode, implicit $exec, implicit $idx1 :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @_ZZ24mlof_ifblock_fullfuse_r2E7ls_data, i32 1284)`, addrspace 10) {
+    BUNDLE implicit-def dead $stg_dsta, implicit %55, implicit %54, implicit $mode, implicit $exec, implicit $idx1 :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @LS, i32 1284)`, addrspace 10) {
       $stg_dsta = contract nofpexcept V_PK_MAX_F16 8, %55, 8, %54, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-      V_STORE_IDX_B32 internal $stg_dsta, $idx1, 321, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @_ZZ24mlof_ifblock_fullfuse_r2E7ls_data, i32 1284)`, addrspace 10)
+      V_STORE_IDX_B32 internal $stg_dsta, $idx1, 321, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @LS, i32 1284)`, addrspace 10)
     }
-    BUNDLE implicit-def dead $stg_dsta, implicit %59, implicit %58, implicit $mode, implicit $exec, implicit $idx1 :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @_ZZ24mlof_ifblock_fullfuse_r2E7ls_data, i32 1348)`, addrspace 10) {
+    BUNDLE implicit-def dead $stg_dsta, implicit %59, implicit %58, implicit $mode, implicit $exec, implicit $idx1 :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @LS, i32 1348)`, addrspace 10) {
       $stg_dsta = contract nofpexcept V_PK_MAX_F16 8, %59, 8, %58, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-      V_STORE_IDX_B32 internal $stg_dsta, $idx1, 337, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @_ZZ24mlof_ifblock_fullfuse_r2E7ls_data, i32 1348)`, addrspace 10)
+      V_STORE_IDX_B32 internal $stg_dsta, $idx1, 337, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @LS, i32 1348)`, addrspace 10)
     }
-    BUNDLE implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def %64, implicit $idx1, implicit $exec :: (dereferenceable load (s32) from `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @_ZZ24mlof_ifblock_fullfuse_r2E7ls_data, i32 2272)`, align 32, addrspace 10), (dereferenceable load (s128) from `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @_ZZ24mlof_ifblock_fullfuse_r2E7ls_data, i32 80)`, addrspace 10) {
-      $stg_srcb = V_LOAD_IDX_B32 $idx1, 568, implicit $exec :: (dereferenceable load (s32) from `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @_ZZ24mlof_ifblock_fullfuse_r2E7ls_data, i32 2272)`, align 32, addrspace 10)
-      $stg_srca = V_LOAD_IDX_B128 $idx1, 20, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @_ZZ24mlof_ifblock_fullfuse_r2E7ls_data, i32 80)`, addrspace 10)
+    BUNDLE implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def %64, implicit $idx1, implicit $exec :: (dereferenceable load (s32) from `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @LS, i32 2272)`, align 32, addrspace 10), (dereferenceable load (s128) from `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @LS, i32 80)`, addrspace 10) {
+      $stg_srcb = V_LOAD_IDX_B32 $idx1, 568, implicit $exec :: (dereferenceable load (s32) from `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @LS, i32 2272)`, align 32, addrspace 10)
+      $stg_srca = V_LOAD_IDX_B128 $idx1, 20, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @LS, i32 80)`, addrspace 10)
       %64:vreg_128 = contract V_SCALE_BIAS_ACTIVATE_F32 internal $stg_srca, 1065353216, internal $stg_srcb, 2179, -1, 0, 0, implicit $exec
     }
     %65:vgpr_32, %66:vgpr_32 = V_CVT_TO_TENSOR_F16_F32_4x2x16 %64, 0, 3, -1, 0, 0, implicit $exec
@@ -73,12 +73,12 @@ body:             |
     %68:vgpr_32 = contract nofpexcept V_PK_MAX_F16 8, %65, 8, %65, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     %71:vgpr_32 = contract nofpexcept V_PK_MUL_F16 0, 12902, 8, %66, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     %72:vgpr_32 = contract nofpexcept V_PK_MAX_F16 8, %66, 8, %66, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-    BUNDLE implicit-def dead $stg_dsta, implicit %68, implicit %67, implicit $mode, implicit $exec, implicit $idx1 :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @_ZZ24mlof_ifblock_fullfuse_r2E7ls_data, i32 1412)`, addrspace 10) {
+    BUNDLE implicit-def dead $stg_dsta, implicit %68, implicit %67, implicit $mode, implicit $exec, implicit $idx1 :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @LS, i32 1412)`, addrspace 10) {
       $stg_dsta = contract nofpexcept V_PK_MAX_F16 8, %68, 8, %67, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-      V_STORE_IDX_B32 internal $stg_dsta, $idx1, 353, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @_ZZ24mlof_ifblock_fullfuse_r2E7ls_data, i32 1412)`, addrspace 10)
+      V_STORE_IDX_B32 internal $stg_dsta, $idx1, 353, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @LS, i32 1412)`, addrspace 10)
     }
-    BUNDLE implicit-def dead $stg_dsta, implicit %72, implicit %71, implicit $mode, implicit $exec, implicit $idx1 :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @_ZZ24mlof_ifblock_fullfuse_r2E7ls_data, i32 1476)`, addrspace 10) {
+    BUNDLE implicit-def dead $stg_dsta, implicit %72, implicit %71, implicit $mode, implicit $exec, implicit $idx1 :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @LS, i32 1476)`, addrspace 10) {
       $stg_dsta = contract nofpexcept V_PK_MAX_F16 8, %72, 8, %71, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-      V_STORE_IDX_B32 internal $stg_dsta, $idx1, 369, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @_ZZ24mlof_ifblock_fullfuse_r2E7ls_data, i32 1476)`, addrspace 10)
+      V_STORE_IDX_B32 internal $stg_dsta, $idx1, 369, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @LS, i32 1476)`, addrspace 10)
     }
 ...
