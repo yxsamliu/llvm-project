@@ -1559,7 +1559,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   bit IsF16BF16 = !or(IsAB_F16, IsAB_BF16);
 
   bit IsC_F64 = !eq(ArgTy[3], v8f64);
-  bit IsC_F32 = !or(!eq(ArgTy[3], v8f32), !eq(ArgTy[3], v4f32));
+  bit IsC_F32 = !or(!eq(ArgTy[3], v8f32), !eq(ArgTy[3], v4f32), !eq(ArgTy[3], v64f32));
   bit IsC_BF16 = !or(!eq(ArgTy[3], v8i16), !eq(ArgTy[3], v4i16),
                      !eq(ArgTy[3], v8bf16), !eq(ArgTy[3], v4bf16));
   bit IsC_F16 = !or(!eq(ArgTy[3], v8f16), !eq(ArgTy[3], v4f16));
@@ -1908,7 +1908,7 @@ class VOP3PWMMA_gfx1260_Profile<list<ValueType> ArgTy, bit IsSWMMAC, int IndexTy
   let NegHiAny = 0; // NEG_HI is overloaded to convey the MREG settings.
 }
 
-def BF16F32_32X64X32_BF16_SWMMAC_w32 : VOP3PWMMA_gfx1260_Profile<[v64f32, v16bf16, v64bf16, f32],
+def BF16F32_32X64X32_BF16_SWMMAC_w32 : VOP3PWMMA_gfx1260_Profile<[v64f32, v16bf16, v64bf16, v64f32],
                                          /*IsSWMMAC=*/1, /*IndexType=*/16, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
                                          /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
 
