@@ -168,6 +168,13 @@ protected:
   bool HasFP8ConversionInsts = false;
   bool HasWMMA128bInsts = false;
   bool HasWMMA256bInsts = false;
+  bool HasCubeInsts = false;
+  bool HasLerpInst = false;
+  bool HasSadInsts = false;
+  bool HasQsadInsts = false;
+  bool HasCvtNormInsts = false;
+  bool HasCvtPkNormVOP2Insts = false;
+  bool HasCvtPkNormVOP3Insts = false;
   bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
@@ -904,6 +911,20 @@ public:
 
   bool isGFX1170Plus() const { return getGeneration() >= GFX12 || isGFX1170(); }
 
+  bool hasCubeInsts() const { return HasCubeInsts; }
+
+  bool hasLerpInst() const { return HasLerpInst; }
+
+  bool hasSadInsts() const { return HasSadInsts; }
+
+  bool hasQsadInsts() const { return HasQsadInsts; }
+
+  bool hasCvtNormInsts() const { return HasCvtNormInsts; }
+
+  bool hasCvtPkNormVOP2Insts() const { return HasCvtPkNormVOP2Insts; }
+
+  bool hasCvtPkNormVOP3Insts() const { return HasCvtPkNormVOP3Insts; }
+
   bool hasFP8E5M3Insts() const { return HasFP8E5M3Insts; }
 
   bool hasPkFmacF16Inst() const {
@@ -1435,7 +1456,7 @@ public:
   /// \returns true if the target has packed f32 instructions that only read 32
   /// bits from a scalar operand (SGPR or literal) and replicates the bits to
   /// both channels.
-  bool hasPKF32InstsReplicatingLow32BitsOfScalarInput() const {
+  bool hasPKF32InstsReplicatingLower32BitsOfScalarInput() const {
     return getGeneration() == GFX12 && GFX1250Insts;
   }
 
