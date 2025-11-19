@@ -785,6 +785,7 @@ def VDst_128  : VOPDstOperand<VReg_128_STAGING_AlignTarget>;
 def VDst_256  : VOPDstOperand<VReg_256_STAGING_AlignTarget>;
 def VDst_512  : VOPDstOperand<VReg_512_STAGING_AlignTarget>;
 def VDst_1024 : VOPDstOperand<VReg_1024_STAGING_AlignTarget>;
+def VDst_2048 : VOPDstOperand<Pseudo_VGPR_2048>;
 
 def VOPProfileAccRead : VOP3P_Profile<VOP_I32_I32, VOP3_MAI> {
   let Src0RC64 = ARegSrc_32;
@@ -1897,6 +1898,20 @@ def F32_FP8BF8X128_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f32, v8i32,  v16i32, v8f
 def F16_FP8BF8X128_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f16, v8i32,  v16i32, v8f16], 1, 32, 0, 1, 1, 0, 0, 0, 1>;
 def I32_IU8X128_SWMMAC_w32       : VOP3PWMMA_Profile<[v8i32, v8i32,  v16i32, v8i32], 1, 32, 1, 0, 1, 0, 0, 0, 1>;
 
+class VOP3PWMMA_gfx1260_Profile<list<ValueType> ArgTy, bit IsSWMMAC, int IndexType,
+                                bit IsIU, bit IsFP8BF8XF32, bit HasMatrixFMT = 0,
+                                bit HasMatrixScale = 0, bit Scale16 = 0, bit IsF4 = 0>
+    : VOP3PWMMA_Profile<ArgTy, IsSWMMAC, IndexType, IsIU, IsFP8BF8XF32, /*Has_ImodOp=*/0,
+                        HasMatrixFMT, HasMatrixScale, Scale16, /*HasMatrixReuse=*/1, IsF4> {
+  let NoABMods = 0;
+  let HasClamp = 0;
+  let NegHiAny = 0; // NEG_HI is overloaded to convey the MREG settings.
+}
+
+def BF16F32_32X64X32_BF16_SWMMAC_w32 : VOP3PWMMA_gfx1260_Profile<[v64f32, v16bf16, v64bf16, f32],
+                                         /*IsSWMMAC=*/1, /*IndexType=*/16, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
+                                         /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
+
 multiclass WMMA_F8F6F4_Profiles<bit HasMatrixScale, bit Scale16, bit HasMatrixReuse> {
   def _f8_f8_w32 : VOP3PWMMA_Profile<[v8f32, v16i32, v16i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
   def _f8_f6_w32 : VOP3PWMMA_Profile<[v8f32, v16i32, v12i32, v8f32], 0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse>;
@@ -1992,6 +2007,10 @@ let isConvergent = 1 in {
 let SubtargetPredicate = HasGFX1251GEMMInsts in {
 defm V_WMMA_F64_16X16X4_F64_w32      : WMMAInstGFX12<"v_wmma_f64_16x16x4_f64",       F64_F64X4_WMMA_w32, "_w32">;
 } // End SubtargetPredicate = HasGFX1251GEMMInsts
+
+let SubtargetPredicate = HasWMMA2048bInsts in {
+  defm V_SWMMAC_BF16F32_32X64X32_BF16_w32 : SWMMACInstGFX12<"v_swmmac_bf16f32_32x64x32_bf16", BF16F32_32X64X32_BF16_SWMMAC_w32, "_w32">;
+}
 } // End WaveSizePredicate = isWave32
 
 let WaveSizePredicate = isWave32 in {
@@ -2290,6 +2309,12 @@ multiclass VOP3P_Real_WMMA_gfx1250 <bits<8> op, VOP3PWMMA_Profile WMMAP> {
   }
 }
 
+multiclass VOP3P_Real_WMMA_gfx1260 <bits<8> op, VOP3PWMMA_Profile WMMAP> {
+  let WaveSizePredicate = isWave32, DecoderNamespace = "GFX12" in {
+    defm _twoaddr : VOP3P_WMMA_Real_Base <GFX1260Gen, op, WMMAP>;
+  }
+}
+
 multiclass VOP3P_Real_WMMA_F8F6F4_gfx1250<bits<8> op, VOP3PWMMA_Profile WMMAP> {
   defvar PS = !cast<VOP3P_Pseudo>(NAME # "_twoaddr");
   defvar asmName = !substr(PS.Mnemonic, 0, !sub(!size(PS.Mnemonic), !size("_f8_f8_w32")));
@@ -2479,6 +2504,8 @@ defm V_SWMMAC_F16_16X16X128_FP8_BF8_w32 : VOP3P_Real_WMMA_gfx1250 <0x078, F16_FP
 defm V_SWMMAC_F16_16X16X128_BF8_FP8_w32 : VOP3P_Real_WMMA_gfx1250 <0x079, F16_FP8BF8X128_SWMMAC_w32>;
 defm V_SWMMAC_F16_16X16X128_BF8_BF8_w32 : VOP3P_Real_WMMA_gfx1250 <0x07a, F16_FP8BF8X128_SWMMAC_w32>;
 defm V_SWMMAC_I32_16X16X128_IU8_w32     : VOP3P_Real_WMMA_gfx1250 <0x07b, I32_IU8X128_SWMMAC_w32>;
+
+defm V_SWMMAC_BF16F32_32X64X32_BF16_w32 : VOP3P_Real_WMMA_gfx1260 <0x0a1, BF16F32_32X64X32_BF16_SWMMAC_w32>;
 
 multiclass VOP3P_Real_with_name<GFXGen Gen, bits<8> op,
                           string backing_ps_name = NAME,

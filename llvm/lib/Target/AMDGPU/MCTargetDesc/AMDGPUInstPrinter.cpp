@@ -506,11 +506,18 @@ void AMDGPUInstPrinter::printRegOperand(MCRegister Reg,
     break;
   }
 #endif
-
+  const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
   unsigned PrintReg = getRegForPrinting(Reg, STI, MRI);
-  std::string PrintRegName = getRegisterName(PrintReg);
-  modifyVGPRNameUsingIndex(PrintRegName, IdxReg);
-  O << PrintRegName;
+  if (RC && RC->getID() == AMDGPU::Pseudo_VGPR_2048RegClassID) {
+    unsigned RegIdx = Reg.id() - AMDGPU::VGPR0_Pseudo;
+    O << "v[" << RegIdx << ':' << RegIdx + 63 << ']';
+    // TODO: we will probably need to modify the VGPR name for the index
+    // register as well, like the other case below.
+  } else {
+    std::string PrintRegName = getRegisterName(PrintReg);
+    modifyVGPRNameUsingIndex(PrintRegName, IdxReg);
+    O << PrintRegName;
+  }
 
   if (PrintReg != Reg.id()) {
     std::string RegName = getRegisterName(Reg);

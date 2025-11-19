@@ -678,6 +678,8 @@ const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
   if (ST.hasFeature(AMDGPU::FeatureGFX13Insts))
     return SIEncodingFamily::GFX13;
+  if (ST.hasFeature(AMDGPU::FeatureGFX1260Insts))
+    return SIEncodingFamily::GFX1260;
   if (ST.hasFeature(AMDGPU::FeatureGFX1250Insts))
     return SIEncodingFamily::GFX1250;
   if (ST.hasFeature(AMDGPU::FeatureGFX12Insts))
@@ -2550,7 +2552,7 @@ bool getHasDepthExport(const Function &F) {
 bool getWavegroupEnable(const Function &F) {
   return F.hasFnAttribute("amdgpu-wavegroup-enable");
 }
-  
+
 bool getSpatialClusterEnable(const Function &F) {
   return F.hasFnAttribute("amdgpu-spatial-cluster");
 }
@@ -3220,6 +3222,8 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::VReg_1024_Lo256_Align2RegClassID:
   case AMDGPU::VReg_1024_STAGING_Lo256_Align2RegClassID:
     return 1024;
+  case AMDGPU::Pseudo_VGPR_2048RegClassID:
+    return 2048;
   default:
     llvm_unreachable("Unexpected register class");
   }
@@ -3675,14 +3679,15 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
 const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
                                            const MCRegisterInfo &MRI) {
   const unsigned VGPRClasses[] = {
-      AMDGPU::VGPR_16RegClassID,  AMDGPU::VGPR_32RegClassID,
-      AMDGPU::VReg_64RegClassID,  AMDGPU::VReg_96RegClassID,
-      AMDGPU::VReg_128RegClassID, AMDGPU::VReg_160RegClassID,
-      AMDGPU::VReg_192RegClassID, AMDGPU::VReg_224RegClassID,
-      AMDGPU::VReg_256RegClassID, AMDGPU::VReg_288RegClassID,
-      AMDGPU::VReg_320RegClassID, AMDGPU::VReg_352RegClassID,
-      AMDGPU::VReg_384RegClassID, AMDGPU::VReg_512RegClassID,
-      AMDGPU::VReg_576RegClassID, AMDGPU::VReg_1024RegClassID};
+      AMDGPU::VGPR_16RegClassID,         AMDGPU::VGPR_32RegClassID,
+      AMDGPU::VReg_64RegClassID,         AMDGPU::VReg_96RegClassID,
+      AMDGPU::VReg_128RegClassID,        AMDGPU::VReg_160RegClassID,
+      AMDGPU::VReg_192RegClassID,        AMDGPU::VReg_224RegClassID,
+      AMDGPU::VReg_256RegClassID,        AMDGPU::VReg_288RegClassID,
+      AMDGPU::VReg_320RegClassID,        AMDGPU::VReg_352RegClassID,
+      AMDGPU::VReg_384RegClassID,        AMDGPU::VReg_512RegClassID,
+      AMDGPU::VReg_576RegClassID,        AMDGPU::VReg_1024RegClassID,
+      AMDGPU::Pseudo_VGPR_2048RegClassID};
 
   for (unsigned RCID : VGPRClasses) {
     const MCRegisterClass &RC = MRI.getRegClass(RCID);

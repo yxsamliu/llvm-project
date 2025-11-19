@@ -35,7 +35,8 @@ def SIEncodingFamily {
   int GFX1170 = 11;
   int GFX12 = 12;
   int GFX1250 = 13;
-  int GFX13 = 14;
+  int GFX1260 = 14;
+  int GFX13 = 15;
 }
 
 //===----------------------------------------------------------------------===//
@@ -51,6 +52,7 @@ class GFXGen<Predicate pred, string dn, string suffix, int sub> {
 
 def GFX13Gen         : GFXGen<isGFX13Only, "GFX13", "_gfx13", SIEncodingFamily.GFX13>;
 def GFX1250Gen       : GFXGen<isGFX125xOnly, "GFX1250", "_gfx1250", SIEncodingFamily.GFX1250>;
+def GFX1260Gen       : GFXGen<isGFX1260Only, "GFX1260", "_gfx1260", SIEncodingFamily.GFX1260>;
 def GFX12Not12_50Gen : GFXGen<isGFX12Not12_50, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
 def GFX12Gen         : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
 def GFX1170Gen       : GFXGen<isGFX1170Only, "GFX1170", "_gfx1170", SIEncodingFamily.GFX1170>;
@@ -3485,6 +3487,7 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.GFX1170)],
                    [!cast<string>(SIEncodingFamily.GFX12)],
                    [!cast<string>(SIEncodingFamily.GFX1250)],
+                   [!cast<string>(SIEncodingFamily.GFX1260)],
                    [!cast<string>(SIEncodingFamily.GFX13)]];
 }
 

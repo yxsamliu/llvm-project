@@ -377,6 +377,12 @@ foreach Index = 0...255 in {
                    [!add(Index, 3072), !add(Index, 2048)]>;
 }
 
+// Pseudo VGPR registers only for 2048-bit VGPR tuples.
+// The last one would be v[192:255] so we can skip the rest.
+foreach Index = 0...192 in {
+  def VGPR#Index#_Pseudo : SIReg <"v"#Index#"_pseudo", Index, /*isVGPR=*/1, /*isAGPR=*/0>;
+}
+
 //===----------------------------------------------------------------------===//
 //  Groupings using register classes and tuples
 //===----------------------------------------------------------------------===//
@@ -404,7 +410,7 @@ def Reg352Types : RegisterTypes<[v11i32, v11f32]>;
 def Reg384Types : RegisterTypes<[v12i32, v12f32]>;
 def Reg512Types : RegisterTypes<[v16i32, v16f32, v8i64, v8f64, v32i16, v32f16, v32bf16]>;
 def Reg576Types : RegisterTypes<[v18i32, v18f32, v36i16, v36f16, v36bf16]>;
-def Reg1024Types : RegisterTypes<[v32i32, v32f32, v16i64, v16f64]>;
+def Reg1024Types : RegisterTypes<[v32i32, v32f32, v16i64, v16f64, v64f16, v64bf16]>;
 
 def SCC_CLASS : SIRegisterClass<"AMDGPU", [i1], 1, (add SCC)> {
   let CopyCost = -1;
@@ -771,6 +777,15 @@ def VGPR_576 : SIRegisterTuples<getSubRegs<18>.ret, VGPR_32, 1023, 1, 18, "v">;
 
 // VGPR 1024-bit registers
 def VGPR_1024 : SIRegisterTuples<getSubRegs<32>.ret, VGPR_32, 1023, 1, 32, "v">;
+
+// VGPR 2048-bit registers - MC-only, no subregisters. Used for large matrix operations.
+def Pseudo_VGPR_2048 : SIRegisterClass<"AMDGPU", [v64i32, v64f32], 32,
+                         (add (sequence "VGPR%u_Pseudo", 0, 192))> {
+  let isAllocatable = 0;
+  let GeneratePressureSet = 0;
+  let HasVGPR = 1;
+  let BaseClassOrder = 10000;
+}
 
 let HasAGPR = 1 in {
 def AGPR_LO16 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
@@ -1683,6 +1698,8 @@ def VGPROp_32_Lo256 : RegisterOperand<VGPR_32_Lo256> {
   let DecoderMethod = "DecodeVGPR_32RegisterClass";
 }
 
+// VGPROp for VGPR_2048 - MC-only register operand
+def VGPROp_2048 : RegisterOperand<Pseudo_VGPR_2048>;
 
 //===----------------------------------------------------------------------===//
 //  ASrc_* Operands with an AccVGPR

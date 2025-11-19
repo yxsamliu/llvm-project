@@ -2715,6 +2715,8 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
         return AMDGPU::VReg_576RegClassID;
       case 1024:
         return AMDGPU::VReg_1024RegClassID;
+      case 2048:
+        return AMDGPU::Pseudo_VGPR_2048RegClassID;
     }
   } else if (Is == IS_TTMP) {
     switch (RegWidth) {

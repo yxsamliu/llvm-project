@@ -10340,7 +10340,9 @@ static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
   case AMDGPUSubtarget::GFX11:
     return ST.isGFX1170() ? SIEncodingFamily::GFX1170 : SIEncodingFamily::GFX11;
   case AMDGPUSubtarget::GFX12:
-    return ST.hasGFX1250Insts() ? SIEncodingFamily::GFX1250
+    return ST.hasGFX1250Insts() ? ST.hasGFX1260Insts()
+                                      ? SIEncodingFamily::GFX1260
+                                      : SIEncodingFamily::GFX1250
                                 : SIEncodingFamily::GFX12;
   case AMDGPUSubtarget::GFX13:
     return SIEncodingFamily::GFX13;

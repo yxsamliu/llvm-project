@@ -373,6 +373,17 @@ DecodeVGPR_16_Lo128RegisterClass(MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,
   return addOperand(Inst, DAsm->createVGPR16Operand(RegIdx, IsHi));
 }
 
+static DecodeStatus
+DecodePseudo_VGPR_2048RegisterClass(MCInst &Inst, unsigned Imm,
+                                    uint64_t /*Addr*/,
+                                    const MCDisassembler *Decoder) {
+  assert(isUInt<9>(Imm) && "9-bit encoding expected");
+  unsigned RegIdx = Imm & 0xff;
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(
+      Inst, DAsm->createRegOperand(AMDGPU::Pseudo_VGPR_2048RegClassID, RegIdx));
+}
+
 template <unsigned OpWidth>
 static DecodeStatus decodeOperand_VSrcT16_Lo128(MCInst &Inst, unsigned Imm,
                                                 uint64_t /*Addr*/,
