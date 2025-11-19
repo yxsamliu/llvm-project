@@ -708,6 +708,16 @@ public:
 
   bool isVSrc_NoInline_v2f16() const { return isVSrc_v2f16(); }
 
+  bool isVSrc_NoInline_b16() const {
+    return (isRegClass(AMDGPU::VS_32RegClassID) && !hasModifiers()) ||
+           isLiteralImm(MVT::i16);
+  }
+
+  bool isVSrc_NoInline_b32() const {
+    return (isRegClass(AMDGPU::VS_32RegClassID) && !hasModifiers()) ||
+           isLiteralImm(MVT::i32);
+  }
+
   bool isVISrcB32() const {
     return isRegOrInlineNoMods(AMDGPU::VGPR_32RegClassID, MVT::i32);
   }
@@ -2579,6 +2589,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_IMM_V2INT32:
   case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT32:
     break;
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
@@ -2639,6 +2650,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT16:
     break;
 
   case AMDGPU::OPERAND_KIMM64:
@@ -3890,7 +3902,9 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
         OperandType == AMDGPU::OPERAND_REG_INLINE_C_BF16)
       return AMDGPU::isInlinableLiteralBF16(Val, hasInv2PiInlineImm());
 
-    if (OperandType == AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16)
+    if (OperandType == AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16 ||
+        OperandType == AMDGPU::OPERAND_REG_IMM_NOINLINE_INT16 ||
+        OperandType == AMDGPU::OPERAND_REG_IMM_NOINLINE_INT32)
       return false;
 
     llvm_unreachable("invalid operand type");
