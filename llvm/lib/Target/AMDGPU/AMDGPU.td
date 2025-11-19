@@ -2327,7 +2327,8 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
 def FeatureISAVersion12_60 : FeatureSet<
   !listconcat(FeatureISAVersion12_50.Features,
     [FeatureGFX1260Insts,
-     FeatureWMMA2048bInsts])>;
+     FeatureWMMA2048bInsts,
+     FeatureWavegroups])>;
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
