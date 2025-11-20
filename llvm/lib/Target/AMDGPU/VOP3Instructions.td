@@ -1771,13 +1771,10 @@ let HasExtVOP3DPP = 0, HasModifiers = 0 in {
 def VOP3_V2I32_I32_I32_V2I32 : VOP3_Profile<VOPProfile<[v2i32, i32, i32, v2i32]>>;
 def VOP3_V3I32_I32_I64_V2I32 : VOP3_Profile<VOPProfile<[v3i32, i32, i64, v2i32]>>;
 def VOP3_V4I32_I64_I64_V2I32 : VOP3_Profile<VOPProfile<[v4i32, i64, i64, v2i32]>>;
-let HasExt64BitDPP = 0, HasExtDPP = 0,
-Src0RC64 = VSrc_NoInline_b16, Src1RC64 = VSrc_NoInline_b32 in
-  def VOP_V2I32_I16_I32      : VOP3_Profile<VOPProfile<[v2i32, i16,   i32, untyped]>>;
-let Src0RC64 = VSrc_NoInline_b32, Src1RC64 = VSrc_NoInline_b32 in {
-  def VOP_V3I32_I32_I32        : VOP3_Profile<VOPProfile<[v3i32, i32,   i32, untyped]>>;
-  def VOP_V4I32_I32_I32        : VOP3_Profile<VOPProfile<[v4i32, i32,   i32, untyped]>>;
-}
+let HasExt64BitDPP = 0, HasExtDPP = 0 in
+  def VOP_V2I32_I16_I32      : VOP3_Profile_NoInline_Src<VOPProfile<[v2i32, i16,   i32, untyped]>>;
+def VOP_V3I32_I32_I32        : VOP3_Profile_NoInline_Src<VOPProfile<[v3i32, i32,   i32, untyped]>>;
+def VOP_V4I32_I32_I32        : VOP3_Profile_NoInline_Src<VOPProfile<[v4i32, i32,   i32, untyped]>>;
 def VOP_V4I32_I32_I32_I64    : VOP3_Profile<VOPProfile<[v4i32, i32,   i32, i64]>>;
 def VOP_V6I32_V2I32_I32_I64  : VOP3_Profile<VOPProfile<[v6i32, v2i32, i32, i64]>>;
 def VOP_V8I32_V2I32_I32_I64  : VOP3_Profile<VOPProfile<[v8i32, v2i32, i32, i64]>>;

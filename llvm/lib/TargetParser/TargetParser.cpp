@@ -477,49 +477,12 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
   case GK_GFX1260:
     Features["gfx1260-insts"] = true;
     Features["wavegroups"] = true;
-    Features["ci-insts"] = true;
-    Features["dot7-insts"] = true;
-    Features["dot8-insts"] = true;
-    Features["dl-insts"] = true;
-    Features["16-bit-insts"] = true;
-    Features["dpp"] = true;
-    Features["gfx8-insts"] = true;
-    Features["gfx9-insts"] = true;
-    Features["gfx10-insts"] = true;
-    Features["gfx10-3-insts"] = true;
-    Features["gfx11-insts"] = true;
-    Features["gfx12-insts"] = true;
-    Features["gfx1250-insts"] = true;
-    Features["bitop3-insts"] = true;
-    Features["prng-inst"] = true;
-    Features["tanh-insts"] = true;
-    Features["tensor-cvt-lut-insts"] = true;
-    Features["transpose-load-f4f6-insts"] = true;
-    Features["bf16-trans-insts"] = true;
-    Features["bf16-cvt-insts"] = true;
-    Features["bf16-pk-insts"] = true;
-    Features["fp8-conversion-insts"] = true;
-    Features["fp8e5m3-insts"] = true;
-    Features["permlane16-swap"] = true;
-    Features["ashr-pk-insts"] = true;
-    Features["add-min-max-insts"] = true;
-    Features["pk-add-min-max-insts"] = true;
-    Features["atomic-buffer-pk-add-bf16-inst"] = true;
-    Features["vmem-pref-insts"] = true;
-    Features["atomic-fadd-rtn-insts"] = true;
-    Features["atomic-buffer-global-pk-add-f16-insts"] = true;
-    Features["atomic-flat-pk-add-16-insts"] = true;
-    Features["atomic-global-pk-add-bf16-inst"] = true;
-    Features["atomic-ds-pk-add-16-insts"] = true;
-    Features["setprio-inc-wg-inst"] = true;
-    Features["atomic-fmin-fmax-global-f32"] = true;
-    Features["atomic-fmin-fmax-global-f64"] = true;
-    Features["wavefrontsize32"] = true;
-    Features["clusters"] = true;
-    Features["wmma-2048b-insts"] = true;
-    break;
+    [[fallthrough]];
   case GK_GFX1251:
-    Features["gfx1251-gemm-insts"] = true;
+    if (Kind == GK_GFX1260)
+      Features["wmma-2048b-insts"] = true;
+    else if (Kind == GK_GFX1251)
+      Features["gfx1251-gemm-insts"] = true;
     [[fallthrough]];
   case GK_GFX1250:
   case GK_GFX12_5_GENERIC:

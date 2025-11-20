@@ -708,6 +708,11 @@ public:
 
   bool isVSrc_NoInline_v2f16() const { return isVSrc_v2f16(); }
 
+  bool isVSrcT_NoInline_b16() const {
+    return (isRegClass(AMDGPU::VS_16RegClassID) && !hasModifiers()) ||
+           isLiteralImm(MVT::i16);
+  }
+
   bool isVSrc_NoInline_b16() const {
     return (isRegClass(AMDGPU::VS_32RegClassID) && !hasModifiers()) ||
            isLiteralImm(MVT::i16);

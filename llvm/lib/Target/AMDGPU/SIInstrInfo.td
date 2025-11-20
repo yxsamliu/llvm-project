@@ -2004,6 +2004,15 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
         1                  : VSrc_b32);
 }
 
+// Returns the register class without inline to use for sources of VOP3
+// instructions for the given VT.
+class getVOP3NoInlineSrcForVT<ValueType VT, bit IsTrue16 = 0> {
+  RegisterOperand ret =
+  !cond(!eq(VT, i16)       : !if(IsTrue16, VSrcT_NoInline_b16, VSrc_NoInline_b16),
+        !eq(VT, v2f16)     : VSrc_NoInline_v2f16,
+        1                  : VSrc_NoInline_b32);
+}
+
 // VGPR only VOP3 src with 9 bit encoding
 class getVOP3VRegSrcForVT<ValueType VT> {
   RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VRegSrc_1024,
