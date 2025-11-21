@@ -31,6 +31,21 @@ v_wmma_f16_32x64x128_bf8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] clamp
 v_wmma_f16_32x64x128_bf8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] neg_hi:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:70: error: not a valid operand.
 
+v_wmma_f16_32x64x128_bf8_fp8 v[0:31], v[32:63], v[200:263], v[64:95]
+// GFX1260-ERR: :[[@LINE-1]]:49: error: register index is out of range
+
+v_wmma_f16_32x64x128_bf8_fp8 v[0:31], v[32:63], |v[192:255]|, v[64:95]
+// GFX1260-ERR: :[[@LINE-1]]:49: error: not a valid operand.
+
+v_wmma_f16_32x64x128_bf8_fp8 v[0:31], v[32:63], -v[192:255], v[64:95]
+// GFX1260-ERR: :[[@LINE-1]]:49: error: not a valid operand.
+
+v_wmma_f16_32x64x128_bf8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] clamp
+// GFX1260-ERR: :[[@LINE-1]]:70: error: invalid operand for instruction
+
+v_wmma_f16_32x64x128_bf8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] neg_hi:[1,0,0]
+// GFX1260-ERR: :[[@LINE-1]]:70: error: not a valid operand.
+
 v_swmmac_bf16f32_32x64x32_bf16 v[200:263], v[0:7], v[8:39], v40
 // GFX1260-ERR: :[[@LINE-1]]:32: error: register index is out of range
 
