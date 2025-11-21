@@ -34,6 +34,8 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/xxhash.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include <functional>
 #include <optional>
 
@@ -53,35 +55,104 @@ static GlobalDecl getGlobalDeclAsDeclContext(const DeclContext *DC) {
   return GD;
 }
 
-struct msvc_hashing_ostream : public llvm::raw_svector_ostream {
+struct msvc_hashing_ostream : public llvm::raw_ostream {
   raw_ostream &OS;
   llvm::SmallString<64> Buffer;
+  llvm::MD5 Hasher;
+  bool Hashing = false;
+  bool StartsWithEscape = false;
+  uint64_t TotalWritten = 0;
+  std::unique_ptr<llvm::raw_fd_ostream> DebugFile;
+  static uint64_t TotalDebugWritten;
 
-  msvc_hashing_ostream(raw_ostream &OS)
-      : llvm::raw_svector_ostream(Buffer), OS(OS) {}
+  msvc_hashing_ostream(raw_ostream &OS) : OS(OS) { 
+    SetUnbuffered();
+    if (const char *Path = std::getenv("CLANG_MANGLE_DUMP_FILE")) {
+      std::error_code EC;
+      DebugFile = std::make_unique<llvm::raw_fd_ostream>(
+          Path, EC, llvm::sys::fs::OF_Append);
+      if (EC)
+        DebugFile.reset();
+    }
+  }
+
   ~msvc_hashing_ostream() override {
-    StringRef MangledName = str();
-    bool StartsWithEscape = MangledName.starts_with("\01");
-    if (StartsWithEscape)
-      MangledName = MangledName.drop_front(1);
-    if (MangledName.size() < 4096) {
-      OS << str();
+    if (Hashing) {
+      llvm::MD5::MD5Result Hash;
+      Hasher.final(Hash);
+
+      SmallString<32> HexString;
+      llvm::MD5::stringifyResult(Hash, HexString);
+
+      if (StartsWithEscape)
+        OS << '\01';
+      OS << "??@" << HexString << '@';
+      
+      static bool DebugMangle = !!std::getenv("CLANG_DBG_MANGLE");
+      if (DebugMangle)
+        llvm::errs() << "Long name mangled. Size: " << TotalWritten << "\n";
+      
+      if (DebugFile) {
+        *DebugFile << "\n=== MANGLED NAME (Size: " << TotalWritten << ") ===\n";
+        // We cannot print the name here because we streamed it into the hasher!
+        // We missed the opportunity to capture it.
+        *DebugFile << "[NAME DATA LOST DUE TO STREAMING]\n";
+      }
+    } else {
+      OS << StringRef(Buffer.data(), Buffer.size());
+    }
+  }
+
+  void write_impl(const char *Ptr, size_t Size) override {
+    if (Size == 0)
+      return;
+
+    if (DebugFile) {
+      if (TotalDebugWritten + Size > 1024 * 1024) {
+        llvm::errs() << "Mangling dump limit (1MB) reached. Aborting.\n";
+        exit(1);
+      }
+      DebugFile->write(Ptr, Size);
+      TotalDebugWritten += Size;
+    }
+
+    if (Hashing) {
+      Hasher.update(StringRef(Ptr, Size));
+      TotalWritten += Size;
       return;
     }
 
-    llvm::MD5 Hasher;
-    llvm::MD5::MD5Result Hash;
-    Hasher.update(MangledName);
-    Hasher.final(Hash);
+    if (TotalWritten == 0 && Ptr[0] == '\01')
+      StartsWithEscape = true;
 
-    SmallString<32> HexString;
-    llvm::MD5::stringifyResult(Hash, HexString);
+    size_t Threshold = 4096 + (StartsWithEscape ? 1 : 0);
 
+    if (Buffer.size() + Size < Threshold) {
+      Buffer.append(Ptr, Ptr + Size);
+      TotalWritten += Size;
+      return;
+    }
+
+    Hashing = true;
+
+    StringRef Existing(Buffer.data(), Buffer.size());
     if (StartsWithEscape)
-      OS << '\01';
-    OS << "??@" << HexString << '@';
+      Existing = Existing.drop_front(1);
+    Hasher.update(Existing);
+
+    StringRef New(Ptr, Size);
+    if (StartsWithEscape && Buffer.empty())
+      New = New.drop_front(1);
+    Hasher.update(New);
+
+    Buffer.clear();
+    TotalWritten += Size;
   }
+
+  uint64_t current_pos() const override { return TotalWritten; }
 };
+
+uint64_t msvc_hashing_ostream::TotalDebugWritten = 0;
 
 static const DeclContext *
 getLambdaDefaultArgumentDeclContext(const Decl *D) {
