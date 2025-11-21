@@ -1964,6 +1964,8 @@ unsigned AMDGPUDisassembler::getVgprClassId(unsigned Width) const {
     return VReg_576RegClassID;
   case 1024:
     return VReg_1024RegClassID;
+  case 2048:
+    return Pseudo_VGPR_2048RegClassID;
   }
   llvm_unreachable("Invalid register width!");
 }

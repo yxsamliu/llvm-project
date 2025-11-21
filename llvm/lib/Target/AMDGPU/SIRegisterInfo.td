@@ -781,6 +781,7 @@ def VGPR_1024 : SIRegisterTuples<getSubRegs<32>.ret, VGPR_32, 1023, 1, 32, "v">;
 // VGPR 2048-bit registers - MC-only, no subregisters. Used for large matrix operations.
 def Pseudo_VGPR_2048 : SIRegisterClass<"AMDGPU", [v64i32, v64f32], 32,
                          (add (sequence "VGPR%u_Pseudo", 0, 192))> {
+  let Size = 2048;
   let isAllocatable = 0;
   let GeneratePressureSet = 0;
   let HasVGPR = 1;
@@ -1755,6 +1756,7 @@ def VISrc_512_f32 : SrcRegOrImm9 <VReg_512_STAGING_AlignTarget, "OPERAND_REG_INL
 def VISrc_512_f64 : SrcRegOrImm9 <VReg_512_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_FP64">;
 def VISrc_1024_b32 : SrcRegOrImm9 <VReg_1024_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_INT32">;
 def VISrc_1024_f32 : SrcRegOrImm9 <VReg_1024_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_FP32">;
+def VISrc_2048_f32 : SrcRegOrImm9 <Pseudo_VGPR_2048, "OPERAND_REG_INLINE_C_FP32">;
 
 //===----------------------------------------------------------------------===//
 //  AVSrc_*, AVDst_*, AVLdSt_* Operands with an AGPR or VGPR

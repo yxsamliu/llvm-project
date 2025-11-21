@@ -1555,7 +1555,8 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   bit IsAB_F32  = !eq(ArgTy[1], v2f32);
   bit IsAB_F16 = !or(!eq(ArgTy[1], v16f16), !eq(ArgTy[1], v8f16), !eq(ArgTy[1], v4f16));
   bit IsAB_BF16 = !or(!eq(ArgTy[1], v16i16), !eq(ArgTy[1], v8i16), !eq(ArgTy[1], v4i16),
-                      !eq(ArgTy[1], v16bf16), !eq(ArgTy[1], v8bf16), !eq(ArgTy[1], v4bf16));
+                      !eq(ArgTy[1], v16bf16), !eq(ArgTy[1], v8bf16), !eq(ArgTy[1], v4bf16),
+                      !eq(ArgTy[1], v32bf16), !eq(ArgTy[1], v64bf16));
   bit IsF16BF16 = !or(IsAB_F16, IsAB_BF16);
 
   bit IsC_F64 = !eq(ArgTy[3], v8f64);
@@ -1901,12 +1902,16 @@ def I32_IU8X128_SWMMAC_w32       : VOP3PWMMA_Profile<[v8i32, v8i32,  v16i32, v8i
 class VOP3PWMMA_gfx1260_Profile<list<ValueType> ArgTy, bit IsSWMMAC, int IndexType,
                                 bit IsIU, bit IsFP8BF8XF32, bit HasMatrixFMT = 0,
                                 bit HasMatrixScale = 0, bit Scale16 = 0, bit IsF4 = 0>
-    : VOP3PWMMA_Profile<ArgTy, IsSWMMAC, IndexType, IsIU, IsFP8BF8XF32, /*Has_ImodOp=*/0,
+    : VOP3PWMMA_Profile<ArgTy, IsSWMMAC, IndexType, IsIU, IsFP8BF8XF32, /*Has_ImodOp=*/1,
                         HasMatrixFMT, HasMatrixScale, Scale16, /*HasMatrixReuse=*/1, IsF4> {
   let NoABMods = 0;
   let HasClamp = 0;
   let NegHiAny = 0; // NEG_HI is overloaded to convey the MREG settings.
 }
+
+def BF16F32_32X64X32_BF16_WMMA_w32 : VOP3PWMMA_gfx1260_Profile<[v64bf16, v32bf16, v64bf16, v64f32],
+                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
+                                         /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
 
 def BF16F32_32X64X32_BF16_SWMMAC_w32 : VOP3PWMMA_gfx1260_Profile<[v64f32, v16bf16, v64bf16, v64f32],
                                          /*IsSWMMAC=*/1, /*IndexType=*/16, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
@@ -2009,6 +2014,8 @@ defm V_WMMA_F64_16X16X4_F64_w32      : WMMAInstGFX12<"v_wmma_f64_16x16x4_f64",  
 } // End SubtargetPredicate = HasGFX1251GEMMInsts
 
 let SubtargetPredicate = HasWMMA2048bInsts in {
+  defm V_WMMA_BF16F32_32X64X32_BF16_w32   : WMMAInstGFX12<"v_wmma_bf16f32_32x64x32_bf16", BF16F32_32X64X32_BF16_WMMA_w32, "_w32">;
+
   defm V_SWMMAC_BF16F32_32X64X32_BF16_w32 : SWMMACInstGFX12<"v_swmmac_bf16f32_32x64x32_bf16", BF16F32_32X64X32_BF16_SWMMAC_w32, "_w32">;
 }
 } // End WaveSizePredicate = isWave32
@@ -2504,6 +2511,8 @@ defm V_SWMMAC_F16_16X16X128_FP8_BF8_w32 : VOP3P_Real_WMMA_gfx1250 <0x078, F16_FP
 defm V_SWMMAC_F16_16X16X128_BF8_FP8_w32 : VOP3P_Real_WMMA_gfx1250 <0x079, F16_FP8BF8X128_SWMMAC_w32>;
 defm V_SWMMAC_F16_16X16X128_BF8_BF8_w32 : VOP3P_Real_WMMA_gfx1250 <0x07a, F16_FP8BF8X128_SWMMAC_w32>;
 defm V_SWMMAC_I32_16X16X128_IU8_w32     : VOP3P_Real_WMMA_gfx1250 <0x07b, I32_IU8X128_SWMMAC_w32>;
+
+defm V_WMMA_BF16F32_32X64X32_BF16_w32   : VOP3P_Real_WMMA_gfx1260 <0x08f, BF16F32_32X64X32_BF16_WMMA_w32>;
 
 defm V_SWMMAC_BF16F32_32X64X32_BF16_w32 : VOP3P_Real_WMMA_gfx1260 <0x0a1, BF16F32_32X64X32_BF16_SWMMAC_w32>;
 
