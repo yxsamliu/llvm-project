@@ -679,7 +679,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                         DecW, Address, CS))
         break;
 
-      if ((isGFX1250Only() || STI.hasFeature(AMDGPU::FeatureGFX1260Insts)) &&
+      if (isGFX1250Only() &&
           tryDecodeInst(DecoderTableGFX125096, DecoderTableGFX1250_FAKE1696, MI,
                         DecW, Address, CS))
         break;
@@ -710,7 +710,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
             tryDecodeInst(DecoderTableGFX1396, MI, DecW, Address, CS))
           break;
 
-        if ((isGFX1250Only() || STI.hasFeature(AMDGPU::FeatureGFX1260Insts)) &&
+        if (isGFX1250Only() &&
             tryDecodeInst(DecoderTableGFX125096, MI, DecW, Address, CS))
           break;
       }
@@ -772,7 +772,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (isGFX10() && tryDecodeInst(DecoderTableGFX1064, MI, QW, Address, CS))
         break;
 
-      if ((isGFX1250Only() || STI.hasFeature(AMDGPU::FeatureGFX1260Insts)) &&
+      if (isGFX1250Only() &&
           tryDecodeInst(DecoderTableGFX125064, DecoderTableGFX1250_FAKE1664, MI,
                         QW, Address, CS))
         break;
