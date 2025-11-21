@@ -1638,6 +1638,7 @@ def VRegSrc_384  : SrcReg9<VReg_384_STAGING_AlignTarget>;
 def VRegSrc_512  : SrcReg9<VReg_512_STAGING_AlignTarget>;
 def VRegSrc_576  : SrcReg9<VReg_576_STAGING_AlignTarget>;
 def VRegSrc_1024 : SrcReg9<VReg_1024_STAGING_AlignTarget>;
+def VRegSrc_2048 : SrcReg9<Pseudo_VGPR_2048>;
 def VRegOrLdsSrc_32 : SrcReg9<VRegOrLds_32>;
 
 // True 16 Operands
@@ -1754,6 +1755,7 @@ def VISrc_256_f64 : SrcRegOrImm9 <VReg_256_STAGING_AlignTarget, "OPERAND_REG_INL
 def VISrc_512_b32 : SrcRegOrImm9 <VReg_512_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_INT32">;
 def VISrc_512_f32 : SrcRegOrImm9 <VReg_512_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_FP32">;
 def VISrc_512_f64 : SrcRegOrImm9 <VReg_512_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_FP64">;
+def VISrc_1024_f16 : SrcRegOrImm9 <VReg_1024_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_FP16">;
 def VISrc_1024_b32 : SrcRegOrImm9 <VReg_1024_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_INT32">;
 def VISrc_1024_f32 : SrcRegOrImm9 <VReg_1024_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_FP32">;
 def VISrc_2048_f32 : SrcRegOrImm9 <Pseudo_VGPR_2048, "OPERAND_REG_INLINE_C_FP32">;
