@@ -15,9 +15,13 @@ body:  |
     ; CHECK-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[V_LSHLREV_B32_e64_]], 8, implicit $exec
     ; CHECK-NEXT: [[V_LSHLREV_B32_e64_1:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 2, [[V_AND_B32_e64_]], implicit $exec
     ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+    ; CHECK-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[S_LOAD_DWORDX2_IMM]], implicit [[V_LSHLREV_B32_e64_1]], implicit $exec, implicit [[S_MOV_B32_]] :: (load (s128), addrspace 1), (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @0, i32 96)`, align 32, addrspace 10) {
+    ; CHECK-NEXT:   $stg_dsta = GLOBAL_LOAD_DWORDX4_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_LSHLREV_B32_e64_1]], 64, 0, implicit $exec :: (load (s128), addrspace 1)
+    ; CHECK-NEXT:   V_STORE_IDX_B128 internal $stg_dsta, [[S_MOV_B32_]], 24, implicit $exec :: (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @0, i32 96)`, align 32, addrspace 10)
+    ; CHECK-NEXT: }
     ; CHECK-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[S_LOAD_DWORDX2_IMM]], implicit [[V_LSHLREV_B32_e64_1]], implicit $exec, implicit [[S_MOV_B32_]] :: (load (s128), addrspace 1), (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @0, i32 96)` + 16, basealign 32, addrspace 10) {
     ; CHECK-NEXT:   $stg_dsta = GLOBAL_LOAD_DWORDX4_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_LSHLREV_B32_e64_1]], 80, 0, implicit $exec :: (load (s128), addrspace 1)
-    ; CHECK-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_MOV_B32_]], 28, implicit $exec :: (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @0, i32 96)` + 16, basealign 32, addrspace 10)
+    ; CHECK-NEXT:   V_STORE_IDX_B128 internal $stg_dsta, [[S_MOV_B32_]], 28, implicit $exec :: (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @0, i32 96)` + 16, basealign 32, addrspace 10)
     ; CHECK-NEXT: }
     ; CHECK-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[S_LOAD_DWORDX2_IMM]], implicit [[V_LSHLREV_B32_e64_1]], implicit $exec, implicit [[S_MOV_B32_]] :: (load (s128), addrspace 1), (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @0, i32 96)`, align 32, addrspace 10) {
     ; CHECK-NEXT:   $stg_dsta = GLOBAL_LOAD_DWORDX4_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_LSHLREV_B32_e64_1]], 64, 0, implicit $exec :: (load (s128), addrspace 1)
@@ -97,9 +101,13 @@ body:  |
     ; CHECK-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[V_LSHLREV_B32_e64_]], 8, implicit $exec
     ; CHECK-NEXT: [[V_LSHLREV_B32_e64_1:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 2, [[V_AND_B32_e64_]], implicit $exec
     ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+    ; CHECK-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[S_LOAD_DWORDX2_IMM]], implicit [[V_LSHLREV_B32_e64_1]], implicit $exec, implicit [[S_MOV_B32_]] :: (load (s128), addrspace 1), (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @2, i32 96)`, align 32, addrspace 10) {
+    ; CHECK-NEXT:   $stg_dsta = GLOBAL_LOAD_DWORDX4_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_LSHLREV_B32_e64_1]], 64, 0, implicit $exec :: (load (s128), addrspace 1)
+    ; CHECK-NEXT:   V_STORE_IDX_B128 internal $stg_dsta, [[S_MOV_B32_]], 24, implicit $exec :: (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @2, i32 96)`, align 32, addrspace 10)
+    ; CHECK-NEXT: }
     ; CHECK-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[S_LOAD_DWORDX2_IMM]], implicit [[V_LSHLREV_B32_e64_1]], implicit $exec, implicit [[S_MOV_B32_]] :: (load (s128), addrspace 1), (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @2, i32 96)` + 16, basealign 32, addrspace 10) {
     ; CHECK-NEXT:   $stg_dsta = GLOBAL_LOAD_DWORDX4_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_LSHLREV_B32_e64_1]], 80, 0, implicit $exec :: (load (s128), addrspace 1)
-    ; CHECK-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_MOV_B32_]], 28, implicit $exec :: (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @2, i32 96)` + 16, basealign 32, addrspace 10)
+    ; CHECK-NEXT:   V_STORE_IDX_B128 internal $stg_dsta, [[S_MOV_B32_]], 28, implicit $exec :: (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @2, i32 96)` + 16, basealign 32, addrspace 10)
     ; CHECK-NEXT: }
     ; CHECK-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[S_LOAD_DWORDX2_IMM]], implicit [[V_LSHLREV_B32_e64_1]], implicit $exec, implicit [[S_MOV_B32_]] :: (load (s128), addrspace 1), (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @2, i32 96)`, align 32, addrspace 10) {
     ; CHECK-NEXT:   $stg_dsta = GLOBAL_LOAD_DWORDX4_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_LSHLREV_B32_e64_1]], 64, 0, implicit $exec :: (load (s128), addrspace 1)

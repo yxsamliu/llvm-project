@@ -3084,22 +3084,21 @@ bool SIFoldOperandsImpl::trySplitVStIdxRegSeq(AMDGPUMI::VStoreIdxInst &MI) {
   for (auto &[Op, SubIdx] : Srcs) {
     // Need to adjust the v_store_idx offset.
     int64_t SubOffset = TRI->getSubRegIdxOffset(SubIdx);
-    int64_t SubSize = TRI->getSubRegIdxSize(SubIdx);
+    int64_t NewStSize = TRI->getRegSizeInBits(Op->getReg(), *MRI);
     assert(SubOffset % REG_SEQ_CONCAT_UNIT == 0);
     assert(Offset + SubOffset / REG_SEQ_CONCAT_UNIT <
            ST->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()));
     auto NewSt =
         BuildMI(
             *MI.getParent(), MI, MI.getDebugLoc(),
-            TII->get(AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(SubSize)))
+            TII->get(AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(NewStSize)))
             .addReg(Op->getReg())
             .addReg(VirtualIDX)
             .addImm(Offset + SubOffset / REG_SEQ_CONCAT_UNIT);
     // Need to adjust the size and offset in MMO.
     MachinePointerInfo NewPtrI = MMOPtrInfo.getWithOffset(SubOffset / 8);
-    NewSt->addMemOperand(
-        *MF, MF->getMachineMemOperand(
-                 MMO, NewPtrI, TRI->getRegSizeInBits(Op->getReg(), *MRI) / 8));
+    NewSt->addMemOperand(*MF,
+                         MF->getMachineMemOperand(MMO, NewPtrI, NewStSize / 8));
     LLVM_DEBUG(dbgs() << "  Created: " << *NewSt);
   }
 
