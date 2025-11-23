@@ -277,9 +277,14 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
     RecipeCost = 0;
   } else {
     RecipeCost = computeCost(VF, Ctx);
-    if (UI && ForceTargetInstructionCost.getNumOccurrences() > 0 &&
-        RecipeCost.isValid())
-      RecipeCost = InstructionCost(ForceTargetInstructionCost);
+    RecipeCost = computeCost(VF, Ctx);
+    if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
+        RecipeCost.isValid()) {
+      if (UI)
+        RecipeCost = InstructionCost(ForceTargetInstructionCost);
+      else
+        RecipeCost = InstructionCost(0);
+    }
   }
 
   LLVM_DEBUG({
@@ -549,7 +554,6 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::ExtractValue:
   case Instruction::Freeze:
   case Instruction::Load:
-  case VPInstruction::AnyOf:
   case VPInstruction::BranchOnCond:
   case VPInstruction::Broadcast:
   case VPInstruction::BuildStructVector:
@@ -589,6 +593,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::GetElementPtr:
   case Instruction::PHI:
   case Instruction::Switch:
+  case VPInstruction::AnyOf:
   case VPInstruction::SLPLoad:
   case VPInstruction::SLPStore:
     // Cannot determine the number of operands from the opcode.
