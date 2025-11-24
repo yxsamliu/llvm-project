@@ -4104,11 +4104,9 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
   MachineInstr *CandidateMI = &MI;
 
   if (MI.isBundle()) {
-    // This is a temporary placeholder for bundle handling that enables us to
-    // exercise the relevant code paths in the two-address instruction pass.
-    if (MI.getBundleSize() != 1)
+    CandidateMI = bundleWithGPRIndexing(MI);
+    if (!CandidateMI)
       return nullptr;
-    CandidateMI = MI.getNextNode();
   }
 
   ThreeAddressUpdates U;
