@@ -984,9 +984,11 @@ public:
 
   bool isXDLWMMA(const MachineInstr &MI) const;
 
-  // Instructions for which we care if their destination ends up in a laneshared
-  // VGPR.
-  // Async multicast to LDS instructions have no issue.
+  // Multicast or neighbor data share have to write their result directly into
+  // laneshared, because otherwise we would clobber private vgprs in other
+  // SIMDs.
+  //
+  // Async load to LDS instructions do not have this issue.
   static bool mustHaveLanesharedResult(const MachineInstr &MI) {
     switch (MI.getOpcode()) {
     case AMDGPU::CLUSTER_LOAD_B32:
@@ -1728,6 +1730,8 @@ public:
   /// \brief Check if this instruction should only be used by assembler.
   /// Return true if this opcode should not be used by codegen.
   bool isAsmOnlyOpcode(int MCOp) const;
+
+  bool canUseVGPRIndexing(MachineInstr &MI, unsigned OpNo) const;
 
   void fixImplicitOperands(MachineInstr &MI) const;
 

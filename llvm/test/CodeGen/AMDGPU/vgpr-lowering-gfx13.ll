@@ -78,7 +78,7 @@ define amdgpu_kernel void @vsample_vaddr3_kern(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX13-NEXT:    ;;#ASMSTART
 ; GFX13-NEXT:    ; def v[0:31]
 ; GFX13-NEXT:    ;;#ASMEND
-; GFX13-NEXT:    s_clause 0x3
+; GFX13-NEXT:    s_clause 0x3 ; 16-byte Folded Reload
 ; GFX13-NEXT:    scratch_load_b32 v0, off, s33 th:TH_LOAD_LU
 ; GFX13-NEXT:    scratch_load_b32 v1, off, s33 offset:4 th:TH_LOAD_LU
 ; GFX13-NEXT:    scratch_load_b32 v2, off, s33 offset:8 th:TH_LOAD_LU

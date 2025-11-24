@@ -65,18 +65,7 @@ define amdgpu_kernel void @wmma_ls_out(ptr addrspace(1) %src, ptr addrspace(1) %
 ; CHECK-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:1024
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    v_wmma_f32_16x16_f16 v[0:7], v[8:11], v[12:15], v[0:7] clamp
-; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    s_delay_alu instid0(XDL_DEP_1) | instskip(NEXT) | instid1(XDL_DEP_1)
-; CHECK-NEXT:    v_mov_b32_e32 g1[0], v0
-; CHECK-NEXT:    v_mov_b32_e32 g1[1], v1
-; CHECK-NEXT:    s_delay_alu instid0(XDL_DEP_1)
-; CHECK-NEXT:    v_mov_b32_e32 g1[2], v2
-; CHECK-NEXT:    v_mov_b32_e32 g1[3], v3
-; CHECK-NEXT:    v_mov_b32_e32 g1[4], v4
-; CHECK-NEXT:    v_mov_b32_e32 g1[5], v5
-; CHECK-NEXT:    v_mov_b32_e32 g1[6], v6
-; CHECK-NEXT:    v_mov_b32_e32 g1[7], v7
+; CHECK-NEXT:    v_wmma_f32_16x16_f16 g1[0:7], v[8:11], v[12:15], v[0:7] clamp idxs:0x1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
@@ -129,40 +118,20 @@ define amdgpu_kernel void @wmma_ls_accum(ptr addrspace(1) %src, ptr addrspace(1)
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; CHECK-NEXT:    s_mul_i32 s1, s0, 16
+; CHECK-NEXT:    s_mul_i32 s1, s0, 8
 ; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_add_co_u32 s1, s1, 0x80
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v4, -1, 0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_b128 v[8:11], v0, s[0:1] scale_offset
-; CHECK-NEXT:    global_load_b128 v[12:15], v0, s[2:3] offset:512 scale_offset
+; CHECK-NEXT:    global_load_b128 v[0:3], v4, s[0:1] scale_offset
+; CHECK-NEXT:    global_load_b128 v[4:7], v4, s[2:3] offset:512 scale_offset
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_mov_b32_e32 v0, g1[0]
-; CHECK-NEXT:    v_mov_b32_e32 v1, g1[1]
-; CHECK-NEXT:    v_mov_b32_e32 v2, g1[2]
-; CHECK-NEXT:    v_mov_b32_e32 v3, g1[3]
-; CHECK-NEXT:    v_mov_b32_e32 v4, g1[4]
-; CHECK-NEXT:    v_mov_b32_e32 v5, g1[5]
-; CHECK-NEXT:    v_mov_b32_e32 v6, g1[6]
-; CHECK-NEXT:    v_mov_b32_e32 v7, g1[7]
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(XDL_DEP_1)
-; CHECK-NEXT:    v_wmma_f32_16x16_f16 v[0:7], v[8:11], v[12:15], v[0:7] clamp
-; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_mov_b32_e32 g1[0], v0
-; CHECK-NEXT:    s_delay_alu instid0(XDL_DEP_1) | instskip(NEXT) | instid1(XDL_DEP_1)
-; CHECK-NEXT:    v_mov_b32_e32 g1[1], v1
-; CHECK-NEXT:    v_mov_b32_e32 g1[2], v2
-; CHECK-NEXT:    v_mov_b32_e32 g1[3], v3
-; CHECK-NEXT:    v_mov_b32_e32 g1[4], v4
-; CHECK-NEXT:    v_mov_b32_e32 g1[5], v5
-; CHECK-NEXT:    v_mov_b32_e32 g1[6], v6
-; CHECK-NEXT:    v_mov_b32_e32 g1[7], v7
+; CHECK-NEXT:    v_wmma_f32_16x16_f16 g1[0:7], v[0:3], v[4:7], g1[0:7] clamp idxs:0x11
 ; CHECK-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
@@ -182,40 +151,20 @@ define amdgpu_kernel void @wmma_ls_accum_disjoint(ptr addrspace(1) %src, ptr add
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; CHECK-NEXT:    s_mul_i32 s1, s0, 16
+; CHECK-NEXT:    s_mul_i32 s1, s0, 8
 ; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_add_co_u32 s1, s1, 0x80
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v4, -1, 0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_b128 v[8:11], v0, s[0:1] scale_offset
-; CHECK-NEXT:    global_load_b128 v[12:15], v0, s[2:3] offset:512 scale_offset
+; CHECK-NEXT:    global_load_b128 v[0:3], v4, s[0:1] scale_offset
+; CHECK-NEXT:    global_load_b128 v[4:7], v4, s[2:3] offset:512 scale_offset
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_mov_b32_e32 v0, g1[8]
-; CHECK-NEXT:    v_mov_b32_e32 v1, g1[9]
-; CHECK-NEXT:    v_mov_b32_e32 v2, g1[10]
-; CHECK-NEXT:    v_mov_b32_e32 v3, g1[11]
-; CHECK-NEXT:    v_mov_b32_e32 v4, g1[12]
-; CHECK-NEXT:    v_mov_b32_e32 v5, g1[13]
-; CHECK-NEXT:    v_mov_b32_e32 v6, g1[14]
-; CHECK-NEXT:    v_mov_b32_e32 v7, g1[15]
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(XDL_DEP_1)
-; CHECK-NEXT:    v_wmma_f32_16x16_f16 v[0:7], v[8:11], v[12:15], v[0:7] clamp
-; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_mov_b32_e32 g1[0], v0
-; CHECK-NEXT:    s_delay_alu instid0(XDL_DEP_1) | instskip(NEXT) | instid1(XDL_DEP_1)
-; CHECK-NEXT:    v_mov_b32_e32 g1[1], v1
-; CHECK-NEXT:    v_mov_b32_e32 g1[2], v2
-; CHECK-NEXT:    v_mov_b32_e32 g1[3], v3
-; CHECK-NEXT:    v_mov_b32_e32 g1[4], v4
-; CHECK-NEXT:    v_mov_b32_e32 g1[5], v5
-; CHECK-NEXT:    v_mov_b32_e32 g1[6], v6
-; CHECK-NEXT:    v_mov_b32_e32 g1[7], v7
+; CHECK-NEXT:    v_wmma_f32_16x16_f16 g1[0:7], v[0:3], v[4:7], g1[8:15] clamp idxs:0x11
 ; CHECK-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
@@ -290,7 +239,7 @@ define amdgpu_kernel void @wmma_ls_factor_overlap(ptr addrspace(1) %src, ptr add
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; CHECK-NEXT:    s_mul_i32 s1, s0, 16
+; CHECK-NEXT:    s_mul_i32 s1, s0, 8
 ; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_add_co_u32 s1, s1, 0x80
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
@@ -298,34 +247,16 @@ define amdgpu_kernel void @wmma_ls_factor_overlap(ptr addrspace(1) %src, ptr add
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    global_load_b128 v[8:11], v0, s[0:1] scale_offset
+; CHECK-NEXT:    global_load_b128 v[0:3], v0, s[0:1] scale_offset
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_mov_b32_e32 v12, g1[0]
-; CHECK-NEXT:    v_mov_b32_e32 v13, g1[1]
-; CHECK-NEXT:    v_mov_b32_e32 v14, g1[2]
-; CHECK-NEXT:    v_mov_b32_e32 v15, g1[3]
-; CHECK-NEXT:    v_mov_b32_e32 v0, g1[8]
-; CHECK-NEXT:    v_mov_b32_e32 v1, g1[9]
-; CHECK-NEXT:    v_mov_b32_e32 v2, g1[10]
-; CHECK-NEXT:    v_mov_b32_e32 v3, g1[11]
-; CHECK-NEXT:    v_mov_b32_e32 v4, g1[12]
-; CHECK-NEXT:    v_mov_b32_e32 v5, g1[13]
-; CHECK-NEXT:    v_mov_b32_e32 v6, g1[14]
-; CHECK-NEXT:    v_mov_b32_e32 v7, g1[15]
+; CHECK-NEXT:    v_mov_b32_e32 v4, g1[0]
+; CHECK-NEXT:    v_mov_b32_e32 v5, g1[1]
+; CHECK-NEXT:    v_mov_b32_e32 v6, g1[2]
+; CHECK-NEXT:    v_mov_b32_e32 v7, g1[3]
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(XDL_DEP_1)
-; CHECK-NEXT:    v_wmma_f32_16x16_f16 v[0:7], v[8:11], v[12:15], v[0:7] clamp
-; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_mov_b32_e32 g1[0], v0
-; CHECK-NEXT:    s_delay_alu instid0(XDL_DEP_1) | instskip(NEXT) | instid1(XDL_DEP_1)
-; CHECK-NEXT:    v_mov_b32_e32 g1[1], v1
-; CHECK-NEXT:    v_mov_b32_e32 g1[2], v2
-; CHECK-NEXT:    v_mov_b32_e32 g1[3], v3
-; CHECK-NEXT:    v_mov_b32_e32 g1[4], v4
-; CHECK-NEXT:    v_mov_b32_e32 g1[5], v5
-; CHECK-NEXT:    v_mov_b32_e32 g1[6], v6
-; CHECK-NEXT:    v_mov_b32_e32 g1[7], v7
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_wmma_f32_16x16_f16 g1[0:7], v[0:3], v[4:7], g1[8:15] clamp idxs:0x11
 ; CHECK-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)

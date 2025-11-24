@@ -27,6 +27,7 @@
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -38,21 +39,124 @@ using namespace llvm;
 
 #define DEBUG_TYPE "bundle-indexed-load-store"
 
-constexpr unsigned NumSrcStagingRegs = 6;
-
 namespace {
 
-// OpInLdSt and OpInCoreMI are null if MI is CoreMI, including if V_STORE_IDX is
-// the CoreMI
-struct BundleItem {
-  MachineInstr *MI;
-  MachineOperand *OpInLdSt;
-  SmallVector<MachineOperand *> OpsInCoreMI;
-  Register StagingReg;
-  Register OpReg;
+/// Representation of a candidate operand of the core MI for bundling.
+struct Operand {
+  /// The operand of the core MI.
+  MachineOperand *Op = nullptr;
+
+  /// The V_{LOAD,STORE}_IDX instruction.
+  AMDGPUMI::VLoadStoreIdxInst *LoadStore = nullptr;
+
+  /// Size of the operand in bytes.
+  unsigned NumBytes = 0;
+
+  MachineOperand &getDataOperand() const { return LoadStore->getDataOp(); }
+
+  Register getDataReg() const { return getDataOperand().getReg(); }
+
+  MachineOperand &getIndexOperand() const { return LoadStore->getIdxOp(); }
+
+  Register getIndexReg() const { return getIndexOperand().getReg(); }
+
+  unsigned getOffset() const { return LoadStore->getOffsetOp().getImm(); }
+};
+
+/// Helper class for hoisting instructions within a basic block.
+///
+/// The user of this class desires to hoist various instructions to (before) a
+/// common *target* iterator within the basic block. Hoisted instructions have
+/// two kinds of use operands:
+///
+///  1. Use operands that are ignored by this class. The class assumes that
+///     their register definition is already safely before the target iterator.
+///  2. Use operands that must be fully defined before a common *prolog*
+///     iterator. The class attempts to hoist intermediate instructions to
+///     satisfy this condition.
+///
+/// In the use case here, we have:
+///
+///     <previous instruction>
+///     V_CORE                       <-- prolog iterator
+///     <next instruction>           <-- target iterator
+///     ...
+///     S_ADD_U32                    <-- index computation
+///     ...
+///     V_STORE_IDX_Bnn              <-- candidate instruction for hoisting
+///
+/// ... which will be hoisted as:
+///
+///     <previous instruction>
+///     S_ADD_U32                    <-- index computation
+///     V_CORE                       <-- prolog iterator
+///     V_STORE_IDX_Bnn
+///     <next instruction>           <-- target iterator
+///
+/// A common case is that the instruction pointed to by the original target
+/// iterator is hoisted, so that:
+///
+///     <previous instruction>
+///     V_CORE                       <-- prolog iterator
+///     S_ADD_U32                    <-- target iterator; index computation
+///     V_STORE_IDX_Bnn              <-- candidate instruction for hoisting
+///     <next instruction>
+///
+/// is hoisted to:
+///
+///     <previous instruction>
+///     S_ADD_U32                    <-- index computation
+///     V_CORE                       <-- prolog iterator
+///     V_STORE_IDX_Bnn
+///     <next instruction>           <-- updated target iterator
+///
+/// This class allows a two-phase approach to hoisting multiple instructions. In
+/// the first phase, candidate instructions for hoisting are checked. Finally,
+/// a hoisting of a subset of the candidates is committed in the second phase.
+///
+/// Prolog and Target must be equivalent iterators for each call to methods of
+/// this class.
+class InstHoisting {
+private:
+  struct InstrInfo {
+    bool IsRoot = false;
+    bool CheckComplete = false;
+    bool CanHoist = false;
+    unsigned Id = -1;
+    SmallBitVector Dependencies;
+  };
+
+  MapVector<MachineInstr *, InstrInfo> InstrInfos;
+
+  // Analyzed instructions in reverse basic block order.
+  SmallVector<MachineInstr *> Instrs;
+
+  const DenseSet<std::pair<MachineInstr *, MachineInstr *>> *CommutableInstrs = nullptr;
+public:
+  void setCommutableInstrs(const DenseSet<std::pair<MachineInstr *, MachineInstr *>> *Commutable) {
+    CommutableInstrs = Commutable;
+  }
+
+  bool check(MachineBasicBlock::iterator Prolog,
+             MachineBasicBlock::iterator Target, MachineInstr *MI,
+             ArrayRef<MachineOperand *> CheckedUses, AAResults *AA,
+             unsigned MaxWorklist = 8);
+
+  MachineBasicBlock::instr_iterator
+  commit(MachineBasicBlock::instr_iterator Prolog,
+         MachineBasicBlock::instr_iterator Target,
+         ArrayRef<MachineInstr *> MIs);
 };
 
 class AMDGPUBundleIdxLdSt : public MachineFunctionPass {
+  struct BundlingInfo {
+    MachineInstr *MI = nullptr;
+    InstHoisting StoreHoisting;
+
+    // Operands of MI that are to be bundled, in no particular order.
+    SmallVector<Operand, 8> BundledOps;
+  };
+
 public:
   static char ID;
 
@@ -74,6 +178,9 @@ public:
 
 private:
   bool bundleIdxLdSt(MachineInstr *MI);
+  bool analyze(BundlingInfo &BI);
+  void reject(MachineOperand &MO, const Twine &Reason = {});
+  MachineInstr *convertInstTo3Addr(MachineInstr *MI);
   bool sinkInstruction(MachineInstr &MI, bool &SawStore);
   bool sinkLoadsAndCoreMIs(MachineFunction &MF);
   void lowerLanesharedPseudoInst(MachineInstr &MI);
@@ -82,16 +189,10 @@ private:
   bool expandPseudoInstructions(MachineFunction &MF);
   SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>, 4>
   findSuccsToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB);
-  void recoverIdx0ForPrivateUse(SmallVector<BundleItem, 4> &Worklist,
-                                std::unordered_set<unsigned> &IdxList,
-                                unsigned &SrcStagingRegIdx);
   Register computeNewIdxForPrivateObject(MachineRegisterInfo &MRI,
                                          MachineInstr &MI);
   bool updatePrivateObjectNewRegs(MachineRegisterInfo *MRI,
                                   MachineInstr *LdStMI);
-  SmallVector<BundleItem, 4>::iterator
-  tryGetDefInsertPt(SmallVector<BundleItem, 4> &Worklist,
-                    MachineInstr *StoreMI);
   bool hasConflictBetween(MachineBasicBlock *From, MachineBasicBlock *To,
                           MachineInstr &MI);
   bool blockPrologueInterferes(const MachineBasicBlock *BB,
@@ -117,9 +218,12 @@ private:
            SmallVector<SmallVector<MachineBasicBlock *, 8>, 8>>
       PathsCache;
 
-  const TargetRegisterInfo *TRI = nullptr;
-  const TargetInstrInfo *TII = nullptr;
-  const SIInstrInfo *STI = nullptr;
+  /// Pairs of store instructions whose order can be exchanged regardless of
+  /// what a standard alias analysis would say.
+  DenseSet<std::pair<MachineInstr *, MachineInstr *>> CommutableStores;
+
+  const SIRegisterInfo *TRI = nullptr;
+  const SIInstrInfo *TII = nullptr;
   const GCNSubtarget *ST = nullptr;
   const MCSubtargetInfo *MCSTI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
@@ -156,6 +260,229 @@ void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
 }
 } // End anonymous namespace.
 
+/// Check whether MI can be hoisted to (before) Target while making sure that
+/// any registers used by operands in CheckedUses are or can be defined before
+/// the Prolog iterator (if necessary, by hoisting intermediate instructions).
+///
+/// This method also records dependency information that is later used by the
+/// commit() method.
+///
+/// Also refer to the class comment for more context.
+bool InstHoisting::check(MachineBasicBlock::iterator Prolog,
+                         MachineBasicBlock::iterator Target, MachineInstr *MI,
+                         ArrayRef<MachineOperand *> CheckedUses, AAResults *AA,
+                         unsigned MaxWorklist) {
+  assert(Prolog != MI->getParent()->end());
+  assert(Target != MI->getParent()->end());
+  assert(Prolog->getParent() == MI->getParent());
+  assert(Target->getParent() == MI->getParent());
+  assert(!InstrInfos.contains(MI));
+
+  for (const auto &Def : MI->all_defs()) {
+    if (Def.getReg().isPhysical())
+      return false;
+  }
+
+  unsigned RootId = InstrInfos.size();
+  {
+    auto Insert = InstrInfos.try_emplace(MI);
+    assert(Insert.second);
+    InstrInfo &II = Insert.first->second;
+    II.IsRoot = true;
+    II.Id = RootId;
+    Instrs.push_back(MI);
+  }
+
+  // First phase: Scan backwards from MI to determine dependencies and find
+  // blockers against hoisting MI and its dependencies.
+
+  // Map registers to instructions that use them.
+  DenseMap<Register, DenseSet<MachineInstr *>> Regs;
+  SmallVector<MachineInstr *> AllInstrs;
+
+  AllInstrs.push_back(MI);
+
+  for (const auto &Use : CheckedUses) {
+    assert(Use->getParent() == MI);
+    if (!Use->isReg() || !Use->readsReg())
+      continue;
+    if (Use->getSubReg() != 0) {
+      InstrInfo &II = InstrInfos.find(MI)->second;
+      II.CheckComplete = true;
+      return false;
+    }
+    Regs[Use->getReg()].insert(MI);
+  }
+
+  bool ScanComplete = true;
+  bool InProlog = false;
+  for (MachineBasicBlock::iterator II = MI->getIterator(); II != Prolog;) {
+    if (II == Target)
+      InProlog = true;
+    --II;
+
+    if (!InProlog) {
+      bool Commutable = false;
+
+      if (CommutableInstrs && !CommutableInstrs->empty()) {
+        if (CommutableInstrs->contains({MI, &*II}) ||
+            CommutableInstrs->contains({&*II, MI}))
+          Commutable = true;
+      }
+
+      if (!Commutable && MI->mayAlias(AA, *II, true)) {
+        InstrInfo &Info = InstrInfos.find(MI)->second;
+        Info.CheckComplete = true;
+        ScanComplete = false;
+        break;
+      }
+    }
+
+    unsigned IIId = ~0u;
+    bool CanHoist = AllInstrs.size() < MaxWorklist;
+
+    // For simplicity, never hoist a memory access.
+    if (II->mayLoadOrStore())
+      CanHoist = false;
+
+    // Check if this instruction defines any registers used by a relevant
+    // later instruction, and record dependencies if so.
+    for (const auto &Def : II->all_defs()) {
+      // For simplicity, never hoist a physical register def.
+      assert(!Def.getSubReg() && "no subregister defs allowed in SSA form");
+      if (InProlog || (Def.getReg().isPhysical() && !Def.isDead()))
+        CanHoist = false;
+
+      auto RegIt = Regs.find(Def.getReg());
+      if (RegIt == Regs.end())
+        continue;
+
+      // The current instruction (II) defines a register that is used by one of
+      // the previously found candidates for hoisting. That means that II itself
+      // becomes a candidate for hoisting that we add to our data structures.
+      if (IIId == ~0u) {
+        auto [It, Inserted] = InstrInfos.try_emplace(&*II);
+        if (Inserted) {
+          It->second.Id = InstrInfos.size() - 1;
+          Instrs.push_back(&*II);
+        }
+        IIId = It->second.Id;
+      }
+
+      // Add II as a dependency to all previously found candidates for hoisting
+      // that use this register defined by II.
+      for (MachineInstr *DepMI : RegIt->second) {
+        auto &DepMIInfo = InstrInfos.find(DepMI)->second;
+        if (IIId >= DepMIInfo.Dependencies.size())
+          DepMIInfo.Dependencies.resize(IIId + 1);
+        DepMIInfo.Dependencies.set(IIId);
+      }
+
+      Regs.erase(RegIt);
+    }
+
+    // If this instruction has a later dependency, see if we can hoist it.
+    if (IIId != ~0u && CanHoist) {
+      auto &IIInfo = InstrInfos.find(&*II)->second;
+
+      if (!IIInfo.CheckComplete) {
+        for (const auto &Use : II->all_uses()) {
+          if (!Use.isReg() || !Use.readsReg())
+            continue;
+
+          if (Use.getSubReg() != 0) {
+            IIInfo.CheckComplete = true;
+            IIInfo.CanHoist = false;
+            break;
+          }
+
+          Regs[Use.getReg()].insert(&*II);
+        }
+
+        AllInstrs.push_back(&*II);
+      }
+    }
+  }
+
+  // Second phase: Propagate any completed checks backwards.
+  for (MachineInstr *MI : reverse(AllInstrs)) {
+    InstrInfo &Info = InstrInfos.find(MI)->second;
+    if (Info.CheckComplete)
+      continue;
+
+    bool AllDependenciesComplete = true;
+    for (unsigned Id : Info.Dependencies.set_bits()) {
+      InstrInfo &DepInfo = InstrInfos.find(Instrs[Id])->second;
+      if (DepInfo.CheckComplete) {
+        if (!DepInfo.CanHoist) {
+          Info.CheckComplete = true;
+          Info.CanHoist = false;
+          break;
+        }
+      } else {
+        AllDependenciesComplete = false;
+      }
+    }
+
+    if (!Info.CheckComplete && AllDependenciesComplete && ScanComplete) {
+      Info.CheckComplete = true;
+      Info.CanHoist = true;
+    }
+  }
+
+  return InstrInfos.find(MI)->second.CanHoist;
+}
+
+/// Commit the hoisting of the given subset of previously checked instructions.
+///
+/// Returns the updated target iterator (this differs from the input target if
+/// the target instruction itself was hoisted).
+MachineBasicBlock::instr_iterator
+InstHoisting::commit(MachineBasicBlock::instr_iterator Prolog,
+                     MachineBasicBlock::instr_iterator Target,
+                     ArrayRef<MachineInstr *> MIs) {
+  if (MIs.empty())
+    return Target;
+
+  MachineBasicBlock *MBB = MIs[0]->getParent();
+
+  SmallBitVector Committing;
+  Committing.resize(InstrInfos.size());
+  for (MachineInstr *MI : MIs) {
+    const InstrInfo &II = InstrInfos.find(MI)->second;
+    assert(II.IsRoot);
+    Committing.set(II.Id);
+  }
+
+  for (MachineInstr *MI : Instrs) {
+    const InstrInfo &II = InstrInfos.find(MI)->second;
+    if (!Committing.test(II.Id))
+      continue;
+
+    if (II.IsRoot) {
+      if (Target != MI->getIterator()) {
+        MI->removeFromParent();
+        MBB->insert(Target, MI);
+      } else {
+        Target = std::next(MI->getIterator());
+      }
+    } else {
+      assert(Prolog != MI->getIterator());
+
+      if (Target == MI->getIterator())
+        Target = std::next(MI->getIterator());
+
+      MI->removeFromParent();
+      MBB->insert(Prolog, MI);
+      Prolog = MI->getIterator();
+    }
+
+    Committing |= II.Dependencies;
+  }
+
+  return Target;
+}
+
 // Return true if a target defined block prologue instruction interferes
 // with a sink candidate.
 bool AMDGPUBundleIdxLdSt::blockPrologueInterferes(
@@ -189,70 +516,6 @@ bool AMDGPUBundleIdxLdSt::blockPrologueInterferes(
     }
   }
   return false;
-}
-
-void AMDGPUBundleIdxLdSt::recoverIdx0ForPrivateUse(
-    SmallVector<BundleItem, 4> &Worklist, std::unordered_set<unsigned> &IdxList,
-    unsigned &SrcStagingRegIdx) {
-  // First, find the idx reg with the least V_LOAD_IDX uses
-  // Second, remove the loads that use the idx from the worklist
-  // and remap the staging regs to get an updated SrcStagingRegIdx
-  DenseMap<unsigned, unsigned> IdxRegUseCounts(NumSrcStagingRegs);
-  assert(Worklist.size() >= 4 &&
-         "Shouldn't be attempting to recover idx0 if there aren't at least 4 "
-         "bundled instructions");
-  static_assert(AMDGPU::STG_DSTA < AMDGPU::STG_SRCA &&
-                "idx0 staging reg recovery is incorrect if staging reg "
-                "ordering is changed");
-  for (auto &BI : Worklist) {
-    // Only consider src staging registers for implicit use of idx0, to simplify
-    // the algorithm
-    if (BI.StagingReg < AMDGPU::STG_SRCA)
-      continue;
-    Register IdxOpReg =
-        STI->getNamedOperand(*BI.MI, AMDGPU::OpName::idx)->getReg();
-    if (IdxRegUseCounts.find(IdxOpReg) == IdxRegUseCounts.end())
-      IdxRegUseCounts[IdxOpReg] = 0;
-    IdxRegUseCounts[IdxOpReg]++;
-  }
-  Register MinUseIdxOpReg;
-  unsigned MinUses = std::numeric_limits<unsigned>::max();
-  for (const auto &IdxRegUseCount : IdxRegUseCounts) {
-    if (IdxRegUseCount.second < MinUses) {
-      MinUseIdxOpReg = IdxRegUseCount.first;
-      MinUses = IdxRegUseCount.second;
-    }
-  }
-  assert(MinUseIdxOpReg.isValid() &&
-         "There should always be at least one staging register with only one "
-         "use, otherwise we wouldn't have to recover idx0");
-  IdxList.erase(MinUseIdxOpReg);
-  unsigned NewSrcStagingRegIdx = 0;
-  constexpr unsigned DefaultValueSentinel = NumSrcStagingRegs;
-  IndexedMap<unsigned> NewRegMap(DefaultValueSentinel);
-  NewRegMap.resize(NumSrcStagingRegs);
-  // remaps multiple uses of the same staging reg to the same new staging reg,
-  // to preserve sequential usage of staging regs
-  llvm::erase_if(Worklist, [&](auto &BI) {
-    if (BI.StagingReg < AMDGPU::STG_SRCA) {
-      return false;
-    }
-    if (STI->getNamedOperand(*BI.MI, AMDGPU::OpName::idx)->getReg() !=
-        MinUseIdxOpReg) {
-      unsigned I = BI.StagingReg - AMDGPU::STG_SRCA;
-      if (NewRegMap[I] == DefaultValueSentinel) {
-        NewRegMap[I] = AMDGPU::STG_SRCA + NewSrcStagingRegIdx;
-        NewSrcStagingRegIdx++;
-      }
-      BI.StagingReg = NewRegMap[I];
-      return false;
-    }
-    for (auto *CoreMIOp : BI.OpsInCoreMI) {
-      CoreMIOp->setReg(BI.OpReg);
-    }
-    return true;
-  });
-  SrcStagingRegIdx = NewSrcStagingRegIdx;
 }
 
 // Find all paths between a given Start and End block.
@@ -609,20 +872,28 @@ AMDGPUBundleIdxLdSt::computeNewIdxForPrivateObject(MachineRegisterInfo &MRI,
                                                    MachineInstr &MI) {
   Register Idx0Def = MFI->getIdx0VRegDef();
   if (!Idx0Def.isValid()) {
-    Idx0Def = initIdx0VRegDef(*MI.getMF(), STI);
+    Idx0Def = initIdx0VRegDef(*MI.getMF(), TII);
     MFI->setIdx0VRegDef(Idx0Def);
   }
   // Create a new reg that is idx0 added to the idx reg used by MI
-  MachineOperand *IdxOp = STI->getNamedOperand(MI, AMDGPU::OpName::idx);
+  MachineOperand *IdxOp = TII->getNamedOperand(MI, AMDGPU::OpName::idx);
   Register IdxOpReg = IdxOp->getReg();
   Register NewIdxReg =
       MRI.createVirtualRegister(&AMDGPU::SReg_32_XEXEC_HIRegClass);
   MachineInstr *DefRegMI = MRI.getUniqueVRegDef(IdxOpReg);
   MachineBasicBlock::iterator InsertPt = std::next(DefRegMI->getIterator());
-  BuildMI(*DefRegMI->getParent(), InsertPt, DefRegMI->getDebugLoc(),
-          STI->get(AMDGPU::S_ADD_I32), NewIdxReg)
-      .addReg(IdxOpReg)
-      .addReg(Idx0Def);
+  MachineInstr *AddMI =
+      BuildMI(*DefRegMI->getParent(), InsertPt, DefRegMI->getDebugLoc(),
+              TII->get(AMDGPU::S_ADD_I32), NewIdxReg)
+          .addReg(IdxOpReg)
+          .addReg(Idx0Def);
+
+  // TODO-GFX13: We shouldn't do the insertion of the add here since SCC might
+  // be live. Mark SCC as dead to reduce test perturbation until we can fix
+  // this properly.
+  assert(AddMI->getOperand(3).getReg() == AMDGPU::SCC);
+  AddMI->getOperand(3).setIsDead();
+
   return NewIdxReg;
 }
 
@@ -646,66 +917,18 @@ bool AMDGPUBundleIdxLdSt::updatePrivateObjectNewRegs(MachineRegisterInfo *MRI,
   return false;
 }
 
-SmallVector<BundleItem, 4>::iterator
-AMDGPUBundleIdxLdSt::tryGetDefInsertPt(SmallVector<BundleItem, 4> &Worklist,
-                                       MachineInstr *StoreMI) {
-  // TODO-GFX13: Handle more than 2 defs and optimal selection of what the last
-  // def will be.
-
-  // If there are multiple stores, ensure that the store
-  // getting sunk (i.e. the earliest store) can be sunk to the last store.
-  if (Worklist.empty())
-    return Worklist.begin();
-  bool IsNewLastMI = false;
-  MachineInstr *PrevLastMI = Worklist[0].MI;
-  // Determine if there is a new last def - in most circumstances
-  // the stores would be in order, but there is no guarantee.
-  MachineBasicBlock::instr_iterator I = PrevLastMI->getIterator(),
-                                    E = StoreMI->getParent()->instr_end();
-  for (++I; I != E; ++I) {
-    if (&*I == StoreMI) {
-      IsNewLastMI = true;
-      break;
-    }
-  }
-
-  if (!IsNewLastMI) {
-    // Then we have to verify that this MI can be sunk to the previous one
-    I = StoreMI->getIterator();
-    E = PrevLastMI->getIterator();
-    PrevLastMI = StoreMI;
-  } else {
-    // Otherwise verify that the previous last MI can be sunk to the current
-    // last MI
-    I = PrevLastMI->getIterator();
-    E = StoreMI->getIterator();
-  }
-  for (++I; I != E; ++I) {
-    if (I->isBundle())
-      I++;
-    if (PrevLastMI->mayAlias(AA, *I, false)) {
-      LLVM_DEBUG(dbgs() << " *** Conflict with "; I->print(dbgs()));
-      return nullptr;
-    }
-  }
-
-  if (IsNewLastMI)
-    return Worklist.begin();
-  return Worklist.begin() + 1;
-}
-
 // This lowering puts the value into the lo16 bits of a private VGPR.
 void AMDGPUBundleIdxLdSt::lowerLoadIdxBits(MachineInstr &MI) {
   MachineBasicBlock *MBB = MI.getParent();
 
-  const MCInstrDesc &II = STI->get(AMDGPU::V_BFE_U32_e64);
+  const MCInstrDesc &II = TII->get(AMDGPU::V_BFE_U32_e64);
   Register ReadReg = MRI->createVirtualRegister(
       TRI->getAllocatableClass(TII->getRegClass(II, 0)));
 
-  auto LoadMIB =
-      BuildMI(*MBB, MI, MI.getDebugLoc(), STI->get(AMDGPU::V_LOAD_IDX_B32), ReadReg)
-          .add(MI.getOperand(1))  // idx
-          .add(MI.getOperand(2)); // offset
+  auto LoadMIB = BuildMI(*MBB, MI, MI.getDebugLoc(),
+                         TII->get(AMDGPU::V_LOAD_IDX_B32), ReadReg)
+                     .add(MI.getOperand(1))  // idx
+                     .add(MI.getOperand(2)); // offset
   auto *LoadMMO = *MI.memoperands_begin();
   LoadMIB.addMemOperand(LoadMMO);
 
@@ -723,21 +946,21 @@ void AMDGPUBundleIdxLdSt::lowerStoreIdxBits(MachineInstr &MI) {
   MachineFunction *MF = MBB->getParent();
 
   // BFM
-  const MCInstrDesc &BFMII = STI->get(AMDGPU::V_BFM_B32_e64);
+  const MCInstrDesc &BFMII = TII->get(AMDGPU::V_BFM_B32_e64);
   Register MaskReg = MRI->createVirtualRegister(
       TRI->getAllocatableClass(TII->getRegClass(BFMII, 0)));
   BuildMI(*MBB, MI, MI.getDebugLoc(), BFMII, MaskReg)
       .add(MI.getOperand(3))  // bitsize
       .add(MI.getOperand(4)); // bitoffset
 
-  const MCInstrDesc &II = STI->get(AMDGPU::V_BFI_B32_e64);
+  const MCInstrDesc &II = TII->get(AMDGPU::V_BFI_B32_e64);
   Register ReadReg = MRI->createVirtualRegister(
       TRI->getAllocatableClass(TII->getRegClass(II, 0)));
 
-  auto LoadMIB =
-      BuildMI(*MBB, MI, MI.getDebugLoc(), STI->get(AMDGPU::V_LOAD_IDX_B32), ReadReg)
-          .add(MI.getOperand(1))  // idx
-          .add(MI.getOperand(2)); // offset
+  auto LoadMIB = BuildMI(*MBB, MI, MI.getDebugLoc(),
+                         TII->get(AMDGPU::V_LOAD_IDX_B32), ReadReg)
+                     .add(MI.getOperand(1))  // idx
+                     .add(MI.getOperand(2)); // offset
   auto *StoreMMO = *MI.memoperands_begin();
   // Synthesize MMO for V_LOAD_IDX.
   auto NewFlags = MachineMemOperand::MOLoad;
@@ -756,7 +979,7 @@ void AMDGPUBundleIdxLdSt::lowerStoreIdxBits(MachineInstr &MI) {
 
   // V_STORE_IDX
   auto StoreMIB = BuildMI(*MBB, MI, MI.getDebugLoc(),
-                          STI->get(AMDGPU::V_STORE_IDX_B32))
+                          TII->get(AMDGPU::V_STORE_IDX_B32))
                       .addReg(WriteReg)       // data
                       .add(MI.getOperand(1))  // idx
                       .add(MI.getOperand(2)); // offset
@@ -834,7 +1057,7 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
   default:
     return;
   }
-  const MCInstrDesc &II = STI->get(Opc);
+  const MCInstrDesc &II = TII->get(Opc);
   auto CoreMIB = BuildMI(*MBB, MI, MI.getDebugLoc(), II);
   SmallVector<Register, 4> DataRegs;
   for (unsigned I = 0; I < NumStores; I++) {
@@ -861,11 +1084,12 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
     BaseAlign = LoadMMO->getBaseAlign();
   }
 
+  SmallVector<MachineInstr *, 2> Stores;
   for (unsigned I = 0; I < NumStores; ++I) {
     // DataRegs is in reverse order of V_STORE_IDXs
     auto StoreMIB =
         BuildMI(*MBB, MI, MI.getDebugLoc(),
-                STI->get(AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(
+                TII->get(AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(
                     Size.getValue() * 8)))
             .addReg(DataRegs[NumStores - I - 1])         // data
             .add(MI.getOperand(NumMIOps - (2 + 2 * I)))  // idx
@@ -876,7 +1100,11 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
     MachineMemOperand *StoreMMO =
         MF->getMachineMemOperand(StorePtrI, StoreFlags, Size, BaseAlign);
     StoreMIB.addMemOperand(StoreMMO);
+    Stores.push_back(StoreMIB);
   }
+
+  if (Stores.size() == 2)
+    CommutableStores.insert(std::make_pair(Stores[0], Stores[1]));
 
   LLVM_DEBUG(dbgs() << " *** Expanded pseudo: "; MI.print(dbgs()));
   MI.eraseFromParent();
@@ -906,14 +1134,73 @@ bool AMDGPUBundleIdxLdSt::expandPseudoInstructions(MachineFunction &MF) {
   return Changed;
 }
 
-bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
+/// Convert the specified two-address instruction into a three address one.
+/// Return the new instruction if this transformation was successful.
+///
+/// TODO-GFX13: Extract common code from
+/// TwoAddressInstructionImpl::convertInstTo3Addr
+///             during upstreaming.
+MachineInstr *AMDGPUBundleIdxLdSt::convertInstTo3Addr(MachineInstr *MI) {
+  MachineBasicBlock *MBB = MI->getParent();
+  MachineFunction *MF = MBB->getParent();
+  MachineInstr *NewMI = TII->convertToThreeAddress(*MI, nullptr, nullptr);
+  if (!NewMI)
+    return nullptr;
+
+  LLVM_DEBUG(dbgs() << "2addr: CONVERTING 2-ADDR: " << *MI);
+  LLVM_DEBUG(dbgs() << "2addr:         TO 3-ADDR: " << *NewMI);
+
+  // If the old instruction is debug value tracked, an update is required.
+  if (auto OldInstrNum = MI->peekDebugInstrNum()) {
+    assert(MI->getNumExplicitDefs() == 1);
+    assert(NewMI->getNumExplicitDefs() == 1);
+
+    // Find the old and new def location.
+    unsigned OldIdx = MI->defs().begin()->getOperandNo();
+    unsigned NewIdx = NewMI->defs().begin()->getOperandNo();
+
+    // Record that one def has been replaced by the other.
+    unsigned NewInstrNum = NewMI->getDebugInstrNum();
+    MF->makeDebugValueSubstitution(std::make_pair(OldInstrNum, OldIdx),
+                                   std::make_pair(NewInstrNum, NewIdx));
+  }
+
+  MBB->erase(MI); // Nuke the old inst.
+
+  return NewMI;
+}
+
+/// Report that a candidate for bundling was rejected.
+void AMDGPUBundleIdxLdSt::reject(MachineOperand &MO, const Twine &Reason) {
+  LLVM_DEBUG(dbgs() << "  Cannot bundle operand: " << MO << '\n'
+                    << "                     in: " << *MO.getParent() << "\n";
+             if (!Reason.isTriviallyEmpty()) dbgs()
+             << "                 reason: " << Reason << "\n";);
+  if (MO.isDef() && SIInstrInfo::mustHaveLanesharedResult(*MO.getParent()))
+    report_fatal_error(
+        "Failed to bundle instruction that must have laneshared");
+}
+
+/// Check whether MI has some indexing operands that should be bundled, and
+/// collect information in BI without making any IR changes.
+///
+/// This is read-only **except** it may convert the core MI into three-address
+/// form.
+///
+/// TODO: It would be great if we could avoid that conversion here, but the
+/// code relies to much on being able to reference the correct MachineOperands.
+///
+/// TODO-GFX13: There is also a guaranteed-to-be-broken mutation of private
+/// object pointers here.
+bool AMDGPUBundleIdxLdSt::analyze(BundlingInfo &BI) {
+  MachineInstr *MI = BI.MI;
+
   LLVM_DEBUG(dbgs() << "BB." << MI->getParent()->getNumber() << " :: ";
              MI->print(dbgs()));
 
   if (MI->isMetaInstruction())
     return false;
-  // TODO-GFX13 Update TwoAddressInstructionPass to handle Bundles
-  if (MI->isConvertibleTo3Addr() || MI->isRegSequence() || MI->isInsertSubreg())
+  if (MI->isRegSequence() || MI->isInsertSubreg())
     return false;
   // COPY would be lowered to v_mov, which is equivalent to not bundling at all,
   // and further optimization of the COPY would be blocked by the BUNDLE, so
@@ -927,258 +1214,341 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
   if (MI->getOpcode() == AMDGPU::V_MOV_B64_PSEUDO && !ST->hasMovB64())
     return false;
 
-  // If multicast or neighbor data share is used, and we cannot bundle its
-  // destination laneshared access(es), it is a fatal error, because we might
-  // clobber private vgprs in other SIMDs.
-  const auto rejectUser = [&](MachineInstr *Inst) {
-    LLVM_DEBUG(dbgs() << "  Cannot bundle operand in :" << "\n"
-                      << "    " << *Inst << "\n");
-    if (SIInstrInfo::mustHaveLanesharedResult(*MI))
-      report_fatal_error(
-          "Failed to bundle instruction that must have laneshared");
-    return false;
-  };
+  BI.StoreHoisting.setCommutableInstrs(&CommutableStores);
 
-  MachineFunction *MF = MI->getParent()->getParent();
+  // Step 1: Collect candidate defs.
   MachineBasicBlock *MBB = MI->getParent();
-  SmallVector<BundleItem, 4> Worklist;
-  std::unordered_set<unsigned> IdxList;
-  bool UsesIdx0ForPrivate = false;
-  bool UsesIdx0ForDynamic = false;
-  unsigned DstCount = 0;
+
   for (auto &Def : MI->defs()) {
-    // TODO-GFX13 Update TwoAddressInstructionPass to handle Bundles
-    if (Def.isTied())
-      return false;
     Register DefReg = Def.getReg();
+    assert(Def.getSubReg() == 0 && "unexpected subreg def in SSA form");
     if (!MRI->hasOneNonDBGUse(DefReg))
       continue;
     MachineOperand *UseOfMI = &*MRI->use_nodbg_begin(DefReg);
     if (UseOfMI->getSubReg() != 0)
       continue;
-    if (auto *RC = TII->getRegClass(MI->getDesc(), Def.getOperandNo());
-        RC && !RC->contains(AMDGPU::STG_SRCA))
-      continue;
     auto *StoreMI = dyn_cast<AMDGPUMI::VStoreIdxInst>(UseOfMI->getParent());
     if (!StoreMI)
       continue;
-    if (StoreMI->getDataOp().getReg() != DefReg)
+
+    Operand Candidate{&Def, StoreMI};
+    if (Candidate.getDataReg() != DefReg)
       continue;
-    // If we tried to sink it but couldn't, skip.
+
     if (StoreMI->getParent() != MBB) {
-      rejectUser(MI);
+      reject(Def, "store in different basic block");
       continue;
     }
 
-    if (ST->needsAlignedVGPRs() && !isa<AMDGPUMI::VLoadIdxInst>(MI) &&
-        AMDGPU::getRegOperandSize(MCSTI, TII, MI->getDesc(),
-                                  Def.getOperandNo()) > 4) {
-      // Do not bundle instructions with odd offsets to ensure proper register
-      // alignment.
-      unsigned Offset = StoreMI->getOffsetOp().getImm();
-      if (Offset & 1) {
-        rejectUser(MI);
-        continue;
-      }
-    }
-    assert(AMDGPU::STG_DSTA + DstCount <= AMDGPU::STG_DSTB &&
-           "Exceeded the max amount of dst staging regs");
-    MachineOperand *IdxOp = &StoreMI->getIdxOp();
-    // If the idx operand to V_STORE_IDX is defined by CoreMI,
-    // we can't bundle.
-    if (MI->definesRegister(IdxOp->getReg(), TRI)) {
-      rejectUser(MI);
+    // Check that we can hoist the store to MI
+    if (!BI.StoreHoisting.check(MI->getIterator(), std::next(MI->getIterator()),
+                                StoreMI, &StoreMI->getIdxOp(), AA)) {
+      reject(Def, "cannot hoist store");
       continue;
     }
-    assert(DstCount <= 2 &&
-           "tryGetDefInsertPt only logically supports validation of 2 stores");
-    if (auto WorklistIt = tryGetDefInsertPt(Worklist, StoreMI);
-        WorklistIt != nullptr) {
-      IdxList.insert(IdxOp->getReg());
-      Worklist.insert(
-          WorklistIt,
-          {StoreMI, UseOfMI, {&Def}, AMDGPU::STG_DSTA + DstCount++, DefReg});
-    } else {
-      rejectUser(MI);
-      continue;
-    }
+
+    BI.BundledOps.push_back(Candidate);
   }
 
-  // Check for constraints on moving MI down to the last StoreMI (always the 0th
-  // worklist item) If MI must happen before I, then we cannot form the bundle
-  // by moving MI after I.
-  // This assumes that the defs of an instruction will be in the same order as
-  // their corresponding stores.
-  if (Worklist.size() > 0) {
-    bool MILoads = MI->mayLoad();
-    assert((!MI->mayStore() || MILoads) &&
-                                  "Unexpected MI which produces a values and "
-                                  "stores but does not load");
-    if (MILoads) {
-      MachineBasicBlock::instr_iterator I = MI->getIterator(),
-                                  E = Worklist[0].MI->getIterator();
-      unsigned OwnDefIdx = 1;
-      for (++I; I != E; ++I) {
-        if (I->isBundle())
-          continue;
-        // Ignore own defs
-        if (OwnDefIdx < Worklist.size() && &*I == Worklist[OwnDefIdx].MI) {
-          OwnDefIdx++;
-          continue;
-        }
-        if (I->mayStore() && MI->mayAlias(AA, *I, false)) {
-          LLVM_DEBUG(dbgs() << " *** Conflict with "; I->print(dbgs()));
-          return rejectUser(MI);
-        }
-      }
-    }
-  }
-  Worklist.push_back({MI, nullptr, {}, 0, 0});
+  assert(BI.BundledOps.size() <= 2); // would need more staging registers
 
-  static const Register StagingRegs[NumSrcStagingRegs] = {
-      AMDGPU::STG_SRCA, AMDGPU::STG_SRCB, AMDGPU::STG_SRCC,
-      AMDGPU::STG_SRCD, AMDGPU::STG_SRCE, AMDGPU::STG_SRCF};
-  unsigned StagingRegIdx = 0;
+  // Step 2: Collect candidate uses.
   for (auto &Use : MI->explicit_uses()) {
-    if (StagingRegIdx == NumSrcStagingRegs)
-      break;
-    if (!Use.isReg())
+    // TODO-GFX13: Skip uses that *cannot* use indexing, e.g. high operands of
+    //             image instructions.
+    if (!Use.isReg() || Use.getSubReg() != 0)
       continue;
-    if (Use.getSubReg() != 0)
-      continue;
-    // TODO-GFX13 Update TwoAddressInstructionPass to handle Bundles
-    if (Use.isTied())
-      return rejectUser(MI);
     Register UseReg = Use.getReg();
     if (!UseReg.isVirtual())
       continue;
-    if (auto *RC = TII->getRegClass(MI->getDesc(), Use.getOperandNo());
-        RC && !RC->contains(AMDGPU::STG_SRCA))
-      continue;
-    MachineInstr *DefMI = MRI->getVRegDef(UseReg);
-    if (!DefMI)
-      continue;
-    auto *LoadMI = dyn_cast<AMDGPUMI::VLoadIdxInst>(DefMI);
-    if (!LoadMI) {
-      if (UsesIdx0ForPrivate)
-        continue;
-      // Check if a reg use needs a private VGPR of any kind
-      const TargetRegisterClass *RegClass = MRI->getRegClass(UseReg);
-      if (TRI->getCommonSubClass(RegClass, &AMDGPU::VGPR_32RegClass)) {
-        if (UsesIdx0ForDynamic)
-          recoverIdx0ForPrivateUse(Worklist, IdxList, StagingRegIdx);
-        UsesIdx0ForPrivate = true;
-        UsesIdx0ForDynamic = false;
-      }
-      continue;
-    }
-
-    if (LoadMI->getParent() != MBB)
+    auto *LoadMI = dyn_cast<AMDGPUMI::VLoadIdxInst>(MRI->getVRegDef(UseReg));
+    if (!LoadMI || LoadMI->getParent() != MBB)
       continue;
 
-    if (ST->needsAlignedVGPRs() &&
-        AMDGPU::getRegOperandSize(MCSTI, TII, MI->getDesc(),
-                                  Use.getOperandNo()) > 4) {
-      // Do not bundle instructions with odd offsets to ensure proper register
-      // alignment.
-      unsigned Offset = LoadMI->getOffsetOp().getImm();
-      if (Offset & 1)
-        continue;
-    }
-
-    // Do not move any V_LOAD_IDX past an aliased V_STORE_IDX.
-    bool AliasConflict = false;
-    // The index of the V_STORE_IDX that currently doesn't need an alias check.
-    unsigned IgnoreVStoreI = DstCount;
-    MachineBasicBlock::instr_iterator I = LoadMI->getIterator(),
-                                      E = Worklist[0].MI->getIterator();
-    for (++I; I != E; ++I) {
-      if (I->isBundle())
-        I++;
-      // Ignore V_STORE_IDX that are part of this bundle.
-      if (IgnoreVStoreI > 0 && &*I == Worklist[IgnoreVStoreI - 1].MI) {
-        IgnoreVStoreI--;
-        continue;
-      }
-      if (I->mayStore() && LoadMI->mayAlias(AA, *I, false)) {
-        LLVM_DEBUG(dbgs() << " *** Conflict with "; I->print(dbgs());
-                   dbgs() << "\tLoadMI: " << *LoadMI);
-        AliasConflict = true;
+    // Check that we can sink the load to MI
+    bool MayAlias = false;
+    for (auto II = LoadMI->getNextNode()->getIterator(); &*II != MI; ++II) {
+      if (II->hasOrderedMemoryRef() || LoadMI->mayAlias(AA, *II, true)) {
+        LLVM_DEBUG(dbgs() << " *** Conflict with "; II->print(dbgs()));
+        reject(Use);
+        MayAlias = true;
         break;
       }
     }
-    if (AliasConflict)
+    if (MayAlias)
       continue;
 
-    MachineOperand *IdxOp = &LoadMI->getIdxOp();
-    if (!IdxList.count(IdxOp->getReg())) {
-      // If a bundle would use more than 4 indexes, or if a bundle is
-      // using idx0 already through a private vgpr Op, then it can't use idx0
-      if (IdxList.size() == 3 && !UsesIdx0ForPrivate) {
-        UsesIdx0ForDynamic = true;
-      } else if (IdxList.size() == 3 && UsesIdx0ForPrivate) {
-        continue;
-      } else if (IdxList.size() == 4) {
-        recoverIdx0ForPrivateUse(Worklist, IdxList, StagingRegIdx);
-        UsesIdx0ForDynamic = false;
-        UsesIdx0ForPrivate = true;
-        continue;
-      }
-      IdxList.insert(IdxOp->getReg());
-    }
-
-    // Duplicate V_LOAD_IDX with uses in multiple instructions.
-    auto It = MRI->use_instr_nodbg_begin(UseReg);
-    if (++It != MRI->use_instr_nodbg_end()) {
-      LLVM_DEBUG(dbgs() << " *** Duplicating "; LoadMI->print(dbgs()));
-      MachineInstr *DupLoad = MF->CloneMachineInstr(LoadMI);
-      MBB->insert(LoadMI, DupLoad);
-      LoadMI = cast<AMDGPUMI::VLoadIdxInst>(DupLoad);
-    }
-
-    // Add uses of LoadMI in MI to be replaced.
-    // Prevent duplicating loads for multiple uses in one MI. The following
-    // iterations of the enclosing loop over MI's uses of the same register will
-    // be skipped.
-    SmallVector<MachineOperand *> LoadUsesInMI;
-    for (auto &Use : make_early_inc_range(MRI->use_operands(UseReg))) {
-      if (Use.getParent() == MI) {
-        Use.setReg(Register());
-        LoadUsesInMI.push_back(&Use);
-      }
-    }
-
-    Worklist.push_back({LoadMI, &LoadMI->getDataOp(), LoadUsesInMI,
-                        StagingRegs[StagingRegIdx], UseReg});
-
-    StagingRegIdx++;
+    Operand Candidate{&Use, LoadMI};
+    BI.BundledOps.push_back(Candidate);
   }
-  if (IdxList.size() == 0)
+
+  // Step 3: Common checks that apply to both defs and uses.
+  BI.BundledOps.erase(
+      llvm::remove_if(BI.BundledOps,
+                      [&](Operand &Op) {
+                        const TargetRegisterClass *RegClass =
+                            TRI->getRegClassForReg(*MRI, Op.getDataReg());
+                        Op.NumBytes = AMDGPU::getRegBitWidth(*RegClass) / 8;
+
+                        if (ST->needsAlignedVGPRs() && Op.NumBytes > 4) {
+                          // Do not bundle instructions with odd offsets to
+                          // ensure proper register alignment.
+                          //
+                          // TODO-GFX13: Should this also check the alignment in
+                          // the MMO, considering that the index itself might
+                          // not be aligned?
+                          if (Op.getOffset() & 1) {
+                            reject(*Op.Op);
+                            return true;
+                          }
+                        }
+
+                        if (!TII->canUseVGPRIndexing(*MI,
+                                                     Op.Op->getOperandNo()))
+                          return true;
+
+                        return false;
+                      }),
+      BI.BundledOps.end());
+
+  if (BI.BundledOps.empty())
     return false;
 
-  // Replace the registers in the bundle with the staging registers.
-  // Insert bundle where the store was, or where MI was if there was no store.
-  auto LastMII = MachineBasicBlock::instr_iterator(Worklist[0].MI);
-  auto FirstMII = LastMII;
-  if (auto *Op = Worklist[0].OpInLdSt)
-    Op->setReg(Worklist[0].StagingReg);
-  for (auto *Op : Worklist[0].OpsInCoreMI)
-    Op->setReg(Worklist[0].StagingReg);
-  for (unsigned I = 1; I < Worklist.size(); I++) {
-    MachineInstr *CurMI = Worklist[I].MI;
-    CurMI->removeFromParent();
-    MBB->insert(FirstMII, CurMI);
-    if (auto *Op = Worklist[I].OpInLdSt)
-      Op->setReg(Worklist[I].StagingReg);
-    for (auto *Op : Worklist[I].OpsInCoreMI)
-      Op->setReg(Worklist[I].StagingReg);
-    FirstMII = MachineBasicBlock::instr_iterator(CurMI);
+  // Step 4: Handle earlyclobber and tied operands.
+  for (auto &Def : MI->defs()) {
+    if (Def.isEarlyClobber()) {
+      auto DefIt = llvm::find_if(BI.BundledOps,
+                                 [&](Operand &Op) { return Op.Op == &Def; });
+      if (DefIt != BI.BundledOps.end()) {
+        unsigned DefIdx = std::distance(BI.BundledOps.begin(), DefIt);
+        SmallVector<unsigned> UseIdxs;
+        unsigned UseBytes = 0;
+        for (unsigned UseIdx = DefIdx + 1; UseIdx != BI.BundledOps.size();
+             ++UseIdx) {
+          // Earlyclobber does not affect a tied use.
+          if (Def.isTied()) {
+            unsigned TiedUseOpIdx = MI->findTiedOperandIdx(Def.getOperandNo());
+            if (BI.BundledOps[UseIdx].Op == &MI->getOperand(TiedUseOpIdx))
+              continue;
+          }
+
+          if (DefIt->LoadStore->mayAlias(AA, *BI.BundledOps[UseIdx].LoadStore,
+                                         true)) {
+            UseIdxs.push_back(UseIdx);
+            UseBytes += BI.BundledOps[UseIdx].NumBytes;
+          }
+        }
+
+        // If the def aliases any uses, refuse bundling either the uses or the
+        // defs.
+        if (!UseIdxs.empty()) {
+          if (SIInstrInfo::mustHaveLanesharedResult(*MI) ||
+              DefIt->NumBytes >= UseBytes) {
+            for (unsigned UseIdx : reverse(UseIdxs))
+              BI.BundledOps.erase(BI.BundledOps.begin() + UseIdx);
+          } else {
+            BI.BundledOps.erase(DefIt);
+          }
+        }
+      }
+    }
+
+    if (Def.isTied()) {
+      unsigned TiedUseIdx = MI->findTiedOperandIdx(Def.getOperandNo());
+      MachineOperand &TiedUse = MI->getOperand(TiedUseIdx);
+      auto DefIt = llvm::find_if(BI.BundledOps,
+                                 [&](Operand &Op) { return Op.Op == &Def; });
+      auto UseIt = llvm::find_if(
+          BI.BundledOps, [&](Operand &Op) { return Op.Op == &TiedUse; });
+      bool BundleDef = DefIt != BI.BundledOps.end();
+      bool BundleUse = UseIt != BI.BundledOps.end();
+      bool Conflict = false;
+
+      if (BundleDef != BundleUse) {
+        Conflict = true;
+      } else if (BundleDef && BundleUse) {
+        Conflict = DefIt->getIndexReg() != UseIt->getIndexReg() ||
+                   DefIt->getOffset() != UseIt->getOffset();
+      }
+
+      if (Conflict && MI->isConvertibleTo3Addr()) {
+        // Convert into 3-address form, unless the def is earlyclobber and we
+        // would bundle a partially overlapping tied use.
+        if (!BundleDef || !BundleUse || !Def.isEarlyClobber() ||
+            !DefIt->LoadStore->mayAlias(AA, *UseIt->LoadStore, true)) {
+          if (MachineInstr *NewMI = convertInstTo3Addr(MI)) {
+            // The instruction was completely replaced, so we have to re-scan it
+            // from the top.
+            BI = {};
+            BI.MI = NewMI;
+            return analyze(BI);
+          }
+        }
+      }
+
+      if (Conflict) {
+        // Uses come after defs, so erase the use first to avoid iterator
+        // invalidation.
+        if (BundleUse)
+          BI.BundledOps.erase(UseIt);
+        if (BundleDef) {
+          BI.BundledOps.erase(DefIt);
+        }
+      }
+    }
   }
-  finalizeBundle(*MBB, FirstMII, ++LastMII);
+
+  if (BI.BundledOps.empty())
+    return false;
+
+  // Step 5: Account for availability of index registers.
+  //
+  // Map each virtual index register to the total number of bytes accessed
+  // through it.
+  SmallVector<std::pair<Register, unsigned>> Indices;
+  unsigned NumDstIndices = 0;
+  bool HasPrivate = false;
+
+  for (auto &Op : MI->operands()) {
+    if (!Op.isReg())
+      continue;
+    const TargetRegisterClass *RegClass =
+        TRI->getRegClassForReg(*MRI, Op.getReg());
+    if (SIRegisterInfo::hasVGPRs(RegClass)) {
+      if (none_of(BI.BundledOps, [&](Operand &O) { return O.Op == &Op; })) {
+        HasPrivate = true;
+        break;
+      }
+    }
+  }
+
+  for (auto &Op : BI.BundledOps) {
+    auto It = find_if(Indices, [&](const auto &Pair) {
+      return Pair.first == Op.getIndexReg();
+    });
+    if (It == Indices.end()) {
+      Indices.emplace_back(Op.getIndexReg(), 0);
+      It = std::prev(Indices.end());
+    }
+    It->second += Op.NumBytes;
+
+    if (Op.Op->isDef())
+      NumDstIndices = Indices.size();
+  }
+
+  assert(NumDstIndices <= 2);
+
+  if (Indices.size() > (HasPrivate ? 3 : 4)) {
+    auto Begin = Indices.begin();
+    if (SIInstrInfo::mustHaveLanesharedResult(*MI))
+      Begin += NumDstIndices;
+
+    std::stable_sort(Begin, Indices.end(), [](const auto &A, const auto &B) {
+      return A.second > B.second;
+    });
+
+    // Since we failed to bundle everything, we need idx0 for private registers.
+    Indices.resize(3);
+
+    BI.BundledOps.erase(
+        llvm::remove_if(BI.BundledOps,
+                        [&](Operand &Op) {
+                          return llvm::none_of(Indices, [&](const auto &Pair) {
+                            return Pair.first == Op.getIndexReg();
+                          });
+                        }),
+        BI.BundledOps.end());
+  }
+
+  assert(!BI.BundledOps.empty());
+  return true;
+}
+
+bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *OrigMI) {
+  BundlingInfo BI;
+  BI.MI = OrigMI;
+  if (!analyze(BI))
+    return false;
+
+  MachineInstr *MI = BI.MI;
+  MachineFunction *MF = MI->getParent()->getParent();
+  MachineBasicBlock *MBB = MI->getParent();
+
+  // Turn unbundled tied sub-register uses into full register uses by inserting
+  // COPY.
+  for (MachineOperand &MO : MI->all_uses()) {
+    if (!MO.isReg() || !MO.isTied() || MO.getSubReg() == 0)
+      continue;
+
+    assert(none_of(BI.BundledOps, [&](Operand &Op) { return Op.Op == &MO; }));
+
+    const TargetRegisterClass *SuperRC = MRI->getRegClass(MO.getReg());
+    const TargetRegisterClass *SubRC =
+        TRI->getSubRegisterClass(SuperRC, MO.getSubReg());
+    Register Tmp = MRI->createVirtualRegister(SubRC);
+    BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::COPY), Tmp)
+        .addUse(MO.getReg(), 0, MO.getSubReg());
+    MO.setReg(Tmp);
+    MO.setSubReg(0);
+  }
+
+  // Commit the bundle.
+  static const Register DstStagingRegsList[] = {AMDGPU::STG_DSTA,
+                                                AMDGPU::STG_DSTB};
+  static const Register SrcStagingRegsList[] = {
+      AMDGPU::STG_SRCA, AMDGPU::STG_SRCB, AMDGPU::STG_SRCC,
+      AMDGPU::STG_SRCD, AMDGPU::STG_SRCE, AMDGPU::STG_SRCF};
+  auto DstStagingRegs = ArrayRef(DstStagingRegsList);
+  auto SrcStagingRegs = ArrayRef(SrcStagingRegsList);
+
+  MachineInstr *FirstMI = MI;
+
+  SmallVector<MachineInstr *, 2> Stores;
+
+  for (auto &Op : BI.BundledOps) {
+    if (Op.Op->isDef()) {
+      Stores.push_back(Op.LoadStore);
+    } else {
+      if (!MRI->hasOneNonDBGUse(Op.getDataReg())) {
+        LLVM_DEBUG(dbgs() << " *** Duplicating "; Op.LoadStore->print(dbgs()));
+        Op.LoadStore = cast<AMDGPUMI::VLoadStoreIdxInst>(
+            MF->CloneMachineInstr(Op.LoadStore));
+      } else {
+        Op.LoadStore->removeFromParent();
+      }
+    }
+
+    Register Stg;
+    MachineOperand *UnderlyingOp = Op.Op;
+    if (Op.Op->isUse() && Op.Op->isTied()) {
+      unsigned DefIdx = MI->findTiedOperandIdx(Op.Op->getOperandNo());
+      UnderlyingOp = &MI->getOperand(DefIdx);
+    }
+    if (UnderlyingOp->isDef()) {
+      Stg = DstStagingRegs[UnderlyingOp->getOperandNo()];
+    } else {
+      Stg = SrcStagingRegs.consume_front();
+    }
+
+    Op.Op->setReg(Stg);
+    Op.getDataOperand().setReg(Stg);
+
+    if (!Op.Op->isDef()) {
+      MBB->insert(FirstMI->getIterator(), Op.LoadStore);
+      FirstMI = Op.LoadStore;
+    }
+  }
+
+  auto BeginMII = FirstMI->getIterator();
+  auto EndMII = std::next(MI->getIterator());
+  EndMII = BI.StoreHoisting.commit(BeginMII, EndMII, Stores);
+
+  finalizeBundle(*MBB, BeginMII, EndMII);
+
   LLVM_DEBUG({
     dbgs() << " *** Created bundle from \n";
-    for (auto Item : reverse(Worklist))
-      dbgs() << "\t" << *(Item.MI);
+    for (MachineInstr &MI : make_range(BeginMII, EndMII))
+      dbgs() << "\t" << MI;
   });
   return true;
 }
@@ -1191,8 +1561,7 @@ bool AMDGPUBundleIdxLdSt::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   TRI = ST->getRegisterInfo();
-  STI = ST->getInstrInfo();
-  TII = MF.getSubtarget().getInstrInfo();
+  TII = ST->getInstrInfo();
   MRI = &MF.getRegInfo();
   MCSTI = MF.getTarget().getMCSubtargetInfo();
 
@@ -1221,9 +1590,17 @@ bool AMDGPUBundleIdxLdSt::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "===== AMDGPUBundleIdxLdSt :: Bundling Phase =====\n");
   PrivateObjectNewRegs.clear();
   for (MachineBasicBlock &MBB : MF) {
-    auto Iter = make_early_inc_range(MBB);
-    for (auto &MI : Iter)
+    // Instruction iterator stability:
+    //  * We use an early incrementing range because MI might be erased and
+    //    replaced by its 3-address variant.
+    //  * The next instruction might be a V_STORE_IDX that gets bundled with
+    //    MI. If that happens, we skip it immediately in the next iteration of
+    //    the loop, and the iterator safely skips over the rest of the bundle.
+    for (auto &MI : make_early_inc_range(MBB)) {
+      if (MI.isBundled())
+        continue;
       Changed |= bundleIdxLdSt(&MI);
+    }
   }
   return Changed;
 }

@@ -3959,6 +3959,9 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   if (MIa.hasOrderedMemoryRef() || MIb.hasOrderedMemoryRef())
     return false;
 
+  if (MIa.isBundle() || MIb.isBundle())
+    return false;
+
   const bool isLdStIdxA = isa<AMDGPUMI::VLoadStoreIdxInst>(MIa);
   const bool isLdStIdxB = isa<AMDGPUMI::VLoadStoreIdxInst>(MIb);
   if (isLdStIdxA || isLdStIdxB) {
@@ -3969,9 +3972,6 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   }
 
   if (isLDSDMA(MIa) || isLDSDMA(MIb))
-    return false;
-
-  if (MIa.isBundle() || MIb.isBundle())
     return false;
 
   // TODO: Should we check the address space from the MachineMemOperand? That
@@ -6136,6 +6136,12 @@ SIInstrInfo::getWholeWaveFunctionSetup(MachineFunction &MF) const {
       return &MI;
 
   llvm_unreachable("Couldn't find SI_SETUP_WHOLE_WAVE_FUNC instruction");
+}
+
+bool SIInstrInfo::canUseVGPRIndexing(MachineInstr &MI, unsigned OpNo) const {
+  const MCInstrDesc &Desc = MI.getDesc();
+  const TargetRegisterClass *RC = getRegClass(Desc, OpNo);
+  return RC->contains(AMDGPU::STG_SRCA);
 }
 
 const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,

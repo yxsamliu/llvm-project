@@ -83,10 +83,10 @@ define amdgpu_kernel void @vnbr(ptr addrspace(10) %itp, ptr addrspace(10) %itp_r
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_lshr_b32 s1, s1, 2
 ; GFX13-NEXT:    s_lshr_b32 s0, s0, 2
-; GFX13-NEXT:    s_set_gpr_idx_u32 idx2, s1
-; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, s0
-; GFX13-NEXT:    s_set_vgpr_frames 0x48 ; vsrc0_idx=0 vsrc1_idx=2 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_send_vgpr_next_b32 g1[0], g2[0], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:0
+; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, s1
+; GFX13-NEXT:    s_set_gpr_idx_u32 idx2, s0
+; GFX13-NEXT:    s_set_vgpr_frames 0x84 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=2 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; GFX13-NEXT:    v_send_vgpr_next_b32 g2[0], g1[0], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:0
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.spatial.cluster.send.next(i32 0, ptr addrspace(10) %itp, ptr addrspace(3) @sem,
