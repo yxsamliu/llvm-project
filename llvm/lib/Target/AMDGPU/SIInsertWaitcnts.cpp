@@ -678,10 +678,10 @@ public:
   bool counterOutOfOrder(InstCounterType T) const;
   void simplifyWaitcnt(AMDGPU::Waitcnt &Wait);
   void simplifyWaitcnt(InstCounterType T, unsigned &Count) const;
-  void clearRedundantVmVsrcWait(AMDGPU::Waitcnt &Wait);
   bool hasRedundantXCntWithKmCnt(const AMDGPU::Waitcnt &Wait);
   bool canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait);
   void simplifyXcnt(AMDGPU::Waitcnt &CheckWait, AMDGPU::Waitcnt &UpdateWait);
+  void simplifyVmVsrc(AMDGPU::Waitcnt &Wait);
 
   void determineWait(InstCounterType T, RegInterval Interval,
                      AMDGPU::Waitcnt &Wait) const;
@@ -1270,7 +1270,7 @@ void WaitcntBrackets::simplifyWaitcnt(AMDGPU::Waitcnt &Wait) {
   simplifyWaitcnt(KM_CNT, Wait.KmCnt);
   simplifyXcnt(Wait, Wait);
   simplifyWaitcnt(VA_VDST, Wait.VaVdst);
-  simplifyWaitcnt(VM_VSRC, Wait.VmVsrc);
+  simplifyVmVsrc(Wait);
 }
 
 void WaitcntBrackets::simplifyWaitcnt(InstCounterType T,
@@ -1282,22 +1282,15 @@ void WaitcntBrackets::simplifyWaitcnt(InstCounterType T,
     Count = ~0u;
 }
 
-/// Waiting for some counters implies waiting for VM_VSRC, since an
-/// instruction that decrements a counter on completion would have
-/// decremented VM_VSRC once its VGPR operands had been read. Don't wait
-/// separately on VM_VSRC if waiting on another counter will already do
-/// so implicitly.
-void WaitcntBrackets::clearRedundantVmVsrcWait(AMDGPU::Waitcnt &Wait) {
-  if (Wait.VmVsrc != ~0u) {
-    unsigned MinCount = std::min(
-        {Wait.LoadCnt, Wait.StoreCnt, Wait.SampleCnt, Wait.BvhCnt, Wait.DsCnt});
-
-    if (MinCount != ~0u) {
-      applyWaitcnt(VM_VSRC, MinCount);
-      if (Wait.VmVsrc >= MinCount)
-        Wait.VmVsrc = ~0u;
-    }
-  }
+void WaitcntBrackets::simplifyVmVsrc(AMDGPU::Waitcnt &Wait) {
+  // Waiting for some counters implies waiting for VM_VSRC, since an
+  // instruction that decrements a counter on completion would have
+  // decremented VM_VSRC once its VGPR operands had been read. Make
+  // sure any pending VM_VSRC events are cleared in this case.
+  if (hasPendingEvent(VM_VSRC))
+    applyWaitcnt(VM_VSRC, std::min({Wait.LoadCnt, Wait.StoreCnt, Wait.SampleCnt,
+                                    Wait.BvhCnt, Wait.DsCnt}));
+  simplifyWaitcnt(VM_VSRC, Wait.VmVsrc);
 }
 
 void WaitcntBrackets::determineWait(InstCounterType T, RegInterval Interval,
@@ -2287,10 +2280,6 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // expert scheduling mode.
   if (TII->isVALU(MI))
     Wait.VaVdst = ~0u;
-
-  // Remove any wait on VmVsrc if waiting for other counters
-  // would implicitly do so.
-  ScoreBrackets.clearRedundantVmVsrcWait(Wait);
 
   // Since the translation for VMEM addresses occur in-order, we can apply the
   // XCnt if the current instruction is of VMEM type and has a memory
