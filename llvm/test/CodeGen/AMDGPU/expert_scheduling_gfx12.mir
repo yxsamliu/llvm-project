@@ -437,13 +437,13 @@ body: |
 ...
 
 ---
-# TODO: Remove unnecessary wait on vm_vsrc when load has already completed.
+# Ensure there is no unnecessary wait on vm_vsrc when load has already
+# completed.
 
 # GCN-LABEL: name: test_war_completed_vmem
 # GCN:       GLOBAL_LOAD_DWORD
 # GCN-NEXT:  S_WAIT_LOADCNT 0
 # GCN-NEXT:  V_MOV_B32_e32
-# GCN-NEXT:  S_WAITCNT_DEPCTR 65507
 # GCN-NEXT:  V_MOV_B32_e32
 name: test_war_completed_vmem
 body: |
