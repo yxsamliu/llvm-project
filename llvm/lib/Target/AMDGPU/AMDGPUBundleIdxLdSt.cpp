@@ -700,7 +700,7 @@ void AMDGPUBundleIdxLdSt::lowerLoadIdxBits(MachineInstr &MI) {
 
   const MCInstrDesc &II = STI->get(AMDGPU::V_BFE_U32_e64);
   Register ReadReg = MRI->createVirtualRegister(
-      TRI->getAllocatableClass(TII->getRegClass(II, 0, TRI)));
+      TRI->getAllocatableClass(TII->getRegClass(II, 0)));
 
   auto LoadMIB =
       BuildMI(*MBB, MI, MI.getDebugLoc(), STI->get(AMDGPU::V_LOAD_IDX_B32), ReadReg)
@@ -725,14 +725,14 @@ void AMDGPUBundleIdxLdSt::lowerStoreIdxBits(MachineInstr &MI) {
   // BFM
   const MCInstrDesc &BFMII = STI->get(AMDGPU::V_BFM_B32_e64);
   Register MaskReg = MRI->createVirtualRegister(
-      TRI->getAllocatableClass(TII->getRegClass(BFMII, 0, TRI)));
+      TRI->getAllocatableClass(TII->getRegClass(BFMII, 0)));
   BuildMI(*MBB, MI, MI.getDebugLoc(), BFMII, MaskReg)
       .add(MI.getOperand(3))  // bitsize
       .add(MI.getOperand(4)); // bitoffset
 
   const MCInstrDesc &II = STI->get(AMDGPU::V_BFI_B32_e64);
   Register ReadReg = MRI->createVirtualRegister(
-      TRI->getAllocatableClass(TII->getRegClass(II, 0, TRI)));
+      TRI->getAllocatableClass(TII->getRegClass(II, 0)));
 
   auto LoadMIB =
       BuildMI(*MBB, MI, MI.getDebugLoc(), STI->get(AMDGPU::V_LOAD_IDX_B32), ReadReg)
@@ -746,7 +746,7 @@ void AMDGPUBundleIdxLdSt::lowerStoreIdxBits(MachineInstr &MI) {
   LoadMIB.addMemOperand(LoadMMO);
 
   Register WriteReg = MRI->createVirtualRegister(
-      TRI->getAllocatableClass(TII->getRegClass(II, 0, TRI)));
+      TRI->getAllocatableClass(TII->getRegClass(II, 0)));
 
   // BFI
   auto CoreMIB = BuildMI(*MBB, MI, MI.getDebugLoc(), II, WriteReg);
@@ -839,7 +839,7 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
   SmallVector<Register, 4> DataRegs;
   for (unsigned I = 0; I < NumStores; I++) {
     Register DataReg = MRI->createVirtualRegister(
-        TRI->getAllocatableClass(TII->getRegClass(II, 0, TRI)));
+        TRI->getAllocatableClass(TII->getRegClass(II, 0)));
     CoreMIB.addDef(DataReg);
     DataRegs.push_back(DataReg);
   }
@@ -956,7 +956,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     MachineOperand *UseOfMI = &*MRI->use_nodbg_begin(DefReg);
     if (UseOfMI->getSubReg() != 0)
       continue;
-    if (auto *RC = TII->getRegClass(MI->getDesc(), Def.getOperandNo(), TRI);
+    if (auto *RC = TII->getRegClass(MI->getDesc(), Def.getOperandNo());
         RC && !RC->contains(AMDGPU::STG_SRCA))
       continue;
     auto *StoreMI = dyn_cast<AMDGPUMI::VStoreIdxInst>(UseOfMI->getParent());
@@ -1052,7 +1052,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     Register UseReg = Use.getReg();
     if (!UseReg.isVirtual())
       continue;
-    if (auto *RC = TII->getRegClass(MI->getDesc(), Use.getOperandNo(), TRI);
+    if (auto *RC = TII->getRegClass(MI->getDesc(), Use.getOperandNo());
         RC && !RC->contains(AMDGPU::STG_SRCA))
       continue;
     MachineInstr *DefMI = MRI->getVRegDef(UseReg);

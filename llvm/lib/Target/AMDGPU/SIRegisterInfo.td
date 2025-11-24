@@ -981,20 +981,6 @@ def SReg_64_Encodable : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v
   let Size = 64;
 }
 
-def SReg_1_XEXEC : SIRegisterClass<"AMDGPU", [i1], 32,
-  (add SReg_64_XEXEC, SReg_32_XEXEC)> {
-  let CopyCost = 1;
-  let isAllocatable = 0;
-  let HasSGPR = 1;
-}
-
-def SReg_1 : SIRegisterClass<"AMDGPU", [i1], 32,
-  (add SReg_1_XEXEC, EXEC, EXEC_LO, EXEC_HI)> {
-  let CopyCost = 1;
-  let isAllocatable = 0;
-  let HasSGPR = 1;
-}
-
 multiclass SRegClass<int numRegs,
                      list<ValueType> regTypes,
                      SIRegisterTuples regList,
@@ -1367,6 +1353,34 @@ def RsrcReg128Op : RegisterOperand<RsrcReg32> {
 def VGPR_IDX_IDX_OP : RegisterOperand<VGPR_IDX_IDX_OP_RC> {
 }
 
+def SReg_1_XEXEC : SIRegisterClassLike<0, false, false, true>,
+  RegClassByHwMode<
+    [DefaultMode_Wave64,
+     AlignedVGPRNoAGPRMode_Wave64,
+     AVAlign2LoadStoreMode,
+     DefaultMode_Wave32,
+     AlignedVGPRNoAGPRMode_Wave32],
+    [SReg_64_XEXEC,
+     SReg_64_XEXEC,
+     SReg_64_XEXEC,
+     SReg_32_XM0_XEXEC, // FIXME: Why do the wave32 cases exclude m0?
+     SReg_32_XM0_XEXEC]
+>;
+
+def SReg_1 : SIRegisterClassLike<0, false, false, true>,
+  RegClassByHwMode<
+    [DefaultMode_Wave64,
+     AlignedVGPRNoAGPRMode_Wave64,
+     AVAlign2LoadStoreMode,
+     DefaultMode_Wave32,
+     AlignedVGPRNoAGPRMode_Wave32],
+    [SReg_64,
+     SReg_64,
+     SReg_64,
+     SReg_32,
+     SReg_32]
+>;
+
 //===----------------------------------------------------------------------===//
 //
 //  AlignTarget classes. Artifical classes to swap between
@@ -1374,23 +1388,51 @@ def VGPR_IDX_IDX_OP : RegisterOperand<VGPR_IDX_IDX_OP_RC> {
 //
 //===----------------------------------------------------------------------===//
 
+// We have 3 orthogonal properties to consider. Unfortunately we need
+// to define the cross product of these states, minus unused
+// combinations.
+
 def AV_LdSt_32_Target : RegClassByHwMode<
-    [DefaultMode, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode],
-    [VGPR_32, AV_32, VGPR_32]>, SIRegisterClassLike<32, true, true> {
+    [DefaultMode_Wave64,
+     DefaultMode_Wave32,
+     AVAlign2LoadStoreMode,
+     AlignedVGPRNoAGPRMode_Wave64,
+     AlignedVGPRNoAGPRMode_Wave32],
+    [VGPR_32,
+     VGPR_32,
+     AV_32,
+     VGPR_32,
+     VGPR_32]>,
+    SIRegisterClassLike<32, true, true> {
   let DecoderMethod = "decodeAVLdSt";
 }
 
 def AV_LdSt_32_STAGING_Target : RegClassByHwMode<
-    [DefaultMode, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode],
-    [VGPR_32_STAGING, AV_32_STAGING, VGPR_32_STAGING]>, SIRegisterClassLike<32, true, true> {
+    [DefaultMode_Wave64,
+     DefaultMode_Wave32,
+     AVAlign2LoadStoreMode,
+     AlignedVGPRNoAGPRMode_Wave64,
+     AlignedVGPRNoAGPRMode_Wave32],
+    [VGPR_32_STAGING,
+     VGPR_32_STAGING,
+     AV_32_STAGING,
+     VGPR_32_STAGING,
+     VGPR_32_STAGING]>,
+   SIRegisterClassLike<32, true, true> {
   let DecoderMethod = "decodeAVLdSt";
 }
 
 foreach RegSize = [ 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 512, 576, 1024 ] in {
   def VReg_#RegSize#_STAGING_AlignTarget : SIRegisterClassLike<RegSize, true>,
     RegClassByHwMode<
-      [DefaultMode, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode],
+      [DefaultMode_Wave64,
+       DefaultMode_Wave32,
+       AVAlign2LoadStoreMode,
+       AlignedVGPRNoAGPRMode_Wave64,
+       AlignedVGPRNoAGPRMode_Wave32],
       [!cast<RegisterClass>("VReg_"#RegSize#_STAGING),
+       !cast<RegisterClass>("VReg_"#RegSize#_STAGING),
+       !cast<RegisterClass>("VReg_"#RegSize#_STAGING_Align2),
        !cast<RegisterClass>("VReg_"#RegSize#_STAGING_Align2),
        !cast<RegisterClass>("VReg_"#RegSize#_STAGING_Align2)]> {
      let DecoderMethod = "DecodeVReg_"#RegSize#"RegisterClass";
@@ -1398,45 +1440,59 @@ foreach RegSize = [ 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 512, 57
 
   def AReg_#RegSize#_AlignTarget : SIRegisterClassLike<RegSize, false, true>,
     RegClassByHwMode<
-      [DefaultMode, AVAlign2LoadStoreMode, /*Unused combination*/],
+      [DefaultMode_Wave64, /*unused combination*/ AVAlign2LoadStoreMode, /*Unused combination*/ /*Unused combination*/],
       [!cast<RegisterClass>("AReg_"#RegSize),
+       /*unused combination*/
        !cast<RegisterClass>("AReg_"#RegSize#_Align2)
+       /*Unused combination*/
        /*Unused combination*/]> {
      let DecoderMethod = "DecodeAReg_"#RegSize#"RegisterClass";
    }
 
   def AV_#RegSize#_STAGING_AlignTarget : SIRegisterClassLike<RegSize, true, true>,
     RegClassByHwMode<
-      [DefaultMode, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode],
+      [DefaultMode_Wave32,
+       DefaultMode_Wave64,
+       AVAlign2LoadStoreMode,
+       AlignedVGPRNoAGPRMode_Wave64,
+       AlignedVGPRNoAGPRMode_Wave32],
       [!cast<RegisterClass>("AV_"#RegSize#_STAGING),
+       !cast<RegisterClass>("AV_"#RegSize#_STAGING),
        !cast<RegisterClass>("AV_"#RegSize#_STAGING_Align2),
+       !cast<RegisterClass>("VReg_"#RegSize#_STAGING_Align2),
        !cast<RegisterClass>("VReg_"#RegSize#_STAGING_Align2)]> {
      let DecoderMethod = "DecodeAV_"#RegSize#"RegisterClass";
   }
 
   def AV_LdSt_#RegSize#_STAGING_AlignTarget : SIRegisterClassLike<RegSize, true, true>,
     RegClassByHwMode<
-      [DefaultMode, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode],
+      [DefaultMode_Wave64, DefaultMode_Wave32, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode_Wave64, AlignedVGPRNoAGPRMode_Wave32],
       [!cast<RegisterClass>("VReg_"#RegSize#_STAGING),
+       !cast<RegisterClass>("VReg_"#RegSize#_STAGING),
        !cast<RegisterClass>("AV_"#RegSize#_STAGING_Align2),
+       !cast<RegisterClass>("VReg_"#RegSize#_STAGING_Align2),
        !cast<RegisterClass>("VReg_"#RegSize#_STAGING_Align2)]> {
     let DecoderMethod = "decodeAVLdSt";
   }
 
   def AV_LdSt_#RegSize#_STAGING_Align2 : SIRegisterClassLike<RegSize, true, true>,
     RegClassByHwMode<
-      [DefaultMode, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode],
+      [DefaultMode_Wave64, DefaultMode_Wave32, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode_Wave64, AlignedVGPRNoAGPRMode_Wave32],
       [!cast<RegisterClass>("VReg_"#RegSize#_STAGING_Align2),
+       !cast<RegisterClass>("VReg_"#RegSize#_STAGING_Align2),
        !cast<RegisterClass>("AV_"#RegSize#_STAGING_Align2),
+       !cast<RegisterClass>("VReg_"#RegSize#_STAGING_Align2),
        !cast<RegisterClass>("VReg_"#RegSize#_STAGING_Align2)]> {
     let DecoderMethod = "decodeAVLdSt";
   }
 
   def AV_LdSt_#RegSize#_STAGING_Align1 : SIRegisterClassLike<RegSize, true, true>,
     RegClassByHwMode<
-        [DefaultMode, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode],
+        [DefaultMode_Wave64, DefaultMode_Wave32, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode_Wave64, AlignedVGPRNoAGPRMode_Wave32],
         [!cast<RegisterClass>("VReg_"#RegSize#_STAGING),
+         !cast<RegisterClass>("VReg_"#RegSize#_STAGING),
          !cast<RegisterClass>("AV_"#RegSize#_STAGING),
+         !cast<RegisterClass>("VReg_"#RegSize#_STAGING),
          !cast<RegisterClass>("VReg_"#RegSize#_STAGING)]> {
     let DecoderMethod = "decodeAVLdSt";
   }
@@ -1444,8 +1500,8 @@ foreach RegSize = [ 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 512, 57
 
 def VS_64_STAGING_AlignTarget : SIRegisterClassLike<64, true, false, true>,
   RegClassByHwMode<
-      [DefaultMode, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode],
-      [VS_64, VS_64_Align2, VS_64_Align2]> {
+      [DefaultMode_Wave64, DefaultMode_Wave32, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode_Wave64, AlignedVGPRNoAGPRMode_Wave32],
+      [VS_64,              VS_64,              VS_64_Align2,          VS_64_Align2,                 VS_64_Align2]> {
   let DecoderMethod = "decodeSrcRegOrImm9";
 }
 

@@ -386,8 +386,8 @@ void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
 
 // \returns a low 256 vgpr representing a high vgpr \p Reg [v256..v1023] or
 // \p Reg itself otherwise.
-static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCSubtargetInfo &STI,
-                                   const MCRegisterInfo &MRI) {
+static MCRegister getRegForPrinting(MCPhysReg Reg, const MCSubtargetInfo &STI,
+                                    const MCRegisterInfo &MRI) {
   unsigned Enc = MRI.getEncodingValue(Reg);
   unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
   if (Idx < 0x100)
@@ -423,10 +423,10 @@ static unsigned getIdxLocFromTable(unsigned OpNo, const MCInstrDesc &Desc) {
 }
 
 // Restore MSBs of a VGPR above 255 from the MCInstrAnalysis.
-static MCPhysReg getRegFromMIA(MCPhysReg Reg, unsigned OpNo,
-                               const MCInstrDesc &Desc,
-                               const MCRegisterInfo &MRI,
-                               const AMDGPUMCInstrAnalysis &MIA) {
+static MCRegister getRegFromMIA(MCRegister Reg, unsigned OpNo,
+                                const MCInstrDesc &Desc,
+                                const MCRegisterInfo &MRI,
+                                const AMDGPUMCInstrAnalysis &MIA) {
   unsigned VgprMSBs = MIA.getVgprMSBs();
   if (!VgprMSBs)
     return Reg;
@@ -507,12 +507,12 @@ void AMDGPUInstPrinter::printRegOperand(MCRegister Reg,
   }
 #endif
 
-  unsigned PrintReg = getRegForPrinting(Reg, STI, MRI);
+  MCRegister PrintReg = getRegForPrinting(Reg, STI, MRI);
   std::string PrintRegName = getRegisterName(PrintReg);
   modifyVGPRNameUsingIndex(PrintRegName, IdxReg);
   O << PrintRegName;
 
-  if (PrintReg != Reg.id()) {
+  if (PrintReg != Reg) {
     std::string RegName = getRegisterName(Reg);
     modifyVGPRNameUsingIndex(RegName, IdxReg);
     O << " /*" << RegName << "*/";
@@ -931,14 +931,24 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     // Intention: print disassembler message when invalid code is decoded,
     // for example sgpr register used in VReg or VISrc(VReg or imm) operand.
     const MCOperandInfo &OpInfo = Desc.operands()[OpNo];
-    int16_t RCID = MII.getOpRegClassID(
-        OpInfo, STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
-    if (RCID != -1) {
+    if (OpInfo.RegClass != -1) {
+      int16_t RCID = MII.getOpRegClassID(
+          OpInfo, STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
       const MCRegisterClass &RC = MRI.getRegClass(RCID);
       auto Reg = mc2PseudoReg(Op.getReg());
       if (!RC.contains(Reg) && !isInlineValue(Reg)) {
-        O << "/*Invalid register, operand has \'" << MRI.getRegClassName(&RC)
-          << "\' register class*/";
+        bool IsWaveSizeOp = OpInfo.isLookupRegClassByHwMode() &&
+                            (OpInfo.RegClass == AMDGPU::SReg_1 ||
+                             OpInfo.RegClass == AMDGPU::SReg_1_XEXEC);
+        // Suppress this comment for a mismatched wavesize. Some users expect to
+        // be able to assemble and disassemble modules with mixed wavesizes, but
+        // we do not know the subtarget in different functions in MC.
+        //
+        // TODO: Should probably print it anyway, maybe a more specific version.
+        if (!IsWaveSizeOp) {
+          O << "/*Invalid register, operand has \'" << MRI.getRegClassName(&RC)
+            << "\' register class*/";
+        }
       }
     }
   } else if (Op.isImm()) {
