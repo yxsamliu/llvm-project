@@ -419,6 +419,22 @@ public:
 
       DelayType Type = getDelayType(MI);
 
+      // Do not insert s_delay_alu for an XDL instruction reading the
+      // accumulator output of a previous XDL instructions as its accumulator
+      // input.
+      if (Type == XDL && (SIInstrInfo::isConvolve(MI) || SII->isXDLWMMA(MI))) {
+        auto Name = SIInstrInfo::isConvolve(MI) ? AMDGPU::OpName::src0
+                                                : AMDGPU::OpName::srcC;
+        MachineOperand *Accum = SII->getNamedOperand(MI, Name);
+        if (Accum->isReg()) {
+          for (MCRegUnit Unit : TRI->regunits(Accum->getReg())) {
+            auto It = State.find(Unit);
+            if (It != State.end())
+              State[Unit].XDLNum = DelayInfo::XDL_MAX;
+          }
+        }
+      }
+
       if (instructionWaitsForSGPRWrites(MI)) {
         auto It = State.find(LastSGPRFromVALU);
         if (It != State.end()) {
