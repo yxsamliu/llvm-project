@@ -1877,17 +1877,14 @@ let SubtargetPredicate = HasTensorCvtLutInsts in {
   defm V_PERM_PK16_B8_U4 : VOP3Inst<"v_perm_pk16_b8_u4", VOP3_V4I32_I64_I64_V2I32, int_amdgcn_perm_pk16_b8_u4>;
 } // End SubtargetPredicate = HasTensorCvtLutInsts
 
-let SubtargetPredicate = HasPermPkU2Insts in {
+let SubtargetPredicate = HasPermPkU2U3Insts in {
   defm V_PERM_PK16_B4_U2 : VOP3Inst<"v_perm_pk16_b4_u2", VOP_V2I32_I16_I32, int_amdgcn_perm_pk16_b4_u2>;
   defm V_PERM_PK16_B6_U2 : VOP3Inst<"v_perm_pk16_b6_u2", VOP_V3I32_I32_I32, int_amdgcn_perm_pk16_b6_u2>;
   defm V_PERM_PK16_B8_U2 : VOP3Inst<"v_perm_pk16_b8_u2", VOP_V4I32_I32_I32, int_amdgcn_perm_pk16_b8_u2>;
-} // End SubtargetPredicate = HasPermPkU2Insts
-
-let SubtargetPredicate = HasPermPkU3Insts in {
   defm V_PERM_PK32_B4_U3 : VOP3Inst<"v_perm_pk32_b4_u3", VOP_V4I32_I32_I32_I64, int_amdgcn_perm_pk32_b4_u3>;
   defm V_PERM_PK32_B6_U3 : VOP3Inst<"v_perm_pk32_b6_u3", VOP_V6I32_V2I32_I32_I64, int_amdgcn_perm_pk32_b6_u3>;
   defm V_PERM_PK32_B8_U3 : VOP3Inst<"v_perm_pk32_b8_u3", VOP_V8I32_V2I32_I32_I64, int_amdgcn_perm_pk32_b8_u3>;
-} // End SubtargetPredicate = HasPermPkU3Insts
+} // End SubtargetPredicate = HasPermPkU2U3Insts
 
 class Cvt_Scale_Sr_F32ToBF16F16_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType DstTy> : GCNPat<
     (DstTy (node DstTy:$vdst_in, f32:$src0, i32:$src1, timm:$word_sel)),

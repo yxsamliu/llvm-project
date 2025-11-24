@@ -958,16 +958,10 @@ def FeatureWMMA2048bInsts : SubtargetFeature<"wmma-2048b-insts",
   "Has WMMA instructions where A, B, C, or D matrix can be 2048-bits"
 >;
 
-def FeaturePermPkU2Insts : SubtargetFeature<"perm-pk-u2-insts",
-  "HasPermPkU2Insts",
+def FeaturePermPkU2U3Insts : SubtargetFeature<"perm-pk-u2u3-insts",
+  "HasPermPkU2U3Insts",
   "true",
-  "Has permute packed u2 instructions"
->;
-
-def FeaturePermPkU3Insts : SubtargetFeature<"perm-pk-u3-insts",
-  "HasPermPkU3Insts",
-  "true",
-  "Has permute packed u3 instructions"
+  "Has permute packed u2 and u3 instructions"
 >;
 
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
@@ -2341,8 +2335,7 @@ def FeatureISAVersion12_60 : FeatureSet<
     [FeatureGFX1260Insts,
      FeatureWMMA2048bInsts,
      FeatureWavegroups,
-     FeaturePermPkU2Insts,
-     FeaturePermPkU3Insts])>;
+     FeaturePermPkU2U3Insts])>;
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
@@ -3135,11 +3128,8 @@ def HasWMMA128bInsts : Predicate<"Subtarget->hasWMMA128bInsts()">,
 def HasWMMA2048bInsts : Predicate<"Subtarget->hasWMMA2048bInsts()">,
   AssemblerPredicate<(all_of FeatureWMMA2048bInsts)>;
 
-def HasPermPkU2Insts : Predicate<"Subtarget->hasPermPkU2Insts()">,
-  AssemblerPredicate<(all_of FeaturePermPkU2Insts)>;
-
-def HasPermPkU3Insts : Predicate<"Subtarget->hasPermPkU3Insts()">,
-  AssemblerPredicate<(all_of FeaturePermPkU3Insts)>;
+def HasPermPkU2U3Insts : Predicate<"Subtarget->hasPermPkU2U3Insts()">,
+  AssemblerPredicate<(all_of FeaturePermPkU2U3Insts)>;
 
 def HasFP8E5M3Insts : Predicate<"Subtarget->hasFP8E5M3Insts()">,
   AssemblerPredicate<(all_of FeatureFP8E5M3Insts)>;

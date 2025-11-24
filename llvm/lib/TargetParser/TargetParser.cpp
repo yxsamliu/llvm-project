@@ -477,8 +477,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
   case GK_GFX1260:
     Features["gfx1260-insts"] = true;
     Features["wavegroups"] = true;
-    Features["perm-pk-u2-insts"] = true;
-    Features["perm-pk-u3-insts"] = true;
+    Features["perm-pk-u2u3-insts"] = true;
     [[fallthrough]];
   case GK_GFX1251:
     if (Kind == GK_GFX1260)
