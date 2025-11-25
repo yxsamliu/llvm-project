@@ -125,7 +125,7 @@ bool eliminateConstantExprUsesOfLDSFromAllInstructions(Module &M) {
 }
 
 void getUsesOfLDSByFunction(const CallGraph &CG, Module &M,
-                            FunctionVariableMap &kernels,
+                            FunctionVariableMap &Kernels,
                             FunctionVariableMap &Functions) {
   // Get uses from the current function, excluding uses by called Functions
   // Two output variables to avoid walking the globals list twice
@@ -136,7 +136,7 @@ void getUsesOfLDSByFunction(const CallGraph &CG, Module &M,
       if (auto *I = dyn_cast<Instruction>(V)) {
         Function *F = I->getFunction();
         if (isKernelLDS(F))
-          kernels[F].insert(&GV);
+          Kernels[F].insert(&GV);
         else
           Functions[F].insert(&GV);
       }
@@ -207,11 +207,11 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
     if (Func.isDeclaration() || isKernelLDS(&Func))
       continue;
 
-    DenseSet<Function *> seen; // catches cycles
-    SmallVector<Function *, 4> wip = {&Func};
+    DenseSet<Function *> Seen; // catches cycles
+    SmallVector<Function *, 4> Wip = {&Func};
 
-    while (!wip.empty()) {
-      Function *F = wip.pop_back_val();
+    while (!Wip.empty()) {
+      Function *F = Wip.pop_back_val();
 
       // Can accelerate this by referring to transitive map for functions that
       // have already been computed, with more care than this
@@ -220,9 +220,9 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
       for (const CallGraphNode::CallRecord &R : *CG[F]) {
         Function *Ith = R.second->getFunction();
         if (Ith) {
-          if (!seen.contains(Ith)) {
-            seen.insert(Ith);
-            wip.push_back(Ith);
+          if (!Seen.contains(Ith)) {
+            Seen.insert(Ith);
+            Wip.push_back(Ith);
           }
         }
       }
@@ -261,7 +261,7 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
         Function *F = WorkList.pop_back_val();
         if (F->isDeclaration())
           continue;
-          
+
         for (const CallGraphNode::CallRecord &CallRecord : *CG[F]) {
           if (!CallRecord.second)
             continue;
@@ -458,9 +458,9 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
 
 static bool allPtrInputsInSetOrNull(const Instruction *Inst,
                                     DenseSet<Value *> &Set) {
-  unsigned i = isa<SelectInst>(Inst) ? 1 : 0;
-  for (; i < Inst->getNumOperands(); ++i) {
-    Value *Op = Inst->getOperand(i);
+  unsigned I = isa<SelectInst>(Inst) ? 1 : 0;
+  for (; I < Inst->getNumOperands(); ++I) {
+    Value *Op = Inst->getOperand(I);
 
     if (isa<ConstantPointerNull>(Op) || isa<UndefValue>(Op))
       continue;
@@ -538,7 +538,7 @@ bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
       for (auto &U : Cur->uses()) {
         Uses.push_back(&U);
 
-        auto User = U.getUser();
+        auto *User = U.getUser();
         if (isa<GEPOperator, AddrSpaceCastOperator, PHINode, SelectInst>(
                 User)) {
           if (Pointers.insert(User).second)
