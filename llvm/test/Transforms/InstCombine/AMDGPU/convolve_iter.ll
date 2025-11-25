@@ -393,3 +393,38 @@ define void @convolve_base_then_wrong_offset(){
   store <8 x half> %7, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_storage, i32 1216), align 16
   ret void
 }
+
+define <4 x float> @convolve_iter_weights_vec_ty(<4 x half> %weights_0, <4 x half> %weights_1, <4 x half> %weights_2, <4 x half> %weights_3, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> %tensor_3) {
+; CHECK-LABEL: define <4 x float> @convolve_iter_weights_vec_ty(
+; CHECK-SAME: <4 x half> [[WEIGHTS_0:%.*]], <4 x half> [[WEIGHTS_1:%.*]], <4 x half> [[WEIGHTS_2:%.*]], <4 x half> [[WEIGHTS_3:%.*]], <2 x half> [[TENSOR_0:%.*]], <2 x half> [[TENSOR_1:%.*]], <2 x half> [[TENSOR_2:%.*]], <2 x half> [[TENSOR_3:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x half> [[WEIGHTS_2]], <4 x half> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x half> [[WEIGHTS_3]], <4 x half> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x half> [[WEIGHTS_0]], <4 x half> [[WEIGHTS_1]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x half> [[TMP3]], <16 x half> [[TMP1]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <16 x half> [[TMP4]], <16 x half> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19>
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v16f16.v2f16(<4 x float> zeroinitializer, <16 x half> [[TMP5]], <2 x half> [[TENSOR_0]], <2 x half> [[TENSOR_1]], <2 x half> [[TENSOR_2]], <2 x half> [[TENSOR_3]], i32 12291, i1 false)
+; CHECK-NEXT:    ret <4 x float> [[TMP6]]
+;
+  %1 = call contract <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v4f16.v2f16(<4 x float> zeroinitializer, <4 x half> %weights_0, <2 x half> %tensor_0, <2 x half> undef, <2 x half> undef, <2 x half> undef, i32 3, i1 false)
+  %2 = call contract <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v4f16.v2f16(<4 x float> %1, <4 x half> %weights_1, <2 x half> %tensor_1, <2 x half> undef, <2 x half> undef, <2 x half> undef, i32 3, i1 false)
+  %3 = call contract <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v4f16.v2f16(<4 x float> %2, <4 x half> %weights_2, <2 x half> %tensor_2, <2 x half> undef, <2 x half> undef, <2 x half> undef, i32 3, i1 false)
+  %4 = call contract <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v4f16.v2f16(<4 x float> %3, <4 x half> %weights_3, <2 x half> %tensor_3, <2 x half> undef, <2 x half> undef, <2 x half> undef, i32 3, i1 false)
+  ret <4 x float> %4
+}
+
+define <4 x float> @convolve_iter_weights_ty_missmatch(<5 x half> %weights_0, <4 x half> %weights_1, <4 x half> %weights_2, <4 x half> %weights_3, <2 x half> %tensor_0, <2 x half> %tensor_1, <2 x half> %tensor_2, <2 x half> %tensor_3) {
+; CHECK-LABEL: define <4 x float> @convolve_iter_weights_ty_missmatch(
+; CHECK-SAME: <5 x half> [[WEIGHTS_0:%.*]], <4 x half> [[WEIGHTS_1:%.*]], <4 x half> [[WEIGHTS_2:%.*]], <4 x half> [[WEIGHTS_3:%.*]], <2 x half> [[TENSOR_0:%.*]], <2 x half> [[TENSOR_1:%.*]], <2 x half> [[TENSOR_2:%.*]], <2 x half> [[TENSOR_3:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x half> [[WEIGHTS_3]], <4 x half> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = call contract <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v5f16.v2f16(<4 x float> zeroinitializer, <5 x half> [[WEIGHTS_0]], <2 x half> [[TENSOR_0]], <2 x half> undef, <2 x half> undef, <2 x half> undef, i32 3, i1 false)
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x half> [[WEIGHTS_1]], <4 x half> [[WEIGHTS_2]], <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <12 x half> [[TMP3]], <12 x half> [[TMP1]], <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v12f16.v2f16(<4 x float> [[TMP2]], <12 x half> [[TMP4]], <2 x half> [[TENSOR_1]], <2 x half> [[TENSOR_2]], <2 x half> [[TENSOR_3]], <2 x half> poison, i32 8195, i1 false)
+; CHECK-NEXT:    ret <4 x float> [[TMP5]]
+;
+  %1 = call contract <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v5f16.v2f16(<4 x float> zeroinitializer, <5 x half> %weights_0, <2 x half> %tensor_0, <2 x half> undef, <2 x half> undef, <2 x half> undef, i32 3, i1 false)
+  %2 = call contract <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v4f16.v2f16(<4 x float> %1, <4 x half> %weights_1, <2 x half> %tensor_1, <2 x half> undef, <2 x half> undef, <2 x half> undef, i32 3, i1 false)
+  %3 = call contract <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v4f16.v2f16(<4 x float> %2, <4 x half> %weights_2, <2 x half> %tensor_2, <2 x half> undef, <2 x half> undef, <2 x half> undef, i32 3, i1 false)
+  %4 = call contract <4 x float> @llvm.amdgcn.convolve.f32.f16.1x1.v4f32.v4f32.v4f16.v2f16(<4 x float> %3, <4 x half> %weights_3, <2 x half> %tensor_3, <2 x half> undef, <2 x half> undef, <2 x half> undef, i32 3, i1 false)
+  ret <4 x float> %4
+}
