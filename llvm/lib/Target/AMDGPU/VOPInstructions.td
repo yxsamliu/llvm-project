@@ -1564,8 +1564,8 @@ class VOP3_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_Pr
 
 }
 
-class VOP3_Profile_NoInline_Src<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : 
-  VOP3_Profile_Base<P, Features> {
+class VOP3_Profile_NoInline_Src<VOPProfile P> : 
+  VOP3_Profile_Base<P, VOP3_REGULAR> {
   let IsSingle = 1;
   let Src0RC32 = getVOP3NoInlineSrcForVT<P.ArgVT[1], P.IsTrue16>.ret;
   let Src1RC32 = getVOP3NoInlineSrcForVT<P.ArgVT[2], P.IsTrue16>.ret;

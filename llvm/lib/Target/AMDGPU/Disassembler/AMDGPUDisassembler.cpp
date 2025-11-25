@@ -758,7 +758,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
           tryDecodeInst(DecoderTableGFX90A64, MI, QW, Address, CS))
         break;
 
-      if (STI.hasFeature(AMDGPU::FeatureGFX1260Insts) &&
+      if (isGFX1260Only() &&
           tryDecodeInst(DecoderTableGFX1260_FAKE1664, MI, QW, Address, CS))
         break;
 
@@ -2433,6 +2433,10 @@ bool AMDGPUDisassembler::isGFX12() const {
 
 bool AMDGPUDisassembler::isGFX12Plus() const {
   return AMDGPU::isGFX12Plus(STI);
+}
+
+bool AMDGPUDisassembler::isGFX1260Only() const {
+  return STI.hasFeature(AMDGPU::FeatureGFX1260Insts);
 }
 
 bool AMDGPUDisassembler::isGFX1250Only() const {
