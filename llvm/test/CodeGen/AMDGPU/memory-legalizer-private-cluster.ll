@@ -188,7 +188,6 @@ define amdgpu_kernel void @private_cluster_unordered_load(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -219,7 +218,6 @@ define amdgpu_kernel void @private_cluster_unordered_load(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -426,7 +424,6 @@ define amdgpu_kernel void @private_cluster_monotonic_load(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -457,7 +454,6 @@ define amdgpu_kernel void @private_cluster_monotonic_load(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -664,7 +660,6 @@ define amdgpu_kernel void @private_cluster_acquire_load(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -696,7 +691,6 @@ define amdgpu_kernel void @private_cluster_acquire_load(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -904,7 +898,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_load(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -938,7 +931,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_load(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -1130,7 +1122,6 @@ define amdgpu_kernel void @private_cluster_unordered_store(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -1161,7 +1152,6 @@ define amdgpu_kernel void @private_cluster_unordered_store(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -1346,7 +1336,6 @@ define amdgpu_kernel void @private_cluster_monotonic_store(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -1377,7 +1366,6 @@ define amdgpu_kernel void @private_cluster_monotonic_store(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -1562,7 +1550,6 @@ define amdgpu_kernel void @private_cluster_release_store(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -1595,7 +1582,6 @@ define amdgpu_kernel void @private_cluster_release_store(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -1784,7 +1770,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_store(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -1817,7 +1802,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_store(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -2006,7 +1990,6 @@ define amdgpu_kernel void @private_cluster_monotonic_atomicrmw(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -2037,7 +2020,6 @@ define amdgpu_kernel void @private_cluster_monotonic_atomicrmw(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -2222,7 +2204,6 @@ define amdgpu_kernel void @private_cluster_acquire_atomicrmw(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -2255,7 +2236,6 @@ define amdgpu_kernel void @private_cluster_acquire_atomicrmw(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -2442,7 +2422,6 @@ define amdgpu_kernel void @private_cluster_release_atomicrmw(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -2475,7 +2454,6 @@ define amdgpu_kernel void @private_cluster_release_atomicrmw(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -2664,7 +2642,6 @@ define amdgpu_kernel void @private_cluster_acq_rel_atomicrmw(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -2699,7 +2676,6 @@ define amdgpu_kernel void @private_cluster_acq_rel_atomicrmw(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -2890,7 +2866,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_atomicrmw(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -2925,7 +2900,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_atomicrmw(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -3170,7 +3144,6 @@ define amdgpu_kernel void @private_cluster_acquire_ret_atomicrmw(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[2:3], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[2:3]
@@ -3204,7 +3177,6 @@ define amdgpu_kernel void @private_cluster_acquire_ret_atomicrmw(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s0
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -3447,7 +3419,6 @@ define amdgpu_kernel void @private_cluster_acq_rel_ret_atomicrmw(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[2:3], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[2:3]
@@ -3483,7 +3454,6 @@ define amdgpu_kernel void @private_cluster_acq_rel_ret_atomicrmw(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s0
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -3730,7 +3700,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_ret_atomicrmw(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[2:3], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[2:3]
@@ -3766,7 +3735,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_ret_atomicrmw(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s0
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -4046,7 +4014,6 @@ define amdgpu_kernel void @private_cluster_monotonic_monotonic_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -4083,7 +4050,6 @@ define amdgpu_kernel void @private_cluster_monotonic_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -4359,7 +4325,6 @@ define amdgpu_kernel void @private_cluster_acquire_monotonic_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -4398,7 +4363,6 @@ define amdgpu_kernel void @private_cluster_acquire_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -4676,7 +4640,6 @@ define amdgpu_kernel void @private_cluster_release_monotonic_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -4715,7 +4678,6 @@ define amdgpu_kernel void @private_cluster_release_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -4995,7 +4957,6 @@ define amdgpu_kernel void @private_cluster_acq_rel_monotonic_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -5036,7 +4997,6 @@ define amdgpu_kernel void @private_cluster_acq_rel_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -5318,7 +5278,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_monotonic_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -5359,7 +5318,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -5641,7 +5599,6 @@ define amdgpu_kernel void @private_cluster_monotonic_acquire_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -5680,7 +5637,6 @@ define amdgpu_kernel void @private_cluster_monotonic_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -5958,7 +5914,6 @@ define amdgpu_kernel void @private_cluster_acquire_acquire_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -5997,7 +5952,6 @@ define amdgpu_kernel void @private_cluster_acquire_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -6275,7 +6229,6 @@ define amdgpu_kernel void @private_cluster_release_acquire_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -6316,7 +6269,6 @@ define amdgpu_kernel void @private_cluster_release_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -6598,7 +6550,6 @@ define amdgpu_kernel void @private_cluster_acq_rel_acquire_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -6639,7 +6590,6 @@ define amdgpu_kernel void @private_cluster_acq_rel_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -6921,7 +6871,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_acquire_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -6962,7 +6911,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -7244,7 +7192,6 @@ define amdgpu_kernel void @private_cluster_monotonic_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -7285,7 +7232,6 @@ define amdgpu_kernel void @private_cluster_monotonic_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -7567,7 +7513,6 @@ define amdgpu_kernel void @private_cluster_acquire_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -7608,7 +7553,6 @@ define amdgpu_kernel void @private_cluster_acquire_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -7890,7 +7834,6 @@ define amdgpu_kernel void @private_cluster_release_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -7931,7 +7874,6 @@ define amdgpu_kernel void @private_cluster_release_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -8213,7 +8155,6 @@ define amdgpu_kernel void @private_cluster_acq_rel_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -8254,7 +8195,6 @@ define amdgpu_kernel void @private_cluster_acq_rel_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -8536,7 +8476,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -8577,7 +8516,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -8887,7 +8825,6 @@ define amdgpu_kernel void @private_cluster_monotonic_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -8926,7 +8863,6 @@ define amdgpu_kernel void @private_cluster_monotonic_monotonic_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -9234,7 +9170,6 @@ define amdgpu_kernel void @private_cluster_acquire_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -9274,7 +9209,6 @@ define amdgpu_kernel void @private_cluster_acquire_monotonic_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -9583,7 +9517,6 @@ define amdgpu_kernel void @private_cluster_release_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -9624,7 +9557,6 @@ define amdgpu_kernel void @private_cluster_release_monotonic_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -9936,7 +9868,6 @@ define amdgpu_kernel void @private_cluster_acq_rel_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -9978,7 +9909,6 @@ define amdgpu_kernel void @private_cluster_acq_rel_monotonic_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -10291,7 +10221,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -10333,7 +10262,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_monotonic_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -10646,7 +10574,6 @@ define amdgpu_kernel void @private_cluster_monotonic_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -10686,7 +10613,6 @@ define amdgpu_kernel void @private_cluster_monotonic_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -10995,7 +10921,6 @@ define amdgpu_kernel void @private_cluster_acquire_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -11035,7 +10960,6 @@ define amdgpu_kernel void @private_cluster_acquire_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -11344,7 +11268,6 @@ define amdgpu_kernel void @private_cluster_release_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -11386,7 +11309,6 @@ define amdgpu_kernel void @private_cluster_release_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -11699,7 +11621,6 @@ define amdgpu_kernel void @private_cluster_acq_rel_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -11741,7 +11662,6 @@ define amdgpu_kernel void @private_cluster_acq_rel_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -12054,7 +11974,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -12096,7 +12015,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -12409,7 +12327,6 @@ define amdgpu_kernel void @private_cluster_monotonic_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -12451,7 +12368,6 @@ define amdgpu_kernel void @private_cluster_monotonic_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -12764,7 +12680,6 @@ define amdgpu_kernel void @private_cluster_acquire_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -12806,7 +12721,6 @@ define amdgpu_kernel void @private_cluster_acquire_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -13119,7 +13033,6 @@ define amdgpu_kernel void @private_cluster_release_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -13161,7 +13074,6 @@ define amdgpu_kernel void @private_cluster_release_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -13474,7 +13386,6 @@ define amdgpu_kernel void @private_cluster_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -13516,7 +13427,6 @@ define amdgpu_kernel void @private_cluster_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -13829,7 +13739,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -13871,7 +13780,6 @@ define amdgpu_kernel void @private_cluster_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -14089,7 +13997,6 @@ define amdgpu_kernel void @private_cluster_one_as_unordered_load(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -14120,7 +14027,6 @@ define amdgpu_kernel void @private_cluster_one_as_unordered_load(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -14327,7 +14233,6 @@ define amdgpu_kernel void @private_cluster_one_as_monotonic_load(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -14358,7 +14263,6 @@ define amdgpu_kernel void @private_cluster_one_as_monotonic_load(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -14565,7 +14469,6 @@ define amdgpu_kernel void @private_cluster_one_as_acquire_load(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -14598,7 +14501,6 @@ define amdgpu_kernel void @private_cluster_one_as_acquire_load(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -14807,7 +14709,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_load(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -14842,7 +14743,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_load(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -15035,7 +14935,6 @@ define amdgpu_kernel void @private_cluster_one_as_unordered_store(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -15066,7 +14965,6 @@ define amdgpu_kernel void @private_cluster_one_as_unordered_store(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -15251,7 +15149,6 @@ define amdgpu_kernel void @private_cluster_one_as_monotonic_store(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -15282,7 +15179,6 @@ define amdgpu_kernel void @private_cluster_one_as_monotonic_store(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -15467,7 +15363,6 @@ define amdgpu_kernel void @private_cluster_one_as_release_store(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -15500,7 +15395,6 @@ define amdgpu_kernel void @private_cluster_one_as_release_store(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -15689,7 +15583,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_store(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -15722,7 +15615,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_store(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -15911,7 +15803,6 @@ define amdgpu_kernel void @private_cluster_one_as_monotonic_atomicrmw(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -15942,7 +15833,6 @@ define amdgpu_kernel void @private_cluster_one_as_monotonic_atomicrmw(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -16127,7 +16017,6 @@ define amdgpu_kernel void @private_cluster_one_as_acquire_atomicrmw(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -16160,7 +16049,6 @@ define amdgpu_kernel void @private_cluster_one_as_acquire_atomicrmw(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -16347,7 +16235,6 @@ define amdgpu_kernel void @private_cluster_one_as_release_atomicrmw(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -16380,7 +16267,6 @@ define amdgpu_kernel void @private_cluster_one_as_release_atomicrmw(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -16569,7 +16455,6 @@ define amdgpu_kernel void @private_cluster_one_as_acq_rel_atomicrmw(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -16604,7 +16489,6 @@ define amdgpu_kernel void @private_cluster_one_as_acq_rel_atomicrmw(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -16795,7 +16679,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_atomicrmw(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s1, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -16830,7 +16713,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_atomicrmw(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s1, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -17075,7 +16957,6 @@ define amdgpu_kernel void @private_cluster_one_as_acquire_ret_atomicrmw(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[2:3], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[2:3]
@@ -17110,7 +16991,6 @@ define amdgpu_kernel void @private_cluster_one_as_acquire_ret_atomicrmw(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s0
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -17354,7 +17234,6 @@ define amdgpu_kernel void @private_cluster_one_as_acq_rel_ret_atomicrmw(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[2:3], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[2:3]
@@ -17391,7 +17270,6 @@ define amdgpu_kernel void @private_cluster_one_as_acq_rel_ret_atomicrmw(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s0
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -17639,7 +17517,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_ret_atomicrmw(
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[2:3], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[2:3]
@@ -17676,7 +17553,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_ret_atomicrmw(
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s0
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -17957,7 +17833,6 @@ define amdgpu_kernel void @private_cluster_one_as_monotonic_monotonic_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -17994,7 +17869,6 @@ define amdgpu_kernel void @private_cluster_one_as_monotonic_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -18270,7 +18144,6 @@ define amdgpu_kernel void @private_cluster_one_as_acquire_monotonic_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -18309,7 +18182,6 @@ define amdgpu_kernel void @private_cluster_one_as_acquire_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -18587,7 +18459,6 @@ define amdgpu_kernel void @private_cluster_one_as_release_monotonic_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -18626,7 +18497,6 @@ define amdgpu_kernel void @private_cluster_one_as_release_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -18906,7 +18776,6 @@ define amdgpu_kernel void @private_cluster_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -18947,7 +18816,6 @@ define amdgpu_kernel void @private_cluster_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -19229,7 +19097,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -19270,7 +19137,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -19552,7 +19418,6 @@ define amdgpu_kernel void @private_cluster_one_as_monotonic_acquire_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -19591,7 +19456,6 @@ define amdgpu_kernel void @private_cluster_one_as_monotonic_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -19869,7 +19733,6 @@ define amdgpu_kernel void @private_cluster_one_as_acquire_acquire_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -19908,7 +19771,6 @@ define amdgpu_kernel void @private_cluster_one_as_acquire_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -20186,7 +20048,6 @@ define amdgpu_kernel void @private_cluster_one_as_release_acquire_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -20227,7 +20088,6 @@ define amdgpu_kernel void @private_cluster_one_as_release_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -20509,7 +20369,6 @@ define amdgpu_kernel void @private_cluster_one_as_acq_rel_acquire_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -20550,7 +20409,6 @@ define amdgpu_kernel void @private_cluster_one_as_acq_rel_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -20832,7 +20690,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_acquire_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -20873,7 +20730,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -21155,7 +21011,6 @@ define amdgpu_kernel void @private_cluster_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -21196,7 +21051,6 @@ define amdgpu_kernel void @private_cluster_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -21478,7 +21332,6 @@ define amdgpu_kernel void @private_cluster_one_as_acquire_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -21519,7 +21372,6 @@ define amdgpu_kernel void @private_cluster_one_as_acquire_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -21801,7 +21653,6 @@ define amdgpu_kernel void @private_cluster_one_as_release_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -21842,7 +21693,6 @@ define amdgpu_kernel void @private_cluster_one_as_release_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -22124,7 +21974,6 @@ define amdgpu_kernel void @private_cluster_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -22165,7 +22014,6 @@ define amdgpu_kernel void @private_cluster_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -22447,7 +22295,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s2, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s2, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s3
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[4:5]
@@ -22488,7 +22335,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s2, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s2, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s3
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -22798,7 +22644,6 @@ define amdgpu_kernel void @private_cluster_one_as_monotonic_monotonic_ret_cmpxch
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -22837,7 +22682,6 @@ define amdgpu_kernel void @private_cluster_one_as_monotonic_monotonic_ret_cmpxch
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -23145,7 +22989,6 @@ define amdgpu_kernel void @private_cluster_one_as_acquire_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -23186,7 +23029,6 @@ define amdgpu_kernel void @private_cluster_one_as_acquire_monotonic_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -23496,7 +23338,6 @@ define amdgpu_kernel void @private_cluster_one_as_acq_rel_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -23539,7 +23380,6 @@ define amdgpu_kernel void @private_cluster_one_as_acq_rel_monotonic_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -23853,7 +23693,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -23896,7 +23735,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_monotonic_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -24210,7 +24048,6 @@ define amdgpu_kernel void @private_cluster_one_as_monotonic_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -24251,7 +24088,6 @@ define amdgpu_kernel void @private_cluster_one_as_monotonic_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -24561,7 +24397,6 @@ define amdgpu_kernel void @private_cluster_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -24602,7 +24437,6 @@ define amdgpu_kernel void @private_cluster_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -24912,7 +24746,6 @@ define amdgpu_kernel void @private_cluster_one_as_release_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -24955,7 +24788,6 @@ define amdgpu_kernel void @private_cluster_one_as_release_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -25269,7 +25101,6 @@ define amdgpu_kernel void @private_cluster_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -25312,7 +25143,6 @@ define amdgpu_kernel void @private_cluster_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -25626,7 +25456,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -25669,7 +25498,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -25983,7 +25811,6 @@ define amdgpu_kernel void @private_cluster_one_as_monotonic_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -26026,7 +25853,6 @@ define amdgpu_kernel void @private_cluster_one_as_monotonic_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -26340,7 +26166,6 @@ define amdgpu_kernel void @private_cluster_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -26383,7 +26208,6 @@ define amdgpu_kernel void @private_cluster_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -26697,7 +26521,6 @@ define amdgpu_kernel void @private_cluster_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -26740,7 +26563,6 @@ define amdgpu_kernel void @private_cluster_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -27054,7 +26876,6 @@ define amdgpu_kernel void @private_cluster_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -27097,7 +26918,6 @@ define amdgpu_kernel void @private_cluster_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1
@@ -27411,7 +27231,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_mov_b32 s3, 20
 ; GFX1250-NEXT:    v_lshlrev_b32_e64 v2, s3, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_add_nc_u64_e64 v[0:1], v[0:1], s[6:7]
@@ -27454,7 +27273,6 @@ define amdgpu_kernel void @private_cluster_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_mov_b32 s3, 20
 ; GFX1300-NEXT:    v_lshlrev_b32_e64 v0, s3, v0
 ; GFX1300-NEXT:    v_mov_b32_e32 v1, s4
-; GFX1300-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1300-NEXT:    s_mov_b64 s[6:7], src_flat_scratch_base_lo
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, v1

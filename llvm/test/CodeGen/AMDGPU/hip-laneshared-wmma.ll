@@ -26,18 +26,16 @@ define amdgpu_kernel void @_Z37test_amdgcn_wmma_f32_16x16x16_f16_w32v() "amdgpu-
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY %10.sub6
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY %10.sub5
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY %10.sub4
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY1]], %subreg.sub2, [[COPY]], %subreg.sub3
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE killed [[COPY3]], %subreg.sub0, killed [[COPY2]], %subreg.sub1, killed [[COPY1]], %subreg.sub2, killed [[COPY]], %subreg.sub3
   ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 48
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE]]
-  ; CHECK-NEXT:   SCRATCH_STORE_DWORDX4_SADDR killed [[COPY4]], killed [[S_MOV_B32_2]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s128) into @out + 16, addrspace 10)
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY %10.sub3
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY %10.sub2
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY %10.sub1
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY %10.sub0
-  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY7]], %subreg.sub1, [[COPY6]], %subreg.sub2, [[COPY5]], %subreg.sub3
+  ; CHECK-NEXT:   SCRATCH_STORE_DWORDX4_SADDR killed [[REG_SEQUENCE]], killed [[S_MOV_B32_2]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s128) into @out + 16, addrspace 10)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY %10.sub3
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY %10.sub2
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY %10.sub1
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY %10.sub0
+  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE killed [[COPY7]], %subreg.sub0, killed [[COPY6]], %subreg.sub1, killed [[COPY5]], %subreg.sub2, killed [[COPY4]], %subreg.sub3
   ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 32
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE1]]
-  ; CHECK-NEXT:   SCRATCH_STORE_DWORDX4_SADDR killed [[COPY9]], killed [[S_MOV_B32_3]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s128) into @out, align 32, addrspace 10)
+  ; CHECK-NEXT:   SCRATCH_STORE_DWORDX4_SADDR killed [[REG_SEQUENCE1]], killed [[S_MOV_B32_3]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s128) into @out, align 32, addrspace 10)
   ; CHECK-NEXT:   S_ENDPGM 0
   ;
   ; VIDX-LABEL: name: _Z37test_amdgcn_wmma_f32_16x16x16_f16_w32v
