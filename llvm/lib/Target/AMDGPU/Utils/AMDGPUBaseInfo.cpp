@@ -3779,6 +3779,12 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
       AMDGPU::OpName::vsrc, AMDGPU::OpName::vdst_refl,
       AMDGPU::OpName::NUM_OPERAND_NAMES, AMDGPU::OpName::vdst,
       DEFAULT_VALUES_3};
+
+  // VOP2 MADMK instructions use src0, imm, src1 scheme.
+  static const AMDGPU::OpName VOP2MADMKOps[VGPRLoweringOperandTableNumOps] = {
+      AMDGPU::OpName::src0, AMDGPU::OpName::NUM_OPERAND_NAMES,
+      AMDGPU::OpName::src1, AMDGPU::OpName::vdst,
+      DEFAULT_VALUES_3};
 #undef DEFAULT_VALUES_3
 
   uint64_t TSFlags = Desc.TSFlags;
@@ -3786,12 +3792,30 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
   if (TSFlags &
       (SIInstrFlags::VOP1 | SIInstrFlags::VOP2 | SIInstrFlags::VOP3 |
        SIInstrFlags::VOP3P | SIInstrFlags::VOPC | SIInstrFlags::DPP)) {
+    switch (Desc.getOpcode()) {
     // LD_SCALE operands ignore MSB.
-    if (Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32 ||
-        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32_gfx1250 ||
-        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64 ||
-        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64_gfx1250)
+    case AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32:
+    case AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32_gfx1250:
+    case AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64:
+    case AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64_gfx1250:
       return {};
+    case AMDGPU::V_FMAMK_F16:
+    case AMDGPU::V_FMAMK_F16_t16:
+    case AMDGPU::V_FMAMK_F16_t16_gfx12:
+    case AMDGPU::V_FMAMK_F16_t16_gfx13:
+    case AMDGPU::V_FMAMK_F16_fake16:
+    case AMDGPU::V_FMAMK_F16_fake16_gfx12:
+    case AMDGPU::V_FMAMK_F16_fake16_gfx13:
+    case AMDGPU::V_FMAMK_F32:
+    case AMDGPU::V_FMAMK_F32_gfx12:
+    case AMDGPU::V_FMAMK_F32_gfx13:
+    case AMDGPU::V_FMAMK_F64:
+    case AMDGPU::V_FMAMK_F64_gfx1250:
+    case AMDGPU::V_FMAMK_F64_gfx13:
+      return {VOP2MADMKOps, nullptr};
+    default:
+      break;
+    }
     return {VOPOps, nullptr};
   }
 

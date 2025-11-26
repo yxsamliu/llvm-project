@@ -271,11 +271,11 @@ body:             |
     ; GCN-NEXT: v_fmaak_f32 v0 /*v256*/, v1, v2 /*v258*/, 0x1
     $vgpr256 = V_FMAAK_F32 undef $vgpr1, undef $vgpr258, 1, implicit $exec, implicit $mode
 
-    ; GCN-NEXT: s_set_vgpr_frames 0x4500
+    ; GCN-NEXT: s_set_vgpr_frames 0x5100
     ; GCN-NEXT: v_fmamk_f32 v0 /*v256*/, v1 /*v257*/, 0x1, v2 /*v258*/
     $vgpr256 = V_FMAMK_F32 undef $vgpr257, 1, undef $vgpr258, implicit $exec, implicit $mode
 
-    ; GCN-NEXT: s_set_vgpr_frames 0x500
+    ; GCN-NEXT: s_set_vgpr_frames 0x1100
     ; GCN-NEXT: v_fmamk_f32 v0, v1 /*v257*/, 0x1, v2 /*v258*/
     $vgpr0 = V_FMAMK_F32 undef $vgpr257, 1, undef $vgpr258, implicit $exec, implicit $mode
 
@@ -283,7 +283,7 @@ body:             |
     ; GCN-NEXT: v_fmamk_f32 v0 /*v256*/, v1 /*v257*/, 0x1, v2
     $vgpr256 = V_FMAMK_F32 undef $vgpr257, 1, undef $vgpr2, implicit $exec, implicit $mode
 
-    ; GCN-NEXT: s_set_vgpr_frames 0x4400
+    ; GCN-NEXT: s_set_vgpr_frames 0x5000
     ; GCN-NEXT: v_fmamk_f32 v0 /*v256*/, v1, 0x1, v2 /*v258*/
     $vgpr256 = V_FMAMK_F32 undef $vgpr1, 1, undef $vgpr258, implicit $exec, implicit $mode
 
