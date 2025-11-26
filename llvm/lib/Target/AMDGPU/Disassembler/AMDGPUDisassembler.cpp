@@ -758,6 +758,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
           tryDecodeInst(DecoderTableGFX90A64, MI, QW, Address, CS))
         break;
 
+      if (isGFX1260Only() &&
+          tryDecodeInst(DecoderTableGFX1260_FAKE1664, MI, QW, Address, CS))
+        break;
+
       if ((isVI() || isGFX9()) &&
           tryDecodeInst(DecoderTableGFX864, MI, QW, Address, CS))
         break;
@@ -1757,6 +1761,8 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
     UseLit = AMDGPU::isInlinableLiteralV2F16(Val);
     break;
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT32:
     break;
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
@@ -2429,6 +2435,10 @@ bool AMDGPUDisassembler::isGFX12() const {
 
 bool AMDGPUDisassembler::isGFX12Plus() const {
   return AMDGPU::isGFX12Plus(STI);
+}
+
+bool AMDGPUDisassembler::isGFX1260Only() const {
+  return STI.hasFeature(AMDGPU::FeatureGFX1260Insts);
 }
 
 bool AMDGPUDisassembler::isGFX1250Only() const {

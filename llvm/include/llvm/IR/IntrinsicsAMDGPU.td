@@ -4868,6 +4868,30 @@ def int_amdgcn_perm_pk16_b8_u4 : ClangBuiltin<"__builtin_amdgcn_perm_pk16_b8_u4"
   DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_i64_ty, llvm_i64_ty, llvm_v2i32_ty],
                         [IntrNoMem, IntrSpeculatable]>;
 
+def int_amdgcn_perm_pk16_b4_u2 : ClangBuiltin<"__builtin_amdgcn_perm_pk16_b4_u2">,
+  DefaultAttrsIntrinsic<[llvm_v2i32_ty], [llvm_i16_ty, llvm_i32_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+
+def int_amdgcn_perm_pk16_b6_u2 : ClangBuiltin<"__builtin_amdgcn_perm_pk16_b6_u2">,
+  DefaultAttrsIntrinsic<[llvm_v3i32_ty], [llvm_i32_ty, llvm_i32_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+
+def int_amdgcn_perm_pk16_b8_u2 : ClangBuiltin<"__builtin_amdgcn_perm_pk16_b8_u2">,
+  DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_i32_ty, llvm_i32_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+
+def int_amdgcn_perm_pk32_b4_u3 : ClangBuiltin<"__builtin_amdgcn_perm_pk32_b4_u3">,
+  DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i64_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+
+def int_amdgcn_perm_pk32_b6_u3 : ClangBuiltin<"__builtin_amdgcn_perm_pk32_b6_u3">,
+  DefaultAttrsIntrinsic<[llvm_v6i32_ty], [llvm_v2i32_ty, llvm_i32_ty, llvm_i64_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+
+def int_amdgcn_perm_pk32_b8_u3 : ClangBuiltin<"__builtin_amdgcn_perm_pk32_b8_u3">,
+  DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v2i32_ty, llvm_i32_ty, llvm_i64_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+
 class AMDGPUAddMinMax<LLVMType Ty, string Name> : ClangBuiltin<"__builtin_amdgcn_"#Name>,
   DefaultAttrsIntrinsic<[Ty], [Ty, Ty, Ty, llvm_i1_ty /* clamp */],
                         [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]>;
