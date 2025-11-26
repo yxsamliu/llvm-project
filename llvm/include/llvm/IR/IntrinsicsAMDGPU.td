@@ -3355,7 +3355,7 @@ def int_amdgcn_s_inst_auto_prefetch_mode :
 // void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) %sem, i32 %state)
 // Sets the SEMA*_STATE wave state register for a semaphore owned by the current
 // rank.
-// The %sem argument must be uniform, otherwise behavior is undefined.
+// The %sem and %state arguments must be uniform, otherwise behavior is undefined.
 def int_amdgcn_s_sema_set_state :
   ClangBuiltin<"__builtin_amdgcn_s_sema_set_state">,
   Intrinsic<
