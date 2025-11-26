@@ -248,3 +248,26 @@ entry:
   store i32 %val, ptr addrspace(10) %pextra2
   ret void
 }
+
+define amdgpu_kernel void @send_next_from_laneshared() "amdgpu-cluster-dims"="4,1,1" "amdgpu-wavegroup-enable" "amdgpu-spatial-cluster" !reqd_work_group_size !{i32 32, i32 8, i32 1} {
+; CHECK-LABEL: send_next_from_laneshared:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_mul_i32 s1, s0, 0
+; CHECK-NEXT:    s_mul_i32 s33, s0, s8
+; CHECK-NEXT:    s_add_co_u32 s1, s1, 9
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
+; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_set_vgpr_frames 0x45 ; vsrc0_idx=1 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    v_send_vgpr_next_b32 g1[1], g1[2], g1[8] sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:0
+; CHECK-NEXT:    s_endpgm
+entry:
+  %pdst = getelementptr i32, ptr addrspace(10) @dst, i32 1
+  %prefl = getelementptr i32, ptr addrspace(10) @dst, i32 2
+  %value = load i32, ptr addrspace(10) @extra1
+  call void @llvm.amdgcn.spatial.cluster.send.next(i32 %value, ptr addrspace(10) %pdst, ptr addrspace(3) @sem,
+                                                  ptr addrspace(10) %prefl, ptr addrspace(3) @sem2, i32 0);
+  ret void
+}
