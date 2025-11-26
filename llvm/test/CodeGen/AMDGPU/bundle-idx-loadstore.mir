@@ -3,6 +3,61 @@
 # RUN: llc -march=amdgcn -mcpu=gfx1300 -verify-machineinstrs -start-before=bundle-indexed-load-store -stop-after=amdgpu-idx-reg-alloc -o - %s | FileCheck -check-prefixes=ALLOC %s
 # RUN: llc -march=amdgcn -mcpu=gfx1300 -verify-machineinstrs -start-before=bundle-indexed-load-store -stop-after=amdgpu-lower-vgpr-encoding -o - %s | FileCheck -check-prefixes=LOWERED %s
 
+--- |
+  @laneshared = internal addrspace(10) global [128 x i32] poison, align 128, !absolute_symbol !0
+
+  define void @same-bb-load-trivial() { unreachable }
+  define void @same-bb-store-trivial() { unreachable }
+  define void @same-bb-store-out-of-order() { unreachable }
+  define void @same-bb-store-cannot-bundle() { unreachable }
+  define void @same-bb-store-cannot-bundle-indirect() { unreachable }
+  define void @same-bb-store-carryout() { unreachable }
+  define void @same-bb-load-store-trivial() { unreachable }
+  define void @same-bb-load-store-fmac() { unreachable }
+  define void @same-bb-load-store-different-idx() { unreachable }
+  define void @same-bb-load-store-different-idx-out-of-order() { unreachable }
+  define void @same-bb-multi-use-coremi() { unreachable }
+  define void @same-bb-multi-use-load-coremi() { unreachable }
+  define void @multi-use-in-one-mi-load() { unreachable }
+  define void @same-bb-multi-use-load() { unreachable }
+  define void @load-2x2-uses() { unreachable }
+  define void @same-bb-multi-use-load-store() { unreachable }
+  define void @same-bb-load-store-vop2() { unreachable }
+  define void @same-bb-load-store-vop3() { unreachable }
+  define void @same-bb-load-store-vop3-two-unique-idx() { unreachable }
+  define void @insert-set-gpr-idx-after-bundle() { unreachable }
+  define void @two-bundles-vop3-vop2() { unreachable }
+  define void @two-bundles-same-idx() { unreachable }
+  define void @two-bundles-interleave() { unreachable }
+  define void @same-bb-wide-load-store() { unreachable }
+  define void @unsafe-load-past-store() { unreachable }
+  define void @tied-operand() { unreachable }
+  define void @coremi-load-store() { unreachable }
+  define void @coremi-store-store() { unreachable }
+  define void @coremi-store-store-trivially-distinct() { unreachable }
+  define void @same-bb-load-store-no-core() { unreachable }
+  define void @same-bb-wide-no-core() { unreachable }
+  define void @wide-no-core-regno-wrap() { unreachable }
+  define void @debug-instr() { unreachable }
+  define void @no-copy() { unreachable }
+  define void @no-bundle-subreg-in() { unreachable }
+  define void @no-bundle-subreg-out() { unreachable }
+  define void @idx0-test-private-vgprs() { unreachable }
+  define void @idx0-test-idx0-bundle-late() { unreachable }
+  define void @redirect-with-idx0-bundle() { unreachable }
+  define void @enable-dst-operand-class() { unreachable }
+  define void @multi-bb-load-simple() { unreachable }
+  define void @multi-bb-store-simple() { unreachable }
+  define void @multi-bb-load-store-simple() { unreachable }
+  define void @multi-bb-branched-stores() { unreachable }
+  define void @multi-bb-branched-loads() { unreachable }
+  define void @multi-bb-convolve-phi-nodes() { unreachable }
+  define void @multi-bb-simple-move-to-store() { unreachable }
+  define void @multi-bb-coremis-swap-order() { unreachable }
+
+  !0 = !{i32 268435456, i32 268435457}
+...
+
 ---
 name:            same-bb-load-trivial
 machineFunctionInfo:
@@ -19,7 +74,16 @@ body:             |
     ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
     ; GCN-NEXT: }
+    ; GCN-NEXT: FAKE_USE [[V_MAX_U32_e64_]]
     ;
+    ; ALLOC-LABEL: name: same-bb-load-trivial
+    ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def %2, implicit $idx1, implicit $exec :: (load (s32), addrspace 10) {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
+    ; ALLOC-NEXT: }
+    ; ALLOC-NEXT: FAKE_USE [[V_MAX_U32_e64_]]
     ;
     ; LOWERED-LABEL: name: same-bb-load-trivial
     ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
@@ -27,9 +91,16 @@ body:             |
     ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
     ; LOWERED-NEXT: S_WAIT_BVHCNT 0
     ; LOWERED-NEXT: S_WAIT_KMCNT 0
+    ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
+    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 4
+    ; LOWERED-NEXT: renamable $vgpr0 = V_MAX_U32_e64 12345, undef $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: FAKE_USE killed renamable $vgpr0
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:vgpr_32 = V_LOAD_IDX_B32 %0, 0, implicit $exec :: (load (s32), addrspace 10)
     %2:vgpr_32 = V_MAX_U32_e64 12345, %1, implicit $exec
+    FAKE_USE %2
 ...
 
 ---
@@ -91,11 +162,11 @@ body:             |
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_LSHL_B32_]]
     ; GCN-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_LSHL_B32_]], 429496640, implicit-def dead $scc
-    ; GCN-NEXT: [[S_ADD_I32_1:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_LSHL_B32_]], 5, implicit-def dead $scc
     ; GCN-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[COPY]], implicit $exec, implicit [[S_ADD_I32_]] :: (store (s32), addrspace 10) {
     ; GCN-NEXT:   $stg_dsta = V_MAX_U32_e64 12345, [[COPY]], implicit $exec
     ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_ADD_I32_]], 0, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
+    ; GCN-NEXT: [[S_ADD_I32_1:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_LSHL_B32_]], 5, implicit-def dead $scc
     ;
     ; ALLOC-LABEL: name: same-bb-store-out-of-order
     ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
@@ -166,6 +237,51 @@ body:             |
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:vgpr_32 = COPY %0:sreg_32_xexec_hi
     %2:vgpr_32, %3:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 12345, %1, 0, implicit $exec
+    V_STORE_IDX_B32 %2:vgpr_32, %3, 0, implicit $exec :: (store (s32), addrspace 10)
+...
+
+# Bundling would introduce impossible cycles in the dataflow.
+---
+name:            same-bb-store-cannot-bundle-indirect
+machineFunctionInfo:
+  laneSharedVGPRSize: 1000
+  stackPtrOffsetReg: '$sgpr32'
+  frameOffsetReg: '$sgpr33'
+tracksRegLiveness: true
+body:             |
+
+  bb.0:
+    ; GCN-LABEL: name: same-bb-store-cannot-bundle-indirect
+    ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[DEF]], 0, 0, implicit $exec :: (load (s32), addrspace 3)
+    ; GCN-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[DS_READ_B32_gfx9_]], implicit $exec
+    ; GCN-NEXT: V_STORE_IDX_B32 [[DS_READ_B32_gfx9_]], [[V_READFIRSTLANE_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
+    ;
+    ; ALLOC-LABEL: name: same-bb-store-cannot-bundle-indirect
+    ; ALLOC: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; ALLOC-NEXT: [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[DEF]], 0, 0, implicit $exec :: (load (s32), addrspace 3)
+    ; ALLOC-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[DS_READ_B32_gfx9_]], implicit $exec
+    ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[V_READFIRSTLANE_B32_]]
+    ; ALLOC-NEXT: V_STORE_IDX_B32 [[DS_READ_B32_gfx9_]], $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ;
+    ; LOWERED-LABEL: name: same-bb-store-cannot-bundle-indirect
+    ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
+    ; LOWERED-NEXT: S_WAIT_EXPCNT 0
+    ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
+    ; LOWERED-NEXT: S_WAIT_BVHCNT 0
+    ; LOWERED-NEXT: S_WAIT_KMCNT 0
+    ; LOWERED-NEXT: renamable $vgpr0 = DS_READ_B32_gfx9 undef renamable $vgpr0, 0, 0, implicit $exec :: (load (s32), addrspace 3)
+    ; LOWERED-NEXT: S_WAIT_DSCNT 0
+    ; LOWERED-NEXT: renamable $sgpr0 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
+    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 64
+    ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
+    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = DS_READ_B32_gfx9 %1, 0, 0, implicit $exec :: (load (s32), addrspace 3)
+    %3:sgpr_32 = V_READFIRSTLANE_B32 %2, implicit $exec
     V_STORE_IDX_B32 %2:vgpr_32, %3, 0, implicit $exec :: (store (s32), addrspace 10)
 ...
 
@@ -271,18 +387,22 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: same-bb-load-store-fmac
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
-    ; GCN-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[V_FMAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_FMAC_F32_e64 0, 12345, 0, [[V_LOAD_IDX_B32_]], 0, [[DEF]], 0, 0, implicit $mode, implicit $exec
-    ; GCN-NEXT: V_STORE_IDX_B32 [[V_FMAC_F32_e64_]], [[S_LSHL_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHL_B32_]], implicit $exec, implicit [[DEF]], implicit $mode :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta = V_FMA_F32_e64 0, 12345, 0, internal $stg_srca, 0, [[DEF]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHL_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: same-bb-load-store-fmac
     ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
-    ; ALLOC-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
     ; ALLOC-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; ALLOC-NEXT: [[V_FMAC_F32_e32_:%[0-9]+]]:vgpr_32 = V_FMAC_F32_e32 12345, [[V_LOAD_IDX_B32_]], [[DEF]], implicit $mode, implicit $exec
-    ; ALLOC-NEXT: V_STORE_IDX_B32 [[V_FMAC_F32_e32_]], $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx1, implicit $exec, implicit [[DEF]], implicit $mode :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta = V_FMA_F32_e64 0, 12345, 0, internal $stg_srca, 0, [[DEF]], 0, 0, implicit $mode, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-load-store-fmac
     ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
@@ -292,11 +412,8 @@ body:             |
     ; LOWERED-NEXT: S_WAIT_KMCNT 0
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
-    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 1
-    ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 undef $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
-    ; LOWERED-NEXT: renamable $vgpr0 = V_FMAC_F32_e32 12345, killed $vgpr0, undef $vgpr0, implicit $mode, implicit $exec
-    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 64
-    ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 68
+    ; LOWERED-NEXT: undef $vgpr0 = V_FMA_F32_e64 0, 12345, 0, undef $vgpr0, 0, undef $vgpr0, 0, 0, <0x{{[0-9a-f]+}}>, implicit $mode, implicit $exec
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:vgpr_32 = V_LOAD_IDX_B32 %0, 0, implicit $exec :: (load (s32), addrspace 10)
@@ -368,12 +485,12 @@ body:             |
     ; GCN-LABEL: name: same-bb-load-store-different-idx-out-of-order
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; GCN-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
-    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]] :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
     ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_dsta = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
     ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHL_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
+    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ;
     ; ALLOC-LABEL: name: same-bb-load-store-different-idx-out-of-order
     ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
@@ -455,7 +572,6 @@ body:             |
     V_STORE_IDX_B32 %2:vgpr_32, %0, 0, implicit $exec :: (store (s32), addrspace 10)
 ...
 
-# TODO-GFX13 Should be able to duplicate load and bundle. AA is an issue.
 ---
 name:            same-bb-multi-use-load-coremi
 machineFunctionInfo:
@@ -468,33 +584,33 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: same-bb-multi-use-load-coremi
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
-    ; GCN-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def %2, implicit [[S_LSHL_B32_]], implicit $exec :: (load (s32), addrspace 10) {
-    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def %2, implicit [[S_LSHL_B32_]], implicit $exec :: (load (s32) from @laneshared, addrspace 10) {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32) from @laneshared, addrspace 10)
     ; GCN-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
+    ; GCN-NEXT: }
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHL_B32_]], implicit $exec :: (load (s32) from @laneshared, addrspace 10), (store (s32) into `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 16)`, addrspace 10) {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32) from @laneshared, addrspace 10)
+    ; GCN-NEXT:   $stg_dsta = V_MIN_U32_e64 12345, internal $stg_srca, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHL_B32_]], 16, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 16)`, addrspace 10)
     ; GCN-NEXT: }
     ; GCN-NEXT: [[V_MIN_U32_e64_:%[0-9]+]]:vgpr_32 = V_MIN_U32_e64 12345, [[V_MAX_U32_e64_]], implicit $exec
     ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 5
-    ; GCN-NEXT: V_STORE_IDX_B32 [[V_MAX_U32_e64_]], [[S_MOV_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
-    ; GCN-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[V_LOAD_IDX_B32_]], implicit $exec, implicit [[S_LSHL_B32_]] :: (store (s32), addrspace 10) {
-    ; GCN-NEXT:   $stg_dsta = V_MIN_U32_e64 12345, [[V_LOAD_IDX_B32_]], implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHL_B32_]], 16, implicit $exec :: (store (s32), addrspace 10)
-    ; GCN-NEXT: }
+    ; GCN-NEXT: V_STORE_IDX_B32 [[V_MAX_U32_e64_]], [[S_MOV_B32_]], 0, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 5)`, addrspace 10)
     ;
     ; ALLOC-LABEL: name: same-bb-multi-use-load-coremi
     ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
-    ; ALLOC-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def %2, implicit $idx1, implicit $exec :: (load (s32), addrspace 10) {
-    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def %2, implicit $idx1, implicit $exec :: (load (s32) from @laneshared, addrspace 10) {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s32) from @laneshared, addrspace 10)
     ; ALLOC-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
     ; ALLOC-NEXT: }
-    ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 0
-    ; ALLOC-NEXT: V_STORE_IDX_B32 [[V_MAX_U32_e64_]], killed $idx2, 5, implicit $exec :: (store (s32), addrspace 10)
-    ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[V_LOAD_IDX_B32_]], implicit $exec, implicit $idx1 :: (store (s32), addrspace 10) {
-    ; ALLOC-NEXT:   $stg_dsta = V_MIN_U32_e64 12345, [[V_LOAD_IDX_B32_]], implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 16, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx1, implicit $exec :: (load (s32) from @laneshared, addrspace 10), (store (s32) into `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 16)`, addrspace 10) {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s32) from @laneshared, addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta = V_MIN_U32_e64 12345, internal $stg_srca, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 16, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 16)`, addrspace 10)
     ; ALLOC-NEXT: }
+    ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 0
+    ; ALLOC-NEXT: V_STORE_IDX_B32 [[V_MAX_U32_e64_]], killed $idx1, 5, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 5)`, addrspace 10)
     ;
     ; LOWERED-LABEL: name: same-bb-multi-use-load-coremi
     ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
@@ -504,23 +620,22 @@ body:             |
     ; LOWERED-NEXT: S_WAIT_KMCNT 0
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
-    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 5
-    ; LOWERED-NEXT: renamable $vgpr1 = V_MAX_U32_e64 12345, undef $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
-    ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 undef $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
-    ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 0
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 68
+    ; LOWERED-NEXT: undef $vgpr16 = V_MIN_U32_e64 12345, undef $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 4
+    ; LOWERED-NEXT: renamable $vgpr0 = V_MAX_U32_e64 12345, undef $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 0
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 64
-    ; LOWERED-NEXT: undef $vgpr16 = V_MIN_U32_e64 12345, killed $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
-    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 128
-    ; LOWERED-NEXT: $vgpr5 = V_MOV_B32_e32 $vgpr1, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: $vgpr5 = V_MOV_B32_e32 $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
-    %1:vgpr_32 = V_LOAD_IDX_B32 %0, 0, implicit $exec :: (load (s32), addrspace 10)
+    %1:vgpr_32 = V_LOAD_IDX_B32 %0, 0, implicit $exec :: (load (s32) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 0)`, addrspace 10)
     %2:vgpr_32 = V_MAX_U32_e64 12345, %1, implicit $exec
     %3:vgpr_32 = V_MIN_U32_e64 12345, %1, implicit $exec
     %4:vgpr_32 = V_MIN_U32_e64 12345, %2, implicit $exec
     %5:sreg_32_xexec_hi = S_MOV_B32 5
-    V_STORE_IDX_B32 %2:vgpr_32, %5, 0, implicit $exec :: (store (s32), addrspace 10)
-    V_STORE_IDX_B32 %3:vgpr_32, %0, 16, implicit $exec :: (store (s32), addrspace 10)
+    V_STORE_IDX_B32 %2:vgpr_32, %5, 0, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 5)`, addrspace 10)
+    V_STORE_IDX_B32 %3:vgpr_32, %0, 16, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 16)`, addrspace 10)
 ...
 
 ---
@@ -535,11 +650,22 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: multi-use-in-one-mi-load
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
-    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def %2, implicit [[S_LSHL_B32_]], implicit $exec :: (load (s32), addrspace 10) {
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def %2, implicit [[S_LSHL_B32_]], implicit $exec :: (load (s32), addrspace 10) {
+    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 internal $stg_srca, internal $stg_srca, implicit $exec
+    ; GCN-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 internal $stg_srca, internal $stg_srcb, implicit $exec
     ; GCN-NEXT: }
+    ; GCN-NEXT: FAKE_USE [[V_MAX_U32_e64_]]
     ;
+    ; ALLOC-LABEL: name: multi-use-in-one-mi-load
+    ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def %2, implicit $idx1, implicit $exec :: (load (s32), addrspace 10) {
+    ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 internal $stg_srca, internal $stg_srcb, implicit $exec
+    ; ALLOC-NEXT: }
+    ; ALLOC-NEXT: FAKE_USE [[V_MAX_U32_e64_]]
     ;
     ; LOWERED-LABEL: name: multi-use-in-one-mi-load
     ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
@@ -547,9 +673,16 @@ body:             |
     ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
     ; LOWERED-NEXT: S_WAIT_BVHCNT 0
     ; LOWERED-NEXT: S_WAIT_KMCNT 0
+    ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
+    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 5
+    ; LOWERED-NEXT: renamable $vgpr0 = V_MAX_U32_e64 undef $vgpr0, undef $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: FAKE_USE killed renamable $vgpr0
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:vgpr_32 = V_LOAD_IDX_B32 %0, 0, implicit $exec :: (load (s32), addrspace 10)
     %2:vgpr_32 = V_MAX_U32_e64 %1, %1, implicit $exec
+    FAKE_USE %2
 ...
 
 ---
@@ -572,7 +705,18 @@ body:             |
     ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   [[V_MIN_U32_e64_:%[0-9]+]]:vgpr_32 = V_MIN_U32_e64 65432, internal $stg_srca, implicit $exec
     ; GCN-NEXT: }
+    ; GCN-NEXT: FAKE_USE [[V_MAX_U32_e64_]]
+    ; GCN-NEXT: FAKE_USE [[V_MAX_U32_e64_]]
     ;
+    ; ALLOC-LABEL: name: same-bb-multi-use-load
+    ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def %2, implicit $idx1, implicit $exec :: (load (s32), addrspace 10) {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
+    ; ALLOC-NEXT: }
+    ; ALLOC-NEXT: FAKE_USE [[V_MAX_U32_e64_]]
+    ; ALLOC-NEXT: FAKE_USE [[V_MAX_U32_e64_]]
     ;
     ; LOWERED-LABEL: name: same-bb-multi-use-load
     ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
@@ -580,10 +724,19 @@ body:             |
     ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
     ; LOWERED-NEXT: S_WAIT_BVHCNT 0
     ; LOWERED-NEXT: S_WAIT_KMCNT 0
+    ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
+    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 4
+    ; LOWERED-NEXT: renamable $vgpr0 = V_MAX_U32_e64 12345, undef $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: FAKE_USE renamable $vgpr0
+    ; LOWERED-NEXT: FAKE_USE killed renamable $vgpr0
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:vgpr_32 = V_LOAD_IDX_B32 %0, 0, implicit $exec :: (load (s32), addrspace 10)
     %2:vgpr_32 = V_MAX_U32_e64 12345, %1, implicit $exec
     %3:vgpr_32 = V_MIN_U32_e64 65432, %1, implicit $exec
+    FAKE_USE %2
+    FAKE_USE %2
 ...
 
 
@@ -601,16 +754,38 @@ body:             |
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; GCN-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
-    ; GCN-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def %5, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]] :: (load (s32), addrspace 10) {
-    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srcc, implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def %5, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]] :: (load (s32), addrspace 10) {
+    ; GCN-NEXT:   $stg_srcc = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_LSHL_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srca, internal $stg_srcb, implicit $exec
+    ; GCN-NEXT:   [[V_LSHL_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, internal $stg_srcc, implicit $exec
     ; GCN-NEXT: }
-    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def %6, implicit [[S_LSHR_B32_]], implicit $exec :: (load (s32), addrspace 10) {
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def %6, implicit [[S_LSHR_B32_]], implicit $exec :: (load (s32), addrspace 10) {
+    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   [[V_LSHL_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHL_ADD_U32_e64 0, internal $stg_srca, internal $stg_srca, implicit $exec
+    ; GCN-NEXT:   [[V_LSHL_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHL_ADD_U32_e64 0, internal $stg_srca, internal $stg_srcb, implicit $exec
     ; GCN-NEXT: }
+    ; GCN-NEXT: FAKE_USE [[V_LSHL_ADD_U32_e64_]]
+    ; GCN-NEXT: FAKE_USE [[V_LSHL_ADD_U32_e64_1]]
     ;
+    ; ALLOC-LABEL: name: load-2x2-uses
+    ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
+    ; ALLOC-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
+    ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_]]
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srcc, implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def %5, implicit $idx1, implicit $exec, implicit $idx2 :: (load (s32), addrspace 10) {
+    ; ALLOC-NEXT:   $stg_srcc = V_LOAD_IDX_B32 $idx1, 10, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX_B32 $idx2, 5, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx2, 5, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   [[V_LSHL_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, internal $stg_srcc, implicit $exec
+    ; ALLOC-NEXT: }
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def %6, implicit $idx1, implicit $exec :: (load (s32), addrspace 10) {
+    ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX_B32 $idx1, 10, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx1, 10, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   [[V_LSHL_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHL_ADD_U32_e64 0, internal $stg_srca, internal $stg_srcb, implicit $exec
+    ; ALLOC-NEXT: }
+    ; ALLOC-NEXT: FAKE_USE [[V_LSHL_ADD_U32_e64_]]
+    ; ALLOC-NEXT: FAKE_USE [[V_LSHL_ADD_U32_e64_1]]
     ;
     ; LOWERED-LABEL: name: load-2x2-uses
     ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
@@ -618,6 +793,17 @@ body:             |
     ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
     ; LOWERED-NEXT: S_WAIT_BVHCNT 0
     ; LOWERED-NEXT: S_WAIT_KMCNT 0
+    ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
+    ; LOWERED-NEXT: renamable $sgpr1 = S_LSHR_B32 renamable $sgpr0, 2, implicit-def dead $scc
+    ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
+    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 26
+    ; LOWERED-NEXT: renamable $vgpr0 = V_LSHL_ADD_U32_e64 undef $vgpr5, undef $vgpr5, undef $vgpr10, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 20
+    ; LOWERED-NEXT: renamable $vgpr1 = V_LSHL_ADD_U32_e64 0, undef $vgpr10, undef $vgpr10, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: FAKE_USE killed renamable $vgpr0
+    ; LOWERED-NEXT: FAKE_USE killed renamable $vgpr1
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHR_B32 %0, 2, implicit-def dead $scc
     %2:sreg_32_xexec_hi = S_LSHL_B32 %1, 3, implicit-def dead $scc
@@ -625,6 +811,8 @@ body:             |
     %4:vgpr_32 = V_LOAD_IDX_B32 %1, 10, implicit $exec :: (load (s32), addrspace 10)
     %5:vgpr_32 = V_LSHL_ADD_U32_e64 %3, %3, %4, implicit $exec
     %6:vgpr_32 = V_LSHL_ADD_U32_e64 0, %4, %4, implicit $exec
+    FAKE_USE %5
+    FAKE_USE %6
 ...
 
 ---
@@ -672,10 +860,10 @@ body:             |
     ; LOWERED-NEXT: S_WAIT_KMCNT 0
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
-    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 68
-    ; LOWERED-NEXT: undef $vgpr0 = V_MAX_U32_e64 12345, undef $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 1
     ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 undef $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 68
+    ; LOWERED-NEXT: undef $vgpr0 = V_MAX_U32_e64 12345, undef $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 64
     ; LOWERED-NEXT: undef $vgpr0 = V_MIN_U32_e64 65432, killed $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
@@ -700,13 +888,13 @@ body:             |
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; GCN-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
-    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ; GCN-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]], implicit [[S_LSHL_B32_1]] :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
     ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_dsta = V_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, 0, implicit $exec
     ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHL_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
+    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ;
     ; ALLOC-LABEL: name: same-bb-load-store-vop2
     ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
@@ -763,7 +951,6 @@ body:             |
     ; GCN-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHR_B32_]], 4, implicit-def dead $scc
-    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ; GCN-NEXT: BUNDLE implicit-def $stg_srcc, implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHL_B32_1]], implicit $exec, implicit [[S_LSHR_B32_]], implicit [[S_LSHL_B32_]], implicit [[S_LSHR_B32_1]] :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
     ; GCN-NEXT:   $stg_srcc = V_LOAD_IDX_B32 [[S_LSHL_B32_1]], 15, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
@@ -771,6 +958,7 @@ body:             |
     ; GCN-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, internal $stg_srcc, implicit $exec
     ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHR_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
+    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ;
     ; ALLOC-LABEL: name: same-bb-load-store-vop3
     ; ALLOC: $idx0 = S_SET_GPR_IDX_U32 0
@@ -836,7 +1024,6 @@ body:             |
     ; GCN-LABEL: name: same-bb-load-store-vop3-two-unique-idx
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; GCN-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
-    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ; GCN-NEXT: BUNDLE implicit-def $stg_srcc, implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]] :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
     ; GCN-NEXT:   $stg_srcc = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 15, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
@@ -844,6 +1031,7 @@ body:             |
     ; GCN-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, internal $stg_srcc, implicit $exec
     ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHR_B32_]], 20, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
+    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ;
     ; ALLOC-LABEL: name: same-bb-load-store-vop3-two-unique-idx
     ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
@@ -895,13 +1083,13 @@ body:             |
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; GCN-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
-    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ; GCN-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]], implicit [[S_LSHL_B32_1]] :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
     ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_dsta = V_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, 0, implicit $exec
     ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHL_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
+    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ; GCN-NEXT: [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 3, implicit-def $scc
     ; GCN-NEXT: [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 4, implicit-def $scc
     ; GCN-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit [[S_LSHL_B32_2]], implicit $exec, implicit [[S_LSHL_B32_3]], implicit $m0 :: (load (s32), addrspace 10), (store (s32), addrspace 3) {
@@ -984,7 +1172,6 @@ body:             |
     ; GCN-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHR_B32_]], 4, implicit-def dead $scc
-    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ; GCN-NEXT: BUNDLE implicit-def $stg_srcc, implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHL_B32_1]], implicit $exec, implicit [[S_LSHR_B32_]], implicit [[S_LSHL_B32_]], implicit [[S_LSHR_B32_1]] :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
     ; GCN-NEXT:   $stg_srcc = V_LOAD_IDX_B32 [[S_LSHL_B32_1]], 15, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
@@ -992,16 +1179,17 @@ body:             |
     ; GCN-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, internal $stg_srcc, implicit $exec
     ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHR_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
+    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ; GCN-NEXT: [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 12, implicit-def $scc
     ; GCN-NEXT: [[S_LSHR_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 12, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 13, implicit-def dead $scc
-    ; GCN-NEXT: [[V_MAX_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54, [[S_LSHL_B32_]], implicit $exec
     ; GCN-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_2]], implicit $exec, implicit [[S_LSHL_B32_2]], implicit [[S_LSHL_B32_3]] :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
     ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX_B32 [[S_LSHR_B32_2]], 11, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_2]], 6, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_dsta = V_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, 0, implicit $exec
     ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHL_B32_3]], 21, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
+    ; GCN-NEXT: [[V_MAX_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54, [[S_LSHL_B32_]], implicit $exec
     ;
     ; ALLOC-LABEL: name: two-bundles-vop3-vop2
     ; ALLOC: $idx0 = S_SET_GPR_IDX_U32 0
@@ -1095,20 +1283,20 @@ body:             |
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; GCN-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
-    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ; GCN-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]], implicit [[S_LSHL_B32_1]] :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
     ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_dsta = V_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, 0, implicit $exec
     ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHL_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
-    ; GCN-NEXT: [[V_MAX_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54, [[S_LSHL_B32_]], implicit $exec
+    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ; GCN-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_]], implicit [[S_LSHL_B32_1]] :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
     ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 11, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 6, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_dsta = V_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, 0, implicit $exec
     ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHL_B32_1]], 21, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
+    ; GCN-NEXT: [[V_MAX_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54, [[S_LSHL_B32_]], implicit $exec
     ;
     ; ALLOC-LABEL: name: two-bundles-same-idx
     ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
@@ -1264,22 +1452,22 @@ body:             |
     ; GCN-NEXT: [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_1]], 2, implicit-def dead $scc
     ; GCN-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
     ; GCN-NEXT: [[S_LSHR_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_2]], 2, implicit-def dead $scc
-    ; GCN-NEXT: BUNDLE implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def early-clobber $stg_dsta, implicit [[S_LSHR_B32_1]], implicit $exec, implicit [[S_LSHR_B32_]], implicit [[S_LSHR_B32_2]] :: (load (s128), addrspace 10), (store (s256), addrspace 10) {
-    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX_B128 [[S_LSHR_B32_1]], 0, implicit $exec :: (load (s128), addrspace 10)
-    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B128 [[S_LSHR_B32_]], 0, implicit $exec :: (load (s128), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def early-clobber $stg_dsta, implicit [[S_LSHR_B32_1]], implicit $exec, implicit [[S_LSHR_B32_]], implicit [[S_LSHR_B32_2]] :: (load (s128) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 36)`, addrspace 10), (load (s128) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 32)`, addrspace 10), (store (s256) into `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 16)`, addrspace 10) {
+    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX_B128 [[S_LSHR_B32_1]], 0, implicit $exec :: (load (s128) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 36)`, addrspace 10)
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B128 [[S_LSHR_B32_]], 0, implicit $exec :: (load (s128) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 32)`, addrspace 10)
     ; GCN-NEXT:   early-clobber $stg_dsta = contract V_WMMA_F32_16X16X16_F16_w32_threeaddr 8, internal killed $stg_srca, 8, internal killed $stg_srcb, 8, 0, 0, 0, implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX_B256 internal $stg_dsta, [[S_LSHR_B32_2]], 0, implicit $exec :: (store (s256), addrspace 10)
+    ; GCN-NEXT:   V_STORE_IDX_B256 internal $stg_dsta, [[S_LSHR_B32_2]], 0, implicit $exec :: (store (s256) into `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 16)`, addrspace 10)
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: same-bb-wide-load-store
     ; ALLOC: $idx2 = S_SET_GPR_IDX_U32 12
     ; ALLOC-NEXT: $idx3 = S_SET_GPR_IDX_U32 8
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 0
-    ; ALLOC-NEXT: BUNDLE implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def early-clobber $stg_dsta, implicit $idx3, implicit $exec, implicit $idx2, implicit $idx1 :: (load (s128), addrspace 10), (store (s256), addrspace 10) {
-    ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX_B128 $idx3, 0, implicit $exec :: (load (s128), addrspace 10)
-    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B128 $idx2, 0, implicit $exec :: (load (s128), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def early-clobber $stg_dsta, implicit $idx3, implicit $exec, implicit $idx2, implicit $idx1 :: (load (s128) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 36)`, addrspace 10), (load (s128) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 32)`, addrspace 10), (store (s256) into `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 16)`, addrspace 10) {
+    ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX_B128 $idx3, 0, implicit $exec :: (load (s128) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 36)`, addrspace 10)
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B128 $idx2, 0, implicit $exec :: (load (s128) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 32)`, addrspace 10)
     ; ALLOC-NEXT:   early-clobber $stg_dsta = contract V_WMMA_F32_16X16X16_F16_w32_threeaddr 8, internal killed $stg_srca, 8, internal killed $stg_srcb, 8, 0, 0, 0, implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX_B256 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s256), addrspace 10)
+    ; ALLOC-NEXT:   V_STORE_IDX_B256 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s256) into `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 16)`, addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-wide-load-store
@@ -1296,22 +1484,20 @@ body:             |
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
     %0:sreg_32_xexec_hi = S_MOV_B32 48
     %1:sreg_32_xexec_hi = S_LSHR_B32 %0, 2, implicit-def dead $scc
-    %2:vreg_128_align2 = V_LOAD_IDX_B128 %1, 0, implicit $exec :: (load (s128), addrspace 10)
+    %2:vreg_128_align2 = V_LOAD_IDX_B128 %1, 0, implicit $exec :: (load (s128) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 32)`, addrspace 10)
     %3:sreg_32_xexec_hi = S_MOV_B32 32
     %4:sreg_32_xexec_hi = S_LSHR_B32 %3, 2, implicit-def dead $scc
-    %5:vreg_128_align2 = V_LOAD_IDX_B128 %4, 0, implicit $exec :: (load (s128), addrspace 10)
+    %5:vreg_128_align2 = V_LOAD_IDX_B128 %4, 0, implicit $exec :: (load (s128) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 36)`, addrspace 10)
     %6:vreg_256_align2 = contract V_WMMA_F32_16X16X16_F16_w32_threeaddr 8, killed %2, 8, killed %5, 8, 0, 0, 0, implicit $exec
     %7:sreg_32_xexec_hi = S_MOV_B32 0
     %8:sreg_32_xexec_hi = S_LSHR_B32 %7, 2, implicit-def dead $scc
-    V_STORE_IDX_B256 %6, %8, 0, implicit $exec :: (store (s256), addrspace 10)
+    V_STORE_IDX_B256 %6, %8, 0, implicit $exec :: (store (s256) into `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 16)`, addrspace 10)
 ...
 
 ---
 name:            unsafe-load-past-store
-# We do not currently analyze index and offset values to optimize potentially aliasing loads and stores.
-# Therefore we should not bundle %12:vgpr_32 = V_LOAD_IDX %9, 6 with %14:vgpr_32 = V_ADD_U32_e64 %12, %13 as that would move it past a potentially aliasing store
-# We never move stores in the current bundling algorithm so will never do an unsafe move of store past a load, but when updating the test in the future ensure that
-# V_STORE_IDX %7:vgpr_32, %3, 20 does not happen before %12:vgpr_32 = V_LOAD_IDX %9, 6
+# When updating the test in the future ensure that V_STORE_IDX %7:vgpr_32, %3, 20
+# is not moved before %12:vgpr_32 = V_LOAD_IDX %9, 6
 machineFunctionInfo:
   laneSharedVGPRSize: 1000
   stackPtrOffsetReg: '$sgpr32'
@@ -1325,51 +1511,48 @@ body:             |
     ; GCN-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHR_B32_]], 4, implicit-def dead $scc
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srcc, implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def %7, implicit [[S_LSHL_B32_1]], implicit $exec, implicit [[S_LSHR_B32_]], implicit [[S_LSHL_B32_]] :: (load (s32), addrspace 10) {
+    ; GCN-NEXT:   $stg_srcc = V_LOAD_IDX_B32 [[S_LSHL_B32_1]], 15, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   [[V_LSHL_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, internal $stg_srcc, implicit $exec
+    ; GCN-NEXT: }
     ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ; GCN-NEXT: [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 12, implicit-def $scc
     ; GCN-NEXT: [[S_LSHR_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 12, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 13, implicit-def dead $scc
     ; GCN-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[S_LSHL_B32_2]], 6, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT: BUNDLE implicit-def $stg_srcc, implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHL_B32_1]], implicit $exec, implicit [[S_LSHR_B32_]], implicit [[S_LSHL_B32_]], implicit [[S_LSHR_B32_1]] :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
-    ; GCN-NEXT:   $stg_srcc = V_LOAD_IDX_B32 [[S_LSHL_B32_1]], 15, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, internal $stg_srcc, implicit $exec
-    ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHR_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
-    ; GCN-NEXT: }
-    ; GCN-NEXT: [[V_MAX_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54, [[S_LSHL_B32_]], implicit $exec
+    ; GCN-NEXT: V_STORE_IDX_B32 [[V_LSHL_ADD_U32_e64_]], [[S_LSHR_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_2]], implicit $exec, implicit [[V_LOAD_IDX_B32_]], implicit [[S_LSHL_B32_3]] :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
     ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHR_B32_2]], 11, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_dsta = V_ADD_U32_e64 [[V_LOAD_IDX_B32_]], internal $stg_srca, 0, implicit $exec
     ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHL_B32_3]], 21, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
+    ; GCN-NEXT: [[V_MAX_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54, [[S_LSHL_B32_]], implicit $exec
     ;
     ; ALLOC-LABEL: name: unsafe-load-past-store
-    ; ALLOC: $idx0 = S_SET_GPR_IDX_U32 0
-    ; ALLOC-NEXT: [[COPY:%[0-9]+]]:sreg_32_xm0_xexec = COPY $idx0
-    ; ALLOC-NEXT: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
     ; ALLOC-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_]]
     ; ALLOC-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
+    ; ALLOC-NEXT: $idx3 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_1]]
     ; ALLOC-NEXT: [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHR_B32_]], 4, implicit-def dead $scc
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srcc, implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def %7, implicit $idx3, implicit $exec, implicit $idx2, implicit $idx1 :: (load (s32), addrspace 10) {
+    ; ALLOC-NEXT:   $stg_srcc = V_LOAD_IDX_B32 $idx3, 15, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX_B32 $idx2, 10, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx1, 5, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   [[V_LSHL_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, internal $stg_srcc, implicit $exec
+    ; ALLOC-NEXT: }
     ; ALLOC-NEXT: $idx3 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_1]]
     ; ALLOC-NEXT: [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 12, implicit-def $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_2]]
     ; ALLOC-NEXT: [[S_LSHR_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 12, implicit-def dead $scc
+    ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_2]]
     ; ALLOC-NEXT: [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 13, implicit-def dead $scc
     ; ALLOC-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 $idx1, 6, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
-    ; ALLOC-NEXT: $idx0 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_1]]
-    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srcc, implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx0, implicit $exec, implicit $idx2, implicit $idx1, implicit $idx3 :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
-    ; ALLOC-NEXT:   $stg_srcc = V_LOAD_IDX_B32 $idx0, 15, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX_B32 $idx2, 10, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx1, 5, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, internal $stg_srcc, implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx3, 20, implicit $exec :: (store (s32), addrspace 10)
-    ; ALLOC-NEXT: }
-    ; ALLOC-NEXT: $idx0 = S_SET_GPR_IDX_U32 [[COPY]]
-    ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_2]]
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_3]]
+    ; ALLOC-NEXT: V_STORE_IDX_B32 [[V_LSHL_ADD_U32_e64_]], $idx3, 20, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx2, implicit $exec, implicit [[V_LOAD_IDX_B32_]], implicit $idx1 :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
     ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx2, 11, implicit $exec :: (load (s32), addrspace 10)
     ; ALLOC-NEXT:   $stg_dsta = V_ADD_U32_e64 [[V_LOAD_IDX_B32_]], internal $stg_srca, 0, implicit $exec
@@ -1383,27 +1566,26 @@ body:             |
     ; LOWERED-NEXT: S_WAIT_BVHCNT 0
     ; LOWERED-NEXT: S_WAIT_KMCNT 0
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
-    ; LOWERED-NEXT: renamable $sgpr5 = S_LSHL_B32 1, 12, implicit-def dead $scc
     ; LOWERED-NEXT: renamable $sgpr1 = S_LSHR_B32 renamable $sgpr0, 2, implicit-def dead $scc
-    ; LOWERED-NEXT: $sgpr2 = S_GETREG_B32 63532, implicit $mode
-    ; LOWERED-NEXT: renamable $sgpr4 = S_LSHR_B32 renamable $sgpr1, 4, implicit-def dead $scc
+    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 renamable $sgpr0
+    ; LOWERED-NEXT: renamable $sgpr2 = S_LSHL_B32 renamable $sgpr1, 3, implicit-def dead $scc
     ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 renamable $sgpr1
-    ; LOWERED-NEXT: renamable $sgpr3 = S_LSHL_B32 renamable $sgpr1, 3, implicit-def dead $scc
-    ; LOWERED-NEXT: $idx3 = S_SET_GPR_IDX_U32 killed renamable $sgpr4
-    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr5
-    ; LOWERED-NEXT: renamable $sgpr4 = S_LSHR_B32 renamable $sgpr0, 12, implicit-def dead $scc
-    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 1
-    ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 undef $vgpr6, <0x{{[0-9a-f]+}}>, implicit $exec
-    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
-    ; LOWERED-NEXT: $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr3
+    ; LOWERED-NEXT: $idx3 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
+    ; LOWERED-NEXT: renamable $sgpr2 = S_LSHR_B32 renamable $sgpr1, 4, implicit-def dead $scc
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 57
+    ; LOWERED-NEXT: renamable $vgpr0 = V_LSHL_ADD_U32_e64 undef $vgpr5, undef $vgpr10, undef $vgpr15, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: $idx3 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
+    ; LOWERED-NEXT: renamable $sgpr2 = S_LSHL_B32 1, 12, implicit-def dead $scc
+    ; LOWERED-NEXT: renamable $sgpr0 = S_LSHR_B32 killed renamable $sgpr0, 12, implicit-def dead $scc
+    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
+    ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
+    ; LOWERED-NEXT: $vgpr1 = V_MOV_B32_e32 undef $vgpr6, <0x{{[0-9a-f]+}}>, implicit $exec
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 killed renamable $sgpr1, 13, implicit-def dead $scc
-    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 201
-    ; LOWERED-NEXT: undef $vgpr20 = V_LSHL_ADD_U32_e64 undef $vgpr5, undef $vgpr10, undef $vgpr15, <0x{{[0-9a-f]+}}>, implicit $exec
-    ; LOWERED-NEXT: dead $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
-    ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr4
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 192
+    ; LOWERED-NEXT: $vgpr20 = V_MOV_B32_e32 $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 72
-    ; LOWERED-NEXT: undef $vgpr21 = V_ADD_U32_e64 killed $vgpr0, undef $vgpr11, 0, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: undef $vgpr21 = V_ADD_U32_e64 killed $vgpr1, undef $vgpr11, 0, <0x{{[0-9a-f]+}}>, implicit $exec
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHR_B32 %0, 2, implicit-def dead $scc
@@ -1521,8 +1703,10 @@ body:             |
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; GCN-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
-    ; GCN-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT: [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[V_LOAD_IDX_B32_]], 0, 0, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def %4, implicit [[S_LSHR_B32_]], implicit $exec {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 internal $stg_srca, 0, 0, implicit $exec
+    ; GCN-NEXT: }
     ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ; GCN-NEXT: [[V_MAX_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, [[S_LSHL_B32_]], implicit $exec
     ; GCN-NEXT: DS_WRITE_B32_gfx9 [[V_MAX_U32_e64_1]], [[V_MAX_U32_e64_]], 0, 0, implicit $exec
@@ -1534,8 +1718,10 @@ body:             |
     ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_]]
     ; ALLOC-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_1]]
-    ; ALLOC-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 $idx2, 10, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT: [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[V_LOAD_IDX_B32_]], 0, 0, implicit $exec
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def %4, implicit $idx2, implicit $exec {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx2, 10, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 internal $stg_srca, 0, 0, implicit $exec
+    ; ALLOC-NEXT: }
     ; ALLOC-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ; ALLOC-NEXT: [[V_MAX_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, [[S_LSHL_B32_]], implicit $exec
     ; ALLOC-NEXT: DS_WRITE_B32_gfx9 [[V_MAX_U32_e64_1]], [[V_MAX_U32_e64_]], 0, 0, implicit $exec
@@ -1549,24 +1735,22 @@ body:             |
     ; LOWERED-NEXT: S_WAIT_KMCNT 0
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
     ; LOWERED-NEXT: renamable $sgpr1 = S_LSHR_B32 renamable $sgpr0, 2, implicit-def dead $scc
-    ; LOWERED-NEXT: renamable $vgpr1 = V_MAX_U32_e64 54321, $sgpr0, implicit $exec
-    ; LOWERED-NEXT: renamable $sgpr2 = S_LSHL_B32 renamable $sgpr1, 3, implicit-def dead $scc
+    ; LOWERED-NEXT: renamable $vgpr0 = V_MAX_U32_e64 54321, $sgpr0, implicit $exec
+    ; LOWERED-NEXT: renamable $vgpr1 = V_MAX_U32_e64 12345, killed $sgpr0, implicit $exec
+    ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 renamable $sgpr1, 3, implicit-def dead $scc
     ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
-    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
-    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 2
-    ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 undef $vgpr10, <0x{{[0-9a-f]+}}>, implicit $exec
-    ; LOWERED-NEXT: renamable $vgpr2 = V_MAX_U32_e64 12345, killed $sgpr0, implicit $exec
+    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
     ; LOWERED-NEXT: S_WAIT_STORECNT 0
-    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
-    ; LOWERED-NEXT: renamable $vgpr0 = DS_READ_B32_gfx9 killed renamable $vgpr0, 0, 0, implicit $exec
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 2
+    ; LOWERED-NEXT: renamable $vgpr2 = DS_READ_B32_gfx9 undef $vgpr10, 0, 0, <0x{{[0-9a-f]+}}>, implicit $exec
     ; LOWERED-NEXT: S_WAIT_DSCNT 0
     ; LOWERED-NEXT: GLOBAL_INV 24, implicit $exec
     ; LOWERED-NEXT: GLOBAL_WB 24, implicit $exec
     ; LOWERED-NEXT: S_WAIT_LOADCNT 0
     ; LOWERED-NEXT: S_WAIT_STORECNT 0
-    ; LOWERED-NEXT: DS_WRITE_B32_gfx9 killed renamable $vgpr2, killed renamable $vgpr1, 0, 0, implicit $exec
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 64
-    ; LOWERED-NEXT: $vgpr20 = V_MOV_B32_e32 $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: DS_WRITE_B32_gfx9 killed renamable $vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec
+    ; LOWERED-NEXT: $vgpr20 = V_MOV_B32_e32 $vgpr2, <0x{{[0-9a-f]+}}>, implicit $exec
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHR_B32 %0, 2, implicit-def dead $scc
@@ -1593,9 +1777,11 @@ body:             |
     ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; GCN-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
-    ; GCN-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT: [[V_LOAD_IDX_B32_1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT: [[DS_SUB_RTN_U32_:%[0-9]+]]:vgpr_32 = DS_SUB_RTN_U32 [[V_LOAD_IDX_B32_1]], [[V_LOAD_IDX_B32_]], 0, 0, implicit $exec, implicit $m0
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def %5, implicit [[S_LSHL_B32_]], implicit $exec, implicit [[S_LSHR_B32_]], implicit $m0 {
+    ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
+    ; GCN-NEXT:   [[DS_SUB_RTN_U32_:%[0-9]+]]:vgpr_32 = DS_SUB_RTN_U32 internal $stg_srca, internal $stg_srcb, 0, 0, implicit $exec, implicit $m0
+    ; GCN-NEXT: }
     ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ; GCN-NEXT: [[V_MAX_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, [[S_LSHL_B32_]], implicit $exec
     ; GCN-NEXT: DS_WRITE_B32_gfx9 [[V_MAX_U32_e64_1]], [[V_MAX_U32_e64_]], 0, 0, implicit $exec
@@ -1608,9 +1794,11 @@ body:             |
     ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_]]
     ; ALLOC-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_1]]
-    ; ALLOC-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 $idx3, 5, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT: [[V_LOAD_IDX_B32_1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 $idx2, 10, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT: [[DS_SUB_RTN_U32_:%[0-9]+]]:vgpr_32 = DS_SUB_RTN_U32 [[V_LOAD_IDX_B32_1]], [[V_LOAD_IDX_B32_]], 0, 0, implicit $exec, implicit $m0
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def %5, implicit $idx3, implicit $exec, implicit $idx2, implicit $m0 {
+    ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX_B32 $idx3, 5, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx2, 10, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   [[DS_SUB_RTN_U32_:%[0-9]+]]:vgpr_32 = DS_SUB_RTN_U32 internal $stg_srca, internal $stg_srcb, 0, 0, implicit $exec, implicit $m0
+    ; ALLOC-NEXT: }
     ; ALLOC-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ; ALLOC-NEXT: [[V_MAX_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, [[S_LSHL_B32_]], implicit $exec
     ; ALLOC-NEXT: DS_WRITE_B32_gfx9 [[V_MAX_U32_e64_1]], [[V_MAX_U32_e64_]], 0, 0, implicit $exec
@@ -1628,24 +1816,20 @@ body:             |
     ; LOWERED-NEXT: renamable $sgpr2 = S_LSHL_B32 renamable $sgpr1, 3, implicit-def dead $scc
     ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
-    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 3
-    ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 undef $vgpr5, <0x{{[0-9a-f]+}}>, implicit $exec
-    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 2
-    ; LOWERED-NEXT: $vgpr1 = V_MOV_B32_e32 undef $vgpr10, <0x{{[0-9a-f]+}}>, implicit $exec
-    ; LOWERED-NEXT: renamable $vgpr2 = V_MAX_U32_e64 12345, $sgpr0, implicit $exec
     ; LOWERED-NEXT: GLOBAL_WB 24, implicit $exec
     ; LOWERED-NEXT: S_WAIT_STORECNT 0
-    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
-    ; LOWERED-NEXT: renamable $vgpr0 = DS_SUB_RTN_U32 killed renamable $vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec, implicit $m0
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 14
+    ; LOWERED-NEXT: renamable $vgpr2 = DS_SUB_RTN_U32 undef $vgpr10, undef $vgpr5, 0, 0, <0x{{[0-9a-f]+}}>, implicit $exec, implicit $m0
     ; LOWERED-NEXT: S_WAIT_DSCNT 0
     ; LOWERED-NEXT: GLOBAL_INV 24, implicit $exec
-    ; LOWERED-NEXT: renamable $vgpr1 = V_MAX_U32_e64 54321, killed $sgpr0, implicit $exec
+    ; LOWERED-NEXT: renamable $vgpr0 = V_MAX_U32_e64 54321, $sgpr0, implicit $exec
+    ; LOWERED-NEXT: renamable $vgpr1 = V_MAX_U32_e64 12345, killed $sgpr0, implicit $exec
     ; LOWERED-NEXT: GLOBAL_WB 24, implicit $exec
     ; LOWERED-NEXT: S_WAIT_LOADCNT 0
     ; LOWERED-NEXT: S_WAIT_STORECNT 0
-    ; LOWERED-NEXT: DS_WRITE_B32_gfx9 killed renamable $vgpr2, killed renamable $vgpr1, 0, 0, implicit $exec
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 64
-    ; LOWERED-NEXT: $vgpr20 = V_MOV_B32_e32 $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: DS_WRITE_B32_gfx9 killed renamable $vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec
+    ; LOWERED-NEXT: $vgpr20 = V_MOV_B32_e32 $vgpr2, <0x{{[0-9a-f]+}}>, implicit $exec
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHR_B32 %0, 2, implicit-def dead $scc
@@ -1674,16 +1858,14 @@ body:             |
     ; GCN-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
     ; GCN-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
     ; GCN-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 5, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[V_MAX_U32_e64_]] :: (load (s32), addrspace 10), (store (s32), addrspace 3) {
-    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
-    ; GCN-NEXT:   DS_WRITE_B32_gfx9 internal $stg_srca, [[V_MAX_U32_e64_]], 4, 0, implicit $exec :: (store (s32), addrspace 3)
-    ; GCN-NEXT: }
+    ; GCN-NEXT: [[V_LOAD_IDX_B32_1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_]], implicit $exec, implicit [[S_LSHL_B32_1]] :: (load (s32), addrspace 10), (load (s32), addrspace 3), (store (s32), addrspace 10) {
     ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 10, implicit $exec :: (load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_dsta = DS_READ_B32_gfx9 internal $stg_srca, 0, 0, implicit $exec :: (load (s32), addrspace 3)
     ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHL_B32_1]], 20, implicit $exec :: (store (s32), addrspace 10)
     ; GCN-NEXT: }
+    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
+    ; GCN-NEXT: DS_WRITE_B32_gfx9 [[V_LOAD_IDX_B32_1]], [[V_MAX_U32_e64_]], 4, 0, implicit $exec :: (store (s32), addrspace 3)
     ;
     ; ALLOC-LABEL: name: coremi-store-store-trivially-distinct
     ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
@@ -1691,16 +1873,14 @@ body:             |
     ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_]]
     ; ALLOC-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHR_B32_]], 3, implicit-def dead $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_1]]
-    ; ALLOC-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
-    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit $idx2, implicit $exec, implicit [[V_MAX_U32_e64_]] :: (load (s32), addrspace 10), (store (s32), addrspace 3) {
-    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx2, 10, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   DS_WRITE_B32_gfx9 internal $stg_srca, [[V_MAX_U32_e64_]], 4, 0, implicit $exec :: (store (s32), addrspace 3)
-    ; ALLOC-NEXT: }
+    ; ALLOC-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 $idx2, 10, implicit $exec :: (load (s32), addrspace 10)
     ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx2, implicit $exec, implicit $idx1 :: (load (s32), addrspace 10), (load (s32), addrspace 3), (store (s32), addrspace 10) {
     ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx2, 10, implicit $exec :: (load (s32), addrspace 10)
     ; ALLOC-NEXT:   $stg_dsta = DS_READ_B32_gfx9 internal $stg_srca, 0, 0, implicit $exec :: (load (s32), addrspace 3)
     ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 20, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
+    ; ALLOC-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
+    ; ALLOC-NEXT: DS_WRITE_B32_gfx9 [[V_LOAD_IDX_B32_]], [[V_MAX_U32_e64_]], 4, 0, implicit $exec :: (store (s32), addrspace 3)
     ;
     ; LOWERED-LABEL: name: coremi-store-store-trivially-distinct
     ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
@@ -1714,10 +1894,12 @@ body:             |
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 renamable $sgpr1, 3, implicit-def dead $scc
     ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 2
+    ; LOWERED-NEXT: $vgpr1 = V_MOV_B32_e32 undef $vgpr10, <0x{{[0-9a-f]+}}>, implicit $exec
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 66
-    ; LOWERED-NEXT: DS_WRITE_B32_gfx9 undef $vgpr10, killed renamable $vgpr0, 4, 0, <0x{{[0-9a-f]+}}>, implicit $exec :: (store (s32), addrspace 3)
     ; LOWERED-NEXT: undef $vgpr20 = DS_READ_B32_gfx9 undef $vgpr10, 0, 0, <0x{{[0-9a-f]+}}>, implicit $exec :: (load (s32), addrspace 3)
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
+    ; LOWERED-NEXT: DS_WRITE_B32_gfx9 killed renamable $vgpr1, killed renamable $vgpr0, 4, 0, implicit $exec :: (store (s32), addrspace 3)
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHR_B32 %0, 2, implicit-def dead $scc
     %2:sreg_32_xexec_hi = S_LSHL_B32 %1, 3, implicit-def dead $scc
@@ -1783,11 +1965,11 @@ body:             |
     ; GCN-LABEL: name: same-bb-wide-no-core
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 48
     ; GCN-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 16
-    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, [[S_MOV_B32_]], implicit $exec
     ; GCN-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[S_MOV_B32_]], implicit $exec, implicit [[S_MOV_B32_1]] :: (load (s128), addrspace 10), (store (s128), addrspace 10) {
     ; GCN-NEXT:   $stg_dsta = V_LOAD_IDX_B128 [[S_MOV_B32_]], 8, implicit $exec :: (load (s128), addrspace 10)
     ; GCN-NEXT:   V_STORE_IDX_B128 internal $stg_dsta, [[S_MOV_B32_1]], 4, implicit $exec :: (store (s128), addrspace 10)
     ; GCN-NEXT: }
+    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, [[S_MOV_B32_]], implicit $exec
     ;
     ; ALLOC-LABEL: name: same-bb-wide-no-core
     ; ALLOC: $idx2 = S_SET_GPR_IDX_U32 48
@@ -1831,11 +2013,11 @@ body:             |
     ; GCN-LABEL: name: wide-no-core-regno-wrap
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 48
     ; GCN-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 16
-    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, [[S_MOV_B32_]], implicit $exec
     ; GCN-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[S_MOV_B32_]], implicit $exec, implicit [[S_MOV_B32_1]] :: (load (s128), addrspace 10), (store (s128), addrspace 10) {
     ; GCN-NEXT:   $stg_dsta = V_LOAD_IDX_B128 [[S_MOV_B32_]], 1022, implicit $exec :: (load (s128), addrspace 10)
     ; GCN-NEXT:   V_STORE_IDX_B128 internal $stg_dsta, [[S_MOV_B32_1]], 1020, implicit $exec :: (store (s128), addrspace 10)
     ; GCN-NEXT: }
+    ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, [[S_MOV_B32_]], implicit $exec
     ;
     ; ALLOC-LABEL: name: wide-no-core-regno-wrap
     ; ALLOC: $idx2 = S_SET_GPR_IDX_U32 48
@@ -2384,6 +2566,7 @@ body:             |
   ; GCN-NEXT:     $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
   ; GCN-NEXT:     [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
   ; GCN-NEXT:   }
+  ; GCN-NEXT:   FAKE_USE [[V_MAX_U32_e64_]]
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
@@ -2401,6 +2584,12 @@ body:             |
   ; ALLOC-NEXT: bb.1:
   ; ALLOC-NEXT:   successors: %bb.2(0x80000000)
   ; ALLOC-NEXT: {{  $}}
+  ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
+  ; ALLOC-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def %2, implicit $idx1, implicit $exec :: (load (s32), addrspace 10) {
+  ; ALLOC-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
+  ; ALLOC-NEXT:     [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
+  ; ALLOC-NEXT:   }
+  ; ALLOC-NEXT:   FAKE_USE [[V_MAX_U32_e64_]]
   ; ALLOC-NEXT:   S_BRANCH %bb.2
   ; ALLOC-NEXT: {{  $}}
   ; ALLOC-NEXT: bb.2:
@@ -2408,13 +2597,24 @@ body:             |
   ;
   ; LOWERED-LABEL: name: multi-bb-load-simple
   ; LOWERED: bb.0:
+  ; LOWERED-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; LOWERED-NEXT: {{  $}}
   ; LOWERED-NEXT:   S_WAIT_LOADCNT_DSCNT 0
   ; LOWERED-NEXT:   S_WAIT_EXPCNT 0
   ; LOWERED-NEXT:   S_WAIT_SAMPLECNT 0
   ; LOWERED-NEXT:   S_WAIT_BVHCNT 0
   ; LOWERED-NEXT:   S_WAIT_KMCNT 0
   ; LOWERED-NEXT:   renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
-  ; LOWERED-NEXT:   S_CMP_EQ_U32 killed renamable $sgpr0, 0, implicit-def $scc
+  ; LOWERED-NEXT:   S_CMP_EQ_U32 renamable $sgpr0, 0, implicit-def $scc
+  ; LOWERED-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
+  ; LOWERED-NEXT: {{  $}}
+  ; LOWERED-NEXT: bb.1:
+  ; LOWERED-NEXT:   successors: %bb.2(0x80000000)
+  ; LOWERED-NEXT:   liveins: $sgpr0
+  ; LOWERED-NEXT: {{  $}}
+  ; LOWERED-NEXT:   $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
+  ; LOWERED-NEXT: {{  $}}
+  ; LOWERED-NEXT: bb.2:
   ; LOWERED-NEXT:   S_ENDPGM 0
 
 
@@ -2427,6 +2627,7 @@ body:             |
 
   bb.1:
     %2:vgpr_32 = V_MAX_U32_e64 12345, %1, implicit $exec
+    FAKE_USE %2
     S_BRANCH %bb.2
 
   bb.2:
@@ -2445,7 +2646,7 @@ body:             |
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
   ; GCN-NEXT:   S_CMP_EQ_U32 [[S_LSHL_B32_]], 0, implicit-def $scc
   ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; GCN-NEXT:   S_BRANCH %bb.1
@@ -2453,7 +2654,7 @@ body:             |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
   ; GCN-NEXT:   BUNDLE implicit-def $stg_dsta, implicit [[S_LSHL_B32_]], implicit $exec, implicit [[S_LSHL_B32_1]] :: (store (s32), addrspace 10) {
   ; GCN-NEXT:     $stg_dsta = V_MAX_U32_e64 12345, [[S_LSHL_B32_]], implicit $exec
   ; GCN-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHL_B32_1]], 0, implicit $exec :: (store (s32), addrspace 10)
@@ -2467,7 +2668,7 @@ body:             |
   ; ALLOC: bb.0:
   ; ALLOC-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; ALLOC-NEXT: {{  $}}
-  ; ALLOC-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
   ; ALLOC-NEXT:   S_CMP_EQ_U32 [[S_LSHL_B32_]], 0, implicit-def $scc
   ; ALLOC-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; ALLOC-NEXT:   S_BRANCH %bb.1
@@ -2475,7 +2676,7 @@ body:             |
   ; ALLOC-NEXT: bb.1:
   ; ALLOC-NEXT:   successors: %bb.2(0x80000000)
   ; ALLOC-NEXT: {{  $}}
-  ; ALLOC-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
   ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_1]]
   ; ALLOC-NEXT:   BUNDLE implicit-def $stg_dsta, implicit [[S_LSHL_B32_]], implicit $exec, implicit $idx1 :: (store (s32), addrspace 10) {
   ; ALLOC-NEXT:     $stg_dsta = V_MAX_U32_e64 12345, [[S_LSHL_B32_]], implicit $exec
@@ -2513,14 +2714,14 @@ body:             |
   ; LOWERED-NEXT:   S_ENDPGM 0
 
   bb.0:
-    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
     %1:vgpr_32 = V_MAX_U32_e64 12345, %0:sreg_32_xexec_hi, implicit $exec
     S_CMP_EQ_U32 %0:sreg_32_xexec_hi, 0, implicit-def $scc
     S_CBRANCH_SCC1 %bb.2, implicit $scc
     S_BRANCH %bb.1
 
   bb.1:
-    %2:sreg_32_xexec_hi = S_LSHL_B32 %0:sreg_32_xexec_hi, 2, implicit-def $scc
+    %2:sreg_32_xexec_hi = S_LSHL_B32 %0:sreg_32_xexec_hi, 2, implicit-def dead $scc
     V_STORE_IDX_B32 %1, %2:sreg_32_xexec_hi, 0, implicit $exec :: (store (s32), addrspace 10)
     S_BRANCH %bb.2
 
@@ -2540,7 +2741,7 @@ body:             |
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
   ; GCN-NEXT:   S_CMP_EQ_U32 [[S_LSHL_B32_]], 0, implicit-def $scc
   ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit $scc
   ; GCN-NEXT:   S_BRANCH %bb.3
@@ -2548,7 +2749,7 @@ body:             |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 5, implicit-def $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 5, implicit-def dead $scc
   ; GCN-NEXT:   S_CMP_GT_U32 [[S_LSHL_B32_1]], 0, implicit-def $scc
   ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; GCN-NEXT:   S_BRANCH %bb.3
@@ -2568,7 +2769,7 @@ body:             |
   ; ALLOC: bb.0:
   ; ALLOC-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; ALLOC-NEXT: {{  $}}
-  ; ALLOC-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
   ; ALLOC-NEXT:   S_CMP_EQ_U32 [[S_LSHL_B32_]], 0, implicit-def $scc
   ; ALLOC-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit $scc
   ; ALLOC-NEXT:   S_BRANCH %bb.3
@@ -2576,7 +2777,7 @@ body:             |
   ; ALLOC-NEXT: bb.1:
   ; ALLOC-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; ALLOC-NEXT: {{  $}}
-  ; ALLOC-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 5, implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 5, implicit-def dead $scc
   ; ALLOC-NEXT:   S_CMP_GT_U32 [[S_LSHL_B32_1]], 0, implicit-def $scc
   ; ALLOC-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; ALLOC-NEXT:   S_BRANCH %bb.3
@@ -2627,7 +2828,7 @@ body:             |
   ; LOWERED-NEXT:   S_ENDPGM 0
 
   bb.0:
-    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
     %1:vgpr_32 = V_LOAD_IDX_B32 %0:sreg_32_xexec_hi, 0, implicit $exec :: (load (s32), addrspace 10)
     S_CMP_EQ_U32 %0:sreg_32_xexec_hi, 0, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit $scc
@@ -2635,7 +2836,7 @@ body:             |
 
   bb.1:
     %2:vgpr_32 = V_MAX_U32_e64 12345, %1, implicit $exec
-    %3:sreg_32_xexec_hi = S_LSHL_B32 %0, 5, implicit-def $scc
+    %3:sreg_32_xexec_hi = S_LSHL_B32 %0, 5, implicit-def dead $scc
     S_CMP_GT_U32 %3:sreg_32_xexec_hi, 0, implicit-def $scc
     S_CBRANCH_SCC1 %bb.2, implicit $scc
     S_BRANCH %bb.3
@@ -2660,7 +2861,7 @@ body:             |
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
   ; GCN-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def %2, implicit [[S_LSHL_B32_]], implicit $exec :: (load (s32), addrspace 10) {
   ; GCN-NEXT:     $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
   ; GCN-NEXT:     [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 12345, internal $stg_srca, implicit $exec
@@ -2672,7 +2873,7 @@ body:             |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 1, implicit-def $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 1, implicit-def dead $scc
   ; GCN-NEXT:   V_STORE_IDX_B32 [[V_MAX_U32_e64_]], [[S_LSHL_B32_1]], 0, implicit $exec :: (store (s32), addrspace 10)
   ; GCN-NEXT:   S_CMP_GT_U32 [[S_LSHL_B32_1]], 0, implicit-def $scc
   ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
@@ -2681,12 +2882,12 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
   ; GCN-NEXT:   V_STORE_IDX_B32 [[V_MAX_U32_e64_]], [[S_LSHL_B32_2]], 0, implicit $exec :: (store (s32), addrspace 10)
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
-  ; GCN-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 3, implicit-def $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 3, implicit-def dead $scc
   ; GCN-NEXT:   V_STORE_IDX_B32 [[V_MAX_U32_e64_]], [[S_LSHL_B32_3]], 0, implicit $exec :: (store (s32), addrspace 10)
   ; GCN-NEXT:   S_ENDPGM 0
   ;
@@ -2694,7 +2895,7 @@ body:             |
   ; ALLOC: bb.0:
   ; ALLOC-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; ALLOC-NEXT: {{  $}}
-  ; ALLOC-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
   ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
   ; ALLOC-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def %2, implicit $idx1, implicit $exec :: (load (s32), addrspace 10) {
   ; ALLOC-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
@@ -2707,7 +2908,7 @@ body:             |
   ; ALLOC-NEXT: bb.1:
   ; ALLOC-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; ALLOC-NEXT: {{  $}}
-  ; ALLOC-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 1, implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 1, implicit-def dead $scc
   ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_1]]
   ; ALLOC-NEXT:   V_STORE_IDX_B32 [[V_MAX_U32_e64_]], $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
   ; ALLOC-NEXT:   S_CMP_GT_U32 [[S_LSHL_B32_1]], 0, implicit-def $scc
@@ -2717,13 +2918,13 @@ body:             |
   ; ALLOC-NEXT: bb.2:
   ; ALLOC-NEXT:   successors: %bb.3(0x80000000)
   ; ALLOC-NEXT: {{  $}}
-  ; ALLOC-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
   ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_2]]
   ; ALLOC-NEXT:   V_STORE_IDX_B32 [[V_MAX_U32_e64_]], $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
   ; ALLOC-NEXT:   S_BRANCH %bb.3
   ; ALLOC-NEXT: {{  $}}
   ; ALLOC-NEXT: bb.3:
-  ; ALLOC-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 3, implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 3, implicit-def dead $scc
   ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_3]]
   ; ALLOC-NEXT:   V_STORE_IDX_B32 [[V_MAX_U32_e64_]], $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
   ; ALLOC-NEXT:   S_ENDPGM 0
@@ -2777,7 +2978,7 @@ body:             |
   ; LOWERED-NEXT:   S_ENDPGM 0
 
   bb.0:
-    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
     %1:vgpr_32 = V_LOAD_IDX_B32 %0:sreg_32_xexec_hi, 0, implicit $exec :: (load (s32), addrspace 10)
     %2:vgpr_32 = V_MAX_U32_e64 12345, %1, implicit $exec
     S_CMP_EQ_U32 %0:sreg_32_xexec_hi, 0, implicit-def $scc
@@ -2785,19 +2986,19 @@ body:             |
     S_BRANCH %bb.3
 
   bb.1:
-    %3:sreg_32_xexec_hi = S_LSHL_B32 %0, 1, implicit-def $scc
+    %3:sreg_32_xexec_hi = S_LSHL_B32 %0, 1, implicit-def dead $scc
     V_STORE_IDX_B32 %2, %3:sreg_32_xexec_hi, 0, implicit $exec :: (store (s32), addrspace 10)
     S_CMP_GT_U32 %3:sreg_32_xexec_hi, 0, implicit-def $scc
     S_CBRANCH_SCC1 %bb.2, implicit $scc
     S_BRANCH %bb.3
 
   bb.2:
-    %4:sreg_32_xexec_hi = S_LSHL_B32 %0, 2, implicit-def $scc
+    %4:sreg_32_xexec_hi = S_LSHL_B32 %0, 2, implicit-def dead $scc
     V_STORE_IDX_B32 %2, %4:sreg_32_xexec_hi, 0, implicit $exec :: (store (s32), addrspace 10)
     S_BRANCH %bb.3
 
   bb.3:
-    %5:sreg_32_xexec_hi = S_LSHL_B32 %0, 3, implicit-def $scc
+    %5:sreg_32_xexec_hi = S_LSHL_B32 %0, 3, implicit-def dead $scc
     V_STORE_IDX_B32 %2, %5:sreg_32_xexec_hi, 0, implicit $exec :: (store (s32), addrspace 10)
     S_ENDPGM 0
 
@@ -2814,19 +3015,19 @@ body:             |
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
   ; GCN-NEXT:   S_BRANCH %bb.1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_1]], 2, implicit-def $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_1]], 2, implicit-def dead $scc
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
@@ -2835,7 +3036,7 @@ body:             |
   ; GCN-NEXT:     $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_1]], 1, implicit $exec :: (load (s32), addrspace 10)
   ; GCN-NEXT:     [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 internal $stg_srca, internal $stg_srcb, implicit $exec
   ; GCN-NEXT:   }
-  ; GCN-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_2]], 1, implicit-def $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_2]], 1, implicit-def dead $scc
   ; GCN-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHL_B32_]], implicit $exec, implicit [[V_MAX_U32_e64_]], implicit [[S_LSHL_B32_3]] :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
   ; GCN-NEXT:     $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
   ; GCN-NEXT:     $stg_dsta = V_ADD_U32_e64 internal $stg_srca, [[V_MAX_U32_e64_]], 0, implicit $exec
@@ -2847,19 +3048,19 @@ body:             |
   ; ALLOC: bb.0:
   ; ALLOC-NEXT:   successors: %bb.1(0x80000000)
   ; ALLOC-NEXT: {{  $}}
-  ; ALLOC-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
   ; ALLOC-NEXT:   S_BRANCH %bb.1
   ; ALLOC-NEXT: {{  $}}
   ; ALLOC-NEXT: bb.1:
   ; ALLOC-NEXT:   successors: %bb.2(0x80000000)
   ; ALLOC-NEXT: {{  $}}
-  ; ALLOC-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
   ; ALLOC-NEXT:   S_BRANCH %bb.2
   ; ALLOC-NEXT: {{  $}}
   ; ALLOC-NEXT: bb.2:
   ; ALLOC-NEXT:   successors: %bb.3(0x80000000)
   ; ALLOC-NEXT: {{  $}}
-  ; ALLOC-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_1]], 2, implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_1]], 2, implicit-def dead $scc
   ; ALLOC-NEXT:   S_BRANCH %bb.3
   ; ALLOC-NEXT: {{  $}}
   ; ALLOC-NEXT: bb.3:
@@ -2870,7 +3071,7 @@ body:             |
   ; ALLOC-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx1, 1, implicit $exec :: (load (s32), addrspace 10)
   ; ALLOC-NEXT:     [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 internal $stg_srca, internal $stg_srcb, implicit $exec
   ; ALLOC-NEXT:   }
-  ; ALLOC-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_2]], 1, implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_2]], 1, implicit-def dead $scc
   ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_3]]
   ; ALLOC-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx2, implicit $exec, implicit [[V_MAX_U32_e64_]], implicit $idx1 :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
   ; ALLOC-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx2, 0, implicit $exec :: (load (s32), addrspace 10)
@@ -2900,24 +3101,24 @@ body:             |
   ; LOWERED-NEXT:   S_ENDPGM 0
 
   bb.0:
-    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
     %1:vgpr_32 = V_LOAD_IDX_B32 %0:sreg_32_xexec_hi, 0, implicit $exec :: (load (s32), addrspace 10)
     S_BRANCH %bb.1
 
   bb.1:
-    %2:sreg_32_xexec_hi = S_LSHL_B32 %0:sreg_32_xexec_hi, 2, implicit-def $scc
+    %2:sreg_32_xexec_hi = S_LSHL_B32 %0:sreg_32_xexec_hi, 2, implicit-def dead $scc
     %3:vgpr_32 = V_LOAD_IDX_B32 %2:sreg_32_xexec_hi, 0, implicit $exec :: (load (s32), addrspace 10)
     S_BRANCH %bb.2
 
   bb.2:
-    %4:sreg_32_xexec_hi = S_LSHL_B32 %2:sreg_32_xexec_hi, 2, implicit-def $scc
+    %4:sreg_32_xexec_hi = S_LSHL_B32 %2:sreg_32_xexec_hi, 2, implicit-def dead $scc
     %5:vgpr_32 = V_LOAD_IDX_B32 %2:sreg_32_xexec_hi, 1, implicit $exec :: (load (s32), addrspace 10)
     S_BRANCH %bb.3
 
   bb.3:
     %6:vgpr_32 = V_MAX_U32_e64 %5, %3, implicit $exec
     %7:vgpr_32 = V_ADD_U32_e64 %1, %6, 0, implicit $exec
-    %8:sreg_32_xexec_hi = S_LSHL_B32 %4, 1, implicit-def $scc
+    %8:sreg_32_xexec_hi = S_LSHL_B32 %4, 1, implicit-def dead $scc
     V_STORE_IDX_B32 %7, %8, 0, implicit $exec :: (store (s32), addrspace 10)
     S_ENDPGM 0
 
@@ -2935,17 +3136,17 @@ body:             |
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT:   liveins: $sgpr4, $idx0
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 $sgpr4, 4, implicit-def $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 $sgpr4, 4, implicit-def dead $scc
   ; GCN-NEXT:   S_BRANCH %bb.1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
-  ; GCN-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_1]], 4, implicit-def $scc
-  ; GCN-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_2]], 6, implicit-def $scc
-  ; GCN-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 7, 1, implicit-def $scc
-  ; GCN-NEXT:   [[V_LOAD_IDX_B96_:%[0-9]+]]:vreg_96_align2 = V_LOAD_IDX_B96 [[S_LSHL_B32_3]], 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s96), align 4, addrspace 10)
+  ; GCN-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_1]], 4, implicit-def dead $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_2]], 6, implicit-def dead $scc
+  ; GCN-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 7, 1, implicit-def dead $scc
+  ; GCN-NEXT:   [[V_LOAD_IDX_B96_:%[0-9]+]]:vreg_96_align2 = V_LOAD_IDX_B96 [[S_LSHL_B32_3]], 0, implicit $exec :: (dereferenceable load (s96), align 4, addrspace 10)
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_128_align2 = COPY [[REG_SEQUENCE]]
@@ -2956,8 +3157,8 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_LSHL_B32_4:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
-  ; GCN-NEXT:   [[V_LOAD_IDX_B96_1:%[0-9]+]]:vreg_96_align2 = V_LOAD_IDX_B96 [[S_LSHL_B32_4]], 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s96), align 4, addrspace 10)
+  ; GCN-NEXT:   [[S_LSHL_B32_4:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
+  ; GCN-NEXT:   [[V_LOAD_IDX_B96_1:%[0-9]+]]:vreg_96_align2 = V_LOAD_IDX_B96 [[S_LSHL_B32_4]], 0, implicit $exec :: (dereferenceable load (s96), align 4, addrspace 10)
   ; GCN-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_1]], %subreg.sub3
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vreg_128_align2 = COPY [[REG_SEQUENCE1]]
@@ -2967,12 +3168,12 @@ body:             |
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xexec_hi = PHI [[S_LSHL_B32_4]], %bb.2, [[S_LSHL_B32_2]], %bb.1
   ; GCN-NEXT:   [[PHI1:%[0-9]+]]:vreg_128_align2 = PHI [[COPY]], %bb.1, [[COPY1]], %bb.2
   ; GCN-NEXT:   [[PHI2:%[0-9]+]]:vreg_96_align2 = PHI [[V_LOAD_IDX_B96_]], %bb.1, [[V_LOAD_IDX_B96_1]], %bb.2
-  ; GCN-NEXT:   [[S_LSHL_B32_5:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 killed [[PHI]], 3, implicit-def $scc
-  ; GCN-NEXT:   BUNDLE implicit-def dead $stg_srcc, implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHR_B32_]], implicit $exec, implicit $flat_scr, implicit [[S_LSHL_B32_2]], implicit [[S_LSHL_B32_1]], implicit [[PHI1]], implicit [[PHI2]], implicit [[S_LSHL_B32_5]] :: (dereferenceable load (s96), align 4, addrspace 10), (dereferenceable load (s288), align 4, addrspace 10), (store (s32), addrspace 10) {
-  ; GCN-NEXT:     $stg_srcc = V_LOAD_IDX_B96 [[S_LSHR_B32_]], 288, implicit $exec, implicit $flat_scr :: (dereferenceable load (s96), align 4, addrspace 10)
-  ; GCN-NEXT:     $stg_srcb = V_LOAD_IDX_B96 [[S_LSHL_B32_2]], 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s96), align 4, addrspace 10)
-  ; GCN-NEXT:     $stg_srca = V_LOAD_IDX_B288 [[S_LSHL_B32_1]], 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s288), align 4, addrspace 10)
-  ; GCN-NEXT:     $stg_dsta = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 [[PHI1]], internal killed $stg_srca, internal killed $stg_srcb, [[PHI2]], internal killed $stg_srcc, 8, -1, 0, 0, implicit $exec
+  ; GCN-NEXT:   [[V_LOAD_IDX_B96_2:%[0-9]+]]:vreg_96_align2 = V_LOAD_IDX_B96 [[S_LSHR_B32_]], 288, implicit $exec :: (dereferenceable load (s96), align 4, addrspace 10)
+  ; GCN-NEXT:   [[S_LSHL_B32_5:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 killed [[PHI]], 3, implicit-def dead $scc
+  ; GCN-NEXT:   BUNDLE implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHL_B32_2]], implicit $exec, implicit [[S_LSHL_B32_1]], implicit [[PHI1]], implicit [[PHI2]], implicit killed [[V_LOAD_IDX_B96_2]], implicit [[S_LSHL_B32_5]] :: (dereferenceable load (s96), align 4, addrspace 10), (dereferenceable load (s288), align 4, addrspace 10), (store (s32), addrspace 10) {
+  ; GCN-NEXT:     $stg_srcb = V_LOAD_IDX_B96 [[S_LSHL_B32_2]], 0, implicit $exec :: (dereferenceable load (s96), align 4, addrspace 10)
+  ; GCN-NEXT:     $stg_srca = V_LOAD_IDX_B288 [[S_LSHL_B32_1]], 0, implicit $exec :: (dereferenceable load (s288), align 4, addrspace 10)
+  ; GCN-NEXT:     $stg_dsta = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 [[PHI1]], internal killed $stg_srca, internal killed $stg_srcb, [[PHI2]], killed [[V_LOAD_IDX_B96_2]], 8, -1, 0, 0, implicit $exec
   ; GCN-NEXT:     V_STORE_IDX_B128 internal $stg_dsta, [[S_LSHL_B32_5]], 0, implicit $exec :: (store (s32), addrspace 10)
   ; GCN-NEXT:   }
   ; GCN-NEXT:   S_ENDPGM 0
@@ -2982,23 +3183,21 @@ body:             |
   ; ALLOC-NEXT:   successors: %bb.1(0x80000000)
   ; ALLOC-NEXT:   liveins: $sgpr4, $idx0
   ; ALLOC-NEXT: {{  $}}
-  ; ALLOC-NEXT:   $idx0 = S_SET_GPR_IDX_U32 0
-  ; ALLOC-NEXT:   [[COPY:%[0-9]+]]:sreg_32_xm0_xexec = COPY $idx0
-  ; ALLOC-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 $sgpr4, 4, implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 $sgpr4, 4, implicit-def dead $scc
   ; ALLOC-NEXT:   S_BRANCH %bb.1
   ; ALLOC-NEXT: {{  $}}
   ; ALLOC-NEXT: bb.1:
   ; ALLOC-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; ALLOC-NEXT: {{  $}}
-  ; ALLOC-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
-  ; ALLOC-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_1]], 4, implicit-def $scc
-  ; ALLOC-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_2]], 6, implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_1]], 4, implicit-def dead $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_2]], 6, implicit-def dead $scc
   ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_3]]
-  ; ALLOC-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 7, 1, implicit-def $scc
-  ; ALLOC-NEXT:   [[V_LOAD_IDX_B96_:%[0-9]+]]:vreg_96_align2 = V_LOAD_IDX_B96 $idx1, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s96), align 4, addrspace 10)
+  ; ALLOC-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 7, 1, implicit-def dead $scc
+  ; ALLOC-NEXT:   [[V_LOAD_IDX_B96_:%[0-9]+]]:vreg_96_align2 = V_LOAD_IDX_B96 $idx1, 0, implicit $exec :: (dereferenceable load (s96), align 4, addrspace 10)
   ; ALLOC-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; ALLOC-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
-  ; ALLOC-NEXT:   [[COPY1:%[0-9]+]]:vreg_128_align2 = COPY [[REG_SEQUENCE]]
+  ; ALLOC-NEXT:   [[COPY:%[0-9]+]]:vreg_128_align2 = COPY [[REG_SEQUENCE]]
   ; ALLOC-NEXT:   S_CMP_EQ_U32 [[S_LSHL_B32_]], 0, implicit-def $scc
   ; ALLOC-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; ALLOC-NEXT:   S_BRANCH %bb.3
@@ -3006,29 +3205,27 @@ body:             |
   ; ALLOC-NEXT: bb.2:
   ; ALLOC-NEXT:   successors: %bb.3(0x80000000)
   ; ALLOC-NEXT: {{  $}}
-  ; ALLOC-NEXT:   [[S_LSHL_B32_4:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
-  ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_4]]
-  ; ALLOC-NEXT:   [[V_LOAD_IDX_B96_1:%[0-9]+]]:vreg_96_align2 = V_LOAD_IDX_B96 $idx1, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s96), align 4, addrspace 10)
-  ; ALLOC-NEXT:   [[COPY2:%[0-9]+]]:vreg_128_align2 = COPY [[REG_SEQUENCE]]
+  ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_1]]
+  ; ALLOC-NEXT:   [[V_LOAD_IDX_B96_1:%[0-9]+]]:vreg_96_align2 = V_LOAD_IDX_B96 $idx1, 0, implicit $exec :: (dereferenceable load (s96), align 4, addrspace 10)
+  ; ALLOC-NEXT:   [[COPY1:%[0-9]+]]:vreg_128_align2 = COPY [[REG_SEQUENCE]]
   ; ALLOC-NEXT:   S_BRANCH %bb.3
   ; ALLOC-NEXT: {{  $}}
   ; ALLOC-NEXT: bb.3:
-  ; ALLOC-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xexec_hi = PHI [[S_LSHL_B32_4]], %bb.2, [[S_LSHL_B32_2]], %bb.1
-  ; ALLOC-NEXT:   [[PHI1:%[0-9]+]]:vreg_128_align2 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
+  ; ALLOC-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xexec_hi = PHI [[S_LSHL_B32_1]], %bb.2, [[S_LSHL_B32_2]], %bb.1
+  ; ALLOC-NEXT:   [[PHI1:%[0-9]+]]:vreg_128_align2 = PHI [[COPY]], %bb.1, [[COPY1]], %bb.2
   ; ALLOC-NEXT:   [[PHI2:%[0-9]+]]:vreg_96_align2 = PHI [[V_LOAD_IDX_B96_]], %bb.1, [[V_LOAD_IDX_B96_1]], %bb.2
+  ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_]]
   ; ALLOC-NEXT:   $idx3 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_2]]
   ; ALLOC-NEXT:   $idx2 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_1]]
-  ; ALLOC-NEXT:   [[S_LSHL_B32_5:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 killed [[PHI]], 3, implicit-def $scc
-  ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_5]]
-  ; ALLOC-NEXT:   $idx0 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_]]
-  ; ALLOC-NEXT:   BUNDLE implicit-def dead $stg_srcc, implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def $stg_dsta, implicit $idx0, implicit $exec, implicit $flat_scr, implicit $idx3, implicit $idx2, implicit [[PHI1]], implicit [[PHI2]], implicit $idx1 :: (dereferenceable load (s96), align 4, addrspace 10), (dereferenceable load (s288), align 4, addrspace 10), (store (s32), addrspace 10) {
-  ; ALLOC-NEXT:     $stg_srcc = V_LOAD_IDX_B96 $idx0, 288, implicit $exec, implicit $flat_scr :: (dereferenceable load (s96), align 4, addrspace 10)
-  ; ALLOC-NEXT:     $stg_srcb = V_LOAD_IDX_B96 $idx3, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s96), align 4, addrspace 10)
-  ; ALLOC-NEXT:     $stg_srca = V_LOAD_IDX_B288 $idx2, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s288), align 4, addrspace 10)
-  ; ALLOC-NEXT:     $stg_dsta = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 [[PHI1]], internal killed $stg_srca, internal killed $stg_srcb, [[PHI2]], internal killed $stg_srcc, 8, -1, 0, 0, implicit $exec
+  ; ALLOC-NEXT:   [[V_LOAD_IDX_B96_2:%[0-9]+]]:vreg_96_align2 = V_LOAD_IDX_B96 $idx1, 288, implicit $exec :: (dereferenceable load (s96), align 4, addrspace 10)
+  ; ALLOC-NEXT:   [[S_LSHL_B32_4:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 killed [[PHI]], 3, implicit-def dead $scc
+  ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_4]]
+  ; ALLOC-NEXT:   BUNDLE implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def $stg_dsta, implicit $idx3, implicit $exec, implicit $idx2, implicit [[PHI1]], implicit [[PHI2]], implicit killed [[V_LOAD_IDX_B96_2]], implicit $idx1 :: (dereferenceable load (s96), align 4, addrspace 10), (dereferenceable load (s288), align 4, addrspace 10), (store (s32), addrspace 10) {
+  ; ALLOC-NEXT:     $stg_srcb = V_LOAD_IDX_B96 $idx3, 0, implicit $exec :: (dereferenceable load (s96), align 4, addrspace 10)
+  ; ALLOC-NEXT:     $stg_srca = V_LOAD_IDX_B288 $idx2, 0, implicit $exec :: (dereferenceable load (s288), align 4, addrspace 10)
+  ; ALLOC-NEXT:     $stg_dsta = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 [[PHI1]], internal killed $stg_srca, internal killed $stg_srcb, [[PHI2]], killed [[V_LOAD_IDX_B96_2]], 8, -1, 0, 0, implicit $exec
   ; ALLOC-NEXT:     V_STORE_IDX_B128 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
   ; ALLOC-NEXT:   }
-  ; ALLOC-NEXT:   $idx0 = S_SET_GPR_IDX_U32 [[COPY]]
   ; ALLOC-NEXT:   S_ENDPGM 0
   ;
   ; LOWERED-LABEL: name: multi-bb-convolve-phi-nodes
@@ -3041,13 +3238,12 @@ body:             |
   ; LOWERED-NEXT:   S_WAIT_SAMPLECNT 0
   ; LOWERED-NEXT:   S_WAIT_BVHCNT 0
   ; LOWERED-NEXT:   S_WAIT_KMCNT 0
-  ; LOWERED-NEXT:   renamable $sgpr8 = S_LSHL_B32 killed $sgpr4, 4, implicit-def dead $scc
+  ; LOWERED-NEXT:   renamable $sgpr6 = S_LSHL_B32 killed $sgpr4, 4, implicit-def dead $scc
   ; LOWERED-NEXT:   renamable $sgpr4 = S_LSHL_B32 1, 2, implicit-def dead $scc
   ; LOWERED-NEXT:   renamable $sgpr0 = S_MOV_B32 0
-  ; LOWERED-NEXT:   renamable $sgpr6 = S_LSHL_B32 renamable $sgpr4, 4, implicit-def dead $scc
-  ; LOWERED-NEXT:   $sgpr5 = S_GETREG_B32 63532, implicit $mode
-  ; LOWERED-NEXT:   renamable $sgpr3 = S_LSHL_B32 renamable $sgpr6, 6, implicit-def dead $scc
+  ; LOWERED-NEXT:   renamable $sgpr5 = S_LSHL_B32 renamable $sgpr4, 4, implicit-def dead $scc
   ; LOWERED-NEXT:   $sgpr1 = S_MOV_B32 $sgpr0
+  ; LOWERED-NEXT:   renamable $sgpr3 = S_LSHL_B32 renamable $sgpr5, 6, implicit-def dead $scc
   ; LOWERED-NEXT:   $sgpr2 = S_MOV_B32 $sgpr0
   ; LOWERED-NEXT:   $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr3
   ; LOWERED-NEXT:   $sgpr3 = S_MOV_B32 $sgpr0
@@ -3058,53 +3254,56 @@ body:             |
   ; LOWERED-NEXT:   $vgpr6 = V_MOV_B32_e32 undef $vgpr2, <0x{{[0-9a-f]+}}>, implicit $exec
   ; LOWERED-NEXT:   $vgpr2, $vgpr3 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx13 $sgpr2, $sgpr3, implicit $exec, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec
   ; LOWERED-NEXT:   renamable $sgpr7 = S_LSHR_B32 7, 1, implicit-def dead $scc
-  ; LOWERED-NEXT:   S_CMP_EQ_U32 killed renamable $sgpr8, 0, implicit-def $scc
-  ; LOWERED-NEXT:   $sgpr8 = S_MOV_B32 $sgpr6
+  ; LOWERED-NEXT:   S_CMP_EQ_U32 killed renamable $sgpr6, 0, implicit-def $scc
+  ; LOWERED-NEXT:   $sgpr6 = S_MOV_B32 $sgpr5
   ; LOWERED-NEXT:   S_SET_VGPR_FRAMES 0
   ; LOWERED-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit killed $scc
   ; LOWERED-NEXT: {{  $}}
   ; LOWERED-NEXT: bb.1:
   ; LOWERED-NEXT:   successors: %bb.2(0x80000000)
-  ; LOWERED-NEXT:   liveins: $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000000000000FF
+  ; LOWERED-NEXT:   liveins: $sgpr4, $sgpr5, $sgpr7, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000000000000FF
   ; LOWERED-NEXT: {{  $}}
-  ; LOWERED-NEXT:   renamable $sgpr8 = S_LSHL_B32 1, 2, implicit-def dead $scc
+  ; LOWERED-NEXT:   $idx1 = S_SET_GPR_IDX_U32 renamable $sgpr4
   ; LOWERED-NEXT:   $vgpr0, $vgpr1 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx13 $sgpr0, $sgpr1, implicit $exec, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3
-  ; LOWERED-NEXT:   $idx1 = S_SET_GPR_IDX_U32 renamable $sgpr8
-  ; LOWERED-NEXT:   $vgpr2, $vgpr3 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx13 $sgpr2, killed $sgpr3, implicit $exec, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec
   ; LOWERED-NEXT:   S_SET_VGPR_FRAMES 1
   ; LOWERED-NEXT:   $vgpr4 = V_MOV_B32_e32 undef $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
   ; LOWERED-NEXT:   $vgpr5 = V_MOV_B32_e32 undef $vgpr1, <0x{{[0-9a-f]+}}>, implicit $exec
   ; LOWERED-NEXT:   $vgpr6 = V_MOV_B32_e32 undef $vgpr2, <0x{{[0-9a-f]+}}>, implicit $exec
+  ; LOWERED-NEXT:   $vgpr2, $vgpr3 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx13 $sgpr2, killed $sgpr3, implicit $exec, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec
+  ; LOWERED-NEXT:   $sgpr6 = S_MOV_B32 $sgpr4
   ; LOWERED-NEXT:   S_SET_VGPR_FRAMES 0
   ; LOWERED-NEXT: {{  $}}
   ; LOWERED-NEXT: bb.2:
-  ; LOWERED-NEXT:   liveins: $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $vgpr4_vgpr5_vgpr6, $vgpr0_vgpr1_vgpr2_vgpr3
+  ; LOWERED-NEXT:   liveins: $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr4_vgpr5_vgpr6, $vgpr0_vgpr1_vgpr2_vgpr3
   ; LOWERED-NEXT: {{  $}}
-  ; LOWERED-NEXT:   renamable $sgpr0 = S_LSHL_B32 killed renamable $sgpr8, 3, implicit-def dead $scc
-  ; LOWERED-NEXT:   $idx3 = S_SET_GPR_IDX_U32 killed renamable $sgpr6
+  ; LOWERED-NEXT:   $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr7
+  ; LOWERED-NEXT:   $idx3 = S_SET_GPR_IDX_U32 killed renamable $sgpr5
   ; LOWERED-NEXT:   $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr4
+  ; LOWERED-NEXT:   S_SET_VGPR_FRAMES 257
+  ; LOWERED-NEXT:   $vgpr8 = V_MOV_B32_e32 undef $vgpr288, <0x{{[0-9a-f]+}}>, implicit $exec
+  ; LOWERED-NEXT:   $vgpr9 = V_MOV_B32_e32 undef $vgpr289, <0x{{[0-9a-f]+}}>, implicit $exec
+  ; LOWERED-NEXT:   $vgpr10 = V_MOV_B32_e32 undef $vgpr290, <0x{{[0-9a-f]+}}>, implicit $exec
+  ; LOWERED-NEXT:   renamable $sgpr0 = S_LSHL_B32 killed renamable $sgpr6, 3, implicit-def dead $scc
   ; LOWERED-NEXT:   $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
-  ; LOWERED-NEXT:   $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr7
-  ; LOWERED-NEXT:   undef $vgpr0_vgpr1_vgpr2_vgpr3 = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 killed $vgpr0_vgpr1_vgpr2_vgpr3, killed undef $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8, killed undef $vgpr0_vgpr1_vgpr2, killed $vgpr4_vgpr5_vgpr6, killed undef $vgpr288_vgpr289_vgpr290, 8, -1, 12801, 0, <0x{{[0-9a-f]+}}>, implicit $exec
-  ; LOWERED-NEXT:   dead $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr5
+  ; LOWERED-NEXT:   undef $vgpr0_vgpr1_vgpr2_vgpr3 = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 killed $vgpr0_vgpr1_vgpr2_vgpr3, killed undef $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8, killed undef $vgpr0_vgpr1_vgpr2, killed $vgpr4_vgpr5_vgpr6, killed $vgpr8_vgpr9_vgpr10, 8, -1, 12801, 0, <0x{{[0-9a-f]+}}>, implicit $exec
   ; LOWERED-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1(0x80000000); %bb.1(100.00%)
     liveins: $sgpr4, $idx0
-    %0:sreg_32 = S_LSHL_B32 $sgpr4, 4, implicit-def $scc
+    %0:sreg_32 = S_LSHL_B32 $sgpr4, 4, implicit-def dead $scc
     S_BRANCH %bb.1
 
   bb.1:
     successors: %bb.2(0x40000000), %bb.3(0x40000000); %bb.2(50.00%), %bb.3(50.00%)
 
-    %1:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
-    %2:sreg_32_xexec_hi = S_LSHL_B32 %1:sreg_32_xexec_hi, 4, implicit-def $scc
-    %3:sreg_32_xexec_hi = S_LSHL_B32 %2:sreg_32_xexec_hi, 6, implicit-def $scc
-    %4:sreg_32_xexec_hi = S_LSHR_B32 7, 1, implicit-def $scc
-    %5:vreg_288_align2 = V_LOAD_IDX_B288 %1:sreg_32_xexec_hi, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s288), align 4, addrspace 10)
-    %6:vreg_96_align2 = V_LOAD_IDX_B96 %2:sreg_32_xexec_hi, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s96), align 4, addrspace 10)
-    %7:vreg_96_align2 = V_LOAD_IDX_B96 %3:sreg_32_xexec_hi, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s96), align 4, addrspace 10)
-    %8:vreg_96_align2 = V_LOAD_IDX_B96 %4:sreg_32_xexec_hi, 288, implicit $exec, implicit $flat_scr :: (dereferenceable load (s96), align 4, addrspace 10)
+    %1:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
+    %2:sreg_32_xexec_hi = S_LSHL_B32 %1:sreg_32_xexec_hi, 4, implicit-def dead $scc
+    %3:sreg_32_xexec_hi = S_LSHL_B32 %2:sreg_32_xexec_hi, 6, implicit-def dead $scc
+    %4:sreg_32_xexec_hi = S_LSHR_B32 7, 1, implicit-def dead $scc
+    %5:vreg_288_align2 = V_LOAD_IDX_B288 %1:sreg_32_xexec_hi, 0, implicit $exec :: (dereferenceable load (s288), align 4, addrspace 10)
+    %6:vreg_96_align2 = V_LOAD_IDX_B96 %2:sreg_32_xexec_hi, 0, implicit $exec :: (dereferenceable load (s96), align 4, addrspace 10)
+    %7:vreg_96_align2 = V_LOAD_IDX_B96 %3:sreg_32_xexec_hi, 0, implicit $exec :: (dereferenceable load (s96), align 4, addrspace 10)
+    %8:vreg_96_align2 = V_LOAD_IDX_B96 %4:sreg_32_xexec_hi, 288, implicit $exec :: (dereferenceable load (s96), align 4, addrspace 10)
     %9:sreg_32 = S_MOV_B32 0
     %10:sgpr_128 = REG_SEQUENCE %9:sreg_32, %subreg.sub0, %9:sreg_32, %subreg.sub1, %9:sreg_32, %subreg.sub2, %9:sreg_32, %subreg.sub3
     %11:vreg_128_align2 = COPY %10:sgpr_128
@@ -3115,8 +3314,8 @@ body:             |
   bb.2:
     successors: %bb.3(0x80000000); %bb.3(100.00%)
 
-    %12:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
-    %13:vreg_96_align2 = V_LOAD_IDX_B96 %12:sreg_32_xexec_hi, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s96), align 4, addrspace 10)
+    %12:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
+    %13:vreg_96_align2 = V_LOAD_IDX_B96 %12:sreg_32_xexec_hi, 0, implicit $exec :: (dereferenceable load (s96), align 4, addrspace 10)
     %14:sreg_32 = S_MOV_B32 0
     %15:sgpr_128 = REG_SEQUENCE %14:sreg_32, %subreg.sub0, %14:sreg_32, %subreg.sub1, %14:sreg_32, %subreg.sub2, %14:sreg_32, %subreg.sub3
     %16:vreg_128_align2 = COPY %15:sgpr_128
@@ -3128,7 +3327,7 @@ body:             |
     %18:vreg_128_align2 = PHI %11:vreg_128_align2, %bb.1, %16:vreg_128_align2, %bb.2
     %19:vreg_96_align2 = PHI %7:vreg_96_align2, %bb.1, %13:vreg_96_align2, %bb.2
     %20:vreg_128_align2 = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 %18:vreg_128_align2, killed %5:vreg_288_align2, killed %6:vreg_96_align2, %19:vreg_96_align2, killed %8:vreg_96_align2, 8, -1, 0, 0, implicit $exec
-    %21:sreg_32_xexec_hi = S_LSHL_B32 killed %17:sreg_32_xexec_hi, 3, implicit-def $scc
+    %21:sreg_32_xexec_hi = S_LSHL_B32 killed %17:sreg_32_xexec_hi, 3, implicit-def dead $scc
     V_STORE_IDX_B128 %20:vreg_128_align2, %21:sreg_32_xexec_hi, 0, implicit $exec :: (store (s32), addrspace 10)
     S_ENDPGM 0
 
@@ -3145,7 +3344,7 @@ body:             |
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
   ; GCN-NEXT:   S_CMP_EQ_U32 [[S_LSHL_B32_]], 0, implicit-def $scc
   ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; GCN-NEXT:   S_BRANCH %bb.1
@@ -3153,13 +3352,13 @@ body:             |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def $scc
-  ; GCN-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_1]], 1, implicit-def $scc
   ; GCN-NEXT:   BUNDLE implicit-def $stg_dsta, implicit [[S_LSHL_B32_]], implicit $exec :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
   ; GCN-NEXT:     $stg_dsta = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
   ; GCN-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHL_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
   ; GCN-NEXT:   }
-  ; GCN-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_2]], 1, implicit-def $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_1]], 1, implicit-def dead $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_2]], 1, implicit-def dead $scc
   ; GCN-NEXT:   BUNDLE implicit-def $stg_dsta, implicit [[S_LSHL_B32_2]], implicit $exec, implicit [[S_LSHL_B32_3]] :: (store (s32), addrspace 10) {
   ; GCN-NEXT:     $stg_dsta = V_MAX_U32_e64 23456, [[S_LSHL_B32_2]], implicit $exec
   ; GCN-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHL_B32_3]], 0, implicit $exec :: (store (s32), addrspace 10)
@@ -3172,7 +3371,7 @@ body:             |
   ; ALLOC: bb.0:
   ; ALLOC-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; ALLOC-NEXT: {{  $}}
-  ; ALLOC-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
   ; ALLOC-NEXT:   S_CMP_EQ_U32 [[S_LSHL_B32_]], 0, implicit-def $scc
   ; ALLOC-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; ALLOC-NEXT:   S_BRANCH %bb.1
@@ -3181,13 +3380,13 @@ body:             |
   ; ALLOC-NEXT:   successors: %bb.2(0x80000000)
   ; ALLOC-NEXT: {{  $}}
   ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
-  ; ALLOC-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def $scc
-  ; ALLOC-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_1]], 1, implicit-def $scc
   ; ALLOC-NEXT:   BUNDLE implicit-def $stg_dsta, implicit $idx1, implicit $exec :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
   ; ALLOC-NEXT:     $stg_dsta = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
   ; ALLOC-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
   ; ALLOC-NEXT:   }
-  ; ALLOC-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_2]], 1, implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_1]], 1, implicit-def dead $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_2]], 1, implicit-def dead $scc
   ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_3]]
   ; ALLOC-NEXT:   BUNDLE implicit-def $stg_dsta, implicit [[S_LSHL_B32_2]], implicit $exec, implicit $idx1 :: (store (s32), addrspace 10) {
   ; ALLOC-NEXT:     $stg_dsta = V_MAX_U32_e64 23456, [[S_LSHL_B32_2]], implicit $exec
@@ -3227,18 +3426,18 @@ body:             |
   ; LOWERED-NEXT: bb.2:
   ; LOWERED-NEXT:   S_ENDPGM 0
   bb.0:
-    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
     %1:vgpr_32 = V_LOAD_IDX_B32 %0:sreg_32_xexec_hi, 0, implicit $exec :: (load (s32), addrspace 10)
     S_CMP_EQ_U32 %0:sreg_32_xexec_hi, 0, implicit-def $scc
     S_CBRANCH_SCC1 %bb.2, implicit $scc
     S_BRANCH %bb.1
 
   bb.1:
-    %2:sreg_32_xexec_hi = S_LSHL_B32 %0:sreg_32_xexec_hi, 2, implicit-def $scc
-    %3:sreg_32_xexec_hi = S_LSHL_B32 %2:sreg_32_xexec_hi, 1, implicit-def $scc
+    %2:sreg_32_xexec_hi = S_LSHL_B32 %0:sreg_32_xexec_hi, 2, implicit-def dead $scc
+    %3:sreg_32_xexec_hi = S_LSHL_B32 %2:sreg_32_xexec_hi, 1, implicit-def dead $scc
     V_STORE_IDX_B32 %1:vgpr_32, %0:sreg_32_xexec_hi, 0, implicit $exec :: (store (s32), addrspace 10)
     %5:vgpr_32 = V_MAX_U32_e64 23456, %3:sreg_32_xexec_hi, implicit $exec
-    %6:sreg_32_xexec_hi = S_LSHL_B32 %3:sreg_32_xexec_hi, 1, implicit-def $scc
+    %6:sreg_32_xexec_hi = S_LSHL_B32 %3:sreg_32_xexec_hi, 1, implicit-def dead $scc
     V_STORE_IDX_B32 %5:vgpr_32, %6:sreg_32_xexec_hi, 0, implicit $exec :: (store (s32), addrspace 10)
 
   bb.2:
@@ -3257,54 +3456,54 @@ body:             |
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
-  ; GCN-NEXT:   S_CMP_EQ_U32 [[S_LSHL_B32_]], 0, implicit-def $scc
-  ; GCN-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def $scc
-  ; GCN-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_1]], 1, implicit-def $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
+  ; GCN-NEXT:   S_CMP_EQ_U32 [[S_LSHL_B32_]], 0, implicit-def dead $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_1]], 1, implicit-def dead $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_2]], 1, implicit-def $scc
+  ; GCN-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_2]], 1, implicit-def dead $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
+  ; GCN-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def %4, implicit [[S_LSHL_B32_]], implicit $exec, implicit [[S_LSHL_B32_2]] :: (load (s32), addrspace 10) {
+  ; GCN-NEXT:     $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
+  ; GCN-NEXT:     [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 internal $stg_srca, [[S_LSHL_B32_2]], implicit $exec
+  ; GCN-NEXT:   }
   ; GCN-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def %6, implicit [[S_LSHL_B32_]], implicit $exec :: (load (s32), addrspace 10) {
   ; GCN-NEXT:     $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
   ; GCN-NEXT:     [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 internal $stg_srca, implicit $exec
   ; GCN-NEXT:   }
-  ; GCN-NEXT:   [[S_LSHL_B32_4:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_3]], [[V_READFIRSTLANE_B32_]], implicit-def $scc
-  ; GCN-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHL_B32_]], implicit $exec, implicit [[S_LSHL_B32_2]], implicit [[S_LSHL_B32_4]] :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
-  ; GCN-NEXT:     $stg_srca = V_LOAD_IDX_B32 [[S_LSHL_B32_]], 0, implicit $exec :: (load (s32), addrspace 10)
-  ; GCN-NEXT:     $stg_dsta = V_MAX_U32_e64 internal $stg_srca, [[S_LSHL_B32_2]], implicit $exec
-  ; GCN-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, [[S_LSHL_B32_4]], 0, implicit $exec :: (store (s32), addrspace 10)
-  ; GCN-NEXT:   }
+  ; GCN-NEXT:   [[S_LSHL_B32_4:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_3]], [[V_READFIRSTLANE_B32_]], implicit-def dead $scc
+  ; GCN-NEXT:   V_STORE_IDX_B32 [[V_MAX_U32_e64_]], [[S_LSHL_B32_4]], 0, implicit $exec :: (store (s32), addrspace 10)
   ;
   ; ALLOC-LABEL: name: multi-bb-coremis-swap-order
   ; ALLOC: bb.0:
   ; ALLOC-NEXT:   successors: %bb.1(0x80000000)
   ; ALLOC-NEXT: {{  $}}
-  ; ALLOC-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
-  ; ALLOC-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def $scc
-  ; ALLOC-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_1]], 1, implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_1]], 1, implicit-def dead $scc
   ; ALLOC-NEXT: {{  $}}
   ; ALLOC-NEXT: bb.1:
   ; ALLOC-NEXT:   successors: %bb.2(0x80000000)
   ; ALLOC-NEXT: {{  $}}
-  ; ALLOC-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_2]], 1, implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_2]], 1, implicit-def dead $scc
   ; ALLOC-NEXT: {{  $}}
   ; ALLOC-NEXT: bb.2:
-  ; ALLOC-NEXT:   $idx2 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
-  ; ALLOC-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def %6, implicit $idx2, implicit $exec :: (load (s32), addrspace 10) {
-  ; ALLOC-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx2, 0, implicit $exec :: (load (s32), addrspace 10)
+  ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
+  ; ALLOC-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def %4, implicit $idx1, implicit $exec, implicit [[S_LSHL_B32_2]] :: (load (s32), addrspace 10) {
+  ; ALLOC-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
+  ; ALLOC-NEXT:     [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 internal $stg_srca, [[S_LSHL_B32_2]], implicit $exec
+  ; ALLOC-NEXT:   }
+  ; ALLOC-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def %6, implicit $idx1, implicit $exec :: (load (s32), addrspace 10) {
+  ; ALLOC-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s32), addrspace 10)
   ; ALLOC-NEXT:     [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 internal $stg_srca, implicit $exec
   ; ALLOC-NEXT:   }
-  ; ALLOC-NEXT:   [[S_LSHL_B32_4:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_3]], [[V_READFIRSTLANE_B32_]], implicit-def $scc
+  ; ALLOC-NEXT:   [[S_LSHL_B32_4:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LSHL_B32_3]], [[V_READFIRSTLANE_B32_]], implicit-def dead $scc
   ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_4]]
-  ; ALLOC-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx2, implicit $exec, implicit [[S_LSHL_B32_2]], implicit $idx1 :: (load (s32), addrspace 10), (store (s32), addrspace 10) {
-  ; ALLOC-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx2, 0, implicit $exec :: (load (s32), addrspace 10)
-  ; ALLOC-NEXT:     $stg_dsta = V_MAX_U32_e64 internal $stg_srca, [[S_LSHL_B32_2]], implicit $exec
-  ; ALLOC-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
-  ; ALLOC-NEXT:   }
+  ; ALLOC-NEXT:   V_STORE_IDX_B32 [[V_MAX_U32_e64_]], $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
   ;
   ; LOWERED-LABEL: name: multi-bb-coremis-swap-order
   ; LOWERED: bb.0:
@@ -3314,29 +3513,31 @@ body:             |
   ; LOWERED-NEXT:   S_WAIT_BVHCNT 0
   ; LOWERED-NEXT:   S_WAIT_KMCNT 0
   ; LOWERED-NEXT:   renamable $sgpr1 = S_LSHL_B32 1, 2, implicit-def dead $scc
-  ; LOWERED-NEXT:   $idx2 = S_SET_GPR_IDX_U32 renamable $sgpr1
+  ; LOWERED-NEXT:   $idx1 = S_SET_GPR_IDX_U32 renamable $sgpr1
   ; LOWERED-NEXT:   renamable $sgpr0 = S_LSHL_B32 killed renamable $sgpr1, 2, implicit-def dead $scc
-  ; LOWERED-NEXT:   S_SET_VGPR_FRAMES 66
+  ; LOWERED-NEXT:   S_SET_VGPR_FRAMES 1
   ; LOWERED-NEXT:   renamable $sgpr1 = V_READFIRSTLANE_B32 undef $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
   ; LOWERED-NEXT:   renamable $sgpr0 = S_LSHL_B32 killed renamable $sgpr0, 1, implicit-def dead $scc
-  ; LOWERED-NEXT:   renamable $sgpr2 = S_LSHL_B32 renamable $sgpr0, 1, implicit-def dead $scc
+  ; LOWERED-NEXT:   renamable $vgpr0 = V_MAX_U32_e64 undef $vgpr0, $sgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
+  ; LOWERED-NEXT:   renamable $sgpr2 = S_LSHL_B32 killed renamable $sgpr0, 1, implicit-def dead $scc
   ; LOWERED-NEXT:   renamable $sgpr1 = S_LSHL_B32 killed renamable $sgpr2, killed renamable $sgpr1, implicit-def dead $scc
   ; LOWERED-NEXT:   $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
-  ; LOWERED-NEXT:   undef $vgpr0 = V_MAX_U32_e64 undef $vgpr0, killed $sgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
+  ; LOWERED-NEXT:   S_SET_VGPR_FRAMES 64
+  ; LOWERED-NEXT:   $vgpr0 = V_MOV_B32_e32 $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec
   ; LOWERED-NEXT:   S_SET_VGPR_FRAMES 0
 
   bb.0:
-    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def dead $scc
     %1:vgpr_32 = V_LOAD_IDX_B32 %0:sreg_32_xexec_hi, 0, implicit $exec :: (load (s32), addrspace 10)
-    S_CMP_EQ_U32 %0:sreg_32_xexec_hi, 0, implicit-def $scc
-    %2:sreg_32_xexec_hi = S_LSHL_B32 %0:sreg_32_xexec_hi, 2, implicit-def $scc
-    %3:sreg_32_xexec_hi = S_LSHL_B32 %2:sreg_32_xexec_hi, 1, implicit-def $scc
+    S_CMP_EQ_U32 %0:sreg_32_xexec_hi, 0, implicit-def dead $scc
+    %2:sreg_32_xexec_hi = S_LSHL_B32 %0:sreg_32_xexec_hi, 2, implicit-def dead $scc
+    %3:sreg_32_xexec_hi = S_LSHL_B32 %2:sreg_32_xexec_hi, 1, implicit-def dead $scc
 
   bb.1:
     %4:vgpr_32 = V_MAX_U32_e64 %1:vgpr_32, %3:sreg_32_xexec_hi, implicit $exec
-    %5:sreg_32_xexec_hi = S_LSHL_B32 %3:sreg_32_xexec_hi, 1, implicit-def $scc
+    %5:sreg_32_xexec_hi = S_LSHL_B32 %3:sreg_32_xexec_hi, 1, implicit-def dead $scc
 
   bb.2:
     %6:sreg_32_xm0 = V_READFIRSTLANE_B32 %1:vgpr_32, implicit $exec
-    %7:sreg_32_xexec_hi = S_LSHL_B32 %5:sreg_32_xexec_hi, %6:sreg_32_xm0, implicit-def $scc
+    %7:sreg_32_xexec_hi = S_LSHL_B32 %5:sreg_32_xexec_hi, %6:sreg_32_xm0, implicit-def dead $scc
     V_STORE_IDX_B32 %4:vgpr_32, %7:sreg_32_xexec_hi, 0, implicit $exec :: (store (s32), addrspace 10)

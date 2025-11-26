@@ -20,6 +20,7 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <optional>
 
@@ -27,6 +28,11 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "AMDGPUtti"
+
+static cl::opt<bool> EnableConvolveCombine(
+    "enable-convolve-combine",
+    cl::init(false),
+    cl::desc("Enable combining of AMDGPU convolve intrinsics"));
 
 namespace {
 
@@ -786,6 +792,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::amdgcn_convolve_f32i32_iu8_1x1:
   case Intrinsic::amdgcn_convolve_i32_iu4_1x1:
   case Intrinsic::amdgcn_convolve_i32_iu8_1x1: {
+    if (!EnableConvolveCombine)
+      break;
     // 1x1 convolutions run more efficiently when multiple iterations are
     // combined into a single instruction.
     //

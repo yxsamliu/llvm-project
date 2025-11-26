@@ -274,7 +274,6 @@ public:
   bool trySplitVStIdxRegSeq(AMDGPUMI::VStoreIdxInst &MI);
   bool trySplitVLdIdxMultiRegSeq(AMDGPUMI::VLoadIdxInst &MI);
   bool tryFoldRegSeqVLdIdx(MachineInstr &MI);
-  bool tryFoldMiscCombinations(MachineInstr &MI);
 
   bool tryOptimizeAGPRPhis(MachineBasicBlock &MBB);
 
@@ -728,7 +727,7 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
 
   // Verify the register is compatible with the operand.
   if (const TargetRegisterClass *OpRC =
-          TII->getRegClass(MI->getDesc(), Fold.UseOpNo, TRI)) {
+          TII->getRegClass(MI->getDesc(), Fold.UseOpNo)) {
     const TargetRegisterClass *NewRC =
         TRI->getRegClassForReg(*MRI, New->getReg());
 
@@ -1375,10 +1374,11 @@ void SIFoldOperandsImpl::foldOperand(
         continue;
 
       const int SrcIdx = MovOp == AMDGPU::V_MOV_B16_t16_e64 ? 2 : 1;
-      const TargetRegisterClass *MovSrcRC =
-          TRI->getRegClass(TII->getOpRegClassID(MovDesc.operands()[SrcIdx]));
 
-      if (MovSrcRC) {
+      int16_t RegClassID = TII->getOpRegClassID(MovDesc.operands()[SrcIdx]);
+      if (RegClassID != -1) {
+        const TargetRegisterClass *MovSrcRC = TRI->getRegClass(RegClassID);
+
         if (UseSubReg)
           MovSrcRC = TRI->getMatchingSuperRegClass(SrcRC, MovSrcRC, UseSubReg);
 
@@ -2485,7 +2485,7 @@ bool SIFoldOperandsImpl::tryFoldRegSequence(MachineInstr &MI) {
 
   unsigned OpIdx = Op - &UseMI->getOperand(0);
   const MCInstrDesc &InstDesc = UseMI->getDesc();
-  const TargetRegisterClass *OpRC = TII->getRegClass(InstDesc, OpIdx, TRI);
+  const TargetRegisterClass *OpRC = TII->getRegClass(InstDesc, OpIdx);
   if (!OpRC || !TRI->isVectorSuperClass(OpRC))
     return false;
 
@@ -3210,64 +3210,6 @@ bool SIFoldOperandsImpl::tryOptimizeAGPRPhis(MachineBasicBlock &MBB) {
   return Changed;
 }
 
-// If there is a pattern like this:
-// %0:vreg = REG_SEQUENCE %1:vgpr_32, %subreg.sub0, %2:vgpr_32, %subreg.sub1,
-// %3:sgpr_32 = V_READFIRSTLANE_B32 %0.sub0:vreg
-// %4:sgpr_32 = V_READFIRSTLANE_B32 %0.sub1:vreg
-
-// =>
-
-// %0:vreg = REG_SEQUENCE %1:vgpr_32, %subreg.sub0, %2:vgpr_32, %subreg.sub1,
-// %3:sgpr_32 = V_READFIRSTLANE_B32 %1:vgpr_32
-// %4:sgpr_32 = V_READFIRSTLANE_B32 %2:vgpr_32
-
-// This allows the second pass through si-fold-operands to fold READFIRSTLANEs
-// into COPYs.
-bool SIFoldOperandsImpl::tryFoldMiscCombinations(MachineInstr &MI) {
-  MachineOperand *SrcMO = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
-  if (!SrcMO->isReg())
-    return false;
-
-  bool FoundRegSeqWithRFLSrc = false;
-  unsigned SrcReg = SrcMO->getReg();
-  unsigned SubRegIdx = SrcMO->getSubReg();
-  auto It = MI.getIterator();
-  auto Begin = MI.getParent()->begin();
-  for (; It != Begin; --It) {
-    MachineInstr &PrevMI = *std::prev(It);
-    for (const MachineOperand &DefOp : PrevMI.defs()) {
-      if (!DefOp.isReg())
-        break;
-      unsigned DefReg = DefOp.getReg();
-      if (DefReg && TRI->regsOverlap(DefReg, SrcReg)) {
-        if (!PrevMI.isRegSequence())
-          break;
-
-        for (unsigned i = 1; i + 1 < PrevMI.getNumOperands(); i += 2) {
-          MachineOperand &PrevMO = PrevMI.getOperand(i);
-
-          const MachineOperand &SubRegMO = PrevMI.getOperand(i + 1);
-          if (SubRegMO.isImm() && (SubRegMO.getImm() == SubRegIdx)) {
-            SrcMO->setReg(PrevMO.getReg());
-            SrcMO->setSubReg(PrevMO.getSubReg());
-            if (PrevMO.isKill()) {
-              PrevMO.setIsKill(false);
-              SrcMO->setIsKill(true);
-            }
-            FoundRegSeqWithRFLSrc = true;
-            break;
-          }
-        }
-      }
-    }
-    if (FoundRegSeqWithRFLSrc)
-      break;
-  }
-  LLVM_DEBUG(dbgs() << "Folded " << MI);
-
-  return FoundRegSeqWithRFLSrc;
-}
-
 bool SIFoldOperandsImpl::run(MachineFunction &MF) {
   this->MF = &MF;
   MRI = &MF.getRegInfo();
@@ -3326,12 +3268,6 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
 
       if (TII->isFoldableCopy(MI)) {
         Changed |= tryFoldFoldableCopy(MI, CurrentKnownM0Val);
-        continue;
-      }
-
-      unsigned UseOpc = MI.getOpcode();
-      if (UseOpc == AMDGPU::V_READFIRSTLANE_B32) {
-        Changed |= tryFoldMiscCombinations(MI);
         continue;
       }
 
