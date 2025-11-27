@@ -108,7 +108,6 @@ enum class OffloadArch {
   GFX12_5_GENERIC,
   GFX1300,
   GFX1301,
-  GFX1302,
   GFX130E,
   GFX1310,
   AMDGCNSPIRV,
