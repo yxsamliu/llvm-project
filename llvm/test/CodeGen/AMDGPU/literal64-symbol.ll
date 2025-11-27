@@ -32,6 +32,7 @@ define amdgpu_gs ptr addrspace(4) @v_add_symbol(i64 %arg) {
 ;
 ; GFX1250-LABEL: v_add_symbol:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 4, sym@abs64
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
