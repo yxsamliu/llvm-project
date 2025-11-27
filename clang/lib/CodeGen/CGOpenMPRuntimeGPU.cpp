@@ -871,6 +871,8 @@ CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
       hasRequiresUnifiedSharedMemory(), /*HasRequiresDynamicAllocators*/ false);
   Config.setDefaultTargetAS(
       CGM.getContext().getTargetInfo().getTargetAddressSpace(LangAS::Default));
+  Config.setRuntimeCC(CGM.getRuntimeCC());
+
   OMPBuilder.setConfig(Config);
 
   if (!CGM.getLangOpts().OpenMPIsTargetDevice)
@@ -2371,7 +2373,6 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX12_5_GENERIC:
       case OffloadArch::GFX1300:
       case OffloadArch::GFX1301:
-      case OffloadArch::GFX1302:
       case OffloadArch::GFX130E:
       case OffloadArch::GFX1310:
       case OffloadArch::GFX1370:

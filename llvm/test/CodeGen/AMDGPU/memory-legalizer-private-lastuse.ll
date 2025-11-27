@@ -19,6 +19,7 @@ define amdgpu_kernel void @private_last_use_load_0(ptr addrspace(5) %in, ptr add
 ;
 ; GFX1250-LABEL: private_last_use_load_0:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
@@ -64,6 +65,7 @@ define amdgpu_kernel void @private_last_use_load_1(ptr addrspace(5) %in, ptr add
 ;
 ; GFX1250-LABEL: private_last_use_load_1:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
@@ -113,6 +115,7 @@ define amdgpu_kernel void @private_last_use_and_volatile_load(ptr addrspace(5) %
 ;
 ; GFX1250-LABEL: private_last_use_and_volatile_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
@@ -154,6 +157,7 @@ define amdgpu_kernel void @private_last_use_and_nontemporal_load(ptr addrspace(5
 ;
 ; GFX1250-LABEL: private_last_use_and_nontemporal_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0

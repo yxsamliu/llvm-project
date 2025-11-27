@@ -4,18 +4,13 @@
 
 
 define amdgpu_ps void @flat_discard_b32(ptr %addr) {
-; GFX1300-SDAG-LABEL: flat_discard_b32:
-; GFX1300-SDAG:       ; %bb.0: ; %entry
-; GFX1300-SDAG-NEXT:    flat_discard_b32 v[0:1] offset:32
-; GFX1300-SDAG-NEXT:    s_endpgm
-;
-; GFX1300-GISEL-LABEL: flat_discard_b32:
-; GFX1300-GISEL:       ; %bb.0: ; %entry
-; GFX1300-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX1300-GISEL-NEXT:    flat_discard_b32 v[0:1]
-; GFX1300-GISEL-NEXT:    s_endpgm
+; GFX1300-LABEL: flat_discard_b32:
+; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1300-NEXT:    flat_discard_b32 v[0:1]
+; GFX1300-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
   call void @llvm.amdgcn.discard.b32(ptr addrspace(0) %gep, i32 0);
@@ -47,18 +42,13 @@ entry:
 }
 
 define amdgpu_ps void @flat_discard_b128(ptr %addr) {
-; GFX1300-SDAG-LABEL: flat_discard_b128:
-; GFX1300-SDAG:       ; %bb.0: ; %entry
-; GFX1300-SDAG-NEXT:    flat_discard_b128 v[0:1] offset:32 th:TH_STORE_NT
-; GFX1300-SDAG-NEXT:    s_endpgm
-;
-; GFX1300-GISEL-LABEL: flat_discard_b128:
-; GFX1300-GISEL:       ; %bb.0: ; %entry
-; GFX1300-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX1300-GISEL-NEXT:    flat_discard_b128 v[0:1] th:TH_STORE_NT
-; GFX1300-GISEL-NEXT:    s_endpgm
+; GFX1300-LABEL: flat_discard_b128:
+; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1300-NEXT:    flat_discard_b128 v[0:1] th:TH_STORE_NT
+; GFX1300-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
   call void @llvm.amdgcn.discard.b128(ptr addrspace(0) %gep, i32 1);
@@ -90,18 +80,13 @@ entry:
 }
 
 define amdgpu_ps void @flat_discard_b1024(ptr %addr) {
-; GFX1300-SDAG-LABEL: flat_discard_b1024:
-; GFX1300-SDAG:       ; %bb.0: ; %entry
-; GFX1300-SDAG-NEXT:    flat_discard_b1024 v[0:1] offset:32
-; GFX1300-SDAG-NEXT:    s_endpgm
-;
-; GFX1300-GISEL-LABEL: flat_discard_b1024:
-; GFX1300-GISEL:       ; %bb.0: ; %entry
-; GFX1300-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX1300-GISEL-NEXT:    flat_discard_b1024 v[0:1]
-; GFX1300-GISEL-NEXT:    s_endpgm
+; GFX1300-LABEL: flat_discard_b1024:
+; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1300-NEXT:    flat_discard_b1024 v[0:1]
+; GFX1300-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
   call void @llvm.amdgcn.discard.b1024(ptr addrspace(0) %gep, i32 0);

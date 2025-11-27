@@ -346,10 +346,10 @@ define amdgpu_ps <2 x float> @image_sample_c_d_1d_v2f16_tfe(<8 x i32> inreg %rsr
 ;
 ; GFX13-LABEL: image_sample_c_d_1d_v2f16_tfe:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v4, v0
+; GFX13-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v0
 ; GFX13-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-NEXT:    v_mov_b32_e32 v1, v0
-; GFX13-NEXT:    image_sample_c_d v[0:1], [v4, v5, v2, v3], s[0:7], s[8:11] dmask:0x3 dim:SQ_RSRC_IMG_1D tfe d16
+; GFX13-NEXT:    image_sample_c_d v[0:1], [v5, v4, v2, v3], s[0:7], s[8:11] dmask:0x3 dim:SQ_RSRC_IMG_1D tfe d16
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:

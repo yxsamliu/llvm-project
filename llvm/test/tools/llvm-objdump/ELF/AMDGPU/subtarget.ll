@@ -21,11 +21,6 @@ define amdgpu_kernel void @test_kernel() {
 ; RUN: llvm-objdump -D %t.o > %t-detect.txt
 ; RUN: diff %t-specify.txt %t-detect.txt
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1302 -filetype=obj -O0 -o %t.o %s
-; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx1302 %t.o > %t-specify.txt
-; RUN: llvm-objdump -D %t.o > %t-detect.txt
-; RUN: diff %t-specify.txt %t-detect.txt
-
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1301 -filetype=obj -O0 -o %t.o %s
 ; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx1301 %t.o > %t-specify.txt
 ; RUN: llvm-objdump -D %t.o > %t-detect.txt
