@@ -1964,6 +1964,13 @@ public:
   // of IMAGE_SAMPLE instructions.
   bool hasG16Bug() const { return getGeneration() == GFX13; };
 
+  /// \returns true if the subtarget requires a wait for xcnt before VMEM
+  /// accesses that must never be repeated in the event of a page fault/re-try.
+  /// Atomic stores/rmw and all volatile accesses fall under this criteria.
+  bool requiresWaitXCntForSingleAccessInstructions() const {
+    return GFX1250Insts && !GFX13Insts;;
+  }
+
   /// \returns the number of significant bits in the immediate field of the
   /// S_NOP instruction.
   unsigned getSNopBits() const {
