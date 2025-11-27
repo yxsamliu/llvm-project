@@ -4871,7 +4871,8 @@ bool AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst,
 bool AMDGPUAsmParser::validateRegOperands(const MCInst &Inst,
                                           const OperandVector &Operands) {
   unsigned Opc = Inst.getOpcode();
-  if (isVOPMAsmOnly(Opc) || isVNBR(Opc))
+  const MCInstrDesc &Desc = MII.get(Opc);
+  if (isVOPMAsmOnly(Opc) || (Desc.TSFlags & SIInstrFlags::VNBR))
     return true;
 
   const MCRegisterInfo &MRI = *getMRI();

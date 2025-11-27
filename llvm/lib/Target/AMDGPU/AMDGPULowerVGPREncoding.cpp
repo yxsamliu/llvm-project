@@ -593,7 +593,7 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(
       continue;
 
     // Instructions with 10 bit VGPR encodings don't read MSBs.
-    if (!AMDGPU::isVNBR(CoreMI->getOpcode()))
+    if (!SIInstrInfo::isVNBR(*CoreMI))
       NewMode.Ops[I].MSBits = MSBits.value();
 
     if (ST->hasVGPRIndexingRegisters()) {

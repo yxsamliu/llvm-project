@@ -4123,8 +4123,7 @@ void AMDGPUDAGToDAGISel::SelectSpatialClusterVNBR(SDNode *N, unsigned IntrID) {
   };
   auto [SemID, WaveID] = GetSemNodes(Sem);
   auto [SemReflID, SemReflWaveID] = GetSemNodes(SemRefl);
-  // TODO-GFX13: Make this 15 and handle in SIInsertWaitcnts.
-  SDValue WaitVDst = CurDAG->getTargetConstant(0, SL, MVT::i32);
+  SDValue WaitVDst = CurDAG->getTargetConstant(0xf, SL, MVT::i32);
   if (IsSend) {
     SmallVector<SDValue, 11> SendOps = {// regIns
                                         N->getOperand(2),

@@ -43,7 +43,7 @@ body:             |
     ; ESM2-NEXT: S_WAIT_SAMPLECNT 0
     ; ESM2-NEXT: S_WAIT_BVHCNT 0
     ; ESM2-NEXT: S_WAIT_KMCNT 0
-    ; ESM2-NEXT: S_WAITCNT_DEPCTR 4067
+    ; ESM2-NEXT: S_WAITCNT_DEPCTR 4095
     ; ESM2-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr2_sgpr3, 36, 0 :: (dereferenceable invariant load (s64), addrspace 4)
     ; ESM2-NEXT: $sgpr33 = S_MOV_B32 0
     ; ESM2-NEXT: S_WAIT_KMCNT 0
@@ -121,7 +121,7 @@ body:             |
     ; ESM2-NEXT: S_WAIT_SAMPLECNT 0
     ; ESM2-NEXT: S_WAIT_BVHCNT 0
     ; ESM2-NEXT: S_WAIT_KMCNT 0
-    ; ESM2-NEXT: S_WAITCNT_DEPCTR 4067
+    ; ESM2-NEXT: S_WAITCNT_DEPCTR 4095
     ; ESM2-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr2_sgpr3, 36, 0 :: (dereferenceable invariant load (s64), addrspace 4)
     ; ESM2-NEXT: $sgpr33 = S_MOV_B32 0
     ; ESM2-NEXT: S_WAIT_KMCNT 0
@@ -204,7 +204,7 @@ body:             |
     ; ESM2-NEXT: S_WAIT_SAMPLECNT 0
     ; ESM2-NEXT: S_WAIT_BVHCNT 0
     ; ESM2-NEXT: S_WAIT_KMCNT 0
-    ; ESM2-NEXT: S_WAITCNT_DEPCTR 4067
+    ; ESM2-NEXT: S_WAITCNT_DEPCTR 4095
     ; ESM2-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr2_sgpr3, 36, 0 :: (dereferenceable invariant load (s64), addrspace 4)
     ; ESM2-NEXT: $sgpr33 = S_MOV_B32 0
     ; ESM2-NEXT: S_WAIT_KMCNT 0

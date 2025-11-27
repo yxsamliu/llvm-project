@@ -1831,9 +1831,14 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   bool LOADCnt = false;
   bool DSCnt = false;
   bool STORECnt = false;
+  bool DepCtr = false;
+  bool EXPcnt = false;
 
   if (Pos == Position::AFTER)
     ++MI;
+
+  if (!ST.hasWavegroups())
+    AddrSpace &= ~SIAtomicAddrSpace::LANESHARED;
 
   if ((AddrSpace & (SIAtomicAddrSpace::GLOBAL | SIAtomicAddrSpace::SCRATCH |
                     SIAtomicAddrSpace::LANESHARED)) !=
@@ -1870,6 +1875,15 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
           LOADCnt |= true;
         if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
           STORECnt |= true;
+      }
+      // GFX13x:
+      // Laneshared accesses require synchronization of VA_VDST, VM_VSRC,
+      // and EXPcnt for neighbor data share instructions.
+      if ((AddrSpace & SIAtomicAddrSpace::LANESHARED) !=
+              SIAtomicAddrSpace::NONE &&
+          isReleaseOrStronger(Order)) {
+        DepCtr |= true;
+        EXPcnt |= true;
       }
       break;
     case SIAtomicScope::WAVEFRONT:
@@ -1935,6 +1949,16 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_DSCNT_soft)).addImm(0);
     Changed = true;
   }
+
+  if (DepCtr) {
+    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+            TII->get(AMDGPU::S_WAIT_DEPCTR_soft))
+        .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(
+            AMDGPU::DepCtr::encodeFieldVaVdst(0), 0));
+  }
+
+  if (EXPcnt)
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_EXPCNT_soft)).addImm(0);
 
   if (Pos == Position::AFTER)
     --MI;

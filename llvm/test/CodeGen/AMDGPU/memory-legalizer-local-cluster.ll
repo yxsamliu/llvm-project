@@ -821,6 +821,8 @@ define amdgpu_kernel void @local_cluster_seq_cst_load(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_load_b32 v1, v0
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -1334,6 +1336,8 @@ define amdgpu_kernel void @local_cluster_release_store(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_store_b32 v0, v1
 ; GFX1300-NEXT:    s_endpgm
@@ -1523,6 +1527,8 @@ define amdgpu_kernel void @local_cluster_seq_cst_store(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_store_b32 v0, v1
 ; GFX1300-NEXT:    s_endpgm
@@ -2050,6 +2056,8 @@ define amdgpu_kernel void @local_cluster_release_atomicrmw(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX1300-NEXT:    s_endpgm
@@ -2256,6 +2264,8 @@ define amdgpu_kernel void @local_cluster_acq_rel_atomicrmw(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -2463,6 +2473,8 @@ define amdgpu_kernel void @local_cluster_seq_cst_atomicrmw(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -2917,6 +2929,8 @@ define amdgpu_kernel void @local_cluster_acq_rel_ret_atomicrmw(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_storexchg_rtn_b32 v1, v0, v1
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -3160,6 +3174,8 @@ define amdgpu_kernel void @local_cluster_seq_cst_ret_atomicrmw(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_storexchg_rtn_b32 v1, v0, v1
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -3783,6 +3799,8 @@ define amdgpu_kernel void @local_cluster_release_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_endpgm
@@ -4020,6 +4038,8 @@ define amdgpu_kernel void @local_cluster_acq_rel_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -4258,6 +4278,8 @@ define amdgpu_kernel void @local_cluster_seq_cst_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -4914,6 +4936,8 @@ define amdgpu_kernel void @local_cluster_release_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -5152,6 +5176,8 @@ define amdgpu_kernel void @local_cluster_acq_rel_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -5390,6 +5416,8 @@ define amdgpu_kernel void @local_cluster_seq_cst_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -5628,6 +5656,8 @@ define amdgpu_kernel void @local_cluster_monotonic_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -5866,6 +5896,8 @@ define amdgpu_kernel void @local_cluster_acquire_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -6104,6 +6136,8 @@ define amdgpu_kernel void @local_cluster_release_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -6342,6 +6376,8 @@ define amdgpu_kernel void @local_cluster_acq_rel_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -6580,6 +6616,8 @@ define amdgpu_kernel void @local_cluster_seq_cst_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -7333,6 +7371,8 @@ define amdgpu_kernel void @local_cluster_release_monotonic_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
 ; GFX1300-NEXT:    v_mov_b32_e32 v0, s0
@@ -7608,6 +7648,8 @@ define amdgpu_kernel void @local_cluster_acq_rel_monotonic_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -7883,6 +7925,8 @@ define amdgpu_kernel void @local_cluster_seq_cst_monotonic_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -8650,6 +8694,8 @@ define amdgpu_kernel void @local_cluster_release_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -8925,6 +8971,8 @@ define amdgpu_kernel void @local_cluster_acq_rel_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -9200,6 +9248,8 @@ define amdgpu_kernel void @local_cluster_seq_cst_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -9475,6 +9525,8 @@ define amdgpu_kernel void @local_cluster_monotonic_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -9750,6 +9802,8 @@ define amdgpu_kernel void @local_cluster_acquire_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -10025,6 +10079,8 @@ define amdgpu_kernel void @local_cluster_release_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -10300,6 +10356,8 @@ define amdgpu_kernel void @local_cluster_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0
@@ -10575,6 +10633,8 @@ define amdgpu_kernel void @local_cluster_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu 0xfff
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
 ; GFX1300-NEXT:    s_wait_dscnt 0x0

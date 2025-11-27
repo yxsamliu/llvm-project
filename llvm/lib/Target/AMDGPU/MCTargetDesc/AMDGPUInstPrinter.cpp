@@ -2120,6 +2120,7 @@ void AMDGPUInstPrinter::printGVGPR(const MCInst *MI, unsigned OpNo,
     O << ' ';
   std::string OpndStr = getRegisterName(MI->getOperand(OpNo).getReg());
   const unsigned Opc = MI->getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opc);
   if (isVOPMAsmOnly(Opc)) {
     int OpIdxs = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::idxs);
     unsigned IdxLoc = getIdxLocFromTable(OpNo, MII.get(Opc));
@@ -2127,7 +2128,7 @@ void AMDGPUInstPrinter::printGVGPR(const MCInst *MI, unsigned OpNo,
       IdxLoc = OpNo;
     unsigned IdxReg = (MI->getOperand(OpIdxs).getImm() >> (IdxLoc * 4)) & 0xf;
     modifyVGPRNameUsingIndex(OpndStr, IdxReg);
-  } else if (isVNBR(Opc)) {
+  } else if (Desc.TSFlags & SIInstrFlags::VNBR) {
     unsigned IdxReg = 0;
     if (MIA)
       IdxReg = getIdxFromMIA(OpNo, MII.get(Opc),

@@ -784,10 +784,6 @@ bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc) {
          Opc == AMDGPU::V_CVT_PK_F32_FP8_t16_e64_gfx12;
 }
 
-bool isVNBR(unsigned Opc) {
-  return AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_refl);
-}
-
 bool isGenericAtomic(unsigned Opc) {
   return Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD ||
@@ -3837,7 +3833,7 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
   if (AMDGPU::isVOPD(Desc.getOpcode()))
     return {VOPDOpsX, VOPDOpsY};
 
-  if (AMDGPU::isVNBR(Desc.getOpcode()))
+  if (TSFlags & SIInstrFlags::VNBR)
     return {VNBROps, nullptr};
 
   assert(!(TSFlags & SIInstrFlags::MIMG));
