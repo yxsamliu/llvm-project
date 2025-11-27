@@ -388,3 +388,7 @@ def : ProcessorModel<"gfx130E", GFX12SpeedModel,
 def : ProcessorModel<"gfx1310", GFX12SpeedModel,
   FeatureISAVersion13_1.Features
 >;
+
+def : ProcessorModel<"gfx1370", GFX12SpeedModel,
+  FeatureISAVersion13.Features
+>;
