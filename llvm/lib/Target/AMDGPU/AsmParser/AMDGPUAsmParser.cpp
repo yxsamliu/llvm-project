@@ -3830,7 +3830,6 @@ bool AMDGPUAsmParser::usesConstantBus(const MCInst &Inst, unsigned OpIdx) {
   if (MO.isReg()) {
     auto Reg = MO.getReg();
     if (!Reg)
-      // TODO-GFX12: why is this needed only for a few GFX12 instructions?
       return false;
     const MCRegisterInfo *TRI = getContext().getRegisterInfo();
     auto PReg = mc2PseudoReg(Reg);

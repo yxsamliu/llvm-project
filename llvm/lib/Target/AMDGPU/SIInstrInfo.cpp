@@ -1894,9 +1894,9 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     if (RI.spillSGPRToVGPR())
       FrameInfo.setStackID(FrameIndex, TargetStackID::SGPRSpill);
     BuildMI(MBB, MI, DL, OpDesc, DestReg)
-        .addFrameIndex(FrameIndex) // addr
-        .addMemOperand(MMO)        // offset
-        .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
+      .addFrameIndex(FrameIndex) // addr
+      .addMemOperand(MMO)
+      .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
 
     return;
   }

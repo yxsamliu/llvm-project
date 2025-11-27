@@ -7505,9 +7505,9 @@ bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
     MIB.addUse(R);
   }
 
-  MIB.addUse(TDescr);
-
-  MIB.addImm(IsA16 ? 1 : 0).cloneMemRefs(MI);
+  MIB.addUse(TDescr)
+     .addImm(IsA16 ? 1 : 0)
+     .cloneMemRefs(MI);
 
   MI.eraseFromParent();
   return true;
