@@ -97,6 +97,7 @@ define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s
 ; GFX12ES2-SPREFETCH-NEXT:    flat_store_b128 v[4:5], v[0:3]
 ; GFX12ES2-SPREFETCH-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GFX12ES2-SPREFETCH-NEXT:  .LBB0_3: ; %for.end
+; GFX12ES2-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_SCHED_MODE, 0, 2), 0
 ; GFX12ES2-SPREFETCH-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: copy_flat:
@@ -220,6 +221,7 @@ define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrsp
 ; GFX12ES2-SPREFETCH-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GFX12ES2-SPREFETCH-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX12ES2-SPREFETCH-NEXT:  .LBB1_3: ; %for.end
+; GFX12ES2-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_SCHED_MODE, 0, 2), 0
 ; GFX12ES2-SPREFETCH-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: copy_global:
@@ -347,6 +349,7 @@ define amdgpu_kernel void @copy_constant(ptr addrspace(1) nocapture %d, ptr addr
 ; GFX12ES2-SPREFETCH-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GFX12ES2-SPREFETCH-NEXT:    s_cbranch_scc1 .LBB2_2
 ; GFX12ES2-SPREFETCH-NEXT:  .LBB2_3: ; %for.end
+; GFX12ES2-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_SCHED_MODE, 0, 2), 0
 ; GFX12ES2-SPREFETCH-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: copy_constant:
@@ -474,6 +477,7 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GFX12ES2-SPREFETCH-NEXT:    ds_store_2addr_b32 v4, v2, v3 offset1:1
 ; GFX12ES2-SPREFETCH-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GFX12ES2-SPREFETCH-NEXT:  .LBB3_2: ; %for.end
+; GFX12ES2-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_SCHED_MODE, 0, 2), 0
 ; GFX12ES2-SPREFETCH-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: copy_local:
@@ -649,6 +653,7 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12ES2-SPREFETCH-NEXT:    s_cbranch_scc1 .LBB4_2
 ; GFX12ES2-SPREFETCH-NEXT:  .LBB4_3: ; %for.end
+; GFX12ES2-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_SCHED_MODE, 0, 2), 0
 ; GFX12ES2-SPREFETCH-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: copy_flat_divergent:
@@ -825,6 +830,7 @@ define amdgpu_kernel void @copy_global_divergent(ptr addrspace(1) nocapture %d, 
 ; GFX12ES2-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12ES2-SPREFETCH-NEXT:    s_cbranch_scc1 .LBB5_2
 ; GFX12ES2-SPREFETCH-NEXT:  .LBB5_3: ; %for.end
+; GFX12ES2-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_SCHED_MODE, 0, 2), 0
 ; GFX12ES2-SPREFETCH-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: copy_global_divergent:

@@ -471,6 +471,10 @@ private:
   // S_ENDPGM instructions before which we should deallocate the VGPRs.
   DenseSet<MachineInstr *> ReleaseVGPRInsts;
 
+  // S_ENDPGM instructions before which expert scheduling mode should
+  // be disabled.
+  DenseSet<MachineInstr *> DisableExpertModeInsts;
+
   HardwareLimits Limits;
 
 public:
@@ -2205,6 +2209,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
           ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
           !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS))))
       ReleaseVGPRInsts.insert(&MI);
+    if (IsExpertMode)
+      DisableExpertModeInsts.insert(&MI);
   }
   // Resolve vm waits before gs-done.
   else if ((Opc == AMDGPU::S_SENDMSG || Opc == AMDGPU::S_SENDMSGHALT) &&
@@ -3486,6 +3492,11 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
     }
   }
   ReleaseVGPRInsts.clear();
+
+  for (MachineInstr *MI : DisableExpertModeInsts)
+    setSchedulingMode(*MI->getParent(), *MI, false);
+  DisableExpertModeInsts.clear();
+
   PreheadersToFlush.clear();
   SLoadAddresses.clear();
 
