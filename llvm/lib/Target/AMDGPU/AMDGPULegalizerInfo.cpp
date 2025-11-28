@@ -7793,9 +7793,9 @@ bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
     MIB.addUse(R);
   }
 
-  MIB.addUse(TDescr);
-
-  MIB.addImm(IsA16 ? 1 : 0).cloneMemRefs(MI);
+  MIB.addUse(TDescr)
+     .addImm(IsA16 ? 1 : 0)
+     .cloneMemRefs(MI);
 
   MI.eraseFromParent();
   return true;
@@ -8104,7 +8104,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_make_buffer_rsrc:
     return legalizePointerAsRsrcIntrin(MI, MRI, B);
   case Intrinsic::amdgcn_kernarg_segment_ptr:
-    if (!AMDGPU::isKernel(B.getMF().getFunction().getCallingConv())) {
+    if (!AMDGPU::isKernel(B.getMF().getFunction())) {
       // This only makes sense to call in a kernel, so just lower to null.
       B.buildConstant(MI.getOperand(0).getReg(), 0);
       MI.eraseFromParent();

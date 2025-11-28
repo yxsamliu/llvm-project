@@ -174,6 +174,13 @@ protected:
   bool HasWMMA256bInsts = false;
   bool HasWMMA2048bInsts = false;
   bool HasPermPkU2U3Insts = false;
+  bool HasCubeInsts = false;
+  bool HasLerpInst = false;
+  bool HasSadInsts = false;
+  bool HasQsadInsts = false;
+  bool HasCvtNormInsts = false;
+  bool HasCvtPkNormVOP2Insts = false;
+  bool HasCvtPkNormVOP3Insts = false;
   bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
@@ -929,6 +936,20 @@ public:
 
   bool isGFX1170Plus() const { return getGeneration() >= GFX12 || isGFX1170(); }
 
+  bool hasCubeInsts() const { return HasCubeInsts; }
+
+  bool hasLerpInst() const { return HasLerpInst; }
+
+  bool hasSadInsts() const { return HasSadInsts; }
+
+  bool hasQsadInsts() const { return HasQsadInsts; }
+
+  bool hasCvtNormInsts() const { return HasCvtNormInsts; }
+
+  bool hasCvtPkNormVOP2Insts() const { return HasCvtPkNormVOP2Insts; }
+
+  bool hasCvtPkNormVOP3Insts() const { return HasCvtPkNormVOP3Insts; }
+
   bool hasFP8E5M3Insts() const { return HasFP8E5M3Insts; }
 
   bool hasPkFmacF16Inst() const {
@@ -1483,7 +1504,7 @@ public:
   /// \returns true if the target has packed f32 instructions that only read 32
   /// bits from a scalar operand (SGPR or literal) and replicates the bits to
   /// both channels.
-  bool hasPKF32InstsReplicatingLow32BitsOfScalarInput() const {
+  bool hasPKF32InstsReplicatingLower32BitsOfScalarInput() const {
     return getGeneration() == GFX12 && GFX1250Insts;
   }
 
@@ -1951,6 +1972,13 @@ public:
   // \returns true if the subtarget has a hardware bug affecting the G16 variant
   // of IMAGE_SAMPLE instructions.
   bool hasG16Bug() const { return getGeneration() == GFX13; };
+
+  /// \returns true if the subtarget requires a wait for xcnt before VMEM
+  /// accesses that must never be repeated in the event of a page fault/re-try.
+  /// Atomic stores/rmw and all volatile accesses fall under this criteria.
+  bool requiresWaitXCntForSingleAccessInstructions() const {
+    return GFX1250Insts && !GFX13Insts;;
+  }
 
   /// \returns the number of significant bits in the immediate field of the
   /// S_NOP instruction.

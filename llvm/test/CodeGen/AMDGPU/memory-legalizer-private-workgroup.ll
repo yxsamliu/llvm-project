@@ -180,6 +180,7 @@ define amdgpu_kernel void @private_workgroup_unordered_load(
 ;
 ; GFX1250-LABEL: private_workgroup_unordered_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -416,6 +417,7 @@ define amdgpu_kernel void @private_workgroup_monotonic_load(
 ;
 ; GFX1250-LABEL: private_workgroup_monotonic_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -652,6 +654,7 @@ define amdgpu_kernel void @private_workgroup_acquire_load(
 ;
 ; GFX1250-LABEL: private_workgroup_acquire_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -888,6 +891,7 @@ define amdgpu_kernel void @private_workgroup_seq_cst_load(
 ;
 ; GFX1250-LABEL: private_workgroup_seq_cst_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -953,8 +957,12 @@ define amdgpu_kernel void @private_workgroup_seq_cst_load(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_load_b32 v0, v[0:1]
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -1110,6 +1118,7 @@ define amdgpu_kernel void @private_workgroup_unordered_store(
 ;
 ; GFX1250-LABEL: private_workgroup_unordered_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -1324,6 +1333,7 @@ define amdgpu_kernel void @private_workgroup_monotonic_store(
 ;
 ; GFX1250-LABEL: private_workgroup_monotonic_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -1538,6 +1548,7 @@ define amdgpu_kernel void @private_workgroup_release_store(
 ;
 ; GFX1250-LABEL: private_workgroup_release_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -1604,6 +1615,8 @@ define amdgpu_kernel void @private_workgroup_release_store(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX1300-NEXT:    s_endpgm
@@ -1758,6 +1771,7 @@ define amdgpu_kernel void @private_workgroup_seq_cst_store(
 ;
 ; GFX1250-LABEL: private_workgroup_seq_cst_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -1824,6 +1838,8 @@ define amdgpu_kernel void @private_workgroup_seq_cst_store(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX1300-NEXT:    s_endpgm
@@ -1978,6 +1994,7 @@ define amdgpu_kernel void @private_workgroup_monotonic_atomicrmw(
 ;
 ; GFX1250-LABEL: private_workgroup_monotonic_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -2192,6 +2209,7 @@ define amdgpu_kernel void @private_workgroup_acquire_atomicrmw(
 ;
 ; GFX1250-LABEL: private_workgroup_acquire_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -2408,6 +2426,7 @@ define amdgpu_kernel void @private_workgroup_release_atomicrmw(
 ;
 ; GFX1250-LABEL: private_workgroup_release_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -2474,6 +2493,8 @@ define amdgpu_kernel void @private_workgroup_release_atomicrmw(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_swap_b32 v[0:1], v2
 ; GFX1300-NEXT:    s_endpgm
@@ -2628,6 +2649,7 @@ define amdgpu_kernel void @private_workgroup_acq_rel_atomicrmw(
 ;
 ; GFX1250-LABEL: private_workgroup_acq_rel_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -2695,8 +2717,12 @@ define amdgpu_kernel void @private_workgroup_acq_rel_atomicrmw(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_swap_b32 v[0:1], v2
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in) {
@@ -2850,6 +2876,7 @@ define amdgpu_kernel void @private_workgroup_seq_cst_atomicrmw(
 ;
 ; GFX1250-LABEL: private_workgroup_seq_cst_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -2917,8 +2944,12 @@ define amdgpu_kernel void @private_workgroup_seq_cst_atomicrmw(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_swap_b32 v[0:1], v2
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in) {
@@ -3126,6 +3157,7 @@ define amdgpu_kernel void @private_workgroup_acquire_ret_atomicrmw(
 ;
 ; GFX1250-LABEL: private_workgroup_acquire_ret_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s2, 0
@@ -3399,6 +3431,7 @@ define amdgpu_kernel void @private_workgroup_acq_rel_ret_atomicrmw(
 ;
 ; GFX1250-LABEL: private_workgroup_acq_rel_ret_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s2, 0
@@ -3467,8 +3500,12 @@ define amdgpu_kernel void @private_workgroup_acq_rel_ret_atomicrmw(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_swap_b32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -3678,6 +3715,7 @@ define amdgpu_kernel void @private_workgroup_seq_cst_ret_atomicrmw(
 ;
 ; GFX1250-LABEL: private_workgroup_seq_cst_ret_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s2, 0
@@ -3746,8 +3784,12 @@ define amdgpu_kernel void @private_workgroup_seq_cst_ret_atomicrmw(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_swap_b32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -3966,7 +4008,7 @@ define amdgpu_kernel void @private_workgroup_monotonic_monotonic_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -3980,13 +4022,14 @@ define amdgpu_kernel void @private_workgroup_monotonic_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_monotonic_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -4277,7 +4320,7 @@ define amdgpu_kernel void @private_workgroup_acquire_monotonic_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -4291,13 +4334,14 @@ define amdgpu_kernel void @private_workgroup_acquire_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_acquire_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -4590,7 +4634,7 @@ define amdgpu_kernel void @private_workgroup_release_monotonic_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -4604,13 +4648,14 @@ define amdgpu_kernel void @private_workgroup_release_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_release_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -4689,6 +4734,8 @@ define amdgpu_kernel void @private_workgroup_release_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1300-NEXT:    s_endpgm
@@ -4907,7 +4954,7 @@ define amdgpu_kernel void @private_workgroup_acq_rel_monotonic_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -4921,13 +4968,14 @@ define amdgpu_kernel void @private_workgroup_acq_rel_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_acq_rel_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -5007,8 +5055,12 @@ define amdgpu_kernel void @private_workgroup_acq_rel_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -5226,7 +5278,7 @@ define amdgpu_kernel void @private_workgroup_seq_cst_monotonic_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -5240,13 +5292,14 @@ define amdgpu_kernel void @private_workgroup_seq_cst_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_seq_cst_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -5326,8 +5379,12 @@ define amdgpu_kernel void @private_workgroup_seq_cst_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -5545,7 +5602,7 @@ define amdgpu_kernel void @private_workgroup_monotonic_acquire_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -5559,13 +5616,14 @@ define amdgpu_kernel void @private_workgroup_monotonic_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_monotonic_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -5858,7 +5916,7 @@ define amdgpu_kernel void @private_workgroup_acquire_acquire_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -5872,13 +5930,14 @@ define amdgpu_kernel void @private_workgroup_acquire_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_acquire_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -6171,7 +6230,7 @@ define amdgpu_kernel void @private_workgroup_release_acquire_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -6185,13 +6244,14 @@ define amdgpu_kernel void @private_workgroup_release_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_release_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -6271,8 +6331,12 @@ define amdgpu_kernel void @private_workgroup_release_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -6490,7 +6554,7 @@ define amdgpu_kernel void @private_workgroup_acq_rel_acquire_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -6504,13 +6568,14 @@ define amdgpu_kernel void @private_workgroup_acq_rel_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_acq_rel_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -6590,8 +6655,12 @@ define amdgpu_kernel void @private_workgroup_acq_rel_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -6809,7 +6878,7 @@ define amdgpu_kernel void @private_workgroup_seq_cst_acquire_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -6823,13 +6892,14 @@ define amdgpu_kernel void @private_workgroup_seq_cst_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_seq_cst_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -6909,8 +6979,12 @@ define amdgpu_kernel void @private_workgroup_seq_cst_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -7128,7 +7202,7 @@ define amdgpu_kernel void @private_workgroup_monotonic_seq_cst_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -7142,13 +7216,14 @@ define amdgpu_kernel void @private_workgroup_monotonic_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_monotonic_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -7228,6 +7303,8 @@ define amdgpu_kernel void @private_workgroup_monotonic_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1300-NEXT:    s_wait_storecnt_dscnt 0x0
@@ -7447,7 +7524,7 @@ define amdgpu_kernel void @private_workgroup_acquire_seq_cst_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -7461,13 +7538,14 @@ define amdgpu_kernel void @private_workgroup_acquire_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_acquire_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -7547,6 +7625,8 @@ define amdgpu_kernel void @private_workgroup_acquire_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1300-NEXT:    s_wait_storecnt_dscnt 0x0
@@ -7766,7 +7846,7 @@ define amdgpu_kernel void @private_workgroup_release_seq_cst_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -7780,13 +7860,14 @@ define amdgpu_kernel void @private_workgroup_release_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_release_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -7866,8 +7947,12 @@ define amdgpu_kernel void @private_workgroup_release_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -8085,7 +8170,7 @@ define amdgpu_kernel void @private_workgroup_acq_rel_seq_cst_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -8099,13 +8184,14 @@ define amdgpu_kernel void @private_workgroup_acq_rel_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_acq_rel_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -8185,8 +8271,12 @@ define amdgpu_kernel void @private_workgroup_acq_rel_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -8404,7 +8494,7 @@ define amdgpu_kernel void @private_workgroup_seq_cst_seq_cst_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -8418,13 +8508,14 @@ define amdgpu_kernel void @private_workgroup_seq_cst_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_seq_cst_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -8504,8 +8595,12 @@ define amdgpu_kernel void @private_workgroup_seq_cst_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -8749,7 +8844,7 @@ define amdgpu_kernel void @private_workgroup_monotonic_monotonic_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -8764,7 +8859,7 @@ define amdgpu_kernel void @private_workgroup_monotonic_monotonic_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -8772,6 +8867,7 @@ define amdgpu_kernel void @private_workgroup_monotonic_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_monotonic_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -9094,7 +9190,7 @@ define amdgpu_kernel void @private_workgroup_acquire_monotonic_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -9109,7 +9205,7 @@ define amdgpu_kernel void @private_workgroup_acquire_monotonic_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -9117,6 +9213,7 @@ define amdgpu_kernel void @private_workgroup_acquire_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_acquire_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -9439,7 +9536,7 @@ define amdgpu_kernel void @private_workgroup_release_monotonic_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -9454,7 +9551,7 @@ define amdgpu_kernel void @private_workgroup_release_monotonic_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -9462,6 +9559,7 @@ define amdgpu_kernel void @private_workgroup_release_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_release_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -9542,6 +9640,8 @@ define amdgpu_kernel void @private_workgroup_release_monotonic_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -9790,7 +9890,7 @@ define amdgpu_kernel void @private_workgroup_acq_rel_monotonic_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -9805,7 +9905,7 @@ define amdgpu_kernel void @private_workgroup_acq_rel_monotonic_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -9813,6 +9913,7 @@ define amdgpu_kernel void @private_workgroup_acq_rel_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_acq_rel_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -9893,8 +9994,12 @@ define amdgpu_kernel void @private_workgroup_acq_rel_monotonic_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -10141,7 +10246,7 @@ define amdgpu_kernel void @private_workgroup_seq_cst_monotonic_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -10156,7 +10261,7 @@ define amdgpu_kernel void @private_workgroup_seq_cst_monotonic_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -10164,6 +10269,7 @@ define amdgpu_kernel void @private_workgroup_seq_cst_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_seq_cst_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -10244,8 +10350,12 @@ define amdgpu_kernel void @private_workgroup_seq_cst_monotonic_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -10492,7 +10602,7 @@ define amdgpu_kernel void @private_workgroup_monotonic_acquire_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -10507,7 +10617,7 @@ define amdgpu_kernel void @private_workgroup_monotonic_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -10515,6 +10625,7 @@ define amdgpu_kernel void @private_workgroup_monotonic_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_monotonic_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -10837,7 +10948,7 @@ define amdgpu_kernel void @private_workgroup_acquire_acquire_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -10852,7 +10963,7 @@ define amdgpu_kernel void @private_workgroup_acquire_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -10860,6 +10971,7 @@ define amdgpu_kernel void @private_workgroup_acquire_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_acquire_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -11182,7 +11294,7 @@ define amdgpu_kernel void @private_workgroup_release_acquire_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -11197,7 +11309,7 @@ define amdgpu_kernel void @private_workgroup_release_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -11205,6 +11317,7 @@ define amdgpu_kernel void @private_workgroup_release_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_release_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -11285,8 +11398,12 @@ define amdgpu_kernel void @private_workgroup_release_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -11533,7 +11650,7 @@ define amdgpu_kernel void @private_workgroup_acq_rel_acquire_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -11548,7 +11665,7 @@ define amdgpu_kernel void @private_workgroup_acq_rel_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -11556,6 +11673,7 @@ define amdgpu_kernel void @private_workgroup_acq_rel_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_acq_rel_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -11636,8 +11754,12 @@ define amdgpu_kernel void @private_workgroup_acq_rel_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -11884,7 +12006,7 @@ define amdgpu_kernel void @private_workgroup_seq_cst_acquire_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -11899,7 +12021,7 @@ define amdgpu_kernel void @private_workgroup_seq_cst_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -11907,6 +12029,7 @@ define amdgpu_kernel void @private_workgroup_seq_cst_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_seq_cst_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -11987,8 +12110,12 @@ define amdgpu_kernel void @private_workgroup_seq_cst_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -12235,7 +12362,7 @@ define amdgpu_kernel void @private_workgroup_monotonic_seq_cst_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -12250,7 +12377,7 @@ define amdgpu_kernel void @private_workgroup_monotonic_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -12258,6 +12385,7 @@ define amdgpu_kernel void @private_workgroup_monotonic_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_monotonic_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -12338,6 +12466,8 @@ define amdgpu_kernel void @private_workgroup_monotonic_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -12586,7 +12716,7 @@ define amdgpu_kernel void @private_workgroup_acquire_seq_cst_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -12601,7 +12731,7 @@ define amdgpu_kernel void @private_workgroup_acquire_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -12609,6 +12739,7 @@ define amdgpu_kernel void @private_workgroup_acquire_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_acquire_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -12689,6 +12820,8 @@ define amdgpu_kernel void @private_workgroup_acquire_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -12937,7 +13070,7 @@ define amdgpu_kernel void @private_workgroup_release_seq_cst_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -12952,7 +13085,7 @@ define amdgpu_kernel void @private_workgroup_release_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -12960,6 +13093,7 @@ define amdgpu_kernel void @private_workgroup_release_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_release_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -13040,8 +13174,12 @@ define amdgpu_kernel void @private_workgroup_release_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -13288,7 +13426,7 @@ define amdgpu_kernel void @private_workgroup_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -13303,7 +13441,7 @@ define amdgpu_kernel void @private_workgroup_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -13311,6 +13449,7 @@ define amdgpu_kernel void @private_workgroup_acq_rel_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_acq_rel_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -13391,8 +13530,12 @@ define amdgpu_kernel void @private_workgroup_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -13639,7 +13782,7 @@ define amdgpu_kernel void @private_workgroup_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -13654,7 +13797,7 @@ define amdgpu_kernel void @private_workgroup_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -13662,6 +13805,7 @@ define amdgpu_kernel void @private_workgroup_seq_cst_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_seq_cst_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -13742,8 +13886,12 @@ define amdgpu_kernel void @private_workgroup_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -13921,6 +14069,7 @@ define amdgpu_kernel void @private_workgroup_one_as_unordered_load(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_unordered_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -14157,6 +14306,7 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_load(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_monotonic_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -14393,6 +14543,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_load(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_acquire_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -14629,6 +14780,7 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_load(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_seq_cst_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -14695,7 +14847,11 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_load(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_load_b32 v0, v[0:1]
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -14851,6 +15007,7 @@ define amdgpu_kernel void @private_workgroup_one_as_unordered_store(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_unordered_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -15065,6 +15222,7 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_store(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_monotonic_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -15279,6 +15437,7 @@ define amdgpu_kernel void @private_workgroup_one_as_release_store(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_release_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -15346,6 +15505,8 @@ define amdgpu_kernel void @private_workgroup_one_as_release_store(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX1300-NEXT:    s_endpgm
     i32 %in, ptr addrspace(5) %out) {
@@ -15499,6 +15660,7 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_store(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_seq_cst_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -15566,6 +15728,8 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_store(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX1300-NEXT:    s_endpgm
     i32 %in, ptr addrspace(5) %out) {
@@ -15719,6 +15883,7 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_atomicrmw(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_monotonic_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -15933,6 +16098,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_atomicrmw(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_acquire_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -16149,6 +16315,7 @@ define amdgpu_kernel void @private_workgroup_one_as_release_atomicrmw(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_release_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -16216,6 +16383,8 @@ define amdgpu_kernel void @private_workgroup_one_as_release_atomicrmw(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_swap_b32 v[0:1], v2
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in) {
@@ -16369,6 +16538,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_atomicrmw(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_acq_rel_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -16437,8 +16607,12 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_atomicrmw(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_swap_b32 v[0:1], v2
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in) {
 entry:
@@ -16591,6 +16765,7 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_atomicrmw(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_seq_cst_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
@@ -16659,8 +16834,12 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_atomicrmw(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_swap_b32 v[0:1], v2
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in) {
 entry:
@@ -16867,6 +17046,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_ret_atomicrmw(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_acquire_ret_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s2, 0
@@ -17140,6 +17320,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_ret_atomicrmw(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_acq_rel_ret_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s2, 0
@@ -17209,7 +17390,11 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_ret_atomicrmw(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_swap_b32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -17419,6 +17604,7 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_ret_atomicrmw(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_seq_cst_ret_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_mov_b32 s2, 0
@@ -17488,7 +17674,11 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_ret_atomicrmw(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_swap_b32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -17707,7 +17897,7 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_monotonic_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -17721,13 +17911,14 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_monotonic_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -18018,7 +18209,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_monotonic_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -18032,13 +18223,14 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_acquire_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -18331,7 +18523,7 @@ define amdgpu_kernel void @private_workgroup_one_as_release_monotonic_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -18345,13 +18537,14 @@ define amdgpu_kernel void @private_workgroup_one_as_release_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_release_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -18431,6 +18624,8 @@ define amdgpu_kernel void @private_workgroup_one_as_release_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
@@ -18648,7 +18843,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -18662,13 +18857,14 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_acq_rel_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -18749,8 +18945,12 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
 entry:
@@ -18967,7 +19167,7 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -18981,13 +19181,14 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_seq_cst_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -19068,8 +19269,12 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
 entry:
@@ -19286,7 +19491,7 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_acquire_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -19300,13 +19505,14 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_monotonic_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -19599,7 +19805,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_acquire_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -19613,13 +19819,14 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_acquire_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -19912,7 +20119,7 @@ define amdgpu_kernel void @private_workgroup_one_as_release_acquire_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -19926,13 +20133,14 @@ define amdgpu_kernel void @private_workgroup_one_as_release_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_release_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -20013,8 +20221,12 @@ define amdgpu_kernel void @private_workgroup_one_as_release_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
 entry:
@@ -20231,7 +20443,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_acquire_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -20245,13 +20457,14 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_acq_rel_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -20332,8 +20545,12 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
 entry:
@@ -20550,7 +20767,7 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_acquire_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -20564,13 +20781,14 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_seq_cst_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -20651,8 +20869,12 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_acquire_cmpxchg(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
 entry:
@@ -20869,7 +21091,7 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -20883,13 +21105,14 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_monotonic_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -20970,6 +21193,8 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
 ; GFX1300-NEXT:    s_endpgm
@@ -21188,7 +21413,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_seq_cst_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -21202,13 +21427,14 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_acquire_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -21289,6 +21515,8 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
 ; GFX1300-NEXT:    s_endpgm
@@ -21507,7 +21735,7 @@ define amdgpu_kernel void @private_workgroup_one_as_release_seq_cst_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -21521,13 +21749,14 @@ define amdgpu_kernel void @private_workgroup_one_as_release_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_release_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -21608,8 +21837,12 @@ define amdgpu_kernel void @private_workgroup_one_as_release_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
 entry:
@@ -21826,7 +22059,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -21840,13 +22073,14 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_acq_rel_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -21927,8 +22161,12 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
 entry:
@@ -22145,7 +22383,7 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-WGP-NEXT:    s_endpgm
@@ -22159,13 +22397,14 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 offset:16
 ; GFX12-CU-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_seq_cst_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
@@ -22246,8 +22485,12 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3]
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_endpgm
     ptr addrspace(5) %out, i32 %in, i32 %old) {
 entry:
@@ -22490,7 +22733,7 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_monotonic_ret_cmpx
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -22505,7 +22748,7 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_monotonic_ret_cmpx
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -22513,6 +22756,7 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_monotonic_ret_cmpx
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_monotonic_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -22835,7 +23079,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_monotonic_ret_cmpxch
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -22850,7 +23094,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_monotonic_ret_cmpxch
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -22858,6 +23102,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_monotonic_ret_cmpxch
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_acquire_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -23180,7 +23425,7 @@ define amdgpu_kernel void @private_workgroup_one_as_release_monotonic_ret_cmpxch
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -23195,7 +23440,7 @@ define amdgpu_kernel void @private_workgroup_one_as_release_monotonic_ret_cmpxch
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -23203,6 +23448,7 @@ define amdgpu_kernel void @private_workgroup_one_as_release_monotonic_ret_cmpxch
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_release_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -23284,6 +23530,8 @@ define amdgpu_kernel void @private_workgroup_one_as_release_monotonic_ret_cmpxch
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
@@ -23531,7 +23779,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_monotonic_ret_cmpxch
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -23546,7 +23794,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_monotonic_ret_cmpxch
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -23554,6 +23802,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_monotonic_ret_cmpxch
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_acq_rel_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -23635,7 +23884,11 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_monotonic_ret_cmpxch
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -23882,7 +24135,7 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_monotonic_ret_cmpxch
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -23897,7 +24150,7 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_monotonic_ret_cmpxch
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -23905,6 +24158,7 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_monotonic_ret_cmpxch
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_seq_cst_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -23986,7 +24240,11 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_monotonic_ret_cmpxch
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -24233,7 +24491,7 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_acquire_ret_cmpxch
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -24248,7 +24506,7 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_acquire_ret_cmpxch
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -24256,6 +24514,7 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_acquire_ret_cmpxch
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_monotonic_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -24578,7 +24837,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -24593,7 +24852,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -24601,6 +24860,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_acquire_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -24923,7 +25183,7 @@ define amdgpu_kernel void @private_workgroup_one_as_release_acquire_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -24938,7 +25198,7 @@ define amdgpu_kernel void @private_workgroup_one_as_release_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -24946,6 +25206,7 @@ define amdgpu_kernel void @private_workgroup_one_as_release_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_release_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -25027,7 +25288,11 @@ define amdgpu_kernel void @private_workgroup_one_as_release_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -25274,7 +25539,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -25289,7 +25554,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -25297,6 +25562,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_acq_rel_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -25378,7 +25644,11 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -25625,7 +25895,7 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -25640,7 +25910,7 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -25648,6 +25918,7 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_seq_cst_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -25729,7 +26000,11 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -25976,7 +26251,7 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_seq_cst_ret_cmpxch
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -25991,7 +26266,7 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_seq_cst_ret_cmpxch
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -25999,6 +26274,7 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_seq_cst_ret_cmpxch
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_monotonic_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -26080,6 +26356,8 @@ define amdgpu_kernel void @private_workgroup_one_as_monotonic_seq_cst_ret_cmpxch
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
@@ -26327,7 +26605,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -26342,7 +26620,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -26350,6 +26628,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_acquire_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -26431,6 +26710,8 @@ define amdgpu_kernel void @private_workgroup_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
@@ -26678,7 +26959,7 @@ define amdgpu_kernel void @private_workgroup_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -26693,7 +26974,7 @@ define amdgpu_kernel void @private_workgroup_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -26701,6 +26982,7 @@ define amdgpu_kernel void @private_workgroup_one_as_release_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_release_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -26782,7 +27064,11 @@ define amdgpu_kernel void @private_workgroup_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -27029,7 +27315,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -27044,7 +27330,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -27052,6 +27338,7 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_acq_rel_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -27133,7 +27420,11 @@ define amdgpu_kernel void @private_workgroup_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm
@@ -27380,7 +27671,7 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX12-WGP-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xf1ff
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-WGP-NEXT:    scratch_store_b32 off, v0, s0
@@ -27395,7 +27686,7 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    scratch_load_b32 v0, off, s0 offset:16
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_cmp_eq_u32_e64 s2, v0, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xf1ff
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_cndmask_b32_e64 v1, v0, s1, s2
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v1, s0 offset:16
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0
@@ -27403,6 +27694,7 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: private_workgroup_one_as_seq_cst_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4
 ; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
@@ -27484,7 +27776,11 @@ define amdgpu_kernel void @private_workgroup_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    scratch_store_b32 off, v0, s0
 ; GFX1300-NEXT:    s_endpgm

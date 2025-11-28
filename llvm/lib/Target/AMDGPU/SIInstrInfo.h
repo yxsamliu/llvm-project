@@ -597,6 +597,10 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::MTBUF;
   }
 
+  static bool isBUF(const MachineInstr &MI) {
+    return isMUBUF(MI) || isMTBUF(MI);
+  }
+
   static bool isSMRD(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::SMRD;
   }
@@ -1089,6 +1093,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::VINTERP;
   }
 
+  static bool isVNBR(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::VNBR;
+  }
+
+  bool isVNBR(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::VNBR;
+  }
+
   static bool isScalarUnit(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & (SIInstrFlags::SALU | SIInstrFlags::SMRD);
   }
@@ -1194,6 +1206,12 @@ public:
            Opc == AMDGPU::GLOBAL_WBINV;
   }
 
+  // Check to see if opcode is for a semaphore signal instruction.
+  bool isSemaphoreSignal(unsigned Opcode) const {
+    return Opcode == AMDGPU::S_SEMA_SIGNAL ||
+           Opcode == AMDGPU::S_SEMA_SIGNAL_AFTER;
+  }
+
   static bool isF16PseudoScalarTrans(unsigned Opcode) {
     return Opcode == AMDGPU::V_S_EXP_F16_e64 ||
            Opcode == AMDGPU::V_S_LOG_F16_e64 ||
@@ -1243,6 +1261,10 @@ public:
       return AMDGPU::S_WAIT_KMCNT;
     case AMDGPU::S_WAIT_XCNT_soft:
       return AMDGPU::S_WAIT_XCNT;
+    case AMDGPU::S_WAIT_DEPCTR_soft:
+      return AMDGPU::S_WAITCNT_DEPCTR;
+    case AMDGPU::S_WAIT_EXPCNT_soft:
+      return AMDGPU::S_WAIT_EXPCNT;
     default:
       return Opcode;
     }
@@ -1765,6 +1787,7 @@ public:
 
   const TargetSchedModel &getSchedModel() const { return SchedModel; }
 
+  // FIXME: This should be removed
   // Enforce operand's \p OpName even alignment if required by target.
   // This is used if an operand is a 32 bit register but needs to be aligned
   // regardless.

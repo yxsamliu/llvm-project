@@ -796,6 +796,13 @@ SIMemOpAccess::constructFromMIWithMMO(const MachineInstr *MI) const {
     }
   }
 
+  // FIXME: The MMO of buffer atomic instructions does not always have an atomic
+  // ordering. We only need to handle VBUFFER atomics on GFX12+ so we can fix it
+  // here, but the lowering should really be cleaned up at some point.
+  if ((ST.getGeneration() >= GCNSubtarget::GFX12) && SIInstrInfo::isBUF(*MI) &&
+      SIInstrInfo::isAtomic(*MI) && Ordering == AtomicOrdering::NotAtomic)
+    Ordering = AtomicOrdering::Monotonic;
+
   SIAtomicScope Scope = SIAtomicScope::NONE;
   SIAtomicAddrSpace OrderingAddrSpace = SIAtomicAddrSpace::NONE;
   bool IsCrossAddressSpaceOrdering = false;
@@ -1831,9 +1838,14 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   bool LOADCnt = false;
   bool DSCnt = false;
   bool STORECnt = false;
+  bool DepCtr = false;
+  bool EXPcnt = false;
 
   if (Pos == Position::AFTER)
     ++MI;
+
+  if (!ST.hasWavegroups())
+    AddrSpace &= ~SIAtomicAddrSpace::LANESHARED;
 
   if ((AddrSpace & (SIAtomicAddrSpace::GLOBAL | SIAtomicAddrSpace::SCRATCH |
                     SIAtomicAddrSpace::LANESHARED)) !=
@@ -1870,6 +1882,15 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
           LOADCnt |= true;
         if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
           STORECnt |= true;
+      }
+      // GFX13x:
+      // Laneshared accesses require synchronization of VA_VDST, VM_VSRC,
+      // and EXPcnt for neighbor data share instructions.
+      if ((AddrSpace & SIAtomicAddrSpace::LANESHARED) !=
+              SIAtomicAddrSpace::NONE &&
+          isReleaseOrStronger(Order)) {
+        DepCtr |= true;
+        EXPcnt |= true;
       }
       break;
     case SIAtomicScope::WAVEFRONT:
@@ -1935,6 +1956,16 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_DSCNT_soft)).addImm(0);
     Changed = true;
   }
+
+  if (DepCtr) {
+    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+            TII->get(AMDGPU::S_WAIT_DEPCTR_soft))
+        .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(
+            AMDGPU::DepCtr::encodeFieldVaVdst(0, ST), 0));
+  }
+
+  if (EXPcnt)
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_EXPCNT_soft)).addImm(0);
 
   if (Pos == Position::AFTER)
     --MI;
@@ -2090,6 +2121,13 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
   if (IsVolatile) {
     Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SYS);
 
+    if (ST.requiresWaitXCntForSingleAccessInstructions() &&
+        SIInstrInfo::isVMEM(*MI)) {
+      MachineBasicBlock &MBB = *MI->getParent();
+      BuildMI(MBB, MI, MI->getDebugLoc(), TII->get(S_WAIT_XCNT_soft)).addImm(0);
+      Changed = true;
+    }
+
     // Ensure operation has completed at system scope to cause all volatile
     // operations to be visible outside the program in a global order. Do not
     // request cross address space as only the global address space can be
@@ -2112,9 +2150,8 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   const bool IsRMW = (MI.mayLoad() && MI.mayStore());
   bool Changed = false;
 
-  // GFX12.5 only: xcnt wait is needed before flat and global atomics
-  // stores/rmw.
-  if (Atomic && ST.requiresWaitXCntBeforeAtomicStores() && TII->isFLAT(MI)) {
+  if (Atomic && ST.requiresWaitXCntForSingleAccessInstructions() &&
+      SIInstrInfo::isVMEM(MI)) {
     MachineBasicBlock &MBB = *MI.getParent();
     BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(S_WAIT_XCNT_soft)).addImm(0);
     Changed = true;

@@ -297,7 +297,6 @@ private:
   void SelectFP_EXTEND(SDNode *N);
   void SelectDSAppendConsume(SDNode *N, unsigned IntrID);
   void SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID);
-  void SelectPOPSExitingWaveID(SDNode *N);
   void SelectSpatialClusterChainIntrinsic(SDNode *N, unsigned IntrID);
   void SelectDS_GWS(SDNode *N, unsigned IntrID);
   void SelectLOAD_MCAST(MemIntrinsicSDNode *N, unsigned IntrID);

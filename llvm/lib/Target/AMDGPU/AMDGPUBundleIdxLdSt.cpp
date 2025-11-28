@@ -1414,6 +1414,8 @@ bool AMDGPUBundleIdxLdSt::analyze(BundlingInfo &BI) {
       continue;
     const TargetRegisterClass *RegClass =
         TRI->getRegClassForReg(*MRI, Op.getReg());
+    if (!RegClass)
+      continue; // happens e.g. for (implicit) MODE operands
     if (SIRegisterInfo::hasVGPRs(RegClass)) {
       if (none_of(BI.BundledOps, [&](Operand &O) { return O.Op == &Op; })) {
         HasPrivate = true;

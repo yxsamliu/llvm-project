@@ -73,6 +73,8 @@ class VNBR_Pseudo<string opName, bit EnableWrite = 0>
   dag RegOuts =
       !if(EnableWrite, (outs GVGPR_32:$vdst, GVGPR_32:$vdst_refl), (outs));
 
+  let VNBR = 1;
+  let EXP_CNT = 1;
   let InOperandList = !con(RegIns, BasicIns);
   let OutOperandList = RegOuts;
   let isPseudo = 1;
@@ -134,6 +136,7 @@ multiclass VNBR_Real_Base<GFXGen gen, VNBR_Pseudo ps> {
     let Uses               = ps.Uses;
     let UseNamedOperandTable = ps.UseNamedOperandTable;
     let isConvergent       = ps.isConvergent;
+    let VNBR = 1;
   }
 }
 

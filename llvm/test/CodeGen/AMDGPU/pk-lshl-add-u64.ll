@@ -49,6 +49,7 @@ define <2 x i64> @pk_lshl_add_u64_vvv(<2 x i64> %v, <2 x i64> %s, <2 x i64> %a) 
 define amdgpu_kernel void @pk_lshl_add_u64_s2v(<2 x i64> %v) {
 ; GFX1251-LABEL: pk_lshl_add_u64_s2v:
 ; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1251-NEXT:    flat_load_b128 v[0:3], v[0:1]
 ; GFX1251-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1251-NEXT:    s_wait_xcnt 0x0
@@ -70,6 +71,7 @@ define amdgpu_kernel void @pk_lshl_add_u64_s2v(<2 x i64> %v) {
 define amdgpu_kernel void @pk_lshl_add_u64_v2s(<2 x i64> %a) {
 ; GFX1251-LABEL: pk_lshl_add_u64_v2s:
 ; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1251-NEXT:    flat_load_b128 v[0:3], v[0:1]
 ; GFX1251-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1251-NEXT:    s_wait_xcnt 0x0
@@ -91,6 +93,7 @@ define amdgpu_kernel void @pk_lshl_add_u64_v2s(<2 x i64> %a) {
 define amdgpu_kernel void @pk_lshl_add_u64_s2s(<2 x i64> %v, <2 x i64> %a) {
 ; GFX1251-LABEL: pk_lshl_add_u64_s2s:
 ; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1251-NEXT:    s_load_b256 s[8:15], s[4:5], 0x24
 ; GFX1251-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-NEXT:    s_lshl_b64 s[2:3], s[10:11], 2

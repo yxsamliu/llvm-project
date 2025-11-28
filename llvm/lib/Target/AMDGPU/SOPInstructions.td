@@ -1722,10 +1722,16 @@ def S_WAITCNT_VSCNT_soft : SOPK_WAITCNT<"s_soft_waitcnt_vscnt">;
 let SubtargetPredicate = isGFX12Plus in {
   def S_WAIT_LOADCNT_soft : SOPP_Pseudo <"s_soft_wait_loadcnt", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_STORECNT_soft : SOPP_Pseudo <"s_soft_wait_storecnt", (ins s16imm:$simm16), "$simm16">;
-let OtherPredicates = [HasImageInsts] in {
-  def S_WAIT_SAMPLECNT_soft : SOPP_Pseudo <"s_soft_wait_samplecnt", (ins s16imm:$simm16), "$simm16">;
-  def S_WAIT_BVHCNT_soft : SOPP_Pseudo <"s_soft_wait_bvhcnt", (ins s16imm:$simm16), "$simm16">;
-} // End OtherPredicates = [HasImageInsts].
+  def S_WAIT_DEPCTR_soft
+      : SOPP_Pseudo<"s_soft_wait_depctr", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_EXPCNT_soft
+      : SOPP_Pseudo<"s_soft_wait_expcnt", (ins s16imm:$simm16), "$simm16">;
+  let OtherPredicates = [HasImageInsts] in {
+    def S_WAIT_SAMPLECNT_soft
+        : SOPP_Pseudo<"s_soft_wait_samplecnt", (ins s16imm:$simm16), "$simm16">;
+    def S_WAIT_BVHCNT_soft
+        : SOPP_Pseudo<"s_soft_wait_bvhcnt", (ins s16imm:$simm16), "$simm16">;
+  } // End OtherPredicates = [HasImageInsts].
   def S_WAIT_DSCNT_soft : SOPP_Pseudo <"s_soft_wait_dscnt", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_KMCNT_soft : SOPP_Pseudo <"s_soft_wait_kmcnt", (ins s16imm:$simm16), "$simm16">;
 }
@@ -2426,7 +2432,7 @@ defm S_GET_BARRIER_STATE_IMM      : SOP1_IMM_Real_gfx12_gfx13<0x050>;
 defm S_BARRIER_INIT_IMM           : SOP1_IMM_Real_gfx12_gfx13<0x051>;
 defm S_BARRIER_JOIN_IMM           : SOP1_IMM_Real_gfx12_gfx13<0x052>;
 defm S_ALLOC_VGPR                 : SOP1_Real_gfx12_gfx13<0x053>;
-defm S_SLEEP_VAR                  : SOP1_Real_gfx12_gfx13<0x058>;
+defm S_SLEEP_VAR                  : SOP1_IMM_Real_gfx12_gfx13<0x058>;
 
 // GFX1250
 defm S_ADD_PC_I64                 : SOP1_Real_gfx12_gfx13<0x04b>;
