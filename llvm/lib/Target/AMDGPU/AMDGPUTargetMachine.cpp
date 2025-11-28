@@ -1271,10 +1271,6 @@ class GCNPassConfig final : public AMDGPUPassConfig {
 public:
   GCNPassConfig(TargetMachine &TM, PassManagerBase &PM)
       : AMDGPUPassConfig(TM, PM) {
-    // It is necessary to know the register usage of the entire call graph.  We
-    // allow calls without EnableAMDGPUFunctionCalls if they are marked
-    // noinline, so this is always required.
-    setRequiresCodeGenSCCOrder(true);
     substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
   }
 
@@ -1477,9 +1473,6 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
     addPass(createAMDGPULowerIntrinsicsLegacyPass());
     // Another module pass.
     addPass(createAMDGPUAssignLaneSharedLegacyPass(MaxLaneSharedVGPRS));
-    // In accordance with the above FIXME, manually force all the
-    // function-level passes into a CGSCCPassManager.
-    addPass(new DummyCGSCCPass());
   }
 
   // LowerSwitch pass may introduce unreachable blocks that can

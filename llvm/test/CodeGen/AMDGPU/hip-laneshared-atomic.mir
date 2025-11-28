@@ -25,7 +25,7 @@ body:             |
     ; CHECK-NEXT: S_WAIT_LOADCNT_soft 0
     ; CHECK-NEXT: S_WAIT_STORECNT_soft 0
     ; CHECK-NEXT: S_WAIT_DSCNT_soft 0
-    ; CHECK-NEXT: S_WAIT_DEPCTR_soft 4067
+    ; CHECK-NEXT: S_WAIT_DEPCTR_soft 3971
     ; CHECK-NEXT: S_WAIT_EXPCNT_soft 0
     ; CHECK-NEXT: $vgpr0, $vgpr1 = BUNDLE {
     ; CHECK-NEXT:   $vgpr1 = GLOBAL_ATOMIC_INC_SADDR_RTN renamable $vgpr0, killed renamable $vgpr1, renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
@@ -37,14 +37,14 @@ body:             |
     ; CHECK-NEXT: S_WAIT_LOADCNT_soft 0
     ; CHECK-NEXT: S_WAIT_STORECNT_soft 0
     ; CHECK-NEXT: S_WAIT_DSCNT_soft 0
-    ; CHECK-NEXT: S_WAIT_DEPCTR_soft 4067
+    ; CHECK-NEXT: S_WAIT_DEPCTR_soft 3971
     ; CHECK-NEXT: S_WAIT_EXPCNT_soft 0
     ; CHECK-NEXT: S_WAIT_BVHCNT_soft 0
     ; CHECK-NEXT: S_WAIT_SAMPLECNT_soft 0
     ; CHECK-NEXT: S_WAIT_LOADCNT_soft 0
     ; CHECK-NEXT: S_WAIT_STORECNT_soft 0
     ; CHECK-NEXT: S_WAIT_DSCNT_soft 0
-    ; CHECK-NEXT: S_WAIT_DEPCTR_soft 4067
+    ; CHECK-NEXT: S_WAIT_DEPCTR_soft 3971
     ; CHECK-NEXT: S_WAIT_EXPCNT_soft 0
     ; CHECK-NEXT: $vgpr0, $vgpr1 = BUNDLE {
     ; CHECK-NEXT:   $vgpr1 = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
@@ -94,7 +94,7 @@ body:             |
     ; CHECK-NEXT: S_WAIT_LOADCNT_soft 0
     ; CHECK-NEXT: S_WAIT_STORECNT_soft 0
     ; CHECK-NEXT: S_WAIT_DSCNT_soft 0
-    ; CHECK-NEXT: S_WAIT_DEPCTR_soft 4067
+    ; CHECK-NEXT: S_WAIT_DEPCTR_soft 3971
     ; CHECK-NEXT: S_WAIT_EXPCNT_soft 0
     $idx1 = S_SET_GPR_IDX_U32 0
     BUNDLE implicit-def dead $stg_dsta, implicit-def dead $stg_dstb, implicit killed renamable $vgpr0, implicit $m0, implicit $exec, implicit $idx1 {
@@ -127,7 +127,7 @@ body:             |
     ; CHECK-NEXT: S_WAIT_LOADCNT_soft 0
     ; CHECK-NEXT: S_WAIT_STORECNT_soft 0
     ; CHECK-NEXT: S_WAIT_DSCNT_soft 0
-    ; CHECK-NEXT: S_WAIT_DEPCTR_soft 4067
+    ; CHECK-NEXT: S_WAIT_DEPCTR_soft 3971
     ; CHECK-NEXT: S_WAIT_EXPCNT_soft 0
     ; CHECK-NEXT: V_SEND_VGPR_NEXT_B32_no_write 2, 1, 1, 1, 0, implicit $mode, implicit $exec
     $idx1 = S_SET_GPR_IDX_U32 0
@@ -162,7 +162,7 @@ body:             |
     ; CHECK-NEXT: S_WAIT_LOADCNT_soft 0
     ; CHECK-NEXT: S_WAIT_STORECNT_soft 0
     ; CHECK-NEXT: S_WAIT_DSCNT_soft 0
-    ; CHECK-NEXT: S_WAIT_DEPCTR_soft 4067
+    ; CHECK-NEXT: S_WAIT_DEPCTR_soft 3971
     ; CHECK-NEXT: S_WAIT_EXPCNT_soft 0
     ; CHECK-NEXT: S_BARRIER_SIGNAL_IMM -1
     ; CHECK-NEXT: S_BARRIER_WAIT -1

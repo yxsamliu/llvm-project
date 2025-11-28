@@ -52,8 +52,8 @@ define private amdgpu_kernel void @input(ptr addrspace(3) %addr, ptr addrspace(1
 ; CHECK-NEXT:    v_mov_b32_e32 g1[109], v7
 ; CHECK-NEXT:    v_mov_b32_e32 g1[110], v8
 ; CHECK-NEXT:    s_wait_dscnt 0x0
-; CHECK-NEXT:    s_wait_alu 0xfff
-; CHECK-NEXT:    s_sema_signal 17
+; CHECK-NEXT:    s_wait_alu depctr_va_vdst(0)
+; CHECK-NEXT:    s_sema_signal 0
 ; CHECK-NEXT:    s_endpgm
 entry:
 
@@ -84,11 +84,11 @@ entry:
 define private amdgpu_kernel void @compute(ptr addrspace(3) %addr, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
 ; CHECK-LABEL: compute:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_sema_wait 1
+; CHECK-NEXT:    s_sema_wait 0
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    v_convolve_f16_fp8_fp8 g1[22:25], 0, g1[12:20], g1[0:2], g1[4:6], g1[8:10] aux_data:42 clamp idxs:0x111101
-; CHECK-NEXT:    s_wait_alu 0xfff
-; CHECK-NEXT:    s_sema_signal 33
+; CHECK-NEXT:    s_wait_alu depctr_va_vdst(0)
+; CHECK-NEXT:    s_sema_signal 1
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem1)

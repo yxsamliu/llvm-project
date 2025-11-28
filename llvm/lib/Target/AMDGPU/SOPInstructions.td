@@ -2432,7 +2432,7 @@ defm S_GET_BARRIER_STATE_IMM      : SOP1_IMM_Real_gfx12_gfx13<0x050>;
 defm S_BARRIER_INIT_IMM           : SOP1_IMM_Real_gfx12_gfx13<0x051>;
 defm S_BARRIER_JOIN_IMM           : SOP1_IMM_Real_gfx12_gfx13<0x052>;
 defm S_ALLOC_VGPR                 : SOP1_Real_gfx12_gfx13<0x053>;
-defm S_SLEEP_VAR                  : SOP1_Real_gfx12_gfx13<0x058>;
+defm S_SLEEP_VAR                  : SOP1_IMM_Real_gfx12_gfx13<0x058>;
 
 // GFX1250
 defm S_ADD_PC_I64                 : SOP1_Real_gfx12_gfx13<0x04b>;
