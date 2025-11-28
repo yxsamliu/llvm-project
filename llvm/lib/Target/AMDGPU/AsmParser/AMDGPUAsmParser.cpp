@@ -372,6 +372,11 @@ public:
     return isRegKind() && getReg() == AMDGPU::SGPR_NULL;
   }
 
+  bool isAV_LdSt_32_Align2_RegOp() const {
+    return isRegClass(AMDGPU::VGPR_32RegClassID) ||
+           isRegClass(AMDGPU::AGPR_32RegClassID);
+  }
+
   bool isVRegWithInputMods() const;
   template <bool IsFake16> bool isT16_Lo128VRegWithInputMods() const;
   template <bool IsFake16> bool isT16VRegWithInputMods() const;
@@ -3964,7 +3969,6 @@ bool AMDGPUAsmParser::usesConstantBus(const MCInst &Inst, unsigned OpIdx) {
   if (MO.isReg()) {
     auto Reg = MO.getReg();
     if (!Reg)
-      // TODO-GFX12: why is this needed only for a few GFX12 instructions?
       return false;
     const MCRegisterInfo *TRI = getContext().getRegisterInfo();
     auto PReg = mc2PseudoReg(Reg);

@@ -1505,6 +1505,16 @@ def VS_64_STAGING_AlignTarget : SIRegisterClassLike<64, true, false, true>,
   let DecoderMethod = "decodeSrcRegOrImm9";
 }
 
+// Special case for DS_GWS instructions. The register input is really
+// 32-bit, but it needs to be even aligned on targets with a VGPR
+// alignment requirement.
+def AV_LdSt_32_Align2 : SIRegisterClassLike</*Bitwidth=*/32, /*VGPR=*/true, /*AGPR=*/true>,
+                        RegClassByHwMode<
+  [DefaultMode_Wave64, DefaultMode_Wave32, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode_Wave64, AlignedVGPRNoAGPRMode_Wave32],
+  [VGPR_32,            VGPR_32,            AV_64_Align2,          VReg_64_Align2,               VReg_64_Align2]> {
+  let DecoderMethod = "decodeAVLdSt<32>";
+}
+
 class RegImmMatcher<string name, string predicate, string diagnosticString>
     : AsmOperandClass {
   let Name = name;
@@ -1833,6 +1843,17 @@ foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "512", "57
   def AVLdSt_#size : AVLdStOperand<!cast<RegisterClassLike>("AV_LdSt_"#size#_STAGING_AlignTarget)>;
   def AVLdSt_#size#_Align1 : AVLdStOperand<!cast<RegisterClassLike>("AV_LdSt_"#size#_STAGING_Align1)>;
   def AVLdSt_#size#_Align2 : AVLdStOperand<!cast<RegisterClassLike>("AV_LdSt_"#size#_STAGING_Align2)>;
+}
+
+def AV_LdSt_32_Align2_RegMatcher : AsmOperandClass {
+  let Name = "AV_LdSt_32_Align2_RegOp";
+  let RenderMethod = "addRegOperands";
+}
+
+def AV_LdSt_32_Align2_RegOp : RegisterOperand<AV_LdSt_32_Align2> {
+  let ParserMatchClass = AV_LdSt_32_Align2_RegMatcher;
+  let PrintMethod = "printAVLdSt32Align2RegOp";
+  let EncoderMethod = "getAVOperandEncoding";
 }
 
 //===----------------------------------------------------------------------===//

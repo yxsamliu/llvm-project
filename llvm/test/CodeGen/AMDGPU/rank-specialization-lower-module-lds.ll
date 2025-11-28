@@ -34,12 +34,12 @@ define private amdgpu_kernel void @input(ptr addrspace(1) %inbuf, ptr addrspace(
 ; CHECK-NEXT:    store <3 x i32> [[VEC30]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, align 16
 ; CHECK-NEXT:    store <3 x i32> [[VEC31]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 1), align 16
 ; CHECK-NEXT:    store <3 x i32> [[VEC32]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 2), align 16
-; CHECK-NEXT:    store <3 x i32> [[WEI30]], ptr addrspace(3) @llvm.amdgcn.module.lds, align 64, !alias.scope [[META4:![0-9]+]], !noalias [[META7:![0-9]+]]
-; CHECK-NEXT:    [[WEI_P1:%.*]] = getelementptr <3 x i32>, ptr addrspace(3) @llvm.amdgcn.module.lds, i64 12
-; CHECK-NEXT:    store <3 x i32> [[WEI31]], ptr addrspace(3) [[WEI_P1]], align 64, !alias.scope [[META4]], !noalias [[META7]]
-; CHECK-NEXT:    [[WEI_P2:%.*]] = getelementptr <3 x i32>, ptr addrspace(3) @llvm.amdgcn.module.lds, i64 24
-; CHECK-NEXT:    store <3 x i32> [[WEI32]], ptr addrspace(3) [[WEI_P2]], align 64, !alias.scope [[META4]], !noalias [[META7]]
-; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.module.lds, i32 0, i32 1)), !alias.scope [[META13:![0-9]+]], !noalias [[META14:![0-9]+]]
+; CHECK-NEXT:    store <3 x i32> [[WEI30]], ptr addrspace(3) @weights, align 64
+; CHECK-NEXT:    [[WEI_P1:%.*]] = getelementptr <3 x i32>, ptr addrspace(3) @weights, i64 12
+; CHECK-NEXT:    store <3 x i32> [[WEI31]], ptr addrspace(3) [[WEI_P1]], align 64
+; CHECK-NEXT:    [[WEI_P2:%.*]] = getelementptr <3 x i32>, ptr addrspace(3) @weights, i64 24
+; CHECK-NEXT:    store <3 x i32> [[WEI32]], ptr addrspace(3) [[WEI_P2]], align 64
+; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -73,13 +73,13 @@ define private amdgpu_kernel void @compute(ptr addrspace(1) %inbuf, ptr addrspac
 ; CHECK-LABEL: define private amdgpu_kernel void @compute(
 ; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.module.lds, i32 0, i32 1)), !alias.scope [[META13]], !noalias [[META14]]
+; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem1)
 ; CHECK-NEXT:    [[VEC30:%.*]] = load <3 x i32>, ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, align 16
 ; CHECK-NEXT:    [[VEC31:%.*]] = load <3 x i32>, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 1), align 16
 ; CHECK-NEXT:    [[VEC32:%.*]] = load <3 x i32>, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 2), align 16
-; CHECK-NEXT:    [[WEI:%.*]] = load <9 x i32>, ptr addrspace(3) @llvm.amdgcn.module.lds, align 64, !alias.scope [[META4]], !noalias [[META7]]
+; CHECK-NEXT:    [[WEI:%.*]] = load <9 x i32>, ptr addrspace(3) @weights, align 64
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> zeroinitializer, <9 x i32> [[WEI]], <3 x i32> [[VEC30]], <3 x i32> [[VEC31]], <3 x i32> [[VEC32]], i32 42, i1 true)
-; CHECK-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 3), align 16, !tbaa [[TBAA17:![0-9]+]]
+; CHECK-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 3), align 16, !tbaa [[TBAA4:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 4))
 ; CHECK-NEXT:    ret void
 ;
@@ -114,10 +114,10 @@ entry:
 ; Function Attrs: convergent mustprogress nofree norecurse nosync nounwind memory(readwrite, argmem: none, inaccessiblemem: none)
 define amdgpu_kernel void @main(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) !reqd_work_group_size !{i32 32, i32 12, i32 1} {
 ; CHECK-LABEL: define amdgpu_kernel void @main(
-; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR2:[0-9]+]] !reqd_work_group_size [[META20:![0-9]+]] {
+; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR2:[0-9]+]] !reqd_work_group_size [[META7:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.main.lds) ], !alias.scope [[META21:![0-9]+]], !noalias [[META24:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ], !alias.scope [[META4]], !noalias [[META13]]
+; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.main.lds) ], !alias.scope [[META8:![0-9]+]], !noalias [[META11:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ], !alias.scope [[META16:![0-9]+]], !noalias [[META19:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr @input)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr @compute)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 2, ptr @output)
@@ -140,8 +140,8 @@ define private amdgpu_kernel void @input_kern2(ptr addrspace(1) %inbuf, ptr addr
 ; CHECK-NEXT:    [[IN:%.*]] = load <3 x i32>, ptr addrspace(1) [[INBUF]], align 16
 ; CHECK-NEXT:    [[W:%.*]] = load <3 x i32>, ptr addrspace(1) [[WBUF]], align 64
 ; CHECK-NEXT:    [[VEC:%.*]] = add <3 x i32> [[W]], [[IN]]
-; CHECK-NEXT:    store <3 x i32> [[VEC]], ptr addrspace(3) @llvm.amdgcn.module.lds, align 64, !alias.scope [[META4]], !noalias [[META7]]
-; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.module.lds, i32 0, i32 1)), !alias.scope [[META13]], !noalias [[META14]]
+; CHECK-NEXT:    store <3 x i32> [[VEC]], ptr addrspace(3) @weights, align 64
+; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -157,7 +157,7 @@ entry:
 
 define amdgpu_kernel void @kern2(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) !reqd_work_group_size !{i32 32, i32 12, i32 1} {
 ; CHECK-LABEL: define amdgpu_kernel void @kern2(
-; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR4:[0-9]+]] !reqd_work_group_size [[META20]] {
+; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR4:[0-9]+]] !reqd_work_group_size [[META7]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr @input_kern2)
@@ -184,31 +184,23 @@ attributes #2 = { convergent nounwind }
 !39 = !{i64 1, i1 false}
 
 ;.
-; CHECK: [[META4]] = !{[[META5:![0-9]+]]}
-; CHECK: [[META5]] = distinct !{[[META5]], [[META6:![0-9]+]]}
-; CHECK: [[META6]] = distinct !{[[META6]]}
-; CHECK: [[META7]] = !{[[META8:![0-9]+]], [[META10:![0-9]+]], [[META12:![0-9]+]]}
-; CHECK: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]]}
-; CHECK: [[META9]] = distinct !{[[META9]]}
-; CHECK: [[META10]] = distinct !{[[META10]], [[META11:![0-9]+]]}
-; CHECK: [[META11]] = distinct !{[[META11]]}
-; CHECK: [[META12]] = distinct !{[[META12]], [[META6]]}
-; CHECK: [[META13]] = !{[[META12]]}
-; CHECK: [[META14]] = !{[[META15:![0-9]+]], [[META16:![0-9]+]], [[META5]]}
-; CHECK: [[META15]] = distinct !{[[META15]], [[META9]]}
-; CHECK: [[META16]] = distinct !{[[META16]], [[META11]]}
-; CHECK: [[TBAA17]] = !{[[META18:![0-9]+]], [[META18]], i64 0}
-; CHECK: [[META18]] = !{!"omnipotent char", [[META19:![0-9]+]], i64 0}
-; CHECK: [[META19]] = !{!"Simple C++ TBAA"}
-; CHECK: [[META20]] = !{i32 32, i32 12, i32 1}
-; CHECK: [[META21]] = !{[[META22:![0-9]+]]}
-; CHECK: [[META22]] = distinct !{[[META22]], [[META23:![0-9]+]]}
-; CHECK: [[META23]] = distinct !{[[META23]]}
-; CHECK: [[META24]] = !{[[META25:![0-9]+]], [[META26:![0-9]+]], [[META27:![0-9]+]], [[META28:![0-9]+]]}
-; CHECK: [[META25]] = distinct !{[[META25]], [[META23]]}
-; CHECK: [[META26]] = distinct !{[[META26]], [[META23]]}
-; CHECK: [[META27]] = distinct !{[[META27]], [[META23]]}
-; CHECK: [[META28]] = distinct !{[[META28]], [[META23]]}
+; CHECK: [[TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
+; CHECK: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
+; CHECK: [[META6]] = !{!"Simple C++ TBAA"}
+; CHECK: [[META7]] = !{i32 32, i32 12, i32 1}
+; CHECK: [[META8]] = !{[[META9:![0-9]+]]}
+; CHECK: [[META9]] = distinct !{[[META9]], [[META10:![0-9]+]]}
+; CHECK: [[META10]] = distinct !{[[META10]]}
+; CHECK: [[META11]] = !{[[META12:![0-9]+]], [[META13:![0-9]+]], [[META14:![0-9]+]], [[META15:![0-9]+]]}
+; CHECK: [[META12]] = distinct !{[[META12]], [[META10]]}
+; CHECK: [[META13]] = distinct !{[[META13]], [[META10]]}
+; CHECK: [[META14]] = distinct !{[[META14]], [[META10]]}
+; CHECK: [[META15]] = distinct !{[[META15]], [[META10]]}
+; CHECK: [[META16]] = !{[[META17:![0-9]+]]}
+; CHECK: [[META17]] = distinct !{[[META17]], [[META18:![0-9]+]]}
+; CHECK: [[META18]] = distinct !{[[META18]]}
+; CHECK: [[META19]] = !{[[META20:![0-9]+]]}
+; CHECK: [[META20]] = distinct !{[[META20]], [[META18]]}
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GV: {{.*}}

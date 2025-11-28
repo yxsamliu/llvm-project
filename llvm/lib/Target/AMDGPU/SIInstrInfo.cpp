@@ -1935,9 +1935,9 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     if (RI.spillSGPRToVGPR())
       FrameInfo.setStackID(FrameIndex, TargetStackID::SGPRSpill);
     BuildMI(MBB, MI, DL, OpDesc, DestReg)
-        .addFrameIndex(FrameIndex) // addr
-        .addMemOperand(MMO)        // offset
-        .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
+      .addFrameIndex(FrameIndex) // addr
+      .addMemOperand(MMO)
+      .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
 
     return;
   }
@@ -2980,7 +2980,7 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   auto ApplyHazardWorkarounds = [this, &MBB, &I, &DL, FlushSGPRWrites]() {
     if (FlushSGPRWrites)
       BuildMI(MBB, I, DL, get(AMDGPU::S_WAITCNT_DEPCTR))
-          .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0));
+          .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0, ST));
   };
 
   // We need to compute the offset relative to the instruction immediately after

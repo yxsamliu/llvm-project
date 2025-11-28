@@ -2116,7 +2116,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
   if (Wait.hasWaitDepctr()) {
     if (!IsExpertMode)
       return Modified;
-    unsigned Enc = AMDGPU::DepCtr::encodeFieldVmVsrc(Wait.VmVsrc);
+    unsigned Enc = AMDGPU::DepCtr::encodeFieldVmVsrc(Wait.VmVsrc, *ST);
     Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, Wait.VaVdst);
 
     if (Enc != 0xffff) {
@@ -3318,7 +3318,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
             .addImm(0);
       }
       if (IsExpertMode) {
-        unsigned Enc = AMDGPU::DepCtr::encodeFieldVaVdst(0);
+        unsigned Enc = AMDGPU::DepCtr::encodeFieldVaVdst(0, *ST);
         Enc = AMDGPU::DepCtr::encodeFieldVmVsrc(Enc, 0);
         BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT_DEPCTR))
             .addImm(Enc);

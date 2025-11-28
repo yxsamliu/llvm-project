@@ -8,7 +8,7 @@
 
 # GCN-LABEL: name: raw_exp
 # GCN:       bb.0
-# GCN:       S_WAITCNT_DEPCTR 4095
+# GCN:       S_WAITCNT_DEPCTR 3999
 # GCN-NEXT   EXP_DONE
 
 name:            raw_exp
@@ -27,7 +27,7 @@ body:             |
 # GCN-LABEL: name: raw_vmem
 # GCN:       bb.0
 # GCN:       $vgpr0 = nofpexcept V_ADD_F32_e32
-# GCN-NEXT:  S_WAITCNT_DEPCTR 4095
+# GCN-NEXT:  S_WAITCNT_DEPCTR 3999
 # GCN-NEXT:  IMAGE_STORE_V4_V1_gfx12
 
 name:            raw_vmem
@@ -50,7 +50,7 @@ body:             |
 # GCN-LABEL: name: war_lds
 # GCN:       bb.0
 # GCN:       IMAGE_LOAD_V4_V1
-# GCN-NEXT:  S_WAITCNT_DEPCTR 65507
+# GCN-NEXT:  S_WAITCNT_DEPCTR 65411
 # GCN-NEXT   DS_READ_B128
 
 name:            war_lds
@@ -72,7 +72,7 @@ body:             |
 # GCN-LABEL: name: war_tex
 # GCN:       bb.0
 # GCN:       DS_WRITE_B128
-# GCN-NEXT:  S_WAITCNT_DEPCTR 65507
+# GCN-NEXT:  S_WAITCNT_DEPCTR 65411
 # GCN-NEXT:  IMAGE_LOAD_V4_V1
 
 name:            war_tex
@@ -92,7 +92,7 @@ body:             |
 ---
 # GCN-LABEL: name: war_valu
 # GCN:       bb.0
-# GCN:       S_WAITCNT_DEPCTR 65507
+# GCN:       S_WAITCNT_DEPCTR 65411
 # GCN-NEXT:  V_MOV_B32_e32
 
 name:            war_valu
@@ -115,10 +115,10 @@ body:             |
 # GCN-LABEL: name: war_vmem
 # GCN:       bb.0
 # GCN:       V_MOV_B32_e32
-# GCN-NEXT:  S_WAITCNT_DEPCTR 4095
+# GCN-NEXT:  S_WAITCNT_DEPCTR 3999
 # GCN-NEXT:  IMAGE_LOAD_V4_V1_gfx12
 # GCN:       $vgpr0 = nofpexcept V_ADD_F32_e32
-# GCN-NEXT:  S_WAITCNT_DEPCTR 4095
+# GCN-NEXT:  S_WAITCNT_DEPCTR 3999
 # GCN-NEXT:  IMAGE_STORE_V4_V1_gfx12
 
 name:            war_vmem
@@ -141,7 +141,7 @@ body:             |
 # GCN-LABEL: name: waw_vmem
 # GCN:       bb.0
 # GCN:       V_MOV_B32_e32
-# GCN-NEXT:  S_WAITCNT_DEPCTR 4095
+# GCN-NEXT:  S_WAITCNT_DEPCTR 3999
 # GCN-NEXT:  IMAGE_LOAD_V4_V1_gfx12
 
 name:            waw_vmem
@@ -166,11 +166,11 @@ body:             |
 # GCN-NEXT: S_WAIT_SAMPLECNT 0
 # GCN-NEXT: S_WAIT_BVHCNT 0
 # GCN-NEXT: S_WAIT_KMCNT 0
-# GCN-NEXT: S_WAITCNT_DEPCTR 4095
+# GCN-NEXT: S_WAITCNT_DEPCTR 3999
 # GCN-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
 # GCN-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
 # GCN-NEXT: $vgpr3 = V_MOV_B32_e32 $vgpr1, implicit $exec
-# GCN-NEXT: S_WAITCNT_DEPCTR 8191
+# GCN-NEXT: S_WAITCNT_DEPCTR 8095
 # GCN-NEXT: $vgpr4 = SCRATCH_LOAD_UBYTE_SVS $vgpr2, $sgpr0, 0, 0, implicit $exec, implicit $flat_scr
 
 name: raw_valu_scratch
@@ -201,7 +201,7 @@ body: |
 ---
 # GCN-LABEL: name: test_xdl_csmacc_ooo_completion
 # GCN: $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
-# GCN-NEXT: S_WAITCNT_DEPCTR 4095
+# GCN-NEXT: S_WAITCNT_DEPCTR 3999
 # GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
 
 name: test_xdl_csmacc_ooo_completion
@@ -217,7 +217,7 @@ body: |
 ---
 # GCN-LABEL: name: test_dpmacc_csmacc_ooo_completion
 # GCN: $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
-# GCN-NEXT: S_WAITCNT_DEPCTR 4095
+# GCN-NEXT: S_WAITCNT_DEPCTR 3999
 # GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
 
 name: test_dpmacc_csmacc_ooo_completion
@@ -233,7 +233,7 @@ body: |
 ---
 # GCN-LABEL: name: test_trans_csmacc_ooo_completion
 # GCN: $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
-# GCN-NEXT: S_WAITCNT_DEPCTR 4095
+# GCN-NEXT: S_WAITCNT_DEPCTR 3999
 # GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
 
 name: test_trans_csmacc_ooo_completion
@@ -249,7 +249,7 @@ body: |
 ---
 # GCN-LABEL: name: test_csmacc_csmacc_io_completion
 # GCN: $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
-# GCN-NEXT: S_WAITCNT_DEPCTR 8191
+# GCN-NEXT: S_WAITCNT_DEPCTR 8095
 # GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
 
 name: test_csmacc_csmacc_io_completion
@@ -265,7 +265,7 @@ body: |
 ---
 # GCN-LABEL: name: test_dpmacc_dpmacc_io_completion
 # GCN: $vgpr4_vgpr5 = V_TRUNC_F64_e32 $vgpr2_vgpr3, implicit $exec, implicit $mode
-# GCN-NEXT: S_WAITCNT_DEPCTR 8191
+# GCN-NEXT: S_WAITCNT_DEPCTR 8095
 # GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
 
 name: test_dpmacc_dpmacc_io_completion
@@ -281,7 +281,7 @@ body: |
 ---
 # GCN-LABEL: name: test_trans_trans_io_completion
 # GCN: $vgpr8 = V_LOG_F32_e32 $vgpr11, implicit $exec, implicit $mode
-# GCN-NEXT: S_WAITCNT_DEPCTR 8191
+# GCN-NEXT: S_WAITCNT_DEPCTR 8095
 # GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
 
 name: test_trans_trans_io_completion
@@ -297,7 +297,7 @@ body: |
 ---
 # GCN-LABEL: name: test_xdl_xdl_io_completion
 # GCN: $vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_vgpr11_vgpr12_vgpr13, 8, killed $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26, 0, 0, implicit $exec
-# GCN-NEXT: S_WAITCNT_DEPCTR 8191
+# GCN-NEXT: S_WAITCNT_DEPCTR 8095
 # GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
 
 name: test_xdl_xdl_io_completion
@@ -314,9 +314,9 @@ body: |
 # GCN-LABEL: name: test_war_vmvsrc_vmem_vmem_io
 # GCN:       bb.0
 # GCN:       $vgpr4_vgpr5_vgpr6_vgpr7 = IMAGE_LOAD_V4_V1
-# GCN-NEXT:  S_WAITCNT_DEPCTR 65511
+# GCN-NEXT:  S_WAITCNT_DEPCTR 65415
 # GCN-NEXT:  V_ADD_F32
-# GCN-NEXT:  S_WAITCNT_DEPCTR 65507
+# GCN-NEXT:  S_WAITCNT_DEPCTR 65411
 # GCN-NEXT:  V_ADD_F32
 
 name: test_war_vmvsrc_vmem_vmem_io
@@ -336,9 +336,9 @@ body: |
 # GCN-LABEL: name: test_war_vmvsrc_flat_flat_io
 # GCN:       bb.0
 # GCN:       $vgpr5 = FLAT_LOAD_DWORD
-# GCN-NEXT:  S_WAITCNT_DEPCTR 65511
+# GCN-NEXT:  S_WAITCNT_DEPCTR 65415
 # GCN-NEXT:  V_ADD_F32
-# GCN-NEXT:  S_WAITCNT_DEPCTR 65507
+# GCN-NEXT:  S_WAITCNT_DEPCTR 65411
 # GCN-NEXT:  V_ADD_F32
 
 name: test_war_vmvsrc_flat_flat_io
@@ -358,9 +358,9 @@ body: |
 # GCN-LABEL: name: test_war_vmvsrc_lds_lds_io
 # GCN:       bb.0
 # GCN:       $vgpr4_vgpr5_vgpr6_vgpr7 = DS_READ_B128
-# GCN-NEXT:  S_WAITCNT_DEPCTR 65511
+# GCN-NEXT:  S_WAITCNT_DEPCTR 65415
 # GCN-NEXT:  V_ADD_F32
-# GCN-NEXT:  S_WAITCNT_DEPCTR 65507
+# GCN-NEXT:  S_WAITCNT_DEPCTR 65411
 # GCN-NEXT:  V_ADD_F32
 
 name: test_war_vmvsrc_lds_lds_io
@@ -380,7 +380,7 @@ body: |
 # GCN-LABEL: name: test_war_vmvsrc_vmem_lds_ooo
 # GCN:       bb.0
 # GCN:       DS_READ_B128
-# GCN-NEXT:  S_WAITCNT_DEPCTR 65507
+# GCN-NEXT:  S_WAITCNT_DEPCTR 65411
 # GCN-NEXT:  V_ADD_F32
 
 name: test_war_vmvsrc_vmem_lds_ooo
@@ -400,7 +400,7 @@ body: |
 # GCN-LABEL: name: test_war_vmvsrc_flat_lds_ooo
 # GCN:       bb.0
 # GCN:       DS_READ_B128
-# GCN-NEXT:  S_WAITCNT_DEPCTR 65507
+# GCN-NEXT:  S_WAITCNT_DEPCTR 65411
 # GCN-NEXT:  V_ADD_F32
 
 name: test_war_vmvsrc_flat_lds_ooo
@@ -420,7 +420,7 @@ body: |
 # GCN-LABEL: name: test_war_vmvsrc_flat_vmem_ooo
 # GCN:       bb.0
 # GCN:       IMAGE_LOAD_V4_V1
-# GCN-NEXT:  S_WAITCNT_DEPCTR 65507
+# GCN-NEXT:  S_WAITCNT_DEPCTR 65411
 # GCN-NEXT:  V_ADD_F32
 
 name: test_war_vmvsrc_flat_vmem_ooo
@@ -444,7 +444,7 @@ body: |
 # GCN:       GLOBAL_LOAD_DWORD
 # GCN-NEXT:  S_WAIT_LOADCNT 0
 # GCN-NEXT:  V_MOV_B32_e32
-# GCN-NEXT:  S_WAITCNT_DEPCTR 65507
+# GCN-NEXT:  S_WAITCNT_DEPCTR 65411
 # GCN-NEXT:  V_MOV_B32_e32
 name: test_war_completed_vmem
 body: |

@@ -135,17 +135,13 @@ void getUsesOfLDSByFunction(const CallGraph &CG, Module &M,
     for (User *V : GV.users()) {
       if (auto *I = dyn_cast<Instruction>(V)) {
         Function *F = I->getFunction();
-        if (isKernelLDS(F))
+        if (isKernel(*F) && !getWavegroupRankFunction(*F))
           Kernels[F].insert(&GV);
         else
           Functions[F].insert(&GV);
       }
     }
   }
-}
-
-bool isKernelLDS(const Function *F) {
-  return AMDGPU::isKernel(F->getCallingConv()) && !getWavegroupRankFunction(*F);
 }
 
 LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
@@ -162,7 +158,7 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
     if (getWavegroupRankFunction(F))
       continue;
 
-    if (!isKernelLDS(&F))
+    if (!isKernel(F))
       if (F.hasAddressTaken(nullptr,
                             /* IgnoreCallbackUses */ false,
                             /* IgnoreAssumeLikeCalls */ false,
@@ -194,7 +190,7 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   // access all variables accessed by functions whose address escaped
   for (Function &F : M.functions()) {
     if (!F.isDeclaration() && FunctionMakesUnknownCall(&F)) {
-      if (!isKernelLDS(&F)) {
+      if (!isKernel(F)) {
         set_union(TransitiveMapFunction[&F],
                   VariablesReachableThroughFunctionPointer);
       }
@@ -204,7 +200,7 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   // Direct implementation of collecting all variables reachable from each
   // function
   for (Function &Func : M.functions()) {
-    if (Func.isDeclaration() || isKernelLDS(&Func))
+    if (Func.isDeclaration() || isKernel(Func))
       continue;
 
     DenseSet<Function *> Seen; // catches cycles
@@ -241,7 +237,7 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   FunctionVariableMap IndirectMapKernel;
 
   for (Function &Func : M.functions()) {
-    if (Func.isDeclaration() || !isKernelLDS(&Func))
+    if (Func.isDeclaration() || !isKernel(Func))
       continue;
 
     for (const CallGraphNode::CallRecord &R : *CG[&Func]) {
@@ -357,7 +353,7 @@ void removeFnAttrFromReachable(CallGraph &CG, Function *KernelRoot,
             Function *PotentialCallee =
                 ExternalCallRecord.second->getFunction();
             assert(PotentialCallee);
-            if (!isKernelLDS(PotentialCallee)) {
+            if (!isKernel(*PotentialCallee)) {
               for (StringRef Attr : FnAttrs)
                 PotentialCallee->removeFnAttr(Attr);
             }
