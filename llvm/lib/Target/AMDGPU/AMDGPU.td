@@ -1698,7 +1698,8 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureFastDenormalF32,
    FeatureUnalignedBufferAccess, FeatureImageInsts, FeatureGDS, FeatureGWS,
    FeatureDefaultComponentZero, FeatureVmemWriteVgprInOrder, FeatureCubeInsts, 
-   FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts
+   FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts, 
+   FeatureCvtPkNormVOP2Insts
   ]
 >;
 
@@ -1819,10 +1820,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
-   FeatureExclusiveScanInsts, FeatureSWC, FeatureParallelBitInsts, 
-   FeatureVCUBEInsts, FeatureVLERPInsts, FeatureVSADInsts, 
-   FeatureVQSADInsts, FeatureVCVTNORMInsts, FeatureVCVTPKNORMVOP2Insts, 
-   FeatureVCVTPKNORMVOP3Insts
+   FeatureExclusiveScanInsts, FeatureSWC, FeatureParallelBitInsts,
   ]
 >;
 
@@ -2380,7 +2378,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
 ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
-  !listconcat(FeatureISAVersion12_50_Common.Features,
+  !listconcat(FeatureISAVersion12_50.Features,
   [FeatureCubeInsts, 
    FeatureLerpInst, 
    FeatureSadInsts, 
