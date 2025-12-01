@@ -25,9 +25,9 @@ define amdgpu_ps <4 x float> @getlod_1d_nonuniform(i32 %rsrc, <4 x i32> inreg %s
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s4, exec_lo
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX13-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v0
+; GFX13-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v4, v0
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s4
-; GFX13-NEXT:    image_get_lod v[0:3], v4, v5, s[0:3] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX13-NEXT:    image_get_lod v[0:3], v5, v4, s[0:3] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
@@ -59,10 +59,11 @@ define amdgpu_ps <2 x float> @getlod_2d_nonuniform(i32 %rsrc, <4 x i32> inreg %s
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s4, exec_lo
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX13-NEXT:    v_dual_mov_b32 v3, v1 :: v_dual_mov_b32 v4, v0
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s4
-; GFX13-NEXT:    image_get_lod v[0:1], [v3, v2], v4, s[0:3] dmask:0x3 dim:SQ_RSRC_IMG_2D
+; GFX13-NEXT:    image_get_lod v[3:4], [v1, v2], v0, s[0:3] dmask:0x3 dim:SQ_RSRC_IMG_2D
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    v_dual_mov_b32 v0, v3 :: v_dual_mov_b32 v1, v4
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <2 x float> @llvm.amdgcn.image.getlod.2d.v2f32.f32(i32 3, float %s, float %t, i32 %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)

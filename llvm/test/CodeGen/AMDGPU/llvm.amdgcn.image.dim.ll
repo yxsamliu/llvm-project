@@ -1425,20 +1425,35 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, ptr ad
 ; GFX11-NEXT:    global_store_b32 v9, v4, s[8:9]
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12PLUS-LABEL: load_2darraymsaa_tfe:
-; GFX12PLUS:       ; %bb.0: ; %main_body
-; GFX12PLUS-NEXT:    v_dual_mov_b32 v9, 0 :: v_dual_mov_b32 v8, v3
-; GFX12PLUS-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v6, v1
-; GFX12PLUS-NEXT:    v_dual_mov_b32 v7, v0 :: v_dual_mov_b32 v10, v9
-; GFX12PLUS-NEXT:    v_dual_mov_b32 v11, v9 :: v_dual_mov_b32 v12, v9
-; GFX12PLUS-NEXT:    v_mov_b32_e32 v13, v9
-; GFX12PLUS-NEXT:    v_dual_mov_b32 v0, v9 :: v_dual_mov_b32 v1, v10
-; GFX12PLUS-NEXT:    v_dual_mov_b32 v2, v11 :: v_dual_mov_b32 v3, v12
-; GFX12PLUS-NEXT:    v_mov_b32_e32 v4, v13
-; GFX12PLUS-NEXT:    image_load v[0:4], [v7, v6, v5, v8], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY tfe
-; GFX12PLUS-NEXT:    s_wait_loadcnt 0x0
-; GFX12PLUS-NEXT:    global_store_b32 v9, v4, s[8:9]
-; GFX12PLUS-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: load_2darraymsaa_tfe:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    v_mov_b32_e32 v9, 0
+; GFX12-NEXT:    v_dual_mov_b32 v5, v3 :: v_dual_mov_b32 v6, v2
+; GFX12-NEXT:    v_dual_mov_b32 v7, v1 :: v_dual_mov_b32 v8, v0
+; GFX12-NEXT:    v_dual_mov_b32 v10, v9 :: v_dual_mov_b32 v11, v9
+; GFX12-NEXT:    v_dual_mov_b32 v12, v9 :: v_dual_mov_b32 v13, v9
+; GFX12-NEXT:    v_dual_mov_b32 v0, v9 :: v_dual_mov_b32 v1, v10
+; GFX12-NEXT:    v_dual_mov_b32 v2, v11 :: v_dual_mov_b32 v3, v12
+; GFX12-NEXT:    v_mov_b32_e32 v4, v13
+; GFX12-NEXT:    image_load v[0:4], [v8, v7, v6, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY tfe
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_store_b32 v9, v4, s[8:9]
+; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: load_2darraymsaa_tfe:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    v_dual_mov_b32 v9, 0 :: v_dual_mov_b32 v5, v3
+; GFX13-NEXT:    v_dual_mov_b32 v6, v2 :: v_dual_mov_b32 v7, v1
+; GFX13-NEXT:    v_dual_mov_b32 v8, v0 :: v_dual_mov_b32 v10, v9
+; GFX13-NEXT:    v_dual_mov_b32 v11, v9 :: v_dual_mov_b32 v12, v9
+; GFX13-NEXT:    v_mov_b32_e32 v13, v9
+; GFX13-NEXT:    v_dual_mov_b32 v0, v9 :: v_dual_mov_b32 v1, v10
+; GFX13-NEXT:    v_dual_mov_b32 v2, v11 :: v_dual_mov_b32 v3, v12
+; GFX13-NEXT:    v_mov_b32_e32 v4, v13
+; GFX13-NEXT:    image_load v[0:4], [v8, v7, v6, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY tfe
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    global_store_b32 v9, v4, s[8:9]
+; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.load.2darraymsaa.v4f32i32.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 %fragid, <8 x i32> %rsrc, i32 1, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0

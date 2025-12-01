@@ -261,7 +261,7 @@ public:
   };
 
   // A map from regunits to the delay info for that regunit.
-  struct DelayState : DenseMap<unsigned, DelayInfo> {
+  struct DelayState : DenseMap<MCRegUnit, DelayInfo> {
     // Merge another DelayState into this one by merging the delay info for each
     // regunit.
     void merge(const DelayState &RHS) {
@@ -404,7 +404,8 @@ public:
     bool Changed = false;
     MachineInstr *LastDelayAlu = nullptr;
 
-    MCRegUnit LastSGPRFromVALU = 0;
+    // FIXME: 0 is a valid register unit.
+    MCRegUnit LastSGPRFromVALU = static_cast<MCRegUnit>(0);
     // Iterate over the contents of bundles, but don't emit any instructions
     // inside a bundle.
     for (auto &MI : MBB.instrs()) {
@@ -419,12 +420,29 @@ public:
 
       DelayType Type = getDelayType(MI);
 
+      // Do not insert s_delay_alu for an XDL instruction reading the
+      // accumulator output of a previous XDL instructions as its accumulator
+      // input.
+      if (Type == XDL && (SIInstrInfo::isConvolve(MI) || SII->isXDLWMMA(MI))) {
+        auto Name = SIInstrInfo::isConvolve(MI) ? AMDGPU::OpName::src0
+                                                : AMDGPU::OpName::srcC;
+        MachineOperand *Accum = SII->getNamedOperand(MI, Name);
+        if (Accum->isReg()) {
+          for (MCRegUnit Unit : TRI->regunits(Accum->getReg())) {
+            auto It = State.find(Unit);
+            if (It != State.end())
+              State[Unit].XDLNum = DelayInfo::XDL_MAX;
+          }
+        }
+      }
+
       if (instructionWaitsForSGPRWrites(MI)) {
         auto It = State.find(LastSGPRFromVALU);
         if (It != State.end()) {
           DelayInfo Info = It->getSecond();
           State.advanceByVALUNum(Info.VALUNum);
-          LastSGPRFromVALU = 0;
+          // FIXME: 0 is a valid register unit.
+          LastSGPRFromVALU = static_cast<MCRegUnit>(0);
         }
       }
 

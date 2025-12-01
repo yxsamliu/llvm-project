@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMachineInstrs.h"
 #include "AMDGPUVGPRIndexingAnalysis.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
@@ -181,8 +182,9 @@ void AMDGPUPrivateObjectVGPRs::insertObjectDef(
 
 void AMDGPUPrivateObjectVGPRs::addUseDefOperands(
     MachineInstr &MI, const AMDGPUPrivateObjectIdxInfo &PO) {
-  assert(MI.getOpcode() == AMDGPU::V_LOAD_IDX ||
-         MI.getOpcode() == AMDGPU::V_STORE_IDX);
+  bool IsLoad = isa<AMDGPUMI::VLoadIdxInst>(MI);
+  bool IsStore = isa<AMDGPUMI::VStoreIdxInst>(MI);
+  assert(IsLoad || IsStore);
   ObjectRegs &Regs = getObjectRegs(PO);
 
   MachineInstr *Bundle = nullptr;
@@ -195,7 +197,7 @@ void AMDGPUPrivateObjectVGPRs::addUseDefOperands(
     // object and V_STORE_IDX store only some of them, meaning V_STORE_IDX have
     // to have both defs and uses for all the registers. When interval is
     // available V_STORE_IDX only needs defs on relevant registers.
-    if ((MI.getOpcode() == AMDGPU::V_LOAD_IDX) || !PO.UsedRegs.has_value()) {
+    if (IsLoad || !PO.UsedRegs.has_value()) {
       MachineOperand UseOp =
           MachineOperand::CreateReg(Reg, /*isDef=*/false, /*isImp=*/true);
       MI.addOperand(UseOp);
@@ -203,7 +205,7 @@ void AMDGPUPrivateObjectVGPRs::addUseDefOperands(
         Bundle->addOperand(UseOp);
     }
 
-    if (MI.getOpcode() == AMDGPU::V_STORE_IDX) {
+    if (IsStore) {
       MachineOperand StoreOp =
           MachineOperand::CreateReg(Reg, /*isDef=*/true, /*isImp=*/true);
       MI.addOperand(StoreOp);

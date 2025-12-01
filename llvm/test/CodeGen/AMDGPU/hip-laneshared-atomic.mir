@@ -25,9 +25,11 @@ body:             |
     ; CHECK-NEXT: S_WAIT_LOADCNT_soft 0
     ; CHECK-NEXT: S_WAIT_STORECNT_soft 0
     ; CHECK-NEXT: S_WAIT_DSCNT_soft 0
+    ; CHECK-NEXT: S_WAIT_DEPCTR_soft 3971
+    ; CHECK-NEXT: S_WAIT_EXPCNT_soft 0
     ; CHECK-NEXT: $vgpr0, $vgpr1 = BUNDLE {
     ; CHECK-NEXT:   $vgpr1 = GLOBAL_ATOMIC_INC_SADDR_RTN renamable $vgpr0, killed renamable $vgpr1, renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
-    ; CHECK-NEXT:   V_STORE_IDX killed $vgpr1, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; CHECK-NEXT:   V_STORE_IDX_B32 killed $vgpr1, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ; CHECK-NEXT: }
     ; CHECK-NEXT: S_WAIT_STORECNT_soft 0
     ; CHECK-NEXT: S_WAIT_BVHCNT_soft 0
@@ -35,15 +37,19 @@ body:             |
     ; CHECK-NEXT: S_WAIT_LOADCNT_soft 0
     ; CHECK-NEXT: S_WAIT_STORECNT_soft 0
     ; CHECK-NEXT: S_WAIT_DSCNT_soft 0
+    ; CHECK-NEXT: S_WAIT_DEPCTR_soft 3971
+    ; CHECK-NEXT: S_WAIT_EXPCNT_soft 0
     ; CHECK-NEXT: S_WAIT_BVHCNT_soft 0
     ; CHECK-NEXT: S_WAIT_SAMPLECNT_soft 0
     ; CHECK-NEXT: S_WAIT_LOADCNT_soft 0
     ; CHECK-NEXT: S_WAIT_STORECNT_soft 0
     ; CHECK-NEXT: S_WAIT_DSCNT_soft 0
+    ; CHECK-NEXT: S_WAIT_DEPCTR_soft 3971
+    ; CHECK-NEXT: S_WAIT_EXPCNT_soft 0
     ; CHECK-NEXT: $vgpr0, $vgpr1 = BUNDLE {
-    ; CHECK-NEXT:   $vgpr1 = V_LOAD_IDX $idx1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+    ; CHECK-NEXT:   $vgpr1 = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
     ; CHECK-NEXT:   $vgpr0 = GLOBAL_ATOMIC_DEC_SADDR_RTN killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
-    ; CHECK-NEXT:   V_STORE_IDX killed $vgpr0, killed $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; CHECK-NEXT:   V_STORE_IDX_B32 killed $vgpr0, killed $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ; CHECK-NEXT: }
     ; CHECK-NEXT: S_WAIT_STORECNT_soft 0
     ; CHECK-NEXT: S_ENDPGM 0
@@ -55,12 +61,118 @@ body:             |
     $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
     $vgpr0, $vgpr1 = BUNDLE {
     $vgpr1 = GLOBAL_ATOMIC_INC_SADDR_RTN renamable $vgpr0, killed renamable $vgpr1, renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
-    V_STORE_IDX killed $vgpr1, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    V_STORE_IDX_B32 killed $vgpr1, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     }
     ATOMIC_FENCE 7, 2
     $vgpr0, $vgpr1 = BUNDLE {
-    $vgpr1 = V_LOAD_IDX $idx1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+    $vgpr1 = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
     $vgpr0 = GLOBAL_ATOMIC_DEC_SADDR_RTN killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
-    V_STORE_IDX killed $vgpr0, killed $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    V_STORE_IDX_B32 killed $vgpr0, killed $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     }
     S_ENDPGM 0
+...
+
+---
+name:            neighbor_share_next
+tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       16
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    ; CHECK-LABEL: name: neighbor_share_next
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $idx1 = S_SET_GPR_IDX_U32 0
+    ; CHECK-NEXT: BUNDLE implicit-def dead $stg_dsta, implicit-def dead $stg_dstb, implicit killed renamable $vgpr0, implicit $m0, implicit $exec, implicit $idx1 {
+    ; CHECK-NEXT:   $stg_dsta, $stg_dstb = V_SEND_VGPR_NEXT_B32 killed renamable $vgpr0, 2, 1, 1, 1, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; CHECK-NEXT:   V_STORE_IDX_B32 internal $stg_dstb, $idx1, 1, implicit $exec :: (store (s32), addrspace 10)
+    ; CHECK-NEXT: }
+    ; CHECK-NEXT: S_WAIT_BVHCNT_soft 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT_soft 0
+    ; CHECK-NEXT: S_WAIT_LOADCNT_soft 0
+    ; CHECK-NEXT: S_WAIT_STORECNT_soft 0
+    ; CHECK-NEXT: S_WAIT_DSCNT_soft 0
+    ; CHECK-NEXT: S_WAIT_DEPCTR_soft 3971
+    ; CHECK-NEXT: S_WAIT_EXPCNT_soft 0
+    $idx1 = S_SET_GPR_IDX_U32 0
+    BUNDLE implicit-def dead $stg_dsta, implicit-def dead $stg_dstb, implicit killed renamable $vgpr0, implicit $m0, implicit $exec, implicit $idx1 {
+      $stg_dsta, $stg_dstb = V_SEND_VGPR_NEXT_B32 killed renamable $vgpr0, 2, 1, 1, 1, 0, implicit $mode, implicit $exec
+      V_STORE_IDX_B32 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+      V_STORE_IDX_B32 internal $stg_dstb, $idx1, 1, implicit $exec :: (store (s32), addrspace 10)
+    }
+    ATOMIC_FENCE 5, 2
+...
+
+---
+name:            neighbor_share_next_separate
+tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       16
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    ; CHECK-LABEL: name: neighbor_share_next_separate
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $idx1 = S_SET_GPR_IDX_U32 0
+    ; CHECK-NEXT: BUNDLE implicit-def dead $stg_dsta, implicit-def dead $stg_dstb, implicit killed renamable $vgpr0, implicit $m0, implicit $exec, implicit $idx1 {
+    ; CHECK-NEXT:   $stg_dsta, $stg_dstb = V_SEND_VGPR_NEXT_B32 killed renamable $vgpr0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; CHECK-NEXT:   V_STORE_IDX_B32 internal $stg_dstb, $idx1, 1, implicit $exec :: (store (s32), addrspace 10)
+    ; CHECK-NEXT: }
+    ; CHECK-NEXT: S_WAIT_BVHCNT_soft 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT_soft 0
+    ; CHECK-NEXT: S_WAIT_LOADCNT_soft 0
+    ; CHECK-NEXT: S_WAIT_STORECNT_soft 0
+    ; CHECK-NEXT: S_WAIT_DSCNT_soft 0
+    ; CHECK-NEXT: S_WAIT_DEPCTR_soft 3971
+    ; CHECK-NEXT: S_WAIT_EXPCNT_soft 0
+    ; CHECK-NEXT: V_SEND_VGPR_NEXT_B32_no_write 2, 1, 1, 1, 0, implicit $mode, implicit $exec
+    $idx1 = S_SET_GPR_IDX_U32 0
+    BUNDLE implicit-def dead $stg_dsta, implicit-def dead $stg_dstb, implicit killed renamable $vgpr0, implicit $m0, implicit $exec, implicit $idx1 {
+      $stg_dsta, $stg_dstb = V_SEND_VGPR_NEXT_B32 killed renamable $vgpr0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+      V_STORE_IDX_B32 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+      V_STORE_IDX_B32 internal $stg_dstb, $idx1, 1, implicit $exec :: (store (s32), addrspace 10)
+    }
+    ATOMIC_FENCE 5, 2
+    V_SEND_VGPR_NEXT_B32_no_write 2, 1, 1, 1, 0, implicit $mode, implicit $exec
+...
+
+---
+name:            neighbor_share_next_barrier
+tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy:       16
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    ; CHECK-LABEL: name: neighbor_share_next_barrier
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $idx1 = S_SET_GPR_IDX_U32 0
+    ; CHECK-NEXT: BUNDLE implicit-def dead $stg_dsta, implicit-def dead $stg_dstb, implicit killed renamable $vgpr0, implicit $m0, implicit $exec, implicit $idx1 {
+    ; CHECK-NEXT:   $stg_dsta, $stg_dstb = V_SEND_VGPR_NEXT_B32 killed renamable $vgpr0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; CHECK-NEXT:   V_STORE_IDX_B32 internal $stg_dstb, $idx1, 1, implicit $exec :: (store (s32), addrspace 10)
+    ; CHECK-NEXT: }
+    ; CHECK-NEXT: S_WAIT_BVHCNT_soft 0
+    ; CHECK-NEXT: S_WAIT_SAMPLECNT_soft 0
+    ; CHECK-NEXT: S_WAIT_LOADCNT_soft 0
+    ; CHECK-NEXT: S_WAIT_STORECNT_soft 0
+    ; CHECK-NEXT: S_WAIT_DSCNT_soft 0
+    ; CHECK-NEXT: S_WAIT_DEPCTR_soft 3971
+    ; CHECK-NEXT: S_WAIT_EXPCNT_soft 0
+    ; CHECK-NEXT: S_BARRIER_SIGNAL_IMM -1
+    ; CHECK-NEXT: S_BARRIER_WAIT -1
+    $idx1 = S_SET_GPR_IDX_U32 0
+    BUNDLE implicit-def dead $stg_dsta, implicit-def dead $stg_dstb, implicit killed renamable $vgpr0, implicit $m0, implicit $exec, implicit $idx1 {
+      $stg_dsta, $stg_dstb = V_SEND_VGPR_NEXT_B32 killed renamable $vgpr0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+      V_STORE_IDX_B32 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+      V_STORE_IDX_B32 internal $stg_dstb, $idx1, 1, implicit $exec :: (store (s32), addrspace 10)
+    }
+    ATOMIC_FENCE 5, 2
+    S_BARRIER_SIGNAL_IMM -1
+    S_BARRIER_WAIT -1
+...

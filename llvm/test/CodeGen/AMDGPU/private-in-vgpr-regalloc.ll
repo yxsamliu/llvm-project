@@ -98,9 +98,9 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) {
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:  .LBB0_5: ; %exit
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    scratch_load_b32 v0, off, s0 offset:28
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    scratch_store_b32 off, g1[1], s0
-; CHECK-NEXT:    scratch_load_b32 v0, off, s0 offset:28
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, 7, v0

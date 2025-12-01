@@ -51,7 +51,7 @@ define amdgpu_cs void @test_rts_save(){
 ; GFX13-NEXT:    export prim v0, off, off, off done
 ; GFX13-NEXT:    s_endpgm
   %ret_two = call i32 @llvm.amdgcn.rts.ray.save()
-  call void @llvm.amdgcn.exp.i32(i32 20, i32 1, i32 %ret_two, i32 undef, i32 undef, i32 undef, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.i32(i32 20, i32 1, i32 %ret_two, i32 poison, i32 poison, i32 poison, i1 true, i1 false)
   ret void
 }
 
@@ -63,7 +63,7 @@ define amdgpu_cs void @test_rts_update_ray(i64 %arg){
 ; GFX13-NEXT:    export prim v0, off, off, off done
 ; GFX13-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.rts.update.ray(i64 %arg)
-  call void @llvm.amdgcn.exp.i32(i32 20, i32 1, i32 %ret, i32 undef, i32 undef, i32 undef, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.i32(i32 20, i32 1, i32 %ret, i32 poison, i32 poison, i32 poison, i1 true, i1 false)
   ret void
 }
 
@@ -75,7 +75,7 @@ define amdgpu_cs void @rts_trace_ray_nonblock_test(i32 %ray_init_data, <3 x i32>
 ; GFX13-NEXT:    export prim v0, off, off, off done
 ; GFX13-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.rts.trace.ray.nonblock(i32 %ray_init_data, <3 x i32> %ray_init_flag, float %ray_extent, <4 x float> %ray_origin, <4 x float> %ray_dir, <4 x i32> %rsrc)
-  call void @llvm.amdgcn.exp.i32(i32 20, i32 1, i32 %ret, i32 undef, i32 undef, i32 undef, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.i32(i32 20, i32 1, i32 %ret, i32 poison, i32 poison, i32 poison, i1 true, i1 false)
   ret void
 }
 
@@ -109,7 +109,7 @@ define amdgpu_cs void @rts_trace_ray_notmin_nonblock_test(i32 %ray_init_data, <3
 ; GFX13-GISEL-NEXT:    export prim v0, off, off, off done
 ; GFX13-GISEL-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.rts.trace.ray.nonblock(i32 %ray_init_data, <3 x i32> %ray_init_flag, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <4 x i32> %rsrc)
-  call void @llvm.amdgcn.exp.i32(i32 20, i32 1, i32 %ret, i32 undef, i32 undef, i32 undef, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.i32(i32 20, i32 1, i32 %ret, i32 poison, i32 poison, i32 poison, i1 true, i1 false)
   ret void
 }
 
@@ -151,7 +151,7 @@ define amdgpu_cs void @test_rts_read_packet_info(ptr addrspace(1) %gaddr){
 ; GFX13-NEXT:    export prim v0, v0, v0, v0 done
 ; GFX13-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.rts.read.packet.info(ptr addrspace(1) %gaddr)
-  call void @llvm.amdgcn.exp.i32(i32 20, i32 15, i32 %ret, i32 undef, i32 undef, i32 undef, i1 true, i1 false)
+  call void @llvm.amdgcn.exp.i32(i32 20, i32 15, i32 %ret, i32 poison, i32 poison, i32 poison, i1 true, i1 false)
   ret void
 }
 

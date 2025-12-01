@@ -71,7 +71,7 @@ main_body:
   %res.f = extractelement <4 x float> %res.vec, i32 0
   %res.err = extractvalue {<4 x float>,i32} %v, 1
   %res.errf = bitcast i32 %res.err to float
-  %res.tmp = insertelement <2 x float> undef, float %res.f, i32 0
+  %res.tmp = insertelement <2 x float> poison, float %res.f, i32 0
   %res = insertelement <2 x float> %res.tmp, float %res.errf, i32 1
   ret <2 x float> %res
 }
@@ -97,7 +97,7 @@ main_body:
   %res.f = extractelement <4 x float> %res.vec, i32 1
   %res.err = extractvalue {<4 x float>,i32} %v, 1
   %res.errf = bitcast i32 %res.err to float
-  %res.tmp = insertelement <2 x float> undef, float %res.f, i32 0
+  %res.tmp = insertelement <2 x float> poison, float %res.f, i32 0
   %res = insertelement <2 x float> %res.tmp, float %res.errf, i32 1
   ret <2 x float> %res
 }
@@ -123,7 +123,7 @@ main_body:
   %res.f = extractelement <4 x float> %res.vec, i32 2
   %res.err = extractvalue {<4 x float>,i32} %v, 1
   %res.errf = bitcast i32 %res.err to float
-  %res.tmp = insertelement <2 x float> undef, float %res.f, i32 0
+  %res.tmp = insertelement <2 x float> poison, float %res.f, i32 0
   %res = insertelement <2 x float> %res.tmp, float %res.errf, i32 1
   ret <2 x float> %res
 }
@@ -149,7 +149,7 @@ main_body:
   %res.f = extractelement <4 x float> %res.vec, i32 3
   %res.err = extractvalue {<4 x float>,i32} %v, 1
   %res.errf = bitcast i32 %res.err to float
-  %res.tmp = insertelement <2 x float> undef, float %res.f, i32 0
+  %res.tmp = insertelement <2 x float> poison, float %res.f, i32 0
   %res = insertelement <2 x float> %res.tmp, float %res.errf, i32 1
   ret <2 x float> %res
 }
@@ -176,7 +176,7 @@ main_body:
   %res.f2 = extractelement <4 x float> %res.vec, i32 1
   %res.err = extractvalue {<4 x float>,i32} %v, 1
   %res.errf = bitcast i32 %res.err to float
-  %res.tmp1 = insertelement <4 x float> undef, float %res.f1, i32 0
+  %res.tmp1 = insertelement <4 x float> poison, float %res.f1, i32 0
   %res.tmp2 = insertelement <4 x float> %res.tmp1, float %res.f2, i32 1
   %res = insertelement <4 x float> %res.tmp2, float %res.errf, i32 2
   ret <4 x float> %res
@@ -204,7 +204,7 @@ main_body:
   %res.f2 = extractelement <4 x float> %res.vec, i32 3
   %res.err = extractvalue {<4 x float>,i32} %v, 1
   %res.errf = bitcast i32 %res.err to float
-  %res.tmp1 = insertelement <4 x float> undef, float %res.f1, i32 0
+  %res.tmp1 = insertelement <4 x float> poison, float %res.f1, i32 0
   %res.tmp2 = insertelement <4 x float> %res.tmp1, float %res.f2, i32 1
   %res = insertelement <4 x float> %res.tmp2, float %res.errf, i32 2
   ret <4 x float> %res
@@ -234,7 +234,7 @@ main_body:
   %res.f3 = extractelement <4 x float> %res.vec, i32 3
   %res.err = extractvalue {<4 x float>,i32} %v, 1
   %res.errf = bitcast i32 %res.err to float
-  %res.tmp1 = insertelement <4 x float> undef, float %res.f1, i32 0
+  %res.tmp1 = insertelement <4 x float> poison, float %res.f1, i32 0
   %res.tmp2 = insertelement <4 x float> %res.tmp1, float %res.f2, i32 1
   %res.tmp3 = insertelement <4 x float> %res.tmp2, float %res.f3, i32 2
   %res = insertelement <4 x float> %res.tmp3, float %res.errf, i32 3
@@ -472,14 +472,14 @@ define amdgpu_ps <4 x float> @sample_c_cl_2d(i32 inreg %rsrc, <4 x i32> inreg %s
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX13-NEXT:    v_dual_mov_b32 v7, v3 :: v_dual_mov_b32 v4, v2
-; GFX13-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v6, v0
+; GFX13-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v5, v2
+; GFX13-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v0
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s5
 ; GFX13-NEXT:    s_mov_b32 s7, s4
 ; GFX13-NEXT:    s_mov_b32 s6, s3
 ; GFX13-NEXT:    s_mov_b32 s5, s2
 ; GFX13-NEXT:    s_mov_b32 s4, s1
-; GFX13-NEXT:    image_sample_c_cl v[0:3], [v6, v5, v4, v7], s0, s[4:7] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX13-NEXT:    image_sample_c_cl v[0:3], [v7, v6, v5, v4], s0, s[4:7] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
@@ -551,14 +551,14 @@ define amdgpu_ps <4 x float> @sample_c_b_2d(i32 inreg %rsrc, <4 x i32> inreg %sa
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX13-NEXT:    v_dual_mov_b32 v7, v3 :: v_dual_mov_b32 v4, v2
-; GFX13-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v6, v0
+; GFX13-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v5, v2
+; GFX13-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v0
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s5
 ; GFX13-NEXT:    s_mov_b32 s7, s4
 ; GFX13-NEXT:    s_mov_b32 s6, s3
 ; GFX13-NEXT:    s_mov_b32 s5, s2
 ; GFX13-NEXT:    s_mov_b32 s4, s1
-; GFX13-NEXT:    image_sample_c_b v[0:3], [v6, v5, v4, v7], s0, s[4:7] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX13-NEXT:    image_sample_c_b v[0:3], [v7, v6, v5, v4], s0, s[4:7] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
@@ -591,14 +591,14 @@ define amdgpu_ps <4 x float> @sample_b_cl_2d(i32 inreg %rsrc, <4 x i32> inreg %s
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX13-NEXT:    v_dual_mov_b32 v7, v3 :: v_dual_mov_b32 v4, v2
-; GFX13-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v6, v0
+; GFX13-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v5, v2
+; GFX13-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v0
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s5
 ; GFX13-NEXT:    s_mov_b32 s7, s4
 ; GFX13-NEXT:    s_mov_b32 s6, s3
 ; GFX13-NEXT:    s_mov_b32 s5, s2
 ; GFX13-NEXT:    s_mov_b32 s4, s1
-; GFX13-NEXT:    image_sample_b_cl v[0:3], [v6, v5, v4, v7], s0, s[4:7] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX13-NEXT:    image_sample_b_cl v[0:3], [v7, v6, v5, v4], s0, s[4:7] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
@@ -611,14 +611,14 @@ define amdgpu_ps <4 x float> @sample_c_b_cl_1d(i32 inreg %rsrc, <4 x i32> inreg 
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX13-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX13-NEXT:    v_dual_mov_b32 v7, v3 :: v_dual_mov_b32 v4, v2
-; GFX13-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v6, v0
+; GFX13-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v5, v2
+; GFX13-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v0
 ; GFX13-NEXT:    s_and_b32 exec_lo, exec_lo, s5
 ; GFX13-NEXT:    s_mov_b32 s7, s4
 ; GFX13-NEXT:    s_mov_b32 s6, s3
 ; GFX13-NEXT:    s_mov_b32 s5, s2
 ; GFX13-NEXT:    s_mov_b32 s4, s1
-; GFX13-NEXT:    image_sample_c_b_cl v[0:3], [v6, v5, v4, v7], s0, s[4:7] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX13-NEXT:    image_sample_c_b_cl v[0:3], [v7, v6, v5, v4], s0, s[4:7] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
@@ -685,13 +685,13 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_d_1d(i32 inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, float %dsdh, float %dsdv, float %s) {
 ; GFX13-LABEL: sample_c_d_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v7, v3 :: v_dual_mov_b32 v4, v2
-; GFX13-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v6, v0
+; GFX13-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v5, v2
+; GFX13-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v0
 ; GFX13-NEXT:    s_mov_b32 s7, s4
 ; GFX13-NEXT:    s_mov_b32 s6, s3
 ; GFX13-NEXT:    s_mov_b32 s5, s2
 ; GFX13-NEXT:    s_mov_b32 s4, s1
-; GFX13-NEXT:    image_sample_c_d v[0:3], [v6, v5, v4, v7], s0, s[4:7] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX13-NEXT:    image_sample_c_d v[0:3], [v7, v6, v5, v4], s0, s[4:7] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
@@ -719,13 +719,13 @@ main_body:
 define amdgpu_ps <4 x float> @sample_d_cl_1d(i32 inreg %rsrc, <4 x i32> inreg %samp, float %dsdh, float %dsdv, float %s, float %clamp) {
 ; GFX13-LABEL: sample_d_cl_1d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v7, v3 :: v_dual_mov_b32 v4, v2
-; GFX13-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v6, v0
+; GFX13-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v5, v2
+; GFX13-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v0
 ; GFX13-NEXT:    s_mov_b32 s7, s4
 ; GFX13-NEXT:    s_mov_b32 s6, s3
 ; GFX13-NEXT:    s_mov_b32 s5, s2
 ; GFX13-NEXT:    s_mov_b32 s4, s1
-; GFX13-NEXT:    image_sample_d_cl v[0:3], [v6, v5, v4, v7], s0, s[4:7] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX13-NEXT:    image_sample_d_cl v[0:3], [v7, v6, v5, v4], s0, s[4:7] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
@@ -838,13 +838,13 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_l_2d(i32 inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, float %s, float %t, float %lod) {
 ; GFX13-LABEL: sample_c_l_2d:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_dual_mov_b32 v7, v3 :: v_dual_mov_b32 v4, v2
-; GFX13-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v6, v0
+; GFX13-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v5, v2
+; GFX13-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v0
 ; GFX13-NEXT:    s_mov_b32 s7, s4
 ; GFX13-NEXT:    s_mov_b32 s6, s3
 ; GFX13-NEXT:    s_mov_b32 s5, s2
 ; GFX13-NEXT:    s_mov_b32 s4, s1
-; GFX13-NEXT:    image_sample_c_l v[0:3], [v6, v5, v4, v7], s0, s[4:7] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX13-NEXT:    image_sample_c_l v[0:3], [v7, v6, v5, v4], s0, s[4:7] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
@@ -995,7 +995,7 @@ main_body:
   %v.f2 = extractelement <2 x float> %v.vec, i32 1
   %v.err = extractvalue {<2 x float>, i32} %v, 1
   %v.errf = bitcast i32 %v.err to float
-  %res.0 = insertelement <4 x float> undef, float %v.f1, i32 0
+  %res.0 = insertelement <4 x float> poison, float %v.f1, i32 0
   %res.1 = insertelement <4 x float> %res.0, float %v.f2, i32 1
   %res.2 = insertelement <4 x float> %res.1, float %v.errf, i32 2
   ret <4 x float> %res.2
@@ -1113,7 +1113,7 @@ define amdgpu_ps <2 x float> @adjust_writemask_sample_01(i32 inreg %rsrc, <4 x i
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, i32 %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %out = shufflevector <4 x float> %r, <4 x float> undef, <2 x i32> <i32 0, i32 1>
+  %out = shufflevector <4 x float> %r, <4 x float> poison, <2 x i32> <i32 0, i32 1>
   ret <2 x float> %out
 }
 
@@ -1133,7 +1133,7 @@ define amdgpu_ps <3 x float> @adjust_writemask_sample_012(i32 inreg %rsrc, <4 x 
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, i32 %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %out = shufflevector <4 x float> %r, <4 x float> undef, <3 x i32> <i32 0, i32 1, i32 2>
+  %out = shufflevector <4 x float> %r, <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
   ret <3 x float> %out
 }
 
@@ -1153,7 +1153,7 @@ define amdgpu_ps <2 x float> @adjust_writemask_sample_12(i32 inreg %rsrc, <4 x i
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, i32 %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %out = shufflevector <4 x float> %r, <4 x float> undef, <2 x i32> <i32 1, i32 2>
+  %out = shufflevector <4 x float> %r, <4 x float> poison, <2 x i32> <i32 1, i32 2>
   ret <2 x float> %out
 }
 
@@ -1173,7 +1173,7 @@ define amdgpu_ps <2 x float> @adjust_writemask_sample_03(i32 inreg %rsrc, <4 x i
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, i32 %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %out = shufflevector <4 x float> %r, <4 x float> undef, <2 x i32> <i32 0, i32 3>
+  %out = shufflevector <4 x float> %r, <4 x float> poison, <2 x i32> <i32 0, i32 3>
   ret <2 x float> %out
 }
 
@@ -1193,7 +1193,7 @@ define amdgpu_ps <2 x float> @adjust_writemask_sample_13(i32 inreg %rsrc, <4 x i
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, i32 %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %out = shufflevector <4 x float> %r, <4 x float> undef, <2 x i32> <i32 1, i32 3>
+  %out = shufflevector <4 x float> %r, <4 x float> poison, <2 x i32> <i32 1, i32 3>
   ret <2 x float> %out
 }
 
@@ -1213,7 +1213,7 @@ define amdgpu_ps <3 x float> @adjust_writemask_sample_123(i32 inreg %rsrc, <4 x 
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, i32 %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %out = shufflevector <4 x float> %r, <4 x float> undef, <3 x i32> <i32 1, i32 2, i32 3>
+  %out = shufflevector <4 x float> %r, <4 x float> poison, <3 x i32> <i32 1, i32 2, i32 3>
   ret <3 x float> %out
 }
 
@@ -1242,7 +1242,7 @@ define amdgpu_ps <2 x float> @adjust_writemask_sample_123_to_12(i32 inreg %rsrc,
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 14, float %s, i32 %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %out = shufflevector <4 x float> %r, <4 x float> undef, <2 x i32> <i32 0, i32 1>
+  %out = shufflevector <4 x float> %r, <4 x float> poison, <2 x i32> <i32 0, i32 1>
   ret <2 x float> %out
 }
 
@@ -1262,7 +1262,7 @@ define amdgpu_ps <2 x float> @adjust_writemask_sample_013_to_13(i32 inreg %rsrc,
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 11, float %s, i32 %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %out = shufflevector <4 x float> %r, <4 x float> undef, <2 x i32> <i32 1, i32 2>
+  %out = shufflevector <4 x float> %r, <4 x float> poison, <2 x i32> <i32 1, i32 2>
   ret <2 x float> %out
 }
 

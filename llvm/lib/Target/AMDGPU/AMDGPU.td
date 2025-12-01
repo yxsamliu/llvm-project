@@ -958,52 +958,58 @@ def FeatureWMMA2048bInsts : SubtargetFeature<"wmma-2048b-insts",
   "Has WMMA instructions where A, B, C, or D matrix can be 2048-bits"
 >;
 
-def FeatureVCUBEInsts : SubtargetFeature<"V_CUBE-Insts",
-  "HasVCUBEInsts",
+def FeaturePermPkU2U3Insts : SubtargetFeature<"perm-pk-u2u3-insts",
+  "HasPermPkU2U3Insts",
   "true",
-  "Has V_CUBE* instructions"
->; 
-
-def FeatureVLERPInsts : SubtargetFeature<"V_LERP-insts",
-  "HasVLERPInsts",
-  "true",
-  "Has V_LERP* instructions"
->; 
-
-def FeatureVSADInsts : SubtargetFeature<"V_SAD-insts",
-  "HasVSADInsts",
-  "true",
-  "Has V_SAD* instructions"
->; 
-
-def FeatureVQSADInsts : SubtargetFeature<"V_QSAD-insts",
-  "HasVQSADInsts",
-  "true",
-  "Has V_QSAD* instructions"
->; 
-
-def FeatureVCVTNORMInsts : SubtargetFeature<"V_CVT_NORM-insts",
-  "HasVCVTNORMInsts",
-  "true",
-  "Has V_CVT_NORM* instructions"
->;
-
-def FeatureVCVTPKNORMVOP2Insts : SubtargetFeature<"V_CVT_PKNORM-VOP2-insts",
-  "HasVCVTPKNORMVOP2Insts",
-  "true",
-  "Has V_CVT_NORM* VOP2 instructions"
->;
-
-def FeatureVCVTPKNORMVOP3Insts : SubtargetFeature<"V_CVT_PKNORM-VOP3-insts",
-  "HasVCVTPKNORMVOP3Insts",
-  "true",
-  "Has V_CVT_NORM* VOP3 instructions"
+  "Has permute packed u2 and u3 instructions"
 >;
 
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
   "HasPkFmacF16Inst",
   "true",
   "Has v_pk_fmac_f16 instruction"
+>;
+
+def FeatureCubeInsts : SubtargetFeature<"cube-insts",
+  "HasCubeInsts",
+  "true",
+  "Has v_cube* instructions"
+>; 
+
+def FeatureLerpInst : SubtargetFeature<"lerp-inst",
+  "HasLerpInst",
+  "true",
+  "Has v_lerp_u8 instruction"
+>; 
+
+def FeatureSadInsts : SubtargetFeature<"sad-insts",
+  "HasSadInsts",
+  "true",
+  "Has v_sad* instructions"
+>; 
+
+def FeatureQsadInsts : SubtargetFeature<"qsad-insts",
+  "HasQsadInsts",
+  "true",
+  "Has v_qsad* instructions"
+>; 
+
+def FeatureCvtNormInsts : SubtargetFeature<"cvt-norm-insts",
+  "HasCvtNormInsts",
+  "true",
+  "Has v_cvt_norm* instructions"
+>;
+
+def FeatureCvtPkNormVOP2Insts : SubtargetFeature<"cvt-pknorm-vop2-insts",
+  "HasCvtPkNormVOP2Insts",
+  "true",
+  "Has v_cvt_pk_norm_*f32 instructions/Has v_cvt_pk_norm_*_f16 instructions"
+>;
+
+def FeatureCvtPkNormVOP3Insts : SubtargetFeature<"cvt-pknorm-vop3-insts",
+  "HasCvtPkNormVOP3Insts",
+  "true",
+  "Has v_cvt_pk_norm_*f32 instructions/Has v_cvt_pk_norm_*_f16 instructions"
 >;
 
 def FeatureAtomicDsPkAdd16Insts : SubtargetFeature<"atomic-ds-pk-add-16-insts",
@@ -1659,8 +1665,8 @@ def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   FeatureTrigReducedRange, FeatureExtendedImageInsts, FeatureImageInsts,
   FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
-  FeatureVmemWriteVgprInOrder, FeatureVCUBEInsts, FeatureVLERPInsts,
-  FeatureVSADInsts, FeatureVCVTPKNORMVOP2Insts
+  FeatureVmemWriteVgprInOrder, FeatureCubeInsts, FeatureLerpInst,
+  FeatureSadInsts, FeatureCvtPkNormVOP2Insts
   ]
 >;
 
@@ -1674,8 +1680,8 @@ def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   FeatureImageInsts, FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
   FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts,
-  FeatureVmemWriteVgprInOrder, FeatureVCUBEInsts, FeatureVLERPInsts,
-  FeatureVSADInsts, FeatureVQSADInsts, FeatureVCVTPKNORMVOP2Insts
+  FeatureVmemWriteVgprInOrder, FeatureCubeInsts, FeatureLerpInst,
+  FeatureSadInsts, FeatureQsadInsts, FeatureCvtPkNormVOP2Insts
   ]
 >;
 
@@ -1691,9 +1697,10 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
    FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureFastDenormalF32,
    FeatureUnalignedBufferAccess, FeatureImageInsts, FeatureGDS, FeatureGWS,
-   FeatureDefaultComponentZero, FeatureVmemWriteVgprInOrder, FeatureVCUBEInsts, 
-   FeatureVLERPInsts, FeatureVSADInsts, FeatureVQSADInsts, 
-   FeatureVCVTPKNORMVOP2Insts
+<<<<<<< HEAD
+   FeatureDefaultComponentZero, FeatureVmemWriteVgprInOrder, FeatureCubeInsts, 
+   FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts, 
+>>>>>>> origin/amd-arcadia
   ]
 >;
 
@@ -1712,10 +1719,10 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureSupportsXNACK,
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
    FeatureUnalignedDSAccess, FeatureNegativeScratchOffsetBug, FeatureGWS,
-   FeatureDefaultComponentZero,FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad, 
-   FeatureVCUBEInsts, FeatureVLERPInsts, FeatureVSADInsts, FeatureVQSADInsts, 
-   FeatureVCVTNORMInsts, FeatureVCVTPKNORMVOP2Insts, 
-   FeatureVCVTPKNORMVOP3Insts
+   FeatureDefaultComponentZero,FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad,
+   FeatureCubeInsts, FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts, 
+   FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts, 
+   FeatureCvtPkNormVOP3Insts
   ]
 >;
 
@@ -1739,10 +1746,10 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureDefaultComponentZero, FeatureMaxHardClauseLength63,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts,
-   FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad, FeatureVCUBEInsts, 
-   FeatureVLERPInsts, FeatureVSADInsts, FeatureVQSADInsts, 
-   FeatureVCVTNORMInsts, FeatureVCVTPKNORMVOP2Insts, 
-   FeatureVCVTPKNORMVOP3Insts
+   FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad, FeatureCubeInsts, 
+   FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts, 
+   FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts, 
+   FeatureCvtPkNormVOP3Insts
   ]
 >;
 
@@ -1765,9 +1772,9 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureUnalignedDSAccess, FeatureGDS, FeatureGWS,
    FeatureDefaultComponentZero, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
-   FeatureVmemWriteVgprInOrder, FeatureVCUBEInsts, FeatureVLERPInsts,
-   FeatureVSADInsts, FeatureVQSADInsts, FeatureVCVTNORMInsts, 
-   FeatureVCVTPKNORMVOP2Insts, FeatureVCVTPKNORMVOP3Insts
+   FeatureVmemWriteVgprInOrder, FeatureCubeInsts, FeatureLerpInst,
+   FeatureSadInsts, FeatureQsadInsts, FeatureCvtNormInsts, 
+   FeatureCvtPkNormVOP2Insts, FeatureCvtPkNormVOP3Insts
   ]
 >;
 
@@ -2289,13 +2296,14 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureBVHDualAndBVH8Insts,
    FeatureWaitsBeforeSystemScopeStores,
-   FeatureVCUBEInsts, 
-   FeatureVLERPInsts, 
-   FeatureVSADInsts,
-   FeatureVQSADInsts, 
-   FeatureVCVTNORMInsts, 
-   FeatureVCVTPKNORMVOP2Insts, 
-   FeatureVCVTPKNORMVOP3Insts
+   FeatureD16Writes32BitVgpr,
+   FeatureCubeInsts, 
+   FeatureLerpInst, 
+   FeatureSadInsts,
+   FeatureQsadInsts, 
+   FeatureCvtNormInsts, 
+   FeatureCvtPkNormVOP2Insts, 
+   FeatureCvtPkNormVOP3Insts
    ]>;
 
 def FeatureISAVersion12_50_Common : FeatureSet<
@@ -2370,17 +2378,18 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureSupportsXNACK,
    FeatureXNACK,
    FeatureClusters,
+   FeatureD16Writes32BitVgpr,
 ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
-  [FeatureVCUBEInsts, 
-   FeatureVLERPInsts, 
-   FeatureVSADInsts, 
-   FeatureVQSADInsts, 
-   FeatureVCVTNORMInsts, 
-   FeatureVCVTPKNORMVOP2Insts, 
-   FeatureVCVTPKNORMVOP3Insts])>;
+  [FeatureCubeInsts, 
+   FeatureLerpInst, 
+   FeatureSadInsts, 
+   FeatureQsadInsts, 
+   FeatureCvtNormInsts, 
+   FeatureCvtPkNormVOP2Insts, 
+   FeatureCvtPkNormVOP3Insts])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50.Features,
@@ -2401,7 +2410,9 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
 def FeatureISAVersion12_60 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
     [FeatureGFX1260Insts,
-     FeatureWMMA2048bInsts])>;
+     FeatureWMMA2048bInsts,
+     FeatureWavegroups,
+     FeaturePermPkU2U3Insts])>;
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
@@ -2462,6 +2473,13 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureWMMA128bInsts,
    FeatureIEEEMinimumMaximumInsts,
    FeatureClusters,
+   FeatureCubeInsts,
+   FeatureLerpInst,
+   FeatureSadInsts,
+   FeatureQsadInsts,
+   FeatureCvtNormInsts,
+   FeatureCvtPkNormVOP2Insts,
+   FeatureCvtPkNormVOP3Insts
 ]>;
 
 defvar FeatureISAVersion13_1 = FeatureISAVersion13;
@@ -3194,26 +3212,29 @@ def HasWMMA128bInsts : Predicate<"Subtarget->hasWMMA128bInsts()">,
 def HasWMMA2048bInsts : Predicate<"Subtarget->hasWMMA2048bInsts()">,
   AssemblerPredicate<(all_of FeatureWMMA2048bInsts)>;
 
-def HasVCUBEInsts : Predicate<"Subtarget->hasVCUBEInsts()">,
-  AssemblerPredicate<(all_of FeatureVCUBEInsts)>;
+def HasPermPkU2U3Insts : Predicate<"Subtarget->hasPermPkU2U3Insts()">,
+  AssemblerPredicate<(all_of FeaturePermPkU2U3Insts)>;
 
-def HasVLERPInsts : Predicate<"Subtarget->hasVLERPInsts()">,
-  AssemblerPredicate<(all_of FeatureVLERPInsts)>;
+def HasCubeInsts : Predicate<"Subtarget->hasCubeInsts()">,
+  AssemblerPredicate<(all_of FeatureCubeInsts)>;
 
-def HasVSADInsts : Predicate<"Subtarget->hasVSADInsts()">,
-  AssemblerPredicate<(all_of FeatureVSADInsts)>;
+def HasLerpInst : Predicate<"Subtarget->hasLerpInst()">,
+  AssemblerPredicate<(all_of FeatureLerpInst)>;
 
-def HasVQSADInsts : Predicate<"Subtarget->hasVQSADInsts()">,
-  AssemblerPredicate<(all_of FeatureVQSADInsts)>;
+def HasSadInsts : Predicate<"Subtarget->hasSadInsts()">,
+  AssemblerPredicate<(all_of FeatureSadInsts)>;
 
-def HasVCVTNORMInsts : Predicate<"Subtarget->hasVCVTNORMInsts()">,
-  AssemblerPredicate<(all_of FeatureVCVTNORMInsts)>;
+def HasQsadInsts : Predicate<"Subtarget->hasQsadInsts()">,
+  AssemblerPredicate<(all_of FeatureQsadInsts)>;
 
-def HasVCVTPKNORMVOP2Insts : Predicate<"Subtarget->hasVCVTPKNORMVOP2Insts()">,
-  AssemblerPredicate<(all_of FeatureVCVTPKNORMVOP2Insts)>;
+def HasCvtNormInsts : Predicate<"Subtarget->hasCvtNormInsts()">,
+  AssemblerPredicate<(all_of FeatureCvtNormInsts)>;
 
-def HasVCVTPKNORMVOP3Insts : Predicate<"Subtarget->hasVCVTPKNORMVOP3Insts()">,
-  AssemblerPredicate<(all_of FeatureVCVTPKNORMVOP3Insts)>;
+def HasCvtPkNormVOP2Insts : Predicate<"Subtarget->hasCvtPkNormVOP2Insts()">,
+  AssemblerPredicate<(all_of FeatureCvtPkNormVOP2Insts)>;
+
+def HasCvtPkNormVOP3Insts : Predicate<"Subtarget->hasCvtPkNormVOP3Insts()">,
+  AssemblerPredicate<(all_of FeatureCvtPkNormVOP3Insts)>;
 
 def HasFP8E5M3Insts : Predicate<"Subtarget->hasFP8E5M3Insts()">,
   AssemblerPredicate<(all_of FeatureFP8E5M3Insts)>;
@@ -3421,15 +3442,46 @@ def NotHasUnalignedDS2Bug : Predicate<"!Subtarget->hasUnalignedDS2Bug()">,
 def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of FeatureRequiresAlignedVGPRs)>;
 
+def NotNeedsAlignedVGPRs : Predicate<"!Subtarget->needsAlignedVGPRs()">,
+                      AssemblerPredicate<(all_of (not FeatureRequiresAlignedVGPRs))>;
+
+def isWave32 : Predicate<"Subtarget->isWave32()">,
+  AssemblerPredicate <(any_of FeatureWavefrontSize32,
+                              FeatureAssemblerPermissiveWavesize)>;
+def isWave64 : Predicate<"Subtarget->isWave64()">,
+  AssemblerPredicate <(any_of FeatureWavefrontSize64,
+                              FeatureAssemblerPermissiveWavesize)>;
+
+def isWave32Strict : Predicate<"Subtarget->isWave32()">,
+  AssemblerPredicate <(all_of FeatureWavefrontSize32)>;
+def isWave64Strict : Predicate<"Subtarget->isWave64()">,
+  AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
+
 //===----------------------------------------------------------------------===//
 // HwModes
 //===----------------------------------------------------------------------===//
 
-// gfx90a-gfx950. Has AGPRs, and also the align2 VGPR/AGPR requirement
+defvar DefaultMode_Wave64 = DefaultMode;
+defvar DefaultMode_Wave32 = HwMode<[isWave32, NotNeedsAlignedVGPRs]>;
+
+// gfx90a-gfx950. Has AGPRs, and also the align2 VGPR/AGPR requirement. Implied
+// wave64.
 def AVAlign2LoadStoreMode : HwMode<[HasMAIInsts, NeedsAlignedVGPRs]>;
 
 // gfx1250, has alignment requirement but no AGPRs.
-def AlignedVGPRNoAGPRMode : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs]>;
+def AlignedVGPRNoAGPRMode_Wave32 : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs, isWave32Strict]>;
+def AlignedVGPRNoAGPRMode_Wave64 : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs, isWave64Strict]>;
+
+// FIXME: This should be able to only define a separate hwmode that
+// only depends on wavesize for just ValueTypes. These use different
+// HwMode namespaces. If we don't define the full set of modes used
+// for RegClassByHwMode, tablegen crashes for some reason
+def WaveSizeVT : ValueTypeByHwMode<[
+  DefaultMode_Wave64,
+  AVAlign2LoadStoreMode,
+  AlignedVGPRNoAGPRMode_Wave64,
+  DefaultMode_Wave32,
+  AlignedVGPRNoAGPRMode_Wave32], [i64, i64, i64, i32, i32]>;
 
 
 // Include AMDGPU TD files

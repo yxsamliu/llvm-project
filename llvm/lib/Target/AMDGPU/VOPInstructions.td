@@ -1371,8 +1371,12 @@ class VOPBinOpClampPat<SDPatternOperator node, Instruction inst, ValueType vt> :
 
 class getVOP3ModPat<VOPProfile P, SDPatternOperator node> {
   dag src0 = !if(P.HasOMod,
-    (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod),
-    (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp));
+    !if(P.HasClamp,
+        (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod),
+        (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i32:$omod)),
+    !if(P.HasClamp,
+        (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp),
+        (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers)));
 
   list<dag> ret3 = [(set P.DstVT:$vdst,
     (DivergentFragOrOp<node, P>.ret (P.Src0VT src0),
@@ -1562,6 +1566,16 @@ class VOP3_Profile_Base<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VO
 class VOP3_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_Profile_Base<P, Features> {
   let IsSingle = 1;
 
+}
+
+class VOP3_Profile_NoInline_Src<VOPProfile P> : 
+  VOP3_Profile_Base<P, VOP3_REGULAR> {
+  let IsSingle = 1;
+  let Src0RC32 = getVOP3NoInlineSrcForVT<P.ArgVT[1], P.IsTrue16>.ret;
+  let Src1RC32 = getVOP3NoInlineSrcForVT<P.ArgVT[2], P.IsTrue16>.ret;
+  let Src0RC64 = getVOP3NoInlineSrcForVT<P.ArgVT[1], P.IsTrue16>.ret;
+  let Src1RC64 = getVOP3NoInlineSrcForVT<P.ArgVT[2], P.IsTrue16>.ret;
+  let Src2RC64 = getVOP3NoInlineSrcForVT<P.ArgVT[3], P.IsTrue16>.ret;
 }
 
 class VOP3_Profile_True16<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOPProfile_True16<P> {
@@ -2194,6 +2208,8 @@ multiclass VOP3Only_Realtriple_with_name_gfx12_not_gfx1250_gfx13<bits<10> gfx12O
 
 multiclass VOP3Only_Real_Base_gfx1250<bits<10> op> :
   VOP3_Real_Base<GFX1250Gen, op, NAME, 1/*IsSingle*/>;
+multiclass VOP3Only_Real_Base_gfx1260<bits<10> op> :
+  VOP3_Real_Base<GFX1260Gen, op, NAME, 1/*IsSingle*/>;
 
 multiclass VOP3Only_Real_Base_gfx13<bits<10> op> :
   VOP3_Real_Base<GFX13Gen, op, NAME, 1/*IsSingle*/>;
@@ -2375,12 +2391,12 @@ include "VOPDInstructions.td"
 include "VOPMInstructions.td"
 
 class ClassPat<Instruction inst, ValueType vt> : GCNPat <
-  (is_fpclass (vt (VOP3ModsNonCanonicalizing vt:$src0, i32:$src0_mods)), (i32 timm:$mask)),
+  (i1 (is_fpclass (vt (VOP3ModsNonCanonicalizing vt:$src0, i32:$src0_mods)), (i32 timm:$mask))),
   (inst i32:$src0_mods, vt:$src0, (V_MOV_B32_e32 timm:$mask))
 >;
 
 class ClassPat_t16<Instruction inst, ValueType vt> : GCNPat <
-  (is_fpclass (vt (VOP3ModsNonCanonicalizing vt:$src0, i32:$src0_mods)), (i32 timm:$mask)),
+  (i1 (is_fpclass (vt (VOP3ModsNonCanonicalizing vt:$src0, i32:$src0_mods)), (i32 timm:$mask))),
   (inst i32:$src0_mods, vt:$src0, SRCMODS.NONE, (V_MOV_B32_e32 timm:$mask))
 >;
 

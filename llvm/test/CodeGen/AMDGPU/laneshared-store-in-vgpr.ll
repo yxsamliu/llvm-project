@@ -8,7 +8,7 @@
 @ComputedDataQueue = external addrspace(10) global <250 x i32>
 
 define private amdgpu_kernel void @_Z11wasp_kernelPiPKii_0_rank(ptr addrspace(1) noundef writeonly captures(none) %0, ptr addrspace(1) noundef readonly captures(none) %1, i32 noundef %2) local_unnamed_addr #0 {
-; GFX1300-LABEL: .L_Z11wasp_kernelPiPKii_0_rank:
+; GFX1300-LABEL: _Z11wasp_kernelPiPKii_0_rank:
 ; GFX1300:       ; %bb.0:
 ; GFX1300-NEXT:    s_load_b32 s2, s[0:1], 0x10
 ; GFX1300-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0

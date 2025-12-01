@@ -12,6 +12,7 @@
 #include "SIDefines.h"
 #include "Utils/AMDGPUAsmUtils.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -386,8 +387,8 @@ void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
 
 // \returns a low 256 vgpr representing a high vgpr \p Reg [v256..v1023] or
 // \p Reg itself otherwise.
-static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCSubtargetInfo &STI,
-                                   const MCRegisterInfo &MRI) {
+static MCRegister getRegForPrinting(MCPhysReg Reg, const MCSubtargetInfo &STI,
+                                    const MCRegisterInfo &MRI) {
   unsigned Enc = MRI.getEncodingValue(Reg);
   unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
   if (Idx < 0x100)
@@ -423,10 +424,10 @@ static unsigned getIdxLocFromTable(unsigned OpNo, const MCInstrDesc &Desc) {
 }
 
 // Restore MSBs of a VGPR above 255 from the MCInstrAnalysis.
-static MCPhysReg getRegFromMIA(MCPhysReg Reg, unsigned OpNo,
-                               const MCInstrDesc &Desc,
-                               const MCRegisterInfo &MRI,
-                               const AMDGPUMCInstrAnalysis &MIA) {
+static MCRegister getRegFromMIA(MCRegister Reg, unsigned OpNo,
+                                const MCInstrDesc &Desc,
+                                const MCRegisterInfo &MRI,
+                                const AMDGPUMCInstrAnalysis &MIA) {
   unsigned VgprMSBs = MIA.getVgprMSBs();
   if (!VgprMSBs)
     return Reg;
@@ -506,13 +507,20 @@ void AMDGPUInstPrinter::printRegOperand(MCRegister Reg,
     break;
   }
 #endif
+  const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
+  MCRegister PrintReg = getRegForPrinting(Reg, STI, MRI);
+  if (RC && RC->getID() == AMDGPU::Pseudo_VGPR_2048RegClassID) {
+    unsigned RegIdx = Reg.id() - AMDGPU::VGPR0_Pseudo;
+    O << "v[" << RegIdx << ':' << RegIdx + 63 << ']';
+    // TODO: we will probably need to modify the VGPR name for the index
+    // register as well, like the other case below.
+  } else {
+    std::string PrintRegName = getRegisterName(PrintReg);
+    modifyVGPRNameUsingIndex(PrintRegName, IdxReg);
+    O << PrintRegName;
+  }
 
-  unsigned PrintReg = getRegForPrinting(Reg, STI, MRI);
-  std::string PrintRegName = getRegisterName(PrintReg);
-  modifyVGPRNameUsingIndex(PrintRegName, IdxReg);
-  O << PrintRegName;
-
-  if (PrintReg != Reg.id()) {
+  if (PrintReg != Reg) {
     std::string RegName = getRegisterName(Reg);
     modifyVGPRNameUsingIndex(RegName, IdxReg);
     O << " /*" << RegName << "*/";
@@ -614,6 +622,18 @@ void AMDGPUInstPrinter::printVINTRPDst(const MCInst *MI, unsigned OpNo,
     O << "_e32 ";
 
   printRegularOperand(MI, OpNo, STI, O);
+}
+
+void AMDGPUInstPrinter::printAVLdSt32Align2RegOp(const MCInst *MI,
+                                                 unsigned OpNo,
+                                                 const MCSubtargetInfo &STI,
+                                                 raw_ostream &O) {
+  MCRegister Reg = MI->getOperand(OpNo).getReg();
+
+  // On targets with an even alignment requirement
+  if (MCRegister SubReg = MRI.getSubReg(Reg, AMDGPU::sub0))
+    Reg = SubReg;
+  printRegOperand(Reg, STI, O, MRI);
 }
 
 void AMDGPUInstPrinter::printImmediateInt16(uint32_t Imm,
@@ -931,14 +951,24 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     // Intention: print disassembler message when invalid code is decoded,
     // for example sgpr register used in VReg or VISrc(VReg or imm) operand.
     const MCOperandInfo &OpInfo = Desc.operands()[OpNo];
-    int16_t RCID = MII.getOpRegClassID(
-        OpInfo, STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
-    if (RCID != -1) {
+    if (OpInfo.RegClass != -1) {
+      int16_t RCID = MII.getOpRegClassID(
+          OpInfo, STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
       const MCRegisterClass &RC = MRI.getRegClass(RCID);
       auto Reg = mc2PseudoReg(Op.getReg());
       if (!RC.contains(Reg) && !isInlineValue(Reg)) {
-        O << "/*Invalid register, operand has \'" << MRI.getRegClassName(&RC)
-          << "\' register class*/";
+        bool IsWaveSizeOp = OpInfo.isLookupRegClassByHwMode() &&
+                            (OpInfo.RegClass == AMDGPU::SReg_1 ||
+                             OpInfo.RegClass == AMDGPU::SReg_1_XEXEC);
+        // Suppress this comment for a mismatched wavesize. Some users expect to
+        // be able to assemble and disassemble modules with mixed wavesizes, but
+        // we do not know the subtarget in different functions in MC.
+        //
+        // TODO: Should probably print it anyway, maybe a more specific version.
+        if (!IsWaveSizeOp) {
+          O << "/*Invalid register, operand has \'" << MRI.getRegClassName(&RC)
+            << "\' register class*/";
+        }
       }
     }
   } else if (Op.isImm()) {
@@ -954,6 +984,8 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_IMM_V2FP32:
     case MCOI::OPERAND_IMMEDIATE:
     case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
+    case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT32:
+    case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT16:
       printImmediate32(Op.getImm(), STI, O);
       break;
     case AMDGPU::OPERAND_REG_IMM_INT64:
@@ -1481,12 +1513,9 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
     return;
 
   O << Name;
-  for (int I = 0; I < NumOps; ++I) {
-    if (I != 0)
-      O << ',';
-
-    O << !!(Ops[I] & Mod);
-  }
+  ListSeparator Sep(",");
+  for (int I = 0; I < NumOps; ++I)
+    O << Sep << !!(Ops[I] & Mod);
 
   if (HasDstSel) {
     O << ',' << !!(Ops[0] & SISrcMods::DST_OP_SEL);
@@ -1724,14 +1753,10 @@ void AMDGPUInstPrinter::printGPRIdxMode(const MCInst *MI, unsigned OpNo,
     O << formatHex(static_cast<uint64_t>(Val));
   } else {
     O << "gpr_idx(";
-    bool NeedComma = false;
+    ListSeparator Sep(",");
     for (unsigned ModeId = ID_MIN; ModeId <= ID_MAX; ++ModeId) {
-      if (Val & (1 << ModeId)) {
-        if (NeedComma)
-          O << ',';
-        O << IdSymbolic[ModeId];
-        NeedComma = true;
-      }
+      if (Val & (1 << ModeId))
+        O << Sep << IdSymbolic[ModeId];
     }
     O << ')';
   }
@@ -1938,25 +1963,16 @@ void AMDGPUInstPrinter::printSWaitCnt(const MCInst *MI, unsigned OpNo,
   bool IsDefaultLgkmcnt = Lgkmcnt == getLgkmcntBitMask(ISA);
   bool PrintAll = IsDefaultVmcnt && IsDefaultExpcnt && IsDefaultLgkmcnt;
 
-  bool NeedSpace = false;
+  ListSeparator Sep(" ");
 
-  if (!IsDefaultVmcnt || PrintAll) {
-    O << "vmcnt(" << Vmcnt << ')';
-    NeedSpace = true;
-  }
+  if (!IsDefaultVmcnt || PrintAll)
+    O << Sep << "vmcnt(" << Vmcnt << ')';
 
-  if (!IsDefaultExpcnt || PrintAll) {
-    if (NeedSpace)
-      O << ' ';
-    O << "expcnt(" << Expcnt << ')';
-    NeedSpace = true;
-  }
+  if (!IsDefaultExpcnt || PrintAll)
+    O << Sep << "expcnt(" << Expcnt << ')';
 
-  if (!IsDefaultLgkmcnt || PrintAll) {
-    if (NeedSpace)
-      O << ' ';
-    O << "lgkmcnt(" << Lgkmcnt << ')';
-  }
+  if (!IsDefaultLgkmcnt || PrintAll)
+    O << Sep << "lgkmcnt(" << Lgkmcnt << ')';
 }
 
 void AMDGPUInstPrinter::printDepCtr(const MCInst *MI, unsigned OpNo,
@@ -1972,14 +1988,10 @@ void AMDGPUInstPrinter::printDepCtr(const MCInst *MI, unsigned OpNo,
     StringRef Name;
     unsigned Val;
     bool IsDefault;
-    bool NeedSpace = false;
+    ListSeparator Sep(" ");
     while (decodeDepCtr(Imm16, Id, Name, Val, IsDefault, STI)) {
-      if (!IsDefault || !HasNonDefaultVal) {
-        if (NeedSpace)
-          O << ' ';
-        O << Name << '(' << Val << ')';
-        NeedSpace = true;
-      }
+      if (!IsDefault || !HasNonDefaultVal)
+        O << Sep << Name << '(' << Val << ')';
     }
   } else {
     O << formatHex(Imm16);
@@ -2110,6 +2122,7 @@ void AMDGPUInstPrinter::printGVGPR(const MCInst *MI, unsigned OpNo,
     O << ' ';
   std::string OpndStr = getRegisterName(MI->getOperand(OpNo).getReg());
   const unsigned Opc = MI->getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opc);
   if (isVOPMAsmOnly(Opc)) {
     int OpIdxs = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::idxs);
     unsigned IdxLoc = getIdxLocFromTable(OpNo, MII.get(Opc));
@@ -2117,7 +2130,7 @@ void AMDGPUInstPrinter::printGVGPR(const MCInst *MI, unsigned OpNo,
       IdxLoc = OpNo;
     unsigned IdxReg = (MI->getOperand(OpIdxs).getImm() >> (IdxLoc * 4)) & 0xf;
     modifyVGPRNameUsingIndex(OpndStr, IdxReg);
-  } else if (isVNBR(Opc)) {
+  } else if (Desc.TSFlags & SIInstrFlags::VNBR) {
     unsigned IdxReg = 0;
     if (MIA)
       IdxReg = getIdxFromMIA(OpNo, MII.get(Opc),

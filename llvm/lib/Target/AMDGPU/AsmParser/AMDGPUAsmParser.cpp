@@ -372,6 +372,11 @@ public:
     return isRegKind() && getReg() == AMDGPU::SGPR_NULL;
   }
 
+  bool isAV_LdSt_32_Align2_RegOp() const {
+    return isRegClass(AMDGPU::VGPR_32RegClassID) ||
+           isRegClass(AMDGPU::AGPR_32RegClassID);
+  }
+
   bool isVRegWithInputMods() const;
   template <bool IsFake16> bool isT16_Lo128VRegWithInputMods() const;
   template <bool IsFake16> bool isT16VRegWithInputMods() const;
@@ -708,6 +713,21 @@ public:
 
   bool isVSrc_NoInline_v2f16() const { return isVSrc_v2f16(); }
 
+  bool isVSrcT_NoInline_b16() const {
+    return (isRegClass(AMDGPU::VS_16RegClassID) && !hasModifiers()) ||
+           isLiteralImm(MVT::i16);
+  }
+
+  bool isVSrc_NoInline_b16() const {
+    return (isRegClass(AMDGPU::VS_32RegClassID) && !hasModifiers()) ||
+           isLiteralImm(MVT::i16);
+  }
+
+  bool isVSrc_NoInline_b32() const {
+    return (isRegClass(AMDGPU::VS_32RegClassID) && !hasModifiers()) ||
+           isLiteralImm(MVT::i32);
+  }
+
   bool isVISrcB32() const {
     return isRegOrInlineNoMods(AMDGPU::VGPR_32RegClassID, MVT::i32);
   }
@@ -854,6 +874,18 @@ public:
 
   bool isVISrc_1024V2F16() const {
     return isVISrc_1024F16() || isVISrc_1024_b32();
+  }
+
+  bool isVISrc_1024_f16() const {
+    return isRegOrInlineNoMods(AMDGPU::VReg_1024RegClassID, MVT::f16);
+  }
+
+  bool isVISrc_1024_bf16() const {
+    return isRegOrInlineNoMods(AMDGPU::VReg_1024RegClassID, MVT::bf16);
+  }
+
+  bool isVISrc_2048_f32() const {
+    return isRegOrInlineNoMods(AMDGPU::Pseudo_VGPR_2048RegClassID, MVT::f32);
   }
 
   bool isAISrcB32() const {
@@ -1961,7 +1993,7 @@ private:
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
-  unsigned findImplicitSGPRReadInVOP(const MCInst &Inst) const;
+  MCRegister findImplicitSGPRReadInVOP(const MCInst &Inst) const;
 
   bool isSupportedMnemo(StringRef Mnemo,
                         const FeatureBitset &FBS);
@@ -2579,6 +2611,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_IMM_V2INT32:
   case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT32:
     break;
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
@@ -2639,6 +2672,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT16:
     break;
 
   case AMDGPU::OPERAND_KIMM64:
@@ -2715,6 +2749,8 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
         return AMDGPU::VReg_576RegClassID;
       case 1024:
         return AMDGPU::VReg_1024RegClassID;
+      case 2048:
+        return AMDGPU::Pseudo_VGPR_2048RegClassID;
     }
   } else if (Is == IS_TTMP) {
     switch (RegWidth) {
@@ -3822,7 +3858,8 @@ StringRef AMDGPUAsmParser::getMatchedVariantName() const {
   return "";
 }
 
-unsigned AMDGPUAsmParser::findImplicitSGPRReadInVOP(const MCInst &Inst) const {
+MCRegister
+AMDGPUAsmParser::findImplicitSGPRReadInVOP(const MCInst &Inst) const {
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
   for (MCPhysReg Reg : Desc.implicit_uses()) {
     switch (Reg) {
@@ -3836,7 +3873,7 @@ unsigned AMDGPUAsmParser::findImplicitSGPRReadInVOP(const MCInst &Inst) const {
       break;
     }
   }
-  return AMDGPU::NoRegister;
+  return MCRegister();
 }
 
 // NB: This code is correct only when used to check constant
@@ -3888,7 +3925,9 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
         OperandType == AMDGPU::OPERAND_REG_INLINE_C_BF16)
       return AMDGPU::isInlinableLiteralBF16(Val, hasInv2PiInlineImm());
 
-    if (OperandType == AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16)
+    if (OperandType == AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16 ||
+        OperandType == AMDGPU::OPERAND_REG_IMM_NOINLINE_INT16 ||
+        OperandType == AMDGPU::OPERAND_REG_IMM_NOINLINE_INT32)
       return false;
 
     llvm_unreachable("invalid operand type");
@@ -3963,7 +4002,6 @@ bool AMDGPUAsmParser::usesConstantBus(const MCInst &Inst, unsigned OpIdx) {
   if (MO.isReg()) {
     auto Reg = MO.getReg();
     if (!Reg)
-      // TODO-GFX12: why is this needed only for a few GFX12 instructions?
       return false;
     const MCRegisterInfo *TRI = getContext().getRegisterInfo();
     auto PReg = mc2PseudoReg(Reg);
@@ -4012,9 +4050,9 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(
     LiteralSize = 4;
   }
 
-  SmallDenseSet<unsigned> SGPRsUsed;
-  unsigned SGPRUsed = findImplicitSGPRReadInVOP(Inst);
-  if (SGPRUsed != AMDGPU::NoRegister) {
+  SmallDenseSet<MCRegister> SGPRsUsed;
+  MCRegister SGPRUsed = findImplicitSGPRReadInVOP(Inst);
+  if (SGPRUsed) {
     SGPRsUsed.insert(SGPRUsed);
     ++ConstantBusUseCount;
   }
@@ -4870,7 +4908,8 @@ bool AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst,
 bool AMDGPUAsmParser::validateRegOperands(const MCInst &Inst,
                                           const OperandVector &Operands) {
   unsigned Opc = Inst.getOpcode();
-  if (isVOPMAsmOnly(Opc) || isVNBR(Opc))
+  const MCInstrDesc &Desc = MII.get(Opc);
+  if (isVOPMAsmOnly(Opc) || (Desc.TSFlags & SIInstrFlags::VNBR))
     return true;
 
   const MCRegisterInfo &MRI = *getMRI();
@@ -7368,6 +7407,12 @@ ParseStatus AMDGPUAsmParser::parseNamedBit(StringRef Name,
     return Error(S, "r128 modifier is not supported on this GPU");
   if (Name == "a16" && !hasA16())
     return Error(S, "a16 modifier is not supported on this GPU");
+
+  if (Bit == 0 && Name == "gds") {
+    StringRef Mnemo = ((AMDGPUOperand &)*Operands[0]).getToken();
+    if (Mnemo.starts_with("ds_gws"))
+      return Error(S, "nogds is not allowed");
+  }
 
   if (isGFX9() && ImmTy == AMDGPUOperand::ImmTyA16)
     ImmTy = AMDGPUOperand::ImmTyR128A16;

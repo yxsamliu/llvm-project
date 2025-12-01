@@ -184,7 +184,7 @@ define amdgpu_ps float @test4() {
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-GISEL-NEXT:    ; return to shader part epilog
 main_body:
-  %v = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 1, i32 undef, i32 0, i32 4, i32 0, i32 0)
+  %v = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 1, i32 poison, i32 0, i32 4, i32 0, i32 0)
   %v.float = bitcast i32 %v to float
   ret float %v.float
 }

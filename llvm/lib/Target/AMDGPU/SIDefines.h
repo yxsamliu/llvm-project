@@ -47,7 +47,8 @@ enum {
   GFX1170 = 11,
   GFX12 = 12,
   GFX1250 = 13,
-  GFX13 = 14,
+  GFX1260 = 14,
+  GFX13 = 15,
 };
 }
 
@@ -101,6 +102,9 @@ enum : uint64_t {
   VINTERP = 1 << 29,
 
   VOPD3 = 1 << 30,
+
+  // VNBR instruction format.
+  VNBR = UINT64_C(1) << 31,
 
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,
@@ -212,6 +216,8 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_V2INT16,
   OPERAND_REG_IMM_V2INT64,
   OPERAND_REG_IMM_NOINLINE_V2FP16,
+  OPERAND_REG_IMM_NOINLINE_INT16,
+  OPERAND_REG_IMM_NOINLINE_INT32,
   OPERAND_REG_IMM_V2INT32,
   OPERAND_REG_IMM_V2FP32,
   OPERAND_REG_IMM_V2FP64,

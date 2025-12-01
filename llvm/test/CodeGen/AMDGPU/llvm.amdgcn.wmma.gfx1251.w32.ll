@@ -5,6 +5,7 @@
 define amdgpu_ps void @test_wmma_f64_16x16x4_f64(<2 x double> %A, <2 x double> %B, <8 x double> %C, ptr addrspace(1) %out) {
 ; GFX1251-LABEL: test_wmma_f64_16x16x4_f64:
 ; GFX1251:       ; %bb.0: ; %bb
+; GFX1251-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1251-NEXT:    v_wmma_f64_16x16x4_f64 v[8:23], v[0:3], v[4:7], v[8:23]
 ; GFX1251-NEXT:    s_clause 0x3
 ; GFX1251-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:48
@@ -15,6 +16,7 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64(<2 x double> %A, <2 x double> %
 ;
 ; GISEL-LABEL: test_wmma_f64_16x16x4_f64:
 ; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GISEL-NEXT:    v_wmma_f64_16x16x4_f64 v[8:23], v[0:3], v[4:7], v[8:23]
 ; GISEL-NEXT:    s_clause 0x3
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[8:11], off

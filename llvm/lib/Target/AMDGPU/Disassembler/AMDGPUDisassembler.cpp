@@ -373,6 +373,17 @@ DecodeVGPR_16_Lo128RegisterClass(MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,
   return addOperand(Inst, DAsm->createVGPR16Operand(RegIdx, IsHi));
 }
 
+static DecodeStatus
+DecodePseudo_VGPR_2048RegisterClass(MCInst &Inst, unsigned Imm,
+                                    uint64_t /*Addr*/,
+                                    const MCDisassembler *Decoder) {
+  assert(isUInt<9>(Imm) && "9-bit encoding expected");
+  unsigned RegIdx = Imm & 0xff;
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(
+      Inst, DAsm->createRegOperand(AMDGPU::Pseudo_VGPR_2048RegClassID, RegIdx));
+}
+
 template <unsigned OpWidth>
 static DecodeStatus decodeOperand_VSrcT16_Lo128(MCInst &Inst, unsigned Imm,
                                                 uint64_t /*Addr*/,
@@ -745,6 +756,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
       if (STI.hasFeature(AMDGPU::FeatureGFX90AInsts) &&
           tryDecodeInst(DecoderTableGFX90A64, MI, QW, Address, CS))
+        break;
+
+      if (isGFX1260Only() &&
+          tryDecodeInst(DecoderTableGFX1260_FAKE1664, MI, QW, Address, CS))
         break;
 
       if ((isVI() || isGFX9()) &&
@@ -1331,8 +1346,8 @@ void AMDGPUDisassembler::convertVOP3DPPInst(MCInst &MI) const {
 
 // Given a wide tuple \p Reg check if it will overflow 256 registers.
 // \returns \p Reg on success or NoRegister otherwise.
-static unsigned CheckVGPROverflow(unsigned Reg, const MCRegisterClass &RC,
-                                  const MCRegisterInfo &MRI) {
+static MCRegister CheckVGPROverflow(MCRegister Reg, const MCRegisterClass &RC,
+                                    const MCRegisterInfo &MRI) {
   unsigned NumRegs = RC.getSizeInBits() / 32;
   MCRegister Sub0 = MRI.getSubReg(Reg, AMDGPU::sub0);
   if (!Sub0)
@@ -1346,7 +1361,7 @@ static unsigned CheckVGPROverflow(unsigned Reg, const MCRegisterClass &RC,
 
   assert(BaseReg && "Only vector registers expected");
 
-  return (Sub0 - BaseReg + NumRegs <= 256) ? Reg : AMDGPU::NoRegister;
+  return (Sub0 - BaseReg + NumRegs <= 256) ? Reg : MCRegister();
 }
 
 // Note that before gfx10, the MIMG encoding provided no information about
@@ -1602,9 +1617,8 @@ MCOperand AMDGPUDisassembler::errOperand(unsigned V,
   return MCOperand();
 }
 
-inline
-MCOperand AMDGPUDisassembler::createRegOperand(unsigned int RegId) const {
-  return MCOperand::createReg(AMDGPU::getMCReg(RegId, STI));
+inline MCOperand AMDGPUDisassembler::createRegOperand(MCRegister Reg) const {
+  return MCOperand::createReg(AMDGPU::getMCReg(Reg, STI));
 }
 
 inline
@@ -1746,6 +1760,8 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
     UseLit = AMDGPU::isInlinableLiteralV2F16(Val);
     break;
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT32:
     break;
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
@@ -1953,6 +1969,8 @@ unsigned AMDGPUDisassembler::getVgprClassId(unsigned Width) const {
     return VReg_576RegClassID;
   case 1024:
     return VReg_1024RegClassID;
+  case 2048:
+    return Pseudo_VGPR_2048RegClassID;
   }
   llvm_unreachable("Invalid register width!");
 }
@@ -2416,6 +2434,10 @@ bool AMDGPUDisassembler::isGFX12() const {
 
 bool AMDGPUDisassembler::isGFX12Plus() const {
   return AMDGPU::isGFX12Plus(STI);
+}
+
+bool AMDGPUDisassembler::isGFX1260Only() const {
+  return STI.hasFeature(AMDGPU::FeatureGFX1260Insts);
 }
 
 bool AMDGPUDisassembler::isGFX1250Only() const {

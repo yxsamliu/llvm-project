@@ -551,7 +551,8 @@ bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
   uint32_t NewImm = 0;
 
   if (Opc == AMDGPU::S_AND_B32) {
-    if (isPowerOf2_32(~Imm)) {
+    if (isPowerOf2_32(~Imm) &&
+        MI.findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr)->isDead()) {
       NewImm = llvm::countr_one(Imm);
       Opc = AMDGPU::S_BITSET0_B32;
     } else if (AMDGPU::isInlinableLiteral32(~Imm, ST->hasInv2PiInlineImm())) {
@@ -559,7 +560,8 @@ bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
       Opc = AMDGPU::S_ANDN2_B32;
     }
   } else if (Opc == AMDGPU::S_OR_B32) {
-    if (isPowerOf2_32(Imm)) {
+    if (isPowerOf2_32(Imm) &&
+        MI.findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr)->isDead()) {
       NewImm = llvm::countr_zero(Imm);
       Opc = AMDGPU::S_BITSET1_B32;
     } else if (AMDGPU::isInlinableLiteral32(~Imm, ST->hasInv2PiInlineImm())) {
@@ -585,7 +587,7 @@ bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
     if (SrcReg->isReg() && SrcReg->getReg() == Dest->getReg()) {
       const bool IsUndef = SrcReg->isUndef();
       const bool IsKill = SrcReg->isKill();
-      MI.setDesc(TII->get(Opc));
+      TII->mutateAndCleanupImplicit(MI, TII->get(Opc));
       if (Opc == AMDGPU::S_BITSET0_B32 ||
           Opc == AMDGPU::S_BITSET1_B32) {
         Src0->ChangeToImmediate(NewImm);

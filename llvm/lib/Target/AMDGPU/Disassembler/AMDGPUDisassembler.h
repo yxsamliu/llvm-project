@@ -69,7 +69,7 @@ public:
 
   const char* getRegClassName(unsigned RegClassID) const;
 
-  MCOperand createRegOperand(unsigned int RegId) const;
+  MCOperand createRegOperand(MCRegister Reg) const;
   MCOperand createRegOperand(unsigned RegClassID, unsigned Val) const;
   MCOperand createSRegOperand(unsigned SRegClassID, unsigned Val) const;
   MCOperand createVGPR16Operand(unsigned RegIdx, bool IsHi) const;
@@ -189,6 +189,7 @@ public:
   bool isGFX12() const;
   bool isGFX12Plus() const;
   bool isGFX1250Plus() const;
+  bool isGFX1260Only() const;
   bool isGFX1250Only() const;
   bool isGFX13() const;
   bool isGFX13Plus() const;

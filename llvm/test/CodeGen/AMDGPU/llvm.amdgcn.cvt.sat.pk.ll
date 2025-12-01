@@ -12,49 +12,51 @@ declare i16 @llvm.amdgcn.sat.pk4.i4.i8(i32) #0
 declare i16 @llvm.amdgcn.sat.pk4.u4.u8(i32) #0
 
 define amdgpu_kernel void @sat_pk4_i4_i8_f32_v(i32 %src, ptr %out) #1 {
-; SDAG-REAL16-LABEL: sat_pk4_i4_i8_f32_v:
-; SDAG-REAL16:       ; %bb.0:
-; SDAG-REAL16-NEXT:    s_clause 0x1
-; SDAG-REAL16-NEXT:    s_load_b32 s2, s[4:5], 0x0
-; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
-; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
-; SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-REAL16-NEXT:    v_sat_pk4_i4_i8_e32 v0.l, s2
-; SDAG-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
-; SDAG-REAL16-NEXT:    s_endpgm
+; GFX1250-SDAG-REAL16-LABEL: sat_pk4_i4_i8_f32_v:
+; GFX1250-SDAG-REAL16:       ; %bb.0:
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-REAL16-NEXT:    s_clause 0x1
+; GFX1250-SDAG-REAL16-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX1250-SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX1250-SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-REAL16-NEXT:    v_sat_pk4_i4_i8_e32 v0.l, s2
+; GFX1250-SDAG-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
+; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
-; SDAG-FAKE16-LABEL: sat_pk4_i4_i8_f32_v:
-; SDAG-FAKE16:       ; %bb.0:
-; SDAG-FAKE16-NEXT:    s_clause 0x1
-; SDAG-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x0
-; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
-; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-FAKE16-NEXT:    v_sat_pk4_i4_i8_e32 v1, s2
-; SDAG-FAKE16-NEXT:    flat_store_b16 v0, v1, s[0:1]
-; SDAG-FAKE16-NEXT:    s_endpgm
+; GFX1250-SDAG-FAKE16-LABEL: sat_pk4_i4_i8_f32_v:
+; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-FAKE16-NEXT:    s_clause 0x1
+; GFX1250-SDAG-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX1250-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    v_sat_pk4_i4_i8_e32 v1, s2
+; GFX1250-SDAG-FAKE16-NEXT:    flat_store_b16 v0, v1, s[0:1]
+; GFX1250-SDAG-FAKE16-NEXT:    s_endpgm
 ;
-; GISEL-REAL16-LABEL: sat_pk4_i4_i8_f32_v:
-; GISEL-REAL16:       ; %bb.0:
-; GISEL-REAL16-NEXT:    s_clause 0x1
-; GISEL-REAL16-NEXT:    s_load_b32 s2, s[4:5], 0x0
-; GISEL-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
-; GISEL-REAL16-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-REAL16-NEXT:    s_wait_kmcnt 0x0
-; GISEL-REAL16-NEXT:    v_sat_pk4_i4_i8_e32 v0.l, s2
-; GISEL-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
-; GISEL-REAL16-NEXT:    s_endpgm
+; GFX13-SDAG-REAL16-LABEL: sat_pk4_i4_i8_f32_v:
+; GFX13-SDAG-REAL16:       ; %bb.0:
+; GFX13-SDAG-REAL16-NEXT:    s_clause 0x1
+; GFX13-SDAG-REAL16-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX13-SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    v_sat_pk4_i4_i8_e32 v0.l, s2
+; GFX13-SDAG-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
+; GFX13-SDAG-REAL16-NEXT:    s_endpgm
 ;
-; GISEL-FAKE16-LABEL: sat_pk4_i4_i8_f32_v:
-; GISEL-FAKE16:       ; %bb.0:
-; GISEL-FAKE16-NEXT:    s_clause 0x1
-; GISEL-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x0
-; GISEL-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
-; GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GISEL-FAKE16-NEXT:    v_sat_pk4_i4_i8_e32 v0, s2
-; GISEL-FAKE16-NEXT:    flat_store_b16 v1, v0, s[0:1]
-; GISEL-FAKE16-NEXT:    s_endpgm
+; GFX13-SDAG-FAKE16-LABEL: sat_pk4_i4_i8_f32_v:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_clause 0x1
+; GFX13-SDAG-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX13-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_sat_pk4_i4_i8_e32 v1, s2
+; GFX13-SDAG-FAKE16-NEXT:    flat_store_b16 v0, v1, s[0:1]
+; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
   %cvt = call i16 @llvm.amdgcn.sat.pk4.i4.i8(i32 %src) #0
   store i16 %cvt, ptr %out, align 2
   ret void
@@ -63,6 +65,7 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_v(i32 %src, ptr %out) #1 {
 define amdgpu_kernel void @sat_pk4_i4_i8_f32_s(i32 inreg %src, ptr %out) #1 {
 ; GFX1250-SDAG-REAL16-LABEL: sat_pk4_i4_i8_f32_s:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-SDAG-REAL16-NEXT:    v_sat_pk4_i4_i8_e32 v0.l, s8
 ; GFX1250-SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
@@ -72,34 +75,13 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_s(i32 inreg %src, ptr %out) #1 {
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: sat_pk4_i4_i8_f32_s:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_sat_pk4_i4_i8_e32 v1, s8
 ; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-FAKE16-NEXT:    flat_store_b16 v0, v1, s[0:1]
 ; GFX1250-SDAG-FAKE16-NEXT:    s_endpgm
-;
-; GISEL-REAL16-LABEL: sat_pk4_i4_i8_f32_s:
-; GISEL-REAL16:       ; %bb.0:
-; GISEL-REAL16-NEXT:    s_clause 0x1
-; GISEL-REAL16-NEXT:    s_load_b32 s2, s[4:5], 0x0
-; GISEL-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
-; GISEL-REAL16-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-REAL16-NEXT:    s_wait_kmcnt 0x0
-; GISEL-REAL16-NEXT:    v_sat_pk4_i4_i8_e32 v0.l, s2
-; GISEL-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
-; GISEL-REAL16-NEXT:    s_endpgm
-;
-; GISEL-FAKE16-LABEL: sat_pk4_i4_i8_f32_s:
-; GISEL-FAKE16:       ; %bb.0:
-; GISEL-FAKE16-NEXT:    s_clause 0x1
-; GISEL-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x0
-; GISEL-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
-; GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GISEL-FAKE16-NEXT:    v_sat_pk4_i4_i8_e32 v0, s2
-; GISEL-FAKE16-NEXT:    flat_store_b16 v1, v0, s[0:1]
-; GISEL-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-REAL16-LABEL: sat_pk4_i4_i8_f32_s:
 ; GFX13-SDAG-REAL16:       ; %bb.0:
@@ -130,6 +112,7 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_s(i32 inreg %src, ptr %out) #1 {
 define amdgpu_kernel void @sat_pk4_i4_i8_f32_i(ptr %out) #1 {
 ; GFX1250-SDAG-REAL16-LABEL: sat_pk4_i4_i8_f32_i:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-SDAG-REAL16-NEXT:    v_sat_pk4_i4_i8_e32 v0.l, 0x64
 ; GFX1250-SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
@@ -137,32 +120,15 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_i(ptr %out) #1 {
 ; GFX1250-SDAG-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
 ; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
-; SDAG-FAKE16-LABEL: sat_pk4_i4_i8_f32_i:
-; SDAG-FAKE16:       ; %bb.0:
-; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-FAKE16-NEXT:    v_sat_pk4_i4_i8_e32 v1, 0x64
-; SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-FAKE16-NEXT:    flat_store_b16 v0, v1, s[0:1]
-; SDAG-FAKE16-NEXT:    s_endpgm
-;
-; GISEL-REAL16-LABEL: sat_pk4_i4_i8_f32_i:
-; GISEL-REAL16:       ; %bb.0:
-; GISEL-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GISEL-REAL16-NEXT:    v_sat_pk4_i4_i8_e32 v0.l, 0x64
-; GISEL-REAL16-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-REAL16-NEXT:    s_wait_kmcnt 0x0
-; GISEL-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
-; GISEL-REAL16-NEXT:    s_endpgm
-;
-; GISEL-FAKE16-LABEL: sat_pk4_i4_i8_f32_i:
-; GISEL-FAKE16:       ; %bb.0:
-; GISEL-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GISEL-FAKE16-NEXT:    v_sat_pk4_i4_i8_e32 v0, 0x64
-; GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GISEL-FAKE16-NEXT:    flat_store_b16 v1, v0, s[0:1]
-; GISEL-FAKE16-NEXT:    s_endpgm
+; GFX1250-SDAG-FAKE16-LABEL: sat_pk4_i4_i8_f32_i:
+; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-SDAG-FAKE16-NEXT:    v_sat_pk4_i4_i8_e32 v1, 0x64
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    flat_store_b16 v0, v1, s[0:1]
+; GFX1250-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-REAL16-LABEL: sat_pk4_i4_i8_f32_i:
 ; GFX13-SDAG-REAL16:       ; %bb.0:
@@ -172,55 +138,66 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_i(ptr %out) #1 {
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
 ; GFX13-SDAG-REAL16-NEXT:    s_endpgm
+;
+; GFX13-SDAG-FAKE16-LABEL: sat_pk4_i4_i8_f32_i:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX13-SDAG-FAKE16-NEXT:    v_sat_pk4_i4_i8_e32 v1, 0x64
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    flat_store_b16 v0, v1, s[0:1]
+; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
   %cvt = call i16 @llvm.amdgcn.sat.pk4.i4.i8(i32 100) #0
   store i16 %cvt, ptr %out, align 2
   ret void
 }
 
 define amdgpu_kernel void @sat_pk4_u4_u8_f32_v(i32 %src, ptr %out) #1 {
-; SDAG-REAL16-LABEL: sat_pk4_u4_u8_f32_v:
-; SDAG-REAL16:       ; %bb.0:
-; SDAG-REAL16-NEXT:    s_clause 0x1
-; SDAG-REAL16-NEXT:    s_load_b32 s2, s[4:5], 0x0
-; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
-; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
-; SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-REAL16-NEXT:    v_sat_pk4_u4_u8_e32 v0.l, s2
-; SDAG-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
-; SDAG-REAL16-NEXT:    s_endpgm
+; GFX1250-SDAG-REAL16-LABEL: sat_pk4_u4_u8_f32_v:
+; GFX1250-SDAG-REAL16:       ; %bb.0:
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-REAL16-NEXT:    s_clause 0x1
+; GFX1250-SDAG-REAL16-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX1250-SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX1250-SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-REAL16-NEXT:    v_sat_pk4_u4_u8_e32 v0.l, s2
+; GFX1250-SDAG-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
+; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
-; SDAG-FAKE16-LABEL: sat_pk4_u4_u8_f32_v:
-; SDAG-FAKE16:       ; %bb.0:
-; SDAG-FAKE16-NEXT:    s_clause 0x1
-; SDAG-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x0
-; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
-; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-FAKE16-NEXT:    v_sat_pk4_u4_u8_e32 v1, s2
-; SDAG-FAKE16-NEXT:    flat_store_b16 v0, v1, s[0:1]
-; SDAG-FAKE16-NEXT:    s_endpgm
+; GFX1250-SDAG-FAKE16-LABEL: sat_pk4_u4_u8_f32_v:
+; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-FAKE16-NEXT:    s_clause 0x1
+; GFX1250-SDAG-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX1250-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    v_sat_pk4_u4_u8_e32 v1, s2
+; GFX1250-SDAG-FAKE16-NEXT:    flat_store_b16 v0, v1, s[0:1]
+; GFX1250-SDAG-FAKE16-NEXT:    s_endpgm
 ;
-; GISEL-REAL16-LABEL: sat_pk4_u4_u8_f32_v:
-; GISEL-REAL16:       ; %bb.0:
-; GISEL-REAL16-NEXT:    s_clause 0x1
-; GISEL-REAL16-NEXT:    s_load_b32 s2, s[4:5], 0x0
-; GISEL-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
-; GISEL-REAL16-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-REAL16-NEXT:    s_wait_kmcnt 0x0
-; GISEL-REAL16-NEXT:    v_sat_pk4_u4_u8_e32 v0.l, s2
-; GISEL-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
-; GISEL-REAL16-NEXT:    s_endpgm
+; GFX13-SDAG-REAL16-LABEL: sat_pk4_u4_u8_f32_v:
+; GFX13-SDAG-REAL16:       ; %bb.0:
+; GFX13-SDAG-REAL16-NEXT:    s_clause 0x1
+; GFX13-SDAG-REAL16-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX13-SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    v_sat_pk4_u4_u8_e32 v0.l, s2
+; GFX13-SDAG-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
+; GFX13-SDAG-REAL16-NEXT:    s_endpgm
 ;
-; GISEL-FAKE16-LABEL: sat_pk4_u4_u8_f32_v:
-; GISEL-FAKE16:       ; %bb.0:
-; GISEL-FAKE16-NEXT:    s_clause 0x1
-; GISEL-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x0
-; GISEL-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
-; GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GISEL-FAKE16-NEXT:    v_sat_pk4_u4_u8_e32 v0, s2
-; GISEL-FAKE16-NEXT:    flat_store_b16 v1, v0, s[0:1]
-; GISEL-FAKE16-NEXT:    s_endpgm
+; GFX13-SDAG-FAKE16-LABEL: sat_pk4_u4_u8_f32_v:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_clause 0x1
+; GFX13-SDAG-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX13-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_sat_pk4_u4_u8_e32 v1, s2
+; GFX13-SDAG-FAKE16-NEXT:    flat_store_b16 v0, v1, s[0:1]
+; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
   %cvt = call i16 @llvm.amdgcn.sat.pk4.u4.u8(i32 %src) #0
   store i16 %cvt, ptr %out, align 2
   ret void
@@ -229,6 +206,7 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_v(i32 %src, ptr %out) #1 {
 define amdgpu_kernel void @sat_pk4_u4_u8_f32_s(i32 inreg %src, ptr %out) #1 {
 ; GFX1250-SDAG-REAL16-LABEL: sat_pk4_u4_u8_f32_s:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-SDAG-REAL16-NEXT:    v_sat_pk4_u4_u8_e32 v0.l, s8
 ; GFX1250-SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
@@ -238,34 +216,13 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_s(i32 inreg %src, ptr %out) #1 {
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: sat_pk4_u4_u8_f32_s:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_sat_pk4_u4_u8_e32 v1, s8
 ; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-FAKE16-NEXT:    flat_store_b16 v0, v1, s[0:1]
 ; GFX1250-SDAG-FAKE16-NEXT:    s_endpgm
-;
-; GISEL-REAL16-LABEL: sat_pk4_u4_u8_f32_s:
-; GISEL-REAL16:       ; %bb.0:
-; GISEL-REAL16-NEXT:    s_clause 0x1
-; GISEL-REAL16-NEXT:    s_load_b32 s2, s[4:5], 0x0
-; GISEL-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
-; GISEL-REAL16-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-REAL16-NEXT:    s_wait_kmcnt 0x0
-; GISEL-REAL16-NEXT:    v_sat_pk4_u4_u8_e32 v0.l, s2
-; GISEL-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
-; GISEL-REAL16-NEXT:    s_endpgm
-;
-; GISEL-FAKE16-LABEL: sat_pk4_u4_u8_f32_s:
-; GISEL-FAKE16:       ; %bb.0:
-; GISEL-FAKE16-NEXT:    s_clause 0x1
-; GISEL-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x0
-; GISEL-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
-; GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GISEL-FAKE16-NEXT:    v_sat_pk4_u4_u8_e32 v0, s2
-; GISEL-FAKE16-NEXT:    flat_store_b16 v1, v0, s[0:1]
-; GISEL-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-REAL16-LABEL: sat_pk4_u4_u8_f32_s:
 ; GFX13-SDAG-REAL16:       ; %bb.0:
@@ -296,6 +253,7 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_s(i32 inreg %src, ptr %out) #1 {
 define amdgpu_kernel void @sat_pk4_u4_u8_f32_i(ptr %out) #1 {
 ; GFX1250-SDAG-REAL16-LABEL: sat_pk4_u4_u8_f32_i:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-SDAG-REAL16-NEXT:    v_sat_pk4_u4_u8_e32 v0.l, 0x64
 ; GFX1250-SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
@@ -303,32 +261,15 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_i(ptr %out) #1 {
 ; GFX1250-SDAG-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
 ; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
-; SDAG-FAKE16-LABEL: sat_pk4_u4_u8_f32_i:
-; SDAG-FAKE16:       ; %bb.0:
-; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-FAKE16-NEXT:    v_sat_pk4_u4_u8_e32 v1, 0x64
-; SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-FAKE16-NEXT:    flat_store_b16 v0, v1, s[0:1]
-; SDAG-FAKE16-NEXT:    s_endpgm
-;
-; GISEL-REAL16-LABEL: sat_pk4_u4_u8_f32_i:
-; GISEL-REAL16:       ; %bb.0:
-; GISEL-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GISEL-REAL16-NEXT:    v_sat_pk4_u4_u8_e32 v0.l, 0x64
-; GISEL-REAL16-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-REAL16-NEXT:    s_wait_kmcnt 0x0
-; GISEL-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
-; GISEL-REAL16-NEXT:    s_endpgm
-;
-; GISEL-FAKE16-LABEL: sat_pk4_u4_u8_f32_i:
-; GISEL-FAKE16:       ; %bb.0:
-; GISEL-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GISEL-FAKE16-NEXT:    v_sat_pk4_u4_u8_e32 v0, 0x64
-; GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GISEL-FAKE16-NEXT:    flat_store_b16 v1, v0, s[0:1]
-; GISEL-FAKE16-NEXT:    s_endpgm
+; GFX1250-SDAG-FAKE16-LABEL: sat_pk4_u4_u8_f32_i:
+; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-SDAG-FAKE16-NEXT:    v_sat_pk4_u4_u8_e32 v1, 0x64
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    flat_store_b16 v0, v1, s[0:1]
+; GFX1250-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-REAL16-LABEL: sat_pk4_u4_u8_f32_i:
 ; GFX13-SDAG-REAL16:       ; %bb.0:
@@ -338,6 +279,15 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_i(ptr %out) #1 {
 ; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-REAL16-NEXT:    flat_store_b16 v1, v0, s[0:1]
 ; GFX13-SDAG-REAL16-NEXT:    s_endpgm
+;
+; GFX13-SDAG-FAKE16-LABEL: sat_pk4_u4_u8_f32_i:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX13-SDAG-FAKE16-NEXT:    v_sat_pk4_u4_u8_e32 v1, 0x64
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    flat_store_b16 v0, v1, s[0:1]
+; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
   %cvt = call i16 @llvm.amdgcn.sat.pk4.u4.u8(i32 100) #0
   store i16 %cvt, ptr %out, align 2
   ret void
@@ -345,3 +295,8 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_i(ptr %out) #1 {
 
 attributes #0 = { nounwind memory(none) }
 attributes #1 = { nounwind }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GISEL-FAKE16: {{.*}}
+; GISEL-REAL16: {{.*}}
+; SDAG-FAKE16: {{.*}}
+; SDAG-REAL16: {{.*}}

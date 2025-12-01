@@ -20,6 +20,7 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <optional>
 
@@ -27,6 +28,11 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "AMDGPUtti"
+
+static cl::opt<bool> EnableConvolveCombine(
+    "enable-convolve-combine",
+    cl::init(false),
+    cl::desc("Enable combining of AMDGPU convolve intrinsics"));
 
 namespace {
 
@@ -392,6 +398,13 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
       });
 }
 
+static bool isVNBRSendNonSignalling(const IntrinsicInst &II) {
+  const Value *Sema = II.getOperand(2);
+  const Value *SemaRefl = II.getOperand(4);
+  return isa<ConstantPointerNull>(Sema->stripPointerCasts()) && 
+         isa<ConstantPointerNull>(SemaRefl->stripPointerCasts());
+}
+
 bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
                                            const Value *Op0, const Value *Op1,
                                            InstCombiner &IC) const {
@@ -643,6 +656,62 @@ std::optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
   switch (IID) {
+  case Intrinsic::amdgcn_spatial_cluster_signal_next:
+  case Intrinsic::amdgcn_spatial_cluster_signal_prev: {
+    // Look backwards for a matching non-signaling send.
+    // Check data defs to make sure those don't become invalid.
+    SmallVector<Value *> DataOpds;
+    BasicBlock *BB = II.getParent();
+    auto It = BasicBlock::iterator(&II);
+    Intrinsic::ID SignalIID = II.getIntrinsicID();
+    Intrinsic::ID SendIID =
+        (SignalIID == Intrinsic::amdgcn_spatial_cluster_signal_next)
+            ? Intrinsic::amdgcn_spatial_cluster_send_next
+            : Intrinsic::amdgcn_spatial_cluster_send_prev;
+    while (It != BB->begin()) {
+      --It;
+      IntrinsicInst *IntrInst = dyn_cast<IntrinsicInst>(&*It);
+      if (IntrInst) {
+        auto ID = IntrInst->getIntrinsicID();
+        bool isSignal = ID == Intrinsic::amdgcn_spatial_cluster_signal_next ||
+                        ID == Intrinsic::amdgcn_spatial_cluster_signal_prev;
+        if (isSignal && ID != SignalIID) {
+          // Can always move past a signal in the opposite direction.
+          continue;
+        }
+        if (ID == SignalIID) {
+          // Don't move past a signal in the same direction.
+          break;
+        }
+        bool isVNBRSend = ID == Intrinsic::amdgcn_spatial_cluster_send_next ||
+                          ID == Intrinsic::amdgcn_spatial_cluster_send_prev;
+        if (isVNBRSend && ID != SendIID) {
+          // Can always move past a send in the opposite direction
+          continue;
+        }
+        if (ID == SendIID) {
+          if (!isVNBRSendNonSignalling(*IntrInst))
+            // Fail due to already signalling semaphores.
+            break;
+          SmallVector<Value *> Args;
+          Args.push_back(IntrInst->getArgOperand(0)); // Data
+          Args.push_back(IntrInst->getArgOperand(1)); // Dst
+          Args.push_back(II.getArgOperand(0));        // Sema
+          Args.push_back(IntrInst->getArgOperand(3)); // Dst_refl
+          Args.push_back(II.getArgOperand(1));        // Sema_refl
+          Args.push_back(IntrInst->getArgOperand(5)); // Flags
+          Function *F = Intrinsic::getDeclarationIfExists(II.getModule(), SendIID);
+          auto Intr = CallInst::Create(F, Args);
+          IC.replaceInstUsesWith(*IntrInst, Intr);
+          IC.eraseInstFromFunction(*IntrInst);
+          return Intr;
+        }
+      }
+      if (It->mayHaveSideEffects())
+        break;
+    }
+    return std::nullopt;
+  }
   case Intrinsic::amdgcn_rcp: {
     Value *Src = II.getArgOperand(0);
     if (isa<PoisonValue>(Src))
@@ -723,6 +792,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::amdgcn_convolve_f32i32_iu8_1x1:
   case Intrinsic::amdgcn_convolve_i32_iu4_1x1:
   case Intrinsic::amdgcn_convolve_i32_iu8_1x1: {
+    if (!EnableConvolveCombine)
+      break;
     // 1x1 convolutions run more efficiently when multiple iterations are
     // combined into a single instruction.
     //
@@ -758,10 +829,32 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return Load->getPointerOperand();
     };
 
+    auto GetIterCount = [AuxIdx](IntrinsicInst *I) {
+      uint64_t Aux = cast<ConstantInt>(I->getOperand(AuxIdx))->getZExtValue();
+      return ((Aux & AUX_ITER_MASK) >> AUX_ITER_SHIFT) + 1;
+    };
+
+    auto GetWeightBaseTy = [](Type *Ty, unsigned IterCnt) -> Type * {
+      if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
+        unsigned NumElts = VecTy->getNumElements();
+        assert(NumElts % IterCnt == 0);
+        if (NumElts == IterCnt)
+          return VecTy->getElementType();
+        return FixedVectorType::get(VecTy->getElementType(), NumElts / IterCnt);
+      }
+      assert(IterCnt == 1);
+      return Ty;
+    };
     auto CompareWeights = [&](IntrinsicInst *Prev, IntrinsicInst *Curr,
                               unsigned WeightSize) {
       Value *PrevW = Prev->getOperand(WeightIdx);
       Value *CurrW = Curr->getOperand(WeightIdx);
+
+      // If weights have a different type, we can't continue with the combine.
+      Type *PrevWBaseTy = GetWeightBaseTy(PrevW->getType(), GetIterCount(Prev));
+      Type *CurrWBaseTy = GetWeightBaseTy(CurrW->getType(), GetIterCount(Curr));
+      if (PrevWBaseTy != CurrWBaseTy)
+        return false;
 
       LoadInst *PrevLoad = nullptr;
       // If a combine happened in a previous iteration, we can encounter an
@@ -856,7 +949,6 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     //    ranges are extended and is more faithful to the original schedule of
     //    the program.
     //  * It should help the quality of debug info.
-    IntegerType *I32 = IC.Builder.getInt32Ty();
     Value *Accum = II.getOperand(0);
     SmallVector<Value *> Tensors;
     SmallVector<Value *> Weights;
@@ -865,16 +957,20 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     for (IntrinsicInst *Inst : WorkList) {
       IC.Builder.SetInsertPoint(Inst);
       // Collect tensors and weights from the instruction.
-      uint64_t Aux =
-          cast<ConstantInt>(Inst->getOperand(AuxIdx))->getZExtValue();
-      unsigned IterTmp = ((Aux & AUX_ITER_MASK) >> AUX_ITER_SHIFT) + 1;
+      unsigned IterTmp = GetIterCount(Inst);
       Value *Weight = Inst->getOperand(WeightIdx);
-      for (unsigned Idx = 0; Idx < IterTmp; ++Idx) {
+      for (unsigned Idx = 0; Idx < IterTmp; ++Idx)
         Tensors.push_back(Inst->getOperand(TensorIdx + Idx));
-        Value *W =
-            IterTmp > 1 ? IC.Builder.CreateExtractElement(Weight, Idx) : Weight;
-        Weights.push_back(W);
+
+      unsigned WeightBaseNumElts = 1;
+      if (auto *Ty = dyn_cast<FixedVectorType>(Weight->getType())) {
+        for (unsigned WIdx = 0; WIdx < Ty->getNumElements(); ++WIdx)
+          Weights.push_back(IC.Builder.CreateExtractElement(Weight, WIdx));
+        WeightBaseNumElts = Ty->getNumElements() / IterTmp;
+      } else {
+        Weights.push_back(Weight);
       }
+
       // "Discharge" the accumulated (tensor, weight) pairs in one or more new
       // intrinsics based on the plan.
       assert(IterationsIt != Iterations.end());
@@ -883,9 +979,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
            ++IterationsIt) {
         uint64_t Aux = BaseAux | ((*IterationsIt - 1) << AUX_ITER_SHIFT);
 
-        Value *NewWeights =
-            PoisonValue::get(FixedVectorType::get(I32, *IterationsIt));
-        for (unsigned I = 0; I < *IterationsIt; ++I) {
+        unsigned NewWeightsNumElts = *IterationsIt * WeightBaseNumElts;
+        Value *NewWeights = PoisonValue::get(FixedVectorType::get(
+            Weight->getType()->getScalarType(), NewWeightsNumElts));
+        for (unsigned I = 0; I < NewWeightsNumElts; ++I) {
           NewWeights =
               IC.Builder.CreateInsertElement(NewWeights, Weights[I], I);
         }
@@ -897,7 +994,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
           if (Idx < *IterationsIt)
             Args.push_back(Tensors[Idx]);
           else
-            Args.push_back(PoisonValue::get(I32));
+            Args.push_back(PoisonValue::get(Tensors[0]->getType()));
         }
         Args.push_back(IC.Builder.getInt32(Aux));
         Args.push_back(IC.Builder.getInt1(Clamp));
@@ -905,7 +1002,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
                                            Inst->getIntrinsicID(), Args);
 
         Tensors.erase(Tensors.begin(), Tensors.begin() + *IterationsIt);
-        Weights.erase(Weights.begin(), Weights.begin() + *IterationsIt);
+        Weights.erase(Weights.begin(), Weights.begin() + NewWeightsNumElts);
       }
       // Replace and erase the original instruction.
       //

@@ -97,7 +97,6 @@ static const OffloadArchToStringMap ArchNames[] = {
     GFX(1260), // gfx1260
     GFX(1300), // gfx1300
     GFX(1301), // gfx1301
-    GFX(1302), // gfx1302
     GFX(130E), // gfx130E
     GFX(1310), // gfx1310
     {OffloadArch::AMDGCNSPIRV, "amdgcnspirv", "compute_amdgcn"},

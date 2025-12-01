@@ -8,7 +8,8 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1200 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1200 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-FAKE16 %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1300 < %s | FileCheck -check-prefix=GFX13 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1300 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX13,GFX13-TRUE16 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1300 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX13,GFX13-FAKE16 %s
 
 define i16 @abs_i16(i16 %arg) {
 ; GFX6-LABEL: abs_i16:
@@ -88,17 +89,29 @@ define i16 @abs_i16(i16 %arg) {
 ; GFX12-FAKE16-NEXT:    v_max_i16 v0, v0, v1
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX13-LABEL: abs_i16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_sub_nc_u16 v1, 0, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_max_i16 v0, v0, v1
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+; GFX13-TRUE16-LABEL: abs_i16:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    v_sub_nc_u16 v0.h, 0, v0.l
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_max_i16 v0.l, v0.l, v0.h
+; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-FAKE16-LABEL: abs_i16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    v_sub_nc_u16 v1, 0, v0
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_max_i16 v0, v0, v1
+; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %res = call i16 @llvm.abs.i16(i16 %arg, i1 false)
   ret i16 %res
 }
@@ -551,33 +564,54 @@ define <6 x i16> @v_abs_v6i16(<6 x i16> %arg) {
 ; GFX12-NEXT:    v_pk_max_i16 v2, v2, v5
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX13-LABEL: v_abs_v6i16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_lshrrev_b32 v3, 16, v2 :: v_dual_lshrrev_b32 v4, 16, v1
-; GFX13-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
-; GFX13-NEXT:    v_sub_nc_u16 v6, 0, v2
-; GFX13-NEXT:    v_sub_nc_u16 v7, 0, v1
-; GFX13-NEXT:    v_sub_nc_u16 v8, 0, v0
-; GFX13-NEXT:    v_sub_nc_u16 v9, 0, v3
-; GFX13-NEXT:    v_sub_nc_u16 v10, 0, v5
-; GFX13-NEXT:    v_sub_nc_u16 v11, 0, v4
-; GFX13-NEXT:    v_max_i16 v2, v2, v6
-; GFX13-NEXT:    v_max_i16 v1, v1, v7
-; GFX13-NEXT:    v_max_i16 v0, v0, v8
-; GFX13-NEXT:    v_max_i16 v5, v5, v10
-; GFX13-NEXT:    v_max_i16 v4, v4, v11
-; GFX13-NEXT:    v_max_i16 v3, v3, v9
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_perm_b32 v0, v5, v0, 0x5040100
-; GFX13-NEXT:    v_perm_b32 v1, v4, v1, 0x5040100
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_perm_b32 v2, v3, v2, 0x5040100
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+; GFX13-TRUE16-LABEL: v_abs_v6i16:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    v_sub_nc_u16 v3.l, 0, v2.h
+; GFX13-TRUE16-NEXT:    v_sub_nc_u16 v3.h, 0, v1.h
+; GFX13-TRUE16-NEXT:    v_sub_nc_u16 v4.l, 0, v0.h
+; GFX13-TRUE16-NEXT:    v_sub_nc_u16 v4.h, 0, v2.l
+; GFX13-TRUE16-NEXT:    v_sub_nc_u16 v5.l, 0, v0.l
+; GFX13-TRUE16-NEXT:    v_sub_nc_u16 v5.h, 0, v1.l
+; GFX13-TRUE16-NEXT:    v_max_i16 v2.h, v2.h, v3.l
+; GFX13-TRUE16-NEXT:    v_max_i16 v1.h, v1.h, v3.h
+; GFX13-TRUE16-NEXT:    v_max_i16 v0.h, v0.h, v4.l
+; GFX13-TRUE16-NEXT:    v_max_i16 v0.l, v0.l, v5.l
+; GFX13-TRUE16-NEXT:    v_max_i16 v1.l, v1.l, v5.h
+; GFX13-TRUE16-NEXT:    v_max_i16 v2.l, v2.l, v4.h
+; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-FAKE16-LABEL: v_abs_v6i16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    v_dual_lshrrev_b32 v3, 16, v2 :: v_dual_lshrrev_b32 v4, 16, v1
+; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
+; GFX13-FAKE16-NEXT:    v_sub_nc_u16 v6, 0, v2
+; GFX13-FAKE16-NEXT:    v_sub_nc_u16 v7, 0, v1
+; GFX13-FAKE16-NEXT:    v_sub_nc_u16 v8, 0, v0
+; GFX13-FAKE16-NEXT:    v_sub_nc_u16 v9, 0, v3
+; GFX13-FAKE16-NEXT:    v_sub_nc_u16 v10, 0, v5
+; GFX13-FAKE16-NEXT:    v_sub_nc_u16 v11, 0, v4
+; GFX13-FAKE16-NEXT:    v_max_i16 v2, v2, v6
+; GFX13-FAKE16-NEXT:    v_max_i16 v1, v1, v7
+; GFX13-FAKE16-NEXT:    v_max_i16 v0, v0, v8
+; GFX13-FAKE16-NEXT:    v_max_i16 v5, v5, v10
+; GFX13-FAKE16-NEXT:    v_max_i16 v4, v4, v11
+; GFX13-FAKE16-NEXT:    v_max_i16 v3, v3, v9
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX13-FAKE16-NEXT:    v_perm_b32 v0, v5, v0, 0x5040100
+; GFX13-FAKE16-NEXT:    v_perm_b32 v1, v4, v1, 0x5040100
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX13-FAKE16-NEXT:    v_perm_b32 v2, v3, v2, 0x5040100
+; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %res = call <6 x i16> @llvm.abs.v6i16(<6 x i16> %arg, i1 false)
   ret <6 x i16> %res
 }

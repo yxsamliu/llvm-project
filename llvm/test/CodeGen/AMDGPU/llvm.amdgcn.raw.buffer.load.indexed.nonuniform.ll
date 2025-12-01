@@ -5,18 +5,20 @@
 define amdgpu_ps { <4 x float>, <4 x float>, <4 x float> } @buffer_load(i32 %arg) {
 ; GFX13-LABEL: buffer_load:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b32_e32 v8, v0
-; GFX13-NEXT:    buffer_load_b128 v[0:3], off, v0, null
-; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    buffer_load_b128 v[4:7], off, v8, null th:TH_LOAD_NT
-; GFX13-NEXT:    buffer_load_b128 v[8:11], off, v8, null th:TH_LOAD_HT
+; GFX13-NEXT:    s_clause 0x2
+; GFX13-NEXT:    buffer_load_b128 v[12:15], off, v0, null
+; GFX13-NEXT:    buffer_load_b128 v[4:7], off, v0, null th:TH_LOAD_NT
+; GFX13-NEXT:    buffer_load_b128 v[8:11], off, v0, null th:TH_LOAD_HT
+; GFX13-NEXT:    s_wait_loadcnt 0x2
+; GFX13-NEXT:    v_dual_mov_b32 v0, v12 :: v_dual_mov_b32 v1, v13
+; GFX13-NEXT:    v_dual_mov_b32 v2, v14 :: v_dual_mov_b32 v3, v15
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32.i32(i32 %arg, i32 0, i32 0, i32 0)
   %data_nt = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32.i32(i32 %arg, i32 0, i32 0, i32 1)
   %data_ht = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32.i32(i32 %arg, i32 0, i32 0, i32 2)
-  %r0 = insertvalue { <4 x float>, <4 x float>, <4 x float> } undef, <4 x float> %data, 0
+  %r0 = insertvalue { <4 x float>, <4 x float>, <4 x float> } poison, <4 x float> %data, 0
   %r1 = insertvalue { <4 x float>, <4 x float>, <4 x float> } %r0, <4 x float> %data_nt, 1
   %r2 = insertvalue { <4 x float>, <4 x float>, <4 x float> } %r1, <4 x float> %data_ht, 2
   ret { <4 x float>, <4 x float>, <4 x float> } %r2
@@ -25,18 +27,20 @@ main_body:
 define amdgpu_ps { <4 x float>, <4 x float>, <4 x float> } @buffer_load_dlc(i32 %arg) {
 ; GFX13-LABEL: buffer_load_dlc:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b32_e32 v8, v0
-; GFX13-NEXT:    buffer_load_b128 v[0:3], off, v0, null th:TH_LOAD_NT_RT
-; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    buffer_load_b128 v[4:7], off, v8, null th:TH_LOAD_RT_NT
-; GFX13-NEXT:    buffer_load_b128 v[8:11], off, v8, null th:TH_LOAD_NT_HT
+; GFX13-NEXT:    s_clause 0x2
+; GFX13-NEXT:    buffer_load_b128 v[12:15], off, v0, null th:TH_LOAD_NT_RT
+; GFX13-NEXT:    buffer_load_b128 v[4:7], off, v0, null th:TH_LOAD_RT_NT
+; GFX13-NEXT:    buffer_load_b128 v[8:11], off, v0, null th:TH_LOAD_NT_HT
+; GFX13-NEXT:    s_wait_loadcnt 0x2
+; GFX13-NEXT:    v_dual_mov_b32 v0, v12 :: v_dual_mov_b32 v1, v13
+; GFX13-NEXT:    v_dual_mov_b32 v2, v14 :: v_dual_mov_b32 v3, v15
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32.i32(i32 %arg, i32 0, i32 0, i32 4)
   %data_nt = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32.i32(i32 %arg, i32 0, i32 0, i32 5)
   %data_ht = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32.i32(i32 %arg, i32 0, i32 0, i32 6)
-  %r0 = insertvalue { <4 x float>, <4 x float>, <4 x float> } undef, <4 x float> %data, 0
+  %r0 = insertvalue { <4 x float>, <4 x float>, <4 x float> } poison, <4 x float> %data, 0
   %r1 = insertvalue { <4 x float>, <4 x float>, <4 x float> } %r0, <4 x float> %data_nt, 1
   %r2 = insertvalue { <4 x float>, <4 x float>, <4 x float> } %r1, <4 x float> %data_ht, 2
   ret { <4 x float>, <4 x float>, <4 x float> } %r2
@@ -228,7 +232,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.raw.buffer.load.f32.i32(i32 %rsrc, i32 %a5, i32 0, i32 0)
   %r6 = call float @llvm.amdgcn.raw.buffer.load.f32.i32(i32 %rsrc, i32 %a6, i32 0, i32 0)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -281,7 +285,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.raw.buffer.load.f32.i32(i32 %rsrc, i32 %a5, i32 0, i32 0)
   %r6 = call float @llvm.amdgcn.raw.buffer.load.f32.i32(i32 %rsrc, i32 %a6, i32 0, i32 0)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -317,7 +321,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.raw.buffer.load.f32.i32(i32 %rsrc, i32 %a5, i32 0, i32 3)
   %r6 = call float @llvm.amdgcn.raw.buffer.load.f32.i32(i32 %rsrc, i32 %a6, i32 0, i32 3)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -396,7 +400,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.raw.buffer.load.f32.i32(i32 %rsrc, i32 28, i32 0, i32 0)
   %r6 = call float @llvm.amdgcn.raw.buffer.load.f32.i32(i32 %rsrc, i32 32, i32 0, i32 0)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -421,11 +425,13 @@ main_body:
 define amdgpu_ps { <4 x float>, <2 x float>, float } @buffer_load_int(i32 %arg) {
 ; GFX13-LABEL: buffer_load_int:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b32_e32 v6, v0
-; GFX13-NEXT:    buffer_load_b128 v[0:3], off, v0, null
-; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    buffer_load_b64 v[4:5], off, v6, null th:TH_LOAD_NT
-; GFX13-NEXT:    buffer_load_b32 v6, off, v6, null th:TH_LOAD_HT
+; GFX13-NEXT:    s_clause 0x2
+; GFX13-NEXT:    buffer_load_b128 v[7:10], off, v0, null
+; GFX13-NEXT:    buffer_load_b64 v[4:5], off, v0, null th:TH_LOAD_NT
+; GFX13-NEXT:    buffer_load_b32 v6, off, v0, null th:TH_LOAD_HT
+; GFX13-NEXT:    s_wait_loadcnt 0x2
+; GFX13-NEXT:    v_dual_mov_b32 v0, v7 :: v_dual_mov_b32 v1, v8
+; GFX13-NEXT:    v_dual_mov_b32 v2, v9 :: v_dual_mov_b32 v3, v10
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
@@ -435,7 +441,7 @@ main_body:
   %fdata = bitcast <4 x i32> %data to <4 x float>
   %fdata_nt = bitcast <2 x i32> %data_nt to <2 x float>
   %fdata_ht = bitcast i32 %data_ht to float
-  %r0 = insertvalue { <4 x float>, <2 x float>, float } undef, <4 x float> %fdata, 0
+  %r0 = insertvalue { <4 x float>, <2 x float>, float } poison, <4 x float> %fdata, 0
   %r1 = insertvalue { <4 x float>, <2 x float>, float } %r0, <2 x float> %fdata_nt, 1
   %r2 = insertvalue { <4 x float>, <2 x float>, float } %r1, float %fdata_ht, 2
   ret { <4 x float>, <2 x float>, float } %r2
@@ -581,7 +587,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.raw.buffer.load.f32.i32(i32 %rsrc, i32 28, i32 0, i32 0)
   %r6 = call float @llvm.amdgcn.raw.buffer.load.f32.i32(i32 %rsrc, i32 32, i32 0, i32 0)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -604,7 +610,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.raw.buffer.load.f32.i32(i32 %rsrc, i32 28, i32 0, i32 8)
   %r6 = call float @llvm.amdgcn.raw.buffer.load.f32.i32(i32 %rsrc, i32 32, i32 0, i32 8)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
   ret void
 }
 

@@ -125,7 +125,7 @@ bool eliminateConstantExprUsesOfLDSFromAllInstructions(Module &M) {
 }
 
 void getUsesOfLDSByFunction(const CallGraph &CG, Module &M,
-                            FunctionVariableMap &kernels,
+                            FunctionVariableMap &Kernels,
                             FunctionVariableMap &Functions) {
   // Get uses from the current function, excluding uses by called Functions
   // Two output variables to avoid walking the globals list twice
@@ -135,17 +135,13 @@ void getUsesOfLDSByFunction(const CallGraph &CG, Module &M,
     for (User *V : GV.users()) {
       if (auto *I = dyn_cast<Instruction>(V)) {
         Function *F = I->getFunction();
-        if (isKernelLDS(F))
-          kernels[F].insert(&GV);
+        if (isKernel(*F) && !getWavegroupRankFunction(*F))
+          Kernels[F].insert(&GV);
         else
           Functions[F].insert(&GV);
       }
     }
   }
-}
-
-bool isKernelLDS(const Function *F) {
-  return AMDGPU::isKernel(F->getCallingConv()) && !getWavegroupRankFunction(*F);
 }
 
 LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
@@ -157,7 +153,12 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   // Collect functions whose address has escaped
   DenseSet<Function *> AddressTakenFuncs;
   for (Function &F : M.functions()) {
-    if (!isKernelLDS(&F))
+    // Ignore functions that are called by wavegroup rank-function,
+    // which looks like a callback by the rank-call intrinsic.
+    if (getWavegroupRankFunction(F))
+      continue;
+
+    if (!isKernel(F))
       if (F.hasAddressTaken(nullptr,
                             /* IgnoreCallbackUses */ false,
                             /* IgnoreAssumeLikeCalls */ false,
@@ -189,7 +190,7 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   // access all variables accessed by functions whose address escaped
   for (Function &F : M.functions()) {
     if (!F.isDeclaration() && FunctionMakesUnknownCall(&F)) {
-      if (!isKernelLDS(&F)) {
+      if (!isKernel(F)) {
         set_union(TransitiveMapFunction[&F],
                   VariablesReachableThroughFunctionPointer);
       }
@@ -199,14 +200,14 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   // Direct implementation of collecting all variables reachable from each
   // function
   for (Function &Func : M.functions()) {
-    if (Func.isDeclaration() || isKernelLDS(&Func))
+    if (Func.isDeclaration() || isKernel(Func))
       continue;
 
-    DenseSet<Function *> seen; // catches cycles
-    SmallVector<Function *, 4> wip = {&Func};
+    DenseSet<Function *> Seen; // catches cycles
+    SmallVector<Function *, 4> Wip = {&Func};
 
-    while (!wip.empty()) {
-      Function *F = wip.pop_back_val();
+    while (!Wip.empty()) {
+      Function *F = Wip.pop_back_val();
 
       // Can accelerate this by referring to transitive map for functions that
       // have already been computed, with more care than this
@@ -215,9 +216,9 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
       for (const CallGraphNode::CallRecord &R : *CG[F]) {
         Function *Ith = R.second->getFunction();
         if (Ith) {
-          if (!seen.contains(Ith)) {
-            seen.insert(Ith);
-            wip.push_back(Ith);
+          if (!Seen.contains(Ith)) {
+            Seen.insert(Ith);
+            Wip.push_back(Ith);
           }
         }
       }
@@ -236,7 +237,7 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   FunctionVariableMap IndirectMapKernel;
 
   for (Function &Func : M.functions()) {
-    if (Func.isDeclaration() || !isKernelLDS(&Func))
+    if (Func.isDeclaration() || !isKernel(Func))
       continue;
 
     for (const CallGraphNode::CallRecord &R : *CG[&Func]) {
@@ -256,7 +257,7 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
         Function *F = WorkList.pop_back_val();
         if (F->isDeclaration())
           continue;
-          
+
         for (const CallGraphNode::CallRecord &CallRecord : *CG[F]) {
           if (!CallRecord.second)
             continue;
@@ -284,6 +285,8 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   //      this is a re-run of the pass
   //      so we don't have anything to do.
   //    - No variables are absolute.
+  // Named-barriers which are absolute symbols are removed
+  // from the maps.
   std::optional<bool> HasAbsoluteGVs;
   bool HasSpecialGVs = false;
   for (auto &Map : {DirectMapKernel, IndirectMapKernel}) {
@@ -295,6 +298,10 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
         if (IsDirectMapDynLDSGV)
           continue;
         if (isNamedBarrier(*GV) || isLDSSemaphore(*GV)) {
+          if (IsAbsolute) {
+            DirectMapKernel[Fn].erase(GV);
+            IndirectMapKernel[Fn].erase(GV);
+          }
           HasSpecialGVs = true;
           continue;
         }
@@ -346,7 +353,7 @@ void removeFnAttrFromReachable(CallGraph &CG, Function *KernelRoot,
             Function *PotentialCallee =
                 ExternalCallRecord.second->getFunction();
             assert(PotentialCallee);
-            if (!isKernelLDS(PotentialCallee)) {
+            if (!isKernel(*PotentialCallee)) {
               for (StringRef Attr : FnAttrs)
                 PotentialCallee->removeFnAttr(Attr);
             }
@@ -453,9 +460,9 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
 
 static bool allPtrInputsInSetOrNull(const Instruction *Inst,
                                     DenseSet<Value *> &Set) {
-  unsigned i = isa<SelectInst>(Inst) ? 1 : 0;
-  for (; i < Inst->getNumOperands(); ++i) {
-    Value *Op = Inst->getOperand(i);
+  unsigned I = isa<SelectInst>(Inst) ? 1 : 0;
+  for (; I < Inst->getNumOperands(); ++I) {
+    Value *Op = Inst->getOperand(I);
 
     if (isa<ConstantPointerNull>(Op) || isa<UndefValue>(Op))
       continue;
@@ -533,7 +540,7 @@ bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
       for (auto &U : Cur->uses()) {
         Uses.push_back(&U);
 
-        auto User = U.getUser();
+        auto *User = U.getUser();
         if (isa<GEPOperator, AddrSpaceCastOperator, PHINode, SelectInst>(
                 User)) {
           if (Pointers.insert(User).second)
