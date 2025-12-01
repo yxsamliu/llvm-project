@@ -1697,10 +1697,8 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
    FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureFastDenormalF32,
    FeatureUnalignedBufferAccess, FeatureImageInsts, FeatureGDS, FeatureGWS,
-<<<<<<< HEAD
    FeatureDefaultComponentZero, FeatureVmemWriteVgprInOrder, FeatureCubeInsts, 
-   FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts, 
->>>>>>> origin/amd-arcadia
+   FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts
   ]
 >;
 
