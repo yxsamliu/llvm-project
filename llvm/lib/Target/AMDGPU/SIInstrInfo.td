@@ -2166,6 +2166,7 @@ class getGVGPRforVT<ValueType VT>{
                               !eq(VT.Size, 96)  : GVGPR_96,
                               !eq(VT.Size, 128) : GVGPR_128,
                               !eq(VT.Size, 256) : GVGPR_256,
+                              !eq(VT.Size, 512) : GVGPR_512,
                               1 : GVGPR_32); // unused
 }
 
@@ -2179,6 +2180,7 @@ class getGSrcVGPRForVT<ValueType VT>{
                               !eq(VT.Size, 192) : GSrcVGPR_192,
                               !eq(VT.Size, 256) : GSrcVGPR_256,
                               !eq(VT.Size, 288) : GSrcVGPR_288,
+                              !eq(VT.Size, 512) : GSrcVGPR_512,
                               !eq(VT.Size, 576) : GSrcVGPR_576,
                               1 : SSrc_bf16); // unused
 }

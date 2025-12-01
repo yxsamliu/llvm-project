@@ -946,6 +946,12 @@ def FeatureWMMA128bInsts : SubtargetFeature<"wmma-128b-insts",
   "Has WMMA instructions where A and B matrices do not have duplicated data"
 >;
 
+def FeatureWMMAK128 : SubtargetFeature<"wmma-k128",
+  "HasWMMAK128",
+  "true",
+  "Has WMMA instructions with K multiplier 8 (16x16x128) encoding"
+>;
+
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
   "HasPkFmacF16Inst",
   "true",
@@ -2385,7 +2391,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12_50.Features,
     [FeatureRequiresCOV6])>;
 
-def FeatureISAVersion13 : FeatureSet<
+def FeatureISAVersion13_Common : FeatureSet<
   [FeatureGFX13,
    FeatureGFX1250Insts,
    FeatureAddressableLocalMemorySize196608,
@@ -2453,7 +2459,13 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtPkNormVOP3Insts
 ]>;
 
-defvar FeatureISAVersion13_1 = FeatureISAVersion13;
+
+defvar FeatureISAVersion13_0 = FeatureISAVersion13_Common;
+defvar FeatureISAVersion13_1 = FeatureISAVersion13_Common;
+
+def FeatureISAVersion13_7 : FeatureSet<
+  !listconcat(FeatureISAVersion13_Common.Features,
+    [FeatureWMMAK128])>;
 
 //===----------------------------------------------------------------------===//
 
@@ -3196,6 +3208,9 @@ def HasCvtPkNormVOP2Insts : Predicate<"Subtarget->hasCvtPkNormVOP2Insts()">,
 
 def HasCvtPkNormVOP3Insts : Predicate<"Subtarget->hasCvtPkNormVOP3Insts()">,
   AssemblerPredicate<(all_of FeatureCvtPkNormVOP3Insts)>;
+
+def HasWMMAK128 : Predicate<"Subtarget->hasWMMAK128()">,
+  AssemblerPredicate<(all_of FeatureWMMAK128)>;
 
 def HasFP8E5M3Insts : Predicate<"Subtarget->hasFP8E5M3Insts()">,
   AssemblerPredicate<(all_of FeatureFP8E5M3Insts)>;

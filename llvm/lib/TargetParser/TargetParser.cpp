@@ -429,6 +429,8 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
   AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
   switch (Kind) {
     case GK_GFX1370:
+      Features["wmma-k128"] = true;
+    [[fallthrough]];
     case GK_GFX1310:
     case GK_GFX130E:
     case GK_GFX1301:

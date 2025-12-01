@@ -1547,6 +1547,7 @@ def GVGPR_64 : GVGPROp<VReg_64_STAGING>;
 def GVGPR_96 : GVGPROp<VReg_96_STAGING>;
 def GVGPR_128 : GVGPROp<VReg_128_STAGING>;
 def GVGPR_256 : GVGPROp<VReg_256_STAGING>;
+def GVGPR_512 : GVGPROp<VReg_512_STAGING>;
 
 class GSrcVGPROp<RegisterClass regClass> : RegisterOperand<regClass> {
   let EncoderMethod = "encodeGSrcVGPR";
@@ -1562,6 +1563,7 @@ def GSrcVGPR_160 : GSrcVGPROp<VReg_160_STAGING>;
 def GSrcVGPR_192 : GSrcVGPROp<VReg_192_STAGING>;
 def GSrcVGPR_256 : GSrcVGPROp<VReg_256_STAGING>;
 def GSrcVGPR_288 : GSrcVGPROp<VReg_288_STAGING>;
+def GSrcVGPR_512 : GSrcVGPROp<VReg_512_STAGING>;
 def GSrcVGPR_576 : GSrcVGPROp<VReg_576_STAGING>;
 
 class GSrcVGPROrZeroOp<RegisterClass regClass> : RegOrImmOperand<regClass, "OPERAND_REG_INLINE_C_INT32"> {
