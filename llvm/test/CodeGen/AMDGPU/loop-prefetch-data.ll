@@ -67,7 +67,7 @@ define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s
 ;
 ; GFX12ES2-SPREFETCH-LABEL: copy_flat:
 ; GFX12ES2-SPREFETCH:       ; %bb.0: ; %entry
-; GFX12ES2-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_SCHED_MODE, 0, 2), 2
+; GFX12ES2-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 2
 ; GFX12ES2-SPREFETCH-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_kmcnt 0x0
 ; GFX12ES2-SPREFETCH-NEXT:    s_cmp_eq_u32 s6, 0
@@ -197,7 +197,7 @@ define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrsp
 ;
 ; GFX12ES2-SPREFETCH-LABEL: copy_global:
 ; GFX12ES2-SPREFETCH:       ; %bb.0: ; %entry
-; GFX12ES2-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_SCHED_MODE, 0, 2), 2
+; GFX12ES2-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 2
 ; GFX12ES2-SPREFETCH-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_kmcnt 0x0
 ; GFX12ES2-SPREFETCH-NEXT:    s_cmp_eq_u32 s6, 0
@@ -322,7 +322,7 @@ define amdgpu_kernel void @copy_constant(ptr addrspace(1) nocapture %d, ptr addr
 ;
 ; GFX12ES2-SPREFETCH-LABEL: copy_constant:
 ; GFX12ES2-SPREFETCH:       ; %bb.0: ; %entry
-; GFX12ES2-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_SCHED_MODE, 0, 2), 2
+; GFX12ES2-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 2
 ; GFX12ES2-SPREFETCH-NEXT:    s_load_b32 s6, s[4:5], 0x34
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_kmcnt 0x0
 ; GFX12ES2-SPREFETCH-NEXT:    s_cmp_eq_u32 s6, 0
@@ -449,7 +449,7 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ;
 ; GFX12ES2-SPREFETCH-LABEL: copy_local:
 ; GFX12ES2-SPREFETCH:       ; %bb.0: ; %entry
-; GFX12ES2-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_SCHED_MODE, 0, 2), 2
+; GFX12ES2-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 2
 ; GFX12ES2-SPREFETCH-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_kmcnt 0x0
 ; GFX12ES2-SPREFETCH-NEXT:    s_cmp_eq_u32 s2, 0
@@ -605,7 +605,7 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ;
 ; GFX12ES2-SPREFETCH-LABEL: copy_flat_divergent:
 ; GFX12ES2-SPREFETCH:       ; %bb.0: ; %entry
-; GFX12ES2-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_SCHED_MODE, 0, 2), 2
+; GFX12ES2-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 2
 ; GFX12ES2-SPREFETCH-NEXT:    s_load_b32 s0, s[4:5], 0x34
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_kmcnt 0x0
 ; GFX12ES2-SPREFETCH-NEXT:    s_cmp_eq_u32 s0, 0
@@ -784,7 +784,7 @@ define amdgpu_kernel void @copy_global_divergent(ptr addrspace(1) nocapture %d, 
 ;
 ; GFX12ES2-SPREFETCH-LABEL: copy_global_divergent:
 ; GFX12ES2-SPREFETCH:       ; %bb.0: ; %entry
-; GFX12ES2-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_SCHED_MODE, 0, 2), 2
+; GFX12ES2-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SCHED_MODE, 0, 2), 2
 ; GFX12ES2-SPREFETCH-NEXT:    s_load_b32 s0, s[4:5], 0x34
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_kmcnt 0x0
 ; GFX12ES2-SPREFETCH-NEXT:    s_cmp_eq_u32 s0, 0
