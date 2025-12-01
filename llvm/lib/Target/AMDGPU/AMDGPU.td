@@ -2404,7 +2404,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
     [FeatureRequiresCOV6])>;
 
 def FeatureISAVersion12_60 : FeatureSet<
-  !listconcat(FeatureISAVersion12_50.Features,
+  !listconcat(FeatureISAVersion12_50_Common.Features,
     [FeatureGFX1260Insts,
      FeatureWMMA2048bInsts,
      FeatureWavegroups,
