@@ -1958,8 +1958,7 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   }
 
   if (DepCtr) {
-    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-            TII->get(AMDGPU::S_WAIT_DEPCTR_soft))
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_DEPCTR_soft))
         .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(
             AMDGPU::DepCtr::encodeFieldVaVdst(0, ST), 0));
   }
