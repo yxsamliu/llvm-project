@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
@@ -2286,6 +2287,14 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
   return TargetLowering::isTypeDesirableForOp(Op, VT);
 }
 
+MachinePointerInfo
+SITargetLowering::getKernargSegmentPtrInfo(MachineFunction &MF) const {
+  // This isn't really a constant pool but close enough.
+  MachinePointerInfo PtrInfo(MF.getPSVManager().getConstantPool());
+  PtrInfo.AddrSpace = AMDGPUAS::CONSTANT_ADDRESS;
+  return PtrInfo;
+}
+
 SDValue SITargetLowering::lowerKernArgParameterPtr(SelectionDAG &DAG,
                                                    const SDLoc &SL,
                                                    SDValue Chain,
@@ -2362,7 +2371,9 @@ SDValue SITargetLowering::lowerKernargMemParameter(
     SelectionDAG &DAG, EVT VT, EVT MemVT, const SDLoc &SL, SDValue Chain,
     uint64_t Offset, Align Alignment, bool Signed,
     const ISD::InputArg *Arg) const {
-  MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
+
+  MachinePointerInfo PtrInfo =
+      getKernargSegmentPtrInfo(DAG.getMachineFunction());
 
   // Try to avoid using an extload by loading earlier than the argument address,
   // and extracting the relevant bits. The load should hopefully be merged with
@@ -2377,7 +2388,8 @@ SDValue SITargetLowering::lowerKernargMemParameter(
     // TODO: If we passed in the base kernel offset we could have a better
     // alignment than 4, but we don't really need it.
     SDValue Ptr = lowerKernArgParameterPtr(DAG, SL, Chain, AlignDownOffset);
-    SDValue Load = DAG.getLoad(MVT::i32, SL, Chain, Ptr, PtrInfo, Align(4),
+    SDValue Load = DAG.getLoad(MVT::i32, SL, Chain, Ptr,
+                               PtrInfo.getWithOffset(AlignDownOffset), Align(4),
                                MachineMemOperand::MODereferenceable |
                                    MachineMemOperand::MOInvariant);
 
@@ -2392,9 +2404,9 @@ SDValue SITargetLowering::lowerKernargMemParameter(
   }
 
   SDValue Ptr = lowerKernArgParameterPtr(DAG, SL, Chain, Offset);
-  SDValue Load = DAG.getLoad(MemVT, SL, Chain, Ptr, PtrInfo, Alignment,
-                             MachineMemOperand::MODereferenceable |
-                                 MachineMemOperand::MOInvariant);
+  SDValue Load = DAG.getLoad(
+      MemVT, SL, Chain, Ptr, PtrInfo.getWithOffset(Offset), Alignment,
+      MachineMemOperand::MODereferenceable | MachineMemOperand::MOInvariant);
 
   SDValue Val = convertArgType(DAG, VT, MemVT, SL, Load, Signed, Arg);
   return DAG.getMergeValues({Val, Load.getValue(1)}, SL);
@@ -8168,10 +8180,11 @@ SITargetLowering::loadImplicitKernelArgument(SelectionDAG &DAG, MVT VT,
   MachineFunction &MF = DAG.getMachineFunction();
   uint64_t Offset = getImplicitParameterOffset(MF, Param);
   SDValue Ptr = lowerKernArgParameterPtr(DAG, DL, DAG.getEntryNode(), Offset);
-  MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
-  return DAG.getLoad(VT, DL, DAG.getEntryNode(), Ptr, PtrInfo, Alignment,
-                     MachineMemOperand::MODereferenceable |
-                         MachineMemOperand::MOInvariant);
+  MachinePointerInfo PtrInfo =
+      getKernargSegmentPtrInfo(DAG.getMachineFunction());
+  return DAG.getLoad(
+      VT, DL, DAG.getEntryNode(), Ptr, PtrInfo.getWithOffset(Offset), Alignment,
+      MachineMemOperand::MODereferenceable | MachineMemOperand::MOInvariant);
 }
 
 SDValue SITargetLowering::lowerTrapHsaQueuePtr(SDValue Op,
