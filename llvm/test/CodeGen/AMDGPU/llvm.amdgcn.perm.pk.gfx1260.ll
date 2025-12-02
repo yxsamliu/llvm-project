@@ -21,7 +21,7 @@ define void @test_perm_pk16_b4_u2(i16 %a, i16 inreg %areg, i32 %b, ptr %out1, pt
 ; GFX1260-NEXT:    flat_store_b64 v[4:5], v[10:11]
 ; GFX1260-NEXT:    flat_store_b64 v[6:7], v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
-; GFX1260-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %ret1 = tail call <2 x i32> @llvm.amdgcn.perm.pk16.b4.u2(i16 %a, i32 %b)
   store <2 x i32> %ret1, ptr %out1, align 8
   %ret2 = tail call <2 x i32> @llvm.amdgcn.perm.pk16.b4.u2(i16 %a, i32 100)
@@ -43,7 +43,7 @@ define void @test_perm_pk16_b6_u2(i32 %a, i32 inreg %areg, i32 %b, ptr %out1, pt
 ; GFX1260-NEXT:    flat_store_b96 v[4:5], v[12:14]
 ; GFX1260-NEXT:    flat_store_b96 v[6:7], v[16:18]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
-; GFX1260-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %ret1 = tail call <3 x i32> @llvm.amdgcn.perm.pk16.b6.u2(i32 %a, i32 %b)
   store <3 x i32> %ret1, ptr %out1, align 16
   %ret2 = tail call <3 x i32> @llvm.amdgcn.perm.pk16.b6.u2(i32 %a, i32 100)
@@ -65,7 +65,7 @@ define void @test_perm_pk16_b8_u2(i32 %a, i32 inreg %areg, i32 %b, ptr %out1, pt
 ; GFX1260-NEXT:    flat_store_b128 v[4:5], v[12:15]
 ; GFX1260-NEXT:    flat_store_b128 v[6:7], v[16:19]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
-; GFX1260-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %ret1 = tail call <4 x i32> @llvm.amdgcn.perm.pk16.b8.u2(i32 %a, i32 %b)
   store <4 x i32> %ret1, ptr %out1, align 16
   %ret2 = tail call <4 x i32> @llvm.amdgcn.perm.pk16.b8.u2(i32 %a, i32 100)
@@ -89,7 +89,7 @@ define void @test_perm_pk32_b4_u3(i32 %a, i32 inreg %areg, i32 %b, i64 %c, ptr %
 ; GFX1260-NEXT:    flat_store_b128 v[8:9], v[20:23]
 ; GFX1260-NEXT:    flat_store_b128 v[10:11], v[0:3]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
-; GFX1260-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %ret1 = tail call <4 x i32> @llvm.amdgcn.perm.pk32.b4.u3(i32 %a, i32 %b, i64 %c)
   store <4 x i32> %ret1, ptr %out1, align 8
   %ret2 = tail call <4 x i32> @llvm.amdgcn.perm.pk32.b4.u3(i32 %a, i32 %b, i64 100)
@@ -134,7 +134,7 @@ define void @test_perm_pk32_b6_u3(<2 x i32> %a, <2 x i32> inreg %areg, i32 %b, i
 ; GFX1260-SDAG-NEXT:    flat_store_b64 v[22:23], v[4:5] offset:16
 ; GFX1260-SDAG-NEXT:    flat_store_b128 v[22:23], v[0:3]
 ; GFX1260-SDAG-NEXT:    s_wait_dscnt 0x0
-; GFX1260-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1260-GISEL-LABEL: test_perm_pk32_b6_u3:
 ; GFX1260-GISEL:       ; %bb.0:
@@ -168,7 +168,7 @@ define void @test_perm_pk32_b6_u3(<2 x i32> %a, <2 x i32> inreg %areg, i32 %b, i
 ; GFX1260-GISEL-NEXT:    flat_store_b128 v[30:31], v[0:3]
 ; GFX1260-GISEL-NEXT:    flat_store_b64 v[30:31], v[4:5] offset:16
 ; GFX1260-GISEL-NEXT:    s_wait_dscnt 0x0
-; GFX1260-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %ret1 = tail call <6 x i32> @llvm.amdgcn.perm.pk32.b6.u3(<2 x i32> %a, i32 %b, i64 %c)
   store <6 x i32> %ret1, ptr %out1, align 16
   %ret2 = tail call <6 x i32> @llvm.amdgcn.perm.pk32.b6.u3(<2 x i32> %a, i32 %b, i64 100)
@@ -213,7 +213,7 @@ define void @test_perm_pk32_b8_u3(<2 x i32> %a, <2 x i32> inreg %areg, i32 %b, i
 ; GFX1260-SDAG-NEXT:    flat_store_b128 v[28:29], v[4:7] offset:16
 ; GFX1260-SDAG-NEXT:    flat_store_b128 v[28:29], v[0:3]
 ; GFX1260-SDAG-NEXT:    s_wait_dscnt 0x0
-; GFX1260-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1260-GISEL-LABEL: test_perm_pk32_b8_u3:
 ; GFX1260-GISEL:       ; %bb.0:
@@ -247,7 +247,7 @@ define void @test_perm_pk32_b8_u3(<2 x i32> %a, <2 x i32> inreg %areg, i32 %b, i
 ; GFX1260-GISEL-NEXT:    flat_store_b128 v[36:37], v[0:3]
 ; GFX1260-GISEL-NEXT:    flat_store_b128 v[36:37], v[4:7] offset:16
 ; GFX1260-GISEL-NEXT:    s_wait_dscnt 0x0
-; GFX1260-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %ret1 = tail call <8 x i32> @llvm.amdgcn.perm.pk32.b8.u3(<2 x i32> %a, i32 %b, i64 %c)
   store <8 x i32> %ret1, ptr %out1, align 16
   %ret2 = tail call <8 x i32> @llvm.amdgcn.perm.pk32.b8.u3(<2 x i32> %a, i32 %b, i64 100)

@@ -11,7 +11,9 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GCN,GFX12 %s
 ; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GCN,GFX12 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GCN,GFX1250 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1260 < %s | FileCheck -check-prefixes=GCN,GFX1250 %s
 ; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GCN,GFX1250 %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1260 < %s | FileCheck -check-prefixes=GCN,GFX1250 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX1250 %s
 ; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX1250 %s
 

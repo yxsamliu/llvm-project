@@ -9,7 +9,9 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12-FAKE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250,GFX1250-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1260 -mattr=+real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250,GFX1250-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250,GFX1250-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1260 -mattr=-real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250,GFX1250-FAKE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX13,GFX13-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=-real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX13,GFX13-FAKE16 %s
 

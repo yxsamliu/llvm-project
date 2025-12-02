@@ -4,7 +4,9 @@
 ; xUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+real-true16 %s -o - | FileCheck %s -check-prefixes=GFX1200-GI-TRUE16
 ; xUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=-real-true16 %s -o - | FileCheck %s -check-prefixes=GFX1200-GI-FAKE16
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=+real-true16 %s -o - | FileCheck %s -check-prefixes=GFX1250-SDAG-TRUE16
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1260 -mattr=+real-true16 %s -o - | FileCheck %s -check-prefixes=GFX1250-SDAG-TRUE16
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=-real-true16 %s -o - | FileCheck %s -check-prefixes=GFX1250-SDAG-FAKE16
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1260 -mattr=-real-true16 %s -o - | FileCheck %s -check-prefixes=GFX1250-SDAG-FAKE16
 ; xUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=+real-true16 %s -o - | FileCheck %s -check-prefixes=GFX1250-GI-TRUE16
 ; xUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=-real-true16 %s -o - | FileCheck %s -check-prefixes=GFX1250-GI-FAKE16
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1300 -mattr=+real-true16 %s -o - | FileCheck %s -check-prefixes=GFX13-SDAG-TRUE16

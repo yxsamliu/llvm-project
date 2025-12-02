@@ -5,6 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -show-mc-encoding < %s | FileCheck -check-prefixes=GFX11,GFX1150,NOT-GFX12 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -show-mc-encoding < %s | FileCheck -check-prefixes=GFX1200 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -show-mc-encoding < %s | FileCheck -check-prefixes=GFX1250 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1260 -show-mc-encoding < %s | FileCheck -check-prefixes=GFX1250 %s
 
 declare float @llvm.fabs.f32(float)
 declare float @llvm.fma.f32(float, float, float)
