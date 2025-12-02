@@ -5516,6 +5516,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_global_tiled_store_half_vst2_b128:
     case Intrinsic::amdgcn_global_tiled_store_b128:
     case Intrinsic::amdgcn_global_tiled_store_vst2_b128:
+    case Intrinsic::amdgcn_global_tiled_load_2x2_b128:
+    case Intrinsic::amdgcn_ds_tiled_load_half_b64:
+    case Intrinsic::amdgcn_ds_tiled_load_b64:
+    case Intrinsic::amdgcn_ds_tiled_load_b128:
+    case Intrinsic::amdgcn_ds_tiled_load_2x2_b128:
     case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
     case Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64:
       return getDefaultMappingAllVGPR(MI);

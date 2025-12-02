@@ -317,6 +317,8 @@ protected:
 
   bool HasClusters = false;
   bool RequiresWaitsBeforeSystemScopeStores = false;
+  bool HasGlobalTiledLoads2x2 = false;
+  bool HasLDSTiledLoads = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1992,6 +1994,10 @@ public:
   bool requiresWaitsBeforeSystemScopeStores() const {
     return RequiresWaitsBeforeSystemScopeStores;
   }
+
+  bool hasGlobalTiledLoads2x2() const { return HasGlobalTiledLoads2x2; }
+
+  bool hasLDSTiledLoads() const { return HasLDSTiledLoads; }
 };
 
 class GCNUserSGPRUsageInfo {

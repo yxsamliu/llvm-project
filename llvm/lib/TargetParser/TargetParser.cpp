@@ -430,7 +430,9 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
   switch (Kind) {
     case GK_GFX1370:
       Features["wmma-k128"] = true;
-    [[fallthrough]];
+      Features["lds-tiled-loads"] = true;
+      Features["global-tiled-loads-2x2"] = true;
+      [[fallthrough]];
     case GK_GFX1310:
     case GK_GFX130E:
     case GK_GFX1301:

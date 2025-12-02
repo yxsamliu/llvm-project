@@ -4235,6 +4235,22 @@ def int_amdgcn_global_tiled_load_b64            : AMDGPUTiledLoad<llvm_v2i32_ty>
 def int_amdgcn_global_tiled_load_qtr_b128       : AMDGPUTiledLoad<llvm_i32_ty>;
 def int_amdgcn_global_tiled_load_half_b128      : AMDGPUTiledLoad<llvm_v2i32_ty>;
 def int_amdgcn_global_tiled_load_b128           : AMDGPUTiledLoad<llvm_v4i32_ty>;
+def int_amdgcn_global_tiled_load_2x2_b128       : AMDGPUTiledLoad<llvm_v4i32_ty>;
+
+class AMDGPUTiledLoadLDS<LLVMType data_ty>:
+  ClangBuiltin<!subst("int", "__builtin", NAME)>,
+  DefaultAttrsIntrinsic<
+    [data_ty],
+    [local_ptr_ty],
+    [IntrReadMem, IntrConvergent, NoCapture<ArgIndex<0>>],
+    "",
+    [SDNPMemOperand]
+  >;
+
+def int_amdgcn_ds_tiled_load_half_b64 : AMDGPUTiledLoadLDS<llvm_i32_ty>;
+def int_amdgcn_ds_tiled_load_b64      : AMDGPUTiledLoadLDS<llvm_v2i32_ty>;
+def int_amdgcn_ds_tiled_load_2x2_b128 : AMDGPUTiledLoadLDS<llvm_v4i32_ty>;
+def int_amdgcn_ds_tiled_load_b128     : AMDGPUTiledLoadLDS<llvm_v4i32_ty>;
 
 // Strided loads write every other register of the destination (other registers
 // are unmodified). The intrinsics have an extra param for partial result which

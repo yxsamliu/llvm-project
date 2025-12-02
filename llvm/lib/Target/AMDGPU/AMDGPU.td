@@ -1632,6 +1632,20 @@ def FeatureWaitsBeforeSystemScopeStores : SubtargetFeature<
   "Target requires waits for loads and atomics before system scope stores"
 >;
 
+def FeatureGlobalTiledLoads2x2 : SubtargetFeature<
+  "global-tiled-loads-2x2",
+  "HasGlobalTiledLoads2x2",
+  "true",
+  "Target has 2x2 128B tiled load support"
+>;
+
+def FeatureLDSTiledLoads : SubtargetFeature<
+  "lds-tiled-loads",
+  "HasLDSTiledLoads",
+  "true",
+  "Target has LDS tiled load support"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -2465,7 +2479,10 @@ defvar FeatureISAVersion13_1 = FeatureISAVersion13_Common;
 
 def FeatureISAVersion13_7 : FeatureSet<
   !listconcat(FeatureISAVersion13_Common.Features,
-    [FeatureWMMAK128])>;
+    [FeatureWMMAK128,
+     FeatureGlobalTiledLoads2x2,
+     FeatureLDSTiledLoads,
+    ])>;
 
 //===----------------------------------------------------------------------===//
 
@@ -3420,6 +3437,12 @@ def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
 
 def NotNeedsAlignedVGPRs : Predicate<"!Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of (not FeatureRequiresAlignedVGPRs))>;
+
+def HasGlobalTiledLoads2x2 : Predicate<"Subtarget->hasGlobalTiledLoads2x2()">,
+  AssemblerPredicate<(all_of FeatureGlobalTiledLoads2x2)>;
+
+def HasLDSTiledLoads : Predicate<"Subtarget->hasLDSTiledLoads()">,
+  AssemblerPredicate<(all_of FeatureLDSTiledLoads)>;
 
 def isWave32 : Predicate<"Subtarget->isWave32()">,
   AssemblerPredicate <(any_of FeatureWavefrontSize32,
