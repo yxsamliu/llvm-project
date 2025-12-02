@@ -1191,20 +1191,6 @@ bool SIFoldOperandsImpl::isRegSeqConcat(
   });
 
   unsigned SrcSize = 0;
-  SmallVector<MachineOperand *> Srcs;
-  // check the last SrcOp in Srcs are completely covered (wrapped in a lambda)
-  auto IsLastSrcFullyCovered = [&]() -> bool {
-    if (Srcs.empty())
-      return true;
-    MachineOperand *LastSrc = Srcs.back();
-    if (LastSrc->isReg() && LastSrc->getSubReg() != AMDGPU::NoSubRegister) {
-      unsigned LastSize = TRI->getRegSizeInBits(LastSrc->getReg(), *MRI);
-      // if the last subreg is not fully covered, fail
-      if (LastSize != SrcSize)
-        return false;
-    }
-    return true;
-  };
   for (unsigned I = 0, E = SrcOpnds.size(); I != E; ++I) {
     MachineOperand *SrcOp = SrcOpnds[I].second;
     unsigned SubRegIdx = SrcOpnds[I].first;
@@ -1214,27 +1200,35 @@ bool SIFoldOperandsImpl::isRegSeqConcat(
       return false;
 
     if (SrcOp->getSubReg() == AMDGPU::NoSubRegister) {
+      if (SrcSize != 0)
+          return false; // Previous reg not fully covered.
       SrcRegs.emplace_back(SrcOp->getReg(), SubRegIdx);
-      Srcs.push_back(SrcOp);
     } else {
       auto SrcSubIdx = SrcOp->getSubReg();
       auto SubOffset = TRI->getSubRegIdxOffset(SrcSubIdx);
       auto SubSize = TRI->getSubRegIdxSize(SrcSubIdx);
       if (SubOffset == 0) {
-        if (!IsLastSrcFullyCovered())
-          return false;
+        if (SrcSize != 0)
+          return false; // Previous reg not fully covered.
         SrcRegs.emplace_back(SrcOp->getReg(), SubRegIdx);
-        Srcs.push_back(SrcOp);
         SrcSize = SubSize;
-      } else if (SubOffset == SrcSize) {
+      } else if (SubOffset == SrcSize &&
+                 SrcOp->getReg() == SrcRegs.back().first) {
         // Contiguous subreg, continue.
         SrcSize += SubSize;
+        assert(SrcSize <= TRI->getRegSizeInBits(SrcOp->getReg(), *MRI));
+        if (SrcSize == TRI->getRegSizeInBits(SrcOp->getReg(), *MRI))
+          SrcSize = 0;
       } else {
         // Non-contiguous subreg, fail.
         return false;
       }
     }
   }
+
+  if (SrcSize != 0)
+    return false; // The last reg not fully covered.
+
   return true;
 }
 
