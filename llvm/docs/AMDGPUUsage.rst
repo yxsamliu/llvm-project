@@ -565,13 +565,13 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                       - Workgroup
                                                                         Clusters
 
-     ``gfx1301``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
+     ``gfx1310``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
                                                                       - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
-     ``gfx1310``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
+     ``gfx1360``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
                                                                       - Packed
@@ -2645,7 +2645,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1201``          0x04e      ``gfx1201``
      ``EF_AMDGPU_MACH_AMDGCN_GFX950``           0x04f      ``gfx950``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1310``          0x050      ``gfx1310``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1301``          0x056      ``gfx1301``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1360``          0x056      ``gfx1360``
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC``     0x051      ``gfx9-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC``  0x052      ``gfx10-1-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC``  0x053      ``gfx10-3-generic``
