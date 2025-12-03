@@ -368,7 +368,7 @@ salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
 /// introducing a use-before-def, it is either salvaged (\ref salvageDebugInfo)
 /// or deleted. Returns true if any debug users were updated.
 LLVM_ABI bool replaceAllDbgUsesWith(Instruction &From, Value &To,
-                                    Instruction &DomPoint, DominatorTree &DT);
+                                    Instruction &DomPoint, const DominatorTree &DT);
 
 /// If a terminator in an unreachable basic block has an operand of type
 /// Instruction, transform it into poison. Return true if any operands
@@ -431,7 +431,7 @@ LLVM_ABI void combineAAMetadata(Instruction *K, const Instruction *J);
 
 /// Copy the metadata from the source instruction to the destination (the
 /// replacement for the source instruction).
-LLVM_ABI void copyMetadataForAccess(Instruction &Dest, Instruction &Source);
+LLVM_ABI void copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source);
 
 /// Patch the replacement so that it is not more restrictive than the value
 /// being replaced. It assumes that the replacement does not get moved from

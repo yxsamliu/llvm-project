@@ -1239,8 +1239,7 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
   if (UseOpIdx >= Desc.getNumOperands())
     return false;
 
-  // Filter out unhandled pseudos.
-  if (!AMDGPU::isSISrcOperand(Desc, UseOpIdx))
+  if (!AMDGPU::isSISrcInlinableOperand(Desc, UseOpIdx))
     return false;
 
   if (OpToFold.isImm() && OpToFold.isOperandLegal(*TII, *UseMI, UseOpIdx)) {
@@ -1549,9 +1548,9 @@ void SIFoldOperandsImpl::foldOperand(
       }
 
       if (OpToFold.isReg() && TRI->isSGPRReg(*MRI, OpToFold.getReg())) {
-        if (execMayBeModifiedBeforeUse(*MRI,
-                                       UseMI->getOperand(UseOpIdx).getReg(),
-                                       *OpToFold.DefMI, *UseMI))
+        if (execMayBeModifiedBeforeUse(
+                *MRI, UseMI->getOperand(UseOpIdx).getReg(),
+                *OpToFold.DefMI, *UseMI))
           return;
 
         // %vgpr = COPY %sgpr0

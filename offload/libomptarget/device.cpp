@@ -15,6 +15,8 @@
 #include "OpenMP/Mapping.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
+#include "OpenMP/OMPT/OmptCommonDefs.h"
+#include "OpenMP/OMPT/OmptTracing.h"
 #include "PluginManager.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
@@ -34,10 +36,12 @@
 #include <thread>
 
 #ifdef OMPT_SUPPORT
-using namespace llvm::omp::target::ompt;
+using namespace llvm::omp::target;
+using namespace ompt;
 #endif
 
 using namespace llvm::omp::target::plugin;
+using namespace llvm::omp::target::debug;
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {
@@ -48,7 +52,7 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   void *Event = getEvent();
   bool NeedNewEvent = Event == nullptr;
   if (NeedNewEvent && Device.createEvent(&Event) != OFFLOAD_SUCCESS) {
-    REPORT("Failed to create event\n");
+    REPORT() << "Failed to create event";
     return OFFLOAD_FAIL;
   }
 
@@ -56,7 +60,7 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   // know if the target support event. But if a target doesn't,
   // recordEvent should always return success.
   if (Device.recordEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
-    REPORT("Failed to set dependence on event " DPxMOD "\n", DPxPTR(Event));
+    REPORT() << "Failed to set dependence on event " << Event;
     return OFFLOAD_FAIL;
   }
 
@@ -68,7 +72,7 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
 
 DeviceTy::DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID)
     : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID),
-      MappingInfo(*this) {}
+      ForceSynchronousTargetRegions(false), MappingInfo(*this) {}
 
 DeviceTy::~DeviceTy() {
   if (DeviceID == -1 || !(getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE))
@@ -78,12 +82,19 @@ DeviceTy::~DeviceTy() {
   dumpTargetPointerMappings(&Loc, *this);
 }
 
+/// Used to set the asynchronous execution mode
+inline void setAsyncInfoSynchronous(__tgt_async_info *AI, bool SetSynchronous) {
+  if (SetSynchronous)
+    AI->ExecAsync = false;
+}
+
 llvm::Error DeviceTy::init() {
   int32_t Ret = RTL->init_device(RTLDeviceID);
   if (Ret != OFFLOAD_SUCCESS)
     return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
                                      "failed to initialize device %d\n",
                                      DeviceID);
+  setTeamProcs(RTL->number_of_team_procs(RTLDeviceID));
 
   // Enables recording kernels if set.
   BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
@@ -230,10 +241,15 @@ DeviceTy::loadBinary(__tgt_device_image *Img) {
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   /// RAII to establish tool anchors before and after data allocation
   void *TargetPtr = nullptr;
-  OMPT_IF_BUILT(InterfaceRAII TargetDataAllocRAII(
-                    RegionInterface.getCallbacks<ompt_target_data_alloc>(),
-                    DeviceID, HstPtr, &TargetPtr, Size,
-                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
+  OMPT_IF_BUILT(
+      InterfaceRAII TargetDataAllocRAII(
+          RegionInterface.getCallbacks<ompt_target_data_alloc>(), DeviceID,
+          HstPtr, &TargetPtr, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+      InterfaceRAII TargetDataAllocTraceRAII(
+          RegionInterface.getTraceGenerators<ompt_target_data_alloc>(),
+          RTLDeviceID, HstPtr, &TargetPtr, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   TargetPtr = RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
   return TargetPtr;
@@ -241,11 +257,15 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
 
 int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
   /// RAII to establish tool anchors before and after data deletion
-  OMPT_IF_BUILT(InterfaceRAII TargetDataDeleteRAII(
-                    RegionInterface.getCallbacks<ompt_target_data_delete>(),
-                    DeviceID, TgtAllocBegin,
-                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
-
+  OMPT_IF_BUILT(
+      InterfaceRAII TargetDataDeleteRAII(
+          RegionInterface.getCallbacks<ompt_target_data_delete>(), DeviceID,
+          TgtAllocBegin,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+      InterfaceRAII TargetDataDeleteTraceRAII(
+          RegionInterface.getTraceGenerators<ompt_target_data_delete>(),
+          DeviceID, TgtAllocBegin,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
   return RTL->data_delete(RTLDeviceID, TgtAllocBegin, Kind);
 }
 
@@ -262,8 +282,18 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
       InterfaceRAII TargetDataSubmitRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_to_device>(),
           omp_get_initial_device(), HstPtrBegin, DeviceID, TgtPtrBegin, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+      // Only if 'TracedDeviceId' is actually traced, AsyncInfo->OmptEventInfo
+      // is set and a trace record generated. Otherwise: No OMPT device tracing.
+      TracerInterfaceRAII TargetDataSubmitTraceRAII(
+          RegionInterface
+              .getTraceGenerators<ompt_target_data_transfer_to_device>(),
+          AsyncInfo, RTL->getProfiler(), /*TracedDeviceId=*/DeviceID,
+          /*EventType=*/ompt_callback_target_data_op, omp_get_initial_device(),
+          HstPtrBegin, DeviceID, TgtPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
+  setAsyncInfoSynchronous(AsyncInfo, ForceSynchronousTargetRegions);
   return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
                                 AsyncInfo);
 }
@@ -282,8 +312,18 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
       InterfaceRAII TargetDataRetrieveRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
           DeviceID, TgtPtrBegin, omp_get_initial_device(), HstPtrBegin, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+      // Only if 'TracedDeviceId' is actually traced, AsyncInfo->OmptEventInfo
+      // is set and a trace record generated. Otherwise: No OMPT device tracing.
+      TracerInterfaceRAII TargetDataSubmitTraceRAII(
+          RegionInterface
+              .getTraceGenerators<ompt_target_data_transfer_from_device>(),
+          AsyncInfo, RTL->getProfiler(), /*TracedDeviceId=*/DeviceID,
+          /*EventType=*/ompt_callback_target_data_op, DeviceID, TgtPtrBegin,
+          omp_get_initial_device(), HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
+  setAsyncInfoSynchronous(AsyncInfo, ForceSynchronousTargetRegions);
   return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
                                   AsyncInfo);
 }
@@ -301,11 +341,18 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
       InterfaceRAII TargetDataExchangeRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
           RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+      // Only if 'TracedDeviceId' is actually traced, AsyncInfo->OmptEventInfo
+      // is set and a trace record generated. Otherwise: No OMPT device tracing.
+      TracerInterfaceRAII TargetDataExchangeTraceRAII(
+          RegionInterface
+              .getTraceGenerators<ompt_target_data_transfer_from_device>(),
+          AsyncInfo, RTL->getProfiler(), /*TracedDeviceId=*/RTLDeviceID,
+          /*EventType=*/ompt_callback_target_data_op, RTLDeviceID, SrcPtr,
+          DstDev.RTLDeviceID, DstPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
-  if (!AsyncInfo) {
-    return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
-                              Size);
-  }
+
+  setAsyncInfoSynchronous(AsyncInfo, ForceSynchronousTargetRegions);
   return RTL->data_exchange_async(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID,
                                   DstPtr, Size, AsyncInfo);
 }
@@ -315,21 +362,21 @@ int32_t DeviceTy::dataFence(AsyncInfoTy &AsyncInfo) {
 }
 
 int32_t DeviceTy::notifyDataMapped(void *HstPtr, int64_t Size) {
-  DP("Notifying about new mapping: HstPtr=" DPxMOD ", Size=%" PRId64 "\n",
-     DPxPTR(HstPtr), Size);
+  ODBG(ODT_Mapping) << "Notifying about new mapping: HstPtr=" << HstPtr
+                    << ", Size=" << Size;
 
   if (RTL->data_notify_mapped(RTLDeviceID, HstPtr, Size)) {
-    REPORT("Notifying about data mapping failed.\n");
+    REPORT() << "Notifying about data mapping failed.";
     return OFFLOAD_FAIL;
   }
   return OFFLOAD_SUCCESS;
 }
 
 int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
-  DP("Notifying about an unmapping: HstPtr=" DPxMOD "\n", DPxPTR(HstPtr));
+  ODBG(ODT_Mapping) << "Notifying about an unmapping: HstPtr=" << HstPtr;
 
   if (RTL->data_notify_unmapped(RTLDeviceID, HstPtr)) {
-    REPORT("Notifying about data unmapping failed.\n");
+    REPORT() << "Notifying about data unmapping failed.";
     return OFFLOAD_FAIL;
   }
   return OFFLOAD_SUCCESS;
@@ -339,6 +386,8 @@ int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
 int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
                                ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
                                AsyncInfoTy &AsyncInfo) {
+
+  setAsyncInfoSynchronous(AsyncInfo, ForceSynchronousTargetRegions);
   return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
                             &KernelArgs, AsyncInfo);
 }
@@ -402,7 +451,30 @@ void DeviceTy::dumpOffloadEntries() {
 bool DeviceTy::useAutoZeroCopy() {
   if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY)
     return false;
+
   return RTL->use_auto_zero_copy(RTLDeviceID);
+}
+
+bool DeviceTy::checkIfAPU() { return RTL->has_apu_device(RTLDeviceID); }
+
+bool DeviceTy::supportsUnifiedMemory() {
+  return RTL->supports_unified_memory(RTLDeviceID);
+}
+
+void DeviceTy::zeroCopySanityChecksAndDiag(bool isUnifiedSharedMemory,
+                                           bool isAutoZeroCopy,
+                                           bool isEagerMaps) {
+  RTL->zero_copy_sanity_checks_and_diag(RTLDeviceID, isUnifiedSharedMemory,
+                                        isAutoZeroCopy, isEagerMaps);
+}
+
+uint32_t DeviceTy::getNumMultiDevices() const {
+  return RTL->get_num_multi_devices(RTLDeviceID);
+}
+
+// Check if kernel is a multi device kernel
+bool DeviceTy::isMultiDeviceKernel(void *TgtEntryPtr) {
+  return RTL->kernel_is_multi_device(RTLDeviceID, TgtEntryPtr);
 }
 
 bool DeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {

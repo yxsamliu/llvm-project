@@ -567,8 +567,13 @@ void Sema::Initialize() {
   }
 
   if (Context.getTargetInfo().getTriple().isAMDGPU() ||
+      (Context.getTargetInfo().getTriple().isSPIRV() &&
+       Context.getTargetInfo().getTriple().getVendor() == llvm::Triple::AMD) ||
       (Context.getAuxTargetInfo() &&
-       Context.getAuxTargetInfo()->getTriple().isAMDGPU())) {
+       (Context.getAuxTargetInfo()->getTriple().isAMDGPU() ||
+        (Context.getAuxTargetInfo()->getTriple().isSPIRV() &&
+         Context.getAuxTargetInfo()->getTriple().getVendor() ==
+             llvm::Triple::AMD)))) {
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   addImplicitTypedef(Name, Context.SingletonId);
 #include "clang/Basic/AMDGPUTypes.def"
@@ -1497,6 +1502,9 @@ void Sema::ActOnEndOfTranslationUnit() {
 
   if (LangOpts.HLSL)
     HLSL().ActOnEndOfTranslationUnit(getASTContext().getTranslationUnitDecl());
+  if (LangOpts.OpenACC)
+    OpenACC().ActOnEndOfTranslationUnit(
+        getASTContext().getTranslationUnitDecl());
 
   // If there were errors, disable 'unused' warnings since they will mostly be
   // noise. Don't warn for a use from a module: either we should warn on all

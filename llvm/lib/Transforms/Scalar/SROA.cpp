@@ -3150,7 +3150,6 @@ private:
     assert(IsSplit || BeginOffset == NewBeginOffset);
     uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
 
-#ifndef NDEBUG
     StringRef OldName = OldPtr->getName();
     // Skip through the last '.sroa.' component of the name.
     size_t LastSROAPrefix = OldName.rfind(".sroa.");
@@ -3169,17 +3168,10 @@ private:
     }
     // Strip any SROA suffixes as well.
     OldName = OldName.substr(0, OldName.find(".sroa_"));
-#endif
 
     return getAdjustedPtr(IRB, DL, &NewAI,
                           APInt(DL.getIndexTypeSizeInBits(PointerTy), Offset),
-                          PointerTy,
-#ifndef NDEBUG
-                          Twine(OldName) + "."
-#else
-                          Twine()
-#endif
-    );
+                          PointerTy, Twine(OldName) + ".");
   }
 
   /// Compute suitable alignment to access this slice of the *new*
@@ -3280,7 +3272,7 @@ private:
       // Copy any metadata that is valid for the new load. This may require
       // conversion to a different kind of metadata, e.g. !nonnull might change
       // to !range or vice versa.
-      copyMetadataForAccess(*NewLI, LI);
+      copyMetadataForLoad(*NewLI, LI);
 
       // Do this after copyMetadataForLoad() to preserve the TBAA shift.
       if (AATags)
@@ -5444,6 +5436,15 @@ static DIExpression *createOrReplaceFragment(const DIExpression *Expr,
   bool HasFragment = false;
   bool HasBitExtract = false;
 
+  if (auto NewElems = Expr->getNewElementsRef()) {
+    DIExprBuilder B(Expr->getContext());
+    for (DIOp::Variant Op : *NewElems)
+      if (!std::holds_alternative<DIOp::Fragment>(Op))
+        B.append(Op);
+    B.append<DIOp::Fragment>(Frag.OffsetInBits, Frag.SizeInBits);
+    return B.intoExpression();
+  }
+
   for (auto &Op : Expr->expr_ops()) {
     if (Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
       HasFragment = true;
@@ -5551,6 +5552,19 @@ insertNewDbgInst(DIBuilder &DIB, DbgVariableRecord *Orig, AllocaInst *NewAddr,
       NewAddrExpr, Orig->getDebugLoc());
   LLVM_DEBUG(dbgs() << "Created new DVRAssign: " << *NewAssign << "\n");
   (void)NewAssign;
+}
+
+static bool isNoOffsetDIOpExpr(const DIExpression *Expr) {
+  auto OptNewOps = Expr->getNewElementsRef();
+  if (!OptNewOps)
+    return false;
+
+  ArrayRef<DIOp::Variant> NewOps = *OptNewOps;
+  if (!NewOps.empty() && std::holds_alternative<DIOp::Fragment>(NewOps.back()))
+    NewOps = NewOps.drop_back();
+
+  return NewOps.size() == 2 && std::holds_alternative<DIOp::Arg>(NewOps[0]) &&
+         std::holds_alternative<DIOp::Deref>(NewOps[1]);
 }
 
 /// Walks the slices of an alloca and form partitions based on them,
@@ -5666,7 +5680,12 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
     // that come after it.
     int64_t CurrentExprOffsetInBytes = 0;
     SmallVector<uint64_t> PostOffsetOps;
-    if (!getAddressExpression(DbgVariable)
+    const DIExpression *NoOffsetDIOpExpr = nullptr;
+    if (isNoOffsetDIOpExpr(getAddressExpression(DbgVariable))) {
+      NoOffsetDIOpExpr = getAddressExpression(DbgVariable);
+      ArrayRef<uint64_t> PoisonElems = NoOffsetDIOpExpr->getElements();
+      PostOffsetOps.append(PoisonElems.begin(), PoisonElems.end());
+    } else if (!getAddressExpression(DbgVariable)
              ->extractLeadingOffset(CurrentExprOffsetInBytes, PostOffsetOps))
       return; // Couldn't interpret this DIExpression - drop the var.
 
@@ -5727,6 +5746,8 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
       if (OffestFromNewAllocaInBits > 0) {
         int64_t OffsetInBytes = (OffestFromNewAllocaInBits + 7) / 8;
         NewExpr = DIExpression::prepend(NewExpr, /*flags=*/0, OffsetInBytes);
+      } else if (NoOffsetDIOpExpr && OffestFromNewAllocaInBits == 0) {
+        NewExpr = const_cast<DIExpression *>(NoOffsetDIOpExpr);
       }
 
       // Remove any existing intrinsics on the new alloca describing

@@ -154,7 +154,7 @@ def bp_startup_sort: JJ<"bp-startup-sort=">, MetaVarName<"[none,function]">,
 
 // Auxiliary options related to balanced partition
 defm bp_compression_sort_startup_functions: BB<"bp-compression-sort-startup-functions",
-  "When --irpgo-profile is pecified, prioritize function similarity for compression in addition to startup time", "">;
+  "When --irpgo-profile is specified, prioritize function similarity for compression in addition to startup time", "">;
 def verbose_bp_section_orderer: FF<"verbose-bp-section-orderer">,
   HelpText<"Print information on balanced partitioning">;
 
@@ -526,7 +526,7 @@ defm unresolved_symbols:
   Eq<"unresolved-symbols", "Determine how to handle unresolved symbols">;
 
 defm undefined_version: B<"undefined-version",
-  "Allow unused version in version script (disabled by default)",
+  "Allow unused version in version script (default)",
   "Report version scripts that refer undefined symbols">;
 
 defm rsp_quoting: EEq<"rsp-quoting", "Quoting style for response files">,
