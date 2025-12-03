@@ -1427,7 +1427,7 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   }
 }
 
-static void getCoopAtomicOperandsInfo(const CallInst &CI, bool IsLoad,
+static void getCoopAtomicOperandsInfo(const CallBase &CI, bool IsLoad,
                                       TargetLoweringBase::IntrinsicInfo &Info) {
   Value *OrderingArg = CI.getArgOperand(IsLoad ? 1 : 2);
   unsigned Ord = cast<ConstantInt>(OrderingArg)->getZExtValue();
@@ -1457,7 +1457,7 @@ static void getCoopAtomicOperandsInfo(const CallInst &CI, bool IsLoad,
 }
 
 bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                          const CallInst &CI,
+                                          const CallBase &CI,
                                           MachineFunction &MF,
                                           unsigned IntrID) const {
   Info.flags = MachineMemOperand::MONone;
