@@ -221,6 +221,8 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_V2INT32,
   OPERAND_REG_IMM_V2FP32,
   OPERAND_REG_IMM_V2FP64,
+  OPERAND_REG_IMM_V4FP16,
+  OPERAND_REG_IMM_V4BF16,
 
   /// Operands with register or inline constant
   OPERAND_REG_INLINE_C_INT16,

@@ -607,6 +607,7 @@ void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
       switch (OpDesc.OperandType) {
       case AMDGPU::OPERAND_REG_IMM_BF16:
       case AMDGPU::OPERAND_REG_IMM_V2BF16:
+      case AMDGPU::OPERAND_REG_IMM_V4BF16:
       case AMDGPU::OPERAND_REG_INLINE_C_BF16:
       case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
         Imm = getInlineImmValBF16(Imm);
@@ -614,6 +615,7 @@ void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
       case AMDGPU::OPERAND_REG_IMM_FP16:
       case AMDGPU::OPERAND_REG_IMM_INT16:
       case AMDGPU::OPERAND_REG_IMM_V2FP16:
+      case AMDGPU::OPERAND_REG_IMM_V4FP16:
       case AMDGPU::OPERAND_REG_INLINE_C_FP16:
       case AMDGPU::OPERAND_REG_INLINE_C_INT16:
       case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
@@ -759,7 +761,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         break;
 
       if (isGFX1260Only() &&
-          tryDecodeInst(DecoderTableGFX1260_FAKE1664, MI, QW, Address, CS))
+          tryDecodeInst(DecoderTableGFX1260_FAKE1664, DecoderTableGFX126064, MI,
+                        QW, Address, CS))
         break;
 
       if ((isVI() || isGFX9()) &&
@@ -1749,6 +1752,7 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
     UseLit = AMDGPU::isInlinableLiteralBF16(Val, HasInv2Pi);
     break;
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
+  case AMDGPU::OPERAND_REG_IMM_V4BF16:
     UseLit = AMDGPU::isInlinableLiteralV2BF16(Val);
     break;
   case AMDGPU::OPERAND_REG_IMM_FP16:
@@ -1757,6 +1761,7 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
     UseLit = AMDGPU::isInlinableLiteralFP16(Val, HasInv2Pi);
     break;
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V4FP16:
     UseLit = AMDGPU::isInlinableLiteralV2F16(Val);
     break;
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:

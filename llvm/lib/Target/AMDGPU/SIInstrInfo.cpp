@@ -4695,9 +4695,11 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
     return AMDGPU::isInlinableLiteralV2I16(Imm);
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V4FP16:
     return AMDGPU::isInlinableLiteralV2F16(Imm);
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
+  case AMDGPU::OPERAND_REG_IMM_V4BF16:
     return AMDGPU::isInlinableLiteralV2BF16(Imm);
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT16:
@@ -5177,6 +5179,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     case AMDGPU::OPERAND_REG_IMM_V2BF16:
     case AMDGPU::OPERAND_REG_IMM_V2FP64:
     case AMDGPU::OPERAND_REG_IMM_V2INT64:
+    case AMDGPU::OPERAND_REG_IMM_V4FP16:
+    case AMDGPU::OPERAND_REG_IMM_V4BF16:
       break;
     case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
       break;
