@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/Support/raw_ostream.h"
+#include <memory>
 #include <optional>
 
 namespace llvm {
@@ -34,6 +35,10 @@ class MachineFunction;
 class SIMachineFunctionInfo;
 class SIRegisterInfo;
 class TargetRegisterClass;
+
+namespace AMDGPU {
+struct KernelPerfReport;
+} // namespace AMDGPU
 
 class AMDGPUPseudoSourceValue : public PseudoSourceValue {
 public:
@@ -1285,6 +1290,17 @@ public:
   // rank-functions.
   bool getPreservePreloadedSGPRs() const { return PreservePreloadedSGPRs; }
   void setPreservePreloadedSGPRs() { PreservePreloadedSGPRs = true; }
+
+  // Static simulator report (shared to allow MFI copy)
+  std::shared_ptr<AMDGPU::KernelPerfReport> StaticSimReport;
+
+  bool hasStaticSimReport() const { return StaticSimReport != nullptr; }
+  const AMDGPU::KernelPerfReport *getStaticSimReport() const {
+    return StaticSimReport.get();
+  }
+  void setStaticSimReport(std::shared_ptr<AMDGPU::KernelPerfReport> Report) {
+    StaticSimReport = std::move(Report);
+  }
 };
 
 } // end namespace llvm
