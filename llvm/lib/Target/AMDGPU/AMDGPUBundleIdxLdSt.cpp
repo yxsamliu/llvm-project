@@ -186,7 +186,7 @@ private:
   void lowerLanesharedPseudoInst(MachineInstr &MI);
   void lowerLoadIdxBits(MachineInstr &MI);
   void lowerStoreIdxBits(MachineInstr &MI);
-  bool expandPseudoInstructions(MachineFunction &MF);
+  bool expandPseudoInstructions(MachineFunction &MF, bool &HaveLoadStoreIdx);
   SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>, 4>
   findSuccsToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB);
   Register computeNewIdxForPrivateObject(MachineRegisterInfo &MRI,
@@ -1110,7 +1110,7 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
-bool AMDGPUBundleIdxLdSt::expandPseudoInstructions(MachineFunction &MF) {
+bool AMDGPUBundleIdxLdSt::expandPseudoInstructions(MachineFunction &MF, bool &HaveLoadStoreIdx) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
@@ -1120,17 +1120,23 @@ bool AMDGPUBundleIdxLdSt::expandPseudoInstructions(MachineFunction &MF) {
         // their temporary pseudos into bundles as late as possible
         Changed = true;
         lowerLanesharedPseudoInst(MI);
+        continue;
       }
       if (MI.getOpcode() == AMDGPU::V_LOAD_IDX_BITS) {
         Changed = true;
         lowerLoadIdxBits(MI);
+        continue;
       }
       if (MI.getOpcode() == AMDGPU::V_STORE_IDX_BITS) {
         Changed = true;
         lowerStoreIdxBits(MI);
+        continue;
       }
+      if (isa<AMDGPUMI::VLoadStoreIdxInst>(MI))
+        HaveLoadStoreIdx = true;
     }
   }
+  HaveLoadStoreIdx |= Changed;
   return Changed;
 }
 
@@ -1568,10 +1574,15 @@ bool AMDGPUBundleIdxLdSt::runOnMachineFunction(MachineFunction &MF) {
   MCSTI = MF.getTarget().getMCSubtargetInfo();
 
   bool Changed = false;
+  bool HaveLoadStoreIdx = false;
   LLVM_DEBUG(
       dbgs()
       << "===== AMDGPUBundleIdxLdSt :: Lower pseudo-Instructions =====\n");
-  Changed |= expandPseudoInstructions(MF);
+  Changed |= expandPseudoInstructions(MF, HaveLoadStoreIdx);
+  if (!HaveLoadStoreIdx) {
+    assert(!Changed);
+    return false; // early out
+  }
 
   if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
     AA = &AAR->getAAResults();
