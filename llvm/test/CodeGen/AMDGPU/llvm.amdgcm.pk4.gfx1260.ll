@@ -10,7 +10,7 @@ define void @test_pk4_fma_f16(<4 x half> %a, <4 x half> %b, <4 x half> %c, ptr %
 ; GFX1260-NEXT:    v_pk4_fma_f16 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GFX1260-NEXT:    flat_store_b64 v[6:7], v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
-; GFX1260-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x half> @llvm.amdgcn.pk4.fma.f16(<4 x half> %a, <4 x half> %b, <4 x half> %c)
   store <4 x half> %0, ptr %outf
@@ -25,7 +25,7 @@ define void @test_pk4_mul_f16(<4 x half> %a, <4 x half> %b, <4 x half> %c, ptr %
 ; GFX1260-NEXT:    v_pk4_mul_f16 v[0:1], v[0:1], v[2:3]
 ; GFX1260-NEXT:    flat_store_b64 v[6:7], v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
-; GFX1260-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x half> @llvm.amdgcn.pk4.mul.f16(<4 x half> %a, <4 x half> %b)
   store <4 x half> %0, ptr %outf
@@ -40,7 +40,7 @@ define void @test_pk4_add_f16(<4 x half> %a, <4 x half> %b, <4 x half> %c, ptr %
 ; GFX1260-NEXT:    v_pk4_add_f16 v[0:1], v[0:1], v[2:3]
 ; GFX1260-NEXT:    flat_store_b64 v[6:7], v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
-; GFX1260-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x half> @llvm.amdgcn.pk4.add.f16(<4 x half> %a, <4 x half> %b)
   store <4 x half> %0, ptr %outf
@@ -55,7 +55,7 @@ define void @test_pk4_max_num_f16(<4 x half> %a, <4 x half> %b, <4 x half> %c, p
 ; GFX1260-NEXT:    v_pk4_max_num_f16 v[0:1], v[0:1], v[2:3]
 ; GFX1260-NEXT:    flat_store_b64 v[6:7], v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
-; GFX1260-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x half> @llvm.amdgcn.pk4.max.num.f16(<4 x half> %a, <4 x half> %b)
   store <4 x half> %0, ptr %outf
@@ -70,7 +70,7 @@ define void @test_pk4_min_num_f16(<4 x half> %a, <4 x half> %b, <4 x half> %c, p
 ; GFX1260-NEXT:    v_pk4_min_num_f16 v[0:1], v[0:1], v[2:3]
 ; GFX1260-NEXT:    flat_store_b64 v[6:7], v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
-; GFX1260-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x half> @llvm.amdgcn.pk4.min.num.f16(<4 x half> %a, <4 x half> %b)
   store <4 x half> %0, ptr %outf
@@ -85,7 +85,7 @@ define void @test_pk4_max3_num_f16(<4 x half> %a, <4 x half> %b, <4 x half> %c, 
 ; GFX1260-NEXT:    v_pk4_max3_num_f16 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GFX1260-NEXT:    flat_store_b64 v[6:7], v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
-; GFX1260-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x half> @llvm.amdgcn.pk4.max3.num.f16(<4 x half> %a, <4 x half> %b, <4 x half> %c)
   store <4 x half> %0, ptr %outf
@@ -100,7 +100,7 @@ define void @test_pk4_min3_num_f16(<4 x half> %a, <4 x half> %b, <4 x half> %c, 
 ; GFX1260-NEXT:    v_pk4_min3_num_f16 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GFX1260-NEXT:    flat_store_b64 v[6:7], v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
-; GFX1260-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x half> @llvm.amdgcn.pk4.min3.num.f16(<4 x half> %a, <4 x half> %b, <4 x half> %c)
   store <4 x half> %0, ptr %outf
@@ -115,7 +115,7 @@ define void @test_pk4_maximum3_f16(<4 x half> %a, <4 x half> %b, <4 x half> %c, 
 ; GFX1260-NEXT:    v_pk4_maximum3_f16 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GFX1260-NEXT:    flat_store_b64 v[6:7], v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
-; GFX1260-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x half> @llvm.amdgcn.pk4.maximum3.f16(<4 x half> %a, <4 x half> %b, <4 x half> %c)
   store <4 x half> %0, ptr %outf
@@ -130,7 +130,7 @@ define void @test_pk4_minimum3_f16(<4 x half> %a, <4 x half> %b, <4 x half> %c, 
 ; GFX1260-NEXT:    v_pk4_minimum3_f16 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GFX1260-NEXT:    flat_store_b64 v[6:7], v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
-; GFX1260-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x half> @llvm.amdgcn.pk4.minimum3.f16(<4 x half> %a, <4 x half> %b, <4 x half> %c)
   store <4 x half> %0, ptr %outf
@@ -145,7 +145,7 @@ define void @test_pk4_fma_bf16(<4 x bfloat> %a, <4 x bfloat> %b, <4 x bfloat> %c
 ; GFX1260-NEXT:    v_pk4_fma_bf16 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GFX1260-NEXT:    flat_store_b64 v[6:7], v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
-; GFX1260-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x bfloat> @llvm.amdgcn.pk4.fma.bf16(<4 x bfloat> %a, <4 x bfloat> %b, <4 x bfloat> %c)
   store <4 x bfloat> %0, ptr %outf
@@ -160,7 +160,7 @@ define void @test_pk4_add_bf16(<4 x bfloat> %a, <4 x bfloat> %b, <4 x bfloat> %c
 ; GFX1260-NEXT:    v_pk4_add_bf16 v[0:1], v[0:1], v[2:3]
 ; GFX1260-NEXT:    flat_store_b64 v[6:7], v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
-; GFX1260-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x bfloat> @llvm.amdgcn.pk4.add.bf16(<4 x bfloat> %a, <4 x bfloat> %b)
   store <4 x bfloat> %0, ptr %outf
@@ -175,7 +175,7 @@ define void @test_pk4_mul_bf16(<4 x bfloat> %a, <4 x bfloat> %b, <4 x bfloat> %c
 ; GFX1260-NEXT:    v_pk4_mul_bf16 v[0:1], v[0:1], v[2:3]
 ; GFX1260-NEXT:    flat_store_b64 v[6:7], v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
-; GFX1260-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x bfloat> @llvm.amdgcn.pk4.mul.bf16(<4 x bfloat> %a, <4 x bfloat> %b)
   store <4 x bfloat> %0, ptr %outf
@@ -190,7 +190,7 @@ define void @test_pk4_max_num_bf16(<4 x bfloat> %a, <4 x bfloat> %b, <4 x bfloat
 ; GFX1260-NEXT:    v_pk4_max_num_bf16 v[0:1], v[0:1], v[2:3]
 ; GFX1260-NEXT:    flat_store_b64 v[6:7], v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
-; GFX1260-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x bfloat> @llvm.amdgcn.pk4.max.num.bf16(<4 x bfloat> %a, <4 x bfloat> %b)
   store <4 x bfloat> %0, ptr %outf
@@ -205,7 +205,7 @@ define void @test_pk4_min_num_bf16(<4 x bfloat> %a, <4 x bfloat> %b, <4 x bfloat
 ; GFX1260-NEXT:    v_pk4_min_num_bf16 v[0:1], v[0:1], v[2:3]
 ; GFX1260-NEXT:    flat_store_b64 v[6:7], v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
-; GFX1260-NEXT:    s_setpc_b64 s[30:31]
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x bfloat> @llvm.amdgcn.pk4.min.num.bf16(<4 x bfloat> %a, <4 x bfloat> %b)
   store <4 x bfloat> %0, ptr %outf
