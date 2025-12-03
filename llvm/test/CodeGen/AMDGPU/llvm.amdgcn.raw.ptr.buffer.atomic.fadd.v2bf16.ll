@@ -2,6 +2,7 @@
 ; FIXME: Test 90a, 940. 908 should fail to select.
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX1200 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1260 < %s | FileCheck -check-prefix=GFX1260 %s
 
 define <2 x bfloat> @raw_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__sgpr_rsrc__vgpr_voffset_add__sgpr_soffset(<2 x bfloat> %val, ptr addrspace(8) inreg %rsrc, i32 %voffset, i32 inreg %soffset) #0 {
 ; GFX1200-LABEL: raw_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__sgpr_rsrc__vgpr_voffset_add__sgpr_soffset:
@@ -23,6 +24,15 @@ define <2 x bfloat> @raw_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__sgpr_rsrc__
 ; GFX1250-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s16 offen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1260-LABEL: raw_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__sgpr_rsrc__vgpr_voffset_add__sgpr_soffset:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    v_add_nc_u32_e32 v1, 0x80, v1
+; GFX1260-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s16 offen th:TH_ATOMIC_RETURN
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %voffset.add = add i32 %voffset, 128
   %ret = call <2 x bfloat> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 %soffset, i32 0)
   ret <2 x bfloat> %ret
@@ -47,6 +57,14 @@ define <2 x bfloat> @raw_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__sgpr_rsrc__
 ; GFX1250-NEXT:    buffer_atomic_pk_add_bf16 v0, off, s[0:3], s16 offset:92 th:TH_ATOMIC_NT_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1260-LABEL: raw_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__sgpr_rsrc__0_voffset__sgpr_soffset__slc:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    buffer_atomic_pk_add_bf16 v0, off, s[0:3], s16 offset:92 th:TH_ATOMIC_NT_RETURN
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %ret = call <2 x bfloat> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, ptr addrspace(8) %rsrc, i32 92, i32 %soffset, i32 2)
   ret <2 x bfloat> %ret
 }
@@ -69,6 +87,14 @@ define void @raw_ptr_buffer_atomic_add_v2bf16_noret__vgpr_val__sgpr_rsrc__vgpr_v
 ; GFX1250-NEXT:    v_add_nc_u32_e32 v1, 0x80, v1
 ; GFX1250-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s16 offen
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1260-LABEL: raw_ptr_buffer_atomic_add_v2bf16_noret__vgpr_val__sgpr_rsrc__vgpr_voffset_add__sgpr_soffset:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    v_add_nc_u32_e32 v1, 0x80, v1
+; GFX1260-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s16 offen
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %voffset.add = add i32 %voffset, 128
   %unused = call <2 x bfloat> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 %soffset, i32 0)
   ret void
@@ -91,6 +117,13 @@ define void @raw_ptr_buffer_atomic_add_v2bf16_noret__vgpr_val__sgpr_rsrc__0_voff
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    buffer_atomic_pk_add_bf16 v0, off, s[0:3], s16 offset:92 th:TH_ATOMIC_NT
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1260-LABEL: raw_ptr_buffer_atomic_add_v2bf16_noret__vgpr_val__sgpr_rsrc__0_voffset__sgpr_soffset__slc:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    buffer_atomic_pk_add_bf16 v0, off, s[0:3], s16 offset:92 th:TH_ATOMIC_NT
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %unused = call <2 x bfloat> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, ptr addrspace(8) %rsrc, i32 92, i32 %soffset, i32 2)
   ret void
 }
@@ -169,6 +202,44 @@ define <2 x bfloat> @raw_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__vgpr_rsrc__
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1260-LABEL: raw_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__vgpr_rsrc__vgpr_voffset_add__vgpr_soffset:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    v_mov_b32_e32 v11, v4
+; GFX1260-NEXT:    v_mov_b32_e32 v10, v3
+; GFX1260-NEXT:    v_mov_b32_e32 v9, v2
+; GFX1260-NEXT:    v_mov_b32_e32 v8, v1
+; GFX1260-NEXT:    v_add_nc_u32_e32 v1, 0x80, v5
+; GFX1260-NEXT:    s_mov_b32 s2, exec_lo
+; GFX1260-NEXT:  .LBB4_1: ; =>This Inner Loop Header: Depth=1
+; GFX1260-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_4)
+; GFX1260-NEXT:    v_readfirstlane_b32 s4, v8
+; GFX1260-NEXT:    v_readfirstlane_b32 s5, v9
+; GFX1260-NEXT:    v_readfirstlane_b32 s6, v10
+; GFX1260-NEXT:    v_readfirstlane_b32 s7, v11
+; GFX1260-NEXT:    v_readfirstlane_b32 s3, v6
+; GFX1260-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[8:9]
+; GFX1260-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1260-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[10:11]
+; GFX1260-NEXT:    v_cmp_eq_u32_e64 s1, s3, v6
+; GFX1260-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX1260-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1260-NEXT:    s_and_b32 s0, s0, s1
+; GFX1260-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[4:7], s3 offen th:TH_ATOMIC_RETURN
+; GFX1260-NEXT:    ; implicit-def: $vgpr8_vgpr9_vgpr10_vgpr11
+; GFX1260-NEXT:    ; implicit-def: $vgpr6
+; GFX1260-NEXT:    ; implicit-def: $vgpr1
+; GFX1260-NEXT:    s_wait_xcnt 0x0
+; GFX1260-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX1260-NEXT:    s_cbranch_execnz .LBB4_1
+; GFX1260-NEXT:  ; %bb.2:
+; GFX1260-NEXT:    s_mov_b32 exec_lo, s2
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %voffset.add = add i32 %voffset, 128
   %ret = call <2 x bfloat> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 %soffset, i32 0)
   ret <2 x bfloat> %ret

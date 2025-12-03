@@ -1,5 +1,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1260 < %s | FileCheck --check-prefix=GCN %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1260 < %s | FileCheck --check-prefix=GCN %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1300 -mattr=+lds-barrier-arrive-atomic < %s | FileCheck --check-prefix=GCN %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1300 -mattr=+lds-barrier-arrive-atomic < %s | FileCheck --check-prefix=GCN %s
 

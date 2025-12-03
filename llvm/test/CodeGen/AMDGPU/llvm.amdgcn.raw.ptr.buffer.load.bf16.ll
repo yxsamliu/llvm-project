@@ -5,6 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck --check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefix=GFX11 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefix=GFX12 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1260 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefix=GFX12 %s
 
 define bfloat @raw_ptr_buffer_load_bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX7-LABEL: raw_ptr_buffer_load_bf16:

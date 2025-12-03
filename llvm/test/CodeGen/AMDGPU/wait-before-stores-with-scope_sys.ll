@@ -2,7 +2,9 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX1200 %s
 ; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX1200 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250-SDAG %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1260 < %s | FileCheck -check-prefix=GFX1260-SDAG %s
 ; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1260 < %s | FileCheck -check-prefix=GFX1260-GISEL %s
 
 define amdgpu_ps void @intrinsic_store_system_scope(i32 %val, <4 x i32> inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {
 ; GFX1200-LABEL: intrinsic_store_system_scope:
@@ -17,12 +19,28 @@ define amdgpu_ps void @intrinsic_store_system_scope(i32 %val, <4 x i32> inreg %r
 ; GFX1250-SDAG-NEXT:    buffer_store_b32 v0, v[2:3], s[0:3], s4 idxen offen scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: intrinsic_store_system_scope:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v3, v2
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1260-SDAG-NEXT:    buffer_store_b32 v0, v[2:3], s[0:3], s4 idxen offen scope:SCOPE_SYS
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: intrinsic_store_system_scope:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-NEXT:    buffer_store_b32 v0, v[4:5], s[0:3], s4 idxen offen scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: intrinsic_store_system_scope:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v5, v2
+; GFX1260-GISEL-NEXT:    buffer_store_b32 v0, v[4:5], s[0:3], s4 idxen offen scope:SCOPE_SYS
+; GFX1260-GISEL-NEXT:    s_endpgm
   call void @llvm.amdgcn.struct.buffer.store.i32(i32 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 24)
   ret void
 }
@@ -42,6 +60,15 @@ define amdgpu_ps void @generic_store_volatile(i32 %val, ptr addrspace(1) %out) {
 ; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: generic_store_volatile:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v3, v2
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1260-SDAG-NEXT:    global_store_b32 v[2:3], v0, off scope:SCOPE_SYS
+; GFX1260-SDAG-NEXT:    s_wait_storecnt 0x0
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: generic_store_volatile:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -49,6 +76,15 @@ define amdgpu_ps void @generic_store_volatile(i32 %val, ptr addrspace(1) %out) {
 ; GFX1250-GISEL-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: generic_store_volatile:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v5, v2
+; GFX1260-GISEL-NEXT:    global_store_b32 v[4:5], v0, off scope:SCOPE_SYS
+; GFX1260-GISEL-NEXT:    s_wait_storecnt 0x0
+; GFX1260-GISEL-NEXT:    s_endpgm
   store volatile i32 %val, ptr addrspace(1) %out
   ret void
 }

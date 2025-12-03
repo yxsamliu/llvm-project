@@ -10563,11 +10563,11 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   if (MCOp == (uint16_t)-1 && ST.isGFX1170())
     MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX11);
 
-  if (MCOp == (uint16_t)-1 && ST.hasGFX1250Insts())
-    MCOp =
-        AMDGPU::getMCOpcode(Opcode, ST.getGeneration() == AMDGPUSubtarget::GFX13
-                                        ? SIEncodingFamily::GFX1250
-                                        : SIEncodingFamily::GFX12);
+  if (MCOp == (uint16_t)-1 && ST.hasGFX1250Insts()) {
+    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX1250);
+    if (MCOp == (uint16_t)-1)
+      MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX12);
+  }
 
   // -1 means that Opcode is already a native instruction.
   if (MCOp == -1)

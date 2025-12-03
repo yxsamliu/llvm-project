@@ -3,6 +3,8 @@
 ; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx1250 %t.bc -o - | FileCheck -check-prefixes=CHECK-MESA3D %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1250 %t.bc -o - | FileCheck --check-prefixes=CHECK-G-UNKNOWN %s
 ; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx1250 %t.bc -o - | FileCheck -check-prefixes=CHECK-G-MESA3D %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1260 %t.bc -o - | FileCheck --check-prefixes=GFX1260,GFX1260-SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1260 %t.bc -o - | FileCheck --check-prefixes=GFX1260,GFX1260-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1300 %t.bc -o - | FileCheck --check-prefixes=GFX13,GFX13-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1300 %t.bc -o - | FileCheck --check-prefixes=GFX13,GFX13-GISEL %s
 
@@ -190,6 +192,16 @@ define amdgpu_kernel void @test_cluster_id_x(ptr addrspace(1) %out) {
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-NEXT:    s_endpgm
+;
+; GFX1260-LABEL: test_cluster_id_x:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-NEXT:    s_load_b64 s[2:3], s[0:1], 0x24
+; GFX1260-NEXT:    v_mov_b32_e32 v0, ttmp9
+; GFX1260-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    global_store_b32 v1, v0, s[2:3]
+; GFX1260-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.cluster.id.x()
   store i32 %id, ptr addrspace(1) %out
   ret void
@@ -383,6 +395,16 @@ define amdgpu_kernel void @test_cluster_id_y(ptr addrspace(1) %out) #1 {
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-LABEL: test_cluster_id_y:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-NEXT:    s_load_b64 s[2:3], s[0:1], 0x24
+; GFX1260-NEXT:    v_mov_b32_e32 v0, ttmp7
+; GFX1260-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    global_store_b32 v1, v0, s[2:3]
+; GFX1260-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.cluster.id.y()
   store i32 %id, ptr addrspace(1) %out
   ret void
@@ -590,6 +612,30 @@ define amdgpu_kernel void @test_cluster_id_z(ptr addrspace(1) %out) #1 {
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-SDAG-LABEL: test_cluster_id_z:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[2:3], s[0:1], 0x24
+; GFX1260-SDAG-NEXT:    s_wait_xcnt 0x0
+; GFX1260-SDAG-NEXT:    s_lshr_b32 s0, ttmp7, 16
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v1, s0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_store_b32 v0, v1, s[2:3]
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: test_cluster_id_z:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[2:3], s[0:1], 0x24
+; GFX1260-GISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1260-GISEL-NEXT:    s_lshr_b32 s0, ttmp7, 16
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_store_b32 v1, v0, s[2:3]
+; GFX1260-GISEL-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.cluster.id.z()
   store i32 %id, ptr addrspace(1) %out
   ret void

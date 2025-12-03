@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -filetype=obj < %s 2>&1 | llvm-objdump -d --section=.rodata - | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1260 -filetype=obj < %s 2>&1 | llvm-objdump -d --section=.rodata - | FileCheck %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -filetype=obj < %s 2>&1 | llvm-objdump -d --section=.rodata - | FileCheck %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -filetype=obj < %s 2>&1 | llvm-objdump -d --section=.rodata - | FileCheck %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -filetype=obj < %s 2>&1 | llvm-objdump -d --section=.rodata - | FileCheck %s
