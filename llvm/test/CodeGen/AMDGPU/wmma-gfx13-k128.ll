@@ -57,6 +57,20 @@ entry:
   ret void
 }
 
+define amdgpu_ps void @test_wmma_f32_16x16x128_f8f6f4_clamp(<16 x i32> %A, <16 x i32> %B, <8 x float> %C, i32 %scale_a, i32 %scale_b, ptr addrspace(1) %out) {
+; GFX1370-LABEL: test_wmma_f32_16x16x128_f8f6f4_clamp:
+; GFX1370:       ; %bb.0: ; %entry
+; GFX1370-NEXT:    v_wmma_f32_16x16_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], v40, v41 aux_data:1152 clamp
+; GFX1370-NEXT:    s_clause 0x1
+; GFX1370-NEXT:    global_store_b128 v[42:43], v[36:39], off offset:16
+; GFX1370-NEXT:    global_store_b128 v[42:43], v[32:35], off
+; GFX1370-NEXT:    s_endpgm
+entry:
+  %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x128.f8f6f4.clamp(<16 x i32> %A, <16 x i32> %B, <8 x float> %C, i32 %scale_a, i32 %scale_b, i32 1152, i1 true)
+  store <8 x float> %res, ptr addrspace(1) %out
+  ret void
+}
+
 define amdgpu_ps void @test_wmma_f16_16x16x128_fp8_fp8_clamp(<16 x i32> %A, <16 x i32> %B, <8 x half> %C, ptr addrspace(1) %out) {
 ; GFX1370-LABEL: test_wmma_f16_16x16x128_fp8_fp8_clamp:
 ; GFX1370:       ; %bb.0: ; %entry
@@ -102,5 +116,57 @@ define amdgpu_ps void @test_wmma_f16_16x16x128_bf8_bf8_clamp(<16 x i32> %A, <16 
 entry:
   %res = call <8 x half> @llvm.amdgcn.wmma.f16.16x16x128.bf8.bf8.clamp(<16 x i32> %A, <16 x i32> %B, <8 x half> %C, i1 true)
   store <8 x half> %res, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @test_wmma_f32_16x16x32_f16_clamp(<16 x half> %A, <16 x half> %B, <8 x float> %C, ptr addrspace(1) %out) {
+; GFX1370-LABEL: test_wmma_f32_16x16x32_f16_clamp:
+; GFX1370:       ; %bb.0: ; %entry
+; GFX1370-NEXT:    v_wmma_f32_16x16_f16 v[16:23], v[0:7], v[8:15], v[16:23] clamp
+; GFX1370-NEXT:    s_clause 0x1
+; GFX1370-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
+; GFX1370-NEXT:    global_store_b128 v[24:25], v[16:19], off
+; GFX1370-NEXT:    s_endpgm
+entry:
+  %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.f16.clamp(<16 x half> %A, <16 x half> %B, <8 x float> %C, i1 true)
+  store <8 x float> %res, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @test_wmma_f16_16x16x32_f16_clamp(<16 x half> %A, <16 x half> %B, <8 x half> %C, ptr addrspace(1) %out) {
+; GFX1370-LABEL: test_wmma_f16_16x16x32_f16_clamp:
+; GFX1370:       ; %bb.0: ; %entry
+; GFX1370-NEXT:    v_wmma_f16_16x16_f16 v[16:19], v[0:7], v[8:15], v[16:19] clamp
+; GFX1370-NEXT:    global_store_b128 v[20:21], v[16:19], off
+; GFX1370-NEXT:    s_endpgm
+entry:
+  %res = call <8 x half> @llvm.amdgcn.wmma.f16.16x16x32.f16.clamp(<16 x half> %A, <16 x half> %B, <8 x half> %C, i1 true)
+  store <8 x half> %res, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @test_wmma_f32_16x16x32_bf16_clamp(<16 x bfloat> %A, <16 x bfloat> %B, <8 x float> %C, ptr addrspace(1) %out) {
+; GFX1370-LABEL: test_wmma_f32_16x16x32_bf16_clamp:
+; GFX1370:       ; %bb.0: ; %entry
+; GFX1370-NEXT:    v_wmma_f32_16x16_bf16 v[16:23], v[0:7], v[8:15], v[16:23] clamp
+; GFX1370-NEXT:    s_clause 0x1
+; GFX1370-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
+; GFX1370-NEXT:    global_store_b128 v[24:25], v[16:19], off
+; GFX1370-NEXT:    s_endpgm
+entry:
+  %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.bf16.clamp(<16 x bfloat> %A, <16 x bfloat> %B, <8 x float> %C, i1 true)
+  store <8 x float> %res, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @test_wmma_bf16_16x16x32_bf16_clamp(<16 x bfloat> %A, <16 x bfloat> %B, <8 x bfloat> %C, ptr addrspace(1) %out) {
+; GFX1370-LABEL: test_wmma_bf16_16x16x32_bf16_clamp:
+; GFX1370:       ; %bb.0: ; %entry
+; GFX1370-NEXT:    v_wmma_bf16_16x16_bf16 v[16:19], v[0:7], v[8:15], v[16:19] clamp
+; GFX1370-NEXT:    global_store_b128 v[20:21], v[16:19], off
+; GFX1370-NEXT:    s_endpgm
+entry:
+  %res = call <8 x bfloat> @llvm.amdgcn.wmma.bf16.16x16x32.bf16.clamp(<16 x bfloat> %A, <16 x bfloat> %B, <8 x bfloat> %C, i1 true)
+  store <8 x bfloat> %res, ptr addrspace(1) %out
   ret void
 }
