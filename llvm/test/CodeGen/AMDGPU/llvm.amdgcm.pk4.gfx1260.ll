@@ -2,6 +2,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1260 < %s | FileCheck -check-prefixes=GFX1260,GFX1260-SDAG %s
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1260 < %s | FileCheck -check-prefixes=GFX1260,GFX1260-GISEL %s
 
+; TODO: gisel do not support bfloat16 yet.
+
 define void @test_pk4_fma_f16(<4 x half> %a, <4 x half> %b, <4 x half> %c, ptr %outf) {
 ; GFX1260-LABEL: test_pk4_fma_f16:
 ; GFX1260:       ; %bb.0: ; %entry

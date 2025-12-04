@@ -967,7 +967,7 @@ def FeaturePermPkU2U3Insts : SubtargetFeature<"perm-pk-u2u3-insts",
 def FeaturePk4Insts : SubtargetFeature<"pk4-insts",
   "HasPk4Insts",
   "true",
-  "Has permute packed u2 and u3 instructions"
+  "Has pk4 instructions"
 >;
 
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
