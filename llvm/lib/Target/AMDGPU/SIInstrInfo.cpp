@@ -10959,8 +10959,7 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
   unsigned opcode = MI.getOpcode();
   if (opcode == AMDGPU::V_READLANE_B32 ||
       opcode == AMDGPU::V_READFIRSTLANE_B32 ||
-      opcode == AMDGPU::SI_RESTORE_S32_FROM_VGPR ||
-      opcode == AMDGPU::RTS_TRACE_RAY_NONBLOCK)
+      opcode == AMDGPU::SI_RESTORE_S32_FROM_VGPR)
     return InstructionUniformity::AlwaysUniform;
 
   if (isCopyInstr(MI)) {
