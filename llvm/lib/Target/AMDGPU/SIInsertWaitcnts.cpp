@@ -468,7 +468,8 @@ private:
 
   WaitcntGenerator *WCG = nullptr;
 
-  // S_ENDPGM instructions before which we should deallocate the VGPRs.
+  // S_ENDPGM instructions before which we should insert a DEALLOC_VGPRS
+  // message.
   DenseSet<MachineInstr *> ReleaseVGPRInsts;
 
   // S_ENDPGM instructions before which expert scheduling mode should
@@ -2459,7 +2460,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // Verify that the wait is actually needed.
   ScoreBrackets.simplifyWaitcnt(Wait);
 
-  // It is only necessary insert an S_WAITCNT_DEPCTR instruction that
+  // It is only necessary to insert an S_WAITCNT_DEPCTR instruction that
   // waits on VA_VDST if the instruction it would precede is not a VALU
   // instruction, since hardware handles VALU->VGPR->VALU hazards in
   // expert scheduling mode.
