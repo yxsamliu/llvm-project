@@ -1456,7 +1456,7 @@ public:
   /// \returns true if inline constants are not supported for F16 pseudo
   /// scalar transcendentals.
   bool hasNoF16PseudoScalarTransInlineConstants() const {
-    return getGeneration() == GFX12;
+    return getGeneration() == GFX12 || isGFX1170();
   }
 
   /// \returns true if the target has instructions with xf32 format support.
@@ -1647,6 +1647,10 @@ public:
   bool needsKernArgPreloadProlog() const {
     return hasKernargPreload() && !GFX1250Insts;
   }
+
+  bool hasCondSubInsts() const { return GFX12Insts; }
+
+  bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
