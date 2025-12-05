@@ -1479,13 +1479,14 @@ def TENSOR_SAVE : FLAT_Global_Tensor_Pseudo<"tensor_save", 1>;
 def TENSOR_STOP : FLAT_Global_Tensor_Pseudo<"tensor_stop">;
 } // End SubtargetPredicate = isGFX1250Plus
 
+// may apply CustomInsert to convert into V_LOAD_IDX and V_STORE_IDX
+// Every instruction which may be used to represent a dynamic load/store must
+// set this.
+let usesCustomInserter = 1 in {
 defm SCRATCH_LOAD_UBYTE    : FLAT_Scratch_Load_Pseudo <"scratch_load_ubyte">;
 defm SCRATCH_LOAD_SBYTE    : FLAT_Scratch_Load_Pseudo <"scratch_load_sbyte">;
 defm SCRATCH_LOAD_USHORT   : FLAT_Scratch_Load_Pseudo <"scratch_load_ushort">;
 defm SCRATCH_LOAD_SSHORT   : FLAT_Scratch_Load_Pseudo <"scratch_load_sshort">;
-
-// may apply CustomInsert to convert into V_LOAD_IDX and V_STORE_IDX
-let usesCustomInserter = 1 in {
 defm SCRATCH_LOAD_DWORD    : FLAT_Scratch_Load_Pseudo <"scratch_load_dword">;
 defm SCRATCH_LOAD_DWORDX2  : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx2", AVLdSt_64>;
 defm SCRATCH_LOAD_DWORDX3  : FLAT_Scratch_Load_Pseudo <"scratch_load_dwordx3", AVLdSt_96>;
@@ -1503,18 +1504,20 @@ let TiedSourceNotRead = 1 in {
 defm SCRATCH_LOAD_UBYTE_D16_HI : FLAT_Scratch_Load_Pseudo <"scratch_load_ubyte_d16_hi", AVLdSt_32, 1>;
 defm SCRATCH_LOAD_SBYTE_D16_HI : FLAT_Scratch_Load_Pseudo <"scratch_load_sbyte_d16_hi", AVLdSt_32, 1>;
 defm SCRATCH_LOAD_SHORT_D16_HI : FLAT_Scratch_Load_Pseudo <"scratch_load_short_d16_hi", AVLdSt_32, 1>;
-defm SCRATCH_LOAD_UBYTE_D16    : FLAT_Scratch_Load_Pseudo_t16 <"scratch_load_ubyte_d16">;
-defm SCRATCH_LOAD_SBYTE_D16    : FLAT_Scratch_Load_Pseudo_t16 <"scratch_load_sbyte_d16">;
-defm SCRATCH_LOAD_SHORT_D16    : FLAT_Scratch_Load_Pseudo_t16 <"scratch_load_short_d16">;
+let usesCustomInserter = 1 in {
+  defm SCRATCH_LOAD_UBYTE_D16    : FLAT_Scratch_Load_Pseudo_t16 <"scratch_load_ubyte_d16">;
+  defm SCRATCH_LOAD_SBYTE_D16    : FLAT_Scratch_Load_Pseudo_t16 <"scratch_load_sbyte_d16">;
+  defm SCRATCH_LOAD_SHORT_D16    : FLAT_Scratch_Load_Pseudo_t16 <"scratch_load_short_d16">;
 }
+} // End TiedSourceNotRead = 1
 
 defm SCRATCH_STORE_BYTE_D16_HI : FLAT_Scratch_Store_Pseudo <"scratch_store_byte_d16_hi">;
 defm SCRATCH_STORE_SHORT_D16_HI : FLAT_Scratch_Store_Pseudo <"scratch_store_short_d16_hi">;
 
-defm SCRATCH_STORE_BYTE    : FLAT_Scratch_Store_Pseudo_t16 <"scratch_store_byte">;
-defm SCRATCH_STORE_SHORT   : FLAT_Scratch_Store_Pseudo_t16 <"scratch_store_short">;
 // may apply CustomInsert to convert into V_LOAD_IDX and V_STORE_IDX
 let usesCustomInserter = 1 in {
+defm SCRATCH_STORE_BYTE    : FLAT_Scratch_Store_Pseudo_t16 <"scratch_store_byte">;
+defm SCRATCH_STORE_SHORT   : FLAT_Scratch_Store_Pseudo_t16 <"scratch_store_short">;
 defm SCRATCH_STORE_DWORD   : FLAT_Scratch_Store_Pseudo <"scratch_store_dword">;
 defm SCRATCH_STORE_DWORDX2 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx2", AVLdSt_64>;
 defm SCRATCH_STORE_DWORDX3 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx3", AVLdSt_96>;

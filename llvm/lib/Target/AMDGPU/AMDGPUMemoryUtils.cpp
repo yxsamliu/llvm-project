@@ -27,6 +27,11 @@ using namespace llvm;
 
 namespace llvm::AMDGPU {
 
+cl::opt<bool> PromoteSubDword("amdgpu-promote-sub-dword",
+                              cl::desc("Enable promotion of variables smaller "
+                                       "than 4 bytes to VGPRs"),
+                              cl::init(false), cl::Hidden);
+
 Align getAlign(const DataLayout &DL, const GlobalVariable *GV) {
   return DL.getValueOrABITypeAlignment(GV->getPointerAlignment(DL),
                                        GV->getValueType());
@@ -489,7 +494,8 @@ static bool isSupportedMemset(MemSetInst *I, const Value &V, Type *ValueType,
 }
 
 bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
-                        DenseSet<Value *> &Pointers, bool &MustInVGPR) {
+                        DenseSet<Value *> &Pointers, bool &MustInVGPR,
+                        bool PromoteSubDword) {
 
   MustInVGPR = false;
   const auto RejectUser = [&](Instruction *Inst, Twine Msg) {
@@ -574,12 +580,14 @@ bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
 
       auto Align = isa<LoadInst>(Inst) ? cast<LoadInst>(Inst)->getAlign()
                                        : cast<StoreInst>(Inst)->getAlign();
-      if (Align < 4u)
-        return RejectUser(Inst, "address is less than dword-aligned");
+      // TODO-GFX13 : Always promote after True16 is supported.
+      unsigned MinAlign = PromoteSubDword ? 1 : 4;
+      if (Align < MinAlign)
+        return RejectUser(Inst, "address is less than minimum alignment");
 
       Type *AccessTy = getLoadStoreType(Inst);
       auto DataSize = DL.getTypeAllocSize(AccessTy);
-      if (DataSize % 4)
+      if (DataSize % MinAlign)
         return RejectUser(Inst, "data-size is not supported");
 
       continue;

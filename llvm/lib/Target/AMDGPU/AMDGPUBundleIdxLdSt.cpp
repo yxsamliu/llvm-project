@@ -921,7 +921,9 @@ bool AMDGPUBundleIdxLdSt::updatePrivateObjectNewRegs(MachineRegisterInfo *MRI,
 void AMDGPUBundleIdxLdSt::lowerLoadIdxBits(MachineInstr &MI) {
   MachineBasicBlock *MBB = MI.getParent();
 
-  const MCInstrDesc &II = TII->get(AMDGPU::V_BFE_U32_e64);
+  const bool IsSigned = MI.getOperand(5).getImm() != 0;
+  const MCInstrDesc &II =
+      TII->get(IsSigned ? AMDGPU::V_BFE_I32_e64 : AMDGPU::V_BFE_U32_e64);
   Register ReadReg = MRI->createVirtualRegister(
       TRI->getAllocatableClass(TII->getRegClass(II, 0)));
 
