@@ -114,9 +114,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 < %s | FileCheck --check-prefixes=GFX1251 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1300 < %s | FileCheck --check-prefixes=GFX1300 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1301 < %s | FileCheck --check-prefixes=GFX1301 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx130E < %s | FileCheck --check-prefixes=GFX130E %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 < %s | FileCheck --check-prefixes=GFX1310 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1360 < %s | FileCheck --check-prefixes=GFX1360 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1370 < %s | FileCheck --check-prefixes=GFX1370 %s
 
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-generic -mattr=-xnack < %s | FileCheck --check-prefixes=GFX9_GENERIC_NOXNACK %s
@@ -224,9 +224,9 @@
 ; GFX1250: .amdgcn_target "amdgcn-amd-amdhsa--gfx1250"
 ; GFX1251: .amdgcn_target "amdgcn-amd-amdhsa--gfx1251"
 ; GFX1300: .amdgcn_target "amdgcn-amd-amdhsa--gfx1300"
-; GFX1301: .amdgcn_target "amdgcn-amd-amdhsa--gfx1301"
 ; GFX130E: .amdgcn_target "amdgcn-amd-amdhsa--gfx130E"
 ; GFX1310: .amdgcn_target "amdgcn-amd-amdhsa--gfx1310"
+; GFX1360: .amdgcn_target "amdgcn-amd-amdhsa--gfx1360"
 ; GFX1370: .amdgcn_target "amdgcn-amd-amdhsa--gfx1370"
 
 ; GFX9_GENERIC_NOXNACK:     .amdgcn_target "amdgcn-amd-amdhsa--gfx9-generic:xnack-"

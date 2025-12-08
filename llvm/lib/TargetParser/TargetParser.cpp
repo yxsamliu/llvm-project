@@ -181,10 +181,10 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx120F"},   {"gfx120F"}, GK_GFX120F, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1250"},   {"gfx1250"}, GK_GFX1250, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK_ALWAYS},
     {{"gfx1251"},   {"gfx1251"}, GK_GFX1251, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK_ALWAYS},
-    {{"gfx1301"},   {"gfx1301"}, GK_GFX1301, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx130E"},   {"gfx130E"}, GK_GFX130E, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1310"},   {"gfx1310"}, GK_GFX1310, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1300"},   {"gfx1310"}, GK_GFX1310, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+    {{"gfx1360"},   {"gfx1360"}, GK_GFX1360, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1370"},   {"gfx1370"}, GK_GFX1370, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
 
     {{"gfx9-generic"},      {"gfx9-generic"},    GK_GFX9_GENERIC,    FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
@@ -349,9 +349,9 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX120F: return {12, 0, 0xFFFF};
   case GK_GFX1250: return {12, 5, 0};
   case GK_GFX1251: return {12, 5, 1};
-  case GK_GFX1301: return {13, 0, 1};
   case GK_GFX130E: return {13, 0, 0xFFFE};
   case GK_GFX1310: return {13, 1, 0};
+  case GK_GFX1360: return {13, 6, 0};
   case GK_GFX1370: return {13, 7, 0};
 
   // Generic targets return the lowest common denominator
@@ -433,9 +433,9 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
       Features["lds-tiled-loads"] = true;
       Features["global-tiled-loads-2x2"] = true;
       [[fallthrough]];
+    case GK_GFX1360:
     case GK_GFX1310:
     case GK_GFX130E:
-    case GK_GFX1301:
       Features["ci-insts"] = true;
       Features["dot7-insts"] = true;
       Features["dot8-insts"] = true;

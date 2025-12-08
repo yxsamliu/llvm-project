@@ -2476,6 +2476,7 @@ def FeatureISAVersion13_Common : FeatureSet<
 
 defvar FeatureISAVersion13_0 = FeatureISAVersion13_Common;
 defvar FeatureISAVersion13_1 = FeatureISAVersion13_Common;
+defvar FeatureISAVersion13_6 = FeatureISAVersion13_Common;
 
 def FeatureISAVersion13_7 : FeatureSet<
   !listconcat(FeatureISAVersion13_Common.Features,
