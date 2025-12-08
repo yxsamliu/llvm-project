@@ -1938,6 +1938,9 @@ def F16_32X64X128_BF8_BF8_WMMA_w32 : VOP3PWMMA_gfx1260_Profile<[v64f16, v32i32, 
 def F32_32X64X128_BF8_BF8_w32      : VOP3PWMMA_gfx1260_Profile<[v64f32, v32i32, v64i32, v64f32],
                                          /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/1,
                                          /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
+def F32_32X64X256_F4_WMMA_w32      : VOP3PWMMA_gfx1260_Profile<[v64f32, v32i32, v64i32, v64f32],
+                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
+                                         /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/1>;
 def F16_32X64X256_F4_WMMA_w32      : VOP3PWMMA_gfx1260_Profile<[v64f16, v32i32, v64i32, v64f16],
                                          /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
                                          /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/1>;
@@ -2060,6 +2063,7 @@ let SubtargetPredicate = HasWMMA2048bInsts in {
   defm V_WMMA_F16_32X64X128_FP8_BF8_w32   : WMMAInstGFX12<"v_wmma_f16_32x64x128_fp8_bf8", F16_32X64X128_BF8_BF8_WMMA_w32, "_w32">;
   defm V_WMMA_F16_32X64X128_BF8_FP8_w32   : WMMAInstGFX12<"v_wmma_f16_32x64x128_bf8_fp8", F16_32X64X128_BF8_BF8_WMMA_w32, "_w32">;
   defm V_WMMA_F16_32X64X128_BF8_BF8_w32   : WMMAInstGFX12<"v_wmma_f16_32x64x128_bf8_bf8", F16_32X64X128_BF8_BF8_WMMA_w32, "_w32">;
+  defm V_WMMA_F32_32X64X256_F4_w32        : WMMAInstGFX12<"v_wmma_f32_32x64x256_f4",      F32_32X64X256_F4_WMMA_w32, "_w32">;
   defm V_WMMA_F16_32X64X256_F4_w32        : WMMAInstGFX12<"v_wmma_f16_32x64x256_f4",      F16_32X64X256_F4_WMMA_w32, "_w32">;
 
   defm V_SWMMAC_BF16F32_32X64X32_BF16_w32 : SWMMACInstGFX12<"v_swmmac_bf16f32_32x64x32_bf16", BF16F32_32X64X32_BF16_SWMMAC_w32, "_w32">;
@@ -2572,6 +2576,7 @@ defm V_WMMA_F16_32X64X128_FP8_FP8_w32   : VOP3P_Real_WMMA_gfx1260 <0x095, F16_32
 defm V_WMMA_F16_32X64X128_FP8_BF8_w32   : VOP3P_Real_WMMA_gfx1260 <0x096, F16_32X64X128_BF8_BF8_WMMA_w32>;
 defm V_WMMA_F16_32X64X128_BF8_FP8_w32   : VOP3P_Real_WMMA_gfx1260 <0x097, F16_32X64X128_BF8_BF8_WMMA_w32>;
 defm V_WMMA_F16_32X64X128_BF8_BF8_w32   : VOP3P_Real_WMMA_gfx1260 <0x098, F16_32X64X128_BF8_BF8_WMMA_w32>;
+defm V_WMMA_F32_32X64X256_F4_w32        : VOP3P_Real_WMMA_gfx1260 <0x09b, F32_32X64X256_F4_WMMA_w32>;
 defm V_WMMA_F16_32X64X256_F4_w32        : VOP3P_Real_WMMA_gfx1260 <0x09c, F16_32X64X256_F4_WMMA_w32>;
 
 defm V_SWMMAC_BF16F32_32X64X32_BF16_w32 : VOP3P_Real_WMMA_gfx1260 <0x0a1, BF16F32_32X64X32_BF16_SWMMAC_w32>;
