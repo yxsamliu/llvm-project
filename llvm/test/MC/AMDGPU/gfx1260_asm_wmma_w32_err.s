@@ -190,6 +190,24 @@ v_wmma_bf16_32x64x32_f16 v[0:31], v[32:47], v[48:79], v[80:111] clamp
 v_wmma_bf16_32x64x32_f16 v[0:31], v[32:47], v[48:79], v[80:111] neg_hi:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:65: error: not a valid operand.
 
+v_wmma_i32_32x64x32_iu8 v[0:63], v[64:71], v[72:87], v[200:263]
+// GFX1260-ERR: :[[@LINE-1]]:54: error: register index is out of range
+
+v_wmma_i32_32x64x32_iu8 v[0:63], v[64:71], |v[192:255]|, v[200:263]
+// GFX1260-ERR: :[[@LINE-1]]:44: error: not a valid operand.
+
+v_wmma_i32_32x64x32_iu8 v[0:63], v[64:71], -v[192:255], v[200:263]
+// GFX1260-ERR: :[[@LINE-1]]:44: error: not a valid operand.
+
+v_wmma_i32_32x64x32_iu8 v[0:63], v[64:71], v[72:87], v[192:255] clamp
+// GFX1260-ERR: :[[@LINE-1]]:65: error: invalid operand for instruction
+
+v_wmma_i32_32x64x32_iu8 v[0:63], v[64:71], v[72:87], v[192:255] neg_lo:[0,0,1]
+// GFX1260-ERR: :[[@LINE-1]]:65: error: invalid neg_lo operand
+
+v_wmma_i32_32x64x32_iu8 v[0:63], v[64:71], v[72:87], v[192:255] neg_hi:[1,0,0]
+// GFX1260-ERR: :[[@LINE-1]]:65: error: not a valid operand.
+
 v_swmmac_bf16f32_32x64x32_bf16 v[200:263], v[0:7], v[8:39], v40
 // GFX1260-ERR: :[[@LINE-1]]:32: error: register index is out of range
 
