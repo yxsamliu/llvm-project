@@ -30,6 +30,7 @@ using namespace AMDGPU;
 #define DEBUG_TYPE "amdgpu-assign-laneshared"
 
 namespace {
+
 class AMDGPUAssignLaneShared {
   unsigned MaxLaneSharedVGPRs;
 
@@ -334,8 +335,8 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
   for (auto *GV : LaneSharedGlobals) {
     DenseSet<Value *> Pointers;
     bool MustInVGPR = false;
-    bool IsPromotable =
-        IsPromotableToVGPR(*GV, M.getDataLayout(), Pointers, MustInVGPR);
+    bool IsPromotable = IsPromotableToVGPR(*GV, M.getDataLayout(), Pointers,
+                                           MustInVGPR, AMDGPU::PromoteSubDword);
     if (IsPromotable && MaxLaneSharedVGPRs > 0) {
       GVsInVGPR.push_back(GV);
       GVPtrSets[GV] = std::move(Pointers);

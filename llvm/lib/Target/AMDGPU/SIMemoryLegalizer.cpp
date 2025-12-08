@@ -1958,8 +1958,7 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   }
 
   if (DepCtr) {
-    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-            TII->get(AMDGPU::S_WAIT_DEPCTR_soft))
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_DEPCTR_soft))
         .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(
             AMDGPU::DepCtr::encodeFieldVaVdst(0, ST), 0));
   }
@@ -2302,6 +2301,7 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
                                    Position::AFTER);
     }
 
+    Changed |= CC->setCFS(MI, MOI.getCFS());
     return Changed;
   }
 
@@ -2345,6 +2345,7 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
                                    Position::BEFORE);
 
     Changed |= CC->finalizeStore(StoreMI, /*Atomic=*/true);
+    Changed |= CC->setCFS(MI, MOI.getCFS());
     return Changed;
   }
 
@@ -2452,9 +2453,11 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(
     }
 
     Changed |= CC->finalizeStore(RMWMI, /*Atomic=*/true);
+    Changed |= CC->setCFS(MI, MOI.getCFS());
     return Changed;
   }
 
+  Changed |= CC->setCFS(MI, MOI.getCFS());
   return Changed;
 }
 

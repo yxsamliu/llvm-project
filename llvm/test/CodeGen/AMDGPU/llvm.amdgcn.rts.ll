@@ -25,10 +25,7 @@ define amdgpu_cs  void @test_rts_read_result(){
 define amdgpu_cs void @test_rts_flush(){
 ; GFX13-LABEL: test_rts_flush:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    global_wb scope:SCOPE_SYS
-; GFX13-NEXT:    s_wait_storecnt 0x0
-; GFX13-NEXT:    rts_flush scope:SCOPE_SYS
-; GFX13-NEXT:    global_inv scope:SCOPE_SYS
+; GFX13-NEXT:    rts_flush
 ; GFX13-NEXT:    s_endpgm
   call void @llvm.amdgcn.rts.flush()
   ret void

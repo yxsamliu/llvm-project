@@ -3788,6 +3788,14 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
       AMDGPU::OpName::src0, AMDGPU::OpName::NUM_OPERAND_NAMES,
       AMDGPU::OpName::src1, AMDGPU::OpName::vdst,
       DEFAULT_VALUES_3};
+  static const AMDGPU::OpName VOPDFMAMKOpsX[VGPRLoweringOperandTableNumOps] = {
+      AMDGPU::OpName::src0X, AMDGPU::OpName::NUM_OPERAND_NAMES,
+      AMDGPU::OpName::vsrc1X, AMDGPU::OpName::vdstX,
+      DEFAULT_VALUES_3};
+  static const AMDGPU::OpName VOPDFMAMKOpsY[VGPRLoweringOperandTableNumOps] = {
+      AMDGPU::OpName::src0Y, AMDGPU::OpName::NUM_OPERAND_NAMES,
+      AMDGPU::OpName::vsrc1Y, AMDGPU::OpName::vdstY,
+      DEFAULT_VALUES_3};
 #undef DEFAULT_VALUES_3
 
   uint64_t TSFlags = Desc.TSFlags;
@@ -3837,8 +3845,11 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
   if (TSFlags & SIInstrFlags::EXP)
     return {VEXPOps, nullptr};
 
-  if (AMDGPU::isVOPD(Desc.getOpcode()))
-    return {VOPDOpsX, VOPDOpsY};
+  if (AMDGPU::isVOPD(Desc.getOpcode())) {
+    auto [OpX, OpY] = getVOPDComponents(Desc.getOpcode());
+    return {(OpX == AMDGPU::V_FMAMK_F32) ? VOPDFMAMKOpsX : VOPDOpsX,
+            (OpY == AMDGPU::V_FMAMK_F32) ? VOPDFMAMKOpsY : VOPDOpsY};
+  }
 
   if (TSFlags & SIInstrFlags::VNBR)
     return {VNBROps, nullptr};

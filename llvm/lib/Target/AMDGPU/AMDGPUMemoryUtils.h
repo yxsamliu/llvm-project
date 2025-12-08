@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 
@@ -29,6 +30,7 @@ class Module;
 class TargetExtType;
 
 namespace AMDGPU {
+extern cl::opt<bool> PromoteSubDword;
 
 using FunctionVariableMap = DenseMap<Function *, DenseSet<GlobalVariable *>>;
 using VariableFunctionMap = DenseMap<GlobalVariable *, DenseSet<Function *>>;
@@ -76,7 +78,8 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
 /// in VGPRs. If so, the set of pointers is filled in with all derived pointers.
 /// Also returns whether the variable must be allocated in VGPRs.
 bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
-                        DenseSet<Value *> &Pointers, bool &MustInVGPR);
+                        DenseSet<Value *> &Pointers, bool &MustInVGPR,
+                        bool PromoteSubDword = false);
 
 } // end namespace AMDGPU
 

@@ -1942,6 +1942,12 @@ public:
     return GFX1250Insts && getGeneration() == GFX12;
   }
 
+  // src_flat_scratch_hi cannot be used as a source in SALU producing a 64-bit
+  // result.
+  bool hasFlatScratchHiInB64InstHazard() const {
+    return GFX1250Insts && getGeneration() == GFX12;
+  }
+
   // TODO: Remove this when we replace all A0 GFX1250 with B0.
   // DS_READ2 and DS_WRITE2 instructions must have addresses aligned to the
   // payload size.
