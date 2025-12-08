@@ -1876,17 +1876,20 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_rts_read_result_ongoing:
   case Intrinsic::amdgcn_rts_update_ray:
   case Intrinsic::amdgcn_rts_ray_save:
-  case Intrinsic::amdgcn_rts_ray_restore: {
-    if (IntrID != Intrinsic::amdgcn_rts_ray_restore) {
-      Info.memVT = MVT::getVT(CI.getType());
-      Info.opc = ISD::INTRINSIC_W_CHAIN;
-    } else {
+  case Intrinsic::amdgcn_rts_ray_restore:
+  case Intrinsic::amdgcn_rts_flush: {
+    if (IntrID == Intrinsic::amdgcn_rts_ray_restore ||
+        IntrID == Intrinsic::amdgcn_rts_flush) {
       Info.memVT = MVT::i32;
       Info.opc = ISD::INTRINSIC_VOID;
+    } else {
+      Info.memVT = MVT::getVT(CI.getType());
+      Info.opc = ISD::INTRINSIC_W_CHAIN;
     }
     Info.flags |= MachineMemOperand::MOLoad;
     if (IntrID == Intrinsic::amdgcn_rts_update_ray ||
-        IntrID == Intrinsic::amdgcn_rts_ray_save)
+        IntrID == Intrinsic::amdgcn_rts_ray_save ||
+        IntrID == Intrinsic::amdgcn_rts_flush)
       Info.flags |= MachineMemOperand::MOStore;
 
     return true;
@@ -14571,7 +14574,8 @@ static bool isRTS(const MemSDNode *N) {
         IntrinID == Intrinsic::amdgcn_rts_read_result_ongoing ||
         IntrinID == Intrinsic::amdgcn_rts_update_ray ||
         IntrinID == Intrinsic::amdgcn_rts_ray_restore ||
-        IntrinID == Intrinsic::amdgcn_rts_ray_save)
+        IntrinID == Intrinsic::amdgcn_rts_ray_save ||
+        IntrinID == Intrinsic::amdgcn_rts_flush)
       return true;
   }
   return false;
