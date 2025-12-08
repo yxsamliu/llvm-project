@@ -1046,12 +1046,13 @@ public:
     case AMDGPU::RTS_RAY_SAVE:
     case AMDGPU::RTS_RAY_RESTORE:
     case AMDGPU::RTS_UPDATE_RAY:
-    case AMDGPU::RTS_TRACE_RAY:
-    case AMDGPU::RTS_TRACE_RAY_NONBLOCK:
-    case AMDGPU::RTS_READ_VERTEX:
-    case AMDGPU::RTS_READ_VERTEX_COORDS:
-    case AMDGPU::RTS_READ_PACKET_INFO:
-    case AMDGPU::RTS_READ_PRIM_INFO:
+    // Below are VIMAGE opcodes which only have `Real` variants.
+    case AMDGPU::RTS_TRACE_RAY_gfx13:
+    case AMDGPU::RTS_TRACE_RAY_NONBLOCK_gfx13:
+    case AMDGPU::RTS_READ_VERTEX_gfx13:
+    case AMDGPU::RTS_READ_VERTEX_COORDS_gfx13:
+    case AMDGPU::RTS_READ_PACKET_INFO_gfx13:
+    case AMDGPU::RTS_READ_PRIM_INFO_gfx13:
       return true;
     default:
       return false;
