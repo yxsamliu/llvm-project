@@ -166,7 +166,7 @@ body:             |
 # GCN-NEXT: S_WAIT_SAMPLECNT 0
 # GCN-NEXT: S_WAIT_BVHCNT 0
 # GCN-NEXT: S_WAIT_KMCNT 0
-# GCN-NEXT: S_WAITCNT_DEPCTR 3999
+# GCN-NEXT: S_WAITCNT_DEPCTR 3971
 # GCN-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
 # GCN-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
 # GCN-NEXT: $vgpr3 = V_MOV_B32_e32 $vgpr1, implicit $exec
@@ -444,7 +444,6 @@ body: |
 # GCN:       GLOBAL_LOAD_DWORD
 # GCN-NEXT:  S_WAIT_LOADCNT 0
 # GCN-NEXT:  V_MOV_B32_e32
-# GCN-NEXT:  S_WAITCNT_DEPCTR 65411
 # GCN-NEXT:  V_MOV_B32_e32
 name: test_war_completed_vmem
 body: |

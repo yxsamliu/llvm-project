@@ -51,7 +51,8 @@ bool AMDGPUMarkPromotablePrivate::runOnFunction(Function &F) {
       }
       DenseSet<Value *> Pointers;
       bool MustInVGPR = false;
-      if (AMDGPU::IsPromotableToVGPR(*AI, DL, Pointers, MustInVGPR)) {
+      if (AMDGPU::IsPromotableToVGPR(*AI, DL, Pointers, MustInVGPR,
+                                     AMDGPU::PromoteSubDword)) {
         AI->setMetadata("amdgpu.promotable.to.vgpr", PrivateInVGPRMD);
         // Set the metadata for all the pointers to this alloca
         // to facilitate the promotion to VGPR during Instruction selection.

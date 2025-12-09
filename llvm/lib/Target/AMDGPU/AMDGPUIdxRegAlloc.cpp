@@ -45,14 +45,14 @@ public:
 
 private:
   bool processMBB(MachineBasicBlock &MBB);
-  void createIdx0SaveDef(MachineFunction &MF);
+  void ensurePrivateVgprBase(MachineFunction &MF);
 
   MachineRegisterInfo *MRI;
   const SIInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   SIMachineFunctionInfo *MFI;
   SmallVector<MachineInstr *, 4> InstrsToErase;
-  Register Idx0Restore;
+  Register PrivateVgprBase;
 };
 
 } // End anonymous namespace.
@@ -181,12 +181,12 @@ bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
       // It's much easier to track which S_ADD_I32 instr is being used by this
       // setter if we check it here. If idx0 is known to be 0 during frame
       // lowering, then the add instruction is not needed
-      if (auto Idx0Def = MFI->getIdx0VRegDef();
-          Idx0Def.isValid() && DefMI->getOpcode() == AMDGPU::S_ADD_I32 &&
+      if (DefMI->getOpcode() == AMDGPU::S_ADD_I32 &&
           ((DefMI->getOperand(2).isReg() &&
-            DefMI->getOperand(2).getReg() == Idx0Def) ||
+            DefMI->getOperand(2).getReg() == PrivateVgprBase) ||
            (DefMI->getOperand(1).isReg() &&
-            DefMI->getOperand(1).getReg() == Idx0Def))) {
+            DefMI->getOperand(1).getReg() == PrivateVgprBase))) {
+        // TODO-GFX13: This is a problematic hack, get rid of this.
         MFI->getIdx0PrivateComputations()[Setter] = DefMI;
       }
 
@@ -198,12 +198,13 @@ bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
         ActiveBundleIdxUses.set(FreeIdx);
         updateReplacedRegInBundle(MI, NewOp, *IdxOpnd, TRI);
         if (FreeIdx == 0) {
-          MFI->setNeedIdx0Restore(true);
           // insert restore
+          ensurePrivateVgprBase(*MBB.getParent());
+
           auto RestoreInsertPt = getBundleEnd(MI.getIterator());
           BuildMI(MBB, RestoreInsertPt, DefMI->getDebugLoc(),
                   TII->get(AMDGPU::S_SET_GPR_IDX_U32), RegList[FreeIdx])
-              .addReg(Idx0Restore);
+              .addReg(PrivateVgprBase);
         }
       }
 
@@ -223,6 +224,16 @@ bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
         }
       }
       IdxInfo[FreeIdx].UseCnt = Cnt;
+    } else if (MI.getOpcode() == AMDGPU::COPY) {
+      // When allocas are lowered to VGPRs, we can end up with COPY from IDX0
+      // during isel. Replace it with the saved value.
+      MachineOperand &Src = MI.getOperand(1);
+      if (Src.getReg() == AMDGPU::IDX0) {
+        if (MI.getOperand(0).getReg() != PrivateVgprBase) {
+          ensurePrivateVgprBase(*MBB.getParent());
+          Src.setReg(PrivateVgprBase);
+        }
+      }
     } else if (MI.getOpcode() == AMDGPU::S_SET_GPR_IDX_U32) {
       // clears the entry when we meet the setter
       for (int i = 0; i < NumIDXReg; ++i) {
@@ -246,15 +257,22 @@ bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
   return Changed;
 }
 
-void AMDGPUIdxRegAlloc::createIdx0SaveDef(MachineFunction &MF) {
-  // Create the idx0 save if it hasn't already been created, otherwise only
-  // update the local restore
-  Register Idx0VRegDef = MFI->getIdx0VRegDef();
-  if (!Idx0VRegDef.isValid()) {
-    Idx0VRegDef = initIdx0VRegDef(MF, TII);
-    MFI->setIdx0VRegDef(Idx0VRegDef);
+void AMDGPUIdxRegAlloc::ensurePrivateVgprBase(MachineFunction &MF) {
+  if (PrivateVgprBase != AMDGPU::NoRegister)
+    return;
+
+  MachineBasicBlock &MBB = MF.front();
+
+  PrivateVgprBase = MRI->createVirtualRegister(&AMDGPU::SReg_32_XEXECRegClass);
+
+  if (MFI->isEntryFunction() && !AMDGPU::getWavegroupEnable(MF.getFunction())) {
+    // In non-wavegroup entry functions, the private VGPR base is known to be 0.
+    BuildMI(MBB, MBB.begin(), {}, TII->get(AMDGPU::S_MOV_B32), PrivateVgprBase)
+        .addImm(0);
+  } else {
+    BuildMI(MBB, MBB.begin(), {}, TII->get(AMDGPU::SI_GET_IDX0),
+            PrivateVgprBase);
   }
-  MRI->replaceRegWith(Idx0Restore, Idx0VRegDef);
 }
 
 bool AMDGPUIdxRegAlloc::runOnMachineFunction(MachineFunction &MF) {
@@ -267,15 +285,12 @@ bool AMDGPUIdxRegAlloc::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TRI = &TII->getRegisterInfo();
   MFI = MF.getInfo<SIMachineFunctionInfo>();
+  PrivateVgprBase = AMDGPU::NoRegister;
 
   bool Changed = false;
   InstrsToErase.clear();
   for (MachineBasicBlock &MBB : MF)
     Changed |= processMBB(MBB);
-
-  if (MFI->getNeedIdx0Restore()) {
-    createIdx0SaveDef(MF);
-  }
 
   for (auto I : InstrsToErase)
     I->eraseFromParent();

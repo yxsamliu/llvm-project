@@ -49,11 +49,9 @@ public:
                               const TargetRegisterInfo *TRI,
                               std::vector<CalleeSavedInfo> &CSI) const override;
 
-  bool assignCalleeSavedSpillSlots(MachineFunction &MF,
-                                   const TargetRegisterInfo *TRI,
-                                   std::vector<CalleeSavedInfo> &CSI,
-                                   unsigned &MinCSFrameIndex,
-                                   unsigned &MaxCSFrameIndex) const override;
+  bool assignCalleeSavedSpillSlotsImpl(MachineFunction &MF,
+                                       const TargetRegisterInfo *TRI,
+                                       std::vector<CalleeSavedInfo> &CSI) const;
 
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
@@ -100,9 +98,6 @@ private:
       MachineBasicBlock::iterator I, const DebugLoc &DL,
       Register PreloadedPrivateBufferReg, Register ScratchRsrcReg,
       Register ScratchWaveOffsetReg) const;
-
-  void finalizeIdx0SaveRestores(MachineFunction &MF, bool EntryFunction,
-                                Register TmpWavegroupReg) const;
 
 public:
   bool requiresStackPointerReference(const MachineFunction &MF) const;

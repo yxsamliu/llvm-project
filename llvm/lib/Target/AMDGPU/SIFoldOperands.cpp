@@ -233,9 +233,9 @@ public:
   std::pair<int64_t, const TargetRegisterClass *>
   isRegSeqSplat(MachineInstr &RegSeg) const;
 
-  bool isRegSeqConcat(
-      MachineInstr &RegSeq,
-      SmallVectorImpl<std::pair<MachineOperand *, unsigned>> &Srcs) const;
+  bool
+  isRegSeqConcat(MachineInstr &RegSeq,
+                 SmallVectorImpl<std::pair<Register, unsigned>> &Srcs) const;
 
   int isSubcopy(MachineInstr &MI) const;
 
@@ -1172,39 +1172,25 @@ bool SIFoldOperandsImpl::tryFoldRegSeqSplat(
 
 #define REG_SEQ_CONCAT_UNIT 32
 // Checks whether a REG_SEQUENCE output is the concatenation of several
-// registers. If true, it also returns the starting subregister operand
-// and its sequencing-index for each concatenated register.
+// registers. If true, it also returns the virtual register and its starting
+// index in the REG_SEQUENCE.
 bool SIFoldOperandsImpl::isRegSeqConcat(
     MachineInstr &RegSeq,
-    SmallVectorImpl<std::pair<MachineOperand *, unsigned>> &Srcs) const {
+    SmallVectorImpl<std::pair<Register, unsigned>> &SrcRegs) const {
   assert(RegSeq.isRegSequence());
-  assert(Srcs.empty());
-  unsigned SrcSize = 0;
-  // check the last SrcOp in Srcs are completely covered (wrapped in a lambda)
-  auto IsLastSrcFullyCovered = [&]() -> bool {
-    if (Srcs.empty())
-      return true;
-    auto &Last = Srcs.back();
-    MachineOperand *LastSrc = Last.first;
-    if (LastSrc->isReg() && LastSrc->getSubReg() != AMDGPU::NoSubRegister) {
-      unsigned LastSize = TRI->getRegSizeInBits(LastSrc->getReg(), *MRI);
-      // if the last subreg is not fully covered, fail
-      if (LastSize != SrcSize)
-        return false;
-    }
-    return true;
-  };
+  assert(SrcRegs.empty());
   SmallVector<std::pair<unsigned, MachineOperand *>, 8> SrcOpnds;
   for (unsigned I = 1, E = RegSeq.getNumExplicitOperands(); I != E; I += 2) {
     MachineOperand &SrcOp = RegSeq.getOperand(I);
     unsigned SubRegIdx = RegSeq.getOperand(I + 1).getImm();
     SrcOpnds.emplace_back(SubRegIdx, &SrcOp);
   }
+  // Canonicalize the order of source operands by subreg index.
   llvm::sort(SrcOpnds, [&](const auto &A, const auto &B) {
-    return TRI->getSubRegIdxOffset(A.first) <
-           TRI->getSubRegIdxOffset(B.first);
+    return TRI->getSubRegIdxOffset(A.first) < TRI->getSubRegIdxOffset(B.first);
   });
 
+  unsigned SrcSize = 0;
   for (unsigned I = 0, E = SrcOpnds.size(); I != E; ++I) {
     MachineOperand *SrcOp = SrcOpnds[I].second;
     unsigned SubRegIdx = SrcOpnds[I].first;
@@ -1213,26 +1199,42 @@ bool SIFoldOperandsImpl::isRegSeqConcat(
     if (TRI->getRegSizeInBits(SrcOp->getReg(), *MRI) % REG_SEQ_CONCAT_UNIT)
       return false;
 
+    // Don't try to split reg seq with sgprs
+    // GFX13-TODO: could just make sure these don't get bundled
+    // and lower to v_movs
+    if (!TRI->isVGPR(*MRI, SrcOp->getReg()))
+      return false;
+
     if (SrcOp->getSubReg() == AMDGPU::NoSubRegister) {
-      Srcs.emplace_back(SrcOp, SubRegIdx);
+      if (SrcSize != 0)
+          return false; // Previous reg not fully covered.
+      SrcRegs.emplace_back(SrcOp->getReg(), SubRegIdx);
     } else {
       auto SrcSubIdx = SrcOp->getSubReg();
       auto SubOffset = TRI->getSubRegIdxOffset(SrcSubIdx);
       auto SubSize = TRI->getSubRegIdxSize(SrcSubIdx);
       if (SubOffset == 0) {
-        if (!IsLastSrcFullyCovered())
-          return false;
-        Srcs.emplace_back(SrcOp, SubRegIdx);
+        if (SrcSize != 0)
+          return false; // Previous reg not fully covered.
+        SrcRegs.emplace_back(SrcOp->getReg(), SubRegIdx);
         SrcSize = SubSize;
-      } else if (SubOffset == SrcSize) {
+      } else if (SubOffset == SrcSize &&
+                 SrcOp->getReg() == SrcRegs.back().first) {
         // Contiguous subreg, continue.
         SrcSize += SubSize;
+        assert(SrcSize <= TRI->getRegSizeInBits(SrcOp->getReg(), *MRI));
+        if (SrcSize == TRI->getRegSizeInBits(SrcOp->getReg(), *MRI))
+          SrcSize = 0;
       } else {
         // Non-contiguous subreg, fail.
         return false;
       }
     }
   }
+
+  if (SrcSize != 0)
+    return false; // The last reg not fully covered.
+
   return true;
 }
 
@@ -3067,7 +3069,7 @@ bool SIFoldOperandsImpl::trySplitVStIdxRegSeq(AMDGPUMI::VStoreIdxInst &MI) {
   if (!RegSeqMI || !RegSeqMI->isRegSequence())
     return false;
 
-  SmallVector<std::pair<MachineOperand *, unsigned>, 8> Srcs;
+  SmallVector<std::pair<Register, unsigned>, 8> Srcs;
   if (!isRegSeqConcat(*RegSeqMI, Srcs))
     return false;
 
@@ -3081,25 +3083,24 @@ bool SIFoldOperandsImpl::trySplitVStIdxRegSeq(AMDGPUMI::VStoreIdxInst &MI) {
   MachineFunction *MF = MI.getParent()->getParent();
 
   // Create a V_STORE_IDX for each concatenating component of the REG_SEQUENCE.
-  for (auto &[Op, SubIdx] : Srcs) {
+  for (auto &[SrcReg, SubIdx] : Srcs) {
     // Need to adjust the v_store_idx offset.
     int64_t SubOffset = TRI->getSubRegIdxOffset(SubIdx);
-    int64_t SubSize = TRI->getSubRegIdxSize(SubIdx);
+    int64_t NewStSize = TRI->getRegSizeInBits(SrcReg, *MRI);
     assert(SubOffset % REG_SEQ_CONCAT_UNIT == 0);
     assert(Offset + SubOffset / REG_SEQ_CONCAT_UNIT <
            ST->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()));
     auto NewSt =
         BuildMI(
             *MI.getParent(), MI, MI.getDebugLoc(),
-            TII->get(AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(SubSize)))
-            .addReg(Op->getReg())
+            TII->get(AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(NewStSize)))
+            .addReg(SrcReg)
             .addReg(VirtualIDX)
             .addImm(Offset + SubOffset / REG_SEQ_CONCAT_UNIT);
     // Need to adjust the size and offset in MMO.
     MachinePointerInfo NewPtrI = MMOPtrInfo.getWithOffset(SubOffset / 8);
-    NewSt->addMemOperand(
-        *MF, MF->getMachineMemOperand(
-                 MMO, NewPtrI, TRI->getRegSizeInBits(Op->getReg(), *MRI) / 8));
+    NewSt->addMemOperand(*MF,
+                         MF->getMachineMemOperand(MMO, NewPtrI, NewStSize / 8));
     LLVM_DEBUG(dbgs() << "  Created: " << *NewSt);
   }
 
