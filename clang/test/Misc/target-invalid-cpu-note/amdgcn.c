@@ -75,12 +75,16 @@
 // CHECK-SAME: {{^}}, gfx120F
 // CHECK-SAME: {{^}}, gfx1250
 // CHECK-SAME: {{^}}, gfx1251
+<<<<<<< HEAD
 // CHECK-SAME: {{^}}, gfx1260
 // CHECK-SAME: {{^}}, gfx1301
 // CHECK-SAME: {{^}}, gfx1302
+=======
+>>>>>>> 97ee787266500c8ad3c020008102d130d4ee22c9
 // CHECK-SAME: {{^}}, gfx130E
 // CHECK-SAME: {{^}}, gfx1310
 // CHECK-SAME: {{^}}, gfx1300
+// CHECK-SAME: {{^}}, gfx1360
 // CHECK-SAME: {{^}}, gfx9-generic
 // CHECK-SAME: {{^}}, gfx10-1-generic
 // CHECK-SAME: {{^}}, gfx10-3-generic

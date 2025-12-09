@@ -268,7 +268,7 @@ extern std::set<LLTCodeGen> KnownTypes;
 
 /// Convert an MVT to an equivalent LLT if possible, or the invalid LLT() for
 /// MVTs that don't map cleanly to an LLT (e.g., iPTR, *any, ...).
-std::optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT);
+std::optional<LLTCodeGen> MVTToLLT(MVT VT);
 
 using TempTypeIdx = int64_t;
 class LLTCodeGenOrTempType {
@@ -529,10 +529,10 @@ protected:
 
   ArrayRef<SMLoc> SrcLoc;
 
-  typedef std::tuple<const Record *, unsigned, unsigned>
-      DefinedComplexPatternSubOperand;
-  typedef StringMap<DefinedComplexPatternSubOperand>
-      DefinedComplexPatternSubOperandMap;
+  using DefinedComplexPatternSubOperand =
+      std::tuple<const Record *, unsigned, unsigned>;
+  using DefinedComplexPatternSubOperandMap =
+      StringMap<DefinedComplexPatternSubOperand>;
   /// A map of Symbolic Names to ComplexPattern sub-operands.
   DefinedComplexPatternSubOperandMap ComplexSubOperands;
   /// A map used to for multiple referenced error check of ComplexSubOperand.
@@ -1777,7 +1777,7 @@ public:
 /// * Has an nsw/nuw flag or doesn't.
 class InstructionMatcher final : public PredicateListMatcher<PredicateMatcher> {
 protected:
-  typedef std::vector<std::unique_ptr<OperandMatcher>> OperandVec;
+  using OperandVec = std::vector<std::unique_ptr<OperandMatcher>>;
 
   RuleMatcher &Rule;
 

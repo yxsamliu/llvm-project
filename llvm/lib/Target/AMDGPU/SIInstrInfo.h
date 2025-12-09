@@ -27,6 +27,10 @@
 
 namespace llvm {
 
+namespace AMDGPUMI {
+class VLoadStoreIdxInst;
+}
+
 class APInt;
 class GCNSubtarget;
 class LiveVariables;
@@ -142,6 +146,8 @@ private:
                    MachineDominatorTree *MDT = nullptr) const;
 
   void lowerScalarAbs(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
+
+  void lowerScalarAbsDiff(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
 
   void lowerScalarXnor(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
 
@@ -305,8 +311,7 @@ private:
   void storeRegToStackSlotImpl(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI, Register SrcReg,
                                bool isKill, int FrameIndex,
-                               const TargetRegisterClass *RC,
-                               const TargetRegisterInfo *TRI, Register VReg,
+                               const TargetRegisterClass *RC, Register VReg,
                                MachineInstr::MIFlag Flags, bool NeedsCFI) const;
 
 public:
@@ -331,22 +336,19 @@ public:
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
-      int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                      Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig,
-                     const TargetRegisterInfo &TRI) const override;
+                     const MachineInstr &Orig) const override;
 
   // Splits a V_MOV_B64_DPP_PSEUDO opcode into a pair of v_mov_b32_dpp
   // instructions. Returns a pair of generated instructions.
@@ -449,6 +451,9 @@ public:
   static unsigned getFoldableCopySrcIdx(const MachineInstr &MI);
 
   void removeModOperands(MachineInstr &MI) const;
+
+  void mutateAndCleanupImplicit(MachineInstr &MI,
+                                const MCInstrDesc &NewDesc) const;
 
   /// Return the extracted immediate value in a subregister use from a constant
   /// materialized in a super register.
@@ -607,6 +612,10 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::MTBUF;
   }
 
+  static bool isBUF(const MachineInstr &MI) {
+    return isMUBUF(MI) || isMTBUF(MI);
+  }
+
   static bool isSMRD(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::SMRD;
   }
@@ -733,16 +742,6 @@ public:
     case AMDGPU::SCRATCH_LOAD_BLOCK_SADDR:
     case AMDGPU::SCRATCH_STORE_BLOCK_SVS:
     case AMDGPU::SCRATCH_LOAD_BLOCK_SVS:
-      return true;
-    default:
-      return false;
-    }
-  }
-
-  static bool isVLdStIdx(uint16_t Opcode) {
-    switch (Opcode) {
-    case AMDGPU::V_LOAD_IDX:
-    case AMDGPU::V_STORE_IDX:
       return true;
     default:
       return false;
@@ -1008,9 +1007,11 @@ public:
 
   bool isXDLWMMA(const MachineInstr &MI) const;
 
-  // Instructions for which we care if their destination ends up in a laneshared
-  // VGPR.
-  // Async multicast to LDS instructions have no issue.
+  // Multicast or neighbor data share have to write their result directly into
+  // laneshared, because otherwise we would clobber private vgprs in other
+  // SIMDs.
+  //
+  // Async load to LDS instructions do not have this issue.
   static bool mustHaveLanesharedResult(const MachineInstr &MI) {
     switch (MI.getOpcode()) {
     case AMDGPU::CLUSTER_LOAD_B32:
@@ -1106,6 +1107,14 @@ public:
 
   bool isVINTERP(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::VINTERP;
+  }
+
+  static bool isVNBR(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::VNBR;
+  }
+
+  bool isVNBR(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::VNBR;
   }
 
   static bool isScalarUnit(const MachineInstr &MI) {
@@ -1213,6 +1222,12 @@ public:
            Opc == AMDGPU::GLOBAL_WBINV;
   }
 
+  // Check to see if opcode is for a semaphore signal instruction.
+  bool isSemaphoreSignal(unsigned Opcode) const {
+    return Opcode == AMDGPU::S_SEMA_SIGNAL ||
+           Opcode == AMDGPU::S_SEMA_SIGNAL_AFTER;
+  }
+
   static bool isF16PseudoScalarTrans(unsigned Opcode) {
     return Opcode == AMDGPU::V_S_EXP_F16_e64 ||
            Opcode == AMDGPU::V_S_LOG_F16_e64 ||
@@ -1262,6 +1277,10 @@ public:
       return AMDGPU::S_WAIT_KMCNT;
     case AMDGPU::S_WAIT_XCNT_soft:
       return AMDGPU::S_WAIT_XCNT;
+    case AMDGPU::S_WAIT_DEPCTR_soft:
+      return AMDGPU::S_WAITCNT_DEPCTR;
+    case AMDGPU::S_WAIT_EXPCNT_soft:
+      return AMDGPU::S_WAIT_EXPCNT;
     default:
       return Opcode;
     }
@@ -1293,13 +1312,13 @@ public:
   bool isVGPRCopy(const MachineInstr &MI) const {
     assert(isCopyInstr(MI));
     Register Dest = MI.getOperand(0).getReg();
-    const MachineFunction &MF = *MI.getParent()->getParent();
+    const MachineFunction &MF = *MI.getMF();
     const MachineRegisterInfo &MRI = MF.getRegInfo();
     return !RI.isSGPRReg(MRI, Dest);
   }
 
   bool hasVGPRUses(const MachineInstr &MI) const {
-    const MachineFunction &MF = *MI.getParent()->getParent();
+    const MachineFunction &MF = *MI.getMF();
     const MachineRegisterInfo &MRI = MF.getRegInfo();
     return llvm::any_of(MI.explicit_uses(),
                         [&MRI, this](const MachineOperand &MO) {
@@ -1555,7 +1574,7 @@ public:
   void legalizeOperandsSMRD(MachineRegisterInfo &MRI, MachineInstr &MI) const;
   void legalizeOperandsFLAT(MachineRegisterInfo &MRI, MachineInstr &MI) const;
   void legalizeOperandsVLdStIdx(MachineRegisterInfo &MRI, MachineInstr &MI,
-                                unsigned OpNo) const;
+                                MachineOperand &Idx) const;
 
   void legalizeGenericOperand(MachineBasicBlock &InsertMBB,
                               MachineBasicBlock::iterator I,
@@ -1653,10 +1672,10 @@ public:
   /// instruction if true. In case it is just a v_load_idx bundled
   /// with v_store_idx, return the v_store_idx as the core.
   static MachineInstr *bundleWithGPRIndexing(MachineInstr &MI);
-  /// Starting for a core instruction in bundle, find the corresponding
+  /// Starting from a core instruction in bundle, find the corresponding
   /// v_load/store_idx that is the source/dest of its operand
-  static const MachineInstr *getBundledIndexingInst(const MachineInstr &MI,
-                                                    const MachineOperand &Op);
+  static const AMDGPUMI::VLoadStoreIdxInst *
+  getBundledIndexingInst(const MachineInstr &MI, const MachineOperand &Op);
 
   unsigned getInstBundleSize(const MachineInstr &MI) const;
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
@@ -1753,13 +1772,7 @@ public:
   /// Return true if this opcode should not be used by codegen.
   bool isAsmOnlyOpcode(int MCOp) const;
 
-  const TargetRegisterClass *
-  getRegClass(const MCInstrDesc &TID, unsigned OpNum,
-              const TargetRegisterInfo *TRI) const override;
-
-  const TargetRegisterClass *
-  getRegClassForBlockOp(const TargetRegisterInfo *TRI,
-                        const MachineFunction &MF) const;
+  bool canUseVGPRIndexing(MachineInstr &MI, unsigned OpNo) const;
 
   void fixImplicitOperands(MachineInstr &MI) const;
 
@@ -1790,6 +1803,7 @@ public:
 
   const TargetSchedModel &getSchedModel() const { return SchedModel; }
 
+  // FIXME: This should be removed
   // Enforce operand's \p OpName even alignment if required by target.
   // This is used if an operand is a 32 bit register but needs to be aligned
   // regardless.
@@ -1833,7 +1847,7 @@ TargetInstrInfo::RegSubRegPair getRegSequenceSubReg(MachineInstr &MI,
 /// skipping copy like instructions and subreg-manipulation pseudos.
 /// Following another subreg of a reg:subreg isn't supported.
 MachineInstr *getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
-                               MachineRegisterInfo &MRI);
+                               const MachineRegisterInfo &MRI);
 
 /// \brief Return false if EXEC is not changed between the def of \p VReg at \p
 /// DefMI and the use at \p UseMI. Should be run on SSA. Currently does not

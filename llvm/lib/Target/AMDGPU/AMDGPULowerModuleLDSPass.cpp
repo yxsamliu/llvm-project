@@ -443,7 +443,7 @@ public:
       return KernelSet;
 
     for (Function &Func : M.functions()) {
-      if (Func.isDeclaration() || !isKernelLDS(&Func))
+      if (Func.isDeclaration() || !isKernel(Func))
         continue;
       for (GlobalVariable *GV : LDSUsesInfo.indirect_access[&Func]) {
         if (VariableSet.contains(GV)) {
@@ -557,7 +557,7 @@ public:
       for (Function &Func : M->functions()) {
         if (Func.isDeclaration())
           continue;
-        if (!isKernelLDS(&Func))
+        if (!isKernel(Func))
           continue;
 
         if (KernelsThatAllocateTableLDS.contains(&Func) ||
@@ -705,7 +705,7 @@ public:
             return false;
           }
           Function *F = I->getFunction();
-          return !isKernelLDS(F);
+          return !isKernel(*F);
         });
 
     // Replace uses of module scope variable from kernel functions that
@@ -713,7 +713,7 @@ public:
     // Record on each kernel whether the module scope global is used by it
 
     for (Function &Func : M.functions()) {
-      if (Func.isDeclaration() || !isKernelLDS(&Func))
+      if (Func.isDeclaration() || !isKernel(Func))
         continue;
 
       if (KernelsThatAllocateModuleLDS.contains(&Func)) {
@@ -745,7 +745,7 @@ public:
 
     DenseMap<Function *, LDSVariableReplacement> KernelToReplacement;
     for (Function &Func : M.functions()) {
-      if (Func.isDeclaration() || !isKernelLDS(&Func))
+      if (Func.isDeclaration() || !isKernel(Func))
         continue;
 
       DenseSet<GlobalVariable *> KernelUsedVariables;
@@ -830,7 +830,7 @@ public:
     // semantics. Setting the alignment here allows this IR pass to accurately
     // predict the exact constant at which it will be allocated.
 
-    assert(isKernelLDS(func));
+    assert(isKernel(*func));
 
     LLVMContext &Ctx = M.getContext();
     const DataLayout &DL = M.getDataLayout();
@@ -880,7 +880,7 @@ public:
       for (auto &func : OrderedKernels) {
 
         if (KernelsThatIndirectlyAllocateDynamicLDS.contains(func)) {
-          assert(isKernelLDS(func));
+          assert(isKernel(*func));
           if (!func->hasName()) {
             reportFatalUsageError("anonymous kernels cannot use LDS variables");
           }
@@ -914,7 +914,7 @@ public:
           auto *I = dyn_cast<Instruction>(U.getUser());
           if (!I)
             continue;
-          if (isKernelLDS(I->getFunction()))
+          if (isKernel(*I->getFunction()))
             continue;
 
           replaceUseWithTableLookup(M, Builder, table, GV, U, nullptr);
@@ -922,172 +922,6 @@ public:
       }
     }
     return KernelToCreatedDynamicLDS;
-  }
-
-  static GlobalVariable *uniquifyGVPerKernel(Module &M, GlobalVariable *GV,
-                                             Function *KF) {
-    bool NeedsReplacement = false;
-    for (Use &U : GV->uses()) {
-      if (auto *I = dyn_cast<Instruction>(U.getUser())) {
-        Function *F = I->getFunction();
-        if (isKernelLDS(F) && F != KF) {
-          NeedsReplacement = true;
-          break;
-        }
-      }
-    }
-    if (!NeedsReplacement)
-      return GV;
-    // Create a new GV used only by this kernel and its function
-    GlobalVariable *NewGV = new GlobalVariable(
-        M, GV->getValueType(), GV->isConstant(), GV->getLinkage(),
-        GV->getInitializer(), GV->getName() + "." + KF->getName(), nullptr,
-        GV->getThreadLocalMode(), GV->getType()->getAddressSpace());
-    NewGV->copyAttributesFrom(GV);
-    for (Use &U : make_early_inc_range(GV->uses())) {
-      if (auto *I = dyn_cast<Instruction>(U.getUser())) {
-        Function *F = I->getFunction();
-        if (!isKernelLDS(F) || F == KF) {
-          U.getUser()->replaceUsesOfWith(GV, NewGV);
-        }
-      }
-    }
-    return NewGV;
-  }
-
-  /// Assigns an absolute address for special kinds of GVs like semaphores and
-  /// barriers. Does this in two rounds: first by assigning a module-absolute
-  /// address for any GV that is indirectly used by more than one kernel, and
-  /// second by computing a kernel relative assignment for any GVs remaining.
-  bool lowerSpecialLDSVariables(
-      Module &M, LDSUsesInfoTy &LDSUsesInfo,
-      VariableFunctionMap &LDSToKernelsThatNeedToAccessItIndirectly) {
-    bool Changed = false;
-    const DataLayout &DL = M.getDataLayout();
-
-    unsigned NumSemAbsolutes[MAX_WAVES_PER_WAVEGROUP] = {0};
-    constexpr unsigned NumBarScopes =
-        static_cast<unsigned>(Barrier::Scope::NUM_SCOPES);
-    unsigned NumBarAbsolutes[NumBarScopes] = {0};
-
-    // The 1st round: give module-absolute assignments
-    std::vector<GlobalVariable *> OrderedGVs;
-    for (auto &K : LDSToKernelsThatNeedToAccessItIndirectly) {
-      GlobalVariable *GV = K.first;
-      if (!(isNamedBarrier(*GV) || isLDSSemaphore(*GV)))
-        continue;
-
-      // Give a module-absolute assignment if it is indirectly accessed by
-      // multiple kernels. This is not precise, but we don't want to duplicate
-      // a function when it is called by multiple kernels.
-      if (LDSToKernelsThatNeedToAccessItIndirectly[GV].size() > 1) {
-        OrderedGVs.push_back(GV);
-      } else {
-        // Leave it to the 2nd round, which will give a kernel-relative
-        // assignment if it is only indirectly accessed by one kernel.
-        LDSUsesInfo.direct_access[*K.second.begin()].insert(GV);
-      }
-      LDSToKernelsThatNeedToAccessItIndirectly.erase(GV);
-    }
-    OrderedGVs = sortByName(std::move(OrderedGVs));
-    for (GlobalVariable *GV : OrderedGVs) {
-      unsigned Offset;
-      if (TargetExtType *ExtTy = isNamedBarrier(*GV)) {
-        unsigned BarrierScope = ExtTy->getIntParameter(0);
-        unsigned BarId = NumBarAbsolutes[BarrierScope] + 1;
-        unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
-        NumBarAbsolutes[BarrierScope] += BarCnt;
-
-        // 4 bits for alignment, 5 bits for the barrier num,
-        // 3 bits for the barrier scope
-        Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
-
-      } else if (TargetExtType *ExtTy = isLDSSemaphore(*GV)) {
-        unsigned OwningRank = ExtTy->getIntParameter(0);
-        assert(OwningRank < MAX_WAVES_PER_WAVEGROUP); 
-        unsigned Num = ++NumSemAbsolutes[OwningRank];
-
-        // 4 bits for alignment, 4 bits for the semaphore num,
-        // 4 bits for the owning rank
-        Offset = 0x801000u | OwningRank << 8 | Num << 4;
-
-      } else
-        llvm_unreachable("Unhandled special variable type.");
-
-      recordLDSAbsoluteAddress(&M, GV, Offset);
-    }
-    OrderedGVs.clear();
-
-    // The 2nd round: give a kernel-relative assignment for GV that
-    // either only indirectly accessed by single kernel or only directly
-    // accessed by multiple kernels.
-    std::vector<Function *> OrderedKernels;
-    for (auto &K : LDSUsesInfo.direct_access) {
-      Function *F = K.first;
-      assert(isKernelLDS(F));
-      OrderedKernels.push_back(F);
-    }
-    OrderedKernels = sortByName(std::move(OrderedKernels));
-
-    DenseMap<Function *, unsigned> Kernel2BarId[NumBarScopes];
-    DenseMap<Function *, unsigned> Kernel2SemRelative[MAX_WAVES_PER_WAVEGROUP];
-    for (Function *F : OrderedKernels) {
-
-      // Collect all globals for each kernel.
-      for (GlobalVariable *GV : LDSUsesInfo.direct_access[F]) {
-        if (!(isNamedBarrier(*GV) || isLDSSemaphore(*GV)))
-          continue;
-
-        LDSUsesInfo.direct_access[F].erase(GV);
-        if (GV->isAbsoluteSymbolRef()) {
-          // Already assigned.
-          continue;
-        }
-        OrderedGVs.push_back(GV);
-      }
-
-      OrderedGVs = sortByName(std::move(OrderedGVs));
-      for (GlobalVariable *GV : OrderedGVs) {
-        // GV could also be used directly by other kernels. If so, we need to
-        // create a new GV used only by this kernel and its function.
-        auto NewGV = uniquifyGVPerKernel(M, GV, F);
-        Changed |= (NewGV != GV);
-        unsigned Offset;
-        if (TargetExtType *ExtTy = isNamedBarrier(*GV)) {
-          // Place each barrier in the next open slot above the module-relative
-          // and already assigned kernel-relative barriers.
-          unsigned BarrierScope = ExtTy->getIntParameter(0);
-          unsigned BarId = Kernel2BarId[BarrierScope][F];
-          BarId += NumBarAbsolutes[BarrierScope] + 1;
-          unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
-          Kernel2BarId[BarrierScope][F] += BarCnt;
-          Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
-
-        } else if (TargetExtType *ExtTy = isLDSSemaphore(*GV)) {
-          // Determine which semaphore GVs were already assigned, and for the
-          // remaining ones assign the semaphore nums above.
-          unsigned OwningRank =
-              ExtTy->getIntParameter(0) % MAX_WAVES_PER_WAVEGROUP;
-          unsigned Num = NumSemAbsolutes[OwningRank];
-          Kernel2SemRelative[OwningRank][F]++;
-          Num += Kernel2SemRelative[OwningRank][F];
-          Offset = 0x801000u | OwningRank << 8 | Num << 4;
-
-        } else
-          llvm_unreachable("Unhandled special variable type.");
-        recordLDSAbsoluteAddress(&M, NewGV, Offset);
-      }
-      OrderedGVs.clear();
-    }
-    // Also erase those special LDS variables from indirect_access.
-    for (auto &K : LDSUsesInfo.indirect_access) {
-      assert(isKernelLDS(K.first));
-      for (GlobalVariable *GV : K.second) {
-        if (isNamedBarrier(*GV) || isLDSSemaphore(*GV))
-          K.second.erase(GV);
-      }
-    }
-    return Changed;
   }
 
   // Search the CallGraph for each function in the set looking for calls to
@@ -1099,7 +933,7 @@ public:
 
     DenseMap<Function *, SmallDenseSet<Function *>> RankFuncMap;
     for (Function &Func : M.functions()) {
-      if (Func.isDeclaration() || !isKernelLDS(&Func))
+      if (Func.isDeclaration() || !(isKernel(Func) && !getWavegroupRankFunction(Func)))
         continue;
       for (const CallGraphNode::CallRecord &R : *CG[&Func]) {
         Function *Ith = R.second->getFunction();
@@ -1127,16 +961,10 @@ public:
     VariableFunctionMap LDSToKernelsThatNeedToAccessItIndirectly;
     for (auto &K : LDSUsesInfo.indirect_access) {
       Function *F = K.first;
-      assert(isKernelLDS(F));
+      assert(isKernel(*F));
       for (GlobalVariable *GV : K.second) {
         LDSToKernelsThatNeedToAccessItIndirectly[GV].insert(F);
       }
-    }
-
-    if (LDSUsesInfo.HasSpecialGVs) {
-      // Special LDS variables need special address assignment
-      Changed |= lowerSpecialLDSVariables(
-          M, LDSUsesInfo, LDSToKernelsThatNeedToAccessItIndirectly);
     }
 
     // Partition variables accessed indirectly into the different strategies
@@ -1234,7 +1062,7 @@ public:
       const DataLayout &DL = M.getDataLayout();
 
       for (Function &Func : M.functions()) {
-        if (Func.isDeclaration() || !isKernelLDS(&Func))
+        if (Func.isDeclaration() || !isKernel(Func))
           continue;
 
         // All three of these are optional. The first variable is allocated at

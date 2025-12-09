@@ -10,6 +10,7 @@
 
 #include "SIFoldOperands.h"
 #include "AMDGPU.h"
+#include "AMDGPUMachineInstrs.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
@@ -232,9 +233,9 @@ public:
   std::pair<int64_t, const TargetRegisterClass *>
   isRegSeqSplat(MachineInstr &RegSeg) const;
 
-  bool isRegSeqConcat(
-      MachineInstr &RegSeq,
-      SmallVectorImpl<std::pair<MachineOperand *, unsigned>> &Srcs) const;
+  bool
+  isRegSeqConcat(MachineInstr &RegSeq,
+                 SmallVectorImpl<std::pair<Register, unsigned>> &Srcs) const;
 
   int isSubcopy(MachineInstr &MI) const;
 
@@ -270,10 +271,9 @@ public:
   bool tryFoldDynamicIdxOffset(MachineOperand *Idx, MachineOperand *Offset,
                                MachineInstr *&SMovImmZero);
   bool tryFoldDynamicIdxMI(MachineInstr &MI, MachineInstr *&SMovImmZero);
-  bool trySplitVStIdxRegSeq(MachineInstr &MI);
-  bool trySplitVLdIdxMultiRegSeq(MachineInstr &MI);
+  bool trySplitVStIdxRegSeq(AMDGPUMI::VStoreIdxInst &MI);
+  bool trySplitVLdIdxMultiRegSeq(AMDGPUMI::VLoadIdxInst &MI);
   bool tryFoldRegSeqVLdIdx(MachineInstr &MI);
-  bool tryFoldMiscCombinations(MachineInstr &MI);
 
   bool tryOptimizeAGPRPhis(MachineBasicBlock &MBB);
 
@@ -695,6 +695,10 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
         return false;
       MI->setDesc(TII->get(NewMFMAOpc));
       MI->untieRegOperand(0);
+      const MCInstrDesc &MCID = MI->getDesc();
+      for (unsigned I = 0; I < MI->getNumDefs(); ++I)
+        if (MCID.getOperandConstraint(I, MCOI::EARLY_CLOBBER) != -1)
+          MI->getOperand(I).setIsEarlyClobber(true);
     }
 
     // TODO: Should we try to avoid adding this to the candidate list?
@@ -723,7 +727,7 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
 
   // Verify the register is compatible with the operand.
   if (const TargetRegisterClass *OpRC =
-          TII->getRegClass(MI->getDesc(), Fold.UseOpNo, TRI)) {
+          TII->getRegClass(MI->getDesc(), Fold.UseOpNo)) {
     const TargetRegisterClass *NewRC =
         TRI->getRegClassForReg(*MRI, New->getReg());
 
@@ -775,6 +779,29 @@ static void appendFoldCandidate(SmallVectorImpl<FoldCandidate> &FoldList,
                                 bool Commuted = false, int ShrinkOp = -1) {
   appendFoldCandidate(FoldList,
                       FoldCandidate(MI, OpNo, FoldOp, Commuted, ShrinkOp));
+}
+
+// Returns true if the instruction is a packed F32 instruction and the
+// corresponding scalar operand reads 32 bits and replicates the bits to both
+// channels.
+static bool isPKF32InstrReplicatesLower32BitsOfScalarOperand(
+    const GCNSubtarget *ST, MachineInstr *MI, unsigned OpNo) {
+  if (!ST->hasPKF32InstsReplicatingLower32BitsOfScalarInput())
+    return false;
+  const MCOperandInfo &OpDesc = MI->getDesc().operands()[OpNo];
+  return OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP32;
+}
+
+// Packed FP32 instructions only read 32 bits from a scalar operand (SGPR or
+// literal) and replicates the bits to both channels. Therefore, if the hi and
+// lo are not same, we can't fold it.
+static bool checkImmOpForPKF32InstrReplicatesLower32BitsOfScalarOperand(
+    const FoldableDef &OpToFold) {
+  assert(OpToFold.isImm() && "Expected immediate operand");
+  uint64_t ImmVal = OpToFold.getEffectiveImmVal().value();
+  uint32_t Lo = Lo_32(ImmVal);
+  uint32_t Hi = Hi_32(ImmVal);
+  return Lo == Hi;
 }
 
 bool SIFoldOperandsImpl::tryAddToFoldList(
@@ -932,6 +959,13 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
     if (tryToFoldAsFMAAKorMK())
       return true;
   }
+
+  // Special case for PK_F32 instructions if we are trying to fold an imm to
+  // src0 or src1.
+  if (OpToFold.isImm() &&
+      isPKF32InstrReplicatesLower32BitsOfScalarOperand(ST, MI, OpNo) &&
+      !checkImmOpForPKF32InstrReplicatesLower32BitsOfScalarOperand(OpToFold))
+    return false;
 
   appendFoldCandidate(FoldList, MI, OpNo, OpToFold);
   return true;
@@ -1138,39 +1172,25 @@ bool SIFoldOperandsImpl::tryFoldRegSeqSplat(
 
 #define REG_SEQ_CONCAT_UNIT 32
 // Checks whether a REG_SEQUENCE output is the concatenation of several
-// registers. If true, it also returns the starting subregister operand
-// and its sequencing-index for each concatenated register.
+// registers. If true, it also returns the virtual register and its starting
+// index in the REG_SEQUENCE.
 bool SIFoldOperandsImpl::isRegSeqConcat(
     MachineInstr &RegSeq,
-    SmallVectorImpl<std::pair<MachineOperand *, unsigned>> &Srcs) const {
+    SmallVectorImpl<std::pair<Register, unsigned>> &SrcRegs) const {
   assert(RegSeq.isRegSequence());
-  assert(Srcs.empty());
-  unsigned SrcSize = 0;
-  // check the last SrcOp in Srcs are completely covered (wrapped in a lambda)
-  auto IsLastSrcFullyCovered = [&]() -> bool {
-    if (Srcs.empty())
-      return true;
-    auto &Last = Srcs.back();
-    MachineOperand *LastSrc = Last.first;
-    if (LastSrc->isReg() && LastSrc->getSubReg() != AMDGPU::NoSubRegister) {
-      unsigned LastSize = TRI->getRegSizeInBits(LastSrc->getReg(), *MRI);
-      // if the last subreg is not fully covered, fail
-      if (LastSize != SrcSize)
-        return false;
-    }
-    return true;
-  };
+  assert(SrcRegs.empty());
   SmallVector<std::pair<unsigned, MachineOperand *>, 8> SrcOpnds;
   for (unsigned I = 1, E = RegSeq.getNumExplicitOperands(); I != E; I += 2) {
     MachineOperand &SrcOp = RegSeq.getOperand(I);
     unsigned SubRegIdx = RegSeq.getOperand(I + 1).getImm();
     SrcOpnds.emplace_back(SubRegIdx, &SrcOp);
   }
+  // Canonicalize the order of source operands by subreg index.
   llvm::sort(SrcOpnds, [&](const auto &A, const auto &B) {
-    return TRI->getSubRegIdxOffset(A.first) <
-           TRI->getSubRegIdxOffset(B.first);
+    return TRI->getSubRegIdxOffset(A.first) < TRI->getSubRegIdxOffset(B.first);
   });
 
+  unsigned SrcSize = 0;
   for (unsigned I = 0, E = SrcOpnds.size(); I != E; ++I) {
     MachineOperand *SrcOp = SrcOpnds[I].second;
     unsigned SubRegIdx = SrcOpnds[I].first;
@@ -1180,25 +1200,35 @@ bool SIFoldOperandsImpl::isRegSeqConcat(
       return false;
 
     if (SrcOp->getSubReg() == AMDGPU::NoSubRegister) {
-      Srcs.emplace_back(SrcOp, SubRegIdx);
+      if (SrcSize != 0)
+          return false; // Previous reg not fully covered.
+      SrcRegs.emplace_back(SrcOp->getReg(), SubRegIdx);
     } else {
       auto SrcSubIdx = SrcOp->getSubReg();
       auto SubOffset = TRI->getSubRegIdxOffset(SrcSubIdx);
       auto SubSize = TRI->getSubRegIdxSize(SrcSubIdx);
       if (SubOffset == 0) {
-        if (!IsLastSrcFullyCovered())
-          return false;
-        Srcs.emplace_back(SrcOp, SubRegIdx);
+        if (SrcSize != 0)
+          return false; // Previous reg not fully covered.
+        SrcRegs.emplace_back(SrcOp->getReg(), SubRegIdx);
         SrcSize = SubSize;
-      } else if (SubOffset == SrcSize) {
+      } else if (SubOffset == SrcSize &&
+                 SrcOp->getReg() == SrcRegs.back().first) {
         // Contiguous subreg, continue.
         SrcSize += SubSize;
+        assert(SrcSize <= TRI->getRegSizeInBits(SrcOp->getReg(), *MRI));
+        if (SrcSize == TRI->getRegSizeInBits(SrcOp->getReg(), *MRI))
+          SrcSize = 0;
       } else {
         // Non-contiguous subreg, fail.
         return false;
       }
     }
   }
+
+  if (SrcSize != 0)
+    return false; // The last reg not fully covered.
+
   return true;
 }
 
@@ -1213,6 +1243,9 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
     return false;
 
   if (OpToFold.isImm() && OpToFold.isOperandLegal(*TII, *UseMI, UseOpIdx)) {
+    if (isPKF32InstrReplicatesLower32BitsOfScalarOperand(ST, UseMI, UseOpIdx) &&
+        !checkImmOpForPKF32InstrReplicatesLower32BitsOfScalarOperand(OpToFold))
+      return false;
     appendFoldCandidate(FoldList, UseMI, UseOpIdx, OpToFold);
     return true;
   }
@@ -1369,10 +1402,11 @@ void SIFoldOperandsImpl::foldOperand(
         continue;
 
       const int SrcIdx = MovOp == AMDGPU::V_MOV_B16_t16_e64 ? 2 : 1;
-      const TargetRegisterClass *MovSrcRC =
-          TRI->getRegClass(TII->getOpRegClassID(MovDesc.operands()[SrcIdx]));
 
-      if (MovSrcRC) {
+      int16_t RegClassID = TII->getOpRegClassID(MovDesc.operands()[SrcIdx]);
+      if (RegClassID != -1) {
+        const TargetRegisterClass *MovSrcRC = TRI->getRegClass(RegClassID);
+
         if (UseSubReg)
           MovSrcRC = TRI->getMatchingSuperRegClass(SrcRC, MovSrcRC, UseSubReg);
 
@@ -1411,7 +1445,7 @@ void SIFoldOperandsImpl::foldOperand(
       if (MovOp == AMDGPU::V_MOV_B16_t16_e64) {
         const auto &SrcOp = UseMI->getOperand(UseOpIdx);
         MachineOperand NewSrcOp(SrcOp);
-        MachineFunction *MF = UseMI->getParent()->getParent();
+        MachineFunction *MF = UseMI->getMF();
         UseMI->removeOperand(1);
         UseMI->addOperand(*MF, MachineOperand::CreateImm(0)); // src0_modifiers
         UseMI->addOperand(NewSrcOp);                          // src0
@@ -1442,7 +1476,7 @@ void SIFoldOperandsImpl::foldOperand(
       // Remove this if 16-bit SGPRs (i.e. SGPR_LO16) are added to the
       // VS_16RegClass
       //
-      // Excerpt from AMDGPUGenRegisterInfo.inc
+      // Excerpt from AMDGPUGenRegisterInfoEnums.inc
       // NoSubRegister, //0
       // hi16, // 1
       // lo16, // 2
@@ -1618,20 +1652,6 @@ static unsigned getMovOpc(bool IsScalar) {
   return IsScalar ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
 }
 
-static void mutateCopyOp(MachineInstr &MI, const MCInstrDesc &NewDesc) {
-  MI.setDesc(NewDesc);
-
-  // Remove any leftover implicit operands from mutating the instruction. e.g.
-  // if we replace an s_and_b32 with a copy, we don't need the implicit scc def
-  // anymore.
-  const MCInstrDesc &Desc = MI.getDesc();
-  unsigned NumOps = Desc.getNumOperands() + Desc.implicit_uses().size() +
-                    Desc.implicit_defs().size();
-
-  for (unsigned I = MI.getNumOperands() - 1; I >= NumOps; --I)
-    MI.removeOperand(I);
-}
-
 std::optional<int64_t>
 SIFoldOperandsImpl::getImmOrMaterializedImm(MachineOperand &Op) const {
   if (Op.isImm())
@@ -1670,7 +1690,8 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
        Opc == AMDGPU::S_NOT_B32) &&
       Src0Imm) {
     MI->getOperand(1).ChangeToImmediate(~*Src0Imm);
-    mutateCopyOp(*MI, TII->get(getMovOpc(Opc == AMDGPU::S_NOT_B32)));
+    TII->mutateAndCleanupImplicit(
+        *MI, TII->get(getMovOpc(Opc == AMDGPU::S_NOT_B32)));
     return true;
   }
 
@@ -1698,7 +1719,7 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
     // instruction.
     MI->getOperand(Src0Idx).ChangeToImmediate(NewImm);
     MI->removeOperand(Src1Idx);
-    mutateCopyOp(*MI, TII->get(getMovOpc(IsSGPR)));
+    TII->mutateAndCleanupImplicit(*MI, TII->get(getMovOpc(IsSGPR)));
     return true;
   }
 
@@ -1718,11 +1739,12 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
     if (Src1Val == 0) {
       // y = or x, 0 => y = copy x
       MI->removeOperand(Src1Idx);
-      mutateCopyOp(*MI, TII->get(AMDGPU::COPY));
+      TII->mutateAndCleanupImplicit(*MI, TII->get(AMDGPU::COPY));
     } else if (Src1Val == -1) {
       // y = or x, -1 => y = v_mov_b32 -1
       MI->removeOperand(Src1Idx);
-      mutateCopyOp(*MI, TII->get(getMovOpc(Opc == AMDGPU::S_OR_B32)));
+      TII->mutateAndCleanupImplicit(
+          *MI, TII->get(getMovOpc(Opc == AMDGPU::S_OR_B32)));
     } else
       return false;
 
@@ -1734,11 +1756,12 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
     if (Src1Val == 0) {
       // y = and x, 0 => y = v_mov_b32 0
       MI->removeOperand(Src0Idx);
-      mutateCopyOp(*MI, TII->get(getMovOpc(Opc == AMDGPU::S_AND_B32)));
+      TII->mutateAndCleanupImplicit(
+          *MI, TII->get(getMovOpc(Opc == AMDGPU::S_AND_B32)));
     } else if (Src1Val == -1) {
       // y = and x, -1 => y = copy x
       MI->removeOperand(Src1Idx);
-      mutateCopyOp(*MI, TII->get(AMDGPU::COPY));
+      TII->mutateAndCleanupImplicit(*MI, TII->get(AMDGPU::COPY));
     } else
       return false;
 
@@ -1750,7 +1773,7 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
     if (Src1Val == 0) {
       // y = xor x, 0 => y = copy x
       MI->removeOperand(Src1Idx);
-      mutateCopyOp(*MI, TII->get(AMDGPU::COPY));
+      TII->mutateAndCleanupImplicit(*MI, TII->get(AMDGPU::COPY));
       return true;
     }
   }
@@ -1796,7 +1819,7 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
     MI.removeOperand(Src1ModIdx);
   if (Src0ModIdx != -1)
     MI.removeOperand(Src0ModIdx);
-  mutateCopyOp(MI, NewDesc);
+  TII->mutateAndCleanupImplicit(MI, NewDesc);
   LLVM_DEBUG(dbgs() << MI);
   return true;
 }
@@ -1864,7 +1887,7 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
   if (CopiesToReplace.empty() && FoldList.empty())
     return Changed;
 
-  MachineFunction *MF = MI.getParent()->getParent();
+  MachineFunction *MF = MI.getMF();
   // Make sure we add EXEC uses to any new v_mov instructions created.
   for (MachineInstr *Copy : CopiesToReplace)
     Copy->addImplicitDefUseOperands(*MF);
@@ -2479,7 +2502,7 @@ bool SIFoldOperandsImpl::tryFoldRegSequence(MachineInstr &MI) {
 
   unsigned OpIdx = Op - &UseMI->getOperand(0);
   const MCInstrDesc &InstDesc = UseMI->getDesc();
-  const TargetRegisterClass *OpRC = TII->getRegClass(InstDesc, OpIdx, TRI);
+  const TargetRegisterClass *OpRC = TII->getRegClass(InstDesc, OpIdx);
   if (!OpRC || !TRI->isVectorSuperClass(OpRC))
     return false;
 
@@ -2554,27 +2577,27 @@ bool SIFoldOperandsImpl::tryFoldRegSeqVLdIdx(MachineInstr &MI) {
   MachineOperand *IdxOp = nullptr;
   unsigned RegSeqOffset = 0;
   unsigned VLdIdxOffset = 0;
-  SmallVector<MachineInstr *, 8> VLdIdxMIs;
+  SmallVector<AMDGPUMI::VLoadIdxInst *, 8> VLdIdxMIs;
   for (auto &[SubRegIdx, SrcOp] : SrcOpnds) {
     if (!SrcOp->isReg() || !SrcOp->getReg().isVirtual())
       return false;
     // Only used by this reg-sequence.
     if (!MRI->hasOneNonDBGUser(SrcOp->getReg()))
       return false;
-    MachineInstr *Def = MRI->getVRegDef(SrcOp->getReg());
-    if (!Def || Def->getOpcode() != AMDGPU::V_LOAD_IDX)
+    auto *Def = dyn_cast_or_null<AMDGPUMI::VLoadIdxInst>(
+        MRI->getVRegDef(SrcOp->getReg()));
+    if (!Def)
       return false;
     // Check the idx-operand.
-    MachineOperand *DefIdxOp = TII->getNamedOperand(*Def, AMDGPU::OpName::idx);
+    MachineOperand *DefIdxOp = &Def->getIdxOp();
     if (!IdxOp)
       IdxOp = DefIdxOp;
     else if (IdxOp->getReg() != DefIdxOp->getReg() ||
              IdxOp->getSubReg() != DefIdxOp->getSubReg())
       return false;
     // Check the offset. First check the v_load_idx.
-    MachineOperand *DefOffsetOp =
-        TII->getNamedOperand(*Def, AMDGPU::OpName::offset);
-    assert(DefOffsetOp && DefOffsetOp->isImm());
+    MachineOperand *DefOffsetOp = &Def->getOffsetOp();
+    assert(DefOffsetOp->isImm());
     unsigned ThisVLdIdxOffset = DefOffsetOp->getImm();
     if (SrcOp->getSubReg())
       ThisVLdIdxOffset +=
@@ -2594,10 +2617,8 @@ bool SIFoldOperandsImpl::tryFoldRegSeqVLdIdx(MachineInstr &MI) {
   assert(!VLdIdxMIs.empty());
   // Create a new v_load_idx to replace the reg-sequence.
   auto *LeadMI = VLdIdxMIs.front();
-  Register VirtualIDX =
-      TII->getNamedOperand(*LeadMI, AMDGPU::OpName::idx)->getReg();
-  int64_t Offset =
-      TII->getNamedOperand(*LeadMI, AMDGPU::OpName::offset)->getImm();
+  Register VirtualIDX = LeadMI->getIdxOp().getReg();
+  int64_t Offset = LeadMI->getOffsetOp().getImm();
   auto *MMO = *LeadMI->memoperands_begin();
   assert(MMO);
   auto &MMOPtrInfo = MMO->getPointerInfo();
@@ -2605,20 +2626,22 @@ bool SIFoldOperandsImpl::tryFoldRegSeqVLdIdx(MachineInstr &MI) {
   MachineFunction *MF = MBB->getParent();
 
   MachineOperand &DefMO = MI.getOperand(0);
-
-  auto NewLd = BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::V_LOAD_IDX))
-                   .add(DefMO)
-                   .addReg(VirtualIDX)
-                   .addImm(Offset);
-  // Need to adjust the load size in MMO.
   const TargetRegisterClass *DstRC = MRI->getRegClass(DefMO.getReg());
   if (DefMO.getSubReg() != AMDGPU::NoSubRegister) {
     DstRC = TRI->getSubRegisterClass(DstRC, DefMO.getSubReg());
   }
   assert(DstRC);
-  NewLd->addMemOperand(
-      *MF, MF->getMachineMemOperand(MMO, MMOPtrInfo,
-                                    TRI->getRegSizeInBits(*DstRC) / 8));
+  unsigned Size = TRI->getRegSizeInBits(*DstRC);
+
+  auto NewLd =
+      BuildMI(*MBB, MI, MI.getDebugLoc(),
+              TII->get(AMDGPUMI::VLoadIdxInst::getOpcodeForBitWidth(Size)))
+          .add(DefMO)
+          .addReg(VirtualIDX)
+          .addImm(Offset);
+  // Need to adjust the load size in MMO.
+  NewLd->addMemOperand(*MF,
+                       MF->getMachineMemOperand(MMO, MMOPtrInfo, Size / 8));
   LLVM_DEBUG(dbgs() << "Folded: " << MI << "  Created: " << *NewLd);
 
   for (auto SubVLdIdx : VLdIdxMIs) {
@@ -2959,9 +2982,8 @@ int SIFoldOperandsImpl::isSubcopy(MachineInstr &MI) const {
 // return value, split the V_LOAD_IDX into several V_LOAD_IDXs without
 // REG_SEQUENCE. This enables the bundling, and reduces the number of
 // vgpr copies.
-bool SIFoldOperandsImpl::trySplitVLdIdxMultiRegSeq(MachineInstr &MI) {
-  assert(MI.getOpcode() == AMDGPU::V_LOAD_IDX);
-  MachineOperand *DataOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::data_op);
+bool SIFoldOperandsImpl::trySplitVLdIdxMultiRegSeq(AMDGPUMI::VLoadIdxInst &MI) {
+  MachineOperand *DataOpnd = &MI.getDataOp();
   assert(DataOpnd);
 
   Register DataReg = DataOpnd->getReg();
@@ -2980,8 +3002,8 @@ bool SIFoldOperandsImpl::trySplitVLdIdxMultiRegSeq(MachineInstr &MI) {
 
   // Generate a V_LOAD_IDX for each sub-copy user.
   LLVM_DEBUG(dbgs() << "Splitting " << MI);
-  Register VirtualIDX = TII->getNamedOperand(MI, AMDGPU::OpName::idx)->getReg();
-  int64_t Offset = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
+  Register VirtualIDX = MI.getIdxOp().getReg();
+  int64_t Offset = MI.getOffsetOp().getImm();
   auto *MMO = *MI.memoperands_begin();
   assert(MMO);
   auto &MMOPtrInfo = MMO->getPointerInfo();
@@ -2993,22 +3015,22 @@ bool SIFoldOperandsImpl::trySplitVLdIdxMultiRegSeq(MachineInstr &MI) {
     assert(Offset + SubOffset / REG_SEQ_CONCAT_UNIT <
            ST->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()));
     MachineOperand &DefMO = Subcopy->getOperand(0);
-
-    auto NewLd =
-        BuildMI(*MBB, MI, Subcopy->getDebugLoc(), TII->get(AMDGPU::V_LOAD_IDX))
-            .add(DefMO)
-            .addReg(VirtualIDX)
-            .addImm(Offset + SubOffset / REG_SEQ_CONCAT_UNIT);
-    // Need to adjust the size and offset in MMO.
     const TargetRegisterClass *RC = MRI->getRegClass(DefMO.getReg());
     if (DefMO.getSubReg() != AMDGPU::NoSubRegister) {
       RC = TRI->getSubRegisterClass(RC, DefMO.getSubReg());
     }
     assert(RC);
+    unsigned Size = TRI->getRegSizeInBits(*RC);
+
+    auto NewLd =
+        BuildMI(*MBB, MI, Subcopy->getDebugLoc(),
+                TII->get(AMDGPUMI::VLoadIdxInst::getOpcodeForBitWidth(Size)))
+            .add(DefMO)
+            .addReg(VirtualIDX)
+            .addImm(Offset + SubOffset / REG_SEQ_CONCAT_UNIT);
+    // Need to adjust the size and offset in MMO.
     MachinePointerInfo NewPtrI = MMOPtrInfo.getWithOffset(SubOffset / 8);
-    NewLd->addMemOperand(
-        *MF,
-        MF->getMachineMemOperand(MMO, NewPtrI, TRI->getRegSizeInBits(*RC) / 8));
+    NewLd->addMemOperand(*MF, MF->getMachineMemOperand(MMO, NewPtrI, Size / 8));
     LLVM_DEBUG(dbgs() << "  Created: " << *NewLd);
   }
   // Existing SubcopyMIs should be dead. We cannot erase them due to MBB
@@ -3028,9 +3050,8 @@ bool SIFoldOperandsImpl::trySplitVLdIdxMultiRegSeq(MachineInstr &MI) {
 // When the data-operand of V_STORE_IDX is a REG_SEQUENCE of concatenation,
 // split it into several V_STORE_IDXs without REG_SEQUENCE. This enables the
 // bundling, and reduces the number of vgpr copies.
-bool SIFoldOperandsImpl::trySplitVStIdxRegSeq(MachineInstr &MI) {
-  assert(MI.getOpcode() == AMDGPU::V_STORE_IDX);
-  MachineOperand *DataOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::data_op);
+bool SIFoldOperandsImpl::trySplitVStIdxRegSeq(AMDGPUMI::VStoreIdxInst &MI) {
+  MachineOperand *DataOpnd = &MI.getDataOp();
   assert(DataOpnd);
 
   Register DataReg = DataOpnd->getReg();
@@ -3041,36 +3062,38 @@ bool SIFoldOperandsImpl::trySplitVStIdxRegSeq(MachineInstr &MI) {
   if (!RegSeqMI || !RegSeqMI->isRegSequence())
     return false;
 
-  SmallVector<std::pair<MachineOperand *, unsigned>, 8> Srcs;
+  SmallVector<std::pair<Register, unsigned>, 8> Srcs;
   if (!isRegSeqConcat(*RegSeqMI, Srcs))
     return false;
 
   LLVM_DEBUG(dbgs() << "Splitting " << *RegSeqMI << " from " << MI);
 
-  Register VirtualIDX = TII->getNamedOperand(MI, AMDGPU::OpName::idx)->getReg();
-  int64_t Offset = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
+  Register VirtualIDX = MI.getIdxOp().getReg();
+  int64_t Offset = MI.getOffsetOp().getImm();
   auto *MMO = *MI.memoperands_begin();
   assert(MMO);
   auto &MMOPtrInfo = MMO->getPointerInfo();
   MachineFunction *MF = MI.getParent()->getParent();
 
   // Create a V_STORE_IDX for each concatenating component of the REG_SEQUENCE.
-  for (auto &[Op, SubIdx] : Srcs) {
+  for (auto &[SrcReg, SubIdx] : Srcs) {
     // Need to adjust the v_store_idx offset.
     int64_t SubOffset = TRI->getSubRegIdxOffset(SubIdx);
-    assert(TRI->getSubRegIdxOffset(SubIdx) % REG_SEQ_CONCAT_UNIT == 0);
+    int64_t NewStSize = TRI->getRegSizeInBits(SrcReg, *MRI);
+    assert(SubOffset % REG_SEQ_CONCAT_UNIT == 0);
     assert(Offset + SubOffset / REG_SEQ_CONCAT_UNIT <
            ST->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()));
-    auto NewSt = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-                         TII->get(AMDGPU::V_STORE_IDX))
-                     .addReg(Op->getReg())
-                     .addReg(VirtualIDX)
-                     .addImm(Offset + SubOffset / REG_SEQ_CONCAT_UNIT);
+    auto NewSt =
+        BuildMI(
+            *MI.getParent(), MI, MI.getDebugLoc(),
+            TII->get(AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(NewStSize)))
+            .addReg(SrcReg)
+            .addReg(VirtualIDX)
+            .addImm(Offset + SubOffset / REG_SEQ_CONCAT_UNIT);
     // Need to adjust the size and offset in MMO.
     MachinePointerInfo NewPtrI = MMOPtrInfo.getWithOffset(SubOffset / 8);
-    NewSt->addMemOperand(
-        *MF, MF->getMachineMemOperand(
-                 MMO, NewPtrI, TRI->getRegSizeInBits(Op->getReg(), *MRI) / 8));
+    NewSt->addMemOperand(*MF,
+                         MF->getMachineMemOperand(MMO, NewPtrI, NewStSize / 8));
     LLVM_DEBUG(dbgs() << "  Created: " << *NewSt);
   }
 
@@ -3083,17 +3106,16 @@ bool SIFoldOperandsImpl::trySplitVStIdxRegSeq(MachineInstr &MI) {
 bool SIFoldOperandsImpl::tryFoldDynamicIdxMI(MachineInstr &MI,
                                              MachineInstr *&SMovImmZero) {
   bool Changed = false;
-  if (SIInstrInfo::isVLdStIdx(MI.getOpcode())) {
-    MachineOperand *IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx),
-                   *OffOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::offset);
+  if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+    MachineOperand *IdxOpnd = &LdStIdx->getIdxOp();
+    MachineOperand *OffOpnd = &LdStIdx->getOffsetOp();
     Changed |= tryFoldDynamicIdxOffset(IdxOpnd, OffOpnd, SMovImmZero);
 
-    if (MI.getOpcode() == AMDGPU::V_STORE_IDX)
-      Changed |= trySplitVStIdxRegSeq(MI);
+    if (auto *StIdx = dyn_cast<AMDGPUMI::VStoreIdxInst>(LdStIdx))
+      Changed |= trySplitVStIdxRegSeq(*StIdx);
     else
-      Changed |= trySplitVLdIdxMultiRegSeq(MI);
-  }
-  else if (SIInstrInfo::mustHaveLanesharedResult(MI)) {
+      Changed |= trySplitVLdIdxMultiRegSeq(cast<AMDGPUMI::VLoadIdxInst>(MI));
+  } else if (SIInstrInfo::mustHaveLanesharedResult(MI)) {
     MachineOperand *IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx),
                    *OffOpnd =
                        TII->getNamedOperand(MI, AMDGPU::OpName::dyn_offset),
@@ -3204,64 +3226,6 @@ bool SIFoldOperandsImpl::tryOptimizeAGPRPhis(MachineBasicBlock &MBB) {
   return Changed;
 }
 
-// If there is a pattern like this:
-// %0:vreg = REG_SEQUENCE %1:vgpr_32, %subreg.sub0, %2:vgpr_32, %subreg.sub1,
-// %3:sgpr_32 = V_READFIRSTLANE_B32 %0.sub0:vreg
-// %4:sgpr_32 = V_READFIRSTLANE_B32 %0.sub1:vreg
-
-// =>
-
-// %0:vreg = REG_SEQUENCE %1:vgpr_32, %subreg.sub0, %2:vgpr_32, %subreg.sub1,
-// %3:sgpr_32 = V_READFIRSTLANE_B32 %1:vgpr_32
-// %4:sgpr_32 = V_READFIRSTLANE_B32 %2:vgpr_32
-
-// This allows the second pass through si-fold-operands to fold READFIRSTLANEs
-// into COPYs.
-bool SIFoldOperandsImpl::tryFoldMiscCombinations(MachineInstr &MI) {
-  MachineOperand *SrcMO = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
-  if (!SrcMO->isReg())
-    return false;
-
-  bool FoundRegSeqWithRFLSrc = false;
-  unsigned SrcReg = SrcMO->getReg();
-  unsigned SubRegIdx = SrcMO->getSubReg();
-  auto It = MI.getIterator();
-  auto Begin = MI.getParent()->begin();
-  for (; It != Begin; --It) {
-    MachineInstr &PrevMI = *std::prev(It);
-    for (const MachineOperand &DefOp : PrevMI.defs()) {
-      if (!DefOp.isReg())
-        break;
-      unsigned DefReg = DefOp.getReg();
-      if (DefReg && TRI->regsOverlap(DefReg, SrcReg)) {
-        if (!PrevMI.isRegSequence())
-          break;
-
-        for (unsigned i = 1; i + 1 < PrevMI.getNumOperands(); i += 2) {
-          MachineOperand &PrevMO = PrevMI.getOperand(i);
-
-          const MachineOperand &SubRegMO = PrevMI.getOperand(i + 1);
-          if (SubRegMO.isImm() && (SubRegMO.getImm() == SubRegIdx)) {
-            SrcMO->setReg(PrevMO.getReg());
-            SrcMO->setSubReg(PrevMO.getSubReg());
-            if (PrevMO.isKill()) {
-              PrevMO.setIsKill(false);
-              SrcMO->setIsKill(true);
-            }
-            FoundRegSeqWithRFLSrc = true;
-            break;
-          }
-        }
-      }
-    }
-    if (FoundRegSeqWithRFLSrc)
-      break;
-  }
-  LLVM_DEBUG(dbgs() << "Folded " << MI);
-
-  return FoundRegSeqWithRFLSrc;
-}
-
 bool SIFoldOperandsImpl::run(MachineFunction &MF) {
   this->MF = &MF;
   MRI = &MF.getRegInfo();
@@ -3320,12 +3284,6 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
 
       if (TII->isFoldableCopy(MI)) {
         Changed |= tryFoldFoldableCopy(MI, CurrentKnownM0Val);
-        continue;
-      }
-
-      unsigned UseOpc = MI.getOpcode();
-      if (UseOpc == AMDGPU::V_READFIRSTLANE_B32) {
-        Changed |= tryFoldMiscCombinations(MI);
         continue;
       }
 

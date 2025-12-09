@@ -172,7 +172,17 @@ protected:
   bool HasFP8ConversionInsts = false;
   bool HasWMMA128bInsts = false;
   bool HasWMMA256bInsts = false;
+<<<<<<< HEAD
   bool HasWMMA2048bInsts = false;
+=======
+  bool HasCubeInsts = false;
+  bool HasLerpInst = false;
+  bool HasSadInsts = false;
+  bool HasQsadInsts = false;
+  bool HasCvtNormInsts = false;
+  bool HasCvtPkNormVOP2Insts = false;
+  bool HasCvtPkNormVOP3Insts = false;
+>>>>>>> 97ee787266500c8ad3c020008102d130d4ee22c9
   bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
@@ -926,6 +936,20 @@ public:
 
   bool isGFX1170Plus() const { return getGeneration() >= GFX12 || isGFX1170(); }
 
+  bool hasCubeInsts() const { return HasCubeInsts; }
+
+  bool hasLerpInst() const { return HasLerpInst; }
+
+  bool hasSadInsts() const { return HasSadInsts; }
+
+  bool hasQsadInsts() const { return HasQsadInsts; }
+
+  bool hasCvtNormInsts() const { return HasCvtNormInsts; }
+
+  bool hasCvtPkNormVOP2Insts() const { return HasCvtPkNormVOP2Insts; }
+
+  bool hasCvtPkNormVOP3Insts() const { return HasCvtPkNormVOP3Insts; }
+
   bool hasFP8E5M3Insts() const { return HasFP8E5M3Insts; }
 
   bool hasPkFmacF16Inst() const {
@@ -1477,6 +1501,13 @@ public:
   /// \returns true if the target supports Wavegroups.
   bool hasWavegroups() const { return HasWavegroups; }
 
+  /// \returns true if the target has packed f32 instructions that only read 32
+  /// bits from a scalar operand (SGPR or literal) and replicates the bits to
+  /// both channels.
+  bool hasPKF32InstsReplicatingLower32BitsOfScalarInput() const {
+    return getGeneration() == GFX12 && GFX1250Insts;
+  }
+
   bool hasBitOp3Insts() const { return HasBitOp3Insts; }
 
   bool hasPermlane16Swap() const { return HasPermlane16Swap; }
@@ -1921,6 +1952,12 @@ public:
   // payload size.
   bool hasUnalignedDS2Bug() const { return GFX1250Insts; }
 
+  // src_flat_scratch_hi cannot be used as a source in SALU producing a 64-bit
+  // result.
+  bool hasFlatScratchHiInB64InstHazard() const {
+    return GFX1250Insts && getGeneration() == GFX12;
+  }
+
   /// \returns true if the subtarget supports clusters of workgroups.
   bool hasClusters() const { return HasClusters; }
 
@@ -1941,6 +1978,13 @@ public:
   // \returns true if the subtarget has a hardware bug affecting the G16 variant
   // of IMAGE_SAMPLE instructions.
   bool hasG16Bug() const { return getGeneration() == GFX13; };
+
+  /// \returns true if the subtarget requires a wait for xcnt before VMEM
+  /// accesses that must never be repeated in the event of a page fault/re-try.
+  /// Atomic stores/rmw and all volatile accesses fall under this criteria.
+  bool requiresWaitXCntForSingleAccessInstructions() const {
+    return GFX1250Insts && !GFX13Insts;;
+  }
 
   /// \returns the number of significant bits in the immediate field of the
   /// S_NOP instruction.

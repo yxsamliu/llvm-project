@@ -61,7 +61,6 @@
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <array>
@@ -1664,11 +1663,15 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX120E, "gfx120E"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1250, "gfx1250"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1251, "gfx1251"),                          \
+<<<<<<< HEAD
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1260, "gfx1260"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1301, "gfx1301"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1302, "gfx1302"),                          \
+=======
+>>>>>>> 97ee787266500c8ad3c020008102d130d4ee22c9
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX130E, "gfx130E"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1310, "gfx1310"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1360, "gfx1360"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic"),                \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic"),            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic"),          \

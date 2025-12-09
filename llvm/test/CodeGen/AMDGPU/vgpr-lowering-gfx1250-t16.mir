@@ -65,7 +65,10 @@ body:             |
     $vgpr896_lo16 = V_ADD_F16_t16_e64 0, undef $vgpr897_lo16, 0, undef $vgpr898_lo16, 0, 0, 0, implicit $exec, implicit $mode
 ...
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 97ee787266500c8ad3c020008102d130d4ee22c9
 # ASM-LABEL: {{^}}fmaak_fmamk:
 # DIS-LABEL: <fmaak_fmamk>:
 ---
@@ -74,6 +77,7 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; ASM: %bb.0:
+<<<<<<< HEAD
     ; We use an extra instruction to set the MSB, and then we expect it to be reset to 0 (lower 16-bit).
     ; GCN: s_set_vgpr_msb 0xcf
     ; GCN-NEXT: v_add_f16_e64 v0.h /*v768.h*/, v1.h /*v769.h*/, v2.h /*v770.h*/
@@ -88,4 +92,28 @@ body:             |
     ; GCN-NEXT: v_fmamk_f16 v5.l, v2.l, 0x1, v4.l
     $vgpr5_lo16 = V_FMAMK_F16_t16 undef $vgpr2_lo16, 1, undef $vgpr4_lo16, implicit $exec, implicit $mode
     ; ASM: NumVgprs: 771
+=======
+
+    ; We use an extra instruction to set the MSB, and then we expect it to be reset to 0 (lower 16-bit).
+
+    ; GCN: s_set_vgpr_msb 0xcf
+    ; GCN-NEXT: v_add_f16_e64 v0.h /*v768.h*/, v1.h /*v769.h*/, v2.h /*v770.h*/
+    $vgpr768_hi16 = V_ADD_F16_t16_e64 0, undef $vgpr769_hi16, 0, undef $vgpr770_hi16, 0, 0, 0, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_msb 0xcf00
+    ; GCN-NEXT: v_fmamk_f16 v26.l, v56.l, 0x1, v58.l
+    $vgpr26_lo16 = V_FMAMK_F16_t16 undef $vgpr56_lo16, 1, undef $vgpr58_lo16, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: v_fmamk_f16 v0.l, v35.l, 0x1, v2.l
+    $vgpr0_lo16 = V_FMAMK_F16_t16 undef $vgpr35_lo16, 1, undef $vgpr2_lo16, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: v_fmamk_f16 v0.l, v2.l, 0x1, v6.l
+    $vgpr0_lo16 = V_FMAMK_F16_t16 undef $vgpr2_lo16, 1, undef $vgpr6_lo16, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: v_fmamk_f16 v5.l, v2.l, 0x1, v4.l
+    $vgpr5_lo16 = V_FMAMK_F16_t16 undef $vgpr2_lo16, 1, undef $vgpr4_lo16, implicit $exec, implicit $mode
+
+    ; ASM: NumVgprs: 771
+
+>>>>>>> 97ee787266500c8ad3c020008102d130d4ee22c9
 ...

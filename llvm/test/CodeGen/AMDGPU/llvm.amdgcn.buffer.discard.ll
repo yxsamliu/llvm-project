@@ -143,25 +143,23 @@ define amdgpu_ps void @struct_buffer_discard_waterfall_rsrc_vgpr(<4 x i32> %rsrc
 ;
 ; GFX13-GISEL-LABEL: struct_buffer_discard_waterfall_rsrc_vgpr:
 ; GFX13-GISEL:       ; %bb.0: ; %main_body
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v5, v1
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v6, 0
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX13-GISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX13-GISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s4, v4
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s5, v5
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[4:5]
+; GFX13-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX13-GISEL-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
 ; GFX13-GISEL-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX13-GISEL-NEXT:    buffer_discard_b32 v6, s[4:7], null idxen
+; GFX13-GISEL-NEXT:    buffer_discard_b32 v4, s[4:7], null idxen
+; GFX13-GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GFX13-GISEL-NEXT:    ; implicit-def: $vgpr4
-; GFX13-GISEL-NEXT:    ; implicit-def: $vgpr6
-; GFX13-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX13-GISEL-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX13-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX13-GISEL-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX13-GISEL-NEXT:  ; %bb.2:
@@ -195,23 +193,21 @@ define amdgpu_ps void @raw_buffer_discard_waterfall_rsrc_vgpr(<4 x i32> %rsrc) {
 ;
 ; GFX13-GISEL-LABEL: raw_buffer_discard_waterfall_rsrc_vgpr:
 ; GFX13-GISEL:       ; %bb.0: ; %main_body
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v5, v1
 ; GFX13-GISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX13-GISEL-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s4, v4
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s5, v5
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[4:5]
+; GFX13-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX13-GISEL-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
 ; GFX13-GISEL-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX13-GISEL-NEXT:    buffer_discard_b32 off, s[4:7], null
-; GFX13-GISEL-NEXT:    ; implicit-def: $vgpr4
-; GFX13-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX13-GISEL-NEXT:    ; implicit-def: $vgpr0
+; GFX13-GISEL-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX13-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX13-GISEL-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX13-GISEL-NEXT:  ; %bb.2:

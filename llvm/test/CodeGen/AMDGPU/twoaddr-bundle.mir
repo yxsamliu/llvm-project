@@ -15,23 +15,25 @@ body:             |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GCN-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_U32_e64_]]
-    ; GCN-NEXT: BUNDLE implicit-def [[COPY2]], implicit [[DEF]], implicit [[DEF1]], implicit [[COPY2]](tied-def 0), implicit $mode, implicit $exec {
-    ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = V_FMAC_F32_e32 killed [[DEF]], killed [[DEF1]], killed [[COPY2]], implicit $mode, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit-def [[COPY2]], implicit-def dead $stg_srca, implicit [[DEF]], implicit [[DEF1]], implicit [[COPY2]](tied-def 0), implicit $mode, implicit $exec {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[DEF1]], 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+    ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = V_FMAC_F32_e32 killed [[DEF]], internal killed $stg_srca, killed [[COPY2]], implicit $mode, implicit $exec
     ; GCN-NEXT: }
     %10:vgpr_32 = COPY $vgpr0
     %11:vgpr_32 = COPY $vgpr1
     %2:vgpr_32 = V_ADD_U32_e64 %10, %11, 0, implicit $exec
     %0:vgpr_32 = IMPLICIT_DEF
-    %1:vgpr_32 = IMPLICIT_DEF
-    BUNDLE implicit-def %3:vgpr_32, implicit %0, implicit %1, implicit killed %2(tied-def 0), implicit $mode, implicit $exec {
-      %3:vgpr_32 = V_FMAC_F32_e32 killed %0, killed %1, killed %2, implicit $mode, implicit $exec
+    %1:sgpr_32 = IMPLICIT_DEF
+    BUNDLE implicit-def %3:vgpr_32, implicit-def dead $stg_srca, implicit %0, implicit %1, implicit killed %2(tied-def 0), implicit $mode, implicit $exec {
+      $stg_srca = V_LOAD_IDX_B32 %1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+      %3:vgpr_32 = V_FMAC_F32_e32 killed %0, internal killed $stg_srca, killed %2, implicit $mode, implicit $exec
     }
 
 ...
 
-# This test is an example where conversion to three-address form would be beneficial.
+# This test is an example where conversion to three-address form is beneficial.
 ---
 name:            test_fmac_reuse_bundle
 body:             |
@@ -40,17 +42,18 @@ body:             |
     ; GCN-LABEL: name: test_fmac_reuse_bundle
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
-    ; GCN-NEXT: BUNDLE implicit-def [[COPY1]], implicit [[DEF]], implicit [[DEF1]], implicit [[COPY1]](tied-def 0), implicit $mode, implicit $exec {
-    ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = V_FMAC_F32_e32 killed [[DEF]], killed [[DEF1]], killed [[COPY1]], implicit $mode, implicit $exec
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: BUNDLE implicit-def %3, implicit-def dead $stg_srca, implicit [[DEF]], implicit [[DEF1]], implicit [[COPY]], implicit $mode, implicit $exec {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[DEF1]], 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+    ; GCN-NEXT:   [[V_FMA_F32_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, killed [[DEF]], 0, internal killed $stg_srca, 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: }
-    ; GCN-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY1]], [[COPY]], 0, implicit $exec
+    ; GCN-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_FMA_F32_e64_]], [[COPY]], 0, implicit $exec
     %2:vgpr_32 = COPY $vgpr0
     %0:vgpr_32 = IMPLICIT_DEF
-    %1:vgpr_32 = IMPLICIT_DEF
-    BUNDLE implicit-def %3:vgpr_32, implicit %0, implicit %1, implicit %2(tied-def 0), implicit $mode, implicit $exec {
-      %3:vgpr_32 = V_FMAC_F32_e32 killed %0, killed %1, killed %2, implicit $mode, implicit $exec
+    %1:sgpr_32 = IMPLICIT_DEF
+    BUNDLE implicit-def %3:vgpr_32, implicit-def dead $stg_srca, implicit %0, implicit %1, implicit %2(tied-def 0), implicit $mode, implicit $exec {
+      $stg_srca = V_LOAD_IDX_B32 %1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+      %3:vgpr_32 = V_FMAC_F32_e32 killed %0, internal killed $stg_srca, %2, implicit $mode, implicit $exec
     }
     %4:vgpr_32 = V_ADD_U32_e64 %3, %2, 0, implicit $exec
 

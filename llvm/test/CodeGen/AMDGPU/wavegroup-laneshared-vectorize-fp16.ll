@@ -17,18 +17,18 @@ define amdgpu_kernel void @vectorize() "amdgpu-wavegroup-enable" !reqd_work_grou
   ; CHECK-NEXT:   [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1, [[V_MOV_B32_e32_2]], %subreg.sub2, [[V_MOV_B32_e32_3]], %subreg.sub3
-  ; CHECK-NEXT:   BUNDLE implicit-def $stg_srcd, implicit-def $stg_srcc, implicit-def $stg_srcb, implicit-def dead $stg_srca, implicit-def $stg_dsta, implicit killed [[S_MOV_B32_1]], implicit $exec, implicit [[S_MOV_B32_]] :: (dereferenceable load (s96) from @color + 24, align 8, addrspace 10), (dereferenceable load (s96) from @color + 12, align 4, basealign 8, addrspace 10), (dereferenceable load (s96) from @color, align 8, addrspace 10), (dereferenceable load (s576) from @weights, align 268435456, !tbaa !5, addrspace 10), (store (s128) into @out, align 4, !tbaa !10, addrspace 10) {
-  ; CHECK-NEXT:     $stg_srcd = V_LOAD_IDX [[S_MOV_B32_1]], 24, implicit $exec :: (dereferenceable load (s96) from @color + 24, align 8, addrspace 10)
-  ; CHECK-NEXT:     $stg_srcc = V_LOAD_IDX [[S_MOV_B32_1]], 21, implicit $exec :: (dereferenceable load (s96) from @color + 12, align 4, basealign 8, addrspace 10)
-  ; CHECK-NEXT:     $stg_srcb = V_LOAD_IDX [[S_MOV_B32_1]], 18, implicit $exec :: (dereferenceable load (s96) from @color, align 8, addrspace 10)
-  ; CHECK-NEXT:     $stg_srca = V_LOAD_IDX [[S_MOV_B32_]], 0, implicit $exec :: (dereferenceable load (s576) from @weights, align 268435456, !tbaa !5, addrspace 10)
-  ; CHECK-NEXT:     $stg_dsta = contract V_CONVOLVE_F32_F16_3x3_4x2 0, internal killed $stg_srca, internal $stg_srcb, internal $stg_srcc, internal $stg_srcd, 11, -1, 0, 0, implicit $exec
-  ; CHECK-NEXT:     V_STORE_IDX internal $stg_dsta, killed [[S_MOV_B32_1]], 27, implicit $exec :: (store (s128) into @out, align 4, !tbaa !10, addrspace 10)
+  ; CHECK-NEXT:   BUNDLE implicit-def dead $stg_srcd, implicit-def dead $stg_srcc, implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def $stg_dsta, implicit killed [[S_MOV_B32_1]], implicit $exec, implicit [[S_MOV_B32_]] :: (dereferenceable load (s96) from @color + 24, align 8, addrspace 10), (dereferenceable load (s96) from @color + 12, align 4, basealign 8, addrspace 10), (dereferenceable load (s96) from @color, align 8, addrspace 10), (dereferenceable load (s576) from @weights, align 268435456, !tbaa !5, addrspace 10), (store (s128) into @out, align 4, !tbaa !10, addrspace 10) {
+  ; CHECK-NEXT:     $stg_srcd = V_LOAD_IDX_B96 [[S_MOV_B32_1]], 24, implicit $exec :: (dereferenceable load (s96) from @color + 24, align 8, addrspace 10)
+  ; CHECK-NEXT:     $stg_srcc = V_LOAD_IDX_B96 [[S_MOV_B32_1]], 21, implicit $exec :: (dereferenceable load (s96) from @color + 12, align 4, basealign 8, addrspace 10)
+  ; CHECK-NEXT:     $stg_srcb = V_LOAD_IDX_B96 [[S_MOV_B32_1]], 18, implicit $exec :: (dereferenceable load (s96) from @color, align 8, addrspace 10)
+  ; CHECK-NEXT:     $stg_srca = V_LOAD_IDX_B576 [[S_MOV_B32_]], 0, implicit $exec :: (dereferenceable load (s576) from @weights, align 268435456, !tbaa !5, addrspace 10)
+  ; CHECK-NEXT:     $stg_dsta = contract V_CONVOLVE_F32_F16_3x3_4x2 0, internal killed $stg_srca, internal killed $stg_srcb, internal killed $stg_srcc, internal killed $stg_srcd, 11, -1, 0, 0, implicit $exec
+  ; CHECK-NEXT:     V_STORE_IDX_B128 internal $stg_dsta, killed [[S_MOV_B32_1]], 27, implicit $exec :: (store (s128) into @out, align 4, !tbaa !10, addrspace 10)
   ; CHECK-NEXT:   }
   ; CHECK-NEXT:   S_ENDPGM 0
 entry:
   %4 = load half, ptr addrspace(10) @weights, align 4, !tbaa !12
-  %vecins = insertelement <36 x half> <half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison>, half %4, i64 0
+  %vecins = insertelement <36 x half> <half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half poison, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef, half undef>, half %4, i64 0
   %5 = load half, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @weights, i32 2), align 2, !tbaa !12
   %vecins.1 = insertelement <36 x half> %vecins, half %5, i64 1
   %6 = load half, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @weights, i32 4), align 4, !tbaa !12

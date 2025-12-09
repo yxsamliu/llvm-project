@@ -743,7 +743,7 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_frames 64
     ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
     ; GCN-NEXT: v_mov_b32_e32 g1[0], v10
-    V_STORE_IDX undef $vgpr10, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    V_STORE_IDX_B32 undef $vgpr10, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
 
     ; reset idx, set msb 0 & dst
     ; GCN-NEXT: s_set_vgpr_frames 0x4100
@@ -755,7 +755,7 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_frames 0x140
     ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=1 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
     ; GCN-NEXT: v_mov_b32_e32 g1[0], v24 /*v280*/
-    V_STORE_IDX undef $vgpr280, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    V_STORE_IDX_B32 undef $vgpr280, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
 
     ; reset idx, set dst msb, set src0 msb
     ; GCN-NEXT: s_set_vgpr_frames 0x4300
@@ -767,11 +767,11 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_frames 0x301
     ; ASM-SAME:                                         ;  vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=3 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
     ; GCN-NEXT: v_mov_b32_e32 v11, g1[231] /*g1[999]*/
-    renamable $vgpr11 = V_LOAD_IDX $idx1, 999, implicit $exec :: (load (s32), addrspace 10)
+    renamable $vgpr11 = V_LOAD_IDX_B32 $idx1, 999, implicit $exec :: (load (s32), addrspace 10)
 
     ; no set_vgpr_frames
     ; GCN-NEXT: v_mov_b32_e32 v12, g1[230] /*g1[998]*/
-    renamable $vgpr12 = V_LOAD_IDX $idx1, 998, implicit $exec :: (load (s32), addrspace 10)
+    renamable $vgpr12 = V_LOAD_IDX_B32 $idx1, 998, implicit $exec :: (load (s32), addrspace 10)
 
     ; FLAT (vaddr, vdata and vdst operands)
 
@@ -784,13 +784,13 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_frames 1
     ; ASM-SAME:                                         ;  vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
     ; GCN-NEXT: v_mov_b32_e32 v11, g1[1]
-    renamable $vgpr11 = V_LOAD_IDX $idx1, 1, implicit $exec :: (load (s32), addrspace 10)
+    renamable $vgpr11 = V_LOAD_IDX_B32 $idx1, 1, implicit $exec :: (load (s32), addrspace 10)
 
     ; set dst idx, reset src0 idx, set src0 msb
     ; GCN-NEXT: s_set_vgpr_frames 0x140
     ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=1 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
     ; GCN-NEXT: v_mov_b32_e32 g1[1], v24 /*v280*/
-    V_STORE_IDX undef $vgpr280, $idx1, 1, implicit $exec :: (store (s32), addrspace 10)
+    V_STORE_IDX_B32 undef $vgpr280, $idx1, 1, implicit $exec :: (store (s32), addrspace 10)
 
     ; reset idx, no mod src0 msb
     ; GCN-NEXT: s_set_vgpr_frames 0x100
@@ -806,7 +806,7 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_frames 2
     ; ASM-SAME:                                         ;  vsrc0_idx=2 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
     ; GCN-NEXT: v_mov_b32_e32 v11, g2[5]
-    renamable $vgpr11 = V_LOAD_IDX $idx2, 5, implicit $exec :: (load (s32), addrspace 10)
+    renamable $vgpr11 = V_LOAD_IDX_B32 $idx2, 5, implicit $exec :: (load (s32), addrspace 10)
 
     ; GCN-NEXT: s_set_gpr_idx_u32 idx3, s5
     $idx3 = S_SET_GPR_IDX_U32 undef $sgpr5
@@ -814,7 +814,7 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_frames 0xc0
     ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=3 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
     ; GCN-NEXT: v_mov_b32_e32 g3[0], v10
-    V_STORE_IDX undef $vgpr10, $idx3, 0, implicit $exec :: (store (s32), addrspace 10)
+    V_STORE_IDX_B32 undef $vgpr10, $idx3, 0, implicit $exec :: (store (s32), addrspace 10)
 
     ; GCN-NEXT: s_set_gpr_idx_u32 idx0, s6
     $idx0 = S_SET_GPR_IDX_U32 undef $sgpr6
@@ -822,7 +822,7 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_frames 0
     ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
     ; GCN-NEXT: v_mov_b32_e32 v11, v6
-    renamable $vgpr11 = V_LOAD_IDX $idx0, 6, implicit $exec :: (load (s32), addrspace 10)
+    renamable $vgpr11 = V_LOAD_IDX_B32 $idx0, 6, implicit $exec :: (load (s32), addrspace 10)
 
     ; GCN-NEXT: s_set_vgpr_frames 2
     ; ASM-SAME:                                         ;  vsrc0_idx=2 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -832,7 +832,7 @@ body:             |
     ; ASM-SAME:                                         ;  vsrc0_idx=2 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=1 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
     ; GCN-NEXT: v_mov_b32_e32 v12, g2[0] /*g2[256]*/
     ; GCN-NEXT: v_mov_b32_e32 v13, g2[1] /*g2[257]*/
-    renamable $vgpr10_vgpr11_vgpr12_vgpr13 = V_LOAD_IDX $idx2, 254, implicit $exec :: (load (s128), addrspace 10)
+    renamable $vgpr10_vgpr11_vgpr12_vgpr13 = V_LOAD_IDX_B128 $idx2, 254, implicit $exec :: (load (s128), addrspace 10)
 
     ; GCN-NEXT: s_set_vgpr_frames 0xc0
     ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=3 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -842,7 +842,7 @@ body:             |
     ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=3 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=1
     ; GCN-NEXT: v_mov_b32_e32 g3[0] /*g3[256]*/, v6
     ; GCN-NEXT: v_mov_b32_e32 g3[1] /*g3[257]*/, v7
-    V_STORE_IDX undef $vgpr4_vgpr5_vgpr6_vgpr7, $idx3, 254, implicit $exec :: (store (s128), addrspace 10)
+    V_STORE_IDX_B128 undef $vgpr4_vgpr5_vgpr6_vgpr7, $idx3, 254, implicit $exec :: (store (s128), addrspace 10)
 
     ; Test that VNBR instructions can ignore MSBs when the idx regs are the same
     ; GCN-NEXT: s_set_vgpr_frames 0x44
@@ -850,19 +850,19 @@ body:             |
     ; GCN-NEXT: v_send_vgpr_next_b32 g1[301], g1[300], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:0
     BUNDLE implicit-def dead $stg_dsta, implicit-def dead $stg_dstb, implicit renamable $vgpr0, implicit $mode, implicit $exec, implicit $idx1, implicit $idx1 {
       $stg_dsta, $stg_dstb = V_SEND_VGPR_NEXT_B32 renamable $vgpr0, 1, 1, 2, 1, 0, implicit $mode, implicit $exec
-      V_STORE_IDX internal $stg_dstb, $idx1, 300, implicit $exec :: (store (s32), addrspace 10)
-      V_STORE_IDX internal $stg_dsta, $idx1, 301, implicit $exec :: (store (s32), addrspace 10)
+      V_STORE_IDX_B32 internal $stg_dstb, $idx1, 300, implicit $exec :: (store (s32), addrspace 10)
+      V_STORE_IDX_B32 internal $stg_dsta, $idx1, 301, implicit $exec :: (store (s32), addrspace 10)
     }
     ; GCN-NEXT: s_set_vgpr_frames 0x40c4
     ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=3 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=1
     ; GCN-NEXT: v_mov_b32_e32 g3[0] /*g3[256]*/, v6
     ; GCN-NEXT: v_mov_b32_e32 g3[1] /*g3[257]*/, v7
-    V_STORE_IDX undef $vgpr6_vgpr7, $idx3, 256, implicit $exec :: (store (s64), addrspace 10)
+    V_STORE_IDX_B64 undef $vgpr6_vgpr7, $idx3, 256, implicit $exec :: (store (s64), addrspace 10)
     ; GCN-NEXT: v_send_vgpr_next_b32 g3[301], g1[300], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:0
     BUNDLE implicit-def dead $stg_dsta, implicit-def dead $stg_dstb, implicit renamable $vgpr0, implicit $mode, implicit $exec, implicit $idx1, implicit $idx1 {
       $stg_dsta, $stg_dstb = V_SEND_VGPR_NEXT_B32 renamable $vgpr0, 1, 1, 2, 1, 0, implicit $mode, implicit $exec
-      V_STORE_IDX internal $stg_dstb, $idx1, 300, implicit $exec :: (store (s32), addrspace 10)
-      V_STORE_IDX internal $stg_dsta, $idx3, 301, implicit $exec :: (store (s32), addrspace 10)
+      V_STORE_IDX_B32 internal $stg_dstb, $idx1, 300, implicit $exec :: (store (s32), addrspace 10)
+      V_STORE_IDX_B32 internal $stg_dsta, $idx3, 301, implicit $exec :: (store (s32), addrspace 10)
     }
 
     ; TODO-GFX13 tests with idx bits
@@ -887,7 +887,7 @@ body:             |
     BUNDLE implicit-def dead renamable $vgpr2, implicit killed renamable $vgpr2, implicit renamable $vgpr0, implicit $exec, implicit $idx1 {
       S_WAIT_LOADCNT 0
       renamable $vgpr2 = V_ADD_U32_e64 killed $vgpr2, $vgpr0, 0, implicit $exec
-      V_STORE_IDX internal $vgpr2, $idx1, 7, implicit $exec :: (store (s32), addrspace 10)
+      V_STORE_IDX_B32 internal $vgpr2, $idx1, 7, implicit $exec :: (store (s32), addrspace 10)
     }
 ...
 
@@ -903,12 +903,12 @@ body:             |
     liveins: $vgpr2
     $idx1 = S_SET_GPR_IDX_U32 0
     BUNDLE implicit-def dead renamable $vgpr2, implicit-def dead renamable $vgpr0, implicit killed renamable $vgpr2, implicit $exec, implicit $idx1 {
-      $vgpr0 = V_LOAD_IDX $idx1, 8, implicit $exec :: (load (s32), addrspace 10)
+      $vgpr0 = V_LOAD_IDX_B32 $idx1, 8, implicit $exec :: (load (s32), addrspace 10)
       S_WAIT_LOADCNT 0
       S_WAIT_DSCNT 0
       S_WAIT_KMCNT 0
       renamable $vgpr2 = V_ADD_U32_e64 killed $vgpr2, internal $vgpr0, 0, implicit $exec
-      V_STORE_IDX internal $vgpr2, $idx1, 7, implicit $exec :: (store (s32), addrspace 10)
+      V_STORE_IDX_B32 internal $vgpr2, $idx1, 7, implicit $exec :: (store (s32), addrspace 10)
     }
 ...
 
@@ -928,7 +928,7 @@ body:             |
     ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
     ; GCN-NEXT: global_store_b32 v1, g1[0], s[2:3] offset:28 scale_offset
     BUNDLE implicit-def dead $vgpr1, implicit $idx1, implicit $exec, implicit killed $vgpr1, implicit renamable $sgpr2_sgpr3 {
-      $vgpr1 = V_LOAD_IDX $idx1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+      $vgpr1 = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
       GLOBAL_STORE_DWORD_SADDR $vgpr1, internal $vgpr1, renamable $sgpr2_sgpr3, 28, 512, implicit $exec :: (store (s32), addrspace 1)
     }
 ...
