@@ -2548,7 +2548,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     }
     break;
 
-  case AMDGPU::V_MAX_BF16_PSEUDO_e64:
+  case AMDGPU::V_MAX_BF16_PSEUDO_e64: {
     assert(ST.hasBF16PackedInsts());
     MI.setDesc(get(AMDGPU::V_PK_MAX_NUM_BF16));
     MI.addOperand(MachineOperand::CreateImm(0)); // op_sel
@@ -2559,6 +2559,14 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     auto Op1 = getNamedOperand(MI, AMDGPU::OpName::src1_modifiers);
     Op1->setImm(Op1->getImm() | SISrcMods::OP_SEL_1);
     break;
+  }
+  case AMDGPU::SI_GET_IDX0: {
+    using namespace AMDGPU::Hwreg;
+    MI.setDesc(get(AMDGPU::S_GETREG_B32));
+    MI.addOperand(MachineOperand::CreateImm(
+        HwregEncoding::encode(ID_WAVE_GPR_MSB_IDX0, 0, 10)));
+    break;
+  }
   }
 
   return true;

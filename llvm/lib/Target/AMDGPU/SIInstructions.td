@@ -1350,8 +1350,14 @@ def : GCNPat <
 >;
 
 //===----------------------------------------------------------------------===//
-// Indexed Instructions
+// VGPR Indexing Instructions
 //===----------------------------------------------------------------------===//
+
+// Pseudo-instruction for reading idx0 that gets expanded to s_getreg_b32
+def SI_GET_IDX0 : SPseudoInstSI<(outs SReg_32:$sdst), (ins)> {
+  let Size = 4;
+  let Uses = [IDX0];
+}
 
 foreach rc = [VGPR_32_STAGING, VReg_64_STAGING, VReg_96_STAGING,
               VReg_128_STAGING, VReg_160_STAGING, VReg_192_STAGING,

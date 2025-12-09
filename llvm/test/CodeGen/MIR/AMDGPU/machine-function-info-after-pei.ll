@@ -45,7 +45,6 @@
 ; AFTER-PEI-NEXT: scavengeFI: '%stack.3'
 ; AFTER-PEI-NEXT: vgprForAGPRCopy: ''
 ; AFTER-PEI-NEXT: sgprForEXECCopy: ''
-; AFTER-PEI-NEXT: needIdx0Restore: false
 ; AFTER-PEI-NEXT: longBranchReservedReg: ''
 ; AFTER-PEI-NEXT: hasInitWholeWave: false
 ; AFTER-PEI-NEXT: dynamicVGPRBlockSize: 0

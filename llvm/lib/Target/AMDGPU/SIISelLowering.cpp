@@ -10025,7 +10025,22 @@ SDValue SITargetLowering::lowerFrameIndex(AMDGPUMachineFunction *MFI,
     if (AMDGPU::IsPromotablePrivate(*Alloca)) {
       unsigned Offset = MFI->allocatePrivateInVGPR(
           DAG.getDataLayout(), const_cast<AllocaInst &>(*Alloca));
-      return DAG.getConstant(Offset, SDLoc(Op), Op.getValueType());
+      SDLoc DL(Op);
+      SDValue OffsetVal = DAG.getConstant(Offset, DL, MVT::i32);
+
+      // TODO-GFX13: This temporarily helps avoid some test quality regressions,
+      // but long-term it's probably better to always have idx0 here to help
+      // the index register allocation pass do a better job.
+      if (MFI->isEntryFunction() &&
+          !AMDGPU::getWavegroupEnable(MF.getFunction()))
+        return OffsetVal;
+
+      SDValue PrivateBase;
+      PrivateBase =
+          DAG.getCopyFromReg(DAG.getEntryNode(), DL, AMDGPU::IDX0, MVT::i32);
+      PrivateBase = DAG.getNode(ISD::SHL, DL, MVT::i32, PrivateBase,
+                                DAG.getConstant(2, DL, MVT::i32));
+      return DAG.getNode(ISD::ADD, DL, MVT::i32, PrivateBase, OffsetVal);
     }
   }
   return SDValue();
@@ -19876,7 +19891,7 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
 
     // FIXME: Why does this need to consider isLiveIn?
     if (Reg.isPhysical() || MRI.isLiveIn(Reg))
-      return !TRI->isSGPRReg(MRI, Reg);
+      return !TRI->isSGPRReg(MRI, Reg) && Reg != AMDGPU::IDX0;
 
     if (const Value *V = FLI->getValueFromVirtualReg(R->getReg()))
       return UA->isDivergent(V);
