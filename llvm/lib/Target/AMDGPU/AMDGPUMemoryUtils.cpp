@@ -641,4 +641,20 @@ bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
   return true;
 }
 
+DenseMap<Function *, SmallDenseSet<Function *>>
+getEntryFunctionToRankSpecializationMap(const CallGraph &CG, Module &M) {
+  DenseMap<Function *, SmallDenseSet<Function *>> RankFuncMap;
+  for (Function &Func : M.functions()) {
+    if (Func.isDeclaration() ||
+        !(isKernel(Func) && !getWavegroupRankFunction(Func)))
+      continue;
+    for (const CallGraphNode::CallRecord &R : *CG[&Func]) {
+      Function *Ith = R.second->getFunction();
+      if (Ith && getWavegroupRankFunction(*Ith))
+        RankFuncMap[&Func].insert(Ith);
+    }
+  }
+  return RankFuncMap;
+}
+
 } // end namespace llvm::AMDGPU

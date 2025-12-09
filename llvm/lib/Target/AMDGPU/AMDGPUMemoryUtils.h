@@ -35,6 +35,10 @@ extern cl::opt<bool> PromoteSubDword;
 using FunctionVariableMap = DenseMap<Function *, DenseSet<GlobalVariable *>>;
 using VariableFunctionMap = DenseMap<GlobalVariable *, DenseSet<Function *>>;
 
+// Mapping from entry kernels to their rank specialization functions
+DenseMap<Function *, SmallDenseSet<Function *>>
+getEntryFunctionToRankSpecializationMap(const CallGraph &CG, Module &M);
+
 Align getAlign(const DataLayout &DL, const GlobalVariable *GV);
 
 // If GV is a named-barrier return its type. Otherwise return nullptr.
