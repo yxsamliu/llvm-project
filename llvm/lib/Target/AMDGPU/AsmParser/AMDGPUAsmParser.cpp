@@ -894,6 +894,10 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VReg_1024RegClassID, MVT::bf16);
   }
 
+  bool isVISrc_2048_b32() const {
+    return isRegOrInlineNoMods(AMDGPU::Pseudo_VGPR_2048RegClassID, MVT::i32);
+  }
+
   bool isVISrc_2048_f32() const {
     return isRegOrInlineNoMods(AMDGPU::Pseudo_VGPR_2048RegClassID, MVT::f32);
   }
