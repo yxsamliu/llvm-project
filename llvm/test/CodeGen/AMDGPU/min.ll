@@ -1309,13 +1309,13 @@ define amdgpu_kernel void @s_test_imin_sle_v4i16(ptr addrspace(1) %out, <4 x i16
 ; GFX13-LABEL: s_test_imin_sle_v4i16:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
-; GFX13-NEXT:    s_load_b64 s[4:5], s[4:5], 0x10
+; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x8
+; GFX13-NEXT:    s_load_b64 s[4:5], s[4:5], 0x0
 ; GFX13-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_pk_min_i16 v1, s3, s5
-; GFX13-NEXT:    v_pk_min_i16 v0, s2, s4
-; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX13-NEXT:    v_pk_min_i16 v1, s1, s3
+; GFX13-NEXT:    v_pk_min_i16 v0, s0, s2
+; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
 ; GFX13-NEXT:    s_endpgm
   %cmp = icmp sle <4 x i16> %a, %b
   %val = select <4 x i1> %cmp, <4 x i16> %a, <4 x i16> %b
@@ -1913,15 +1913,15 @@ define amdgpu_kernel void @s_test_imin_slt_v2i32(ptr addrspace(1) %out, <2 x i32
 ; GFX13-LABEL: s_test_imin_slt_v2i32:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
-; GFX13-NEXT:    s_load_b64 s[4:5], s[4:5], 0x10
+; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x8
+; GFX13-NEXT:    s_load_b64 s[4:5], s[4:5], 0x0
 ; GFX13-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    s_min_i32 s2, s2, s4
-; GFX13-NEXT:    s_min_i32 s3, s3, s5
-; GFX13-NEXT:    v_mov_b32_e32 v0, s2
-; GFX13-NEXT:    v_mov_b32_e32 v1, s3
-; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX13-NEXT:    s_min_i32 s0, s0, s2
+; GFX13-NEXT:    s_min_i32 s1, s1, s3
+; GFX13-NEXT:    v_mov_b32_e32 v0, s0
+; GFX13-NEXT:    v_mov_b32_e32 v1, s1
+; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
 ; GFX13-NEXT:    s_endpgm
   %cmp = icmp slt <2 x i32> %a, %b
   %val = select <2 x i1> %cmp, <2 x i32> %a, <2 x i32> %b

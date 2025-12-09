@@ -3233,39 +3233,35 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX11-NEXT:    s_or_saveexec_b32 s0, -1
 ; GFX11-NEXT:    scratch_store_b32 off, v60, s33 offset:1600 ; 4-byte Folded Spill
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
-; GFX11-NEXT:    s_mov_b32 s39, s34
+; GFX11-NEXT:    s_mov_b32 s36, s34
 ; GFX11-NEXT:    s_mov_b32 s34, s32
 ; GFX11-NEXT:    s_addk_i32 s32, 0xa00
-; GFX11-NEXT:    s_clause 0xd ; 56-byte Folded Spill
-; GFX11-NEXT:    scratch_store_b32 off, v40, s33 offset:52
+; GFX11-NEXT:    s_clause 0xb ; 48-byte Folded Spill
+; GFX11-NEXT:    scratch_store_b32 off, v40, s33 offset:44
 ; GFX11-NEXT:    ; meta instruction
-; GFX11-NEXT:    scratch_store_b32 off, v41, s33 offset:48
+; GFX11-NEXT:    scratch_store_b32 off, v41, s33 offset:40
 ; GFX11-NEXT:    ; meta instruction
-; GFX11-NEXT:    scratch_store_b32 off, v42, s33 offset:44
+; GFX11-NEXT:    scratch_store_b32 off, v42, s33 offset:36
 ; GFX11-NEXT:    ; meta instruction
-; GFX11-NEXT:    scratch_store_b32 off, v43, s33 offset:40
+; GFX11-NEXT:    scratch_store_b32 off, v43, s33 offset:32
 ; GFX11-NEXT:    ; meta instruction
-; GFX11-NEXT:    scratch_store_b32 off, v44, s33 offset:36
+; GFX11-NEXT:    scratch_store_b32 off, v44, s33 offset:28
 ; GFX11-NEXT:    ; meta instruction
-; GFX11-NEXT:    scratch_store_b32 off, v45, s33 offset:32
+; GFX11-NEXT:    scratch_store_b32 off, v45, s33 offset:24
 ; GFX11-NEXT:    ; meta instruction
-; GFX11-NEXT:    scratch_store_b32 off, v46, s33 offset:28
+; GFX11-NEXT:    scratch_store_b32 off, v46, s33 offset:20
 ; GFX11-NEXT:    ; meta instruction
-; GFX11-NEXT:    scratch_store_b32 off, v47, s33 offset:24
+; GFX11-NEXT:    scratch_store_b32 off, v47, s33 offset:16
 ; GFX11-NEXT:    ; meta instruction
-; GFX11-NEXT:    scratch_store_b32 off, v56, s33 offset:20
+; GFX11-NEXT:    scratch_store_b32 off, v56, s33 offset:12
 ; GFX11-NEXT:    ; meta instruction
-; GFX11-NEXT:    scratch_store_b32 off, v57, s33 offset:16
+; GFX11-NEXT:    scratch_store_b32 off, v57, s33 offset:8
 ; GFX11-NEXT:    ; meta instruction
-; GFX11-NEXT:    scratch_store_b32 off, v58, s33 offset:12
+; GFX11-NEXT:    scratch_store_b32 off, v58, s33 offset:4
 ; GFX11-NEXT:    ; meta instruction
-; GFX11-NEXT:    scratch_store_b32 off, v59, s33 offset:8
-; GFX11-NEXT:    ; meta instruction
-; GFX11-NEXT:    scratch_store_b32 off, v60, s33 offset:4
-; GFX11-NEXT:    ; meta instruction
-; GFX11-NEXT:    scratch_store_b32 off, v61, s33
-; GFX11-NEXT:    v_writelane_b32 v62, s30, 0
-; GFX11-NEXT:    v_writelane_b32 v62, s31, 1
+; GFX11-NEXT:    scratch_store_b32 off, v59, s33
+; GFX11-NEXT:    v_writelane_b32 v60, s30, 0
+; GFX11-NEXT:    v_writelane_b32 v60, s31, 1
 ; GFX11-NEXT:    s_mov_b32 s0, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX11-NEXT:    s_mov_b32 s1, s0
@@ -3273,25 +3269,6 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX11-NEXT:    s_mov_b32 s3, s0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
-<<<<<<< HEAD
-; GFX11-NEXT:    s_mov_b32 s36, s34
-; GFX11-NEXT:    s_mov_b32 s34, s32
-; GFX11-NEXT:    s_addk_i32 s32, 0xa00
-; GFX11-NEXT:    s_clause 0xb ; 48-byte Folded Spill
-; GFX11-NEXT:    scratch_store_b32 off, v40, s33 offset:44
-; GFX11-NEXT:    scratch_store_b32 off, v41, s33 offset:40
-; GFX11-NEXT:    scratch_store_b32 off, v42, s33 offset:36
-; GFX11-NEXT:    scratch_store_b32 off, v43, s33 offset:32
-; GFX11-NEXT:    scratch_store_b32 off, v44, s33 offset:28
-; GFX11-NEXT:    scratch_store_b32 off, v45, s33 offset:24
-; GFX11-NEXT:    scratch_store_b32 off, v46, s33 offset:20
-; GFX11-NEXT:    scratch_store_b32 off, v47, s33 offset:16
-; GFX11-NEXT:    scratch_store_b32 off, v56, s33 offset:12
-; GFX11-NEXT:    scratch_store_b32 off, v57, s33 offset:8
-; GFX11-NEXT:    scratch_store_b32 off, v58, s33 offset:4
-; GFX11-NEXT:    scratch_store_b32 off, v59, s33
-=======
->>>>>>> 669729e1c758e8ab4a68bfd31c099862e40754af
 ; GFX11-NEXT:    s_add_i32 s0, s32, 0xa0
 ; GFX11-NEXT:    s_add_i32 s1, s32, 0x90
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32
@@ -3312,10 +3289,6 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX11-NEXT:    s_add_i32 s0, s32, 32
 ; GFX11-NEXT:    s_add_i32 s1, s32, 16
 ; GFX11-NEXT:    s_add_i32 s2, s33, 0x200
-<<<<<<< HEAD
-; GFX11-NEXT:    v_writelane_b32 v60, s30, 0
-=======
->>>>>>> 669729e1c758e8ab4a68bfd31c099862e40754af
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s0
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s1
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v3, 0
@@ -3336,11 +3309,7 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX11-NEXT:    v_dual_mov_b32 v31, 0 :: v_dual_mov_b32 v30, 0
 ; GFX11-NEXT:    s_mov_b32 s1, return_72xi32@abs32@hi
 ; GFX11-NEXT:    s_mov_b32 s0, return_72xi32@abs32@lo
-<<<<<<< HEAD
-; GFX11-NEXT:    v_writelane_b32 v60, s31, 1
-=======
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
->>>>>>> 669729e1c758e8ab4a68bfd31c099862e40754af
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    scratch_load_b128 v[45:48], off, s33 offset:624
@@ -3439,7 +3408,6 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-<<<<<<< HEAD
 ; GFX11-NEXT:    s_clause 0xb ; 48-byte Folded Reload
 ; GFX11-NEXT:    scratch_load_b32 v59, off, s33
 ; GFX11-NEXT:    scratch_load_b32 v58, off, s33 offset:4
@@ -3453,27 +3421,8 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX11-NEXT:    scratch_load_b32 v42, off, s33 offset:36
 ; GFX11-NEXT:    scratch_load_b32 v41, off, s33 offset:40
 ; GFX11-NEXT:    scratch_load_b32 v40, off, s33 offset:44
-; GFX11-NEXT:    v_readlane_b32 s31, v60, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v60, 0
-=======
-; GFX11-NEXT:    s_clause 0xd ; 56-byte Folded Reload
-; GFX11-NEXT:    scratch_load_b32 v61, off, s33
-; GFX11-NEXT:    scratch_load_b32 v60, off, s33 offset:4
-; GFX11-NEXT:    scratch_load_b32 v59, off, s33 offset:8
-; GFX11-NEXT:    scratch_load_b32 v58, off, s33 offset:12
-; GFX11-NEXT:    scratch_load_b32 v57, off, s33 offset:16
-; GFX11-NEXT:    scratch_load_b32 v56, off, s33 offset:20
-; GFX11-NEXT:    scratch_load_b32 v47, off, s33 offset:24
-; GFX11-NEXT:    scratch_load_b32 v46, off, s33 offset:28
-; GFX11-NEXT:    scratch_load_b32 v45, off, s33 offset:32
-; GFX11-NEXT:    scratch_load_b32 v44, off, s33 offset:36
-; GFX11-NEXT:    scratch_load_b32 v43, off, s33 offset:40
-; GFX11-NEXT:    scratch_load_b32 v42, off, s33 offset:44
-; GFX11-NEXT:    scratch_load_b32 v41, off, s33 offset:48
-; GFX11-NEXT:    scratch_load_b32 v40, off, s33 offset:52
-; GFX11-NEXT:    v_readlane_b32 s30, v62, 0
-; GFX11-NEXT:    v_readlane_b32 s31, v62, 1
->>>>>>> 669729e1c758e8ab4a68bfd31c099862e40754af
+; GFX11-NEXT:    v_readlane_b32 s31, v60, 1
 ; GFX11-NEXT:    s_mov_b32 s32, s34
 ; GFX11-NEXT:    s_mov_b32 s34, s36
 ; GFX11-NEXT:    s_or_saveexec_b32 s0, -1

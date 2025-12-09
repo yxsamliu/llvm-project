@@ -20,13 +20,13 @@
   AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)
 #endif
 
-<<<<<<< HEAD
 #ifndef AMDGPU_SEMAPHORE_TYPE
 #define AMDGPU_SEMAPHORE_TYPE(Name, Id, SingletonId, Width, Align, Rank) \
-=======
+  AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)
+#endif
+
 #ifndef AMDGPU_FEATURE_PREDICATE_TYPE
 #define AMDGPU_FEATURE_PREDICATE_TYPE(Name, Id, SingletonId, Width, Align) \
->>>>>>> 669729e1c758e8ab4a68bfd31c099862e40754af
   AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)
 #endif
 
@@ -52,8 +52,5 @@ AMDGPU_FEATURE_PREDICATE_TYPE("__amdgpu_feature_predicate_t", AMDGPUFeaturePredi
 #undef AMDGPU_TYPE
 #undef AMDGPU_OPAQUE_PTR_TYPE
 #undef AMDGPU_NAMED_BARRIER_TYPE
-<<<<<<< HEAD
 #undef AMDGPU_SEMAPHORE_TYPE
-=======
 #undef AMDGPU_FEATURE_PREDICATE_TYPE
->>>>>>> 669729e1c758e8ab4a68bfd31c099862e40754af

@@ -72,20 +72,17 @@ public:
   void handleAMDGPUNumVGPRAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUMaxNumWorkGroupsAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUFlatWorkGroupSizeAttr(Decl *D, const ParsedAttr &AL);
-<<<<<<< HEAD
   void handleAMDGPUWavegroupKernelAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUSpatialClusterKernelAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUAsymmetricClusterClampKernelAttr(Decl *D,
                                                     const ParsedAttr &AL);
   void handleAMDGPUNoRankSpecializationAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUEnableWaspAttr(Decl *D, const ParsedAttr &AL);
-=======
 
   /// Expand a valid use of the feature identification builtins into its
   /// corresponding sequence of instructions.
   Expr *ExpandAMDGPUPredicateBI(CallExpr *CE);
   bool IsPredicate(Expr *E) const;
->>>>>>> 669729e1c758e8ab4a68bfd31c099862e40754af
 };
 } // namespace clang
 

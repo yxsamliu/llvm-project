@@ -6141,9 +6141,9 @@ define amdgpu_kernel void @bitcast_v9i64_to_v18i32(i32 %cond, ptr addrspace(1) %
 ; GCN-LABEL: bitcast_v9i64_to_v18i32:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0x9
+; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s0, 0
-; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
@@ -6175,16 +6175,16 @@ define amdgpu_kernel void @bitcast_v9i64_to_v18i32(i32 %cond, ptr addrspace(1) %
 ;
 ; VI-LABEL: bitcast_v9i64_to_v18i32:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dword s0, s[4:5], 0x24
+; VI-NEXT:    s_load_dword s7, s[4:5], 0x24
 ; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x2c
-; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_cmp_lg_u32 s0, 0
-; VI-NEXT:    s_add_u32 s16, s4, 48
 ; VI-NEXT:    s_mov_b32 s0, 0
-; VI-NEXT:    s_addc_u32 s17, s5, 0
-; VI-NEXT:    v_mov_b32_e32 v4, s16
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s0
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_cmp_lg_u32 s7, 0
+; VI-NEXT:    s_add_u32 s16, s4, 48
+; VI-NEXT:    s_addc_u32 s17, s5, 0
+; VI-NEXT:    v_mov_b32_e32 v4, s16
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    v_mov_b32_e32 v3, s0
 ; VI-NEXT:    v_mov_b32_e32 v5, s17
@@ -6197,15 +6197,15 @@ define amdgpu_kernel void @bitcast_v9i64_to_v18i32(i32 %cond, ptr addrspace(1) %
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    v_mov_b32_e32 v3, s0
 ; VI-NEXT:    v_mov_b32_e32 v5, s13
-; VI-NEXT:    s_add_u32 s10, s4, 16
+; VI-NEXT:    s_add_u32 s8, s4, 16
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; VI-NEXT:    s_addc_u32 s11, s5, 0
-; VI-NEXT:    v_mov_b32_e32 v4, s10
+; VI-NEXT:    s_addc_u32 s9, s5, 0
+; VI-NEXT:    v_mov_b32_e32 v4, s8
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s0
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    v_mov_b32_e32 v3, s0
-; VI-NEXT:    v_mov_b32_e32 v5, s11
+; VI-NEXT:    v_mov_b32_e32 v5, s9
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    v_mov_b32_e32 v4, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s0
@@ -6225,18 +6225,17 @@ define amdgpu_kernel void @bitcast_v9i64_to_v18i32(i32 %cond, ptr addrspace(1) %
 ;
 ; GFX9-LABEL: bitcast_v9i64_to_v18i32:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x24
+; GFX9-NEXT:    s_load_dword s7, s[4:5], 0x24
 ; GFX9-NEXT:    s_load_dwordx2 s[20:21], s[4:5], 0x2c
-; GFX9-NEXT:    v_mov_b32_e32 v4, 0
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX9-NEXT:    s_mov_b32 s0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dwordx4 v4, v[0:3], s[20:21] offset:48
-; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    s_cmp_lg_u32 s7, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s0
@@ -6262,10 +6261,8 @@ define amdgpu_kernel void @bitcast_v9i64_to_v18i32(i32 %cond, ptr addrspace(1) %
 ; GFX11-LABEL: bitcast_v9i64_to_v18i32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x24
+; GFX11-NEXT:    s_load_b32 s7, s[4:5], 0x24
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x2c
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX11-NEXT:    s_mov_b32 s0, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v18, 0 :: v_dual_mov_b32 v1, s0
@@ -6278,6 +6275,8 @@ define amdgpu_kernel void @bitcast_v9i64_to_v18i32(i32 %cond, ptr addrspace(1) %
 ; GFX11-NEXT:    v_dual_mov_b32 v12, s0 :: v_dual_mov_b32 v15, s0
 ; GFX11-NEXT:    v_dual_mov_b32 v14, s0 :: v_dual_mov_b32 v17, s0
 ; GFX11-NEXT:    v_mov_b32_e32 v16, s0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_cmp_lg_u32 s7, 0
 ; GFX11-NEXT:    s_clause 0x4
 ; GFX11-NEXT:    global_store_b128 v18, v[0:3], s[4:5] offset:48
 ; GFX11-NEXT:    global_store_b128 v18, v[4:7], s[4:5] offset:32
