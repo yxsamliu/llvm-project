@@ -145,7 +145,7 @@ def V_PK_LSHL_ADD_U64_Profile : VOP3P_Profile<VOP_V2I64_V2I64_V2I32_V2I64, VOP3_
                           HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret;
 }
 
-class VOP3P_PK4_Profile<list<ValueType> VTy> : VOP3P_Profile<VOPProfile<VTy>> {
+class VOP3P_PK4_F16BF16_Profile<list<ValueType> VTy> : VOP3P_Profile<VOPProfile<VTy>> {
   let HasOpSel = 0;
   let HasOMod = 0;
   let HasClamp = !if(!eq(VTy[0], v4bf16), 0, 1);
@@ -154,10 +154,10 @@ class VOP3P_PK4_Profile<list<ValueType> VTy> : VOP3P_Profile<VOPProfile<VTy>> {
   let Src2RC64 = !if(!eq(VTy[3], v4bf16), VSrc_v4bf16, VSrc_v4f16);
 }
 
-def V_PK4_VOP2_F16_Profile  : VOP3P_PK4_Profile<[v4f16, v4f16, v4f16, untyped]>;
-def V_PK4_VOP3_F16_Profile  : VOP3P_PK4_Profile<[v4f16, v4f16, v4f16, v4f16]>;
-def V_PK4_VOP2_BF16_Profile : VOP3P_PK4_Profile<[v4bf16, v4bf16, v4bf16, untyped]>;
-def V_PK4_VOP3_BF16_Profile : VOP3P_PK4_Profile<[v4bf16, v4bf16, v4bf16, v4bf16]>;
+def V_PK4_VOP2_F16_Profile  : VOP3P_PK4_F16BF16_Profile<[v4f16, v4f16, v4f16, untyped]>;
+def V_PK4_VOP3_F16_Profile  : VOP3P_PK4_F16BF16_Profile<[v4f16, v4f16, v4f16, v4f16]>;
+def V_PK4_VOP2_BF16_Profile : VOP3P_PK4_F16BF16_Profile<[v4bf16, v4bf16, v4bf16, untyped]>;
+def V_PK4_VOP3_BF16_Profile : VOP3P_PK4_F16BF16_Profile<[v4bf16, v4bf16, v4bf16, v4bf16]>;
 
 let isReMaterializable = 1 in {
 let isCommutable = 1 in {
