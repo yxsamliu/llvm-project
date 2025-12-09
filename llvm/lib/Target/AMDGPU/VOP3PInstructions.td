@@ -1363,16 +1363,10 @@ class WMMAOpcodeMapping<Instruction TwoAddr, Instruction ThreeAddr> {
   field bit is_wmma_xdl;
 }
 
-def WMMAOpcode : GenericEnum {
-  let FilterClass = "VOP3P_Pseudo";
-}
-
 class WMMAMappingTable : GenericTable {
   let FilterClass = "WMMAOpcodeMapping";
   let CppTypeName = "WMMAOpcodeMappingInfo";
   let Fields = ["Opcode2Addr", "Opcode3Addr"];
-  string TypeOf_Opcode2Addr = "WMMAOpcode";
-  string TypeOf_Opcode3Addr = "WMMAOpcode";
 }
 
 def WMMAOpcode2AddrMappingTable : WMMAMappingTable {
