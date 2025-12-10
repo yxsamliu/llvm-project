@@ -8,16 +8,15 @@ define dso_local amdgpu_kernel void @test_wavegroup_entry(i64 %i) "amdgpu-wavegr
 ; CHECK-NEXT:    .type .Ltest_wavegroup_entry$local,@function
 ; CHECK-NEXT:  ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s1, s0, 1
-; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_add_co_u32 s1, s1, 40
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
+; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_lshl_b32 s1, s0, 2
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_lshr_b32 s1, s1, 2
 ; CHECK-NEXT:    s_cmp_eq_u32 s0, 1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, s1

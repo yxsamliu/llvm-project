@@ -12,18 +12,17 @@
 ; DISASM-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; DISASM-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; DISASM-NEXT:    s_mul_i32 s1, s0, 2
-; DISASM-NEXT:    s_mul_i32 s33, s0, s4
 ; DISASM-NEXT:    s_set_gpr_idx_u32 idx0, s1
+; DISASM-NEXT:    s_mul_i32 s33, s0, s4
 
 define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %p) #0 "amdgpu-wavegroup-enable" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-dispatch-id" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" !reqd_work_group_size !{i32 32, i32 8, i32 1} {
 ; CHECK-LABEL: wavegroup_kernel:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s1, s0, 2
-; CHECK-NEXT:    s_mul_i32 s33, s0, s4
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
+; CHECK-NEXT:    s_mul_i32 s33, s0, s4
 ; CHECK-NEXT:    s_bfe_u32 s4, ttmp6, 0x4000c
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
 ; CHECK-NEXT:    s_add_co_i32 s4, s4, 1

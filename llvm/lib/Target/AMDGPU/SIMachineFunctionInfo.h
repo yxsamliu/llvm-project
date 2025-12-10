@@ -320,7 +320,6 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   std::optional<FrameIndex> ScavengeFI;
   StringValue VGPRForAGPRCopy;
   StringValue SGPRForEXECCopy;
-  bool NeedIdx0Restore;
   StringValue LongBranchReservedReg;
 
   bool HasInitWholeWave = false;
@@ -372,8 +371,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("maxMemoryClusterDWords", MFI.MaxMemoryClusterDWords,
                        DefaultMemoryClusterDWordsLimit);
     YamlIO.mapOptional("mode", MFI.Mode, SIMode());
-    YamlIO.mapOptional("highBitsOf32BitAddress",
-                       MFI.HighBitsOf32BitAddress, 0u);
+    YamlIO.mapOptional("highBitsOf32BitAddress", MFI.HighBitsOf32BitAddress,
+                       0u);
     YamlIO.mapOptional("occupancy", MFI.Occupancy, 0);
     YamlIO.mapOptional("spillPhysVGPRs", MFI.SpillPhysVGPRS);
     YamlIO.mapOptional("wwmReservedRegs", MFI.WWMReservedRegs);
@@ -382,7 +381,6 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
                        StringValue()); // Don't print out when it's empty.
     YamlIO.mapOptional("sgprForEXECCopy", MFI.SGPRForEXECCopy,
                        StringValue()); // Don't print out when it's empty.
-    YamlIO.mapOptional("needIdx0Restore", MFI.NeedIdx0Restore, false);
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
@@ -434,10 +432,6 @@ struct VGPRBlock2IndexFunctor {
     return Reg - FirstVGPRBlock;
   }
 };
-
-// Creates a vreg definition for idx0, so it's value can be manipulated
-// prior to frame lowering
-Register initIdx0VRegDef(MachineFunction &MF, const SIInstrInfo *TII);
 
 /// This class keeps track of the SPI_SP_INPUT_ADDR config register, which
 /// tells the hardware which interpolation parameters to load.
@@ -634,8 +628,6 @@ private:
 
   // Maps s_set_gpr instrs to a idx0 s_add computation
   DenseMap<MachineInstr *, MachineInstr *> SetterPairs;
-  Register Idx0VRegDef;
-  bool NeedIdx0Restore;
 
   DenseMap<int, VGPRSpillToAGPR> VGPRToAGPRSpills;
 
@@ -836,34 +828,17 @@ public:
       SmallVectorImpl<std::pair<Register, int>> &CalleeSavedRegs,
       SmallVectorImpl<std::pair<Register, int>> &ScratchRegs) const;
 
-  ArrayRef<MCPhysReg> getAGPRSpillVGPRs() const {
-    return SpillAGPR;
-  }
+  ArrayRef<MCPhysReg> getAGPRSpillVGPRs() const { return SpillAGPR; }
 
   Register getSGPRForEXECCopy() const { return SGPRForEXECCopy; }
 
   void setSGPRForEXECCopy(Register Reg) { SGPRForEXECCopy = Reg; }
 
-  bool getNeedIdx0Restore() const { return NeedIdx0Restore; }
-
-  void setNeedIdx0Restore(bool Need) { NeedIdx0Restore = Need; }
-
-  Register getIdx0VRegDef() const { return Idx0VRegDef; }
-
   DenseMap<MachineInstr *, MachineInstr *> &getIdx0PrivateComputations() {
     return SetterPairs;
   }
 
-  void setIdx0VRegDef(Register Reg) {
-    assert(!Idx0VRegDef.isValid() && Reg.isVirtual() &&
-           "Idx0 should only have one reg def and it must be set before reg "
-           "alloc");
-    Idx0VRegDef = Reg;
-  }
-
-  ArrayRef<MCPhysReg> getVGPRSpillAGPRs() const {
-    return SpillVGPR;
-  }
+  ArrayRef<MCPhysReg> getVGPRSpillAGPRs() const { return SpillVGPR; }
 
   MCPhysReg getVGPRToAGPRSpill(int FrameIndex, unsigned Lane) const {
     auto I = VGPRToAGPRSpills.find(FrameIndex);

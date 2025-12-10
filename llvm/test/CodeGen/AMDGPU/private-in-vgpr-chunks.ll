@@ -6,10 +6,9 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %out, i32 %x) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 0
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x40a00000
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0x40e00000
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr33_vgpr34_vgpr35_vgpr36
 ; CHECK-NEXT:    ; implicit-def: $vgpr65
 ; CHECK-NEXT:    ; implicit-def: $vgpr32

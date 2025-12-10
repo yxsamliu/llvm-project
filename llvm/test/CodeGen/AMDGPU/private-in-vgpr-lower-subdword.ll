@@ -22,48 +22,40 @@ define amdgpu_kernel void @subdword() {
   ;
   ; BUNDLE-LABEL: name: subdword
   ; BUNDLE: bb.0.entry:
-  ; BUNDLE-NEXT:   $idx0 = S_SET_GPR_IDX_U32 0
-  ; BUNDLE-NEXT:   [[COPY:%[0-9]+]]:sreg_32_xm0_xexec = COPY $idx0
   ; BUNDLE-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 2, 0, implicit-def dead $scc
   ; BUNDLE-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_]], 3, implicit-def dead $scc
   ; BUNDLE-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_]], 3, implicit-def dead $scc
   ; BUNDLE-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
-  ; BUNDLE-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_MOV_B32_]], [[COPY]], implicit-def dead $scc
-  ; BUNDLE-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def %6, implicit [[S_ADD_I32_1]], implicit $exec, implicit [[S_LSHL_B32_]] :: (load (s16) from %ir.q.1, align 4, addrspace 5) {
-  ; BUNDLE-NEXT:     $stg_srca = V_LOAD_IDX_B32 [[S_ADD_I32_1]], 0, implicit $exec :: (load (s16) from %ir.q.1, align 4, addrspace 5)
+  ; BUNDLE-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def %6, implicit [[S_MOV_B32_]], implicit $exec, implicit [[S_LSHL_B32_]] :: (load (s16) from %ir.q.1, align 4, addrspace 5) {
+  ; BUNDLE-NEXT:     $stg_srca = V_LOAD_IDX_B32 [[S_MOV_B32_]], 0, implicit $exec :: (load (s16) from %ir.q.1, align 4, addrspace 5)
   ; BUNDLE-NEXT:     [[V_BFE_U32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_U32_e64 internal $stg_srca, [[S_LSHL_B32_]], 16, implicit $exec
   ; BUNDLE-NEXT:   }
-  ; BUNDLE-NEXT:   [[S_ADD_I32_2:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 4, 0, implicit-def dead $scc
-  ; BUNDLE-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_2]], 3, implicit-def dead $scc
+  ; BUNDLE-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 4, 0, implicit-def dead $scc
+  ; BUNDLE-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_1]], 3, implicit-def dead $scc
   ; BUNDLE-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_1]], 3, implicit-def dead $scc
   ; BUNDLE-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 1
-  ; BUNDLE-NEXT:   [[S_ADD_I32_3:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_MOV_B32_1]], [[COPY]], implicit-def dead $scc
   ; BUNDLE-NEXT:   [[V_BFM_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFM_B32_e64 16, [[S_LSHL_B32_1]], implicit $exec
-  ; BUNDLE-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_ADD_I32_3]], implicit $exec, implicit [[V_BFM_B32_e64_]], implicit [[V_BFE_U32_e64_]] :: (load (s16) from %ir.q.2, align 4, addrspace 5), (store (s16) into %ir.q.2, align 4, addrspace 5) {
-  ; BUNDLE-NEXT:     $stg_srca = V_LOAD_IDX_B32 [[S_ADD_I32_3]], 0, implicit $exec :: (load (s16) from %ir.q.2, align 4, addrspace 5)
+  ; BUNDLE-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_MOV_B32_1]], implicit $exec, implicit [[V_BFM_B32_e64_]], implicit [[V_BFE_U32_e64_]] :: (load (s16) from %ir.q.2, align 4, addrspace 5), (store (s16) into %ir.q.2, align 4, addrspace 5) {
+  ; BUNDLE-NEXT:     $stg_srca = V_LOAD_IDX_B32 [[S_MOV_B32_1]], 0, implicit $exec :: (load (s16) from %ir.q.2, align 4, addrspace 5)
   ; BUNDLE-NEXT:     $stg_dsta = V_BFI_B32_e64 [[V_BFM_B32_e64_]], [[V_BFE_U32_e64_]], internal $stg_srca, implicit $exec
-  ; BUNDLE-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, [[S_ADD_I32_3]], 0, implicit $exec :: (store (s16) into %ir.q.2, align 4, addrspace 5)
+  ; BUNDLE-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, [[S_MOV_B32_1]], 0, implicit $exec :: (store (s16) into %ir.q.2, align 4, addrspace 5)
   ; BUNDLE-NEXT:   }
   ; BUNDLE-NEXT:   S_ENDPGM 0
   ;
   ; SETIDX-LABEL: name: subdword
   ; SETIDX: bb.0.entry:
-  ; SETIDX-NEXT:   $idx0 = S_SET_GPR_IDX_U32 0
-  ; SETIDX-NEXT:   [[COPY:%[0-9]+]]:sreg_32_xm0_xexec = COPY $idx0
   ; SETIDX-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 2, 0, implicit-def dead $scc
   ; SETIDX-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_]], 3, implicit-def dead $scc
   ; SETIDX-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_]], 3, implicit-def dead $scc
-  ; SETIDX-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY]], 0, implicit-def dead $scc
-  ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_ADD_I32_1]]
+  ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
   ; SETIDX-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def %6, implicit $idx1, implicit $exec, implicit [[S_LSHL_B32_]] :: (load (s16) from %ir.q.1, align 4, addrspace 5) {
   ; SETIDX-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s16) from %ir.q.1, align 4, addrspace 5)
   ; SETIDX-NEXT:     [[V_BFE_U32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_U32_e64 internal $stg_srca, [[S_LSHL_B32_]], 16, implicit $exec
   ; SETIDX-NEXT:   }
-  ; SETIDX-NEXT:   [[S_ADD_I32_2:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 4, 0, implicit-def dead $scc
-  ; SETIDX-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_2]], 3, implicit-def dead $scc
+  ; SETIDX-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 4, 0, implicit-def dead $scc
+  ; SETIDX-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_1]], 3, implicit-def dead $scc
   ; SETIDX-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_1]], 3, implicit-def dead $scc
-  ; SETIDX-NEXT:   [[S_ADD_I32_3:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY]], 1, implicit-def dead $scc
-  ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_ADD_I32_3]]
+  ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 1
   ; SETIDX-NEXT:   [[V_BFM_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFM_B32_e64 16, [[S_LSHL_B32_1]], implicit $exec
   ; SETIDX-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx1, implicit $exec, implicit [[V_BFM_B32_e64_]], implicit [[V_BFE_U32_e64_]] :: (load (s16) from %ir.q.2, align 4, addrspace 5), (store (s16) into %ir.q.2, align 4, addrspace 5) {
   ; SETIDX-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s16) from %ir.q.2, align 4, addrspace 5)

@@ -11,13 +11,12 @@ define amdgpu_kernel void @wavegroup_kernel() "amdgpu-wavegroup-enable" "amdgpu-
 ; CHECK-LABEL: wavegroup_kernel:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s1, s0, 1
-; CHECK-NEXT:    s_mul_i32 s33, s0, s2
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; CHECK-NEXT:    s_add_co_u32 s33, s33, 0x2000
-; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
+; CHECK-NEXT:    s_mul_i32 s33, s0, s2
 ; CHECK-NEXT:    s_mov_b32 s0, 4
+; CHECK-NEXT:    s_add_co_u32 s33, s33, 0x2000
 ; CHECK-NEXT:    scratch_load_b32 v0, off, s0
 ; CHECK-NEXT:    s_mov_b32 s0, 8
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
