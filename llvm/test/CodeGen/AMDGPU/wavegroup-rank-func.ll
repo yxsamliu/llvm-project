@@ -191,6 +191,7 @@ entry:
 ; RANK:         .set main.num_named_barrier, max(0, max(.L.Linput.num_named_barrier, .L.Lcompute.num_named_barrier, .L.Loutput.num_named_barrier))
 ; RANK:         .set main.private_seg_size, max(0, 0+max(.L.Linput.private_seg_size, .L.Lcompute.private_seg_size, .L.Loutput.private_seg_size))
 ; RANK:         .set main.num_vgpr_rank_sum, 0+.L.Linput.num_vgpr+.L.Lcompute.num_vgpr+.L.Loutput.num_vgpr
+; RANK: ; LDSByteSize: 0 bytes/workgroup (compile time only)
 ; RANK: ; NumVGPRsForWavesPerEU: 45
 ; RANK: ; NamedBarCnt: 1
 
@@ -361,6 +362,8 @@ entry:
   call void @llvm.amdgcn.wavegroup.rank(i32 2, ptr @output2)
   ret void
 }
+
+; RANK: ; LDSByteSize: 128 bytes/workgroup (compile time only)
 
 ; Function Attrs: convergent nounwind
 declare !callback !0 void @llvm.amdgcn.wavegroup.rank.p0(i32 immarg, ptr) #2

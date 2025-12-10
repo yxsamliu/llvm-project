@@ -17,18 +17,18 @@ define amdgpu_kernel void @vectorize() "amdgpu-wavegroup-enable" !reqd_work_grou
   ; CHECK-NEXT:   [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1, [[V_MOV_B32_e32_2]], %subreg.sub2, [[V_MOV_B32_e32_3]], %subreg.sub3
-  ; CHECK-NEXT:   BUNDLE implicit-def $stg_srcd, implicit-def $stg_srcc, implicit-def $stg_srcb, implicit-def dead $stg_srca, implicit-def $stg_dsta, implicit killed [[S_MOV_B32_1]], implicit $exec, implicit [[S_MOV_B32_]] :: (dereferenceable load (s96) from @color + 24, align 4, addrspace 10), (dereferenceable load (s96) from @color + 12, align 4, addrspace 10), (dereferenceable load (s96) from @color, align 4, addrspace 10), (dereferenceable load (s288) from @weights, align 268435456, addrspace 10), (store (s128) into @out, align 8, !tbaa !8, addrspace 10) {
-  ; CHECK-NEXT:     $stg_srcd = V_LOAD_IDX [[S_MOV_B32_1]], 15, implicit $exec :: (dereferenceable load (s96) from @color + 24, align 4, addrspace 10)
-  ; CHECK-NEXT:     $stg_srcc = V_LOAD_IDX [[S_MOV_B32_1]], 12, implicit $exec :: (dereferenceable load (s96) from @color + 12, align 4, addrspace 10)
-  ; CHECK-NEXT:     $stg_srcb = V_LOAD_IDX [[S_MOV_B32_1]], 9, implicit $exec :: (dereferenceable load (s96) from @color, align 4, addrspace 10)
-  ; CHECK-NEXT:     $stg_srca = V_LOAD_IDX [[S_MOV_B32_]], 0, implicit $exec :: (dereferenceable load (s288) from @weights, align 268435456, addrspace 10)
-  ; CHECK-NEXT:     $stg_dsta = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 0, internal killed $stg_srca, internal $stg_srcb, internal $stg_srcc, internal $stg_srcd, 10, -1, 0, 0, implicit $exec
-  ; CHECK-NEXT:     V_STORE_IDX internal $stg_dsta, killed [[S_MOV_B32_1]], 18, implicit $exec :: (store (s128) into @out, align 8, !tbaa !8, addrspace 10)
+  ; CHECK-NEXT:   BUNDLE implicit-def dead $stg_srcd, implicit-def dead $stg_srcc, implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def $stg_dsta, implicit killed [[S_MOV_B32_1]], implicit $exec, implicit [[S_MOV_B32_]] :: (dereferenceable load (s96) from @color + 24, align 4, addrspace 10), (dereferenceable load (s96) from @color + 12, align 4, addrspace 10), (dereferenceable load (s96) from @color, align 4, addrspace 10), (dereferenceable load (s288) from @weights, align 268435456, addrspace 10), (store (s128) into @out, align 8, !tbaa !8, addrspace 10) {
+  ; CHECK-NEXT:     $stg_srcd = V_LOAD_IDX_B96 [[S_MOV_B32_1]], 15, implicit $exec :: (dereferenceable load (s96) from @color + 24, align 4, addrspace 10)
+  ; CHECK-NEXT:     $stg_srcc = V_LOAD_IDX_B96 [[S_MOV_B32_1]], 12, implicit $exec :: (dereferenceable load (s96) from @color + 12, align 4, addrspace 10)
+  ; CHECK-NEXT:     $stg_srcb = V_LOAD_IDX_B96 [[S_MOV_B32_1]], 9, implicit $exec :: (dereferenceable load (s96) from @color, align 4, addrspace 10)
+  ; CHECK-NEXT:     $stg_srca = V_LOAD_IDX_B288 [[S_MOV_B32_]], 0, implicit $exec :: (dereferenceable load (s288) from @weights, align 268435456, addrspace 10)
+  ; CHECK-NEXT:     $stg_dsta = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 0, internal killed $stg_srca, internal killed $stg_srcb, internal killed $stg_srcc, internal killed $stg_srcd, 10, -1, 0, 0, implicit $exec
+  ; CHECK-NEXT:     V_STORE_IDX_B128 internal $stg_dsta, killed [[S_MOV_B32_1]], 18, implicit $exec :: (store (s128) into @out, align 8, !tbaa !8, addrspace 10)
   ; CHECK-NEXT:   }
   ; CHECK-NEXT:   S_ENDPGM 0
 entry:
   %6 = load i32, ptr addrspace(10) @weights, align 4
-  %vecins = insertelement <9 x i32> poison, i32 %6, i64 0
+  %vecins = insertelement <9 x i32> undef, i32 %6, i64 0
   %7 = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @weights, i32 4), align 4, !tbaa !5
   %vecins.1 = insertelement <9 x i32> %vecins, i32 %7, i64 1
   %8 = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @weights, i32 8), align 4, !tbaa !5

@@ -184,8 +184,10 @@ define amdgpu_kernel void @flat_CFS128B(ptr %addr) {
 ; GFX13-SDAG:       ; %bb.0:
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX13-SDAG-NEXT:    flat_discard_b32 v[0:1] offset:32 cfs:CFS_128B
+; GFX13-SDAG-NEXT:    flat_discard_b32 v[0:1] cfs:CFS_128B
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: flat_CFS128B:
@@ -208,8 +210,10 @@ define amdgpu_kernel void @flat_CFS64B(ptr %addr) {
 ; GFX13-SDAG:       ; %bb.0:
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX13-SDAG-NEXT:    flat_discard_b32 v[0:1] offset:32 cfs:CFS_64B
+; GFX13-SDAG-NEXT:    flat_discard_b32 v[0:1] cfs:CFS_64B
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: flat_CFS64B:
@@ -232,8 +236,10 @@ define amdgpu_kernel void @vflat_CFS32B(ptr %addr) {
 ; GFX13-SDAG:       ; %bb.0:
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX13-SDAG-NEXT:    flat_discard_b32 v[0:1] offset:32 cfs:CFS_32B
+; GFX13-SDAG-NEXT:    flat_discard_b32 v[0:1] cfs:CFS_32B
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: vflat_CFS32B:

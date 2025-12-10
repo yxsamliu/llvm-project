@@ -8,11 +8,18 @@
 
 
 define amdgpu_ps float @scratch_load_b32_alloca_idxprom(i32 %idx) {
-; GCN-LABEL: scratch_load_b32_alloca_idxprom:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    scratch_load_b32 v0, v0, off scale_offset
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: scratch_load_b32_alloca_idxprom:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    scratch_load_b32 v0, v0, off scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: scratch_load_b32_alloca_idxprom:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    scratch_load_b32 v0, v0, off scale_offset
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %p = alloca [64 x i32], align 4, addrspace(5)
   %idxprom = zext i32 %idx to i64
@@ -22,11 +29,18 @@ entry:
 }
 
 define amdgpu_ps float @scratch_load_b32_idxprom(ptr addrspace(5) align 4 inreg %p, i32 %idx) {
-; GCN-LABEL: scratch_load_b32_idxprom:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    scratch_load_b32 v0, v0, s0 scale_offset
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: scratch_load_b32_idxprom:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    scratch_load_b32 v0, v0, s0 scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: scratch_load_b32_idxprom:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    scratch_load_b32 v0, v0, s0 scale_offset
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds float, ptr addrspace(5) %p, i64 %idxprom
@@ -35,11 +49,18 @@ entry:
 }
 
 define amdgpu_ps float @scratch_load_b32_idx32(ptr addrspace(5) align 4 inreg %p, i32 %idx) {
-; GCN-LABEL: scratch_load_b32_idx32:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    scratch_load_b32 v0, v0, s0 scale_offset
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: scratch_load_b32_idx32:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    scratch_load_b32 v0, v0, s0 scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: scratch_load_b32_idx32:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    scratch_load_b32 v0, v0, s0 scale_offset
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %arrayidx = getelementptr inbounds float, ptr addrspace(5) %p, i32 %idx
   %ret = load float, ptr addrspace(5) %arrayidx, align 4
@@ -47,12 +68,20 @@ entry:
 }
 
 define amdgpu_ps float @scratch_load_b32_idxprom_wrong_stride(ptr addrspace(5) align 4 inreg %p, i32 %idx) {
-; GCN-LABEL: scratch_load_b32_idxprom_wrong_stride:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; GCN-NEXT:    scratch_load_b32 v0, v0, s0
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: scratch_load_b32_idxprom_wrong_stride:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; GFX1250-NEXT:    scratch_load_b32 v0, v0, s0
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: scratch_load_b32_idxprom_wrong_stride:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; GFX13-NEXT:    scratch_load_b32 v0, v0, s0
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = zext i32 %idx to i64
   %arrayidx = getelementptr inbounds <2 x float>, ptr addrspace(5) %p, i64 %idxprom
@@ -61,11 +90,18 @@ entry:
 }
 
 define amdgpu_ps float @scratch_load_b16_idxprom_ioffset(ptr addrspace(5) align 4 inreg %p, i32 %idx) {
-; GCN-LABEL: scratch_load_b16_idxprom_ioffset:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    scratch_load_u16 v0, v0, s0 offset:32 scale_offset
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: scratch_load_b16_idxprom_ioffset:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    scratch_load_u16 v0, v0, s0 offset:32 scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: scratch_load_b16_idxprom_ioffset:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    scratch_load_u16 v0, v0, s0 offset:32 scale_offset
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = sext i32 %idx to i64
   %idxadd = add i64 %idxprom, 16
@@ -77,11 +113,18 @@ entry:
 }
 
 define amdgpu_ps <2 x float> @scratch_load_b64_idxprom(ptr addrspace(5) align 4 inreg %p, i32 %idx) {
-; GCN-LABEL: scratch_load_b64_idxprom:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    scratch_load_b64 v[0:1], v0, s0 scale_offset
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: scratch_load_b64_idxprom:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    scratch_load_b64 v[0:1], v0, s0 scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: scratch_load_b64_idxprom:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    scratch_load_b64 v[0:1], v0, s0 scale_offset
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = zext i32 %idx to i64
   %arrayidx = getelementptr inbounds <2 x float>, ptr addrspace(5) %p, i64 %idxprom
@@ -90,11 +133,18 @@ entry:
 }
 
 define amdgpu_ps <3 x float> @scratch_load_b96_idxprom(ptr addrspace(5) align 4 inreg %p, i32 %idx) {
-; GCN-LABEL: scratch_load_b96_idxprom:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    scratch_load_b96 v[0:2], v0, s0 scale_offset
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: scratch_load_b96_idxprom:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    scratch_load_b96 v[0:2], v0, s0 scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: scratch_load_b96_idxprom:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    scratch_load_b96 v[0:2], v0, s0 scale_offset
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = zext i32 %idx to i64
   %arrayidx = getelementptr inbounds [3 x float], ptr addrspace(5) %p, i64 %idxprom
@@ -103,11 +153,18 @@ entry:
 }
 
 define amdgpu_ps <3 x float> @scratch_load_b96_idxpromi_ioffset(ptr addrspace(5) align 4 inreg %p, i32 %idx) {
-; GCN-LABEL: scratch_load_b96_idxpromi_ioffset:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    scratch_load_b96 v[0:2], v0, s0 offset:192 scale_offset
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: scratch_load_b96_idxpromi_ioffset:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    scratch_load_b96 v[0:2], v0, s0 offset:192 scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: scratch_load_b96_idxpromi_ioffset:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    scratch_load_b96 v[0:2], v0, s0 offset:192 scale_offset
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = zext i32 %idx to i64
   %idxadd = add i64 %idxprom, 16
@@ -117,11 +174,18 @@ entry:
 }
 
 define amdgpu_ps <4 x float> @scratch_load_b128_idxprom(ptr addrspace(5) align 4 inreg %p, i32 %idx) {
-; GCN-LABEL: scratch_load_b128_idxprom:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    scratch_load_b128 v[0:3], v0, s0 scale_offset
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: scratch_load_b128_idxprom:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    scratch_load_b128 v[0:3], v0, s0 scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: scratch_load_b128_idxprom:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    scratch_load_b128 v[0:3], v0, s0 scale_offset
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = zext i32 %idx to i64
   %arrayidx = getelementptr inbounds <4 x float>, ptr addrspace(5) %p, i64 %idxprom
@@ -130,13 +194,22 @@ entry:
 }
 
 define amdgpu_ps float @scratch_load_b32_idxprom_range(ptr addrspace(5) align 4 inreg %p, ptr addrspace(5) align 4 %pp) {
-; GCN-LABEL: scratch_load_b32_idxprom_range:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    scratch_load_b32 v0, v0, off
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    scratch_load_b32 v0, v0, s0 scale_offset
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: scratch_load_b32_idxprom_range:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    scratch_load_b32 v0, v0, off
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    scratch_load_b32 v0, v0, s0 scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: scratch_load_b32_idxprom_range:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    scratch_load_b32 v0, v0, off
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    scratch_load_b32 v0, v0, s0 scale_offset
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
   %idxprom = zext i32 %idx to i64
@@ -146,13 +219,22 @@ entry:
 }
 
 define amdgpu_ps float @scratch_load_b32_idxprom_range_ioffset(ptr addrspace(5) align 4 inreg %p, ptr addrspace(5) align 4 %pp) {
-; GCN-LABEL: scratch_load_b32_idxprom_range_ioffset:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    scratch_load_b32 v0, v0, off
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    scratch_load_b32 v0, v0, s0 offset:64 scale_offset
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: scratch_load_b32_idxprom_range_ioffset:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    scratch_load_b32 v0, v0, off
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    scratch_load_b32 v0, v0, s0 offset:64 scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: scratch_load_b32_idxprom_range_ioffset:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    scratch_load_b32 v0, v0, off
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    scratch_load_b32 v0, v0, s0 offset:64 scale_offset
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
   %idxprom = zext i32 %idx to i64
@@ -163,13 +245,22 @@ entry:
 }
 
 define amdgpu_ps float @scratch_load_b8_idxprom_range_ioffset(ptr addrspace(5) align 4 inreg %p, ptr addrspace(5) align 4 %pp) {
-; GCN-LABEL: scratch_load_b8_idxprom_range_ioffset:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    scratch_load_b32 v0, v0, off
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    scratch_load_u8 v0, v0, s0 offset:16
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: scratch_load_b8_idxprom_range_ioffset:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    scratch_load_b32 v0, v0, off
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    scratch_load_u8 v0, v0, s0 offset:16
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: scratch_load_b8_idxprom_range_ioffset:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    scratch_load_b32 v0, v0, off
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    scratch_load_u8 v0, v0, s0 offset:16
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
   %idxprom = zext i32 %idx to i64
@@ -182,13 +273,22 @@ entry:
 }
 
 define amdgpu_ps float @scratch_load_b16_idxprom_range(ptr addrspace(5) align 4 inreg %p, ptr addrspace(5) align 4 %pp) {
-; GCN-LABEL: scratch_load_b16_idxprom_range:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    scratch_load_b32 v0, v0, off
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    scratch_load_u16 v0, v0, s0 scale_offset
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: scratch_load_b16_idxprom_range:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    scratch_load_b32 v0, v0, off
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    scratch_load_u16 v0, v0, s0 scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: scratch_load_b16_idxprom_range:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    scratch_load_b32 v0, v0, off
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    scratch_load_u16 v0, v0, s0 scale_offset
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
   %idxprom = zext i32 %idx to i64
@@ -200,13 +300,22 @@ entry:
 }
 
 define amdgpu_ps float @scratch_load_b16_idxprom_range_ioffset(ptr addrspace(5) align 4 inreg %p, ptr addrspace(5) align 4 %pp) {
-; GCN-LABEL: scratch_load_b16_idxprom_range_ioffset:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    scratch_load_b32 v0, v0, off
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    scratch_load_u16 v0, v0, s0 offset:32 scale_offset
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: scratch_load_b16_idxprom_range_ioffset:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    scratch_load_b32 v0, v0, off
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    scratch_load_u16 v0, v0, s0 offset:32 scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: scratch_load_b16_idxprom_range_ioffset:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    scratch_load_b32 v0, v0, off
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    scratch_load_u16 v0, v0, s0 offset:32 scale_offset
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
   %idxprom = zext i32 %idx to i64
@@ -219,13 +328,22 @@ entry:
 }
 
 define amdgpu_ps <2 x float> @scratch_load_b64_idxprom_range(ptr addrspace(5) align 4 inreg %p, ptr addrspace(5) align 4 %pp) {
-; GCN-LABEL: scratch_load_b64_idxprom_range:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    scratch_load_b32 v0, v0, off
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    scratch_load_b64 v[0:1], v0, s0 scale_offset
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: scratch_load_b64_idxprom_range:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    scratch_load_b32 v0, v0, off
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    scratch_load_b64 v[0:1], v0, s0 scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: scratch_load_b64_idxprom_range:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    scratch_load_b32 v0, v0, off
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    scratch_load_b64 v[0:1], v0, s0 scale_offset
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
   %idxprom = zext i32 %idx to i64
@@ -237,13 +355,22 @@ entry:
 ; Multiplication is unsigned here, so we cannot match it.
 
 define amdgpu_ps <3 x float> @scratch_load_b96_idxprom_range(ptr addrspace(5) align 4 inreg %p, ptr addrspace(5) align 4 %pp) {
-; GCN-LABEL: scratch_load_b96_idxprom_range:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    scratch_load_b32 v0, v0, off
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    scratch_load_b96 v[0:2], v0, s0 scale_offset
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: scratch_load_b96_idxprom_range:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    scratch_load_b32 v0, v0, off
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    scratch_load_b96 v[0:2], v0, s0 scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: scratch_load_b96_idxprom_range:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    scratch_load_b32 v0, v0, off
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    scratch_load_b96 v[0:2], v0, s0 scale_offset
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
   %idxprom = sext i32 %idx to i64
@@ -253,13 +380,22 @@ entry:
 }
 
 define amdgpu_ps <3 x float> @scratch_load_b96_idxprom_range_ioffset(ptr addrspace(5) align 4 inreg %p, ptr addrspace(5) align 4 %pp) {
-; GCN-LABEL: scratch_load_b96_idxprom_range_ioffset:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    scratch_load_b32 v0, v0, off
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    scratch_load_b96 v[0:2], v0, s0 offset:192 scale_offset
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: scratch_load_b96_idxprom_range_ioffset:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    scratch_load_b32 v0, v0, off
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    scratch_load_b96 v[0:2], v0, s0 offset:192 scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: scratch_load_b96_idxprom_range_ioffset:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    scratch_load_b32 v0, v0, off
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    scratch_load_b96 v[0:2], v0, s0 offset:192 scale_offset
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
   %idxprom = sext i32 %idx to i64
@@ -270,13 +406,22 @@ entry:
 }
 
 define amdgpu_ps <4 x float> @scratch_load_b128_idxprom_range(ptr addrspace(5) align 4 inreg %p, ptr addrspace(5) align 4 %pp) {
-; GCN-LABEL: scratch_load_b128_idxprom_range:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    scratch_load_b32 v0, v0, off
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    scratch_load_b128 v[0:3], v0, s0 scale_offset
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: scratch_load_b128_idxprom_range:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    scratch_load_b32 v0, v0, off
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    scratch_load_b128 v[0:3], v0, s0 scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: scratch_load_b128_idxprom_range:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    scratch_load_b32 v0, v0, off
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    scratch_load_b128 v[0:3], v0, s0 scale_offset
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(5) %pp, align 4, !range !0
   %idxprom = zext i32 %idx to i64
@@ -286,11 +431,18 @@ entry:
 }
 
 define amdgpu_ps void @scratch_store_b32_idxprom(ptr addrspace(5) align 4 inreg %p, i32 %idx) {
-; GCN-LABEL: scratch_store_b32_idxprom:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    v_mov_b32_e32 v1, 1.0
-; GCN-NEXT:    scratch_store_b32 v0, v1, s0 scale_offset
-; GCN-NEXT:    s_endpgm
+; GFX1250-LABEL: scratch_store_b32_idxprom:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 1.0
+; GFX1250-NEXT:    scratch_store_b32 v0, v1, s0 scale_offset
+; GFX1250-NEXT:    s_endpgm
+;
+; GFX13-LABEL: scratch_store_b32_idxprom:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    v_mov_b32_e32 v1, 1.0
+; GFX13-NEXT:    scratch_store_b32 v0, v1, s0 scale_offset
+; GFX13-NEXT:    s_endpgm
 entry:
   %idxprom = zext i32 %idx to i64
   %arrayidx = getelementptr inbounds float, ptr addrspace(5) %p, i64 %idxprom
@@ -301,6 +453,7 @@ entry:
 define amdgpu_ps void @scratch_store_b16_idxprom(ptr addrspace(5) align 2 inreg %p, i32 %idx) {
 ; GFX1250-LABEL: scratch_store_b16_idxprom:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    scratch_store_b16 v0, v1, s0 scale_offset
 ; GFX1250-NEXT:    s_endpgm
@@ -326,6 +479,7 @@ entry:
 define amdgpu_ps void @scratch_store_b64_idxprom(ptr addrspace(5) align 4 inreg %p, i32 %idx) {
 ; GFX1250-LABEL: scratch_store_b64_idxprom:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], 1.0
 ; GFX1250-NEXT:    scratch_store_b64 v0, v[2:3], s0 scale_offset
 ; GFX1250-NEXT:    s_endpgm
@@ -344,3 +498,5 @@ entry:
 }
 
 !0 = !{i32 0, i32 1024}
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GCN: {{.*}}

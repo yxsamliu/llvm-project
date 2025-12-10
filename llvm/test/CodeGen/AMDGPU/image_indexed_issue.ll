@@ -17,18 +17,7 @@ define <3 x float> @square(ptr addrspace(4) %ptr, ptr addrspace(4) %ptr1, i64 %1
 ; GFX13-SDAG-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX13-SDAG-NEXT:  .LBB0_1: ; =>This Loop Header: Depth=1
 ; GFX13-SDAG-NEXT:    ; Child Loop BB0_2 Depth 2
-; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s12, v16
-; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s13, v17
-; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s14, v18
-; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s15, v19
-; GFX13-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[12:13], v[16:17]
-; GFX13-SDAG-NEXT:    v_cmp_eq_u64_e64 s0, s[14:15], v[18:19]
-; GFX13-SDAG-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX13-SDAG-NEXT:    s_and_saveexec_b32 s16, s0
-; GFX13-SDAG-NEXT:    s_mov_b32 s17, exec_lo
-; GFX13-SDAG-NEXT:  .LBB0_2: ; Parent Loop BB0_1 Depth=1
-; GFX13-SDAG-NEXT:    ; => This Inner Loop Header: Depth=2
+; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x1
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s4, v12
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s5, v13
 ; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s6, v14
@@ -44,14 +33,26 @@ define <3 x float> @square(ptr addrspace(4) %ptr, ptr addrspace(4) %ptr1, i64 %1
 ; GFX13-SDAG-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX13-SDAG-NEXT:    s_and_b32 s0, s0, s1
 ; GFX13-SDAG-NEXT:    s_and_b32 s0, s0, s2
+; GFX13-SDAG-NEXT:    s_and_saveexec_b32 s1, s0
+; GFX13-SDAG-NEXT:    s_mov_b32 s2, exec_lo
+; GFX13-SDAG-NEXT:  .LBB0_2: ; Parent Loop BB0_1 Depth=1
+; GFX13-SDAG-NEXT:    ; => This Inner Loop Header: Depth=2
+; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s12, v16
+; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s13, v17
+; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s14, v18
+; GFX13-SDAG-NEXT:    v_readfirstlane_b32 s15, v19
+; GFX13-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[12:13], v[16:17]
+; GFX13-SDAG-NEXT:    v_cmp_eq_u64_e64 s0, s[14:15], v[18:19]
+; GFX13-SDAG-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX13-SDAG-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-SDAG-NEXT:    image_sample_lz v[0:2], [v6, v7], s[4:11], s[12:15] dmask:0x7 dim:SQ_RSRC_IMG_2D
 ; GFX13-SDAG-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX13-SDAG-NEXT:    s_cbranch_execnz .LBB0_2
 ; GFX13-SDAG-NEXT:  ; %bb.3: ; in Loop: Header=BB0_1 Depth=1
-; GFX13-SDAG-NEXT:    s_mov_b32 exec_lo, s17
-; GFX13-SDAG-NEXT:    s_xor_b32 exec_lo, exec_lo, s16
+; GFX13-SDAG-NEXT:    s_mov_b32 exec_lo, s2
+; GFX13-SDAG-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
 ; GFX13-SDAG-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX13-SDAG-NEXT:  ; %bb.4:
 ; GFX13-SDAG-NEXT:    s_mov_b32 exec_lo, s3

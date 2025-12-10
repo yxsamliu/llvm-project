@@ -5025,7 +5025,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
 
 void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
                                           QualType CalleeType,
-                                          const FunctionDecl *CalleeDecl) {
+                                          GlobalDecl CalleeGlobalDecl) {
   if (!CallOrInvoke)
     return;
   auto *Func = dyn_cast<llvm::Function>(CallOrInvoke->getCalledOperand());
@@ -5033,6 +5033,9 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
     return;
   if (Func->getSubprogram())
     return;
+
+  const FunctionDecl *CalleeDecl =
+      cast<FunctionDecl>(CalleeGlobalDecl.getDecl());
 
   // Do not emit a declaration subprogram for a function with nodebug
   // attribute, or if call site info isn't required.
@@ -5044,7 +5047,8 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
   // create the one describing the function in order to have complete
   // call site debug info.
   if (!CalleeDecl->isStatic() && !CalleeDecl->isInlined())
-    EmitFunctionDecl(CalleeDecl, CalleeDecl->getLocation(), CalleeType, Func);
+    EmitFunctionDecl(CalleeGlobalDecl, CalleeDecl->getLocation(), CalleeType,
+                     Func);
 }
 
 void CGDebugInfo::EmitInlineFunctionStart(CGBuilderTy &Builder, GlobalDecl GD) {
@@ -5594,7 +5598,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclareForHeterogeneousDwarf(
   } else if (const auto *RT = dyn_cast<RecordType>(VD->getType())) {
     // If VD is an anonymous union then Storage represents value for
     // all union fields.
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
     if (RD->isUnion() && RD->isAnonymousStructOrUnion()) {
       llvm::DIExprBuilder UnionExprBuilder{ExprBuilder};
       llvm::DIExpression *UnionDIExpression = UnionExprBuilder.intoExpression();
@@ -6157,8 +6161,9 @@ llvm::DIGlobalVariableExpression *CGDebugInfo::CollectAnonRecordDecls(
     // Ignore unnamed fields, but recurse into anonymous records.
     if (FieldName.empty()) {
       if (const auto *RT = dyn_cast<RecordType>(Field->getType()))
-        GVE = CollectAnonRecordDecls(RT->getDecl()->getDefinitionOrSelf(), Unit,
-                     LineNo, LinkageName, MS, Var, DContext);
+        GVE = CollectAnonRecordDecls(
+            RT->getDecl()->getDefinitionOrSelf(), Unit, LineNo,
+            LinkageName, MS, Var, DContext);
       continue;
     }
     // Use VarDecl's Tag, Scope and Line number.
@@ -6187,7 +6192,7 @@ CGDebugInfo::CollectAnonRecordDeclsForHeterogeneousDwarf(
     if (FieldName.empty()) {
       if (const auto *RT = dyn_cast<RecordType>(Field->getType()))
         GVE = CollectAnonRecordDeclsForHeterogeneousDwarf(
-            RT->getOriginalDecl()->getDefinitionOrSelf(), Unit, LineNo,
+            RT->getDecl()->getDefinitionOrSelf(), Unit, LineNo,
             LinkageName, MS, Var, DContext);
       continue;
     }
@@ -6256,15 +6261,6 @@ struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
   bool VisitAtomicType(AtomicType *FT) {
     Reconstitutable = false;
     return false;
-  }
-  bool VisitType(Type *T) {
-    // _BitInt(N) isn't reconstitutable because the bit width isn't encoded in
-    // the DWARF, only the byte width.
-    if (T->isBitIntType()) {
-      Reconstitutable = false;
-      return false;
-    }
-    return true;
   }
   bool TraverseEnumType(EnumType *ET, bool = false) {
     // Unnamed enums can't be reconstituted due to a lack of column info we
@@ -6552,7 +6548,7 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
   llvm::dwarf::MemorySpace MS = getDWARFMemorySpace(D);
   if (T->isUnionType() && DeclName.empty()) {
     const RecordDecl *RD =
-        T->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
+        T->castAs<RecordType>()->getDecl()->getDefinitionOrSelf();
     assert(RD->isAnonymousStructOrUnion() &&
            "unnamed non-anonymous struct or union?");
     // FIXME(KZHURAVL): No tests for this path.
@@ -7104,7 +7100,8 @@ llvm::DINode::DIFlags CGDebugInfo::getCallSiteRelatedAttrs() const {
   // when there's a possibility of debugging backtraces.
   if (CGM.getCodeGenOpts().OptimizationLevel == 0 ||
       DebugKind == llvm::codegenoptions::NoDebugInfo ||
-      DebugKind == llvm::codegenoptions::LocTrackingOnly)
+      DebugKind == llvm::codegenoptions::LocTrackingOnly ||
+      !CGM.getCodeGenOpts().DebugCallSiteInfo)
     return llvm::DINode::FlagZero;
 
   // Call site-related attributes are available in DWARF v5. Some debuggers,

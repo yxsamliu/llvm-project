@@ -349,7 +349,7 @@ class WaveReduceOp<string OpName, string TypeStr, ValueType Ty,
 
 // Input list : [Operation_name,
 //              type - Signed(I)/Unsigned(U)/Float(F)/Bitwise(B),
-//              bit-width
+//              input-type
 //              output register class,
 //              input register class]
 defvar Operations = [
@@ -372,6 +372,11 @@ defvar Operations = [
   WaveReduceOp<"and", "B64", i64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"or", "B64", i64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"xor", "B64", i64, SGPR_64, VSrc_b64>,
+
+  WaveReduceOp<"fmin", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fmax", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fadd", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fsub", "F32", f32, SGPR_32, VSrc_b32>,
 ];
 
 foreach Op = Operations in {
@@ -792,6 +797,17 @@ def : GCNPat<
   (SI_CALL_ISEL $src0, (i64 0))
 >;
 
+// Funnel shift right (fshr) patterns for uniform inputs.
+// These patterns implement this using scalar instructions by constructing a 64-bit
+// value {a, b} and performing a single right shift.
+def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, i32:$src2),
+  (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), (S_AND_B32 $src2, (i32 31))), sub0))
+>;
+
+def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, (i32 ShiftAmt32Imm:$src2)),
+  (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), $src2), sub0))
+>;
+
 // Wrapper around s_swappc_b64 with extra $callee parameter to track
 // the called function after regalloc.
 def SI_CALL : SPseudoInstSI <
@@ -814,9 +830,8 @@ def WAVEGROUP_RANK_CALL
   let isConvergent = 1;
 }
 
-class SI_TCRETURN_Pseudo<RegisterClass rc, SDNode sd> : SPseudoInstSI <(outs),
-  (ins rc:$src0, unknown:$callee, i32imm:$fpdiff),
-  [(sd i64:$src0, tglobaladdr:$callee, i32:$fpdiff)]> {
+class SI_TCRETURN_Pseudo<RegisterClass rc, list<dag> pattern = []>
+  : SPseudoInstSI <(outs), (ins rc:$src0, unknown:$callee, i32imm:$fpdiff), pattern> {
   let Size = 4;
   let FixedSize = 1;
   let isCall = 1;
@@ -830,8 +845,15 @@ class SI_TCRETURN_Pseudo<RegisterClass rc, SDNode sd> : SPseudoInstSI <(outs),
 }
 
 // Tail call handling pseudo
-def SI_TCRETURN :     SI_TCRETURN_Pseudo<CCR_SGPR_64, AMDGPUtc_return>;
-def SI_TCRETURN_GFX : SI_TCRETURN_Pseudo<Gfx_CCR_SGPR_64, AMDGPUtc_return_gfx>;
+def SI_TCRETURN : SI_TCRETURN_Pseudo<CCR_SGPR_64,
+  [(AMDGPUtc_return i64:$src0, tglobaladdr:$callee, i32:$fpdiff)]>;
+def SI_TCRETURN_GFX : SI_TCRETURN_Pseudo<Gfx_CCR_SGPR_64,
+  [(AMDGPUtc_return_gfx i64:$src0, tglobaladdr:$callee, i32:$fpdiff)]>;
+
+// Tail call for chain calling conventions.
+// Uses unrestricted SGPR_64 instead of CCR_SGPR_64 because chain calls
+// never return and don't need to preserve any SGPRs.
+def SI_TCRETURN_CHAIN : SI_TCRETURN_Pseudo<SGPR_64>;
 
 // Handle selecting indirect tail calls
 def : GCNPat<
@@ -861,13 +883,13 @@ multiclass SI_CS_CHAIN_TC<
     // This is essentially a tail call, but it also takes a mask to put in EXEC
     // right before jumping to the callee.
     def NAME: SPseudoInstSI <(outs),
-        (ins CCR_SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff, execrc:$exec)>;
+        (ins SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff, execrc:$exec)>;
 
     // Same as above, but it will first try to reallocate the VGPRs, and choose an
     // EXEC mask and a callee depending on the success of the reallocation attempt.
     def _DVGPR : SPseudoInstSI <(outs),
-        (ins CCR_SGPR_64:$src0, i64imm:$callee, i32imm:$fpdiff, execrc:$exec,
-             SSrc_b32:$numvgprs, execrc:$fbexec, CCR_SGPR_64:$fbcallee)>;
+        (ins SGPR_64:$src0, i64imm:$callee, i32imm:$fpdiff, execrc:$exec,
+             SSrc_b32:$numvgprs, execrc:$fbexec, SGPR_64:$fbcallee)>;
   } // End FixedSize = 0 etc
 }
 
@@ -879,7 +901,7 @@ multiclass si_cs_chain_tc_pattern<
   dag callee, ValueType execvt, RegisterOperand execrc, Instruction tc> {
   def : GCNPat<
     (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec),
-    (tc CCR_SGPR_64:$src0, callee, i32imm:$fpdiff, execrc:$exec)
+    (tc SGPR_64:$src0, callee, i32imm:$fpdiff, execrc:$exec)
   >;
 }
 
@@ -906,8 +928,8 @@ multiclass si_cs_chain_tc_dvgpr_patterns<
     (AMDGPUtc_return_chain_dvgpr i64:$src0, callee, (i32 timm:$fpdiff),
                                  execvt:$exec, i32:$numvgprs,
                                  execvt:$fbexec, i64:$fbcallee),
-    (tc CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff, execrc:$exec,
-        SSrc_b32:$numvgprs, execrc:$fbexec, CCR_SGPR_64:$fbcallee)
+    (tc SGPR_64:$src0, (i64 0), i32imm:$fpdiff, execrc:$exec,
+        SSrc_b32:$numvgprs, execrc:$fbexec, SGPR_64:$fbcallee)
   >;
   }
 }
@@ -1354,16 +1376,28 @@ def : GCNPat <
 // Indexed Instructions
 //===----------------------------------------------------------------------===//
 
-// The units of $idx and $offset are in DWORDS.
-// is_laneshared == 0 if the access is to a dynamically accessed private array.
-// That case and laneshared have different fence semantics.
-def V_LOAD_IDX : VPseudoInstSI <
-  (outs VGPR_IDX_DATA_OP:$data_op),
-  (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
-    let mayLoad = 1;
-    let VALU = 1;
-    let UseNamedOperandTable = 1;
-    let hasSideEffects = 0;
+foreach rc = [VGPR_32_STAGING, VReg_64_STAGING, VReg_96_STAGING,
+              VReg_128_STAGING, VReg_160_STAGING, VReg_192_STAGING,
+              VReg_224_STAGING, VReg_256_STAGING, VReg_288_STAGING,
+              VReg_320_STAGING, VReg_352_STAGING, VReg_384_STAGING,
+              VReg_512_STAGING, VReg_576_STAGING, VReg_1024_STAGING] in {
+  // The units of $idx and $offset are in DWORDS.
+  def V_LOAD_IDX_B#rc.Size : VPseudoInstSI <
+    (outs rc:$data_op),
+    (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
+      let mayLoad = 1;
+      let VALU = 1;
+      let UseNamedOperandTable = 1;
+      let hasSideEffects = 0;
+  }
+  def V_STORE_IDX_B#rc.Size : VPseudoInstSI <
+    (outs),
+    (ins rc:$data_op, VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
+      let mayStore = 1;
+      let VALU = 1;
+      let UseNamedOperandTable = 1;
+      let hasSideEffects = 0;
+  }
 }
 
 // Used for byte or short loads.
@@ -1371,7 +1405,7 @@ def V_LOAD_IDX : VPseudoInstSI <
 // Only bitoffset of 0, 8, 16, or 24 bits are supported.
 // Only bitsize of 8 or 16 bits are supported.
 def V_LOAD_IDX_BITS
-    : VPseudoInstSI<(outs VGPR_IDX_DATA_OP:$data_op),
+    : VPseudoInstSI<(outs VGPR_32:$data_op),
                     (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset,
                         SSrc_b32:$bitsize, SSrc_b32:$bitoffset)> {
   let mayLoad = 1;
@@ -1380,20 +1414,11 @@ def V_LOAD_IDX_BITS
   let hasSideEffects = 0;
 }
 
-def V_STORE_IDX : VPseudoInstSI <
-  (outs),
-  (ins VGPR_IDX_DATA_OP:$data_op, VGPR_IDX_IDX_OP:$idx, i32imm:$offset)> {
-    let mayStore = 1;
-    let VALU = 1;
-    let UseNamedOperandTable = 1;
-    let hasSideEffects = 0;
-}
-
 // Used for byte or short stores.
 // Only bitoffset of 0, 8, 16, or 24 bits are supported.
 // Only bitsize of 8 or 16 bits are supported.
 def V_STORE_IDX_BITS
-    : VPseudoInstSI<(outs), (ins VGPR_IDX_DATA_OP:$data_op,
+    : VPseudoInstSI<(outs), (ins VGPR_32:$data_op,
                                 VGPR_IDX_IDX_OP:$idx, i32imm:$offset,
                                 SSrc_b32:$bitsize, SSrc_b32:$bitoffset)> {
   let mayStore = 1;
@@ -2107,10 +2132,13 @@ foreach vt = Reg1024Types.types in {
 
 // If denormals are not enabled, it only impacts the compare of the
 // inputs. The output result is not flushed.
-class ClampPat<Instruction inst, ValueType vt> : GCNPat <
+class ClampPat<Instruction inst, ValueType vt, bit fix16SrcWithInst32 = 0> : GCNPat <
   (vt (AMDGPUclamp (VOP3Mods vt:$src0, i32:$src0_modifiers))),
-  (inst i32:$src0_modifiers, vt:$src0,
-        i32:$src0_modifiers, vt:$src0, DSTCLAMP.ENABLE, DSTOMOD.NONE)
+  true16HelperReg16FromSrc32<(inst i32:$src0_modifiers,
+                              true16HelperReg32FromSrc16<(vt $src0), fix16SrcWithInst32>.ret,
+                              i32:$src0_modifiers,
+                              true16HelperReg32FromSrc16<(vt $src0), fix16SrcWithInst32>.ret,
+                              DSTCLAMP.ENABLE, DSTOMOD.NONE), fix16SrcWithInst32>.ret
 >;
 
 def : ClampPat<V_MAX_F32_e64, f32>;
@@ -2124,9 +2152,10 @@ let SubtargetPredicate = UseRealTrue16Insts in
 def : ClampPat<V_MAX_F16_t16_e64, f16>;
 let SubtargetPredicate = UseFakeTrue16Insts in
 def : ClampPat<V_MAX_F16_fake16_e64, f16>;
-// FIXME-TRUE16: Pseudo expansion of this won't work with True16.
-let True16Predicate = UseFakeTrue16Insts in
+let SubtargetPredicate = UseFakeTrue16Insts in
 def : ClampPat<V_MAX_BF16_PSEUDO_e64, bf16>;
+let SubtargetPredicate = UseRealTrue16Insts in
+def : ClampPat<V_MAX_BF16_PSEUDO_e64, bf16, 1>;
 
 let SubtargetPredicate = HasVOP3PInsts in {
 def : GCNPat <
@@ -3103,13 +3132,23 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (i64 (zext i32:$src)),
+  (i64 (UniformUnaryFrag<zext> i32:$src)),
   (REG_SEQUENCE SReg_64, $src, sub0, (S_MOV_B32 (i32 0)), sub1)
 >;
 
 def : GCNPat <
-  (i64 (anyext i32:$src)),
+  (i64 (zext i32:$src)),
+  (REG_SEQUENCE VReg_64, $src, sub0, (V_MOV_B32_e32 (i32 0)), sub1)
+>;
+
+def : GCNPat <
+  (i64 (UniformUnaryFrag<anyext> i32:$src)),
   (REG_SEQUENCE SReg_64, $src, sub0, (i32 (IMPLICIT_DEF)), sub1)
+>;
+
+def : GCNPat <
+  (i64 (anyext i32:$src)),
+  (REG_SEQUENCE VReg_64, $src, sub0, (i32 (IMPLICIT_DEF)), sub1)
 >;
 
 class ZExt_i64_i1_Pat <SDNode ext> : GCNPat <
@@ -4916,4 +4955,15 @@ def V_ILLEGAL : Enc32, InstSI<(outs), (ins), "v_illegal"> {
   let Uses = [EXEC];
   let hasSideEffects = 1;
   let SubtargetPredicate = isGFX10Plus;
+}
+
+defvar VGPR32_Ptr_Opcodes = [LOAD_STACK_GUARD];
+defvar VGPR64_Ptr_Opcodes = !listremove(PseudosWithPtrOps, VGPR32_Ptr_Opcodes);
+
+foreach inst = VGPR32_Ptr_Opcodes in {
+  def : RemapPointerOperands<inst, VGPR_32>;
+}
+
+foreach inst = VGPR64_Ptr_Opcodes in {
+  def : RemapPointerOperands<inst, VReg_64_STAGING_AlignTarget>;
 }

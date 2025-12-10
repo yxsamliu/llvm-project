@@ -857,8 +857,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC = 0x053,
   EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC   = 0x054,
   EF_AMDGPU_MACH_AMDGCN_GFX1152         = 0x055,
-  EF_AMDGPU_MACH_AMDGCN_GFX1301         = 0x056,
-  EF_AMDGPU_MACH_AMDGCN_GFX1302         = 0x057,
+  EF_AMDGPU_MACH_AMDGCN_GFX1360         = 0x056,
   EF_AMDGPU_MACH_AMDGCN_GFX1153         = 0x058,
   EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC   = 0x059,
   EF_AMDGPU_MACH_AMDGCN_GFX1251         = 0x05a,
@@ -1718,8 +1717,8 @@ enum { VER_FLG_BASE = 0x1, VER_FLG_WEAK = 0x2, VER_FLG_INFO = 0x4 };
 
 // Special constants for the version table. (SHT_GNU_versym/.gnu.version)
 enum {
-  VER_NDX_LOCAL = 0,       // Unversioned local symbol
-  VER_NDX_GLOBAL = 1,      // Unversioned global symbol
+  VER_NDX_LOCAL = 0,       // Unversioned undefined or localized defined symbol
+  VER_NDX_GLOBAL = 1,      // Unversioned non-local defined symbol
   VERSYM_VERSION = 0x7fff, // Version Index mask
   VERSYM_HIDDEN = 0x8000   // Hidden bit (non-default version)
 };

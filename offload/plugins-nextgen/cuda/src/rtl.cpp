@@ -382,6 +382,12 @@ struct CUDADeviceTy : public GenericDeviceTy {
       return Err;
     HardwareParallelism = NumMuliprocessors * (MaxThreadsPerSM / WarpSize);
 
+    uint32_t MaxSharedMem;
+    if (auto Err = getDeviceAttr(
+            CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK, MaxSharedMem))
+      return Err;
+    MaxBlockSharedMemSize = MaxSharedMem;
+
     return Plugin::success();
   }
 
@@ -1092,10 +1098,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (Res == CUDA_SUCCESS)
       Info.add("Total Constant Memory", TmpInt, "bytes");
 
-    Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK,
-                           TmpInt);
-    if (Res == CUDA_SUCCESS)
-      Info.add("Max Shared Memory per Block", TmpInt, "bytes");
+    Info.add("Max Shared Memory per Block", MaxBlockSharedMemSize, "bytes",
+             DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_REGISTERS_PER_BLOCK, TmpInt);
     if (Res == CUDA_SUCCESS)
@@ -1238,11 +1242,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Info;
   }
 
-  virtual bool shouldSetupDeviceMemoryPool() const override {
-    /// We use the CUDA malloc for now.
-    return false;
-  }
-
   /// Getters and setters for stack and heap sizes.
   Error getDeviceStackSize(uint64_t &Value) override {
     return getCtxLimit(CU_LIMIT_STACK_SIZE, Value);
@@ -1253,6 +1252,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
   Error getDeviceHeapSize(uint64_t &Value) override {
     return getCtxLimit(CU_LIMIT_MALLOC_HEAP_SIZE, Value);
   }
+  bool hasDeviceHeapSize() override { return true; }
   Error setDeviceHeapSize(uint64_t Value) override {
     return setCtxLimit(CU_LIMIT_MALLOC_HEAP_SIZE, Value);
   }

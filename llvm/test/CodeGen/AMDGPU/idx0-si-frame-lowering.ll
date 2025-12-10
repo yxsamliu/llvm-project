@@ -32,11 +32,11 @@ define void @test_nonentry(i64 %a, i64 %b, i64 %c, i64 %d) {
   ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_3]]
   ; ALLOC-NEXT:   $idx0 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_2]]
   ; ALLOC-NEXT:   BUNDLE implicit-def dead $stg_srcc, implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def $stg_dsta, implicit $idx0, implicit $exec, implicit $idx3, implicit $idx2, implicit $idx1 :: (load (s32) from %ir.o.3, addrspace 10), (load (s32) from %ir.o.2, addrspace 10), (load (s32) from %ir.o.1, addrspace 10), (store (s32) into %ir.o.4, addrspace 10) {
-  ; ALLOC-NEXT:     $stg_srcc = V_LOAD_IDX $idx0, 0, implicit $exec :: (load (s32) from %ir.o.3, addrspace 10)
-  ; ALLOC-NEXT:     $stg_srcb = V_LOAD_IDX $idx3, 0, implicit $exec :: (load (s32) from %ir.o.2, addrspace 10)
-  ; ALLOC-NEXT:     $stg_srca = V_LOAD_IDX $idx2, 0, implicit $exec :: (load (s32) from %ir.o.1, addrspace 10)
+  ; ALLOC-NEXT:     $stg_srcc = V_LOAD_IDX_B32 $idx0, 0, implicit $exec :: (load (s32) from %ir.o.3, addrspace 10)
+  ; ALLOC-NEXT:     $stg_srcb = V_LOAD_IDX_B32 $idx3, 0, implicit $exec :: (load (s32) from %ir.o.2, addrspace 10)
+  ; ALLOC-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx2, 0, implicit $exec :: (load (s32) from %ir.o.1, addrspace 10)
   ; ALLOC-NEXT:     $stg_dsta = nuw nsw V_LSHL_ADD_U32_e64 internal killed $stg_srca, internal killed $stg_srcb, internal killed $stg_srcc, implicit $exec
-  ; ALLOC-NEXT:     V_STORE_IDX internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32) into %ir.o.4, addrspace 10)
+  ; ALLOC-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32) into %ir.o.4, addrspace 10)
   ; ALLOC-NEXT:   }
   ; ALLOC-NEXT:   $idx0 = S_SET_GPR_IDX_U32 [[COPY]]
   ; ALLOC-NEXT:   SI_RETURN
@@ -70,11 +70,11 @@ define void @test_nonentry(i64 %a, i64 %b, i64 %c, i64 %d) {
   ; GFX13-NEXT:   $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
   ; GFX13-NEXT:   $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
   ; GFX13-NEXT:   BUNDLE implicit-def dead $stg_srcc, implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def dead $stg_dsta, implicit $idx0, implicit $exec, implicit killed $idx3, implicit $idx2, implicit killed $idx1 :: (load (s32) from %ir.o.3, addrspace 10), (load (s32) from %ir.o.2, addrspace 10), (load (s32) from %ir.o.1, addrspace 10), (store (s32) into %ir.o.4, addrspace 10) {
-  ; GFX13-NEXT:     $stg_srcc = V_LOAD_IDX $idx0, 0, implicit $exec :: (load (s32) from %ir.o.3, addrspace 10)
-  ; GFX13-NEXT:     $stg_srcb = V_LOAD_IDX $idx3, 0, implicit $exec :: (load (s32) from %ir.o.2, addrspace 10)
-  ; GFX13-NEXT:     $stg_srca = V_LOAD_IDX $idx2, 0, implicit $exec :: (load (s32) from %ir.o.1, addrspace 10)
+  ; GFX13-NEXT:     $stg_srcc = V_LOAD_IDX_B32 $idx0, 0, implicit $exec :: (load (s32) from %ir.o.3, addrspace 10)
+  ; GFX13-NEXT:     $stg_srcb = V_LOAD_IDX_B32 $idx3, 0, implicit $exec :: (load (s32) from %ir.o.2, addrspace 10)
+  ; GFX13-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx2, 0, implicit $exec :: (load (s32) from %ir.o.1, addrspace 10)
   ; GFX13-NEXT:     $stg_dsta = nuw nsw V_LSHL_ADD_U32_e64 internal killed $stg_srca, internal killed $stg_srcb, internal killed $stg_srcc, implicit $exec
-  ; GFX13-NEXT:     V_STORE_IDX internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32) into %ir.o.4, addrspace 10)
+  ; GFX13-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32) into %ir.o.4, addrspace 10)
   ; GFX13-NEXT:   }
   ; GFX13-NEXT:   dead $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr4
   ; GFX13-NEXT:   SI_RETURN
@@ -130,11 +130,11 @@ define dso_local amdgpu_kernel void @test_wavegroup_entry(i64 %idx0, i64 %idx1, 
   ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_3]]
   ; ALLOC-NEXT:   $idx0 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_2]]
   ; ALLOC-NEXT:   BUNDLE implicit-def dead $stg_srcc, implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def $stg_dsta, implicit $idx0, implicit $exec, implicit $idx3, implicit $idx2, implicit $idx1 :: (load (s32) from %ir.o.3, addrspace 10), (load (s32) from %ir.o.2, addrspace 10), (load (s32) from %ir.o.1, addrspace 10), (store (s32) into %ir.o.4, addrspace 10) {
-  ; ALLOC-NEXT:     $stg_srcc = V_LOAD_IDX $idx0, 0, implicit $exec :: (load (s32) from %ir.o.3, addrspace 10)
-  ; ALLOC-NEXT:     $stg_srcb = V_LOAD_IDX $idx3, 0, implicit $exec :: (load (s32) from %ir.o.2, addrspace 10)
-  ; ALLOC-NEXT:     $stg_srca = V_LOAD_IDX $idx2, 0, implicit $exec :: (load (s32) from %ir.o.1, addrspace 10)
+  ; ALLOC-NEXT:     $stg_srcc = V_LOAD_IDX_B32 $idx0, 0, implicit $exec :: (load (s32) from %ir.o.3, addrspace 10)
+  ; ALLOC-NEXT:     $stg_srcb = V_LOAD_IDX_B32 $idx3, 0, implicit $exec :: (load (s32) from %ir.o.2, addrspace 10)
+  ; ALLOC-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx2, 0, implicit $exec :: (load (s32) from %ir.o.1, addrspace 10)
   ; ALLOC-NEXT:     $stg_dsta = nuw nsw V_LSHL_ADD_U32_e64 internal killed $stg_srca, internal killed $stg_srcb, internal killed $stg_srcc, implicit $exec
-  ; ALLOC-NEXT:     V_STORE_IDX internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32) into %ir.o.4, addrspace 10)
+  ; ALLOC-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32) into %ir.o.4, addrspace 10)
   ; ALLOC-NEXT:   }
   ; ALLOC-NEXT:   $idx0 = S_SET_GPR_IDX_U32 [[COPY]]
   ; ALLOC-NEXT:   [[S_ADD_U64_:%[0-9]+]]:sreg_64 = S_ADD_U64 [[COPY2]](p4), 68
@@ -198,11 +198,11 @@ define dso_local amdgpu_kernel void @test_wavegroup_entry(i64 %idx0, i64 %idx1, 
   ; GFX13-NEXT:   $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr8
   ; GFX13-NEXT:   renamable $sgpr8_sgpr9 = S_ADD_U64 killed renamable $sgpr4_sgpr5, 68
   ; GFX13-NEXT:   BUNDLE implicit-def dead $stg_srcc, implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def dead $stg_dsta, implicit $idx0, implicit $exec, implicit $idx3, implicit $idx2, implicit $idx1 :: (load (s32) from %ir.o.3, addrspace 10), (load (s32) from %ir.o.2, addrspace 10), (load (s32) from %ir.o.1, addrspace 10), (store (s32) into %ir.o.4, addrspace 10) {
-  ; GFX13-NEXT:     $stg_srcc = V_LOAD_IDX $idx0, 0, implicit $exec :: (load (s32) from %ir.o.3, addrspace 10)
-  ; GFX13-NEXT:     $stg_srcb = V_LOAD_IDX $idx3, 0, implicit $exec :: (load (s32) from %ir.o.2, addrspace 10)
-  ; GFX13-NEXT:     $stg_srca = V_LOAD_IDX $idx2, 0, implicit $exec :: (load (s32) from %ir.o.1, addrspace 10)
+  ; GFX13-NEXT:     $stg_srcc = V_LOAD_IDX_B32 $idx0, 0, implicit $exec :: (load (s32) from %ir.o.3, addrspace 10)
+  ; GFX13-NEXT:     $stg_srcb = V_LOAD_IDX_B32 $idx3, 0, implicit $exec :: (load (s32) from %ir.o.2, addrspace 10)
+  ; GFX13-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx2, 0, implicit $exec :: (load (s32) from %ir.o.1, addrspace 10)
   ; GFX13-NEXT:     $stg_dsta = nuw nsw V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, internal $stg_srcc, implicit $exec
-  ; GFX13-NEXT:     V_STORE_IDX internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32) into %ir.o.4, addrspace 10)
+  ; GFX13-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32) into %ir.o.4, addrspace 10)
   ; GFX13-NEXT:   }
   ; GFX13-NEXT:   dead $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr22
   ; GFX13-NEXT:   $sgpr4_sgpr5 = COPY killed renamable $sgpr0_sgpr1
