@@ -4443,6 +4443,12 @@ bool SIInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   if (MI.getOpcode() == AMDGPU::SCHED_BARRIER && MI.getOperand(0).getImm() == 0)
     return true;
 
+  // Most vector instructions depend on IDX0, but we don't model that with
+  // implicit uses. Treat modifications of IDX0 as a scheduling boundary
+  // instead.
+  if (MI.modifiesRegister(AMDGPU::IDX0, &RI))
+    return true;
+
   // Target-independent instructions do not have an implicit-use of EXEC, even
   // when they operate on VGPRs. Treating EXEC modifications as scheduling
   // boundaries prevents incorrect movements of such instructions.

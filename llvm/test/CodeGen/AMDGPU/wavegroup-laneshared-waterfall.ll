@@ -10,12 +10,12 @@ define protected amdgpu_kernel void @test_large_shared_vgpr(ptr addrspace(1) nou
 ; CHECK-LABEL: test_large_shared_vgpr:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s4, s3, 3
-; CHECK-NEXT:    s_mul_i32 s33, s3, s2
 ; CHECK-NEXT:    s_add_co_u32 s4, s4, 0x300
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s4
-; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
+; CHECK-NEXT:    s_mul_i32 s33, s3, s2
 ; CHECK-NEXT:    s_bfe_u32 s2, ttmp6, 0x4000c
 ; CHECK-NEXT:    s_and_b32 s4, ttmp6, 15
 ; CHECK-NEXT:    s_add_co_i32 s2, s2, 1

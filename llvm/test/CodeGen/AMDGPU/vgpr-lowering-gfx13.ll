@@ -54,12 +54,12 @@ define amdgpu_kernel void @vsample_vaddr3_kern(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX13-LABEL: vsample_vaddr3_kern:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_mul_i32 s1, s0, 256
-; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_add_co_u32 s1, s1, 16
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; GFX13-NEXT:    ; sched_barrier mask(0x00000000)
+; GFX13-NEXT:    s_mul_i32 s33, s0, s8
 ; GFX13-NEXT:    s_clause 0x2
 ; GFX13-NEXT:    s_load_b96 s[12:14], s[4:5], 0x54
 ; GFX13-NEXT:    s_load_b128 s[8:11], s[4:5], 0x44

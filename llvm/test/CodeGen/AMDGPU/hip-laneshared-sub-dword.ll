@@ -17,13 +17,12 @@ define dso_local amdgpu_kernel void @load_store() "amdgpu-wavegroup-enable" !req
 ; REAL16-NEXT:    .type .Lload_store$local,@function
 ; REAL16-NEXT:  ; %bb.0: ; %entry
 ; REAL16-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; REAL16-NEXT:    s_mul_i32 s1, s0, 1
-; REAL16-NEXT:    s_mul_i32 s33, s0, s8
 ; REAL16-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; REAL16-NEXT:    s_add_co_u32 s33, s33, 0x190
-; REAL16-NEXT:    ; sched_barrier mask(0x00000000)
+; REAL16-NEXT:    s_mul_i32 s33, s0, s8
 ; REAL16-NEXT:    s_mov_b32 s0, 20
+; REAL16-NEXT:    s_add_co_u32 s33, s33, 0x190
 ; REAL16-NEXT:    scratch_load_d16_b16 v0, off, s0
 ; REAL16-NEXT:    s_mov_b32 s0, 12
 ; REAL16-NEXT:    s_wait_loadcnt 0x0
@@ -35,12 +34,12 @@ define dso_local amdgpu_kernel void @load_store() "amdgpu-wavegroup-enable" !req
 ; FAKE16-NEXT:    .type .Lload_store$local,@function
 ; FAKE16-NEXT:  ; %bb.0: ; %entry
 ; FAKE16-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; FAKE16-NEXT:    s_mul_i32 s1, s0, 2
-; FAKE16-NEXT:    s_mul_i32 s33, s0, s8
 ; FAKE16-NEXT:    s_add_co_u32 s1, s1, 0x64
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FAKE16-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; FAKE16-NEXT:    ; sched_barrier mask(0x00000000)
+; FAKE16-NEXT:    s_mul_i32 s33, s0, s8
 ; FAKE16-NEXT:    s_add_co_i32 s0, 20, 0
 ; FAKE16-NEXT:    s_add_co_i32 s1, 12, 0
 ; FAKE16-NEXT:    s_and_b32 s0, s0, 3
@@ -62,13 +61,12 @@ define dso_local amdgpu_kernel void @load_store() "amdgpu-wavegroup-enable" !req
 ; SCRATCH-NEXT:    .type .Lload_store$local,@function
 ; SCRATCH-NEXT:  ; %bb.0: ; %entry
 ; SCRATCH-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; SCRATCH-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; SCRATCH-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; SCRATCH-NEXT:    s_mul_i32 s1, s0, 1
-; SCRATCH-NEXT:    s_mul_i32 s33, s0, s8
 ; SCRATCH-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; SCRATCH-NEXT:    s_add_co_u32 s33, s33, 0x190
-; SCRATCH-NEXT:    ; sched_barrier mask(0x00000000)
+; SCRATCH-NEXT:    s_mul_i32 s33, s0, s8
 ; SCRATCH-NEXT:    s_mov_b32 s0, 20
+; SCRATCH-NEXT:    s_add_co_u32 s33, s33, 0x190
 ; SCRATCH-NEXT:    scratch_load_u16 v0, off, s0
 ; SCRATCH-NEXT:    s_mov_b32 s0, 12
 ; SCRATCH-NEXT:    s_wait_loadcnt 0x0
@@ -87,13 +85,12 @@ define dso_local amdgpu_kernel void @sext_load() "amdgpu-wavegroup-enable" !reqd
 ; REAL16-NEXT:    .type .Lsext_load$local,@function
 ; REAL16-NEXT:  ; %bb.0: ; %entry
 ; REAL16-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; REAL16-NEXT:    s_mul_i32 s1, s0, 1
-; REAL16-NEXT:    s_mul_i32 s33, s0, s8
 ; REAL16-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; REAL16-NEXT:    s_add_co_u32 s33, s33, 0x190
-; REAL16-NEXT:    ; sched_barrier mask(0x00000000)
+; REAL16-NEXT:    s_mul_i32 s33, s0, s8
 ; REAL16-NEXT:    s_mov_b32 s0, 1
+; REAL16-NEXT:    s_add_co_u32 s33, s33, 0x190
 ; REAL16-NEXT:    scratch_load_i8 v0, off, s0
 ; REAL16-NEXT:    s_mov_b32 s0, 12
 ; REAL16-NEXT:    s_wait_loadcnt 0x0
@@ -105,16 +102,15 @@ define dso_local amdgpu_kernel void @sext_load() "amdgpu-wavegroup-enable" !reqd
 ; FAKE16-NEXT:    .type .Lsext_load$local,@function
 ; FAKE16-NEXT:  ; %bb.0: ; %entry
 ; FAKE16-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; FAKE16-NEXT:    s_mul_i32 s1, s0, 0
-; FAKE16-NEXT:    s_mul_i32 s33, s0, s8
 ; FAKE16-NEXT:    s_add_co_u32 s1, s1, 0x64
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
 ; FAKE16-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; FAKE16-NEXT:    ; sched_barrier mask(0x00000000)
+; FAKE16-NEXT:    s_mul_i32 s33, s0, s8
 ; FAKE16-NEXT:    s_add_co_i32 s0, 1, 0
 ; FAKE16-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; FAKE16-NEXT:    s_and_b32 s0, s0, 3
-; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FAKE16-NEXT:    s_lshl_b32 s0, s0, 3
 ; FAKE16-NEXT:    s_set_vgpr_frames 0x41 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; FAKE16-NEXT:    v_bfe_i32 g1[3], g1[0], s0, 8
@@ -125,13 +121,12 @@ define dso_local amdgpu_kernel void @sext_load() "amdgpu-wavegroup-enable" !reqd
 ; SCRATCH-NEXT:    .type .Lsext_load$local,@function
 ; SCRATCH-NEXT:  ; %bb.0: ; %entry
 ; SCRATCH-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; SCRATCH-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; SCRATCH-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; SCRATCH-NEXT:    s_mul_i32 s1, s0, 1
-; SCRATCH-NEXT:    s_mul_i32 s33, s0, s8
 ; SCRATCH-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; SCRATCH-NEXT:    s_add_co_u32 s33, s33, 0x190
-; SCRATCH-NEXT:    ; sched_barrier mask(0x00000000)
+; SCRATCH-NEXT:    s_mul_i32 s33, s0, s8
 ; SCRATCH-NEXT:    s_mov_b32 s0, 1
+; SCRATCH-NEXT:    s_add_co_u32 s33, s33, 0x190
 ; SCRATCH-NEXT:    scratch_load_i8 v0, off, s0
 ; SCRATCH-NEXT:    s_mov_b32 s0, 12
 ; SCRATCH-NEXT:    s_wait_loadcnt 0x0

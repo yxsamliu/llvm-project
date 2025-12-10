@@ -128,15 +128,16 @@ define amdgpu_kernel void @main(ptr addrspace(3) %addr, ptr addrspace(1) %wbuf, 
 ; CHECK-LABEL: main:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s4, s3, 0
-; CHECK-NEXT:    s_mul_i32 s33, s3, s2
 ; CHECK-NEXT:    s_add_co_u32 s4, s4, 26
-; CHECK-NEXT:    s_add_co_u32 s32, s33, 0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s4
-; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
-; CHECK-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
+; CHECK-NEXT:    s_mul_i32 s33, s3, s2
+; CHECK-NEXT:    s_add_co_u32 s32, s33, 0
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 26
+; CHECK-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cmp_eq_u32 s3, 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB3_2
 ; CHECK-NEXT:  ; %bb.1:

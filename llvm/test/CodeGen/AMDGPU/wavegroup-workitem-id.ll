@@ -6,12 +6,11 @@ define amdgpu_kernel void @wavegroup_kernel_3x64x2(ptr addrspace(1) %p) #0 "amdg
 ; ISEL-LABEL: wavegroup_kernel_3x64x2:
 ; ISEL:       ; %bb.0: ; %entry
 ; ISEL-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; ISEL-NEXT:    s_mul_i32 s1, s0, 4
-; ISEL-NEXT:    s_mul_i32 s33, s0, s4
 ; ISEL-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; ISEL-NEXT:    ; sched_barrier mask(0x00000000)
 ; ISEL-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; ISEL-NEXT:    s_mul_i32 s33, s0, s4
 ; ISEL-NEXT:    s_bfe_u32 s0, ttmp8, 0x50019
 ; ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; ISEL-NEXT:    v_lshl_or_b32 v0, s0, 5, v0
@@ -31,13 +30,13 @@ define amdgpu_kernel void @wavegroup_kernel_3x64x2(ptr addrspace(1) %p) #0 "amdg
 ; GISEL-LABEL: wavegroup_kernel_3x64x2:
 ; GISEL:       ; %bb.0: ; %entry
 ; GISEL-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_mul_i32 s1, s0, 5
-; GISEL-NEXT:    s_mul_i32 s33, s0, s4
 ; GISEL-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; GISEL-NEXT:    ; sched_barrier mask(0x00000000)
 ; GISEL-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; GISEL-NEXT:    s_mul_i32 s33, s0, s4
 ; GISEL-NEXT:    s_bfe_u32 s0, ttmp8, 0x50019
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_lshl_b32 s0, s0, 5
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_add_nc_u32_e32 v0, s0, v0
@@ -73,11 +72,10 @@ define amdgpu_kernel void @wavegroup_kernel_128x1x1(ptr addrspace(1) %p) #0 "amd
 ; ISEL-LABEL: wavegroup_kernel_128x1x1:
 ; ISEL:       ; %bb.0: ; %entry
 ; ISEL-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; ISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; ISEL-NEXT:    s_mul_i32 s1, s0, 2
-; ISEL-NEXT:    s_mul_i32 s33, s0, s4
 ; ISEL-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; ISEL-NEXT:    ; sched_barrier mask(0x00000000)
+; ISEL-NEXT:    s_mul_i32 s33, s0, s4
 ; ISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
 ; ISEL-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; ISEL-NEXT:    s_bfe_u32 s2, ttmp8, 0x50019
@@ -91,11 +89,10 @@ define amdgpu_kernel void @wavegroup_kernel_128x1x1(ptr addrspace(1) %p) #0 "amd
 ; GISEL-LABEL: wavegroup_kernel_128x1x1:
 ; GISEL:       ; %bb.0: ; %entry
 ; GISEL-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_mul_i32 s1, s0, 2
-; GISEL-NEXT:    s_mul_i32 s33, s0, s4
 ; GISEL-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; GISEL-NEXT:    ; sched_barrier mask(0x00000000)
+; GISEL-NEXT:    s_mul_i32 s33, s0, s4
 ; GISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
 ; GISEL-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GISEL-NEXT:    s_bfe_u32 s2, ttmp8, 0x50019

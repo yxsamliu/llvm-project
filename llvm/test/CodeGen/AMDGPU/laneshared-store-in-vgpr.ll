@@ -163,15 +163,16 @@ define protected amdgpu_kernel void @_Z11wasp_kernelPiPKii(ptr addrspace(1) noun
 ; GFX1300-LABEL: _Z11wasp_kernelPiPKii:
 ; GFX1300:       ; %bb.0:
 ; GFX1300-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1300-NEXT:    s_mul_i32 s4, s3, 0
-; GFX1300-NEXT:    s_mul_i32 s33, s3, s2
 ; GFX1300-NEXT:    s_add_co_u32 s4, s4, 0xfa
-; GFX1300-NEXT:    s_add_co_u32 s32, s33, 0
+; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1300-NEXT:    s_set_gpr_idx_u32 idx0, s4
-; GFX1300-NEXT:    ; sched_barrier mask(0x00000000)
-; GFX1300-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
+; GFX1300-NEXT:    s_mul_i32 s33, s3, s2
+; GFX1300-NEXT:    s_add_co_u32 s32, s33, 0
 ; GFX1300-NEXT:    s_set_gpr_idx_u32 idx0, 0xfa
+; GFX1300-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
+; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1300-NEXT:    s_cmp_eq_u32 s3, 0
 ; GFX1300-NEXT:    s_cbranch_scc0 .LBB1_2
 ; GFX1300-NEXT:  ; %bb.1:

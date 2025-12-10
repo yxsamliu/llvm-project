@@ -9,13 +9,13 @@ define amdgpu_kernel void @wavegroup_kernel() "amdgpu-wavegroup-enable" "amdgpu-
 ; KERNEL-LABEL: wavegroup_kernel:
 ; KERNEL:       ; %bb.0: ; %entry
 ; KERNEL-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; KERNEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; KERNEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; KERNEL-NEXT:    s_mul_i32 s1, s0, 0
-; KERNEL-NEXT:    s_mul_i32 s33, s0, s2
 ; KERNEL-NEXT:    s_add_co_u32 s1, s1, 0x200
+; KERNEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; KERNEL-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; KERNEL-NEXT:    ; sched_barrier mask(0x00000000)
 ; KERNEL-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; KERNEL-NEXT:    s_mul_i32 s33, s0, s2
 ; KERNEL-NEXT:    s_set_vgpr_frames 0x41 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; KERNEL-NEXT:    v_mov_b32_e32 g1[2], g1[1]
 ; KERNEL-NEXT:    s_endpgm
