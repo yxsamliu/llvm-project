@@ -857,6 +857,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                         DW, Address, CS))
         break;
 
+      // TODO: use DecoderTableGFX1260_FAKE1632 when we have it.
+      if (isGFX1260Only() &&
+          tryDecodeInst(DecoderTableGFX126032, MI, DW, Address, CS))
+        break;
+
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX1232, DecoderTableGFX12_FAKE1632, MI, DW,
                         Address, CS))
