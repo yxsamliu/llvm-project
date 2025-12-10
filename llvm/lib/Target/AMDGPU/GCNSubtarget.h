@@ -206,6 +206,7 @@ protected:
   bool HasSemaphores = false;
   bool HasWavegroups = false;
   bool HasSWakeupImm = false;
+  bool HasSBarrierLeaveImm = false;
 
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
@@ -1498,6 +1499,10 @@ public:
   /// \returns true if the target has the s_wakeup instruction that takes 
   /// an immediate operand.
   bool hasSWakeupImm() const { return HasSWakeupImm; }
+
+  /// \returns true if the target has the s_barrier_leave instruction that takes an immediate 
+  /// operand.
+  bool hasSBarrierLeaveImm() const { return HasSBarrierLeaveImm; }
 
   /// \returns true if the target has packed f32 instructions that only read 32
   /// bits from a scalar operand (SGPR or literal) and replicates the bits to
