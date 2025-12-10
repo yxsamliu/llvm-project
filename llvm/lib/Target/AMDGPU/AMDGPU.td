@@ -509,6 +509,12 @@ def FeatureWavegroups : SubtargetFeature<"wavegroups",
   "Has wavegroups"
 >;
 
+def FeatureSWakeupImm : SubtargetFeature<"s-wakeup-imm",
+  "HasSWakeupImm",
+  "true",
+  "s_wakeup takes an immediate operand"
+>;
+
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
@@ -556,7 +562,7 @@ def FeatureGFX13Insts : SubtargetFeature<"gfx13-insts",
   "GFX13Insts",
   "true",
   "Additional instructions for GFX13+",
-  [FeatureSemaphores, FeatureWavegroups]
+  [FeatureSemaphores, FeatureWavegroups, FeatureSWakeupImm]
 >;
 
 def FeatureGFX10_3Insts : SubtargetFeature<"gfx10-3-insts",
@@ -3323,6 +3329,9 @@ def HasSemaphores :
 def HasWavegroups :
   Predicate<"Subtarget->hasWavegroups()">,
   AssemblerPredicate<(all_of FeatureWavegroups)>;
+
+def HasSWakeupImm : Predicate<"Subtarget->hasSWakeupImm()">,
+  AssemblerPredicate<(all_of FeatureSWakeupImm)>;
 
 def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
   AssemblerPredicate<(all_of FeatureWaitXcnt)>;

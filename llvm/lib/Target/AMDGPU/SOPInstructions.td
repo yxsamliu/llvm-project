@@ -1700,10 +1700,10 @@ def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
   let mayStore = 1;
 }
 
-let SubtargetPredicate = isGFX13Plus in {
+let SubtargetPredicate = HasSWakeupImm in {
   def S_WAKEUP_imm : SOPP_Pseudo <"s_wakeup",
     (ins i16imm:$simm16), "$simm16">;
-} // End SubtargetPredicate = isGFX13Plus
+} // End SubtargetPredicate = HasSWakeupImm
 
 let SubtargetPredicate = isNotGFX1250Plus in {
 def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins SWaitCnt:$simm16), "$simm16",
