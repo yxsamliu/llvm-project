@@ -2169,9 +2169,9 @@ def : GCNPat<
 
 def : GCNPat<
   (int_amdgcn_rts_invalidate_bvh),
-  //SCOPE_SE is 8
-  (GLOBAL_INV (i32 8))
+  (RTS_INVALIDATE_BVH)
 >;
+
 /********** ========================================= **********/
 /********** Table of dimension-aware image intrinsics **********/
 /********** ========================================= **********/
