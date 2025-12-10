@@ -172,9 +172,7 @@ protected:
   bool HasFP8ConversionInsts = false;
   bool HasWMMA128bInsts = false;
   bool HasWMMA256bInsts = false;
-<<<<<<< HEAD
   bool HasWMMA2048bInsts = false;
-=======
   bool HasCubeInsts = false;
   bool HasLerpInst = false;
   bool HasSadInsts = false;
@@ -182,7 +180,6 @@ protected:
   bool HasCvtNormInsts = false;
   bool HasCvtPkNormVOP2Insts = false;
   bool HasCvtPkNormVOP3Insts = false;
->>>>>>> 97ee787266500c8ad3c020008102d130d4ee22c9
   bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;

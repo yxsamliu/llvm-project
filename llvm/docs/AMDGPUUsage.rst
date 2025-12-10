@@ -566,7 +566,6 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                       - Workgroup
                                                                         Clusters
 
-<<<<<<< HEAD
      ``gfx1260``                 ``amdgcn``   APU                     - Architected                   *TBA*
                                                                         flat
                                                                         scratch                       .. TODO::
@@ -579,20 +578,6 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                       - Workgroup
                                                                         Clusters
 
-     ``gfx1301``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
-                                                                      - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
-     ``gfx1302``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
-                                                                      - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
-=======
->>>>>>> 97ee787266500c8ad3c020008102d130d4ee22c9
      ``gfx1310``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::

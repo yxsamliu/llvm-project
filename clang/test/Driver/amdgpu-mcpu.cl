@@ -181,12 +181,7 @@
 // GFX1201:   "-target-cpu" "gfx1201"
 // GFX1250:   "-target-cpu" "gfx1250"
 // GFX1251:   "-target-cpu" "gfx1251"
-<<<<<<< HEAD
 // GFX1260:   "-target-cpu" "gfx1260"
-// GFX1301:   "-target-cpu" "gfx1301"
-// GFX1302:   "-target-cpu" "gfx1302"
-=======
->>>>>>> 97ee787266500c8ad3c020008102d130d4ee22c9
 // GFX130E:   "-target-cpu" "gfx130E"
 // GFX1310:   "-target-cpu" "gfx1310"
 // GFX1360:   "-target-cpu" "gfx1360"
