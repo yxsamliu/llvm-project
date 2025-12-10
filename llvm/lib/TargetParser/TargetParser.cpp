@@ -184,6 +184,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx130E"},   {"gfx130E"}, GK_GFX130E, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1310"},   {"gfx1310"}, GK_GFX1310, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1300"},   {"gfx1310"}, GK_GFX1310, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+    {{"gfx131F"},   {"gfx131F"}, GK_GFX131F, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1360"},   {"gfx1360"}, GK_GFX1360, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
 
     {{"gfx9-generic"},      {"gfx9-generic"},    GK_GFX9_GENERIC,    FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
@@ -350,6 +351,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1251: return {12, 5, 1};
   case GK_GFX130E: return {13, 0, 0xFFFE};
   case GK_GFX1310: return {13, 1, 0};
+  case GK_GFX131F: return {13, 1, 0xFFFF};
   case GK_GFX1360: return {13, 6, 0};
 
   // Generic targets return the lowest common denominator
@@ -427,6 +429,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
   AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
   switch (Kind) {
     case GK_GFX1360:
+    case GK_GFX131F:
     case GK_GFX1310:
     case GK_GFX130E:
       Features["ci-insts"] = true;

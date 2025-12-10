@@ -124,6 +124,7 @@ enum GPUKind : uint32_t {
 
   GK_GFX130E,
   GK_GFX1310,
+  GK_GFX131F,
   GK_GFX1360,
 
   GK_AMDGCN_FIRST = GK_GFX600,
