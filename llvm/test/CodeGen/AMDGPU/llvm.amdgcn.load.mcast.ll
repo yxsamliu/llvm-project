@@ -1163,21 +1163,21 @@ define amdgpu_kernel void @dummy_kernel() "amdgpu-wavegroup-enable" !reqd_work_g
 ; CHECK-LABEL: dummy_kernel:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_getreg_b32 s9, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s10, s9, max(32, load_mcast_b32_vaddr_imm_mask_dst2.num_vgpr)
-; CHECK-NEXT:    s_mul_i32 s33, s9, s8
 ; CHECK-NEXT:    s_add_co_u32 s10, s10, 16
-; CHECK-NEXT:    s_add_co_u32 s32, s33, 0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s10
-; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; CHECK-NEXT:    s_get_pc_i64 s[6:7]
 ; CHECK-NEXT:    s_add_nc_u64 s[6:7], s[6:7], load_mcast_b32_vaddr_imm_mask_dst2@gotpcrel+4
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v0
 ; CHECK-NEXT:    s_load_b64 s[12:13], s[6:7], 0x0
+; CHECK-NEXT:    s_mul_i32 s33, s9, s8
 ; CHECK-NEXT:    s_add_nc_u64 s[8:9], s[4:5], 36
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; CHECK-NEXT:    s_add_co_u32 s32, s33, 0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_swap_pc_i64 s[30:31], s[12:13]
 ; CHECK-NEXT:    s_endpgm

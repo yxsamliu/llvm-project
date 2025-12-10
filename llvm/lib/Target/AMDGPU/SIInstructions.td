@@ -525,6 +525,15 @@ def IGLP_OPT : SPseudoInstSI<(outs), (ins i32imm:$mask),
   let isMeta = 1;
 }
 
+def RTS_INVALIDATE_BVH : SPseudoInstSI <(outs), (ins)> {
+  let hasNoSchedulingInfo = 1;
+  let hasSideEffects = 1;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let maybeAtomic = 1;
+  let Size = 4;
+}
+
 // SI pseudo instructions. These are used by the CFG structurizer pass
 // and should be lowered to ISA instructions prior to codegen.
 
