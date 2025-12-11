@@ -1640,15 +1640,6 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     return true;
   }
-  case Intrinsic::amdgcn_global_atomic_csub: {
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::getVT(CI.getType());
-    Info.ptrVal = CI.getOperand(0);
-    Info.align.reset();
-    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
-                  MachineMemOperand::MOVolatile;
-    return true;
-  }
   case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
   case Intrinsic::amdgcn_image_bvh8_intersect_ray: {
@@ -1669,8 +1660,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_global_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
-  case Intrinsic::amdgcn_flat_atomic_fmax_num:
-  case Intrinsic::amdgcn_atomic_cond_sub_u32: {
+  case Intrinsic::amdgcn_flat_atomic_fmax_num: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
@@ -1994,7 +1984,6 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
                                             Type *&AccessTy) const {
   Value *Ptr = nullptr;
   switch (II->getIntrinsicID()) {
-  case Intrinsic::amdgcn_atomic_cond_sub_u32:
   case Intrinsic::amdgcn_cluster_load_b128:
   case Intrinsic::amdgcn_cluster_load_b64:
   case Intrinsic::amdgcn_cluster_load_b32:
@@ -2020,7 +2009,6 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_flat_load_monitor_b128:
   case Intrinsic::amdgcn_flat_load_monitor_b32:
   case Intrinsic::amdgcn_flat_load_monitor_b64:
-  case Intrinsic::amdgcn_global_atomic_csub:
   case Intrinsic::amdgcn_global_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
@@ -19205,6 +19193,8 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       break;
     case 'v':
       switch (BitWidth) {
+      case 1:
+        return std::pair(0U, nullptr);
       case 16:
         RC = Subtarget->useRealTrue16Insts() ? &AMDGPU::VGPR_16RegClass
                                              : &AMDGPU::VGPR_32_Lo256RegClass;
@@ -19223,6 +19213,8 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       if (!Subtarget->hasMAIInsts())
         break;
       switch (BitWidth) {
+      case 1:
+        return std::pair(0U, nullptr);
       case 16:
         RC = &AMDGPU::AGPR_32RegClass;
         break;
@@ -19926,7 +19918,6 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
   case AMDGPUISD::BUFFER_ATOMIC_INC:
   case AMDGPUISD::BUFFER_ATOMIC_DEC:
   case AMDGPUISD::BUFFER_ATOMIC_CMPSWAP:
-  case AMDGPUISD::BUFFER_ATOMIC_CSUB:
   case AMDGPUISD::BUFFER_ATOMIC_FADD:
   case AMDGPUISD::BUFFER_ATOMIC_FMIN:
   case AMDGPUISD::BUFFER_ATOMIC_FMAX:

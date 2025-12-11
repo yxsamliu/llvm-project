@@ -2459,11 +2459,10 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
   addPass(SIMemoryLegalizerPass());
   addPass(SIInsertWaitcntsPass());
 
-  // TODO: addPass(SIModeRegisterPass());
+  addPass(SIModeRegisterPass());
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None) {
-    // TODO: addPass(SIInsertHardClausesPass());
-  }
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(SIInsertHardClausesPass());
 
   addPass(SILateBranchLoweringPass());
 
