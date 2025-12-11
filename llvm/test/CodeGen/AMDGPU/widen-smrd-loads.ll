@@ -3,6 +3,8 @@
 ; RUN: llc -amdgpu-codegenprepare-widen-constant-loads=0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope --check-prefix=VI %s
 ; RUN: llc -amdgpu-codegenprepare-widen-constant-loads=0 -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -enable-var-scope --check-prefixes=GFX11,GFX11-TRUE16 %s
 ; RUN: llc -amdgpu-codegenprepare-widen-constant-loads=0 -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -enable-var-scope --check-prefixes=GFX11,GFX11-FAKE16 %s
+; RUN: llc -amdgpu-codegenprepare-widen-constant-loads=0 -mtriple=amdgcn -mcpu=gfx1300 -mattr=+real-true16 < %s | FileCheck -enable-var-scope --check-prefixes=GFX13,GFX13-TRUE16 %s
+; RUN: llc -amdgpu-codegenprepare-widen-constant-loads=0 -mtriple=amdgcn -mcpu=gfx1300 -mattr=-real-true16 < %s | FileCheck -enable-var-scope --check-prefixes=GFX13,GFX13-FAKE16 %s
 
 define amdgpu_kernel void @widen_i16_constant_load(ptr addrspace(4) %arg) {
 ; SI-LABEL: widen_i16_constant_load:
@@ -47,6 +49,20 @@ define amdgpu_kernel void @widen_i16_constant_load(ptr addrspace(4) %arg) {
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: widen_i16_constant_load:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_addk_co_i32 s0, 0x3e7
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    s_or_b32 s0, s0, 4
+; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v2, s0
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-NEXT:    s_endpgm
   %load = load i16, ptr addrspace(4) %arg, align 4
   %add = add i16 %load, 999
   %or = or i16 %add, 4
@@ -101,6 +117,22 @@ define amdgpu_kernel void @widen_i16_constant_load_zext_i32(ptr addrspace(4) %ar
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: widen_i16_constant_load_zext_i32:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    s_addk_co_i32 s0, 0x3e7
+; GFX13-NEXT:    s_or_b32 s0, s0, 4
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v2, s0
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX13-NEXT:    s_endpgm
   %load = load i16, ptr addrspace(4) %arg, align 4
   %ext = zext i16 %load to i32
   %add = add i32 %ext, 999
@@ -156,6 +188,22 @@ define amdgpu_kernel void @widen_i16_constant_load_sext_i32(ptr addrspace(4) %ar
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: widen_i16_constant_load_sext_i32:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_sext_i32_i16 s0, s0
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    s_addk_co_i32 s0, 0x3e7
+; GFX13-NEXT:    s_or_b32 s0, s0, 4
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v2, s0
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX13-NEXT:    s_endpgm
   %load = load i16, ptr addrspace(4) %arg, align 4
   %ext = sext i16 %load to i32
   %add = add i32 %ext, 999
@@ -223,6 +271,25 @@ define amdgpu_kernel void @widen_i17_constant_load(ptr addrspace(4) %arg) {
 ; GFX11-NEXT:    global_store_b16 v[0:1], v4, off
 ; GFX11-NEXT:    global_store_d16_hi_b8 v[2:3], v5, off
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: widen_i17_constant_load:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-NEXT:    v_mov_b32_e32 v2, 2
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_add_co_i32 s0, s0, 34
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    s_or_b32 s0, s0, 4
+; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v4, s0
+; GFX13-NEXT:    s_and_b32 s0, s0, 0x1ffff
+; GFX13-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v3, 0
+; GFX13-NEXT:    v_mov_b32_e32 v5, s0
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    global_store_b16 v[0:1], v4, off
+; GFX13-NEXT:    global_store_d16_hi_b8 v[2:3], v5, off
+; GFX13-NEXT:    s_endpgm
   %load = load i17, ptr addrspace(4) %arg, align 4
   %add = add i17 %load, 34
   %or = or i17 %add, 4
@@ -281,6 +348,33 @@ define amdgpu_kernel void @widen_f16_constant_load(ptr addrspace(4) %arg) {
 ; GFX11-FAKE16-NEXT:    v_add_f16_e64 v2, s0, 4.0
 ; GFX11-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-TRUE16-LABEL: widen_f16_constant_load:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    s_add_f16 s0, s0, 4.0
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX13-TRUE16-NEXT:    global_store_b16 v[1:2], v0, off
+; GFX13-TRUE16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: widen_f16_constant_load:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    s_add_f16 s0, s0, 4.0
+; GFX13-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
+; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
+; GFX13-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-FAKE16-NEXT:    s_endpgm
   %load = load half, ptr addrspace(4) %arg, align 4
   %add = fadd half %load, 4.0
   store half %add, ptr addrspace(1) null
@@ -348,6 +442,27 @@ define amdgpu_kernel void @widen_v2i8_constant_load(ptr addrspace(4) %arg) {
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: widen_v2i8_constant_load:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_add_co_i32 s1, s0, 12
+; GFX13-NEXT:    s_and_b32 s0, s0, 0xff00
+; GFX13-NEXT:    s_or_b32 s1, s1, 4
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    s_and_b32 s1, s1, 0xff
+; GFX13-NEXT:    s_or_b32 s0, s0, s1
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    s_addk_co_i32 s0, 0x2c00
+; GFX13-NEXT:    s_or_b32 s0, s0, 0x300
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v2, s0
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-NEXT:    s_endpgm
   %load = load <2 x i8>, ptr addrspace(4) %arg, align 4
   %add = add <2 x i8> %load, <i8 12, i8 44>
   %or = or <2 x i8> %add, <i8 4, i8 3>
@@ -421,6 +536,35 @@ define amdgpu_kernel void @no_widen_i16_constant_divergent_load(ptr addrspace(4)
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v2, 4, v2
 ; GFX11-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-TRUE16-LABEL: no_widen_i16_constant_divergent_load:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[0:1] scale_offset
+; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-TRUE16-NEXT:    v_add_nc_u16 v0.l, 0x3e7, v0.l
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, 4
+; GFX13-TRUE16-NEXT:    global_store_b16 v[1:2], v0, off
+; GFX13-TRUE16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: no_widen_i16_constant_divergent_load:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    global_load_u16 v0, v0, s[0:1] scale_offset
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-FAKE16-NEXT:    v_add_nc_u16 v2, 0x3e7, v0
+; GFX13-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v2, 4, v2 bitop3:0x54
+; GFX13-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-FAKE16-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = zext i32 %tid to i64
   %gep.arg = getelementptr inbounds i16, ptr addrspace(4) %arg, i64 %tid.ext
@@ -471,6 +615,19 @@ define amdgpu_kernel void @widen_i1_constant_load(ptr addrspace(4) %arg) {
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    global_store_b8 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: widen_i1_constant_load:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_and_b32 s0, s0, 1
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v2, s0
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-NEXT:    global_store_b8 v[0:1], v2, off
+; GFX13-NEXT:    s_endpgm
   %load = load i1, ptr addrspace(4) %arg, align 4
   %and = and i1 %load, true
   store i1 %and, ptr addrspace(1) null
@@ -524,6 +681,22 @@ define amdgpu_kernel void @widen_i16_zextload_i64_constant_load(ptr addrspace(4)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: widen_i16_zextload_i64_constant_load:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    s_addk_co_i32 s0, 0x3e7
+; GFX13-NEXT:    s_or_b32 s0, s0, 4
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v2, s0
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX13-NEXT:    s_endpgm
   %load = load i16, ptr addrspace(4) %arg, align 4
   %zext = zext i16 %load to i32
   %add = add i32 %zext, 999
@@ -577,6 +750,21 @@ define amdgpu_kernel void @widen_i1_zext_to_i64_constant_load(ptr addrspace(4) %
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: widen_i1_zext_to_i64_constant_load:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-NEXT:    v_mov_b32_e32 v3, 0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_and_b32 s0, s0, 0xff
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    s_addk_co_i32 s0, 0x3e7
+; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v2, s0
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX13-NEXT:    s_endpgm
   %load = load i1, ptr addrspace(4) %arg, align 4
   %zext = zext i1 %load to i64
   %add = add i64 %zext, 999
@@ -630,6 +818,21 @@ define amdgpu_kernel void @widen_i16_constant32_load(ptr addrspace(6) %arg) {
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: widen_i16_constant32_load:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_load_b32 s0, s[4:5], 0x24
+; GFX13-NEXT:    s_mov_b32 s1, 0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_addk_co_i32 s0, 0x3e7
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    s_or_b32 s0, s0, 4
+; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v2, s0
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-NEXT:    s_endpgm
   %load = load i16, ptr addrspace(6) %arg, align 4
   %add = add i16 %load, 999
   %or = or i16 %add, 4
@@ -680,6 +883,20 @@ define amdgpu_kernel void @widen_i16_global_invariant_load(ptr addrspace(1) %arg
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: widen_i16_global_invariant_load:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_addk_co_i32 s0, 0x3e7
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    s_or_b32 s0, s0, 1
+; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v2, s0
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-NEXT:    s_endpgm
   %load = load i16, ptr addrspace(1) %arg, align 4, !invariant.load !0
   %add = add i16 %load, 999
   %or = or i16 %add, 1
