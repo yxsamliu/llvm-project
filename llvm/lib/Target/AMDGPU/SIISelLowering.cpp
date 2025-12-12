@@ -17,6 +17,7 @@
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "AMDGPUMachineInstrs.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSelectionDAGInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
@@ -10011,11 +10012,8 @@ SDValue SITargetLowering::lowerFrameIndex(AMDGPUMachineFunction *MFI,
   int FI = cast<FrameIndexSDNode>(Op)->getIndex();
   if (const AllocaInst *Alloca = MF.getFrameInfo().getObjectAllocation(FI)) {
     if (AMDGPU::IsPromotablePrivate(*Alloca)) {
-      MDNode *MD = Alloca->getMetadata("amdgpu.allocated.vgprs");
-      unsigned Offset =
-          cast<ConstantInt>(
-              cast<ConstantAsMetadata>(MD->getOperand(0))->getValue())
-              ->getZExtValue();
+      auto &MD = AMDGPU::AllocatedVGPRsMetadata::get(*Alloca);
+      unsigned Offset = MD.getAddress();
       SDLoc DL(Op);
       SDValue OffsetVal = DAG.getConstant(Offset, DL, MVT::i32);
 

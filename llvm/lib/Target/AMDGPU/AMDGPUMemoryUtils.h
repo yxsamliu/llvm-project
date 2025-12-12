@@ -12,12 +12,14 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 
 struct Align;
 class AAResults;
+class AllocaInst;
 class DataLayout;
 class GlobalVariable;
 class LoadInst;
@@ -84,6 +86,22 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
 bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
                         DenseSet<Value *> &Pointers, bool &MustInVGPR,
                         bool PromoteSubDword = false);
+
+/// Convenience wrapper for !amdgpu.allocated.vgprs metadata.
+///
+/// NOTE: Using `isa` with this class is not very meaningful.
+class AllocatedVGPRsMetadata : public MDNode {
+public:
+  static AllocatedVGPRsMetadata &get(const AllocaInst &Alloca);
+
+  /// Get the indicated (byte) address for the VGPR allocation.
+  unsigned getAddress() const;
+
+  /// Get the size (in bytes) of the VGPR allocation.
+  unsigned getSize() const;
+
+  static bool classof(const MDNode *N);
+};
 
 } // end namespace AMDGPU
 
