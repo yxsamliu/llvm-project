@@ -225,7 +225,6 @@ private:
   MachineRegisterInfo *MRI = nullptr;
   AliasAnalysis *AA = nullptr;
   MachineCycleInfo *CI = nullptr;
-  SIMachineFunctionInfo *MFI = nullptr;
 
   // (original idx reg) to new-idx-reg mapping
   // Private-in-vgpr objects need a new idx reg that is calculated with idx0 as
