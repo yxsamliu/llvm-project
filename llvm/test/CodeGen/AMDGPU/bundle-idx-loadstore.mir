@@ -46,6 +46,7 @@
   define void @idx0-test-idx0-bundle-late() { unreachable }
   define void @redirect-with-idx0-bundle() { unreachable }
   define void @enable-dst-operand-class() { unreachable }
+  define void @test-aliasing-no-prevent-bundle() { unreachable }
   define void @multi-bb-load-simple() { unreachable }
   define void @multi-bb-store-simple() { unreachable }
   define void @multi-bb-load-store-simple() { unreachable }
@@ -2536,6 +2537,101 @@ body:             |
     %1:vreg_64_align2 = V_LOAD_IDX_B64 %0, 10, implicit $exec :: (load (s64), addrspace 10)
     %2:vreg_64_align2 = V_LSHRREV_B64_e64 2, %1, implicit $exec
     V_STORE_IDX_B64 %2, %0, 0, implicit $exec :: (store (s64), addrspace 10)
+...
+# The V_LOAD_IDX should not alias since they are loading from 0 and 2,
+# and the VNBR are storing to 1 and 3, and vice versa.
+---
+name:            test-aliasing-no-prevent-bundle
+machineFunctionInfo:
+  laneSharedVGPRSize: 1000
+  stackPtrOffsetReg: '$sgpr32'
+  frameOffsetReg: '$sgpr33'
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test-aliasing-no-prevent-bundle
+    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+    ; GCN-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[S_MOV_B32_]], 2, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def dead $stg_srca, implicit-def $stg_dsta, implicit-def $stg_dstb, implicit [[S_MOV_B32_]], implicit $exec, implicit $mode :: (dereferenceable load (s32), addrspace 10), (store (s32), addrspace 10), (store (s32), addrspace 10) {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_MOV_B32_]], 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta, $stg_dstb = V_SEND_VGPR_NEXT_B32 internal killed $stg_srca, 1, 0, 2, 0, 15, implicit $mode, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_MOV_B32_]], 1, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dstb, [[S_MOV_B32_]], 3, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: }
+    ; GCN-NEXT: BUNDLE implicit-def $stg_dsta, implicit-def $stg_dstb, implicit killed [[V_LOAD_IDX_B32_]], implicit $mode, implicit $exec, implicit [[S_MOV_B32_]] :: (store (s32), addrspace 10) {
+    ; GCN-NEXT:   $stg_dsta, $stg_dstb = V_SEND_VGPR_PREV_B32 killed [[V_LOAD_IDX_B32_]], 2, 0, 1, 0, 15, implicit $mode, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_MOV_B32_]], 3, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dstb, [[S_MOV_B32_]], 1, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: }
+    ; GCN-NEXT: [[V_LOAD_IDX_B32_1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[S_MOV_B32_]], 3, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+    ; GCN-NEXT: BUNDLE implicit-def dead $stg_srca, implicit-def $stg_dsta, implicit-def $stg_dstb, implicit [[S_MOV_B32_]], implicit $exec, implicit $mode :: (dereferenceable load (s32), addrspace 10), (store (s32), addrspace 10), (store (s32), addrspace 10) {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B32 [[S_MOV_B32_]], 1, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta, $stg_dstb = V_SEND_VGPR_NEXT_B32 internal killed $stg_srca, 1, 0, 2, 0, 15, implicit $mode, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_MOV_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dstb, [[S_MOV_B32_]], 2, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: }
+    ; GCN-NEXT: BUNDLE implicit-def $stg_dsta, implicit-def $stg_dstb, implicit killed [[V_LOAD_IDX_B32_1]], implicit $mode, implicit $exec, implicit [[S_MOV_B32_]] :: (store (s32), addrspace 10) {
+    ; GCN-NEXT:   $stg_dsta, $stg_dstb = V_SEND_VGPR_PREV_B32 killed [[V_LOAD_IDX_B32_1]], 2, 0, 1, 0, 15, implicit $mode, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, [[S_MOV_B32_]], 2, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT:   V_STORE_IDX_B32 internal $stg_dstb, [[S_MOV_B32_]], 0, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: }
+    ;
+    ; ALLOC-LABEL: name: test-aliasing-no-prevent-bundle
+    ; ALLOC: $idx1 = S_SET_GPR_IDX_U32 0
+    ; ALLOC-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 $idx1, 2, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def dead $stg_srca, implicit-def $stg_dsta, implicit-def $stg_dstb, implicit $idx1, implicit $exec, implicit $mode :: (dereferenceable load (s32), addrspace 10), (store (s32), addrspace 10), (store (s32), addrspace 10) {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta, $stg_dstb = V_SEND_VGPR_NEXT_B32 internal killed $stg_srca, 1, 0, 2, 0, 15, implicit $mode, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 1, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dstb, $idx1, 3, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: }
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit-def $stg_dstb, implicit killed [[V_LOAD_IDX_B32_]], implicit $mode, implicit $exec, implicit $idx1 :: (store (s32), addrspace 10) {
+    ; ALLOC-NEXT:   $stg_dsta, $stg_dstb = V_SEND_VGPR_PREV_B32 killed [[V_LOAD_IDX_B32_]], 2, 0, 1, 0, 15, implicit $mode, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 3, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dstb, $idx1, 1, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: }
+    ; ALLOC-NEXT: [[V_LOAD_IDX_B32_1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 $idx1, 3, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+    ; ALLOC-NEXT: BUNDLE implicit-def dead $stg_srca, implicit-def $stg_dsta, implicit-def $stg_dstb, implicit $idx1, implicit $exec, implicit $mode :: (dereferenceable load (s32), addrspace 10), (store (s32), addrspace 10), (store (s32), addrspace 10) {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx1, 1, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta, $stg_dstb = V_SEND_VGPR_NEXT_B32 internal killed $stg_srca, 1, 0, 2, 0, 15, implicit $mode, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dstb, $idx1, 2, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: }
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit-def $stg_dstb, implicit killed [[V_LOAD_IDX_B32_1]], implicit $mode, implicit $exec, implicit $idx1 :: (store (s32), addrspace 10) {
+    ; ALLOC-NEXT:   $stg_dsta, $stg_dstb = V_SEND_VGPR_PREV_B32 killed [[V_LOAD_IDX_B32_1]], 2, 0, 1, 0, 15, implicit $mode, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 2, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dstb, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: }
+    ;
+    ; LOWERED-LABEL: name: test-aliasing-no-prevent-bundle
+    ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
+    ; LOWERED-NEXT: S_WAIT_EXPCNT 0
+    ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
+    ; LOWERED-NEXT: S_WAIT_BVHCNT 0
+    ; LOWERED-NEXT: S_WAIT_KMCNT 0
+    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 0
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 1
+    ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 undef $vgpr2, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 69
+    ; LOWERED-NEXT: undef $vgpr1, undef $vgpr3 = V_SEND_VGPR_NEXT_B32 killed undef $vgpr0, 1, 0, 2, 0, 15, <0x{{[0-9a-f]+}}>, implicit $mode, implicit $exec
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 68
+    ; LOWERED-NEXT: undef $vgpr3, undef $vgpr1 = V_SEND_VGPR_PREV_B32 killed renamable $vgpr0, 2, 0, 1, 0, 1, <0x{{[0-9a-f]+}}>, implicit $mode, implicit $exec
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 1
+    ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 undef $vgpr3, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 69
+    ; LOWERED-NEXT: undef $vgpr0, undef $vgpr2 = V_SEND_VGPR_NEXT_B32 killed undef $vgpr1, 1, 0, 2, 0, 15, <0x{{[0-9a-f]+}}>, implicit $mode, implicit $exec
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 68
+    ; LOWERED-NEXT: undef $vgpr2, undef $vgpr0 = V_SEND_VGPR_PREV_B32 killed renamable $vgpr0, 2, 0, 1, 0, 1, <0x{{[0-9a-f]+}}>, implicit $mode, implicit $exec
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
+    %72:sgpr_32 = S_MOV_B32 0
+    %73:vgpr_32 = V_LOAD_IDX_B32 %72:sgpr_32, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+    %74:vgpr_32 = V_LOAD_IDX_B32 %72:sgpr_32, 2, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+    V_SEND_VGPR_NEXT_B32_LANESHARED killed %73:vgpr_32, 1, 0, 2, 0, 15, %72:sgpr_32, 1, %72:sgpr_32, 3, implicit $mode, implicit $exec
+    V_SEND_VGPR_PREV_B32_LANESHARED killed %74:vgpr_32, 2, 0, 1, 0, 15, %72:sgpr_32, 3, %72:sgpr_32, 1, implicit $mode, implicit $exec
+    %75:vgpr_32 = V_LOAD_IDX_B32 %72:sgpr_32, 1, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+    %76:vgpr_32 = V_LOAD_IDX_B32 %72:sgpr_32, 3, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+    V_SEND_VGPR_NEXT_B32_LANESHARED killed %75:vgpr_32, 1, 0, 2, 0, 15, %72:sgpr_32, 0, %72:sgpr_32, 2, implicit $mode, implicit $exec
+    V_SEND_VGPR_PREV_B32_LANESHARED killed %76:vgpr_32, 2, 0, 1, 0, 15, %72:sgpr_32, 2, %72:sgpr_32, 0, implicit $mode, implicit $exec
 ...
 ---
 name:            multi-bb-load-simple
