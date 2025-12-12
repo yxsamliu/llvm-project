@@ -30,3 +30,9 @@ s_add_gpr_idx_u32 idx3, 0x1
 
 s_add_gpr_idx_u32 idx3, 0x12345678
 // GFX1260: s_add_gpr_idx_u32 idx3, 0x12345678      ; encoding: [0xff,0x70,0x83,0xbe,0x78,0x56,0x34,0x12]
+
+s_barrier_leave 0
+// GFX1260: s_barrier_leave 0                       ; encoding: [0x00,0x00,0x95,0xbf]
+
+s_barrier_leave 32
+// GFX1260: s_barrier_leave 32                      ; encoding: [0x20,0x00,0x95,0xbf]
