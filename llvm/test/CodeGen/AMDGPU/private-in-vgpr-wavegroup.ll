@@ -3,7 +3,7 @@
 
 @ls = external local_unnamed_addr addrspace(10) global [8 x i32], align 16
 
-define amdgpu_kernel void @private_load_store(i32 inreg %idx) "amdgpu-wavegroup-enable" !reqd_work_group_size !{ i32 256, i32 1, i32 1 } {
+define amdgpu_kernel void @private_load_store(i32 inreg %idx) "amdgpu-wavegroup-enable" "amdgpu-flat-work-group-size"="256,256" !reqd_work_group_size !{ i32 256, i32 1, i32 1 } {
 ; CHECK-LABEL: private_load_store:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)

@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1300 -amdgpu-promote-private=true -stop-after=bundle-indexed-load-store -verify-machineinstrs -o - %s | FileCheck -check-prefix=BUNDLE %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1300 -amdgpu-promote-private=true -stop-after=amdgpu-idx-reg-alloc -verify-machineinstrs -o - %s | FileCheck -check-prefix=SETIDX %s
 
-define amdgpu_kernel void @private_load_store() {
+define amdgpu_kernel void @private_load_store() #0 {
   ; NOVIDX-LABEL: name: private_load_store
   ; NOVIDX: bb.0.entry:
   ; NOVIDX-NEXT:   [[SCRATCH_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD_SADDR %stack.0.p, 4, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
@@ -73,7 +73,7 @@ entry:
   ret void
 }
 
-define dso_local amdgpu_kernel void @private_fail_bundle(ptr addrspace(1) noundef %dst.coerce, ptr addrspace(1) noundef %src.coerce, i32 noundef %i) {
+define dso_local amdgpu_kernel void @private_fail_bundle(ptr addrspace(1) noundef %dst.coerce, ptr addrspace(1) noundef %src.coerce, i32 noundef %i) #0 {
   ; NOVIDX-LABEL: name: private_fail_bundle
   ; NOVIDX: bb.0.entry:
   ; NOVIDX-NEXT:   liveins: $sgpr4_sgpr5
@@ -188,3 +188,4 @@ entry:
   ret void
 }
 
+attributes #0 = { "amdgpu-flat-work-group-size"="32,32" }
