@@ -6,25 +6,25 @@
 define amdgpu_kernel void @subdword() #0 {
   ; VIDX-LABEL: name: subdword
   ; VIDX: bb.0.entry:
-  ; VIDX-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 134
+  ; VIDX-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 2
   ; VIDX-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_MOV_B32_]], 0, implicit-def dead $scc
   ; VIDX-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_]], 3, implicit-def dead $scc
   ; VIDX-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_]], 3, implicit-def dead $scc
   ; VIDX-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_]], 2, implicit-def dead $scc
   ; VIDX-NEXT:   [[V_LOAD_IDX_BITS:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_BITS [[S_LSHR_B32_]], 0, 16, [[S_LSHL_B32_]], 0, implicit $exec :: (load (s16) from %ir.p.1, align 4, addrspace 5)
-  ; VIDX-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 136
+  ; VIDX-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 4
   ; VIDX-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_MOV_B32_1]], 0, implicit-def dead $scc
   ; VIDX-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_1]], 3, implicit-def dead $scc
   ; VIDX-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_1]], 3, implicit-def dead $scc
   ; VIDX-NEXT:   [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_1]], 2, implicit-def dead $scc
   ; VIDX-NEXT:   V_STORE_IDX_BITS [[V_LOAD_IDX_BITS]], [[S_LSHR_B32_1]], 0, 16, [[S_LSHL_B32_1]], implicit $exec :: (store (s16) into %ir.p.2, align 4, addrspace 5)
-  ; VIDX-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 2
+  ; VIDX-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 134
   ; VIDX-NEXT:   [[S_ADD_I32_2:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_MOV_B32_2]], 0, implicit-def dead $scc
   ; VIDX-NEXT:   [[S_AND_B32_2:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_2]], 3, implicit-def dead $scc
   ; VIDX-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_2]], 3, implicit-def dead $scc
   ; VIDX-NEXT:   [[S_LSHR_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_2]], 2, implicit-def dead $scc
   ; VIDX-NEXT:   [[V_LOAD_IDX_BITS1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_BITS [[S_LSHR_B32_2]], 0, 16, [[S_LSHL_B32_2]], 0, implicit $exec :: (load (s16) from %ir.q.1, align 4, addrspace 5)
-  ; VIDX-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 4
+  ; VIDX-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 136
   ; VIDX-NEXT:   [[S_ADD_I32_3:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_MOV_B32_3]], 0, implicit-def dead $scc
   ; VIDX-NEXT:   [[S_AND_B32_3:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_3]], 3, implicit-def dead $scc
   ; VIDX-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_3]], 3, implicit-def dead $scc
@@ -34,36 +34,36 @@ define amdgpu_kernel void @subdword() #0 {
   ;
   ; BUNDLE-LABEL: name: subdword
   ; BUNDLE: bb.0.entry:
-  ; BUNDLE-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 134, 0, implicit-def dead $scc
+  ; BUNDLE-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 2, 0, implicit-def dead $scc
   ; BUNDLE-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_]], 3, implicit-def dead $scc
   ; BUNDLE-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_]], 3, implicit-def dead $scc
-  ; BUNDLE-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 33
+  ; BUNDLE-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
   ; BUNDLE-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def %6, implicit [[S_MOV_B32_]], implicit $exec, implicit [[S_LSHL_B32_]] :: (load (s16) from %ir.p.1, align 4, addrspace 5) {
   ; BUNDLE-NEXT:     $stg_srca = V_LOAD_IDX_B32 [[S_MOV_B32_]], 0, implicit $exec :: (load (s16) from %ir.p.1, align 4, addrspace 5)
   ; BUNDLE-NEXT:     [[V_BFE_U32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_U32_e64 internal $stg_srca, [[S_LSHL_B32_]], 16, implicit $exec
   ; BUNDLE-NEXT:   }
-  ; BUNDLE-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 136, 0, implicit-def dead $scc
+  ; BUNDLE-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 4, 0, implicit-def dead $scc
   ; BUNDLE-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_1]], 3, implicit-def dead $scc
   ; BUNDLE-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_1]], 3, implicit-def dead $scc
-  ; BUNDLE-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 34
+  ; BUNDLE-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 1
   ; BUNDLE-NEXT:   [[V_BFM_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFM_B32_e64 16, [[S_LSHL_B32_1]], implicit $exec
   ; BUNDLE-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_MOV_B32_1]], implicit $exec, implicit [[V_BFM_B32_e64_]], implicit [[V_BFE_U32_e64_]] :: (load (s16) from %ir.p.2, align 4, addrspace 5), (store (s16) into %ir.p.2, align 4, addrspace 5) {
   ; BUNDLE-NEXT:     $stg_srca = V_LOAD_IDX_B32 [[S_MOV_B32_1]], 0, implicit $exec :: (load (s16) from %ir.p.2, align 4, addrspace 5)
   ; BUNDLE-NEXT:     $stg_dsta = V_BFI_B32_e64 [[V_BFM_B32_e64_]], [[V_BFE_U32_e64_]], internal $stg_srca, implicit $exec
   ; BUNDLE-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, [[S_MOV_B32_1]], 0, implicit $exec :: (store (s16) into %ir.p.2, align 4, addrspace 5)
   ; BUNDLE-NEXT:   }
-  ; BUNDLE-NEXT:   [[S_ADD_I32_2:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 2, 0, implicit-def dead $scc
+  ; BUNDLE-NEXT:   [[S_ADD_I32_2:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 134, 0, implicit-def dead $scc
   ; BUNDLE-NEXT:   [[S_AND_B32_2:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_2]], 3, implicit-def dead $scc
   ; BUNDLE-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_2]], 3, implicit-def dead $scc
-  ; BUNDLE-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
+  ; BUNDLE-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 33
   ; BUNDLE-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def %9, implicit [[S_MOV_B32_2]], implicit $exec, implicit [[S_LSHL_B32_2]] :: (load (s16) from %ir.q.1, align 4, addrspace 5) {
   ; BUNDLE-NEXT:     $stg_srca = V_LOAD_IDX_B32 [[S_MOV_B32_2]], 0, implicit $exec :: (load (s16) from %ir.q.1, align 4, addrspace 5)
   ; BUNDLE-NEXT:     [[V_BFE_U32_e64_1:%[0-9]+]]:vgpr_32 = V_BFE_U32_e64 internal $stg_srca, [[S_LSHL_B32_2]], 16, implicit $exec
   ; BUNDLE-NEXT:   }
-  ; BUNDLE-NEXT:   [[S_ADD_I32_3:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 4, 0, implicit-def dead $scc
+  ; BUNDLE-NEXT:   [[S_ADD_I32_3:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 136, 0, implicit-def dead $scc
   ; BUNDLE-NEXT:   [[S_AND_B32_3:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_3]], 3, implicit-def dead $scc
   ; BUNDLE-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_3]], 3, implicit-def dead $scc
-  ; BUNDLE-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 1
+  ; BUNDLE-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 34
   ; BUNDLE-NEXT:   [[V_BFM_B32_e64_1:%[0-9]+]]:vgpr_32 = V_BFM_B32_e64 16, [[S_LSHL_B32_3]], implicit $exec
   ; BUNDLE-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_MOV_B32_3]], implicit $exec, implicit [[V_BFM_B32_e64_1]], implicit [[V_BFE_U32_e64_1]] :: (load (s16) from %ir.q.2, align 4, addrspace 5), (store (s16) into %ir.q.2, align 4, addrspace 5) {
   ; BUNDLE-NEXT:     $stg_srca = V_LOAD_IDX_B32 [[S_MOV_B32_3]], 0, implicit $exec :: (load (s16) from %ir.q.2, align 4, addrspace 5)
@@ -74,36 +74,36 @@ define amdgpu_kernel void @subdword() #0 {
   ;
   ; SETIDX-LABEL: name: subdword
   ; SETIDX: bb.0.entry:
-  ; SETIDX-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 134, 0, implicit-def dead $scc
+  ; SETIDX-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 2, 0, implicit-def dead $scc
   ; SETIDX-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_]], 3, implicit-def dead $scc
   ; SETIDX-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_]], 3, implicit-def dead $scc
-  ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 33
+  ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
   ; SETIDX-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def %6, implicit $idx1, implicit $exec, implicit [[S_LSHL_B32_]] :: (load (s16) from %ir.p.1, align 4, addrspace 5) {
   ; SETIDX-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s16) from %ir.p.1, align 4, addrspace 5)
   ; SETIDX-NEXT:     [[V_BFE_U32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_U32_e64 internal $stg_srca, [[S_LSHL_B32_]], 16, implicit $exec
   ; SETIDX-NEXT:   }
-  ; SETIDX-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 136, 0, implicit-def dead $scc
+  ; SETIDX-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 4, 0, implicit-def dead $scc
   ; SETIDX-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_1]], 3, implicit-def dead $scc
   ; SETIDX-NEXT:   [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_1]], 3, implicit-def dead $scc
-  ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 34
+  ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 1
   ; SETIDX-NEXT:   [[V_BFM_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFM_B32_e64 16, [[S_LSHL_B32_1]], implicit $exec
   ; SETIDX-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx1, implicit $exec, implicit [[V_BFM_B32_e64_]], implicit [[V_BFE_U32_e64_]] :: (load (s16) from %ir.p.2, align 4, addrspace 5), (store (s16) into %ir.p.2, align 4, addrspace 5) {
   ; SETIDX-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s16) from %ir.p.2, align 4, addrspace 5)
   ; SETIDX-NEXT:     $stg_dsta = V_BFI_B32_e64 [[V_BFM_B32_e64_]], [[V_BFE_U32_e64_]], internal $stg_srca, implicit $exec
   ; SETIDX-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s16) into %ir.p.2, align 4, addrspace 5)
   ; SETIDX-NEXT:   }
-  ; SETIDX-NEXT:   [[S_ADD_I32_2:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 2, 0, implicit-def dead $scc
+  ; SETIDX-NEXT:   [[S_ADD_I32_2:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 134, 0, implicit-def dead $scc
   ; SETIDX-NEXT:   [[S_AND_B32_2:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_2]], 3, implicit-def dead $scc
   ; SETIDX-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_2]], 3, implicit-def dead $scc
-  ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
+  ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 33
   ; SETIDX-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def %9, implicit $idx1, implicit $exec, implicit [[S_LSHL_B32_2]] :: (load (s16) from %ir.q.1, align 4, addrspace 5) {
   ; SETIDX-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s16) from %ir.q.1, align 4, addrspace 5)
   ; SETIDX-NEXT:     [[V_BFE_U32_e64_1:%[0-9]+]]:vgpr_32 = V_BFE_U32_e64 internal $stg_srca, [[S_LSHL_B32_2]], 16, implicit $exec
   ; SETIDX-NEXT:   }
-  ; SETIDX-NEXT:   [[S_ADD_I32_3:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 4, 0, implicit-def dead $scc
+  ; SETIDX-NEXT:   [[S_ADD_I32_3:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 136, 0, implicit-def dead $scc
   ; SETIDX-NEXT:   [[S_AND_B32_3:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_3]], 3, implicit-def dead $scc
   ; SETIDX-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_3]], 3, implicit-def dead $scc
-  ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 1
+  ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 34
   ; SETIDX-NEXT:   [[V_BFM_B32_e64_1:%[0-9]+]]:vgpr_32 = V_BFM_B32_e64 16, [[S_LSHL_B32_3]], implicit $exec
   ; SETIDX-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx1, implicit $exec, implicit [[V_BFM_B32_e64_1]], implicit [[V_BFE_U32_e64_1]] :: (load (s16) from %ir.q.2, align 4, addrspace 5), (store (s16) into %ir.q.2, align 4, addrspace 5) {
   ; SETIDX-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s16) from %ir.q.2, align 4, addrspace 5)
