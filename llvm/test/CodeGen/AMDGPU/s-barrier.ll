@@ -421,8 +421,7 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX1260-SDAG-NEXT:    s_mov_b32 m0, 2
 ; GFX1260-SDAG-NEXT:    s_barrier_signal_isfirst -1
 ; GFX1260-SDAG-NEXT:    s_barrier_wait 1
-; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1260-SDAG-NEXT:    s_barrier_leave
+; GFX1260-SDAG-NEXT:    s_barrier_leave 1
 ; GFX1260-SDAG-NEXT:    s_get_barrier_state s3, m0
 ; GFX1260-SDAG-NEXT:    s_mov_b32 m0, s2
 ; GFX1260-SDAG-NEXT:    s_get_barrier_state s2, m0
@@ -471,8 +470,7 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX1260-GISEL-NEXT:    s_barrier_join m0
 ; GFX1260-GISEL-NEXT:    s_barrier_signal_isfirst -1
 ; GFX1260-GISEL-NEXT:    s_barrier_wait 1
-; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1260-GISEL-NEXT:    s_barrier_leave
+; GFX1260-GISEL-NEXT:    s_barrier_leave 1
 ; GFX1260-GISEL-NEXT:    s_get_barrier_state s0, 2
 ; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-GISEL-NEXT:    s_get_barrier_state s0, m0
@@ -481,6 +479,7 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX1260-GISEL-NEXT:    s_add_nc_u64 s[0:1], s[0:1], func1@gotpcrel+4
 ; GFX1260-GISEL-NEXT:    s_add_co_u32 s8, s12, 48
 ; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX1260-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-GISEL-NEXT:    s_add_co_ci_u32 s9, s13, 0
 ; GFX1260-GISEL-NEXT:    s_barrier_signal -1
 ; GFX1260-GISEL-NEXT:    s_barrier_wait -1
@@ -490,7 +489,6 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX1260-GISEL-NEXT:    s_add_nc_u64 s[0:1], s[0:1], func2@gotpcrel+4
 ; GFX1260-GISEL-NEXT:    s_add_co_u32 s8, s12, 48
 ; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX1260-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-GISEL-NEXT:    s_add_co_ci_u32 s9, s13, 0
 ; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-GISEL-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
@@ -677,12 +675,11 @@ define amdgpu_ps void @test_barrier_leave_write_to_scc(i32 inreg %val, ptr addrs
 ; GFX1260-LABEL: test_barrier_leave_write_to_scc:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    s_barrier_leave
-; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX1260-NEXT:    s_movk_i32 s0, 0x7b
-; GFX1260-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1260-NEXT:    s_barrier_leave 1
 ; GFX1260-NEXT:    s_cselect_b32 s0, s0, 0x1c8
+; GFX1260-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1260-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1260-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1260-NEXT:    s_endpgm

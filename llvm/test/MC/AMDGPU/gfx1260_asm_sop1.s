@@ -54,3 +54,12 @@ s_barrier_join 0
 
 s_barrier_join 0.5
 // GFX1260: s_barrier_join 0.5                      ; encoding: [0xf0,0x52,0x80,0xbe]
+
+s_wakeup_barrier 1
+// GFX1260: s_wakeup_barrier 1                      ; encoding: [0x81,0x57,0x80,0xbe]
+
+s_wakeup_barrier -1
+// GFX1260: s_wakeup_barrier -1                     ; encoding: [0xc1,0x57,0x80,0xbe]
+
+s_wakeup_barrier m0
+// GFX1260: s_wakeup_barrier m0                     ; encoding: [0x7d,0x57,0x80,0xbe]

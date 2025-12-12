@@ -2426,7 +2426,10 @@ def FeatureISAVersion12_60 : FeatureSet<
      FeatureWavegroups,
      FeaturePermPkU2U3Insts,
      FeatureAddressableLocalMemorySize327680,
-     FeatureVGPRIndexingRegisters])>;
+     FeatureVGPRIndexingRegisters,
+     FeatureSWakeupImm,
+     FeatureSBarrierLeaveImm
+    ])>;
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
