@@ -565,12 +565,12 @@ def S_GET_BARRIER_STATE_M0 : SOP1_Pseudo <"s_get_barrier_state $sdst, m0", (outs
 }
 } // End hasSideEffects = 1
 
-let SubtargetPredicate = isGFX13Plus in {
+let SubtargetPredicate = HasVGPRIndexingRegisters in {
   let hasSideEffects = 1 in {
     def S_SET_GPR_IDX_U32 : SOP1_IDX_32<"s_set_gpr_idx_u32", [], 0>;
     def S_ADD_GPR_IDX_U32 : SOP1_IDX_32<"s_add_gpr_idx_u32", [], 1>;
   }
-} // End SubtargetPredicate = isGFX13Plus
+} // End SubtargetPredicate = HasVGPRIndexingRegisters
 
 // Move from/to global registers.
 //
@@ -1687,7 +1687,7 @@ let SchedRW = [WriteBarrier], isConvergent = 1 in {
     let Defs = [SCC];
   }
 
-  let SubtargetPredicate = isGFX13Plus in
+  let SubtargetPredicate = HasSBarrierLeaveImm in
   def S_BARRIER_LEAVE_IMM : SOPP_Pseudo <"s_barrier_leave",
     (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_barrier_leave timm:$simm16)]>;
 }
@@ -1700,10 +1700,10 @@ def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
   let mayStore = 1;
 }
 
-let SubtargetPredicate = isGFX13Plus in {
+let SubtargetPredicate = HasSWakeupImm in {
   def S_WAKEUP_imm : SOPP_Pseudo <"s_wakeup",
     (ins i16imm:$simm16), "$simm16">;
-} // End SubtargetPredicate = isGFX13Plus
+} // End SubtargetPredicate = HasSWakeupImm
 
 let SubtargetPredicate = isNotGFX1250Plus in {
 def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins SWaitCnt:$simm16), "$simm16",
@@ -2266,6 +2266,18 @@ multiclass SOP1_Real_gfx13<bits<8> op, string name = !tolower(NAME)> {
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
 }
 
+multiclass SOP1_Real_gfx1260<bits<8> op, string name = !tolower(NAME)> {
+  defvar ps = !cast<SOP1_Pseudo>(NAME);
+  def _gfx1260 : SOP1_Real<op, ps, name>,
+                 Select<GFX1260Gen, ps.Mnemonic>;
+  if !ne(ps.Mnemonic, name) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX1260Only]>;
+}
+
+multiclass SOP1_Real_gfx1260_gfx13<bits<8> op> :
+  SOP1_Real_gfx1260<op>,
+  SOP1_Real_gfx13<op>;
+
 multiclass SOP1_M0_Real_gfx13<bits<8> op> {
   defvar ps = !cast<SOP1_Pseudo>(NAME);
   def _gfx13 : SOP1_Real<op, ps>, Select<GFX13Gen, ps.PseudoInstr> {
@@ -2286,8 +2298,8 @@ defm S_MOV_FROM_GLOBAL_B32   : SOP1_Real_gfx13<0x05b>;
 defm S_MOV_FROM_GLOBAL_B64   : SOP1_Real_gfx13<0x05c>;
 defm S_MOV_TO_GLOBAL_B32     : SOP1_Real_gfx13<0x05d>;
 defm S_MOV_TO_GLOBAL_B64     : SOP1_Real_gfx13<0x05e>;
-defm S_SET_GPR_IDX_U32       : SOP1_Real_gfx13<0x06f>;
-defm S_ADD_GPR_IDX_U32       : SOP1_Real_gfx13<0x070>;
+defm S_SET_GPR_IDX_U32       : SOP1_Real_gfx1260_gfx13<0x06f>;
+defm S_ADD_GPR_IDX_U32       : SOP1_Real_gfx1260_gfx13<0x070>;
 
 //===----------------------------------------------------------------------===//
 //  SOP1 - GFX11, GFX12
@@ -2980,11 +2992,23 @@ multiclass SOPP_Real_32_gfx13<bits<7> op, string name = !cast<SOPP_Pseudo>(NAME)
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
 }
 
+multiclass SOPP_Real_32_gfx1260<bits<7> op, string name = !cast<SOPP_Pseudo>(NAME).Mnemonic, bit compat_alias = 1> {
+  defvar ps = !cast<SOPP_Pseudo>(NAME);
+  def _gfx1260 : SOPP_Real_32<op, ps, name>,
+                 Select<GFX1260Gen, ps.Mnemonic>,
+                 SOPPRelaxTable<0, ps.KeyName, "_gfx1260">;
+  if !and(compat_alias, !ne(ps.Mnemonic, name)) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX1260Only]>;
+}
+
+multiclass SOPP_Real_32_gfx1260_gfx13<bits<7> op> :
+  SOPP_Real_32_gfx13<op>, SOPP_Real_32_gfx1260<op>;
+
 defm S_WAKEUP_imm        : SOPP_Real_32_gfx13<0x003>;
 defm S_SINGLEUSE_VDST    : SOPP_Real_32_gfx13<0x13>;
 defm S_BARRIER_WAIT      : SOPP_Real_32_gfx13<0x2b>;
 defm S_MONITOR_SLEEP     : SOPP_Real_32_gfx13<0x2c>;
-defm S_SET_VGPR_FRAMES   : SOPP_Real_32_gfx13<0x1c>;
+defm S_SET_VGPR_FRAMES   : SOPP_Real_32_gfx1260_gfx13<0x1c>;
 defm S_DELAY_ALU         : SOPP_Real_32_gfx13<0x2e>;
 defm S_WAIT_EVENT        : SOPP_Real_32_gfx13<0x2f>;
 defm S_BARRIER_LEAVE_IMM : SOPP_Real_32_gfx13<0x31>;

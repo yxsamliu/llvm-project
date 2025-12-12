@@ -70,7 +70,8 @@ public:
 
   virtual void EmitMCResourceMaximums(const MCSymbol *MaxVGPR,
                                       const MCSymbol *MaxAGPR,
-                                      const MCSymbol *MaxSGPR) {};
+                                      const MCSymbol *MaxSGPR,
+                                      const MCSymbol *MaxNamedBarrier) {};
 
   /// \returns True on success, false on failure.
   virtual bool EmitISAVersion() { return true; }
@@ -151,7 +152,8 @@ public:
       const MCSymbol *NumVGPRRankSum) override;
 
   void EmitMCResourceMaximums(const MCSymbol *MaxVGPR, const MCSymbol *MaxAGPR,
-                              const MCSymbol *MaxSGPR) override;
+                              const MCSymbol *MaxSGPR,
+                              const MCSymbol *MaxNamedBarrier) override;
 
   /// \returns True on success, false on failure.
   bool EmitISAVersion() override;

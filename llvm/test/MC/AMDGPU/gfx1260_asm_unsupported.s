@@ -2,917 +2,194 @@
 ; RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1260 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1260-ERR --implicit-check-not=error: --strict-whitespace %s
 
 
-v_cubeid_f32 v5, v1, v2, s3
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubeid_f32 v5, v255, s2, s105
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubeid_f32 v5, s1, v255, exec_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubeid_f32 v5, s105, s105, exec_lo
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubeid_f32 v5, vcc_lo, ttmp15, v3
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubeid_f32 v5, vcc_hi, 0xaf123456, v255
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubeid_f32 v5, -|ttmp15|, -|src_scc|, -|ttmp15|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubeid_f32 v5, m0, 0.5, m0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubeid_f32 v5, |exec_lo|, -1, vcc_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubeid_f32 v5, -|exec_hi|, null, -|vcc_lo|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubeid_f32 v5, null, exec_lo, -|0xaf123456|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubeid_f32 v5, -1, -|exec_hi|, -|src_scc|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubeid_f32 v5, 0.5, -m0, 0.5 mul:2
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubeid_f32 v5, -src_scc, |vcc_lo|, -1 mul:4
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubeid_f32 v255, -|0xaf123456|, -|vcc_hi|, null clamp div:2
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubema_f32 v5, v1, v2, s3
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubema_f32 v5, v255, s2, s105
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubema_f32 v5, s1, v255, exec_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubema_f32 v5, s105, s105, exec_lo
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubema_f32 v5, vcc_lo, ttmp15, v3
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubema_f32 v5, vcc_hi, 0xaf123456, v255
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubema_f32 v5, -|ttmp15|, -|src_scc|, -|ttmp15|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubema_f32 v5, m0, 0.5, m0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubema_f32 v5, |exec_lo|, -1, vcc_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubema_f32 v5, -|exec_hi|, null, -|vcc_lo|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubema_f32 v5, null, exec_lo, -|0xaf123456|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubema_f32 v5, -1, -|exec_hi|, -|src_scc|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubema_f32 v5, 0.5, -m0, 0.5 mul:2
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubema_f32 v5, -src_scc, |vcc_lo|, -1 mul:4
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubema_f32 v255, -|0xaf123456|, -|vcc_hi|, null clamp div:2
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubesc_f32 v5, v1, v2, s3
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubesc_f32 v5, v255, s2, s105
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubesc_f32 v5, s1, v255, exec_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubesc_f32 v5, s105, s105, exec_lo
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubesc_f32 v5, vcc_lo, ttmp15, v3
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubesc_f32 v5, vcc_hi, 0xaf123456, v255
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubesc_f32 v5, -|ttmp15|, -|src_scc|, -|ttmp15|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubesc_f32 v5, m0, 0.5, m0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubesc_f32 v5, |exec_lo|, -1, vcc_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubesc_f32 v5, -|exec_hi|, null, -|vcc_lo|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubesc_f32 v5, null, exec_lo, -|0xaf123456|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubesc_f32 v5, -1, -|exec_hi|, -|src_scc|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubesc_f32 v5, 0.5, -m0, 0.5 mul:2
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubesc_f32 v5, -src_scc, |vcc_lo|, -1 mul:4
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubesc_f32 v255, -|0xaf123456|, -|vcc_hi|, null clamp div:2
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubetc_f32 v5, v1, v2, s3
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubetc_f32 v5, v255, s2, s105
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubetc_f32 v5, s1, v255, exec_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubetc_f32 v5, s105, s105, exec_lo
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubetc_f32 v5, vcc_lo, ttmp15, v3
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubetc_f32 v5, vcc_hi, 0xaf123456, v255
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubetc_f32 v5, -|ttmp15|, -|src_scc|, -|ttmp15|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubetc_f32 v5, m0, 0.5, m0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubetc_f32 v5, |exec_lo|, -1, vcc_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubetc_f32 v5, -|exec_hi|, null, -|vcc_lo|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubetc_f32 v5, null, exec_lo, -|0xaf123456|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubetc_f32 v5, -1, -|exec_hi|, -|src_scc|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubetc_f32 v5, 0.5, -m0, 0.5 mul:2
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubetc_f32 v5, -src_scc, |vcc_lo|, -1 mul:4
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cubetc_f32 v255, -|0xaf123456|, -|vcc_hi|, null clamp div:2
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8 v5, v1, v2, s3
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8 v5, v255, s2, s105
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8 v5, s1, v255, exec_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8 v5, s105, s105, exec_lo
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8 v5, vcc_lo, ttmp15, v3
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8 v5, vcc_hi, 0xaf123456, v255
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8 v5, ttmp15, src_scc, ttmp15
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8 v5, m0, 0.5, m0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8 v5, exec_lo, -1, vcc_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8 v5, exec_hi, null, vcc_lo
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8 v5, null, exec_lo, 0xaf123456
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8 v5, -1, exec_hi, src_scc
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8 v5, 0.5, m0, 0.5
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8 v5, src_scc, vcc_lo, -1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8 v255, 0xaf123456, vcc_hi, null
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8_e64_dpp v5, v1, v2, v3 quad_perm:[3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8_e64_dpp v5, v1, s2, v3 quad_perm:[3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8_e64_dpp v5, v1, v2, v3 quad_perm:[0,1,2,3]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8_e64_dpp v5, v1, v2, v3 row_mirror
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8_e64_dpp v5, v1, v2, v255 row_half_mirror
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8_e64_dpp v5, v1, v2, s105 row_shl:1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8_e64_dpp v5, v1, v2, vcc_hi row_shl:15
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8_e64_dpp v5, v1, v2, vcc_lo row_shr:1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8_e64_dpp v5, v1, v2, ttmp15 row_shr:15
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8_e64_dpp v5, v1, v2, exec_hi row_ror:1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8_e64_dpp v5, v1, v2, exec_lo row_ror:15
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8_e64_dpp v5, v1, v2, null row_share:0 row_mask:0xf bank_mask:0xf
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8_e64_dpp v5, v1, v2, -1 row_share:15 row_mask:0x0 bank_mask:0x1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8_e64_dpp v5, v1, v2, 0.5 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_lerp_u8_e64_dpp v255, v255, v255, src_scc row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8_e64_dpp v5, v1, s2, v3 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8_e64_dpp v5, v1, v2, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8_e64_dpp v5, v1, v2, s105 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8_e64_dpp v5, v1, v2, vcc_hi dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8_e64_dpp v5, v1, v2, vcc_lo dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8_e64_dpp v5, v1, v2, ttmp15 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8_e64_dpp v5, v1, v2, exec_hi dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8_e64_dpp v5, v1, v2, exec_lo dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8_e64_dpp v5, v1, v2, null dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8_e64_dpp v5, v1, v2, -1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8_e64_dpp v5, v1, v2, 0.5 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8_e64_dpp v255, v255, v255, src_scc clamp dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16_e64_dpp v5, v1, s2, v3 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16_e64_dpp v5, v1, 10, v3 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16_e64_dpp v5, v1, v2, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16_e64_dpp v5, v1, v2, s105 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16_e64_dpp v5, v1, v2, vcc_hi dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16_e64_dpp v5, v1, v2, vcc_lo dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16_e64_dpp v5, v1, v2, ttmp15 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16_e64_dpp v5, v1, v2, exec_hi dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16_e64_dpp v5, v1, v2, exec_lo dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16_e64_dpp v5, v1, v2, null dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16_e64_dpp v5, v1, v2, -1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16_e64_dpp v5, v1, v2, 0.5 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16_e64_dpp v255, v255, v255, src_scc clamp dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32_e64_dpp v5, v1, s2, v3 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32_e64_dpp v5, v1, 10, v3 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32_e64_dpp v5, v1, v2, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32_e64_dpp v5, v1, v2, s105 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32_e64_dpp v5, v1, v2, vcc_hi dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32_e64_dpp v5, v1, v2, vcc_lo dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32_e64_dpp v5, v1, v2, ttmp15 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32_e64_dpp v5, v1, v2, exec_hi dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32_e64_dpp v5, v1, v2, exec_lo dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32_e64_dpp v5, v1, v2, null dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32_e64_dpp v5, v1, v2, -1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32_e64_dpp v5, v1, v2, 0.5 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32_e64_dpp v255, v255, v255, src_scc clamp dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8_e64_dpp v5, v1, s2, v3 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8_e64_dpp v5, v1, v2, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8_e64_dpp v5, v1, v2, s105 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8_e64_dpp v5, v1, v2, vcc_hi dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8_e64_dpp v5, v1, v2, vcc_lo dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8_e64_dpp v5, v1, v2, ttmp15 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8_e64_dpp v5, v1, v2, exec_hi dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8_e64_dpp v5, v1, v2, exec_lo dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8_e64_dpp v5, v1, v2, null dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8_e64_dpp v5, v1, v2, -1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8_e64_dpp v5, v1, v2, 0.5 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8_e64_dpp v255, v255, v255, src_scc clamp dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8 v5, v1, v2, s3
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8 v5, v255, s2, s105
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8 v5, s1, v255, exec_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8 v5, s105, s105, exec_lo
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8 v5, vcc_lo, ttmp15, v3
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8 v5, vcc_hi, 0xaf123456, v255
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8 v5, ttmp15, src_scc, ttmp15
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8 v5, m0, 0.5, m0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8 v5, exec_lo, -1, vcc_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8 v5, exec_hi, null, vcc_lo
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8 v5, null, exec_lo, 0xaf123456
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8 v5, -1, exec_hi, src_scc
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8 v5, 0.5, m0, 0.5
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8 v5, src_scc, vcc_lo, -1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_hi_u8 v255, 0xaf123456, vcc_hi, null clamp
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16 v5, v1, v2, s3
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16 v5, v255, s2, s105
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16 v5, s1, v255, exec_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16 v5, s105, s105, exec_lo
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16 v5, vcc_lo, ttmp15, v3
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16 v5, vcc_hi, 0xfe0b, v255
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16 v5, ttmp15, src_scc, ttmp15
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16 v5, m0, 0.5, m0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16 v5, exec_lo, -1, vcc_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16 v5, exec_hi, null, vcc_lo
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16 v5, null, exec_lo, 0xaf123456
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16 v5, -1, exec_hi, src_scc
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16 v5, 0.5, m0, 0.5
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16 v5, src_scc, vcc_lo, -1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u16 v255, 0xfe0b, vcc_hi, null clamp
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32 v5, v1, v2, s3
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32 v5, v255, s2, s105
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32 v5, s1, v255, exec_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32 v5, s105, s105, exec_lo
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32 v5, vcc_lo, ttmp15, v3
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32 v5, vcc_hi, 0xaf123456, v255
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32 v5, ttmp15, src_scc, ttmp15
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32 v5, m0, 0.5, m0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32 v5, exec_lo, -1, vcc_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32 v5, exec_hi, null, vcc_lo
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32 v5, null, exec_lo, 0xaf123456
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32 v5, -1, exec_hi, src_scc
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32 v5, 0.5, m0, 0.5
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32 v5, src_scc, vcc_lo, -1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u32 v255, 0xaf123456, vcc_hi, null clamp
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8 v5, v1, v2, s3
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8 v5, v255, s2, s105
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8 v5, s1, v255, exec_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8 v5, s105, s105, exec_lo
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8 v5, vcc_lo, ttmp15, v3
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8 v5, vcc_hi, 0xaf123456, v255
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8 v5, ttmp15, src_scc, ttmp15
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8 v5, m0, 0.5, m0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8 v5, exec_lo, -1, vcc_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8 v5, exec_hi, null, vcc_lo
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8 v5, null, exec_lo, 0xaf123456
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8 v5, -1, exec_hi, src_scc
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8 v5, 0.5, m0, 0.5
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8 v5, src_scc, vcc_lo, -1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_sad_u8 v255, 0xaf123456, vcc_hi, null clamp
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
 v_qsad_pk_u16_u8 v[5:6], v[1:2], v2, ttmp[14:15]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:18: error: invalid operand for instruction
 
 v_qsad_pk_u16_u8 v[5:6], v[1:2], v255, ttmp[14:15]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:18: error: invalid operand for instruction
 
 v_qsad_pk_u16_u8 v[5:6], v[1:2], s2, ttmp[14:15]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:18: error: invalid operand for instruction
 
 v_qsad_pk_u16_u8 v[5:6], v[1:2], s105, ttmp[14:15]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:18: error: invalid operand for instruction
 
 v_qsad_pk_u16_u8 v[5:6], v[254:255], ttmp15, s[6:7]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:18: error: invalid operand for instruction
 
 v_qsad_pk_u16_u8 v[5:6], s[2:3], vcc_hi, v[3:4]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:18: error: invalid operand for instruction
 
 v_qsad_pk_u16_u8 v[5:6], s[104:105], vcc_lo, s[104:105]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:18: error: invalid operand for instruction
 
 v_qsad_pk_u16_u8 v[5:6], vcc, m0, v[254:255]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:18: error: invalid operand for instruction
 
 v_qsad_pk_u16_u8 v[5:6], ttmp[14:15], exec_hi, null
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:18: error: invalid operand for instruction
 
 v_qsad_pk_u16_u8 v[5:6], exec, exec_lo, exec
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:18: error: invalid operand for instruction
 
 v_qsad_pk_u16_u8 v[5:6], null, null, vcc
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:18: error: invalid operand for instruction
 
 v_qsad_pk_u16_u8 v[5:6], -1, -1, 0xaf123456
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:18: error: invalid operand for instruction
 
 v_qsad_pk_u16_u8 v[5:6], 0.5, 0.5, src_scc
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:18: error: invalid operand for instruction
 
 v_qsad_pk_u16_u8 v[5:6], src_scc, src_scc, 0.5
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_qsad_pk_u16_u8 v[254:255], 0xaf123456, 0xaf123456, -1 clamp
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_i16_f16 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_i16_f16 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_i16_f16 v127, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_u16_f16 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_u16_f16 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_u16_f16 v127, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:18: error: invalid operand for instruction
 
 v_cvt_norm_i16_f16_e32 v128, 0xfe0b
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e32 v255, v1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e32 v255, v1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:33: error: invalid operand for instruction
 
 v_cvt_norm_i16_f16_e32 v255, v1 quad_perm:[3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:33: error: invalid operand for instruction
 
 v_cvt_norm_i16_f16_e32 v5, v199
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e32 v5, v199 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:33: error: invalid operand for instruction
 
 v_cvt_norm_i16_f16_e32 v5, v199 quad_perm:[3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:33: error: invalid operand for instruction
 
 v_cvt_norm_u16_f16_e32 v128, 0xfe0b
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e32 v255, v1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e32 v255, v1 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:33: error: invalid operand for instruction
 
 v_cvt_norm_u16_f16_e32 v255, v1 quad_perm:[3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:33: error: invalid operand for instruction
 
 v_cvt_norm_u16_f16_e32 v5, v199
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e32 v5, v199 dpp8:[7,6,5,4,3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:33: error: invalid operand for instruction
 
 v_cvt_norm_u16_f16_e32 v5, v199 quad_perm:[3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:33: error: invalid operand for instruction
 
 v_cvt_norm_i16_f16_e64 v5.l, v1.l
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e64 v5.l, v255.l
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e64 v5.l, s1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e64 v5.l, s105
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e64 v5.l, vcc_lo
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e64 v5.l, vcc_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e64 v5.l, ttmp15
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e64 v5.l, m0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e64 v5.l, exec_lo
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e64 v5.l, exec_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e64 v5.l, null
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e64 v5.l, -1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e64 v5.l, 0.5
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e64 v5.l, src_scc
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e64 v255.l, -|0xfe0b|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e64 v5.h, v1.h
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e64 v5.l, v255.h
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_i16_f16_e64 v255.h, -|0xfe0b|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e64 v5.l, v1.l
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e64 v5.l, v255.l
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e64 v5.l, s1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e64 v5.l, s105
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e64 v5.l, vcc_lo
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e64 v5.l, vcc_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e64 v5.l, ttmp15
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e64 v5.l, m0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e64 v5.l, exec_lo
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e64 v5.l, exec_hi
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e64 v5.l, null
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e64 v5.l, -1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e64 v5.l, 0.5
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e64 v5.l, src_scc
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e64 v255.l, -|0xfe0b|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e64 v5.h, v1.h
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e64 v5.l, v255.h
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_norm_u16_f16_e64 v255.h, -|0xfe0b|
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_i16_f16_e64_dpp v5, v1 quad_perm:[3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_i16_f16_e64_dpp v5, v1 quad_perm:[0,1,2,3]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_i16_f16_e64_dpp v5, v1 row_mirror
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_i16_f16_e64_dpp v5, v1 row_half_mirror
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_i16_f16_e64_dpp v5, v1 row_shl:1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_i16_f16_e64_dpp v5, v1 row_shl:15
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_i16_f16_e64_dpp v5, v1 row_shr:1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_i16_f16_e64_dpp v5, v1 row_shr:15
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_i16_f16_e64_dpp v5, v1 row_ror:1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_i16_f16_e64_dpp v5, v1 row_ror:15
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_i16_f16_e64_dpp v5, v1 row_share:0 row_mask:0xf bank_mask:0xf
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_i16_f16_e64_dpp v5, v1 row_share:15 row_mask:0x0 bank_mask:0x1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_i16_f16_e64_dpp v5, v1 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_i16_f16_e64_dpp v255, -|v255| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_u16_f16_e64_dpp v5, v1 quad_perm:[3,2,1,0]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_u16_f16_e64_dpp v5, v1 quad_perm:[0,1,2,3]
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_u16_f16_e64_dpp v5, v1 row_mirror
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_u16_f16_e64_dpp v5, v1 row_half_mirror
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_u16_f16_e64_dpp v5, v1 row_shl:1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_u16_f16_e64_dpp v5, v1 row_shl:15
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_u16_f16_e64_dpp v5, v1 row_shr:1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_u16_f16_e64_dpp v5, v1 row_shr:15
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_u16_f16_e64_dpp v5, v1 row_ror:1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_u16_f16_e64_dpp v5, v1 row_ror:15
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_u16_f16_e64_dpp v5, v1 row_share:0 row_mask:0xf bank_mask:0xf
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_u16_f16_e64_dpp v5, v1 row_share:15 row_mask:0x0 bank_mask:0x1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_u16_f16_e64_dpp v5, v1 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_norm_u16_f16_e64_dpp v255, -|v255| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_pknorm_i16_f16 v5, v1, v2
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-
-v_cvt_pknorm_u16_f16 v5, v1, v2
-// GFX1260-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1260-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode

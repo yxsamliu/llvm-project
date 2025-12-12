@@ -5073,7 +5073,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v245, s33 offset:568
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v246, s33 offset:572
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v247, s33 offset:576
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 4 ; msbs: dst=0 src0=0 src1=1 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0x400 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=1 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v256*/, s33 offset:580
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v257*/, s33 offset:584
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v258*/, s33 offset:588
@@ -5334,7 +5334,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v253 /*v509*/, s33 offset:1592
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v254 /*v510*/, s33 offset:1596
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v511*/, s33 offset:1600
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 0x408 ; msbs: dst=0 src0=0 src1=2 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0x800 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=2 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v512*/, s33 offset:1604
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v513*/, s33 offset:1608
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v514*/, s33 offset:1612
@@ -5595,7 +5595,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v253 /*v765*/, s33 offset:2616
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v254 /*v766*/, s33 offset:2620
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v767*/, s33 offset:2624
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 0x80c ; msbs: dst=0 src0=0 src1=3 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0xc00 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=3 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v768*/, s33 offset:2628
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v769*/, s33 offset:2632
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v770*/, s33 offset:2636
@@ -5858,7 +5858,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v1023*/, s33 offset:3648
 ; GFX1260-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 0xc00 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v40, s33 ; 4-byte Folded Spill
 ; GFX1260-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-DAGISEL-NEXT:    v_writelane_b32 v40, s0, 3
@@ -6026,7 +6026,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v245, off, s33 offset:568
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v246, off, s33 offset:572
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v247, off, s33 offset:576
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 64 ; msbs: dst=1 src0=0 src1=0 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0x4000 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=1
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v0 /*v256*/, off, s33 offset:580
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v1 /*v257*/, off, s33 offset:584
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v2 /*v258*/, off, s33 offset:588
@@ -6287,7 +6287,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v253 /*v509*/, off, s33 offset:1592
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v254 /*v510*/, off, s33 offset:1596
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v255 /*v511*/, off, s33 offset:1600
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 0x4080 ; msbs: dst=2 src0=0 src1=0 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0x8000 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=2
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v0 /*v512*/, off, s33 offset:1604
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v1 /*v513*/, off, s33 offset:1608
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v2 /*v514*/, off, s33 offset:1612
@@ -6548,7 +6548,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v253 /*v765*/, off, s33 offset:2616
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v254 /*v766*/, off, s33 offset:2620
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v255 /*v767*/, off, s33 offset:2624
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 0x80c0 ; msbs: dst=3 src0=0 src1=0 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0xc000 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=3
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v0 /*v768*/, off, s33 offset:2628
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v1 /*v769*/, off, s33 offset:2632
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v2 /*v770*/, off, s33 offset:2636
@@ -6813,7 +6813,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GFX1260-DAGISEL-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX1260-DAGISEL-NEXT:    s_mov_b32 s33, s0
 ; GFX1260-DAGISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 0xc000 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-DAGISEL-NEXT:    s_set_pc_i64 s[30:31]
   %ret = call amdgpu_gfx <2 x half>(<2 x half>, <2 x half>) @gfx_callee(<2 x half> %y, <2 x half> %x) convergent
   ret <2 x half> %ret
@@ -10114,7 +10114,7 @@ define amdgpu_gfx_whole_wave <2 x half> @tail_call_gfx_from_whole_wave(i1 %activ
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v245, s32 offset:564
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v246, s32 offset:568
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v247, s32 offset:572
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 4 ; msbs: dst=0 src0=0 src1=1 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0x400 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=1 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v256*/, s32 offset:576
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v257*/, s32 offset:580
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v258*/, s32 offset:584
@@ -10375,7 +10375,7 @@ define amdgpu_gfx_whole_wave <2 x half> @tail_call_gfx_from_whole_wave(i1 %activ
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v253 /*v509*/, s32 offset:1588
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v254 /*v510*/, s32 offset:1592
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v511*/, s32 offset:1596
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 0x408 ; msbs: dst=0 src0=0 src1=2 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0x800 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=2 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v512*/, s32 offset:1600
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v513*/, s32 offset:1604
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v514*/, s32 offset:1608
@@ -10636,7 +10636,7 @@ define amdgpu_gfx_whole_wave <2 x half> @tail_call_gfx_from_whole_wave(i1 %activ
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v253 /*v765*/, s32 offset:2612
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v254 /*v766*/, s32 offset:2616
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v767*/, s32 offset:2620
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 0x80c ; msbs: dst=0 src0=0 src1=3 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0xc00 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=3 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v768*/, s32 offset:2624
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v769*/, s32 offset:2628
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v770*/, s32 offset:2632
@@ -10901,7 +10901,7 @@ define amdgpu_gfx_whole_wave <2 x half> @tail_call_gfx_from_whole_wave(i1 %activ
 ; GFX1260-DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GFX1260-DAGISEL-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1260-DAGISEL-NEXT:    s_mov_b64 s[36:37], gfx_callee@abs64
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 0xc00 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-DAGISEL-NEXT:    v_swap_b32 v0, v1
 ; GFX1260-DAGISEL-NEXT:    s_xor_b32 exec_lo, s0, -1
 ; GFX1260-DAGISEL-NEXT:    s_clause 0x3e ; 252-byte Folded Reload
@@ -11051,7 +11051,7 @@ define amdgpu_gfx_whole_wave <2 x half> @tail_call_gfx_from_whole_wave(i1 %activ
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v245, off, s32 offset:564
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v246, off, s32 offset:568
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v247, off, s32 offset:572
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 64 ; msbs: dst=1 src0=0 src1=0 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0x4000 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=1
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v0 /*v256*/, off, s32 offset:576
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v1 /*v257*/, off, s32 offset:580
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v2 /*v258*/, off, s32 offset:584
@@ -11312,7 +11312,7 @@ define amdgpu_gfx_whole_wave <2 x half> @tail_call_gfx_from_whole_wave(i1 %activ
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v253 /*v509*/, off, s32 offset:1588
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v254 /*v510*/, off, s32 offset:1592
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v255 /*v511*/, off, s32 offset:1596
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 0x4080 ; msbs: dst=2 src0=0 src1=0 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0x8000 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=2
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v0 /*v512*/, off, s32 offset:1600
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v1 /*v513*/, off, s32 offset:1604
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v2 /*v514*/, off, s32 offset:1608
@@ -11573,7 +11573,7 @@ define amdgpu_gfx_whole_wave <2 x half> @tail_call_gfx_from_whole_wave(i1 %activ
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v253 /*v765*/, off, s32 offset:2612
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v254 /*v766*/, off, s32 offset:2616
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v255 /*v767*/, off, s32 offset:2620
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 0x80c0 ; msbs: dst=3 src0=0 src1=0 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0xc000 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=3
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v0 /*v768*/, off, s32 offset:2624
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v1 /*v769*/, off, s32 offset:2628
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v2 /*v770*/, off, s32 offset:2632
@@ -11836,7 +11836,7 @@ define amdgpu_gfx_whole_wave <2 x half> @tail_call_gfx_from_whole_wave(i1 %activ
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v255 /*v1023*/, off, s32 offset:3644
 ; GFX1260-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-DAGISEL-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 0xc000 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-DAGISEL-NEXT:    s_set_pc_i64 s[36:37]
   %ret = tail call amdgpu_gfx <2 x half>(<2 x half>, <2 x half>) @gfx_callee(<2 x half> %y, <2 x half> %x) convergent
   ret <2 x half> %ret
@@ -15340,7 +15340,7 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v245, s33 offset:576
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v246, s33 offset:580
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v247, s33 offset:584
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 4 ; msbs: dst=0 src0=0 src1=1 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0x400 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=1 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v256*/, s33 offset:588
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v257*/, s33 offset:592
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v258*/, s33 offset:596
@@ -15601,7 +15601,7 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v253 /*v509*/, s33 offset:1600
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v254 /*v510*/, s33 offset:1604
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v511*/, s33 offset:1608
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 0x408 ; msbs: dst=0 src0=0 src1=2 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0x800 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=2 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v512*/, s33 offset:1612
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v513*/, s33 offset:1616
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v514*/, s33 offset:1620
@@ -15862,7 +15862,7 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v253 /*v765*/, s33 offset:2624
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v254 /*v766*/, s33 offset:2628
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v767*/, s33 offset:2632
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 0x80c ; msbs: dst=0 src0=0 src1=3 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0xc00 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=3 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v0 /*v768*/, s33 offset:2636
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v1 /*v769*/, s33 offset:2640
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v2 /*v770*/, s33 offset:2644
@@ -16125,7 +16125,7 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v255 /*v1023*/, s33 offset:3656
 ; GFX1260-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 0xc00 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-DAGISEL-NEXT:    s_clause 0x2 ; 12-byte Folded Spill
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v42, s33
 ; GFX1260-DAGISEL-NEXT:    scratch_store_b32 off, v40, s33 offset:164
@@ -16300,7 +16300,7 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v245, off, s33 offset:576
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v246, off, s33 offset:580
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v247, off, s33 offset:584
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 64 ; msbs: dst=1 src0=0 src1=0 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0x4000 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=1
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v0 /*v256*/, off, s33 offset:588
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v1 /*v257*/, off, s33 offset:592
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v2 /*v258*/, off, s33 offset:596
@@ -16561,7 +16561,7 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v253 /*v509*/, off, s33 offset:1600
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v254 /*v510*/, off, s33 offset:1604
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v255 /*v511*/, off, s33 offset:1608
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 0x4080 ; msbs: dst=2 src0=0 src1=0 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0x8000 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=2
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v0 /*v512*/, off, s33 offset:1612
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v1 /*v513*/, off, s33 offset:1616
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v2 /*v514*/, off, s33 offset:1620
@@ -16822,7 +16822,7 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v253 /*v765*/, off, s33 offset:2624
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v254 /*v766*/, off, s33 offset:2628
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v255 /*v767*/, off, s33 offset:2632
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 0x80c0 ; msbs: dst=3 src0=0 src1=0 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0xc000 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=3
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v0 /*v768*/, off, s33 offset:2636
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v1 /*v769*/, off, s33 offset:2640
 ; GFX1260-DAGISEL-NEXT:    scratch_load_b32 v2 /*v770*/, off, s33 offset:2644
@@ -17087,7 +17087,7 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GFX1260-DAGISEL-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX1260-DAGISEL-NEXT:    s_mov_b32 s33, s0
 ; GFX1260-DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1260-DAGISEL-NEXT:    s_set_vgpr_msb 0xc000 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1260-DAGISEL-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-DAGISEL-NEXT:    s_set_pc_i64 s[30:31]
   %ret = call float(ptr, ...) @llvm.amdgcn.call.whole.wave(ptr @callee, <8 x float> %x) convergent
   store float %ret, ptr %p

@@ -525,6 +525,15 @@ def IGLP_OPT : SPseudoInstSI<(outs), (ins i32imm:$mask),
   let isMeta = 1;
 }
 
+def RTS_INVALIDATE_BVH : SPseudoInstSI <(outs), (ins)> {
+  let hasNoSchedulingInfo = 1;
+  let hasSideEffects = 1;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let maybeAtomic = 1;
+  let Size = 4;
+}
+
 // SI pseudo instructions. These are used by the CFG structurizer pass
 // and should be lowered to ISA instructions prior to codegen.
 
@@ -830,9 +839,8 @@ def WAVEGROUP_RANK_CALL
   let isConvergent = 1;
 }
 
-class SI_TCRETURN_Pseudo<RegisterClass rc, SDNode sd> : SPseudoInstSI <(outs),
-  (ins rc:$src0, unknown:$callee, i32imm:$fpdiff),
-  [(sd i64:$src0, tglobaladdr:$callee, i32:$fpdiff)]> {
+class SI_TCRETURN_Pseudo<RegisterClass rc, list<dag> pattern = []>
+  : SPseudoInstSI <(outs), (ins rc:$src0, unknown:$callee, i32imm:$fpdiff), pattern> {
   let Size = 4;
   let FixedSize = 1;
   let isCall = 1;
@@ -846,8 +854,15 @@ class SI_TCRETURN_Pseudo<RegisterClass rc, SDNode sd> : SPseudoInstSI <(outs),
 }
 
 // Tail call handling pseudo
-def SI_TCRETURN :     SI_TCRETURN_Pseudo<CCR_SGPR_64, AMDGPUtc_return>;
-def SI_TCRETURN_GFX : SI_TCRETURN_Pseudo<Gfx_CCR_SGPR_64, AMDGPUtc_return_gfx>;
+def SI_TCRETURN : SI_TCRETURN_Pseudo<CCR_SGPR_64,
+  [(AMDGPUtc_return i64:$src0, tglobaladdr:$callee, i32:$fpdiff)]>;
+def SI_TCRETURN_GFX : SI_TCRETURN_Pseudo<Gfx_CCR_SGPR_64,
+  [(AMDGPUtc_return_gfx i64:$src0, tglobaladdr:$callee, i32:$fpdiff)]>;
+
+// Tail call for chain calling conventions.
+// Uses unrestricted SGPR_64 instead of CCR_SGPR_64 because chain calls
+// never return and don't need to preserve any SGPRs.
+def SI_TCRETURN_CHAIN : SI_TCRETURN_Pseudo<SGPR_64>;
 
 // Handle selecting indirect tail calls
 def : GCNPat<
@@ -877,13 +892,13 @@ multiclass SI_CS_CHAIN_TC<
     // This is essentially a tail call, but it also takes a mask to put in EXEC
     // right before jumping to the callee.
     def NAME: SPseudoInstSI <(outs),
-        (ins CCR_SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff, execrc:$exec)>;
+        (ins SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff, execrc:$exec)>;
 
     // Same as above, but it will first try to reallocate the VGPRs, and choose an
     // EXEC mask and a callee depending on the success of the reallocation attempt.
     def _DVGPR : SPseudoInstSI <(outs),
-        (ins CCR_SGPR_64:$src0, i64imm:$callee, i32imm:$fpdiff, execrc:$exec,
-             SSrc_b32:$numvgprs, execrc:$fbexec, CCR_SGPR_64:$fbcallee)>;
+        (ins SGPR_64:$src0, i64imm:$callee, i32imm:$fpdiff, execrc:$exec,
+             SSrc_b32:$numvgprs, execrc:$fbexec, SGPR_64:$fbcallee)>;
   } // End FixedSize = 0 etc
 }
 
@@ -895,7 +910,7 @@ multiclass si_cs_chain_tc_pattern<
   dag callee, ValueType execvt, RegisterOperand execrc, Instruction tc> {
   def : GCNPat<
     (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec),
-    (tc CCR_SGPR_64:$src0, callee, i32imm:$fpdiff, execrc:$exec)
+    (tc SGPR_64:$src0, callee, i32imm:$fpdiff, execrc:$exec)
   >;
 }
 
@@ -922,8 +937,8 @@ multiclass si_cs_chain_tc_dvgpr_patterns<
     (AMDGPUtc_return_chain_dvgpr i64:$src0, callee, (i32 timm:$fpdiff),
                                  execvt:$exec, i32:$numvgprs,
                                  execvt:$fbexec, i64:$fbcallee),
-    (tc CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff, execrc:$exec,
-        SSrc_b32:$numvgprs, execrc:$fbexec, CCR_SGPR_64:$fbcallee)
+    (tc SGPR_64:$src0, (i64 0), i32imm:$fpdiff, execrc:$exec,
+        SSrc_b32:$numvgprs, execrc:$fbexec, SGPR_64:$fbcallee)
   >;
   }
 }
@@ -1344,8 +1359,14 @@ def : GCNPat <
 >;
 
 //===----------------------------------------------------------------------===//
-// Indexed Instructions
+// VGPR Indexing Instructions
 //===----------------------------------------------------------------------===//
+
+// Pseudo-instruction for reading idx0 that gets expanded to s_getreg_b32
+def SI_GET_IDX0 : SPseudoInstSI<(outs SReg_32:$sdst), (ins)> {
+  let Size = 4;
+  let Uses = [IDX0];
+}
 
 foreach rc = [VGPR_32_STAGING, VReg_64_STAGING, VReg_96_STAGING,
               VReg_128_STAGING, VReg_160_STAGING, VReg_192_STAGING,
@@ -1372,13 +1393,14 @@ foreach rc = [VGPR_32_STAGING, VReg_64_STAGING, VReg_96_STAGING,
 }
 
 // Used for byte or short loads.
-// It lowers into V_BFE_U32 + V_LOAD_IDX
-// Only bitoffset of 0, 8, 16, or 24 bits are supported.
-// Only bitsize of 8 or 16 bits are supported.
+// It lowers into V_BFE_U32 + V_LOAD_IDX, or V_BFE_I32 + V_LOAD_IDX for
+// sign-extended loads. Only bitoffset of 0, 8, 16, or 24 bits are supported.
+// Only bitsize of 8 or 16 bits are supported and must be a compile-time
+// constant.
 def V_LOAD_IDX_BITS
     : VPseudoInstSI<(outs VGPR_32:$data_op),
-                    (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset,
-                        SSrc_b32:$bitsize, SSrc_b32:$bitoffset)> {
+                    (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset, i32imm:$bitsize,
+                        SSrc_b32:$bitoffset, i32imm:$is_sext_load)> {
   let mayLoad = 1;
   let VALU = 1;
   let UseNamedOperandTable = 1;
@@ -1387,11 +1409,11 @@ def V_LOAD_IDX_BITS
 
 // Used for byte or short stores.
 // Only bitoffset of 0, 8, 16, or 24 bits are supported.
-// Only bitsize of 8 or 16 bits are supported.
+// Only bitsize of 8 or 16 bits are supported and must be a compile-time constant.
 def V_STORE_IDX_BITS
     : VPseudoInstSI<(outs), (ins VGPR_32:$data_op,
                                 VGPR_IDX_IDX_OP:$idx, i32imm:$offset,
-                                SSrc_b32:$bitsize, SSrc_b32:$bitoffset)> {
+                                i32imm:$bitsize, SSrc_b32:$bitoffset)> {
   let mayStore = 1;
   let VALU = 1;
   let UseNamedOperandTable = 1;
@@ -1520,7 +1542,7 @@ def : GCNPat <
 
 // Don't allow source modifiers. If there are any source modifiers then it's
 // better to select fma instead of fmac.
-let SubtargetPredicate = HasFmaLegacy32 in
+let SubtargetPredicate = HasFmacLegacy32 in
 def : GCNPat <
       (f32 (int_amdgcn_fma_legacy (VOP3NoMods f32:$src0),
                                   (VOP3NoMods f32:$src1),
@@ -2834,8 +2856,6 @@ def : AMDGPUPat <
 
 let True16Predicate = NotHasTrue16BitInsts in {
 let SubtargetPredicate = isNotGFX9Plus in {
-def : ROTRPattern <V_ALIGNBIT_B32_e64>;
-
 def : GCNPat<(i32 (DivergentUnaryFrag<trunc> (srl i64:$src0, (and i32:$src1, (i32 31))))),
           (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
                           (i32 (EXTRACT_SUBREG (i64 $src0), sub0)), $src1)>;
@@ -2846,14 +2866,6 @@ def : GCNPat<(i32 (DivergentUnaryFrag<trunc> (srl i64:$src0, (i32 ShiftAmt32Imm:
 } // isNotGFX9Plus
 
 let SubtargetPredicate = isGFX9GFX10 in {
-def : GCNPat <
-        (rotr i32:$src0, i32:$src1),
-        (V_ALIGNBIT_B32_opsel_e64 /* src0_modifiers */ 0, $src0,
-                                  /* src1_modifiers */ 0, $src0,
-                                  /* src2_modifiers */ 0,
-                                  $src1, /* clamp */ 0, /* op_sel */ 0)
->;
-
 foreach pat = [(i32 (DivergentUnaryFrag<trunc> (srl i64:$src0, (and i32:$src1, (i32 31))))),
                (i32 (DivergentUnaryFrag<trunc> (srl i64:$src0, (i32 ShiftAmt32Imm:$src1))))] in
 def : GCNPat<pat,
@@ -2875,15 +2887,6 @@ def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
 } // end True16Predicate = NotHasTrue16BitInsts
 
 let True16Predicate = UseRealTrue16Insts in {
-def : GCNPat <
-  (rotr i32:$src0, i32:$src1),
-  (V_ALIGNBIT_B32_t16_e64 /* src0_modifiers */ 0, $src0,
-                          /* src1_modifiers */ 0, $src0,
-                          /* src2_modifiers */ 0,
-                          (EXTRACT_SUBREG $src1, lo16),
-                          /* clamp */ 0, /* op_sel */ 0)
->;
-
 def : GCNPat<(i32 (DivergentUnaryFrag<trunc> (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
           (V_ALIGNBIT_B32_t16_e64 0, /* src0_modifiers */
                           (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
@@ -2902,14 +2905,6 @@ def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
 } // end True16Predicate = UseRealTrue16Insts
 
 let True16Predicate = UseFakeTrue16Insts in {
-def : GCNPat <
-  (rotr i32:$src0, i32:$src1),
-  (V_ALIGNBIT_B32_fake16_e64 /* src0_modifiers */ 0, $src0,
-                             /* src1_modifiers */ 0, $src0,
-                             /* src2_modifiers */ 0,
-                             $src1, /* clamp */ 0, /* op_sel */ 0)
->;
-
 def : GCNPat<(i32 (DivergentUnaryFrag<trunc> (srl i64:$src0, (and i32:$src1, (i32 31))))),
      (V_ALIGNBIT_B32_fake16_e64 0, /* src0_modifiers */
                                (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
@@ -4729,6 +4724,7 @@ def G_AMDGPU_BUFFER_ATOMIC_SMAX : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_UMAX : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_AND : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_COND_SUB_U32 : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_SUB_CLAMP_U32 : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_OR : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_XOR : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_INC : BufferAtomicGenericInstruction;

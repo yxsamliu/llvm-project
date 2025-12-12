@@ -209,6 +209,8 @@ protected:
   bool HasXF32Insts = false;
   bool HasSemaphores = false;
   bool HasWavegroups = false;
+  bool HasSWakeupImm = false;
+  bool HasSBarrierLeaveImm = false;
 
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
@@ -1494,7 +1496,7 @@ public:
   /// \returns true if inline constants are not supported for F16 pseudo
   /// scalar transcendentals.
   bool hasNoF16PseudoScalarTransInlineConstants() const {
-    return getGeneration() == GFX12;
+    return getGeneration() == GFX12 || isGFX1170();
   }
 
   /// \returns true if the target has instructions with xf32 format support.
@@ -1503,6 +1505,14 @@ public:
 
   /// \returns true if the target supports Wavegroups.
   bool hasWavegroups() const { return HasWavegroups; }
+
+  /// \returns true if the target has the s_wakeup instruction that takes 
+  /// an immediate operand.
+  bool hasSWakeupImm() const { return HasSWakeupImm; }
+
+  /// \returns true if the target has the s_barrier_leave instruction that takes an immediate 
+  /// operand.
+  bool hasSBarrierLeaveImm() const { return HasSBarrierLeaveImm; }
 
   /// \returns true if the target has packed f32 instructions that only read 32
   /// bits from a scalar operand (SGPR or literal) and replicates the bits to
@@ -1703,6 +1713,10 @@ public:
   bool needsKernArgPreloadProlog() const {
     return hasKernargPreload() && !GFX1250Insts;
   }
+
+  bool hasCondSubInsts() const { return GFX12Insts; }
+
+  bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
@@ -1947,6 +1961,12 @@ public:
   // Requires s_wait_alu(0) after s102/s103 write and src_flat_scratch_base
   // read.
   bool hasScratchBaseForwardingHazard() const {
+    return GFX1250Insts && getGeneration() == GFX12;
+  }
+
+  // src_flat_scratch_hi cannot be used as a source in SALU producing a 64-bit
+  // result.
+  bool hasFlatScratchHiInB64InstHazard() const {
     return GFX1250Insts && getGeneration() == GFX12;
   }
 

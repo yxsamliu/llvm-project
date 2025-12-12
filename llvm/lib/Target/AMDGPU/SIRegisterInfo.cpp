@@ -600,8 +600,10 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   reserveRegisterTuples(Reserved, AMDGPU::EXEC);
   reserveRegisterTuples(Reserved, AMDGPU::FLAT_SCR);
 
-  // M0 has to be reserved so that llvm accepts it as a live-in into a block.
+  // M0 and IDX0 have to be reserved so that llvm accepts them as a live-in into
+  // a block.
   reserveRegisterTuples(Reserved, AMDGPU::M0);
+  reserveRegisterTuples(Reserved, AMDGPU::IDX0);
 
   // Reserve src_vccz, src_execz, src_scc.
   reserveRegisterTuples(Reserved, AMDGPU::SRC_VCCZ);

@@ -186,13 +186,9 @@ private:
   void lowerLanesharedPseudoInst(MachineInstr &MI);
   void lowerLoadIdxBits(MachineInstr &MI);
   void lowerStoreIdxBits(MachineInstr &MI);
-  bool expandPseudoInstructions(MachineFunction &MF);
+  bool expandPseudoInstructions(MachineFunction &MF, bool &HaveLoadStoreIdx);
   SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>, 4>
   findSuccsToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB);
-  Register computeNewIdxForPrivateObject(MachineRegisterInfo &MRI,
-                                         MachineInstr &MI);
-  bool updatePrivateObjectNewRegs(MachineRegisterInfo *MRI,
-                                  MachineInstr *LdStMI);
   bool hasConflictBetween(MachineBasicBlock *From, MachineBasicBlock *To,
                           MachineInstr &MI);
   bool blockPrologueInterferes(const MachineBasicBlock *BB,
@@ -867,61 +863,13 @@ bool AMDGPUBundleIdxLdSt::sinkLoadsAndCoreMIs(MachineFunction &MF) {
   return MadeChange;
 }
 
-Register
-AMDGPUBundleIdxLdSt::computeNewIdxForPrivateObject(MachineRegisterInfo &MRI,
-                                                   MachineInstr &MI) {
-  Register Idx0Def = MFI->getIdx0VRegDef();
-  if (!Idx0Def.isValid()) {
-    Idx0Def = initIdx0VRegDef(*MI.getMF(), TII);
-    MFI->setIdx0VRegDef(Idx0Def);
-  }
-  // Create a new reg that is idx0 added to the idx reg used by MI
-  MachineOperand *IdxOp = TII->getNamedOperand(MI, AMDGPU::OpName::idx);
-  Register IdxOpReg = IdxOp->getReg();
-  Register NewIdxReg =
-      MRI.createVirtualRegister(&AMDGPU::SReg_32_XEXEC_HIRegClass);
-  MachineInstr *DefRegMI = MRI.getUniqueVRegDef(IdxOpReg);
-  MachineBasicBlock::iterator InsertPt = std::next(DefRegMI->getIterator());
-  MachineInstr *AddMI =
-      BuildMI(*DefRegMI->getParent(), InsertPt, DefRegMI->getDebugLoc(),
-              TII->get(AMDGPU::S_ADD_I32), NewIdxReg)
-          .addReg(IdxOpReg)
-          .addReg(Idx0Def);
-
-  // TODO-GFX13: We shouldn't do the insertion of the add here since SCC might
-  // be live. Mark SCC as dead to reduce test perturbation until we can fix
-  // this properly.
-  assert(AddMI->getOperand(3).getReg() == AMDGPU::SCC);
-  AddMI->getOperand(3).setIsDead();
-
-  return NewIdxReg;
-}
-
-bool AMDGPUBundleIdxLdSt::updatePrivateObjectNewRegs(MachineRegisterInfo *MRI,
-                                                     MachineInstr *MI) {
-  auto *LdStMI = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(MI);
-  if (!LdStMI)
-    return false;
-  // Ensure a private object indexing vgprs is calculating the idx
-  // relative to idx0.
-  assert(LdStMI->hasOneMemOperand());
-  MachineMemOperand *MMO = *LdStMI->memoperands_begin();
-  if (MMO->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS) {
-    MachineOperand *IdxOp = &LdStMI->getIdxOp();
-    unsigned &NewReg = PrivateObjectNewRegs[IdxOp->getReg()];
-    if (!NewReg)
-      NewReg = computeNewIdxForPrivateObject(*MRI, *LdStMI);
-    IdxOp->setReg(NewReg);
-    return true;
-  }
-  return false;
-}
-
 // This lowering puts the value into the lo16 bits of a private VGPR.
 void AMDGPUBundleIdxLdSt::lowerLoadIdxBits(MachineInstr &MI) {
   MachineBasicBlock *MBB = MI.getParent();
 
-  const MCInstrDesc &II = TII->get(AMDGPU::V_BFE_U32_e64);
+  const bool IsSigned = MI.getOperand(5).getImm() != 0;
+  const MCInstrDesc &II =
+      TII->get(IsSigned ? AMDGPU::V_BFE_I32_e64 : AMDGPU::V_BFE_U32_e64);
   Register ReadReg = MRI->createVirtualRegister(
       TRI->getAllocatableClass(TII->getRegClass(II, 0)));
 
@@ -1110,7 +1058,7 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
-bool AMDGPUBundleIdxLdSt::expandPseudoInstructions(MachineFunction &MF) {
+bool AMDGPUBundleIdxLdSt::expandPseudoInstructions(MachineFunction &MF, bool &HaveLoadStoreIdx) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
@@ -1120,17 +1068,23 @@ bool AMDGPUBundleIdxLdSt::expandPseudoInstructions(MachineFunction &MF) {
         // their temporary pseudos into bundles as late as possible
         Changed = true;
         lowerLanesharedPseudoInst(MI);
+        continue;
       }
       if (MI.getOpcode() == AMDGPU::V_LOAD_IDX_BITS) {
         Changed = true;
         lowerLoadIdxBits(MI);
+        continue;
       }
       if (MI.getOpcode() == AMDGPU::V_STORE_IDX_BITS) {
         Changed = true;
         lowerStoreIdxBits(MI);
+        continue;
       }
+      if (isa<AMDGPUMI::VLoadStoreIdxInst>(MI))
+        HaveLoadStoreIdx = true;
     }
   }
+  HaveLoadStoreIdx |= Changed;
   return Changed;
 }
 
@@ -1568,10 +1522,15 @@ bool AMDGPUBundleIdxLdSt::runOnMachineFunction(MachineFunction &MF) {
   MCSTI = MF.getTarget().getMCSubtargetInfo();
 
   bool Changed = false;
+  bool HaveLoadStoreIdx = false;
   LLVM_DEBUG(
       dbgs()
       << "===== AMDGPUBundleIdxLdSt :: Lower pseudo-Instructions =====\n");
-  Changed |= expandPseudoInstructions(MF);
+  Changed |= expandPseudoInstructions(MF, HaveLoadStoreIdx);
+  if (!HaveLoadStoreIdx) {
+    assert(!Changed);
+    return false; // early out
+  }
 
   if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
     AA = &AAR->getAAResults();
@@ -1579,15 +1538,6 @@ bool AMDGPUBundleIdxLdSt::runOnMachineFunction(MachineFunction &MF) {
 
   LLVM_DEBUG(dbgs() << "===== AMDGPUBundleIdxLdSt :: Sinking Phase =====\n");
   Changed |= sinkLoadsAndCoreMIs(MF);
-
-  MFI = MF.getInfo<SIMachineFunctionInfo>();
-  LLVM_DEBUG(
-      dbgs() << "===== AMDGPUBundleIdxLdSt :: Private Objects Phase =====\n");
-  for (MachineBasicBlock &MBB : MF) {
-    auto Iter = make_early_inc_range(MBB);
-    for (auto &MI : Iter)
-      Changed |= updatePrivateObjectNewRegs(MRI, &MI);
-  }
 
   LLVM_DEBUG(dbgs() << "===== AMDGPUBundleIdxLdSt :: Bundling Phase =====\n");
   PrivateObjectNewRegs.clear();

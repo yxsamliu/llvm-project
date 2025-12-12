@@ -17,11 +17,10 @@ define amdgpu_kernel void @set_and_is_chain() "amdgpu-cluster-dims"="4,1,1" "amd
 ; CHECK-LABEL: set_and_is_chain:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s1, s0, 0
-; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
+; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 1), -1
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_MODE, 12, 1)
 ; CHECK-NEXT:    s_getreg_b32 s1, hwreg(HW_REG_WAVE_MODE, 13, 1)
@@ -42,11 +41,10 @@ define amdgpu_kernel void @signal_next_prev() "amdgpu-cluster-dims"="4,1,1" "amd
 ; CHECK-LABEL: signal_next_prev:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s1, s0, 0
-; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
+; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    v_send_vgpr_next_b32 off, off, off sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:15
 ; CHECK-NEXT:    v_send_vgpr_prev_b32 off, off, off sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:15
 ; CHECK-NEXT:    s_endpgm
@@ -61,12 +59,12 @@ define amdgpu_kernel void @send_next_prev(i32 %i1, ptr addrspace(1) %p) "amdgpu-
 ; CHECK-LABEL: send_next_prev:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s1, s0, 2
-; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_add_co_u32 s1, s1, 10
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
+; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    s_load_b32 s2, s[4:5], 0x24
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
@@ -109,12 +107,12 @@ define amdgpu_kernel void @send_next_prev_nowrite(i32 %i1, ptr addrspace(1) %p) 
 ; CHECK-LABEL: send_next_prev_nowrite:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s1, s0, 2
-; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_add_co_u32 s1, s1, 10
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
+; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    s_load_b32 s2, s[4:5], 0x24
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
@@ -206,12 +204,12 @@ define amdgpu_kernel void @send_next_prev_nodims(i32 %i1, ptr addrspace(1) %p) "
 ; CHECK-LABEL: send_next_prev_nodims:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s1, s0, 2
-; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_add_co_u32 s1, s1, 10
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
+; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    s_load_b32 s2, s[4:5], 0x24
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
@@ -254,13 +252,13 @@ define amdgpu_kernel void @send_next_from_laneshared() "amdgpu-cluster-dims"="4,
 ; CHECK-LABEL: send_next_from_laneshared:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s1, s0, 0
-; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_add_co_u32 s1, s1, 9
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_set_vgpr_frames 0x45 ; vsrc0_idx=1 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_send_vgpr_next_b32 g1[1], g1[2], g1[8] sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:15
 ; CHECK-NEXT:    s_endpgm

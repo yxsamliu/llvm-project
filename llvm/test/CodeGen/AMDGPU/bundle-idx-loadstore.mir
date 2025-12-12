@@ -961,8 +961,7 @@ body:             |
     ; GCN-NEXT: [[V_MAX_U32_e64_:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54321, [[S_LSHL_B32_]], implicit $exec
     ;
     ; ALLOC-LABEL: name: same-bb-load-store-vop3
-    ; ALLOC: $idx0 = S_SET_GPR_IDX_U32 0
-    ; ALLOC-NEXT: [[COPY:%[0-9]+]]:sreg_32_xm0_xexec = COPY $idx0
+    ; ALLOC: [[SI_GET_IDX0_:%[0-9]+]]:sreg_32_xexec = SI_GET_IDX0 implicit $idx0
     ; ALLOC-NEXT: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
     ; ALLOC-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
@@ -978,7 +977,7 @@ body:             |
     ; ALLOC-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, internal $stg_srcc, implicit $exec
     ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 20, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
-    ; ALLOC-NEXT: $idx0 = S_SET_GPR_IDX_U32 [[COPY]]
+    ; ALLOC-NEXT: $idx0 = S_SET_GPR_IDX_U32 [[SI_GET_IDX0_]]
     ;
     ; LOWERED-LABEL: name: same-bb-load-store-vop3
     ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
@@ -987,17 +986,17 @@ body:             |
     ; LOWERED-NEXT: S_WAIT_BVHCNT 0
     ; LOWERED-NEXT: S_WAIT_KMCNT 0
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
-    ; LOWERED-NEXT: $sgpr1 = S_GETREG_B32 63532, implicit $mode
+    ; LOWERED-NEXT: renamable $sgpr1 = S_GETREG_B32 18476, implicit $idx0
     ; LOWERED-NEXT: renamable $sgpr2 = S_LSHR_B32 renamable $sgpr0, 2, implicit-def dead $scc
     ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
-    ; LOWERED-NEXT: $idx3 = S_SET_GPR_IDX_U32 renamable $sgpr2
-    ; LOWERED-NEXT: renamable $sgpr0 = S_LSHR_B32 renamable $sgpr2, 4, implicit-def dead $scc
-    ; LOWERED-NEXT: renamable $sgpr2 = S_LSHL_B32 killed renamable $sgpr2, 3, implicit-def dead $scc
-    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
-    ; LOWERED-NEXT: $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
+    ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 renamable $sgpr2, 3, implicit-def dead $scc
+    ; LOWERED-NEXT: renamable $sgpr3 = S_LSHR_B32 renamable $sgpr2, 4, implicit-def dead $scc
+    ; LOWERED-NEXT: $idx3 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
+    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr3
+    ; LOWERED-NEXT: $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 78
     ; LOWERED-NEXT: undef $vgpr20 = V_LSHL_ADD_U32_e64 undef $vgpr5, undef $vgpr10, undef $vgpr15, <0x{{[0-9a-f]+}}>, implicit $exec
-    ; LOWERED-NEXT: dead $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
+    ; LOWERED-NEXT: $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHR_B32 %0, 2, implicit-def dead $scc
@@ -1192,8 +1191,7 @@ body:             |
     ; GCN-NEXT: [[V_MAX_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MAX_U32_e64 54, [[S_LSHL_B32_]], implicit $exec
     ;
     ; ALLOC-LABEL: name: two-bundles-vop3-vop2
-    ; ALLOC: $idx0 = S_SET_GPR_IDX_U32 0
-    ; ALLOC-NEXT: [[COPY:%[0-9]+]]:sreg_32_xm0_xexec = COPY $idx0
+    ; ALLOC: [[SI_GET_IDX0_:%[0-9]+]]:sreg_32_xexec = SI_GET_IDX0 implicit $idx0
     ; ALLOC-NEXT: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
     ; ALLOC-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
@@ -1209,7 +1207,7 @@ body:             |
     ; ALLOC-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, internal $stg_srcc, implicit $exec
     ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 20, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
-    ; ALLOC-NEXT: $idx0 = S_SET_GPR_IDX_U32 [[COPY]]
+    ; ALLOC-NEXT: $idx0 = S_SET_GPR_IDX_U32 [[SI_GET_IDX0_]]
     ; ALLOC-NEXT: [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 12, implicit-def $scc
     ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_2]]
     ; ALLOC-NEXT: [[S_LSHR_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 12, implicit-def dead $scc
@@ -1230,20 +1228,20 @@ body:             |
     ; LOWERED-NEXT: S_WAIT_BVHCNT 0
     ; LOWERED-NEXT: S_WAIT_KMCNT 0
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
-    ; LOWERED-NEXT: $sgpr1 = S_GETREG_B32 63532, implicit $mode
+    ; LOWERED-NEXT: renamable $sgpr1 = S_GETREG_B32 18476, implicit $idx0
     ; LOWERED-NEXT: renamable $sgpr2 = S_LSHR_B32 renamable $sgpr0, 2, implicit-def dead $scc
     ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 renamable $sgpr0
-    ; LOWERED-NEXT: renamable $sgpr3 = S_LSHR_B32 renamable $sgpr2, 4, implicit-def dead $scc
-    ; LOWERED-NEXT: renamable $sgpr4 = S_LSHL_B32 renamable $sgpr2, 3, implicit-def dead $scc
+    ; LOWERED-NEXT: renamable $sgpr3 = S_LSHL_B32 renamable $sgpr2, 3, implicit-def dead $scc
+    ; LOWERED-NEXT: renamable $sgpr4 = S_LSHR_B32 renamable $sgpr2, 4, implicit-def dead $scc
     ; LOWERED-NEXT: $idx3 = S_SET_GPR_IDX_U32 renamable $sgpr2
-    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr3
-    ; LOWERED-NEXT: $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr4
-    ; LOWERED-NEXT: renamable $sgpr3 = S_LSHL_B32 1, 12, implicit-def dead $scc
-    ; LOWERED-NEXT: renamable $sgpr0 = S_LSHR_B32 killed renamable $sgpr0, 12, implicit-def dead $scc
+    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr4
+    ; LOWERED-NEXT: $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr3
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 78
     ; LOWERED-NEXT: undef $vgpr20 = V_LSHL_ADD_U32_e64 undef $vgpr5, undef $vgpr10, undef $vgpr15, <0x{{[0-9a-f]+}}>, implicit $exec
-    ; LOWERED-NEXT: dead $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
-    ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr3
+    ; LOWERED-NEXT: $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
+    ; LOWERED-NEXT: renamable $sgpr1 = S_LSHL_B32 1, 12, implicit-def dead $scc
+    ; LOWERED-NEXT: renamable $sgpr0 = S_LSHR_B32 killed renamable $sgpr0, 12, implicit-def dead $scc
+    ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
     ; LOWERED-NEXT: renamable $sgpr1 = S_LSHL_B32 killed renamable $sgpr2, 13, implicit-def dead $scc
     ; LOWERED-NEXT: $idx3 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
@@ -2243,8 +2241,7 @@ body:             |
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: idx0-test-private-vgprs
-    ; ALLOC: $idx0 = S_SET_GPR_IDX_U32 0
-    ; ALLOC-NEXT: [[COPY:%[0-9]+]]:sreg_32_xm0_xexec = COPY $idx0
+    ; ALLOC: [[SI_GET_IDX0_:%[0-9]+]]:sreg_32_xexec = SI_GET_IDX0 implicit $idx0
     ; ALLOC-NEXT: [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; ALLOC-NEXT: [[BUFFER_LOAD_DWORD_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET [[DEF]], 0, 0, 0, 0, implicit $exec
     ; ALLOC-NEXT: [[DEF1:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
@@ -2267,7 +2264,7 @@ body:             |
     ; ALLOC-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, internal $stg_srcc, implicit $exec
     ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 8, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
-    ; ALLOC-NEXT: $idx0 = S_SET_GPR_IDX_U32 [[COPY]]
+    ; ALLOC-NEXT: $idx0 = S_SET_GPR_IDX_U32 [[SI_GET_IDX0_]]
     ;
     ; LOWERED-LABEL: name: idx0-test-private-vgprs
     ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
@@ -2275,7 +2272,7 @@ body:             |
     ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
     ; LOWERED-NEXT: S_WAIT_BVHCNT 0
     ; LOWERED-NEXT: S_WAIT_KMCNT 0
-    ; LOWERED-NEXT: $sgpr0 = S_GETREG_B32 63532, implicit $mode
+    ; LOWERED-NEXT: renamable $sgpr0 = S_GETREG_B32 18476, implicit $idx0
     ; LOWERED-NEXT: S_WAIT_STORECNT 0
     ; LOWERED-NEXT: renamable $vgpr0 = BUFFER_LOAD_DWORD_OFFSET undef renamable $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 24, 0, implicit $exec
     ; LOWERED-NEXT: S_WAIT_LOADCNT 0
@@ -2285,11 +2282,11 @@ body:             |
     ; LOWERED-NEXT: S_WAIT_LOADCNT 0
     ; LOWERED-NEXT: GLOBAL_INV 24, implicit $exec
     ; LOWERED-NEXT: renamable $sgpr1 = S_LSHL_B32 1, 2, implicit-def dead $scc
-    ; LOWERED-NEXT: renamable $sgpr2 = S_LSHL_B32 1, 3, implicit-def dead $scc
-    ; LOWERED-NEXT: renamable $sgpr3 = S_LSHL_B32 1, 5, implicit-def dead $scc
+    ; LOWERED-NEXT: renamable $sgpr2 = S_LSHL_B32 1, 5, implicit-def dead $scc
     ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
-    ; LOWERED-NEXT: $idx3 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
-    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr3
+    ; LOWERED-NEXT: renamable $sgpr1 = S_LSHL_B32 1, 3, implicit-def dead $scc
+    ; LOWERED-NEXT: $idx3 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
+    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
     ; LOWERED-NEXT: renamable $sgpr1 = S_LSHL_B32 1, 4, implicit-def dead $scc
     ; LOWERED-NEXT: renamable $vgpr2 = V_ADD_F32_e32 $vgpr0, $vgpr1, implicit $exec, implicit $mode
     ; LOWERED-NEXT: renamable $vgpr0 = V_MAX_F32_e32 $vgpr2, killed $vgpr0, implicit $exec, implicit $mode
@@ -2297,7 +2294,7 @@ body:             |
     ; LOWERED-NEXT: $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 78
     ; LOWERED-NEXT: undef $vgpr8 = V_LSHL_ADD_U32_e64 undef $vgpr5, undef $vgpr6, undef $vgpr7, <0x{{[0-9a-f]+}}>, implicit $exec
-    ; LOWERED-NEXT: dead $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
+    ; LOWERED-NEXT: $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
     %123:sgpr_128 = IMPLICIT_DEF
     %124:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %123, 0, 0, 0, 0, implicit $exec
@@ -2346,8 +2343,7 @@ body:             |
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: idx0-test-idx0-bundle-late
-    ; ALLOC: $idx0 = S_SET_GPR_IDX_U32 0
-    ; ALLOC-NEXT: [[COPY:%[0-9]+]]:sreg_32_xm0_xexec = COPY $idx0
+    ; ALLOC: [[SI_GET_IDX0_:%[0-9]+]]:sreg_32_xexec = SI_GET_IDX0 implicit $idx0
     ; ALLOC-NEXT: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; ALLOC-NEXT: $idx2 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
     ; ALLOC-NEXT: [[S_LSHL_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 3, implicit-def dead $scc
@@ -2369,7 +2365,7 @@ body:             |
     ; ALLOC-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, internal $stg_srcc, implicit $exec
     ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 20, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
-    ; ALLOC-NEXT: $idx0 = S_SET_GPR_IDX_U32 [[COPY]]
+    ; ALLOC-NEXT: $idx0 = S_SET_GPR_IDX_U32 [[SI_GET_IDX0_]]
     ;
     ; LOWERED-LABEL: name: idx0-test-idx0-bundle-late
     ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
@@ -2379,19 +2375,19 @@ body:             |
     ; LOWERED-NEXT: S_WAIT_KMCNT 0
     ; LOWERED-NEXT: renamable $sgpr1 = S_LSHL_B32 1, 2, implicit-def dead $scc
     ; LOWERED-NEXT: renamable $sgpr2 = S_LSHL_B32 1, 3, implicit-def dead $scc
-    ; LOWERED-NEXT: $sgpr0 = S_GETREG_B32 63532, implicit $mode
+    ; LOWERED-NEXT: renamable $sgpr0 = S_GETREG_B32 18476, implicit $idx0
     ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
     ; LOWERED-NEXT: $idx3 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
-    ; LOWERED-NEXT: renamable $sgpr1 = S_LSHL_B32 1, 4, implicit-def dead $scc
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 0
-    ; LOWERED-NEXT: renamable $sgpr2 = S_LSHL_B32 1, 5, implicit-def dead $scc
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 5
     ; LOWERED-NEXT: renamable $vgpr0 = V_ADD_F32_e32 undef $vgpr2, undef $vgpr2, <0x{{[0-9a-f]+}}>, implicit $exec, implicit $mode
+    ; LOWERED-NEXT: renamable $sgpr1 = S_LSHL_B32 1, 4, implicit-def dead $scc
+    ; LOWERED-NEXT: renamable $sgpr2 = S_LSHL_B32 1, 5, implicit-def dead $scc
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
     ; LOWERED-NEXT: $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 78
     ; LOWERED-NEXT: undef $vgpr20 = V_LSHL_ADD_U32_e64 undef $vgpr5, undef $vgpr10, undef $vgpr15, <0x{{[0-9a-f]+}}>, implicit $exec
-    ; LOWERED-NEXT: dead $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
+    ; LOWERED-NEXT: $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 0
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHL_B32 1, 3, implicit-def dead $scc
@@ -2437,8 +2433,7 @@ body:             |
     ; GCN-NEXT: }
     ;
     ; ALLOC-LABEL: name: redirect-with-idx0-bundle
-    ; ALLOC: $idx0 = S_SET_GPR_IDX_U32 0
-    ; ALLOC-NEXT: [[COPY:%[0-9]+]]:sreg_32_xm0_xexec = COPY $idx0
+    ; ALLOC: [[SI_GET_IDX0_:%[0-9]+]]:sreg_32_xexec = SI_GET_IDX0 implicit $idx0
     ; ALLOC-NEXT: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     ; ALLOC-NEXT: $idx3 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
     ; ALLOC-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def $scc
@@ -2455,7 +2450,7 @@ body:             |
     ; ALLOC-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 internal $stg_srca, internal $stg_srcb, internal $stg_srcc, implicit $exec
     ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx2, 0, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
-    ; ALLOC-NEXT: $idx0 = S_SET_GPR_IDX_U32 [[COPY]]
+    ; ALLOC-NEXT: $idx0 = S_SET_GPR_IDX_U32 [[SI_GET_IDX0_]]
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_1]]
     ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[V_LOAD_IDX_B32_]], implicit $exec, implicit $idx1 :: (store (s32), addrspace 10) {
     ; ALLOC-NEXT:   $stg_dsta = V_LSHL_ADD_U32_e64 0, [[V_LOAD_IDX_B32_]], [[V_LOAD_IDX_B32_]], implicit $exec
@@ -2469,19 +2464,19 @@ body:             |
     ; LOWERED-NEXT: S_WAIT_BVHCNT 0
     ; LOWERED-NEXT: S_WAIT_KMCNT 0
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
-    ; LOWERED-NEXT: $sgpr1 = S_GETREG_B32 63532, implicit $mode
+    ; LOWERED-NEXT: renamable $sgpr1 = S_GETREG_B32 18476, implicit $idx0
     ; LOWERED-NEXT: renamable $sgpr2 = S_LSHR_B32 renamable $sgpr0, 2, implicit-def dead $scc
     ; LOWERED-NEXT: $idx3 = S_SET_GPR_IDX_U32 renamable $sgpr0
+    ; LOWERED-NEXT: renamable $sgpr3 = S_LSHR_B32 renamable $sgpr0, 4, implicit-def dead $scc
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
-    ; LOWERED-NEXT: renamable $sgpr2 = S_LSHR_B32 renamable $sgpr0, 4, implicit-def dead $scc
-    ; LOWERED-NEXT: renamable $sgpr0 = S_LSHR_B32 killed renamable $sgpr0, 3, implicit-def dead $scc
-    ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
+    ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr3
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 1
     ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 undef $vgpr10, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: renamable $sgpr0 = S_LSHR_B32 killed renamable $sgpr0, 3, implicit-def dead $scc
     ; LOWERED-NEXT: $idx0 = S_SET_GPR_IDX_U32 renamable $sgpr0
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 135
     ; LOWERED-NEXT: undef $vgpr0 = V_LSHL_ADD_U32_e64 undef $vgpr5, undef $vgpr10, undef $vgpr15, <0x{{[0-9a-f]+}}>, implicit $exec
-    ; LOWERED-NEXT: dead $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
+    ; LOWERED-NEXT: $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 64
     ; LOWERED-NEXT: undef $vgpr0 = V_LSHL_ADD_U32_e64 0, killed $vgpr0, $vgpr0, <0x{{[0-9a-f]+}}>, implicit $exec

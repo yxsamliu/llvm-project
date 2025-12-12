@@ -13,14 +13,14 @@ define amdgpu_kernel void @laneshared_example_kernel(ptr addrspace(1) %0, ptr ad
 ; CHECK-LABEL: laneshared_example_kernel:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s1, s0, 1
-; CHECK-NEXT:    s_mul_i32 s33, s0, s2
 ; CHECK-NEXT:    s_add_co_u32 s1, s1, 0x200
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_mul_i32 s33, s0, s2
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    ds_store_b32 v0, g1[0]
 ; CHECK-NEXT:    s_endpgm
