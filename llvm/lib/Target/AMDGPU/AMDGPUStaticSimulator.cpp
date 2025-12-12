@@ -634,12 +634,6 @@ bool canMSBSetFuse(InstClass PrevIC) {
   case InstClass::TRANS:
   case InstClass::SALU:
   case InstClass::WMMA:
-  case InstClass::DS_READ:
-  case InstClass::DS_WRITE:
-  case InstClass::VMEM_READ:
-  case InstClass::VMEM_WRITE:
-  case InstClass::SMEM:
-  case InstClass::TDM:
     return true;
   default:
     return false;
