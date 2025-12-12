@@ -154,10 +154,10 @@ class VOP3P_PK4_F16BF16_Profile<list<ValueType> VTy> : VOP3P_Profile<VOPProfile<
   let Src2RC64 = !if(!eq(VTy[3], v4bf16), VSrc_v4bf16, VSrc_v4f16);
 }
 
-def V_PK4_VOP2_F16_Profile  : VOP3P_PK4_F16BF16_Profile<[v4f16, v4f16, v4f16, untyped]>;
-def V_PK4_VOP3_F16_Profile  : VOP3P_PK4_F16BF16_Profile<[v4f16, v4f16, v4f16, v4f16]>;
-def V_PK4_VOP2_BF16_Profile : VOP3P_PK4_F16BF16_Profile<[v4bf16, v4bf16, v4bf16, untyped]>;
-def V_PK4_VOP3_BF16_Profile : VOP3P_PK4_F16BF16_Profile<[v4bf16, v4bf16, v4bf16, v4bf16]>;
+def V_PK4_2_Operand_F16_Profile  : VOP3P_PK4_F16BF16_Profile<[v4f16, v4f16, v4f16, untyped]>;
+def V_PK4_3_Operand_F16_Profile  : VOP3P_PK4_F16BF16_Profile<[v4f16, v4f16, v4f16, v4f16]>;
+def V_PK4_2_Operand_BF16_Profile : VOP3P_PK4_F16BF16_Profile<[v4bf16, v4bf16, v4bf16, untyped]>;
+def V_PK4_3_Operand_BF16_Profile : VOP3P_PK4_F16BF16_Profile<[v4bf16, v4bf16, v4bf16, v4bf16]>;
 
 let isReMaterializable = 1 in {
 let isCommutable = 1 in {
@@ -194,23 +194,23 @@ defm V_PK_MAXIMUM_F16 : VOP3PInst<"v_pk_maximum_f16", VOP3P_Profile<VOP_V2F16_V2
 defm V_PK_MINIMUM_F16 : VOP3PInst<"v_pk_minimum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>, fminimum>;
 
 let SubtargetPredicate = HasPk4Insts in {
-defm v_pk4_mul_f16      : VOP3PInst<"v_pk4_mul_f16", V_PK4_VOP2_F16_Profile, int_amdgcn_pk4_mul_f16>;
-defm v_pk4_add_f16      : VOP3PInst<"v_pk4_add_f16", V_PK4_VOP2_F16_Profile, int_amdgcn_pk4_add_f16>;
-defm v_pk4_max_num_f16  : VOP3PInst<"v_pk4_max_num_f16", V_PK4_VOP2_F16_Profile, int_amdgcn_pk4_max_num_f16>;
-defm v_pk4_min_num_f16  : VOP3PInst<"v_pk4_min_num_f16", V_PK4_VOP2_F16_Profile, int_amdgcn_pk4_min_num_f16>;
+defm v_pk4_mul_f16      : VOP3PInst<"v_pk4_mul_f16", V_PK4_2_Operand_F16_Profile, int_amdgcn_pk4_mul_f16>;
+defm v_pk4_add_f16      : VOP3PInst<"v_pk4_add_f16", V_PK4_2_Operand_F16_Profile, int_amdgcn_pk4_add_f16>;
+defm v_pk4_max_num_f16  : VOP3PInst<"v_pk4_max_num_f16", V_PK4_2_Operand_F16_Profile, int_amdgcn_pk4_max_num_f16>;
+defm v_pk4_min_num_f16  : VOP3PInst<"v_pk4_min_num_f16", V_PK4_2_Operand_F16_Profile, int_amdgcn_pk4_min_num_f16>;
 
-defm v_pk4_fma_f16      : VOP3PInst<"v_pk4_fma_f16", V_PK4_VOP3_F16_Profile, int_amdgcn_pk4_fma_f16>;
-defm v_pk4_max3_num_f16 : VOP3PInst<"v_pk4_max3_num_f16", V_PK4_VOP3_F16_Profile, int_amdgcn_pk4_max3_num_f16>;
-defm v_pk4_min3_num_f16 : VOP3PInst<"v_pk4_min3_num_f16", V_PK4_VOP3_F16_Profile, int_amdgcn_pk4_min3_num_f16>;
-defm v_pk4_maximum3_f16 : VOP3PInst<"v_pk4_maximum3_f16", V_PK4_VOP3_F16_Profile, int_amdgcn_pk4_maximum3_f16>;
-defm v_pk4_minimum3_f16 : VOP3PInst<"v_pk4_minimum3_f16", V_PK4_VOP3_F16_Profile, int_amdgcn_pk4_minimum3_f16>;
+defm v_pk4_fma_f16      : VOP3PInst<"v_pk4_fma_f16", V_PK4_3_Operand_F16_Profile, int_amdgcn_pk4_fma_f16>;
+defm v_pk4_max3_num_f16 : VOP3PInst<"v_pk4_max3_num_f16", V_PK4_3_Operand_F16_Profile, int_amdgcn_pk4_max3_num_f16>;
+defm v_pk4_min3_num_f16 : VOP3PInst<"v_pk4_min3_num_f16", V_PK4_3_Operand_F16_Profile, int_amdgcn_pk4_min3_num_f16>;
+defm v_pk4_maximum3_f16 : VOP3PInst<"v_pk4_maximum3_f16", V_PK4_3_Operand_F16_Profile, int_amdgcn_pk4_maximum3_f16>;
+defm v_pk4_minimum3_f16 : VOP3PInst<"v_pk4_minimum3_f16", V_PK4_3_Operand_F16_Profile, int_amdgcn_pk4_minimum3_f16>;
 
-defm v_pk4_fma_bf16     : VOP3PInst<"v_pk4_fma_bf16", V_PK4_VOP3_BF16_Profile, int_amdgcn_pk4_fma_bf16>;
+defm v_pk4_fma_bf16     : VOP3PInst<"v_pk4_fma_bf16", V_PK4_3_Operand_BF16_Profile, int_amdgcn_pk4_fma_bf16>;
 
-defm v_pk4_add_bf16     : VOP3PInst<"v_pk4_add_bf16", V_PK4_VOP2_BF16_Profile, int_amdgcn_pk4_add_bf16>;
-defm v_pk4_mul_bf16     : VOP3PInst<"v_pk4_mul_bf16", V_PK4_VOP2_BF16_Profile, int_amdgcn_pk4_mul_bf16>;
-defm v_pk4_max_num_bf16 : VOP3PInst<"v_pk4_max_num_bf16", V_PK4_VOP2_BF16_Profile, int_amdgcn_pk4_max_num_bf16>;
-defm v_pk4_min_num_bf16 : VOP3PInst<"v_pk4_min_num_bf16", V_PK4_VOP2_BF16_Profile, int_amdgcn_pk4_min_num_bf16>;
+defm v_pk4_add_bf16     : VOP3PInst<"v_pk4_add_bf16", V_PK4_2_Operand_BF16_Profile, int_amdgcn_pk4_add_bf16>;
+defm v_pk4_mul_bf16     : VOP3PInst<"v_pk4_mul_bf16", V_PK4_2_Operand_BF16_Profile, int_amdgcn_pk4_mul_bf16>;
+defm v_pk4_max_num_bf16 : VOP3PInst<"v_pk4_max_num_bf16", V_PK4_2_Operand_BF16_Profile, int_amdgcn_pk4_max_num_bf16>;
+defm v_pk4_min_num_bf16 : VOP3PInst<"v_pk4_min_num_bf16", V_PK4_2_Operand_BF16_Profile, int_amdgcn_pk4_min_num_bf16>;
 }
 
 } // End SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0
