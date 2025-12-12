@@ -361,11 +361,13 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
         .value_or(255);
 
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V4FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
     return AMDGPU::getInlineEncodingV2F16(static_cast<uint32_t>(Imm))
         .value_or(255);
 
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
+  case AMDGPU::OPERAND_REG_IMM_V4BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     return AMDGPU::getInlineEncodingV2BF16(static_cast<uint32_t>(Imm))
         .value_or(255);

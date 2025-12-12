@@ -145,6 +145,15 @@ def V_PK_LSHL_ADD_U64_Profile : VOP3P_Profile<VOP_V2I64_V2I64_V2I32_V2I64, VOP3_
                           HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret;
 }
 
+class VOP3P_PK4_F16BF16_Profile<VOPProfile P> : VOP3P_Profile<P> {
+  let HasOpSel = 0;
+  let HasOMod = 0;
+  let HasClamp = !if(!eq(P.ArgVT[0], v4bf16), 0, 1);
+  let Src0RC64 = !if(!eq(P.ArgVT[1], v4bf16), VSrc_v4bf16, VSrc_v4f16);
+  let Src1RC64 = !if(!eq(P.ArgVT[2], v4bf16), VSrc_v4bf16, VSrc_v4f16);
+  let Src2RC64 = !if(!eq(P.ArgVT[3], v4bf16), VSrc_v4bf16, VSrc_v4f16);
+}
+
 let isReMaterializable = 1 in {
 let isCommutable = 1 in {
 defm V_PK_MAD_I16 : VOP3PInst<"v_pk_mad_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16>>;
@@ -178,6 +187,41 @@ defm V_PK_ADD_NC_U64 : VOP3PInst<"v_pk_add_nc_u64", V_PK_VOP2_I64_Profile, add>;
 let SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0 in {
 defm V_PK_MAXIMUM_F16 : VOP3PInst<"v_pk_maximum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>, fmaximum>;
 defm V_PK_MINIMUM_F16 : VOP3PInst<"v_pk_minimum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>, fminimum>;
+
+let SubtargetPredicate = HasPk4Insts in {
+defm v_pk4_mul_f16 : VOP3PInst<"v_pk4_mul_f16",
+  VOP3P_PK4_F16BF16_Profile<VOP_V4F16_V4F16_V4F16>, int_amdgcn_pk4_mul_f16>;
+defm v_pk4_add_f16 : VOP3PInst<"v_pk4_add_f16",
+  VOP3P_PK4_F16BF16_Profile<VOP_V4F16_V4F16_V4F16>, int_amdgcn_pk4_add_f16>;
+defm v_pk4_max_num_f16 : VOP3PInst<"v_pk4_max_num_f16",
+  VOP3P_PK4_F16BF16_Profile<VOP_V4F16_V4F16_V4F16>, int_amdgcn_pk4_max_num_f16>;
+defm v_pk4_min_num_f16 : VOP3PInst<"v_pk4_min_num_f16",
+  VOP3P_PK4_F16BF16_Profile<VOP_V4F16_V4F16_V4F16>, int_amdgcn_pk4_min_num_f16>;
+
+defm v_pk4_fma_f16 : VOP3PInst<"v_pk4_fma_f16",
+  VOP3P_PK4_F16BF16_Profile<VOP_V4F16_V4F16_V4F16_V4F16>, int_amdgcn_pk4_fma_f16>;
+defm v_pk4_max3_num_f16 : VOP3PInst<"v_pk4_max3_num_f16",
+  VOP3P_PK4_F16BF16_Profile<VOP_V4F16_V4F16_V4F16_V4F16>, int_amdgcn_pk4_max3_num_f16>;
+defm v_pk4_min3_num_f16 : VOP3PInst<"v_pk4_min3_num_f16",
+  VOP3P_PK4_F16BF16_Profile<VOP_V4F16_V4F16_V4F16_V4F16>, int_amdgcn_pk4_min3_num_f16>;
+defm v_pk4_maximum3_f16 : VOP3PInst<"v_pk4_maximum3_f16",
+  VOP3P_PK4_F16BF16_Profile<VOP_V4F16_V4F16_V4F16_V4F16>, int_amdgcn_pk4_maximum3_f16>;
+defm v_pk4_minimum3_f16 : VOP3PInst<"v_pk4_minimum3_f16",
+  VOP3P_PK4_F16BF16_Profile<VOP_V4F16_V4F16_V4F16_V4F16>, int_amdgcn_pk4_minimum3_f16>;
+
+defm v_pk4_fma_bf16 : VOP3PInst<"v_pk4_fma_bf16",
+  VOP3P_PK4_F16BF16_Profile<VOP_V4BF16_V4BF16_V4BF16_V4BF16>, int_amdgcn_pk4_fma_bf16>;
+
+defm v_pk4_add_bf16 : VOP3PInst<"v_pk4_add_bf16",
+  VOP3P_PK4_F16BF16_Profile<VOP_V4BF16_V4BF16_V4BF16>, int_amdgcn_pk4_add_bf16>;
+defm v_pk4_mul_bf16 : VOP3PInst<"v_pk4_mul_bf16",
+  VOP3P_PK4_F16BF16_Profile<VOP_V4BF16_V4BF16_V4BF16>, int_amdgcn_pk4_mul_bf16>;
+defm v_pk4_max_num_bf16 : VOP3PInst<"v_pk4_max_num_bf16",
+  VOP3P_PK4_F16BF16_Profile<VOP_V4BF16_V4BF16_V4BF16>, int_amdgcn_pk4_max_num_bf16>;
+defm v_pk4_min_num_bf16 : VOP3PInst<"v_pk4_min_num_bf16",
+  VOP3P_PK4_F16BF16_Profile<VOP_V4BF16_V4BF16_V4BF16>, int_amdgcn_pk4_min_num_bf16>;
+}
+
 } // End SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0
 } // End isCommutable = 1
 
@@ -3152,6 +3196,21 @@ defm V_PK_MAX_F16     : VOP3P_Real_gfx10_gfx11_not_gfx1170<0x12>;
 defm V_FMA_MIX_F32    : VOP3P_Real_gfx10_gfx11_gfx12_gfx13_Triple<0x20>;
 defm V_FMA_MIXLO_F16  : VOP3P_Real_gfx10_gfx11_gfx12_gfx13_Triple<0x21>;
 defm V_FMA_MIXHI_F16  : VOP3P_Real_gfx10_gfx11_gfx12_gfx13_Triple<0x22>;
+
+defm v_pk4_fma_f16      : VOP3P_Real_Base<GFX1260Gen, 0xc5>;
+defm v_pk4_mul_f16      : VOP3P_Real_Base<GFX1260Gen, 0xc6>;
+defm v_pk4_add_f16      : VOP3P_Real_Base<GFX1260Gen, 0xc7>;
+defm v_pk4_max_num_f16  : VOP3P_Real_Base<GFX1260Gen, 0xc8>;
+defm v_pk4_min_num_f16  : VOP3P_Real_Base<GFX1260Gen, 0xc9>;
+defm v_pk4_max3_num_f16 : VOP3P_Real_Base<GFX1260Gen, 0xca>;
+defm v_pk4_min3_num_f16 : VOP3P_Real_Base<GFX1260Gen, 0xcb>;
+defm v_pk4_maximum3_f16 : VOP3P_Real_Base<GFX1260Gen, 0xcc>;
+defm v_pk4_minimum3_f16 : VOP3P_Real_Base<GFX1260Gen, 0xcd>;
+defm v_pk4_fma_bf16     : VOP3P_Real_Base<GFX1260Gen, 0xd6>;
+defm v_pk4_add_bf16     : VOP3P_Real_Base<GFX1260Gen, 0xd7>;
+defm v_pk4_mul_bf16     : VOP3P_Real_Base<GFX1260Gen, 0xd8>;
+defm v_pk4_max_num_bf16 : VOP3P_Real_Base<GFX1260Gen, 0xd9>;
+defm v_pk4_min_num_bf16 : VOP3P_Real_Base<GFX1260Gen, 0xda>;
 
 defm V_DOT2_I32_I16 : VOP3P_Real_gfx10 <0x14>;
 defm V_DOT2_U32_U16 : VOP3P_Real_gfx10 <0x15>;

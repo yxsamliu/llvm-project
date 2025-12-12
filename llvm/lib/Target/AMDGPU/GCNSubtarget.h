@@ -174,6 +174,7 @@ protected:
   bool HasWMMA256bInsts = false;
   bool HasWMMA2048bInsts = false;
   bool HasPermPkU2U3Insts = false;
+  bool HasPk4Insts = false;
   bool HasCubeInsts = false;
   bool HasLerpInst = false;
   bool HasSadInsts = false;
@@ -931,6 +932,8 @@ public:
   bool hasWMMA2048bInsts() const { return HasWMMA2048bInsts; }
 
   bool hasPermPkU2U3Insts() const { return HasPermPkU2U3Insts; }
+
+  bool hasPk4Insts() const { return HasPk4Insts; }
 
   bool isGFX1170() const {
     return getGeneration() == GFX11 && hasWMMA128bInsts();

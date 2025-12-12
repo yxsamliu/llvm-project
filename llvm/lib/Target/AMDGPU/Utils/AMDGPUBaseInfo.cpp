@@ -2966,6 +2966,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V4FP16:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
@@ -3428,9 +3429,11 @@ bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType) {
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
     return getInlineEncodingV216(false, Literal).has_value();
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V4FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
     return getInlineEncodingV216(true, Literal).has_value();
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
+  case AMDGPU::OPERAND_REG_IMM_V4BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     return isInlinableLiteralV2BF16(Literal);
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
@@ -3476,6 +3479,8 @@ int64_t encode32BitLiteral(int64_t Imm, OperandType Type, bool IsLit) {
   case OPERAND_REG_IMM_INT32:
   case OPERAND_REG_IMM_V2BF16:
   case OPERAND_REG_IMM_V2FP16:
+  case OPERAND_REG_IMM_V4FP16:
+  case OPERAND_REG_IMM_V4BF16:
   case OPERAND_REG_IMM_V2FP32:
   case OPERAND_REG_IMM_V2INT16:
   case OPERAND_REG_IMM_V2INT32:

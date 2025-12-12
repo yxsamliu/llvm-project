@@ -10,6 +10,8 @@ typedef unsigned int __attribute__((ext_vector_type(3))) uint3;
 typedef unsigned int __attribute__((ext_vector_type(4))) uint4;
 typedef unsigned int __attribute__((ext_vector_type(6))) uint6;
 typedef unsigned int __attribute__((ext_vector_type(8))) uint8;
+typedef __bf16 __attribute__((ext_vector_type(4))) bfloat4;
+typedef half __attribute__((ext_vector_type(4))) half4;
 
 // CHECK-LABEL: @test_wavegroup_id(
 // CHECK-NEXT:  entry:
@@ -121,4 +123,154 @@ void test_perm_pk(ushort a16, uint a32, uint2 a64, uint b32, uint c32, unsigned 
   *out4_2 = __builtin_amdgcn_perm_pk32_b4_u3(a32, b32, c64);
   *out6 = __builtin_amdgcn_perm_pk32_b6_u3(a64, b32, c64);
   *out8 = __builtin_amdgcn_perm_pk32_b8_u3(a64, b32, c64);
+}
+
+// CHECK-LABEL: @test_pk4(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <4 x half>, align 8, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <4 x half>, align 8, addrspace(5)
+// CHECK-NEXT:    [[C_ADDR:%.*]] = alloca <4 x half>, align 8, addrspace(5)
+// CHECK-NEXT:    [[BA_ADDR:%.*]] = alloca <4 x bfloat>, align 8, addrspace(5)
+// CHECK-NEXT:    [[BB_ADDR:%.*]] = alloca <4 x bfloat>, align 8, addrspace(5)
+// CHECK-NEXT:    [[BC_ADDR:%.*]] = alloca <4 x bfloat>, align 8, addrspace(5)
+// CHECK-NEXT:    [[OUTF_ADDR:%.*]] = alloca ptr addrspace(5), align 4, addrspace(5)
+// CHECK-NEXT:    [[OUTBF_ADDR:%.*]] = alloca ptr addrspace(5), align 4, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
+// CHECK-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
+// CHECK-NEXT:    [[BA_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BA_ADDR]] to ptr
+// CHECK-NEXT:    [[BB_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BB_ADDR]] to ptr
+// CHECK-NEXT:    [[BC_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[BC_ADDR]] to ptr
+// CHECK-NEXT:    [[OUTF_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUTF_ADDR]] to ptr
+// CHECK-NEXT:    [[OUTBF_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUTBF_ADDR]] to ptr
+// CHECK-NEXT:    store <4 x half> [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <4 x half> [[B:%.*]], ptr [[B_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <4 x half> [[C:%.*]], ptr [[C_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <4 x bfloat> [[BA:%.*]], ptr [[BA_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <4 x bfloat> [[BB:%.*]], ptr [[BB_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <4 x bfloat> [[BC:%.*]], ptr [[BC_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store ptr addrspace(5) [[OUTF:%.*]], ptr [[OUTF_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store ptr addrspace(5) [[OUTBF:%.*]], ptr [[OUTBF_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x half>, ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x half>, ptr [[B_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load <4 x half>, ptr [[C_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x half> @llvm.amdgcn.pk4.fma.f16(<4 x half> [[TMP0]], <4 x half> [[TMP1]], <4 x half> [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(5), ptr [[OUTF_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr addrspace(5) [[TMP4]], i64 0
+// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr addrspace(5) [[ARRAYIDX]], align 8
+// CHECK-NEXT:    store <4 x half> [[TMP3]], ptr [[TMP5]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load <4 x half>, ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP7:%.*]] = load <4 x half>, ptr [[B_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = call <4 x half> @llvm.amdgcn.pk4.mul.f16(<4 x half> [[TMP6]], <4 x half> [[TMP7]])
+// CHECK-NEXT:    [[TMP9:%.*]] = load ptr addrspace(5), ptr [[OUTF_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds ptr, ptr addrspace(5) [[TMP9]], i64 1
+// CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr addrspace(5) [[ARRAYIDX1]], align 8
+// CHECK-NEXT:    store <4 x half> [[TMP8]], ptr [[TMP10]], align 8
+// CHECK-NEXT:    [[TMP11:%.*]] = load <4 x half>, ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP12:%.*]] = load <4 x half>, ptr [[B_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP13:%.*]] = load <4 x half>, ptr [[C_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP14:%.*]] = call <4 x half> @llvm.amdgcn.pk4.max3.num.f16(<4 x half> [[TMP11]], <4 x half> [[TMP12]], <4 x half> [[TMP13]])
+// CHECK-NEXT:    [[TMP15:%.*]] = load ptr addrspace(5), ptr [[OUTF_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds ptr, ptr addrspace(5) [[TMP15]], i64 2
+// CHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr addrspace(5) [[ARRAYIDX2]], align 8
+// CHECK-NEXT:    store <4 x half> [[TMP14]], ptr [[TMP16]], align 8
+// CHECK-NEXT:    [[TMP17:%.*]] = load <4 x half>, ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP18:%.*]] = load <4 x half>, ptr [[B_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP19:%.*]] = load <4 x half>, ptr [[C_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP20:%.*]] = call <4 x half> @llvm.amdgcn.pk4.min3.num.f16(<4 x half> [[TMP17]], <4 x half> [[TMP18]], <4 x half> [[TMP19]])
+// CHECK-NEXT:    [[TMP21:%.*]] = load ptr addrspace(5), ptr [[OUTF_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds ptr, ptr addrspace(5) [[TMP21]], i64 3
+// CHECK-NEXT:    [[TMP22:%.*]] = load ptr, ptr addrspace(5) [[ARRAYIDX3]], align 8
+// CHECK-NEXT:    store <4 x half> [[TMP20]], ptr [[TMP22]], align 8
+// CHECK-NEXT:    [[TMP23:%.*]] = load <4 x half>, ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP24:%.*]] = load <4 x half>, ptr [[B_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP25:%.*]] = load <4 x half>, ptr [[C_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP26:%.*]] = call <4 x half> @llvm.amdgcn.pk4.maximum3.f16(<4 x half> [[TMP23]], <4 x half> [[TMP24]], <4 x half> [[TMP25]])
+// CHECK-NEXT:    [[TMP27:%.*]] = load ptr addrspace(5), ptr [[OUTF_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds ptr, ptr addrspace(5) [[TMP27]], i64 4
+// CHECK-NEXT:    [[TMP28:%.*]] = load ptr, ptr addrspace(5) [[ARRAYIDX4]], align 8
+// CHECK-NEXT:    store <4 x half> [[TMP26]], ptr [[TMP28]], align 8
+// CHECK-NEXT:    [[TMP29:%.*]] = load <4 x half>, ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP30:%.*]] = load <4 x half>, ptr [[B_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP31:%.*]] = load <4 x half>, ptr [[C_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP32:%.*]] = call <4 x half> @llvm.amdgcn.pk4.minimum3.f16(<4 x half> [[TMP29]], <4 x half> [[TMP30]], <4 x half> [[TMP31]])
+// CHECK-NEXT:    [[TMP33:%.*]] = load ptr addrspace(5), ptr [[OUTF_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds ptr, ptr addrspace(5) [[TMP33]], i64 5
+// CHECK-NEXT:    [[TMP34:%.*]] = load ptr, ptr addrspace(5) [[ARRAYIDX5]], align 8
+// CHECK-NEXT:    store <4 x half> [[TMP32]], ptr [[TMP34]], align 8
+// CHECK-NEXT:    [[TMP35:%.*]] = load <4 x half>, ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP36:%.*]] = load <4 x half>, ptr [[B_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP37:%.*]] = call <4 x half> @llvm.amdgcn.pk4.add.f16(<4 x half> [[TMP35]], <4 x half> [[TMP36]])
+// CHECK-NEXT:    [[TMP38:%.*]] = load ptr addrspace(5), ptr [[OUTF_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds ptr, ptr addrspace(5) [[TMP38]], i64 6
+// CHECK-NEXT:    [[TMP39:%.*]] = load ptr, ptr addrspace(5) [[ARRAYIDX6]], align 8
+// CHECK-NEXT:    store <4 x half> [[TMP37]], ptr [[TMP39]], align 8
+// CHECK-NEXT:    [[TMP40:%.*]] = load <4 x half>, ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP41:%.*]] = load <4 x half>, ptr [[B_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP42:%.*]] = call <4 x half> @llvm.amdgcn.pk4.max.num.f16(<4 x half> [[TMP40]], <4 x half> [[TMP41]])
+// CHECK-NEXT:    [[TMP43:%.*]] = load ptr addrspace(5), ptr [[OUTF_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds ptr, ptr addrspace(5) [[TMP43]], i64 7
+// CHECK-NEXT:    [[TMP44:%.*]] = load ptr, ptr addrspace(5) [[ARRAYIDX7]], align 8
+// CHECK-NEXT:    store <4 x half> [[TMP42]], ptr [[TMP44]], align 8
+// CHECK-NEXT:    [[TMP45:%.*]] = load <4 x half>, ptr [[A_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP46:%.*]] = load <4 x half>, ptr [[B_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP47:%.*]] = call <4 x half> @llvm.amdgcn.pk4.min.num.f16(<4 x half> [[TMP45]], <4 x half> [[TMP46]])
+// CHECK-NEXT:    [[TMP48:%.*]] = load ptr addrspace(5), ptr [[OUTF_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds ptr, ptr addrspace(5) [[TMP48]], i64 8
+// CHECK-NEXT:    [[TMP49:%.*]] = load ptr, ptr addrspace(5) [[ARRAYIDX8]], align 8
+// CHECK-NEXT:    store <4 x half> [[TMP47]], ptr [[TMP49]], align 8
+// CHECK-NEXT:    [[TMP50:%.*]] = load <4 x bfloat>, ptr [[BA_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP51:%.*]] = load <4 x bfloat>, ptr [[BB_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP52:%.*]] = load <4 x bfloat>, ptr [[BC_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP53:%.*]] = call <4 x bfloat> @llvm.amdgcn.pk4.fma.bf16(<4 x bfloat> [[TMP50]], <4 x bfloat> [[TMP51]], <4 x bfloat> [[TMP52]])
+// CHECK-NEXT:    [[TMP54:%.*]] = load ptr addrspace(5), ptr [[OUTBF_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds ptr, ptr addrspace(5) [[TMP54]], i64 0
+// CHECK-NEXT:    [[TMP55:%.*]] = load ptr, ptr addrspace(5) [[ARRAYIDX9]], align 8
+// CHECK-NEXT:    store <4 x bfloat> [[TMP53]], ptr [[TMP55]], align 8
+// CHECK-NEXT:    [[TMP56:%.*]] = load <4 x bfloat>, ptr [[BA_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP57:%.*]] = load <4 x bfloat>, ptr [[BB_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP58:%.*]] = call <4 x bfloat> @llvm.amdgcn.pk4.add.bf16(<4 x bfloat> [[TMP56]], <4 x bfloat> [[TMP57]])
+// CHECK-NEXT:    [[TMP59:%.*]] = load ptr addrspace(5), ptr [[OUTBF_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds ptr, ptr addrspace(5) [[TMP59]], i64 1
+// CHECK-NEXT:    [[TMP60:%.*]] = load ptr, ptr addrspace(5) [[ARRAYIDX10]], align 8
+// CHECK-NEXT:    store <4 x bfloat> [[TMP58]], ptr [[TMP60]], align 8
+// CHECK-NEXT:    [[TMP61:%.*]] = load <4 x bfloat>, ptr [[BA_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP62:%.*]] = load <4 x bfloat>, ptr [[BB_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP63:%.*]] = call <4 x bfloat> @llvm.amdgcn.pk4.mul.bf16(<4 x bfloat> [[TMP61]], <4 x bfloat> [[TMP62]])
+// CHECK-NEXT:    [[TMP64:%.*]] = load ptr addrspace(5), ptr [[OUTBF_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds ptr, ptr addrspace(5) [[TMP64]], i64 2
+// CHECK-NEXT:    [[TMP65:%.*]] = load ptr, ptr addrspace(5) [[ARRAYIDX11]], align 8
+// CHECK-NEXT:    store <4 x bfloat> [[TMP63]], ptr [[TMP65]], align 8
+// CHECK-NEXT:    [[TMP66:%.*]] = load <4 x bfloat>, ptr [[BA_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP67:%.*]] = load <4 x bfloat>, ptr [[BB_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP68:%.*]] = call <4 x bfloat> @llvm.amdgcn.pk4.max.num.bf16(<4 x bfloat> [[TMP66]], <4 x bfloat> [[TMP67]])
+// CHECK-NEXT:    [[TMP69:%.*]] = load ptr addrspace(5), ptr [[OUTBF_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds ptr, ptr addrspace(5) [[TMP69]], i64 3
+// CHECK-NEXT:    [[TMP70:%.*]] = load ptr, ptr addrspace(5) [[ARRAYIDX12]], align 8
+// CHECK-NEXT:    store <4 x bfloat> [[TMP68]], ptr [[TMP70]], align 8
+// CHECK-NEXT:    [[TMP71:%.*]] = load <4 x bfloat>, ptr [[BA_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP72:%.*]] = load <4 x bfloat>, ptr [[BB_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP73:%.*]] = call <4 x bfloat> @llvm.amdgcn.pk4.min.num.bf16(<4 x bfloat> [[TMP71]], <4 x bfloat> [[TMP72]])
+// CHECK-NEXT:    [[TMP74:%.*]] = load ptr addrspace(5), ptr [[OUTBF_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds ptr, ptr addrspace(5) [[TMP74]], i64 4
+// CHECK-NEXT:    [[TMP75:%.*]] = load ptr, ptr addrspace(5) [[ARRAYIDX13]], align 8
+// CHECK-NEXT:    store <4 x bfloat> [[TMP73]], ptr [[TMP75]], align 8
+// CHECK-NEXT:    ret void
+//
+void test_pk4(half4 a, half4 b, half4 c, bfloat4 ba, bfloat4 bb, bfloat4 bc, half4 *outf[9], bfloat4 *outbf[5]) {
+  *outf[0] = __builtin_amdgcn_pk4_fma_f16(a, b, c);
+  *outf[1] = __builtin_amdgcn_pk4_mul_f16(a, b);
+  *outf[2] = __builtin_amdgcn_pk4_max3_num_f16(a, b, c);
+  *outf[3] = __builtin_amdgcn_pk4_min3_num_f16(a, b, c);
+  *outf[4] = __builtin_amdgcn_pk4_maximum3_f16(a, b, c);
+  *outf[5] = __builtin_amdgcn_pk4_minimum3_f16(a, b, c);
+  *outf[6] = __builtin_amdgcn_pk4_add_f16(a, b);
+  *outf[7] = __builtin_amdgcn_pk4_max_num_f16(a, b);
+  *outf[8] = __builtin_amdgcn_pk4_min_num_f16(a, b);
+
+  *outbf[0] = __builtin_amdgcn_pk4_fma_bf16(ba, bb, bc);
+  *outbf[1] = __builtin_amdgcn_pk4_add_bf16(ba, bb);
+  *outbf[2] = __builtin_amdgcn_pk4_mul_bf16(ba, bb);
+  *outbf[3] = __builtin_amdgcn_pk4_max_num_bf16(ba, bb);
+  *outbf[4] = __builtin_amdgcn_pk4_min_num_bf16(ba, bb);
 }
