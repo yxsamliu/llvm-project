@@ -1335,6 +1335,10 @@ static void printBlockFrequencies(const MachineFunction &MF,
 
 constexpr unsigned DefaultTripCount = 10;
 
+static cl::opt<unsigned>
+    TripCountOverride("amdgpu-static-sim-trip-count", cl::Hidden,
+                               cl::desc("Override static sim trip count analysis."));
+
 unsigned getLoopTripCount(MachineLoop *L,
                           const MachineBlockFrequencyInfo *MBFI = nullptr) {
   if (MBFI) {
@@ -1360,12 +1364,14 @@ unsigned getLoopTripCount(MachineLoop *L,
   }
   return DefaultTripCount;
 }
+
 BlockMetrics analyzeLoop(MachineLoop *L, MachineLoopInfo &MLI,
                          const SIInstrInfo &TII, GPUSimState &EntryState,
                          DenseSet<MachineBasicBlock *> &Visited,
                          KernelPerfReport &Report,
                          const MachineBlockFrequencyInfo *MBFI) {
-  unsigned TripCount = getLoopTripCount(L, MBFI);
+
+  unsigned TripCount = TripCountOverride.getNumOccurrences() ? TripCountOverride.getValue() : getLoopTripCount(L, MBFI);
   unsigned LoopDepth = L->getLoopDepth();
 
   Report.NumLoops++;
