@@ -1306,6 +1306,12 @@ def FeatureSetPrioIncWgInst : SubtargetFeature<"setprio-inc-wg-inst",
   "Has s_setprio_inc_wg instruction."
 >;
 
+def FeatureSWakeupBarrier : SubtargetFeature<"s-wakeup-barrier-inst",
+  "HasSWakeupBarrier",
+  "true",
+  "Has s_wakeup_barrier instruction."
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -2247,6 +2253,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeaturePkAddMinMaxInsts,
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
+   FeatureSWakeupBarrier,
    Feature45BitNumRecordsBufferResource,
    FeatureSupportsXNACK,
    FeatureXNACK,
@@ -3176,6 +3183,8 @@ def HasUnalignedDS2Bug : Predicate<"Subtarget->hasUnalignedDS2Bug()">,
 
 def NotHasUnalignedDS2Bug : Predicate<"!Subtarget->hasUnalignedDS2Bug()">,
  AssemblerPredicate<(not FeatureGFX1250Insts)>;
+def HasSWakeupBarrier : Predicate<"Subtarget->hasSWakeupBarrier()">,
+                       AssemblerPredicate<(all_of FeatureSWakeupBarrier)>;
 
 def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of FeatureRequiresAlignedVGPRs)>;
