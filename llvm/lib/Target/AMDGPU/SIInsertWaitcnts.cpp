@@ -1302,30 +1302,30 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
     switch (T) {
     case LOAD_CNT:
       OS << "    " << (ST->hasExtendedWaitCounts() ? "LOAD" : "VM") << "_CNT("
-         << SR << "): ";
+         << SR << "):";
       break;
     case DS_CNT:
       OS << "    " << (ST->hasExtendedWaitCounts() ? "DS" : "LGKM") << "_CNT("
-         << SR << "): ";
+         << SR << "):";
       break;
     case EXP_CNT:
-      OS << "    EXP_CNT(" << SR << "): ";
+      OS << "    EXP_CNT(" << SR << "):";
       break;
     case STORE_CNT:
       OS << "    " << (ST->hasExtendedWaitCounts() ? "STORE" : "VS") << "_CNT("
-         << SR << "): ";
+         << SR << "):";
       break;
     case SAMPLE_CNT:
-      OS << "    SAMPLE_CNT(" << SR << "): ";
+      OS << "    SAMPLE_CNT(" << SR << "):";
       break;
     case BVH_CNT:
-      OS << "    BVH_CNT(" << SR << "): ";
+      OS << "    BVH_CNT(" << SR << "):";
       break;
     case KM_CNT:
-      OS << "    KM_CNT(" << SR << "): ";
+      OS << "    KM_CNT(" << SR << "):";
       break;
     case X_CNT:
-      OS << "    X_CNT(" << SR << "): ";
+      OS << "    X_CNT(" << SR << "):";
       break;
     case SWC_CNT:
       OS << "    SWC_CNT(" << SR << "): ";
@@ -1337,7 +1337,7 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
       OS << "    VM_VSRC(" << SR << "): ";
       break;
     default:
-      OS << "    UNKNOWN(" << SR << "): ";
+      OS << "    UNKNOWN(" << SR << "):";
       break;
     }
 
@@ -1354,7 +1354,7 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
           std::string part = J % 2 == 0 ? ".lo" : ".hi";
           OS << RelScore << ":v" << J / 2 << part << " ";
         } else {
-          OS << RelScore << ":ds ";
+          OS << ' ' << RelScore << ":ds";
         }
       }
       // Also need to print sgpr scores for lgkm_cnt or xcnt.
@@ -1364,11 +1364,11 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
           if (RegScore <= LB)
             continue;
           unsigned RelScore = RegScore - LB - 1;
-          OS << RelScore << ":s" << J << " ";
+          OS << ' ' << RelScore << ":s" << J;
         }
       }
       if (T == KM_CNT && SCCScore > 0)
-        OS << SCCScore << ":scc ";
+        OS << ' ' << SCCScore << ":scc";
     }
     OS << '\n';
   }
@@ -1759,7 +1759,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
         BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(Enc);
     Modified = true;
 
-    LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
+    LLVM_DEBUG(dbgs() << "PreGFX12::createNewWaitcnt\n";
                if (It != Block.instr_end()) dbgs() << "Old Instr: " << *It;
                dbgs() << "New Instr: " << *SWaitInst << '\n');
   }
@@ -1773,7 +1773,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
             .addImm(Wait.StoreCnt);
     Modified = true;
 
-    LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
+    LLVM_DEBUG(dbgs() << "PreGFX12::createNewWaitcnt\n";
                if (It != Block.instr_end()) dbgs() << "Old Instr: " << *It;
                dbgs() << "New Instr: " << *SWaitInst << '\n');
   }
@@ -2111,7 +2111,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
     if (SWaitInst) {
       Modified = true;
 
-      LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
+      LLVM_DEBUG(dbgs() << "GFX12Plus::createNewWaitcnt\n";
                  if (It != Block.instr_end()) dbgs() << "Old Instr: " << *It;
                  dbgs() << "New Instr: " << *SWaitInst << '\n');
     }
@@ -2131,7 +2131,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
 
     Modified = true;
 
-    LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
+    LLVM_DEBUG(dbgs() << "GFX12Plus::createNewWaitcnt\n";
                if (It != Block.instr_end()) dbgs() << "Old Instr: " << *It;
                dbgs() << "New Instr: " << *SWaitInst << '\n');
   }

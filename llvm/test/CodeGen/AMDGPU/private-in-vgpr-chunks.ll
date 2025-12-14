@@ -2,24 +2,24 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1300 -amdgpu-promote-private=true -private-object-reg-chunk-size=4 -verify-machineinstrs -o - %s | FileCheck --check-prefixes=GFX13,KERNEL %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1260 -amdgpu-promote-private=true -private-object-reg-chunk-size=4 -verify-machineinstrs -o - %s | FileCheck --check-prefixes=GFX1260,KERNEL %s
 
-define amdgpu_kernel void @foo(ptr addrspace(5) %out, i32 %x) {
+define amdgpu_kernel void @foo(ptr addrspace(5) %out, i32 %x) #0 {
 ; GFX13-LABEL: foo:
 ; GFX13:       ; %bb.0: ; %entry
 ; GFX13-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX13-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; GFX13-NEXT:    v_mov_b32_e32 v4, 0x40e00000
 ; GFX13-NEXT:    v_mov_b32_e32 v0, 0x40a00000
-; GFX13-NEXT:    v_mov_b32_e32 v1, 0x40e00000
+; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    ; implicit-def: $vgpr33_vgpr34_vgpr35_vgpr36
-; GFX13-NEXT:    ; implicit-def: $vgpr65
 ; GFX13-NEXT:    ; implicit-def: $vgpr32
+; GFX13-NEXT:    ; implicit-def: $vgpr65
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    scratch_store_b32 off, v0, s0 offset:20
-; GFX13-NEXT:    scratch_store_b32 off, v1, s0 offset:28
+; GFX13-NEXT:    scratch_store_b32 off, v4, s0 offset:28
 ; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 g1[34], v0
-; GFX13-NEXT:    v_mov_b32_e32 g1[1], v1
+; GFX13-NEXT:    v_mov_b32_e32 g1[1], v0
+; GFX13-NEXT:    v_mov_b32_e32 g1[34], v4
 ; GFX13-NEXT:    s_endpgm
 ;
 ; GFX1260-LABEL: foo:
@@ -27,19 +27,19 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %out, i32 %x) {
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX1260-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX1260-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; GFX1260-NEXT:    v_mov_b32_e32 v4, 0x40e00000
 ; GFX1260-NEXT:    v_mov_b32_e32 v0, 0x40a00000
-; GFX1260-NEXT:    v_mov_b32_e32 v1, 0x40e00000
+; GFX1260-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX1260-NEXT:    ; implicit-def: $vgpr33_vgpr34_vgpr35_vgpr36
-; GFX1260-NEXT:    ; implicit-def: $vgpr65
 ; GFX1260-NEXT:    ; implicit-def: $vgpr32
+; GFX1260-NEXT:    ; implicit-def: $vgpr65
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_clause 0x1
 ; GFX1260-NEXT:    scratch_store_b32 off, v0, s0 offset:20
-; GFX1260-NEXT:    scratch_store_b32 off, v1, s0 offset:28
+; GFX1260-NEXT:    scratch_store_b32 off, v4, s0 offset:28
 ; GFX1260-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX1260-NEXT:    v_mov_b32_e32 g1[34], v0
-; GFX1260-NEXT:    v_mov_b32_e32 g1[1], v1
+; GFX1260-NEXT:    v_mov_b32_e32 g1[1], v0
+; GFX1260-NEXT:    v_mov_b32_e32 g1[34], v4
 ; GFX1260-NEXT:    s_endpgm
 entry:
   %p = alloca [33 x float], align 4, addrspace(5)
@@ -61,12 +61,14 @@ entry:
   ret void
 }
 
+attributes #0 = { "amdgpu-flat-work-group-size"="32,32" }
+
 ; KERNEL:    .enable_wavegroup: false
 ; KERNEL-NEXT:    .group_segment_fixed_size: 0
 ; KERNEL-NEXT:    .kernarg_segment_align: 8
 ; KERNEL-NEXT:    .kernarg_segment_size: 264
 ; KERNEL-NEXT:    .laneshared_segment_fixed_size: 0
-; KERNEL-NEXT:    .max_flat_workgroup_size: 1024
+; KERNEL-NEXT:    .max_flat_workgroup_size: 32
 ; KERNEL-NEXT:    .name:           foo
 ; KERNEL-NEXT:    .private_segment_fixed_size: 268
 ; KERNEL-NEXT:    .sgpr_count:     6

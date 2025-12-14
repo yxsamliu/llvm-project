@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1260 -amdgpu-promote-private=true -verify-machineinstrs -o - %s | FileCheck --check-prefix=GFX1260 %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1260 -amdgpu-promote-private=true -verify-machineinstrs -stop-after=amdgpu-private-object-vgprs -o - %s | FileCheck --check-prefix=LIVEINS-GFX1260 %s
 
-define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) {
+define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0 {
 ; CHECK-LABEL: basic:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
@@ -486,7 +486,7 @@ ret:
 ; LIVEINS: bb.0.entry:
 ; LIVEINS-NEXT: liveins: $sgpr4_sgpr5{{$}}
 
-define amdgpu_kernel void @load_without_store(ptr addrspace(5) %out) {
+define amdgpu_kernel void @load_without_store(ptr addrspace(5) %out) #0 {
 ; CHECK-LABEL: load_without_store:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b32 s0, s[4:5], 0x24
@@ -789,7 +789,7 @@ entry:
 ; LIVEINS: bb.2.skip:
 ; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
 
-define amdgpu_kernel void @bypassed_store(ptr addrspace(5) %out, i32 %x) {
+define amdgpu_kernel void @bypassed_store(ptr addrspace(5) %out, i32 %x) #0 {
 ; CHECK-LABEL: bypassed_store:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
@@ -1110,7 +1110,7 @@ skip:
 ; LIVEINS: bb.2.ret:
 ; LIVEINS-NEXT: S_ENDPGM
 
-define amdgpu_kernel void @def_in_nonentry_block(ptr addrspace(5) %out, float %x) {
+define amdgpu_kernel void @def_in_nonentry_block(ptr addrspace(5) %out, float %x) #0 {
 ; CHECK-LABEL: def_in_nonentry_block:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
@@ -1415,7 +1415,7 @@ ret:
 ; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
 ; LIVEINS: S_ENDPGM
 
-define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) {
+define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) #0 {
 ; CHECK-LABEL: loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
@@ -1753,3 +1753,5 @@ exit:
   store i32 %v, ptr addrspace(5) %out
   ret void
 }
+
+attributes #0 = { "amdgpu-flat-work-group-size"="32,32" }

@@ -4,6 +4,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX13,GFX13-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX13,GFX13-FAKE16 %s
 
 declare half @llvm.nearbyint.f16(half) #0
 declare float @llvm.nearbyint.f32(float) #0
@@ -73,6 +75,27 @@ define amdgpu_kernel void @fnearbyint_f16(ptr addrspace(1) %out, half %in) #1 {
 ; GFX11-FAKE16-NEXT:    v_rndne_f16_e32 v1, s2
 ; GFX11-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-TRUE16-LABEL: fnearbyint_f16:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    s_rndne_f16 s2, s2
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX13-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-TRUE16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: fnearbyint_f16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    s_rndne_f16 s2, s2
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX13-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX13-FAKE16-NEXT:    s_endpgm
   %1 = call half @llvm.nearbyint.f16(half %in)
   store half %1, ptr addrspace(1) %out
   ret void
@@ -111,6 +134,16 @@ define amdgpu_kernel void @fnearbyint_f32(ptr addrspace(1) %out, float %in) #1 {
 ; GFX11-NEXT:    v_rndne_f32_e32 v1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: fnearbyint_f32:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_rndne_f32 s2, s2
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13-NEXT:    s_endpgm
 entry:
   %0 = call float @llvm.nearbyint.f32(float %in)
   store float %0, ptr addrspace(1) %out
@@ -150,6 +183,18 @@ define amdgpu_kernel void @fnearbyint_v2f32(ptr addrspace(1) %out, <2 x float> %
 ; GFX11-NEXT:    v_rndne_f32_e32 v0, s2
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: fnearbyint_v2f32:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_rndne_f32 s2, s2
+; GFX13-NEXT:    s_rndne_f32 s3, s3
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_2)
+; GFX13-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
+; GFX13-NEXT:    v_mov_b32_e32 v1, s3
+; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX13-NEXT:    s_endpgm
 entry:
   %0 = call <2 x float> @llvm.nearbyint.v2f32(<2 x float> %in)
   store <2 x float> %0, ptr addrspace(1) %out
@@ -198,6 +243,23 @@ define amdgpu_kernel void @fnearbyint_v4f32(ptr addrspace(1) %out, <4 x float> %
 ; GFX11-NEXT:    v_rndne_f32_e32 v0, s0
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: fnearbyint_v4f32:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX13-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_rndne_f32 s0, s0
+; GFX13-NEXT:    s_rndne_f32 s1, s1
+; GFX13-NEXT:    s_rndne_f32 s2, s2
+; GFX13-NEXT:    s_rndne_f32 s3, s3
+; GFX13-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v0, s0
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v2, s2
+; GFX13-NEXT:    v_mov_b32_e32 v3, s3
+; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[4:5]
+; GFX13-NEXT:    s_endpgm
 entry:
   %0 = call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %in)
   store <4 x float> %0, ptr addrspace(1) %out
@@ -257,6 +319,15 @@ define amdgpu_kernel void @nearbyint_f64(ptr addrspace(1) %out, double %in) {
 ; GFX11-NEXT:    v_rndne_f64_e32 v[0:1], s[2:3]
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: nearbyint_f64:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX13-NEXT:    v_mov_b32_e32 v2, 0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_rndne_f64_e32 v[0:1], s[2:3]
+; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX13-NEXT:    s_endpgm
 entry:
   %0 = call double @llvm.nearbyint.f64(double %in)
   store double %0, ptr addrspace(1) %out
@@ -333,6 +404,18 @@ define amdgpu_kernel void @nearbyint_v2f64(ptr addrspace(1) %out, <2 x double> %
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: nearbyint_v2f64:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX13-NEXT:    v_mov_b32_e32 v4, 0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_rndne_f64_e32 v[2:3], s[2:3]
+; GFX13-NEXT:    v_rndne_f64_e32 v[0:1], s[0:1]
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX13-NEXT:    s_endpgm
 entry:
   %0 = call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %in)
   store <2 x double> %0, ptr addrspace(1) %out
@@ -439,6 +522,22 @@ define amdgpu_kernel void @nearbyint_v4f64(ptr addrspace(1) %out, <4 x double> %
 ; GFX11-NEXT:    global_store_b128 v8, v[4:7], s[0:1] offset:16
 ; GFX11-NEXT:    global_store_b128 v8, v[0:3], s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: nearbyint_v4f64:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    s_load_b256 s[8:15], s[4:5], 0x44
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX13-NEXT:    v_mov_b32_e32 v8, 0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_rndne_f64_e32 v[6:7], s[14:15]
+; GFX13-NEXT:    v_rndne_f64_e32 v[4:5], s[12:13]
+; GFX13-NEXT:    v_rndne_f64_e32 v[2:3], s[10:11]
+; GFX13-NEXT:    v_rndne_f64_e32 v[0:1], s[8:9]
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    global_store_b128 v8, v[4:7], s[0:1] offset:16
+; GFX13-NEXT:    global_store_b128 v8, v[0:3], s[0:1]
+; GFX13-NEXT:    s_endpgm
 entry:
   %0 = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> %in)
   store <4 x double> %0, ptr addrspace(1) %out

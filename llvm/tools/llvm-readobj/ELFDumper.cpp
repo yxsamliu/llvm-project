@@ -1666,6 +1666,7 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1260, "gfx1260"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX130E, "gfx130E"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1310, "gfx1310"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX131F, "gfx131F"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1360, "gfx1360"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic"),                \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic"),            \
