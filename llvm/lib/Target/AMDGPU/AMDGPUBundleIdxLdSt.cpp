@@ -225,7 +225,6 @@ private:
   MachineRegisterInfo *MRI = nullptr;
   AliasAnalysis *AA = nullptr;
   MachineCycleInfo *CI = nullptr;
-  SIMachineFunctionInfo *MFI = nullptr;
 
   // (original idx reg) to new-idx-reg mapping
   // Private-in-vgpr objects need a new idx reg that is calculated with idx0 as
@@ -1223,7 +1222,9 @@ bool AMDGPUBundleIdxLdSt::analyze(BundlingInfo &BI) {
     bool MayAlias = false;
     for (auto II = LoadMI->getNextNode()->getIterator(); &*II != MI; ++II) {
       if (II->hasOrderedMemoryRef() || LoadMI->mayAlias(AA, *II, true)) {
-        LLVM_DEBUG(dbgs() << " *** Conflict with "; II->print(dbgs()));
+        LLVM_DEBUG(dbgs() << "***Sinking conflict: \n\tLoadMI: ";
+                   LoadMI->print(dbgs()); dbgs() << "\twith: ";
+                   II->print(dbgs()));
         reject(Use);
         MayAlias = true;
         break;

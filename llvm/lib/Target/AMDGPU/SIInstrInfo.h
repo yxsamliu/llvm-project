@@ -452,6 +452,10 @@ public:
   bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const final;
 
+  /// Override the default limit because bundles with v-load/store-idx
+  /// can have more MMOs.
+  unsigned getMemOperandAACheckLimit() const override { return 32; }
+
   unsigned getMachineCSELookAheadLimit() const override { return 500; }
 
   MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,

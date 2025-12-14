@@ -5,6 +5,8 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 | FileCheck %s -check-prefixes=GFX11,GFX11-FAKE16
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 | FileCheck %s -check-prefixes=GFX12,GFX12-TRUE16
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 | FileCheck %s -check-prefixes=GFX12,GFX12-FAKE16
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1300 -mattr=+real-true16 | FileCheck %s -check-prefixes=GFX13,GFX13-TRUE16
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1300 -mattr=-real-true16 | FileCheck %s -check-prefixes=GFX13,GFX13-FAKE16
 
 define bfloat @v_uitofp_i1_to_bf16(i1 %num) {
 ; GFX7-LABEL: v_uitofp_i1_to_bf16:
@@ -112,6 +114,20 @@ define bfloat @v_uitofp_i1_to_bf16(i1 %num) {
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX13-LABEL: v_uitofp_i1_to_bf16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
+; GFX13-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, vcc_lo
+; GFX13-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %op = uitofp i1 %num to bfloat
   ret bfloat %op
 }
@@ -181,6 +197,18 @@ define amdgpu_ps i32 @s_uitofp_i1_to_bf16(i1 inreg %num) {
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: s_uitofp_i1_to_bf16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX13-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
+; GFX13-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX13-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX13-NEXT:    ; return to shader part epilog
   %op = uitofp i1 %num to bfloat
   %b16 = bitcast bfloat %op to i16
   %b32 = zext i16 %b16 to i32
@@ -348,6 +376,42 @@ define <2 x bfloat> @v_uitofp_v2i1_to_v2bf16(<2 x i1> %num) {
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v1, v3, v5, vcc_lo
 ; GFX12-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x7060302
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX13-TRUE16-LABEL: v_uitofp_v2i1_to_v2bf16:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    v_and_b16 v0.h, 1, v1.l
+; GFX13-TRUE16-NEXT:    v_and_b16 v0.l, 1, v0.l
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX13-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v0.h
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1.0, vcc_lo
+; GFX13-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v0.l
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, vcc_lo
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
+; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-FAKE16-LABEL: v_uitofp_v2i1_to_v2bf16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1.0, vcc_lo
+; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, vcc_lo
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
+; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %op = uitofp <2 x i1> %num to <2 x bfloat>
   ret <2 x bfloat> %op
 }
@@ -464,6 +528,27 @@ define amdgpu_ps <2 x i32> @s_uitofp_v2i1_to_v2bf16(<2 x i1> inreg %num) {
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: s_uitofp_v2i1_to_v2bf16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_and_b32 s0, 1, s0
+; GFX13-NEXT:    s_bitcmp1_b32 s1, 0
+; GFX13-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX13-NEXT:    s_cmp_eq_u32 s0, 1
+; GFX13-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s1
+; GFX13-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_cndmask_b32_e64 v1, 0, 1.0, s0
+; GFX13-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_cvt_pk_bf16_f32 v1, v1, s0
+; GFX13-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX13-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX13-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX13-NEXT:    ; return to shader part epilog
   %op = uitofp <2 x i1> %num to <2 x bfloat>
   %b16 = bitcast <2 x bfloat> %op to <2 x i16>
   %b32 = zext <2 x i16> %b16 to <2 x i32>
@@ -690,6 +775,51 @@ define <3 x bfloat> @v_uitofp_v3i1_to_v3bf16(<3 x i1> %num) {
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_alignbit_b32 v1, s0, v2, 16
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX13-TRUE16-LABEL: v_uitofp_v3i1_to_v3bf16:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    v_and_b16 v0.h, 1, v2.l
+; GFX13-TRUE16-NEXT:    v_and_b16 v1.l, 1, v1.l
+; GFX13-TRUE16-NEXT:    v_and_b16 v0.l, 1, v0.l
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX13-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v0.h
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, vcc_lo
+; GFX13-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v1.l
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v2, v2, s0
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1.0, vcc_lo
+; GFX13-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v0.l
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, vcc_lo
+; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.l
+; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-FAKE16-LABEL: v_uitofp_v3i1_to_v3bf16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1.0, vcc_lo
+; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, vcc_lo
+; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v2
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, vcc_lo
+; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v1, v2, s0
+; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %op = uitofp <3 x i1> %num to <3 x bfloat>
   ret <3 x bfloat> %op
 }
@@ -847,6 +977,67 @@ define amdgpu_ps <3 x i32> @s_uitofp_v3i1_to_v3bf16(<3 x i1> inreg %num) {
 ; GFX12-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-TRUE16-LABEL: s_uitofp_v3i1_to_v3bf16:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_and_b32 s0, 1, s0
+; GFX13-TRUE16-NEXT:    s_and_b32 s1, 1, s1
+; GFX13-TRUE16-NEXT:    s_bitcmp1_b32 s2, 0
+; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v3, 0
+; GFX13-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX13-TRUE16-NEXT:    s_cmp_eq_u32 s1, 1
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, s2
+; GFX13-TRUE16-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX13-TRUE16-NEXT:    s_cmp_eq_u32 s0, 1
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1.0, s1
+; GFX13-TRUE16-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
+; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v4, v0, s0
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_4)
+; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
+; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v1, v2, s0
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l
+; GFX13-TRUE16-NEXT:    v_and_b32_e32 v3, 0xffff, v4
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v0.h
+; GFX13-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v1
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s0, v3
+; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s1, v2
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX13-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX13-FAKE16-LABEL: s_uitofp_v3i1_to_v3bf16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_and_b32 s0, 1, s0
+; GFX13-FAKE16-NEXT:    s_and_b32 s1, 1, s1
+; GFX13-FAKE16-NEXT:    s_bitcmp1_b32 s2, 0
+; GFX13-FAKE16-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX13-FAKE16-NEXT:    s_cmp_eq_u32 s1, 1
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, s2
+; GFX13-FAKE16-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX13-FAKE16-NEXT:    s_cmp_eq_u32 s0, 1
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s1
+; GFX13-FAKE16-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1.0, s0
+; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v2, v2, s0
+; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v1, v0
+; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v1, v1, s0
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX13-FAKE16-NEXT:    v_lshl_or_b32 v0, 0, 16, v0
+; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX13-FAKE16-NEXT:    ; return to shader part epilog
   %op = uitofp <3 x i1> %num to <3 x bfloat>
   %b16 = bitcast <3 x bfloat> %op to <3 x i16>
   %b32 = zext <3 x i16> %b16 to <3 x i32>
@@ -1124,6 +1315,56 @@ define <4 x bfloat> @v_uitofp_v4i1_to_v4bf16(<4 x i1> %num) {
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v3, v5, v9, vcc_lo
 ; GFX12-FAKE16-NEXT:    v_perm_b32 v1, v3, v2, 0x7060302
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX13-TRUE16-LABEL: v_uitofp_v4i1_to_v4bf16:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    v_and_b16 v0.h, 1, v3.l
+; GFX13-TRUE16-NEXT:    v_and_b16 v1.l, 1, v1.l
+; GFX13-TRUE16-NEXT:    v_and_b16 v0.l, 1, v0.l
+; GFX13-TRUE16-NEXT:    v_and_b16 v1.h, 1, v2.l
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v0.h
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, vcc_lo
+; GFX13-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v1.l
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v3, 0, 1.0, vcc_lo
+; GFX13-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v0.l
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, vcc_lo
+; GFX13-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v1.h
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v3
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1.0, vcc_lo
+; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v1, v1, v2
+; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-FAKE16-LABEL: v_uitofp_v4i1_to_v4bf16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v3, 1, v3
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v3
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v3, 0, 1.0, vcc_lo
+; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1.0, vcc_lo
+; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, vcc_lo
+; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v2
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, vcc_lo
+; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v1, v2, v3
+; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %op = uitofp <4 x i1> %num to <4 x bfloat>
   ret <4 x bfloat> %op
 }
@@ -1324,6 +1565,43 @@ define amdgpu_ps <4 x i32> @s_uitofp_v4i1_to_v4bf16(<4 x i1> inreg %num) {
 ; GFX12-NEXT:    v_readfirstlane_b32 s3, v0
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: s_uitofp_v4i1_to_v4bf16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_and_b32 s0, 1, s0
+; GFX13-NEXT:    s_and_b32 s1, 1, s1
+; GFX13-NEXT:    s_and_b32 s2, 1, s2
+; GFX13-NEXT:    s_bitcmp1_b32 s3, 0
+; GFX13-NEXT:    s_cselect_b32 s3, -1, 0
+; GFX13-NEXT:    s_cmp_eq_u32 s2, 1
+; GFX13-NEXT:    v_cndmask_b32_e64 v3, 0, 1.0, s3
+; GFX13-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX13-NEXT:    s_cmp_eq_u32 s1, 1
+; GFX13-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, s2
+; GFX13-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX13-NEXT:    s_cmp_eq_u32 s0, 1
+; GFX13-NEXT:    v_cndmask_b32_e64 v1, 0, 1.0, s1
+; GFX13-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX13-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
+; GFX13-NEXT:    v_cvt_pk_bf16_f32 v2, v2, s0
+; GFX13-NEXT:    v_cvt_pk_bf16_f32 v1, v1, s0
+; GFX13-NEXT:    v_cvt_pk_bf16_f32 v3, v3, s0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GFX13-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX13-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX13-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX13-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX13-NEXT:    ; return to shader part epilog
   %op = uitofp <4 x i1> %num to <4 x bfloat>
   %b16 = bitcast <4 x bfloat> %op to <4 x i16>
   %b32 = zext <4 x i16> %b16 to <4 x i32>
@@ -1436,6 +1714,20 @@ define bfloat @v_sitofp_i1_to_bf16(i1 %num) {
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX13-LABEL: v_sitofp_i1_to_bf16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
+; GFX13-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc_lo
+; GFX13-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %op = sitofp i1 %num to bfloat
   ret bfloat %op
 }
@@ -1505,6 +1797,18 @@ define amdgpu_ps i32 @s_sitofp_i1_to_bf16(i1 inreg %num) {
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: s_sitofp_i1_to_bf16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX13-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, s0
+; GFX13-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX13-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX13-NEXT:    ; return to shader part epilog
   %op = sitofp i1 %num to bfloat
   %b16 = bitcast bfloat %op to i16
   %b32 = sext i16 %b16 to i32
@@ -1672,6 +1976,42 @@ define <2 x bfloat> @v_sitofp_v2i1_to_v2bf16(<2 x i1> %num) {
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v1, v3, v5, vcc_lo
 ; GFX12-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x7060302
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX13-TRUE16-LABEL: v_sitofp_v2i1_to_v2bf16:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    v_and_b16 v0.h, 1, v1.l
+; GFX13-TRUE16-NEXT:    v_and_b16 v0.l, 1, v0.l
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX13-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v0.h
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1.0, vcc_lo
+; GFX13-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v0.l
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc_lo
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
+; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-FAKE16-LABEL: v_sitofp_v2i1_to_v2bf16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1.0, vcc_lo
+; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc_lo
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
+; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %op = sitofp <2 x i1> %num to <2 x bfloat>
   ret <2 x bfloat> %op
 }
@@ -1790,6 +2130,27 @@ define amdgpu_ps <2 x i32> @s_sitofp_v2i1_to_v2bf16(<2 x i1> inreg %num) {
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v0
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: s_sitofp_v2i1_to_v2bf16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_and_b32 s0, 1, s0
+; GFX13-NEXT:    s_bitcmp1_b32 s1, 0
+; GFX13-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX13-NEXT:    s_cmp_eq_u32 s0, 1
+; GFX13-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, s1
+; GFX13-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_cndmask_b32_e64 v1, 0, -1.0, s0
+; GFX13-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_cvt_pk_bf16_f32 v1, v1, s0
+; GFX13-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_bfe_i32 v1, v1, 0, 16
+; GFX13-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX13-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX13-NEXT:    ; return to shader part epilog
   %op = sitofp <2 x i1> %num to <2 x bfloat>
   %b16 = bitcast <2 x bfloat> %op to <2 x i16>
   %b32 = sext <2 x i16> %b16 to <2 x i32>
@@ -2016,6 +2377,51 @@ define <3 x bfloat> @v_sitofp_v3i1_to_v3bf16(<3 x i1> %num) {
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_alignbit_b32 v1, s0, v2, 16
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX13-TRUE16-LABEL: v_sitofp_v3i1_to_v3bf16:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    v_and_b16 v0.h, 1, v2.l
+; GFX13-TRUE16-NEXT:    v_and_b16 v1.l, 1, v1.l
+; GFX13-TRUE16-NEXT:    v_and_b16 v0.l, 1, v0.l
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX13-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v0.h
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, -1.0, vcc_lo
+; GFX13-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v1.l
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v2, v2, s0
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1.0, vcc_lo
+; GFX13-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v0.l
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc_lo
+; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.l
+; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-FAKE16-LABEL: v_sitofp_v3i1_to_v3bf16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1.0, vcc_lo
+; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc_lo
+; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v2
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v2, 0, -1.0, vcc_lo
+; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v1, v2, s0
+; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %op = sitofp <3 x i1> %num to <3 x bfloat>
   ret <3 x bfloat> %op
 }
@@ -2176,6 +2582,67 @@ define amdgpu_ps <3 x i32> @s_sitofp_v3i1_to_v3bf16(<3 x i1> inreg %num) {
 ; GFX12-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-TRUE16-LABEL: s_sitofp_v3i1_to_v3bf16:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_and_b32 s1, 1, s1
+; GFX13-TRUE16-NEXT:    s_and_b32 s0, 1, s0
+; GFX13-TRUE16-NEXT:    s_bitcmp1_b32 s2, 0
+; GFX13-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX13-TRUE16-NEXT:    s_cmp_eq_u32 s0, 1
+; GFX13-TRUE16-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX13-TRUE16-NEXT:    s_cmp_eq_u32 s1, 1
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, s0
+; GFX13-TRUE16-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1.0, s0
+; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v2, s0
+; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1.0, s2
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v2.l
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v0.h
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v1, v1, s0
+; GFX13-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX13-TRUE16-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX13-TRUE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
+; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s1, v2
+; GFX13-TRUE16-NEXT:    v_readfirstlane_b32 s2, v1
+; GFX13-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX13-FAKE16-LABEL: s_sitofp_v3i1_to_v3bf16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_and_b32 s1, 1, s1
+; GFX13-FAKE16-NEXT:    s_and_b32 s0, 1, s0
+; GFX13-FAKE16-NEXT:    s_bitcmp1_b32 s2, 0
+; GFX13-FAKE16-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX13-FAKE16-NEXT:    s_cmp_eq_u32 s0, 1
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v2, 0, -1.0, s2
+; GFX13-FAKE16-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX13-FAKE16-NEXT:    s_cmp_eq_u32 s1, 1
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, s0
+; GFX13-FAKE16-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1.0, s0
+; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v2, v2, s0
+; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-FAKE16-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; GFX13-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX13-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX13-FAKE16-NEXT:    v_lshl_or_b32 v1, s0, 16, v1
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX13-FAKE16-NEXT:    v_bfe_i32 v1, v1, 0, 16
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX13-FAKE16-NEXT:    ; return to shader part epilog
   %op = sitofp <3 x i1> %num to <3 x bfloat>
   %b16 = bitcast <3 x bfloat> %op to <3 x i16>
   %b32 = sext <3 x i16> %b16 to <3 x i32>
@@ -2453,6 +2920,56 @@ define <4 x bfloat> @v_sitofp_v4i1_to_v4bf16(<4 x i1> %num) {
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v3, v5, v9, vcc_lo
 ; GFX12-FAKE16-NEXT:    v_perm_b32 v1, v3, v2, 0x7060302
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX13-TRUE16-LABEL: v_sitofp_v4i1_to_v4bf16:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    v_and_b16 v0.h, 1, v3.l
+; GFX13-TRUE16-NEXT:    v_and_b16 v1.l, 1, v1.l
+; GFX13-TRUE16-NEXT:    v_and_b16 v0.l, 1, v0.l
+; GFX13-TRUE16-NEXT:    v_and_b16 v1.h, 1, v2.l
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v0.h
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, -1.0, vcc_lo
+; GFX13-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v1.l
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v3, 0, -1.0, vcc_lo
+; GFX13-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v0.l
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc_lo
+; GFX13-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v1.h
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v3
+; GFX13-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1.0, vcc_lo
+; GFX13-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v1, v1, v2
+; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-FAKE16-LABEL: v_sitofp_v4i1_to_v4bf16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v3, 1, v3
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX13-FAKE16-NEXT:    v_and_b32_e32 v2, 1, v2
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v3
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v3, 0, -1.0, vcc_lo
+; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v1, 0, -1.0, vcc_lo
+; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc_lo
+; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v2
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
+; GFX13-FAKE16-NEXT:    v_cndmask_b32_e64 v2, 0, -1.0, vcc_lo
+; GFX13-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v1, v2, v3
+; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %op = sitofp <4 x i1> %num to <4 x bfloat>
   ret <4 x bfloat> %op
 }
@@ -2660,6 +3177,43 @@ define amdgpu_ps <4 x i32> @s_sitofp_v4i1_to_v4bf16(<4 x i1> inreg %num) {
 ; GFX12-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: s_sitofp_v4i1_to_v4bf16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_and_b32 s0, 1, s0
+; GFX13-NEXT:    s_and_b32 s1, 1, s1
+; GFX13-NEXT:    s_and_b32 s2, 1, s2
+; GFX13-NEXT:    s_bitcmp1_b32 s3, 0
+; GFX13-NEXT:    s_cselect_b32 s3, -1, 0
+; GFX13-NEXT:    s_cmp_eq_u32 s2, 1
+; GFX13-NEXT:    v_cndmask_b32_e64 v3, 0, -1.0, s3
+; GFX13-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX13-NEXT:    s_cmp_eq_u32 s1, 1
+; GFX13-NEXT:    v_cndmask_b32_e64 v2, 0, -1.0, s2
+; GFX13-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX13-NEXT:    s_cmp_eq_u32 s0, 1
+; GFX13-NEXT:    v_cndmask_b32_e64 v1, 0, -1.0, s1
+; GFX13-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX13-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, s0
+; GFX13-NEXT:    v_cvt_pk_bf16_f32 v2, v2, s0
+; GFX13-NEXT:    v_cvt_pk_bf16_f32 v1, v1, s0
+; GFX13-NEXT:    v_cvt_pk_bf16_f32 v3, v3, s0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GFX13-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_bfe_i32 v1, v1, 0, 16
+; GFX13-NEXT:    v_bfe_i32 v3, v3, 0, 16
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX13-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX13-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX13-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX13-NEXT:    ; return to shader part epilog
   %op = sitofp <4 x i1> %num to <4 x bfloat>
   %b16 = bitcast <4 x bfloat> %op to <4 x i16>
   %b32 = sext <4 x i16> %b16 to <4 x i32>

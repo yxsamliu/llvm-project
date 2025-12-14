@@ -19,7 +19,10 @@
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -52,7 +55,15 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
     AU.addRequired<AMDGPUIndexingInfoWrapper>();
+    // LiveVariables only tracks virtual registers and we only touch physical
+    // registers.
+    AU.addPreserved<LiveVariablesWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
+    AU.addPreservedID(MachineLoopInfoID);
+    AU.addPreservedID(MachineDominatorsID);
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -61,6 +72,9 @@ private:
   const AMDGPUIndexingInfo *SII;
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
+  LiveIntervals *LIS = nullptr;
+  SlotIndexes *SI = nullptr;
+
   // Store computed object regs with the associated PO Info, (un)known precise
   // reg use information determines the computed regs.
   std::unordered_map<const AMDGPUPrivateObjectIdxInfo *, ObjectRegs>
@@ -69,6 +83,7 @@ private:
   // use information.
   std::unordered_map<const MDNode *, ObjectRegs> MDNodeObjectRegs;
 
+  void populateObjectRegs(const MDNode &Obj);
   ObjectRegs &getObjectRegs(const MDNode &Obj);
   ObjectRegs &getObjectRegs(const AMDGPUPrivateObjectIdxInfo &PO);
 
@@ -157,13 +172,18 @@ AMDGPUPrivateObjectVGPRs::getObjectRegs(const AMDGPUPrivateObjectIdxInfo &PO) {
   return Regs;
 }
 
-ObjectRegs &AMDGPUPrivateObjectVGPRs::getObjectRegs(const MDNode &Obj) {
+void AMDGPUPrivateObjectVGPRs::populateObjectRegs(const MDNode &Obj) {
   auto &Regs = MDNodeObjectRegs[&Obj];
   if (Regs.empty()) {
     auto [Offset, Size] = getAMDGPUPrivateObjectNodeInfo(&Obj);
     updateObjectRegs(Regs, Offset, Size);
   }
-  return Regs;
+}
+
+ObjectRegs &AMDGPUPrivateObjectVGPRs::getObjectRegs(const MDNode &Obj) {
+  auto It = MDNodeObjectRegs.find(&Obj);
+  assert(It != MDNodeObjectRegs.end());
+  return It->second;
 }
 
 void AMDGPUPrivateObjectVGPRs::insertObjectDef(
@@ -176,8 +196,12 @@ void AMDGPUPrivateObjectVGPRs::insertObjectDef(
       --DefPt;
   }
 
-  for (MCPhysReg Reg : Regs)
-    BuildMI(MBB, DefPt, DebugLoc(), TII->get(TargetOpcode::IMPLICIT_DEF), Reg);
+  for (MCPhysReg Reg : Regs) {
+    MachineInstr *MI = BuildMI(MBB, DefPt, DebugLoc(),
+                               TII->get(TargetOpcode::IMPLICIT_DEF), Reg);
+    if (SI)
+      SI->insertMachineInstrInMaps(*MI);
+  }
 }
 
 void AMDGPUPrivateObjectVGPRs::addUseDefOperands(
@@ -230,6 +254,13 @@ bool AMDGPUPrivateObjectVGPRs::runOnMachineFunction(MachineFunction &MF) {
   SII = &getAnalysis<AMDGPUIndexingInfoWrapper>().getIndexingInfo();
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
+  LIS = nullptr;
+  if (auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>())
+    LIS = &LISWrapper->getLIS();
+  SI = nullptr;
+  if (auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>())
+    SI = &SIWrapper->getSI();
+
   FilteredObjectRegs.clear();
   MDNodeObjectRegs.clear();
 
@@ -279,8 +310,10 @@ bool AMDGPUPrivateObjectVGPRs::runOnMachineFunction(MachineFunction &MF) {
     SmallVector<const MDNode *, 4> LiveObjs = LiveIns[&MBB];
     for (MachineInstr &MI : MBB.instrs()) {
       if (auto Info = SII->getPrivateObjectIdxInfo(&MI);
-          Info && !is_contained(LiveObjs, Info->get().Obj))
+          Info && !is_contained(LiveObjs, Info->get().Obj)) {
         LiveObjs.push_back(Info->get().Obj);
+        populateObjectRegs(*Info->get().Obj);
+      }
     }
 
     // Add objects that must be defined at the beginnings of successors.
@@ -343,6 +376,15 @@ bool AMDGPUPrivateObjectVGPRs::runOnMachineFunction(MachineFunction &MF) {
           Changed = true;
         }
       }
+    }
+  }
+
+  // Remove live ranges from LiveIntervals. They will be recalculated lazily.
+  if (LIS) {
+    for (const auto &Pair : MDNodeObjectRegs) {
+      const ObjectRegs &Regs = Pair.second;
+      for (MCPhysReg Reg : Regs)
+        LIS->removeAllRegUnitsForPhysReg(Reg);
     }
   }
 

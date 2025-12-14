@@ -14,6 +14,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -655,6 +656,32 @@ getEntryFunctionToRankSpecializationMap(const CallGraph &CG, Module &M) {
     }
   }
   return RankFuncMap;
+}
+
+AllocatedVGPRsMetadata &AllocatedVGPRsMetadata::get(const AllocaInst &Alloca) {
+  return *cast<AllocatedVGPRsMetadata>(Alloca.getMetadata("amdgpu.allocated.vgprs"));
+}
+
+unsigned AllocatedVGPRsMetadata::getAddress() const {
+  return cast<ConstantInt>(cast<ConstantAsMetadata>(getOperand(0))->getValue())->getZExtValue();
+}
+
+/// Get the size (in bytes) of the VGPR allocation.
+unsigned AllocatedVGPRsMetadata::getSize() const {
+  return cast<ConstantInt>(cast<ConstantAsMetadata>(getOperand(1))->getValue())->getZExtValue();
+}
+
+bool AllocatedVGPRsMetadata::classof(const MDNode *N) {
+  if (N->getNumOperands() != 2)
+    return false;
+  for (int i = 0; i < 2; ++i) {
+    auto *C = dyn_cast<ConstantAsMetadata>(N->getOperand(i));
+    if (!C)
+      return false;
+    if (!isa<ConstantInt>(C->getValue()))
+      return false;
+  }
+  return true;
 }
 
 } // end namespace llvm::AMDGPU
