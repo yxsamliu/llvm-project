@@ -1193,6 +1193,12 @@ int SIInstrInfo::commuteOpcode(unsigned Opcode) const {
   return Opcode;
 }
 
+unsigned SIInstrInfo::getMemOperandAACheckLimit() const {
+  if (ST.hasVGPRIndexingRegisters())
+    return 32;
+  return TargetInstrInfo::getMemOperandAACheckLimit();
+}
+
 const TargetRegisterClass *
 SIInstrInfo::getPreferredSelectRegClass(unsigned Size) const {
   return &AMDGPU::VGPR_32RegClass;
