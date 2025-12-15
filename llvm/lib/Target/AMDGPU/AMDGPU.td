@@ -968,6 +968,12 @@ def FeatureWMMAK128 : SubtargetFeature<"wmma-k128",
   "Has WMMA instructions with K multiplier 8 (16x16x128) encoding"
 >;
 
+def FeatureTensorWmmaOps : SubtargetFeature<"tensor-wmma-ops",
+  "HasTensorWmmaOps",
+  "true",
+  "Has extended set of WMMA instructions (IU16 inputs)"
+>;
+
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
   "HasPkFmacF16Inst",
   "true",
@@ -2497,6 +2503,7 @@ defvar FeatureISAVersion13_6 = FeatureISAVersion13_Common;
 def FeatureISAVersion13_7 : FeatureSet<
   !listconcat(FeatureISAVersion13_Common.Features,
     [FeatureWMMAK128,
+     FeatureTensorWmmaOps,
      FeatureGlobalTiledLoads2x2,
      FeatureLDSTiledLoads,
     ])>;
@@ -3225,6 +3232,9 @@ def HasWMMA256bInsts : Predicate<"Subtarget->hasWMMA256bInsts()">,
 
 def HasWMMA128bInsts : Predicate<"Subtarget->hasWMMA128bInsts()">,
   AssemblerPredicate<(all_of FeatureWMMA128bInsts)>;
+
+def HasTensorWmmaOps : Predicate<"Subtarget->hasTensorWmmaOps()">,
+  AssemblerPredicate<(all_of FeatureTensorWmmaOps)>;
 
 def HasCubeInsts : Predicate<"Subtarget->hasCubeInsts()">,
   AssemblerPredicate<(all_of FeatureCubeInsts)>;

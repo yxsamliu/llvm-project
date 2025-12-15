@@ -172,6 +172,7 @@ protected:
   bool HasWMMA128bInsts = false;
   bool HasWMMAK128 = false;
   bool HasWMMA256bInsts = false;
+  bool HasTensorWmmaOps = false;
   bool HasCubeInsts = false;
   bool HasLerpInst = false;
   bool HasSadInsts = false;
@@ -928,6 +929,7 @@ public:
 
   bool hasWMMA128bInsts() const { return HasWMMA128bInsts; }
   bool hasWMMAK128() const { return HasWMMAK128; }
+  bool hasTensorWmmaOps() const { return HasTensorWmmaOps; }
 
   bool isGFX1170() const {
     return getGeneration() == GFX11 && hasWMMA128bInsts();

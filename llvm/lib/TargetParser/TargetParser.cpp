@@ -431,6 +431,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
   AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
   switch (Kind) {
     case GK_GFX1370:
+      Features["tensor-wmma-ops"] = true;
       Features["wmma-k128"] = true;
       Features["lds-tiled-loads"] = true;
       Features["global-tiled-loads-2x2"] = true;

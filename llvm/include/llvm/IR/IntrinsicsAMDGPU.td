@@ -3837,24 +3837,57 @@ class AMDGPUWmmaIntrinsicIUClamp<LLVMType D, LLVMType AB, LLVMType C> :
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>]
 >;
 
+class AMDGPUWmmaIntrinsicIUTwoClamp<LLVMType D, LLVMType A, LLVMType B, LLVMType C> :
+  ClangBuiltin<!subst("int", "__builtin", NAME)>,
+  DefaultAttrsIntrinsic<
+    [D], // %D
+    [
+      llvm_i1_ty,       // %A_sign
+      A,                // %A
+      llvm_i1_ty,       // %B_sign
+      B,                // %B
+      C,                // %C
+      llvm_i1_ty,       // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>]
+>;
+
 def int_amdgcn_wmma_f32_16x16x16_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_i32_ty, llvm_v8f32_ty>;
 def int_amdgcn_wmma_f32_16x16x16_iu8_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v2i32_ty, llvm_v8f32_ty>;
+def int_amdgcn_wmma_f32_16x16x16_iu16_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v4i32_ty, llvm_v8f32_ty>;
+def int_amdgcn_wmma_f32_16x16x32_iu16_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v8i32_ty, llvm_v8f32_ty>;
+def int_amdgcn_wmma_f32_16x16x64_iu16_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v16i32_ty, llvm_v8f32_ty>;
 def int_amdgcn_wmma_f32_16x16x32_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v2i32_ty, llvm_v8f32_ty>;
 def int_amdgcn_wmma_f32_16x16x32_iu8_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v4i32_ty, llvm_v8f32_ty>;
 def int_amdgcn_wmma_f32_16x16x128_iu8_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v16i32_ty, llvm_v8f32_ty>;
 def int_amdgcn_wmma_f32_16x16x64_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v4i32_ty, llvm_v8f32_ty>;
 def int_amdgcn_wmma_f32i32_16x16x16_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_i32_ty, llvm_v8i32_ty>;
 def int_amdgcn_wmma_f32i32_16x16x16_iu8_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v2i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_f32i32_16x16x16_iu16_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_f32i32_16x16x32_iu16_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v8i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_f32i32_16x16x64_iu16_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v16i32_ty, llvm_v8i32_ty>;
 def int_amdgcn_wmma_f32i32_16x16x32_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v2i32_ty, llvm_v8i32_ty>;
 def int_amdgcn_wmma_f32i32_16x16x32_iu8_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
 def int_amdgcn_wmma_f32i32_16x16x128_iu8_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v16i32_ty, llvm_v8i32_ty>;
 def int_amdgcn_wmma_f32i32_16x16x64_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
 def int_amdgcn_wmma_i32_16x16x16_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8i32_ty, llvm_i32_ty, llvm_v8i32_ty>;
 def int_amdgcn_wmma_i32_16x16x16_iu8_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8i32_ty, llvm_v2i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_i32_16x16x16_iu16_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8i32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_i32_16x16x32_iu16_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8i32_ty, llvm_v8i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_i32_16x16x64_iu16_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8i32_ty, llvm_v16i32_ty, llvm_v8i32_ty>;
 def int_amdgcn_wmma_i32_16x16x32_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8i32_ty, llvm_v2i32_ty, llvm_v8i32_ty>;
 def int_amdgcn_wmma_i32_16x16x32_iu8_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8i32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
 def int_amdgcn_wmma_i32_16x16x128_iu8_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8i32_ty, llvm_v16i32_ty, llvm_v8i32_ty>;
 def int_amdgcn_wmma_i32_16x16x64_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8i32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_f32_16x16x16_iu8_iu16_clamp : AMDGPUWmmaIntrinsicIUTwoClamp<llvm_v8f32_ty, llvm_v2i32_ty, llvm_v4i32_ty, llvm_v8f32_ty>;
+def int_amdgcn_wmma_f32_16x16x32_iu8_iu16_clamp : AMDGPUWmmaIntrinsicIUTwoClamp<llvm_v8f32_ty, llvm_v4i32_ty, llvm_v8i32_ty, llvm_v8f32_ty>;
+def int_amdgcn_wmma_f32_16x16x64_iu8_iu16_clamp : AMDGPUWmmaIntrinsicIUTwoClamp<llvm_v8f32_ty, llvm_v8i32_ty, llvm_v16i32_ty, llvm_v8f32_ty>;
+def int_amdgcn_wmma_f32i32_16x16x16_iu8_iu16_clamp : AMDGPUWmmaIntrinsicIUTwoClamp<llvm_v8f32_ty, llvm_v2i32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_f32i32_16x16x32_iu8_iu16_clamp : AMDGPUWmmaIntrinsicIUTwoClamp<llvm_v8f32_ty, llvm_v4i32_ty, llvm_v8i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_f32i32_16x16x64_iu8_iu16_clamp : AMDGPUWmmaIntrinsicIUTwoClamp<llvm_v8f32_ty, llvm_v8i32_ty, llvm_v16i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_i32_16x16x16_iu8_iu16_clamp : AMDGPUWmmaIntrinsicIUTwoClamp<llvm_v8i32_ty, llvm_v2i32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_i32_16x16x32_iu8_iu16_clamp : AMDGPUWmmaIntrinsicIUTwoClamp<llvm_v8i32_ty, llvm_v4i32_ty, llvm_v8i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_i32_16x16x64_iu8_iu16_clamp : AMDGPUWmmaIntrinsicIUTwoClamp<llvm_v8i32_ty, llvm_v8i32_ty, llvm_v16i32_ty, llvm_v8i32_ty>;
 
 class AMDGPUWmmaIntrinsicBlockScaleClamp<LLVMType AB, LLVMType CD, LLVMType scale_ty> :
   ClangBuiltin<!subst("int", "__builtin", NAME)>,
