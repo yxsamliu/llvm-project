@@ -753,6 +753,7 @@ TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr16_b128_v8bf16, "V8yV8y*3", "nc", "gfx
 
 TARGET_BUILTIN(__builtin_amdgcn_s_setprio_inc_wg, "vIs", "n", "setprio-inc-wg-inst")
 TARGET_BUILTIN(__builtin_amdgcn_s_monitor_sleep,  "vIs", "n", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_s_wakeup_barrier, "vv*", "n", "s-wakeup-barrier-inst")
 
 TARGET_BUILTIN(__builtin_amdgcn_s_wait_asynccnt, "vIUs", "n", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_wait_tensorcnt, "vIUs", "n", "gfx1250-insts")
@@ -924,8 +925,6 @@ TARGET_BUILTIN(__builtin_amdgcn_s_sema_set_state, "vv*Ui", "n", "semaphores")
 TARGET_BUILTIN(__builtin_amdgcn_s_sema_set_limit, "vv*Ui", "n", "semaphores")
 TARGET_BUILTIN(__builtin_amdgcn_s_sema_signal, "vv*", "n", "semaphores")
 TARGET_BUILTIN(__builtin_amdgcn_s_sema_wait, "vv*", "n", "semaphores")
-
-TARGET_BUILTIN(__builtin_amdgcn_s_wakeup_barrier, "vv*", "n", "gfx13-insts")
 
 // The convolve builtins are overloaded and support multiple variants driven by filter type and iteration count,
 // both provided in aux_data. Only return types are listed.
