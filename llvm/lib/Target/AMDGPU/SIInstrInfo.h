@@ -454,7 +454,7 @@ public:
 
   /// Override the default limit because bundles with v-load/store-idx
   /// can have more MMOs.
-  unsigned getMemOperandAACheckLimit() const override { return 32; }
+  unsigned getMemOperandAACheckLimit() const override;
 
   unsigned getMachineCSELookAheadLimit() const override { return 500; }
 
