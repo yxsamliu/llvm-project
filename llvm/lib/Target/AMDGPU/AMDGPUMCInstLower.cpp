@@ -361,7 +361,8 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     bool HasBankConflict = Info.Reason == AMDGPU::StallReason::REG_BANK;
     
     if (Info.StallCycles == 0 && !Info.InWMMAWindow && 
-        !Info.WasFused && !Info.WasExposed && !Info.IsWMMA && !HasCacheHit)
+        !Info.WasFused && !Info.WasExposed && !Info.WasMasked && 
+        !Info.IsWMMA && !HasCacheHit)
       return;
     
     std::string Comment;
@@ -379,7 +380,10 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       OS << " Fused";
       HasContent = true;
     } else if (Info.WasExposed) {
-      OS << " Exposed";
+      if (Info.WasMasked)
+        OS << " MSB_Exposed(masked)";
+      else
+        OS << " MSB_Exposed";
       HasContent = true;
     }
     
