@@ -136,6 +136,8 @@ struct HardwareLimits {
   DECL(VMEM_FORMAT_READ_ACCESS)  /* vmem buffer format read (gfx13+ only) */   \
   DECL(VMEM_WRITE_ACCESS)        /* vmem write that is not scratch */          \
   DECL(SCRATCH_WRITE_ACCESS)     /* vmem write that may be scratch */          \
+  DECL(IMAGE_WRITE_ACCESS)       /* vmem VIMAGE write (gfx13+) */              \
+  DECL(RTS_WRITE_ACCESS)         /* vmem RTS write using STOREcnt (gfx13+) */  \
   DECL(VMEM_GROUP)               /* vmem group */                              \
   DECL(SWC_ACCESS)               /* streaming wave coalescer */                \
   DECL(LDS_ACCESS)               /* lds read & write */                        \
@@ -167,6 +169,9 @@ enum WaitEventType {
   NUM_WAIT_EVENTS
 };
 #undef AMDGPU_EVENT_ENUM
+
+static_assert(NUM_WAIT_EVENTS <= sizeof(uint64_t) * CHAR_BIT,
+              "Event mask overflow");
 
 #define AMDGPU_EVENT_NAME(Name) #Name,
 static constexpr StringLiteral WaitEventTypeName[] = {
@@ -269,9 +274,9 @@ unsigned getWait(AMDGPU::Waitcnt &Wait, InstCounterType T) {
 }
 
 // Mapping from event to counter according to the table masks.
-InstCounterType eventCounter(const unsigned *masks, WaitEventType E) {
+InstCounterType eventCounter(const uint64_t *Masks, WaitEventType E) {
   for (auto T : inst_counter_types()) {
-    if (masks[T] & (1 << E))
+    if (Masks[T] & (1ull << E))
       return T;
   }
   llvm_unreachable("event type has no associated counter");
@@ -337,7 +342,7 @@ public:
 
   // Returns an array of bit masks which can be used to map values in
   // WaitEventType to corresponding counter values in InstCounterType.
-  virtual const unsigned *getWaitEventMask() const = 0;
+  virtual const uint64_t *getWaitEventMask() const = 0;
 
   // Returns a new waitcnt with all counters except VScnt set to 0. If
   // IncludeVSCnt is true, VScnt is set to 0, otherwise it is set to ~0u.
@@ -346,11 +351,11 @@ public:
   virtual ~WaitcntGenerator() = default;
 
   // Create a mask value from the initializer list of wait event types.
-  static constexpr unsigned
+  static constexpr uint64_t
   eventMask(std::initializer_list<WaitEventType> Events) {
-    unsigned Mask = 0;
+    uint64_t Mask = 0ull;
     for (auto &E : Events)
-      Mask |= 1 << E;
+      Mask |= 1ull << E;
 
     return Mask;
   }
@@ -369,10 +374,10 @@ public:
                         MachineBasicBlock::instr_iterator It,
                         AMDGPU::Waitcnt Wait) override;
 
-  const unsigned *getWaitEventMask() const override {
+  const uint64_t *getWaitEventMask() const override {
     assert(ST);
 
-    static const unsigned WaitEventMaskForInstPreGFX12[NUM_INST_CNTS] = {
+    static const uint64_t WaitEventMaskForInstPreGFX12[NUM_INST_CNTS] = {
         eventMask({VMEM_ACCESS, VMEM_READ_ACCESS, VMEM_SAMPLER_READ_ACCESS,
                    VMEM_IMAGE_READ_ACCESS, VMEM_FORMAT_READ_ACCESS,
                    VMEM_BVH_READ_ACCESS}),
@@ -407,17 +412,18 @@ public:
                         MachineBasicBlock::instr_iterator It,
                         AMDGPU::Waitcnt Wait) override;
 
-  const unsigned *getWaitEventMask() const override {
+  const uint64_t *getWaitEventMask() const override {
     assert(ST);
 
-    static const unsigned WaitEventMaskForInstGFX12Plus[NUM_INST_CNTS] = {
+    static const uint64_t WaitEventMaskForInstGFX12Plus[NUM_INST_CNTS] = {
         eventMask({VMEM_ACCESS, VMEM_READ_ACCESS, VMEM_IMAGE_READ_ACCESS,
                    VMEM_FORMAT_READ_ACCESS}),
         eventMask({LDS_ACCESS, GDS_ACCESS}),
         eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
                    EXP_POS_ACCESS, EXP_LDS_ACCESS, EXP_VGPR_SEND_PREV,
                    EXP_VGPR_SEND_NEXT}),
-        eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
+        eventMask({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS, IMAGE_WRITE_ACCESS,
+                   RTS_WRITE_ACCESS}),
         eventMask({VMEM_SAMPLER_READ_ACCESS}),
         eventMask({VMEM_BVH_READ_ACCESS}),
         eventMask({SMEM_ACCESS, SQ_MESSAGE, SCC_WRITE}),
@@ -442,7 +448,7 @@ public:
   InstCounterType SmemAccessCounter;
   bool IsExpertMode;
   unsigned LaneSharedSize;
-  const unsigned *WaitEventMaskForInst;
+  const uint64_t *WaitEventMaskForInst;
   const AMDGPUIndexingInfo &SII;
 
 private:
@@ -623,6 +629,12 @@ public:
         (!Inst.mayLoad() || SIInstrInfo::isAtomicNoRet(Inst))) {
       if (TII->mayAccessScratch(Inst))
         return SCRATCH_WRITE_ACCESS;
+      if (AMDGPU::isGFX13Plus(*ST)) {
+        if (SIInstrInfo::isVIMAGE(Inst))
+          return IMAGE_WRITE_ACCESS;
+        if (Inst.getOpcode() == AMDGPU::RTS_RAY_SAVE)
+          return RTS_WRITE_ACCESS;
+      }
       return VMEM_WRITE_ACCESS;
     }
     if (!ST->hasExtendedWaitCounts() || SIInstrInfo::isFLAT(Inst))
@@ -744,18 +756,18 @@ public:
   void applyWaitcnt(InstCounterType T, unsigned Count);
   void updateByEvent(WaitEventType E, MachineInstr &MI);
 
-  unsigned hasPendingEvent() const { return PendingEvents; }
-  unsigned hasPendingEvent(WaitEventType E) const {
-    return PendingEvents & (1 << E);
+  uint64_t hasPendingEvent() const { return PendingEvents; }
+  uint64_t hasPendingEvent(WaitEventType E) const {
+    return PendingEvents & (1ull << E);
   }
-  unsigned hasPendingEvent(InstCounterType T) const {
-    unsigned HasPending = PendingEvents & Context->WaitEventMaskForInst[T];
+  uint64_t hasPendingEvent(InstCounterType T) const {
+    uint64_t HasPending = PendingEvents & Context->WaitEventMaskForInst[T];
     assert((HasPending != 0) == (getScoreRange(T) != 0));
     return HasPending;
   }
 
   bool hasMixedPendingEvents(InstCounterType T) const {
-    unsigned Events = hasPendingEvent(T);
+    uint64_t Events = hasPendingEvent(T);
     // Return true if more than one bit is set in Events.
     return Events & (Events - 1);
   }
@@ -876,7 +888,7 @@ private:
 
   unsigned ScoreLBs[NUM_INST_CNTS] = {0};
   unsigned ScoreUBs[NUM_INST_CNTS] = {0};
-  unsigned PendingEvents = 0;
+  uint64_t PendingEvents = 0ull;
   // Remember the last flat memory operation.
   unsigned LastFlat[NUM_INST_CNTS] = {0};
   // Remember the last GDS operation.
@@ -1089,7 +1101,7 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
   // PendingEvents and ScoreUB need to be update regardless if this event
   // changes the score of a register or not.
   // Examples including vm_cnt when buffer-store or lgkm_cnt when send-message.
-  PendingEvents |= 1 << E;
+  PendingEvents |= 1ull << E;
   setScoreUB(T, CurrScore);
 
   const SIRegisterInfo *TRI = Context->TRI;
@@ -1178,13 +1190,13 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
     }
   } else if (T == X_CNT) {
     WaitEventType OtherEvent = E == SMEM_GROUP ? VMEM_GROUP : SMEM_GROUP;
-    if (PendingEvents & (1 << OtherEvent)) {
+    if (PendingEvents & (1ull << OtherEvent)) {
       // Hardware inserts an implicit xcnt between interleaved
       // SMEM and VMEM operations. So there will never be
       // outstanding address translations for both SMEM and
       // VMEM at the same time.
       setScoreLB(T, getScoreUB(T) - 1);
-      PendingEvents &= ~(1 << OtherEvent);
+      PendingEvents &= ~(1ull << OtherEvent);
     }
     for (const MachineOperand &Op : Inst.all_uses())
       setScoreByOperand(&Inst, Op, T, CurrScore);
@@ -1467,7 +1479,7 @@ void WaitcntBrackets::tryClearSCCWriteEvent(MachineInstr *Inst) {
   if (PendingSCCWrite &&
       PendingSCCWrite->getOpcode() == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM &&
       PendingSCCWrite->getOperand(0).getImm() == Inst->getOperand(0).getImm()) {
-    unsigned SCC_WRITE_PendingEvent = 1 << SCC_WRITE;
+    uint64_t SCC_WRITE_PendingEvent = 1ull << SCC_WRITE;
     // If this SCC_WRITE is the only pending KM_CNT event, clear counter.
     if ((PendingEvents & Context->WaitEventMaskForInst[KM_CNT]) ==
         SCC_WRITE_PendingEvent) {
@@ -1533,13 +1545,13 @@ void WaitcntBrackets::simplifyXcnt(AMDGPU::Waitcnt &CheckWait,
     if (!hasMixedPendingEvents(X_CNT)) {
       applyWaitcnt(X_CNT, 0);
     } else {
-      PendingEvents &= ~(1 << SMEM_GROUP);
+      PendingEvents &= ~(1ull << SMEM_GROUP);
     }
   } else if (canOptimizeXCntWithLoadCnt(CheckWait)) {
     if (!hasMixedPendingEvents(X_CNT)) {
       applyWaitcnt(X_CNT, std::min(CheckWait.XCnt, CheckWait.LoadCnt));
     } else if (CheckWait.LoadCnt == 0) {
-      PendingEvents &= ~(1 << VMEM_GROUP);
+      PendingEvents &= ~(1ull << VMEM_GROUP);
     }
   }
   simplifyWaitcnt(X_CNT, UpdateWait.XCnt);
@@ -2758,7 +2770,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
         Inst.getOpcode() == AMDGPU::SWC_REORDER_SWAP_RESUME)
       ScoreBrackets->updateByEvent(SWC_ACCESS, Inst);
     if (Inst.getOpcode() == AMDGPU::RTS_RAY_SAVE)
-      ScoreBrackets->updateByEvent(VMEM_WRITE_ACCESS, Inst);
+      ScoreBrackets->updateByEvent(RTS_WRITE_ACCESS, Inst);
     if (Inst.getOpcode() == AMDGPU::RTS_FLUSH)
       return;
     if (Inst.getOpcode() == AMDGPU::RTS_READ_RESULT_ALL_STOP ||
@@ -2887,9 +2899,9 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
 
   for (auto T : inst_counter_types()) {
     // Merge event flags for this counter
-    const unsigned *WaitEventMaskForInst = Context->WaitEventMaskForInst;
-    const unsigned OldEvents = PendingEvents & WaitEventMaskForInst[T];
-    const unsigned OtherEvents = Other.PendingEvents & WaitEventMaskForInst[T];
+    const uint64_t *WaitEventMaskForInst = Context->WaitEventMaskForInst;
+    const uint64_t OldEvents = PendingEvents & WaitEventMaskForInst[T];
+    const uint64_t OtherEvents = Other.PendingEvents & WaitEventMaskForInst[T];
     if (OtherEvents & ~OldEvents)
       StrictDom = true;
     PendingEvents |= OtherEvents;
