@@ -467,6 +467,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
       Features["atomic-ds-pk-add-16-insts"] = true;
       Features["gfx1251-gemm-insts"] = true;
       Features["gfx13-insts"] = true;
+      Features["s-wakeup-barrier-inst"] = true;
       Features["parallel-bit-insts"] = true;
       Features["f32-to-f16bf16-cvt-sr-insts"] = true;
       Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
@@ -528,6 +529,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["atomic-global-pk-add-bf16-inst"] = true;
     Features["atomic-ds-pk-add-16-insts"] = true;
     Features["setprio-inc-wg-inst"] = true;
+    Features["s-wakeup-barrier-inst"] = true;
     Features["atomic-fmin-fmax-global-f32"] = true;
     Features["atomic-fmin-fmax-global-f64"] = true;
     Features["wavefrontsize32"] = true;

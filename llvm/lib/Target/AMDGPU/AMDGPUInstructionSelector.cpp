@@ -2429,8 +2429,17 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_s_barrier_init:
   case Intrinsic::amdgcn_s_barrier_signal_var:
     return selectNamedBarrierInit(I, IntrinsicID);
+  case Intrinsic::amdgcn_s_wakeup_barrier: {
+    if (!STI.hasSWakeupBarrier()) {
+      Function &F = I.getMF()->getFunction();
+      F.getContext().diagnose(
+          DiagnosticInfoUnsupported(F, "intrinsic not supported on subtarget",
+                                    I.getDebugLoc(), DS_Error));
+      return false;
+    }
+    [[fallthrough]];
+  }
   case Intrinsic::amdgcn_s_barrier_join:
-  case Intrinsic::amdgcn_s_wakeup_barrier:
   case Intrinsic::amdgcn_s_get_named_barrier_state:
     return selectNamedBarrierInst(I, IntrinsicID);
   case Intrinsic::amdgcn_s_get_barrier_state:
