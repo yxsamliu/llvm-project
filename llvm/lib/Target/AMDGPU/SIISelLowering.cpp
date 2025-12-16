@@ -7830,6 +7830,12 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return splitTernaryVectorOp(Op, DAG);
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
+    if (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 &&
+        Op.getValueType() == MVT::i16 &&
+        Op.getOperand(0).getValueType() == MVT::f32) {
+      // Make f32->i16 legal so we can select V_CVT_PK_[IU]16_F32.
+      return Op;
+    }
     return LowerFP_TO_INT(Op, DAG);
   case ISD::SHL:
   case ISD::SRA:
@@ -12929,8 +12935,12 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     auto *NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     return SDValue(NewMI, 0);
   }
-  case Intrinsic::amdgcn_s_barrier_join:
   case Intrinsic::amdgcn_s_wakeup_barrier: {
+    if (!Subtarget->hasSWakeupBarrier())
+      return SDValue();
+    [[fallthrough]];
+  }
+  case Intrinsic::amdgcn_s_barrier_join: {
     // these three intrinsics have one operand: barrier pointer
     SDValue Chain = Op->getOperand(0);
     SmallVector<SDValue, 2> Ops;

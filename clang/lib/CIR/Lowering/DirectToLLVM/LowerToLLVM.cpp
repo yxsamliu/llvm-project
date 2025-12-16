@@ -868,8 +868,8 @@ mlir::LogicalResult CIRToLLVMAtomicClearOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMAtomicFenceLowering::matchAndRewrite(
-    cir::AtomicFence op, OpAdaptor adaptor,
+mlir::LogicalResult CIRToLLVMAtomicFenceOpLowering::matchAndRewrite(
+    cir::AtomicFenceOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(adaptor.getOrdering());
 
@@ -1651,12 +1651,15 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
-  // TODO: nontemporal, syncscope.
+  // TODO: nontemporal.
   assert(!cir::MissingFeatures::opLoadStoreNontemporal());
+  std::optional<llvm::StringRef> syncScope =
+      getLLVMSyncScope(op.getSyncScope());
   mlir::LLVM::LoadOp newLoad = mlir::LLVM::LoadOp::create(
       rewriter, op->getLoc(), llvmTy, adaptor.getAddr(), alignment,
       op.getIsVolatile(), /*isNonTemporal=*/false,
-      /*isInvariant=*/false, /*isInvariantGroup=*/false, ordering);
+      /*isInvariant=*/false, /*isInvariantGroup=*/false, ordering,
+      syncScope.value_or(llvm::StringRef()));
 
   // Convert adapted result to its original type if needed.
   mlir::Value result =
@@ -1681,13 +1684,16 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   // Convert adapted value to its memory type if needed.
   mlir::Value value = emitToMemory(rewriter, dataLayout,
                                    op.getValue().getType(), adaptor.getValue());
-  // TODO: nontemporal, syncscope.
+  // TODO: nontemporal.
   assert(!cir::MissingFeatures::opLoadStoreNontemporal());
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
+  std::optional<llvm::StringRef> syncScope =
+      getLLVMSyncScope(op.getSyncScope());
   mlir::LLVM::StoreOp storeOp = mlir::LLVM::StoreOp::create(
       rewriter, op->getLoc(), value, adaptor.getAddr(), alignment,
       op.getIsVolatile(),
-      /*isNonTemporal=*/false, /*isInvariantGroup=*/false, memorder);
+      /*isNonTemporal=*/false, /*isInvariantGroup=*/false, memorder,
+      syncScope.value_or(llvm::StringRef()));
   rewriter.replaceOp(op, storeOp);
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return mlir::LogicalResult::success();
