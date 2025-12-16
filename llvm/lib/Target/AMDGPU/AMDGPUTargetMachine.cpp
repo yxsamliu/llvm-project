@@ -104,6 +104,7 @@
 #include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/DeadStoreElimination.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/FlattenCFG.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -354,6 +355,12 @@ static cl::opt<bool> EnableLoadStoreVectorizer(
   cl::desc("Enable load store vectorizer"),
   cl::init(true),
   cl::Hidden);
+
+// Option to enable DSE.
+static cl::opt<bool>
+    EnableDeadStoreElimination("amdgpu-dead-store-elimination",
+                               cl::desc("Enable dead store elimination"),
+                               cl::init(true), cl::Hidden);
 
 // Option to control global loads scalarization
 static cl::opt<bool> ScalarizeGlobal(
@@ -996,6 +1003,13 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           MPM.addPass(AMDGPUAttributorPass(*this, Opts, Phase));
         }
       }
+    }
+    // Extra DSE pass is needed to catch dead stores after RankSpecialization.
+    // TODO: We may try to remove DSE when LoadStoreVectorizer is enhanced to
+    // handle partially overlapping vector-stores.
+    if (Level.getSpeedupLevel() > OptimizationLevel::O1.getSpeedupLevel() &&
+        EnableDeadStoreElimination && getTargetTriple().isAMDGCN()) {
+      MPM.addPass(createModuleToFunctionPassAdaptor(DSEPass()));
     }
   });
 
