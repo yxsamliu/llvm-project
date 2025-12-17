@@ -743,7 +743,6 @@ define float @buffer_atomicrmw_cfs_128B(ptr addrspace(7) inreg %ptr, float %val)
 ; GFX13-NEXT:    s_cbranch_execnz .LBB27_1
 ; GFX13-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX13-NEXT:    s_or_b32 exec_lo, exec_lo, s4
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %gep = getelementptr float, ptr addrspace(7) %ptr, i32 256
   %result = atomicrmw fadd ptr addrspace(7) %gep, float %val syncscope("agent") seq_cst, !amdgpu.cfs !{i32 2}
@@ -782,7 +781,6 @@ define float @buffer_atomicrmw_cfs_64B(ptr addrspace(7) inreg %ptr, float %val) 
 ; GFX13-NEXT:    s_cbranch_execnz .LBB28_1
 ; GFX13-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX13-NEXT:    s_or_b32 exec_lo, exec_lo, s4
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %gep = getelementptr float, ptr addrspace(7) %ptr, i32 256
   %result = atomicrmw fadd ptr addrspace(7) %gep, float %val syncscope("agent") seq_cst, !amdgpu.cfs !{i32 1}
@@ -821,7 +819,6 @@ define float @buffer_atomicrmw_cfs_32B(ptr addrspace(7) inreg %ptr, float %val) 
 ; GFX13-NEXT:    s_cbranch_execnz .LBB29_1
 ; GFX13-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX13-NEXT:    s_or_b32 exec_lo, exec_lo, s4
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %gep = getelementptr float, ptr addrspace(7) %ptr, i32 256
   %result = atomicrmw fadd ptr addrspace(7) %gep, float %val syncscope("agent") seq_cst, !amdgpu.cfs !{i32 3}
