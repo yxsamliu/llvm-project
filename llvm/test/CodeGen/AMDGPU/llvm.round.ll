@@ -1229,8 +1229,6 @@ define amdgpu_kernel void @round_v2f16(ptr addrspace(1) %out, i32 %in.arg) #0 {
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-TRUE16-NEXT:    v_add_f16_e32 v0.h, v0.h, v2.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -1300,35 +1298,33 @@ define amdgpu_kernel void @round_v2f16(ptr addrspace(1) %out, i32 %in.arg) #0 {
 ; GFX13-TRUE16:       ; %bb.0:
 ; GFX13-TRUE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-TRUE16-NEXT:    s_trunc_f16 s3, s2
+; GFX13-TRUE16-NEXT:    s_trunc_f16 s4, s2
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_3)
-; GFX13-TRUE16-NEXT:    s_sub_f16 s4, s2, s3
-; GFX13-TRUE16-NEXT:    s_and_b32 s4, s4, 0x7fff
+; GFX13-TRUE16-NEXT:    s_sub_f16 s3, s2, s4
+; GFX13-TRUE16-NEXT:    s_and_b32 s3, s3, 0x7fff
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX13-TRUE16-NEXT:    s_cmp_ge_f16 s4, 0x3800
-; GFX13-TRUE16-NEXT:    s_cselect_b32 s4, -1, 0
+; GFX13-TRUE16-NEXT:    s_cmp_ge_f16 s3, 0x3800
+; GFX13-TRUE16-NEXT:    s_cselect_b32 s3, -1, 0
 ; GFX13-TRUE16-NEXT:    s_lshr_b32 s5, s2, 16
-; GFX13-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 0x3c00, s4
+; GFX13-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 0x3c00, s3
 ; GFX13-TRUE16-NEXT:    s_trunc_f16 s6, s5
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v3.l, s5
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX13-TRUE16-NEXT:    s_sub_f16 s7, s5, s6
 ; GFX13-TRUE16-NEXT:    v_bfi_b32 v0, 0x7fff, v1, v0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX13-TRUE16-NEXT:    s_and_b32 s7, s7, 0x7fff
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-TRUE16-NEXT:    s_cmp_ge_f16 s7, 0x3800
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX13-TRUE16-NEXT:    v_add_f16_e32 v0.l, s3, v0.l
-; GFX13-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX13-TRUE16-NEXT:    v_add_f16_e32 v0.l, s4, v0.l
 ; GFX13-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX13-TRUE16-NEXT:    v_cndmask_b16 v2.l, 0, 0x3c00, s2
 ; GFX13-TRUE16-NEXT:    s_mov_b32 s2, -1
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-TRUE16-NEXT:    v_bfi_b32 v1, 0x7fff, v2, v3
-; GFX13-TRUE16-NEXT:    v_add_f16_e32 v0.h, s6, v1.l
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
+; GFX13-TRUE16-NEXT:    v_add_f16_e32 v0.h, s6, v1.l
 ; GFX13-TRUE16-NEXT:    buffer_store_b32 v0, off, s[0:3], null
 ; GFX13-TRUE16-NEXT:    s_endpgm
 ;
