@@ -133,6 +133,7 @@ struct HardwareLimits {
   DECL(VMEM_BVH_READ_ACCESS)     /* vmem BVH read (gfx12+ only) */             \
   DECL(VMEM_IMAGE_READ_ACCESS)   /* vmem VIMAGE read (gfx13+ only) */          \
   DECL(VMEM_FORMAT_READ_ACCESS)  /* vmem buffer format read (gfx13+ only) */   \
+  DECL(GLOBAL_INV_ACCESS)        /* GLOBAL_INV (gfx12+ only) */                \
   DECL(VMEM_WRITE_ACCESS)        /* vmem write that is not scratch */          \
   DECL(SCRATCH_WRITE_ACCESS)     /* vmem write that may be scratch */          \
   DECL(IMAGE_WRITE_ACCESS)       /* vmem VIMAGE write (gfx13+) */              \
@@ -415,7 +416,7 @@ public:
     assert(ST);
 
     static const uint64_t WaitEventMaskForInstGFX12Plus[NUM_INST_CNTS] = {
-        eventMask({VMEM_ACCESS, VMEM_IMAGE_READ_ACCESS, VMEM_FORMAT_READ_ACCESS}),
+        eventMask({VMEM_ACCESS, GLOBAL_INV_ACCESS, VMEM_IMAGE_READ_ACCESS, VMEM_FORMAT_READ_ACCESS}),
         eventMask({LDS_ACCESS, GDS_ACCESS}),
         eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
                    EXP_POS_ACCESS, EXP_LDS_ACCESS, EXP_VGPR_SEND_PREV,
@@ -605,7 +606,8 @@ public:
     switch (Inst.getOpcode()) {
     // FIXME: GLOBAL_INV needs to be tracked with xcnt too.
     case AMDGPU::GLOBAL_INV:
-      return VMEM_ACCESS; // tracked using loadcnt
+      return GLOBAL_INV_ACCESS; // tracked using loadcnt, but doesn't write
+                                // VGPRs
     case AMDGPU::GLOBAL_WB:
     case AMDGPU::GLOBAL_WBINV:
       return VMEM_WRITE_ACCESS; // tracked using storecnt
@@ -1562,6 +1564,20 @@ bool WaitcntBrackets::counterOutOfOrder(InstCounterType T) const {
   if ((T == Context->SmemAccessCounter && hasPendingEvent(SMEM_ACCESS)) ||
       (T == X_CNT && hasPendingEvent(SMEM_GROUP)))
     return true;
+
+  // GLOBAL_INV completes in-order with other LOAD_CNT events (VMEM_ACCESS),
+  // so having GLOBAL_INV_ACCESS mixed with other LOAD_CNT events doesn't cause
+  // out-of-order completion.
+  if (T == LOAD_CNT) {
+    unsigned Events = hasPendingEvent(T);
+    // Remove GLOBAL_INV_ACCESS from the event mask before checking for mixed
+    // events
+    Events &= ~(1 << GLOBAL_INV_ACCESS);
+    // Return true only if there are still multiple event types after removing
+    // GLOBAL_INV
+    return Events & (Events - 1);
+  }
+
   return hasMixedPendingEvents(T);
 }
 
@@ -2221,7 +2237,16 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       Opc == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN ||
       Opc == AMDGPU::S_SETPC_B64_return ||
       (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry(MI))) {
-    Wait = Wait.combined(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));
+    AMDGPU::Waitcnt AllZeroWait =
+        WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false);
+    // On GFX12+, if LOAD_CNT is pending but no VGPRs are waiting for loads
+    // (e.g., only GLOBAL_INV is pending), we can skip waiting on loadcnt.
+    // GLOBAL_INV increments loadcnt but doesn't write to VGPRs, so there's
+    // no need to wait for it at function boundaries.
+    if (ST->hasExtendedWaitCounts() &&
+        !ScoreBrackets.hasPendingEvent(VMEM_ACCESS))
+      AllZeroWait.LoadCnt = ~0u;
+    Wait = Wait.combined(AllZeroWait);
   }
   // In dynamic VGPR mode, we want to release the VGPRs before the wave exits.
   // Technically the hardware will do this on its own if we don't, but that

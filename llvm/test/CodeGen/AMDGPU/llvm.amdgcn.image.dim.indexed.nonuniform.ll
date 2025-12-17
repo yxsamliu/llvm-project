@@ -5,7 +5,6 @@ define amdgpu_ps <4 x float> @load_1d(i32 %rsrc, i32 %s) {
 ; GFX13-LABEL: load_1d:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load v[0:3], v1, v0 dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, i32 %rsrc, i32 0, i32 0)
@@ -54,7 +53,6 @@ define amdgpu_ps <4 x float> @load_2d(i32 %rsrc, i32 %s, i32 %t) {
 ; GFX13-LABEL: load_2d:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load v[0:3], [v1, v2], v0 dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %rsrc, i32 0, i32 0)
@@ -87,7 +85,6 @@ define amdgpu_ps <4 x float> @load_3d(i32 %rsrc, i32 %s, i32 %t, i32 %r) {
 ; GFX13-LABEL: load_3d:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load v[0:3], [v1, v2, v3], v0 dmask:0xf dim:SQ_RSRC_IMG_3D
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.3d.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %r, i32 %rsrc, i32 0, i32 0)
@@ -121,7 +118,6 @@ define amdgpu_ps <4 x float> @load_cube(i32 %rsrc, i32 %s, i32 %t, i32 %slice) {
 ; GFX13-LABEL: load_cube:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load v[0:3], [v1, v2, v3], v0 dmask:0xf dim:SQ_RSRC_IMG_CUBE
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.cube.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 %rsrc, i32 0, i32 0)
@@ -148,7 +144,6 @@ define amdgpu_ps <4 x float> @load_1darray(i32 %rsrc, i32 %s, i32 %slice) {
 ; GFX13-LABEL: load_1darray:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load v[0:3], [v1, v2], v0 dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.1darray.v4f32.i32(i32 15, i32 %s, i32 %slice, i32 %rsrc, i32 0, i32 0)
@@ -181,7 +176,6 @@ define amdgpu_ps <4 x float> @load_2darray(i32 %rsrc, i32 %s, i32 %t, i32 %slice
 ; GFX13-LABEL: load_2darray:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load v[0:3], [v1, v2, v3], v0 dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.2darray.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 %rsrc, i32 0, i32 0)
@@ -208,7 +202,6 @@ define amdgpu_ps <4 x float> @load_2dmsaa(i32 %rsrc, i32 %s, i32 %t, i32 %fragid
 ; GFX13-LABEL: load_2dmsaa:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load v[0:3], [v1, v2, v3], v0 dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.2dmsaa.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %fragid, i32 %rsrc, i32 0, i32 0)
@@ -242,7 +235,6 @@ define amdgpu_ps <4 x float> @load_2darraymsaa(i32 %rsrc, i32 %s, i32 %t, i32 %s
 ; GFX13-LABEL: load_2darraymsaa:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load v[0:3], [v1, v2, v3, v4], v0 dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.2darraymsaa.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 %fragid, i32 %rsrc, i32 0, i32 0)
@@ -276,7 +268,6 @@ define amdgpu_ps <4 x float> @load_mip_1d(i32 %rsrc, i32 %s, i32 %mip) {
 ; GFX13-LABEL: load_mip_1d:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load_mip v[0:3], [v1, v2], v0 dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.mip.1d.v4f32.i32(i32 15, i32 %s, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -303,7 +294,6 @@ define amdgpu_ps <4 x float> @load_mip_2d(i32 %rsrc, i32 %s, i32 %t, i32 %mip) {
 ; GFX13-LABEL: load_mip_2d:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load_mip v[0:3], [v1, v2, v3], v0 dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -512,7 +502,6 @@ define amdgpu_ps <4 x float> @load_mip_3d(i32 %rsrc, i32 %s, i32 %t, i32 %r, i32
 ; GFX13-LABEL: load_mip_3d:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load_mip v[0:3], [v1, v2, v3, v4], v0 dmask:0xf dim:SQ_RSRC_IMG_3D
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.mip.3d.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %r, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -523,7 +512,6 @@ define amdgpu_ps <4 x float> @load_mip_cube(i32 %rsrc, i32 %s, i32 %t, i32 %slic
 ; GFX13-LABEL: load_mip_cube:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load_mip v[0:3], [v1, v2, v3, v4], v0 dmask:0xf dim:SQ_RSRC_IMG_CUBE
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.mip.cube.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -534,7 +522,6 @@ define amdgpu_ps <4 x float> @load_mip_1darray(i32 %rsrc, i32 %s, i32 %slice, i3
 ; GFX13-LABEL: load_mip_1darray:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load_mip v[0:3], [v1, v2, v3], v0 dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.mip.1darray.v4f32.i32(i32 15, i32 %s, i32 %slice, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -545,7 +532,6 @@ define amdgpu_ps <4 x float> @load_mip_2darray(i32 %rsrc, i32 %s, i32 %t, i32 %s
 ; GFX13-LABEL: load_mip_2darray:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load_mip v[0:3], [v1, v2, v3, v4], v0 dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.mip.2darray.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -696,7 +682,6 @@ define amdgpu_ps <4 x float> @getresinfo_1d(i32 %rsrc, i32 %mip) {
 ; GFX13-LABEL: getresinfo_1d:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_get_resinfo v[0:3], v1, v0 dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.1d.v4f32.i32(i32 15, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -707,7 +692,6 @@ define amdgpu_ps <4 x float> @getresinfo_2d(i32 %rsrc, i32 %mip) {
 ; GFX13-LABEL: getresinfo_2d:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_get_resinfo v[0:3], v1, v0 dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.2d.v4f32.i32(i32 15, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -718,7 +702,6 @@ define amdgpu_ps <4 x float> @getresinfo_3d(i32 %rsrc, i32 %mip) {
 ; GFX13-LABEL: getresinfo_3d:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_get_resinfo v[0:3], v1, v0 dmask:0xf dim:SQ_RSRC_IMG_3D
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.3d.v4f32.i32(i32 15, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -729,7 +712,6 @@ define amdgpu_ps <4 x float> @getresinfo_cube(i32 %rsrc, i32 %mip) {
 ; GFX13-LABEL: getresinfo_cube:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_get_resinfo v[0:3], v1, v0 dmask:0xf dim:SQ_RSRC_IMG_CUBE
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.cube.v4f32.i32(i32 15, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -740,7 +722,6 @@ define amdgpu_ps <4 x float> @getresinfo_1darray(i32 %rsrc, i32 %mip) {
 ; GFX13-LABEL: getresinfo_1darray:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_get_resinfo v[0:3], v1, v0 dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.1darray.v4f32.i32(i32 15, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -751,7 +732,6 @@ define amdgpu_ps <4 x float> @getresinfo_2darray(i32 %rsrc, i32 %mip) {
 ; GFX13-LABEL: getresinfo_2darray:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_get_resinfo v[0:3], v1, v0 dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.2darray.v4f32.i32(i32 15, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -762,7 +742,6 @@ define amdgpu_ps <4 x float> @getresinfo_2dmsaa(i32 %rsrc, i32 %mip) {
 ; GFX13-LABEL: getresinfo_2dmsaa:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_get_resinfo v[0:3], v1, v0 dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.2dmsaa.v4f32.i32(i32 15, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -773,7 +752,6 @@ define amdgpu_ps <4 x float> @getresinfo_2darraymsaa(i32 %rsrc, i32 %mip) {
 ; GFX13-LABEL: getresinfo_2darraymsaa:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_get_resinfo v[0:3], v1, v0 dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.2darraymsaa.v4f32.i32(i32 15, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -784,7 +762,6 @@ define amdgpu_ps float @load_1d_V1(i32 %rsrc, i32 %s) {
 ; GFX13-LABEL: load_1d_V1:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load v0, v1, v0 dmask:0x8 dim:SQ_RSRC_IMG_1D
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call float @llvm.amdgcn.image.load.1d.f32.i32(i32 8, i32 %s, i32 %rsrc, i32 0, i32 0)
@@ -795,7 +772,6 @@ define amdgpu_ps <2 x float> @load_1d_V2(i32 %rsrc, i32 %s) {
 ; GFX13-LABEL: load_1d_V2:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load v[0:1], v1, v0 dmask:0x9 dim:SQ_RSRC_IMG_1D
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <2 x float> @llvm.amdgcn.image.load.1d.v2f32.i32(i32 9, i32 %s, i32 %rsrc, i32 0, i32 0)
@@ -826,7 +802,6 @@ define amdgpu_ps <4 x float> @load_1d_glc(i32 %rsrc, i32 %s) {
 ; GFX13-LABEL: load_1d_glc:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load v[0:3], v1, v0 dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_LOAD_NT
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, i32 %rsrc, i32 0, i32 1)
@@ -837,7 +812,6 @@ define amdgpu_ps <4 x float> @load_1d_slc(i32 %rsrc, i32 %s) {
 ; GFX13-LABEL: load_1d_slc:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load v[0:3], v1, v0 dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_LOAD_HT
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, i32 %rsrc, i32 0, i32 2)
@@ -848,7 +822,6 @@ define amdgpu_ps <4 x float> @load_1d_glc_slc(i32 %rsrc, i32 %s) {
 ; GFX13-LABEL: load_1d_glc_slc:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_load v[0:3], v1, v0 dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_LOAD_LU
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, i32 %rsrc, i32 0, i32 3)
@@ -889,7 +862,6 @@ define amdgpu_ps <3 x float> @getresinfo_dmask7(i32 %rsrc, <4 x float> %vdata, i
 ; GFX13-LABEL: getresinfo_dmask7:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_get_resinfo v[0:2], v1, v0 dmask:0x7 dim:SQ_RSRC_IMG_1D
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <3 x float> @llvm.amdgcn.image.getresinfo.1d.v3f32.i32(i32 7, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -900,7 +872,6 @@ define amdgpu_ps <2 x float> @getresinfo_dmask3(i32 %rsrc, <4 x float> %vdata, i
 ; GFX13-LABEL: getresinfo_dmask3:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_get_resinfo v[0:1], v1, v0 dmask:0x3 dim:SQ_RSRC_IMG_1D
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <2 x float> @llvm.amdgcn.image.getresinfo.1d.v2f32.i32(i32 3, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -911,7 +882,6 @@ define amdgpu_ps float @getresinfo_dmask1(i32 %rsrc, <4 x float> %vdata, i32 %mi
 ; GFX13-LABEL: getresinfo_dmask1:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    image_get_resinfo v0, v1, v0 dmask:0x1 dim:SQ_RSRC_IMG_1D
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %r = call float @llvm.amdgcn.image.getresinfo.1d.f32.i32(i32 1, i32 %mip, i32 %rsrc, i32 0, i32 0)
@@ -948,7 +918,7 @@ define amdgpu_ps float @image_load_mmo(i32 %rsrc, ptr addrspace(3) %lds, <2 x i3
 ; GFX13-NEXT:    image_load v0, [v2, v3], v0 dmask:0x1 dim:SQ_RSRC_IMG_2D
 ; GFX13-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-NEXT:    ds_store_2addr_b32 v1, v2, v2 offset1:4
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_dscnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
   store float 0.000000e+00, ptr addrspace(3) %lds
   %c0 = extractelement <2 x i32> %c, i32 0
