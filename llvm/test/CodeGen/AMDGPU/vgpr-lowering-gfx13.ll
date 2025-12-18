@@ -19,7 +19,6 @@ define amdgpu_ps <4 x float> @vimage_vaddr3(<8 x i32> inreg %rsrc, i32 %a0, i32 
 ; GFX13-NEXT:    scratch_load_b32 v0, off, off th:TH_LOAD_LU ; 4-byte Folded Reload
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    image_load_mip v[0:3], [v2 /*v258*/, v1 /*v257*/, v0 /*v256*/, v0], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX13-NEXT:    ; return to shader part epilog
   %dummy = call { <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32>, <32 x i32> }  asm sideeffect "; def $0", "=${v[0:31]},=${v[32:63]},=${v[64:95]},=${v[96:127]},=${v[128:159]},=${v[160:191]},=${v[192:223]},=${v[224:255]}"()
