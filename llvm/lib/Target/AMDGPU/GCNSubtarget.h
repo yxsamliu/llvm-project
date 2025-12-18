@@ -474,30 +474,6 @@ public:
     return getGeneration() == SOUTHERN_ISLANDS;
   }
 
-  bool hasBFE() const {
-    return true;
-  }
-
-  bool hasBFI() const {
-    return true;
-  }
-
-  bool hasBFM() const {
-    return hasBFE();
-  }
-
-  bool hasBCNT(unsigned Size) const {
-    return true;
-  }
-
-  bool hasFFBL() const {
-    return true;
-  }
-
-  bool hasFFBH() const {
-    return true;
-  }
-
   bool hasMed3_16() const {
     return getGeneration() >= AMDGPUSubtarget::GFX9;
   }
@@ -511,10 +487,6 @@ public:
   }
 
   bool hasFmaMixBF16Insts() const { return HasFmaMixBF16Insts; }
-
-  bool hasCARRY() const {
-    return true;
-  }
 
   bool hasFMA() const {
     return FMA;
