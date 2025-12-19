@@ -564,6 +564,12 @@ def FeatureGFX1250Insts : SubtargetFeature<"gfx1250-insts",
   "Additional instructions for GFX1250+"
 >;
 
+def FeatureGFX1260Insts : SubtargetFeature<"gfx1260-insts",
+  "GFX1260Insts",
+  "true",
+  "Additional instructions for GFX1260+"
+>;
+
 def FeatureGFX13Insts : SubtargetFeature<"gfx13-insts",
   "GFX13Insts",
   "true",
@@ -972,6 +978,24 @@ def FeatureTensorWmmaOps : SubtargetFeature<"tensor-wmma-ops",
   "HasTensorWmmaOps",
   "true",
   "Has extended set of WMMA instructions (IU16 inputs)"
+>;
+
+def FeatureWMMA2048bInsts : SubtargetFeature<"wmma-2048b-insts",
+  "HasWMMA2048bInsts",
+  "true",
+  "Has WMMA instructions where A, B, C, or D matrix can be 2048-bits"
+>;
+
+def FeaturePermPkU2U3Insts : SubtargetFeature<"perm-pk-u2u3-insts",
+  "HasPermPkU2U3Insts",
+  "true",
+  "Has permute packed u2 and u3 instructions"
+>;
+
+def FeaturePk4Insts : SubtargetFeature<"pk4-insts",
+  "HasPk4Insts",
+  "true",
+  "Has pk4 instructions"
 >;
 
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
@@ -2434,6 +2458,19 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12_50.Features,
     [FeatureRequiresCOV6])>;
 
+def FeatureISAVersion12_60 : FeatureSet<
+  !listconcat(FeatureISAVersion12_50_Common.Features,
+    [FeatureGFX1260Insts,
+     FeatureWMMA2048bInsts,
+     FeatureWavegroups,
+     FeaturePermPkU2U3Insts,
+     FeaturePk4Insts,
+     FeatureAddressableLocalMemorySize327680,
+     FeatureVGPRIndexingRegisters,
+     FeatureSWakeupImm,
+     FeatureSBarrierLeaveImm
+    ])>;
+
 def FeatureISAVersion13_Common : FeatureSet<
   [FeatureGFX13,
    FeatureGFX1250Insts,
@@ -2864,6 +2901,10 @@ def isGFX125xOnly :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && Subtarget->hasGFX1250Insts()">,
   AssemblerPredicate<(all_of FeatureGFX1250Insts, (not FeatureGFX13Insts))>;
 
+def isGFX1260Only :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && Subtarget->hasGFX1260Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX1260Insts)>;
+
 def isGFX1250Plus :
   Predicate<"Subtarget->hasGFX1250Insts()">,
   AssemblerPredicate<(all_of FeatureGFX1250Insts)>;
@@ -3243,6 +3284,15 @@ def HasWMMA128bInsts : Predicate<"Subtarget->hasWMMA128bInsts()">,
 
 def HasTensorWmmaOps : Predicate<"Subtarget->hasTensorWmmaOps()">,
   AssemblerPredicate<(all_of FeatureTensorWmmaOps)>;
+
+def HasWMMA2048bInsts : Predicate<"Subtarget->hasWMMA2048bInsts()">,
+  AssemblerPredicate<(all_of FeatureWMMA2048bInsts)>;
+
+def HasPermPkU2U3Insts : Predicate<"Subtarget->hasPermPkU2U3Insts()">,
+  AssemblerPredicate<(all_of FeaturePermPkU2U3Insts)>;
+
+def HasPk4Insts : Predicate<"Subtarget->hasPk4Insts()">,
+  AssemblerPredicate<(all_of FeaturePk4Insts)>;
 
 def HasCubeInsts : Predicate<"Subtarget->hasCubeInsts()">,
   AssemblerPredicate<(all_of FeatureCubeInsts)>;

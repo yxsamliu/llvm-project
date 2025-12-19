@@ -5,6 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck --check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefix=GFX11 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefix=GFX12 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1260 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefix=GFX12 %s
 
 define amdgpu_ps void @buffer_store_bf16(ptr addrspace(8) inreg %rsrc, bfloat %data, i32 %offset) {
 ; GFX7-LABEL: buffer_store_bf16:

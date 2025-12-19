@@ -114,6 +114,7 @@ protected:
   bool GFX11Insts = false;
   bool GFX12Insts = false;
   bool GFX1250Insts = false;
+  bool GFX1260Insts = false;
   bool GFX13Insts = false;
   bool GFX10_3Insts = false;
   bool GFX7GFX8GFX9Insts = false;
@@ -173,6 +174,9 @@ protected:
   bool HasWMMAK128 = false;
   bool HasWMMA256bInsts = false;
   bool HasTensorWmmaOps = false;
+  bool HasWMMA2048bInsts = false;
+  bool HasPermPkU2U3Insts = false;
+  bool HasPk4Insts = false;
   bool HasCubeInsts = false;
   bool HasLerpInst = false;
   bool HasSadInsts = false;
@@ -904,6 +908,12 @@ public:
   bool hasWMMAK128() const { return HasWMMAK128; }
   bool hasTensorWmmaOps() const { return HasTensorWmmaOps; }
 
+  bool hasWMMA2048bInsts() const { return HasWMMA2048bInsts; }
+
+  bool hasPermPkU2U3Insts() const { return HasPermPkU2U3Insts; }
+
+  bool hasPk4Insts() const { return HasPk4Insts; }
+
   bool isGFX1170() const {
     return getGeneration() == GFX11 && hasWMMA128bInsts();
   }
@@ -1475,11 +1485,11 @@ public:
   /// \returns true if the target supports Wavegroups.
   bool hasWavegroups() const { return HasWavegroups; }
 
-  /// \returns true if the target has the s_wakeup instruction that takes 
+  /// \returns true if the target has the s_wakeup instruction that takes
   /// an immediate operand.
   bool hasSWakeupImm() const { return HasSWakeupImm; }
 
-  /// \returns true if the target has the s_barrier_leave instruction that takes an immediate 
+  /// \returns true if the target has the s_barrier_leave instruction that takes an immediate
   /// operand.
   bool hasSBarrierLeaveImm() const { return HasSBarrierLeaveImm; }
 
@@ -1634,6 +1644,8 @@ public:
   bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
 
   bool hasGFX1250Insts() const { return GFX1250Insts; }
+
+  bool hasGFX1260Insts() const { return GFX1260Insts; }
 
   bool hasGFX13Insts() const { return GFX13Insts; }
 

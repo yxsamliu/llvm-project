@@ -181,6 +181,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx120F"},   {"gfx120F"}, GK_GFX120F, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1250"},   {"gfx1250"}, GK_GFX1250, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK_ALWAYS},
     {{"gfx1251"},   {"gfx1251"}, GK_GFX1251, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK_ALWAYS},
+    {{"gfx1260"},   {"gfx1260"}, GK_GFX1260, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK_ALWAYS},
     {{"gfx130E"},   {"gfx130E"}, GK_GFX130E, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1310"},   {"gfx1310"}, GK_GFX1310, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1300"},   {"gfx1310"}, GK_GFX1310, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
@@ -350,6 +351,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX120F: return {12, 0, 0xFFFF};
   case GK_GFX1250: return {12, 5, 0};
   case GK_GFX1251: return {12, 5, 1};
+  case GK_GFX1260: return {12, 6, 0};
   case GK_GFX130E: return {13, 0, 0xFFFE};
   case GK_GFX1310: return {13, 1, 0};
   case GK_GFX131F: return {13, 1, 0xFFFF};
@@ -486,8 +488,17 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
       Features["qsad-insts"] = true;
       Features["cvt-pknorm-vop2-insts"] = true;
       break;
+  case GK_GFX1260:
+    Features["gfx1260-insts"] = true;
+    Features["wavegroups"] = true;
+    Features["perm-pk-u2u3-insts"] = true;
+    Features["pk4-insts"] = true;
+    [[fallthrough]];
   case GK_GFX1251:
-    Features["gfx1251-gemm-insts"] = true;
+    if (Kind == GK_GFX1260)
+      Features["wmma-2048b-insts"] = true;
+    else if (Kind == GK_GFX1251)
+      Features["gfx1251-gemm-insts"] = true;
     [[fallthrough]];
   case GK_GFX1250:
   case GK_GFX12_5_GENERIC:

@@ -678,6 +678,8 @@ const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
   if (ST.hasFeature(AMDGPU::FeatureGFX13Insts))
     return SIEncodingFamily::GFX13;
+  if (ST.hasFeature(AMDGPU::FeatureGFX1260Insts))
+    return SIEncodingFamily::GFX1260;
   if (ST.hasFeature(AMDGPU::FeatureGFX1250Insts))
     return SIEncodingFamily::GFX1250;
   if (ST.hasFeature(AMDGPU::FeatureGFX12Insts))
@@ -2580,7 +2582,7 @@ bool getHasDepthExport(const Function &F) {
 bool getWavegroupEnable(const Function &F) {
   return F.hasFnAttribute("amdgpu-wavegroup-enable");
 }
-  
+
 bool getSpatialClusterEnable(const Function &F) {
   return F.hasFnAttribute("amdgpu-spatial-cluster");
 }
@@ -2988,6 +2990,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V4FP16:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
@@ -3250,6 +3253,8 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::VReg_1024_Lo256_Align2RegClassID:
   case AMDGPU::VReg_1024_STAGING_Lo256_Align2RegClassID:
     return 1024;
+  case AMDGPU::Pseudo_VGPR_2048RegClassID:
+    return 2048;
   default:
     llvm_unreachable("Unexpected register class");
   }
@@ -3448,9 +3453,11 @@ bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType) {
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
     return getInlineEncodingV216(false, Literal).has_value();
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V4FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
     return getInlineEncodingV216(true, Literal).has_value();
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
+  case AMDGPU::OPERAND_REG_IMM_V4BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     return isInlinableLiteralV2BF16(Literal);
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
@@ -3496,6 +3503,8 @@ int64_t encode32BitLiteral(int64_t Imm, OperandType Type, bool IsLit) {
   case OPERAND_REG_IMM_INT32:
   case OPERAND_REG_IMM_V2BF16:
   case OPERAND_REG_IMM_V2FP16:
+  case OPERAND_REG_IMM_V4FP16:
+  case OPERAND_REG_IMM_V4BF16:
   case OPERAND_REG_IMM_V2FP32:
   case OPERAND_REG_IMM_V2INT16:
   case OPERAND_REG_IMM_V2INT32:
@@ -3705,14 +3714,15 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
 const MCRegisterClass *getVGPRPhysRegClass(MCRegister Reg,
                                            const MCRegisterInfo &MRI) {
   const unsigned VGPRClasses[] = {
-      AMDGPU::VGPR_16RegClassID,  AMDGPU::VGPR_32RegClassID,
-      AMDGPU::VReg_64RegClassID,  AMDGPU::VReg_96RegClassID,
-      AMDGPU::VReg_128RegClassID, AMDGPU::VReg_160RegClassID,
-      AMDGPU::VReg_192RegClassID, AMDGPU::VReg_224RegClassID,
-      AMDGPU::VReg_256RegClassID, AMDGPU::VReg_288RegClassID,
-      AMDGPU::VReg_320RegClassID, AMDGPU::VReg_352RegClassID,
-      AMDGPU::VReg_384RegClassID, AMDGPU::VReg_512RegClassID,
-      AMDGPU::VReg_576RegClassID, AMDGPU::VReg_1024RegClassID};
+      AMDGPU::VGPR_16RegClassID,         AMDGPU::VGPR_32RegClassID,
+      AMDGPU::VReg_64RegClassID,         AMDGPU::VReg_96RegClassID,
+      AMDGPU::VReg_128RegClassID,        AMDGPU::VReg_160RegClassID,
+      AMDGPU::VReg_192RegClassID,        AMDGPU::VReg_224RegClassID,
+      AMDGPU::VReg_256RegClassID,        AMDGPU::VReg_288RegClassID,
+      AMDGPU::VReg_320RegClassID,        AMDGPU::VReg_352RegClassID,
+      AMDGPU::VReg_384RegClassID,        AMDGPU::VReg_512RegClassID,
+      AMDGPU::VReg_576RegClassID,        AMDGPU::VReg_1024RegClassID,
+      AMDGPU::Pseudo_VGPR_2048RegClassID};
 
   for (unsigned RCID : VGPRClasses) {
     const MCRegisterClass &RC = MRI.getRegClass(RCID);

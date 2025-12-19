@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GFX11-WGP %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GFX12-WGP %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1260 < %s | FileCheck --check-prefixes=GFX1250 %s
 
 
 define float @test_barrier_workgroup_local_mmra(ptr addrspace(3) noundef %x, ptr addrspace(3) noundef %y, float %val) {

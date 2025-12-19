@@ -4740,11 +4740,15 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
     return AMDGPU::isInlinableLiteralV2I16(Imm);
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V4FP16:
     return AMDGPU::isInlinableLiteralV2F16(Imm);
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
+  case AMDGPU::OPERAND_REG_IMM_V4BF16:
     return AMDGPU::isInlinableLiteralV2BF16(Imm);
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT32:
     return false;
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16: {
@@ -5220,6 +5224,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     case AMDGPU::OPERAND_REG_IMM_V2BF16:
     case AMDGPU::OPERAND_REG_IMM_V2FP64:
     case AMDGPU::OPERAND_REG_IMM_V2INT64:
+    case AMDGPU::OPERAND_REG_IMM_V4FP16:
+    case AMDGPU::OPERAND_REG_IMM_V4BF16:
       break;
     case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
       break;
@@ -10523,7 +10529,9 @@ static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
   case AMDGPUSubtarget::GFX11:
     return ST.isGFX1170() ? SIEncodingFamily::GFX1170 : SIEncodingFamily::GFX11;
   case AMDGPUSubtarget::GFX12:
-    return ST.hasGFX1250Insts() ? SIEncodingFamily::GFX1250
+    return ST.hasGFX1250Insts() ? ST.hasGFX1260Insts()
+                                      ? SIEncodingFamily::GFX1260
+                                      : SIEncodingFamily::GFX1250
                                 : SIEncodingFamily::GFX12;
   case AMDGPUSubtarget::GFX13:
     return SIEncodingFamily::GFX13;
@@ -10624,11 +10632,11 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   if (MCOp == (uint16_t)-1 && ST.isGFX1170())
     MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX11);
 
-  if (MCOp == (uint16_t)-1 && ST.hasGFX1250Insts())
-    MCOp =
-        AMDGPU::getMCOpcode(Opcode, ST.getGeneration() == AMDGPUSubtarget::GFX13
-                                        ? SIEncodingFamily::GFX1250
-                                        : SIEncodingFamily::GFX12);
+  if (MCOp == (uint16_t)-1 && ST.hasGFX1250Insts()) {
+    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX1250);
+    if (MCOp == (uint16_t)-1)
+      MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX12);
+  }
 
   // -1 means that Opcode is already a native instruction.
   if (MCOp == -1)

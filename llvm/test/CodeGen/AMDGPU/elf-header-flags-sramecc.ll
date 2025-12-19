@@ -18,6 +18,9 @@
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1250 < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX1250 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1250 -mattr=+sramecc < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX1250 %s
 
+; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1260 < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX1260 %s
+; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1260 -mattr=+sramecc < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX1260 %s
+
 ; NO-SRAM-ECC-GFX906:      Flags [
 ; NO-SRAM-ECC-GFX906-NEXT:   EF_AMDGPU_FEATURE_XNACK_V3   (0x100)
 ; NO-SRAM-ECC-GFX906-NEXT:   EF_AMDGPU_MACH_AMDGCN_GFX906 (0x2F)
@@ -59,6 +62,11 @@
 ; SRAM-ECC-GFX1250:    EF_AMDGPU_FEATURE_SRAMECC_V3 (0x200)
 ; SRAM-ECC-GFX1250:    EF_AMDGPU_MACH_AMDGCN_GFX1250 (0x49)
 ; SRAM-ECC-GFX1250:  ]
+
+; SRAM-ECC-GFX1260: Flags [
+; SRAM-ECC-GFX1260:    EF_AMDGPU_FEATURE_SRAMECC_V3 (0x200)
+; SRAM-ECC-GFX1260:    EF_AMDGPU_MACH_AMDGCN_GFX1260 (0x60)
+; SRAM-ECC-GFX1260:  ]
 
 define amdgpu_kernel void @elf_header() {
   ret void

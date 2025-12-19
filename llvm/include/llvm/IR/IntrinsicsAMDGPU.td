@@ -4935,6 +4935,52 @@ def int_amdgcn_perm_pk16_b8_u4 : ClangBuiltin<"__builtin_amdgcn_perm_pk16_b8_u4"
   DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_i64_ty, llvm_i64_ty, llvm_v2i32_ty],
                         [IntrNoMem, IntrSpeculatable]>;
 
+def int_amdgcn_perm_pk16_b4_u2 : ClangBuiltin<"__builtin_amdgcn_perm_pk16_b4_u2">,
+  DefaultAttrsIntrinsic<[llvm_v2i32_ty], [llvm_i16_ty, llvm_i32_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+
+def int_amdgcn_perm_pk16_b6_u2 : ClangBuiltin<"__builtin_amdgcn_perm_pk16_b6_u2">,
+  DefaultAttrsIntrinsic<[llvm_v3i32_ty], [llvm_i32_ty, llvm_i32_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+
+def int_amdgcn_perm_pk16_b8_u2 : ClangBuiltin<"__builtin_amdgcn_perm_pk16_b8_u2">,
+  DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_i32_ty, llvm_i32_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+
+def int_amdgcn_perm_pk32_b4_u3 : ClangBuiltin<"__builtin_amdgcn_perm_pk32_b4_u3">,
+  DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i64_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+
+def int_amdgcn_perm_pk32_b6_u3 : ClangBuiltin<"__builtin_amdgcn_perm_pk32_b6_u3">,
+  DefaultAttrsIntrinsic<[llvm_v6i32_ty], [llvm_v2i32_ty, llvm_i32_ty, llvm_i64_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+
+def int_amdgcn_perm_pk32_b8_u3 : ClangBuiltin<"__builtin_amdgcn_perm_pk32_b8_u3">,
+  DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v2i32_ty, llvm_i32_ty, llvm_i64_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+
+class AMDGPUPk4Op3<LLVMType Ty, string Name> : ClangBuiltin<"__builtin_amdgcn_"#Name>,
+  DefaultAttrsIntrinsic<[Ty], [Ty, Ty, Ty], [IntrNoMem, IntrSpeculatable]>;
+
+def int_amdgcn_pk4_fma_f16 : AMDGPUPk4Op3<llvm_v4f16_ty, "pk4_fma_f16">;
+def int_amdgcn_pk4_max3_num_f16 : AMDGPUPk4Op3<llvm_v4f16_ty, "pk4_max3_num_f16">;
+def int_amdgcn_pk4_min3_num_f16 : AMDGPUPk4Op3<llvm_v4f16_ty, "pk4_min3_num_f16">;
+def int_amdgcn_pk4_maximum3_f16 : AMDGPUPk4Op3<llvm_v4f16_ty, "pk4_maximum3_f16">;
+def int_amdgcn_pk4_minimum3_f16 : AMDGPUPk4Op3<llvm_v4f16_ty, "pk4_minimum3_f16">;
+def int_amdgcn_pk4_fma_bf16 : AMDGPUPk4Op3<llvm_v4bf16_ty, "pk4_fma_bf16">;
+
+class AMDGPUPk4Op2<LLVMType Ty, string Name> : ClangBuiltin<"__builtin_amdgcn_"#Name>,
+  DefaultAttrsIntrinsic<[Ty], [Ty, Ty], [IntrNoMem, IntrSpeculatable]>;
+
+def int_amdgcn_pk4_mul_f16 : AMDGPUPk4Op2<llvm_v4f16_ty, "pk4_mul_f16">;
+def int_amdgcn_pk4_add_f16 : AMDGPUPk4Op2<llvm_v4f16_ty, "pk4_add_f16">;
+def int_amdgcn_pk4_max_num_f16 : AMDGPUPk4Op2<llvm_v4f16_ty, "pk4_max_num_f16">;
+def int_amdgcn_pk4_min_num_f16 : AMDGPUPk4Op2<llvm_v4f16_ty, "pk4_min_num_f16">;
+def int_amdgcn_pk4_add_bf16 : AMDGPUPk4Op2<llvm_v4bf16_ty, "pk4_add_bf16">;
+def int_amdgcn_pk4_mul_bf16 : AMDGPUPk4Op2<llvm_v4bf16_ty, "pk4_mul_bf16">;
+def int_amdgcn_pk4_max_num_bf16 : AMDGPUPk4Op2<llvm_v4bf16_ty, "pk4_max_num_bf16">;
+def int_amdgcn_pk4_min_num_bf16 : AMDGPUPk4Op2<llvm_v4bf16_ty, "pk4_min_num_bf16">;
+
 class AMDGPUAddMinMax<LLVMType Ty, string Name> : ClangBuiltin<"__builtin_amdgcn_"#Name>,
   DefaultAttrsIntrinsic<[Ty], [Ty, Ty, Ty, llvm_i1_ty /* clamp */],
                         [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]>;

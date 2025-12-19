@@ -565,6 +565,18 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                       - Workgroup
                                                                         Clusters
 
+     ``gfx1260``                 ``amdgcn``   APU                     - Architected                   *TBA*
+                                                                        flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+                                                                      - Globally
+                                                                        Accessible
+                                                                        Scratch
+                                                                      - Workgroup
+                                                                        Clusters
+
      ``gfx1310``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
@@ -2660,6 +2672,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC``  0x05b      ``gfx12-5-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1170``          0x05d      ``gfx1170``
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC``   0x05f      ``gfx9-4-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1260``          0x060      ``gfx1260``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1370``          0x070      ``gfx1370``
      ========================================== ========== =============================
 

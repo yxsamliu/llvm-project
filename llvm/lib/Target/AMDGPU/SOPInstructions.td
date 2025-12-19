@@ -573,12 +573,12 @@ def S_GET_BARRIER_STATE_M0 : SOP1_Pseudo <"s_get_barrier_state $sdst, m0", (outs
 }
 } // End hasSideEffects = 1
 
-let SubtargetPredicate = isGFX13Plus in {
+let SubtargetPredicate = HasVGPRIndexingRegisters in {
   let hasSideEffects = 1 in {
     def S_SET_GPR_IDX_U32 : SOP1_IDX_32<"s_set_gpr_idx_u32", [], 0>;
     def S_ADD_GPR_IDX_U32 : SOP1_IDX_32<"s_add_gpr_idx_u32", [], 1>;
   }
-} // End SubtargetPredicate = isGFX13Plus
+} // End SubtargetPredicate = HasVGPRIndexingRegisters
 
 // Move from/to global registers.
 //
@@ -2274,6 +2274,18 @@ multiclass SOP1_Real_gfx13<bits<8> op, string name = !tolower(NAME)> {
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
 }
 
+multiclass SOP1_Real_gfx1260<bits<8> op, string name = !tolower(NAME)> {
+  defvar ps = !cast<SOP1_Pseudo>(NAME);
+  def _gfx1260 : SOP1_Real<op, ps, name>,
+                 Select<GFX1260Gen, ps.Mnemonic>;
+  if !ne(ps.Mnemonic, name) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX1260Only]>;
+}
+
+multiclass SOP1_Real_gfx1260_gfx13<bits<8> op> :
+  SOP1_Real_gfx1260<op>,
+  SOP1_Real_gfx13<op>;
+
 multiclass SOP1_M0_Real_gfx13<bits<8> op> {
   defvar ps = !cast<SOP1_Pseudo>(NAME);
   def _gfx13 : SOP1_Real<op, ps>, Select<GFX13Gen, ps.PseudoInstr> {
@@ -2281,21 +2293,41 @@ multiclass SOP1_M0_Real_gfx13<bits<8> op> {
   }
 }
 
+multiclass SOP1_M0_Real_gfx1260<bits<8> op> {
+  defvar ps = !cast<SOP1_Pseudo>(NAME);
+  def _gfx1260 : SOP1_Real<op, ps>, Select<GFX1260Gen, ps.PseudoInstr> {
+    let Inst{7-0} = M0_gfx11plus.HWEncoding{7-0}; // Set Src0 encoding to M0
+  }
+}
+
+multiclass SOP1_M0_Real_gfx1260_gfx13<bits<8> op> :
+  SOP1_M0_Real_gfx1260<op>,
+  SOP1_M0_Real_gfx13<op>;
+
 multiclass SOP1_IMM_Real_gfx13<bits<8> op> {
   defvar ps = !cast<SOP1_Pseudo>(NAME);
   def _gfx13 : SOP1_Real<op, ps>,
                Select<GFX13Gen, ps.PseudoInstr>;
 }
 
+multiclass SOP1_IMM_Real_gfx1260<bits<8> op> {
+  defvar ps = !cast<SOP1_Pseudo>(NAME);
+  def _gfx1260 : SOP1_Real<op, ps>, Select<GFX1260Gen, ps.PseudoInstr>;
+}
+
+multiclass SOP1_IMM_Real_gfx1260_gfx13<bits<8> op> :
+  SOP1_IMM_Real_gfx1260<op>,
+  SOP1_IMM_Real_gfx13<op>;
+
 defm S_GET_SHADER_CYCLES_U64 : SOP1_Real_gfx13<0x011>;
-defm S_WAKEUP_BARRIER_M0     : SOP1_M0_Real_gfx13<0x057>;
-defm S_WAKEUP_BARRIER_IMM    : SOP1_IMM_Real_gfx13<0x057>;
+defm S_WAKEUP_BARRIER_M0     : SOP1_M0_Real_gfx1260_gfx13<0x057>;
+defm S_WAKEUP_BARRIER_IMM    : SOP1_IMM_Real_gfx1260_gfx13<0x057>;
 defm S_MOV_FROM_GLOBAL_B32   : SOP1_Real_gfx13<0x05b>;
 defm S_MOV_FROM_GLOBAL_B64   : SOP1_Real_gfx13<0x05c>;
 defm S_MOV_TO_GLOBAL_B32     : SOP1_Real_gfx13<0x05d>;
 defm S_MOV_TO_GLOBAL_B64     : SOP1_Real_gfx13<0x05e>;
-defm S_SET_GPR_IDX_U32       : SOP1_Real_gfx13<0x06f>;
-defm S_ADD_GPR_IDX_U32       : SOP1_Real_gfx13<0x070>;
+defm S_SET_GPR_IDX_U32       : SOP1_Real_gfx1260_gfx13<0x06f>;
+defm S_ADD_GPR_IDX_U32       : SOP1_Real_gfx1260_gfx13<0x070>;
 
 //===----------------------------------------------------------------------===//
 //  SOP1 - GFX11, GFX12
@@ -2990,14 +3022,26 @@ multiclass SOPP_Real_32_gfx13<bits<7> op, string name = !cast<SOPP_Pseudo>(NAME)
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
 }
 
-defm S_WAKEUP_imm        : SOPP_Real_32_gfx13<0x003>;
+multiclass SOPP_Real_32_gfx1260<bits<7> op, string name = !cast<SOPP_Pseudo>(NAME).Mnemonic, bit compat_alias = 1> {
+  defvar ps = !cast<SOPP_Pseudo>(NAME);
+  def _gfx1260 : SOPP_Real_32<op, ps, name>,
+                 Select<GFX1260Gen, ps.Mnemonic>,
+                 SOPPRelaxTable<0, ps.KeyName, "_gfx1260">;
+  if !and(compat_alias, !ne(ps.Mnemonic, name)) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX1260Only]>;
+}
+
+multiclass SOPP_Real_32_gfx1260_gfx13<bits<7> op> :
+  SOPP_Real_32_gfx13<op>, SOPP_Real_32_gfx1260<op>;
+
+defm S_WAKEUP_imm        : SOPP_Real_32_gfx13<0x003>, SOPP_Real_32_gfx1260<0x34>;
 defm S_SINGLEUSE_VDST    : SOPP_Real_32_gfx13<0x13>;
 defm S_BARRIER_WAIT      : SOPP_Real_32_gfx13<0x2b>;
 defm S_MONITOR_SLEEP     : SOPP_Real_32_gfx13<0x2c>;
-defm S_SET_VGPR_FRAMES   : SOPP_Real_32_gfx13<0x1c>;
+defm S_SET_VGPR_FRAMES   : SOPP_Real_32_gfx1260_gfx13<0x1c>;
 defm S_DELAY_ALU         : SOPP_Real_32_gfx13<0x2e>;
 defm S_WAIT_EVENT        : SOPP_Real_32_gfx13<0x2f>;
-defm S_BARRIER_LEAVE_IMM : SOPP_Real_32_gfx13<0x31>;
+defm S_BARRIER_LEAVE_IMM : SOPP_Real_32_gfx13<0x31>, SOPP_Real_32_gfx1260<0x15>;
 defm S_SEMA_SIGNAL       : SOPP_Real_32_gfx13<0x32>;
 defm S_SEMA_WAIT         : SOPP_Real_32_gfx13<0x33>;
 defm S_SEMA_SET_LIMIT    : SOPP_Real_32_gfx13<0x34>;

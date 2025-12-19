@@ -121,6 +121,7 @@ enum GPUKind : uint32_t {
 
   GK_GFX1250,
   GK_GFX1251,
+  GK_GFX1260,
 
   GK_GFX130E,
   GK_GFX1310,
