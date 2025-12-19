@@ -2060,6 +2060,17 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     --MI;
 
+  // gfx125x requires a waitcnt to ensure that the proceeding INV has completed
+  // as it may get reorded with following load instructions.
+  if (ST.hasINVWaitCntRequirement() && Scope > SIAtomicScope::CLUSTER) {
+    insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD,
+               /*IsCrossAddrSpaceOrdering=*/false, Pos, AtomicOrdering::Acquire,
+               /*AtomicsOnly=*/false);
+
+    if (Pos == Position::AFTER)
+      --MI;
+  }
+
   return true;
 }
 

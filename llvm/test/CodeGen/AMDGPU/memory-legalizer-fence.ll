@@ -1337,7 +1337,7 @@ define amdgpu_kernel void @workgroup_release_fence() {
 ; GFX1260:       ; %bb.0: ; %entry
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_expcnt 0x0
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_endpgm
@@ -1448,7 +1448,7 @@ define amdgpu_kernel void @workgroup_acq_rel_fence() {
 ; GFX1260:       ; %bb.0: ; %entry
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_expcnt 0x0
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_endpgm
@@ -1559,7 +1559,7 @@ define amdgpu_kernel void @workgroup_seq_cst_fence() {
 ; GFX1260:       ; %bb.0: ; %entry
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_expcnt 0x0
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_endpgm
@@ -1751,7 +1751,7 @@ define amdgpu_kernel void @workgroup_one_as_release_fence() {
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_expcnt 0x0
 ; GFX1260-NEXT:    s_endpgm
 ;
@@ -1857,7 +1857,7 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel_fence() {
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_expcnt 0x0
 ; GFX1260-NEXT:    s_endpgm
 ;
@@ -1963,7 +1963,7 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst_fence() {
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_expcnt 0x0
 ; GFX1260-NEXT:    s_endpgm
 ;
@@ -3006,6 +3006,7 @@ define amdgpu_kernel void @agent_acquire_fence() {
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1260-LABEL: agent_acquire_fence:
@@ -3014,6 +3015,7 @@ define amdgpu_kernel void @agent_acquire_fence() {
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: agent_acquire_fence:
@@ -3235,6 +3237,7 @@ define amdgpu_kernel void @agent_acq_rel_fence() {
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1260-LABEL: agent_acq_rel_fence:
@@ -3244,6 +3247,7 @@ define amdgpu_kernel void @agent_acq_rel_fence() {
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: agent_acq_rel_fence:
@@ -3361,6 +3365,7 @@ define amdgpu_kernel void @agent_seq_cst_fence() {
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1260-LABEL: agent_seq_cst_fence:
@@ -3370,6 +3375,7 @@ define amdgpu_kernel void @agent_seq_cst_fence() {
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: agent_seq_cst_fence:
@@ -3480,6 +3486,7 @@ define amdgpu_kernel void @agent_one_as_acquire_fence() {
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1260-LABEL: agent_one_as_acquire_fence:
@@ -3488,6 +3495,7 @@ define amdgpu_kernel void @agent_one_as_acquire_fence() {
 ; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: agent_one_as_acquire_fence:
@@ -3709,6 +3717,7 @@ define amdgpu_kernel void @agent_one_as_acq_rel_fence() {
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1260-LABEL: agent_one_as_acq_rel_fence:
@@ -3718,6 +3727,7 @@ define amdgpu_kernel void @agent_one_as_acq_rel_fence() {
 ; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: agent_one_as_acq_rel_fence:
@@ -3835,6 +3845,7 @@ define amdgpu_kernel void @agent_one_as_seq_cst_fence() {
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1260-LABEL: agent_one_as_seq_cst_fence:
@@ -3844,6 +3855,7 @@ define amdgpu_kernel void @agent_one_as_seq_cst_fence() {
 ; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: agent_one_as_seq_cst_fence:
@@ -3956,6 +3968,7 @@ define amdgpu_kernel void @system_acquire_fence() {
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1260-LABEL: system_acquire_fence:
@@ -3964,6 +3977,7 @@ define amdgpu_kernel void @system_acquire_fence() {
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: system_acquire_fence:
@@ -4195,6 +4209,7 @@ define amdgpu_kernel void @system_acq_rel_fence() {
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1260-LABEL: system_acq_rel_fence:
@@ -4204,6 +4219,7 @@ define amdgpu_kernel void @system_acq_rel_fence() {
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: system_acq_rel_fence:
@@ -4327,6 +4343,7 @@ define amdgpu_kernel void @system_seq_cst_fence() {
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1260-LABEL: system_seq_cst_fence:
@@ -4336,6 +4353,7 @@ define amdgpu_kernel void @system_seq_cst_fence() {
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: system_seq_cst_fence:
@@ -4448,6 +4466,7 @@ define amdgpu_kernel void @system_one_as_acquire_fence() {
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1260-LABEL: system_one_as_acquire_fence:
@@ -4456,6 +4475,7 @@ define amdgpu_kernel void @system_one_as_acquire_fence() {
 ; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: system_one_as_acquire_fence:
@@ -4687,6 +4707,7 @@ define amdgpu_kernel void @system_one_as_acq_rel_fence() {
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1260-LABEL: system_one_as_acq_rel_fence:
@@ -4696,6 +4717,7 @@ define amdgpu_kernel void @system_one_as_acq_rel_fence() {
 ; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: system_one_as_acq_rel_fence:
@@ -4819,6 +4841,7 @@ define amdgpu_kernel void @system_one_as_seq_cst_fence() {
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1260-LABEL: system_one_as_seq_cst_fence:
@@ -4828,6 +4851,7 @@ define amdgpu_kernel void @system_one_as_seq_cst_fence() {
 ; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: system_one_as_seq_cst_fence:
