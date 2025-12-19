@@ -21,6 +21,7 @@ define amdgpu_cs void @test_swc_flush(){
 ; GFX13-NEXT:    s_wait_storecnt 0x0
 ; GFX13-NEXT:    swc_flush scope:SCOPE_SYS
 ; GFX13-NEXT:    global_inv scope:SCOPE_SYS
+; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_endpgm
   call void @llvm.amdgcn.swc.flush()
   ret void
@@ -78,6 +79,7 @@ define amdgpu_cs void @test_swc_abort_exchange(){
 ; GFX13-NEXT:    s_wait_storecnt 0x0
 ; GFX13-NEXT:    swc_abort_exchange scope:SCOPE_SYS
 ; GFX13-NEXT:    global_inv scope:SCOPE_SYS
+; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_endpgm
   call void @llvm.amdgcn.swc.abort.exchange()
   ret void
