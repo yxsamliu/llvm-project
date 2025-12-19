@@ -357,7 +357,6 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX1364-NEXT:    buffer_atomic_add_u32 v1, off, s[8:11], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:  .LBB0_2:
 ; GFX1364-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX1364-NEXT:    s_wait_kmcnt 0x0
@@ -392,7 +391,6 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX1332-NEXT:    buffer_atomic_add_u32 v1, off, s[8:11], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:  .LBB0_2:
 ; GFX1332-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX1332-NEXT:    s_wait_kmcnt 0x0
@@ -757,7 +755,6 @@ define amdgpu_kernel void @add_i32_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1364-NEXT:    buffer_atomic_add_u32 v1, off, s[12:15], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:  .LBB1_2:
 ; GFX1364-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX1364-NEXT:    s_wait_kmcnt 0x0
@@ -795,7 +792,6 @@ define amdgpu_kernel void @add_i32_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1332-NEXT:    buffer_atomic_add_u32 v1, off, s[8:11], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:  .LBB1_2:
 ; GFX1332-NEXT:    s_or_b32 exec_lo, exec_lo, s5
 ; GFX1332-NEXT:    s_wait_kmcnt 0x0
@@ -1769,7 +1765,6 @@ define amdgpu_kernel void @add_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1364-NEXT:    buffer_atomic_add_u32 v0, off, s[4:7], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:  .LBB2_2:
 ; GFX1364-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX1364-NEXT:    s_wait_kmcnt 0x0
@@ -1825,7 +1820,6 @@ define amdgpu_kernel void @add_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1332-NEXT:    buffer_atomic_add_u32 v0, off, s[4:7], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:  .LBB2_2:
 ; GFX1332-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; GFX1332-NEXT:    s_wait_kmcnt 0x0
@@ -2199,7 +2193,6 @@ define amdgpu_kernel void @add_i64_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX1364-NEXT:    buffer_atomic_add_u64 v[0:1], off, s[8:11], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:  .LBB3_2:
 ; GFX1364-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX1364-NEXT:    s_wait_kmcnt 0x0
@@ -2236,7 +2229,6 @@ define amdgpu_kernel void @add_i64_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX1332-NEXT:    buffer_atomic_add_u64 v[0:1], off, s[8:11], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:  .LBB3_2:
 ; GFX1332-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX1332-NEXT:    s_wait_kmcnt 0x0
@@ -2663,7 +2655,6 @@ define amdgpu_kernel void @add_i64_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1364-NEXT:    buffer_atomic_add_u64 v[0:1], off, s[8:11], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:  .LBB4_2:
 ; GFX1364-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX1364-NEXT:    s_wait_kmcnt 0x0
@@ -2704,7 +2695,6 @@ define amdgpu_kernel void @add_i64_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1332-NEXT:    buffer_atomic_add_u64 v[0:1], off, s[12:15], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:  .LBB4_2:
 ; GFX1332-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; GFX1332-NEXT:    s_wait_kmcnt 0x0
@@ -4068,7 +4058,6 @@ define amdgpu_kernel void @add_i64_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1364-NEXT:    buffer_atomic_add_u64 v[6:7], off, s[4:7], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:  .LBB5_2:
 ; GFX1364-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX1364-NEXT:    s_wait_kmcnt 0x0
@@ -4151,7 +4140,6 @@ define amdgpu_kernel void @add_i64_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1332-NEXT:    buffer_atomic_add_u64 v[6:7], off, s[4:7], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:  .LBB5_2:
 ; GFX1332-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; GFX1332-NEXT:    s_wait_kmcnt 0x0
@@ -4631,7 +4619,6 @@ define amdgpu_kernel void @sub_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX1364-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], off, s[4:7], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v4
 ; GFX1364-NEXT:    s_or_b64 s[10:11], vcc, s[10:11]
 ; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -4685,7 +4672,6 @@ define amdgpu_kernel void @sub_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX1332-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], off, s[4:7], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v4
 ; GFX1332-NEXT:    s_or_b32 s9, vcc_lo, s9
 ; GFX1332-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -5184,7 +5170,6 @@ define amdgpu_kernel void @sub_i32_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1364-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], off, s[4:7], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v4
 ; GFX1364-NEXT:    s_or_b64 s[10:11], vcc, s[10:11]
 ; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -5240,7 +5225,6 @@ define amdgpu_kernel void @sub_i32_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1332-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], off, s[4:7], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v4
 ; GFX1332-NEXT:    s_or_b32 s10, vcc_lo, s10
 ; GFX1332-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -6448,7 +6432,6 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1364-NEXT:    buffer_atomic_cmpswap_b32 v[4:5], off, s[4:7], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    v_cmp_eq_u32_e32 vcc, v4, v6
 ; GFX1364-NEXT:    s_or_b64 s[10:11], vcc, s[10:11]
 ; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -6521,7 +6504,6 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1332-NEXT:    buffer_atomic_cmpswap_b32 v[3:4], off, s[4:7], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v5
 ; GFX1332-NEXT:    s_or_b32 s10, vcc_lo, s10
 ; GFX1332-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -7079,7 +7061,6 @@ define amdgpu_kernel void @sub_i64_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX1364-NEXT:    buffer_atomic_cmpswap_b64 v[0:3], off, s[4:7], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[7:8]
 ; GFX1364-NEXT:    s_or_b64 s[10:11], vcc, s[10:11]
 ; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -7140,7 +7121,6 @@ define amdgpu_kernel void @sub_i64_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX1332-NEXT:    buffer_atomic_cmpswap_b64 v[0:3], off, s[4:7], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[0:1], v[7:8]
 ; GFX1332-NEXT:    s_or_b32 s9, vcc_lo, s9
 ; GFX1332-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -7751,7 +7731,6 @@ define amdgpu_kernel void @sub_i64_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1364-NEXT:    buffer_atomic_cmpswap_b64 v[0:3], off, s[4:7], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[7:8]
 ; GFX1364-NEXT:    s_or_b64 s[12:13], vcc, s[12:13]
 ; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -7814,7 +7793,6 @@ define amdgpu_kernel void @sub_i64_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1332-NEXT:    buffer_atomic_cmpswap_b64 v[0:3], off, s[4:7], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[0:1], v[7:8]
 ; GFX1332-NEXT:    s_or_b32 s11, vcc_lo, s11
 ; GFX1332-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -9488,7 +9466,6 @@ define amdgpu_kernel void @sub_i64_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1364-NEXT:    buffer_atomic_cmpswap_b64 v[6:9], off, s[4:7], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    v_cmp_eq_u64_e32 vcc, v[6:7], v[10:11]
 ; GFX1364-NEXT:    s_or_b64 s[12:13], vcc, s[12:13]
 ; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -9593,7 +9570,6 @@ define amdgpu_kernel void @sub_i64_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1332-NEXT:    buffer_atomic_cmpswap_b64 v[6:9], off, s[4:7], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[6:7], v[10:11]
 ; GFX1332-NEXT:    s_or_b32 s11, vcc_lo, s11
 ; GFX1332-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -18724,7 +18700,6 @@ define amdgpu_kernel void @fadd_f32_varying(ptr addrspace(1) %out, ptr addrspace
 ; GFX1364-NEXT:    buffer_atomic_cmpswap_b32 v[4:5], off, s[8:11], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    v_cmp_eq_u32_e64 s[0:1], v4, v6
 ; GFX1364-NEXT:    s_or_b64 s[12:13], s[0:1], s[12:13]
 ; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -18814,7 +18789,6 @@ define amdgpu_kernel void @fadd_f32_varying(ptr addrspace(1) %out, ptr addrspace
 ; GFX1332-NEXT:    buffer_atomic_cmpswap_b32 v[4:5], off, s[8:11], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    v_cmp_eq_u32_e64 s0, v4, v6
 ; GFX1332-NEXT:    s_or_b32 s3, s0, s3
 ; GFX1332-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -20642,7 +20616,6 @@ define amdgpu_kernel void @fadd_f64_varying(ptr addrspace(1) %out, ptr addrspace
 ; GFX1364-NEXT:    buffer_atomic_cmpswap_b64 v[7:10], off, s[8:11], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    v_cmp_eq_u64_e64 s[0:1], v[7:8], v[11:12]
 ; GFX1364-NEXT:    s_or_b64 s[14:15], s[0:1], s[14:15]
 ; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -20752,7 +20725,6 @@ define amdgpu_kernel void @fadd_f64_varying(ptr addrspace(1) %out, ptr addrspace
 ; GFX1332-NEXT:    buffer_atomic_cmpswap_b64 v[7:10], off, s[8:11], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    v_cmp_eq_u64_e64 s0, v[7:8], v[11:12]
 ; GFX1332-NEXT:    s_or_b32 s12, s0, s12
 ; GFX1332-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -22226,7 +22198,6 @@ define amdgpu_kernel void @fsub_f32_varying(ptr addrspace(1) %out, ptr addrspace
 ; GFX1364-NEXT:    buffer_atomic_cmpswap_b32 v[4:5], off, s[8:11], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    v_cmp_eq_u32_e64 s[0:1], v4, v6
 ; GFX1364-NEXT:    s_or_b64 s[12:13], s[0:1], s[12:13]
 ; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -22316,7 +22287,6 @@ define amdgpu_kernel void @fsub_f32_varying(ptr addrspace(1) %out, ptr addrspace
 ; GFX1332-NEXT:    buffer_atomic_cmpswap_b32 v[4:5], off, s[8:11], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    v_cmp_eq_u32_e64 s0, v4, v6
 ; GFX1332-NEXT:    s_or_b32 s3, s0, s3
 ; GFX1332-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -24144,7 +24114,6 @@ define amdgpu_kernel void @fsub_f64_varying(ptr addrspace(1) %out, ptr addrspace
 ; GFX1364-NEXT:    buffer_atomic_cmpswap_b64 v[7:10], off, s[8:11], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1364-NEXT:    s_wait_loadcnt 0x0
 ; GFX1364-NEXT:    v_cmp_eq_u64_e64 s[0:1], v[7:8], v[11:12]
 ; GFX1364-NEXT:    s_or_b64 s[14:15], s[0:1], s[14:15]
 ; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -24254,7 +24223,6 @@ define amdgpu_kernel void @fsub_f64_varying(ptr addrspace(1) %out, ptr addrspace
 ; GFX1332-NEXT:    buffer_atomic_cmpswap_b64 v[7:10], off, s[8:11], null th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1332-NEXT:    s_wait_loadcnt 0x0
 ; GFX1332-NEXT:    v_cmp_eq_u64_e64 s0, v[7:8], v[11:12]
 ; GFX1332-NEXT:    s_or_b32 s12, s0, s12
 ; GFX1332-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)

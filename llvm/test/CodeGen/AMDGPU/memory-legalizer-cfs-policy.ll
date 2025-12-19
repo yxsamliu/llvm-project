@@ -736,7 +736,6 @@ define float @buffer_atomicrmw_cfs_128B(ptr addrspace(7) inreg %ptr, float %val)
 ; GFX13-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v3, s[0:3], null offen th:TH_ATOMIC_RETURN cfs:CFS_64B
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    global_inv scope:SCOPE_DEV
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
 ; GFX13-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -775,7 +774,6 @@ define float @buffer_atomicrmw_cfs_64B(ptr addrspace(7) inreg %ptr, float %val) 
 ; GFX13-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v3, s[0:3], null offen th:TH_ATOMIC_RETURN cfs:CFS_128B
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    global_inv scope:SCOPE_DEV
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
 ; GFX13-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -814,7 +812,6 @@ define float @buffer_atomicrmw_cfs_32B(ptr addrspace(7) inreg %ptr, float %val) 
 ; GFX13-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v3, s[0:3], null offen th:TH_ATOMIC_RETURN cfs:CFS_32B
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    global_inv scope:SCOPE_DEV
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
 ; GFX13-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)

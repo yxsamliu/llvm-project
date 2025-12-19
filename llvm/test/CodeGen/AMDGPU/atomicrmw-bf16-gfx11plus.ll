@@ -155,7 +155,6 @@ define amdgpu_kernel void @v_atomicrmw_fadd_bf16(ptr addrspace(1) %out, i1 %in, 
 ; GFX13-TRUE16-NEXT:    global_atomic_cmpswap_b32 v0, v4, v[0:1], s[0:1] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-TRUE16-NEXT:    global_inv scope:SCOPE_DEV
-; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX13-TRUE16-NEXT:    s_or_b32 s4, vcc_lo, s4
@@ -206,7 +205,6 @@ define amdgpu_kernel void @v_atomicrmw_fadd_bf16(ptr addrspace(1) %out, i1 %in, 
 ; GFX13-FAKE16-NEXT:    global_atomic_cmpswap_b32 v0, v3, v[0:1], s[0:1] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-FAKE16-NEXT:    global_inv scope:SCOPE_DEV
-; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX13-FAKE16-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX13-FAKE16-NEXT:    s_or_b32 s4, vcc_lo, s4
