@@ -131,9 +131,12 @@ private:
   // Analyzed instructions in reverse basic block order.
   SmallVector<MachineInstr *> Instrs;
 
-  const DenseSet<std::pair<MachineInstr *, MachineInstr *>> *CommutableInstrs = nullptr;
+  const DenseSet<std::pair<MachineInstr *, MachineInstr *>> *CommutableInstrs =
+      nullptr;
+
 public:
-  void setCommutableInstrs(const DenseSet<std::pair<MachineInstr *, MachineInstr *>> *Commutable) {
+  void setCommutableInstrs(
+      const DenseSet<std::pair<MachineInstr *, MachineInstr *>> *Commutable) {
     CommutableInstrs = Commutable;
   }
 
@@ -1057,7 +1060,8 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
-bool AMDGPUBundleIdxLdSt::expandPseudoInstructions(MachineFunction &MF, bool &HaveLoadStoreIdx) {
+bool AMDGPUBundleIdxLdSt::expandPseudoInstructions(MachineFunction &MF,
+                                                   bool &HaveLoadStoreIdx) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
@@ -1167,6 +1171,13 @@ bool AMDGPUBundleIdxLdSt::analyze(BundlingInfo &BI) {
   if (MI->getOpcode() == AMDGPU::V_MOV_B64_PSEUDO && !ST->hasMovB64())
     return false;
 
+  // Cannot bundle instructions using frame indices because
+  // PrologueEpilogueInserter cannot handle them inside bundles
+  // during replaceFrameIndicesBackward.
+  if (llvm::any_of(MI->operands(),
+                   [](const MachineOperand &MO) { return MO.isFI(); }))
+    return false;
+
   BI.StoreHoisting.setCommutableInstrs(&CommutableStores);
 
   // Step 1: Collect candidate defs.
@@ -1249,9 +1260,9 @@ bool AMDGPUBundleIdxLdSt::analyze(BundlingInfo &BI) {
                           // Do not bundle instructions with odd offsets to
                           // ensure proper register alignment.
                           //
-                          // TODO-GFX13: Should this also check the alignment in
-                          // the MMO, considering that the index itself might
-                          // not be aligned?
+                          // TODO-GFX13: Should this also check the alignment
+                          // in the MMO, considering that the index itself
+                          // might not be aligned?
                           if (Op.getOffset() & 1) {
                             reject(*Op.Op);
                             return true;
@@ -1332,8 +1343,8 @@ bool AMDGPUBundleIdxLdSt::analyze(BundlingInfo &BI) {
         if (!BundleDef || !BundleUse || !Def.isEarlyClobber() ||
             !DefIt->LoadStore->mayAlias(AA, *UseIt->LoadStore, true)) {
           if (MachineInstr *NewMI = convertInstTo3Addr(MI)) {
-            // The instruction was completely replaced, so we have to re-scan it
-            // from the top.
+            // The instruction was completely replaced, so we have to re-scan
+            // it from the top.
             BI = {};
             BI.MI = NewMI;
             return analyze(BI);
@@ -1404,7 +1415,8 @@ bool AMDGPUBundleIdxLdSt::analyze(BundlingInfo &BI) {
       return A.second > B.second;
     });
 
-    // Since we failed to bundle everything, we need idx0 for private registers.
+    // Since we failed to bundle everything, we need idx0 for private
+    // registers.
     Indices.resize(3);
 
     BI.BundledOps.erase(
