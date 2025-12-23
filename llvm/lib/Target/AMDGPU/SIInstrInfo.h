@@ -1841,6 +1841,8 @@ public:
            MI.getOperand(1).isGlobal() &&
            MI.getOperand(1).getTargetFlags() == MO_NUM_VGPRS;
   }
+
+  unsigned getRepeatRate(const MachineInstr &MI) const;
 };
 
 /// \brief Returns true if a reg:subreg pair P has a TRC class

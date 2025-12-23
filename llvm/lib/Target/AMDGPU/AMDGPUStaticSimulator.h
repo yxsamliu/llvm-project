@@ -922,6 +922,7 @@ struct RegisterFile {
   explicit RegisterFile(const SIRegisterInfo *TRI) : TRI(TRI) {}
 
   static unsigned countBankConflicts(ArrayRef<unsigned> HWRegs, unsigned NumBanks) {
+    // return 0;
     SmallVector<unsigned, 8> BankCount(NumBanks, 0);
     for (unsigned HWReg : HWRegs)
       BankCount[HWReg % NumBanks]++;

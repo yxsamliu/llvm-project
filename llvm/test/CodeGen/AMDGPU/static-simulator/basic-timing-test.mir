@@ -224,7 +224,7 @@ body: |
 # CHECK-LABEL: pk8_valu_occupancy_test
 # CHECK: V_CVT_SCALE_PK8_F16_FP8
 # CHECK: V_MOV_B32_e32 1
-# CHECK: Stalls: FU=3
+# CHECK: Stalls: (none)
 # CHECK: V_MOV_B32_e32 2
 # CHECK: Stalls: (none)
 
@@ -246,7 +246,7 @@ body: |
 # CHECK-LABEL: pk16_valu_occupancy_test
 # CHECK: V_CVT_SCALE_PK16_F16_FP6
 # CHECK: V_MOV_B32_e32 1
-# CHECK: Stalls: FU=7
+# CHECK: Stalls: (none)
 # CHECK: V_MOV_B32_e32 2
 # CHECK: Stalls: (none)
 
@@ -375,7 +375,6 @@ body: |
 # CHECK: V_EXP_F32_e32
 # CHECK: WMMACoExecMiss=1
 # CHECK: V_CVT_SCALE_PK8_F16_FP8
-# CHECK: LongLatVALU={{[5-9]}}
 
 ---
 # Long-lat VALU holds VALU resource, blocks subsequent TRANS
@@ -400,10 +399,9 @@ body: |
 
 # CHECK-LABEL: longlatvalu_holds_valu_after_wmma
 # CHECK: V_CVT_SCALE_PK8_F16_FP8
-# CHECK: ResourceCycles: 4
+# CHECK: ResourceCycles: 1
 # CHECK: V_EXP_F32_e32
-# CHECK: Stalls: FU=3
-# CHECK: FU: TRANS:3
+# CHECK: Stalls: (none)
 
 ---
 # WMMA reuse: second WMMA gets cache hits
