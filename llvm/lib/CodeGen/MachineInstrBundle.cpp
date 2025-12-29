@@ -426,5 +426,5 @@ llvm::FinalizeBundleTestPass::run(MachineFunction &MF,
   // except for terminators.
   for (MachineBasicBlock &MBB : MF)
     finalizeBundle(MBB, MBB.instr_begin(), MBB.getFirstInstrTerminator());
-  return PreservedAnalyses::none();
+  return getMachineFunctionPassPreservedAnalyses();
 }
