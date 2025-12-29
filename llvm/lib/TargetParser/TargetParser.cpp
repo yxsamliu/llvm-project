@@ -493,6 +493,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["wavegroups"] = true;
     Features["perm-pk-u2u3-insts"] = true;
     Features["pk4-insts"] = true;
+    Features["semaphores"] = true;
     [[fallthrough]];
   case GK_GFX1251:
     if (Kind == GK_GFX1260)

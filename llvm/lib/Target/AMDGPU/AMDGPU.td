@@ -2468,7 +2468,8 @@ def FeatureISAVersion12_60 : FeatureSet<
      FeatureAddressableLocalMemorySize327680,
      FeatureVGPRIndexingRegisters,
      FeatureSWakeupImm,
-     FeatureSBarrierLeaveImm
+     FeatureSBarrierLeaveImm,
+     FeatureSemaphores,
     ])>;
 
 def FeatureISAVersion13_Common : FeatureSet<

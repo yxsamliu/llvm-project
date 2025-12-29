@@ -36,3 +36,27 @@ s_barrier_leave 0
 
 s_barrier_leave 32
 // GFX1260: s_barrier_leave 32                      ; encoding: [0x20,0x00,0x95,0xbf]
+
+s_sema_signal 0
+// GFX1260: s_sema_signal 0                         ; encoding: [0x00,0x00,0x96,0xbf]
+
+s_sema_signal 0x1234
+// GFX1260: s_sema_signal 0x1234                    ; encoding: [0x34,0x12,0x96,0xbf]
+
+s_sema_wait 0
+// GFX1260: s_sema_wait 0                           ; encoding: [0x00,0x00,0x97,0xbf]
+
+s_sema_wait 0x1234
+// GFX1260: s_sema_wait 0x1234                      ; encoding: [0x34,0x12,0x97,0xbf]
+
+s_sema_set_limit 0
+// GFX1260: s_sema_set_limit 0                      ; encoding: [0x00,0x00,0x98,0xbf]
+
+s_sema_set_limit 0x1234
+// GFX1260: s_sema_set_limit 0x1234                 ; encoding: [0x34,0x12,0x98,0xbf]
+
+s_sema_signal_after 0
+// GFX1260: s_sema_signal_after 0                   ; encoding: [0x00,0x00,0x99,0xbf]
+
+s_sema_signal_after 0x1234
+// GFX1260: s_sema_signal_after 0x1234              ; encoding: [0x34,0x12,0x99,0xbf]
