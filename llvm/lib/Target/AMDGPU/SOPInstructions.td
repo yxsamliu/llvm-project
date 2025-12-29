@@ -3010,6 +3010,26 @@ defm S_SETREG_B32       : SOPK_Real32_gfx6_gfx7_gfx10_gfx13<0x013>;
 defm S_SETREG_IMM32_B32 : SOPK_Real64_gfx6_gfx7_gfx10_gfx13<0x015>;
 
 //===----------------------------------------------------------------------===//
+// SOPP - GFX1260.
+//===----------------------------------------------------------------------===//
+
+multiclass SOPP_Real_32_gfx1260<bits<7> op, string name = !cast<SOPP_Pseudo>(NAME).Mnemonic, bit compat_alias = 1> {
+  defvar ps = !cast<SOPP_Pseudo>(NAME);
+  def _gfx1260 : SOPP_Real_32<op, ps, name>,
+                 Select<GFX1260Gen, ps.Mnemonic>,
+                 SOPPRelaxTable<0, ps.KeyName, "_gfx1260">;
+  if !and(compat_alias, !ne(ps.Mnemonic, name)) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX1260Only]>;
+}
+
+defm S_BARRIER_LEAVE_IMM : SOPP_Real_32_gfx1260<0x15>;
+defm S_SEMA_SIGNAL       : SOPP_Real_32_gfx1260<0x16>;
+defm S_SEMA_WAIT         : SOPP_Real_32_gfx1260<0x17>;
+defm S_SEMA_SET_LIMIT    : SOPP_Real_32_gfx1260<0x18>;
+defm S_SEMA_SIGNAL_AFTER : SOPP_Real_32_gfx1260<0x19>;
+defm S_WAKEUP_imm        : SOPP_Real_32_gfx1260<0x34>;
+
+//===----------------------------------------------------------------------===//
 // SOPP - GFX13.
 //===----------------------------------------------------------------------===//
 
@@ -3022,26 +3042,17 @@ multiclass SOPP_Real_32_gfx13<bits<7> op, string name = !cast<SOPP_Pseudo>(NAME)
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
 }
 
-multiclass SOPP_Real_32_gfx1260<bits<7> op, string name = !cast<SOPP_Pseudo>(NAME).Mnemonic, bit compat_alias = 1> {
-  defvar ps = !cast<SOPP_Pseudo>(NAME);
-  def _gfx1260 : SOPP_Real_32<op, ps, name>,
-                 Select<GFX1260Gen, ps.Mnemonic>,
-                 SOPPRelaxTable<0, ps.KeyName, "_gfx1260">;
-  if !and(compat_alias, !ne(ps.Mnemonic, name)) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX1260Only]>;
-}
-
 multiclass SOPP_Real_32_gfx1260_gfx13<bits<7> op> :
   SOPP_Real_32_gfx13<op>, SOPP_Real_32_gfx1260<op>;
 
-defm S_WAKEUP_imm        : SOPP_Real_32_gfx13<0x003>, SOPP_Real_32_gfx1260<0x34>;
+defm S_WAKEUP_imm        : SOPP_Real_32_gfx13<0x003>;
 defm S_SINGLEUSE_VDST    : SOPP_Real_32_gfx13<0x13>;
 defm S_BARRIER_WAIT      : SOPP_Real_32_gfx13<0x2b>;
 defm S_MONITOR_SLEEP     : SOPP_Real_32_gfx13<0x2c>;
 defm S_SET_VGPR_FRAMES   : SOPP_Real_32_gfx1260_gfx13<0x1c>;
 defm S_DELAY_ALU         : SOPP_Real_32_gfx13<0x2e>;
 defm S_WAIT_EVENT        : SOPP_Real_32_gfx13<0x2f>;
-defm S_BARRIER_LEAVE_IMM : SOPP_Real_32_gfx13<0x31>, SOPP_Real_32_gfx1260<0x15>;
+defm S_BARRIER_LEAVE_IMM : SOPP_Real_32_gfx13<0x31>;
 defm S_SEMA_SIGNAL       : SOPP_Real_32_gfx13<0x32>;
 defm S_SEMA_WAIT         : SOPP_Real_32_gfx13<0x33>;
 defm S_SEMA_SET_LIMIT    : SOPP_Real_32_gfx13<0x34>;
