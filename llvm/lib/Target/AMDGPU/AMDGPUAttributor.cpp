@@ -14,7 +14,11 @@
 #include "AMDGPUMemoryUtils.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
+<<<<<<< HEAD
 #include "llvm/Analysis/CallGraph.h"
+=======
+#include "llvm/Analysis/TargetTransformInfo.h"
+>>>>>>> 4e7ef48e58c4950ba3756e29a3cff696c1fef390
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/Target/TargetMachine.h"
@@ -1609,10 +1613,17 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
   AC.IsModulePass = true;
   AC.DefaultInitializeLiveInternals = false;
   AC.IndirectCalleeSpecializationCallback =
-      [](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
-         Function &Callee, unsigned NumAssumedCallees) {
-        return !AMDGPU::isEntryFunctionCC(Callee.getCallingConv()) &&
-               (NumAssumedCallees <= IndirectCallSpecializationThreshold);
+      [&TM](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
+            Function &Callee, unsigned NumAssumedCallees) {
+        if (AMDGPU::isEntryFunctionCC(Callee.getCallingConv()))
+          return false;
+        // Singleton functions can be specialized.
+        if (NumAssumedCallees == 1)
+          return true;
+        // Otherwise specialize uniform values.
+        const auto &TTI = TM.getTargetTransformInfo(*CB.getCaller());
+        return TTI.getInstructionUniformity(CB.getCalledOperand()) ==
+               InstructionUniformity::AlwaysUniform;
       };
   AC.IPOAmendableCB = [](const Function &F) {
     return F.getCallingConv() == CallingConv::AMDGPU_KERNEL;

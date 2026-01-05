@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClauseProcessor.h"
-#include "Utils.h"
+#include "flang/Lower/OpenMP/Utils.h"
 
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
@@ -1289,7 +1289,7 @@ void ClauseProcessor::processMapObjects(
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapVars,
     llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
-    llvm::StringRef mapperIdNameRef) const {
+    llvm::StringRef mapperIdNameRef, bool isMotionModifier) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   auto getSymbolDerivedType = [](const semantics::Symbol &symbol)
@@ -1387,7 +1387,7 @@ void ClauseProcessor::processMapObjects(
             treatIndexAsSection);
 
     mlir::Value baseOp = info.rawInput;
-    if (object.sym()->owner().IsDerivedType()) {
+    if (object.sym()->owner().IsDerivedType() && !isMotionModifier) {
       omp::ObjectList objectList = gatherObjectsOf(object, semaCtx);
       assert(!objectList.empty() &&
              "could not find parent objects of derived type member");
@@ -1565,7 +1565,8 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
     if (expectation && *expectation == omp::clause::To::Expectation::Present)
       mapTypeBits |= mlir::omp::ClauseMapFlags::present;
     processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
-                      parentMemberIndices, result.mapVars, mapSymbols);
+                      parentMemberIndices, result.mapVars, mapSymbols, "",
+                      true);
   };
 
   bool clauseFound = findRepeatableClause<omp::clause::To>(callbackFn);

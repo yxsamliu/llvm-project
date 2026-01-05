@@ -5435,7 +5435,7 @@ static Address emitAddrOfZeroSizeField(CodeGenFunction &CGF, Address Base,
 /// The resulting address doesn't necessarily have the right type.
 static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
                                       const FieldDecl *field, bool IsInBounds) {
-  if (isEmptyFieldForLayout(CGF.getContext(), field))
+  if (field->isZeroSize(CGF.getContext()))
     return emitAddrOfZeroSizeField(CGF, base, field, IsInBounds);
 
   const RecordDecl *rec = field->getParent();
@@ -6796,6 +6796,21 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
             dyn_cast_if_present<CXXMethodDecl>(OCE->getCalleeDecl());
         MD && MD->isStatic())
       StaticOperator = true;
+  }
+
+  // Emit __llvm_omp_emissary_rpc for stubs of emissary APIs.
+  if ((CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX()) && FnType &&
+      dyn_cast<FunctionProtoType>(FnType) &&
+      dyn_cast<FunctionProtoType>(FnType)->isVariadic()) {
+    // This is a variadic function in a device compile
+    // if (emissary_exec || (openmp && (fprintf || printf))
+    if ((E->getDirectCallee()->getNameAsString() == "_emissary_exec") ||
+        // FIXME: do not call for fprintf or printf if device libc is active
+        (CGM.getLangOpts().OpenMP && 
+         ((E->getDirectCallee()->getNameAsString() == "fprintf") ||
+          (E->getDirectCallee()->getNameAsString() == "printf")))) {
+      return EmitEmissaryExec(E);
+    }
   }
 
   auto Arguments = E->arguments();

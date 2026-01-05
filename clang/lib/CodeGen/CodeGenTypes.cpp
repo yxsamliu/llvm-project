@@ -584,10 +584,16 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case BuiltinType::Id:                                                        \
     return llvm::TargetExtType::get(getLLVMContext(), "amdgcn.named.barrier",  \
                                     {}, {Scope});
+<<<<<<< HEAD
 #define AMDGPU_SEMAPHORE_TYPE(Name, Id, SingletonId, Width, Align, Rank)       \
   case BuiltinType::Id:                                                        \
     return llvm::TargetExtType::get(getLLVMContext(), "amdgcn.semaphore", {},  \
                                     {Rank});
+=======
+#define AMDGPU_FEATURE_PREDICATE_TYPE(Name, Id, SingletonId, Width, Align)     \
+  case BuiltinType::Id:                                                        \
+    return ConvertType(getContext().getLogicalOperationType());
+>>>>>>> 4e7ef48e58c4950ba3756e29a3cff696c1fef390
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
