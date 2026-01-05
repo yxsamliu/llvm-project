@@ -2031,7 +2031,6 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
-<<<<<<< HEAD
   case Intrinsic::amdgcn_global_tiled_load_b128:
   case Intrinsic::amdgcn_global_tiled_load_b64:
   case Intrinsic::amdgcn_global_tiled_load_half_b128:
@@ -2040,10 +2039,8 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_global_tiled_load_qtr_b128:
   case Intrinsic::amdgcn_global_tiled_load_vst2_b128:
   case Intrinsic::amdgcn_global_tiled_load_vst2_b64:
-=======
   case Intrinsic::amdgcn_global_load_b128:
   case Intrinsic::amdgcn_global_store_b128:
->>>>>>> 4e7ef48e58c4950ba3756e29a3cff696c1fef390
     Ptr = II->getArgOperand(0);
     break;
   case Intrinsic::amdgcn_load_to_lds:

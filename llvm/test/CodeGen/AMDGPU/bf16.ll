@@ -5639,18 +5639,18 @@ define void @test_call(bfloat %in, ptr addrspace(5) %out) {
 ; GFX1260-NEXT:    scratch_store_b32 off, v4, s33 ; 4-byte Folded Spill
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1260-NEXT:    s_get_pc_i64 s[0:1]
-; GFX1260-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store@gotpcrel+4
 ; GFX1260-NEXT:    v_writelane_b32 v4, s30, 0
-; GFX1260-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1260-NEXT:    s_add_co_i32 s32, s32, 16
 ; GFX1260-NEXT:    v_writelane_b32 v4, s31, 1
+; GFX1260-NEXT:    s_get_pc_i64 s[0:1]
+; GFX1260-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store@gotpcrel+4
+; GFX1260-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1260-NEXT:    v_readlane_b32 s30, v4, 0
 ; GFX1260-NEXT:    scratch_store_b16 v1, v0, off scope:SCOPE_SYS
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    v_readlane_b32 s31, v4, 1
-; GFX1260-NEXT:    v_readlane_b32 s30, v4, 0
 ; GFX1260-NEXT:    s_mov_b32 s32, s33
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    s_xor_saveexec_b32 s0, -1
@@ -5673,18 +5673,18 @@ define void @test_call(bfloat %in, ptr addrspace(5) %out) {
 ; GFX13-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX13-NEXT:    scratch_store_b32 off, v2, s33 ; 4-byte Folded Spill
 ; GFX13-NEXT:    s_mov_b32 exec_lo, s0
-; GFX13-NEXT:    s_get_pc_i64 s[0:1]
-; GFX13-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store@gotpcrel+4
 ; GFX13-NEXT:    v_writelane_b32 v2, s30, 0
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX13-NEXT:    s_add_co_i32 s32, s32, 16
 ; GFX13-NEXT:    v_writelane_b32 v2, s31, 1
+; GFX13-NEXT:    s_get_pc_i64 s[0:1]
+; GFX13-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store@gotpcrel+4
+; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX13-NEXT:    v_readlane_b32 s30, v2, 0
 ; GFX13-NEXT:    scratch_store_b16 v1, v0, off scope:SCOPE_SYS
 ; GFX13-NEXT:    s_wait_storecnt 0x0
 ; GFX13-NEXT:    v_readlane_b32 s31, v2, 1
-; GFX13-NEXT:    v_readlane_b32 s30, v2, 0
 ; GFX13-NEXT:    s_mov_b32 s32, s33
 ; GFX13-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX13-NEXT:    scratch_load_b32 v2, off, s33 ; 4-byte Folded Reload
@@ -5962,18 +5962,18 @@ define void @test_call_v2bf16(<2 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX1260-NEXT:    scratch_store_b32 off, v4, s33 ; 4-byte Folded Spill
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1260-NEXT:    s_get_pc_i64 s[0:1]
-; GFX1260-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
 ; GFX1260-NEXT:    v_writelane_b32 v4, s30, 0
-; GFX1260-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1260-NEXT:    s_add_co_i32 s32, s32, 16
 ; GFX1260-NEXT:    v_writelane_b32 v4, s31, 1
+; GFX1260-NEXT:    s_get_pc_i64 s[0:1]
+; GFX1260-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
+; GFX1260-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1260-NEXT:    v_readlane_b32 s30, v4, 0
 ; GFX1260-NEXT:    scratch_store_b32 v1, v0, off scope:SCOPE_SYS
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    v_readlane_b32 s31, v4, 1
-; GFX1260-NEXT:    v_readlane_b32 s30, v4, 0
 ; GFX1260-NEXT:    s_mov_b32 s32, s33
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    s_xor_saveexec_b32 s0, -1
@@ -5996,18 +5996,18 @@ define void @test_call_v2bf16(<2 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX13-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX13-NEXT:    scratch_store_b32 off, v2, s33 ; 4-byte Folded Spill
 ; GFX13-NEXT:    s_mov_b32 exec_lo, s0
-; GFX13-NEXT:    s_get_pc_i64 s[0:1]
-; GFX13-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
 ; GFX13-NEXT:    v_writelane_b32 v2, s30, 0
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX13-NEXT:    s_add_co_i32 s32, s32, 16
 ; GFX13-NEXT:    v_writelane_b32 v2, s31, 1
+; GFX13-NEXT:    s_get_pc_i64 s[0:1]
+; GFX13-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
+; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX13-NEXT:    v_readlane_b32 s30, v2, 0
 ; GFX13-NEXT:    scratch_store_b32 v1, v0, off scope:SCOPE_SYS
 ; GFX13-NEXT:    s_wait_storecnt 0x0
 ; GFX13-NEXT:    v_readlane_b32 s31, v2, 1
-; GFX13-NEXT:    v_readlane_b32 s30, v2, 0
 ; GFX13-NEXT:    s_mov_b32 s32, s33
 ; GFX13-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX13-NEXT:    scratch_load_b32 v2, off, s33 ; 4-byte Folded Reload
@@ -6305,22 +6305,22 @@ define void @test_call_v3bf16(<3 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX1260-NEXT:    scratch_store_b32 off, v5, s33 ; 4-byte Folded Spill
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    s_mov_b32 exec_lo, s0
+; GFX1260-NEXT:    v_writelane_b32 v5, s30, 0
+; GFX1260-NEXT:    s_add_co_i32 s32, s32, 16
+; GFX1260-NEXT:    v_writelane_b32 v5, s31, 1
 ; GFX1260-NEXT:    s_get_pc_i64 s[0:1]
 ; GFX1260-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
-; GFX1260-NEXT:    v_writelane_b32 v5, s30, 0
-; GFX1260-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX1260-NEXT:    s_add_co_i32 s32, s32, 16
 ; GFX1260-NEXT:    v_mov_b32_e32 v4, v2
-; GFX1260-NEXT:    v_writelane_b32 v5, s31, 1
+; GFX1260-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1260-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX1260-NEXT:    scratch_store_b16 v4, v1, off offset:4 scope:SCOPE_SYS
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    scratch_store_b32 v4, v0, off scope:SCOPE_SYS
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    v_readlane_b32 s31, v5, 1
-; GFX1260-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX1260-NEXT:    s_mov_b32 s32, s33
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    s_xor_saveexec_b32 s0, -1
@@ -6343,20 +6343,20 @@ define void @test_call_v3bf16(<3 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX13-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX13-NEXT:    scratch_store_b32 off, v3, s33 ; 4-byte Folded Spill
 ; GFX13-NEXT:    s_mov_b32 exec_lo, s0
-; GFX13-NEXT:    s_get_pc_i64 s[0:1]
-; GFX13-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
 ; GFX13-NEXT:    v_writelane_b32 v3, s30, 0
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX13-NEXT:    s_add_co_i32 s32, s32, 16
 ; GFX13-NEXT:    v_writelane_b32 v3, s31, 1
+; GFX13-NEXT:    s_get_pc_i64 s[0:1]
+; GFX13-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
+; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX13-NEXT:    v_readlane_b32 s30, v3, 0
 ; GFX13-NEXT:    scratch_store_b16 v2, v1, off offset:4 scope:SCOPE_SYS
 ; GFX13-NEXT:    s_wait_storecnt 0x0
 ; GFX13-NEXT:    scratch_store_b32 v2, v0, off scope:SCOPE_SYS
 ; GFX13-NEXT:    s_wait_storecnt 0x0
 ; GFX13-NEXT:    v_readlane_b32 s31, v3, 1
-; GFX13-NEXT:    v_readlane_b32 s30, v3, 0
 ; GFX13-NEXT:    s_mov_b32 s32, s33
 ; GFX13-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX13-NEXT:    scratch_load_b32 v3, off, s33 ; 4-byte Folded Reload
@@ -6663,19 +6663,19 @@ define void @test_call_v4bf16(<4 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX1260-NEXT:    scratch_store_b32 off, v5, s33 ; 4-byte Folded Spill
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    s_mov_b32 exec_lo, s0
+; GFX1260-NEXT:    v_writelane_b32 v5, s30, 0
+; GFX1260-NEXT:    s_add_co_i32 s32, s32, 16
+; GFX1260-NEXT:    v_writelane_b32 v5, s31, 1
 ; GFX1260-NEXT:    s_get_pc_i64 s[0:1]
 ; GFX1260-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
-; GFX1260-NEXT:    v_writelane_b32 v5, s30, 0
-; GFX1260-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX1260-NEXT:    s_add_co_i32 s32, s32, 16
 ; GFX1260-NEXT:    v_mov_b32_e32 v4, v2
-; GFX1260-NEXT:    v_writelane_b32 v5, s31, 1
+; GFX1260-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1260-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX1260-NEXT:    scratch_store_b64 v4, v[0:1], off scope:SCOPE_SYS
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    v_readlane_b32 s31, v5, 1
-; GFX1260-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX1260-NEXT:    s_mov_b32 s32, s33
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    s_xor_saveexec_b32 s0, -1
@@ -6698,18 +6698,18 @@ define void @test_call_v4bf16(<4 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX13-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX13-NEXT:    scratch_store_b32 off, v3, s33 ; 4-byte Folded Spill
 ; GFX13-NEXT:    s_mov_b32 exec_lo, s0
-; GFX13-NEXT:    s_get_pc_i64 s[0:1]
-; GFX13-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
 ; GFX13-NEXT:    v_writelane_b32 v3, s30, 0
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX13-NEXT:    s_add_co_i32 s32, s32, 16
 ; GFX13-NEXT:    v_writelane_b32 v3, s31, 1
+; GFX13-NEXT:    s_get_pc_i64 s[0:1]
+; GFX13-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
+; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX13-NEXT:    v_readlane_b32 s30, v3, 0
 ; GFX13-NEXT:    scratch_store_b64 v2, v[0:1], off scope:SCOPE_SYS
 ; GFX13-NEXT:    s_wait_storecnt 0x0
 ; GFX13-NEXT:    v_readlane_b32 s31, v3, 1
-; GFX13-NEXT:    v_readlane_b32 s30, v3, 0
 ; GFX13-NEXT:    s_mov_b32 s32, s33
 ; GFX13-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX13-NEXT:    scratch_load_b32 v3, off, s33 ; 4-byte Folded Reload
@@ -7068,18 +7068,18 @@ define void @test_call_v8bf16(<8 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX1260-NEXT:    scratch_store_b32 off, v5, s33 ; 4-byte Folded Spill
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1260-NEXT:    s_get_pc_i64 s[0:1]
-; GFX1260-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
 ; GFX1260-NEXT:    v_writelane_b32 v5, s30, 0
-; GFX1260-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1260-NEXT:    s_add_co_i32 s32, s32, 16
 ; GFX1260-NEXT:    v_writelane_b32 v5, s31, 1
+; GFX1260-NEXT:    s_get_pc_i64 s[0:1]
+; GFX1260-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
+; GFX1260-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1260-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX1260-NEXT:    scratch_store_b128 v4, v[0:3], off scope:SCOPE_SYS
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    v_readlane_b32 s31, v5, 1
-; GFX1260-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX1260-NEXT:    s_mov_b32 s32, s33
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    s_xor_saveexec_b32 s0, -1
@@ -7102,18 +7102,18 @@ define void @test_call_v8bf16(<8 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX13-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX13-NEXT:    scratch_store_b32 off, v5, s33 ; 4-byte Folded Spill
 ; GFX13-NEXT:    s_mov_b32 exec_lo, s0
-; GFX13-NEXT:    s_get_pc_i64 s[0:1]
-; GFX13-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
 ; GFX13-NEXT:    v_writelane_b32 v5, s30, 0
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX13-NEXT:    s_add_co_i32 s32, s32, 16
 ; GFX13-NEXT:    v_writelane_b32 v5, s31, 1
+; GFX13-NEXT:    s_get_pc_i64 s[0:1]
+; GFX13-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
+; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX13-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX13-NEXT:    scratch_store_b128 v4, v[0:3], off scope:SCOPE_SYS
 ; GFX13-NEXT:    s_wait_storecnt 0x0
 ; GFX13-NEXT:    v_readlane_b32 s31, v5, 1
-; GFX13-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX13-NEXT:    s_mov_b32 s32, s33
 ; GFX13-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX13-NEXT:    scratch_load_b32 v5, off, s33 ; 4-byte Folded Reload
@@ -7587,21 +7587,21 @@ define void @test_call_v16bf16(<16 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX1260-NEXT:    scratch_store_b32 off, v9, s33 ; 4-byte Folded Spill
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1260-NEXT:    s_get_pc_i64 s[0:1]
-; GFX1260-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
 ; GFX1260-NEXT:    v_writelane_b32 v9, s30, 0
-; GFX1260-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1260-NEXT:    s_add_co_i32 s32, s32, 16
 ; GFX1260-NEXT:    v_writelane_b32 v9, s31, 1
+; GFX1260-NEXT:    s_get_pc_i64 s[0:1]
+; GFX1260-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
+; GFX1260-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1260-NEXT:    v_readlane_b32 s30, v9, 0
 ; GFX1260-NEXT:    scratch_store_b128 v8, v[4:7], off offset:16 scope:SCOPE_SYS
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    scratch_store_b128 v8, v[0:3], off scope:SCOPE_SYS
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    v_readlane_b32 s31, v9, 1
-; GFX1260-NEXT:    v_readlane_b32 s30, v9, 0
 ; GFX1260-NEXT:    s_mov_b32 s32, s33
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    s_xor_saveexec_b32 s0, -1
@@ -7624,20 +7624,20 @@ define void @test_call_v16bf16(<16 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX13-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX13-NEXT:    scratch_store_b32 off, v9, s33 ; 4-byte Folded Spill
 ; GFX13-NEXT:    s_mov_b32 exec_lo, s0
-; GFX13-NEXT:    s_get_pc_i64 s[0:1]
-; GFX13-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
 ; GFX13-NEXT:    v_writelane_b32 v9, s30, 0
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX13-NEXT:    s_add_co_i32 s32, s32, 16
 ; GFX13-NEXT:    v_writelane_b32 v9, s31, 1
+; GFX13-NEXT:    s_get_pc_i64 s[0:1]
+; GFX13-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
+; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX13-NEXT:    v_readlane_b32 s30, v9, 0
 ; GFX13-NEXT:    scratch_store_b128 v8, v[4:7], off offset:16 scope:SCOPE_SYS
 ; GFX13-NEXT:    s_wait_storecnt 0x0
 ; GFX13-NEXT:    scratch_store_b128 v8, v[0:3], off scope:SCOPE_SYS
 ; GFX13-NEXT:    s_wait_storecnt 0x0
 ; GFX13-NEXT:    v_readlane_b32 s31, v9, 1
-; GFX13-NEXT:    v_readlane_b32 s30, v9, 0
 ; GFX13-NEXT:    s_mov_b32 s32, s33
 ; GFX13-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX13-NEXT:    scratch_load_b32 v9, off, s33 ; 4-byte Folded Reload
@@ -35290,12 +35290,46 @@ define bfloat @v_rsq_bf16(bfloat %x) {
 ; GFX1250TRUE16-NEXT:    v_rsq_bf16_e32 v0.l, v0.l
 ; GFX1250TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1260TRUE16-LABEL: v_rsq_bf16:
+; GFX1260TRUE16:       ; %bb.0:
+; GFX1260TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1260TRUE16-NEXT:    v_rsq_bf16_e32 v0.l, v0.l
+; GFX1260TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
 ; GFX1250FAKE16-LABEL: v_rsq_bf16:
 ; GFX1250FAKE16:       ; %bb.0:
 ; GFX1250FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250FAKE16-NEXT:    v_rsq_bf16_e32 v0, v0
 ; GFX1250FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1260FAKE16-LABEL: v_rsq_bf16:
+; GFX1260FAKE16:       ; %bb.0:
+; GFX1260FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1260FAKE16-NEXT:    v_rsq_bf16_e32 v0, v0
+; GFX1260FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13TRUE16-LABEL: v_rsq_bf16:
+; GFX13TRUE16:       ; %bb.0:
+; GFX13TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13TRUE16-NEXT:    v_rsq_bf16_e32 v0.l, v0.l
+; GFX13TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13FAKE16-LABEL: v_rsq_bf16:
+; GFX13FAKE16:       ; %bb.0:
+; GFX13FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13FAKE16-NEXT:    v_rsq_bf16_e32 v0, v0
+; GFX13FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %sqrt = call contract bfloat @llvm.sqrt.bf16(bfloat %x)
   %rsq = fdiv contract bfloat 1.0, %sqrt
   ret bfloat %rsq
@@ -35700,6 +35734,16 @@ define bfloat @v_neg_rsq_bf16(bfloat %x) {
 ; GFX1250TRUE16-NEXT:    v_xor_b16 v0.l, 0x8000, v0.l
 ; GFX1250TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
+; GFX1260TRUE16-LABEL: v_neg_rsq_bf16:
+; GFX1260TRUE16:       ; %bb.0:
+; GFX1260TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1260TRUE16-NEXT:    v_rsq_bf16_e32 v0.l, v0.l
+; GFX1260TRUE16-NEXT:    v_nop
+; GFX1260TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX1260TRUE16-NEXT:    v_xor_b16 v0.l, 0x8000, v0.l
+; GFX1260TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
 ; GFX1250FAKE16-LABEL: v_neg_rsq_bf16:
 ; GFX1250FAKE16:       ; %bb.0:
 ; GFX1250FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -35709,6 +35753,40 @@ define bfloat @v_neg_rsq_bf16(bfloat %x) {
 ; GFX1250FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
 ; GFX1250FAKE16-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX1250FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1260FAKE16-LABEL: v_neg_rsq_bf16:
+; GFX1260FAKE16:       ; %bb.0:
+; GFX1260FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1260FAKE16-NEXT:    v_rsq_bf16_e32 v0, v0
+; GFX1260FAKE16-NEXT:    v_nop
+; GFX1260FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX1260FAKE16-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
+; GFX1260FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13TRUE16-LABEL: v_neg_rsq_bf16:
+; GFX13TRUE16:       ; %bb.0:
+; GFX13TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13TRUE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13TRUE16-NEXT:    v_rsq_bf16_e32 v0.l, v0.l
+; GFX13TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX13TRUE16-NEXT:    v_xor_b16 v0.l, 0x8000, v0.l
+; GFX13TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13FAKE16-LABEL: v_neg_rsq_bf16:
+; GFX13FAKE16:       ; %bb.0:
+; GFX13FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13FAKE16-NEXT:    s_wait_rtscnt 0x0
+; GFX13FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13FAKE16-NEXT:    v_rsq_bf16_e32 v0, v0
+; GFX13FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX13FAKE16-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
+; GFX13FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %sqrt = call contract bfloat @llvm.sqrt.bf16(bfloat %x)
   %rsq = fdiv contract bfloat -1.0, %sqrt
   ret bfloat %rsq

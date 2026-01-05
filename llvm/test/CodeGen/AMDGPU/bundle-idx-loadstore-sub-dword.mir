@@ -26,7 +26,9 @@ body:             |
     ;
     ;
     ; LOWERED-LABEL: name: same-bb-load-trivial
-    ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
+    ; LOWERED: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; LOWERED-NEXT: S_WAIT_LOADCNT_DSCNT 0
     ; LOWERED-NEXT: S_WAIT_EXPCNT 0
     ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
     ; LOWERED-NEXT: S_WAIT_BVHCNT 0
@@ -69,7 +71,12 @@ body:             |
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-store-trivial
-    ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
+    ; LOWERED: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; LOWERED-NEXT: S_WAIT_LOADCNT_DSCNT 0
     ; LOWERED-NEXT: S_WAIT_EXPCNT 0
     ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
     ; LOWERED-NEXT: S_WAIT_BVHCNT 0
@@ -109,7 +116,9 @@ body:             |
     ;
     ;
     ; LOWERED-LABEL: name: same-bb-load-trivial-reg
-    ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
+    ; LOWERED: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; LOWERED-NEXT: S_WAIT_LOADCNT_DSCNT 0
     ; LOWERED-NEXT: S_WAIT_EXPCNT 0
     ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
     ; LOWERED-NEXT: S_WAIT_BVHCNT 0
@@ -158,7 +167,13 @@ body:             |
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-store-trivial-reg
-    ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
+    ; LOWERED: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; LOWERED-NEXT: S_WAIT_LOADCNT_DSCNT 0
     ; LOWERED-NEXT: S_WAIT_EXPCNT 0
     ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
     ; LOWERED-NEXT: S_WAIT_BVHCNT 0
@@ -220,7 +235,12 @@ body:             |
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-multi-use
-    ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
+    ; LOWERED: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; LOWERED-NEXT: S_WAIT_LOADCNT_DSCNT 0
     ; LOWERED-NEXT: S_WAIT_EXPCNT 0
     ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
     ; LOWERED-NEXT: S_WAIT_BVHCNT 0
@@ -275,7 +295,12 @@ body:             |
     ; ALLOC-NEXT: FAKE_USE [[V_MIN_U32_e32_]]
     ;
     ; LOWERED-LABEL: name: same-bb-multi-load
-    ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
+    ; LOWERED: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; LOWERED-NEXT: S_WAIT_LOADCNT_DSCNT 0
     ; LOWERED-NEXT: S_WAIT_EXPCNT 0
     ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
     ; LOWERED-NEXT: S_WAIT_BVHCNT 0
@@ -353,7 +378,13 @@ body:             |
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-multi-load-coremi
-    ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
+    ; LOWERED: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; LOWERED-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; LOWERED-NEXT: S_WAIT_LOADCNT_DSCNT 0
     ; LOWERED-NEXT: S_WAIT_EXPCNT 0
     ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
     ; LOWERED-NEXT: S_WAIT_BVHCNT 0
@@ -438,6 +469,10 @@ body:             |
   ;
   ; LOWERED-LABEL: name: multi-bb-load-simple
   ; LOWERED: bb.0:
+  ; LOWERED-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+  ; LOWERED-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+  ; LOWERED-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0
+  ; LOWERED-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr0
   ; LOWERED-NEXT:   S_WAIT_LOADCNT_DSCNT 0
   ; LOWERED-NEXT:   S_WAIT_EXPCNT 0
   ; LOWERED-NEXT:   S_WAIT_SAMPLECNT 0
@@ -565,6 +600,12 @@ body:             |
   ;
   ; LOWERED-LABEL: name: multi-bb-branched-loads
   ; LOWERED: bb.0:
+  ; LOWERED-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+  ; LOWERED-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+  ; LOWERED-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0
+  ; LOWERED-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr1
+  ; LOWERED-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr2
+  ; LOWERED-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr0
   ; LOWERED-NEXT:   S_WAIT_LOADCNT_DSCNT 0
   ; LOWERED-NEXT:   S_WAIT_EXPCNT 0
   ; LOWERED-NEXT:   S_WAIT_SAMPLECNT 0
@@ -657,6 +698,11 @@ body:             |
   ;
   ; LOWERED-LABEL: name: multi-bb-multi-loads
   ; LOWERED: bb.0:
+  ; LOWERED-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+  ; LOWERED-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+  ; LOWERED-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0
+  ; LOWERED-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr1
+  ; LOWERED-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr0
   ; LOWERED-NEXT:   S_WAIT_LOADCNT_DSCNT 0
   ; LOWERED-NEXT:   S_WAIT_EXPCNT 0
   ; LOWERED-NEXT:   S_WAIT_SAMPLECNT 0

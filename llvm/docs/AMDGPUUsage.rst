@@ -1669,7 +1669,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    Instruction cache prefetches are unsafe on invalid address.
 
-<<<<<<< HEAD
   llvm.amdgcn.wavegroup.id                         In a wavegroup-enabled dispatch, return the 0-based ID of the
                                                    wavegroup within the workgroup. Otherwise the return value is
                                                    undefined.
@@ -1686,7 +1685,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    wavegroup within the spatial cluster. Otherwise the return value is undefined.
                                                    The next neighbor has an id one greater, and the previous has one less.
 
-=======
   llvm.amdgcn.global.load.b128                 This intrinsic is supported on gfx942, gfx950.
   
                                                    Signature:
@@ -1766,7 +1764,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    "Memory Scope and Temporal Controls" of the CDNA4
                                                    Instruction Set Architecture Reference.
                                                                                                       
->>>>>>> 4e7ef48e58c4950ba3756e29a3cff696c1fef390
   ==============================================   ==========================================================
 
 .. TODO::
