@@ -6,6 +6,7 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX1200 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1260 < %s | FileCheck -check-prefix=GFX1260 %s
 
 define float @struct_ptr_buffer_atomic_add_f32_ret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset(float %val, ptr addrspace(8) inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {
 ; GFX6-LABEL: struct_ptr_buffer_atomic_add_f32_ret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset:
@@ -55,6 +56,16 @@ define float @struct_ptr_buffer_atomic_add_f32_ret__vgpr_val__sgpr_rsrc__vgpr_vo
 ; GFX1250-NEXT:    buffer_atomic_max_num_f32 v0, v[2:3], s[0:3], s16 idxen offen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1260-LABEL: struct_ptr_buffer_atomic_add_f32_ret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    v_mov_b32_e32 v3, v2
+; GFX1260-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1260-NEXT:    buffer_atomic_max_num_f32 v0, v[2:3], s[0:3], s16 idxen offen th:TH_ATOMIC_RETURN
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %ret = call float @llvm.amdgcn.struct.ptr.buffer.atomic.fmax.f32(float %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret float %ret
 }
@@ -107,6 +118,16 @@ define float @struct_ptr_buffer_atomic_add_f32_ret__vgpr_val__sgpr_rsrc__vgpr_vo
 ; GFX1250-NEXT:    buffer_atomic_max_num_f32 v0, v[4:5], s[0:3], s16 idxen offen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1260-LABEL: struct_ptr_buffer_atomic_add_f32_ret__vgpr_val__sgpr_rsrc__vgpr_voffset_add__sgpr_soffset:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    v_mov_b32_e32 v4, v1
+; GFX1260-NEXT:    v_add_nc_u32_e32 v5, 0x100, v2
+; GFX1260-NEXT:    buffer_atomic_max_num_f32 v0, v[4:5], s[0:3], s16 idxen offen th:TH_ATOMIC_RETURN
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %voffset.add = add i32 %voffset, 256
   %ret = call float @llvm.amdgcn.struct.ptr.buffer.atomic.fmax.f32(float %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset.add, i32 %soffset, i32 0)
   ret float %ret
@@ -159,6 +180,14 @@ define float @struct_ptr_buffer_atomic_add_f32_ret__vgpr_val__sgpr_rsrc__0_voffs
 ; GFX1250-NEXT:    buffer_atomic_max_num_f32 v0, v1, s[0:3], s16 idxen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1260-LABEL: struct_ptr_buffer_atomic_add_f32_ret__vgpr_val__sgpr_rsrc__0_voffset__sgpr_soffset:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    buffer_atomic_max_num_f32 v0, v1, s[0:3], s16 idxen th:TH_ATOMIC_RETURN
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %ret = call float @llvm.amdgcn.struct.ptr.buffer.atomic.fmax.f32(float %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 %soffset, i32 0)
   ret float %ret
 }
@@ -211,6 +240,16 @@ define float @struct_ptr_buffer_atomic_add_f32_ret__vgpr_val__sgpr_rsrc__vgpr_vo
 ; GFX1250-NEXT:    buffer_atomic_max_num_f32 v0, v[2:3], s[0:3], s16 idxen offen th:TH_ATOMIC_NT_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1260-LABEL: struct_ptr_buffer_atomic_add_f32_ret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    v_mov_b32_e32 v3, v2
+; GFX1260-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1260-NEXT:    buffer_atomic_max_num_f32 v0, v[2:3], s[0:3], s16 idxen offen th:TH_ATOMIC_NT_RETURN
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %ret = call float @llvm.amdgcn.struct.ptr.buffer.atomic.fmax.f32(float %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 2)
   ret float %ret
 }
@@ -259,6 +298,15 @@ define void @struct_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_v
 ; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1250-NEXT:    buffer_atomic_max_num_f32 v0, v[2:3], s[0:3], s16 idxen offen
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1260-LABEL: struct_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    v_mov_b32_e32 v3, v2
+; GFX1260-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1260-NEXT:    buffer_atomic_max_num_f32 v0, v[2:3], s[0:3], s16 idxen offen
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %ret = call float @llvm.amdgcn.struct.ptr.buffer.atomic.fmax.f32(float %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
 }
@@ -307,6 +355,15 @@ define void @struct_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_v
 ; GFX1250-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_add_nc_u32 v5, 0x100, v2
 ; GFX1250-NEXT:    buffer_atomic_max_num_f32 v0, v[4:5], s[0:3], s16 idxen offen
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1260-LABEL: struct_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset_add__sgpr_soffset:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    v_mov_b32_e32 v4, v1
+; GFX1260-NEXT:    v_add_nc_u32_e32 v5, 0x100, v2
+; GFX1260-NEXT:    buffer_atomic_max_num_f32 v0, v[4:5], s[0:3], s16 idxen offen
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %voffset.add = add i32 %voffset, 256
   %ret = call float @llvm.amdgcn.struct.ptr.buffer.atomic.fmax.f32(float %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset.add, i32 %soffset, i32 0)
   ret void
@@ -356,6 +413,13 @@ define void @struct_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__0_voff
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    buffer_atomic_max_num_f32 v0, v1, s[0:3], s16 idxen
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1260-LABEL: struct_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__0_voffset__sgpr_soffset:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    buffer_atomic_max_num_f32 v0, v1, s[0:3], s16 idxen
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %ret = call float @llvm.amdgcn.struct.ptr.buffer.atomic.fmax.f32(float %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 %soffset, i32 0)
   ret void
 }
@@ -404,6 +468,15 @@ define void @struct_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_v
 ; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1250-NEXT:    buffer_atomic_max_num_f32 v0, v[2:3], s[0:3], s16 idxen offen th:TH_ATOMIC_NT
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1260-LABEL: struct_ptr_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    v_mov_b32_e32 v3, v2
+; GFX1260-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1260-NEXT:    buffer_atomic_max_num_f32 v0, v[2:3], s[0:3], s16 idxen offen th:TH_ATOMIC_NT
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %ret = call float @llvm.amdgcn.struct.ptr.buffer.atomic.fmax.f32(float %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 2)
   ret void
 }
@@ -571,6 +644,40 @@ define float @struct_ptr_buffer_atomic_add_f32_ret__vgpr_val__vgpr_rsrc__vgpr_vo
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1260-LABEL: struct_ptr_buffer_atomic_add_f32_ret__vgpr_val__vgpr_rsrc__vgpr_voffset_add__sgpr_soffset:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    v_mov_b32_e32 v8, v5
+; GFX1260-NEXT:    v_mov_b32_e32 v5, v4
+; GFX1260-NEXT:    v_mov_b32_e32 v4, v3
+; GFX1260-NEXT:    v_mov_b32_e32 v3, v2
+; GFX1260-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1260-NEXT:    v_add_nc_u32_e32 v9, 0x100, v6
+; GFX1260-NEXT:    s_mov_b32 s2, exec_lo
+; GFX1260-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
+; GFX1260-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_3)
+; GFX1260-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX1260-NEXT:    v_readfirstlane_b32 s5, v3
+; GFX1260-NEXT:    v_readfirstlane_b32 s6, v4
+; GFX1260-NEXT:    v_readfirstlane_b32 s7, v5
+; GFX1260-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[2:3]
+; GFX1260-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1260-NEXT:    v_cmp_eq_u64_e64 s1, s[6:7], v[4:5]
+; GFX1260-NEXT:    s_and_b32 s1, vcc_lo, s1
+; GFX1260-NEXT:    s_and_saveexec_b32 s1, s1
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    buffer_atomic_max_num_f32 v0, v[8:9], s[4:7], s0 idxen offen th:TH_ATOMIC_RETURN
+; GFX1260-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX1260-NEXT:    ; implicit-def: $vgpr8_vgpr9
+; GFX1260-NEXT:    s_wait_xcnt 0x0
+; GFX1260-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
+; GFX1260-NEXT:    s_cbranch_execnz .LBB8_1
+; GFX1260-NEXT:  ; %bb.2:
+; GFX1260-NEXT:    s_mov_b32 exec_lo, s2
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %voffset.add = add i32 %voffset, 256
   %ret = call float @llvm.amdgcn.struct.ptr.buffer.atomic.fmax.f32(float %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset.add, i32 %soffset, i32 0)
   ret float %ret
@@ -766,6 +873,45 @@ define float @struct_ptr_buffer_atomic_add_f32_ret__vgpr_val__sgpr_rsrc__vgpr_vo
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1260-LABEL: struct_ptr_buffer_atomic_add_f32_ret__vgpr_val__sgpr_rsrc__vgpr_voffset_add__vgpr_soffset:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    v_mov_b32_e32 v8, v5
+; GFX1260-NEXT:    v_mov_b32_e32 v5, v4
+; GFX1260-NEXT:    v_mov_b32_e32 v4, v3
+; GFX1260-NEXT:    v_mov_b32_e32 v3, v2
+; GFX1260-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1260-NEXT:    v_add_nc_u32_e32 v9, 0x100, v6
+; GFX1260-NEXT:    s_mov_b32 s2, exec_lo
+; GFX1260-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
+; GFX1260-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_4)
+; GFX1260-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX1260-NEXT:    v_readfirstlane_b32 s5, v3
+; GFX1260-NEXT:    v_readfirstlane_b32 s6, v4
+; GFX1260-NEXT:    v_readfirstlane_b32 s7, v5
+; GFX1260-NEXT:    v_readfirstlane_b32 s3, v7
+; GFX1260-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[2:3]
+; GFX1260-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1260-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[4:5]
+; GFX1260-NEXT:    v_cmp_eq_u32_e64 s1, s3, v7
+; GFX1260-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX1260-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1260-NEXT:    s_and_b32 s0, s0, s1
+; GFX1260-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    buffer_atomic_max_num_f32 v0, v[8:9], s[4:7], s3 idxen offen th:TH_ATOMIC_RETURN
+; GFX1260-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX1260-NEXT:    ; implicit-def: $vgpr7
+; GFX1260-NEXT:    ; implicit-def: $vgpr8_vgpr9
+; GFX1260-NEXT:    s_wait_xcnt 0x0
+; GFX1260-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX1260-NEXT:    s_cbranch_execnz .LBB9_1
+; GFX1260-NEXT:  ; %bb.2:
+; GFX1260-NEXT:    s_mov_b32 exec_lo, s2
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   %voffset.add = add i32 %voffset, 256
   %ret = call float @llvm.amdgcn.struct.ptr.buffer.atomic.fmax.f32(float %val, ptr addrspace(8) %rsrc, i32 %vindex, i32 %voffset.add, i32 %soffset, i32 0)
   ret float %ret

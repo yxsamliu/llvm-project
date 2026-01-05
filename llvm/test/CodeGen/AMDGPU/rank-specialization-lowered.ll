@@ -65,7 +65,7 @@ entry:
 declare i32 @llvm.amdgcn.wave.id.in.wavegroup() #2
 
 define private amdgpu_kernel void @test_kernel_1.rank_0_2_3_4_5_6_7() #3 {
-; CHECK-LABEL: .Ltest_kernel_1.rank_0_2_3_4_5_6_7:
+; CHECK-LABEL: test_kernel_1.rank_0_2_3_4_5_6_7:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[0:1]
@@ -113,7 +113,7 @@ if.end7:                                          ; preds = %for.cond
 }
 
 define private amdgpu_kernel void @test_kernel_1.rank_1() #3 {
-; CHECK-LABEL: .Ltest_kernel_1.rank_1:
+; CHECK-LABEL: test_kernel_1.rank_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[0:1]
@@ -177,15 +177,16 @@ define dso_local amdgpu_kernel void @test_kernel_1() local_unnamed_addr #1 !reqd
 ; CHECK-NEXT:    .type .Ltest_kernel_1$local,@function
 ; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s9, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s10, s9, 0
-; CHECK-NEXT:    s_mul_i32 s33, s9, s8
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s10
+; CHECK-NEXT:    s_mul_i32 s33, s9, s8
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_add_co_u32 s33, s33, 16
 ; CHECK-NEXT:    s_add_co_u32 s32, s33, 0
-; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
-; CHECK-NEXT:    s_getreg_b32 s9, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 0
+; CHECK-NEXT:    s_getreg_b32 s9, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cmp_eq_u32 s9, 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_2
 ; CHECK-NEXT:  ; %bb.1:

@@ -6,7 +6,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -global-isel=0 < %s | FileCheck -check-prefix=GFX1200 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefix=GFX1200 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 -global-isel=0 < %s | FileCheck -check-prefix=GFX1250 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1260 -global-isel=0 < %s | FileCheck -check-prefix=GFX1250 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefix=GFX1250 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1260 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefix=GFX1250 %s
 
 ; GFX9-SDAG-ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.wave.id
 ; GFX9-GISEL-ERR: LLVM ERROR: unable to legalize instruction: {{.*}} = G_INTRINSIC intrinsic(@llvm.amdgcn.wave.id)

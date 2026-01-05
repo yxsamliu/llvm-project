@@ -6,9 +6,13 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -global-isel=1 -new-reg-bank-select | FileCheck %s -check-prefixes=GFX11,GFX11-GISEL
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -global-isel=1 -new-reg-bank-select | FileCheck %s -check-prefixes=GFX11,GFX11-GISEL
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 -global-isel=0 | FileCheck %s -check-prefixes=GFX12,GFX12-SDAG-TRUE16
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1260 -mattr=+real-true16 -global-isel=0 | FileCheck %s -check-prefixes=GFX12,GFX12-SDAG-TRUE16
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 -global-isel=0 | FileCheck %s -check-prefixes=GFX12,GFX12-FAKE16
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1260 -mattr=-real-true16 -global-isel=0 | FileCheck %s -check-prefixes=GFX12,GFX12-FAKE16
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 -global-isel=1 | FileCheck %s -check-prefixes=GFX12,GFX12-GISEL-TRUE16
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1260 -mattr=+real-true16 -global-isel=1 | FileCheck %s -check-prefixes=GFX12,GFX12-GISEL-TRUE16
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 -global-isel=1 | FileCheck %s -check-prefixes=GFX12,GFX12-FAKE16
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1260 -mattr=-real-true16 -global-isel=1 | FileCheck %s -check-prefixes=GFX12,GFX12-FAKE16
 
 define amdgpu_kernel void @raw_atomic_buffer_load_i32(<4 x i32> %addr) {
 ; GFX11-LABEL: raw_atomic_buffer_load_i32:

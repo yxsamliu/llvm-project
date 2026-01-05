@@ -3131,6 +3131,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_XOR:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_INC:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB_CLAMP_U32:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_COND_SUB_U32:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMIN:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX: {
@@ -4575,6 +4577,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_XOR:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_INC:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB_CLAMP_U32:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_COND_SUB_U32:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMIN:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX: {
@@ -4923,6 +4927,26 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_perm_pk16_b4_u4:
     case Intrinsic::amdgcn_perm_pk16_b6_u4:
     case Intrinsic::amdgcn_perm_pk16_b8_u4:
+    case Intrinsic::amdgcn_perm_pk16_b4_u2:
+    case Intrinsic::amdgcn_perm_pk16_b6_u2:
+    case Intrinsic::amdgcn_perm_pk16_b8_u2:
+    case Intrinsic::amdgcn_perm_pk32_b4_u3:
+    case Intrinsic::amdgcn_perm_pk32_b6_u3:
+    case Intrinsic::amdgcn_perm_pk32_b8_u3:
+    case Intrinsic::amdgcn_pk4_fma_f16:
+    case Intrinsic::amdgcn_pk4_mul_f16:
+    case Intrinsic::amdgcn_pk4_max3_num_f16:
+    case Intrinsic::amdgcn_pk4_min3_num_f16:
+    case Intrinsic::amdgcn_pk4_maximum3_f16:
+    case Intrinsic::amdgcn_pk4_minimum3_f16:
+    case Intrinsic::amdgcn_pk4_fma_bf16:
+    case Intrinsic::amdgcn_pk4_add_f16:
+    case Intrinsic::amdgcn_pk4_max_num_f16:
+    case Intrinsic::amdgcn_pk4_min_num_f16:
+    case Intrinsic::amdgcn_pk4_add_bf16:
+    case Intrinsic::amdgcn_pk4_mul_bf16:
+    case Intrinsic::amdgcn_pk4_max_num_bf16:
+    case Intrinsic::amdgcn_pk4_min_num_bf16:
     case Intrinsic::amdgcn_convolve_bf16_bf16_1x1:
     case Intrinsic::amdgcn_convolve_bf16_bf16_3x3:
     case Intrinsic::amdgcn_convolve_f16_bf8_fp8_1x1:
@@ -5458,12 +5482,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
       break;
     }
-    case Intrinsic::amdgcn_global_atomic_csub:
     case Intrinsic::amdgcn_global_atomic_fmin_num:
     case Intrinsic::amdgcn_global_atomic_fmax_num:
     case Intrinsic::amdgcn_flat_atomic_fmin_num:
     case Intrinsic::amdgcn_flat_atomic_fmax_num:
-    case Intrinsic::amdgcn_atomic_cond_sub_u32:
     case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
     case Intrinsic::amdgcn_global_load_tr_b64:
     case Intrinsic::amdgcn_global_load_tr_b128:
@@ -5967,6 +5989,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_ATOMICRMW_FMAX:
   case AMDGPU::G_ATOMICRMW_UINC_WRAP:
   case AMDGPU::G_ATOMICRMW_UDEC_WRAP:
+  case AMDGPU::G_ATOMICRMW_USUB_COND:
+  case AMDGPU::G_ATOMICRMW_USUB_SAT:
   case AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG: {
     OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
     OpdsMapping[1] = getValueMappingForPtr(MRI, MI.getOperand(1).getReg());

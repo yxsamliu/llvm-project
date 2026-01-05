@@ -768,6 +768,33 @@ static unsigned getScratchScaleFactor(const GCNSubtarget &ST) {
   return ST.enableFlatScratch() ? 1 : ST.getWavefrontSize();
 }
 
+/// Look for an SI_GET_IDX0 pseudo at the start of the function whose SGPR
+/// we can re-use for the initial setting of IDX0.
+static MachineInstr *findInitialGetIdx0(MachineFunction &MF,
+                                        const LiveRegUnits &InLiveUnits) {
+  LiveRegUnits LiveUnits = InLiveUnits;
+
+  unsigned Limit = 0;
+  for (MachineInstr &MI : MF.front()) {
+    // Heuristically limit the depth of our scan
+    if (Limit++ > 10)
+      break;
+
+    if (MI.getOpcode() == AMDGPU::SI_GET_IDX0) {
+      Register Idx0Reg = MI.getOperand(0).getReg();
+      if (LiveUnits.available(Idx0Reg)) {
+        return &MI;
+      }
+      return nullptr;
+    }
+
+    for (MachineOperand &Def : MI.all_defs())
+      LiveUnits.addReg(Def.getReg());
+  }
+
+  return nullptr;
+}
+
 void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
                                                 MachineBasicBlock &MBB) const {
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
@@ -898,7 +925,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   Register PreloadedPrivateSegmentSizeReg;
   Register FPReg;
   Register WaveIdReg;
-  Register Tmp32Reg;
+  Register Idx0Reg;
 
   if (WavegroupEnable) {
     PreloadedPrivateSegmentSizeReg =
@@ -911,8 +938,19 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     LiveUnits.init(*TRI);
     LiveUnits.addLiveIns(MBB);
 
+    MachineInstr *FirstGetIdx0 = findInitialGetIdx0(MF, LiveUnits);
+    if (FirstGetIdx0) {
+      Register Reg = FirstGetIdx0->getOperand(0).getReg();
+      if (LiveUnits.available(Reg)) {
+        LiveUnits.addReg(Reg);
+        Idx0Reg = Reg;
+        FirstGetIdx0->eraseFromParent();
+      }
+    }
+
     WaveIdReg = allocScratchRegister(MRI, LiveUnits, AMDGPU::SGPR_32RegClass);
-    Tmp32Reg = allocScratchRegister(MRI, LiveUnits, AMDGPU::SGPR_32RegClass);
+    if (!Idx0Reg)
+      Idx0Reg = allocScratchRegister(MRI, LiveUnits, AMDGPU::SGPR_32RegClass);
 
     // TODO-GFX13: This will typically be redundant with uses of the WaveID from
     //             the main function body. We could potentially eliminate the
@@ -928,25 +966,21 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     // number of VGPRs here (taking the entire control flow graph into
     // account!). So we use a placeholder immediate that is fixed up in a late
     // pass.
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MUL_I32), Tmp32Reg)
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MUL_I32), Idx0Reg)
         .addReg(WaveIdReg)
         .addTargetIndex(AMDGPU::TI_NUM_VGPRS);
 
     unsigned RankVGPRStart = MFI->getLaneSharedVGPRSize() / 4u;
     if (RankVGPRStart != 0) {
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_U32), Tmp32Reg)
-          .addReg(Tmp32Reg)
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_U32), Idx0Reg)
+          .addReg(Idx0Reg)
           .addImm(RankVGPRStart);
     }
 
     // idx0 points to the base of wave-private space
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_U32), AMDGPU::IDX0)
-        .addReg(Tmp32Reg);
+        .addReg(Idx0Reg);
   }
-
-  // If wavegroup is enabled then the entry function will need to save a copy of
-  // it's computed tmp reg
-  finalizeIdx0SaveRestores(MF, true, Tmp32Reg);
 
   unsigned Offset = FrameInfo.getStackSize() * getScratchScaleFactor(ST);
   if (!mayReserveScratchForCWSR(MF)) {
@@ -1049,6 +1083,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
                                          ScratchRsrcReg, ScratchWaveOffsetReg);
   }
 
+<<<<<<< HEAD
   if (WavegroupEnable) {
     // Add this barrier to prevent re-ordering of S_SET_GPR_IDX against
     // VALU instructions.
@@ -1058,6 +1093,8 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     BuildMI(MBB, I, DL, TII->get(AMDGPU::SCHED_BARRIER)).addImm(0);
   }
 
+=======
+>>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
   if (ST.hasWaitXCnt()) {
     // Set REPLAY_MODE (bit 25) in MODE register to enable multi-group XNACK
     // replay. This aligns hardware behavior with the compiler's s_wait_xcnt
@@ -1439,147 +1476,6 @@ void SIFrameLowering::emitCSRSpillStores(MachineFunction &MF,
     FuncInfo->removePrologEpilogSGPRSpillEntry(TRI.getExec());
 }
 
-// Describes how Idx0 is being used
-enum class Idx0UsageKind {
-  NoUsage,
-  EntryWavegroupUsage,
-  EntryNonWavegroupUsage,
-  NonEntryUsage
-};
-
-static Idx0UsageKind determineIdx0Usage(SIMachineFunctionInfo *MFI,
-                                        bool EntryFunction,
-                                        Register TmpWavegroupReg) {
-  if (!MFI->getNeedIdx0Restore() && !MFI->getIdx0VRegDef().isValid())
-    return Idx0UsageKind::NoUsage;
-  if (EntryFunction && !TmpWavegroupReg.isValid())
-    return Idx0UsageKind::EntryNonWavegroupUsage;
-  if (EntryFunction && TmpWavegroupReg.isValid())
-    return Idx0UsageKind::EntryWavegroupUsage;
-  if (!EntryFunction)
-    return Idx0UsageKind::NonEntryUsage;
-  llvm_unreachable("Impossible idx0 usage case");
-}
-
-void SIFrameLowering::finalizeIdx0SaveRestores(MachineFunction &MF,
-                                               bool EntryFunction,
-                                               Register TmpWavegroupReg) const {
-  // Modify idx0 save/restores to be aware of wavegroup state
-  // Convert the save COPY to use TmpWavegroupReg, to a GETREG, or remove it
-  // entirely. Restore private base to 0 if in EntryNonWavegroupUsage. Convert
-  // and cleanup the extra setter used as an idx0 def.
-  // TODO-GFX13: Optimize idx0 save/restore placement(s)
-  SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const SIInstrInfo *TII = ST.getInstrInfo();
-  Idx0UsageKind Idx0UK =
-      determineIdx0Usage(FuncInfo, EntryFunction, TmpWavegroupReg);
-  if (Idx0UK == Idx0UsageKind::NoUsage)
-    return;
-  SmallPtrSet<MachineInstr *, 16> InstrsToErase;
-  for (MachineBasicBlock &MBB : MF) {
-    MachineBasicBlock::iterator BundleMBBI = nullptr;
-    for (MachineBasicBlock::reverse_iterator I = MBB.rbegin(), E = MBB.rend();
-         I != E; ++I) {
-      MachineInstr &MI = (*I);
-      // Rewrite unnecessary Idx0 base computations, idx0 is known to be 0
-      if (Idx0UK == Idx0UsageKind::EntryNonWavegroupUsage &&
-          MI.getOpcode() == AMDGPU::S_SET_GPR_IDX_U32) {
-        if (MachineInstr *Adder =
-                FuncInfo->getIdx0PrivateComputations().lookup(&MI)) {
-          Register DefReg = Adder->getOperand(0).getReg();
-          assert(MI.getOperand(1).getReg() == DefReg &&
-                 "Setter is not using the result of the idx0 computation");
-          MachineOperand RealIdxUse = Adder->getOperand(1);
-          MachineOperand Idx0MO = Adder->getOperand(2);
-          if (RealIdxUse.isReg() && Idx0MO.isImm()) {
-            // they got swapped by optimize instr size
-            RealIdxUse = Idx0MO;
-          }
-          for (MachineOperand &MO : MI.uses()) {
-            if (MO.isReg() && MO.getReg() == DefReg) {
-              MO.setIsKill(false);
-              if (RealIdxUse.isReg())
-                MO.setReg(RealIdxUse.getReg());
-              else {
-                MI.removeOperand(MO.getOperandNo());
-                MI.addOperand(MachineOperand::CreateImm(RealIdxUse.getImm()));
-              }
-            }
-          }
-          // Cleanup liveins
-          SmallPtrSet<MachineBasicBlock *, 16> Worklist;
-          Worklist.insert(MI.getParent());
-          while (!Worklist.empty()) {
-            MachineBasicBlock &MBB = **Worklist.begin();
-            Worklist.erase(&MBB);
-            if (&MBB == Adder->getParent())
-              continue;
-            // then we can't reach the def through this pred
-            if (!MBB.isLiveIn(DefReg))
-              continue;
-            assert(MBB.isLiveIn(DefReg) &&
-                   "idx0 private computation reg isn't live in predecessor");
-            MBB.removeLiveIn(DefReg);
-            Worklist.insert_range(MBB.predecessors());
-          }
-          FuncInfo->getIdx0PrivateComputations().erase(&MI);
-          InstrsToErase.insert(Adder);
-        }
-      }
-      // Stateful BundleMBBI check
-      if (MI.getOpcode() == TargetOpcode::BUNDLE) {
-        for (auto &MO : MI.operands()) {
-          if (MO.getReg() == AMDGPU::IDX0) {
-            BundleMBBI = getBundleEnd(MachineBasicBlock::instr_iterator(&MI));
-            break;
-          }
-        }
-      } else if (MI.getOpcode() == AMDGPU::S_SET_GPR_IDX_U32 &&
-                 BundleMBBI == nullptr) {
-        if (MI.getOperand(0).getReg() != AMDGPU::IDX0)
-          continue;
-        if (Idx0UK == Idx0UsageKind::EntryNonWavegroupUsage &&
-            !MI.getOperand(1).isImm()) {
-          // Update idx0 restores to restore to 0 for EntryNonWavegroupUsage.
-          MI.removeOperand(1);
-          MI.addOperand(MachineOperand::CreateImm(0));
-        } else if (Idx0UK != Idx0UsageKind::EntryNonWavegroupUsage &&
-                   MI.getOperand(1).isImm()) {
-          // Erase the extra idx0 setter if incorrectly setting to 0 when !=
-          // EntryNonWavegroupUsage.
-          InstrsToErase.insert(&MI);
-        }
-      } else if (MI.getOpcode() == AMDGPU::S_SET_GPR_IDX_U32 &&
-                 BundleMBBI != nullptr) {
-        // find the idx0 setter
-        if (MI.getOperand(0).getReg() == AMDGPU::IDX0)
-          BundleMBBI = nullptr;
-      } else if (MI.getOpcode() == AMDGPU::COPY &&
-                 MI.getOperand(1).getReg() == AMDGPU::IDX0) {
-        Register RestoreSGPR = MI.getOperand(0).getReg();
-        if (Idx0UK == Idx0UsageKind::EntryWavegroupUsage) {
-          MI.getOperand(1).setReg(TmpWavegroupReg);
-        } else if (Idx0UK == Idx0UsageKind::NonEntryUsage) {
-          using namespace AMDGPU::Hwreg;
-          BuildMI(*MI.getParent(), &MI, MI.getDebugLoc(),
-                  TII->get(AMDGPU::S_GETREG_B32), RestoreSGPR)
-              .addImm(HwregEncoding::encode(ID_WAVE_GPR_MSB_IDX0, 0, 32));
-          InstrsToErase.insert(&MI);
-        } else if (Idx0UK == Idx0UsageKind::EntryNonWavegroupUsage) {
-          InstrsToErase.insert(&MI);
-        }
-      }
-    }
-  }
-  for (auto MI : InstrsToErase) {
-    MI->eraseFromParent();
-  }
-  assert(FuncInfo->getIdx0PrivateComputations().size() == 0 ||
-         Idx0UK != Idx0UsageKind::EntryNonWavegroupUsage &&
-             "All idx0 computations should be cleaned up.");
-}
-
 void SIFrameLowering::emitCSRSpillRestores(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator MBBI, DebugLoc &DL, LiveRegUnits &LiveUnits,
@@ -1688,11 +1584,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
   // A wavegroup rank-function uses its wavegroup-entry kernel's
   // prologue and frame.
-  if (AMDGPU::getWavegroupRankFunction(MF.getFunction())) {
-    // however it is not an entry function in terms of idx0-usage
-    finalizeIdx0SaveRestores(MF, false, false);
+  if (AMDGPU::getWavegroupRankFunction(MF.getFunction()))
     return;
-  }
 
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   if (FuncInfo->isEntryFunction()) {
@@ -1859,8 +1752,6 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     // SI_WHOLE_WAVE_FUNC_SETUP has outlived its purpose.
     TII->getWholeWaveFunctionSetup(MF)->eraseFromParent();
   }
-
-  finalizeIdx0SaveRestores(MF, false, false);
 }
 
 void SIFrameLowering::emitEpilogue(MachineFunction &MF,
@@ -2368,9 +2259,7 @@ void SIFrameLowering::determineCalleeSavesSGPR(MachineFunction &MF,
 
 static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
                                        const GCNSubtarget &ST,
-                                       std::vector<CalleeSavedInfo> &CSI,
-                                       unsigned &MinCSFrameIndex,
-                                       unsigned &MaxCSFrameIndex) {
+                                       std::vector<CalleeSavedInfo> &CSI) {
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
@@ -2439,10 +2328,7 @@ static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
     int FrameIdx =
         MFI.CreateStackObject(BlockSize, TRI->getSpillAlign(*BlockRegClass),
                               /*isSpillSlot=*/true);
-    if ((unsigned)FrameIdx < MinCSFrameIndex)
-      MinCSFrameIndex = FrameIdx;
-    if ((unsigned)FrameIdx > MaxCSFrameIndex)
-      MaxCSFrameIndex = FrameIdx;
+    MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
 
     CSIt->setFrameIdx(FrameIdx);
     CSIt->setReg(RegBlock);
@@ -2452,8 +2338,7 @@ static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
 
 bool SIFrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
-    std::vector<CalleeSavedInfo> &CSI, unsigned &MinCSFrameIndex,
-    unsigned &MaxCSFrameIndex) const {
+    std::vector<CalleeSavedInfo> &CSI) const {
   if (CSI.empty())
     return true; // Early exit if no callee saved registers are modified!
 
@@ -2461,12 +2346,12 @@ bool SIFrameLowering::assignCalleeSavedSpillSlots(
   bool UseVGPRBlocks = ST.useVGPRBlockOpsForCSR();
 
   if (UseVGPRBlocks)
-    assignSlotsUsingVGPRBlocks(MF, ST, CSI, MinCSFrameIndex, MaxCSFrameIndex);
+    assignSlotsUsingVGPRBlocks(MF, ST, CSI);
 
-  return assignCalleeSavedSpillSlots(MF, TRI, CSI) || UseVGPRBlocks;
+  return assignCalleeSavedSpillSlotsImpl(MF, TRI, CSI) || UseVGPRBlocks;
 }
 
-bool SIFrameLowering::assignCalleeSavedSpillSlots(
+bool SIFrameLowering::assignCalleeSavedSpillSlotsImpl(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
     std::vector<CalleeSavedInfo> &CSI) const {
   if (CSI.empty())

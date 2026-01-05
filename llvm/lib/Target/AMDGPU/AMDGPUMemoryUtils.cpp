@@ -14,6 +14,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -26,6 +27,11 @@
 using namespace llvm;
 
 namespace llvm::AMDGPU {
+
+cl::opt<bool> PromoteSubDword("amdgpu-promote-sub-dword",
+                              cl::desc("Enable promotion of variables smaller "
+                                       "than 4 bytes to VGPRs"),
+                              cl::init(false), cl::Hidden);
 
 Align getAlign(const DataLayout &DL, const GlobalVariable *GV) {
   return DL.getValueOrABITypeAlignment(GV->getPointerAlignment(DL),
@@ -489,7 +495,8 @@ static bool isSupportedMemset(MemSetInst *I, const Value &V, Type *ValueType,
 }
 
 bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
-                        DenseSet<Value *> &Pointers, bool &MustInVGPR) {
+                        DenseSet<Value *> &Pointers, bool &MustInVGPR,
+                        bool PromoteSubDword) {
 
   MustInVGPR = false;
   const auto RejectUser = [&](Instruction *Inst, Twine Msg) {
@@ -574,12 +581,14 @@ bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
 
       auto Align = isa<LoadInst>(Inst) ? cast<LoadInst>(Inst)->getAlign()
                                        : cast<StoreInst>(Inst)->getAlign();
-      if (Align < 4u)
-        return RejectUser(Inst, "address is less than dword-aligned");
+      // TODO-GFX13 : Always promote after True16 is supported.
+      unsigned MinAlign = PromoteSubDword ? 1 : 4;
+      if (Align < MinAlign)
+        return RejectUser(Inst, "address is less than minimum alignment");
 
       Type *AccessTy = getLoadStoreType(Inst);
       auto DataSize = DL.getTypeAllocSize(AccessTy);
-      if (DataSize % 4)
+      if (DataSize % MinAlign)
         return RejectUser(Inst, "data-size is not supported");
 
       continue;
@@ -629,6 +638,48 @@ bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
     }
 
     return RejectUser(Inst, "unhandled global-variable user");
+  }
+  return true;
+}
+
+DenseMap<Function *, SmallDenseSet<Function *>>
+getEntryFunctionToRankSpecializationMap(const CallGraph &CG, Module &M) {
+  DenseMap<Function *, SmallDenseSet<Function *>> RankFuncMap;
+  for (Function &Func : M.functions()) {
+    if (Func.isDeclaration() ||
+        !(isKernel(Func) && !getWavegroupRankFunction(Func)))
+      continue;
+    for (const CallGraphNode::CallRecord &R : *CG[&Func]) {
+      Function *Ith = R.second->getFunction();
+      if (Ith && getWavegroupRankFunction(*Ith))
+        RankFuncMap[&Func].insert(Ith);
+    }
+  }
+  return RankFuncMap;
+}
+
+AllocatedVGPRsMetadata &AllocatedVGPRsMetadata::get(const AllocaInst &Alloca) {
+  return *cast<AllocatedVGPRsMetadata>(Alloca.getMetadata("amdgpu.allocated.vgprs"));
+}
+
+unsigned AllocatedVGPRsMetadata::getAddress() const {
+  return cast<ConstantInt>(cast<ConstantAsMetadata>(getOperand(0))->getValue())->getZExtValue();
+}
+
+/// Get the size (in bytes) of the VGPR allocation.
+unsigned AllocatedVGPRsMetadata::getSize() const {
+  return cast<ConstantInt>(cast<ConstantAsMetadata>(getOperand(1))->getValue())->getZExtValue();
+}
+
+bool AllocatedVGPRsMetadata::classof(const MDNode *N) {
+  if (N->getNumOperands() != 2)
+    return false;
+  for (int i = 0; i < 2; ++i) {
+    auto *C = dyn_cast<ConstantAsMetadata>(N->getOperand(i));
+    if (!C)
+      return false;
+    if (!isa<ConstantInt>(C->getValue()))
+      return false;
   }
   return true;
 }

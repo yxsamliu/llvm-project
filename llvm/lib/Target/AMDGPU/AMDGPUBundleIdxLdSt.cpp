@@ -131,9 +131,12 @@ private:
   // Analyzed instructions in reverse basic block order.
   SmallVector<MachineInstr *> Instrs;
 
-  const DenseSet<std::pair<MachineInstr *, MachineInstr *>> *CommutableInstrs = nullptr;
+  const DenseSet<std::pair<MachineInstr *, MachineInstr *>> *CommutableInstrs =
+      nullptr;
+
 public:
-  void setCommutableInstrs(const DenseSet<std::pair<MachineInstr *, MachineInstr *>> *Commutable) {
+  void setCommutableInstrs(
+      const DenseSet<std::pair<MachineInstr *, MachineInstr *>> *Commutable) {
     CommutableInstrs = Commutable;
   }
 
@@ -189,10 +192,6 @@ private:
   bool expandPseudoInstructions(MachineFunction &MF, bool &HaveLoadStoreIdx);
   SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>, 4>
   findSuccsToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB);
-  Register computeNewIdxForPrivateObject(MachineRegisterInfo &MRI,
-                                         MachineInstr &MI);
-  bool updatePrivateObjectNewRegs(MachineRegisterInfo *MRI,
-                                  MachineInstr *LdStMI);
   bool hasConflictBetween(MachineBasicBlock *From, MachineBasicBlock *To,
                           MachineInstr &MI);
   bool blockPrologueInterferes(const MachineBasicBlock *BB,
@@ -229,7 +228,6 @@ private:
   MachineRegisterInfo *MRI = nullptr;
   AliasAnalysis *AA = nullptr;
   MachineCycleInfo *CI = nullptr;
-  SIMachineFunctionInfo *MFI = nullptr;
 
   // (original idx reg) to new-idx-reg mapping
   // Private-in-vgpr objects need a new idx reg that is calculated with idx0 as
@@ -867,61 +865,13 @@ bool AMDGPUBundleIdxLdSt::sinkLoadsAndCoreMIs(MachineFunction &MF) {
   return MadeChange;
 }
 
-Register
-AMDGPUBundleIdxLdSt::computeNewIdxForPrivateObject(MachineRegisterInfo &MRI,
-                                                   MachineInstr &MI) {
-  Register Idx0Def = MFI->getIdx0VRegDef();
-  if (!Idx0Def.isValid()) {
-    Idx0Def = initIdx0VRegDef(*MI.getMF(), TII);
-    MFI->setIdx0VRegDef(Idx0Def);
-  }
-  // Create a new reg that is idx0 added to the idx reg used by MI
-  MachineOperand *IdxOp = TII->getNamedOperand(MI, AMDGPU::OpName::idx);
-  Register IdxOpReg = IdxOp->getReg();
-  Register NewIdxReg =
-      MRI.createVirtualRegister(&AMDGPU::SReg_32_XEXEC_HIRegClass);
-  MachineInstr *DefRegMI = MRI.getUniqueVRegDef(IdxOpReg);
-  MachineBasicBlock::iterator InsertPt = std::next(DefRegMI->getIterator());
-  MachineInstr *AddMI =
-      BuildMI(*DefRegMI->getParent(), InsertPt, DefRegMI->getDebugLoc(),
-              TII->get(AMDGPU::S_ADD_I32), NewIdxReg)
-          .addReg(IdxOpReg)
-          .addReg(Idx0Def);
-
-  // TODO-GFX13: We shouldn't do the insertion of the add here since SCC might
-  // be live. Mark SCC as dead to reduce test perturbation until we can fix
-  // this properly.
-  assert(AddMI->getOperand(3).getReg() == AMDGPU::SCC);
-  AddMI->getOperand(3).setIsDead();
-
-  return NewIdxReg;
-}
-
-bool AMDGPUBundleIdxLdSt::updatePrivateObjectNewRegs(MachineRegisterInfo *MRI,
-                                                     MachineInstr *MI) {
-  auto *LdStMI = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(MI);
-  if (!LdStMI)
-    return false;
-  // Ensure a private object indexing vgprs is calculating the idx
-  // relative to idx0.
-  assert(LdStMI->hasOneMemOperand());
-  MachineMemOperand *MMO = *LdStMI->memoperands_begin();
-  if (MMO->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS) {
-    MachineOperand *IdxOp = &LdStMI->getIdxOp();
-    unsigned &NewReg = PrivateObjectNewRegs[IdxOp->getReg()];
-    if (!NewReg)
-      NewReg = computeNewIdxForPrivateObject(*MRI, *LdStMI);
-    IdxOp->setReg(NewReg);
-    return true;
-  }
-  return false;
-}
-
 // This lowering puts the value into the lo16 bits of a private VGPR.
 void AMDGPUBundleIdxLdSt::lowerLoadIdxBits(MachineInstr &MI) {
   MachineBasicBlock *MBB = MI.getParent();
 
-  const MCInstrDesc &II = TII->get(AMDGPU::V_BFE_U32_e64);
+  const bool IsSigned = MI.getOperand(5).getImm() != 0;
+  const MCInstrDesc &II =
+      TII->get(IsSigned ? AMDGPU::V_BFE_I32_e64 : AMDGPU::V_BFE_U32_e64);
   Register ReadReg = MRI->createVirtualRegister(
       TRI->getAllocatableClass(TII->getRegClass(II, 0)));
 
@@ -1110,7 +1060,8 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
-bool AMDGPUBundleIdxLdSt::expandPseudoInstructions(MachineFunction &MF, bool &HaveLoadStoreIdx) {
+bool AMDGPUBundleIdxLdSt::expandPseudoInstructions(MachineFunction &MF,
+                                                   bool &HaveLoadStoreIdx) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
@@ -1220,6 +1171,13 @@ bool AMDGPUBundleIdxLdSt::analyze(BundlingInfo &BI) {
   if (MI->getOpcode() == AMDGPU::V_MOV_B64_PSEUDO && !ST->hasMovB64())
     return false;
 
+  // Cannot bundle instructions using frame indices because
+  // PrologueEpilogueInserter cannot handle them inside bundles
+  // during replaceFrameIndicesBackward.
+  if (llvm::any_of(MI->operands(),
+                   [](const MachineOperand &MO) { return MO.isFI(); }))
+    return false;
+
   BI.StoreHoisting.setCommutableInstrs(&CommutableStores);
 
   // Step 1: Collect candidate defs.
@@ -1275,7 +1233,9 @@ bool AMDGPUBundleIdxLdSt::analyze(BundlingInfo &BI) {
     bool MayAlias = false;
     for (auto II = LoadMI->getNextNode()->getIterator(); &*II != MI; ++II) {
       if (II->hasOrderedMemoryRef() || LoadMI->mayAlias(AA, *II, true)) {
-        LLVM_DEBUG(dbgs() << " *** Conflict with "; II->print(dbgs()));
+        LLVM_DEBUG(dbgs() << "***Sinking conflict: \n\tLoadMI: ";
+                   LoadMI->print(dbgs()); dbgs() << "\twith: ";
+                   II->print(dbgs()));
         reject(Use);
         MayAlias = true;
         break;
@@ -1300,9 +1260,9 @@ bool AMDGPUBundleIdxLdSt::analyze(BundlingInfo &BI) {
                           // Do not bundle instructions with odd offsets to
                           // ensure proper register alignment.
                           //
-                          // TODO-GFX13: Should this also check the alignment in
-                          // the MMO, considering that the index itself might
-                          // not be aligned?
+                          // TODO-GFX13: Should this also check the alignment
+                          // in the MMO, considering that the index itself
+                          // might not be aligned?
                           if (Op.getOffset() & 1) {
                             reject(*Op.Op);
                             return true;
@@ -1383,8 +1343,8 @@ bool AMDGPUBundleIdxLdSt::analyze(BundlingInfo &BI) {
         if (!BundleDef || !BundleUse || !Def.isEarlyClobber() ||
             !DefIt->LoadStore->mayAlias(AA, *UseIt->LoadStore, true)) {
           if (MachineInstr *NewMI = convertInstTo3Addr(MI)) {
-            // The instruction was completely replaced, so we have to re-scan it
-            // from the top.
+            // The instruction was completely replaced, so we have to re-scan
+            // it from the top.
             BI = {};
             BI.MI = NewMI;
             return analyze(BI);
@@ -1455,7 +1415,8 @@ bool AMDGPUBundleIdxLdSt::analyze(BundlingInfo &BI) {
       return A.second > B.second;
     });
 
-    // Since we failed to bundle everything, we need idx0 for private registers.
+    // Since we failed to bundle everything, we need idx0 for private
+    // registers.
     Indices.resize(3);
 
     BI.BundledOps.erase(
@@ -1590,15 +1551,6 @@ bool AMDGPUBundleIdxLdSt::runOnMachineFunction(MachineFunction &MF) {
 
   LLVM_DEBUG(dbgs() << "===== AMDGPUBundleIdxLdSt :: Sinking Phase =====\n");
   Changed |= sinkLoadsAndCoreMIs(MF);
-
-  MFI = MF.getInfo<SIMachineFunctionInfo>();
-  LLVM_DEBUG(
-      dbgs() << "===== AMDGPUBundleIdxLdSt :: Private Objects Phase =====\n");
-  for (MachineBasicBlock &MBB : MF) {
-    auto Iter = make_early_inc_range(MBB);
-    for (auto &MI : Iter)
-      Changed |= updatePrivateObjectNewRegs(MRI, &MI);
-  }
 
   LLVM_DEBUG(dbgs() << "===== AMDGPUBundleIdxLdSt :: Bundling Phase =====\n");
   PrivateObjectNewRegs.clear();

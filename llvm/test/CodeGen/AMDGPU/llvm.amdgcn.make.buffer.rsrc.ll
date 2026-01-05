@@ -2,7 +2,9 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -stop-after=amdgpu-isel < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -stop-after=amdgpu-isel < %s | FileCheck --check-prefix=CHECK45 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1260 -stop-after=amdgpu-isel < %s | FileCheck --check-prefix=CHECK45 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck --check-prefix=CHECK45 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1260 -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck --check-prefix=CHECK45 %s
 
 define amdgpu_ps ptr addrspace(8) @basic_raw_buffer(ptr inreg %p) {
   ; CHECK-LABEL: name: basic_raw_buffer

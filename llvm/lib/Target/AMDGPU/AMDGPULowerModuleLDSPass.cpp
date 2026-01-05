@@ -924,6 +924,7 @@ public:
     return KernelToCreatedDynamicLDS;
   }
 
+<<<<<<< HEAD
   // Search the CallGraph for each function in the set looking for calls to
   // wavegroup rank functions, and return the discovered mapping.
   static DenseMap<Function *, SmallDenseSet<Function *>>
@@ -945,6 +946,8 @@ public:
     return RankFuncMap;
   }
 
+=======
+>>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
   bool runOnModule(Module &M) {
     CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);
@@ -1054,7 +1057,7 @@ public:
     // calls. Here we collect the mapping of entry kernels to rank
     // specializations.
     DenseMap<Function *, SmallDenseSet<Function *>> RankFuncMap =
-        getEntryFunctionToRankSpecializationMap(CG, M);
+        AMDGPU::getEntryFunctionToRankSpecializationMap(CG, M);
 
     // All kernel frames have been allocated. Calculate and record the
     // addresses.

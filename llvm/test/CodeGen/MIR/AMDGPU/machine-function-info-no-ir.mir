@@ -54,7 +54,6 @@
 # FULL-NEXT:  occupancy: 8
 # FULL-NEXT:  vgprForAGPRCopy: ''
 # FULL-NEXT:  sgprForEXECCopy: ''
-# FULL-NEXT:  needIdx0Restore: false
 # FULL-NEXT:  longBranchReservedReg: ''
 # FULL-NEXT:  hasInitWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
@@ -167,7 +166,6 @@ body:             |
 # FULL-NEXT:  occupancy: 10
 # FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: sgprForEXECCopy: ''
-# FULL-NEXT: needIdx0Restore: false
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
@@ -251,7 +249,6 @@ body:             |
 # FULL-NEXT:  occupancy: 10
 # FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: sgprForEXECCopy: ''
-# FULL-NEXT: needIdx0Restore: false
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
@@ -336,7 +333,6 @@ body:             |
 # FULL-NEXT:  occupancy: 10
 # FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: sgprForEXECCopy: ''
-# FULL-NEXT: needIdx0Restore: false
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0

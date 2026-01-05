@@ -28,7 +28,8 @@ def SIEncodingFamily {
   int GFX1170 = 11;
   int GFX12 = 12;
   int GFX1250 = 13;
-  int GFX13 = 14;
+  int GFX1260 = 14;
+  int GFX13 = 15;
 }
 
 //===----------------------------------------------------------------------===//
@@ -44,6 +45,7 @@ class GFXGen<Predicate pred, string dn, string suffix, int sub> {
 
 def GFX13Gen         : GFXGen<isGFX13Only, "GFX13", "_gfx13", SIEncodingFamily.GFX13>;
 def GFX1250Gen       : GFXGen<isGFX125xOnly, "GFX1250", "_gfx1250", SIEncodingFamily.GFX1250>;
+def GFX1260Gen       : GFXGen<isGFX1260Only, "GFX1260", "_gfx1260", SIEncodingFamily.GFX1260>;
 def GFX12Not12_50Gen : GFXGen<isGFX12Not12_50, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
 def GFX12Gen         : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
 def GFX1170Gen       : GFXGen<isGFX1170Only, "GFX1170", "_gfx1170", SIEncodingFamily.GFX1170>;
@@ -824,6 +826,8 @@ defm atomic_load_add : SIAtomicM0Glue2 <"LOAD_ADD">;
 defm atomic_load_sub : SIAtomicM0Glue2 <"LOAD_SUB">;
 defm atomic_load_uinc_wrap : SIAtomicM0Glue2 <"LOAD_UINC_WRAP">;
 defm atomic_load_udec_wrap : SIAtomicM0Glue2 <"LOAD_UDEC_WRAP">;
+defm atomic_load_usub_cond : SIAtomicM0Glue2 <"LOAD_USUB_COND">;
+defm atomic_load_usub_sat : SIAtomicM0Glue2 <"LOAD_USUB_SAT">;
 defm atomic_load_and : SIAtomicM0Glue2 <"LOAD_AND">;
 defm atomic_load_min : SIAtomicM0Glue2 <"LOAD_MIN">;
 defm atomic_load_max : SIAtomicM0Glue2 <"LOAD_MAX">;
@@ -969,6 +973,9 @@ def InlineImmFP64 : FPImmLeaf<f64, [{
   return isInlineImmediate(Imm);
 }]>;
 
+def fpimm_pos_zero : FPImmLeaf<fAny, [{
+  return Imm.isZero() && !Imm.isNegative();
+}]>;
 
 class VGPRImm <dag frag> : PatLeaf<frag, [{
   return isVGPRImm(N);
@@ -996,6 +1003,11 @@ def ShiftAmt32Imm : ImmLeaf <i32, [{
 def fp16_zeros_high_16bits : PatLeaf<(f16 VGPR_32:$src), [{
   return fp16SrcZerosHighBits(N->getOpcode());
 }]>;
+
+
+class build_vector_fpimm_pos_zero_v2<VTVec vec> : PatLeaf<
+  (vec (build_vector (vec.ElementType fpimm_pos_zero),
+                     (vec.ElementType fpimm_pos_zero)))>;
 
 def MFMALdScaleXForm : SDNodeXForm<timm, [{
   unsigned Val = N->getZExtValue();
@@ -1991,6 +2003,15 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
         !eq(VT.Size, 96)   : VRegSrc_96,
         !eq(VT.Size, 64)   : VSrc_b64,
         1                  : VSrc_b32);
+}
+
+// Returns the register class without inline to use for sources of VOP3
+// instructions for the given VT.
+class getVOP3NoInlineSrcForVT<ValueType VT, bit IsTrue16 = 0> {
+  RegisterOperand ret =
+  !cond(!eq(VT, i16)       : !if(IsTrue16, VSrcT_NoInline_b16, VSrc_NoInline_b16),
+        !eq(VT, v2f16)     : VSrc_NoInline_v2f16,
+        1                  : VSrc_NoInline_b32);
 }
 
 // VGPR only VOP3 src with 9 bit encoding
@@ -3128,6 +3149,11 @@ def VOP_V2I16_V2I16_V2I16 : VOPProfile <[v2i16, v2i16, v2i16, untyped]>;
 def VOP_V2BF16_V2BF16_V2BF16 : VOPProfile <[v2bf16, v2bf16, v2bf16, untyped]>;
 def VOP_B32_F16_F16 : VOPProfile <[i32, f16, f16, untyped]>;
 
+def VOP_V4F16_V4F16_V4F16 : VOPProfile <[v4f16, v4f16, v4f16, untyped]>;
+def VOP_V4F16_V4F16_V4F16_V4F16 : VOPProfile <[v4f16, v4f16, v4f16, v4f16]>;
+def VOP_V4BF16_V4BF16_V4BF16 : VOPProfile <[v4bf16, v4bf16, v4bf16, untyped]>;
+def VOP_V4BF16_V4BF16_V4BF16_V4BF16 : VOPProfile <[v4bf16, v4bf16, v4bf16, v4bf16]>;
+
 def VOP_V2F16_V2F16_V2F16_V2F16 : VOPProfile <[v2f16, v2f16, v2f16, v2f16]>;
 def VOP_V2I16_V2I16_V2I16_V2I16 : VOPProfile <[v2i16, v2i16, v2i16, v2i16]>;
 def VOP_V2BF16_V2BF16_V2BF16_V2BF16 : VOPProfile <[v2bf16, v2bf16, v2bf16, v2bf16]>;
@@ -3476,6 +3502,7 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.GFX1170)],
                    [!cast<string>(SIEncodingFamily.GFX12)],
                    [!cast<string>(SIEncodingFamily.GFX1250)],
+                   [!cast<string>(SIEncodingFamily.GFX1260)],
                    [!cast<string>(SIEncodingFamily.GFX13)]];
 }
 

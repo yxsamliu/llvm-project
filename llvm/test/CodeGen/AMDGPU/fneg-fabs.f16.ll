@@ -4,6 +4,8 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 < %s | FileCheck --check-prefixes=GFX9 %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck --check-prefixes=GFX11,GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck --check-prefixes=GFX11,GFX11-FAKE16 %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1300 -mattr=+real-true16 < %s | FileCheck --check-prefixes=GFX13,GFX13-TRUE16 %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1300 -mattr=-real-true16 < %s | FileCheck --check-prefixes=GFX13,GFX13-FAKE16 %s
 
 define amdgpu_kernel void @fneg_fabs_fadd_f16(ptr addrspace(1) %out, half %x, half %y) {
 ; CI-LABEL: fneg_fabs_fadd_f16:
@@ -78,6 +80,31 @@ define amdgpu_kernel void @fneg_fabs_fadd_f16(ptr addrspace(1) %out, half %x, ha
 ; GFX11-FAKE16-NEXT:    v_sub_f16_e64 v1, s3, |s2|
 ; GFX11-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-TRUE16-LABEL: fneg_fabs_fadd_f16:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    s_lshr_b32 s3, s2, 16
+; GFX13-TRUE16-NEXT:    s_and_b32 s2, s2, 0x7fff
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GFX13-TRUE16-NEXT:    s_sub_f16 s2, s3, s2
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX13-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-TRUE16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: fneg_fabs_fadd_f16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    s_lshr_b32 s3, s2, 16
+; GFX13-FAKE16-NEXT:    s_and_b32 s2, s2, 0x7fff
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GFX13-FAKE16-NEXT:    s_sub_f16 s2, s3, s2
+; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX13-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX13-FAKE16-NEXT:    s_endpgm
   %fabs = call half @llvm.fabs.f16(half %x)
   %fsub = fsub half -0.0, %fabs
   %fadd = fadd half %y, %fsub
@@ -159,6 +186,31 @@ define amdgpu_kernel void @fneg_fabs_fmul_f16(ptr addrspace(1) %out, half %x, ha
 ; GFX11-FAKE16-NEXT:    v_mul_f16_e64 v1, s3, -|s2|
 ; GFX11-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-TRUE16-LABEL: fneg_fabs_fmul_f16:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    s_lshr_b32 s3, s2, 16
+; GFX13-TRUE16-NEXT:    s_bitset1_b32 s2, 15
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GFX13-TRUE16-NEXT:    s_mul_f16 s2, s3, s2
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX13-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-TRUE16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: fneg_fabs_fmul_f16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    s_lshr_b32 s3, s2, 16
+; GFX13-FAKE16-NEXT:    s_bitset1_b32 s2, 15
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GFX13-FAKE16-NEXT:    s_mul_f16 s2, s3, s2
+; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX13-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX13-FAKE16-NEXT:    s_endpgm
   %fabs = call half @llvm.fabs.f16(half %x)
   %fsub = fsub half -0.0, %fabs
   %fmul = fmul half %y, %fsub
@@ -235,6 +287,27 @@ define amdgpu_kernel void @fneg_fabs_free_f16(ptr addrspace(1) %out, i16 %in) {
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-TRUE16-LABEL: fneg_fabs_free_f16:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    s_bitset1_b32 s2, 15
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX13-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-TRUE16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: fneg_fabs_free_f16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    s_bitset1_b32 s2, 15
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX13-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX13-FAKE16-NEXT:    s_endpgm
   %bc = bitcast i16 %in to half
   %fabs = call half @llvm.fabs.f16(half %bc)
   %fsub = fsub half -0.0, %fabs
@@ -308,6 +381,27 @@ define amdgpu_kernel void @fneg_fabs_f16(ptr addrspace(1) %out, half %in) {
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-TRUE16-LABEL: fneg_fabs_f16:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    s_bitset1_b32 s2, 15
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX13-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-TRUE16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: fneg_fabs_f16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    s_bitset1_b32 s2, 15
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX13-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX13-FAKE16-NEXT:    s_endpgm
   %fabs = call half @llvm.fabs.f16(half %in)
   %fsub = fsub half -0.0, %fabs
   store half %fsub, ptr addrspace(1) %out, align 2
@@ -364,6 +458,28 @@ define amdgpu_kernel void @v_fneg_fabs_f16(ptr addrspace(1) %out, ptr addrspace(
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v1, 0x8000, v1
 ; GFX11-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-TRUE16-LABEL: v_fneg_fabs_f16:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3]
+; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-TRUE16-NEXT:    v_or_b32_e32 v0, 0x8000, v0
+; GFX13-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-TRUE16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: v_fneg_fabs_f16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX13-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    global_load_u16 v1, v0, s[2:3]
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-FAKE16-NEXT:    v_or_b32_e32 v1, 0x8000, v1
+; GFX13-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX13-FAKE16-NEXT:    s_endpgm
   %val = load half, ptr addrspace(1) %in, align 2
   %fabs = call half @llvm.fabs.f16(half %val)
   %fsub = fsub half -0.0, %fabs
@@ -440,6 +556,17 @@ define amdgpu_kernel void @s_fneg_fabs_v2f16_non_bc_src(ptr addrspace(1) %out, <
 ; GFX11-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: s_fneg_fabs_v2f16_non_bc_src:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_pk_add_f16 v0, 0x40003c00, s2
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
+; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX13-NEXT:    s_endpgm
   %add = fadd <2 x half> %in, <half 1.0, half 2.0>
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %add)
   %fneg.fabs = fsub <2 x half> <half -0.0, half -0.0>, %fabs
@@ -502,6 +629,16 @@ define amdgpu_kernel void @s_fneg_fabs_v2f16_bc_src(ptr addrspace(1) %out, <2 x 
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: s_fneg_fabs_v2f16_bc_src:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_or_b32 s2, s2, 0x80008000
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13-NEXT:    s_endpgm
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fneg.fabs = fsub <2 x half> <half -0.0, half -0.0>, %fabs
   store <2 x half> %fneg.fabs, ptr addrspace(1) %out
@@ -548,6 +685,17 @@ define amdgpu_kernel void @fneg_fabs_v4f16(ptr addrspace(1) %out, <4 x half> %in
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: fneg_fabs_v4f16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_or_b32 s2, s2, 0x80008000
+; GFX13-NEXT:    s_or_b32 s3, s3, 0x80008000
+; GFX13-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
+; GFX13-NEXT:    v_mov_b32_e32 v1, s3
+; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX13-NEXT:    s_endpgm
   %fabs = call <4 x half> @llvm.fabs.v4f16(<4 x half> %in)
   %fsub = fsub <4 x half> <half -0.0, half -0.0, half -0.0, half -0.0>, %fabs
   store <4 x half> %fsub, ptr addrspace(1) %out
@@ -620,6 +768,17 @@ define amdgpu_kernel void @fold_user_fneg_fabs_v2f16(ptr addrspace(1) %out, <2 x
 ; GFX11-NEXT:    v_pk_mul_f16 v1, s2, -4.0 op_sel_hi:[1,0]
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: fold_user_fneg_fabs_v2f16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
+; GFX13-NEXT:    v_mov_b32_e32 v0, 0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_and_b32 s2, s2, 0x7fff7fff
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_pk_mul_f16 v1, s2, -4.0 op_sel_hi:[1,0]
+; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13-NEXT:    s_endpgm
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fneg.fabs = fsub <2 x half> <half -0.0, half -0.0>, %fabs
   %mul = fmul <2 x half> %fneg.fabs, <half 4.0, half 4.0>
@@ -697,6 +856,22 @@ define amdgpu_kernel void @s_fneg_multi_use_fabs_v2f16(ptr addrspace(1) %out0, p
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    global_store_b32 v0, v2, s[2:3]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: s_fneg_multi_use_fabs_v2f16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    s_load_b32 s6, s[4:5], 0x10
+; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_and_b32 s4, s6, 0x7fff7fff
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
+; GFX13-NEXT:    s_xor_b32 s5, s4, 0x80008000
+; GFX13-NEXT:    v_mov_b32_e32 v2, s5
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13-NEXT:    global_store_b32 v0, v2, s[2:3]
+; GFX13-NEXT:    s_endpgm
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fneg = fsub <2 x half> <half -0.0, half -0.0>, %fabs
   store <2 x half> %fabs, ptr addrspace(1) %out0
@@ -783,6 +958,21 @@ define amdgpu_kernel void @s_fneg_multi_use_fabs_foldable_neg_v2f16(ptr addrspac
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    global_store_b32 v0, v2, s[2:3]
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX13-LABEL: s_fneg_multi_use_fabs_foldable_neg_v2f16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    s_load_b32 s6, s[4:5], 0x10
+; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_and_b32 s4, s6, 0x7fff7fff
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
+; GFX13-NEXT:    v_pk_mul_f16 v2, s4, -4.0 op_sel_hi:[1,0]
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13-NEXT:    global_store_b32 v0, v2, s[2:3]
+; GFX13-NEXT:    s_endpgm
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fneg = fsub <2 x half> <half -0.0, half -0.0>, %fabs
   %mul = fmul <2 x half> %fneg, <half 4.0, half 4.0>

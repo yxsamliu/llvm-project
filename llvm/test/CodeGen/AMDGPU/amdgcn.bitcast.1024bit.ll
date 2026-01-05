@@ -207540,7 +207540,10 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX13-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+<<<<<<< HEAD
 
+=======
+>>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
 

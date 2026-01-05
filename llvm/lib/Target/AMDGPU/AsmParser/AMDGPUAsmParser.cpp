@@ -711,7 +711,32 @@ public:
 
   bool isVSrc_v2f16() const { return isVSrc_f16() || isLiteralImm(MVT::v2f16); }
 
+  bool isVSrc_v4f16() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::f16) ||
+           isLiteralImm(MVT::f16);
+  }
+
+  bool isVSrc_v4bf16() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::bf16) ||
+           isLiteralImm(MVT::bf16);
+  }
+
   bool isVSrc_NoInline_v2f16() const { return isVSrc_v2f16(); }
+
+  bool isVSrcT_NoInline_b16() const {
+    return (isRegClass(AMDGPU::VS_16RegClassID) && !hasModifiers()) ||
+           isLiteralImm(MVT::i16);
+  }
+
+  bool isVSrc_NoInline_b16() const {
+    return (isRegClass(AMDGPU::VS_32RegClassID) && !hasModifiers()) ||
+           isLiteralImm(MVT::i16);
+  }
+
+  bool isVSrc_NoInline_b32() const {
+    return (isRegClass(AMDGPU::VS_32RegClassID) && !hasModifiers()) ||
+           isLiteralImm(MVT::i32);
+  }
 
   bool isVISrcB32() const {
     return isRegOrInlineNoMods(AMDGPU::VGPR_32RegClassID, MVT::i32);
@@ -859,6 +884,22 @@ public:
 
   bool isVISrc_1024V2F16() const {
     return isVISrc_1024F16() || isVISrc_1024_b32();
+  }
+
+  bool isVISrc_1024_f16() const {
+    return isRegOrInlineNoMods(AMDGPU::VReg_1024RegClassID, MVT::f16);
+  }
+
+  bool isVISrc_1024_bf16() const {
+    return isRegOrInlineNoMods(AMDGPU::VReg_1024RegClassID, MVT::bf16);
+  }
+
+  bool isVISrc_2048_b32() const {
+    return isRegOrInlineNoMods(AMDGPU::Pseudo_VGPR_2048RegClassID, MVT::i32);
+  }
+
+  bool isVISrc_2048_f32() const {
+    return isRegOrInlineNoMods(AMDGPU::Pseudo_VGPR_2048RegClassID, MVT::f32);
   }
 
   bool isAISrcB32() const {
@@ -2142,6 +2183,7 @@ static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V4FP16:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
   case AMDGPU::OPERAND_KIMM16:
     return &APFloat::IEEEhalf();
@@ -2149,6 +2191,7 @@ static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
   case AMDGPU::OPERAND_REG_INLINE_C_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
+  case AMDGPU::OPERAND_REG_IMM_V4BF16:
     return &APFloat::BFloat();
   default:
     llvm_unreachable("unsupported fp type");
@@ -2513,6 +2556,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     case AMDGPU::OPERAND_REG_INLINE_C_BF16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     case AMDGPU::OPERAND_REG_IMM_V2BF16:
+    case AMDGPU::OPERAND_REG_IMM_V4BF16:
       if (Lit == LitModifier::None && AsmParser->hasInv2PiInlineImm() &&
           Literal == 0x3fc45f306725feed) {
         // This is the 1/(2*pi) which is going to be truncated to bf16 with the
@@ -2538,6 +2582,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
     case AMDGPU::OPERAND_REG_IMM_V2INT16:
     case AMDGPU::OPERAND_REG_IMM_V2FP16:
+    case AMDGPU::OPERAND_REG_IMM_V4FP16:
     case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     case AMDGPU::OPERAND_REG_IMM_V2FP32:
     case AMDGPU::OPERAND_REG_IMM_V2INT32:
@@ -2580,10 +2625,13 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V4BF16:
+  case AMDGPU::OPERAND_REG_IMM_V4FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP32:
   case AMDGPU::OPERAND_REG_IMM_V2INT32:
   case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT32:
     break;
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
@@ -2644,6 +2692,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT16:
     break;
 
   case AMDGPU::OPERAND_KIMM64:
@@ -2720,6 +2769,8 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
         return AMDGPU::VReg_576RegClassID;
       case 1024:
         return AMDGPU::VReg_1024RegClassID;
+      case 2048:
+        return AMDGPU::Pseudo_VGPR_2048RegClassID;
     }
   } else if (Is == IS_TTMP) {
     switch (RegWidth) {
@@ -3879,11 +3930,13 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
       return AMDGPU::isInlinableLiteralV2I16(Val);
 
     if (OperandType == AMDGPU::OPERAND_REG_INLINE_C_V2FP16 ||
-        OperandType == AMDGPU::OPERAND_REG_IMM_V2FP16)
+        OperandType == AMDGPU::OPERAND_REG_IMM_V2FP16 ||
+        OperandType == AMDGPU::OPERAND_REG_IMM_V4FP16)
       return AMDGPU::isInlinableLiteralV2F16(Val);
 
     if (OperandType == AMDGPU::OPERAND_REG_INLINE_C_V2BF16 ||
-        OperandType == AMDGPU::OPERAND_REG_IMM_V2BF16)
+        OperandType == AMDGPU::OPERAND_REG_IMM_V2BF16 ||
+        OperandType == AMDGPU::OPERAND_REG_IMM_V4BF16)
       return AMDGPU::isInlinableLiteralV2BF16(Val);
 
     if (OperandType == AMDGPU::OPERAND_REG_IMM_FP16 ||
@@ -3894,7 +3947,9 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
         OperandType == AMDGPU::OPERAND_REG_INLINE_C_BF16)
       return AMDGPU::isInlinableLiteralBF16(Val, hasInv2PiInlineImm());
 
-    if (OperandType == AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16)
+    if (OperandType == AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16 ||
+        OperandType == AMDGPU::OPERAND_REG_IMM_NOINLINE_INT16 ||
+        OperandType == AMDGPU::OPERAND_REG_IMM_NOINLINE_INT32)
       return false;
 
     llvm_unreachable("invalid operand type");

@@ -510,14 +510,14 @@ class ASTInfoCollector : public ASTReaderListener {
   LangOptions &LangOpts;
   CodeGenOptions &CodeGenOpts;
   TargetOptions &TargetOpts;
-  unsigned &Counter;
+  uint32_t &Counter;
 
 public:
   ASTInfoCollector(HeaderSearchOptions &HSOpts,
                    std::string &SpecificModuleCachePath,
                    PreprocessorOptions &PPOpts, LangOptions &LangOpts,
                    CodeGenOptions &CodeGenOpts, TargetOptions &TargetOpts,
-                   unsigned &Counter)
+                   uint32_t &Counter)
       : HSOpts(HSOpts), SpecificModuleCachePath(SpecificModuleCachePath),
         PPOpts(PPOpts), LangOpts(LangOpts), CodeGenOpts(CodeGenOpts),
         TargetOpts(TargetOpts), Counter(Counter) {}
@@ -569,7 +569,7 @@ public:
   }
 
   void ReadCounter(const serialization::ModuleFile &M,
-                   unsigned NewCounter) override {
+                   uint32_t NewCounter) override {
     Counter = NewCounter;
   }
 };
@@ -745,7 +745,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
           Filename, TmpFileMgr, *AST->ModCache, PCHContainerRdr,
           /*FindModuleFileExtensions=*/true, Collector,
           /*ValidateDiagnosticOptions=*/true, ASTReader::ARR_None)) {
-    AST->getDiagnostics().Report(diag::err_fe_unable_to_load_pch);
+    AST->getDiagnostics().Report(diag::err_fe_unable_to_load_ast_file);
     return nullptr;
   }
 
@@ -847,7 +847,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   case ASTReader::VersionMismatch:
   case ASTReader::ConfigurationMismatch:
   case ASTReader::HadErrors:
-    AST->getDiagnostics().Report(diag::err_fe_unable_to_load_pch);
+    AST->getDiagnostics().Report(diag::err_fe_unable_to_load_ast_file);
     return nullptr;
   }
 

@@ -507,11 +507,26 @@ void AMDGPUInstPrinter::printRegOperand(MCRegister Reg,
     break;
   }
 #endif
+<<<<<<< HEAD
 
   MCRegister PrintReg = getRegForPrinting(Reg, STI, MRI);
   std::string PrintRegName = getRegisterName(PrintReg);
   modifyVGPRNameUsingIndex(PrintRegName, IdxReg);
   O << PrintRegName;
+=======
+  const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
+  MCRegister PrintReg = getRegForPrinting(Reg, STI, MRI);
+  if (RC && RC->getID() == AMDGPU::Pseudo_VGPR_2048RegClassID) {
+    unsigned RegIdx = Reg.id() - AMDGPU::VGPR0_Pseudo;
+    O << "v[" << RegIdx << ':' << RegIdx + 63 << ']';
+    // TODO: we will probably need to modify the VGPR name for the index
+    // register as well, like the other case below.
+  } else {
+    std::string PrintRegName = getRegisterName(PrintReg);
+    modifyVGPRNameUsingIndex(PrintRegName, IdxReg);
+    O << PrintRegName;
+  }
+>>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 
   if (PrintReg != Reg) {
     std::string RegName = getRegisterName(Reg);
@@ -764,6 +779,33 @@ void AMDGPUInstPrinter::printImmediateV216(uint32_t Imm, uint8_t OpType,
   O << formatHex(static_cast<uint64_t>(Imm));
 }
 
+void AMDGPUInstPrinter::printImmediateV416(uint32_t Imm, uint8_t OpType,
+                                           const MCSubtargetInfo &STI,
+                                           raw_ostream &O) {
+  int32_t SImm = static_cast<int32_t>(Imm);
+  if (isInlinableIntLiteral(SImm)) {
+    O << SImm;
+    return;
+  }
+
+  switch (OpType) {
+  case AMDGPU::OPERAND_REG_IMM_V4FP16:
+    if (isUInt<16>(Imm) &&
+        printImmediateFP16(static_cast<uint16_t>(Imm), STI, O))
+      return;
+    break;
+  case AMDGPU::OPERAND_REG_IMM_V4BF16:
+    if (isUInt<16>(Imm) &&
+        printImmediateBFloat16(static_cast<uint16_t>(Imm), STI, O))
+      return;
+    break;
+  default:
+    llvm_unreachable("bad operand type");
+  }
+
+  O << formatHex(static_cast<uint64_t>(Imm));
+}
+
 bool AMDGPUInstPrinter::printImmediateFloat32(uint32_t Imm,
                                               const MCSubtargetInfo &STI,
                                               raw_ostream &O) {
@@ -977,6 +1019,8 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_IMM_V2FP32:
     case MCOI::OPERAND_IMMEDIATE:
     case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
+    case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT32:
+    case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT16:
       printImmediate32(Op.getImm(), STI, O);
       break;
     case AMDGPU::OPERAND_REG_IMM_INT64:
@@ -1010,6 +1054,10 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
       printImmediateV216(Op.getImm(), OpTy, STI, O);
+      break;
+    case AMDGPU::OPERAND_REG_IMM_V4FP16:
+    case AMDGPU::OPERAND_REG_IMM_V4BF16:
+      printImmediateV416(Op.getImm(), OpTy, STI, O);
       break;
     case MCOI::OPERAND_UNKNOWN:
     case MCOI::OPERAND_PCREL:

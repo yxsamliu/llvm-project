@@ -7,7 +7,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX1200-PAL %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX1200-MESA %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250-PAL %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1260 < %s | FileCheck -check-prefix=GFX1250-PAL %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250-MESA %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1260 < %s | FileCheck -check-prefix=GFX1250-MESA %s
 
 ; Check EXTRA_LDS_SIZE in SPI_SHADER_PGM_RSRC2_PS.
 

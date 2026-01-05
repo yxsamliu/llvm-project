@@ -12,11 +12,14 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 
 struct Align;
 class AAResults;
+class AllocaInst;
 class DataLayout;
 class GlobalVariable;
 class LoadInst;
@@ -29,9 +32,14 @@ class Module;
 class TargetExtType;
 
 namespace AMDGPU {
+extern cl::opt<bool> PromoteSubDword;
 
 using FunctionVariableMap = DenseMap<Function *, DenseSet<GlobalVariable *>>;
 using VariableFunctionMap = DenseMap<GlobalVariable *, DenseSet<Function *>>;
+
+// Mapping from entry kernels to their rank specialization functions
+DenseMap<Function *, SmallDenseSet<Function *>>
+getEntryFunctionToRankSpecializationMap(const CallGraph &CG, Module &M);
 
 Align getAlign(const DataLayout &DL, const GlobalVariable *GV);
 
@@ -76,7 +84,24 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
 /// in VGPRs. If so, the set of pointers is filled in with all derived pointers.
 /// Also returns whether the variable must be allocated in VGPRs.
 bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
-                        DenseSet<Value *> &Pointers, bool &MustInVGPR);
+                        DenseSet<Value *> &Pointers, bool &MustInVGPR,
+                        bool PromoteSubDword = false);
+
+/// Convenience wrapper for !amdgpu.allocated.vgprs metadata.
+///
+/// NOTE: Using `isa` with this class is not very meaningful.
+class AllocatedVGPRsMetadata : public MDNode {
+public:
+  static AllocatedVGPRsMetadata &get(const AllocaInst &Alloca);
+
+  /// Get the indicated (byte) address for the VGPR allocation.
+  unsigned getAddress() const;
+
+  /// Get the size (in bytes) of the VGPR allocation.
+  unsigned getSize() const;
+
+  static bool classof(const MDNode *N);
+};
 
 } // end namespace AMDGPU
 

@@ -33,7 +33,8 @@ void builtin_test_unsupported(double a_double, float a_float,
                               v2f a_v2f, v4f a_v4f, v16f a_v16f, v32f  a_v32f,
                               v4h a_v4h, v8h a_v8h,
 
-                              uint a, uint b) {
+                              uint a, uint b,
+                              void *sem) {
 
   __builtin_amdgcn_ds_gws_init(a, b); // expected-error {{'__builtin_amdgcn_ds_gws_init' needs target feature gws}}
   __builtin_amdgcn_ds_gws_barrier(a, b); // expected-error {{'__builtin_amdgcn_ds_gws_barrier' needs target feature gws}}
@@ -97,4 +98,9 @@ void builtin_test_unsupported(double a_double, float a_float,
 
   a = __builtin_amdgcn_wavegroup_id(); // expected-error {{'__builtin_amdgcn_wavegroup_id' needs target feature wavegroups}}
   a = __builtin_amdgcn_wave_id_in_wavegroup(); // expected-error {{'__builtin_amdgcn_wave_id_in_wavegroup' needs target feature wavegroups}}
+
+  __builtin_amdgcn_s_sema_set_state(sem, 1); // expected-error {{'__builtin_amdgcn_s_sema_set_state' needs target feature semaphores}}
+  __builtin_amdgcn_s_sema_set_limit(sem, 1); // expected-error {{'__builtin_amdgcn_s_sema_set_limit' needs target feature semaphores}}
+  __builtin_amdgcn_s_sema_signal(sem); // expected-error {{'__builtin_amdgcn_s_sema_signal' needs target feature semaphores}}
+  __builtin_amdgcn_s_sema_wait(sem); // expected-error {{'__builtin_amdgcn_s_sema_wait' needs target feature semaphores}}
 }

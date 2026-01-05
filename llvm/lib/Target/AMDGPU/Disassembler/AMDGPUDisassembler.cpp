@@ -373,6 +373,17 @@ DecodeVGPR_16_Lo128RegisterClass(MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,
   return addOperand(Inst, DAsm->createVGPR16Operand(RegIdx, IsHi));
 }
 
+static DecodeStatus
+DecodePseudo_VGPR_2048RegisterClass(MCInst &Inst, unsigned Imm,
+                                    uint64_t /*Addr*/,
+                                    const MCDisassembler *Decoder) {
+  assert(isUInt<9>(Imm) && "9-bit encoding expected");
+  unsigned RegIdx = Imm & 0xff;
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(
+      Inst, DAsm->createRegOperand(AMDGPU::Pseudo_VGPR_2048RegClassID, RegIdx));
+}
+
 template <unsigned OpWidth>
 static DecodeStatus decodeOperand_VSrcT16_Lo128(MCInst &Inst, unsigned Imm,
                                                 uint64_t /*Addr*/,
@@ -596,6 +607,7 @@ void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
       switch (OpDesc.OperandType) {
       case AMDGPU::OPERAND_REG_IMM_BF16:
       case AMDGPU::OPERAND_REG_IMM_V2BF16:
+      case AMDGPU::OPERAND_REG_IMM_V4BF16:
       case AMDGPU::OPERAND_REG_INLINE_C_BF16:
       case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
         Imm = getInlineImmValBF16(Imm);
@@ -603,6 +615,7 @@ void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
       case AMDGPU::OPERAND_REG_IMM_FP16:
       case AMDGPU::OPERAND_REG_IMM_INT16:
       case AMDGPU::OPERAND_REG_IMM_V2FP16:
+      case AMDGPU::OPERAND_REG_IMM_V4FP16:
       case AMDGPU::OPERAND_REG_INLINE_C_FP16:
       case AMDGPU::OPERAND_REG_INLINE_C_INT16:
       case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
@@ -747,6 +760,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
           tryDecodeInst(DecoderTableGFX90A64, MI, QW, Address, CS))
         break;
 
+      if (isGFX1260Only() &&
+          tryDecodeInst(DecoderTableGFX1260_FAKE1664, DecoderTableGFX126064, MI,
+                        QW, Address, CS))
+        break;
+
       if ((isVI() || isGFX9()) &&
           tryDecodeInst(DecoderTableGFX864, MI, QW, Address, CS))
         break;
@@ -840,6 +858,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (isGFX1250Only() &&
           tryDecodeInst(DecoderTableGFX125032, DecoderTableGFX1250_FAKE1632, MI,
                         DW, Address, CS))
+        break;
+
+      // TODO: use DecoderTableGFX1260_FAKE1632 when we have it.
+      if (isGFX1260Only() &&
+          tryDecodeInst(DecoderTableGFX126032, MI, DW, Address, CS))
         break;
 
       if (isGFX12() &&
@@ -1734,6 +1757,7 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
     UseLit = AMDGPU::isInlinableLiteralBF16(Val, HasInv2Pi);
     break;
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
+  case AMDGPU::OPERAND_REG_IMM_V4BF16:
     UseLit = AMDGPU::isInlinableLiteralV2BF16(Val);
     break;
   case AMDGPU::OPERAND_REG_IMM_FP16:
@@ -1742,9 +1766,12 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
     UseLit = AMDGPU::isInlinableLiteralFP16(Val, HasInv2Pi);
     break;
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V4FP16:
     UseLit = AMDGPU::isInlinableLiteralV2F16(Val);
     break;
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_INT32:
     break;
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
@@ -1952,6 +1979,8 @@ unsigned AMDGPUDisassembler::getVgprClassId(unsigned Width) const {
     return VReg_576RegClassID;
   case 1024:
     return VReg_1024RegClassID;
+  case 2048:
+    return Pseudo_VGPR_2048RegClassID;
   }
   llvm_unreachable("Invalid register width!");
 }
@@ -2415,6 +2444,10 @@ bool AMDGPUDisassembler::isGFX12() const {
 
 bool AMDGPUDisassembler::isGFX12Plus() const {
   return AMDGPU::isGFX12Plus(STI);
+}
+
+bool AMDGPUDisassembler::isGFX1260Only() const {
+  return STI.hasFeature(AMDGPU::FeatureGFX1260Insts);
 }
 
 bool AMDGPUDisassembler::isGFX1250Only() const {

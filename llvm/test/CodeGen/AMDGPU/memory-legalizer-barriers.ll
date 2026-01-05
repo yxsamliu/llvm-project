@@ -6,6 +6,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GFX12-WGP %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX12-CU %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1260 < %s | FileCheck --check-prefixes=GFX1260 %s
 
 define amdgpu_kernel void @test_s_barrier() {
 ; GFX10-WGP-LABEL: test_s_barrier:
@@ -46,6 +47,13 @@ define amdgpu_kernel void @test_s_barrier() {
 ; GFX1250-NEXT:    s_barrier_signal -1
 ; GFX1250-NEXT:    s_barrier_wait -1
 ; GFX1250-NEXT:    s_endpgm
+;
+; GFX1260-LABEL: test_s_barrier:
+; GFX1260:       ; %bb.0: ; %entry
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-NEXT:    s_barrier_signal -1
+; GFX1260-NEXT:    s_barrier_wait -1
+; GFX1260-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.s.barrier()
   ret void
@@ -108,6 +116,17 @@ define amdgpu_kernel void @test_s_barrier_workgroup_fence() {
 ; GFX1250-NEXT:    s_barrier_signal -1
 ; GFX1250-NEXT:    s_barrier_wait -1
 ; GFX1250-NEXT:    s_endpgm
+;
+; GFX1260-LABEL: test_s_barrier_workgroup_fence:
+; GFX1260:       ; %bb.0: ; %entry
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-NEXT:    s_wait_storecnt 0x0
+; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
+; GFX1260-NEXT:    s_wait_expcnt 0x0
+; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260-NEXT:    s_barrier_signal -1
+; GFX1260-NEXT:    s_barrier_wait -1
+; GFX1260-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup") release
   call void @llvm.amdgcn.s.barrier()
@@ -172,6 +191,16 @@ define amdgpu_kernel void @test_s_barrier_agent_fence() {
 ; GFX1250-NEXT:    s_barrier_signal -1
 ; GFX1250-NEXT:    s_barrier_wait -1
 ; GFX1250-NEXT:    s_endpgm
+;
+; GFX1260-LABEL: test_s_barrier_agent_fence:
+; GFX1260:       ; %bb.0: ; %entry
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1260-NEXT:    s_wait_storecnt 0x0
+; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1260-NEXT:    s_barrier_signal -1
+; GFX1260-NEXT:    s_barrier_wait -1
+; GFX1260-NEXT:    s_endpgm
 entry:
   fence syncscope("agent") release
   call void @llvm.amdgcn.s.barrier()

@@ -509,6 +509,18 @@ def FeatureWavegroups : SubtargetFeature<"wavegroups",
   "Has wavegroups"
 >;
 
+def FeatureSWakeupImm : SubtargetFeature<"s-wakeup-imm",
+  "HasSWakeupImm",
+  "true",
+  "s_wakeup takes an immediate operand"
+>;
+
+def FeatureSBarrierLeaveImm : SubtargetFeature<"s-barrier-leave-imm",
+  "HasSBarrierLeaveImm",
+  "true",
+  "s_barrier_leave takes an immediate operand"
+>;
+
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
@@ -562,7 +574,11 @@ def FeatureGFX13Insts : SubtargetFeature<"gfx13-insts",
   "GFX13Insts",
   "true",
   "Additional instructions for GFX13+",
-  [FeatureSemaphores, FeatureWavegroups]
+  [FeatureSemaphores,
+   FeatureWavegroups,
+   FeatureSWakeupImm,
+   FeatureSBarrierLeaveImm,
+  ]
 >;
 
 def FeatureGFX10_3Insts : SubtargetFeature<"gfx10-3-insts",
@@ -956,6 +972,18 @@ def FeatureWMMA2048bInsts : SubtargetFeature<"wmma-2048b-insts",
   "HasWMMA2048bInsts",
   "true",
   "Has WMMA instructions where A, B, C, or D matrix can be 2048-bits"
+>;
+
+def FeaturePermPkU2U3Insts : SubtargetFeature<"perm-pk-u2u3-insts",
+  "HasPermPkU2U3Insts",
+  "true",
+  "Has permute packed u2 and u3 instructions"
+>;
+
+def FeaturePk4Insts : SubtargetFeature<"pk4-insts",
+  "HasPk4Insts",
+  "true",
+  "Has pk4 instructions"
 >;
 
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
@@ -1379,6 +1407,12 @@ def FeatureSetPrioIncWgInst : SubtargetFeature<"setprio-inc-wg-inst",
   "HasSetPrioIncWgInst",
   "true",
   "Has s_setprio_inc_wg instruction."
+>;
+
+def FeatureSWakeupBarrier : SubtargetFeature<"s-wakeup-barrier-inst",
+  "HasSWakeupBarrier",
+  "true",
+  "Has s_wakeup_barrier instruction."
 >;
 
 //===------------------------------------------------------------===//
@@ -2363,6 +2397,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeaturePkAddMinMaxInsts,
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
+   FeatureSWakeupBarrier,
    Feature45BitNumRecordsBufferResource,
    FeatureSupportsXNACK,
    FeatureXNACK,
@@ -2398,9 +2433,18 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
     [FeatureRequiresCOV6])>;
 
 def FeatureISAVersion12_60 : FeatureSet<
-  !listconcat(FeatureISAVersion12_50.Features,
+  !listconcat(FeatureISAVersion12_50_Common.Features,
     [FeatureGFX1260Insts,
-     FeatureWMMA2048bInsts])>;
+     FeatureWMMA2048bInsts,
+     FeatureWavegroups,
+     FeaturePermPkU2U3Insts,
+     FeaturePk4Insts,
+     FeatureAddressableLocalMemorySize327680,
+     FeatureVGPRIndexingRegisters,
+     FeatureSWakeupImm,
+     FeatureSBarrierLeaveImm,
+     FeatureSemaphores,
+    ])>;
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
@@ -2460,6 +2504,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBVHDualAndBVH8Insts,
    FeatureWMMA128bInsts,
    FeatureIEEEMinimumMaximumInsts,
+   FeatureSWakeupBarrier,
    FeatureClusters,
    FeatureCubeInsts,
    FeatureLerpInst,
@@ -2894,6 +2939,10 @@ def HasAtomicFMinFMaxF64FlatInsts :
   Predicate<"Subtarget->hasAtomicFMinFMaxF64FlatInsts()">,
   AssemblerPredicate<(any_of FeatureAtomicFMinFMaxF64FlatInsts)>;
 
+def HasAtomicCondSubClampFlatInsts :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts)>;
+
 def HasLdsAtomicAddF64 :
   Predicate<"Subtarget->hasLdsAtomicAddF64()">,
   AssemblerPredicate<(any_of FeatureGFX90AInsts, FeatureGFX1250Insts)>;
@@ -3200,6 +3249,15 @@ def HasWMMA128bInsts : Predicate<"Subtarget->hasWMMA128bInsts()">,
 def HasWMMA2048bInsts : Predicate<"Subtarget->hasWMMA2048bInsts()">,
   AssemblerPredicate<(all_of FeatureWMMA2048bInsts)>;
 
+<<<<<<< HEAD
+=======
+def HasPermPkU2U3Insts : Predicate<"Subtarget->hasPermPkU2U3Insts()">,
+  AssemblerPredicate<(all_of FeaturePermPkU2U3Insts)>;
+
+def HasPk4Insts : Predicate<"Subtarget->hasPk4Insts()">,
+  AssemblerPredicate<(all_of FeaturePk4Insts)>;
+
+>>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 def HasCubeInsts : Predicate<"Subtarget->hasCubeInsts()">,
   AssemblerPredicate<(all_of FeatureCubeInsts)>;
 
@@ -3236,8 +3294,15 @@ def HasMadMacF32Insts : Predicate<"Subtarget->hasMadMacF32Insts()">,
 def HasFmaLegacy32 : Predicate<"Subtarget->hasGFX10_3Insts()">,
   AssemblerPredicate<(any_of FeatureGFX10_3Insts)>;
 
+def HasFmacLegacy32 : Predicate<"Subtarget->hasGFX10_3Insts() && Subtarget->getGeneration() < AMDGPUSubtarget::GFX12">,
+  AssemblerPredicate<(all_of FeatureGFX10_3Insts, (not FeatureGFX12Insts))>;
+
 def HasAtomicDsPkAdd16Insts : Predicate<"Subtarget->hasAtomicDsPkAdd16Insts()">,
   AssemblerPredicate<(any_of FeatureAtomicDsPkAdd16Insts)>;
+
+def HasAtomicDsCondSubClampInsts :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts)>;
 
 def HasAtomicFlatPkAdd16Insts : Predicate<"Subtarget->hasAtomicFlatPkAdd16Insts()">,
   AssemblerPredicate<(any_of FeatureAtomicFlatPkAdd16Insts)>;
@@ -3337,6 +3402,12 @@ def HasWavegroups :
   Predicate<"Subtarget->hasWavegroups()">,
   AssemblerPredicate<(all_of FeatureWavegroups)>;
 
+def HasSWakeupImm : Predicate<"Subtarget->hasSWakeupImm()">,
+  AssemblerPredicate<(all_of FeatureSWakeupImm)>;
+
+def HasSBarrierLeaveImm : Predicate<"Subtarget->hasSBarrierLeaveImm()">,
+  AssemblerPredicate<(all_of FeatureSBarrierLeaveImm)>;
+
 def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
   AssemblerPredicate<(all_of FeatureWaitXcnt)>;
 
@@ -3423,6 +3494,8 @@ def HasUnalignedDS2Bug : Predicate<"Subtarget->hasUnalignedDS2Bug()">,
 
 def NotHasUnalignedDS2Bug : Predicate<"!Subtarget->hasUnalignedDS2Bug()">,
  AssemblerPredicate<(not FeatureGFX1250Insts)>;
+def HasSWakeupBarrier : Predicate<"Subtarget->hasSWakeupBarrier()">,
+                       AssemblerPredicate<(all_of FeatureSWakeupBarrier)>;
 
 def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of FeatureRequiresAlignedVGPRs)>;

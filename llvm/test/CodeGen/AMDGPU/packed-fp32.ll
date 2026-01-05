@@ -5,7 +5,9 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck -enable-var-scope -check-prefixes=PACKED,PACKED-SDAG,GFX942-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck -enable-var-scope -check-prefixes=PACKED,PACKED-GISEL,GFX942-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250,GFX1250-SDAG %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1260 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1260,GFX1260-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250,GFX1250-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1260 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1260,GFX1260-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1300 < %s | FileCheck -check-prefixes=GFX13,GFX13-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1300 < %s | FileCheck -check-prefixes=GFX13,GFX13-GISEL %s
 
@@ -45,6 +47,18 @@ define amdgpu_kernel void @fadd_v2_vv(ptr addrspace(1) %a) {
 ; GFX1250-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[0:1]
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-NEXT:    s_endpgm
+;
+; GFX1260-LABEL: fadd_v2_vv:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[0:1]
+; GFX1260-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
+; GFX1260-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fadd_v2_vv:
 ; GFX13-SDAG:       ; %bb.0:
@@ -113,6 +127,23 @@ define amdgpu_kernel void @fadd_v2_vs(ptr addrspace(1) %a, <2 x float> %x) {
 ; GFX1250-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-NEXT:    s_endpgm
+<<<<<<< HEAD
+=======
+;
+; GFX1260-LABEL: fadd_v2_vs:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1260-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-NEXT:    s_endpgm
+>>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ;
 ; GFX13-SDAG-LABEL: fadd_v2_vs:
 ; GFX13-SDAG:       ; %bb.0:
@@ -205,6 +236,25 @@ define amdgpu_kernel void @fadd_v4_vs(ptr addrspace(1) %a, <4 x float> %x) {
 ; GFX1250-SDAG-NEXT:    global_store_b128 v8, v[0:3], s[6:7] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fadd_v4_vs:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_clause 0x1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[6:7], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b128 v[0:3], v8, s[6:7] scale_offset
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[6:7], s[0:1]
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v4, s2
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v5, s3
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[2:3], v[2:3], v[4:5]
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[6:7]
+; GFX1260-SDAG-NEXT:    global_store_b128 v8, v[0:3], s[6:7] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fadd_v4_vs:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -222,6 +272,24 @@ define amdgpu_kernel void @fadd_v4_vs(ptr addrspace(1) %a, <4 x float> %x) {
 ; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[2:3], v[2:3], v[6:7]
 ; GFX1250-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[6:7] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fadd_v4_vs:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_clause 0x1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[6:7], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b128 v[0:3], v8, s[6:7] scale_offset
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[4:5]
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[2:3], v[2:3], v[6:7]
+; GFX1260-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[6:7] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fadd_v4_vs:
 ; GFX13-SDAG:       ; %bb.0:
@@ -486,6 +554,87 @@ define amdgpu_kernel void @fadd_v32_vs(ptr addrspace(1) %a, <32 x float> %x) {
 ; GFX1250-SDAG-NEXT:    global_store_b128 v56, v[0:3], s[0:1] offset:16
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fadd_v32_vs:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_clause 0x1
+; GFX1260-SDAG-NEXT:    s_load_b512 s[36:51], s[4:5], 0xa4
+; GFX1260-SDAG-NEXT:    s_load_b512 s[8:23], s[4:5], 0xe4
+; GFX1260-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-SDAG-NEXT:    v_lshlrev_b32_e32 v56, 7, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    s_clause 0x7
+; GFX1260-SDAG-NEXT:    global_load_b128 v[0:3], v56, s[0:1] offset:16
+; GFX1260-SDAG-NEXT:    global_load_b128 v[4:7], v56, s[0:1] offset:48
+; GFX1260-SDAG-NEXT:    global_load_b128 v[8:11], v56, s[0:1] offset:32
+; GFX1260-SDAG-NEXT:    global_load_b128 v[12:15], v56, s[0:1]
+; GFX1260-SDAG-NEXT:    global_load_b128 v[16:19], v56, s[0:1] offset:80
+; GFX1260-SDAG-NEXT:    global_load_b128 v[20:23], v56, s[0:1] offset:96
+; GFX1260-SDAG-NEXT:    global_load_b128 v[24:27], v56, s[0:1] offset:64
+; GFX1260-SDAG-NEXT:    global_load_b128 v[28:31], v56, s[0:1] offset:112
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v32, s40
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v33, s41
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v34, s42
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v35, s43
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v40, s50
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v41, s51
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v38, s48
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v39, s49
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v52, s20
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v53, s21
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v54, s22
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v55, s23
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v50, s10
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v51, s11
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v46, s12
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v47, s13
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v48, s14
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v49, s15
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v42, s44
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v43, s45
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v44, s46
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v45, s47
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v36, s38
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v37, s39
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x7
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[32:33]
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[2:3], v[2:3], v[34:35]
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v32, s16
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v33, s17
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v34, s18
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v35, s19
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x6
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[6:7], v[6:7], v[40:41]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[40:41], s[8:9]
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[4:5], v[4:5], v[38:39]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[38:39], s[36:37]
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x2
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[20:21], v[20:21], v[32:33]
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[22:23], v[22:23], v[34:35]
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[28:29], v[28:29], v[52:53]
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[30:31], v[30:31], v[54:55]
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[26:27], v[26:27], v[50:51]
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[24:25], v[24:25], v[40:41]
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[16:17], v[16:17], v[46:47]
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[18:19], v[18:19], v[48:49]
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[8:9], v[8:9], v[42:43]
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[10:11], v[10:11], v[44:45]
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[14:15], v[14:15], v[36:37]
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[12:13], v[12:13], v[38:39]
+; GFX1260-SDAG-NEXT:    s_clause 0x7
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[20:23], s[0:1] offset:96
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[28:31], s[0:1] offset:112
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[24:27], s[0:1] offset:64
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[16:19], s[0:1] offset:80
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[8:11], s[0:1] offset:32
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[4:7], s[0:1] offset:48
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[12:15], s[0:1]
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[0:3], s[0:1] offset:16
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fadd_v32_vs:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -556,6 +705,77 @@ define amdgpu_kernel void @fadd_v32_vs(ptr addrspace(1) %a, <32 x float> %x) {
 ; GFX1250-GISEL-NEXT:    global_store_b128 v56, v[24:27], s[0:1] offset:96
 ; GFX1250-GISEL-NEXT:    global_store_b128 v56, v[28:31], s[0:1] offset:112
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fadd_v32_vs:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_clause 0x1
+; GFX1260-GISEL-NEXT:    s_load_b512 s[36:51], s[4:5], 0xa4
+; GFX1260-GISEL-NEXT:    s_load_b512 s[8:23], s[4:5], 0xe4
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_lshlrev_b32_e32 v56, 7, v0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    s_clause 0x7
+; GFX1260-GISEL-NEXT:    global_load_b128 v[0:3], v56, s[0:1]
+; GFX1260-GISEL-NEXT:    global_load_b128 v[4:7], v56, s[0:1] offset:16
+; GFX1260-GISEL-NEXT:    global_load_b128 v[8:11], v56, s[0:1] offset:32
+; GFX1260-GISEL-NEXT:    global_load_b128 v[12:15], v56, s[0:1] offset:48
+; GFX1260-GISEL-NEXT:    global_load_b128 v[16:19], v56, s[0:1] offset:64
+; GFX1260-GISEL-NEXT:    global_load_b128 v[20:23], v56, s[0:1] offset:80
+; GFX1260-GISEL-NEXT:    global_load_b128 v[24:27], v56, s[0:1] offset:96
+; GFX1260-GISEL-NEXT:    global_load_b128 v[28:31], v56, s[0:1] offset:112
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[36:37]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[38:39]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[36:37], s[40:41]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[38:39], s[42:43]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[40:41], s[44:45]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[42:43], s[46:47]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[44:45], s[48:49]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[46:47], s[50:51]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[48:49], s[8:9]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[50:51], s[10:11]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[52:53], s[12:13]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[54:55], s[14:15]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x7
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[32:33]
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[2:3], v[2:3], v[34:35]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[16:17]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[18:19]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x6
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[4:5], v[4:5], v[36:37]
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[6:7], v[6:7], v[38:39]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[36:37], s[20:21]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[38:39], s[22:23]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x5
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[8:9], v[8:9], v[40:41]
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[10:11], v[10:11], v[42:43]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x4
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[12:13], v[12:13], v[44:45]
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[14:15], v[14:15], v[46:47]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x3
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[16:17], v[16:17], v[48:49]
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[18:19], v[18:19], v[50:51]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x2
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[20:21], v[20:21], v[52:53]
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[22:23], v[22:23], v[54:55]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x1
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[24:25], v[24:25], v[32:33]
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[26:27], v[26:27], v[34:35]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[28:29], v[28:29], v[36:37]
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[30:31], v[30:31], v[38:39]
+; GFX1260-GISEL-NEXT:    s_clause 0x7
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[0:3], s[0:1]
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[4:7], s[0:1] offset:16
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[8:11], s[0:1] offset:32
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[12:15], s[0:1] offset:48
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[16:19], s[0:1] offset:64
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[20:23], s[0:1] offset:80
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[24:27], s[0:1] offset:96
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[28:31], s[0:1] offset:112
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fadd_v32_vs:
 ; GFX13-SDAG:       ; %bb.0:
@@ -723,6 +943,19 @@ define amdgpu_kernel void @fadd_v2_v_imm(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fadd_v2_v_imm:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_mov_b32 s2, 0x42c80000
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], s[2:3] op_sel_hi:[1,0]
+; GFX1260-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fadd_v2_v_imm:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -738,6 +971,22 @@ define amdgpu_kernel void @fadd_v2_v_imm(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fadd_v2_v_imm:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_mov_b32 s2, 0x42c80000
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1260-GISEL-NEXT:    s_mov_b32 s3, s2
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fadd_v2_v_imm:
 ; GFX13-SDAG:       ; %bb.0:
@@ -818,6 +1067,18 @@ define amdgpu_kernel void @fadd_v2_v_v_splat(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v0, v[2:3], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fadd_v2_v_v_splat:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[2:3], v0, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[2:3], v[2:3], v[0:1] op_sel_hi:[1,0]
+; GFX1260-SDAG-NEXT:    global_store_b64 v0, v[2:3], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fadd_v2_v_v_splat:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -831,6 +1092,20 @@ define amdgpu_kernel void @fadd_v2_v_v_splat(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[2:3], v[2:3], v[0:1]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v0, v[2:3], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fadd_v2_v_v_splat:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[2:3], v0, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[2:3], v[2:3], v[0:1]
+; GFX1260-GISEL-NEXT:    global_store_b64 v0, v[2:3], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fadd_v2_v_v_splat:
 ; GFX13-SDAG:       ; %bb.0:
@@ -915,6 +1190,18 @@ define amdgpu_kernel void @fadd_v2_v_lit_splat(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fadd_v2_v_lit_splat:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 1.0 op_sel_hi:[1,0]
+; GFX1260-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fadd_v2_v_lit_splat:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -930,6 +1217,22 @@ define amdgpu_kernel void @fadd_v2_v_lit_splat(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fadd_v2_v_lit_splat:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_mov_b32 s2, 1.0
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1260-GISEL-NEXT:    s_mov_b32 s3, s2
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fadd_v2_v_lit_splat:
 ; GFX13-SDAG:       ; %bb.0:
@@ -999,6 +1302,19 @@ define amdgpu_kernel void @fadd_v2_v_lit_hi0(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fadd_v2_v_lit_hi0:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[2:3], 0x3f800000
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fadd_v2_v_lit_hi0:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -1013,6 +1329,21 @@ define amdgpu_kernel void @fadd_v2_v_lit_hi0(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fadd_v2_v_lit_hi0:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_mov_b64 s[2:3], 0x3f800000
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fadd_v2_v_lit_hi0:
 ; GFX13-SDAG:       ; %bb.0:
@@ -1083,6 +1414,19 @@ define amdgpu_kernel void @fadd_v2_v_lit_lo0(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fadd_v2_v_lit_lo0:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[2:3], 0x3f80000000000000
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fadd_v2_v_lit_lo0:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -1097,6 +1441,21 @@ define amdgpu_kernel void @fadd_v2_v_lit_lo0(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fadd_v2_v_lit_lo0:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_mov_b64 s[2:3], 0x3f80000000000000
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fadd_v2_v_lit_lo0:
 ; GFX13-SDAG:       ; %bb.0:
@@ -1167,6 +1526,19 @@ define amdgpu_kernel void @fadd_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fadd_v2_v_unfoldable_lit:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[2:3], 0x400000003f800000
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fadd_v2_v_unfoldable_lit:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -1181,6 +1553,21 @@ define amdgpu_kernel void @fadd_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fadd_v2_v_unfoldable_lit:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_mov_b64 s[2:3], 0x400000003f800000
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fadd_v2_v_unfoldable_lit:
 ; GFX13-SDAG:       ; %bb.0:
@@ -1266,6 +1653,18 @@ define amdgpu_kernel void @fadd_v2_v_fneg(ptr addrspace(1) %a, float %x) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fadd_v2_v_fneg:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], s[2:3] op_sel_hi:[1,0] neg_lo:[0,1] neg_hi:[0,1]
+; GFX1260-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fadd_v2_v_fneg:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -1280,6 +1679,21 @@ define amdgpu_kernel void @fadd_v2_v_fneg(ptr addrspace(1) %a, float %x) {
 ; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fadd_v2_v_fneg:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    v_max_num_f32_e64 v2, -s2, -s2
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v3, v2
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fadd_v2_v_fneg:
 ; GFX13-SDAG:       ; %bb.0:
@@ -1369,6 +1783,18 @@ define amdgpu_kernel void @fadd_v2_v_fneg_lo(ptr addrspace(1) %a, float %x) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fadd_v2_v_fneg_lo:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], s[2:3] op_sel_hi:[1,0] neg_lo:[0,1]
+; GFX1260-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fadd_v2_v_fneg_lo:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -1383,6 +1809,21 @@ define amdgpu_kernel void @fadd_v2_v_fneg_lo(ptr addrspace(1) %a, float %x) {
 ; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fadd_v2_v_fneg_lo:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v3, s2
+; GFX1260-GISEL-NEXT:    v_max_num_f32_e64 v2, -s2, -s2
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fadd_v2_v_fneg_lo:
 ; GFX13-SDAG:       ; %bb.0:
@@ -1472,6 +1913,18 @@ define amdgpu_kernel void @fadd_v2_v_fneg_hi(ptr addrspace(1) %a, float %x) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fadd_v2_v_fneg_hi:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], s[2:3] op_sel_hi:[1,0] neg_hi:[0,1]
+; GFX1260-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fadd_v2_v_fneg_hi:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -1486,6 +1939,21 @@ define amdgpu_kernel void @fadd_v2_v_fneg_hi(ptr addrspace(1) %a, float %x) {
 ; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fadd_v2_v_fneg_hi:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX1260-GISEL-NEXT:    v_max_num_f32_e64 v3, -s2, -s2
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fadd_v2_v_fneg_hi:
 ; GFX13-SDAG:       ; %bb.0:
@@ -1574,6 +2042,20 @@ define amdgpu_kernel void @fadd_v2_v_fneg_lo2(ptr addrspace(1) %a, float %x, flo
 ; GFX1250-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fadd_v2_v_fneg_lo2:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3] neg_lo:[0,1]
+; GFX1260-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fadd_v2_v_fneg_lo2:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -1588,6 +2070,21 @@ define amdgpu_kernel void @fadd_v2_v_fneg_lo2(ptr addrspace(1) %a, float %x, flo
 ; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fadd_v2_v_fneg_lo2:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    v_max_num_f32_e64 v2, -s2, -s2
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fadd_v2_v_fneg_lo2:
 ; GFX13-SDAG:       ; %bb.0:
@@ -1676,6 +2173,20 @@ define amdgpu_kernel void @fadd_v2_v_fneg_hi2(ptr addrspace(1) %a, float %x, flo
 ; GFX1250-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fadd_v2_v_fneg_hi2:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3] op_sel:[0,1] op_sel_hi:[1,0] neg_hi:[0,1]
+; GFX1260-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fadd_v2_v_fneg_hi2:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -1690,6 +2201,21 @@ define amdgpu_kernel void @fadd_v2_v_fneg_hi2(ptr addrspace(1) %a, float %x, flo
 ; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fadd_v2_v_fneg_hi2:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    v_max_num_f32_e64 v3, -s2, -s2
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fadd_v2_v_fneg_hi2:
 ; GFX13-SDAG:       ; %bb.0:
@@ -1762,6 +2288,18 @@ define amdgpu_kernel void @fmul_v2_vv(ptr addrspace(1) %a) {
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-NEXT:    s_endpgm
 ;
+; GFX1260-LABEL: fmul_v2_vv:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[0:1]
+; GFX1260-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
+; GFX1260-NEXT:    s_endpgm
+;
 ; GFX13-SDAG-LABEL: fmul_v2_vv:
 ; GFX13-SDAG:       ; %bb.0:
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
@@ -1829,6 +2367,23 @@ define amdgpu_kernel void @fmul_v2_vs(ptr addrspace(1) %a, <2 x float> %x) {
 ; GFX1250-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-NEXT:    s_endpgm
+<<<<<<< HEAD
+=======
+;
+; GFX1260-LABEL: fmul_v2_vs:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1260-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-NEXT:    s_endpgm
+>>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ;
 ; GFX13-SDAG-LABEL: fmul_v2_vs:
 ; GFX13-SDAG:       ; %bb.0:
@@ -1921,6 +2476,25 @@ define amdgpu_kernel void @fmul_v4_vs(ptr addrspace(1) %a, <4 x float> %x) {
 ; GFX1250-SDAG-NEXT:    global_store_b128 v8, v[0:3], s[6:7] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fmul_v4_vs:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_clause 0x1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[6:7], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b128 v[0:3], v8, s[6:7] scale_offset
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[6:7], s[0:1]
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v4, s2
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v5, s3
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[2:3], v[2:3], v[4:5]
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[6:7]
+; GFX1260-SDAG-NEXT:    global_store_b128 v8, v[0:3], s[6:7] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fmul_v4_vs:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -1938,6 +2512,24 @@ define amdgpu_kernel void @fmul_v4_vs(ptr addrspace(1) %a, <4 x float> %x) {
 ; GFX1250-GISEL-NEXT:    v_pk_mul_f32 v[2:3], v[2:3], v[6:7]
 ; GFX1250-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[6:7] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fmul_v4_vs:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_clause 0x1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[6:7], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b128 v[0:3], v8, s[6:7] scale_offset
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[4:5]
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[2:3], v[2:3], v[6:7]
+; GFX1260-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[6:7] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fmul_v4_vs:
 ; GFX13-SDAG:       ; %bb.0:
@@ -2202,6 +2794,87 @@ define amdgpu_kernel void @fmul_v32_vs(ptr addrspace(1) %a, <32 x float> %x) {
 ; GFX1250-SDAG-NEXT:    global_store_b128 v56, v[0:3], s[0:1] offset:16
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fmul_v32_vs:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_clause 0x1
+; GFX1260-SDAG-NEXT:    s_load_b512 s[36:51], s[4:5], 0xa4
+; GFX1260-SDAG-NEXT:    s_load_b512 s[8:23], s[4:5], 0xe4
+; GFX1260-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-SDAG-NEXT:    v_lshlrev_b32_e32 v56, 7, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    s_clause 0x7
+; GFX1260-SDAG-NEXT:    global_load_b128 v[0:3], v56, s[0:1] offset:16
+; GFX1260-SDAG-NEXT:    global_load_b128 v[4:7], v56, s[0:1] offset:48
+; GFX1260-SDAG-NEXT:    global_load_b128 v[8:11], v56, s[0:1] offset:32
+; GFX1260-SDAG-NEXT:    global_load_b128 v[12:15], v56, s[0:1]
+; GFX1260-SDAG-NEXT:    global_load_b128 v[16:19], v56, s[0:1] offset:80
+; GFX1260-SDAG-NEXT:    global_load_b128 v[20:23], v56, s[0:1] offset:96
+; GFX1260-SDAG-NEXT:    global_load_b128 v[24:27], v56, s[0:1] offset:64
+; GFX1260-SDAG-NEXT:    global_load_b128 v[28:31], v56, s[0:1] offset:112
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v32, s40
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v33, s41
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v34, s42
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v35, s43
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v40, s50
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v41, s51
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v38, s48
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v39, s49
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v52, s20
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v53, s21
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v54, s22
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v55, s23
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v50, s10
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v51, s11
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v46, s12
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v47, s13
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v48, s14
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v49, s15
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v42, s44
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v43, s45
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v44, s46
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v45, s47
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v36, s38
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v37, s39
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x7
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[32:33]
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[2:3], v[2:3], v[34:35]
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v32, s16
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v33, s17
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v34, s18
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v35, s19
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x6
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[6:7], v[6:7], v[40:41]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[40:41], s[8:9]
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[4:5], v[4:5], v[38:39]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[38:39], s[36:37]
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x2
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[20:21], v[20:21], v[32:33]
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[22:23], v[22:23], v[34:35]
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[28:29], v[28:29], v[52:53]
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[30:31], v[30:31], v[54:55]
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[26:27], v[26:27], v[50:51]
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[24:25], v[24:25], v[40:41]
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[16:17], v[16:17], v[46:47]
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[18:19], v[18:19], v[48:49]
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[8:9], v[8:9], v[42:43]
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[10:11], v[10:11], v[44:45]
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[14:15], v[14:15], v[36:37]
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[12:13], v[12:13], v[38:39]
+; GFX1260-SDAG-NEXT:    s_clause 0x7
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[20:23], s[0:1] offset:96
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[28:31], s[0:1] offset:112
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[24:27], s[0:1] offset:64
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[16:19], s[0:1] offset:80
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[8:11], s[0:1] offset:32
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[4:7], s[0:1] offset:48
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[12:15], s[0:1]
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[0:3], s[0:1] offset:16
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fmul_v32_vs:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -2272,6 +2945,77 @@ define amdgpu_kernel void @fmul_v32_vs(ptr addrspace(1) %a, <32 x float> %x) {
 ; GFX1250-GISEL-NEXT:    global_store_b128 v56, v[24:27], s[0:1] offset:96
 ; GFX1250-GISEL-NEXT:    global_store_b128 v56, v[28:31], s[0:1] offset:112
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fmul_v32_vs:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_clause 0x1
+; GFX1260-GISEL-NEXT:    s_load_b512 s[36:51], s[4:5], 0xa4
+; GFX1260-GISEL-NEXT:    s_load_b512 s[8:23], s[4:5], 0xe4
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_lshlrev_b32_e32 v56, 7, v0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    s_clause 0x7
+; GFX1260-GISEL-NEXT:    global_load_b128 v[0:3], v56, s[0:1]
+; GFX1260-GISEL-NEXT:    global_load_b128 v[4:7], v56, s[0:1] offset:16
+; GFX1260-GISEL-NEXT:    global_load_b128 v[8:11], v56, s[0:1] offset:32
+; GFX1260-GISEL-NEXT:    global_load_b128 v[12:15], v56, s[0:1] offset:48
+; GFX1260-GISEL-NEXT:    global_load_b128 v[16:19], v56, s[0:1] offset:64
+; GFX1260-GISEL-NEXT:    global_load_b128 v[20:23], v56, s[0:1] offset:80
+; GFX1260-GISEL-NEXT:    global_load_b128 v[24:27], v56, s[0:1] offset:96
+; GFX1260-GISEL-NEXT:    global_load_b128 v[28:31], v56, s[0:1] offset:112
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[36:37]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[38:39]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[36:37], s[40:41]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[38:39], s[42:43]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[40:41], s[44:45]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[42:43], s[46:47]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[44:45], s[48:49]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[46:47], s[50:51]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[48:49], s[8:9]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[50:51], s[10:11]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[52:53], s[12:13]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[54:55], s[14:15]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x7
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[32:33]
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[2:3], v[2:3], v[34:35]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[16:17]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[18:19]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x6
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[4:5], v[4:5], v[36:37]
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[6:7], v[6:7], v[38:39]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[36:37], s[20:21]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[38:39], s[22:23]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x5
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[8:9], v[8:9], v[40:41]
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[10:11], v[10:11], v[42:43]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x4
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[12:13], v[12:13], v[44:45]
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[14:15], v[14:15], v[46:47]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x3
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[16:17], v[16:17], v[48:49]
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[18:19], v[18:19], v[50:51]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x2
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[20:21], v[20:21], v[52:53]
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[22:23], v[22:23], v[54:55]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x1
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[24:25], v[24:25], v[32:33]
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[26:27], v[26:27], v[34:35]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[28:29], v[28:29], v[36:37]
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[30:31], v[30:31], v[38:39]
+; GFX1260-GISEL-NEXT:    s_clause 0x7
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[0:3], s[0:1]
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[4:7], s[0:1] offset:16
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[8:11], s[0:1] offset:32
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[12:15], s[0:1] offset:48
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[16:19], s[0:1] offset:64
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[20:23], s[0:1] offset:80
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[24:27], s[0:1] offset:96
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[28:31], s[0:1] offset:112
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fmul_v32_vs:
 ; GFX13-SDAG:       ; %bb.0:
@@ -2438,6 +3182,19 @@ define amdgpu_kernel void @fmul_v2_v_imm(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fmul_v2_v_imm:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_mov_b32 s2, 0x42c80000
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], s[2:3] op_sel_hi:[1,0]
+; GFX1260-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fmul_v2_v_imm:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -2453,6 +3210,22 @@ define amdgpu_kernel void @fmul_v2_v_imm(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fmul_v2_v_imm:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_mov_b32 s2, 0x42c80000
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1260-GISEL-NEXT:    s_mov_b32 s3, s2
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fmul_v2_v_imm:
 ; GFX13-SDAG:       ; %bb.0:
@@ -2533,6 +3306,18 @@ define amdgpu_kernel void @fmul_v2_v_v_splat(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v0, v[2:3], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fmul_v2_v_v_splat:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[2:3], v0, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[2:3], v[2:3], v[0:1] op_sel_hi:[1,0]
+; GFX1260-SDAG-NEXT:    global_store_b64 v0, v[2:3], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fmul_v2_v_v_splat:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -2546,6 +3331,20 @@ define amdgpu_kernel void @fmul_v2_v_v_splat(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    v_pk_mul_f32 v[2:3], v[2:3], v[0:1]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v0, v[2:3], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fmul_v2_v_v_splat:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[2:3], v0, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[2:3], v[2:3], v[0:1]
+; GFX1260-GISEL-NEXT:    global_store_b64 v0, v[2:3], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fmul_v2_v_v_splat:
 ; GFX13-SDAG:       ; %bb.0:
@@ -2630,6 +3429,18 @@ define amdgpu_kernel void @fmul_v2_v_lit_splat(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fmul_v2_v_lit_splat:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], 4.0 op_sel_hi:[1,0]
+; GFX1260-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fmul_v2_v_lit_splat:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -2645,6 +3456,22 @@ define amdgpu_kernel void @fmul_v2_v_lit_splat(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fmul_v2_v_lit_splat:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_mov_b32 s2, 4.0
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1260-GISEL-NEXT:    s_mov_b32 s3, s2
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fmul_v2_v_lit_splat:
 ; GFX13-SDAG:       ; %bb.0:
@@ -2715,6 +3542,19 @@ define amdgpu_kernel void @fmul_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fmul_v2_v_unfoldable_lit:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[2:3], 0x4040000040800000
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fmul_v2_v_unfoldable_lit:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -2729,6 +3569,21 @@ define amdgpu_kernel void @fmul_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fmul_v2_v_unfoldable_lit:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_mov_b64 s[2:3], 0x4040000040800000
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fmul_v2_v_unfoldable_lit:
 ; GFX13-SDAG:       ; %bb.0:
@@ -2813,6 +3668,18 @@ define amdgpu_kernel void @fmul_v2_v_fneg(ptr addrspace(1) %a, float %x) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fmul_v2_v_fneg:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], s[2:3] op_sel_hi:[1,0] neg_lo:[0,1] neg_hi:[0,1]
+; GFX1260-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fmul_v2_v_fneg:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -2827,6 +3694,21 @@ define amdgpu_kernel void @fmul_v2_v_fneg(ptr addrspace(1) %a, float %x) {
 ; GFX1250-GISEL-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fmul_v2_v_fneg:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    v_max_num_f32_e64 v2, -s2, -s2
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v3, v2
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fmul_v2_v_fneg:
 ; GFX13-SDAG:       ; %bb.0:
@@ -2900,6 +3782,18 @@ define amdgpu_kernel void @fma_v2_vv(ptr addrspace(1) %a) {
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-NEXT:    s_endpgm
 ;
+; GFX1260-LABEL: fma_v2_vv:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[0:1], v[0:1]
+; GFX1260-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
+; GFX1260-NEXT:    s_endpgm
+;
 ; GFX13-SDAG-LABEL: fma_v2_vv:
 ; GFX13-SDAG:       ; %bb.0:
 ; GFX13-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
@@ -2967,6 +3861,20 @@ define amdgpu_kernel void @fma_v2_vs(ptr addrspace(1) %a, <2 x float> %x) {
 ; GFX1250-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[2:3]
 ; GFX1250-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-NEXT:    s_endpgm
+;
+; GFX1260-LABEL: fma_v2_vs:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1260-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[2:3]
+; GFX1260-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fma_v2_vs:
 ; GFX13-SDAG:       ; %bb.0:
@@ -3061,6 +3969,24 @@ define amdgpu_kernel void @fma_v4_vs(ptr addrspace(1) %a, <4 x float> %x) {
 ; GFX1250-SDAG-NEXT:    global_store_b128 v8, v[0:3], s[6:7] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fma_v4_vs:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_clause 0x1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[6:7], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b128 v[0:3], v8, s[6:7] scale_offset
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[6:7], s[0:1]
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[2:3], v[2:3], v[4:5], v[4:5]
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[6:7], v[6:7]
+; GFX1260-SDAG-NEXT:    global_store_b128 v8, v[0:3], s[6:7] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fma_v4_vs:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -3078,6 +4004,24 @@ define amdgpu_kernel void @fma_v4_vs(ptr addrspace(1) %a, <4 x float> %x) {
 ; GFX1250-GISEL-NEXT:    v_pk_fma_f32 v[2:3], v[2:3], v[6:7], v[6:7]
 ; GFX1250-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[6:7] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fma_v4_vs:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_clause 0x1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[6:7], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b128 v[0:3], v8, s[6:7] scale_offset
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[4:5], v[4:5]
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[2:3], v[2:3], v[6:7], v[6:7]
+; GFX1260-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[6:7] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fma_v4_vs:
 ; GFX13-SDAG:       ; %bb.0:
@@ -3345,6 +4289,72 @@ define amdgpu_kernel void @fma_v32_vs(ptr addrspace(1) %a, <32 x float> %x) {
 ; GFX1250-SDAG-NEXT:    global_store_b128 v56, v[0:3], s[0:1] offset:16
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fma_v32_vs:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_clause 0x1
+; GFX1260-SDAG-NEXT:    s_load_b512 s[36:51], s[4:5], 0xa4
+; GFX1260-SDAG-NEXT:    s_load_b512 s[8:23], s[4:5], 0xe4
+; GFX1260-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-SDAG-NEXT:    v_lshlrev_b32_e32 v56, 7, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    s_clause 0x7
+; GFX1260-SDAG-NEXT:    global_load_b128 v[0:3], v56, s[0:1] offset:16
+; GFX1260-SDAG-NEXT:    global_load_b128 v[4:7], v56, s[0:1] offset:48
+; GFX1260-SDAG-NEXT:    global_load_b128 v[8:11], v56, s[0:1] offset:32
+; GFX1260-SDAG-NEXT:    global_load_b128 v[12:15], v56, s[0:1]
+; GFX1260-SDAG-NEXT:    global_load_b128 v[16:19], v56, s[0:1] offset:80
+; GFX1260-SDAG-NEXT:    global_load_b128 v[20:23], v56, s[0:1] offset:96
+; GFX1260-SDAG-NEXT:    global_load_b128 v[24:27], v56, s[0:1] offset:64
+; GFX1260-SDAG-NEXT:    global_load_b128 v[28:31], v56, s[0:1] offset:112
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[32:33], s[40:41]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[34:35], s[42:43]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[40:41], s[50:51]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[38:39], s[48:49]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[52:53], s[20:21]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[54:55], s[22:23]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[50:51], s[10:11]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[46:47], s[12:13]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[48:49], s[14:15]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[42:43], s[44:45]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[44:45], s[46:47]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[36:37], s[38:39]
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x7
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[32:33], v[32:33]
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[2:3], v[2:3], v[34:35], v[34:35]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[32:33], s[16:17]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[34:35], s[18:19]
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x6
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[6:7], v[6:7], v[40:41], v[40:41]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[40:41], s[8:9]
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[4:5], v[4:5], v[38:39], v[38:39]
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[38:39], s[36:37]
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[28:29], v[28:29], v[52:53], v[52:53]
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[20:21], v[20:21], v[32:33], v[32:33]
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[22:23], v[22:23], v[34:35], v[34:35]
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[30:31], v[30:31], v[54:55], v[54:55]
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[26:27], v[26:27], v[50:51], v[50:51]
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[24:25], v[24:25], v[40:41], v[40:41]
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[16:17], v[16:17], v[46:47], v[46:47]
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[18:19], v[18:19], v[48:49], v[48:49]
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[8:9], v[8:9], v[42:43], v[42:43]
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[10:11], v[10:11], v[44:45], v[44:45]
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[14:15], v[14:15], v[36:37], v[36:37]
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[12:13], v[12:13], v[38:39], v[38:39]
+; GFX1260-SDAG-NEXT:    s_clause 0x7
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[20:23], s[0:1] offset:96
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[28:31], s[0:1] offset:112
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[24:27], s[0:1] offset:64
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[16:19], s[0:1] offset:80
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[8:11], s[0:1] offset:32
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[4:7], s[0:1] offset:48
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[12:15], s[0:1]
+; GFX1260-SDAG-NEXT:    global_store_b128 v56, v[0:3], s[0:1] offset:16
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fma_v32_vs:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -3415,6 +4425,77 @@ define amdgpu_kernel void @fma_v32_vs(ptr addrspace(1) %a, <32 x float> %x) {
 ; GFX1250-GISEL-NEXT:    global_store_b128 v56, v[24:27], s[0:1] offset:96
 ; GFX1250-GISEL-NEXT:    global_store_b128 v56, v[28:31], s[0:1] offset:112
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fma_v32_vs:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_clause 0x1
+; GFX1260-GISEL-NEXT:    s_load_b512 s[36:51], s[4:5], 0xa4
+; GFX1260-GISEL-NEXT:    s_load_b512 s[8:23], s[4:5], 0xe4
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_lshlrev_b32_e32 v56, 7, v0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    s_clause 0x7
+; GFX1260-GISEL-NEXT:    global_load_b128 v[0:3], v56, s[0:1]
+; GFX1260-GISEL-NEXT:    global_load_b128 v[4:7], v56, s[0:1] offset:16
+; GFX1260-GISEL-NEXT:    global_load_b128 v[8:11], v56, s[0:1] offset:32
+; GFX1260-GISEL-NEXT:    global_load_b128 v[12:15], v56, s[0:1] offset:48
+; GFX1260-GISEL-NEXT:    global_load_b128 v[16:19], v56, s[0:1] offset:64
+; GFX1260-GISEL-NEXT:    global_load_b128 v[20:23], v56, s[0:1] offset:80
+; GFX1260-GISEL-NEXT:    global_load_b128 v[24:27], v56, s[0:1] offset:96
+; GFX1260-GISEL-NEXT:    global_load_b128 v[28:31], v56, s[0:1] offset:112
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[36:37]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[38:39]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[36:37], s[40:41]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[38:39], s[42:43]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[40:41], s[44:45]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[42:43], s[46:47]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[44:45], s[48:49]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[46:47], s[50:51]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[48:49], s[8:9]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[50:51], s[10:11]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[52:53], s[12:13]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[54:55], s[14:15]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x7
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[32:33], v[32:33]
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[2:3], v[2:3], v[34:35], v[34:35]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[16:17]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[18:19]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x6
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[4:5], v[4:5], v[36:37], v[36:37]
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[6:7], v[6:7], v[38:39], v[38:39]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[36:37], s[20:21]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[38:39], s[22:23]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x5
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[8:9], v[8:9], v[40:41], v[40:41]
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[10:11], v[10:11], v[42:43], v[42:43]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x4
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[12:13], v[12:13], v[44:45], v[44:45]
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[14:15], v[14:15], v[46:47], v[46:47]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x3
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[16:17], v[16:17], v[48:49], v[48:49]
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[18:19], v[18:19], v[50:51], v[50:51]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x2
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[20:21], v[20:21], v[52:53], v[52:53]
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[22:23], v[22:23], v[54:55], v[54:55]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x1
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[24:25], v[24:25], v[32:33], v[32:33]
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[26:27], v[26:27], v[34:35], v[34:35]
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[28:29], v[28:29], v[36:37], v[36:37]
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[30:31], v[30:31], v[38:39], v[38:39]
+; GFX1260-GISEL-NEXT:    s_clause 0x7
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[0:3], s[0:1]
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[4:7], s[0:1] offset:16
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[8:11], s[0:1] offset:32
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[12:15], s[0:1] offset:48
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[16:19], s[0:1] offset:64
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[20:23], s[0:1] offset:80
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[24:27], s[0:1] offset:96
+; GFX1260-GISEL-NEXT:    global_store_b128 v56, v[28:31], s[0:1] offset:112
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fma_v32_vs:
 ; GFX13-SDAG:       ; %bb.0:
@@ -3639,6 +4720,21 @@ define amdgpu_kernel void @fma_v2_v_imm(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fma_v2_v_imm:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_mov_b32 s2, 0x43480000
+; GFX1260-SDAG-NEXT:    s_wait_xcnt 0x0
+; GFX1260-SDAG-NEXT:    s_mov_b32 s4, 0x42c80000
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], s[4:5], s[2:3] op_sel_hi:[1,0,0]
+; GFX1260-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fma_v2_v_imm:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -3657,6 +4753,25 @@ define amdgpu_kernel void @fma_v2_v_imm(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v6, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fma_v2_v_imm:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v6, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_mov_b32 s2, 0x42c80000
+; GFX1260-GISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1260-GISEL-NEXT:    s_mov_b32 s4, 0x43480000
+; GFX1260-GISEL-NEXT:    s_mov_b32 s3, s2
+; GFX1260-GISEL-NEXT:    s_mov_b32 s5, s4
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v6, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
+; GFX1260-GISEL-NEXT:    global_store_b64 v6, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fma_v2_v_imm:
 ; GFX13-SDAG:       ; %bb.0:
@@ -3739,6 +4854,18 @@ define amdgpu_kernel void @fma_v2_v_v_splat(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v0, v[2:3], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fma_v2_v_v_splat:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[2:3], v0, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[2:3], v[2:3], v[0:1], v[0:1] op_sel_hi:[1,0,0]
+; GFX1260-SDAG-NEXT:    global_store_b64 v0, v[2:3], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fma_v2_v_v_splat:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -3752,6 +4879,20 @@ define amdgpu_kernel void @fma_v2_v_v_splat(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    v_pk_fma_f32 v[2:3], v[2:3], v[0:1], v[0:1]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v0, v[2:3], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fma_v2_v_v_splat:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[2:3], v0, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[2:3], v[2:3], v[0:1], v[0:1]
+; GFX1260-GISEL-NEXT:    global_store_b64 v0, v[2:3], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fma_v2_v_v_splat:
 ; GFX13-SDAG:       ; %bb.0:
@@ -3856,6 +4997,18 @@ define amdgpu_kernel void @fma_v2_v_lit_splat(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fma_v2_v_lit_splat:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], 4.0, 1.0 op_sel_hi:[1,0,0]
+; GFX1260-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fma_v2_v_lit_splat:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -3874,6 +5027,25 @@ define amdgpu_kernel void @fma_v2_v_lit_splat(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v6, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fma_v2_v_lit_splat:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v6, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_mov_b32 s2, 4.0
+; GFX1260-GISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1260-GISEL-NEXT:    s_mov_b32 s4, 1.0
+; GFX1260-GISEL-NEXT:    s_mov_b32 s3, s2
+; GFX1260-GISEL-NEXT:    s_mov_b32 s5, s4
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v6, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
+; GFX1260-GISEL-NEXT:    global_store_b64 v6, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fma_v2_v_lit_splat:
 ; GFX13-SDAG:       ; %bb.0:
@@ -3984,6 +5156,20 @@ define amdgpu_kernel void @fma_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v6, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fma_v2_v_unfoldable_lit:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v6, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[2:3], 0x4040000040800000
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[4:5], 0x400000003f800000
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v6, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
+; GFX1260-SDAG-NEXT:    global_store_b64 v6, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fma_v2_v_unfoldable_lit:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -4000,6 +5186,23 @@ define amdgpu_kernel void @fma_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v6, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fma_v2_v_unfoldable_lit:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v6, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_mov_b64 s[2:3], 0x4040000040800000
+; GFX1260-GISEL-NEXT:    s_wait_xcnt 0x0
+; GFX1260-GISEL-NEXT:    s_mov_b64 s[4:5], 0x400000003f800000
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v6, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
+; GFX1260-GISEL-NEXT:    global_store_b64 v6, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fma_v2_v_unfoldable_lit:
 ; GFX13-SDAG:       ; %bb.0:
@@ -4087,6 +5290,18 @@ define amdgpu_kernel void @fma_v2_v_fneg(ptr addrspace(1) %a, float %x) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fma_v2_v_fneg:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], s[2:3], s[2:3] op_sel_hi:[1,0,0] neg_lo:[0,1,1] neg_hi:[0,1,1]
+; GFX1260-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fma_v2_v_fneg:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -4101,6 +5316,21 @@ define amdgpu_kernel void @fma_v2_v_fneg(ptr addrspace(1) %a, float %x) {
 ; GFX1250-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[2:3]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fma_v2_v_fneg:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    v_max_num_f32_e64 v2, -s2, -s2
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v3, v2
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[2:3]
+; GFX1260-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fma_v2_v_fneg:
 ; GFX13-SDAG:       ; %bb.0:
@@ -4197,6 +5427,21 @@ define amdgpu_kernel void @add_vector_neg_bitcast_scalar_lo(ptr addrspace(1) %ou
 ; GFX1250-SDAG-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: add_vector_neg_bitcast_scalar_lo:
+; GFX1260-SDAG:       ; %bb.0: ; %bb
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v3, 0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1260-SDAG-NEXT:    ds_load_b64 v[0:1], v0
+; GFX1260-SDAG-NEXT:    ds_load_b32 v2, v2
+; GFX1260-SDAG-NEXT:    s_wait_dscnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3] op_sel_hi:[1,0] neg_lo:[0,1] neg_hi:[0,1]
+; GFX1260-SDAG-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: add_vector_neg_bitcast_scalar_lo:
 ; GFX1250-GISEL:       ; %bb.0: ; %bb
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -4213,6 +5458,24 @@ define amdgpu_kernel void @add_vector_neg_bitcast_scalar_lo(ptr addrspace(1) %ou
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: add_vector_neg_bitcast_scalar_lo:
+; GFX1260-GISEL:       ; %bb.0: ; %bb
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1260-GISEL-NEXT:    ds_load_b64 v[0:1], v0
+; GFX1260-GISEL-NEXT:    ds_load_b32 v2, v2
+; GFX1260-GISEL-NEXT:    s_wait_dscnt 0x0
+; GFX1260-GISEL-NEXT:    v_max_num_f32_e64 v2, -v2, -v2
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v3, v2
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1260-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: add_vector_neg_bitcast_scalar_lo:
 ; GFX13-SDAG:       ; %bb.0: ; %bb
@@ -4322,6 +5585,23 @@ define amdgpu_kernel void @fma_vector_vector_neg_scalar_lo_scalar_hi(ptr addrspa
 ; GFX1250-SDAG-NEXT:    global_store_b64 v6, v[0:1], s[0:1]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fma_vector_vector_neg_scalar_lo_scalar_hi:
+; GFX1260-SDAG:       ; %bb.0: ; %bb
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v6, 0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v2, s2
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v5, s3
+; GFX1260-SDAG-NEXT:    ds_load_b64 v[0:1], v2
+; GFX1260-SDAG-NEXT:    ds_load_b64 v[2:3], v2 offset:8
+; GFX1260-SDAG-NEXT:    ds_load_b32 v4, v5
+; GFX1260-SDAG-NEXT:    ds_load_b32 v5, v5 offset:8
+; GFX1260-SDAG-NEXT:    s_wait_dscnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GFX1260-SDAG-NEXT:    global_store_b64 v6, v[0:1], s[0:1]
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fma_vector_vector_neg_scalar_lo_scalar_hi:
 ; GFX1250-GISEL:       ; %bb.0: ; %bb
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -4339,6 +5619,25 @@ define amdgpu_kernel void @fma_vector_vector_neg_scalar_lo_scalar_hi(ptr addrspa
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fma_vector_vector_neg_scalar_lo_scalar_hi:
+; GFX1260-GISEL:       ; %bb.0: ; %bb
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v5, s3
+; GFX1260-GISEL-NEXT:    ds_load_b64 v[0:1], v2
+; GFX1260-GISEL-NEXT:    ds_load_b64 v[2:3], v2 offset:8
+; GFX1260-GISEL-NEXT:    ds_load_b32 v4, v5
+; GFX1260-GISEL-NEXT:    ds_load_b32 v5, v5 offset:8
+; GFX1260-GISEL-NEXT:    s_wait_dscnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[4:5], 1.0, v[4:5] op_sel_hi:[0,1]
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1260-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fma_vector_vector_neg_scalar_lo_scalar_hi:
 ; GFX13-SDAG:       ; %bb.0: ; %bb
@@ -4451,6 +5750,20 @@ define amdgpu_kernel void @shuffle_add_f32(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1250-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: shuffle_add_f32:
+; GFX1260-SDAG:       ; %bb.0: ; %bb
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v2, s2
+; GFX1260-SDAG-NEXT:    ds_load_b64 v[0:1], v2
+; GFX1260-SDAG-NEXT:    ds_load_b64 v[2:3], v2 offset:8
+; GFX1260-SDAG-NEXT:    s_wait_dscnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3] op_sel:[0,1] op_sel_hi:[1,0]
+; GFX1260-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1]
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: shuffle_add_f32:
 ; GFX1250-GISEL:       ; %bb.0: ; %bb
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -4464,6 +5777,20 @@ define amdgpu_kernel void @shuffle_add_f32(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: shuffle_add_f32:
+; GFX1260-GISEL:       ; %bb.0: ; %bb
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX1260-GISEL-NEXT:    ds_load_b64 v[0:1], v2
+; GFX1260-GISEL-NEXT:    ds_load_b64 v[2:3], v2 offset:8
+; GFX1260-GISEL-NEXT:    s_wait_dscnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3] op_sel:[0,1] op_sel_hi:[1,0]
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1260-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: shuffle_add_f32:
 ; GFX13-SDAG:       ; %bb.0: ; %bb
@@ -4569,6 +5896,23 @@ define amdgpu_kernel void @shuffle_neg_add_f32(ptr addrspace(1) %out, ptr addrsp
 ; GFX1250-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: shuffle_neg_add_f32:
+; GFX1260-SDAG:       ; %bb.0: ; %bb
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v2, s2
+; GFX1260-SDAG-NEXT:    ds_load_b64 v[0:1], v2
+; GFX1260-SDAG-NEXT:    s_wait_dscnt 0x0
+; GFX1260-SDAG-NEXT:    ds_load_b32 v3, v0
+; GFX1260-SDAG-NEXT:    s_wait_dscnt 0x0
+; GFX1260-SDAG-NEXT:    ds_load_b64 v[2:3], v2 offset:8
+; GFX1260-SDAG-NEXT:    s_wait_dscnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3] op_sel:[0,1] op_sel_hi:[1,0] neg_lo:[0,1] neg_hi:[0,1]
+; GFX1260-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1]
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: shuffle_neg_add_f32:
 ; GFX1250-GISEL:       ; %bb.0: ; %bb
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -4587,6 +5931,25 @@ define amdgpu_kernel void @shuffle_neg_add_f32(ptr addrspace(1) %out, ptr addrsp
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: shuffle_neg_add_f32:
+; GFX1260-GISEL:       ; %bb.0: ; %bb
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX1260-GISEL-NEXT:    ds_load_b64 v[0:1], v2
+; GFX1260-GISEL-NEXT:    s_wait_dscnt 0x0
+; GFX1260-GISEL-NEXT:    ds_load_b32 v3, v0
+; GFX1260-GISEL-NEXT:    s_wait_dscnt 0x0
+; GFX1260-GISEL-NEXT:    ds_load_b64 v[2:3], v2 offset:8
+; GFX1260-GISEL-NEXT:    s_wait_dscnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[2:3], 1.0, v[2:3] op_sel_hi:[0,1] neg_lo:[0,1] neg_hi:[0,1]
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3] op_sel:[0,1] op_sel_hi:[1,0]
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1260-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: shuffle_neg_add_f32:
 ; GFX13-SDAG:       ; %bb.0: ; %bb
@@ -4690,6 +6053,19 @@ define amdgpu_kernel void @fadd_fadd_fsub_0(<2 x float> %arg) {
 ; GFX1250-SDAG-NEXT:    flat_store_b64 v[0:1], v[0:1]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fadd_fadd_fsub_0:
+; GFX1260-SDAG:       ; %bb.0: ; %bb
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    s_add_f32 s1, s1, 0
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1260-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GFX1260-SDAG-NEXT:    s_add_f32 s1, s1, 0
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GFX1260-SDAG-NEXT:    flat_store_b64 v[0:1], v[0:1]
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fadd_fadd_fsub_0:
 ; GFX1250-GISEL:       ; %bb.0: ; %bb
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -4705,6 +6081,22 @@ define amdgpu_kernel void @fadd_fadd_fsub_0(<2 x float> %arg) {
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX1250-GISEL-NEXT:    flat_store_b64 v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fadd_fadd_fsub_0:
+; GFX1260-GISEL:       ; %bb.0: ; %bb
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 0
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 0
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v3, v0
+; GFX1260-GISEL-NEXT:    flat_store_b64 v[0:1], v[2:3]
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: fadd_fadd_fsub_0:
 ; GFX13:       ; %bb.0: ; %bb
@@ -4809,6 +6201,25 @@ define amdgpu_kernel void @fadd_fadd_fsub(<2 x float> %arg, <2 x float> %arg1, p
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[6:7]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fadd_fadd_fsub:
+; GFX1260-SDAG:       ; %bb.0: ; %bb
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_clause 0x1
+; GFX1260-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX1260-SDAG-NEXT:    s_add_f32 s2, s1, s3
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v4, s0
+; GFX1260-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_2)
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[2:3], v[0:1], s[2:3] op_sel_hi:[1,0]
+; GFX1260-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v5, v2
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[4:5], v[0:1] neg_lo:[0,1] neg_hi:[0,1]
+; GFX1260-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[6:7]
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fadd_fadd_fsub:
 ; GFX1250-GISEL:       ; %bb.0: ; %bb
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -4828,6 +6239,27 @@ define amdgpu_kernel void @fadd_fadd_fsub(<2 x float> %arg, <2 x float> %arg1, p
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-GISEL-NEXT:    global_store_b64 v0, v[2:3], s[6:7]
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fadd_fadd_fsub:
+; GFX1260-GISEL:       ; %bb.0: ; %bb
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_clause 0x1
+; GFX1260-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1260-GISEL-NEXT:    s_sub_f32 s0, s0, s2
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[2:3], v[0:1]
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1260-GISEL-NEXT:    v_subrev_f32_e32 v3, s3, v0
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1260-GISEL-NEXT:    global_store_b64 v0, v[2:3], s[6:7]
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fadd_fadd_fsub:
 ; GFX13-SDAG:       ; %bb.0: ; %bb
@@ -4929,6 +6361,19 @@ define amdgpu_kernel void @fadd_shuffle_v4(ptr addrspace(1) %arg) {
 ; GFX1250-SDAG-NEXT:    global_store_b128 v4, v[0:3], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fadd_shuffle_v4:
+; GFX1260-SDAG:       ; %bb.0: ; %bb
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b128 v[0:3], v4, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[2:3], v[2:3], v[0:1] op_sel_hi:[1,0]
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[0:1] op_sel_hi:[1,0]
+; GFX1260-SDAG-NEXT:    global_store_b128 v4, v[0:3], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fadd_shuffle_v4:
 ; GFX1250-GISEL:       ; %bb.0: ; %bb
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -4943,6 +6388,22 @@ define amdgpu_kernel void @fadd_shuffle_v4(ptr addrspace(1) %arg) {
 ; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[2:3], v[2:3], v[4:5]
 ; GFX1250-GISEL-NEXT:    global_store_b128 v6, v[0:3], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fadd_shuffle_v4:
+; GFX1260-GISEL:       ; %bb.0: ; %bb
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v6, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b128 v[0:3], v6, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v4, v0
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v5, v0
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[4:5]
+; GFX1260-GISEL-NEXT:    v_pk_add_f32 v[2:3], v[2:3], v[4:5]
+; GFX1260-GISEL-NEXT:    global_store_b128 v6, v[0:3], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fadd_shuffle_v4:
 ; GFX13-SDAG:       ; %bb.0: ; %bb
@@ -5026,6 +6487,18 @@ define amdgpu_kernel void @fneg_v2f32_vec(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fneg_v2f32_vec:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 0 neg_lo:[1,1] neg_hi:[1,1]
+; GFX1260-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fneg_v2f32_vec:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -5037,6 +6510,18 @@ define amdgpu_kernel void @fneg_v2f32_vec(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    v_pk_mul_f32 v[0:1], 1.0, v[0:1] op_sel_hi:[0,1] neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fneg_v2f32_vec:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[0:1], 1.0, v[0:1] op_sel_hi:[0,1] neg_lo:[0,1] neg_hi:[0,1]
+; GFX1260-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fneg_v2f32_vec:
 ; GFX13-SDAG:       ; %bb.0:
@@ -5114,6 +6599,19 @@ define amdgpu_kernel void @fneg_v2f32_scalar(ptr addrspace(1) %a, <2 x float> %x
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: fneg_v2f32_scalar:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    s_xor_b32 s2, s2, 0x80000000
+; GFX1260-SDAG-NEXT:    s_xor_b32 s3, s3, 0x80000000
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1260-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: fneg_v2f32_scalar:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -5125,6 +6623,18 @@ define amdgpu_kernel void @fneg_v2f32_scalar(ptr addrspace(1) %a, <2 x float> %x
 ; GFX1250-GISEL-NEXT:    v_pk_mul_f32 v[0:1], 1.0, v[0:1] op_sel_hi:[0,1] neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: fneg_v2f32_scalar:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX1260-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1260-GISEL-NEXT:    v_pk_mul_f32 v[0:1], 1.0, v[0:1] op_sel_hi:[0,1] neg_lo:[0,1] neg_hi:[0,1]
+; GFX1260-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX1260-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-LABEL: fneg_v2f32_scalar:
 ; GFX13-SDAG:       ; %bb.0:
@@ -5212,6 +6722,23 @@ define amdgpu_kernel void @fneg_v2f32_trunc_vector(ptr addrspace(1) %a) {
 ; GFX1250-NEXT:    v_pk_add_f16 v0, v0, 0
 ; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
+;
+; GFX1260-LABEL: fneg_v2f32_trunc_vector:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 0 neg_lo:[1,1] neg_hi:[1,1]
+; GFX1260-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX1260-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX1260-NEXT:    v_lshlrev_b32_e32 v1, 3, v2
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0
+; GFX1260-NEXT:    v_pk_add_f16 v0, v0, 0
+; GFX1260-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX1260-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: fneg_v2f32_trunc_vector:
 ; GFX13:       ; %bb.0:

@@ -7,7 +7,6 @@ define amdgpu_ps half @tbuffer_load_d16_x(i32 %rsrc) {
 ; GFX13-PACKED:       ; %bb.0: ; %main_body
 ; GFX13-PACKED-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-PACKED-NEXT:    tbuffer_load_d16_format_x v0, v1, v0, null format:[BUF_FMT_32_FLOAT] idxen
-; GFX13-PACKED-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-PACKED-NEXT:    ; return to shader part epilog
 main_body:
   %data = call half @llvm.amdgcn.struct.tbuffer.load.f16(i32 %rsrc, i32 0, i32 0, i32 0, i32 22, i32 0)

@@ -124,8 +124,12 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250: AK = GK_GFX1250; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1251: AK = GK_GFX1251; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1260: AK = GK_GFX1260; break;
+<<<<<<< HEAD
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX130E: AK = GK_GFX130E; break;
+=======
+>>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1310: AK = GK_GFX1310; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX131F: AK = GK_GFX131F; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1360: AK = GK_GFX1360; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:     AK = GK_GFX9_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC:   AK = GK_GFX9_4_GENERIC; break;
@@ -223,6 +227,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1260: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1260;
   case GK_GFX130E: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX130E;
   case GK_GFX1310: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1310;
+  case GK_GFX131F: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX131F;
   case GK_GFX1360: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1360;
   case GK_GFX9_GENERIC:     return ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC;
   case GK_GFX9_4_GENERIC:   return ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC;
@@ -324,9 +329,9 @@ void AMDGPUTargetAsmStreamer::EmitMCResourceInfo(
 #undef PRINT_RES_INFO
 }
 
-void AMDGPUTargetAsmStreamer::EmitMCResourceMaximums(const MCSymbol *MaxVGPR,
-                                                     const MCSymbol *MaxAGPR,
-                                                     const MCSymbol *MaxSGPR) {
+void AMDGPUTargetAsmStreamer::EmitMCResourceMaximums(
+    const MCSymbol *MaxVGPR, const MCSymbol *MaxAGPR, const MCSymbol *MaxSGPR,
+    const MCSymbol *MaxNamedBarrier) {
 #define PRINT_RES_INFO(ARG)                                                    \
   OS << "\t.set ";                                                             \
   ARG->print(OS, getContext().getAsmInfo());                                   \
@@ -337,6 +342,7 @@ void AMDGPUTargetAsmStreamer::EmitMCResourceMaximums(const MCSymbol *MaxVGPR,
   PRINT_RES_INFO(MaxVGPR);
   PRINT_RES_INFO(MaxAGPR);
   PRINT_RES_INFO(MaxSGPR);
+  PRINT_RES_INFO(MaxNamedBarrier);
 #undef PRINT_RES_INFO
 }
 

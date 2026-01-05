@@ -45,21 +45,6 @@ const GCNTargetMachine &getTM(const GCNSubtarget *STI) {
   return static_cast<const GCNTargetMachine &>(TLI->getTargetMachine());
 }
 
-Register llvm::initIdx0VRegDef(MachineFunction &MF, const SIInstrInfo *TII) {
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  Register Idx0VRegDef =
-      MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0_XEXECRegClass);
-  MachineBasicBlock &EntryMBB = MF.front();
-  auto InsertPt = EntryMBB.begin();
-  BuildMI(EntryMBB, InsertPt, DebugLoc(), TII->get(AMDGPU::S_SET_GPR_IDX_U32),
-          AMDGPU::IDX0)
-      .addImm(0);
-  BuildMI(EntryMBB, InsertPt, DebugLoc(), TII->get(TargetOpcode::COPY),
-          Idx0VRegDef)
-      .addReg(AMDGPU::IDX0);
-  return Idx0VRegDef;
-}
-
 bool SIMachineFunctionInfo::MFMAVGPRForm = false;
 
 SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
@@ -71,8 +56,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
       WorkItemIDX(false), WorkItemIDY(false), WorkItemIDZ(false),
       ImplicitArgPtr(false), GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0),
       IsWholeWaveFunction(F.getCallingConv() ==
-                          CallingConv::AMDGPU_Gfx_WholeWave),
-      NeedIdx0Restore(false) {
+                          CallingConv::AMDGPU_Gfx_WholeWave) {
   const GCNSubtarget &ST = *STI;
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
@@ -782,8 +766,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)),
       PSInputAddr(MFI.getPSInputAddr()), PSInputEnable(MFI.getPSInputEnable()),
       MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
-      Mode(MFI.getMode()), NeedIdx0Restore(MFI.getNeedIdx0Restore()),
-      HasInitWholeWave(MFI.hasInitWholeWave()),
+      Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()),
       IsWholeWaveFunction(MFI.isWholeWaveFunction()),
       DynamicVGPRBlockSize(MFI.getDynamicVGPRBlockSize()),
       ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()),
