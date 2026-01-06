@@ -100,12 +100,6 @@ private:
       Register PreloadedPrivateBufferReg, Register ScratchRsrcReg,
       Register ScratchWaveOffsetReg) const;
 
-<<<<<<< HEAD
-  void finalizeIdx0SaveRestores(MachineFunction &MF, bool EntryFunction,
-                                Register TmpWavegroupReg) const;
-
-=======
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
   void emitPrologueEntryCFI(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI,
                             const DebugLoc &DL) const;

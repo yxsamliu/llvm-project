@@ -924,30 +924,6 @@ public:
     return KernelToCreatedDynamicLDS;
   }
 
-<<<<<<< HEAD
-  // Search the CallGraph for each function in the set looking for calls to
-  // wavegroup rank functions, and return the discovered mapping.
-  static DenseMap<Function *, SmallDenseSet<Function *>>
-  getEntryFunctionToRankSpecializationMap(
-      const CallGraph &CG,
-      Module &M) {
-
-    DenseMap<Function *, SmallDenseSet<Function *>> RankFuncMap;
-    for (Function &Func : M.functions()) {
-      if (Func.isDeclaration() || !(isKernel(Func) && !getWavegroupRankFunction(Func)))
-        continue;
-      for (const CallGraphNode::CallRecord &R : *CG[&Func]) {
-        Function *Ith = R.second->getFunction();
-        if (Ith && getWavegroupRankFunction(*Ith))
-          RankFuncMap[&Func].insert(Ith);
-      }
-      
-    }
-    return RankFuncMap;
-  }
-
-=======
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
   bool runOnModule(Module &M) {
     CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);

@@ -127,8 +127,6 @@ define amdgpu_kernel void @fadd_v2_vs(ptr addrspace(1) %a, <2 x float> %x) {
 ; GFX1250-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-NEXT:    s_endpgm
-<<<<<<< HEAD
-=======
 ;
 ; GFX1260-LABEL: fadd_v2_vs:
 ; GFX1260:       ; %bb.0:
@@ -143,7 +141,6 @@ define amdgpu_kernel void @fadd_v2_vs(ptr addrspace(1) %a, <2 x float> %x) {
 ; GFX1260-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1260-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1260-NEXT:    s_endpgm
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ;
 ; GFX13-SDAG-LABEL: fadd_v2_vs:
 ; GFX13-SDAG:       ; %bb.0:
@@ -2367,8 +2364,6 @@ define amdgpu_kernel void @fmul_v2_vs(ptr addrspace(1) %a, <2 x float> %x) {
 ; GFX1250-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-NEXT:    s_endpgm
-<<<<<<< HEAD
-=======
 ;
 ; GFX1260-LABEL: fmul_v2_vs:
 ; GFX1260:       ; %bb.0:
@@ -2383,7 +2378,6 @@ define amdgpu_kernel void @fmul_v2_vs(ptr addrspace(1) %a, <2 x float> %x) {
 ; GFX1260-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3]
 ; GFX1260-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1260-NEXT:    s_endpgm
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ;
 ; GFX13-SDAG-LABEL: fmul_v2_vs:
 ; GFX13-SDAG:       ; %bb.0:

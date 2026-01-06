@@ -3249,15 +3249,12 @@ def HasWMMA128bInsts : Predicate<"Subtarget->hasWMMA128bInsts()">,
 def HasWMMA2048bInsts : Predicate<"Subtarget->hasWMMA2048bInsts()">,
   AssemblerPredicate<(all_of FeatureWMMA2048bInsts)>;
 
-<<<<<<< HEAD
-=======
 def HasPermPkU2U3Insts : Predicate<"Subtarget->hasPermPkU2U3Insts()">,
   AssemblerPredicate<(all_of FeaturePermPkU2U3Insts)>;
 
 def HasPk4Insts : Predicate<"Subtarget->hasPk4Insts()">,
   AssemblerPredicate<(all_of FeaturePk4Insts)>;
 
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 def HasCubeInsts : Predicate<"Subtarget->hasCubeInsts()">,
   AssemblerPredicate<(all_of FeatureCubeInsts)>;
 

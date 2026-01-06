@@ -739,18 +739,10 @@ public:
   bool counterOutOfOrder(InstCounterType T) const;
   void simplifyWaitcnt(AMDGPU::Waitcnt &Wait);
   void simplifyWaitcnt(InstCounterType T, unsigned &Count) const;
-<<<<<<< HEAD
-  void clearRedundantVmVsrcWait(AMDGPU::Waitcnt &Wait,
-                                AMDGPU::Waitcnt &UpdateWait);
-  bool hasRedundantXCntWithKmCnt(const AMDGPU::Waitcnt &Wait);
-  bool canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait);
-  void simplifyXcnt(AMDGPU::Waitcnt &CheckWait, AMDGPU::Waitcnt &UpdateWait);
-=======
   bool hasRedundantXCntWithKmCnt(const AMDGPU::Waitcnt &Wait);
   bool canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait);
   void simplifyXcnt(AMDGPU::Waitcnt &CheckWait, AMDGPU::Waitcnt &UpdateWait);
   void simplifyVmVsrc(AMDGPU::Waitcnt &Wait, AMDGPU::Waitcnt &UpdateWait);
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 
   void determineWait(InstCounterType T, RegInterval Interval,
                      AMDGPU::Waitcnt &Wait) const;
@@ -1422,11 +1414,7 @@ void WaitcntBrackets::simplifyWaitcnt(AMDGPU::Waitcnt &Wait) {
   simplifyXcnt(Wait, Wait);
   simplifyWaitcnt(SWC_CNT, Wait.Swccnt);
   simplifyWaitcnt(VA_VDST, Wait.VaVdst);
-<<<<<<< HEAD
-  simplifyWaitcnt(VM_VSRC, Wait.VmVsrc);
-=======
   simplifyVmVsrc(Wait, Wait);
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 }
 
 void WaitcntBrackets::simplifyWaitcnt(InstCounterType T,
@@ -2535,11 +2523,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // Verify that the wait is actually needed.
   ScoreBrackets.simplifyWaitcnt(Wait);
 
-<<<<<<< HEAD
-  // It is only necessary insert an S_WAITCNT_DEPCTR instruction that
-=======
   // It is only necessary to insert an S_WAITCNT_DEPCTR instruction that
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
   // waits on VA_VDST if the instruction it would precede is not a VALU
   // instruction, since hardware handles VALU->VGPR->VALU hazards in
   // expert scheduling mode.
@@ -2553,13 +2537,6 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
     }
   }
 
-<<<<<<< HEAD
-  // Remove any wait on VmVsrc if waiting for other counters
-  // would implicitly do so.
-  ScoreBrackets.clearRedundantVmVsrcWait(Wait, Wait);
-
-=======
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
   // Since the translation for VMEM addresses occur in-order, we can apply the
   // XCnt if the current instruction is of VMEM type and has a memory
   // dependency with another VMEM instruction in flight.

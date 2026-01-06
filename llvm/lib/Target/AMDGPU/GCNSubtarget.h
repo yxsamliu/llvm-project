@@ -173,11 +173,8 @@ protected:
   bool HasWMMA128bInsts = false;
   bool HasWMMA256bInsts = false;
   bool HasWMMA2048bInsts = false;
-<<<<<<< HEAD
-=======
   bool HasPermPkU2U3Insts = false;
   bool HasPk4Insts = false;
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
   bool HasCubeInsts = false;
   bool HasLerpInst = false;
   bool HasSadInsts = false;
@@ -1947,27 +1944,16 @@ public:
     return GFX1250Insts && getGeneration() == GFX12;
   }
 
-<<<<<<< HEAD
-  // TODO: Remove this when we replace all A0 GFX1250 with B0.
-  // DS_READ2 and DS_WRITE2 instructions must have addresses aligned to the
-  // payload size.
-  bool hasUnalignedDS2Bug() const { return GFX1250Insts; }
-
-=======
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
   // src_flat_scratch_hi cannot be used as a source in SALU producing a 64-bit
   // result.
   bool hasFlatScratchHiInB64InstHazard() const {
     return GFX1250Insts && getGeneration() == GFX12;
   }
-<<<<<<< HEAD
-=======
 
   // TODO: Remove this when we replace all A0 GFX1250 with B0.
   // DS_READ2 and DS_WRITE2 instructions must have addresses aligned to the
   // payload size.
   bool hasUnalignedDS2Bug() const { return GFX1250Insts; }
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 
   /// \returns true if the subtarget supports clusters of workgroups.
   bool hasClusters() const { return HasClusters; }

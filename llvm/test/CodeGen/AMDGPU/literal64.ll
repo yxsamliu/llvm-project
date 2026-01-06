@@ -641,8 +641,6 @@ define amdgpu_ps <2 x float> @v_add_neg_f64(double %a) {
 ; GFX1250-SDAG-NEXT:    v_add_f64_e64 v[0:1], -v[0:1], s[0:1]
 ; GFX1250-SDAG-NEXT:    ; return to shader part epilog
 ;
-<<<<<<< HEAD
-=======
 ; GFX1260-SDAG-LABEL: v_add_neg_f64:
 ; GFX1260-SDAG:       ; %bb.0:
 ; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -651,7 +649,6 @@ define amdgpu_ps <2 x float> @v_add_neg_f64(double %a) {
 ; GFX1260-SDAG-NEXT:    v_add_f64_e64 v[0:1], -v[0:1], s[0:1]
 ; GFX1260-SDAG-NEXT:    ; return to shader part epilog
 ;
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ; GFX1250-GISEL-LABEL: v_add_neg_f64:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1

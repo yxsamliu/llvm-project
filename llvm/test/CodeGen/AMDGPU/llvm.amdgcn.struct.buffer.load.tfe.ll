@@ -78,8 +78,6 @@ define amdgpu_ps void @struct_buffer_load_i8_tfe(<4 x i32> inreg %rsrc, ptr addr
 ; GFX1250-NEXT:    global_store_b8 v[0:1], v4, off
 ; GFX1250-NEXT:    global_store_b32 v[2:3], v5, off
 ; GFX1250-NEXT:    s_endpgm
-<<<<<<< HEAD
-=======
 ;
 ; GFX1260-LABEL: struct_buffer_load_i8_tfe:
 ; GFX1260:       ; %bb.0:
@@ -92,7 +90,6 @@ define amdgpu_ps void @struct_buffer_load_i8_tfe(<4 x i32> inreg %rsrc, ptr addr
 ; GFX1260-NEXT:    global_store_b8 v[0:1], v4, off
 ; GFX1260-NEXT:    global_store_b32 v[2:3], v5, off
 ; GFX1260-NEXT:    s_endpgm
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ;
 ; GFX13-LABEL: struct_buffer_load_i8_tfe:
 ; GFX13:       ; %bb.0:
@@ -190,8 +187,6 @@ define amdgpu_ps void @struct_buffer_load_i16_tfe(<4 x i32> inreg %rsrc, ptr add
 ; GFX1250-NEXT:    global_store_b16 v[0:1], v4, off
 ; GFX1250-NEXT:    global_store_b32 v[2:3], v5, off
 ; GFX1250-NEXT:    s_endpgm
-<<<<<<< HEAD
-=======
 ;
 ; GFX1260-LABEL: struct_buffer_load_i16_tfe:
 ; GFX1260:       ; %bb.0:
@@ -204,7 +199,6 @@ define amdgpu_ps void @struct_buffer_load_i16_tfe(<4 x i32> inreg %rsrc, ptr add
 ; GFX1260-NEXT:    global_store_b16 v[0:1], v4, off
 ; GFX1260-NEXT:    global_store_b32 v[2:3], v5, off
 ; GFX1260-NEXT:    s_endpgm
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ;
 ; GFX13-LABEL: struct_buffer_load_i16_tfe:
 ; GFX13:       ; %bb.0:
@@ -302,8 +296,6 @@ define amdgpu_ps void @struct_buffer_load_f16_tfe(<4 x i32> inreg %rsrc, ptr add
 ; GFX1250-NEXT:    global_store_b16 v[0:1], v4, off
 ; GFX1250-NEXT:    global_store_b32 v[2:3], v5, off
 ; GFX1250-NEXT:    s_endpgm
-<<<<<<< HEAD
-=======
 ;
 ; GFX1260-LABEL: struct_buffer_load_f16_tfe:
 ; GFX1260:       ; %bb.0:
@@ -316,7 +308,6 @@ define amdgpu_ps void @struct_buffer_load_f16_tfe(<4 x i32> inreg %rsrc, ptr add
 ; GFX1260-NEXT:    global_store_b16 v[0:1], v4, off
 ; GFX1260-NEXT:    global_store_b32 v[2:3], v5, off
 ; GFX1260-NEXT:    s_endpgm
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ;
 ; GFX13-LABEL: struct_buffer_load_f16_tfe:
 ; GFX13:       ; %bb.0:
@@ -414,8 +405,6 @@ define amdgpu_ps void @struct_buffer_load_i32_tfe(<4 x i32> inreg %rsrc, ptr add
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v4, off
 ; GFX1250-NEXT:    global_store_b32 v[2:3], v5, off
 ; GFX1250-NEXT:    s_endpgm
-<<<<<<< HEAD
-=======
 ;
 ; GFX1260-LABEL: struct_buffer_load_i32_tfe:
 ; GFX1260:       ; %bb.0:
@@ -428,7 +417,6 @@ define amdgpu_ps void @struct_buffer_load_i32_tfe(<4 x i32> inreg %rsrc, ptr add
 ; GFX1260-NEXT:    global_store_b32 v[0:1], v4, off
 ; GFX1260-NEXT:    global_store_b32 v[2:3], v5, off
 ; GFX1260-NEXT:    s_endpgm
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ;
 ; GFX13-LABEL: struct_buffer_load_i32_tfe:
 ; GFX13:       ; %bb.0:
@@ -546,8 +534,6 @@ define amdgpu_ps void @struct_buffer_load_v2i32_tfe(<4 x i32> inreg %rsrc, ptr a
 ; GFX1250-NEXT:    global_store_b64 v[0:1], v[4:5], off
 ; GFX1250-NEXT:    global_store_b32 v[2:3], v6, off
 ; GFX1250-NEXT:    s_endpgm
-<<<<<<< HEAD
-=======
 ;
 ; GFX1260-LABEL: struct_buffer_load_v2i32_tfe:
 ; GFX1260:       ; %bb.0:
@@ -561,7 +547,6 @@ define amdgpu_ps void @struct_buffer_load_v2i32_tfe(<4 x i32> inreg %rsrc, ptr a
 ; GFX1260-NEXT:    global_store_b64 v[0:1], v[4:5], off
 ; GFX1260-NEXT:    global_store_b32 v[2:3], v6, off
 ; GFX1260-NEXT:    s_endpgm
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ;
 ; GFX13-LABEL: struct_buffer_load_v2i32_tfe:
 ; GFX13:       ; %bb.0:
@@ -679,8 +664,6 @@ define amdgpu_ps void @struct_buffer_load_v2f32_tfe(<4 x i32> inreg %rsrc, ptr a
 ; GFX1250-NEXT:    global_store_b64 v[0:1], v[4:5], off
 ; GFX1250-NEXT:    global_store_b32 v[2:3], v6, off
 ; GFX1250-NEXT:    s_endpgm
-<<<<<<< HEAD
-=======
 ;
 ; GFX1260-LABEL: struct_buffer_load_v2f32_tfe:
 ; GFX1260:       ; %bb.0:
@@ -694,7 +677,6 @@ define amdgpu_ps void @struct_buffer_load_v2f32_tfe(<4 x i32> inreg %rsrc, ptr a
 ; GFX1260-NEXT:    global_store_b64 v[0:1], v[4:5], off
 ; GFX1260-NEXT:    global_store_b32 v[2:3], v6, off
 ; GFX1260-NEXT:    s_endpgm
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ;
 ; GFX13-LABEL: struct_buffer_load_v2f32_tfe:
 ; GFX13:       ; %bb.0:
@@ -819,8 +801,6 @@ define amdgpu_ps void @struct_buffer_load_v3i32_tfe(<4 x i32> inreg %rsrc, ptr a
 ; GFX1250-NEXT:    global_store_b96 v[0:1], v[4:6], off
 ; GFX1250-NEXT:    global_store_b32 v[2:3], v7, off
 ; GFX1250-NEXT:    s_endpgm
-<<<<<<< HEAD
-=======
 ;
 ; GFX1260-LABEL: struct_buffer_load_v3i32_tfe:
 ; GFX1260:       ; %bb.0:
@@ -835,7 +815,6 @@ define amdgpu_ps void @struct_buffer_load_v3i32_tfe(<4 x i32> inreg %rsrc, ptr a
 ; GFX1260-NEXT:    global_store_b96 v[0:1], v[4:6], off
 ; GFX1260-NEXT:    global_store_b32 v[2:3], v7, off
 ; GFX1260-NEXT:    s_endpgm
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ;
 ; GFX13-LABEL: struct_buffer_load_v3i32_tfe:
 ; GFX13:       ; %bb.0:
@@ -962,8 +941,6 @@ define amdgpu_ps void @struct_buffer_load_v3f32_tfe(<4 x i32> inreg %rsrc, ptr a
 ; GFX1250-NEXT:    global_store_b96 v[0:1], v[4:6], off
 ; GFX1250-NEXT:    global_store_b32 v[2:3], v7, off
 ; GFX1250-NEXT:    s_endpgm
-<<<<<<< HEAD
-=======
 ;
 ; GFX1260-LABEL: struct_buffer_load_v3f32_tfe:
 ; GFX1260:       ; %bb.0:
@@ -978,7 +955,6 @@ define amdgpu_ps void @struct_buffer_load_v3f32_tfe(<4 x i32> inreg %rsrc, ptr a
 ; GFX1260-NEXT:    global_store_b96 v[0:1], v[4:6], off
 ; GFX1260-NEXT:    global_store_b32 v[2:3], v7, off
 ; GFX1260-NEXT:    s_endpgm
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ;
 ; GFX13-LABEL: struct_buffer_load_v3f32_tfe:
 ; GFX13:       ; %bb.0:
@@ -1092,8 +1068,6 @@ define amdgpu_ps void @struct_buffer_load_v4i32_tfe(<4 x i32> inreg %rsrc, ptr a
 ; GFX1250-NEXT:    global_store_b128 v[0:1], v[4:7], off
 ; GFX1250-NEXT:    global_store_b32 v[2:3], v8, off
 ; GFX1250-NEXT:    s_endpgm
-<<<<<<< HEAD
-=======
 ;
 ; GFX1260-LABEL: struct_buffer_load_v4i32_tfe:
 ; GFX1260:       ; %bb.0:
@@ -1109,7 +1083,6 @@ define amdgpu_ps void @struct_buffer_load_v4i32_tfe(<4 x i32> inreg %rsrc, ptr a
 ; GFX1260-NEXT:    global_store_b128 v[0:1], v[4:7], off
 ; GFX1260-NEXT:    global_store_b32 v[2:3], v8, off
 ; GFX1260-NEXT:    s_endpgm
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ;
 ; GFX13-LABEL: struct_buffer_load_v4i32_tfe:
 ; GFX13:       ; %bb.0:
@@ -1223,8 +1196,6 @@ define amdgpu_ps void @struct_buffer_load_v4f32_tfe(<4 x i32> inreg %rsrc, ptr a
 ; GFX1250-NEXT:    global_store_b128 v[0:1], v[4:7], off
 ; GFX1250-NEXT:    global_store_b32 v[2:3], v8, off
 ; GFX1250-NEXT:    s_endpgm
-<<<<<<< HEAD
-=======
 ;
 ; GFX1260-LABEL: struct_buffer_load_v4f32_tfe:
 ; GFX1260:       ; %bb.0:
@@ -1240,7 +1211,6 @@ define amdgpu_ps void @struct_buffer_load_v4f32_tfe(<4 x i32> inreg %rsrc, ptr a
 ; GFX1260-NEXT:    global_store_b128 v[0:1], v[4:7], off
 ; GFX1260-NEXT:    global_store_b32 v[2:3], v8, off
 ; GFX1260-NEXT:    s_endpgm
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ;
 ; GFX13-LABEL: struct_buffer_load_v4f32_tfe:
 ; GFX13:       ; %bb.0:

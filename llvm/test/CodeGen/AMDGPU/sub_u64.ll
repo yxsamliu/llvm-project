@@ -12,8 +12,6 @@ define amdgpu_ps <2 x float> @test_sub_u64_vv(i64 %a, i64 %b) {
 ; GFX12-NEXT:    v_sub_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
-<<<<<<< HEAD
-=======
 ; GFX1250-LABEL: test_sub_u64_vv:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -25,7 +23,6 @@ define amdgpu_ps <2 x float> @test_sub_u64_vv(i64 %a, i64 %b) {
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    v_sub_nc_u64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX1260-NEXT:    ; return to shader part epilog
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ; GFX_LIT64-LABEL: test_sub_u64_vv:
 ; GFX_LIT64:       ; %bb.0:
 ; GFX_LIT64-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -44,8 +41,6 @@ define amdgpu_ps <2 x float> @test_sub_u64_vs(i64 %a, i64 inreg %b) {
 ; GFX12-NEXT:    v_subrev_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
-<<<<<<< HEAD
-=======
 ; GFX1250-LABEL: test_sub_u64_vs:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -57,7 +52,6 @@ define amdgpu_ps <2 x float> @test_sub_u64_vs(i64 %a, i64 inreg %b) {
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    v_sub_nc_u64_e64 v[0:1], v[0:1], s[0:1]
 ; GFX1260-NEXT:    ; return to shader part epilog
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ; GFX_LIT64-LABEL: test_sub_u64_vs:
 ; GFX_LIT64:       ; %bb.0:
 ; GFX_LIT64-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -76,8 +70,6 @@ define amdgpu_ps <2 x float> @test_sub_u64_sv(i64 inreg %a, i64 %b) {
 ; GFX12-NEXT:    v_sub_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
-<<<<<<< HEAD
-=======
 ; GFX1250-LABEL: test_sub_u64_sv:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -89,7 +81,6 @@ define amdgpu_ps <2 x float> @test_sub_u64_sv(i64 inreg %a, i64 %b) {
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    v_sub_nc_u64_e32 v[0:1], s[0:1], v[0:1]
 ; GFX1260-NEXT:    ; return to shader part epilog
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ; GFX_LIT64-LABEL: test_sub_u64_sv:
 ; GFX_LIT64:       ; %bb.0:
 ; GFX_LIT64-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -144,8 +135,6 @@ define amdgpu_ps <2 x float> @test_sub_u64_inline_lit_v(i64 %a) {
 ; GFX12-NEXT:    v_sub_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
-<<<<<<< HEAD
-=======
 ; GFX1250-LABEL: test_sub_u64_inline_lit_v:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -157,7 +146,6 @@ define amdgpu_ps <2 x float> @test_sub_u64_inline_lit_v(i64 %a) {
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    v_sub_nc_u64_e32 v[0:1], 5, v[0:1]
 ; GFX1260-NEXT:    ; return to shader part epilog
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ; GFX_LIT64-LABEL: test_sub_u64_inline_lit_v:
 ; GFX_LIT64:       ; %bb.0:
 ; GFX_LIT64-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -176,8 +164,6 @@ define amdgpu_ps <2 x float> @test_sub_u64_v_inline_lit(i64 %a) {
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
-<<<<<<< HEAD
-=======
 ; GFX1250-LABEL: test_sub_u64_v_inline_lit:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -189,7 +175,6 @@ define amdgpu_ps <2 x float> @test_sub_u64_v_inline_lit(i64 %a) {
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    v_add_nc_u64_e32 v[0:1], -5, v[0:1]
 ; GFX1260-NEXT:    ; return to shader part epilog
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ; GFX_LIT64-LABEL: test_sub_u64_v_inline_lit:
 ; GFX_LIT64:       ; %bb.0:
 ; GFX_LIT64-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -208,8 +193,6 @@ define amdgpu_ps <2 x float> @test_sub_u64_small_imm_v(i64 %a) {
 ; GFX12-NEXT:    v_sub_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
-<<<<<<< HEAD
-=======
 ; GFX1250-LABEL: test_sub_u64_small_imm_v:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -221,7 +204,6 @@ define amdgpu_ps <2 x float> @test_sub_u64_small_imm_v(i64 %a) {
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    v_sub_nc_u64_e32 v[0:1], 0x1f4, v[0:1]
 ; GFX1260-NEXT:    ; return to shader part epilog
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ; GFX_LIT64-LABEL: test_sub_u64_small_imm_v:
 ; GFX_LIT64:       ; %bb.0:
 ; GFX_LIT64-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -240,8 +222,6 @@ define amdgpu_ps <2 x float> @test_sub_u64_64bit_imm_v(i64 %a) {
 ; GFX12-NEXT:    v_sub_co_ci_u32_e64 v1, null, 1, v1, vcc_lo
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
-<<<<<<< HEAD
-=======
 ; GFX1250-LABEL: test_sub_u64_64bit_imm_v:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -253,7 +233,6 @@ define amdgpu_ps <2 x float> @test_sub_u64_64bit_imm_v(i64 %a) {
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    v_sub_nc_u64_e32 v[0:1], 0x13b9ac9ff, v[0:1]
 ; GFX1260-NEXT:    ; return to shader part epilog
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
 ; GFX_LIT64-LABEL: test_sub_u64_64bit_imm_v:
 ; GFX_LIT64:       ; %bb.0:
 ; GFX_LIT64-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1

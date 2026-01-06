@@ -1083,18 +1083,6 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
                                          ScratchRsrcReg, ScratchWaveOffsetReg);
   }
 
-<<<<<<< HEAD
-  if (WavegroupEnable) {
-    // Add this barrier to prevent re-ordering of S_SET_GPR_IDX against
-    // VALU instructions.
-    //
-    // TODO-GFX13: We would get slightly better SMEM latency hiding if we could
-    //             model this more accurately.
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::SCHED_BARRIER)).addImm(0);
-  }
-
-=======
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
   if (ST.hasWaitXCnt()) {
     // Set REPLAY_MODE (bit 25) in MODE register to enable multi-group XNACK
     // replay. This aligns hardware behavior with the compiler's s_wait_xcnt

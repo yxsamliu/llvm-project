@@ -20,15 +20,12 @@ define amdgpu_cs float @test_cvt_f32_bf8_byte0(i32 %a) {
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_cvt_f32_bf8_dpp v0, v0 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1250-NEXT:    ; return to shader part epilog
-<<<<<<< HEAD
-=======
 ;
 ; GFX1260-LABEL: test_cvt_f32_bf8_byte0:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    v_cvt_f32_bf8_dpp v0, v0 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1260-NEXT:    ; return to shader part epilog
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
   %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %a, i32 228, i32 15, i32 15, i1 1)
   %ret = tail call float @llvm.amdgcn.cvt.f32.bf8(i32 %tmp0, i32 0)
   ret float %ret
@@ -50,15 +47,12 @@ define amdgpu_cs float @test_cvt_f32_bf8_byte1(i32 %a) {
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_cvt_f32_bf8_e64_dpp v0, v0 byte_sel:1 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1250-NEXT:    ; return to shader part epilog
-<<<<<<< HEAD
-=======
 ;
 ; GFX1260-LABEL: test_cvt_f32_bf8_byte1:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    v_cvt_f32_bf8_e64_dpp v0, v0 byte_sel:1 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1260-NEXT:    ; return to shader part epilog
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
   %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %a, i32 228, i32 15, i32 15, i1 1)
   %ret = tail call float @llvm.amdgcn.cvt.f32.bf8(i32 %tmp0, i32 1)
   ret float %ret
@@ -80,15 +74,12 @@ define amdgpu_cs float @test_cvt_f32_bf8_byte2(i32 %a) {
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_cvt_f32_bf8_e64_dpp v0, v0 byte_sel:2 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1250-NEXT:    ; return to shader part epilog
-<<<<<<< HEAD
-=======
 ;
 ; GFX1260-LABEL: test_cvt_f32_bf8_byte2:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    v_cvt_f32_bf8_e64_dpp v0, v0 byte_sel:2 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1260-NEXT:    ; return to shader part epilog
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
   %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %a, i32 228, i32 15, i32 15, i1 1)
   %ret = tail call float @llvm.amdgcn.cvt.f32.bf8(i32 %tmp0, i32 2)
   ret float %ret
@@ -110,15 +101,12 @@ define amdgpu_cs float @test_cvt_f32_fp8_byte3(i32 %a) {
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_cvt_f32_fp8_e64_dpp v0, v0 byte_sel:3 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1250-NEXT:    ; return to shader part epilog
-<<<<<<< HEAD
-=======
 ;
 ; GFX1260-LABEL: test_cvt_f32_fp8_byte3:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    v_cvt_f32_fp8_e64_dpp v0, v0 byte_sel:3 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1260-NEXT:    ; return to shader part epilog
->>>>>>> 886d11ecb0c537c01dcdd070b382ba5118209a84
   %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %a, i32 228, i32 15, i32 15, i1 1)
   %ret = tail call float @llvm.amdgcn.cvt.f32.fp8(i32 %tmp0, i32 3)
   ret float %ret
