@@ -3733,8 +3733,8 @@ SIRegisterInfo::getEquivalentAGPRClass(const TargetRegisterClass *SRC) const {
 const TargetRegisterClass *
 SIRegisterInfo::getEquivalentAVClass(const TargetRegisterClass *SRC) const {
   unsigned Size = getRegSizeInBits(*SRC);
-  const TargetRegisterClass *ARC = 
-    getAllocatableClass(getVectorSuperClassForBitWidth(Size));
+  const TargetRegisterClass *ARC =
+      getAllocatableClass(getVectorSuperClassForBitWidth(Size));
   assert(ARC && "Invalid register class size");
   return ARC;
 }

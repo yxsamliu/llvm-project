@@ -401,7 +401,7 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
 static bool isVNBRSendNonSignalling(const IntrinsicInst &II) {
   const Value *Sema = II.getOperand(2);
   const Value *SemaRefl = II.getOperand(4);
-  return isa<ConstantPointerNull>(Sema->stripPointerCasts()) && 
+  return isa<ConstantPointerNull>(Sema->stripPointerCasts()) &&
          isa<ConstantPointerNull>(SemaRefl->stripPointerCasts());
 }
 
