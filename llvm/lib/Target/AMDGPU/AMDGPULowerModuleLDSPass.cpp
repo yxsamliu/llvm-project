@@ -703,7 +703,7 @@ public:
             return false;
           }
           Function *F = I->getFunction();
-          return !isKernel(*F);
+          return !isKernel(*F) || getWavegroupRankFunction(*F);
         });
 
     // Replace uses of module scope variable from kernel functions that
