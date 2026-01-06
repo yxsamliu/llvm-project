@@ -2524,13 +2524,6 @@ def int_experimental_vp_reverse:
                          llvm_i32_ty],
                         [IntrNoMem, IntrSpeculatable]>;
 
-def int_experimental_vp_splat:
-  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                        [LLVMVectorElementType<0>,
-                         LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                         llvm_i32_ty],
-                        [IntrNoMem, IntrSpeculatable]>;
-
 def int_vp_is_fpclass:
       DefaultAttrsIntrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                               [ llvm_anyvector_ty,
@@ -2943,6 +2936,13 @@ def int_experimental_convergence_anchor
   : DefaultAttrsIntrinsic<[llvm_token_ty], [], [IntrNoMem, IntrConvergent]>;
 def int_experimental_convergence_loop
   : DefaultAttrsIntrinsic<[llvm_token_ty], [], [IntrNoMem, IntrConvergent]>;
+
+//===----------------- Structure Protection Intrinsics --------------------===//
+
+def int_protected_field_ptr :
+  DefaultAttrsIntrinsic<[llvm_anyptr_ty],
+                        [LLVMMatchType<0>, llvm_i64_ty, llvm_i1_ty],
+                        [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 //===----------------------------------------------------------------------===//
 // Target-specific intrinsics

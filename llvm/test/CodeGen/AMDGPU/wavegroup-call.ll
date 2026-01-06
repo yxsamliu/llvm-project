@@ -8,8 +8,8 @@
 ; DISASM-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; DISASM-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; DISASM-NEXT:    s_mul_i32 s4, s3, 42
-; DISASM-NEXT:    s_mul_i32 s33, s3, s2
 ; DISASM-NEXT:    s_set_gpr_idx_u32 idx0, s4
+; DISASM-NEXT:    s_mul_i32 s33, s3, s2
 
 define void @callee() {
 ; CHECK-LABEL: callee:
@@ -34,18 +34,17 @@ define amdgpu_kernel void @wavegroup_kernel() #0 "amdgpu-wavegroup-enable" "amdg
 ; CHECK-LABEL: wavegroup_kernel:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s3, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s4, s3, max(32, callee.num_vgpr)
-; CHECK-NEXT:    s_mul_i32 s33, s3, s2
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s4
-; CHECK-NEXT:    s_add_co_u32 s32, s33, 0
-; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
+; CHECK-NEXT:    s_mul_i32 s33, s3, s2
 ; CHECK-NEXT:    s_get_pc_i64 s[2:3]
 ; CHECK-NEXT:    s_add_nc_u64 s[2:3], s[2:3], callee@gotpcrel+4
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v0
 ; CHECK-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], 0
+; CHECK-NEXT:    s_add_co_u32 s32, s33, 0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_swap_pc_i64 s[30:31], s[2:3]
 ; CHECK-NEXT:    s_endpgm

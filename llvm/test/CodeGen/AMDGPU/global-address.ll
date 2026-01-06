@@ -2,11 +2,15 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-PAL-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-PAL-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250-PAL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1260 < %s | FileCheck -check-prefix=GFX1250-PAL %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250-PAL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdpal -mcpu=gfx1260 < %s | FileCheck -check-prefix=GFX1250-PAL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-HSA %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-HSA %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250-HSA %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1260 < %s | FileCheck -check-prefix=GFX1250-HSA %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250-HSA %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1260 < %s | FileCheck -check-prefix=GFX1250-HSA %s
 
 define amdgpu_kernel void @caller_internal() {
 ; GFX11-PAL-SDAG-LABEL: caller_internal:

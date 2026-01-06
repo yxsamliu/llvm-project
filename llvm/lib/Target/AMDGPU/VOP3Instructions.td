@@ -1726,6 +1726,28 @@ let SubtargetPredicate = isGFX11Plus in {
   defm V_MINMAX_I32     : VOP3Inst<"v_minmax_i32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
   defm V_CVT_PK_I16_F32 : VOP3Inst<"v_cvt_pk_i16_f32", VOP3_Profile<VOP_V2I16_F32_F32>>;
   defm V_CVT_PK_U16_F32 : VOP3Inst<"v_cvt_pk_u16_f32", VOP3_Profile<VOP_V2I16_F32_F32>>;
+
+  def : GCNPat<(v2i16 (build_vector (i16 (fp_to_sint (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+                                                      (i16 (fp_to_sint (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)))))),
+               (V_CVT_PK_I16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
+  def : GCNPat<(v2i16 (build_vector (i16 (fp_to_uint (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+                                                      (i16 (fp_to_uint (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)))))),
+               (V_CVT_PK_U16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
+
+  // Fallback patterns for f32->i16 conversion. These are only required because
+  // f32->i16 has to be legal so that we can select V_CVT_PK_[IU]16_F32 above.
+  let True16Predicate = UseRealTrue16Insts in {
+    def : GCNPat<(i16 (fp_to_sint (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+                 (EXTRACT_SUBREG (V_CVT_I32_F32_e64 $src0_modifiers, $src0), lo16)>;
+    def : GCNPat<(i16 (fp_to_uint (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+                 (EXTRACT_SUBREG (V_CVT_U32_F32_e64 $src0_modifiers, $src0), lo16)>;
+  }
+  let True16Predicate = NotUseRealTrue16Insts in {
+    def : GCNPat<(i16 (fp_to_sint (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+                 (V_CVT_I32_F32_e64 $src0_modifiers, $src0)>;
+    def : GCNPat<(i16 (fp_to_uint (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+                 (V_CVT_U32_F32_e64 $src0_modifiers, $src0)>;
+  }
 } // End SubtargetPredicate = isGFX11Plus
 
 class VOP3_CVT_SR_FP16_TiedInput_Profile<VOPProfile P> : VOP3_CVT_SCALE_F1632_FP8BF8_TiedInput_Profile<P> {
@@ -1775,6 +1797,13 @@ let HasExtVOP3DPP = 0, HasModifiers = 0 in {
 def VOP3_V2I32_I32_I32_V2I32 : VOP3_Profile<VOPProfile<[v2i32, i32, i32, v2i32]>>;
 def VOP3_V3I32_I32_I64_V2I32 : VOP3_Profile<VOPProfile<[v3i32, i32, i64, v2i32]>>;
 def VOP3_V4I32_I64_I64_V2I32 : VOP3_Profile<VOPProfile<[v4i32, i64, i64, v2i32]>>;
+let HasExt64BitDPP = 0, HasExtDPP = 0 in
+  def VOP_V2I32_I16_I32      : VOP3_Profile_NoInline_Src<VOPProfile<[v2i32, i16,   i32, untyped]>>;
+def VOP_V3I32_I32_I32        : VOP3_Profile_NoInline_Src<VOPProfile<[v3i32, i32,   i32, untyped]>>;
+def VOP_V4I32_I32_I32        : VOP3_Profile_NoInline_Src<VOPProfile<[v4i32, i32,   i32, untyped]>>;
+def VOP_V4I32_I32_I32_I64    : VOP3_Profile<VOPProfile<[v4i32, i32,   i32, i64]>>;
+def VOP_V6I32_V2I32_I32_I64  : VOP3_Profile<VOPProfile<[v6i32, v2i32, i32, i64]>>;
+def VOP_V8I32_V2I32_I32_I64  : VOP3_Profile<VOPProfile<[v8i32, v2i32, i32, i64]>>;
 }
 
 let HasClamp = 0, HasOpSel = 1 in {
@@ -1873,6 +1902,15 @@ let SubtargetPredicate = HasTensorCvtLutInsts in {
   defm V_PERM_PK16_B6_U4 : VOP3Inst<"v_perm_pk16_b6_u4", VOP3_V3I32_I32_I64_V2I32, int_amdgcn_perm_pk16_b6_u4>;
   defm V_PERM_PK16_B8_U4 : VOP3Inst<"v_perm_pk16_b8_u4", VOP3_V4I32_I64_I64_V2I32, int_amdgcn_perm_pk16_b8_u4>;
 } // End SubtargetPredicate = HasTensorCvtLutInsts
+
+let SubtargetPredicate = HasPermPkU2U3Insts in {
+  defm V_PERM_PK16_B4_U2 : VOP3Inst<"v_perm_pk16_b4_u2", VOP_V2I32_I16_I32, int_amdgcn_perm_pk16_b4_u2>;
+  defm V_PERM_PK16_B6_U2 : VOP3Inst<"v_perm_pk16_b6_u2", VOP_V3I32_I32_I32, int_amdgcn_perm_pk16_b6_u2>;
+  defm V_PERM_PK16_B8_U2 : VOP3Inst<"v_perm_pk16_b8_u2", VOP_V4I32_I32_I32, int_amdgcn_perm_pk16_b8_u2>;
+  defm V_PERM_PK32_B4_U3 : VOP3Inst<"v_perm_pk32_b4_u3", VOP_V4I32_I32_I32_I64, int_amdgcn_perm_pk32_b4_u3>;
+  defm V_PERM_PK32_B6_U3 : VOP3Inst<"v_perm_pk32_b6_u3", VOP_V6I32_V2I32_I32_I64, int_amdgcn_perm_pk32_b6_u3>;
+  defm V_PERM_PK32_B8_U3 : VOP3Inst<"v_perm_pk32_b8_u3", VOP_V8I32_V2I32_I32_I64, int_amdgcn_perm_pk32_b8_u3>;
+} // End SubtargetPredicate = HasPermPkU2U3Insts
 
 class Cvt_Scale_Sr_F32ToBF16F16_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType DstTy> : GCNPat<
     (DstTy (node DstTy:$vdst_in, f32:$src0, i32:$src1, timm:$word_sel)),
@@ -2422,6 +2460,13 @@ defm V_ASHRREV_I64                   : VOP3Only_Realtriple_gfx1250_gfx13<0x33e, 
 defm V_PERM_PK16_B4_U4               : VOP3Only_Real_Base_gfx1250_gfx13<0x23f, 0x348>;
 defm V_PERM_PK16_B6_U4               : VOP3Only_Real_Base_gfx1250_gfx13<0x242, 0x349>;
 defm V_PERM_PK16_B8_U4               : VOP3Only_Real_Base_gfx1250_gfx13<0x243, 0x34a>;
+defm V_PERM_PK16_B4_U2               : VOP3Only_Real_Base_gfx1260<0x274>;
+defm V_PERM_PK16_B6_U2               : VOP3Only_Real_Base_gfx1260<0x275>;
+defm V_PERM_PK16_B8_U2               : VOP3Only_Real_Base_gfx1260<0x276>;
+defm V_PERM_PK32_B4_U3               : VOP3Only_Real_Base_gfx1260<0x277>;
+defm V_PERM_PK32_B6_U3               : VOP3Only_Real_Base_gfx1260<0x278>;
+defm V_PERM_PK32_B8_U3               : VOP3Only_Real_Base_gfx1260<0x279>;
+
 defm V_LSHL_ADD_U64                  : VOP3Only_Realtriple_gfx1250_DPP8_gfx13<0x252>;
 defm V_ASHR_PK_I8_I32                : VOP3Only_Realtriple_t16_and_fake16_gfx1250_gfx13<0x290, 0x290>;
 defm V_ASHR_PK_U8_I32                : VOP3Only_Realtriple_t16_and_fake16_gfx1250_gfx13<0x291, 0x291>;

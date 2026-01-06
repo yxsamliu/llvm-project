@@ -173,6 +173,8 @@ protected:
   bool HasWMMA128bInsts = false;
   bool HasWMMA256bInsts = false;
   bool HasWMMA2048bInsts = false;
+  bool HasPermPkU2U3Insts = false;
+  bool HasPk4Insts = false;
   bool HasCubeInsts = false;
   bool HasLerpInst = false;
   bool HasSadInsts = false;
@@ -207,6 +209,8 @@ protected:
   bool HasXF32Insts = false;
   bool HasSemaphores = false;
   bool HasWavegroups = false;
+  bool HasSWakeupImm = false;
+  bool HasSBarrierLeaveImm = false;
 
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
@@ -309,6 +313,7 @@ protected:
   bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
   bool HasAtomicMinMaxWithPayload = false;
+  bool HasSWakeupBarrier = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -473,30 +478,6 @@ public:
     return getGeneration() == SOUTHERN_ISLANDS;
   }
 
-  bool hasBFE() const {
-    return true;
-  }
-
-  bool hasBFI() const {
-    return true;
-  }
-
-  bool hasBFM() const {
-    return hasBFE();
-  }
-
-  bool hasBCNT(unsigned Size) const {
-    return true;
-  }
-
-  bool hasFFBL() const {
-    return true;
-  }
-
-  bool hasFFBH() const {
-    return true;
-  }
-
   bool hasMed3_16() const {
     return getGeneration() >= AMDGPUSubtarget::GFX9;
   }
@@ -510,10 +491,6 @@ public:
   }
 
   bool hasFmaMixBF16Insts() const { return HasFmaMixBF16Insts; }
-
-  bool hasCARRY() const {
-    return true;
-  }
 
   bool hasFMA() const {
     return FMA;
@@ -926,6 +903,10 @@ public:
   bool hasWMMA128bInsts() const { return HasWMMA128bInsts; }
 
   bool hasWMMA2048bInsts() const { return HasWMMA2048bInsts; }
+
+  bool hasPermPkU2U3Insts() const { return HasPermPkU2U3Insts; }
+
+  bool hasPk4Insts() const { return HasPk4Insts; }
 
   bool isGFX1170() const {
     return getGeneration() == GFX11 && hasWMMA128bInsts();
@@ -1488,7 +1469,7 @@ public:
   /// \returns true if inline constants are not supported for F16 pseudo
   /// scalar transcendentals.
   bool hasNoF16PseudoScalarTransInlineConstants() const {
-    return getGeneration() == GFX12;
+    return getGeneration() == GFX12 || isGFX1170();
   }
 
   /// \returns true if the target has instructions with xf32 format support.
@@ -1497,6 +1478,14 @@ public:
 
   /// \returns true if the target supports Wavegroups.
   bool hasWavegroups() const { return HasWavegroups; }
+
+  /// \returns true if the target has the s_wakeup instruction that takes 
+  /// an immediate operand.
+  bool hasSWakeupImm() const { return HasSWakeupImm; }
+
+  /// \returns true if the target has the s_barrier_leave instruction that takes an immediate 
+  /// operand.
+  bool hasSBarrierLeaveImm() const { return HasSBarrierLeaveImm; }
 
   /// \returns true if the target has packed f32 instructions that only read 32
   /// bits from a scalar operand (SGPR or literal) and replicates the bits to
@@ -1654,6 +1643,10 @@ public:
 
   bool hasGFX13Insts() const { return GFX13Insts; }
 
+  bool hasINVWaitCntRequirement() const {
+    return GFX1250Insts && !GFX1260Insts && !GFX13Insts;
+  }
+
   bool hasVOPD3() const { return GFX1250Insts; }
 
   // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.
@@ -1687,6 +1680,9 @@ public:
   // \returns true if target has S_SETPRIO_INC_WG instruction.
   bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }
 
+  // \returns true if target has S_WAKEUP_BARRIER instruction.
+  bool hasSWakeupBarrier() const { return HasSWakeupBarrier; }
+
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
   // of sign-extending. Note that GFX1250 has not only fixed the bug but also
   // extended VA to 57 bits.
@@ -1697,6 +1693,10 @@ public:
   bool needsKernArgPreloadProlog() const {
     return hasKernargPreload() && !GFX1250Insts;
   }
+
+  bool hasCondSubInsts() const { return GFX12Insts; }
+
+  bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
@@ -1944,16 +1944,16 @@ public:
     return GFX1250Insts && getGeneration() == GFX12;
   }
 
-  // TODO: Remove this when we replace all A0 GFX1250 with B0.
-  // DS_READ2 and DS_WRITE2 instructions must have addresses aligned to the
-  // payload size.
-  bool hasUnalignedDS2Bug() const { return GFX1250Insts; }
-
   // src_flat_scratch_hi cannot be used as a source in SALU producing a 64-bit
   // result.
   bool hasFlatScratchHiInB64InstHazard() const {
     return GFX1250Insts && getGeneration() == GFX12;
   }
+
+  // TODO: Remove this when we replace all A0 GFX1250 with B0.
+  // DS_READ2 and DS_WRITE2 instructions must have addresses aligned to the
+  // payload size.
+  bool hasUnalignedDS2Bug() const { return GFX1250Insts; }
 
   /// \returns true if the subtarget supports clusters of workgroups.
   bool hasClusters() const { return HasClusters; }

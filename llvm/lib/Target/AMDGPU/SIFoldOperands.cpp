@@ -1199,6 +1199,12 @@ bool SIFoldOperandsImpl::isRegSeqConcat(
     if (TRI->getRegSizeInBits(SrcOp->getReg(), *MRI) % REG_SEQ_CONCAT_UNIT)
       return false;
 
+    // Don't try to split reg seq with sgprs
+    // GFX13-TODO: could just make sure these don't get bundled
+    // and lower to v_movs
+    if (!TRI->isVGPR(*MRI, SrcOp->getReg()))
+      return false;
+
     if (SrcOp->getSubReg() == AMDGPU::NoSubRegister) {
       if (SrcSize != 0)
           return false; // Previous reg not fully covered.

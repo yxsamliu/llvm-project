@@ -2,7 +2,9 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GFX11,GFX11-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GFX11,GFX11-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-SDAG %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1260 < %s | FileCheck --check-prefixes=GFX1260,GFX1260-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1260 < %s | FileCheck --check-prefixes=GFX1260,GFX1260-GISEL %s
 
 define amdgpu_kernel void @test_get_doorbell(ptr addrspace(1) %out) {
 ; GFX11-SDAG-LABEL: test_get_doorbell:
@@ -33,6 +35,17 @@ define amdgpu_kernel void @test_get_doorbell(ptr addrspace(1) %out) {
 ; GFX1250-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: test_get_doorbell:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_DOORBELL)
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1260-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: test_get_doorbell:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -42,6 +55,17 @@ define amdgpu_kernel void @test_get_doorbell(ptr addrspace(1) %out) {
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1250-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: test_get_doorbell:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_DOORBELL)
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1260-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX1260-GISEL-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 128)
   store i32 %ret, ptr addrspace(1) %out
   ret void
@@ -76,6 +100,17 @@ define amdgpu_kernel void @test_get_ddid(ptr addrspace(1) %out) {
 ; GFX1250-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: test_get_ddid:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_DDID)
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1260-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: test_get_ddid:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -85,6 +120,17 @@ define amdgpu_kernel void @test_get_ddid(ptr addrspace(1) %out) {
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1250-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: test_get_ddid:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_DDID)
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1260-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX1260-GISEL-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 129)
   store i32 %ret, ptr addrspace(1) %out
   ret void
@@ -111,6 +157,17 @@ define amdgpu_kernel void @test_get_tma(ptr addrspace(1) %out) {
 ; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
+;
+; GFX1260-LABEL: test_get_tma:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_RTN_GET_TMA)
+; GFX1260-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX1260-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX1260-NEXT:    s_endpgm
   %ret = call i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32 130)
   store i64 %ret, ptr addrspace(1) %out
   ret void
@@ -137,6 +194,17 @@ define amdgpu_kernel void @test_get_realtime(ptr addrspace(1) %out) {
 ; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
+;
+; GFX1260-LABEL: test_get_realtime:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_RTN_GET_REALTIME)
+; GFX1260-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX1260-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX1260-NEXT:    s_endpgm
   %ret = call i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32 131)
   store i64 %ret, ptr addrspace(1) %out
   ret void
@@ -171,6 +239,17 @@ define amdgpu_kernel void @test_savewave(ptr addrspace(1) %out) {
 ; GFX1250-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: test_savewave:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_SAVE_WAVE)
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1260-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: test_savewave:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -180,6 +259,17 @@ define amdgpu_kernel void @test_savewave(ptr addrspace(1) %out) {
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1250-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: test_savewave:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_SAVE_WAVE)
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1260-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX1260-GISEL-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 132)
   store i32 %ret, ptr addrspace(1) %out
   ret void
@@ -206,6 +296,17 @@ define amdgpu_kernel void @test_get_tba(ptr addrspace(1) %out) {
 ; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
+;
+; GFX1260-LABEL: test_get_tba:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_RTN_GET_TBA)
+; GFX1260-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX1260-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX1260-NEXT:    s_endpgm
   %ret = call i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32 133)
   store i64 %ret, ptr addrspace(1) %out
   ret void
@@ -240,6 +341,17 @@ define amdgpu_kernel void @test_get_0_i32(ptr addrspace(1) %out) {
 ; GFX1250-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
+; GFX1260-SDAG-LABEL: test_get_0_i32:
+; GFX1260-SDAG:       ; %bb.0:
+; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-SDAG-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(0, 0, 0)
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1260-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1260-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX1260-SDAG-NEXT:    s_endpgm
+;
 ; GFX1250-GISEL-LABEL: test_get_0_i32:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -249,6 +361,17 @@ define amdgpu_kernel void @test_get_0_i32(ptr addrspace(1) %out) {
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1250-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1250-GISEL-NEXT:    s_endpgm
+;
+; GFX1260-GISEL-LABEL: test_get_0_i32:
+; GFX1260-GISEL:       ; %bb.0:
+; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-GISEL-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(0, 0, 0)
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1260-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1260-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX1260-GISEL-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32 0)
   store i32 %ret, ptr addrspace(1) %out
   ret void
@@ -275,6 +398,17 @@ define amdgpu_kernel void @test_get_99999_i64(ptr addrspace(1) %out) {
 ; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
+;
+; GFX1260-LABEL: test_get_99999_i64:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-NEXT:    s_sendmsg_rtn_b64 s[2:3], 99999
+; GFX1260-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX1260-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX1260-NEXT:    s_endpgm
   %ret = call i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32 99999)
   store i64 %ret, ptr addrspace(1) %out
   ret void
@@ -301,6 +435,17 @@ define amdgpu_kernel void @test_get_136_i64(ptr addrspace(1) %out) {
 ; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
+;
+; GFX1260-LABEL: test_get_136_i64:
+; GFX1260:       ; %bb.0:
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1260-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1260-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_RTN_GET_CLUSTER_BARRIER_STATE)
+; GFX1260-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1260-NEXT:    s_wait_kmcnt 0x0
+; GFX1260-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX1260-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX1260-NEXT:    s_endpgm
   %ret = call i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32 136)
   store i64 %ret, ptr addrspace(1) %out
   ret void

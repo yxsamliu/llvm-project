@@ -10,7 +10,6 @@ define amdgpu_vs { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @tbuffer
 ; GFX13-NEXT:    tbuffer_load_format_xyzw v[4:7], off, s0, null format:[BUF_FMT_32_32_32_32_FLOAT] th:TH_LOAD_NT
 ; GFX13-NEXT:    tbuffer_load_format_xyzw v[8:11], off, s0, null format:[BUF_FMT_32_FLOAT] th:TH_LOAD_HT
 ; GFX13-NEXT:    tbuffer_load_format_xyzw v[12:15], off, s0, null format:[BUF_FMT_32_FLOAT] th:TH_LOAD_RT_NT
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %vdata = call <4 x i32> @llvm.amdgcn.raw.tbuffer.load.v4i32.i32(i32 %arg, i32 0, i32 0, i32 78, i32 0)
@@ -31,7 +30,6 @@ define amdgpu_vs <4 x float> @tbuffer_load_immoffs(i32 inreg %arg) {
 ; GFX13-LABEL: tbuffer_load_immoffs:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    tbuffer_load_format_xyzw v[0:3], off, s0, null format:78 offset:42
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %vdata = call <4 x i32> @llvm.amdgcn.raw.tbuffer.load.v4i32.i32(i32 %arg, i32 42, i32 0, i32 78, i32 0)
@@ -43,7 +41,6 @@ define amdgpu_ps <4 x float> @buffer_load_voffset_large_12bit(i32 inreg %arg) {
 ; GFX13-LABEL: buffer_load_voffset_large_12bit:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    tbuffer_load_format_xyzw v[0:3], off, s0, null format:[BUF_FMT_32_32_32_32_FLOAT] offset:4092
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.tbuffer.load.v4f32.i32(i32 %arg, i32 4092, i32 0, i32 63, i32 0)
@@ -54,7 +51,6 @@ define amdgpu_ps <4 x float> @tbuffer_load_voffset_large_13bit(i32 inreg %arg) {
 ; GFX13-LABEL: tbuffer_load_voffset_large_13bit:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    tbuffer_load_format_xyzw v[0:3], off, s0, null format:[BUF_FMT_32_32_32_32_FLOAT] offset:8188
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.tbuffer.load.v4f32.i32(i32 %arg, i32 8188, i32 0, i32 63, i32 0)
@@ -65,7 +61,6 @@ define amdgpu_ps <4 x float> @tbuffer_load_voffset_large_16bit(i32 inreg %arg) {
 ; GFX13-LABEL: tbuffer_load_voffset_large_16bit:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    tbuffer_load_format_xyzw v[0:3], off, s0, null format:[BUF_FMT_32_32_32_32_FLOAT] offset:65532
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.tbuffer.load.v4f32.i32(i32 %arg, i32 65532, i32 0, i32 63, i32 0)
@@ -76,7 +71,6 @@ define amdgpu_ps <4 x float> @tbuffer_load_voffset_large_23bit(i32 inreg %arg) {
 ; GFX13-LABEL: tbuffer_load_voffset_large_23bit:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    tbuffer_load_format_xyzw v[0:3], off, s0, null format:[BUF_FMT_32_32_32_32_FLOAT] offset:8388604
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.tbuffer.load.v4f32.i32(i32 %arg, i32 8388604, i32 0, i32 63, i32 0)
@@ -88,7 +82,6 @@ define amdgpu_ps <4 x float> @tbuffer_load_voffset_large_24bit(i32 inreg %arg) {
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    v_mov_b32_e32 v0, 0x800000
 ; GFX13-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s0, null format:[BUF_FMT_32_32_32_32_FLOAT] offen offset:8388604
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.tbuffer.load.v4f32.i32(i32 %arg, i32 16777212, i32 0, i32 63, i32 0)
@@ -103,7 +96,6 @@ define amdgpu_vs { <4 x float>, <4 x float>, <4 x float> } @tbuffer_load_immoffs
 ; GFX13-NEXT:    tbuffer_load_format_xyzw v[0:3], off, s0, s2 format:[BUF_FMT_8_8_8_8_SINT] offset:4095
 ; GFX13-NEXT:    tbuffer_load_format_xyzw v[4:7], off, s0, s1 format:[BUF_FMT_32_32_32_32_SINT] offset:73
 ; GFX13-NEXT:    tbuffer_load_format_xyzw v[8:11], off, s0, s1 format:77 offset:1
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 bb:
   %vdata = call <4 x i32> @llvm.amdgcn.raw.tbuffer.load.v4i32.i32(i32 %arg, i32 4095, i32 61, i32 47, i32 0)
@@ -122,7 +114,6 @@ define amdgpu_vs <4 x float> @tbuffer_load_ofs(i32 inreg %arg, i32 %voffs) {
 ; GFX13-LABEL: tbuffer_load_ofs:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s0, null format:78 offen
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %vdata = call <4 x i32> @llvm.amdgcn.raw.tbuffer.load.v4i32.i32(i32 %arg, i32 %voffs, i32 0, i32 78, i32 0)
@@ -135,7 +126,6 @@ define amdgpu_vs <4 x float> @tbuffer_load_ofs_imm(i32 inreg %arg, i32 %voffs) {
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    v_add_nc_u32_e32 v0, 52, v0
 ; GFX13-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s0, null format:78 offen
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
   %ofs = add i32 %voffs, 52
@@ -148,7 +138,6 @@ define amdgpu_vs <2 x float> @buffer_load_xy(i32 inreg %rsrc) {
 ; GFX13-LABEL: buffer_load_xy:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    tbuffer_load_format_xy v[0:1], off, s0, null format:77
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 bb:
   %vdata = call <2 x i32> @llvm.amdgcn.raw.tbuffer.load.v2i32.i32(i32 %rsrc, i32 0, i32 0, i32 77, i32 0)
@@ -160,7 +149,6 @@ define amdgpu_vs float @buffer_load_x(i32 inreg %rsrc) {
 ; GFX13-LABEL: buffer_load_x:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    tbuffer_load_format_x v0, off, s0, null format:77
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 bb:
   %vdata = call i32 @llvm.amdgcn.raw.tbuffer.load.i32.i32(i32 %rsrc, i32 0, i32 0, i32 77, i32 0)

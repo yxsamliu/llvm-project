@@ -467,6 +467,10 @@ public:
   bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const final;
 
+  /// Override the default limit because bundles with v-load/store-idx
+  /// can have more MMOs.
+  unsigned getMemOperandAACheckLimit() const override;
+
   unsigned getMachineCSELookAheadLimit() const override { return 500; }
 
   MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
@@ -482,6 +486,12 @@ public:
 
   bool isSALU(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::SALU;
+  }
+
+  static bool isProgramStateSALU(const MachineInstr &MI) {
+    return MI.getOpcode() == AMDGPU::S_DELAY_ALU ||
+           MI.getOpcode() == AMDGPU::S_SET_VGPR_MSB ||
+           MI.getOpcode() == AMDGPU::ATOMIC_FENCE;
   }
 
   static bool isVALU(const MachineInstr &MI) {
@@ -635,11 +645,13 @@ public:
   }
 
   static bool isLDSDMA(const MachineInstr &MI) {
-    return isVALU(MI) && (isMUBUF(MI) || isFLAT(MI));
+    return (isVALU(MI) && (isMUBUF(MI) || isFLAT(MI))) ||
+           (MI.getDesc().TSFlags & SIInstrFlags::TENSOR_CNT);
   }
 
   bool isLDSDMA(uint16_t Opcode) {
-    return isVALU(Opcode) && (isMUBUF(Opcode) || isFLAT(Opcode));
+    return (isVALU(Opcode) && (isMUBUF(Opcode) || isFLAT(Opcode))) ||
+           (get(Opcode).TSFlags & SIInstrFlags::TENSOR_CNT);
   }
 
   static bool isGWS(const MachineInstr &MI) {
@@ -721,11 +733,11 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FLAT;
   }
 
-  /// \returns true for SCRATCH_ instructions, or FLAT_ instructions with
-  /// SCRATCH_ memory operands.
+  /// \returns true for SCRATCH_ instructions, or FLAT/BUF instructions unless
+  /// the MMOs do not include scratch.
   /// Conservatively correct; will return true if \p MI cannot be proven
   /// to not hit scratch.
-  bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
+  bool mayAccessScratch(const MachineInstr &MI) const;
 
   /// \returns true for FLAT instructions that can access VMEM.
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
@@ -837,7 +849,11 @@ public:
   }
 
   static bool mayWriteLDSThroughDMA(const MachineInstr &MI) {
-    return isLDSDMA(MI) && MI.getOpcode() != AMDGPU::BUFFER_STORE_LDS_DWORD;
+    unsigned Opc = MI.getOpcode();
+    // Exclude instructions that read FROM LDS (not write to it)
+    return isLDSDMA(MI) && Opc != AMDGPU::BUFFER_STORE_LDS_DWORD &&
+           Opc != AMDGPU::TENSOR_STORE_FROM_LDS &&
+           Opc != AMDGPU::TENSOR_STORE_FROM_LDS_D2;
   }
 
   static bool isSBarrierSCCWrite(unsigned Opcode) {
@@ -1062,12 +1078,13 @@ public:
     case AMDGPU::RTS_RAY_SAVE:
     case AMDGPU::RTS_RAY_RESTORE:
     case AMDGPU::RTS_UPDATE_RAY:
-    case AMDGPU::RTS_TRACE_RAY:
-    case AMDGPU::RTS_TRACE_RAY_NONBLOCK:
-    case AMDGPU::RTS_READ_VERTEX:
-    case AMDGPU::RTS_READ_VERTEX_COORDS:
-    case AMDGPU::RTS_READ_PACKET_INFO:
-    case AMDGPU::RTS_READ_PRIM_INFO:
+    // Below are VIMAGE opcodes which only have `Real` variants.
+    case AMDGPU::RTS_TRACE_RAY_gfx13:
+    case AMDGPU::RTS_TRACE_RAY_NONBLOCK_gfx13:
+    case AMDGPU::RTS_READ_VERTEX_gfx13:
+    case AMDGPU::RTS_READ_VERTEX_COORDS_gfx13:
+    case AMDGPU::RTS_READ_PACKET_INFO_gfx13:
+    case AMDGPU::RTS_READ_PRIM_INFO_gfx13:
       return true;
     default:
       return false;
@@ -1786,6 +1803,8 @@ public:
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
+
+  const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
 
   InstructionUniformity
   getInstructionUniformity(const MachineInstr &MI) const final;

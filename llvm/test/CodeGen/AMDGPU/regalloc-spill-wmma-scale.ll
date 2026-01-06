@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1260 < %s | FileCheck %s
 
 ; Scale operands of WMMA are limited to low 256 VGPRs
 ; Make sure we do not spill scale operands because of the low 256 restriction.

@@ -404,8 +404,10 @@ unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
     return 8 * ST->getMaxPrivateElementSize();
 
+  // Used to be 18*32, changed to 1024 to avoid hitting an assert in
+  // LoadStoreVectorizer.
   if (AddrSpace == AMDGPUAS::LANE_SHARED)
-    return 18 * 32; // Max possible operand size.
+    return 1024;
 
   // Common to flat, global, local and region. Assume for unknown addrspace.
   return 128;
@@ -1676,4 +1678,15 @@ unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
     }
   }
   return BaseT::getNumberOfParts(Tp);
+}
+
+InstructionUniformity
+GCNTTIImpl::getInstructionUniformity(const Value *V) const {
+  if (isAlwaysUniform(V))
+    return InstructionUniformity::AlwaysUniform;
+
+  if (isSourceOfDivergence(V))
+    return InstructionUniformity::NeverUniform;
+
+  return InstructionUniformity::Default;
 }

@@ -7,7 +7,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck --check-prefixes=GFX11,GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck --check-prefixes=GFX11,GFX11-FAKE16 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=+real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-TRUE16 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1260 -mattr=+real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-FAKE16 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1260 -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-FAKE16 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1300 -mattr=+real-true16 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX13,GFX13-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1300 -mattr=-real-true16 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX13,GFX13-FAKE16 %s
 

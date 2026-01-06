@@ -11,8 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMemoryUtils.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
@@ -116,6 +118,10 @@ intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &NeedsImplicit,
                                                       : QUEUE_PTR;
     NeedsImplicit = (CodeObjectVersion >= AMDGPU::AMDHSA_COV5);
     return QUEUE_PTR;
+  case Intrinsic::amdgcn_wavegroup_rank:
+    // This intrinsic is used for rank specialization dispatch and does not
+    // access implicit arguments - it just dispatches to the rank functions
+    return NOT_IMPLICIT_INPUT;
   default:
     return UNKNOWN_INTRINSIC;
   }
@@ -223,15 +229,6 @@ public:
       Val->second = ST.getMaxWavesPerEU();
     }
     return std::make_pair(Val->first, *(Val->second));
-  }
-
-  std::pair<unsigned, unsigned>
-  getEffectiveWavesPerEU(const Function &F,
-                         std::pair<unsigned, unsigned> WavesPerEU,
-                         std::pair<unsigned, unsigned> FlatWorkGroupSize) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.getEffectiveWavesPerEU(WavesPerEU, FlatWorkGroupSize,
-                                     getLDSSize(F));
   }
 
   unsigned getMaxWavesPerEU(const Function &F) {
@@ -513,7 +510,8 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
         AAEdges->hasNonAsmUnknownCallee())
       return indicatePessimisticFixpoint();
 
-    bool IsNonEntryFunc = !AMDGPU::isEntryFunctionCC(F->getCallingConv());
+    bool IsNonEntryFunc = !AMDGPU::isEntryFunctionCC(F->getCallingConv()) ||
+                          AMDGPU::getWavegroupRankFunction(*F);
 
     bool NeedsImplicit = false;
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
@@ -1604,7 +1602,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
        &AAAMDGPUMinAGPRAlloc::ID, &AACallEdges::ID, &AAPointerInfo::ID,
        &AAPotentialConstantValues::ID, &AAUnderlyingObjects::ID,
        &AANoAliasAddrSpace::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
-       &AAAMDGPUClusterDims::ID});
+       &AAAMDGPUClusterDims::ID, &AAAlign::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1621,7 +1619,8 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
           return true;
         // Otherwise specialize uniform values.
         const auto &TTI = TM.getTargetTransformInfo(*CB.getCaller());
-        return TTI.isAlwaysUniform(CB.getCalledOperand());
+        return TTI.getInstructionUniformity(CB.getCalledOperand()) ==
+               InstructionUniformity::AlwaysUniform;
       };
   AC.IPOAmendableCB = [](const Function &F) {
     return F.getCallingConv() == CallingConv::AMDGPU_KERNEL;
@@ -1668,11 +1667,52 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
       if (Ptr) {
         A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
         A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
+        if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Ptr)) {
+          if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc)
+            A.getOrCreateAAFor<AAAlign>(IRPosition::value(*Ptr));
+        }
       }
     }
   }
 
-  return A.run() == ChangeStatus::CHANGED;
+  bool Changed = A.run() == ChangeStatus::CHANGED;
+
+  // Enforce a consistent ABI for rank specialization groups: if any function in
+  // the group (dispatch or rank) needs an implicit arg, then all functions should
+  // uniformly NOT have the corresponding amdgpu-no-* attribute
+  CallGraph CG = CallGraph(M);
+  auto RankSpecializationMap =
+      AMDGPU::getEntryFunctionToRankSpecializationMap(CG, M);
+
+  for (auto &[DispatchKernel, RankFunctions] : RankSpecializationMap) {
+    if (RankFunctions.empty())
+      continue;
+
+    RankFunctions.insert(DispatchKernel);
+
+    // For each implicit attribute, check if any function lacks it (ie. uses that 
+    // argument) and if so, remove the attribute from all functions.
+    for (auto &[Mask, AttrName] : ImplicitAttrs) {
+      bool AnyFunctionLacksAttr = false;
+      for (Function *F : RankFunctions) {
+        if (!F->hasFnAttribute(AttrName)) {
+          AnyFunctionLacksAttr = true;
+          break;
+        }
+      }
+
+      if (AnyFunctionLacksAttr) {
+        for (Function *F : RankFunctions) {
+          if (F->hasFnAttribute(AttrName)) {
+            F->removeFnAttr(AttrName);
+            Changed = true;
+          }
+        }
+      }
+    }
+  }
+
+  return Changed;
 }
 } // namespace
 

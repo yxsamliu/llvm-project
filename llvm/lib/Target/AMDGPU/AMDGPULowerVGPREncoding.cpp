@@ -249,6 +249,12 @@ private:
   /// instruction to extend it or drop the clause if it cannot be adjusted.
   MachineBasicBlock::instr_iterator
   handleClause(MachineBasicBlock::instr_iterator I);
+
+  /// Check if an instruction \p I is immediately after another program state
+  /// instruction which it cannot coissue with. If so, insert before that
+  /// instruction to encourage more coissuing.
+  MachineBasicBlock::instr_iterator
+  handleCoissue(MachineBasicBlock::instr_iterator I);
 };
 
 bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
@@ -289,6 +295,7 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
   }
 
   I = handleClause(I);
+  I = handleCoissue(I);
   MostRecentModeSet = BuildMI(*MBB, I, {},
                               TII->get(ST->hasVGPRIndexingRegisters()
                                            ? AMDGPU::S_SET_VGPR_FRAMES
@@ -697,6 +704,31 @@ AMDGPULowerVGPREncoding::handleClause(MachineBasicBlock::instr_iterator I) {
   return I;
 }
 
+MachineBasicBlock::instr_iterator
+AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
+  if (I.isEnd())
+    return I;
+
+  if (I == I->getParent()->begin())
+    return I;
+
+  MachineBasicBlock::instr_iterator Prev = std::prev(I);
+  auto isProgramStateSALU = [this](MachineInstr *MI) {
+    return TII->isBarrier(MI->getOpcode()) ||
+           TII->isWaitcnt(MI || (SIInstrInfo::isProgramStateSALU(*MI) &&
+                                 MI->getOpcode() != AMDGPU::S_SET_VGPR_MSB));
+  };
+
+  if (!isProgramStateSALU(&*Prev))
+    return I;
+
+  while (!Prev.isEnd() && (Prev != Prev->getParent()->begin()) &&
+         isProgramStateSALU(&*Prev)) {
+    --Prev;
+  }
+  return Prev;
+}
+
 bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
   if (!ST->has1024AddressableVGPRs())
@@ -787,7 +819,5 @@ AMDGPULowerVGPREncodingPass::run(MachineFunction &MF,
   if (!AMDGPULowerVGPREncoding().run(MF))
     return PreservedAnalyses::all();
 
-  PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }

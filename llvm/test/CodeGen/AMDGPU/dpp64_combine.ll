@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX10 -DCTL=row_share
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX11 -DCTL=row_share
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX1250 -DCTL=row_share
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1260 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX1250 -DCTL=row_share
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1251 < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX1251 -DCTL=row_share
 
 ; GCN-LABEL: {{^}}dpp64_ceil:

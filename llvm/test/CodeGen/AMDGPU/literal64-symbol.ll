@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -mattr=wavefrontsize32 < %s | FileCheck %s --check-prefixes=GFX12-W32
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -mattr=wavefrontsize64 < %s | FileCheck %s --check-prefixes=GFX12-W64
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1250 -mattr=wavefrontsize32 < %s | FileCheck %s --check-prefixes=GFX1250
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1260 -mattr=wavefrontsize32 < %s | FileCheck %s --check-prefixes=GFX1250
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1300 -mattr=wavefrontsize32 < %s | FileCheck %s --check-prefixes=GFX13-W32
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1300 -mattr=wavefrontsize64 < %s | FileCheck %s --check-prefixes=GFX13-W64
 

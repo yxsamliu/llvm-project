@@ -4,7 +4,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+real-true16,+d16-write-vgpr32 -enable-misched=0 -post-RA-scheduler=0 -stress-regalloc=8 < %s | FileCheck %s -check-prefixes=GFX12-TRUE16,GFX12-TRUE16-D16W32
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+real-true16,-d16-write-vgpr32 -enable-misched=0 -post-RA-scheduler=0 -stress-regalloc=8 < %s | FileCheck %s -check-prefixes=GFX12-TRUE16,GFX12-TRUE16-D16W16
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=+real-true16 -enable-misched=0 -post-RA-scheduler=0 -stress-regalloc=8 < %s | FileCheck %s -check-prefixes=GFX1250,GFX1250-TRUE16
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1260 -mattr=+real-true16 -enable-misched=0 -post-RA-scheduler=0 -stress-regalloc=8 < %s | FileCheck %s -check-prefixes=GFX1250,GFX1250-TRUE16
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=-real-true16 -enable-misched=0 -post-RA-scheduler=0 -stress-regalloc=8 < %s | FileCheck %s -check-prefixes=GFX1250,GFX1250-FAKE16
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1260 -mattr=-real-true16 -enable-misched=0 -post-RA-scheduler=0 -stress-regalloc=8 < %s | FileCheck %s -check-prefixes=GFX1250,GFX1250-FAKE16
 
 define void @spill_i16_alu() {
 ; GCN-TRUE16-LABEL: spill_i16_alu:
