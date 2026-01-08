@@ -87,6 +87,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUMacroFusion.cpp
   AMDGPUMCInstLower.cpp
   AMDGPUMemoryUtils.cpp
+  AMDGPUStaticSimulator.cpp
   AMDGPUIGroupLP.cpp
   AMDGPUInsertSingleUseVDST.cpp
   AMDGPULowerVGPREncoding.cpp
