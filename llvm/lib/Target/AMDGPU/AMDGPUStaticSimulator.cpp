@@ -635,8 +635,6 @@ bool canMSBSetFuse(InstClass PrevIC) {
   case InstClass::BARRIER:
   case InstClass::WAITCNT:
     return false;
-  case InstClass::BARRIER:
-  case InstClass::WAITCNT:
   case InstClass::VALU:
   case InstClass::TRANS:
   case InstClass::SALU:
