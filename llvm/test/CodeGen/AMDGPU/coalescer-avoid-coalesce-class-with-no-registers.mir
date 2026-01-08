@@ -24,9 +24,8 @@ body:             |
     ; CHECK-LABEL: name: no_introduce_vreg_1024
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK-NEXT: undef [[COPY1:%[0-9]+]].sub9:vreg_512 = COPY [[COPY]].sub0
-    ; CHECK-NEXT: SI_RETURN implicit [[COPY1]]
+    ; CHECK-NEXT: undef [[COPY:%[0-9]+]].sub9_sub10_sub11_sub12_sub13_sub14_sub15_sub16:vreg_576 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: SI_RETURN implicit [[COPY]].sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15
     %0:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     undef %1.sub9:vreg_512 = COPY %0.sub0
     SI_RETURN implicit %1
