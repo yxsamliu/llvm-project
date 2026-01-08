@@ -225,6 +225,8 @@ inline FunctionalUnit getUnitForClass(InstClass IC) {
   case InstClass::OTHER:
    return FunctionalUnit::NONE;
   }
+
+  llvm_unreachable("Unhandled InstClass");
 }
 
 // Resource hold time queried via getResourceCycles() in .cpp.
