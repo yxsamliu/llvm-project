@@ -2474,7 +2474,8 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureQsadInsts,
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
-   FeatureCvtPkNormVOP3Insts
+   FeatureCvtPkNormVOP3Insts,
+   FeatureRealTrue16Insts
 ]>;
 
 defvar FeatureISAVersion13_1 = FeatureISAVersion13;
