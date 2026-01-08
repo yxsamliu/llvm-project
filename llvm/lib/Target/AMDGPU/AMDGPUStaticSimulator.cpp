@@ -17,7 +17,8 @@
 /// - WMMA co-execution efficiency
 /// - IPC and other derived metrics
 ///
-/// Results are stored in SIMachineFunctionInfo and emitted as assembly comments.
+/// Results are stored in SIMachineFunctionInfo and emitted as assembly
+/// comments.
 //
 //===----------------------------------------------------------------------===//
 
@@ -31,10 +32,10 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/TargetSchedule.h"
@@ -82,7 +83,8 @@ void GPUSimState::retireCompletedMemOps() {
       }
       const auto &Op = Queue.front();
       if (VerboseSimulation) {
-        if (Retired > 0) dbgs() << ", ";
+        if (Retired > 0)
+          dbgs() << ", ";
         dbgs() << "v" << Op.DestVGPR;
         if (Op.NumRegs > 1)
           dbgs() << "-v" << (Op.DestVGPR + Op.NumRegs - 1);
@@ -127,8 +129,7 @@ InstClass classifyInst(const MachineInstr &MI, const SIInstrInfo &TII) {
       Opc == AMDGPU::S_BARRIER_WAIT)
     return InstClass::BARRIER;
 
-  if (TII.isWaitcnt(Opc) ||
-      Opc == AMDGPU::S_WAIT_XCNT ||
+  if (TII.isWaitcnt(Opc) || Opc == AMDGPU::S_WAIT_XCNT ||
       Opc == AMDGPU::S_WAIT_TENSORCNT)
     return InstClass::WAITCNT;
 
@@ -177,39 +178,66 @@ InstClass classifyInst(const MachineInstr &MI, const SIInstrInfo &TII) {
 #ifndef NDEBUG
 static const char *getInstClassName(InstClass IC) {
   switch (IC) {
-  case InstClass::VALU:       return "VALU";
-  case InstClass::SALU:       return "SALU";
-  case InstClass::TRANS:      return "TRANS";
-  case InstClass::WMMA:       return "WMMA";
-  case InstClass::DS_READ:    return "DS_READ";
-  case InstClass::DS_WRITE:   return "DS_WRITE";
-  case InstClass::VMEM_READ:  return "VMEM_READ";
-  case InstClass::VMEM_WRITE: return "VMEM_WRITE";
-  case InstClass::SMEM:       return "SMEM";
-  case InstClass::TDM:        return "TDM";
-  case InstClass::BARRIER:    return "BARRIER";
-  case InstClass::WAITCNT:    return "WAITCNT";
-  case InstClass::DELAY_ALU:  return "DELAY_ALU";
-  case InstClass::MSB_SET:    return "MSB_SET";
-  case InstClass::NOP:        return "NOP";
-  case InstClass::BRANCH:     return "BRANCH";
-  case InstClass::OTHER:      return "OTHER";
+  case InstClass::VALU:
+    return "VALU";
+  case InstClass::SALU:
+    return "SALU";
+  case InstClass::TRANS:
+    return "TRANS";
+  case InstClass::WMMA:
+    return "WMMA";
+  case InstClass::DS_READ:
+    return "DS_READ";
+  case InstClass::DS_WRITE:
+    return "DS_WRITE";
+  case InstClass::VMEM_READ:
+    return "VMEM_READ";
+  case InstClass::VMEM_WRITE:
+    return "VMEM_WRITE";
+  case InstClass::SMEM:
+    return "SMEM";
+  case InstClass::TDM:
+    return "TDM";
+  case InstClass::BARRIER:
+    return "BARRIER";
+  case InstClass::WAITCNT:
+    return "WAITCNT";
+  case InstClass::DELAY_ALU:
+    return "DELAY_ALU";
+  case InstClass::MSB_SET:
+    return "MSB_SET";
+  case InstClass::NOP:
+    return "NOP";
+  case InstClass::BRANCH:
+    return "BRANCH";
+  case InstClass::OTHER:
+    return "OTHER";
   }
   return "UNKNOWN";
 }
 
 static const char *getUnitName(FunctionalUnit Unit) {
   switch (Unit) {
-  case FunctionalUnit::NONE:   return "NONE";
-  case FunctionalUnit::XDL:    return "XDL";
-  case FunctionalUnit::VALU:   return "VALU";
-  case FunctionalUnit::SALU:   return "SALU";
-  case FunctionalUnit::TRANS:  return "TRANS";
-  case FunctionalUnit::LDS:    return "LDS";
-  case FunctionalUnit::VMEM:   return "VMEM";
-  case FunctionalUnit::SMEM:   return "SMEM";
-  case FunctionalUnit::BRANCH: return "BRANCH";
-  case FunctionalUnit::NUM_UNITS: return "NUM_UNITS";
+  case FunctionalUnit::NONE:
+    return "NONE";
+  case FunctionalUnit::XDL:
+    return "XDL";
+  case FunctionalUnit::VALU:
+    return "VALU";
+  case FunctionalUnit::SALU:
+    return "SALU";
+  case FunctionalUnit::TRANS:
+    return "TRANS";
+  case FunctionalUnit::LDS:
+    return "LDS";
+  case FunctionalUnit::VMEM:
+    return "VMEM";
+  case FunctionalUnit::SMEM:
+    return "SMEM";
+  case FunctionalUnit::BRANCH:
+    return "BRANCH";
+  case FunctionalUnit::NUM_UNITS:
+    return "NUM_UNITS";
   }
   return "UNKNOWN";
 }
@@ -321,8 +349,9 @@ unsigned getInstrLatency(const MachineInstr &MI, const SIInstrInfo &TII,
 
 unsigned getResourceCycles(const MachineInstr &MI, const SIInstrInfo &TII,
                            InstClass IC) {
-  // Use getRepeatRate() for VALU/TRANS to get canonical long-lat VALU resource cycles
-  // getRepeatRate returns 1 for regular VALU, >1 for long-lat VALU (PK8=4, PK16=8, F64=32, etc.)
+  // Use getRepeatRate() for VALU/TRANS to get canonical long-lat VALU resource
+  // cycles getRepeatRate returns 1 for regular VALU, >1 for long-lat VALU
+  // (PK8=4, PK16=8, F64=32, etc.)
   if (IC == InstClass::VALU || IC == InstClass::TRANS) {
     unsigned RepeatRate = TII.getRepeatRate(MI);
     if (RepeatRate > 1)
@@ -339,7 +368,8 @@ unsigned getResourceCycles(const MachineInstr &MI, const SIInstrInfo &TII,
   if (SchedModel.hasInstrSchedModel()) {
     double RecipThroughput = SchedModel.computeReciprocalThroughput(&MI);
     if (RecipThroughput > 0.0) {
-      unsigned Cycles = std::max(1u, static_cast<unsigned>(std::ceil(RecipThroughput)));
+      unsigned Cycles =
+          std::max(1u, static_cast<unsigned>(std::ceil(RecipThroughput)));
       if (IC == InstClass::TRANS && Cycles < 2)
         return 2;
       return Cycles;
@@ -409,8 +439,8 @@ unsigned computeWaitStall(const MachineInstr &MI, GPUSimState &State) {
 
   if (VerboseSimulation) {
     unsigned Retired = QueueSizeBefore - QueueSizeAfter;
-    dbgs() << "    Wait decode: " << WaitName << " " << WaitCount
-           << " (queue " << QueueSizeBefore << " → " << QueueSizeAfter;
+    dbgs() << "    Wait decode: " << WaitName << " " << WaitCount << " (queue "
+           << QueueSizeBefore << " → " << QueueSizeAfter;
     if (Retired > 0)
       dbgs() << ", retired " << Retired;
     dbgs() << ") → stall " << Stall << "\n";
@@ -423,9 +453,8 @@ unsigned computeWaitStall(const MachineInstr &MI, GPUSimState &State) {
 // Register Info Helpers
 //===----------------------------------------------------------------------===//
 
-std::pair<unsigned, unsigned> getDestRegInfo(const MachineInstr &MI,
-                                              const SIInstrInfo &TII,
-                                              bool IsVGPR) {
+std::pair<unsigned, unsigned>
+getDestRegInfo(const MachineInstr &MI, const SIInstrInfo &TII, bool IsVGPR) {
   if (MI.getNumOperands() == 0 || !MI.getOperand(0).isReg())
     return {0, 0};
 
@@ -456,7 +485,7 @@ std::pair<unsigned, unsigned> getDestRegInfo(const MachineInstr &MI,
 //===----------------------------------------------------------------------===//
 
 static SmallSet<unsigned, 16> collectUsedVGPRs(const MachineInstr &MI,
-                                                const SIInstrInfo &TII) {
+                                               const SIInstrInfo &TII) {
   SmallSet<unsigned, 16> UsedVGPRs;
   const SIRegisterInfo &TRI = TII.getRegisterInfo();
 
@@ -479,9 +508,10 @@ static SmallSet<unsigned, 16> collectUsedVGPRs(const MachineInstr &MI,
   return UsedVGPRs;
 }
 
-static const MachineInstr *findNextConsumer(MachineBasicBlock::const_instr_iterator It,
-                                             MachineBasicBlock::const_instr_iterator End,
-                                             const SIInstrInfo &TII) {
+static const MachineInstr *
+findNextConsumer(MachineBasicBlock::const_instr_iterator It,
+                 MachineBasicBlock::const_instr_iterator End,
+                 const SIInstrInfo &TII) {
   for (++It; It != End; ++It) {
     const MachineInstr &MI = *It;
     if (MI.isBundle() || MI.isMetaInstruction() || MI.isDebugInstr())
@@ -502,13 +532,11 @@ struct FalseWaitResult {
   unsigned WastedCycles = 0;
 };
 
-static FalseWaitResult analyzeFalseWaitsInQueue(
-    const MachineInstr &WaitMI,
-    unsigned WaitCount,
-    const std::deque<PendingMemOp> &Queue,
-    const MachineInstr *Consumer,
-    const SIInstrInfo &TII,
-    unsigned CurrentCycle) {
+static FalseWaitResult
+analyzeFalseWaitsInQueue(const MachineInstr &WaitMI, unsigned WaitCount,
+                         const std::deque<PendingMemOp> &Queue,
+                         const MachineInstr *Consumer, const SIInstrInfo &TII,
+                         unsigned CurrentCycle) {
 
   FalseWaitResult Result;
   if (!Consumer)
@@ -533,7 +561,8 @@ static FalseWaitResult analyzeFalseWaitsInQueue(
 
     bool IsNeeded = Op.writesToAnyOf(ConsumerUses);
     if (IsNeeded) {
-      MaxTrueWaitCompletion = std::max(MaxTrueWaitCompletion, Op.CompletionCycle);
+      MaxTrueWaitCompletion =
+          std::max(MaxTrueWaitCompletion, Op.CompletionCycle);
     } else {
       Result.Count++;
       if (VerboseSimulation) {
@@ -548,25 +577,27 @@ static FalseWaitResult analyzeFalseWaitsInQueue(
 
   if (MaxAllWaitCompletion > MaxTrueWaitCompletion) {
     unsigned ActualStall = (MaxAllWaitCompletion > CurrentCycle)
-                         ? (MaxAllWaitCompletion - CurrentCycle) : 0;
+                               ? (MaxAllWaitCompletion - CurrentCycle)
+                               : 0;
     unsigned OptimalStall = (MaxTrueWaitCompletion > CurrentCycle)
-                          ? (MaxTrueWaitCompletion - CurrentCycle) : 0;
+                                ? (MaxTrueWaitCompletion - CurrentCycle)
+                                : 0;
     Result.WastedCycles = ActualStall - OptimalStall;
 
     if (VerboseSimulation && Result.WastedCycles > 0) {
       dbgs() << "    Wasted cycles: " << Result.WastedCycles
-             << " (actual stall " << ActualStall
-             << ", optimal " << OptimalStall << ")\n";
+             << " (actual stall " << ActualStall << ", optimal " << OptimalStall
+             << ")\n";
     }
   }
 
   return Result;
 }
-static FalseWaitResult analyzeFalseWaitsForWait(const MachineInstr &MI,
-                                                 MachineBasicBlock::const_instr_iterator It,
-                                                 MachineBasicBlock::const_instr_iterator End,
-                                                 GPUSimState &State,
-                                                 const SIInstrInfo &TII) {
+static FalseWaitResult
+analyzeFalseWaitsForWait(const MachineInstr &MI,
+                         MachineBasicBlock::const_instr_iterator It,
+                         MachineBasicBlock::const_instr_iterator End,
+                         GPUSimState &State, const SIInstrInfo &TII) {
   unsigned Opc = MI.getOpcode();
   if (Opc != AMDGPU::S_WAIT_DSCNT && Opc != AMDGPU::S_WAIT_LOADCNT)
     return {};
@@ -581,10 +612,10 @@ static FalseWaitResult analyzeFalseWaitsForWait(const MachineInstr &MI,
 
   if (Opc == AMDGPU::S_WAIT_DSCNT) {
     return analyzeFalseWaitsInQueue(MI, WaitCount, State.PendingDS, Consumer,
-                                     TII, State.CurrentCycle);
+                                    TII, State.CurrentCycle);
   }
-  return analyzeFalseWaitsInQueue(MI, WaitCount, State.PendingVMEMLoad, Consumer,
-                                   TII, State.CurrentCycle);
+  return analyzeFalseWaitsInQueue(MI, WaitCount, State.PendingVMEMLoad,
+                                  Consumer, TII, State.CurrentCycle);
 }
 
 //===----------------------------------------------------------------------===//
@@ -636,7 +667,8 @@ struct StallSources {
   unsigned CoExecFromEffective = 0;
   bool HasFUCoExecInteraction = false;
   bool LDScaleBlocked = false;
-  bool RegBankInWMMAWindow = false;  // Track if regbank conflict occurred in WMMA window
+  bool RegBankInWMMAWindow =
+      false; // Track if regbank conflict occurred in WMMA window
 
   unsigned total() const {
     unsigned EffectiveRegBank = RegBankInWMMAWindow ? 0 : RegBank;
@@ -673,11 +705,12 @@ bool canMSBSetFuse(InstClass PrevIC) {
 }
 
 MSBSetOutcome classifyMSBSet(const GPUSimState &State) {
-  return canMSBSetFuse(State.PreviousInstClass)
-         ? MSBSetOutcome::Fused : MSBSetOutcome::Exposed;
+  return canMSBSetFuse(State.PreviousInstClass) ? MSBSetOutcome::Fused
+                                                : MSBSetOutcome::Exposed;
 }
 
-void populateMSBSetInfo(MSBSetOutcome Outcome, bool IsMasked, InstrSimInfo &Info) {
+void populateMSBSetInfo(MSBSetOutcome Outcome, bool IsMasked,
+                        InstrSimInfo &Info) {
   if (Outcome == MSBSetOutcome::Fused) {
     Info.WasFused = true;
   } else if (IsMasked) {
@@ -701,7 +734,8 @@ bool handleMSBSet(InstClass IC, GPUSimState &State, BlockMetrics &Metrics,
 
   // Check if exposure is masked by next instruction's co-exec stall
   if (Outcome == MSBSetOutcome::Exposed && State.inWMMAWindow()) {
-    if (MachineInstr *NextMI = SIInstrInfo::getNextRealInstr(const_cast<MachineInstr *>(&MI))) {
+    if (MachineInstr *NextMI =
+            SIInstrInfo::getNextRealInstr(const_cast<MachineInstr *>(&MI))) {
       InstClass NextIC = classifyInst(*NextMI, TII);
       unsigned NextCoExecStall = State.getCoExecStall(NextIC);
       IsMasked = (NextCoExecStall >= 1);
@@ -727,8 +761,8 @@ bool handleMSBSet(InstClass IC, GPUSimState &State, BlockMetrics &Metrics,
 
   if (VerboseSimulation) {
     unsigned DisplayCycle = (Outcome == MSBSetOutcome::Fused)
-                            ? (EntryCycle > 0 ? EntryCycle - 1 : 0)
-                            : EntryCycle;
+                                ? (EntryCycle > 0 ? EntryCycle - 1 : 0)
+                                : EntryCycle;
     dbgs() << "\n[Cycle " << DisplayCycle << "] ";
     MI.print(dbgs(), /*IsStandalone=*/true, /*SkipOpers=*/false,
              /*SkipDebugLoc=*/true, /*AddNewLine=*/false);
@@ -754,9 +788,9 @@ bool handleMSBSet(InstClass IC, GPUSimState &State, BlockMetrics &Metrics,
   return true;
 }
 
-StallSources computeStallSources(
-    const MachineInstr &MI, InstClass IC, FunctionalUnit Unit,
-    const SIInstrInfo &TII, GPUSimState &State) {
+StallSources computeStallSources(const MachineInstr &MI, InstClass IC,
+                                 FunctionalUnit Unit, const SIInstrInfo &TII,
+                                 GPUSimState &State) {
 
   StallSources S;
   unsigned IssueCycle = State.CurrentCycle;
@@ -794,7 +828,8 @@ StallSources computeStallSources(
     S.VALUSlot = IssueCycle - State.CurrentCycle;
   }
 
-  if (IC == InstClass::VALU || IC == InstClass::TRANS || IC == InstClass::SALU) {
+  if (IC == InstClass::VALU || IC == InstClass::TRANS ||
+      IC == InstClass::SALU) {
     auto RB = State.RegFile.getRegBankStalls(MI);
     S.RegBank = RB.Stalls;
     S.CachePattern = RB.CachePattern;
@@ -811,8 +846,8 @@ StallSources computeStallSources(
   }
 
   if (EnablePKScalarBug && IC == InstClass::SALU &&
-      State.ScalarResourceBusyUntil > IssueCycle &&
-      State.RegFile.TRI && hasSGPROperands(MI, *State.RegFile.TRI)) {
+      State.ScalarResourceBusyUntil > IssueCycle && State.RegFile.TRI &&
+      hasSGPROperands(MI, *State.RegFile.TRI)) {
     S.PKScalarBug = State.ScalarResourceBusyUntil - IssueCycle;
     IssueCycle = State.ScalarResourceBusyUntil;
   }
@@ -967,8 +1002,8 @@ void attributeStall(const StallSources &S, FunctionalUnit Unit, InstClass IC,
   }
 }
 
-void trackWMMACoExec(InstClass IC, const StallSources &S,
-                     GPUSimState &State, BlockMetrics &Metrics) {
+void trackWMMACoExec(InstClass IC, const StallSources &S, GPUSimState &State,
+                     BlockMetrics &Metrics) {
   bool InWMMAWindow = State.inWMMAWindow() && IC != InstClass::WMMA;
   if (InWMMAWindow) {
     if (S.CoExec > 0)
@@ -994,8 +1029,8 @@ void trackWMMACoExec(InstClass IC, const StallSources &S,
 }
 
 void recordInstruction(const MachineInstr &MI, const InstTiming &T,
-                       const SIInstrInfo &TII,
-                       GPUSimState &State, BlockMetrics &Metrics) {
+                       const SIInstrInfo &TII, GPUSimState &State,
+                       BlockMetrics &Metrics) {
   Metrics.NumInstructions++;
 
   switch (T.IC) {
@@ -1005,17 +1040,17 @@ void recordInstruction(const MachineInstr &MI, const InstTiming &T,
     bool IsPacked = TII.isPacked(MI);
     if (IsVOPD) {
       Metrics.NumVOPD++;
-      Metrics.NumVALU++;  // VOPD = 2 VALU ops
+      Metrics.NumVALU++; // VOPD = 2 VALU ops
     } else if (IsPacked) {
       Metrics.NumPacked++;
-      Metrics.NumVALU++;  // Packed = 2 VALU ops
+      Metrics.NumVALU++; // Packed = 2 VALU ops
     }
     State.trackVALU(T.Latency);
     State.trackVALUForWMMA(T.IC);
     unsigned LongLatVALU = TII.isTRANS(MI) ? 0 : TII.getRepeatRate(MI);
     if (LongLatVALU > 1)
       State.VALUResourceBusyUntil = std::max(State.VALUResourceBusyUntil,
-                                              State.CurrentCycle + LongLatVALU);
+                                             State.CurrentCycle + LongLatVALU);
     // PK/VOPD/CVT bug: falsely holds scalar resource for 6 cycles
     if (EnablePKScalarBug && (IsVOPD || IsPacked || LongLatVALU > 1))
       State.ScalarResourceBusyUntil = State.CurrentCycle + 6;
@@ -1060,7 +1095,8 @@ void recordInstruction(const MachineInstr &MI, const InstTiming &T,
   case InstClass::VMEM_READ: {
     Metrics.NumVMEM++;
     auto [BaseVGPR, NumRegs] = getDestRegInfo(MI, TII, /*IsVGPR=*/true);
-    State.issueVMEM(T.Latency, BaseVGPR, std::max(NumRegs, 1u), /*IsLoad=*/true);
+    State.issueVMEM(T.Latency, BaseVGPR, std::max(NumRegs, 1u),
+                    /*IsLoad=*/true);
     break;
   }
   case InstClass::VMEM_WRITE:
@@ -1114,8 +1150,10 @@ void recordInstruction(const MachineInstr &MI, const InstTiming &T,
     Metrics.NumVGPRToSGPR++;
 
   if (SIInstrInfo::isSpill(MI) || SIInstrInfo::isFLATScratch(MI)) {
-    if (MI.mayStore()) Metrics.NumSpill++;
-    if (MI.mayLoad()) Metrics.NumReload++;
+    if (MI.mayStore())
+      Metrics.NumSpill++;
+    if (MI.mayLoad())
+      Metrics.NumReload++;
   }
 
   if (T.IC != InstClass::WMMA)
@@ -1126,15 +1164,15 @@ void recordInstruction(const MachineInstr &MI, const InstTiming &T,
 // Verbose Logging Helpers
 //===----------------------------------------------------------------------===//
 
-void logInstHeader(unsigned Cycle, const MachineInstr &MI, const InstTiming &T) {
+void logInstHeader(unsigned Cycle, const MachineInstr &MI,
+                   const InstTiming &T) {
   dbgs() << "\n[Cycle " << Cycle << "] ";
   MI.print(dbgs(), /*IsStandalone=*/true, /*SkipOpers=*/false,
            /*SkipDebugLoc=*/true, /*AddNewLine=*/false);
   dbgs() << "\n";
   if (T.IC != InstClass::WMMA) {
     dbgs() << "  Class: " << getInstClassName(T.IC)
-           << " | Unit: " << getUnitName(T.Unit)
-           << " | Latency: " << T.Latency
+           << " | Unit: " << getUnitName(T.Unit) << " | Latency: " << T.Latency
            << " | ResourceCycles: " << T.ResourceCycles << "\n";
   }
 }
@@ -1147,7 +1185,8 @@ void logStalls(const StallSources &Stalls, const GPUSimState &State) {
     bool First = true;
     auto printStall = [&](const char *Name, unsigned Val) {
       if (Val > 0) {
-        if (!First) dbgs() << ", ";
+        if (!First)
+          dbgs() << ", ";
         dbgs() << Name << "=" << Val;
         First = false;
       }
@@ -1170,19 +1209,20 @@ void logStalls(const StallSources &Stalls, const GPUSimState &State) {
   dbgs() << "\n";
 
   if (Stalls.HasFUCoExecInteraction) {
-    auto EffectiveStage = State.ActiveWMMA.getCurrentStage(Stalls.EffectiveCycle);
+    auto EffectiveStage =
+        State.ActiveWMMA.getCurrentStage(Stalls.EffectiveCycle);
     dbgs() << "    (Base stall lands at cycle " << Stalls.EffectiveCycle;
     if (EffectiveStage) {
       uint8_t Mask = State.ActiveWMMA.Info.StageMask[*EffectiveStage];
       WMMAStageType StageType = CoExecMask::getStageType(Mask);
-      const char *StageName =
-          StageType == WMMAStageType::E0 ? "E0" :
-          StageType == WMMAStageType::E  ? "E" :
-          StageType == WMMAStageType::I  ? "I" :
-          StageType == WMMAStageType::V  ? "V" : "?";
+      const char *StageName = StageType == WMMAStageType::E0  ? "E0"
+                              : StageType == WMMAStageType::E ? "E"
+                              : StageType == WMMAStageType::I ? "I"
+                              : StageType == WMMAStageType::V ? "V"
+                                                              : "?";
       dbgs() << " [stage " << *EffectiveStage << "/"
-             << State.ActiveWMMA.Info.TotalWindow << " "
-             << StageName << " - blocked]";
+             << State.ActiveWMMA.Info.TotalWindow << " " << StageName
+             << " - blocked]";
     } else {
       dbgs() << " [outside window]";
     }
@@ -1198,22 +1238,22 @@ void logWMMAWindow(const GPUSimState &State, InstClass IC) {
     return;
 
   auto Stage = State.ActiveWMMA.getCurrentStage(State.CurrentCycle);
-  dbgs() << "  WMMA Window: [" << (Stage ? *Stage : ~0U)
-         << "/" << State.ActiveWMMA.Info.TotalWindow << "]";
+  dbgs() << "  WMMA Window: [" << (Stage ? *Stage : ~0U) << "/"
+         << State.ActiveWMMA.Info.TotalWindow << "]";
   if (Stage) {
     uint8_t Mask = State.ActiveWMMA.Info.StageMask[*Stage];
     WMMAStageType ST = CoExecMask::getStageType(Mask);
     const char *StageNames[] = {"?", "E0", "E", "I", "V"};
     dbgs() << " " << StageNames[(int)ST];
   }
-  dbgs() << " (cycles " << State.ActiveWMMA.StartCycle
-         << "-" << State.ActiveWMMA.EndCycle << ")\n";
+  dbgs() << " (cycles " << State.ActiveWMMA.StartCycle << "-"
+         << State.ActiveWMMA.EndCycle << ")\n";
 }
 
 void logUnitAndMemState(const GPUSimState &State, const InstTiming &T) {
   if (T.Unit != FunctionalUnit::NONE) {
-    dbgs() << "  → UnitBusyUntil[" << getUnitName(T.Unit) << "] = "
-           << State.getUnitBusyUntil(T.Unit) << "\n";
+    dbgs() << "  → UnitBusyUntil[" << getUnitName(T.Unit)
+           << "] = " << State.getUnitBusyUntil(T.Unit) << "\n";
   }
 
   if (T.IC == InstClass::VALU)
@@ -1224,24 +1264,27 @@ void logUnitAndMemState(const GPUSimState &State, const InstTiming &T) {
   switch (T.IC) {
   case InstClass::DS_READ:
   case InstClass::DS_WRITE:
-    dbgs() << "  → PendingDS: " << State.PendingDS.size()
-           << ", Counter[LGKM]=" << State.MemCounters[(unsigned)MemCounter::LGKM] << "\n";
+    dbgs() << "  → PendingDS: " << State.PendingDS.size() << ", Counter[LGKM]="
+           << State.MemCounters[(unsigned)MemCounter::LGKM] << "\n";
     break;
   case InstClass::VMEM_READ:
     dbgs() << "  → PendingVMEMLoad: " << State.PendingVMEMLoad.size()
-           << ", Counter[VMEM]=" << State.MemCounters[(unsigned)MemCounter::VMEM] << "\n";
+           << ", Counter[VMEM]="
+           << State.MemCounters[(unsigned)MemCounter::VMEM] << "\n";
     break;
   case InstClass::VMEM_WRITE:
     dbgs() << "  → PendingVMEMStore: " << State.PendingVMEMStore.size()
-           << ", Counter[VS]=" << State.MemCounters[(unsigned)MemCounter::VS] << "\n";
+           << ", Counter[VS]=" << State.MemCounters[(unsigned)MemCounter::VS]
+           << "\n";
     break;
   case InstClass::SMEM:
     dbgs() << "  → PendingSMEM: " << State.PendingSMEM.size()
-           << ", Counter[LGKM]=" << State.MemCounters[(unsigned)MemCounter::LGKM] << "\n";
+           << ", Counter[LGKM]="
+           << State.MemCounters[(unsigned)MemCounter::LGKM] << "\n";
     break;
   case InstClass::WMMA:
-    dbgs() << "  → ActiveWMMA: cycles " << State.ActiveWMMA.StartCycle
-           << "-" << State.ActiveWMMA.EndCycle;
+    dbgs() << "  → ActiveWMMA: cycles " << State.ActiveWMMA.StartCycle << "-"
+           << State.ActiveWMMA.EndCycle;
     if (State.ActiveWMMA.IsBackToBack)
       dbgs() << " [back-to-back]";
     dbgs() << "\n";
@@ -1263,7 +1306,7 @@ struct WMMAWindowCapture {
 };
 
 WMMAWindowCapture captureWMMAWindowState(const GPUSimState &State,
-                                          unsigned EntryCycle, InstClass IC) {
+                                         unsigned EntryCycle, InstClass IC) {
   WMMAWindowCapture Capture;
   if (!State.inWMMAWindow() || IC == InstClass::WMMA)
     return Capture;
@@ -1287,15 +1330,34 @@ static StallReason getDominantStallReason(const StallSources &Stalls) {
   unsigned Max = 0;
   StallReason Reason = StallReason::NONE;
 
-  if (Stalls.WaitCnt > Max) { Max = Stalls.WaitCnt; Reason = StallReason::WAITCNT; }
-  if (Stalls.DelayAlu > Max) { Max = Stalls.DelayAlu; Reason = StallReason::DELAY_ALU; }
-  if (Stalls.CoExec > Max) { Max = Stalls.CoExec; Reason = StallReason::COEXEC_BLOCKED; }
-  if (Stalls.LongLatVALU > Max) { Max = Stalls.LongLatVALU; Reason = StallReason::LONG_LAT_VALU; }
-  if (Stalls.PKScalarBug > 0 && Stalls.PKScalarBug >= Max) {
-    Max = Stalls.PKScalarBug; Reason = StallReason::PK_SCALAR_BUG;
+  if (Stalls.WaitCnt > Max) {
+    Max = Stalls.WaitCnt;
+    Reason = StallReason::WAITCNT;
   }
-  if (Stalls.MemFIFO > Max) { Max = Stalls.MemFIFO; Reason = StallReason::MEM_FIFO; }
-  if (Stalls.Unit > Max) { Max = Stalls.Unit; Reason = StallReason::FU_BUSY; }
+  if (Stalls.DelayAlu > Max) {
+    Max = Stalls.DelayAlu;
+    Reason = StallReason::DELAY_ALU;
+  }
+  if (Stalls.CoExec > Max) {
+    Max = Stalls.CoExec;
+    Reason = StallReason::COEXEC_BLOCKED;
+  }
+  if (Stalls.LongLatVALU > Max) {
+    Max = Stalls.LongLatVALU;
+    Reason = StallReason::LONG_LAT_VALU;
+  }
+  if (Stalls.PKScalarBug > 0 && Stalls.PKScalarBug >= Max) {
+    Max = Stalls.PKScalarBug;
+    Reason = StallReason::PK_SCALAR_BUG;
+  }
+  if (Stalls.MemFIFO > Max) {
+    Max = Stalls.MemFIFO;
+    Reason = StallReason::MEM_FIFO;
+  }
+  if (Stalls.Unit > Max) {
+    Max = Stalls.Unit;
+    Reason = StallReason::FU_BUSY;
+  }
   // Only count reg bank if not in WMMA window
   if (!Stalls.RegBankInWMMAWindow && Stalls.RegBank > Max) {
     Max = Stalls.RegBank;
@@ -1344,8 +1406,8 @@ void simulateInst(const MachineInstr &MI, const SIInstrInfo &TII,
   if (T.IC == InstClass::WAITCNT) {
     const MachineBasicBlock *MBB = MI.getParent();
     MachineBasicBlock::const_instr_iterator It(&MI);
-    FalseWaitResult FWR = analyzeFalseWaitsForWait(MI, It, MBB->instr_end(),
-                                                    State, TII);
+    FalseWaitResult FWR =
+        analyzeFalseWaitsForWait(MI, It, MBB->instr_end(), State, TII);
     Metrics.NumFalseWaits += FWR.Count;
     Metrics.StallFalseWait += FWR.WastedCycles;
 
@@ -1365,8 +1427,8 @@ void simulateInst(const MachineInstr &MI, const SIInstrInfo &TII,
   unsigned ReadyCycle = State.CurrentCycle + Stalls.total();
   if (ReadyCycle > State.CurrentCycle) {
     if (VerboseSimulation)
-      dbgs() << "  → Advancing cycle: " << State.CurrentCycle
-             << " → " << ReadyCycle << "\n";
+      dbgs() << "  → Advancing cycle: " << State.CurrentCycle << " → "
+             << ReadyCycle << "\n";
     State.advanceToCycle(ReadyCycle);
   }
 
@@ -1423,10 +1485,9 @@ BlockMetrics analyzeBlock(MachineBasicBlock &MBB, const SIInstrInfo &TII,
   Metrics.TotalCycles = State.CurrentCycle - StartCycle;
 
   if (VerboseSimulation) {
-    dbgs() << "=== End BB#" << MBB.getNumber()
-           << ": " << Metrics.NumInstructions << " insts, "
-           << Metrics.TotalCycles << " cycles, "
-           << Metrics.StallCycles() << " stalls ===\n";
+    dbgs() << "=== End BB#" << MBB.getNumber() << ": "
+           << Metrics.NumInstructions << " insts, " << Metrics.TotalCycles
+           << " cycles, " << Metrics.StallCycles() << " stalls ===\n";
   }
 
   return Metrics;
@@ -1463,7 +1524,7 @@ constexpr unsigned DefaultTripCount = 10;
 
 static cl::opt<unsigned>
     TripCountOverride("amdgpu-static-sim-trip-count", cl::Hidden,
-                               cl::desc("Override static sim trip count analysis."));
+                      cl::desc("Override static sim trip count analysis."));
 
 unsigned getLoopTripCount(MachineLoop *L,
                           const MachineBlockFrequencyInfo *MBFI = nullptr) {
@@ -1476,7 +1537,8 @@ unsigned getLoopTripCount(MachineLoop *L,
       float PreheaderFreq = getBlockFrequency(MBFI, Preheader);
 
       if (PreheaderFreq > 0.0f) {
-        unsigned DerivedTC = static_cast<unsigned>(HeaderFreq / PreheaderFreq + 0.5f);
+        unsigned DerivedTC =
+            static_cast<unsigned>(HeaderFreq / PreheaderFreq + 0.5f);
         if (DerivedTC >= 1) {
           if (VerboseSimulation) {
             dbgs() << "  Trip count from MBFI: " << DerivedTC
@@ -1497,7 +1559,9 @@ BlockMetrics analyzeLoop(MachineLoop *L, MachineLoopInfo &MLI,
                          KernelPerfReport &Report,
                          const MachineBlockFrequencyInfo *MBFI) {
 
-  unsigned TripCount = TripCountOverride.getNumOccurrences() ? TripCountOverride.getValue() : getLoopTripCount(L, MBFI);
+  unsigned TripCount = TripCountOverride.getNumOccurrences()
+                           ? TripCountOverride.getValue()
+                           : getLoopTripCount(L, MBFI);
   unsigned LoopDepth = L->getLoopDepth();
 
   Report.NumLoops++;
@@ -1508,8 +1572,8 @@ BlockMetrics analyzeLoop(MachineLoop *L, MachineLoopInfo &MLI,
   float HeaderFreq = getBlockFrequency(MBFI, Header);
 
   if (VerboseSimulation) {
-    dbgs() << "\n=== Analyzing Loop (depth " << LoopDepth
-           << ", trip count " << TripCount << ") ===\n";
+    dbgs() << "\n=== Analyzing Loop (depth " << LoopDepth << ", trip count "
+           << TripCount << ") ===\n";
     dbgs() << "  Header: " << Header->getName()
            << " (freq=" << format("%.3f", HeaderFreq) << ")\n";
   }
@@ -1519,9 +1583,10 @@ BlockMetrics analyzeLoop(MachineLoop *L, MachineLoopInfo &MLI,
   DenseMap<MachineLoop *, BlockMetrics> InnerLoopMetrics;
   BlockMetrics DirectBlocksRaw;
 
-  auto simulateIteration = [&](GPUSimState &State, const char *Label,
-                               DenseMap<MachineBasicBlock *, BlockMetrics> &PerBlockOut,
-                               bool isCold) -> BlockMetrics {
+  auto simulateIteration =
+      [&](GPUSimState &State, const char *Label,
+          DenseMap<MachineBasicBlock *, BlockMetrics> &PerBlockOut,
+          bool isCold) -> BlockMetrics {
     BlockMetrics IterMetrics;
 
     if (VerboseSimulation)
@@ -1534,8 +1599,8 @@ BlockMetrics analyzeLoop(MachineLoop *L, MachineLoopInfo &MLI,
           InnerLoop->getParentLoop() == L) {
         BlockMetrics InnerMetrics;
         if (isCold) {
-          InnerMetrics = analyzeLoop(InnerLoop, MLI, TII, State,
-                                     Visited, Report, MBFI);
+          InnerMetrics =
+              analyzeLoop(InnerLoop, MLI, TII, State, Visited, Report, MBFI);
           InnerLoopMetrics[InnerLoop] = InnerMetrics;
         } else {
           InnerMetrics = InnerLoopMetrics.lookup(InnerLoop);
@@ -1547,9 +1612,12 @@ BlockMetrics analyzeLoop(MachineLoop *L, MachineLoopInfo &MLI,
         } else {
           float InnerHeaderFreq = getBlockFrequency(MBFI, MBB);
           unsigned InnerTripCount = getLoopTripCount(InnerLoop, MBFI);
-          InnerEntryFreq = (InnerTripCount > 0) ? InnerHeaderFreq / InnerTripCount : InnerHeaderFreq;
+          InnerEntryFreq = (InnerTripCount > 0)
+                               ? InnerHeaderFreq / InnerTripCount
+                               : InnerHeaderFreq;
         }
-        float RelativeFreq = (HeaderFreq > 0) ? InnerEntryFreq / HeaderFreq : 1.0f;
+        float RelativeFreq =
+            (HeaderFreq > 0) ? InnerEntryFreq / HeaderFreq : 1.0f;
 
         if (VerboseSimulation) {
           dbgs() << "  Inner loop " << MBB->getName()
@@ -1574,13 +1642,15 @@ BlockMetrics analyzeLoop(MachineLoop *L, MachineLoopInfo &MLI,
   };
 
   GPUSimState ColdState = EntryState;
-  BlockMetrics ColdMetrics = simulateIteration(ColdState, "Cold", ColdPerBlock, true);
+  BlockMetrics ColdMetrics =
+      simulateIteration(ColdState, "Cold", ColdPerBlock, true);
 
   if (VerboseSimulation)
     dbgs() << "  Cold iteration: " << ColdMetrics.TotalCycles << " cycles, "
            << ColdMetrics.StallCycles() << " stall\n";
 
-  BlockMetrics WarmMetrics = simulateIteration(ColdState, "Warm", WarmPerBlock, false);
+  BlockMetrics WarmMetrics =
+      simulateIteration(ColdState, "Warm", WarmPerBlock, false);
 
   if (VerboseSimulation)
     dbgs() << "  Warm iteration: " << WarmMetrics.TotalCycles << " cycles, "
@@ -1638,7 +1708,8 @@ KernelPerfReport analyzeFunction(MachineFunction &MF, const SIInstrInfo &TII,
     MachineLoop *L = MLI ? MLI->getLoopFor(MBB) : nullptr;
 
     if (L && L->getHeader() == MBB) {
-      BlockMetrics LoopMetrics = analyzeLoop(L, *MLI, TII, State, Visited, Report, MBFI);
+      BlockMetrics LoopMetrics =
+          analyzeLoop(L, *MLI, TII, State, Visited, Report, MBFI);
 
       float LoopEntryFreq = 1.0f;
       if (MachineBasicBlock *Preheader = L->getLoopPreheader()) {
@@ -1650,7 +1721,8 @@ KernelPerfReport analyzeFunction(MachineFunction &MF, const SIInstrInfo &TII,
       }
 
       if (VerboseSimulation)
-        dbgs() << "  Loop entry frequency: " << format("%.3f", LoopEntryFreq) << "\n";
+        dbgs() << "  Loop entry frequency: " << format("%.3f", LoopEntryFreq)
+               << "\n";
 
       Report.Scaled = Report.Scaled + LoopMetrics * LoopEntryFreq;
     } else {
@@ -1716,7 +1788,8 @@ bool runStaticSimulator(MachineFunction &MF, MachineLoopInfo *MLI,
   LLVM_DEBUG(Report.print(dbgs(), MF.getName()));
 
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  MFI->setStaticSimReport(std::make_shared<KernelPerfReport>(std::move(Report)));
+  MFI->setStaticSimReport(
+      std::make_shared<KernelPerfReport>(std::move(Report)));
 
   return true;
 }
@@ -1729,9 +1802,10 @@ bool runStaticSimulator(MachineFunction &MF, MachineLoopInfo *MLI,
 
 static void printStallBreakdown(raw_ostream &OS, const BlockMetrics &M,
                                 const char *Indent = ";   ") {
-  float StallPct = M.TotalCycles > 0
-      ? 100.0f * M.StallCycles() / M.TotalCycles : 0.0f;
-  OS << formatv("{0}Stall: {1} cycles ({2:F1}%)\n", Indent, M.StallCycles(), StallPct);
+  float StallPct =
+      M.TotalCycles > 0 ? 100.0f * M.StallCycles() / M.TotalCycles : 0.0f;
+  OS << formatv("{0}Stall: {1} cycles ({2:F1}%)\n", Indent, M.StallCycles(),
+                StallPct);
   OS << Indent << "  ";
   M.printStallBreakdown(OS);
   OS << "\n";
@@ -1756,15 +1830,16 @@ void KernelPerfReport::print(raw_ostream &OS, StringRef FuncName) const {
   OS << formatv(";   Instructions: {0}\n", Raw.NumInstructions);
   OS << formatv(";   Cycles:       {0}\n", Raw.TotalCycles);
   printStallBreakdown(OS, Raw);
-  OS << formatv(";   Waitcnts: {0} | False waits: {1}\n",
-                Raw.NumWaitcnt, Raw.NumFalseWaits);
+  OS << formatv(";   Waitcnts: {0} | False waits: {1}\n", Raw.NumWaitcnt,
+                Raw.NumFalseWaits);
   OS << formatv(";   WMMA windows: {0} | Co-executed: {1}\n",
                 Raw.WMMAWindowCycles, Raw.WMMACoExecUsed);
   if (Raw.ISlotTotal > 0) {
-    OS << formatv(";   I-slots: {0} used | {1} wasted on non-VALU ({2:F0}% VALU)\n",
-                  Raw.ISlotTotal, Raw.ISlotWastedOnNonVALU,
-                  Raw.ISlotTotal > 0
-                      ? 100.0f * Raw.ISlotUsedByVALU / Raw.ISlotTotal : 0.0f);
+    OS << formatv(
+        ";   I-slots: {0} used | {1} wasted on non-VALU ({2:F0}% VALU)\n",
+        Raw.ISlotTotal, Raw.ISlotWastedOnNonVALU,
+        Raw.ISlotTotal > 0 ? 100.0f * Raw.ISlotUsedByVALU / Raw.ISlotTotal
+                           : 0.0f);
   }
   OS << ";\n";
 
@@ -1773,16 +1848,18 @@ void KernelPerfReport::print(raw_ostream &OS, StringRef FuncName) const {
   OS << formatv(";   Instructions: {0}\n", Scaled.NumInstructions);
   OS << formatv(";   Cycles:       {0}\n", Scaled.TotalCycles);
   printStallBreakdown(OS, Scaled);
-  OS << formatv(";   Waitcnts: {0} | False waits: {1}\n",
-                Scaled.NumWaitcnt, Scaled.NumFalseWaits);
+  OS << formatv(";   Waitcnts: {0} | False waits: {1}\n", Scaled.NumWaitcnt,
+                Scaled.NumFalseWaits);
   OS << formatv(";   WMMA windows: {0} | Co-executed: {1} ({2:F0}%)\n",
                 Scaled.WMMAWindowCycles, Scaled.WMMACoExecUsed,
                 CoExecEfficiency * 100.0f);
   if (Scaled.ISlotTotal > 0) {
-    OS << formatv(";   I-slots: {0} used | {1} wasted on non-VALU ({2:F0}% VALU)\n",
-                  Scaled.ISlotTotal, Scaled.ISlotWastedOnNonVALU,
-                  Scaled.ISlotTotal > 0
-                      ? 100.0f * Scaled.ISlotUsedByVALU / Scaled.ISlotTotal : 0.0f);
+    OS << formatv(
+        ";   I-slots: {0} used | {1} wasted on non-VALU ({2:F0}% VALU)\n",
+        Scaled.ISlotTotal, Scaled.ISlotWastedOnNonVALU,
+        Scaled.ISlotTotal > 0
+            ? 100.0f * Scaled.ISlotUsedByVALU / Scaled.ISlotTotal
+            : 0.0f);
   }
   OS << ";\n";
 
@@ -1802,31 +1879,33 @@ void KernelPerfReport::print(raw_ostream &OS, StringRef FuncName) const {
       First = false;
     }
     if (Raw.NumPacked || Scaled.NumPacked) {
-      if (!First) OS << "+";
+      if (!First)
+        OS << "+";
       OS << formatv("PK:{0}/{1}", Raw.NumPacked, Scaled.NumPacked);
     }
     OS << ")";
   }
   OS << formatv(" | SALU: {0}/{1} | TRANS: {2}/{3} | WMMA: {4}/{5}\n",
-                Raw.NumSALU, Scaled.NumSALU,
-                Raw.NumTRANS, Scaled.NumTRANS, Raw.NumWMMA, Scaled.NumWMMA);
-  OS << formatv(";   DS_RD: {0}/{1} | DS_WR: {2}/{3} | VMEM: {4}/{5} | TDM: {6}/{7}\n",
-                Raw.NumDSRead, Scaled.NumDSRead, Raw.NumDSWrite, Scaled.NumDSWrite,
-                Raw.NumVMEM, Scaled.NumVMEM, Raw.NumTDM, Scaled.NumTDM);
+                Raw.NumSALU, Scaled.NumSALU, Raw.NumTRANS, Scaled.NumTRANS,
+                Raw.NumWMMA, Scaled.NumWMMA);
+  OS << formatv(
+      ";   DS_RD: {0}/{1} | DS_WR: {2}/{3} | VMEM: {4}/{5} | TDM: {6}/{7}\n",
+      Raw.NumDSRead, Scaled.NumDSRead, Raw.NumDSWrite, Scaled.NumDSWrite,
+      Raw.NumVMEM, Scaled.NumVMEM, Raw.NumTDM, Scaled.NumTDM);
   if (Raw.NumSpill || Raw.NumReload || Scaled.NumSpill || Scaled.NumReload) {
-    OS << formatv(";   Spill: {0}/{1} | Reload: {2}/{3}\n",
-                  Raw.NumSpill, Scaled.NumSpill, Raw.NumReload, Scaled.NumReload);
+    OS << formatv(";   Spill: {0}/{1} | Reload: {2}/{3}\n", Raw.NumSpill,
+                  Scaled.NumSpill, Raw.NumReload, Scaled.NumReload);
   }
   if (Raw.NumSGPRToVGPR || Raw.NumVGPRToSGPR) {
     OS << formatv(";   SGPR->Lane: {0}/{1} | Lane->SGPR: {2}/{3}\n",
-                  Raw.NumSGPRToVGPR, Scaled.NumSGPRToVGPR,
-                  Raw.NumVGPRToSGPR, Scaled.NumVGPRToSGPR);
+                  Raw.NumSGPRToVGPR, Scaled.NumSGPRToVGPR, Raw.NumVGPRToSGPR,
+                  Scaled.NumVGPRToSGPR);
   }
   if (Raw.NumDelayAlu || Scaled.NumDelayAlu) {
-    OS << formatv(";   delay_alu: {0}/{1} | MSB_set: {2}/{3} (exposed: {4}/{5})\n",
-                  Raw.NumDelayAlu, Scaled.NumDelayAlu,
-                  Raw.NumMSBSet, Scaled.NumMSBSet,
-                  Raw.NumMSBSetExposed, Scaled.NumMSBSetExposed);
+    OS << formatv(
+        ";   delay_alu: {0}/{1} | MSB_set: {2}/{3} (exposed: {4}/{5})\n",
+        Raw.NumDelayAlu, Scaled.NumDelayAlu, Raw.NumMSBSet, Scaled.NumMSBSet,
+        Raw.NumMSBSetExposed, Scaled.NumMSBSetExposed);
   }
   OS << ";\n";
 
@@ -1835,16 +1914,15 @@ void KernelPerfReport::print(raw_ostream &OS, StringRef FuncName) const {
   unsigned ScaledTotal = Scaled.VGPRCacheHits + Scaled.VGPRCacheMisses;
   if (RawTotal > 0 || ScaledTotal > 0) {
     OS << "; === VGPR Operand Cache ===\n";
-    OS << formatv(";   VGPR reads: {0}/{1} | From cache: {2}/{3}",
-                  RawTotal, ScaledTotal,
-                  Raw.VGPRCacheHits, Scaled.VGPRCacheHits);
+    OS << formatv(";   VGPR reads: {0}/{1} | From cache: {2}/{3}", RawTotal,
+                  ScaledTotal, Raw.VGPRCacheHits, Scaled.VGPRCacheHits);
     if (ScaledTotal > 0) {
       OS << formatv(" ({0:F0}%)", Scaled.VGPRCacheHitRate() * 100.0f);
     }
     OS << "\n";
     if (Raw.VGPRCacheEvictions > 0 || Scaled.VGPRCacheEvictions > 0) {
-      OS << formatv(";   Evictions: {0}/{1}\n",
-                    Raw.VGPRCacheEvictions, Scaled.VGPRCacheEvictions);
+      OS << formatv(";   Evictions: {0}/{1}\n", Raw.VGPRCacheEvictions,
+                    Scaled.VGPRCacheEvictions);
     }
     OS << ";\n";
   }
@@ -1858,24 +1936,29 @@ void KernelPerfReport::print(raw_ostream &OS, StringRef FuncName) const {
       OS << formatv(";   Cold: {0} cycles | Warm: {1} cycles",
                     ColdTotal.TotalCycles, WarmTotal.TotalCycles);
       if (ColdTotal.TotalCycles > 0 && WarmTotal.TotalCycles > 0) {
-        float Speedup = static_cast<float>(ColdTotal.TotalCycles) / WarmTotal.TotalCycles;
+        float Speedup =
+            static_cast<float>(ColdTotal.TotalCycles) / WarmTotal.TotalCycles;
         OS << formatv(" | Speedup: {0:F2}x", Speedup);
       }
       OS << "\n";
     }
     if (NumBranches > 0) {
-      OS << formatv(";   Branches: {0} (scaled metrics use uniform probability)\n",
-                    NumBranches);
+      OS << formatv(
+          ";   Branches: {0} (scaled metrics use uniform probability)\n",
+          NumBranches);
     }
     OS << ";\n";
   }
 
   // === Derived Metrics ===
   OS << "; === Derived Metrics ===\n";
-  OS << formatv(";   IPC: {0:F2} | Stall ratio: {1:F1}%\n", IPC, StallRatio * 100.0f);
+  OS << formatv(";   IPC: {0:F2} | Stall ratio: {1:F1}%\n", IPC,
+                StallRatio * 100.0f);
   if (Scaled.NumWaitcnt > 0) {
-    float AvgFalsePerWait = static_cast<float>(Scaled.NumFalseWaits) / Scaled.NumWaitcnt;
-    OS << formatv(";   False wait ratio: {0:F2} per waitcnt\n", AvgFalsePerWait);
+    float AvgFalsePerWait =
+        static_cast<float>(Scaled.NumFalseWaits) / Scaled.NumWaitcnt;
+    OS << formatv(";   False wait ratio: {0:F2} per waitcnt\n",
+                  AvgFalsePerWait);
   }
   OS << ";\n";
 
@@ -1936,4 +2019,3 @@ INITIALIZE_PASS_END(AMDGPUStaticSimulatorLegacy, DEBUG_TYPE,
 FunctionPass *llvm::createAMDGPUStaticSimulatorPass() {
   return new AMDGPUStaticSimulatorLegacy();
 }
-

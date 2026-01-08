@@ -44,12 +44,12 @@ namespace AMDGPU {
 namespace DefaultLatency {
 constexpr unsigned VALU = 5;
 constexpr unsigned SALU = 2;
-constexpr unsigned TRANS = 8;      // Transcendental / WMMA
-constexpr unsigned DS_READ = 50;   // LDS load
-constexpr unsigned DS_WRITE = 8;   // LDS store
-constexpr unsigned VMEM = 300;     // Global memory (conservative)
-constexpr unsigned SMEM = 20;      // Scalar memory
-constexpr unsigned BARRIER = 32;   // s_barrier
+constexpr unsigned TRANS = 8;    // Transcendental / WMMA
+constexpr unsigned DS_READ = 50; // LDS load
+constexpr unsigned DS_WRITE = 8; // LDS store
+constexpr unsigned VMEM = 300;   // Global memory (conservative)
+constexpr unsigned SMEM = 20;    // Scalar memory
+constexpr unsigned BARRIER = 32; // s_barrier
 } // namespace DefaultLatency
 
 //===----------------------------------------------------------------------===//
@@ -61,18 +61,18 @@ constexpr unsigned BARRIER = 32;   // s_barrier
 enum class InstClass {
   VALU,
   SALU,
-  TRANS,       // Transcendentals (V_EXP, V_LOG, V_RCP, V_RSQ, V_SQRT, etc.)
-  WMMA,        // Matrix multiply
+  TRANS, // Transcendentals (V_EXP, V_LOG, V_RCP, V_RSQ, V_SQRT, etc.)
+  WMMA,  // Matrix multiply
   DS_READ,
   DS_WRITE,
   VMEM_READ,
   VMEM_WRITE,
   SMEM,
-  TDM,         // Tensor DMA (TENSOR_LOAD_TO_LDS etc.)
+  TDM, // Tensor DMA (TENSOR_LOAD_TO_LDS etc.)
   BARRIER,
   WAITCNT,
   DELAY_ALU,
-  MSB_SET,     // s_set_vgpr_msb (gfx1250 overhead for >256 VGPRs)
+  MSB_SET, // s_set_vgpr_msb (gfx1250 overhead for >256 VGPRs)
   NOP,
   BRANCH,
   OTHER
@@ -81,22 +81,34 @@ enum class InstClass {
 /// Get the latency for an instruction class.
 inline unsigned getLatencyForClass(InstClass IC) {
   switch (IC) {
-  case InstClass::VALU:       return DefaultLatency::VALU;
-  case InstClass::SALU:       return DefaultLatency::SALU;
-  case InstClass::TRANS:      return DefaultLatency::TRANS;
-  case InstClass::WMMA:       return DefaultLatency::TRANS;  // Similar latency
-  case InstClass::DS_READ:    return DefaultLatency::DS_READ;
-  case InstClass::DS_WRITE:   return DefaultLatency::DS_WRITE;
+  case InstClass::VALU:
+    return DefaultLatency::VALU;
+  case InstClass::SALU:
+    return DefaultLatency::SALU;
+  case InstClass::TRANS:
+    return DefaultLatency::TRANS;
+  case InstClass::WMMA:
+    return DefaultLatency::TRANS; // Similar latency
+  case InstClass::DS_READ:
+    return DefaultLatency::DS_READ;
+  case InstClass::DS_WRITE:
+    return DefaultLatency::DS_WRITE;
   case InstClass::VMEM_READ:
-  case InstClass::VMEM_WRITE: return DefaultLatency::VMEM;
-  case InstClass::SMEM:       return DefaultLatency::SMEM;
-  case InstClass::TDM:        return DefaultLatency::DS_READ; // Similar to DS
-  case InstClass::BARRIER:    return DefaultLatency::BARRIER;
-  default:                    return 1;
+  case InstClass::VMEM_WRITE:
+    return DefaultLatency::VMEM;
+  case InstClass::SMEM:
+    return DefaultLatency::SMEM;
+  case InstClass::TDM:
+    return DefaultLatency::DS_READ; // Similar to DS
+  case InstClass::BARRIER:
+    return DefaultLatency::BARRIER;
+  default:
+    return 1;
   }
 }
 
-// WMMA window size is per-variant via SchedModel (8 for BF16/F16, 16 for IU8/IU4, etc.)
+// WMMA window size is per-variant via SchedModel (8 for BF16/F16, 16 for
+// IU8/IU4, etc.)
 
 //===----------------------------------------------------------------------===//
 // Per-Instruction Simulation Info (for assembly annotations)
@@ -105,24 +117,24 @@ inline unsigned getLatencyForClass(InstClass IC) {
 /// Reason for stall cycles on an instruction
 enum class StallReason : uint8_t {
   NONE = 0,
-  FU_BUSY,          // Functional unit not ready
-  COEXEC_BLOCKED,   // Blocked by WMMA co-execution rules
-  LONG_LAT_VALU,    // Long-latency VALU blocked by WMMA window
-  PK_SCALAR_BUG,    // PK/VOPD incorrectly holds scalar resource
-  WAITCNT,          // Memory wait (s_wait_*)
-  DELAY_ALU,        // RAW dependency (s_delay_alu)
-  MEM_FIFO,         // Memory FIFO full
-  MSB_SET_EXPOSED,  // s_set_vgpr_msb not fused
-  REG_BANK          // Register bank conflict (operands in same sub-bank)
+  FU_BUSY,         // Functional unit not ready
+  COEXEC_BLOCKED,  // Blocked by WMMA co-execution rules
+  LONG_LAT_VALU,   // Long-latency VALU blocked by WMMA window
+  PK_SCALAR_BUG,   // PK/VOPD incorrectly holds scalar resource
+  WAITCNT,         // Memory wait (s_wait_*)
+  DELAY_ALU,       // RAW dependency (s_delay_alu)
+  MEM_FIFO,        // Memory FIFO full
+  MSB_SET_EXPOSED, // s_set_vgpr_msb not fused
+  REG_BANK         // Register bank conflict (operands in same sub-bank)
 };
 
 /// Stage type for WMMA co-execution (for annotation display)
 enum class WMMAStageType : uint8_t {
-  NONE = 0,  // Not in WMMA window
-  E0,        // Issue cycle - control only
-  E,         // External - MEM/SALU allowed
-  I,         // Internal - MEM/SALU/VALU allowed
-  V          // Vacant - MEM/SALU/WMMA allowed, no VALU
+  NONE = 0, // Not in WMMA window
+  E0,       // Issue cycle - control only
+  E,        // External - MEM/SALU allowed
+  I,        // Internal - MEM/SALU/VALU allowed
+  V         // Vacant - MEM/SALU/WMMA allowed, no VALU
 };
 
 /// Per-instruction simulation data for assembly annotation
@@ -140,21 +152,31 @@ struct InstrSimInfo {
   bool IsWMMA = false;
   bool LDScaleBlocked = false;
   StringRef WMMAPattern;
-  std::string CachePattern;  // e.g., "($--)" for VGPR cache hits ($=hit, -=miss)
+  std::string CachePattern; // e.g., "($--)" for VGPR cache hits ($=hit, -=miss)
 
   /// Get human-readable reason string
   const char *getReasonString() const {
     switch (Reason) {
-    case StallReason::NONE:           return nullptr;
-    case StallReason::FU_BUSY:        return "FU busy";
-    case StallReason::COEXEC_BLOCKED: return "CoExec blocked";
-    case StallReason::LONG_LAT_VALU:  return "LongLatVALU blocked";
-    case StallReason::PK_SCALAR_BUG:  return "PKScalar bug";
-    case StallReason::WAITCNT:        return "WaitCnt";
-    case StallReason::DELAY_ALU:      return "DelayAlu";
-    case StallReason::MEM_FIFO:       return "FIFO full";
-    case StallReason::MSB_SET_EXPOSED: return "MSB exposed";
-    case StallReason::REG_BANK:       return "RegBank conflict";
+    case StallReason::NONE:
+      return nullptr;
+    case StallReason::FU_BUSY:
+      return "FU busy";
+    case StallReason::COEXEC_BLOCKED:
+      return "CoExec blocked";
+    case StallReason::LONG_LAT_VALU:
+      return "LongLatVALU blocked";
+    case StallReason::PK_SCALAR_BUG:
+      return "PKScalar bug";
+    case StallReason::WAITCNT:
+      return "WaitCnt";
+    case StallReason::DELAY_ALU:
+      return "DelayAlu";
+    case StallReason::MEM_FIFO:
+      return "FIFO full";
+    case StallReason::MSB_SET_EXPOSED:
+      return "MSB exposed";
+    case StallReason::REG_BANK:
+      return "RegBank conflict";
     }
     return "Unknown";
   }
@@ -162,22 +184,32 @@ struct InstrSimInfo {
   /// Get stage type character for compact display
   char getStageChar() const {
     switch (StageType) {
-    case WMMAStageType::E0: return '0';
-    case WMMAStageType::E:  return 'E';
-    case WMMAStageType::I:  return 'I';
-    case WMMAStageType::V:  return 'V';
-    default: return '?';
+    case WMMAStageType::E0:
+      return '0';
+    case WMMAStageType::E:
+      return 'E';
+    case WMMAStageType::I:
+      return 'I';
+    case WMMAStageType::V:
+      return 'V';
+    default:
+      return '?';
     }
   }
 
   /// Get stage type name
   const char *getStageName() const {
     switch (StageType) {
-    case WMMAStageType::E0: return "E0";
-    case WMMAStageType::E:  return "E";
-    case WMMAStageType::I:  return "I";
-    case WMMAStageType::V:  return "V";
-    default: return "?";
+    case WMMAStageType::E0:
+      return "E0";
+    case WMMAStageType::E:
+      return "E";
+    case WMMAStageType::I:
+      return "I";
+    case WMMAStageType::V:
+      return "V";
+    default:
+      return "?";
     }
   }
 };
@@ -188,42 +220,51 @@ struct InstrSimInfo {
 
 /// Hardware functional units for per-unit busy tracking
 enum class FunctionalUnit : unsigned {
-  NONE = 0,   // No unit (NOPs, WAITCNTs, BARRIERs) - no busy tracking
-  XDL,        // Matrix/WMMA unit
-  VALU,       // Vector ALU
-  SALU,       // Scalar ALU
-  TRANS,      // Transcendental unit
-  LDS,        // Local Data Share
-  VMEM,       // Global memory unit
-  SMEM,       // Scalar memory unit
-  BRANCH,     // Branch unit
+  NONE = 0, // No unit (NOPs, WAITCNTs, BARRIERs) - no busy tracking
+  XDL,      // Matrix/WMMA unit
+  VALU,     // Vector ALU
+  SALU,     // Scalar ALU
+  TRANS,    // Transcendental unit
+  LDS,      // Local Data Share
+  VMEM,     // Global memory unit
+  SMEM,     // Scalar memory unit
+  BRANCH,   // Branch unit
   NUM_UNITS
 };
 
 /// Map InstClass to FunctionalUnit
 inline FunctionalUnit getUnitForClass(InstClass IC) {
   switch (IC) {
-  case InstClass::WMMA:       return FunctionalUnit::XDL;
-  case InstClass::VALU:       return FunctionalUnit::VALU;
-  case InstClass::TRANS:      return FunctionalUnit::TRANS;
+  case InstClass::WMMA:
+    return FunctionalUnit::XDL;
+  case InstClass::VALU:
+    return FunctionalUnit::VALU;
+  case InstClass::TRANS:
+    return FunctionalUnit::TRANS;
   case InstClass::SALU:
-  case InstClass::DELAY_ALU:  // s_delay_alu is SALU
-  case InstClass::MSB_SET:    // s_set_vgpr_msb is SALU (co-fuses with following VALU)
+  case InstClass::DELAY_ALU: // s_delay_alu is SALU
+  case InstClass::MSB_SET:   // s_set_vgpr_msb is SALU (co-fuses with following
+                             // VALU)
     return FunctionalUnit::SALU;
   case InstClass::DS_READ:
   case InstClass::DS_WRITE:
-  case InstClass::TDM:        return FunctionalUnit::LDS;
+  case InstClass::TDM:
+    return FunctionalUnit::LDS;
   case InstClass::VMEM_READ:
-  case InstClass::VMEM_WRITE: return FunctionalUnit::VMEM;
-  case InstClass::SMEM:       return FunctionalUnit::SMEM;
-  case InstClass::BRANCH:     return FunctionalUnit::BRANCH;
+  case InstClass::VMEM_WRITE:
+    return FunctionalUnit::VMEM;
+  case InstClass::SMEM:
+    return FunctionalUnit::SMEM;
+  case InstClass::BRANCH:
+    return FunctionalUnit::BRANCH;
   // These don't occupy functional units - they're cycle padding or control flow
-  // NOPs are inserted by hazard recognizer to resolve stalls, not cause new ones
+  // NOPs are inserted by hazard recognizer to resolve stalls, not cause new
+  // ones
   case InstClass::NOP:
   case InstClass::WAITCNT:
   case InstClass::BARRIER:
   case InstClass::OTHER:
-   return FunctionalUnit::NONE;
+    return FunctionalUnit::NONE;
   }
 
   llvm_unreachable("Unhandled InstClass");
@@ -238,43 +279,50 @@ inline FunctionalUnit getUnitForClass(InstClass IC) {
 /// Stage types for WMMA co-execution windows
 /// Each WMMA cycle has a stage type determining what can co-execute.
 enum class StageType : uint8_t {
-  E0,   // Issue cycle - only control co-executes (s_delay_alu, s_set_vgpr_msb)
-  E,    // External - mem/salu primary, no valu/trans
-  I,    // Internal - mem/salu/valu/trans all allowed
-  V,    // Vacant - mem/salu/next-wmma ok, NO VALU/TRANS
-  ANY,  // Default - all instruction types allowed (fallback)
+  E0,  // Issue cycle - only control co-executes (s_delay_alu, s_set_vgpr_msb)
+  E,   // External - mem/salu primary, no valu/trans
+  I,   // Internal - mem/salu/valu/trans all allowed
+  V,   // Vacant - mem/salu/next-wmma ok, NO VALU/TRANS
+  ANY, // Default - all instruction types allowed (fallback)
 };
 
 /// Bitmask for instruction types allowed to co-execute at a stage
 namespace CoExecMask {
-  constexpr uint8_t None  = 0;
-  constexpr uint8_t CTRL  = 1 << 0;   // Control: s_delay_alu, s_set_vgpr_msb
-  constexpr uint8_t VALU  = 1 << 1;   // Vector ALU
-  constexpr uint8_t TRANS = 1 << 2;   // Transcendentals (V_EXP etc)
-  constexpr uint8_t SALU  = 1 << 3;   // Scalar ALU
-  constexpr uint8_t DS    = 1 << 4;   // LDS read/write
-  constexpr uint8_t VMEM  = 1 << 5;   // Global memory
-  constexpr uint8_t SMEM  = 1 << 6;   // Scalar memory
-  constexpr uint8_t WMMA  = 1 << 7;   // Next WMMA (V stages only)
-  constexpr uint8_t All   = 0xFF;
+constexpr uint8_t None = 0;
+constexpr uint8_t CTRL = 1 << 0;  // Control: s_delay_alu, s_set_vgpr_msb
+constexpr uint8_t VALU = 1 << 1;  // Vector ALU
+constexpr uint8_t TRANS = 1 << 2; // Transcendentals (V_EXP etc)
+constexpr uint8_t SALU = 1 << 3;  // Scalar ALU
+constexpr uint8_t DS = 1 << 4;    // LDS read/write
+constexpr uint8_t VMEM = 1 << 5;  // Global memory
+constexpr uint8_t SMEM = 1 << 6;  // Scalar memory
+constexpr uint8_t WMMA = 1 << 7;  // Next WMMA (V stages only)
+constexpr uint8_t All = 0xFF;
 
-  constexpr uint8_t MEM = DS | VMEM | SMEM;
-  constexpr uint8_t StageE0 = CTRL;                           // Issue: control only
-  constexpr uint8_t StageE  = CTRL | SALU | MEM;              // External: mem/salu
-  constexpr uint8_t StageI  = CTRL | SALU | MEM | VALU | TRANS; // Internal: all ALU
-  constexpr uint8_t StageV  = CTRL | SALU | MEM | WMMA;       // Vacant: no valu/trans
+constexpr uint8_t MEM = DS | VMEM | SMEM;
+constexpr uint8_t StageE0 = CTRL;             // Issue: control only
+constexpr uint8_t StageE = CTRL | SALU | MEM; // External: mem/salu
+constexpr uint8_t StageI =
+    CTRL | SALU | MEM | VALU | TRANS;                // Internal: all ALU
+constexpr uint8_t StageV = CTRL | SALU | MEM | WMMA; // Vacant: no valu/trans
 
-  /// Get WMMAStageType from a stage mask value
-  inline WMMAStageType getStageType(uint8_t Mask) {
-    if (Mask == StageE0) return WMMAStageType::E0;
-    if (Mask == StageE)  return WMMAStageType::E;
-    if (Mask == StageI)  return WMMAStageType::I;
-    if (Mask == StageV)  return WMMAStageType::V;
-    // For 'All' or unknown, return based on what's allowed
-    if (Mask & VALU) return WMMAStageType::I;  // If VALU allowed, it's I-like
-    if (Mask & WMMA) return WMMAStageType::V;  // If WMMA allowed (not VALU), V-like
-    return WMMAStageType::E;  // Default to E
-  }
+/// Get WMMAStageType from a stage mask value
+inline WMMAStageType getStageType(uint8_t Mask) {
+  if (Mask == StageE0)
+    return WMMAStageType::E0;
+  if (Mask == StageE)
+    return WMMAStageType::E;
+  if (Mask == StageI)
+    return WMMAStageType::I;
+  if (Mask == StageV)
+    return WMMAStageType::V;
+  // For 'All' or unknown, return based on what's allowed
+  if (Mask & VALU)
+    return WMMAStageType::I; // If VALU allowed, it's I-like
+  if (Mask & WMMA)
+    return WMMAStageType::V; // If WMMA allowed (not VALU), V-like
+  return WMMAStageType::E;   // Default to E
+}
 } // namespace CoExecMask
 
 /// Max stages: INT8 16x16x64 = 17 cycles, round up for safety
@@ -282,17 +330,18 @@ constexpr unsigned MaxWMMAStages = 20;
 
 /// Per-WMMA-variant co-execution rules
 struct WMMACoExecInfo {
-  unsigned Occupancy;                         // Cycles until XDL frees (next WMMA can issue)
-  unsigned TotalWindow;                       // Total window including V tail
-  uint8_t StageMask[MaxWMMAStages] = {};      // Per-stage allowed instruction mask
-  unsigned LastIStage;                        // Last I-stage index (for LD_SCALE rule)
-  bool HasScaling;                            // True for FP8/FP6/FP4 scaled variants
-  StringRef Pattern;                          // Pattern string for display (e.g., "0EEIIIVV")
+  unsigned Occupancy;   // Cycles until XDL frees (next WMMA can issue)
+  unsigned TotalWindow; // Total window including V tail
+  uint8_t StageMask[MaxWMMAStages] = {}; // Per-stage allowed instruction mask
+  unsigned LastIStage; // Last I-stage index (for LD_SCALE rule)
+  bool HasScaling;     // True for FP8/FP6/FP4 scaled variants
+  StringRef Pattern;   // Pattern string for display (e.g., "0EEIIIVV")
 
   /// Default constructor - initialize to safe defaults
-  WMMACoExecInfo() : Occupancy(0), TotalWindow(0), LastIStage(0), HasScaling(false) {
+  WMMACoExecInfo()
+      : Occupancy(0), TotalWindow(0), LastIStage(0), HasScaling(false) {
     for (unsigned i = 0; i < MaxWMMAStages; ++i)
-      StageMask[i] = CoExecMask::All;  // Default: permissive
+      StageMask[i] = CoExecMask::All; // Default: permissive
   }
 
   /// Get the mask bit for an instruction class
@@ -303,9 +352,9 @@ struct WMMACoExecInfo {
     case InstClass::TRANS:
       return CoExecMask::TRANS;
     case InstClass::SALU:
-    case InstClass::BARRIER:   // Barriers use SALU, can co-exec like SALU
-    case InstClass::WAITCNT:   // Wait instructions use SALU
-    case InstClass::BRANCH:    // Branch instructions use SALU
+    case InstClass::BARRIER: // Barriers use SALU, can co-exec like SALU
+    case InstClass::WAITCNT: // Wait instructions use SALU
+    case InstClass::BRANCH:  // Branch instructions use SALU
       return CoExecMask::SALU;
     case InstClass::DELAY_ALU:
     case InstClass::MSB_SET:
@@ -337,7 +386,8 @@ struct WMMACoExecInfo {
   }
 
   /// Find the next stage (>= CurrentStage) where IC can co-execute.
-  std::optional<unsigned> findNextAllowedStage(InstClass IC, unsigned CurrentStage) const {
+  std::optional<unsigned> findNextAllowedStage(InstClass IC,
+                                               unsigned CurrentStage) const {
     uint8_t Needed = getMaskForIC(IC);
     if (Needed == 0)
       return std::nullopt;
@@ -353,29 +403,41 @@ struct WMMACoExecInfo {
   bool isBackToBack(unsigned NextWMMAStage) const {
     return NextWMMAStage >= Occupancy && NextWMMAStage < TotalWindow;
   }
-
 };
 
 /// Helper to create WMMACoExecInfo from a pattern string
 /// Pattern chars: '0'=E0, 'E'=External, 'I'=Internal, 'V'=Vacant, 'A'=Any
-inline WMMACoExecInfo makeWMMACoExecInfo(unsigned Occupancy, unsigned TotalWindow,
-                                         const char* Pattern, unsigned LastIStage,
-                                         bool HasScaling) {
+inline WMMACoExecInfo makeWMMACoExecInfo(unsigned Occupancy,
+                                         unsigned TotalWindow,
+                                         const char *Pattern,
+                                         unsigned LastIStage, bool HasScaling) {
   WMMACoExecInfo Info;
   Info.Occupancy = Occupancy;
   Info.TotalWindow = TotalWindow;
   Info.LastIStage = LastIStage;
   Info.HasScaling = HasScaling;
-  Info.Pattern = Pattern;  // Store pattern for display
+  Info.Pattern = Pattern; // Store pattern for display
 
   for (unsigned i = 0; i < TotalWindow && Pattern[i]; ++i) {
     switch (Pattern[i]) {
-    case '0': Info.StageMask[i] = CoExecMask::StageE0; break;  // E0: control only
-    case 'E': Info.StageMask[i] = CoExecMask::StageE; break;   // External
-    case 'I': Info.StageMask[i] = CoExecMask::StageI; break;   // Internal
-    case 'V': Info.StageMask[i] = CoExecMask::StageV; break;   // Vacant
-    case 'A': Info.StageMask[i] = CoExecMask::All; break;      // All allowed
-    default:  Info.StageMask[i] = CoExecMask::All; break;      // Safe default
+    case '0':
+      Info.StageMask[i] = CoExecMask::StageE0;
+      break; // E0: control only
+    case 'E':
+      Info.StageMask[i] = CoExecMask::StageE;
+      break; // External
+    case 'I':
+      Info.StageMask[i] = CoExecMask::StageI;
+      break; // Internal
+    case 'V':
+      Info.StageMask[i] = CoExecMask::StageV;
+      break; // Vacant
+    case 'A':
+      Info.StageMask[i] = CoExecMask::All;
+      break; // All allowed
+    default:
+      Info.StageMask[i] = CoExecMask::All;
+      break; // Safe default
     }
   }
   return Info;
@@ -397,8 +459,10 @@ inline WMMACoExecInfo getWMMACoExecInfo(const MachineInstr &MI,
   if (Name.contains_insensitive("16x16x128_f8f6f4")) {
     // Check if both operands are FP4 (shorter window)
     bool BothF4 = false;
-    if (const MachineOperand *FmtA = TII.getNamedOperand(MI, AMDGPU::OpName::matrix_a_fmt)) {
-      if (const MachineOperand *FmtB = TII.getNamedOperand(MI, AMDGPU::OpName::matrix_b_fmt)) {
+    if (const MachineOperand *FmtA =
+            TII.getNamedOperand(MI, AMDGPU::OpName::matrix_a_fmt)) {
+      if (const MachineOperand *FmtB =
+              TII.getNamedOperand(MI, AMDGPU::OpName::matrix_b_fmt)) {
         BothF4 = (FmtA->getImm() == WMMA::MATRIX_FMT_FP4 &&
                   FmtB->getImm() == WMMA::MATRIX_FMT_FP4);
       }
@@ -478,11 +542,11 @@ struct PendingMemOp {
 };
 
 namespace MemLimits {
-  constexpr unsigned MaxDSInFlight = 10;
-  constexpr unsigned MaxVMEMInFlight = 16;
-  constexpr unsigned MaxSMEMInFlight = 10;
-  constexpr unsigned MaxTDMInFlight = 4;
-}
+constexpr unsigned MaxDSInFlight = 10;
+constexpr unsigned MaxVMEMInFlight = 16;
+constexpr unsigned MaxSMEMInFlight = 10;
+constexpr unsigned MaxTDMInFlight = 4;
+} // namespace MemLimits
 
 //===----------------------------------------------------------------------===//
 // BlockMetrics - Per-block accumulated counts and cycles
@@ -496,8 +560,8 @@ struct BlockMetrics {
   unsigned NumSALU = 0;
   unsigned NumTRANS = 0;
   unsigned NumWMMA = 0;
-  unsigned NumVOPD = 0;    // Dual-issue VALU instructions
-  unsigned NumPacked = 0;  // Packed (V_PK_*) instructions
+  unsigned NumVOPD = 0;   // Dual-issue VALU instructions
+  unsigned NumPacked = 0; // Packed (V_PK_*) instructions
   unsigned NumDSRead = 0;
   unsigned NumDSWrite = 0;
   unsigned NumVMEM = 0;
@@ -705,7 +769,8 @@ struct BlockMetrics {
     Result.StallLDS = StallLDS + O.StallLDS;
     Result.StallVMEMUnit = StallVMEMUnit + O.StallVMEMUnit;
     Result.StallRegBankConflict = StallRegBankConflict + O.StallRegBankConflict;
-    Result.RegBankConflictsInWMMAWindow = RegBankConflictsInWMMAWindow + O.RegBankConflictsInWMMAWindow;
+    Result.RegBankConflictsInWMMAWindow =
+        RegBankConflictsInWMMAWindow + O.RegBankConflictsInWMMAWindow;
     Result.StallLongLatVALU = StallLongLatVALU + O.StallLongLatVALU;
     Result.StallPKScalarBug = StallPKScalarBug + O.StallPKScalarBug;
 
@@ -734,7 +799,8 @@ struct BlockMetrics {
     bool First = true;
     auto Emit = [&](const char *Name, unsigned Val) {
       if (Val) {
-        if (!First) OS << " ";
+        if (!First)
+          OS << " ";
         OS << Name << ":" << Val;
         First = false;
       }
@@ -743,7 +809,8 @@ struct BlockMetrics {
     // NumVALU = ops (VOPD/PK each count as 2)
     // NumVOPD/NumPacked = instructions
     if (NumVALU) {
-      if (!First) OS << " ";
+      if (!First)
+        OS << " ";
       // Total VALU instructions = ops - dual_ops + dual_inst
       //                        = NumVALU - (NumVOPD + NumPacked)
       unsigned NumVALUInst = NumVALU - NumVOPD - NumPacked;
@@ -757,7 +824,8 @@ struct BlockMetrics {
           DualFirst = false;
         }
         if (NumPacked) {
-          if (!DualFirst) OS << "+";
+          if (!DualFirst)
+            OS << "+";
           OS << "PK:" << NumPacked;
         }
         OS << ")";
@@ -773,7 +841,8 @@ struct BlockMetrics {
     Emit("SMEM", NumSMEM);
     Emit("TDM", NumTDM);
     // Control flow (grouped as "Ctrl" to keep output concise)
-    unsigned NumCtrl = NumWaitcnt + NumBarrier + NumDelayAlu + NumMSBSet + NumNop + NumBranch;
+    unsigned NumCtrl =
+        NumWaitcnt + NumBarrier + NumDelayAlu + NumMSBSet + NumNop + NumBranch;
     Emit("Ctrl", NumCtrl);
     // Spills/reloads (show separately for clarity)
     Emit("Spill", NumSpill);
@@ -785,7 +854,8 @@ struct BlockMetrics {
     bool First = true;
     auto Emit = [&](const char *Name, unsigned Val) {
       if (Val) {
-        if (!First) OS << " | ";
+        if (!First)
+          OS << " | ";
         OS << Name << ":" << Val;
         First = false;
       }
@@ -793,15 +863,18 @@ struct BlockMetrics {
     Emit("FU", StallFunctionalUnit);
     // WMMA co-exec miss with breakdown by instruction class
     if (StallCoExec) {
-      if (!First) OS << " | ";
+      if (!First)
+        OS << " | ";
       OS << "WMMACoExec:" << StallCoExec;
       // Show breakdown if we have per-class data
-      if (CoExecMissVALU || CoExecMissTRANS || CoExecMissMemory || CoExecMissOther) {
+      if (CoExecMissVALU || CoExecMissTRANS || CoExecMissMemory ||
+          CoExecMissOther) {
         OS << "(";
         bool SubFirst = true;
         auto EmitSub = [&](const char *Name, unsigned Val) {
           if (Val) {
-            if (!SubFirst) OS << "+";
+            if (!SubFirst)
+              OS << "+";
             OS << Name << ":" << Val;
             SubFirst = false;
           }
@@ -821,12 +894,15 @@ struct BlockMetrics {
     Emit("LongLatVALU", StallLongLatVALU);
     Emit("PKScalar", StallPKScalarBug);
     if (RegBankConflictsInWMMAWindow) {
-      if (!First) OS << " | ";
-      OS << "RegBankInWMMA:" << RegBankConflictsInWMMAWindow << " (not counted)";
+      if (!First)
+        OS << " | ";
+      OS << "RegBankInWMMA:" << RegBankConflictsInWMMAWindow
+         << " (not counted)";
       First = false;
     }
     if (NumMSBSetExposed || NumMSBSetMasked) {
-      if (!First) OS << " | ";
+      if (!First)
+        OS << " | ";
       OS << "MSBExposed:" << NumMSBSetExposed;
       if (NumMSBSetMasked)
         OS << " (+" << NumMSBSetMasked << " masked)";
@@ -834,7 +910,8 @@ struct BlockMetrics {
     }
     // I-slot utilization
     if (ISlotTotal) {
-      if (!First) OS << " | ";
+      if (!First)
+        OS << " | ";
       OS << "ISlot:" << ISlotUsedByVALU << "/" << ISlotTotal;
       if (ISlotWastedOnNonVALU)
         OS << " (wasted:" << ISlotWastedOnNonVALU << ")";
@@ -847,7 +924,8 @@ struct BlockMetrics {
     bool First = true;
     auto Emit = [&](const char *Name, unsigned Val) {
       if (Val) {
-        if (!First) OS << " ";
+        if (!First)
+          OS << " ";
         OS << Name << ":" << Val;
         First = false;
       }
@@ -871,7 +949,8 @@ struct VGPRSourceCache {
   static constexpr unsigned NumPorts = 3;
   static constexpr unsigned CacheDepth = 4;
 
-  std::array<std::array<SmallVector<unsigned, CacheDepth>, NumPorts>, NumBanks> Cache;
+  std::array<std::array<SmallVector<unsigned, CacheDepth>, NumPorts>, NumBanks>
+      Cache;
 
   unsigned CycleHits = 0;
   unsigned CycleMisses = 0;
@@ -930,7 +1009,8 @@ struct RegisterFile {
   RegisterFile() = default;
   explicit RegisterFile(const SIRegisterInfo *TRI) : TRI(TRI) {}
 
-  static unsigned countBankConflicts(ArrayRef<unsigned> HWRegs, unsigned NumBanks) {
+  static unsigned countBankConflicts(ArrayRef<unsigned> HWRegs,
+                                     unsigned NumBanks) {
     // return 0;
     SmallVector<unsigned, 8> BankCount(NumBanks, 0);
     for (unsigned HWReg : HWRegs)
@@ -941,7 +1021,8 @@ struct RegisterFile {
 
   RegBankResult getRegBankStalls(const MachineInstr &MI) {
     RegBankResult Result;
-    if (!TRI) return Result;
+    if (!TRI)
+      return Result;
 
     SrcCache.resetCycleStats();
     SmallVector<unsigned, 16> VGPRMisses;
@@ -951,8 +1032,14 @@ struct RegisterFile {
 
     unsigned PortIdx = 0;
     for (const MachineOperand &MO : MI.explicit_uses()) {
-      if (!MO.isReg()) { PortIdx++; continue; }
-      if (!MO.getReg().isPhysical()) { PortIdx++; continue; }
+      if (!MO.isReg()) {
+        PortIdx++;
+        continue;
+      }
+      if (!MO.getReg().isPhysical()) {
+        PortIdx++;
+        continue;
+      }
 
       Register Reg = MO.getReg();
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
@@ -979,7 +1066,8 @@ struct RegisterFile {
       PortIdx++;
     }
 
-    Result.Stalls = countBankConflicts(VGPRMisses, 8) + countBankConflicts(SGPRHWRegs, 4);
+    Result.Stalls =
+        countBankConflicts(VGPRMisses, 8) + countBankConflicts(SGPRHWRegs, 4);
     if (!Pattern.empty())
       Result.CachePattern = "(" + Pattern + ")";
     Result.CacheHits = SrcCache.CycleHits;
@@ -989,14 +1077,17 @@ struct RegisterFile {
   }
 
   void invalidateWrites(const MachineInstr &MI) {
-    if (!TRI) return;
+    if (!TRI)
+      return;
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
 
     for (const MachineOperand &MO : MI.defs()) {
-      if (!MO.isReg() || !MO.getReg().isPhysical()) continue;
+      if (!MO.isReg() || !MO.getReg().isPhysical())
+        continue;
 
       Register Reg = MO.getReg();
-      if (!TRI->isVGPR(MRI, Reg)) continue;
+      if (!TRI->isVGPR(MRI, Reg))
+        continue;
 
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
       unsigned NumComponents = (RC ? TRI->getRegSizeInBits(*RC) : 32) / 32;
@@ -1011,7 +1102,8 @@ struct RegisterFile {
   RegBankResult updateCacheForWMMA(const MachineInstr &MI,
                                    const SIInstrInfo &TII) {
     RegBankResult Result;
-    if (!TRI) return Result;
+    if (!TRI)
+      return Result;
 
     SrcCache.resetCycleStats();
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
@@ -1020,12 +1112,15 @@ struct RegisterFile {
 
     auto ProcessOperand = [&](AMDGPU::OpName OpName) {
       int Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), OpName);
-      if (Idx < 0) return;
+      if (Idx < 0)
+        return;
       const MachineOperand &MO = MI.getOperand(Idx);
-      if (!MO.isReg() || !MO.getReg().isPhysical()) return;
+      if (!MO.isReg() || !MO.getReg().isPhysical())
+        return;
 
       Register Reg = MO.getReg();
-      if (!TRI->isVGPR(MRI, Reg)) return;
+      if (!TRI->isVGPR(MRI, Reg))
+        return;
 
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
       unsigned NumComponents = (RC ? TRI->getRegSizeInBits(*RC) : 32) / 32;
@@ -1121,9 +1216,7 @@ struct GPUSimState {
     return ActiveWMMA.getCurrentStage(CurrentCycle);
   }
 
-  void advanceCycle(unsigned N = 1) {
-    advanceToCycle(CurrentCycle + N);
-  }
+  void advanceCycle(unsigned N = 1) { advanceToCycle(CurrentCycle + N); }
 
   unsigned advanceToCycle(unsigned TargetCycle) {
     if (TargetCycle <= CurrentCycle)
@@ -1132,7 +1225,8 @@ struct GPUSimState {
     CurrentCycle = TargetCycle;
     if (ActiveWMMA.Active && CurrentCycle >= ActiveWMMA.EndCycle) {
       ActiveWMMA.Active = false;
-      // Don't reset VALUResourceBusyUntil - long-lat VALU may still be holding it
+      // Don't reset VALUResourceBusyUntil - long-lat VALU may still be holding
+      // it
     }
     retireCompletedMemOps();
     return Delta;
@@ -1187,14 +1281,16 @@ struct GPUSimState {
 
   void holdVALUResourceInWindow(unsigned Cycles) {
     if (inWMMAWindow())
-      VALUResourceBusyUntil = std::max(VALUResourceBusyUntil, CurrentCycle + Cycles);
+      VALUResourceBusyUntil =
+          std::max(VALUResourceBusyUntil, CurrentCycle + Cycles);
   }
 
   unsigned getVALUResourceStallInWindow() const {
     if (!inWMMAWindow())
       return 0;
     return (VALUResourceBusyUntil > CurrentCycle)
-               ? (VALUResourceBusyUntil - CurrentCycle) : 0;
+               ? (VALUResourceBusyUntil - CurrentCycle)
+               : 0;
   }
 
   unsigned getWMMATRANSStall() const {
@@ -1286,7 +1382,8 @@ struct GPUSimState {
     if (Queue.size() < MaxInFlight)
       return 0;
     unsigned OldestComplete = Queue.front().CompletionCycle;
-    return (OldestComplete > CurrentCycle) ? (OldestComplete - CurrentCycle) : 0;
+    return (OldestComplete > CurrentCycle) ? (OldestComplete - CurrentCycle)
+                                           : 0;
   }
 
   unsigned getDSFIFOStall() const {
@@ -1299,34 +1396,42 @@ struct GPUSimState {
       return 0;
     unsigned OldestComplete = UINT_MAX;
     if (!PendingVMEMLoad.empty())
-      OldestComplete = std::min(OldestComplete, PendingVMEMLoad.front().CompletionCycle);
+      OldestComplete =
+          std::min(OldestComplete, PendingVMEMLoad.front().CompletionCycle);
     if (!PendingVMEMStore.empty())
-      OldestComplete = std::min(OldestComplete, PendingVMEMStore.front().CompletionCycle);
-    return (OldestComplete > CurrentCycle) ? (OldestComplete - CurrentCycle) : 0;
+      OldestComplete =
+          std::min(OldestComplete, PendingVMEMStore.front().CompletionCycle);
+    return (OldestComplete > CurrentCycle) ? (OldestComplete - CurrentCycle)
+                                           : 0;
   }
 
   void issueMemOp(std::deque<PendingMemOp> &Queue, MemCounter Cnt,
                   unsigned Latency, unsigned BaseReg, unsigned NumRegs,
                   bool IsLoad, bool UpdateVGPR, bool UpdateSGPR) {
-    Queue.emplace_back(CurrentCycle, CurrentCycle + Latency, BaseReg, NumRegs, Cnt, IsLoad);
+    Queue.emplace_back(CurrentCycle, CurrentCycle + Latency, BaseReg, NumRegs,
+                       Cnt, IsLoad);
     MemCounters[static_cast<size_t>(Cnt)]++;
     unsigned ReadyTime = CurrentCycle + Latency;
     if (UpdateVGPR) {
-      for (unsigned i = 0; i < NumRegs && (BaseReg + i) < VGPRReadyTimes.size(); ++i)
+      for (unsigned i = 0; i < NumRegs && (BaseReg + i) < VGPRReadyTimes.size();
+           ++i)
         VGPRReadyTimes[BaseReg + i] = ReadyTime;
     }
     if (UpdateSGPR) {
-      for (unsigned i = 0; i < NumRegs && (BaseReg + i) < SGPRReadyTimes.size(); ++i)
+      for (unsigned i = 0; i < NumRegs && (BaseReg + i) < SGPRReadyTimes.size();
+           ++i)
         SGPRReadyTimes[BaseReg + i] = ReadyTime;
     }
   }
 
-  void issueDS(unsigned Latency, unsigned BaseVGPR, unsigned NumRegs, bool IsLoad) {
+  void issueDS(unsigned Latency, unsigned BaseVGPR, unsigned NumRegs,
+               bool IsLoad) {
     issueMemOp(PendingDS, MemCounter::LGKM, Latency, BaseVGPR, NumRegs, IsLoad,
                /*UpdateVGPR=*/IsLoad, /*UpdateSGPR=*/false);
   }
 
-  void issueVMEM(unsigned Latency, unsigned BaseVGPR, unsigned NumRegs, bool IsLoad) {
+  void issueVMEM(unsigned Latency, unsigned BaseVGPR, unsigned NumRegs,
+                 bool IsLoad) {
     MemCounter Cnt = IsLoad ? MemCounter::VMEM : MemCounter::VS;
     auto &Queue = IsLoad ? PendingVMEMLoad : PendingVMEMStore;
     issueMemOp(Queue, Cnt, Latency, BaseVGPR, NumRegs, IsLoad,
@@ -1339,7 +1444,8 @@ struct GPUSimState {
   }
 
   void issueTDM(unsigned Latency) {
-    issueMemOp(PendingTDM, MemCounter::TENSOR, Latency, /*BaseReg=*/0, /*NumRegs=*/0,
+    issueMemOp(PendingTDM, MemCounter::TENSOR, Latency, /*BaseReg=*/0,
+               /*NumRegs=*/0,
                /*IsLoad=*/true, /*UpdateVGPR=*/false, /*UpdateSGPR=*/false);
   }
 
@@ -1352,22 +1458,26 @@ struct GPUSimState {
   }
 
   unsigned getDSCompletionCycle(unsigned Index) const {
-    if (Index >= PendingDS.size()) return 0;
+    if (Index >= PendingDS.size())
+      return 0;
     return PendingDS[Index].CompletionCycle;
   }
 
   unsigned getVMEMLoadCompletionCycle(unsigned Index) const {
-    if (Index >= PendingVMEMLoad.size()) return 0;
+    if (Index >= PendingVMEMLoad.size())
+      return 0;
     return PendingVMEMLoad[Index].CompletionCycle;
   }
 
   unsigned getVMEMStoreCompletionCycle(unsigned Index) const {
-    if (Index >= PendingVMEMStore.size()) return 0;
+    if (Index >= PendingVMEMStore.size())
+      return 0;
     return PendingVMEMStore[Index].CompletionCycle;
   }
 
   unsigned getTDMCompletionCycle(unsigned Index) const {
-    if (Index >= PendingTDM.size()) return 0;
+    if (Index >= PendingTDM.size())
+      return 0;
     return PendingTDM[Index].CompletionCycle;
   }
 
@@ -1384,7 +1494,8 @@ struct GPUSimState {
       return 0;
     unsigned WaitForIndex = Pending - WaitCount - 1;
     unsigned CompletionCycle = Queue[WaitForIndex].CompletionCycle;
-    return (CompletionCycle > CurrentCycle) ? (CompletionCycle - CurrentCycle) : 0;
+    return (CompletionCycle > CurrentCycle) ? (CompletionCycle - CurrentCycle)
+                                            : 0;
   }
 
   unsigned applyWait(std::deque<PendingMemOp> &Queue, unsigned WaitCount) {
@@ -1476,10 +1587,11 @@ struct KernelPerfReport {
 
   void finalize() {
     if (Scaled.TotalCycles > 0) {
-      unsigned ComputeOps = Scaled.NumVALU + Scaled.NumSALU +
-                            Scaled.NumTRANS + Scaled.NumWMMA;
+      unsigned ComputeOps =
+          Scaled.NumVALU + Scaled.NumSALU + Scaled.NumTRANS + Scaled.NumWMMA;
       IPC = static_cast<float>(ComputeOps) / Scaled.TotalCycles;
-      StallRatio = static_cast<float>(Scaled.StallCycles()) / Scaled.TotalCycles;
+      StallRatio =
+          static_cast<float>(Scaled.StallCycles()) / Scaled.TotalCycles;
     }
     if (Scaled.WMMAWindowCycles > 0) {
       CoExecEfficiency =
@@ -1498,4 +1610,3 @@ struct KernelPerfReport {
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUSTATICSIMULATOR_H
-

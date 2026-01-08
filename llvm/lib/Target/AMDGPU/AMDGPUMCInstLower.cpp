@@ -342,36 +342,35 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
     if (!MFI)
       return;
-    
+
     auto Report = MFI->getStaticSimReport();
     if (!Report)
       return;
-    
+
     auto It = Report->PerInstr.find(MI);
     if (It == Report->PerInstr.end())
       return;
-    
+
     const AMDGPU::InstrSimInfo &Info = It->second;
-    
+
     bool HasCacheHit = Info.CachePattern.find('$') != std::string::npos;
     bool HasBankConflict = Info.Reason == AMDGPU::StallReason::REG_BANK;
-    
-    if (Info.StallCycles == 0 && !Info.InWMMAWindow && 
-        !Info.WasFused && !Info.WasExposed && !Info.WasMasked && 
-        !Info.IsWMMA && !HasCacheHit)
+
+    if (Info.StallCycles == 0 && !Info.InWMMAWindow && !Info.WasFused &&
+        !Info.WasExposed && !Info.WasMasked && !Info.IsWMMA && !HasCacheHit)
       return;
-    
+
     std::string Comment;
     raw_string_ostream OS(Comment);
     bool HasContent = false;
-    
+
     OS << "Sim:";
-    
+
     if (Info.IsWMMA && !Info.WMMAPattern.empty()) {
       OS << " " << Info.WMMAPattern;
       HasContent = true;
     }
-    
+
     if (Info.WasFused) {
       OS << " Fused";
       HasContent = true;
@@ -382,13 +381,13 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
         OS << " MSB_Exposed";
       HasContent = true;
     }
-    
+
     if (Info.InWMMAWindow && !Info.IsWMMA) {
-      OS << " WMMA[" << (unsigned)Info.WMMAStage << "/" 
+      OS << " WMMA[" << (unsigned)Info.WMMAStage << "/"
          << (unsigned)Info.WMMATotalWindow << "] " << Info.getStageName();
       if (Info.CoExecuted)
         OS << " OK";
-      else if (Info.StallCycles > 0 && 
+      else if (Info.StallCycles > 0 &&
                Info.Reason == AMDGPU::StallReason::COEXEC_BLOCKED) {
         if (Info.LDScaleBlocked)
           OS << " LD_SCALE";
@@ -397,7 +396,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       }
       HasContent = true;
     }
-    
+
     if (Info.StallCycles > 0) {
       if (HasContent)
         OS << " |";
@@ -406,12 +405,12 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
           Info.Reason != AMDGPU::StallReason::COEXEC_BLOCKED)
         OS << " [" << Info.getReasonString() << "]";
     }
-    
+
     if (!Info.CachePattern.empty() && (HasCacheHit || HasBankConflict)) {
       OS << " Cache" << Info.CachePattern;
       HasContent = true;
     }
-    
+
     OutStreamer->emitRawComment(Comment);
   };
   emitSimAnnotation();
