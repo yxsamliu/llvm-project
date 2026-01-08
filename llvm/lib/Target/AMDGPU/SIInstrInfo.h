@@ -1842,6 +1842,7 @@ public:
            MI.getOperand(1).getTargetFlags() == MO_NUM_VGPRS;
   }
 
+  // Used for for AMDGPUStaticSimulator only.
   unsigned getRepeatRate(const MachineInstr &MI) const;
 };
 

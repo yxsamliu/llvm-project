@@ -304,7 +304,8 @@ void AMDGPUAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
     HexLines.emplace_back("");
   }
   
-  // Per-block sim metrics
+  // Prints out per-block simulator metrics as an asm comment.
+  // Used for for AMDGPUStaticSimulator only.
   if (isVerbose()) {
     const SIMachineFunctionInfo *MFI = 
         MBB.getParent()->getInfo<SIMachineFunctionInfo>();
