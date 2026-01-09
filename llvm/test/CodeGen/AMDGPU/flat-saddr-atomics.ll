@@ -11877,7 +11877,6 @@ define amdgpu_ps float @flat_max_saddr_i32_rtn(ptr inreg %sbase, i32 %voffset, i
 ; GFX1260-LABEL: flat_max_saddr_i32_rtn:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_atomic_max_i32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN
 ; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -11968,7 +11967,6 @@ define amdgpu_ps float @flat_max_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vof
 ; GFX1260-LABEL: flat_max_saddr_i32_rtn_neg128:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_atomic_max_i32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN
 ; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -12060,7 +12058,6 @@ define amdgpu_ps void @flat_max_saddr_i32_nortn(ptr inreg %sbase, i32 %voffset, 
 ; GFX1260-LABEL: flat_max_saddr_i32_nortn:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_atomic_max_i32 v0, v1, s[2:3]
 ; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_storecnt_dscnt 0x0
@@ -12144,7 +12141,6 @@ define amdgpu_ps void @flat_max_saddr_i32_nortn_neg128(ptr inreg %sbase, i32 %vo
 ; GFX1260-LABEL: flat_max_saddr_i32_nortn_neg128:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_atomic_max_i32 v0, v1, s[2:3] offset:-128
 ; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_storecnt_dscnt 0x0
@@ -13714,7 +13710,6 @@ define amdgpu_ps float @flat_min_saddr_i32_rtn(ptr inreg %sbase, i32 %voffset, i
 ; GFX1260-LABEL: flat_min_saddr_i32_rtn:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_atomic_min_i32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN
 ; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -13805,7 +13800,6 @@ define amdgpu_ps float @flat_min_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vof
 ; GFX1260-LABEL: flat_min_saddr_i32_rtn_neg128:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_atomic_min_i32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN
 ; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -13897,7 +13891,6 @@ define amdgpu_ps void @flat_min_saddr_i32_nortn(ptr inreg %sbase, i32 %voffset, 
 ; GFX1260-LABEL: flat_min_saddr_i32_nortn:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_atomic_min_i32 v0, v1, s[2:3]
 ; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_storecnt_dscnt 0x0
@@ -13981,7 +13974,6 @@ define amdgpu_ps void @flat_min_saddr_i32_nortn_neg128(ptr inreg %sbase, i32 %vo
 ; GFX1260-LABEL: flat_min_saddr_i32_nortn_neg128:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_atomic_min_i32 v0, v1, s[2:3] offset:-128
 ; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_storecnt_dscnt 0x0
@@ -15551,7 +15543,6 @@ define amdgpu_ps float @flat_umax_saddr_i32_rtn(ptr inreg %sbase, i32 %voffset, 
 ; GFX1260-LABEL: flat_umax_saddr_i32_rtn:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_atomic_max_u32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN
 ; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -15642,7 +15633,6 @@ define amdgpu_ps float @flat_umax_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vo
 ; GFX1260-LABEL: flat_umax_saddr_i32_rtn_neg128:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_atomic_max_u32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN
 ; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -15734,7 +15724,6 @@ define amdgpu_ps void @flat_umax_saddr_i32_nortn(ptr inreg %sbase, i32 %voffset,
 ; GFX1260-LABEL: flat_umax_saddr_i32_nortn:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_atomic_max_u32 v0, v1, s[2:3]
 ; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_storecnt_dscnt 0x0
@@ -15818,7 +15807,6 @@ define amdgpu_ps void @flat_umax_saddr_i32_nortn_neg128(ptr inreg %sbase, i32 %v
 ; GFX1260-LABEL: flat_umax_saddr_i32_nortn_neg128:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_atomic_max_u32 v0, v1, s[2:3] offset:-128
 ; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_storecnt_dscnt 0x0
@@ -17388,7 +17376,6 @@ define amdgpu_ps float @flat_umin_saddr_i32_rtn(ptr inreg %sbase, i32 %voffset, 
 ; GFX1260-LABEL: flat_umin_saddr_i32_rtn:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_atomic_min_u32 v0, v0, v1, s[2:3] th:TH_ATOMIC_RETURN
 ; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -17479,7 +17466,6 @@ define amdgpu_ps float @flat_umin_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vo
 ; GFX1260-LABEL: flat_umin_saddr_i32_rtn_neg128:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_atomic_min_u32 v0, v0, v1, s[2:3] offset:-128 th:TH_ATOMIC_RETURN
 ; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -17571,7 +17557,6 @@ define amdgpu_ps void @flat_umin_saddr_i32_nortn(ptr inreg %sbase, i32 %voffset,
 ; GFX1260-LABEL: flat_umin_saddr_i32_nortn:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_atomic_min_u32 v0, v1, s[2:3]
 ; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_storecnt_dscnt 0x0
@@ -17655,7 +17640,6 @@ define amdgpu_ps void @flat_umin_saddr_i32_nortn_neg128(ptr inreg %sbase, i32 %v
 ; GFX1260-LABEL: flat_umin_saddr_i32_nortn_neg128:
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_atomic_min_u32 v0, v1, s[2:3] offset:-128
 ; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_storecnt_dscnt 0x0
@@ -27106,7 +27090,6 @@ define void @flat_atomic_fadd_f32_saddr_nortn(ptr inreg %ptr, float %data) {
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    flat_atomic_add_f32 v1, v0, s[0:1] offset:40
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -27253,7 +27236,6 @@ define void @flat_atomic_fmax_f32_saddr_nortn(ptr inreg %ptr, float %data) {
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    flat_atomic_max_num_f32 v1, v0, s[0:1] offset:40
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -27429,7 +27411,6 @@ define void @flat_atomic_fmin_f32_saddr_nortn(ptr inreg %ptr, float %data) {
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    flat_atomic_min_num_f32 v1, v0, s[0:1] offset:40
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -27575,7 +27556,6 @@ define void @flat_atomic_fadd_v2f16_saddr_nortn(ptr inreg %ptr, <2 x half> %data
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    flat_atomic_pk_add_f16 v1, v0, s[0:1] offset:40
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -27663,7 +27643,6 @@ define <2 x half> @flat_atomic_fmax_v2f16_saddr_rtn(ptr inreg %ptr, <2 x half> %
 ; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    flat_atomic_cmpswap_b32 v0, v2, v[4:5], s[0:1] offset:40 th:TH_ATOMIC_RETURN
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
 ; GFX1260-NEXT:    s_or_b32 s2, vcc_lo, s2
@@ -27806,7 +27785,6 @@ define void @flat_atomic_fmax_v2f16_saddr_nortn(ptr inreg %ptr, <2 x half> %data
 ; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    flat_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] offset:40 th:TH_ATOMIC_RETURN
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX1260-NEXT:    v_mov_b32_e32 v1, v0
@@ -27951,7 +27929,6 @@ define <2 x half> @flat_atomic_fmin_v2f16_saddr_rtn(ptr inreg %ptr, <2 x half> %
 ; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    flat_atomic_cmpswap_b32 v0, v2, v[4:5], s[0:1] offset:40 th:TH_ATOMIC_RETURN
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
 ; GFX1260-NEXT:    s_or_b32 s2, vcc_lo, s2
@@ -28094,7 +28071,6 @@ define void @flat_atomic_fmin_v2f16_saddr_nortn(ptr inreg %ptr, <2 x half> %data
 ; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    flat_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] offset:40 th:TH_ATOMIC_RETURN
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX1260-NEXT:    v_mov_b32_e32 v1, v0
@@ -28260,7 +28236,6 @@ define void @flat_atomic_fadd_v2bf16_saddr_nortn(ptr inreg %ptr, <2 x bfloat> %d
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    flat_atomic_pk_add_bf16 v1, v0, s[0:1] offset:40
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -28335,7 +28310,6 @@ define <2 x bfloat> @flat_atomic_fmax_v2bf16_saddr_rtn(ptr inreg %ptr, <2 x bflo
 ; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    flat_atomic_cmpswap_b32 v1, v2, v[4:5], s[0:1] offset:40 th:TH_ATOMIC_RETURN
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v5
 ; GFX1260-NEXT:    s_or_b32 s2, vcc_lo, s2
@@ -28449,7 +28423,6 @@ define void @flat_atomic_fmax_v2bf16_saddr_nortn(ptr inreg %ptr, <2 x bfloat> %d
 ; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    flat_atomic_cmpswap_b32 v2, v1, v[2:3], s[0:1] offset:40 th:TH_ATOMIC_RETURN
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
 ; GFX1260-NEXT:    v_mov_b32_e32 v3, v2
@@ -28565,7 +28538,6 @@ define <2 x bfloat> @flat_atomic_fmin_v2bf16_saddr_rtn(ptr inreg %ptr, <2 x bflo
 ; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    flat_atomic_cmpswap_b32 v1, v2, v[4:5], s[0:1] offset:40 th:TH_ATOMIC_RETURN
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v5
 ; GFX1260-NEXT:    s_or_b32 s2, vcc_lo, s2
@@ -28679,7 +28651,6 @@ define void @flat_atomic_fmin_v2bf16_saddr_nortn(ptr inreg %ptr, <2 x bfloat> %d
 ; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    flat_atomic_cmpswap_b32 v2, v1, v[2:3], s[0:1] offset:40 th:TH_ATOMIC_RETURN
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
 ; GFX1260-NEXT:    v_mov_b32_e32 v3, v2
