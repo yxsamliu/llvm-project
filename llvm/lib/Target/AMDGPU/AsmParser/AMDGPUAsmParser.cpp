@@ -762,6 +762,10 @@ public:
     return isVISrcF16() || isVISrcB32();
   }
 
+  bool isVISrc_32_b32() const {
+    return isVISrcB32();
+  }
+
   bool isVISrc_64_bf16() const {
     return isRegOrInlineNoMods(AMDGPU::VReg_64RegClassID, MVT::bf16);
   }

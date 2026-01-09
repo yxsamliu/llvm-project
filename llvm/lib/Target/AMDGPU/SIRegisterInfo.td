@@ -1812,6 +1812,7 @@ def VCSrcT_f16        : SrcRegOrImm9_t16 <"OPERAND_REG_INLINE_C_FP16">;
 //  VISrc_* Operands with a VGPR or an inline constant
 //===----------------------------------------------------------------------===//
 
+def VISrc_32_b32      : SrcRegOrImm9 <VGPR_32,                       "OPERAND_REG_INLINE_C_INT32">;
 def VISrc_64_bf16     : SrcRegOrImm9 <VReg_64_STAGING_AlignTarget,   "OPERAND_REG_INLINE_C_BF16">;
 def VISrc_64_f16      : SrcRegOrImm9 <VReg_64_STAGING_AlignTarget,   "OPERAND_REG_INLINE_C_FP16">;
 def VISrc_64_b32      : SrcRegOrImm9 <VReg_64_STAGING_AlignTarget,   "OPERAND_REG_INLINE_C_INT32">;

@@ -400,6 +400,11 @@ uint64_t AMDGPUMCCodeEmitter::getImplicitOpSelHiEncoding(int Opcode) const {
   return OP_SEL_HI_0 | OP_SEL_HI_1 | OP_SEL_HI_2;
 }
 
+static bool isWMMATransposeInstruction(int Opcode) {
+  return Opcode == AMDGPU::V_WMMA_TR_16X16_B16_gfx1260 ||
+         Opcode == AMDGPU::V_WMMA_TR_32X32_B16_gfx1260;
+}
+
 static bool isVCMPX64(const MCInstrDesc &Desc) {
   return (Desc.TSFlags & SIInstrFlags::VOP3) &&
          Desc.hasImplicitDefOfPhysReg(AMDGPU::EXEC);
@@ -425,7 +430,9 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
       // Matrix B scale operand reuses op_sel_hi.
       !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_scale) &&
       // Matrix B reuse operand reuses op_sel_hi.
-      !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_reuse)) {
+      !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_reuse) &&
+      // WMMA Transpose instructions do not use op_sel_hi.
+      !isWMMATransposeInstruction(Opcode)) {
     Encoding |= getImplicitOpSelHiEncoding(Opcode);
   }
 

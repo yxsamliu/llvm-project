@@ -1583,6 +1583,9 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   bit Scale16 = _Scale16;
   let HasMatrixReuse = _HasMatrixReuse;
 
+  bit ForceOpselHiZero = 0;
+  bit ForceOpselZero = 0;
+
   bit HasIModOp = _Has_ImodOp;
   let HasClamp = !and(IsIU, !not(HasIModOp));
   let IsPacked = 1;
@@ -1593,11 +1596,14 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   bit IsAB_F32  = !eq(ArgTy[1], v2f32);
   bit IsAB_F16 = !or(!eq(ArgTy[1], v16f16), !eq(ArgTy[1], v8f16), !eq(ArgTy[1], v4f16),
                      !eq(ArgTy[1], v32f16), !eq(ArgTy[1], v64f16));
-  bit IsAB_BF16 = !or(!eq(ArgTy[1], v16i16), !eq(ArgTy[1], v8i16), !eq(ArgTy[1], v4i16),
+  bit IsAB_BF16 = !or(!eq(ArgTy[1], v16i16), !eq(ArgTy[1], v8i16), !eq(ArgTy[1], v4i16), !eq(ArgTy[1], v32i16),
                       !eq(ArgTy[1], v16bf16), !eq(ArgTy[1], v8bf16), !eq(ArgTy[1], v4bf16),
                       !eq(ArgTy[1], v32bf16), !eq(ArgTy[1], v64bf16));
   bit IsF16BF16 = !or(IsAB_F16, IsAB_BF16);
   bit IsAB_F4F6F8 = !and(!not(IsIU), !eq(ArgTy[1], v32i32));
+
+  bit IsSrc1Untyped = !eq(ArgTy[2], untyped);
+  bit IsSrc2Untyped = !eq(ArgTy[3], untyped);
 
   bit IsC_F64 = !eq(ArgTy[3], v8f64);
   bit IsC_F32 = !or(!eq(ArgTy[3], v8f32), !eq(ArgTy[3], v4f32), !eq(ArgTy[3], v64f32));
@@ -1615,14 +1621,16 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
 
   let DstRC = !cast<RegisterOperand>("VDst_"#ArgTy[0].Size);
   let Src0RC64 = !cast<RegisterOperand>("VRegSrc_"#ArgTy[1].Size);
-  let Src1RC64 = !cast<RegisterOperand>("VRegSrc_"#ArgTy[2].Size);
+  let Src1RC64 = !if(IsSrc1Untyped, VRegSrc_32,
+                                    !cast<RegisterOperand>("VRegSrc_"#ArgTy[2].Size));
   let Src2RC64 = !if(IsSWMMAC, DstRC,
-                               !cast<RegisterOperand>("VISrc_"#ArgTy[3].Size#
-                                                      !cond(IsC_F64:  "_f64",
-                                                            IsC_F32:  "_f32",
-                                                            IsC_F16:  "_f16",
-                                                            IsC_BF16: "_bf16",
-                                                            1: "_b32")));
+                     !if(IsSrc2Untyped, VISrc_32_b32,
+                         !cast<RegisterOperand>("VISrc_"#ArgTy[3].Size#
+                                                !cond(IsC_F64:  "_f64",
+                                                      IsC_F32:  "_f32",
+                                                      IsC_F16:  "_f16",
+                                                      IsC_BF16: "_bf16",
+                                                      1: "_b32"))));
   ValueType ScaleTy = !if(Scale16, i64, i32);
 
   // For f16 and bf16 matrices A and B, each element can be modified by
@@ -1851,6 +1859,18 @@ multiclass WMMAInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string Pse
                           !cast<Instruction>(NAME # _threeaddr)>;
 }
 
+// WMMA Transpose instructions only have $src0, no src1/src2 to tie.
+multiclass WMMAInstTR<string Instr, VOP3PWMMA_Profile WMMAProfile> {
+  def NAME : VOP3P_Pseudo<Instr, WMMAProfile>, WMMAInstInfo {
+    let Mnemonic = Instr;
+    let PseudoInstr = Instr;
+    let mayRaiseFPException = 0;
+    let ReadsModeReg = 0;
+    let isConvergent = 1;
+    let Constraints = "@earlyclobber $vdst";
+  }
+}
+
 multiclass SWMMACInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string PseudoInstrSuffix> {
   def _twoaddr : VOP3P_Pseudo<Instr, WMMAProfile>, WMMAInstInfo {
     let Mnemonic = Instr;
@@ -2049,6 +2069,39 @@ defm F32_16X16X128_F8F6F4         : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16
 defm F32_16X16X128_F8F6F4_SCALE   : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/0, /*HasMatrixReuse=*/1>;
 defm F32_16X16X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/1, /*HasMatrixReuse=*/1>;
 
+// WMMA Transpose instructions only have src0 (no src1/src2).
+class VOP3PWMMA_TR_Profile<ValueType SrcTy>
+    : VOP3PWMMA_gfx1260_Profile<[SrcTy, SrcTy, untyped, untyped], /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0> {
+  let ForceOpselHiZero = 1;
+  let ForceOpselZero = 1;
+
+  let HasSrc1 = 0;
+  let HasSrc2 = 0;
+  let HasSrc0Mods = 0;
+  let HasSrc1Mods = 0;
+  let HasSrc2Mods = 0;
+
+  let HasModifiers = 0;
+  let HasOpSel = 0;
+  let HasNeg = 0;
+  let HasMatrixReuse = 0;
+
+  // Disable all neg_lo/neg_hi bits that reference modifiers in the encoding.
+  let NegLo01 = 0;
+  let NegLo2 = 0;
+  let NegHi01 = 0;
+  let NegHi2 = 0;
+  let NegLoAny = 0;
+
+  let Ins64 = (ins Src0RC64:$src0);
+
+  let InsVOP3P = Ins64;
+  let AsmVOP3P = "$vdst, $src0";
+}
+
+def WMMA_TR_16X16_B16 : VOP3PWMMA_TR_Profile<v8i16>;
+def WMMA_TR_32X32_B16 : VOP3PWMMA_TR_Profile<v32i16>;
+
 class VOP_WMMA_LD_SCALE<ValueType vt, RegisterOperand RC> : VOP3P_Profile<VOPProfile<[untyped, vt, vt, untyped]>> {
   let HasMatrixScale = 1;
   let HasMatrixReuse = 1;
@@ -2149,6 +2202,11 @@ let SubtargetPredicate = HasWMMA2048bInsts in {
 
   defm V_SWMMAC_BF16F32_32X64X32_BF16_w32 : SWMMACInstGFX12<"v_swmmac_bf16f32_32x64x32_bf16", BF16F32_32X64X32_BF16_SWMMAC_w32, "_w32">;
 }
+
+let SubtargetPredicate = HasWMMATransposeInsts, is_wmma_xdl = 1 in {
+  defm V_WMMA_TR_16X16_B16 : WMMAInstTR<"v_wmma_tr_16x16_b16", WMMA_TR_16X16_B16>;
+  defm V_WMMA_TR_32X32_B16 : WMMAInstTR<"v_wmma_tr_32x32_b16", WMMA_TR_32X32_B16>;
+} // End SubtargetPredicate = HasWMMATransposeInsts, is_wmma_xdl = 1
 } // End WaveSizePredicate = isWave32
 
 let WaveSizePredicate = isWave32 in {
@@ -2375,20 +2433,21 @@ class VOP3PeWmma<bits<8> op, VOPProfile P, VOP3PWMMA_Profile WMMAP>
     : VOP3Pe_gfx11_gfx12<op, P>{
 
   // opsel
-  let Inst{11} = !cond(WMMAP.HasMatrixFMT       : matrix_a_fmt{0},
+  let Inst{11} = !cond(WMMAP.ForceOpselZero     : 0,
+                       WMMAP.HasMatrixFMT       : matrix_a_fmt{0},
                        !eq(WMMAP.IndexType, 0)  : 0,
                        !eq(WMMAP.IndexType, 8)  : index_key_8bit{0},
                        !eq(WMMAP.IndexType, 16) : index_key_16bit{0},
                        !eq(WMMAP.IndexType, 32) : index_key_32bit{0});
-  let Inst{12} = !if(WMMAP.HasMatrixFMT, matrix_a_fmt{1},
-                     !if(!eq(WMMAP.IndexType, 8), index_key_8bit{1}, 0));
-  let Inst{13} = !if (WMMAP.HasMatrixFMT, matrix_a_fmt{2},
-                      !if(WMMAP.HasMatrixReuse, matrix_a_reuse, 0));
+  let Inst{12} = !if (WMMAP.ForceOpselZero, 0, !if (WMMAP.HasMatrixFMT, matrix_a_fmt{1},
+                     !if(!eq(WMMAP.IndexType, 8), index_key_8bit{1}, 0)));
+  let Inst{13} = !if (WMMAP.ForceOpselZero, 0, !if (WMMAP.HasMatrixFMT, matrix_a_fmt{2},
+                      !if(WMMAP.HasMatrixReuse, matrix_a_reuse, 0)));
   // opsel_hi
-  let Inst{59} = !if (WMMAP.HasMatrixFMT, matrix_b_fmt{0}, 1);
-  let Inst{60} = !if (WMMAP.HasMatrixFMT, matrix_b_fmt{1}, 1);
-  let Inst{14} = !if (WMMAP.HasMatrixFMT, matrix_b_fmt{2},
-                      !if(WMMAP.HasMatrixReuse, matrix_b_reuse, 1));
+  let Inst{59} = !if (WMMAP.ForceOpselHiZero, 0, !if (WMMAP.HasMatrixFMT, matrix_b_fmt{0}, 1));
+  let Inst{60} = !if (WMMAP.ForceOpselHiZero, 0, !if (WMMAP.HasMatrixFMT, matrix_b_fmt{1}, 1));
+  let Inst{14} = !if (WMMAP.ForceOpselHiZero, 0, !if (WMMAP.HasMatrixFMT, matrix_b_fmt{2},
+                      !if(WMMAP.HasMatrixReuse, matrix_b_reuse, 1)));
   // neg_lo
   let Inst{61} = !if(WMMAP.NegLo01, src0_modifiers{0}, 0);
   let Inst{62} = !if(WMMAP.NegLo01, src1_modifiers{0}, 0);
@@ -2663,6 +2722,10 @@ defm V_WMMA_F16_32X64X128_BF8_BF8_w32   : VOP3P_Real_WMMA_gfx1260 <0x098, F16_32
 defm V_WMMA_F32_32X64X256_F4_w32        : VOP3P_Real_WMMA_gfx1260 <0x09b, F32_32X64X256_F4_WMMA_w32>;
 defm V_WMMA_F16_32X64X256_F4_w32        : VOP3P_Real_WMMA_gfx1260 <0x09c, F16_32X64X256_F4_WMMA_w32>;
 
+let WaveSizePredicate = isWave32, DecoderNamespace = "GFX12" in {
+  defm V_WMMA_TR_16X16_B16 : VOP3P_WMMA_Real_Base <GFX1260Gen, 0x089, WMMA_TR_16X16_B16>;
+  defm V_WMMA_TR_32X32_B16 : VOP3P_WMMA_Real_Base <GFX1260Gen, 0x08a, WMMA_TR_32X32_B16>;
+}
 defm V_SWMMAC_BF16F32_32X64X32_BF16_w32 : VOP3P_Real_WMMA_gfx1260 <0x0a1, BF16F32_32X64X32_BF16_SWMMAC_w32>;
 
 multiclass VOP3P_Real_with_name<GFXGen Gen, bits<8> op,
