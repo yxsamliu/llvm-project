@@ -1997,36 +1997,36 @@ class VOP3PWMMA_gfx1260_Profile<list<ValueType> ArgTy, bit IsSWMMAC, int IndexTy
   let NegHiAny = 0; // NEG_HI is overloaded to convey the MREG settings.
 }
 
-def BF16_32X64X32_F16_WMMA_w32      : VOP3PWMMA_gfx1260_Profile<[v64f16, v32f16, v64f16, v64f16],
-                                        /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
+def BF16_32X64X32_F16_WMMA_w32     : VOP3PWMMA_gfx1260_Profile<[v64f16, v32f16, v64f16, v64f16],
+                                       /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
+                                       /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
 def F32_32X64X32_BF16_w32          : VOP3PWMMA_gfx1260_Profile<[v64f32, v32bf16, v64bf16, v64f32],
-                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                         /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
-def BF16_32X64X32_BF16_WMMA_w32     : VOP3PWMMA_gfx1260_Profile<[v64bf16, v32bf16, v64bf16, v64bf16],
-                                        /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
+                                       /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
+                                       /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
+def BF16_32X64X32_BF16_WMMA_w32    : VOP3PWMMA_gfx1260_Profile<[v64bf16, v32bf16, v64bf16, v64bf16],
+                                       /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
+                                       /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
 def F32_32X64X32_F16_w32           : VOP3PWMMA_gfx1260_Profile<[v64f32, v32f16, v64f16, v64f32],
-                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                         /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
+                                       /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
+                                       /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
 def BF16F32_32X64X32_BF16_WMMA_w32 : VOP3PWMMA_gfx1260_Profile<[v64bf16, v32bf16, v64bf16, v64f32],
-                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                         /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
+                                       /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
+                                       /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
 def F16_32X64X128_BF8_BF8_WMMA_w32 : VOP3PWMMA_gfx1260_Profile<[v64f16, v32i32, v64i32, v64f16],
-                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/1,
-                                         /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
+                                       /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/1,
+                                       /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
 def F32_32X64X128_BF8_BF8_w32      : VOP3PWMMA_gfx1260_Profile<[v64f32, v32i32, v64i32, v64f32],
-                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/1,
-                                         /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
+                                       /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/1,
+                                       /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
 def F32_32X64X256_F4_WMMA_w32      : VOP3PWMMA_gfx1260_Profile<[v64f32, v32i32, v64i32, v64f32],
-                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                         /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/1>;
+                                       /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
+                                       /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/1>;
 def F16_32X64X256_F4_WMMA_w32      : VOP3PWMMA_gfx1260_Profile<[v64f16, v32i32, v64i32, v64f16],
-                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                         /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/1>;
+                                       /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
+                                       /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/1>;
 def I32_32X64X32_IU8_WMMA_w32      : VOP3PWMMA_gfx1260_Profile<[v64i32, v8i32, v16i32, v64i32],
-                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/1, /*IsFP8BF8XF32=*/0,
-                                         /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
+                                       /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/1, /*IsFP8BF8XF32=*/0,
+                                       /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
 
 def BF16F32_32X64X32_BF16_SWMMAC_w32 : VOP3PWMMA_gfx1260_Profile<[v64f32, v16bf16, v64bf16, v64f32],
                                          /*IsSWMMAC=*/1, /*IndexType=*/16, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
