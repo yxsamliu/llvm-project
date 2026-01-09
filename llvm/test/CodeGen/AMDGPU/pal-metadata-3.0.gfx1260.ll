@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1250 <%s | FileCheck %s --check-prefixes=CHECK
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1260 <%s | FileCheck %s --check-prefixes=CHECK
 
 ; CHECK-LABEL: {{^}}_amdgpu_cs_main:
 ; CHECK: ; TotalNumSgprs: 4
@@ -115,7 +115,7 @@
 ; CHECK-NEXT:        .entry_point:    _amdgpu_gs
 ; CHECK-NEXT:        .entry_point_symbol:    gs_shader
 ; CHECK-NEXT:        .forward_progress: true
-; CHECK-NEXT:      .lds_size:       0x800
+; CHECK-NEXT:      .lds_size:       0x1000
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .named_bar_cnt:  0
 ; CHECK-NEXT:        .scratch_en:     false

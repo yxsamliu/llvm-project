@@ -49,6 +49,7 @@ def FeatureAddressableLocalMemorySize65536 : SubtargetFeatureAddressableLocalMem
 def FeatureAddressableLocalMemorySize163840 : SubtargetFeatureAddressableLocalMemorySize<163840>;
 def FeatureAddressableLocalMemorySize196608 : SubtargetFeatureAddressableLocalMemorySize<196608>;
 def FeatureAddressableLocalMemorySize327680 : SubtargetFeatureAddressableLocalMemorySize<327680>;
+def FeatureAddressableLocalMemorySize675840 : SubtargetFeatureAddressableLocalMemorySize<675840>;
 
 class SubtargetFeatureWavefrontSize <int ValueLog2> : SubtargetFeature<
   "wavefrontsize"#!shl(1, ValueLog2),
