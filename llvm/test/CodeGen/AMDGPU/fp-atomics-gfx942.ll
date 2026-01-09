@@ -255,7 +255,6 @@ define <2 x half> @local_atomic_fadd_v2f16_rtn(ptr addrspace(3) %ptr, <2 x half>
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    ds_pk_add_rtn_f16 v0, v0, v1
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
@@ -344,7 +343,6 @@ define <2 x i16> @local_atomic_fadd_v2bf16_rtn(ptr addrspace(3) %ptr, <2 x i16> 
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    ds_pk_add_rtn_bf16 v0, v0, v1
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
