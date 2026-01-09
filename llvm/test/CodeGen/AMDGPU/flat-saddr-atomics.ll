@@ -20150,7 +20150,6 @@ define double @flat_atomic_fmax_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1300-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1300-SDAG-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1300-SDAG-NEXT:    flat_atomic_max_num_f64 v[2:3], v2, v[0:1], s[0:1] th:TH_ATOMIC_RETURN
-; GFX1300-SDAG-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1300-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-SDAG-NEXT:    s_cbranch_execz .LBB112_3
 ; GFX1300-SDAG-NEXT:    s_branch .LBB112_4
@@ -20192,7 +20191,6 @@ define double @flat_atomic_fmax_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1300-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1300-GISEL-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1300-GISEL-NEXT:    flat_atomic_max_num_f64 v[2:3], v2, v[0:1], s[0:1] offset:80 th:TH_ATOMIC_RETURN
-; GFX1300-GISEL-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1300-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-GISEL-NEXT:  .LBB112_2: ; %Flow
 ; GFX1300-GISEL-NEXT:    s_xor_b32 s0, s4, 1
@@ -20388,7 +20386,6 @@ define void @flat_atomic_fmax_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1300-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1300-SDAG-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1300-SDAG-NEXT:    flat_atomic_max_num_f64 v2, v[0:1], s[0:1]
-; GFX1300-SDAG-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1300-SDAG-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1300-SDAG-NEXT:    s_cbranch_execnz .LBB113_2
 ; GFX1300-SDAG-NEXT:  .LBB113_4: ; %atomicrmw.private
@@ -20424,7 +20421,6 @@ define void @flat_atomic_fmax_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1300-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1300-GISEL-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1300-GISEL-NEXT:    flat_atomic_max_num_f64 v2, v[0:1], s[0:1] offset:80
-; GFX1300-GISEL-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1300-GISEL-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1300-GISEL-NEXT:  .LBB113_2: ; %Flow
 ; GFX1300-GISEL-NEXT:    s_xor_b32 s0, s4, 1
@@ -20610,7 +20606,6 @@ define double @flat_atomic_fmin_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1300-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1300-SDAG-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1300-SDAG-NEXT:    flat_atomic_min_num_f64 v[2:3], v2, v[0:1], s[0:1] th:TH_ATOMIC_RETURN
-; GFX1300-SDAG-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1300-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-SDAG-NEXT:    s_cbranch_execz .LBB114_3
 ; GFX1300-SDAG-NEXT:    s_branch .LBB114_4
@@ -20652,7 +20647,6 @@ define double @flat_atomic_fmin_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1300-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1300-GISEL-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1300-GISEL-NEXT:    flat_atomic_min_num_f64 v[2:3], v2, v[0:1], s[0:1] offset:80 th:TH_ATOMIC_RETURN
-; GFX1300-GISEL-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1300-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-GISEL-NEXT:  .LBB114_2: ; %Flow
 ; GFX1300-GISEL-NEXT:    s_xor_b32 s0, s4, 1
@@ -20848,7 +20842,6 @@ define void @flat_atomic_fmin_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1300-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1300-SDAG-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1300-SDAG-NEXT:    flat_atomic_min_num_f64 v2, v[0:1], s[0:1]
-; GFX1300-SDAG-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1300-SDAG-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1300-SDAG-NEXT:    s_cbranch_execnz .LBB115_2
 ; GFX1300-SDAG-NEXT:  .LBB115_4: ; %atomicrmw.private
@@ -20884,7 +20877,6 @@ define void @flat_atomic_fmin_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1300-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1300-GISEL-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1300-GISEL-NEXT:    flat_atomic_min_num_f64 v2, v[0:1], s[0:1] offset:80
-; GFX1300-GISEL-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1300-GISEL-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1300-GISEL-NEXT:  .LBB115_2: ; %Flow
 ; GFX1300-GISEL-NEXT:    s_xor_b32 s0, s4, 1
@@ -21183,7 +21175,6 @@ define float @flat_atomic_fmax_f32_saddr_rtn(ptr inreg %ptr, float %data) {
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
 ; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1300-NEXT:    flat_atomic_max_num_f32 v0, v1, v0, s[0:1] offset:40 th:TH_ATOMIC_RETURN
-; GFX1300-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -21335,7 +21326,6 @@ define float @flat_atomic_fmin_f32_saddr_rtn(ptr inreg %ptr, float %data) {
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
 ; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1300-NEXT:    flat_atomic_min_num_f32 v0, v1, v0, s[0:1] offset:40 th:TH_ATOMIC_RETURN
-; GFX1300-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -21487,7 +21477,6 @@ define <2 x half> @flat_atomic_fadd_v2f16_saddr_rtn(ptr inreg %ptr, <2 x half> %
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
 ; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1300-NEXT:    flat_atomic_pk_add_f16 v0, v1, v0, s[0:1] offset:40 th:TH_ATOMIC_RETURN
-; GFX1300-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -22034,7 +22023,6 @@ define <2 x bfloat> @flat_atomic_fadd_v2bf16_saddr_rtn(ptr inreg %ptr, <2 x bflo
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
 ; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1300-NEXT:    flat_atomic_pk_add_bf16 v0, v1, v0, s[0:1] offset:40 th:TH_ATOMIC_RETURN
-; GFX1300-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
 ;

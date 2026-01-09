@@ -1988,6 +1988,12 @@ public:
   bool requiresWaitsBeforeSystemScopeStores() const {
     return RequiresWaitsBeforeSystemScopeStores;
   }
+
+  bool supportsWaveWideBPermute() const {
+    return (getGeneration() <= AMDGPUSubtarget::GFX9 ||
+            getGeneration() == AMDGPUSubtarget::GFX12) ||
+           isWave32();
+  }
 };
 
 class GCNUserSGPRUsageInfo {
