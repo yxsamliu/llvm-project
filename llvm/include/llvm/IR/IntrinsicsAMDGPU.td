@@ -4863,6 +4863,13 @@ def int_amdgcn_pk4_mul_bf16 : AMDGPUPk4Op2<llvm_v4bf16_ty, "pk4_mul_bf16">;
 def int_amdgcn_pk4_max_num_bf16 : AMDGPUPk4Op2<llvm_v4bf16_ty, "pk4_max_num_bf16">;
 def int_amdgcn_pk4_min_num_bf16 : AMDGPUPk4Op2<llvm_v4bf16_ty, "pk4_min_num_bf16">;
 
+def int_amdgcn_wmma_tr_16x16_b16 : ClangBuiltin<"__builtin_amdgcn_wmma_tr_16x16_b16">,
+  DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty],
+                        [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison, IntrConvergent]>;
+def int_amdgcn_wmma_tr_32x32_b16 : ClangBuiltin<"__builtin_amdgcn_wmma_tr_32x32_b16">,
+  DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty],
+                        [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison, IntrConvergent]>;
+
 class AMDGPUAddMinMax<LLVMType Ty, string Name> : ClangBuiltin<"__builtin_amdgcn_"#Name>,
   PureIntrinsic<[Ty], [Ty, Ty, Ty, llvm_i1_ty /* clamp */],
                         [ImmArg<ArgIndex<3>>]>;
