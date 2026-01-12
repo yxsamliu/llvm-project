@@ -1278,6 +1278,8 @@ static unsigned getMaxHWAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
     return 196608;
   if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
     return 327680;
+  if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize675840))
+    return 675840;
   return 32768;
 }
 
@@ -3996,6 +3998,8 @@ unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
     return 320;
   if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
     return 512;
+  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize675840))
+    return 1024;
   return 64; //In sync with getAddressableLocalMemorySize
 }
 

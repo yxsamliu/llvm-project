@@ -2471,7 +2471,7 @@ def FeatureISAVersion12_60 : FeatureSet<
      FeatureWavegroups,
      FeaturePermPkU2U3Insts,
      FeaturePk4Insts,
-     FeatureAddressableLocalMemorySize327680,
+     FeatureAddressableLocalMemorySize675840,
      FeatureVGPRIndexingRegisters,
      FeatureSWakeupImm,
      FeatureSBarrierLeaveImm,

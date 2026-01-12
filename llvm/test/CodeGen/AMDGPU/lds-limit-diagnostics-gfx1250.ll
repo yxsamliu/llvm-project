@@ -1,5 +1,4 @@
 ; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s 2>&1 | FileCheck -check-prefix=ERROR %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1260 < %s 2>&1 | FileCheck -check-prefix=ERROR %s
 
 ; GFX1250 supports upto 320 KB LDS memory.
 ; This is a negative test to check when the LDS size exceeds the max usable limit.
