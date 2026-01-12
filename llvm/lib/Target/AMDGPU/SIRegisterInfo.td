@@ -1331,21 +1331,6 @@ defm AV_512 : AVRegClass_STAGING<16, VReg_512.RegTypes, (add VGPR_512), (add AGP
 defm AV_1024 : AVRegClass_STAGING<32, VReg_1024.RegTypes, (add VGPR_1024), (add AGPR_1024)>;
 }
 
-// Allow any width of VGPR. Only used for the data operand of V_LOAD/STORE_IDX.
-//
-// TODO: Remove this register class. Its existence has surprising indirect
-//       effects on seemingly unrelated test cases.
-def VGPR_IDX_DATA_OP_RC
-    : SIRegisterClass<"AMDGPU",
-                      Reg16Types.types,
-                      16,
-                      (add VGPR_16, VGPR_32, VGPR_64, VGPR_96, VGPR_128, VGPR_160,
-                           VGPR_192, VGPR_256, VGPR_288, VGPR_512, VGPR_576, VGPR_1024,
-                           STAGING_REG)> {
-  let isAllocatable = 0;
-  let HasVGPR = 1;
-}
-
 // Only used for the index operand of V_LOAD/STORE_IDX.
 def VGPR_IDX_IDX_OP_RC : SIRegisterClass<"AMDGPU", [i32], 32,
                             (add SReg_32, IDX_REG_32)> {

@@ -2545,7 +2545,8 @@ def FeatureISAVersion13_Common : FeatureSet<
    FeatureQsadInsts,
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
-   FeatureCvtPkNormVOP3Insts
+   FeatureCvtPkNormVOP3Insts,
+   FeatureRealTrue16Insts
 ]>;
 
 

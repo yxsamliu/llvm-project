@@ -38080,8 +38080,8 @@ define inreg <40 x half> @bitcast_v40i16_to_v40f16_scalar(<40 x i16> inreg %a, i
 ; GFX11-TRUE16-NEXT:    s_and_b32 s47, vcc_lo, exec_lo
 ; GFX11-TRUE16-NEXT:    s_cbranch_scc0 .LBB57_3
 ; GFX11-TRUE16-NEXT:  ; %bb.1: ; %cmp.false
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v20.l, v1.h
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v21.l, v0.h
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v20.l, v19.h
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v21.l, v18.h
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v21.h, v20.h
 ; GFX11-TRUE16-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s46
 ; GFX11-TRUE16-NEXT:    s_cbranch_vccnz .LBB57_4
@@ -38393,8 +38393,8 @@ define inreg <40 x half> @bitcast_v40i16_to_v40f16_scalar(<40 x i16> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_and_b32 s47, vcc_lo, exec_lo
 ; GFX13-TRUE16-NEXT:    s_cbranch_scc0 .LBB57_3
 ; GFX13-TRUE16-NEXT:  ; %bb.1: ; %cmp.false
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v20.l, v1.h
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v21.l, v0.h
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v20.l, v19.h
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v21.l, v18.h
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v21.h, v20.h
 ; GFX13-TRUE16-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s46
 ; GFX13-TRUE16-NEXT:    s_cbranch_vccnz .LBB57_4
@@ -40329,8 +40329,8 @@ define inreg <40 x i16> @bitcast_v40f16_to_v40i16_scalar(<40 x half> inreg %a, i
 ; GFX11-TRUE16-NEXT:    s_and_b32 s47, vcc_lo, exec_lo
 ; GFX11-TRUE16-NEXT:    s_cbranch_scc0 .LBB59_3
 ; GFX11-TRUE16-NEXT:  ; %bb.1: ; %cmp.false
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v20.l, v1.h
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v21.l, v0.h
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v20.l, v19.h
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v21.l, v18.h
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v21.h, v20.h
 ; GFX11-TRUE16-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s46
 ; GFX11-TRUE16-NEXT:    s_cbranch_vccnz .LBB59_4
@@ -40642,8 +40642,8 @@ define inreg <40 x i16> @bitcast_v40f16_to_v40i16_scalar(<40 x half> inreg %a, i
 ; GFX13-TRUE16-NEXT:    s_and_b32 s47, vcc_lo, exec_lo
 ; GFX13-TRUE16-NEXT:    s_cbranch_scc0 .LBB59_3
 ; GFX13-TRUE16-NEXT:  ; %bb.1: ; %cmp.false
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v20.l, v1.h
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v21.l, v0.h
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v20.l, v19.h
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v21.l, v18.h
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v21.h, v20.h
 ; GFX13-TRUE16-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s46
 ; GFX13-TRUE16-NEXT:    s_cbranch_vccnz .LBB59_4
