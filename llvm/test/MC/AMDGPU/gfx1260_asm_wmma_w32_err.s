@@ -264,3 +264,72 @@ v_swmmac_bf16f32_32x64x32_bf16 v[24:87], v[0:7], v[8:39], v40 clamp
 
 v_swmmac_bf16f32_32x64x32_bf16 v[24:87], v[0:7], v[8:39], v40 neg_hi:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:63: error: not a valid operand.
+
+v_wmma_tr_16x16_b16 v[0:3], v[4:7], v8, v9
+// GFX1260-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
+
+v_wmma_tr_16x16_b16 v[0:3], v[4:7], clamp
+// GFX1260-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
+
+v_wmma_tr_16x16_b16 v[0:3], v[4:7], neg_hi:[1,0,0]
+// GFX1260-ERR: :[[@LINE-1]]:37: error: not a valid operand.
+
+v_wmma_tr_16x16_b16 v[0:3], v[4:7], matrix_a_reuse
+// GFX1260-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
+
+v_wmma_tr_16x16_b16 v[0:3], |v[4:7]|
+// GFX1260-ERR: :[[@LINE-1]]:29: error: not a valid operand.
+
+v_wmma_tr_16x16_b16 v[0:3], -v[4:7]
+// GFX1260-ERR: :[[@LINE-1]]:29: error: not a valid operand.
+
+v_wmma_tr_16x16_b16 v[0:7], v[4:7]
+// GFX1260-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_wmma_tr_16x16_b16 v[0:3], v[4:11]
+// GFX1260-ERR: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_wmma_tr_16x16_b16 v[0:3], s[4:7]
+// GFX1260-ERR: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_wmma_tr_16x16_b16 s[0:3], v[4:7]
+// GFX1260-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_wmma_tr_16x16_b16 v[0:3], 1
+// GFX1260-ERR: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_wmma_tr_16x16_b16 1, v[4:7]
+// GFX1260-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_wmma_tr_32x32_b16 v[0:15], v[16:31], clamp
+// GFX1260-ERR: :[[@LINE-1]]:40: error: invalid operand for instruction
+
+v_wmma_tr_32x32_b16 v[0:15], v[16:31], neg_hi:[1,0,0]
+// GFX1260-ERR: :[[@LINE-1]]:40: error: not a valid operand.
+
+v_wmma_tr_32x32_b16 v[0:15], v[16:31], matrix_a_reuse
+// GFX1260-ERR: :[[@LINE-1]]:40: error: invalid operand for instruction
+
+v_wmma_tr_32x32_b16 v[0:15], |v[16:31]|
+// GFX1260-ERR: :[[@LINE-1]]:30: error: not a valid operand.
+
+v_wmma_tr_32x32_b16 v[0:15], -v[16:31]
+// GFX1260-ERR: :[[@LINE-1]]:30: error: not a valid operand.
+
+v_wmma_tr_32x32_b16 v[0:7], v[16:31]
+// GFX1260-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_wmma_tr_32x32_b16 v[0:15], v[16:23]
+// GFX1260-ERR: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_wmma_tr_32x32_b16 v[0:15], s[16:31]
+// GFX1260-ERR: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_wmma_tr_32x32_b16 s[0:15], v[16:31]
+// GFX1260-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_wmma_tr_32x32_b16 v[0:15], 1
+// GFX1260-ERR: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_wmma_tr_32x32_b16 1, v[16:31]
+// GFX1260-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction

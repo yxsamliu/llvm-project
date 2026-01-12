@@ -449,3 +449,11 @@ v_swmmac_bf16f32_32x64x32_bf16 v[192:255], v[0:7], v[8:39], v40 matrix_a_reuse
 v_swmmac_bf16f32_32x64x32_bf16 v[192:255], v[0:7], v[8:39], v40 matrix_b_reuse
 // GFX1260: v_swmmac_bf16f32_32x64x32_bf16 v[192:255], v[0:7], v[8:39], v40 matrix_b_reuse ; encoding: [0xc0,0x40,0xa1,0xcc,0x00,0x11,0xa2,0x1c]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+v_wmma_tr_16x16_b16 v[0:3], v[4:7]
+// GFX1260: v_wmma_tr_16x16_b16 v[0:3], v[4:7]      ; encoding: [0x00,0x00,0x89,0xcc,0x04,0x01,0x00,0x00]
+// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+v_wmma_tr_32x32_b16 v[0:15], v[16:31]
+// GFX1260: v_wmma_tr_32x32_b16 v[0:15], v[16:31]   ; encoding: [0x00,0x00,0x8a,0xcc,0x10,0x01,0x00,0x00]
+// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32

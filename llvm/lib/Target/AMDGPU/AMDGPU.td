@@ -998,6 +998,12 @@ def FeaturePk4Insts : SubtargetFeature<"pk4-insts",
   "Has pk4 instructions"
 >;
 
+def FeatureWMMATransposeInsts : SubtargetFeature<"wmma-transpose-insts",
+  "HasWMMATransposeInsts",
+  "true",
+  "Has WMMA transpose instructions"
+>;
+
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
   "HasPkFmacF16Inst",
   "true",
@@ -2470,6 +2476,7 @@ def FeatureISAVersion12_60 : FeatureSet<
      FeatureSWakeupImm,
      FeatureSBarrierLeaveImm,
      FeatureSemaphores,
+     FeatureWMMATransposeInsts
     ])>;
 
 def FeatureISAVersion13_Common : FeatureSet<
@@ -3318,6 +3325,9 @@ def HasCvtPkNormVOP3Insts : Predicate<"Subtarget->hasCvtPkNormVOP3Insts()">,
 
 def HasWMMAK128 : Predicate<"Subtarget->hasWMMAK128()">,
   AssemblerPredicate<(all_of FeatureWMMAK128)>;
+
+def HasWMMATransposeInsts : Predicate<"Subtarget->hasWMMATransposeInsts()">,
+  AssemblerPredicate<(all_of FeatureWMMATransposeInsts)>;
 
 def HasFP8E5M3Insts : Predicate<"Subtarget->hasFP8E5M3Insts()">,
   AssemblerPredicate<(all_of FeatureFP8E5M3Insts)>;
