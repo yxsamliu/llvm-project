@@ -3645,6 +3645,14 @@ def isMFMA_F8F6F4Table : GenericTable {
   let PrimaryKeyName = "isMFMA_F8F6F4" ;
 }
 
+def WMMA_F8F6F4MatrixDimTable : GenericTable {
+  let FilterClass = "WMMA_F8F6F4_MatrixDimTable";
+  let CppTypeName = "WMMAF8F6F4MatrixDimInfo";
+  let Fields = ["Opcode", "Dim"];
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getWMMAF8F6F4MatrixDimInfo";
+}
+
 def FP4FP8DstByteSelTable : GenericTable {
   let FilterClass = "VOP3_Pseudo";
   let CppTypeName = "FP4FP8DstByteSelInfo";

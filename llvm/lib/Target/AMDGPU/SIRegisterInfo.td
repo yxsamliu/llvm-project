@@ -377,10 +377,16 @@ foreach Index = 0...255 in {
                    [!add(Index, 3072), !add(Index, 2048)]>;
 }
 
+// Pseudo VGPR registers only for 1536-bit VGPR tuples.
+// The last one would be v[207:255] so we can skip the rest.
+foreach Index = 0...207 in {
+  def VGPR_1536_Pseudo#Index : SIReg <"v"#Index#"_pseudo", Index, /*isVGPR=*/1, /*isAGPR=*/0>;
+}
+
 // Pseudo VGPR registers only for 2048-bit VGPR tuples.
 // The last one would be v[192:255] so we can skip the rest.
 foreach Index = 0...192 in {
-  def VGPR#Index#_Pseudo : SIReg <"v"#Index#"_pseudo", Index, /*isVGPR=*/1, /*isAGPR=*/0>;
+  def VGPR_2048_Pseudo#Index : SIReg <"v"#Index#"_pseudo", Index, /*isVGPR=*/1, /*isAGPR=*/0>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -410,6 +416,7 @@ def Reg352Types : RegisterTypes<[v11i32, v11f32]>;
 def Reg384Types : RegisterTypes<[v12i32, v12f32]>;
 def Reg512Types : RegisterTypes<[v16i32, v16f32, v8i64, v8f64, v32i16, v32f16, v32bf16]>;
 def Reg576Types : RegisterTypes<[v18i32, v18f32, v36i16, v36f16, v36bf16]>;
+def Reg768Types : RegisterTypes<[v24i32]>;
 def Reg1024Types : RegisterTypes<[v32i32, v32f32, v16i64, v16f64, v64f16, v64bf16]>;
 
 def SCC_CLASS : SIRegisterClass<"AMDGPU", [i1], 1, (add SCC)> {
@@ -775,12 +782,25 @@ def VGPR_512 : SIRegisterTuples<getSubRegs<16>.ret, VGPR_32, 1023, 1, 16, "v">;
 // VGPR 576-bit registers
 def VGPR_576 : SIRegisterTuples<getSubRegs<18>.ret, VGPR_32, 1023, 1, 18, "v">;
 
+// VGPR 768-bit registers
+def VGPR_768 : SIRegisterTuples<getSubRegs<24>.ret, VGPR_32, 1023, 1, 24, "v">;
+
 // VGPR 1024-bit registers
 def VGPR_1024 : SIRegisterTuples<getSubRegs<32>.ret, VGPR_32, 1023, 1, 32, "v">;
 
+// VGPR 1536-bit registers - MC-only, no subregisters. Used for large matrix operations.
+def Pseudo_VGPR_1536 : SIRegisterClass<"AMDGPU", [v48i32], 32,
+                         (add (sequence "VGPR_1536_Pseudo%u", 0, 207))> {
+  let Size = 1536;
+  let isAllocatable = 0;
+  let GeneratePressureSet = 0;
+  let HasVGPR = 1;
+  let BaseClassOrder = 10000;
+}
+
 // VGPR 2048-bit registers - MC-only, no subregisters. Used for large matrix operations.
 def Pseudo_VGPR_2048 : SIRegisterClass<"AMDGPU", [v64i32, v64f32], 32,
-                         (add (sequence "VGPR%u_Pseudo", 0, 192))> {
+                         (add (sequence "VGPR_2048_Pseudo%u", 0, 192))> {
   let Size = 2048;
   let isAllocatable = 0;
   let GeneratePressureSet = 0;
@@ -845,6 +865,9 @@ def AGPR_512 : SIRegisterTuples<getSubRegs<16>.ret, AGPR_32, 255, 1, 16, "a">;
 
 // AGPR 576-bit registers
 def AGPR_576 : SIRegisterTuples<getSubRegs<18>.ret, AGPR_32, 255, 1, 18, "a">;
+
+// AGPR 768-bit registers
+def AGPR_768 : SIRegisterTuples<getSubRegs<24>.ret, AGPR_32, 255, 1, 24, "a">;
 
 // AGPR 1024-bit registers
 def AGPR_1024 : SIRegisterTuples<getSubRegs<32>.ret, AGPR_32, 255, 1, 32, "a">;
@@ -1134,6 +1157,7 @@ defm VReg_320 : VRegClass_STAGING<10, Reg320Types.types, (add VGPR_320)>;
 defm VReg_352 : VRegClass_STAGING<11, Reg352Types.types, (add VGPR_352)>;
 defm VReg_384 : VRegClass_STAGING<12, Reg384Types.types, (add VGPR_384)>;
 defm VReg_576 : VRegClass_STAGING<18, Reg576Types.types, (add VGPR_576)>;
+defm VReg_768 : VRegClass_STAGING<24, Reg768Types.types, (add VGPR_768)>;
 
 let GlobalPriority = true in {
 defm VReg_512 : VRegClass_STAGING<16, Reg512Types.types, (add VGPR_512)>;
@@ -1170,6 +1194,7 @@ defm AReg_320 : ARegClass<10, [v10i32, v10f32], (add AGPR_320)>;
 defm AReg_352 : ARegClass<11, [v11i32, v11f32], (add AGPR_352)>;
 defm AReg_384 : ARegClass<12, [v12i32, v12f32], (add AGPR_384)>;
 defm AReg_576 : ARegClass<18, [v18i32, v18f32, v36i16, v36f16, v36bf16], (add AGPR_576)>;
+defm AReg_768 : ARegClass<24, [v24i32], (add AGPR_768)>;
 
 let GlobalPriority = true in {
 defm AReg_512 : ARegClass<16, [v16i32, v16f32, v8i64, v8f64], (add AGPR_512)>;
@@ -1325,6 +1350,7 @@ defm AV_320 : AVRegClass_STAGING<10, VReg_320.RegTypes, (add VGPR_320), (add AGP
 defm AV_352 : AVRegClass_STAGING<11, VReg_352.RegTypes, (add VGPR_352), (add AGPR_352)>;
 defm AV_384 : AVRegClass_STAGING<12, VReg_384.RegTypes, (add VGPR_384), (add AGPR_384)>;
 defm AV_576 : AVRegClass_STAGING<18, VReg_576.RegTypes, (add VGPR_576), (add AGPR_576)>;
+defm AV_768 : AVRegClass_STAGING<24, VReg_768.RegTypes, (add VGPR_768), (add AGPR_768)>;
 
 let GlobalPriority = true in {
 defm AV_512 : AVRegClass_STAGING<16, VReg_512.RegTypes, (add VGPR_512), (add AGPR_512)>;
@@ -1423,7 +1449,7 @@ def AV_LdSt_32_STAGING_Target : RegClassByHwMode<
   let DecoderMethod = "decodeAVLdSt";
 }
 
-foreach RegSize = [ 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 512, 576, 1024 ] in {
+foreach RegSize = [ 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 512, 576, 768, 1024 ] in {
   def VReg_#RegSize#_STAGING_AlignTarget : SIRegisterClassLike<RegSize, true>,
     RegClassByHwMode<
       [DefaultMode_Wave64,
@@ -1693,7 +1719,9 @@ def VRegSrc_288     : SrcReg9<VReg_288_STAGING_AlignTarget>;
 def VRegSrc_384     : SrcReg9<VReg_384_STAGING_AlignTarget>;
 def VRegSrc_512     : SrcReg9<VReg_512_STAGING_AlignTarget>;
 def VRegSrc_576     : SrcReg9<VReg_576_STAGING_AlignTarget>;
+def VRegSrc_768     : SrcReg9<VReg_768_STAGING_AlignTarget>;
 def VRegSrc_1024    : SrcReg9<VReg_1024_STAGING_AlignTarget>;
+def VRegSrc_1536    : SrcReg9<Pseudo_VGPR_1536>;
 def VRegSrc_2048    : SrcReg9<Pseudo_VGPR_2048>;
 def VRegOrLdsSrc_32 : SrcReg9<VRegOrLds_32>;
 
@@ -1738,7 +1766,7 @@ def VGPROp_16 : VGPROp<VGPR_16> {
 
 def VGPROp_32 : VGPROp<VGPR_32>;
 
-foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "320", "352", "384", "512", "576", "1024"] in {
+foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "320", "352", "384", "512", "576", "768", "1024"] in {
   defm VGPROp_#size : VGPROp_Aligned<"VReg_"#size>;
   def VGPROp_#size#_Lo256 : VGPROp_Lo256<!cast<RegisterClass>("VReg_"#size)>;
 }
@@ -1755,6 +1783,9 @@ def VGPROp_32_Lo128 : RegisterOperand<VGPR_32_STAGING_Lo128> {
 def VGPROp_32_Lo256 : RegisterOperand<VGPR_32_Lo256> {
   let DecoderMethod = "DecodeVGPR_32RegisterClass";
 }
+
+// VGPROp for VGPR_1536 - MC-only register operand
+def VGPROp_1536 : RegisterOperand<Pseudo_VGPR_1536>;
 
 // VGPROp for VGPR_2048 - MC-only register operand
 def VGPROp_2048 : RegisterOperand<Pseudo_VGPR_2048>;

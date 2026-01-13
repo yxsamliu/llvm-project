@@ -35,14 +35,14 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
   cl::ReallyHidden,
   cl::init(true));
 
-std::array<std::vector<int16_t>, 36> SIRegisterInfo::RegSplitParts;
+std::array<std::vector<int16_t>, 48> SIRegisterInfo::RegSplitParts;
 std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
 
 // Map numbers of DWORDs to indexes in SubRegFromChannelTable.
 // Valid indexes are shifted 1, such that a 0 mapping means unsupported.
 // e.g. for 8 DWORDs (256-bit), SubRegFromChannelTableWidthMap[8] = 8,
 //      meaning index 7 in SubRegFromChannelTable.
-static const std::array<unsigned, 19> SubRegFromChannelTableWidthMap = {
+static const std::array<unsigned, 33> SubRegFromChannelTableWidthMap = {
     0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0};
 
 static void emitUnsupportedError(const Function &Fn, const MachineInstr &MI,

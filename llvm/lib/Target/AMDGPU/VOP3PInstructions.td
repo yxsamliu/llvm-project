@@ -1064,6 +1064,14 @@ class MFMA_F8F6F4_WithSizeTable_Helper<VOP3_Pseudo  ps, string F8F8Op> :
                             !cast<Instruction>(F8F8Op)> {
 }
 
+// Collects the WMMA F8F6F4 opcode -> matrix dimension mapping for C++ helpers.
+class WMMA_F8F6F4_MatrixDimTable<int DimVal> {
+  Instruction Opcode = !cast<Instruction>(NAME);
+  // 0 -> M16X16X128
+  // 1 -> M32X64X128
+  bits<8> Dim = DimVal;
+}
+
 // Currently assumes scaled instructions never have abid
 class MAIFrag<SDPatternOperator Op, bit HasAbid = true, bit Scaled = false> : PatFrag <
   !if(Scaled, (ops node:$src0, node:$src1, node:$src2, node:$cbsz, node:$blgp,
@@ -1600,7 +1608,8 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                       !eq(ArgTy[1], v16bf16), !eq(ArgTy[1], v8bf16), !eq(ArgTy[1], v4bf16),
                       !eq(ArgTy[1], v32bf16), !eq(ArgTy[1], v64bf16));
   bit IsF16BF16 = !or(IsAB_F16, IsAB_BF16);
-  bit IsAB_F4F6F8 = !and(!not(IsIU), !eq(ArgTy[1], v32i32));
+  bit IsAB_F4F6F8 = !and(!not(IsIU), !or(!eq(ArgTy[1], v24i32), !eq(ArgTy[1], v32i32),
+                                         !eq(ArgTy[1], v48i32), !eq(ArgTy[1], v64i32)));
 
   bit IsSrc1Untyped = !eq(ArgTy[2], untyped);
   bit IsSrc2Untyped = !eq(ArgTy[3], untyped);
@@ -2037,7 +2046,8 @@ class getWMMAF8F6F4DstVTy<ValueType DstEltTy, int M, int N> {
   // Size in bits = (M * N / 32) * element_size_in_bits
   defvar Size = !mul(!div(!mul(M, N), 32), DstEltTy.Size);
   ValueType ret = !cond(!eq(Size, 256)  : v8f32,
-                        !eq(Size, 1024) : v64f16);
+                        !eq(Size, 1024) : v64f16,
+                        !eq(Size, 2048) : v64f32);
 }
 
 // Helper class to compute the type of matrix A and B of WMMA_F8F6F4 instructions based on format and dimensions.
@@ -2050,7 +2060,10 @@ class getWMMAF8F6F4ABVTy<string Fmt, int D1, int D2> {
   ValueType ret = !cond(!eq(TypeSize, 256)  : v8i32,
                         !eq(TypeSize, 384)  : v12i32,
                         !eq(TypeSize, 512)  : v16i32,
-                        !eq(TypeSize, 1024) : v32i32);
+                        !eq(TypeSize, 768)  : v24i32,
+                        !eq(TypeSize, 1024) : v32i32,
+                        !eq(TypeSize, 1536) : v48i32,
+                        !eq(TypeSize, 2048) : v64i32);
 }
 
 multiclass WMMA_F8F6F4_Profiles<ValueType DstEltTy, int M, int N, int K,
@@ -2068,6 +2081,10 @@ multiclass WMMA_F8F6F4_Profiles<ValueType DstEltTy, int M, int N, int K,
 defm F32_16X16X128_F8F6F4         : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16, /*K=*/128, /*HasMatrixScale=*/0, /*Scale16=*/0, /*HasMatrixReuse=*/0>;
 defm F32_16X16X128_F8F6F4_SCALE   : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/0, /*HasMatrixReuse=*/1>;
 defm F32_16X16X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/1, /*HasMatrixReuse=*/1>;
+
+let NegHiAny = 0 in {
+  defm F16_32X64X128_F8F6F4 : WMMA_F8F6F4_Profiles<f16, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/0, /*Scale16=*/0, /*HasMatrixReuse=*/0>;
+} // NegHiAny = 0
 
 // WMMA Transpose instructions only have src0 (no src1/src2).
 class VOP3PWMMA_TR_Profile<ValueType SrcTy>
@@ -2199,6 +2216,8 @@ let SubtargetPredicate = HasWMMA2048bInsts in {
   defm V_WMMA_F16_32X64X128_BF8_BF8_w32   : WMMAInstGFX12<"v_wmma_f16_32x64x128_bf8_bf8", F16_32X64X128_BF8_BF8_WMMA_w32, "_w32">;
   defm V_WMMA_F32_32X64X256_F4_w32        : WMMAInstGFX12<"v_wmma_f32_32x64x256_f4",      F32_32X64X256_F4_WMMA_w32, "_w32">;
   defm V_WMMA_F16_32X64X256_F4_w32        : WMMAInstGFX12<"v_wmma_f16_32x64x256_f4",      F16_32X64X256_F4_WMMA_w32, "_w32">;
+
+  defm V_WMMA_F16_32X64X128_F8F6F4        : WMMAInst_SrcFormats_mc<"v_wmma_f16_32x64x128_f8f6f4", "F16_32X64X128_F8F6F4">;
 
   defm V_SWMMAC_BF16F32_32X64X32_BF16_w32 : SWMMACInstGFX12<"v_swmmac_bf16f32_32x64x32_bf16", BF16F32_32X64X32_BF16_SWMMAC_w32, "_w32">;
 }
@@ -2512,23 +2531,29 @@ multiclass VOP3P_Real_WMMA_gfx1260 <bits<8> op, VOP3PWMMA_Profile WMMAP> {
   }
 }
 
-multiclass VOP3P_Real_WMMA_F8F6F4<string Gen, bits<8> op, VOP3PWMMA_Profile WMMAP> {
+multiclass VOP3P_Real_WMMA_F8F6F4<string Gen, bits<8> op, VOP3PWMMA_Profile WMMAP, int DimVal> {
   defvar PS = !cast<VOP3P_Pseudo>(NAME # "_twoaddr");
   defvar asmName = !substr(PS.Mnemonic, 0, !sub(!size(PS.Mnemonic), !size("_f8_f8_w32")));
   defvar psName = !substr(NAME, 0, !sub(!size(PS.Mnemonic), !size("_f8_f8_w32")));
   let AsmString = asmName # PS.AsmOperands in {
     if !eq(Gen, "gfx1250") then {
       defm NAME : VOP3P_Real_WMMA_gfx1250<op, WMMAP>,
-                  MFMA_F8F6F4_WithSizeTable_Helper<PS, psName # "_f8_f8_w32_twoaddr_" # Gen>;
+                  MFMA_F8F6F4_WithSizeTable_Helper<PS, psName # "_f8_f8_w32_twoaddr_" # Gen>,
+                  WMMA_F8F6F4_MatrixDimTable<DimVal>;
+    }
+    if !eq(Gen, "gfx1260") then {
+      defm NAME : VOP3P_Real_WMMA_gfx1260<op, WMMAP>,
+                  MFMA_F8F6F4_WithSizeTable_Helper<PS, psName # "_f8_f8_w32_twoaddr_" # Gen>,
+                  WMMA_F8F6F4_MatrixDimTable<DimVal>;
     }
   }
 }
 
-multiclass VOP3P_Real_WMMA_SrcFormats<string Gen, bits<8> op, string WMMAP> {
-  defm _f8_f8_w32 : VOP3P_Real_WMMA_F8F6F4<Gen, op, !cast<VOP3PWMMA_Profile>(WMMAP # "_f8_f8_w32")>;
+multiclass VOP3P_Real_WMMA_SrcFormats<string Gen, bits<8> op, string WMMAP, int DimVal> {
+  defm _f8_f8_w32 : VOP3P_Real_WMMA_F8F6F4<Gen, op, !cast<VOP3PWMMA_Profile>(WMMAP # "_f8_f8_w32"), DimVal>;
   foreach I = ["f8_f6", "f8_f4", "f6_f8", "f6_f6", "f6_f4", "f4_f8", "f4_f6", "f4_f4"] in {
     let isAsmParserOnly = true in { // Disable ambiguous disassembly.
-      defm _#I#_w32 : VOP3P_Real_WMMA_F8F6F4<Gen, op, !cast<VOP3PWMMA_Profile>(WMMAP # "_" # I # "_w32")>;
+      defm _#I#_w32 : VOP3P_Real_WMMA_F8F6F4<Gen, op, !cast<VOP3PWMMA_Profile>(WMMAP # "_" # I # "_w32"), DimVal>;
     }
   }
 }
@@ -2585,24 +2610,25 @@ multiclass VOP3PX2_Real_ScaledWMMA_F4<string Gen, bits<8> op, bits<8> LdScaleOp,
    }
 }
 
-multiclass VOP3PX2_Real_ScaledWMMA<string Gen, bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile WMMAP> {
+multiclass VOP3PX2_Real_ScaledWMMA<string Gen, bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile WMMAP, int DimVal> {
   defvar PS = !cast<VOP3P_Pseudo>(NAME # "_twoaddr");
   defvar asmName = !substr(PS.Mnemonic, 0, !sub(!size(PS.Mnemonic), !size("_f8_f8_w32")));
   defvar psName = !substr(NAME, 0, !sub(!size(PS.Mnemonic), !size("_f8_f8_w32")));
   if !eq(Gen, "gfx1250") then {
     def _gfx1250 : VOP3P_Real_Gen<PS, GFX1250Gen, asmName>,
                    VOP3PX2e <op, LdScaleOp, WMMAP>,
-                   MFMA_F8F6F4_WithSizeTable_Helper<PS, psName # "_f8_f8_w32_" # Gen> {
+                   MFMA_F8F6F4_WithSizeTable_Helper<PS, psName # "_f8_f8_w32_" # Gen>,
+                   WMMA_F8F6F4_MatrixDimTable<DimVal> {
       let AsmString = asmName # PS.AsmOperands;
     }
   }
 }
 
-multiclass VOP3PX2_Real_ScaledWMMA_SrcFormats<string Gen, bits<8> op, bits<8> LdScaleOp, string WMMAP> {
-  defm _f8_f8_w32 : VOP3PX2_Real_ScaledWMMA<Gen, op, LdScaleOp, !cast<VOP3PWMMA_Profile>(WMMAP # "_f8_f8_w32")>;
+multiclass VOP3PX2_Real_ScaledWMMA_SrcFormats<string Gen, bits<8> op, bits<8> LdScaleOp, string WMMAP, int DimVal> {
+  defm _f8_f8_w32 : VOP3PX2_Real_ScaledWMMA<Gen, op, LdScaleOp, !cast<VOP3PWMMA_Profile>(WMMAP # "_f8_f8_w32"), DimVal>;
   foreach I = ["f8_f6", "f8_f4", "f6_f8", "f6_f6", "f6_f4", "f4_f8", "f4_f6", "f4_f4"] in {
     let isAsmParserOnly = true in { // Disable ambiguous disassembly.
-      defm _#I#_w32 : VOP3PX2_Real_ScaledWMMA<Gen, op, LdScaleOp, !cast<VOP3PWMMA_Profile>(WMMAP # "_" # I # "_w32")>;
+      defm _#I#_w32 : VOP3PX2_Real_ScaledWMMA<Gen, op, LdScaleOp, !cast<VOP3PWMMA_Profile>(WMMAP # "_" # I # "_w32"), DimVal>;
     }
   }
 }
@@ -2682,9 +2708,9 @@ defm V_WMMA_F16_16X16X128_BF8_BF8_w32 : VOP3P_Real_WMMA_gfx1250 <0x087, F16_FP8B
 defm V_WMMA_F32_32X16X128_F4_w32      : VOP3P_Real_WMMA_gfx1250 <0x088, F32_32X16X128_F4_WMMA_w32>;
 
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1250Plus, DecoderNamespace = "GFX1250" in {
-defm V_WMMA_F32_16X16X128_F8F6F4         : VOP3P_Real_WMMA_SrcFormats <"gfx1250", 0x033, "F32_16X16X128_F8F6F4">;
-defm V_WMMA_SCALE_F32_16X16X128_F8F6F4   : VOP3PX2_Real_ScaledWMMA_SrcFormats <"gfx1250", 0x033, 0x35, "F32_16X16X128_F8F6F4_SCALE">;
-defm V_WMMA_SCALE16_F32_16X16X128_F8F6F4 : VOP3PX2_Real_ScaledWMMA_SrcFormats <"gfx1250", 0x033, 0x3a, "F32_16X16X128_F8F6F4_SCALE16">;
+defm V_WMMA_F32_16X16X128_F8F6F4         : VOP3P_Real_WMMA_SrcFormats <"gfx1250", 0x033, "F32_16X16X128_F8F6F4", /*DimVal=*/0>;
+defm V_WMMA_SCALE_F32_16X16X128_F8F6F4   : VOP3PX2_Real_ScaledWMMA_SrcFormats <"gfx1250", 0x033, 0x35, "F32_16X16X128_F8F6F4_SCALE", /*DimVal=*/0>;
+defm V_WMMA_SCALE16_F32_16X16X128_F8F6F4 : VOP3PX2_Real_ScaledWMMA_SrcFormats <"gfx1250", 0x033, 0x3a, "F32_16X16X128_F8F6F4_SCALE16", /*DimVal=*/0>;
 
 defm V_WMMA_SCALE_F32_32X16X128_F4_w32   : VOP3PX2_Real_ScaledWMMA_F4 <"gfx1250", 0x088, 0x35, F32_32X16X128_F4_SCALE_w32>;
 defm V_WMMA_SCALE16_F32_32X16X128_F4_w32 : VOP3PX2_Real_ScaledWMMA_F4 <"gfx1250", 0x088, 0x3a, F32_32X16X128_F4_SCALE16_w32>;
@@ -2727,6 +2753,8 @@ let WaveSizePredicate = isWave32, DecoderNamespace = "GFX12" in {
   defm V_WMMA_TR_32X32_B16 : VOP3P_WMMA_Real_Base <GFX1260Gen, 0x08a, WMMA_TR_32X32_B16>;
 }
 defm V_SWMMAC_BF16F32_32X64X32_BF16_w32 : VOP3P_Real_WMMA_gfx1260 <0x0a1, BF16F32_32X64X32_BF16_SWMMAC_w32>;
+
+defm V_WMMA_F16_32X64X128_F8F6F4        : VOP3P_Real_WMMA_SrcFormats <"gfx1260", 0x09a, "F16_32X64X128_F8F6F4", /*DimVal=*/1>;
 
 multiclass VOP3P_Real_with_name<GFXGen Gen, bits<8> op,
                           string backing_ps_name = NAME,

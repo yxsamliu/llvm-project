@@ -1134,8 +1134,22 @@ static void adjustMFMA_F8F6F4OpRegClass(const MCRegisterInfo &MRI,
     return MO.setReg(NewReg);
   }
   case 16:
+  case 64:
     // No-op in cases where one operand is still f8/bf8.
     return;
+  case 32:
+  case 48: {
+    const MCRegisterClass &RC =
+        MRI.getRegClass(AMDGPU::Pseudo_VGPR_2048RegClassID);
+    if (NumRegs == 32 && !RC.contains(MO.getReg()))
+      return;
+    assert(RC.contains(MO.getReg()) && "expected a 2048-bit register");
+    unsigned RegVal = MO.getReg().id() - AMDGPU::VGPR_2048_Pseudo0;
+    const MCRegisterClass &NewRC =
+        NumRegs == 32 ? MRI.getRegClass(AMDGPU::VReg_1024RegClassID)
+                      : MRI.getRegClass(AMDGPU::Pseudo_VGPR_1536RegClassID);
+    return MO.setReg(NewRC.getRegister(RegVal));
+  }
   default:
     llvm_unreachable("Unexpected size for mfma/wmma f8f6f4 operand");
   }
@@ -1977,8 +1991,12 @@ unsigned AMDGPUDisassembler::getVgprClassId(unsigned Width) const {
     return VReg_512RegClassID;
   case 576:
     return VReg_576RegClassID;
+  case 768:
+    return VReg_768RegClassID;
   case 1024:
     return VReg_1024RegClassID;
+  case 1536:
+    return Pseudo_VGPR_1536RegClassID;
   case 2048:
     return Pseudo_VGPR_2048RegClassID;
   }
@@ -2014,6 +2032,8 @@ unsigned AMDGPUDisassembler::getAgprClassId(unsigned Width) const {
     return AReg_512RegClassID;
   case 576:
     return AReg_576RegClassID;
+  case 768:
+    return AReg_768RegClassID;
   case 1024:
     return AReg_1024RegClassID;
   }
