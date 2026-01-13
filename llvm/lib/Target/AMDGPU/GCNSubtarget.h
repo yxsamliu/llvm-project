@@ -1631,7 +1631,7 @@ public:
 
   bool hasGFX13Insts() const { return GFX13Insts; }
 
-  bool hasINVWaitCntRequirement() const { return GFX1250Insts && !GFX13Insts; }
+  bool hasINVWBL2WaitCntRequirement() const { return GFX1250Insts && !GFX13Insts; }
 
   bool hasVOPD3() const { return GFX1250Insts; }
 
