@@ -673,6 +673,14 @@ public:
 
   bool isVCSrc_v2b32() const { return isVCSrc_b64(); }
 
+  bool isVCSrc_b128_Lo256() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_128_Lo256RegClassID, MVT::v2i64);
+  }
+
+  bool isVCSrc_b256_Lo256() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_256_Lo256RegClassID, MVT::v4i64);
+  }
+
   bool isVSrc_v2b32() const { return isVSrc_b64() || isLiteralImm(MVT::v2i32); }
 
   bool isVSrc_f32() const {
@@ -2771,8 +2779,12 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
         return AMDGPU::VReg_512RegClassID;
       case 576:
         return AMDGPU::VReg_576RegClassID;
+      case 768:
+        return AMDGPU::VReg_768RegClassID;
       case 1024:
         return AMDGPU::VReg_1024RegClassID;
+      case 1536:
+        return AMDGPU::Pseudo_VGPR_1536RegClassID;
       case 2048:
         return AMDGPU::Pseudo_VGPR_2048RegClassID;
     }
@@ -2853,6 +2865,8 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
         return AMDGPU::AReg_512RegClassID;
       case 576:
         return AMDGPU::AReg_576RegClassID;
+      case 768:
+        return AMDGPU::AReg_768RegClassID;
       case 1024:
         return AMDGPU::AReg_1024RegClassID;
     }
@@ -5844,7 +5858,12 @@ bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
         TRI->getRegClass(MII.getOpRegClassID(Desc.operands()[SrcIdx], HwMode))
             .getSizeInBits();
 
-    if (RegSize == AMDGPU::wmmaScaleF8F6F4FormatToNumRegs(Fmt) * 32)
+    AMDGPU::WMMAF8F6F4Matrix Matrix = SrcOp == AMDGPU::OpName::src0
+                                          ? AMDGPU::WMMAF8F6F4Matrix::A
+                                          : AMDGPU::WMMAF8F6F4Matrix::B;
+
+    if (RegSize ==
+        AMDGPU::getNumRegsFromWMMAScaleF8F6F4Format(Opc, Matrix, Fmt) * 32)
       return true;
 
     static const char *FmtNames[] = {"MATRIX_FMT_FP8", "MATRIX_FMT_BF8",

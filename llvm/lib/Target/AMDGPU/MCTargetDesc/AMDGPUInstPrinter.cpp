@@ -507,13 +507,23 @@ void AMDGPUInstPrinter::printRegOperand(MCRegister Reg,
     break;
   }
 #endif
+
+  auto PrintLargeRegTuple = [](raw_ostream &O, MCRegister Reg,
+                               unsigned BaseRegIdx, unsigned NumRegs) {
+    unsigned RegIdx = Reg.id() - BaseRegIdx;
+    O << "v[" << RegIdx << ':' << RegIdx + NumRegs - 1 << ']';
+    // TODO: we will probably need to modify the VGPR name for the index
+    // register as well, like the other case below.
+  };
+
   const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
   MCRegister PrintReg = getRegForPrinting(Reg, STI, MRI);
   if (RC && RC->getID() == AMDGPU::Pseudo_VGPR_2048RegClassID) {
-    unsigned RegIdx = Reg.id() - AMDGPU::VGPR0_Pseudo;
-    O << "v[" << RegIdx << ':' << RegIdx + 63 << ']';
-    // TODO: we will probably need to modify the VGPR name for the index
-    // register as well, like the other case below.
+    PrintLargeRegTuple(O, Reg, AMDGPU::VGPR_2048_Pseudo0,
+                       RC->getSizeInBits() / 32);
+  } else if (RC && RC->getID() == AMDGPU::Pseudo_VGPR_1536RegClassID) {
+    PrintLargeRegTuple(O, Reg, AMDGPU::VGPR_1536_Pseudo0,
+                       RC->getSizeInBits() / 32);
   } else {
     std::string PrintRegName = getRegisterName(PrintReg);
     modifyVGPRNameUsingIndex(PrintRegName, IdxReg);

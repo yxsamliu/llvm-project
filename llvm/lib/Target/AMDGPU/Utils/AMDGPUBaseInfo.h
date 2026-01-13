@@ -111,6 +111,11 @@ struct MFMA_F8F6F4_Info {
   uint8_t NumRegsSrcB;
 };
 
+struct WMMAF8F6F4MatrixDimInfo {
+  unsigned Opcode;
+  uint8_t Dim;
+};
+
 struct CvtScaleF32_F32F16ToF8F4_Info {
   unsigned Opcode;
 };
@@ -653,8 +658,19 @@ const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
                                                       unsigned BLGP,
                                                       unsigned F8F8Opcode);
 
+// The order and values of these enums must match the uses of the
+// WMMA_F8F6F4MatrixDimTable in AMDGPUGenSearchableTables.inc.
+enum class WMMAF8F6F4MatrixDim { M16X16X128 = 0, M32X64X128 = 1 };
+enum WMMAF8F6F4Matrix { A, B };
+
 LLVM_READNONE
-uint8_t wmmaScaleF8F6F4FormatToNumRegs(unsigned Fmt);
+uint8_t getNumRegsFromWMMAScaleF8F6F4Format(unsigned Opc,
+                                            WMMAF8F6F4Matrix Matrix,
+                                            unsigned Fmt);
+LLVM_READNONE
+uint8_t getNumRegsFromWMMAScaleF8F6F4Format(WMMAF8F6F4MatrixDim Dim,
+                                            WMMAF8F6F4Matrix Matrix,
+                                            unsigned Fmt);
 
 LLVM_READONLY
 const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,

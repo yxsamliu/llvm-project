@@ -2135,8 +2135,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     auto *Src1Ty = cast<FixedVectorType>(Src1->getType());
 
     bool MadeChange = false;
-    unsigned Src0NumElts = AMDGPU::wmmaScaleF8F6F4FormatToNumRegs(FmtA);
-    unsigned Src1NumElts = AMDGPU::wmmaScaleF8F6F4FormatToNumRegs(FmtB);
+    unsigned Src0NumElts = AMDGPU::getNumRegsFromWMMAScaleF8F6F4Format(
+        AMDGPU::WMMAF8F6F4MatrixDim::M16X16X128, AMDGPU::WMMAF8F6F4Matrix::A,
+        FmtA);
+    unsigned Src1NumElts = AMDGPU::getNumRegsFromWMMAScaleF8F6F4Format(
+        AMDGPU::WMMAF8F6F4MatrixDim::M16X16X128, AMDGPU::WMMAF8F6F4Matrix::B,
+        FmtB);
 
     // Depending on the used format, fewer registers are required so shrink the
     // vector type.
