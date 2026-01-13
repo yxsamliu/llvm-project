@@ -2104,6 +2104,7 @@ let NegHiAny = 0 in {
   defm F32_32X64X128_F8F6F4_SCALE   : WMMA_F8F6F4_Profiles<f32, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/0, /*HasMatrixReuse=*/1>;
   defm F16_32X64X128_F8F6F4_SCALE   : WMMA_F8F6F4_Profiles<f16, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/0, /*HasMatrixReuse=*/1>;
 
+  defm F32_32X64X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<f32, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/1, /*HasMatrixReuse=*/1>;
   defm F16_32X64X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<f16, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/1, /*HasMatrixReuse=*/1>;
 } // NegHiAny = 0
 
@@ -2209,6 +2210,7 @@ defm V_WMMA_SCALE16_F32_16X16X128_F8F6F4 : WMMAInst_SrcFormats_mc<"v_wmma_scale1
 defm V_WMMA_SCALE_F32_32X64X128_F8F6F4   : WMMAInst_SrcFormats_mc<"v_wmma_scale_f32_32x64x128_f8f6f4", "F32_32X64X128_F8F6F4_SCALE">;
 defm V_WMMA_SCALE_F16_32X64X128_F8F6F4   : WMMAInst_SrcFormats_mc<"v_wmma_scale_f16_32x64x128_f8f6f4", "F16_32X64X128_F8F6F4_SCALE">;
 
+defm V_WMMA_SCALE16_F32_32X64X128_F8F6F4 : WMMAInst_SrcFormats_mc<"v_wmma_scale16_f32_32x64x128_f8f6f4", "F32_32X64X128_F8F6F4_SCALE16">;
 defm V_WMMA_SCALE16_F16_32X64X128_F8F6F4 : WMMAInst_SrcFormats_mc<"v_wmma_scale16_f16_32x64x128_f8f6f4", "F16_32X64X128_F8F6F4_SCALE16">;
 
 defm V_WMMA_SCALE_F32_32X16X128_F4_w32   : WMMAInstGFX12<"v_wmma_scale_f32_32x16x128_f4",   F32_32X16X128_F4_SCALE_w32, "_w32">;
@@ -2760,6 +2762,7 @@ let WaveSizePredicate = isWave32 in {
     defm V_WMMA_SCALE_F32_32X64X128_F8F6F4   : VOP3PX2_Real_ScaledWMMA_SrcFormats <"gfx1260", 0x099, 0xab, "F32_32X64X128_F8F6F4_SCALE", /*DimVal=*/1>;
     defm V_WMMA_SCALE_F16_32X64X128_F8F6F4   : VOP3PX2_Real_ScaledWMMA_SrcFormats <"gfx1260", 0x09a, 0xab, "F16_32X64X128_F8F6F4_SCALE", /*DimVal=*/1>;
 
+    defm V_WMMA_SCALE16_F32_32X64X128_F8F6F4 : VOP3PX2_Real_ScaledWMMA_SrcFormats <"gfx1260", 0x099, 0xac, "F32_32X64X128_F8F6F4_SCALE16", /*DimVal=*/1>;
     defm V_WMMA_SCALE16_F16_32X64X128_F8F6F4 : VOP3PX2_Real_ScaledWMMA_SrcFormats <"gfx1260", 0x09a, 0xac, "F16_32X64X128_F8F6F4_SCALE16", /*DimVal=*/1>;
   } // End SubtargetPredicate = isGFX1260Only, DecoderNamespace = "GFX1260"
 } // End WaveSizePredicate = isWave32
