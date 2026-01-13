@@ -1141,6 +1141,13 @@ static void adjustMFMA_F8F6F4OpRegClass(const MCRegisterInfo &MRI,
     return MO.setReg(NewReg);
   }
   case 16:
+    if (MCRegister NewReg = MRI.getSubReg(
+            MO.getReg(),
+            AMDGPU::
+                sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15)) {
+      MO.setReg(NewReg);
+    }
+    return;
   case 64:
     // No-op in cases where one operand is still f8/bf8.
     return;
