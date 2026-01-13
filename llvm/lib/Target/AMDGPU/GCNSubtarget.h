@@ -2015,6 +2015,12 @@ public:
   bool hasGlobalTiledLoads2x2() const { return HasGlobalTiledLoads2x2; }
 
   bool hasLDSTiledLoads() const { return HasLDSTiledLoads; }
+
+  bool supportsWaveWideBPermute() const {
+    return (getGeneration() <= AMDGPUSubtarget::GFX9 ||
+            getGeneration() == AMDGPUSubtarget::GFX12) ||
+           isWave32();
+  }
 };
 
 class GCNUserSGPRUsageInfo {

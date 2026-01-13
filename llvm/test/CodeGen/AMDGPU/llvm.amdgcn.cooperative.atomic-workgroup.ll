@@ -278,7 +278,6 @@ define i32 @test_flat_amdgcn_cooperative_atomic_load_32x4B_seq_cst(ptr noundef r
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    flat_load_b32 v0, v[0:1] scope:SCOPE_DEV
-; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
@@ -302,7 +301,6 @@ define <2 x i32> @test_flat_amdgcn_cooperative_atomic_load_16x8B_seq_cst(ptr nou
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_DEV
-; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
@@ -326,7 +324,6 @@ define <4 x i32> @test_flat_amdgcn_cooperative_atomic_load_8x16B_seq_cst(ptr nou
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_DEV
-; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
@@ -677,7 +674,6 @@ define i32 @test_one_as_flat_amdgcn_cooperative_atomic_load_32x4B_seq_cst(ptr no
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    flat_load_b32 v0, v[0:1] scope:SCOPE_DEV
-; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
@@ -701,7 +697,6 @@ define <2 x i32> @test_one_as_flat_amdgcn_cooperative_atomic_load_16x8B_seq_cst(
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_DEV
-; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
@@ -725,7 +720,6 @@ define <4 x i32> @test_one_as_flat_amdgcn_cooperative_atomic_load_8x16B_seq_cst(
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
 ; GFX1260-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_DEV
-; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
