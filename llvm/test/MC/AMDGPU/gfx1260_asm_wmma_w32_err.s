@@ -283,6 +283,39 @@ v_wmma_f16_32x64x128_f8f6f4 v[0:31], v[32:63], v[192:255], v[64:95] matrix_b_fmt
 v_wmma_f16_32x64x128_f8f6f4 v[0:31], v[32:63], v[192:255], v[64:95] matrix_a_fmt:xxx
 // GFX1260-ERR: :[[@LINE-1]]:82: error: invalid matrix_a_fmt value
 
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[200:263], v[128:191]
+// GFX1260-ERR: :[[@LINE-1]]:48: error: register index is out of range
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[1,0,0]
+// GFX1260-ERR: :[[@LINE-1]]:71: error: invalid neg_lo operand
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[0,1,0]
+// GFX1260-ERR: :[[@LINE-1]]:71: error: invalid neg_lo operand
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[1,0,0]
+// GFX1260-ERR: :[[@LINE-1]]:71: error: not a valid operand.
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[0,1,0]
+// GFX1260-ERR: :[[@LINE-1]]:71: error: not a valid operand.
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[0,0,1]
+// GFX1260-ERR: :[[@LINE-1]]:71: error: not a valid operand.
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] matrix_a_reuse
+// GFX1260-ERR: :[[@LINE-1]]:71: error: invalid operand for instruction
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] matrix_b_reuse
+// GFX1260-ERR: :[[@LINE-1]]:71: error: invalid operand for instruction
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] clamp
+// GFX1260-ERR: :[[@LINE-1]]:71: error: invalid operand for instruction
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] matrix_b_fmt:-1
+// GFX1260-ERR: :[[@LINE-1]]:84: error: invalid matrix_b_fmt value
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] matrix_a_fmt:xxx
+// GFX1260-ERR: :[[@LINE-1]]:84: error: invalid matrix_a_fmt value
+
 v_swmmac_bf16f32_32x64x32_bf16 v[200:263], v[0:7], v[8:39], v40
 // GFX1260-ERR: :[[@LINE-1]]:32: error: register index is out of range
 

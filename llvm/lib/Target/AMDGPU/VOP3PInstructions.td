@@ -2084,6 +2084,7 @@ defm F32_16X16X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16
 
 let NegHiAny = 0 in {
   defm F16_32X64X128_F8F6F4 : WMMA_F8F6F4_Profiles<f16, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/0, /*Scale16=*/0, /*HasMatrixReuse=*/0>;
+  defm F32_32X64X128_F8F6F4 : WMMA_F8F6F4_Profiles<f32, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/0, /*Scale16=*/0, /*HasMatrixReuse=*/0>;
 } // NegHiAny = 0
 
 // WMMA Transpose instructions only have src0 (no src1/src2).
@@ -2217,6 +2218,7 @@ let SubtargetPredicate = HasWMMA2048bInsts in {
   defm V_WMMA_F32_32X64X256_F4_w32        : WMMAInstGFX12<"v_wmma_f32_32x64x256_f4",      F32_32X64X256_F4_WMMA_w32, "_w32">;
   defm V_WMMA_F16_32X64X256_F4_w32        : WMMAInstGFX12<"v_wmma_f16_32x64x256_f4",      F16_32X64X256_F4_WMMA_w32, "_w32">;
 
+  defm V_WMMA_F32_32X64X128_F8F6F4        : WMMAInst_SrcFormats_mc<"v_wmma_f32_32x64x128_f8f6f4", "F32_32X64X128_F8F6F4">;
   defm V_WMMA_F16_32X64X128_F8F6F4        : WMMAInst_SrcFormats_mc<"v_wmma_f16_32x64x128_f8f6f4", "F16_32X64X128_F8F6F4">;
 
   defm V_SWMMAC_BF16F32_32X64X32_BF16_w32 : SWMMACInstGFX12<"v_swmmac_bf16f32_32x64x32_bf16", BF16F32_32X64X32_BF16_SWMMAC_w32, "_w32">;
@@ -2754,6 +2756,7 @@ let WaveSizePredicate = isWave32, DecoderNamespace = "GFX12" in {
 }
 defm V_SWMMAC_BF16F32_32X64X32_BF16_w32 : VOP3P_Real_WMMA_gfx1260 <0x0a1, BF16F32_32X64X32_BF16_SWMMAC_w32>;
 
+defm V_WMMA_F32_32X64X128_F8F6F4        : VOP3P_Real_WMMA_SrcFormats <"gfx1260", 0x099, "F32_32X64X128_F8F6F4", /*DimVal=*/1>;
 defm V_WMMA_F16_32X64X128_F8F6F4        : VOP3P_Real_WMMA_SrcFormats <"gfx1260", 0x09a, "F16_32X64X128_F8F6F4", /*DimVal=*/1>;
 
 multiclass VOP3P_Real_with_name<GFXGen Gen, bits<8> op,
