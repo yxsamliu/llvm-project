@@ -1304,6 +1304,22 @@ def VS_128_Align2 : SIRegisterClass<"AMDGPU", VReg_128.RegTypes, 32,
   let HasSGPR = 1;
   let Size = 128;
 }
+
+def VS_128_Lo256 : SIRegisterClass<"AMDGPU", VReg_128.RegTypes, 32,
+                                   (add VReg_128_STAGING_Lo256_Align2, SReg_128)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+  let HasSGPR = 1;
+  let Size = 128;
+}
+
+def VS_256_Lo256 : SIRegisterClass<"AMDGPU", VReg_256.RegTypes, 32,
+                                   (add VReg_256_STAGING_Lo256_Align2, SReg_256)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+  let HasSGPR = 1;
+  let Size = 256;
+}
 } // End GeneratePressureSet = 0
 
 // TODO-GFX13: Accept VCC and TTMP as SGPR index registers.
@@ -1819,6 +1835,8 @@ def VCSrc_b64_Lo256   : SrcRegOrImm9 <VS_64_Lo256, "OPERAND_REG_INLINE_C_INT64">
 def VCSrc_b64         : SrcRegOrImm9 <VS_64_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_INT64">;
 def VCSrc_f64         : SrcRegOrImm9 <VS_64_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_FP64">;
 def VCSrc_v2b32       : SrcRegOrImm9 <VS_64_STAGING_AlignTarget, "OPERAND_REG_INLINE_C_V2INT32">;
+def VCSrc_b128_Lo256  : SrcRegOrImm9 <VS_128_Lo256, "OPERAND_REG_INLINE_C_INT64">;
+def VCSrc_b256_Lo256  : SrcRegOrImm9 <VS_256_Lo256, "OPERAND_REG_INLINE_C_INT64">;
 
 // True 16 Operands
 def VCSrcT_b16        : SrcRegOrImm9_t16 <"OPERAND_REG_INLINE_C_INT16">;

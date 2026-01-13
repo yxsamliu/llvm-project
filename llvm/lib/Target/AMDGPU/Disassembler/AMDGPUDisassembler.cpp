@@ -658,6 +658,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (isGFX1250Plus() && Bytes.size() >= 16) {
       std::bitset<128> DecW = eat16Bytes(Bytes);
 
+      if (isGFX1260Only() &&
+          tryDecodeInst(DecoderTableGFX1260128, MI, DecW, Address, CS))
+        break;
+
       if (tryDecodeInst(DecoderTableGFX1250128, MI, DecW, Address, CS))
         break;
 
@@ -1126,11 +1130,14 @@ static void adjustMFMA_F8F6F4OpRegClass(const MCRegisterInfo &MRI,
       MO.setReg(NewReg);
     }
     return;
-  case 12: {
-    // There is no 384-bit subreg index defined.
+  case 12:
+  case 24: {
+    // There is no 384-bit or 768-bit subreg index defined.
     MCRegister BaseReg = MRI.getSubReg(MO.getReg(), AMDGPU::sub0);
     MCRegister NewReg = MRI.getMatchingSuperReg(
-        BaseReg, AMDGPU::sub0, &MRI.getRegClass(AMDGPU::VReg_384RegClassID));
+        BaseReg, AMDGPU::sub0,
+        &MRI.getRegClass(NumRegs == 24 ? AMDGPU::VReg_768RegClassID
+                                       : AMDGPU::VReg_384RegClassID));
     return MO.setReg(NewReg);
   }
   case 16:

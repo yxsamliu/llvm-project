@@ -673,6 +673,14 @@ public:
 
   bool isVCSrc_v2b32() const { return isVCSrc_b64(); }
 
+  bool isVCSrc_b128_Lo256() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_128_Lo256RegClassID, MVT::v2i64);
+  }
+
+  bool isVCSrc_b256_Lo256() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_256_Lo256RegClassID, MVT::v4i64);
+  }
+
   bool isVSrc_v2b32() const { return isVSrc_b64() || isLiteralImm(MVT::v2i32); }
 
   bool isVSrc_f32() const {
