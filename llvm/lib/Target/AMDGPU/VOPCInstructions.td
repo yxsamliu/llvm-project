@@ -422,7 +422,7 @@ multiclass VOPC_Pseudos <string opName,
 
 }
 
-let SubtargetPredicate = HasSdstCMPX in {
+let PostEncoderMethod = "postEncodeVOPCX" in
 multiclass VOPCX_Pseudos <string opName,
                           VOPC_Profile P, VOPC_Profile P_NoSDst,
                           SDPatternOperator cond = COND_NULL,
@@ -486,7 +486,6 @@ multiclass VOPCX_Pseudos <string opName,
     }
   } // end SubtargetPredicate = isGFX11Plus
 }
-} // End SubtargetPredicate = HasSdstCMPX
 
 defm VOPC_I1_F16_F16 : VOPC_Profile_t16<[Write32Bit], f16>;
 def VOPC_I1_F32_F32 : VOPC_Profile<[Write32Bit], f32>;
@@ -1121,7 +1120,7 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
   } // end SubtargetPredicate = isGFX11Plus
 }
 
-let SubtargetPredicate = HasSdstCMPX in {
+let PostEncoderMethod = "postEncodeVOPCX" in
 multiclass VOPCX_Class_Pseudos <string opName,
                                 VOPC_Profile P,
                                 VOPC_Profile P_NoSDst> :
@@ -1171,7 +1170,6 @@ multiclass VOPCX_Class_Pseudos <string opName,
     }
   } // end SubtargetPredicate = isGFX11Plus
 }
-} // End SubtargetPredicate = HasSdstCMPX
 } // End ReadsModeReg = 0, mayRaiseFPException = 0
 
 defm VOPC_I1_F16_I16 : VOPC_Class_Profile_t16<[Write32Bit]>;
@@ -1538,6 +1536,7 @@ class VOPC64_DPP<VOP_DPP_Pseudo ps, string opName = ps.OpName>
   let Uses = ps.Uses;
   let OtherPredicates = ps.OtherPredicates;
   let Constraints = ps.Constraints;
+  let PostEncoderMethod = ps.PostEncoderMethod;
 }
 
 class VOPC64_DPP16_Dst<bits<10> op, VOP_DPP_Pseudo ps,
@@ -1578,6 +1577,7 @@ class VOPC64_DPP8<VOP_Pseudo ps, string opName = ps.OpName>
   let Uses = ps.Uses;
   let OtherPredicates = ps.OtherPredicates;
   let True16Predicate = ps.True16Predicate;
+  let PostEncoderMethod = ps.PostEncoderMethod;
 }
 
 class VOPC64_DPP8_Dst<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
