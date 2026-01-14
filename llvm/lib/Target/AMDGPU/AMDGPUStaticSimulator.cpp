@@ -1170,11 +1170,13 @@ void logInstHeader(unsigned Cycle, const MachineInstr &MI,
   MI.print(dbgs(), /*IsStandalone=*/true, /*SkipOpers=*/false,
            /*SkipDebugLoc=*/true, /*AddNewLine=*/false);
   dbgs() << "\n";
+#ifndef NDEBUG
   if (T.IC != InstClass::WMMA) {
     dbgs() << "  Class: " << getInstClassName(T.IC)
            << " | Unit: " << getUnitName(T.Unit) << " | Latency: " << T.Latency
            << " | ResourceCycles: " << T.ResourceCycles << "\n";
   }
+#endif
 }
 
 void logStalls(const StallSources &Stalls, const GPUSimState &State) {
@@ -1251,10 +1253,12 @@ void logWMMAWindow(const GPUSimState &State, InstClass IC) {
 }
 
 void logUnitAndMemState(const GPUSimState &State, const InstTiming &T) {
+#ifndef NDEBUG
   if (T.Unit != FunctionalUnit::NONE) {
     dbgs() << "  → UnitBusyUntil[" << getUnitName(T.Unit)
            << "] = " << State.getUnitBusyUntil(T.Unit) << "\n";
   }
+#endif
 
   if (T.IC == InstClass::VALU)
     dbgs() << "  → LastVALUCycle = " << State.LastVALUCycle << "\n";
