@@ -18003,6 +18003,7 @@ the instruction in the code sequence that references the table.
                                                              back.
 
                                                          2. ``global_wb``
+
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
 
                                                          3. | ``s_wait_storecnt 0x0``
