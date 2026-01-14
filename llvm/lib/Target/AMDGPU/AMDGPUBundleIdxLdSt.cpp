@@ -158,6 +158,8 @@ class AMDGPUBundleIdxLdSt : public MachineFunctionPass {
 
     // Operands of MI that are to be bundled, in no particular order.
     SmallVector<Operand, 8> BundledOps;
+    // Operands of MI that need to be marked as not killed.
+    SmallVector<MachineOperand *, 8> OpsToUnmarkKill;
   };
 
 public:
@@ -943,6 +945,7 @@ void AMDGPUBundleIdxLdSt::lowerStoreIdxBits(MachineInstr &MI) {
 void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
   MachineBasicBlock *MBB = MI.getParent();
   MachineFunction *MF = MBB->getParent();
+  MachineMemOperand *StoreMMO = nullptr;
   unsigned Opc = 0;
   bool Loads = true;
   unsigned NumStores = 1;
@@ -951,14 +954,17 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
     Opc = AMDGPU::V_SEND_VGPR_NEXT_B32;
     NumStores = 2;
     Loads = false;
+    StoreMMO = *MI.memoperands_begin();
     break;
   }
   case AMDGPU::V_SEND_VGPR_PREV_B32_LANESHARED: {
     Opc = AMDGPU::V_SEND_VGPR_PREV_B32;
     NumStores = 2;
     Loads = false;
+    StoreMMO = *MI.memoperands_begin();
     break;
   }
+  // TODO-GFX13: Add pre-existing StoreMMOs
   case AMDGPU::CLUSTER_LOAD_B32_LANESHARED:
     Opc = AMDGPU::CLUSTER_LOAD_B32;
     break;
@@ -1045,10 +1051,13 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
             .add(MI.getOperand(NumMIOps - (2 + 2 * I)))  // idx
             .add(MI.getOperand(NumMIOps - (1 + 2 * I))); // offset
 
-    // Synthesize MMO for V_STORE_IDX.
-    MachinePointerInfo StorePtrI = MachinePointerInfo(AMDGPUAS::LANE_SHARED);
-    MachineMemOperand *StoreMMO =
-        MF->getMachineMemOperand(StorePtrI, StoreFlags, Size, BaseAlign);
+    // Ideally use a pre-existing StoreMMO, if not synthesize here.
+    if (!StoreMMO) {
+      MachinePointerInfo StorePtrI(AMDGPUAS::LANE_SHARED);
+      StoreMMO =
+          MF->getMachineMemOperand(StorePtrI, StoreFlags, Size, BaseAlign);
+    }
+
     StoreMIB.addMemOperand(StoreMMO);
     Stores.push_back(StoreMIB);
   }
@@ -1228,11 +1237,13 @@ bool AMDGPUBundleIdxLdSt::analyze(BundlingInfo &BI) {
     auto *LoadMI = dyn_cast<AMDGPUMI::VLoadIdxInst>(MRI->getVRegDef(UseReg));
     if (!LoadMI || LoadMI->getParent() != MBB)
       continue;
+    // Unset kill hints since LoadStore MIs could be completely reorderded.
+    BI.OpsToUnmarkKill.push_back(&LoadMI->getIdxOp());
 
     // Check that we can sink the load to MI
     bool MayAlias = false;
-    for (auto II = LoadMI->getNextNode()->getIterator(); &*II != MI; ++II) {
-      if (II->hasOrderedMemoryRef() || LoadMI->mayAlias(AA, *II, true)) {
+    for (auto II = ++MachineBasicBlock::iterator(LoadMI); &*II != MI; ++II) {
+      if ((II->hasOrderedMemoryRef() || LoadMI->mayAlias(AA, *II, true))) {
         LLVM_DEBUG(dbgs() << "***Sinking conflict: \n\tLoadMI: ";
                    LoadMI->print(dbgs()); dbgs() << "\twith: ";
                    II->print(dbgs()));
@@ -1436,7 +1447,12 @@ bool AMDGPUBundleIdxLdSt::analyze(BundlingInfo &BI) {
 bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *OrigMI) {
   BundlingInfo BI;
   BI.MI = OrigMI;
-  if (!analyze(BI))
+  bool WillBundle = analyze(BI);
+  // Clear any kill flags that may become incorrect when other bundles get
+  // committed.
+  for (MachineOperand *&Op : BI.OpsToUnmarkKill)
+    Op->setIsKill(false);
+  if (!WillBundle)
     return false;
 
   MachineInstr *MI = BI.MI;
