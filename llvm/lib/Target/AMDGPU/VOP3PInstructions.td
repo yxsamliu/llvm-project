@@ -2064,6 +2064,12 @@ def F16_32X64X256_F4_SCALE_w32      : VOP3PWMMA_gfx1260_Profile<[v64f16, v32i32,
                                         /*HasMatrixFMT=*/0, /*HasMatrixScale=*/1, /*Scale16=*/0, /*IsF4=*/1>;
 }
 
+let MatrixScaleSrc = getMatrixScaleSrc</*M=*/32, /*N=*/64, /*K=*/256, /*HasMatrixScale=*/1, /*Scale16=*/1>.ret in {
+def F32_32X64X256_F4_SCALE16_w32    : VOP3PWMMA_gfx1260_Profile<[v64f32, v32i32,  v64i32,  v64f32],
+                                        /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
+                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/1, /*Scale16=*/1, /*IsF4=*/1>;
+}
+
 def BF16F32_32X64X32_BF16_SWMMAC_w32  : VOP3PWMMA_gfx1260_Profile<[v64f32, v16bf16, v64bf16, v64f32],
                                           /*IsSWMMAC=*/1, /*IndexType=*/16, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
                                           /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
@@ -2266,6 +2272,8 @@ let SubtargetPredicate = HasWMMA2048bInsts in {
 
   defm V_WMMA_SCALE_F32_32X64X256_F4_w32  : WMMAInstGFX12<"v_wmma_scale_f32_32x64x256_f4", F32_32X64X256_F4_SCALE_w32, "_w32">;
   defm V_WMMA_SCALE_F16_32X64X256_F4_w32  : WMMAInstGFX12<"v_wmma_scale_f16_32x64x256_f4", F16_32X64X256_F4_SCALE_w32, "_w32">;
+
+  defm V_WMMA_SCALE16_F32_32X64X256_F4_w32 : WMMAInstGFX12<"v_wmma_scale16_f32_32x64x256_f4", F32_32X64X256_F4_SCALE16_w32, "_w32">;
 
   defm V_SWMMAC_BF16F32_32X64X32_BF16_w32 : SWMMACInstGFX12<"v_swmmac_bf16f32_32x64x32_bf16", BF16F32_32X64X32_BF16_SWMMAC_w32, "_w32">;
 }
@@ -2786,6 +2794,8 @@ let WaveSizePredicate = isWave32 in {
 
     defm V_WMMA_SCALE_F32_32X64X256_F4_w32   : VOP3PX2_Real_ScaledWMMA_F4 <"gfx1260", 0x09b, 0xad, F32_32X64X256_F4_SCALE_w32>;
     defm V_WMMA_SCALE_F16_32X64X256_F4_w32   : VOP3PX2_Real_ScaledWMMA_F4 <"gfx1260", 0x09c, 0xad, F16_32X64X256_F4_SCALE_w32>;
+
+    defm V_WMMA_SCALE16_F32_32X64X256_F4_w32 : VOP3PX2_Real_ScaledWMMA_F4 <"gfx1260", 0x09b, 0xae, F32_32X64X256_F4_SCALE16_w32>;
   } // End SubtargetPredicate = isGFX1260Only, DecoderNamespace = "GFX1260"
 } // End WaveSizePredicate = isWave32
 
