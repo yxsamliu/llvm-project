@@ -129,6 +129,7 @@ struct True16D16Info {
 struct WMMAInstInfo {
   uint16_t Opcode;
   bool is_wmma_xdl;
+  uint8_t PredXDLIdx; // 0xff = no pred_xdl, 0/1/2 = which neg_lo bit is used
 };
 
 struct FLATInfo {
@@ -632,6 +633,12 @@ bool getMAIIsGFX940XDL(unsigned Opc);
 
 LLVM_READONLY
 bool getWMMAIsXDL(unsigned Opc);
+
+/// Returns the PredXDLIdx for WMMA instructions.
+/// Returns -1 if the instruction does not support pred_xdl or is not a WMMA.
+/// Returns 0, 1, or 2 indicating which neg_lo bit is repurposed for pred_xdl.
+LLVM_READONLY
+int getWMMAPredXDLIdx(unsigned Opc);
 
 // Get an equivalent BitOp3 for a binary logical \p Opc.
 // \returns BitOp3 modifier for the logical operation or zero.

@@ -1593,10 +1593,13 @@ class getMatrixScaleSrc<int M, int N, int K, bit HasMatrixScale, bit Scale16> {
                             (ins VCSrc_b128_Lo256:$scale_src0, VCSrc_b256_Lo256:$scale_src1))));
 }
 
+// _PredXDLIdx can be -1, 0, 1, 2. When _PredXDLIdx is -1, the instruction does not support the pred_xdl operand.
+// Otherwise, the instruction supports pred_xdl, and NEG[PredXDLIdx] is used to encode it.
 class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                         bit _IsIU, bit _IsFP8BF8XF32, bit _Has_ImodOp = 0,
                         bit _HasMatrixFMT = 0, bit _HasMatrixScale = 0,
-                        bit _Scale16 = 0, bit _HasMatrixReuse = 0, bit _IsF4 = 0>
+                        bit _Scale16 = 0, bit _HasMatrixReuse = 0, bit _IsF4 = 0,
+                        int _PredXDLIdx = -1>
     : VOP3P_Profile<VOPProfile<ArgTy>> {
   bit IsIU = _IsIU;
   bit NoABMods = !or(_IsFP8BF8XF32, _IsF4); // No IMOD support for A and B
@@ -1610,6 +1613,9 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
 
   bit ForceOpselHiZero = 0;
   bit ForceOpselZero = 0;
+
+  let PredXDLIdx = _PredXDLIdx;
+  bit HasPredXDL = !ne(PredXDLIdx, -1);
 
   bit HasIModOp = _Has_ImodOp;
   let HasClamp = !and(IsIU, !not(HasIModOp));
@@ -1727,6 +1733,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                                              MatrixAScaleFmt:$matrix_a_scale_fmt, MatrixBScaleFmt:$matrix_b_scale_fmt),
                                         (ins));
   dag MatrixReuse = !if(HasMatrixReuse, (ins MatrixAReuse:$matrix_a_reuse, MatrixBReuse:$matrix_b_reuse), (ins));
+  dag PredXDLOp = !if(HasPredXDL, (ins PredXDL:$pred_xdl), (ins));
   dag Clamp = !if(HasClamp, (ins Clamp0:$clamp), (ins));
   dag Neg = !cond(!and(NegLoAny, NegHiAny)             : (ins neg_lo0:$neg_lo, neg_hi0:$neg_hi),
                   !and(NegLoAny, !not(NegHiAny))       : (ins neg_lo0:$neg_lo),
@@ -1739,7 +1746,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                                                  (ins VRegSrc_64:$src2),
                                                  (ins VRegSrc_32:$src2)),
                                             IndexKey)),
-                      MatrixScaleSrc, MatrixFMT, MatrixScale, MatrixReuse, Clamp, Neg);
+                      MatrixScaleSrc, MatrixFMT, MatrixScale, MatrixReuse, PredXDLOp, Clamp, Neg);
 
   // asm
 
@@ -1751,12 +1758,13 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   string MatrixScaleSrcAsm = !if(HasMatrixScale, ", $scale_src0, $scale_src1", "");
   string MatrixScaleAsm = !if(HasMatrixScale, "$matrix_a_scale$matrix_b_scale$matrix_a_scale_fmt$matrix_b_scale_fmt", "");
   string MatrixReuseAsm = !if(HasMatrixReuse, "$matrix_a_reuse$matrix_b_reuse", "");
+  string PredXDLAsm = !if(HasPredXDL, "$pred_xdl", "");
   string ClampAsm = !if(HasClamp, "$clamp", "");
   string NegAsm = !cond(!and(NegLoAny, NegHiAny)             : "$neg_lo$neg_hi",
                         !and(NegLoAny, !not(NegHiAny))       : "$neg_lo",
                         !and(!not(NegLoAny), !not(NegHiAny)) : "");
 
-  let AsmVOP3P = "$vdst, $src0, $src1, $src2"#IndexKeyAsm#MatrixScaleSrcAsm#MatrxFMTAsm#MatrixScaleAsm#MatrixReuseAsm#NegAsm#ClampAsm;
+  let AsmVOP3P = "$vdst, $src0, $src1, $src2"#IndexKeyAsm#MatrixScaleSrcAsm#MatrxFMTAsm#MatrixScaleAsm#MatrixReuseAsm#NegAsm#ClampAsm#PredXDLAsm;
 
   // isel patterns
   bit IsAB_BF16_IMod0 = !and(IsAB_BF16, !not(HasIModOp));
@@ -1832,32 +1840,36 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   dag MatrixScaleOutModPat = !if(HasMatrixScale, (ins i32:$matrix_a_scale, i32:$matrix_b_scale, i32:$matrix_a_scale_fmt, i32:$matrix_b_scale_fmt), (ins));
   dag MatrixReuseOutModPat = !if(HasMatrixReuse, (ins i1:$matrix_a_reuse, i1:$matrix_b_reuse), (ins));
 
-  dag WmmaInPat  = !con(Src0InPat, Src1InPat, Src2InPatWmma, MatrixScaleInPat, MatrixReuseInPat, ClampPat);
-  dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, MatrixScaleOutSrcPat, MatrixFMTOutPat,
-                        MatrixScaleOutModPat, MatrixReuseOutModPat, ClampPat);
+  dag PredXDLInPat  = !if(HasPredXDL, (ins timm:$pred_xdl), (ins));
+  dag PredXDLOutPat = !if(HasPredXDL, (ins i1:$pred_xdl), (ins));
 
-  dag SwmmacInPat  = !con(Src0InPat, Src1InPat, (ins Src2VT:$srcTiedDef), IndexInPat, MatrixReuseInPat, ClampPat);
-  dag SwmmacOutPat = !con(Src0OutPat, Src1OutPat, (ins Src2VT:$srcTiedDef), IndexOutPat, MatrixReuseOutModPat, ClampPat);
+  dag WmmaInPat  = !con(Src0InPat, Src1InPat, Src2InPatWmma, MatrixScaleInPat, MatrixReuseInPat, PredXDLInPat, ClampPat);
+  dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, MatrixScaleOutSrcPat, MatrixFMTOutPat,
+                        MatrixScaleOutModPat, MatrixReuseOutModPat, PredXDLOutPat, ClampPat);
+
+  dag SwmmacInPat  = !con(Src0InPat, Src1InPat, (ins Src2VT:$srcTiedDef), IndexInPat, MatrixReuseInPat, PredXDLInPat, ClampPat);
+  dag SwmmacOutPat = !con(Src0OutPat, Src1OutPat, (ins Src2VT:$srcTiedDef), IndexOutPat, MatrixReuseOutModPat, PredXDLOutPat, ClampPat);
 
   // wmma pattern where src2 is inline imm uses _threeaddr pseudo,
   // can't use _twoaddr since it would violate src2 tied to vdst constraint.
-  dag WmmaInlineInPat  = !con(Src0InPat, Src1InPat, Src2InlineInPat, MatrixScaleInPat, MatrixReuseInPat, ClampPat);
+  dag WmmaInlineInPat  = !con(Src0InPat, Src1InPat, Src2InlineInPat, MatrixScaleInPat, MatrixReuseInPat, PredXDLInPat, ClampPat);
   dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, MatrixScaleOutSrcPat,
-                              MatrixFMTOutPat, MatrixScaleOutModPat, MatrixReuseOutModPat, ClampPat);
+                              MatrixFMTOutPat, MatrixScaleOutModPat, MatrixReuseOutModPat, PredXDLOutPat, ClampPat);
 }
 
 def WMMAInstInfoTable : GenericTable {
   let FilterClass = "WMMAInstInfo";
   let CppTypeName = "WMMAInstInfo";
-  let Fields = ["Opcode", "is_wmma_xdl"];
+  let Fields = ["Opcode", "is_wmma_xdl", "PredXDLIdx"];
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getWMMAInstInfoHelper";
 }
 
-class WMMAInstInfo {
+class WMMAInstInfo<int predXDLIdx = -1> {
   Instruction Opcode = !cast<Instruction>(NAME);
   bit is_wmma_xdl = 0;
+  bits<8> PredXDLIdx = predXDLIdx;
 }
 
 multiclass WMMAInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string PseudoInstrSuffix, bit DiffVdstSrc2 = 0> {
@@ -1867,14 +1879,14 @@ multiclass WMMAInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string Pse
 
   let Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0, isConvergent = 1, SubtargetPredicate = HasWMMA128bInsts in {
     let Constraints = WMMAConstraints2Addr, isConvertibleToThreeAddress = 1 in
-      def _twoaddr : VOP3P_Pseudo<Instr, WMMAProfile>, WMMAInstInfo {
+      def _twoaddr : VOP3P_Pseudo<Instr, WMMAProfile>, WMMAInstInfo<WMMAProfile.PredXDLIdx> {
         let PseudoInstr = Instr#PseudoInstrSuffix;
         let FixedSize = WMMAProfile.HasMatrixScale;
         let Size = !if(WMMAProfile.HasMatrixScale, 16, 8);
       }
 
     let Constraints = WMMAConstraints3Addr, SchedRW = [Write32Bit, Write32Bit] in
-      def _threeaddr : VOP3P_Pseudo<Instr, WMMAProfile>, WMMAInstInfo {
+      def _threeaddr : VOP3P_Pseudo<Instr, WMMAProfile>, WMMAInstInfo<WMMAProfile.PredXDLIdx> {
         let PseudoInstr = Instr#PseudoInstrSuffix;
         let FixedSize = WMMAProfile.HasMatrixScale;
         let Size = !if(WMMAProfile.HasMatrixScale, 16, 8);
@@ -1887,7 +1899,7 @@ multiclass WMMAInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string Pse
 
 // WMMA Transpose instructions only have $src0, no src1/src2 to tie.
 multiclass WMMAInstTR<string Instr, VOP3PWMMA_Profile WMMAProfile, SDPatternOperator node> {
-  def NAME : VOP3P_Pseudo<Instr, WMMAProfile, getVOP3Pat<WMMAProfile, node>.ret>, WMMAInstInfo {
+  def NAME : VOP3P_Pseudo<Instr, WMMAProfile, getVOP3Pat<WMMAProfile, node>.ret>, WMMAInstInfo<WMMAProfile.PredXDLIdx> {
     let Mnemonic = Instr;
     let PseudoInstr = Instr;
     let mayRaiseFPException = 0;
@@ -1898,7 +1910,7 @@ multiclass WMMAInstTR<string Instr, VOP3PWMMA_Profile WMMAProfile, SDPatternOper
 }
 
 multiclass SWMMACInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string PseudoInstrSuffix> {
-  def _twoaddr : VOP3P_Pseudo<Instr, WMMAProfile>, WMMAInstInfo {
+  def _twoaddr : VOP3P_Pseudo<Instr, WMMAProfile>, WMMAInstInfo<WMMAProfile.PredXDLIdx> {
     let Mnemonic = Instr;
     let PseudoInstr = Instr#PseudoInstrSuffix;
     let mayRaiseFPException = 0;
@@ -2015,10 +2027,12 @@ def I32_IU8X128_SWMMAC_w32       : VOP3PWMMA_Profile<[v8i32, v8i32,    v16i32,  
 
 class VOP3PWMMA_gfx1260_Profile<list<ValueType> ArgTy, bit IsSWMMAC, int IndexType,
                                 bit IsIU, bit IsFP8BF8XF32, bit HasMatrixFMT = 0,
-                                bit HasMatrixScale = 0, bit Scale16 = 0, bit IsF4 = 0>
+                                bit HasMatrixScale = 0, bit Scale16 = 0, bit IsF4 = 0,
+                                int PredXDLIdx = -1>
     : VOP3PWMMA_Profile<ArgTy, IsSWMMAC, IndexType, IsIU, IsFP8BF8XF32, /*Has_ImodOp=*/1,
                         HasMatrixFMT, HasMatrixScale, Scale16,
-                        /*HasMatrixReuse=*/!if(!and(IsF4, !not(HasMatrixScale)), 0, 1), IsF4> {
+                        /*HasMatrixReuse=*/!if(!and(IsF4, !not(HasMatrixScale)), 0, 1), IsF4,
+                        PredXDLIdx> {
   let NoABMods = 0;
   let HasClamp = 0;
   let NegHiAny = 0; // NEG_HI is overloaded to convey the MREG settings.
@@ -2032,7 +2046,8 @@ def F32_32X64X32_BF16_w32           : VOP3PWMMA_gfx1260_Profile<[v64f32, v32bf16
                                         /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
 def BF16_32X64X32_BF16_WMMA_w32     : VOP3PWMMA_gfx1260_Profile<[v64bf16, v32bf16, v64bf16, v64bf16],
                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
+                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0,
+                                        /*PredXDLIdx=*/0>;
 def F32_32X64X32_F16_w32            : VOP3PWMMA_gfx1260_Profile<[v64f32, v32f16, v64f16, v64f32],
                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
                                         /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
@@ -2528,9 +2543,9 @@ class VOP3PeWmma<bits<8> op, VOPProfile P, VOP3PWMMA_Profile WMMAP>
   let Inst{14} = !if (WMMAP.ForceOpselHiZero, 0, !if (WMMAP.HasMatrixFMT, matrix_b_fmt{2},
                       !if(WMMAP.HasMatrixReuse, matrix_b_reuse, 1)));
   // neg_lo
-  let Inst{61} = !if(WMMAP.NegLo01, src0_modifiers{0}, 0);
-  let Inst{62} = !if(WMMAP.NegLo01, src1_modifiers{0}, 0);
-  let Inst{63} = !if(WMMAP.NegLo2, src2_modifiers{0}, 0);
+  let Inst{61} = !if(!eq(WMMAP.PredXDLIdx, 0), pred_xdl{0}, !if(WMMAP.NegLo01, src0_modifiers{0}, 0));
+  let Inst{62} = !if(!eq(WMMAP.PredXDLIdx, 1), pred_xdl{0}, !if(WMMAP.NegLo01, src1_modifiers{0}, 0));
+  let Inst{63} = !if(!eq(WMMAP.PredXDLIdx, 2), pred_xdl{0}, !if(WMMAP.NegLo2, src2_modifiers{0}, 0));
   // neg_hi
   let Inst{8}  = !if(WMMAP.NegHi01, src0_modifiers{1}, 0);
   let Inst{9}  = !if(WMMAP.NegHi01, src1_modifiers{1}, 0);
@@ -2544,7 +2559,8 @@ multiclass VOP3P_WMMA_Real_Base<GFXGen Gen, bits<8> op, VOP3PWMMA_Profile WMMAP,
                                 string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
   def Gen.Suffix :
     VOP3P_Real_Gen<!cast<VOP3P_Pseudo>(backing_ps_name), Gen, asmName>,
-    VOP3PeWmma<op, !cast<VOP3P_Pseudo>(backing_ps_name).Pfl, WMMAP>;
+    VOP3PeWmma<op, !cast<VOP3P_Pseudo>(backing_ps_name).Pfl, WMMAP>,
+    WMMAInstInfo<WMMAP.PredXDLIdx>;
 }
 
 multiclass VOP3P_Real_WMMA_gfx1170 <bits<8> op, VOP3PWMMA_Profile WMMAP> {

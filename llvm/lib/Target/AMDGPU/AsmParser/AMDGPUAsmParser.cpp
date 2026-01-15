@@ -196,6 +196,7 @@ public:
     ImmTyMatrixBScaleFmt,
     ImmTyMatrixAReuse,
     ImmTyMatrixBReuse,
+    ImmTyPredXDL,
     ImmTyScaleSel,
     ImmTyAuxData,
     ImmTyIdxs,
@@ -423,6 +424,7 @@ public:
   bool isMatrixBScaleFmt() const { return isImmTy(ImmTyMatrixBScaleFmt); }
   bool isMatrixAReuse() const { return isImmTy(ImmTyMatrixAReuse); }
   bool isMatrixBReuse() const { return isImmTy(ImmTyMatrixBReuse); }
+  bool isPredXDL() const { return isImmTy(ImmTyPredXDL); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
   bool isFORMAT() const { return isImmTy(ImmTyFORMAT) && isUInt<7>(getImm()); }
   bool isDppFI() const { return isImmTy(ImmTyDppFI); }
@@ -1286,6 +1288,7 @@ public:
     case ImmTyMatrixBScaleFmt: OS << "ImmTyMatrixBScaleFmt"; break;
     case ImmTyMatrixAReuse: OS << "ImmTyMatrixAReuse"; break;
     case ImmTyMatrixBReuse: OS << "ImmTyMatrixBReuse"; break;
+    case ImmTyPredXDL: OS << "ImmTyPredXDL"; break;
     case ImmTyScaleSel: OS << "ScaleSel" ; break;
     case ImmTyAuxData: OS << "ImmTyAuxData"; break;
     case ImmTyIdxs: OS << "ImmTyIdxs"; break;
@@ -5281,6 +5284,14 @@ bool AMDGPUAsmParser::validateNeg(const MCInst &Inst, AMDGPU::OpName OpName) {
     return true;
 
   unsigned Neg = Inst.getOperand(NegIdx).getImm();
+
+  // For WMMA instructions with pred_xdl, the corresponding neg_lo bit
+  // (determined by PredXDLIdx) is repurposed for pred_xdl and cannot be set.
+  if (OpName == AMDGPU::OpName::neg_lo) {
+    int PredXDLIdx = AMDGPU::getWMMAPredXDLIdx(Opc);
+    if (PredXDLIdx >= 0 && (Neg & (1 << PredXDLIdx)))
+      return false;
+  }
 
   // Instructions that have neg_lo or neg_hi operand but neg modifier is allowed
   // on some src operands but not allowed on other.
@@ -10091,6 +10102,9 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::matrix_b_reuse))
     addOptionalImmOperand(Inst, Operands, OptIdx,
                           AMDGPUOperand::ImmTyMatrixBReuse, 0);
+
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::pred_xdl))
+    addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyPredXDL);
 
   int NegLoIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::neg_lo);
   if (NegLoIdx != -1)

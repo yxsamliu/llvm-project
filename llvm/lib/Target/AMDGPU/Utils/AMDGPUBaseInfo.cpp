@@ -625,6 +625,13 @@ bool getWMMAIsXDL(unsigned Opc) {
   return Info ? Info->is_wmma_xdl : false;
 }
 
+int getWMMAPredXDLIdx(unsigned Opc) {
+  const WMMAInstInfo *Info = getWMMAInstInfoHelper(Opc);
+  if (!Info || Info->PredXDLIdx == 0xff)
+    return -1;
+  return Info->PredXDLIdx;
+}
+
 bool isVDDS(unsigned Opc) {
   const FLATInfo *Info = isFlatOpcodeHelper(Opc);
   return Info ? Info->IsVDDS : false;

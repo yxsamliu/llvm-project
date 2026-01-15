@@ -178,6 +178,9 @@ v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] clamp
 v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] neg_hi:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:66: error: not a valid operand.
 
+v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] neg_lo:[1,0,0]
+// GFX1260-ERR: :[[@LINE-1]]:66: error: invalid neg_lo operand
+
 v_wmma_f16_32x64x32_f16 v[0:31], v[32:47], |v[48:79]|, v[80:111]
 // GFX1260-ERR: :[[@LINE-1]]:44: error: not a valid operand.
 
