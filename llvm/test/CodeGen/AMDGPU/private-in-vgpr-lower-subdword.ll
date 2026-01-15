@@ -78,8 +78,8 @@ define amdgpu_kernel void @subdword() #0 {
   ; SETIDX-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_]], 3, implicit-def dead $scc
   ; SETIDX-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_]], 3, implicit-def dead $scc
   ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-  ; SETIDX-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def %6, implicit $idx1, implicit $exec, implicit [[S_LSHL_B32_]] :: (load (s16) from %ir.p.1, align 4, addrspace 5) {
-  ; SETIDX-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (load (s16) from %ir.p.1, align 4, addrspace 5)
+  ; SETIDX-NEXT:   BUNDLE implicit-def $stg_srca, implicit-def %6, implicit killed $idx1, implicit $exec, implicit [[S_LSHL_B32_]] :: (load (s16) from %ir.p.1, align 4, addrspace 5) {
+  ; SETIDX-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 0, implicit $exec :: (load (s16) from %ir.p.1, align 4, addrspace 5)
   ; SETIDX-NEXT:     [[V_BFE_U32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_U32_e64 internal $stg_srca, [[S_LSHL_B32_]], 16, implicit $exec
   ; SETIDX-NEXT:   }
   ; SETIDX-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 4, 0, implicit-def dead $scc

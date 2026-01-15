@@ -320,7 +320,7 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; LIVEINS-GFX13-NEXT: {{  $}}
 ; LIVEINS-GFX13-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
 ; LIVEINS-GFX13-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed $idx1, implicit $exec, implicit [[S_LOAD_DWORDX2_IMM]], implicit $flat_scr, implicit $vgpr1 :: (dereferenceable load (s32) from %ir.sunkaddr2, addrspace 5), (store (s32) into %ir.1, addrspace 5) {
-; LIVEINS-GFX13-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx1, 1, implicit $exec, implicit $vgpr1 :: (dereferenceable load (s32) from %ir.sunkaddr2, addrspace 5)
+; LIVEINS-GFX13-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 1, implicit $exec, implicit $vgpr1 :: (dereferenceable load (s32) from %ir.sunkaddr2, addrspace 5)
 ; LIVEINS-GFX13-NEXT:     SCRATCH_STORE_DWORD_SADDR internal killed $stg_srca, [[S_LOAD_DWORDX2_IMM]].sub0, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.1, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   }
 ; LIVEINS-GFX13-NEXT:   [[SCRATCH_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD_SADDR [[S_LOAD_DWORDX2_IMM]].sub0, 28, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.out.7, addrspace 5)
@@ -417,7 +417,7 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; LIVEINS-GFX1260-NEXT: {{  $}}
 ; LIVEINS-GFX1260-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
 ; LIVEINS-GFX1260-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed $idx1, implicit $exec, implicit %8, implicit $flat_scr, implicit $vgpr1 :: (dereferenceable load (s32) from %ir.sunkaddr2, addrspace 5), (store (s32) into %ir.1, addrspace 5) {
-; LIVEINS-GFX1260-NEXT:     $stg_srca = V_LOAD_IDX_B32 $idx1, 1, implicit $exec, implicit $vgpr1 :: (dereferenceable load (s32) from %ir.sunkaddr2, addrspace 5)
+; LIVEINS-GFX1260-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 1, implicit $exec, implicit $vgpr1 :: (dereferenceable load (s32) from %ir.sunkaddr2, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:     SCRATCH_STORE_DWORD_SADDR internal killed $stg_srca, %8.sub0, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.1, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   }
 ; LIVEINS-GFX1260-NEXT:   [[SCRATCH_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD_SADDR %8.sub0, 28, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.out.7, addrspace 5)
