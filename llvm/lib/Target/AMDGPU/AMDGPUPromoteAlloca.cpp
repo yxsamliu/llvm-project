@@ -1167,8 +1167,20 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
 
   // Now fixup the placeholders.
   for (Instruction *Placeholder : Placeholders) {
-    Placeholder->replaceAllUsesWith(
-        Updater.GetValueInMiddleOfBlock(Placeholder->getParent()));
+    BasicBlock *BB = Placeholder->getParent();
+    Value *LiveIn = Updater.GetValueInMiddleOfBlock(BB);
+
+    Placeholder->replaceAllUsesWith(LiveIn);
+
+    // If InstSimplify folded a promoted store into the placeholder value
+    // itself (e.g. inserting `undef`), the SSAUpdater may have recorded the
+    // placeholder as the live-out value for this block. Update the mapping to
+    // avoid leaving dangling references after we delete the placeholder.
+    if (Updater.FindValueForBlock(BB) == Placeholder) {
+      LLVM_DEBUG(dbgs() << "Promote alloca: fixing escaped placeholder in "
+                        << BB->getName() << "\n");
+      Updater.AddAvailableValue(BB, LiveIn);
+    }
     Placeholder->eraseFromParent();
   }
 

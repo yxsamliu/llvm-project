@@ -723,9 +723,21 @@ LazyValueInfoImpl::solveBlockValueNonLocal(Value *Val, BasicBlock *BB) {
 
   // If this is the entry block, we must be asking about an argument.
   if (BB->isEntryBlock()) {
-    assert(isa<Argument>(Val) && "Unknown live-in to the entry block");
-    if (std::optional<ConstantRange> Range = cast<Argument>(Val)->getRange())
-      return ValueLatticeElement::getRange(*Range);
+    if (auto *Arg = dyn_cast<Argument>(Val)) {
+      if (std::optional<ConstantRange> Range = Arg->getRange())
+        return ValueLatticeElement::getRange(*Range);
+      return ValueLatticeElement::getOverdefined();
+    }
+
+    // We can reach the entry block for non-argument values in the presence of
+    // unreachable code (e.g. infinite loops after inlining) when the value
+    // analysis traces back through predecessor edges. Treat such cases as
+    // overdefined to avoid crashing under assertions.
+    LLVM_DEBUG({
+      dbgs() << "LVI: treating non-Argument value as overdefined in entry: ";
+      Val->printAsOperand(dbgs(), /*PrintType=*/true);
+      dbgs() << " in function " << BB->getParent()->getName() << "\n";
+    });
     return ValueLatticeElement::getOverdefined();
   }
 
