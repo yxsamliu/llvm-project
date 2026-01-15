@@ -428,10 +428,10 @@ defm : MadFmaMixFP16Pats<fmad, V_MAD_MIXLO_F16, V_MAD_MIXHI_F16>;
 
 // Essentially the same as the mad_mix versions
 let SubtargetPredicate = HasFmaMixInsts in {
-let isCommutable = 1 in {
 
+let isCommutable = 1, IsCMACCInstruction = 1 in {
 let isReMaterializable = 1 in
-defm V_FMA_MIX_F32 : VOP3_VOP3PInst<"v_fma_mix_f32", VOP3P_Mix_Profile<VOP_F32_F16_F16_F16, VOP3_OPSEL>>;
+  defm V_FMA_MIX_F32 : VOP3_VOP3PInst<"v_fma_mix_f32", VOP3P_Mix_Profile<VOP_F32_F16_F16_F16, VOP3_OPSEL>>;
 
 let FPDPRounding = 1 in {
 // Clamp modifier is applied after conversion to f16.
@@ -440,11 +440,10 @@ defm V_FMA_MIXLO_F16 : VOP3_VOP3PInst<"v_fma_mixlo_f16", VOP3P_Mix_Profile<VOP_F
 let ClampLo = 0, ClampHi = 1 in {
 defm V_FMA_MIXHI_F16 : VOP3_VOP3PInst<"v_fma_mixhi_f16", VOP3P_Mix_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL, 1>>;
 }
-
 // Pseudo true16 inst for v_fma_mixlo/hi_f16
 defm V_FMA_MIX_F16_t16 : VOP3_VOP3PInst_t16<"v_fma_mix_f16_t16", VOP3P_Mix_Profile_t16<VOP_F16_F16_F16_F16, VOP3_OPSEL>>;
 } // End FPDPRounding = 1
-}
+} // End isCommutable = 1, IsCMACCInstruction = 1
 
 defm : MadFmaMixFP32Pats<fma, V_FMA_MIX_F32>;
 

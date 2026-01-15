@@ -229,7 +229,8 @@ def VOPProfile_MOV : VOPProfile <[i32, i32, untyped, untyped]> {
 }
 
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
-defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOPProfile_MOV, null_frag, 0x8>;
+let IsCMACCInstruction = 1 in
+  defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOPProfile_MOV, null_frag, 0x8>;
 
 let SubtargetPredicate = isGFX940orGFX1250, SchedRW = [Write64Bit] in
 defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOP_I64_I64>;
@@ -878,8 +879,8 @@ let SubtargetPredicate = isGFX11Plus in {
     let IsInvalidSingleUseProducer = 1;
   }
 
-  let isAsCheapAsAMove = 1 in
-  defm V_MOV_B16        : VOP1Inst_t16<"v_mov_b16", VOP_I16_I16>;
+  let isAsCheapAsAMove = 1, IsCMACCInstruction = 1 in
+    defm V_MOV_B16        : VOP1Inst_t16<"v_mov_b16", VOP_I16_I16>;
   defm V_NOT_B16        : VOP1Inst_t16<"v_not_b16", VOP_I16_I16>;
   defm V_CVT_I32_I16    : VOP1Inst_t16<"v_cvt_i32_i16", VOP_I32_I16>;
   defm V_CVT_U32_U16    : VOP1Inst_t16<"v_cvt_u32_u16", VOP_I32_I16>;

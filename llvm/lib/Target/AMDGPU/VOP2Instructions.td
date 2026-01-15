@@ -870,24 +870,27 @@ def V_MADMK_F32 : VOP2_Pseudo <"v_madmk_f32", VOP_MADMK_F32, []>;
 
 let isCommutable = 1 in {
 let isReMaterializable = 1 in {
+let IsCMACCInstruction = 1 in {
 defm V_ADD_F32 : VOP2Inst_VOPD <"v_add_f32", VOP_F32_F32_F32, 0x4, "v_add_f32", any_fadd>;
 defm V_SUB_F32 : VOP2Inst_VOPD <"v_sub_f32", VOP_F32_F32_F32, 0x5, "v_sub_f32", any_fsub>;
 defm V_SUBREV_F32 : VOP2Inst_VOPD <"v_subrev_f32", VOP_F32_F32_F32, 0x6, "v_subrev_f32", null_frag, "v_sub_f32">;
 defm V_MUL_LEGACY_F32 : VOP2Inst_VOPD <"v_mul_legacy_f32", VOP_F32_F32_F32, 0x7, "v_mul_dx9_zero_f32", AMDGPUfmul_legacy>;
 defm V_MUL_F32 : VOP2Inst_VOPD <"v_mul_f32", VOP_F32_F32_F32, 0x3, "v_mul_f32", any_fmul>;
+defm V_LSHRREV_B32 : VOP2Inst_VOPD <"v_lshrrev_b32", VOP_I32_I32_I32, 0x15, "v_lshrrev_b32", clshr_rev_32, "v_lshr_b32">;
+defm V_ASHRREV_I32 : VOP2Inst_VOPD <"v_ashrrev_i32", VOP_I32_I32_I32, 0x16, "v_ashrrev_i32", cashr_rev_32, "v_ashr_i32">;
+defm V_LSHLREV_B32 : VOP2Inst_VOPD <"v_lshlrev_b32", VOP_I32_I32_I32, 0x11, "v_lshlrev_b32", clshl_rev_32, "v_lshl_b32">;
+defm V_MAX_F32 : VOP2Inst_VOPD <"v_max_f32", VOP_F32_F32_F32, 0xa, "v_max_f32", fmaxnum_like>;
+defm V_MIN_F32 : VOP2Inst_VOPD <"v_min_f32", VOP_F32_F32_F32, 0xb, "v_min_f32", fminnum_like>;
+} // End IsCMACCInstruction = 1
+
 defm V_MUL_I32_I24 : VOP2Inst <"v_mul_i32_i24", VOP_I32_I32_I32_ARITH, AMDGPUmul_i24>;
 defm V_MUL_HI_I32_I24 : VOP2Inst <"v_mul_hi_i32_i24", VOP_I32_I32_I32, AMDGPUmulhi_i24>;
 defm V_MUL_U32_U24 : VOP2Inst <"v_mul_u32_u24", VOP_I32_I32_I32_ARITH, AMDGPUmul_u24>;
 defm V_MUL_HI_U32_U24 : VOP2Inst <"v_mul_hi_u32_u24", VOP_I32_I32_I32, AMDGPUmulhi_u24>;
-defm V_MIN_F32 : VOP2Inst_VOPD <"v_min_f32", VOP_F32_F32_F32, 0xb, "v_min_f32", fminnum_like>;
-defm V_MAX_F32 : VOP2Inst_VOPD <"v_max_f32", VOP_F32_F32_F32, 0xa, "v_max_f32", fmaxnum_like>;
 defm V_MIN_I32 : VOP2Inst_VOPD <"v_min_i32", VOP_PAT_GEN<VOP_I32_I32_I32>, 0x18, "v_min_i32", smin>;
 defm V_MAX_I32 : VOP2Inst_VOPD <"v_max_i32", VOP_PAT_GEN<VOP_I32_I32_I32>, 0x17, "v_max_i32", smax>;
 defm V_MIN_U32 : VOP2Inst <"v_min_u32", VOP_PAT_GEN<VOP_I32_I32_I32>, umin>;
 defm V_MAX_U32 : VOP2Inst <"v_max_u32", VOP_PAT_GEN<VOP_I32_I32_I32>, umax>;
-defm V_LSHRREV_B32 : VOP2Inst_VOPD <"v_lshrrev_b32", VOP_I32_I32_I32, 0x15, "v_lshrrev_b32", clshr_rev_32, "v_lshr_b32">;
-defm V_ASHRREV_I32 : VOP2Inst_VOPD <"v_ashrrev_i32", VOP_I32_I32_I32, 0x16, "v_ashrrev_i32", cashr_rev_32, "v_ashr_i32">;
-defm V_LSHLREV_B32 : VOP2Inst_VOPD <"v_lshlrev_b32", VOP_I32_I32_I32, 0x11, "v_lshlrev_b32", clshl_rev_32, "v_lshl_b32">;
 defm V_AND_B32 : VOP2Inst_VOPD <"v_and_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, 0x12, "v_and_b32", and>;
 defm V_OR_B32 : VOP2Inst <"v_or_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, or>;
 defm V_XOR_B32 : VOP2Inst <"v_xor_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, xor>;
@@ -917,6 +920,7 @@ defm V_SUBB_U32 : VOP2bInst <"v_subb_u32", VOP2b_I32_I1_I32_I32_I1, null_frag, "
 defm V_SUBBREV_U32 : VOP2bInst <"v_subbrev_u32", VOP2b_I32_I1_I32_I32_I1, null_frag, "v_subb_u32">;
 
 
+let IsCMACCInstruction = 1 in {
 let SubtargetPredicate = HasAddNoCarryInsts, isReMaterializable = 1 in {
   defm V_SUB_U32 : VOP2Inst_VOPD <"v_sub_u32", VOP_I32_I32_I32_ARITH, 0x14, "v_sub_nc_u32", null_frag, "v_sub_u32">;
   defm V_SUBREV_U32 : VOP2Inst <"v_subrev_u32", VOP_I32_I32_I32_ARITH, null_frag, "v_sub_u32">;
@@ -925,6 +929,7 @@ let SubtargetPredicate = HasAddNoCarryInsts, isReMaterializable = 1 in {
 let SubtargetPredicate = HasAddNoCarryInsts, isReMaterializable = 1, isAdd = 1 in {
   defm V_ADD_U32 : VOP2Inst_VOPD <"v_add_u32", VOP_I32_I32_I32_ARITH, 0x10, "v_add_nc_u32", null_frag, "v_add_u32">;
 }
+} // End IsCMACCInstruction = 1
 
 let isAdd = 1 in {
   defm V_ADD_CO_U32 : VOP2bInst <"v_add_co_u32", VOP2b_I32_I1_I32_I32, null_frag, "v_add_co_u32">;
@@ -1103,9 +1108,12 @@ let FPDPRounding = 1 in {
   let SubtargetPredicate = UseFakeTrue16Insts in
     defm V_LDEXP_F16_fake16 : VOP2Inst <"v_ldexp_f16_fake16", LDEXP_F16_VOPProfile_Fake16, null_frag, "v_ldexp_f16_fake16">;
 } // End FPDPRounding = 1
+
+let IsCMACCInstruction = 1 in {
 defm V_LSHLREV_B16 : VOP2Inst_e64_t16 <"v_lshlrev_b16", VOP_I16_I16_I16, clshl_rev_16>;
 defm V_LSHRREV_B16 : VOP2Inst_e64_t16 <"v_lshrrev_b16", VOP_I16_I16_I16, clshr_rev_16>;
 defm V_ASHRREV_I16 : VOP2Inst_e64_t16 <"v_ashrrev_i16", VOP_I16_I16_I16, cashr_rev_16>;
+
 let isCommutable = 1 in {
 let FPDPRounding = 1 in {
 defm V_ADD_F16 : VOP2Inst_t16 <"v_add_f16", VOP_F16_F16_F16, any_fadd>;
@@ -1120,7 +1128,8 @@ defm V_MAX_U16 : VOP2Inst_e64_t16 <"v_max_u16", VOP_I16_I16_I16, umax>;
 defm V_MAX_I16 : VOP2Inst_e64_t16 <"v_max_i16", VOP_I16_I16_I16, smax>;
 defm V_MIN_U16 : VOP2Inst_e64_t16 <"v_min_u16", VOP_I16_I16_I16, umin>;
 defm V_MIN_I16 : VOP2Inst_e64_t16 <"v_min_i16", VOP_I16_I16_I16, smin>;
-} // End isCommutable = 1
+} // End isCommutable = 1, 
+} // End IsCMACCInstruction = 1
 } // End isReMaterializable = 1
 
 class LDEXP_F16_Pat <SDPatternOperator op, VOP_Pseudo inst, VOPProfile P = inst.Pfl> : GCNPat <
@@ -1162,7 +1171,7 @@ let SubtargetPredicate = isGFX11Plus in {
   } // End isCommutable = 1
 } // End SubtargetPredicate = isGFX11Plus
 
-let FPDPRounding = 1, isReMaterializable = 1, FixedSize = 1 in {
+let FPDPRounding = 1, isReMaterializable = 1, FixedSize = 1, IsCMACCInstruction = 1 in {
 let SubtargetPredicate = isGFX10Plus, True16Predicate = NotHasTrue16BitInsts in {
   def V_FMAMK_F16 : VOP2_Pseudo <"v_fmamk_f16", VOP_MADMK_F16, [], "">;
 }
@@ -1184,11 +1193,12 @@ let True16Predicate = UseFakeTrue16Insts in {
   def V_FMAAK_F16_fake16 : VOP2_Pseudo <"v_fmaak_f16_fake16", VOP_MADAK_F16_fake16, [], "">;
 }
 } // End isCommutable = 1
-} // End FPDPRounding  = 1, isReMaterializable = 1, FixedSize = 1
+} // End FPDPRounding  = 1, isReMaterializable = 1, FixedSize = 1, IsCMACCInstruction = 1
 
 let Constraints = "$vdst = $src2",
     isConvertibleToThreeAddress = 1,
-    isCommutable = 1 in {
+    isCommutable = 1,
+    IsCMACCInstruction = 1 in {
 let SubtargetPredicate = isGFX10Plus in {
 let True16Predicate = NotHasTrue16BitInsts in {
   defm V_FMAC_F16 : VOP2Inst <"v_fmac_f16", VOP_MAC_F16>;
@@ -1264,7 +1274,8 @@ def : GCNPat<
 
 let Constraints = "$vdst = $src2",
     isConvertibleToThreeAddress = 1,
-    isCommutable = 1 in
+    isCommutable = 1,
+    IsCMACCInstruction = 1 in
 defm V_FMAC_F32 : VOP2Inst_VOPD <"v_fmac_f32", VOP_MAC_F32, 0x0, "v_fmac_f32">;
 } // End SubtargetPredicate = HasDLInsts
 
@@ -1335,12 +1346,13 @@ let AddedComplexity = 30 in {
   }
 } // End AddedComplexity = 30
 
-let SubtargetPredicate = HasFmaakFmamkF32Insts, isReMaterializable = 1, CanBeVOPD3X = 0, FixedSize = 1 in {
+let SubtargetPredicate = HasFmaakFmamkF32Insts, isReMaterializable = 1,
+    CanBeVOPD3X = 0, FixedSize = 1, IsCMACCInstruction = 1 in {
 def V_FMAMK_F32 : VOP2_Pseudo<"v_fmamk_f32", VOP_MADMK_F32, [], "">, VOPD_Component<0x2, "v_fmamk_f32">;
 
 let isCommutable = 1 in
 def V_FMAAK_F32 : VOP2_Pseudo<"v_fmaak_f32", VOP_MADAK_F32, [], "">, VOPD_Component<0x1, "v_fmaak_f32">;
-} // End SubtargetPredicate = HasFmaakFmamkF32Insts, isReMaterializable = 1, CanBeVOPD3X = 0, FixedSize = 1
+} // End SubtargetPredicate = HasFmaakFmamkF32Insts, isReMaterializable = 1, CanBeVOPD3X = 0, FixedSize = 1, IsCMACCInstruction = 1
 
 let SubtargetPredicate = HasFmaakFmamkF64Insts, isReMaterializable = 1,
     FixedSize = 1, Size = 12, SchedRW = [Write64Bit] in {
