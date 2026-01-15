@@ -310,10 +310,6 @@ v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111]
 // GFX1260: v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] ; encoding: [0x00,0x00,0x8e,0xcc,0x20,0x61,0x42,0x1d]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
-v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] neg_lo:[1,0,0]
-// GFX1260: v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] neg_lo:[1,0,0] ; encoding: [0x00,0x00,0x8e,0xcc,0x20,0x61,0x42,0x3d]
-// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
-
 v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] neg_lo:[0,1,0]
 // GFX1260: v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] neg_lo:[0,1,0] ; encoding: [0x00,0x00,0x8e,0xcc,0x20,0x61,0x42,0x5d]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
@@ -328,6 +324,10 @@ v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] matrix_a_reuse
 
 v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] matrix_b_reuse
 // GFX1260: v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] matrix_b_reuse ; encoding: [0x00,0x40,0x8e,0xcc,0x20,0x61,0x42,0x1d]
+// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] pred_xdl
+// GFX1260: v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] pred_xdl ; encoding: [0x00,0x00,0x8e,0xcc,0x20,0x61,0x42,0x3d]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
 v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], 1.0
