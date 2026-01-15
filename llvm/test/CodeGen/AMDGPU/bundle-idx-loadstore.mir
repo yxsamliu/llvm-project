@@ -1438,9 +1438,9 @@ body:             |
     ; ALLOC-NEXT:   $stg_dsta = GLOBAL_LOAD_DWORDX4_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_LSHLREV_B32_e32_1]], 80, 0, implicit $exec :: (load (s128), addrspace 1)
     ; ALLOC-NEXT:   V_STORE_IDX_B128 internal $stg_dsta, $idx1, 28, implicit $exec :: (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @0, i32 96)` + 16, basealign 32, addrspace 10)
     ; ALLOC-NEXT: }
-    ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[S_LOAD_DWORDX2_IMM]], implicit [[V_LSHLREV_B32_e32_1]], implicit $exec, implicit $idx1 :: (load (s128), addrspace 1), (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @1, i32 96)`, align 32, addrspace 10) {
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit [[S_LOAD_DWORDX2_IMM]], implicit [[V_LSHLREV_B32_e32_1]], implicit $exec, implicit killed $idx1 :: (load (s128), addrspace 1), (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @1, i32 96)`, align 32, addrspace 10) {
     ; ALLOC-NEXT:   $stg_dsta = GLOBAL_LOAD_DWORDX4_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_LSHLREV_B32_e32_1]], 64, 0, implicit $exec :: (load (s128), addrspace 1)
-    ; ALLOC-NEXT:   V_STORE_IDX_B128 internal $stg_dsta, $idx1, 24, implicit $exec :: (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @1, i32 96)`, align 32, addrspace 10)
+    ; ALLOC-NEXT:   V_STORE_IDX_B128 internal $stg_dsta, killed $idx1, 24, implicit $exec :: (store (s128) into `ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @1, i32 96)`, align 32, addrspace 10)
     ; ALLOC-NEXT: }
     ; ALLOC-NEXT: SI_RETURN
     ;
@@ -1507,11 +1507,11 @@ body:             |
     ; ALLOC: $idx2 = S_SET_GPR_IDX_U32 12
     ; ALLOC-NEXT: $idx3 = S_SET_GPR_IDX_U32 8
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 0
-    ; ALLOC-NEXT: BUNDLE implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def early-clobber $stg_dsta, implicit $idx3, implicit $exec, implicit $idx2, implicit $idx1 :: (load (s128) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 36)`, addrspace 10), (load (s128) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 32)`, addrspace 10), (store (s256) into `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 16)`, addrspace 10) {
+    ; ALLOC-NEXT: BUNDLE implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def early-clobber $stg_dsta, implicit $idx3, implicit $exec, implicit $idx2, implicit killed $idx1 :: (load (s128) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 36)`, addrspace 10), (load (s128) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 32)`, addrspace 10), (store (s256) into `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 16)`, addrspace 10) {
     ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX_B128 $idx3, 0, implicit $exec :: (load (s128) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 36)`, addrspace 10)
     ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B128 $idx2, 0, implicit $exec :: (load (s128) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 32)`, addrspace 10)
     ; ALLOC-NEXT:   early-clobber $stg_dsta = contract V_WMMA_F32_16X16X16_F16_w32_threeaddr 8, internal killed $stg_srca, 8, internal killed $stg_srcb, 8, 0, 0, 0, implicit $exec
-    ; ALLOC-NEXT:   V_STORE_IDX_B256 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s256) into `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 16)`, addrspace 10)
+    ; ALLOC-NEXT:   V_STORE_IDX_B256 internal $stg_dsta, killed $idx1, 0, implicit $exec :: (store (s256) into `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 16)`, addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: same-bb-wide-load-store
@@ -2397,9 +2397,9 @@ body:             |
     ; ALLOC-NEXT: [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 4, implicit-def dead $scc
     ; ALLOC-NEXT: [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 5, implicit-def dead $scc
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 0
-    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def %10, implicit $idx1, implicit $exec, implicit $mode :: (load (s32), addrspace 10) {
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srcb, implicit-def $stg_srca, implicit-def %10, implicit killed $idx1, implicit $exec, implicit $mode :: (load (s32), addrspace 10) {
     ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX_B32 $idx1, 2, implicit $exec :: (load (s32), addrspace 10)
-    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 $idx1, 2, implicit $exec :: (load (s32), addrspace 10)
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B32 killed $idx1, 2, implicit $exec :: (load (s32), addrspace 10)
     ; ALLOC-NEXT:   [[V_ADD_F32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 internal $stg_srca, internal $stg_srcb, implicit $exec, implicit $mode
     ; ALLOC-NEXT: }
     ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_3]]
@@ -2642,10 +2642,10 @@ body:             |
     ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dstb, $idx1, 2, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
-    ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit-def $stg_dstb, implicit killed [[V_LOAD_IDX_B32_1]], implicit $mode, implicit $exec, implicit $idx1 :: (store (s32), addrspace 10) {
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_dsta, implicit-def $stg_dstb, implicit killed [[V_LOAD_IDX_B32_1]], implicit $mode, implicit $exec, implicit killed $idx1 :: (store (s32), addrspace 10) {
     ; ALLOC-NEXT:   $stg_dsta, $stg_dstb = V_SEND_VGPR_PREV_B32 killed [[V_LOAD_IDX_B32_1]], 2, 0, 1, 0, 15, implicit $mode, implicit $exec
     ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 2, implicit $exec :: (store (s32), addrspace 10)
-    ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dstb, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT:   V_STORE_IDX_B32 internal $stg_dstb, killed $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
     ; ALLOC-NEXT: }
     ;
     ; LOWERED-LABEL: name: test-aliasing-no-prevent-bundle
