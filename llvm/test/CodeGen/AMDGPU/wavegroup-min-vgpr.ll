@@ -23,6 +23,8 @@ define amdgpu_kernel void @laneshared_example_kernel(ptr addrspace(1) %0, ptr ad
 ; CHECK-NEXT:    s_mul_i32 s33, s0, s2
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    ds_store_b32 v0, g1[0]
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %b = load <2 x bfloat>, ptr addrspace(10) @global_laneshared, align 16

@@ -94,6 +94,8 @@ define private amdgpu_kernel void @test_kernel_1.rank_0_2_3_4_5_6_7() #3 {
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    s_branch .LBB3_1
 ; CHECK-NEXT:  .LBB3_4: ; %if.end7
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   br label %for.cond
@@ -151,6 +153,8 @@ define private amdgpu_kernel void @test_kernel_1.rank_1() #3 {
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   br label %for.cond
@@ -235,6 +239,8 @@ define dso_local amdgpu_kernel void @test_kernel_1() local_unnamed_addr #1 !reqd
 ; CHECK-NEXT:    s_add_pc_i64 .Ltest_kernel_1.rank_0_2_3_4_5_6_7@rel64-8
 ; CHECK-NEXT:  .LBB5_16: ; %entry
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(32, dummy_store.num_vgpr)
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr @test_kernel_1.rank_0_2_3_4_5_6_7)
