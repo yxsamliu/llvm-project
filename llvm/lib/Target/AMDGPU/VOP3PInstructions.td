@@ -1618,7 +1618,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   bit HasPredXDL = !ne(PredXDLIdx, -1);
 
   bit HasIModOp = _Has_ImodOp;
-  let HasClamp = !and(IsIU, !not(HasIModOp));
+  let HasClamp = IsIU;
   let IsPacked = 1;
   let IsWMMA = !not(_IsSWMMAC);
   let IsSWMMAC = _IsSWMMAC;
@@ -1734,7 +1734,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                                         (ins));
   dag MatrixReuse = !if(HasMatrixReuse, (ins MatrixAReuse:$matrix_a_reuse, MatrixBReuse:$matrix_b_reuse), (ins));
   dag PredXDLOp = !if(HasPredXDL, (ins PredXDL:$pred_xdl), (ins));
-  dag Clamp = !if(HasClamp, (ins Clamp0:$clamp), (ins));
+  dag ClampOp = !if(HasClamp, (ins Clamp:$clamp), (ins));
   dag Neg = !cond(!and(NegLoAny, NegHiAny)             : (ins neg_lo0:$neg_lo, neg_hi0:$neg_hi),
                   !and(NegLoAny, !not(NegHiAny))       : (ins neg_lo0:$neg_lo),
                   !and(!not(NegLoAny), !not(NegHiAny)) : (ins));
@@ -1746,7 +1746,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                                                  (ins VRegSrc_64:$src2),
                                                  (ins VRegSrc_32:$src2)),
                                             IndexKey)),
-                      MatrixScaleSrc, MatrixFMT, MatrixScale, MatrixReuse, PredXDLOp, Clamp, Neg);
+                      MatrixScaleSrc, ClampOp, MatrixFMT, MatrixScale, MatrixReuse, PredXDLOp, Neg);
 
   // asm
 
@@ -1844,17 +1844,17 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   dag PredXDLOutPat = !if(HasPredXDL, (ins i1:$pred_xdl), (ins));
 
   dag WmmaInPat  = !con(Src0InPat, Src1InPat, Src2InPatWmma, MatrixScaleInPat, MatrixReuseInPat, PredXDLInPat, ClampPat);
-  dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, MatrixScaleOutSrcPat, MatrixFMTOutPat,
-                        MatrixScaleOutModPat, MatrixReuseOutModPat, PredXDLOutPat, ClampPat);
+  dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, MatrixScaleOutSrcPat, ClampPat, MatrixFMTOutPat,
+                        MatrixScaleOutModPat, MatrixReuseOutModPat, PredXDLOutPat);
 
   dag SwmmacInPat  = !con(Src0InPat, Src1InPat, (ins Src2VT:$srcTiedDef), IndexInPat, MatrixReuseInPat, PredXDLInPat, ClampPat);
-  dag SwmmacOutPat = !con(Src0OutPat, Src1OutPat, (ins Src2VT:$srcTiedDef), IndexOutPat, MatrixReuseOutModPat, PredXDLOutPat, ClampPat);
+  dag SwmmacOutPat = !con(Src0OutPat, Src1OutPat, (ins Src2VT:$srcTiedDef), IndexOutPat, ClampPat, MatrixReuseOutModPat, PredXDLOutPat);
 
   // wmma pattern where src2 is inline imm uses _threeaddr pseudo,
   // can't use _twoaddr since it would violate src2 tied to vdst constraint.
   dag WmmaInlineInPat  = !con(Src0InPat, Src1InPat, Src2InlineInPat, MatrixScaleInPat, MatrixReuseInPat, PredXDLInPat, ClampPat);
-  dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, MatrixScaleOutSrcPat,
-                              MatrixFMTOutPat, MatrixScaleOutModPat, MatrixReuseOutModPat, PredXDLOutPat, ClampPat);
+  dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, MatrixScaleOutSrcPat, ClampPat,
+                              MatrixFMTOutPat, MatrixScaleOutModPat, MatrixReuseOutModPat, PredXDLOutPat);
 }
 
 def WMMAInstInfoTable : GenericTable {

@@ -5186,7 +5186,8 @@ with the changes defined in table
      String Key                       Value Type Required?  Description
      ================================ ========== ========== =======================================
      ".laneshared_segment_fixed_size" integer               (GFX13+) The amount of fixed lane-shared
-                                                            address space memory for a lane in bytes.
+                                                            address space memory for a lane in bytes
+                                                            that is reserved in scratch memory.
                                                             A non-zero value requires enable_wavegroup
                                                             to be set to true.
      ".enable_wavegroup"              boolean               (GFX13+) Whether wavegroup launch is enabled.
@@ -5471,7 +5472,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      GFX13
                                                        The amount of fixed
                                                        lane-shared memory required
-                                                       per wavegroup.
+                                                       per lane in scratch memory.
 
                                                        Must be 0 if ENABLE_WAVEGROUP
                                                        is not set.

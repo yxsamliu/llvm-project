@@ -77,7 +77,7 @@ struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
   uint32_t LDSSize = 0;
   const MCExpr *FlatUsed = nullptr;
 
-  // Number of bytes of laneshared memory in scratch.
+  // Number of bytes of laneshared memory in scratch per lane.
   const MCExpr *LaneSharedSegmentSize = nullptr;
 
   // Number of SGPRs that meets number of waves per execution unit request.
