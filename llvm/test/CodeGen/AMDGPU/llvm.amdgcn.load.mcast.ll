@@ -1180,6 +1180,8 @@ define amdgpu_kernel void @dummy_kernel() "amdgpu-wavegroup-enable" !reqd_work_g
 ; CHECK-NEXT:    s_add_co_u32 s32, s33, 0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_swap_pc_i64 s[30:31], s[12:13]
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
   call void @load_mcast_b32_vaddr_imm_mask_dst2()
   ret void

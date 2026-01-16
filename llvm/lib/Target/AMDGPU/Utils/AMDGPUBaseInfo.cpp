@@ -430,6 +430,11 @@ struct VOPTrue16Info {
   bool IsTrue16;
 };
 
+struct CMACCInstructionInfo {
+  uint16_t Opcode;
+  bool IsCMACCInstruction;
+};
+
 #define GET_FP4FP8DstByteSelTable_DECL
 #define GET_FP4FP8DstByteSelTable_IMPL
 
@@ -450,6 +455,8 @@ struct FP4FP8DstByteSelInfo {
   bool HasFP4DstByteSel;
 };
 
+#define GET_CMACCInstructionTable_DECL
+#define GET_CMACCInstructionTable_IMPL
 #define GET_DPMACCInstructionTable_DECL
 #define GET_DPMACCInstructionTable_IMPL
 #define GET_MTBUFInfoTable_DECL
@@ -905,6 +912,11 @@ FPType getFPDstSelType(unsigned Opc) {
     return FPType::FP4;
 
   return FPType::None;
+}
+
+bool isCMACCInstruction(unsigned Opc) {
+  const CMACCInstructionInfo *Info = getCMACCInstructionHelper(Opc);
+  return Info && Info->IsCMACCInstruction;
 }
 
 bool isDPMACCInstruction(unsigned Opc) {

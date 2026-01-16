@@ -185,6 +185,7 @@ protected:
   bool HasWMMATransposeInsts = false;
   bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
+  bool HasCMACCDroppedWriteBug = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicFMinFMaxF32GlobalInsts = false;
   bool HasAtomicFMinFMaxF64GlobalInsts = false;
@@ -1619,6 +1620,8 @@ public:
 
   // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
   bool hasCvtFP8VOP1Bug() const { return HasCvtFP8Vop1Bug; }
+
+  bool hasCMACCDroppedWriteBug() const { return HasCMACCDroppedWriteBug; }
 
   // \returns true if CSUB (a.k.a. SUB_CLAMP on GFX12) atomics support a
   // no-return form.

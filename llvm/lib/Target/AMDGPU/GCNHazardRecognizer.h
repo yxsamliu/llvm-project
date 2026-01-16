@@ -78,6 +78,8 @@ private:
 
   int getWaitStatesSince(IsHazardFn IsHazard, int Limit,
                          GetNumWaitStatesFn GetNumWaitStates);
+  int getWaitStatesSince(IsHazardFn IsHazard, int Limit, IsExpiredFn IsExpired,
+                         GetNumWaitStatesFn GetNumWaitStates);
   int getWaitStatesSince(IsHazardFn IsHazard, int Limit);
   int getWaitStatesSinceDef(unsigned Reg, IsHazardFn IsHazardDef, int Limit);
   int getWaitStatesSinceSetReg(IsHazardFn IsHazard, int Limit);
@@ -113,6 +115,7 @@ private:
   bool fixVALUTransUseHazard(MachineInstr *MI);
   bool fixVALUTransCoexecutionHazards(MachineInstr *MI);
   bool fixWMMAHazards(MachineInstr *MI);
+  int checkCMACCDroppedWriteHazard(MachineInstr *MI);
   int checkWMMACoexecutionHazards(MachineInstr *MI);
   bool fixShift64HighRegBug(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);

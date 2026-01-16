@@ -26,6 +26,8 @@ define amdgpu_kernel void @set_and_is_chain() "amdgpu-cluster-dims"="4,1,1" "amd
 ; CHECK-NEXT:    s_getreg_b32 s1, hwreg(HW_REG_WAVE_MODE, 13, 1)
 ; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_WAVE_MODE, 12, 1), s0
 ; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_WAVE_MODE, 13, 1), s1
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.spatial.cluster.set.chain.start(i1 true)
@@ -44,9 +46,11 @@ define amdgpu_kernel void @signal_next_prev() "amdgpu-cluster-dims"="4,1,1" "amd
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s1, s0, 0
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    v_send_vgpr_next_b32 off, off, off sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:15
 ; CHECK-NEXT:    v_send_vgpr_prev_b32 off, off, off sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:15
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_mul_i32 s33, s0, s8
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.spatial.cluster.signal.next(ptr addrspace(3) @sem, ptr addrspace(3) @sem2)
@@ -84,6 +88,8 @@ define amdgpu_kernel void @send_next_prev(i32 %i1, ptr addrspace(1) %p) "amdgpu-
 ; CHECK-NEXT:    s_set_vgpr_frames 0x41 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[8], g1[0]
 ; CHECK-NEXT:    v_mov_b32_e32 g1[9], g1[0]
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %wg_cluster = call i32 @llvm.amdgcn.wavegroup.id.in.cluster()
@@ -132,6 +138,8 @@ define amdgpu_kernel void @send_next_prev_nowrite(i32 %i1, ptr addrspace(1) %p) 
 ; CHECK-NEXT:    s_set_vgpr_frames 0x41 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[8], g1[0]
 ; CHECK-NEXT:    v_mov_b32_e32 g1[9], g1[0]
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %wg_cluster = call i32 @llvm.amdgcn.wavegroup.id.in.cluster()
@@ -229,6 +237,8 @@ define amdgpu_kernel void @send_next_prev_nodims(i32 %i1, ptr addrspace(1) %p) "
 ; CHECK-NEXT:    s_set_vgpr_frames 0x41 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[8], g1[0]
 ; CHECK-NEXT:    v_mov_b32_e32 g1[9], g1[0]
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %wg_cluster = call i32 @llvm.amdgcn.wavegroup.id.in.cluster()
@@ -261,6 +271,8 @@ define amdgpu_kernel void @send_next_from_laneshared() "amdgpu-cluster-dims"="4,
 ; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_set_vgpr_frames 0x45 ; vsrc0_idx=1 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_send_vgpr_next_b32 g1[1], g1[2], g1[8] sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:15
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %pdst = getelementptr i32, ptr addrspace(10) @dst, i32 1

@@ -31,29 +31,29 @@ define private amdgpu_kernel void @input(ptr addrspace(3) %addr, ptr addrspace(1
 ; CHECK-NEXT:    v_mov_b32_e32 v9, s3
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v0, s0
+; CHECK-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s4
+; CHECK-NEXT:    v_dual_mov_b32 v4, s5 :: v_dual_mov_b32 v5, s6
+; CHECK-NEXT:    v_dual_mov_b32 v6, s8 :: v_dual_mov_b32 v1, s1
+; CHECK-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v7, s9
+; CHECK-NEXT:    v_mov_b32_e32 v8, s10
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    ds_load_mcast_b32 g1[4], v9
 ; CHECK-NEXT:    ds_load_mcast_b32 g1[0], v9 offset:64
 ; CHECK-NEXT:    ds_load_mcast_b32 g1[8], v9 offset:128
-; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_dual_mov_b32 v3, s4 :: v_dual_mov_b32 v4, s5
-; CHECK-NEXT:    v_dual_mov_b32 v5, s6 :: v_dual_mov_b32 v6, s8
-; CHECK-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v2, s2
-; CHECK-NEXT:    v_dual_mov_b32 v7, s9 :: v_dual_mov_b32 v8, s10
-; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_mov_b32_e32 g1[60], v3
-; CHECK-NEXT:    v_mov_b32_e32 g1[61], v4
-; CHECK-NEXT:    v_mov_b32_e32 g1[62], v5
 ; CHECK-NEXT:    v_mov_b32_e32 g1[12], v0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[13], v1
 ; CHECK-NEXT:    v_mov_b32_e32 g1[14], v2
+; CHECK-NEXT:    v_mov_b32_e32 g1[60], v3
+; CHECK-NEXT:    v_mov_b32_e32 g1[61], v4
+; CHECK-NEXT:    v_mov_b32_e32 g1[62], v5
 ; CHECK-NEXT:    v_mov_b32_e32 g1[108], v6
 ; CHECK-NEXT:    v_mov_b32_e32 g1[109], v7
 ; CHECK-NEXT:    v_mov_b32_e32 g1[110], v8
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; CHECK-NEXT:    s_sema_signal 17
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
 
@@ -89,6 +89,8 @@ define private amdgpu_kernel void @compute(ptr addrspace(3) %addr, ptr addrspace
 ; CHECK-NEXT:    v_convolve_f16_fp8_fp8 g1[22:25], 0, g1[12:20], g1[0:2], g1[4:6], g1[8:10] aux_data:42 clamp idxs:0x111101
 ; CHECK-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; CHECK-NEXT:    s_sema_signal 33
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem1)
@@ -114,6 +116,8 @@ define private amdgpu_kernel void @output(ptr addrspace(3) %addr, ptr addrspace(
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    global_store_b128 v0, g1[22:25], s[0:1]
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem2)
@@ -156,6 +160,8 @@ define amdgpu_kernel void @main(ptr addrspace(3) %addr, ptr addrspace(1) %wbuf, 
 ; CHECK-NEXT:    s_add_pc_i64 .Loutput@rel64-8
 ; CHECK-NEXT:  .LBB3_6: ; %entry
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, 1
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.wavegroup.rank(i32 0, ptr @input)

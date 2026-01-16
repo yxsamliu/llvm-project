@@ -1710,6 +1710,8 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
       RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(4, Align(4)));
     }
   }
+
+  insertWavegroupEndBarrier(MF);
 }
 
 void SIFrameLowering::processFunctionBeforeFrameIndicesReplaced(
@@ -2350,4 +2352,26 @@ bool SIFrameLowering::requiresStackPointerReference(
   // We still need to initialize the SP if we're doing anything weird that
   // references the SP, like variable sized stack objects.
   return frameTriviallyRequiresSP(MFI);
+}
+
+void SIFrameLowering::insertWavegroupEndBarrier(MachineFunction &MF) const {
+  const Function &F = MF.getFunction();
+
+  if (!AMDGPU::getWavegroupEnable(F))
+    return;
+
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+
+  // S_ENDPGM is always the last non-debug instruction in a basic block.
+  for (MachineBasicBlock &MBB : MF) {
+    MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
+    if (MBBI != MBB.end() && MBBI->getOpcode() == AMDGPU::S_ENDPGM) {
+      BuildMI(MBB, *MBBI, MBBI->getDebugLoc(),
+              TII->get(AMDGPU::S_BARRIER_SIGNAL_IMM))
+          .addImm(AMDGPU::Barrier::WORKGROUP);
+      BuildMI(MBB, *MBBI, MBBI->getDebugLoc(), TII->get(AMDGPU::S_BARRIER_WAIT))
+          .addImm(AMDGPU::Barrier::WORKGROUP);
+    }
+  }
 }

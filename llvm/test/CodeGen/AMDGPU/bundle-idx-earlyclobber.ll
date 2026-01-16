@@ -23,6 +23,8 @@ define amdgpu_kernel void @wmma_ls_factor(ptr addrspace(1) %src, ptr addrspace(1
 ; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_store_b128 v12, v[4:7], s[2:3] offset:16 scale_offset
 ; CHECK-NEXT:    global_store_b128 v12, v[0:3], s[2:3] scale_offset
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
@@ -65,6 +67,8 @@ define amdgpu_kernel void @wmma_ls_out(ptr addrspace(1) %src, ptr addrspace(1) %
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    v_wmma_f32_16x16_f16 g1[0:7], v[8:11], v[12:15], v[0:7] clamp idxs:0x1
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
@@ -99,6 +103,8 @@ define amdgpu_kernel void @wmma_ls_out_zero_in(ptr addrspace(1) %src, ptr addrsp
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    v_wmma_f32_16x16_f16 g1[0:7], v[0:3], v[4:7], 0 clamp idxs:0x1
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
@@ -131,6 +137,8 @@ define amdgpu_kernel void @wmma_ls_accum(ptr addrspace(1) %src, ptr addrspace(1)
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    v_wmma_f32_16x16_f16 g1[0:7], v[0:3], v[4:7], g1[0:7] clamp idxs:0x11
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
@@ -164,6 +172,8 @@ define amdgpu_kernel void @wmma_ls_accum_disjoint(ptr addrspace(1) %src, ptr add
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    v_wmma_f32_16x16_f16 g1[0:7], v[0:3], v[4:7], g1[8:15] clamp idxs:0x11
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
@@ -218,6 +228,8 @@ define amdgpu_kernel void @wmma_ls_accum_overlap(ptr addrspace(1) %src, ptr addr
 ; CHECK-NEXT:    v_mov_b32_e32 g1[5], v5
 ; CHECK-NEXT:    v_mov_b32_e32 g1[6], v6
 ; CHECK-NEXT:    v_mov_b32_e32 g1[7], v7
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
@@ -256,6 +268,8 @@ define amdgpu_kernel void @wmma_ls_factor_overlap(ptr addrspace(1) %src, ptr add
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_wmma_f32_16x16_f16 g1[0:7], v[0:3], v[4:7], g1[8:15] clamp idxs:0x11
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)

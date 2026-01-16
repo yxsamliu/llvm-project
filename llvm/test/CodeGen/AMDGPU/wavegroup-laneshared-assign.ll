@@ -85,6 +85,8 @@ define amdgpu_kernel void @kernel(i32 %idx, ptr %out) "amdgpu-wavegroup-enable" 
 ; CHECK-NEXT:  ; %bb.2:
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s52
 ; CHECK-NEXT:    flat_store_b32 v40, v0, s[50:51]
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
   %ptr = getelementptr ptr, ptr @table, i32 %idx
   %f = load ptr, ptr %ptr

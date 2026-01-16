@@ -194,6 +194,9 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   if (!IsHazardRecognizerMode) {
     if (checkWMMACoexecutionHazards(MI) > 0)
       return Hazard;
+
+    if (checkCMACCDroppedWriteHazard(MI) > 0)
+      return Hazard;
   }
 
   if (ST.hasNoDataDepHazard())
@@ -602,11 +605,17 @@ getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
 
 int GCNHazardRecognizer::getWaitStatesSince(
     IsHazardFn IsHazard, int Limit, GetNumWaitStatesFn GetNumWaitStates) {
+  auto IsExpiredFn = [Limit](const MachineInstr &, int WaitStates) {
+    return WaitStates >= Limit;
+  };
+  return getWaitStatesSince(IsHazard, Limit, IsExpiredFn, GetNumWaitStates);
+}
+
+int GCNHazardRecognizer::getWaitStatesSince(
+    IsHazardFn IsHazard, int Limit, IsExpiredFn IsExpired,
+    GetNumWaitStatesFn GetNumWaitStates) {
   if (IsHazardRecognizerMode) {
-    auto IsExpiredFn = [Limit](const MachineInstr &, int WaitStates) {
-      return WaitStates >= Limit;
-    };
-    return ::getWaitStatesSince(IsHazard, CurrCycleInstr, IsExpiredFn,
+    return ::getWaitStatesSince(IsHazard, CurrCycleInstr, IsExpired,
                                 GetNumWaitStates);
   }
 
@@ -1288,6 +1297,7 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixVALUTransCoexecutionHazards(MI);
   fixWMMAHazards(MI); // fall-through if co-execution is enabled.
   emitVNops(MI, checkWMMACoexecutionHazards(MI));
+  emitVNops(MI, checkCMACCDroppedWriteHazard(MI));
   fixShift64HighRegBug(MI);
   fixVALUMaskWriteHazard(MI);
   fixRequiredExportPriority(MI);
@@ -2075,6 +2085,61 @@ static bool IsWMMAHazardInstInCategory(const MachineInstr &MI,
   } // end switch.
 
   return false;
+}
+
+int GCNHazardRecognizer::checkCMACCDroppedWriteHazard(MachineInstr *MI) {
+  if (!ST.hasCMACCDroppedWriteBug())
+    return 0;
+  if (!ST.isWave64())
+    return 0;
+
+  if (!AMDGPU::isCMACCInstruction(MI->getOpcode()))
+    return 0;
+
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+
+  assert(AMDGPU::hasNamedOperand(MI->getOpcode(), AMDGPU::OpName::vdst) &&
+         "CMACC instruction missing vdst operand");
+  Register MID = TII->getNamedOperand(*MI, AMDGPU::OpName::vdst)->getReg();
+
+  auto HazardFn = [TII, TRI, MID](const MachineInstr &I) {
+    if (!AMDGPU::isCMACCInstruction(I.getOpcode()))
+      return false;
+    assert(AMDGPU::hasNamedOperand(I.getOpcode(), AMDGPU::OpName::vdst) &&
+           "CMACC instruction missing vdst operand");
+
+    Register ID = TII->getNamedOperand(I, AMDGPU::OpName::vdst)->getReg();
+    return TRI->regsOverlap(MID, ID);
+  };
+
+  // There must be 5 cycles between CMACC instructions to avoid the hazard.
+  // We insert V_NOPs to reach 5.
+  constexpr int Limit = 5;
+
+  auto IsExpiredFn = [TRI](const MachineInstr &I, int WaitStates) {
+    // TODO If another instruction not triggering the hazard reads vdst of MI,
+    // the hazard is cleared
+
+    // Instructions which write to EXEC expire the hazard
+    if (I.modifiesRegister(AMDGPU::EXEC, TRI))
+      return true;
+    return WaitStates >= Limit;
+  };
+
+  // FIXME This is conservative, ie 2 cycle issue instructions are treated as 1
+  // cycle.
+  auto GetWaitStatesFn = [](const MachineInstr &I) {
+    return SIInstrInfo::isVALU(I) ? 1 : 0;
+  };
+
+  // 'getWaitStatesSince' returns the number of VALUs in between if hazard
+  // exists, and INT_MAX if there is no hazard. As a result, a negative
+  // WaitStatesNeeded here means no hazard
+  int WaitStatesNeeded =
+      Limit - getWaitStatesSince(HazardFn, Limit, IsExpiredFn, GetWaitStatesFn);
+
+  return WaitStatesNeeded;
 }
 
 int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) {

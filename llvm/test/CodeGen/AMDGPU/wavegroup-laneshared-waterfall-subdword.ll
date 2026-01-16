@@ -66,6 +66,8 @@ define protected amdgpu_kernel void @subdword(ptr addrspace(1) noundef readonly 
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
 ; CHECK-NEXT:    global_store_b16 v[0:1], v2, off
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %2 = tail call i32 @llvm.amdgcn.workgroup.id.x()

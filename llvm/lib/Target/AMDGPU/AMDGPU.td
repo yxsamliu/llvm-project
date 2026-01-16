@@ -780,6 +780,12 @@ def FeatureA16 : SubtargetFeature<"a16",
   "Support A16 for 16-bit coordinates/gradients/lod/clamp/mip image operands"
 >;
 
+def FeatureCMACCDroppedWriteBug : SubtargetFeature<"cmacc-dropped-write-bug",
+  "HasCMACCDroppedWriteBug",
+  "true",
+  "Bug with cmacc instructions dropping writes under certain conditions"
+>;
+
 def FeatureG16 : SubtargetFeature<"g16",
   "HasG16",
   "true",
@@ -2457,6 +2463,7 @@ def FeatureISAVersion12_60 : FeatureSet<
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
    FeatureGFX1250Insts,
+   FeatureCMACCDroppedWriteBug,
    FeatureAddressableLocalMemorySize196608,
    Feature1024AddressableVGPRs,
    Feature64BitLiterals,
@@ -3447,6 +3454,9 @@ def HasGWS : Predicate<"Subtarget->hasGWS()">;
 
 def HasCvtFP8VOP1Bug : Predicate<"Subtarget->hasCvtFP8VOP1Bug()">;
 def HasNoCvtFP8VOP1Bug : Predicate<"!Subtarget->hasCvtFP8VOP1Bug()">;
+
+def HasCMACCDroppedWriteBug : Predicate<"Subtarget->hasCMACCDroppedWriteBug()">,
+  AssemblerPredicate<(all_of FeatureCMACCDroppedWriteBug)>;
 
 def HasAtomicCSubNoRtnInsts : Predicate<"Subtarget->hasAtomicCSubNoRtnInsts()">;
 

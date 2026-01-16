@@ -27,6 +27,8 @@ define dso_local amdgpu_kernel void @test_wavegroup_entry(i64 %i) "amdgpu-wavegr
 ; CHECK-NEXT:    s_set_vgpr_frames 0x51 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=1 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_lshl_add_u32 g1[2], g1[0], v0, g1[1]
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 bb:
   %p = alloca [30 x i32], align 4, addrspace(5)

@@ -27,6 +27,8 @@ define dso_local amdgpu_kernel void @load_store() "amdgpu-wavegroup-enable" !req
 ; REAL16-NEXT:    s_mov_b32 s0, 12
 ; REAL16-NEXT:    s_wait_loadcnt 0x0
 ; REAL16-NEXT:    scratch_store_b16 off, v0, s0
+; REAL16-NEXT:    s_barrier_signal -1
+; REAL16-NEXT:    s_barrier_wait -1
 ; REAL16-NEXT:    s_endpgm
 ;
 ; FAKE16-LABEL: load_store:
@@ -54,6 +56,8 @@ define dso_local amdgpu_kernel void @load_store() "amdgpu-wavegroup-enable" !req
 ; FAKE16-NEXT:    s_set_vgpr_frames 0x50 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=1 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; FAKE16-NEXT:    v_bfi_b32 g1[0], v0, v1, g1[0]
+; FAKE16-NEXT:    s_barrier_signal -1
+; FAKE16-NEXT:    s_barrier_wait -1
 ; FAKE16-NEXT:    s_endpgm
 ;
 ; SCRATCH-LABEL: load_store:
@@ -71,6 +75,8 @@ define dso_local amdgpu_kernel void @load_store() "amdgpu-wavegroup-enable" !req
 ; SCRATCH-NEXT:    s_mov_b32 s0, 12
 ; SCRATCH-NEXT:    s_wait_loadcnt 0x0
 ; SCRATCH-NEXT:    scratch_store_b16 off, v0, s0
+; SCRATCH-NEXT:    s_barrier_signal -1
+; SCRATCH-NEXT:    s_barrier_wait -1
 ; SCRATCH-NEXT:    s_endpgm
 entry:
   %1 = load <2 x i8>, ptr addrspace(10) getelementptr inbounds (i8, ptr addrspace(10) @vx, i32 20), align 4, !tbaa !4
@@ -95,6 +101,8 @@ define dso_local amdgpu_kernel void @sext_load() "amdgpu-wavegroup-enable" !reqd
 ; REAL16-NEXT:    s_mov_b32 s0, 12
 ; REAL16-NEXT:    s_wait_loadcnt 0x0
 ; REAL16-NEXT:    scratch_store_b32 off, v0, s0
+; REAL16-NEXT:    s_barrier_signal -1
+; REAL16-NEXT:    s_barrier_wait -1
 ; REAL16-NEXT:    s_endpgm
 ;
 ; FAKE16-LABEL: sext_load:
@@ -114,6 +122,8 @@ define dso_local amdgpu_kernel void @sext_load() "amdgpu-wavegroup-enable" !reqd
 ; FAKE16-NEXT:    s_lshl_b32 s0, s0, 3
 ; FAKE16-NEXT:    s_set_vgpr_frames 0x41 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; FAKE16-NEXT:    v_bfe_i32 g1[3], g1[0], s0, 8
+; FAKE16-NEXT:    s_barrier_signal -1
+; FAKE16-NEXT:    s_barrier_wait -1
 ; FAKE16-NEXT:    s_endpgm
 ;
 ; SCRATCH-LABEL: sext_load:
@@ -131,6 +141,8 @@ define dso_local amdgpu_kernel void @sext_load() "amdgpu-wavegroup-enable" !reqd
 ; SCRATCH-NEXT:    s_mov_b32 s0, 12
 ; SCRATCH-NEXT:    s_wait_loadcnt 0x0
 ; SCRATCH-NEXT:    scratch_store_b32 off, v0, s0
+; SCRATCH-NEXT:    s_barrier_signal -1
+; SCRATCH-NEXT:    s_barrier_wait -1
 ; SCRATCH-NEXT:    s_endpgm
 entry:
   %gep = getelementptr inbounds i8, ptr addrspace(10) @vx, i32 1
