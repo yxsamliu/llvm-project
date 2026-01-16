@@ -4165,25 +4165,28 @@ void AMDGPUDAGToDAGISel::SelectSpatialClusterVNBR(SDNode *N, unsigned IntrID) {
   auto [SemReflID, SemReflWaveID] = GetSemNodes(SemRefl);
   SDValue WaitVDst = CurDAG->getTargetConstant(0xf, SL, MVT::i32);
   if (IsSend) {
+    MemIntrinsicSDNode *NMem = cast<MemIntrinsicSDNode>(N);
     SmallVector<SDValue, 11> SendOps = {// regIns
-                                        N->getOperand(2),
+                                        NMem->getOperand(2),
                                         // ins
                                         SemID, WaveID, SemReflID, SemReflWaveID,
                                         WaitVDst};
     SDNode *Shift =
         CurDAG->getMachineNode(AMDGPU::S_LSHR_B32, SL, MVT::i32,
-                               {N->getOperand(3), // offset
+                               {NMem->getOperand(3), // offset
                                 CurDAG->getTargetConstant(2, SL, MVT::i32)});
     SendOps.push_back(SDValue(Shift, 0));
     SendOps.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32));
     SDNode *ShiftRefl =
         CurDAG->getMachineNode(AMDGPU::S_LSHR_B32, SL, MVT::i32,
-                               {N->getOperand(5), // offset refl
+                               {NMem->getOperand(5), // offset refl
                                 CurDAG->getTargetConstant(2, SL, MVT::i32)});
     SendOps.push_back(SDValue(ShiftRefl, 0));
     SendOps.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32));
-    SendOps.push_back(N->getOperand(0));
-    CurDAG->SelectNodeTo(N, Opcode, MVT::Other, SendOps);
+    SendOps.push_back(NMem->getOperand(0));
+    SDNode *Send = CurDAG->SelectNodeTo(NMem, Opcode, MVT::Other, SendOps);
+    MachineMemOperand *StoreMMO = NMem->getMemOperand();
+    CurDAG->setNodeMemRefs(cast<MachineSDNode>(Send), {StoreMMO});
   } else {
     CurDAG->SelectNodeTo(
         N, Opcode, N->getVTList(),

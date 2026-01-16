@@ -1375,6 +1375,8 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_global_tiled_store_half_b64:
   case Intrinsic::amdgcn_global_tiled_store_qtr_b128:
   case Intrinsic::amdgcn_load_mcast_b32:
+  case Intrinsic::amdgcn_spatial_cluster_send_prev:
+  case Intrinsic::amdgcn_spatial_cluster_send_next:
     return 32;
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
   case Intrinsic::amdgcn_dds_load_async_to_lds_b64:
@@ -1788,6 +1790,16 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     // synthesized
     Info.ptrVal = CI.getArgOperand(1);
     Info.flags |= MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+  case Intrinsic::amdgcn_spatial_cluster_send_prev:
+  case Intrinsic::amdgcn_spatial_cluster_send_next: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
+    // Use the ptr for the reflected dst for the MMO.
+    Info.ptrVal = CI.getArgOperand(3);
+    Info.flags |= MachineMemOperand::MOStore;
     Info.align.reset();
     return true;
   }

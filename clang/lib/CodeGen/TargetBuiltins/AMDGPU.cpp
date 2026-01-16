@@ -1014,6 +1014,23 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {SrcType});
     return Builder.CreateCall(F, {Args});
   }
+  case AMDGPU::BI__builtin_amdgcn_spatial_cluster_send_next:
+  case AMDGPU::BI__builtin_amdgcn_spatial_cluster_send_prev: {
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_spatial_cluster_send_next:
+      IID = Intrinsic::amdgcn_spatial_cluster_send_next;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_spatial_cluster_send_prev:
+      IID = Intrinsic::amdgcn_spatial_cluster_send_prev;
+      break;
+    }
+    SmallVector<Value *, 6> Args;
+    for (int i = 0, e = E->getNumArgs(); i != e; ++i)
+      Args.push_back(EmitScalarExpr(E->getArg(i)));
+    llvm::Function *F = CGM.getIntrinsic(IID, {});
+    return Builder.CreateCall(F, {Args});
+  }
   case AMDGPU::BI__builtin_amdgcn_cluster_load_async_to_lds_b8:
   case AMDGPU::BI__builtin_amdgcn_cluster_load_async_to_lds_b32:
   case AMDGPU::BI__builtin_amdgcn_cluster_load_async_to_lds_b64:

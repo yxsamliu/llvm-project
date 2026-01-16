@@ -3392,28 +3392,40 @@ def int_amdgcn_spatial_cluster_set_chain_end :
   ClangBuiltin<"__builtin_amdgcn_spatial_cluster_set_chain_end">;
 
 // void @llvm.amdgcn.spatial.cluster.send.next(i32, ptr addrspace(10), ptr addrspace(3), ptr addrspace(10), ptr addrspace(3))
-def int_amdgcn_spatial_cluster_send_next :
-  DefaultAttrsIntrinsic<[], [
-    llvm_i32_ty,                // Data to send
-    laneshared_ptr_ty,          // %dst address written in receiving wavegroup
-    local_ptr_ty,               // %sema signaled in receiving wavegroup
-    laneshared_ptr_ty,          // %dst_refl address written in sending wavegroup on reflection
-    local_ptr_ty,               // %sema_refl signaled in sending wavegroup on reflection
-    llvm_i32_ty                 // Flags to choose reflection data movement mode
-  ], [IntrHasSideEffects, IntrConvergent, IntrNoCallback]>,
-  ClangBuiltin<"__builtin_amdgcn_spatial_cluster_send_next">;
+def int_amdgcn_spatial_cluster_send_next
+    : Intrinsic<[],
+                [llvm_i32_ty,       // Data to send
+                 laneshared_ptr_ty, // %dst address written in receiving
+                                    // wavegroup
+                 local_ptr_ty,      // %sema signaled in receiving wavegroup
+                 laneshared_ptr_ty, // %dst_refl address written in sending
+                                    // wavegroup on reflection
+                 local_ptr_ty, // %sema_refl signaled in sending wavegroup on
+                               // reflection
+                 llvm_i32_ty], // Flags to choose reflection data movement mode
+                [IntrArgMemOnly, IntrHasSideEffects, IntrConvergent,
+                 IntrNoCallback, NoCapture<ArgIndex<1>>, NoCapture<ArgIndex<3>>,
+                 WriteOnly<ArgIndex<1>>, WriteOnly<ArgIndex<3>>,
+                 NoCapture<ArgIndex<2>>, NoCapture<ArgIndex<4>>],
+                "", [SDNPMemOperand]>;
 
 // void @llvm.amdgcn.spatial.cluster.send.prev(i32, ptr addrspace(10), ptr addrspace(3), ptr addrspace(10), ptr addrspace(3))
-def int_amdgcn_spatial_cluster_send_prev :
-  DefaultAttrsIntrinsic<[], [
-    llvm_i32_ty,                // Data to send
-    laneshared_ptr_ty,          // %dst address written in receiving wavegroup
-    local_ptr_ty,               // %sema signaled in receiving wavegroup
-    laneshared_ptr_ty,          // %dst_refl address written in sending wavegroup on reflection
-    local_ptr_ty,               // %sema_refl signaled in sending wavegroup on reflection
-    llvm_i32_ty                 // Flags to choose reflection data movement mode
-  ], [IntrHasSideEffects, IntrConvergent, IntrNoCallback]>,
-  ClangBuiltin<"__builtin_amdgcn_spatial_cluster_send_prev">;
+def int_amdgcn_spatial_cluster_send_prev
+    : Intrinsic<[],
+                [llvm_i32_ty,       // Data to send
+                 laneshared_ptr_ty, // %dst address written in receiving
+                                    // wavegroup
+                 local_ptr_ty,      // %sema signaled in receiving wavegroup
+                 laneshared_ptr_ty, // %dst_refl address written in sending
+                                    // wavegroup on reflection
+                 local_ptr_ty, // %sema_refl signaled in sending wavegroup on
+                               // reflection
+                 llvm_i32_ty], // Flags to choose reflection data movement mode
+                [IntrArgMemOnly, IntrHasSideEffects, IntrConvergent,
+                 IntrNoCallback, NoCapture<ArgIndex<1>>, NoCapture<ArgIndex<3>>,
+                 WriteOnly<ArgIndex<1>>, WriteOnly<ArgIndex<3>>,
+                 NoCapture<ArgIndex<2>>, NoCapture<ArgIndex<4>>],
+                "", [SDNPMemOperand]>;
 
 // void @llvm.amdgcn.spatial.cluster.signal.next(ptr addrspace(3), ptr addrspace(3))
 def int_amdgcn_spatial_cluster_signal_next :

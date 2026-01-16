@@ -180,6 +180,15 @@ s_getreg_b32 s0, hwreg(HW_REG_WAVE_SEMA4_STATE)
 s_getreg_b32 s0, hwreg(HW_REG_WAVE_SEMA5_STATE)
 // GFX13: encoding: [0x28,0xf8,0x00,0xb9]
 
+s_getreg_b32 s0, hwreg(HW_REG_WAVE_SEMA6_STATE)
+// GFX13: encoding: [0x29,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_WAVE_SEMA7_STATE)
+// GFX13: encoding: [0x2a,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_WAVE_SEMA_MODE)
+// GFX13: encoding: [0x2e,0xf8,0x00,0xb9]
+
 s_getreg_b32 s0, hwreg(HW_REG_WAVE_GPR_MSB_IDX0)
 // GFX13: encoding: [0x2c,0xf8,0x00,0xb9]
 
