@@ -129,7 +129,7 @@ struct True16D16Info {
 struct WMMAInstInfo {
   uint16_t Opcode;
   bool is_wmma_xdl;
-  uint8_t PredXDLIdx; // 0xff = no pred_xdl, 0/1/2 = which neg_lo bit is used
+  uint8_t PredXDLIdx; // 0xff = no pred_xdl, 0/2 = which neg_lo bit is used
 };
 
 struct FLATInfo {

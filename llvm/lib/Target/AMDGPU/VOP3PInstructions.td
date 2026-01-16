@@ -1593,7 +1593,7 @@ class getMatrixScaleSrc<int M, int N, int K, bit HasMatrixScale, bit Scale16> {
                             (ins VCSrc_b128_Lo256:$scale_src0, VCSrc_b256_Lo256:$scale_src1))));
 }
 
-// _PredXDLIdx can be -1, 0, 1, 2. When _PredXDLIdx is -1, the instruction does not support the pred_xdl operand.
+// _PredXDLIdx can be -1, 0, 2. When _PredXDLIdx is -1, the instruction does not support the pred_xdl operand.
 // Otherwise, the instruction supports pred_xdl, and NEG[PredXDLIdx] is used to encode it.
 class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                         bit _IsIU, bit _IsFP8BF8XF32, bit _Has_ImodOp = 0,
@@ -1644,12 +1644,20 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                      !eq(ArgTy[3], v64bf16));
   bit IsC_F16 = !or(!eq(ArgTy[3], v8f16), !eq(ArgTy[3], v4f16), !eq(ArgTy[3], v64f16));
 
-  bit NegLo01 = !not(NoABMods);
-  bit NegLo2 = !and(!not(IsIU), !not(IsXF32), IsWMMA);
-  bit NegHi01 = IsF16BF16; // Only F16BF16 can have neg_hi[0:1]
+  // When PredXDLIdx == N, neg_lo[N] is repurposed for pred_xdl, so NegLoN = 0.
+  // neg_lo[1] is not repurposed for pred_xdl by any instruction.
+  bit NegLo0 = !and(!not(NoABMods), !ne(PredXDLIdx, 0));
+  bit NegLo1 = !not(NoABMods);
+  bit NegLo2 = !and(!not(IsIU), !not(IsXF32), IsWMMA, !ne(PredXDLIdx, 2));
+  bit NegHi0 = IsF16BF16; // Only F16BF16 can have neg_hi[0]
+  bit NegHi1 = IsF16BF16; // Only F16BF16 can have neg_hi[1]
   bit NegHi2 = !and(!not(IsIU), !not(IsXF32), IsWMMA);
-  bit NegLoAny = !or(NegLo01, NegLo2);
-  bit NegHiAny = !or(NegHi01, NegHi2);
+  bit NegLoAny = !or(NegLo0, NegLo1, NegLo2);
+  bit NegHiAny = !or(NegHi0, NegHi1, NegHi2);
+  // HasSrc0Mods/HasSrc1Mods: true if that source has any modifier bits.
+  bit HasSrc0Mods = !or(NegLo0, NegHi0);
+  bit HasSrc1Mods = !or(NegLo1, NegHi1);
+  bit HasSrc2Mods = !and(!not(IsIU), !not(IsXF32), !not(IsSWMMAC));
 
   let DstRC = !cast<RegisterOperand>("VDst_"#ArgTy[0].Size);
   let Src0RC64 = !cast<RegisterOperand>("VRegSrc_"#ArgTy[1].Size);
@@ -1716,9 +1724,10 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   // use neg_lo and neg_hi. iu wmmas (C is i32) don't use src 2 modifiers,
   // remaining wmmas(f16, bf16 and f8bf8) use neg_lo and neg_hi for C (C is f32
   // f16 or bf16). swmmac use index_key and don't use src 2 modifiers.
-  dag Src0Mods = !if(NoABMods, (ins), (ins PackedF16InputMods:$src0_modifiers));
-  dag Src1Mods = !if(NoABMods, (ins), (ins PackedF16InputMods:$src1_modifiers));
-  dag Src2Mods = !if(!or(IsIU, IsXF32, IsSWMMAC), (ins), (ins PackedF16InputMods:$src2_modifiers));
+  // srcN_modifiers is only included if that source has neg_lo or neg_hi bits.
+  dag Src0Mods = !if(HasSrc0Mods, (ins PackedF16InputMods:$src0_modifiers), (ins));
+  dag Src1Mods = !if(HasSrc1Mods, (ins PackedF16InputMods:$src1_modifiers), (ins));
+  dag Src2Mods = !if(HasSrc2Mods, (ins PackedF16InputMods:$src2_modifiers), (ins));
   dag IndexKey = !cond(!eq(IndexType, 0) : (ins),
                        !eq(IndexType, 8) : (ins IndexKey8bit:$index_key_8bit),
                        !eq(IndexType, 16): (ins IndexKey16bit:$index_key_16bit),
@@ -2039,32 +2048,40 @@ class VOP3PWMMA_gfx1260_Profile<list<ValueType> ArgTy, bit IsSWMMAC, int IndexTy
 
 def F16_32X64X32_F16_WMMA_w32       : VOP3PWMMA_gfx1260_Profile<[v64f16, v32f16, v64f16, v64f16],
                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
+                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0,
+                                        /*PredXDLIdx=*/0>;
 def F32_32X64X32_BF16_WMMA_w32      : VOP3PWMMA_gfx1260_Profile<[v64f32, v32bf16, v64bf16, v64f32],
                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
+                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0,
+                                        /*PredXDLIdx=*/0>;
 def BF16_32X64X32_BF16_WMMA_w32     : VOP3PWMMA_gfx1260_Profile<[v64bf16, v32bf16, v64bf16, v64bf16],
                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
                                         /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0,
                                         /*PredXDLIdx=*/0>;
 def F32_32X64X32_F16_WMMA_w32       : VOP3PWMMA_gfx1260_Profile<[v64f32, v32f16, v64f16, v64f32],
                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
+                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0,
+                                        /*PredXDLIdx=*/0>;
 def BF16F32_32X64X32_BF16_WMMA_w32  : VOP3PWMMA_gfx1260_Profile<[v64bf16, v32bf16, v64bf16, v64f32],
                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
+                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0,
+                                        /*PredXDLIdx=*/0>;
 def F16_32X64X128_BF8_BF8_WMMA_w32  : VOP3PWMMA_gfx1260_Profile<[v64f16, v32i32, v64i32, v64f16],
                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
+                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0,
+                                        /*PredXDLIdx=*/0>;
 def F32_32X64X128_BF8_BF8_WMMA_w32  : VOP3PWMMA_gfx1260_Profile<[v64f32, v32i32, v64i32, v64f32],
                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/1,
-                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
+                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0,
+                                        /*PredXDLIdx=*/0>;
 def F32_32X64X256_F4_WMMA_w32       : VOP3PWMMA_gfx1260_Profile<[v64f32, v32i32, v64i32, v64f32],
                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/1>;
+                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/1,
+                                        /*PredXDLIdx=*/0>;
 def F16_32X64X256_F4_WMMA_w32       : VOP3PWMMA_gfx1260_Profile<[v64f16, v32i32, v64i32, v64f16],
                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/1>;
+                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/1,
+                                        /*PredXDLIdx=*/0>;
 def I32_32X64X32_IU8_WMMA_w32       : VOP3PWMMA_gfx1260_Profile<[v64i32, v8i32, v16i32, v64i32],
                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/1, /*IsFP8BF8XF32=*/0,
                                         /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
@@ -2072,19 +2089,23 @@ def I32_32X64X32_IU8_WMMA_w32       : VOP3PWMMA_gfx1260_Profile<[v64i32, v8i32, 
 let MatrixScaleSrc = getMatrixScaleSrc</*M=*/32, /*N=*/64, /*K=*/256, /*HasMatrixScale=*/1, /*Scale16=*/0>.ret in {
 def F32_32X64X256_F4_SCALE_w32      : VOP3PWMMA_gfx1260_Profile<[v64f32, v32i32,  v64i32,  v64f32],
                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/1, /*Scale16=*/0, /*IsF4=*/1>;
+                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/1, /*Scale16=*/0, /*IsF4=*/1,
+                                        /*PredXDLIdx=*/0>;
 def F16_32X64X256_F4_SCALE_w32      : VOP3PWMMA_gfx1260_Profile<[v64f16, v32i32,  v64i32,  v64f16],
                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/1, /*Scale16=*/0, /*IsF4=*/1>;
+                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/1, /*Scale16=*/0, /*IsF4=*/1,
+                                        /*PredXDLIdx=*/0>;
 }
 
 let MatrixScaleSrc = getMatrixScaleSrc</*M=*/32, /*N=*/64, /*K=*/256, /*HasMatrixScale=*/1, /*Scale16=*/1>.ret in {
 def F32_32X64X256_F4_SCALE16_w32    : VOP3PWMMA_gfx1260_Profile<[v64f32, v32i32,  v64i32,  v64f32],
                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/1, /*Scale16=*/1, /*IsF4=*/1>;
+                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/1, /*Scale16=*/1, /*IsF4=*/1,
+                                        /*PredXDLIdx=*/0>;
 def F16_32X64X256_F4_SCALE16_w32    : VOP3PWMMA_gfx1260_Profile<[v64f16, v32i32,  v64i32,  v64f16],
                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/0, /*IsFP8BF8XF32=*/0,
-                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/1, /*Scale16=*/1, /*IsF4=*/1>;
+                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/1, /*Scale16=*/1, /*IsF4=*/1,
+                                        /*PredXDLIdx=*/0>;
 }
 
 def BF16F32_32X64X32_BF16_SWMMAC_w32  : VOP3PWMMA_gfx1260_Profile<[v64f32, v16bf16, v64bf16, v64f32],
@@ -2119,13 +2140,14 @@ class getWMMAF8F6F4ABVTy<string Fmt, int D1, int D2> {
 }
 
 multiclass WMMA_F8F6F4_Profiles<ValueType DstEltTy, int M, int N, int K,
-                                bit HasMatrixScale, bit Scale16, bit HasMatrixReuse> {
+                                bit HasMatrixScale, bit Scale16, bit HasMatrixReuse,
+                                int PredXDLIdx = -1> {
   defvar DstTy = getWMMAF8F6F4DstVTy<DstEltTy, M, N>.ret;
   foreach ATy = ["f8", "f6", "f4"] in {
     foreach BTy = ["f8", "f6", "f4"] in {
       def _#ATy#_#BTy#_w32 : VOP3PWMMA_Profile<
         [DstTy, getWMMAF8F6F4ABVTy<ATy, M, K>.ret, getWMMAF8F6F4ABVTy<BTy, K, N>.ret, DstTy],
-        0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse> {
+        0, 0, 0, 1, 1, 1, HasMatrixScale, Scale16, HasMatrixReuse, /*IsF4=*/0, PredXDLIdx> {
           let MatrixScaleSrc = getMatrixScaleSrc<M, N, K, HasMatrixScale, Scale16>.ret;
         }
     }
@@ -2137,14 +2159,14 @@ defm F32_16X16X128_F8F6F4_SCALE   : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16
 defm F32_16X16X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/1, /*HasMatrixReuse=*/1>;
 
 let NegHiAny = 0 in {
-  defm F16_32X64X128_F8F6F4         : WMMA_F8F6F4_Profiles<f16, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/0, /*Scale16=*/0, /*HasMatrixReuse=*/0>;
-  defm F32_32X64X128_F8F6F4         : WMMA_F8F6F4_Profiles<f32, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/0, /*Scale16=*/0, /*HasMatrixReuse=*/0>;
+  defm F16_32X64X128_F8F6F4         : WMMA_F8F6F4_Profiles<f16, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/0, /*Scale16=*/0, /*HasMatrixReuse=*/0, /*PredXDLIdx=*/0>;
+  defm F32_32X64X128_F8F6F4         : WMMA_F8F6F4_Profiles<f32, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/0, /*Scale16=*/0, /*HasMatrixReuse=*/0, /*PredXDLIdx=*/0>;
 
-  defm F32_32X64X128_F8F6F4_SCALE   : WMMA_F8F6F4_Profiles<f32, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/0, /*HasMatrixReuse=*/1>;
-  defm F16_32X64X128_F8F6F4_SCALE   : WMMA_F8F6F4_Profiles<f16, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/0, /*HasMatrixReuse=*/1>;
+  defm F32_32X64X128_F8F6F4_SCALE   : WMMA_F8F6F4_Profiles<f32, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/0, /*HasMatrixReuse=*/1, /*PredXDLIdx=*/0>;
+  defm F16_32X64X128_F8F6F4_SCALE   : WMMA_F8F6F4_Profiles<f16, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/0, /*HasMatrixReuse=*/1, /*PredXDLIdx=*/0>;
 
-  defm F32_32X64X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<f32, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/1, /*HasMatrixReuse=*/1>;
-  defm F16_32X64X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<f16, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/1, /*HasMatrixReuse=*/1>;
+  defm F32_32X64X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<f32, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/1, /*HasMatrixReuse=*/1, /*PredXDLIdx=*/0>;
+  defm F16_32X64X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<f16, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/1, /*HasMatrixReuse=*/1, /*PredXDLIdx=*/0>;
 } // NegHiAny = 0
 
 // WMMA Transpose instructions only have src0 (no src1/src2).
@@ -2165,9 +2187,11 @@ class VOP3PWMMA_TR_Profile<ValueType SrcTy>
   let HasMatrixReuse = 0;
 
   // Disable all neg_lo/neg_hi bits that reference modifiers in the encoding.
-  let NegLo01 = 0;
+  let NegLo0 = 0;
+  let NegLo1 = 0;
   let NegLo2 = 0;
-  let NegHi01 = 0;
+  let NegHi0 = 0;
+  let NegHi1 = 0;
   let NegHi2 = 0;
   let NegLoAny = 0;
 
@@ -2541,13 +2565,13 @@ class VOP3PeWmma<bits<8> op, VOPProfile P, VOP3PWMMA_Profile WMMAP>
   let Inst{60} = !if (WMMAP.ForceOpselHiZero, 0, !if (WMMAP.HasMatrixFMT, matrix_b_fmt{1}, 1));
   let Inst{14} = !if (WMMAP.ForceOpselHiZero, 0, !if (WMMAP.HasMatrixFMT, matrix_b_fmt{2},
                       !if(WMMAP.HasMatrixReuse, matrix_b_reuse, 1)));
-  // neg_lo
-  let Inst{61} = !if(!eq(WMMAP.PredXDLIdx, 0), pred_xdl{0}, !if(WMMAP.NegLo01, src0_modifiers{0}, 0));
-  let Inst{62} = !if(!eq(WMMAP.PredXDLIdx, 1), pred_xdl{0}, !if(WMMAP.NegLo01, src1_modifiers{0}, 0));
+  // neg_lo / pred_xdl
+  let Inst{61} = !if(!eq(WMMAP.PredXDLIdx, 0), pred_xdl{0}, !if(WMMAP.NegLo0, src0_modifiers{0}, 0));
+  let Inst{62} = !if(!eq(WMMAP.PredXDLIdx, 1), pred_xdl{0}, !if(WMMAP.NegLo1, src1_modifiers{0}, 0));
   let Inst{63} = !if(!eq(WMMAP.PredXDLIdx, 2), pred_xdl{0}, !if(WMMAP.NegLo2, src2_modifiers{0}, 0));
   // neg_hi
-  let Inst{8}  = !if(WMMAP.NegHi01, src0_modifiers{1}, 0);
-  let Inst{9}  = !if(WMMAP.NegHi01, src1_modifiers{1}, 0);
+  let Inst{8}  = !if(WMMAP.NegHi0, src0_modifiers{1}, 0);
+  let Inst{9}  = !if(WMMAP.NegHi1, src1_modifiers{1}, 0);
   let Inst{10} = !if(WMMAP.NegHi2, src2_modifiers{1}, 0);
   // clamp
   let Inst{15} = !if(WMMAP.HasClamp, clamp{0}, 0);
@@ -2656,8 +2680,8 @@ class VOP3PX2e <bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile P> : Enc128, VO
   // The high half of the encoding is the unscaled wmma op.
   let Inst{71-64} = vdst;
 
-  let Inst{72} = !if(P.NegHi01, src0_modifiers{1}, 0); // neg_hi src0
-  let Inst{73} = !if(P.NegHi01, src1_modifiers{1}, 0); // neg_hi src1
+  let Inst{72} = !if(P.NegHi0, src0_modifiers{1}, 0); // neg_hi src0
+  let Inst{73} = !if(P.NegHi1, src1_modifiers{1}, 0); // neg_hi src1
   let Inst{74} = !if(P.NegHi2, src2_modifiers{1}, 0); // neg_hi src2
 
   let Inst{77-75} = !if(P.HasMatrixFMT, matrix_a_fmt{2-0}, 0); // op_sel
@@ -2671,9 +2695,11 @@ class VOP3PX2e <bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile P> : Enc128, VO
   let Inst{113-105} = !if(P.HasSrc1, src1, 0);
   let Inst{122-114} = !if(P.HasSrc2, src2, 0);
 
-  // neg_lo
-  let Inst{125} = !if(P.NegLo01, src0_modifiers{0}, 0);
-  let Inst{126} = !if(P.NegLo01, src1_modifiers{0}, 0);
+  // neg_lo / pred_xdl
+  // We don't need to do the same for neg_lo[2] because neg_lo[2] is not repurposed
+  // for pred_xdl by any VOP3PX* instruction.
+  let Inst{125} = !if(!eq(P.PredXDLIdx, 0), pred_xdl{0}, !if(P.NegLo0, src0_modifiers{0}, 0));
+  let Inst{126} = !if(P.NegLo1, src1_modifiers{0}, 0);
   let Inst{127} = !if(P.NegLo2, src2_modifiers{0}, 0);
 }
 
