@@ -202,9 +202,6 @@ v_wmma_i32_32x64x32_iu8 v[0:63], v[64:71], |v[192:255]|, v[200:263]
 v_wmma_i32_32x64x32_iu8 v[0:63], v[64:71], -v[192:255], v[200:263]
 // GFX1260-ERR: :[[@LINE-1]]:44: error: not a valid operand.
 
-v_wmma_i32_32x64x32_iu8 v[0:63], v[64:71], v[72:87], v[192:255] clamp
-// GFX1260-ERR: :[[@LINE-1]]:65: error: invalid operand for instruction
-
 v_wmma_i32_32x64x32_iu8 v[0:63], v[64:71], v[72:87], v[192:255] neg_lo:[0,0,1]
 // GFX1260-ERR: :[[@LINE-1]]:65: error: invalid neg_lo operand
 

@@ -2034,7 +2034,6 @@ class VOP3PWMMA_gfx1260_Profile<list<ValueType> ArgTy, bit IsSWMMAC, int IndexTy
                         /*HasMatrixReuse=*/!if(!and(IsF4, !not(HasMatrixScale)), 0, 1), IsF4,
                         PredXDLIdx> {
   let NoABMods = 0;
-  let HasClamp = 0;
   let NegHiAny = 0; // NEG_HI is overloaded to convey the MREG settings.
 }
 
