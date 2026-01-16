@@ -2084,7 +2084,8 @@ def F16_32X64X256_F4_WMMA_w32       : VOP3PWMMA_gfx1260_Profile<[v64f16, v32i32,
                                         /*PredXDLIdx=*/0>;
 def I32_32X64X32_IU8_WMMA_w32       : VOP3PWMMA_gfx1260_Profile<[v64i32, v8i32, v16i32, v64i32],
                                         /*IsSWMMAC=*/0, /*IndexType=*/0, /*IsIU=*/1, /*IsFP8BF8XF32=*/0,
-                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0>;
+                                        /*HasMatrixFMT=*/0, /*HasMatrixScale=*/0, /*Scale16=*/0, /*IsF4=*/0,
+                                        /*PredXDLIdx=*/2>;
 
 let MatrixScaleSrc = getMatrixScaleSrc</*M=*/32, /*N=*/64, /*K=*/256, /*HasMatrixScale=*/1, /*Scale16=*/0>.ret in {
 def F32_32X64X256_F4_SCALE_w32      : VOP3PWMMA_gfx1260_Profile<[v64f32, v32i32,  v64i32,  v64f32],
