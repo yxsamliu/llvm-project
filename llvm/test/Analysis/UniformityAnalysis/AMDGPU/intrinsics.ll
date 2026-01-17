@@ -559,6 +559,46 @@ bb:
   ret void
 }
 
+; CHECK: DIVERGENT: %tmp0 = call <4 x i32> @llvm.amdgcn.ds.load.tr4.32x32.b128.v4i32(ptr addrspace(3) %addr)
+define amdgpu_kernel void @ds_load_tr4_32x32_b128_v4i32(ptr addrspace(3) %addr, ptr addrspace(1) %out) {
+bb:
+  %tmp0 = call <4 x i32> @llvm.amdgcn.ds.load.tr4.32x32.b128.v4i32(ptr addrspace(3) %addr)
+  store <4 x i32> %tmp0, ptr addrspace(1) %out, align 8
+  ret void
+}
+
+; CHECK: DIVERGENT: %tmp0 = call <4 x i32> @llvm.amdgcn.ds.load.tr8.16x32.b128.v4i32(ptr addrspace(3) %addr)
+define amdgpu_kernel void @ds_load_tr8_16x32_b128_v4i32(ptr addrspace(3) %addr, ptr addrspace(1) %out) {
+bb:
+  %tmp0 = call <4 x i32> @llvm.amdgcn.ds.load.tr8.16x32.b128.v4i32(ptr addrspace(3) %addr)
+  store <4 x i32> %tmp0, ptr addrspace(1) %out, align 8
+  ret void
+}
+
+; CHECK: DIVERGENT: %tmp0 = call <8 x i16> @llvm.amdgcn.ds.load.tr16.8x32.b128.v8i16(ptr addrspace(3) %addr)
+define amdgpu_kernel void @ds_load_tr16_8x32_b128_v8i16(ptr addrspace(3) %addr, ptr addrspace(1) %out) {
+bb:
+  %tmp0 = call <8 x i16> @llvm.amdgcn.ds.load.tr16.8x32.b128.v8i16(ptr addrspace(3) %addr)
+  store <8 x i16> %tmp0, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+; CHECK: DIVERGENT: %tmp0 = call <8 x half> @llvm.amdgcn.ds.load.tr16.8x32.b128.v8f16(ptr addrspace(3) %addr)
+define amdgpu_kernel void @ds_load_tr16_8x32_b128_v8f16(ptr addrspace(3) %addr, ptr addrspace(1) %out) {
+bb:
+  %tmp0 = call <8 x half> @llvm.amdgcn.ds.load.tr16.8x32.b128.v8f16(ptr addrspace(3) %addr)
+  store <8 x half> %tmp0, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+; CHECK: DIVERGENT: %tmp0 = call <8 x bfloat> @llvm.amdgcn.ds.load.tr16.8x32.b128.v8bf16(ptr addrspace(3) %addr)
+define amdgpu_kernel void @ds_load_tr16_8x32_b128_v8bf16(ptr addrspace(3) %addr, ptr addrspace(1) %out) {
+bb:
+  %tmp0 = call <8 x bfloat> @llvm.amdgcn.ds.load.tr16.8x32.b128.v8bf16(ptr addrspace(3) %addr)
+  store <8 x bfloat> %tmp0, ptr addrspace(1) %out, align 16
+  ret void
+}
+
 declare <2 x i32> @llvm.amdgcn.ds.read.tr4.b64.v2i32(ptr addrspace(3))
 
 ; CHECK: DIVERGENT: %tmp0 = call <2 x i32> @llvm.amdgcn.ds.read.tr4.b64.v2i32(ptr addrspace(3) %gep)

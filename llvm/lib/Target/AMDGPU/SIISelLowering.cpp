@@ -1681,6 +1681,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_ds_load_tr4_b64:
   case Intrinsic::amdgcn_ds_load_tr8_b64:
   case Intrinsic::amdgcn_ds_load_tr16_b128:
+  case Intrinsic::amdgcn_ds_load_tr4_32x32_b128:
+  case Intrinsic::amdgcn_ds_load_tr8_16x32_b128:
+  case Intrinsic::amdgcn_ds_load_tr16_8x32_b128:
   case Intrinsic::amdgcn_global_load_tr6_b96:
   case Intrinsic::amdgcn_global_load_tr4_b64:
   case Intrinsic::amdgcn_global_load_tr_b64:
@@ -1992,6 +1995,9 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_discard_b1024:
   case Intrinsic::amdgcn_ds_append:
   case Intrinsic::amdgcn_ds_consume:
+  case Intrinsic::amdgcn_ds_load_tr4_32x32_b128:
+  case Intrinsic::amdgcn_ds_load_tr8_16x32_b128:
+  case Intrinsic::amdgcn_ds_load_tr16_8x32_b128:
   case Intrinsic::amdgcn_ds_load_tr8_b64:
   case Intrinsic::amdgcn_ds_load_tr16_b128:
   case Intrinsic::amdgcn_ds_load_tr4_b64:

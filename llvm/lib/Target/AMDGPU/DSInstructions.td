@@ -890,21 +890,34 @@ def DS_BPERMUTE_FI_B32    : DS_1A1D_PERMUTE <"ds_bpermute_fi_b32",
 
 } // let SubtargetPredicate = isGFX12Plus
 
-let SubtargetPredicate = isGFX1250Plus in {
-
-let WaveSizePredicate = isWave32, mayStore = 0 in {
-let OtherPredicates = [HasTransposeLoadF4F6Insts] in {
+let WaveSizePredicate = isWave32, mayStore = 0, SubtargetPredicate = isGFX1250Plus in {
+let OtherPredicates = [NotHasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts] in {
 defm DS_LOAD_TR4_B64   : DS_1A_RET_NoM0<"ds_load_tr4_b64",   VGPROp_64>;
 defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VGPROp_96_Align1>;
-} // End OtherPredicates = [HasTransposeLoadF4F6Insts]
+} // End OtherPredicates = [NotHasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts]
+let OtherPredicates = [NotHasTileShapedTransposeInsts] in {
 defm DS_LOAD_TR8_B64   : DS_1A_RET_NoM0<"ds_load_tr8_b64",   VGPROp_64>;
 defm DS_LOAD_TR16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_b128", VGPROp_128>;
-} // End WaveSizePredicate = isWave32, mayStore = 0
+} // End OtherPredicates = [NotHasTileShapedTransposeInsts]
 
+let OtherPredicates = [HasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts] in {
+defm DS_LOAD_TR4_16X32_B64   : DS_1A_RET_NoM0<"ds_load_tr4_16x32_b64",  VGPROp_64>;
+defm DS_LOAD_TR6_16X32_B96   : DS_1A_RET_NoM0<"ds_load_tr6_16x32_b96",  VGPROp_96_Align1>;
+defm DS_LOAD_TR4_32X32_B128  : DS_1A_RET_NoM0<"ds_load_tr4_32x32_b128", VGPROp_128>;
+} // End OtherPredicates = [HasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts]
+let OtherPredicates = [HasTileShapedTransposeInsts] in {
+defm DS_LOAD_TR8_8X32_B64    : DS_1A_RET_NoM0<"ds_load_tr8_8x32_b64",    VGPROp_64>;
+defm DS_LOAD_TR8_16X32_B128  : DS_1A_RET_NoM0<"ds_load_tr8_16x32_b128",  VGPROp_128>;
+defm DS_LOAD_TR16_16X16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_16x16_b128", VGPROp_128>;
+defm DS_LOAD_TR16_8X32_B128  : DS_1A_RET_NoM0<"ds_load_tr16_8x32_b128",  VGPROp_128>;
+} // End OtherPredicates = [HasTileShapedTransposeInsts]
+} // End WaveSizePredicate = isWave32, mayStore = 0, SubtargetPredicate = isGFX1250Plus
+
+let SubtargetPredicate = isGFX1250Plus in {
 let OtherPredicates = [HasLdsBarrierArriveAtomic] in {
 let ASYNC_CNT = 1, LGKM_CNT = 0, Uses = [EXEC, ASYNCcnt], Defs = [ASYNCcnt] in {
 def DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_1A_Off16_NORET<"ds_atomic_async_barrier_arrive_b64">;
-}
+} // End SubtargetPredicate = isGFX1250Plus
 
 def : GCNPat <
   (int_amdgcn_ds_atomic_async_barrier_arrive_b64 (DS1Addr1Offset i32:$ptr, i32:$offset)),
@@ -1397,14 +1410,29 @@ class DSLoadTrPat <DS_Pseudo inst, ValueType vt, SDPatternOperator node> : GCNPa
 >;
 
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1250Plus in {
-let OtherPredicates = [HasTransposeLoadF4F6Insts] in {
+let OtherPredicates = [NotHasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts] in {
   def : DSLoadTrPat <DS_LOAD_TR4_B64, v2i32, int_amdgcn_ds_load_tr4_b64>;
   def : DSLoadTrPat <DS_LOAD_TR6_B96, v3i32, int_amdgcn_ds_load_tr6_b96>;
-} // End OtherPredicates = [HasTransposeLoadF4F6Insts]
-
+} // End OtherPredicates = [NotHasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts]
+let OtherPredicates = [NotHasTileShapedTransposeInsts] in {
   def : DSLoadTrPat <DS_LOAD_TR8_B64, v2i32, int_amdgcn_ds_load_tr8_b64>;
   foreach vt = [v8i16, v8f16, v8bf16] in
     def : DSLoadTrPat <DS_LOAD_TR16_B128, vt, int_amdgcn_ds_load_tr16_b128>;
+} // End OtherPredicates = [NotHasTileShapedTransposeInsts]
+
+let OtherPredicates = [HasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts] in {
+  def : DSLoadTrPat <DS_LOAD_TR4_16X32_B64, v2i32, int_amdgcn_ds_load_tr4_b64>;
+  def : DSLoadTrPat <DS_LOAD_TR6_16X32_B96, v3i32, int_amdgcn_ds_load_tr6_b96>;
+  def : DSLoadTrPat <DS_LOAD_TR4_32X32_B128, v4i32, int_amdgcn_ds_load_tr4_32x32_b128>;
+} // End OtherPredicates = [HasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts
+let OtherPredicates = [HasTileShapedTransposeInsts] in {
+  def : DSLoadTrPat <DS_LOAD_TR8_8X32_B64, v2i32, int_amdgcn_ds_load_tr8_b64>;
+  def : DSLoadTrPat <DS_LOAD_TR8_16X32_B128, v4i32, int_amdgcn_ds_load_tr8_16x32_b128>;
+  foreach vt = [v8i16, v8f16, v8bf16] in {
+    def : DSLoadTrPat <DS_LOAD_TR16_16X16_B128, vt, int_amdgcn_ds_load_tr16_b128>;
+    def : DSLoadTrPat <DS_LOAD_TR16_8X32_B128, vt, int_amdgcn_ds_load_tr16_8x32_b128>;
+  }
+} // End OtherPredicates = [HasTileShapedTransposeInsts]
 } // End WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1250Plus
 
 let SubtargetPredicate = HasGFX950Insts in {
@@ -1472,6 +1500,18 @@ multiclass DS_Real_gfx13<bits<8> op,
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
 }
 
+multiclass DS_Real_gfx1260<bits<8> op, list<string> Aliases = []> {
+  defvar name = !tolower(NAME);
+  defvar ps = !cast<DS_Pseudo>(NAME);
+  let AssemblerPredicate = isGFX1260Only, DecoderNamespace = "GFX1260" in
+    def _gfx1260 :
+      Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps,
+                                                     SIEncodingFamily.GFX1260,
+                                                     name, /*hasGDS=*/false>;
+  foreach alias = Aliases in
+    def: MnemonicAlias<alias, name>, Requires<[isGFX1260Only]>;
+}
+
 // Helper to avoid repeating the pseudo-name if we only need to set
 // the gfx12 name.
 multiclass DS_Real_gfx12_with_name<bits<8> op, string name> {
@@ -1507,6 +1547,14 @@ defm DS_LOAD_TR4_B64      : DS_Real_gfx12_gfx13<0x0fa>;
 defm DS_LOAD_TR6_B96      : DS_Real_gfx12_gfx13<0x0fb>;
 defm DS_LOAD_TR16_B128    : DS_Real_gfx12_gfx13<0x0fc>;
 defm DS_LOAD_TR8_B64      : DS_Real_gfx12_gfx13<0x0fd>;
+
+defm DS_LOAD_TR16_8X32_B128   : DS_Real_gfx1260<0x0ef>;
+defm DS_LOAD_TR8_16X32_B128   : DS_Real_gfx1260<0x0f0>;
+defm DS_LOAD_TR4_32X32_B128   : DS_Real_gfx1260<0x0f1>;
+defm DS_LOAD_TR4_16X32_B64    : DS_Real_gfx1260<0x0fa, ["ds_load_b64_tr_b4", "ds_load_tr4_b64"]>;
+defm DS_LOAD_TR6_16X32_B96    : DS_Real_gfx1260<0x0fb, ["ds_load_b128_tr_b6", "ds_load_tr6_b96"]>;
+defm DS_LOAD_TR16_16X16_B128  : DS_Real_gfx1260<0x0fc, ["ds_load_b128_tr_b16", "ds_load_tr16_b128", "ds_load_tr_b128"]>;
+defm DS_LOAD_TR8_8X32_B64     : DS_Real_gfx1260<0x0fd, ["ds_load_b64_tr_b8", "ds_load_tr8_b64", "ds_load_tr_b64"]>;
 
 defm DS_BVH_STACK_RTN_B32 : DS_Real_gfx12<0x0e0, DS_BVH_STACK_RTN_B32,
                                           "ds_bvh_stack_push4_pop1_rtn_b32">;

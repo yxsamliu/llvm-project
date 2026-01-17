@@ -998,6 +998,12 @@ def FeatureWMMATransposeInsts : SubtargetFeature<"wmma-transpose-insts",
   "Has WMMA transpose instructions"
 >;
 
+def FeatureTileShapedTransposeInsts : SubtargetFeature<"tile-shaped-transpose-insts",
+  "HasTileShapedTransposeInsts",
+  "true",
+  "Has tile shaped (8x32, 16x16, etc in the names) transpose instructions"
+>;
+
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
   "HasPkFmacF16Inst",
   "true",
@@ -2457,7 +2463,8 @@ def FeatureISAVersion12_60 : FeatureSet<
      FeatureSWakeupImm,
      FeatureSBarrierLeaveImm,
      FeatureSemaphores,
-     FeatureWMMATransposeInsts
+     FeatureWMMATransposeInsts,
+     FeatureTileShapedTransposeInsts
     ])>;
 
 def FeatureISAVersion13 : FeatureSet<
@@ -3294,6 +3301,12 @@ def HasCvtPkNormVOP3Insts : Predicate<"Subtarget->hasCvtPkNormVOP3Insts()">,
 
 def HasWMMATransposeInsts : Predicate<"Subtarget->hasWMMATransposeInsts()">,
   AssemblerPredicate<(all_of FeatureWMMATransposeInsts)>;
+
+def HasTileShapedTransposeInsts : Predicate<"Subtarget->hasTileShapedTransposeInsts()">,
+  AssemblerPredicate<(all_of FeatureTileShapedTransposeInsts)>;
+
+def NotHasTileShapedTransposeInsts : Predicate<"!Subtarget->hasTileShapedTransposeInsts()">,
+  AssemblerPredicate<(all_of (not FeatureTileShapedTransposeInsts))>;
 
 def HasFP8E5M3Insts : Predicate<"Subtarget->hasFP8E5M3Insts()">,
   AssemblerPredicate<(all_of FeatureFP8E5M3Insts)>;

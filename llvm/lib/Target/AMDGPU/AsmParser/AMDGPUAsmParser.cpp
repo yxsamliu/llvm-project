@@ -5506,6 +5506,7 @@ bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
       break;
     case AMDGPU::DS_LOAD_TR6_B96:
     case AMDGPU::DS_LOAD_TR6_B96_gfx12:
+    case AMDGPU::DS_LOAD_TR6_16X32_B96_gfx1260:
       // DS_LOAD_TR6_B96 is the only DS instruction in GFX1250, that
       // allows unaligned VGPR. All others only allow even aligned VGPRs.
       return true;

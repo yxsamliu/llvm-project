@@ -183,6 +183,7 @@ protected:
   bool HasCvtPkNormVOP2Insts = false;
   bool HasCvtPkNormVOP3Insts = false;
   bool HasWMMATransposeInsts = false;
+  bool HasTileShapedTransposeInsts = false;
   bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasCMACCDroppedWriteBug = false;
@@ -911,6 +912,8 @@ public:
   bool hasPk4Insts() const { return HasPk4Insts; }
 
   bool hasWMMATransposeInsts() const { return HasWMMATransposeInsts; }
+
+  bool hasTileShapedTransposeInsts() const { return HasTileShapedTransposeInsts; }
 
   bool isGFX1170() const {
     return getGeneration() == GFX11 && hasWMMA128bInsts();
