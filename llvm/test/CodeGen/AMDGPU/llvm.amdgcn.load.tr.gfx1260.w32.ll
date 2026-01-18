@@ -52,8 +52,8 @@ entry:
   ret void
 }
 
-define amdgpu_ps void @global_load_tr8_8x32_b64_vaddr(ptr addrspace(1) %addr, ptr addrspace(1) %use) {
-; GFX1260-LABEL: global_load_tr8_8x32_b64_vaddr:
+define amdgpu_ps void @global_load_tr8_16x16_b64_vaddr(ptr addrspace(1) %addr, ptr addrspace(1) %use) {
+; GFX1260-LABEL: global_load_tr8_16x16_b64_vaddr:
 ; GFX1260:       ; %bb.0: ; %entry
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    global_load_tr8_b64 v[0:1], v[0:1], off offset:32
@@ -67,8 +67,8 @@ entry:
   ret void
 }
 
-define amdgpu_ps void @global_load_tr8_8x32_b64_saddr(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use) {
-; GFX1260-LABEL: global_load_tr8_8x32_b64_saddr:
+define amdgpu_ps void @global_load_tr8_16x16_b64_saddr(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use) {
+; GFX1260-LABEL: global_load_tr8_16x16_b64_saddr:
 ; GFX1260:       ; %bb.0: ; %entry
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    v_mov_b32_e32 v2, 0
@@ -234,22 +234,22 @@ entry:
   ret void
 }
 
-define amdgpu_ps void @ds_load_tr8_8x32_b64(ptr addrspace(3) %addr, ptr addrspace(1) %use) {
-; GFX1260-SDAG-LABEL: ds_load_tr8_8x32_b64:
+define amdgpu_ps void @ds_load_tr8_16x16_b64(ptr addrspace(3) %addr, ptr addrspace(1) %use) {
+; GFX1260-SDAG-LABEL: ds_load_tr8_16x16_b64:
 ; GFX1260-SDAG:       ; %bb.0: ; %entry
 ; GFX1260-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX1260-SDAG-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1260-SDAG-NEXT:    ds_load_tr8_8x32_b64 v[0:1], v0 offset:32
+; GFX1260-SDAG-NEXT:    ds_load_tr8_16x16_b64 v[0:1], v0 offset:32
 ; GFX1260-SDAG-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX1260-SDAG-NEXT:    s_endpgm
 ;
-; GFX1260-GISEL-LABEL: ds_load_tr8_8x32_b64:
+; GFX1260-GISEL-LABEL: ds_load_tr8_16x16_b64:
 ; GFX1260-GISEL:       ; %bb.0: ; %entry
 ; GFX1260-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v4, v1
-; GFX1260-GISEL-NEXT:    ds_load_tr8_8x32_b64 v[0:1], v0 offset:32
+; GFX1260-GISEL-NEXT:    ds_load_tr8_16x16_b64 v[0:1], v0 offset:32
 ; GFX1260-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX1260-GISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-GISEL-NEXT:    global_store_b64 v[4:5], v[0:1], off

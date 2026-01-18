@@ -906,7 +906,7 @@ defm DS_LOAD_TR6_16X32_B96   : DS_1A_RET_NoM0<"ds_load_tr6_16x32_b96",  VGPROp_9
 defm DS_LOAD_TR4_32X32_B128  : DS_1A_RET_NoM0<"ds_load_tr4_32x32_b128", VGPROp_128>;
 } // End OtherPredicates = [HasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts]
 let OtherPredicates = [HasTileShapedTransposeInsts] in {
-defm DS_LOAD_TR8_8X32_B64    : DS_1A_RET_NoM0<"ds_load_tr8_8x32_b64",    VGPROp_64>;
+defm DS_LOAD_TR8_16X16_B64   : DS_1A_RET_NoM0<"ds_load_tr8_16x16_b64",  VGPROp_64>;
 defm DS_LOAD_TR8_16X32_B128  : DS_1A_RET_NoM0<"ds_load_tr8_16x32_b128",  VGPROp_128>;
 defm DS_LOAD_TR16_16X16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_16x16_b128", VGPROp_128>;
 defm DS_LOAD_TR16_8X32_B128  : DS_1A_RET_NoM0<"ds_load_tr16_8x32_b128",  VGPROp_128>;
@@ -1426,7 +1426,7 @@ let OtherPredicates = [HasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts] i
   def : DSLoadTrPat <DS_LOAD_TR4_32X32_B128, v4i32, int_amdgcn_ds_load_tr4_32x32_b128>;
 } // End OtherPredicates = [HasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts
 let OtherPredicates = [HasTileShapedTransposeInsts] in {
-  def : DSLoadTrPat <DS_LOAD_TR8_8X32_B64, v2i32, int_amdgcn_ds_load_tr8_b64>;
+  def : DSLoadTrPat <DS_LOAD_TR8_16X16_B64, v2i32, int_amdgcn_ds_load_tr8_b64>;
   def : DSLoadTrPat <DS_LOAD_TR8_16X32_B128, v4i32, int_amdgcn_ds_load_tr8_16x32_b128>;
   foreach vt = [v8i16, v8f16, v8bf16] in {
     def : DSLoadTrPat <DS_LOAD_TR16_16X16_B128, vt, int_amdgcn_ds_load_tr16_b128>;
@@ -1554,7 +1554,7 @@ defm DS_LOAD_TR4_32X32_B128   : DS_Real_gfx1260<0x0f1>;
 defm DS_LOAD_TR4_16X32_B64    : DS_Real_gfx1260<0x0fa, ["ds_load_b64_tr_b4", "ds_load_tr4_b64"]>;
 defm DS_LOAD_TR6_16X32_B96    : DS_Real_gfx1260<0x0fb, ["ds_load_b128_tr_b6", "ds_load_tr6_b96"]>;
 defm DS_LOAD_TR16_16X16_B128  : DS_Real_gfx1260<0x0fc, ["ds_load_b128_tr_b16", "ds_load_tr16_b128", "ds_load_tr_b128"]>;
-defm DS_LOAD_TR8_8X32_B64     : DS_Real_gfx1260<0x0fd, ["ds_load_b64_tr_b8", "ds_load_tr8_b64", "ds_load_tr_b64"]>;
+defm DS_LOAD_TR8_16X16_B64    : DS_Real_gfx1260<0x0fd, ["ds_load_b64_tr_b8", "ds_load_tr8_b64", "ds_load_tr_b64"]>;
 
 defm DS_BVH_STACK_RTN_B32 : DS_Real_gfx12<0x0e0, DS_BVH_STACK_RTN_B32,
                                           "ds_bvh_stack_push4_pop1_rtn_b32">;

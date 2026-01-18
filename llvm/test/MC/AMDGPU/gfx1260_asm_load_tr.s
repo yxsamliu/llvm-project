@@ -3,24 +3,24 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1260 -mattr=-wavefrontsize32,+wavefrontsize64 %s 2>&1 | FileCheck --check-prefix=WAVESIZE-ERR --implicit-check-not=error: %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1260 -filetype=null %s 2>&1 | FileCheck --check-prefix=GFX1260-ERR --implicit-check-not=error: %s
 
-ds_load_tr8_8x32_b64 v[2:3], v0
-// GFX1260: ds_load_tr8_8x32_b64 v[2:3], v0         ; encoding: [0x00,0x00,0xf4,0xdb,0x00,0x00,0x00,0x02]
+ds_load_tr8_16x16_b64 v[2:3], v0
+// GFX1260: ds_load_tr8_16x16_b64 v[2:3], v0        ; encoding: [0x00,0x00,0xf4,0xdb,0x00,0x00,0x00,0x02]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
-ds_load_tr8_8x32_b64 v[2:3], v0 offset:64
-// GFX1260: ds_load_tr8_8x32_b64 v[2:3], v0 offset:64 ; encoding: [0x40,0x00,0xf4,0xdb,0x00,0x00,0x00,0x02]
+ds_load_tr8_16x16_b64 v[2:3], v0 offset:64
+// GFX1260: ds_load_tr8_16x16_b64 v[2:3], v0 offset:64 ; encoding: [0x40,0x00,0xf4,0xdb,0x00,0x00,0x00,0x02]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
-ds_load_tr8_8x32_b64 v[2:3], v0 offset:-64
-// GFX1260-ERR: :[[@LINE-1]]:33: error: expected a 16-bit unsigned offset
+ds_load_tr8_16x16_b64 v[2:3], v0 offset:-64
+// GFX1260-ERR: :[[@LINE-1]]:34: error: expected a 16-bit unsigned offset
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
-ds_load_tr8_8x32_b64 v1, v0
-// GFX1260-ERR: :[[@LINE-1]]:22: error: invalid operand for instruction
+ds_load_tr8_16x16_b64 v1, v0
+// GFX1260-ERR: :[[@LINE-1]]:23: error: invalid operand for instruction
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
-ds_load_tr8_8x32_b64 v[2:3], s0
-// GFX1260-ERR: :[[@LINE-1]]:30: error: invalid operand for instruction
+ds_load_tr8_16x16_b64 v[2:3], s0
+// GFX1260-ERR: :[[@LINE-1]]:31: error: invalid operand for instruction
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
 ds_load_tr4_16x32_b64 v[2:3], v0
