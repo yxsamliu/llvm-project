@@ -3345,9 +3345,8 @@ def int_amdgcn_s_sema_set_limit :
     [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
   >;
 
-// void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) %sem, i32 %count)
+// void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) %sem)
 // The %sem argument must be uniform, otherwise behavior is undefined.
-// TODO-GFX13: Add ImmArg<ArgIndex<1>> or handle non-immediate %count in codegen.
 def int_amdgcn_s_sema_signal :
   ClangBuiltin<"__builtin_amdgcn_s_sema_signal">,
   Intrinsic<
