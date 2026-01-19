@@ -1453,6 +1453,9 @@ def int_amdgcn_s_buffer_load : DefaultAttrsIntrinsic <
 // These intrinsics also keep the offset and soffset arguments separate as
 // they behave differently in bounds checking and swizzling.
 
+// GFX13: offset and soffset arguments are treated identically, compiler will
+// add them together and distribute to vgpr_offset.
+
 // The versions of these intrinsics that take <4 x i32> arguments are deprecated
 // in favor of their .ptr.buffer variants that take ptr addrspace(8) arguments,
 // which allow for improved reasoning about memory accesses.

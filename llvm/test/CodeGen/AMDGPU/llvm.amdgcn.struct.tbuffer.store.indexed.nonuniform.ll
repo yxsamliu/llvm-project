@@ -37,8 +37,8 @@ main_body:
 define amdgpu_ps void @tbuffer_store_scalar_and_imm_offs(i32 %arg, <4 x float> %vdata, i32 inreg %soffset) {
 ; GFX13-LABEL: tbuffer_store_scalar_and_imm_offs:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b32_e32 v5, 0
-; GFX13-NEXT:    tbuffer_store_format_xyzw v[1:4], v5, v0, s0 format:117 idxen offset:42
+; GFX13-NEXT:    v_dual_mov_b32 v5, 0 :: v_dual_mov_b32 v6, s0
+; GFX13-NEXT:    tbuffer_store_format_xyzw v[1:4], v[5:6], v0, null format:117 idxen offen offset:42
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>

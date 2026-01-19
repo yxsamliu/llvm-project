@@ -6587,6 +6587,11 @@ bool AMDGPULegalizerInfo::legalizeBufferDiscard(MachineInstr &MI,
 
   std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
 
+  if (AMDGPU::isGFX13Plus(ST)) {
+    VOffset = B.buildAdd(S32, VOffset, SOffset).getReg(0);
+    SOffset = B.buildConstant(S32, 0).getReg(0);
+  }
+
   B.buildInstr(getBufferDiscardPseudo(IID))
       .addUse(RSrc)
       .addUse(VIndex)
@@ -6641,6 +6646,11 @@ bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
 
   Register VOffset = MI.getOperand(3 + OpOffset).getReg();
   Register SOffset = MI.getOperand(4 + OpOffset).getReg();
+
+  if (AMDGPU::isGFX13Plus(ST)) {
+    VOffset = B.buildAdd(S32, VOffset, SOffset).getReg(0);
+    SOffset = B.buildConstant(S32, 0).getReg(0);
+  }
 
   unsigned Format = 0;
   if (IsTyped) {
@@ -6755,6 +6765,10 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
 
   Register VOffset = MI.getOperand(3 + OpOffset).getReg();
   Register SOffset = MI.getOperand(4 + OpOffset).getReg();
+  if (AMDGPU::isGFX13Plus(ST)) {
+    VOffset = B.buildAdd(S32, VOffset, SOffset).getReg(0);
+    SOffset = B.buildConstant(S32, 0).getReg(0);
+  }
 
   unsigned Format = 0;
   if (IsTyped) {
@@ -7009,6 +7023,12 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
 
   Register VOffset = MI.getOperand(4 + OpOffset).getReg();
   Register SOffset = MI.getOperand(5 + OpOffset).getReg();
+
+  if (AMDGPU::isGFX13Plus(ST)) {
+    VOffset = B.buildAdd(S32, VOffset, SOffset).getReg(0);
+    SOffset = B.buildConstant(S32, 0).getReg(0);
+  }
+
   unsigned AuxiliaryData = MI.getOperand(6 + OpOffset).getImm();
 
   MachineMemOperand *MMO = *MI.memoperands_begin();
