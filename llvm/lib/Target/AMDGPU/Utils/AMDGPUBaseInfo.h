@@ -1633,6 +1633,7 @@ bool isGFX13(const MCSubtargetInfo &STI);
 bool isGFX13Plus(const MCSubtargetInfo &STI);
 bool hasWavegroups(const MCSubtargetInfo &STI);
 bool hasSemaphores(const MCSubtargetInfo &STI);
+bool hasVGPRIndexingRegisters(const MCSubtargetInfo &STI);
 bool supportsWGP(const MCSubtargetInfo &STI);
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);

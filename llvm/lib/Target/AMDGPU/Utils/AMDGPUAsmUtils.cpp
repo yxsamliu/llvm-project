@@ -241,8 +241,8 @@ static constexpr CustomOperand Operands[] = {
   {{"HW_REG_WAVE_SEMA6_STATE"},       ID_WAVE_SEMA6_STATE,            hasSemaphores},
   {{"HW_REG_WAVE_SEMA7_STATE"},       ID_WAVE_SEMA7_STATE,            hasSemaphores},
 
-  {{"HW_REG_WAVE_GPR_MSB_IDX0"},      ID_WAVE_GPR_MSB_IDX0,           isGFX13Plus},
-  {{"HW_REG_WAVE_GPR_IDX123"},        ID_WAVE_GPR_IDX123,             isGFX13Plus},
+  {{"HW_REG_WAVE_GPR_MSB_IDX0"},      ID_WAVE_GPR_MSB_IDX0,           hasVGPRIndexingRegisters},
+  {{"HW_REG_WAVE_GPR_IDX123"},        ID_WAVE_GPR_IDX123,             hasVGPRIndexingRegisters},
 
   {{"HW_REG_WAVE_SEMA_MODE"},         ID_WAVE_SEMA_MODE,              hasSemaphores},
 };
