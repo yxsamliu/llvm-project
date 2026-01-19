@@ -668,6 +668,7 @@ LogicalResult LLVMStructType::verifyEntries(DataLayoutEntryListRef entries,
 static constexpr llvm::StringRef kSpirvPrefix = "spirv.";
 static constexpr llvm::StringRef kArmSVCount = "aarch64.svcount";
 static constexpr llvm::StringRef kAMDGCNNamedBarrier = "amdgcn.named.barrier";
+static constexpr llvm::StringRef kAMDGCNSemaphore = "amdgcn.semaphore";
 
 bool LLVM::LLVMTargetExtType::hasProperty(Property prop) const {
   // See llvm/lib/IR/Type.cpp for reference.
@@ -678,6 +679,9 @@ bool LLVM::LLVMTargetExtType::hasProperty(Property prop) const {
         (LLVMTargetExtType::HasZeroInit | LLVM::LLVMTargetExtType::CanBeGlobal);
 
   if (getExtTypeName() == kAMDGCNNamedBarrier)
+    properties |= LLVMTargetExtType::CanBeGlobal;
+
+  if (getExtTypeName() == kAMDGCNSemaphore)
     properties |= LLVMTargetExtType::CanBeGlobal;
 
   return (properties & prop) == prop;
