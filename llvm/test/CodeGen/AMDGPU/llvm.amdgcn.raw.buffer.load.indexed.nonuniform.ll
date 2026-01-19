@@ -58,12 +58,18 @@ main_body:
 }
 
 define amdgpu_ps <4 x float> @buffer_load_immoffs_large(i32 %arg) {
-; GFX13-LABEL: buffer_load_immoffs_large:
-; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    s_movk_i32 s0, 0x1ffc
-; GFX13-NEXT:    buffer_load_b128 v[0:3], off, v0, s0 offset:4
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    ; return to shader part epilog
+; GFX13-SDAG-LABEL: buffer_load_immoffs_large:
+; GFX13-SDAG:       ; %bb.0: ; %main_body
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v1, 0x1ffc
+; GFX13-SDAG-NEXT:    buffer_load_b128 v[0:3], v1, v0, null offen offset:4
+; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX13-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX13-GISEL-LABEL: buffer_load_immoffs_large:
+; GFX13-GISEL:       ; %bb.0: ; %main_body
+; GFX13-GISEL-NEXT:    buffer_load_b128 v[0:3], off, v0, null offset:8192
+; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX13-GISEL-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32.i32(i32 %arg, i32 4, i32 8188, i32 0)
   ret <4 x float> %data
