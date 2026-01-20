@@ -1565,10 +1565,10 @@ let SubtargetPredicate = isGFX12Plus in {
     defm SCRATCH_STORE_BLOCK : FLAT_Scratch_Store_Pseudo <"scratch_store_block", VGPROp_1024>;
   }
 
-  let WaveSizePredicate = isWave32 in {
+  let WaveSizePredicate = isWave32, OtherPredicates = [NotHasTileShapedTransposeInsts] in {
     defm GLOBAL_LOAD_TR_B128_w32  : FLAT_Global_Load_Pseudo <"global_load_tr_b128", VGPROp_128>;
     defm GLOBAL_LOAD_TR_B64_w32   : FLAT_Global_Load_Pseudo <"global_load_tr_b64", VGPROp_64>;
-  }
+  } // End WaveSizePredicate = isWave32, OtherPredicates = [NotHasTileShapedTransposeInsts]
 } // End SubtargetPredicate = isGFX12Plus
 
 let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot12_50 in {
@@ -1578,10 +1578,22 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot12_50 in {
   defm GLOBAL_LOAD_TR_B64_w64   : FLAT_Global_Load_Pseudo <"global_load_tr_b64_w64", VGPROp_32>;
 }
 
-let WaveSizePredicate = isWave32, SubtargetPredicate = HasTransposeLoadF4F6Insts in {
+let WaveSizePredicate = isWave32, OtherPredicates = [NotHasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts] in {
   defm GLOBAL_LOAD_TR6_B96 : FLAT_Global_Load_Pseudo <"global_load_tr6_b96", VGPROp_96_Align1>;
   defm GLOBAL_LOAD_TR4_B64 : FLAT_Global_Load_Pseudo <"global_load_tr4_b64", VGPROp_64>;
-}
+} // End WaveSizePredicate = isWave32, OtherPredicates = [NotHasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts]
+
+let WaveSizePredicate = isWave32, SubtargetPredicate = HasTileShapedTransposeInsts in {
+  let OtherPredicates = [HasTransposeLoadF4F6Insts] in {
+    defm GLOBAL_LOAD_TR4_16X32_B64  : FLAT_Global_Load_Pseudo <"global_load_tr4_16x32_b64", VGPROp_64>;
+    defm GLOBAL_LOAD_TR4_32X32_B128 : FLAT_Global_Load_Pseudo <"global_load_tr4_32x32_b128", VGPROp_128>;
+    defm GLOBAL_LOAD_TR6_16X32_B96  : FLAT_Global_Load_Pseudo <"global_load_tr6_16x32_b96", VGPROp_96_Align1>;
+  } // End OtherPredicates = [HasTransposeLoadF4F6Insts]
+  defm GLOBAL_LOAD_TR8_16X16_B64    : FLAT_Global_Load_Pseudo <"global_load_tr8_16x16_b64", VGPROp_64>;
+  defm GLOBAL_LOAD_TR8_16X32_B128   : FLAT_Global_Load_Pseudo <"global_load_tr8_16x32_b128", VGPROp_128>;
+  defm GLOBAL_LOAD_TR16_16X16_B128  : FLAT_Global_Load_Pseudo <"global_load_tr16_16x16_b128", VGPROp_128>;
+  defm GLOBAL_LOAD_TR16_8X32_B128   : FLAT_Global_Load_Pseudo <"global_load_tr16_8x32_b128", VGPROp_128>;
+} // End WaveSizePredicate = isWave32, SubtargetPredicate = HasTileShapedTransposeInsts.
 
 let SubtargetPredicate = isGFX10Plus in {
   defm GLOBAL_ATOMIC_FCMPSWAP :
@@ -2746,11 +2758,11 @@ let SubtargetPredicate = isGFX12Plus in {
 let OtherPredicates = [isGFX12PlusNot12_50] in
   defm : GlobalFLATAtomicPatsRtn <"GLOBAL_ATOMIC_ORDERED_ADD_B64", "int_amdgcn_global_atomic_ordered_add_b64", i64, i64, /* isIntr */ 1>;
 
-let WaveSizePredicate = isWave32, OtherPredicates = [isGFX12Plus] in {
+let WaveSizePredicate = isWave32, OtherPredicates = [isGFX12Plus, NotHasTileShapedTransposeInsts] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w32, int_amdgcn_global_load_tr_b64, v2i32>;
   foreach vt = [v8i16, v8f16, v8bf16] in
     defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w32, int_amdgcn_global_load_tr_b128, vt>;
-}
+} // End WaveSizePredicate = isWave32, OtherPredicates = [isGFX12Plus, NotHasTileShapedTransposeInsts]
 
 let WaveSizePredicate = isWave64, OtherPredicates = [isGFX12PlusNot12_50] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w64, int_amdgcn_global_load_tr_b64, i32>;
@@ -2758,10 +2770,24 @@ let WaveSizePredicate = isWave64, OtherPredicates = [isGFX12PlusNot12_50] in {
     defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w64, int_amdgcn_global_load_tr_b128, vt>;
 }
 
-let WaveSizePredicate = isWave32,  OtherPredicates = [HasTransposeLoadF4F6Insts] in {
+let WaveSizePredicate = isWave32, OtherPredicates = [NotHasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR4_B64, int_amdgcn_global_load_tr4_b64, v2i32>;
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR6_B96, int_amdgcn_global_load_tr6_b96, v3i32>;
-}
+} // End WaveSizePredicate = isWave32,  OtherPredicates = [NotHasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts]
+
+let WaveSizePredicate = isWave32, SubtargetPredicate = HasTileShapedTransposeInsts in {
+  let OtherPredicates = [HasTransposeLoadF4F6Insts] in {
+    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR4_16X32_B64, int_amdgcn_global_load_tr4_b64, v2i32>;
+    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR4_32X32_B128, int_amdgcn_global_load_tr4_32x32_b128, v4i32>;
+    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR6_16X32_B96, int_amdgcn_global_load_tr6_b96, v3i32>;
+  } // End OtherPredicates = [HasTransposeLoadF4F6Insts]
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR8_16X16_B64, int_amdgcn_global_load_tr_b64, v2i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR8_16X32_B128, int_amdgcn_global_load_tr8_16x32_b128, v4i32>;
+  foreach vt = [v8i16, v8f16, v8bf16] in {
+    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR16_16X16_B128, int_amdgcn_global_load_tr_b128, vt>;
+    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR16_8X32_B128, int_amdgcn_global_load_tr16_8x32_b128, vt>;
+  } // End foreach
+} // End WaveSizePredicate = isWave32, SubtargetPredicate = HasTileShapedTransposeInsts
 
 let OtherPredicates = [isGFX125xOnly] in {
   def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B32,  int_amdgcn_flat_load_monitor_b32,  i32>;
@@ -4162,17 +4188,6 @@ multiclass VFLAT_Real_gfx1250<bits<8> op,
   }
 }
 
-multiclass VFLAT_Aliases_gfx1250<string name> {
-  defvar ps = get_FLAT_ps<NAME>;
-  if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX125xOnly]>;
-}
-
-multiclass VFLAT_Real_Base_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
-  VFLAT_Aliases_gfx1250<name> {
-  defm "" : VFLAT_Real_gfx1250<op, name>;
-}
-
 multiclass VFLAT_Real_RTN_gfx1250<bits<8> op, string name> {
   defm _RTN : VFLAT_Real_gfx1250<op, name>;
 }
@@ -4185,9 +4200,14 @@ multiclass VFLAT_Real_SADDR_RTN_gfx1250<bits<8> op, string name> {
   defm _SADDR_RTN : VFLAT_Real_gfx1250<op, name>;
 }
 
-multiclass VFLAT_Real_AllAddr_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
-  VFLAT_Real_Base_gfx1250<op, name>,
-  VFLAT_Real_SADDR_gfx1250<op, name>;
+multiclass VFLAT_Real_AllAddr_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic,
+                                           list<Predicate> aliasPreds = [isGFX125xOnly]> :
+  VFLAT_Real_gfx1250<op, name>,
+  VFLAT_Real_SADDR_gfx1250<op, name> {
+  defvar ps = get_FLAT_ps<NAME>;
+  if !ne(ps.Mnemonic, name) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<aliasPreds>;
+}
 
 multiclass VFLAT_Real_Atomics_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
   VFLAT_Real_AllAddr_gfx1250<op, name>,
@@ -4225,17 +4245,17 @@ defm GLOBAL_STORE_ASYNC_FROM_LDS_B32  : VFLAT_Real_AllAddr_gfx1250<0x64>;
 defm GLOBAL_STORE_ASYNC_FROM_LDS_B64  : VFLAT_Real_AllAddr_gfx1250<0x65>;
 defm GLOBAL_STORE_ASYNC_FROM_LDS_B128 : VFLAT_Real_AllAddr_gfx1250<0x66>;
 
-defm GLOBAL_LOAD_TR_B128_w32          : VFLAT_Real_AllAddr_gfx1250<0x057, "global_load_tr16_b128">;
-defm GLOBAL_LOAD_TR_B64_w32           : VFLAT_Real_AllAddr_gfx1250<0x058, "global_load_tr8_b64">;
+defm GLOBAL_LOAD_TR_B128_w32          : VFLAT_Real_AllAddr_gfx1250<0x057, "global_load_tr16_b128", [isGFX125xOnly, NotHasTileShapedTransposeInsts]>;
+defm GLOBAL_LOAD_TR_B64_w32           : VFLAT_Real_AllAddr_gfx1250<0x058, "global_load_tr8_b64", [isGFX125xOnly, NotHasTileShapedTransposeInsts]>;
 
 defm GLOBAL_LOAD_TR4_B64              : VFLAT_Real_AllAddr_gfx1250<0x073>;
 defm GLOBAL_LOAD_TR6_B96              : VFLAT_Real_AllAddr_gfx1250<0x074>;
 
 // Additional aliases for global load transpose instructions.
-def : MnemonicAlias<"global_load_b128_tr_b16", "global_load_tr16_b128">, Requires<[isGFX125xOnly]>;
-def : MnemonicAlias<"global_load_b64_tr_b8", "global_load_tr8_b64">, Requires<[isGFX125xOnly]>;
-def : MnemonicAlias<"global_load_b64_tr_b4", "global_load_tr4_b64">, Requires<[isGFX125xOnly]>;
-def : MnemonicAlias<"global_load_b96_tr_b6", "global_load_tr6_b96">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"global_load_b128_tr_b16", "global_load_tr16_b128">, Requires<[isGFX125xOnly, NotHasTileShapedTransposeInsts]>;
+def : MnemonicAlias<"global_load_b64_tr_b8", "global_load_tr8_b64">, Requires<[isGFX125xOnly, NotHasTileShapedTransposeInsts]>;
+def : MnemonicAlias<"global_load_b64_tr_b4", "global_load_tr4_b64">, Requires<[isGFX125xOnly, NotHasTileShapedTransposeInsts]>;
+def : MnemonicAlias<"global_load_b96_tr_b6", "global_load_tr6_b96">, Requires<[isGFX125xOnly, NotHasTileShapedTransposeInsts]>;
 
 defm FLAT_ATOMIC_ADD_F64              : VFLAT_Real_Atomics_gfx1250<0x055>;
 defm FLAT_ATOMIC_MIN_F64              : VFLAT_Real_Atomics_gfx1250<0x05b, "flat_atomic_min_num_f64">;
@@ -4244,6 +4264,27 @@ defm FLAT_ATOMIC_MAX_F64              : VFLAT_Real_Atomics_gfx1250<0x05c, "flat_
 defm GLOBAL_ATOMIC_ADD_F64            : VFLAT_Real_Atomics_gfx1250<0x055>;
 defm GLOBAL_ATOMIC_MIN_F64            : VFLAT_Real_Atomics_gfx1250<0x05b, "global_atomic_min_num_f64">;
 defm GLOBAL_ATOMIC_MAX_F64            : VFLAT_Real_Atomics_gfx1250<0x05c, "global_atomic_max_num_f64">;
+
+let AssemblerPredicate = isGFX1260Only, DecoderNamespace = "GFX1260" in {
+  defm GLOBAL_LOAD_TR16_16X16_B128 : VFLAT_Real_AllAddr_gfx1250<0x057>;
+  defm GLOBAL_LOAD_TR8_16X16_B64   : VFLAT_Real_AllAddr_gfx1250<0x058>;
+  defm GLOBAL_LOAD_TR4_16X32_B64   : VFLAT_Real_AllAddr_gfx1250<0x073>;
+  defm GLOBAL_LOAD_TR6_16X32_B96   : VFLAT_Real_AllAddr_gfx1250<0x074>;
+  defm GLOBAL_LOAD_TR16_8X32_B128  : VFLAT_Real_AllAddr_gfx1250<0x07d>;
+  defm GLOBAL_LOAD_TR8_16X32_B128  : VFLAT_Real_AllAddr_gfx1250<0x07e>;
+  defm GLOBAL_LOAD_TR4_32X32_B128  : VFLAT_Real_AllAddr_gfx1250<0x07f>;
+} // End AssemblerPredicate = isGFX1260Only, DecoderNamespace = "GFX1260"
+
+multiclass MnemonicAlias_gfx1260<string name, list<string> aliases> {
+  foreach alias = aliases in
+    def : MnemonicAlias<alias, name>, Requires<[isGFX1260Only]>;
+}
+
+// Aliases for global load transpose instructions for gfx1260
+defm: MnemonicAlias_gfx1260<"global_load_tr8_16x16_b64", ["global_load_b64_tr_b8", "global_load_tr8_b64", "global_load_tr_b64"]>;
+defm: MnemonicAlias_gfx1260<"global_load_tr16_16x16_b128", ["global_load_b128_tr_b16", "global_load_tr16_b128", "global_load_tr_b128"]>;
+defm: MnemonicAlias_gfx1260<"global_load_tr4_16x32_b64", ["global_load_b64_tr_b4", "global_load_tr4_b64"]>;
+defm: MnemonicAlias_gfx1260<"global_load_tr6_16x32_b96", ["global_load_b96_tr_b6", "global_load_tr6_b96"]>;
 
 //===----------------------------------------------------------------------===//
 // GFX13

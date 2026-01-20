@@ -5511,7 +5511,9 @@ bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
       // allows unaligned VGPR. All others only allow even aligned VGPRs.
       return true;
     case AMDGPU::GLOBAL_LOAD_TR6_B96:
-    case AMDGPU::GLOBAL_LOAD_TR6_B96_gfx1250: {
+    case AMDGPU::GLOBAL_LOAD_TR6_16X32_B96:
+    case AMDGPU::GLOBAL_LOAD_TR6_B96_gfx1250:
+    case AMDGPU::GLOBAL_LOAD_TR6_16X32_B96_gfx1250: {
       // GLOBAL_LOAD_TR6_B96 is the only GLOBAL instruction in GFX1250, that
       // allows unaligned VGPR for vdst, but other operands still only allow
       // even aligned VGPRs.
@@ -5525,7 +5527,9 @@ bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
       return true;
     }
     case AMDGPU::GLOBAL_LOAD_TR6_B96_SADDR:
+    case AMDGPU::GLOBAL_LOAD_TR6_16X32_B96_SADDR:
     case AMDGPU::GLOBAL_LOAD_TR6_B96_SADDR_gfx1250:
+    case AMDGPU::GLOBAL_LOAD_TR6_16X32_B96_SADDR_gfx1250:
       return true;
     }
   }

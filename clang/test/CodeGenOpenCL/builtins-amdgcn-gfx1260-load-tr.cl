@@ -69,6 +69,56 @@ v8y test_amdgcn_global_load_tr16_16x16_b128_v8bf16(global v8y* inptr)
   return __builtin_amdgcn_global_load_tr16_b128_v8bf16(inptr);
 }
 
+// CHECK-GFX1260-LABEL: @test_amdgcn_global_load_tr4_32x32_b128_v4i32(
+// CHECK-GFX1260-NEXT:  entry:
+// CHECK-GFX1260-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.global.load.tr4.32x32.b128.v4i32(ptr addrspace(1) [[INPTR:%.*]])
+// CHECK-GFX1260-NEXT:    ret <4 x i32> [[TMP0]]
+//
+v4i test_amdgcn_global_load_tr4_32x32_b128_v4i32(global v4i* inptr)
+{
+  return __builtin_amdgcn_global_load_tr4_32x32_b128_v4i32(inptr);
+}
+
+// CHECK-GFX1260-LABEL: @test_amdgcn_global_load_tr8_16x32_b128_v4i32(
+// CHECK-GFX1260-NEXT:  entry:
+// CHECK-GFX1260-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.global.load.tr8.16x32.b128.v4i32(ptr addrspace(1) [[INPTR:%.*]])
+// CHECK-GFX1260-NEXT:    ret <4 x i32> [[TMP0]]
+//
+v4i test_amdgcn_global_load_tr8_16x32_b128_v4i32(global v4i* inptr)
+{
+  return __builtin_amdgcn_global_load_tr8_16x32_b128_v4i32(inptr);
+}
+
+// CHECK-GFX1260-LABEL: @test_amdgcn_global_load_tr16_8x32_b128_v8i16(
+// CHECK-GFX1260-NEXT:  entry:
+// CHECK-GFX1260-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.amdgcn.global.load.tr16.8x32.b128.v8i16(ptr addrspace(1) [[INPTR:%.*]])
+// CHECK-GFX1260-NEXT:    ret <8 x i16> [[TMP0]]
+//
+v8s test_amdgcn_global_load_tr16_8x32_b128_v8i16(global v8s* inptr)
+{
+  return __builtin_amdgcn_global_load_tr16_8x32_b128_v8i16(inptr);
+}
+
+// CHECK-GFX1260-LABEL: @test_amdgcn_global_load_tr16_8x32_b128_v8f16(
+// CHECK-GFX1260-NEXT:  entry:
+// CHECK-GFX1260-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.global.load.tr16.8x32.b128.v8f16(ptr addrspace(1) [[INPTR:%.*]])
+// CHECK-GFX1260-NEXT:    ret <8 x half> [[TMP0]]
+//
+v8h test_amdgcn_global_load_tr16_8x32_b128_v8f16(global v8h* inptr)
+{
+  return __builtin_amdgcn_global_load_tr16_8x32_b128_v8f16(inptr);
+}
+
+// CHECK-GFX1260-LABEL: @test_amdgcn_global_load_tr16_8x32_b128_v8bf16(
+// CHECK-GFX1260-NEXT:  entry:
+// CHECK-GFX1260-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.global.load.tr16.8x32.b128.v8bf16(ptr addrspace(1) [[INPTR:%.*]])
+// CHECK-GFX1260-NEXT:    ret <8 x bfloat> [[TMP0]]
+//
+v8y test_amdgcn_global_load_tr16_8x32_b128_v8bf16(global v8y* inptr)
+{
+  return __builtin_amdgcn_global_load_tr16_8x32_b128_v8bf16(inptr);
+}
+
 // CHECK-GFX1260-LABEL: @test_amdgcn_ds_load_tr4_16x32_b64_v2i32(
 // CHECK-GFX1260-NEXT:  entry:
 // CHECK-GFX1260-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.ds.load.tr4.b64.v2i32(ptr addrspace(3) [[INPTR:%.*]])
