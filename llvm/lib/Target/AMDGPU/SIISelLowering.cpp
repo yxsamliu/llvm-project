@@ -1375,6 +1375,7 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_global_tiled_store_half_b64:
   case Intrinsic::amdgcn_global_tiled_store_qtr_b128:
   case Intrinsic::amdgcn_load_mcast_b32:
+  case Intrinsic::amdgcn_ds_tiled_load_half_b64:
     return 32;
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
   case Intrinsic::amdgcn_dds_load_async_to_lds_b64:
@@ -1386,6 +1387,7 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_global_tiled_store_b64:
   case Intrinsic::amdgcn_global_tiled_store_half_b128:
   case Intrinsic::amdgcn_load_mcast_b64:
+  case Intrinsic::amdgcn_ds_tiled_load_b64:
     return 64;
   case Intrinsic::amdgcn_global_tiled_store_vst2_b64:
   case Intrinsic::amdgcn_global_tiled_store_half_vst2_b128:
@@ -1404,6 +1406,8 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_struct_ptr_buffer_discard_b128:
   case Intrinsic::amdgcn_global_tiled_store_b128:
   case Intrinsic::amdgcn_load_mcast_b128:
+  case Intrinsic::amdgcn_ds_tiled_load_2x2_b128:
+  case Intrinsic::amdgcn_ds_tiled_load_b128:
     return 128;
   case Intrinsic::amdgcn_global_tiled_store_vst2_b128:
     return 224;
@@ -1672,6 +1676,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_global_tiled_load_half_vst2_b128:
   case Intrinsic::amdgcn_global_tiled_load_b128:
   case Intrinsic::amdgcn_global_tiled_load_vst2_b128:
+  case Intrinsic::amdgcn_ds_tiled_load_half_b64:
+  case Intrinsic::amdgcn_ds_tiled_load_b64:
+  case Intrinsic::amdgcn_ds_tiled_load_b128:
+  case Intrinsic::amdgcn_ds_tiled_load_2x2_b128:
   case Intrinsic::amdgcn_cluster_load_b32:
   case Intrinsic::amdgcn_cluster_load_b64:
   case Intrinsic::amdgcn_cluster_load_b128:
@@ -2039,8 +2047,15 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_global_tiled_load_qtr_b128:
   case Intrinsic::amdgcn_global_tiled_load_vst2_b128:
   case Intrinsic::amdgcn_global_tiled_load_vst2_b64:
+<<<<<<< HEAD
   case Intrinsic::amdgcn_global_load_b128:
   case Intrinsic::amdgcn_global_store_b128:
+=======
+  case Intrinsic::amdgcn_ds_tiled_load_half_b64:
+  case Intrinsic::amdgcn_ds_tiled_load_b64:
+  case Intrinsic::amdgcn_ds_tiled_load_b128:
+  case Intrinsic::amdgcn_ds_tiled_load_2x2_b128:
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
     Ptr = II->getArgOperand(0);
     break;
   case Intrinsic::amdgcn_load_to_lds:
@@ -8329,6 +8344,84 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   return DAG.getBitcast(VT, UnrolledLaneOp);
 }
 
+static SDValue lowerWaveShuffle(const SITargetLowering &TLI, SDNode *N,
+                                SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+
+  if (VT.getSizeInBits() != 32)
+    return SDValue();
+
+  SDLoc SL(N);
+
+  SDValue Value = N->getOperand(1);
+  SDValue Index = N->getOperand(2);
+
+  // ds_bpermute requires index to be multiplied by 4
+  SDValue ShiftAmount = DAG.getShiftAmountConstant(2, MVT::i32, SL);
+  SDValue ShiftedIndex =
+      DAG.getNode(ISD::SHL, SL, Index.getValueType(), Index, ShiftAmount);
+
+  // Intrinsics will require i32 to operate on
+  SDValue ValueI32 = DAG.getBitcast(MVT::i32, Value);
+
+  auto MakeIntrinsic = [&DAG, &SL](unsigned IID, MVT RetVT,
+                                   SmallVector<SDValue> IntrinArgs) -> SDValue {
+    SmallVector<SDValue> Operands(1);
+    Operands[0] = DAG.getTargetConstant(IID, SL, MVT::i32);
+    Operands.append(IntrinArgs);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, RetVT, Operands);
+  };
+
+  // If we can bpermute across the whole wave, then just do that
+  if (TLI.getSubtarget()->supportsWaveWideBPermute()) {
+    SDValue BPermute = MakeIntrinsic(Intrinsic::amdgcn_ds_bpermute, MVT::i32,
+                                     {ShiftedIndex, ValueI32});
+    return DAG.getBitcast(VT, BPermute);
+  }
+
+  assert(TLI.getSubtarget()->isWave64());
+
+  // Otherwise, we need to make use of whole wave mode
+  SDValue PoisonVal = DAG.getPOISON(ValueI32->getValueType(0));
+
+  // Set inactive lanes to poison
+  SDValue WWMValue = MakeIntrinsic(Intrinsic::amdgcn_set_inactive, MVT::i32,
+                                   {ValueI32, PoisonVal});
+  SDValue WWMIndex = MakeIntrinsic(Intrinsic::amdgcn_set_inactive, MVT::i32,
+                                   {ShiftedIndex, PoisonVal});
+
+  SDValue Swapped =
+      MakeIntrinsic(Intrinsic::amdgcn_permlane64, MVT::i32, {WWMValue});
+
+  // Get permutation of each half, then we'll select which one to use
+  SDValue BPermSameHalf = MakeIntrinsic(Intrinsic::amdgcn_ds_bpermute, MVT::i32,
+                                        {WWMIndex, WWMValue});
+  SDValue BPermOtherHalf = MakeIntrinsic(Intrinsic::amdgcn_ds_bpermute,
+                                         MVT::i32, {WWMIndex, Swapped});
+  SDValue BPermOtherHalfWWM =
+      MakeIntrinsic(Intrinsic::amdgcn_wwm, MVT::i32, {BPermOtherHalf});
+
+  // Select which side to take the permute from
+  SDValue ThreadIDMask = DAG.getAllOnesConstant(SL, MVT::i32);
+  // We can get away with only using mbcnt_lo here since we're only
+  // trying to detect which side of 32 each lane is on, and mbcnt_lo
+  // returns 32 for lanes 32-63.
+  SDValue ThreadID =
+      MakeIntrinsic(Intrinsic::amdgcn_mbcnt_lo, MVT::i32,
+                    {ThreadIDMask, DAG.getTargetConstant(0, SL, MVT::i32)});
+
+  SDValue SameOrOtherHalf =
+      DAG.getNode(ISD::AND, SL, MVT::i32,
+                  DAG.getNode(ISD::XOR, SL, MVT::i32, ThreadID, Index),
+                  DAG.getTargetConstant(32, SL, MVT::i32));
+  SDValue UseSameHalf =
+      DAG.getSetCC(SL, MVT::i1, SameOrOtherHalf,
+                   DAG.getConstant(0, SL, MVT::i32), ISD::SETEQ);
+  SDValue Result = DAG.getSelect(SL, MVT::i32, UseSameHalf, BPermSameHalf,
+                                 BPermOtherHalfWWM);
+  return DAG.getBitcast(VT, Result);
+}
+
 void SITargetLowering::ReplaceNodeResults(SDNode *N,
                                           SmallVectorImpl<SDValue> &Results,
                                           SelectionDAG &DAG) const {
@@ -11588,6 +11681,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       Poisons.push_back(DAG.getPOISON(ValTy));
     return DAG.getMergeValues(Poisons, SDLoc(Op));
   }
+  case Intrinsic::amdgcn_wave_shuffle:
+    return lowerWaveShuffle(*this, Op.getNode(), DAG);
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))

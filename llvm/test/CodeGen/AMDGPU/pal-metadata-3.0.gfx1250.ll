@@ -1,5 +1,4 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1250 <%s | FileCheck %s --check-prefixes=CHECK
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1260 <%s | FileCheck %s --check-prefixes=CHECK
 
 ; CHECK-LABEL: {{^}}_amdgpu_cs_main:
 ; CHECK: ; TotalNumSgprs: 4

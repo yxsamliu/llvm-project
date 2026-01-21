@@ -189,9 +189,16 @@ extern "C" __device__ uint64_t test___make_mantissa_base10(const char *p) {
 // CHECK:       [[IF_ELSE17_I]]:
 // CHECK-NEXT:    [[TMP4:%.*]] = add i8 [[TMP1]], -65
 // CHECK-NEXT:    [[OR_COND34_I:%.*]] = icmp ult i8 [[TMP4]], 6
+<<<<<<< HEAD
 // CHECK-NEXT:    br i1 [[OR_COND34_I]], label %[[IF_THEN23_I:.*]], label %[[_ZL22__MAKE_MANTISSA_BASE16PKC_EXIT]]
 // CHECK:       [[IF_THEN23_I]]:
 // CHECK-NEXT:    [[MUL24_I:%.*]] = shl i64 [[__R_050_I]], 4
+=======
+// CHECK-NEXT:    br i1 [[OR_COND34_I]], label %[[IF_END31_I]], label %[[_ZL22__MAKE_MANTISSA_BASE16PKC_EXIT]]
+// CHECK:       [[IF_END31_I]]:
+// CHECK-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -87, %[[IF_ELSE_I]] ], [ -48, %[[WHILE_BODY_I]] ], [ -55, %[[IF_ELSE17_I]] ]
+// CHECK-NEXT:    [[MUL24_I:%.*]] = shl i64 [[__R_0_I3]], 4
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // CHECK-NEXT:    [[CONV25_I:%.*]] = zext nneg i8 [[TMP1]] to i64
 // CHECK-NEXT:    [[ADD26_I:%.*]] = add nsw i64 [[CONV25_I]], -55
 // CHECK-NEXT:    [[ADD28_I:%.*]] = add i64 [[ADD26_I]], [[MUL24_I]]
@@ -238,9 +245,16 @@ extern "C" __device__ uint64_t test___make_mantissa_base10(const char *p) {
 // AMDGCNSPIRV:       [[IF_ELSE17_I]]:
 // AMDGCNSPIRV-NEXT:    [[TMP4:%.*]] = add i8 [[TMP1]], -65
 // AMDGCNSPIRV-NEXT:    [[OR_COND34_I:%.*]] = icmp ult i8 [[TMP4]], 6
+<<<<<<< HEAD
 // AMDGCNSPIRV-NEXT:    br i1 [[OR_COND34_I]], label %[[IF_THEN23_I:.*]], label %[[_ZL22__MAKE_MANTISSA_BASE16PKC_EXIT]]
 // AMDGCNSPIRV:       [[IF_THEN23_I]]:
 // AMDGCNSPIRV-NEXT:    [[MUL24_I:%.*]] = shl i64 [[__R_050_I]], 4
+=======
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND34_I]], label %[[IF_END31_I]], label %[[_ZL22__MAKE_MANTISSA_BASE16PKC_EXIT]]
+// AMDGCNSPIRV:       [[IF_END31_I]]:
+// AMDGCNSPIRV-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -87, %[[IF_ELSE_I]] ], [ -48, %[[WHILE_BODY_I]] ], [ -55, %[[IF_ELSE17_I]] ]
+// AMDGCNSPIRV-NEXT:    [[MUL24_I:%.*]] = shl i64 [[__R_0_I3]], 4
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // AMDGCNSPIRV-NEXT:    [[CONV25_I:%.*]] = zext nneg i8 [[TMP1]] to i64
 // AMDGCNSPIRV-NEXT:    [[ADD26_I:%.*]] = add nsw i64 [[CONV25_I]], -55
 // AMDGCNSPIRV-NEXT:    [[ADD28_I:%.*]] = add i64 [[ADD26_I]], [[MUL24_I]]
@@ -275,8 +289,40 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // CHECK-NEXT:      i8 120, label %[[WHILE_BODY_I_I_PREHEADER]]
 // CHECK-NEXT:      i8 0, label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]]
 // CHECK-NEXT:    ]
+<<<<<<< HEAD
 // CHECK:       [[WHILE_BODY_I_I_PREHEADER]]:
 // CHECK-NEXT:    br label %[[WHILE_BODY_I_I:.*]]
+=======
+// CHECK:       [[WHILE_COND_I_I_PREHEADER]]:
+// CHECK-NEXT:    br i1 [[CMP_NOT_I_I14]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], label %[[WHILE_BODY_I_I:.*]]
+// CHECK:       [[IF_THEN5_I]]:
+// CHECK-NEXT:    br i1 [[CMP_NOT_I_I14]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], label %[[WHILE_BODY_I31_I:.*]]
+// CHECK:       [[WHILE_BODY_I31_I]]:
+// CHECK-NEXT:    [[TMP3:%.*]] = phi i8 [ [[TMP7:%.*]], %[[IF_END31_I_I:.*]] ], [ [[TMP2]], %[[IF_THEN5_I]] ]
+// CHECK-NEXT:    [[__R_0_I29_I11:%.*]] = phi i64 [ [[ADD28_I_I:%.*]], %[[IF_END31_I_I]] ], [ 0, %[[IF_THEN5_I]] ]
+// CHECK-NEXT:    [[__TAGP_ADDR_0_I28_I10:%.*]] = phi ptr [ [[INCDEC_PTR_I34_I:%.*]], %[[IF_END31_I_I]] ], [ [[INCDEC_PTR_I]], %[[IF_THEN5_I]] ]
+// CHECK-NEXT:    [[TMP4:%.*]] = add i8 [[TMP3]], -48
+// CHECK-NEXT:    [[OR_COND_I32_I:%.*]] = icmp ult i8 [[TMP4]], 10
+// CHECK-NEXT:    br i1 [[OR_COND_I32_I]], label %[[IF_END31_I_I]], label %[[IF_ELSE_I_I:.*]]
+// CHECK:       [[IF_ELSE_I_I]]:
+// CHECK-NEXT:    [[TMP5:%.*]] = add i8 [[TMP3]], -97
+// CHECK-NEXT:    [[OR_COND33_I_I:%.*]] = icmp ult i8 [[TMP5]], 6
+// CHECK-NEXT:    br i1 [[OR_COND33_I_I]], label %[[IF_END31_I_I]], label %[[IF_ELSE17_I_I:.*]]
+// CHECK:       [[IF_ELSE17_I_I]]:
+// CHECK-NEXT:    [[TMP6:%.*]] = add i8 [[TMP3]], -65
+// CHECK-NEXT:    [[OR_COND34_I_I:%.*]] = icmp ult i8 [[TMP6]], 6
+// CHECK-NEXT:    br i1 [[OR_COND34_I_I]], label %[[IF_END31_I_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]]
+// CHECK:       [[IF_END31_I_I]]:
+// CHECK-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -87, %[[IF_ELSE_I_I]] ], [ -48, %[[WHILE_BODY_I31_I]] ], [ -55, %[[IF_ELSE17_I_I]] ]
+// CHECK-NEXT:    [[MUL24_I_I:%.*]] = shl i64 [[__R_0_I29_I11]], 4
+// CHECK-NEXT:    [[CONV25_I_I:%.*]] = zext nneg i8 [[TMP3]] to i64
+// CHECK-NEXT:    [[ADD26_I_I:%.*]] = add i64 [[MUL24_I_I]], [[DOTSINK]]
+// CHECK-NEXT:    [[ADD28_I_I]] = add i64 [[ADD26_I_I]], [[CONV25_I_I]]
+// CHECK-NEXT:    [[INCDEC_PTR_I34_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I28_I10]], i64 1
+// CHECK-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// CHECK-NEXT:    [[CMP_NOT_I30_I:%.*]] = icmp eq i8 [[TMP7]], 0
+// CHECK-NEXT:    br i1 [[CMP_NOT_I30_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], label %[[WHILE_BODY_I31_I]], !llvm.loop [[LOOP13]]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // CHECK:       [[WHILE_BODY_I_I]]:
 // CHECK-NEXT:    [[TMP2:%.*]] = phi i8 [ [[TMP6:%.*]], %[[IF_END31_I_I:.*]] ], [ [[TMP1]], %[[WHILE_BODY_I_I_PREHEADER]] ]
 // CHECK-NEXT:    [[__R_050_I_I:%.*]] = phi i64 [ [[__R_1_I_I:%.*]], %[[IF_END31_I_I]] ], [ 0, %[[WHILE_BODY_I_I_PREHEADER]] ]
@@ -349,7 +395,11 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // CHECK-NEXT:    [[CMP_NOT_I36_I:%.*]] = icmp eq i8 [[TMP12]], 0
 // CHECK-NEXT:    br i1 [[CMP_NOT_I36_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], label %[[WHILE_BODY_I25_I]], !llvm.loop [[LOOP12]]
 // CHECK:       [[_ZL15__MAKE_MANTISSAPKC_EXIT]]:
+<<<<<<< HEAD
 // CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ 0, %[[IF_THEN_I]] ], [ 0, %[[ENTRY]] ], [ [[SUB_I34_I]], %[[IF_THEN_I30_I]] ], [ 0, %[[WHILE_BODY_I25_I]] ], [ [[SUB_I21_I]], %[[IF_THEN_I17_I]] ], [ 0, %[[WHILE_BODY_I14_I]] ], [ [[__R_1_I_I]], %[[IF_END31_I_I]] ], [ 0, %[[IF_ELSE17_I_I]] ]
+=======
+// CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I]] ], [ 0, %[[WHILE_COND_I14_I_PREHEADER]] ], [ 0, %[[WHILE_COND_I_I_PREHEADER]] ], [ [[SUB_I_I]], %[[IF_THEN_I_I]] ], [ [[ADD28_I_I]], %[[IF_END31_I_I]] ], [ 0, %[[WHILE_BODY_I_I]] ], [ 0, %[[IF_ELSE17_I_I]] ], [ [[SUB_I25_I]], %[[IF_THEN_I21_I]] ], [ 0, %[[WHILE_BODY_I18_I]] ]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // CHECK-NEXT:    ret i64 [[RETVAL_0_I]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func i64 @test___make_mantissa(
@@ -365,8 +415,46 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // AMDGCNSPIRV-NEXT:      i8 88, label %[[WHILE_BODY_I_I_PREHEADER:.*]]
 // AMDGCNSPIRV-NEXT:      i8 120, label %[[WHILE_BODY_I_I_PREHEADER]]
 // AMDGCNSPIRV-NEXT:    ]
+<<<<<<< HEAD
 // AMDGCNSPIRV:       [[WHILE_BODY_I_I_PREHEADER]]:
 // AMDGCNSPIRV-NEXT:    br label %[[WHILE_BODY_I_I:.*]]
+=======
+// AMDGCNSPIRV:       [[IF_THEN5_I]]:
+// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I31_I5:%.*]] = icmp eq i8 [[TMP2]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I31_I5]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT:.*]], label %[[WHILE_BODY_I32_I:.*]]
+// AMDGCNSPIRV:       [[WHILE_BODY_I32_I]]:
+// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = phi i8 [ [[TMP7:%.*]], %[[IF_END31_I_I:.*]] ], [ [[TMP2]], %[[IF_THEN5_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__R_0_I30_I7:%.*]] = phi i64 [ [[ADD28_I_I:%.*]], %[[IF_END31_I_I]] ], [ 0, %[[IF_THEN5_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I29_I6:%.*]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I36_I:%.*]], %[[IF_END31_I_I]] ], [ [[INCDEC_PTR_I]], %[[IF_THEN5_I]] ]
+// AMDGCNSPIRV-NEXT:    [[TMP4:%.*]] = add i8 [[TMP3]], -48
+// AMDGCNSPIRV-NEXT:    [[OR_COND_I33_I:%.*]] = icmp ult i8 [[TMP4]], 10
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I33_I]], label %[[IF_END31_I_I]], label %[[IF_ELSE_I_I:.*]]
+// AMDGCNSPIRV:       [[IF_ELSE_I_I]]:
+// AMDGCNSPIRV-NEXT:    [[TMP5:%.*]] = add i8 [[TMP3]], -97
+// AMDGCNSPIRV-NEXT:    [[OR_COND33_I_I:%.*]] = icmp ult i8 [[TMP5]], 6
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND33_I_I]], label %[[IF_END31_I_I]], label %[[IF_ELSE17_I_I:.*]]
+// AMDGCNSPIRV:       [[IF_ELSE17_I_I]]:
+// AMDGCNSPIRV-NEXT:    [[TMP6:%.*]] = add i8 [[TMP3]], -65
+// AMDGCNSPIRV-NEXT:    [[OR_COND34_I_I:%.*]] = icmp ult i8 [[TMP6]], 6
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND34_I_I]], label %[[IF_END31_I_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]]
+// AMDGCNSPIRV:       [[IF_END31_I_I]]:
+// AMDGCNSPIRV-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -87, %[[IF_ELSE_I_I]] ], [ -48, %[[WHILE_BODY_I32_I]] ], [ -55, %[[IF_ELSE17_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[MUL24_I_I:%.*]] = shl i64 [[__R_0_I30_I7]], 4
+// AMDGCNSPIRV-NEXT:    [[CONV25_I_I:%.*]] = zext nneg i8 [[TMP3]] to i64
+// AMDGCNSPIRV-NEXT:    [[ADD26_I_I:%.*]] = add i64 [[MUL24_I_I]], [[DOTSINK]]
+// AMDGCNSPIRV-NEXT:    [[ADD28_I_I]] = add i64 [[ADD26_I_I]], [[CONV25_I_I]]
+// AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I36_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I29_I6]], i64 1
+// AMDGCNSPIRV-NEXT:    [[TMP7]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I36_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I31_I:%.*]] = icmp eq i8 [[TMP7]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I31_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], label %[[WHILE_BODY_I32_I]], !llvm.loop [[LOOP14]]
+// AMDGCNSPIRV:       [[WHILE_COND_I_I]]:
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I_I:%.*]], %[[WHILE_BODY_I_I:.*]] ], [ [[INCDEC_PTR_I]], %[[IF_THEN_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__R_0_I_I:%.*]] = phi i64 [ [[__R_1_I_I:%.*]], %[[WHILE_BODY_I_I]] ], [ 0, %[[IF_THEN_I]] ]
+// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I_I:%.*]] = icmp eq i8 [[TMP8]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], label %[[WHILE_BODY_I_I]]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // AMDGCNSPIRV:       [[WHILE_BODY_I_I]]:
 // AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = phi i8 [ [[TMP6:%.*]], %[[IF_END31_I_I:.*]] ], [ [[TMP1]], %[[WHILE_BODY_I_I_PREHEADER]] ]
 // AMDGCNSPIRV-NEXT:    [[__R_050_I_I:%.*]] = phi i64 [ [[__R_1_I_I:%.*]], %[[IF_END31_I_I]] ], [ 0, %[[WHILE_BODY_I_I_PREHEADER]] ]
@@ -441,7 +529,11 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // AMDGCNSPIRV-NEXT:    [[__R_1_I35_I]] = select i1 [[OR_COND_I28_I]], i64 [[SUB_I32_I]], i64 [[__R_0_I25_I]]
 // AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I28_I]], label %[[WHILE_COND_I23_I]], label %[[_ZL15__MAKE_MANTISSAPKC_EXIT]], !llvm.loop [[LOOP13]]
 // AMDGCNSPIRV:       [[_ZL15__MAKE_MANTISSAPKC_EXIT]]:
+<<<<<<< HEAD
 // AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ 0, %[[WHILE_BODY_I15_I]] ], [ [[__R_0_I_I]], %[[WHILE_COND_I_I]] ], [ [[__R_1_I_I]], %[[IF_END31_I_I]] ], [ 0, %[[IF_ELSE17_I_I]] ], [ 0, %[[WHILE_BODY_I27_I]] ], [ [[__R_0_I25_I]], %[[WHILE_COND_I23_I]] ]
+=======
+// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I]] ], [ [[ADD28_I_I]], %[[IF_END31_I_I]] ], [ [[__R_0_I_I]], %[[WHILE_COND_I_I]] ], [ 0, %[[WHILE_BODY_I_I]] ], [ 0, %[[IF_ELSE17_I_I]] ], [ 0, %[[WHILE_BODY_I18_I]] ], [ [[__R_0_I16_I]], %[[WHILE_COND_I14_I]] ]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // AMDGCNSPIRV-NEXT:    ret i64 [[RETVAL_0_I]]
 //
 extern "C" __device__ uint64_t test___make_mantissa(const char *p) {
@@ -4385,8 +4477,40 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // DEFAULT-NEXT:      i8 120, label %[[WHILE_BODY_I_I_I_PREHEADER]]
 // DEFAULT-NEXT:      i8 0, label %[[_ZL4NANFPKC_EXIT]]
 // DEFAULT-NEXT:    ]
+<<<<<<< HEAD
 // DEFAULT:       [[WHILE_BODY_I_I_I_PREHEADER]]:
 // DEFAULT-NEXT:    br label %[[WHILE_BODY_I_I_I:.*]]
+=======
+// DEFAULT:       [[WHILE_COND_I_I_I_PREHEADER]]:
+// DEFAULT-NEXT:    br i1 [[CMP_NOT_I_I_I14]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I_I_I:.*]]
+// DEFAULT:       [[IF_THEN5_I_I]]:
+// DEFAULT-NEXT:    br i1 [[CMP_NOT_I_I_I14]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I31_I_I:.*]]
+// DEFAULT:       [[WHILE_BODY_I31_I_I]]:
+// DEFAULT-NEXT:    [[TMP3:%.*]] = phi i8 [ [[TMP7:%.*]], %[[IF_END31_I_I_I:.*]] ], [ [[TMP2]], %[[IF_THEN5_I_I]] ]
+// DEFAULT-NEXT:    [[__R_0_I29_I_I11:%.*]] = phi i64 [ [[ADD28_I_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_THEN5_I_I]] ]
+// DEFAULT-NEXT:    [[__TAGP_ADDR_0_I28_I_I10:%.*]] = phi ptr [ [[INCDEC_PTR_I34_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ [[INCDEC_PTR_I_I]], %[[IF_THEN5_I_I]] ]
+// DEFAULT-NEXT:    [[TMP4:%.*]] = add i8 [[TMP3]], -48
+// DEFAULT-NEXT:    [[OR_COND_I32_I_I:%.*]] = icmp ult i8 [[TMP4]], 10
+// DEFAULT-NEXT:    br i1 [[OR_COND_I32_I_I]], label %[[IF_END31_I_I_I]], label %[[IF_ELSE_I_I_I:.*]]
+// DEFAULT:       [[IF_ELSE_I_I_I]]:
+// DEFAULT-NEXT:    [[TMP5:%.*]] = add i8 [[TMP3]], -97
+// DEFAULT-NEXT:    [[OR_COND33_I_I_I:%.*]] = icmp ult i8 [[TMP5]], 6
+// DEFAULT-NEXT:    br i1 [[OR_COND33_I_I_I]], label %[[IF_END31_I_I_I]], label %[[IF_ELSE17_I_I_I:.*]]
+// DEFAULT:       [[IF_ELSE17_I_I_I]]:
+// DEFAULT-NEXT:    [[TMP6:%.*]] = add i8 [[TMP3]], -65
+// DEFAULT-NEXT:    [[OR_COND34_I_I_I:%.*]] = icmp ult i8 [[TMP6]], 6
+// DEFAULT-NEXT:    br i1 [[OR_COND34_I_I_I]], label %[[IF_END31_I_I_I]], label %[[_ZL4NANFPKC_EXIT]]
+// DEFAULT:       [[IF_END31_I_I_I]]:
+// DEFAULT-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -87, %[[IF_ELSE_I_I_I]] ], [ -48, %[[WHILE_BODY_I31_I_I]] ], [ -55, %[[IF_ELSE17_I_I_I]] ]
+// DEFAULT-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I29_I_I11]], 4
+// DEFAULT-NEXT:    [[CONV25_I_I_I:%.*]] = zext nneg i8 [[TMP3]] to i64
+// DEFAULT-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
+// DEFAULT-NEXT:    [[ADD28_I_I_I]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
+// DEFAULT-NEXT:    [[INCDEC_PTR_I34_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I28_I_I10]], i64 1
+// DEFAULT-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// DEFAULT-NEXT:    [[CMP_NOT_I30_I_I:%.*]] = icmp eq i8 [[TMP7]], 0
+// DEFAULT-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I31_I_I]], !llvm.loop [[LOOP13]]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // DEFAULT:       [[WHILE_BODY_I_I_I]]:
 // DEFAULT-NEXT:    [[TMP2:%.*]] = phi i8 [ [[TMP6:%.*]], %[[IF_END31_I_I_I:.*]] ], [ [[TMP1]], %[[WHILE_BODY_I_I_I_PREHEADER]] ]
 // DEFAULT-NEXT:    [[__R_050_I_I_I:%.*]] = phi i64 [ [[__R_1_I_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I_PREHEADER]] ]
@@ -4459,7 +4583,11 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // DEFAULT-NEXT:    [[CMP_NOT_I36_I_I:%.*]] = icmp eq i8 [[TMP12]], 0
 // DEFAULT-NEXT:    br i1 [[CMP_NOT_I36_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I25_I_I]], !llvm.loop [[LOOP12]]
 // DEFAULT:       [[_ZL4NANFPKC_EXIT]]:
+<<<<<<< HEAD
 // DEFAULT-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN_I_I]] ], [ 0, %[[ENTRY]] ], [ [[SUB_I34_I_I]], %[[IF_THEN_I30_I_I]] ], [ 0, %[[WHILE_BODY_I25_I_I]] ], [ [[SUB_I21_I_I]], %[[IF_THEN_I17_I_I]] ], [ 0, %[[WHILE_BODY_I14_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ]
+=======
+// DEFAULT-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I_I]] ], [ 0, %[[WHILE_COND_I14_I_I_PREHEADER]] ], [ 0, %[[WHILE_COND_I_I_I_PREHEADER]] ], [ [[SUB_I_I_I]], %[[IF_THEN_I_I_I]] ], [ [[ADD28_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ [[SUB_I25_I_I]], %[[IF_THEN_I21_I_I]] ], [ 0, %[[WHILE_BODY_I18_I_I]] ]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // DEFAULT-NEXT:    [[CONV_I:%.*]] = trunc i64 [[RETVAL_0_I_I]] to i32
 // DEFAULT-NEXT:    [[BF_VALUE_I:%.*]] = and i32 [[CONV_I]], 4194303
 // DEFAULT-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i32 [[BF_VALUE_I]], 2143289344
@@ -4487,8 +4615,40 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // APPROX-NEXT:      i8 120, label %[[WHILE_BODY_I_I_I_PREHEADER]]
 // APPROX-NEXT:      i8 0, label %[[_ZL4NANFPKC_EXIT]]
 // APPROX-NEXT:    ]
+<<<<<<< HEAD
 // APPROX:       [[WHILE_BODY_I_I_I_PREHEADER]]:
 // APPROX-NEXT:    br label %[[WHILE_BODY_I_I_I:.*]]
+=======
+// APPROX:       [[WHILE_COND_I_I_I_PREHEADER]]:
+// APPROX-NEXT:    br i1 [[CMP_NOT_I_I_I14]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I_I_I:.*]]
+// APPROX:       [[IF_THEN5_I_I]]:
+// APPROX-NEXT:    br i1 [[CMP_NOT_I_I_I14]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I31_I_I:.*]]
+// APPROX:       [[WHILE_BODY_I31_I_I]]:
+// APPROX-NEXT:    [[TMP3:%.*]] = phi i8 [ [[TMP7:%.*]], %[[IF_END31_I_I_I:.*]] ], [ [[TMP2]], %[[IF_THEN5_I_I]] ]
+// APPROX-NEXT:    [[__R_0_I29_I_I11:%.*]] = phi i64 [ [[ADD28_I_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_THEN5_I_I]] ]
+// APPROX-NEXT:    [[__TAGP_ADDR_0_I28_I_I10:%.*]] = phi ptr [ [[INCDEC_PTR_I34_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ [[INCDEC_PTR_I_I]], %[[IF_THEN5_I_I]] ]
+// APPROX-NEXT:    [[TMP4:%.*]] = add i8 [[TMP3]], -48
+// APPROX-NEXT:    [[OR_COND_I32_I_I:%.*]] = icmp ult i8 [[TMP4]], 10
+// APPROX-NEXT:    br i1 [[OR_COND_I32_I_I]], label %[[IF_END31_I_I_I]], label %[[IF_ELSE_I_I_I:.*]]
+// APPROX:       [[IF_ELSE_I_I_I]]:
+// APPROX-NEXT:    [[TMP5:%.*]] = add i8 [[TMP3]], -97
+// APPROX-NEXT:    [[OR_COND33_I_I_I:%.*]] = icmp ult i8 [[TMP5]], 6
+// APPROX-NEXT:    br i1 [[OR_COND33_I_I_I]], label %[[IF_END31_I_I_I]], label %[[IF_ELSE17_I_I_I:.*]]
+// APPROX:       [[IF_ELSE17_I_I_I]]:
+// APPROX-NEXT:    [[TMP6:%.*]] = add i8 [[TMP3]], -65
+// APPROX-NEXT:    [[OR_COND34_I_I_I:%.*]] = icmp ult i8 [[TMP6]], 6
+// APPROX-NEXT:    br i1 [[OR_COND34_I_I_I]], label %[[IF_END31_I_I_I]], label %[[_ZL4NANFPKC_EXIT]]
+// APPROX:       [[IF_END31_I_I_I]]:
+// APPROX-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -87, %[[IF_ELSE_I_I_I]] ], [ -48, %[[WHILE_BODY_I31_I_I]] ], [ -55, %[[IF_ELSE17_I_I_I]] ]
+// APPROX-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I29_I_I11]], 4
+// APPROX-NEXT:    [[CONV25_I_I_I:%.*]] = zext nneg i8 [[TMP3]] to i64
+// APPROX-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
+// APPROX-NEXT:    [[ADD28_I_I_I]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
+// APPROX-NEXT:    [[INCDEC_PTR_I34_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I28_I_I10]], i64 1
+// APPROX-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// APPROX-NEXT:    [[CMP_NOT_I30_I_I:%.*]] = icmp eq i8 [[TMP7]], 0
+// APPROX-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I31_I_I]], !llvm.loop [[LOOP13]]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // APPROX:       [[WHILE_BODY_I_I_I]]:
 // APPROX-NEXT:    [[TMP2:%.*]] = phi i8 [ [[TMP6:%.*]], %[[IF_END31_I_I_I:.*]] ], [ [[TMP1]], %[[WHILE_BODY_I_I_I_PREHEADER]] ]
 // APPROX-NEXT:    [[__R_050_I_I_I:%.*]] = phi i64 [ [[__R_1_I_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I_PREHEADER]] ]
@@ -4561,7 +4721,11 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // APPROX-NEXT:    [[CMP_NOT_I36_I_I:%.*]] = icmp eq i8 [[TMP12]], 0
 // APPROX-NEXT:    br i1 [[CMP_NOT_I36_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I25_I_I]], !llvm.loop [[LOOP12]]
 // APPROX:       [[_ZL4NANFPKC_EXIT]]:
+<<<<<<< HEAD
 // APPROX-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN_I_I]] ], [ 0, %[[ENTRY]] ], [ [[SUB_I34_I_I]], %[[IF_THEN_I30_I_I]] ], [ 0, %[[WHILE_BODY_I25_I_I]] ], [ [[SUB_I21_I_I]], %[[IF_THEN_I17_I_I]] ], [ 0, %[[WHILE_BODY_I14_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ]
+=======
+// APPROX-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I_I]] ], [ 0, %[[WHILE_COND_I14_I_I_PREHEADER]] ], [ 0, %[[WHILE_COND_I_I_I_PREHEADER]] ], [ [[SUB_I_I_I]], %[[IF_THEN_I_I_I]] ], [ [[ADD28_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ [[SUB_I25_I_I]], %[[IF_THEN_I21_I_I]] ], [ 0, %[[WHILE_BODY_I18_I_I]] ]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // APPROX-NEXT:    [[CONV_I:%.*]] = trunc i64 [[RETVAL_0_I_I]] to i32
 // APPROX-NEXT:    [[BF_VALUE_I:%.*]] = and i32 [[CONV_I]], 4194303
 // APPROX-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i32 [[BF_VALUE_I]], 2143289344
@@ -4584,8 +4748,40 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // NCRDIV-NEXT:      i8 120, label %[[WHILE_BODY_I_I_I_PREHEADER]]
 // NCRDIV-NEXT:      i8 0, label %[[_ZL4NANFPKC_EXIT]]
 // NCRDIV-NEXT:    ]
+<<<<<<< HEAD
 // NCRDIV:       [[WHILE_BODY_I_I_I_PREHEADER]]:
 // NCRDIV-NEXT:    br label %[[WHILE_BODY_I_I_I:.*]]
+=======
+// NCRDIV:       [[WHILE_COND_I_I_I_PREHEADER]]:
+// NCRDIV-NEXT:    br i1 [[CMP_NOT_I_I_I14]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I_I_I:.*]]
+// NCRDIV:       [[IF_THEN5_I_I]]:
+// NCRDIV-NEXT:    br i1 [[CMP_NOT_I_I_I14]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I31_I_I:.*]]
+// NCRDIV:       [[WHILE_BODY_I31_I_I]]:
+// NCRDIV-NEXT:    [[TMP3:%.*]] = phi i8 [ [[TMP7:%.*]], %[[IF_END31_I_I_I:.*]] ], [ [[TMP2]], %[[IF_THEN5_I_I]] ]
+// NCRDIV-NEXT:    [[__R_0_I29_I_I11:%.*]] = phi i64 [ [[ADD28_I_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_THEN5_I_I]] ]
+// NCRDIV-NEXT:    [[__TAGP_ADDR_0_I28_I_I10:%.*]] = phi ptr [ [[INCDEC_PTR_I34_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ [[INCDEC_PTR_I_I]], %[[IF_THEN5_I_I]] ]
+// NCRDIV-NEXT:    [[TMP4:%.*]] = add i8 [[TMP3]], -48
+// NCRDIV-NEXT:    [[OR_COND_I32_I_I:%.*]] = icmp ult i8 [[TMP4]], 10
+// NCRDIV-NEXT:    br i1 [[OR_COND_I32_I_I]], label %[[IF_END31_I_I_I]], label %[[IF_ELSE_I_I_I:.*]]
+// NCRDIV:       [[IF_ELSE_I_I_I]]:
+// NCRDIV-NEXT:    [[TMP5:%.*]] = add i8 [[TMP3]], -97
+// NCRDIV-NEXT:    [[OR_COND33_I_I_I:%.*]] = icmp ult i8 [[TMP5]], 6
+// NCRDIV-NEXT:    br i1 [[OR_COND33_I_I_I]], label %[[IF_END31_I_I_I]], label %[[IF_ELSE17_I_I_I:.*]]
+// NCRDIV:       [[IF_ELSE17_I_I_I]]:
+// NCRDIV-NEXT:    [[TMP6:%.*]] = add i8 [[TMP3]], -65
+// NCRDIV-NEXT:    [[OR_COND34_I_I_I:%.*]] = icmp ult i8 [[TMP6]], 6
+// NCRDIV-NEXT:    br i1 [[OR_COND34_I_I_I]], label %[[IF_END31_I_I_I]], label %[[_ZL4NANFPKC_EXIT]]
+// NCRDIV:       [[IF_END31_I_I_I]]:
+// NCRDIV-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -87, %[[IF_ELSE_I_I_I]] ], [ -48, %[[WHILE_BODY_I31_I_I]] ], [ -55, %[[IF_ELSE17_I_I_I]] ]
+// NCRDIV-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I29_I_I11]], 4
+// NCRDIV-NEXT:    [[CONV25_I_I_I:%.*]] = zext nneg i8 [[TMP3]] to i64
+// NCRDIV-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
+// NCRDIV-NEXT:    [[ADD28_I_I_I]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
+// NCRDIV-NEXT:    [[INCDEC_PTR_I34_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I28_I_I10]], i64 1
+// NCRDIV-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// NCRDIV-NEXT:    [[CMP_NOT_I30_I_I:%.*]] = icmp eq i8 [[TMP7]], 0
+// NCRDIV-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I31_I_I]], !llvm.loop [[LOOP13]]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // NCRDIV:       [[WHILE_BODY_I_I_I]]:
 // NCRDIV-NEXT:    [[TMP2:%.*]] = phi i8 [ [[TMP6:%.*]], %[[IF_END31_I_I_I:.*]] ], [ [[TMP1]], %[[WHILE_BODY_I_I_I_PREHEADER]] ]
 // NCRDIV-NEXT:    [[__R_050_I_I_I:%.*]] = phi i64 [ [[__R_1_I_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I_PREHEADER]] ]
@@ -4658,7 +4854,11 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // NCRDIV-NEXT:    [[CMP_NOT_I36_I_I:%.*]] = icmp eq i8 [[TMP12]], 0
 // NCRDIV-NEXT:    br i1 [[CMP_NOT_I36_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I25_I_I]], !llvm.loop [[LOOP12]]
 // NCRDIV:       [[_ZL4NANFPKC_EXIT]]:
+<<<<<<< HEAD
 // NCRDIV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN_I_I]] ], [ 0, %[[ENTRY]] ], [ [[SUB_I34_I_I]], %[[IF_THEN_I30_I_I]] ], [ 0, %[[WHILE_BODY_I25_I_I]] ], [ [[SUB_I21_I_I]], %[[IF_THEN_I17_I_I]] ], [ 0, %[[WHILE_BODY_I14_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ]
+=======
+// NCRDIV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I_I]] ], [ 0, %[[WHILE_COND_I14_I_I_PREHEADER]] ], [ 0, %[[WHILE_COND_I_I_I_PREHEADER]] ], [ [[SUB_I_I_I]], %[[IF_THEN_I_I_I]] ], [ [[ADD28_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ [[SUB_I25_I_I]], %[[IF_THEN_I21_I_I]] ], [ 0, %[[WHILE_BODY_I18_I_I]] ]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // NCRDIV-NEXT:    [[CONV_I:%.*]] = trunc i64 [[RETVAL_0_I_I]] to i32
 // NCRDIV-NEXT:    [[BF_VALUE_I:%.*]] = and i32 [[CONV_I]], 4194303
 // NCRDIV-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i32 [[BF_VALUE_I]], 2143289344
@@ -4678,8 +4878,46 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // AMDGCNSPIRV-NEXT:      i8 88, label %[[WHILE_BODY_I_I_I_PREHEADER:.*]]
 // AMDGCNSPIRV-NEXT:      i8 120, label %[[WHILE_BODY_I_I_I_PREHEADER]]
 // AMDGCNSPIRV-NEXT:    ]
+<<<<<<< HEAD
 // AMDGCNSPIRV:       [[WHILE_BODY_I_I_I_PREHEADER]]:
 // AMDGCNSPIRV-NEXT:    br label %[[WHILE_BODY_I_I_I:.*]]
+=======
+// AMDGCNSPIRV:       [[IF_THEN5_I_I]]:
+// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I31_I_I5:%.*]] = icmp eq i8 [[TMP2]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I31_I_I5]], label %[[_ZL4NANFPKC_EXIT:.*]], label %[[WHILE_BODY_I32_I_I:.*]]
+// AMDGCNSPIRV:       [[WHILE_BODY_I32_I_I]]:
+// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = phi i8 [ [[TMP7:%.*]], %[[IF_END31_I_I_I:.*]] ], [ [[TMP2]], %[[IF_THEN5_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__R_0_I30_I_I7:%.*]] = phi i64 [ [[ADD28_I_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_THEN5_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I29_I_I6:%.*]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I36_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ [[INCDEC_PTR_I_I]], %[[IF_THEN5_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[TMP4:%.*]] = add i8 [[TMP3]], -48
+// AMDGCNSPIRV-NEXT:    [[OR_COND_I33_I_I:%.*]] = icmp ult i8 [[TMP4]], 10
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I33_I_I]], label %[[IF_END31_I_I_I]], label %[[IF_ELSE_I_I_I:.*]]
+// AMDGCNSPIRV:       [[IF_ELSE_I_I_I]]:
+// AMDGCNSPIRV-NEXT:    [[TMP5:%.*]] = add i8 [[TMP3]], -97
+// AMDGCNSPIRV-NEXT:    [[OR_COND33_I_I_I:%.*]] = icmp ult i8 [[TMP5]], 6
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND33_I_I_I]], label %[[IF_END31_I_I_I]], label %[[IF_ELSE17_I_I_I:.*]]
+// AMDGCNSPIRV:       [[IF_ELSE17_I_I_I]]:
+// AMDGCNSPIRV-NEXT:    [[TMP6:%.*]] = add i8 [[TMP3]], -65
+// AMDGCNSPIRV-NEXT:    [[OR_COND34_I_I_I:%.*]] = icmp ult i8 [[TMP6]], 6
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND34_I_I_I]], label %[[IF_END31_I_I_I]], label %[[_ZL4NANFPKC_EXIT]]
+// AMDGCNSPIRV:       [[IF_END31_I_I_I]]:
+// AMDGCNSPIRV-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -87, %[[IF_ELSE_I_I_I]] ], [ -48, %[[WHILE_BODY_I32_I_I]] ], [ -55, %[[IF_ELSE17_I_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I30_I_I7]], 4
+// AMDGCNSPIRV-NEXT:    [[CONV25_I_I_I:%.*]] = zext nneg i8 [[TMP3]] to i64
+// AMDGCNSPIRV-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
+// AMDGCNSPIRV-NEXT:    [[ADD28_I_I_I]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
+// AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I36_I_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I29_I_I6]], i64 1
+// AMDGCNSPIRV-NEXT:    [[TMP7]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I36_I_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I31_I_I:%.*]] = icmp eq i8 [[TMP7]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I31_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I32_I_I]], !llvm.loop [[LOOP14]]
+// AMDGCNSPIRV:       [[WHILE_COND_I_I_I]]:
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I_I_I:%.*]], %[[WHILE_BODY_I_I_I:.*]] ], [ [[INCDEC_PTR_I_I]], %[[IF_THEN_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__R_0_I_I_I:%.*]] = phi i64 [ [[__R_1_I_I_I:%.*]], %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_THEN_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I_I_I:%.*]] = icmp eq i8 [[TMP8]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I_I_I]], label %[[_ZL4NANFPKC_EXIT]], label %[[WHILE_BODY_I_I_I]]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // AMDGCNSPIRV:       [[WHILE_BODY_I_I_I]]:
 // AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = phi i8 [ [[TMP6:%.*]], %[[IF_END31_I_I_I:.*]] ], [ [[TMP1]], %[[WHILE_BODY_I_I_I_PREHEADER]] ]
 // AMDGCNSPIRV-NEXT:    [[__R_050_I_I_I:%.*]] = phi i64 [ [[__R_1_I_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I_PREHEADER]] ]
@@ -4754,7 +4992,11 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // AMDGCNSPIRV-NEXT:    [[__R_1_I35_I_I]] = select i1 [[OR_COND_I28_I_I]], i64 [[SUB_I32_I_I]], i64 [[__R_0_I25_I_I]]
 // AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I28_I_I]], label %[[WHILE_COND_I23_I_I]], label %[[_ZL4NANFPKC_EXIT]], !llvm.loop [[LOOP13]]
 // AMDGCNSPIRV:       [[_ZL4NANFPKC_EXIT]]:
+<<<<<<< HEAD
 // AMDGCNSPIRV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[WHILE_BODY_I15_I_I]] ], [ [[__R_0_I_I_I]], %[[WHILE_COND_I_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ 0, %[[WHILE_BODY_I27_I_I]] ], [ [[__R_0_I25_I_I]], %[[WHILE_COND_I23_I_I]] ]
+=======
+// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I_I]] ], [ [[ADD28_I_I_I]], %[[IF_END31_I_I_I]] ], [ [[__R_0_I_I_I]], %[[WHILE_COND_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ 0, %[[WHILE_BODY_I18_I_I]] ], [ [[__R_0_I16_I_I]], %[[WHILE_COND_I14_I_I]] ]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = trunc i64 [[RETVAL_0_I_I]] to i32
 // AMDGCNSPIRV-NEXT:    [[BF_VALUE_I:%.*]] = and i32 [[CONV_I]], 4194303
 // AMDGCNSPIRV-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i32 [[BF_VALUE_I]], 2143289344
@@ -4781,8 +5023,40 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // DEFAULT-NEXT:      i8 120, label %[[WHILE_BODY_I_I_I_PREHEADER]]
 // DEFAULT-NEXT:      i8 0, label %[[_ZL3NANPKC_EXIT]]
 // DEFAULT-NEXT:    ]
+<<<<<<< HEAD
 // DEFAULT:       [[WHILE_BODY_I_I_I_PREHEADER]]:
 // DEFAULT-NEXT:    br label %[[WHILE_BODY_I_I_I:.*]]
+=======
+// DEFAULT:       [[WHILE_COND_I_I_I_PREHEADER]]:
+// DEFAULT-NEXT:    br i1 [[CMP_NOT_I_I_I14]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I_I_I:.*]]
+// DEFAULT:       [[IF_THEN5_I_I]]:
+// DEFAULT-NEXT:    br i1 [[CMP_NOT_I_I_I14]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I31_I_I:.*]]
+// DEFAULT:       [[WHILE_BODY_I31_I_I]]:
+// DEFAULT-NEXT:    [[TMP3:%.*]] = phi i8 [ [[TMP7:%.*]], %[[IF_END31_I_I_I:.*]] ], [ [[TMP2]], %[[IF_THEN5_I_I]] ]
+// DEFAULT-NEXT:    [[__R_0_I29_I_I11:%.*]] = phi i64 [ [[ADD28_I_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_THEN5_I_I]] ]
+// DEFAULT-NEXT:    [[__TAGP_ADDR_0_I28_I_I10:%.*]] = phi ptr [ [[INCDEC_PTR_I34_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ [[INCDEC_PTR_I_I]], %[[IF_THEN5_I_I]] ]
+// DEFAULT-NEXT:    [[TMP4:%.*]] = add i8 [[TMP3]], -48
+// DEFAULT-NEXT:    [[OR_COND_I32_I_I:%.*]] = icmp ult i8 [[TMP4]], 10
+// DEFAULT-NEXT:    br i1 [[OR_COND_I32_I_I]], label %[[IF_END31_I_I_I]], label %[[IF_ELSE_I_I_I:.*]]
+// DEFAULT:       [[IF_ELSE_I_I_I]]:
+// DEFAULT-NEXT:    [[TMP5:%.*]] = add i8 [[TMP3]], -97
+// DEFAULT-NEXT:    [[OR_COND33_I_I_I:%.*]] = icmp ult i8 [[TMP5]], 6
+// DEFAULT-NEXT:    br i1 [[OR_COND33_I_I_I]], label %[[IF_END31_I_I_I]], label %[[IF_ELSE17_I_I_I:.*]]
+// DEFAULT:       [[IF_ELSE17_I_I_I]]:
+// DEFAULT-NEXT:    [[TMP6:%.*]] = add i8 [[TMP3]], -65
+// DEFAULT-NEXT:    [[OR_COND34_I_I_I:%.*]] = icmp ult i8 [[TMP6]], 6
+// DEFAULT-NEXT:    br i1 [[OR_COND34_I_I_I]], label %[[IF_END31_I_I_I]], label %[[_ZL3NANPKC_EXIT]]
+// DEFAULT:       [[IF_END31_I_I_I]]:
+// DEFAULT-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -87, %[[IF_ELSE_I_I_I]] ], [ -48, %[[WHILE_BODY_I31_I_I]] ], [ -55, %[[IF_ELSE17_I_I_I]] ]
+// DEFAULT-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I29_I_I11]], 4
+// DEFAULT-NEXT:    [[CONV25_I_I_I:%.*]] = zext nneg i8 [[TMP3]] to i64
+// DEFAULT-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
+// DEFAULT-NEXT:    [[ADD28_I_I_I]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
+// DEFAULT-NEXT:    [[INCDEC_PTR_I34_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I28_I_I10]], i64 1
+// DEFAULT-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// DEFAULT-NEXT:    [[CMP_NOT_I30_I_I:%.*]] = icmp eq i8 [[TMP7]], 0
+// DEFAULT-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I31_I_I]], !llvm.loop [[LOOP13]]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // DEFAULT:       [[WHILE_BODY_I_I_I]]:
 // DEFAULT-NEXT:    [[TMP2:%.*]] = phi i8 [ [[TMP6:%.*]], %[[IF_END31_I_I_I:.*]] ], [ [[TMP1]], %[[WHILE_BODY_I_I_I_PREHEADER]] ]
 // DEFAULT-NEXT:    [[__R_050_I_I_I:%.*]] = phi i64 [ [[__R_1_I_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I_PREHEADER]] ]
@@ -4855,7 +5129,11 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // DEFAULT-NEXT:    [[CMP_NOT_I36_I_I:%.*]] = icmp eq i8 [[TMP12]], 0
 // DEFAULT-NEXT:    br i1 [[CMP_NOT_I36_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I25_I_I]], !llvm.loop [[LOOP12]]
 // DEFAULT:       [[_ZL3NANPKC_EXIT]]:
+<<<<<<< HEAD
 // DEFAULT-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN_I_I]] ], [ 0, %[[ENTRY]] ], [ [[SUB_I34_I_I]], %[[IF_THEN_I30_I_I]] ], [ 0, %[[WHILE_BODY_I25_I_I]] ], [ [[SUB_I21_I_I]], %[[IF_THEN_I17_I_I]] ], [ 0, %[[WHILE_BODY_I14_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ]
+=======
+// DEFAULT-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I_I]] ], [ 0, %[[WHILE_COND_I14_I_I_PREHEADER]] ], [ 0, %[[WHILE_COND_I_I_I_PREHEADER]] ], [ [[SUB_I_I_I]], %[[IF_THEN_I_I_I]] ], [ [[ADD28_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ [[SUB_I25_I_I]], %[[IF_THEN_I21_I_I]] ], [ 0, %[[WHILE_BODY_I18_I_I]] ]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // DEFAULT-NEXT:    [[BF_VALUE_I:%.*]] = and i64 [[RETVAL_0_I_I]], 2251799813685247
 // DEFAULT-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i64 [[BF_VALUE_I]], 9221120237041090560
 // DEFAULT-NEXT:    [[TMP13:%.*]] = bitcast i64 [[BF_SET9_I]] to double
@@ -4882,8 +5160,40 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // APPROX-NEXT:      i8 120, label %[[WHILE_BODY_I_I_I_PREHEADER]]
 // APPROX-NEXT:      i8 0, label %[[_ZL3NANPKC_EXIT]]
 // APPROX-NEXT:    ]
+<<<<<<< HEAD
 // APPROX:       [[WHILE_BODY_I_I_I_PREHEADER]]:
 // APPROX-NEXT:    br label %[[WHILE_BODY_I_I_I:.*]]
+=======
+// APPROX:       [[WHILE_COND_I_I_I_PREHEADER]]:
+// APPROX-NEXT:    br i1 [[CMP_NOT_I_I_I14]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I_I_I:.*]]
+// APPROX:       [[IF_THEN5_I_I]]:
+// APPROX-NEXT:    br i1 [[CMP_NOT_I_I_I14]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I31_I_I:.*]]
+// APPROX:       [[WHILE_BODY_I31_I_I]]:
+// APPROX-NEXT:    [[TMP3:%.*]] = phi i8 [ [[TMP7:%.*]], %[[IF_END31_I_I_I:.*]] ], [ [[TMP2]], %[[IF_THEN5_I_I]] ]
+// APPROX-NEXT:    [[__R_0_I29_I_I11:%.*]] = phi i64 [ [[ADD28_I_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_THEN5_I_I]] ]
+// APPROX-NEXT:    [[__TAGP_ADDR_0_I28_I_I10:%.*]] = phi ptr [ [[INCDEC_PTR_I34_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ [[INCDEC_PTR_I_I]], %[[IF_THEN5_I_I]] ]
+// APPROX-NEXT:    [[TMP4:%.*]] = add i8 [[TMP3]], -48
+// APPROX-NEXT:    [[OR_COND_I32_I_I:%.*]] = icmp ult i8 [[TMP4]], 10
+// APPROX-NEXT:    br i1 [[OR_COND_I32_I_I]], label %[[IF_END31_I_I_I]], label %[[IF_ELSE_I_I_I:.*]]
+// APPROX:       [[IF_ELSE_I_I_I]]:
+// APPROX-NEXT:    [[TMP5:%.*]] = add i8 [[TMP3]], -97
+// APPROX-NEXT:    [[OR_COND33_I_I_I:%.*]] = icmp ult i8 [[TMP5]], 6
+// APPROX-NEXT:    br i1 [[OR_COND33_I_I_I]], label %[[IF_END31_I_I_I]], label %[[IF_ELSE17_I_I_I:.*]]
+// APPROX:       [[IF_ELSE17_I_I_I]]:
+// APPROX-NEXT:    [[TMP6:%.*]] = add i8 [[TMP3]], -65
+// APPROX-NEXT:    [[OR_COND34_I_I_I:%.*]] = icmp ult i8 [[TMP6]], 6
+// APPROX-NEXT:    br i1 [[OR_COND34_I_I_I]], label %[[IF_END31_I_I_I]], label %[[_ZL3NANPKC_EXIT]]
+// APPROX:       [[IF_END31_I_I_I]]:
+// APPROX-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -87, %[[IF_ELSE_I_I_I]] ], [ -48, %[[WHILE_BODY_I31_I_I]] ], [ -55, %[[IF_ELSE17_I_I_I]] ]
+// APPROX-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I29_I_I11]], 4
+// APPROX-NEXT:    [[CONV25_I_I_I:%.*]] = zext nneg i8 [[TMP3]] to i64
+// APPROX-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
+// APPROX-NEXT:    [[ADD28_I_I_I]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
+// APPROX-NEXT:    [[INCDEC_PTR_I34_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I28_I_I10]], i64 1
+// APPROX-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// APPROX-NEXT:    [[CMP_NOT_I30_I_I:%.*]] = icmp eq i8 [[TMP7]], 0
+// APPROX-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I31_I_I]], !llvm.loop [[LOOP13]]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // APPROX:       [[WHILE_BODY_I_I_I]]:
 // APPROX-NEXT:    [[TMP2:%.*]] = phi i8 [ [[TMP6:%.*]], %[[IF_END31_I_I_I:.*]] ], [ [[TMP1]], %[[WHILE_BODY_I_I_I_PREHEADER]] ]
 // APPROX-NEXT:    [[__R_050_I_I_I:%.*]] = phi i64 [ [[__R_1_I_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I_PREHEADER]] ]
@@ -4956,7 +5266,11 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // APPROX-NEXT:    [[CMP_NOT_I36_I_I:%.*]] = icmp eq i8 [[TMP12]], 0
 // APPROX-NEXT:    br i1 [[CMP_NOT_I36_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I25_I_I]], !llvm.loop [[LOOP12]]
 // APPROX:       [[_ZL3NANPKC_EXIT]]:
+<<<<<<< HEAD
 // APPROX-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN_I_I]] ], [ 0, %[[ENTRY]] ], [ [[SUB_I34_I_I]], %[[IF_THEN_I30_I_I]] ], [ 0, %[[WHILE_BODY_I25_I_I]] ], [ [[SUB_I21_I_I]], %[[IF_THEN_I17_I_I]] ], [ 0, %[[WHILE_BODY_I14_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ]
+=======
+// APPROX-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I_I]] ], [ 0, %[[WHILE_COND_I14_I_I_PREHEADER]] ], [ 0, %[[WHILE_COND_I_I_I_PREHEADER]] ], [ [[SUB_I_I_I]], %[[IF_THEN_I_I_I]] ], [ [[ADD28_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ [[SUB_I25_I_I]], %[[IF_THEN_I21_I_I]] ], [ 0, %[[WHILE_BODY_I18_I_I]] ]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // APPROX-NEXT:    [[BF_VALUE_I:%.*]] = and i64 [[RETVAL_0_I_I]], 2251799813685247
 // APPROX-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i64 [[BF_VALUE_I]], 9221120237041090560
 // APPROX-NEXT:    [[TMP13:%.*]] = bitcast i64 [[BF_SET9_I]] to double
@@ -4978,8 +5292,40 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // NCRDIV-NEXT:      i8 120, label %[[WHILE_BODY_I_I_I_PREHEADER]]
 // NCRDIV-NEXT:      i8 0, label %[[_ZL3NANPKC_EXIT]]
 // NCRDIV-NEXT:    ]
+<<<<<<< HEAD
 // NCRDIV:       [[WHILE_BODY_I_I_I_PREHEADER]]:
 // NCRDIV-NEXT:    br label %[[WHILE_BODY_I_I_I:.*]]
+=======
+// NCRDIV:       [[WHILE_COND_I_I_I_PREHEADER]]:
+// NCRDIV-NEXT:    br i1 [[CMP_NOT_I_I_I14]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I_I_I:.*]]
+// NCRDIV:       [[IF_THEN5_I_I]]:
+// NCRDIV-NEXT:    br i1 [[CMP_NOT_I_I_I14]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I31_I_I:.*]]
+// NCRDIV:       [[WHILE_BODY_I31_I_I]]:
+// NCRDIV-NEXT:    [[TMP3:%.*]] = phi i8 [ [[TMP7:%.*]], %[[IF_END31_I_I_I:.*]] ], [ [[TMP2]], %[[IF_THEN5_I_I]] ]
+// NCRDIV-NEXT:    [[__R_0_I29_I_I11:%.*]] = phi i64 [ [[ADD28_I_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_THEN5_I_I]] ]
+// NCRDIV-NEXT:    [[__TAGP_ADDR_0_I28_I_I10:%.*]] = phi ptr [ [[INCDEC_PTR_I34_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ [[INCDEC_PTR_I_I]], %[[IF_THEN5_I_I]] ]
+// NCRDIV-NEXT:    [[TMP4:%.*]] = add i8 [[TMP3]], -48
+// NCRDIV-NEXT:    [[OR_COND_I32_I_I:%.*]] = icmp ult i8 [[TMP4]], 10
+// NCRDIV-NEXT:    br i1 [[OR_COND_I32_I_I]], label %[[IF_END31_I_I_I]], label %[[IF_ELSE_I_I_I:.*]]
+// NCRDIV:       [[IF_ELSE_I_I_I]]:
+// NCRDIV-NEXT:    [[TMP5:%.*]] = add i8 [[TMP3]], -97
+// NCRDIV-NEXT:    [[OR_COND33_I_I_I:%.*]] = icmp ult i8 [[TMP5]], 6
+// NCRDIV-NEXT:    br i1 [[OR_COND33_I_I_I]], label %[[IF_END31_I_I_I]], label %[[IF_ELSE17_I_I_I:.*]]
+// NCRDIV:       [[IF_ELSE17_I_I_I]]:
+// NCRDIV-NEXT:    [[TMP6:%.*]] = add i8 [[TMP3]], -65
+// NCRDIV-NEXT:    [[OR_COND34_I_I_I:%.*]] = icmp ult i8 [[TMP6]], 6
+// NCRDIV-NEXT:    br i1 [[OR_COND34_I_I_I]], label %[[IF_END31_I_I_I]], label %[[_ZL3NANPKC_EXIT]]
+// NCRDIV:       [[IF_END31_I_I_I]]:
+// NCRDIV-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -87, %[[IF_ELSE_I_I_I]] ], [ -48, %[[WHILE_BODY_I31_I_I]] ], [ -55, %[[IF_ELSE17_I_I_I]] ]
+// NCRDIV-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I29_I_I11]], 4
+// NCRDIV-NEXT:    [[CONV25_I_I_I:%.*]] = zext nneg i8 [[TMP3]] to i64
+// NCRDIV-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
+// NCRDIV-NEXT:    [[ADD28_I_I_I]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
+// NCRDIV-NEXT:    [[INCDEC_PTR_I34_I_I]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I28_I_I10]], i64 1
+// NCRDIV-NEXT:    [[TMP7]] = load i8, ptr [[INCDEC_PTR_I34_I_I]], align 1, !tbaa [[CHAR_TBAA8]]
+// NCRDIV-NEXT:    [[CMP_NOT_I30_I_I:%.*]] = icmp eq i8 [[TMP7]], 0
+// NCRDIV-NEXT:    br i1 [[CMP_NOT_I30_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I31_I_I]], !llvm.loop [[LOOP13]]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // NCRDIV:       [[WHILE_BODY_I_I_I]]:
 // NCRDIV-NEXT:    [[TMP2:%.*]] = phi i8 [ [[TMP6:%.*]], %[[IF_END31_I_I_I:.*]] ], [ [[TMP1]], %[[WHILE_BODY_I_I_I_PREHEADER]] ]
 // NCRDIV-NEXT:    [[__R_050_I_I_I:%.*]] = phi i64 [ [[__R_1_I_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I_PREHEADER]] ]
@@ -5052,7 +5398,11 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // NCRDIV-NEXT:    [[CMP_NOT_I36_I_I:%.*]] = icmp eq i8 [[TMP12]], 0
 // NCRDIV-NEXT:    br i1 [[CMP_NOT_I36_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I25_I_I]], !llvm.loop [[LOOP12]]
 // NCRDIV:       [[_ZL3NANPKC_EXIT]]:
+<<<<<<< HEAD
 // NCRDIV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN_I_I]] ], [ 0, %[[ENTRY]] ], [ [[SUB_I34_I_I]], %[[IF_THEN_I30_I_I]] ], [ 0, %[[WHILE_BODY_I25_I_I]] ], [ [[SUB_I21_I_I]], %[[IF_THEN_I17_I_I]] ], [ 0, %[[WHILE_BODY_I14_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ]
+=======
+// NCRDIV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I_I]] ], [ 0, %[[WHILE_COND_I14_I_I_PREHEADER]] ], [ 0, %[[WHILE_COND_I_I_I_PREHEADER]] ], [ [[SUB_I_I_I]], %[[IF_THEN_I_I_I]] ], [ [[ADD28_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ [[SUB_I25_I_I]], %[[IF_THEN_I21_I_I]] ], [ 0, %[[WHILE_BODY_I18_I_I]] ]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // NCRDIV-NEXT:    [[BF_VALUE_I:%.*]] = and i64 [[RETVAL_0_I_I]], 2251799813685247
 // NCRDIV-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i64 [[BF_VALUE_I]], 9221120237041090560
 // NCRDIV-NEXT:    [[TMP13:%.*]] = bitcast i64 [[BF_SET9_I]] to double
@@ -5071,8 +5421,46 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // AMDGCNSPIRV-NEXT:      i8 88, label %[[WHILE_BODY_I_I_I_PREHEADER:.*]]
 // AMDGCNSPIRV-NEXT:      i8 120, label %[[WHILE_BODY_I_I_I_PREHEADER]]
 // AMDGCNSPIRV-NEXT:    ]
+<<<<<<< HEAD
 // AMDGCNSPIRV:       [[WHILE_BODY_I_I_I_PREHEADER]]:
 // AMDGCNSPIRV-NEXT:    br label %[[WHILE_BODY_I_I_I:.*]]
+=======
+// AMDGCNSPIRV:       [[IF_THEN5_I_I]]:
+// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I31_I_I5:%.*]] = icmp eq i8 [[TMP2]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I31_I_I5]], label %[[_ZL3NANPKC_EXIT:.*]], label %[[WHILE_BODY_I32_I_I:.*]]
+// AMDGCNSPIRV:       [[WHILE_BODY_I32_I_I]]:
+// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = phi i8 [ [[TMP7:%.*]], %[[IF_END31_I_I_I:.*]] ], [ [[TMP2]], %[[IF_THEN5_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__R_0_I30_I_I7:%.*]] = phi i64 [ [[ADD28_I_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_THEN5_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I29_I_I6:%.*]] = phi ptr addrspace(4) [ [[INCDEC_PTR_I36_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ [[INCDEC_PTR_I_I]], %[[IF_THEN5_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[TMP4:%.*]] = add i8 [[TMP3]], -48
+// AMDGCNSPIRV-NEXT:    [[OR_COND_I33_I_I:%.*]] = icmp ult i8 [[TMP4]], 10
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I33_I_I]], label %[[IF_END31_I_I_I]], label %[[IF_ELSE_I_I_I:.*]]
+// AMDGCNSPIRV:       [[IF_ELSE_I_I_I]]:
+// AMDGCNSPIRV-NEXT:    [[TMP5:%.*]] = add i8 [[TMP3]], -97
+// AMDGCNSPIRV-NEXT:    [[OR_COND33_I_I_I:%.*]] = icmp ult i8 [[TMP5]], 6
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND33_I_I_I]], label %[[IF_END31_I_I_I]], label %[[IF_ELSE17_I_I_I:.*]]
+// AMDGCNSPIRV:       [[IF_ELSE17_I_I_I]]:
+// AMDGCNSPIRV-NEXT:    [[TMP6:%.*]] = add i8 [[TMP3]], -65
+// AMDGCNSPIRV-NEXT:    [[OR_COND34_I_I_I:%.*]] = icmp ult i8 [[TMP6]], 6
+// AMDGCNSPIRV-NEXT:    br i1 [[OR_COND34_I_I_I]], label %[[IF_END31_I_I_I]], label %[[_ZL3NANPKC_EXIT]]
+// AMDGCNSPIRV:       [[IF_END31_I_I_I]]:
+// AMDGCNSPIRV-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -87, %[[IF_ELSE_I_I_I]] ], [ -48, %[[WHILE_BODY_I32_I_I]] ], [ -55, %[[IF_ELSE17_I_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I30_I_I7]], 4
+// AMDGCNSPIRV-NEXT:    [[CONV25_I_I_I:%.*]] = zext nneg i8 [[TMP3]] to i64
+// AMDGCNSPIRV-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
+// AMDGCNSPIRV-NEXT:    [[ADD28_I_I_I]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
+// AMDGCNSPIRV-NEXT:    [[INCDEC_PTR_I36_I_I]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[__TAGP_ADDR_0_I29_I_I6]], i64 1
+// AMDGCNSPIRV-NEXT:    [[TMP7]] = load i8, ptr addrspace(4) [[INCDEC_PTR_I36_I_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I31_I_I:%.*]] = icmp eq i8 [[TMP7]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I31_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I32_I_I]], !llvm.loop [[LOOP14]]
+// AMDGCNSPIRV:       [[WHILE_COND_I_I_I]]:
+// AMDGCNSPIRV-NEXT:    [[__TAGP_ADDR_0_I_I_I:%.*]] = phi ptr addrspace(4) [ [[__TAGP_ADDR_1_I_I_I:%.*]], %[[WHILE_BODY_I_I_I:.*]] ], [ [[INCDEC_PTR_I_I]], %[[IF_THEN_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[__R_0_I_I_I:%.*]] = phi i64 [ [[__R_1_I_I_I:%.*]], %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_THEN_I_I]] ]
+// AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = load i8, ptr addrspace(4) [[__TAGP_ADDR_0_I_I_I]], align 1, !tbaa [[CHAR_TBAA9]]
+// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I_I_I:%.*]] = icmp eq i8 [[TMP8]], 0
+// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I_I_I]], label %[[_ZL3NANPKC_EXIT]], label %[[WHILE_BODY_I_I_I]]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // AMDGCNSPIRV:       [[WHILE_BODY_I_I_I]]:
 // AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = phi i8 [ [[TMP6:%.*]], %[[IF_END31_I_I_I:.*]] ], [ [[TMP1]], %[[WHILE_BODY_I_I_I_PREHEADER]] ]
 // AMDGCNSPIRV-NEXT:    [[__R_050_I_I_I:%.*]] = phi i64 [ [[__R_1_I_I_I:%.*]], %[[IF_END31_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I_PREHEADER]] ]
@@ -5147,7 +5535,11 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // AMDGCNSPIRV-NEXT:    [[__R_1_I35_I_I]] = select i1 [[OR_COND_I28_I_I]], i64 [[SUB_I32_I_I]], i64 [[__R_0_I25_I_I]]
 // AMDGCNSPIRV-NEXT:    br i1 [[OR_COND_I28_I_I]], label %[[WHILE_COND_I23_I_I]], label %[[_ZL3NANPKC_EXIT]], !llvm.loop [[LOOP13]]
 // AMDGCNSPIRV:       [[_ZL3NANPKC_EXIT]]:
+<<<<<<< HEAD
 // AMDGCNSPIRV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[WHILE_BODY_I15_I_I]] ], [ [[__R_0_I_I_I]], %[[WHILE_COND_I_I_I]] ], [ [[__R_1_I_I_I]], %[[IF_END31_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ 0, %[[WHILE_BODY_I27_I_I]] ], [ [[__R_0_I25_I_I]], %[[WHILE_COND_I23_I_I]] ]
+=======
+// AMDGCNSPIRV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, %[[IF_THEN5_I_I]] ], [ [[ADD28_I_I_I]], %[[IF_END31_I_I_I]] ], [ [[__R_0_I_I_I]], %[[WHILE_COND_I_I_I]] ], [ 0, %[[WHILE_BODY_I_I_I]] ], [ 0, %[[IF_ELSE17_I_I_I]] ], [ 0, %[[WHILE_BODY_I18_I_I]] ], [ [[__R_0_I16_I_I]], %[[WHILE_COND_I14_I_I]] ]
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 // AMDGCNSPIRV-NEXT:    [[BF_VALUE_I:%.*]] = and i64 [[RETVAL_0_I_I]], 2251799813685247
 // AMDGCNSPIRV-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i64 [[BF_VALUE_I]], 9221120237041090560
 // AMDGCNSPIRV-NEXT:    [[TMP11:%.*]] = bitcast i64 [[BF_SET9_I]] to double
@@ -9048,7 +9440,7 @@ extern "C" __device__ float test___sinf(float x) {
   return __sinf(x);
 }
 
-// DEFAULT-LABEL: define dso_local float @test___tanf(
+// DEFAULT-LABEL: define dso_local noundef float @test___tanf(
 // DEFAULT-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR6]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[CALL_I_I:%.*]] = tail call contract noundef float @__ocml_native_sin_f32(float noundef [[X]]) #[[ATTR15]]
@@ -9066,7 +9458,7 @@ extern "C" __device__ float test___sinf(float x) {
 // FINITEONLY-NEXT:    [[MUL_I:%.*]] = fmul nnan ninf contract float [[CALL_I_I]], [[TMP0]]
 // FINITEONLY-NEXT:    ret float [[MUL_I]]
 //
-// APPROX-LABEL: define dso_local float @test___tanf(
+// APPROX-LABEL: define dso_local noundef float @test___tanf(
 // APPROX-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR6]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[CALL_I_I:%.*]] = tail call contract noundef float @__ocml_native_sin_f32(float noundef [[X]]) #[[ATTR15]]
@@ -9075,7 +9467,7 @@ extern "C" __device__ float test___sinf(float x) {
 // APPROX-NEXT:    [[MUL_I:%.*]] = fmul contract float [[CALL_I_I]], [[TMP0]]
 // APPROX-NEXT:    ret float [[MUL_I]]
 //
-// NCRDIV-LABEL: define dso_local float @test___tanf(
+// NCRDIV-LABEL: define dso_local noundef float @test___tanf(
 // NCRDIV-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR6]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[CALL_I_I:%.*]] = tail call contract noundef float @__ocml_native_sin_f32(float noundef [[X]]) #[[ATTR15]]
@@ -9084,7 +9476,7 @@ extern "C" __device__ float test___sinf(float x) {
 // NCRDIV-NEXT:    [[MUL_I:%.*]] = fmul contract float [[CALL_I_I]], [[TMP0]]
 // NCRDIV-NEXT:    ret float [[MUL_I]]
 //
-// AMDGCNSPIRV-LABEL: define spir_func float @test___tanf(
+// AMDGCNSPIRV-LABEL: define spir_func noundef float @test___tanf(
 // AMDGCNSPIRV-SAME: float noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR6]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[CALL_I_I:%.*]] = tail call contract spir_func noundef addrspace(4) float @__ocml_native_sin_f32(float noundef [[X]]) #[[ATTR15]]

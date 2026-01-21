@@ -35,19 +35,23 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
   cl::ReallyHidden,
   cl::init(true));
 
+<<<<<<< HEAD
 static cl::opt<bool> EnableSpillCFISavedRegs(
     "amdgpu-spill-cfi-saved-regs",
     cl::desc("Enable spilling the registers required for CFI emission"),
     cl::ReallyHidden, cl::init(false), cl::ZeroOrMore);
 
 std::array<std::vector<int16_t>, 36> SIRegisterInfo::RegSplitParts;
+=======
+std::array<std::vector<int16_t>, 48> SIRegisterInfo::RegSplitParts;
+>>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
 
 // Map numbers of DWORDs to indexes in SubRegFromChannelTable.
 // Valid indexes are shifted 1, such that a 0 mapping means unsupported.
 // e.g. for 8 DWORDs (256-bit), SubRegFromChannelTableWidthMap[8] = 8,
 //      meaning index 7 in SubRegFromChannelTable.
-static const std::array<unsigned, 19> SubRegFromChannelTableWidthMap = {
+static const std::array<unsigned, 33> SubRegFromChannelTableWidthMap = {
     0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0};
 
 static void emitUnsupportedError(const Function &Fn, const MachineInstr &MI,
@@ -1501,7 +1505,7 @@ spillVGPRtoAGPR(const GCNSubtarget &ST, MachineBasicBlock &MBB,
   unsigned Dst = IsStore ? Reg : ValueReg;
   unsigned Src = IsStore ? ValueReg : Reg;
   bool IsVGPR = TRI->isVGPR(MRI, Reg);
-  DebugLoc DL = MI->getDebugLoc();
+  const DebugLoc &DL = MI->getDebugLoc();
   if (IsVGPR == TRI->isVGPR(MRI, ValueReg)) {
     // Spiller during regalloc may restore a spilled register to its superclass.
     // It could result in AGPR spills restored to VGPRs or the other way around,
@@ -3935,8 +3939,8 @@ SIRegisterInfo::getEquivalentAGPRClass(const TargetRegisterClass *SRC) const {
 const TargetRegisterClass *
 SIRegisterInfo::getEquivalentAVClass(const TargetRegisterClass *SRC) const {
   unsigned Size = getRegSizeInBits(*SRC);
-  const TargetRegisterClass *ARC = 
-    getAllocatableClass(getVectorSuperClassForBitWidth(Size));
+  const TargetRegisterClass *ARC =
+      getAllocatableClass(getVectorSuperClassForBitWidth(Size));
   assert(ARC && "Invalid register class size");
   return ARC;
 }

@@ -196,6 +196,7 @@ public:
     ImmTyMatrixBScaleFmt,
     ImmTyMatrixAReuse,
     ImmTyMatrixBReuse,
+    ImmTyPredXDL,
     ImmTyScaleSel,
     ImmTyAuxData,
     ImmTyIdxs,
@@ -423,6 +424,7 @@ public:
   bool isMatrixBScaleFmt() const { return isImmTy(ImmTyMatrixBScaleFmt); }
   bool isMatrixAReuse() const { return isImmTy(ImmTyMatrixAReuse); }
   bool isMatrixBReuse() const { return isImmTy(ImmTyMatrixBReuse); }
+  bool isPredXDL() const { return isImmTy(ImmTyPredXDL); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
   bool isFORMAT() const { return isImmTy(ImmTyFORMAT) && isUInt<7>(getImm()); }
   bool isDppFI() const { return isImmTy(ImmTyDppFI); }
@@ -673,6 +675,18 @@ public:
 
   bool isVCSrc_v2b32() const { return isVCSrc_b64(); }
 
+  bool isVCSrc_b128_Lo256() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_128_Lo256RegClassID, MVT::v2i64);
+  }
+
+  bool isVCSrc_b256_Lo256() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_256_Lo256RegClassID, MVT::v4i64);
+  }
+
+  bool isVCSrc_b512_Lo256() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_512_Lo256RegClassID, MVT::v8i64);
+  }
+
   bool isVSrc_v2b32() const { return isVSrc_b64() || isLiteralImm(MVT::v2i32); }
 
   bool isVSrc_f32() const {
@@ -760,6 +774,10 @@ public:
 
   bool isVISrcV2F16() const {
     return isVISrcF16() || isVISrcB32();
+  }
+
+  bool isVISrc_32_b32() const {
+    return isVISrcB32();
   }
 
   bool isVISrc_64_bf16() const {
@@ -1270,6 +1288,7 @@ public:
     case ImmTyMatrixBScaleFmt: OS << "ImmTyMatrixBScaleFmt"; break;
     case ImmTyMatrixAReuse: OS << "ImmTyMatrixAReuse"; break;
     case ImmTyMatrixBReuse: OS << "ImmTyMatrixBReuse"; break;
+    case ImmTyPredXDL: OS << "ImmTyPredXDL"; break;
     case ImmTyScaleSel: OS << "ScaleSel" ; break;
     case ImmTyAuxData: OS << "ImmTyAuxData"; break;
     case ImmTyIdxs: OS << "ImmTyIdxs"; break;
@@ -2767,8 +2786,12 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
         return AMDGPU::VReg_512RegClassID;
       case 576:
         return AMDGPU::VReg_576RegClassID;
+      case 768:
+        return AMDGPU::VReg_768RegClassID;
       case 1024:
         return AMDGPU::VReg_1024RegClassID;
+      case 1536:
+        return AMDGPU::Pseudo_VGPR_1536RegClassID;
       case 2048:
         return AMDGPU::Pseudo_VGPR_2048RegClassID;
     }
@@ -2849,6 +2872,8 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
         return AMDGPU::AReg_512RegClassID;
       case 576:
         return AMDGPU::AReg_576RegClassID;
+      case 768:
+        return AMDGPU::AReg_768RegClassID;
       case 1024:
         return AMDGPU::AReg_1024RegClassID;
     }
@@ -5260,6 +5285,14 @@ bool AMDGPUAsmParser::validateNeg(const MCInst &Inst, AMDGPU::OpName OpName) {
 
   unsigned Neg = Inst.getOperand(NegIdx).getImm();
 
+  // For WMMA instructions with pred_xdl, the corresponding neg_lo bit
+  // (determined by PredXDLIdx) is repurposed for pred_xdl and cannot be set.
+  if (OpName == AMDGPU::OpName::neg_lo) {
+    int PredXDLIdx = AMDGPU::getWMMAPredXDLIdx(Opc);
+    if (PredXDLIdx >= 0 && (Neg & (1 << PredXDLIdx)))
+      return false;
+  }
+
   // Instructions that have neg_lo or neg_hi operand but neg modifier is allowed
   // on some src operands but not allowed on other.
   // It is convenient that such instructions don't have src_modifiers operand
@@ -5840,7 +5873,12 @@ bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
         TRI->getRegClass(MII.getOpRegClassID(Desc.operands()[SrcIdx], HwMode))
             .getSizeInBits();
 
-    if (RegSize == AMDGPU::wmmaScaleF8F6F4FormatToNumRegs(Fmt) * 32)
+    AMDGPU::WMMAF8F6F4Matrix Matrix = SrcOp == AMDGPU::OpName::src0
+                                          ? AMDGPU::WMMAF8F6F4Matrix::A
+                                          : AMDGPU::WMMAF8F6F4Matrix::B;
+
+    if (RegSize ==
+        AMDGPU::getNumRegsFromWMMAScaleF8F6F4Format(Opc, Matrix, Fmt) * 32)
       return true;
 
     static const char *FmtNames[] = {"MATRIX_FMT_FP8", "MATRIX_FMT_BF8",
@@ -10064,6 +10102,9 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::matrix_b_reuse))
     addOptionalImmOperand(Inst, Operands, OptIdx,
                           AMDGPUOperand::ImmTyMatrixBReuse, 0);
+
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::pred_xdl))
+    addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyPredXDL);
 
   int NegLoIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::neg_lo);
   if (NegLoIdx != -1)

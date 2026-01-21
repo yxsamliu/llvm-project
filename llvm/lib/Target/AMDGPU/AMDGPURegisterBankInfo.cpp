@@ -4910,6 +4910,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_wmma_f32_32x16x128_f4:
     case Intrinsic::amdgcn_wmma_scale_f32_32x16x128_f4:
     case Intrinsic::amdgcn_wmma_scale16_f32_32x16x128_f4:
+    case Intrinsic::amdgcn_wmma_tr_16x16_b16:
+    case Intrinsic::amdgcn_wmma_tr_32x32_b16:
     case Intrinsic::amdgcn_swmmac_f16_16x16x64_f16:
     case Intrinsic::amdgcn_swmmac_bf16_16x16x64_bf16:
     case Intrinsic::amdgcn_swmmac_f32_16x16x64_bf16:
@@ -5411,11 +5413,20 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[2] = AMDGPU::getValueMapping(SrcBank, SrcSize);
       break;
     }
-    case Intrinsic::amdgcn_s_bitreplicate:
+    case Intrinsic::amdgcn_s_bitreplicate: {
       Register MaskReg = MI.getOperand(2).getReg();
       unsigned MaskBank = getRegBankID(MaskReg, MRI, AMDGPU::SGPRRegBankID);
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, 64);
       OpdsMapping[2] = AMDGPU::getValueMapping(MaskBank, 32);
+      break;
+    }
+    case Intrinsic::amdgcn_wave_shuffle: {
+      unsigned OpSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, OpSize);
+      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, OpSize);
+      OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, OpSize);
+      break;
+    }
     }
     break;
   }
@@ -5538,6 +5549,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_global_tiled_store_half_vst2_b128:
     case Intrinsic::amdgcn_global_tiled_store_b128:
     case Intrinsic::amdgcn_global_tiled_store_vst2_b128:
+    case Intrinsic::amdgcn_global_tiled_load_2x2_b128:
+    case Intrinsic::amdgcn_ds_tiled_load_half_b64:
+    case Intrinsic::amdgcn_ds_tiled_load_b64:
+    case Intrinsic::amdgcn_ds_tiled_load_b128:
+    case Intrinsic::amdgcn_ds_tiled_load_2x2_b128:
     case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
     case Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64:
       return getDefaultMappingAllVGPR(MI);

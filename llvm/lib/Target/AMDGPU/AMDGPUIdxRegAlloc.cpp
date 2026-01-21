@@ -70,6 +70,39 @@ FunctionPass *llvm::createAMDGPUIdxRegAllocPass() {
 
 constexpr int NumIDXReg = 4;
 
+/// If OldOp's reg only appears in the index operand in a bundled set of
+/// instructions, perform a replacement by NewOp. If instead it has other
+/// additional uses, perform an addition to the header.
+static bool updateBundleHeader(MachineInstr &BundledMI,
+                                     const MachineOperand &NewOp,
+                                     const MachineOperand &OldOp,
+                                     const TargetRegisterInfo *TRI) {
+  assert(BundledMI.isBundled());
+
+  auto BundleStart = getBundleStart(BundledMI.getIterator());
+  auto BundleEnd = getBundleEnd(BundledMI.getIterator());
+
+  for (auto It = std::next(BundleStart); It != BundleEnd; ++It) {
+    // Get the idx operand if this is a VLoadStoreIdxInst, so we can skip it.
+    const MachineOperand *IdxOp = nullptr;
+    if (auto *LdSt = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&*It))
+      IdxOp = &LdSt->getIdxOp();
+
+    for (const MachineOperand &MO : It->uses()) {
+      if (!MO.isReg() || MO.getReg() != OldOp.getReg())
+        continue;
+      // Skip if this is the idx operand of a VLoadStoreIdxInst
+      if (IdxOp && &MO == IdxOp)
+        continue;
+
+      BundleStart->addOperand(MachineOperand::CreateReg(
+                  NewOp.getReg(), /*isDef=*/false, /*isImp=*/true));
+      return true;
+    }
+  }
+  return updateReplacedRegInBundle(BundledMI, NewOp, OldOp, TRI);
+}
+
 bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
   // Idx0 is used for dynamic indexing and for
   // accessing wave-private space.
@@ -111,7 +144,7 @@ bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
           // simply redirect the indexing operand to the setter
           MachineOperand &NewOp = IdxInfo[i].SetIdxMI->getOperand(0);
           if (MI.isBundled()) {
-            updateReplacedRegInBundle(MI, NewOp, *IdxOpnd, TRI);
+            updateBundleHeader(MI, NewOp, *IdxOpnd, TRI);
             ActiveBundleIdxUses.set(i);
           }
           IdxOpnd->setReg(NewOp.getReg());
@@ -196,7 +229,7 @@ bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
       MachineOperand &NewOp = IdxInfo[FreeIdx].SetIdxMI->getOperand(0);
       if (MI.isBundled()) {
         ActiveBundleIdxUses.set(FreeIdx);
-        updateReplacedRegInBundle(MI, NewOp, *IdxOpnd, TRI);
+        updateBundleHeader(MI, NewOp, *IdxOpnd, TRI);
         if (FreeIdx == 0) {
           // insert restore
           ensurePrivateVgprBase(*MBB.getParent());

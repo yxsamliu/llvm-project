@@ -121,7 +121,6 @@ define amdgpu_kernel void @test_s_barrier_workgroup_fence() {
 ; GFX1260:       ; %bb.0: ; %entry
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    s_wait_expcnt 0x0
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_barrier_signal -1

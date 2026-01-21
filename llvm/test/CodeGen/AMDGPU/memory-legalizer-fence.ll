@@ -1337,7 +1337,6 @@ define amdgpu_kernel void @workgroup_release_fence() {
 ; GFX1260:       ; %bb.0: ; %entry
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_expcnt 0x0
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_endpgm
@@ -1347,7 +1346,6 @@ define amdgpu_kernel void @workgroup_release_fence() {
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
-; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_endpgm
@@ -1448,7 +1446,6 @@ define amdgpu_kernel void @workgroup_acq_rel_fence() {
 ; GFX1260:       ; %bb.0: ; %entry
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_expcnt 0x0
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_endpgm
@@ -1458,7 +1455,6 @@ define amdgpu_kernel void @workgroup_acq_rel_fence() {
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
-; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_endpgm
@@ -1559,7 +1555,6 @@ define amdgpu_kernel void @workgroup_seq_cst_fence() {
 ; GFX1260:       ; %bb.0: ; %entry
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_expcnt 0x0
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_endpgm
@@ -1569,7 +1564,6 @@ define amdgpu_kernel void @workgroup_seq_cst_fence() {
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
-; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_endpgm
@@ -1751,7 +1745,6 @@ define amdgpu_kernel void @workgroup_one_as_release_fence() {
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_expcnt 0x0
 ; GFX1260-NEXT:    s_endpgm
 ;
@@ -1761,7 +1754,6 @@ define amdgpu_kernel void @workgroup_one_as_release_fence() {
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
-; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_endpgm
 entry:
@@ -1857,7 +1849,6 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel_fence() {
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_expcnt 0x0
 ; GFX1260-NEXT:    s_endpgm
 ;
@@ -1867,7 +1858,6 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel_fence() {
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
-; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_endpgm
 entry:
@@ -1963,7 +1953,6 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst_fence() {
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_expcnt 0x0
 ; GFX1260-NEXT:    s_endpgm
 ;
@@ -1973,7 +1962,6 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst_fence() {
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
-; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0) depctr_vm_vsrc(0)
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_endpgm
 entry:

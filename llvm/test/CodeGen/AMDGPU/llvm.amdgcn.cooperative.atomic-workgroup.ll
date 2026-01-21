@@ -208,7 +208,6 @@ define void @test_flat_amdgcn_cooperative_atomic_store_32x4B_release(ptr noundef
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
@@ -232,7 +231,6 @@ define void @test_flat_amdgcn_cooperative_atomic_store_16x8B_release(ptr noundef
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_store_b64 v[0:1], v[2:3] scope:SCOPE_DEV
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
@@ -256,7 +254,6 @@ define void @test_flat_amdgcn_cooperative_atomic_store_8x16B_release(ptr noundef
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_DEV
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
@@ -280,9 +277,7 @@ define i32 @test_flat_amdgcn_cooperative_atomic_load_32x4B_seq_cst(ptr noundef r
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_load_b32 v0, v[0:1] scope:SCOPE_DEV
-; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
@@ -305,9 +300,7 @@ define <2 x i32> @test_flat_amdgcn_cooperative_atomic_load_16x8B_seq_cst(ptr nou
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_DEV
-; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
@@ -330,9 +323,7 @@ define <4 x i32> @test_flat_amdgcn_cooperative_atomic_load_8x16B_seq_cst(ptr nou
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_DEV
-; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
@@ -355,7 +346,6 @@ define void @test_flat_amdgcn_cooperative_atomic_store_32x4B_seq_cst(ptr noundef
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
@@ -379,7 +369,6 @@ define void @test_flat_amdgcn_cooperative_atomic_store_16x8B_seq_cst(ptr noundef
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_store_b64 v[0:1], v[2:3] scope:SCOPE_DEV
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
@@ -403,7 +392,6 @@ define void @test_flat_amdgcn_cooperative_atomic_store_8x16B_seq_cst(ptr noundef
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_DEV
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
@@ -616,7 +604,6 @@ define void @test_one_as_flat_amdgcn_cooperative_atomic_store_32x4B_release(ptr 
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
@@ -640,7 +627,6 @@ define void @test_one_as_flat_amdgcn_cooperative_atomic_store_16x8B_release(ptr 
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_store_b64 v[0:1], v[2:3] scope:SCOPE_DEV
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
@@ -664,7 +650,6 @@ define void @test_one_as_flat_amdgcn_cooperative_atomic_store_8x16B_release(ptr 
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_DEV
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
@@ -688,9 +673,7 @@ define i32 @test_one_as_flat_amdgcn_cooperative_atomic_load_32x4B_seq_cst(ptr no
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_load_b32 v0, v[0:1] scope:SCOPE_DEV
-; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
@@ -713,9 +696,7 @@ define <2 x i32> @test_one_as_flat_amdgcn_cooperative_atomic_load_16x8B_seq_cst(
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_DEV
-; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
@@ -738,9 +719,7 @@ define <4 x i32> @test_one_as_flat_amdgcn_cooperative_atomic_load_8x16B_seq_cst(
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_DEV
-; GFX1260-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
 entry:
@@ -763,7 +742,6 @@ define void @test_one_as_flat_amdgcn_cooperative_atomic_store_32x4B_seq_cst(ptr 
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
@@ -787,7 +765,6 @@ define void @test_one_as_flat_amdgcn_cooperative_atomic_store_16x8B_seq_cst(ptr 
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_store_b64 v[0:1], v[2:3] scope:SCOPE_DEV
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
@@ -811,7 +788,6 @@ define void @test_one_as_flat_amdgcn_cooperative_atomic_store_8x16B_seq_cst(ptr 
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
 ; GFX1260-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_DEV
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]

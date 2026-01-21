@@ -493,6 +493,8 @@ struct FP4FP8DstByteSelInfo {
 #define GET_getMFMA_F8F6F4_WithSize_IMPL
 #define GET_isMFMA_F8F6F4Table_IMPL
 #define GET_isCvtScaleF32_F32F16ToF8F4Table_IMPL
+#define GET_WMMA_F8F6F4MatrixDimTable_DECL
+#define GET_WMMA_F8F6F4MatrixDimTable_IMPL
 
 #include "AMDGPUGenSearchableTables.inc"
 
@@ -623,6 +625,13 @@ bool getWMMAIsXDL(unsigned Opc) {
   return Info ? Info->is_wmma_xdl : false;
 }
 
+int getWMMAPredXDLIdx(unsigned Opc) {
+  const WMMAInstInfo *Info = getWMMAInstInfoHelper(Opc);
+  if (!Info || Info->PredXDLIdx == 0xff)
+    return -1;
+  return Info->PredXDLIdx;
+}
+
 bool isVDDS(unsigned Opc) {
   const FLATInfo *Info = isFlatOpcodeHelper(Opc);
   return Info ? Info->IsVDDS : false;
@@ -652,26 +661,60 @@ const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
   return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
 }
 
-uint8_t wmmaScaleF8F6F4FormatToNumRegs(unsigned Fmt) {
-  switch (Fmt) {
-  case WMMA::MATRIX_FMT_FP8:
-  case WMMA::MATRIX_FMT_BF8:
-    return 16;
-  case WMMA::MATRIX_FMT_FP6:
-  case WMMA::MATRIX_FMT_BF6:
-    return 12;
-  case WMMA::MATRIX_FMT_FP4:
-    return 8;
-  }
+uint8_t getNumRegsFromWMMAScaleF8F6F4Format(WMMAF8F6F4MatrixDim Dimension,
+                                            WMMAF8F6F4Matrix Matrix,
+                                            unsigned Fmt) {
+  assert(Matrix == WMMAF8F6F4Matrix::A || Matrix == WMMAF8F6F4Matrix::B);
 
-  llvm_unreachable("covered switch over wmma scale formats");
+  switch (Dimension) {
+  case WMMAF8F6F4MatrixDim::M16X16X128:
+    switch (Fmt) {
+    case WMMA::MATRIX_FMT_FP8:
+    case WMMA::MATRIX_FMT_BF8:
+      return 16;
+    case WMMA::MATRIX_FMT_FP6:
+    case WMMA::MATRIX_FMT_BF6:
+      return 12;
+    case WMMA::MATRIX_FMT_FP4:
+      return 8;
+    }
+    llvm_unreachable("unknown format for dimension 16x16x128");
+  case WMMAF8F6F4MatrixDim::M32X64X128:
+    switch (Fmt) {
+    case WMMA::MATRIX_FMT_FP8:
+    case WMMA::MATRIX_FMT_BF8:
+      return Matrix == WMMAF8F6F4Matrix::A ? 32 : 64;
+    case WMMA::MATRIX_FMT_FP6:
+    case WMMA::MATRIX_FMT_BF6:
+      return Matrix == WMMAF8F6F4Matrix::A ? 24 : 48;
+    case WMMA::MATRIX_FMT_FP4:
+      return Matrix == WMMAF8F6F4Matrix::A ? 16 : 32;
+    }
+    llvm_unreachable("unknown format for dimension 32x64x128");
+  }
+  llvm_unreachable("unknown dimension for WMMA F8F6F4 instructions");
+}
+
+static WMMAF8F6F4MatrixDim getWMMAF8F6F4MatrixDimFromOpcode(unsigned Opc) {
+  const WMMAF8F6F4MatrixDimInfo *Info = getWMMAF8F6F4MatrixDimInfo(Opc);
+  assert(Info && "not a WMMA F8F6F4 opcode");
+  return static_cast<WMMAF8F6F4MatrixDim>(Info->Dim);
+}
+
+uint8_t getNumRegsFromWMMAScaleF8F6F4Format(unsigned Opc,
+                                            WMMAF8F6F4Matrix Matrix,
+                                            unsigned Fmt) {
+  return getNumRegsFromWMMAScaleF8F6F4Format(
+      getWMMAF8F6F4MatrixDimFromOpcode(Opc), Matrix, Fmt);
 }
 
 const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
                                                       unsigned FmtB,
                                                       unsigned F8F8Opcode) {
-  uint8_t SrcANumRegs = wmmaScaleF8F6F4FormatToNumRegs(FmtA);
-  uint8_t SrcBNumRegs = wmmaScaleF8F6F4FormatToNumRegs(FmtB);
+  uint8_t SrcANumRegs = getNumRegsFromWMMAScaleF8F6F4Format(
+      F8F8Opcode, WMMAF8F6F4Matrix::A, FmtA);
+  uint8_t SrcBNumRegs = getNumRegsFromWMMAScaleF8F6F4Format(
+      F8F8Opcode, WMMAF8F6F4Matrix::B, FmtB);
   return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
 }
 
@@ -1278,6 +1321,8 @@ static unsigned getMaxHWAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
     return 196608;
   if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
     return 327680;
+  if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize675840))
+    return 675840;
   return 32768;
 }
 
@@ -3237,6 +3282,20 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::VReg_576_Lo256_Align2RegClassID:
   case AMDGPU::VReg_576_STAGING_Lo256_Align2RegClassID:
     return 576;
+  case AMDGPU::AReg_768_Align2RegClassID:
+  case AMDGPU::AReg_768RegClassID:
+  case AMDGPU::AV_768_Align2RegClassID:
+  case AMDGPU::AV_768_STAGING_Align2RegClassID:
+  case AMDGPU::AV_768_STAGINGRegClassID:
+  case AMDGPU::AV_768RegClassID:
+  case AMDGPU::VReg_768_Align2RegClassID:
+  case AMDGPU::VReg_768_Lo256_Align2RegClassID:
+  case AMDGPU::VReg_768_Lo256RegClassID:
+  case AMDGPU::VReg_768_STAGING_Align2RegClassID:
+  case AMDGPU::VReg_768_STAGING_Lo256_Align2RegClassID:
+  case AMDGPU::VReg_768_STAGINGRegClassID:
+  case AMDGPU::VReg_768RegClassID:
+    return 768;
   case AMDGPU::SGPR_1024RegClassID:
   case AMDGPU::SReg_1024RegClassID:
   case AMDGPU::VReg_1024RegClassID:
@@ -3253,6 +3312,8 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::VReg_1024_Lo256_Align2RegClassID:
   case AMDGPU::VReg_1024_STAGING_Lo256_Align2RegClassID:
     return 1024;
+  case AMDGPU::Pseudo_VGPR_1536RegClassID:
+    return 1536;
   case AMDGPU::Pseudo_VGPR_2048RegClassID:
     return 2048;
   default:
@@ -3721,7 +3782,8 @@ const MCRegisterClass *getVGPRPhysRegClass(MCRegister Reg,
       AMDGPU::VReg_256RegClassID,        AMDGPU::VReg_288RegClassID,
       AMDGPU::VReg_320RegClassID,        AMDGPU::VReg_352RegClassID,
       AMDGPU::VReg_384RegClassID,        AMDGPU::VReg_512RegClassID,
-      AMDGPU::VReg_576RegClassID,        AMDGPU::VReg_1024RegClassID,
+      AMDGPU::VReg_576RegClassID,        AMDGPU::VReg_768RegClassID,
+      AMDGPU::VReg_1024RegClassID,       AMDGPU::Pseudo_VGPR_1536RegClassID,
       AMDGPU::Pseudo_VGPR_2048RegClassID};
 
   for (unsigned RCID : VGPRClasses) {
@@ -3996,6 +4058,8 @@ unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
     return 320;
   if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
     return 512;
+  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize675840))
+    return 1024;
   return 64; //In sync with getAddressableLocalMemorySize
 }
 
