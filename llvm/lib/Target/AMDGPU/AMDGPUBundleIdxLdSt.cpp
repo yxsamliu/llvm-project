@@ -189,8 +189,8 @@ private:
   bool sinkInstruction(MachineInstr &MI, bool &SawStore);
   bool sinkLoadsAndCoreMIs(MachineFunction &MF);
   void lowerLanesharedPseudoInst(MachineInstr &MI);
-  void lowerLoadIdxBits(MachineInstr &MI);
-  void lowerStoreIdxBits(MachineInstr &MI);
+  void lowerLoadIdxBits(MachineInstr &MI, bool IsD16);
+  void lowerStoreIdxBits(MachineInstr &MI, bool IsD16);
   bool expandPseudoInstructions(MachineFunction &MF, bool &HaveLoadStoreIdx);
   SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>, 4>
   findSuccsToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB);
@@ -868,7 +868,8 @@ bool AMDGPUBundleIdxLdSt::sinkLoadsAndCoreMIs(MachineFunction &MF) {
 }
 
 // This lowering puts the value into the lo16 bits of a private VGPR.
-void AMDGPUBundleIdxLdSt::lowerLoadIdxBits(MachineInstr &MI) {
+// For D16, extract a 16-bit register
+void AMDGPUBundleIdxLdSt::lowerLoadIdxBits(MachineInstr &MI, bool IsD16) {
   MachineBasicBlock *MBB = MI.getParent();
 
   const bool IsSigned = MI.getOperand(5).getImm() != 0;
@@ -883,17 +884,31 @@ void AMDGPUBundleIdxLdSt::lowerLoadIdxBits(MachineInstr &MI) {
                      .add(MI.getOperand(2)); // offset
   auto *LoadMMO = *MI.memoperands_begin();
   LoadMIB.addMemOperand(LoadMMO);
+  Register DataReg = MI.getOperand(0).getReg();
 
-  BuildMI(*MBB, MI, MI.getDebugLoc(), II, MI.getOperand(0).getReg())
-      .addReg(ReadReg)
-      .add(MI.getOperand(4))  // bitoffset
-      .add(MI.getOperand(3)); // bitsize
+  if (IsD16) {
+    assert(TRI->getRegSizeInBits(DataReg, *MRI) == 16 &&
+           "Expected 16-bit data register");
+    Register TmpReg = MRI->createVirtualRegister(
+        TRI->getAllocatableClass(TII->getRegClass(II, 0)));
+    BuildMI(*MBB, MI, MI.getDebugLoc(), II, TmpReg)
+        .addReg(ReadReg)
+        .add(MI.getOperand(4))  // bitoffset
+        .add(MI.getOperand(3)); // bitsize
+    BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY), DataReg)
+        .addReg(TmpReg, 0, AMDGPU::lo16);
+  } else {
+    BuildMI(*MBB, MI, MI.getDebugLoc(), II, DataReg)
+        .addReg(ReadReg)
+        .add(MI.getOperand(4))  // bitoffset
+        .add(MI.getOperand(3)); // bitsize
+  }
 
   LLVM_DEBUG(dbgs() << " *** Expanded pseudo: "; MI.print(dbgs()));
   MI.eraseFromParent();
 }
 
-void AMDGPUBundleIdxLdSt::lowerStoreIdxBits(MachineInstr &MI) {
+void AMDGPUBundleIdxLdSt::lowerStoreIdxBits(MachineInstr &MI, bool IsD16) {
   MachineBasicBlock *MBB = MI.getParent();
   MachineFunction *MF = MBB->getParent();
 
@@ -920,19 +935,35 @@ void AMDGPUBundleIdxLdSt::lowerStoreIdxBits(MachineInstr &MI) {
   MachineMemOperand *LoadMMO = MF->getMachineMemOperand(StoreMMO, NewFlags);
   LoadMIB.addMemOperand(LoadMMO);
 
+  Register DataReg = MI.getOperand(0).getReg();
+  Register ExpandReg = DataReg;
+  if (IsD16) {
+    // Put the 16-bit data_op in a 32-bit register.
+    assert(TRI->getRegSizeInBits(DataReg, *MRI) == 16 &&
+           "Expected 16-bit data register");
+    ExpandReg = MRI->createVirtualRegister(
+        TRI->getAllocatableClass(TII->getRegClass(II, 2)));
+    Register Undef = MRI->createVirtualRegister(&AMDGPU::VGPR_16RegClass);
+    BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::REG_SEQUENCE),
+            ExpandReg)
+        .addReg(DataReg)
+        .addImm(AMDGPU::lo16)
+        .addReg(Undef, RegState::Undef)
+        .addImm(AMDGPU::hi16);
+  }
+
   Register WriteReg = MRI->createVirtualRegister(
       TRI->getAllocatableClass(TII->getRegClass(II, 0)));
-
   // BFI
   auto CoreMIB = BuildMI(*MBB, MI, MI.getDebugLoc(), II, WriteReg);
   CoreMIB.addReg(MaskReg);
-  CoreMIB.addReg(MI.getOperand(0).getReg()); // data_op
+  CoreMIB.addReg(ExpandReg);
   CoreMIB.addReg(ReadReg);
 
   // V_STORE_IDX
   auto StoreMIB = BuildMI(*MBB, MI, MI.getDebugLoc(),
                           TII->get(AMDGPU::V_STORE_IDX_B32))
-                      .addReg(WriteReg)       // data
+                      .addReg(WriteReg)
                       .add(MI.getOperand(1))  // idx
                       .add(MI.getOperand(2)); // offset
   StoreMIB.addMemOperand(StoreMMO);
@@ -1084,12 +1115,22 @@ bool AMDGPUBundleIdxLdSt::expandPseudoInstructions(MachineFunction &MF,
       }
       if (MI.getOpcode() == AMDGPU::V_LOAD_IDX_BITS) {
         Changed = true;
-        lowerLoadIdxBits(MI);
+        lowerLoadIdxBits(MI, false);
+        continue;
+      }
+      if (MI.getOpcode() == AMDGPU::V_LOAD_IDX_BITS_D16) {
+        Changed = true;
+        lowerLoadIdxBits(MI, true);
         continue;
       }
       if (MI.getOpcode() == AMDGPU::V_STORE_IDX_BITS) {
         Changed = true;
-        lowerStoreIdxBits(MI);
+        lowerStoreIdxBits(MI, false);
+        continue;
+      }
+      if (MI.getOpcode() == AMDGPU::V_STORE_IDX_BITS_D16) {
+        Changed = true;
+        lowerStoreIdxBits(MI, true);
         continue;
       }
       if (isa<AMDGPUMI::VLoadStoreIdxInst>(MI))
