@@ -6395,7 +6395,6 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
       IdxRC = &AMDGPU::SReg_32_XEXEC_HIRegClass;
     }
 
-    // Instruction is dead on non-sub-dword-path, worth creating a new function?
     Register AddReg = MRI.createVirtualRegister(IdxRC);
     auto Add = BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), AddReg);
     SAddrOp.isReg() ? Add.addReg(SAddrOp.getReg())
@@ -6480,43 +6479,11 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
     return std::pair(IdxReg, Offset);
   };
 
-  bool IsSignedLoad = false;
-
-  switch (MI.getOpcode()) {
-  case AMDGPU::SCRATCH_LOAD_DWORD_SADDR:
-  case AMDGPU::SCRATCH_LOAD_DWORDX2_SADDR:
-  case AMDGPU::SCRATCH_LOAD_DWORDX3_SADDR:
-  case AMDGPU::SCRATCH_LOAD_DWORDX4_SADDR:
-  case AMDGPU::SCRATCH_LOAD_DWORDX5_SADDR:
-  case AMDGPU::SCRATCH_LOAD_DWORDX6_SADDR:
-  case AMDGPU::SCRATCH_LOAD_DWORDX8_SADDR:
-  case AMDGPU::SCRATCH_LOAD_DWORDX9_SADDR:
-  case AMDGPU::SCRATCH_LOAD_DWORDX16_SADDR:
-  case AMDGPU::SCRATCH_LOAD_DWORDX18_SADDR: {
-    Register Dst = MI.getOperand(0).getReg();
-    unsigned BitWidth = TRI->getRegSizeInBits(Dst, MRI);
-    Register VirtualIDX;
-    int Offset;
-    std::tie(VirtualIDX, Offset) = EmitIdxSAddr(MI);
-    BuildMI(MBB, MI, DL,
-            TII->get(AMDGPUMI::VLoadIdxInst::getOpcodeForBitWidth(BitWidth)),
-            Dst)
-        .addReg(VirtualIDX)
-        .addImm(Offset)
-        .setMemRefs(MI.memoperands());
-    MI.eraseFromParent();
-    return &MBB;
-  }
-  case AMDGPU::SCRATCH_LOAD_SBYTE_SADDR:
-  case AMDGPU::SCRATCH_LOAD_SBYTE_D16_SADDR:
-  case AMDGPU::SCRATCH_LOAD_SSHORT_SADDR:
-    IsSignedLoad = true;
-    [[fallthrough]];
-  case AMDGPU::SCRATCH_LOAD_UBYTE_SADDR:
-  case AMDGPU::SCRATCH_LOAD_USHORT_SADDR:
-  case AMDGPU::SCRATCH_LOAD_UBYTE_D16_SADDR:
-  case AMDGPU::SCRATCH_LOAD_SHORT_D16_SADDR: {
-    Register Dst = MI.getOperand(0).getReg();
+  auto selectSubDwordSaddr = [&](MachineInstr &MI, unsigned NewOpcode,
+                                 bool IsLoad = true, bool IsSigned = true) {
+    Register Data =
+        IsLoad ? MI.getOperand(0).getReg()
+               : TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
     auto BitWidth = (*MI.memoperands_begin())->getSizeInBits().getValue();
     assert((BitWidth == 8 || BitWidth == 16) &&
            "only byte/short load needs bit offset");
@@ -6525,55 +6492,24 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
     std::tie(VirtualIDX, Offset, BitOffset) =
         EmitIdxSAddrSubDword(MI, BitWidth);
 
-    BuildMI(MBB, MI, DL,
-            TII->get(AMDGPUMI::VLoadIdxInst::getOpcodeForBitWidth(BitWidth)),
-            Dst)
-        .addReg(VirtualIDX)
-        .addImm(Offset)
-        .addImm(BitWidth)
-        .addReg(BitOffset)
-        .addImm(IsSignedLoad)
-        .setMemRefs(MI.memoperands());
+    auto NewMI = BuildMI(MBB, MI, DL, TII->get(NewOpcode))
+                     .addReg(Data, IsLoad ? RegState::Define : 0)
+                     .addReg(VirtualIDX)
+                     .addImm(Offset)
+                     .addImm(BitWidth)
+                     .addReg(BitOffset);
+    if (IsLoad)
+      NewMI.addImm(IsSigned);
+    NewMI.setMemRefs(MI.memoperands());
 
     MI.eraseFromParent();
     return &MBB;
-  }
-  // _ST only has immed offset
-  case AMDGPU::SCRATCH_LOAD_DWORD_ST:
-  case AMDGPU::SCRATCH_LOAD_DWORDX2_ST:
-  case AMDGPU::SCRATCH_LOAD_DWORDX3_ST:
-  case AMDGPU::SCRATCH_LOAD_DWORDX4_ST:
-  case AMDGPU::SCRATCH_LOAD_DWORDX5_ST:
-  case AMDGPU::SCRATCH_LOAD_DWORDX6_ST:
-  case AMDGPU::SCRATCH_LOAD_DWORDX8_ST:
-  case AMDGPU::SCRATCH_LOAD_DWORDX9_ST:
-  case AMDGPU::SCRATCH_LOAD_DWORDX16_ST:
-  case AMDGPU::SCRATCH_LOAD_DWORDX18_ST: {
-    Register Dst = MI.getOperand(0).getReg();
-    unsigned BitWidth = TRI->getRegSizeInBits(Dst, MRI);
-    Register VirtualIDX;
-    int Offset;
-    std::tie(VirtualIDX, Offset) = EmitIdxST(MI);
-    BuildMI(MBB, MI, DL,
-            TII->get(AMDGPUMI::VLoadIdxInst::getOpcodeForBitWidth(BitWidth)),
-            Dst)
-        .addReg(VirtualIDX)
-        .addImm(Offset)
-        .setMemRefs(MI.memoperands());
-
-    MI.eraseFromParent();
-    return &MBB;
-  }
-  case AMDGPU::SCRATCH_LOAD_SBYTE_ST:
-  case AMDGPU::SCRATCH_LOAD_SBYTE_D16_ST:
-  case AMDGPU::SCRATCH_LOAD_SSHORT_ST:
-    IsSignedLoad = true;
-    [[fallthrough]];
-  case AMDGPU::SCRATCH_LOAD_UBYTE_ST:
-  case AMDGPU::SCRATCH_LOAD_USHORT_ST:
-  case AMDGPU::SCRATCH_LOAD_UBYTE_D16_ST:
-  case AMDGPU::SCRATCH_LOAD_SHORT_D16_ST: {
-    Register Dst = MI.getOperand(0).getReg();
+  };
+  auto selectSubDwordST = [&](MachineInstr &MI, unsigned NewOpcode,
+                              bool IsLoad = true, bool IsSigned = true) {
+    Register Data =
+        IsLoad ? MI.getOperand(0).getReg()
+               : TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
     auto BitWidth = (*MI.memoperands_begin())->getSizeInBits().getValue();
     assert((BitWidth == 8 || BitWidth == 16) &&
            "only byte/short load needs bit offset");
@@ -6585,166 +6521,24 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
         .addImm((Offset & 3) << 3);
 
     std::tie(VirtualIDX, Offset) = EmitIdxST(MI);
-    BuildMI(MBB, MI, DL,
-            TII->get(AMDGPUMI::VLoadIdxInst::getOpcodeForBitWidth(BitWidth)),
-            Dst)
-        .addReg(VirtualIDX)
-        .addImm(Offset)
-        .addImm(BitWidth)
-        .addReg(BitOffset)
-        .addImm(IsSignedLoad)
-        .setMemRefs(MI.memoperands());
+    auto NewMI = BuildMI(MBB, MI, DL, TII->get(NewOpcode))
+                     .addReg(Data, IsLoad ? RegState::Define : 0)
+                     .addReg(VirtualIDX)
+                     .addImm(Offset)
+                     .addImm(BitWidth)
+                     .addReg(BitOffset);
+    if (IsLoad)
+      NewMI.addImm(IsSigned);
+    NewMI.setMemRefs(MI.memoperands());
 
     MI.eraseFromParent();
     return &MBB;
-  }
-  case AMDGPU::SCRATCH_STORE_DWORD_SADDR:
-  case AMDGPU::SCRATCH_STORE_DWORDX2_SADDR:
-  case AMDGPU::SCRATCH_STORE_DWORDX3_SADDR:
-  case AMDGPU::SCRATCH_STORE_DWORDX4_SADDR:
-  case AMDGPU::SCRATCH_STORE_DWORDX5_SADDR:
-  case AMDGPU::SCRATCH_STORE_DWORDX6_SADDR:
-  case AMDGPU::SCRATCH_STORE_DWORDX8_SADDR:
-  case AMDGPU::SCRATCH_STORE_DWORDX9_SADDR:
-  case AMDGPU::SCRATCH_STORE_DWORDX16_SADDR:
-  case AMDGPU::SCRATCH_STORE_DWORDX18_SADDR: {
-    Register Data = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
-    unsigned BitWidth = TRI->getRegSizeInBits(Data, MRI);
-    Register VirtualIDX;
-    int Offset;
-    std::tie(VirtualIDX, Offset) = EmitIdxSAddr(MI);
-    BuildMI(MBB, MI, DL,
-            TII->get(AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(BitWidth)))
-        .addReg(Data)
-        .addReg(VirtualIDX)
-        .addImm(Offset)
-        .setMemRefs(MI.memoperands());
-
-    MI.eraseFromParent();
-    return &MBB;
-  }
-  case AMDGPU::SCRATCH_STORE_BYTE_SADDR:
-  case AMDGPU::SCRATCH_STORE_SHORT_SADDR: {
-    auto BitWidth = (*MI.memoperands_begin())->getSizeInBits().getValue();
-    Register Data = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
-    assert((BitWidth == 8 || BitWidth == 16) &&
-           "only byte/short store needs bit offset");
-    Register VirtualIDX, BitOffset;
-    int Offset;
-    std::tie(VirtualIDX, Offset, BitOffset) =
-        EmitIdxSAddrSubDword(MI, BitWidth);
-
-    BuildMI(MBB, MI, DL,
-            TII->get(AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(BitWidth)))
-        .addReg(Data)
-        .addReg(VirtualIDX)
-        .addImm(Offset)
-        .addImm(BitWidth)
-        .addReg(BitOffset)
-        .setMemRefs(MI.memoperands());
-
-    MI.eraseFromParent();
-    return &MBB;
-  }
-  // _ST only has immed offset
-  case AMDGPU::SCRATCH_STORE_DWORD_ST:
-  case AMDGPU::SCRATCH_STORE_DWORDX2_ST:
-  case AMDGPU::SCRATCH_STORE_DWORDX3_ST:
-  case AMDGPU::SCRATCH_STORE_DWORDX4_ST:
-  case AMDGPU::SCRATCH_STORE_DWORDX5_ST:
-  case AMDGPU::SCRATCH_STORE_DWORDX6_ST:
-  case AMDGPU::SCRATCH_STORE_DWORDX8_ST:
-  case AMDGPU::SCRATCH_STORE_DWORDX9_ST:
-  case AMDGPU::SCRATCH_STORE_DWORDX16_ST:
-  case AMDGPU::SCRATCH_STORE_DWORDX18_ST: {
-    Register Data = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
-    unsigned BitWidth = TRI->getRegSizeInBits(Data, MRI);
-    Register VirtualIDX;
-    int Offset;
-    std::tie(VirtualIDX, Offset) = EmitIdxST(MI);
-    BuildMI(MBB, MI, DL,
-            TII->get(AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(BitWidth)))
-        .addReg(Data)
-        .addReg(VirtualIDX)
-        .addImm(Offset)
-        .setMemRefs(MI.memoperands());
-
-    MI.eraseFromParent();
-    return &MBB;
-  }
-  case AMDGPU::SCRATCH_STORE_BYTE_ST:
-  case AMDGPU::SCRATCH_STORE_SHORT_ST: {
-    Register Data = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
-    auto BitWidth = (*MI.memoperands_begin())->getSizeInBits().getValue();
-    assert((BitWidth == 8 || BitWidth == 16) &&
-           "only byte/short store needs bit offset");
-    Register VirtualIDX;
-    int Offset = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
-    Register BitOffset =
-        MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0_XEXECRegClass);
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), BitOffset)
-        .addImm((Offset & 3) << 3);
-
-    std::tie(VirtualIDX, Offset) = EmitIdxST(MI);
-    BuildMI(MBB, MI, DL,
-            TII->get(AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(BitWidth)))
-        .addReg(Data)
-        .addReg(VirtualIDX)
-        .addImm(Offset)
-        .addImm(BitWidth)
-        .addReg(BitOffset)
-        .setMemRefs(MI.memoperands());
-
-    MI.eraseFromParent();
-    return &MBB;
-  }
-  // non-uniform indexing, need waterfall loop
-  case AMDGPU::SCRATCH_LOAD_DWORD:
-  case AMDGPU::SCRATCH_LOAD_DWORDX2:
-  case AMDGPU::SCRATCH_LOAD_DWORDX3:
-  case AMDGPU::SCRATCH_LOAD_DWORDX4:
-  case AMDGPU::SCRATCH_LOAD_DWORDX5:
-  case AMDGPU::SCRATCH_LOAD_DWORDX6:
-  case AMDGPU::SCRATCH_LOAD_DWORDX8:
-  case AMDGPU::SCRATCH_LOAD_DWORDX9:
-  case AMDGPU::SCRATCH_LOAD_DWORDX16:
-  case AMDGPU::SCRATCH_LOAD_DWORDX18: {
-    Register Dst = MI.getOperand(0).getReg();
-    unsigned BitWidth = TRI->getRegSizeInBits(Dst, MRI);
-    Register SGPRIdxReg;
-    auto InsPt = extractIdxFromVGPR(TII, MBB, MI, SGPRIdxReg);
-    Register VirtualIDX;
-    int Offset;
-    std::tie(VirtualIDX, Offset) = adjustIdxOffset(MI, InsPt, SGPRIdxReg);
-    MachineBasicBlock *LoopBB = InsPt->getParent();
-    BuildMI(*LoopBB, InsPt, DL,
-            TII->get(AMDGPUMI::VLoadIdxInst::getOpcodeForBitWidth(BitWidth)),
-            Dst)
-        .addReg(VirtualIDX)
-        .addImm(Offset)
-        .setMemRefs(MI.memoperands());
-
-    MI.eraseFromParent();
-    return LoopBB;
-  }
-  case AMDGPU::SCRATCH_LOAD_SBYTE:
-  case AMDGPU::SCRATCH_LOAD_SBYTE_D16:
-  case AMDGPU::SCRATCH_LOAD_SSHORT:
-    IsSignedLoad = true;
-    [[fallthrough]];
-  case AMDGPU::SCRATCH_LOAD_UBYTE:
-  case AMDGPU::SCRATCH_LOAD_USHORT:
-  case AMDGPU::SCRATCH_LOAD_UBYTE_D16:
-  case AMDGPU::SCRATCH_LOAD_SHORT_D16:
-  case AMDGPU::SCRATCH_STORE_BYTE:
-  case AMDGPU::SCRATCH_STORE_SHORT: {
-    Register Data;
-    bool IsStore = MI.getOpcode() == AMDGPU::SCRATCH_STORE_BYTE ||
-                   MI.getOpcode() == AMDGPU::SCRATCH_STORE_SHORT;
-    if (IsStore)
-      Data = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
-    else
-      Data = MI.getOperand(0).getReg();
+  };
+  auto selectSubDwordWaterfall = [&](MachineInstr &MI, unsigned NewOpcode,
+                                     bool IsLoad = true, bool IsSigned = true) {
+    Register Data =
+        IsLoad ? MI.getOperand(0).getReg()
+               : TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
 
     auto BitWidth = (*MI.memoperands_begin())->getSizeInBits().getValue();
     assert((BitWidth == 8 || BitWidth == 16) &&
@@ -6777,25 +6571,216 @@ static MachineBasicBlock *emitVLoadStoreIdx(MachineInstr &MI,
         .addImm(3)
         .setOperandDead(3); // Dead scc
 
-    auto OutMI =
-        BuildMI(
-            *LoopBB, InsPt, DL,
-            TII->get(
-                IsStore
-                    ? AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(BitWidth)
-                    : AMDGPUMI::VLoadIdxInst::getOpcodeForBitWidth(BitWidth)),
-            Data)
-            .addReg(VirtualIDX)
-            .addImm(Offset)
-            .addImm(BitWidth)
-            .addReg(BitOffset);
-    if (!IsStore)
-      OutMI.addImm(IsSignedLoad);
+    auto OutMI = BuildMI(*LoopBB, InsPt, DL, TII->get(NewOpcode))
+                     .addReg(Data, IsLoad ? RegState::Define : 0)
+                     .addReg(VirtualIDX)
+                     .addImm(Offset)
+                     .addImm(BitWidth)
+                     .addReg(BitOffset);
+    if (IsLoad)
+      OutMI.addImm(IsSigned);
     OutMI.setMemRefs(MI.memoperands());
 
     MI.eraseFromParent();
     return LoopBB;
+  };
+
+  switch (MI.getOpcode()) {
+  case AMDGPU::SCRATCH_LOAD_DWORD_SADDR:
+  case AMDGPU::SCRATCH_LOAD_DWORDX2_SADDR:
+  case AMDGPU::SCRATCH_LOAD_DWORDX3_SADDR:
+  case AMDGPU::SCRATCH_LOAD_DWORDX4_SADDR:
+  case AMDGPU::SCRATCH_LOAD_DWORDX5_SADDR:
+  case AMDGPU::SCRATCH_LOAD_DWORDX6_SADDR:
+  case AMDGPU::SCRATCH_LOAD_DWORDX8_SADDR:
+  case AMDGPU::SCRATCH_LOAD_DWORDX9_SADDR:
+  case AMDGPU::SCRATCH_LOAD_DWORDX16_SADDR:
+  case AMDGPU::SCRATCH_LOAD_DWORDX18_SADDR: {
+    Register Dst = MI.getOperand(0).getReg();
+    unsigned BitWidth = TRI->getRegSizeInBits(Dst, MRI);
+    Register VirtualIDX;
+    int Offset;
+    std::tie(VirtualIDX, Offset) = EmitIdxSAddr(MI);
+    BuildMI(MBB, MI, DL,
+            TII->get(AMDGPUMI::VLoadIdxInst::getOpcodeForBitWidth(BitWidth)),
+            Dst)
+        .addReg(VirtualIDX)
+        .addImm(Offset)
+        .setMemRefs(MI.memoperands());
+    MI.eraseFromParent();
+    return &MBB;
   }
+  case AMDGPU::SCRATCH_LOAD_SBYTE_D16_SADDR_t16:
+    return selectSubDwordSaddr(MI, AMDGPU::V_LOAD_IDX_BITS_D16);
+  case AMDGPU::SCRATCH_LOAD_SBYTE_SADDR:
+  case AMDGPU::SCRATCH_LOAD_SBYTE_D16_SADDR:
+  case AMDGPU::SCRATCH_LOAD_SSHORT_SADDR:
+    return selectSubDwordSaddr(MI, AMDGPU::V_LOAD_IDX_BITS);
+  case AMDGPU::SCRATCH_LOAD_UBYTE_D16_SADDR_t16:
+  case AMDGPU::SCRATCH_LOAD_SHORT_D16_SADDR_t16:
+    return selectSubDwordSaddr(MI, AMDGPU::V_LOAD_IDX_BITS_D16, true /*IsLoad*/,
+                               false /*IsSigned*/);
+  case AMDGPU::SCRATCH_LOAD_UBYTE_SADDR:
+  case AMDGPU::SCRATCH_LOAD_USHORT_SADDR:
+  case AMDGPU::SCRATCH_LOAD_UBYTE_D16_SADDR:
+  case AMDGPU::SCRATCH_LOAD_SHORT_D16_SADDR:
+    return selectSubDwordSaddr(MI, AMDGPU::V_LOAD_IDX_BITS, true /*IsLoad*/,
+                               false /*IsSigned*/);
+  // _ST only has immed offset
+  case AMDGPU::SCRATCH_LOAD_DWORD_ST:
+  case AMDGPU::SCRATCH_LOAD_DWORDX2_ST:
+  case AMDGPU::SCRATCH_LOAD_DWORDX3_ST:
+  case AMDGPU::SCRATCH_LOAD_DWORDX4_ST:
+  case AMDGPU::SCRATCH_LOAD_DWORDX5_ST:
+  case AMDGPU::SCRATCH_LOAD_DWORDX6_ST:
+  case AMDGPU::SCRATCH_LOAD_DWORDX8_ST:
+  case AMDGPU::SCRATCH_LOAD_DWORDX9_ST:
+  case AMDGPU::SCRATCH_LOAD_DWORDX16_ST:
+  case AMDGPU::SCRATCH_LOAD_DWORDX18_ST: {
+    Register Dst = MI.getOperand(0).getReg();
+    unsigned BitWidth = TRI->getRegSizeInBits(Dst, MRI);
+    Register VirtualIDX;
+    int Offset;
+    std::tie(VirtualIDX, Offset) = EmitIdxST(MI);
+    BuildMI(MBB, MI, DL,
+            TII->get(AMDGPUMI::VLoadIdxInst::getOpcodeForBitWidth(BitWidth)),
+            Dst)
+        .addReg(VirtualIDX)
+        .addImm(Offset)
+        .setMemRefs(MI.memoperands());
+
+    MI.eraseFromParent();
+    return &MBB;
+  }
+  case AMDGPU::SCRATCH_LOAD_SBYTE_D16_ST_t16:
+    return selectSubDwordST(MI, AMDGPU::V_LOAD_IDX_BITS_D16);
+  case AMDGPU::SCRATCH_LOAD_SBYTE_ST:
+  case AMDGPU::SCRATCH_LOAD_SBYTE_D16_ST:
+  case AMDGPU::SCRATCH_LOAD_SSHORT_ST:
+    return selectSubDwordST(MI, AMDGPU::V_LOAD_IDX_BITS);
+  case AMDGPU::SCRATCH_LOAD_UBYTE_D16_ST_t16:
+  case AMDGPU::SCRATCH_LOAD_SHORT_D16_ST_t16:
+    return selectSubDwordST(MI, AMDGPU::V_LOAD_IDX_BITS_D16, true /*IsLoad*/,
+                            false /*IsSigned*/);
+  case AMDGPU::SCRATCH_LOAD_UBYTE_ST:
+  case AMDGPU::SCRATCH_LOAD_USHORT_ST:
+  case AMDGPU::SCRATCH_LOAD_UBYTE_D16_ST:
+  case AMDGPU::SCRATCH_LOAD_SHORT_D16_ST:
+    return selectSubDwordST(MI, AMDGPU::V_LOAD_IDX_BITS, true /*IsLoad*/,
+                            false /*IsSigned*/);
+  case AMDGPU::SCRATCH_STORE_DWORD_SADDR:
+  case AMDGPU::SCRATCH_STORE_DWORDX2_SADDR:
+  case AMDGPU::SCRATCH_STORE_DWORDX3_SADDR:
+  case AMDGPU::SCRATCH_STORE_DWORDX4_SADDR:
+  case AMDGPU::SCRATCH_STORE_DWORDX5_SADDR:
+  case AMDGPU::SCRATCH_STORE_DWORDX6_SADDR:
+  case AMDGPU::SCRATCH_STORE_DWORDX8_SADDR:
+  case AMDGPU::SCRATCH_STORE_DWORDX9_SADDR:
+  case AMDGPU::SCRATCH_STORE_DWORDX16_SADDR:
+  case AMDGPU::SCRATCH_STORE_DWORDX18_SADDR: {
+    Register Data = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
+    unsigned BitWidth = TRI->getRegSizeInBits(Data, MRI);
+    Register VirtualIDX;
+    int Offset;
+    std::tie(VirtualIDX, Offset) = EmitIdxSAddr(MI);
+    BuildMI(MBB, MI, DL,
+            TII->get(AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(BitWidth)))
+        .addReg(Data)
+        .addReg(VirtualIDX)
+        .addImm(Offset)
+        .setMemRefs(MI.memoperands());
+
+    MI.eraseFromParent();
+    return &MBB;
+  }
+  case AMDGPU::SCRATCH_STORE_BYTE_SADDR_t16:
+  case AMDGPU::SCRATCH_STORE_SHORT_SADDR_t16:
+    return selectSubDwordSaddr(MI, AMDGPU::V_STORE_IDX_BITS_D16,
+                               false /*IsLoad*/);
+  case AMDGPU::SCRATCH_STORE_BYTE_SADDR:
+  case AMDGPU::SCRATCH_STORE_SHORT_SADDR:
+    return selectSubDwordSaddr(MI, AMDGPU::V_STORE_IDX_BITS, false /*IsLoad*/);
+  // _ST only has immed offset
+  case AMDGPU::SCRATCH_STORE_DWORD_ST:
+  case AMDGPU::SCRATCH_STORE_DWORDX2_ST:
+  case AMDGPU::SCRATCH_STORE_DWORDX3_ST:
+  case AMDGPU::SCRATCH_STORE_DWORDX4_ST:
+  case AMDGPU::SCRATCH_STORE_DWORDX5_ST:
+  case AMDGPU::SCRATCH_STORE_DWORDX6_ST:
+  case AMDGPU::SCRATCH_STORE_DWORDX8_ST:
+  case AMDGPU::SCRATCH_STORE_DWORDX9_ST:
+  case AMDGPU::SCRATCH_STORE_DWORDX16_ST:
+  case AMDGPU::SCRATCH_STORE_DWORDX18_ST: {
+    Register Data = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
+    unsigned BitWidth = TRI->getRegSizeInBits(Data, MRI);
+    Register VirtualIDX;
+    int Offset;
+    std::tie(VirtualIDX, Offset) = EmitIdxST(MI);
+    BuildMI(MBB, MI, DL,
+            TII->get(AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(BitWidth)))
+        .addReg(Data)
+        .addReg(VirtualIDX)
+        .addImm(Offset)
+        .setMemRefs(MI.memoperands());
+
+    MI.eraseFromParent();
+    return &MBB;
+  }
+  case AMDGPU::SCRATCH_STORE_BYTE_ST_t16:
+  case AMDGPU::SCRATCH_STORE_SHORT_ST_t16:
+    return selectSubDwordST(MI, AMDGPU::V_STORE_IDX_BITS_D16, false /*IsLoad*/);
+  case AMDGPU::SCRATCH_STORE_BYTE_ST:
+  case AMDGPU::SCRATCH_STORE_SHORT_ST:
+    return selectSubDwordST(MI, AMDGPU::V_STORE_IDX_BITS, false /*IsLoad*/);
+  // non-uniform indexing, need waterfall loop
+  case AMDGPU::SCRATCH_LOAD_DWORD:
+  case AMDGPU::SCRATCH_LOAD_DWORDX2:
+  case AMDGPU::SCRATCH_LOAD_DWORDX3:
+  case AMDGPU::SCRATCH_LOAD_DWORDX4:
+  case AMDGPU::SCRATCH_LOAD_DWORDX5:
+  case AMDGPU::SCRATCH_LOAD_DWORDX6:
+  case AMDGPU::SCRATCH_LOAD_DWORDX8:
+  case AMDGPU::SCRATCH_LOAD_DWORDX9:
+  case AMDGPU::SCRATCH_LOAD_DWORDX16:
+  case AMDGPU::SCRATCH_LOAD_DWORDX18: {
+    Register Dst = MI.getOperand(0).getReg();
+    unsigned BitWidth = TRI->getRegSizeInBits(Dst, MRI);
+    Register SGPRIdxReg;
+    auto InsPt = extractIdxFromVGPR(TII, MBB, MI, SGPRIdxReg);
+    Register VirtualIDX;
+    int Offset;
+    std::tie(VirtualIDX, Offset) = adjustIdxOffset(MI, InsPt, SGPRIdxReg);
+    MachineBasicBlock *LoopBB = InsPt->getParent();
+    BuildMI(*LoopBB, InsPt, DL,
+            TII->get(AMDGPUMI::VLoadIdxInst::getOpcodeForBitWidth(BitWidth)),
+            Dst)
+        .addReg(VirtualIDX)
+        .addImm(Offset)
+        .setMemRefs(MI.memoperands());
+
+    MI.eraseFromParent();
+    return LoopBB;
+  }
+  case AMDGPU::SCRATCH_LOAD_SBYTE_D16_t16:
+    return selectSubDwordWaterfall(MI, AMDGPU::V_LOAD_IDX_BITS_D16);
+  case AMDGPU::SCRATCH_LOAD_SBYTE:
+  case AMDGPU::SCRATCH_LOAD_SBYTE_D16:
+  case AMDGPU::SCRATCH_LOAD_SSHORT:
+    return selectSubDwordWaterfall(MI, AMDGPU::V_LOAD_IDX_BITS);
+  case AMDGPU::SCRATCH_LOAD_UBYTE_D16_t16:
+  case AMDGPU::SCRATCH_LOAD_SHORT_D16_t16:
+    return selectSubDwordWaterfall(MI, AMDGPU::V_LOAD_IDX_BITS_D16,
+                                   true /*IsLoad*/, false /*IsSigned*/);
+  case AMDGPU::SCRATCH_LOAD_UBYTE:
+  case AMDGPU::SCRATCH_LOAD_USHORT:
+  case AMDGPU::SCRATCH_LOAD_UBYTE_D16:
+  case AMDGPU::SCRATCH_LOAD_SHORT_D16:
+    return selectSubDwordWaterfall(MI, AMDGPU::V_LOAD_IDX_BITS, true /*IsLoad*/,
+                                   false /*IsSigned*/);
+  case AMDGPU::SCRATCH_STORE_BYTE:
+  case AMDGPU::SCRATCH_STORE_SHORT:
+    return selectSubDwordWaterfall(MI, AMDGPU::V_STORE_IDX_BITS,
+                                   false /*IsLoad*/);
   case AMDGPU::SCRATCH_STORE_DWORD:
   case AMDGPU::SCRATCH_STORE_DWORDX2:
   case AMDGPU::SCRATCH_STORE_DWORDX3:

@@ -32,6 +32,8 @@ public:
 
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {
+    case AMDGPU::V_LOAD_IDX_BITS:
+    case AMDGPU::V_LOAD_IDX_BITS_D16:
     case AMDGPU::V_LOAD_IDX_B32:
     case AMDGPU::V_LOAD_IDX_B64:
     case AMDGPU::V_LOAD_IDX_B96:
@@ -47,6 +49,8 @@ public:
     case AMDGPU::V_LOAD_IDX_B512:
     case AMDGPU::V_LOAD_IDX_B576:
     case AMDGPU::V_LOAD_IDX_B1024:
+    case AMDGPU::V_STORE_IDX_BITS:
+    case AMDGPU::V_STORE_IDX_BITS_D16:
     case AMDGPU::V_STORE_IDX_B32:
     case AMDGPU::V_STORE_IDX_B64:
     case AMDGPU::V_STORE_IDX_B96:
@@ -75,6 +79,8 @@ public:
 
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {
+    case AMDGPU::V_LOAD_IDX_BITS:
+    case AMDGPU::V_LOAD_IDX_BITS_D16:
     case AMDGPU::V_LOAD_IDX_B32:
     case AMDGPU::V_LOAD_IDX_B64:
     case AMDGPU::V_LOAD_IDX_B96:
@@ -103,6 +109,8 @@ public:
 
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {
+    case AMDGPU::V_STORE_IDX_BITS:
+    case AMDGPU::V_STORE_IDX_BITS_D16:
     case AMDGPU::V_STORE_IDX_B32:
     case AMDGPU::V_STORE_IDX_B64:
     case AMDGPU::V_STORE_IDX_B96:
