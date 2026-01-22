@@ -1409,8 +1409,10 @@ void AMDGPUPassConfig::addIRPasses() {
 
 void AMDGPUPassConfig::addCodeGenPrepare() {
   if (TM->getTargetTriple().isAMDGCN() &&
-      TM->getOptLevel() > CodeGenOptLevel::None)
+      TM->getOptLevel() > CodeGenOptLevel::None) {
+    // Note: kernel argument splitting is now integrated into preload pass
     addPass(createAMDGPUPreloadKernelArgumentsLegacyPass(TM));
+  }
 
   if (TM->getTargetTriple().isAMDGCN() && EnableLowerKernelArguments)
     addPass(createAMDGPULowerKernelArgumentsPass());
@@ -2188,6 +2190,7 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(
     PassManagerWrapper &PMW) const {
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     flushFPMsToMPM(PMW);
+    // Note: kernel argument splitting is now integrated into preload pass
     addModulePass(AMDGPUPreloadKernelArgumentsPass(TM), PMW);
   }
 
