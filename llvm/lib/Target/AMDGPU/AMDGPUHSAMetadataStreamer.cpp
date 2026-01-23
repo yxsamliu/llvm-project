@@ -289,6 +289,9 @@ void MetadataStreamerMsgPackV4::emitKernelArgs(const MachineFunction &MF,
   for (auto &Arg : Func.args()) {
     if (Arg.hasAttribute("amdgpu-hidden-argument"))
       continue;
+    // Skip split args that should not appear in metadata (layout-preserving mode)
+    if (Arg.hasAttribute("amdgpu-no-kernel-arg-metadata"))
+      continue;
 
     emitKernelArg(Arg, Offset, Args);
   }
@@ -305,22 +308,49 @@ void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
   auto ArgNo = Arg.getArgNo();
   const MDNode *Node;
 
+  // Check for amdgpu-emit-as-original-arg attribute (layout-preserving split)
+  // Format: "origIdx:origSize:origAlign"
+  std::optional<unsigned> OrigArgNo;
+  std::optional<uint64_t> OrigSize;
+  std::optional<uint64_t> OrigAlign;
+  Attribute EmitAsOrigAttr =
+      Func->getAttributes().getParamAttr(ArgNo, "amdgpu-emit-as-original-arg");
+  if (EmitAsOrigAttr.isValid()) {
+    StringRef Val = EmitAsOrigAttr.getValueAsString();
+    SmallVector<StringRef, 3> Parts;
+    Val.split(Parts, ':');
+    if (Parts.size() == 3) {
+      unsigned Idx;
+      uint64_t Size, Align;
+      if (!Parts[0].getAsInteger(10, Idx) &&
+          !Parts[1].getAsInteger(10, Size) &&
+          !Parts[2].getAsInteger(10, Align)) {
+        OrigArgNo = Idx;
+        OrigSize = Size;
+        OrigAlign = Align;
+      }
+    }
+  }
+
+  // Use original arg index for metadata lookup if available
+  unsigned MetadataArgNo = OrigArgNo.value_or(ArgNo);
+
   StringRef Name;
   Node = Func->getMetadata("kernel_arg_name");
-  if (Node && ArgNo < Node->getNumOperands())
-    Name = cast<MDString>(Node->getOperand(ArgNo))->getString();
+  if (Node && MetadataArgNo < Node->getNumOperands())
+    Name = cast<MDString>(Node->getOperand(MetadataArgNo))->getString();
   else if (Arg.hasName())
     Name = Arg.getName();
 
   StringRef TypeName;
   Node = Func->getMetadata("kernel_arg_type");
-  if (Node && ArgNo < Node->getNumOperands())
-    TypeName = cast<MDString>(Node->getOperand(ArgNo))->getString();
+  if (Node && MetadataArgNo < Node->getNumOperands())
+    TypeName = cast<MDString>(Node->getOperand(MetadataArgNo))->getString();
 
   StringRef BaseTypeName;
   Node = Func->getMetadata("kernel_arg_base_type");
-  if (Node && ArgNo < Node->getNumOperands())
-    BaseTypeName = cast<MDString>(Node->getOperand(ArgNo))->getString();
+  if (Node && MetadataArgNo < Node->getNumOperands())
+    BaseTypeName = cast<MDString>(Node->getOperand(MetadataArgNo))->getString();
 
   StringRef ActAccQual;
   // Do we really need NoAlias check here?
@@ -333,13 +363,13 @@ void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
 
   StringRef AccQual;
   Node = Func->getMetadata("kernel_arg_access_qual");
-  if (Node && ArgNo < Node->getNumOperands())
-    AccQual = cast<MDString>(Node->getOperand(ArgNo))->getString();
+  if (Node && MetadataArgNo < Node->getNumOperands())
+    AccQual = cast<MDString>(Node->getOperand(MetadataArgNo))->getString();
 
   StringRef TypeQual;
   Node = Func->getMetadata("kernel_arg_type_qual");
-  if (Node && ArgNo < Node->getNumOperands())
-    TypeQual = cast<MDString>(Node->getOperand(ArgNo))->getString();
+  if (Node && MetadataArgNo < Node->getNumOperands())
+    TypeQual = cast<MDString>(Node->getOperand(MetadataArgNo))->getString();
 
   const DataLayout &DL = Func->getDataLayout();
 
@@ -356,6 +386,13 @@ void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
   Type *ArgTy;
   Align ArgAlign;
   std::tie(ArgTy, ArgAlign) = getArgumentTypeAlign(Arg, DL);
+
+  // If emitting as original arg (layout-preserving split), use original size/align
+  if (OrigSize && OrigAlign) {
+    // Override size calculation - we'll pass a fake type but correct size
+    // The emitKernelArg overload below will use DL.getTypeAllocSize(Ty)
+    // so we need to handle this differently
+  }
 
   // Assuming the argument is not split from struct-type argument by default,
   // unless we find it in function attribute amdgpu-argument-mapping.
@@ -376,6 +413,38 @@ void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
       OriginalArgIndex = ~0U;
       OriginalArgOffset = 0;
     }
+  }
+
+  // For layout-preserving split, emit with original size/align directly
+  if (OrigSize && OrigAlign) {
+    auto ArgNode = Args.getDocument()->getMapNode();
+    if (!Name.empty())
+      ArgNode[".name"] = ArgNode.getDocument()->getNode(Name, /*Copy=*/true);
+    if (!TypeName.empty())
+      ArgNode[".type_name"] =
+          ArgNode.getDocument()->getNode(TypeName, /*Copy=*/true);
+    ArgNode[".size"] = ArgNode.getDocument()->getNode(*OrigSize);
+    Offset = alignTo(Offset, Align(*OrigAlign));
+    ArgNode[".offset"] = ArgNode.getDocument()->getNode(Offset);
+    Offset += *OrigSize;
+    ArgNode[".value_kind"] = ArgNode.getDocument()->getNode(
+        getValueKind(ArgTy, TypeQual, BaseTypeName), /*Copy=*/true);
+    if (auto AQ = getAccessQualifier(AccQual))
+      ArgNode[".access"] = ArgNode.getDocument()->getNode(*AQ, /*Copy=*/true);
+    SmallVector<StringRef, 1> SplitTypeQuals;
+    TypeQual.split(SplitTypeQuals, " ", -1, false);
+    for (StringRef Key : SplitTypeQuals) {
+      if (Key == "const")
+        ArgNode[".is_const"] = ArgNode.getDocument()->getNode(true);
+      else if (Key == "restrict")
+        ArgNode[".is_restrict"] = ArgNode.getDocument()->getNode(true);
+      else if (Key == "volatile")
+        ArgNode[".is_volatile"] = ArgNode.getDocument()->getNode(true);
+      else if (Key == "pipe")
+        ArgNode[".is_pipe"] = ArgNode.getDocument()->getNode(true);
+    }
+    Args.push_back(ArgNode);
+    return;
   }
 
   emitKernelArg(DL, ArgTy, ArgAlign,

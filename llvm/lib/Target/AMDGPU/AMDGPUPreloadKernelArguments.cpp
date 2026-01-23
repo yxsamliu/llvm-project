@@ -325,16 +325,43 @@ static Function *trySplitKernelArguments(Function &F, const GCNSubtarget &ST) {
       // Recursively flatten nested structs
       collectLeafFields(STy, DL, 0, Fields);
 
-      // Associate loads with their corresponding fields by offset
-      for (FieldInfo &FI : Fields) {
-        auto It = OffsetToLoad.find(FI.Offset);
-        if (It != OffsetToLoad.end()) {
-          LoadInst *LI = It->second;
-          // Verify type matches
-          if (LI->getType() == FI.Ty) {
-            FI.Load = LI;
-          }
+      // Build a map from (offset, type) to field index for matching
+      DenseMap<std::pair<uint64_t, Type *>, unsigned> OffsetTypeToField;
+      for (unsigned I = 0; I < Fields.size(); ++I) {
+        OffsetTypeToField[{Fields[I].Offset, Fields[I].Ty}] = I;
+      }
+
+      // Verify all loads can be matched to a leaf field
+      bool AllLoadsMatch = true;
+      for (LoadInst *LI : Loads) {
+        uint64_t Off = *GetLoadOffset(LI);
+        auto Key = std::make_pair(Off, LI->getType());
+        if (!OffsetTypeToField.count(Key)) {
+          AllLoadsMatch = false;
+          break;
         }
+      }
+
+      if (!AllLoadsMatch) {
+        LLVM_DEBUG(dbgs() << "Skipping split for " << F.getName()
+                          << ": load type doesn't match leaf field type\n");
+        // Undo: remove from StructArgs, restore passthrough
+        StructArgs.pop_back();
+        ArgToLoadsMap.erase(&Arg);
+        ArgToGEPsMap.erase(&Arg);
+        HandlePassthroughArg(Arg);
+        continue;
+      }
+
+      // Associate loads with their corresponding fields
+      for (LoadInst *LI : Loads) {
+        uint64_t Off = *GetLoadOffset(LI);
+        auto Key = std::make_pair(Off, LI->getType());
+        unsigned FieldIdx = OffsetTypeToField[Key];
+        Fields[FieldIdx].Load = LI;
+      }
+
+      for (const FieldInfo &FI : Fields) {
         NewArgTypes.push_back(FI.Ty);
         uint64_t FinalOff = BaseOffset + FI.Offset;
         NewArgMappings.emplace_back(NewArgIndex, RootIdx, FinalOff);
@@ -376,6 +403,10 @@ static Function *trySplitKernelArguments(Function &F, const GCNSubtarget &ST) {
   NewF->setUnnamedAddr(F.getUnnamedAddr());
   NewF->setCallingConv(F.getCallingConv());
 
+  // Copy function metadata (including kernel_arg_* metadata)
+  // This preserves original arg metadata so CLR sees original signature
+  NewF->copyMetadata(&F, 0);
+
   SmallVector<AttributeSet, 8> NewArgAttrSets;
   NewArgIndex = 0;
   for (Argument &Arg : F.args()) {
@@ -395,14 +426,59 @@ static Function *trySplitKernelArguments(Function &F, const GCNSubtarget &ST) {
       AttributeList::get(F.getContext(), FnAttrs, RetAttrs, NewArgAttrSets);
   NewF->setAttributes(NewAttrList);
 
+  // In layout-preserving mode, mark split args as hidden so metadata streamer
+  // skips them. The original kernel_arg_* metadata is preserved, so CLR sees
+  // the original struct signature and doesn't need patching.
+  // In layout-changing mode, add original-arg attribute so CLR can map split
+  // args back to the original struct (requires CLR patch).
   for (const auto &Info : NewArgMappings) {
     unsigned NewArgIdx, RootArgIdx;
     uint64_t Offset;
     std::tie(NewArgIdx, RootArgIdx, Offset) = Info;
-    NewF->addParamAttr(
-        NewArgIdx,
-        Attribute::get(NewF->getContext(), OriginalArgAttr,
-                       (Twine(RootArgIdx) + ":" + Twine(Offset)).str()));
+    if (EnableKernargLayoutChange) {
+      NewF->addParamAttr(
+          NewArgIdx,
+          Attribute::get(NewF->getContext(), OriginalArgAttr,
+                         (Twine(RootArgIdx) + ":" + Twine(Offset)).str()));
+    } else {
+      // For first split arg from each original arg, emit metadata as the original
+      // For subsequent split args, skip metadata emission
+      // Check if this is the first split arg from this original arg
+      bool IsFirst = (Offset == 0); // First field has offset 0 within the struct
+
+      if (IsFirst) {
+        // First split arg: emit metadata as if this were the original arg
+        // Store: original arg index, original size, original alignment
+        // The original type info comes from kernel_arg_* metadata
+        Argument *OrigArg = nullptr;
+        unsigned OrigArgNo = 0;
+        for (Argument &A : F.args()) {
+          if (OrigArgNo == RootArgIdx) {
+            OrigArg = &A;
+            break;
+          }
+          ++OrigArgNo;
+        }
+        assert(OrigArg && "Original argument not found");
+        Type *OrigTy = OrigArg->hasByRefAttr() ? OrigArg->getParamByRefType()
+                                               : OrigArg->getType();
+        uint64_t OrigSize = DL.getTypeAllocSize(OrigTy);
+        uint64_t OrigAlign = DL.getABITypeAlign(OrigTy).value();
+
+        // Format: "origIdx:origSize:origAlign"
+        NewF->addParamAttr(
+            NewArgIdx,
+            Attribute::get(NewF->getContext(), "amdgpu-emit-as-original-arg",
+                           (Twine(RootArgIdx) + ":" + Twine(OrigSize) + ":" +
+                            Twine(OrigAlign))
+                               .str()));
+      } else {
+        // Subsequent split args: skip metadata emission
+        NewF->addParamAttr(
+            NewArgIdx,
+            Attribute::get(NewF->getContext(), "amdgpu-no-kernel-arg-metadata"));
+      }
+    }
   }
 
   LLVM_DEBUG(dbgs() << "New function signature:\n" << *NewF << '\n');
