@@ -175,14 +175,13 @@ defm V_MAD_LEGACY_F32 : VOP3Inst <"v_mad_legacy_f32", VOP3_Profile<VOP_F32_F32_F
 defm V_MAD_F32 : VOP3Inst <"v_mad_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, any_fmad>;
 } // End SubtargetPredicate = HasMadMacInsts
 
-let SubtargetPredicate = HasFmaLegacy32, IsCMACCInstruction = 1 in
+let SubtargetPredicate = HasFmaLegacy32 in
 defm V_FMA_LEGACY_F32 : VOP3Inst <"v_fma_legacy_f32",
                                  VOP3_Profile<VOP_F32_F32_F32_F32>,
                                  int_amdgcn_fma_legacy>;
 
 defm V_MAD_I32_I24 : VOP3Inst <"v_mad_i32_i24", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
 defm V_MAD_U32_U24 : VOP3Inst <"v_mad_u32_u24", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
-let IsCMACCInstruction = 1 in
 defm V_FMA_F32 : VOP3Inst <"v_fma_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, any_fma>, VOPD_Component<0x13, "v_fma_f32">;
 let SubtargetPredicate = HasLerpInst in
   defm V_LERP_U8 : VOP3Inst <"v_lerp_u8", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_lerp>;
@@ -221,12 +220,10 @@ defm V_MUL_HI_I32 : VOP3Inst <"v_mul_hi_i32", V_MUL_PROF<VOP_I32_I32_I32>, mulhs
 } // End SchedRW = [WriteIntMul], IsInvalidSingleUseConsumer = 1
 
 let SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0, AddedComplexity = 1 in {
-let IsCMACCInstruction = 1 in {
 defm V_MINIMUM_F32 : VOP3Inst <"v_minimum_f32", VOP3_Profile<VOP_F32_F32_F32>, fminimum>;
 defm V_MAXIMUM_F32 : VOP3Inst <"v_maximum_f32", VOP3_Profile<VOP_F32_F32_F32>, fmaximum>;
 defm V_MINIMUM_F16 : VOP3Inst_t16 <"v_minimum_f16", VOP_F16_F16_F16, fminimum>;
 defm V_MAXIMUM_F16 : VOP3Inst_t16 <"v_maximum_f16", VOP_F16_F16_F16, fmaximum>;
-} // End IsCMACCInstruction = 1
 
 let SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1 in {
 defm V_MINIMUM_F64 : VOP3Inst <"v_minimum_f64", VOP3_Profile<VOP_F64_F64_F64>, fminimum>;
@@ -460,17 +457,14 @@ let FPDPRounding = 1 in {
 
   let SubtargetPredicate = isGFX9Plus in {
     defm V_DIV_FIXUP_F16_gfx9 : VOP3Inst_t16 <"v_div_fixup_f16_gfx9", VOP_F16_F16_F16_F16, AMDGPUdiv_fixup>;
-    let IsCMACCInstruction = 1 in 
-      defm V_FMA_F16_gfx9 : VOP3Inst_t16 <"v_fma_f16_gfx9", VOP_F16_F16_F16_F16, any_fma>;
+    defm V_FMA_F16_gfx9 : VOP3Inst_t16 <"v_fma_f16_gfx9", VOP_F16_F16_F16_F16, any_fma>;
   } // End SubtargetPredicate = isGFX9Plus
 } // End FPDPRounding = 1
 
 let SubtargetPredicate = Has16BitInsts, isCommutable = 1 in {
 
-let IsCMACCInstruction = 1 in {
 defm V_MAD_U16 : VOP3Inst <"v_mad_u16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_CLAMP>>;
 defm V_MAD_I16 : VOP3Inst <"v_mad_i16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_CLAMP>>;
-} // End IsCMACCInstruction = 1
 let FPDPRounding = 1 in {
   defm V_MAD_F16 : VOP3Inst <"v_mad_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, any_fmad>;
   let Uses = [MODE, M0, EXEC] in {
@@ -792,10 +786,8 @@ let SubtargetPredicate = HasAddMinMaxInsts, isCommutable = 1, isReMaterializable
   defm V_ADD_MIN_U32 : VOP3Inst <"v_add_min_u32", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>, int_amdgcn_add_min_u32>;
 }
 
-let IsCMACCInstruction = 1 in {
 defm V_ADD_I16 : VOP3Inst_t16 <"v_add_i16", VOP_I16_I16_I16>;
 defm V_SUB_I16 : VOP3Inst_t16 <"v_sub_i16", VOP_I16_I16_I16>;
-} // End IsCMACCInstruction = 1
 
 let isCommutable = 1 in {
   defm V_MAD_U32_U16 : VOP3Inst_t16 <"v_mad_u32_u16", VOP_I32_I16_I16_I32>;
@@ -1546,11 +1538,10 @@ let SubtargetPredicate = isGFX10Plus in {
     def : PermlanePat<int_amdgcn_permlane16, V_PERMLANE16_B32_e64, vt>;
     def : PermlanePat<int_amdgcn_permlanex16, V_PERMLANEX16_B32_e64, vt>;
   }
-  let IsCMACCInstruction = 1 in {
-  let isCommutable = 1 in
+  let isCommutable = 1 in {
     defm V_ADD_NC_U16 : VOP3Inst_t16 <"v_add_nc_u16", VOP_I16_I16_I16, add>;
+  } // End isCommutable = 1
   defm V_SUB_NC_U16 : VOP3Inst_t16 <"v_sub_nc_u16", VOP_I16_I16_I16, sub>;
-  } // End IsCMACCInstruction = 1
 
 } // End SubtargetPredicate = isGFX10Plus
 

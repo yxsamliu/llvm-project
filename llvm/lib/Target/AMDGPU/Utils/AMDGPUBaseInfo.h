@@ -1020,9 +1020,6 @@ bool isInvalidSingleUseConsumerInst(unsigned Opc);
 LLVM_READONLY
 bool isInvalidSingleUseProducerInst(unsigned Opc);
 
-LLVM_READONLY
-bool isCMACCInstruction(unsigned Opc);
-
 bool isDPMACCInstruction(unsigned Opc);
 
 LLVM_READONLY

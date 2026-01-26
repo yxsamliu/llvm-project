@@ -132,10 +132,8 @@ multiclass VINTERP_t16<string OpName, list<ValueType> ArgVT> {
 }
 
 let Uses = [M0, EXEC, MODE] in {
-let IsCMACCInstruction = 1 in {
-  def V_INTERP_P10_F32_inreg : VINTERP_Pseudo <"v_interp_p10_f32", VOP3_VINTERP_F32>;
-  def V_INTERP_P2_F32_inreg : VINTERP_Pseudo <"v_interp_p2_f32", VOP3_VINTERP_F32>;
-} // IsCMACCInstruction = 1
+def V_INTERP_P10_F32_inreg : VINTERP_Pseudo <"v_interp_p10_f32", VOP3_VINTERP_F32>;
+def V_INTERP_P2_F32_inreg : VINTERP_Pseudo <"v_interp_p2_f32", VOP3_VINTERP_F32>;
 
 defm V_INTERP_P10_F16_F32_inreg : VINTERP_t16<"v_interp_p10_f16_f32", [f32, f16, f32, f16]>;
 defm V_INTERP_P2_F16_F32_inreg : VINTERP_t16<"v_interp_p2_f16_f32", [f16, f16, f32, f32]>;
