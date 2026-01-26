@@ -3991,6 +3991,8 @@ def int_amdgcn_fma_from_tensor_f16_u8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32
 def int_amdgcn_fma_from_tensor_f16_fp8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty>;
 def int_amdgcn_fma_from_tensor_f16_bf8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty>;
 def int_amdgcn_fma_from_tensor_f16_bf16 : FmaFromTensor<llvm_anyfloat_ty, llvm_v2bf16_ty>;
+def int_amdgcn_fma_from_tensor_f16_i16 : FmaFromTensorDoubleResid<llvm_anyfloat_ty, llvm_v2i16_ty>;
+def int_amdgcn_fma_from_tensor_f16_u16 : FmaFromTensorDoubleResid<llvm_anyfloat_ty, llvm_v2i16_ty>;
 
 def int_amdgcn_fma_from_tensor_bf16_i4 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty>;
 def int_amdgcn_fma_from_tensor_bf16_u4 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty>;
@@ -4156,6 +4158,16 @@ def int_amdgcn_cvt_to_tensor_sr_bf8_bf16 : AMDGPUCvtTensorSRSingle<llvm_i32_ty, 
 def int_amdgcn_cvt_to_tensor_sr_fp8_f16_double : AMDGPUCvtTensorSRSingle<llvm_v2i32_ty, llvm_anyfloat_ty>;
 def int_amdgcn_cvt_to_tensor_sr_fp8_bf16_double : AMDGPUCvtTensorSRSingle<llvm_v2i32_ty, llvm_anyfloat_ty>;
 def int_amdgcn_cvt_to_tensor_sr_bf8_f16_double : AMDGPUCvtTensorSRSingle<llvm_v2i32_ty, llvm_anyfloat_ty>;
+
+def int_amdgcn_cvt_to_tensor_i16_f32_scatter2 : AMDGPUCvtTensorScatter2<llvm_v2i16_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_u16_f32_scatter2 : AMDGPUCvtTensorScatter2<llvm_v2i16_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_i16_f16_scatter2 : AMDGPUCvtTensorScatter2<llvm_v2i16_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_u16_f16_scatter2 : AMDGPUCvtTensorScatter2<llvm_v2i16_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_i16_f16_scatter4 : AMDGPUCvtTensorScatter4<llvm_v2i16_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_u16_f16_scatter4 : AMDGPUCvtTensorScatter4<llvm_v2i16_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_i16_f16_scatter2_double : AMDGPUCvtTensorScatter2<llvm_v2i32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_u16_f16_scatter2_double : AMDGPUCvtTensorScatter2<llvm_v2i32_ty, llvm_anyfloat_ty>;
+
 def int_amdgcn_cvt_to_tensor_sr_bf8_bf16_double : AMDGPUCvtTensorSRSingle<llvm_v2i32_ty, llvm_anyfloat_ty>;
 
 def int_amdgcn_cvt_to_tensor_sr_fp8_f16_scatter2 : AMDGPUCvtTensorSRScatter2<llvm_i32_ty, llvm_anyfloat_ty>;

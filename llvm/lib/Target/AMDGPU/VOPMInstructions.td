@@ -696,23 +696,28 @@ defm V_CONVOLVE_I32_IU8     : VOPM_Conv_MultiPseudos <"VOPM_CONV_I32_IU8">;
 defm V_CONVOLVE_F32I32_IU4  : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32I32_IU4">;
 defm V_CONVOLVE_F32I32_IU8  : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32I32_IU8">;
 
-multiclass VOPM_Cvt_To_Tensor_Pseudo<string ProfileName> {
+multiclass VOPM_Cvt_To_Tensor_Pseudo<string ProfileName,
+                                     list<Predicate> ExtraPredicates = []> {
   defvar P = !cast<Cvt_To_Tensor_Profile>(ProfileName);
   let SchedRW = P.SchedRW in
-    def NAME : VOPM_Pseudo<P>;
+    def NAME : VOPM_Pseudo<P> {
+      let OtherPredicates = ExtraPredicates;
+    }
 }
 
-multiclass VOPM_Cvt_To_Tensor_Shape_Pseudo<string ProfilePrefix, int acc16bit> {
-  defm _8x4x8 : VOPM_Cvt_To_Tensor_Pseudo<ProfilePrefix #"_8x4x8">;
-  defm _4x4x8 : VOPM_Cvt_To_Tensor_Pseudo<ProfilePrefix #"_4x4x8">;
-  defm _4x4x16 : VOPM_Cvt_To_Tensor_Pseudo<ProfilePrefix #"_4x4x16">;
-  defm _4x2x16 : VOPM_Cvt_To_Tensor_Pseudo<ProfilePrefix # !if(!eq(acc16bit,1),"_ACC16B_4x2x16","_4x2x16")>;
+multiclass VOPM_Cvt_To_Tensor_Shape_Pseudo<string ProfilePrefix, int acc16bit,
+                                           list<Predicate> ExtraPredicates = []> {
+  defm _8x4x8 : VOPM_Cvt_To_Tensor_Pseudo<ProfilePrefix #"_8x4x8", ExtraPredicates>;
+  defm _4x4x8 : VOPM_Cvt_To_Tensor_Pseudo<ProfilePrefix #"_4x4x8", ExtraPredicates>;
+  defm _4x4x16 : VOPM_Cvt_To_Tensor_Pseudo<ProfilePrefix #"_4x4x16", ExtraPredicates>;
+  defm _4x2x16 : VOPM_Cvt_To_Tensor_Pseudo<ProfilePrefix # !if(!eq(acc16bit,1),"_ACC16B_4x2x16","_4x2x16"), ExtraPredicates>;
 }
 
-multiclass VOPM_Cvt_To_Tensor_Acc_Pseudo<string ProfilePrefix> {
-  defm _F32 : VOPM_Cvt_To_Tensor_Shape_Pseudo<ProfilePrefix, 0>;
-  defm _F16 : VOPM_Cvt_To_Tensor_Shape_Pseudo<ProfilePrefix, 1>;
-  defm _BF16 : VOPM_Cvt_To_Tensor_Shape_Pseudo<ProfilePrefix, 1>;
+multiclass VOPM_Cvt_To_Tensor_Acc_Pseudo<string ProfilePrefix,
+                                         list<Predicate> ExtraPredicates = []> {
+  defm _F32 : VOPM_Cvt_To_Tensor_Shape_Pseudo<ProfilePrefix, 0, ExtraPredicates>;
+  defm _F16 : VOPM_Cvt_To_Tensor_Shape_Pseudo<ProfilePrefix, 1, ExtraPredicates>;
+  defm _BF16 : VOPM_Cvt_To_Tensor_Shape_Pseudo<ProfilePrefix, 1, ExtraPredicates>;
 }
 
 multiclass VOPM_Cvt_To_Tensor_MultiPseudos<string ProfilePrefix> {
@@ -735,6 +740,9 @@ multiclass VOPM_Cvt_To_Tensor_SR_MultiPseudos<string ProfilePrefix> {
 
 defm V_CVT_TO_TENSOR : VOPM_Cvt_To_Tensor_MultiPseudos<"VOPM_CVT_TO_TENSOR">;
 defm V_CVT_TO_TENSOR_SR : VOPM_Cvt_To_Tensor_SR_MultiPseudos<"VOPM_CVT_TO_TENSOR_SR">;
+
+defm V_CVT_TO_TENSOR_I16 : VOPM_Cvt_To_Tensor_Acc_Pseudo<"VOPM_CVT_TO_TENSOR_16B", [HasQdqInsts]>;
+defm V_CVT_TO_TENSOR_U16 : VOPM_Cvt_To_Tensor_Acc_Pseudo<"VOPM_CVT_TO_TENSOR_16B", [HasQdqInsts]>;
 
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
   def V_SCALE_BIAS_ACTIVATE_F32 : VOPM_Pseudo<SBA_Profile<[v4f32, v4f32,  f32, untyped, f32], 1>,
@@ -992,58 +1000,70 @@ multiclass Fma_From_Tensor_Profile_Reg<int OutAccScaleReg, int ResidualReg, stri
   def NAME : Fma_From_Tensor_Profile<[OutputFullTy, AccFullTy, ResidualFullTy, SecondResidualFullTy, ScaleInFullTy], OpLayout>;
 }
 
-multiclass Fma_From_Tensor_Profile_Multi<string OutAccBaseTy, string ResidualBaseTy> {
-  defvar ResidualCount = !if(!eq(OutAccBaseTy, ResidualBaseTy), 2, 1);
+multiclass Fma_From_Tensor_Profile_Multi<string OutAccBaseTy, string ResidualBaseTy,
+                                         int ResidualCount> {
 
   defm _regular : Fma_From_Tensor_Profile_Reg<2, 1, OutAccBaseTy, ResidualBaseTy, ResidualCount, FmaFromTensorLayout.CONV_8X4>;
 
   // 4x2 with 32-bit accumulators require 2 registers for accumulator/output, otherwise 1.
   defvar OutAcc_Deq_4x2 = !if(!eq(!find(OutAccBaseTy, "16"), -1), 2, 1);
-  defm _dequant_4x4 : Fma_From_Tensor_Profile_Reg<             1, 1, OutAccBaseTy, ResidualBaseTy, 1, FmaFromTensorLayout.DEQUANT_4X4>;
-  defm _dequant_4x2 : Fma_From_Tensor_Profile_Reg<OutAcc_Deq_4x2, 1, OutAccBaseTy, ResidualBaseTy, 1, FmaFromTensorLayout.DEQUANT_4X2>;
+  defm _dequant_4x4 : Fma_From_Tensor_Profile_Reg<             1, 1, OutAccBaseTy, ResidualBaseTy, ResidualCount, FmaFromTensorLayout.DEQUANT_4X4>;
+  defm _dequant_4x2 : Fma_From_Tensor_Profile_Reg<OutAcc_Deq_4x2, 1, OutAccBaseTy, ResidualBaseTy, ResidualCount, FmaFromTensorLayout.DEQUANT_4X2>;
 }
 
-defm VOPM_FMA_FROM_TENSOR_F32_4B_OR_8B : Fma_From_Tensor_Profile_Multi<"f32", "i32">;
-defm VOPM_FMA_FROM_TENSOR_F16_4B_OR_8B : Fma_From_Tensor_Profile_Multi<"f16", "i32">;
-defm VOPM_FMA_FROM_TENSOR_BF16_4B_OR_8B : Fma_From_Tensor_Profile_Multi<"bf16", "i32">;
+defm VOPM_FMA_FROM_TENSOR_F32_4B_OR_8B : Fma_From_Tensor_Profile_Multi<"f32", "i32", 1>;
+defm VOPM_FMA_FROM_TENSOR_F16_4B_OR_8B : Fma_From_Tensor_Profile_Multi<"f16", "i32", 1>;
+defm VOPM_FMA_FROM_TENSOR_BF16_4B_OR_8B : Fma_From_Tensor_Profile_Multi<"bf16", "i32", 1>;
 
-defm VOPM_FMA_FROM_TENSOR_F32_F16 : Fma_From_Tensor_Profile_Multi<"f32", "f16">;
-defm VOPM_FMA_FROM_TENSOR_F16_F16 : Fma_From_Tensor_Profile_Multi<"f16", "f16">;
-defm VOPM_FMA_FROM_TENSOR_BF16_F16 : Fma_From_Tensor_Profile_Multi<"bf16", "f16">;
+defm VOPM_FMA_FROM_TENSOR_F32_F16 : Fma_From_Tensor_Profile_Multi<"f32", "f16", 1>;
+defm VOPM_FMA_FROM_TENSOR_F16_F16 : Fma_From_Tensor_Profile_Multi<"f16", "f16", 2>;
+defm VOPM_FMA_FROM_TENSOR_BF16_F16 : Fma_From_Tensor_Profile_Multi<"bf16", "f16", 1>;
 
-defm VOPM_FMA_FROM_TENSOR_F32_BF16 : Fma_From_Tensor_Profile_Multi<"f32", "bf16">;
-defm VOPM_FMA_FROM_TENSOR_F16_BF16 : Fma_From_Tensor_Profile_Multi<"f16", "bf16">;
-defm VOPM_FMA_FROM_TENSOR_BF16_BF16 : Fma_From_Tensor_Profile_Multi<"bf16", "bf16">;
+defm VOPM_FMA_FROM_TENSOR_F32_BF16 : Fma_From_Tensor_Profile_Multi<"f32", "bf16", 1>;
+defm VOPM_FMA_FROM_TENSOR_F16_BF16 : Fma_From_Tensor_Profile_Multi<"f16", "bf16", 1>;
+defm VOPM_FMA_FROM_TENSOR_BF16_BF16 : Fma_From_Tensor_Profile_Multi<"bf16", "bf16", 2>;
 
-multiclass VOPM_Fma_From_Tensor_Deq<string ProfilPrefix> {
-  def _4x4 : VOPM_Pseudo<!cast<Fma_From_Tensor_Profile>(ProfilPrefix # "_4x4")>;
-  def _4x2 : VOPM_Pseudo<!cast<Fma_From_Tensor_Profile>(ProfilPrefix # "_4x2")>;
+defm VOPM_FMA_FROM_TENSOR_F16_I16 : Fma_From_Tensor_Profile_Multi<"f16", "i16", 2>;
+defm VOPM_FMA_FROM_TENSOR_F16_U16 : Fma_From_Tensor_Profile_Multi<"f16", "i16", 2>;
+
+multiclass VOPM_Fma_From_Tensor_Deq<string ProfilPrefix, list<Predicate> ExtraPredicates = []> {
+  def _4x4 : VOPM_Pseudo<!cast<Fma_From_Tensor_Profile>(ProfilPrefix # "_4x4")> {
+    let OtherPredicates = ExtraPredicates;
+  }
+  def _4x2 : VOPM_Pseudo<!cast<Fma_From_Tensor_Profile>(ProfilPrefix # "_4x2")> {
+    let OtherPredicates = ExtraPredicates;
+  }
 }
 
-multiclass VOPM_Fma_From_Tensor_Deq_Pseudos<string ProfilPrefix> {
-  defm _dequant : VOPM_Fma_From_Tensor_Deq<ProfilPrefix # "_dequant">;
-  def _regular : VOPM_Pseudo<!cast<Fma_From_Tensor_Profile>(ProfilPrefix # "_regular")>;
+multiclass VOPM_Fma_From_Tensor_Deq_Pseudos<string ProfilPrefix, list<Predicate> ExtraPredicates = []> {
+  defm _dequant : VOPM_Fma_From_Tensor_Deq<ProfilPrefix # "_dequant", ExtraPredicates>;
+  def _regular : VOPM_Pseudo<!cast<Fma_From_Tensor_Profile>(ProfilPrefix # "_regular")> {
+    let OtherPredicates = ExtraPredicates;
+  }
 }
 
-multiclass VOPM_Fma_From_Tensor_Resid_Pseudos<string ProfilePrefix> {
-  defm _I4 : VOPM_Fma_From_Tensor_Deq_Pseudos<ProfilePrefix # "_4B_OR_8B">;
-  defm _U4 : VOPM_Fma_From_Tensor_Deq_Pseudos<ProfilePrefix # "_4B_OR_8B">;
-  defm _I8 : VOPM_Fma_From_Tensor_Deq_Pseudos<ProfilePrefix # "_4B_OR_8B">;
-  defm _U8 : VOPM_Fma_From_Tensor_Deq_Pseudos<ProfilePrefix # "_4B_OR_8B">;
-  defm _FP8 : VOPM_Fma_From_Tensor_Deq_Pseudos<ProfilePrefix # "_4B_OR_8B">;
-  defm _BF8 : VOPM_Fma_From_Tensor_Deq_Pseudos<ProfilePrefix # "_4B_OR_8B">;
+multiclass VOPM_Fma_From_Tensor_Resid_Pseudos<string ProfilePrefix, list<Predicate> ExtraPredicates = []> {
+  defm _I4 : VOPM_Fma_From_Tensor_Deq_Pseudos<ProfilePrefix # "_4B_OR_8B", ExtraPredicates>;
+  defm _U4 : VOPM_Fma_From_Tensor_Deq_Pseudos<ProfilePrefix # "_4B_OR_8B", ExtraPredicates>;
+  defm _I8 : VOPM_Fma_From_Tensor_Deq_Pseudos<ProfilePrefix # "_4B_OR_8B", ExtraPredicates>;
+  defm _U8 : VOPM_Fma_From_Tensor_Deq_Pseudos<ProfilePrefix # "_4B_OR_8B", ExtraPredicates>;
+  defm _FP8 : VOPM_Fma_From_Tensor_Deq_Pseudos<ProfilePrefix # "_4B_OR_8B", ExtraPredicates>;
+  defm _BF8 : VOPM_Fma_From_Tensor_Deq_Pseudos<ProfilePrefix # "_4B_OR_8B", ExtraPredicates>;
 
-  defm _F16 : VOPM_Fma_From_Tensor_Deq_Pseudos<ProfilePrefix # "_F16">;
-  defm _BF16 : VOPM_Fma_From_Tensor_Deq_Pseudos<ProfilePrefix # "_BF16">;
+  defm _F16 : VOPM_Fma_From_Tensor_Deq_Pseudos<ProfilePrefix # "_F16", ExtraPredicates>;
+  defm _BF16 : VOPM_Fma_From_Tensor_Deq_Pseudos<ProfilePrefix # "_BF16", ExtraPredicates>;
 }
 
-multiclass VOPM_Fma_From_Tensor_MultiPseudos<string ProfilePrefix> {
-  defm _F32 : VOPM_Fma_From_Tensor_Resid_Pseudos<ProfilePrefix # "_F32">;
-  defm _F16 : VOPM_Fma_From_Tensor_Resid_Pseudos<ProfilePrefix # "_F16">;
-  defm _BF16 : VOPM_Fma_From_Tensor_Resid_Pseudos<ProfilePrefix # "_BF16">;
+multiclass VOPM_Fma_From_Tensor_MultiPseudos<string ProfilePrefix, list<Predicate> ExtraPredicates = []> {
+  defm _F32 : VOPM_Fma_From_Tensor_Resid_Pseudos<ProfilePrefix # "_F32", ExtraPredicates>;
+  defm _F16 : VOPM_Fma_From_Tensor_Resid_Pseudos<ProfilePrefix # "_F16", ExtraPredicates>;
+  defm _BF16 : VOPM_Fma_From_Tensor_Resid_Pseudos<ProfilePrefix # "_BF16", ExtraPredicates>;
 }
 
 defm V_FMA_FROM_TENSOR : VOPM_Fma_From_Tensor_MultiPseudos<"VOPM_FMA_FROM_TENSOR">;
+
+defm V_FMA_FROM_TENSOR_F16_I16 : VOPM_Fma_From_Tensor_Deq_Pseudos<"VOPM_FMA_FROM_TENSOR_F16_I16", [HasQdqInsts]>;
+defm V_FMA_FROM_TENSOR_F16_U16 : VOPM_Fma_From_Tensor_Deq_Pseudos<"VOPM_FMA_FROM_TENSOR_F16_U16", [HasQdqInsts]>;
 
 //===----------------------------------------------------------------------===//
 // VOPM Reals
@@ -1440,6 +1460,16 @@ defm V_CVT_TO_TENSOR_SR_BF8_F16 : Cvt_To_Tensor_8b_Real_gfx13<0x04b>;
 defm V_CVT_TO_TENSOR_SR_FP8_BF16 : Cvt_To_Tensor_8b_Real_gfx13<0x04c>;
 defm V_CVT_TO_TENSOR_SR_BF8_BF16 : Cvt_To_Tensor_8b_Real_gfx13<0x04d>;
 
+multiclass Cvt_To_Tensor_16b_ACC32b_Real_gfx13<bits<8> op> {
+  defm _4x2x16 : VOP3M_Cvt_To_Tensor_Real_Base<GFX13Gen, op, NAME#"_4x2x16", !tolower(NAME)>;
+}
+
+defm V_CVT_TO_TENSOR_I16_F32 : Cvt_To_Tensor_16b_ACC32b_Real_gfx13<0x2e>;
+defm V_CVT_TO_TENSOR_U16_F32 : Cvt_To_Tensor_16b_ACC32b_Real_gfx13<0x2f>;
+defm V_CVT_TO_TENSOR_I16_F16 : Cvt_To_Tensor_16b_Real_gfx13<0x4e>;
+defm V_CVT_TO_TENSOR_U16_F16 : Cvt_To_Tensor_16b_Real_gfx13<0x4f>;
+
+
 multiclass SBA<string Suffix, bits<8> op, string mnemo> {
   defm NAME # "_" # Suffix : VOP3M_SBA_Real_Base<GFX13Gen, op>;
   defm NAME # "_SCATTER2" # "_" # Suffix : VOP3M_SBA_Real_Base<GFX13Gen, op, NAME # "_SCATTER2" # "_" # Suffix, mnemo>;
@@ -1564,6 +1594,8 @@ defm V_FMA_FROM_TENSOR_F16_U8 : FMA_Tensor_Real <0x5b>;
 defm V_FMA_FROM_TENSOR_F16_FP8 : FMA_Tensor_Real <0x5c>;
 defm V_FMA_FROM_TENSOR_F16_BF8 : FMA_Tensor_Real <0x5d>;
 defm V_FMA_FROM_TENSOR_F16_F16 : FMA_Tensor_Real <0x5e>;
+defm V_FMA_FROM_TENSOR_F16_I16 : FMA_Tensor_Real <0x68>;
+defm V_FMA_FROM_TENSOR_F16_U16 : FMA_Tensor_Real <0x69>;
 defm V_FMA_FROM_TENSOR_BF16_I4 : FMA_Tensor_Real <0x60>;
 defm V_FMA_FROM_TENSOR_BF16_U4 : FMA_Tensor_Real <0x61>;
 defm V_FMA_FROM_TENSOR_BF16_I8 : FMA_Tensor_Real <0x62>;
@@ -1827,6 +1859,10 @@ let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
   defm : FmaFromTensorPatMultiDeq_VOPM<"F16_BF8", "int_amdgcn_fma_from_tensor_f16_bf8", "F16_4B_OR_8B">;
   defm : FmaFromTensorPatMultiDeq_VOPM<"F16_F16", "int_amdgcn_fma_from_tensor_f16_f16", "F16_F16", 0>;
   defm : FmaFromTensorPatMultiDeq_VOPM<"F16_BF16", "int_amdgcn_fma_from_tensor_f16_bf16", "F16_BF16">;
+  let OtherPredicates = [HasQdqInsts] in {
+    defm : FmaFromTensorPatMultiDeq_VOPM<"F16_I16", "int_amdgcn_fma_from_tensor_f16_i16", "F16_I16", 0>;
+    defm : FmaFromTensorPatMultiDeq_VOPM<"F16_U16", "int_amdgcn_fma_from_tensor_f16_u16", "F16_U16", 0>;
+  }
   defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_I4", "int_amdgcn_fma_from_tensor_bf16_i4", "BF16_4B_OR_8B">;
   defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_U4", "int_amdgcn_fma_from_tensor_bf16_u4", "BF16_4B_OR_8B">;
   defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_I8", "int_amdgcn_fma_from_tensor_bf16_i8", "BF16_4B_OR_8B">;

@@ -980,6 +980,12 @@ def FeatureTensorWmmaOps : SubtargetFeature<"tensor-wmma-ops",
   "Has extended set of WMMA instructions (IU16 inputs)"
 >;
 
+def FeatureQdqInsts : SubtargetFeature<"qdq-insts",
+  "HasQdqInsts",
+  "true",
+  "Has enhanced quantize-dequantize tensor instructions"
+>;
+
 def FeatureWMMA2048bInsts : SubtargetFeature<"wmma-2048b-insts",
   "HasWMMA2048bInsts",
   "true",
@@ -2558,6 +2564,7 @@ def FeatureISAVersion13_7 : FeatureSet<
   !listconcat(FeatureISAVersion13_Common.Features,
     [FeatureWMMAK128,
      FeatureTensorWmmaOps,
+     FeatureQdqInsts,
      FeatureGlobalTiledLoads2x2,
      FeatureLDSTiledLoads,
     ])>;
@@ -3293,6 +3300,9 @@ def HasWMMA128bInsts : Predicate<"Subtarget->hasWMMA128bInsts()">,
 
 def HasTensorWmmaOps : Predicate<"Subtarget->hasTensorWmmaOps()">,
   AssemblerPredicate<(all_of FeatureTensorWmmaOps)>;
+
+def HasQdqInsts : Predicate<"Subtarget->hasQdqInsts()">,
+  AssemblerPredicate<(all_of FeatureQdqInsts)>;
 
 def HasWMMA2048bInsts : Predicate<"Subtarget->hasWMMA2048bInsts()">,
   AssemblerPredicate<(all_of FeatureWMMA2048bInsts)>;

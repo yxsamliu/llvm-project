@@ -3916,6 +3916,64 @@ void AMDGPUDAGToDAGISel::SelectCvtTensor(SDNode *N, unsigned IntrID) {
       break;
     }
     break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_i16_f32_scatter2:
+    switch (shape) {
+    case Shape::Pixel_4x2x16:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I16_F32_4x2x16;
+      break;
+    default:
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_i16_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i16_f16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_i16_f16_scatter2_double:
+    switch (shape) {
+    case Shape::Pixel_4x2x16:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I16_F16_4x2x16;
+      break;
+    case Shape::Pixel_4x4x16:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I16_F16_4x4x16;
+      break;
+    case Shape::Pixel_4x4x8:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I16_F16_4x4x8;
+      break;
+    case Shape::Pixel_8x4x8:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I16_F16_8x4x8;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_u16_f32_scatter2:
+    switch (shape) {
+    case Shape::Pixel_4x2x16:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U16_F32_4x2x16;
+      break;
+    default:
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_u16_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u16_f16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_u16_f16_scatter2_double:
+    switch (shape) {
+    case Shape::Pixel_4x2x16:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U16_F16_4x2x16;
+      break;
+    case Shape::Pixel_4x4x16:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U16_F16_4x4x16;
+      break;
+    case Shape::Pixel_4x4x8:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U16_F16_4x4x8;
+      break;
+    case Shape::Pixel_8x4x8:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U16_F16_8x4x8;
+      break;
+    }
+    break;
   }
 
   if (Opc == -1) {
@@ -4085,6 +4143,14 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_bf16:
   case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_bf16_scatter2:
   case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_bf16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_i16_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i16_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i16_f16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_i16_f16_scatter2_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_u16_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u16_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u16_f16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_u16_f16_scatter2_double:
     SelectCvtTensor(N, IntrID);
     return;
   default:

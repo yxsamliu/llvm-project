@@ -267,6 +267,7 @@ protected:
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
   bool HasTensorCvtLutInsts = false;
+  bool HasQdqInsts = false;
   bool HasTransposeLoadF4F6Insts = false;
   bool HasPrngInst = false;
   bool HasBVHDualAndBVH8Insts = false;
@@ -1522,6 +1523,8 @@ public:
   bool hasTanhInsts() const { return HasTanhInsts; }
 
   bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
+
+  bool hasQdqInsts() const { return HasQdqInsts; }
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 
