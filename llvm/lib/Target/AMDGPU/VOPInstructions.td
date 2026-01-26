@@ -18,7 +18,6 @@ class LetDummies {
   bit isConvergent;
   bit isAsCheapAsAMove;
   bit FPDPRounding;
-  bit IsCMACCInstruction;
   bit IsDPMACCInstruction;
   bit IsInvalidSingleUseConsumer;
   bit IsInvalidSingleUseProducer;
@@ -76,7 +75,6 @@ class VOP_Pseudo <string opName, string suffix, VOPProfile P, dag outs, dag ins,
   string Mnemonic = opName;
   Instruction Opcode = !cast<Instruction>(NAME);
   bit IsTrue16 = P.IsTrue16;
-  bit IsCMACCInstruction = 0;
   bit IsDPMACCInstruction = 0;
   bit IsInvalidSingleUseConsumer = P.IsInvalidSingleUseConsumer;
   bit IsInvalidSingleUseProducer = P.IsInvalidSingleUseProducer;
@@ -779,9 +777,16 @@ class VOP_SDWA9Be<VOPProfile P> : VOP_SDWA9e<P> {
 }
 
 class VOP_SDWA_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
-  VOP_Pseudo <opName, "_sdwa", P, P.OutsSDWA, P.InsSDWA, "", pattern> {
+  InstSI <P.OutsSDWA, P.InsSDWA, "", pattern>,
+  VOP <opName>,
+  SIMCInstr <opName#"_sdwa", SIEncodingFamily.NONE> {
 
-  let AsmOperands = P.AsmSDWA;
+  let isPseudo = 1;
+  let isCodeGenOnly = 1;
+  let UseNamedOperandTable = 1;
+
+  string Mnemonic = opName;
+  string AsmOperands = P.AsmSDWA;
   string AsmOperands9 = P.AsmSDWA9;
 
   let Size = 8;
@@ -801,6 +806,8 @@ class VOP_SDWA_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
   let AsmVariantName = !if(P.HasExtSDWA, AMDGPUAsmVariants.SDWA,
                                          AMDGPUAsmVariants.Disable);
   let DecoderNamespace = "GFX8";
+
+  VOPProfile Pfl = P;
 }
 
 class VOP_SDWA8_Real <VOP_SDWA_Pseudo ps> :
@@ -2455,15 +2462,6 @@ def VOPTrue16Table : GenericTable {
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getTrue16OpcodeHelper";
-}
-
-def CMACCInstructionTable : GenericTable {
-  let FilterClass = "VOP_Pseudo";
-  let CppTypeName = "CMACCInstructionInfo";
-  let Fields = ["Opcode", "IsCMACCInstruction"];
-
-  let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "getCMACCInstructionHelper";
 }
 
 def DPMACCInstructionTable : GenericTable {
