@@ -3120,7 +3120,7 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
       findAllocInsertPoints(builder, moduleTranslation);
 
   llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
-      builder, moduleTranslation, privateVarsInfo, allocaIP);
+      simdOp, builder, moduleTranslation, privateVarsInfo, allocaIP);
   if (handleError(afterAllocas, opInst).failed())
     return failure();
 
@@ -3128,18 +3128,10 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   LinearClauseProcessor linearClauseProcessor;
 
   if (!simdOp.getLinearVars().empty()) {
-<<<<<<< HEAD
     if (failed(linearClauseProcessor.registerTypes(
             moduleTranslation, simdOp.getLinearVars(),
             simdOp.getLinearVarTypes(), &opInst)))
       return failure();
-    for (auto [idx, linearVar] : llvm::enumerate(simdOp.getLinearVars()))
-      linearClauseProcessor.createLinearVar(builder, moduleTranslation,
-                                            linearVar, idx);
-=======
-    auto linearVarTypes = simdOp.getLinearVarTypes().value();
-    for (mlir::Attribute linearVarType : linearVarTypes)
-      linearClauseProcessor.registerType(moduleTranslation, linearVarType);
     for (auto [idx, linearVar] : llvm::enumerate(simdOp.getLinearVars())) {
       bool isImplicit = false;
       for (auto [mlirPrivVar, llvmPrivateVar] : llvm::zip_equal(
@@ -3159,19 +3151,10 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
             builder, moduleTranslation,
             moduleTranslation.lookupValue(linearVar), idx);
     }
->>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
     for (mlir::Value linearStep : simdOp.getLinearStepVars())
       linearClauseProcessor.initLinearStep(moduleTranslation, linearStep);
   }
 
-<<<<<<< HEAD
-  llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
-      simdOp, builder, moduleTranslation, privateVarsInfo, allocaIP);
-  if (handleError(afterAllocas, opInst).failed())
-    return failure();
-
-=======
->>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
   if (failed(allocReductionVars(simdOp, reductionArgs, builder,
                                 moduleTranslation, allocaIP, reductionDecls,
                                 privateReductionVariables, reductionVariableMap,

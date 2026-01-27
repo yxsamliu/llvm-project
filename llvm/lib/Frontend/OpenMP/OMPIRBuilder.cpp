@@ -1011,20 +1011,15 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
     assert(OutlinedFn && OutlinedFn->hasNUses(1));
 
     // Run a user callback, e.g. to add attributes.
-<<<<<<< HEAD
     if (OI->PostOutlineCB)
       OI->PostOutlineCB(*OutlinedFn);
-=======
-    if (OI.PostOutlineCB)
-      OI.PostOutlineCB(*OutlinedFn);
 
-    if (OI.FixUpNonEntryAllocas) {
+    if (OI->FixUpNonEntryAllocas) {
       PostDominatorTree PostDomTree(*OutlinedFn);
       for (llvm::BasicBlock &BB : *OutlinedFn)
         if (PostDomTree.properlyDominates(&BB, &OutlinedFn->getEntryBlock()))
           hoistNonEntryAllocasToEntryBlock(BB);
     }
->>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
   }
 
   // Remove work items that have been completed.
@@ -1948,7 +1943,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
                              IfCondition, NumThreads, PrivTID, PrivTIDAddrAcast,
                              ThreadID, ToBeDeletedVec);
     };
-    OI.FixUpNonEntryAllocas = true;
+    OI->FixUpNonEntryAllocas = true;
   } else {
     // Generate OpenMP host runtime call
     OI->PostOutlineCB = [=, ToBeDeletedVec =
@@ -1956,7 +1951,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
       hostParallelCallback(this, OutlinedFn, OuterFn, Ident, IfCondition,
                            PrivTID, PrivTIDAddrAcast, ToBeDeletedVec);
     };
-    OI.FixUpNonEntryAllocas = true;
+    OI->FixUpNonEntryAllocas = true;
   }
 
   OI->OuterAllocBB = OuterAllocaBlock;
@@ -9105,23 +9100,13 @@ static void emitTargetCall(
       // The presence of certain clauses on the target directive require the
       // explicit generation of the target task.
       if (RequiresOuterTargetTask)
-<<<<<<< HEAD
-        return OMPBuilder.emitTargetTask(TaskBodyCB, DeviceID, RTLoc, AllocIP,
+        return OMPBuilder.emitTargetTask(TaskBodyCB, RuntimeAttrs.DeviceID, RTLoc, AllocIP,
                                          Dependencies, KArgs.RTArgs,
                                          Info.HasNoWait);
 
       return OMPBuilder.emitKernelLaunch(Builder, OutlinedFnID,
                                          EmitTargetCallFallbackCB, KArgs,
-                                         DeviceID, RTLoc, AllocIP);
-=======
-        return OMPBuilder.emitTargetTask(TaskBodyCB, RuntimeAttrs.DeviceID,
-                                         RTLoc, AllocaIP, Dependencies,
-                                         KArgs.RTArgs, Info.HasNoWait);
-
-      return OMPBuilder.emitKernelLaunch(
-          Builder, OutlinedFnID, EmitTargetCallFallbackCB, KArgs,
-          RuntimeAttrs.DeviceID, RTLoc, AllocaIP);
->>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
+                                         RuntimeAttrs.DeviceID, RTLoc, AllocIP);
     }());
 
     Builder.restoreIP(AfterIP);

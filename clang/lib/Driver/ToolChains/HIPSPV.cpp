@@ -68,20 +68,11 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
   StringRef Target =
       "generic"; // SPIR-V is generic, no specific target ID like -mcpu
   tools::AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LinkArgs, Arch,
-<<<<<<< HEAD
                                     Target, /*IsBitCodeSDL=*/true,
                                     /*PostClangLink=*/false);
 
-  LinkArgs.append({"-o", TempFile});
-  const char *LlvmLink =
-      Args.MakeArgString(getToolChain().GetProgramPath("llvm-link"));
-  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         LlvmLink, LinkArgs, Inputs, Output));
-=======
-                                    Target, /*IsBitCodeSDL=*/true);
   tools::constructLLVMLinkCommand(C, *this, JA, Inputs, LinkArgs, Output, Args,
                                   TempFile);
->>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 
   // Post-link HIP lowering.
 

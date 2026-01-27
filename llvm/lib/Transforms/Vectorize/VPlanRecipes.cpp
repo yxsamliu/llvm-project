@@ -986,8 +986,6 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
         Ctx.CostKind, {TTI::OK_AnyValue, TTI::OP_None},
         {TTI::OK_AnyValue, TTI::OP_None}, CtxI);
   }
-<<<<<<< HEAD
-=======
   case Instruction::BitCast: {
     Type *ScalarTy = Ctx.Types.inferScalarType(this);
     if (ScalarTy->isPointerTy())
@@ -1109,7 +1107,6 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
         Instruction::Select, VectorTy, CondTy, Pred, Ctx.CostKind,
         {TTI::OK_AnyValue, TTI::OP_None}, {TTI::OK_AnyValue, TTI::OP_None}, SI);
   }
->>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
   }
   llvm_unreachable("called for unsupported opcode");
 }

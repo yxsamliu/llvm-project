@@ -45,23 +45,13 @@ void AMDGCN::Linker::constructLLVMLinkCommand(
   // Look for archive of bundled bitcode in arguments, and add temporary files
   // for the extracted archive of bitcode to inputs.
   auto TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
-<<<<<<< HEAD
-  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LlvmLinkArgs, "amdgcn",
+  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LinkerInputs, "amdgcn",
                              TargetID,
                              /*IsBitCodeSDL=*/true,
                              /*PostClangLink=*/false);
 
-  const char *LlvmLink =
-    Args.MakeArgString(getToolChain().GetProgramPath("llvm-link"));
-  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         LlvmLink, LlvmLinkArgs, Inputs,
-                                         Output));
-=======
-  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LinkerInputs, "amdgcn",
-                             TargetID, /*IsBitCodeSDL=*/true);
   tools::constructLLVMLinkCommand(C, *this, JA, Inputs, LinkerInputs, Output,
                                   Args);
->>>>>>> 9de413b41997fb04cd54cb397e7a00e60a0873de
 }
 
 void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
