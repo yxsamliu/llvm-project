@@ -171,7 +171,9 @@ protected:
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
   bool HasWMMA128bInsts = false;
+  bool HasWMMAK128 = false;
   bool HasWMMA256bInsts = false;
+  bool HasTensorWmmaOps = false;
   bool HasWMMA2048bInsts = false;
   bool HasPermPkU2U3Insts = false;
   bool HasPk4Insts = false;
@@ -182,6 +184,7 @@ protected:
   bool HasCvtNormInsts = false;
   bool HasCvtPkNormVOP2Insts = false;
   bool HasCvtPkNormVOP3Insts = false;
+  bool HasWMMATransposeInsts = false;
   bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
@@ -323,6 +326,8 @@ protected:
 
   bool HasClusters = false;
   bool RequiresWaitsBeforeSystemScopeStores = false;
+  bool HasGlobalTiledLoads2x2 = false;
+  bool HasLDSTiledLoads = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -901,12 +906,16 @@ public:
   bool hasWMMA256bInsts() const { return HasWMMA256bInsts; }
 
   bool hasWMMA128bInsts() const { return HasWMMA128bInsts; }
+  bool hasWMMAK128() const { return HasWMMAK128; }
+  bool hasTensorWmmaOps() const { return HasTensorWmmaOps; }
 
   bool hasWMMA2048bInsts() const { return HasWMMA2048bInsts; }
 
   bool hasPermPkU2U3Insts() const { return HasPermPkU2U3Insts; }
 
   bool hasPk4Insts() const { return HasPk4Insts; }
+
+  bool hasWMMATransposeInsts() const { return HasWMMATransposeInsts; }
 
   bool isGFX1170() const {
     return getGeneration() == GFX11 && hasWMMA128bInsts();
@@ -1479,11 +1488,11 @@ public:
   /// \returns true if the target supports Wavegroups.
   bool hasWavegroups() const { return HasWavegroups; }
 
-  /// \returns true if the target has the s_wakeup instruction that takes 
+  /// \returns true if the target has the s_wakeup instruction that takes
   /// an immediate operand.
   bool hasSWakeupImm() const { return HasSWakeupImm; }
 
-  /// \returns true if the target has the s_barrier_leave instruction that takes an immediate 
+  /// \returns true if the target has the s_barrier_leave instruction that takes an immediate
   /// operand.
   bool hasSBarrierLeaveImm() const { return HasSBarrierLeaveImm; }
 
@@ -2001,6 +2010,16 @@ public:
 
   bool requiresWaitsBeforeSystemScopeStores() const {
     return RequiresWaitsBeforeSystemScopeStores;
+  }
+
+  bool hasGlobalTiledLoads2x2() const { return HasGlobalTiledLoads2x2; }
+
+  bool hasLDSTiledLoads() const { return HasLDSTiledLoads; }
+
+  bool supportsWaveWideBPermute() const {
+    return (getGeneration() <= AMDGPUSubtarget::GFX9 ||
+            getGeneration() == AMDGPUSubtarget::GFX12) ||
+           isWave32();
   }
 };
 

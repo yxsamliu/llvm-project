@@ -118,6 +118,7 @@ Changes to the AMDGPU Backend
 -----------------------------
 
 * Initial support for gfx1260
+* Initial support for gfx1370
 * Removed `llvm.amdgcn.atomic.cond.sub.u32` and
   `llvm.amdgcn.atomic.csub.u32` intrinsics. Users should use the
   `atomicrmw` instruction with `usub_cond` and `usub_sat` instead.

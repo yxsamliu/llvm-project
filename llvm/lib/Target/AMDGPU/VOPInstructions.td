@@ -496,6 +496,7 @@ class VOP3Pe_Base {
   bits<2> matrix_b_scale_fmt;
   bits<1> matrix_a_reuse;
   bits<1> matrix_b_reuse;
+  bits<1> pred_xdl;
 }
 
 class VOP3Pe <VOPProfile P> : Enc64, VOP3Pe_Base {
@@ -1568,7 +1569,7 @@ class VOP3_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_Pr
 
 }
 
-class VOP3_Profile_NoInline_Src<VOPProfile P> : 
+class VOP3_Profile_NoInline_Src<VOPProfile P> :
   VOP3_Profile_Base<P, VOP3_REGULAR> {
   let IsSingle = 1;
   let Src0RC32 = getVOP3NoInlineSrcForVT<P.ArgVT[1], P.IsTrue16>.ret;

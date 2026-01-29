@@ -43,7 +43,6 @@ body:             |
     ; ESM2-NEXT: S_WAIT_SAMPLECNT 0
     ; ESM2-NEXT: S_WAIT_BVHCNT 0
     ; ESM2-NEXT: S_WAIT_KMCNT 0
-    ; ESM2-NEXT: S_WAITCNT_DEPCTR 3971
     ; ESM2-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr2_sgpr3, 36, 0 :: (dereferenceable invariant load (s64), addrspace 4)
     ; ESM2-NEXT: $sgpr33 = S_MOV_B32 0
     ; ESM2-NEXT: S_WAIT_KMCNT 0
@@ -55,6 +54,7 @@ body:             |
     ; ESM2-NEXT: $vgpr1 = GLOBAL_ATOMIC_INC_SADDR_RTN renamable $vgpr0, killed renamable $vgpr1, renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
     ; ESM2-NEXT: S_WAIT_LOADCNT 0
     ; ESM2-NEXT: V_STORE_IDX_B32 killed $vgpr1, $idx1, 0, implicit $exec :: (store (s32), addrspace 10)
+    ; ESM2-NEXT: S_WAITCNT_DEPCTR 65411
     ; ESM2-NEXT: $vgpr1 = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
     ; ESM2-NEXT: S_WAITCNT_DEPCTR 3999
     ; ESM2-NEXT: $vgpr0 = GLOBAL_ATOMIC_DEC_SADDR_RTN killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (load store syncscope("workgroup") seq_cst (s32), addrspace 1)
@@ -121,7 +121,6 @@ body:             |
     ; ESM2-NEXT: S_WAIT_SAMPLECNT 0
     ; ESM2-NEXT: S_WAIT_BVHCNT 0
     ; ESM2-NEXT: S_WAIT_KMCNT 0
-    ; ESM2-NEXT: S_WAITCNT_DEPCTR 3971
     ; ESM2-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr2_sgpr3, 36, 0 :: (dereferenceable invariant load (s64), addrspace 4)
     ; ESM2-NEXT: $sgpr33 = S_MOV_B32 0
     ; ESM2-NEXT: S_WAIT_KMCNT 0
@@ -205,7 +204,6 @@ body:             |
     ; ESM2-NEXT: S_WAIT_SAMPLECNT 0
     ; ESM2-NEXT: S_WAIT_BVHCNT 0
     ; ESM2-NEXT: S_WAIT_KMCNT 0
-    ; ESM2-NEXT: S_WAITCNT_DEPCTR 3971
     ; ESM2-NEXT: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr2_sgpr3, 36, 0 :: (dereferenceable invariant load (s64), addrspace 4)
     ; ESM2-NEXT: $sgpr33 = S_MOV_B32 0
     ; ESM2-NEXT: S_WAIT_KMCNT 0

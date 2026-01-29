@@ -111,6 +111,11 @@ struct MFMA_F8F6F4_Info {
   uint8_t NumRegsSrcB;
 };
 
+struct WMMAF8F6F4MatrixDimInfo {
+  unsigned Opcode;
+  uint8_t Dim;
+};
+
 struct CvtScaleF32_F32F16ToF8F4_Info {
   unsigned Opcode;
 };
@@ -124,6 +129,7 @@ struct True16D16Info {
 struct WMMAInstInfo {
   uint16_t Opcode;
   bool is_wmma_xdl;
+  uint8_t PredXDLIdx; // 0xff = no pred_xdl, 0/1/2 = which neg_lo bit is used
 };
 
 struct FLATInfo {
@@ -628,6 +634,12 @@ bool getMAIIsGFX940XDL(unsigned Opc);
 LLVM_READONLY
 bool getWMMAIsXDL(unsigned Opc);
 
+/// Returns the PredXDLIdx for WMMA instructions.
+/// Returns -1 if the instruction does not support pred_xdl or is not a WMMA.
+/// Returns 0, 1, or 2 indicating which neg_lo bit is repurposed for pred_xdl.
+LLVM_READONLY
+int getWMMAPredXDLIdx(unsigned Opc);
+
 // Get an equivalent BitOp3 for a binary logical \p Opc.
 // \returns BitOp3 modifier for the logical operation or zero.
 // Used in VOPD3 conversion.
@@ -653,8 +665,19 @@ const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
                                                       unsigned BLGP,
                                                       unsigned F8F8Opcode);
 
+// The order and values of these enums must match the uses of the
+// WMMA_F8F6F4MatrixDimTable in AMDGPUGenSearchableTables.inc.
+enum class WMMAF8F6F4MatrixDim { M16X16X128 = 0, M32X64X128 = 1 };
+enum WMMAF8F6F4Matrix { A, B };
+
 LLVM_READNONE
-uint8_t wmmaScaleF8F6F4FormatToNumRegs(unsigned Fmt);
+uint8_t getNumRegsFromWMMAScaleF8F6F4Format(unsigned Opc,
+                                            WMMAF8F6F4Matrix Matrix,
+                                            unsigned Fmt);
+LLVM_READNONE
+uint8_t getNumRegsFromWMMAScaleF8F6F4Format(WMMAF8F6F4MatrixDim Dim,
+                                            WMMAF8F6F4Matrix Matrix,
+                                            unsigned Fmt);
 
 LLVM_READONLY
 const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,

@@ -374,11 +374,11 @@ def : ProcessorModel<"gfx12-5-generic", GFX1250SpeedModel,
 
 // gfx1300 is an alias for gfx1310, and in the future it will be removed.
 def : ProcessorModel<"gfx1300", GFX12SpeedModel,
-  FeatureISAVersion13.Features
+  FeatureISAVersion13_0.Features
 >;
 
 def : ProcessorModel<"gfx130E", GFX12SpeedModel,
-  FeatureISAVersion13.Features
+  FeatureISAVersion13_0.Features
 >;
 
 def : ProcessorModel<"gfx1310", GFX12SpeedModel,
@@ -386,9 +386,13 @@ def : ProcessorModel<"gfx1310", GFX12SpeedModel,
 >;
 
 def : ProcessorModel<"gfx131F", GFX12SpeedModel,
-  FeatureISAVersion13.Features
+  FeatureISAVersion13_1.Features
 >;
 
 def : ProcessorModel<"gfx1360", GFX12SpeedModel,
-  FeatureISAVersion13.Features
+  FeatureISAVersion13_6.Features
+>;
+
+def : ProcessorModel<"gfx1370", GFX12SpeedModel,
+  FeatureISAVersion13_7.Features
 >;

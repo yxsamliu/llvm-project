@@ -10,6 +10,8 @@ typedef unsigned int __attribute__((ext_vector_type(3))) uint3;
 typedef unsigned int __attribute__((ext_vector_type(4))) uint4;
 typedef unsigned int __attribute__((ext_vector_type(6))) uint6;
 typedef unsigned int __attribute__((ext_vector_type(8))) uint8;
+typedef unsigned short __attribute__((ext_vector_type(8))) ushort8;
+typedef unsigned short __attribute__((ext_vector_type(32))) ushort32;
 typedef __bf16 __attribute__((ext_vector_type(4))) bfloat4;
 typedef half __attribute__((ext_vector_type(4))) half4;
 
@@ -273,4 +275,33 @@ void test_pk4(half4 a, half4 b, half4 c, bfloat4 ba, bfloat4 bb, bfloat4 bc, hal
   *outbf[2] = __builtin_amdgcn_pk4_mul_bf16(ba, bb);
   *outbf[3] = __builtin_amdgcn_pk4_max_num_bf16(ba, bb);
   *outbf[4] = __builtin_amdgcn_pk4_min_num_bf16(ba, bb);
+}
+
+// CHECK-LABEL: @test_wmma_tr(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <8 x i16>, align 16, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <32 x i16>, align 64, addrspace(5)
+// CHECK-NEXT:    [[OUTA_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[OUTB_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
+// CHECK-NEXT:    [[OUTA_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUTA_ADDR]] to ptr
+// CHECK-NEXT:    [[OUTB_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUTB_ADDR]] to ptr
+// CHECK-NEXT:    store <8 x i16> [[A:%.*]], ptr [[A_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    store <32 x i16> [[B:%.*]], ptr [[B_ADDR_ASCAST]], align 64
+// CHECK-NEXT:    store ptr [[OUTA:%.*]], ptr [[OUTA_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store ptr [[OUTB:%.*]], ptr [[OUTB_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[A_ADDR_ASCAST]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.amdgcn.wmma.tr.16x16.b16(<8 x i16> [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[OUTA_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <8 x i16> [[TMP1]], ptr [[TMP2]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = load <32 x i16>, ptr [[B_ADDR_ASCAST]], align 64
+// CHECK-NEXT:    [[TMP4:%.*]] = call <32 x i16> @llvm.amdgcn.wmma.tr.32x32.b16(<32 x i16> [[TMP3]])
+// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[OUTB_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <32 x i16> [[TMP4]], ptr [[TMP5]], align 64
+// CHECK-NEXT:    ret void
+//
+void test_wmma_tr(ushort8 a, ushort32 b, ushort8* outa, ushort32* outb) {
+  *outa = __builtin_amdgcn_wmma_tr_16x16_b16(a);
+  *outb = __builtin_amdgcn_wmma_tr_32x32_b16(b);
 }

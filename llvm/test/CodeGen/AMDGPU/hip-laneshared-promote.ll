@@ -29,13 +29,13 @@ define amdgpu_kernel void @_Z3foov() "amdgpu-wavegroup-enable" {
   ; SETIDX-LABEL: name: _Z3foov
   ; SETIDX: bb.0.entry:
   ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-  ; SETIDX-NEXT:   BUNDLE implicit-def $stg_dsta, implicit $idx1, implicit $exec, implicit $idx1 :: (dereferenceable load (s32) from @v1, align 268435456, !tbaa !7, addrspace 10), (store (s32) into `ptr addrspace(10) getelementptr inbounds (i8, ptr addrspace(10) @vx, i32 12)`, !tbaa !7, addrspace 10) {
+  ; SETIDX-NEXT:   BUNDLE implicit-def $stg_dsta, implicit $idx1, implicit $exec :: (dereferenceable load (s32) from @v1, align 268435456, !tbaa !7, addrspace 10), (store (s32) into `ptr addrspace(10) getelementptr inbounds (i8, ptr addrspace(10) @vx, i32 12)`, !tbaa !7, addrspace 10) {
   ; SETIDX-NEXT:     $stg_dsta = V_LOAD_IDX_B32 $idx1, 0, implicit $exec :: (dereferenceable load (s32) from @v1, align 268435456, !tbaa !7, addrspace 10)
   ; SETIDX-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, $idx1, 4, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds (i8, ptr addrspace(10) @vx, i32 12)`, !tbaa !7, addrspace 10)
   ; SETIDX-NEXT:   }
-  ; SETIDX-NEXT:   BUNDLE implicit-def $stg_dsta, implicit $idx1, implicit $exec :: (dereferenceable load (s32) from `ptr addrspace(10) getelementptr inbounds (i8, ptr addrspace(10) @vx, i32 20)`, !tbaa !7, addrspace 10), (store (s32) into @v2, align 32, !tbaa !7, addrspace 10) {
+  ; SETIDX-NEXT:   BUNDLE implicit-def $stg_dsta, implicit killed $idx1, implicit $exec :: (dereferenceable load (s32) from `ptr addrspace(10) getelementptr inbounds (i8, ptr addrspace(10) @vx, i32 20)`, !tbaa !7, addrspace 10), (store (s32) into @v2, align 32, !tbaa !7, addrspace 10) {
   ; SETIDX-NEXT:     $stg_dsta = V_LOAD_IDX_B32 $idx1, 6, implicit $exec :: (dereferenceable load (s32) from `ptr addrspace(10) getelementptr inbounds (i8, ptr addrspace(10) @vx, i32 20)`, !tbaa !7, addrspace 10)
-  ; SETIDX-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, $idx1, 8, implicit $exec :: (store (s32) into @v2, align 32, !tbaa !7, addrspace 10)
+  ; SETIDX-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, killed $idx1, 8, implicit $exec :: (store (s32) into @v2, align 32, !tbaa !7, addrspace 10)
   ; SETIDX-NEXT:   }
   ; SETIDX-NEXT:   S_ENDPGM 0
 entry:

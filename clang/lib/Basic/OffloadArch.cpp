@@ -103,6 +103,7 @@ static const OffloadArchToStringMap ArchNames[] = {
     GFX(1310), // gfx1310
     GFX(131F), // gfx131F
     GFX(1360), // gfx1360
+    GFX(1370), // gfx1370
     {OffloadArch::AMDGCNSPIRV, "amdgcnspirv", "compute_amdgcn"},
     // Intel CPUs
     {OffloadArch::GRANITERAPIDS, "graniterapids", ""},

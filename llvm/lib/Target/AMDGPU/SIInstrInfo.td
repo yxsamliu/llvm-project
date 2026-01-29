@@ -1386,6 +1386,8 @@ def MatrixBScaleFmt : CustomOperand<i32, 1, "MatrixBScaleFmt">;
 def MatrixAReuse : NamedBitOperand<"matrix_a_reuse">;
 def MatrixBReuse : NamedBitOperand<"matrix_b_reuse">;
 
+def PredXDL : NamedBitOperand<"pred_xdl">;
+
 def ScaleSel : NamedIntOperand<"scale_sel"> {
   let Validator = "isUInt<4>";
 }
@@ -2187,6 +2189,7 @@ class getGVGPRforVT<ValueType VT>{
                               !eq(VT.Size, 96)  : GVGPR_96,
                               !eq(VT.Size, 128) : GVGPR_128,
                               !eq(VT.Size, 256) : GVGPR_256,
+                              !eq(VT.Size, 512) : GVGPR_512,
                               1 : GVGPR_32); // unused
 }
 
@@ -2200,6 +2203,7 @@ class getGSrcVGPRForVT<ValueType VT>{
                               !eq(VT.Size, 192) : GSrcVGPR_192,
                               !eq(VT.Size, 256) : GSrcVGPR_256,
                               !eq(VT.Size, 288) : GSrcVGPR_288,
+                              !eq(VT.Size, 512) : GSrcVGPR_512,
                               !eq(VT.Size, 576) : GSrcVGPR_576,
                               1 : SSrc_bf16); // unused
 }
@@ -2941,6 +2945,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit HasMatrixFMT = 0;
   field bit HasMatrixScale = 0;
   field bit HasMatrixReuse = 0;
+  field int PredXDLIdx = -1;
 
   field bit HasSrc0Mods = HasModifiers;
   field bit HasSrc1Mods = !if(HasModifiers, !or(HasSrc1FloatMods, HasSrc1IntMods), 0);
@@ -3643,6 +3648,14 @@ def isMFMA_F8F6F4Table : GenericTable {
   let Fields = [ "Opcode", "F8F8Opcode", "NumRegsSrcA", "NumRegsSrcB" ];
   let PrimaryKey = [ "Opcode" ];
   let PrimaryKeyName = "isMFMA_F8F6F4" ;
+}
+
+def WMMA_F8F6F4MatrixDimTable : GenericTable {
+  let FilterClass = "WMMA_F8F6F4_MatrixDimTable";
+  let CppTypeName = "WMMAF8F6F4MatrixDimInfo";
+  let Fields = ["Opcode", "Dim"];
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getWMMAF8F6F4MatrixDimInfo";
 }
 
 def FP4FP8DstByteSelTable : GenericTable {

@@ -658,6 +658,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (isGFX1250Plus() && Bytes.size() >= 16) {
       std::bitset<128> DecW = eat16Bytes(Bytes);
 
+      if (isGFX1260Only() &&
+          tryDecodeInst(DecoderTableGFX1260128, MI, DecW, Address, CS))
+        break;
+
       if (tryDecodeInst(DecoderTableGFX1250128, MI, DecW, Address, CS))
         break;
 
@@ -1126,16 +1130,40 @@ static void adjustMFMA_F8F6F4OpRegClass(const MCRegisterInfo &MRI,
       MO.setReg(NewReg);
     }
     return;
-  case 12: {
-    // There is no 384-bit subreg index defined.
+  case 12:
+  case 24: {
+    // There is no 384-bit or 768-bit subreg index defined.
     MCRegister BaseReg = MRI.getSubReg(MO.getReg(), AMDGPU::sub0);
     MCRegister NewReg = MRI.getMatchingSuperReg(
-        BaseReg, AMDGPU::sub0, &MRI.getRegClass(AMDGPU::VReg_384RegClassID));
+        BaseReg, AMDGPU::sub0,
+        &MRI.getRegClass(NumRegs == 24 ? AMDGPU::VReg_768RegClassID
+                                       : AMDGPU::VReg_384RegClassID));
     return MO.setReg(NewReg);
   }
   case 16:
+    if (MCRegister NewReg = MRI.getSubReg(
+            MO.getReg(),
+            AMDGPU::
+                sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15)) {
+      MO.setReg(NewReg);
+    }
+    return;
+  case 64:
     // No-op in cases where one operand is still f8/bf8.
     return;
+  case 32:
+  case 48: {
+    const MCRegisterClass &RC =
+        MRI.getRegClass(AMDGPU::Pseudo_VGPR_2048RegClassID);
+    if (NumRegs == 32 && !RC.contains(MO.getReg()))
+      return;
+    assert(RC.contains(MO.getReg()) && "expected a 2048-bit register");
+    unsigned RegVal = MO.getReg().id() - AMDGPU::VGPR_2048_Pseudo0;
+    const MCRegisterClass &NewRC =
+        NumRegs == 32 ? MRI.getRegClass(AMDGPU::VReg_1024RegClassID)
+                      : MRI.getRegClass(AMDGPU::Pseudo_VGPR_1536RegClassID);
+    return MO.setReg(NewRC.getRegister(RegVal));
+  }
   default:
     llvm_unreachable("Unexpected size for mfma/wmma f8f6f4 operand");
   }
@@ -1977,8 +2005,12 @@ unsigned AMDGPUDisassembler::getVgprClassId(unsigned Width) const {
     return VReg_512RegClassID;
   case 576:
     return VReg_576RegClassID;
+  case 768:
+    return VReg_768RegClassID;
   case 1024:
     return VReg_1024RegClassID;
+  case 1536:
+    return Pseudo_VGPR_1536RegClassID;
   case 2048:
     return Pseudo_VGPR_2048RegClassID;
   }
@@ -2014,6 +2046,8 @@ unsigned AMDGPUDisassembler::getAgprClassId(unsigned Width) const {
     return AReg_512RegClassID;
   case 576:
     return AReg_576RegClassID;
+  case 768:
+    return AReg_768RegClassID;
   case 1024:
     return AReg_1024RegClassID;
   }

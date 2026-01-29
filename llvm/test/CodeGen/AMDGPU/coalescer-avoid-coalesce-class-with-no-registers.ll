@@ -10,9 +10,8 @@ define void @no_introduce_vreg_1024() #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[0:7]
+; CHECK-NEXT:    ; def v[9:16]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_mov_b32_e32 v9, v0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use v[0:15]
 ; CHECK-NEXT:    ;;#ASMEND

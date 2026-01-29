@@ -49,7 +49,7 @@ private:
   /// The inner vector is sorted by bit offset.
   /// Provided a register can be fully split with given subregs,
   /// all elements of the inner vector combined give a full lane mask.
-  static std::array<std::vector<int16_t>, 36> RegSplitParts;
+  static std::array<std::vector<int16_t>, 48> RegSplitParts;
 
   // Table representing sub reg of given width and offset.
   // First index is subreg size: 32, 64, 96, 128, 160, 192, 224, 256, 512.

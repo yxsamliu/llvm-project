@@ -968,6 +968,18 @@ def FeatureWMMA128bInsts : SubtargetFeature<"wmma-128b-insts",
   "Has WMMA instructions where A and B matrices do not have duplicated data"
 >;
 
+def FeatureWMMAK128 : SubtargetFeature<"wmma-k128",
+  "HasWMMAK128",
+  "true",
+  "Has WMMA instructions with K multiplier 8 (16x16x128) encoding"
+>;
+
+def FeatureTensorWmmaOps : SubtargetFeature<"tensor-wmma-ops",
+  "HasTensorWmmaOps",
+  "true",
+  "Has extended set of WMMA instructions (IU16 inputs)"
+>;
+
 def FeatureWMMA2048bInsts : SubtargetFeature<"wmma-2048b-insts",
   "HasWMMA2048bInsts",
   "true",
@@ -984,6 +996,12 @@ def FeaturePk4Insts : SubtargetFeature<"pk4-insts",
   "HasPk4Insts",
   "true",
   "Has pk4 instructions"
+>;
+
+def FeatureWMMATransposeInsts : SubtargetFeature<"wmma-transpose-insts",
+  "HasWMMATransposeInsts",
+  "true",
+  "Has WMMA transpose instructions"
 >;
 
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
@@ -1670,6 +1688,20 @@ def FeatureWaitsBeforeSystemScopeStores : SubtargetFeature<
   "RequiresWaitsBeforeSystemScopeStores",
   "true",
   "Target requires waits for loads and atomics before system scope stores"
+>;
+
+def FeatureGlobalTiledLoads2x2 : SubtargetFeature<
+  "global-tiled-loads-2x2",
+  "HasGlobalTiledLoads2x2",
+  "true",
+  "Target has 2x2 128B tiled load support"
+>;
+
+def FeatureLDSTiledLoads : SubtargetFeature<
+  "lds-tiled-loads",
+  "HasLDSTiledLoads",
+  "true",
+  "Target has LDS tiled load support"
 >;
 
 // Dummy feature used to disable assembler instructions.
@@ -2439,14 +2471,15 @@ def FeatureISAVersion12_60 : FeatureSet<
      FeatureWavegroups,
      FeaturePermPkU2U3Insts,
      FeaturePk4Insts,
-     FeatureAddressableLocalMemorySize327680,
+     FeatureAddressableLocalMemorySize675840,
      FeatureVGPRIndexingRegisters,
      FeatureSWakeupImm,
      FeatureSBarrierLeaveImm,
      FeatureSemaphores,
+     FeatureWMMATransposeInsts
     ])>;
 
-def FeatureISAVersion13 : FeatureSet<
+def FeatureISAVersion13_Common : FeatureSet<
   [FeatureGFX13,
    FeatureGFX1250Insts,
    FeatureAddressableLocalMemorySize196608,
@@ -2512,10 +2545,22 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureQsadInsts,
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
-   FeatureCvtPkNormVOP3Insts
+   FeatureCvtPkNormVOP3Insts,
+   FeatureRealTrue16Insts
 ]>;
 
-defvar FeatureISAVersion13_1 = FeatureISAVersion13;
+
+defvar FeatureISAVersion13_0 = FeatureISAVersion13_Common;
+defvar FeatureISAVersion13_1 = FeatureISAVersion13_Common;
+defvar FeatureISAVersion13_6 = FeatureISAVersion13_Common;
+
+def FeatureISAVersion13_7 : FeatureSet<
+  !listconcat(FeatureISAVersion13_Common.Features,
+    [FeatureWMMAK128,
+     FeatureTensorWmmaOps,
+     FeatureGlobalTiledLoads2x2,
+     FeatureLDSTiledLoads,
+    ])>;
 
 //===----------------------------------------------------------------------===//
 
@@ -3246,6 +3291,9 @@ def HasWMMA256bInsts : Predicate<"Subtarget->hasWMMA256bInsts()">,
 def HasWMMA128bInsts : Predicate<"Subtarget->hasWMMA128bInsts()">,
   AssemblerPredicate<(all_of FeatureWMMA128bInsts)>;
 
+def HasTensorWmmaOps : Predicate<"Subtarget->hasTensorWmmaOps()">,
+  AssemblerPredicate<(all_of FeatureTensorWmmaOps)>;
+
 def HasWMMA2048bInsts : Predicate<"Subtarget->hasWMMA2048bInsts()">,
   AssemblerPredicate<(all_of FeatureWMMA2048bInsts)>;
 
@@ -3275,6 +3323,12 @@ def HasCvtPkNormVOP2Insts : Predicate<"Subtarget->hasCvtPkNormVOP2Insts()">,
 
 def HasCvtPkNormVOP3Insts : Predicate<"Subtarget->hasCvtPkNormVOP3Insts()">,
   AssemblerPredicate<(all_of FeatureCvtPkNormVOP3Insts)>;
+
+def HasWMMAK128 : Predicate<"Subtarget->hasWMMAK128()">,
+  AssemblerPredicate<(all_of FeatureWMMAK128)>;
+
+def HasWMMATransposeInsts : Predicate<"Subtarget->hasWMMATransposeInsts()">,
+  AssemblerPredicate<(all_of FeatureWMMATransposeInsts)>;
 
 def HasFP8E5M3Insts : Predicate<"Subtarget->hasFP8E5M3Insts()">,
   AssemblerPredicate<(all_of FeatureFP8E5M3Insts)>;
@@ -3499,6 +3553,12 @@ def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
 
 def NotNeedsAlignedVGPRs : Predicate<"!Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of (not FeatureRequiresAlignedVGPRs))>;
+
+def HasGlobalTiledLoads2x2 : Predicate<"Subtarget->hasGlobalTiledLoads2x2()">,
+  AssemblerPredicate<(all_of FeatureGlobalTiledLoads2x2)>;
+
+def HasLDSTiledLoads : Predicate<"Subtarget->hasLDSTiledLoads()">,
+  AssemblerPredicate<(all_of FeatureLDSTiledLoads)>;
 
 def isWave32 : Predicate<"Subtarget->isWave32()">,
   AssemblerPredicate <(any_of FeatureWavefrontSize32,

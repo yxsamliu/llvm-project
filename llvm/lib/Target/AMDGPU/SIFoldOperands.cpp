@@ -269,7 +269,8 @@ public:
   bool tryFoldPhiAGPR(MachineInstr &MI);
   bool tryFoldLoad(MachineInstr &MI);
   bool tryFoldDynamicIdxOffset(MachineOperand *Idx, MachineOperand *Offset,
-                               MachineInstr *&SMovImmZero);
+                               MachineInstr *&SMovImmZero, bool IsBundled);
+  bool tryClaimSMovImmZero(MachineInstr &MI, MachineInstr *&SMovImmZero);
   bool tryFoldDynamicIdxMI(MachineInstr &MI, MachineInstr *&SMovImmZero);
   bool trySplitVStIdxRegSeq(AMDGPUMI::VStoreIdxInst &MI);
   bool trySplitVLdIdxMultiRegSeq(AMDGPUMI::VLoadIdxInst &MI);
@@ -2886,43 +2887,58 @@ bool SIFoldOperandsImpl::tryFoldLoad(MachineInstr &MI) {
 }
 
 // When the dynamic index operand is a known constant, fold it
-// into the offset operand
+// into the offset operand if necessary.
 bool SIFoldOperandsImpl::tryFoldDynamicIdxOffset(MachineOperand *IdxOpnd,
                                                  MachineOperand *OffOpnd,
-                                                 MachineInstr *&SMovImmZero) {
+                                                 MachineInstr *&SMovImmZero,
+                                                 bool IsBundled) {
   if (!IdxOpnd || !OffOpnd)
     return false;
 
+  bool Changed = false;
+
   auto DefMI = MRI->getVRegDef(IdxOpnd->getReg());
-  if (DefMI->getOpcode() == AMDGPU::S_MOV_B32) {
+  if (DefMI->getOpcode() == AMDGPU::S_MOV_B32 && !SMovImmZero) {
+    // Find a predecessor SMovImmZero.
     auto ImmOpnd = DefMI->getOperand(1);
-    if (ImmOpnd.isImm() && ImmOpnd.getImm()) {
+    if (ImmOpnd.isImm() && ImmOpnd.getImm() == 0) {
+      SMovImmZero = DefMI;
+    }
+  }
+  if (DefMI->getOpcode() == AMDGPU::S_MOV_B32 && DefMI == SMovImmZero) {
+    // Just update liveness.
+    Changed = true;
+  } else if (!IsBundled && DefMI->getOpcode() == AMDGPU::S_MOV_B32 &&
+             DefMI != SMovImmZero) {
+    auto ImmOpnd = DefMI->getOperand(1);
+    if (ImmOpnd.isImm()) {
       auto Offset = (ImmOpnd.getImm() + OffOpnd->getImm()) %
                     ST->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize());
       OffOpnd->setImm(Offset);
-      Register IdxReg;
       if (!SMovImmZero) {
-        IdxReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);
         SMovImmZero =
             BuildMI(*DefMI->getParent(), DefMI->getIterator(),
-                    DefMI->getDebugLoc(), TII->get(AMDGPU::S_MOV_B32), IdxReg)
+                    DefMI->getDebugLoc(), TII->get(AMDGPU::S_MOV_B32),
+                    MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass))
                 .addImm(0);
-      } else {
-        IdxReg = SMovImmZero->getOperand(0).getReg();
-        for (auto &UseMO : MRI->use_nodbg_operands(IdxReg)) {
-          UseMO.setIsKill(false);
-        }
       }
+      Register IdxReg = SMovImmZero->getOperand(0).getReg();
       IdxOpnd->setReg(IdxReg);
-      IdxOpnd->setIsKill(true);
       IdxOpnd->setSubReg(AMDGPU::NoSubRegister);
       if (MRI->use_nodbg_empty(DefMI->getOperand(0).getReg())) {
         DefMI->eraseFromParent();
       }
-      return true;
+      Changed = true;
     }
   }
-  return false;
+  if (Changed) {
+    Register IdxReg = SMovImmZero->getOperand(0).getReg();
+    for (auto &UseMO : MRI->use_nodbg_operands(IdxReg)) {
+      UseMO.setIsKill(false);
+    }
+    IdxOpnd->setIsKill(true);
+  }
+  return Changed;
 }
 
 // Return the subregister offset when MI is a REG_SEQUENCE or a copy-like
@@ -3109,14 +3125,26 @@ bool SIFoldOperandsImpl::trySplitVStIdxRegSeq(AMDGPUMI::VStoreIdxInst &MI) {
   return true;
 }
 
+bool SIFoldOperandsImpl::tryClaimSMovImmZero(MachineInstr &MI,
+                                             MachineInstr *&SMovImmZero) {
+  // Try to find the S_MOV_B32 0 that will be used for folding idx MIs.
+  // If none is found, then one will have to be created.
+  if (!SMovImmZero && MI.getOpcode() == AMDGPU::S_MOV_B32 &&
+      MI.getOperand(1).isImm() && MI.getOperand(1).getImm() == 0) {
+    SMovImmZero = &MI;
+    return true;
+  }
+  return false;
+}
+
 bool SIFoldOperandsImpl::tryFoldDynamicIdxMI(MachineInstr &MI,
                                              MachineInstr *&SMovImmZero) {
   bool Changed = false;
   if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
     MachineOperand *IdxOpnd = &LdStIdx->getIdxOp();
     MachineOperand *OffOpnd = &LdStIdx->getOffsetOp();
-    Changed |= tryFoldDynamicIdxOffset(IdxOpnd, OffOpnd, SMovImmZero);
-
+    Changed |=
+        tryFoldDynamicIdxOffset(IdxOpnd, OffOpnd, SMovImmZero, MI.isBundled());
     if (auto *StIdx = dyn_cast<AMDGPUMI::VStoreIdxInst>(LdStIdx))
       Changed |= trySplitVStIdxRegSeq(*StIdx);
     else
@@ -3129,8 +3157,26 @@ bool SIFoldOperandsImpl::tryFoldDynamicIdxMI(MachineInstr &MI,
                        TII->getNamedOperand(MI, AMDGPU::OpName::idx_refl),
                    *OffOpndRefl = TII->getNamedOperand(
                        MI, AMDGPU::OpName::dyn_offset_refl);
-    Changed |= tryFoldDynamicIdxOffset(IdxOpnd, OffOpnd, SMovImmZero);
-    Changed |= tryFoldDynamicIdxOffset(IdxOpndRefl, OffOpndRefl, SMovImmZero);
+    Changed |=
+        tryFoldDynamicIdxOffset(IdxOpnd, OffOpnd, SMovImmZero, MI.isBundled());
+    Changed |= tryFoldDynamicIdxOffset(IdxOpndRefl, OffOpndRefl, SMovImmZero,
+                                       MI.isBundled());
+  } else if (MI.isBundle()) {
+    for (MachineInstr &MIB :
+         llvm::make_range(++getBundleStart(MI.getIterator()),
+                          getBundleEnd(MI.getIterator()))) {
+      Changed |= tryFoldDynamicIdxMI(MIB, SMovImmZero);
+    }
+    if (Changed) {
+      // Something in the bundle is the last use of SMovImmZero, make sure the
+      // bundle operand kills the reg too
+      for (MachineOperand &MOB : MI.operands()) {
+        if (MOB.isReg() &&
+            MOB.getReg() == SMovImmZero->getOperand(0).getReg()) {
+          MOB.setIsKill(true);
+        }
+      }
+    }
   }
   return Changed;
 }
@@ -3289,7 +3335,11 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
       }
 
       if (TII->isFoldableCopy(MI)) {
-        Changed |= tryFoldFoldableCopy(MI, CurrentKnownM0Val);
+        if (tryFoldFoldableCopy(MI, CurrentKnownM0Val)) {
+          Changed = true;
+        } else {
+          tryClaimSMovImmZero(MI, SMovImmZero);
+        }
         continue;
       }
 

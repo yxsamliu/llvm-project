@@ -178,17 +178,20 @@ v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] clamp
 v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] neg_hi:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:66: error: not a valid operand.
 
-v_wmma_bf16_32x64x32_f16 v[0:31], v[32:47], |v[48:79]|, v[80:111]
-// GFX1260-ERR: :[[@LINE-1]]:45: error: not a valid operand.
+v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] neg_lo:[1,0,0]
+// GFX1260-ERR: :[[@LINE-1]]:66: error: invalid neg_lo operand
 
-v_wmma_bf16_32x64x32_f16 v[0:31], v[32:47], -v[48:79], v[80:111]
-// GFX1260-ERR: :[[@LINE-1]]:45: error: not a valid operand.
+v_wmma_f16_32x64x32_f16 v[0:31], v[32:47], |v[48:79]|, v[80:111]
+// GFX1260-ERR: :[[@LINE-1]]:44: error: not a valid operand.
 
-v_wmma_bf16_32x64x32_f16 v[0:31], v[32:47], v[48:79], v[80:111] clamp
-// GFX1260-ERR: :[[@LINE-1]]:65: error: invalid operand for instruction
+v_wmma_f16_32x64x32_f16 v[0:31], v[32:47], -v[48:79], v[80:111]
+// GFX1260-ERR: :[[@LINE-1]]:44: error: not a valid operand.
 
-v_wmma_bf16_32x64x32_f16 v[0:31], v[32:47], v[48:79], v[80:111] neg_hi:[1,0,0]
-// GFX1260-ERR: :[[@LINE-1]]:65: error: not a valid operand.
+v_wmma_f16_32x64x32_f16 v[0:31], v[32:47], v[48:79], v[80:111] clamp
+// GFX1260-ERR: :[[@LINE-1]]:64: error: invalid operand for instruction
+
+v_wmma_f16_32x64x32_f16 v[0:31], v[32:47], v[48:79], v[80:111] neg_hi:[1,0,0]
+// GFX1260-ERR: :[[@LINE-1]]:64: error: not a valid operand.
 
 v_wmma_i32_32x64x32_iu8 v[0:63], v[64:71], v[72:87], v[200:263]
 // GFX1260-ERR: :[[@LINE-1]]:54: error: register index is out of range
@@ -250,6 +253,72 @@ v_wmma_f32_32x64x256_f4 v[0:63], v[64:95], v[192:255], v[128:191] matrix_a_reuse
 v_wmma_f32_32x64x256_f4 v[0:63], v[64:95], v[192:255], v[128:191] matrix_b_reuse
 // GFX1260-ERR: :[[@LINE-1]]:67: error: invalid operand for instruction
 
+v_wmma_f16_32x64x128_f8f6f4 v[0:31], v[32:63], v[200:263], v[64:95]
+// GFX1260-ERR: :[[@LINE-1]]:48: error: register index is out of range
+
+v_wmma_f16_32x64x128_f8f6f4 v[0:31], v[32:63], v[192:255], v[64:95] neg_lo:[1,0,0]
+// GFX1260-ERR: :[[@LINE-1]]:69: error: invalid neg_lo operand
+
+v_wmma_f16_32x64x128_f8f6f4 v[0:31], v[32:63], v[192:255], v[64:95] neg_lo:[0,1,0]
+// GFX1260-ERR: :[[@LINE-1]]:69: error: invalid neg_lo operand
+
+v_wmma_f16_32x64x128_f8f6f4 v[0:31], v[32:63], v[192:255], v[64:95] neg_hi:[1,0,0]
+// GFX1260-ERR: :[[@LINE-1]]:69: error: not a valid operand.
+
+v_wmma_f16_32x64x128_f8f6f4 v[0:31], v[32:63], v[192:255], v[64:95] neg_hi:[0,1,0]
+// GFX1260-ERR: :[[@LINE-1]]:69: error: not a valid operand.
+
+v_wmma_f16_32x64x128_f8f6f4 v[0:31], v[32:63], v[192:255], v[64:95] neg_hi:[0,0,1]
+// GFX1260-ERR: :[[@LINE-1]]:69: error: not a valid operand.
+
+v_wmma_f16_32x64x128_f8f6f4 v[0:31], v[32:63], v[192:255], v[64:95] matrix_a_reuse
+// GFX1260-ERR: :[[@LINE-1]]:69: error: invalid operand for instruction
+
+v_wmma_f16_32x64x128_f8f6f4 v[0:31], v[32:63], v[192:255], v[64:95] matrix_b_reuse
+// GFX1260-ERR: :[[@LINE-1]]:69: error: invalid operand for instruction
+
+v_wmma_f16_32x64x128_f8f6f4 v[0:31], v[32:63], v[192:255], v[64:95] clamp
+// GFX1260-ERR: :[[@LINE-1]]:69: error: invalid operand for instruction
+
+v_wmma_f16_32x64x128_f8f6f4 v[0:31], v[32:63], v[192:255], v[64:95] matrix_b_fmt:-1
+// GFX1260-ERR: :[[@LINE-1]]:82: error: invalid matrix_b_fmt value
+
+v_wmma_f16_32x64x128_f8f6f4 v[0:31], v[32:63], v[192:255], v[64:95] matrix_a_fmt:xxx
+// GFX1260-ERR: :[[@LINE-1]]:82: error: invalid matrix_a_fmt value
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[200:263], v[128:191]
+// GFX1260-ERR: :[[@LINE-1]]:48: error: register index is out of range
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[1,0,0]
+// GFX1260-ERR: :[[@LINE-1]]:71: error: invalid neg_lo operand
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[0,1,0]
+// GFX1260-ERR: :[[@LINE-1]]:71: error: invalid neg_lo operand
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[1,0,0]
+// GFX1260-ERR: :[[@LINE-1]]:71: error: not a valid operand.
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[0,1,0]
+// GFX1260-ERR: :[[@LINE-1]]:71: error: not a valid operand.
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[0,0,1]
+// GFX1260-ERR: :[[@LINE-1]]:71: error: not a valid operand.
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] matrix_a_reuse
+// GFX1260-ERR: :[[@LINE-1]]:71: error: invalid operand for instruction
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] matrix_b_reuse
+// GFX1260-ERR: :[[@LINE-1]]:71: error: invalid operand for instruction
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] clamp
+// GFX1260-ERR: :[[@LINE-1]]:71: error: invalid operand for instruction
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] matrix_b_fmt:-1
+// GFX1260-ERR: :[[@LINE-1]]:84: error: invalid matrix_b_fmt value
+
+v_wmma_f32_32x64x128_f8f6f4 v[0:63], v[64:95], v[192:255], v[128:191] matrix_a_fmt:xxx
+// GFX1260-ERR: :[[@LINE-1]]:84: error: invalid matrix_a_fmt value
+
 v_swmmac_bf16f32_32x64x32_bf16 v[200:263], v[0:7], v[8:39], v40
 // GFX1260-ERR: :[[@LINE-1]]:32: error: register index is out of range
 
@@ -264,3 +333,72 @@ v_swmmac_bf16f32_32x64x32_bf16 v[24:87], v[0:7], v[8:39], v40 clamp
 
 v_swmmac_bf16f32_32x64x32_bf16 v[24:87], v[0:7], v[8:39], v40 neg_hi:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:63: error: not a valid operand.
+
+v_wmma_tr_16x16_b16 v[0:3], v[4:7], v8, v9
+// GFX1260-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
+
+v_wmma_tr_16x16_b16 v[0:3], v[4:7], clamp
+// GFX1260-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
+
+v_wmma_tr_16x16_b16 v[0:3], v[4:7], neg_hi:[1,0,0]
+// GFX1260-ERR: :[[@LINE-1]]:37: error: not a valid operand.
+
+v_wmma_tr_16x16_b16 v[0:3], v[4:7], matrix_a_reuse
+// GFX1260-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
+
+v_wmma_tr_16x16_b16 v[0:3], |v[4:7]|
+// GFX1260-ERR: :[[@LINE-1]]:29: error: not a valid operand.
+
+v_wmma_tr_16x16_b16 v[0:3], -v[4:7]
+// GFX1260-ERR: :[[@LINE-1]]:29: error: not a valid operand.
+
+v_wmma_tr_16x16_b16 v[0:7], v[4:7]
+// GFX1260-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_wmma_tr_16x16_b16 v[0:3], v[4:11]
+// GFX1260-ERR: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_wmma_tr_16x16_b16 v[0:3], s[4:7]
+// GFX1260-ERR: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_wmma_tr_16x16_b16 s[0:3], v[4:7]
+// GFX1260-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_wmma_tr_16x16_b16 v[0:3], 1
+// GFX1260-ERR: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_wmma_tr_16x16_b16 1, v[4:7]
+// GFX1260-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_wmma_tr_32x32_b16 v[0:15], v[16:31], clamp
+// GFX1260-ERR: :[[@LINE-1]]:40: error: invalid operand for instruction
+
+v_wmma_tr_32x32_b16 v[0:15], v[16:31], neg_hi:[1,0,0]
+// GFX1260-ERR: :[[@LINE-1]]:40: error: not a valid operand.
+
+v_wmma_tr_32x32_b16 v[0:15], v[16:31], matrix_a_reuse
+// GFX1260-ERR: :[[@LINE-1]]:40: error: invalid operand for instruction
+
+v_wmma_tr_32x32_b16 v[0:15], |v[16:31]|
+// GFX1260-ERR: :[[@LINE-1]]:30: error: not a valid operand.
+
+v_wmma_tr_32x32_b16 v[0:15], -v[16:31]
+// GFX1260-ERR: :[[@LINE-1]]:30: error: not a valid operand.
+
+v_wmma_tr_32x32_b16 v[0:7], v[16:31]
+// GFX1260-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_wmma_tr_32x32_b16 v[0:15], v[16:23]
+// GFX1260-ERR: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_wmma_tr_32x32_b16 v[0:15], s[16:31]
+// GFX1260-ERR: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_wmma_tr_32x32_b16 s[0:15], v[16:31]
+// GFX1260-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_wmma_tr_32x32_b16 v[0:15], 1
+// GFX1260-ERR: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_wmma_tr_32x32_b16 1, v[16:31]
+// GFX1260-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction

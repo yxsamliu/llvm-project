@@ -44,7 +44,7 @@ static GlobalVariable *uniquifyGVPerKernel(Module &M, GlobalVariable *GV,
   for (Use &U : GV->uses()) {
     if (auto *I = dyn_cast<Instruction>(U.getUser())) {
       Function *F = I->getFunction();
-      if (isKernel(*F) && F != KF) {
+      if (isKernel(*F) && !getWavegroupRankFunction(*F) && F != KF) {
         NeedsReplacement = true;
         break;
       }
@@ -61,7 +61,7 @@ static GlobalVariable *uniquifyGVPerKernel(Module &M, GlobalVariable *GV,
   for (Use &U : make_early_inc_range(GV->uses())) {
     if (auto *I = dyn_cast<Instruction>(U.getUser())) {
       Function *F = I->getFunction();
-      if (!isKernel(*F) || F == KF) {
+      if (!isKernel(*F) || getWavegroupRankFunction(*F) || F == KF) {
         U.getUser()->replaceUsesOfWith(GV, NewGV);
       }
     }

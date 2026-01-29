@@ -67,9 +67,9 @@ body:             |
     ; DPP/tied operand
     ; GCN-NEXT: s_set_vgpr_frames 0x4500
     ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=1 vsrc1_msb=1 vsrc2_msb=0 vdst_msb=1
-    ; GCN-NEXT: s_delay_alu instid0(VALU_DEP_1)
-    ; GCN-NEXT: v_add_nc_u16_e64_dpp v0 /*v256*/, v1 /*v257*/, v2 /*v258*/ quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
-    $vgpr256 = V_ADD_NC_U16_fake16_e64_dpp $vgpr256, 0, $vgpr257, 0, undef $vgpr258, 0, 0, 1, 15, 15, 1, implicit $exec
+    ; ASM: v_add_nc_u16_e64_dpp v0.l /*v256.l*/, v1.h /*v257.h*/, v2.h /*v258.h*/ quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+    ; DIS: v_add_nc_u16_e64_dpp v0.l /*v256.l*/, v1.h /*v257.h*/, v2.h /*v258.h*/ op_sel:[1,1,0] quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+    $vgpr256_lo16 = V_ADD_NC_U16_t16_e64_dpp $vgpr256_lo16, 0, $vgpr257_hi16, 0, undef $vgpr258_hi16, 0, 0, 1, 15, 15, 1, implicit $exec
 
     ; GCN-NEXT: s_set_vgpr_frames 0x1100
     ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=1 vsrc1_msb=0 vsrc2_msb=1 vdst_msb=0
@@ -304,16 +304,20 @@ body:             |
     $vgpr256_vgpr257 = V_FMAMK_F64 undef $vgpr2_vgpr3, 1, undef $vgpr4_vgpr5, implicit $exec, implicit $mode
 
     ; GCN-NEXT: s_set_vgpr_frames 0
-    ; GCN-NEXT: v_fmamk_f16 v26, v56, 0x1, v58
+    ; ASM-NEXT: v_fmamk_f16 v26, v56, 0x1, v58
+    ; DIS-NEXT: v_fmamk_f16 v26.l, v56.l, 0x1, v58.l
     $vgpr26 = V_FMAMK_F16_fake16 undef $vgpr56, 1, undef $vgpr58, implicit $exec, implicit $mode
 
-    ; GCN-NEXT: v_fmamk_f16 v0, v35, 0x1, v2
+    ; ASM-NEXT: v_fmamk_f16 v0, v35, 0x1, v2
+    ; DIS-NEXT: v_fmamk_f16 v0.l, v35.l, 0x1, v2.l
     $vgpr0 = V_FMAMK_F16_fake16 undef $vgpr35, 1, undef $vgpr2, implicit $exec, implicit $mode
 
-    ; GCN-NEXT: v_fmamk_f16 v0, v2, 0x1, v6
+    ; ASM-NEXT: v_fmamk_f16 v0, v2, 0x1, v6
+    ; DIS-NEXT: v_fmamk_f16 v0.l, v2.l, 0x1, v6.l
     $vgpr0 = V_FMAMK_F16_fake16 undef $vgpr2, 1, undef $vgpr6, implicit $exec, implicit $mode
 
-    ; GCN-NEXT: v_fmamk_f16 v5, v2, 0x1, v4
+    ; ASM-NEXT: v_fmamk_f16 v5, v2, 0x1, v4
+    ; DIS-NEXT: v_fmamk_f16 v5.l, v2.l, 0x1, v4.l
     $vgpr5 = V_FMAMK_F16_fake16 undef $vgpr2, 1, undef $vgpr4, implicit $exec, implicit $mode
 
     ; ASM: NumVgprs: 358
