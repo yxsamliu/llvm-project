@@ -2111,6 +2111,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtPkF16F32Inst,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
    FeatureIEEEMinimumMaximumInsts,
+   FeatureSWakeupBarrier,
    FeatureClusters,
    FeatureCubeInsts,
    FeatureLerpInst,
@@ -2424,8 +2425,9 @@ def isGFX11Plus :
   AssemblerPredicate<(all_of FeatureGFX11Insts)>;
 
 def isGFX11PlusNot12_50 :
-  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 && !Subtarget->hasGFX1250Insts()">,
-  AssemblerPredicate<(all_of FeatureGFX11Insts, (not FeatureGFX1250Insts))>;
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 &&"
+            "(Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13 || !Subtarget->hasGFX1250Insts())">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts, (any_of FeatureGFX13Insts, (not FeatureGFX1250Insts)))>;
 
 def isGFX12Only :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12">,
