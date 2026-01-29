@@ -1983,7 +1983,7 @@ let SubtargetPredicate = HasVGPRIndexingRegisters, hasSideEffects = 1 in {
 }
 
 let SubtargetPredicate = HasSemaphores, hasSideEffects = 1 in {
-  def S_SEMA_SIGNAL       : SOPP_Pseudo<"s_sema_signal", (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_sema_signal s_sema_signal_imm:$simm16)]>;
+  def S_SEMA_SIGNAL       : SOPP_Pseudo<"s_sema_signal", (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_sema_signal s_sema_signal_imm:$simm16, srcvalue)]>;
   def S_SEMA_WAIT         : SOPP_Pseudo<"s_sema_wait", (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_sema_wait s_sema_wait_imm:$simm16)]>;
   def S_SEMA_SET_LIMIT    : SOPP_Pseudo<"s_sema_set_limit", (ins i16imm:$simm16), "$simm16">;
   def S_SEMA_SIGNAL_AFTER : SOPP_Pseudo<"s_sema_signal_after", (ins i16imm:$simm16), "$simm16">;

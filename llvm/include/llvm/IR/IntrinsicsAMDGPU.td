@@ -3348,13 +3348,17 @@ def int_amdgcn_s_sema_set_limit :
     [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
   >;
 
-// void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) %sem)
+// void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) %sem, i32 %mask)
 // The %sem argument must be uniform, otherwise behavior is undefined.
+// The %mask argument must be an unsigned 32-bit integer, with the high 4 bits encoding the mask.
+// The supported range of values for the mask is 0 to 15.
+// It is undefined behavior if the low 28 bits of the argument are non-zero.
+// This %mask argument is ignored for GFX13.
 def int_amdgcn_s_sema_signal :
   ClangBuiltin<"__builtin_amdgcn_s_sema_signal">,
   Intrinsic<
     [],
-    [local_ptr_ty],
+    [local_ptr_ty, llvm_i32_ty],
     [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
   >;
 

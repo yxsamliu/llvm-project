@@ -77,7 +77,7 @@ entry:
   store <3 x i32> %wei32, ptr addrspace(10) %wei.p2, align 64
 
   fence syncscope("workgroup") release, !mmra !{!{!"amdgpu-synchronize-as", !"laneshared"}, !{!"amdgpu-synchronize-as", !"local"}}
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1, i32 poison)
   ret void
 }
 
@@ -102,7 +102,7 @@ entry:
   %0 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> zeroinitializer, <9 x i32> %wei, <3 x i32> %vec30, <3 x i32> %vec31, <3 x i32> %vec32, i32 42, i1 true)
   store <8 x half> %0, ptr addrspace(10) @out, align 16, !tbaa !4
   fence syncscope("workgroup") release, !mmra !{!"amdgpu-synchronize-as", !"laneshared"}
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2, i32 poison)
   ret void
 }
 

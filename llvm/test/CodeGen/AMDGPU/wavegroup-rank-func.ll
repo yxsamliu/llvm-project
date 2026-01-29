@@ -92,7 +92,7 @@ entry:
   %wei.p2 = getelementptr <3 x i32>, ptr addrspace(10) @weights, i64 24
   store <3 x i32> %wei32, ptr addrspace(10) %wei.p2, align 64
 
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1, i32 poison)
   ret void
 }
 
@@ -122,7 +122,7 @@ entry:
   %wei = load <9 x i32>, ptr addrspace(10) @weights, align 64
   %0 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> zeroinitializer, <9 x i32> %wei, <3 x i32> %vec30, <3 x i32> %vec31, <3 x i32> %vec32, i32 42, i1 true)
   store <8 x half> %0, ptr addrspace(10) @out, align 16, !tbaa !4
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2, i32 poison)
   ret void
 }
 
@@ -269,7 +269,7 @@ entry:
   %wei.p2 = getelementptr <3 x i32>, ptr addrspace(3) @weights2, i64 24
   store <3 x i32> %wei32, ptr addrspace(3) %wei.p2, align 64
 
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1, i32 poison)
   ret void
 }
 
@@ -307,7 +307,7 @@ entry:
   %wei = load <9 x i32>, ptr addrspace(3) @weights2, align 64
   %0 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> zeroinitializer, <9 x i32> %wei, <3 x i32> %vec30, <3 x i32> %vec31, <3 x i32> %vec32, i32 42, i1 true)
   store <8 x half> %0, ptr addrspace(3) @out2, align 16, !tbaa !4
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2, i32 poison)
   ret void
 }
 
