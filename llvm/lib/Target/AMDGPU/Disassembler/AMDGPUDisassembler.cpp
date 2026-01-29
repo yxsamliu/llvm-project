@@ -582,7 +582,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
     // Try to decode DPP and SDWA first to solve conflict with VOP1 and VOP2
     // encodings
-    if (isGFX1250() && Bytes.size() >= 16) {
+    if (isGFX1250Plus() && Bytes.size() >= 16) {
       std::bitset<128> DecW = eat16Bytes(Bytes);
       if (tryDecodeInst(DecoderTableGFX1250128, MI, DecW, Address, CS))
         break;
@@ -708,6 +708,9 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX12W6464, MI, QW, Address, CS))
+        break;
+
+      if (isGFX13() && tryDecodeInst(DecoderTableGFX1364, MI, QW, Address, CS))
         break;
 
       // Reinitialize Bytes
@@ -2271,6 +2274,16 @@ bool AMDGPUDisassembler::isGFX12Plus() const {
 
 bool AMDGPUDisassembler::isGFX1250() const { return AMDGPU::isGFX1250(STI); }
 
+bool AMDGPUDisassembler::isGFX1250Plus() const {
+  return AMDGPU::isGFX1250Plus(STI);
+}
+
+bool AMDGPUDisassembler::isGFX13() const { return AMDGPU::isGFX13(STI); }
+
+bool AMDGPUDisassembler::isGFX13Plus() const {
+  return AMDGPU::isGFX13Plus(STI);
+}
+
 bool AMDGPUDisassembler::hasArchitectedFlatScratch() const {
   return STI.hasFeature(AMDGPU::FeatureArchitectedFlatScratch);
 }
@@ -2427,7 +2440,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   }
 
   // Bits [27].
-  if (isGFX1250()) {
+  if (isGFX1250Plus()) {
     PRINT_PSEUDO_DIRECTIVE_COMMENT("FLAT_SCRATCH_IS_NV",
                                    COMPUTE_PGM_RSRC1_GFX125_FLAT_SCRATCH_IS_NV);
   } else {
@@ -2441,7 +2454,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   // Bits [29-31].
   if (isGFX10Plus()) {
     // WGP_MODE is not available on GFX1250.
-    if (!isGFX1250()) {
+    if (!isGFX1250Plus()) {
       PRINT_DIRECTIVE(".amdhsa_workgroup_processor_mode",
                       COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE);
     }
@@ -2572,7 +2585,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC3(
     }
 
     // Bits [14-21].
-    if (isGFX1250()) {
+    if (isGFX1250Plus()) {
       PRINT_DIRECTIVE(".amdhsa_named_barrier_count",
                       COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT);
       PRINT_PSEUDO_DIRECTIVE_COMMENT(
