@@ -1158,6 +1158,52 @@ bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   case Intrinsic::amdgcn_make_buffer_rsrc:
     OpIndexes.push_back(0);
     return true;
+  case Intrinsic::amdgcn_spatial_cluster_send_next:
+  case Intrinsic::amdgcn_spatial_cluster_send_prev:
+    OpIndexes.push_back(1);
+    OpIndexes.push_back(3);
+    return true;
+  case Intrinsic::amdgcn_query_shared_rank:
+  case Intrinsic::amdgcn_map_shared_rank:
+    OpIndexes.push_back(0);
+    return true;
+  // LS pointer <- global ptr
+  case Intrinsic::amdgcn_load_mcast_b32:
+  case Intrinsic::amdgcn_load_mcast_b64:
+  case Intrinsic::amdgcn_load_mcast_b128:
+    OpIndexes.push_back(0);
+    return true;
+  // global ptr <- LDS pointer (AMDGPUAsyncGlobalStoreFromLDS)
+  case Intrinsic::amdgcn_global_store_async_from_lds_b8:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b32:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b64:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b128:
+  // global ptr -> LDS pointer (AMDGPUAsyncClusterLoadLDS)
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
+  // global ptr -> LDS pointer (AMDGPUAsyncGlobalLoadToLDS)
+  case Intrinsic::amdgcn_global_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b128:
+  // DDS pointer -> LDS pointer (AMDGPUAsyncDDSLoadMCASTLDS)
+  case Intrinsic::amdgcn_dds_load_async_mcast_to_lds_b32:
+  case Intrinsic::amdgcn_dds_load_async_mcast_to_lds_b64:
+  case Intrinsic::amdgcn_dds_load_async_mcast_to_lds_b128:
+  // DDS pointer -> LDS pointer (AMDGPUAsyncDDSLoadLDS)
+  case Intrinsic::amdgcn_dds_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_dds_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_dds_load_async_to_lds_b128:
+    OpIndexes.push_back(1);
+    return true;
+  case Intrinsic::amdgcn_s_sema_set_limit:
+  case Intrinsic::amdgcn_s_sema_set_state:
+  case Intrinsic::amdgcn_s_sema_signal:
+  case Intrinsic::amdgcn_s_sema_wait:
+    OpIndexes.push_back(0);
+    return true;
   default:
     return false;
   }

@@ -86,6 +86,8 @@ define private amdgpu_kernel void @_Z11wasp_kernelPiPKii_0_rank(ptr addrspace(1)
 ; GFX1300-NEXT:    global_load_b32 g1[1], v[0:1], off offset:4
 ; GFX1300-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1300-NEXT:  .LBB0_8:
+; GFX1300-NEXT:    s_barrier_signal -1
+; GFX1300-NEXT:    s_barrier_wait -1
 ; GFX1300-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.barrier.signal(i32 -1)
   %4 = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -179,6 +181,8 @@ define protected amdgpu_kernel void @_Z11wasp_kernelPiPKii(ptr addrspace(1) noun
 ; GFX1300-NEXT:    s_add_pc_i64 .L_Z11wasp_kernelPiPKii_0_rank@rel64-8
 ; GFX1300-NEXT:  .LBB1_2:
 ; GFX1300-NEXT:    s_add_gpr_idx_u32 idx0, 2
+; GFX1300-NEXT:    s_barrier_signal -1
+; GFX1300-NEXT:    s_barrier_wait -1
 ; GFX1300-NEXT:    s_endpgm
   call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr @_Z11wasp_kernelPiPKii_0_rank)
   ret void

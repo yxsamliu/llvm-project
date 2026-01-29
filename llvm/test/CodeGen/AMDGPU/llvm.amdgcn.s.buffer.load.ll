@@ -5,7 +5,8 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx900 | FileCheck %s -check-prefixes=GFX678910,GFX6789,GFX78910,GFX789,GFX8910,GFX89,GFX910,GFX9
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s -check-prefixes=GFX678910,GFX78910,GFX8910,GFX910,GFX10
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 | FileCheck %s -check-prefixes=GFX11
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-vopd=0 | FileCheck %s -check-prefixes=GFX12
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-vopd=0 | FileCheck %s -check-prefixes=GFX12_13,GFX12
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1300 -amdgpu-enable-vopd=0 | FileCheck %s -check-prefixes=GFX12_13,GFX13
 
 define amdgpu_ps void @s_buffer_load_imm(<4 x i32> inreg %desc) {
 ; GFX67-LABEL: s_buffer_load_imm:
@@ -32,13 +33,13 @@ define amdgpu_ps void @s_buffer_load_imm(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    exp mrt0 v0, v0, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_load_imm:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x4
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    export mrt0 v0, v0, v0, v0 done
-; GFX12-NEXT:    s_endpgm
+; GFX12_13-LABEL: s_buffer_load_imm:
+; GFX12_13:       ; %bb.0: ; %main_body
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x4
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12_13-NEXT:    export mrt0 v0, v0, v0, v0 done
+; GFX12_13-NEXT:    s_endpgm
 main_body:
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 4, i32 0)
   %bitcast = bitcast i32 %load to float
@@ -71,13 +72,13 @@ define amdgpu_ps void @s_buffer_load_index(<4 x i32> inreg %desc, i32 inreg %ind
 ; GFX11-NEXT:    exp mrt0 v0, v0, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_load_index:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    export mrt0 v0, v0, v0, v0 done
-; GFX12-NEXT:    s_endpgm
+; GFX12_13-LABEL: s_buffer_load_index:
+; GFX12_13:       ; %bb.0: ; %main_body
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12_13-NEXT:    export mrt0 v0, v0, v0, v0 done
+; GFX12_13-NEXT:    s_endpgm
 main_body:
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 %index, i32 0)
   %bitcast = bitcast i32 %load to float
@@ -100,14 +101,80 @@ define amdgpu_ps void @s_buffer_load_index_divergent(<4 x i32> inreg %desc, i32 
 ; GFX11-NEXT:    exp mrt0 v0, v0, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_load_index_divergent:
+; GFX12_13-LABEL: s_buffer_load_index_divergent:
+; GFX12_13:       ; %bb.0: ; %main_body
+; GFX12_13-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
+; GFX12_13-NEXT:    s_wait_loadcnt 0x0
+; GFX12_13-NEXT:    export mrt0 v0, v0, v0, v0 done
+; GFX12_13-NEXT:    s_endpgm
+main_body:
+  %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 %index, i32 0)
+  %bitcast = bitcast i32 %load to float
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %bitcast, float poison, float poison, float poison, i1 true, i1 true)
+  ret void
+}
+
+define amdgpu_ps void @s_buffer_load_index_divergent_offset(<4 x i32> inreg %desc, i32 %index) {
+; GFX678910-LABEL: s_buffer_load_index_divergent_offset:
+; GFX678910:       ; %bb.0: ; %main_body
+; GFX678910-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen offset:32
+; GFX678910-NEXT:    s_waitcnt vmcnt(0)
+; GFX678910-NEXT:    exp mrt0 v0, v0, v0, v0 done vm
+; GFX678910-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_buffer_load_index_divergent_offset:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    buffer_load_b32 v0, v0, s[0:3], 0 offen offset:32
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    exp mrt0 v0, v0, v0, v0 done
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: s_buffer_load_index_divergent_offset:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
+; GFX12-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen offset:32
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    export mrt0 v0, v0, v0, v0 done
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: s_buffer_load_index_divergent_offset:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    v_add_nc_u32_e32 v0, 32, v0
+; GFX13-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    export mrt0 v0, v0, v0, v0 done
+; GFX13-NEXT:    s_endpgm
 main_body:
-  %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 %index, i32 0)
+  %offset.index = add i32 %index, 32
+  %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 %offset.index, i32 0)
+  %bitcast = bitcast i32 %load to float
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %bitcast, float poison, float poison, float poison, i1 true, i1 true)
+  ret void
+}
+
+define amdgpu_ps void @s_buffer_load_index_divergent_offset_nuw(<4 x i32> inreg %desc, i32 %index) {
+; GFX678910-LABEL: s_buffer_load_index_divergent_offset_nuw:
+; GFX678910:       ; %bb.0: ; %main_body
+; GFX678910-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen offset:32
+; GFX678910-NEXT:    s_waitcnt vmcnt(0)
+; GFX678910-NEXT:    exp mrt0 v0, v0, v0, v0 done vm
+; GFX678910-NEXT:    s_endpgm
+;
+; GFX11-LABEL: s_buffer_load_index_divergent_offset_nuw:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    buffer_load_b32 v0, v0, s[0:3], 0 offen offset:32
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    exp mrt0 v0, v0, v0, v0 done
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12_13-LABEL: s_buffer_load_index_divergent_offset_nuw:
+; GFX12_13:       ; %bb.0: ; %main_body
+; GFX12_13-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen offset:32
+; GFX12_13-NEXT:    s_wait_loadcnt 0x0
+; GFX12_13-NEXT:    export mrt0 v0, v0, v0, v0 done
+; GFX12_13-NEXT:    s_endpgm
+main_body:
+  %offset.index = add nuw i32 %index, 32
+  %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 %offset.index, i32 0)
   %bitcast = bitcast i32 %load to float
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %bitcast, float poison, float poison, float poison, i1 true, i1 true)
   ret void
@@ -141,14 +208,14 @@ define amdgpu_ps void @s_buffer_loadx2_imm(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    exp mrt0 v0, v1, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_loadx2_imm:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_buffer_load_b64 s[0:1], s[0:3], 0x40
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    v_mov_b32_e32 v1, s1
-; GFX12-NEXT:    export mrt0 v0, v1, v0, v0 done
-; GFX12-NEXT:    s_endpgm
+; GFX12_13-LABEL: s_buffer_loadx2_imm:
+; GFX12_13:       ; %bb.0: ; %main_body
+; GFX12_13-NEXT:    s_buffer_load_b64 s[0:1], s[0:3], 0x40
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12_13-NEXT:    v_mov_b32_e32 v1, s1
+; GFX12_13-NEXT:    export mrt0 v0, v1, v0, v0 done
+; GFX12_13-NEXT:    s_endpgm
 main_body:
   %load = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %desc, i32 64, i32 0)
   %bitcast = bitcast <2 x i32> %load to <2 x float>
@@ -186,14 +253,14 @@ define amdgpu_ps void @s_buffer_loadx2_index(<4 x i32> inreg %desc, i32 inreg %i
 ; GFX11-NEXT:    exp mrt0 v0, v1, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_loadx2_index:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_buffer_load_b64 s[0:1], s[0:3], s4 offset:0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    v_mov_b32_e32 v1, s1
-; GFX12-NEXT:    export mrt0 v0, v1, v0, v0 done
-; GFX12-NEXT:    s_endpgm
+; GFX12_13-LABEL: s_buffer_loadx2_index:
+; GFX12_13:       ; %bb.0: ; %main_body
+; GFX12_13-NEXT:    s_buffer_load_b64 s[0:1], s[0:3], s4 offset:0x0
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12_13-NEXT:    v_mov_b32_e32 v1, s1
+; GFX12_13-NEXT:    export mrt0 v0, v1, v0, v0 done
+; GFX12_13-NEXT:    s_endpgm
 main_body:
   %load = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %desc, i32 %index, i32 0)
   %bitcast = bitcast <2 x i32> %load to <2 x float>
@@ -218,12 +285,12 @@ define amdgpu_ps void @s_buffer_loadx2_index_divergent(<4 x i32> inreg %desc, i3
 ; GFX11-NEXT:    exp mrt0 v0, v1, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_loadx2_index_divergent:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], null offen
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    export mrt0 v0, v1, v0, v0 done
-; GFX12-NEXT:    s_endpgm
+; GFX12_13-LABEL: s_buffer_loadx2_index_divergent:
+; GFX12_13:       ; %bb.0: ; %main_body
+; GFX12_13-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], null offen
+; GFX12_13-NEXT:    s_wait_loadcnt 0x0
+; GFX12_13-NEXT:    export mrt0 v0, v1, v0, v0 done
+; GFX12_13-NEXT:    s_endpgm
 main_body:
   %load = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %desc, i32 %index, i32 0)
   %bitcast = bitcast <2 x i32> %load to <2 x float>
@@ -264,15 +331,15 @@ define amdgpu_ps void @s_buffer_loadx3_imm(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    exp mrt0 v0, v1, v2, v0 done
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_loadx3_imm:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_buffer_load_b96 s[0:2], s[0:3], 0x40
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    v_mov_b32_e32 v1, s1
-; GFX12-NEXT:    v_mov_b32_e32 v2, s2
-; GFX12-NEXT:    export mrt0 v0, v1, v2, v0 done
-; GFX12-NEXT:    s_endpgm
+; GFX12_13-LABEL: s_buffer_loadx3_imm:
+; GFX12_13:       ; %bb.0: ; %main_body
+; GFX12_13-NEXT:    s_buffer_load_b96 s[0:2], s[0:3], 0x40
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12_13-NEXT:    v_mov_b32_e32 v1, s1
+; GFX12_13-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12_13-NEXT:    export mrt0 v0, v1, v2, v0 done
+; GFX12_13-NEXT:    s_endpgm
 main_body:
   %load = call <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32> %desc, i32 64, i32 0)
   %bitcast = bitcast <3 x i32> %load to <3 x float>
@@ -314,15 +381,15 @@ define amdgpu_ps void @s_buffer_loadx3_index(<4 x i32> inreg %desc, i32 inreg %i
 ; GFX11-NEXT:    exp mrt0 v0, v1, v2, v0 done
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_loadx3_index:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_buffer_load_b96 s[0:2], s[0:3], s4 offset:0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    v_mov_b32_e32 v1, s1
-; GFX12-NEXT:    v_mov_b32_e32 v2, s2
-; GFX12-NEXT:    export mrt0 v0, v1, v2, v0 done
-; GFX12-NEXT:    s_endpgm
+; GFX12_13-LABEL: s_buffer_loadx3_index:
+; GFX12_13:       ; %bb.0: ; %main_body
+; GFX12_13-NEXT:    s_buffer_load_b96 s[0:2], s[0:3], s4 offset:0x0
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12_13-NEXT:    v_mov_b32_e32 v1, s1
+; GFX12_13-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12_13-NEXT:    export mrt0 v0, v1, v2, v0 done
+; GFX12_13-NEXT:    s_endpgm
 main_body:
   %load = call <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32> %desc, i32 %index, i32 0)
   %bitcast = bitcast <3 x i32> %load to <3 x float>
@@ -355,12 +422,12 @@ define amdgpu_ps void @s_buffer_loadx3_index_divergent(<4 x i32> inreg %desc, i3
 ; GFX11-NEXT:    exp mrt0 v0, v1, v2, v0 done
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_loadx3_index_divergent:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    buffer_load_b96 v[0:2], v0, s[0:3], null offen
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    export mrt0 v0, v1, v2, v0 done
-; GFX12-NEXT:    s_endpgm
+; GFX12_13-LABEL: s_buffer_loadx3_index_divergent:
+; GFX12_13:       ; %bb.0: ; %main_body
+; GFX12_13-NEXT:    buffer_load_b96 v[0:2], v0, s[0:3], null offen
+; GFX12_13-NEXT:    s_wait_loadcnt 0x0
+; GFX12_13-NEXT:    export mrt0 v0, v1, v2, v0 done
+; GFX12_13-NEXT:    s_endpgm
 main_body:
   %load = call <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32> %desc, i32 %index, i32 0)
   %bitcast = bitcast <3 x i32> %load to <3 x float>
@@ -405,16 +472,16 @@ define amdgpu_ps void @s_buffer_loadx4_imm(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    exp mrt0 v0, v1, v2, v3 done
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_loadx4_imm:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_buffer_load_b128 s[0:3], s[0:3], 0xc8
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    v_mov_b32_e32 v1, s1
-; GFX12-NEXT:    v_mov_b32_e32 v2, s2
-; GFX12-NEXT:    v_mov_b32_e32 v3, s3
-; GFX12-NEXT:    export mrt0 v0, v1, v2, v3 done
-; GFX12-NEXT:    s_endpgm
+; GFX12_13-LABEL: s_buffer_loadx4_imm:
+; GFX12_13:       ; %bb.0: ; %main_body
+; GFX12_13-NEXT:    s_buffer_load_b128 s[0:3], s[0:3], 0xc8
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12_13-NEXT:    v_mov_b32_e32 v1, s1
+; GFX12_13-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12_13-NEXT:    v_mov_b32_e32 v3, s3
+; GFX12_13-NEXT:    export mrt0 v0, v1, v2, v3 done
+; GFX12_13-NEXT:    s_endpgm
 main_body:
   %load = call <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32> %desc, i32 200, i32 0)
   %bitcast = bitcast <4 x i32> %load to <4 x float>
@@ -460,16 +527,16 @@ define amdgpu_ps void @s_buffer_loadx4_index(<4 x i32> inreg %desc, i32 inreg %i
 ; GFX11-NEXT:    exp mrt0 v0, v1, v2, v3 done
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_loadx4_index:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_buffer_load_b128 s[0:3], s[0:3], s4 offset:0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    v_mov_b32_e32 v1, s1
-; GFX12-NEXT:    v_mov_b32_e32 v2, s2
-; GFX12-NEXT:    v_mov_b32_e32 v3, s3
-; GFX12-NEXT:    export mrt0 v0, v1, v2, v3 done
-; GFX12-NEXT:    s_endpgm
+; GFX12_13-LABEL: s_buffer_loadx4_index:
+; GFX12_13:       ; %bb.0: ; %main_body
+; GFX12_13-NEXT:    s_buffer_load_b128 s[0:3], s[0:3], s4 offset:0x0
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12_13-NEXT:    v_mov_b32_e32 v1, s1
+; GFX12_13-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12_13-NEXT:    v_mov_b32_e32 v3, s3
+; GFX12_13-NEXT:    export mrt0 v0, v1, v2, v3 done
+; GFX12_13-NEXT:    s_endpgm
 main_body:
   %load = call <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32> %desc, i32 %index, i32 0)
   %bitcast = bitcast <4 x i32> %load to <4 x float>
@@ -496,12 +563,12 @@ define amdgpu_ps void @s_buffer_loadx4_index_divergent(<4 x i32> inreg %desc, i3
 ; GFX11-NEXT:    exp mrt0 v0, v1, v2, v3 done
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_loadx4_index_divergent:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    export mrt0 v0, v1, v2, v3 done
-; GFX12-NEXT:    s_endpgm
+; GFX12_13-LABEL: s_buffer_loadx4_index_divergent:
+; GFX12_13:       ; %bb.0: ; %main_body
+; GFX12_13-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen
+; GFX12_13-NEXT:    s_wait_loadcnt 0x0
+; GFX12_13-NEXT:    export mrt0 v0, v1, v2, v3 done
+; GFX12_13-NEXT:    s_endpgm
 main_body:
   %load = call <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32> %desc, i32 %index, i32 0)
   %bitcast = bitcast <4 x i32> %load to <4 x float>
@@ -550,14 +617,14 @@ define amdgpu_ps void @s_buffer_load_imm_mergex2(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    exp mrt0 v0, v1, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_load_imm_mergex2:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_buffer_load_b64 s[0:1], s[0:3], 0x4
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    v_mov_b32_e32 v1, s1
-; GFX12-NEXT:    export mrt0 v0, v1, v0, v0 done
-; GFX12-NEXT:    s_endpgm
+; GFX12_13-LABEL: s_buffer_load_imm_mergex2:
+; GFX12_13:       ; %bb.0: ; %main_body
+; GFX12_13-NEXT:    s_buffer_load_b64 s[0:1], s[0:3], 0x4
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12_13-NEXT:    v_mov_b32_e32 v1, s1
+; GFX12_13-NEXT:    export mrt0 v0, v1, v0, v0 done
+; GFX12_13-NEXT:    s_endpgm
 main_body:
   %load0 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 4, i32 0)
   %load1 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 8, i32 0)
@@ -612,16 +679,16 @@ define amdgpu_ps void @s_buffer_load_imm_mergex4(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    exp mrt0 v0, v1, v2, v3 done
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_load_imm_mergex4:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_buffer_load_b128 s[0:3], s[0:3], 0x8
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    v_mov_b32_e32 v1, s1
-; GFX12-NEXT:    v_mov_b32_e32 v2, s2
-; GFX12-NEXT:    v_mov_b32_e32 v3, s3
-; GFX12-NEXT:    export mrt0 v0, v1, v2, v3 done
-; GFX12-NEXT:    s_endpgm
+; GFX12_13-LABEL: s_buffer_load_imm_mergex4:
+; GFX12_13:       ; %bb.0: ; %main_body
+; GFX12_13-NEXT:    s_buffer_load_b128 s[0:3], s[0:3], 0x8
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12_13-NEXT:    v_mov_b32_e32 v1, s1
+; GFX12_13-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12_13-NEXT:    v_mov_b32_e32 v3, s3
+; GFX12_13-NEXT:    export mrt0 v0, v1, v2, v3 done
+; GFX12_13-NEXT:    s_endpgm
 main_body:
   %load0 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 8, i32 0)
   %load1 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 12, i32 0)
@@ -754,6 +821,21 @@ define amdgpu_ps void @s_buffer_load_index_across_bb(<4 x i32> inreg %desc, i32 
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    export mrt0 v0, v0, v0, v0 done
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: s_buffer_load_index_across_bb:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    s_get_pc_i64 s[4:5]
+; GFX13-NEXT:    s_add_nc_u64 s[4:5], s[4:5], gv@gotpcrel+4
+; GFX13-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; GFX13-NEXT:    s_load_b64 s[4:5], s[4:5], 0x0
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    global_store_b32 v1, v0, s[4:5]
+; GFX13-NEXT:    v_or_b32_e32 v0, 8, v0
+; GFX13-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    export mrt0 v0, v0, v0, v0 done
+; GFX13-NEXT:    s_endpgm
 main_body:
   %tmp = shl i32 %index, 4
   store i32 %tmp, ptr addrspace(1) @gv
@@ -784,13 +866,13 @@ define amdgpu_ps void @s_buffer_load_index_across_bb_merged(<4 x i32> inreg %des
 ; GFX11-NEXT:    exp mrt0 v0, v1, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: s_buffer_load_index_across_bb_merged:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
-; GFX12-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], null offen offset:8
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    export mrt0 v0, v1, v0, v0 done
-; GFX12-NEXT:    s_endpgm
+; GFX12_13-LABEL: s_buffer_load_index_across_bb_merged:
+; GFX12_13:       ; %bb.0: ; %main_body
+; GFX12_13-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; GFX12_13-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], null offen offset:8
+; GFX12_13-NEXT:    s_wait_loadcnt 0x0
+; GFX12_13-NEXT:    export mrt0 v0, v1, v0, v0 done
+; GFX12_13-NEXT:    s_endpgm
 main_body:
   %tmp = shl i32 %index, 4
   br label %bb1
@@ -836,12 +918,12 @@ define amdgpu_ps i32 @s_buffer_load_imm_neg1(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_neg1:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mov_b32 s4, -1
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_neg1:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_mov_b32 s4, -1
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 -1, i32 0)
   ret i32 %load
 }
@@ -882,12 +964,12 @@ define amdgpu_ps i32 @s_buffer_load_imm_neg4(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_neg4:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mov_b32 s4, -4
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_neg4:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_mov_b32 s4, -4
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 -4, i32 0)
   ret i32 %load
 }
@@ -928,12 +1010,12 @@ define amdgpu_ps i32 @s_buffer_load_imm_neg8(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_neg8:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mov_b32 s4, -8
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_neg8:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_mov_b32 s4, -8
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 -8, i32 0)
   ret i32 %load
 }
@@ -974,12 +1056,12 @@ define amdgpu_ps i32 @s_buffer_load_imm_bit31(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_bit31:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_brev_b32 s4, 1
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_bit31:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_brev_b32 s4, 1
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 -2147483648, i32 0)
   ret i32 %load
 }
@@ -1020,12 +1102,12 @@ define amdgpu_ps i32 @s_buffer_load_imm_bit30(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_bit30:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mov_b32 s4, 2.0
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_bit30:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_mov_b32 s4, 2.0
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 1073741824, i32 0)
   ret i32 %load
 }
@@ -1066,12 +1148,12 @@ define amdgpu_ps i32 @s_buffer_load_imm_bit29(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_bit29:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_brev_b32 s4, 4
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_bit29:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_brev_b32 s4, 4
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 536870912, i32 0)
   ret i32 %load
 }
@@ -1112,11 +1194,11 @@ define amdgpu_ps i32 @s_buffer_load_imm_bit21(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_bit21:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x200000
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_bit21:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x200000
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 2097152, i32 0)
   ret i32 %load
 }
@@ -1157,11 +1239,11 @@ define amdgpu_ps i32 @s_buffer_load_imm_bit20(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_bit20:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x100000
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_bit20:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x100000
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 1048576, i32 0)
   ret i32 %load
 }
@@ -1202,12 +1284,12 @@ define amdgpu_ps i32 @s_buffer_load_imm_neg_bit20(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_neg_bit20:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mov_b32 s4, 0xfff00000
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_neg_bit20:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_mov_b32 s4, 0xfff00000
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32  -1048576, i32 0)
   ret i32 %load
 }
@@ -1239,11 +1321,11 @@ define amdgpu_ps i32 @s_buffer_load_imm_bit19(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_bit19:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x80000
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_bit19:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x80000
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 524288, i32 0)
   ret i32 %load
 }
@@ -1284,12 +1366,12 @@ define amdgpu_ps i32 @s_buffer_load_imm_neg_bit19(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_neg_bit19:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mov_b32 s4, 0xfff80000
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_neg_bit19:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_mov_b32 s4, 0xfff80000
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 -524288, i32 0)
   ret i32 %load
 }
@@ -1322,11 +1404,11 @@ define amdgpu_ps i32 @s_buffer_load_imm_255(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_255:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], 0xff
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_255:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], 0xff
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 255, i32 0)
   ret i32 %load
 }
@@ -1350,11 +1432,11 @@ define amdgpu_ps i32 @s_buffer_load_imm_256(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_256:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x100
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_256:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x100
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 256, i32 0)
   ret i32 %load
 }
@@ -1378,11 +1460,11 @@ define amdgpu_ps i32 @s_buffer_load_imm_1016(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_1016:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x3f8
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_1016:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x3f8
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 1016, i32 0)
   ret i32 %load
 }
@@ -1406,11 +1488,11 @@ define amdgpu_ps i32 @s_buffer_load_imm_1020(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_1020:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x3fc
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_1020:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x3fc
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 1020, i32 0)
   ret i32 %load
 }
@@ -1443,11 +1525,11 @@ define amdgpu_ps i32 @s_buffer_load_imm_1021(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_1021:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x3fd
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_1021:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x3fd
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 1021, i32 0)
   ret i32 %load
 }
@@ -1479,11 +1561,11 @@ define amdgpu_ps i32 @s_buffer_load_imm_1024(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_1024:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x400
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_1024:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x400
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 1024, i32 0)
   ret i32 %load
 }
@@ -1516,11 +1598,11 @@ define amdgpu_ps i32 @s_buffer_load_imm_1025(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_1025:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x401
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_1025:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x401
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 1025, i32 0)
   ret i32 %load
 }
@@ -1552,11 +1634,11 @@ define amdgpu_ps i32 @s_buffer_load_imm_1028(<4 x i32> inreg %desc) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: s_buffer_load_imm_1028:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x400
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12_13-LABEL: s_buffer_load_imm_1028:
+; GFX12_13:       ; %bb.0:
+; GFX12_13-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x400
+; GFX12_13-NEXT:    s_wait_kmcnt 0x0
+; GFX12_13-NEXT:    ; return to shader part epilog
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 1024, i32 0)
   ret i32 %load
 }

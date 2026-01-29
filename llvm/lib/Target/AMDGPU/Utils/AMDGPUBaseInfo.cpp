@@ -2808,6 +2808,14 @@ bool hasWavegroups(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureWavegroups);
 }
 
+bool hasSemaphores(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeatureSemaphores);
+}
+
+bool hasVGPRIndexingRegisters(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeatureVGPRIndexingRegisters);
+}
+
 bool supportsWGP(const MCSubtargetInfo &STI) {
   if (isGFX1250Only(STI))
     return false;

@@ -41,7 +41,7 @@ define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %src, ptr addrspace
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    global_store_b64 v0, v[1:2], s[2:3] scale_offset
-; CHECK-NEXT:    s_endpgm
+; CHECK-NEXT:    s_branch .LBB0_3
 ; CHECK-NEXT:  .LBB0_2: ; %load
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_load_b64 v[0:1], v0, s[0:1] scale_offset
@@ -50,6 +50,10 @@ define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %src, ptr addrspace
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[0], v0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[8], v1
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:  .LBB0_3: ; %load
 ; CHECK-NEXT:    s_barrier_signal -1
 ; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm

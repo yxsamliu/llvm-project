@@ -18,6 +18,8 @@ define amdgpu_kernel void @wavegroup_kernel() "amdgpu-wavegroup-enable" "amdgpu-
 ; KERNEL-NEXT:    s_mul_i32 s33, s0, s2
 ; KERNEL-NEXT:    s_set_vgpr_frames 0x41 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; KERNEL-NEXT:    v_mov_b32_e32 g1[2], g1[1]
+; KERNEL-NEXT:    s_barrier_signal -1
+; KERNEL-NEXT:    s_barrier_wait -1
 ; KERNEL-NEXT:    s_endpgm
 entry:
   %src = getelementptr i32, ptr addrspace(10) @ls, i32 1

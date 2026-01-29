@@ -14,6 +14,7 @@ define void @raw_buffer_discard_b32__sgpr_rsrc__vgpr_voffset__sgpr_soffset(<4 x 
   ; GFX13-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX13-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX13-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
+  ; GFX13-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY1]], [[COPY]], 0, implicit $exec
   ; GFX13-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT: bb.1:
@@ -29,15 +30,12 @@ define void @raw_buffer_discard_b32__sgpr_rsrc__vgpr_voffset__sgpr_soffset(<4 x 
   ; GFX13-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub2_sub3, implicit $exec
   ; GFX13-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX13-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX13-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
-  ; GFX13-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
-  ; GFX13-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_AND_B32_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
-  ; GFX13-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[S_AND_B32_1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX13-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[S_AND_B32_]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT: bb.2:
   ; GFX13-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX13-NEXT: {{  $}}
-  ; GFX13-NEXT:   BUFFER_DISCARD_B32_VBUFFER_OFFEN_exact [[COPY1]], killed [[REG_SEQUENCE3]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (store (s32), align 1)
+  ; GFX13-NEXT:   BUFFER_DISCARD_B32_VBUFFER_OFFEN_exact [[V_ADD_U32_e64_]], killed [[REG_SEQUENCE3]], $sgpr_null, 0, 0, 0, implicit $exec :: (store (s32), align 1)
   ; GFX13-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; GFX13-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX13-NEXT: {{  $}}
@@ -75,15 +73,12 @@ define void @raw_buffer_discard_b128__sgpr_rsrc__voffset_4095__sgpr_soffset(<4 x
   ; GFX13-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub2_sub3, implicit $exec
   ; GFX13-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX13-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX13-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
-  ; GFX13-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
-  ; GFX13-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_AND_B32_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
-  ; GFX13-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[S_AND_B32_1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX13-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[S_AND_B32_]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT: bb.2:
   ; GFX13-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX13-NEXT: {{  $}}
-  ; GFX13-NEXT:   BUFFER_DISCARD_B128_VBUFFER_OFFSET_exact killed [[REG_SEQUENCE3]], killed [[V_READFIRSTLANE_B32_4]], 4095, 0, 0, implicit $exec :: (store (s128), align 1)
+  ; GFX13-NEXT:   BUFFER_DISCARD_B128_VBUFFER_OFFEN_exact [[COPY]], killed [[REG_SEQUENCE3]], $sgpr_null, 4095, 0, 0, implicit $exec :: (store (s128), align 1)
   ; GFX13-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; GFX13-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX13-NEXT: {{  $}}
@@ -107,6 +102,7 @@ define void @raw_buffer_discard_b1024__sgpr_rsrc__vgpr_voffset__sgpr_soffset(<4 
   ; GFX13-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX13-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX13-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
+  ; GFX13-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY1]], [[COPY]], 0, implicit $exec
   ; GFX13-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT: bb.1:
@@ -122,15 +118,12 @@ define void @raw_buffer_discard_b1024__sgpr_rsrc__vgpr_voffset__sgpr_soffset(<4 
   ; GFX13-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub2_sub3, implicit $exec
   ; GFX13-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX13-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX13-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
-  ; GFX13-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
-  ; GFX13-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_AND_B32_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
-  ; GFX13-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[S_AND_B32_1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX13-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[S_AND_B32_]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT: bb.2:
   ; GFX13-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX13-NEXT: {{  $}}
-  ; GFX13-NEXT:   BUFFER_DISCARD_B1024_VBUFFER_OFFEN_exact [[COPY1]], killed [[REG_SEQUENCE3]], killed [[V_READFIRSTLANE_B32_4]], 0, 8, 0, implicit $exec :: (store (s1024), align 1)
+  ; GFX13-NEXT:   BUFFER_DISCARD_B1024_VBUFFER_OFFEN_exact [[V_ADD_U32_e64_]], killed [[REG_SEQUENCE3]], $sgpr_null, 0, 8, 0, implicit $exec :: (store (s1024), align 1)
   ; GFX13-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; GFX13-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX13-NEXT: {{  $}}
@@ -155,7 +148,8 @@ define void @raw_struct_buffer_discard_b32__sgpr_rsrc__vgpr_voffset__sgpr_soffse
   ; GFX13-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX13-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX13-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY5]], %subreg.sub1, [[COPY4]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; GFX13-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
+  ; GFX13-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY1]], [[COPY]], 0, implicit $exec
+  ; GFX13-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, killed [[V_ADD_U32_e64_]], %subreg.sub1
   ; GFX13-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT: bb.1:
@@ -171,15 +165,12 @@ define void @raw_struct_buffer_discard_b32__sgpr_rsrc__vgpr_voffset__sgpr_soffse
   ; GFX13-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE3]], [[REG_SEQUENCE]].sub2_sub3, implicit $exec
   ; GFX13-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX13-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX13-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
-  ; GFX13-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
-  ; GFX13-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_AND_B32_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
-  ; GFX13-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[S_AND_B32_1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX13-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[S_AND_B32_]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT: bb.2:
   ; GFX13-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX13-NEXT: {{  $}}
-  ; GFX13-NEXT:   BUFFER_DISCARD_B32_VBUFFER_BOTHEN_exact [[REG_SEQUENCE1]], killed [[REG_SEQUENCE4]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (store (s32), align 1)
+  ; GFX13-NEXT:   BUFFER_DISCARD_B32_VBUFFER_BOTHEN_exact [[REG_SEQUENCE1]], killed [[REG_SEQUENCE4]], $sgpr_null, 0, 0, 0, implicit $exec :: (store (s32), align 1)
   ; GFX13-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; GFX13-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX13-NEXT: {{  $}}
@@ -203,6 +194,7 @@ define void @struct_buffer_discard_b128__sgpr_rsrc__voffset_4095__sgpr_soffset(<
   ; GFX13-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX13-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX13-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
+  ; GFX13-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
   ; GFX13-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT: bb.1:
@@ -210,23 +202,20 @@ define void @struct_buffer_discard_b128__sgpr_rsrc__voffset_4095__sgpr_soffset(<
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub0, implicit $exec
   ; GFX13-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub1, implicit $exec
-  ; GFX13-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; GFX13-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE1]], [[REG_SEQUENCE]].sub0_sub1, implicit $exec
+  ; GFX13-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
+  ; GFX13-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub0_sub1, implicit $exec
   ; GFX13-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub2, implicit $exec
   ; GFX13-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub3, implicit $exec
-  ; GFX13-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_2]], %subreg.sub0, [[V_READFIRSTLANE_B32_3]], %subreg.sub1
-  ; GFX13-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE2]], [[REG_SEQUENCE]].sub2_sub3, implicit $exec
+  ; GFX13-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_2]], %subreg.sub0, [[V_READFIRSTLANE_B32_3]], %subreg.sub1
+  ; GFX13-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE3]], [[REG_SEQUENCE]].sub2_sub3, implicit $exec
   ; GFX13-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
-  ; GFX13-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX13-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
-  ; GFX13-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
-  ; GFX13-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_AND_B32_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
-  ; GFX13-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[S_AND_B32_1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX13-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
+  ; GFX13-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[S_AND_B32_]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT: bb.2:
   ; GFX13-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX13-NEXT: {{  $}}
-  ; GFX13-NEXT:   BUFFER_DISCARD_B128_VBUFFER_IDXEN_exact [[COPY1]], killed [[REG_SEQUENCE3]], killed [[V_READFIRSTLANE_B32_4]], 4095, 0, 0, implicit $exec :: (store (s128), align 1)
+  ; GFX13-NEXT:   BUFFER_DISCARD_B128_VBUFFER_BOTHEN_exact [[REG_SEQUENCE1]], killed [[REG_SEQUENCE4]], $sgpr_null, 4095, 0, 0, implicit $exec :: (store (s128), align 1)
   ; GFX13-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; GFX13-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX13-NEXT: {{  $}}
@@ -250,8 +239,9 @@ define void @struct_buffer_discard_b1024__sgpr_rsrc__vgpr_voffset__sgpr_soffset(
   ; GFX13-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX13-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX13-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
+  ; GFX13-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY1]], [[COPY]], 0, implicit $exec
   ; GFX13-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; GFX13-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE killed [[V_MOV_B32_e32_]], %subreg.sub0, [[COPY1]], %subreg.sub1
+  ; GFX13-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE killed [[V_MOV_B32_e32_]], %subreg.sub0, killed [[V_ADD_U32_e64_]], %subreg.sub1
   ; GFX13-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT: bb.1:
@@ -267,15 +257,12 @@ define void @struct_buffer_discard_b1024__sgpr_rsrc__vgpr_voffset__sgpr_soffset(
   ; GFX13-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE3]], [[REG_SEQUENCE]].sub2_sub3, implicit $exec
   ; GFX13-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX13-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX13-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
-  ; GFX13-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
-  ; GFX13-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_AND_B32_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
-  ; GFX13-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[S_AND_B32_1]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX13-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[S_AND_B32_]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT: bb.2:
   ; GFX13-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX13-NEXT: {{  $}}
-  ; GFX13-NEXT:   BUFFER_DISCARD_B1024_VBUFFER_BOTHEN_exact [[REG_SEQUENCE1]], killed [[REG_SEQUENCE4]], killed [[V_READFIRSTLANE_B32_4]], 0, 8, 0, implicit $exec :: (store (s1024), align 1)
+  ; GFX13-NEXT:   BUFFER_DISCARD_B1024_VBUFFER_BOTHEN_exact [[REG_SEQUENCE1]], killed [[REG_SEQUENCE4]], $sgpr_null, 0, 8, 0, implicit $exec :: (store (s1024), align 1)
   ; GFX13-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; GFX13-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX13-NEXT: {{  $}}

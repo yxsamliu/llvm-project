@@ -872,12 +872,22 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_global_load_tr16_b128_v8i16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr16_b128_v8f16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr16_b128_v8bf16:
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr4_32x32_b128_v4i32:
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr8_16x32_b128_v4i32:
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr16_8x32_b128_v8i16:
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr16_8x32_b128_v8f16:
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr16_8x32_b128_v8bf16:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr4_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr8_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr6_b96_v3i32:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8i16:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8f16:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8bf16:
+  case AMDGPU::BI__builtin_amdgcn_ds_load_tr4_32x32_b128_v4i32:
+  case AMDGPU::BI__builtin_amdgcn_ds_load_tr8_16x32_b128_v4i32:
+  case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_8x32_b128_v8i16:
+  case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_8x32_b128_v8f16:
+  case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_8x32_b128_v8bf16:
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr4_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr8_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr6_b96_v3i32:
@@ -908,6 +918,17 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_global_load_tr6_b96_v3i32:
       IID = Intrinsic::amdgcn_global_load_tr6_b96;
       break;
+    case AMDGPU::BI__builtin_amdgcn_global_load_tr4_32x32_b128_v4i32:
+      IID = Intrinsic::amdgcn_global_load_tr4_32x32_b128;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_global_load_tr8_16x32_b128_v4i32:
+      IID = Intrinsic::amdgcn_global_load_tr8_16x32_b128;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_global_load_tr16_8x32_b128_v8i16:
+    case AMDGPU::BI__builtin_amdgcn_global_load_tr16_8x32_b128_v8f16:
+    case AMDGPU::BI__builtin_amdgcn_global_load_tr16_8x32_b128_v8bf16:
+      IID = Intrinsic::amdgcn_global_load_tr16_8x32_b128;
+      break;
     case AMDGPU::BI__builtin_amdgcn_ds_load_tr4_b64_v2i32:
       IID = Intrinsic::amdgcn_ds_load_tr4_b64;
       break;
@@ -921,6 +942,17 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8f16:
     case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8bf16:
       IID = Intrinsic::amdgcn_ds_load_tr16_b128;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_load_tr4_32x32_b128_v4i32:
+      IID = Intrinsic::amdgcn_ds_load_tr4_32x32_b128;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_load_tr8_16x32_b128_v4i32:
+      IID = Intrinsic::amdgcn_ds_load_tr8_16x32_b128;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_8x32_b128_v8i16:
+    case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_8x32_b128_v8f16:
+    case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_8x32_b128_v8bf16:
+      IID = Intrinsic::amdgcn_ds_load_tr16_8x32_b128;
       break;
     case AMDGPU::BI__builtin_amdgcn_ds_read_tr4_b64_v2i32:
       IID = Intrinsic::amdgcn_ds_read_tr4_b64;
@@ -1018,6 +1050,23 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     for (int i = 0, e = E->getNumArgs(); i != e; ++i)
       Args.push_back(EmitScalarExpr(E->getArg(i)));
     llvm::Function *F = CGM.getIntrinsic(IID, {SrcType});
+    return Builder.CreateCall(F, {Args});
+  }
+  case AMDGPU::BI__builtin_amdgcn_spatial_cluster_send_next:
+  case AMDGPU::BI__builtin_amdgcn_spatial_cluster_send_prev: {
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_spatial_cluster_send_next:
+      IID = Intrinsic::amdgcn_spatial_cluster_send_next;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_spatial_cluster_send_prev:
+      IID = Intrinsic::amdgcn_spatial_cluster_send_prev;
+      break;
+    }
+    SmallVector<Value *, 6> Args;
+    for (int i = 0, e = E->getNumArgs(); i != e; ++i)
+      Args.push_back(EmitScalarExpr(E->getArg(i)));
+    llvm::Function *F = CGM.getIntrinsic(IID, {});
     return Builder.CreateCall(F, {Args});
   }
   case AMDGPU::BI__builtin_amdgcn_cluster_load_async_to_lds_b8:
@@ -1922,6 +1971,20 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       Args.push_back(EmitScalarExpr(E->getArg(i)));
     if (AppendFalseForOpselArg)
       Args.push_back(Builder.getFalse());
+
+    // Handle the optional clamp argument of the following two builtins.
+    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x64_iu8) {
+      if (Args.size() == 7)
+        Args.push_back(Builder.getFalse());
+      assert(Args.size() == 8 && "Expected 8 arguments");
+      Args[7] = Builder.CreateZExtOrTrunc(Args[7], Builder.getInt1Ty());
+    } else if (BuiltinID ==
+               AMDGPU::BI__builtin_amdgcn_swmmac_i32_16x16x128_iu8) {
+      if (Args.size() == 8)
+        Args.push_back(Builder.getFalse());
+      assert(Args.size() == 9 && "Expected 9 arguments");
+      Args[8] = Builder.CreateZExtOrTrunc(Args[8], Builder.getInt1Ty());
+    }
 
     SmallVector<llvm::Type *, 6> ArgTypes;
     if (NeedReturnType)

@@ -21,6 +21,8 @@ define amdgpu_kernel void @wavegroup_kernel() "amdgpu-wavegroup-enable" "amdgpu-
 ; CHECK-NEXT:    s_mov_b32 s0, 8
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s0
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %src = getelementptr i32, ptr addrspace(10) @ls, i32 1

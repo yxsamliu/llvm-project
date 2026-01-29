@@ -690,6 +690,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                         DecW, Address, CS))
         break;
 
+      if (isGFX1260Only() &&
+          tryDecodeInst(DecoderTableGFX126096, MI, DecW, Address, CS))
+        break;
+
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX1296, DecoderTableGFX12_FAKE1696, MI,
                         DecW, Address, CS))

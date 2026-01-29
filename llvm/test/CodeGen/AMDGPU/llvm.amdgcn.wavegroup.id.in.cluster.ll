@@ -22,6 +22,8 @@ define amdgpu_kernel void @get_wavegroup_id_in_cluster(ptr addrspace(1) %use) "a
 ; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %wg_cluster = call i32 @llvm.amdgcn.wavegroup.id.in.cluster()

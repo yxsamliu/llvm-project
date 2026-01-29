@@ -185,6 +185,7 @@ protected:
   bool HasCvtPkNormVOP2Insts = false;
   bool HasCvtPkNormVOP3Insts = false;
   bool HasWMMATransposeInsts = false;
+  bool HasTileShapedTransposeInsts = false;
   bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
@@ -917,6 +918,8 @@ public:
   bool hasPk4Insts() const { return HasPk4Insts; }
 
   bool hasWMMATransposeInsts() const { return HasWMMATransposeInsts; }
+
+  bool hasTileShapedTransposeInsts() const { return HasTileShapedTransposeInsts; }
 
   bool isGFX1170() const {
     return getGeneration() == GFX11 && hasWMMA128bInsts();
@@ -1655,7 +1658,7 @@ public:
 
   bool hasGFX13Insts() const { return GFX13Insts; }
 
-  bool hasINVWaitCntRequirement() const {
+  bool hasINVWBL2WaitCntRequirement() const {
     return GFX1250Insts && !GFX1260Insts && !GFX13Insts;
   }
 
@@ -2018,6 +2021,10 @@ public:
   bool hasGlobalTiledLoads2x2() const { return HasGlobalTiledLoads2x2; }
 
   bool hasLDSTiledLoads() const { return HasLDSTiledLoads; }
+
+  bool supportsBPermute() const {
+    return getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS;
+  }
 
   bool supportsWaveWideBPermute() const {
     return (getGeneration() <= AMDGPUSubtarget::GFX9 ||

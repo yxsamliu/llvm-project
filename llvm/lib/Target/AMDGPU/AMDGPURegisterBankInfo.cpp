@@ -1273,11 +1273,13 @@ unsigned AMDGPURegisterBankInfo::setBufferOffsets(
     }
   }
 
+  const bool CheckNUW = AMDGPU::isGFX1250Plus(Subtarget);
   Register Base;
   unsigned Offset;
 
   std::tie(Base, Offset) =
-      AMDGPU::getBaseWithConstantOffset(*MRI, CombinedOffset);
+      AMDGPU::getBaseWithConstantOffset(*MRI, CombinedOffset,
+                                        /*KnownBits=*/nullptr, CheckNUW);
 
   uint32_t SOffset, ImmOffset;
   if ((int)Offset > 0 &&
@@ -1302,7 +1304,8 @@ unsigned AMDGPURegisterBankInfo::setBufferOffsets(
 
   // Handle the variable sgpr + vgpr case.
   MachineInstr *Add = getOpcodeDef(AMDGPU::G_ADD, CombinedOffset, *MRI);
-  if (Add && (int)Offset >= 0) {
+  if (Add && (int)Offset >= 0 &&
+      (!CheckNUW || Add->getFlag(MachineInstr::NoUWrap))) {
     Register Src0 = getSrcRegIgnoringCopies(Add->getOperand(1).getReg(), *MRI);
     Register Src1 = getSrcRegIgnoringCopies(Add->getOperand(2).getReg(), *MRI);
 
@@ -5500,10 +5503,16 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
     case Intrinsic::amdgcn_global_load_tr_b64:
     case Intrinsic::amdgcn_global_load_tr_b128:
+    case Intrinsic::amdgcn_global_load_tr4_32x32_b128:
+    case Intrinsic::amdgcn_global_load_tr8_16x32_b128:
+    case Intrinsic::amdgcn_global_load_tr16_8x32_b128:
     case Intrinsic::amdgcn_global_load_tr4_b64:
     case Intrinsic::amdgcn_global_load_tr6_b96:
     case Intrinsic::amdgcn_ds_load_tr8_b64:
     case Intrinsic::amdgcn_ds_load_tr16_b128:
+    case Intrinsic::amdgcn_ds_load_tr4_32x32_b128:
+    case Intrinsic::amdgcn_ds_load_tr8_16x32_b128:
+    case Intrinsic::amdgcn_ds_load_tr16_8x32_b128:
     case Intrinsic::amdgcn_ds_load_tr4_b64:
     case Intrinsic::amdgcn_ds_load_tr6_b96:
     case Intrinsic::amdgcn_flat_load_monitor_b32:

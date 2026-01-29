@@ -1413,8 +1413,8 @@ foreach rc = [VGPR_32_STAGING, VReg_64_STAGING, VReg_96_STAGING,
 // sign-extended loads. Only bitoffset of 0, 8, 16, or 24 bits are supported.
 // Only bitsize of 8 or 16 bits are supported and must be a compile-time
 // constant.
-def V_LOAD_IDX_BITS
-    : VPseudoInstSI<(outs VGPR_32:$data_op),
+class V_LOAD_IDX_BITS<RegisterClass data_op_rc>
+    : VPseudoInstSI<(outs data_op_rc:$data_op),
                     (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset, i32imm:$bitsize,
                         SSrc_b32:$bitoffset, i32imm:$is_sext_load)> {
   let mayLoad = 1;
@@ -1423,18 +1423,24 @@ def V_LOAD_IDX_BITS
   let hasSideEffects = 0;
 }
 
+def V_LOAD_IDX_BITS : V_LOAD_IDX_BITS<VGPR_32>;
+def V_LOAD_IDX_BITS_D16 : V_LOAD_IDX_BITS<VGPR_16>;
+
 // Used for byte or short stores.
 // Only bitoffset of 0, 8, 16, or 24 bits are supported.
 // Only bitsize of 8 or 16 bits are supported and must be a compile-time constant.
-def V_STORE_IDX_BITS
-    : VPseudoInstSI<(outs), (ins VGPR_32:$data_op,
-                                VGPR_IDX_IDX_OP:$idx, i32imm:$offset,
-                                i32imm:$bitsize, SSrc_b32:$bitoffset)> {
+class V_STORE_IDX_BITS<RegisterClass data_op_rc>
+    : VPseudoInstSI<(outs), (ins data_op_rc:$data_op, VGPR_IDX_IDX_OP:$idx,
+                                i32imm:$offset, i32imm:$bitsize,
+                                SSrc_b32:$bitoffset)> {
   let mayStore = 1;
   let VALU = 1;
   let UseNamedOperandTable = 1;
   let hasSideEffects = 0;
 }
+
+def V_STORE_IDX_BITS : V_STORE_IDX_BITS<VGPR_32>;
+def V_STORE_IDX_BITS_D16 : V_STORE_IDX_BITS<VGPR_16>;
 
 //===----------------------------------------------------------------------===//
 // VOP1 Patterns

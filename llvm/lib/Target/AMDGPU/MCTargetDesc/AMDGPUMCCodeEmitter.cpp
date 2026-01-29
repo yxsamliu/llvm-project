@@ -115,6 +115,9 @@ private:
   void getBinaryCodeForInstr(const MCInst &MI, SmallVectorImpl<MCFixup> &Fixups,
                              APInt &Inst, APInt &Scratch,
                              const MCSubtargetInfo &STI) const;
+
+  APInt postEncodeVOPCX(const MCInst &MI, APInt EncodedValue,
+                        const MCSubtargetInfo &STI) const;
 };
 
 } // end anonymous namespace
@@ -405,11 +408,6 @@ static bool isWMMATransposeInstruction(int Opcode) {
          Opcode == AMDGPU::V_WMMA_TR_32X32_B16_gfx1260;
 }
 
-static bool isVCMPX64(const MCInstrDesc &Desc) {
-  return (Desc.TSFlags & SIInstrFlags::VOP3) &&
-         Desc.hasImplicitDefOfPhysReg(AMDGPU::EXEC);
-}
-
 void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                             SmallVectorImpl<char> &CB,
                                             SmallVectorImpl<MCFixup> &Fixups,
@@ -434,18 +432,6 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
       // WMMA Transpose instructions do not use op_sel_hi.
       !isWMMATransposeInstruction(Opcode)) {
     Encoding |= getImplicitOpSelHiEncoding(Opcode);
-  }
-
-  // GFX10+ v_cmpx opcodes promoted to VOP3 have implied dst=EXEC.
-  // Documentation requires dst to be encoded as EXEC (0x7E),
-  // but it looks like the actual value encoded for dst operand
-  // is ignored by HW. It was decided to define dst as "do not care"
-  // in td files to allow disassembler accept any dst value.
-  // However, dst is encoded as EXEC for compatibility with SP3.
-  if (AMDGPU::isGFX10Plus(STI) && isVCMPX64(Desc)) {
-    assert((Encoding & 0xFF) == 0);
-    Encoding |= MRI.getEncodingValue(AMDGPU::EXEC_LO) &
-                AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
   }
 
   for (unsigned i = 0; i < bytes; i++) {
@@ -835,6 +821,22 @@ void AMDGPUMCCodeEmitter::encodeGSrcSimple(const MCInst &MI, unsigned OpNo,
   }
 
   getMachineOpValue(MI, MO, Op, Fixups, STI);
+}
+
+APInt AMDGPUMCCodeEmitter::postEncodeVOPCX(const MCInst &MI, APInt EncodedValue,
+                                           const MCSubtargetInfo &STI) const {
+  // GFX10+ v_cmpx opcodes promoted to VOP3 have implied dst=EXEC.
+  // Documentation requires dst to be encoded as EXEC (0x7E),
+  // but it looks like the actual value encoded for dst operand
+  // is ignored by HW. It was decided to define dst as "do not care"
+  // in td files to allow disassembler accept any dst value.
+  // However, dst is encoded as EXEC for compatibility with SP3.
+  [[maybe_unused]] const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+  assert((Desc.TSFlags & SIInstrFlags::VOP3) &&
+         Desc.hasImplicitDefOfPhysReg(AMDGPU::EXEC));
+  EncodedValue |= MRI.getEncodingValue(AMDGPU::EXEC_LO) &
+                  AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
+  return EncodedValue;
 }
 
 #include "AMDGPUGenMCCodeEmitter.inc"

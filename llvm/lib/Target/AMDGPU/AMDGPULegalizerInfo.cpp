@@ -3520,6 +3520,7 @@ static bool valueIsKnownNeverF32Denorm(const MachineRegisterInfo &MRI,
     case Intrinsic::amdgcn_log:
     case Intrinsic::amdgcn_log_clamp:
     case Intrinsic::amdgcn_exp2:
+    case Intrinsic::amdgcn_sqrt:
       return true;
     default:
       break;
@@ -3527,6 +3528,8 @@ static bool valueIsKnownNeverF32Denorm(const MachineRegisterInfo &MRI,
 
     break;
   }
+  case TargetOpcode::G_FSQRT:
+    return true;
   case TargetOpcode::G_FFREXP: {
     if (DefMI->getOperand(0).getReg() == Src)
       return true;
@@ -6584,6 +6587,11 @@ bool AMDGPULegalizerInfo::legalizeBufferDiscard(MachineInstr &MI,
 
   std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
 
+  if (AMDGPU::isGFX13Plus(ST)) {
+    VOffset = B.buildAdd(S32, VOffset, SOffset).getReg(0);
+    SOffset = B.buildConstant(S32, 0).getReg(0);
+  }
+
   B.buildInstr(getBufferDiscardPseudo(IID))
       .addUse(RSrc)
       .addUse(VIndex)
@@ -6638,6 +6646,11 @@ bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
 
   Register VOffset = MI.getOperand(3 + OpOffset).getReg();
   Register SOffset = MI.getOperand(4 + OpOffset).getReg();
+
+  if (AMDGPU::isGFX13Plus(ST)) {
+    VOffset = B.buildAdd(S32, VOffset, SOffset).getReg(0);
+    SOffset = B.buildConstant(S32, 0).getReg(0);
+  }
 
   unsigned Format = 0;
   if (IsTyped) {
@@ -6752,6 +6765,10 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
 
   Register VOffset = MI.getOperand(3 + OpOffset).getReg();
   Register SOffset = MI.getOperand(4 + OpOffset).getReg();
+  if (AMDGPU::isGFX13Plus(ST)) {
+    VOffset = B.buildAdd(S32, VOffset, SOffset).getReg(0);
+    SOffset = B.buildConstant(S32, 0).getReg(0);
+  }
 
   unsigned Format = 0;
   if (IsTyped) {
@@ -7006,6 +7023,12 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
 
   Register VOffset = MI.getOperand(4 + OpOffset).getReg();
   Register SOffset = MI.getOperand(5 + OpOffset).getReg();
+
+  if (AMDGPU::isGFX13Plus(ST)) {
+    VOffset = B.buildAdd(S32, VOffset, SOffset).getReg(0);
+    SOffset = B.buildConstant(S32, 0).getReg(0);
+  }
+
   unsigned AuxiliaryData = MI.getOperand(6 + OpOffset).getImm();
 
   MachineMemOperand *MMO = *MI.memoperands_begin();
