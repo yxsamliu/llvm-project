@@ -82,6 +82,8 @@ static isa_features_t IsaFeatures[] = {
   {"amdgcn-amd-amdhsa--gfx1251",         false,  false,  false},
   {"amdgcn-amd-amdhsa--gfx1260",         false,  false,  false},
   {"amdgcn-amd-amdhsa--gfx1310",         false,  false,  false},
+  {"amdgcn-amd-amdhsa--gfx1360",         false,  false,  false},
+  {"amdgcn-amd-amdhsa--gfx1370",         false,  false,  false},
 
   {"amdgcn-amd-amdhsa--gfx9-generic",    false,  true,   true},
   {"amdgcn-amd-amdhsa--gfx9-4-generic",  true,   true,   true},
