@@ -1551,9 +1551,9 @@ let AssemblerPredicate = HasSGPRVMEM in {
   defm DS_ADD_SGPR_RTN_U32 : DS_Real_gfx13<0x0ae>;
 }
 
-defm DS_LOAD_MCAST_B32  : DS_Real_gfx13<0x069>;
-defm DS_LOAD_MCAST_B64  : DS_Real_gfx13<0x06a>;
-defm DS_LOAD_MCAST_B128 : DS_Real_gfx13<0x06b>;
+defm DS_LOAD_MCAST_B32  : DS_Real_gfx13<0x0ac>;
+defm DS_LOAD_MCAST_B64  : DS_Real_gfx13<0x0f8>;
+defm DS_LOAD_MCAST_B128 : DS_Real_gfx13<0x0f9>;
 
 //===----------------------------------------------------------------------===//
 // GFX11.
