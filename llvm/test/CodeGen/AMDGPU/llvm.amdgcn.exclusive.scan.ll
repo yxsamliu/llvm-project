@@ -24,7 +24,7 @@ define amdgpu_kernel void @v_exclusive_scan_sum_i32_sgpr(ptr addrspace(1) %out, 
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_sum_i32 v0, s2, s3 clamp
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_sum_i32 v1, s2, s3
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; GFX13-GISEL-NEXT:    v_dual_add_nc_u32 v0, v0, v1 :: v_dual_mov_b32 v1, 0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-GISEL-NEXT:    s_endpgm
   %vc = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 %src0, i32 %src1, i1 true)
@@ -75,7 +75,7 @@ define amdgpu_kernel void @v_exclusive_scan_sum_i32_constant(ptr addrspace(1) %o
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_sum_i32 v0, 7, 5 clamp
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_sum_i32 v1, 7, 5
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; GFX13-GISEL-NEXT:    v_dual_add_nc_u32 v0, v0, v1 :: v_dual_mov_b32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-GISEL-NEXT:    s_endpgm
@@ -105,7 +105,7 @@ define amdgpu_kernel void @v_exclusive_scan_sum_i32_undef(ptr addrspace(1) %out)
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_sum_i32 v0, s0, s0 clamp
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_sum_i32 v1, s0, s0
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; GFX13-GISEL-NEXT:    v_dual_add_nc_u32 v0, v0, v1 :: v_dual_mov_b32 v1, 0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-GISEL-NEXT:    s_endpgm
   %vc = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 undef, i32 undef, i1 true)
@@ -134,7 +134,7 @@ define amdgpu_kernel void @v_exclusive_scan_sum_u32_undef(ptr addrspace(1) %out)
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_sum_u32 v0, s0, s0 clamp
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_sum_u32 v1, s0, s0
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; GFX13-GISEL-NEXT:    v_dual_add_nc_u32 v0, v0, v1 :: v_dual_mov_b32 v1, 0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-GISEL-NEXT:    s_endpgm
   %vc = call i32 @llvm.amdgcn.exclusive.scan.sum.u32(i32 undef, i32 undef, i1 true)
@@ -163,7 +163,7 @@ define amdgpu_kernel void @v_exclusive_scan_sum_u32_sgpr(ptr addrspace(1) %out, 
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_sum_u32 v0, s2, s3 clamp
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_sum_u32 v1, s2, s3
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; GFX13-GISEL-NEXT:    v_dual_add_nc_u32 v0, v0, v1 :: v_dual_mov_b32 v1, 0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-GISEL-NEXT:    s_endpgm
   %vc = call i32 @llvm.amdgcn.exclusive.scan.sum.u32(i32 %src0, i32 %src1, i1 true)
@@ -214,7 +214,7 @@ define amdgpu_kernel void @v_exclusive_scan_sum_u32_constant(ptr addrspace(1) %o
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_sum_u32 v0, 7, 5 clamp
 ; GFX13-GISEL-NEXT:    v_exclusive_scan_sum_u32 v1, 7, 5
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; GFX13-GISEL-NEXT:    v_dual_add_nc_u32 v0, v0, v1 :: v_dual_mov_b32 v1, 0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-GISEL-NEXT:    s_endpgm

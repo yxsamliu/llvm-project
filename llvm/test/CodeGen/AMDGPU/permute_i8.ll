@@ -2372,11 +2372,13 @@ define hidden void @lhsr_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX13-FAKE16-NEXT:    v_lshrrev_b16 v4, 1, v0
 ; GFX13-FAKE16-NEXT:    v_perm_b32 v0, v2, v0, 0x1030707
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b16 v1, 8, v1
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-FAKE16-NEXT:    v_bitop3_b16 v4, v9, v4, 0x7f00 bitop3:0xf8
-; GFX13-FAKE16-NEXT:    v_dual_lshlrev_b32 v3, 16, v4 :: v_dual_bitop2_b32 v1, v3, v1 bitop3:0x54
-; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-FAKE16-NEXT:    v_or_b32_e32 v1, v3, v1
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
 ; GFX13-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-FAKE16-NEXT:    v_or_b32_e32 v1, v1, v3
 ; GFX13-FAKE16-NEXT:    global_store_b32 v[5:6], v1, off
 ; GFX13-FAKE16-NEXT:    global_store_b32 v[7:8], v0, off

@@ -54585,7 +54585,8 @@ define inreg <64 x i8> @bitcast_v8f64_to_v64i8_scalar(<8 x double> inreg %a, i32
 ; GFX11-NEXT:    s_lshl_b32 s2, s2, 16
 ; GFX11-NEXT:    v_or_b32_e32 v10, v10, v17
 ; GFX11-NEXT:    s_or_b32 s1, s1, s2
-; GFX11-NEXT:    v_dual_mov_b32 v15, s0 :: v_dual_lshlrev_b32 v20, 16, v15
+; GFX11-NEXT:    v_lshlrev_b32_e32 v20, 16, v15
+; GFX11-NEXT:    v_mov_b32_e32 v15, s0
 ; GFX11-NEXT:    v_mov_b32_e32 v17, s1
 ; GFX11-NEXT:    s_and_b32 s0, s21, 0xff
 ; GFX11-NEXT:    s_lshl_b32 s1, s61, 8
@@ -72528,11 +72529,11 @@ define inreg <32 x i16> @bitcast_v64i8_to_v32i16_scalar(<64 x i8> inreg %a, i32 
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v21.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v8.h, v2.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.h, v20.l
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_add_nc_u32 v19, 0x300, v4
+; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v19, 0x300, v4
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v9.h, v17.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v10.h, v16.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v11.h, v18.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v4.h, v19.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v12.h, v22.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v13.h, v1.l
@@ -84830,11 +84831,11 @@ define inreg <32 x half> @bitcast_v64i8_to_v32f16_scalar(<64 x i8> inreg %a, i32
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v21.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v8.h, v2.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.h, v20.l
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_add_nc_u32 v19, 0x300, v4
+; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v19, 0x300, v4
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v9.h, v17.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v10.h, v16.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v11.h, v18.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v4.h, v19.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v12.h, v22.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v13.h, v1.l
@@ -95271,11 +95272,11 @@ define inreg <32 x bfloat> @bitcast_v64i8_to_v32bf16_scalar(<64 x i8> inreg %a, 
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v21.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v8.h, v2.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.h, v20.l
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_add_nc_u32 v19, 0x300, v4
+; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v19, 0x300, v4
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v9.h, v17.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v10.h, v16.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v11.h, v18.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v4.h, v19.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v12.h, v22.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v13.h, v1.l

@@ -5301,9 +5301,10 @@ define amdgpu_gfx void @test_call_external_void_func_v5i8_ret() #0 {
 ; GFX11-FAKE16-NEXT:    v_readlane_b32 s0, v42, 2
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v0
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v0, 4 :: v_dual_lshlrev_b32 v3, 16, v1
+; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v1
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 4
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    global_store_b8 v[0:1], v4, off
