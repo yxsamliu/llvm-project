@@ -3,7 +3,7 @@
 ; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+cumode -o /dev/null %s 2>&1 | FileCheck -check-prefix=CUMODE-ERR %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1300 -o - -filetype=obj < %s | llvm-objdump --disassemble - | FileCheck --check-prefixes=DISASM %s
 
-; CUMODE-ERR: LLVM ERROR: cannot enable cumode when wavegroup is enabled
+; CUMODE-ERR: LLVM ERROR: wavegroup requires full SIMD mode
 
 ;
 ; Check that binary emit also fills in the VGPR count correctly.

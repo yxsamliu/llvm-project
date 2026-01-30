@@ -672,6 +672,13 @@ public:
     return EnableCuMode;
   }
 
+  /// \returns true if the target is in a "full SIMD" mode. This means waves in
+  /// a work-group can be distributed across all four SIMD32s. As a result, the
+  /// LDS is one large contiguous memory. Historically, there was a concept of
+  /// CU mode and WGP mode, but that naming wasn't accurate. On some targets,
+  /// there is no concept of WGP, so calling it WGP mode is misleading.
+  bool isFullSIMDMode() const { return isGFX1250() || !isCuModeEnabled(); }
+
   bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
 
   bool hasFlatAddressSpace() const {
@@ -903,6 +910,10 @@ public:
   }
 
   bool isGFX1170Plus() const { return getGeneration() >= GFX12 || isGFX1170(); }
+
+  bool isGFX1250() const {
+    return getGeneration() == GFX12 && hasGFX1250Insts();
+  }
 
   bool hasCubeInsts() const { return HasCubeInsts; }
 
@@ -1469,11 +1480,11 @@ public:
   /// \returns true if the target supports Wavegroups.
   bool hasWavegroups() const { return HasWavegroups; }
 
-  /// \returns true if the target has the s_wakeup instruction that takes 
+  /// \returns true if the target has the s_wakeup instruction that takes
   /// an immediate operand.
   bool hasSWakeupImm() const { return HasSWakeupImm; }
 
-  /// \returns true if the target has the s_barrier_leave instruction that takes an immediate 
+  /// \returns true if the target has the s_barrier_leave instruction that takes an immediate
   /// operand.
   bool hasSBarrierLeaveImm() const { return HasSBarrierLeaveImm; }
 
