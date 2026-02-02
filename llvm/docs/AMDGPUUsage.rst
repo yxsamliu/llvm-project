@@ -1690,6 +1690,14 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    wavegroup within the spatial cluster. Otherwise the return value is undefined.
                                                    The next neighbor has an id one greater, and the previous has one less.
 
+  llvm.amdgcn.s.sema.signal                        Provides access to the s_sema_signal instruction.
+                                                   The first argument is a pointer to a semaphore.
+                                                   The second argument is an unsigned 32-bit integer, indicating a mask of SIMDs to signal.
+                                                   This is a 4-bit mask that is encoded within the bits 31:28 of the argument.
+                                                   The supported range of values for the mask is 0 to 15.
+                                                   It is undefined behavior if the low 28 bits of the argument are non-zero.
+                                                   This mask argument is ignored for GFX13.
+
   ==============================================   ==========================================================
 
 .. TODO::
