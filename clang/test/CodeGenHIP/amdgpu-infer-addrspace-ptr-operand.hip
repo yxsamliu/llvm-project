@@ -516,7 +516,7 @@ __exp_amd_wavegroup_kernel(4, 32, 128, 1, 1)
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) nonnull getelementptr inbounds nuw (i8, ptr addrspace(3) @_ZL12g_semaphores, i32 16), i32 1)
 // CHECK-NEXT:    tail call void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) nonnull getelementptr inbounds nuw (i8, ptr addrspace(3) @_ZL12g_semaphores, i32 16), i32 65536)
-// CHECK-NEXT:    tail call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) nonnull getelementptr inbounds nuw (i8, ptr addrspace(3) @_ZL12g_semaphores, i32 16))
+// CHECK-NEXT:    tail call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) nonnull getelementptr inbounds nuw (i8, ptr addrspace(3) @_ZL12g_semaphores, i32 16), i32 0)
 // CHECK-NEXT:    tail call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) nonnull getelementptr inbounds nuw (i8, ptr addrspace(3) @_ZL12g_semaphores, i32 16))
 // CHECK-NEXT:    ret void
 //
@@ -524,7 +524,7 @@ void sema_ops_infers_addrspace(int* out, const int* in)
 {
     __builtin_amdgcn_s_sema_set_limit(&g_semaphores[1], 1);
     __builtin_amdgcn_s_sema_set_state(&g_semaphores[1], 65536);
-    __builtin_amdgcn_s_sema_signal(&g_semaphores[1]);
+    __builtin_amdgcn_s_sema_signal(&g_semaphores[1], 0);
     __builtin_amdgcn_s_sema_wait(&g_semaphores[1]);
 }
 
