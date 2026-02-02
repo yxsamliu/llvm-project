@@ -2338,7 +2338,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     if (ST->hasExtendedWaitCounts() &&
         !ScoreBrackets.hasPendingEvent(VMEM_ACCESS))
       AllZeroWait.LoadCnt = ~0u;
-    Wait = Wait.combined(AllZeroWait);
+    Wait = AllZeroWait;
     break;
   }
   case AMDGPU::S_ENDPGM:
