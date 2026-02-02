@@ -2852,7 +2852,6 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret(ptr addrspace(3) %ptr, do
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX1260-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    ds_add_f64 v2, v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_endpgm
@@ -2897,7 +2896,6 @@ define double @local_atomic_fadd_f64_rtn(ptr addrspace(3) %ptr, double %data) {
 ; GFX1260-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX1260-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    ds_add_rtn_f64 v[0:1], v0, v[2:3]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
@@ -2946,7 +2944,6 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat(ptr addrspace(3) %ptr
 ; GFX1260-NEXT:    v_mov_b64_e32 v[0:1], 4.0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    v_mov_b32_e32 v2, s0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    ds_add_f64 v2, v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_endpgm
@@ -2995,7 +2992,6 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush(ptr addrspace(3
 ; GFX1260-NEXT:    v_mov_b64_e32 v[0:1], 4.0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    v_mov_b32_e32 v2, s0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    ds_add_f64 v2, v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_endpgm
@@ -3044,7 +3040,6 @@ define amdgpu_kernel void @local_atomic_fadd_f64_noret_pat_flush_safe(ptr addrsp
 ; GFX1260-NEXT:    v_mov_b64_e32 v[0:1], 4.0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    v_mov_b32_e32 v2, s0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    ds_add_f64 v2, v[0:1]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_endpgm
@@ -3087,7 +3082,6 @@ define double @local_atomic_fadd_f64_rtn_pat(ptr addrspace(3) %ptr, double %data
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    v_mov_b64_e32 v[2:3], 4.0
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    ds_add_rtn_f64 v[0:1], v0, v[2:3]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
@@ -3132,7 +3126,6 @@ define double @local_atomic_fadd_f64_rtn_ieee_unsafe(ptr addrspace(3) %ptr, doub
 ; GFX1260-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX1260-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    ds_add_rtn_f64 v[0:1], v0, v[2:3]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
@@ -3177,7 +3170,6 @@ define double @local_atomic_fadd_f64_rtn_ieee_safe(ptr addrspace(3) %ptr, double
 ; GFX1260-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX1260-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    ds_add_rtn_f64 v[0:1], v0, v[2:3]
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]

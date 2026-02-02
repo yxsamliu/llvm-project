@@ -2130,6 +2130,11 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
      "amdgpu-wavegroup-rank-function"                 GFX13+ only. Indicate it is a rank-specialized function for wavegroup.
 
+     "amdgpu-expert-scheduling-mode" true/false.      Enable expert scheduling mode 2 for this function. This is a hardware execution
+                                                      mode introduced in GFX12.
+
+                                                      This is only relevant on GFX12+.
+
      ================================================ ==========================================================
 
 Calling Conventions
