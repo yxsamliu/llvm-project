@@ -287,7 +287,36 @@ body:             |
     ; GCN-NEXT: v_fmamk_f32 v0 /*v256*/, v1, 0x1, v2 /*v258*/
     $vgpr256 = V_FMAMK_F32 undef $vgpr1, 1, undef $vgpr258, implicit $exec, implicit $mode
 
-    ; ASM: NumVgprs: 259
+    ; GCN-NEXT: s_set_vgpr_frames 0x5100
+    ; GCN-NEXT: v_fmamk_f64 v[4:5] /*v[260:261]*/, v[100:101] /*v[356:357]*/, 0x1, v[2:3] /*v[258:259]*/
+    $vgpr260_vgpr261 = V_FMAMK_F64 undef $vgpr356_vgpr357, 1, undef $vgpr258_vgpr259, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_frames 0x100
+    ; GCN-NEXT: v_fmamk_f64 v[0:1], v[100:101] /*v[356:357]*/, 0x1, v[2:3]
+    $vgpr0_vgpr1 = V_FMAMK_F64 undef $vgpr356_vgpr357, 1, undef $vgpr2_vgpr3, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_frames 0x1000
+    ; GCN-NEXT: v_fmamk_f64 v[0:1], v[2:3], 0x1, v[100:101] /*v[356:357]*/
+    $vgpr0_vgpr1 = V_FMAMK_F64 undef $vgpr2_vgpr3, 1, undef $vgpr356_vgpr357, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_frames 0x4000
+    ; GCN-NEXT: v_fmamk_f64 v[0:1] /*v[256:257]*/, v[2:3], 0x1, v[4:5]
+    $vgpr256_vgpr257 = V_FMAMK_F64 undef $vgpr2_vgpr3, 1, undef $vgpr4_vgpr5, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: s_set_vgpr_frames 0
+    ; GCN-NEXT: v_fmamk_f16 v26.l, v56.l, 0x1, v58.l
+    $vgpr26_lo16 = V_FMAMK_F16_t16 undef $vgpr56_lo16, 1, undef $vgpr58_lo16, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: v_fmamk_f16 v0.l, v35.l, 0x1, v2.l
+    $vgpr0_lo16 = V_FMAMK_F16_t16 undef $vgpr35_lo16, 1, undef $vgpr2_lo16, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: v_fmamk_f16 v0.l, v2.l, 0x1, v6.l
+    $vgpr0_lo16 = V_FMAMK_F16_t16 undef $vgpr2_lo16, 1, undef $vgpr6_lo16, implicit $exec, implicit $mode
+
+    ; GCN-NEXT: v_fmamk_f16 v5.l, v2.l, 0x1, v4.l
+    $vgpr5_lo16 = V_FMAMK_F16_t16 undef $vgpr2_lo16, 1, undef $vgpr4_lo16, implicit $exec, implicit $mode
+
+    ; ASM: NumVgprs: 358
 
 ...
 

@@ -733,8 +733,8 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
   //             used?
   if (IsKernel && AMDGPU::getWavegroupEnable(F)) {
     PrivateSegmentSize = true;
-    if (ST.isCuModeEnabled())
-      report_fatal_error("cannot enable cumode when wavegroup is enabled");
+    if (!ST.isFullSIMDMode())
+      report_fatal_error("wavegroup requires full SIMD mode");
   }
 
   if (hasImplicitBufferPtr())
