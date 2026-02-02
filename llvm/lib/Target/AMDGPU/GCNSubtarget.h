@@ -257,6 +257,7 @@ protected:
   bool Has64BitLiterals = false;
   bool Has1024AddressableVGPRs = false;
   bool HasVGPRIndexingRegisters = false;
+  bool HasSetregVGPRMSBFixup = false;
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
   bool HasTensorCvtLutInsts = false;
@@ -1521,6 +1522,8 @@ public:
 
   bool hasVGPRIndexingRegisters() const { return HasVGPRIndexingRegisters; }
 
+  bool hasSetregVGPRMSBFixup() const { return HasSetregVGPRMSBFixup; }
+
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
@@ -1533,9 +1536,10 @@ public:
 
   bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
 
-  /// \returns true if the target supports using software to avoid hazards
-  /// between VMEM and VALU instructions in some instances.
-  bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
+  /// \returns true if the target supports expert scheduling mode 2 which relies
+  /// on the compiler to insert waits to avoid hazards between VMEM and VALU
+  /// instructions in some instances.
+  bool hasExpertSchedulingMode() const { return getGeneration() >= GFX12; }
 
   /// \returns true if the target has s_wait_xcnt insertion. Supported for
   /// GFX1250.

@@ -65,10 +65,9 @@ static cl::opt<bool> ForceEmitZeroLoadFlag(
     cl::desc("Force all waitcnt load counters to wait until 0"),
     cl::init(false), cl::Hidden);
 
-static cl::opt<bool> SoftwareHazardModeFlag(
-    "amdgpu-software-hazard-mode",
-    cl::desc("Enable expert scheduling mode 2 for all kernel functions (GFX12+ "
-             "only)"),
+static cl::opt<bool> ExpertSchedulingModeFlag(
+    "amdgpu-expert-scheduling-mode",
+    cl::desc("Enable expert scheduling mode 2 for all functions (GFX12+ only)"),
     cl::init(false), cl::Hidden);
 
 namespace {
@@ -400,8 +399,13 @@ public:
 };
 
 class WaitcntGeneratorGFX12Plus : public WaitcntGenerator {
+protected:
+  bool IsExpertMode;
+
 public:
-  using WaitcntGenerator::WaitcntGenerator;
+  WaitcntGeneratorGFX12Plus() = default;
+  WaitcntGeneratorGFX12Plus(const MachineFunction &MF, bool IsExpertMode)
+      : WaitcntGenerator(MF, IsExpertMode), IsExpertMode(IsExpertMode) {}
 
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
@@ -445,7 +449,7 @@ public:
   const SIRegisterInfo *TRI = nullptr;
   const MachineRegisterInfo *MRI = nullptr;
   InstCounterType SmemAccessCounter;
-  bool IsExpertMode;
+  bool IsExpertMode = false;
   unsigned LaneSharedSize;
   const uint64_t *WaitEventMaskForInst;
   const AMDGPUIndexingInfo &SII;
@@ -473,6 +477,10 @@ private:
   WaitcntGeneratorGFX12Plus WCGGFX12Plus;
 
   WaitcntGenerator *WCG = nullptr;
+
+  // Remember call and return instructions in the function.
+  DenseSet<MachineInstr *> CallInsts;
+  DenseSet<MachineInstr *> ReturnInsts;
 
   // S_ENDPGM instructions before which we should insert a DEALLOC_VGPRS
   // message.
@@ -657,7 +665,7 @@ public:
   }
 
   std::optional<WaitEventType>
-  getSoftwareHazardEventType(const MachineInstr &Inst) const;
+  getExpertSchedulingEventType(const MachineInstr &Inst) const;
 
   bool isVmemAccess(const MachineInstr &MI) const;
   bool generateWaitcntInstBefore(MachineInstr &MI,
@@ -676,7 +684,7 @@ public:
                              WaitcntBrackets &ScoreBrackets);
   bool insertWaitcntInBlock(MachineFunction &MF, MachineBasicBlock &Block,
                             WaitcntBrackets &ScoreBrackets);
-  void setSchedulingMode(MachineBasicBlock &MBB, MachineInstr &MI,
+  void setSchedulingMode(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                          bool ExpertMode) const;
 };
 
@@ -1223,7 +1231,7 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
       if (!Op.isReg() || (T == VA_VDST && Op.isUse()) ||
           (T == VM_VSRC && Op.isDef()))
         continue;
-      if (TRI->isVectorRegister(*MRI, Op.getReg()))
+      if (TRI->isVectorRegister(*Context->MRI, Op.getReg()))
         setScoreByOperand(&Inst, Op, T, CurrScore);
     }
   } else /* LGKM_CNT || EXP_CNT || VS_CNT || NUM_INST_CNTS */ {
@@ -2228,6 +2236,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   if (Opc == AMDGPU::SI_RETURN_TO_EPILOG || Opc == AMDGPU::SI_RETURN ||
       Opc == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN ||
       Opc == AMDGPU::S_SETPC_B64_return) {
+    ReturnInsts.insert(&MI);
     AMDGPU::Waitcnt AllZeroWait =
         WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false);
     // On GFX12+, if LOAD_CNT is pending but no VGPRs are waiting for loads
@@ -2290,6 +2299,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       // The function is going to insert a wait on everything in its prolog.
       // This still needs to be careful if the call target is a load (e.g. a GOT
       // load). We also need to check WAW dependency with saved PC.
+      CallInsts.insert(&MI);
       Wait = AMDGPU::Waitcnt();
 
       const MachineOperand &CallAddrOp = TII->getCalleeOperand(MI);
@@ -2640,7 +2650,7 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
 }
 
 std::optional<WaitEventType>
-SIInsertWaitcnts::getSoftwareHazardEventType(const MachineInstr &Inst) const {
+SIInsertWaitcnts::getExpertSchedulingEventType(const MachineInstr &Inst) const {
   if (TII->isVALU(Inst)) {
     // Core/Side-, DP-, XDL- and TRANS-MACC VALU instructions complete
     // out-of-order with respect to each other, so each of these classes
@@ -2756,8 +2766,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   bool IsVMEMAccess = false;
   bool IsSMEMAccess = false;
 
-  if (ST->hasExtendedWaitCounts()) {
-    if (const auto ET = getSoftwareHazardEventType(Inst))
+  if (IsExpertMode) {
+    if (const auto ET = getExpertSchedulingEventType(Inst))
       ScoreBrackets->updateByEvent(*ET, Inst);
   }
 
@@ -2982,11 +2992,11 @@ static bool isWaitInstr(MachineInstr &Inst) {
 }
 
 void SIInsertWaitcnts::setSchedulingMode(MachineBasicBlock &MBB,
-                                         MachineInstr &MI,
+                                         MachineBasicBlock::iterator I,
                                          bool ExpertMode) const {
   const unsigned EncodedReg = AMDGPU::Hwreg::HwregEncoding::encode(
       AMDGPU::Hwreg::ID_SCHED_MODE, AMDGPU::Hwreg::HwregOffset::Default, 2);
-  BuildMI(MBB, MI, DebugLoc(), TII->get(AMDGPU::S_SETREG_IMM32_B32))
+  BuildMI(MBB, I, DebugLoc(), TII->get(AMDGPU::S_SETREG_IMM32_B32))
       .addImm(ExpertMode ? 2 : 0)
       .addImm(EncodedReg);
 }
@@ -3285,12 +3295,12 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   IsExpertMode = false;
 
   if (ST->hasExtendedWaitCounts()) {
-    if (ST->hasSoftwareHazardMode() &&
-        (MF.getFunction()
-             .getFnAttribute("amdgpu-software-hazard-mode")
-             .getValueAsBool() ||
-         SoftwareHazardModeFlag))
-      IsExpertMode = true;
+    IsExpertMode = ST->hasExpertSchedulingMode() &&
+                   (ExpertSchedulingModeFlag.getNumOccurrences()
+                        ? ExpertSchedulingModeFlag
+                        : MF.getFunction()
+                              .getFnAttribute("amdgpu-expert-scheduling-mode")
+                              .getValueAsBool());
     WCGGFX12Plus = WaitcntGeneratorGFX12Plus(MF, IsExpertMode);
     WCG = &WCGGFX12Plus;
   } else {
@@ -3381,12 +3391,6 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
     NonKernelInitialState->setStateOnFunctionEntryOrReturn();
     BlockInfos[&EntryBB].Incoming = std::move(NonKernelInitialState);
 
-    Modified = true;
-  } else if (IsExpertMode) {
-    MachineBasicBlock::iterator I = EntryBB.begin();
-    while (I != EntryBB.end() && I->isMetaInstruction())
-      ++I;
-    setSchedulingMode(EntryBB, *I, true);
     Modified = true;
   }
 
@@ -3498,6 +3502,28 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
     }
   }
 
+  if (IsExpertMode) {
+    // Enable expert scheduling on function entry. To satisfy ABI requirements
+    // and to allow calls between function with different expert scheduling
+    // settings, disable it around calls and before returns.
+
+    MachineBasicBlock::iterator I = EntryBB.begin();
+    while (I != EntryBB.end() && I->isMetaInstruction())
+      ++I;
+    setSchedulingMode(EntryBB, I, true);
+
+    for (MachineInstr *MI : CallInsts) {
+      MachineBasicBlock &MBB = *MI->getParent();
+      setSchedulingMode(MBB, MI, false);
+      setSchedulingMode(MBB, std::next(MI->getIterator()), true);
+    }
+
+    for (MachineInstr *MI : ReturnInsts)
+      setSchedulingMode(*MI->getParent(), MI, false);
+
+    Modified = true;
+  }
+
   // Deallocate the VGPRs before previously identified S_ENDPGM instructions.
   // This is done in different ways depending on how the VGPRs were allocated
   // (i.e. whether we're in dynamic VGPR mode or not).
@@ -3530,6 +3556,9 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
       }
     }
   }
+
+  CallInsts.clear();
+  ReturnInsts.clear();
   ReleaseVGPRInsts.clear();
 
   for (MachineInstr *MI : DisableExpertModeInsts)
