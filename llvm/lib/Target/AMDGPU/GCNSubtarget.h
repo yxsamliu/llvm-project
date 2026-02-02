@@ -171,6 +171,7 @@ protected:
   bool HasFP8ConversionInsts = false;
   bool HasWMMA128bInsts = false;
   bool HasWMMA256bInsts = false;
+  bool HasMcastLoadInsts = false;
   bool HasCubeInsts = false;
   bool HasLerpInst = false;
   bool HasSadInsts = false;
@@ -915,6 +916,8 @@ public:
   bool isGFX1250() const {
     return getGeneration() == GFX12 && hasGFX1250Insts();
   }
+
+  bool hasMcastLoadInsts() const { return HasMcastLoadInsts; }
 
   bool hasCubeInsts() const { return HasCubeInsts; }
 
