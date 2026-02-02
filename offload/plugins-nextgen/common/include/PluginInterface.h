@@ -51,6 +51,8 @@
 extern std::unique_ptr<llvm::omp::target::plugin::GenericProfilerTy>
 getProfilerToAttach();
 
+using namespace llvm::omp::target::debug;
+
 namespace llvm {
 namespace omp {
 namespace target {
@@ -787,8 +789,8 @@ public:
       IgnoreLockMappedFailures = false;
     } else {
       // Disable by default.
-      DP("Invalid value LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS=%s\n",
-         OMPX_LockMappedBuffers.get().data());
+      ODBG(ODT_Alloc) << "Invalid value LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS="
+                      << OMPX_LockMappedBuffers.get();
       LockMappedBuffers = false;
     }
   }
@@ -1619,6 +1621,14 @@ struct GenericPluginTy {
   virtual GenericGlobalHandlerTy *createGlobalHandler() = 0;
 
   /// Get the reference to the device with a certain device id.
+  const GenericDeviceTy &getDevice(int32_t DeviceId) const {
+    assert(isValidDeviceId(DeviceId) && "Invalid device id");
+    assert(Devices[DeviceId] && "Device is uninitialized");
+
+    return *Devices[DeviceId];
+  }
+
+  /// Get the reference to the device with a certain device id.
   GenericDeviceTy &getDevice(int32_t DeviceId) {
     assert(isValidDeviceId(DeviceId) && "Invalid device id");
     assert(Devices[DeviceId] && "Device is uninitialized");
@@ -1960,6 +1970,13 @@ public:
   /// object and return immediately.
   int32_t async_barrier(omp_interop_val_t *Interop);
 
+  /// Returns a Range over all the devices in the plugin that can be
+  /// used in a for loop:
+  /// for (&Device : GenericPluginRef.getDevicesRange()) {
+  auto getDevicesRange() {
+    return llvm::make_range(Devices.begin(), Devices.end());
+  }
+
 private:
   /// Indicates if the platform runtime has been fully initialized.
   bool Initialized = false;
@@ -2044,7 +2061,8 @@ public:
   /// must be called before the destructor.
   virtual Error deinit() {
     if (NextAvailable)
-      DP("Missing %d resources to be returned\n", NextAvailable);
+      ODBG(ODT_Deinit) << "Missing " << NextAvailable
+                       << " resources to be returned";
 
     // TODO: This prevents a bug on libomptarget to make the plugins fail. There
     // may be some resources not returned. Do not destroy these ones.

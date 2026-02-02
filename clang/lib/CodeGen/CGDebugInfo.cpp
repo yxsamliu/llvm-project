@@ -467,7 +467,7 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
   }
 
   PP.SuppressInlineNamespace =
-      PrintingPolicy::SuppressInlineNamespaceMode::None;
+      llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::None);
   PP.PrintAsCanonical = true;
   PP.UsePreferredNames = false;
   PP.AlwaysIncludeTypeForTemplateArgument = true;
@@ -2421,7 +2421,13 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
       // Emit MS ABI vftable information.  There is only one entry for the
       // deleting dtor.
       const auto *DD = dyn_cast<CXXDestructorDecl>(Method);
-      GlobalDecl GD = DD ? GlobalDecl(DD, Dtor_Deleting) : GlobalDecl(Method);
+      GlobalDecl GD =
+          DD ? GlobalDecl(
+                   DD, CGM.getContext().getTargetInfo().emitVectorDeletingDtors(
+                           CGM.getContext().getLangOpts())
+                           ? Dtor_VectorDeleting
+                           : Dtor_Deleting)
+             : GlobalDecl(Method);
       MethodVFTableLocation ML =
           CGM.getMicrosoftVTableContext().getMethodVFTableLocation(GD);
       VIndex = ML.Index;
@@ -7094,7 +7100,8 @@ llvm::DINode::DIFlags CGDebugInfo::getCallSiteRelatedAttrs() const {
   // when there's a possibility of debugging backtraces.
   if (CGM.getCodeGenOpts().OptimizationLevel == 0 ||
       DebugKind == llvm::codegenoptions::NoDebugInfo ||
-      DebugKind == llvm::codegenoptions::LocTrackingOnly)
+      DebugKind == llvm::codegenoptions::LocTrackingOnly ||
+      !CGM.getCodeGenOpts().DebugCallSiteInfo)
     return llvm::DINode::FlagZero;
 
   // Call site-related attributes are available in DWARF v5. Some debuggers,

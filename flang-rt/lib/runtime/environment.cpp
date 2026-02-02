@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if (not defined (__AMDGPU__) && not defined(__NVPTX__)) || not defined (EMBED_FLANG_RT_GPU_LLVM_IR)
 #include "flang-rt/runtime/environment.h"
 #include "environment-default-list.h"
 #include "memory.h"
@@ -16,7 +17,9 @@
 #include <limits>
 
 #ifdef _WIN32
+#ifdef _MSC_VER
 extern char **_environ;
+#endif
 #elif defined(__FreeBSD__)
 // FreeBSD has environ in crt rather than libc. Using "extern char** environ"
 // in the code of a shared library makes it fail to link with -Wl,--no-undefined
@@ -334,3 +337,4 @@ bool RTNAME(RegisterConfigureEnv)(
 } // extern "C"
 
 } // namespace Fortran::runtime
+#endif
