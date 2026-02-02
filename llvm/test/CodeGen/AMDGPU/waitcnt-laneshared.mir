@@ -112,7 +112,7 @@ body:             |
     ; CHECK-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32) into @laneshared, addrspace 10)
     ; CHECK-NEXT: }
     ; CHECK-NEXT: BUNDLE implicit-def dead $stg_dsta, implicit-def dead $stg_dstb, implicit renamable $vgpr0, implicit $m0, implicit $exec, implicit $idx1 {
-    ; CHECK-NEXT:   $stg_dsta, $stg_dstb = V_SEND_VGPR_NEXT_B32 renamable $vgpr0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT:   $stg_dsta, $stg_dstb = V_SEND_VGPR_NEXT_B32 renamable $vgpr0, 0, 0, 0, 0, 15, implicit $mode, implicit $exec
     ; CHECK-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 2, implicit $exec :: (store (s32) into @laneshared + 8, addrspace 10)
     ; CHECK-NEXT:   V_STORE_IDX_B32 internal $stg_dstb, $idx1, 3, implicit $exec :: (store (s32) into @laneshared + 12, addrspace 10)
     ; CHECK-NEXT: }
@@ -170,7 +170,7 @@ body:             |
     ; CHECK-NEXT:   V_STORE_IDX_B32 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s32) into @laneshared, addrspace 10)
     ; CHECK-NEXT: }
     ; CHECK-NEXT: S_WAIT_STORECNT 0
-    ; CHECK-NEXT: S_WAITCNT_DEPCTR 4095
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR 65535
     ; CHECK-NEXT: V_SEND_VGPR_NEXT_B32_no_write 2, 1, 1, 1, 15, implicit $mode, implicit $exec
     $idx1 = S_SET_GPR_IDX_U32 0
     $idx2 = S_SET_GPR_IDX_U32 0

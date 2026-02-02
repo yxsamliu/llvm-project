@@ -213,7 +213,6 @@ define amdgpu_kernel void @local_atomic_fadd_v2f16_noret(ptr addrspace(3) %ptr, 
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1260-NEXT:    v_mov_b32_e32 v1, s1
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    ds_pk_add_f16 v0, v1
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_endpgm
@@ -301,7 +300,6 @@ define amdgpu_kernel void @local_atomic_fadd_v2bf16_noret(ptr addrspace(3) %ptr,
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1260-NEXT:    v_mov_b32_e32 v1, s1
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    ds_pk_add_bf16 v0, v1
 ; GFX1260-NEXT:    s_wait_dscnt 0x0
 ; GFX1260-NEXT:    s_endpgm

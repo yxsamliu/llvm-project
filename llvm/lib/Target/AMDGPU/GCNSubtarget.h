@@ -265,6 +265,7 @@ protected:
   bool Has64BitLiterals = false;
   bool Has1024AddressableVGPRs = false;
   bool HasVGPRIndexingRegisters = false;
+  bool HasSetregVGPRMSBFixup = false;
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
   bool HasTensorCvtLutInsts = false;
@@ -683,6 +684,13 @@ public:
     return EnableCuMode;
   }
 
+  /// \returns true if the target is in a "full SIMD" mode. This means waves in
+  /// a work-group can be distributed across all four SIMD32s. As a result, the
+  /// LDS is one large contiguous memory. Historically, there was a concept of
+  /// CU mode and WGP mode, but that naming wasn't accurate. On some targets,
+  /// there is no concept of WGP, so calling it WGP mode is misleading.
+  bool isFullSIMDMode() const { return isGFX1250() || !isCuModeEnabled(); }
+
   bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
 
   bool hasFlatAddressSpace() const {
@@ -926,6 +934,10 @@ public:
   }
 
   bool isGFX1170Plus() const { return getGeneration() >= GFX12 || isGFX1170(); }
+
+  bool isGFX1250() const {
+    return getGeneration() == GFX12 && hasGFX1250Insts();
+  }
 
   bool hasCubeInsts() const { return HasCubeInsts; }
 
@@ -1535,6 +1547,8 @@ public:
 
   bool hasVGPRIndexingRegisters() const { return HasVGPRIndexingRegisters; }
 
+  bool hasSetregVGPRMSBFixup() const { return HasSetregVGPRMSBFixup; }
+
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
@@ -1547,9 +1561,10 @@ public:
 
   bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
 
-  /// \returns true if the target supports using software to avoid hazards
-  /// between VMEM and VALU instructions in some instances.
-  bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
+  /// \returns true if the target supports expert scheduling mode 2 which relies
+  /// on the compiler to insert waits to avoid hazards between VMEM and VALU
+  /// instructions in some instances.
+  bool hasExpertSchedulingMode() const { return getGeneration() >= GFX12; }
 
   /// \returns true if the target has s_wait_xcnt insertion. Supported for
   /// GFX1250.
