@@ -6126,6 +6126,81 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(
     }
     case Intrinsic::amdgcn_trig_preop:
     case Intrinsic::amdgcn_fdot2:
+    // All SBA ops.
+    case Intrinsic::amdgcn_scale_bias_activate_bf16:
+    case Intrinsic::amdgcn_scale_bias_activate_f16:
+    case Intrinsic::amdgcn_scale_bias_activate_f32:
+    case Intrinsic::amdgcn_scale_bias_activate_scatter2_bf16:
+    case Intrinsic::amdgcn_scale_bias_activate_scatter2_f16:
+    case Intrinsic::amdgcn_scale_bias_activate_scatter4_bf16:
+    case Intrinsic::amdgcn_scale_bias_activate_scatter4_f16:
+    // All CVT to tensor ops.
+    case Intrinsic::amdgcn_cvt_to_tensor_bf16_bf16_scatter2:
+    case Intrinsic::amdgcn_cvt_to_tensor_bf16_bf16_scatter2_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_bf16_bf16_scatter4:
+    case Intrinsic::amdgcn_cvt_to_tensor_bf16_f16_scatter2:
+    case Intrinsic::amdgcn_cvt_to_tensor_bf16_f16_scatter2_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_bf16_f16_scatter4:
+    case Intrinsic::amdgcn_cvt_to_tensor_bf16_f32_scatter2:
+    case Intrinsic::amdgcn_cvt_to_tensor_bf8_bf16:
+    case Intrinsic::amdgcn_cvt_to_tensor_bf8_bf16_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_bf8_bf16_scatter2:
+    case Intrinsic::amdgcn_cvt_to_tensor_bf8_f16:
+    case Intrinsic::amdgcn_cvt_to_tensor_bf8_f16_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_bf8_f16_scatter2:
+    case Intrinsic::amdgcn_cvt_to_tensor_bf8_f32:
+    case Intrinsic::amdgcn_cvt_to_tensor_f16_bf16_scatter2:
+    case Intrinsic::amdgcn_cvt_to_tensor_f16_bf16_scatter2_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_f16_bf16_scatter4:
+    case Intrinsic::amdgcn_cvt_to_tensor_f16_f16_scatter2:
+    case Intrinsic::amdgcn_cvt_to_tensor_f16_f16_scatter2_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_f16_f16_scatter4:
+    case Intrinsic::amdgcn_cvt_to_tensor_f16_f32_scatter2:
+    case Intrinsic::amdgcn_cvt_to_tensor_fp8_bf16:
+    case Intrinsic::amdgcn_cvt_to_tensor_fp8_bf16_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_fp8_bf16_scatter2:
+    case Intrinsic::amdgcn_cvt_to_tensor_fp8_f16:
+    case Intrinsic::amdgcn_cvt_to_tensor_fp8_f16_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_fp8_f16_scatter2:
+    case Intrinsic::amdgcn_cvt_to_tensor_fp8_f32:
+    case Intrinsic::amdgcn_cvt_to_tensor_i4_bf16:
+    case Intrinsic::amdgcn_cvt_to_tensor_i4_bf16_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_i4_f16:
+    case Intrinsic::amdgcn_cvt_to_tensor_i4_f16_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_i4_f32:
+    case Intrinsic::amdgcn_cvt_to_tensor_i8_bf16:
+    case Intrinsic::amdgcn_cvt_to_tensor_i8_bf16_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_i8_bf16_scatter2:
+    case Intrinsic::amdgcn_cvt_to_tensor_i8_f16:
+    case Intrinsic::amdgcn_cvt_to_tensor_i8_f16_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_i8_f16_scatter2:
+    case Intrinsic::amdgcn_cvt_to_tensor_i8_f32:
+    case Intrinsic::amdgcn_cvt_to_tensor_u4_bf16:
+    case Intrinsic::amdgcn_cvt_to_tensor_u4_bf16_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_u4_f16:
+    case Intrinsic::amdgcn_cvt_to_tensor_u4_f16_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_u4_f32:
+    case Intrinsic::amdgcn_cvt_to_tensor_u8_bf16:
+    case Intrinsic::amdgcn_cvt_to_tensor_u8_bf16_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_u8_bf16_scatter2:
+    case Intrinsic::amdgcn_cvt_to_tensor_u8_f16:
+    case Intrinsic::amdgcn_cvt_to_tensor_u8_f16_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_u8_f16_scatter2:
+    case Intrinsic::amdgcn_cvt_to_tensor_u8_f32:
+    case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_bf16:
+    case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_bf16_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_bf16_scatter2:
+    case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_f16:
+    case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_f16_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_f16_scatter2:
+    case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_f32:
+    case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_bf16:
+    case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_bf16_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_bf16_scatter2:
+    case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_f16:
+    case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_f16_double:
+    case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_f16_scatter2:
+    case Intrinsic::amdgcn_cvt_to_tensor_sr_fp8_f32:
       // TODO: Refine on operand
       return SNaN;
     case Intrinsic::amdgcn_fma_legacy:
