@@ -87,7 +87,7 @@ define amdgpu_kernel void @send_next_prev(i32 %i1, ptr addrspace(1) %p) "amdgpu-
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[1], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:1
+; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[1], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:15
 ; CHECK-NEXT:    v_send_vgpr_prev_b32 g1[0], g1[1], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:15
 ; CHECK-NEXT:    global_store_b32 v1, g1[0], s[0:1] scale_offset
 ; CHECK-NEXT:    s_set_vgpr_frames 0x41 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -137,7 +137,7 @@ define amdgpu_kernel void @send_next_prev_nowrite(i32 %i1, ptr addrspace(1) %p) 
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[1], v0 sema_wave_id:0 sema_wave_id_refl:0 wait_va_vdst:1
+; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[1], v0 sema_wave_id:0 sema_wave_id_refl:0 wait_va_vdst:15
 ; CHECK-NEXT:    v_send_vgpr_prev_b32 g1[0], g1[1], v0 sema_wave_id:0 sema_wave_id_refl:0 wait_va_vdst:15
 ; CHECK-NEXT:    global_store_b32 v1, g1[0], s[0:1] scale_offset
 ; CHECK-NEXT:    s_set_vgpr_frames 0x41 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -192,8 +192,8 @@ define void @send_next_prev_non_kernel(i32 %i1, ptr addrspace(1) %p) {
 ; CHECK-NEXT:    v_mov_b32_e32 g1[9], g1[0]
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    global_store_b32 v[1:2], g1[0], off
-; CHECK-NEXT:    s_wait_expcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_wait_expcnt 0x0
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %wg_cluster = call i32 @llvm.amdgcn.wavegroup.id.in.cluster()
@@ -236,7 +236,7 @@ define amdgpu_kernel void @send_next_prev_nodims(i32 %i1, ptr addrspace(1) %p) "
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[1], v0 sema_wave_id:0 sema_wave_id_refl:0 wait_va_vdst:1
+; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[1], v0 sema_wave_id:0 sema_wave_id_refl:0 wait_va_vdst:15
 ; CHECK-NEXT:    v_send_vgpr_prev_b32 g1[0], g1[1], v0 sema_wave_id:0 sema_wave_id_refl:0 wait_va_vdst:15
 ; CHECK-NEXT:    global_store_b32 v1, g1[0], s[0:1] scale_offset
 ; CHECK-NEXT:    s_set_vgpr_frames 0x41 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -306,8 +306,8 @@ define dso_local amdgpu_kernel void @send_next_with_mcast(ptr addrspace(1) nound
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_mov_b32 m0, 0xc0000
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_load_mcast_b32 g1[1], v0, s[0:1]
 ; CHECK-NEXT:    global_load_mcast_b32 g1[3], v0, s[0:1]
 ; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[2], v0 sema_id:1 sema_wave_id:0 sema_id_refl:2 sema_wave_id_refl:0 wait_va_vdst:15
@@ -354,8 +354,8 @@ define dso_local amdgpu_kernel void @send_next_store_pair(ptr addrspace(1) nound
 ; CHECK-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, g1[1]
 ; CHECK-NEXT:    v_mov_b32_e32 v1, g1[3]
-; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; CHECK-NEXT:    s_barrier_signal -1
 ; CHECK-NEXT:    s_barrier_wait -1

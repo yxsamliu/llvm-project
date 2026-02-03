@@ -21,8 +21,8 @@ define void @global(ptr addrspace(10) %itp, ptr addrspace(1) %p1) {
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, s0
 ; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX13-NEXT:    global_load_mcast_b32 g1[0], v[1:2], off th:TH_LOAD_HT scope:SCOPE_SE
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   call void @llvm.amdgcn.load.mcast.b32.p10.p1(ptr addrspace(10) %itp, ptr addrspace(1) readonly %p1, i32 10, i32 983040)
@@ -44,8 +44,8 @@ define void @ds(ptr addrspace(10) %itp, ptr addrspace(3) %p3) {
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, s0
 ; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX13-NEXT:    ds_load_mcast_b32 g1[0], v1
-; GFX13-NEXT:    s_wait_dscnt 0x0
 ; GFX13-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; GFX13-NEXT:    s_wait_dscnt 0x0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   call void @llvm.amdgcn.load.mcast.b32.p10.p3(ptr addrspace(10) %itp, ptr addrspace(3) readonly %p3, i32 10, i32 983040)
@@ -67,8 +67,8 @@ define void @dds(ptr addrspace(10) %itp, ptr addrspace(11) %p11) {
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, s0
 ; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX13-NEXT:    dds_load_mcast_b32 g1[0], v1, off th:TH_LOAD_HT scope:SCOPE_SE
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   call void @llvm.amdgcn.load.mcast.b32.p10.p11(ptr addrspace(10) %itp, ptr addrspace(11) readonly %p11, i32 10, i32 983040)

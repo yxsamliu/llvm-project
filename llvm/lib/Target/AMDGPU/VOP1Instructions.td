@@ -878,7 +878,7 @@ let SubtargetPredicate = isGFX11Plus in {
     let IsInvalidSingleUseProducer = 1;
   }
 
-  let isAsCheapAsAMove = 1 in
+  let isAsCheapAsAMove = 1, isMoveImm = 1 in
   defm V_MOV_B16        : VOP1Inst_t16<"v_mov_b16", VOP_I16_I16>;
   defm V_NOT_B16        : VOP1Inst_t16<"v_not_b16", VOP_I16_I16>;
   defm V_CVT_I32_I16    : VOP1Inst_t16<"v_cvt_i32_i16", VOP_I32_I16>;
