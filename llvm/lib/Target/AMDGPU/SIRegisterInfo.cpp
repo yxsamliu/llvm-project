@@ -3606,6 +3606,8 @@ SIRegisterInfo::getAnyVGPRClassForBitWidth(unsigned BitWidth) const {
     return &AMDGPU::VReg_512_STAGINGRegClass;
   if (BitWidth == 576)
     return &AMDGPU::VReg_576_STAGINGRegClass;
+  if (BitWidth == 768)
+    return &AMDGPU::VReg_768_STAGINGRegClass;
   if (BitWidth == 1024)
     return &AMDGPU::VReg_1024_STAGINGRegClass;
 
@@ -3646,6 +3648,8 @@ getAlignedVGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::VReg_512_STAGING_Align2RegClass;
   if (BitWidth == 576)
     return &AMDGPU::VReg_576_STAGING_Align2RegClass;
+  if (BitWidth == 768)
+    return &AMDGPU::VReg_768_STAGING_Align2RegClass;
   if (BitWidth == 1024)
     return &AMDGPU::VReg_1024_STAGING_Align2RegClass;
 
@@ -3688,6 +3692,8 @@ SIRegisterInfo::getAlignedLo256VGPRClassForBitWidth(unsigned BitWidth) const {
     return &AMDGPU::VReg_512_Lo256_Align2RegClass;
   if (BitWidth <= 576)
     return &AMDGPU::VReg_576_Lo256_Align2RegClass;
+  if (BitWidth <= 768)
+    return &AMDGPU::VReg_768_Lo256_Align2RegClass;
   if (BitWidth <= 1024)
     return &AMDGPU::VReg_1024_Lo256_Align2RegClass;
 
@@ -3722,6 +3728,8 @@ getAnyAGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::AReg_512RegClass;
   if (BitWidth == 576)
     return &AMDGPU::AReg_576RegClass;
+  if (BitWidth == 768)
+    return &AMDGPU::AReg_768RegClass;
   if (BitWidth == 1024)
     return &AMDGPU::AReg_1024RegClass;
 
@@ -3756,6 +3764,8 @@ getAlignedAGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::AReg_512_Align2RegClass;
   if (BitWidth == 576)
     return &AMDGPU::AReg_576_Align2RegClass;
+  if (BitWidth == 768)
+    return &AMDGPU::AReg_768_Align2RegClass;
   if (BitWidth == 1024)
     return &AMDGPU::AReg_1024_Align2RegClass;
 
@@ -3800,6 +3810,8 @@ getAnyVectorSuperClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::AV_512_STAGINGRegClass;
   if (BitWidth == 576)
     return &AMDGPU::AV_576_STAGINGRegClass;
+  if (BitWidth == 768)
+    return &AMDGPU::AV_768_STAGINGRegClass;
   if (BitWidth == 1024)
     return &AMDGPU::AV_1024_STAGINGRegClass;
 
@@ -3834,6 +3846,8 @@ getAlignedVectorSuperClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::AV_512_STAGING_Align2RegClass;
   if (BitWidth == 576)
     return &AMDGPU::AV_576_STAGING_Align2RegClass;
+  if (BitWidth == 768)
+    return &AMDGPU::AV_768_STAGING_Align2RegClass;
   if (BitWidth == 1024)
     return &AMDGPU::AV_1024_STAGING_Align2RegClass;
 
