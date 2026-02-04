@@ -647,6 +647,8 @@ void GCNSubtarget::adjustSchedDependency(
     MachineBasicBlock::const_instr_iterator E(DefI->getParent()->instr_end());
     unsigned Lat = 0;
     for (++I; I != E && I->isBundledWithPred(); ++I) {
+      if (I->isMetaInstruction())
+        continue;
       if (I->modifiesRegister(Reg, TRI))
         Lat = InstrInfo.getInstrLatency(getInstrItineraryData(), *I);
       else if (Lat)
@@ -660,6 +662,8 @@ void GCNSubtarget::adjustSchedDependency(
     MachineBasicBlock::const_instr_iterator E(UseI->getParent()->instr_end());
     unsigned Lat = InstrInfo.getInstrLatency(getInstrItineraryData(), *DefI);
     for (++I; I != E && I->isBundledWithPred() && Lat; ++I) {
+      if (I->isMetaInstruction())
+        continue;
       if (I->readsRegister(Reg, TRI))
         break;
       --Lat;

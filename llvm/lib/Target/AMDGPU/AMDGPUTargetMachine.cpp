@@ -846,7 +846,8 @@ static bool mustPreserveGV(const GlobalValue &GV) {
 }
 
 void AMDGPUTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
-  AAM.registerFunctionAnalysis<AMDGPUAA>();
+  if (EnableAMDGPUAliasAnalysis)
+    AAM.registerFunctionAnalysis<AMDGPUAA>();
 }
 
 static Expected<ScanOptions>
@@ -2361,6 +2362,8 @@ void AMDGPUCodeGenPassBuilder::addPreRewrite(PassManagerWrapper &PMW) const {
   if (EnableRegReassign) {
     addMachineFunctionPass(GCNNSAReassignPass(), PMW);
   }
+
+  addMachineFunctionPass(AMDGPURewriteAGPRCopyMFMAPass(), PMW);
 }
 
 void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(

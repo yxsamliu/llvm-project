@@ -2618,7 +2618,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
           ScoreBrackets.determineWait(SmemAccessCounter, Interval, Wait);
         }
 
-        if (ST->hasWaitXCnt() && Op.isDef())
+        if (ST->hasWaitXcnt() && Op.isDef())
           ScoreBrackets.determineWait(X_CNT, Interval, Wait);
       }
     }
@@ -3018,7 +3018,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     }
   }
 
-  if (!ST->hasWaitXCnt())
+  if (!ST->hasWaitXcnt())
     return;
 
   if (IsVMEMAccess)
@@ -3629,10 +3629,15 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
         else
           *Brackets = *BI.Incoming;
       } else {
-        if (!Brackets)
+        if (!Brackets) {
           Brackets = std::make_unique<WaitcntBrackets>(this);
-        else
-          *Brackets = WaitcntBrackets(this);
+        } else {
+          // Reinitialize in-place. N.B. do not do this by assigning from a
+          // temporary because the WaitcntBrackets class is large and it could
+          // cause this function to use an unreasonable amount of stack space.
+          Brackets->~WaitcntBrackets();
+          new (Brackets.get()) WaitcntBrackets(this);
+        }
       }
 
       Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets);
