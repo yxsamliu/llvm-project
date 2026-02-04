@@ -671,8 +671,8 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
   (void)PGRM_Rsrc3;
   (void)EvaluatableRsrc3;
   assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
-         STM.hasGFX90AInsts() || AMDGPU::isGFX1250Plus(STM) ||
-         !EvaluatableRsrc3 || static_cast<uint64_t>(PGRM_Rsrc3) == 0);
+         STM.hasGFX90AInsts() || STM.hasGFX1250Insts() || !EvaluatableRsrc3 ||
+         static_cast<uint64_t>(PGRM_Rsrc3) == 0);
   KernelDescriptor.compute_pgm_rsrc3 = CurrentProgramInfo.ComputePGMRSrc3;
 
   KernelDescriptor.kernarg_preload = MCConstantExpr::create(
@@ -885,7 +885,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
           " AccumOffset: " + getMCExprStr(AdjustedAccum), false);
     }
 
-    if (AMDGPU::isGFX1250Plus(STM))
+    if (STM.hasGFX1250Insts())
       OutStreamer->emitRawComment(
           " NamedBarCnt: " + getMCExprStr(CurrentProgramInfo.NamedBarCnt),
           false);
@@ -921,7 +921,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
     [[maybe_unused]] int64_t PGMRSrc3;
     assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
-           STM.hasGFX90AInsts() || AMDGPU::isGFX1250Plus(STM) ||
+           STM.hasGFX90AInsts() || STM.hasGFX1250Insts() ||
            (CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGMRSrc3) &&
             static_cast<uint64_t>(PGMRSrc3) == 0));
     if (STM.hasGFX90AInsts()) {
@@ -1390,7 +1390,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT);
   }
 
-  if (AMDGPU::isGFX1250Plus(STM))
+  if (STM.hasGFX1250Insts())
     ProgInfo.ComputePGMRSrc3 =
         SetBits(ProgInfo.ComputePGMRSrc3, ProgInfo.NamedBarCnt,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,

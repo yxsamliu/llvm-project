@@ -494,7 +494,7 @@ void AMDGPULowerVGPREncoding::lowerIDX(MachineBasicBlock::instr_iterator &MII) {
       NewMode.Ops[VDst].MSBits = CurData >> 8;
     } else {
       MIB.addDef(AMDGPU::VGPR0 + CurOffset)
-          .addUse(AMDGPU::VGPR0 + CurData, DataOp.isUndef() ? RegState::Undef : 0);
+          .addUse(AMDGPU::VGPR0 + CurData, getUndefRegState(DataOp.isUndef()));
       NewMode.Ops[VSrc0].MSBits = CurData >> 8;
       NewMode.Ops[VDst].MSBits = CurOffset >> 8;
     }
@@ -795,7 +795,7 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
                               ? EncodeType::SET_VGPR_FRAMES
                               : EncodeType::SET_VGPR_MSB;
 
-  int64_t ModeValue = static_cast<int64_t>(CurrentMode.encode(encodeType));
+  int64_t ModeValue = CurrentMode.encode(encodeType);
 
   // Case 1: Size <= 12 - the original instruction uses imm32[0:Size-1], so
   // imm32[12:19] is unused. Safe to set imm32[12:19] to the correct VGPR

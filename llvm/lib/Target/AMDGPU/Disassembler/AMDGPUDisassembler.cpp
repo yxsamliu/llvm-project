@@ -682,7 +682,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                         DecW, Address, CS))
         break;
 
-      if (isGFX1250Only() &&
+      if (isGFX1250() &&
           tryDecodeInst(DecoderTableGFX125096, DecoderTableGFX1250_FAKE1696, MI,
                         DecW, Address, CS))
         break;
@@ -713,7 +713,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
             tryDecodeInst(DecoderTableGFX1396, MI, DecW, Address, CS))
           break;
 
-        if (isGFX1250Only() &&
+        if (isGFX1250() &&
             tryDecodeInst(DecoderTableGFX125096, MI, DecW, Address, CS))
           break;
       }
@@ -771,7 +771,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (isGFX10() && tryDecodeInst(DecoderTableGFX1064, MI, QW, Address, CS))
         break;
 
-      if (isGFX1250Only() &&
+      if (isGFX1250() &&
           tryDecodeInst(DecoderTableGFX125064, DecoderTableGFX1250_FAKE1664, MI,
                         QW, Address, CS))
         break;
@@ -851,7 +851,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                         Address, CS))
         break;
 
-      if (isGFX1250Only() &&
+      if (isGFX1250() &&
           tryDecodeInst(DecoderTableGFX125032, DecoderTableGFX1250_FAKE1632, MI,
                         DW, Address, CS))
         break;
@@ -2434,7 +2434,7 @@ bool AMDGPUDisassembler::isGFX12Plus() const {
   return AMDGPU::isGFX12Plus(STI);
 }
 
-bool AMDGPUDisassembler::isGFX1250Only() const {
+bool AMDGPUDisassembler::isGFX1250() const {
   return AMDGPU::isGFX1250Only(STI);
 }
 
@@ -2629,7 +2629,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   // Bits [29-31].
   if (isGFX10Plus()) {
     // WGP_MODE is not available on GFX1250.
-    if (!isGFX1250Only()) {
+    if (!isGFX1250()) {
       PRINT_DIRECTIVE(".amdhsa_workgroup_processor_mode",
                       COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE);
     }

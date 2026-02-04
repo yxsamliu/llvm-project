@@ -558,9 +558,7 @@ def FeatureRealTrue16Insts : SubtargetFeature<"real-true16",
   "Use true 16-bit registers"
 >;
 
-def FeatureD16Writes32BitVgpr : SubtargetFeature<"d16-write-vgpr32",
-  "EnableD16Writes32BitVgpr",
-  "true",
+defm D16Writes32BitVgpr : AMDGPUSubtargetFeature<"d16-write-vgpr32",
   "D16 instructions potentially have 32-bit data dependencies"
 >;
 
@@ -1014,9 +1012,7 @@ defm MadMacF32Insts : AMDGPUSubtargetFeature<"mad-mac-f32-insts",
   "Has v_mad_f32/v_mac_f32/v_madak_f32/v_madmk_f32 instructions"
 >;
 
-def FeatureDsSrc2Insts : SubtargetFeature<"ds-src2-insts",
-  "HasDsSrc2Insts",
-  "true",
+defm DsSrc2Insts : AMDGPUSubtargetFeature<"ds-src2-insts",
   "Has ds_*_src2 instructions"
 >;
 
@@ -2535,7 +2531,8 @@ def isGFX12Plus :
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
 
 def isGFX12PlusNot12_50 :
-  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12 && (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13 || !Subtarget->hasGFX1250Insts())">,
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12 &&"
+            "(Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13 || !Subtarget->hasGFX1250Insts())">,
   AssemblerPredicate<(all_of FeatureGFX12Insts, (any_of FeatureGFX13Insts, (not FeatureGFX1250Insts)))>;
 
 def isGFX125xOnly :
@@ -2551,10 +2548,10 @@ def isNotGFX1250Plus :
   AssemblerPredicate<(all_of (not FeatureGFX1250Insts))>;
 
 def isGFX940orGFX1250 :
-  Predicate<"Subtarget->hasGFX940Insts() || (Subtarget->hasGFX1250Insts() && "
-            "!Subtarget->hasGFX13Insts())">,
-  AssemblerPredicate<(any_of FeatureGFX940Insts, (all_of FeatureGFX1250Insts,
-                             (not FeatureGFX13Insts)))>;
+  Predicate<"Subtarget->hasGFX940Insts() ||"
+            "(Subtarget->hasGFX1250Insts() && !Subtarget->hasGFX13Insts())">,
+  AssemblerPredicate<(any_of FeatureGFX940Insts,
+                     (all_of FeatureGFX1250Insts, (not FeatureGFX13Insts)))>;
 
 def isGFX940orGFX1250orGFX13Plus :
   Predicate<"Subtarget->hasGFX940Insts() || Subtarget->hasGFX1250Insts()">,
@@ -2643,8 +2640,6 @@ def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() &&
 def UseTrue16WithSramECC : True16PredicateClass<"Subtarget->useRealTrue16Insts() && "
                                                 "!Subtarget->d16PreservesUnusedBits()">;
 
-def HasD16Writes32BitVgpr: Predicate<"Subtarget->hasD16Writes32BitVgpr()">,
-  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, FeatureD16Writes32BitVgpr)>;
 def NotHasD16Writes32BitVgpr: Predicate<"!Subtarget->hasD16Writes32BitVgpr()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, (not FeatureD16Writes32BitVgpr))>;
 
@@ -2720,8 +2715,6 @@ def HasAtomicDsCondSubClampInsts :
 def HasAtomicBufferGlobalPkAddF16NoRtnInsts
   : Predicate<"Subtarget->hasAtomicBufferGlobalPkAddF16NoRtnInsts() || Subtarget->hasAtomicBufferGlobalPkAddF16Insts()">,
   AssemblerPredicate<(any_of FeatureAtomicBufferGlobalPkAddF16NoRtnInsts, FeatureAtomicBufferGlobalPkAddF16Insts)>;
-def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
-  AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
 
 def HasAddPC64Inst : Predicate<"Subtarget->hasAddPC64Inst()">,
   AssemblerPredicate<(any_of FeatureGFX1250Insts, FeatureGFX13Insts)>;

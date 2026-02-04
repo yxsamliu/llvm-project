@@ -1645,6 +1645,7 @@ bool isGFX1170Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);
 bool isGFX1250Only(const MCSubtargetInfo &STI);
+bool isGFX1250(const MCSubtargetInfo &STI);
 bool isGFX1250Plus(const MCSubtargetInfo &STI);
 bool isGFX13(const MCSubtargetInfo &STI);
 bool isGFX13Plus(const MCSubtargetInfo &STI);
