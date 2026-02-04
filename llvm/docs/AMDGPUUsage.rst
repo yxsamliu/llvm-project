@@ -565,6 +565,8 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                       - Workgroup
                                                                         Clusters
 
+     **GCN GFX13 (RDNA 5)**
+     -----------------------------------------------------------------------------------------------------------------------
      ``gfx1310``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::

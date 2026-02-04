@@ -76,7 +76,7 @@ protected:
   bool HasFminFmaxLegacy = true;
   bool EnablePromoteAlloca = false;
   bool HasTrigReducedRange = false;
-  bool FastFMAF32 = false;
+  bool HasFastFMAF32 = false;
   bool HasExclusiveScanInsts = false;
   unsigned EUsPerCU = 4;
   unsigned MaxWavesPerEU = 10;
@@ -304,9 +304,7 @@ public:
     return HasTrigReducedRange;
   }
 
-  bool hasFastFMAF32() const {
-    return FastFMAF32;
-  }
+  bool hasFastFMAF32() const { return HasFastFMAF32; }
 
   bool isPromoteAllocaEnabled() const {
     return EnablePromoteAlloca;
