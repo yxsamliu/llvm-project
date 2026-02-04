@@ -197,7 +197,11 @@ public:
     ImmTyMatrixAReuse,
     ImmTyMatrixBReuse,
     ImmTyScaleSel,
-    ImmTyAuxData,
+    ImmTyModsConvolve,
+    ImmTyModsPermute,
+    ImmTyModsShapeCvt,
+    ImmTyModsFmaTensor,
+    ImmTyModsWmma,
     ImmTyIdxs,
     ImmTyByteSel,
     ImmTySignedA,
@@ -412,6 +416,11 @@ public:
   bool isGDS() const { return isImmTy(ImmTyGDS); }
   bool isLDS() const { return isImmTy(ImmTyLDS); }
   bool isCPol() const { return isImmTy(ImmTyCPol); }
+  bool isModsConvolve() const { return isImmTy(ImmTyModsConvolve); }
+  bool isModsPermute() const { return isImmTy(ImmTyModsPermute); }
+  bool isModsShapeCvt() const { return isImmTy(ImmTyModsShapeCvt); }
+  bool isModsFmaTensor() const { return isImmTy(ImmTyModsFmaTensor); }
+  bool isModsWmma() const { return isImmTy(ImmTyModsWmma); }
   bool isIndexKey8bit() const { return isImmTy(ImmTyIndexKey8bit); }
   bool isIndexKey16bit() const { return isImmTy(ImmTyIndexKey16bit); }
   bool isIndexKey32bit() const { return isImmTy(ImmTyIndexKey32bit); }
@@ -1230,7 +1239,11 @@ public:
     case ImmTyMatrixAReuse: OS << "ImmTyMatrixAReuse"; break;
     case ImmTyMatrixBReuse: OS << "ImmTyMatrixBReuse"; break;
     case ImmTyScaleSel: OS << "ScaleSel" ; break;
-    case ImmTyAuxData: OS << "ImmTyAuxData"; break;
+    case ImmTyModsConvolve: OS << "ImmTyModsConvolve"; break;
+    case ImmTyModsPermute: OS << "ImmTyModsPermute"; break;
+    case ImmTyModsShapeCvt: OS << "ImmTyModsShapeCvt"; break;
+    case ImmTyModsFmaTensor: OS << "ImmTyModsFmaTensor"; break;
+    case ImmTyModsWmma: OS << "ImmTyModsWmma"; break;
     case ImmTyIdxs: OS << "ImmTyIdxs"; break;
     case ImmTyByteSel: OS << "ByteSel" ; break;
     case ImmTySignedA: OS << "SignedA"; break;
@@ -1833,8 +1846,6 @@ public:
   ParseStatus parseFlatOffset(OperandVector &Operands);
   ParseStatus parseR128A16(OperandVector &Operands);
   ParseStatus parseBLGP(OperandVector &Operands);
-  ParseStatus parseAuxData(OperandVector &Operands);
-
   bool tryParseFmt(const char *Pref, int64_t MaxVal, int64_t &Val);
   bool matchDfmtNfmt(int64_t &Dfmt, int64_t &Nfmt, StringRef FormatStr, SMLoc Loc);
 
@@ -1851,6 +1862,41 @@ public:
   ParseStatus parseSDelayALU(OperandVector &Operands);
 
   ParseStatus parseHwreg(OperandVector &Operands);
+
+  struct VOPMMod {
+    enum Kind : uint8_t { Named, Int, IntSet, Flag };
+
+    union ModData {
+      const ArrayRef<const char *> Names;
+      const ArrayRef<int32_t> Ints;
+      const std::pair<int32_t, int32_t> Range;
+
+      constexpr ModData() : Names() {}
+      constexpr ModData(ArrayRef<const char *> Names) : Names(Names) {}
+      constexpr ModData(ArrayRef<int32_t> Ints) : Ints(Ints) {}
+      constexpr ModData(int32_t Min, int32_t Max) : Range(Min, Max) {}
+    };
+
+    const ModData Mods;
+    const char *const Name;
+    const unsigned MaskOrBit;
+    const unsigned Shift;
+    const Kind KindValue;
+
+    constexpr VOPMMod(Kind Kind, const char *Name, unsigned MaskOrBit = 0,
+                      unsigned Shift = 0, ModData Mods = {})
+        : Mods(Mods), Name(Name), MaskOrBit(MaskOrBit), Shift(Shift),
+          KindValue(Kind) {}
+  };
+
+  ParseStatus parseModField(const VOPMMod &Field, OperandVector &Operands,
+                            int64_t &Imm, unsigned &Seen);
+  ParseStatus parseMods(ArrayRef<const VOPMMod> Fields, OperandVector &Operands,
+                        AMDGPUOperand::ImmTy Type);
+  ParseStatus parseModsConvolve(OperandVector &Operands);
+  ParseStatus parseModsShapeCvt(OperandVector &Operands);
+  ParseStatus parseModsFmaTensor(OperandVector &Operands);
+  ParseStatus parseModsWmma(OperandVector &Operands);
 
 private:
   struct OperandInfoTy {
@@ -5764,8 +5810,7 @@ bool AMDGPUAsmParser::validateVOPM(const MCInst &Inst,
   if (!isVOPMAsmOnly(Opcode))
     return true;
 
-  // TODO-GFX13: Validate instruction modifiers (aux_data) against specific
-  // opcodes.
+  // TODO-GFX13: Validate instruction modifiers against specific opcodes.
   return true;
 }
 
@@ -7523,6 +7568,161 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
   Operands.push_back(
       AMDGPUOperand::CreateImm(this, Enabled, OpLoc, AMDGPUOperand::ImmTyCPol));
   return ParseStatus::Success;
+}
+
+ParseStatus AMDGPUAsmParser::parseModField(const VOPMMod &Field,
+                                           OperandVector &Operands,
+                                           int64_t &Imm, unsigned &Seen) {
+  SMLoc Loc = getLoc();
+  int64_t Value = 0;
+
+  switch (Field.KindValue) {
+  case VOPMMod::Named: {
+    ParseStatus Res = parseStringOrIntWithPrefix(Operands, Field.Name,
+                                                 Field.Mods.Names, Value);
+    if (!Res.isSuccess())
+      return Res;
+    Imm |= (Value << Field.Shift) & Field.MaskOrBit;
+    break;
+  }
+  case VOPMMod::Int: {
+    ParseStatus Res = parseIntWithPrefix(Field.Name, Value);
+    if (!Res.isSuccess())
+      return Res;
+
+    const auto &[Min, Max] = Field.Mods.Range;
+    if (Value < Min || Value > Max)
+      return Error(Loc, Twine(Field.Name) + " must be in [" + Twine(Min) +
+                            ", " + Twine(Max) + "] range");
+    Imm |= ((Value - Min) << Field.Shift) & Field.MaskOrBit;
+    break;
+  }
+  case VOPMMod::IntSet: {
+    ParseStatus Res = parseIntWithPrefix(Field.Name, Value);
+    if (!Res.isSuccess())
+      return Res;
+
+    auto It = llvm::find(Field.Mods.Ints, static_cast<uint32_t>(Value));
+    if (It == Field.Mods.Ints.end()) {
+      std::string List =
+          llvm::join(llvm::map_range(Field.Mods.Ints,
+                                     [](uint32_t V) { return utostr(V); }),
+                     ", ");
+      return Error(Loc, Twine(Field.Name) + " must be one of [" + List + "]");
+    }
+
+    int64_t EncodedValue = It - Field.Mods.Ints.begin();
+    Imm |= (EncodedValue << Field.Shift) & Field.MaskOrBit;
+    break;
+  }
+  case VOPMMod::Flag: {
+    if (!trySkipId(Field.Name))
+      return ParseStatus::NoMatch;
+    Imm |= Field.MaskOrBit;
+    break;
+  }
+  }
+
+  if (Seen & Field.MaskOrBit)
+    return Error(Loc, Twine("duplicate ") + Field.Name + " modifier");
+
+  Seen |= Field.MaskOrBit;
+
+  return ParseStatus::Success;
+}
+
+ParseStatus AMDGPUAsmParser::parseMods(ArrayRef<const VOPMMod> Fields,
+                                       OperandVector &Operands,
+                                       AMDGPUOperand::ImmTy Type) {
+  SMLoc OperandLoc = getLoc();
+  int64_t Imm = 0;
+  unsigned Seen = 0; // bitmask to track already parsed modifiers
+
+  for (;;) {
+    bool Matched = false;
+
+    for (const VOPMMod &Field : Fields) {
+      ParseStatus EntryRes = parseModField(Field, Operands, Imm, Seen);
+      if (EntryRes.isFailure())
+        return EntryRes;
+      if (EntryRes.isSuccess()) {
+        Matched = true;
+        break;
+      }
+    }
+
+    if (!Matched)
+      break;
+  }
+
+  if (!Seen)
+    return ParseStatus::NoMatch;
+
+  Operands.push_back(AMDGPUOperand::CreateImm(this, Imm, OperandLoc, Type));
+  return ParseStatus::Success;
+}
+
+ParseStatus AMDGPUAsmParser::parseModsConvolve(OperandVector &Operands) {
+  using namespace VOPMMods;
+  static constexpr VOPMMod ModFields[] = {
+      {VOPMMod::Named, "shape", SHAPE, SHAPE_SHIFT,
+       VOPMMod::ModData(VOPMMods::ModShapeNames)},
+      {VOPMMod::Named, "filter", FILTER, FILTER_SHIFT,
+       VOPMMod::ModData(VOPMMods::ModFilterNames)},
+      {VOPMMod::Int, "iter", ITER, ITER_SHIFT, VOPMMod::ModData(1, 4)},
+      {VOPMMod::Flag, "dilate_x", DILATE_X},
+      {VOPMMod::Flag, "dilate_y", DILATE_Y},
+      {VOPMMod::Flag, "start_at_lane_16", START_AT_LANE_16},
+      {VOPMMod::Flag, "accum_chan_order", ACCUM_CHAN_ORDER_convolve},
+      {VOPMMod::Flag, "weights_are_signed", WEIGHTS_ARE_SIGNED},
+      {VOPMMod::Flag, "accum_is_bias", ACCUM_IS_BIAS},
+      {VOPMMod::Flag, "tensor_is_signed", TENSOR_IS_SIGNED},
+      {VOPMMod::Flag, "int_scale", INT_SCALE_convolve},
+  };
+
+  return parseMods(ModFields, Operands, AMDGPUOperand::ImmTyModsConvolve);
+}
+
+ParseStatus AMDGPUAsmParser::parseModsShapeCvt(OperandVector &Operands) {
+  using namespace VOPMMods;
+  static constexpr VOPMMod ModFields[] = {
+      {VOPMMod::Named, "shape", SHAPE, SHAPE_SHIFT,
+       VOPMMod::ModData(VOPMMods::ModShapeNames)},
+      {VOPMMod::Flag, "int_scale", INT_SCALE_shape_cvt},
+      {VOPMMod::Flag, "accum_chan_order", ACCUM_CHAN_ORDER_shape_cvt},
+      {VOPMMod::Named, "activation_fn", ACTIVATION_FN, ACTIVATION_FN_SHIFT,
+       VOPMMod::ModData(VOPMMods::ModActivationNames)},
+      {VOPMMod::IntSet, "chan_offset", CHAN_OFFSET, CHAN_OFFSET_SHIFT,
+       VOPMMod::ModData(VOPMMods::ModChanOffsetInts)},
+  };
+
+  return parseMods(ModFields, Operands, AMDGPUOperand::ImmTyModsShapeCvt);
+}
+
+ParseStatus AMDGPUAsmParser::parseModsFmaTensor(OperandVector &Operands) {
+  using namespace VOPMMods;
+  static constexpr VOPMMod ModFields[] = {
+      {VOPMMod::Named, "layout", LAYOUT, LAYOUT_SHIFT,
+       VOPMMod::ModData(VOPMMods::ModLayoutNames)},
+      {VOPMMod::Flag, "int_scale", INT_SCALE_shape_cvt},
+      {VOPMMod::Flag, "accum_chan_order", ACCUM_CHAN_ORDER_shape_cvt},
+      {VOPMMod::Named, "activation_fn", ACTIVATION_FN, ACTIVATION_FN_SHIFT,
+       VOPMMod::ModData(VOPMMods::ModActivationNames)},
+      {VOPMMod::IntSet, "chan_offset", CHAN_OFFSET, CHAN_OFFSET_SHIFT,
+       VOPMMod::ModData(VOPMMods::ModChanOffsetInts)},
+  };
+
+  return parseMods(ModFields, Operands, AMDGPUOperand::ImmTyModsFmaTensor);
+}
+
+ParseStatus AMDGPUAsmParser::parseModsWmma(OperandVector &Operands) {
+  // TODO: Support VOPM WMMA modifiers
+  ParseStatus Res =
+      parseIntWithPrefix("aux_data", Operands, AMDGPUOperand::ImmTyModsWmma);
+  if (!Res.isNoMatch())
+    return Res;
+
+  return ParseStatus::NoMatch;
 }
 
 ParseStatus AMDGPUAsmParser::parseScope(OperandVector &Operands,

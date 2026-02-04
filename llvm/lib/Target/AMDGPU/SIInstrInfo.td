@@ -1387,7 +1387,17 @@ def MatrixBReuse : NamedBitOperand<"matrix_b_reuse">;
 def ScaleSel : NamedIntOperand<"scale_sel"> {
   let Validator = "isUInt<4>";
 }
-def AuxData : NamedIntOperand<"aux_data">;
+
+def ModsShapeCvt : CustomOperand<i32, 1>;   // VOPM: v_cvt_to_tensor_*,
+                                            //       v_scale_bias_activate_*,
+                                            //       v_uniform_scale_activate_*
+def ModsFmaTensor : CustomOperand<i32, 1>;  // VOPM: v_fma_from_tensor_*
+def ModsConvolve : CustomOperand<i32, 1>;   // VOPM: v_convolve_*
+def ModsWmma : CustomOperand<i32, 1>;       // VOPM: v_wmma_*, v_swmma_*
+def ModsPermute : NamedIntOperand<"pattern"> { // VOPM: v_permute_*
+  let Validator = "isUInt<6>";
+}
+
 let PrintInHex = 1 in
 def Idxs : NamedIntOperand<"idxs">;
 def Idxs0 : DefaultOperand<Idxs, 0>;

@@ -9,7 +9,7 @@ define <4 x float> @v_test_known_not_snan_sba(<4 x float> %a, float %b) {
 ; GCN-NEXT:    s_wait_samplecnt 0x0
 ; GCN-NEXT:    s_wait_rtscnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    v_scale_bias_activate_f32 v[0:3], v[0:3], 1.0, v4 aux_data:131 clamp
+; GCN-NEXT:    v_scale_bias_activate_f32 v[0:3], v[0:3], 1.0, v4 shape:SHAPE_4X2X16 accum_chan_order clamp
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GCN-NEXT:    v_dual_mul_f32 v4, 0x40200000, v0 :: v_dual_mul_f32 v5, 0x40200000, v1
 ; GCN-NEXT:    v_dual_mul_f32 v6, 0x40200000, v2 :: v_dual_mul_f32 v7, 0x40200000, v3
@@ -31,9 +31,9 @@ define <2 x half> @v_test_known_not_snan_cvt2tensor(<4 x float> %a, float %b) {
 ; GCN-NEXT:    s_wait_samplecnt 0x0
 ; GCN-NEXT:    s_wait_rtscnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    v_scale_bias_activate_f32 v[0:3], v[0:3], 1.0, v4 aux_data:131 clamp
+; GCN-NEXT:    v_scale_bias_activate_f32 v[0:3], v[0:3], 1.0, v4 shape:SHAPE_4X2X16 accum_chan_order clamp
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GCN-NEXT:    v_cvt_to_tensor_f16_f32 v0, v1, v[0:3], 0 aux_data:3 clamp
+; GCN-NEXT:    v_cvt_to_tensor_f16_f32 v0, v1, v[0:3], 0 shape:SHAPE_4X2X16 clamp
 ; GCN-NEXT:    v_pk_mul_f16 v1, 0x3266, v0 op_sel_hi:[0,1]
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-NEXT:    v_pk_max_num_f16 v0, v0, v1

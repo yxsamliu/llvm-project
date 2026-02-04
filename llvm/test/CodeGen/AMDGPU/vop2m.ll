@@ -31,7 +31,7 @@ bb:
 define amdgpu_ps void @test_permute_pair_bcast_b32(i32 %src0, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_permute_pair_bcast_b32:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_permute_pair_bcast_b32 v0, v0 aux_data:2
+; GFX13-NEXT:    v_permute_pair_bcast_b32 v0, v0 pattern:2
 ; GFX13-NEXT:    global_store_b32 v[1:2], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:
@@ -43,7 +43,7 @@ bb:
 define amdgpu_ps void @test_permute_pair_2src_rotate_group_b32(i32 %src0, i32 %src1, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_permute_pair_2src_rotate_group_b32:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_permute_pair_2src_rotate_group_b32 v0, v0, v1 aux_data:2
+; GFX13-NEXT:    v_permute_pair_2src_rotate_group_b32 v0, v0, v1 pattern:2
 ; GFX13-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX13-NEXT:    s_endpgm
 bb:

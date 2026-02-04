@@ -12,17 +12,18 @@
 // VOPM Encodings
 //===----------------------------------------------------------------------===//
 
-class VOPMProfile<list<ValueType> ArgTy, bit _HasAux,
-                                         bit _HasClamp,
-                                         bit _HasSSrc,
-                                         bit _HasSrc4> : VOPProfile<ArgTy> {
-  bit HasAux = _HasAux;
+class VOPMProfile<list<ValueType> ArgTy, bit _HasMods, bit _HasClamp,
+                  bit _HasSSrc, bit _HasSrc4, Operand _ModsOp = ModsPermute>
+    : VOPProfile<ArgTy> {
+  bit HasMods = _HasMods; // Has VOPM modifiers
   let HasClamp = _HasClamp;
   bit HasSSrc = _HasSSrc;
 
   bit HasSrc4 = _HasSrc4;
 
-  let HasModifiers = 0;
+  field Operand ModsOp = _ModsOp;
+
+  let HasModifiers = 0; // Does not use VOP3 source modifiers from VOPProfile
   let HasOMod = 0;
 
   let DstVT = ArgVT[0];
@@ -66,7 +67,7 @@ class VOP2Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc64 {
   let Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
   let Inst{57-56} = idxs{9-8};    // src1_idx
 
-  let Inst{63-58} = !if(pfl.HasAux, aux_data, ?);
+  let Inst{63-58} = !if(pfl.HasMods, aux_data, ?);
 }
 
 class VOP3Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc96 {
@@ -97,12 +98,12 @@ class VOP3Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc96 {
   let Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
   let Inst{57-56} = idxs{9-8};    // src1_idx
 
-  let Inst{63-58} = !if(pfl.HasAux, aux_data{5-0}, ?); // mod0
+  let Inst{63-58} = !if(pfl.HasMods, aux_data{5-0}, ?); // mod0
 
   let Inst{73-64} = !if(pfl.HasSrc2, src2, ?);
   let Inst{75-74} = idxs{13-12};    // src2_idx
 
-  let Inst{87-76} = !if(pfl.HasAux, aux_data{17-6}, ?); // mod1
+  let Inst{87-76} = !if(pfl.HasMods, aux_data{17-6}, ?); // mod1
 
   let Inst{95-88} = !if(pfl.HasSSrc, ssrc, ?);
 }
@@ -135,12 +136,12 @@ class VOP5Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc128 {
   let Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
   let Inst{57-56} = idxs{9-8};      // src1_idx
 
-  let Inst{63-58} = !if(pfl.HasAux, aux_data{5-0}, ?); // mod0
+  let Inst{63-58} = !if(pfl.HasMods, aux_data{5-0}, ?); // mod0
 
   let Inst{73-64} = !if(pfl.HasSrc2, src2, ?);
   let Inst{75-74} = idxs{13-12};    // src2_idx
 
-  let Inst{87-76} = !if(pfl.HasAux, aux_data{17-6}, ?); // mod1
+  let Inst{87-76} = !if(pfl.HasMods, aux_data{17-6}, ?); // mod1
 
   let Inst{95-88} = !if(pfl.HasSSrc, ssrc, ?);
 
@@ -150,7 +151,7 @@ class VOP5Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc128 {
   let Inst{117-108} = !if(pfl.HasSrc4, src4, ?);
   let Inst{119-118} = idxs{21-20};  // src4_idx
 
-  let Inst{127-120} = !if(pfl.HasAux, aux_data{25-18}, ?); // mod2
+  let Inst{127-120} = !if(pfl.HasMods, aux_data{25-18}, ?); // mod2
 }
 
 class VOP6Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc128 {
@@ -181,12 +182,12 @@ class VOP6Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc128 {
   let Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
   let Inst{57-56} = idxs{9-8};      // src1_idx
 
-  let Inst{63-58} = !if(pfl.HasAux, aux_data{5-0}, ?); // mod0
+  let Inst{63-58} = !if(pfl.HasMods, aux_data{5-0}, ?); // mod0
 
   let Inst{73-64} = src2;
   let Inst{75-74} = idxs{13-12};    // src2_idx
 
-  let Inst{83-76} = !if(pfl.HasAux, aux_data{13-6}, ?); // mod1
+  let Inst{83-76} = !if(pfl.HasMods, aux_data{13-6}, ?); // mod1
 
   let Inst{93-84} = src5;
   let Inst{95-94} = idxs{25-24};    // src5_idx
@@ -197,7 +198,7 @@ class VOP6Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc128 {
   let Inst{117-108} = !if(pfl.HasSrc4, src4, ?);
   let Inst{119-118} = idxs{21-20};  // src4_idx
 
-  let Inst{127-120} = !if(pfl.HasAux, aux_data{25-18}, ?); // mod2
+  let Inst{127-120} = !if(pfl.HasMods, aux_data{25-18}, ?); // mod2
 }
 
 //===----------------------------------------------------------------------===//
@@ -222,13 +223,17 @@ def IterationCnt {
   int IT_4 = 3;
 }
 
-class VOP2M_Profile<list<ValueType> ArgTy, bit _HasAux = 0> : VOPMProfile<ArgTy, _HasAux, 0, 0, 0> {
-  let Ins64 = !con((ins Src0RC64:$src0), !if(HasSrc1, (ins Src1RC64:$src1), (ins)), !if(HasAux, (ins AuxData:$aux_data), (ins)), (ins Idxs0:$idxs), (ins SUPR0:$supr));
+class VOP2M_Profile<list<ValueType> ArgTy, bit _HasMods = 0, Operand _ModsOp = ModsPermute>
+    : VOPMProfile<ArgTy, _HasMods, 0, 0, 0, _ModsOp> {
+  let Ins64 = !con((ins Src0RC64:$src0),
+                   !if(HasSrc1, (ins Src1RC64:$src1), (ins)),
+                   !if(HasMods, (ins ModsOp:$aux_data), (ins)),
+                   (ins Idxs0:$idxs), (ins SUPR0:$supr));
 
   string Src1Asm = !if(HasSrc1, ", $src1", "");
-  string AuxDataAsm = !if(HasAux, "$aux_data", "");
+  string ModsDataAsm = !if(HasMods, "$aux_data", "");
 
-  let Asm64 = "$vdst, $src0"#Src1Asm#AuxDataAsm#"$idxs$supr";
+  let Asm64 = "$vdst, $src0"#Src1Asm#ModsDataAsm#"$idxs$supr";
 }
 
 def VOPM_I64_I32_I32 : VOP2M_Profile<[i64, i32, i32, untyped]> {
@@ -236,36 +241,37 @@ def VOPM_I64_I32_I32 : VOP2M_Profile<[i64, i32, i32, untyped]> {
   let Src1RC64 = GSrcSimple;
 }
 def VOPM_I32_I32_I32 : VOP2M_Profile<[i32, i32, i32, untyped]>;
-def VOPM_I32_I32_I32_AUX : VOP2M_Profile<[i32, i32, i32, untyped], 1>;
-def VOPM_I32_I32_AUX : VOP2M_Profile<[i32, i32, untyped, untyped], 1>;
+def VOPM_I32_I32_I32_MODS : VOP2M_Profile<[i32, i32, i32, untyped], 1, ModsPermute>;
+def VOPM_I32_I32_MODS : VOP2M_Profile<[i32, i32, untyped, untyped], 1, ModsPermute>;
 def VOPM_I32_I32_I64 : VOP2M_Profile<[i32, i32, i64, untyped]> {
   let Src1RC64 = SCSrc_b64;
 }
 
-class VOP3M_Permute_Profile<list<ValueType> ArgTy> : VOPMProfile<ArgTy, 1, 0, 0, 0> {
+class VOP3M_Permute_Profile<list<ValueType> ArgTy> : VOPMProfile<ArgTy, 1, 0, 0, 0, ModsPermute> {
   let Outs64 = (outs DstRC64:$vdst, Src2RC64:$src2);
-  let Ins64 = !con((ins Src0RC64:$src0, Src1RC64:$src1, AuxData:$aux_data, Idxs0:$idxs, SUPR0:$supr), (ins));
+  let Ins64 = !con((ins Src0RC64:$src0, Src1RC64:$src1, ModsOp:$aux_data, Idxs0:$idxs, SUPR0:$supr), (ins));
 
   let Asm64 = "$vdst, $src2, $src0, $src1$aux_data$idxs$supr";
 }
 
 def VOPM_PERMUTE_I32_I32_I32_I32 : VOP3M_Permute_Profile<[i32, i32, i32, i32]>;
 
-class Conv_Profile<list<ValueType> ArgTy, int Shape, int Filter, int Iterations> : VOPMProfile<ArgTy, 1, 1, 0, 1> {
+class Conv_Profile<list<ValueType> ArgTy, int Shape, int Filter, int Iterations>
+    : VOPMProfile<ArgTy, 1, 1, 0, 1, ModsConvolve> {
   let Outs64 = (outs DstRC64:$vdst);
 
   // Accumulator operands support inline 0.
   let Src0RC64 = getGSrcVGPROrZeroForVT<ArgTy[1]>.ret;
 
-  let Ins64 = !if(!eq(Filter,FilterType.3X3), (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr),
-                                              (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4, Src2RC64:$src5, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr));
+  let Ins64 = !if(!eq(Filter,FilterType.3X3), (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr),
+                                              (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4, Src2RC64:$src5, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr));
 
   dag ConvIntrinsicPat = !if(!eq(Filter,FilterType.3X3), (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src2VT:$src3, Src2VT:$src4, timm:$aux_data, i1:$clamp),
                                                          (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src2VT:$src3, Src2VT:$src4, Src2VT:$src5, timm:$aux_data, i1:$clamp));
   dag ConvPseudoPat = !con(ConvIntrinsicPat, (ins 0));
 
   dag ConvFrag = !if(!eq(Filter,FilterType.3X3), (ops node:$src0, node:$src1, node:$src2, node:$src3, node:$src4, node:$aux_data, node:$clamp),
-                                                  (ops node:$src0, node:$src1, node:$src2, node:$src3, node:$src4, node:$src5, node:$aux_data, node:$clamp));
+                                                 (ops node:$src0, node:$src1, node:$src2, node:$src3, node:$src4, node:$src5, node:$aux_data, node:$clamp));
 
   let Asm64 = !if(!eq(Filter,FilterType.3X3), "$vdst, $src0, $src1, $src2, $src3, $src4$aux_data$clamp$idxs$supr",
                                               !cond(!eq(Iterations, IterationCnt.IT_1) : "$vdst, $src0, $src1, $src2$aux_data$clamp$idxs$supr",
@@ -353,7 +359,7 @@ defm VOPM_CONV_I32_IU8     : Conv_Profile_Multi<"i32", "i32">;
 defm VOPM_CONV_F32I32_IU4 : Conv_Profile_Multi<"f32", "i32", "i32">;
 defm VOPM_CONV_F32I32_IU8 : Conv_Profile_Multi<"f32", "i32", "i32">;
 
-class SBA_Profile<list<ValueType> ArgTy, int Scatter> : VOPMProfile<ArgTy, 1, 1, 1, 1> {
+class SBA_Profile<list<ValueType> ArgTy, int Scatter> : VOPMProfile<ArgTy, 1, 1, 1, 1, ModsShapeCvt> {
 
   let Outs64 = !cond(!eq(Scatter, 1) : (outs DstRC64:$vdst),
                      !eq(Scatter, 2) : (outs DstRC64:$vdst, Src2RC64:$src2),
@@ -361,8 +367,8 @@ class SBA_Profile<list<ValueType> ArgTy, int Scatter> : VOPMProfile<ArgTy, 1, 1,
 
   field RegisterOperand SSrcOp = getVOPMSSrcForVT<ArgTy[4]>.ret;
 
-  let Ins64 = !if(HasSrc1, (ins Src0RC64:$src0, SSrcOp:$ssrc, Src1RC64:$src1, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr),
-                           (ins Src0RC64:$src0, SSrcOp:$ssrc, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr));
+  let Ins64 = !if(HasSrc1, (ins Src0RC64:$src0, SSrcOp:$ssrc, Src1RC64:$src1, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr),
+                           (ins Src0RC64:$src0, SSrcOp:$ssrc, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr));
 
   string DestAsm = !cond(!eq(Scatter, 1) : "$vdst",
                          !eq(Scatter, 2) : "$vdst, $src2",
@@ -381,8 +387,8 @@ def KMult {
   int X4 = 3;
 }
 
-class WMMA_SWMMA_Profile<list<ValueType> ArgTy, int K, bit HasSrc4>
-    : VOPMProfile<ArgTy, 0, 1, 0, HasSrc4> {
+class WMMA_SWMMA_Profile<list<ValueType> ArgTy, int K, bit HasSrc4, bit _HasMods = 0, Operand _ModsOp = ModsWmma>
+    : VOPMProfile<ArgTy, _HasMods, 1, 0, HasSrc4, _ModsOp> {
   int KMultiplier = K;
 
   let Src0RC64 = getGSrcVGPRForVT<ArgVT[1]>.ret; // srcA
@@ -391,7 +397,8 @@ class WMMA_SWMMA_Profile<list<ValueType> ArgTy, int K, bit HasSrc4>
   let Src2RC64 = getGSrcVGPROrZeroForVT<ArgVT[3]>.ret; // srcC
 }
 
-class VOPM_WMMA_Profile<list<ValueType> ArgTy, int K, bit HasSrc4> : WMMA_SWMMA_Profile<ArgTy, K, HasSrc4> {
+class VOPM_WMMA_Profile<list<ValueType> ArgTy, int K, bit HasSrc4, bit _HasMods = 0, Operand _ModsOp = ModsWmma>
+    : WMMA_SWMMA_Profile<ArgTy, K, HasSrc4, _HasMods, _ModsOp> {
   dag WmmaInPat;
   dag WmmaOutPat;
   dag WmmaInlineInPat;
@@ -429,12 +436,12 @@ class VOPM_WMMA_Profile_Int<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<Ar
   let Asm64 = "$vdst, $srcA, $srcB, $srcC$signed_a$signed_b$clamp$idxs$supr";
 }
 
-class VOPM_WMMA_Profile_BlockScale<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<ArgTy, K, 1> {
+class VOPM_WMMA_Profile_BlockScale<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<ArgTy, K, 1, 1> {
   let IsWMMA = 1;
   let isInt = 0;
 
-  let HasAux = 1;
-  let Ins64 = (ins Src0RC64:$srcA, Src1RC64:$srcB, Src2RC64:$srcC, GVGPR_32:$src3, GVGPR_32:$src4, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr);
+  let HasMods = 1;
+  let Ins64 = (ins Src0RC64:$srcA, Src1RC64:$srcB, Src2RC64:$srcC, GVGPR_32:$src3, GVGPR_32:$src4, ModsWmma:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr);
 
   let WmmaInPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, i32:$src3, i32:$src4, timm:$aux_data, i1:$clamp);
   let WmmaOutPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, i32:$src3, i32:$src4, timm:$aux_data, i1:$clamp);
@@ -527,15 +534,16 @@ def VOPM_SWMMA_I32_IU4_X128    : VOPM_SWMMA_Profile_Int<[v8i32, v4i32, v8i32, v8
 def VOPM_SWMMA_F32_IU4_X128    : VOPM_SWMMA_Profile_Int<[v8f32, v4i32, v8i32, v8f32, v2i32], KMult.X4>;
 def VOPM_SWMMA_F32I32_IU4_X128 : VOPM_SWMMA_Profile_Int<[v8f32, v4i32, v8i32, v8i32, v2i32], KMult.X4>;
 
-class Cvt_To_Tensor_Profile<list<ValueType> ArgTy, int PixelShape, int Scatter> : VOPMProfile<ArgTy, 1, 1, 1, 1> {
+class Cvt_To_Tensor_Profile<list<ValueType> ArgTy, int PixelShape, int Scatter>
+    : VOPMProfile<ArgTy, 1, 1, 1, 1, ModsShapeCvt> {
   let Outs64 = !cond(!eq(Scatter, 1) : (outs DstRC64:$vdst),
                      !eq(Scatter, 2) : (outs DstRC64:$vdst, Src2RC64:$src2),
                      !eq(Scatter, 4) : (outs DstRC64:$vdst, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4));
 
   field RegisterOperand SSrcOp = getVOPMSSrcForVT<ArgTy[4]>.ret;
 
-  let Ins64 = !if(HasSrc1, (ins Src0RC64:$src0, SSrcOp:$ssrc, Src1RC64:$src1, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr),
-                           (ins Src0RC64:$src0, SSrcOp:$ssrc, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr));
+  let Ins64 = !if(HasSrc1, (ins Src0RC64:$src0, SSrcOp:$ssrc, Src1RC64:$src1, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr),
+                           (ins Src0RC64:$src0, SSrcOp:$ssrc, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr));
 
   dag InPat = !if(HasSrc1, (ins Src0VT:$src0, Src3VT:$ssrc, Src1VT:$src1, timm:$aux_data, i1:$clamp),
                            (ins Src0VT:$src0, Src3VT:$ssrc, timm:$aux_data, i1:$clamp));
@@ -605,9 +613,9 @@ let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
                                                  [(set i32:$vdst, (int_amdgcn_bpermute_b32 i32:$src0, i32:$src1))]>;
   def V_PERMUTE_PAIR_GENSGPR_B32   : VOPM_Pseudo<VOPM_I32_I32_I64,
                                                  [(set i32:$vdst, (int_amdgcn_permute_pair_gensgpr_b32 i32:$src0, i64:$src1))]>;
-  def V_PERMUTE_PAIR_BCAST_B32     : VOPM_Pseudo<VOPM_I32_I32_AUX,
+  def V_PERMUTE_PAIR_BCAST_B32     : VOPM_Pseudo<VOPM_I32_I32_MODS,
                                                  [(set i32:$vdst, (int_amdgcn_permute_pair_bcast_b32 i32:$src0, timm:$aux_data))]>;
-  def V_PERMUTE_PAIR_2SRC_ROTATE_GROUP_B32 : VOPM_Pseudo<VOPM_I32_I32_I32_AUX,
+  def V_PERMUTE_PAIR_2SRC_ROTATE_GROUP_B32 : VOPM_Pseudo<VOPM_I32_I32_I32_MODS,
                                                          [(set i32:$vdst, (int_amdgcn_permute_pair_2src_rotate_group_b32 i32:$src0, i32:$src1, timm:$aux_data))]>;
 
   let SchedRW = [Write32Bit, Write32Bit] in {
@@ -877,10 +885,11 @@ def FmaFromTensorLayout {
   int DEQUANT_4X2 = 4;
 }
 
-class Fma_From_Tensor_Profile<list<ValueType> ArgTy, int OpLayout> : VOPMProfile<ArgTy, 1, 1, 0, 0> {
+class Fma_From_Tensor_Profile<list<ValueType> ArgTy, int OpLayout>
+  : VOPMProfile<ArgTy, 1, 1, 0, 0, ModsFmaTensor> {
   let Outs64 = (outs DstRC64:$vdst);
-  let Ins64 = !if(HasSrc2, (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src3RC64:$src3, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr),
-                           (ins Src0RC64:$src0, Src1RC64:$src1, Src3RC64:$src3, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr));
+  let Ins64 = !if(HasSrc2, (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src3RC64:$src3, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr),
+                           (ins Src0RC64:$src0, Src1RC64:$src1, Src3RC64:$src3, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr));
 
   dag FmaFromTensorInPat = !if(HasSrc2, (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src3VT:$src3, timm:$aux_data, i1:$clamp),
                                         (ins Src0VT:$src0, Src1VT:$src1, Src3VT:$src3, timm:$aux_data, i1:$clamp));
@@ -891,7 +900,7 @@ class Fma_From_Tensor_Profile<list<ValueType> ArgTy, int OpLayout> : VOPMProfile
                                        (ops node:$src0, node:$src1, node:$src3, node:$aux_data, node:$clamp));
 
   let Asm64 = !if(HasSrc2, "$vdst, $src0, $src1, $src2, $src3$aux_data$clamp$idxs$supr",
-                           "$vdst, $src0, $src1, $src3$aux_data$clamp$idxs$supr");
+            "$vdst, $src0, $src1, $src3$aux_data$clamp$idxs$supr");
 
   int Layout = OpLayout;
 }
@@ -1056,7 +1065,7 @@ multiclass VOP3M_Cvt_To_Tensor_Real_Base<GFXGen Gen, bits<8> op,
       let AsmString = asmName # ps.Pfl.Asm64;
 
       defvar PrimTy = !cast<Cvt_To_Tensor_Profile>(ps.Pfl).PrimTy;
-      let Inst{59-58} = PrimTy;
+      let aux_data{1-0} = PrimTy;
   }
 }
 
@@ -1071,7 +1080,7 @@ multiclass VOP3M_SBA_Real_Base<GFXGen Gen, bits<8> op,
       let AsmString = asmName # ps.Pfl.Asm64;
 
       defvar PixelShape4x2 = !cast<SBA_Profile>(ps.Pfl).PixelShape4x2;
-      let Inst{58} = !if(PixelShape4x2, aux_data{0}, 0);
+      let aux_data{0} = !if(PixelShape4x2, aux_data{0}, 0);
   }
 }
 
@@ -1101,7 +1110,7 @@ multiclass VOP5M_Cvt_To_Tensor_Real_Base<GFXGen Gen, bits<8> op,
       let AsmString = asmName # ps.Pfl.Asm64;
 
       defvar PrimTy = !cast<Cvt_To_Tensor_Profile>(ps.Pfl).PrimTy;
-      let Inst{59-58} = PrimTy;
+      let aux_data{1-0} = PrimTy;
   }
 }
 
@@ -1116,9 +1125,9 @@ multiclass VOP5M_Conv_Real_Base<GFXGen Gen, bits<8> op,
       let AsmString = asmName # ps.Pfl.Asm64;
 
       defvar PrimTy = !cast<Conv_Profile>(ps.Pfl).PrimTy;
-      let Inst{59-58} = PrimTy;
+      let aux_data{1-0} = PrimTy;
       defvar FilterTy = !cast<Conv_Profile>(ps.Pfl).FilterTy;
-      let Inst{61} = FilterTy;
+      let aux_data{3} = FilterTy;
   }
 }
 
@@ -1141,11 +1150,11 @@ multiclass VOP6M_Conv_Real_Base<GFXGen Gen, bits<8> op,
       let AsmString = asmName # ps.Pfl.Asm64;
 
       defvar PrimTy = !cast<Conv_Profile>(ps.Pfl).PrimTy;
-      let Inst{59-58} = PrimTy;
+      let aux_data{1-0} = PrimTy;
       defvar FilterTy = !cast<Conv_Profile>(ps.Pfl).FilterTy;
-      let Inst{61} = FilterTy;
+      let aux_data{3} = FilterTy;
       defvar IterCnt = !cast<Conv_Profile>(ps.Pfl).IterCnt;
-      let Inst{83-82} = IterCnt;
+      let aux_data{13-12} = IterCnt;
   }
 }
 
@@ -1284,9 +1293,9 @@ multiclass VOP5M_Fma_From_Tensor_Real_Base<GFXGen Gen, bits<8> op,
       let AsmString = asmName # ps.Pfl.Asm64;
 
       defvar Layout = !cast<Fma_From_Tensor_Profile>(ps.Pfl).Layout;
-      let Inst{60-58} = !if(!or(!eq(Layout,FmaFromTensorLayout.DEQUANT_4X2),
-                                !eq(Layout,FmaFromTensorLayout.DEQUANT_4X4)), Layout, aux_data{2-0});
-
+      let aux_data{2-0} = !if(!or(!eq(Layout,FmaFromTensorLayout.DEQUANT_4X2),
+                                   !eq(Layout,FmaFromTensorLayout.DEQUANT_4X4)),
+                               Layout, aux_data{2-0});
       let Inst{95-88} = SGPR_NULL_gfx11plus.Index;
   }
 }

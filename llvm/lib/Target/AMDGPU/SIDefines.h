@@ -1178,6 +1178,80 @@ enum class Scope : unsigned {
 };
 
 } // namespace Barrier
+
+namespace VOPMMods {
+// clang-format off
+enum VOPMModBits : unsigned {
+  // mod0 convolve / shape_cvt (layout)
+  SHAPE_SHIFT  = 0,
+  SHAPE        = 0x7 << SHAPE_SHIFT,
+  LAYOUT_SHIFT = SHAPE_SHIFT,
+  LAYOUT       = SHAPE,
+  FILTER_SHIFT = 3,
+  FILTER       = 0x7 << FILTER_SHIFT,
+
+  // mod0 permute
+  PATTERN_SHIFT = 0,
+  PATTERN       = 0x3F << PATTERN_SHIFT,
+
+  MOD1_SHIFT = 6, // mod1 offset in aux_data
+
+  // mod1 convolve
+  DILATE_X                  = 1 << (0 + MOD1_SHIFT),
+  DILATE_Y                  = 1 << (1 + MOD1_SHIFT),
+  START_AT_LANE_16          = 1 << (2 + MOD1_SHIFT),
+  ACCUM_CHAN_ORDER_convolve = 1 << (3 + MOD1_SHIFT),
+
+  // mod1 convolve 1x1 only
+  ITER_SHIFT = 6 + MOD1_SHIFT,
+  ITER       = 0x3 << ITER_SHIFT,
+
+  // mod1 shape_cvt
+  INT_SCALE_shape_cvt        = 1 << (0 + MOD1_SHIFT),
+  ACCUM_CHAN_ORDER_shape_cvt = 1 << (1 + MOD1_SHIFT),
+  ACTIVATION_FN_SHIFT        = 2 + MOD1_SHIFT,
+  ACTIVATION_FN              = 0x3 << ACTIVATION_FN_SHIFT,
+  CHAN_OFFSET_SHIFT          = 4 + MOD1_SHIFT,
+  CHAN_OFFSET                = 0x7 << CHAN_OFFSET_SHIFT,
+
+  MOD2_SHIFT = 18, // mod2 offset in aux_data
+
+  // mods2 convolve
+  WEIGHTS_ARE_SIGNED = 1 << (0 + MOD2_SHIFT),
+  ACCUM_IS_BIAS      = 1 << (1 + MOD2_SHIFT),
+  TENSOR_IS_SIGNED   = 1 << (2 + MOD2_SHIFT),
+  INT_SCALE_convolve = 1 << (3 + MOD2_SHIFT),
+};
+// clang-format on
+
+namespace CNN {
+enum SHAPE : unsigned {
+  SHAPE_8X4X8 = 0,
+  SHAPE_4X4X8 = 1,
+  SHAPE_4X4X16 = 2,
+  SHAPE_4X2X16 = 3,
+};
+
+enum LAYOUT : unsigned {
+  LAYOUT_CONVOLVE_8X4 = 0,
+  LAYOUT_CONVOLVE_4X4 = 1,
+  LAYOUT_CONVOLVE_4X2 = 2,
+  LAYOUT_DEQUANT_4X4 = 3,
+  LAYOUT_DEQUANT_4X2 = 4,
+};
+
+enum FILTER : unsigned {
+  FILTER_1X1 = 0,
+  FILTER_3X3 = 1,
+};
+
+enum ACTIVATION_FN : unsigned {
+  ACTIVATION_OFF = 0x0,      // No activation function: result = input
+  ACTIVATION_RELU = 0x1,     // result = max(0, input)
+  ACTIVATION_HARD_TANH = 0x2 // result = min(1, max(-1, input))
+};
+} // namespace CNN
+} // namespace VOPMMods
 } // namespace AMDGPU
 
 // clang-format off

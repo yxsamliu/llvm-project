@@ -113,7 +113,7 @@ body: |
   bb.0:
     ; CHECK-LABEL: {{^}}convolve:
     ; CHECK: %bb.0:
-    ; CHECK-NEXT: v_convolve_f32_iu4 g1[0:3], v[0:3], v[4:5], g1[4] aux_data:3 clamp idxs:0x1001
+    ; CHECK-NEXT: v_convolve_f32_iu4 g1[0:3], v[0:3], v[4:5], g1[4] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1001
     ; CHECK-NEXT: s_delay_alu instid0(XDL_DEP_1)
     ; CHECK-NEXT: v_add_nc_u32_e32 v5, v0, v0
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5

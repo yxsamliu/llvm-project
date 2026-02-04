@@ -873,13 +873,98 @@ void AMDGPUInstPrinter::printBLGP(const MCInst *MI, unsigned OpNo,
   O << " blgp:" << Imm;
 }
 
-void AMDGPUInstPrinter::printAuxData(const MCInst *MI, unsigned OpNo,
-                                     const MCSubtargetInfo &STI,
-                                     raw_ostream &O) {
+void AMDGPUInstPrinter::printModsConvolve(const MCInst *MI, unsigned OpNo,
+                                          const MCSubtargetInfo &STI,
+                                          raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+
+  unsigned Shape = (Imm & VOPMMods::SHAPE) >> VOPMMods::SHAPE_SHIFT;
+  printModNamed(Shape, "shape",  VOPMMods::ModShapeNames, O);
+  unsigned Filter = (Imm & VOPMMods::FILTER) >> VOPMMods::FILTER_SHIFT;
+  printModNamed(Filter, "filter", VOPMMods::ModFilterNames, O);
+
+  O << (Imm & VOPMMods::DILATE_X ? " dilate_x" : "");
+  O << (Imm & VOPMMods::DILATE_Y ? " dilate_y" : "");
+  O << (Imm & VOPMMods::START_AT_LANE_16 ? " start_at_lane_16" : "");
+  O << (Imm & VOPMMods::ACCUM_CHAN_ORDER_convolve ? " accum_chan_order" : "");
+
+  if (Filter == VOPMMods::CNN::FILTER_1X1) {
+    unsigned Iter = ((Imm & VOPMMods::ITER) >> VOPMMods::ITER_SHIFT) + 1;
+    O << " iter:" << Iter;
+  }
+
+  O << (Imm & VOPMMods::WEIGHTS_ARE_SIGNED ? " weights_are_signed" : "");
+  O << (Imm & VOPMMods::ACCUM_IS_BIAS ? " accum_is_bias" : "");
+  O << (Imm & VOPMMods::TENSOR_IS_SIGNED ? " tensor_is_signed" : "");
+  O << (Imm & VOPMMods::INT_SCALE_convolve ? " int_scale" : "");
+}
+
+void AMDGPUInstPrinter::printModsTensor(unsigned Imm, raw_ostream &O) {
+  O << (Imm & VOPMMods::INT_SCALE_shape_cvt ? " int_scale" : "");
+  O << (Imm & VOPMMods::ACCUM_CHAN_ORDER_shape_cvt ? " accum_chan_order" : "");
+
+  unsigned ActivationFn =
+      (Imm & VOPMMods::ACTIVATION_FN) >> VOPMMods::ACTIVATION_FN_SHIFT;
+  // Do not print activation_fn:ACTIVATION_OFF (0x0) by default
+  if (ActivationFn) {
+    printModNamed(ActivationFn, "activation_fn", VOPMMods::ModActivationNames,
+                  O);
+  }
+
+  unsigned ChanOffset =
+      (Imm & VOPMMods::CHAN_OFFSET) >> VOPMMods::CHAN_OFFSET_SHIFT;
+  // Do not print chan_offset:0 by default
+  if (ChanOffset) {
+    O << " chan_offset:";
+    if (ChanOffset < std::size(VOPMMods::ModChanOffsetInts))
+      O << VOPMMods::ModChanOffsetInts[ChanOffset];
+    else
+      O << "/*invalid chan_offset (encoded) value:" << ChanOffset << "*/";
+  }
+}
+
+void AMDGPUInstPrinter::printModsShapeCvt(const MCInst *MI, unsigned OpNo,
+                                          const MCSubtargetInfo &STI,
+                                          raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+
+  unsigned Shape = (Imm & VOPMMods::SHAPE) >> VOPMMods::SHAPE_SHIFT;
+  printModNamed(Shape, "shape",  VOPMMods::ModShapeNames, O);
+
+  printModsTensor(Imm, O);
+}
+
+void AMDGPUInstPrinter::printModsFmaTensor(const MCInst *MI, unsigned OpNo,
+                                           const MCSubtargetInfo &STI,
+                                           raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+
+  unsigned Layout = (Imm & VOPMMods::LAYOUT) >> VOPMMods::LAYOUT_SHIFT;
+  printModNamed(Layout, "layout",  VOPMMods::ModLayoutNames, O);
+
+  printModsTensor(Imm, O);
+}
+
+void AMDGPUInstPrinter::printModNamed(unsigned Value, const char *Name,
+                                      ArrayRef<const char *> Mods,
+                                      raw_ostream &O) {
+  O << " " << Name << ":";
+  if (Value < Mods.size())
+    O << Mods[Value];
+  else
+    O << "/*invalid " << Name << " value:" << Value << "*/";
+}
+
+void AMDGPUInstPrinter::printModsWmma(const MCInst *MI, unsigned OpNo,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
   if (!Imm)
     return;
 
+  // TODO: Support VOPM WMMA modifiers
+  // SignedA, SignedB and SparseIndexOdd are already separate operands. Should
+  // we join them into ModsWmma?
   O << " aux_data:" << Imm;
 }
 

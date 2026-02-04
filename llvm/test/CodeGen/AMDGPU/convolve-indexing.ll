@@ -19,7 +19,7 @@ define amdgpu_kernel void @test_convolve.f32_iu4_3x3_4x2() "amdgpu-wavegroup-ena
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_iu4 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_iu4 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -58,7 +58,7 @@ define amdgpu_kernel void @test_convolve.f16_iu4_3x3_4x2() "amdgpu-wavegroup-ena
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu4 g1[29:30], g1[0:1], g1[2:19], g1[20:22], g1[23:25], g1[26:28] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[29:30], g1[0:1], g1[2:19], g1[20:22], g1[23:25], g1[26:28] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -97,7 +97,7 @@ define amdgpu_kernel void @test_convolve.f16_iu4_3x3_4x4() "amdgpu-wavegroup-ena
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu4 g1[22:25], g1[0:3], g1[4:12], g1[13:15], g1[16:18], g1[19:21] aux_data:10 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[22:25], g1[0:3], g1[4:12], g1[13:15], g1[16:18], g1[19:21] shape:SHAPE_4X4X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -136,7 +136,7 @@ define amdgpu_kernel void @test_convolve.f16_iu4_3x3_8x4() "amdgpu-wavegroup-ena
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu4 g1[21:24], g1[0:3], g1[4:8], g1[9:12], g1[13:16], g1[17:20] aux_data:8 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[21:24], g1[0:3], g1[4:8], g1[9:12], g1[13:16], g1[17:20] shape:SHAPE_8X4X8 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -175,7 +175,7 @@ define amdgpu_kernel void @test_convolve.i32_iu4_3x3_4x2() "amdgpu-wavegroup-ena
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_i32_iu4 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_i32_iu4 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -214,7 +214,7 @@ define amdgpu_kernel void @test_convolve.f32i32_iu4_3x3_4x2() "amdgpu-wavegroup-
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32i32_iu4 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32i32_iu4 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -253,7 +253,7 @@ define amdgpu_kernel void @test_convolve.f32_iu8_3x3_4x2() "amdgpu-wavegroup-ena
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_iu8 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_iu8 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -292,7 +292,7 @@ define amdgpu_kernel void @test_convolve.f16_iu8_3x3_4x2() "amdgpu-wavegroup-ena
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu8 g1[29:30], g1[0:1], g1[2:19], g1[20:22], g1[23:25], g1[26:28] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[29:30], g1[0:1], g1[2:19], g1[20:22], g1[23:25], g1[26:28] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -331,7 +331,7 @@ define amdgpu_kernel void @test_convolve.f16_iu8_3x3_4x4() "amdgpu-wavegroup-ena
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu8 g1[22:25], g1[0:3], g1[4:12], g1[13:15], g1[16:18], g1[19:21] aux_data:10 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[22:25], g1[0:3], g1[4:12], g1[13:15], g1[16:18], g1[19:21] shape:SHAPE_4X4X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -370,7 +370,7 @@ define amdgpu_kernel void @test_convolve.f16_iu8_3x3_8x4() "amdgpu-wavegroup-ena
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu8 g1[21:24], g1[0:3], g1[4:8], g1[9:12], g1[13:16], g1[17:20] aux_data:8 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[21:24], g1[0:3], g1[4:8], g1[9:12], g1[13:16], g1[17:20] shape:SHAPE_8X4X8 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -409,7 +409,7 @@ define amdgpu_kernel void @test_convolve.i32_iu8_3x3_4x2() "amdgpu-wavegroup-ena
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_i32_iu8 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_i32_iu8 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -448,7 +448,7 @@ define amdgpu_kernel void @test_convolve.f32i32_iu8_3x3_4x2() "amdgpu-wavegroup-
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32i32_iu8 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32i32_iu8 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -487,7 +487,7 @@ define amdgpu_kernel void @test_convolve.f32_fp8_3x3_4x2() "amdgpu-wavegroup-ena
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_fp8_fp8 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_fp8_fp8 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -526,7 +526,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_3x3_4x2() "amdgpu-wavegroup-ena
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[29:30], g1[0:1], g1[2:19], g1[20:22], g1[23:25], g1[26:28] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[29:30], g1[0:1], g1[2:19], g1[20:22], g1[23:25], g1[26:28] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -565,7 +565,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_fp8_3x3_4x4() "amdgpu-wavegroup
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[22:25], g1[0:3], g1[4:12], g1[13:15], g1[16:18], g1[19:21] aux_data:10 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[22:25], g1[0:3], g1[4:12], g1[13:15], g1[16:18], g1[19:21] shape:SHAPE_4X4X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -604,7 +604,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_3x3_8x4() "amdgpu-wavegroup-ena
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[21:24], g1[0:3], g1[4:8], g1[9:12], g1[13:16], g1[17:20] aux_data:8 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[21:24], g1[0:3], g1[4:8], g1[9:12], g1[13:16], g1[17:20] shape:SHAPE_8X4X8 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -643,7 +643,7 @@ define amdgpu_kernel void @test_convolve.f32_fp8_bf8_3x3_4x2() "amdgpu-wavegroup
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_fp8_bf8 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_fp8_bf8 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -682,7 +682,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_bf8_3x3_4x2() "amdgpu-wavegroup
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[29:30], g1[0:1], g1[2:19], g1[20:22], g1[23:25], g1[26:28] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[29:30], g1[0:1], g1[2:19], g1[20:22], g1[23:25], g1[26:28] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -721,7 +721,7 @@ define amdgpu_kernel void @test_convolve.bf16_bf8_3x3_4x4() "amdgpu-wavegroup-en
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[22:25], g1[0:3], g1[4:12], g1[13:15], g1[16:18], g1[19:21] aux_data:10 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[22:25], g1[0:3], g1[4:12], g1[13:15], g1[16:18], g1[19:21] shape:SHAPE_4X4X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -760,7 +760,7 @@ define amdgpu_kernel void @test_convolve.bf16_bf8_3x3_8x4() "amdgpu-wavegroup-en
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[21:24], g1[0:3], g1[4:8], g1[9:12], g1[13:16], g1[17:20] aux_data:8 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[21:24], g1[0:3], g1[4:8], g1[9:12], g1[13:16], g1[17:20] shape:SHAPE_8X4X8 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -799,7 +799,7 @@ define amdgpu_kernel void @test_convolve.f32_bf8_fp8_3x3_4x2() "amdgpu-wavegroup
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_bf8_fp8 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_bf8_fp8 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -838,7 +838,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_3x3_4x2() "amdgpu-wavegroup
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[29:30], g1[0:1], g1[2:19], g1[20:22], g1[23:25], g1[26:28] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[29:30], g1[0:1], g1[2:19], g1[20:22], g1[23:25], g1[26:28] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -877,7 +877,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_3x3_4x4() "amdgpu-wavegroup
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[22:25], g1[0:3], g1[4:12], g1[13:15], g1[16:18], g1[19:21] aux_data:10 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[22:25], g1[0:3], g1[4:12], g1[13:15], g1[16:18], g1[19:21] shape:SHAPE_4X4X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -916,7 +916,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_3x3_8x4() "amdgpu-wavegroup
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[21:24], g1[0:3], g1[4:8], g1[9:12], g1[13:16], g1[17:20] aux_data:8 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[21:24], g1[0:3], g1[4:8], g1[9:12], g1[13:16], g1[17:20] shape:SHAPE_8X4X8 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -955,7 +955,7 @@ define amdgpu_kernel void @test_convolve.f32_bf8_bf8_3x3_4x2() "amdgpu-wavegroup
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_bf8_bf8 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_bf8_bf8 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -994,7 +994,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_3x3_4x2() "amdgpu-wavegroup
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[29:30], g1[0:1], g1[2:19], g1[20:22], g1[23:25], g1[26:28] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[29:30], g1[0:1], g1[2:19], g1[20:22], g1[23:25], g1[26:28] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1033,7 +1033,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_3x3_4x4() "amdgpu-wavegroup
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[22:25], g1[0:3], g1[4:12], g1[13:15], g1[16:18], g1[19:21] aux_data:10 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[22:25], g1[0:3], g1[4:12], g1[13:15], g1[16:18], g1[19:21] shape:SHAPE_4X4X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1072,7 +1072,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_3x3_8x4() "amdgpu-wavegroup
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[21:24], g1[0:3], g1[4:8], g1[9:12], g1[13:16], g1[17:20] aux_data:8 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[21:24], g1[0:3], g1[4:8], g1[9:12], g1[13:16], g1[17:20] shape:SHAPE_8X4X8 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1111,7 +1111,7 @@ define amdgpu_kernel void @test_convolve.f32_f16_3x3_4x2() "amdgpu-wavegroup-ena
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_f16 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_f16 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1150,7 +1150,7 @@ define amdgpu_kernel void @test_convolve.f16_f16_3x3_4x2() "amdgpu-wavegroup-ena
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_f16 g1[29:30], g1[0:1], g1[2:19], g1[20:22], g1[23:25], g1[26:28] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[29:30], g1[0:1], g1[2:19], g1[20:22], g1[23:25], g1[26:28] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1189,7 +1189,7 @@ define amdgpu_kernel void @test_convolve.f16_f16_3x3_4x4() "amdgpu-wavegroup-ena
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_f16 g1[22:25], g1[0:3], g1[4:12], g1[13:15], g1[16:18], g1[19:21] aux_data:10 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[22:25], g1[0:3], g1[4:12], g1[13:15], g1[16:18], g1[19:21] shape:SHAPE_4X4X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1228,7 +1228,7 @@ define amdgpu_kernel void @test_convolve.f16_f16_3x3_8x4() "amdgpu-wavegroup-ena
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_f16 g1[21:24], g1[0:3], g1[4:8], g1[9:12], g1[13:16], g1[17:20] aux_data:8 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[21:24], g1[0:3], g1[4:8], g1[9:12], g1[13:16], g1[17:20] shape:SHAPE_8X4X8 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1267,7 +1267,7 @@ define amdgpu_kernel void @test_convolve.f32_bf16_3x3_4x2() "amdgpu-wavegroup-en
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_bf16 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_bf16 g1[31:34], g1[0:3], g1[4:21], g1[22:24], g1[25:27], g1[28:30] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1306,7 +1306,7 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_3x3_4x2() "amdgpu-wavegroup-e
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_bf16_bf16 g1[29:30], g1[0:1], g1[2:19], g1[20:22], g1[23:25], g1[26:28] aux_data:11 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[29:30], g1[0:1], g1[2:19], g1[20:22], g1[23:25], g1[26:28] shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1345,7 +1345,7 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_3x3_4x4() "amdgpu-wavegroup-e
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_bf16_bf16 g1[22:25], g1[0:3], g1[4:12], g1[13:15], g1[16:18], g1[19:21] aux_data:10 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[22:25], g1[0:3], g1[4:12], g1[13:15], g1[16:18], g1[19:21] shape:SHAPE_4X4X16 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1384,7 +1384,7 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_3x3_8x4() "amdgpu-wavegroup-e
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_bf16_bf16 g1[21:24], g1[0:3], g1[4:8], g1[9:12], g1[13:16], g1[17:20] aux_data:8 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[21:24], g1[0:3], g1[4:8], g1[9:12], g1[13:16], g1[17:20] shape:SHAPE_8X4X8 filter:FILTER_3X3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1422,7 +1422,7 @@ define amdgpu_kernel void @test_convolve.f32_iu4_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_iu4 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f32_iu4 g1[7:10], g1[0:3], g1[4:5], g1[6] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1458,7 +1458,7 @@ define amdgpu_kernel void @test_convolve.f16_iu4_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu4 g1[5:6], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[5:6], g1[0:1], g1[2:3], g1[4] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1494,7 +1494,7 @@ define amdgpu_kernel void @test_convolve.f16_iu4_1x1_4x4_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu4 g1[6:9], g1[0:3], g1[4], g1[5] aux_data:2 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[6:9], g1[0:3], g1[4], g1[5] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1530,7 +1530,7 @@ define amdgpu_kernel void @test_convolve.f16_iu4_1x1_8x4_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu4 g1[7:10], g1[0:3], g1[4], g1[5:6] clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[7:10], g1[0:3], g1[4], g1[5:6] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1566,7 +1566,7 @@ define amdgpu_kernel void @test_convolve.i32_iu4_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_i32_iu4 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_i32_iu4 g1[7:10], g1[0:3], g1[4:5], g1[6] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1602,7 +1602,7 @@ define amdgpu_kernel void @test_convolve.f32i32_iu4_1x1_4x2_iter_1() "amdgpu-wav
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32i32_iu4 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f32i32_iu4 g1[7:10], g1[0:3], g1[4:5], g1[6] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1639,7 +1639,7 @@ define amdgpu_kernel void @test_convolve.f32_iu4_1x1_4x2_iter_2() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_iu4 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32_iu4 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1677,7 +1677,7 @@ define amdgpu_kernel void @test_convolve.f16_iu4_1x1_4x2_iter_2() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu4 g1[8:9], g1[0:1], g1[2:5], g1[6], g1[7] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[8:9], g1[0:1], g1[2:5], g1[6], g1[7] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1715,7 +1715,7 @@ define amdgpu_kernel void @test_convolve.f16_iu4_1x1_4x4_iter_2() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu4 g1[8:11], g1[0:3], g1[4:5], g1[6], g1[7] aux_data:4098 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[8:11], g1[0:3], g1[4:5], g1[6], g1[7] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1753,7 +1753,7 @@ define amdgpu_kernel void @test_convolve.f16_iu4_1x1_8x4_iter_2() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu4 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] aux_data:4096 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1791,7 +1791,7 @@ define amdgpu_kernel void @test_convolve.i32_iu4_1x1_4x2_iter_2() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_i32_iu4 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_i32_iu4 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1829,7 +1829,7 @@ define amdgpu_kernel void @test_convolve.f32i32_iu4_1x1_4x2_iter_2() "amdgpu-wav
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32i32_iu4 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32i32_iu4 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1868,7 +1868,7 @@ define amdgpu_kernel void @test_convolve.f32_iu4_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_iu4 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_iu4 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1908,7 +1908,7 @@ define amdgpu_kernel void @test_convolve.f16_iu4_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu4 g1[11:12], g1[0:1], g1[2:7], g1[8], g1[9], g1[10] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[11:12], g1[0:1], g1[2:7], g1[8], g1[9], g1[10] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1948,7 +1948,7 @@ define amdgpu_kernel void @test_convolve.f16_iu4_1x1_4x4_iter_3() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu4 g1[10:13], g1[0:3], g1[4:6], g1[7], g1[8], g1[9] aux_data:8194 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[10:13], g1[0:3], g1[4:6], g1[7], g1[8], g1[9] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -1988,7 +1988,7 @@ define amdgpu_kernel void @test_convolve.f16_iu4_1x1_8x4_iter_3() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu4 g1[12:15], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11] aux_data:8192 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[12:15], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2028,7 +2028,7 @@ define amdgpu_kernel void @test_convolve.i32_iu4_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_i32_iu4 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_i32_iu4 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2068,7 +2068,7 @@ define amdgpu_kernel void @test_convolve.f32i32_iu4_1x1_4x2_iter_3() "amdgpu-wav
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32i32_iu4 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32i32_iu4 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2108,7 +2108,7 @@ define amdgpu_kernel void @test_convolve.f32_iu4_1x1_4x2_iter_4() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_iu4 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32_iu4 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2149,7 +2149,7 @@ define amdgpu_kernel void @test_convolve.f16_iu4_1x1_4x2_iter_4() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu4 g1[14:15], g1[0:1], g1[2:9], g1[10], g1[11], g1[12], g1[13] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[14:15], g1[0:1], g1[2:9], g1[10], g1[11], g1[12], g1[13] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2190,7 +2190,7 @@ define amdgpu_kernel void @test_convolve.f16_iu4_1x1_4x4_iter_4() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu4 g1[12:15], g1[0:3], g1[4:7], g1[8], g1[9], g1[10], g1[11] aux_data:12290 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[12:15], g1[0:3], g1[4:7], g1[8], g1[9], g1[10], g1[11] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2231,7 +2231,7 @@ define amdgpu_kernel void @test_convolve.f16_iu4_1x1_8x4_iter_4() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu4 g1[14:17], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11], g1[12:13] aux_data:12288 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[14:17], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11], g1[12:13] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2272,7 +2272,7 @@ define amdgpu_kernel void @test_convolve.i32_iu4_1x1_4x2_iter_4() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_i32_iu4 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_i32_iu4 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2313,7 +2313,7 @@ define amdgpu_kernel void @test_convolve.f32i32_iu4_1x1_4x2_iter_4() "amdgpu-wav
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32i32_iu4 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32i32_iu4 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2352,7 +2352,7 @@ define amdgpu_kernel void @test_convolve.f32_iu8_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_iu8 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f32_iu8 g1[7:10], g1[0:3], g1[4:5], g1[6] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2388,7 +2388,7 @@ define amdgpu_kernel void @test_convolve.f16_iu8_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu8 g1[5:6], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[5:6], g1[0:1], g1[2:3], g1[4] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2424,7 +2424,7 @@ define amdgpu_kernel void @test_convolve.f16_iu8_1x1_4x4_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu8 g1[6:9], g1[0:3], g1[4], g1[5] aux_data:2 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[6:9], g1[0:3], g1[4], g1[5] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2460,7 +2460,7 @@ define amdgpu_kernel void @test_convolve.f16_iu8_1x1_8x4_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu8 g1[7:10], g1[0:3], g1[4], g1[5:6] clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[7:10], g1[0:3], g1[4], g1[5:6] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2496,7 +2496,7 @@ define amdgpu_kernel void @test_convolve.i32_iu8_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_i32_iu8 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_i32_iu8 g1[7:10], g1[0:3], g1[4:5], g1[6] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2532,7 +2532,7 @@ define amdgpu_kernel void @test_convolve.f32i32_iu8_1x1_4x2_iter_1() "amdgpu-wav
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32i32_iu8 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f32i32_iu8 g1[7:10], g1[0:3], g1[4:5], g1[6] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2569,7 +2569,7 @@ define amdgpu_kernel void @test_convolve.f32_iu8_1x1_4x2_iter_2() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_iu8 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32_iu8 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2607,7 +2607,7 @@ define amdgpu_kernel void @test_convolve.f16_iu8_1x1_4x2_iter_2() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu8 g1[8:9], g1[0:1], g1[2:5], g1[6], g1[7] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[8:9], g1[0:1], g1[2:5], g1[6], g1[7] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2645,7 +2645,7 @@ define amdgpu_kernel void @test_convolve.f16_iu8_1x1_4x4_iter_2() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu8 g1[8:11], g1[0:3], g1[4:5], g1[6], g1[7] aux_data:4098 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[8:11], g1[0:3], g1[4:5], g1[6], g1[7] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2683,7 +2683,7 @@ define amdgpu_kernel void @test_convolve.f16_iu8_1x1_8x4_iter_2() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu8 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] aux_data:4096 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2721,7 +2721,7 @@ define amdgpu_kernel void @test_convolve.i32_iu8_1x1_4x2_iter_2() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_i32_iu8 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_i32_iu8 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2759,7 +2759,7 @@ define amdgpu_kernel void @test_convolve.f32i32_iu8_1x1_4x2_iter_2() "amdgpu-wav
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32i32_iu8 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32i32_iu8 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2798,7 +2798,7 @@ define amdgpu_kernel void @test_convolve.f32_iu8_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_iu8 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_iu8 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2838,7 +2838,7 @@ define amdgpu_kernel void @test_convolve.f16_iu8_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu8 g1[11:12], g1[0:1], g1[2:7], g1[8], g1[9], g1[10] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[11:12], g1[0:1], g1[2:7], g1[8], g1[9], g1[10] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2878,7 +2878,7 @@ define amdgpu_kernel void @test_convolve.f16_iu8_1x1_4x4_iter_3() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu8 g1[10:13], g1[0:3], g1[4:6], g1[7], g1[8], g1[9] aux_data:8194 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[10:13], g1[0:3], g1[4:6], g1[7], g1[8], g1[9] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2918,7 +2918,7 @@ define amdgpu_kernel void @test_convolve.f16_iu8_1x1_8x4_iter_3() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu8 g1[12:15], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11] aux_data:8192 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[12:15], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2958,7 +2958,7 @@ define amdgpu_kernel void @test_convolve.i32_iu8_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_i32_iu8 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_i32_iu8 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -2998,7 +2998,7 @@ define amdgpu_kernel void @test_convolve.f32i32_iu8_1x1_4x2_iter_3() "amdgpu-wav
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32i32_iu8 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32i32_iu8 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3038,7 +3038,7 @@ define amdgpu_kernel void @test_convolve.f32_iu8_1x1_4x2_iter_4() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_iu8 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32_iu8 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3079,7 +3079,7 @@ define amdgpu_kernel void @test_convolve.f16_iu8_1x1_4x2_iter_4() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu8 g1[14:15], g1[0:1], g1[2:9], g1[10], g1[11], g1[12], g1[13] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[14:15], g1[0:1], g1[2:9], g1[10], g1[11], g1[12], g1[13] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3120,7 +3120,7 @@ define amdgpu_kernel void @test_convolve.f16_iu8_1x1_4x4_iter_4() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu8 g1[12:15], g1[0:3], g1[4:7], g1[8], g1[9], g1[10], g1[11] aux_data:12290 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[12:15], g1[0:3], g1[4:7], g1[8], g1[9], g1[10], g1[11] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3161,7 +3161,7 @@ define amdgpu_kernel void @test_convolve.f16_iu8_1x1_8x4_iter_4() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_iu8 g1[14:17], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11], g1[12:13] aux_data:12288 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[14:17], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11], g1[12:13] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3202,7 +3202,7 @@ define amdgpu_kernel void @test_convolve.i32_iu8_1x1_4x2_iter_4() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_i32_iu8 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_i32_iu8 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3243,7 +3243,7 @@ define amdgpu_kernel void @test_convolve.f32i32_iu8_1x1_4x2_iter_4() "amdgpu-wav
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32i32_iu8 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32i32_iu8 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3284,7 +3284,7 @@ define amdgpu_kernel void @test_convolve.f32_fp8_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_fp8_fp8 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f32_fp8_fp8 g1[7:10], g1[0:3], g1[4:5], g1[6] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3320,7 +3320,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[5:6], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[5:6], g1[0:1], g1[2:3], g1[4] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3356,7 +3356,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_1x1_4x4_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[6:9], g1[0:3], g1[4], g1[5] aux_data:2 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[6:9], g1[0:3], g1[4], g1[5] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3392,7 +3392,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_1x1_8x4_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[7:10], g1[0:3], g1[4], g1[5:6] clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[7:10], g1[0:3], g1[4], g1[5:6] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3429,7 +3429,7 @@ define amdgpu_kernel void @test_convolve.f32_fp8_1x1_4x2_iter_2() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_fp8_fp8 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32_fp8_fp8 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3467,7 +3467,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_1x1_4x2_iter_2() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[8:9], g1[0:1], g1[2:5], g1[6], g1[7] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[8:9], g1[0:1], g1[2:5], g1[6], g1[7] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3505,7 +3505,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_1x1_4x4_iter_2() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[8:11], g1[0:3], g1[4:5], g1[6], g1[7] aux_data:4098 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[8:11], g1[0:3], g1[4:5], g1[6], g1[7] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3543,7 +3543,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_1x1_8x4_iter_2() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] aux_data:4096 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3582,7 +3582,7 @@ define amdgpu_kernel void @test_convolve.f32_fp8_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_fp8_fp8 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_fp8_fp8 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3622,7 +3622,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[11:12], g1[0:1], g1[2:7], g1[8], g1[9], g1[10] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[11:12], g1[0:1], g1[2:7], g1[8], g1[9], g1[10] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3662,7 +3662,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_fp8_1x1_4x4_iter_3() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[10:13], g1[0:3], g1[4:6], g1[7], g1[8], g1[9] aux_data:8194 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[10:13], g1[0:3], g1[4:6], g1[7], g1[8], g1[9] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3702,7 +3702,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_fp8_1x1_8x4_iter_3() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[12:15], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11] aux_data:8192 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[12:15], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3742,7 +3742,7 @@ define amdgpu_kernel void @test_convolve.f32_fp8_1x1_4x2_iter_4() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_fp8_fp8 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32_fp8_fp8 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3783,7 +3783,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_1x1_4x2_iter_4() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[14:15], g1[0:1], g1[2:9], g1[10], g1[11], g1[12], g1[13] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[14:15], g1[0:1], g1[2:9], g1[10], g1[11], g1[12], g1[13] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3824,7 +3824,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_1x1_4x4_iter_4() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[12:15], g1[0:3], g1[4:7], g1[8], g1[9], g1[10], g1[11] aux_data:12290 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[12:15], g1[0:3], g1[4:7], g1[8], g1[9], g1[10], g1[11] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3865,7 +3865,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_1x1_8x4_iter_4() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[14:17], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11], g1[12:13] aux_data:12288 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[14:17], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11], g1[12:13] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3904,7 +3904,7 @@ define amdgpu_kernel void @test_convolve.f32_bf8_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_fp8_bf8 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f32_fp8_bf8 g1[7:10], g1[0:3], g1[4:5], g1[6] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3940,7 +3940,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_bf8_1x1_4x2_iter_1() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[5:6], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[5:6], g1[0:1], g1[2:3], g1[4] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -3976,7 +3976,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_bf8_1x1_4x4_iter_1() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[6:9], g1[0:3], g1[4], g1[5] aux_data:2 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[6:9], g1[0:3], g1[4], g1[5] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4012,7 +4012,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_bf8_1x1_8x4_iter_1() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[7:10], g1[0:3], g1[4], g1[5:6] clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[7:10], g1[0:3], g1[4], g1[5:6] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4049,7 +4049,7 @@ define amdgpu_kernel void @test_convolve.f32_fp8_bf8_1x1_4x2_iter_2() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_fp8_bf8 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32_fp8_bf8 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4087,7 +4087,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_bf8_1x1_4x2_iter_2() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[8:9], g1[0:1], g1[2:5], g1[6], g1[7] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[8:9], g1[0:1], g1[2:5], g1[6], g1[7] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4125,7 +4125,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_bf8_1x1_4x4_iter_2() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[8:11], g1[0:3], g1[4:5], g1[6], g1[7] aux_data:4098 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[8:11], g1[0:3], g1[4:5], g1[6], g1[7] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4163,7 +4163,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_bf8_1x1_8x4_iter_2() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] aux_data:4096 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4202,7 +4202,7 @@ define amdgpu_kernel void @test_convolve.f32_fp8_bf8_1x1_4x2_iter_3() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_fp8_bf8 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_fp8_bf8 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4242,7 +4242,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_bf8_1x1_4x2_iter_3() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[11:12], g1[0:1], g1[2:7], g1[8], g1[9], g1[10] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[11:12], g1[0:1], g1[2:7], g1[8], g1[9], g1[10] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4282,7 +4282,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_bf8_1x1_4x4_iter_3() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[10:13], g1[0:3], g1[4:6], g1[7], g1[8], g1[9] aux_data:8194 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[10:13], g1[0:3], g1[4:6], g1[7], g1[8], g1[9] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4322,7 +4322,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_bf8_1x1_8x4_iter_3() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[12:15], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11] aux_data:8192 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[12:15], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4362,7 +4362,7 @@ define amdgpu_kernel void @test_convolve.f32_fp8_bf8_1x1_4x2_iter_4() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_fp8_bf8 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32_fp8_bf8 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4403,7 +4403,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_bf8_1x1_4x2_iter_4() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[14:15], g1[0:1], g1[2:9], g1[10], g1[11], g1[12], g1[13] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[14:15], g1[0:1], g1[2:9], g1[10], g1[11], g1[12], g1[13] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4444,7 +4444,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_bf8_1x1_4x4_iter_4() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[12:15], g1[0:3], g1[4:7], g1[8], g1[9], g1[10], g1[11] aux_data:12290 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[12:15], g1[0:3], g1[4:7], g1[8], g1[9], g1[10], g1[11] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4485,7 +4485,7 @@ define amdgpu_kernel void @test_convolve.f16_fp8_bf8_1x1_8x4_iter_4() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[14:17], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11], g1[12:13] aux_data:12288 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[14:17], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11], g1[12:13] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4524,7 +4524,7 @@ define amdgpu_kernel void @test_convolve.f32_bf8_fp8_1x1_4x2_iter_1() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_bf8_fp8 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f32_bf8_fp8 g1[7:10], g1[0:3], g1[4:5], g1[6] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4560,7 +4560,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_1x1_4x2_iter_1() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[5:6], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[5:6], g1[0:1], g1[2:3], g1[4] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4596,7 +4596,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_1x1_4x4_iter_1() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[6:9], g1[0:3], g1[4], g1[5] aux_data:2 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[6:9], g1[0:3], g1[4], g1[5] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4632,7 +4632,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_1x1_8x4_iter_1() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[7:10], g1[0:3], g1[4], g1[5:6] clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[7:10], g1[0:3], g1[4], g1[5:6] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4669,7 +4669,7 @@ define amdgpu_kernel void @test_convolve.f32_bf8_fp8_1x1_4x2_iter_2() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_bf8_fp8 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32_bf8_fp8 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4707,7 +4707,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_1x1_4x2_iter_2() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[8:9], g1[0:1], g1[2:5], g1[6], g1[7] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[8:9], g1[0:1], g1[2:5], g1[6], g1[7] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4745,7 +4745,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_1x1_4x4_iter_2() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[8:11], g1[0:3], g1[4:5], g1[6], g1[7] aux_data:4098 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[8:11], g1[0:3], g1[4:5], g1[6], g1[7] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4783,7 +4783,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_1x1_8x4_iter_2() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] aux_data:4096 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4822,7 +4822,7 @@ define amdgpu_kernel void @test_convolve.f32_bf8_fp8_1x1_4x2_iter_3() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_bf8_fp8 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_bf8_fp8 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4862,7 +4862,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_1x1_4x2_iter_3() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[11:12], g1[0:1], g1[2:7], g1[8], g1[9], g1[10] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[11:12], g1[0:1], g1[2:7], g1[8], g1[9], g1[10] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4902,7 +4902,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_1x1_4x4_iter_3() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[10:13], g1[0:3], g1[4:6], g1[7], g1[8], g1[9] aux_data:8194 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[10:13], g1[0:3], g1[4:6], g1[7], g1[8], g1[9] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4942,7 +4942,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_1x1_8x4_iter_3() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[12:15], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11] aux_data:8192 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[12:15], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -4982,7 +4982,7 @@ define amdgpu_kernel void @test_convolve.f32_bf8_fp8_1x1_4x2_iter_4() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_bf8_fp8 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32_bf8_fp8 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5023,7 +5023,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_1x1_4x2_iter_4() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[14:15], g1[0:1], g1[2:9], g1[10], g1[11], g1[12], g1[13] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[14:15], g1[0:1], g1[2:9], g1[10], g1[11], g1[12], g1[13] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5064,7 +5064,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_1x1_4x4_iter_4() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[12:15], g1[0:3], g1[4:7], g1[8], g1[9], g1[10], g1[11] aux_data:12290 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[12:15], g1[0:3], g1[4:7], g1[8], g1[9], g1[10], g1[11] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5105,7 +5105,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_fp8_1x1_8x4_iter_4() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[14:17], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11], g1[12:13] aux_data:12288 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[14:17], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11], g1[12:13] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5144,7 +5144,7 @@ define amdgpu_kernel void @test_convolve.f32_bf8_bf8_1x1_4x2_iter_1() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_bf8_bf8 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f32_bf8_bf8 g1[7:10], g1[0:3], g1[4:5], g1[6] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5180,7 +5180,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_1x1_4x2_iter_1() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[5:6], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[5:6], g1[0:1], g1[2:3], g1[4] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5216,7 +5216,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_1x1_4x4_iter_1() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[6:9], g1[0:3], g1[4], g1[5] aux_data:2 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[6:9], g1[0:3], g1[4], g1[5] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5252,7 +5252,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_1x1_8x4_iter_1() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[7:10], g1[0:3], g1[4], g1[5:6] clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[7:10], g1[0:3], g1[4], g1[5:6] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5289,7 +5289,7 @@ define amdgpu_kernel void @test_convolve.f32_bf8_bf8_1x1_4x2_iter_2() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_bf8_bf8 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32_bf8_bf8 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5327,7 +5327,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_1x1_4x2_iter_2() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[8:9], g1[0:1], g1[2:5], g1[6], g1[7] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[8:9], g1[0:1], g1[2:5], g1[6], g1[7] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5365,7 +5365,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_1x1_4x4_iter_2() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[8:11], g1[0:3], g1[4:5], g1[6], g1[7] aux_data:4098 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[8:11], g1[0:3], g1[4:5], g1[6], g1[7] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5403,7 +5403,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_1x1_8x4_iter_2() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] aux_data:4096 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5442,7 +5442,7 @@ define amdgpu_kernel void @test_convolve.f32_bf8_bf8_1x1_4x2_iter_3() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_bf8_bf8 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_bf8_bf8 g1[13:16], g1[0:3], g1[4:9], g1[10], g1[11], g1[12] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5482,7 +5482,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_1x1_4x2_iter_3() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[11:12], g1[0:1], g1[2:7], g1[8], g1[9], g1[10] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[11:12], g1[0:1], g1[2:7], g1[8], g1[9], g1[10] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5522,7 +5522,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_1x1_4x4_iter_3() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[10:13], g1[0:3], g1[4:6], g1[7], g1[8], g1[9] aux_data:8194 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[10:13], g1[0:3], g1[4:6], g1[7], g1[8], g1[9] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5562,7 +5562,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_1x1_8x4_iter_3() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[12:15], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11] aux_data:8192 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[12:15], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5602,7 +5602,7 @@ define amdgpu_kernel void @test_convolve.f32_bf8_bf8_1x1_4x2_iter_4() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_bf8_bf8 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32_bf8_bf8 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5643,7 +5643,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_1x1_4x2_iter_4() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[14:15], g1[0:1], g1[2:9], g1[10], g1[11], g1[12], g1[13] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[14:15], g1[0:1], g1[2:9], g1[10], g1[11], g1[12], g1[13] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5684,7 +5684,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_1x1_4x4_iter_4() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[12:15], g1[0:3], g1[4:7], g1[8], g1[9], g1[10], g1[11] aux_data:12290 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[12:15], g1[0:3], g1[4:7], g1[8], g1[9], g1[10], g1[11] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5725,7 +5725,7 @@ define amdgpu_kernel void @test_convolve.f16_bf8_bf8_1x1_8x4_iter_4() "amdgpu-wa
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[14:17], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11], g1[12:13] aux_data:12288 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[14:17], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11], g1[12:13] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5764,7 +5764,7 @@ define amdgpu_kernel void @test_convolve.f32_f16_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_f16 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f32_f16 g1[7:10], g1[0:3], g1[4:5], g1[6] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5800,7 +5800,7 @@ define amdgpu_kernel void @test_convolve.f16_f16_1x1_4x2_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_f16 g1[5:6], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[5:6], g1[0:1], g1[2:3], g1[4] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5836,7 +5836,7 @@ define amdgpu_kernel void @test_convolve.f16_f16_1x1_4x4_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_f16 g1[6:9], g1[0:3], g1[4], g1[5] aux_data:2 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[6:9], g1[0:3], g1[4], g1[5] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5872,7 +5872,7 @@ define amdgpu_kernel void @test_convolve.f16_f16_1x1_8x4_iter_1() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_f16 g1[7:10], g1[0:3], g1[4], g1[5:6] clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[7:10], g1[0:3], g1[4], g1[5:6] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5909,7 +5909,7 @@ define amdgpu_kernel void @test_convolve.f32_f16_1x1_4x2_iter_2() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_f16 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32_f16 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5947,7 +5947,7 @@ define amdgpu_kernel void @test_convolve.f16_f16_1x1_4x2_iter_2() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_f16 g1[8:9], g1[0:1], g1[2:5], g1[6], g1[7] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[8:9], g1[0:1], g1[2:5], g1[6], g1[7] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -5985,7 +5985,7 @@ define amdgpu_kernel void @test_convolve.f16_f16_1x1_4x4_iter_2() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_f16 g1[8:11], g1[0:3], g1[4:5], g1[6], g1[7] aux_data:4098 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[8:11], g1[0:3], g1[4:5], g1[6], g1[7] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6023,7 +6023,7 @@ define amdgpu_kernel void @test_convolve.f16_f16_1x1_8x4_iter_2() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_f16 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] aux_data:4096 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6062,7 +6062,7 @@ define amdgpu_kernel void @test_convolve.f32_f16_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_f16 g1[15:18], g1[0:3], g1[4:11], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_f16 g1[15:18], g1[0:3], g1[4:11], g1[12], g1[13], g1[14] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6102,7 +6102,7 @@ define amdgpu_kernel void @test_convolve.f16_f16_1x1_4x2_iter_3() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_f16 g1[13:14], g1[0:1], g1[2:9], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[13:14], g1[0:1], g1[2:9], g1[10], g1[11], g1[12] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6142,7 +6142,7 @@ define amdgpu_kernel void @test_convolve.f16_f16_1x1_4x4_iter_3() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_f16 g1[10:13], g1[0:3], g1[4:6], g1[7], g1[8], g1[9] aux_data:8194 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[10:13], g1[0:3], g1[4:6], g1[7], g1[8], g1[9] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6182,7 +6182,7 @@ define amdgpu_kernel void @test_convolve.f16_f16_1x1_8x4_iter_3() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_f16 g1[12:15], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11] aux_data:8192 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[12:15], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6222,7 +6222,7 @@ define amdgpu_kernel void @test_convolve.f32_f16_1x1_4x2_iter_4() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_f16 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32_f16 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6263,7 +6263,7 @@ define amdgpu_kernel void @test_convolve.f16_f16_1x1_4x2_iter_4() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_f16 g1[14:15], g1[0:1], g1[2:9], g1[10], g1[11], g1[12], g1[13] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[14:15], g1[0:1], g1[2:9], g1[10], g1[11], g1[12], g1[13] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6304,7 +6304,7 @@ define amdgpu_kernel void @test_convolve.f16_f16_1x1_4x4_iter_4() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_f16 g1[12:15], g1[0:3], g1[4:7], g1[8], g1[9], g1[10], g1[11] aux_data:12290 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[12:15], g1[0:3], g1[4:7], g1[8], g1[9], g1[10], g1[11] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6345,7 +6345,7 @@ define amdgpu_kernel void @test_convolve.f16_f16_1x1_8x4_iter_4() "amdgpu-wavegr
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f16_f16 g1[14:17], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11], g1[12:13] aux_data:12288 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[14:17], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11], g1[12:13] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6384,7 +6384,7 @@ define amdgpu_kernel void @test_convolve.f32_bf16_1x1_4x2_iter_1() "amdgpu-waveg
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_bf16 g1[7:10], g1[0:3], g1[4:5], g1[6] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f32_bf16 g1[7:10], g1[0:3], g1[4:5], g1[6] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6420,7 +6420,7 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_1x1_4x2_iter_1() "amdgpu-wave
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_bf16_bf16 g1[5:6], g1[0:1], g1[2:3], g1[4] aux_data:3 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[5:6], g1[0:1], g1[2:3], g1[4] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6456,7 +6456,7 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_1x1_4x4_iter_1() "amdgpu-wave
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_bf16_bf16 g1[6:9], g1[0:3], g1[4], g1[5] aux_data:2 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[6:9], g1[0:3], g1[4], g1[5] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6492,7 +6492,7 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_1x1_8x4_iter_1() "amdgpu-wave
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_bf16_bf16 g1[7:10], g1[0:3], g1[4], g1[5:6] clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[7:10], g1[0:3], g1[4], g1[5:6] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:1 clamp idxs:0x1111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6529,7 +6529,7 @@ define amdgpu_kernel void @test_convolve.f32_bf16_1x1_4x2_iter_2() "amdgpu-waveg
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_bf16 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32_bf16 g1[10:13], g1[0:3], g1[4:7], g1[8], g1[9] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6567,7 +6567,7 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_1x1_4x2_iter_2() "amdgpu-wave
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_bf16_bf16 g1[8:9], g1[0:1], g1[2:5], g1[6], g1[7] aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[8:9], g1[0:1], g1[2:5], g1[6], g1[7] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6605,7 +6605,7 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_1x1_4x4_iter_2() "amdgpu-wave
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_bf16_bf16 g1[8:11], g1[0:3], g1[4:5], g1[6], g1[7] aux_data:4098 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[8:11], g1[0:3], g1[4:5], g1[6], g1[7] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6643,7 +6643,7 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_1x1_8x4_iter_2() "amdgpu-wave
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_bf16_bf16 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] aux_data:4096 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[9:12], g1[0:3], g1[4], g1[5:6], g1[7:8] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:2 clamp idxs:0x11111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6682,7 +6682,7 @@ define amdgpu_kernel void @test_convolve.f32_bf16_1x1_4x2_iter_3() "amdgpu-waveg
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_bf16 g1[15:18], g1[0:3], g1[4:11], g1[12], g1[13], g1[14] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_bf16 g1[15:18], g1[0:3], g1[4:11], g1[12], g1[13], g1[14] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6722,7 +6722,7 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_1x1_4x2_iter_3() "amdgpu-wave
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_bf16_bf16 g1[13:14], g1[0:1], g1[2:9], g1[10], g1[11], g1[12] aux_data:8195 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[13:14], g1[0:1], g1[2:9], g1[10], g1[11], g1[12] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6762,7 +6762,7 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_1x1_4x4_iter_3() "amdgpu-wave
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_bf16_bf16 g1[10:13], g1[0:3], g1[4:6], g1[7], g1[8], g1[9] aux_data:8194 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[10:13], g1[0:3], g1[4:6], g1[7], g1[8], g1[9] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6802,7 +6802,7 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_1x1_8x4_iter_3() "amdgpu-wave
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_bf16_bf16 g1[12:15], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11] aux_data:8192 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[12:15], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6842,7 +6842,7 @@ define amdgpu_kernel void @test_convolve.f32_bf16_1x1_4x2_iter_4() "amdgpu-waveg
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_f32_bf16 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32_bf16 g1[16:19], g1[0:3], g1[4:11], g1[12], g1[13], g1[14], g1[15] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6883,7 +6883,7 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_1x1_4x2_iter_4() "amdgpu-wave
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_bf16_bf16 g1[14:15], g1[0:1], g1[2:9], g1[10], g1[11], g1[12], g1[13] aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[14:15], g1[0:1], g1[2:9], g1[10], g1[11], g1[12], g1[13] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6924,7 +6924,7 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_1x1_4x4_iter_4() "amdgpu-wave
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_bf16_bf16 g1[12:15], g1[0:3], g1[4:7], g1[8], g1[9], g1[10], g1[11] aux_data:12290 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[12:15], g1[0:3], g1[4:7], g1[8], g1[9], g1[10], g1[11] shape:SHAPE_4X4X16 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
@@ -6965,7 +6965,7 @@ define amdgpu_kernel void @test_convolve.bf16_bf16_1x1_8x4_iter_4() "amdgpu-wave
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_mul_i32 s33, s0, s8
-; GFX13-NEXT:    v_convolve_bf16_bf16 g1[14:17], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11], g1[12:13] aux_data:12288 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[14:17], g1[0:3], g1[4:5], g1[6:7], g1[8:9], g1[10:11], g1[12:13] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:4 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_barrier_signal -1
 ; GFX13-NEXT:    s_barrier_wait -1
 ; GFX13-NEXT:    s_endpgm
