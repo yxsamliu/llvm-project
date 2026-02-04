@@ -251,7 +251,7 @@ class VOP3M_Permute_Profile<list<ValueType> ArgTy> : VOPMProfile<ArgTy, 1, 0, 0,
   let Outs64 = (outs DstRC64:$vdst, Src2RC64:$src2);
   let Ins64 = !con((ins Src0RC64:$src0, Src1RC64:$src1, ModsOp:$aux_data, Idxs0:$idxs, SUPR0:$supr), (ins));
 
-  let Asm64 = "$vdst, $src2, $src0, $src1$aux_data$idxs$supr";
+  let Asm64 = " $vdst, $src2, $src0, $src1$aux_data$idxs$supr";
 }
 
 def VOPM_PERMUTE_I32_I32_I32_I32 : VOP3M_Permute_Profile<[i32, i32, i32, i32]>;
@@ -273,11 +273,11 @@ class Conv_Profile<list<ValueType> ArgTy, int Shape, int Filter, int Iterations>
   dag ConvFrag = !if(!eq(Filter,FilterType.3X3), (ops node:$src0, node:$src1, node:$src2, node:$src3, node:$src4, node:$aux_data, node:$clamp),
                                                  (ops node:$src0, node:$src1, node:$src2, node:$src3, node:$src4, node:$src5, node:$aux_data, node:$clamp));
 
-  let Asm64 = !if(!eq(Filter,FilterType.3X3), "$vdst, $src0, $src1, $src2, $src3, $src4$aux_data$clamp$idxs$supr",
-                                              !cond(!eq(Iterations, IterationCnt.IT_1) : "$vdst, $src0, $src1, $src2$aux_data$clamp$idxs$supr",
-                                                    !eq(Iterations, IterationCnt.IT_2) : "$vdst, $src0, $src1, $src2, $src3$aux_data$clamp$idxs$supr",
-                                                    !eq(Iterations, IterationCnt.IT_3) : "$vdst, $src0, $src1, $src2, $src3, $src4$aux_data$clamp$idxs$supr",
-                                                    !eq(Iterations, IterationCnt.IT_4) : "$vdst, $src0, $src1, $src2, $src3, $src4, $src5$aux_data$clamp$idxs$supr"));
+  let Asm64 = !cond(!eq(Filter,FilterType.3X3)         : "$vdst, $src1, [$src2, $src3, $src4], $src0$aux_data$clamp$idxs$supr",
+                    !eq(Iterations, IterationCnt.IT_1) : "$vdst, $src1, $src2, $src0$aux_data$clamp$idxs$supr",
+                    !eq(Iterations, IterationCnt.IT_2) : "$vdst, $src1, [$src2, $src3], $src0$aux_data$clamp$idxs$supr",
+                    !eq(Iterations, IterationCnt.IT_3) : "$vdst, $src1, [$src2, $src3, $src4], $src0$aux_data$clamp$idxs$supr",
+                    !eq(Iterations, IterationCnt.IT_4) : "$vdst, $src1, [$src2, $src3, $src4, $src5], $src0$aux_data$clamp$idxs$supr");
 
   int PrimTy = Shape;
   int FilterTy = Filter;
@@ -371,8 +371,8 @@ class SBA_Profile<list<ValueType> ArgTy, int Scatter> : VOPMProfile<ArgTy, 1, 1,
                            (ins Src0RC64:$src0, SSrcOp:$ssrc, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr));
 
   string DestAsm = !cond(!eq(Scatter, 1) : "$vdst",
-                         !eq(Scatter, 2) : "$vdst, $src2",
-                         !eq(Scatter, 4) : "$vdst, $src2, $src3, $src4");
+                         !eq(Scatter, 2) : " [$vdst, $src2]",
+                         !eq(Scatter, 4) : " [$vdst, $src2, $src3, $src4]");
   string SrcAsm = !if(HasSrc1, "$src0, $ssrc, $src1$aux_data$clamp$idxs$supr",
                                "$src0, $ssrc$aux_data$clamp$idxs$supr");
   let Asm64 = DestAsm#", "#SrcAsm;
@@ -553,8 +553,8 @@ class Cvt_To_Tensor_Profile<list<ValueType> ArgTy, int PixelShape, int Scatter>
                                        !eq(Scatter, 4) : [Write32Bit, Write32Bit, Write32Bit, Write32Bit]);
 
   string DestAsm = !cond(!eq(Scatter, 1) : "$vdst",
-                         !eq(Scatter, 2) : "$vdst, $src2",
-                         !eq(Scatter, 4) : "$vdst, $src2, $src3, $src4");
+                         !eq(Scatter, 2) : " [$vdst, $src2]",
+                         !eq(Scatter, 4) : " [$vdst, $src2, $src3, $src4]");
   string SrcAsm = !if(HasSrc1, "$src0, $ssrc, $src1$aux_data$clamp$idxs$supr",
                                "$src0, $ssrc$aux_data$clamp$idxs$supr");
   let Asm64 = DestAsm#", "#SrcAsm;
@@ -899,8 +899,8 @@ class Fma_From_Tensor_Profile<list<ValueType> ArgTy, int OpLayout>
   dag FmaFromTensorFrag = !if(HasSrc2, (ops node:$src0, node:$src1, node:$src2, node:$src3, node:$aux_data, node:$clamp),
                                        (ops node:$src0, node:$src1, node:$src3, node:$aux_data, node:$clamp));
 
-  let Asm64 = !if(HasSrc2, "$vdst, $src0, $src1, $src2, $src3$aux_data$clamp$idxs$supr",
-            "$vdst, $src0, $src1, $src3$aux_data$clamp$idxs$supr");
+  let Asm64 = !if(HasSrc2, "$vdst, [$src1, $src2], $src3, $src0$aux_data$clamp$idxs$supr",
+                           "$vdst, $src1, $src3, $src0$aux_data$clamp$idxs$supr");
 
   int Layout = OpLayout;
 }

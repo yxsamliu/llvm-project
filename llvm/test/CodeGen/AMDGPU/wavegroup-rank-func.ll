@@ -106,7 +106,7 @@ define private amdgpu_kernel void @compute(ptr addrspace(1) %inbuf, ptr addrspac
 ; CHECK-NEXT:    s_barrier_wait 1
 ; CHECK-NEXT:    s_sema_wait 1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    v_convolve_f16_fp8_fp8 g1[22:25], 0, g1[0:8], g1[10:12], g1[14:16], g1[18:20] shape:SHAPE_4X4X16 filter:FILTER_3X3 clamp idxs:0x111101
+; CHECK-NEXT:    v_convolve_f16_fp8_fp8 g1[22:25], g1[0:8], [g1[10:12], g1[14:16], g1[18:20]], 0 shape:SHAPE_4X4X16 filter:FILTER_3X3 clamp idxs:0x111101
 ; CHECK-NEXT:    s_sema_signal 33
 ; CHECK-NEXT:    s_barrier_signal -1
 ; CHECK-NEXT:    s_barrier_wait -1
@@ -290,7 +290,7 @@ define private amdgpu_kernel void @compute2(ptr addrspace(1) %inbuf, ptr addrspa
 ; CHECK-NEXT:    ds_load_b96 v[15:17], v18 offset:64
 ; CHECK-NEXT:    ds_load_b32 v8, v18 offset:32
 ; CHECK-NEXT:    s_wait_dscnt 0x0
-; CHECK-NEXT:    v_convolve_f16_fp8_fp8 v[0:3], 0, v[0:8], v[15:17], v[9:11], v[12:14] shape:SHAPE_4X4X16 filter:FILTER_3X3 clamp
+; CHECK-NEXT:    v_convolve_f16_fp8_fp8 v[0:3], v[0:8], [v[15:17], v[9:11], v[12:14]], 0 shape:SHAPE_4X4X16 filter:FILTER_3X3 clamp
 ; CHECK-NEXT:    ds_store_b128 v18, v[0:3] offset:112
 ; CHECK-NEXT:    s_sema_signal 33
 ; CHECK-NEXT:    s_barrier_signal -1

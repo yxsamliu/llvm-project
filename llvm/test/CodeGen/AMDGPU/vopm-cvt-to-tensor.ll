@@ -406,7 +406,7 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_f16_4x4x16(<8 x half> %acc_in, i8 %
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_i8_f16 v0, v1, v[0:3], s0 shape:SHAPE_4X4X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_i8_f16 [v0, v1], v[0:3], s0 shape:SHAPE_4X4X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -486,7 +486,7 @@ define amdgpu_ps void @test_cvt_to_tensor_i8_bf16_4x4x16(<8 x bfloat> %acc_in, i
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_i8_bf16 v0, v1, v[0:3], s0 shape:SHAPE_4X4X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_i8_bf16 [v0, v1], v[0:3], s0 shape:SHAPE_4X4X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -585,7 +585,7 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_f16_4x4x16(<8 x half> %acc_in, i8 %
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_u8_f16 v0, v1, v[0:3], s0 shape:SHAPE_4X4X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_u8_f16 [v0, v1], v[0:3], s0 shape:SHAPE_4X4X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -665,7 +665,7 @@ define amdgpu_ps void @test_cvt_to_tensor_u8_bf16_4x4x16(<8 x bfloat> %acc_in, i
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_u8_bf16 v0, v1, v[0:3], s0 shape:SHAPE_4X4X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_u8_bf16 [v0, v1], v[0:3], s0 shape:SHAPE_4X4X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -764,7 +764,7 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_f16_4x4x16(<8 x half> %acc_in, i8 
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_fp8_f16 v0, v1, v[0:3], s0 shape:SHAPE_4X4X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_fp8_f16 [v0, v1], v[0:3], s0 shape:SHAPE_4X4X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -844,7 +844,7 @@ define amdgpu_ps void @test_cvt_to_tensor_fp8_bf16_4x4x16(<8 x bfloat> %acc_in, 
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_fp8_bf16 v0, v1, v[0:3], s0 shape:SHAPE_4X4X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_fp8_bf16 [v0, v1], v[0:3], s0 shape:SHAPE_4X4X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -943,7 +943,7 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_f16_4x4x16(<8 x half> %acc_in, i8 
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_bf8_f16 v0, v1, v[0:3], s0 shape:SHAPE_4X4X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_bf8_f16 [v0, v1], v[0:3], s0 shape:SHAPE_4X4X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -1023,7 +1023,7 @@ define amdgpu_ps void @test_cvt_to_tensor_bf8_bf16_4x4x16(<8 x bfloat> %acc_in, 
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_bf8_bf16 v0, v1, v[0:3], s0 shape:SHAPE_4X4X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_bf8_bf16 [v0, v1], v[0:3], s0 shape:SHAPE_4X4X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -1065,7 +1065,7 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_f32_4x2x16(<4 x float> %acc_in, i8
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_f16_f32 v0, v1, v[0:3], s0 shape:SHAPE_4X2X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_f16_f32 [v0, v1], v[0:3], s0 shape:SHAPE_4X2X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -1088,7 +1088,7 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_f16_8x4x8(<8 x half> %acc_in, i8 %
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_f16_f16 v[0:1], v[2:3], v[0:3], s0 shape:SHAPE_8X4X8 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_f16_f16 [v[0:1], v[2:3]], v[0:3], s0 shape:SHAPE_8X4X8 clamp
 ; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    global_store_b64 v[7:8], v[2:3], off
 ; GFX13-NEXT:    s_endpgm
@@ -1111,7 +1111,7 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_f16_4x4x8(<4 x half> %acc_in, i8 %
 ; GFX13-NEXT:    v_bfe_i32 v2, v2, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX13-NEXT:    v_cvt_to_tensor_f16_f16 v0, v1, v[0:1], s0 shape:SHAPE_4X4X8 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_f16_f16 [v0, v1], v[0:1], s0 shape:SHAPE_4X4X8 clamp
 ; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -1134,7 +1134,7 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_f16_4x4x16(<8 x half> %acc_in, i8 
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_f16_f16 v0, v1, v2, v3, v[0:3], s0 shape:SHAPE_4X4X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_f16_f16 [v0, v1, v2, v3], v[0:3], s0 shape:SHAPE_4X4X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    global_store_b32 v[9:10], v2, off
@@ -1163,7 +1163,7 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_f16_4x2x16(<4 x half> %acc_in, i8 
 ; GFX13-NEXT:    v_bfe_i32 v2, v2, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX13-NEXT:    v_cvt_to_tensor_f16_f16 v0, v1, v[0:1], s0 shape:SHAPE_4X2X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_f16_f16 [v0, v1], v[0:1], s0 shape:SHAPE_4X2X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -1186,7 +1186,7 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_bf16_8x4x8(<8 x bfloat> %acc_in, i
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_f16_bf16 v[0:1], v[2:3], v[0:3], s0 shape:SHAPE_8X4X8 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_f16_bf16 [v[0:1], v[2:3]], v[0:3], s0 shape:SHAPE_8X4X8 clamp
 ; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    global_store_b64 v[7:8], v[2:3], off
 ; GFX13-NEXT:    s_endpgm
@@ -1209,7 +1209,7 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_bf16_4x4x8(<4 x bfloat> %acc_in, i
 ; GFX13-NEXT:    v_bfe_i32 v2, v2, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX13-NEXT:    v_cvt_to_tensor_f16_bf16 v0, v1, v[0:1], s0 shape:SHAPE_4X4X8 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_f16_bf16 [v0, v1], v[0:1], s0 shape:SHAPE_4X4X8 clamp
 ; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -1232,7 +1232,7 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_bf16_4x4x16(<8 x bfloat> %acc_in, 
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_f16_bf16 v0, v1, v2, v3, v[0:3], s0 shape:SHAPE_4X4X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_f16_bf16 [v0, v1, v2, v3], v[0:3], s0 shape:SHAPE_4X4X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    global_store_b32 v[9:10], v2, off
@@ -1261,7 +1261,7 @@ define amdgpu_ps void @test_cvt_to_tensor_f16_bf16_4x2x16(<4 x bfloat> %acc_in, 
 ; GFX13-NEXT:    v_bfe_i32 v2, v2, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX13-NEXT:    v_cvt_to_tensor_f16_bf16 v0, v1, v[0:1], s0 shape:SHAPE_4X2X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_f16_bf16 [v0, v1], v[0:1], s0 shape:SHAPE_4X2X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -1284,7 +1284,7 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_f32_4x2x16(<4 x float> %acc_in, i
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_bf16_f32 v0, v1, v[0:3], s0 shape:SHAPE_4X2X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_bf16_f32 [v0, v1], v[0:3], s0 shape:SHAPE_4X2X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -1307,7 +1307,7 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_f16_8x4x8(<8 x half> %acc_in, i8 
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_bf16_f16 v[0:1], v[2:3], v[0:3], s0 shape:SHAPE_8X4X8 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_bf16_f16 [v[0:1], v[2:3]], v[0:3], s0 shape:SHAPE_8X4X8 clamp
 ; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    global_store_b64 v[7:8], v[2:3], off
 ; GFX13-NEXT:    s_endpgm
@@ -1330,7 +1330,7 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_f16_4x4x8(<4 x half> %acc_in, i8 
 ; GFX13-NEXT:    v_bfe_i32 v2, v2, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX13-NEXT:    v_cvt_to_tensor_bf16_f16 v0, v1, v[0:1], s0 shape:SHAPE_4X4X8 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_bf16_f16 [v0, v1], v[0:1], s0 shape:SHAPE_4X4X8 clamp
 ; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -1353,7 +1353,7 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_f16_4x4x16(<8 x half> %acc_in, i8
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_bf16_f16 v0, v1, v2, v3, v[0:3], s0 shape:SHAPE_4X4X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_bf16_f16 [v0, v1, v2, v3], v[0:3], s0 shape:SHAPE_4X4X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    global_store_b32 v[9:10], v2, off
@@ -1382,7 +1382,7 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_f16_4x2x16(<4 x half> %acc_in, i8
 ; GFX13-NEXT:    v_bfe_i32 v2, v2, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX13-NEXT:    v_cvt_to_tensor_bf16_f16 v0, v1, v[0:1], s0 shape:SHAPE_4X2X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_bf16_f16 [v0, v1], v[0:1], s0 shape:SHAPE_4X2X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -1405,7 +1405,7 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_bf16_8x4x8(<8 x bfloat> %acc_in, 
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_bf16_bf16 v[0:1], v[2:3], v[0:3], s0 shape:SHAPE_8X4X8 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_bf16_bf16 [v[0:1], v[2:3]], v[0:3], s0 shape:SHAPE_8X4X8 clamp
 ; GFX13-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX13-NEXT:    global_store_b64 v[7:8], v[2:3], off
 ; GFX13-NEXT:    s_endpgm
@@ -1428,7 +1428,7 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_bf16_4x4x8(<4 x bfloat> %acc_in, 
 ; GFX13-NEXT:    v_bfe_i32 v2, v2, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX13-NEXT:    v_cvt_to_tensor_bf16_bf16 v0, v1, v[0:1], s0 shape:SHAPE_4X4X8 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_bf16_bf16 [v0, v1], v[0:1], s0 shape:SHAPE_4X4X8 clamp
 ; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -1451,7 +1451,7 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_bf16_4x4x16(<8 x bfloat> %acc_in,
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_bf16_bf16 v0, v1, v2, v3, v[0:3], s0 shape:SHAPE_4X4X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_bf16_bf16 [v0, v1, v2, v3], v[0:3], s0 shape:SHAPE_4X4X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    global_store_b32 v[9:10], v2, off
@@ -1480,7 +1480,7 @@ define amdgpu_ps void @test_cvt_to_tensor_bf16_bf16_4x2x16(<4 x bfloat> %acc_in,
 ; GFX13-NEXT:    v_bfe_i32 v2, v2, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX13-NEXT:    v_cvt_to_tensor_bf16_bf16 v0, v1, v[0:1], s0 shape:SHAPE_4X2X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_bf16_bf16 [v0, v1], v[0:1], s0 shape:SHAPE_4X2X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX13-NEXT:    global_store_b32 v[5:6], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -1560,7 +1560,7 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_fp8_f16_4x4x16(<8 x half> %acc_in, 
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_sr_fp8_f16 v0, v1, v[0:3], s0, v9 shape:SHAPE_4X4X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_sr_fp8_f16 [v0, v1], v[0:3], s0, v9 shape:SHAPE_4X4X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -1640,7 +1640,7 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_fp8_bf16_4x4x16(<8 x bfloat> %acc_i
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_sr_fp8_bf16 v0, v1, v[0:3], s0, v9 shape:SHAPE_4X4X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_sr_fp8_bf16 [v0, v1], v[0:3], s0, v9 shape:SHAPE_4X4X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -1739,7 +1739,7 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_bf8_f16_4x4x16(<8 x half> %acc_in, 
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_sr_bf8_f16 v0, v1, v[0:3], s0, v9 shape:SHAPE_4X4X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_sr_bf8_f16 [v0, v1], v[0:3], s0, v9 shape:SHAPE_4X4X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm
@@ -1819,7 +1819,7 @@ define amdgpu_ps void @test_cvt_to_tensor_sr_bf8_bf16_4x4x16(<8 x bfloat> %acc_i
 ; GFX13-NEXT:    v_bfe_i32 v4, v4, 0, 8
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX13-NEXT:    v_cvt_to_tensor_sr_bf8_bf16 v0, v1, v[0:3], s0, v9 shape:SHAPE_4X4X16 clamp
+; GFX13-NEXT:    v_cvt_to_tensor_sr_bf8_bf16 [v0, v1], v[0:3], s0, v9 shape:SHAPE_4X4X16 clamp
 ; GFX13-NEXT:    global_store_b32 v[5:6], v0, off
 ; GFX13-NEXT:    global_store_b32 v[7:8], v1, off
 ; GFX13-NEXT:    s_endpgm

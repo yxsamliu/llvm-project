@@ -7290,12 +7290,18 @@ bool AMDGPUAsmParser::parseInstruction(ParseInstructionInfo &Info,
 
   bool IsMIMG = Name.starts_with("image_");
   bool IsRTS = Name.starts_with("rts_");
+  // Only VOPM instructions that could have operands grouped in brackets.
+  bool IsVOPM = Name.starts_with("v_convolve") ||
+                Name.starts_with("v_cvt_to_tensor") ||
+                Name.starts_with("v_scale_bias_activate") ||
+                Name.starts_with("v_uniform_scale_activate") ||
+                Name.starts_with("v_fma_from_tensor");
 
   while (!trySkipToken(AsmToken::EndOfStatement)) {
     OperandMode Mode = OperandMode_Default;
     if (IsMIMG && isGFX10Plus() && Operands.size() == 2)
       Mode = OperandMode_NSA;
-    if (IsRTS)
+    if (IsRTS || IsVOPM)
       Mode = OperandMode_NSA;
     ParseStatus Res = parseOperand(Operands, Name, Mode);
 

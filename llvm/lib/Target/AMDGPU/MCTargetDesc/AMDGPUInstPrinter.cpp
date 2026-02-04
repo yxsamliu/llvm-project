@@ -2194,12 +2194,12 @@ void AMDGPUInstPrinter::printSema(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printGVGPR(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo & /*STI*/,
                                    raw_ostream &O) {
-  if (OpNo == 0)
-    O << ' ';
   std::string OpndStr = getRegisterName(MI->getOperand(OpNo).getReg());
   const unsigned Opc = MI->getOpcode();
   const MCInstrDesc &Desc = MII.get(Opc);
   if (isVOPMAsmOnly(Opc)) {
+    if (OpNo == 0 && Desc.getNumDefs() == 1)
+      O << ' ';
     int OpIdxs = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::idxs);
     unsigned IdxLoc = getIdxLocFromTable(OpNo, MII.get(Opc));
     if (IdxLoc >= VGPRLoweringOperandTableNumOps)
@@ -2207,6 +2207,8 @@ void AMDGPUInstPrinter::printGVGPR(const MCInst *MI, unsigned OpNo,
     unsigned IdxReg = (MI->getOperand(OpIdxs).getImm() >> (IdxLoc * 4)) & 0xf;
     modifyVGPRNameUsingIndex(OpndStr, IdxReg);
   } else if (Desc.TSFlags & SIInstrFlags::VNBR) {
+    if (OpNo == 0)
+      O << ' ';
     unsigned IdxReg = 0;
     if (MIA)
       IdxReg = getIdxFromMIA(OpNo, MII.get(Opc),
