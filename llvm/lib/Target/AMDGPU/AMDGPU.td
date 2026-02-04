@@ -521,6 +521,12 @@ def FeatureSBarrierLeaveImm : SubtargetFeature<"s-barrier-leave-imm",
   "s_barrier_leave takes an immediate operand"
 >;
 
+def FeatureMcastLoadInsts : SubtargetFeature<"mcast-load-insts",
+  "HasMcastLoadInsts",
+  "true",
+  "Has multicast load instructions"
+>;
+
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
@@ -2427,7 +2433,8 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureQsadInsts,
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
-   FeatureCvtPkNormVOP3Insts
+   FeatureCvtPkNormVOP3Insts,
+   FeatureMcastLoadInsts
 ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2535,7 +2542,8 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
-   FeatureRealTrue16Insts
+   FeatureRealTrue16Insts,
+   FeatureMcastLoadInsts,
 ]>;
 
 defvar FeatureISAVersion13_1 = FeatureISAVersion13;
@@ -3436,6 +3444,9 @@ def HasSWakeupImm : Predicate<"Subtarget->hasSWakeupImm()">,
 
 def HasSBarrierLeaveImm : Predicate<"Subtarget->hasSBarrierLeaveImm()">,
   AssemblerPredicate<(all_of FeatureSBarrierLeaveImm)>;
+
+def HasMcastLoadInsts : Predicate<"Subtarget->hasMcastLoadInsts()">,
+  AssemblerPredicate<(all_of FeatureMcastLoadInsts)>;
 
 def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
   AssemblerPredicate<(all_of FeatureWaitXcnt)>;

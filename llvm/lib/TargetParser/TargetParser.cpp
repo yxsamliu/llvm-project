@@ -474,6 +474,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
       Features["clusters"] = true;
       Features["semaphores"] = true;
       Features["wavegroups"] = true;
+      Features["mcast-load-insts"] = true;
       Features["cube-insts"] = true;
       Features["lerp-inst"] = true;
       Features["sad-insts"] = true;
@@ -537,6 +538,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["atomic-fmin-fmax-global-f64"] = true;
     Features["wavefrontsize32"] = true;
     Features["clusters"] = true;
+    Features["mcast-load-insts"] = true;
     Features["cube-insts"] = true;
     Features["lerp-inst"] = true;
     Features["sad-insts"] = true;
