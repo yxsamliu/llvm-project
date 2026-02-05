@@ -16,21 +16,24 @@ define protected amdgpu_kernel void @subdword(ptr addrspace(1) noundef readonly 
 ; CHECK-NEXT:    s_add_co_u32 s4, s4, 0x300
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s4
-; CHECK-NEXT:    s_mul_i32 s33, s3, s2
-; CHECK-NEXT:    s_bfe_u32 s2, ttmp6, 0x4000c
-; CHECK-NEXT:    s_and_b32 s4, ttmp6, 15
-; CHECK-NEXT:    s_add_co_i32 s2, s2, 1
-; CHECK-NEXT:    s_getreg_b32 s5, hwreg(HW_REG_WAVE_GROUP_INFO, 0, 4)
-; CHECK-NEXT:    s_mul_i32 s2, ttmp9, s2
-; CHECK-NEXT:    s_bfe_u32 s3, ttmp8, 0x20019
-; CHECK-NEXT:    s_add_co_i32 s4, s4, s2
-; CHECK-NEXT:    s_cmp_eq_u32 s5, 0
 ; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; CHECK-NEXT:    s_cselect_b32 s2, ttmp9, s4
-; CHECK-NEXT:    s_lshl_b32 s3, s3, 5
-; CHECK-NEXT:    s_lshl_b32 s2, s2, 7
-; CHECK-NEXT:    v_mov_b32_e32 v2, -1
-; CHECK-NEXT:    v_or3_b32 v0, s2, s3, v0
+; CHECK-NEXT:    s_bfe_u32 s4, ttmp6, 0x4000c
+; CHECK-NEXT:    s_mul_i32 s33, s3, s2
+; CHECK-NEXT:    s_bfe_u32 s3, ttmp8, 0x50019
+; CHECK-NEXT:    s_add_co_i32 s4, s4, 1
+; CHECK-NEXT:    v_lshl_or_b32 v0, s3, 5, v0
+; CHECK-NEXT:    s_and_b32 s3, ttmp6, 15
+; CHECK-NEXT:    s_mul_i32 s4, ttmp9, s4
+; CHECK-NEXT:    s_getreg_b32 s5, hwreg(HW_REG_WAVE_GROUP_INFO, 0, 4)
+; CHECK-NEXT:    s_bfe_u32 s2, ttmp8, 0x20019
+; CHECK-NEXT:    s_add_co_i32 s3, s3, s4
+; CHECK-NEXT:    s_cmp_eq_u32 s5, 0
+; CHECK-NEXT:    v_dual_mov_b32 v2, -1 :: v_dual_bitop2_b32 v0, 31, v0 bitop3:0x40
+; CHECK-NEXT:    s_cselect_b32 s3, ttmp9, s3
+; CHECK-NEXT:    s_lshl_b32 s2, s2, 5
+; CHECK-NEXT:    s_lshl_b32 s3, s3, 7
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_or3_b32 v0, s3, s2, v0
 ; CHECK-NEXT:    s_mov_b32 s2, exec_lo
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_cmpx_gt_u32_e32 0x300, v0
@@ -78,21 +81,24 @@ define protected amdgpu_kernel void @subdword(ptr addrspace(1) noundef readonly 
 ; REAL16-NEXT:    s_add_co_u32 s4, s4, 0x300
 ; REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; REAL16-NEXT:    s_set_gpr_idx_u32 idx0, s4
-; REAL16-NEXT:    s_mul_i32 s33, s3, s2
-; REAL16-NEXT:    s_bfe_u32 s2, ttmp6, 0x4000c
-; REAL16-NEXT:    s_and_b32 s4, ttmp6, 15
-; REAL16-NEXT:    s_add_co_i32 s2, s2, 1
-; REAL16-NEXT:    s_getreg_b32 s5, hwreg(HW_REG_WAVE_GROUP_INFO, 0, 4)
-; REAL16-NEXT:    s_mul_i32 s2, ttmp9, s2
-; REAL16-NEXT:    s_bfe_u32 s3, ttmp8, 0x20019
-; REAL16-NEXT:    s_add_co_i32 s4, s4, s2
-; REAL16-NEXT:    s_cmp_eq_u32 s5, 0
 ; REAL16-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; REAL16-NEXT:    s_cselect_b32 s2, ttmp9, s4
-; REAL16-NEXT:    s_lshl_b32 s3, s3, 5
-; REAL16-NEXT:    s_lshl_b32 s2, s2, 7
+; REAL16-NEXT:    s_bfe_u32 s4, ttmp6, 0x4000c
+; REAL16-NEXT:    s_mul_i32 s33, s3, s2
+; REAL16-NEXT:    s_bfe_u32 s3, ttmp8, 0x50019
+; REAL16-NEXT:    s_add_co_i32 s4, s4, 1
+; REAL16-NEXT:    v_lshl_or_b32 v0, s3, 5, v0
+; REAL16-NEXT:    s_and_b32 s3, ttmp6, 15
+; REAL16-NEXT:    s_mul_i32 s4, ttmp9, s4
+; REAL16-NEXT:    s_getreg_b32 s5, hwreg(HW_REG_WAVE_GROUP_INFO, 0, 4)
+; REAL16-NEXT:    s_bfe_u32 s2, ttmp8, 0x20019
+; REAL16-NEXT:    s_add_co_i32 s3, s3, s4
+; REAL16-NEXT:    s_cmp_eq_u32 s5, 0
+; REAL16-NEXT:    v_and_b32_e32 v0, 31, v0
+; REAL16-NEXT:    s_cselect_b32 s3, ttmp9, s3
+; REAL16-NEXT:    s_lshl_b32 s2, s2, 5
+; REAL16-NEXT:    s_lshl_b32 s3, s3, 7
 ; REAL16-NEXT:    v_mov_b16_e32 v2.l, -1
-; REAL16-NEXT:    v_or3_b32 v0, s2, s3, v0
+; REAL16-NEXT:    v_or3_b32 v0, s3, s2, v0
 ; REAL16-NEXT:    s_mov_b32 s2, exec_lo
 ; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; REAL16-NEXT:    v_cmpx_gt_u32_e32 0x300, v0

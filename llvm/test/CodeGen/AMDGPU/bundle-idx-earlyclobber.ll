@@ -14,7 +14,12 @@ define amdgpu_kernel void @wmma_ls_factor(ptr addrspace(1) %src, ptr addrspace(1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v12, -1, 0
+; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; CHECK-NEXT:    s_bfe_u32 s4, ttmp8, 0x50019
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_lshl_or_b32 v0, s4, 5, v0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_and_b32_e32 v12, 31, v0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_load_b128 v[8:11], v12, s[0:1] scale_offset
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
@@ -45,11 +50,16 @@ define amdgpu_kernel void @wmma_ls_out(ptr addrspace(1) %src, ptr addrspace(1) %
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s1, s0, 16
 ; CHECK-NEXT:    s_add_co_u32 s1, s1, 0x80
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; CHECK-NEXT:    s_mul_i32 s33, s0, s8
+; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
+; CHECK-NEXT:    s_bfe_u32 s4, ttmp8, 0x50019
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_lshl_or_b32 v0, s4, 5, v0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_and_b32_e32 v2, 31, v0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 4, v2
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -95,7 +105,12 @@ define amdgpu_kernel void @wmma_ls_out_zero_in(ptr addrspace(1) %src, ptr addrsp
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v4, -1, 0
+; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; CHECK-NEXT:    s_bfe_u32 s4, ttmp8, 0x50019
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_lshl_or_b32 v0, s4, 5, v0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_and_b32_e32 v4, 31, v0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_b128 v[0:3], v4, s[0:1] scale_offset
@@ -129,7 +144,12 @@ define amdgpu_kernel void @wmma_ls_accum(ptr addrspace(1) %src, ptr addrspace(1)
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v4, -1, 0
+; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; CHECK-NEXT:    s_bfe_u32 s4, ttmp8, 0x50019
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_lshl_or_b32 v0, s4, 5, v0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_and_b32_e32 v4, 31, v0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_b128 v[0:3], v4, s[0:1] scale_offset
@@ -164,7 +184,12 @@ define amdgpu_kernel void @wmma_ls_accum_disjoint(ptr addrspace(1) %src, ptr add
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v4, -1, 0
+; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; CHECK-NEXT:    s_bfe_u32 s4, ttmp8, 0x50019
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_lshl_or_b32 v0, s4, 5, v0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_and_b32_e32 v4, 31, v0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_b128 v[0:3], v4, s[0:1] scale_offset
@@ -201,6 +226,11 @@ define amdgpu_kernel void @wmma_ls_accum_overlap(ptr addrspace(1) %src, ptr addr
 ; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; CHECK-NEXT:    s_bfe_u32 s4, ttmp8, 0x50019
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_lshl_or_b32 v0, s4, 5, v0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_and_b32_e32 v0, 31, v0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_b128 v[8:11], v0, s[0:1] scale_offset
@@ -257,6 +287,11 @@ define amdgpu_kernel void @wmma_ls_factor_overlap(ptr addrspace(1) %src, ptr add
 ; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; CHECK-NEXT:    s_bfe_u32 s2, ttmp8, 0x50019
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_lshl_or_b32 v0, s2, 5, v0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_and_b32_e32 v0, 31, v0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_load_b128 v[0:3], v0, s[0:1] scale_offset
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
