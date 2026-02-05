@@ -369,11 +369,11 @@ public:
       Mask |= 1ull << E;
     }
   }
-  void insert(const WaitEventType &Event) { Mask |= 1 << Event; }
-  void remove(const WaitEventType &Event) { Mask &= ~(1 << Event); }
+  void insert(const WaitEventType &Event) { Mask |= 1ull << Event; }
+  void remove(const WaitEventType &Event) { Mask &= ~(1ull << Event); }
   void remove(const WaitEventSet &Other) { Mask &= ~Other.Mask; }
   bool contains(const WaitEventType &Event) const {
-    return Mask & (1 << Event);
+    return Mask & (1ull << Event);
   }
   /// \Returns true if this set contains all elements of \p Other.
   bool contains(const WaitEventSet &Other) const {
