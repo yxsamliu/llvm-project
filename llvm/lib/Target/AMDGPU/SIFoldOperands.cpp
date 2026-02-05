@@ -1538,6 +1538,7 @@ void SIFoldOperandsImpl::foldOperand(
           return;
 
         UseMI->setDesc(TII->get(AMDGPU::S_MOV_B32));
+        UseMI->clearFlag(MachineInstr::NoConvergent);
 
         if (OpToFold.isImm()) {
           UseMI->getOperand(1).ChangeToImmediate(
@@ -1569,6 +1570,7 @@ void SIFoldOperandsImpl::foldOperand(
         UseMI->getOperand(1).setSubReg(OpToFold.getSubReg());
         UseMI->getOperand(1).setIsKill(false);
         UseMI->removeOperand(2); // Remove exec read (or src1 for readlane)
+        UseMI->clearFlag(MachineInstr::NoConvergent);
         return;
       }
     }
