@@ -1883,6 +1883,10 @@ public:
   bool requiresWaitsBeforeSystemScopeStores() const {
     return RequiresWaitsBeforeSystemScopeStores;
   }
+
+  bool requiresWaitOnWorkgroupReleaseFence() const {
+    return getGeneration() >= GFX10 || isTgSplitEnabled();
+  }
 };
 
 class GCNUserSGPRUsageInfo {
