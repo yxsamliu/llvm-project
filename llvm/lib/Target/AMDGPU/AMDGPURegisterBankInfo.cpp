@@ -1273,13 +1273,14 @@ unsigned AMDGPURegisterBankInfo::setBufferOffsets(
     }
   }
 
-  const bool CheckNUW = AMDGPU::isGFX1250Plus(Subtarget);
+  const bool CheckNUW = Subtarget.hasGFX1250Insts();
   Register Base;
   unsigned Offset;
 
   std::tie(Base, Offset) =
       AMDGPU::getBaseWithConstantOffset(*MRI, CombinedOffset,
-                                        /*KnownBits=*/nullptr, CheckNUW);
+                                        /*KnownBits=*/nullptr,
+                                        /*CheckNUW=*/CheckNUW);
 
   uint32_t SOffset, ImmOffset;
   if ((int)Offset > 0 &&

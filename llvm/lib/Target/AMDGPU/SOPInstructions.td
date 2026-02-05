@@ -2299,8 +2299,6 @@ multiclass SOP1_IMM_Real_gfx13<bits<8> op> {
 }
 
 defm S_GET_SHADER_CYCLES_U64 : SOP1_Real_gfx13<0x011>;
-defm S_WAKEUP_BARRIER_M0     : SOP1_M0_Real_gfx13<0x057>;
-defm S_WAKEUP_BARRIER_IMM    : SOP1_IMM_Real_gfx13<0x057>;
 defm S_MOV_FROM_GLOBAL_B32   : SOP1_Real_gfx13<0x05b>;
 defm S_MOV_FROM_GLOBAL_B64   : SOP1_Real_gfx13<0x05c>;
 defm S_MOV_TO_GLOBAL_B32     : SOP1_Real_gfx13<0x05d>;
@@ -2309,7 +2307,7 @@ defm S_SET_GPR_IDX_U32       : SOP1_Real_gfx13<0x06f>;
 defm S_ADD_GPR_IDX_U32       : SOP1_Real_gfx13<0x070>;
 
 //===----------------------------------------------------------------------===//
-//  SOP1 - GFX11, GFX12
+//  SOP1 - GFX11, GFX12, GFX13
 //===----------------------------------------------------------------------===//
 
 multiclass SOP1_Real_gfx11<bits<8> op, string name = !tolower(NAME)> {
@@ -2350,7 +2348,6 @@ multiclass SOP1_IMM_Real_gfx12<bits<8> op> {
 
 multiclass SOP1_IMM_Real_gfx12_gfx13<bits<8> op> :
   SOP1_IMM_Real_gfx12<op>, SOP1_IMM_Real_gfx13<op>;
-
 
 multiclass SOP1_Real_gfx11_gfx12<bits<8> op, string name = !tolower(NAME)> :
   SOP1_Real_gfx11<op, name>, SOP1_Real_gfx12<op, name>;
@@ -2453,14 +2450,14 @@ defm S_BARRIER_JOIN_IMM           : SOP1_IMM_Real_gfx12_gfx13<0x052>;
 defm S_ALLOC_VGPR                 : SOP1_Real_gfx12_gfx13<0x053>;
 defm S_SLEEP_VAR                  : SOP1_IMM_Real_gfx12_gfx13<0x058>;
 
-// GFX1250
-defm S_ADD_PC_I64                 : SOP1_Real_gfx12_gfx13<0x04b>;
+// GFX1250, GFX13
 defm S_GET_SHADER_CYCLES_U64      : SOP1_Real_gfx12<0x06>;
-defm S_WAKEUP_BARRIER_M0          : SOP1_M0_Real_gfx12<0x057>;
-defm S_WAKEUP_BARRIER_IMM         : SOP1_IMM_Real_gfx12<0x057>;
+defm S_ADD_PC_I64                 : SOP1_Real_gfx12_gfx13<0x04b>;
+defm S_WAKEUP_BARRIER_M0          : SOP1_M0_Real_gfx12_gfx13<0x057>;
+defm S_WAKEUP_BARRIER_IMM         : SOP1_IMM_Real_gfx12_gfx13<0x057>;
 
 //===----------------------------------------------------------------------===//
-// SOP1 - GFX1150, GFX12
+// SOP1 - GFX1150, GFX12, GFX13
 //===----------------------------------------------------------------------===//
 
 defm S_CEIL_F32          : SOP1_Real_gfx11_gfx12_gfx13<0x060>;
@@ -2480,7 +2477,7 @@ defm S_TRUNC_F16         : SOP1_Real_gfx11_gfx12_gfx13<0x06d>;
 defm S_RNDNE_F16         : SOP1_Real_gfx11_gfx12_gfx13<0x06e>;
 
 //===----------------------------------------------------------------------===//
-// SOP1 - GFX10.
+// SOP1 - GFX10, GFX13
 //===----------------------------------------------------------------------===//
 
 multiclass SOP1_Real_gfx10<bits<8> op> {
@@ -2515,7 +2512,7 @@ defm S_ANDN2_WREXEC_B32     : SOP1_Real_gfx10_Renamed_gfx13<0x47, "s_and_not1_wr
 defm S_MOVRELSD_2_B32       : SOP1_Real_gfx10_gfx13<0x049>;
 
 //===----------------------------------------------------------------------===//
-// SOP1 - GFX6, GFX7, GFX10, GFX11.
+// SOP1 - GFX6, GFX7, GFX10, GFX11, GFX13
 //===----------------------------------------------------------------------===//
 
 

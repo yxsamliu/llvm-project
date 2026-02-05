@@ -529,7 +529,6 @@ public:
   InstCounterType SmemAccessCounter;
   bool IsExpertMode = false;
   unsigned LaneSharedSize;
-  const uint64_t *WaitEventMaskForInst;
   const AMDGPUIndexingInfo &SII;
 
 private:
@@ -554,9 +553,10 @@ private:
   DenseSet<MachineInstr *> CallInsts;
   DenseSet<MachineInstr *> ReturnInsts;
 
-  // S_ENDPGM instructions before which we should insert a DEALLOC_VGPRS
-  // message.
-  DenseSet<MachineInstr *> ReleaseVGPRInsts;
+  // Remember all S_ENDPGM instructions. The boolean flag is true if there might
+  // be outstanding stores but definitely no outstanding scratch stores, to help
+  // with insertion of DEALLOC_VGPRS messages.
+  DenseMap<MachineInstr *, bool> EndPgmInsts;
 
   // S_ENDPGM instructions before which expert scheduling mode should
   // be disabled.
@@ -735,6 +735,7 @@ public:
                          bool ExpertMode) const;
   AtomicRMWState getAtomicRMWState(MachineInstr &MI,
                                    AtomicRMWState PrevState) const;
+  const uint64_t *getWaitEventMask() const { return WCG->getWaitEventMask(); }
 };
 
 // This objects maintains the current score brackets of each wait counter, and
@@ -822,7 +823,7 @@ public:
     return PendingEvents & (1ull << E);
   }
   uint64_t hasPendingEvent(InstCounterType T) const {
-    uint64_t HasPending = PendingEvents & Context->WaitEventMaskForInst[T];
+    uint64_t HasPending = PendingEvents & Context->getWaitEventMask()[T];
     assert((HasPending != 0) == (getScoreRange(T) != 0));
     return HasPending;
   }
@@ -895,7 +896,7 @@ public:
   void setStateOnFunctionEntryOrReturn() {
     setScoreUB(STORE_CNT, getScoreUB(STORE_CNT) +
                               getWaitCountMax(Context->getLimits(), STORE_CNT));
-    PendingEvents |= Context->WaitEventMaskForInst[STORE_CNT];
+    PendingEvents |= Context->getWaitEventMask()[STORE_CNT];
   }
 
   ArrayRef<const MachineInstr *> getLDSDMAStores() const {
@@ -1154,7 +1155,7 @@ bool WaitcntBrackets::hasPointSamplePendingVmemTypes(
 }
 
 void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
-  InstCounterType T = eventCounter(Context->WaitEventMaskForInst, E);
+  InstCounterType T = eventCounter(Context->getWaitEventMask(), E);
 
   unsigned UB = getScoreUB(T);
   unsigned CurrScore = UB + 1;
@@ -1541,7 +1542,7 @@ void WaitcntBrackets::tryClearSCCWriteEvent(MachineInstr *Inst) {
       PendingSCCWrite->getOperand(0).getImm() == Inst->getOperand(0).getImm()) {
     uint64_t SCC_WRITE_PendingEvent = 1ull << SCC_WRITE;
     // If this SCC_WRITE is the only pending KM_CNT event, clear counter.
-    if ((PendingEvents & Context->WaitEventMaskForInst[KM_CNT]) ==
+    if ((PendingEvents & Context->getWaitEventMask()[KM_CNT]) ==
         SCC_WRITE_PendingEvent) {
       setScoreLB(KM_CNT, getScoreUB(KM_CNT));
     }
@@ -1575,7 +1576,7 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
     setScoreLB(T, std::max(getScoreLB(T), UB - Count));
   } else {
     setScoreLB(T, UB);
-    PendingEvents &= ~Context->WaitEventMaskForInst[T];
+    PendingEvents &= ~Context->getWaitEventMask()[T];
   }
 
   if (T == KM_CNT && Count == 0 && hasPendingEvent(SMEM_GROUP)) {
@@ -2392,12 +2393,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   // completed, but it is only safe to do this if there are no outstanding
   // scratch stores.
   else if (Opc == AMDGPU::S_ENDPGM || Opc == AMDGPU::S_ENDPGM_SAVED) {
-    if (!WCG->isOptNone() &&
-        (MI.getMF()->getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled() ||
-         (ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
-          ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
-          !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS))))
-      ReleaseVGPRInsts.insert(&MI);
+    EndPgmInsts[&MI] = ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
+                       !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS);
     if (IsExpertMode)
       DisableExpertModeInsts.insert(&MI);
   }
@@ -3057,9 +3054,9 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
 
   for (auto T : inst_counter_types()) {
     // Merge event flags for this counter
-    const uint64_t *WaitEventMaskForInst = Context->WaitEventMaskForInst;
-    const uint64_t OldEvents = PendingEvents & WaitEventMaskForInst[T];
-    const uint64_t OtherEvents = Other.PendingEvents & WaitEventMaskForInst[T];
+    auto EventsForT = Context->getWaitEventMask()[T];
+    const uint64_t OldEvents = PendingEvents & EventsForT;
+    const uint64_t OtherEvents = Other.PendingEvents & EventsForT;
     if (OtherEvents & ~OldEvents)
       StrictDom = true;
     PendingEvents |= OtherEvents;
@@ -3598,9 +3595,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   for (auto T : inst_counter_types())
     ForceEmitWaitcnt[T] = false;
 
-  WaitEventMaskForInst = WCG->getWaitEventMask();
-
-  SmemAccessCounter = eventCounter(WaitEventMaskForInst, SMEM_ACCESS);
+  SmemAccessCounter = eventCounter(WCG->getWaitEventMask(), SMEM_ACCESS);
 
   [[maybe_unused]] unsigned NumVGPRsMax =
       ST->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize());
@@ -3804,21 +3799,22 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   // (i.e. whether we're in dynamic VGPR mode or not).
   // Skip deallocation if kernel is waveslot limited vs VGPR limited. A short
   // waveslot limited kernel runs slower with the deallocation.
-  if (MFI->isDynamicVGPREnabled()) {
-    for (MachineInstr *MI : ReleaseVGPRInsts) {
+  if (!WCG->isOptNone() && MFI->isDynamicVGPREnabled()) {
+    for (auto [MI, _] : EndPgmInsts) {
       BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
               TII->get(AMDGPU::S_ALLOC_VGPR))
           .addImm(0);
       Modified = true;
     }
-  } else {
-    if (!ReleaseVGPRInsts.empty() &&
-        (MF.getFrameInfo().hasCalls() ||
-         ST->getOccupancyWithNumVGPRs(
-             TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass),
-             /*IsDynamicVGPR=*/false) <
-             AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
-      for (MachineInstr *MI : ReleaseVGPRInsts) {
+  } else if (!WCG->isOptNone() &&
+             ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
+             (MF.getFrameInfo().hasCalls() ||
+              ST->getOccupancyWithNumVGPRs(
+                  TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass),
+                  /*IsDynamicVGPR=*/false) <
+                  AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
+    for (auto [MI, Flag] : EndPgmInsts) {
+      if (Flag) {
         if (ST->requiresNopBeforeDeallocVGPRs()) {
           BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
                   TII->get(AMDGPU::S_NOP))
@@ -3834,7 +3830,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
 
   CallInsts.clear();
   ReturnInsts.clear();
-  ReleaseVGPRInsts.clear();
+  EndPgmInsts.clear();
 
   for (MachineInstr *MI : DisableExpertModeInsts)
     setSchedulingMode(*MI->getParent(), *MI, false);

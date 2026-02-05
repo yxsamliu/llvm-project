@@ -1054,6 +1054,10 @@ public:
   bool useRealTrue16Insts() const {
     return hasTrue16BitInsts() && EnableRealTrue16Insts;
   }
+
+  bool requiresWaitOnWorkgroupReleaseFence() const {
+    return getGeneration() >= GFX10 || isTgSplitEnabled();
+  }
 };
 
 class GCNUserSGPRUsageInfo {

@@ -702,7 +702,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         break;
 
       if (isGFX13() &&
-          tryDecodeInst(DecoderTableGFX1396, MI, DecW, Address, CS))
+          tryDecodeInst(DecoderTableGFX1396, DecoderTableGFX13_FAKE1696, MI,
+                        DecW, Address, CS))
         break;
 
       if (STI.hasFeature(AMDGPU::Feature64BitLiterals)) {

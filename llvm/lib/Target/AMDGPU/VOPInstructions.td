@@ -1889,6 +1889,12 @@ multiclass VOP3_Real_with_name_gfx12_gfx13<
   VOP3_Real_with_name<GFX12Gen, op, opName, asmName, pseudo_mnemonic, isSingle>,
   VOP3_Real_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
 
+multiclass VOP3_Real_with_name_gfx11_gfx12_gfx13<
+    bits<10> op, string opName, string asmName, string pseudo_mnemonic = "", bit isSingle = 0> :
+  VOP3_Real_with_name<GFX11Gen, op, opName, asmName, pseudo_mnemonic, isSingle>,
+  VOP3_Real_with_name<GFX12Gen, op, opName, asmName, pseudo_mnemonic, isSingle>,
+  VOP3_Real_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
+
 // for READLANE/WRITELANE
 multiclass VOP3_Real_No_Suffix<GFXGen Gen, bits<10> op, string opName = NAME> {
   defvar ps = !cast<VOP_Pseudo>(opName);
@@ -2348,12 +2354,6 @@ multiclass VOP3_Real_with_name_gfx11_gfx12<bits<10> op, string opName,
                                            string asmName> :
   VOP3_Real_with_name<GFX11Gen, op, opName, asmName>,
   VOP3_Real_with_name<GFX12Gen, op, opName, asmName>;
-
-multiclass VOP3_Real_with_name_gfx11_gfx12_gfx13<bits<10> op, string opName,
-                                           string asmName> :
-  VOP3_Real_with_name<GFX11Gen, op, opName, asmName>,
-  VOP3_Real_with_name<GFX12Gen, op, opName, asmName>,
-  VOP3_Real_with_name<GFX13Gen, op, opName, asmName>;
 
 multiclass VOP3Only_Real_with_name_t16_and_fake16_gfx13<bits<10> op, string asmName=!tolower(NAME),
                                      string opName=NAME, string pseudo_mnemonic = ""> {
