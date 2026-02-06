@@ -2005,7 +2005,8 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.flags |=
         MachineMemOperand::MODereferenceable | MachineMemOperand::MOStore;
     Info.ptrVal = Alloca;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   default:
     return;

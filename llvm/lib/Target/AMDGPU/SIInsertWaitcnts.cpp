@@ -25,7 +25,7 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUMachineInstrs.h"
-#include "AMDGPUVGPRIndexingAnalysis.h"
+#include "AMDGPUMemoryUtils.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
@@ -34,6 +34,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -611,7 +612,6 @@ public:
   InstCounterType SmemAccessCounter;
   bool IsExpertMode = false;
   unsigned LaneSharedSize;
-  const AMDGPUIndexingInfo &SII;
 
 private:
   DenseMap<const Value *, MachineBasicBlock *> SLoadAddresses;
@@ -648,8 +648,8 @@ private:
 
 public:
   SIInsertWaitcnts(MachineLoopInfo *MLI, MachinePostDominatorTree *PDT,
-                   AliasAnalysis *AA, const AMDGPUIndexingInfo &SII)
-      : SII(SII), MLI(MLI), PDT(PDT), AA(AA) {
+                   AliasAnalysis *AA)
+      : MLI(MLI), PDT(PDT), AA(AA) {
     (void)ForceExpCounter;
     (void)ForceLgkmCounter;
     (void)ForceVMCounter;
@@ -1080,51 +1080,99 @@ public:
     AU.addRequired<MachinePostDominatorTreeWrapperPass>();
     AU.addUsedIfAvailable<AAResultsWrapperPass>();
     AU.addPreserved<AAResultsWrapperPass>();
-    AU.addRequired<AMDGPUIndexingInfoWrapper>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
 
 } // end anonymous namespace
 
+/// Attempt to find the unique underlying identified object and optionally
+/// constant offset, if any.
+static std::optional<std::pair<const Value *, std::optional<uint64_t>>>
+getUnderlyingObjectAndOffset(const Value *V, const DataLayout &DL) {
+  if (!V)
+    return {};
+
+  // Fast path for the constant offset case, which is canonicalized to a direct
+  // access or a single GEP.
+  if (isIdentifiedObject(V))
+    return std::make_pair(V, 0);
+
+  if (const auto *GEP = dyn_cast<GEPOperator>(V)) {
+    if (isIdentifiedObject(GEP->getPointerOperand())) {
+      APInt Offset(DL.getIndexSizeInBits(GEP->getPointerAddressSpace()), 0);
+      if (GEP->accumulateConstantOffset(DL, Offset))
+        return std::make_pair(GEP->getPointerOperand(), Offset.getZExtValue());
+    }
+
+    return std::make_pair(GEP->getPointerOperand(), std::nullopt);
+  }
+
+  // Otherwise, attempt reasonably hard to at least find a unique underlying
+  // object.
+  SmallVector<Value *> Objects;
+  if (getUnderlyingObjectsForCodeGen(V, Objects) && Objects.size() == 1)
+    return std::make_pair(Objects[0], std::nullopt);
+
+  return {};
+}
+
 RegInterval
 WaitcntBrackets::getRegIndexingInterval(const AMDGPUMI::VLoadStoreIdxInst *MI,
                                         const MachineRegisterInfo *MRI,
                                         const SIRegisterInfo *TRI) const {
-  // Intervals retrieved from the IndexingAnalysis are in full-width VGPRs, and
-  // so need to be adjusted into 16bit VGPR units. Offset and Size, when queried
-  // from the analysis, are in units of bytes.
-  auto CheckBounds = [&](int VGPR32Begin, int VGPR32End) {
-    RegInterval Interval;
-    auto Size = (VGPR32End - VGPR32Begin) * 2;
-    Interval.first = (VGPR32Begin * 2) % SQ_MAX_PGM_VGPRS;
-    Interval.second = Interval.first + Size;
-    if (Interval.second > SQ_MAX_PGM_VGPRS) {
-      Interval.first = 0;
-      Interval.second = SQ_MAX_PGM_VGPRS;
+  assert(MI->hasOneMemOperand());
+  const DataLayout &DL =
+      MI->getParent()->getParent()->getFunction().getParent()->getDataLayout();
+  const MachineMemOperand &MMO = **MI->memoperands_begin();
+  const Value *Ptr = MMO.getValue();
+
+  if (auto ObjWithOffset = getUnderlyingObjectAndOffset(Ptr, DL)) {
+    const Value *Obj = ObjWithOffset->first;
+    std::optional<RegInterval> ObjInterval;
+
+    if (auto *Alloca = dyn_cast<AllocaInst>(Obj)) {
+      auto &MD = AMDGPU::AllocatedVGPRsMetadata::get(*Alloca);
+      unsigned Begin = Context->LaneSharedSize + MD.getAddress() / 2;
+      ObjInterval = {Begin, Begin + MD.getSize() / 2};
+    } else if (auto *GV = dyn_cast<GlobalVariable>(Obj)) {
+      std::optional<ConstantRange> Range = GV->getAbsoluteSymbolRange();
+      assert(Range && Range->isSingleElement() &&
+             "Expected a single address for global");
+      unsigned Address = Range->getSingleElement()->getZExtValue();
+      assert(Address & (1 << 28));
+      Address &= ~(1 << 28);
+      assert(Address < SQ_MAX_PGM_VGPRS * 2);
+
+      unsigned Begin = Address / 2;
+      unsigned Size = DL.getTypeAllocSize(GV->getValueType());
+      ObjInterval = {Begin, Begin + Size / 2};
     }
-    return Interval;
-  };
-  if (auto Info = Context->SII.getPrivateObjectIdxInfo(MI)) {
-    if (auto UsedRegs = Info->get().UsedRegs)
-      return CheckBounds(UsedRegs->first, UsedRegs->second);
-    // we don't know the exact vgprs,
-    // so best we can do is use the size of the private object
-    RegInterval Interval = {Context->LaneSharedSize + Info->get().Offset / 2u,
-                            0};
-    Interval.second += Interval.first + Info->get().Size / 2u;
-    return Interval;
+
+    if (ObjInterval) {
+      if (ObjWithOffset->second) {
+        LocationSize Size = MMO.getSize();
+        assert(Size.isPrecise());
+        unsigned Offset = *ObjWithOffset->second + MMO.getOffset();
+        unsigned Begin = ObjInterval->first + Offset / 2;
+        unsigned End = Begin + Size.getValue() / 2;
+        // End can only be out of bounds for code that has UB, but we still need
+        // to handle this case correctly.
+        if (End <= (unsigned)ObjInterval->second)
+          return {Begin, End};
+      }
+
+      return *ObjInterval;
+    }
   }
-  if (auto Info = Context->SII.getLaneSharedIdxInfo(MI)) {
-    if (auto UsedRegs = Info->get().UsedRegs)
-      return CheckBounds(UsedRegs->first, UsedRegs->second);
-    // Claim the entire lane-shared range when idx is unknown
-    // TODO-GFX13:
-    // We want to build an event-queue and apply alias analysis to
-    // get more accurate result in this case.
+
+  // If we can find no better information, return an interval that spans the
+  // entire address space.
+  if (MMO.getAddrSpace() == AMDGPUAS::LANE_SHARED)
     return {0, Context->LaneSharedSize};
-  }
-  llvm_unreachable("v_load/store_idx without index info");
+
+  assert(MMO.getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS);
+  return {Context->LaneSharedSize, SQ_MAX_PGM_VGPRS};
 }
 
 RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
@@ -3616,10 +3664,8 @@ bool SIInsertWaitcntsLegacy::runOnMachineFunction(MachineFunction &MF) {
   AliasAnalysis *AA = nullptr;
   if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
     AA = &AAR->getAAResults();
-  const AMDGPUIndexingInfo &SII =
-      getAnalysis<AMDGPUIndexingInfoWrapper>().getIndexingInfo();
 
-  return SIInsertWaitcnts(MLI, PDT, AA, SII).run(MF);
+  return SIInsertWaitcnts(MLI, PDT, AA).run(MF);
 }
 
 PreservedAnalyses
@@ -3630,9 +3676,7 @@ SIInsertWaitcntsPass::run(MachineFunction &MF,
   auto *AA = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                  .getManager()
                  .getCachedResult<AAManager>(MF.getFunction());
-  // TODO-GFX13: When VGPR Indexing passes are ported to NPM SII analysis needs
-  // to be fetched here
-  if (!SIInsertWaitcnts(MLI, PDT, AA, AMDGPUIndexingInfo{}).run(MF))
+  if (!SIInsertWaitcnts(MLI, PDT, AA).run(MF))
     return PreservedAnalyses::all();
 
   return getMachineFunctionPassPreservedAnalyses()

@@ -624,9 +624,6 @@ private:
   // To save/restore EXEC MASK around WWM spills and copies.
   Register SGPRForEXECCopy;
 
-  // Maps s_set_gpr instrs to a idx0 s_add computation
-  DenseMap<MachineInstr *, MachineInstr *> SetterPairs;
-
   DenseMap<int, VGPRSpillToAGPR> VGPRToAGPRSpills;
 
   // AGPRs used for VGPR spills.
@@ -831,10 +828,6 @@ public:
   Register getSGPRForEXECCopy() const { return SGPRForEXECCopy; }
 
   void setSGPRForEXECCopy(Register Reg) { SGPRForEXECCopy = Reg; }
-
-  DenseMap<MachineInstr *, MachineInstr *> &getIdx0PrivateComputations() {
-    return SetterPairs;
-  }
 
   ArrayRef<MCPhysReg> getVGPRSpillAGPRs() const { return SpillVGPR; }
 
