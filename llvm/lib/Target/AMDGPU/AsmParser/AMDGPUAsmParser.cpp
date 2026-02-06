@@ -197,6 +197,9 @@ public:
     ImmTyMatrixAReuse,
     ImmTyMatrixBReuse,
     ImmTyScaleSel,
+    ImmTyMatrixASigned,
+    ImmTyMatrixBSigned,
+    ImmTyIndexSet,
     ImmTyModsConvolve,
     ImmTyModsPermute,
     ImmTyModsShapeCvt,
@@ -206,9 +209,6 @@ public:
     ImmTyModsWmmaBlockScale,
     ImmTyIdxs,
     ImmTyByteSel,
-    ImmTyMatrixASigned,
-    ImmTyMatrixBSigned,
-    ImmTySparseIndexOdd,
     ImmTyGlobalSReg32,
     ImmTyGlobalSReg64,
   };
@@ -428,6 +428,7 @@ public:
   bool isIndexKey8bit() const { return isImmTy(ImmTyIndexKey8bit); }
   bool isIndexKey16bit() const { return isImmTy(ImmTyIndexKey16bit); }
   bool isIndexKey32bit() const { return isImmTy(ImmTyIndexKey32bit); }
+  bool isIndexSet() const { return isImmTy(ImmTyIndexSet); }
   bool isMatrixAFMT() const { return isImmTy(ImmTyMatrixAFMT); }
   bool isMatrixBFMT() const { return isImmTy(ImmTyMatrixBFMT); }
   bool isMatrixAScale() const { return isImmTy(ImmTyMatrixAScale); }
@@ -1245,6 +1246,9 @@ public:
     case ImmTyMatrixAReuse: OS << "ImmTyMatrixAReuse"; break;
     case ImmTyMatrixBReuse: OS << "ImmTyMatrixBReuse"; break;
     case ImmTyScaleSel: OS << "ScaleSel" ; break;
+    case ImmTyMatrixASigned: OS << "MatrixASigned"; break;
+    case ImmTyMatrixBSigned: OS << "MatrixBSigned"; break;
+    case ImmTyIndexSet: OS << "IndexSet"; break;
     case ImmTyModsConvolve: OS << "ImmTyModsConvolve"; break;
     case ImmTyModsPermute: OS << "ImmTyModsPermute"; break;
     case ImmTyModsShapeCvt: OS << "ImmTyModsShapeCvt"; break;
@@ -1254,9 +1258,6 @@ public:
     case ImmTyModsWmmaBlockScale: OS << "ImmTyModsWmmaBlockScale"; break;
     case ImmTyIdxs: OS << "ImmTyIdxs"; break;
     case ImmTyByteSel: OS << "ByteSel" ; break;
-    case ImmTyMatrixASigned: OS << "MatrixASigned"; break;
-    case ImmTyMatrixBSigned: OS << "MatrixBSigned"; break;
-    case ImmTySparseIndexOdd: OS << "SparseIndexOdd"; break;
     case ImmTyGlobalSReg32: OS << "GlobalSReg32"; break;
     case ImmTyGlobalSReg64: OS << "GlobalSReg64"; break;
     }
@@ -1829,6 +1830,7 @@ public:
   ParseStatus parseIndexKey8bit(OperandVector &Operands);
   ParseStatus parseIndexKey16bit(OperandVector &Operands);
   ParseStatus parseIndexKey32bit(OperandVector &Operands);
+  ParseStatus parseIndexSet(OperandVector &Operands);
   ParseStatus tryParseMatrixFMT(OperandVector &Operands, StringRef Name,
                                 AMDGPUOperand::ImmTy Type);
   ParseStatus parseMatrixAFMT(OperandVector &Operands);
@@ -8014,6 +8016,13 @@ ParseStatus AMDGPUAsmParser::parseIndexKey16bit(OperandVector &Operands) {
 
 ParseStatus AMDGPUAsmParser::parseIndexKey32bit(OperandVector &Operands) {
   return tryParseIndexKey(Operands, AMDGPUOperand::ImmTyIndexKey32bit);
+}
+
+ParseStatus AMDGPUAsmParser::parseIndexSet(OperandVector &Operands) {
+  return parseStringOrIntWithPrefix(
+      Operands, "index_set",
+      {"MATRIX_SPARSE_INDEX_EVEN", "MATRIX_SPARSE_INDEX_ODD"},
+      AMDGPUOperand::ImmTyIndexSet);
 }
 
 ParseStatus AMDGPUAsmParser::tryParseMatrixFMT(OperandVector &Operands,

@@ -1295,10 +1295,6 @@ def LWE : NamedBitOperand<"lwe">;
 def exp_compr : NamedBitOperand<"compr", "ExpCompr">;
 def exp_vm : NamedBitOperand<"vm", "ExpVM">;
 
-def MatrixASigned : NamedBitOperand<"matrix_a_signed">;
-def MatrixBSigned : NamedBitOperand<"matrix_b_signed">;
-def SparseIndexOdd : NamedBitOperand<"sparse_index_odd">;
-
 def FORMAT : CustomOperand<i8>;
 
 let PrintInHex = 1 in
@@ -1387,6 +1383,10 @@ def MatrixBReuse : NamedBitOperand<"matrix_b_reuse">;
 def ScaleSel : NamedIntOperand<"scale_sel"> {
   let Validator = "isUInt<4>";
 }
+
+def MatrixASigned : NamedBitOperand<"matrix_a_signed">;
+def MatrixBSigned : NamedBitOperand<"matrix_b_signed">;
+def IndexSet : CustomOperand<i1, 1>;
 
 def ModsShapeCvt : CustomOperand<i32, 1>;  // VOPM: v_cvt_to_tensor_*,
                                            //       v_scale_bias_activate_*,

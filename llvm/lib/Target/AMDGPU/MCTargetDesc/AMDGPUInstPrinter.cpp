@@ -988,8 +988,8 @@ void AMDGPUInstPrinter::printModsSwmma(const MCInst *MI, unsigned OpNo,
 
 void AMDGPUInstPrinter::printModsWmmaBase(const MCInst *MI, unsigned OpNo,
                                           unsigned K1Size, raw_ostream &O) {
-  // MatrixASigned, MatrixBSigned and SparseIndexOdd are separate operands.
-  // Should we join them into ModsWmma?
+  // MatrixASigned, MatrixBSigned and IndexSet are separate operands.
+  // Should we join them into ModsWmma/ModsSwmma?
   unsigned Imm = MI->getOperand(OpNo).getImm();
 
   unsigned KScale = (Imm & VOPMMods::KSCALE) >> VOPMMods::KSCALE_SHIFT;
@@ -1726,6 +1726,17 @@ void AMDGPUInstPrinter::printIndexKey32bit(const MCInst *MI, unsigned OpNo,
     return;
 
   O << " index_key:" << Imm;
+}
+
+void AMDGPUInstPrinter::printIndexSet(const MCInst *MI, unsigned OpNo,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm() & 0x1;
+  // Do not print index_set:MATRIX_SPARSE_INDEX_EVEN by default.
+  if (Imm == 0)
+    return;
+
+  O << " index_set:MATRIX_SPARSE_INDEX_ODD";
 }
 
 void AMDGPUInstPrinter::printMatrixFMT(const MCInst *MI, unsigned OpNo,

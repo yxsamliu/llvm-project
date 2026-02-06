@@ -3854,7 +3854,7 @@ class AMDGPUSWmmaIntrinsicClamp<LLVMType A, LLVMType B, LLVMType CD> :
       B,                // %B
       CD,               // %C
       llvm_i32_ty,      // %idxset
-      llvm_i1_ty,       // %sparse_index_odd
+      llvm_i1_ty,       // %index_set (0=even, 1=odd)
       llvm_i1_ty,       // %clamp
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]
@@ -3894,7 +3894,7 @@ class AMDGPUSWmmaIntrinsicIUClamp<LLVMType D, LLVMType A, LLVMType B, LLVMType C
       B,                // %B
       C,                // %C
       idxset_ty,        // %idxset
-      llvm_i1_ty,       // %sparse_index_odd
+      llvm_i1_ty,       // %index_set (0=even, 1=odd)
       llvm_i1_ty,       // %clamp
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>]
