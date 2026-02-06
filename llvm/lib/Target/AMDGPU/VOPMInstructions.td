@@ -425,15 +425,15 @@ class VOPM_WMMA_Profile_Int<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<Ar
   let IsWMMA = 1;
   let isInt = 1;
 
-  let Ins64 = (ins MatrixASigned:$signed_a, Src0RC64:$srcA, MatrixBSigned:$signed_b, Src1RC64:$srcB, Src2RC64:$srcC, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr);
+  let Ins64 = (ins Src0RC64:$srcA, Src1RC64:$srcB, Src2RC64:$srcC, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr);
 
-  let WmmaInPat = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, Src2VT:$srcC, i1:$clamp);
-  let WmmaOutPat = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, Src2VT:$srcC, (i32 0), i1:$clamp);
+  let WmmaInPat = (ins (i1 (WMMASigned i32:$aux_data) /*sign_a*/), Src0VT:$srcA, srcvalue /*sign_b*/, Src1VT:$srcB, Src2VT:$srcC, i1:$clamp);
+  let WmmaOutPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, i32:$aux_data, i1:$clamp);
 
-  let WmmaInlineInPat = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, (Src2VT (WMMAVISrc Src2VT:$srcC)), i1:$clamp);
-  let WmmaInlineOutPat = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, Src2VT:$srcC, (i32 0), i1:$clamp);
+  let WmmaInlineInPat = (ins (i1 (WMMASigned i32:$aux_data) /*sign_a*/), Src0VT:$srcA, srcvalue /*sign_b*/, Src1VT:$srcB, (Src2VT (WMMAVISrc Src2VT:$srcC)), i1:$clamp);
+  let WmmaInlineOutPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, i32:$aux_data, i1:$clamp);
 
-  let Asm64 = "$vdst, $srcA, $srcB, $srcC$signed_a$signed_b$aux_data$clamp$idxs$supr";
+  let Asm64 = "$vdst, $srcA, $srcB, $srcC$aux_data$clamp$idxs$supr";
 }
 
 class VOPM_WMMA_Profile_BlockScale<list<ValueType> ArgTy, int K>
@@ -493,22 +493,22 @@ class VOPM_SWMMA_Profile<list<ValueType> ArgTy, int K>
 
 class VOPM_SWMMA_Profile_Float<list<ValueType> ArgTy, int K> : VOPM_SWMMA_Profile<ArgTy, K> {
   let isInt = 0;
-  let Ins64 = (ins Src0RC64:$srcA, Src1RC64:$srcB, Src2RC64:$srcC, Src3RC64:$src3, IndexSet:$index_set, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr);
+  let Ins64 = (ins Src0RC64:$srcA, Src1RC64:$srcB, Src2RC64:$srcC, Src3RC64:$src3, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr);
 
-  let SwmmaInPat  = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, Src3VT:$src3, i1:$index_set, i1:$clamp);
-  let SwmmaOutPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, Src3VT:$src3, i1:$index_set, (i32 0), i1:$clamp);
+  let SwmmaInPat  = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, Src3VT:$src3, (i1 (SWMMAIndexSet i32:$aux_data)), i1:$clamp);
+  let SwmmaOutPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, Src3VT:$src3, i32:$aux_data, i1:$clamp);
 
-  let Asm64 = "$vdst, $srcA, $srcB, $srcC, $src3$index_set$aux_data$clamp$idxs$supr";
+  let Asm64 = "$vdst, $srcA, $srcB, $srcC, $src3$aux_data$clamp$idxs$supr";
 }
 
 class VOPM_SWMMA_Profile_Int<list<ValueType> ArgTy, int K> : VOPM_SWMMA_Profile<ArgTy, K> {
   let isInt = 1;
-  let Ins64 = (ins MatrixASigned:$signed_a, Src0RC64:$srcA, MatrixBSigned:$signed_b, Src1RC64:$srcB, Src2RC64:$srcC, Src3RC64:$src3, IndexSet:$index_set, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr);
+  let Ins64 = (ins Src0RC64:$srcA, Src1RC64:$srcB, Src2RC64:$srcC, Src3RC64:$src3, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr);
 
-  let SwmmaInPat  = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, Src2VT:$srcC, Src3VT:$src3, i1:$index_set, i1:$clamp);
-  let SwmmaOutPat = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, Src2VT:$srcC, Src3VT:$src3, i1:$index_set, (i32 0), i1:$clamp);
+  let SwmmaInPat  = (ins (i1 (SWMMASignedIndexSet i32:$aux_data) /*sign_a*/), Src0VT:$srcA, srcvalue /*sign_b*/, Src1VT:$srcB, Src2VT:$srcC, Src3VT:$src3, srcvalue /*index_set*/, i1:$clamp);
+  let SwmmaOutPat = (ins Src0VT:$srcA, Src1VT:$srcB, Src2VT:$srcC, Src3VT:$src3, i32:$aux_data, i1:$clamp);
 
-  let Asm64 = "$vdst, $srcA, $srcB, $srcC, $src3$signed_a$signed_b$index_set$aux_data$clamp$idxs$supr";
+  let Asm64 = "$vdst, $srcA, $srcB, $srcC, $src3$aux_data$clamp$idxs$supr";
 }
 
 def VOPM_SWMMA_F16_F16_X32   : VOPM_SWMMA_Profile_Float<[v8f16, v8f16, v16f16, v8f16, i32], KMult.X1>;
@@ -1195,16 +1195,11 @@ multiclass VOP3M_WMMA_Real_Base<GFXGen Gen, bits<8> op,
       let src1 = srcA;
       let src2 = srcB;
 
-      bit signed_a;
-      bit signed_b;
-
       let AsmString = asmName # ps.Pfl.Asm64;
 
       defvar WMMAPfl = !cast<VOPM_WMMA_Profile>(ps.Pfl);
       defvar KMultiplier = WMMAPfl.KMultiplier;
       let aux_data{2-0} = KMultiplier;
-      let aux_data{6} = !if(WMMAPfl.isInt, signed_a, ?);
-      let aux_data{9} = !if(WMMAPfl.isInt, signed_b, ?);
   }
 }
 
@@ -1264,16 +1259,8 @@ multiclass VOP5M_Real_SWMMA<GFXGen Gen, bits<8> op,
       let src1 = srcA;
       let src2 = srcB;
 
-      bit index_set;
-      bit signed_a;
-      bit signed_b;
-
-      let aux_data{18} = index_set;
-
       defvar WMMAPfl = !cast<VOPM_SWMMA_Profile>(ps.Pfl);
       let aux_data{2-0} = WMMAPfl.KMultiplier;
-      let aux_data{6} = !if(WMMAPfl.isInt, signed_a, ?);
-      let aux_data{9} = !if(WMMAPfl.isInt, signed_b, ?);
   }
 }
 

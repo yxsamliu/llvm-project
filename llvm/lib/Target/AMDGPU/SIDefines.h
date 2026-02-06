@@ -1220,16 +1220,18 @@ enum VOPMModBits : unsigned {
   CHAN_OFFSET                = 0x7 << CHAN_OFFSET_SHIFT,
 
   // mod1 wmma
-  FMT_A_SHIFT   = 0 + MOD1_SHIFT,
-  FMT_A         = 0x7 << FMT_A_SHIFT,    // matrix_a_fmt
-  FMT_B_SHIFT   = 3 + MOD1_SHIFT,
-  FMT_B         = 0x7 << FMT_B_SHIFT,    // matrix_b_fmt
-  REUSE_A       = 1 << (6 + MOD1_SHIFT), // matrix_a_reuse
-  REUSE_B       = 1 << (7 + MOD1_SHIFT), // matrix_b_reuse
-  SCALE_A_SHIFT = 8 + MOD1_SHIFT,
-  SCALE_A       = 0x3 << SCALE_A_SHIFT,  // matrix_a_scale
-  SCALE_B_SHIFT = 10 + MOD1_SHIFT,
-  SCALE_B       = 0x3 << SCALE_B_SHIFT,  // matrix_b_scale
+  FMT_A_SHIFT     = 0 + MOD1_SHIFT,
+  FMT_A           = 0x7 << FMT_A_SHIFT,    // matrix_a_fmt
+  FMT_B_SHIFT     = 3 + MOD1_SHIFT,
+  FMT_B           = 0x7 << FMT_B_SHIFT,    // matrix_b_fmt
+  MATRIX_A_SIGNED = 1 << (0 + MOD1_SHIFT), // matrix_a_signed (fmt bit 0)
+  MATRIX_B_SIGNED = 1 << (3 + MOD1_SHIFT), // matrix_b_signed (fmt bit 0)
+  REUSE_A         = 1 << (6 + MOD1_SHIFT), // matrix_a_reuse
+  REUSE_B         = 1 << (7 + MOD1_SHIFT), // matrix_b_reuse
+  SCALE_A_SHIFT   = 8 + MOD1_SHIFT,
+  SCALE_A         = 0x3 << SCALE_A_SHIFT,  // matrix_a_scale
+  SCALE_B_SHIFT   = 10 + MOD1_SHIFT,
+  SCALE_B         = 0x3 << SCALE_B_SHIFT,  // matrix_b_scale
 
   MOD2_SHIFT = 18, // mod2 offset in aux_data
 
@@ -1240,7 +1242,8 @@ enum VOPMModBits : unsigned {
   INT_SCALE_convolve = 1 << (3 + MOD2_SHIFT),
 
   // mod2 wmma
-  INDEX_SET = 1 << (0 + MOD2_SHIFT), // sparse select (0=even, 1=odd lanes)
+  INDEX_SET_SHIFT = 0 + MOD2_SHIFT,
+  INDEX_SET = 0x1 << INDEX_SET_SHIFT, // sparse select (0=even, 1=odd lanes)
 };
 // clang-format on
 

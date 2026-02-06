@@ -148,8 +148,6 @@ private:
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printIndexKey32bit(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
-  void printIndexSet(const MCInst *MI, unsigned OpNo,
-                     const MCSubtargetInfo &STI, raw_ostream &O);
   void printMatrixFMT(const MCInst *MI, unsigned OpNo,
                       const MCSubtargetInfo &STI, raw_ostream &O, char AorB);
   void printMatrixAFMT(const MCInst *MI, unsigned OpNo,
@@ -217,7 +215,7 @@ private:
                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printModsSwmma(const MCInst *MI, unsigned OpNo,
                       const MCSubtargetInfo &STI, raw_ostream &O);
-  void printModsWmmaBase(const MCInst *MI, unsigned OpNo, unsigned K1Size,
+  void printModsWmmaBase(const MCInst *MI, unsigned OpNo, bool IsSwmma,
                          raw_ostream &O);
   void printModsWmmaBlockScale(const MCInst *MI, unsigned OpNo,
                                const MCSubtargetInfo &STI, raw_ostream &O);

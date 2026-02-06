@@ -197,9 +197,6 @@ public:
     ImmTyMatrixAReuse,
     ImmTyMatrixBReuse,
     ImmTyScaleSel,
-    ImmTyMatrixASigned,
-    ImmTyMatrixBSigned,
-    ImmTyIndexSet,
     ImmTyModsConvolve,
     ImmTyModsPermute,
     ImmTyModsShapeCvt,
@@ -428,7 +425,6 @@ public:
   bool isIndexKey8bit() const { return isImmTy(ImmTyIndexKey8bit); }
   bool isIndexKey16bit() const { return isImmTy(ImmTyIndexKey16bit); }
   bool isIndexKey32bit() const { return isImmTy(ImmTyIndexKey32bit); }
-  bool isIndexSet() const { return isImmTy(ImmTyIndexSet); }
   bool isMatrixAFMT() const { return isImmTy(ImmTyMatrixAFMT); }
   bool isMatrixBFMT() const { return isImmTy(ImmTyMatrixBFMT); }
   bool isMatrixAScale() const { return isImmTy(ImmTyMatrixAScale); }
@@ -1246,9 +1242,6 @@ public:
     case ImmTyMatrixAReuse: OS << "ImmTyMatrixAReuse"; break;
     case ImmTyMatrixBReuse: OS << "ImmTyMatrixBReuse"; break;
     case ImmTyScaleSel: OS << "ScaleSel" ; break;
-    case ImmTyMatrixASigned: OS << "MatrixASigned"; break;
-    case ImmTyMatrixBSigned: OS << "MatrixBSigned"; break;
-    case ImmTyIndexSet: OS << "IndexSet"; break;
     case ImmTyModsConvolve: OS << "ImmTyModsConvolve"; break;
     case ImmTyModsPermute: OS << "ImmTyModsPermute"; break;
     case ImmTyModsShapeCvt: OS << "ImmTyModsShapeCvt"; break;
@@ -1830,7 +1823,6 @@ public:
   ParseStatus parseIndexKey8bit(OperandVector &Operands);
   ParseStatus parseIndexKey16bit(OperandVector &Operands);
   ParseStatus parseIndexKey32bit(OperandVector &Operands);
-  ParseStatus parseIndexSet(OperandVector &Operands);
   ParseStatus tryParseMatrixFMT(OperandVector &Operands, StringRef Name,
                                 AMDGPUOperand::ImmTy Type);
   ParseStatus parseMatrixAFMT(OperandVector &Operands);
@@ -7761,6 +7753,8 @@ ParseStatus AMDGPUAsmParser::parseModsWmma(OperandVector &Operands) {
   static constexpr VOPMMod ModFields[] = {
       {VOPMMod::Pow2ScaledInt, "k", KSCALE, KSCALE_SHIFT,
        VOPMMod::ModData(16, 128)},
+      {VOPMMod::Flag, "matrix_a_signed", MATRIX_A_SIGNED},
+      {VOPMMod::Flag, "matrix_b_signed", MATRIX_B_SIGNED},
       {VOPMMod::Flag, "matrix_a_reuse", REUSE_A},
       {VOPMMod::Flag, "matrix_b_reuse", REUSE_B},
   };
@@ -7773,6 +7767,10 @@ ParseStatus AMDGPUAsmParser::parseModsSwmma(OperandVector &Operands) {
   static constexpr VOPMMod ModFields[] = {
       {VOPMMod::Pow2ScaledInt, "k", KSCALE, KSCALE_SHIFT,
        VOPMMod::ModData(32, 128)},
+      {VOPMMod::Flag, "matrix_a_signed", MATRIX_A_SIGNED},
+      {VOPMMod::Flag, "matrix_b_signed", MATRIX_B_SIGNED},
+      {VOPMMod::Named, "index_set", INDEX_SET, INDEX_SET_SHIFT,
+       VOPMMod::ModData(VOPMMods::ModIndexSetNames)},
       {VOPMMod::Flag, "matrix_a_reuse", REUSE_A},
       {VOPMMod::Flag, "matrix_b_reuse", REUSE_B},
   };
@@ -8016,13 +8014,6 @@ ParseStatus AMDGPUAsmParser::parseIndexKey16bit(OperandVector &Operands) {
 
 ParseStatus AMDGPUAsmParser::parseIndexKey32bit(OperandVector &Operands) {
   return tryParseIndexKey(Operands, AMDGPUOperand::ImmTyIndexKey32bit);
-}
-
-ParseStatus AMDGPUAsmParser::parseIndexSet(OperandVector &Operands) {
-  return parseStringOrIntWithPrefix(
-      Operands, "index_set",
-      {"MATRIX_SPARSE_INDEX_EVEN", "MATRIX_SPARSE_INDEX_ODD"},
-      AMDGPUOperand::ImmTyIndexSet);
 }
 
 ParseStatus AMDGPUAsmParser::tryParseMatrixFMT(OperandVector &Operands,

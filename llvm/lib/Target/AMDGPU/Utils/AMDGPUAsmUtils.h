@@ -154,6 +154,9 @@ inline constexpr const char *const ModMatrixScale[] = {
     "MATRIX_SCALE_LO_EVEN", "MATRIX_SCALE_HI_EVEN", "MATRIX_SCALE_LO_ODD",
     "MATRIX_SCALE_HI_ODD"};
 
+inline constexpr const char *ModIndexSetNames[] = {"MATRIX_SPARSE_INDEX_EVEN",
+                                                   "MATRIX_SPARSE_INDEX_ODD"};
+
 } // namespace VOPMMods
 
 } // namespace AMDGPU

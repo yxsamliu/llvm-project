@@ -977,26 +977,30 @@ void AMDGPUInstPrinter::printModNamed(unsigned Value, const char *Name,
 void AMDGPUInstPrinter::printModsWmma(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
-  printModsWmmaBase(MI, OpNo, 16, O);
+  printModsWmmaBase(MI, OpNo, /*IsSwmma=*/false, O);
 }
 
 void AMDGPUInstPrinter::printModsSwmma(const MCInst *MI, unsigned OpNo,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O) {
-  printModsWmmaBase(MI, OpNo, 32, O);
+  printModsWmmaBase(MI, OpNo, /*IsSwmma=*/true, O);
 }
 
 void AMDGPUInstPrinter::printModsWmmaBase(const MCInst *MI, unsigned OpNo,
-                                          unsigned K1Size, raw_ostream &O) {
-  // MatrixASigned, MatrixBSigned and IndexSet are separate operands.
-  // Should we join them into ModsWmma/ModsSwmma?
+                                          bool IsSwmma, raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
 
   unsigned KScale = (Imm & VOPMMods::KSCALE) >> VOPMMods::KSCALE_SHIFT;
-  O << " k:" << (KScale + 1) * K1Size;
+  O << " k:" << (KScale + 1) * (IsSwmma ? 32 : 16);
 
+  O << (Imm & VOPMMods::MATRIX_A_SIGNED ? " matrix_a_signed" : "");
+  O << (Imm & VOPMMods::MATRIX_B_SIGNED ? " matrix_b_signed" : "");
   O << (Imm & VOPMMods::REUSE_A ? " matrix_a_reuse" : "");
   O << (Imm & VOPMMods::REUSE_B ? " matrix_b_reuse" : "");
+
+  // Do not print index_set:MATRIX_SPARSE_INDEX_EVEN (0x0) by default
+  if (IsSwmma && (Imm & VOPMMods::INDEX_SET))
+    O << " index_set:MATRIX_SPARSE_INDEX_ODD";
 }
 
 void AMDGPUInstPrinter::printModsWmmaBlockScale(const MCInst *MI, unsigned OpNo,
@@ -1726,17 +1730,6 @@ void AMDGPUInstPrinter::printIndexKey32bit(const MCInst *MI, unsigned OpNo,
     return;
 
   O << " index_key:" << Imm;
-}
-
-void AMDGPUInstPrinter::printIndexSet(const MCInst *MI, unsigned OpNo,
-                                      const MCSubtargetInfo &STI,
-                                      raw_ostream &O) {
-  unsigned Imm = MI->getOperand(OpNo).getImm() & 0x1;
-  // Do not print index_set:MATRIX_SPARSE_INDEX_EVEN by default.
-  if (Imm == 0)
-    return;
-
-  O << " index_set:MATRIX_SPARSE_INDEX_ODD";
 }
 
 void AMDGPUInstPrinter::printMatrixFMT(const MCInst *MI, unsigned OpNo,

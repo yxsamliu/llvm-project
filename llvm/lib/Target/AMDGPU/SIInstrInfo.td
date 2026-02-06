@@ -1384,10 +1384,6 @@ def ScaleSel : NamedIntOperand<"scale_sel"> {
   let Validator = "isUInt<4>";
 }
 
-def MatrixASigned : NamedBitOperand<"matrix_a_signed">;
-def MatrixBSigned : NamedBitOperand<"matrix_b_signed">;
-def IndexSet : CustomOperand<i1, 1>;
-
 def ModsShapeCvt : CustomOperand<i32, 1>;  // VOPM: v_cvt_to_tensor_*,
                                            //       v_scale_bias_activate_*,
                                            //       v_uniform_scale_activate_*
@@ -1743,6 +1739,10 @@ def WMMAVISrc  : ComplexPattern<untyped, 1, "SelectWMMAVISrc">;
 def SWMMACIndex8  : ComplexPattern<untyped, 2, "SelectSWMMACIndex8">;
 def SWMMACIndex16  : ComplexPattern<untyped, 2, "SelectSWMMACIndex16">;
 def SWMMACIndex32  : ComplexPattern<untyped, 2, "SelectSWMMACIndex32">;
+
+def WMMASigned : ComplexPattern<untyped, 1, "SelectWMMASignedMods">;
+def SWMMAIndexSet : ComplexPattern<untyped, 1, "SelectSWMMAIndexSet">;
+def SWMMASignedIndexSet : ComplexPattern<untyped, 1, "SelectSWMMASignedIndexSet">;
 
 def VOP3OpSel  : ComplexPattern<untyped, 2, "SelectVOP3OpSel">;
 

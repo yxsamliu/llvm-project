@@ -38,8 +38,8 @@ v_scale_bias_activate_f16 [v5, v6], v[5:6], 4.0, v3 shape:SHAPE_4X2X16 accum_cha
 v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] k:16 clamp supr
 // GFX13: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] k:16 clamp supr ; encoding: [0x04,0x30,0x1d,0xdd,0x04,0x04,0x80,0x00,0x02,0x00,0x00,0x00]
 
-v_swmma_f32_16x16_fp8_fp8 v[6:13], v[0:1], v[2:5], v[6:13], v14 index_set:MATRIX_SPARSE_INDEX_ODD k:32 clamp supr
-// GFX13: v_swmma_f32_16x16_fp8_fp8 v[6:13], v[0:1], v[2:5], v[6:13], v14 index_set:MATRIX_SPARSE_INDEX_ODD k:32 clamp supr ; encoding: [0x06,0x30,0x2d,0xde,0x06,0x04,0x80,0x00,0x02,0x00,0x00,0x00,0x0e,0x00,0x00,0x01]
+v_swmma_f32_16x16_fp8_fp8 v[6:13], v[0:1], v[2:5], v[6:13], v14 k:32 index_set:MATRIX_SPARSE_INDEX_ODD clamp supr
+// GFX13: v_swmma_f32_16x16_fp8_fp8 v[6:13], v[0:1], v[2:5], v[6:13], v14 k:32 index_set:MATRIX_SPARSE_INDEX_ODD clamp supr ; encoding: [0x06,0x30,0x2d,0xde,0x06,0x04,0x80,0x00,0x02,0x00,0x00,0x00,0x0e,0x00,0x00,0x01]
 
 v_fma_from_tensor_bf16_bf16 v[2:3], [v4, v5], v[6:7], v[2:3] layout:LAYOUT_CONVOLVE_8X4 clamp supr
 // GFX13: v_fma_from_tensor_bf16_bf16 v[2:3], [v4, v5], v[6:7], v[2:3] layout:LAYOUT_CONVOLVE_8X4 clamp supr ; encoding: [0x02,0xf0,0x19,0xde,0x02,0x84,0x80,0x00,0x05,0x00,0x00,0x7c,0x06,0x00,0x00,0x00]
