@@ -978,13 +978,18 @@ void AMDGPUInstPrinter::printModsWmma(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
-  if (!Imm)
-    return;
 
-  // TODO: Support VOPM WMMA modifiers
   // SignedA, SignedB and SparseIndexOdd are already separate operands. Should
   // we join them into ModsWmma?
-  O << " aux_data:" << Imm;
+
+  unsigned FmtA = (Imm & VOPMMods::FMT_A) >> VOPMMods::FMT_A_SHIFT;
+  printModNamed(FmtA, "matrix_a_fmt", WMMAMods::ModMatrixFmt, O);
+  unsigned FmtB = (Imm & VOPMMods::FMT_B) >> VOPMMods::FMT_B_SHIFT;
+  printModNamed(FmtB, "matrix_b_fmt", WMMAMods::ModMatrixFmt, O);
+  unsigned ScaleA = (Imm & VOPMMods::SCALE_A) >> VOPMMods::SCALE_A_SHIFT;
+  printModNamed(ScaleA, "matrix_a_scale", VOPMMods::ModMatrixScale, O);
+  unsigned ScaleB = (Imm & VOPMMods::SCALE_B) >> VOPMMods::SCALE_B_SHIFT;
+  printModNamed(ScaleB, "matrix_b_scale", VOPMMods::ModMatrixScale, O);
 }
 
 void AMDGPUInstPrinter::printDefaultVccOperand(bool FirstOperand,
@@ -1703,26 +1708,10 @@ void AMDGPUInstPrinter::printMatrixFMT(const MCInst *MI, unsigned OpNo,
     return;
 
   O << " matrix_" << AorB << "_fmt:";
-  switch (Imm) {
-  default:
+  if (Imm < static_cast<int64_t>(std::size(WMMAMods::ModMatrixFmt)))
+    O << WMMAMods::ModMatrixFmt[Imm];
+  else
     O << Imm;
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_FP8:
-    O << "MATRIX_FMT_FP8";
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_BF8:
-    O << "MATRIX_FMT_BF8";
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_FP6:
-    O << "MATRIX_FMT_FP6";
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_BF6:
-    O << "MATRIX_FMT_BF6";
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_FP4:
-    O << "MATRIX_FMT_FP4";
-    break;
-  }
 }
 
 void AMDGPUInstPrinter::printMatrixAFMT(const MCInst *MI, unsigned OpNo,

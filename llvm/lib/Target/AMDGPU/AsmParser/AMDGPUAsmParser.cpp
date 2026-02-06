@@ -5841,12 +5841,9 @@ bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
     if (RegSize == AMDGPU::wmmaScaleF8F6F4FormatToNumRegs(Fmt) * 32)
       return true;
 
-    static const char *FmtNames[] = {"MATRIX_FMT_FP8", "MATRIX_FMT_BF8",
-                                     "MATRIX_FMT_FP6", "MATRIX_FMT_BF6",
-                                     "MATRIX_FMT_FP4"};
-
     Error(getOperandLoc(Operands, SrcIdx),
-          "wrong register tuple size for " + Twine(FmtNames[Fmt]));
+          "wrong register tuple size for " +
+              Twine(WMMAMods::ModMatrixFmt[Fmt]));
     return false;
   };
 
@@ -7730,13 +7727,19 @@ ParseStatus AMDGPUAsmParser::parseModsFmaTensor(OperandVector &Operands) {
 }
 
 ParseStatus AMDGPUAsmParser::parseModsWmma(OperandVector &Operands) {
-  // TODO: Support VOPM WMMA modifiers
-  ParseStatus Res =
-      parseIntWithPrefix("aux_data", Operands, AMDGPUOperand::ImmTyModsWmma);
-  if (!Res.isNoMatch())
-    return Res;
+  using namespace VOPMMods;
+  static constexpr VOPMMod ModFields[] = {
+      {VOPMMod::Named, "matrix_a_fmt", FMT_A, FMT_A_SHIFT,
+       VOPMMod::ModData(WMMAMods::ModMatrixFmt)},
+      {VOPMMod::Named, "matrix_b_fmt", FMT_B, FMT_B_SHIFT,
+       VOPMMod::ModData(WMMAMods::ModMatrixFmt)},
+      {VOPMMod::Named, "matrix_a_scale", SCALE_A, SCALE_A_SHIFT,
+       VOPMMod::ModData(VOPMMods::ModMatrixScale)},
+      {VOPMMod::Named, "matrix_b_scale", SCALE_B, SCALE_B_SHIFT,
+       VOPMMod::ModData(VOPMMods::ModMatrixScale)},
+  };
 
-  return ParseStatus::NoMatch;
+  return parseMods(ModFields, Operands, AMDGPUOperand::ImmTyModsWmma);
 }
 
 ParseStatus AMDGPUAsmParser::parseScope(OperandVector &Operands,
@@ -7960,10 +7963,7 @@ ParseStatus AMDGPUAsmParser::parseIndexKey32bit(OperandVector &Operands) {
 ParseStatus AMDGPUAsmParser::tryParseMatrixFMT(OperandVector &Operands,
                                                StringRef Name,
                                                AMDGPUOperand::ImmTy Type) {
-  return parseStringOrIntWithPrefix(Operands, Name,
-                                    {"MATRIX_FMT_FP8", "MATRIX_FMT_BF8",
-                                     "MATRIX_FMT_FP6", "MATRIX_FMT_BF6",
-                                     "MATRIX_FMT_FP4"},
+  return parseStringOrIntWithPrefix(Operands, Name, WMMAMods::ModMatrixFmt,
                                     Type);
 }
 

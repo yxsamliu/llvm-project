@@ -127,6 +127,12 @@ ArrayRef<GFXVersion> getGFXVersions();
 
 } // namespace UCVersion
 
+namespace WMMAMods {
+inline constexpr const char *const ModMatrixFmt[] = {
+    "MATRIX_FMT_FP8", "MATRIX_FMT_BF8", "MATRIX_FMT_FP6", "MATRIX_FMT_BF6",
+    "MATRIX_FMT_FP4"};
+}
+
 namespace VOPMMods {
 
 inline constexpr const char *const ModShapeNames[] = {
@@ -143,6 +149,10 @@ inline constexpr const char *const ModActivationNames[] = {
     "ACTIVATION_OFF", "ACTIVATION_RELU", "ACTIVATION_HARD_TANH"};
 
 inline constexpr int32_t ModChanOffsetInts[] = {0, 2, 8, 10, 16, 18};
+
+inline constexpr const char *const ModMatrixScale[] = {
+    "MATRIX_SCALE_LO_EVEN", "MATRIX_SCALE_HI_EVEN", "MATRIX_SCALE_LO_ODD",
+    "MATRIX_SCALE_HI_ODD"};
 
 } // namespace VOPMMods
 

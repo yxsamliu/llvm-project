@@ -280,8 +280,8 @@ v_uniform_scale_activate_f16 [v905, v906, v907, v908], v[905:908], 4.0 shape:SHA
 v_uniform_scale_activate_bf16 [v905, v906, v907, v908], v[905:908], s1 shape:SHAPE_4X4X16
 // GFX13: v_uniform_scale_activate_bf16 [v905, v906, v907, v908], v[905:908], s1 shape:SHAPE_4X4X16 ; encoding: [0x89,0xc3,0x09,0xde,0x89,0x07,0x00,0x08,0x8a,0x03,0x00,0x01,0x8b,0xc3,0x38,0x00]
 
-v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], v[916:923], v924, v925 aux_data:1152 clamp
-// GFX13: v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], v[916:923], v924, v925 aux_data:1152 clamp ; encoding: [0x94,0x93,0x20,0xde,0x94,0x87,0xf0,0x00,0x8c,0x23,0x01,0x00,0x9c,0xd3,0x39,0x00]
+v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], v[916:923], v924, v925 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp
+// GFX13: v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], v[916:923], v924, v925 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp ; encoding: [0x94,0x93,0x20,0xde,0x94,0x87,0xf0,0x00,0x8c,0x23,0x01,0x00,0x9c,0xd3,0x39,0x00]
 
 v_fma_from_tensor_bf16_bf16 v[902:903], [v904, v905], v[906:907], v[902:903] layout:LAYOUT_CONVOLVE_8X4 clamp
 // GFX13: v_fma_from_tensor_bf16_bf16 v[902:903], [v904, v905], v[906:907], v[902:903] layout:LAYOUT_CONVOLVE_8X4 clamp ; encoding: [0x86,0xd3,0x19,0xde,0x86,0x07,0xf1,0x00,0x89,0x03,0x00,0x7c,0x8a,0x03,0x00,0x00]
@@ -1300,5 +1300,5 @@ v_wmma_f32i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b 
 v_wmma_i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b clamp
 // GFX13: v_wmma_i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b clamp ; encoding: [0x8c,0x93,0x1f,0xdd,0x80,0x80,0xf0,0x0c,0x88,0x93,0x00,0x00]
 
-v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], 0, v924, v925 aux_data:1152 clamp
-// GFX13: v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], 0, v924, v925 aux_data:1152 clamp ; encoding: [0x94,0x93,0x20,0xde,0x80,0x80,0xf0,0x00,0x8c,0x23,0x01,0x00,0x9c,0xd3,0x39,0x00]
+v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], 0, v924, v925 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp
+// GFX13: v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], 0, v924, v925 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp ; encoding: [0x94,0x93,0x20,0xde,0x80,0x80,0xf0,0x00,0x8c,0x23,0x01,0x00,0x9c,0xd3,0x39,0x00]

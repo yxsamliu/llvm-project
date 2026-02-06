@@ -13,8 +13,8 @@ v_uniform_scale_activate_f16 [v5, v6, v7, v8], v[5:8], 4.0 shape:SHAPE_4X4X16
 v_uniform_scale_activate_bf16 [v5, v6, v7, v8], v[5:8], s1 shape:SHAPE_4X4X16
 // GFX13: v_uniform_scale_activate_bf16 [v5, v6, v7, v8], v[5:8], s1 shape:SHAPE_4X4X16 ; encoding: [0x05,0xc0,0x09,0xde,0x05,0x04,0x00,0x08,0x06,0x00,0x00,0x01,0x07,0x80,0x00,0x00]
 
-v_wmma_f32_16x16_f8f6f4 v[16:23], v[0:7], v[8:15], v[16:23], v24, v25 aux_data:1152 clamp
-// GFX13: v_wmma_f32_16x16_f8f6f4 v[16:23], v[0:7], v[8:15], v[16:23], v24, v25 aux_data:1152 clamp ; encoding: [0x10,0x90,0x20,0xde,0x10,0x04,0x80,0x00,0x08,0x20,0x01,0x00,0x18,0x90,0x01,0x00]
+v_wmma_f32_16x16_f8f6f4 v[16:23], v[0:7], v[8:15], v[16:23], v24, v25 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp
+// GFX13: v_wmma_f32_16x16_f8f6f4 v[16:23], v[0:7], v[8:15], v[16:23], v24, v25 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp ; encoding: [0x10,0x90,0x20,0xde,0x10,0x04,0x80,0x00,0x08,0x20,0x01,0x00,0x18,0x90,0x01,0x00]
 
 v_swmma_f32_16x16_fp8_fp8 v[6:13], v[0:1], v[2:5], v[6:13], v14 sparse_index_odd clamp
 // GFX13: v_swmma_f32_16x16_fp8_fp8 v[6:13], v[0:1], v[2:5], v[6:13], v14 sparse_index_odd clamp ; encoding: [0x06,0x10,0x2d,0xde,0x06,0x04,0x80,0x00,0x02,0x00,0x00,0x00,0x0e,0x00,0x00,0x01]
