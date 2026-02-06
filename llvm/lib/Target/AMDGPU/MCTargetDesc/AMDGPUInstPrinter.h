@@ -204,8 +204,11 @@ private:
                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printModsConvolve(const MCInst *MI, unsigned OpNo,
                          const MCSubtargetInfo &STI, raw_ostream &O);
-  void printModsTensor(unsigned Imm, raw_ostream &O);
-  void printModsShapeCvt(const MCInst *MI, unsigned OpNo,
+  void printModsTensor(unsigned Imm, ArrayRef<int32_t> ChannelOffsetInts,
+                       raw_ostream &O);
+  void printModsCvtTensor(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
+  void printModsScaleActivate(const MCInst *MI, unsigned OpNo,
                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printModsFmaTensor(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);

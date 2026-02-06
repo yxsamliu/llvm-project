@@ -359,7 +359,7 @@ defm VOPM_CONV_I32_IU8     : Conv_Profile_Multi<"i32", "i32">;
 defm VOPM_CONV_F32I32_IU4 : Conv_Profile_Multi<"f32", "i32", "i32">;
 defm VOPM_CONV_F32I32_IU8 : Conv_Profile_Multi<"f32", "i32", "i32">;
 
-class SBA_Profile<list<ValueType> ArgTy, int Scatter> : VOPMProfile<ArgTy, 1, 1, 1, 1, ModsShapeCvt> {
+class SBA_Profile<list<ValueType> ArgTy, int Scatter> : VOPMProfile<ArgTy, 1, 1, 1, 1, ModsScaleActivate> {
 
   let Outs64 = !cond(!eq(Scatter, 1) : (outs DstRC64:$vdst),
                      !eq(Scatter, 2) : (outs DstRC64:$vdst, Src2RC64:$src2),
@@ -537,7 +537,7 @@ def VOPM_SWMMA_F32_IU4_X128    : VOPM_SWMMA_Profile_Int<[v8f32, v4i32, v8i32, v8
 def VOPM_SWMMA_F32I32_IU4_X128 : VOPM_SWMMA_Profile_Int<[v8f32, v4i32, v8i32, v8i32, v2i32], KMult.X4>;
 
 class Cvt_To_Tensor_Profile<list<ValueType> ArgTy, int PixelShape, int Scatter>
-    : VOPMProfile<ArgTy, 1, 1, 1, 1, ModsShapeCvt> {
+    : VOPMProfile<ArgTy, 1, 1, 1, 1, ModsCvtTensor> {
   let Outs64 = !cond(!eq(Scatter, 1) : (outs DstRC64:$vdst),
                      !eq(Scatter, 2) : (outs DstRC64:$vdst, Src2RC64:$src2),
                      !eq(Scatter, 4) : (outs DstRC64:$vdst, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4));

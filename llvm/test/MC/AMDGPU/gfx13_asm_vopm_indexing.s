@@ -43,5 +43,5 @@ v_swmma_f32_16x16_fp8_fp8 g2[6:13], g1[0:1], g2[2:5], g1[6:13], v14 k:32 index_s
 v_fma_from_tensor_bf16_bf16 g1[2:3], [g2[4], g3[5]], g1[6:7], g1[2:3] layout:LAYOUT_CONVOLVE_8X4 clamp idxs:0x13211
 // GFX13: v_fma_from_tensor_bf16_bf16 g1[2:3], [g2[4], g3[5]], g1[6:7], g1[2:3] layout:LAYOUT_CONVOLVE_8X4 clamp idxs:0x13211 ; encoding: [0x02,0xd4,0x19,0xde,0x02,0x8c,0x80,0x02,0x05,0x0c,0x00,0x7c,0x06,0x04,0x00,0x00]
 
-v_cvt_to_tensor_i4_f32 g3[1], g1[5:8], s42 shape:SHAPE_4X2X16 accum_chan_order clamp idxs:0x13
-// GFX13: v_cvt_to_tensor_i4_f32 g3[1], g1[5:8], s42 shape:SHAPE_4X2X16 accum_chan_order clamp idxs:0x13 ; encoding: [0x01,0x1c,0x0c,0xdd,0x05,0x0c,0x00,0x0c,0x00,0x20,0x00,0x2a]
+v_cvt_to_tensor_i4_f32 g3[1], g1[5:8], s42 shape:SHAPE_4X2X16 clamp idxs:0x13
+// GFX13: v_cvt_to_tensor_i4_f32 g3[1], g1[5:8], s42 shape:SHAPE_4X2X16 clamp idxs:0x13 ; encoding: [0x01,0x1c,0x0c,0xdd,0x05,0x0c,0x00,0x0c,0x00,0x00,0x00,0x2a]

@@ -1384,11 +1384,11 @@ def ScaleSel : NamedIntOperand<"scale_sel"> {
   let Validator = "isUInt<4>";
 }
 
-def ModsShapeCvt : CustomOperand<i32, 1>;  // VOPM: v_cvt_to_tensor_*,
-                                           //       v_scale_bias_activate_*,
-                                           //       v_uniform_scale_activate_*
-def ModsFmaTensor : CustomOperand<i32, 1>; // VOPM: v_fma_from_tensor_*
-def ModsConvolve : CustomOperand<i32, 1>;  // VOPM: v_convolve_*
+def ModsCvtTensor : CustomOperand<i32, 1>;      // VOPM: v_cvt_to_tensor_*,
+def ModsScaleActivate : CustomOperand<i32, 1>;  // VOPM: v_scale_bias_activate_*,
+                                                //       v_uniform_scale_activate_*
+def ModsFmaTensor : CustomOperand<i32, 1>;      // VOPM: v_fma_from_tensor_*
+def ModsConvolve : CustomOperand<i32, 1>;       // VOPM: v_convolve_*
 def ModsWmmaBlockScale : CustomOperand<i32, 1>; // VOPM: v_wmma_*_f8f6f4_*
 def ModsWmma : CustomOperand<i32, 1>;           // VOPM: v_wmma_*
 def ModsSwmma : CustomOperand<i32, 1>;          // VOPM: v_swmma_*

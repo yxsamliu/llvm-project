@@ -199,7 +199,8 @@ public:
     ImmTyScaleSel,
     ImmTyModsConvolve,
     ImmTyModsPermute,
-    ImmTyModsShapeCvt,
+    ImmTyModsCvtTensor,
+    ImmTyModsScaleActivate,
     ImmTyModsFmaTensor,
     ImmTyModsWmma,
     ImmTyModsSwmma,
@@ -417,7 +418,8 @@ public:
   bool isCPol() const { return isImmTy(ImmTyCPol); }
   bool isModsConvolve() const { return isImmTy(ImmTyModsConvolve); }
   bool isModsPermute() const { return isImmTy(ImmTyModsPermute); }
-  bool isModsShapeCvt() const { return isImmTy(ImmTyModsShapeCvt); }
+  bool isModsCvtTensor() const { return isImmTy(ImmTyModsCvtTensor); }
+  bool isModsScaleActivate() const { return isImmTy(ImmTyModsScaleActivate); }
   bool isModsFmaTensor() const { return isImmTy(ImmTyModsFmaTensor); }
   bool isModsWmma() const { return isImmTy(ImmTyModsWmma); }
   bool isModsSwmma() const { return isImmTy(ImmTyModsSwmma); }
@@ -1244,7 +1246,8 @@ public:
     case ImmTyScaleSel: OS << "ScaleSel" ; break;
     case ImmTyModsConvolve: OS << "ImmTyModsConvolve"; break;
     case ImmTyModsPermute: OS << "ImmTyModsPermute"; break;
-    case ImmTyModsShapeCvt: OS << "ImmTyModsShapeCvt"; break;
+    case ImmTyModsCvtTensor: OS << "ImmTyModsCvtTensor"; break;
+    case ImmTyModsScaleActivate: OS << "ImmTyModsScaleActivate"; break;
     case ImmTyModsFmaTensor: OS << "ImmTyModsFmaTensor"; break;
     case ImmTyModsWmma: OS << "ImmTyModsWmma"; break;
     case ImmTyModsSwmma: OS << "ImmTyModsSwmma"; break;
@@ -1866,7 +1869,7 @@ public:
   ParseStatus parseHwreg(OperandVector &Operands);
 
   struct VOPMMod {
-    enum Kind : uint8_t { Named, Int, IntSet, Pow2ScaledInt, Flag };
+    enum Kind : uint8_t { Named, Int, IntSet, NonZero, Pow2ScaledInt, Flag };
 
     union ModData {
       const ArrayRef<const char *> Names;
@@ -1896,7 +1899,8 @@ public:
   ParseStatus parseMods(ArrayRef<const VOPMMod> Fields, OperandVector &Operands,
                         AMDGPUOperand::ImmTy Type);
   ParseStatus parseModsConvolve(OperandVector &Operands);
-  ParseStatus parseModsShapeCvt(OperandVector &Operands);
+  ParseStatus parseModsCvtTensor(OperandVector &Operands);
+  ParseStatus parseModsScaleActivate(OperandVector &Operands);
   ParseStatus parseModsFmaTensor(OperandVector &Operands);
   ParseStatus parseModsWmma(OperandVector &Operands);
   ParseStatus parseModsSwmma(OperandVector &Operands);
@@ -7628,6 +7632,23 @@ ParseStatus AMDGPUAsmParser::parseModField(const VOPMMod &Field,
     Imm |= (EncodedValue << Field.Shift) & Field.MaskOrBit;
     break;
   }
+  case VOPMMod::NonZero: {
+    ParseStatus Res = parseIntWithPrefix(Field.Name, Value);
+    if (!Res.isSuccess())
+      return Res;
+
+    if (Value == 0)
+      break;
+
+    // Shift field is bitmask for determining which value to check.
+    unsigned Idx = (Imm & Field.Shift) ? 1 : 0;
+    if (Value != Field.Mods.Ints[Idx])
+      Error(Loc, Twine(Field.Name) + " must be either 0 or " +
+                     Twine(Field.Mods.Ints[Idx]) + " for selected SHAPE");
+
+    Imm |= Field.MaskOrBit;
+    break;
+  }
   case VOPMMod::Pow2ScaledInt: {
     const auto &[Min, Max] = Field.Mods.Range;
     assert(isPowerOf2_32(Min) && isPowerOf2_32(Max) &&
@@ -7716,7 +7737,27 @@ ParseStatus AMDGPUAsmParser::parseModsConvolve(OperandVector &Operands) {
   return parseMods(ModFields, Operands, AMDGPUOperand::ImmTyModsConvolve);
 }
 
-ParseStatus AMDGPUAsmParser::parseModsShapeCvt(OperandVector &Operands) {
+ParseStatus AMDGPUAsmParser::parseModsCvtTensor(OperandVector &Operands) {
+  using namespace VOPMMods;
+  static constexpr VOPMMod ModFields[] = {
+      {VOPMMod::Named, "shape", SHAPE, SHAPE_SHIFT,
+       VOPMMod::ModData(VOPMMods::ModShapeNames)},
+      {VOPMMod::Flag, "int_scale", INT_SCALE_shape_cvt},
+      {VOPMMod::Named, "activation_fn", ACTIVATION_FN, ACTIVATION_FN_SHIFT,
+       VOPMMod::ModData(VOPMMods::ModActivationNames)},
+      // chan_offset can be only a single non-zero value from the allowed set
+      // and is determined based on SHAPE.
+      // For SHAPE_8X4X8, SHAPE_4X4X8 allowed values are 0 or 8.
+      // For SHAPE_4X2X16 allowed value are 0 or 16.
+      {VOPMMod::NonZero, "chan_offset", CHAN_OFFSET_cvt_tensor,
+       (SHAPE & -SHAPE) << 1,
+       VOPMMod::ModData(VOPMMods::ModChanOffsetCvtTensorNonZeroInts)},
+  };
+
+  return parseMods(ModFields, Operands, AMDGPUOperand::ImmTyModsCvtTensor);
+}
+
+ParseStatus AMDGPUAsmParser::parseModsScaleActivate(OperandVector &Operands) {
   using namespace VOPMMods;
   static constexpr VOPMMod ModFields[] = {
       {VOPMMod::Named, "shape", SHAPE, SHAPE_SHIFT,
@@ -7726,10 +7767,10 @@ ParseStatus AMDGPUAsmParser::parseModsShapeCvt(OperandVector &Operands) {
       {VOPMMod::Named, "activation_fn", ACTIVATION_FN, ACTIVATION_FN_SHIFT,
        VOPMMod::ModData(VOPMMods::ModActivationNames)},
       {VOPMMod::IntSet, "chan_offset", CHAN_OFFSET, CHAN_OFFSET_SHIFT,
-       VOPMMod::ModData(VOPMMods::ModChanOffsetInts)},
+       VOPMMod::ModData(VOPMMods::ModChanOffsetScaleActivateInts)},
   };
 
-  return parseMods(ModFields, Operands, AMDGPUOperand::ImmTyModsShapeCvt);
+  return parseMods(ModFields, Operands, AMDGPUOperand::ImmTyModsScaleActivate);
 }
 
 ParseStatus AMDGPUAsmParser::parseModsFmaTensor(OperandVector &Operands) {
@@ -7738,11 +7779,10 @@ ParseStatus AMDGPUAsmParser::parseModsFmaTensor(OperandVector &Operands) {
       {VOPMMod::Named, "layout", LAYOUT, LAYOUT_SHIFT,
        VOPMMod::ModData(VOPMMods::ModLayoutNames)},
       {VOPMMod::Flag, "int_scale", INT_SCALE_shape_cvt},
-      {VOPMMod::Flag, "accum_chan_order", ACCUM_CHAN_ORDER_shape_cvt},
       {VOPMMod::Named, "activation_fn", ACTIVATION_FN, ACTIVATION_FN_SHIFT,
        VOPMMod::ModData(VOPMMods::ModActivationNames)},
       {VOPMMod::IntSet, "chan_offset", CHAN_OFFSET, CHAN_OFFSET_SHIFT,
-       VOPMMod::ModData(VOPMMods::ModChanOffsetInts)},
+       VOPMMod::ModData(VOPMMods::ModChanOffsetFmaTensorInts)},
   };
 
   return parseMods(ModFields, Operands, AMDGPUOperand::ImmTyModsFmaTensor);

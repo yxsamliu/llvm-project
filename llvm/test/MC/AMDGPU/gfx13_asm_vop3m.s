@@ -13,8 +13,8 @@ v_permute_pack_tensor_2src_b64 v5, v6, v2, v3
 v_permute_pack_tensor_2src_b64 v5, v6, v2, v3 pattern:2
 // GFX13: v_permute_pack_tensor_2src_b64 v5, v6, v2, v3 pattern:2 ; encoding: [0x05,0x40,0x04,0xdd,0x02,0x64,0x80,0x08,0x06,0x00,0x00,0x00]
 
-v_scale_bias_activate_f32 v[5:8], v[5:8], s1, v3 shape:SHAPE_4X4X16 accum_chan_order
-// GFX13: v_scale_bias_activate_f32 v[5:8], v[5:8], s1, v3 shape:SHAPE_4X4X16 accum_chan_order ; encoding: [0x05,0x00,0x08,0xdd,0x05,0x64,0x80,0x08,0x00,0x20,0x00,0x01]
+v_scale_bias_activate_f32 v[5:8], v[5:8], s1, v3 shape:SHAPE_4X2X16 accum_chan_order
+// GFX13: v_scale_bias_activate_f32 v[5:8], v[5:8], s1, v3 shape:SHAPE_4X2X16 accum_chan_order ; encoding: [0x05,0x00,0x08,0xdd,0x05,0x64,0x80,0x0c,0x00,0x20,0x00,0x01]
 
 v_scale_bias_activate_f16 v[5:8], v[5:8], 4.0, v3 shape:SHAPE_8X4X8 accum_chan_order
 // GFX13: v_scale_bias_activate_f16 v[5:8], v[5:8], 4.0, v3 shape:SHAPE_8X4X8 accum_chan_order ; encoding: [0x05,0x40,0x08,0xdd,0x05,0x64,0x80,0x00,0x00,0x20,0x00,0xf6]
@@ -22,14 +22,14 @@ v_scale_bias_activate_f16 v[5:8], v[5:8], 4.0, v3 shape:SHAPE_8X4X8 accum_chan_o
 v_scale_bias_activate_bf16 v[5:8], v[5:8], s1, v3 shape:SHAPE_4X4X16 accum_chan_order
 // GFX13: v_scale_bias_activate_bf16 v[5:8], v[5:8], s1, v3 shape:SHAPE_4X4X16 accum_chan_order ; encoding: [0x05,0x80,0x08,0xdd,0x05,0x64,0x80,0x08,0x00,0x20,0x00,0x01]
 
-v_uniform_scale_activate_f32 v[5:8], v[5:8], s1 shape:SHAPE_4X4X16 accum_chan_order
-// GFX13: v_uniform_scale_activate_f32 v[5:8], v[5:8], s1 shape:SHAPE_4X4X16 accum_chan_order ; encoding: [0x05,0x40,0x09,0xdd,0x05,0x04,0x00,0x08,0x00,0x20,0x00,0x01]
+v_uniform_scale_activate_f32 v[5:8], v[5:8], s1 shape:SHAPE_4X2X16
+// GFX13: v_uniform_scale_activate_f32 v[5:8], v[5:8], s1 shape:SHAPE_4X2X16 ; encoding: [0x05,0x40,0x09,0xdd,0x05,0x04,0x00,0x0c,0x00,0x00,0x00,0x01]
 
-v_uniform_scale_activate_f16 v[5:8], v[5:8], 4.0 shape:SHAPE_4X4X16 accum_chan_order
-// GFX13: v_uniform_scale_activate_f16 v[5:8], v[5:8], 4.0 shape:SHAPE_4X4X16 accum_chan_order ; encoding: [0x05,0x80,0x09,0xdd,0x05,0x04,0x00,0x08,0x00,0x20,0x00,0xf6]
+v_uniform_scale_activate_f16 v[5:8], v[5:8], 4.0 shape:SHAPE_4X4X16
+// GFX13: v_uniform_scale_activate_f16 v[5:8], v[5:8], 4.0 shape:SHAPE_4X4X16 ; encoding: [0x05,0x80,0x09,0xdd,0x05,0x04,0x00,0x08,0x00,0x00,0x00,0xf6]
 
-v_uniform_scale_activate_bf16 v[5:8], v[5:8], s1 shape:SHAPE_8X4X8 accum_chan_order
-// GFX13: v_uniform_scale_activate_bf16 v[5:8], v[5:8], s1 shape:SHAPE_8X4X8 accum_chan_order ; encoding: [0x05,0xc0,0x09,0xdd,0x05,0x04,0x00,0x00,0x00,0x20,0x00,0x01]
+v_uniform_scale_activate_bf16 v[5:8], v[5:8], s1 shape:SHAPE_8X4X8
+// GFX13: v_uniform_scale_activate_bf16 v[5:8], v[5:8], s1 shape:SHAPE_8X4X8 ; encoding: [0x05,0xc0,0x09,0xdd,0x05,0x04,0x00,0x00,0x00,0x00,0x00,0x01]
 
 v_scale_bias_activate_f16 [v5, v6], v[5:6], 4.0, v3 shape:SHAPE_4X2X16 accum_chan_order
 // GFX13: v_scale_bias_activate_f16 [v5, v6], v[5:6], 4.0, v3 shape:SHAPE_4X2X16 accum_chan_order ; encoding: [0x05,0x40,0x08,0xdd,0x05,0x64,0x80,0x0c,0x06,0x20,0x00,0xf6]
@@ -37,11 +37,11 @@ v_scale_bias_activate_f16 [v5, v6], v[5:6], 4.0, v3 shape:SHAPE_4X2X16 accum_cha
 v_scale_bias_activate_bf16 [v5, v6], v[5:6], s1, v3 shape:SHAPE_4X2X16 accum_chan_order
 // GFX13: v_scale_bias_activate_bf16 [v5, v6], v[5:6], s1, v3 shape:SHAPE_4X2X16 accum_chan_order ; encoding: [0x05,0x80,0x08,0xdd,0x05,0x64,0x80,0x0c,0x06,0x20,0x00,0x01]
 
-v_uniform_scale_activate_f16 [v5, v6], v[5:6], 4.0 shape:SHAPE_4X2X16 accum_chan_order
-// GFX13: v_uniform_scale_activate_f16 [v5, v6], v[5:6], 4.0 shape:SHAPE_4X2X16 accum_chan_order ; encoding: [0x05,0x80,0x09,0xdd,0x05,0x04,0x00,0x0c,0x06,0x20,0x00,0xf6]
+v_uniform_scale_activate_f16 [v5, v6], v[5:6], 4.0 shape:SHAPE_4X2X16
+// GFX13: v_uniform_scale_activate_f16 [v5, v6], v[5:6], 4.0 shape:SHAPE_4X2X16 ; encoding: [0x05,0x80,0x09,0xdd,0x05,0x04,0x00,0x0c,0x06,0x00,0x00,0xf6]
 
-v_uniform_scale_activate_bf16 [v5, v6], v[5:6], s1 shape:SHAPE_4X2X16 accum_chan_order
-// GFX13: v_uniform_scale_activate_bf16 [v5, v6], v[5:6], s1 shape:SHAPE_4X2X16 accum_chan_order ; encoding: [0x05,0xc0,0x09,0xdd,0x05,0x04,0x00,0x0c,0x06,0x20,0x00,0x01]
+v_uniform_scale_activate_bf16 [v5, v6], v[5:6], s1 shape:SHAPE_4X2X16
+// GFX13: v_uniform_scale_activate_bf16 [v5, v6], v[5:6], s1 shape:SHAPE_4X2X16 ; encoding: [0x05,0xc0,0x09,0xdd,0x05,0x04,0x00,0x0c,0x06,0x00,0x00,0x01]
 
 v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] k:16 clamp
 // GFX13: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] k:16 clamp ; encoding: [0x04,0x10,0x1d,0xdd,0x04,0x04,0x80,0x00,0x02,0x00,0x00,0x00]

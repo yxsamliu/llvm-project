@@ -148,7 +148,12 @@ inline constexpr const char *const ModLayoutNames[] = {
 inline constexpr const char *const ModActivationNames[] = {
     "ACTIVATION_OFF", "ACTIVATION_RELU", "ACTIVATION_HARD_TANH"};
 
-inline constexpr int32_t ModChanOffsetInts[] = {0, 2, 8, 10, 16, 18};
+inline constexpr int32_t ModChanOffsetFmaTensorInts[] = {0, 2, 8, 10, 16, 18};
+
+inline constexpr int32_t ModChanOffsetCvtTensorNonZeroInts[] = {8, 16};
+
+inline constexpr int32_t ModChanOffsetScaleActivateInts[] = {0,  8,  16, 24,
+                                                             32, 40, 48, 56};
 
 inline constexpr const char *const ModMatrixScale[] = {
     "MATRIX_SCALE_LO_EVEN", "MATRIX_SCALE_HI_EVEN", "MATRIX_SCALE_LO_ODD",

@@ -918,7 +918,9 @@ void AMDGPUInstPrinter::printModsConvolve(const MCInst *MI, unsigned OpNo,
   O << (Imm & VOPMMods::INT_SCALE_convolve ? " int_scale" : "");
 }
 
-void AMDGPUInstPrinter::printModsTensor(unsigned Imm, raw_ostream &O) {
+void AMDGPUInstPrinter::printModsTensor(unsigned Imm,
+                                        ArrayRef<int32_t> ChannelOffsetInts,
+                                        raw_ostream &O) {
   O << (Imm & VOPMMods::INT_SCALE_shape_cvt ? " int_scale" : "");
   O << (Imm & VOPMMods::ACCUM_CHAN_ORDER_shape_cvt ? " accum_chan_order" : "");
 
@@ -935,14 +937,14 @@ void AMDGPUInstPrinter::printModsTensor(unsigned Imm, raw_ostream &O) {
   // Do not print chan_offset:0 by default
   if (ChanOffset) {
     O << " chan_offset:";
-    if (ChanOffset < std::size(VOPMMods::ModChanOffsetInts))
-      O << VOPMMods::ModChanOffsetInts[ChanOffset];
+    if (ChanOffset < std::size(ChannelOffsetInts))
+      O << ChannelOffsetInts[ChanOffset];
     else
       O << "/*invalid chan_offset (encoded) value:" << ChanOffset << "*/";
   }
 }
 
-void AMDGPUInstPrinter::printModsShapeCvt(const MCInst *MI, unsigned OpNo,
+void AMDGPUInstPrinter::printModsCvtTensor(const MCInst *MI, unsigned OpNo,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
@@ -950,7 +952,25 @@ void AMDGPUInstPrinter::printModsShapeCvt(const MCInst *MI, unsigned OpNo,
   unsigned Shape = (Imm & VOPMMods::SHAPE) >> VOPMMods::SHAPE_SHIFT;
   printModNamed(Shape, "shape",  VOPMMods::ModShapeNames, O);
 
-  printModsTensor(Imm, O);
+  if (Shape == VOPMMods::CNN::SHAPE_8X4X8 ||
+      Shape == VOPMMods::CNN::SHAPE_4X4X8) {
+    printModsTensor(Imm, {0, 8}, O);
+  } else if (Shape == VOPMMods::CNN::SHAPE_4X2X16) {
+    printModsTensor(Imm, {0, 16}, O);
+  } else { // SHAPE_4X4X16
+    printModsTensor(Imm, {0}, O);
+  }
+}
+
+void AMDGPUInstPrinter::printModsScaleActivate(const MCInst *MI, unsigned OpNo,
+                                          const MCSubtargetInfo &STI,
+                                          raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+
+  unsigned Shape = (Imm & VOPMMods::SHAPE) >> VOPMMods::SHAPE_SHIFT;
+  printModNamed(Shape, "shape",  VOPMMods::ModShapeNames, O);
+
+  printModsTensor(Imm, VOPMMods::ModChanOffsetScaleActivateInts, O);
 }
 
 void AMDGPUInstPrinter::printModsFmaTensor(const MCInst *MI, unsigned OpNo,
@@ -961,7 +981,7 @@ void AMDGPUInstPrinter::printModsFmaTensor(const MCInst *MI, unsigned OpNo,
   unsigned Layout = (Imm & VOPMMods::LAYOUT) >> VOPMMods::LAYOUT_SHIFT;
   printModNamed(Layout, "layout",  VOPMMods::ModLayoutNames, O);
 
-  printModsTensor(Imm, O);
+  printModsTensor(Imm, VOPMMods::ModChanOffsetFmaTensorInts, O);
 }
 
 void AMDGPUInstPrinter::printModNamed(unsigned Value, const char *Name,

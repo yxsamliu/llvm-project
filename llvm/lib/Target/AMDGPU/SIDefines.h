@@ -1218,6 +1218,7 @@ enum VOPMModBits : unsigned {
   ACTIVATION_FN              = 0x3 << ACTIVATION_FN_SHIFT,
   CHAN_OFFSET_SHIFT          = 4 + MOD1_SHIFT,
   CHAN_OFFSET                = 0x7 << CHAN_OFFSET_SHIFT,
+  CHAN_OFFSET_cvt_tensor     = 1 << CHAN_OFFSET_SHIFT, // low bit only
 
   // mod1 wmma
   FMT_A_SHIFT     = 0 + MOD1_SHIFT,

@@ -13,8 +13,8 @@ v_permute_pack_tensor_2src_b64 v905, v906, v902, v3
 v_permute_pack_tensor_2src_b64 v905, v906, v902, v903 pattern:2
 // GFX13: v_permute_pack_tensor_2src_b64 v905, v906, v902, v903 pattern:2 ; encoding: [0x89,0x43,0x04,0xdd,0x86,0xe7,0xf0,0x08,0x8a,0x03,0x00,0x00]
 
-v_scale_bias_activate_f32 v[905:908], v[905:908], s1, v903 shape:SHAPE_4X4X16 accum_chan_order
-// GFX13: v_scale_bias_activate_f32 v[905:908], v[905:908], s1, v903 shape:SHAPE_4X4X16 accum_chan_order ; encoding: [0x89,0x03,0x08,0xdd,0x89,0xe7,0xf0,0x08,0x00,0x20,0x00,0x01]
+v_scale_bias_activate_f32 v[905:908], v[905:908], s1, v903 shape:SHAPE_4X2X16 accum_chan_order
+// GFX13: v_scale_bias_activate_f32 v[905:908], v[905:908], s1, v903 shape:SHAPE_4X2X16 accum_chan_order ; encoding: [0x89,0x03,0x08,0xdd,0x89,0xe7,0xf0,0x0c,0x00,0x20,0x00,0x01]
 
 v_scale_bias_activate_f16 v[905:908], v[905:908], 4.0, v903 shape:SHAPE_8X4X8 accum_chan_order
 // GFX13: v_scale_bias_activate_f16 v[905:908], v[905:908], 4.0, v903 shape:SHAPE_8X4X8 accum_chan_order ; encoding: [0x89,0x43,0x08,0xdd,0x89,0xe7,0xf0,0x00,0x00,0x20,0x00,0xf6]
@@ -22,14 +22,14 @@ v_scale_bias_activate_f16 v[905:908], v[905:908], 4.0, v903 shape:SHAPE_8X4X8 ac
 v_scale_bias_activate_bf16 v[905:908], v[905:908], s1, v903 shape:SHAPE_4X4X16 accum_chan_order
 // GFX13: v_scale_bias_activate_bf16 v[905:908], v[905:908], s1, v903 shape:SHAPE_4X4X16 accum_chan_order ; encoding: [0x89,0x83,0x08,0xdd,0x89,0xe7,0xf0,0x08,0x00,0x20,0x00,0x01]
 
-v_uniform_scale_activate_f32 v[905:908], v[905:908], s1 shape:SHAPE_4X4X16 accum_chan_order
-// GFX13: v_uniform_scale_activate_f32 v[905:908], v[905:908], s1 shape:SHAPE_4X4X16 accum_chan_order ; encoding: [0x89,0x43,0x09,0xdd,0x89,0x07,0x00,0x08,0x00,0x20,0x00,0x01]
+v_uniform_scale_activate_f32 v[905:908], v[905:908], s1 shape:SHAPE_4X2X16
+// GFX13: v_uniform_scale_activate_f32 v[905:908], v[905:908], s1 shape:SHAPE_4X2X16 ; encoding: [0x89,0x43,0x09,0xdd,0x89,0x07,0x00,0x0c,0x00,0x00,0x00,0x01]
 
-v_uniform_scale_activate_f16 v[905:908], v[905:908], 4.0 shape:SHAPE_4X4X16 accum_chan_order
-// GFX13: v_uniform_scale_activate_f16 v[905:908], v[905:908], 4.0 shape:SHAPE_4X4X16 accum_chan_order ; encoding: [0x89,0x83,0x09,0xdd,0x89,0x07,0x00,0x08,0x00,0x20,0x00,0xf6]
+v_uniform_scale_activate_f16 v[905:908], v[905:908], 4.0 shape:SHAPE_4X4X16
+// GFX13: v_uniform_scale_activate_f16 v[905:908], v[905:908], 4.0 shape:SHAPE_4X4X16 ; encoding: [0x89,0x83,0x09,0xdd,0x89,0x07,0x00,0x08,0x00,0x00,0x00,0xf6]
 
-v_uniform_scale_activate_bf16 v[905:908], v[905:908], s1 shape:SHAPE_8X4X8 accum_chan_order
-// GFX13: v_uniform_scale_activate_bf16 v[905:908], v[905:908], s1 shape:SHAPE_8X4X8 accum_chan_order ; encoding: [0x89,0xc3,0x09,0xdd,0x89,0x07,0x00,0x00,0x00,0x20,0x00,0x01]
+v_uniform_scale_activate_bf16 v[905:908], v[905:908], s1 shape:SHAPE_8X4X8
+// GFX13: v_uniform_scale_activate_bf16 v[905:908], v[905:908], s1 shape:SHAPE_8X4X8 ; encoding: [0x89,0xc3,0x09,0xdd,0x89,0x07,0x00,0x00,0x00,0x00,0x00,0x01]
 
 v_scale_bias_activate_f16 [v905, v906], v[905:906], 4.0, v903 shape:SHAPE_4X2X16 accum_chan_order
 // GFX13: v_scale_bias_activate_f16 [v905, v906], v[905:906], 4.0, v903 shape:SHAPE_4X2X16 accum_chan_order ; encoding: [0x89,0x43,0x08,0xdd,0x89,0xe7,0xf0,0x0c,0x8a,0x23,0x00,0xf6]
@@ -37,11 +37,11 @@ v_scale_bias_activate_f16 [v905, v906], v[905:906], 4.0, v903 shape:SHAPE_4X2X16
 v_scale_bias_activate_bf16 [v905, v906], v[905:906], s1, v903 shape:SHAPE_4X2X16 accum_chan_order
 // GFX13: v_scale_bias_activate_bf16 [v905, v906], v[905:906], s1, v903 shape:SHAPE_4X2X16 accum_chan_order ; encoding: [0x89,0x83,0x08,0xdd,0x89,0xe7,0xf0,0x0c,0x8a,0x23,0x00,0x01]
 
-v_uniform_scale_activate_f16 [v905, v906], v[905:906], 4.0 shape:SHAPE_4X2X16 accum_chan_order
-// GFX13: v_uniform_scale_activate_f16 [v905, v906], v[905:906], 4.0 shape:SHAPE_4X2X16 accum_chan_order ; encoding: [0x89,0x83,0x09,0xdd,0x89,0x07,0x00,0x0c,0x8a,0x23,0x00,0xf6]
+v_uniform_scale_activate_f16 [v905, v906], v[905:906], 4.0 shape:SHAPE_4X2X16
+// GFX13: v_uniform_scale_activate_f16 [v905, v906], v[905:906], 4.0 shape:SHAPE_4X2X16 ; encoding: [0x89,0x83,0x09,0xdd,0x89,0x07,0x00,0x0c,0x8a,0x03,0x00,0xf6]
 
-v_uniform_scale_activate_bf16 [v905, v906], v[905:906], s1 shape:SHAPE_4X2X16 accum_chan_order
-// GFX13: v_uniform_scale_activate_bf16 [v905, v906], v[905:906], s1 shape:SHAPE_4X2X16 accum_chan_order ; encoding: [0x89,0xc3,0x09,0xdd,0x89,0x07,0x00,0x0c,0x8a,0x23,0x00,0x01]
+v_uniform_scale_activate_bf16 [v905, v906], v[905:906], s1 shape:SHAPE_4X2X16
+// GFX13: v_uniform_scale_activate_bf16 [v905, v906], v[905:906], s1 shape:SHAPE_4X2X16 ; encoding: [0x89,0xc3,0x09,0xdd,0x89,0x07,0x00,0x0c,0x8a,0x03,0x00,0x01]
 
 v_wmma_f32_16x16_fp8_fp8 v[904:911], v[900:901], v[902:903], v[904:911] k:16 clamp
 // GFX13: v_wmma_f32_16x16_fp8_fp8 v[904:911], v[900:901], v[902:903], v[904:911] k:16 clamp ; encoding: [0x88,0x13,0x1d,0xdd,0x88,0x87,0xf0,0x00,0x86,0x03,0x00,0x00]
@@ -385,215 +385,215 @@ v_fma_from_tensor_f32_u4 v[902:903], v904, v[906:907], v[902:903] layout:LAYOUT_
 v_fma_from_tensor_f32_u8 v[902:903], v904, v[906:907], v[902:903] layout:LAYOUT_DEQUANT_4X2 chan_offset:2 clamp
 // GFX13: v_fma_from_tensor_f32_u8 v[902:903], v904, v[906:907], v[902:903] layout:LAYOUT_DEQUANT_4X2 chan_offset:2 clamp ; encoding: [0x86,0xd3,0x14,0xde,0x86,0x07,0xf1,0x10,0x00,0x00,0x01,0x7c,0x8a,0x03,0x00,0x00]
 
-v_cvt_to_tensor_bf16_bf16 [v[900:901], v[902:903]], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_bf16_bf16 [v[900:901], v[902:903]], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0xd3,0x11,0xdd,0x84,0x07,0x00,0x00,0x86,0x23,0x00,0x00]
+v_cvt_to_tensor_bf16_bf16 [v[900:901], v[902:903]], v[900:903], s0 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_bf16_bf16 [v[900:901], v[902:903]], v[900:903], s0 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0xd3,0x11,0xdd,0x84,0x07,0x00,0x00,0x86,0x03,0x00,0x00]
 
-v_cvt_to_tensor_bf16_bf16 [v900, v901], v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_bf16_bf16 [v900, v901], v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0xd3,0x11,0xdd,0x84,0x07,0x00,0x0c,0x85,0x23,0x00,0x00]
+v_cvt_to_tensor_bf16_bf16 [v900, v901], v[900:901], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_bf16_bf16 [v900, v901], v[900:901], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0xd3,0x11,0xdd,0x84,0x07,0x00,0x0c,0x85,0x03,0x00,0x00]
 
-v_cvt_to_tensor_bf16_bf16 [v900, v901, v902, v903], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_bf16_bf16 [v900, v901, v902, v903], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0xd3,0x11,0xde,0x84,0x07,0x00,0x08,0x85,0x23,0x00,0x00,0x86,0x73,0x38,0x00]
+v_cvt_to_tensor_bf16_bf16 [v900, v901, v902, v903], v[900:903], s0 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_bf16_bf16 [v900, v901, v902, v903], v[900:903], s0 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0xd3,0x11,0xde,0x84,0x07,0x00,0x08,0x85,0x03,0x00,0x00,0x86,0x73,0x38,0x00]
 
-v_cvt_to_tensor_bf16_f16 [v[900:901], v[902:903]], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_bf16_f16 [v[900:901], v[902:903]], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0xd3,0x0f,0xdd,0x84,0x07,0x00,0x00,0x86,0x23,0x00,0x00]
+v_cvt_to_tensor_bf16_f16 [v[900:901], v[902:903]], v[900:903], s0 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_bf16_f16 [v[900:901], v[902:903]], v[900:903], s0 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0xd3,0x0f,0xdd,0x84,0x07,0x00,0x00,0x86,0x03,0x00,0x00]
 
-v_cvt_to_tensor_bf16_f16 [v900, v901], v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_bf16_f16 [v900, v901], v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0xd3,0x0f,0xdd,0x84,0x07,0x00,0x0c,0x85,0x23,0x00,0x00]
+v_cvt_to_tensor_bf16_f16 [v900, v901], v[900:901], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_bf16_f16 [v900, v901], v[900:901], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0xd3,0x0f,0xdd,0x84,0x07,0x00,0x0c,0x85,0x03,0x00,0x00]
 
-v_cvt_to_tensor_bf16_f16 [v900, v901, v902, v903], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_bf16_f16 [v900, v901, v902, v903], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0xd3,0x0f,0xde,0x84,0x07,0x00,0x08,0x85,0x23,0x00,0x00,0x86,0x73,0x38,0x00]
+v_cvt_to_tensor_bf16_f16 [v900, v901, v902, v903], v[900:903], s0 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_bf16_f16 [v900, v901, v902, v903], v[900:903], s0 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0xd3,0x0f,0xde,0x84,0x07,0x00,0x08,0x85,0x03,0x00,0x00,0x86,0x73,0x38,0x00]
 
-v_cvt_to_tensor_bf16_f32 [v900, v901], v[900:903], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_bf16_f32 [v900, v901], v[900:903], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0xd3,0x0d,0xdd,0x84,0x07,0x00,0x0c,0x85,0x23,0x00,0x00]
+v_cvt_to_tensor_bf16_f32 [v900, v901], v[900:903], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_bf16_f32 [v900, v901], v[900:903], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0xd3,0x0d,0xdd,0x84,0x07,0x00,0x0c,0x85,0x03,0x00,0x00]
 
-v_cvt_to_tensor_bf8_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_bf8_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0x53,0x11,0xdd,0x84,0x07,0x00,0x00,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_bf8_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_bf8_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0x53,0x11,0xdd,0x84,0x07,0x00,0x00,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_bf8_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_bf8_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x53,0x11,0xdd,0x84,0x07,0x00,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_bf8_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_bf8_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x53,0x11,0xdd,0x84,0x07,0x00,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_bf8_bf16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_bf8_bf16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0x53,0x11,0xdd,0x84,0x07,0x00,0x08,0x85,0x23,0x00,0x00]
+v_cvt_to_tensor_bf8_bf16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_bf8_bf16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0x53,0x11,0xdd,0x84,0x07,0x00,0x08,0x85,0x03,0x00,0x00]
 
-v_cvt_to_tensor_bf8_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_bf8_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0x53,0x0f,0xdd,0x84,0x07,0x00,0x00,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_bf8_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_bf8_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0x53,0x0f,0xdd,0x84,0x07,0x00,0x00,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_bf8_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_bf8_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x53,0x0f,0xdd,0x84,0x07,0x00,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_bf8_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_bf8_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x53,0x0f,0xdd,0x84,0x07,0x00,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_bf8_f16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_bf8_f16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0x53,0x0f,0xdd,0x84,0x07,0x00,0x08,0x85,0x23,0x00,0x00]
+v_cvt_to_tensor_bf8_f16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_bf8_f16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0x53,0x0f,0xdd,0x84,0x07,0x00,0x08,0x85,0x03,0x00,0x00]
 
-v_cvt_to_tensor_bf8_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_bf8_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x53,0x0d,0xdd,0x84,0x07,0x00,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_bf8_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_bf8_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x53,0x0d,0xdd,0x84,0x07,0x00,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_f16_bf16 [v[900:901], v[902:903]], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_f16_bf16 [v[900:901], v[902:903]], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0x93,0x11,0xdd,0x84,0x07,0x00,0x00,0x86,0x23,0x00,0x00]
+v_cvt_to_tensor_f16_bf16 [v[900:901], v[902:903]], v[900:903], s0 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_f16_bf16 [v[900:901], v[902:903]], v[900:903], s0 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0x93,0x11,0xdd,0x84,0x07,0x00,0x00,0x86,0x03,0x00,0x00]
 
-v_cvt_to_tensor_f16_bf16 [v900, v901], v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_f16_bf16 [v900, v901], v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x93,0x11,0xdd,0x84,0x07,0x00,0x0c,0x85,0x23,0x00,0x00]
+v_cvt_to_tensor_f16_bf16 [v900, v901], v[900:901], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_f16_bf16 [v900, v901], v[900:901], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x93,0x11,0xdd,0x84,0x07,0x00,0x0c,0x85,0x03,0x00,0x00]
 
-v_cvt_to_tensor_f16_bf16 [v900, v901, v902, v903], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_f16_bf16 [v900, v901, v902, v903], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0x93,0x11,0xde,0x84,0x07,0x00,0x08,0x85,0x23,0x00,0x00,0x86,0x73,0x38,0x00]
+v_cvt_to_tensor_f16_bf16 [v900, v901, v902, v903], v[900:903], s0 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_f16_bf16 [v900, v901, v902, v903], v[900:903], s0 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0x93,0x11,0xde,0x84,0x07,0x00,0x08,0x85,0x03,0x00,0x00,0x86,0x73,0x38,0x00]
 
-v_cvt_to_tensor_f16_f16 [v[900:901], v[902:903]], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_f16_f16 [v[900:901], v[902:903]], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0x93,0x0f,0xdd,0x84,0x07,0x00,0x00,0x86,0x23,0x00,0x00]
+v_cvt_to_tensor_f16_f16 [v[900:901], v[902:903]], v[900:903], s0 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_f16_f16 [v[900:901], v[902:903]], v[900:903], s0 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0x93,0x0f,0xdd,0x84,0x07,0x00,0x00,0x86,0x03,0x00,0x00]
 
-v_cvt_to_tensor_f16_f16 [v900, v901], v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_f16_f16 [v900, v901], v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x93,0x0f,0xdd,0x84,0x07,0x00,0x0c,0x85,0x23,0x00,0x00]
+v_cvt_to_tensor_f16_f16 [v900, v901], v[900:901], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_f16_f16 [v900, v901], v[900:901], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x93,0x0f,0xdd,0x84,0x07,0x00,0x0c,0x85,0x03,0x00,0x00]
 
-v_cvt_to_tensor_f16_f16 [v900, v901, v902, v903], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_f16_f16 [v900, v901, v902, v903], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0x93,0x0f,0xde,0x84,0x07,0x00,0x08,0x85,0x23,0x00,0x00,0x86,0x73,0x38,0x00]
+v_cvt_to_tensor_f16_f16 [v900, v901, v902, v903], v[900:903], s0 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_f16_f16 [v900, v901, v902, v903], v[900:903], s0 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0x93,0x0f,0xde,0x84,0x07,0x00,0x08,0x85,0x03,0x00,0x00,0x86,0x73,0x38,0x00]
 
-v_cvt_to_tensor_f16_f32 [v900, v901], v[900:903], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_f16_f32 [v900, v901], v[900:903], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x93,0x0d,0xdd,0x84,0x07,0x00,0x0c,0x85,0x23,0x00,0x00]
+v_cvt_to_tensor_f16_f32 [v900, v901], v[900:903], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_f16_f32 [v900, v901], v[900:903], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x93,0x0d,0xdd,0x84,0x07,0x00,0x0c,0x85,0x03,0x00,0x00]
 
-v_cvt_to_tensor_fp8_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_fp8_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0x13,0x11,0xdd,0x84,0x07,0x00,0x00,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_fp8_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_fp8_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0x13,0x11,0xdd,0x84,0x07,0x00,0x00,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_fp8_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_fp8_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x13,0x11,0xdd,0x84,0x07,0x00,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_fp8_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_fp8_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x13,0x11,0xdd,0x84,0x07,0x00,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_fp8_bf16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_fp8_bf16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0x13,0x11,0xdd,0x84,0x07,0x00,0x08,0x85,0x23,0x00,0x00]
+v_cvt_to_tensor_fp8_bf16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_fp8_bf16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0x13,0x11,0xdd,0x84,0x07,0x00,0x08,0x85,0x03,0x00,0x00]
 
-v_cvt_to_tensor_fp8_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_fp8_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0x13,0x0f,0xdd,0x84,0x07,0x00,0x00,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_fp8_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_fp8_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0x13,0x0f,0xdd,0x84,0x07,0x00,0x00,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_fp8_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_fp8_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x13,0x0f,0xdd,0x84,0x07,0x00,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_fp8_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_fp8_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x13,0x0f,0xdd,0x84,0x07,0x00,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_fp8_f16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_fp8_f16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0x13,0x0f,0xdd,0x84,0x07,0x00,0x08,0x85,0x23,0x00,0x00]
+v_cvt_to_tensor_fp8_f16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_fp8_f16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0x13,0x0f,0xdd,0x84,0x07,0x00,0x08,0x85,0x03,0x00,0x00]
 
-v_cvt_to_tensor_fp8_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_fp8_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x13,0x0d,0xdd,0x84,0x07,0x00,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_fp8_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_fp8_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x13,0x0d,0xdd,0x84,0x07,0x00,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_i4_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_i4_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0x13,0x10,0xdd,0x84,0x07,0x00,0x00,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_i4_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_i4_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0x13,0x10,0xdd,0x84,0x07,0x00,0x00,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_i4_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_i4_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x13,0x10,0xdd,0x84,0x07,0x00,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_i4_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_i4_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x13,0x10,0xdd,0x84,0x07,0x00,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_i4_bf16 v900, v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_i4_bf16 v900, v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0x13,0x10,0xdd,0x84,0x07,0x00,0x08,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_i4_bf16 v900, v[900:903], s0 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_i4_bf16 v900, v[900:903], s0 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0x13,0x10,0xdd,0x84,0x07,0x00,0x08,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_i4_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_i4_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0x13,0x0e,0xdd,0x84,0x07,0x00,0x00,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_i4_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_i4_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0x13,0x0e,0xdd,0x84,0x07,0x00,0x00,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_i4_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_i4_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x13,0x0e,0xdd,0x84,0x07,0x00,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_i4_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_i4_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x13,0x0e,0xdd,0x84,0x07,0x00,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_i4_f16 v900, v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_i4_f16 v900, v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0x13,0x0e,0xdd,0x84,0x07,0x00,0x08,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_i4_f16 v900, v[900:903], s0 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_i4_f16 v900, v[900:903], s0 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0x13,0x0e,0xdd,0x84,0x07,0x00,0x08,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_i4_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_i4_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x13,0x0c,0xdd,0x84,0x07,0x00,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_i4_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_i4_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x13,0x0c,0xdd,0x84,0x07,0x00,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_i8_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_i8_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0x93,0x10,0xdd,0x84,0x07,0x00,0x00,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_i8_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_i8_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0x93,0x10,0xdd,0x84,0x07,0x00,0x00,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_i8_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_i8_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x93,0x10,0xdd,0x84,0x07,0x00,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_i8_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_i8_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x93,0x10,0xdd,0x84,0x07,0x00,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_i8_bf16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_i8_bf16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0x93,0x10,0xdd,0x84,0x07,0x00,0x08,0x85,0x23,0x00,0x00]
+v_cvt_to_tensor_i8_bf16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_i8_bf16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0x93,0x10,0xdd,0x84,0x07,0x00,0x08,0x85,0x03,0x00,0x00]
 
-v_cvt_to_tensor_i8_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_i8_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0x93,0x0e,0xdd,0x84,0x07,0x00,0x00,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_i8_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_i8_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0x93,0x0e,0xdd,0x84,0x07,0x00,0x00,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_i8_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_i8_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x93,0x0e,0xdd,0x84,0x07,0x00,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_i8_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_i8_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x93,0x0e,0xdd,0x84,0x07,0x00,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_i8_f16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_i8_f16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0x93,0x0e,0xdd,0x84,0x07,0x00,0x08,0x85,0x23,0x00,0x00]
+v_cvt_to_tensor_i8_f16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_i8_f16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0x93,0x0e,0xdd,0x84,0x07,0x00,0x08,0x85,0x03,0x00,0x00]
 
-v_cvt_to_tensor_i8_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_i8_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x93,0x0c,0xdd,0x84,0x07,0x00,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_i8_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_i8_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x93,0x0c,0xdd,0x84,0x07,0x00,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_u4_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_u4_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0x53,0x10,0xdd,0x84,0x07,0x00,0x00,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_u4_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_u4_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0x53,0x10,0xdd,0x84,0x07,0x00,0x00,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_u4_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_u4_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x53,0x10,0xdd,0x84,0x07,0x00,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_u4_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_u4_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x53,0x10,0xdd,0x84,0x07,0x00,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_u4_bf16 v900, v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_u4_bf16 v900, v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0x53,0x10,0xdd,0x84,0x07,0x00,0x08,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_u4_bf16 v900, v[900:903], s0 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_u4_bf16 v900, v[900:903], s0 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0x53,0x10,0xdd,0x84,0x07,0x00,0x08,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_u4_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_u4_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0x53,0x0e,0xdd,0x84,0x07,0x00,0x00,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_u4_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_u4_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0x53,0x0e,0xdd,0x84,0x07,0x00,0x00,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_u4_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_u4_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x53,0x0e,0xdd,0x84,0x07,0x00,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_u4_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_u4_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x53,0x0e,0xdd,0x84,0x07,0x00,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_u4_f16 v900, v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_u4_f16 v900, v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0x53,0x0e,0xdd,0x84,0x07,0x00,0x08,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_u4_f16 v900, v[900:903], s0 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_u4_f16 v900, v[900:903], s0 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0x53,0x0e,0xdd,0x84,0x07,0x00,0x08,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_u4_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_u4_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x53,0x0c,0xdd,0x84,0x07,0x00,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_u4_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_u4_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x53,0x0c,0xdd,0x84,0x07,0x00,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_u8_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_u8_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0xd3,0x10,0xdd,0x84,0x07,0x00,0x00,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_u8_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_u8_bf16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0xd3,0x10,0xdd,0x84,0x07,0x00,0x00,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_u8_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_u8_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0xd3,0x10,0xdd,0x84,0x07,0x00,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_u8_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_u8_bf16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0xd3,0x10,0xdd,0x84,0x07,0x00,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_u8_bf16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_u8_bf16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0xd3,0x10,0xdd,0x84,0x07,0x00,0x08,0x85,0x23,0x00,0x00]
+v_cvt_to_tensor_u8_bf16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_u8_bf16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0xd3,0x10,0xdd,0x84,0x07,0x00,0x08,0x85,0x03,0x00,0x00]
 
-v_cvt_to_tensor_u8_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_u8_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0xd3,0x0e,0xdd,0x84,0x07,0x00,0x00,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_u8_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_u8_f16 v[900:901], v[900:903], s0 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0xd3,0x0e,0xdd,0x84,0x07,0x00,0x00,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_u8_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_u8_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0xd3,0x0e,0xdd,0x84,0x07,0x00,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_u8_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_u8_f16 v900, v[900:901], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0xd3,0x0e,0xdd,0x84,0x07,0x00,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_u8_f16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_u8_f16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0xd3,0x0e,0xdd,0x84,0x07,0x00,0x08,0x85,0x23,0x00,0x00]
+v_cvt_to_tensor_u8_f16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_u8_f16 [v900, v901], v[900:903], s0 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0xd3,0x0e,0xdd,0x84,0x07,0x00,0x08,0x85,0x03,0x00,0x00]
 
-v_cvt_to_tensor_u8_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_u8_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0xd3,0x0c,0xdd,0x84,0x07,0x00,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_u8_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_u8_f32 v900, v[900:903], s0 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0xd3,0x0c,0xdd,0x84,0x07,0x00,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_sr_bf8_bf16 v[900:901], v[900:903], s0, v942 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_sr_bf8_bf16 v[900:901], v[900:903], s0, v942 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0x53,0x13,0xdd,0x84,0xc7,0xf5,0x00,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_sr_bf8_bf16 v[900:901], v[900:903], s0, v942 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_sr_bf8_bf16 v[900:901], v[900:903], s0, v942 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0x53,0x13,0xdd,0x84,0xc7,0xf5,0x00,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_sr_bf8_bf16 v900, v[900:901], s0, v942 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_sr_bf8_bf16 v900, v[900:901], s0, v942 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x53,0x13,0xdd,0x84,0xc7,0xf5,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_sr_bf8_bf16 v900, v[900:901], s0, v942 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_sr_bf8_bf16 v900, v[900:901], s0, v942 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x53,0x13,0xdd,0x84,0xc7,0xf5,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_sr_bf8_bf16 [v900, v901], v[900:903], s0, v942 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_sr_bf8_bf16 [v900, v901], v[900:903], s0, v942 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0x53,0x13,0xdd,0x84,0xc7,0xf5,0x08,0x85,0x23,0x00,0x00]
+v_cvt_to_tensor_sr_bf8_bf16 [v900, v901], v[900:903], s0, v942 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_sr_bf8_bf16 [v900, v901], v[900:903], s0, v942 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0x53,0x13,0xdd,0x84,0xc7,0xf5,0x08,0x85,0x03,0x00,0x00]
 
-v_cvt_to_tensor_sr_bf8_f16 v[900:901], v[900:903], s0, v942 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_sr_bf8_f16 v[900:901], v[900:903], s0, v942 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0xd3,0x12,0xdd,0x84,0xc7,0xf5,0x00,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_sr_bf8_f16 v[900:901], v[900:903], s0, v942 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_sr_bf8_f16 v[900:901], v[900:903], s0, v942 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0xd3,0x12,0xdd,0x84,0xc7,0xf5,0x00,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_sr_bf8_f16 v900, v[900:901], s0, v942 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_sr_bf8_f16 v900, v[900:901], s0, v942 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0xd3,0x12,0xdd,0x84,0xc7,0xf5,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_sr_bf8_f16 v900, v[900:901], s0, v942 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_sr_bf8_f16 v900, v[900:901], s0, v942 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0xd3,0x12,0xdd,0x84,0xc7,0xf5,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_sr_bf8_f16 [v900, v901], v[900:903], s0, v942 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_sr_bf8_f16 [v900, v901], v[900:903], s0, v942 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0xd3,0x12,0xdd,0x84,0xc7,0xf5,0x08,0x85,0x23,0x00,0x00]
+v_cvt_to_tensor_sr_bf8_f16 [v900, v901], v[900:903], s0, v942 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_sr_bf8_f16 [v900, v901], v[900:903], s0, v942 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0xd3,0x12,0xdd,0x84,0xc7,0xf5,0x08,0x85,0x03,0x00,0x00]
 
-v_cvt_to_tensor_sr_bf8_f32 v900, v[900:903], s0, v942 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_sr_bf8_f32 v900, v[900:903], s0, v942 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x53,0x12,0xdd,0x84,0xc7,0xf5,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_sr_bf8_f32 v900, v[900:903], s0, v942 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_sr_bf8_f32 v900, v[900:903], s0, v942 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x53,0x12,0xdd,0x84,0xc7,0xf5,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_sr_fp8_bf16 v[900:901], v[900:903], s0, v942 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_sr_fp8_bf16 v[900:901], v[900:903], s0, v942 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0x13,0x13,0xdd,0x84,0xc7,0xf5,0x00,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_sr_fp8_bf16 v[900:901], v[900:903], s0, v942 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_sr_fp8_bf16 v[900:901], v[900:903], s0, v942 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0x13,0x13,0xdd,0x84,0xc7,0xf5,0x00,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_sr_fp8_bf16 v900, v[900:901], s0, v942 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_sr_fp8_bf16 v900, v[900:901], s0, v942 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x13,0x13,0xdd,0x84,0xc7,0xf5,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_sr_fp8_bf16 v900, v[900:901], s0, v942 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_sr_fp8_bf16 v900, v[900:901], s0, v942 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x13,0x13,0xdd,0x84,0xc7,0xf5,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_sr_fp8_bf16 [v900, v901], v[900:903], s0, v942 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_sr_fp8_bf16 [v900, v901], v[900:903], s0, v942 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0x13,0x13,0xdd,0x84,0xc7,0xf5,0x08,0x85,0x23,0x00,0x00]
+v_cvt_to_tensor_sr_fp8_bf16 [v900, v901], v[900:903], s0, v942 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_sr_fp8_bf16 [v900, v901], v[900:903], s0, v942 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0x13,0x13,0xdd,0x84,0xc7,0xf5,0x08,0x85,0x03,0x00,0x00]
 
-v_cvt_to_tensor_sr_fp8_f16 v[900:901], v[900:903], s0, v942 shape:SHAPE_8X4X8 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_sr_fp8_f16 v[900:901], v[900:903], s0, v942 shape:SHAPE_8X4X8 accum_chan_order clamp ; encoding: [0x84,0x93,0x12,0xdd,0x84,0xc7,0xf5,0x00,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_sr_fp8_f16 v[900:901], v[900:903], s0, v942 shape:SHAPE_8X4X8 clamp
+// GFX13: v_cvt_to_tensor_sr_fp8_f16 v[900:901], v[900:903], s0, v942 shape:SHAPE_8X4X8 clamp ; encoding: [0x84,0x93,0x12,0xdd,0x84,0xc7,0xf5,0x00,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_sr_fp8_f16 v900, v[900:901], s0, v942 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_sr_fp8_f16 v900, v[900:901], s0, v942 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x93,0x12,0xdd,0x84,0xc7,0xf5,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_sr_fp8_f16 v900, v[900:901], s0, v942 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_sr_fp8_f16 v900, v[900:901], s0, v942 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x93,0x12,0xdd,0x84,0xc7,0xf5,0x0c,0x00,0x00,0x00,0x00]
 
-v_cvt_to_tensor_sr_fp8_f16 [v900, v901], v[900:903], s0, v942 shape:SHAPE_4X4X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_sr_fp8_f16 [v900, v901], v[900:903], s0, v942 shape:SHAPE_4X4X16 accum_chan_order clamp ; encoding: [0x84,0x93,0x12,0xdd,0x84,0xc7,0xf5,0x08,0x85,0x23,0x00,0x00]
+v_cvt_to_tensor_sr_fp8_f16 [v900, v901], v[900:903], s0, v942 shape:SHAPE_4X4X16 clamp
+// GFX13: v_cvt_to_tensor_sr_fp8_f16 [v900, v901], v[900:903], s0, v942 shape:SHAPE_4X4X16 clamp ; encoding: [0x84,0x93,0x12,0xdd,0x84,0xc7,0xf5,0x08,0x85,0x03,0x00,0x00]
 
-v_cvt_to_tensor_sr_fp8_f32 v900, v[900:903], s0, v942 shape:SHAPE_4X2X16 accum_chan_order clamp
-// GFX13: v_cvt_to_tensor_sr_fp8_f32 v900, v[900:903], s0, v942 shape:SHAPE_4X2X16 accum_chan_order clamp ; encoding: [0x84,0x13,0x12,0xdd,0x84,0xc7,0xf5,0x0c,0x00,0x20,0x00,0x00]
+v_cvt_to_tensor_sr_fp8_f32 v900, v[900:903], s0, v942 shape:SHAPE_4X2X16 clamp
+// GFX13: v_cvt_to_tensor_sr_fp8_f32 v900, v[900:903], s0, v942 shape:SHAPE_4X2X16 clamp ; encoding: [0x84,0x13,0x12,0xdd,0x84,0xc7,0xf5,0x0c,0x00,0x00,0x00,0x00]
 
 v_convolve_bf16_bf16 v[902:903], v[904:911], [v912, v913, v914], v[902:903] shape:SHAPE_4X2X16 filter:FILTER_1X1 accum_chan_order iter:3 clamp
 // GFX13: v_convolve_bf16_bf16 v[902:903], v[904:911], [v912, v913, v914], v[902:903] shape:SHAPE_4X2X16 filter:FILTER_1X1 accum_chan_order iter:3 clamp ; encoding: [0x86,0xd3,0x3c,0xdf,0x86,0x07,0xf1,0x0c,0x90,0x83,0x08,0x00,0x91,0x23,0x39,0x00]
