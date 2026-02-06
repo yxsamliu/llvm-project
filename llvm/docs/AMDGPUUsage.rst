@@ -1752,7 +1752,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    This is a 4-bit mask that is encoded within the bits 31:28 of the argument.
                                                    The supported range of values for the mask is 0 to 15.
                                                    It is undefined behavior if the low 28 bits of the argument are non-zero.
-                                                   This mask argument is ignored for GFX13.
+                                                   This mask argument must be 0 for GFX13.
 
   llvm.amdgcn.s.barrier                            Performs a barrier *signal* operation immediately followed
                                                    by a barrier *wait* operation on the *workgroup barrier* object.
