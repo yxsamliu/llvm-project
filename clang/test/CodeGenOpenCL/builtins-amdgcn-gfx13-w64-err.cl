@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx1300 -target-feature -wavefrontsize64 \
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx1300 -target-feature +wavefrontsize64 \
 // RUN: -emit-llvm -verify -o - %s
 
 typedef int    v2i   __attribute__((ext_vector_type(2)));

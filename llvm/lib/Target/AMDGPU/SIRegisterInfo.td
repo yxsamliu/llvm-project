@@ -1722,6 +1722,8 @@ def VSrc_NoInline_b16    : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_NOINLINE_INT16"
 def VSrcT_NoInline_b16   : SrcRegOrImm9_t16 <"OPERAND_REG_IMM_NOINLINE_INT16">;
 def VSrc_NoInline_b32    : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_NOINLINE_INT32">;
 
+def VSrc_v2f16_splat : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_V2FP16_SPLAT">;
+
 //===----------------------------------------------------------------------===//
 //  VRegSrc_* Operands with a VGPR
 //===----------------------------------------------------------------------===//

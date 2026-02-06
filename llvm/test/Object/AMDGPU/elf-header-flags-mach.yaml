@@ -274,6 +274,10 @@
 # RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1260 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1260 %s
 # RUN: obj2yaml %t.o.AMDGCN_GFX1260 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1260 %s
 
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1310/' %s | yaml2obj -o %t.o.AMDGCN_GFX1310
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1310 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1310 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX1310 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1310 %s
+
 # RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX9_GENERIC/' %s | yaml2obj -o %t.o.AMDGCN_GFX9_GENERIC
 # RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX9_GENERIC | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX9_GENERIC %s
 # RUN: obj2yaml %t.o.AMDGCN_GFX9_GENERIC | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX9_GENERIC %s

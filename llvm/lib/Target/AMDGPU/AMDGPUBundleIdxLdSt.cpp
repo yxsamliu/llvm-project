@@ -896,7 +896,7 @@ void AMDGPUBundleIdxLdSt::lowerLoadIdxBits(MachineInstr &MI, bool IsD16) {
         .add(MI.getOperand(4))  // bitoffset
         .add(MI.getOperand(3)); // bitsize
     BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY), DataReg)
-        .addReg(TmpReg, 0, AMDGPU::lo16);
+        .addReg(TmpReg, {}, AMDGPU::lo16);
   } else {
     BuildMI(*MBB, MI, MI.getDebugLoc(), II, DataReg)
         .addReg(ReadReg)
@@ -1513,7 +1513,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *OrigMI) {
         TRI->getSubRegisterClass(SuperRC, MO.getSubReg());
     Register Tmp = MRI->createVirtualRegister(SubRC);
     BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::COPY), Tmp)
-        .addUse(MO.getReg(), 0, MO.getSubReg());
+        .addUse(MO.getReg(), {}, MO.getSubReg());
     MO.setReg(Tmp);
     MO.setSubReg(0);
   }

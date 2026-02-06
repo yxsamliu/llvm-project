@@ -21,8 +21,8 @@ define amdgpu_kernel void @fmac_a(ptr addrspace(1) %src, ptr addrspace(1) %dst) 
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_load_b64 v[1:2], v3, s[0:1] scale_offset
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    v_fma_f32 v0, g1[0], v2, v1
 ; CHECK-NEXT:    v_fma_f32 v1, g1[1], v2, v1
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -71,8 +71,8 @@ define amdgpu_kernel void @fmac_a_const(ptr addrspace(1) %src, ptr addrspace(1) 
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_load_b32 v1, v2, s[0:1] scale_offset
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    v_fma_f32 v0, g1[0], 0x40400000, v1
 ; CHECK-NEXT:    v_fmac_f32_e64 v1, g1[1], 0x40400000
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -120,8 +120,8 @@ define amdgpu_kernel void @fmac_cd_same(ptr addrspace(1) %src, ptr addrspace(1) 
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_load_b64 v[0:1], v0, s[0:1] scale_offset
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 0x50 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=1 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    v_fmac_f32_e64 g1[0], v0, v1
 ; CHECK-NEXT:    s_barrier_signal -1
 ; CHECK-NEXT:    s_barrier_wait -1
@@ -157,8 +157,8 @@ define amdgpu_kernel void @fmac_cd_different(ptr addrspace(1) %src, ptr addrspac
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_load_b64 v[0:1], v0, s[0:1] scale_offset
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 0x50 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=1 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    v_fma_f32 g1[1], v0, v1, g1[0]
 ; CHECK-NEXT:    s_barrier_signal -1
 ; CHECK-NEXT:    s_barrier_wait -1
@@ -194,8 +194,8 @@ define amdgpu_kernel void @fmac_cd_mixed1(ptr addrspace(1) %src, ptr addrspace(1
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 16 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=1 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    v_fma_f32 v0, v0, v1, g1[0]
 ; CHECK-NEXT:    global_store_b32 v2, v0, s[2:3] scale_offset
 ; CHECK-NEXT:    s_barrier_signal -1
@@ -234,8 +234,8 @@ define amdgpu_kernel void @fmac_cd_mixed2(ptr addrspace(1) %src, ptr addrspace(1
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_load_b96 v[0:2], v0, s[0:1] scale_offset
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    v_fma_f32 g1[1], v0, v1, v2
 ; CHECK-NEXT:    s_barrier_signal -1
 ; CHECK-NEXT:    s_barrier_wait -1

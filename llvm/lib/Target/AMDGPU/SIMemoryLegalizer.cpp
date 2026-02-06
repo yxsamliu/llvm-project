@@ -535,8 +535,7 @@ public:
   SIGfx12CacheControl(const GCNSubtarget &ST) : SICacheControl(ST) {
     // GFX120x and GFX125x memory models greatly overlap, and in some cases
     // the behavior is the same if assuming GFX120x in CU mode.
-    assert((ST.hasGFX1250Insts() && !ST.hasGFX13Insts()) ? ST.isCuModeEnabled()
-                                                         : true);
+    assert(!ST.hasGFX1250Insts() || ST.hasGFX13Insts() || ST.isCuModeEnabled());
   }
 
   bool insertWait(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
