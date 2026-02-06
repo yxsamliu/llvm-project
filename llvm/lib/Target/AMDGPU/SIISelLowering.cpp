@@ -1996,6 +1996,17 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Infos.push_back(Info);
     return;
   }
+  case Intrinsic::amdgcn_vgpr_lifetime_start:
+  case Intrinsic::amdgcn_vgpr_lifetime_end: {
+    auto *Alloca = cast<AllocaInst>(CI.getArgOperand(0));
+    auto &MD = AMDGPU::AllocatedVGPRsMetadata::get(*Alloca);
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = EVT::getIntegerVT(CI.getContext(), MD.getSize() * 8);
+    Info.flags |=
+        MachineMemOperand::MODereferenceable | MachineMemOperand::MOStore;
+    Info.ptrVal = Alloca;
+    return true;
+  }
   default:
     return;
   }
@@ -12529,6 +12540,17 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     EVT VT = Op->getValueType(0);
     return DAG.getAtomicLoad(ISD::NON_EXTLOAD, DL, MII->getMemoryVT(), VT,
                              Chain, Ptr, MII->getMemOperand());
+  }
+  case Intrinsic::amdgcn_vgpr_lifetime_start:
+  case Intrinsic::amdgcn_vgpr_lifetime_end: {
+    unsigned Opcode = IntrID == Intrinsic::amdgcn_vgpr_lifetime_start
+                          ? AMDGPU::VGPR_LIFETIME_START
+                          : AMDGPU::VGPR_LIFETIME_END;
+    SDValue Chain = Op->getOperand(0);
+    MemSDNode *M = cast<MemSDNode>(Op);
+    MachineSDNode *NewNode = DAG.getMachineNode(Opcode, DL, MVT::Other, Chain);
+    DAG.setNodeMemRefs(NewNode, M->getMemOperand());
+    return SDValue(NewNode, 0);
   }
   default:
 

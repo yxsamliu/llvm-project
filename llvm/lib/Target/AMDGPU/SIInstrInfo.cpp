@@ -4118,7 +4118,11 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
     if (isLdStIdxA && isLdStIdxB) {
       return checkInstOffsetsDoNotOverlap(MIa, MIb);
     }
-    return true;
+    const bool isLifetimeA = MIa.getOpcode() == AMDGPU::VGPR_LIFETIME_START ||
+                             MIa.getOpcode() == AMDGPU::VGPR_LIFETIME_END;
+    const bool isLifetimeB = MIb.getOpcode() == AMDGPU::VGPR_LIFETIME_START ||
+                             MIb.getOpcode() == AMDGPU::VGPR_LIFETIME_END;
+    return !isLifetimeA && !isLifetimeB;
   }
 
   if (isLDSDMA(MIa) || isLDSDMA(MIb))

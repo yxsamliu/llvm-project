@@ -1389,6 +1389,26 @@ def : GCNPat <
 // VGPR Indexing Instructions
 //===----------------------------------------------------------------------===//
 
+/// Pseudo instructions marking the start and end of the lifetime of a private
+/// registers-as-memory allocation.
+///
+/// These must have an MMO that refers to an alloca instruction with
+/// !amdgpu.allocated.vgprs metadata and will carry implicit defs and uses of
+/// physical VGPRs to prevent conflicts with regular register allocation.
+///
+/// These instructions conceptually overwrite the referenced memory with
+/// "undef".
+def VGPR_LIFETIME_START : SPseudoInstSI<(outs), (ins)> {
+  let hasSideEffects = false;
+  let mayStore = true;
+  let isMeta = true;
+}
+def VGPR_LIFETIME_END : SPseudoInstSI<(outs), (ins)> {
+  let hasSideEffects = false;
+  let mayStore = true;
+  let isMeta = true;
+}
+
 // Pseudo-instruction for reading idx0 that gets expanded to s_getreg_b32
 def SI_GET_IDX0 : SPseudoInstSI<(outs SReg_32:$sdst), (ins)> {
   let Size = 4;

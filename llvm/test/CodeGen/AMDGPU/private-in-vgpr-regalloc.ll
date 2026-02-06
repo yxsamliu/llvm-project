@@ -9,11 +9,11 @@
 ;
 ; LIVEINS: bb.1.bb:
 ; LIVEINS-NEXT: successors:
-; LIVEINS-NOT: liveins:
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
 ;
 ; LIVEINS: bb.2.bb2:
 ; LIVEINS-NEXT: successors:
-; LIVEINS-NOT: liveins:
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
 ;
 ; LIVEINS: bb.3.bb3:
 ; LIVEINS-NEXT: successors:
@@ -28,6 +28,9 @@
 ; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
 ;
 ; LIVEINS: bb.6.ret:
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
+;
+; LIVEINS:      VGPR_LIFETIME_END
 ; LIVEINS-NEXT: S_ENDPGM 0
 
 define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0 {
@@ -37,51 +40,19 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 3
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:12
+; CHECK-NEXT:    ; VGPR lifetime start: v[0:32]
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_6
 ; CHECK-NEXT:  ; %bb.1: ; %bb
-; CHECK-NEXT:    v_mov_b32_e32 v0, 5
-; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:20
+; CHECK-NEXT:    v_mov_b32_e32 v33, 5
+; CHECK-NEXT:    scratch_store_b32 off, v33, s0 offset:20
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_6
 ; CHECK-NEXT:  ; %bb.2: ; %bb2
-; CHECK-NEXT:    scratch_load_b32 v0, off, s1
+; CHECK-NEXT:    scratch_load_b32 v33, off, s1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr2
-; CHECK-NEXT:    ; implicit-def: $vgpr3
-; CHECK-NEXT:    ; implicit-def: $vgpr4
-; CHECK-NEXT:    ; implicit-def: $vgpr5
-; CHECK-NEXT:    ; implicit-def: $vgpr6
-; CHECK-NEXT:    ; implicit-def: $vgpr7
-; CHECK-NEXT:    ; implicit-def: $vgpr8
-; CHECK-NEXT:    ; implicit-def: $vgpr9
-; CHECK-NEXT:    ; implicit-def: $vgpr10
-; CHECK-NEXT:    ; implicit-def: $vgpr11
-; CHECK-NEXT:    ; implicit-def: $vgpr12
-; CHECK-NEXT:    ; implicit-def: $vgpr13
-; CHECK-NEXT:    ; implicit-def: $vgpr14
-; CHECK-NEXT:    ; implicit-def: $vgpr15
-; CHECK-NEXT:    ; implicit-def: $vgpr16
-; CHECK-NEXT:    ; implicit-def: $vgpr17
-; CHECK-NEXT:    ; implicit-def: $vgpr18
-; CHECK-NEXT:    ; implicit-def: $vgpr19
-; CHECK-NEXT:    ; implicit-def: $vgpr20
-; CHECK-NEXT:    ; implicit-def: $vgpr21
-; CHECK-NEXT:    ; implicit-def: $vgpr22
-; CHECK-NEXT:    ; implicit-def: $vgpr23
-; CHECK-NEXT:    ; implicit-def: $vgpr24
-; CHECK-NEXT:    ; implicit-def: $vgpr25
-; CHECK-NEXT:    ; implicit-def: $vgpr26
-; CHECK-NEXT:    ; implicit-def: $vgpr27
-; CHECK-NEXT:    ; implicit-def: $vgpr28
-; CHECK-NEXT:    ; implicit-def: $vgpr29
-; CHECK-NEXT:    ; implicit-def: $vgpr30
-; CHECK-NEXT:    ; implicit-def: $vgpr31
-; CHECK-NEXT:    ; implicit-def: $vgpr32
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    v_mul_f32_e32 v0, v0, v0
+; CHECK-NEXT:    v_mul_f32_e32 v33, v33, v33
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; CHECK-NEXT:    v_add_f32_e32 v33, 2.0, v0
-; CHECK-NEXT:    ; implicit-def: $vgpr0
+; CHECK-NEXT:    v_add_f32_e32 v33, 2.0, v33
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[1], v33
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -89,22 +60,23 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; CHECK-NEXT:  ; %bb.3: ; %bb3
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_5
 ; CHECK-NEXT:  ; %bb.4: ; %bb4
-; CHECK-NEXT:    v_mul_f32_e32 v0, v33, v33
+; CHECK-NEXT:    v_mul_f32_e32 v33, v33, v33
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_add_f32_e64 g1[1], v0, 2.0
+; CHECK-NEXT:    v_add_f32_e64 g1[1], v33, 2.0
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:  .LBB0_5: ; %exit
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    scratch_load_b32 v0, off, s0 offset:28
+; CHECK-NEXT:    scratch_load_b32 v33, off, s0 offset:28
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    scratch_store_b32 off, g1[1], s0
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    v_add_nc_u32_e32 v0, 7, v0
-; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:28
+; CHECK-NEXT:    s_wait_loadcnt 0
+; CHECK-NEXT:    v_add_nc_u32_e32 v33, 7, v33
+; CHECK-NEXT:    scratch_store_b32 off, v33, s0 offset:28
 ; CHECK-NEXT:  .LBB0_6: ; %ret
+; CHECK-NEXT:    ; VGPR lifetime end: v[0:32]
 ; CHECK-NEXT:    s_endpgm
 entry:
   ; Give VGPR0 some use.
@@ -150,8 +122,8 @@ exit:
   %v3 = load float, ptr addrspace(5) %p.1, align 4
   store float %v3, ptr addrspace(5) %out
 
-  ; The private object is not live anymore, so VGPR0 is available for
-  ; allocation again.
+  ; The private object is not live anymore, but we currently do not optimize
+  ; placement of VGPR_LIFETIME_END.
   %out.7 = getelementptr i32, ptr addrspace(5) %out, i32 7
   %v7 = load i32, ptr addrspace(5) %out.7
   %add7 = add i32 %v7, 7
@@ -170,45 +142,14 @@ define amdgpu_kernel void @load_without_store(ptr addrspace(5) %out) #0 {
 ; CHECK-LABEL: load_without_store:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b32 s0, s[4:5], 0x24
-; CHECK-NEXT:    v_mov_b32_e32 v0, 3
-; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr2
-; CHECK-NEXT:    ; implicit-def: $vgpr3
-; CHECK-NEXT:    ; implicit-def: $vgpr4
-; CHECK-NEXT:    ; implicit-def: $vgpr5
-; CHECK-NEXT:    ; implicit-def: $vgpr6
-; CHECK-NEXT:    ; implicit-def: $vgpr7
-; CHECK-NEXT:    ; implicit-def: $vgpr8
-; CHECK-NEXT:    ; implicit-def: $vgpr9
-; CHECK-NEXT:    ; implicit-def: $vgpr10
-; CHECK-NEXT:    ; implicit-def: $vgpr11
-; CHECK-NEXT:    ; implicit-def: $vgpr12
-; CHECK-NEXT:    ; implicit-def: $vgpr13
-; CHECK-NEXT:    ; implicit-def: $vgpr14
-; CHECK-NEXT:    ; implicit-def: $vgpr15
-; CHECK-NEXT:    ; implicit-def: $vgpr16
-; CHECK-NEXT:    ; implicit-def: $vgpr17
-; CHECK-NEXT:    ; implicit-def: $vgpr18
-; CHECK-NEXT:    ; implicit-def: $vgpr19
-; CHECK-NEXT:    ; implicit-def: $vgpr20
-; CHECK-NEXT:    ; implicit-def: $vgpr21
-; CHECK-NEXT:    ; implicit-def: $vgpr22
-; CHECK-NEXT:    ; implicit-def: $vgpr23
-; CHECK-NEXT:    ; implicit-def: $vgpr24
-; CHECK-NEXT:    ; implicit-def: $vgpr25
-; CHECK-NEXT:    ; implicit-def: $vgpr26
-; CHECK-NEXT:    ; implicit-def: $vgpr27
-; CHECK-NEXT:    ; implicit-def: $vgpr28
-; CHECK-NEXT:    ; implicit-def: $vgpr29
-; CHECK-NEXT:    ; implicit-def: $vgpr30
-; CHECK-NEXT:    ; implicit-def: $vgpr31
-; CHECK-NEXT:    ; implicit-def: $vgpr32
+; CHECK-NEXT:    v_mov_b32_e32 v33, 3
+; CHECK-NEXT:    ; VGPR lifetime start: v[0:32]
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:12
+; CHECK-NEXT:    scratch_store_b32 off, v33, s0 offset:12
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    scratch_store_b32 off, g1[1], s0 offset:28
-; CHECK-NEXT:    ; implicit-def: $vgpr0
+; CHECK-NEXT:    ; VGPR lifetime end: v[0:32]
 ; CHECK-NEXT:    s_endpgm
 entry:
   %out.3 = getelementptr i32, ptr addrspace(5) %out, i32 3
@@ -241,42 +182,10 @@ define amdgpu_kernel void @bypassed_store(ptr addrspace(5) %out, i32 %x) #0 {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 3
-; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr2
-; CHECK-NEXT:    ; implicit-def: $vgpr3
-; CHECK-NEXT:    ; implicit-def: $vgpr4
-; CHECK-NEXT:    ; implicit-def: $vgpr5
-; CHECK-NEXT:    ; implicit-def: $vgpr6
-; CHECK-NEXT:    ; implicit-def: $vgpr7
-; CHECK-NEXT:    ; implicit-def: $vgpr8
-; CHECK-NEXT:    ; implicit-def: $vgpr9
-; CHECK-NEXT:    ; implicit-def: $vgpr10
-; CHECK-NEXT:    ; implicit-def: $vgpr11
-; CHECK-NEXT:    ; implicit-def: $vgpr12
-; CHECK-NEXT:    ; implicit-def: $vgpr13
-; CHECK-NEXT:    ; implicit-def: $vgpr14
-; CHECK-NEXT:    ; implicit-def: $vgpr15
-; CHECK-NEXT:    ; implicit-def: $vgpr16
-; CHECK-NEXT:    ; implicit-def: $vgpr17
-; CHECK-NEXT:    ; implicit-def: $vgpr18
-; CHECK-NEXT:    ; implicit-def: $vgpr19
-; CHECK-NEXT:    ; implicit-def: $vgpr20
-; CHECK-NEXT:    ; implicit-def: $vgpr21
-; CHECK-NEXT:    ; implicit-def: $vgpr22
-; CHECK-NEXT:    ; implicit-def: $vgpr23
-; CHECK-NEXT:    ; implicit-def: $vgpr24
-; CHECK-NEXT:    ; implicit-def: $vgpr25
-; CHECK-NEXT:    ; implicit-def: $vgpr26
-; CHECK-NEXT:    ; implicit-def: $vgpr27
-; CHECK-NEXT:    ; implicit-def: $vgpr28
-; CHECK-NEXT:    ; implicit-def: $vgpr29
-; CHECK-NEXT:    ; implicit-def: $vgpr30
-; CHECK-NEXT:    ; implicit-def: $vgpr31
-; CHECK-NEXT:    ; implicit-def: $vgpr32
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_cmp_eq_u32 s1, 9
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:12
-; CHECK-NEXT:    ; implicit-def: $vgpr0
+; CHECK-NEXT:    ; VGPR lifetime start: v[0:32]
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB2_2
 ; CHECK-NEXT:  ; %bb.1: ; %store
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
@@ -287,6 +196,7 @@ define amdgpu_kernel void @bypassed_store(ptr addrspace(5) %out, i32 %x) #0 {
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    scratch_store_b32 off, g1[1], s0 offset:28
+; CHECK-NEXT:    ; VGPR lifetime end: v[0:32]
 ; CHECK-NEXT:    s_endpgm
 entry:
   %out.3 = getelementptr i32, ptr addrspace(5) %out, i32 3
@@ -316,10 +226,12 @@ skip:
 ;
 ; LIVEINS: bb.1.bb:
 ; LIVEINS-NEXT: successors:
-; LIVEINS-NOT: liveins:
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
 ; LIVEINS: V_STORE_IDX
 ;
 ; LIVEINS: bb.2.ret:
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
+; LIVEINS:      VGPR_LIFETIME_END
 ; LIVEINS-NEXT: S_ENDPGM
 
 define amdgpu_kernel void @def_in_nonentry_block(ptr addrspace(5) %out, float %x) #0 {
@@ -330,49 +242,18 @@ define amdgpu_kernel void @def_in_nonentry_block(ptr addrspace(5) %out, float %x
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_cmp_nge_f32 s1, 0x41100000
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:12
+; CHECK-NEXT:    ; VGPR lifetime start: v[0:32]
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB3_2
 ; CHECK-NEXT:  ; %bb.1: ; %bb
 ; CHECK-NEXT:    v_mov_b32_e32 v33, s1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    ; implicit-def: $vgpr2
-; CHECK-NEXT:    ; implicit-def: $vgpr3
-; CHECK-NEXT:    ; implicit-def: $vgpr4
-; CHECK-NEXT:    ; implicit-def: $vgpr5
-; CHECK-NEXT:    ; implicit-def: $vgpr6
-; CHECK-NEXT:    ; implicit-def: $vgpr7
-; CHECK-NEXT:    ; implicit-def: $vgpr8
-; CHECK-NEXT:    ; implicit-def: $vgpr9
-; CHECK-NEXT:    ; implicit-def: $vgpr10
-; CHECK-NEXT:    ; implicit-def: $vgpr11
-; CHECK-NEXT:    ; implicit-def: $vgpr12
-; CHECK-NEXT:    ; implicit-def: $vgpr13
-; CHECK-NEXT:    ; implicit-def: $vgpr14
-; CHECK-NEXT:    ; implicit-def: $vgpr15
-; CHECK-NEXT:    ; implicit-def: $vgpr16
-; CHECK-NEXT:    ; implicit-def: $vgpr17
-; CHECK-NEXT:    ; implicit-def: $vgpr18
-; CHECK-NEXT:    ; implicit-def: $vgpr19
-; CHECK-NEXT:    ; implicit-def: $vgpr20
-; CHECK-NEXT:    ; implicit-def: $vgpr21
-; CHECK-NEXT:    ; implicit-def: $vgpr22
-; CHECK-NEXT:    ; implicit-def: $vgpr23
-; CHECK-NEXT:    ; implicit-def: $vgpr24
-; CHECK-NEXT:    ; implicit-def: $vgpr25
-; CHECK-NEXT:    ; implicit-def: $vgpr26
-; CHECK-NEXT:    ; implicit-def: $vgpr27
-; CHECK-NEXT:    ; implicit-def: $vgpr28
-; CHECK-NEXT:    ; implicit-def: $vgpr29
-; CHECK-NEXT:    ; implicit-def: $vgpr30
-; CHECK-NEXT:    ; implicit-def: $vgpr31
-; CHECK-NEXT:    ; implicit-def: $vgpr32
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_mov_b32_e32 g1[1], v33
 ; CHECK-NEXT:    scratch_store_b32 off, v33, s0 offset:28
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:  .LBB3_2: ; %ret
+; CHECK-NEXT:    ; VGPR lifetime end: v[0:32]
 ; CHECK-NEXT:    s_endpgm
 entry:
   %out.3 = getelementptr i32, ptr addrspace(5) %out, i32 3
@@ -417,39 +298,7 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) #0 {
 ; CHECK-NEXT:    v_mov_b32_e32 v33, 3
 ; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    s_mov_b32 s3, 0
-; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr2
-; CHECK-NEXT:    ; implicit-def: $vgpr3
-; CHECK-NEXT:    ; implicit-def: $vgpr4
-; CHECK-NEXT:    ; implicit-def: $vgpr5
-; CHECK-NEXT:    ; implicit-def: $vgpr6
-; CHECK-NEXT:    ; implicit-def: $vgpr7
-; CHECK-NEXT:    ; implicit-def: $vgpr8
-; CHECK-NEXT:    ; implicit-def: $vgpr9
-; CHECK-NEXT:    ; implicit-def: $vgpr10
-; CHECK-NEXT:    ; implicit-def: $vgpr11
-; CHECK-NEXT:    ; implicit-def: $vgpr12
-; CHECK-NEXT:    ; implicit-def: $vgpr13
-; CHECK-NEXT:    ; implicit-def: $vgpr14
-; CHECK-NEXT:    ; implicit-def: $vgpr15
-; CHECK-NEXT:    ; implicit-def: $vgpr16
-; CHECK-NEXT:    ; implicit-def: $vgpr17
-; CHECK-NEXT:    ; implicit-def: $vgpr18
-; CHECK-NEXT:    ; implicit-def: $vgpr19
-; CHECK-NEXT:    ; implicit-def: $vgpr20
-; CHECK-NEXT:    ; implicit-def: $vgpr21
-; CHECK-NEXT:    ; implicit-def: $vgpr22
-; CHECK-NEXT:    ; implicit-def: $vgpr23
-; CHECK-NEXT:    ; implicit-def: $vgpr24
-; CHECK-NEXT:    ; implicit-def: $vgpr25
-; CHECK-NEXT:    ; implicit-def: $vgpr26
-; CHECK-NEXT:    ; implicit-def: $vgpr27
-; CHECK-NEXT:    ; implicit-def: $vgpr28
-; CHECK-NEXT:    ; implicit-def: $vgpr29
-; CHECK-NEXT:    ; implicit-def: $vgpr30
-; CHECK-NEXT:    ; implicit-def: $vgpr31
-; CHECK-NEXT:    ; implicit-def: $vgpr32
+; CHECK-NEXT:    ; VGPR lifetime start: v[0:32]
 ; CHECK-NEXT:  .LBB4_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -467,6 +316,7 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) #0 {
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    scratch_store_b32 off, g1[5], s0
+; CHECK-NEXT:    ; VGPR lifetime end: v[0:32]
 ; CHECK-NEXT:    s_endpgm
 entry:
   %p = alloca [33 x i32], align 4, addrspace(5)
