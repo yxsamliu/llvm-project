@@ -35,11 +35,11 @@ v_scale_bias_activate_f32 v[5:8], v[5:8], s1, v3 shape:SHAPE_4X2X16 accum_chan_o
 v_scale_bias_activate_f16 [v5, v6], v[5:6], 4.0, v3 shape:SHAPE_4X2X16 accum_chan_order supr
 // GFX13: v_scale_bias_activate_f16 [v5, v6], v[5:6], 4.0, v3 shape:SHAPE_4X2X16 accum_chan_order supr ; encoding: [0x05,0x60,0x08,0xdd,0x05,0x64,0x80,0x0c,0x06,0x20,0x00,0xf6]
 
-v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] clamp supr
-// GFX13: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] clamp supr ; encoding: [0x04,0x30,0x1d,0xdd,0x04,0x04,0x80,0x00,0x02,0x00,0x00,0x00]
+v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] k:16 clamp supr
+// GFX13: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] k:16 clamp supr ; encoding: [0x04,0x30,0x1d,0xdd,0x04,0x04,0x80,0x00,0x02,0x00,0x00,0x00]
 
-v_swmma_f32_16x16_fp8_fp8 v[6:13], v[0:1], v[2:5], v[6:13], v14 sparse_index_odd clamp supr
-// GFX13: v_swmma_f32_16x16_fp8_fp8 v[6:13], v[0:1], v[2:5], v[6:13], v14 sparse_index_odd clamp supr ; encoding: [0x06,0x30,0x2d,0xde,0x06,0x04,0x80,0x00,0x02,0x00,0x00,0x00,0x0e,0x00,0x00,0x01]
+v_swmma_f32_16x16_fp8_fp8 v[6:13], v[0:1], v[2:5], v[6:13], v14 sparse_index_odd k:32 clamp supr
+// GFX13: v_swmma_f32_16x16_fp8_fp8 v[6:13], v[0:1], v[2:5], v[6:13], v14 sparse_index_odd k:32 clamp supr ; encoding: [0x06,0x30,0x2d,0xde,0x06,0x04,0x80,0x00,0x02,0x00,0x00,0x00,0x0e,0x00,0x00,0x01]
 
 v_fma_from_tensor_bf16_bf16 v[2:3], [v4, v5], v[6:7], v[2:3] layout:LAYOUT_CONVOLVE_8X4 clamp supr
 // GFX13: v_fma_from_tensor_bf16_bf16 v[2:3], [v4, v5], v[6:7], v[2:3] layout:LAYOUT_CONVOLVE_8X4 clamp supr ; encoding: [0x02,0xf0,0x19,0xde,0x02,0x84,0x80,0x00,0x05,0x00,0x00,0x7c,0x06,0x00,0x00,0x00]

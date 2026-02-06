@@ -213,6 +213,12 @@ private:
                      ArrayRef<const char *> Mods, raw_ostream &O);
   void printModsWmma(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O);
+  void printModsSwmma(const MCInst *MI, unsigned OpNo,
+                      const MCSubtargetInfo &STI, raw_ostream &O);
+  void printModsWmmaBase(const MCInst *MI, unsigned OpNo, unsigned K1Size,
+                         raw_ostream &O);
+  void printModsWmmaBlockScale(const MCInst *MI, unsigned OpNo,
+                               const MCSubtargetInfo &STI, raw_ostream &O);
 
   void printSema(const MCInst *MI, unsigned OpNo, raw_ostream &O,
                  StringRef Prefix, bool AlwaysPrint);

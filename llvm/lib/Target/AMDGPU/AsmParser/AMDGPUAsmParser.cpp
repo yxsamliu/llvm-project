@@ -202,6 +202,8 @@ public:
     ImmTyModsShapeCvt,
     ImmTyModsFmaTensor,
     ImmTyModsWmma,
+    ImmTyModsSwmma,
+    ImmTyModsWmmaBlockScale,
     ImmTyIdxs,
     ImmTyByteSel,
     ImmTySignedA,
@@ -421,6 +423,8 @@ public:
   bool isModsShapeCvt() const { return isImmTy(ImmTyModsShapeCvt); }
   bool isModsFmaTensor() const { return isImmTy(ImmTyModsFmaTensor); }
   bool isModsWmma() const { return isImmTy(ImmTyModsWmma); }
+  bool isModsSwmma() const { return isImmTy(ImmTyModsSwmma); }
+  bool isModsWmmaBlockScale() const { return isImmTy(ImmTyModsWmmaBlockScale); }
   bool isIndexKey8bit() const { return isImmTy(ImmTyIndexKey8bit); }
   bool isIndexKey16bit() const { return isImmTy(ImmTyIndexKey16bit); }
   bool isIndexKey32bit() const { return isImmTy(ImmTyIndexKey32bit); }
@@ -1246,6 +1250,8 @@ public:
     case ImmTyModsShapeCvt: OS << "ImmTyModsShapeCvt"; break;
     case ImmTyModsFmaTensor: OS << "ImmTyModsFmaTensor"; break;
     case ImmTyModsWmma: OS << "ImmTyModsWmma"; break;
+    case ImmTyModsSwmma: OS << "ImmTyModsSwmma"; break;
+    case ImmTyModsWmmaBlockScale: OS << "ImmTyModsWmmaBlockScale"; break;
     case ImmTyIdxs: OS << "ImmTyIdxs"; break;
     case ImmTyByteSel: OS << "ByteSel" ; break;
     case ImmTySignedA: OS << "SignedA"; break;
@@ -1866,7 +1872,7 @@ public:
   ParseStatus parseHwreg(OperandVector &Operands);
 
   struct VOPMMod {
-    enum Kind : uint8_t { Named, Int, IntSet, Flag };
+    enum Kind : uint8_t { Named, Int, IntSet, Pow2ScaledInt, Flag };
 
     union ModData {
       const ArrayRef<const char *> Names;
@@ -1899,6 +1905,8 @@ public:
   ParseStatus parseModsShapeCvt(OperandVector &Operands);
   ParseStatus parseModsFmaTensor(OperandVector &Operands);
   ParseStatus parseModsWmma(OperandVector &Operands);
+  ParseStatus parseModsSwmma(OperandVector &Operands);
+  ParseStatus parseModsWmmaBlockScale(OperandVector &Operands);
 
 private:
   struct OperandInfoTy {
@@ -7626,6 +7634,26 @@ ParseStatus AMDGPUAsmParser::parseModField(const VOPMMod &Field,
     Imm |= (EncodedValue << Field.Shift) & Field.MaskOrBit;
     break;
   }
+  case VOPMMod::Pow2ScaledInt: {
+    const auto &[Min, Max] = Field.Mods.Range;
+    assert(isPowerOf2_32(Min) && isPowerOf2_32(Max) &&
+           "Min and Max values must be a power of two");
+
+    ParseStatus Res = parseIntWithPrefix(Field.Name, Value);
+    if (!Res.isSuccess())
+      return Res;
+
+    if (Value < Min || Value > Max || !isPowerOf2_64(Value))
+      return Error(Loc,
+                   Twine(Field.Name) + " must be " +
+                       (Min == Max ? Twine(Min)
+                                   : ("in [" + Twine(Min) + ", " + Twine(Max) +
+                                      "] range and a power of two")));
+
+    const int64_t Index = Log2_64(Value) - Log2_32(Min);
+    Imm |= (Index << Field.Shift) & Field.MaskOrBit;
+    break;
+  }
   case VOPMMod::Flag: {
     if (!trySkipId(Field.Name))
       return ParseStatus::NoMatch;
@@ -7729,6 +7757,32 @@ ParseStatus AMDGPUAsmParser::parseModsFmaTensor(OperandVector &Operands) {
 ParseStatus AMDGPUAsmParser::parseModsWmma(OperandVector &Operands) {
   using namespace VOPMMods;
   static constexpr VOPMMod ModFields[] = {
+      {VOPMMod::Pow2ScaledInt, "k", KSCALE, KSCALE_SHIFT,
+       VOPMMod::ModData(16, 128)},
+      {VOPMMod::Flag, "matrix_a_reuse", REUSE_A},
+      {VOPMMod::Flag, "matrix_b_reuse", REUSE_B},
+  };
+
+  return parseMods(ModFields, Operands, AMDGPUOperand::ImmTyModsWmma);
+}
+
+ParseStatus AMDGPUAsmParser::parseModsSwmma(OperandVector &Operands) {
+  using namespace VOPMMods;
+  static constexpr VOPMMod ModFields[] = {
+      {VOPMMod::Pow2ScaledInt, "k", KSCALE, KSCALE_SHIFT,
+       VOPMMod::ModData(32, 128)},
+      {VOPMMod::Flag, "matrix_a_reuse", REUSE_A},
+      {VOPMMod::Flag, "matrix_b_reuse", REUSE_B},
+  };
+
+  return parseMods(ModFields, Operands, AMDGPUOperand::ImmTyModsSwmma);
+}
+
+ParseStatus AMDGPUAsmParser::parseModsWmmaBlockScale(OperandVector &Operands) {
+  using namespace VOPMMods;
+  static constexpr VOPMMod ModFields[] = {
+      {VOPMMod::Pow2ScaledInt, "k", KSCALE, KSCALE_SHIFT,
+       VOPMMod::ModData(64, 64)},
       {VOPMMod::Named, "matrix_a_fmt", FMT_A, FMT_A_SHIFT,
        VOPMMod::ModData(WMMAMods::ModMatrixFmt)},
       {VOPMMod::Named, "matrix_b_fmt", FMT_B, FMT_B_SHIFT,
@@ -7737,9 +7791,11 @@ ParseStatus AMDGPUAsmParser::parseModsWmma(OperandVector &Operands) {
        VOPMMod::ModData(VOPMMods::ModMatrixScale)},
       {VOPMMod::Named, "matrix_b_scale", SCALE_B, SCALE_B_SHIFT,
        VOPMMod::ModData(VOPMMods::ModMatrixScale)},
+      {VOPMMod::Flag, "matrix_a_reuse", REUSE_A},
+      {VOPMMod::Flag, "matrix_b_reuse", REUSE_B},
   };
 
-  return parseMods(ModFields, Operands, AMDGPUOperand::ImmTyModsWmma);
+  return parseMods(ModFields, Operands, AMDGPUOperand::ImmTyModsWmmaBlockScale);
 }
 
 ParseStatus AMDGPUAsmParser::parseScope(OperandVector &Operands,

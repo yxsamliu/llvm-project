@@ -43,230 +43,230 @@ v_uniform_scale_activate_f16 [v905, v906], v[905:906], 4.0 shape:SHAPE_4X2X16 ac
 v_uniform_scale_activate_bf16 [v905, v906], v[905:906], s1 shape:SHAPE_4X2X16 accum_chan_order
 // GFX13: v_uniform_scale_activate_bf16 [v905, v906], v[905:906], s1 shape:SHAPE_4X2X16 accum_chan_order ; encoding: [0x89,0xc3,0x09,0xdd,0x89,0x07,0x00,0x0c,0x8a,0x23,0x00,0x01]
 
-v_wmma_f32_16x16_fp8_fp8 v[904:911], v[900:901], v[902:903], v[904:911] clamp
-// GFX13: v_wmma_f32_16x16_fp8_fp8 v[904:911], v[900:901], v[902:903], v[904:911] clamp ; encoding: [0x88,0x13,0x1d,0xdd,0x88,0x87,0xf0,0x00,0x86,0x03,0x00,0x00]
+v_wmma_f32_16x16_fp8_fp8 v[904:911], v[900:901], v[902:903], v[904:911] k:16 clamp
+// GFX13: v_wmma_f32_16x16_fp8_fp8 v[904:911], v[900:901], v[902:903], v[904:911] k:16 clamp ; encoding: [0x88,0x13,0x1d,0xdd,0x88,0x87,0xf0,0x00,0x86,0x03,0x00,0x00]
 
-v_wmma_f16_16x16_fp8_fp8 v[904:907], v[900:901], v[902:903], v[904:907] clamp
-// GFX13: v_wmma_f16_16x16_fp8_fp8 v[904:907], v[900:901], v[902:903], v[904:907] clamp ; encoding: [0x88,0x13,0x1e,0xdd,0x88,0x87,0xf0,0x00,0x86,0x03,0x00,0x00]
+v_wmma_f16_16x16_fp8_fp8 v[904:907], v[900:901], v[902:903], v[904:907] k:16 clamp
+// GFX13: v_wmma_f16_16x16_fp8_fp8 v[904:907], v[900:901], v[902:903], v[904:907] k:16 clamp ; encoding: [0x88,0x13,0x1e,0xdd,0x88,0x87,0xf0,0x00,0x86,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_fp8_bf8 v[904:911], v[900:901], v[902:903], v[904:911] clamp
-// GFX13: v_wmma_f32_16x16_fp8_bf8 v[904:911], v[900:901], v[902:903], v[904:911] clamp ; encoding: [0x88,0x53,0x1d,0xdd,0x88,0x87,0xf0,0x00,0x86,0x03,0x00,0x00]
+v_wmma_f32_16x16_fp8_bf8 v[904:911], v[900:901], v[902:903], v[904:911] k:16 clamp
+// GFX13: v_wmma_f32_16x16_fp8_bf8 v[904:911], v[900:901], v[902:903], v[904:911] k:16 clamp ; encoding: [0x88,0x53,0x1d,0xdd,0x88,0x87,0xf0,0x00,0x86,0x03,0x00,0x00]
 
-v_wmma_f16_16x16_fp8_bf8 v[904:907], v[900:901], v[902:903], v[904:907] clamp
-// GFX13: v_wmma_f16_16x16_fp8_bf8 v[904:907], v[900:901], v[902:903], v[904:907] clamp ; encoding: [0x88,0x53,0x1e,0xdd,0x88,0x87,0xf0,0x00,0x86,0x03,0x00,0x00]
+v_wmma_f16_16x16_fp8_bf8 v[904:907], v[900:901], v[902:903], v[904:907] k:16 clamp
+// GFX13: v_wmma_f16_16x16_fp8_bf8 v[904:907], v[900:901], v[902:903], v[904:907] k:16 clamp ; encoding: [0x88,0x53,0x1e,0xdd,0x88,0x87,0xf0,0x00,0x86,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_bf8_fp8 v[904:911], v[900:901], v[902:903], v[904:911] clamp
-// GFX13: v_wmma_f32_16x16_bf8_fp8 v[904:911], v[900:901], v[902:903], v[904:911] clamp ; encoding: [0x88,0x93,0x1d,0xdd,0x88,0x87,0xf0,0x00,0x86,0x03,0x00,0x00]
+v_wmma_f32_16x16_bf8_fp8 v[904:911], v[900:901], v[902:903], v[904:911] k:16 clamp
+// GFX13: v_wmma_f32_16x16_bf8_fp8 v[904:911], v[900:901], v[902:903], v[904:911] k:16 clamp ; encoding: [0x88,0x93,0x1d,0xdd,0x88,0x87,0xf0,0x00,0x86,0x03,0x00,0x00]
 
-v_wmma_f16_16x16_bf8_fp8 v[904:907], v[900:901], v[902:903], v[904:907] clamp
-// GFX13: v_wmma_f16_16x16_bf8_fp8 v[904:907], v[900:901], v[902:903], v[904:907] clamp ; encoding: [0x88,0x93,0x1e,0xdd,0x88,0x87,0xf0,0x00,0x86,0x03,0x00,0x00]
+v_wmma_f16_16x16_bf8_fp8 v[904:907], v[900:901], v[902:903], v[904:907] k:16 clamp
+// GFX13: v_wmma_f16_16x16_bf8_fp8 v[904:907], v[900:901], v[902:903], v[904:907] k:16 clamp ; encoding: [0x88,0x93,0x1e,0xdd,0x88,0x87,0xf0,0x00,0x86,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_bf8_bf8 v[904:911], v[900:901], v[902:903], v[904:911] clamp
-// GFX13: v_wmma_f32_16x16_bf8_bf8 v[904:911], v[900:901], v[902:903], v[904:911] clamp ; encoding: [0x88,0xd3,0x1d,0xdd,0x88,0x87,0xf0,0x00,0x86,0x03,0x00,0x00]
+v_wmma_f32_16x16_bf8_bf8 v[904:911], v[900:901], v[902:903], v[904:911] k:16 clamp
+// GFX13: v_wmma_f32_16x16_bf8_bf8 v[904:911], v[900:901], v[902:903], v[904:911] k:16 clamp ; encoding: [0x88,0xd3,0x1d,0xdd,0x88,0x87,0xf0,0x00,0x86,0x03,0x00,0x00]
 
-v_wmma_f16_16x16_bf8_bf8 v[904:907], v[900:901], v[902:903], v[904:907] clamp
-// GFX13: v_wmma_f16_16x16_bf8_bf8 v[904:907], v[900:901], v[902:903], v[904:907] clamp ; encoding: [0x88,0xd3,0x1e,0xdd,0x88,0x87,0xf0,0x00,0x86,0x03,0x00,0x00]
+v_wmma_f16_16x16_bf8_bf8 v[904:907], v[900:901], v[902:903], v[904:907] k:16 clamp
+// GFX13: v_wmma_f16_16x16_bf8_bf8 v[904:907], v[900:901], v[902:903], v[904:907] k:16 clamp ; encoding: [0x88,0xd3,0x1e,0xdd,0x88,0x87,0xf0,0x00,0x86,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_f16 v[908:915], v[900:903], v[904:907], v[908:915] clamp
-// GFX13: v_wmma_f32_16x16_f16 v[908:915], v[900:903], v[904:907], v[908:915] clamp ; encoding: [0x8c,0x13,0x1c,0xdd,0x8c,0x87,0xf0,0x00,0x88,0x03,0x00,0x00]
+v_wmma_f32_16x16_f16 v[908:915], v[900:903], v[904:907], v[908:915] k:16 clamp
+// GFX13: v_wmma_f32_16x16_f16 v[908:915], v[900:903], v[904:907], v[908:915] k:16 clamp ; encoding: [0x8c,0x13,0x1c,0xdd,0x8c,0x87,0xf0,0x00,0x88,0x03,0x00,0x00]
 
-v_wmma_f16_16x16_f16 v[908:911], v[900:903], v[904:907], v[908:911] clamp
-// GFX13: v_wmma_f16_16x16_f16 v[908:911], v[900:903], v[904:907], v[908:911] clamp ; encoding: [0x8c,0x53,0x1c,0xdd,0x8c,0x87,0xf0,0x00,0x88,0x03,0x00,0x00]
+v_wmma_f16_16x16_f16 v[908:911], v[900:903], v[904:907], v[908:911] k:16 clamp
+// GFX13: v_wmma_f16_16x16_f16 v[908:911], v[900:903], v[904:907], v[908:911] k:16 clamp ; encoding: [0x8c,0x53,0x1c,0xdd,0x8c,0x87,0xf0,0x00,0x88,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_bf16 v[908:915], v[900:903], v[904:907], v[908:915] clamp
-// GFX13: v_wmma_f32_16x16_bf16 v[908:915], v[900:903], v[904:907], v[908:915] clamp ; encoding: [0x8c,0x93,0x1c,0xdd,0x8c,0x87,0xf0,0x00,0x88,0x03,0x00,0x00]
+v_wmma_f32_16x16_bf16 v[908:915], v[900:903], v[904:907], v[908:915] k:16 clamp
+// GFX13: v_wmma_f32_16x16_bf16 v[908:915], v[900:903], v[904:907], v[908:915] k:16 clamp ; encoding: [0x8c,0x93,0x1c,0xdd,0x8c,0x87,0xf0,0x00,0x88,0x03,0x00,0x00]
 
-v_wmma_bf16_16x16_bf16 v[908:911], v[900:903], v[904:907], v[908:911] clamp
-// GFX13: v_wmma_bf16_16x16_bf16 v[908:911], v[900:903], v[904:907], v[908:911] clamp ; encoding: [0x8c,0xd3,0x1c,0xdd,0x8c,0x87,0xf0,0x00,0x88,0x03,0x00,0x00]
+v_wmma_bf16_16x16_bf16 v[908:911], v[900:903], v[904:907], v[908:911] k:16 clamp
+// GFX13: v_wmma_bf16_16x16_bf16 v[908:911], v[900:903], v[904:907], v[908:911] k:16 clamp ; encoding: [0x8c,0xd3,0x1c,0xdd,0x8c,0x87,0xf0,0x00,0x88,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_fp8_fp8 v[908:915], v[900:903], v[904:907], v[908:915] clamp
-// GFX13: v_wmma_f32_16x16_fp8_fp8 v[908:915], v[900:903], v[904:907], v[908:915] clamp ; encoding: [0x8c,0x13,0x1d,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x03,0x00,0x00]
+v_wmma_f32_16x16_fp8_fp8 v[908:915], v[900:903], v[904:907], v[908:915] k:16 clamp
+// GFX13: v_wmma_f32_16x16_fp8_fp8 v[908:915], v[900:903], v[904:907], v[908:915] k:16 clamp ; encoding: [0x8c,0x13,0x1d,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x03,0x00,0x00]
 
-v_wmma_f16_16x16_fp8_fp8 v[908:911], v[900:903], v[904:907], v[908:911] clamp
-// GFX13: v_wmma_f16_16x16_fp8_fp8 v[908:911], v[900:903], v[904:907], v[908:911] clamp ; encoding: [0x8c,0x13,0x1e,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x03,0x00,0x00]
+v_wmma_f16_16x16_fp8_fp8 v[908:911], v[900:903], v[904:907], v[908:911] k:16 clamp
+// GFX13: v_wmma_f16_16x16_fp8_fp8 v[908:911], v[900:903], v[904:907], v[908:911] k:16 clamp ; encoding: [0x8c,0x13,0x1e,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_fp8_bf8 v[908:915], v[900:903], v[904:907], v[908:915] clamp
-// GFX13: v_wmma_f32_16x16_fp8_bf8 v[908:915], v[900:903], v[904:907], v[908:915] clamp ; encoding: [0x8c,0x53,0x1d,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x03,0x00,0x00]
+v_wmma_f32_16x16_fp8_bf8 v[908:915], v[900:903], v[904:907], v[908:915] k:16 clamp
+// GFX13: v_wmma_f32_16x16_fp8_bf8 v[908:915], v[900:903], v[904:907], v[908:915] k:16 clamp ; encoding: [0x8c,0x53,0x1d,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x03,0x00,0x00]
 
-v_wmma_f16_16x16_fp8_bf8 v[908:911], v[900:903], v[904:907], v[908:911] clamp
-// GFX13: v_wmma_f16_16x16_fp8_bf8 v[908:911], v[900:903], v[904:907], v[908:911] clamp ; encoding: [0x8c,0x53,0x1e,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x03,0x00,0x00]
+v_wmma_f16_16x16_fp8_bf8 v[908:911], v[900:903], v[904:907], v[908:911] k:16 clamp
+// GFX13: v_wmma_f16_16x16_fp8_bf8 v[908:911], v[900:903], v[904:907], v[908:911] k:16 clamp ; encoding: [0x8c,0x53,0x1e,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_bf8_fp8 v[908:915], v[900:903], v[904:907], v[908:915] clamp
-// GFX13: v_wmma_f32_16x16_bf8_fp8 v[908:915], v[900:903], v[904:907], v[908:915] clamp ; encoding: [0x8c,0x93,0x1d,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x03,0x00,0x00]
+v_wmma_f32_16x16_bf8_fp8 v[908:915], v[900:903], v[904:907], v[908:915] k:16 clamp
+// GFX13: v_wmma_f32_16x16_bf8_fp8 v[908:915], v[900:903], v[904:907], v[908:915] k:16 clamp ; encoding: [0x8c,0x93,0x1d,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x03,0x00,0x00]
 
-v_wmma_f16_16x16_bf8_fp8 v[908:911], v[900:903], v[904:907], v[908:911] clamp
-// GFX13: v_wmma_f16_16x16_bf8_fp8 v[908:911], v[900:903], v[904:907], v[908:911] clamp ; encoding: [0x8c,0x93,0x1e,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x03,0x00,0x00]
+v_wmma_f16_16x16_bf8_fp8 v[908:911], v[900:903], v[904:907], v[908:911] k:16 clamp
+// GFX13: v_wmma_f16_16x16_bf8_fp8 v[908:911], v[900:903], v[904:907], v[908:911] k:16 clamp ; encoding: [0x8c,0x93,0x1e,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_bf8_bf8 v[908:915], v[900:903], v[904:907], v[908:915] clamp
-// GFX13: v_wmma_f32_16x16_bf8_bf8 v[908:915], v[900:903], v[904:907], v[908:915] clamp ; encoding: [0x8c,0xd3,0x1d,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x03,0x00,0x00]
+v_wmma_f32_16x16_bf8_bf8 v[908:915], v[900:903], v[904:907], v[908:915] k:16 clamp
+// GFX13: v_wmma_f32_16x16_bf8_bf8 v[908:915], v[900:903], v[904:907], v[908:915] k:16 clamp ; encoding: [0x8c,0xd3,0x1d,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x03,0x00,0x00]
 
-v_wmma_f16_16x16_bf8_bf8 v[908:911], v[900:903], v[904:907], v[908:911] clamp
-// GFX13: v_wmma_f16_16x16_bf8_bf8 v[908:911], v[900:903], v[904:907], v[908:911] clamp ; encoding: [0x8c,0xd3,0x1e,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x03,0x00,0x00]
+v_wmma_f16_16x16_bf8_bf8 v[908:911], v[900:903], v[904:907], v[908:911] k:16 clamp
+// GFX13: v_wmma_f16_16x16_bf8_bf8 v[908:911], v[900:903], v[904:907], v[908:911] k:16 clamp ; encoding: [0x8c,0xd3,0x1e,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_iu8 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b clamp
-// GFX13: v_wmma_f32_16x16_iu8 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b clamp ; encoding: [0x88,0x53,0x1f,0xdd,0x88,0x87,0xf0,0x00,0x86,0x93,0x00,0x00]
+v_wmma_f32_16x16_iu8 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32_16x16_iu8 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b k:16 clamp ; encoding: [0x88,0x53,0x1f,0xdd,0x88,0x87,0xf0,0x00,0x86,0x93,0x00,0x00]
 
-v_wmma_f32i32_16x16_iu8 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b clamp
-// GFX13: v_wmma_f32i32_16x16_iu8 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b clamp ; encoding: [0x88,0x13,0x20,0xdd,0x88,0x87,0xf0,0x00,0x86,0x93,0x00,0x00]
+v_wmma_f32i32_16x16_iu8 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32i32_16x16_iu8 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b k:16 clamp ; encoding: [0x88,0x13,0x20,0xdd,0x88,0x87,0xf0,0x00,0x86,0x93,0x00,0x00]
 
-v_wmma_i32_16x16_iu8 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b clamp
-// GFX13: v_wmma_i32_16x16_iu8 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b clamp ; encoding: [0x88,0x13,0x1f,0xdd,0x88,0x87,0xf0,0x00,0x86,0x93,0x00,0x00]
+v_wmma_i32_16x16_iu8 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b k:16 clamp
+// GFX13: v_wmma_i32_16x16_iu8 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b k:16 clamp ; encoding: [0x88,0x13,0x1f,0xdd,0x88,0x87,0xf0,0x00,0x86,0x93,0x00,0x00]
 
-v_wmma_f32_16x16_iu4 v[902:909], v900, v901, v[902:909] signed_a signed_b clamp
-// GFX13: v_wmma_f32_16x16_iu4 v[902:909], v900, v901, v[902:909] signed_a signed_b clamp ; encoding: [0x86,0xd3,0x1f,0xdd,0x86,0x87,0xf0,0x00,0x85,0x93,0x00,0x00]
+v_wmma_f32_16x16_iu4 v[902:909], v900, v901, v[902:909] signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32_16x16_iu4 v[902:909], v900, v901, v[902:909] signed_a signed_b k:16 clamp ; encoding: [0x86,0xd3,0x1f,0xdd,0x86,0x87,0xf0,0x00,0x85,0x93,0x00,0x00]
 
-v_wmma_f32i32_16x16_iu4 v[902:909], v900, v901, v[902:909] signed_a signed_b clamp
-// GFX13: v_wmma_f32i32_16x16_iu4 v[902:909], v900, v901, v[902:909] signed_a signed_b clamp ; encoding: [0x86,0x53,0x20,0xdd,0x86,0x87,0xf0,0x00,0x85,0x93,0x00,0x00]
+v_wmma_f32i32_16x16_iu4 v[902:909], v900, v901, v[902:909] signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32i32_16x16_iu4 v[902:909], v900, v901, v[902:909] signed_a signed_b k:16 clamp ; encoding: [0x86,0x53,0x20,0xdd,0x86,0x87,0xf0,0x00,0x85,0x93,0x00,0x00]
 
-v_wmma_i32_16x16_iu4 v[902:909], v900, v901, v[902:909] signed_a signed_b clamp
-// GFX13: v_wmma_i32_16x16_iu4 v[902:909], v900, v901, v[902:909] signed_a signed_b clamp ; encoding: [0x86,0x93,0x1f,0xdd,0x86,0x87,0xf0,0x00,0x85,0x93,0x00,0x00]
+v_wmma_i32_16x16_iu4 v[902:909], v900, v901, v[902:909] signed_a signed_b k:16 clamp
+// GFX13: v_wmma_i32_16x16_iu4 v[902:909], v900, v901, v[902:909] signed_a signed_b k:16 clamp ; encoding: [0x86,0x93,0x1f,0xdd,0x86,0x87,0xf0,0x00,0x85,0x93,0x00,0x00]
 
-v_wmma_f32_16x16_iu8 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b clamp
-// GFX13: v_wmma_f32_16x16_iu8 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b clamp ; encoding: [0x8c,0x53,0x1f,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x93,0x00,0x00]
+v_wmma_f32_16x16_iu8 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32_16x16_iu8 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b k:16 clamp ; encoding: [0x8c,0x53,0x1f,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x93,0x00,0x00]
 
-v_wmma_f32i32_16x16_iu8 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b clamp
-// GFX13: v_wmma_f32i32_16x16_iu8 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b clamp ; encoding: [0x8c,0x13,0x20,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x93,0x00,0x00]
+v_wmma_f32i32_16x16_iu8 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32i32_16x16_iu8 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b k:16 clamp ; encoding: [0x8c,0x13,0x20,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x93,0x00,0x00]
 
-v_wmma_i32_16x16_iu8 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b clamp
-// GFX13: v_wmma_i32_16x16_iu8 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b clamp ; encoding: [0x8c,0x13,0x1f,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x93,0x00,0x00]
+v_wmma_i32_16x16_iu8 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b k:16 clamp
+// GFX13: v_wmma_i32_16x16_iu8 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b k:16 clamp ; encoding: [0x8c,0x13,0x1f,0xdd,0x8c,0x87,0xf0,0x04,0x88,0x93,0x00,0x00]
 
-v_wmma_f32_16x16_iu4 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b clamp
-// GFX13: v_wmma_f32_16x16_iu4 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b clamp ; encoding: [0x88,0xd3,0x1f,0xdd,0x88,0x87,0xf0,0x04,0x86,0x93,0x00,0x00]
+v_wmma_f32_16x16_iu4 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32_16x16_iu4 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b k:16 clamp ; encoding: [0x88,0xd3,0x1f,0xdd,0x88,0x87,0xf0,0x04,0x86,0x93,0x00,0x00]
 
-v_wmma_f32i32_16x16_iu4 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b clamp
-// GFX13: v_wmma_f32i32_16x16_iu4 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b clamp ; encoding: [0x88,0x53,0x20,0xdd,0x88,0x87,0xf0,0x04,0x86,0x93,0x00,0x00]
+v_wmma_f32i32_16x16_iu4 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32i32_16x16_iu4 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b k:16 clamp ; encoding: [0x88,0x53,0x20,0xdd,0x88,0x87,0xf0,0x04,0x86,0x93,0x00,0x00]
 
-v_wmma_i32_16x16_iu4 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b clamp
-// GFX13: v_wmma_i32_16x16_iu4 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b clamp ; encoding: [0x88,0x93,0x1f,0xdd,0x88,0x87,0xf0,0x04,0x86,0x93,0x00,0x00]
+v_wmma_i32_16x16_iu4 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b k:16 clamp
+// GFX13: v_wmma_i32_16x16_iu4 v[904:911], v[900:901], v[902:903], v[904:911] signed_a signed_b k:16 clamp ; encoding: [0x88,0x93,0x1f,0xdd,0x88,0x87,0xf0,0x04,0x86,0x93,0x00,0x00]
 
-v_wmma_f32_16x16_iu4 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b clamp
-// GFX13: v_wmma_f32_16x16_iu4 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b clamp ; encoding: [0x8c,0xd3,0x1f,0xdd,0x8c,0x87,0xf0,0x0c,0x88,0x93,0x00,0x00]
+v_wmma_f32_16x16_iu4 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32_16x16_iu4 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b k:16 clamp ; encoding: [0x8c,0xd3,0x1f,0xdd,0x8c,0x87,0xf0,0x0c,0x88,0x93,0x00,0x00]
 
-v_wmma_f32i32_16x16_iu4 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b clamp
-// GFX13: v_wmma_f32i32_16x16_iu4 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b clamp ; encoding: [0x8c,0x53,0x20,0xdd,0x8c,0x87,0xf0,0x0c,0x88,0x93,0x00,0x00]
+v_wmma_f32i32_16x16_iu4 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32i32_16x16_iu4 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b k:16 clamp ; encoding: [0x8c,0x53,0x20,0xdd,0x8c,0x87,0xf0,0x0c,0x88,0x93,0x00,0x00]
 
-v_wmma_i32_16x16_iu4 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b clamp
-// GFX13: v_wmma_i32_16x16_iu4 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b clamp ; encoding: [0x8c,0x93,0x1f,0xdd,0x8c,0x87,0xf0,0x0c,0x88,0x93,0x00,0x00]
+v_wmma_i32_16x16_iu4 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b k:16 clamp
+// GFX13: v_wmma_i32_16x16_iu4 v[908:915], v[900:903], v[904:907], v[908:915] signed_a signed_b k:16 clamp ; encoding: [0x8c,0x93,0x1f,0xdd,0x8c,0x87,0xf0,0x0c,0x88,0x93,0x00,0x00]
 
-v_swmma_f32_16x16_fp8_fp8 v[906:913], v[900:901], v[902:905], v[906:913], v914 sparse_index_odd clamp
-// GFX13: v_swmma_f32_16x16_fp8_fp8 v[906:913], v[900:901], v[902:905], v[906:913], v914 sparse_index_odd clamp ; encoding: [0x8a,0x13,0x2d,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x92,0x03,0x00,0x01]
+v_swmma_f32_16x16_fp8_fp8 v[906:913], v[900:901], v[902:905], v[906:913], v914 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f32_16x16_fp8_fp8 v[906:913], v[900:901], v[902:905], v[906:913], v914 sparse_index_odd k:32 clamp ; encoding: [0x8a,0x13,0x2d,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x92,0x03,0x00,0x01]
 
-v_swmma_f16_16x16_fp8_fp8 v[906:909], v[900:901], v[902:905], v[906:909], v910 sparse_index_odd clamp
-// GFX13: v_swmma_f16_16x16_fp8_fp8 v[906:909], v[900:901], v[902:905], v[906:909], v910 sparse_index_odd clamp ; encoding: [0x8a,0x13,0x2e,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x8e,0x03,0x00,0x01]
+v_swmma_f16_16x16_fp8_fp8 v[906:909], v[900:901], v[902:905], v[906:909], v910 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f16_16x16_fp8_fp8 v[906:909], v[900:901], v[902:905], v[906:909], v910 sparse_index_odd k:32 clamp ; encoding: [0x8a,0x13,0x2e,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x8e,0x03,0x00,0x01]
 
-v_swmma_f32_16x16_fp8_bf8 v[906:913], v[900:901], v[902:905], v[906:913], v914 sparse_index_odd clamp
-// GFX13: v_swmma_f32_16x16_fp8_bf8 v[906:913], v[900:901], v[902:905], v[906:913], v914 sparse_index_odd clamp ; encoding: [0x8a,0x53,0x2d,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x92,0x03,0x00,0x01]
+v_swmma_f32_16x16_fp8_bf8 v[906:913], v[900:901], v[902:905], v[906:913], v914 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f32_16x16_fp8_bf8 v[906:913], v[900:901], v[902:905], v[906:913], v914 sparse_index_odd k:32 clamp ; encoding: [0x8a,0x53,0x2d,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x92,0x03,0x00,0x01]
 
-v_swmma_f16_16x16_fp8_bf8 v[906:909], v[900:901], v[902:905], v[906:909], v910 sparse_index_odd clamp
-// GFX13: v_swmma_f16_16x16_fp8_bf8 v[906:909], v[900:901], v[902:905], v[906:909], v910 sparse_index_odd clamp ; encoding: [0x8a,0x53,0x2e,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x8e,0x03,0x00,0x01]
+v_swmma_f16_16x16_fp8_bf8 v[906:909], v[900:901], v[902:905], v[906:909], v910 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f16_16x16_fp8_bf8 v[906:909], v[900:901], v[902:905], v[906:909], v910 sparse_index_odd k:32 clamp ; encoding: [0x8a,0x53,0x2e,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x8e,0x03,0x00,0x01]
 
-v_swmma_f32_16x16_bf8_fp8 v[906:913], v[900:901], v[902:905], v[906:913], v914 sparse_index_odd clamp
-// GFX13: v_swmma_f32_16x16_bf8_fp8 v[906:913], v[900:901], v[902:905], v[906:913], v914 sparse_index_odd clamp ; encoding: [0x8a,0x93,0x2d,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x92,0x03,0x00,0x01]
+v_swmma_f32_16x16_bf8_fp8 v[906:913], v[900:901], v[902:905], v[906:913], v914 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f32_16x16_bf8_fp8 v[906:913], v[900:901], v[902:905], v[906:913], v914 sparse_index_odd k:32 clamp ; encoding: [0x8a,0x93,0x2d,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x92,0x03,0x00,0x01]
 
-v_swmma_f16_16x16_bf8_fp8 v[906:909], v[900:901], v[902:905], v[906:909], v910 sparse_index_odd clamp
-// GFX13: v_swmma_f16_16x16_bf8_fp8 v[906:909], v[900:901], v[902:905], v[906:909], v910 sparse_index_odd clamp ; encoding: [0x8a,0x93,0x2e,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x8e,0x03,0x00,0x01]
+v_swmma_f16_16x16_bf8_fp8 v[906:909], v[900:901], v[902:905], v[906:909], v910 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f16_16x16_bf8_fp8 v[906:909], v[900:901], v[902:905], v[906:909], v910 sparse_index_odd k:32 clamp ; encoding: [0x8a,0x93,0x2e,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x8e,0x03,0x00,0x01]
 
-v_swmma_f32_16x16_bf8_bf8 v[906:913], v[900:901], v[902:905], v[906:913], v914 sparse_index_odd clamp
-// GFX13: v_swmma_f32_16x16_bf8_bf8 v[906:913], v[900:901], v[902:905], v[906:913], v914 sparse_index_odd clamp ; encoding: [0x8a,0xd3,0x2d,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x92,0x03,0x00,0x01]
+v_swmma_f32_16x16_bf8_bf8 v[906:913], v[900:901], v[902:905], v[906:913], v914 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f32_16x16_bf8_bf8 v[906:913], v[900:901], v[902:905], v[906:913], v914 sparse_index_odd k:32 clamp ; encoding: [0x8a,0xd3,0x2d,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x92,0x03,0x00,0x01]
 
-v_swmma_f16_16x16_bf8_bf8 v[906:909], v[900:901], v[902:905], v[906:909], v910 sparse_index_odd clamp
-// GFX13: v_swmma_f16_16x16_bf8_bf8 v[906:909], v[900:901], v[902:905], v[906:909], v910 sparse_index_odd clamp ; encoding: [0x8a,0xd3,0x2e,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x8e,0x03,0x00,0x01]
+v_swmma_f16_16x16_bf8_bf8 v[906:909], v[900:901], v[902:905], v[906:909], v910 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f16_16x16_bf8_bf8 v[906:909], v[900:901], v[902:905], v[906:909], v910 sparse_index_odd k:32 clamp ; encoding: [0x8a,0xd3,0x2e,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x8e,0x03,0x00,0x01]
 
-v_swmma_f32_16x16_f16 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd clamp
-// GFX13: v_swmma_f32_16x16_f16 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd clamp ; encoding: [0x90,0x13,0x2c,0xde,0x90,0x87,0xf0,0x00,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x01]
+v_swmma_f32_16x16_f16 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f32_16x16_f16 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd k:32 clamp ; encoding: [0x90,0x13,0x2c,0xde,0x90,0x87,0xf0,0x00,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x01]
 
-v_swmma_f16_16x16_f16 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd clamp
-// GFX13: v_swmma_f16_16x16_f16 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd clamp ; encoding: [0x90,0x53,0x2c,0xde,0x90,0x87,0xf0,0x00,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x01]
+v_swmma_f16_16x16_f16 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f16_16x16_f16 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd k:32 clamp ; encoding: [0x90,0x53,0x2c,0xde,0x90,0x87,0xf0,0x00,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x01]
 
-v_swmma_f32_16x16_bf16 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd clamp
-// GFX13: v_swmma_f32_16x16_bf16 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd clamp ; encoding: [0x90,0x93,0x2c,0xde,0x90,0x87,0xf0,0x00,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x01]
+v_swmma_f32_16x16_bf16 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f32_16x16_bf16 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd k:32 clamp ; encoding: [0x90,0x93,0x2c,0xde,0x90,0x87,0xf0,0x00,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x01]
 
-v_swmma_bf16_16x16_bf16 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd clamp
-// GFX13: v_swmma_bf16_16x16_bf16 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd clamp ; encoding: [0x90,0xd3,0x2c,0xde,0x90,0x87,0xf0,0x00,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x01]
+v_swmma_bf16_16x16_bf16 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_bf16_16x16_bf16 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd k:32 clamp ; encoding: [0x90,0xd3,0x2c,0xde,0x90,0x87,0xf0,0x00,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x01]
 
-v_swmma_f32_16x16_fp8_fp8 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd clamp
-// GFX13: v_swmma_f32_16x16_fp8_fp8 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd clamp ; encoding: [0x90,0x13,0x2d,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x01]
+v_swmma_f32_16x16_fp8_fp8 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f32_16x16_fp8_fp8 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd k:32 clamp ; encoding: [0x90,0x13,0x2d,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x01]
 
-v_swmma_f16_16x16_fp8_fp8 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd clamp
-// GFX13: v_swmma_f16_16x16_fp8_fp8 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd clamp ; encoding: [0x90,0x13,0x2e,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x01]
+v_swmma_f16_16x16_fp8_fp8 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f16_16x16_fp8_fp8 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd k:32 clamp ; encoding: [0x90,0x13,0x2e,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x01]
 
-v_swmma_f32_16x16_fp8_bf8 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd clamp
-// GFX13: v_swmma_f32_16x16_fp8_bf8 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd clamp ; encoding: [0x90,0x53,0x2d,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x01]
+v_swmma_f32_16x16_fp8_bf8 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f32_16x16_fp8_bf8 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd k:32 clamp ; encoding: [0x90,0x53,0x2d,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x01]
 
-v_swmma_f16_16x16_fp8_bf8 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd clamp
-// GFX13: v_swmma_f16_16x16_fp8_bf8 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd clamp ; encoding: [0x90,0x53,0x2e,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x01]
+v_swmma_f16_16x16_fp8_bf8 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f16_16x16_fp8_bf8 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd k:32 clamp ; encoding: [0x90,0x53,0x2e,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x01]
 
-v_swmma_f32_16x16_bf8_fp8 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd clamp
-// GFX13: v_swmma_f32_16x16_bf8_fp8 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd clamp ; encoding: [0x90,0x93,0x2d,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x01]
+v_swmma_f32_16x16_bf8_fp8 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f32_16x16_bf8_fp8 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd k:32 clamp ; encoding: [0x90,0x93,0x2d,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x01]
 
-v_swmma_f16_16x16_bf8_fp8 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd clamp
-// GFX13: v_swmma_f16_16x16_bf8_fp8 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd clamp ; encoding: [0x90,0x93,0x2e,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x01]
+v_swmma_f16_16x16_bf8_fp8 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f16_16x16_bf8_fp8 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd k:32 clamp ; encoding: [0x90,0x93,0x2e,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x01]
 
-v_swmma_f32_16x16_bf8_bf8 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd clamp
-// GFX13: v_swmma_f32_16x16_bf8_bf8 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd clamp ; encoding: [0x90,0xd3,0x2d,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x01]
+v_swmma_f32_16x16_bf8_bf8 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f32_16x16_bf8_bf8 v[912:919], v[900:903], v[904:911], v[912:919], v920 sparse_index_odd k:32 clamp ; encoding: [0x90,0xd3,0x2d,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x01]
 
-v_swmma_f16_16x16_bf8_bf8 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd clamp
-// GFX13: v_swmma_f16_16x16_bf8_bf8 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd clamp ; encoding: [0x90,0xd3,0x2e,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x01]
+v_swmma_f16_16x16_bf8_bf8 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd k:32 clamp
+// GFX13: v_swmma_f16_16x16_bf8_bf8 v[912:915], v[900:903], v[904:911], v[912:915], v916 sparse_index_odd k:32 clamp ; encoding: [0x90,0xd3,0x2e,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x01]
 
-v_swmma_f32_16x16_fp8_fp8 v[906:913], v[900:901], v[902:905], v[906:913], v914 clamp
-// GFX13: v_swmma_f32_16x16_fp8_fp8 v[906:913], v[900:901], v[902:905], v[906:913], v914 clamp ; encoding: [0x8a,0x13,0x2d,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x92,0x03,0x00,0x00]
+v_swmma_f32_16x16_fp8_fp8 v[906:913], v[900:901], v[902:905], v[906:913], v914 k:32 clamp
+// GFX13: v_swmma_f32_16x16_fp8_fp8 v[906:913], v[900:901], v[902:905], v[906:913], v914 k:32 clamp ; encoding: [0x8a,0x13,0x2d,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x92,0x03,0x00,0x00]
 
-v_swmma_f16_16x16_fp8_fp8 v[906:909], v[900:901], v[902:905], v[906:909], v910 clamp
-// GFX13: v_swmma_f16_16x16_fp8_fp8 v[906:909], v[900:901], v[902:905], v[906:909], v910 clamp ; encoding: [0x8a,0x13,0x2e,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x8e,0x03,0x00,0x00]
+v_swmma_f16_16x16_fp8_fp8 v[906:909], v[900:901], v[902:905], v[906:909], v910 k:32 clamp
+// GFX13: v_swmma_f16_16x16_fp8_fp8 v[906:909], v[900:901], v[902:905], v[906:909], v910 k:32 clamp ; encoding: [0x8a,0x13,0x2e,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x8e,0x03,0x00,0x00]
 
-v_swmma_f32_16x16_fp8_bf8 v[906:913], v[900:901], v[902:905], v[906:913], v914 clamp
-// GFX13: v_swmma_f32_16x16_fp8_bf8 v[906:913], v[900:901], v[902:905], v[906:913], v914 clamp ; encoding: [0x8a,0x53,0x2d,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x92,0x03,0x00,0x00]
+v_swmma_f32_16x16_fp8_bf8 v[906:913], v[900:901], v[902:905], v[906:913], v914 k:32 clamp
+// GFX13: v_swmma_f32_16x16_fp8_bf8 v[906:913], v[900:901], v[902:905], v[906:913], v914 k:32 clamp ; encoding: [0x8a,0x53,0x2d,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x92,0x03,0x00,0x00]
 
-v_swmma_f16_16x16_fp8_bf8 v[906:909], v[900:901], v[902:905], v[906:909], v910 clamp
-// GFX13: v_swmma_f16_16x16_fp8_bf8 v[906:909], v[900:901], v[902:905], v[906:909], v910 clamp ; encoding: [0x8a,0x53,0x2e,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x8e,0x03,0x00,0x00]
+v_swmma_f16_16x16_fp8_bf8 v[906:909], v[900:901], v[902:905], v[906:909], v910 k:32 clamp
+// GFX13: v_swmma_f16_16x16_fp8_bf8 v[906:909], v[900:901], v[902:905], v[906:909], v910 k:32 clamp ; encoding: [0x8a,0x53,0x2e,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x8e,0x03,0x00,0x00]
 
-v_swmma_f32_16x16_bf8_fp8 v[906:913], v[900:901], v[902:905], v[906:913], v914 clamp
-// GFX13: v_swmma_f32_16x16_bf8_fp8 v[906:913], v[900:901], v[902:905], v[906:913], v914 clamp ; encoding: [0x8a,0x93,0x2d,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x92,0x03,0x00,0x00]
+v_swmma_f32_16x16_bf8_fp8 v[906:913], v[900:901], v[902:905], v[906:913], v914 k:32 clamp
+// GFX13: v_swmma_f32_16x16_bf8_fp8 v[906:913], v[900:901], v[902:905], v[906:913], v914 k:32 clamp ; encoding: [0x8a,0x93,0x2d,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x92,0x03,0x00,0x00]
 
-v_swmma_f16_16x16_bf8_fp8 v[906:909], v[900:901], v[902:905], v[906:909], v910 clamp
-// GFX13: v_swmma_f16_16x16_bf8_fp8 v[906:909], v[900:901], v[902:905], v[906:909], v910 clamp ; encoding: [0x8a,0x93,0x2e,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x8e,0x03,0x00,0x00]
+v_swmma_f16_16x16_bf8_fp8 v[906:909], v[900:901], v[902:905], v[906:909], v910 k:32 clamp
+// GFX13: v_swmma_f16_16x16_bf8_fp8 v[906:909], v[900:901], v[902:905], v[906:909], v910 k:32 clamp ; encoding: [0x8a,0x93,0x2e,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x8e,0x03,0x00,0x00]
 
-v_swmma_f32_16x16_bf8_bf8 v[906:913], v[900:901], v[902:905], v[906:913], v914 clamp
-// GFX13: v_swmma_f32_16x16_bf8_bf8 v[906:913], v[900:901], v[902:905], v[906:913], v914 clamp ; encoding: [0x8a,0xd3,0x2d,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x92,0x03,0x00,0x00]
+v_swmma_f32_16x16_bf8_bf8 v[906:913], v[900:901], v[902:905], v[906:913], v914 k:32 clamp
+// GFX13: v_swmma_f32_16x16_bf8_bf8 v[906:913], v[900:901], v[902:905], v[906:913], v914 k:32 clamp ; encoding: [0x8a,0xd3,0x2d,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x92,0x03,0x00,0x00]
 
-v_swmma_f16_16x16_bf8_bf8 v[906:909], v[900:901], v[902:905], v[906:909], v910 clamp
-// GFX13: v_swmma_f16_16x16_bf8_bf8 v[906:909], v[900:901], v[902:905], v[906:909], v910 clamp ; encoding: [0x8a,0xd3,0x2e,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x8e,0x03,0x00,0x00]
+v_swmma_f16_16x16_bf8_bf8 v[906:909], v[900:901], v[902:905], v[906:909], v910 k:32 clamp
+// GFX13: v_swmma_f16_16x16_bf8_bf8 v[906:909], v[900:901], v[902:905], v[906:909], v910 k:32 clamp ; encoding: [0x8a,0xd3,0x2e,0xde,0x8a,0x87,0xf0,0x00,0x86,0x03,0x00,0x00,0x8e,0x03,0x00,0x00]
 
-v_swmma_f32_16x16_f16 v[912:919], v[900:903], v[904:911], v[912:919], v920 clamp
-// GFX13: v_swmma_f32_16x16_f16 v[912:919], v[900:903], v[904:911], v[912:919], v920 clamp ; encoding: [0x90,0x13,0x2c,0xde,0x90,0x87,0xf0,0x00,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x00]
+v_swmma_f32_16x16_f16 v[912:919], v[900:903], v[904:911], v[912:919], v920 k:32 clamp
+// GFX13: v_swmma_f32_16x16_f16 v[912:919], v[900:903], v[904:911], v[912:919], v920 k:32 clamp ; encoding: [0x90,0x13,0x2c,0xde,0x90,0x87,0xf0,0x00,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x00]
 
-v_swmma_f16_16x16_f16 v[912:915], v[900:903], v[904:911], v[912:915], v916 clamp
-// GFX13: v_swmma_f16_16x16_f16 v[912:915], v[900:903], v[904:911], v[912:915], v916 clamp ; encoding: [0x90,0x53,0x2c,0xde,0x90,0x87,0xf0,0x00,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x00]
+v_swmma_f16_16x16_f16 v[912:915], v[900:903], v[904:911], v[912:915], v916 k:32 clamp
+// GFX13: v_swmma_f16_16x16_f16 v[912:915], v[900:903], v[904:911], v[912:915], v916 k:32 clamp ; encoding: [0x90,0x53,0x2c,0xde,0x90,0x87,0xf0,0x00,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x00]
 
-v_swmma_f32_16x16_bf16 v[912:919], v[900:903], v[904:911], v[912:919], v920 clamp
-// GFX13: v_swmma_f32_16x16_bf16 v[912:919], v[900:903], v[904:911], v[912:919], v920 clamp ; encoding: [0x90,0x93,0x2c,0xde,0x90,0x87,0xf0,0x00,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x00]
+v_swmma_f32_16x16_bf16 v[912:919], v[900:903], v[904:911], v[912:919], v920 k:32 clamp
+// GFX13: v_swmma_f32_16x16_bf16 v[912:919], v[900:903], v[904:911], v[912:919], v920 k:32 clamp ; encoding: [0x90,0x93,0x2c,0xde,0x90,0x87,0xf0,0x00,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x00]
 
-v_swmma_bf16_16x16_bf16 v[912:915], v[900:903], v[904:911], v[912:915], v916 clamp
-// GFX13: v_swmma_bf16_16x16_bf16 v[912:915], v[900:903], v[904:911], v[912:915], v916 clamp ; encoding: [0x90,0xd3,0x2c,0xde,0x90,0x87,0xf0,0x00,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x00]
+v_swmma_bf16_16x16_bf16 v[912:915], v[900:903], v[904:911], v[912:915], v916 k:32 clamp
+// GFX13: v_swmma_bf16_16x16_bf16 v[912:915], v[900:903], v[904:911], v[912:915], v916 k:32 clamp ; encoding: [0x90,0xd3,0x2c,0xde,0x90,0x87,0xf0,0x00,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x00]
 
-v_swmma_f32_16x16_fp8_fp8 v[912:919], v[900:903], v[904:911], v[912:919], v920 clamp
-// GFX13: v_swmma_f32_16x16_fp8_fp8 v[912:919], v[900:903], v[904:911], v[912:919], v920 clamp ; encoding: [0x90,0x13,0x2d,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x00]
+v_swmma_f32_16x16_fp8_fp8 v[912:919], v[900:903], v[904:911], v[912:919], v920 k:32 clamp
+// GFX13: v_swmma_f32_16x16_fp8_fp8 v[912:919], v[900:903], v[904:911], v[912:919], v920 k:32 clamp ; encoding: [0x90,0x13,0x2d,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x00]
 
-v_swmma_f16_16x16_fp8_fp8 v[912:915], v[900:903], v[904:911], v[912:915], v916 clamp
-// GFX13: v_swmma_f16_16x16_fp8_fp8 v[912:915], v[900:903], v[904:911], v[912:915], v916 clamp ; encoding: [0x90,0x13,0x2e,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x00]
+v_swmma_f16_16x16_fp8_fp8 v[912:915], v[900:903], v[904:911], v[912:915], v916 k:32 clamp
+// GFX13: v_swmma_f16_16x16_fp8_fp8 v[912:915], v[900:903], v[904:911], v[912:915], v916 k:32 clamp ; encoding: [0x90,0x13,0x2e,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x00]
 
-v_swmma_f32_16x16_fp8_bf8 v[912:919], v[900:903], v[904:911], v[912:919], v920 clamp
-// GFX13: v_swmma_f32_16x16_fp8_bf8 v[912:919], v[900:903], v[904:911], v[912:919], v920 clamp ; encoding: [0x90,0x53,0x2d,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x00]
+v_swmma_f32_16x16_fp8_bf8 v[912:919], v[900:903], v[904:911], v[912:919], v920 k:32 clamp
+// GFX13: v_swmma_f32_16x16_fp8_bf8 v[912:919], v[900:903], v[904:911], v[912:919], v920 k:32 clamp ; encoding: [0x90,0x53,0x2d,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x00]
 
-v_swmma_f16_16x16_fp8_bf8 v[912:915], v[900:903], v[904:911], v[912:915], v916 clamp
-// GFX13: v_swmma_f16_16x16_fp8_bf8 v[912:915], v[900:903], v[904:911], v[912:915], v916 clamp ; encoding: [0x90,0x53,0x2e,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x00]
+v_swmma_f16_16x16_fp8_bf8 v[912:915], v[900:903], v[904:911], v[912:915], v916 k:32 clamp
+// GFX13: v_swmma_f16_16x16_fp8_bf8 v[912:915], v[900:903], v[904:911], v[912:915], v916 k:32 clamp ; encoding: [0x90,0x53,0x2e,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x00]
 
-v_swmma_f32_16x16_bf8_fp8 v[912:919], v[900:903], v[904:911], v[912:919], v920 clamp
-// GFX13: v_swmma_f32_16x16_bf8_fp8 v[912:919], v[900:903], v[904:911], v[912:919], v920 clamp ; encoding: [0x90,0x93,0x2d,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x00]
+v_swmma_f32_16x16_bf8_fp8 v[912:919], v[900:903], v[904:911], v[912:919], v920 k:32 clamp
+// GFX13: v_swmma_f32_16x16_bf8_fp8 v[912:919], v[900:903], v[904:911], v[912:919], v920 k:32 clamp ; encoding: [0x90,0x93,0x2d,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x00]
 
-v_swmma_f16_16x16_bf8_fp8 v[912:915], v[900:903], v[904:911], v[912:915], v916 clamp
-// GFX13: v_swmma_f16_16x16_bf8_fp8 v[912:915], v[900:903], v[904:911], v[912:915], v916 clamp ; encoding: [0x90,0x93,0x2e,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x00]
+v_swmma_f16_16x16_bf8_fp8 v[912:915], v[900:903], v[904:911], v[912:915], v916 k:32 clamp
+// GFX13: v_swmma_f16_16x16_bf8_fp8 v[912:915], v[900:903], v[904:911], v[912:915], v916 k:32 clamp ; encoding: [0x90,0x93,0x2e,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x00]
 
-v_swmma_f32_16x16_bf8_bf8 v[912:919], v[900:903], v[904:911], v[912:919], v920 clamp
-// GFX13: v_swmma_f32_16x16_bf8_bf8 v[912:919], v[900:903], v[904:911], v[912:919], v920 clamp ; encoding: [0x90,0xd3,0x2d,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x00]
+v_swmma_f32_16x16_bf8_bf8 v[912:919], v[900:903], v[904:911], v[912:919], v920 k:32 clamp
+// GFX13: v_swmma_f32_16x16_bf8_bf8 v[912:919], v[900:903], v[904:911], v[912:919], v920 k:32 clamp ; encoding: [0x90,0xd3,0x2d,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x98,0x03,0x00,0x00]
 
-v_swmma_f16_16x16_bf8_bf8 v[912:915], v[900:903], v[904:911], v[912:915], v916 clamp
-// GFX13: v_swmma_f16_16x16_bf8_bf8 v[912:915], v[900:903], v[904:911], v[912:915], v916 clamp ; encoding: [0x90,0xd3,0x2e,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x00]
+v_swmma_f16_16x16_bf8_bf8 v[912:915], v[900:903], v[904:911], v[912:915], v916 k:32 clamp
+// GFX13: v_swmma_f16_16x16_bf8_bf8 v[912:915], v[900:903], v[904:911], v[912:915], v916 k:32 clamp ; encoding: [0x90,0xd3,0x2e,0xde,0x90,0x87,0xf0,0x04,0x88,0x03,0x00,0x00,0x94,0x03,0x00,0x00]
 
 v_scale_bias_activate_f16 [v905, v906, v907, v908], v[905:908], 4.0, v903 shape:SHAPE_4X4X16
 // GFX13: v_scale_bias_activate_f16 [v905, v906, v907, v908], v[905:908], 4.0, v903 shape:SHAPE_4X4X16 ; encoding: [0x89,0x43,0x08,0xde,0x89,0xe7,0xf0,0x08,0x8a,0x03,0x00,0xf6,0x8b,0xc3,0x38,0x00]
@@ -280,8 +280,8 @@ v_uniform_scale_activate_f16 [v905, v906, v907, v908], v[905:908], 4.0 shape:SHA
 v_uniform_scale_activate_bf16 [v905, v906, v907, v908], v[905:908], s1 shape:SHAPE_4X4X16
 // GFX13: v_uniform_scale_activate_bf16 [v905, v906, v907, v908], v[905:908], s1 shape:SHAPE_4X4X16 ; encoding: [0x89,0xc3,0x09,0xde,0x89,0x07,0x00,0x08,0x8a,0x03,0x00,0x01,0x8b,0xc3,0x38,0x00]
 
-v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], v[916:923], v924, v925 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp
-// GFX13: v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], v[916:923], v924, v925 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp ; encoding: [0x94,0x93,0x20,0xde,0x94,0x87,0xf0,0x00,0x8c,0x23,0x01,0x00,0x9c,0xd3,0x39,0x00]
+v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], v[916:923], v924, v925 k:64 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp
+// GFX13: v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], v[916:923], v924, v925 k:64 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp ; encoding: [0x94,0x93,0x20,0xde,0x94,0x87,0xf0,0x00,0x8c,0x23,0x01,0x00,0x9c,0xd3,0x39,0x00]
 
 v_fma_from_tensor_bf16_bf16 v[902:903], [v904, v905], v[906:907], v[902:903] layout:LAYOUT_CONVOLVE_8X4 clamp
 // GFX13: v_fma_from_tensor_bf16_bf16 v[902:903], [v904, v905], v[906:907], v[902:903] layout:LAYOUT_CONVOLVE_8X4 clamp ; encoding: [0x86,0xd3,0x19,0xde,0x86,0x07,0xf1,0x00,0x89,0x03,0x00,0x7c,0x8a,0x03,0x00,0x00]
@@ -1195,110 +1195,110 @@ v_convolve_i32_iu8 v[902:905], v[906:909], [v910, v911], v[902:905] shape:SHAPE_
 v_convolve_i32_iu8 v[902:905], v[906:909], [v910, v911], 0 shape:SHAPE_4X2X16 filter:FILTER_1X1 accum_chan_order iter:2 clamp
 // GFX13: v_convolve_i32_iu8 v[902:905], v[906:909], [v910, v911], 0 shape:SHAPE_4X2X16 filter:FILTER_1X1 accum_chan_order iter:2 clamp ; encoding: [0x86,0x53,0x3d,0xdf,0x80,0x40,0xf1,0x0c,0x8e,0x83,0x04,0x00,0x8f,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_fp8_fp8 v[904:911], v[900:901], v[902:903], 0 clamp
-// GFX13: v_wmma_f32_16x16_fp8_fp8 v[904:911], v[900:901], v[902:903], 0 clamp ; encoding: [0x88,0x13,0x1d,0xdd,0x80,0x80,0xf0,0x00,0x86,0x03,0x00,0x00]
+v_wmma_f32_16x16_fp8_fp8 v[904:911], v[900:901], v[902:903], 0 k:16 clamp
+// GFX13: v_wmma_f32_16x16_fp8_fp8 v[904:911], v[900:901], v[902:903], 0 k:16 clamp ; encoding: [0x88,0x13,0x1d,0xdd,0x80,0x80,0xf0,0x00,0x86,0x03,0x00,0x00]
 
-v_wmma_f16_16x16_fp8_fp8 v[904:907], v[900:901], v[902:903], 0 clamp
-// GFX13: v_wmma_f16_16x16_fp8_fp8 v[904:907], v[900:901], v[902:903], 0 clamp ; encoding: [0x88,0x13,0x1e,0xdd,0x80,0x80,0xf0,0x00,0x86,0x03,0x00,0x00]
+v_wmma_f16_16x16_fp8_fp8 v[904:907], v[900:901], v[902:903], 0 k:16 clamp
+// GFX13: v_wmma_f16_16x16_fp8_fp8 v[904:907], v[900:901], v[902:903], 0 k:16 clamp ; encoding: [0x88,0x13,0x1e,0xdd,0x80,0x80,0xf0,0x00,0x86,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_fp8_bf8 v[904:911], v[900:901], v[902:903], 0 clamp
-// GFX13: v_wmma_f32_16x16_fp8_bf8 v[904:911], v[900:901], v[902:903], 0 clamp ; encoding: [0x88,0x53,0x1d,0xdd,0x80,0x80,0xf0,0x00,0x86,0x03,0x00,0x00]
+v_wmma_f32_16x16_fp8_bf8 v[904:911], v[900:901], v[902:903], 0 k:16 clamp
+// GFX13: v_wmma_f32_16x16_fp8_bf8 v[904:911], v[900:901], v[902:903], 0 k:16 clamp ; encoding: [0x88,0x53,0x1d,0xdd,0x80,0x80,0xf0,0x00,0x86,0x03,0x00,0x00]
 
-v_wmma_f16_16x16_fp8_bf8 v[904:907], v[900:901], v[902:903], 0 clamp
-// GFX13: v_wmma_f16_16x16_fp8_bf8 v[904:907], v[900:901], v[902:903], 0 clamp ; encoding: [0x88,0x53,0x1e,0xdd,0x80,0x80,0xf0,0x00,0x86,0x03,0x00,0x00]
+v_wmma_f16_16x16_fp8_bf8 v[904:907], v[900:901], v[902:903], 0 k:16 clamp
+// GFX13: v_wmma_f16_16x16_fp8_bf8 v[904:907], v[900:901], v[902:903], 0 k:16 clamp ; encoding: [0x88,0x53,0x1e,0xdd,0x80,0x80,0xf0,0x00,0x86,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_bf8_fp8 v[904:911], v[900:901], v[902:903], 0 clamp
-// GFX13: v_wmma_f32_16x16_bf8_fp8 v[904:911], v[900:901], v[902:903], 0 clamp ; encoding: [0x88,0x93,0x1d,0xdd,0x80,0x80,0xf0,0x00,0x86,0x03,0x00,0x00]
+v_wmma_f32_16x16_bf8_fp8 v[904:911], v[900:901], v[902:903], 0 k:16 clamp
+// GFX13: v_wmma_f32_16x16_bf8_fp8 v[904:911], v[900:901], v[902:903], 0 k:16 clamp ; encoding: [0x88,0x93,0x1d,0xdd,0x80,0x80,0xf0,0x00,0x86,0x03,0x00,0x00]
 
-v_wmma_f16_16x16_bf8_fp8 v[904:907], v[900:901], v[902:903], 0 clamp
-// GFX13: v_wmma_f16_16x16_bf8_fp8 v[904:907], v[900:901], v[902:903], 0 clamp ; encoding: [0x88,0x93,0x1e,0xdd,0x80,0x80,0xf0,0x00,0x86,0x03,0x00,0x00]
+v_wmma_f16_16x16_bf8_fp8 v[904:907], v[900:901], v[902:903], 0 k:16 clamp
+// GFX13: v_wmma_f16_16x16_bf8_fp8 v[904:907], v[900:901], v[902:903], 0 k:16 clamp ; encoding: [0x88,0x93,0x1e,0xdd,0x80,0x80,0xf0,0x00,0x86,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_bf8_bf8 v[904:911], v[900:901], v[902:903], 0 clamp
-// GFX13: v_wmma_f32_16x16_bf8_bf8 v[904:911], v[900:901], v[902:903], 0 clamp ; encoding: [0x88,0xd3,0x1d,0xdd,0x80,0x80,0xf0,0x00,0x86,0x03,0x00,0x00]
+v_wmma_f32_16x16_bf8_bf8 v[904:911], v[900:901], v[902:903], 0 k:16 clamp
+// GFX13: v_wmma_f32_16x16_bf8_bf8 v[904:911], v[900:901], v[902:903], 0 k:16 clamp ; encoding: [0x88,0xd3,0x1d,0xdd,0x80,0x80,0xf0,0x00,0x86,0x03,0x00,0x00]
 
-v_wmma_f16_16x16_bf8_bf8 v[904:907], v[900:901], v[902:903], 0 clamp
-// GFX13: v_wmma_f16_16x16_bf8_bf8 v[904:907], v[900:901], v[902:903], 0 clamp ; encoding: [0x88,0xd3,0x1e,0xdd,0x80,0x80,0xf0,0x00,0x86,0x03,0x00,0x00]
+v_wmma_f16_16x16_bf8_bf8 v[904:907], v[900:901], v[902:903], 0 k:16 clamp
+// GFX13: v_wmma_f16_16x16_bf8_bf8 v[904:907], v[900:901], v[902:903], 0 k:16 clamp ; encoding: [0x88,0xd3,0x1e,0xdd,0x80,0x80,0xf0,0x00,0x86,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_f16 v[908:915], v[900:903], v[904:907], 0 clamp
-// GFX13: v_wmma_f32_16x16_f16 v[908:915], v[900:903], v[904:907], 0 clamp ; encoding: [0x8c,0x13,0x1c,0xdd,0x80,0x80,0xf0,0x00,0x88,0x03,0x00,0x00]
+v_wmma_f32_16x16_f16 v[908:915], v[900:903], v[904:907], 0 k:16 clamp
+// GFX13: v_wmma_f32_16x16_f16 v[908:915], v[900:903], v[904:907], 0 k:16 clamp ; encoding: [0x8c,0x13,0x1c,0xdd,0x80,0x80,0xf0,0x00,0x88,0x03,0x00,0x00]
 
-v_wmma_f16_16x16_f16 v[908:911], v[900:903], v[904:907], 0 clamp
-// GFX13: v_wmma_f16_16x16_f16 v[908:911], v[900:903], v[904:907], 0 clamp ; encoding: [0x8c,0x53,0x1c,0xdd,0x80,0x80,0xf0,0x00,0x88,0x03,0x00,0x00]
+v_wmma_f16_16x16_f16 v[908:911], v[900:903], v[904:907], 0 k:16 clamp
+// GFX13: v_wmma_f16_16x16_f16 v[908:911], v[900:903], v[904:907], 0 k:16 clamp ; encoding: [0x8c,0x53,0x1c,0xdd,0x80,0x80,0xf0,0x00,0x88,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_bf16 v[908:915], v[900:903], v[904:907], 0 clamp
-// GFX13: v_wmma_f32_16x16_bf16 v[908:915], v[900:903], v[904:907], 0 clamp ; encoding: [0x8c,0x93,0x1c,0xdd,0x80,0x80,0xf0,0x00,0x88,0x03,0x00,0x00]
+v_wmma_f32_16x16_bf16 v[908:915], v[900:903], v[904:907], 0 k:16 clamp
+// GFX13: v_wmma_f32_16x16_bf16 v[908:915], v[900:903], v[904:907], 0 k:16 clamp ; encoding: [0x8c,0x93,0x1c,0xdd,0x80,0x80,0xf0,0x00,0x88,0x03,0x00,0x00]
 
-v_wmma_bf16_16x16_bf16 v[908:911], v[900:903], v[904:907], 0 clamp
-// GFX13: v_wmma_bf16_16x16_bf16 v[908:911], v[900:903], v[904:907], 0 clamp ; encoding: [0x8c,0xd3,0x1c,0xdd,0x80,0x80,0xf0,0x00,0x88,0x03,0x00,0x00]
+v_wmma_bf16_16x16_bf16 v[908:911], v[900:903], v[904:907], 0 k:16 clamp
+// GFX13: v_wmma_bf16_16x16_bf16 v[908:911], v[900:903], v[904:907], 0 k:16 clamp ; encoding: [0x8c,0xd3,0x1c,0xdd,0x80,0x80,0xf0,0x00,0x88,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_fp8_fp8 v[908:915], v[900:903], v[904:907], 0 clamp
-// GFX13: v_wmma_f32_16x16_fp8_fp8 v[908:915], v[900:903], v[904:907], 0 clamp ; encoding: [0x8c,0x13,0x1d,0xdd,0x80,0x80,0xf0,0x04,0x88,0x03,0x00,0x00]
+v_wmma_f32_16x16_fp8_fp8 v[908:915], v[900:903], v[904:907], 0 k:16 clamp
+// GFX13: v_wmma_f32_16x16_fp8_fp8 v[908:915], v[900:903], v[904:907], 0 k:16 clamp ; encoding: [0x8c,0x13,0x1d,0xdd,0x80,0x80,0xf0,0x04,0x88,0x03,0x00,0x00]
 
-v_wmma_f16_16x16_fp8_fp8 v[908:911], v[900:903], v[904:907], 0 clamp
-// GFX13: v_wmma_f16_16x16_fp8_fp8 v[908:911], v[900:903], v[904:907], 0 clamp ; encoding: [0x8c,0x13,0x1e,0xdd,0x80,0x80,0xf0,0x04,0x88,0x03,0x00,0x00]
+v_wmma_f16_16x16_fp8_fp8 v[908:911], v[900:903], v[904:907], 0 k:16 clamp
+// GFX13: v_wmma_f16_16x16_fp8_fp8 v[908:911], v[900:903], v[904:907], 0 k:16 clamp ; encoding: [0x8c,0x13,0x1e,0xdd,0x80,0x80,0xf0,0x04,0x88,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_fp8_bf8 v[908:915], v[900:903], v[904:907], 0 clamp
-// GFX13: v_wmma_f32_16x16_fp8_bf8 v[908:915], v[900:903], v[904:907], 0 clamp ; encoding: [0x8c,0x53,0x1d,0xdd,0x80,0x80,0xf0,0x04,0x88,0x03,0x00,0x00]
+v_wmma_f32_16x16_fp8_bf8 v[908:915], v[900:903], v[904:907], 0 k:16 clamp
+// GFX13: v_wmma_f32_16x16_fp8_bf8 v[908:915], v[900:903], v[904:907], 0 k:16 clamp ; encoding: [0x8c,0x53,0x1d,0xdd,0x80,0x80,0xf0,0x04,0x88,0x03,0x00,0x00]
 
-v_wmma_f16_16x16_fp8_bf8 v[908:911], v[900:903], v[904:907], 0 clamp
-// GFX13: v_wmma_f16_16x16_fp8_bf8 v[908:911], v[900:903], v[904:907], 0 clamp ; encoding: [0x8c,0x53,0x1e,0xdd,0x80,0x80,0xf0,0x04,0x88,0x03,0x00,0x00]
+v_wmma_f16_16x16_fp8_bf8 v[908:911], v[900:903], v[904:907], 0 k:16 clamp
+// GFX13: v_wmma_f16_16x16_fp8_bf8 v[908:911], v[900:903], v[904:907], 0 k:16 clamp ; encoding: [0x8c,0x53,0x1e,0xdd,0x80,0x80,0xf0,0x04,0x88,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_bf8_fp8 v[908:915], v[900:903], v[904:907], 0 clamp
-// GFX13: v_wmma_f32_16x16_bf8_fp8 v[908:915], v[900:903], v[904:907], 0 clamp ; encoding: [0x8c,0x93,0x1d,0xdd,0x80,0x80,0xf0,0x04,0x88,0x03,0x00,0x00]
+v_wmma_f32_16x16_bf8_fp8 v[908:915], v[900:903], v[904:907], 0 k:16 clamp
+// GFX13: v_wmma_f32_16x16_bf8_fp8 v[908:915], v[900:903], v[904:907], 0 k:16 clamp ; encoding: [0x8c,0x93,0x1d,0xdd,0x80,0x80,0xf0,0x04,0x88,0x03,0x00,0x00]
 
-v_wmma_f16_16x16_bf8_fp8 v[908:911], v[900:903], v[904:907], 0 clamp
-// GFX13: v_wmma_f16_16x16_bf8_fp8 v[908:911], v[900:903], v[904:907], 0 clamp ; encoding: [0x8c,0x93,0x1e,0xdd,0x80,0x80,0xf0,0x04,0x88,0x03,0x00,0x00]
+v_wmma_f16_16x16_bf8_fp8 v[908:911], v[900:903], v[904:907], 0 k:16 clamp
+// GFX13: v_wmma_f16_16x16_bf8_fp8 v[908:911], v[900:903], v[904:907], 0 k:16 clamp ; encoding: [0x8c,0x93,0x1e,0xdd,0x80,0x80,0xf0,0x04,0x88,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_bf8_bf8 v[908:915], v[900:903], v[904:907], 0 clamp
-// GFX13: v_wmma_f32_16x16_bf8_bf8 v[908:915], v[900:903], v[904:907], 0 clamp ; encoding: [0x8c,0xd3,0x1d,0xdd,0x80,0x80,0xf0,0x04,0x88,0x03,0x00,0x00]
+v_wmma_f32_16x16_bf8_bf8 v[908:915], v[900:903], v[904:907], 0 k:16 clamp
+// GFX13: v_wmma_f32_16x16_bf8_bf8 v[908:915], v[900:903], v[904:907], 0 k:16 clamp ; encoding: [0x8c,0xd3,0x1d,0xdd,0x80,0x80,0xf0,0x04,0x88,0x03,0x00,0x00]
 
-v_wmma_f16_16x16_bf8_bf8 v[908:911], v[900:903], v[904:907], 0 clamp
-// GFX13: v_wmma_f16_16x16_bf8_bf8 v[908:911], v[900:903], v[904:907], 0 clamp ; encoding: [0x8c,0xd3,0x1e,0xdd,0x80,0x80,0xf0,0x04,0x88,0x03,0x00,0x00]
+v_wmma_f16_16x16_bf8_bf8 v[908:911], v[900:903], v[904:907], 0 k:16 clamp
+// GFX13: v_wmma_f16_16x16_bf8_bf8 v[908:911], v[900:903], v[904:907], 0 k:16 clamp ; encoding: [0x8c,0xd3,0x1e,0xdd,0x80,0x80,0xf0,0x04,0x88,0x03,0x00,0x00]
 
-v_wmma_f32_16x16_iu8 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b clamp
-// GFX13: v_wmma_f32_16x16_iu8 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b clamp ; encoding: [0x88,0x53,0x1f,0xdd,0x80,0x80,0xf0,0x00,0x86,0x93,0x00,0x00]
+v_wmma_f32_16x16_iu8 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32_16x16_iu8 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b k:16 clamp ; encoding: [0x88,0x53,0x1f,0xdd,0x80,0x80,0xf0,0x00,0x86,0x93,0x00,0x00]
 
-v_wmma_f32i32_16x16_iu8 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b clamp
-// GFX13: v_wmma_f32i32_16x16_iu8 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b clamp ; encoding: [0x88,0x13,0x20,0xdd,0x80,0x80,0xf0,0x00,0x86,0x93,0x00,0x00]
+v_wmma_f32i32_16x16_iu8 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32i32_16x16_iu8 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b k:16 clamp ; encoding: [0x88,0x13,0x20,0xdd,0x80,0x80,0xf0,0x00,0x86,0x93,0x00,0x00]
 
-v_wmma_i32_16x16_iu8 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b clamp
-// GFX13: v_wmma_i32_16x16_iu8 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b clamp ; encoding: [0x88,0x13,0x1f,0xdd,0x80,0x80,0xf0,0x00,0x86,0x93,0x00,0x00]
+v_wmma_i32_16x16_iu8 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b k:16 clamp
+// GFX13: v_wmma_i32_16x16_iu8 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b k:16 clamp ; encoding: [0x88,0x13,0x1f,0xdd,0x80,0x80,0xf0,0x00,0x86,0x93,0x00,0x00]
 
-v_wmma_f32_16x16_iu4 v[902:909], v900, v901, 0 signed_a signed_b clamp
-// GFX13: v_wmma_f32_16x16_iu4 v[902:909], v900, v901, 0 signed_a signed_b clamp ; encoding: [0x86,0xd3,0x1f,0xdd,0x80,0x80,0xf0,0x00,0x85,0x93,0x00,0x00]
+v_wmma_f32_16x16_iu4 v[902:909], v900, v901, 0 signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32_16x16_iu4 v[902:909], v900, v901, 0 signed_a signed_b k:16 clamp ; encoding: [0x86,0xd3,0x1f,0xdd,0x80,0x80,0xf0,0x00,0x85,0x93,0x00,0x00]
 
-v_wmma_f32i32_16x16_iu4 v[902:909], v900, v901, 0 signed_a signed_b clamp
-// GFX13: v_wmma_f32i32_16x16_iu4 v[902:909], v900, v901, 0 signed_a signed_b clamp ; encoding: [0x86,0x53,0x20,0xdd,0x80,0x80,0xf0,0x00,0x85,0x93,0x00,0x00]
+v_wmma_f32i32_16x16_iu4 v[902:909], v900, v901, 0 signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32i32_16x16_iu4 v[902:909], v900, v901, 0 signed_a signed_b k:16 clamp ; encoding: [0x86,0x53,0x20,0xdd,0x80,0x80,0xf0,0x00,0x85,0x93,0x00,0x00]
 
-v_wmma_i32_16x16_iu4 v[902:909], v900, v901, 0 signed_a signed_b clamp
-// GFX13: v_wmma_i32_16x16_iu4 v[902:909], v900, v901, 0 signed_a signed_b clamp ; encoding: [0x86,0x93,0x1f,0xdd,0x80,0x80,0xf0,0x00,0x85,0x93,0x00,0x00]
+v_wmma_i32_16x16_iu4 v[902:909], v900, v901, 0 signed_a signed_b k:16 clamp
+// GFX13: v_wmma_i32_16x16_iu4 v[902:909], v900, v901, 0 signed_a signed_b k:16 clamp ; encoding: [0x86,0x93,0x1f,0xdd,0x80,0x80,0xf0,0x00,0x85,0x93,0x00,0x00]
 
-v_wmma_f32_16x16_iu8 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b clamp
-// GFX13: v_wmma_f32_16x16_iu8 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b clamp ; encoding: [0x8c,0x53,0x1f,0xdd,0x80,0x80,0xf0,0x04,0x88,0x93,0x00,0x00]
+v_wmma_f32_16x16_iu8 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32_16x16_iu8 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b k:16 clamp ; encoding: [0x8c,0x53,0x1f,0xdd,0x80,0x80,0xf0,0x04,0x88,0x93,0x00,0x00]
 
-v_wmma_f32i32_16x16_iu8 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b clamp
-// GFX13: v_wmma_f32i32_16x16_iu8 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b clamp ; encoding: [0x8c,0x13,0x20,0xdd,0x80,0x80,0xf0,0x04,0x88,0x93,0x00,0x00]
+v_wmma_f32i32_16x16_iu8 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32i32_16x16_iu8 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b k:16 clamp ; encoding: [0x8c,0x13,0x20,0xdd,0x80,0x80,0xf0,0x04,0x88,0x93,0x00,0x00]
 
-v_wmma_i32_16x16_iu8 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b clamp
-// GFX13: v_wmma_i32_16x16_iu8 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b clamp ; encoding: [0x8c,0x13,0x1f,0xdd,0x80,0x80,0xf0,0x04,0x88,0x93,0x00,0x00]
+v_wmma_i32_16x16_iu8 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b k:16 clamp
+// GFX13: v_wmma_i32_16x16_iu8 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b k:16 clamp ; encoding: [0x8c,0x13,0x1f,0xdd,0x80,0x80,0xf0,0x04,0x88,0x93,0x00,0x00]
 
-v_wmma_f32_16x16_iu4 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b clamp
-// GFX13: v_wmma_f32_16x16_iu4 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b clamp ; encoding: [0x88,0xd3,0x1f,0xdd,0x80,0x80,0xf0,0x04,0x86,0x93,0x00,0x00]
+v_wmma_f32_16x16_iu4 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32_16x16_iu4 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b k:16 clamp ; encoding: [0x88,0xd3,0x1f,0xdd,0x80,0x80,0xf0,0x04,0x86,0x93,0x00,0x00]
 
-v_wmma_f32i32_16x16_iu4 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b clamp
-// GFX13: v_wmma_f32i32_16x16_iu4 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b clamp ; encoding: [0x88,0x53,0x20,0xdd,0x80,0x80,0xf0,0x04,0x86,0x93,0x00,0x00]
+v_wmma_f32i32_16x16_iu4 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32i32_16x16_iu4 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b k:16 clamp ; encoding: [0x88,0x53,0x20,0xdd,0x80,0x80,0xf0,0x04,0x86,0x93,0x00,0x00]
 
-v_wmma_i32_16x16_iu4 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b clamp
-// GFX13: v_wmma_i32_16x16_iu4 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b clamp ; encoding: [0x88,0x93,0x1f,0xdd,0x80,0x80,0xf0,0x04,0x86,0x93,0x00,0x00]
+v_wmma_i32_16x16_iu4 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b k:16 clamp
+// GFX13: v_wmma_i32_16x16_iu4 v[904:911], v[900:901], v[902:903], 0 signed_a signed_b k:16 clamp ; encoding: [0x88,0x93,0x1f,0xdd,0x80,0x80,0xf0,0x04,0x86,0x93,0x00,0x00]
 
-v_wmma_f32_16x16_iu4 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b clamp
-// GFX13: v_wmma_f32_16x16_iu4 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b clamp ; encoding: [0x8c,0xd3,0x1f,0xdd,0x80,0x80,0xf0,0x0c,0x88,0x93,0x00,0x00]
+v_wmma_f32_16x16_iu4 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32_16x16_iu4 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b k:16 clamp ; encoding: [0x8c,0xd3,0x1f,0xdd,0x80,0x80,0xf0,0x0c,0x88,0x93,0x00,0x00]
 
-v_wmma_f32i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b clamp
-// GFX13: v_wmma_f32i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b clamp ; encoding: [0x8c,0x53,0x20,0xdd,0x80,0x80,0xf0,0x0c,0x88,0x93,0x00,0x00]
+v_wmma_f32i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b k:16 clamp
+// GFX13: v_wmma_f32i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b k:16 clamp ; encoding: [0x8c,0x53,0x20,0xdd,0x80,0x80,0xf0,0x0c,0x88,0x93,0x00,0x00]
 
-v_wmma_i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b clamp
-// GFX13: v_wmma_i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b clamp ; encoding: [0x8c,0x93,0x1f,0xdd,0x80,0x80,0xf0,0x0c,0x88,0x93,0x00,0x00]
+v_wmma_i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b k:16 clamp
+// GFX13: v_wmma_i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 0 signed_a signed_b k:16 clamp ; encoding: [0x8c,0x93,0x1f,0xdd,0x80,0x80,0xf0,0x0c,0x88,0x93,0x00,0x00]
 
-v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], 0, v924, v925 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp
-// GFX13: v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], 0, v924, v925 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp ; encoding: [0x94,0x93,0x20,0xde,0x80,0x80,0xf0,0x00,0x8c,0x23,0x01,0x00,0x9c,0xd3,0x39,0x00]
+v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], 0, v924, v925 k:64 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp
+// GFX13: v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], 0, v924, v925 k:64 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp ; encoding: [0x94,0x93,0x20,0xde,0x80,0x80,0xf0,0x00,0x8c,0x23,0x01,0x00,0x9c,0xd3,0x39,0x00]

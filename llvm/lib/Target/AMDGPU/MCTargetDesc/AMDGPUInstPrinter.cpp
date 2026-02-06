@@ -977,10 +977,35 @@ void AMDGPUInstPrinter::printModNamed(unsigned Value, const char *Name,
 void AMDGPUInstPrinter::printModsWmma(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
-  unsigned Imm = MI->getOperand(OpNo).getImm();
+  printModsWmmaBase(MI, OpNo, 16, O);
+}
 
+void AMDGPUInstPrinter::printModsSwmma(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  printModsWmmaBase(MI, OpNo, 32, O);
+}
+
+void AMDGPUInstPrinter::printModsWmmaBase(const MCInst *MI, unsigned OpNo,
+                                          unsigned K1Size, raw_ostream &O) {
   // SignedA, SignedB and SparseIndexOdd are already separate operands. Should
   // we join them into ModsWmma?
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+
+  unsigned KScale = (Imm & VOPMMods::KSCALE) >> VOPMMods::KSCALE_SHIFT;
+  O << " k:" << (KScale + 1) * K1Size;
+
+  O << (Imm & VOPMMods::REUSE_A ? " matrix_a_reuse" : "");
+  O << (Imm & VOPMMods::REUSE_B ? " matrix_b_reuse" : "");
+}
+
+void AMDGPUInstPrinter::printModsWmmaBlockScale(const MCInst *MI, unsigned OpNo,
+                                                const MCSubtargetInfo &STI,
+                                                raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+
+  unsigned KScale = (Imm & VOPMMods::KSCALE) >> VOPMMods::KSCALE_SHIFT;
+  O << " k:" << (KScale + 1) * 64;
 
   unsigned FmtA = (Imm & VOPMMods::FMT_A) >> VOPMMods::FMT_A_SHIFT;
   printModNamed(FmtA, "matrix_a_fmt", WMMAMods::ModMatrixFmt, O);
@@ -990,6 +1015,9 @@ void AMDGPUInstPrinter::printModsWmma(const MCInst *MI, unsigned OpNo,
   printModNamed(ScaleA, "matrix_a_scale", VOPMMods::ModMatrixScale, O);
   unsigned ScaleB = (Imm & VOPMMods::SCALE_B) >> VOPMMods::SCALE_B_SHIFT;
   printModNamed(ScaleB, "matrix_b_scale", VOPMMods::ModMatrixScale, O);
+
+  O << (Imm & VOPMMods::REUSE_A ? " matrix_a_reuse" : "");
+  O << (Imm & VOPMMods::REUSE_B ? " matrix_b_reuse" : "");
 }
 
 void AMDGPUInstPrinter::printDefaultVccOperand(bool FirstOperand,
