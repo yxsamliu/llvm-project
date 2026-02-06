@@ -520,6 +520,7 @@ defm GFX13Insts : AMDGPUSubtargetFeature<"gfx13-insts",
   /*GenAssemblerPredicate=*/1,
   [FeatureSemaphores,
    FeatureWavegroups,
+   FeatureMcastLoadInsts,
    FeatureSWakeupImm,
    FeatureSBarrierLeaveImm,
   ]
@@ -2754,6 +2755,9 @@ def isWave32Strict : Predicate<"Subtarget->isWave32()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize32)>;
 def isWave64Strict : Predicate<"Subtarget->isWave64()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
+
+def HasWavegroupMcastLoadInsts : Predicate<"Subtarget->hasWavegroups() && Subtarget->hasMcastLoadInsts()">,
+  AssemblerPredicate<(all_of FeatureWavegroups, FeatureMcastLoadInsts)>;
 
 //===----------------------------------------------------------------------===//
 // HwModes

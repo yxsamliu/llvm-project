@@ -363,9 +363,9 @@ multiclass Load_LANESHARED<string opName, RegisterOperand regClass,
 }
 
 multiclass Cluster_Load<string opName, RegisterOperand regClass, bit HasTiedInput = 0> {
-  let SubtargetPredicate = isGFX1250Plus in
+  let SubtargetPredicate = HasMcastLoadInsts in
     defm "" : FLAT_Global_Load_Pseudo<opName, regClass, HasTiedInput>;
-  let SubtargetPredicate = isGFX13Plus in
+  let SubtargetPredicate = HasWavegroupMcastLoadInsts in
     defm "" : Load_LANESHARED<opName, regClass, HasTiedInput>;
 }
 
