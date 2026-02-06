@@ -988,8 +988,8 @@ void AMDGPUInstPrinter::printModsSwmma(const MCInst *MI, unsigned OpNo,
 
 void AMDGPUInstPrinter::printModsWmmaBase(const MCInst *MI, unsigned OpNo,
                                           unsigned K1Size, raw_ostream &O) {
-  // SignedA, SignedB and SparseIndexOdd are already separate operands. Should
-  // we join them into ModsWmma?
+  // MatrixASigned, MatrixBSigned and SparseIndexOdd are separate operands.
+  // Should we join them into ModsWmma?
   unsigned Imm = MI->getOperand(OpNo).getImm();
 
   unsigned KScale = (Imm & VOPMMods::KSCALE) >> VOPMMods::KSCALE_SHIFT;

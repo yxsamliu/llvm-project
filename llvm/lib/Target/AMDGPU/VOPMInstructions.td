@@ -425,7 +425,7 @@ class VOPM_WMMA_Profile_Int<list<ValueType> ArgTy, int K> : VOPM_WMMA_Profile<Ar
   let IsWMMA = 1;
   let isInt = 1;
 
-  let Ins64 = (ins SignedA:$signed_a, Src0RC64:$srcA, SignedB:$signed_b, Src1RC64:$srcB, Src2RC64:$srcC, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr);
+  let Ins64 = (ins MatrixASigned:$signed_a, Src0RC64:$srcA, MatrixBSigned:$signed_b, Src1RC64:$srcB, Src2RC64:$srcC, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr);
 
   let WmmaInPat = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, Src2VT:$srcC, i1:$clamp);
   let WmmaOutPat = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, Src2VT:$srcC, (i32 0), i1:$clamp);
@@ -503,7 +503,7 @@ class VOPM_SWMMA_Profile_Float<list<ValueType> ArgTy, int K> : VOPM_SWMMA_Profil
 
 class VOPM_SWMMA_Profile_Int<list<ValueType> ArgTy, int K> : VOPM_SWMMA_Profile<ArgTy, K> {
   let isInt = 1;
-  let Ins64 = (ins SignedA:$signed_a, Src0RC64:$srcA, SignedB:$signed_b, Src1RC64:$srcB, Src2RC64:$srcC, Src3RC64:$src3, SparseIndexOdd:$sparse_index_odd, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr);
+  let Ins64 = (ins MatrixASigned:$signed_a, Src0RC64:$srcA, MatrixBSigned:$signed_b, Src1RC64:$srcB, Src2RC64:$srcC, Src3RC64:$src3, SparseIndexOdd:$sparse_index_odd, ModsOp:$aux_data, Clamp0:$clamp, Idxs0:$idxs, SUPR0:$supr);
 
   let SwmmaInPat  = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, Src2VT:$srcC, Src3VT:$src3, i1:$sparse_index_odd, i1:$clamp);
   let SwmmaOutPat = (ins i1:$signed_a, Src0VT:$srcA, i1:$signed_b, Src1VT:$srcB, Src2VT:$srcC, Src3VT:$src3, i1:$sparse_index_odd, (i32 0), i1:$clamp);
