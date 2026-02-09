@@ -1912,6 +1912,10 @@ let SubtargetPredicate = HasPermPkU2U3Insts in {
   defm V_PERM_PK32_B8_U3 : VOP3Inst<"v_perm_pk32_b8_u3", VOP_V8I32_V2I32_I32_I64, int_amdgcn_perm_pk32_b8_u3>;
 } // End SubtargetPredicate = HasPermPkU2U3Insts
 
+let SubtargetPredicate = HasE5M3ScaleInst, WaveSizePredicate = isWave32 in {
+  defm V_CVT_E5M3SCALE_PK8_FP4_F32 : VOP3Inst<"v_cvt_e5m3scale_pk8_fp4_f32", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8F32_I32>>;
+} // End SubtargetPredicate = HasE5M3ScaleInst, WaveSizePredicate = isWave32
+
 class Cvt_Scale_Sr_F32ToBF16F16_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType DstTy> : GCNPat<
     (DstTy (node DstTy:$vdst_in, f32:$src0, i32:$src1, timm:$word_sel)),
     (inst (DstSelToOpSelXForm $word_sel), $src0, 0, $src1, VGPR_32:$vdst_in)
@@ -2466,6 +2470,7 @@ defm V_PERM_PK16_B8_U2               : VOP3Only_Real_Base_gfx1260<0x276>;
 defm V_PERM_PK32_B4_U3               : VOP3Only_Real_Base_gfx1260<0x277>;
 defm V_PERM_PK32_B6_U3               : VOP3Only_Real_Base_gfx1260<0x278>;
 defm V_PERM_PK32_B8_U3               : VOP3Only_Real_Base_gfx1260<0x279>;
+defm V_CVT_E5M3SCALE_PK8_FP4_F32     : VOP3Only_Real_Base_gfx1260<0x371>;
 
 defm V_LSHL_ADD_U64                  : VOP3Only_Realtriple_gfx1250_DPP8_gfx13<0x252>;
 defm V_ASHR_PK_I8_I32                : VOP3Only_Realtriple_t16_and_fake16_gfx1250_gfx13<0x290, 0x290>;
