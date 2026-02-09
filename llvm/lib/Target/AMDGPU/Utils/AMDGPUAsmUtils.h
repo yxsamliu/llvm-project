@@ -127,6 +127,25 @@ ArrayRef<GFXVersion> getGFXVersions();
 
 } // namespace UCVersion
 
+namespace VOPMMods {
+
+inline constexpr const char *const ModShapeNames[] = {
+    "SHAPE_8X4X8", "SHAPE_4X4X8", "SHAPE_4X4X16", "SHAPE_4X2X16"};
+
+inline constexpr const char *const ModFilterNames[] = {"FILTER_1X1",
+                                                       "FILTER_3X3"};
+
+inline constexpr const char *const ModLayoutNames[] = {
+    "LAYOUT_CONVOLVE_8X4", "LAYOUT_CONVOLVE_4X4", "LAYOUT_CONVOLVE_4X2",
+    "LAYOUT_DEQUANT_4X4", "LAYOUT_DEQUANT_4X2"};
+
+inline constexpr const char *const ModActivationNames[] = {
+    "ACTIVATION_OFF", "ACTIVATION_RELU", "ACTIVATION_HARD_TANH"};
+
+inline constexpr int32_t ModChanOffsetInts[] = {0, 2, 8, 10, 16, 18};
+
+} // namespace VOPMMods
+
 } // namespace AMDGPU
 } // namespace llvm
 

@@ -85,7 +85,7 @@ define private amdgpu_kernel void @compute(ptr addrspace(3) %addr, ptr addrspace
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_sema_wait 1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    v_convolve_f16_fp8_fp8 g1[22:25], 0, g1[12:20], g1[0:2], g1[4:6], g1[8:10] aux_data:42 clamp idxs:0x111101
+; CHECK-NEXT:    v_convolve_f16_fp8_fp8 g1[22:25], g1[12:20], [g1[0:2], g1[4:6], g1[8:10]], 0 shape:SHAPE_4X4X16 filter:FILTER_3X3 clamp idxs:0x111101
 ; CHECK-NEXT:    s_sema_signal 33
 ; CHECK-NEXT:    s_barrier_signal -1
 ; CHECK-NEXT:    s_barrier_wait -1
@@ -97,7 +97,7 @@ entry:
   %vec31 = load <3 x i32>, ptr addrspace(10) @col_left, align 16
   %vec32 = load <3 x i32>, ptr addrspace(10) @col_right, align 16
   %wei = load <9 x i32>, ptr addrspace(10) @weights, align 64
-  %0 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> zeroinitializer, <9 x i32> %wei, <3 x i32> %vec30, <3 x i32> %vec31, <3 x i32> %vec32, i32 42, i1 true)
+  %0 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> zeroinitializer, <9 x i32> %wei, <3 x i32> %vec30, <3 x i32> %vec31, <3 x i32> %vec32, i32 10, i1 true)
   store <8 x half> %0, ptr addrspace(10) @out, align 16, !tbaa !4
   fence syncscope("workgroup") release, !mmra !{!"amdgpu-synchronize-as", !"laneshared"}
   call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2, i32 poison)
@@ -111,8 +111,8 @@ define private amdgpu_kernel void @output(ptr addrspace(3) %addr, ptr addrspace(
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_sema_wait 1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_store_b128 v0, g1[22:25], s[0:1]
 ; CHECK-NEXT:    s_barrier_signal -1
 ; CHECK-NEXT:    s_barrier_wait -1

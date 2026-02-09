@@ -204,8 +204,17 @@ private:
 
   void printScaleSel(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O);
-  void printAuxData(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                    raw_ostream &O);
+  void printModsConvolve(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
+  void printModsTensor(unsigned Imm, raw_ostream &O);
+  void printModsShapeCvt(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
+  void printModsFmaTensor(const MCInst *MI, unsigned OpNo,
+                          const MCSubtargetInfo &STI, raw_ostream &O);
+  void printModNamed(unsigned Value, const char *Name,
+                     ArrayRef<const char *> Mods, raw_ostream &O);
+  void printModsWmma(const MCInst *MI, unsigned OpNo,
+                     const MCSubtargetInfo &STI, raw_ostream &O);
 
   void printSema(const MCInst *MI, unsigned OpNo, raw_ostream &O,
                  StringRef Prefix, bool AlwaysPrint);

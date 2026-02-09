@@ -129,8 +129,8 @@ define void @load_mcast_b32_vaddr_imm_mask_comp(ptr addrspace(1) %addr, ptr addr
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    global_load_mcast_b32 g1[3], v[0:1], off offset:16 th:TH_LOAD_HT scope:SCOPE_SE
 ; CHECK-NEXT:    global_store_b32 v[2:3], g1[0], off
-; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %gep = getelementptr float, ptr addrspace(1) %addr, i32 4
@@ -497,8 +497,8 @@ define void @load_mcast_b32_vaddr_imm_mask_comp_local(ptr addrspace(3) %addr, pt
 ; CHECK-NEXT:    s_mov_b32 s0, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_mov_b32 s33, s0
-; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %gep = getelementptr float, ptr addrspace(3) %addr, i32 4
@@ -894,8 +894,8 @@ define void @load_mcast_b32_vaddr_imm_mask_comp_distributed(ptr addrspace(11) %a
 ; CHECK-NEXT:    s_mov_b32 s0, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_mov_b32 s33, s0
-; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %gep = getelementptr float, ptr addrspace(11) %addr, i32 4

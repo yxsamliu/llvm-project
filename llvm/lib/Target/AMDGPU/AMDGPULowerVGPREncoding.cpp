@@ -494,7 +494,7 @@ void AMDGPULowerVGPREncoding::lowerIDX(MachineBasicBlock::instr_iterator &MII) {
       NewMode.Ops[VDst].MSBits = CurData >> 8;
     } else {
       MIB.addDef(AMDGPU::VGPR0 + CurOffset)
-          .addUse(AMDGPU::VGPR0 + CurData, DataOp.isUndef() ? RegState::Undef : 0);
+          .addUse(AMDGPU::VGPR0 + CurData, getUndefRegState(DataOp.isUndef()));
       NewMode.Ops[VSrc0].MSBits = CurData >> 8;
       NewMode.Ops[VDst].MSBits = CurOffset >> 8;
     }
@@ -734,24 +734,23 @@ AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
   if (I.isEnd())
     return I;
 
-  if (I == I->getParent()->begin())
-    return I;
-
-  MachineBasicBlock::instr_iterator Prev = std::prev(I);
-  auto isProgramStateSALU = [this](MachineInstr *MI) {
-    return TII->isBarrier(MI->getOpcode()) ||
-           TII->isWaitcnt(MI || (SIInstrInfo::isProgramStateSALU(*MI) &&
-                                 MI->getOpcode() != AMDGPU::S_SET_VGPR_MSB));
+  // "Program State instructions" are instructions which are used to control
+  // operation of the GPU rather than performing arithmetic. Such instructions
+  // have different coissuing rules w.r.t s_set_vgpr_msb.
+  auto isProgramStateInstr = [this](MachineInstr *MI) {
+    unsigned Opc = MI->getOpcode();
+    return TII->isBarrier(Opc) || TII->isWaitcnt(Opc) ||
+           Opc == AMDGPU::S_DELAY_ALU;
   };
 
-  if (!isProgramStateSALU(&*Prev))
-    return I;
-
-  while (!Prev.isEnd() && (Prev != Prev->getParent()->begin()) &&
-         isProgramStateSALU(&*Prev)) {
-    --Prev;
+  while (!I.isEnd() && I != I->getParent()->begin()) {
+    auto Prev = std::prev(I);
+    if (!isProgramStateInstr(&*Prev))
+      return I;
+    I = Prev;
   }
-  return Prev;
+
+  return I;
 }
 
 /// Convert mode value from S_SET_VGPR_MSB format to MODE register format.
@@ -796,7 +795,7 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
                               ? EncodeType::SET_VGPR_FRAMES
                               : EncodeType::SET_VGPR_MSB;
 
-  int64_t ModeValue = static_cast<int64_t>(CurrentMode.encode(encodeType));
+  int64_t ModeValue = CurrentMode.encode(encodeType);
 
   // Case 1: Size <= 12 - the original instruction uses imm32[0:Size-1], so
   // imm32[12:19] is unused. Safe to set imm32[12:19] to the correct VGPR

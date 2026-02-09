@@ -2867,7 +2867,7 @@ defm : FlatAtomicPat <"FLAT_ATOMIC_PK_ADD_BF16", "atomic_load_fadd_flat", v2bf16
 
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_PK_ADD_BF16", "atomic_load_fadd_global", v2bf16>;
 
-let OtherPredicates = [HasFlatScratchInsts, EnableFlatScratch] in {
+let OtherPredicates = [HasFlatScratchInsts, HasFlatScratchEnabled] in {
 foreach as = [ "private", "laneshared" ] in {
   defm : ScratchFLATLoadPats <SCRATCH_LOAD_UBYTE, "extloadi8_"#as, i32>;
   defm : ScratchFLATLoadPats <SCRATCH_LOAD_UBYTE, "zextloadi8_"#as, i32>;
@@ -2947,12 +2947,12 @@ foreach as = [ "private", "laneshared" ] in {
   defm : ScratchFLATStorePats <SCRATCH_STORE_SHORT, "store_"#as, i16>;
 
 
-  let OtherPredicates = [HasD16LoadStore, HasFlatScratchInsts, EnableFlatScratch] in {
+  let OtherPredicates = [HasD16LoadStore, HasFlatScratchInsts, HasFlatScratchEnabled] in {
     defm : ScratchFLATStorePats <SCRATCH_STORE_SHORT_D16_HI, "truncstorei16_hi16_"#as, i32>;
     defm : ScratchFLATStorePats <SCRATCH_STORE_BYTE_D16_HI, "truncstorei8_hi16_"#as, i32>;
   }
 
-  let OtherPredicates = [D16PreservesUnusedBits, HasFlatScratchInsts, EnableFlatScratch] in {
+  let OtherPredicates = [D16PreservesUnusedBits, HasFlatScratchInsts, HasFlatScratchEnabled] in {
     defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_UBYTE_D16_HI, "az_extloadi8_d16_hi_"#as, v2i16>;
     defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_UBYTE_D16_HI, "az_extloadi8_d16_hi_"#as, v2f16>;
     defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SBYTE_D16_HI, "sextloadi8_d16_hi_"#as, v2i16>;
@@ -2968,7 +2968,7 @@ foreach as = [ "private", "laneshared" ] in {
     defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SHORT_D16, "load_d16_lo_"#as, v2f16>;
   }
 } // End foreach as
-} // End OtherPredicates = [HasFlatScratchInsts,EnableFlatScratch]
+} // End OtherPredicates = [HasFlatScratchInsts,HasFlatScratchEnabled]
 
 def PrefetchLoc: SDNodeXForm<timm, [{
   uint32_t V = N->getZExtValue();
@@ -4206,7 +4206,7 @@ multiclass VFLAT_Real_SADDR_RTN_gfx1250<bits<8> op, string name> {
 }
 
 multiclass VFLAT_Real_AllAddr_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic,
-                                           list<Predicate> aliasPreds = [isGFX125xOnly]> :
+                                      list<Predicate> aliasPreds = [isGFX125xOnly]> :
   VFLAT_Real_gfx1250<op, name>,
   VFLAT_Real_SADDR_gfx1250<op, name> {
   defvar ps = get_FLAT_ps<NAME>;

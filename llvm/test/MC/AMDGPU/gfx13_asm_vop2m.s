@@ -125,8 +125,8 @@ v_permute_pair_bcast_b32 v5, v1023
 v_permute_pair_bcast_b32 v5, 0xfe0b
 // GFX13-ERR: :[[@LINE-1]]:30: error: invalid operand for instruction
 
-v_permute_pair_bcast_b32 v5, v2 aux_data:2
-// GFX13: v_permute_pair_bcast_b32 v5, v2 aux_data:2 ; encoding: [0x05,0x80,0x00,0xdc,0x02,0x04,0x00,0x08]
+v_permute_pair_bcast_b32 v5, v2 pattern:2
+// GFX13: v_permute_pair_bcast_b32 v5, v2 pattern:2 ; encoding: [0x05,0x80,0x00,0xdc,0x02,0x04,0x00,0x08]
 
 v_permute_pair_bcast_b32 v5, v2, v3
 // GFX13-ERR: :[[@LINE-1]]:34: error: invalid operand for instruction
@@ -179,5 +179,5 @@ v_permute_pair_2src_rotate_group_b32 v5, v2, v1023
 v_permute_pair_2src_rotate_group_b32 v5, 0xfe0b, v3
 // GFX13-ERR: :[[@LINE-1]]:42: error: invalid operand for instruction
 
-v_permute_pair_2src_rotate_group_b32 v5, v2, v3 aux_data:2
-// GFX13: v_permute_pair_2src_rotate_group_b32 v5, v2, v3 aux_data:2 ; encoding: [0x05,0x00,0x00,0xdc,0x02,0x64,0x80,0x08]
+v_permute_pair_2src_rotate_group_b32 v5, v2, v3 pattern:2
+// GFX13: v_permute_pair_2src_rotate_group_b32 v5, v2, v3 pattern:2 ; encoding: [0x05,0x00,0x00,0xdc,0x02,0x64,0x80,0x08]
