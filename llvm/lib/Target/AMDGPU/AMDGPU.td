@@ -1181,6 +1181,10 @@ defm SWakeupBarrier : AMDGPUSubtargetFeature<"s-wakeup-barrier-inst",
   "Has s_wakeup_barrier instruction."
 >;
 
+defm E5M3ScaleInst : AMDGPUSubtargetFeature<"e5m3-scale-inst",
+  "Has v_scale_e5m3_f32 instruction."
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -2189,7 +2193,8 @@ def FeatureISAVersion12_60 : FeatureSet<
      FeatureSBarrierLeaveImm,
      FeatureSemaphores,
      FeatureWMMATransposeInsts,
-     FeatureTileShapedTransposeInsts
+     FeatureTileShapedTransposeInsts,
+     FeatureE5M3ScaleInst
     ])>;
 
 def FeatureISAVersion13_Common : FeatureSet<
