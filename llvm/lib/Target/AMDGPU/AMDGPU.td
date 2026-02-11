@@ -1388,6 +1388,12 @@ defm Clusters : AMDGPUSubtargetFeature<"clusters",
   /*GenPredicate=*/0
 >;
 
+defm WMMAWithPredXDL : AMDGPUSubtargetFeature<"wmma-with-predxdl",
+  "The WMMA instructions support pred_xdl operand",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/0
+>;
+
 def FeatureWaitsBeforeSystemScopeStores : SubtargetFeature<
   "waits-before-system-scope-stores",
   "RequiresWaitsBeforeSystemScopeStores",
@@ -2172,7 +2178,8 @@ def FeatureISAVersion12_60 : FeatureSet<
      FeatureSemaphores,
      FeatureWMMATransposeInsts,
      FeatureTileShapedTransposeInsts,
-     FeatureE5M3ScaleInst
+     FeatureE5M3ScaleInst,
+     FeatureWMMAWithPredXDL
     ])>;
 
 def FeatureISAVersion13 : FeatureSet<
@@ -2794,6 +2801,8 @@ def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
 
 def NotNeedsAlignedVGPRs : Predicate<"!Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of (not FeatureRequiresAlignedVGPRs))>;
+
+def NotHasWMMAWithPredXDL : Predicate<"!Subtarget->hasWMMAWithPredXDL()">;
 
 def isWave32 : Predicate<"Subtarget->isWave32()">,
   AssemblerPredicate <(any_of FeatureWavefrontSize32,
