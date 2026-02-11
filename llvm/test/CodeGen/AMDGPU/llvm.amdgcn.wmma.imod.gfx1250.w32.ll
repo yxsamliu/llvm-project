@@ -182,7 +182,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_bf16_negA(<16 x bfloat> %A, <16 x 
 ; GFX1260-LABEL: test_wmma_f32_16x16x32_bf16_negA:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[1,0,0]
+; GFX1260-NEXT:    v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], v[16:23]
 ; GFX1260-NEXT:    s_clause 0x1
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
@@ -200,7 +200,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_bf16_negA(<16 x bfloat> %A, <16 x 
 ; GISEL-GFX1260-LABEL: test_wmma_f32_16x16x32_bf16_negA:
 ; GISEL-GFX1260:       ; %bb.0: ; %bb
 ; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[1,0,0]
+; GISEL-GFX1260-NEXT:    v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], v[16:23]
 ; GISEL-GFX1260-NEXT:    s_clause 0x1
 ; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
@@ -224,29 +224,20 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_bf16_negB(<16 x bfloat> %A, <16 x 
 ; GFX1260-LABEL: test_wmma_f32_16x16x32_bf16_negB:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0]
+; GFX1260-NEXT:    v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX1260-NEXT:    s_clause 0x1
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f32_16x16x32_bf16_negB:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0] neg_hi:[0,1,0]
-; GISEL-GFX1250-NEXT:    s_clause 0x1
-; GISEL-GFX1250-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-GFX1250-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f32_16x16x32_bf16_negB:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0]
-; GISEL-GFX1260-NEXT:    s_clause 0x1
-; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f32_16x16x32_bf16_negB:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0] neg_hi:[0,1,0]
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
+; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.bf16.v8f32.v16bf16(i1 0, <16 x bfloat> %A, i1 1, <16 x bfloat> %B, i16 0, <8 x float> %C, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -299,29 +290,20 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_bf16_neg_absC(<16 x bfloat> %A, <1
 ; GFX1260-LABEL: test_wmma_f32_16x16x32_bf16_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    s_clause 0x1
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f32_16x16x32_bf16_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    s_clause 0x1
-; GISEL-GFX1250-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-GFX1250-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f32_16x16x32_bf16_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    s_clause 0x1
-; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f32_16x16x32_bf16_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
+; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.bf16.v8f32.v16bf16(i1 0, <16 x bfloat> %A, i1 0, <16 x bfloat> %B, i16 3, <8 x float> %C, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -372,7 +354,7 @@ define amdgpu_ps void @test_wmma_bf16_16x16x32_bf16_negA(<16 x bfloat> %A, <16 x
 ; GFX1260-LABEL: test_wmma_bf16_16x16x32_bf16_negA:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_bf16_16x16x32_bf16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[1,0,0]
+; GFX1260-NEXT:    v_wmma_bf16_16x16x32_bf16 v[16:19], v[0:7], v[8:15], v[16:19]
 ; GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
 ; GFX1260-NEXT:    s_endpgm
 ;
@@ -386,7 +368,7 @@ define amdgpu_ps void @test_wmma_bf16_16x16x32_bf16_negA(<16 x bfloat> %A, <16 x
 ; GISEL-GFX1260-LABEL: test_wmma_bf16_16x16x32_bf16_negA:
 ; GISEL-GFX1260:       ; %bb.0: ; %bb
 ; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_bf16_16x16x32_bf16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[1,0,0]
+; GISEL-GFX1260-NEXT:    v_wmma_bf16_16x16x32_bf16 v[16:19], v[0:7], v[8:15], v[16:19]
 ; GISEL-GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
 ; GISEL-GFX1260-NEXT:    s_endpgm
 bb:
@@ -406,23 +388,16 @@ define amdgpu_ps void @test_wmma_bf16_16x16x32_bf16_negB(<16 x bfloat> %A, <16 x
 ; GFX1260-LABEL: test_wmma_bf16_16x16x32_bf16_negB:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_bf16_16x16x32_bf16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,1,0]
+; GFX1260-NEXT:    v_wmma_bf16_16x16x32_bf16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_bf16_16x16x32_bf16_negB:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_bf16_16x16x32_bf16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,1,0] neg_hi:[0,1,0]
-; GISEL-GFX1250-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_bf16_16x16x32_bf16_negB:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_bf16_16x16x32_bf16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,1,0]
-; GISEL-GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_bf16_16x16x32_bf16_negB:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_bf16_16x16x32_bf16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,1,0] neg_hi:[0,1,0]
+; GISEL-NEXT:    global_store_b128 v[20:21], v[16:19], off
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x bfloat> @llvm.amdgcn.wmma.bf16.16x16x32.bf16.v8bf16.v16bf16(i1 0, <16 x bfloat> %A, i1 1, <16 x bfloat> %B, i16 0, <8 x bfloat> %C, i1 false, i1 false)
   store <8 x bfloat> %res, ptr addrspace(1) %out
@@ -467,23 +442,16 @@ define amdgpu_ps void @test_wmma_bf16_16x16x32_bf16_neg_absC(<16 x bfloat> %A, <
 ; GFX1260-LABEL: test_wmma_bf16_16x16x32_bf16_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_bf16_16x16x32_bf16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_bf16_16x16x32_bf16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_bf16_16x16x32_bf16_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_bf16_16x16x32_bf16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_bf16_16x16x32_bf16_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_bf16_16x16x32_bf16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_bf16_16x16x32_bf16_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_bf16_16x16x32_bf16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    global_store_b128 v[20:21], v[16:19], off
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x bfloat> @llvm.amdgcn.wmma.bf16.16x16x32.bf16.v8bf16.v16bf16(i1 0, <16 x bfloat> %A, i1 0, <16 x bfloat> %B, i16 3, <8 x bfloat> %C, i1 false, i1 false)
   store <8 x bfloat> %res, ptr addrspace(1) %out
@@ -528,7 +496,7 @@ define amdgpu_ps void @test_wmma_bf16f32_16x16x32_bf16_negA(<16 x bfloat> %A, <1
 ; GFX1260-LABEL: test_wmma_bf16f32_16x16x32_bf16_negA:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[16:23] neg_lo:[1,0,0]
+; GFX1260-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[16:23]
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[26:29], off
 ; GFX1260-NEXT:    s_endpgm
 ;
@@ -542,7 +510,7 @@ define amdgpu_ps void @test_wmma_bf16f32_16x16x32_bf16_negA(<16 x bfloat> %A, <1
 ; GISEL-GFX1260-LABEL: test_wmma_bf16f32_16x16x32_bf16_negA:
 ; GISEL-GFX1260:       ; %bb.0: ; %bb
 ; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[16:23] neg_lo:[1,0,0]
+; GISEL-GFX1260-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[16:23]
 ; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[26:29], off
 ; GISEL-GFX1260-NEXT:    s_endpgm
 bb:
@@ -562,23 +530,16 @@ define amdgpu_ps void @test_wmma_bf16f32_16x16x32_bf16_negB(<16 x bfloat> %A, <1
 ; GFX1260-LABEL: test_wmma_bf16f32_16x16x32_bf16_negB:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0]
+; GFX1260-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[26:29], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_bf16f32_16x16x32_bf16_negB:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0] neg_hi:[0,1,0]
-; GISEL-GFX1250-NEXT:    global_store_b128 v[24:25], v[26:29], off
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_bf16f32_16x16x32_bf16_negB:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0]
-; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[26:29], off
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_bf16f32_16x16x32_bf16_negB:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0] neg_hi:[0,1,0]
+; GISEL-NEXT:    global_store_b128 v[24:25], v[26:29], off
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x bfloat> @llvm.amdgcn.wmma.bf16f32.16x16x32.bf16.v8bf16.v16bf16(i1 0, <16 x bfloat> %A, i1 1, <16 x bfloat> %B, i16 0, <8 x float> %C, i1 false, i1 false)
   store <8 x bfloat> %res, ptr addrspace(1) %out
@@ -623,23 +584,16 @@ define amdgpu_ps void @test_wmma_bf16f32_16x16x32_bf16_neg_absC(<16 x bfloat> %A
 ; GFX1260-LABEL: test_wmma_bf16f32_16x16x32_bf16_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[26:29], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_bf16f32_16x16x32_bf16_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    global_store_b128 v[24:25], v[26:29], off
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_bf16f32_16x16x32_bf16_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[26:29], off
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_bf16f32_16x16x32_bf16_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    global_store_b128 v[24:25], v[26:29], off
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x bfloat> @llvm.amdgcn.wmma.bf16f32.16x16x32.bf16.v8bf16.v16bf16(i1 0, <16 x bfloat> %A, i1 0, <16 x bfloat> %B, i16 3, <8 x float> %C, i1 false, i1 false)
   store <8 x bfloat> %res, ptr addrspace(1) %out
@@ -657,7 +611,7 @@ define amdgpu_ps void @test_wmma_bf16f32_16x16x32_bf16_ignoreC(<16 x bfloat> %A,
 ; GFX1260-LABEL: test_wmma_bf16f32_16x16x32_bf16_ignoreC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[16:23] neg_lo:[1,0,0]
+; GFX1260-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[16:23]
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[26:29], off
 ; GFX1260-NEXT:    s_endpgm
 ;
@@ -671,7 +625,7 @@ define amdgpu_ps void @test_wmma_bf16f32_16x16x32_bf16_ignoreC(<16 x bfloat> %A,
 ; GISEL-GFX1260-LABEL: test_wmma_bf16f32_16x16x32_bf16_ignoreC:
 ; GISEL-GFX1260:       ; %bb.0: ; %bb
 ; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[16:23] neg_lo:[1,0,0]
+; GISEL-GFX1260-NEXT:    v_wmma_bf16f32_16x16x32_bf16 v[26:29], v[0:7], v[8:15], v[16:23]
 ; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[26:29], off
 ; GISEL-GFX1260-NEXT:    s_endpgm
 bb:
@@ -726,29 +680,20 @@ define amdgpu_ps void @test_wmma_f32_16x16x64_fp8_fp8_neg_absC(<8 x i32> %A, <8 
 ; GFX1260-LABEL: test_wmma_f32_16x16x64_fp8_fp8_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f32_16x16x64_fp8_fp8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f32_16x16x64_fp8_fp8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    s_clause 0x1
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f32_16x16x64_fp8_fp8_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f32_16x16x64_fp8_fp8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    s_clause 0x1
-; GISEL-GFX1250-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GISEL-GFX1250-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f32_16x16x64_fp8_fp8_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f32_16x16x64_fp8_fp8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    s_clause 0x1
-; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f32_16x16x64_fp8_fp8_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f32_16x16x64_fp8_fp8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off
+; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x64.fp8.fp8.v8f32.v8i32(<8 x i32> %A, <8 x i32> %B, i16 3, <8 x float> %C, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -834,29 +779,20 @@ define amdgpu_ps void @test_wmma_f32_16x16x64_fp8_bf8_neg_absC(<8 x i32> %A, <8 
 ; GFX1260-LABEL: test_wmma_f32_16x16x64_fp8_bf8_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f32_16x16x64_fp8_bf8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f32_16x16x64_fp8_bf8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    s_clause 0x1
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f32_16x16x64_fp8_bf8_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f32_16x16x64_fp8_bf8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    s_clause 0x1
-; GISEL-GFX1250-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GISEL-GFX1250-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f32_16x16x64_fp8_bf8_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f32_16x16x64_fp8_bf8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    s_clause 0x1
-; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f32_16x16x64_fp8_bf8_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f32_16x16x64_fp8_bf8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off
+; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x64.fp8.bf8.v8f32.v8i32(<8 x i32> %A, <8 x i32> %B, i16 3, <8 x float> %C, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -942,29 +878,20 @@ define amdgpu_ps void @test_wmma_f32_16x16x64_bf8_fp8_neg_absC(<8 x i32> %A, <8 
 ; GFX1260-LABEL: test_wmma_f32_16x16x64_bf8_fp8_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f32_16x16x64_bf8_fp8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f32_16x16x64_bf8_fp8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    s_clause 0x1
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f32_16x16x64_bf8_fp8_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f32_16x16x64_bf8_fp8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    s_clause 0x1
-; GISEL-GFX1250-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GISEL-GFX1250-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f32_16x16x64_bf8_fp8_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f32_16x16x64_bf8_fp8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    s_clause 0x1
-; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f32_16x16x64_bf8_fp8_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f32_16x16x64_bf8_fp8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off
+; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x64.bf8.fp8.v8f32.v8i32(<8 x i32> %A, <8 x i32> %B, i16 3, <8 x float> %C, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -1050,29 +977,20 @@ define amdgpu_ps void @test_wmma_f32_16x16x64_bf8_bf8_neg_absC(<8 x i32> %A, <8 
 ; GFX1260-LABEL: test_wmma_f32_16x16x64_bf8_bf8_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f32_16x16x64_bf8_bf8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f32_16x16x64_bf8_bf8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    s_clause 0x1
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f32_16x16x64_bf8_bf8_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f32_16x16x64_bf8_bf8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    s_clause 0x1
-; GISEL-GFX1250-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GISEL-GFX1250-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f32_16x16x64_bf8_bf8_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f32_16x16x64_bf8_bf8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    s_clause 0x1
-; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f32_16x16x64_bf8_bf8_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f32_16x16x64_bf8_bf8 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off
+; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x64.bf8.bf8.v8f32.v8i32(<8 x i32> %A, <8 x i32> %B, i16 3, <8 x float> %C, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -1150,23 +1068,16 @@ define amdgpu_ps void @test_wmma_f16_16x16x64_fp8_fp8_neg_absC(<8 x i32> %A, <8 
 ; GFX1260-LABEL: test_wmma_f16_16x16x64_fp8_fp8_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f16_16x16x64_fp8_fp8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f16_16x16x64_fp8_fp8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f16_16x16x64_fp8_fp8_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f16_16x16x64_fp8_fp8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f16_16x16x64_fp8_fp8_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f16_16x16x64_fp8_fp8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f16_16x16x64_fp8_fp8_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f16_16x16x64_fp8_fp8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    global_store_b128 v[20:21], v[16:19], off
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x half> @llvm.amdgcn.wmma.f16.16x16x64.fp8.fp8.v8f16.v8i32(<8 x i32> %A, <8 x i32> %B, i16 3, <8 x half> %C, i1 false, i1 false)
   store <8 x half> %res, ptr addrspace(1) %out
@@ -1238,23 +1149,16 @@ define amdgpu_ps void @test_wmma_f16_16x16x64_fp8_bf8_neg_absC(<8 x i32> %A, <8 
 ; GFX1260-LABEL: test_wmma_f16_16x16x64_fp8_bf8_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f16_16x16x64_fp8_bf8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f16_16x16x64_fp8_bf8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f16_16x16x64_fp8_bf8_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f16_16x16x64_fp8_bf8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f16_16x16x64_fp8_bf8_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f16_16x16x64_fp8_bf8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f16_16x16x64_fp8_bf8_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f16_16x16x64_fp8_bf8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    global_store_b128 v[20:21], v[16:19], off
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x half> @llvm.amdgcn.wmma.f16.16x16x64.fp8.bf8.v8f16.v8i32(<8 x i32> %A, <8 x i32> %B, i16 3, <8 x half> %C, i1 false, i1 false)
   store <8 x half> %res, ptr addrspace(1) %out
@@ -1326,23 +1230,16 @@ define amdgpu_ps void @test_wmma_f16_16x16x64_bf8_fp8_neg_absC(<8 x i32> %A, <8 
 ; GFX1260-LABEL: test_wmma_f16_16x16x64_bf8_fp8_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f16_16x16x64_bf8_fp8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f16_16x16x64_bf8_fp8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f16_16x16x64_bf8_fp8_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f16_16x16x64_bf8_fp8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f16_16x16x64_bf8_fp8_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f16_16x16x64_bf8_fp8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f16_16x16x64_bf8_fp8_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f16_16x16x64_bf8_fp8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    global_store_b128 v[20:21], v[16:19], off
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x half> @llvm.amdgcn.wmma.f16.16x16x64.bf8.fp8.v8f16.v8i32(<8 x i32> %A, <8 x i32> %B, i16 3, <8 x half> %C, i1 false, i1 false)
   store <8 x half> %res, ptr addrspace(1) %out
@@ -1414,23 +1311,16 @@ define amdgpu_ps void @test_wmma_f16_16x16x64_bf8_bf8_neg_absC(<8 x i32> %A, <8 
 ; GFX1260-LABEL: test_wmma_f16_16x16x64_bf8_bf8_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f16_16x16x64_bf8_bf8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f16_16x16x64_bf8_bf8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f16_16x16x64_bf8_bf8_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f16_16x16x64_bf8_bf8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f16_16x16x64_bf8_bf8_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f16_16x16x64_bf8_bf8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f16_16x16x64_bf8_bf8_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f16_16x16x64_bf8_bf8 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    global_store_b128 v[20:21], v[16:19], off
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x half> @llvm.amdgcn.wmma.f16.16x16x64.bf8.bf8.v8f16.v8i32(<8 x i32> %A, <8 x i32> %B, i16 3, <8 x half> %C, i1 false, i1 false)
   store <8 x half> %res, ptr addrspace(1) %out
@@ -1543,7 +1433,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_f16_negA(<16 x half> %A, <16 x hal
 ; GFX1260-LABEL: test_wmma_f32_16x16x32_f16_negA:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[1,0,0]
+; GFX1260-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23]
 ; GFX1260-NEXT:    s_clause 0x1
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
@@ -1561,7 +1451,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_f16_negA(<16 x half> %A, <16 x hal
 ; GISEL-GFX1260-LABEL: test_wmma_f32_16x16x32_f16_negA:
 ; GISEL-GFX1260:       ; %bb.0: ; %bb
 ; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[1,0,0]
+; GISEL-GFX1260-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23]
 ; GISEL-GFX1260-NEXT:    s_clause 0x1
 ; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
@@ -1585,29 +1475,20 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_f16_negB(<16 x half> %A, <16 x hal
 ; GFX1260-LABEL: test_wmma_f32_16x16x32_f16_negB:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0]
+; GFX1260-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX1260-NEXT:    s_clause 0x1
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f32_16x16x32_f16_negB:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0] neg_hi:[0,1,0]
-; GISEL-GFX1250-NEXT:    s_clause 0x1
-; GISEL-GFX1250-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GISEL-GFX1250-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f32_16x16x32_f16_negB:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0]
-; GISEL-GFX1260-NEXT:    s_clause 0x1
-; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f32_16x16x32_f16_negB:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0] neg_hi:[0,1,0]
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off
+; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.f16.v8f32.v16f16(i1 0, <16 x half> %A, i1 1, <16 x half> %B, i16 0, <8 x float> %C, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -1660,29 +1541,20 @@ define amdgpu_ps void @test_wmma_f32_16x16x32_f16_neg_absC(<16 x half> %A, <16 x
 ; GFX1260-LABEL: test_wmma_f32_16x16x32_f16_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    s_clause 0x1
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f32_16x16x32_f16_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    s_clause 0x1
-; GISEL-GFX1250-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GISEL-GFX1250-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f32_16x16x32_f16_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    s_clause 0x1
-; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GISEL-GFX1260-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f32_16x16x32_f16_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off
+; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.f16.v8f32.v16f16(i1 0, <16 x half> %A, i1 0, <16 x half> %B, i16 3, <8 x float> %C, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -1733,7 +1605,7 @@ define amdgpu_ps void @test_wmma_f16_16x16x32_f16_negA(<16 x half> %A, <16 x hal
 ; GFX1260-LABEL: test_wmma_f16_16x16x32_f16_negA:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[1,0,0]
+; GFX1260-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19]
 ; GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
 ; GFX1260-NEXT:    s_endpgm
 ;
@@ -1747,7 +1619,7 @@ define amdgpu_ps void @test_wmma_f16_16x16x32_f16_negA(<16 x half> %A, <16 x hal
 ; GISEL-GFX1260-LABEL: test_wmma_f16_16x16x32_f16_negA:
 ; GISEL-GFX1260:       ; %bb.0: ; %bb
 ; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[1,0,0]
+; GISEL-GFX1260-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19]
 ; GISEL-GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
 ; GISEL-GFX1260-NEXT:    s_endpgm
 bb:
@@ -1767,23 +1639,16 @@ define amdgpu_ps void @test_wmma_f16_16x16x32_f16_negB(<16 x half> %A, <16 x hal
 ; GFX1260-LABEL: test_wmma_f16_16x16x32_f16_negB:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,1,0]
+; GFX1260-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f16_16x16x32_f16_negB:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,1,0] neg_hi:[0,1,0]
-; GISEL-GFX1250-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f16_16x16x32_f16_negB:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,1,0]
-; GISEL-GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f16_16x16x32_f16_negB:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,1,0] neg_hi:[0,1,0]
+; GISEL-NEXT:    global_store_b128 v[20:21], v[16:19], off
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x half> @llvm.amdgcn.wmma.f16.16x16x32.f16.v8f16.v16f16(i1 0, <16 x half> %A, i1 1, <16 x half> %B, i16 0, <8 x half> %C, i1 false, i1 false)
   store <8 x half> %res, ptr addrspace(1) %out
@@ -1828,23 +1693,16 @@ define amdgpu_ps void @test_wmma_f16_16x16x32_f16_neg_absC(<16 x half> %A, <16 x
 ; GFX1260-LABEL: test_wmma_f16_16x16x32_f16_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f16_16x16x32_f16_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f16_16x16x32_f16_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f16_16x16x32_f16_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    global_store_b128 v[20:21], v[16:19], off
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x half> @llvm.amdgcn.wmma.f16.16x16x32.f16.v8f16.v16f16(i1 0, <16 x half> %A, i1 0, <16 x half> %B, i16 3, <8 x half> %C, i1 false, i1 false)
   store <8 x half> %res, ptr addrspace(1) %out
@@ -2213,23 +2071,16 @@ define amdgpu_ps void @test_wmma_f16_16x16x128_fp8_fp8_neg_absC(<16 x i32> %A, <
 ; GFX1260-LABEL: test_wmma_f16_16x16x128_fp8_fp8_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f16_16x16x128_fp8_fp8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f16_16x16x128_fp8_fp8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    global_store_b128 v[36:37], v[32:35], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f16_16x16x128_fp8_fp8_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f16_16x16x128_fp8_fp8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    global_store_b128 v[36:37], v[32:35], off
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f16_16x16x128_fp8_fp8_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f16_16x16x128_fp8_fp8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    global_store_b128 v[36:37], v[32:35], off
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f16_16x16x128_fp8_fp8_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f16_16x16x128_fp8_fp8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    global_store_b128 v[36:37], v[32:35], off
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x half> @llvm.amdgcn.wmma.f16.16x16x128.fp8.fp8.v8f16.v16i32(<16 x i32> %A, <16 x i32> %B, i16 3, <8 x half> %C, i1 false, i1 false)
   store <8 x half> %res, ptr addrspace(1) %out
@@ -2301,23 +2152,16 @@ define amdgpu_ps void @test_wmma_f16_16x16x128_fp8_bf8_neg_absC(<16 x i32> %A, <
 ; GFX1260-LABEL: test_wmma_f16_16x16x128_fp8_bf8_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f16_16x16x128_fp8_bf8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f16_16x16x128_fp8_bf8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    global_store_b128 v[36:37], v[32:35], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f16_16x16x128_fp8_bf8_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f16_16x16x128_fp8_bf8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    global_store_b128 v[36:37], v[32:35], off
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f16_16x16x128_fp8_bf8_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f16_16x16x128_fp8_bf8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    global_store_b128 v[36:37], v[32:35], off
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f16_16x16x128_fp8_bf8_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f16_16x16x128_fp8_bf8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    global_store_b128 v[36:37], v[32:35], off
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x half> @llvm.amdgcn.wmma.f16.16x16x128.fp8.bf8.v8f16.v16i32(<16 x i32> %A, <16 x i32> %B, i16 3, <8 x half> %C, i1 false, i1 false)
   store <8 x half> %res, ptr addrspace(1) %out
@@ -2389,23 +2233,16 @@ define amdgpu_ps void @test_wmma_f16_16x16x128_bf8_fp8_neg_absC(<16 x i32> %A, <
 ; GFX1260-LABEL: test_wmma_f16_16x16x128_bf8_fp8_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f16_16x16x128_bf8_fp8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f16_16x16x128_bf8_fp8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    global_store_b128 v[36:37], v[32:35], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f16_16x16x128_bf8_fp8_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f16_16x16x128_bf8_fp8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    global_store_b128 v[36:37], v[32:35], off
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f16_16x16x128_bf8_fp8_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f16_16x16x128_bf8_fp8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    global_store_b128 v[36:37], v[32:35], off
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f16_16x16x128_bf8_fp8_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f16_16x16x128_bf8_fp8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    global_store_b128 v[36:37], v[32:35], off
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x half> @llvm.amdgcn.wmma.f16.16x16x128.bf8.fp8.v8f16.v16i32(<16 x i32> %A, <16 x i32> %B, i16 3, <8 x half> %C, i1 false, i1 false)
   store <8 x half> %res, ptr addrspace(1) %out
@@ -2477,23 +2314,16 @@ define amdgpu_ps void @test_wmma_f16_16x16x128_bf8_bf8_neg_absC(<16 x i32> %A, <
 ; GFX1260-LABEL: test_wmma_f16_16x16x128_bf8_bf8_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f16_16x16x128_bf8_bf8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f16_16x16x128_bf8_bf8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    global_store_b128 v[36:37], v[32:35], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f16_16x16x128_bf8_bf8_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f16_16x16x128_bf8_bf8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    global_store_b128 v[36:37], v[32:35], off
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f16_16x16x128_bf8_bf8_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f16_16x16x128_bf8_bf8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    global_store_b128 v[36:37], v[32:35], off
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f16_16x16x128_bf8_bf8_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f16_16x16x128_bf8_bf8 v[32:35], v[0:15], v[16:31], v[32:35] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    global_store_b128 v[36:37], v[32:35], off
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x half> @llvm.amdgcn.wmma.f16.16x16x128.bf8.bf8.v8f16.v16i32(<16 x i32> %A, <16 x i32> %B, i16 3, <8 x half> %C, i1 false, i1 false)
   store <8 x half> %res, ptr addrspace(1) %out
@@ -2573,29 +2403,20 @@ define amdgpu_ps void @test_wmma_f32_16x16x128_fp8_fp8_neg_absC(<16 x i32> %A, <
 ; GFX1260-LABEL: test_wmma_f32_16x16x128_fp8_fp8_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f32_16x16x128_fp8_fp8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f32_16x16x128_fp8_fp8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    s_clause 0x1
 ; GFX1260-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1260-NEXT:    global_store_b128 v[40:41], v[32:35], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f32_16x16x128_fp8_fp8_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f32_16x16x128_fp8_fp8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    s_clause 0x1
-; GISEL-GFX1250-NEXT:    global_store_b128 v[40:41], v[32:35], off
-; GISEL-GFX1250-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f32_16x16x128_fp8_fp8_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f32_16x16x128_fp8_fp8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    s_clause 0x1
-; GISEL-GFX1260-NEXT:    global_store_b128 v[40:41], v[32:35], off
-; GISEL-GFX1260-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f32_16x16x128_fp8_fp8_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f32_16x16x128_fp8_fp8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    global_store_b128 v[40:41], v[32:35], off
+; GISEL-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x128.fp8.fp8.v8f32.v16i32(<16 x i32> %A, <16 x i32> %B, i16 3, <8 x float> %C, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -2681,29 +2502,20 @@ define amdgpu_ps void @test_wmma_f32_16x16x128_fp8_bf8_neg_absC(<16 x i32> %A, <
 ; GFX1260-LABEL: test_wmma_f32_16x16x128_fp8_bf8_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f32_16x16x128_fp8_bf8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f32_16x16x128_fp8_bf8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    s_clause 0x1
 ; GFX1260-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1260-NEXT:    global_store_b128 v[40:41], v[32:35], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f32_16x16x128_fp8_bf8_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f32_16x16x128_fp8_bf8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    s_clause 0x1
-; GISEL-GFX1250-NEXT:    global_store_b128 v[40:41], v[32:35], off
-; GISEL-GFX1250-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f32_16x16x128_fp8_bf8_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f32_16x16x128_fp8_bf8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    s_clause 0x1
-; GISEL-GFX1260-NEXT:    global_store_b128 v[40:41], v[32:35], off
-; GISEL-GFX1260-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f32_16x16x128_fp8_bf8_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f32_16x16x128_fp8_bf8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    global_store_b128 v[40:41], v[32:35], off
+; GISEL-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x128.fp8.bf8.v8f32.v16i32(<16 x i32> %A, <16 x i32> %B, i16 3, <8 x float> %C, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -2789,29 +2601,20 @@ define amdgpu_ps void @test_wmma_f32_16x16x128_bf8_fp8_neg_absC(<16 x i32> %A, <
 ; GFX1260-LABEL: test_wmma_f32_16x16x128_bf8_fp8_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f32_16x16x128_bf8_fp8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f32_16x16x128_bf8_fp8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    s_clause 0x1
 ; GFX1260-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1260-NEXT:    global_store_b128 v[40:41], v[32:35], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f32_16x16x128_bf8_fp8_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f32_16x16x128_bf8_fp8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    s_clause 0x1
-; GISEL-GFX1250-NEXT:    global_store_b128 v[40:41], v[32:35], off
-; GISEL-GFX1250-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f32_16x16x128_bf8_fp8_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f32_16x16x128_bf8_fp8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    s_clause 0x1
-; GISEL-GFX1260-NEXT:    global_store_b128 v[40:41], v[32:35], off
-; GISEL-GFX1260-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f32_16x16x128_bf8_fp8_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f32_16x16x128_bf8_fp8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    global_store_b128 v[40:41], v[32:35], off
+; GISEL-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x128.bf8.fp8.v8f32.v16i32(<16 x i32> %A, <16 x i32> %B, i16 3, <8 x float> %C, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -2897,29 +2700,20 @@ define amdgpu_ps void @test_wmma_f32_16x16x128_bf8_bf8_neg_absC(<16 x i32> %A, <
 ; GFX1260-LABEL: test_wmma_f32_16x16x128_bf8_bf8_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f32_16x16x128_bf8_bf8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f32_16x16x128_bf8_bf8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    s_clause 0x1
 ; GFX1260-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1260-NEXT:    global_store_b128 v[40:41], v[32:35], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f32_16x16x128_bf8_bf8_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f32_16x16x128_bf8_bf8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    s_clause 0x1
-; GISEL-GFX1250-NEXT:    global_store_b128 v[40:41], v[32:35], off
-; GISEL-GFX1250-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f32_16x16x128_bf8_bf8_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f32_16x16x128_bf8_bf8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    s_clause 0x1
-; GISEL-GFX1260-NEXT:    global_store_b128 v[40:41], v[32:35], off
-; GISEL-GFX1260-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f32_16x16x128_bf8_bf8_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f32_16x16x128_bf8_bf8 v[32:39], v[0:15], v[16:31], v[32:39] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    global_store_b128 v[40:41], v[32:35], off
+; GISEL-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x128.bf8.bf8.v8f32.v16i32(<16 x i32> %A, <16 x i32> %B, i16 3, <8 x float> %C, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -3013,7 +2807,7 @@ define amdgpu_ps void @test_wmma_f32_32x16x128_f4_neg_absC(<16 x i32> %A, <8 x i
 ; GFX1260-LABEL: test_wmma_f32_32x16x128_f4_neg_absC:
 ; GFX1260:       ; %bb.0: ; %bb
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1260-NEXT:    v_wmma_f32_32x16x128_f4 v[24:39], v[0:15], v[16:23], v[24:39] neg_lo:[0,0,1]
+; GFX1260-NEXT:    v_wmma_f32_32x16x128_f4 v[24:39], v[0:15], v[16:23], v[24:39] neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX1260-NEXT:    s_clause 0x3
 ; GFX1260-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:48
 ; GFX1260-NEXT:    global_store_b128 v[40:41], v[32:35], off offset:32
@@ -3021,27 +2815,16 @@ define amdgpu_ps void @test_wmma_f32_32x16x128_f4_neg_absC(<16 x i32> %A, <8 x i
 ; GFX1260-NEXT:    global_store_b128 v[40:41], v[24:27], off
 ; GFX1260-NEXT:    s_endpgm
 ;
-; GISEL-GFX1250-LABEL: test_wmma_f32_32x16x128_f4_neg_absC:
-; GISEL-GFX1250:       ; %bb.0: ; %bb
-; GISEL-GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1250-NEXT:    v_wmma_f32_32x16x128_f4 v[24:39], v[0:15], v[16:23], v[24:39] neg_lo:[0,0,1] neg_hi:[0,0,1]
-; GISEL-GFX1250-NEXT:    s_clause 0x3
-; GISEL-GFX1250-NEXT:    global_store_b128 v[40:41], v[24:27], off
-; GISEL-GFX1250-NEXT:    global_store_b128 v[40:41], v[28:31], off offset:16
-; GISEL-GFX1250-NEXT:    global_store_b128 v[40:41], v[32:35], off offset:32
-; GISEL-GFX1250-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:48
-; GISEL-GFX1250-NEXT:    s_endpgm
-;
-; GISEL-GFX1260-LABEL: test_wmma_f32_32x16x128_f4_neg_absC:
-; GISEL-GFX1260:       ; %bb.0: ; %bb
-; GISEL-GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-GFX1260-NEXT:    v_wmma_f32_32x16x128_f4 v[24:39], v[0:15], v[16:23], v[24:39] neg_lo:[0,0,1]
-; GISEL-GFX1260-NEXT:    s_clause 0x3
-; GISEL-GFX1260-NEXT:    global_store_b128 v[40:41], v[24:27], off
-; GISEL-GFX1260-NEXT:    global_store_b128 v[40:41], v[28:31], off offset:16
-; GISEL-GFX1260-NEXT:    global_store_b128 v[40:41], v[32:35], off offset:32
-; GISEL-GFX1260-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:48
-; GISEL-GFX1260-NEXT:    s_endpgm
+; GISEL-LABEL: test_wmma_f32_32x16x128_f4_neg_absC:
+; GISEL:       ; %bb.0: ; %bb
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GISEL-NEXT:    v_wmma_f32_32x16x128_f4 v[24:39], v[0:15], v[16:23], v[24:39] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GISEL-NEXT:    s_clause 0x3
+; GISEL-NEXT:    global_store_b128 v[40:41], v[24:27], off
+; GISEL-NEXT:    global_store_b128 v[40:41], v[28:31], off offset:16
+; GISEL-NEXT:    global_store_b128 v[40:41], v[32:35], off offset:32
+; GISEL-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:48
+; GISEL-NEXT:    s_endpgm
 bb:
   %res = call <16 x float> @llvm.amdgcn.wmma.f32.32x16x128.f4.v16i32.v8i32.v16f32(<16 x i32> %A, <8 x i32> %B, i16 3, <16 x float> %C)
   store <16 x float> %res, ptr addrspace(1) %out

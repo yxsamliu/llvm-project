@@ -14,6 +14,10 @@ v_wmma_bf16f32_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[192:255] neg_lo:[0,0
 // GFX1260: v_wmma_bf16f32_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[192:255] neg_lo:[0,0,1] ; encoding: [0x00,0x00,0x8f,0xcc,0x20,0x61,0x02,0x9f]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
+v_wmma_bf16f32_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[192:255] neg_hi:[0,0,1]
+// GFX1260: v_wmma_bf16f32_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[192:255] neg_hi:[0,0,1] ; encoding: [0x00,0x04,0x8f,0xcc,0x20,0x61,0x02,0x1f]
+// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
 v_wmma_bf16f32_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[192:255] matrix_a_reuse
 // GFX1260: v_wmma_bf16f32_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[192:255] matrix_a_reuse ; encoding: [0x00,0x20,0x8f,0xcc,0x20,0x61,0x02,0x1f]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
@@ -36,6 +40,10 @@ v_wmma_f16_32x64x128_bf8_bf8 v[0:31], v[32:63], v[192:255], v[64:95]
 
 v_wmma_f16_32x64x128_bf8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] neg_lo:[0,0,1]
 // GFX1260: v_wmma_f16_32x64x128_bf8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] neg_lo:[0,0,1] ; encoding: [0x00,0x00,0x98,0xcc,0x20,0x81,0x03,0x9d]
+// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+v_wmma_f16_32x64x128_bf8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] neg_hi:[0,0,1]
+// GFX1260: v_wmma_f16_32x64x128_bf8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] neg_hi:[0,0,1] ; encoding: [0x00,0x04,0x98,0xcc,0x20,0x81,0x03,0x1d]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
 v_wmma_f16_32x64x128_bf8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] matrix_a_reuse
@@ -62,6 +70,10 @@ v_wmma_f16_32x64x128_bf8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] neg_lo:[0,0
 // GFX1260: v_wmma_f16_32x64x128_bf8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] neg_lo:[0,0,1] ; encoding: [0x00,0x00,0x97,0xcc,0x20,0x81,0x03,0x9d]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
+v_wmma_f16_32x64x128_bf8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] neg_hi:[0,0,1]
+// GFX1260: v_wmma_f16_32x64x128_bf8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] neg_hi:[0,0,1] ; encoding: [0x00,0x04,0x97,0xcc,0x20,0x81,0x03,0x1d]
+// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
 v_wmma_f16_32x64x128_bf8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] matrix_a_reuse
 // GFX1260: v_wmma_f16_32x64x128_bf8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] matrix_a_reuse ; encoding: [0x00,0x20,0x97,0xcc,0x20,0x81,0x03,0x1d]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
@@ -86,6 +98,10 @@ v_wmma_f16_32x64x128_fp8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] neg_lo:[0,0
 // GFX1260: v_wmma_f16_32x64x128_fp8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] neg_lo:[0,0,1] ; encoding: [0x00,0x00,0x96,0xcc,0x20,0x81,0x03,0x9d]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
+v_wmma_f16_32x64x128_fp8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] neg_hi:[0,0,1]
+// GFX1260: v_wmma_f16_32x64x128_fp8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] neg_hi:[0,0,1] ; encoding: [0x00,0x04,0x96,0xcc,0x20,0x81,0x03,0x1d]
+// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
 v_wmma_f16_32x64x128_fp8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] matrix_a_reuse
 // GFX1260: v_wmma_f16_32x64x128_fp8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] matrix_a_reuse ; encoding: [0x00,0x20,0x96,0xcc,0x20,0x81,0x03,0x1d]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
@@ -108,6 +124,10 @@ v_wmma_f16_32x64x128_fp8_fp8 v[0:31], v[32:63], v[192:255], v[64:95]
 
 v_wmma_f16_32x64x128_fp8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] neg_lo:[0,0,1]
 // GFX1260: v_wmma_f16_32x64x128_fp8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] neg_lo:[0,0,1] ; encoding: [0x00,0x00,0x95,0xcc,0x20,0x81,0x03,0x9d]
+// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+v_wmma_f16_32x64x128_fp8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] neg_hi:[0,0,1]
+// GFX1260: v_wmma_f16_32x64x128_fp8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] neg_hi:[0,0,1] ; encoding: [0x00,0x04,0x95,0xcc,0x20,0x81,0x03,0x1d]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
 v_wmma_f16_32x64x128_fp8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] matrix_a_reuse
@@ -138,6 +158,10 @@ v_wmma_f32_32x64x32_bf16 v[192:255], v[0:15], v[16:47], v[128:191] neg_lo:[0,0,1
 // GFX1260: v_wmma_f32_32x64x32_bf16 v[192:255], v[0:15], v[16:47], v[128:191] neg_lo:[0,0,1] ; encoding: [0xc0,0x00,0x8d,0xcc,0x00,0x21,0x02,0x9e]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
+v_wmma_f32_32x64x32_bf16 v[192:255], v[0:15], v[16:47], v[128:191] neg_hi:[0,0,1]
+// GFX1260: v_wmma_f32_32x64x32_bf16 v[192:255], v[0:15], v[16:47], v[128:191] neg_hi:[0,0,1] ; encoding: [0xc0,0x04,0x8d,0xcc,0x00,0x21,0x02,0x1e]
+// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
 v_wmma_f32_32x64x32_bf16 v[192:255], v[0:15], v[16:47], v[128:191] matrix_a_reuse
 // GFX1260: v_wmma_f32_32x64x32_bf16 v[192:255], v[0:15], v[16:47], v[128:191] matrix_a_reuse ; encoding: [0xc0,0x20,0x8d,0xcc,0x00,0x21,0x02,0x1e]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
@@ -166,6 +190,10 @@ v_wmma_f32_32x64x32_f16 v[192:255], v[0:15], v[16:47], v[128:191] neg_lo:[0,0,1]
 // GFX1260: v_wmma_f32_32x64x32_f16 v[192:255], v[0:15], v[16:47], v[128:191] neg_lo:[0,0,1] ; encoding: [0xc0,0x00,0x8b,0xcc,0x00,0x21,0x02,0x9e]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
+v_wmma_f32_32x64x32_f16 v[192:255], v[0:15], v[16:47], v[128:191] neg_hi:[0,0,1]
+// GFX1260: v_wmma_f32_32x64x32_f16 v[192:255], v[0:15], v[16:47], v[128:191] neg_hi:[0,0,1] ; encoding: [0xc0,0x04,0x8b,0xcc,0x00,0x21,0x02,0x1e]
+// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
 v_wmma_f32_32x64x32_f16 v[192:255], v[0:15], v[16:47], v[128:191] matrix_a_reuse
 // GFX1260: v_wmma_f32_32x64x32_f16 v[192:255], v[0:15], v[16:47], v[128:191] matrix_a_reuse ; encoding: [0xc0,0x20,0x8b,0xcc,0x00,0x21,0x02,0x1e]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
@@ -184,6 +212,10 @@ v_wmma_f32_32x64x128_bf8_bf8 v[0:63], v[64:95], v[192:255], v[128:191]
 
 v_wmma_f32_32x64x128_bf8_bf8 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[0,0,1]
 // GFX1260: v_wmma_f32_32x64x128_bf8_bf8 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[0,0,1] ; encoding: [0x00,0x00,0x94,0xcc,0x40,0x81,0x03,0x9e]
+// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+v_wmma_f32_32x64x128_bf8_bf8 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[0,0,1]
+// GFX1260: v_wmma_f32_32x64x128_bf8_bf8 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[0,0,1] ; encoding: [0x00,0x04,0x94,0xcc,0x40,0x81,0x03,0x1e]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
 v_wmma_f32_32x64x128_bf8_bf8 v[0:63], v[64:95], v[192:255], v[128:191] matrix_a_reuse
@@ -210,6 +242,10 @@ v_wmma_f32_32x64x128_fp8_fp8 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[0
 // GFX1260: v_wmma_f32_32x64x128_fp8_fp8 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[0,0,1] ; encoding: [0x00,0x00,0x91,0xcc,0x40,0x81,0x03,0x9e]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
+v_wmma_f32_32x64x128_fp8_fp8 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[0,0,1]
+// GFX1260: v_wmma_f32_32x64x128_fp8_fp8 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[0,0,1] ; encoding: [0x00,0x04,0x91,0xcc,0x40,0x81,0x03,0x1e]
+// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
 v_wmma_f32_32x64x128_fp8_fp8 v[0:63], v[64:95], v[192:255], v[128:191] matrix_a_reuse
 // GFX1260: v_wmma_f32_32x64x128_fp8_fp8 v[0:63], v[64:95], v[192:255], v[128:191] matrix_a_reuse ; encoding: [0x00,0x20,0x91,0xcc,0x40,0x81,0x03,0x1e]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
@@ -234,6 +270,10 @@ v_wmma_f32_32x64x128_fp8_bf8 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[0
 // GFX1260: v_wmma_f32_32x64x128_fp8_bf8 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[0,0,1] ; encoding: [0x00,0x00,0x92,0xcc,0x40,0x81,0x03,0x9e]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
+v_wmma_f32_32x64x128_fp8_bf8 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[0,0,1]
+// GFX1260: v_wmma_f32_32x64x128_fp8_bf8 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[0,0,1] ; encoding: [0x00,0x04,0x92,0xcc,0x40,0x81,0x03,0x1e]
+// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
 v_wmma_f32_32x64x128_fp8_bf8 v[0:63], v[64:95], v[192:255], v[128:191] matrix_a_reuse
 // GFX1260: v_wmma_f32_32x64x128_fp8_bf8 v[0:63], v[64:95], v[192:255], v[128:191] matrix_a_reuse ; encoding: [0x00,0x20,0x92,0xcc,0x40,0x81,0x03,0x1e]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
@@ -256,6 +296,10 @@ v_wmma_f32_32x64x128_bf8_fp8 v[0:63], v[64:95], v[192:255], v[128:191]
 
 v_wmma_f32_32x64x128_bf8_fp8 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[0,0,1]
 // GFX1260: v_wmma_f32_32x64x128_bf8_fp8 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[0,0,1] ; encoding: [0x00,0x00,0x93,0xcc,0x40,0x81,0x03,0x9e]
+// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+v_wmma_f32_32x64x128_bf8_fp8 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[0,0,1]
+// GFX1260: v_wmma_f32_32x64x128_bf8_fp8 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[0,0,1] ; encoding: [0x00,0x04,0x93,0xcc,0x40,0x81,0x03,0x1e]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
 v_wmma_f32_32x64x128_bf8_fp8 v[0:63], v[64:95], v[192:255], v[128:191] matrix_a_reuse
@@ -286,6 +330,10 @@ v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] neg_lo:[0,0,1]
 // GFX1260: v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] neg_lo:[0,0,1] ; encoding: [0x00,0x00,0x8e,0xcc,0x20,0x61,0x42,0x9d]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
+v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] neg_hi:[0,0,1]
+// GFX1260: v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] neg_hi:[0,0,1] ; encoding: [0x00,0x04,0x8e,0xcc,0x20,0x61,0x42,0x1d]
+// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
 v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] matrix_a_reuse
 // GFX1260: v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] matrix_a_reuse ; encoding: [0x00,0x20,0x8e,0xcc,0x20,0x61,0x42,0x1d]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
@@ -312,6 +360,10 @@ v_wmma_f16_32x64x32_f16 v[0:31], v[32:47], v[48:79], v[80:111] neg_lo:[0,1,0]
 
 v_wmma_f16_32x64x32_f16 v[0:31], v[32:47], v[48:79], v[80:111] neg_lo:[0,0,1]
 // GFX1260: v_wmma_f16_32x64x32_f16 v[0:31], v[32:47], v[48:79], v[80:111] neg_lo:[0,0,1] ; encoding: [0x00,0x00,0x8c,0xcc,0x20,0x61,0x42,0x9d]
+// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+v_wmma_f16_32x64x32_f16 v[0:31], v[32:47], v[48:79], v[80:111] neg_hi:[0,0,1]
+// GFX1260: v_wmma_f16_32x64x32_f16 v[0:31], v[32:47], v[48:79], v[80:111] neg_hi:[0,0,1] ; encoding: [0x00,0x04,0x8c,0xcc,0x20,0x61,0x42,0x1d]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
 v_wmma_f16_32x64x32_f16 v[0:31], v[32:47], v[48:79], v[80:111] matrix_a_reuse
@@ -370,6 +422,10 @@ v_wmma_f16_32x64x256_f4 v[0:31], v[64:95], v[192:255], v[128:159] neg_lo:[0,0,1]
 // GFX1260: v_wmma_f16_32x64x256_f4 v[0:31], v[64:95], v[192:255], v[128:159] neg_lo:[0,0,1] ; encoding: [0x00,0x40,0x9c,0xcc,0x40,0x81,0x03,0x9e]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
+v_wmma_f16_32x64x256_f4 v[0:31], v[64:95], v[192:255], v[128:159] neg_hi:[0,0,1]
+// GFX1260: v_wmma_f16_32x64x256_f4 v[0:31], v[64:95], v[192:255], v[128:159] neg_hi:[0,0,1] ; encoding: [0x00,0x44,0x9c,0xcc,0x40,0x81,0x03,0x1e]
+// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
 v_wmma_f16_32x64x256_f4 v[0:31], v[64:95], v[192:255], v[128:159] pred_xdl
 // GFX1260: v_wmma_f16_32x64x256_f4 v[0:31], v[64:95], v[192:255], v[128:159] pred_xdl ; encoding: [0x00,0x40,0x9c,0xcc,0x40,0x81,0x03,0x3e]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
@@ -384,6 +440,10 @@ v_wmma_f32_32x64x256_f4 v[0:63], v[64:95], v[192:255], v[128:191]
 
 v_wmma_f32_32x64x256_f4 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[0,0,1]
 // GFX1260: v_wmma_f32_32x64x256_f4 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[0,0,1] ; encoding: [0x00,0x40,0x9b,0xcc,0x40,0x81,0x03,0x9e]
+// WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+v_wmma_f32_32x64x256_f4 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[0,0,1]
+// GFX1260: v_wmma_f32_32x64x256_f4 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[0,0,1] ; encoding: [0x00,0x44,0x9b,0xcc,0x40,0x81,0x03,0x1e]
 // WAVESIZE-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
 v_wmma_f32_32x64x256_f4 v[0:63], v[64:95], v[192:255], v[128:191] pred_xdl
