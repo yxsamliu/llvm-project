@@ -962,7 +962,9 @@ void AMDGPUInstPrinter::printModsConvolve(const MCInst *MI, unsigned OpNo,
   O << (Imm & VOPMMods::INT_SCALE_convolve ? " int_scale" : "");
 }
 
-void AMDGPUInstPrinter::printModsTensor(unsigned Imm, raw_ostream &O) {
+void AMDGPUInstPrinter::printModsTensor(unsigned Imm,
+                                        ArrayRef<int32_t> ChannelOffsetInts,
+                                        raw_ostream &O) {
   O << (Imm & VOPMMods::INT_SCALE_shape_cvt ? " int_scale" : "");
   O << (Imm & VOPMMods::ACCUM_CHAN_ORDER_shape_cvt ? " accum_chan_order" : "");
 
@@ -979,14 +981,14 @@ void AMDGPUInstPrinter::printModsTensor(unsigned Imm, raw_ostream &O) {
   // Do not print chan_offset:0 by default
   if (ChanOffset) {
     O << " chan_offset:";
-    if (ChanOffset < std::size(VOPMMods::ModChanOffsetInts))
-      O << VOPMMods::ModChanOffsetInts[ChanOffset];
+    if (ChanOffset < std::size(ChannelOffsetInts))
+      O << ChannelOffsetInts[ChanOffset];
     else
       O << "/*invalid chan_offset (encoded) value:" << ChanOffset << "*/";
   }
 }
 
-void AMDGPUInstPrinter::printModsShapeCvt(const MCInst *MI, unsigned OpNo,
+void AMDGPUInstPrinter::printModsCvtTensor(const MCInst *MI, unsigned OpNo,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
@@ -994,7 +996,25 @@ void AMDGPUInstPrinter::printModsShapeCvt(const MCInst *MI, unsigned OpNo,
   unsigned Shape = (Imm & VOPMMods::SHAPE) >> VOPMMods::SHAPE_SHIFT;
   printModNamed(Shape, "shape",  VOPMMods::ModShapeNames, O);
 
-  printModsTensor(Imm, O);
+  if (Shape == VOPMMods::CNN::SHAPE_8X4X8 ||
+      Shape == VOPMMods::CNN::SHAPE_4X4X8) {
+    printModsTensor(Imm, {0, 8}, O);
+  } else if (Shape == VOPMMods::CNN::SHAPE_4X2X16) {
+    printModsTensor(Imm, {0, 16}, O);
+  } else { // SHAPE_4X4X16
+    printModsTensor(Imm, {0}, O);
+  }
+}
+
+void AMDGPUInstPrinter::printModsScaleActivate(const MCInst *MI, unsigned OpNo,
+                                          const MCSubtargetInfo &STI,
+                                          raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+
+  unsigned Shape = (Imm & VOPMMods::SHAPE) >> VOPMMods::SHAPE_SHIFT;
+  printModNamed(Shape, "shape",  VOPMMods::ModShapeNames, O);
+
+  printModsTensor(Imm, VOPMMods::ModChanOffsetScaleActivateInts, O);
 }
 
 void AMDGPUInstPrinter::printModsFmaTensor(const MCInst *MI, unsigned OpNo,
@@ -1005,7 +1025,7 @@ void AMDGPUInstPrinter::printModsFmaTensor(const MCInst *MI, unsigned OpNo,
   unsigned Layout = (Imm & VOPMMods::LAYOUT) >> VOPMMods::LAYOUT_SHIFT;
   printModNamed(Layout, "layout",  VOPMMods::ModLayoutNames, O);
 
-  printModsTensor(Imm, O);
+  printModsTensor(Imm, VOPMMods::ModChanOffsetFmaTensorInts, O);
 }
 
 void AMDGPUInstPrinter::printModNamed(unsigned Value, const char *Name,
@@ -1021,14 +1041,51 @@ void AMDGPUInstPrinter::printModNamed(unsigned Value, const char *Name,
 void AMDGPUInstPrinter::printModsWmma(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
-  unsigned Imm = MI->getOperand(OpNo).getImm();
-  if (!Imm)
-    return;
+  printModsWmmaBase(MI, OpNo, /*IsSwmma=*/false, O);
+}
 
-  // TODO: Support VOPM WMMA modifiers
-  // SignedA, SignedB and SparseIndexOdd are already separate operands. Should
-  // we join them into ModsWmma?
-  O << " aux_data:" << Imm;
+void AMDGPUInstPrinter::printModsSwmma(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  printModsWmmaBase(MI, OpNo, /*IsSwmma=*/true, O);
+}
+
+void AMDGPUInstPrinter::printModsWmmaBase(const MCInst *MI, unsigned OpNo,
+                                          bool IsSwmma, raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+
+  unsigned KScale = (Imm & VOPMMods::KSCALE) >> VOPMMods::KSCALE_SHIFT;
+  O << " k:" << (KScale + 1) * (IsSwmma ? 32 : 16);
+
+  O << (Imm & VOPMMods::MATRIX_A_SIGNED ? " matrix_a_signed" : "");
+  O << (Imm & VOPMMods::MATRIX_B_SIGNED ? " matrix_b_signed" : "");
+  O << (Imm & VOPMMods::REUSE_A ? " matrix_a_reuse" : "");
+  O << (Imm & VOPMMods::REUSE_B ? " matrix_b_reuse" : "");
+
+  // Do not print index_set:MATRIX_SPARSE_INDEX_EVEN (0x0) by default
+  if (IsSwmma && (Imm & VOPMMods::INDEX_SET))
+    O << " index_set:MATRIX_SPARSE_INDEX_ODD";
+}
+
+void AMDGPUInstPrinter::printModsWmmaBlockScale(const MCInst *MI, unsigned OpNo,
+                                                const MCSubtargetInfo &STI,
+                                                raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+
+  unsigned KScale = (Imm & VOPMMods::KSCALE) >> VOPMMods::KSCALE_SHIFT;
+  O << " k:" << (KScale + 1) * 64;
+
+  unsigned FmtA = (Imm & VOPMMods::FMT_A) >> VOPMMods::FMT_A_SHIFT;
+  printModNamed(FmtA, "matrix_a_fmt", WMMAMods::ModMatrixFmt, O);
+  unsigned FmtB = (Imm & VOPMMods::FMT_B) >> VOPMMods::FMT_B_SHIFT;
+  printModNamed(FmtB, "matrix_b_fmt", WMMAMods::ModMatrixFmt, O);
+  unsigned ScaleA = (Imm & VOPMMods::SCALE_A) >> VOPMMods::SCALE_A_SHIFT;
+  printModNamed(ScaleA, "matrix_a_scale", VOPMMods::ModMatrixScale, O);
+  unsigned ScaleB = (Imm & VOPMMods::SCALE_B) >> VOPMMods::SCALE_B_SHIFT;
+  printModNamed(ScaleB, "matrix_b_scale", VOPMMods::ModMatrixScale, O);
+
+  O << (Imm & VOPMMods::REUSE_A ? " matrix_a_reuse" : "");
+  O << (Imm & VOPMMods::REUSE_B ? " matrix_b_reuse" : "");
 }
 
 void AMDGPUInstPrinter::printDefaultVccOperand(bool FirstOperand,
@@ -1753,26 +1810,10 @@ void AMDGPUInstPrinter::printMatrixFMT(const MCInst *MI, unsigned OpNo,
     return;
 
   O << " matrix_" << AorB << "_fmt:";
-  switch (Imm) {
-  default:
+  if (Imm < static_cast<int64_t>(std::size(WMMAMods::ModMatrixFmt)))
+    O << WMMAMods::ModMatrixFmt[Imm];
+  else
     O << Imm;
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_FP8:
-    O << "MATRIX_FMT_FP8";
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_BF8:
-    O << "MATRIX_FMT_BF8";
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_FP6:
-    O << "MATRIX_FMT_FP6";
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_BF6:
-    O << "MATRIX_FMT_BF6";
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_FP4:
-    O << "MATRIX_FMT_FP4";
-    break;
-  }
 }
 
 void AMDGPUInstPrinter::printMatrixAFMT(const MCInst *MI, unsigned OpNo,

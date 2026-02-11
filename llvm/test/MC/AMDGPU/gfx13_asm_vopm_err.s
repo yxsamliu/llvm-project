@@ -48,7 +48,7 @@ v_wmma_f32_16x16_bf8_fp8 v[908:915], 0, v[904:907], 0 clamp
 v_wmma_f32_16x16_f16 v[908:915], 0, v[904:907], 0 clamp
 // GFX13-ERR: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_wmma_f32_16x16_f8f6f4 v[916:923], 0, v[908:915], 0, v924, v925 aux_data:1152 clamp
+v_wmma_f32_16x16_f8f6f4 v[916:923], 0, v[908:915], 0, v924, v925 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp
 // GFX13-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
 
 v_wmma_f32_16x16_fp8_bf8 v[904:911], 0, v[902:903], 0 clamp
@@ -63,49 +63,49 @@ v_wmma_f32_16x16_fp8_fp8 v[904:911], 0, v[902:903], 0 clamp
 v_wmma_f32_16x16_fp8_fp8 v[908:915], 0, v[904:907], 0 clamp
 // GFX13-ERR: :[[@LINE-1]]:38: error: invalid operand for instruction
 
-v_wmma_f32_16x16_iu4 v[902:909], 0, v901, 0 signed_a signed_b clamp
+v_wmma_f32_16x16_iu4 v[902:909], 0, v901, 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_wmma_f32_16x16_iu4 v[904:911], 0, v[902:903], 0 signed_a signed_b clamp
+v_wmma_f32_16x16_iu4 v[904:911], 0, v[902:903], 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_wmma_f32_16x16_iu4 v[908:915], 0, v[904:907], 0 signed_a signed_b clamp
+v_wmma_f32_16x16_iu4 v[908:915], 0, v[904:907], 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_wmma_f32_16x16_iu8 v[904:911], 0, v[902:903], 0 signed_a signed_b clamp
+v_wmma_f32_16x16_iu8 v[904:911], 0, v[902:903], 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_wmma_f32_16x16_iu8 v[908:915], 0, v[904:907], 0 signed_a signed_b clamp
+v_wmma_f32_16x16_iu8 v[908:915], 0, v[904:907], 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_wmma_f32i32_16x16_iu4 v[902:909], 0, v901, 0 signed_a signed_b clamp
+v_wmma_f32i32_16x16_iu4 v[902:909], 0, v901, 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
 
-v_wmma_f32i32_16x16_iu4 v[904:911], 0, v[902:903], 0 signed_a signed_b clamp
+v_wmma_f32i32_16x16_iu4 v[904:911], 0, v[902:903], 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
 
-v_wmma_f32i32_16x16_iu4 v[908:915], 0, v[904:907], 0 signed_a signed_b clamp
+v_wmma_f32i32_16x16_iu4 v[908:915], 0, v[904:907], 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
 
-v_wmma_f32i32_16x16_iu8 v[904:911], 0, v[902:903], 0 signed_a signed_b clamp
+v_wmma_f32i32_16x16_iu8 v[904:911], 0, v[902:903], 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
 
-v_wmma_f32i32_16x16_iu8 v[908:915], 0, v[904:907], 0 signed_a signed_b clamp
+v_wmma_f32i32_16x16_iu8 v[908:915], 0, v[904:907], 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
 
-v_wmma_i32_16x16_iu4 v[902:909], 0, v901, 0 signed_a signed_b clamp
+v_wmma_i32_16x16_iu4 v[902:909], 0, v901, 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_wmma_i32_16x16_iu4 v[904:911], 0, v[902:903], 0 signed_a signed_b clamp
+v_wmma_i32_16x16_iu4 v[904:911], 0, v[902:903], 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_wmma_i32_16x16_iu4 v[908:915], 0, v[904:907], 0 signed_a signed_b clamp
+v_wmma_i32_16x16_iu4 v[908:915], 0, v[904:907], 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_wmma_i32_16x16_iu8 v[904:911], 0, v[902:903], 0 signed_a signed_b clamp
+v_wmma_i32_16x16_iu8 v[904:911], 0, v[902:903], 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_wmma_i32_16x16_iu8 v[908:915], 0, v[904:907], 0 signed_a signed_b clamp
+v_wmma_i32_16x16_iu8 v[908:915], 0, v[904:907], 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:34: error: invalid operand for instruction
 
 v_wmma_bf16_16x16_bf16 v[908:911], v[900:903], 0, 0 clamp
@@ -156,7 +156,7 @@ v_wmma_f32_16x16_bf8_fp8 v[908:915], v[900:903], 0, 0 clamp
 v_wmma_f32_16x16_f16 v[908:915], v[900:903], 0, 0 clamp
 // GFX13-ERR: :[[@LINE-1]]:46: error: invalid operand for instruction
 
-v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], 0, 0, v924, v925 aux_data:1152 clamp
+v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], 0, 0, v924, v925 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp
 // GFX13-ERR: :[[@LINE-1]]:49: error: invalid operand for instruction
 
 v_wmma_f32_16x16_fp8_bf8 v[904:911], v[900:901], 0, 0 clamp
@@ -171,49 +171,49 @@ v_wmma_f32_16x16_fp8_fp8 v[904:911], v[900:901], 0, 0 clamp
 v_wmma_f32_16x16_fp8_fp8 v[908:915], v[900:903], 0, 0 clamp
 // GFX13-ERR: :[[@LINE-1]]:50: error: invalid operand for instruction
 
-v_wmma_f32_16x16_iu4 v[902:909], v900, 0, 0 signed_a signed_b clamp
+v_wmma_f32_16x16_iu4 v[902:909], v900, 0, 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:40: error: invalid operand for instruction
 
-v_wmma_f32_16x16_iu4 v[904:911], v[900:901], 0, 0 signed_a signed_b clamp
+v_wmma_f32_16x16_iu4 v[904:911], v[900:901], 0, 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:46: error: invalid operand for instruction
 
-v_wmma_f32_16x16_iu4 v[908:915], v[900:903], 0, 0 signed_a signed_b clamp
+v_wmma_f32_16x16_iu4 v[908:915], v[900:903], 0, 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:46: error: invalid operand for instruction
 
-v_wmma_f32_16x16_iu8 v[904:911], v[900:901], 0, 0 signed_a signed_b clamp
+v_wmma_f32_16x16_iu8 v[904:911], v[900:901], 0, 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:46: error: invalid operand for instruction
 
-v_wmma_f32_16x16_iu8 v[908:915], v[900:903], 0, 0 signed_a signed_b clamp
+v_wmma_f32_16x16_iu8 v[908:915], v[900:903], 0, 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:46: error: invalid operand for instruction
 
-v_wmma_f32i32_16x16_iu4 v[902:909], v900, 0, 0 signed_a signed_b clamp
+v_wmma_f32i32_16x16_iu4 v[902:909], v900, 0, 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:43: error: invalid operand for instruction
 
-v_wmma_f32i32_16x16_iu4 v[904:911], v[900:901], 0, 0 signed_a signed_b clamp
+v_wmma_f32i32_16x16_iu4 v[904:911], v[900:901], 0, 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:49: error: invalid operand for instruction
 
-v_wmma_f32i32_16x16_iu4 v[908:915], v[900:903], 0, 0 signed_a signed_b clamp
+v_wmma_f32i32_16x16_iu4 v[908:915], v[900:903], 0, 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:49: error: invalid operand for instruction
 
-v_wmma_f32i32_16x16_iu8 v[904:911], v[900:901], 0, 0 signed_a signed_b clamp
+v_wmma_f32i32_16x16_iu8 v[904:911], v[900:901], 0, 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:49: error: invalid operand for instruction
 
-v_wmma_f32i32_16x16_iu8 v[908:915], v[900:903], 0, 0 signed_a signed_b clamp
+v_wmma_f32i32_16x16_iu8 v[908:915], v[900:903], 0, 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:49: error: invalid operand for instruction
 
-v_wmma_i32_16x16_iu4 v[902:909], v900, 0, 0 signed_a signed_b clamp
+v_wmma_i32_16x16_iu4 v[902:909], v900, 0, 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:40: error: invalid operand for instruction
 
-v_wmma_i32_16x16_iu4 v[904:911], v[900:901], 0, 0 signed_a signed_b clamp
+v_wmma_i32_16x16_iu4 v[904:911], v[900:901], 0, 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:46: error: invalid operand for instruction
 
-v_wmma_i32_16x16_iu4 v[908:915], v[900:903], 0, 0 signed_a signed_b clamp
+v_wmma_i32_16x16_iu4 v[908:915], v[900:903], 0, 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:46: error: invalid operand for instruction
 
-v_wmma_i32_16x16_iu8 v[904:911], v[900:901], 0, 0 signed_a signed_b clamp
+v_wmma_i32_16x16_iu8 v[904:911], v[900:901], 0, 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:46: error: invalid operand for instruction
 
-v_wmma_i32_16x16_iu8 v[908:915], v[900:903], 0, 0 signed_a signed_b clamp
+v_wmma_i32_16x16_iu8 v[908:915], v[900:903], 0, 0 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:46: error: invalid operand for instruction
 
 v_wmma_f32_16x16_fp8_fp8 v[904:911], v[900:901], v[902:903], 1 clamp
@@ -276,52 +276,52 @@ v_wmma_f32_16x16_bf8_bf8 v[908:915], v[900:903], v[904:907], 1 clamp
 v_wmma_f16_16x16_bf8_bf8 v[908:911], v[900:903], v[904:907], 1 clamp
 // GFX13-ERR: :[[@LINE-1]]:62: error: operand must be a 128-bit VGPR or 0
 
-v_wmma_f32_16x16_iu8 v[904:911], v[900:901], v[902:903], 1 signed_a signed_b clamp
+v_wmma_f32_16x16_iu8 v[904:911], v[900:901], v[902:903], 1 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:58: error: operand must be a 256-bit VGPR or 0
 
-v_wmma_f32i32_16x16_iu8 v[904:911], v[900:901], v[902:903], 1 signed_a signed_b clamp
+v_wmma_f32i32_16x16_iu8 v[904:911], v[900:901], v[902:903], 1 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:61: error: operand must be a 256-bit VGPR or 0
 
-v_wmma_i32_16x16_iu8 v[904:911], v[900:901], v[902:903], 1 signed_a signed_b clamp
+v_wmma_i32_16x16_iu8 v[904:911], v[900:901], v[902:903], 1 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:58: error: operand must be a 256-bit VGPR or 0
 
-v_wmma_f32_16x16_iu4 v[902:909], v900, v901, 1 signed_a signed_b clamp
+v_wmma_f32_16x16_iu4 v[902:909], v900, v901, 1 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:46: error: operand must be a 256-bit VGPR or 0
 
-v_wmma_f32i32_16x16_iu4 v[902:909], v900, v901, 1 signed_a signed_b clamp
+v_wmma_f32i32_16x16_iu4 v[902:909], v900, v901, 1 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:49: error: operand must be a 256-bit VGPR or 0
 
-v_wmma_i32_16x16_iu4 v[902:909], v900, v901, 1 signed_a signed_b clamp
+v_wmma_i32_16x16_iu4 v[902:909], v900, v901, 1 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:46: error: operand must be a 256-bit VGPR or 0
 
-v_wmma_f32_16x16_iu8 v[908:915], v[900:903], v[904:907], 1 signed_a signed_b clamp
+v_wmma_f32_16x16_iu8 v[908:915], v[900:903], v[904:907], 1 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:58: error: operand must be a 256-bit VGPR or 0
 
-v_wmma_f32i32_16x16_iu8 v[908:915], v[900:903], v[904:907], 1 signed_a signed_b clamp
+v_wmma_f32i32_16x16_iu8 v[908:915], v[900:903], v[904:907], 1 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:61: error: operand must be a 256-bit VGPR or 0
 
-v_wmma_i32_16x16_iu8 v[908:915], v[900:903], v[904:907], 1 signed_a signed_b clamp
+v_wmma_i32_16x16_iu8 v[908:915], v[900:903], v[904:907], 1 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:58: error: operand must be a 256-bit VGPR or 0
 
-v_wmma_f32_16x16_iu4 v[904:911], v[900:901], v[902:903], 1 signed_a signed_b clamp
+v_wmma_f32_16x16_iu4 v[904:911], v[900:901], v[902:903], 1 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:58: error: operand must be a 256-bit VGPR or 0
 
-v_wmma_f32i32_16x16_iu4 v[904:911], v[900:901], v[902:903], 1 signed_a signed_b clamp
+v_wmma_f32i32_16x16_iu4 v[904:911], v[900:901], v[902:903], 1 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:61: error: operand must be a 256-bit VGPR or 0
 
-v_wmma_i32_16x16_iu4 v[904:911], v[900:901], v[902:903], 1 signed_a signed_b clamp
+v_wmma_i32_16x16_iu4 v[904:911], v[900:901], v[902:903], 1 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:58: error: operand must be a 256-bit VGPR or 0
 
-v_wmma_f32_16x16_iu4 v[908:915], v[900:903], v[904:907], 1 signed_a signed_b clamp
+v_wmma_f32_16x16_iu4 v[908:915], v[900:903], v[904:907], 1 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:58: error: operand must be a 256-bit VGPR or 0
 
-v_wmma_f32i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 1 signed_a signed_b clamp
+v_wmma_f32i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 1 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:61: error: operand must be a 256-bit VGPR or 0
 
-v_wmma_i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 1 signed_a signed_b clamp
+v_wmma_i32_16x16_iu4 v[908:915], v[900:903], v[904:907], 1 matrix_a_signed matrix_b_signed clamp
 // GFX13-ERR: :[[@LINE-1]]:58: error: operand must be a 256-bit VGPR or 0
 
-v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], 1, v924, v925 aux_data:1152 clamp
+v_wmma_f32_16x16_f8f6f4 v[916:923], v[900:907], v[908:915], 1, v924, v925 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp
 // GFX13-ERR: :[[@LINE-1]]:61: error: operand must be a 256-bit VGPR or 0
 
 v_convolve_bf16_bf16 v[902:905], v906, [v[908:909], v[910:911]], 1 shape:SHAPE_4X2X16 filter:FILTER_3X3 clamp

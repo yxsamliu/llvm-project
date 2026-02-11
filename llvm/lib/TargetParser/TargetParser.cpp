@@ -534,6 +534,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["gfx11-insts"] = true;
     Features["gfx12-insts"] = true;
     Features["gfx1250-insts"] = true;
+    Features["mcast-load-insts"] = true;
     Features["bitop3-insts"] = true;
     Features["prng-inst"] = true;
     Features["tanh-insts"] = true;

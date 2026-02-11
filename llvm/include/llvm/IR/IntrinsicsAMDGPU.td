@@ -3860,7 +3860,7 @@ class AMDGPUSWmmaIntrinsicClamp<LLVMType A, LLVMType B, LLVMType CD> :
       B,                // %B
       CD,               // %C
       llvm_i32_ty,      // %idxset
-      llvm_i1_ty,       // %sparse_index_odd
+      llvm_i1_ty,       // %index_set (0=even, 1=odd)
       llvm_i1_ty,       // %clamp
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]
@@ -3900,7 +3900,7 @@ class AMDGPUSWmmaIntrinsicIUClamp<LLVMType D, LLVMType A, LLVMType B, LLVMType C
       B,                // %B
       C,                // %C
       idxset_ty,        // %idxset
-      llvm_i1_ty,       // %sparse_index_odd
+      llvm_i1_ty,       // %index_set (0=even, 1=odd)
       llvm_i1_ty,       // %clamp
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>]
@@ -5449,4 +5449,14 @@ def int_amdgcn_addrspacecast_nonnull : DefaultAttrsIntrinsic<
 /// incoming block.
 def int_amdgcn_dead: DefaultAttrsIntrinsic<[llvm_any_ty], [],
     [IntrNoMem]>;
-}
+
+/// Backend-only intrinsics analogous to llvm.lifetime.{start,end} for marking
+/// the lifetimes of allocas in the VGPR address space.
+def int_amdgcn_vgpr_lifetime_start :
+    DefaultAttrsIntrinsic<[], [llvm_anyptr_ty],
+                          [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+def int_amdgcn_vgpr_lifetime_end :
+    DefaultAttrsIntrinsic<[], [llvm_anyptr_ty],
+                          [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+
+} // End TargetPrefix = "amdgcn"

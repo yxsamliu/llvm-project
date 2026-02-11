@@ -21,7 +21,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUMachineInstrs.h"
 #include "AMDGPUResourceUsageAnalysis.h"
-#include "AMDGPUVGPRIndexingAnalysis.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"

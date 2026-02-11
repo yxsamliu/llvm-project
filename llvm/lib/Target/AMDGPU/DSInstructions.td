@@ -952,7 +952,7 @@ multiclass DS_LOAD_MCAST<string opName, RegisterOperand rc = AVLdSt_32> {
   }
 }
 
-let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
+let WaveSizePredicate = isWave32, SubtargetPredicate = HasWavegroupMcastLoadInsts in {
   defm DS_LOAD_MCAST_B32  : DS_LOAD_MCAST<"ds_load_mcast_b32">;
   defm DS_LOAD_MCAST_B64  : DS_LOAD_MCAST<"ds_load_mcast_b64", AVLdSt_64>;
   defm DS_LOAD_MCAST_B128 : DS_LOAD_MCAST<"ds_load_mcast_b128", AVLdSt_128>;

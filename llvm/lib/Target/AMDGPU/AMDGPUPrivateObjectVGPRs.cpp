@@ -7,17 +7,21 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Add implicit use/def operands to V_LOAD/STORE_IDX pseudos for VGPRs
-/// allocated to promoted private objects and thus prevent the register
-/// allocator from using these VGPRs where the private objects are live.
+/// Mark physical VGPRs allocated to promoted private objects as used to prevent
+/// the register allocator from using these VGPRs where the objects are live:
+///
+///  * Add implicit use/def operands to VGPR_LIFETIME_{START,END} pseudos
+///  * Add the VGPRs to basic block live-ins
 //
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
 #include "AMDGPUMachineInstrs.h"
-#include "AMDGPUVGPRIndexingAnalysis.h"
+#include "AMDGPUMemoryUtils.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
@@ -56,7 +60,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<AMDGPUIndexingInfoWrapper>();
     // LiveVariables only tracks virtual registers and we only touch physical
     // registers.
     AU.addPreserved<LiveVariablesWrapperPass>();
@@ -68,36 +71,22 @@ public:
   }
 
 private:
+  struct AllocaBBInfo {
+    const AllocaInst *Alloca = nullptr;
+    bool LiveIn = false;
+    bool Starts = false;
+    bool Ends = false;
+  };
+
   // Private/shared indexing analysis
-  const AMDGPUIndexingInfo *SII;
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
   LiveIntervals *LIS = nullptr;
-  SlotIndexes *SI = nullptr;
 
-  // Store computed object regs with the associated PO Info, (un)known precise
-  // reg use information determines the computed regs.
-  std::unordered_map<const AMDGPUPrivateObjectIdxInfo *, ObjectRegs>
-      FilteredObjectRegs;
-  // Store a more generic set of regs that are computed always with no precise
-  // use information.
-  std::unordered_map<const MDNode *, ObjectRegs> MDNodeObjectRegs;
+  DenseMap<const AllocaInst *, std::pair<ObjectRegs, MachineMemOperand *>>
+      AllocaObjectRegs;
 
-  void populateObjectRegs(const MDNode &Obj);
-  ObjectRegs &getObjectRegs(const MDNode &Obj);
-  ObjectRegs &getObjectRegs(const AMDGPUPrivateObjectIdxInfo &PO);
-
-  void updateObjectRegs(
-      ObjectRegs &Regs, unsigned Offset, unsigned Size,
-      std::optional<std::pair<unsigned, unsigned>> RelativeUsedRegs);
-
-  void insertObjectDef(MachineBasicBlock::instr_iterator DefPt,
-                       const MDNode &Obj, MachineBasicBlock &MBB);
-
-  void addUseDefOperands(MachineInstr &MI,
-                         const AMDGPUPrivateObjectIdxInfo &PO);
-
-  void addLiveInRegs(MachineBasicBlock &MBB, const MDNode &Obj);
+  ObjectRegs computeObjectRegs(const AllocaInst &Alloca) const;
 };
 
 } // End anonymous namespace.
@@ -113,9 +102,12 @@ FunctionPass *llvm::createAMDGPUPrivateObjectVGPRsPass() {
   return new AMDGPUPrivateObjectVGPRs();
 }
 
-void AMDGPUPrivateObjectVGPRs::updateObjectRegs(
-    ObjectRegs &Regs, unsigned Offset, unsigned Size,
-    std::optional<std::pair<unsigned, unsigned>> RelativeUsedRegs = {}) {
+ObjectRegs
+AMDGPUPrivateObjectVGPRs::computeObjectRegs(const AllocaInst &Alloca) const {
+  ObjectRegs Regs;
+  auto &MD = AMDGPU::AllocatedVGPRsMetadata::get(Alloca);
+  unsigned Offset = MD.getAddress();
+  unsigned Size = MD.getSize();
   assert(Offset % 4 == 0 && Size % 4 == 0);
   unsigned RegWidth = RegChunkSizeInDWords * 32;
   const TargetRegisterClass *BaseRegRC =
@@ -127,9 +119,7 @@ void AMDGPUPrivateObjectVGPRs::updateObjectRegs(
   unsigned NumRegs = Size / (RegChunkSizeInDWords * 4);
   for (unsigned I : seq(NumRegs)) {
     MCPhysReg Reg = BaseReg + I * RegChunkSizeInDWords;
-    if (!RelativeUsedRegs || (Reg >= BaseReg + RelativeUsedRegs->first &&
-                              Reg < BaseReg + RelativeUsedRegs->second))
-      Regs.push_back(Reg);
+    Regs.push_back(Reg);
   }
 
   if (unsigned LastChunkSize = Size % (RegChunkSizeInDWords * 4)) {
@@ -140,249 +130,177 @@ void AMDGPUPrivateObjectVGPRs::updateObjectRegs(
       report_fatal_error("Invalid VGPR width " + Twine(LastRegWidth));
     unsigned LastRegIdx = BaseRegIdx + RegChunkSizeInDWords * NumRegs;
     MCPhysReg Reg = LastRegRC->getRegister(LastRegIdx);
-    MCPhysReg ChunkReg = BaseRegRC->getRegister(LastRegIdx);
-    // Filter using the larger chunk size, as that's covered by the object.
-    if (!RelativeUsedRegs || (ChunkReg >= BaseReg + RelativeUsedRegs->first &&
-                              ChunkReg < BaseReg + RelativeUsedRegs->second))
-      Regs.push_back(Reg);
+    Regs.push_back(Reg);
   }
-}
 
-ObjectRegs &
-AMDGPUPrivateObjectVGPRs::getObjectRegs(const AMDGPUPrivateObjectIdxInfo &PO) {
-  auto &Regs = FilteredObjectRegs[&PO];
-  if (!Regs.empty())
-    return Regs;
-  // The (un)known regs used by this PO relative to itself (as opposed to the
-  // base of laneshared space).
-  std::optional<std::pair<unsigned, unsigned>> RelativeUsedRegs;
-  if (PO.UsedRegs.has_value()) {
-    std::pair<unsigned, unsigned> Result = *PO.UsedRegs;
-    // Shift interval to only include the immediate offset.
-    Result.first -= SII->getLaneSharedSize() + PO.Offset / 4;
-    Result.second -= SII->getLaneSharedSize() + PO.Offset / 4;
-    // Widen the interval to the nearest chunk.
-    Result.first =
-        alignDown(Result.first, static_cast<unsigned>(RegChunkSizeInDWords));
-    Result.second =
-        alignTo(Result.second, static_cast<unsigned>(RegChunkSizeInDWords));
-    RelativeUsedRegs = Result;
-  }
-  updateObjectRegs(Regs, PO.Offset, PO.Size, RelativeUsedRegs);
   return Regs;
-}
-
-void AMDGPUPrivateObjectVGPRs::populateObjectRegs(const MDNode &Obj) {
-  auto &Regs = MDNodeObjectRegs[&Obj];
-  if (Regs.empty()) {
-    auto [Offset, Size] = getAMDGPUPrivateObjectNodeInfo(&Obj);
-    updateObjectRegs(Regs, Offset, Size);
-  }
-}
-
-ObjectRegs &AMDGPUPrivateObjectVGPRs::getObjectRegs(const MDNode &Obj) {
-  auto It = MDNodeObjectRegs.find(&Obj);
-  assert(It != MDNodeObjectRegs.end());
-  return It->second;
-}
-
-void AMDGPUPrivateObjectVGPRs::insertObjectDef(
-    MachineBasicBlock::instr_iterator DefPt, const MDNode &Obj,
-    MachineBasicBlock &MBB) {
-  ObjectRegs &Regs = getObjectRegs(Obj);
-
-  if (DefPt != MBB.instr_end()) {
-    while (DefPt->isBundledWithPred())
-      --DefPt;
-  }
-
-  for (MCPhysReg Reg : Regs) {
-    MachineInstr *MI = BuildMI(MBB, DefPt, DebugLoc(),
-                               TII->get(TargetOpcode::IMPLICIT_DEF), Reg);
-    if (SI)
-      SI->insertMachineInstrInMaps(*MI);
-  }
-}
-
-void AMDGPUPrivateObjectVGPRs::addUseDefOperands(
-    MachineInstr &MI, const AMDGPUPrivateObjectIdxInfo &PO) {
-  bool IsLoad = isa<AMDGPUMI::VLoadIdxInst>(MI);
-  bool IsStore = isa<AMDGPUMI::VStoreIdxInst>(MI);
-  assert(IsLoad || IsStore);
-  ObjectRegs &Regs = getObjectRegs(PO);
-
-  MachineInstr *Bundle = nullptr;
-  if (MI.isBundled())
-    Bundle = &*getBundleStart(MI.getIterator());
-
-  for (MCPhysReg Reg : Regs) {
-    // In the case where no private object interval is available,
-    // we conservatively assume V_LOAD_IDX loads all registers assigned to the
-    // object and V_STORE_IDX store only some of them, meaning V_STORE_IDX have
-    // to have both defs and uses for all the registers. When interval is
-    // available V_STORE_IDX only needs defs on relevant registers.
-    if (IsLoad || !PO.UsedRegs.has_value()) {
-      MachineOperand UseOp =
-          MachineOperand::CreateReg(Reg, /*isDef=*/false, /*isImp=*/true);
-      MI.addOperand(UseOp);
-      if (Bundle && !Bundle->hasRegisterImplicitUseOperand(Reg))
-        Bundle->addOperand(UseOp);
-    }
-
-    if (IsStore) {
-      MachineOperand StoreOp =
-          MachineOperand::CreateReg(Reg, /*isDef=*/true, /*isImp=*/true);
-      MI.addOperand(StoreOp);
-      if (Bundle && (Bundle->findRegisterDefOperandIdx(Reg, TRI) == -1))
-        Bundle->addOperand(StoreOp);
-    }
-  }
-}
-
-void AMDGPUPrivateObjectVGPRs::addLiveInRegs(MachineBasicBlock &MBB,
-                                             const MDNode &Obj) {
-  ObjectRegs &Regs = getObjectRegs(Obj);
-
-  for (MCPhysReg Reg : Regs)
-    MBB.addLiveIn(Reg);
 }
 
 bool AMDGPUPrivateObjectVGPRs::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   if (!ST.hasVGPRIndexingRegisters())
     return false;
-  SII = &getAnalysis<AMDGPUIndexingInfoWrapper>().getIndexingInfo();
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
   LIS = nullptr;
   if (auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>())
     LIS = &LISWrapper->getLIS();
-  SI = nullptr;
-  if (auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>())
-    SI = &SIWrapper->getSI();
 
-  FilteredObjectRegs.clear();
-  MDNodeObjectRegs.clear();
-
-  // Compute reachable objects. Use SmallVector to avoid wasting memory
-  // storing lots of empty or nearly empty sets.
-  DenseMap<const MachineBasicBlock *, SmallVector<const MDNode *, 4>>
-      ReachableObjs;
-  SmallPtrSet<MachineBasicBlock *, 16> Worklist;
-  for (MachineBasicBlock &MBB : MF)
-    Worklist.insert(&MBB);
-  while (!Worklist.empty()) {
-    MachineBasicBlock &MBB = **Worklist.begin();
-    Worklist.erase(&MBB);
-    SmallVectorImpl<const MDNode *> &BlockReachable = ReachableObjs[&MBB];
-    bool Updated = false;
-    for (MachineInstr &MI : MBB.instrs()) {
-      if (auto Info = SII->getPrivateObjectIdxInfo(&MI);
-          Info && !is_contained(BlockReachable, Info->get().Obj)) {
-        BlockReachable.push_back(Info->get().Obj);
-        Updated = true;
-      }
-    }
-    for (MachineBasicBlock *Succ : MBB.successors()) {
-      for (const MDNode *Obj : ReachableObjs[Succ]) {
-        if (!is_contained(BlockReachable, Obj)) {
-          BlockReachable.push_back(Obj);
-          Updated = true;
-        }
-      }
-    }
-    if (Updated)
-      Worklist.insert(MBB.predecessors().begin(), MBB.predecessors().end());
+  // Sort basic blocks in reverse post-order for the live-out/live-in
+  // propagation.
+  DenseMap<MachineBasicBlock *, unsigned> BlockToIndex;
+  SmallVector<MachineBasicBlock *> IndexToBlock;
+  ReversePostOrderTraversal<MachineBasicBlock *> RPOT(&*MF.begin());
+  for (MachineBasicBlock *MBB : RPOT) {
+    BlockToIndex[MBB] = IndexToBlock.size();
+    IndexToBlock.push_back(MBB);
   }
 
-  // Collect promoted private objects that must be live at the
-  // beginnings of basic blocks (live-ins). All live-in objects of a
-  // block and all objects referred to in that block and live-ins
-  // of any successors of that block must also be live-ins of all its
-  // successors, unless they are unreachable there.
-  DenseMap<const MachineBasicBlock *, SmallVector<const MDNode *, 4>> LiveIns;
-  for (MachineBasicBlock &MBB : MF)
-    Worklist.insert(&MBB);
-  while (!Worklist.empty()) {
-    // Gather objects that are live at the end of the block.
-    MachineBasicBlock &MBB = **Worklist.begin();
-    Worklist.erase(&MBB);
-    SmallVector<const MDNode *, 4> LiveObjs = LiveIns[&MBB];
-    for (MachineInstr &MI : MBB.instrs()) {
-      if (auto Info = SII->getPrivateObjectIdxInfo(&MI);
-          Info && !is_contained(LiveObjs, Info->get().Obj)) {
-        LiveObjs.push_back(Info->get().Obj);
-        populateObjectRegs(*Info->get().Obj);
-      }
-    }
+  // Fixed-point iteration to determine basic block live-ins.
+  //
+  // The first pass of the fixed-point iteration also scans instructions.
+  SmallVector<SmallVector<AllocaBBInfo>> BBInfos(IndexToBlock.size());
+  SmallBitVector Worklist(IndexToBlock.size());
+  bool Changed = false;
 
-    // Add objects that must be defined at the beginnings of successors.
-    for (MachineBasicBlock *Succ : MBB.successors()) {
-      for (const MDNode *Obj : LiveIns[Succ]) {
-        if (!is_contained(LiveObjs, Obj))
-          LiveObjs.push_back(Obj);
-      }
-    }
+  for (bool Dirty = true, FirstPass = true; Dirty; FirstPass = false) {
+    Dirty = false;
 
-    // Propagate all objects that are defined in this block to successors.
-    for (MachineBasicBlock *Succ : MBB.successors()) {
-      SmallVectorImpl<const MDNode *> &SuccLiveIns = LiveIns[Succ];
-      const SmallVectorImpl<const MDNode *> &Reachables = ReachableObjs[Succ];
-      for (const MDNode *Obj : LiveObjs) {
-        if (!is_contained(SuccLiveIns, Obj) && is_contained(Reachables, Obj)) {
-          SuccLiveIns.push_back(Obj);
-          Worklist.insert(Succ);
-          for (MachineBasicBlock *Pred : Succ->predecessors()) {
-            if (Pred != &MBB)
-              Worklist.insert(Pred);
+    for (auto [MBBI, MBB] : enumerate(IndexToBlock)) {
+      auto &BBI = BBInfos[MBBI];
+
+      // During the first outer iteration, augment VGPR_LIFETIME_{START,END}
+      // with implicit operands and record the initial per-basic block
+      // information to compute live-ins.
+      if (FirstPass) {
+        for (MachineInstr &MI : *MBB) {
+          if (MI.getOpcode() == AMDGPU::VGPR_LIFETIME_START ||
+              MI.getOpcode() == AMDGPU::VGPR_LIFETIME_END) {
+            bool IsStart = MI.getOpcode() == AMDGPU::VGPR_LIFETIME_START;
+            MachineMemOperand *MMO = *MI.memoperands_begin();
+            auto *Alloca = cast<AllocaInst>(MMO->getValue());
+
+            // Add the implicit operand(s).
+            auto ObjRegsIt = AllocaObjectRegs.find(Alloca);
+            if (ObjRegsIt == AllocaObjectRegs.end()) {
+              ObjRegsIt =
+                  AllocaObjectRegs
+                      .try_emplace(Alloca, computeObjectRegs(*Alloca), MMO)
+                      .first;
+            }
+
+            for (MCPhysReg Reg : ObjRegsIt->second.first) {
+              MachineOperand Op = MachineOperand::CreateReg(
+                  Reg, /*isDef=*/IsStart, /*isImp=*/true, /*isKill=*/!IsStart);
+              MI.addOperand(Op);
+            }
+
+            // Record the basic block behavior.
+            auto It = find_if(BBI, [&](const AllocaBBInfo &Info) {
+              return Info.Alloca == Alloca;
+            });
+            if (It == BBI.end()) {
+              BBI.push_back({Alloca, false, false, false});
+              It = std::prev(BBI.end());
+            }
+            It->Starts = IsStart;
+            It->Ends = !IsStart;
+
+            Changed = true;
+          }
+        }
+      } else {
+        if (!Worklist[MBBI])
+          continue;
+        Worklist[MBBI] = false;
+      }
+
+      // Propagate live-outs into successors.
+      for (const auto &ABBI : BBI) {
+        if ((ABBI.LiveIn && !ABBI.Ends) || ABBI.Starts) {
+          auto &ObjectRegs = AllocaObjectRegs.at(ABBI.Alloca).first;
+          for (MachineBasicBlock *Succ : MBB->successors()) {
+            unsigned SuccI = BlockToIndex.at(Succ);
+            auto &SuccBBI = BBInfos[SuccI];
+            auto It = find_if(BBInfos[SuccI], [&](const AllocaBBInfo &Info) {
+              return Info.Alloca == ABBI.Alloca;
+            });
+            bool Update = false;
+            if (It == SuccBBI.end()) {
+              SuccBBI.push_back({ABBI.Alloca, true, false, false});
+              It = std::prev(SuccBBI.end());
+              Update = true;
+            } else if (!It->LiveIn) {
+              It->LiveIn = true;
+              Update = true;
+            }
+
+            if (Update) {
+              if (!It->Starts && !It->Ends) {
+                // We are live-out from the successor because of the newly found
+                // live-in. If the successor is earlier in RPOT, we will have
+                // to re-evaluate it on the next outer iteration.
+                if (SuccI < MBBI) {
+                  Worklist[SuccI] = true;
+                  Dirty = true;
+                }
+              }
+
+              for (MCPhysReg Reg : ObjectRegs)
+                Succ->addLiveIn(Reg);
+            }
           }
         }
       }
     }
   }
 
-  // Add use/def operands and live-in registers, and insert object
-  // definitions. Object definitions are inserted where control
-  // transitions from where objects don't have to be live to where they
-  // must be live. For all objects that are not live-ins of a block but
-  // used in it we insert a definition right before the corresponding
-  // V_LOAD/STORE_IDX pseudo. Also, if an object must be defined in a
-  // successor of a block but is not a live-in of that block nor it is
-  // referred to within that block, we insert a definition for that
-  // object just before the first terminator of the block.
-  bool Changed = false;
-  for (MachineBasicBlock &MBB : MF) {
-    SmallVector<const MDNode *, 4> LiveObjs = LiveIns[&MBB];
-    for (const MDNode *Obj : LiveObjs)
-      addLiveInRegs(MBB, *Obj);
+  // It is legal for the pre-isel LLVM IR to have a lifetime.start without a
+  // lifetime.end. Liveness analysis is strong enough to mark physical registers
+  // as unused immediately after VGPR_LIFETIME_START in this case.
+  //
+  // Add VGPR_LIFETIME_END instructions at the end of basic blocks that end the
+  // function.
+  for (unsigned BBIdx = 0; BBIdx != IndexToBlock.size(); ++BBIdx) {
+    MachineBasicBlock *MBB = IndexToBlock[BBIdx];
+    if (!MBB->succ_empty())
+      continue;
 
-    for (MachineInstr &MI : MBB.instrs()) {
-      if (auto Info = SII->getPrivateObjectIdxInfo(&MI)) {
-        const AMDGPUPrivateObjectIdxInfo &PO = Info->get();
-        addUseDefOperands(MI, PO);
-        if (!is_contained(LiveObjs, PO.Obj)) {
-          LiveObjs.push_back(PO.Obj);
-          insertObjectDef(MI.getIterator(), *PO.Obj, MBB);
+    auto &BBI = BBInfos[BBIdx];
+    for (const auto &ABBI : BBI) {
+      if ((ABBI.LiveIn || ABBI.Starts) && !ABBI.Ends) {
+        // There may be a COPY to a conflicting physical VGPR before a function
+        // return. We just iterate backwards over instructions that don't touch
+        // memory.
+        MachineBasicBlock::iterator IP = MBB->getFirstTerminator();
+        while (IP != MBB->begin()) {
+          --IP;
+          if (IP->mayStore() || IP->mayLoad()) {
+            ++IP;
+            break;
+          }
         }
+
+        const auto &[ObjRegs, MMO] = AllocaObjectRegs.at(ABBI.Alloca);
+        MachineInstr *MI =
+            BuildMI(*MBB, IP, {}, TII->get(AMDGPU::VGPR_LIFETIME_END))
+                .addMemOperand(MMO);
+
+        for (MCPhysReg Reg : ObjRegs) {
+          MachineOperand Op = MachineOperand::CreateReg(
+              Reg, /*isDef=*/false, /*isImp=*/true, /*isKill=*/true);
+          MI->addOperand(Op);
+        }
+
         Changed = true;
-      }
-    }
-
-    for (MachineBasicBlock *Succ : MBB.successors()) {
-      for (const MDNode *Obj : LiveIns[Succ]) {
-        if (!is_contained(LiveObjs, Obj)) {
-          LiveObjs.push_back(Obj);
-          insertObjectDef(MBB.getFirstInstrTerminator(), *Obj, MBB);
-          Changed = true;
-        }
       }
     }
   }
 
   // Remove live ranges from LiveIntervals. They will be recalculated lazily.
   if (LIS) {
-    for (const auto &Pair : MDNodeObjectRegs) {
-      const ObjectRegs &Regs = Pair.second;
+    for (const auto &Pair : AllocaObjectRegs) {
+      const ObjectRegs &Regs = Pair.second.first;
       for (MCPhysReg Reg : Regs)
         LIS->removeAllRegUnitsForPhysReg(Reg);
     }

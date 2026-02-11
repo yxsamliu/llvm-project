@@ -525,6 +525,7 @@ defm GFX13Insts : AMDGPUSubtargetFeature<"gfx13-insts",
   /*GenAssemblerPredicate=*/1,
   [FeatureSemaphores,
    FeatureWavegroups,
+   FeatureMcastLoadInsts,
    FeatureSWakeupImm,
    FeatureSBarrierLeaveImm,
   ]
@@ -2568,7 +2569,8 @@ def isGFX11GFX12 :
   AssemblerPredicate<(all_of FeatureGFX11Insts, (not FeatureGFX13Insts))>;
 
 def isGFX11PlusNot12_50 :
-  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 && (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13 || !Subtarget->hasGFX1250Insts())">,
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 &&"
+            "(Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13 || !Subtarget->hasGFX1250Insts())">,
   AssemblerPredicate<(all_of FeatureGFX11Insts, (any_of FeatureGFX13Insts, (not FeatureGFX1250Insts)))>;
 
 def isGFX12Only :
@@ -2815,6 +2817,9 @@ def isWave32Strict : Predicate<"Subtarget->isWave32()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize32)>;
 def isWave64Strict : Predicate<"Subtarget->isWave64()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
+
+def HasWavegroupMcastLoadInsts : Predicate<"Subtarget->hasWavegroups() && Subtarget->hasMcastLoadInsts()">,
+  AssemblerPredicate<(all_of FeatureWavegroups, FeatureMcastLoadInsts)>;
 
 //===----------------------------------------------------------------------===//
 // HwModes

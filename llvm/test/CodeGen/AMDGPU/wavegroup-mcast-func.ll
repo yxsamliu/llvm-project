@@ -38,8 +38,11 @@ define private amdgpu_kernel void @input(ptr addrspace(3) %addr, ptr addrspace(1
 ; CHECK-NEXT:    v_mov_b32_e32 v8, s10
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    ds_load_mcast_b32 g1[4], v9
+; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    ds_load_mcast_b32 g1[0], v9 offset:64
+; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    ds_load_mcast_b32 g1[8], v9 offset:128
+; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[12], v0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[13], v1
 ; CHECK-NEXT:    v_mov_b32_e32 g1[14], v2
@@ -49,7 +52,6 @@ define private amdgpu_kernel void @input(ptr addrspace(3) %addr, ptr addrspace(1
 ; CHECK-NEXT:    v_mov_b32_e32 g1[108], v6
 ; CHECK-NEXT:    v_mov_b32_e32 g1[109], v7
 ; CHECK-NEXT:    v_mov_b32_e32 g1[110], v8
-; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    s_sema_signal 17
 ; CHECK-NEXT:    s_barrier_signal -1
 ; CHECK-NEXT:    s_barrier_wait -1
