@@ -5210,6 +5210,77 @@ class AMDGPUWmmaIntrinsicModsC_MatrixFMT :
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
+// WMMA PredXDL intrinsic classes -- same as above but with extra i32 (custom_shape) at the end.
+// No A_mod (no src0_modifiers on gfx1260 for these).
+class AMDGPUWmmaIntrinsicModsBCReusePredXDL<LLVMType AB, LLVMType CD> :
+  Intrinsic<
+    [CD],               // %D
+    [
+      AB,               // %A
+      llvm_i16_ty,      // %B_mod: 0 -- none, 1 -- neg
+      LLVMMatchType<1>, // %B
+      llvm_i16_ty,      // %C_mod: 0 -- none, 1 -- neg, 2 -- abs, 3 -- neg(abs)
+      LLVMMatchType<0>, // %C
+      llvm_i1_ty,       // matrix_a_reuse
+      llvm_i1_ty,       // matrix_b_reuse
+      llvm_i32_ty,      // custom_shape
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>,
+     IntrWillReturn, IntrNoCallback, IntrNoFree]
+>;
+
+// Like ModsBCReusePredXDL but D and C are of different types.
+class AMDGPUWmmaIntrinsicModsBCDiffPredXDL<LLVMType DstTy, LLVMType AB, LLVMType C> :
+  Intrinsic<
+    [DstTy],             // %D
+    [
+      AB,                // %A
+      llvm_i16_ty,       // %B_mod: 0 -- none, 1 -- neg
+      LLVMMatchType<1>,  // %B
+      llvm_i16_ty,       // %C_mod: 0 -- none, 1 -- neg, 2 -- abs, 3 -- neg(abs)
+      C,                 // %C
+      llvm_i1_ty,        // matrix_a_reuse
+      llvm_i1_ty,        // matrix_b_reuse
+      llvm_i32_ty,       // custom_shape
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>,
+     IntrWillReturn, IntrNoCallback, IntrNoFree]
+>;
+
+class AMDGPUWmmaIntrinsicModsCPredXDL<LLVMType AB, LLVMType CD> :
+  Intrinsic<
+    [CD],               // %D
+    [
+      AB,               // %A
+      LLVMMatchType<1>, // %B
+      llvm_i16_ty,      // %C_mod: 0 - none, 1 - neg, 2 - abs, 3 - neg(abs)
+      LLVMMatchType<0>, // %C
+      llvm_i1_ty,       // matrix_a_reuse
+      llvm_i1_ty,       // matrix_b_reuse
+      llvm_i32_ty,      // custom_shape
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>,
+     IntrWillReturn, IntrNoCallback, IntrNoFree, IntrNoCreateUndefOrPoison]
+>;
+
+class AMDGPUWmmaIntrinsicModsABClampPredXDL<LLVMType AB, LLVMType CD> :
+  Intrinsic<
+    [CD],               // %D
+    [
+      llvm_i16_ty,      // %A_mod: 0 -- none, 1 -- neg
+      AB,               // %A
+      llvm_i16_ty,      // %B_mod: 0 -- none, 1 -- neg
+      LLVMMatchType<1>, // %B
+      LLVMMatchType<0>, // %C
+      llvm_i1_ty,       // matrix_a_reuse
+      llvm_i1_ty,       // matrix_b_reuse
+      llvm_i32_ty,      // custom_shape
+      llvm_i1_ty,       // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<8>>,
+     IntrWillReturn, IntrNoCallback, IntrNoFree, IntrNoCreateUndefOrPoison]
+>;
+
 class AMDGPUWmmaScaleIntrinsicModsC<LLVMType scale_ty> :
   Intrinsic<
     [llvm_anyfloat_ty], // %D
@@ -5287,6 +5358,31 @@ def int_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4 : AMDGPUWmmaScaleIntrinsicModsC
 def int_amdgcn_wmma_f32_32x16x128_f4       : AMDGPUWmmaIntrinsicF4ModsC<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_scale_f32_32x16x128_f4 : AMDGPUWmmaScaleF4IntrinsicModsC<llvm_i32_ty>;
 def int_amdgcn_wmma_scale16_f32_32x16x128_f4 : AMDGPUWmmaScaleF4IntrinsicModsC<llvm_i64_ty>;
+}
+
+defset list<Intrinsic> AMDGPUWmmaIntrinsicsGFX1260 = {
+def int_amdgcn_wmma_f32_16x16x32_bf16_pred_xdl     : AMDGPUWmmaIntrinsicModsBCReusePredXDL<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x32_f16_pred_xdl      : AMDGPUWmmaIntrinsicModsBCReusePredXDL<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x32_f16_pred_xdl      : AMDGPUWmmaIntrinsicModsBCReusePredXDL<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_bf16_16x16x32_bf16_pred_xdl    : AMDGPUWmmaIntrinsicModsBCReusePredXDL<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_bf16f32_16x16x32_bf16_pred_xdl : AMDGPUWmmaIntrinsicModsBCDiffPredXDL<llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x64_fp8_fp8_pred_xdl  : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x64_fp8_bf8_pred_xdl  : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x64_bf8_fp8_pred_xdl  : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x64_bf8_bf8_pred_xdl  : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x64_fp8_fp8_pred_xdl  : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x64_fp8_bf8_pred_xdl  : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x64_bf8_fp8_pred_xdl  : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x64_bf8_bf8_pred_xdl  : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x128_fp8_fp8_pred_xdl : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x128_fp8_bf8_pred_xdl : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x128_bf8_fp8_pred_xdl : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x128_bf8_bf8_pred_xdl : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x128_fp8_fp8_pred_xdl : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x128_fp8_bf8_pred_xdl : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x128_bf8_fp8_pred_xdl : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x128_bf8_bf8_pred_xdl : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_i32_16x16x64_iu8_pred_xdl      : AMDGPUWmmaIntrinsicModsABClampPredXDL<llvm_anyint_ty, llvm_anyint_ty>;
 }
 
 class AMDGPUSWmmacIntrinsicABIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
