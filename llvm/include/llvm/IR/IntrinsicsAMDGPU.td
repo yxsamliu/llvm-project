@@ -700,6 +700,7 @@ def int_amdgcn_cvt_scalef32_pk8_bf8_f32   : AMDGPUCvtScaleF32Intrinsic<llvm_v2i3
 def int_amdgcn_cvt_scalef32_pk8_fp4_f32   : AMDGPUCvtScaleF32Intrinsic<llvm_i32_ty,   llvm_v8f32_ty,   "cvt_scalef32_pk8_fp4_f32">;
 def int_amdgcn_cvt_scalef32_pk8_fp4_f16   : AMDGPUCvtScaleF32Intrinsic<llvm_i32_ty,   llvm_v8f16_ty,   "cvt_scalef32_pk8_fp4_f16">;
 def int_amdgcn_cvt_scalef32_pk8_fp4_bf16  : AMDGPUCvtScaleF32Intrinsic<llvm_i32_ty,   llvm_v8bf16_ty,  "cvt_scalef32_pk8_fp4_bf16">;
+def int_amdgcn_cvt_e5m3scale_pk8_fp4_f32  : AMDGPUCvtScaleF32Intrinsic<llvm_i32_ty,   llvm_v8f32_ty,   "cvt_e5m3scale_pk8_fp4_f32">;
 def int_amdgcn_cvt_scalef32_pk16_fp6_f32  : AMDGPUCvtScaleF32Intrinsic<llvm_v3i32_ty, llvm_v16f32_ty,   "cvt_scalef32_pk16_fp6_f32">;
 def int_amdgcn_cvt_scalef32_pk16_bf6_f32  : AMDGPUCvtScaleF32Intrinsic<llvm_v3i32_ty, llvm_v16f32_ty,   "cvt_scalef32_pk16_bf6_f32">;
 def int_amdgcn_cvt_scalef32_pk16_fp6_f16  : AMDGPUCvtScaleF32Intrinsic<llvm_v3i32_ty, llvm_v16f16_ty,   "cvt_scalef32_pk16_fp6_f16">;
