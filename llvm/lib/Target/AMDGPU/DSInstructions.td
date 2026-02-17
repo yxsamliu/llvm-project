@@ -944,6 +944,13 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = HasGFX950Insts, mayStore 
 multiclass DS_BLOCK_LOAD_MCAST<string opName, RegisterOperand rc> {
   let has_m0_read = 0 in {
     def "" : DS_1A_RET<opName, rc, 0, Offset, RegisterOperand<SReg_64>>;
+    def _LANESHARED : DS_1A_RET<opName#"_LANESHARED", rc, 0, Offset, RegisterOperand<SReg_64>> {
+      let OutOperandList = (outs);
+      defvar BasicIns = (ins RegisterOperand<SReg_64>:$addr, Offset:$offset, gds:$gds);
+      defvar V_STORE_IDX_Ins = (ins VGPR_IDX_IDX_OP:$idx, i32imm:$dyn_offset);
+      let InOperandList = !con(BasicIns, V_STORE_IDX_Ins);
+      let mayStore = 1;
+    }
   } // End has_m0_read = 0
 }
 

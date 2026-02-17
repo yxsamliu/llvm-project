@@ -768,6 +768,11 @@ def __builtin_amdgcn_ds_load_tr16_8x32_b128_v8i16 : AMDGPUBuiltin<"_Vector<8, sh
 def __builtin_amdgcn_ds_load_tr16_8x32_b128_v8f16 : AMDGPUBuiltin<"_Vector<8, __fp16>(_Vector<8, __fp16 address_space<3> *>)", [Const], "tile-shaped-transpose-insts,wavefrontsize32">;
 def __builtin_amdgcn_ds_load_tr16_8x32_b128_v8bf16 : AMDGPUBuiltin<"_Vector<8, __bf16>(_Vector<8, __bf16 address_space<3> *>)", [Const], "tile-shaped-transpose-insts,wavefrontsize32">;
 
+def __builtin_amdgcn_ds_block_load_mcast_b128  : AMDGPUBuiltin<"void(int address_space<10> *, _ExtVector<2, int>, _Constant short)", [Const], "block-load-mcast-insts,wavefrontsize32">;
+def __builtin_amdgcn_ds_block_load_mcast_b256  : AMDGPUBuiltin<"void(int address_space<10> *, _ExtVector<2, int>, _Constant short)", [Const], "block-load-mcast-insts,wavefrontsize32">;
+def __builtin_amdgcn_ds_block_load_mcast_b512  : AMDGPUBuiltin<"void(int address_space<10> *, _ExtVector<2, int>, _Constant short)", [Const], "block-load-mcast-insts,wavefrontsize32">;
+def __builtin_amdgcn_ds_block_load_mcast_b1024 : AMDGPUBuiltin<"void(int address_space<10> *, _ExtVector<2, int>, _Constant short)", [Const], "block-load-mcast-insts,wavefrontsize32">;
+
 def __builtin_amdgcn_s_setprio_inc_wg : AMDGPUBuiltin<"void(_Constant short)", [], "setprio-inc-wg-inst">;
 def __builtin_amdgcn_s_monitor_sleep : AMDGPUBuiltin<"void(_Constant short)", [], "gfx1250-insts">;
 def __builtin_amdgcn_s_wakeup_barrier : AMDGPUBuiltin<"void(void *)", [], "s-wakeup-barrier-inst">;

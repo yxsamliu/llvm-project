@@ -188,6 +188,7 @@ private:
   bool sinkInstruction(MachineInstr &MI, bool &SawStore);
   bool sinkLoadsAndCoreMIs(MachineFunction &MF);
   void lowerLanesharedPseudoInst(MachineInstr &MI);
+  void lowerBlockLoadMCastLanesharedPseudoInst(MachineInstr &MI);
   void lowerLoadIdxBits(MachineInstr &MI, bool IsD16);
   void lowerStoreIdxBits(MachineInstr &MI, bool IsD16);
   bool expandPseudoInstructions(MachineFunction &MF, bool &HaveLoadStoreIdx);
@@ -971,6 +972,57 @@ void AMDGPUBundleIdxLdSt::lowerStoreIdxBits(MachineInstr &MI, bool IsD16) {
   MI.eraseFromParent();
 }
 
+// Lower block load mcast pseudo instruction to another pseudo and V_STORE_IDX
+void
+AMDGPUBundleIdxLdSt::lowerBlockLoadMCastLanesharedPseudoInst(MachineInstr &MI) {
+  MachineBasicBlock *MBB = MI.getParent();
+  MachineFunction *MF = MBB->getParent();
+
+  unsigned Opc, DstSize;
+  switch (MI.getOpcode()) {
+  case AMDGPU::DS_BLOCK_LOAD_MCAST_B128_LANESHARED:
+    DstSize = 128;
+    Opc = AMDGPU::DS_BLOCK_LOAD_MCAST_B128;
+    break;
+  case AMDGPU::DS_BLOCK_LOAD_MCAST_B256_LANESHARED:
+    DstSize = 256;
+    Opc = AMDGPU::DS_BLOCK_LOAD_MCAST_B256;
+    break;
+  case AMDGPU::DS_BLOCK_LOAD_MCAST_B512_LANESHARED:
+    DstSize = 512;
+    Opc = AMDGPU::DS_BLOCK_LOAD_MCAST_B512;
+    break;
+  case AMDGPU::DS_BLOCK_LOAD_MCAST_B1024_LANESHARED:
+    DstSize = 1024;
+    Opc = AMDGPU::DS_BLOCK_LOAD_MCAST_B1024;
+    break;
+  default:
+    llvm_unreachable("Unknown DS block load mcast instruction!");
+  }
+
+  const MCInstrDesc &II = TII->get(Opc);
+  Register DstReg = MRI->createVirtualRegister(
+      TRI->getAllocatableClass(TII->getRegClass(II, 0)));
+  BuildMI(*MBB, MI, MI.getDebugLoc(), II, DstReg)
+      .add(MI.getOperand(0))  // L#
+      .add(MI.getOperand(1))  // LDS address offset
+      .add(MI.getOperand(2)); // gds bit
+
+  MachinePointerInfo StorePtrI(AMDGPUAS::LANE_SHARED);
+  MachineMemOperand *StoreMMO =
+      MF->getMachineMemOperand(StorePtrI, MachineMemOperand::MOStore,
+                               LocationSize::precise(4), Align(4));
+  unsigned StIdxOpc = AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(DstSize);
+  BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(StIdxOpc))
+      .addReg(DstReg)        // data
+      .add(MI.getOperand(3)) // idx
+      .add(MI.getOperand(4)) // offset
+      .addMemOperand(StoreMMO);
+
+  LLVM_DEBUG(dbgs() << " *** Expanded pseudo: "; MI.print(dbgs()));
+  MI.eraseFromParent();
+}
+
 // Lower the pseudo instruction to another pseudo and V_STORE_IDX
 void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
   MachineBasicBlock *MBB = MI.getParent();
@@ -1040,6 +1092,12 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
   case AMDGPU::DS_LOAD_MCAST_B128_LANESHARED:
     Opc = AMDGPU::DS_LOAD_MCAST_B128;
     break;
+  case AMDGPU::DS_BLOCK_LOAD_MCAST_B128_LANESHARED:
+  case AMDGPU::DS_BLOCK_LOAD_MCAST_B256_LANESHARED:
+  case AMDGPU::DS_BLOCK_LOAD_MCAST_B512_LANESHARED:
+  case AMDGPU::DS_BLOCK_LOAD_MCAST_B1024_LANESHARED:
+    lowerBlockLoadMCastLanesharedPseudoInst(MI);
+    return;
   default:
     return;
   }
