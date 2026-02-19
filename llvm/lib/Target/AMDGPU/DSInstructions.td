@@ -1647,6 +1647,10 @@ defm DS_LOAD_MCAST_B64  : DS_Real_gfx13<0x0f8>;
 defm DS_LOAD_MCAST_B128 : DS_Real_gfx13<0x0f9>;
 
 let AssemblerPredicate = HasLDSTiledLoads in {
+  defm DS_TILED_LOAD_HALF_B64       : DS_Real_gfx13<0x0d6>;
+  defm DS_TILED_LOAD_B64            : DS_Real_gfx13<0x0d7>;
+  defm DS_TILED_LOAD_B128           : DS_Real_gfx13<0x0d8>;
+  defm DS_TILED_LOAD_2X2_B128       : DS_Real_gfx13<0x0d9>;
   defm DS_TILED_LOAD_MCAST_HALF_B64 : DS_Real_gfx13<0x0da>;
   defm DS_TILED_LOAD_MCAST_B64      : DS_Real_gfx13<0x0db>;
   defm DS_TILED_LOAD_MCAST_B128     : DS_Real_gfx13<0x0dc>;
@@ -1720,14 +1724,6 @@ defm DS_WRITE_B96           : DS_Real_gfx11_gfx12_gfx13<0x0de, "ds_store_b96">;
 defm DS_WRITE_B128          : DS_Real_gfx11_gfx12_gfx13<0x0df, "ds_store_b128">;
 defm DS_READ_B96            : DS_Real_gfx11_gfx12_gfx13<0x0fe, "ds_load_b96">;
 defm DS_READ_B128           : DS_Real_gfx11_gfx12_gfx13<0x0ff, "ds_load_b128">;
-
-let AssemblerPredicate = HasLDSTiledLoads in {
-  // TODO-GFX1370: Opcode values are placeholders
-  defm DS_TILED_LOAD_B128     : DS_Real_gfx13<0x0f0, DS_TILED_LOAD_B128>;
-  defm DS_TILED_LOAD_HALF_B64 : DS_Real_gfx13<0x0f1, DS_TILED_LOAD_HALF_B64>;
-  defm DS_TILED_LOAD_B64      : DS_Real_gfx13<0x0f2, DS_TILED_LOAD_B64>;
-  defm DS_TILED_LOAD_2X2_B128 : DS_Real_gfx13<0x0f3, DS_TILED_LOAD_2X2_B128>;
-}
 
 // DS_CMPST_* are renamed to DS_CMPSTORE_* in GFX11, but also the data operands (src and cmp) are swapped
 // comparing to pre-GFX11.

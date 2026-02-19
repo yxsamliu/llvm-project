@@ -4600,7 +4600,6 @@ defm GLOBAL_TILED_STORE_HALF_VST2_B128 : VFLAT_Real_AllAddr_gfx13<0x0b9>;
 defm GLOBAL_TILED_STORE_B128           : VFLAT_Real_AllAddr_gfx13<0x0ba>;
 defm GLOBAL_TILED_STORE_VST2_B128      : VFLAT_Real_AllAddr_gfx13<0x0bb>;
 
-// TODO-GFX1370: Opcode value is a placeholder
 defm GLOBAL_TILED_LOAD_2X2_B128        : VFLAT_Real_AllAddr_gfx13<0x0bc>;
 
 let AssemblerPredicate = HasGlobalTiledLoadMcast in {
