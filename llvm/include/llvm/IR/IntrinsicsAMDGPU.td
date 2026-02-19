@@ -4296,6 +4296,27 @@ def int_amdgcn_ds_tiled_load_b64      : AMDGPUTiledLoadLDS<llvm_v2i32_ty>;
 def int_amdgcn_ds_tiled_load_2x2_b128 : AMDGPUTiledLoadLDS<llvm_v4i32_ty>;
 def int_amdgcn_ds_tiled_load_b128     : AMDGPUTiledLoadLDS<llvm_v4i32_ty>;
 
+class AMDGPUTiledLoadMCast<LLVMType data_ty, LLVMType ptr_ty>:
+  ClangBuiltin<!subst("int", "__builtin", NAME)>,
+  Intrinsic<
+    [data_ty],
+    [ptr_ty,
+     llvm_i32_ty],
+    [IntrReadMem, IntrConvergent, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
+    "",
+    [SDNPMemOperand, SDNPHasChain]
+  >;
+
+def int_amdgcn_global_tiled_load_mcast_half_b64 : AMDGPUTiledLoadMCast<llvm_i32_ty, global_ptr_ty>;
+def int_amdgcn_global_tiled_load_mcast_b64      : AMDGPUTiledLoadMCast<llvm_v2i32_ty, global_ptr_ty>;
+def int_amdgcn_global_tiled_load_mcast_b128     : AMDGPUTiledLoadMCast<llvm_v4i32_ty, global_ptr_ty>;
+def int_amdgcn_global_tiled_load_mcast_2x2_b128 : AMDGPUTiledLoadMCast<llvm_v4i32_ty, global_ptr_ty>;
+
+def int_amdgcn_ds_tiled_load_mcast_half_b64 : AMDGPUTiledLoadMCast<llvm_i32_ty, local_ptr_ty>;
+def int_amdgcn_ds_tiled_load_mcast_b64      : AMDGPUTiledLoadMCast<llvm_v2i32_ty, local_ptr_ty>;
+def int_amdgcn_ds_tiled_load_mcast_b128     : AMDGPUTiledLoadMCast<llvm_v4i32_ty, local_ptr_ty>;
+def int_amdgcn_ds_tiled_load_mcast_2x2_b128 : AMDGPUTiledLoadMCast<llvm_v4i32_ty, local_ptr_ty>;
+
 // Strided loads write every other register of the destination (other registers
 // are unmodified). The intrinsics have an extra param for partial result which
 // is tied with destination.

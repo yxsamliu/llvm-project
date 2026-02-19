@@ -1412,6 +1412,11 @@ defm GlobalTiledLoads2x2 : AMDGPUSubtargetFeature<
   "Target has 2x2 128B tiled load support"
 >;
 
+defm GlobalTiledLoadMcast : AMDGPUSubtargetFeature<
+  "global-tiled-load-mcast",
+  "Target has global tiled load multicast support"
+>;
+
 defm LDSTiledLoads : AMDGPUSubtargetFeature<
   "lds-tiled-loads",
   "Target has LDS tiled load support"
@@ -2279,6 +2284,7 @@ def FeatureISAVersion13_7 : FeatureSet<
      FeatureTensorWmmaOps,
      FeatureQdqInsts,
      FeatureGlobalTiledLoads2x2,
+     FeatureGlobalTiledLoadMcast,
      FeatureLDSTiledLoads,
     ])>;
 

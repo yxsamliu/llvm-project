@@ -3359,6 +3359,87 @@ void AMDGPUDAGToDAGISel::SelectLOAD_MCAST(MemIntrinsicSDNode *N,
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(MCast), {LoadMMO});
 }
 
+void AMDGPUDAGToDAGISel::SelectTILED_LOAD_MCAST(SDNode *N, unsigned IntrID) {
+  unsigned Opcode;
+  bool IsGlobal = false;
+  switch (IntrID) {
+  case Intrinsic::amdgcn_global_tiled_load_mcast_half_b64:
+    Opcode = AMDGPU::GLOBAL_TILED_LOAD_MCAST_HALF_B64;
+    IsGlobal = true;
+    break;
+  case Intrinsic::amdgcn_global_tiled_load_mcast_b64:
+    Opcode = AMDGPU::GLOBAL_TILED_LOAD_MCAST_B64;
+    IsGlobal = true;
+    break;
+  case Intrinsic::amdgcn_global_tiled_load_mcast_b128:
+    Opcode = AMDGPU::GLOBAL_TILED_LOAD_MCAST_B128;
+    IsGlobal = true;
+    break;
+  case Intrinsic::amdgcn_global_tiled_load_mcast_2x2_b128:
+    Opcode = AMDGPU::GLOBAL_TILED_LOAD_MCAST_2X2_B128;
+    IsGlobal = true;
+    break;
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_half_b64:
+    Opcode = AMDGPU::DS_TILED_LOAD_MCAST_HALF_B64;
+    break;
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_b64:
+    Opcode = AMDGPU::DS_TILED_LOAD_MCAST_B64;
+    break;
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_b128:
+    Opcode = AMDGPU::DS_TILED_LOAD_MCAST_B128;
+    break;
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_b128:
+    Opcode = AMDGPU::DS_TILED_LOAD_MCAST_2X2_B128;
+    break;
+  default:
+    llvm_unreachable("tiled load mcast selection error");
+  }
+
+  SDLoc SL(N);
+  EVT VT = N->getValueType(0);
+
+  // Pointer (for INTRINSIC_W_CHAIN: 0=chain, 1=ID, 2=ptr)
+  SDValue PtrOp = N->getOperand(2);
+
+  SDValue Mask = N->getOperand(3);
+
+  // Extract base and offset from address
+  SDValue Addr;
+  SDValue Offset;
+  if (IsGlobal) {
+    if (!SelectGlobalOffset(N, PtrOp, Addr, Offset)) {
+      SelectCode(N); // Let this error
+      return;
+    }
+  } else {
+    if (!SelectDS1Addr1Offset(PtrOp, Addr, Offset)) {
+      // Couldn't match address pattern, use base with zero offset
+      Addr = PtrOp;
+      Offset = CurDAG->getTargetConstant(0, SL, MVT::i16);
+    }
+  }
+
+  // Load mask into M0 and add chain/glue
+  glueCopyToM0(N, Mask);
+
+  // global_* sets 0 for CPol; ds_* sets 0 for gds; ds_*_extend_* uses format
+  SDValue Imm = IsGlobal ? CurDAG->getTargetConstant(0, SL, MVT::i32)
+                         : CurDAG->getTargetConstant(0, SL, MVT::i1);
+
+  SmallVector<SDValue, 6> Ops = {
+      Addr, Offset, Imm,
+      N->getOperand(0),                      // Chain
+      N->getOperand(N->getNumOperands() - 1) // Glue
+  };
+  SDNode *Result = CurDAG->SelectNodeTo(N, Opcode, VT, MVT::Other, Ops);
+
+  // Preserve memory operand if this is a MemIntrinsicSDNode
+  if (auto *MemNode = dyn_cast<MemIntrinsicSDNode>(N)) {
+    MachineMemOperand *MMO = MemNode->getMemOperand();
+    CurDAG->setNodeMemRefs(cast<MachineSDNode>(Result), {MMO});
+  }
+}
+
 void AMDGPUDAGToDAGISel::SelectInterpP1F16(SDNode *N) {
   if (Subtarget->getLDSBankCount() != 16) {
     // This is a single instruction with a pattern.
@@ -4006,6 +4087,16 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn:
     SelectDSBvhStackIntrinsic(N, IntrID);
+    return;
+  case Intrinsic::amdgcn_global_tiled_load_mcast_half_b64:
+  case Intrinsic::amdgcn_global_tiled_load_mcast_b64:
+  case Intrinsic::amdgcn_global_tiled_load_mcast_b128:
+  case Intrinsic::amdgcn_global_tiled_load_mcast_2x2_b128:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_half_b64:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_b64:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_b128:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_b128:
+    SelectTILED_LOAD_MCAST(N, IntrID);
     return;
   case Intrinsic::amdgcn_init_whole_wave:
     CurDAG->getMachineFunction()

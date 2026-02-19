@@ -1353,10 +1353,18 @@ def __builtin_amdgcn_load_mcast_b64 : AMDGPUBuiltin<"void(_Vector<2, int address
 def __builtin_amdgcn_load_mcast_b128 : AMDGPUBuiltin<"void(_Vector<4, int address_space<10> *>, _Vector<4, int const *>, _Constant int, int)", [], "gfx13-insts,wavefrontsize32">;
 
 def __builtin_amdgcn_global_tiled_load_2x2_b128 : AMDGPUBuiltin<"_Vector<4, int>(_Vector<4, int address_space<1> *>)", [Const], "gfx13-insts,global-tiled-loads-2x2,wavefrontsize32">;
+def __builtin_amdgcn_global_tiled_load_mcast_half_b64 : AMDGPUBuiltin<"int(int address_space<1> *, int)", [Const], "gfx13-insts,global-tiled-load-mcast,wavefrontsize32">;
+def __builtin_amdgcn_global_tiled_load_mcast_b64 : AMDGPUBuiltin<"_Vector<2, int>(_Vector<2, int address_space<1> *>, int)", [Const], "gfx13-insts,global-tiled-load-mcast,wavefrontsize32">;
+def __builtin_amdgcn_global_tiled_load_mcast_b128 : AMDGPUBuiltin<"_Vector<4, int>(_Vector<4, int address_space<1> *>, int)", [Const], "gfx13-insts,global-tiled-load-mcast,wavefrontsize32">;
+def __builtin_amdgcn_global_tiled_load_mcast_2x2_b128 : AMDGPUBuiltin<"_Vector<4, int>(_Vector<4, int address_space<1> *>, int)", [Const], "gfx13-insts,global-tiled-load-mcast,wavefrontsize32">;
 def __builtin_amdgcn_ds_tiled_load_half_b64 : AMDGPUBuiltin<"int(int address_space<3> *)", [Const], "gfx13-insts,lds-tiled-loads,wavefrontsize32">;
 def __builtin_amdgcn_ds_tiled_load_b64 : AMDGPUBuiltin<"_Vector<2, int>(_Vector<2, int address_space<3> *>)", [Const], "gfx13-insts,lds-tiled-loads,wavefrontsize32">;
 def __builtin_amdgcn_ds_tiled_load_2x2_b128 : AMDGPUBuiltin<"_Vector<4, int>(_Vector<4, int address_space<3> *>)", [Const], "gfx13-insts,lds-tiled-loads,wavefrontsize32">;
 def __builtin_amdgcn_ds_tiled_load_b128 : AMDGPUBuiltin<"_Vector<4, int>(_Vector<4, int address_space<3> *>)", [Const], "gfx13-insts,lds-tiled-loads,wavefrontsize32">;
+def __builtin_amdgcn_ds_tiled_load_mcast_half_b64 : AMDGPUBuiltin<"int(int address_space<3> *, int)", [Const], "gfx13-insts,lds-tiled-loads,wavefrontsize32">;
+def __builtin_amdgcn_ds_tiled_load_mcast_b64 : AMDGPUBuiltin<"_Vector<2, int>(_Vector<2, int address_space<3> *>, int)", [Const], "gfx13-insts,lds-tiled-loads,wavefrontsize32">;
+def __builtin_amdgcn_ds_tiled_load_mcast_b128 : AMDGPUBuiltin<"_Vector<4, int>(_Vector<4, int address_space<3> *>, int)", [Const], "gfx13-insts,lds-tiled-loads,wavefrontsize32">;
+def __builtin_amdgcn_ds_tiled_load_mcast_2x2_b128 : AMDGPUBuiltin<"_Vector<4, int>(_Vector<4, int address_space<3> *>, int)", [Const], "gfx13-insts,lds-tiled-loads,wavefrontsize32">;
 
 def __builtin_amdgcn_map_shared_rank : AMDGPUBuiltin<"void address_space<11> *(void address_space<3> *, int)", [], "gfx13-insts,wavefrontsize32">;
 def __builtin_amdgcn_query_shared_rank : AMDGPUBuiltin<"int(void const address_space<11> *)", [], "gfx13-insts,wavefrontsize32">;

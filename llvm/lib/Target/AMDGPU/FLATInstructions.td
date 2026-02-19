@@ -1677,8 +1677,15 @@ let SubtargetPredicate = isGFX13Plus in {
   defm GLOBAL_TILED_STORE_VST2_B128      : FLAT_Global_Store_Pseudo<"global_tiled_store_vst2_b128", AVLdSt_224>;
 
   let OtherPredicates = [HasGlobalTiledLoads2x2] in {
-    defm GLOBAL_TILED_LOAD_2x2_B128 : FLAT_Global_Load_Pseudo<"global_tiled_load_2x2_b128", AVLdSt_128>;
+    defm GLOBAL_TILED_LOAD_2X2_B128 : FLAT_Global_Load_Pseudo<"global_tiled_load_2x2_b128", AVLdSt_128>;
   } // end let OtherPredicates = [HasGlobalTiledLoads2x2]
+
+  let Uses = [M0, EXEC], OtherPredicates = [HasGlobalTiledLoadMcast] in {
+    defm GLOBAL_TILED_LOAD_MCAST_2X2_B128 : FLAT_Global_Load_Pseudo<"global_tiled_load_mcast_2x2_b128", AVLdSt_128>;
+    defm GLOBAL_TILED_LOAD_MCAST_HALF_B64 : FLAT_Global_Load_Pseudo<"global_tiled_load_mcast_half_b64">;
+    defm GLOBAL_TILED_LOAD_MCAST_B64      : FLAT_Global_Load_Pseudo<"global_tiled_load_mcast_b64", AVLdSt_64>;
+    defm GLOBAL_TILED_LOAD_MCAST_B128     : FLAT_Global_Load_Pseudo<"global_tiled_load_mcast_b128", AVLdSt_128>;
+  } // end let Uses = [M0, EXEC], OtherPredicates = [HasGlobalTiledLoadMcast]
   } // end let WaveSizePredicate = isWave32
 }
 
@@ -3047,7 +3054,7 @@ let OtherPredicates = [isGFX13Plus], WaveSizePredicate = isWave32 in {
   defm : GlobalFLATLoadPats <GLOBAL_TILED_LOAD_QTR_B128,       int_amdgcn_global_tiled_load_qtr_b128, i32>;
   defm : GlobalFLATLoadPats <GLOBAL_TILED_LOAD_HALF_B128,      int_amdgcn_global_tiled_load_half_b128, v2i32>;
   defm : GlobalFLATLoadPats <GLOBAL_TILED_LOAD_B128,           int_amdgcn_global_tiled_load_b128, v4i32>;
-  defm : GlobalFLATLoadPats <GLOBAL_TILED_LOAD_2x2_B128,       int_amdgcn_global_tiled_load_2x2_b128, v4i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_TILED_LOAD_2X2_B128,       int_amdgcn_global_tiled_load_2x2_b128, v4i32>;
 
   defm : GlobalFLATLoadPats_D16 <GLOBAL_TILED_LOAD_VST2_B64,       int_amdgcn_global_tiled_load_vst2_b64, v3i32>;
   defm : GlobalFLATLoadPats_D16 <GLOBAL_TILED_LOAD_HALF_VST2_B128, int_amdgcn_global_tiled_load_half_vst2_b128, v3i32>;
@@ -4594,8 +4601,14 @@ defm GLOBAL_TILED_STORE_B128           : VFLAT_Real_AllAddr_gfx13<0x0ba>;
 defm GLOBAL_TILED_STORE_VST2_B128      : VFLAT_Real_AllAddr_gfx13<0x0bb>;
 
 // TODO-GFX1370: Opcode value is a placeholder
-defm GLOBAL_TILED_LOAD_2x2_B128        : VFLAT_Real_AllAddr_gfx13<0x0bc>;
+defm GLOBAL_TILED_LOAD_2X2_B128        : VFLAT_Real_AllAddr_gfx13<0x0bc>;
 
+let AssemblerPredicate = HasGlobalTiledLoadMcast in {
+  defm GLOBAL_TILED_LOAD_MCAST_2X2_B128 : VFLAT_Real_AllAddr_gfx13<0x0bd>;
+  defm GLOBAL_TILED_LOAD_MCAST_HALF_B64 : VFLAT_Real_AllAddr_gfx13<0x0be>;
+  defm GLOBAL_TILED_LOAD_MCAST_B64      : VFLAT_Real_AllAddr_gfx13<0x0bf>;
+  defm GLOBAL_TILED_LOAD_MCAST_B128     : VFLAT_Real_AllAddr_gfx13<0x0c0>;
+}
 
 // ENC_VSCRATCH.
 defm SCRATCH_LOAD_UBYTE               : VSCRATCH_Real_AllAddr_gfx13<0x08, "scratch_load_u8">;

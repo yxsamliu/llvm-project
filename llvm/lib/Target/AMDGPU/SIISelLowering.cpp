@@ -1376,6 +1376,8 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_global_tiled_store_qtr_b128:
   case Intrinsic::amdgcn_load_mcast_b32:
   case Intrinsic::amdgcn_ds_tiled_load_half_b64:
+  case Intrinsic::amdgcn_global_tiled_load_mcast_half_b64:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_half_b64:
   case Intrinsic::amdgcn_spatial_cluster_send_prev:
   case Intrinsic::amdgcn_spatial_cluster_send_next:
     return 32;
@@ -1390,6 +1392,8 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_global_tiled_store_half_b128:
   case Intrinsic::amdgcn_load_mcast_b64:
   case Intrinsic::amdgcn_ds_tiled_load_b64:
+  case Intrinsic::amdgcn_global_tiled_load_mcast_b64:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_b64:
     return 64;
   case Intrinsic::amdgcn_global_tiled_store_vst2_b64:
   case Intrinsic::amdgcn_global_tiled_store_half_vst2_b128:
@@ -1410,6 +1414,10 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_load_mcast_b128:
   case Intrinsic::amdgcn_ds_tiled_load_2x2_b128:
   case Intrinsic::amdgcn_ds_tiled_load_b128:
+  case Intrinsic::amdgcn_global_tiled_load_mcast_b128:
+  case Intrinsic::amdgcn_global_tiled_load_mcast_2x2_b128:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_b128:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_b128:
     return 128;
   case Intrinsic::amdgcn_global_tiled_store_vst2_b128:
     return 224;
@@ -1678,10 +1686,18 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_global_tiled_load_half_vst2_b128:
   case Intrinsic::amdgcn_global_tiled_load_b128:
   case Intrinsic::amdgcn_global_tiled_load_vst2_b128:
+  case Intrinsic::amdgcn_global_tiled_load_mcast_half_b64:
+  case Intrinsic::amdgcn_global_tiled_load_mcast_b64:
+  case Intrinsic::amdgcn_global_tiled_load_mcast_b128:
+  case Intrinsic::amdgcn_global_tiled_load_mcast_2x2_b128:
   case Intrinsic::amdgcn_ds_tiled_load_half_b64:
   case Intrinsic::amdgcn_ds_tiled_load_b64:
   case Intrinsic::amdgcn_ds_tiled_load_b128:
   case Intrinsic::amdgcn_ds_tiled_load_2x2_b128:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_half_b64:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_b64:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_b128:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_b128:
   case Intrinsic::amdgcn_cluster_load_b32:
   case Intrinsic::amdgcn_cluster_load_b64:
   case Intrinsic::amdgcn_cluster_load_b128:
@@ -2051,10 +2067,18 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_global_tiled_load_qtr_b128:
   case Intrinsic::amdgcn_global_tiled_load_vst2_b128:
   case Intrinsic::amdgcn_global_tiled_load_vst2_b64:
+  case Intrinsic::amdgcn_global_tiled_load_mcast_half_b64:
+  case Intrinsic::amdgcn_global_tiled_load_mcast_b64:
+  case Intrinsic::amdgcn_global_tiled_load_mcast_b128:
+  case Intrinsic::amdgcn_global_tiled_load_mcast_2x2_b128:
   case Intrinsic::amdgcn_ds_tiled_load_half_b64:
   case Intrinsic::amdgcn_ds_tiled_load_b64:
   case Intrinsic::amdgcn_ds_tiled_load_b128:
   case Intrinsic::amdgcn_ds_tiled_load_2x2_b128:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_half_b64:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_b64:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_b128:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_b128:
     Ptr = II->getArgOperand(0);
     break;
   case Intrinsic::amdgcn_load_to_lds:

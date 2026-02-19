@@ -300,6 +300,7 @@ private:
   void SelectSpatialClusterChainIntrinsic(SDNode *N, unsigned IntrID);
   void SelectDS_GWS(SDNode *N, unsigned IntrID);
   void SelectLOAD_MCAST(MemIntrinsicSDNode *N, unsigned IntrID);
+  void SelectTILED_LOAD_MCAST(SDNode *N, unsigned IntrID);
   void SelectInterpP1F16(SDNode *N);
   void SelectCvtTensor(SDNode *N, unsigned IntrID);
   void SelectSpatialClusterVNBR(SDNode *N, unsigned IntrID);

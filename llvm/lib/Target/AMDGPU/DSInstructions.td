@@ -963,10 +963,18 @@ let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
       : DS_1A_RET_NoM0<"ds_tiled_load_half_b64", AVLdSt_32>;
     defm DS_TILED_LOAD_B64
       : DS_1A_RET_NoM0<"ds_tiled_load_b64", AVLdSt_64>;
-    defm DS_TILED_LOAD_2x2_B128
+    defm DS_TILED_LOAD_2X2_B128
       : DS_1A_RET_NoM0<"ds_tiled_load_2x2_b128", AVLdSt_128>;
     defm DS_TILED_LOAD_B128
       : DS_1A_RET_NoM0<"ds_tiled_load_b128", AVLdSt_128>;
+    def DS_TILED_LOAD_MCAST_HALF_B64
+      : DS_1A_RET<"ds_tiled_load_mcast_half_b64", AVLdSt_32>;
+    def DS_TILED_LOAD_MCAST_B64
+      : DS_1A_RET<"ds_tiled_load_mcast_b64", AVLdSt_64>;
+    def DS_TILED_LOAD_MCAST_B128
+      : DS_1A_RET<"ds_tiled_load_mcast_b128", AVLdSt_128>;
+    def DS_TILED_LOAD_MCAST_2X2_B128
+      : DS_1A_RET<"ds_tiled_load_mcast_2x2_b128", AVLdSt_128>;
   }
 }
 
@@ -1475,7 +1483,7 @@ def : GCNPat <
 def : GCNPat <
   (v4i32 (int_amdgcn_ds_tiled_load_2x2_b128
             (DS1Addr1Offset i32:$ptr, i32:$offset))),
-  (DS_TILED_LOAD_2x2_B128 $ptr, Offset:$offset, (i1 0))
+  (DS_TILED_LOAD_2X2_B128 $ptr, Offset:$offset, (i1 0))
 >;
 }
 
@@ -1638,6 +1646,13 @@ defm DS_LOAD_MCAST_B32  : DS_Real_gfx13<0x0ac>;
 defm DS_LOAD_MCAST_B64  : DS_Real_gfx13<0x0f8>;
 defm DS_LOAD_MCAST_B128 : DS_Real_gfx13<0x0f9>;
 
+let AssemblerPredicate = HasLDSTiledLoads in {
+  defm DS_TILED_LOAD_MCAST_HALF_B64 : DS_Real_gfx13<0x0da>;
+  defm DS_TILED_LOAD_MCAST_B64      : DS_Real_gfx13<0x0db>;
+  defm DS_TILED_LOAD_MCAST_B128     : DS_Real_gfx13<0x0dc>;
+  defm DS_TILED_LOAD_MCAST_2X2_B128 : DS_Real_gfx13<0x0dd>;
+}
+
 //===----------------------------------------------------------------------===//
 // GFX11.
 //===----------------------------------------------------------------------===//
@@ -1711,7 +1726,7 @@ let AssemblerPredicate = HasLDSTiledLoads in {
   defm DS_TILED_LOAD_B128     : DS_Real_gfx13<0x0f0, DS_TILED_LOAD_B128>;
   defm DS_TILED_LOAD_HALF_B64 : DS_Real_gfx13<0x0f1, DS_TILED_LOAD_HALF_B64>;
   defm DS_TILED_LOAD_B64      : DS_Real_gfx13<0x0f2, DS_TILED_LOAD_B64>;
-  defm DS_TILED_LOAD_2x2_B128 : DS_Real_gfx13<0x0f3, DS_TILED_LOAD_2x2_B128>;
+  defm DS_TILED_LOAD_2X2_B128 : DS_Real_gfx13<0x0f3, DS_TILED_LOAD_2X2_B128>;
 }
 
 // DS_CMPST_* are renamed to DS_CMPSTORE_* in GFX11, but also the data operands (src and cmp) are swapped
