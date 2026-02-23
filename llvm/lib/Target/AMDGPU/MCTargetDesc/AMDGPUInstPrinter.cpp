@@ -98,6 +98,21 @@ void AMDGPUInstPrinter::printFP64ImmOperand(const MCInst *MI, unsigned OpNo,
   printLiteral64(Op.getImm(), O, /*IsFP=*/true);
 }
 
+void AMDGPUInstPrinter::printExtendMatrixFmt(const MCInst *MI, unsigned OpNo,
+                                             const MCSubtargetInfo &STI,
+                                             raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  assert(Op.isImm());
+  int64_t Imm = Op.getImm();
+
+  O << "extend_matrix_fmt:";
+  if (Imm <
+      static_cast<int64_t>(std::size(ExtendMatrixFmtMods::ModExtendMatrixFmt)))
+    O << ExtendMatrixFmtMods::ModExtendMatrixFmt[Imm];
+  else
+    O << Imm;
+}
+
 void AMDGPUInstPrinter::printGlobalSReg32(const MCInst *MI, unsigned OpNo,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O) {

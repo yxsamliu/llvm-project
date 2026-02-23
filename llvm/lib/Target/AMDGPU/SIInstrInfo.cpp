@@ -5882,6 +5882,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     const MachineOperand *Data2 = getNamedOperand(MI, AMDGPU::OpName::data1);
     if (Data && !Data->isReg())
       Data = nullptr;
+    if (Data2 && !Data2->isReg())
+      Data2 = nullptr;
 
     if (ST.hasGFX90AInsts()) {
       if (Dst && Data && !Dst->isTied() && !Data->isTied() &&

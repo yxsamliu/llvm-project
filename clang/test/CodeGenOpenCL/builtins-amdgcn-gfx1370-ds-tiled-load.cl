@@ -4,6 +4,10 @@
 
 typedef int v2i __attribute__((ext_vector_type(2)));
 typedef int v4i __attribute__((ext_vector_type(4)));
+typedef signed char    v8c   __attribute__((ext_vector_type(8)));
+typedef unsigned char  v8uc  __attribute__((ext_vector_type(8)));
+typedef signed char    v16c  __attribute__((ext_vector_type(16)));
+typedef unsigned char  v16uc __attribute__((ext_vector_type(16)));
 
 // CHECK-GFX1370-LABEL: define dso_local amdgpu_kernel void @test_ds_tiled_load_half_b64(
 // CHECK-GFX1370-SAME: ptr addrspace(3) noundef readonly align 4 captures(none) [[SRC:%.*]], ptr addrspace(1) noundef writeonly align 4 captures(none) initializes((0, 4)) [[DST:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] !kernel_arg_addr_space [[META8:![0-9]+]] !kernel_arg_access_qual [[META9:![0-9]+]] !kernel_arg_type [[META10:![0-9]+]] !kernel_arg_base_type [[META10]] !kernel_arg_type_qual [[META11:![0-9]+]] {
@@ -91,6 +95,76 @@ void kernel test_ds_tiled_load_mcast_b128(local v4i *src, global v4i *dst, int m
 //
 void kernel test_ds_tiled_load_mcast_2x2_b128(local v4i *src, global v4i *dst, int mask) {
   *dst = __builtin_amdgcn_ds_tiled_load_mcast_2x2_b128(src, mask);
+}
+
+
+// Test with bitsize argument (1, 2, or 4) which gets translated to format
+
+// CHECK-GFX13-LABEL: @test_amdgcn_tiled_load_mcast_extend_b64_sign_bitsize1(
+// CHECK-GFX13-NEXT:  entry:
+// CHECK-GFX13-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.ds.tiled.load.mcast.extend.b64(ptr addrspace(3) [[INPTR:%.*]], i32 1, i32 [[MASK:%.*]])
+// CHECK-GFX13-NEXT:    store <2 x i32> [[TMP0]], ptr addrspace(1) [[DST:%.*]], align 8, !tbaa [[TBAA8:![0-9]+]]
+// CHECK-GFX13-NEXT:    ret void
+//
+void test_amdgcn_tiled_load_mcast_extend_b64_sign_bitsize1(local v2i* inptr, global v8c* dst, int mask)
+{
+  *dst = __builtin_amdgcn_ds_tiled_load_mcast_extend_b64_sign(inptr, 1, mask);
+}
+
+// CHECK-GFX13-LABEL: @test_amdgcn_tiled_load_mcast_extend_b64_zero_bitsize2(
+// CHECK-GFX13-NEXT:  entry:
+// CHECK-GFX13-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.ds.tiled.load.mcast.extend.b64(ptr addrspace(3) [[INPTR:%.*]], i32 2, i32 [[MASK:%.*]])
+// CHECK-GFX13-NEXT:    store <2 x i32> [[TMP0]], ptr addrspace(1) [[DST:%.*]], align 8, !tbaa [[TBAA8]]
+// CHECK-GFX13-NEXT:    ret void
+//
+void test_amdgcn_tiled_load_mcast_extend_b64_zero_bitsize2(local v2i* inptr, global v8uc* dst, int mask)
+{
+  *dst = __builtin_amdgcn_ds_tiled_load_mcast_extend_b64_zero(inptr, 2, mask);
+}
+
+// CHECK-GFX13-LABEL: @test_amdgcn_tiled_load_mcast_2x2_extend_b128_sign_bitsize4(
+// CHECK-GFX13-NEXT:  entry:
+// CHECK-GFX13-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.ds.tiled.load.mcast.2x2.extend.b128(ptr addrspace(3) [[INPTR:%.*]], i32 5, i32 [[MASK:%.*]])
+// CHECK-GFX13-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[DST:%.*]], align 16, !tbaa [[TBAA8]]
+// CHECK-GFX13-NEXT:    ret void
+//
+void test_amdgcn_tiled_load_mcast_2x2_extend_b128_sign_bitsize4(local v4i* inptr, global v16c* dst, int mask)
+{
+  *dst = __builtin_amdgcn_ds_tiled_load_mcast_2x2_extend_b128_sign(inptr, 4, mask);
+}
+
+// CHECK-GFX13-LABEL: @test_amdgcn_tiled_load_mcast_2x2_extend_b128_zero_bitsize1(
+// CHECK-GFX13-NEXT:  entry:
+// CHECK-GFX13-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.ds.tiled.load.mcast.2x2.extend.b128(ptr addrspace(3) [[INPTR:%.*]], i32 0, i32 [[MASK:%.*]])
+// CHECK-GFX13-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[DST:%.*]], align 16, !tbaa [[TBAA8]]
+// CHECK-GFX13-NEXT:    ret void
+//
+void test_amdgcn_tiled_load_mcast_2x2_extend_b128_zero_bitsize1(local v4i* inptr, global v16uc* dst, int mask)
+{
+  *dst = __builtin_amdgcn_ds_tiled_load_mcast_2x2_extend_b128_zero(inptr, 1, mask);
+}
+
+// Test with constant mask
+// CHECK-GFX13-LABEL: @test_amdgcn_tiled_load_mcast_extend_b64_sign_imm(
+// CHECK-GFX13-NEXT:  entry:
+// CHECK-GFX13-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.ds.tiled.load.mcast.extend.b64(ptr addrspace(3) [[INPTR:%.*]], i32 1, i32 7)
+// CHECK-GFX13-NEXT:    store <2 x i32> [[TMP0]], ptr addrspace(1) [[DST:%.*]], align 8, !tbaa [[TBAA8]]
+// CHECK-GFX13-NEXT:    ret void
+//
+void test_amdgcn_tiled_load_mcast_extend_b64_sign_imm(local v2i* inptr, global v8c* dst)
+{
+  *dst = __builtin_amdgcn_ds_tiled_load_mcast_extend_b64_sign(inptr, 1, 7);
+}
+
+// CHECK-GFX13-LABEL: @test_amdgcn_tiled_load_mcast_2x2_extend_b128_zero_imm(
+// CHECK-GFX13-NEXT:  entry:
+// CHECK-GFX13-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.ds.tiled.load.mcast.2x2.extend.b128(ptr addrspace(3) [[INPTR:%.*]], i32 2, i32 15)
+// CHECK-GFX13-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[DST:%.*]], align 16, !tbaa [[TBAA8]]
+// CHECK-GFX13-NEXT:    ret void
+//
+void test_amdgcn_tiled_load_mcast_2x2_extend_b128_zero_imm(local v4i* inptr, global v16uc* dst)
+{
+  *dst = __builtin_amdgcn_ds_tiled_load_mcast_2x2_extend_b128_zero(inptr, 2, 15);
 }
 
 //.

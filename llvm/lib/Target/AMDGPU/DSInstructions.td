@@ -952,6 +952,22 @@ multiclass DS_LOAD_MCAST<string opName, RegisterOperand rc = AVLdSt_32> {
   }
 }
 
+def ExtendMatrixFmt : CustomOperand<i8, 0, "ExtendMatrixFmt"> {
+  let ParserMethod = "parseExtendMatrixFmt";
+  let PrintMethod = "printExtendMatrixFmt";
+}
+
+class DS_EMF<string opName, RegisterOperand data_op>
+: DS_Pseudo<opName,
+  (outs data_op:$vdst),
+  (ins VGPROp_32:$addr, Offset:$offset, ExtendMatrixFmt:$data1),
+  " $vdst, $addr$offset $data1"> {
+
+  let has_data0 = 0;
+  let has_data1 = 1;
+  let has_gds = 0;
+}
+
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
   defm DS_LOAD_MCAST_B32  : DS_LOAD_MCAST<"ds_load_mcast_b32">;
   defm DS_LOAD_MCAST_B64  : DS_LOAD_MCAST<"ds_load_mcast_b64", AVLdSt_64>;
@@ -975,6 +991,13 @@ let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
       : DS_1A_RET<"ds_tiled_load_mcast_b128", AVLdSt_128>;
     def DS_TILED_LOAD_MCAST_2X2_B128
       : DS_1A_RET<"ds_tiled_load_mcast_2x2_b128", AVLdSt_128>;
+  }
+
+  let OtherPredicates = [HasLDSTiledLoads] in {
+    def DS_TILED_LOAD_MCAST_EXTEND_B64
+      : DS_EMF<"ds_tiled_load_mcast_extend_b64", AVLdSt_64>;
+    def DS_TILED_LOAD_MCAST_2X2_EXTEND_B128
+      : DS_EMF<"ds_tiled_load_mcast_2x2_extend_b128", AVLdSt_128>;
   }
 }
 
@@ -1647,6 +1670,8 @@ defm DS_LOAD_MCAST_B64  : DS_Real_gfx13<0x0f8>;
 defm DS_LOAD_MCAST_B128 : DS_Real_gfx13<0x0f9>;
 
 let AssemblerPredicate = HasLDSTiledLoads in {
+  defm DS_TILED_LOAD_MCAST_EXTEND_B64      : DS_Real_gfx13<0x0d3>;
+  defm DS_TILED_LOAD_MCAST_2X2_EXTEND_B128 : DS_Real_gfx13<0x0d4>;
   defm DS_TILED_LOAD_HALF_B64       : DS_Real_gfx13<0x0d6>;
   defm DS_TILED_LOAD_B64            : DS_Real_gfx13<0x0d7>;
   defm DS_TILED_LOAD_B128           : DS_Real_gfx13<0x0d8>;

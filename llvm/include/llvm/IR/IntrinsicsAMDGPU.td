@@ -5514,6 +5514,32 @@ def int_amdgcn_load_mcast_b32         : AMDGPULoadMCast;
 def int_amdgcn_load_mcast_b64         : AMDGPULoadMCast;
 def int_amdgcn_load_mcast_b128        : AMDGPULoadMCast;
 
+class AMDGPUTiledLoadMCastLDS<LLVMType data_ty>:
+  ClangBuiltin<!subst("int", "__builtin", NAME)>,
+  Intrinsic<
+    [data_ty],
+    [local_ptr_ty,    // LDS pointer to load from
+     llvm_i32_ty,     // MAT_ELEM_EXP_FORMAT, bit range: [2:0]
+                      //  0 = U1, 1 bit unsigned integer
+                      //  1 = I1, 1 bit signed integer (0 is extended to -1, 1 to +1)
+                      //  2 = U2, 2 bit unsigned integer
+                      //  3 = I2, 2 bit signed integer
+                      //  4 = U4, 4 bit unsigned integer
+                      //  5 = I4, 4 bit signed integer
+                      // (unused encodings function the same as U1)
+     llvm_i32_ty],    // workgroup and SIMD broadcast mask (in M0)
+                      //   bits [0-15] = workgroup select
+                      //   bits [16] = Early Timeout
+                      //   bits [18-19] = SIMD select
+    [IntrReadMem, IntrConvergent,
+     ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>],
+    "",
+    [SDNPMemOperand, SDNPHasChain]
+  >;
+
+def int_amdgcn_ds_tiled_load_mcast_extend_b64         : AMDGPUTiledLoadMCastLDS<llvm_v2i32_ty>;
+def int_amdgcn_ds_tiled_load_mcast_2x2_extend_b128    : AMDGPUTiledLoadMCastLDS<llvm_v4i32_ty>;
+
 class AMDGPULoadMonitor<LLVMType ptr_ty>:
   Intrinsic<
     [llvm_any_ty],

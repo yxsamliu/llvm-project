@@ -1069,6 +1069,72 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {});
     return Builder.CreateCall(F, {Args});
   }
+  case AMDGPU::BI__builtin_amdgcn_ds_tiled_load_mcast_extend_b64_sign:
+  case AMDGPU::BI__builtin_amdgcn_ds_tiled_load_mcast_extend_b64_zero:
+  case AMDGPU::BI__builtin_amdgcn_ds_tiled_load_mcast_2x2_extend_b128_sign:
+  case AMDGPU::BI__builtin_amdgcn_ds_tiled_load_mcast_2x2_extend_b128_zero: {
+    // DS tiled load mcast extend instructions
+    // Builtin args: ptr addrspace(3), i32 bitsize, i32 mask
+    // Intrinsic args: ptr addrspace(3), i32 format, i32 mask
+    // Translation: bitsize + sign/zero → format
+    //   For _sign: bitsize 1→format 1 (I1), 2→format 3 (I2), 4→format 5 (I4)
+    //   For _zero: bitsize 1→format 0 (U1), 2→format 2 (U2), 4→format 4 (U4)
+
+    Intrinsic::ID IID;
+    bool IsSigned = false;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_ds_tiled_load_mcast_extend_b64_sign:
+      IID = Intrinsic::amdgcn_ds_tiled_load_mcast_extend_b64;
+      IsSigned = true;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_tiled_load_mcast_2x2_extend_b128_sign:
+      IID = Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_extend_b128;
+      IsSigned = true;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_tiled_load_mcast_extend_b64_zero:
+      IID = Intrinsic::amdgcn_ds_tiled_load_mcast_extend_b64;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_tiled_load_mcast_2x2_extend_b128_zero:
+      IID = Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_extend_b128;
+      break;
+    }
+
+    // Extract arguments
+    Value *Ptr = EmitScalarExpr(E->getArg(0)); // LDS pointer
+    Value *BitSize = EmitScalarExpr(
+        E->getArg(1)); // Bit size (1, 2, or 4) - immediate constant
+    Value *Mask =
+        EmitScalarExpr(E->getArg(2)); // Mask for M0 - can be runtime value
+
+    // Convert bitsize to format (bitsize is guaranteed to be constant by
+    // builtin spec)
+    auto *CI = cast<llvm::ConstantInt>(BitSize);
+    uint64_t BitSizeVal = CI->getZExtValue();
+    unsigned FormatVal;
+    switch (BitSizeVal) {
+    case 1: // U1=0, I1=1
+    case 2: // U2=2, I2=3
+    case 4: // U4=4, I4=5
+      FormatVal = (BitSizeVal & ~1ull) + (IsSigned ? 1 : 0);
+      break;
+    default:
+      CGM.Error(E->getExprLoc(),
+                "invalid bit size for ds_tiled_load_mcast_extend (must be 1, "
+                "2, or 4)");
+      return llvm::UndefValue::get(ConvertType(E->getType()));
+    }
+
+    SmallVector<Value *, 3> Args;
+    Args.push_back(Ptr);
+    Args.push_back(Builder.getInt32(FormatVal));
+    Args.push_back(Mask);
+
+    llvm::Function *F = CGM.getIntrinsic(IID);
+    Value *Result = Builder.CreateCall(F, Args);
+
+    // Intrinsic returns v2i32/v4i32 (legal types), bitcast to v8i8/v16i8
+    return Builder.CreateBitCast(Result, ConvertType(E->getType()));
+  }
   case AMDGPU::BI__builtin_amdgcn_cluster_load_async_to_lds_b8:
   case AMDGPU::BI__builtin_amdgcn_cluster_load_async_to_lds_b32:
   case AMDGPU::BI__builtin_amdgcn_cluster_load_async_to_lds_b64:

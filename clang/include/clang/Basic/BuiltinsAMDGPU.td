@@ -1366,6 +1366,11 @@ def __builtin_amdgcn_ds_tiled_load_mcast_b64 : AMDGPUBuiltin<"_Vector<2, int>(_V
 def __builtin_amdgcn_ds_tiled_load_mcast_b128 : AMDGPUBuiltin<"_Vector<4, int>(_Vector<4, int address_space<3> *>, int)", [Const], "gfx13-insts,lds-tiled-loads,wavefrontsize32">;
 def __builtin_amdgcn_ds_tiled_load_mcast_2x2_b128 : AMDGPUBuiltin<"_Vector<4, int>(_Vector<4, int address_space<3> *>, int)", [Const], "gfx13-insts,lds-tiled-loads,wavefrontsize32">;
 
+def __builtin_amdgcn_ds_tiled_load_mcast_extend_b64_sign : AMDGPUBuiltin<"_Vector<8, signed char>(_Vector<2, int const address_space<3> *>, _Constant int, int)", [Const], "gfx13-insts,lds-tiled-loads,wavefrontsize32">;
+def __builtin_amdgcn_ds_tiled_load_mcast_extend_b64_zero : AMDGPUBuiltin<"_Vector<8, unsigned char>(_Vector<2, int const address_space<3> *>, _Constant int, int)", [Const], "gfx13-insts,lds-tiled-loads,wavefrontsize32">;
+def __builtin_amdgcn_ds_tiled_load_mcast_2x2_extend_b128_sign : AMDGPUBuiltin<"_Vector<16, signed char>(_Vector<4, int const address_space<3> *>, _Constant int, int)", [Const], "gfx13-insts,lds-tiled-loads,wavefrontsize32">;
+def __builtin_amdgcn_ds_tiled_load_mcast_2x2_extend_b128_zero : AMDGPUBuiltin<"_Vector<16, unsigned char>(_Vector<4, int const address_space<3> *>, _Constant int, int)", [Const], "gfx13-insts,lds-tiled-loads,wavefrontsize32">;
+
 def __builtin_amdgcn_map_shared_rank : AMDGPUBuiltin<"void address_space<11> *(void address_space<3> *, int)", [], "gfx13-insts,wavefrontsize32">;
 def __builtin_amdgcn_query_shared_rank : AMDGPUBuiltin<"int(void const address_space<11> *)", [], "gfx13-insts,wavefrontsize32">;
 def __builtin_amdgcn_dds_load_async_to_lds_b32 : AMDGPUBuiltin<"void(int const address_space<11> *, int address_space<3> *, _Constant int, _Constant int)", [], "gfx13-insts,wavefrontsize32">;

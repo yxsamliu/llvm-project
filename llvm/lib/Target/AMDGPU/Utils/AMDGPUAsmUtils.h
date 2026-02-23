@@ -146,6 +146,14 @@ inline constexpr int32_t ModChanOffsetInts[] = {0, 2, 8, 10, 16, 18};
 
 } // namespace VOPMMods
 
+namespace ExtendMatrixFmtMods {
+
+inline constexpr const char *const ModExtendMatrixFmt[] = {
+    "EXTEND_MATRIX_FMT_U1", "EXTEND_MATRIX_FMT_I1", "EXTEND_MATRIX_FMT_U2",
+    "EXTEND_MATRIX_FMT_I2", "EXTEND_MATRIX_FMT_U4", "EXTEND_MATRIX_FMT_I4"};
+
+} // namespace ExtendMatrixFmtMods
+
 } // namespace AMDGPU
 } // namespace llvm
 

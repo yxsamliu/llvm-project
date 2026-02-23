@@ -3362,6 +3362,7 @@ void AMDGPUDAGToDAGISel::SelectLOAD_MCAST(MemIntrinsicSDNode *N,
 void AMDGPUDAGToDAGISel::SelectTILED_LOAD_MCAST(SDNode *N, unsigned IntrID) {
   unsigned Opcode;
   bool IsGlobal = false;
+  bool IsExtend = false;
   switch (IntrID) {
   case Intrinsic::amdgcn_global_tiled_load_mcast_half_b64:
     Opcode = AMDGPU::GLOBAL_TILED_LOAD_MCAST_HALF_B64;
@@ -3391,6 +3392,14 @@ void AMDGPUDAGToDAGISel::SelectTILED_LOAD_MCAST(SDNode *N, unsigned IntrID) {
   case Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_b128:
     Opcode = AMDGPU::DS_TILED_LOAD_MCAST_2X2_B128;
     break;
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_extend_b64:
+    Opcode = AMDGPU::DS_TILED_LOAD_MCAST_EXTEND_B64;
+    IsExtend = true;
+    break;
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_extend_b128:
+    Opcode = AMDGPU::DS_TILED_LOAD_MCAST_2X2_EXTEND_B128;
+    IsExtend = true;
+    break;
   default:
     llvm_unreachable("tiled load mcast selection error");
   }
@@ -3401,7 +3410,8 @@ void AMDGPUDAGToDAGISel::SelectTILED_LOAD_MCAST(SDNode *N, unsigned IntrID) {
   // Pointer (for INTRINSIC_W_CHAIN: 0=chain, 1=ID, 2=ptr)
   SDValue PtrOp = N->getOperand(2);
 
-  SDValue Mask = N->getOperand(3);
+  // For extend instructions: operand 3 = format, operand 4 = mask
+  SDValue Mask = N->getOperand(IsExtend ? 4 : 3);
 
   // Extract base and offset from address
   SDValue Addr;
@@ -3423,8 +3433,15 @@ void AMDGPUDAGToDAGISel::SelectTILED_LOAD_MCAST(SDNode *N, unsigned IntrID) {
   glueCopyToM0(N, Mask);
 
   // global_* sets 0 for CPol; ds_* sets 0 for gds; ds_*_extend_* uses format
-  SDValue Imm = IsGlobal ? CurDAG->getTargetConstant(0, SL, MVT::i32)
-                         : CurDAG->getTargetConstant(0, SL, MVT::i1);
+  SDValue Imm;
+  if (IsGlobal) {
+    Imm = CurDAG->getTargetConstant(0, SL, MVT::i32);
+  } else if (IsExtend) {
+    uint64_t FormatVal = cast<ConstantSDNode>(N->getOperand(3))->getZExtValue();
+    Imm = CurDAG->getTargetConstant(FormatVal, SL, MVT::i8);
+  } else {
+    Imm = CurDAG->getTargetConstant(0, SL, MVT::i1);
+  }
 
   SmallVector<SDValue, 6> Ops = {
       Addr, Offset, Imm,
@@ -4096,6 +4113,8 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_ds_tiled_load_mcast_b64:
   case Intrinsic::amdgcn_ds_tiled_load_mcast_b128:
   case Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_b128:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_extend_b64:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_extend_b128:
     SelectTILED_LOAD_MCAST(N, IntrID);
     return;
   case Intrinsic::amdgcn_init_whole_wave:

@@ -83,7 +83,152 @@ entry:
   ret void
 }
 
+; DS tiled load mcast extend tests
+; LDS (LOCAL_ADDRESS)
+
+define void @tiled_load_mcast_extend_b64(ptr addrspace(3) %addr, ptr addrspace(1) %use, i32 %mask) {
+; CHECK-LABEL: tiled_load_mcast_extend_b64:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v3
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    global_wb scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    ds_tiled_load_mcast_extend_b64 v[3:4], v0 offset:16 extend_matrix_fmt:EXTEND_MATRIX_FMT_U1
+; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    global_inv scope:SCOPE_SYS
+; CHECK-NEXT:    global_store_b64 v[1:2], v[3:4], off
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %gep = getelementptr i32, ptr addrspace(3) %addr, i32 4
+  %val = call <2 x i32> @llvm.amdgcn.ds.tiled.load.mcast.extend.b64(ptr addrspace(3) %gep, i32 0, i32 %mask)
+  store <2 x i32> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @tiled_load_mcast_extend_b64_imm(ptr addrspace(3) %addr, ptr addrspace(1) %use) {
+; CHECK-LABEL: tiled_load_mcast_extend_b64_imm:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_mov_b32 m0, 7
+; CHECK-NEXT:    global_wb scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    ds_tiled_load_mcast_extend_b64 v[3:4], v0 offset:16 extend_matrix_fmt:EXTEND_MATRIX_FMT_I1
+; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    global_inv scope:SCOPE_SYS
+; CHECK-NEXT:    global_store_b64 v[1:2], v[3:4], off
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %gep = getelementptr i32, ptr addrspace(3) %addr, i32 4
+  %val = call <2 x i32> @llvm.amdgcn.ds.tiled.load.mcast.extend.b64(ptr addrspace(3) %gep, i32 1, i32 7)
+  store <2 x i32> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @tiled_load_mcast_2x2_extend_b128(ptr addrspace(3) %addr, ptr addrspace(1) %use, i32 %mask) {
+; CHECK-LABEL: tiled_load_mcast_2x2_extend_b128:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v3
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    global_wb scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    ds_tiled_load_mcast_2x2_extend_b128 v[3:6], v0 offset:16 extend_matrix_fmt:EXTEND_MATRIX_FMT_U2
+; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    global_inv scope:SCOPE_SYS
+; CHECK-NEXT:    global_store_b128 v[1:2], v[3:6], off
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %gep = getelementptr i32, ptr addrspace(3) %addr, i32 4
+  %val = call <4 x i32> @llvm.amdgcn.ds.tiled.load.mcast.2x2.extend.b128(ptr addrspace(3) %gep, i32 2, i32 %mask)
+  store <4 x i32> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @tiled_load_mcast_2x2_extend_b128_imm(ptr addrspace(3) %addr, ptr addrspace(1) %use) {
+; CHECK-LABEL: tiled_load_mcast_2x2_extend_b128_imm:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_mov_b32 m0, 7
+; CHECK-NEXT:    global_wb scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    ds_tiled_load_mcast_2x2_extend_b128 v[3:6], v0 offset:16 extend_matrix_fmt:EXTEND_MATRIX_FMT_I2
+; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    global_inv scope:SCOPE_SYS
+; CHECK-NEXT:    global_store_b128 v[1:2], v[3:6], off
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %gep = getelementptr i32, ptr addrspace(3) %addr, i32 4
+  %val = call <4 x i32> @llvm.amdgcn.ds.tiled.load.mcast.2x2.extend.b128(ptr addrspace(3) %gep, i32 3, i32 7)
+  store <4 x i32> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @tiled_load_mcast_extend_b64_no_offset(ptr addrspace(3) %addr, ptr addrspace(1) %use, i32 %mask) {
+; CHECK-LABEL: tiled_load_mcast_extend_b64_no_offset:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v3
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    global_wb scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    ds_tiled_load_mcast_extend_b64 v[3:4], v0 extend_matrix_fmt:EXTEND_MATRIX_FMT_U4
+; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    global_inv scope:SCOPE_SYS
+; CHECK-NEXT:    global_store_b64 v[1:2], v[3:4], off
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %val = call <2 x i32> @llvm.amdgcn.ds.tiled.load.mcast.extend.b64(ptr addrspace(3) %addr, i32 4, i32 %mask)
+  store <2 x i32> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @tiled_load_mcast_2x2_extend_b128_no_offset(ptr addrspace(3) %addr, ptr addrspace(1) %use, i32 %mask) {
+; CHECK-LABEL: tiled_load_mcast_2x2_extend_b128_no_offset:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v3
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    global_wb scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    ds_tiled_load_mcast_2x2_extend_b128 v[3:6], v0 extend_matrix_fmt:EXTEND_MATRIX_FMT_I4
+; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    global_inv scope:SCOPE_SYS
+; CHECK-NEXT:    global_store_b128 v[1:2], v[3:6], off
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %val = call <4 x i32> @llvm.amdgcn.ds.tiled.load.mcast.2x2.extend.b128(ptr addrspace(3) %addr, i32 5, i32 %mask)
+  store <4 x i32> %val, ptr addrspace(1) %use
+  ret void
+}
+
 declare i32 @llvm.amdgcn.global.tiled.load.mcast.half.b64(ptr addrspace(1), i32)
 declare <4 x i32> @llvm.amdgcn.global.tiled.load.mcast.b128(ptr addrspace(1), i32)
 declare <2 x i32> @llvm.amdgcn.ds.tiled.load.mcast.b64(ptr addrspace(3), i32)
 declare <4 x i32> @llvm.amdgcn.ds.tiled.load.mcast.2x2.b128(ptr addrspace(3), i32)
+declare <2 x i32> @llvm.amdgcn.ds.tiled.load.mcast.extend.b64(ptr addrspace(3) nocapture readonly, i32 immarg, i32)
+declare <4 x i32> @llvm.amdgcn.ds.tiled.load.mcast.2x2.extend.b128(ptr addrspace(3) nocapture readonly, i32 immarg, i32)

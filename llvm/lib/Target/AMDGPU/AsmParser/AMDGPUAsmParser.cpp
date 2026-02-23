@@ -196,6 +196,7 @@ public:
     ImmTyMatrixBScaleFmt,
     ImmTyMatrixAReuse,
     ImmTyMatrixBReuse,
+    ImmTyExtendMatrixFmt,
     ImmTyPredXDL,
     ImmTyScaleSel,
     ImmTyModsConvolve,
@@ -1091,6 +1092,7 @@ public:
   bool isGPRIdxMode() const;
   bool isS16Imm() const;
   bool isU16Imm() const;
+  bool isExtendMatrixFmt() const;
   bool isEndpgm() const;
 
   auto getPredicate(std::function<bool(const AMDGPUOperand &Op)> P) const {
@@ -1313,6 +1315,7 @@ public:
     case ImmTySparseIndexOdd: OS << "SparseIndexOdd"; break;
     case ImmTyGlobalSReg32: OS << "GlobalSReg32"; break;
     case ImmTyGlobalSReg64: OS << "GlobalSReg64"; break;
+    case ImmTyExtendMatrixFmt: OS << "ExtendMatrixFmt"; break;
     }
     // clang-format on
   }
@@ -2115,6 +2118,7 @@ public:
   ParseStatus parseSendMsg(OperandVector &Operands);
   ParseStatus parseInterpSlot(OperandVector &Operands);
   ParseStatus parseInterpAttr(OperandVector &Operands);
+  ParseStatus parseExtendMatrixFmt(OperandVector &Operands);
   ParseStatus parseSOPPBrTarget(OperandVector &Operands);
   ParseStatus parseBoolReg(OperandVector &Operands);
 
@@ -8962,6 +8966,16 @@ ParseStatus AMDGPUAsmParser::parseInterpAttr(OperandVector &Operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// extend_matrix_fmt
+//===----------------------------------------------------------------------===//
+
+ParseStatus AMDGPUAsmParser::parseExtendMatrixFmt(OperandVector &Operands) {
+  return parseStringOrIntWithPrefix(Operands, "extend_matrix_fmt",
+                                    ExtendMatrixFmtMods::ModExtendMatrixFmt,
+                                    AMDGPUOperand::ImmTyExtendMatrixFmt);
+}
+
+//===----------------------------------------------------------------------===//
 // exp
 //===----------------------------------------------------------------------===//
 
@@ -10562,6 +10576,10 @@ bool AMDGPUOperand::isS16Imm() const {
 
 bool AMDGPUOperand::isU16Imm() const {
   return isImmLiteral() && isUInt<16>(getImm());
+}
+
+bool AMDGPUOperand::isExtendMatrixFmt() const {
+  return isImmTy(ImmTyExtendMatrixFmt);
 }
 
 //===----------------------------------------------------------------------===//
