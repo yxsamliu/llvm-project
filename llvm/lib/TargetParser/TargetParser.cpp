@@ -460,6 +460,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
       Features["wmma-k128"] = true;
       Features["lds-tiled-loads"] = true;
       Features["global-tiled-loads-2x2"] = true;
+      Features["global-tiled-load-mcast"] = true;
       Features["qdq-insts"] = true;
       [[fallthrough]];
     case GK_GFX1360:
