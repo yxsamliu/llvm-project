@@ -77,6 +77,7 @@ set(OCLC_ISA_TARGETS
   "1310|13100"
   "1360|13600"
   "1370|13700"
+  "131F|13199"
 )
 
 # ABI versions (version in name equals value)
