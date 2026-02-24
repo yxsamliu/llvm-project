@@ -29,7 +29,7 @@ behaviors:
 Extensions (the same license used by LLVM).
 - Added Image Support to Comgr's handling of ISA metadata. Support for images
 can now be queried with Comgr's metadata APIs.
-- Added support for linking device library files through the use of a Virtual 
+- Added support for linking device library files through the use of a Virtual
 File System (VFS).
 
 Bug Fixes
@@ -75,6 +75,7 @@ tests.
 New Targets
 -----------
 - gfx1310
+- gfx131F
 - gfx1260
 
 Removed Targets
