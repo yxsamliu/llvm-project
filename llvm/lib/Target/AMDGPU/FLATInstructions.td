@@ -1583,6 +1583,13 @@ let WaveSizePredicate = isWave32, OtherPredicates = [NotHasTileShapedTransposeIn
   defm GLOBAL_LOAD_TR4_B64 : FLAT_Global_Load_Pseudo <"global_load_tr4_b64", VGPROp_64>;
 } // End WaveSizePredicate = isWave32, OtherPredicates = [NotHasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts]
 
+let WaveSizePredicate = isWave32, Uses = [M0, EXEC], OtherPredicates = [HasTransposeMcastLoadInsts] in {
+  defm GLOBAL_LOAD_MCAST_TR4_B64  : FLAT_Global_Load_Pseudo <"global_load_mcast_tr4_b64", VGPROp_64>;
+  defm GLOBAL_LOAD_MCAST_TR6_B96  : FLAT_Global_Load_Pseudo <"global_load_mcast_tr6_b96", VGPROp_96_Align1>;
+  defm GLOBAL_LOAD_MCAST_TR8_B64  : FLAT_Global_Load_Pseudo <"global_load_mcast_tr8_b64", VGPROp_64>;
+  defm GLOBAL_LOAD_MCAST_TR16_B128 : FLAT_Global_Load_Pseudo <"global_load_mcast_tr16_b128", VGPROp_128>;
+} // End WaveSizePredicate = isWave32, OtherPredicates = [HasTransposeMcastLoadInsts]
+
 let WaveSizePredicate = isWave32, SubtargetPredicate = HasTileShapedTransposeInsts in {
   let OtherPredicates = [HasTransposeLoadF4F6Insts] in {
     defm GLOBAL_LOAD_TR4_16X32_B64  : FLAT_Global_Load_Pseudo <"global_load_tr4_16x32_b64", VGPROp_64>;
@@ -4607,6 +4614,13 @@ let AssemblerPredicate = HasGlobalTiledLoadMcast in {
   defm GLOBAL_TILED_LOAD_MCAST_HALF_B64 : VFLAT_Real_AllAddr_gfx13<0x0be>;
   defm GLOBAL_TILED_LOAD_MCAST_B64      : VFLAT_Real_AllAddr_gfx13<0x0bf>;
   defm GLOBAL_TILED_LOAD_MCAST_B128     : VFLAT_Real_AllAddr_gfx13<0x0c0>;
+}
+
+let AssemblerPredicate = HasTransposeMcastLoadInsts in {
+  defm GLOBAL_LOAD_MCAST_TR16_B128 : VFLAT_Real_AllAddr_gfx13<0x0c1>;
+  defm GLOBAL_LOAD_MCAST_TR8_B64   : VFLAT_Real_AllAddr_gfx13<0x0c2>;
+  defm GLOBAL_LOAD_MCAST_TR4_B64   : VFLAT_Real_AllAddr_gfx13<0x0c3>;
+  defm GLOBAL_LOAD_MCAST_TR6_B96   : VFLAT_Real_AllAddr_gfx13<0x0c4>;
 }
 
 // ENC_VSCRATCH.

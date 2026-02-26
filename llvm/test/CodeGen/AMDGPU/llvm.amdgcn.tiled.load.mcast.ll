@@ -226,9 +226,177 @@ entry:
   ret void
 }
 
+define void @global_load_mcast_tr4_b64(ptr addrspace(1) %addr, ptr addrspace(1) %use, i32 %mask) {
+; CHECK-LABEL: global_load_mcast_tr4_b64:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v4
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    global_load_mcast_tr4_b64 v[0:1], v[0:1], off
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %val = call <2 x i32> @llvm.amdgcn.global.load.mcast.tr4.b64(ptr addrspace(1) %addr, i32 %mask)
+  store <2 x i32> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @global_load_mcast_tr6_b96(ptr addrspace(1) %addr, ptr addrspace(1) %use, i32 %mask) {
+; CHECK-LABEL: global_load_mcast_tr6_b96:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v4
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    global_load_mcast_tr6_b96 v[4:6], v[0:1], off
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b96 v[2:3], v[4:6], off
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %val = call <3 x i32> @llvm.amdgcn.global.load.mcast.tr6.b96(ptr addrspace(1) %addr, i32 %mask)
+  store <3 x i32> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @global_load_mcast_tr8_b64(ptr addrspace(1) %addr, ptr addrspace(1) %use, i32 %mask) {
+; CHECK-LABEL: global_load_mcast_tr8_b64:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v4
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    global_load_mcast_tr8_b64 v[0:1], v[0:1], off
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %val = call <2 x i32> @llvm.amdgcn.global.load.mcast.tr8.b64(ptr addrspace(1) %addr, i32 %mask)
+  store <2 x i32> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @global_load_mcast_tr16_b128(ptr addrspace(1) %addr, ptr addrspace(1) %use, i32 %mask) {
+; CHECK-LABEL: global_load_mcast_tr16_b128:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v4
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    global_load_mcast_tr16_b128 v[4:7], v[0:1], off
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %val = call <4 x i32> @llvm.amdgcn.global.load.mcast.tr16.b128(ptr addrspace(1) %addr, i32 %mask)
+  store <4 x i32> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @ds_load_mcast_tr4_b64(ptr addrspace(3) %addr, ptr addrspace(1) %use, i32 %mask) {
+; CHECK-LABEL: ds_load_mcast_tr4_b64:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v3
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    ds_load_mcast_tr4_b64 v[3:4], v0
+; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    global_store_b64 v[1:2], v[3:4], off
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %val = call <2 x i32> @llvm.amdgcn.ds.load.mcast.tr4.b64(ptr addrspace(3) %addr, i32 %mask)
+  store <2 x i32> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @ds_load_mcast_tr6_b96(ptr addrspace(3) %addr, ptr addrspace(1) %use, i32 %mask) {
+; CHECK-LABEL: ds_load_mcast_tr6_b96:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v3
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    ds_load_mcast_tr6_b96 v[3:5], v0
+; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    global_store_b96 v[1:2], v[3:5], off
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %val = call <3 x i32> @llvm.amdgcn.ds.load.mcast.tr6.b96(ptr addrspace(3) %addr, i32 %mask)
+  store <3 x i32> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @ds_load_mcast_tr8_b64(ptr addrspace(3) %addr, ptr addrspace(1) %use, i32 %mask) {
+; CHECK-LABEL: ds_load_mcast_tr8_b64:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v3
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    ds_load_mcast_tr8_b64 v[3:4], v0
+; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    global_store_b64 v[1:2], v[3:4], off
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %val = call <2 x i32> @llvm.amdgcn.ds.load.mcast.tr8.b64(ptr addrspace(3) %addr, i32 %mask)
+  store <2 x i32> %val, ptr addrspace(1) %use
+  ret void
+}
+
+define void @ds_load_mcast_tr16_b128(ptr addrspace(3) %addr, ptr addrspace(1) %use, i32 %mask) {
+; CHECK-LABEL: ds_load_mcast_tr16_b128:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v3
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    ds_load_mcast_tr16_b128 v[3:6], v0
+; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    global_store_b128 v[1:2], v[3:6], off
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %val = call <4 x i32> @llvm.amdgcn.ds.load.mcast.tr16.b128(ptr addrspace(3) %addr, i32 %mask)
+  store <4 x i32> %val, ptr addrspace(1) %use
+  ret void
+}
+
 declare i32 @llvm.amdgcn.global.tiled.load.mcast.half.b64(ptr addrspace(1), i32)
 declare <4 x i32> @llvm.amdgcn.global.tiled.load.mcast.b128(ptr addrspace(1), i32)
 declare <2 x i32> @llvm.amdgcn.ds.tiled.load.mcast.b64(ptr addrspace(3), i32)
 declare <4 x i32> @llvm.amdgcn.ds.tiled.load.mcast.2x2.b128(ptr addrspace(3), i32)
 declare <2 x i32> @llvm.amdgcn.ds.tiled.load.mcast.extend.b64(ptr addrspace(3) nocapture readonly, i32 immarg, i32)
 declare <4 x i32> @llvm.amdgcn.ds.tiled.load.mcast.2x2.extend.b128(ptr addrspace(3) nocapture readonly, i32 immarg, i32)
+declare <2 x i32> @llvm.amdgcn.global.load.mcast.tr4.b64(ptr addrspace(1), i32)
+declare <3 x i32> @llvm.amdgcn.global.load.mcast.tr6.b96(ptr addrspace(1), i32)
+declare <2 x i32> @llvm.amdgcn.global.load.mcast.tr8.b64(ptr addrspace(1), i32)
+declare <4 x i32> @llvm.amdgcn.global.load.mcast.tr16.b128(ptr addrspace(1), i32)
+declare <2 x i32> @llvm.amdgcn.ds.load.mcast.tr4.b64(ptr addrspace(3), i32)
+declare <3 x i32> @llvm.amdgcn.ds.load.mcast.tr6.b96(ptr addrspace(3), i32)
+declare <2 x i32> @llvm.amdgcn.ds.load.mcast.tr8.b64(ptr addrspace(3), i32)
+declare <4 x i32> @llvm.amdgcn.ds.load.mcast.tr16.b128(ptr addrspace(3), i32)

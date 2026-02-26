@@ -973,6 +973,13 @@ let WaveSizePredicate = isWave32, SubtargetPredicate = HasWavegroupMcastLoadInst
   defm DS_LOAD_MCAST_B64  : DS_LOAD_MCAST<"ds_load_mcast_b64", AVLdSt_64>;
   defm DS_LOAD_MCAST_B128 : DS_LOAD_MCAST<"ds_load_mcast_b128", AVLdSt_128>;
 
+  let OtherPredicates = [HasTransposeMcastLoadInsts] in {
+    def DS_LOAD_MCAST_TR4_B64   : DS_1A_RET<"ds_load_mcast_tr4_b64", AVLdSt_64>;
+    def DS_LOAD_MCAST_TR6_B96   : DS_1A_RET<"ds_load_mcast_tr6_b96", AVLdSt_96_Align1>;
+    def DS_LOAD_MCAST_TR8_B64   : DS_1A_RET<"ds_load_mcast_tr8_b64", AVLdSt_64>;
+    def DS_LOAD_MCAST_TR16_B128 : DS_1A_RET<"ds_load_mcast_tr16_b128", AVLdSt_128>;
+  }
+
   let mayStore = 0, has_gds = 0, gdsValue = 0,
       OtherPredicates = [HasLDSTiledLoads] in {
     defm DS_TILED_LOAD_HALF_B64
@@ -1680,6 +1687,13 @@ let AssemblerPredicate = HasLDSTiledLoads in {
   defm DS_TILED_LOAD_MCAST_B64      : DS_Real_gfx13<0x0db>;
   defm DS_TILED_LOAD_MCAST_B128     : DS_Real_gfx13<0x0dc>;
   defm DS_TILED_LOAD_MCAST_2X2_B128 : DS_Real_gfx13<0x0dd>;
+}
+
+let AssemblerPredicate = HasTransposeMcastLoadInsts in {
+  defm DS_LOAD_MCAST_TR16_B128 : DS_Real_gfx13<0x0e3>;
+  defm DS_LOAD_MCAST_TR8_B64   : DS_Real_gfx13<0x0e4>;
+  defm DS_LOAD_MCAST_TR4_B64   : DS_Real_gfx13<0x0e5>;
+  defm DS_LOAD_MCAST_TR6_B96   : DS_Real_gfx13<0x0e6>;
 }
 
 //===----------------------------------------------------------------------===//

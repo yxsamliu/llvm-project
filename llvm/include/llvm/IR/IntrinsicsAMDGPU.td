@@ -4317,6 +4317,16 @@ def int_amdgcn_ds_tiled_load_mcast_b64      : AMDGPUTiledLoadMCast<llvm_v2i32_ty
 def int_amdgcn_ds_tiled_load_mcast_b128     : AMDGPUTiledLoadMCast<llvm_v4i32_ty, local_ptr_ty>;
 def int_amdgcn_ds_tiled_load_mcast_2x2_b128 : AMDGPUTiledLoadMCast<llvm_v4i32_ty, local_ptr_ty>;
 
+def int_amdgcn_ds_load_mcast_tr4_b64   : AMDGPUTiledLoadMCast<llvm_v2i32_ty, local_ptr_ty>;
+def int_amdgcn_ds_load_mcast_tr6_b96   : AMDGPUTiledLoadMCast<llvm_v3i32_ty, local_ptr_ty>;
+def int_amdgcn_ds_load_mcast_tr8_b64   : AMDGPUTiledLoadMCast<llvm_v2i32_ty, local_ptr_ty>;
+def int_amdgcn_ds_load_mcast_tr16_b128 : AMDGPUTiledLoadMCast<llvm_v4i32_ty, local_ptr_ty>;
+
+def int_amdgcn_global_load_mcast_tr4_b64   : AMDGPUTiledLoadMCast<llvm_v2i32_ty, global_ptr_ty>;
+def int_amdgcn_global_load_mcast_tr6_b96   : AMDGPUTiledLoadMCast<llvm_v3i32_ty, global_ptr_ty>;
+def int_amdgcn_global_load_mcast_tr8_b64   : AMDGPUTiledLoadMCast<llvm_v2i32_ty, global_ptr_ty>;
+def int_amdgcn_global_load_mcast_tr16_b128 : AMDGPUTiledLoadMCast<llvm_v4i32_ty, global_ptr_ty>;
+
 // Strided loads write every other register of the destination (other registers
 // are unmodified). The intrinsics have an extra param for partial result which
 // is tied with destination.

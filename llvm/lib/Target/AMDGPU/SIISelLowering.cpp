@@ -1712,6 +1712,10 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
   case Intrinsic::amdgcn_global_tiled_load_mcast_b64:
   case Intrinsic::amdgcn_global_tiled_load_mcast_b128:
   case Intrinsic::amdgcn_global_tiled_load_mcast_2x2_b128:
+  case Intrinsic::amdgcn_global_load_mcast_tr4_b64:
+  case Intrinsic::amdgcn_global_load_mcast_tr6_b96:
+  case Intrinsic::amdgcn_global_load_mcast_tr8_b64:
+  case Intrinsic::amdgcn_global_load_mcast_tr16_b128:
   case Intrinsic::amdgcn_ds_tiled_load_half_b64:
   case Intrinsic::amdgcn_ds_tiled_load_b64:
   case Intrinsic::amdgcn_ds_tiled_load_b128:
@@ -1720,6 +1724,10 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
   case Intrinsic::amdgcn_ds_tiled_load_mcast_b64:
   case Intrinsic::amdgcn_ds_tiled_load_mcast_b128:
   case Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_b128:
+  case Intrinsic::amdgcn_ds_load_mcast_tr4_b64:
+  case Intrinsic::amdgcn_ds_load_mcast_tr6_b96:
+  case Intrinsic::amdgcn_ds_load_mcast_tr8_b64:
+  case Intrinsic::amdgcn_ds_load_mcast_tr16_b128:
   case Intrinsic::amdgcn_cluster_load_b32:
   case Intrinsic::amdgcn_cluster_load_b64:
   case Intrinsic::amdgcn_cluster_load_b128:

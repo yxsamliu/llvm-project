@@ -1123,6 +1123,10 @@ defm TransposeLoadF4F6Insts : AMDGPUSubtargetFeature<"transpose-load-f4f6-insts"
   "Has ds_load_tr4/tr6 and global_load_tr4/tr6 instructions"
 >;
 
+defm TransposeMcastLoadInsts : AMDGPUSubtargetFeature<"transpose-mcast-load-insts",
+  "Has transpose multicast load instructions"
+>;
+
 defm PrngInst : AMDGPUSubtargetFeature<"prng-inst",
   "Has v_prng_b32 instruction"
 >;
@@ -2294,6 +2298,7 @@ def FeatureISAVersion13_7 : FeatureSet<
      FeatureGlobalTiledLoads2x2,
      FeatureGlobalTiledLoadMcast,
      FeatureLDSTiledLoads,
+     FeatureTransposeMcastLoadInsts,
     ])>;
 
 //===----------------------------------------------------------------------===//

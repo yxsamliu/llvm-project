@@ -3380,6 +3380,22 @@ void AMDGPUDAGToDAGISel::SelectTILED_LOAD_MCAST(SDNode *N, unsigned IntrID) {
     Opcode = AMDGPU::GLOBAL_TILED_LOAD_MCAST_2X2_B128;
     IsGlobal = true;
     break;
+  case Intrinsic::amdgcn_global_load_mcast_tr4_b64:
+    Opcode = AMDGPU::GLOBAL_LOAD_MCAST_TR4_B64;
+    IsGlobal = true;
+    break;
+  case Intrinsic::amdgcn_global_load_mcast_tr6_b96:
+    Opcode = AMDGPU::GLOBAL_LOAD_MCAST_TR6_B96;
+    IsGlobal = true;
+    break;
+  case Intrinsic::amdgcn_global_load_mcast_tr8_b64:
+    Opcode = AMDGPU::GLOBAL_LOAD_MCAST_TR8_B64;
+    IsGlobal = true;
+    break;
+  case Intrinsic::amdgcn_global_load_mcast_tr16_b128:
+    Opcode = AMDGPU::GLOBAL_LOAD_MCAST_TR16_B128;
+    IsGlobal = true;
+    break;
   case Intrinsic::amdgcn_ds_tiled_load_mcast_half_b64:
     Opcode = AMDGPU::DS_TILED_LOAD_MCAST_HALF_B64;
     break;
@@ -3391,6 +3407,18 @@ void AMDGPUDAGToDAGISel::SelectTILED_LOAD_MCAST(SDNode *N, unsigned IntrID) {
     break;
   case Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_b128:
     Opcode = AMDGPU::DS_TILED_LOAD_MCAST_2X2_B128;
+    break;
+  case Intrinsic::amdgcn_ds_load_mcast_tr4_b64:
+    Opcode = AMDGPU::DS_LOAD_MCAST_TR4_B64;
+    break;
+  case Intrinsic::amdgcn_ds_load_mcast_tr6_b96:
+    Opcode = AMDGPU::DS_LOAD_MCAST_TR6_B96;
+    break;
+  case Intrinsic::amdgcn_ds_load_mcast_tr8_b64:
+    Opcode = AMDGPU::DS_LOAD_MCAST_TR8_B64;
+    break;
+  case Intrinsic::amdgcn_ds_load_mcast_tr16_b128:
+    Opcode = AMDGPU::DS_LOAD_MCAST_TR16_B128;
     break;
   case Intrinsic::amdgcn_ds_tiled_load_mcast_extend_b64:
     Opcode = AMDGPU::DS_TILED_LOAD_MCAST_EXTEND_B64;
@@ -4115,6 +4143,14 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_b128:
   case Intrinsic::amdgcn_ds_tiled_load_mcast_extend_b64:
   case Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_extend_b128:
+  case Intrinsic::amdgcn_ds_load_mcast_tr4_b64:
+  case Intrinsic::amdgcn_ds_load_mcast_tr6_b96:
+  case Intrinsic::amdgcn_ds_load_mcast_tr8_b64:
+  case Intrinsic::amdgcn_ds_load_mcast_tr16_b128:
+  case Intrinsic::amdgcn_global_load_mcast_tr4_b64:
+  case Intrinsic::amdgcn_global_load_mcast_tr6_b96:
+  case Intrinsic::amdgcn_global_load_mcast_tr8_b64:
+  case Intrinsic::amdgcn_global_load_mcast_tr16_b128:
     SelectTILED_LOAD_MCAST(N, IntrID);
     return;
   case Intrinsic::amdgcn_init_whole_wave:
