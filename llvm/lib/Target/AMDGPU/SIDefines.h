@@ -1200,6 +1200,10 @@ enum VOPMModBits : unsigned {
   PATTERN_SHIFT = 0,
   PATTERN       = 0x3F << PATTERN_SHIFT,
 
+  // mod0 wmma
+  KSCALE_SHIFT = 0,
+  KSCALE       = 0xF << KSCALE_SHIFT,
+
   MOD1_SHIFT = 6, // mod1 offset in aux_data
 
   // mod1 convolve
@@ -1219,6 +1223,21 @@ enum VOPMModBits : unsigned {
   ACTIVATION_FN              = 0x3 << ACTIVATION_FN_SHIFT,
   CHAN_OFFSET_SHIFT          = 4 + MOD1_SHIFT,
   CHAN_OFFSET                = 0x7 << CHAN_OFFSET_SHIFT,
+  CHAN_OFFSET_cvt_tensor     = 1 << CHAN_OFFSET_SHIFT, // low bit only
+
+  // mod1 wmma
+  FMT_A_SHIFT     = 0 + MOD1_SHIFT,
+  FMT_A           = 0x7 << FMT_A_SHIFT,    // matrix_a_fmt
+  FMT_B_SHIFT     = 3 + MOD1_SHIFT,
+  FMT_B           = 0x7 << FMT_B_SHIFT,    // matrix_b_fmt
+  MATRIX_A_SIGNED = 1 << (0 + MOD1_SHIFT), // matrix_a_signed (fmt bit 0)
+  MATRIX_B_SIGNED = 1 << (3 + MOD1_SHIFT), // matrix_b_signed (fmt bit 0)
+  REUSE_A         = 1 << (6 + MOD1_SHIFT), // matrix_a_reuse
+  REUSE_B         = 1 << (7 + MOD1_SHIFT), // matrix_b_reuse
+  SCALE_A_SHIFT   = 8 + MOD1_SHIFT,
+  SCALE_A         = 0x3 << SCALE_A_SHIFT,  // matrix_a_scale
+  SCALE_B_SHIFT   = 10 + MOD1_SHIFT,
+  SCALE_B         = 0x3 << SCALE_B_SHIFT,  // matrix_b_scale
 
   MOD2_SHIFT = 18, // mod2 offset in aux_data
 
@@ -1227,6 +1246,10 @@ enum VOPMModBits : unsigned {
   ACCUM_IS_BIAS      = 1 << (1 + MOD2_SHIFT),
   TENSOR_IS_SIGNED   = 1 << (2 + MOD2_SHIFT),
   INT_SCALE_convolve = 1 << (3 + MOD2_SHIFT),
+
+  // mod2 wmma
+  INDEX_SET_SHIFT = 0 + MOD2_SHIFT,
+  INDEX_SET = 0x1 << INDEX_SET_SHIFT, // sparse select (0=even, 1=odd lanes)
 };
 // clang-format on
 
@@ -1257,6 +1280,16 @@ enum ACTIVATION_FN : unsigned {
   ACTIVATION_HARD_TANH = 0x2 // result = min(1, max(-1, input))
 };
 } // namespace CNN
+
+namespace WMMA {
+enum MATRIX_SCALE : unsigned {
+  MATRIX_SCALE_LO_EVEN = 0, // Select bits [15:0] of even lanes
+  MATRIX_SCALE_HI_EVEN = 1, // Select bits [31:16] of even lanes
+  MATRIX_SCALE_LO_ODD = 2,  // Select bits [15:0] of odd lanes
+  MATRIX_SCALE_HI_ODD = 3,  // Select bits [31:16] of odd lanes
+};
+} // namespace WMMA
+
 } // namespace VOPMMods
 } // namespace AMDGPU
 

@@ -63,6 +63,7 @@ entry:
   ret void
 }
 
+; TODO-GFX13: Double-check the wait_va_vdst generation!
 
 define amdgpu_kernel void @send_next_prev(i32 %i1, ptr addrspace(1) %p) "amdgpu-cluster-dims"="4,1,1" "amdgpu-wavegroup-enable" "amdgpu-spatial-cluster" !reqd_work_group_size !{i32 32, i32 8, i32 1} {
 ; CHECK-LABEL: send_next_prev:
@@ -309,12 +310,13 @@ define dso_local amdgpu_kernel void @send_next_with_mcast(ptr addrspace(1) nound
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_load_mcast_b32 g1[1], v0, s[0:1]
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    global_load_mcast_b32 g1[3], v0, s[0:1]
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[2], v0 sema_id:1 sema_wave_id:0 sema_id_refl:2 sema_wave_id_refl:0 wait_va_vdst:15
 ; CHECK-NEXT:    v_send_vgpr_prev_b32 g1[2], g1[0], v0 sema_id:2 sema_wave_id:0 sema_id_refl:1 sema_wave_id_refl:0 wait_va_vdst:15
 ; CHECK-NEXT:    s_sema_wait 1
 ; CHECK-NEXT:    s_sema_wait 2
-; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_barrier_signal -1
 ; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm

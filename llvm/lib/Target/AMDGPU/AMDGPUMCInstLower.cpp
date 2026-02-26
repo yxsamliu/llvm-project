@@ -16,6 +16,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPUMachineFunction.h"
+#include "AMDGPUMemoryUtils.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -25,6 +26,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -405,8 +407,22 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
 
     if (MI->isMetaInstruction()) {
-      if (isVerbose())
+      if (isVerbose()) {
+        if (MI->getOpcode() == AMDGPU::VGPR_LIFETIME_START ||
+            MI->getOpcode() == AMDGPU::VGPR_LIFETIME_END) {
+          MachineMemOperand *MMO = *MI->memoperands_begin();
+          auto *Alloca = cast<AllocaInst>(MMO->getValue());
+          auto &MD = AMDGPU::AllocatedVGPRsMetadata::get(*Alloca);
+          unsigned Begin = MD.getAddress() / 4;
+          unsigned End = (MD.getAddress() + MD.getSize() - 1) / 4;
+          bool IsStart = MI->getOpcode() == AMDGPU::VGPR_LIFETIME_START;
+          OutStreamer->emitRawComment(Twine(" VGPR lifetime ") +
+                                      (IsStart ? "start" : "end") + ": v[" +
+                                      Twine(Begin) + ":" + Twine(End) + "]");
+          return;
+        }
         OutStreamer->emitRawComment(" meta instruction");
+      }
       return;
     }
 

@@ -259,6 +259,10 @@ private:
   bool SelectSWMMACIndex16(SDValue In, SDValue &Src, SDValue &IndexKey) const;
   bool SelectSWMMACIndex32(SDValue In, SDValue &Src, SDValue &IndexKey) const;
 
+  bool SelectWMMASignedMods(SDValue In, SDValue &Src) const;
+  bool SelectSWMMAIndexSet(SDValue In, SDValue &Src) const;
+  bool SelectSWMMASignedIndexSet(SDValue In, SDValue &Src) const;
+
   bool SelectVOP3OpSel(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
   bool SelectVOP3OpSelMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;

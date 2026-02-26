@@ -9,6 +9,8 @@
 define amdgpu_kernel void @subdword() #0 {
   ; VIDX-LABEL: name: subdword
   ; VIDX: bb.0.entry:
+  ; VIDX-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.q, align 1, addrspace 5)
+  ; VIDX-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
   ; VIDX-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 2
   ; VIDX-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_MOV_B32_]], 0, implicit-def dead $scc
   ; VIDX-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_]], 3, implicit-def dead $scc
@@ -37,6 +39,8 @@ define amdgpu_kernel void @subdword() #0 {
   ;
   ; BUNDLE-LABEL: name: subdword
   ; BUNDLE: bb.0.entry:
+  ; BUNDLE-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.q, align 1, addrspace 5)
+  ; BUNDLE-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
   ; BUNDLE-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 2, 0, implicit-def dead $scc
   ; BUNDLE-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_]], 3, implicit-def dead $scc
   ; BUNDLE-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_]], 3, implicit-def dead $scc
@@ -74,6 +78,8 @@ define amdgpu_kernel void @subdword() #0 {
   ;
   ; SETIDX-LABEL: name: subdword
   ; SETIDX: bb.0.entry:
+  ; SETIDX-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.q, align 1, addrspace 5)
+  ; SETIDX-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
   ; SETIDX-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 2, 0, implicit-def dead $scc
   ; SETIDX-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_]], 3, implicit-def dead $scc
   ; SETIDX-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_]], 3, implicit-def dead $scc
@@ -111,6 +117,8 @@ define amdgpu_kernel void @subdword() #0 {
   ;
   ; REAL16-VIDX-LABEL: name: subdword
   ; REAL16-VIDX: bb.0.entry:
+  ; REAL16-VIDX-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.q, align 1, addrspace 5)
+  ; REAL16-VIDX-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
   ; REAL16-VIDX-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 2
   ; REAL16-VIDX-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_MOV_B32_]], 0, implicit-def dead $scc
   ; REAL16-VIDX-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_]], 3, implicit-def dead $scc
@@ -139,6 +147,8 @@ define amdgpu_kernel void @subdword() #0 {
   ;
   ; REAL16-BUNDLE-LABEL: name: subdword
   ; REAL16-BUNDLE: bb.0.entry:
+  ; REAL16-BUNDLE-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.q, align 1, addrspace 5)
+  ; REAL16-BUNDLE-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
   ; REAL16-BUNDLE-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 2, 0, implicit-def dead $scc
   ; REAL16-BUNDLE-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_]], 3, implicit-def dead $scc
   ; REAL16-BUNDLE-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_]], 3, implicit-def dead $scc
@@ -180,6 +190,8 @@ define amdgpu_kernel void @subdword() #0 {
   ;
   ; REAL16-SETIDX-LABEL: name: subdword
   ; REAL16-SETIDX: bb.0.entry:
+  ; REAL16-SETIDX-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.q, align 1, addrspace 5)
+  ; REAL16-SETIDX-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
   ; REAL16-SETIDX-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 2, 0, implicit-def dead $scc
   ; REAL16-SETIDX-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_ADD_I32_]], 3, implicit-def dead $scc
   ; REAL16-SETIDX-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_LSHL_B32 [[S_AND_B32_]], 3, implicit-def dead $scc

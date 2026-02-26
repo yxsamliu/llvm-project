@@ -5207,6 +5207,64 @@ bool AMDGPUDAGToDAGISel::SelectSWMMACIndex32(SDValue In, SDValue &Src,
   return true;
 }
 
+static bool getI1Constant(SDValue Val, uint64_t &Out) {
+  if (auto *C = dyn_cast<ConstantSDNode>(Val)) {
+    Out = C->getZExtValue() & 0x1;
+    return true;
+  }
+  return false;
+}
+
+static SDNode *findIntrinsicUser(SDValue In) {
+  for (SDNode *User : In->users()) {
+    if (User->getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
+        User->getOpcode() == ISD::INTRINSIC_W_CHAIN)
+      return User;
+  }
+  return nullptr;
+}
+
+bool AMDGPUDAGToDAGISel::SelectWMMASignedMods(SDValue In, SDValue &Src) const {
+  SDNode *User = findIntrinsicUser(In);
+  uint64_t SignedA, SignedB;
+
+  if (!User || !getI1Constant(User->getOperand(1), SignedA) ||
+      !getI1Constant(User->getOperand(3), SignedB))
+    return false;
+
+  const uint32_t Val = (SignedA ? AMDGPU::VOPMMods::MATRIX_A_SIGNED : 0) |
+                       (SignedB ? AMDGPU::VOPMMods::MATRIX_B_SIGNED : 0);
+  Src = CurDAG->getTargetConstant(Val, SDLoc(In), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectSWMMAIndexSet(SDValue In, SDValue &Src) const {
+  uint64_t IndexSet;
+  if (!getI1Constant(In, IndexSet))
+    return false;
+
+  const uint32_t Val = IndexSet ? AMDGPU::VOPMMods::INDEX_SET : 0;
+  Src = CurDAG->getTargetConstant(Val, SDLoc(In), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectSWMMASignedIndexSet(SDValue In,
+                                                   SDValue &Src) const {
+  SDNode *User = findIntrinsicUser(In);
+  uint64_t SignedA, SignedB, IndexSet;
+
+  if (!User || !getI1Constant(User->getOperand(1), SignedA) ||
+      !getI1Constant(User->getOperand(3), SignedB) ||
+      !getI1Constant(User->getOperand(7), IndexSet))
+    return false;
+
+  const uint32_t Val = (SignedA ? AMDGPU::VOPMMods::MATRIX_A_SIGNED : 0) |
+                       (SignedB ? AMDGPU::VOPMMods::MATRIX_B_SIGNED : 0) |
+                       (IndexSet ? AMDGPU::VOPMMods::INDEX_SET : 0);
+  Src = CurDAG->getTargetConstant(Val, SDLoc(In), MVT::i32);
+  return true;
+}
+
 bool AMDGPUDAGToDAGISel::SelectVOP3OpSel(SDValue In, SDValue &Src,
                                          SDValue &SrcMods) const {
   Src = In;
@@ -5447,7 +5505,7 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
     SmallVector<SDValue, 3> Backup(Src.begin(), Src.end());
     if (!getOperandBits(LHS, LHSBits) ||
         !getOperandBits(RHS, RHSBits)) {
-      Src = Backup;
+      Src = std::move(Backup);
       return std::make_pair(0, 0);
     }
 

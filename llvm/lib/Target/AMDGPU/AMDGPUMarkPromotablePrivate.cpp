@@ -16,6 +16,9 @@
 #include "AMDGPU.h"
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 
@@ -68,6 +71,33 @@ bool AMDGPUMarkPromotablePrivate::runOnFunction(Function &F) {
         if (auto *Inst = dyn_cast<Instruction>(Ptr))
           Inst->setMetadata("amdgpu.promotable.to.vgpr", PrivateInVGPRMD);
       }
+
+      // Prepare the lifetime intrinsics.
+      bool HaveLifetimeStart = false;
+      for (Use &U : AI->uses()) {
+        if (auto *II = dyn_cast<IntrinsicInst>(U.getUser())) {
+          if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
+            HaveLifetimeStart = true;
+            II->setCalledFunction(Intrinsic::getOrInsertDeclaration(
+                F.getParent(), Intrinsic::amdgcn_vgpr_lifetime_start,
+                AI->getType()));
+          } else if (II->getIntrinsicID() == Intrinsic::lifetime_end) {
+            II->setCalledFunction(Intrinsic::getOrInsertDeclaration(
+                F.getParent(), Intrinsic::amdgcn_vgpr_lifetime_end,
+                AI->getType()));
+          }
+        }
+      }
+      if (!HaveLifetimeStart) {
+        Instruction *IP = AI->getNextNode();
+        while (isa<AllocaInst>(IP))
+          IP = IP->getNextNode();
+        IRBuilder<> B(IP);
+        B.SetCurrentDebugLocation(AI->getDebugLoc());
+        B.CreateIntrinsic(B.getVoidTy(), Intrinsic::amdgcn_vgpr_lifetime_start,
+                          AI);
+      }
+
       Changed = true;
       TotalBytesInVGPRs += alignTo(AllocaSize, 4);
     }
