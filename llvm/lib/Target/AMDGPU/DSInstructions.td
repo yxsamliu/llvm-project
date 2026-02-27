@@ -941,6 +941,20 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = HasGFX950Insts, mayStore 
   defm DS_READ_B96_TR_B6  : DS_1A_RET_NoM0<"ds_read_b96_tr_b6", AVLdSt_96_Align1>;
 }
 
+multiclass DS_BLOCK_LOAD_MCAST<string opName, RegisterOperand rc> {
+  let has_m0_read = 0 in {
+    def "" : DS_1A_RET<opName, rc, 0, Offset, RegisterOperand<SReg_64>>;
+  } // End has_m0_read = 0
+}
+
+let WaveSizePredicate = isWave32, SubtargetPredicate = HasBlockLoadMcastInsts in {
+defm DS_BLOCK_LOAD_MCAST_B128     : DS_BLOCK_LOAD_MCAST<"ds_block_load_mcast_b128",  AVLdSt_128>;
+defm DS_BLOCK_LOAD_MCAST_B256     : DS_BLOCK_LOAD_MCAST<"ds_block_load_mcast_b256",  AVLdSt_256>;
+defm DS_BLOCK_LOAD_MCAST_B512     : DS_BLOCK_LOAD_MCAST<"ds_block_load_mcast_b512",  AVLdSt_512>;
+defm DS_BLOCK_LOAD_MCAST_B1024    : DS_BLOCK_LOAD_MCAST<"ds_block_load_mcast_b1024", AVLdSt_1024>;
+def  DS_BLOCK_LOAD_MCAST_NOP      : DS_VOID<"ds_block_load_mcast_nop">;
+} // End WaveSizePredicate = isWave32, SubtargetPredicate = HasBlockLoadMcastInsts
+
 multiclass DS_LOAD_MCAST<string opName, RegisterOperand rc = AVLdSt_32> {
   def "" : DS_1A_RET<opName, rc>;
   def _LANESHARED : DS_1A_RET<opName#"_LANESHARED", rc> {
@@ -1628,6 +1642,12 @@ defm DS_LOAD_TR4_16X32_B64    : DS_Real_gfx1260<0x0fa, ["ds_load_b64_tr_b4", "ds
 defm DS_LOAD_TR6_16X32_B96    : DS_Real_gfx1260<0x0fb, ["ds_load_b128_tr_b6", "ds_load_tr6_b96"]>;
 defm DS_LOAD_TR16_16X16_B128  : DS_Real_gfx1260<0x0fc, ["ds_load_b128_tr_b16", "ds_load_tr16_b128", "ds_load_tr_b128"]>;
 defm DS_LOAD_TR8_16X16_B64    : DS_Real_gfx1260<0x0fd, ["ds_load_b64_tr_b8", "ds_load_tr8_b64", "ds_load_tr_b64"]>;
+
+defm DS_BLOCK_LOAD_MCAST_B128     :  DS_Real_gfx1260<0x0ce>;
+defm DS_BLOCK_LOAD_MCAST_B256     :  DS_Real_gfx1260<0x0cf>;
+defm DS_BLOCK_LOAD_MCAST_B512     :  DS_Real_gfx1260<0x0d0>;
+defm DS_BLOCK_LOAD_MCAST_B1024    :  DS_Real_gfx1260<0x0d1>;
+defm DS_BLOCK_LOAD_MCAST_NOP      :  DS_Real_gfx1260<0x0d2>;
 
 defm DS_BVH_STACK_RTN_B32 : DS_Real_gfx12<0x0e0, DS_BVH_STACK_RTN_B32,
                                           "ds_bvh_stack_push4_pop1_rtn_b32">;

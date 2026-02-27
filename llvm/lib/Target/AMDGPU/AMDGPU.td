@@ -847,6 +847,10 @@ defm TileShapedTransposeInsts : AMDGPUSubtargetFeature<"tile-shaped-transpose-in
   "Has tile shaped (8x32, 16x16, etc in the names) transpose instructions"
 >;
 
+defm BlockLoadMcastInsts : AMDGPUSubtargetFeature<"block-load-mcast-insts",
+  "Has ds block load multicast instructions"
+>;
+
 defm PkFmacF16Inst : AMDGPUSubtargetFeature<"pk-fmac-f16-inst",
   "Has v_pk_fmac_f16 instruction"
 >;
@@ -2211,7 +2215,8 @@ def FeatureISAVersion12_60 : FeatureSet<
      FeatureWMMATransposeInsts,
      FeatureTileShapedTransposeInsts,
      FeatureE5M3ScaleInst,
-     FeatureWMMAWithPredXDL
+     FeatureWMMAWithPredXDL,
+     FeatureBlockLoadMcastInsts
     ])>;
 
 def FeatureISAVersion13_Common : FeatureSet<
