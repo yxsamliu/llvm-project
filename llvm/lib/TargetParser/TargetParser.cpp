@@ -523,6 +523,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["semaphores"] = true;
     Features["wmma-transpose-insts"] = true;
     Features["tile-shaped-transpose-insts"] = true;
+    Features["wmma-with-predxdl"] = true;
     [[fallthrough]];
   case GK_GFX1251:
     if (Kind == GK_GFX1260)
