@@ -7541,6 +7541,19 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
       legalizeOperandsVLdStIdx(MRI, MI, *Idx);
       break;
     }
+    case AMDGPU::DS_BLOCK_LOAD_MCAST_B128_LANESHARED:
+    case AMDGPU::DS_BLOCK_LOAD_MCAST_B256_LANESHARED:
+    case AMDGPU::DS_BLOCK_LOAD_MCAST_B512_LANESHARED:
+    case AMDGPU::DS_BLOCK_LOAD_MCAST_B1024_LANESHARED: {
+      // Legalize L# which should be in SGPR
+      MachineOperand *Rsrc = getNamedOperand(MI, AMDGPU::OpName::addr);
+      if (Rsrc->isReg() && RI.hasVectorRegisters(MRI.getRegClass(Rsrc->getReg())))
+        Rsrc->setReg(readlaneVGPRToSGPR(Rsrc->getReg(), MI, MRI));
+
+      MachineOperand *Idx = getNamedOperand(MI, AMDGPU::OpName::idx);
+      legalizeOperandsVLdStIdx(MRI, MI, *Idx);
+      break;
+    }
     default:
       // The rest don't require legalization.
       break;

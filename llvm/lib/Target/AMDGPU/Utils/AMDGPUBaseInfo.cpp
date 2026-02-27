@@ -408,7 +408,7 @@ struct VOP3CDPPAsmOnlyInfo {
 };
 
 struct VOPMAsmOnlyInfo {
-  uint16_t Opcode;
+  uint32_t Opcode;
 };
 
 struct VOPMPseudoInfo {

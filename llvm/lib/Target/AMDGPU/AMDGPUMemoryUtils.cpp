@@ -510,13 +510,20 @@ bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
   };
   // A Lambda function to check if an intrinsic must use laneshared in VGPRs.
   const auto MustUseLanesharedInVGPR = [&](IntrinsicInst *Intr) {
-    return Intr->getIntrinsicID() == Intrinsic::amdgcn_load_mcast_b32 ||
-           Intr->getIntrinsicID() == Intrinsic::amdgcn_load_mcast_b64 ||
-           Intr->getIntrinsicID() == Intrinsic::amdgcn_load_mcast_b128 ||
-           Intr->getIntrinsicID() ==
-               Intrinsic::amdgcn_spatial_cluster_send_next ||
-           Intr->getIntrinsicID() ==
-               Intrinsic::amdgcn_spatial_cluster_send_prev;
+    switch (Intr->getIntrinsicID()) {
+    case Intrinsic::amdgcn_load_mcast_b128:
+    case Intrinsic::amdgcn_load_mcast_b32:
+    case Intrinsic::amdgcn_load_mcast_b64:
+    case Intrinsic::amdgcn_spatial_cluster_send_next:
+    case Intrinsic::amdgcn_spatial_cluster_send_prev:
+    case Intrinsic::amdgcn_ds_block_load_mcast_b128:
+    case Intrinsic::amdgcn_ds_block_load_mcast_b256:
+    case Intrinsic::amdgcn_ds_block_load_mcast_b512:
+    case Intrinsic::amdgcn_ds_block_load_mcast_b1024:
+      return true;
+    default:
+      return false;
+    }
   };
 
   Type *ValueType;

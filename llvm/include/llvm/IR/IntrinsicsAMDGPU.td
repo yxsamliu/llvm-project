@@ -5647,6 +5647,22 @@ class AMDGPUTiledLoadMCastLDS<LLVMType data_ty>:
 def int_amdgcn_ds_tiled_load_mcast_extend_b64         : AMDGPUTiledLoadMCastLDS<llvm_v2i32_ty>;
 def int_amdgcn_ds_tiled_load_mcast_2x2_extend_b128    : AMDGPUTiledLoadMCastLDS<llvm_v4i32_ty>;
 
+class AMDGPUDSBlockLoadMCast:
+  Intrinsic<
+    [],
+    [laneshared_ptr_ty, // laneshared destination pointer
+                        // The argument must be uniform; otherwise, the result is undefined.
+     llvm_v2i32_ty,     // L# containing LDS base_address and SIMD_SEL, etc.
+     llvm_i16_ty],      // LDS address offset in units of 8 bytes
+    [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<2>>, IntrConvergent, IntrNoCallback, IntrNoFree],
+    "", [SDNPMemOperand]
+  >;
+
+def int_amdgcn_ds_block_load_mcast_b128  : ClangBuiltin<"__builtin_amdgcn_ds_block_load_mcast_b128">, AMDGPUDSBlockLoadMCast;
+def int_amdgcn_ds_block_load_mcast_b256  : ClangBuiltin<"__builtin_amdgcn_ds_block_load_mcast_b256">, AMDGPUDSBlockLoadMCast;
+def int_amdgcn_ds_block_load_mcast_b512  : ClangBuiltin<"__builtin_amdgcn_ds_block_load_mcast_b512">, AMDGPUDSBlockLoadMCast;
+def int_amdgcn_ds_block_load_mcast_b1024 : ClangBuiltin<"__builtin_amdgcn_ds_block_load_mcast_b1024">, AMDGPUDSBlockLoadMCast;
+
 class AMDGPULoadMonitor<LLVMType ptr_ty>:
   Intrinsic<
     [llvm_any_ty],

@@ -3485,6 +3485,78 @@ void AMDGPUDAGToDAGISel::SelectTILED_LOAD_MCAST(SDNode *N, unsigned IntrID) {
   }
 }
 
+
+bool AMDGPUDAGToDAGISel::selectVGPRIdxOffset(SDValue In, SDValue &Base,
+                                             SDValue &Offset) const {
+  SDLoc SL(In);
+
+  if (isa<ConstantSDNode>(In)) {
+    Base = In;
+    Offset = CurDAG->getTargetConstant(0, SL, MVT::i32);
+    return true;
+  }
+
+  if (In->isAnyAdd()) {
+    SDValue LHS = In->getOperand(0);
+    SDValue RHS = In->getOperand(1);
+    if (auto RHSC = dyn_cast<ConstantSDNode>(RHS)) {
+      Base = LHS;
+      Offset =
+          CurDAG->getTargetConstant(RHSC->getZExtValue() / 4, SL, MVT::i32);
+      return true;
+    }
+    if (auto LHSC = dyn_cast<ConstantSDNode>(LHS)) {
+      Base = RHS;
+      Offset =
+          CurDAG->getTargetConstant(LHSC->getZExtValue() / 4, SL, MVT::i32);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void AMDGPUDAGToDAGISel::SelectBlockLOAD_MCAST(SDNode *N,
+                                               unsigned IntrID) {
+  unsigned Opcode;
+  switch (IntrID) {
+  case Intrinsic::amdgcn_ds_block_load_mcast_b128:
+    Opcode = AMDGPU::DS_BLOCK_LOAD_MCAST_B128_LANESHARED;
+    break;
+  case Intrinsic::amdgcn_ds_block_load_mcast_b256:
+    Opcode = AMDGPU::DS_BLOCK_LOAD_MCAST_B256_LANESHARED;
+    break;
+  case Intrinsic::amdgcn_ds_block_load_mcast_b512:
+    Opcode = AMDGPU::DS_BLOCK_LOAD_MCAST_B512_LANESHARED;
+    break;
+  case Intrinsic::amdgcn_ds_block_load_mcast_b1024:
+    Opcode = AMDGPU::DS_BLOCK_LOAD_MCAST_B1024_LANESHARED;
+    break;
+  default:
+    llvm_unreachable("ds bock load mcast selection error");
+  }
+
+  SmallVector<SDValue, 5> MCastOps;
+  SDLoc DL(N);
+
+  MCastOps.push_back(N->getOperand(3)); // L#
+  MCastOps.push_back(N->getOperand(4)); // LDS address offset
+  MCastOps.push_back(CurDAG->getTargetConstant(0, DL, MVT::i1));  // isGDS bit
+
+  SDValue Base, Offset;
+  if (!selectVGPRIdxOffset(N->getOperand(2), Base, Offset)) {
+    Base = N->getOperand(2);
+    Offset = CurDAG->getTargetConstant(0, DL, MVT::i32);
+  }
+
+  // V_STORE_IDX operands
+  MCastOps.push_back(Base);   // idx
+  MCastOps.push_back(Offset); // offset
+
+  MCastOps.push_back(N->getOperand(0)); // Chain
+  (void )CurDAG->SelectNodeTo(N, Opcode, MVT::Other, MCastOps);
+}
+
 void AMDGPUDAGToDAGISel::SelectInterpP1F16(SDNode *N) {
   if (Subtarget->getLDSBankCount() != 16) {
     // This is a single instruction with a pattern.
@@ -4430,6 +4502,13 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {
   case Intrinsic::amdgcn_load_mcast_b64:
   case Intrinsic::amdgcn_load_mcast_b128: {
     SelectLOAD_MCAST(cast<MemIntrinsicSDNode>(N), IntrID);
+    return;
+  }
+  case Intrinsic::amdgcn_ds_block_load_mcast_b128:
+  case Intrinsic::amdgcn_ds_block_load_mcast_b256:
+  case Intrinsic::amdgcn_ds_block_load_mcast_b512:
+  case Intrinsic::amdgcn_ds_block_load_mcast_b1024: {
+    SelectBlockLOAD_MCAST(N, IntrID);
     return;
   }
   case Intrinsic::amdgcn_spatial_cluster_send_next:
