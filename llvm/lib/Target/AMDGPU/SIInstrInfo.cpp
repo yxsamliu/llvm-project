@@ -2112,6 +2112,40 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
   switch (MI.getOpcode()) {
   default: return TargetInstrInfo::expandPostRAPseudo(MI);
+
+    // pred_xdl pseudo-wrappers: expand to the corresponding gfx1260
+    // instruction.
+#define WMMA_PRED_XDL_CASE(Op)                                                 \
+  case AMDGPU::Op##_pred_xdl_w32_twoaddr:                                      \
+    MI.setDesc(get(AMDGPU::Op##_w32_twoaddr));                                 \
+    break;                                                                     \
+  case AMDGPU::Op##_pred_xdl_w32_threeaddr:                                    \
+    MI.setDesc(get(AMDGPU::Op##_w32_threeaddr));                               \
+    break;
+    WMMA_PRED_XDL_CASE(V_WMMA_F32_16X16X32_BF16_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_BF16_16X16X32_BF16_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_BF16F32_16X16X32_BF16_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_F32_16X16X64_FP8_FP8_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_F32_16X16X64_FP8_BF8_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_F32_16X16X64_BF8_FP8_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_F32_16X16X64_BF8_BF8_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_F16_16X16X64_FP8_FP8_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_F16_16X16X64_FP8_BF8_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_F16_16X16X64_BF8_FP8_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_F16_16X16X64_BF8_BF8_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_I32_16X16X64_IU8_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_F32_16X16X32_F16_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_F16_16X16X32_F16_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_F16_16X16X128_FP8_FP8_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_F16_16X16X128_FP8_BF8_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_F16_16X16X128_BF8_FP8_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_F16_16X16X128_BF8_BF8_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_F32_16X16X128_FP8_FP8_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_F32_16X16X128_FP8_BF8_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_F32_16X16X128_BF8_FP8_gfx1260)
+    WMMA_PRED_XDL_CASE(V_WMMA_F32_16X16X128_BF8_BF8_gfx1260)
+#undef WMMA_PRED_XDL_CASE
+
   case AMDGPU::S_MOV_B64_term:
     // This is only a terminator to get the correct spill code placement during
     // register allocation.
