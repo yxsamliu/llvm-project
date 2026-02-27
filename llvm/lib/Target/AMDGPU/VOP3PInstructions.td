@@ -2164,7 +2164,7 @@ defm F32_16X16X128_F8F6F4         : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16
 defm F32_16X16X128_F8F6F4_SCALE   : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/0, /*HasMatrixReuse=*/1>;
 defm F32_16X16X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/1, /*HasMatrixReuse=*/1>;
 
-let NegHiAny = 0 in {
+let NegHi0 = 0, NegHi1 = 0 in {
   defm F16_32X64X128_F8F6F4         : WMMA_F8F6F4_Profiles<f16, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/0, /*Scale16=*/0, /*HasMatrixReuse=*/0, /*PredXDLIdx=*/0>;
   defm F32_32X64X128_F8F6F4         : WMMA_F8F6F4_Profiles<f32, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/0, /*Scale16=*/0, /*HasMatrixReuse=*/0, /*PredXDLIdx=*/0>;
 
@@ -2173,7 +2173,7 @@ let NegHiAny = 0 in {
 
   defm F32_32X64X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<f32, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/1, /*HasMatrixReuse=*/1, /*PredXDLIdx=*/0>;
   defm F16_32X64X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<f16, /*M=*/32, /*N=*/64, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/1, /*HasMatrixReuse=*/1, /*PredXDLIdx=*/0>;
-} // NegHiAny = 0
+} // End NegHi0 = 0, NegHi1 = 0
 
 // WMMA Transpose instructions only have src0 (no src1/src2).
 class VOP3PWMMA_TR_Profile<ValueType SrcTy>
