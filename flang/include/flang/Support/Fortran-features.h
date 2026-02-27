@@ -53,10 +53,12 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
     UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram, PrintCptr,
     SavedLocalInSpecExpr, PrintNamelist, AssumedRankPassedToNonAssumedRank,
-    IgnoreIrrelevantAttributes, Unsigned, ContiguousOkForSeqAssociation,
-    ForwardRefExplicitTypeDummy, InaccessibleDeferredOverride,
-    CudaWarpMatchFunction, DoConcurrentOffload, TransferBOZ, Coarray,
-    PointerPassObject, MultipleIdenticalDATA)
+    IgnoreIrrelevantAttributes, Unsigned,
+    ContiguousOkForSeqAssociation, ForwardRefExplicitTypeDummy,
+    InaccessibleDeferredOverride,
+    AmdMemoryAllocator, CudaWarpMatchFunction,
+    DoConcurrentOffload, TransferBOZ, Coarray, PointerPassObject,
+    MultipleIdenticalDATA)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,

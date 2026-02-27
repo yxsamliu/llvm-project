@@ -5932,12 +5932,18 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_flat_prefetch:
     case Intrinsic::amdgcn_global_prefetch:
       return getDefaultMappingVOP(MI);
+<<<<<<< HEAD
     case Intrinsic::amdgcn_spatial_cluster_send_prev:
     case Intrinsic::amdgcn_spatial_cluster_send_next: {
       OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       OpdsMapping[4] = getSGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
       break;
     }
+=======
+    case Intrinsic::amdgcn_global_load_b128:
+    case Intrinsic::amdgcn_global_store_b128:
+      return getDefaultMappingAllVGPR(MI);
+>>>>>>> 774fb191e0ff8566005f198b310ad17518f827cc
     default:
       return getInvalidInstructionMapping();
     }

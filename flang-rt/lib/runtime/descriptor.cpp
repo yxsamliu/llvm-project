@@ -8,7 +8,9 @@
 
 #include "flang-rt/runtime/descriptor.h"
 #include "ISO_Fortran_util.h"
+#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
 #include "memory.h"
+#endif
 #include "flang-rt/runtime/allocator-registry.h"
 #include "flang-rt/runtime/derived.h"
 #include "flang-rt/runtime/stat.h"
@@ -27,7 +29,7 @@ RT_OFFLOAD_API_GROUP_BEGIN
 RT_API_ATTRS Descriptor::Descriptor(const Descriptor &that) { *this = that; }
 
 RT_API_ATTRS Descriptor &Descriptor::operator=(const Descriptor &that) {
-  runtime::memcpy(reinterpret_cast<void *>(this), &that, that.SizeInBytes());
+  runtime::memcpy(this, &that, that.SizeInBytes());
   return *this;
 }
 

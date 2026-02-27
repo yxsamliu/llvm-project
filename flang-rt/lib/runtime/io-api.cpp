@@ -31,7 +31,9 @@
 #include <memory>
 
 namespace Fortran::runtime::io {
+#ifdef RT_OFFLOAD_IO
 RT_EXT_API_GROUP_BEGIN
+#endif
 
 template <Direction DIR>
 RT_API_ATTRS Cookie BeginInternalArrayListIO(const Descriptor &descriptor,
@@ -197,12 +199,14 @@ RT_API_ATTRS Cookie BeginExternalFormattedIO(const char *format,
   }
 }
 
+#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
 Cookie IODEF(BeginExternalFormattedOutput)(const char *format,
     std::size_t formatLength, const Descriptor *formatDescriptor,
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   return BeginExternalFormattedIO<Direction::Output>(format, formatLength,
       formatDescriptor, unitNumber, sourceFile, sourceLine);
 }
+#endif
 
 Cookie IODEF(BeginExternalFormattedInput)(const char *format,
     std::size_t formatLength, const Descriptor *formatDescriptor,
@@ -1319,5 +1323,7 @@ enum Iostat IODEF(CheckUnitNumberInRange128)(common::int128_t unit,
 }
 #endif
 
+#ifdef RT_OFFLOAD_IO
 RT_EXT_API_GROUP_END
+#endif
 } // namespace Fortran::runtime::io
