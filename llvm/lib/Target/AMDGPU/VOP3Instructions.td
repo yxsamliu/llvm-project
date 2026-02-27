@@ -1913,7 +1913,7 @@ let SubtargetPredicate = HasPermPkU2U3Insts in {
 } // End SubtargetPredicate = HasPermPkU2U3Insts
 
 let SubtargetPredicate = HasE5M3ScaleInst, WaveSizePredicate = isWave32 in {
-  defm V_CVT_E5M3SCALE_PK8_FP4_F32 : VOP3Inst<"v_cvt_e5m3scale_pk8_fp4_f32", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8F32_F32>>;
+  defm V_CVT_E5M3SCALE_PK8_FP4_F32 : VOP3Inst<"v_cvt_e5m3scale_pk8_fp4_f32", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_I32_V8F32_F32>, int_amdgcn_cvt_e5m3scale_pk8_fp4_f32>;
 } // End SubtargetPredicate = HasE5M3ScaleInst, WaveSizePredicate = isWave32
 
 class Cvt_Scale_Sr_F32ToBF16F16_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType DstTy> : GCNPat<
