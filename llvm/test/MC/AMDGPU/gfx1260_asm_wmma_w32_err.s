@@ -14,7 +14,7 @@ v_wmma_bf16f32_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[192:255] clamp
 // GFX1260-ERR: :[[@LINE-1]]:70: error: invalid operand for instruction
 
 v_wmma_bf16f32_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[192:255] neg_hi:[1,0,0]
-// GFX1260-ERR: :[[@LINE-1]]:70: error: not a valid operand.
+// GFX1260-ERR: :[[@LINE-1]]:70: error: invalid neg_hi operand
 
 v_wmma_bf16f32_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[192:255] neg_lo:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:70: error: invalid neg_lo operand
@@ -32,7 +32,7 @@ v_wmma_f16_32x64x128_bf8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] clamp
 // GFX1260-ERR: :[[@LINE-1]]:70: error: invalid operand for instruction
 
 v_wmma_f16_32x64x128_bf8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] neg_hi:[1,0,0]
-// GFX1260-ERR: :[[@LINE-1]]:70: error: not a valid operand.
+// GFX1260-ERR: :[[@LINE-1]]:70: error: invalid neg_hi operand
 
 v_wmma_f16_32x64x128_bf8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] neg_lo:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:70: error: invalid neg_lo operand
@@ -53,7 +53,7 @@ v_wmma_f16_32x64x128_bf8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] clamp
 // GFX1260-ERR: :[[@LINE-1]]:70: error: invalid operand for instruction
 
 v_wmma_f16_32x64x128_bf8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] neg_hi:[1,0,0]
-// GFX1260-ERR: :[[@LINE-1]]:70: error: not a valid operand.
+// GFX1260-ERR: :[[@LINE-1]]:70: error: invalid neg_hi operand
 
 v_wmma_f16_32x64x128_bf8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] neg_lo:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:70: error: invalid neg_lo operand
@@ -74,7 +74,7 @@ v_wmma_f16_32x64x128_fp8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] clamp
 // GFX1260-ERR: :[[@LINE-1]]:70: error: invalid operand for instruction
 
 v_wmma_f16_32x64x128_fp8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] neg_hi:[1,0,0]
-// GFX1260-ERR: :[[@LINE-1]]:70: error: not a valid operand.
+// GFX1260-ERR: :[[@LINE-1]]:70: error: invalid neg_hi operand
 
 v_wmma_f16_32x64x128_fp8_bf8 v[0:31], v[32:63], v[192:255], v[64:95] neg_lo:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:70: error: invalid neg_lo operand
@@ -95,7 +95,7 @@ v_wmma_f16_32x64x128_fp8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] clamp
 // GFX1260-ERR: :[[@LINE-1]]:70: error: invalid operand for instruction
 
 v_wmma_f16_32x64x128_fp8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] neg_hi:[1,0,0]
-// GFX1260-ERR: :[[@LINE-1]]:70: error: not a valid operand.
+// GFX1260-ERR: :[[@LINE-1]]:70: error: invalid neg_hi operand
 
 v_wmma_f16_32x64x128_fp8_fp8 v[0:31], v[32:63], v[192:255], v[64:95] neg_lo:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:70: error: invalid neg_lo operand
@@ -116,7 +116,7 @@ v_wmma_f32_32x64x32_bf16 v[192:255], v[0:15], v[16:47], v[128:191] clamp
 // GFX1260-ERR: :[[@LINE-1]]:68: error: invalid operand for instruction
 
 v_wmma_f32_32x64x32_bf16 v[192:255], v[0:15], v[16:47], v[128:191] neg_hi:[1,0,0]
-// GFX1260-ERR: :[[@LINE-1]]:68: error: not a valid operand.
+// GFX1260-ERR: :[[@LINE-1]]:68: error: invalid neg_hi operand
 
 v_wmma_f32_32x64x32_bf16 v[192:255], v[0:15], v[16:47], v[128:191] neg_lo:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:68: error: invalid neg_lo operand
@@ -134,7 +134,7 @@ v_wmma_f32_32x64x32_f16 v[192:255], v[0:15], v[16:47], v[128:191] clamp
 // GFX1260-ERR: :[[@LINE-1]]:67: error: invalid operand for instruction
 
 v_wmma_f32_32x64x32_f16 v[192:255], v[0:15], v[16:47], v[128:191] neg_hi:[1,0,0]
-// GFX1260-ERR: :[[@LINE-1]]:67: error: not a valid operand.
+// GFX1260-ERR: :[[@LINE-1]]:67: error: invalid neg_hi operand
 
 v_wmma_f32_32x64x32_f16 v[192:255], v[0:15], v[16:47], v[128:191] neg_lo:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:67: error: invalid neg_lo operand
@@ -152,7 +152,7 @@ v_wmma_f32_32x64x128_bf8_bf8 v[0:63], v[64:95], v[192:255], v[128:191] clamp
 // GFX1260-ERR: :[[@LINE-1]]:72: error: invalid operand for instruction
 
 v_wmma_f32_32x64x128_bf8_bf8 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[1,0,0]
-// GFX1260-ERR: :[[@LINE-1]]:72: error: not a valid operand.
+// GFX1260-ERR: :[[@LINE-1]]:72: error: invalid neg_hi operand
 
 v_wmma_f32_32x64x128_bf8_bf8 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:72: error: invalid neg_lo operand
@@ -173,7 +173,7 @@ v_wmma_f32_32x64x128_fp8_fp8 v[0:63], v[64:95], v[192:255], v[128:191] clamp
 // GFX1260-ERR: :[[@LINE-1]]:72: error: invalid operand for instruction
 
 v_wmma_f32_32x64x128_fp8_fp8 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[1,0,0]
-// GFX1260-ERR: :[[@LINE-1]]:72: error: not a valid operand.
+// GFX1260-ERR: :[[@LINE-1]]:72: error: invalid neg_hi operand
 
 v_wmma_f32_32x64x128_fp8_fp8 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:72: error: invalid neg_lo operand
@@ -194,7 +194,7 @@ v_wmma_f32_32x64x128_fp8_bf8 v[0:63], v[64:95], v[192:255], v[128:191] clamp
 // GFX1260-ERR: :[[@LINE-1]]:72: error: invalid operand for instruction
 
 v_wmma_f32_32x64x128_fp8_bf8 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[1,0,0]
-// GFX1260-ERR: :[[@LINE-1]]:72: error: not a valid operand.
+// GFX1260-ERR: :[[@LINE-1]]:72: error: invalid neg_hi operand
 
 v_wmma_f32_32x64x128_fp8_bf8 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:72: error: invalid neg_lo operand
@@ -215,7 +215,7 @@ v_wmma_f32_32x64x128_bf8_fp8 v[0:63], v[64:95], v[192:255], v[128:191] clamp
 // GFX1260-ERR: :[[@LINE-1]]:72: error: invalid operand for instruction
 
 v_wmma_f32_32x64x128_bf8_fp8 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[1,0,0]
-// GFX1260-ERR: :[[@LINE-1]]:72: error: not a valid operand.
+// GFX1260-ERR: :[[@LINE-1]]:72: error: invalid neg_hi operand
 
 v_wmma_f32_32x64x128_bf8_fp8 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:72: error: invalid neg_lo operand
@@ -233,7 +233,7 @@ v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] clamp
 // GFX1260-ERR: :[[@LINE-1]]:66: error: invalid operand for instruction
 
 v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] neg_hi:[1,0,0]
-// GFX1260-ERR: :[[@LINE-1]]:66: error: not a valid operand.
+// GFX1260-ERR: :[[@LINE-1]]:66: error: invalid neg_hi operand
 
 v_wmma_bf16_32x64x32_bf16 v[0:31], v[32:47], v[48:79], v[80:111] neg_lo:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:66: error: invalid neg_lo operand
@@ -248,7 +248,7 @@ v_wmma_f16_32x64x32_f16 v[0:31], v[32:47], v[48:79], v[80:111] clamp
 // GFX1260-ERR: :[[@LINE-1]]:64: error: invalid operand for instruction
 
 v_wmma_f16_32x64x32_f16 v[0:31], v[32:47], v[48:79], v[80:111] neg_hi:[1,0,0]
-// GFX1260-ERR: :[[@LINE-1]]:64: error: not a valid operand.
+// GFX1260-ERR: :[[@LINE-1]]:64: error: invalid neg_hi operand
 
 v_wmma_f16_32x64x32_f16 v[0:31], v[32:47], v[48:79], v[80:111] neg_lo:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:64: error: invalid neg_lo operand
@@ -281,7 +281,7 @@ v_wmma_f16_32x64x256_f4 v[0:31], v[64:95], v[192:255], v[128:159] clamp
 // GFX1260-ERR: :[[@LINE-1]]:67: error: invalid operand for instruction
 
 v_wmma_f16_32x64x256_f4 v[0:31], v[64:95], v[192:255], v[128:159] neg_hi:[1,0,0]
-// GFX1260-ERR: :[[@LINE-1]]:67: error: not a valid operand.
+// GFX1260-ERR: :[[@LINE-1]]:67: error: invalid neg_hi operand
 
 v_wmma_f16_32x64x256_f4 v[0:31], v[64:95], v[192:255], v[128:159] neg_lo:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:67: error: invalid neg_lo operand
@@ -308,7 +308,7 @@ v_wmma_f32_32x64x256_f4 v[0:63], v[64:95], v[192:255], v[128:191] clamp
 // GFX1260-ERR: :[[@LINE-1]]:67: error: invalid operand for instruction
 
 v_wmma_f32_32x64x256_f4 v[0:63], v[64:95], v[192:255], v[128:191] neg_hi:[1,0,0]
-// GFX1260-ERR: :[[@LINE-1]]:67: error: not a valid operand.
+// GFX1260-ERR: :[[@LINE-1]]:67: error: invalid neg_hi operand
 
 v_wmma_f32_32x64x256_f4 v[0:63], v[64:95], v[192:255], v[128:191] neg_lo:[1,0,0]
 // GFX1260-ERR: :[[@LINE-1]]:67: error: invalid neg_lo operand

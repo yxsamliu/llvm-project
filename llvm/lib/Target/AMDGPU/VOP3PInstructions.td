@@ -2023,7 +2023,9 @@ class VOP3PWMMA_gfx1260_Profile<list<ValueType> ArgTy, bit IsSWMMAC, int IndexTy
                         HasMatrixFMT, HasMatrixScale, Scale16,
                         /*HasMatrixReuse=*/!if(!and(IsF4, !not(HasMatrixScale)), 0, 1), IsF4,
                         PredXDLIdx> {
-  let NegHiAny = 0; // NEG_HI is overloaded to convey the MREG settings.
+  // NEG_HI[1:0] is overloaded to convey the MREG settings.
+  let NegHi0 = 0;
+  let NegHi1 = 0;
 }
 
 def F16_32X64X32_F16_WMMA_w32       : VOP3PWMMA_gfx1260_Profile<[v64f16, v32f16, v64f16, v64f16],
@@ -2422,19 +2424,27 @@ multiclass WMMAPat<string Inst, SDPatternOperator node, VOP3PWMMA_Profile P, bit
 
 // Match legacy 6-operand intrinsics to pred_xdl-capable WMMA pseudos by
 // materializing pred_xdl as immediate 0 on the instruction side.
-multiclass WMMAPatDefaultPredXDL0<string Inst, SDPatternOperator node, VOP3PWMMA_Profile P> {
-  def : GCNPat <(P.DstVT !setdagop(!con(P.Src0InPat, P.Src1InPat, P.Src2InPatWmma, P.MatrixScaleInPat,
-                                        P.MatrixReuseInPat, P.ClampPat), node)),
-                (P.DstVT !setdagop(!con(P.Src0OutPat, P.Src1OutPat, P.Src2OutPatWmma, P.MatrixScaleOutSrcPat,
-                                        P.ClampPat, P.MatrixFMTOutPat, P.MatrixScaleOutModPat,
-                                        P.MatrixReuseOutModPat, (ins (i1 0))),
+multiclass WMMAPatDefaultPredXDL0<string Inst, SDPatternOperator node, string ProfileName> {
+  // P0 is the profile for the original gfx1250 version, and P1 is the profile for the gfx1260 version.
+  defvar P0 = !cast<VOP3PWMMA_Profile>(ProfileName#"_w32");
+  defvar P1 = !cast<VOP3PWMMA_Profile>(ProfileName#"_PRED_XDL_w32");
+  // When pred_xdl repurposes NEG[0], gfx1260 drops src0 modifiers in some cases. Match and ignore the legacy src0_mod
+  // immediate by keeping it unnamed on the input side.
+  defvar DropSrc0Mods = !and(P0.HasSrc0Mods, !not(P1.HasSrc0Mods));
+  defvar Src0InPat = !if(DropSrc0Mods, (ins timm, P0.Src0VT:$src0), P0.Src0InPat);
+  defvar Src0OutPat = !if(DropSrc0Mods, (ins P1.Src0VT:$src0), P1.Src0OutPat);
+  def : GCNPat <(P0.DstVT !setdagop(!con(Src0InPat, P0.Src1InPat, P0.Src2InPatWmma, P0.MatrixScaleInPat,
+                                         P0.MatrixReuseInPat, P0.ClampPat), node)),
+                (P1.DstVT !setdagop(!con(Src0OutPat, P1.Src1OutPat, P1.Src2OutPatWmma, P1.MatrixScaleOutSrcPat,
+                                         P1.ClampPat, P1.MatrixFMTOutPat, P1.MatrixScaleOutModPat,
+                                         P1.MatrixReuseOutModPat, (ins (i1 0))),
                                   !cast<Instruction>(Inst#"_twoaddr")))>;
   let AddedComplexity = 4 in
-  def : GCNPat <(P.DstVT !setdagop(!con(P.Src0InPat, P.Src1InPat, P.Src2InlineInPat, P.MatrixScaleInPat,
-                                        P.MatrixReuseInPat, P.ClampPat), node)),
-                (P.DstVT !setdagop(!con(P.Src0OutPat, P.Src1OutPat, P.Src2InlineOutPat, P.MatrixScaleOutSrcPat,
-                                        P.ClampPat, P.MatrixFMTOutPat, P.MatrixScaleOutModPat,
-                                        P.MatrixReuseOutModPat, (ins (i1 0))),
+  def : GCNPat <(P0.DstVT !setdagop(!con(Src0InPat, P0.Src1InPat, P0.Src2InlineInPat, P0.MatrixScaleInPat,
+                                         P0.MatrixReuseInPat, P0.ClampPat), node)),
+                (P1.DstVT !setdagop(!con(Src0OutPat, P1.Src1OutPat, P1.Src2InlineOutPat, P1.MatrixScaleOutSrcPat,
+                                         P1.ClampPat, P1.MatrixFMTOutPat, P1.MatrixScaleOutModPat,
+                                         P1.MatrixReuseOutModPat, (ins (i1 0))),
                                   !cast<Instruction>(Inst#"_threeaddr")))>;
 }
 
@@ -2532,29 +2542,29 @@ let OtherPredicates = [NotHasWMMAWithPredXDL] in {
 } // End OtherPredicates = [NotHasWMMAWithPredXDL]
 
 let OtherPredicates = [HasWMMAWithPredXDL] in {
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X32_BF16_gfx1260_w32",     int_amdgcn_wmma_f32_16x16x32_bf16,      F32_BF16X32_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_BF16_16X16X32_BF16_gfx1260_w32",    int_amdgcn_wmma_bf16_16x16x32_bf16,     BF16_BF16X32_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_BF16F32_16X16X32_BF16_gfx1260_w32", int_amdgcn_wmma_bf16f32_16x16x32_bf16,  BF16F32_BF16_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X64_FP8_FP8_gfx1260_w32",  int_amdgcn_wmma_f32_16x16x64_fp8_fp8,   F32_FP8BF8X64_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X64_FP8_BF8_gfx1260_w32",  int_amdgcn_wmma_f32_16x16x64_fp8_bf8,   F32_FP8BF8X64_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X64_BF8_FP8_gfx1260_w32",  int_amdgcn_wmma_f32_16x16x64_bf8_fp8,   F32_FP8BF8X64_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X64_BF8_BF8_gfx1260_w32",  int_amdgcn_wmma_f32_16x16x64_bf8_bf8,   F32_FP8BF8X64_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F16_16X16X64_FP8_FP8_gfx1260_w32",  int_amdgcn_wmma_f16_16x16x64_fp8_fp8,   F16_FP8BF8X64_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F16_16X16X64_FP8_BF8_gfx1260_w32",  int_amdgcn_wmma_f16_16x16x64_fp8_bf8,   F16_FP8BF8X64_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F16_16X16X64_BF8_FP8_gfx1260_w32",  int_amdgcn_wmma_f16_16x16x64_bf8_fp8,   F16_FP8BF8X64_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F16_16X16X64_BF8_BF8_gfx1260_w32",  int_amdgcn_wmma_f16_16x16x64_bf8_bf8,   F16_FP8BF8X64_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_I32_16X16X64_IU8_gfx1260_w32",      int_amdgcn_wmma_i32_16x16x64_iu8,       I32_IU8X64_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X32_F16_gfx1260_w32",      int_amdgcn_wmma_f32_16x16x32_f16,       F32_F16X32_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F16_16X16X32_F16_gfx1260_w32",      int_amdgcn_wmma_f16_16x16x32_f16,       F16_F16X32_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F16_16X16X128_FP8_FP8_gfx1260_w32", int_amdgcn_wmma_f16_16x16x128_fp8_fp8,  F16_FP8BF8X128_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F16_16X16X128_FP8_BF8_gfx1260_w32", int_amdgcn_wmma_f16_16x16x128_fp8_bf8,  F16_FP8BF8X128_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F16_16X16X128_BF8_FP8_gfx1260_w32", int_amdgcn_wmma_f16_16x16x128_bf8_fp8,  F16_FP8BF8X128_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F16_16X16X128_BF8_BF8_gfx1260_w32", int_amdgcn_wmma_f16_16x16x128_bf8_bf8,  F16_FP8BF8X128_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X128_FP8_FP8_gfx1260_w32", int_amdgcn_wmma_f32_16x16x128_fp8_fp8,  F32_FP8BF8X128_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X128_FP8_BF8_gfx1260_w32", int_amdgcn_wmma_f32_16x16x128_fp8_bf8,  F32_FP8BF8X128_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X128_BF8_FP8_gfx1260_w32", int_amdgcn_wmma_f32_16x16x128_bf8_fp8,  F32_FP8BF8X128_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X128_BF8_BF8_gfx1260_w32", int_amdgcn_wmma_f32_16x16x128_bf8_bf8,  F32_FP8BF8X128_WMMA_PRED_XDL_w32>;
-  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_32X16X128_F4_gfx1260_w32",      int_amdgcn_wmma_f32_32x16x128_f4,       F32_32X16X128_F4_WMMA_PRED_XDL_w32>;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X32_BF16_gfx1260_w32",     int_amdgcn_wmma_f32_16x16x32_bf16,      "F32_BF16X32_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_BF16_16X16X32_BF16_gfx1260_w32",    int_amdgcn_wmma_bf16_16x16x32_bf16,     "BF16_BF16X32_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_BF16F32_16X16X32_BF16_gfx1260_w32", int_amdgcn_wmma_bf16f32_16x16x32_bf16,  "BF16F32_BF16_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X64_FP8_FP8_gfx1260_w32",  int_amdgcn_wmma_f32_16x16x64_fp8_fp8,   "F32_FP8BF8X64_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X64_FP8_BF8_gfx1260_w32",  int_amdgcn_wmma_f32_16x16x64_fp8_bf8,   "F32_FP8BF8X64_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X64_BF8_FP8_gfx1260_w32",  int_amdgcn_wmma_f32_16x16x64_bf8_fp8,   "F32_FP8BF8X64_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X64_BF8_BF8_gfx1260_w32",  int_amdgcn_wmma_f32_16x16x64_bf8_bf8,   "F32_FP8BF8X64_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F16_16X16X64_FP8_FP8_gfx1260_w32",  int_amdgcn_wmma_f16_16x16x64_fp8_fp8,   "F16_FP8BF8X64_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F16_16X16X64_FP8_BF8_gfx1260_w32",  int_amdgcn_wmma_f16_16x16x64_fp8_bf8,   "F16_FP8BF8X64_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F16_16X16X64_BF8_FP8_gfx1260_w32",  int_amdgcn_wmma_f16_16x16x64_bf8_fp8,   "F16_FP8BF8X64_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F16_16X16X64_BF8_BF8_gfx1260_w32",  int_amdgcn_wmma_f16_16x16x64_bf8_bf8,   "F16_FP8BF8X64_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_I32_16X16X64_IU8_gfx1260_w32",      int_amdgcn_wmma_i32_16x16x64_iu8,       "I32_IU8X64_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X32_F16_gfx1260_w32",      int_amdgcn_wmma_f32_16x16x32_f16,       "F32_F16X32_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F16_16X16X32_F16_gfx1260_w32",      int_amdgcn_wmma_f16_16x16x32_f16,       "F16_F16X32_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F16_16X16X128_FP8_FP8_gfx1260_w32", int_amdgcn_wmma_f16_16x16x128_fp8_fp8,  "F16_FP8BF8X128_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F16_16X16X128_FP8_BF8_gfx1260_w32", int_amdgcn_wmma_f16_16x16x128_fp8_bf8,  "F16_FP8BF8X128_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F16_16X16X128_BF8_FP8_gfx1260_w32", int_amdgcn_wmma_f16_16x16x128_bf8_fp8,  "F16_FP8BF8X128_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F16_16X16X128_BF8_BF8_gfx1260_w32", int_amdgcn_wmma_f16_16x16x128_bf8_bf8,  "F16_FP8BF8X128_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X128_FP8_FP8_gfx1260_w32", int_amdgcn_wmma_f32_16x16x128_fp8_fp8,  "F32_FP8BF8X128_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X128_FP8_BF8_gfx1260_w32", int_amdgcn_wmma_f32_16x16x128_fp8_bf8,  "F32_FP8BF8X128_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X128_BF8_FP8_gfx1260_w32", int_amdgcn_wmma_f32_16x16x128_bf8_fp8,  "F32_FP8BF8X128_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_16X16X128_BF8_BF8_gfx1260_w32", int_amdgcn_wmma_f32_16x16x128_bf8_bf8,  "F32_FP8BF8X128_WMMA">;
+  defm : WMMAPatDefaultPredXDL0<"V_WMMA_F32_32X16X128_F4_gfx1260_w32",      int_amdgcn_wmma_f32_32x16x128_f4,       "F32_32X16X128_F4_WMMA">;
 } // End OtherPredicates = [HasWMMAWithPredXDL]
 
   defm : WMMAPat<"V_WMMA_SCALE_F32_32X16X128_F4_w32",   int_amdgcn_wmma_scale_f32_32x16x128_f4,   F32_32X16X128_F4_SCALE_w32>;
