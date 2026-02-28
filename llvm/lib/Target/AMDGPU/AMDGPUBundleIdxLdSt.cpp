@@ -21,7 +21,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUMachineInstrs.h"
 #include "AMDGPUResourceUsageAnalysis.h"
-#include "AMDGPUVGPRIndexingAnalysis.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
@@ -158,6 +157,8 @@ class AMDGPUBundleIdxLdSt : public MachineFunctionPass {
 
     // Operands of MI that are to be bundled, in no particular order.
     SmallVector<Operand, 8> BundledOps;
+    // Operands of MI that need to be marked as not killed.
+    SmallVector<MachineOperand *, 8> OpsToUnmarkKill;
   };
 
 public:
@@ -187,8 +188,9 @@ private:
   bool sinkInstruction(MachineInstr &MI, bool &SawStore);
   bool sinkLoadsAndCoreMIs(MachineFunction &MF);
   void lowerLanesharedPseudoInst(MachineInstr &MI);
-  void lowerLoadIdxBits(MachineInstr &MI);
-  void lowerStoreIdxBits(MachineInstr &MI);
+  void lowerBlockLoadMCastLanesharedPseudoInst(MachineInstr &MI);
+  void lowerLoadIdxBits(MachineInstr &MI, bool IsD16);
+  void lowerStoreIdxBits(MachineInstr &MI, bool IsD16);
   bool expandPseudoInstructions(MachineFunction &MF, bool &HaveLoadStoreIdx);
   SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>, 4>
   findSuccsToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB);
@@ -866,7 +868,8 @@ bool AMDGPUBundleIdxLdSt::sinkLoadsAndCoreMIs(MachineFunction &MF) {
 }
 
 // This lowering puts the value into the lo16 bits of a private VGPR.
-void AMDGPUBundleIdxLdSt::lowerLoadIdxBits(MachineInstr &MI) {
+// For D16, extract a 16-bit register
+void AMDGPUBundleIdxLdSt::lowerLoadIdxBits(MachineInstr &MI, bool IsD16) {
   MachineBasicBlock *MBB = MI.getParent();
 
   const bool IsSigned = MI.getOperand(5).getImm() != 0;
@@ -881,17 +884,31 @@ void AMDGPUBundleIdxLdSt::lowerLoadIdxBits(MachineInstr &MI) {
                      .add(MI.getOperand(2)); // offset
   auto *LoadMMO = *MI.memoperands_begin();
   LoadMIB.addMemOperand(LoadMMO);
+  Register DataReg = MI.getOperand(0).getReg();
 
-  BuildMI(*MBB, MI, MI.getDebugLoc(), II, MI.getOperand(0).getReg())
-      .addReg(ReadReg)
-      .add(MI.getOperand(4))  // bitoffset
-      .add(MI.getOperand(3)); // bitsize
+  if (IsD16) {
+    assert(TRI->getRegSizeInBits(DataReg, *MRI) == 16 &&
+           "Expected 16-bit data register");
+    Register TmpReg = MRI->createVirtualRegister(
+        TRI->getAllocatableClass(TII->getRegClass(II, 0)));
+    BuildMI(*MBB, MI, MI.getDebugLoc(), II, TmpReg)
+        .addReg(ReadReg)
+        .add(MI.getOperand(4))  // bitoffset
+        .add(MI.getOperand(3)); // bitsize
+    BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY), DataReg)
+        .addReg(TmpReg, {}, AMDGPU::lo16);
+  } else {
+    BuildMI(*MBB, MI, MI.getDebugLoc(), II, DataReg)
+        .addReg(ReadReg)
+        .add(MI.getOperand(4))  // bitoffset
+        .add(MI.getOperand(3)); // bitsize
+  }
 
   LLVM_DEBUG(dbgs() << " *** Expanded pseudo: "; MI.print(dbgs()));
   MI.eraseFromParent();
 }
 
-void AMDGPUBundleIdxLdSt::lowerStoreIdxBits(MachineInstr &MI) {
+void AMDGPUBundleIdxLdSt::lowerStoreIdxBits(MachineInstr &MI, bool IsD16) {
   MachineBasicBlock *MBB = MI.getParent();
   MachineFunction *MF = MBB->getParent();
 
@@ -918,22 +935,89 @@ void AMDGPUBundleIdxLdSt::lowerStoreIdxBits(MachineInstr &MI) {
   MachineMemOperand *LoadMMO = MF->getMachineMemOperand(StoreMMO, NewFlags);
   LoadMIB.addMemOperand(LoadMMO);
 
+  Register DataReg = MI.getOperand(0).getReg();
+  Register ExpandReg = DataReg;
+  if (IsD16) {
+    // Put the 16-bit data_op in a 32-bit register.
+    assert(TRI->getRegSizeInBits(DataReg, *MRI) == 16 &&
+           "Expected 16-bit data register");
+    ExpandReg = MRI->createVirtualRegister(
+        TRI->getAllocatableClass(TII->getRegClass(II, 2)));
+    Register Undef = MRI->createVirtualRegister(&AMDGPU::VGPR_16RegClass);
+    BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::REG_SEQUENCE),
+            ExpandReg)
+        .addReg(DataReg)
+        .addImm(AMDGPU::lo16)
+        .addReg(Undef, RegState::Undef)
+        .addImm(AMDGPU::hi16);
+  }
+
   Register WriteReg = MRI->createVirtualRegister(
       TRI->getAllocatableClass(TII->getRegClass(II, 0)));
-
   // BFI
   auto CoreMIB = BuildMI(*MBB, MI, MI.getDebugLoc(), II, WriteReg);
   CoreMIB.addReg(MaskReg);
-  CoreMIB.addReg(MI.getOperand(0).getReg()); // data_op
+  CoreMIB.addReg(ExpandReg);
   CoreMIB.addReg(ReadReg);
 
   // V_STORE_IDX
   auto StoreMIB = BuildMI(*MBB, MI, MI.getDebugLoc(),
                           TII->get(AMDGPU::V_STORE_IDX_B32))
-                      .addReg(WriteReg)       // data
+                      .addReg(WriteReg)
                       .add(MI.getOperand(1))  // idx
                       .add(MI.getOperand(2)); // offset
   StoreMIB.addMemOperand(StoreMMO);
+
+  LLVM_DEBUG(dbgs() << " *** Expanded pseudo: "; MI.print(dbgs()));
+  MI.eraseFromParent();
+}
+
+// Lower block load mcast pseudo instruction to another pseudo and V_STORE_IDX
+void
+AMDGPUBundleIdxLdSt::lowerBlockLoadMCastLanesharedPseudoInst(MachineInstr &MI) {
+  MachineBasicBlock *MBB = MI.getParent();
+  MachineFunction *MF = MBB->getParent();
+
+  unsigned Opc, DstSize;
+  switch (MI.getOpcode()) {
+  case AMDGPU::DS_BLOCK_LOAD_MCAST_B128_LANESHARED:
+    DstSize = 128;
+    Opc = AMDGPU::DS_BLOCK_LOAD_MCAST_B128;
+    break;
+  case AMDGPU::DS_BLOCK_LOAD_MCAST_B256_LANESHARED:
+    DstSize = 256;
+    Opc = AMDGPU::DS_BLOCK_LOAD_MCAST_B256;
+    break;
+  case AMDGPU::DS_BLOCK_LOAD_MCAST_B512_LANESHARED:
+    DstSize = 512;
+    Opc = AMDGPU::DS_BLOCK_LOAD_MCAST_B512;
+    break;
+  case AMDGPU::DS_BLOCK_LOAD_MCAST_B1024_LANESHARED:
+    DstSize = 1024;
+    Opc = AMDGPU::DS_BLOCK_LOAD_MCAST_B1024;
+    break;
+  default:
+    llvm_unreachable("Unknown DS block load mcast instruction!");
+  }
+
+  const MCInstrDesc &II = TII->get(Opc);
+  Register DstReg = MRI->createVirtualRegister(
+      TRI->getAllocatableClass(TII->getRegClass(II, 0)));
+  BuildMI(*MBB, MI, MI.getDebugLoc(), II, DstReg)
+      .add(MI.getOperand(0))  // L#
+      .add(MI.getOperand(1))  // LDS address offset
+      .add(MI.getOperand(2)); // gds bit
+
+  MachinePointerInfo StorePtrI(AMDGPUAS::LANE_SHARED);
+  MachineMemOperand *StoreMMO =
+      MF->getMachineMemOperand(StorePtrI, MachineMemOperand::MOStore,
+                               LocationSize::precise(4), Align(4));
+  unsigned StIdxOpc = AMDGPUMI::VStoreIdxInst::getOpcodeForBitWidth(DstSize);
+  BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(StIdxOpc))
+      .addReg(DstReg)        // data
+      .add(MI.getOperand(3)) // idx
+      .add(MI.getOperand(4)) // offset
+      .addMemOperand(StoreMMO);
 
   LLVM_DEBUG(dbgs() << " *** Expanded pseudo: "; MI.print(dbgs()));
   MI.eraseFromParent();
@@ -943,6 +1027,7 @@ void AMDGPUBundleIdxLdSt::lowerStoreIdxBits(MachineInstr &MI) {
 void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
   MachineBasicBlock *MBB = MI.getParent();
   MachineFunction *MF = MBB->getParent();
+  MachineMemOperand *StoreMMO = nullptr;
   unsigned Opc = 0;
   bool Loads = true;
   unsigned NumStores = 1;
@@ -951,14 +1036,17 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
     Opc = AMDGPU::V_SEND_VGPR_NEXT_B32;
     NumStores = 2;
     Loads = false;
+    StoreMMO = *MI.memoperands_begin();
     break;
   }
   case AMDGPU::V_SEND_VGPR_PREV_B32_LANESHARED: {
     Opc = AMDGPU::V_SEND_VGPR_PREV_B32;
     NumStores = 2;
     Loads = false;
+    StoreMMO = *MI.memoperands_begin();
     break;
   }
+  // TODO-GFX13: Add pre-existing StoreMMOs
   case AMDGPU::CLUSTER_LOAD_B32_LANESHARED:
     Opc = AMDGPU::CLUSTER_LOAD_B32;
     break;
@@ -1004,6 +1092,12 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
   case AMDGPU::DS_LOAD_MCAST_B128_LANESHARED:
     Opc = AMDGPU::DS_LOAD_MCAST_B128;
     break;
+  case AMDGPU::DS_BLOCK_LOAD_MCAST_B128_LANESHARED:
+  case AMDGPU::DS_BLOCK_LOAD_MCAST_B256_LANESHARED:
+  case AMDGPU::DS_BLOCK_LOAD_MCAST_B512_LANESHARED:
+  case AMDGPU::DS_BLOCK_LOAD_MCAST_B1024_LANESHARED:
+    lowerBlockLoadMCastLanesharedPseudoInst(MI);
+    return;
   default:
     return;
   }
@@ -1045,10 +1139,13 @@ void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
             .add(MI.getOperand(NumMIOps - (2 + 2 * I)))  // idx
             .add(MI.getOperand(NumMIOps - (1 + 2 * I))); // offset
 
-    // Synthesize MMO for V_STORE_IDX.
-    MachinePointerInfo StorePtrI = MachinePointerInfo(AMDGPUAS::LANE_SHARED);
-    MachineMemOperand *StoreMMO =
-        MF->getMachineMemOperand(StorePtrI, StoreFlags, Size, BaseAlign);
+    // Ideally use a pre-existing StoreMMO, if not synthesize here.
+    if (!StoreMMO) {
+      MachinePointerInfo StorePtrI(AMDGPUAS::LANE_SHARED);
+      StoreMMO =
+          MF->getMachineMemOperand(StorePtrI, StoreFlags, Size, BaseAlign);
+    }
+
     StoreMIB.addMemOperand(StoreMMO);
     Stores.push_back(StoreMIB);
   }
@@ -1075,12 +1172,22 @@ bool AMDGPUBundleIdxLdSt::expandPseudoInstructions(MachineFunction &MF,
       }
       if (MI.getOpcode() == AMDGPU::V_LOAD_IDX_BITS) {
         Changed = true;
-        lowerLoadIdxBits(MI);
+        lowerLoadIdxBits(MI, false);
+        continue;
+      }
+      if (MI.getOpcode() == AMDGPU::V_LOAD_IDX_BITS_D16) {
+        Changed = true;
+        lowerLoadIdxBits(MI, true);
         continue;
       }
       if (MI.getOpcode() == AMDGPU::V_STORE_IDX_BITS) {
         Changed = true;
-        lowerStoreIdxBits(MI);
+        lowerStoreIdxBits(MI, false);
+        continue;
+      }
+      if (MI.getOpcode() == AMDGPU::V_STORE_IDX_BITS_D16) {
+        Changed = true;
+        lowerStoreIdxBits(MI, true);
         continue;
       }
       if (isa<AMDGPUMI::VLoadStoreIdxInst>(MI))
@@ -1228,11 +1335,13 @@ bool AMDGPUBundleIdxLdSt::analyze(BundlingInfo &BI) {
     auto *LoadMI = dyn_cast<AMDGPUMI::VLoadIdxInst>(MRI->getVRegDef(UseReg));
     if (!LoadMI || LoadMI->getParent() != MBB)
       continue;
+    // Unset kill hints since LoadStore MIs could be completely reorderded.
+    BI.OpsToUnmarkKill.push_back(&LoadMI->getIdxOp());
 
     // Check that we can sink the load to MI
     bool MayAlias = false;
-    for (auto II = LoadMI->getNextNode()->getIterator(); &*II != MI; ++II) {
-      if (II->hasOrderedMemoryRef() || LoadMI->mayAlias(AA, *II, true)) {
+    for (auto II = ++MachineBasicBlock::iterator(LoadMI); &*II != MI; ++II) {
+      if ((II->hasOrderedMemoryRef() || LoadMI->mayAlias(AA, *II, true))) {
         LLVM_DEBUG(dbgs() << "***Sinking conflict: \n\tLoadMI: ";
                    LoadMI->print(dbgs()); dbgs() << "\twith: ";
                    II->print(dbgs()));
@@ -1436,7 +1545,12 @@ bool AMDGPUBundleIdxLdSt::analyze(BundlingInfo &BI) {
 bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *OrigMI) {
   BundlingInfo BI;
   BI.MI = OrigMI;
-  if (!analyze(BI))
+  bool WillBundle = analyze(BI);
+  // Clear any kill flags that may become incorrect when other bundles get
+  // committed.
+  for (MachineOperand *&Op : BI.OpsToUnmarkKill)
+    Op->setIsKill(false);
+  if (!WillBundle)
     return false;
 
   MachineInstr *MI = BI.MI;
@@ -1456,7 +1570,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *OrigMI) {
         TRI->getSubRegisterClass(SuperRC, MO.getSubReg());
     Register Tmp = MRI->createVirtualRegister(SubRC);
     BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::COPY), Tmp)
-        .addUse(MO.getReg(), 0, MO.getSubReg());
+        .addUse(MO.getReg(), {}, MO.getSubReg());
     MO.setReg(Tmp);
     MO.setSubReg(0);
   }

@@ -4,7 +4,7 @@
 define amdgpu_ps void @test_wmma_f32_16x16x16_fp8_fp8_clamp(<8 x i32> %A, <8 x i32> %B, <8 x float> %C, i32 %scaleA, i32 %scaleB, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_wmma_f32_16x16x16_fp8_fp8_clamp:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_wmma_f32_16x16_f8f6f4 v[16:23], v[0:7], v[8:15], v[16:23], v24, v25 aux_data:1152 clamp
+; GFX13-NEXT:    v_wmma_f32_16x16_f8f6f4 v[16:23], v[0:7], v[8:15], v[16:23], v24, v25 k:64 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp
 ; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    global_store_b128 v[26:27], v[20:23], off offset:16
 ; GFX13-NEXT:    global_store_b128 v[26:27], v[16:19], off
@@ -22,7 +22,7 @@ bb:
 define amdgpu_ps void @test_wmma_f32_16x16x16_fp8_fp8_clamp_inline(<8 x i32> %A, <8 x i32> %B, i32 %scaleA, i32 %scaleB, ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_wmma_f32_16x16x16_fp8_fp8_clamp_inline:
 ; GFX13:       ; %bb.0: ; %bb
-; GFX13-NEXT:    v_wmma_f32_16x16_f8f6f4 v[20:27], v[0:7], v[8:15], 0, v16, v17 aux_data:1152 clamp
+; GFX13-NEXT:    v_wmma_f32_16x16_f8f6f4 v[20:27], v[0:7], v[8:15], 0, v16, v17 k:64 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp
 ; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    global_store_b128 v[18:19], v[24:27], off offset:16
 ; GFX13-NEXT:    global_store_b128 v[18:19], v[20:23], off

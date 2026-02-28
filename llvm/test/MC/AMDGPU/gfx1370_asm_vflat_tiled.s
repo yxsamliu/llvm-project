@@ -6,3 +6,35 @@
 global_tiled_load_2x2_b128 v[1:4], v0, s[0:1]
 // GFX1370: global_tiled_load_2x2_b128 v[1:4], v0, s[0:1] ; encoding: [0x00,0x00,0x2f,0xee,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
 // GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_tiled_load_mcast_half_b64 v1, v0, s[0:1]
+// GFX1370: global_tiled_load_mcast_half_b64 v1, v0, s[0:1] ; encoding: [0x00,0x80,0x2f,0xee,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_tiled_load_mcast_b64 v[1:2], v0, s[0:1]
+// GFX1370: global_tiled_load_mcast_b64 v[1:2], v0, s[0:1] ; encoding: [0x00,0xc0,0x2f,0xee,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_tiled_load_mcast_b128 v[1:4], v0, s[0:1]
+// GFX1370: global_tiled_load_mcast_b128 v[1:4], v0, s[0:1] ; encoding: [0x00,0x00,0x30,0xee,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_tiled_load_mcast_2x2_b128 v[1:4], v0, s[0:1]
+// GFX1370: global_tiled_load_mcast_2x2_b128 v[1:4], v0, s[0:1] ; encoding: [0x00,0x40,0x2f,0xee,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_load_mcast_tr4_b64 v[1:2], v0, s[0:1]
+// GFX1370: global_load_mcast_tr4_b64 v[1:2], v0, s[0:1] ; encoding: [0x00,0xc0,0x30,0xee,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_load_mcast_tr6_b96 v[1:3], v0, s[0:1]
+// GFX1370: global_load_mcast_tr6_b96 v[1:3], v0, s[0:1] ; encoding: [0x00,0x00,0x31,0xee,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_load_mcast_tr8_b64 v[1:2], v0, s[0:1]
+// GFX1370: global_load_mcast_tr8_b64 v[1:2], v0, s[0:1] ; encoding: [0x00,0x80,0x30,0xee,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+global_load_mcast_tr16_b128 v[1:4], v0, s[0:1]
+// GFX1370: global_load_mcast_tr16_b128 v[1:4], v0, s[0:1] ; encoding: [0x00,0x40,0x30,0xee,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32

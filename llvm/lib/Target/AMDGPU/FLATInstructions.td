@@ -363,9 +363,9 @@ multiclass Load_LANESHARED<string opName, RegisterOperand regClass,
 }
 
 multiclass Cluster_Load<string opName, RegisterOperand regClass, bit HasTiedInput = 0> {
-  let SubtargetPredicate = isGFX1250Plus in
+  let SubtargetPredicate = HasMcastLoadInsts in
     defm "" : FLAT_Global_Load_Pseudo<opName, regClass, HasTiedInput>;
-  let SubtargetPredicate = isGFX13Plus in
+  let SubtargetPredicate = HasWavegroupMcastLoadInsts in
     defm "" : Load_LANESHARED<opName, regClass, HasTiedInput>;
 }
 
@@ -1458,7 +1458,7 @@ let SubtargetPredicate = isGFX12Plus in {
   def GLOBAL_WBINV  : FLAT_Global_Invalidate_Writeback<"global_wbinv">;
 } // End SubtargetPredicate = isGFX12Plus
 
-let SubtargetPredicate = isGFX1250Plus in {
+let SubtargetPredicate = HasMcastLoadInsts in {
 
 let Uses = [M0, EXEC, ASYNCcnt], WaveSizePredicate = isWave32 in {
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B8      :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b8",   1>;
@@ -1477,7 +1477,7 @@ defm GLOBAL_STORE_ASYNC_FROM_LDS_B128  :  FLAT_Global_STORE_LDS_Pseudo<"global_s
 
 def TENSOR_SAVE : FLAT_Global_Tensor_Pseudo<"tensor_save", 1>;
 def TENSOR_STOP : FLAT_Global_Tensor_Pseudo<"tensor_stop">;
-} // End SubtargetPredicate = isGFX1250Plus
+} // End SubtargetPredicate = HasMcastLoadInsts
 
 // may apply CustomInsert to convert into V_LOAD_IDX and V_STORE_IDX
 // Every instruction which may be used to represent a dynamic load/store must
@@ -1565,10 +1565,10 @@ let SubtargetPredicate = isGFX12Plus in {
     defm SCRATCH_STORE_BLOCK : FLAT_Scratch_Store_Pseudo <"scratch_store_block", VGPROp_1024>;
   }
 
-  let WaveSizePredicate = isWave32 in {
+  let WaveSizePredicate = isWave32, OtherPredicates = [NotHasTileShapedTransposeInsts] in {
     defm GLOBAL_LOAD_TR_B128_w32  : FLAT_Global_Load_Pseudo <"global_load_tr_b128", VGPROp_128>;
     defm GLOBAL_LOAD_TR_B64_w32   : FLAT_Global_Load_Pseudo <"global_load_tr_b64", VGPROp_64>;
-  }
+  } // End WaveSizePredicate = isWave32, OtherPredicates = [NotHasTileShapedTransposeInsts]
 } // End SubtargetPredicate = isGFX12Plus
 
 let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot12_50 in {
@@ -1578,10 +1578,29 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot12_50 in {
   defm GLOBAL_LOAD_TR_B64_w64   : FLAT_Global_Load_Pseudo <"global_load_tr_b64_w64", VGPROp_32>;
 }
 
-let WaveSizePredicate = isWave32, SubtargetPredicate = HasTransposeLoadF4F6Insts in {
+let WaveSizePredicate = isWave32, OtherPredicates = [NotHasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts] in {
   defm GLOBAL_LOAD_TR6_B96 : FLAT_Global_Load_Pseudo <"global_load_tr6_b96", VGPROp_96_Align1>;
   defm GLOBAL_LOAD_TR4_B64 : FLAT_Global_Load_Pseudo <"global_load_tr4_b64", VGPROp_64>;
-}
+} // End WaveSizePredicate = isWave32, OtherPredicates = [NotHasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts]
+
+let WaveSizePredicate = isWave32, Uses = [M0, EXEC], OtherPredicates = [HasTransposeMcastLoadInsts] in {
+  defm GLOBAL_LOAD_MCAST_TR4_B64  : FLAT_Global_Load_Pseudo <"global_load_mcast_tr4_b64", VGPROp_64>;
+  defm GLOBAL_LOAD_MCAST_TR6_B96  : FLAT_Global_Load_Pseudo <"global_load_mcast_tr6_b96", VGPROp_96_Align1>;
+  defm GLOBAL_LOAD_MCAST_TR8_B64  : FLAT_Global_Load_Pseudo <"global_load_mcast_tr8_b64", VGPROp_64>;
+  defm GLOBAL_LOAD_MCAST_TR16_B128 : FLAT_Global_Load_Pseudo <"global_load_mcast_tr16_b128", VGPROp_128>;
+} // End WaveSizePredicate = isWave32, OtherPredicates = [HasTransposeMcastLoadInsts]
+
+let WaveSizePredicate = isWave32, SubtargetPredicate = HasTileShapedTransposeInsts in {
+  let OtherPredicates = [HasTransposeLoadF4F6Insts] in {
+    defm GLOBAL_LOAD_TR4_16X32_B64  : FLAT_Global_Load_Pseudo <"global_load_tr4_16x32_b64", VGPROp_64>;
+    defm GLOBAL_LOAD_TR4_32X32_B128 : FLAT_Global_Load_Pseudo <"global_load_tr4_32x32_b128", VGPROp_128>;
+    defm GLOBAL_LOAD_TR6_16X32_B96  : FLAT_Global_Load_Pseudo <"global_load_tr6_16x32_b96", VGPROp_96_Align1>;
+  } // End OtherPredicates = [HasTransposeLoadF4F6Insts]
+  defm GLOBAL_LOAD_TR8_16X16_B64    : FLAT_Global_Load_Pseudo <"global_load_tr8_16x16_b64", VGPROp_64>;
+  defm GLOBAL_LOAD_TR8_16X32_B128   : FLAT_Global_Load_Pseudo <"global_load_tr8_16x32_b128", VGPROp_128>;
+  defm GLOBAL_LOAD_TR16_16X16_B128  : FLAT_Global_Load_Pseudo <"global_load_tr16_16x16_b128", VGPROp_128>;
+  defm GLOBAL_LOAD_TR16_8X32_B128   : FLAT_Global_Load_Pseudo <"global_load_tr16_8x32_b128", VGPROp_128>;
+} // End WaveSizePredicate = isWave32, SubtargetPredicate = HasTileShapedTransposeInsts.
 
 let SubtargetPredicate = isGFX10Plus in {
   defm GLOBAL_ATOMIC_FCMPSWAP :
@@ -1665,8 +1684,15 @@ let SubtargetPredicate = isGFX13Plus in {
   defm GLOBAL_TILED_STORE_VST2_B128      : FLAT_Global_Store_Pseudo<"global_tiled_store_vst2_b128", AVLdSt_224>;
 
   let OtherPredicates = [HasGlobalTiledLoads2x2] in {
-    defm GLOBAL_TILED_LOAD_2x2_B128 : FLAT_Global_Load_Pseudo<"global_tiled_load_2x2_b128", AVLdSt_128>;
+    defm GLOBAL_TILED_LOAD_2X2_B128 : FLAT_Global_Load_Pseudo<"global_tiled_load_2x2_b128", AVLdSt_128>;
   } // end let OtherPredicates = [HasGlobalTiledLoads2x2]
+
+  let Uses = [M0, EXEC], OtherPredicates = [HasGlobalTiledLoadMcast] in {
+    defm GLOBAL_TILED_LOAD_MCAST_2X2_B128 : FLAT_Global_Load_Pseudo<"global_tiled_load_mcast_2x2_b128", AVLdSt_128>;
+    defm GLOBAL_TILED_LOAD_MCAST_HALF_B64 : FLAT_Global_Load_Pseudo<"global_tiled_load_mcast_half_b64">;
+    defm GLOBAL_TILED_LOAD_MCAST_B64      : FLAT_Global_Load_Pseudo<"global_tiled_load_mcast_b64", AVLdSt_64>;
+    defm GLOBAL_TILED_LOAD_MCAST_B128     : FLAT_Global_Load_Pseudo<"global_tiled_load_mcast_b128", AVLdSt_128>;
+  } // end let Uses = [M0, EXEC], OtherPredicates = [HasGlobalTiledLoadMcast]
   } // end let WaveSizePredicate = isWave32
 }
 
@@ -2201,70 +2227,17 @@ multiclass GlobalFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
   }
 }
 
-class GlobalLoadIntrinWrapper<SDPatternOperator intrin> : PatFrag<
-  (ops node:$ptr, node:$cpol),
-  (intrin $ptr, $cpol)>;
+def global_load_b128_intrin_pat : PatFrag<
+  (ops node:$ptr),
+  (int_amdgcn_global_load_b128 $ptr, srcvalue)>;
 
-def wrapped_global_load_b128_intrin : GlobalLoadIntrinWrapper<int_amdgcn_global_load_b128>;
+def global_store_b128_intrin_pat : PatFrag<
+  (ops node:$data, node:$ptr),
+  (int_amdgcn_global_store_b128 $ptr, $data, srcvalue)>;
 
-class FlatLoadIntrinSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), srcvalue)),
-  (inst $vaddr, $offset)
->;
-
-class FlatLoadIntrinSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), srcvalue)),
-  (inst $saddr, $voffset, $offset, $cpol)
->;
-
-multiclass GlobalFLATLoadIntrinPats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
-  def : FlatLoadIntrinSignedPat <inst, node, vt> {
-    let AddedComplexity = 10;
-    let SubtargetPredicate = inst.SubtargetPredicate;
-    let OtherPredicates = inst.OtherPredicates;
-  }
-  
-  def : FlatLoadIntrinSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
-    let AddedComplexity = 11;
-    let SubtargetPredicate = inst.SubtargetPredicate;
-    let OtherPredicates = inst.OtherPredicates;
-  }  
-}
-
-class GlobalStoreIntrinWrapper<SDPatternOperator intrin> : PatFrag<
-  (ops node:$data, node:$ptr, node:$scope),
-  (intrin $ptr, $data, $scope)>;
-
-def wrapped_global_store_b128_intrin : GlobalStoreIntrinWrapper<int_amdgcn_global_store_b128>;
-
-class FlatStoreIntrinSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (node vt:$data, (GlobalOffset i64:$vaddr, i32:$offset), srcvalue),
-  (inst $vaddr, getVregSrcForVT<vt>.ret:$data, $offset)
->;
-
-class FlatStoreIntrinSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
-                            ValueType vt> : GCNPat <
-  (node vt:$data, (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), srcvalue),
-  (inst $voffset, getVregSrcForVT<vt>.ret:$data, $saddr, $offset, $cpol)
->;
-
-multiclass GlobalFLATStoreIntrinPats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
-  def : FlatStoreIntrinSignedPat <inst, node, vt> {
-    let SubtargetPredicate = inst.SubtargetPredicate;
-    let OtherPredicates = inst.OtherPredicates;
-    let AddedComplexity = 10;
-  }
-
-  def : FlatStoreIntrinSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
-    let SubtargetPredicate = inst.SubtargetPredicate;
-    let OtherPredicates = inst.OtherPredicates;
-    let AddedComplexity = 11;
-  }
-}
-
-let SubtargetPredicate = isGFX940Plus in {
-defm : GlobalFLATLoadIntrinPats <GLOBAL_LOAD_DWORDX4, wrapped_global_load_b128_intrin, v4i32>;
-defm : GlobalFLATStoreIntrinPats <GLOBAL_STORE_DWORDX4, wrapped_global_store_b128_intrin, v4i32>;
+let SubtargetPredicate = HasFlatGlobalInsts in {
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_DWORDX4, global_load_b128_intrin_pat, v4i32>;
+defm : GlobalFLATStorePats <GLOBAL_STORE_DWORDX4, global_store_b128_intrin_pat, v4i32>;
 }
 
 multiclass GlobalFLATStorePats_D16_t16<string inst, SDPatternOperator node, ValueType vt> {
@@ -2816,11 +2789,11 @@ let SubtargetPredicate = isGFX12Plus in {
 let OtherPredicates = [isGFX12PlusNot12_50] in
   defm : GlobalFLATAtomicPatsRtn <"GLOBAL_ATOMIC_ORDERED_ADD_B64", "int_amdgcn_global_atomic_ordered_add_b64", i64, i64, /* isIntr */ 1>;
 
-let WaveSizePredicate = isWave32, OtherPredicates = [isGFX12Plus] in {
+let WaveSizePredicate = isWave32, OtherPredicates = [isGFX12Plus, NotHasTileShapedTransposeInsts] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w32, int_amdgcn_global_load_tr_b64, v2i32>;
   foreach vt = [v8i16, v8f16, v8bf16] in
     defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w32, int_amdgcn_global_load_tr_b128, vt>;
-}
+} // End WaveSizePredicate = isWave32, OtherPredicates = [isGFX12Plus, NotHasTileShapedTransposeInsts]
 
 let WaveSizePredicate = isWave64, OtherPredicates = [isGFX12PlusNot12_50] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w64, int_amdgcn_global_load_tr_b64, i32>;
@@ -2828,10 +2801,24 @@ let WaveSizePredicate = isWave64, OtherPredicates = [isGFX12PlusNot12_50] in {
     defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w64, int_amdgcn_global_load_tr_b128, vt>;
 }
 
-let WaveSizePredicate = isWave32,  OtherPredicates = [HasTransposeLoadF4F6Insts] in {
+let WaveSizePredicate = isWave32, OtherPredicates = [NotHasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR4_B64, int_amdgcn_global_load_tr4_b64, v2i32>;
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR6_B96, int_amdgcn_global_load_tr6_b96, v3i32>;
-}
+} // End WaveSizePredicate = isWave32,  OtherPredicates = [NotHasTileShapedTransposeInsts, HasTransposeLoadF4F6Insts]
+
+let WaveSizePredicate = isWave32, SubtargetPredicate = HasTileShapedTransposeInsts in {
+  let OtherPredicates = [HasTransposeLoadF4F6Insts] in {
+    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR4_16X32_B64, int_amdgcn_global_load_tr4_b64, v2i32>;
+    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR4_32X32_B128, int_amdgcn_global_load_tr4_32x32_b128, v4i32>;
+    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR6_16X32_B96, int_amdgcn_global_load_tr6_b96, v3i32>;
+  } // End OtherPredicates = [HasTransposeLoadF4F6Insts]
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR8_16X16_B64, int_amdgcn_global_load_tr_b64, v2i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR8_16X32_B128, int_amdgcn_global_load_tr8_16x32_b128, v4i32>;
+  foreach vt = [v8i16, v8f16, v8bf16] in {
+    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR16_16X16_B128, int_amdgcn_global_load_tr_b128, vt>;
+    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR16_8X32_B128, int_amdgcn_global_load_tr16_8x32_b128, vt>;
+  } // End foreach
+} // End WaveSizePredicate = isWave32, SubtargetPredicate = HasTileShapedTransposeInsts
 
 let OtherPredicates = [isGFX125xOnly] in {
   def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B32,  int_amdgcn_flat_load_monitor_b32,  i32>;
@@ -2907,7 +2894,7 @@ defm : FlatAtomicPat <"FLAT_ATOMIC_PK_ADD_BF16", "atomic_load_fadd_flat", v2bf16
 
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_PK_ADD_BF16", "atomic_load_fadd_global", v2bf16>;
 
-let OtherPredicates = [HasFlatScratchInsts, EnableFlatScratch] in {
+let OtherPredicates = [HasFlatScratchInsts, HasFlatScratchEnabled] in {
 foreach as = [ "private", "laneshared" ] in {
   defm : ScratchFLATLoadPats <SCRATCH_LOAD_UBYTE, "extloadi8_"#as, i32>;
   defm : ScratchFLATLoadPats <SCRATCH_LOAD_UBYTE, "zextloadi8_"#as, i32>;
@@ -2987,12 +2974,12 @@ foreach as = [ "private", "laneshared" ] in {
   defm : ScratchFLATStorePats <SCRATCH_STORE_SHORT, "store_"#as, i16>;
 
 
-  let OtherPredicates = [HasD16LoadStore, HasFlatScratchInsts, EnableFlatScratch] in {
+  let OtherPredicates = [HasD16LoadStore, HasFlatScratchInsts, HasFlatScratchEnabled] in {
     defm : ScratchFLATStorePats <SCRATCH_STORE_SHORT_D16_HI, "truncstorei16_hi16_"#as, i32>;
     defm : ScratchFLATStorePats <SCRATCH_STORE_BYTE_D16_HI, "truncstorei8_hi16_"#as, i32>;
   }
 
-  let OtherPredicates = [D16PreservesUnusedBits, HasFlatScratchInsts, EnableFlatScratch] in {
+  let OtherPredicates = [D16PreservesUnusedBits, HasFlatScratchInsts, HasFlatScratchEnabled] in {
     defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_UBYTE_D16_HI, "az_extloadi8_d16_hi_"#as, v2i16>;
     defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_UBYTE_D16_HI, "az_extloadi8_d16_hi_"#as, v2f16>;
     defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SBYTE_D16_HI, "sextloadi8_d16_hi_"#as, v2i16>;
@@ -3008,7 +2995,7 @@ foreach as = [ "private", "laneshared" ] in {
     defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SHORT_D16, "load_d16_lo_"#as, v2f16>;
   }
 } // End foreach as
-} // End OtherPredicates = [HasFlatScratchInsts,EnableFlatScratch]
+} // End OtherPredicates = [HasFlatScratchInsts,HasFlatScratchEnabled]
 
 def PrefetchLoc: SDNodeXForm<timm, [{
   uint32_t V = N->getZExtValue();
@@ -3087,7 +3074,7 @@ let OtherPredicates = [isGFX13Plus], WaveSizePredicate = isWave32 in {
   defm : GlobalFLATLoadPats <GLOBAL_TILED_LOAD_QTR_B128,       int_amdgcn_global_tiled_load_qtr_b128, i32>;
   defm : GlobalFLATLoadPats <GLOBAL_TILED_LOAD_HALF_B128,      int_amdgcn_global_tiled_load_half_b128, v2i32>;
   defm : GlobalFLATLoadPats <GLOBAL_TILED_LOAD_B128,           int_amdgcn_global_tiled_load_b128, v4i32>;
-  defm : GlobalFLATLoadPats <GLOBAL_TILED_LOAD_2x2_B128,       int_amdgcn_global_tiled_load_2x2_b128, v4i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_TILED_LOAD_2X2_B128,       int_amdgcn_global_tiled_load_2x2_b128, v4i32>;
 
   defm : GlobalFLATLoadPats_D16 <GLOBAL_TILED_LOAD_VST2_B64,       int_amdgcn_global_tiled_load_vst2_b64, v3i32>;
   defm : GlobalFLATLoadPats_D16 <GLOBAL_TILED_LOAD_HALF_VST2_B128, int_amdgcn_global_tiled_load_half_vst2_b128, v3i32>;
@@ -4233,17 +4220,6 @@ multiclass VFLAT_Real_gfx1250<bits<8> op,
   }
 }
 
-multiclass VFLAT_Aliases_gfx1250<string name> {
-  defvar ps = get_FLAT_ps<NAME>;
-  if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX125xOnly]>;
-}
-
-multiclass VFLAT_Real_Base_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
-  VFLAT_Aliases_gfx1250<name> {
-  defm "" : VFLAT_Real_gfx1250<op, name>;
-}
-
 multiclass VFLAT_Real_RTN_gfx1250<bits<8> op, string name> {
   defm _RTN : VFLAT_Real_gfx1250<op, name>;
 }
@@ -4256,9 +4232,14 @@ multiclass VFLAT_Real_SADDR_RTN_gfx1250<bits<8> op, string name> {
   defm _SADDR_RTN : VFLAT_Real_gfx1250<op, name>;
 }
 
-multiclass VFLAT_Real_AllAddr_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
-  VFLAT_Real_Base_gfx1250<op, name>,
-  VFLAT_Real_SADDR_gfx1250<op, name>;
+multiclass VFLAT_Real_AllAddr_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic,
+                                      list<Predicate> aliasPreds = [isGFX125xOnly]> :
+  VFLAT_Real_gfx1250<op, name>,
+  VFLAT_Real_SADDR_gfx1250<op, name> {
+  defvar ps = get_FLAT_ps<NAME>;
+  if !ne(ps.Mnemonic, name) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<aliasPreds>;
+}
 
 multiclass VFLAT_Real_Atomics_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
   VFLAT_Real_AllAddr_gfx1250<op, name>,
@@ -4296,17 +4277,17 @@ defm GLOBAL_STORE_ASYNC_FROM_LDS_B32  : VFLAT_Real_AllAddr_gfx1250<0x64>;
 defm GLOBAL_STORE_ASYNC_FROM_LDS_B64  : VFLAT_Real_AllAddr_gfx1250<0x65>;
 defm GLOBAL_STORE_ASYNC_FROM_LDS_B128 : VFLAT_Real_AllAddr_gfx1250<0x66>;
 
-defm GLOBAL_LOAD_TR_B128_w32          : VFLAT_Real_AllAddr_gfx1250<0x057, "global_load_tr16_b128">;
-defm GLOBAL_LOAD_TR_B64_w32           : VFLAT_Real_AllAddr_gfx1250<0x058, "global_load_tr8_b64">;
+defm GLOBAL_LOAD_TR_B128_w32          : VFLAT_Real_AllAddr_gfx1250<0x057, "global_load_tr16_b128", [isGFX125xOnly, NotHasTileShapedTransposeInsts]>;
+defm GLOBAL_LOAD_TR_B64_w32           : VFLAT_Real_AllAddr_gfx1250<0x058, "global_load_tr8_b64", [isGFX125xOnly, NotHasTileShapedTransposeInsts]>;
 
 defm GLOBAL_LOAD_TR4_B64              : VFLAT_Real_AllAddr_gfx1250<0x073>;
 defm GLOBAL_LOAD_TR6_B96              : VFLAT_Real_AllAddr_gfx1250<0x074>;
 
 // Additional aliases for global load transpose instructions.
-def : MnemonicAlias<"global_load_b128_tr_b16", "global_load_tr16_b128">, Requires<[isGFX125xOnly]>;
-def : MnemonicAlias<"global_load_b64_tr_b8", "global_load_tr8_b64">, Requires<[isGFX125xOnly]>;
-def : MnemonicAlias<"global_load_b64_tr_b4", "global_load_tr4_b64">, Requires<[isGFX125xOnly]>;
-def : MnemonicAlias<"global_load_b96_tr_b6", "global_load_tr6_b96">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"global_load_b128_tr_b16", "global_load_tr16_b128">, Requires<[isGFX125xOnly, NotHasTileShapedTransposeInsts]>;
+def : MnemonicAlias<"global_load_b64_tr_b8", "global_load_tr8_b64">, Requires<[isGFX125xOnly, NotHasTileShapedTransposeInsts]>;
+def : MnemonicAlias<"global_load_b64_tr_b4", "global_load_tr4_b64">, Requires<[isGFX125xOnly, NotHasTileShapedTransposeInsts]>;
+def : MnemonicAlias<"global_load_b96_tr_b6", "global_load_tr6_b96">, Requires<[isGFX125xOnly, NotHasTileShapedTransposeInsts]>;
 
 defm FLAT_ATOMIC_ADD_F64              : VFLAT_Real_Atomics_gfx1250<0x055>;
 defm FLAT_ATOMIC_MIN_F64              : VFLAT_Real_Atomics_gfx1250<0x05b, "flat_atomic_min_num_f64">;
@@ -4315,6 +4296,27 @@ defm FLAT_ATOMIC_MAX_F64              : VFLAT_Real_Atomics_gfx1250<0x05c, "flat_
 defm GLOBAL_ATOMIC_ADD_F64            : VFLAT_Real_Atomics_gfx1250<0x055>;
 defm GLOBAL_ATOMIC_MIN_F64            : VFLAT_Real_Atomics_gfx1250<0x05b, "global_atomic_min_num_f64">;
 defm GLOBAL_ATOMIC_MAX_F64            : VFLAT_Real_Atomics_gfx1250<0x05c, "global_atomic_max_num_f64">;
+
+let AssemblerPredicate = isGFX1260Only, DecoderNamespace = "GFX1260" in {
+  defm GLOBAL_LOAD_TR16_16X16_B128 : VFLAT_Real_AllAddr_gfx1250<0x057>;
+  defm GLOBAL_LOAD_TR8_16X16_B64   : VFLAT_Real_AllAddr_gfx1250<0x058>;
+  defm GLOBAL_LOAD_TR4_16X32_B64   : VFLAT_Real_AllAddr_gfx1250<0x073>;
+  defm GLOBAL_LOAD_TR6_16X32_B96   : VFLAT_Real_AllAddr_gfx1250<0x074>;
+  defm GLOBAL_LOAD_TR16_8X32_B128  : VFLAT_Real_AllAddr_gfx1250<0x07d>;
+  defm GLOBAL_LOAD_TR8_16X32_B128  : VFLAT_Real_AllAddr_gfx1250<0x07e>;
+  defm GLOBAL_LOAD_TR4_32X32_B128  : VFLAT_Real_AllAddr_gfx1250<0x07f>;
+} // End AssemblerPredicate = isGFX1260Only, DecoderNamespace = "GFX1260"
+
+multiclass MnemonicAlias_gfx1260<string name, list<string> aliases> {
+  foreach alias = aliases in
+    def : MnemonicAlias<alias, name>, Requires<[isGFX1260Only]>;
+}
+
+// Aliases for global load transpose instructions for gfx1260
+defm: MnemonicAlias_gfx1260<"global_load_tr8_16x16_b64", ["global_load_b64_tr_b8", "global_load_tr8_b64", "global_load_tr_b64"]>;
+defm: MnemonicAlias_gfx1260<"global_load_tr16_16x16_b128", ["global_load_b128_tr_b16", "global_load_tr16_b128", "global_load_tr_b128"]>;
+defm: MnemonicAlias_gfx1260<"global_load_tr4_16x32_b64", ["global_load_b64_tr_b4", "global_load_tr4_b64"]>;
+defm: MnemonicAlias_gfx1260<"global_load_tr6_16x32_b96", ["global_load_b96_tr_b6", "global_load_tr6_b96"]>;
 
 //===----------------------------------------------------------------------===//
 // GFX13
@@ -4618,9 +4620,21 @@ defm GLOBAL_TILED_STORE_HALF_VST2_B128 : VFLAT_Real_AllAddr_gfx13<0x0b9>;
 defm GLOBAL_TILED_STORE_B128           : VFLAT_Real_AllAddr_gfx13<0x0ba>;
 defm GLOBAL_TILED_STORE_VST2_B128      : VFLAT_Real_AllAddr_gfx13<0x0bb>;
 
-// TODO-GFX1370: Opcode value is a placeholder
-defm GLOBAL_TILED_LOAD_2x2_B128        : VFLAT_Real_AllAddr_gfx13<0x0bc>;
+defm GLOBAL_TILED_LOAD_2X2_B128        : VFLAT_Real_AllAddr_gfx13<0x0bc>;
 
+let AssemblerPredicate = HasGlobalTiledLoadMcast in {
+  defm GLOBAL_TILED_LOAD_MCAST_2X2_B128 : VFLAT_Real_AllAddr_gfx13<0x0bd>;
+  defm GLOBAL_TILED_LOAD_MCAST_HALF_B64 : VFLAT_Real_AllAddr_gfx13<0x0be>;
+  defm GLOBAL_TILED_LOAD_MCAST_B64      : VFLAT_Real_AllAddr_gfx13<0x0bf>;
+  defm GLOBAL_TILED_LOAD_MCAST_B128     : VFLAT_Real_AllAddr_gfx13<0x0c0>;
+}
+
+let AssemblerPredicate = HasTransposeMcastLoadInsts in {
+  defm GLOBAL_LOAD_MCAST_TR16_B128 : VFLAT_Real_AllAddr_gfx13<0x0c1>;
+  defm GLOBAL_LOAD_MCAST_TR8_B64   : VFLAT_Real_AllAddr_gfx13<0x0c2>;
+  defm GLOBAL_LOAD_MCAST_TR4_B64   : VFLAT_Real_AllAddr_gfx13<0x0c3>;
+  defm GLOBAL_LOAD_MCAST_TR6_B96   : VFLAT_Real_AllAddr_gfx13<0x0c4>;
+}
 
 // ENC_VSCRATCH.
 defm SCRATCH_LOAD_UBYTE               : VSCRATCH_Real_AllAddr_gfx13<0x08, "scratch_load_u8">;

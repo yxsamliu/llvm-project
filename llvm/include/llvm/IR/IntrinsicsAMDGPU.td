@@ -700,6 +700,7 @@ def int_amdgcn_cvt_scalef32_pk8_bf8_f32   : AMDGPUCvtScaleF32Intrinsic<llvm_v2i3
 def int_amdgcn_cvt_scalef32_pk8_fp4_f32   : AMDGPUCvtScaleF32Intrinsic<llvm_i32_ty,   llvm_v8f32_ty,   "cvt_scalef32_pk8_fp4_f32">;
 def int_amdgcn_cvt_scalef32_pk8_fp4_f16   : AMDGPUCvtScaleF32Intrinsic<llvm_i32_ty,   llvm_v8f16_ty,   "cvt_scalef32_pk8_fp4_f16">;
 def int_amdgcn_cvt_scalef32_pk8_fp4_bf16  : AMDGPUCvtScaleF32Intrinsic<llvm_i32_ty,   llvm_v8bf16_ty,  "cvt_scalef32_pk8_fp4_bf16">;
+def int_amdgcn_cvt_e5m3scale_pk8_fp4_f32  : AMDGPUCvtScaleF32Intrinsic<llvm_i32_ty,   llvm_v8f32_ty,   "cvt_e5m3scale_pk8_fp4_f32">;
 def int_amdgcn_cvt_scalef32_pk16_fp6_f32  : AMDGPUCvtScaleF32Intrinsic<llvm_v3i32_ty, llvm_v16f32_ty,   "cvt_scalef32_pk16_fp6_f32">;
 def int_amdgcn_cvt_scalef32_pk16_bf6_f32  : AMDGPUCvtScaleF32Intrinsic<llvm_v3i32_ty, llvm_v16f32_ty,   "cvt_scalef32_pk16_bf6_f32">;
 def int_amdgcn_cvt_scalef32_pk16_fp6_f16  : AMDGPUCvtScaleF32Intrinsic<llvm_v3i32_ty, llvm_v16f16_ty,   "cvt_scalef32_pk16_fp6_f16">;
@@ -1477,6 +1478,9 @@ def int_amdgcn_s_buffer_load : DefaultAttrsIntrinsic <
 // and swizzling changes depending on whether idxen is set in the instruction.
 // These intrinsics also keep the offset and soffset arguments separate as
 // they behave differently in bounds checking and swizzling.
+
+// GFX13: offset and soffset arguments are treated identically, compiler will
+// add them together and distribute to vgpr_offset.
 
 // The versions of these intrinsics that take <4 x i32> arguments are deprecated
 // in favor of their .ptr.buffer variants that take ptr addrspace(8) arguments,
@@ -3180,18 +3184,24 @@ class AMDGPULoadIntrinsic<LLVMType ptr_ty>:
 // i32          @llvm.amdgcn.global.load.tr.b64.i32(ptr addrspace(1))    -> global_load_tr_b64
 // <4 x i16>    @llvm.amdgcn.global.load.tr.b128.v4i16(ptr addrspace(1))  -> global_load_tr_b128
 
-def int_amdgcn_global_load_tr_b64  : AMDGPULoadIntrinsic<global_ptr_ty>;
-def int_amdgcn_global_load_tr_b128 : AMDGPULoadIntrinsic<global_ptr_ty>;
-def int_amdgcn_global_load_tr4_b64 : AMDGPULoadIntrinsic<global_ptr_ty>;
-def int_amdgcn_global_load_tr6_b96 : AMDGPULoadIntrinsic<global_ptr_ty>;
-def int_amdgcn_ds_load_tr8_b64     : AMDGPULoadIntrinsic<local_ptr_ty>;
-def int_amdgcn_ds_load_tr16_b128   : AMDGPULoadIntrinsic<local_ptr_ty>;
-def int_amdgcn_ds_load_tr4_b64     : AMDGPULoadIntrinsic<local_ptr_ty>;
-def int_amdgcn_ds_load_tr6_b96     : AMDGPULoadIntrinsic<local_ptr_ty>;
-def int_amdgcn_ds_read_tr4_b64     : AMDGPULoadIntrinsic<local_ptr_ty>;
-def int_amdgcn_ds_read_tr6_b96     : AMDGPULoadIntrinsic<local_ptr_ty>;
-def int_amdgcn_ds_read_tr8_b64     : AMDGPULoadIntrinsic<local_ptr_ty>;
-def int_amdgcn_ds_read_tr16_b64    : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_global_load_tr_b64         : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_global_load_tr_b128        : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_global_load_tr4_b64        : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_global_load_tr6_b96        : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_ds_load_tr8_b64            : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_ds_load_tr16_b128          : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_ds_load_tr4_b64            : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_ds_load_tr6_b96            : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_ds_read_tr4_b64            : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_ds_read_tr6_b96            : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_ds_read_tr8_b64            : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_ds_read_tr16_b64           : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_global_load_tr4_32x32_b128 : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_global_load_tr8_16x32_b128 : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_global_load_tr16_8x32_b128 : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_ds_load_tr4_32x32_b128     : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_ds_load_tr8_16x32_b128     : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_ds_load_tr16_8x32_b128     : AMDGPULoadIntrinsic<local_ptr_ty>;
 
 // i32 @llvm.amdgcn.wave.id()
 def int_amdgcn_wave_id :
@@ -3370,14 +3380,17 @@ def int_amdgcn_s_sema_set_limit :
     [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
   >;
 
-// void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) %sem, i32 %count)
+// void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) %sem, i32 %mask)
 // The %sem argument must be uniform, otherwise behavior is undefined.
-// TODO-GFX13: Add ImmArg<ArgIndex<1>> or handle non-immediate %count in codegen.
+// The %mask argument must be an unsigned 32-bit integer, with the high 4 bits encoding the mask.
+// The supported range of values for the mask is 0 to 15.
+// It is undefined behavior if the low 28 bits of the argument are non-zero.
+// This %mask argument is ignored for GFX13.
 def int_amdgcn_s_sema_signal :
   ClangBuiltin<"__builtin_amdgcn_s_sema_signal">,
   Intrinsic<
     [],
-    [local_ptr_ty],
+    [local_ptr_ty, llvm_i32_ty],
     [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
   >;
 
@@ -3417,28 +3430,40 @@ def int_amdgcn_spatial_cluster_set_chain_end :
   ClangBuiltin<"__builtin_amdgcn_spatial_cluster_set_chain_end">;
 
 // void @llvm.amdgcn.spatial.cluster.send.next(i32, ptr addrspace(10), ptr addrspace(3), ptr addrspace(10), ptr addrspace(3))
-def int_amdgcn_spatial_cluster_send_next :
-  DefaultAttrsIntrinsic<[], [
-    llvm_i32_ty,                // Data to send
-    laneshared_ptr_ty,          // %dst address written in receiving wavegroup
-    local_ptr_ty,               // %sema signaled in receiving wavegroup
-    laneshared_ptr_ty,          // %dst_refl address written in sending wavegroup on reflection
-    local_ptr_ty,               // %sema_refl signaled in sending wavegroup on reflection
-    llvm_i32_ty                 // Flags to choose reflection data movement mode
-  ], [IntrHasSideEffects, IntrConvergent, IntrNoCallback]>,
-  ClangBuiltin<"__builtin_amdgcn_spatial_cluster_send_next">;
+def int_amdgcn_spatial_cluster_send_next
+    : Intrinsic<[],
+                [llvm_i32_ty,       // Data to send
+                 laneshared_ptr_ty, // %dst address written in receiving
+                                    // wavegroup
+                 local_ptr_ty,      // %sema signaled in receiving wavegroup
+                 laneshared_ptr_ty, // %dst_refl address written in sending
+                                    // wavegroup on reflection
+                 local_ptr_ty, // %sema_refl signaled in sending wavegroup on
+                               // reflection
+                 llvm_i32_ty], // Flags to choose reflection data movement mode
+                [IntrArgMemOnly, IntrHasSideEffects, IntrConvergent,
+                 IntrNoCallback, NoCapture<ArgIndex<1>>, NoCapture<ArgIndex<3>>,
+                 WriteOnly<ArgIndex<1>>, WriteOnly<ArgIndex<3>>,
+                 NoCapture<ArgIndex<2>>, NoCapture<ArgIndex<4>>],
+                "", [SDNPMemOperand]>;
 
 // void @llvm.amdgcn.spatial.cluster.send.prev(i32, ptr addrspace(10), ptr addrspace(3), ptr addrspace(10), ptr addrspace(3))
-def int_amdgcn_spatial_cluster_send_prev :
-  DefaultAttrsIntrinsic<[], [
-    llvm_i32_ty,                // Data to send
-    laneshared_ptr_ty,          // %dst address written in receiving wavegroup
-    local_ptr_ty,               // %sema signaled in receiving wavegroup
-    laneshared_ptr_ty,          // %dst_refl address written in sending wavegroup on reflection
-    local_ptr_ty,               // %sema_refl signaled in sending wavegroup on reflection
-    llvm_i32_ty                 // Flags to choose reflection data movement mode
-  ], [IntrHasSideEffects, IntrConvergent, IntrNoCallback]>,
-  ClangBuiltin<"__builtin_amdgcn_spatial_cluster_send_prev">;
+def int_amdgcn_spatial_cluster_send_prev
+    : Intrinsic<[],
+                [llvm_i32_ty,       // Data to send
+                 laneshared_ptr_ty, // %dst address written in receiving
+                                    // wavegroup
+                 local_ptr_ty,      // %sema signaled in receiving wavegroup
+                 laneshared_ptr_ty, // %dst_refl address written in sending
+                                    // wavegroup on reflection
+                 local_ptr_ty, // %sema_refl signaled in sending wavegroup on
+                               // reflection
+                 llvm_i32_ty], // Flags to choose reflection data movement mode
+                [IntrArgMemOnly, IntrHasSideEffects, IntrConvergent,
+                 IntrNoCallback, NoCapture<ArgIndex<1>>, NoCapture<ArgIndex<3>>,
+                 WriteOnly<ArgIndex<1>>, WriteOnly<ArgIndex<3>>,
+                 NoCapture<ArgIndex<2>>, NoCapture<ArgIndex<4>>],
+                "", [SDNPMemOperand]>;
 
 // void @llvm.amdgcn.spatial.cluster.signal.next(ptr addrspace(3), ptr addrspace(3))
 def int_amdgcn_spatial_cluster_signal_next :
@@ -3910,7 +3935,7 @@ class AMDGPUSWmmaIntrinsicClamp<LLVMType A, LLVMType B, LLVMType CD> :
       B,                // %B
       CD,               // %C
       llvm_i32_ty,      // %idxset
-      llvm_i1_ty,       // %sparse_index_odd
+      llvm_i1_ty,       // %index_set (0=even, 1=odd)
       llvm_i1_ty,       // %clamp
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]
@@ -3950,7 +3975,7 @@ class AMDGPUSWmmaIntrinsicIUClamp<LLVMType D, LLVMType A, LLVMType B, LLVMType C
       B,                // %B
       C,                // %C
       idxset_ty,        // %idxset
-      llvm_i1_ty,       // %sparse_index_odd
+      llvm_i1_ty,       // %index_set (0=even, 1=odd)
       llvm_i1_ty,       // %clamp
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>]
@@ -4016,6 +4041,8 @@ def int_amdgcn_fma_from_tensor_f16_u8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32
 def int_amdgcn_fma_from_tensor_f16_fp8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty>;
 def int_amdgcn_fma_from_tensor_f16_bf8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty>;
 def int_amdgcn_fma_from_tensor_f16_bf16 : FmaFromTensor<llvm_anyfloat_ty, llvm_v2bf16_ty>;
+def int_amdgcn_fma_from_tensor_f16_i16 : FmaFromTensorDoubleResid<llvm_anyfloat_ty, llvm_v2i16_ty>;
+def int_amdgcn_fma_from_tensor_f16_u16 : FmaFromTensorDoubleResid<llvm_anyfloat_ty, llvm_v2i16_ty>;
 
 def int_amdgcn_fma_from_tensor_bf16_i4 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty>;
 def int_amdgcn_fma_from_tensor_bf16_u4 : FmaFromTensor<llvm_anyfloat_ty, llvm_i32_ty>;
@@ -4181,6 +4208,16 @@ def int_amdgcn_cvt_to_tensor_sr_bf8_bf16 : AMDGPUCvtTensorSRSingle<llvm_i32_ty, 
 def int_amdgcn_cvt_to_tensor_sr_fp8_f16_double : AMDGPUCvtTensorSRSingle<llvm_v2i32_ty, llvm_anyfloat_ty>;
 def int_amdgcn_cvt_to_tensor_sr_fp8_bf16_double : AMDGPUCvtTensorSRSingle<llvm_v2i32_ty, llvm_anyfloat_ty>;
 def int_amdgcn_cvt_to_tensor_sr_bf8_f16_double : AMDGPUCvtTensorSRSingle<llvm_v2i32_ty, llvm_anyfloat_ty>;
+
+def int_amdgcn_cvt_to_tensor_i16_f32_scatter2 : AMDGPUCvtTensorScatter2<llvm_v2i16_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_u16_f32_scatter2 : AMDGPUCvtTensorScatter2<llvm_v2i16_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_i16_f16_scatter2 : AMDGPUCvtTensorScatter2<llvm_v2i16_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_u16_f16_scatter2 : AMDGPUCvtTensorScatter2<llvm_v2i16_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_i16_f16_scatter4 : AMDGPUCvtTensorScatter4<llvm_v2i16_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_u16_f16_scatter4 : AMDGPUCvtTensorScatter4<llvm_v2i16_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_i16_f16_scatter2_double : AMDGPUCvtTensorScatter2<llvm_v2i32_ty, llvm_anyfloat_ty>;
+def int_amdgcn_cvt_to_tensor_u16_f16_scatter2_double : AMDGPUCvtTensorScatter2<llvm_v2i32_ty, llvm_anyfloat_ty>;
+
 def int_amdgcn_cvt_to_tensor_sr_bf8_bf16_double : AMDGPUCvtTensorSRSingle<llvm_v2i32_ty, llvm_anyfloat_ty>;
 
 def int_amdgcn_cvt_to_tensor_sr_fp8_f16_scatter2 : AMDGPUCvtTensorSRScatter2<llvm_i32_ty, llvm_anyfloat_ty>;
@@ -4284,6 +4321,37 @@ def int_amdgcn_ds_tiled_load_half_b64 : AMDGPUTiledLoadLDS<llvm_i32_ty>;
 def int_amdgcn_ds_tiled_load_b64      : AMDGPUTiledLoadLDS<llvm_v2i32_ty>;
 def int_amdgcn_ds_tiled_load_2x2_b128 : AMDGPUTiledLoadLDS<llvm_v4i32_ty>;
 def int_amdgcn_ds_tiled_load_b128     : AMDGPUTiledLoadLDS<llvm_v4i32_ty>;
+
+class AMDGPUTiledLoadMCast<LLVMType data_ty, LLVMType ptr_ty>:
+  ClangBuiltin<!subst("int", "__builtin", NAME)>,
+  Intrinsic<
+    [data_ty],
+    [ptr_ty,
+     llvm_i32_ty],
+    [IntrReadMem, IntrConvergent, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
+    "",
+    [SDNPMemOperand, SDNPHasChain]
+  >;
+
+def int_amdgcn_global_tiled_load_mcast_half_b64 : AMDGPUTiledLoadMCast<llvm_i32_ty, global_ptr_ty>;
+def int_amdgcn_global_tiled_load_mcast_b64      : AMDGPUTiledLoadMCast<llvm_v2i32_ty, global_ptr_ty>;
+def int_amdgcn_global_tiled_load_mcast_b128     : AMDGPUTiledLoadMCast<llvm_v4i32_ty, global_ptr_ty>;
+def int_amdgcn_global_tiled_load_mcast_2x2_b128 : AMDGPUTiledLoadMCast<llvm_v4i32_ty, global_ptr_ty>;
+
+def int_amdgcn_ds_tiled_load_mcast_half_b64 : AMDGPUTiledLoadMCast<llvm_i32_ty, local_ptr_ty>;
+def int_amdgcn_ds_tiled_load_mcast_b64      : AMDGPUTiledLoadMCast<llvm_v2i32_ty, local_ptr_ty>;
+def int_amdgcn_ds_tiled_load_mcast_b128     : AMDGPUTiledLoadMCast<llvm_v4i32_ty, local_ptr_ty>;
+def int_amdgcn_ds_tiled_load_mcast_2x2_b128 : AMDGPUTiledLoadMCast<llvm_v4i32_ty, local_ptr_ty>;
+
+def int_amdgcn_ds_load_mcast_tr4_b64   : AMDGPUTiledLoadMCast<llvm_v2i32_ty, local_ptr_ty>;
+def int_amdgcn_ds_load_mcast_tr6_b96   : AMDGPUTiledLoadMCast<llvm_v3i32_ty, local_ptr_ty>;
+def int_amdgcn_ds_load_mcast_tr8_b64   : AMDGPUTiledLoadMCast<llvm_v2i32_ty, local_ptr_ty>;
+def int_amdgcn_ds_load_mcast_tr16_b128 : AMDGPUTiledLoadMCast<llvm_v4i32_ty, local_ptr_ty>;
+
+def int_amdgcn_global_load_mcast_tr4_b64   : AMDGPUTiledLoadMCast<llvm_v2i32_ty, global_ptr_ty>;
+def int_amdgcn_global_load_mcast_tr6_b96   : AMDGPUTiledLoadMCast<llvm_v3i32_ty, global_ptr_ty>;
+def int_amdgcn_global_load_mcast_tr8_b64   : AMDGPUTiledLoadMCast<llvm_v2i32_ty, global_ptr_ty>;
+def int_amdgcn_global_load_mcast_tr16_b128 : AMDGPUTiledLoadMCast<llvm_v4i32_ty, global_ptr_ty>;
 
 // Strided loads write every other register of the destination (other registers
 // are unmodified). The intrinsics have an extra param for partial result which
@@ -5167,7 +5235,7 @@ def int_amdgcn_dds_load_async_to_lds_b64     : AMDGPUAsyncDDSLoadLDS;
 def int_amdgcn_dds_load_async_to_lds_b128    : AMDGPUAsyncDDSLoadLDS;
 
 // WMMA intrinsics.
-class AMDGPUWmmaIntrinsicModsAB<LLVMType AB, LLVMType CD> :
+class AMDGPUWmmaIntrinsicModsABClamp<LLVMType AB, LLVMType CD> :
   Intrinsic<
     [CD], // %D
     [
@@ -5178,8 +5246,9 @@ class AMDGPUWmmaIntrinsicModsAB<LLVMType AB, LLVMType CD> :
       LLVMMatchType<0>,               // %C
       llvm_i1_ty,       // matrix_a_reuse
       llvm_i1_ty,       // matrix_b_reuse
+      llvm_i1_ty,       // %clamp
     ],
-    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>,
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>,
      IntrWillReturn, IntrNoCallback, IntrNoFree, IntrNoCreateUndefOrPoison]
 >;
 
@@ -5275,6 +5344,77 @@ class AMDGPUWmmaIntrinsicModsC_MatrixFMT :
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
+// WMMA PredXDL intrinsic classes -- same as above but with extra i32 (custom_shape) at the end.
+// No A_mod (no src0_modifiers on gfx1260 for these).
+class AMDGPUWmmaIntrinsicModsBCReusePredXDL<LLVMType AB, LLVMType CD> :
+  Intrinsic<
+    [CD],               // %D
+    [
+      AB,               // %A
+      llvm_i16_ty,      // %B_mod: 0 -- none, 1 -- neg
+      LLVMMatchType<1>, // %B
+      llvm_i16_ty,      // %C_mod: 0 -- none, 1 -- neg, 2 -- abs, 3 -- neg(abs)
+      LLVMMatchType<0>, // %C
+      llvm_i1_ty,       // matrix_a_reuse
+      llvm_i1_ty,       // matrix_b_reuse
+      llvm_i32_ty,      // custom_shape
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>,
+     IntrWillReturn, IntrNoCallback, IntrNoFree]
+>;
+
+// Like ModsBCReusePredXDL but D and C are of different types.
+class AMDGPUWmmaIntrinsicModsBCDiffPredXDL<LLVMType DstTy, LLVMType AB, LLVMType C> :
+  Intrinsic<
+    [DstTy],             // %D
+    [
+      AB,                // %A
+      llvm_i16_ty,       // %B_mod: 0 -- none, 1 -- neg
+      LLVMMatchType<1>,  // %B
+      llvm_i16_ty,       // %C_mod: 0 -- none, 1 -- neg, 2 -- abs, 3 -- neg(abs)
+      C,                 // %C
+      llvm_i1_ty,        // matrix_a_reuse
+      llvm_i1_ty,        // matrix_b_reuse
+      llvm_i32_ty,       // custom_shape
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>,
+     IntrWillReturn, IntrNoCallback, IntrNoFree]
+>;
+
+class AMDGPUWmmaIntrinsicModsCPredXDL<LLVMType AB, LLVMType CD> :
+  Intrinsic<
+    [CD],               // %D
+    [
+      AB,               // %A
+      LLVMMatchType<1>, // %B
+      llvm_i16_ty,      // %C_mod: 0 - none, 1 - neg, 2 - abs, 3 - neg(abs)
+      LLVMMatchType<0>, // %C
+      llvm_i1_ty,       // matrix_a_reuse
+      llvm_i1_ty,       // matrix_b_reuse
+      llvm_i32_ty,      // custom_shape
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>,
+     IntrWillReturn, IntrNoCallback, IntrNoFree, IntrNoCreateUndefOrPoison]
+>;
+
+class AMDGPUWmmaIntrinsicModsABClampPredXDL<LLVMType AB, LLVMType CD> :
+  Intrinsic<
+    [CD],               // %D
+    [
+      llvm_i16_ty,      // %A_mod: 0 -- none, 1 -- neg
+      AB,               // %A
+      llvm_i16_ty,      // %B_mod: 0 -- none, 1 -- neg
+      LLVMMatchType<1>, // %B
+      LLVMMatchType<0>, // %C
+      llvm_i1_ty,       // matrix_a_reuse
+      llvm_i1_ty,       // matrix_b_reuse
+      llvm_i32_ty,      // custom_shape
+      llvm_i1_ty,       // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<8>>,
+     IntrWillReturn, IntrNoCallback, IntrNoFree, IntrNoCreateUndefOrPoison]
+>;
+
 class AMDGPUWmmaScaleIntrinsicModsC<LLVMType scale_ty> :
   Intrinsic<
     [llvm_anyfloat_ty], // %D
@@ -5345,13 +5485,38 @@ def int_amdgcn_wmma_f32_16x16x128_fp8_fp8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint
 def int_amdgcn_wmma_f32_16x16x128_fp8_bf8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x128_bf8_fp8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x128_bf8_bf8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_i32_16x16x64_iu8      : AMDGPUWmmaIntrinsicModsAB<llvm_anyint_ty, llvm_anyint_ty>;
+def int_amdgcn_wmma_i32_16x16x64_iu8      : AMDGPUWmmaIntrinsicModsABClamp<llvm_anyint_ty, llvm_anyint_ty>;
 def int_amdgcn_wmma_f32_16x16x128_f8f6f4  : AMDGPUWmmaIntrinsicModsC_MatrixFMT;
 def int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4   : AMDGPUWmmaScaleIntrinsicModsC<llvm_i32_ty>;
 def int_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4 : AMDGPUWmmaScaleIntrinsicModsC<llvm_i64_ty>;
 def int_amdgcn_wmma_f32_32x16x128_f4       : AMDGPUWmmaIntrinsicF4ModsC<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_scale_f32_32x16x128_f4 : AMDGPUWmmaScaleF4IntrinsicModsC<llvm_i32_ty>;
 def int_amdgcn_wmma_scale16_f32_32x16x128_f4 : AMDGPUWmmaScaleF4IntrinsicModsC<llvm_i64_ty>;
+}
+
+defset list<Intrinsic> AMDGPUWmmaIntrinsicsGFX1260 = {
+def int_amdgcn_wmma_f32_16x16x32_bf16_pred_xdl     : AMDGPUWmmaIntrinsicModsBCReusePredXDL<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x32_f16_pred_xdl      : AMDGPUWmmaIntrinsicModsBCReusePredXDL<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x32_f16_pred_xdl      : AMDGPUWmmaIntrinsicModsBCReusePredXDL<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_bf16_16x16x32_bf16_pred_xdl    : AMDGPUWmmaIntrinsicModsBCReusePredXDL<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_bf16f32_16x16x32_bf16_pred_xdl : AMDGPUWmmaIntrinsicModsBCDiffPredXDL<llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x64_fp8_fp8_pred_xdl  : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x64_fp8_bf8_pred_xdl  : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x64_bf8_fp8_pred_xdl  : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x64_bf8_bf8_pred_xdl  : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x64_fp8_fp8_pred_xdl  : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x64_fp8_bf8_pred_xdl  : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x64_bf8_fp8_pred_xdl  : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x64_bf8_bf8_pred_xdl  : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x128_fp8_fp8_pred_xdl : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x128_fp8_bf8_pred_xdl : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x128_bf8_fp8_pred_xdl : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f16_16x16x128_bf8_bf8_pred_xdl : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x128_fp8_fp8_pred_xdl : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x128_fp8_bf8_pred_xdl : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x128_bf8_fp8_pred_xdl : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x128_bf8_bf8_pred_xdl : AMDGPUWmmaIntrinsicModsCPredXDL<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_i32_16x16x64_iu8_pred_xdl      : AMDGPUWmmaIntrinsicModsABClampPredXDL<llvm_anyint_ty, llvm_anyint_ty>;
 }
 
 class AMDGPUSWmmacIntrinsicABIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
@@ -5371,6 +5536,24 @@ class AMDGPUSWmmacIntrinsicABIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType I
      ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>]
 >;
 
+class AMDGPUSWmmacIntrinsicABIdxClamp<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
+  Intrinsic<
+    [CD], // %D
+    [
+      llvm_i1_ty,       // %A_mod:  0 - none, 1 - neg
+      A,                // %A
+      llvm_i1_ty,       // %B_mod:  0 - none, 1 - neg
+      B,                // %B
+      LLVMMatchType<0>, // %C
+      Index,            // %Sparsity index for A
+      llvm_i1_ty,       // matrix_a_reuse
+      llvm_i1_ty,       // matrix_b_reuse
+      llvm_i1_ty,       // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCreateUndefOrPoison,
+     ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>, ImmArg<ArgIndex<8>>]
+>;
+
 defset list<Intrinsic> AMDGPUSWMMACIntrinsicsGFX1250 = {
 def int_amdgcn_swmmac_f32_16x16x64_f16      : AMDGPUSWmmacIntrinsicABIdx<llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
 def int_amdgcn_swmmac_f32_16x16x64_bf16     : AMDGPUSWmmacIntrinsicABIdx<llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
@@ -5385,7 +5568,7 @@ def int_amdgcn_swmmac_f16_16x16x128_fp8_fp8 : AMDGPUSWmmacIntrinsicIdxReuse<llvm
 def int_amdgcn_swmmac_f16_16x16x128_fp8_bf8 : AMDGPUSWmmacIntrinsicIdxReuse<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
 def int_amdgcn_swmmac_f16_16x16x128_bf8_fp8 : AMDGPUSWmmacIntrinsicIdxReuse<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
 def int_amdgcn_swmmac_f16_16x16x128_bf8_bf8 : AMDGPUSWmmacIntrinsicIdxReuse<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
-def int_amdgcn_swmmac_i32_16x16x128_iu8     : AMDGPUSWmmacIntrinsicABIdx<llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty>;
+def int_amdgcn_swmmac_i32_16x16x128_iu8     : AMDGPUSWmmacIntrinsicABIdxClamp<llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty>;
 }
 
 
@@ -5463,6 +5646,48 @@ def int_amdgcn_load_mcast_b32         : AMDGPULoadMCast;
 def int_amdgcn_load_mcast_b64         : AMDGPULoadMCast;
 def int_amdgcn_load_mcast_b128        : AMDGPULoadMCast;
 
+class AMDGPUTiledLoadMCastLDS<LLVMType data_ty>:
+  ClangBuiltin<!subst("int", "__builtin", NAME)>,
+  Intrinsic<
+    [data_ty],
+    [local_ptr_ty,    // LDS pointer to load from
+     llvm_i32_ty,     // MAT_ELEM_EXP_FORMAT, bit range: [2:0]
+                      //  0 = U1, 1 bit unsigned integer
+                      //  1 = I1, 1 bit signed integer (0 is extended to -1, 1 to +1)
+                      //  2 = U2, 2 bit unsigned integer
+                      //  3 = I2, 2 bit signed integer
+                      //  4 = U4, 4 bit unsigned integer
+                      //  5 = I4, 4 bit signed integer
+                      // (unused encodings function the same as U1)
+     llvm_i32_ty],    // workgroup and SIMD broadcast mask (in M0)
+                      //   bits [0-15] = workgroup select
+                      //   bits [16] = Early Timeout
+                      //   bits [18-19] = SIMD select
+    [IntrReadMem, IntrConvergent,
+     ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>],
+    "",
+    [SDNPMemOperand, SDNPHasChain]
+  >;
+
+def int_amdgcn_ds_tiled_load_mcast_extend_b64         : AMDGPUTiledLoadMCastLDS<llvm_v2i32_ty>;
+def int_amdgcn_ds_tiled_load_mcast_2x2_extend_b128    : AMDGPUTiledLoadMCastLDS<llvm_v4i32_ty>;
+
+class AMDGPUDSBlockLoadMCast:
+  Intrinsic<
+    [],
+    [laneshared_ptr_ty, // laneshared destination pointer
+                        // The argument must be uniform; otherwise, the result is undefined.
+     llvm_v2i32_ty,     // L# containing LDS base_address and SIMD_SEL, etc.
+     llvm_i16_ty],      // LDS address offset in units of 8 bytes
+    [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<2>>, IntrConvergent, IntrNoCallback, IntrNoFree],
+    "", [SDNPMemOperand]
+  >;
+
+def int_amdgcn_ds_block_load_mcast_b128  : ClangBuiltin<"__builtin_amdgcn_ds_block_load_mcast_b128">, AMDGPUDSBlockLoadMCast;
+def int_amdgcn_ds_block_load_mcast_b256  : ClangBuiltin<"__builtin_amdgcn_ds_block_load_mcast_b256">, AMDGPUDSBlockLoadMCast;
+def int_amdgcn_ds_block_load_mcast_b512  : ClangBuiltin<"__builtin_amdgcn_ds_block_load_mcast_b512">, AMDGPUDSBlockLoadMCast;
+def int_amdgcn_ds_block_load_mcast_b1024 : ClangBuiltin<"__builtin_amdgcn_ds_block_load_mcast_b1024">, AMDGPUDSBlockLoadMCast;
+
 class AMDGPULoadMonitor<LLVMType ptr_ty>:
   Intrinsic<
     [llvm_any_ty],
@@ -5496,4 +5721,14 @@ def int_amdgcn_addrspacecast_nonnull : DefaultAttrsIntrinsic<
 /// incoming block.
 def int_amdgcn_dead: DefaultAttrsIntrinsic<[llvm_any_ty], [],
     [IntrNoMem]>;
-}
+
+/// Backend-only intrinsics analogous to llvm.lifetime.{start,end} for marking
+/// the lifetimes of allocas in the VGPR address space.
+def int_amdgcn_vgpr_lifetime_start :
+    DefaultAttrsIntrinsic<[], [llvm_anyptr_ty],
+                          [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+def int_amdgcn_vgpr_lifetime_end :
+    DefaultAttrsIntrinsic<[], [llvm_anyptr_ty],
+                          [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+
+} // End TargetPrefix = "amdgcn"

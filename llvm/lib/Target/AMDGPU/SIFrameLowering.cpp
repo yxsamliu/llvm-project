@@ -89,7 +89,7 @@ static void encodeDwarfRegisterLocation(int DwarfReg, raw_ostream &OS) {
 static MCCFIInstruction
 createScaledCFAInPrivateWave(const GCNSubtarget &ST,
                              MCRegister DwarfStackPtrReg) {
-  assert(ST.enableFlatScratch());
+  assert(ST.hasFlatScratchEnabled());
 
   // When flat scratch is enabled, the stack pointer is an address in the
   // private_lane DWARF address space (i.e. swizzled), but in order to
@@ -131,7 +131,7 @@ void SIFrameLowering::emitDefCFA(MachineBasicBlock &MBB,
 
   MCRegister DwarfStackPtrReg = MCRI->getDwarfRegNum(StackPtrReg, false);
   MCCFIInstruction CFIInst =
-      ST.enableFlatScratch()
+      ST.hasFlatScratchEnabled()
           ? createScaledCFAInPrivateWave(ST, DwarfStackPtrReg)
           : (AspaceAlreadyDefined
                  ? MCCFIInstruction::createLLVMDefAspaceCfa(
@@ -238,8 +238,8 @@ static void buildPrologSpill(const GCNSubtarget &ST, const SIRegisterInfo &TRI,
                              MachineBasicBlock::iterator I, const DebugLoc &DL,
                              Register SpillReg, int FI, Register FrameReg,
                              int64_t DwordOff = 0) {
-  unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
-                                        : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
+  unsigned Opc = ST.hasFlatScratchEnabled() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
+                                            : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
 
   MachineFrameInfo &FrameInfo = MF.getFrameInfo();
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
@@ -262,8 +262,8 @@ static void buildEpilogRestore(const GCNSubtarget &ST,
                                MachineBasicBlock::iterator I,
                                const DebugLoc &DL, Register SpillReg, int FI,
                                Register FrameReg, int64_t DwordOff = 0) {
-  unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
-                                        : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
+  unsigned Opc = ST.hasFlatScratchEnabled() ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
+                                            : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
 
   MachineFrameInfo &FrameInfo = MF.getFrameInfo();
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
@@ -765,7 +765,7 @@ Register SIFrameLowering::getEntryFunctionReservedScratchRsrcReg(
 }
 
 static unsigned getScratchScaleFactor(const GCNSubtarget &ST) {
-  return ST.enableFlatScratch() ? 1 : ST.getWavefrontSize();
+  return ST.hasFlatScratchEnabled() ? 1 : ST.getWavefrontSize();
 }
 
 /// Look for an SI_GET_IDX0 pseudo at the start of the function whose SGPR
@@ -859,7 +859,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   // This will return `Register()` in cases where there are no actual
   // uses of the SRSRC.
   Register ScratchRsrcReg;
-  if (!ST.enableFlatScratch())
+  if (!ST.hasFlatScratchEnabled())
     ScratchRsrcReg = getEntryFunctionReservedScratchRsrcReg(MF);
 
   // Make the selected register live throughout the function.
@@ -1034,14 +1034,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
         FrameInfo.getMaxAlign());
     MFI->setScratchReservedForDynamicVGPRs(VGPRSize);
 
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_GETREG_B32), FPReg)
-        .addImm(AMDGPU::Hwreg::HwregEncoding::encode(
-            AMDGPU::Hwreg::ID_HW_ID2, AMDGPU::Hwreg::OFFSET_ME_ID, 2));
-    // The MicroEngine ID is 0 for the graphics queue, and 1 or 2 for compute
-    // (3 is unused, so we ignore it). Unfortunately, S_GETREG doesn't set
-    // SCC, so we need to check for 0 manually.
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMP_LG_U32)).addImm(0).addReg(FPReg);
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMOVK_I32), FPReg).addImm(VGPRSize);
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::GET_STACK_BASE), FPReg);
     if (requiresStackPointerReference(MF)) {
       Register SPReg = MFI->getStackPtrOffsetReg();
       assert(SPReg != AMDGPU::SP_REG);
@@ -1065,10 +1058,10 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   bool NeedsFlatScratchInit =
       MFI->getUserSGPRInfo().hasFlatScratchInit() &&
       (MRI.isPhysRegUsed(AMDGPU::FLAT_SCR) || FrameInfo.hasCalls() ||
-       (!allStackObjectsAreDead(MF) && ST.enableFlatScratch()));
+       (!allStackObjectsAreDead(MF) && ST.hasFlatScratchEnabled()));
 
   if ((NeedsFlatScratchInit || ScratchRsrcReg) &&
-      PreloadedScratchWaveOffsetReg && !ST.flatScratchIsArchitected()) {
+      PreloadedScratchWaveOffsetReg && !ST.hasArchitectedFlatScratch()) {
     MRI.addLiveIn(PreloadedScratchWaveOffsetReg);
     MBB.addLiveIn(PreloadedScratchWaveOffsetReg);
   }
@@ -1083,7 +1076,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
                                          ScratchRsrcReg, ScratchWaveOffsetReg);
   }
 
-  if (ST.hasWaitXCnt()) {
+  if (ST.hasWaitXcnt()) {
     // Set REPLAY_MODE (bit 25) in MODE register to enable multi-group XNACK
     // replay. This aligns hardware behavior with the compiler's s_wait_xcnt
     // insertion logic, which assumes multi-group mode by default.
@@ -1968,6 +1961,8 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
       RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(4, Align(4)));
     }
   }
+
+  insertWavegroupEndBarrier(MF);
 }
 
 void SIFrameLowering::processFunctionBeforeFrameIndicesReplaced(
@@ -2396,7 +2391,7 @@ bool SIFrameLowering::allocateScavengingFrameIndexesNearIncomingSP(
   // TODO: We could try sorting the objects to find a hole in the first bytes
   // rather than allocating as close to possible. This could save a lot of space
   // on frames with alignment requirements.
-  if (ST.enableFlatScratch()) {
+  if (ST.hasFlatScratchEnabled()) {
     if (TII->isLegalFLATOffset(MaxOffset, AMDGPUAS::PRIVATE_ADDRESS,
                                SIInstrFlags::FlatScratch))
       return false;
@@ -2651,6 +2646,28 @@ bool SIFrameLowering::requiresStackPointerReference(
   // We still need to initialize the SP if we're doing anything weird that
   // references the SP, like variable sized stack objects.
   return frameTriviallyRequiresSP(MFI);
+}
+
+void SIFrameLowering::insertWavegroupEndBarrier(MachineFunction &MF) const {
+  const Function &F = MF.getFunction();
+
+  if (!AMDGPU::getWavegroupEnable(F))
+    return;
+
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+
+  // S_ENDPGM is always the last non-debug instruction in a basic block.
+  for (MachineBasicBlock &MBB : MF) {
+    MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
+    if (MBBI != MBB.end() && MBBI->getOpcode() == AMDGPU::S_ENDPGM) {
+      BuildMI(MBB, *MBBI, MBBI->getDebugLoc(),
+              TII->get(AMDGPU::S_BARRIER_SIGNAL_IMM))
+          .addImm(AMDGPU::Barrier::WORKGROUP);
+      BuildMI(MBB, *MBBI, MBBI->getDebugLoc(), TII->get(AMDGPU::S_BARRIER_WAIT))
+          .addImm(AMDGPU::Barrier::WORKGROUP);
+    }
+  }
 }
 
 MachineInstr *SIFrameLowering::buildCFI(MachineBasicBlock &MBB,

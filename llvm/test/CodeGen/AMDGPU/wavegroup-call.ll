@@ -47,6 +47,8 @@ define amdgpu_kernel void @wavegroup_kernel() #0 "amdgpu-wavegroup-enable" "amdg
 ; CHECK-NEXT:    s_add_co_u32 s32, s33, 0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_swap_pc_i64 s[30:31], s[2:3]
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @callee()

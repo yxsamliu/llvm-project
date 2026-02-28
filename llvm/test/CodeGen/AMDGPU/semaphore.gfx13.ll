@@ -10,7 +10,7 @@ define amdgpu_ps <2 x half> @test_sema_tensor() {
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v2, v0
 ; GFX13-NEXT:    v_mov_b32_e32 v3, v0
-; GFX13-NEXT:    v_cvt_to_tensor_f16_f32 v0, v1, v[0:3], 0 aux_data:3
+; GFX13-NEXT:    v_cvt_to_tensor_f16_f32 [v0, v1], v[0:3], 0 shape:SHAPE_4X2X16
 ; GFX13-NEXT:    ; return to shader part epilog
   tail call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) null)
   %i = tail call { <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.f32.scatter2.v4f32(<4 x float> zeroinitializer, i8 0, i32 3, i1 false)

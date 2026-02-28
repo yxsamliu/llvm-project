@@ -3,7 +3,7 @@
 ; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+cumode -o /dev/null %s 2>&1 | FileCheck -check-prefix=CUMODE-ERR %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1300 -o - -filetype=obj < %s | llvm-objdump --disassemble - | FileCheck --check-prefixes=DISASM %s
 
-; CUMODE-ERR: LLVM ERROR: cannot enable cumode when wavegroup is enabled
+; CUMODE-ERR: LLVM ERROR: wavegroup requires full SIMD mode
 
 ;
 ; Check that binary emit also fills in the VGPR count correctly.
@@ -32,19 +32,19 @@ define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %p) #0 "amdgpu-wave
 ; CHECK-NEXT:    s_bfe_u32 s2, ttmp8, 0x20019
 ; CHECK-NEXT:    s_add_co_i32 s3, s3, s4
 ; CHECK-NEXT:    s_cmp_eq_u32 s5, 0
-; CHECK-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
+; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; CHECK-NEXT:    s_cselect_b32 s3, ttmp9, s3
 ; CHECK-NEXT:    s_lshl_b32 s2, s2, 6
 ; CHECK-NEXT:    s_lshl_b32 s3, s3, 8
-; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; CHECK-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; CHECK-NEXT:    s_or_b32 s2, s3, s2
 ; CHECK-NEXT:    s_lshl_b32 s3, s4, 5
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    s_or_b32 s2, s2, s3
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    v_or3_b32 v0, s2, v0, v0
+; CHECK-NEXT:    v_or3_b32 v0, s2, s3, v0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %wg_x = call i32 @llvm.amdgcn.workgroup.id.x()

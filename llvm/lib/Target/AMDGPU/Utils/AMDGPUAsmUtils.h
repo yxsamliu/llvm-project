@@ -127,6 +127,51 @@ ArrayRef<GFXVersion> getGFXVersions();
 
 } // namespace UCVersion
 
+namespace WMMAMods {
+inline constexpr const char *const ModMatrixFmt[] = {
+    "MATRIX_FMT_FP8", "MATRIX_FMT_BF8", "MATRIX_FMT_FP6", "MATRIX_FMT_BF6",
+    "MATRIX_FMT_FP4"};
+}
+
+namespace VOPMMods {
+
+inline constexpr const char *const ModShapeNames[] = {
+    "SHAPE_8X4X8", "SHAPE_4X4X8", "SHAPE_4X4X16", "SHAPE_4X2X16"};
+
+inline constexpr const char *const ModFilterNames[] = {"FILTER_1X1",
+                                                       "FILTER_3X3"};
+
+inline constexpr const char *const ModLayoutNames[] = {
+    "LAYOUT_CONVOLVE_8X4", "LAYOUT_CONVOLVE_4X4", "LAYOUT_CONVOLVE_4X2",
+    "LAYOUT_DEQUANT_4X4", "LAYOUT_DEQUANT_4X2"};
+
+inline constexpr const char *const ModActivationNames[] = {
+    "ACTIVATION_OFF", "ACTIVATION_RELU", "ACTIVATION_HARD_TANH"};
+
+inline constexpr int32_t ModChanOffsetFmaTensorInts[] = {0, 2, 8, 10, 16, 18};
+
+inline constexpr int32_t ModChanOffsetCvtTensorNonZeroInts[] = {8, 16};
+
+inline constexpr int32_t ModChanOffsetScaleActivateInts[] = {0,  8,  16, 24,
+                                                             32, 40, 48, 56};
+
+inline constexpr const char *const ModMatrixScale[] = {
+    "MATRIX_SCALE_LO_EVEN", "MATRIX_SCALE_HI_EVEN", "MATRIX_SCALE_LO_ODD",
+    "MATRIX_SCALE_HI_ODD"};
+
+inline constexpr const char *ModIndexSetNames[] = {"MATRIX_SPARSE_INDEX_EVEN",
+                                                   "MATRIX_SPARSE_INDEX_ODD"};
+
+} // namespace VOPMMods
+
+namespace ExtendMatrixFmtMods {
+
+inline constexpr const char *const ModExtendMatrixFmt[] = {
+    "EXTEND_MATRIX_FMT_U1", "EXTEND_MATRIX_FMT_I1", "EXTEND_MATRIX_FMT_U2",
+    "EXTEND_MATRIX_FMT_I2", "EXTEND_MATRIX_FMT_U4", "EXTEND_MATRIX_FMT_I4"};
+
+} // namespace ExtendMatrixFmtMods
+
 } // namespace AMDGPU
 } // namespace llvm
 

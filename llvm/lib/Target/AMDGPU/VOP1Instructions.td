@@ -385,6 +385,33 @@ defm V_FREXP_EXP_I32_F32 : VOP1Inst <"v_frexp_exp_i32_f32", VOP_I32_F32, int_amd
 defm V_FREXP_MANT_F32 : VOP1Inst <"v_frexp_mant_f32", VOP_F32_F32, int_amdgcn_frexp_mant>;
 } // End isReMaterializable = 1
 
+// These i32 conversions naturally saturate.
+def : GCNPat<(i32 (fp_to_uint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i32)),
+             (V_CVT_U32_F32_e64 $src0_modifiers, $src0)>;
+def : GCNPat<(i32 (fp_to_sint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i32)),
+             (V_CVT_I32_F32_e64 $src0_modifiers, $src0)>;
+def : GCNPat<(i32 (fp_to_uint_sat (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)), i32)),
+             (V_CVT_U32_F64_e64 $src0_modifiers, $src0)>;
+def : GCNPat<(i32 (fp_to_sint_sat (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)), i32)),
+             (V_CVT_I32_F64_e64 $src0_modifiers, $src0)>;
+def : GCNPat<(i32 (fp_to_uint_sat f32:$src0, i32)), (V_CVT_U32_F32_e32 (f32 $src0))>;
+def : GCNPat<(i32 (fp_to_sint_sat f32:$src0, i32)), (V_CVT_I32_F32_e32 (f32 $src0))>;
+def : GCNPat<(i32 (fp_to_uint_sat f64:$src0, i32)), (V_CVT_U32_F64_e32 (f64 $src0))>;
+def : GCNPat<(i32 (fp_to_sint_sat f64:$src0, i32)), (V_CVT_I32_F64_e32 (f64 $src0))>;
+
+def : GCNPat<(i32 (fp_to_uint_sat_gi (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+             (V_CVT_U32_F32_e64 $src0_modifiers, $src0)>;
+def : GCNPat<(i32 (fp_to_sint_sat_gi (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
+             (V_CVT_I32_F32_e64 $src0_modifiers, $src0)>;
+def : GCNPat<(i32 (fp_to_uint_sat_gi (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)))),
+             (V_CVT_U32_F64_e64 $src0_modifiers, $src0)>;
+def : GCNPat<(i32 (fp_to_sint_sat_gi (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)))),
+             (V_CVT_I32_F64_e64 $src0_modifiers, $src0)>;
+def : GCNPat<(i32 (fp_to_uint_sat_gi f32:$src0)), (V_CVT_U32_F32_e32 (f32 $src0))>;
+def : GCNPat<(i32 (fp_to_sint_sat_gi f32:$src0)), (V_CVT_I32_F32_e32 (f32 $src0))>;
+def : GCNPat<(i32 (fp_to_uint_sat_gi f64:$src0)), (V_CVT_U32_F64_e32 (f64 $src0))>;
+def : GCNPat<(i32 (fp_to_sint_sat_gi f64:$src0)), (V_CVT_I32_F64_e32 (f64 $src0))>;
+
 defm V_CLREXCP : VOP1Inst <"v_clrexcp", VOP_NO_EXT<VOP_NONE>>;
 
 // Restrict src0 to be VGPR
@@ -677,7 +704,7 @@ let OtherPredicates = [HasCvtFP8VOP1Bug] in {
                (V_CVT_F32_BF8_sdwa 0, $src, 0, 0, 0)>;
 }
 
-let OtherPredicates = [HasNoCvtFP8VOP1Bug, HasSDWA] in { // FIXME: HasSDWA is a substitute for !gfx12
+let OtherPredicates = [NotHasCvtFP8VOP1Bug, HasSDWA] in { // FIXME: HasSDWA is a substitute for !gfx12
   def : GCNPat<(f32 (int_amdgcn_cvt_f32_fp8 i32:$src, 0)),
                (V_CVT_F32_FP8_e32 $src)>;
   def : GCNPat<(f32 (int_amdgcn_cvt_f32_bf8 i32:$src, 0)),
@@ -878,7 +905,7 @@ let SubtargetPredicate = isGFX11Plus in {
     let IsInvalidSingleUseProducer = 1;
   }
 
-  let isAsCheapAsAMove = 1 in
+  let isAsCheapAsAMove = 1, isMoveImm = 1 in
   defm V_MOV_B16        : VOP1Inst_t16<"v_mov_b16", VOP_I16_I16>;
   defm V_NOT_B16        : VOP1Inst_t16<"v_not_b16", VOP_I16_I16>;
   defm V_CVT_I32_I16    : VOP1Inst_t16<"v_cvt_i32_i16", VOP_I32_I16>;
@@ -1124,15 +1151,14 @@ multiclass VOP1Only_Real_gfx11_gfx12_gfx13<bits<9> op> :
   VOP1Only_Real<GFX11Gen, op>, VOP1Only_Real<GFX12Gen, op>,
   VOP1Only_Real<GFX13Gen, op>;
 
-
 multiclass VOP1_Real_FULL_gfx11_gfx12<bits<9> op> :
   VOP1_Real_FULL<GFX11Gen, op>, VOP1_Real_FULL<GFX12Gen, op>;
 
 multiclass VOP1_Real_e32_with_name_gfx11_gfx12_gfx13<bits<9> op, string opName,
-                                               string asmName> :
-  VOP1_Real_e32_with_name<GFX13Gen, op, opName, asmName>,
+                                                    string asmName> :
+  VOP1_Real_e32_with_name<GFX11Gen, op, opName, asmName>,
   VOP1_Real_e32_with_name<GFX12Gen, op, opName, asmName>,
-  VOP1_Real_e32_with_name<GFX11Gen, op, opName, asmName>;
+  VOP1_Real_e32_with_name<GFX13Gen, op, opName, asmName>;
 
 multiclass VOP1_Real_FULL_t16<GFXGen Gen, bits<9> op> :
   VOP1_Real_FULL_with_name<Gen, op, NAME,
@@ -1156,7 +1182,7 @@ multiclass VOP1_Real_FULL_t16_and_fake16_gfx13<
        VOP1_Real_FULL_with_name<GFX13Gen, op, opName#"_fake16", asmName>;
 }
 
-multiclass VOP1_Real_FULL_with_name_gfx11_gfx12_not_gfx1250_gfx13<bits<9> op, string opName,
+multiclass VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13_not_gfx1250<bits<9> op, string opName,
                                                                   string asmName> :
   VOP1_Real_FULL_with_name<GFX11Gen, op, opName, asmName>,
   VOP1_Real_FULL_with_name<GFX12Not12_50Gen, op, opName, asmName>,
@@ -1168,10 +1194,6 @@ multiclass VOP1_Real_OpSelIsDPP<GFXGen Gen, bits<9> op> : VOP1_Real_e32<Gen, op>
         VOP3_Real_Gen<ps, Gen>,
         VOP3OpSelIsDPP_gfx12<{0, 1, 1, op{6-0}}, ps.Pfl>;
 }
-
-multiclass VOP1_Real_OpSelIsDPP_gfx1250_gfx13<bits<9> op> :
-  VOP1_Real_OpSelIsDPP<GFX1250Gen, op>,
-  VOP1_Real_OpSelIsDPP<GFX13Gen, op>;
 
 let HasClamp = 0 in {
 class VOP1_CVT_PK_F8_F16_Profile<RegisterOperand RC> : VOPProfile<[i16, v2f16, untyped, untyped]> {
@@ -1203,10 +1225,14 @@ let ReadsModeReg = 0 in {
 }
 }
 
-defm V_CVT_F32_FP8           : VOP1_Real_FULL_with_name_gfx11_gfx12_not_gfx1250_gfx13<0x06c, "V_CVT_F32_FP8_OP_SEL", "v_cvt_f32_fp8">;
+multiclass VOP1_Real_OpSelIsDPP_gfx1250_gfx13<bits<9> op> :
+  VOP1_Real_OpSelIsDPP<GFX1250Gen, op>,
+  VOP1_Real_OpSelIsDPP<GFX13Gen, op>;
+
+defm V_CVT_F32_FP8           : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13_not_gfx1250<0x06c, "V_CVT_F32_FP8_OP_SEL", "v_cvt_f32_fp8">;
 defm V_CVT_F32_FP8           : VOP1_Real_FULL_with_name<GFX1250Gen, 0x06c, "V_CVT_F32_FP8_gfx1250", "v_cvt_f32_fp8">;
 
-defm V_CVT_F32_BF8      : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13<0x06d, "V_CVT_F32_BF8_OP_SEL", "v_cvt_f32_bf8">;
+defm V_CVT_F32_BF8           : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13<0x06d, "V_CVT_F32_BF8_OP_SEL", "v_cvt_f32_bf8">;
 
 defm V_CVT_PK_F32_FP8_fake16 : VOP1_Real_e32_with_name_gfx11_gfx12_gfx13<0x06e, "V_CVT_PK_F32_FP8_fake16", "v_cvt_pk_f32_fp8">;
 defm V_CVT_PK_F32_FP8_t16    : VOP1_Real_e32_with_name_gfx11_gfx12_gfx13<0x06e, "V_CVT_PK_F32_FP8_t16", "v_cvt_pk_f32_fp8">;

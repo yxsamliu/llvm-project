@@ -13,6 +13,11 @@
 @sem = internal addrspace(3) global target("amdgcn.semaphore", 1) poison
 @sem2 = internal addrspace(3) global target("amdgcn.semaphore", 1) poison
 
+@sema_next = internal addrspace(3) global target("amdgcn.semaphore", 0) poison
+@sema_prev = internal addrspace(3) global target("amdgcn.semaphore", 0) poison
+@ls_next = external addrspace(10) global [2 x i32], align 4
+@ls_prev = external addrspace(10) global [2 x i32], align 4
+
 define amdgpu_kernel void @set_and_is_chain() "amdgpu-cluster-dims"="4,1,1" "amdgpu-wavegroup-enable" "amdgpu-spatial-cluster" !reqd_work_group_size !{i32 32, i32 8, i32 1} {
 ; CHECK-LABEL: set_and_is_chain:
 ; CHECK:       ; %bb.0: ; %entry
@@ -26,6 +31,8 @@ define amdgpu_kernel void @set_and_is_chain() "amdgpu-cluster-dims"="4,1,1" "amd
 ; CHECK-NEXT:    s_getreg_b32 s1, hwreg(HW_REG_WAVE_MODE, 13, 1)
 ; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_WAVE_MODE, 12, 1), s0
 ; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_WAVE_MODE, 13, 1), s1
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.spatial.cluster.set.chain.start(i1 true)
@@ -44,9 +51,11 @@ define amdgpu_kernel void @signal_next_prev() "amdgpu-cluster-dims"="4,1,1" "amd
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s1, s0, 0
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
-; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    v_send_vgpr_next_b32 off, off, off sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:15
 ; CHECK-NEXT:    v_send_vgpr_prev_b32 off, off, off sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:15
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_mul_i32 s33, s0, s8
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.spatial.cluster.signal.next(ptr addrspace(3) @sem, ptr addrspace(3) @sem2)
@@ -54,6 +63,7 @@ entry:
   ret void
 }
 
+; TODO-GFX13: Double-check the wait_va_vdst generation!
 
 define amdgpu_kernel void @send_next_prev(i32 %i1, ptr addrspace(1) %p) "amdgpu-cluster-dims"="4,1,1" "amdgpu-wavegroup-enable" "amdgpu-spatial-cluster" !reqd_work_group_size !{i32 32, i32 8, i32 1} {
 ; CHECK-LABEL: send_next_prev:
@@ -78,12 +88,14 @@ define amdgpu_kernel void @send_next_prev(i32 %i1, ptr addrspace(1) %p) "amdgpu-
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[1], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:1
+; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[1], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:15
 ; CHECK-NEXT:    v_send_vgpr_prev_b32 g1[0], g1[1], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:15
 ; CHECK-NEXT:    global_store_b32 v1, g1[0], s[0:1] scale_offset
 ; CHECK-NEXT:    s_set_vgpr_frames 0x41 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[8], g1[0]
 ; CHECK-NEXT:    v_mov_b32_e32 g1[9], g1[0]
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %wg_cluster = call i32 @llvm.amdgcn.wavegroup.id.in.cluster()
@@ -126,12 +138,14 @@ define amdgpu_kernel void @send_next_prev_nowrite(i32 %i1, ptr addrspace(1) %p) 
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[1], v0 sema_wave_id:0 sema_wave_id_refl:0 wait_va_vdst:1
+; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[1], v0 sema_wave_id:0 sema_wave_id_refl:0 wait_va_vdst:15
 ; CHECK-NEXT:    v_send_vgpr_prev_b32 g1[0], g1[1], v0 sema_wave_id:0 sema_wave_id_refl:0 wait_va_vdst:15
 ; CHECK-NEXT:    global_store_b32 v1, g1[0], s[0:1] scale_offset
 ; CHECK-NEXT:    s_set_vgpr_frames 0x41 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[8], g1[0]
 ; CHECK-NEXT:    v_mov_b32_e32 g1[9], g1[0]
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %wg_cluster = call i32 @llvm.amdgcn.wavegroup.id.in.cluster()
@@ -179,8 +193,8 @@ define void @send_next_prev_non_kernel(i32 %i1, ptr addrspace(1) %p) {
 ; CHECK-NEXT:    v_mov_b32_e32 g1[9], g1[0]
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    global_store_b32 v[1:2], g1[0], off
-; CHECK-NEXT:    s_wait_expcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_wait_expcnt 0x0
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %wg_cluster = call i32 @llvm.amdgcn.wavegroup.id.in.cluster()
@@ -223,12 +237,14 @@ define amdgpu_kernel void @send_next_prev_nodims(i32 %i1, ptr addrspace(1) %p) "
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[1], v0 sema_wave_id:0 sema_wave_id_refl:0 wait_va_vdst:1
+; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[1], v0 sema_wave_id:0 sema_wave_id_refl:0 wait_va_vdst:15
 ; CHECK-NEXT:    v_send_vgpr_prev_b32 g1[0], g1[1], v0 sema_wave_id:0 sema_wave_id_refl:0 wait_va_vdst:15
 ; CHECK-NEXT:    global_store_b32 v1, g1[0], s[0:1] scale_offset
 ; CHECK-NEXT:    s_set_vgpr_frames 0x41 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[8], g1[0]
 ; CHECK-NEXT:    v_mov_b32_e32 g1[9], g1[0]
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %wg_cluster = call i32 @llvm.amdgcn.wavegroup.id.in.cluster()
@@ -261,6 +277,8 @@ define amdgpu_kernel void @send_next_from_laneshared() "amdgpu-cluster-dims"="4,
 ; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_set_vgpr_frames 0x45 ; vsrc0_idx=1 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_send_vgpr_next_b32 g1[1], g1[2], g1[8] sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:15
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %pdst = getelementptr i32, ptr addrspace(10) @dst, i32 1
@@ -270,3 +288,102 @@ entry:
                                                   ptr addrspace(10) %prefl, ptr addrspace(3) @sem2, i32 0);
   ret void
 }
+
+; NOTE: The tests below demonstrate correct addrspace inferral and subsequent bundling.
+
+define dso_local amdgpu_kernel void @send_next_with_mcast(ptr addrspace(1) noundef writeonly captures(none) initializes((0, 8)) %out.coerce, ptr addrspace(1) noundef readnone captures(none) %in.coerce, i32 noundef %size) local_unnamed_addr #4 !reqd_work_group_size !8 {
+; CHECK-LABEL: send_next_with_mcast:
+; CHECK:       .Lsend_next_with_mcast$local:
+; CHECK-NEXT:    .type .Lsend_next_with_mcast$local,@function
+; CHECK-NEXT:  ; %bb.0: ; %entry
+; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_mul_i32 s1, s0, 1
+; CHECK-NEXT:    s_add_co_u32 s1, s1, 4
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
+; CHECK-NEXT:    s_mul_i32 s33, s0, s8
+; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_mov_b32 m0, 0xc0000
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    global_load_mcast_b32 g1[1], v0, s[0:1]
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_load_mcast_b32 g1[3], v0, s[0:1]
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[2], v0 sema_id:1 sema_wave_id:0 sema_id_refl:2 sema_wave_id_refl:0 wait_va_vdst:15
+; CHECK-NEXT:    v_send_vgpr_prev_b32 g1[2], g1[0], v0 sema_id:2 sema_wave_id:0 sema_id_refl:1 sema_wave_id_refl:0 wait_va_vdst:15
+; CHECK-NEXT:    s_sema_wait 1
+; CHECK-NEXT:    s_sema_wait 2
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
+; CHECK-NEXT:    s_endpgm
+entry:
+  tail call void @llvm.amdgcn.load.mcast.b32.p1(ptr addrspace(10) nonnull getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_next, i32 4), ptr addrspace(1) %in.coerce, i32 0, i32 786432)
+  tail call void @llvm.amdgcn.load.mcast.b32.p1(ptr addrspace(10) nonnull getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_prev, i32 4), ptr addrspace(1) %in.coerce, i32 0, i32 786432)
+  tail call void @llvm.amdgcn.spatial.cluster.send.next(i32 0, ptr addrspace(10) @ls_next, ptr addrspace(3) @sema_next, ptr addrspace(10) @ls_prev, ptr addrspace(3) @sema_prev, i32 0)
+  tail call void @llvm.amdgcn.spatial.cluster.send.prev(i32 0, ptr addrspace(10) @ls_prev, ptr addrspace(3) @sema_prev, ptr addrspace(10) @ls_next, ptr addrspace(3) @sema_next, i32 0)
+  tail call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sema_next)
+  tail call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sema_prev)
+  fence syncscope("workgroup") acquire, !mmra !9
+  ret void
+}
+
+define dso_local amdgpu_kernel void @send_next_store_pair(ptr addrspace(1) noundef writeonly captures(none) initializes((0, 8)) %out.coerce, ptr addrspace(1) noundef readonly captures(none) %in.coerce, i32 noundef %size) local_unnamed_addr #0 !reqd_work_group_size !8 {
+; CHECK-LABEL: send_next_store_pair:
+; CHECK:       .Lsend_next_store_pair$local:
+; CHECK-NEXT:    .type .Lsend_next_store_pair$local,@function
+; CHECK-NEXT:  ; %bb.0: ; %entry
+; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_mul_i32 s1, s0, 3
+; CHECK-NEXT:    s_add_co_u32 s1, s1, 4
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
+; CHECK-NEXT:    s_mul_i32 s33, s0, s8
+; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
+; CHECK-NEXT:    s_set_vgpr_frames 0x45 ; vsrc0_idx=1 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    v_send_vgpr_next_b32 g1[1], g1[3], g1[1] sema_id:1 sema_wave_id:0 sema_id_refl:2 sema_wave_id_refl:0 wait_va_vdst:15
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    s_set_vgpr_frames 0x45 ; vsrc0_idx=1 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    v_send_vgpr_prev_b32 g1[3], g1[1], g1[3] sema_id:2 sema_wave_id:0 sema_id_refl:1 sema_wave_id_refl:0 wait_va_vdst:15
+; CHECK-NEXT:    s_sema_wait 1
+; CHECK-NEXT:    s_sema_wait 2
+; CHECK-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    v_mov_b32_e32 v0, g1[1]
+; CHECK-NEXT:    v_mov_b32_e32 v1, g1[3]
+; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
+; CHECK-NEXT:    s_endpgm
+entry:
+  %0 = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_next, i32 4), align 4, !tbaa !4
+  tail call void @llvm.amdgcn.spatial.cluster.send.next(i32 %0, ptr addrspace(10) nonnull getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_next, i32 4), ptr addrspace(3) @sema_next, ptr addrspace(10) nonnull getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_prev, i32 4), ptr addrspace(3) @sema_prev, i32 0)
+  %1 = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_prev, i32 4), align 4, !tbaa !4
+  tail call void @llvm.amdgcn.spatial.cluster.send.prev(i32 %1, ptr addrspace(10) nonnull getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_prev, i32 4), ptr addrspace(3) @sema_prev, ptr addrspace(10) nonnull getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_next, i32 4), ptr addrspace(3) @sema_next, i32 0)
+  tail call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sema_next)
+  tail call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sema_prev)
+  fence syncscope("workgroup") acquire, !mmra !9
+  %2 = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_next, i32 4), align 4, !tbaa !4
+  store i32 %2, ptr addrspace(1) %out.coerce, align 4, !tbaa !4
+  %3 = load i32, ptr addrspace(10) getelementptr inbounds nuw (i8, ptr addrspace(10) @ls_prev, i32 4), align 4, !tbaa !4
+  %arrayidx11 = getelementptr inbounds nuw i8, ptr addrspace(1) %out.coerce, i64 4
+  store i32 %3, ptr addrspace(1) %arrayidx11, align 4, !tbaa !4
+  ret void
+}
+
+attributes #0 = { convergent mustprogress norecurse nounwind "amdgpu-spatial-cluster" "amdgpu-wavegroup-enable"}
+attributes #4 = { convergent mustprogress norecurse nounwind "amdgpu-spatial-cluster" "amdgpu-wavegroup-enable"}
+
+!4 = !{!5, !5, i64 0}
+!5 = !{!"int", !6, i64 0}
+!6 = !{!"omnipotent char", !7, i64 0}
+!7 = !{!"Simple C++ TBAA"}
+!8 = !{i32 128, i32 1, i32 1}
+!9 = !{!"amdgpu-synchronize-as", !"laneshared"}

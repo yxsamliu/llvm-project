@@ -15,6 +15,8 @@ define amdgpu_kernel void @private_load_store() #0 {
   ;
   ; VIDX-LABEL: name: private_load_store
   ; VIDX: bb.0.entry:
+  ; VIDX-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.q, align 1, addrspace 5)
+  ; VIDX-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
   ; VIDX-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 4
   ; VIDX-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_]], 2, implicit-def dead $scc
   ; VIDX-NEXT:   [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[S_LSHR_B32_]], 0, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
@@ -31,6 +33,8 @@ define amdgpu_kernel void @private_load_store() #0 {
   ;
   ; BUNDLE-LABEL: name: private_load_store
   ; BUNDLE: bb.0.entry:
+  ; BUNDLE-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.q, align 1, addrspace 5)
+  ; BUNDLE-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
   ; BUNDLE-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
   ; BUNDLE-NEXT:   BUNDLE implicit-def $stg_dsta, implicit [[S_MOV_B32_]], implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5), (store (s32) into %ir.p.2, addrspace 5) {
   ; BUNDLE-NEXT:     $stg_dsta = V_LOAD_IDX_B32 [[S_MOV_B32_]], 1, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
@@ -44,6 +48,8 @@ define amdgpu_kernel void @private_load_store() #0 {
   ;
   ; SETIDX-LABEL: name: private_load_store
   ; SETIDX: bb.0.entry:
+  ; SETIDX-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.q, align 1, addrspace 5)
+  ; SETIDX-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
   ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
   ; SETIDX-NEXT:   BUNDLE implicit-def $stg_dsta, implicit $idx1, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5), (store (s32) into %ir.p.2, addrspace 5) {
   ; SETIDX-NEXT:     $stg_dsta = V_LOAD_IDX_B32 $idx1, 1, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
@@ -105,6 +111,7 @@ define dso_local amdgpu_kernel void @private_fail_bundle(ptr addrspace(1) nounde
   ; VIDX-NEXT:   liveins: $sgpr4_sgpr5
   ; VIDX-NEXT: {{  $}}
   ; VIDX-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; VIDX-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.my_array, align 1, addrspace 5)
   ; VIDX-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s128) from %ir.dst.coerce.kernarg.offset, align 4, addrspace 4)
   ; VIDX-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s32) from %ir.i.kernarg.offset, addrspace 4)
   ; VIDX-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
@@ -133,6 +140,7 @@ define dso_local amdgpu_kernel void @private_fail_bundle(ptr addrspace(1) nounde
   ; BUNDLE-NEXT:   liveins: $sgpr4_sgpr5
   ; BUNDLE-NEXT: {{  $}}
   ; BUNDLE-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; BUNDLE-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.my_array, align 1, addrspace 5)
   ; BUNDLE-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s128) from %ir.dst.coerce.kernarg.offset, align 4, addrspace 4)
   ; BUNDLE-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s32) from %ir.i.kernarg.offset, addrspace 4)
   ; BUNDLE-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[S_LOAD_DWORDX4_IMM]].sub0, %subreg.sub0, [[S_LOAD_DWORDX4_IMM]].sub1, %subreg.sub1
@@ -146,8 +154,8 @@ define dso_local amdgpu_kernel void @private_fail_bundle(ptr addrspace(1) nounde
   ; BUNDLE-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
   ; BUNDLE-NEXT:   V_STORE_IDX_B32 [[COPY1]], [[S_LSHR_B32_]], 0, implicit $exec :: (store (s32) into %ir.arrayidx, addrspace 5)
   ; BUNDLE-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
-  ; BUNDLE-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed [[S_MOV_B32_]], implicit $exec, implicit killed [[V_MOV_B32_e32_]], implicit killed [[REG_SEQUENCE]] :: (dereferenceable load (s32) from %ir.my_array, addrspace 5), (store (s32) into %ir.1, addrspace 1) {
-  ; BUNDLE-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed [[S_MOV_B32_]], 0, implicit $exec :: (dereferenceable load (s32) from %ir.my_array, addrspace 5)
+  ; BUNDLE-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit [[S_MOV_B32_]], implicit $exec, implicit killed [[V_MOV_B32_e32_]], implicit killed [[REG_SEQUENCE]] :: (dereferenceable load (s32) from %ir.my_array, addrspace 5), (store (s32) into %ir.1, addrspace 1) {
+  ; BUNDLE-NEXT:     $stg_srca = V_LOAD_IDX_B32 [[S_MOV_B32_]], 0, implicit $exec :: (dereferenceable load (s32) from %ir.my_array, addrspace 5)
   ; BUNDLE-NEXT:     GLOBAL_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], internal killed $stg_srca, killed [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s32) into %ir.1, addrspace 1)
   ; BUNDLE-NEXT:   }
   ; BUNDLE-NEXT:   S_ENDPGM 0
@@ -157,6 +165,7 @@ define dso_local amdgpu_kernel void @private_fail_bundle(ptr addrspace(1) nounde
   ; SETIDX-NEXT:   liveins: $sgpr4_sgpr5
   ; SETIDX-NEXT: {{  $}}
   ; SETIDX-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+  ; SETIDX-NEXT:   VGPR_LIFETIME_START :: (dereferenceable store (s1056) into %ir.my_array, align 1, addrspace 5)
   ; SETIDX-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s128) from %ir.dst.coerce.kernarg.offset, align 4, addrspace 4)
   ; SETIDX-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s32) from %ir.i.kernarg.offset, addrspace 4)
   ; SETIDX-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[S_LOAD_DWORDX4_IMM]].sub0, %subreg.sub0, [[S_LOAD_DWORDX4_IMM]].sub1, %subreg.sub1

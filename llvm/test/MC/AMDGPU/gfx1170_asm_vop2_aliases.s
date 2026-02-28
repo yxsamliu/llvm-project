@@ -7,8 +7,8 @@ v_min_f32 v5, v1, v2
 v_max_f32 v5, v1, v2
 // GFX1170: v_max_num_f32_e32 v5, v1, v2            ; encoding: [0x01,0x05,0x0a,0x20]
 
-v_min_f16 v5, v1, v2
-// GFX1170: v_min_num_f16_e32 v5, v1, v2            ; encoding: [0x01,0x05,0x0a,0x74]
+v_min_f16 v5.l, v1.l, v2.l
+// GFX1170: v_min_num_f16_e32 v5.l, v1.l, v2.l      ; encoding: [0x01,0x05,0x0a,0x74]
 
-v_max_f16 v5, v1, v2
-// GFX1170: v_max_num_f16_e32 v5, v1, v2            ; encoding: [0x01,0x05,0x0a,0x72]
+v_max_f16 v5.l, v1.l, v2.l
+// GFX1170: v_max_num_f16_e32 v5.l, v1.l, v2.l      ; encoding: [0x01,0x05,0x0a,0x72]

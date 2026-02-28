@@ -21,8 +21,8 @@ define void @global(ptr addrspace(10) %itp, ptr addrspace(1) %p1) {
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, s0
 ; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX13-NEXT:    global_load_mcast_b32 g1[0], v[1:2], off th:TH_LOAD_HT scope:SCOPE_SE
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   call void @llvm.amdgcn.load.mcast.b32.p10.p1(ptr addrspace(10) %itp, ptr addrspace(1) readonly %p1, i32 10, i32 983040)
@@ -44,8 +44,8 @@ define void @ds(ptr addrspace(10) %itp, ptr addrspace(3) %p3) {
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, s0
 ; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX13-NEXT:    ds_load_mcast_b32 g1[0], v1
-; GFX13-NEXT:    s_wait_dscnt 0x0
 ; GFX13-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; GFX13-NEXT:    s_wait_dscnt 0x0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   call void @llvm.amdgcn.load.mcast.b32.p10.p3(ptr addrspace(10) %itp, ptr addrspace(3) readonly %p3, i32 10, i32 983040)
@@ -67,8 +67,8 @@ define void @dds(ptr addrspace(10) %itp, ptr addrspace(11) %p11) {
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, s0
 ; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX13-NEXT:    dds_load_mcast_b32 g1[0], v1, off th:TH_LOAD_HT scope:SCOPE_SE
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   call void @llvm.amdgcn.load.mcast.b32.p10.p11(ptr addrspace(10) %itp, ptr addrspace(11) readonly %p11, i32 10, i32 983040)
@@ -86,7 +86,7 @@ define amdgpu_kernel void @vnbr(ptr addrspace(10) %itp, ptr addrspace(10) %itp_r
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx2, s0
 ; GFX13-NEXT:    s_set_vgpr_frames 0x84 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=2 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_send_vgpr_next_b32 g2[0], g1[0], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:0
+; GFX13-NEXT:    v_send_vgpr_next_b32 g2[0], g1[0], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:15
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.spatial.cluster.send.next(i32 0, ptr addrspace(10) %itp, ptr addrspace(3) @sem,

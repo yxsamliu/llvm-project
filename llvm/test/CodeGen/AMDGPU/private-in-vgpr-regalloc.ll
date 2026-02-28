@@ -4,6 +4,37 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1260 -amdgpu-promote-private=true -verify-machineinstrs -o - %s | FileCheck --check-prefix=GFX1260 %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1260 -amdgpu-promote-private=true -verify-machineinstrs -stop-after=amdgpu-private-object-vgprs -o - %s | FileCheck --check-prefix=LIVEINS-GFX1260 %s
 
+; LIVEINS-LABEL: name: basic
+; LIVEINS: bb.0.entry:
+; LIVEINS-NEXT: successors:
+; LIVEINS-NEXT: liveins: $sgpr4_sgpr5{{$}}
+;
+; LIVEINS: bb.1.bb:
+; LIVEINS-NEXT: successors:
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
+;
+; LIVEINS: bb.2.bb2:
+; LIVEINS-NEXT: successors:
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
+;
+; LIVEINS: bb.3.bb3:
+; LIVEINS-NEXT: successors:
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
+;
+; LIVEINS: bb.4.bb4:
+; LIVEINS-NEXT: successors:
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
+;
+; LIVEINS: bb.5.exit:
+; LIVEINS-NEXT: successors:
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
+;
+; LIVEINS: bb.6.ret:
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
+;
+; LIVEINS:      VGPR_LIFETIME_END
+; LIVEINS-NEXT: S_ENDPGM 0
+
 define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0 {
 ; CHECK-LABEL: basic:
 ; CHECK:       ; %bb.0: ; %entry
@@ -11,51 +42,19 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 3
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:12
+; CHECK-NEXT:    ; VGPR lifetime start: v[0:32]
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_6
 ; CHECK-NEXT:  ; %bb.1: ; %bb
-; CHECK-NEXT:    v_mov_b32_e32 v0, 5
-; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:20
+; CHECK-NEXT:    v_mov_b32_e32 v33, 5
+; CHECK-NEXT:    scratch_store_b32 off, v33, s0 offset:20
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_6
 ; CHECK-NEXT:  ; %bb.2: ; %bb2
-; CHECK-NEXT:    scratch_load_b32 v0, off, s1
+; CHECK-NEXT:    scratch_load_b32 v33, off, s1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr2
-; CHECK-NEXT:    ; implicit-def: $vgpr3
-; CHECK-NEXT:    ; implicit-def: $vgpr4
-; CHECK-NEXT:    ; implicit-def: $vgpr5
-; CHECK-NEXT:    ; implicit-def: $vgpr6
-; CHECK-NEXT:    ; implicit-def: $vgpr7
-; CHECK-NEXT:    ; implicit-def: $vgpr8
-; CHECK-NEXT:    ; implicit-def: $vgpr9
-; CHECK-NEXT:    ; implicit-def: $vgpr10
-; CHECK-NEXT:    ; implicit-def: $vgpr11
-; CHECK-NEXT:    ; implicit-def: $vgpr12
-; CHECK-NEXT:    ; implicit-def: $vgpr13
-; CHECK-NEXT:    ; implicit-def: $vgpr14
-; CHECK-NEXT:    ; implicit-def: $vgpr15
-; CHECK-NEXT:    ; implicit-def: $vgpr16
-; CHECK-NEXT:    ; implicit-def: $vgpr17
-; CHECK-NEXT:    ; implicit-def: $vgpr18
-; CHECK-NEXT:    ; implicit-def: $vgpr19
-; CHECK-NEXT:    ; implicit-def: $vgpr20
-; CHECK-NEXT:    ; implicit-def: $vgpr21
-; CHECK-NEXT:    ; implicit-def: $vgpr22
-; CHECK-NEXT:    ; implicit-def: $vgpr23
-; CHECK-NEXT:    ; implicit-def: $vgpr24
-; CHECK-NEXT:    ; implicit-def: $vgpr25
-; CHECK-NEXT:    ; implicit-def: $vgpr26
-; CHECK-NEXT:    ; implicit-def: $vgpr27
-; CHECK-NEXT:    ; implicit-def: $vgpr28
-; CHECK-NEXT:    ; implicit-def: $vgpr29
-; CHECK-NEXT:    ; implicit-def: $vgpr30
-; CHECK-NEXT:    ; implicit-def: $vgpr31
-; CHECK-NEXT:    ; implicit-def: $vgpr32
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    v_mul_f32_e32 v0, v0, v0
+; CHECK-NEXT:    v_mul_f32_e32 v33, v33, v33
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; CHECK-NEXT:    v_add_f32_e32 v33, 2.0, v0
-; CHECK-NEXT:    ; implicit-def: $vgpr0
+; CHECK-NEXT:    v_add_f32_e32 v33, 2.0, v33
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[1], v33
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -63,22 +62,23 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; CHECK-NEXT:  ; %bb.3: ; %bb3
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_5
 ; CHECK-NEXT:  ; %bb.4: ; %bb4
-; CHECK-NEXT:    v_mul_f32_e32 v0, v33, v33
+; CHECK-NEXT:    v_mul_f32_e32 v33, v33, v33
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_add_f32_e64 g1[1], v0, 2.0
+; CHECK-NEXT:    v_add_f32_e64 g1[1], v33, 2.0
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:  .LBB0_5: ; %exit
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    scratch_load_b32 v0, off, s0 offset:28
+; CHECK-NEXT:    scratch_load_b32 v33, off, s0 offset:28
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    scratch_store_b32 off, g1[1], s0
-; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_add_nc_u32_e32 v0, 7, v0
-; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:28
+; CHECK-NEXT:    s_wait_loadcnt 0
+; CHECK-NEXT:    v_add_nc_u32_e32 v33, 7, v33
+; CHECK-NEXT:    scratch_store_b32 off, v33, s0 offset:28
 ; CHECK-NEXT:  .LBB0_6: ; %ret
+; CHECK-NEXT:    ; VGPR lifetime end: v[0:32]
 ; CHECK-NEXT:    s_endpgm
 ; GFX13-LABEL: basic:
 ; GFX13:       ; %bb.0: ; %entry
@@ -86,51 +86,19 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; GFX13-NEXT:    v_mov_b32_e32 v0, 3
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    scratch_store_b32 off, v0, s0 offset:12
+; GFX13-NEXT:    ; VGPR lifetime start: v[0:32]
 ; GFX13-NEXT:    s_cbranch_scc1 .LBB0_6
 ; GFX13-NEXT:  ; %bb.1: ; %bb
-; GFX13-NEXT:    v_mov_b32_e32 v0, 5
-; GFX13-NEXT:    scratch_store_b32 off, v0, s0 offset:20
+; GFX13-NEXT:    v_mov_b32_e32 v33, 5
+; GFX13-NEXT:    scratch_store_b32 off, v33, s0 offset:20
 ; GFX13-NEXT:    s_cbranch_scc1 .LBB0_6
 ; GFX13-NEXT:  ; %bb.2: ; %bb2
-; GFX13-NEXT:    scratch_load_b32 v0, off, s1
+; GFX13-NEXT:    scratch_load_b32 v33, off, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    ; implicit-def: $vgpr1
-; GFX13-NEXT:    ; implicit-def: $vgpr2
-; GFX13-NEXT:    ; implicit-def: $vgpr3
-; GFX13-NEXT:    ; implicit-def: $vgpr4
-; GFX13-NEXT:    ; implicit-def: $vgpr5
-; GFX13-NEXT:    ; implicit-def: $vgpr6
-; GFX13-NEXT:    ; implicit-def: $vgpr7
-; GFX13-NEXT:    ; implicit-def: $vgpr8
-; GFX13-NEXT:    ; implicit-def: $vgpr9
-; GFX13-NEXT:    ; implicit-def: $vgpr10
-; GFX13-NEXT:    ; implicit-def: $vgpr11
-; GFX13-NEXT:    ; implicit-def: $vgpr12
-; GFX13-NEXT:    ; implicit-def: $vgpr13
-; GFX13-NEXT:    ; implicit-def: $vgpr14
-; GFX13-NEXT:    ; implicit-def: $vgpr15
-; GFX13-NEXT:    ; implicit-def: $vgpr16
-; GFX13-NEXT:    ; implicit-def: $vgpr17
-; GFX13-NEXT:    ; implicit-def: $vgpr18
-; GFX13-NEXT:    ; implicit-def: $vgpr19
-; GFX13-NEXT:    ; implicit-def: $vgpr20
-; GFX13-NEXT:    ; implicit-def: $vgpr21
-; GFX13-NEXT:    ; implicit-def: $vgpr22
-; GFX13-NEXT:    ; implicit-def: $vgpr23
-; GFX13-NEXT:    ; implicit-def: $vgpr24
-; GFX13-NEXT:    ; implicit-def: $vgpr25
-; GFX13-NEXT:    ; implicit-def: $vgpr26
-; GFX13-NEXT:    ; implicit-def: $vgpr27
-; GFX13-NEXT:    ; implicit-def: $vgpr28
-; GFX13-NEXT:    ; implicit-def: $vgpr29
-; GFX13-NEXT:    ; implicit-def: $vgpr30
-; GFX13-NEXT:    ; implicit-def: $vgpr31
-; GFX13-NEXT:    ; implicit-def: $vgpr32
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_mul_f32_e32 v0, v0, v0
+; GFX13-NEXT:    v_mul_f32_e32 v33, v33, v33
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX13-NEXT:    v_add_f32_e32 v33, 2.0, v0
-; GFX13-NEXT:    ; implicit-def: $vgpr0
+; GFX13-NEXT:    v_add_f32_e32 v33, 2.0, v33
 ; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX13-NEXT:    v_mov_b32_e32 g1[1], v33
 ; GFX13-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -138,22 +106,23 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; GFX13-NEXT:  ; %bb.3: ; %bb3
 ; GFX13-NEXT:    s_cbranch_scc1 .LBB0_5
 ; GFX13-NEXT:  ; %bb.4: ; %bb4
-; GFX13-NEXT:    v_mul_f32_e32 v0, v33, v33
+; GFX13-NEXT:    v_mul_f32_e32 v33, v33, v33
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_add_f32_e64 g1[1], v0, 2.0
+; GFX13-NEXT:    v_add_f32_e64 g1[1], v33, 2.0
 ; GFX13-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX13-NEXT:  .LBB0_5: ; %exit
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    scratch_load_b32 v0, off, s0 offset:28
+; GFX13-NEXT:    scratch_load_b32 v33, off, s0 offset:28
 ; GFX13-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX13-NEXT:    scratch_store_b32 off, g1[1], s0
-; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_add_nc_u32_e32 v0, 7, v0
-; GFX13-NEXT:    scratch_store_b32 off, v0, s0 offset:28
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    v_add_nc_u32_e32 v33, 7, v33
+; GFX13-NEXT:    scratch_store_b32 off, v33, s0 offset:28
 ; GFX13-NEXT:  .LBB0_6: ; %ret
+; GFX13-NEXT:    ; VGPR lifetime end: v[0:32]
 ; GFX13-NEXT:    s_endpgm
 ;
 ; GFX1260-LABEL: basic:
@@ -163,52 +132,19 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; GFX1260-NEXT:    v_mov_b32_e32 v0, 3
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    scratch_store_b32 off, v0, s0 offset:12
+; GFX1260-NEXT:    ; VGPR lifetime start: v[0:32]
 ; GFX1260-NEXT:    s_cbranch_scc1 .LBB0_6
 ; GFX1260-NEXT:  ; %bb.1: ; %bb
-; GFX1260-NEXT:    s_wait_xcnt 0x0
-; GFX1260-NEXT:    v_mov_b32_e32 v0, 5
-; GFX1260-NEXT:    scratch_store_b32 off, v0, s0 offset:20
+; GFX1260-NEXT:    v_mov_b32_e32 v33, 5
+; GFX1260-NEXT:    scratch_store_b32 off, v33, s0 offset:20
 ; GFX1260-NEXT:    s_cbranch_scc1 .LBB0_6
 ; GFX1260-NEXT:  ; %bb.2: ; %bb2
-; GFX1260-NEXT:    scratch_load_b32 v0, off, s1
+; GFX1260-NEXT:    scratch_load_b32 v33, off, s1
 ; GFX1260-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX1260-NEXT:    ; implicit-def: $vgpr1
-; GFX1260-NEXT:    ; implicit-def: $vgpr2
-; GFX1260-NEXT:    ; implicit-def: $vgpr3
-; GFX1260-NEXT:    ; implicit-def: $vgpr4
-; GFX1260-NEXT:    ; implicit-def: $vgpr5
-; GFX1260-NEXT:    ; implicit-def: $vgpr6
-; GFX1260-NEXT:    ; implicit-def: $vgpr7
-; GFX1260-NEXT:    ; implicit-def: $vgpr8
-; GFX1260-NEXT:    ; implicit-def: $vgpr9
-; GFX1260-NEXT:    ; implicit-def: $vgpr10
-; GFX1260-NEXT:    ; implicit-def: $vgpr11
-; GFX1260-NEXT:    ; implicit-def: $vgpr12
-; GFX1260-NEXT:    ; implicit-def: $vgpr13
-; GFX1260-NEXT:    ; implicit-def: $vgpr14
-; GFX1260-NEXT:    ; implicit-def: $vgpr15
-; GFX1260-NEXT:    ; implicit-def: $vgpr16
-; GFX1260-NEXT:    ; implicit-def: $vgpr17
-; GFX1260-NEXT:    ; implicit-def: $vgpr18
-; GFX1260-NEXT:    ; implicit-def: $vgpr19
-; GFX1260-NEXT:    ; implicit-def: $vgpr20
-; GFX1260-NEXT:    ; implicit-def: $vgpr21
-; GFX1260-NEXT:    ; implicit-def: $vgpr22
-; GFX1260-NEXT:    ; implicit-def: $vgpr23
-; GFX1260-NEXT:    ; implicit-def: $vgpr24
-; GFX1260-NEXT:    ; implicit-def: $vgpr25
-; GFX1260-NEXT:    ; implicit-def: $vgpr26
-; GFX1260-NEXT:    ; implicit-def: $vgpr27
-; GFX1260-NEXT:    ; implicit-def: $vgpr28
-; GFX1260-NEXT:    ; implicit-def: $vgpr29
-; GFX1260-NEXT:    ; implicit-def: $vgpr30
-; GFX1260-NEXT:    ; implicit-def: $vgpr31
-; GFX1260-NEXT:    ; implicit-def: $vgpr32
 ; GFX1260-NEXT:    s_wait_loadcnt 0x0
-; GFX1260-NEXT:    v_mul_f32_e32 v0, v0, v0
+; GFX1260-NEXT:    v_mul_f32_e32 v33, v33, v33
 ; GFX1260-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX1260-NEXT:    v_add_f32_e32 v33, 2.0, v0
-; GFX1260-NEXT:    ; implicit-def: $vgpr0
+; GFX1260-NEXT:    v_add_f32_e32 v33, 2.0, v33
 ; GFX1260-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-NEXT:    v_mov_b32_e32 g1[1], v33
 ; GFX1260-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -216,22 +152,23 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; GFX1260-NEXT:  ; %bb.3: ; %bb3
 ; GFX1260-NEXT:    s_cbranch_scc1 .LBB0_5
 ; GFX1260-NEXT:  ; %bb.4: ; %bb4
-; GFX1260-NEXT:    v_mul_f32_e32 v0, v33, v33
+; GFX1260-NEXT:    v_mul_f32_e32 v33, v33, v33
 ; GFX1260-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX1260-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1260-NEXT:    v_add_f32_e64 g1[1], v0, 2.0
+; GFX1260-NEXT:    v_add_f32_e64 g1[1], v33, 2.0
 ; GFX1260-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-NEXT:  .LBB0_5: ; %exit
 ; GFX1260-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX1260-NEXT:    scratch_load_b32 v0, off, s0 offset:28
+; GFX1260-NEXT:    scratch_load_b32 v33, off, s0 offset:28
 ; GFX1260-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-NEXT:    scratch_store_b32 off, g1[1], s0
-; GFX1260-NEXT:    s_wait_loadcnt 0x0
 ; GFX1260-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX1260-NEXT:    v_add_nc_u32_e32 v0, 7, v0
-; GFX1260-NEXT:    scratch_store_b32 off, v0, s0 offset:28
+; GFX1260-NEXT:    s_wait_loadcnt 0x0
+; GFX1260-NEXT:    v_add_nc_u32_e32 v33, 7, v33
+; GFX1260-NEXT:    scratch_store_b32 off, v33, s0 offset:28
 ; GFX1260-NEXT:  .LBB0_6: ; %ret
+; GFX1260-NEXT:    ; VGPR lifetime end: v[0:32]
 ; GFX1260-NEXT:    s_endpgm
 ; LIVEINS-GFX13-LABEL: name: basic
 ; LIVEINS-GFX13: bb.0.entry:
@@ -242,11 +179,13 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; LIVEINS-GFX13-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; LIVEINS-GFX13-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 3, implicit $exec
 ; LIVEINS-GFX13-NEXT:   SCRATCH_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX2_IMM]].sub0, 12, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out.3, addrspace 5)
+; LIVEINS-GFX13-NEXT:   VGPR_LIFETIME_START implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit-def $vgpr5, implicit-def $vgpr6, implicit-def $vgpr7, implicit-def $vgpr8, implicit-def $vgpr9, implicit-def $vgpr10, implicit-def $vgpr11, implicit-def $vgpr12, implicit-def $vgpr13, implicit-def $vgpr14, implicit-def $vgpr15, implicit-def $vgpr16, implicit-def $vgpr17, implicit-def $vgpr18, implicit-def $vgpr19, implicit-def $vgpr20, implicit-def $vgpr21, implicit-def $vgpr22, implicit-def $vgpr23, implicit-def $vgpr24, implicit-def $vgpr25, implicit-def $vgpr26, implicit-def $vgpr27, implicit-def $vgpr28, implicit-def $vgpr29, implicit-def $vgpr30, implicit-def $vgpr31, implicit-def $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   S_CBRANCH_SCC1 %bb.6, implicit undef $scc
 ; LIVEINS-GFX13-NEXT:   S_BRANCH %bb.1
 ; LIVEINS-GFX13-NEXT: {{  $}}
 ; LIVEINS-GFX13-NEXT: bb.1.bb:
 ; LIVEINS-GFX13-NEXT:   successors: %bb.2(0x40000000), %bb.6(0x40000000)
+; LIVEINS-GFX13-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32
 ; LIVEINS-GFX13-NEXT: {{  $}}
 ; LIVEINS-GFX13-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 5, implicit $exec
 ; LIVEINS-GFX13-NEXT:   SCRATCH_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_1]], [[S_LOAD_DWORDX2_IMM]].sub0, 20, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out.5, addrspace 5)
@@ -254,45 +193,13 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; LIVEINS-GFX13-NEXT: {{  $}}
 ; LIVEINS-GFX13-NEXT: bb.2.bb2:
 ; LIVEINS-GFX13-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
+; LIVEINS-GFX13-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32
 ; LIVEINS-GFX13-NEXT: {{  $}}
 ; LIVEINS-GFX13-NEXT:   [[SCRATCH_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD_SADDR [[S_LOAD_DWORDX2_IMM]].sub1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.2, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   [[V_MUL_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F32_e32 killed [[SCRATCH_LOAD_DWORD_SADDR]], [[SCRATCH_LOAD_DWORD_SADDR]], implicit $mode, implicit $exec
 ; LIVEINS-GFX13-NEXT:   [[V_ADD_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e32 1073741824, killed [[V_MUL_F32_e32_]], implicit $mode, implicit $exec
 ; LIVEINS-GFX13-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-; LIVEINS-GFX13-NEXT:   $vgpr0 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr1 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr2 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr3 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr4 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr5 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr6 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr7 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr8 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr9 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr10 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr11 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr12 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr13 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr14 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr15 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr16 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr17 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr18 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr19 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr20 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr21 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr22 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr23 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr24 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr25 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr26 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr27 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr28 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr29 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr30 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr31 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr32 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   V_STORE_IDX_B32 [[V_ADD_F32_e32_]], killed $idx1, 1, implicit $exec, implicit-def $vgpr1 :: (store (s32) into %ir.sunkaddr, addrspace 5)
+; LIVEINS-GFX13-NEXT:   V_STORE_IDX_B32 [[V_ADD_F32_e32_]], killed $idx1, 1, implicit $exec :: (store (s32) into %ir.sunkaddr, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   S_CBRANCH_SCC1 %bb.5, implicit undef $scc
 ; LIVEINS-GFX13-NEXT:   S_BRANCH %bb.3
 ; LIVEINS-GFX13-NEXT: {{  $}}
@@ -308,9 +215,9 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; LIVEINS-GFX13-NEXT: {{  $}}
 ; LIVEINS-GFX13-NEXT:   [[V_MUL_F32_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F32_e32 killed [[V_ADD_F32_e32_]], [[V_ADD_F32_e32_]], implicit $mode, implicit $exec
 ; LIVEINS-GFX13-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-; LIVEINS-GFX13-NEXT:   BUNDLE implicit-def dead $stg_dsta, implicit killed [[V_MUL_F32_e32_1]], implicit $mode, implicit $exec, implicit killed $idx1, implicit-def $vgpr1 :: (store (s32) into %ir.sunkaddr1, addrspace 5) {
+; LIVEINS-GFX13-NEXT:   BUNDLE implicit-def dead $stg_dsta, implicit killed [[V_MUL_F32_e32_1]], implicit $mode, implicit $exec, implicit killed $idx1 :: (store (s32) into %ir.sunkaddr1, addrspace 5) {
 ; LIVEINS-GFX13-NEXT:     $stg_dsta = nofpexcept V_ADD_F32_e64 0, killed [[V_MUL_F32_e32_1]], 0, 1073741824, 0, 0, implicit $mode, implicit $exec
-; LIVEINS-GFX13-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, killed $idx1, 1, implicit $exec, implicit-def $vgpr1 :: (store (s32) into %ir.sunkaddr1, addrspace 5)
+; LIVEINS-GFX13-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, killed $idx1, 1, implicit $exec :: (store (s32) into %ir.sunkaddr1, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   }
 ; LIVEINS-GFX13-NEXT:   S_BRANCH %bb.5
 ; LIVEINS-GFX13-NEXT: {{  $}}
@@ -319,8 +226,8 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; LIVEINS-GFX13-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32
 ; LIVEINS-GFX13-NEXT: {{  $}}
 ; LIVEINS-GFX13-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-; LIVEINS-GFX13-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed $idx1, implicit $exec, implicit [[S_LOAD_DWORDX2_IMM]], implicit $flat_scr, implicit $vgpr1 :: (dereferenceable load (s32) from %ir.sunkaddr2, addrspace 5), (store (s32) into %ir.1, addrspace 5) {
-; LIVEINS-GFX13-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 1, implicit $exec, implicit $vgpr1 :: (dereferenceable load (s32) from %ir.sunkaddr2, addrspace 5)
+; LIVEINS-GFX13-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed $idx1, implicit $exec, implicit [[S_LOAD_DWORDX2_IMM]], implicit $flat_scr :: (dereferenceable load (s32) from %ir.sunkaddr2, addrspace 5), (store (s32) into %ir.1, addrspace 5) {
+; LIVEINS-GFX13-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 1, implicit $exec :: (dereferenceable load (s32) from %ir.sunkaddr2, addrspace 5)
 ; LIVEINS-GFX13-NEXT:     SCRATCH_STORE_DWORD_SADDR internal killed $stg_srca, [[S_LOAD_DWORDX2_IMM]].sub0, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.1, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   }
 ; LIVEINS-GFX13-NEXT:   [[SCRATCH_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD_SADDR [[S_LOAD_DWORDX2_IMM]].sub0, 28, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.out.7, addrspace 5)
@@ -328,6 +235,9 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; LIVEINS-GFX13-NEXT:   SCRATCH_STORE_DWORD_SADDR killed [[V_ADD_U32_e32_]], killed [[S_LOAD_DWORDX2_IMM]].sub0, 28, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out.7, addrspace 5)
 ; LIVEINS-GFX13-NEXT: {{  $}}
 ; LIVEINS-GFX13-NEXT: bb.6.ret:
+; LIVEINS-GFX13-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32
+; LIVEINS-GFX13-NEXT: {{  $}}
+; LIVEINS-GFX13-NEXT:   VGPR_LIFETIME_END implicit killed $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit killed $vgpr4, implicit killed $vgpr5, implicit killed $vgpr6, implicit killed $vgpr7, implicit killed $vgpr8, implicit killed $vgpr9, implicit killed $vgpr10, implicit killed $vgpr11, implicit killed $vgpr12, implicit killed $vgpr13, implicit killed $vgpr14, implicit killed $vgpr15, implicit killed $vgpr16, implicit killed $vgpr17, implicit killed $vgpr18, implicit killed $vgpr19, implicit killed $vgpr20, implicit killed $vgpr21, implicit killed $vgpr22, implicit killed $vgpr23, implicit killed $vgpr24, implicit killed $vgpr25, implicit killed $vgpr26, implicit killed $vgpr27, implicit killed $vgpr28, implicit killed $vgpr29, implicit killed $vgpr30, implicit killed $vgpr31, implicit killed $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   S_ENDPGM 0
 ;
 ; LIVEINS-GFX1260-LABEL: name: basic
@@ -339,11 +249,13 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; LIVEINS-GFX1260-NEXT:   early-clobber %8:sreg_64_xexec = S_LOAD_DWORDX2_IMM_ec killed [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; LIVEINS-GFX1260-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 3, implicit $exec
 ; LIVEINS-GFX1260-NEXT:   SCRATCH_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], %8.sub0, 12, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out.3, addrspace 5)
+; LIVEINS-GFX1260-NEXT:   VGPR_LIFETIME_START implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit-def $vgpr5, implicit-def $vgpr6, implicit-def $vgpr7, implicit-def $vgpr8, implicit-def $vgpr9, implicit-def $vgpr10, implicit-def $vgpr11, implicit-def $vgpr12, implicit-def $vgpr13, implicit-def $vgpr14, implicit-def $vgpr15, implicit-def $vgpr16, implicit-def $vgpr17, implicit-def $vgpr18, implicit-def $vgpr19, implicit-def $vgpr20, implicit-def $vgpr21, implicit-def $vgpr22, implicit-def $vgpr23, implicit-def $vgpr24, implicit-def $vgpr25, implicit-def $vgpr26, implicit-def $vgpr27, implicit-def $vgpr28, implicit-def $vgpr29, implicit-def $vgpr30, implicit-def $vgpr31, implicit-def $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   S_CBRANCH_SCC1 %bb.6, implicit undef $scc
 ; LIVEINS-GFX1260-NEXT:   S_BRANCH %bb.1
 ; LIVEINS-GFX1260-NEXT: {{  $}}
 ; LIVEINS-GFX1260-NEXT: bb.1.bb:
 ; LIVEINS-GFX1260-NEXT:   successors: %bb.2(0x40000000), %bb.6(0x40000000)
+; LIVEINS-GFX1260-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32
 ; LIVEINS-GFX1260-NEXT: {{  $}}
 ; LIVEINS-GFX1260-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 5, implicit $exec
 ; LIVEINS-GFX1260-NEXT:   SCRATCH_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_1]], %8.sub0, 20, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out.5, addrspace 5)
@@ -351,45 +263,13 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; LIVEINS-GFX1260-NEXT: {{  $}}
 ; LIVEINS-GFX1260-NEXT: bb.2.bb2:
 ; LIVEINS-GFX1260-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
+; LIVEINS-GFX1260-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32
 ; LIVEINS-GFX1260-NEXT: {{  $}}
 ; LIVEINS-GFX1260-NEXT:   [[SCRATCH_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD_SADDR %8.sub1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.2, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   [[V_MUL_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F32_e32 killed [[SCRATCH_LOAD_DWORD_SADDR]], [[SCRATCH_LOAD_DWORD_SADDR]], implicit $mode, implicit $exec
 ; LIVEINS-GFX1260-NEXT:   [[V_ADD_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e32 1073741824, killed [[V_MUL_F32_e32_]], implicit $mode, implicit $exec
 ; LIVEINS-GFX1260-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-; LIVEINS-GFX1260-NEXT:   $vgpr0 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr1 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr2 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr3 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr4 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr5 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr6 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr7 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr8 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr9 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr10 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr11 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr12 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr13 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr14 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr15 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr16 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr17 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr18 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr19 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr20 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr21 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr22 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr23 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr24 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr25 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr26 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr27 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr28 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr29 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr30 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr31 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr32 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   V_STORE_IDX_B32 [[V_ADD_F32_e32_]], killed $idx1, 1, implicit $exec, implicit-def $vgpr1 :: (store (s32) into %ir.sunkaddr, addrspace 5)
+; LIVEINS-GFX1260-NEXT:   V_STORE_IDX_B32 [[V_ADD_F32_e32_]], killed $idx1, 1, implicit $exec :: (store (s32) into %ir.sunkaddr, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   S_CBRANCH_SCC1 %bb.5, implicit undef $scc
 ; LIVEINS-GFX1260-NEXT:   S_BRANCH %bb.3
 ; LIVEINS-GFX1260-NEXT: {{  $}}
@@ -405,9 +285,9 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; LIVEINS-GFX1260-NEXT: {{  $}}
 ; LIVEINS-GFX1260-NEXT:   [[V_MUL_F32_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F32_e32 killed [[V_ADD_F32_e32_]], [[V_ADD_F32_e32_]], implicit $mode, implicit $exec
 ; LIVEINS-GFX1260-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-; LIVEINS-GFX1260-NEXT:   BUNDLE implicit-def dead $stg_dsta, implicit killed [[V_MUL_F32_e32_1]], implicit $mode, implicit $exec, implicit killed $idx1, implicit-def $vgpr1 :: (store (s32) into %ir.sunkaddr1, addrspace 5) {
+; LIVEINS-GFX1260-NEXT:   BUNDLE implicit-def dead $stg_dsta, implicit killed [[V_MUL_F32_e32_1]], implicit $mode, implicit $exec, implicit killed $idx1 :: (store (s32) into %ir.sunkaddr1, addrspace 5) {
 ; LIVEINS-GFX1260-NEXT:     $stg_dsta = nofpexcept V_ADD_F32_e64 0, killed [[V_MUL_F32_e32_1]], 0, 1073741824, 0, 0, implicit $mode, implicit $exec
-; LIVEINS-GFX1260-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, killed $idx1, 1, implicit $exec, implicit-def $vgpr1 :: (store (s32) into %ir.sunkaddr1, addrspace 5)
+; LIVEINS-GFX1260-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, killed $idx1, 1, implicit $exec :: (store (s32) into %ir.sunkaddr1, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   }
 ; LIVEINS-GFX1260-NEXT:   S_BRANCH %bb.5
 ; LIVEINS-GFX1260-NEXT: {{  $}}
@@ -416,8 +296,8 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; LIVEINS-GFX1260-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32
 ; LIVEINS-GFX1260-NEXT: {{  $}}
 ; LIVEINS-GFX1260-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-; LIVEINS-GFX1260-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed $idx1, implicit $exec, implicit %8, implicit $flat_scr, implicit $vgpr1 :: (dereferenceable load (s32) from %ir.sunkaddr2, addrspace 5), (store (s32) into %ir.1, addrspace 5) {
-; LIVEINS-GFX1260-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 1, implicit $exec, implicit $vgpr1 :: (dereferenceable load (s32) from %ir.sunkaddr2, addrspace 5)
+; LIVEINS-GFX1260-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed $idx1, implicit $exec, implicit %8, implicit $flat_scr :: (dereferenceable load (s32) from %ir.sunkaddr2, addrspace 5), (store (s32) into %ir.1, addrspace 5) {
+; LIVEINS-GFX1260-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 1, implicit $exec :: (dereferenceable load (s32) from %ir.sunkaddr2, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:     SCRATCH_STORE_DWORD_SADDR internal killed $stg_srca, %8.sub0, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.1, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   }
 ; LIVEINS-GFX1260-NEXT:   [[SCRATCH_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD_SADDR %8.sub0, 28, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.out.7, addrspace 5)
@@ -425,6 +305,9 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) #0
 ; LIVEINS-GFX1260-NEXT:   SCRATCH_STORE_DWORD_SADDR killed [[V_ADD_U32_e32_]], killed %8.sub0, 28, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out.7, addrspace 5)
 ; LIVEINS-GFX1260-NEXT: {{  $}}
 ; LIVEINS-GFX1260-NEXT: bb.6.ret:
+; LIVEINS-GFX1260-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32
+; LIVEINS-GFX1260-NEXT: {{  $}}
+; LIVEINS-GFX1260-NEXT:   VGPR_LIFETIME_END implicit killed $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit killed $vgpr4, implicit killed $vgpr5, implicit killed $vgpr6, implicit killed $vgpr7, implicit killed $vgpr8, implicit killed $vgpr9, implicit killed $vgpr10, implicit killed $vgpr11, implicit killed $vgpr12, implicit killed $vgpr13, implicit killed $vgpr14, implicit killed $vgpr15, implicit killed $vgpr16, implicit killed $vgpr17, implicit killed $vgpr18, implicit killed $vgpr19, implicit killed $vgpr20, implicit killed $vgpr21, implicit killed $vgpr22, implicit killed $vgpr23, implicit killed $vgpr24, implicit killed $vgpr25, implicit killed $vgpr26, implicit killed $vgpr27, implicit killed $vgpr28, implicit killed $vgpr29, implicit killed $vgpr30, implicit killed $vgpr31, implicit killed $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   S_ENDPGM 0
 entry:
   ; Give VGPR0 some use.
@@ -470,8 +353,8 @@ exit:
   %v3 = load float, ptr addrspace(5) %p.1, align 4
   store float %v3, ptr addrspace(5) %out
 
-  ; The private object is not live anymore, so VGPR0 is available for
-  ; allocation again.
+  ; The private object is not live anymore, but we currently do not optimize
+  ; placement of VGPR_LIFETIME_END.
   %out.7 = getelementptr i32, ptr addrspace(5) %out, i32 7
   %v7 = load i32, ptr addrspace(5) %out.7
   %add7 = add i32 %v7, 7
@@ -490,133 +373,40 @@ define amdgpu_kernel void @load_without_store(ptr addrspace(5) %out) #0 {
 ; CHECK-LABEL: load_without_store:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b32 s0, s[4:5], 0x24
-; CHECK-NEXT:    v_mov_b32_e32 v0, 3
-; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr2
-; CHECK-NEXT:    ; implicit-def: $vgpr3
-; CHECK-NEXT:    ; implicit-def: $vgpr4
-; CHECK-NEXT:    ; implicit-def: $vgpr5
-; CHECK-NEXT:    ; implicit-def: $vgpr6
-; CHECK-NEXT:    ; implicit-def: $vgpr7
-; CHECK-NEXT:    ; implicit-def: $vgpr8
-; CHECK-NEXT:    ; implicit-def: $vgpr9
-; CHECK-NEXT:    ; implicit-def: $vgpr10
-; CHECK-NEXT:    ; implicit-def: $vgpr11
-; CHECK-NEXT:    ; implicit-def: $vgpr12
-; CHECK-NEXT:    ; implicit-def: $vgpr13
-; CHECK-NEXT:    ; implicit-def: $vgpr14
-; CHECK-NEXT:    ; implicit-def: $vgpr15
-; CHECK-NEXT:    ; implicit-def: $vgpr16
-; CHECK-NEXT:    ; implicit-def: $vgpr17
-; CHECK-NEXT:    ; implicit-def: $vgpr18
-; CHECK-NEXT:    ; implicit-def: $vgpr19
-; CHECK-NEXT:    ; implicit-def: $vgpr20
-; CHECK-NEXT:    ; implicit-def: $vgpr21
-; CHECK-NEXT:    ; implicit-def: $vgpr22
-; CHECK-NEXT:    ; implicit-def: $vgpr23
-; CHECK-NEXT:    ; implicit-def: $vgpr24
-; CHECK-NEXT:    ; implicit-def: $vgpr25
-; CHECK-NEXT:    ; implicit-def: $vgpr26
-; CHECK-NEXT:    ; implicit-def: $vgpr27
-; CHECK-NEXT:    ; implicit-def: $vgpr28
-; CHECK-NEXT:    ; implicit-def: $vgpr29
-; CHECK-NEXT:    ; implicit-def: $vgpr30
-; CHECK-NEXT:    ; implicit-def: $vgpr31
-; CHECK-NEXT:    ; implicit-def: $vgpr32
+; CHECK-NEXT:    v_mov_b32_e32 v33, 3
+; CHECK-NEXT:    ; VGPR lifetime start: v[0:32]
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:12
+; CHECK-NEXT:    scratch_store_b32 off, v33, s0 offset:12
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    scratch_store_b32 off, g1[1], s0 offset:28
-; CHECK-NEXT:    ; implicit-def: $vgpr0
+; CHECK-NEXT:    ; VGPR lifetime end: v[0:32]
 ; CHECK-NEXT:    s_endpgm
 ; GFX13-LABEL: load_without_store:
 ; GFX13:       ; %bb.0: ; %entry
 ; GFX13-NEXT:    s_load_b32 s0, s[4:5], 0x24
-; GFX13-NEXT:    v_mov_b32_e32 v0, 3
-; GFX13-NEXT:    ; implicit-def: $vgpr1
-; GFX13-NEXT:    ; implicit-def: $vgpr2
-; GFX13-NEXT:    ; implicit-def: $vgpr3
-; GFX13-NEXT:    ; implicit-def: $vgpr4
-; GFX13-NEXT:    ; implicit-def: $vgpr5
-; GFX13-NEXT:    ; implicit-def: $vgpr6
-; GFX13-NEXT:    ; implicit-def: $vgpr7
-; GFX13-NEXT:    ; implicit-def: $vgpr8
-; GFX13-NEXT:    ; implicit-def: $vgpr9
-; GFX13-NEXT:    ; implicit-def: $vgpr10
-; GFX13-NEXT:    ; implicit-def: $vgpr11
-; GFX13-NEXT:    ; implicit-def: $vgpr12
-; GFX13-NEXT:    ; implicit-def: $vgpr13
-; GFX13-NEXT:    ; implicit-def: $vgpr14
-; GFX13-NEXT:    ; implicit-def: $vgpr15
-; GFX13-NEXT:    ; implicit-def: $vgpr16
-; GFX13-NEXT:    ; implicit-def: $vgpr17
-; GFX13-NEXT:    ; implicit-def: $vgpr18
-; GFX13-NEXT:    ; implicit-def: $vgpr19
-; GFX13-NEXT:    ; implicit-def: $vgpr20
-; GFX13-NEXT:    ; implicit-def: $vgpr21
-; GFX13-NEXT:    ; implicit-def: $vgpr22
-; GFX13-NEXT:    ; implicit-def: $vgpr23
-; GFX13-NEXT:    ; implicit-def: $vgpr24
-; GFX13-NEXT:    ; implicit-def: $vgpr25
-; GFX13-NEXT:    ; implicit-def: $vgpr26
-; GFX13-NEXT:    ; implicit-def: $vgpr27
-; GFX13-NEXT:    ; implicit-def: $vgpr28
-; GFX13-NEXT:    ; implicit-def: $vgpr29
-; GFX13-NEXT:    ; implicit-def: $vgpr30
-; GFX13-NEXT:    ; implicit-def: $vgpr31
-; GFX13-NEXT:    ; implicit-def: $vgpr32
+; GFX13-NEXT:    v_mov_b32_e32 v33, 3
+; GFX13-NEXT:    ; VGPR lifetime start: v[0:32]
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    scratch_store_b32 off, v0, s0 offset:12
+; GFX13-NEXT:    scratch_store_b32 off, v33, s0 offset:12
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX13-NEXT:    scratch_store_b32 off, g1[1], s0 offset:28
-; GFX13-NEXT:    ; implicit-def: $vgpr0
+; GFX13-NEXT:    ; VGPR lifetime end: v[0:32]
 ; GFX13-NEXT:    s_endpgm
 ;
 ; GFX1260-LABEL: load_without_store:
 ; GFX1260:       ; %bb.0: ; %entry
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    s_load_b32 s0, s[4:5], 0x24
-; GFX1260-NEXT:    v_mov_b32_e32 v0, 3
-; GFX1260-NEXT:    ; implicit-def: $vgpr1
-; GFX1260-NEXT:    ; implicit-def: $vgpr2
-; GFX1260-NEXT:    ; implicit-def: $vgpr3
-; GFX1260-NEXT:    ; implicit-def: $vgpr4
-; GFX1260-NEXT:    ; implicit-def: $vgpr5
-; GFX1260-NEXT:    ; implicit-def: $vgpr6
-; GFX1260-NEXT:    ; implicit-def: $vgpr7
-; GFX1260-NEXT:    ; implicit-def: $vgpr8
-; GFX1260-NEXT:    ; implicit-def: $vgpr9
-; GFX1260-NEXT:    ; implicit-def: $vgpr10
-; GFX1260-NEXT:    ; implicit-def: $vgpr11
-; GFX1260-NEXT:    ; implicit-def: $vgpr12
-; GFX1260-NEXT:    ; implicit-def: $vgpr13
-; GFX1260-NEXT:    ; implicit-def: $vgpr14
-; GFX1260-NEXT:    ; implicit-def: $vgpr15
-; GFX1260-NEXT:    ; implicit-def: $vgpr16
-; GFX1260-NEXT:    ; implicit-def: $vgpr17
-; GFX1260-NEXT:    ; implicit-def: $vgpr18
-; GFX1260-NEXT:    ; implicit-def: $vgpr19
-; GFX1260-NEXT:    ; implicit-def: $vgpr20
-; GFX1260-NEXT:    ; implicit-def: $vgpr21
-; GFX1260-NEXT:    ; implicit-def: $vgpr22
-; GFX1260-NEXT:    ; implicit-def: $vgpr23
-; GFX1260-NEXT:    ; implicit-def: $vgpr24
-; GFX1260-NEXT:    ; implicit-def: $vgpr25
-; GFX1260-NEXT:    ; implicit-def: $vgpr26
-; GFX1260-NEXT:    ; implicit-def: $vgpr27
-; GFX1260-NEXT:    ; implicit-def: $vgpr28
-; GFX1260-NEXT:    ; implicit-def: $vgpr29
-; GFX1260-NEXT:    ; implicit-def: $vgpr30
-; GFX1260-NEXT:    ; implicit-def: $vgpr31
-; GFX1260-NEXT:    ; implicit-def: $vgpr32
+; GFX1260-NEXT:    v_mov_b32_e32 v33, 3
+; GFX1260-NEXT:    ; VGPR lifetime start: v[0:32]
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
-; GFX1260-NEXT:    scratch_store_b32 off, v0, s0 offset:12
+; GFX1260-NEXT:    scratch_store_b32 off, v33, s0 offset:12
 ; GFX1260-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX1260-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-NEXT:    scratch_store_b32 off, g1[1], s0 offset:28
-; GFX1260-NEXT:    ; implicit-def: $vgpr0
+; GFX1260-NEXT:    ; VGPR lifetime end: v[0:32]
 ; GFX1260-NEXT:    s_endpgm
 ; LIVEINS-GFX13-LABEL: name: load_without_store
 ; LIVEINS-GFX13: bb.0.entry:
@@ -626,44 +416,13 @@ define amdgpu_kernel void @load_without_store(ptr addrspace(5) %out) #0 {
 ; LIVEINS-GFX13-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s32) from %ir.out.kernarg.offset, addrspace 4)
 ; LIVEINS-GFX13-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 3, implicit $exec
 ; LIVEINS-GFX13-NEXT:   SCRATCH_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], [[S_LOAD_DWORD_IMM]], 12, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out.3, addrspace 5)
+; LIVEINS-GFX13-NEXT:   VGPR_LIFETIME_START implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit-def $vgpr5, implicit-def $vgpr6, implicit-def $vgpr7, implicit-def $vgpr8, implicit-def $vgpr9, implicit-def $vgpr10, implicit-def $vgpr11, implicit-def $vgpr12, implicit-def $vgpr13, implicit-def $vgpr14, implicit-def $vgpr15, implicit-def $vgpr16, implicit-def $vgpr17, implicit-def $vgpr18, implicit-def $vgpr19, implicit-def $vgpr20, implicit-def $vgpr21, implicit-def $vgpr22, implicit-def $vgpr23, implicit-def $vgpr24, implicit-def $vgpr25, implicit-def $vgpr26, implicit-def $vgpr27, implicit-def $vgpr28, implicit-def $vgpr29, implicit-def $vgpr30, implicit-def $vgpr31, implicit-def $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-; LIVEINS-GFX13-NEXT:   $vgpr0 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr1 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr2 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr3 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr4 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr5 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr6 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr7 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr8 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr9 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr10 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr11 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr12 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr13 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr14 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr15 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr16 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr17 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr18 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr19 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr20 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr21 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr22 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr23 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr24 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr25 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr26 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr27 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr28 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr29 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr30 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr31 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr32 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed $idx1, implicit $exec, implicit killed [[S_LOAD_DWORD_IMM]], implicit $flat_scr, implicit $vgpr1 :: (dereferenceable load (s32) from %ir.p.1, addrspace 5), (store (s32) into %ir.out.7, addrspace 5) {
-; LIVEINS-GFX13-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 1, implicit $exec, implicit $vgpr1 :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
+; LIVEINS-GFX13-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed $idx1, implicit $exec, implicit killed [[S_LOAD_DWORD_IMM]], implicit $flat_scr :: (dereferenceable load (s32) from %ir.p.1, addrspace 5), (store (s32) into %ir.out.7, addrspace 5) {
+; LIVEINS-GFX13-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 1, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
 ; LIVEINS-GFX13-NEXT:     SCRATCH_STORE_DWORD_SADDR internal killed $stg_srca, [[S_LOAD_DWORD_IMM]], 28, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out.7, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   }
+; LIVEINS-GFX13-NEXT:   VGPR_LIFETIME_END implicit killed $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit killed $vgpr4, implicit killed $vgpr5, implicit killed $vgpr6, implicit killed $vgpr7, implicit killed $vgpr8, implicit killed $vgpr9, implicit killed $vgpr10, implicit killed $vgpr11, implicit killed $vgpr12, implicit killed $vgpr13, implicit killed $vgpr14, implicit killed $vgpr15, implicit killed $vgpr16, implicit killed $vgpr17, implicit killed $vgpr18, implicit killed $vgpr19, implicit killed $vgpr20, implicit killed $vgpr21, implicit killed $vgpr22, implicit killed $vgpr23, implicit killed $vgpr24, implicit killed $vgpr25, implicit killed $vgpr26, implicit killed $vgpr27, implicit killed $vgpr28, implicit killed $vgpr29, implicit killed $vgpr30, implicit killed $vgpr31, implicit killed $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   S_ENDPGM 0
 ;
 ; LIVEINS-GFX1260-LABEL: name: load_without_store
@@ -674,44 +433,13 @@ define amdgpu_kernel void @load_without_store(ptr addrspace(5) %out) #0 {
 ; LIVEINS-GFX1260-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s32) from %ir.out.kernarg.offset, addrspace 4)
 ; LIVEINS-GFX1260-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 3, implicit $exec
 ; LIVEINS-GFX1260-NEXT:   SCRATCH_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], [[S_LOAD_DWORD_IMM]], 12, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out.3, addrspace 5)
+; LIVEINS-GFX1260-NEXT:   VGPR_LIFETIME_START implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit-def $vgpr5, implicit-def $vgpr6, implicit-def $vgpr7, implicit-def $vgpr8, implicit-def $vgpr9, implicit-def $vgpr10, implicit-def $vgpr11, implicit-def $vgpr12, implicit-def $vgpr13, implicit-def $vgpr14, implicit-def $vgpr15, implicit-def $vgpr16, implicit-def $vgpr17, implicit-def $vgpr18, implicit-def $vgpr19, implicit-def $vgpr20, implicit-def $vgpr21, implicit-def $vgpr22, implicit-def $vgpr23, implicit-def $vgpr24, implicit-def $vgpr25, implicit-def $vgpr26, implicit-def $vgpr27, implicit-def $vgpr28, implicit-def $vgpr29, implicit-def $vgpr30, implicit-def $vgpr31, implicit-def $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-; LIVEINS-GFX1260-NEXT:   $vgpr0 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr1 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr2 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr3 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr4 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr5 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr6 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr7 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr8 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr9 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr10 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr11 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr12 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr13 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr14 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr15 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr16 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr17 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr18 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr19 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr20 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr21 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr22 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr23 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr24 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr25 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr26 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr27 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr28 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr29 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr30 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr31 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr32 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed $idx1, implicit $exec, implicit killed [[S_LOAD_DWORD_IMM]], implicit $flat_scr, implicit $vgpr1 :: (dereferenceable load (s32) from %ir.p.1, addrspace 5), (store (s32) into %ir.out.7, addrspace 5) {
-; LIVEINS-GFX1260-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 1, implicit $exec, implicit $vgpr1 :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
+; LIVEINS-GFX1260-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed $idx1, implicit $exec, implicit killed [[S_LOAD_DWORD_IMM]], implicit $flat_scr :: (dereferenceable load (s32) from %ir.p.1, addrspace 5), (store (s32) into %ir.out.7, addrspace 5) {
+; LIVEINS-GFX1260-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 1, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:     SCRATCH_STORE_DWORD_SADDR internal killed $stg_srca, [[S_LOAD_DWORD_IMM]], 28, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out.7, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   }
+; LIVEINS-GFX1260-NEXT:   VGPR_LIFETIME_END implicit killed $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit killed $vgpr4, implicit killed $vgpr5, implicit killed $vgpr6, implicit killed $vgpr7, implicit killed $vgpr8, implicit killed $vgpr9, implicit killed $vgpr10, implicit killed $vgpr11, implicit killed $vgpr12, implicit killed $vgpr13, implicit killed $vgpr14, implicit killed $vgpr15, implicit killed $vgpr16, implicit killed $vgpr17, implicit killed $vgpr18, implicit killed $vgpr19, implicit killed $vgpr20, implicit killed $vgpr21, implicit killed $vgpr22, implicit killed $vgpr23, implicit killed $vgpr24, implicit killed $vgpr25, implicit killed $vgpr26, implicit killed $vgpr27, implicit killed $vgpr28, implicit killed $vgpr29, implicit killed $vgpr30, implicit killed $vgpr31, implicit killed $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   S_ENDPGM 0
 ; LIVEINS-LABEL: name: load_without_store
 ; LIVEINS: bb.0.entry:
@@ -794,42 +522,10 @@ define amdgpu_kernel void @bypassed_store(ptr addrspace(5) %out, i32 %x) #0 {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 3
-; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr2
-; CHECK-NEXT:    ; implicit-def: $vgpr3
-; CHECK-NEXT:    ; implicit-def: $vgpr4
-; CHECK-NEXT:    ; implicit-def: $vgpr5
-; CHECK-NEXT:    ; implicit-def: $vgpr6
-; CHECK-NEXT:    ; implicit-def: $vgpr7
-; CHECK-NEXT:    ; implicit-def: $vgpr8
-; CHECK-NEXT:    ; implicit-def: $vgpr9
-; CHECK-NEXT:    ; implicit-def: $vgpr10
-; CHECK-NEXT:    ; implicit-def: $vgpr11
-; CHECK-NEXT:    ; implicit-def: $vgpr12
-; CHECK-NEXT:    ; implicit-def: $vgpr13
-; CHECK-NEXT:    ; implicit-def: $vgpr14
-; CHECK-NEXT:    ; implicit-def: $vgpr15
-; CHECK-NEXT:    ; implicit-def: $vgpr16
-; CHECK-NEXT:    ; implicit-def: $vgpr17
-; CHECK-NEXT:    ; implicit-def: $vgpr18
-; CHECK-NEXT:    ; implicit-def: $vgpr19
-; CHECK-NEXT:    ; implicit-def: $vgpr20
-; CHECK-NEXT:    ; implicit-def: $vgpr21
-; CHECK-NEXT:    ; implicit-def: $vgpr22
-; CHECK-NEXT:    ; implicit-def: $vgpr23
-; CHECK-NEXT:    ; implicit-def: $vgpr24
-; CHECK-NEXT:    ; implicit-def: $vgpr25
-; CHECK-NEXT:    ; implicit-def: $vgpr26
-; CHECK-NEXT:    ; implicit-def: $vgpr27
-; CHECK-NEXT:    ; implicit-def: $vgpr28
-; CHECK-NEXT:    ; implicit-def: $vgpr29
-; CHECK-NEXT:    ; implicit-def: $vgpr30
-; CHECK-NEXT:    ; implicit-def: $vgpr31
-; CHECK-NEXT:    ; implicit-def: $vgpr32
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_cmp_eq_u32 s1, 9
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:12
-; CHECK-NEXT:    ; implicit-def: $vgpr0
+; CHECK-NEXT:    ; VGPR lifetime start: v[0:32]
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB2_2
 ; CHECK-NEXT:  ; %bb.1: ; %store
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
@@ -840,47 +536,16 @@ define amdgpu_kernel void @bypassed_store(ptr addrspace(5) %out, i32 %x) #0 {
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    scratch_store_b32 off, g1[1], s0 offset:28
+; CHECK-NEXT:    ; VGPR lifetime end: v[0:32]
 ; CHECK-NEXT:    s_endpgm
 ; GFX13-LABEL: bypassed_store:
 ; GFX13:       ; %bb.0: ; %entry
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    v_mov_b32_e32 v0, 3
-; GFX13-NEXT:    ; implicit-def: $vgpr1
-; GFX13-NEXT:    ; implicit-def: $vgpr2
-; GFX13-NEXT:    ; implicit-def: $vgpr3
-; GFX13-NEXT:    ; implicit-def: $vgpr4
-; GFX13-NEXT:    ; implicit-def: $vgpr5
-; GFX13-NEXT:    ; implicit-def: $vgpr6
-; GFX13-NEXT:    ; implicit-def: $vgpr7
-; GFX13-NEXT:    ; implicit-def: $vgpr8
-; GFX13-NEXT:    ; implicit-def: $vgpr9
-; GFX13-NEXT:    ; implicit-def: $vgpr10
-; GFX13-NEXT:    ; implicit-def: $vgpr11
-; GFX13-NEXT:    ; implicit-def: $vgpr12
-; GFX13-NEXT:    ; implicit-def: $vgpr13
-; GFX13-NEXT:    ; implicit-def: $vgpr14
-; GFX13-NEXT:    ; implicit-def: $vgpr15
-; GFX13-NEXT:    ; implicit-def: $vgpr16
-; GFX13-NEXT:    ; implicit-def: $vgpr17
-; GFX13-NEXT:    ; implicit-def: $vgpr18
-; GFX13-NEXT:    ; implicit-def: $vgpr19
-; GFX13-NEXT:    ; implicit-def: $vgpr20
-; GFX13-NEXT:    ; implicit-def: $vgpr21
-; GFX13-NEXT:    ; implicit-def: $vgpr22
-; GFX13-NEXT:    ; implicit-def: $vgpr23
-; GFX13-NEXT:    ; implicit-def: $vgpr24
-; GFX13-NEXT:    ; implicit-def: $vgpr25
-; GFX13-NEXT:    ; implicit-def: $vgpr26
-; GFX13-NEXT:    ; implicit-def: $vgpr27
-; GFX13-NEXT:    ; implicit-def: $vgpr28
-; GFX13-NEXT:    ; implicit-def: $vgpr29
-; GFX13-NEXT:    ; implicit-def: $vgpr30
-; GFX13-NEXT:    ; implicit-def: $vgpr31
-; GFX13-NEXT:    ; implicit-def: $vgpr32
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_cmp_eq_u32 s1, 9
 ; GFX13-NEXT:    scratch_store_b32 off, v0, s0 offset:12
-; GFX13-NEXT:    ; implicit-def: $vgpr0
+; GFX13-NEXT:    ; VGPR lifetime start: v[0:32]
 ; GFX13-NEXT:    s_cbranch_scc1 .LBB2_2
 ; GFX13-NEXT:  ; %bb.1: ; %store
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
@@ -891,6 +556,7 @@ define amdgpu_kernel void @bypassed_store(ptr addrspace(5) %out, i32 %x) #0 {
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX13-NEXT:    scratch_store_b32 off, g1[1], s0 offset:28
+; GFX13-NEXT:    ; VGPR lifetime end: v[0:32]
 ; GFX13-NEXT:    s_endpgm
 ;
 ; GFX1260-LABEL: bypassed_store:
@@ -898,42 +564,10 @@ define amdgpu_kernel void @bypassed_store(ptr addrspace(5) %out, i32 %x) #0 {
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1260-NEXT:    v_mov_b32_e32 v0, 3
-; GFX1260-NEXT:    ; implicit-def: $vgpr1
-; GFX1260-NEXT:    ; implicit-def: $vgpr2
-; GFX1260-NEXT:    ; implicit-def: $vgpr3
-; GFX1260-NEXT:    ; implicit-def: $vgpr4
-; GFX1260-NEXT:    ; implicit-def: $vgpr5
-; GFX1260-NEXT:    ; implicit-def: $vgpr6
-; GFX1260-NEXT:    ; implicit-def: $vgpr7
-; GFX1260-NEXT:    ; implicit-def: $vgpr8
-; GFX1260-NEXT:    ; implicit-def: $vgpr9
-; GFX1260-NEXT:    ; implicit-def: $vgpr10
-; GFX1260-NEXT:    ; implicit-def: $vgpr11
-; GFX1260-NEXT:    ; implicit-def: $vgpr12
-; GFX1260-NEXT:    ; implicit-def: $vgpr13
-; GFX1260-NEXT:    ; implicit-def: $vgpr14
-; GFX1260-NEXT:    ; implicit-def: $vgpr15
-; GFX1260-NEXT:    ; implicit-def: $vgpr16
-; GFX1260-NEXT:    ; implicit-def: $vgpr17
-; GFX1260-NEXT:    ; implicit-def: $vgpr18
-; GFX1260-NEXT:    ; implicit-def: $vgpr19
-; GFX1260-NEXT:    ; implicit-def: $vgpr20
-; GFX1260-NEXT:    ; implicit-def: $vgpr21
-; GFX1260-NEXT:    ; implicit-def: $vgpr22
-; GFX1260-NEXT:    ; implicit-def: $vgpr23
-; GFX1260-NEXT:    ; implicit-def: $vgpr24
-; GFX1260-NEXT:    ; implicit-def: $vgpr25
-; GFX1260-NEXT:    ; implicit-def: $vgpr26
-; GFX1260-NEXT:    ; implicit-def: $vgpr27
-; GFX1260-NEXT:    ; implicit-def: $vgpr28
-; GFX1260-NEXT:    ; implicit-def: $vgpr29
-; GFX1260-NEXT:    ; implicit-def: $vgpr30
-; GFX1260-NEXT:    ; implicit-def: $vgpr31
-; GFX1260-NEXT:    ; implicit-def: $vgpr32
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_cmp_eq_u32 s1, 9
 ; GFX1260-NEXT:    scratch_store_b32 off, v0, s0 offset:12
-; GFX1260-NEXT:    ; implicit-def: $vgpr0
+; GFX1260-NEXT:    ; VGPR lifetime start: v[0:32]
 ; GFX1260-NEXT:    s_cbranch_scc1 .LBB2_2
 ; GFX1260-NEXT:  ; %bb.1: ; %store
 ; GFX1260-NEXT:    s_set_gpr_idx_u32 idx1, 0
@@ -944,6 +578,7 @@ define amdgpu_kernel void @bypassed_store(ptr addrspace(5) %out, i32 %x) #0 {
 ; GFX1260-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX1260-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-NEXT:    scratch_store_b32 off, g1[1], s0 offset:28
+; GFX1260-NEXT:    ; VGPR lifetime end: v[0:32]
 ; GFX1260-NEXT:    s_endpgm
 ; LIVEINS-GFX13-LABEL: name: bypassed_store
 ; LIVEINS-GFX13: bb.0.entry:
@@ -954,40 +589,8 @@ define amdgpu_kernel void @bypassed_store(ptr addrspace(5) %out, i32 %x) #0 {
 ; LIVEINS-GFX13-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; LIVEINS-GFX13-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 3, implicit $exec
 ; LIVEINS-GFX13-NEXT:   SCRATCH_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX2_IMM]].sub0, 12, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out.3, addrspace 5)
+; LIVEINS-GFX13-NEXT:   VGPR_LIFETIME_START implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit-def $vgpr5, implicit-def $vgpr6, implicit-def $vgpr7, implicit-def $vgpr8, implicit-def $vgpr9, implicit-def $vgpr10, implicit-def $vgpr11, implicit-def $vgpr12, implicit-def $vgpr13, implicit-def $vgpr14, implicit-def $vgpr15, implicit-def $vgpr16, implicit-def $vgpr17, implicit-def $vgpr18, implicit-def $vgpr19, implicit-def $vgpr20, implicit-def $vgpr21, implicit-def $vgpr22, implicit-def $vgpr23, implicit-def $vgpr24, implicit-def $vgpr25, implicit-def $vgpr26, implicit-def $vgpr27, implicit-def $vgpr28, implicit-def $vgpr29, implicit-def $vgpr30, implicit-def $vgpr31, implicit-def $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   S_CMP_EQ_U32 [[S_LOAD_DWORDX2_IMM]].sub1, 9, implicit-def $scc
-; LIVEINS-GFX13-NEXT:   $vgpr0 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr1 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr2 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr3 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr4 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr5 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr6 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr7 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr8 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr9 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr10 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr11 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr12 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr13 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr14 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr15 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr16 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr17 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr18 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr19 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr20 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr21 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr22 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr23 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr24 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr25 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr26 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr27 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr28 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr29 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr30 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr31 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr32 = IMPLICIT_DEF
 ; LIVEINS-GFX13-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
 ; LIVEINS-GFX13-NEXT:   S_BRANCH %bb.1
 ; LIVEINS-GFX13-NEXT: {{  $}}
@@ -996,19 +599,20 @@ define amdgpu_kernel void @bypassed_store(ptr addrspace(5) %out, i32 %x) #0 {
 ; LIVEINS-GFX13-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32
 ; LIVEINS-GFX13-NEXT: {{  $}}
 ; LIVEINS-GFX13-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-; LIVEINS-GFX13-NEXT:   BUNDLE implicit-def dead $stg_dsta, implicit $exec, implicit killed $idx1, implicit-def $vgpr1 :: (store (s32) into %ir.sunkaddr, addrspace 5) {
+; LIVEINS-GFX13-NEXT:   BUNDLE implicit-def dead $stg_dsta, implicit $exec, implicit killed $idx1 :: (store (s32) into %ir.sunkaddr, addrspace 5) {
 ; LIVEINS-GFX13-NEXT:     $stg_dsta = V_MOV_B32_e32 1065353216, implicit $exec
-; LIVEINS-GFX13-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, killed $idx1, 1, implicit $exec, implicit-def $vgpr1 :: (store (s32) into %ir.sunkaddr, addrspace 5)
+; LIVEINS-GFX13-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, killed $idx1, 1, implicit $exec :: (store (s32) into %ir.sunkaddr, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   }
 ; LIVEINS-GFX13-NEXT: {{  $}}
 ; LIVEINS-GFX13-NEXT: bb.2.skip:
 ; LIVEINS-GFX13-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32
 ; LIVEINS-GFX13-NEXT: {{  $}}
 ; LIVEINS-GFX13-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-; LIVEINS-GFX13-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed $idx1, implicit $exec, implicit killed [[S_LOAD_DWORDX2_IMM]], implicit $flat_scr, implicit $vgpr1 :: (dereferenceable load (s32) from %ir.sunkaddr1, addrspace 5), (store (s32) into %ir.out.7, addrspace 5) {
-; LIVEINS-GFX13-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 1, implicit $exec, implicit $vgpr1 :: (dereferenceable load (s32) from %ir.sunkaddr1, addrspace 5)
+; LIVEINS-GFX13-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed $idx1, implicit $exec, implicit killed [[S_LOAD_DWORDX2_IMM]], implicit $flat_scr :: (dereferenceable load (s32) from %ir.sunkaddr1, addrspace 5), (store (s32) into %ir.out.7, addrspace 5) {
+; LIVEINS-GFX13-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 1, implicit $exec :: (dereferenceable load (s32) from %ir.sunkaddr1, addrspace 5)
 ; LIVEINS-GFX13-NEXT:     SCRATCH_STORE_DWORD_SADDR internal killed $stg_srca, [[S_LOAD_DWORDX2_IMM]].sub0, 28, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out.7, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   }
+; LIVEINS-GFX13-NEXT:   VGPR_LIFETIME_END implicit killed $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit killed $vgpr4, implicit killed $vgpr5, implicit killed $vgpr6, implicit killed $vgpr7, implicit killed $vgpr8, implicit killed $vgpr9, implicit killed $vgpr10, implicit killed $vgpr11, implicit killed $vgpr12, implicit killed $vgpr13, implicit killed $vgpr14, implicit killed $vgpr15, implicit killed $vgpr16, implicit killed $vgpr17, implicit killed $vgpr18, implicit killed $vgpr19, implicit killed $vgpr20, implicit killed $vgpr21, implicit killed $vgpr22, implicit killed $vgpr23, implicit killed $vgpr24, implicit killed $vgpr25, implicit killed $vgpr26, implicit killed $vgpr27, implicit killed $vgpr28, implicit killed $vgpr29, implicit killed $vgpr30, implicit killed $vgpr31, implicit killed $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   S_ENDPGM 0
 ;
 ; LIVEINS-GFX1260-LABEL: name: bypassed_store
@@ -1020,40 +624,8 @@ define amdgpu_kernel void @bypassed_store(ptr addrspace(5) %out, i32 %x) #0 {
 ; LIVEINS-GFX1260-NEXT:   early-clobber %6:sreg_64_xexec = S_LOAD_DWORDX2_IMM_ec killed [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; LIVEINS-GFX1260-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 3, implicit $exec
 ; LIVEINS-GFX1260-NEXT:   SCRATCH_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], %6.sub0, 12, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out.3, addrspace 5)
+; LIVEINS-GFX1260-NEXT:   VGPR_LIFETIME_START implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit-def $vgpr5, implicit-def $vgpr6, implicit-def $vgpr7, implicit-def $vgpr8, implicit-def $vgpr9, implicit-def $vgpr10, implicit-def $vgpr11, implicit-def $vgpr12, implicit-def $vgpr13, implicit-def $vgpr14, implicit-def $vgpr15, implicit-def $vgpr16, implicit-def $vgpr17, implicit-def $vgpr18, implicit-def $vgpr19, implicit-def $vgpr20, implicit-def $vgpr21, implicit-def $vgpr22, implicit-def $vgpr23, implicit-def $vgpr24, implicit-def $vgpr25, implicit-def $vgpr26, implicit-def $vgpr27, implicit-def $vgpr28, implicit-def $vgpr29, implicit-def $vgpr30, implicit-def $vgpr31, implicit-def $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   S_CMP_EQ_U32 %6.sub1, 9, implicit-def $scc
-; LIVEINS-GFX1260-NEXT:   $vgpr0 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr1 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr2 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr3 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr4 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr5 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr6 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr7 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr8 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr9 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr10 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr11 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr12 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr13 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr14 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr15 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr16 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr17 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr18 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr19 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr20 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr21 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr22 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr23 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr24 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr25 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr26 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr27 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr28 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr29 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr30 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr31 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr32 = IMPLICIT_DEF
 ; LIVEINS-GFX1260-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
 ; LIVEINS-GFX1260-NEXT:   S_BRANCH %bb.1
 ; LIVEINS-GFX1260-NEXT: {{  $}}
@@ -1062,19 +634,20 @@ define amdgpu_kernel void @bypassed_store(ptr addrspace(5) %out, i32 %x) #0 {
 ; LIVEINS-GFX1260-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32
 ; LIVEINS-GFX1260-NEXT: {{  $}}
 ; LIVEINS-GFX1260-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-; LIVEINS-GFX1260-NEXT:   BUNDLE implicit-def dead $stg_dsta, implicit $exec, implicit killed $idx1, implicit-def $vgpr1 :: (store (s32) into %ir.sunkaddr, addrspace 5) {
+; LIVEINS-GFX1260-NEXT:   BUNDLE implicit-def dead $stg_dsta, implicit $exec, implicit killed $idx1 :: (store (s32) into %ir.sunkaddr, addrspace 5) {
 ; LIVEINS-GFX1260-NEXT:     $stg_dsta = V_MOV_B32_e32 1065353216, implicit $exec
-; LIVEINS-GFX1260-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, killed $idx1, 1, implicit $exec, implicit-def $vgpr1 :: (store (s32) into %ir.sunkaddr, addrspace 5)
+; LIVEINS-GFX1260-NEXT:     V_STORE_IDX_B32 internal $stg_dsta, killed $idx1, 1, implicit $exec :: (store (s32) into %ir.sunkaddr, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   }
 ; LIVEINS-GFX1260-NEXT: {{  $}}
 ; LIVEINS-GFX1260-NEXT: bb.2.skip:
 ; LIVEINS-GFX1260-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32
 ; LIVEINS-GFX1260-NEXT: {{  $}}
 ; LIVEINS-GFX1260-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-; LIVEINS-GFX1260-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed $idx1, implicit $exec, implicit killed %6, implicit $flat_scr, implicit $vgpr1 :: (dereferenceable load (s32) from %ir.sunkaddr1, addrspace 5), (store (s32) into %ir.out.7, addrspace 5) {
-; LIVEINS-GFX1260-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 1, implicit $exec, implicit $vgpr1 :: (dereferenceable load (s32) from %ir.sunkaddr1, addrspace 5)
+; LIVEINS-GFX1260-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed $idx1, implicit $exec, implicit killed %6, implicit $flat_scr :: (dereferenceable load (s32) from %ir.sunkaddr1, addrspace 5), (store (s32) into %ir.out.7, addrspace 5) {
+; LIVEINS-GFX1260-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 1, implicit $exec :: (dereferenceable load (s32) from %ir.sunkaddr1, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:     SCRATCH_STORE_DWORD_SADDR internal killed $stg_srca, %6.sub0, 28, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out.7, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   }
+; LIVEINS-GFX1260-NEXT:   VGPR_LIFETIME_END implicit killed $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit killed $vgpr4, implicit killed $vgpr5, implicit killed $vgpr6, implicit killed $vgpr7, implicit killed $vgpr8, implicit killed $vgpr9, implicit killed $vgpr10, implicit killed $vgpr11, implicit killed $vgpr12, implicit killed $vgpr13, implicit killed $vgpr14, implicit killed $vgpr15, implicit killed $vgpr16, implicit killed $vgpr17, implicit killed $vgpr18, implicit killed $vgpr19, implicit killed $vgpr20, implicit killed $vgpr21, implicit killed $vgpr22, implicit killed $vgpr23, implicit killed $vgpr24, implicit killed $vgpr25, implicit killed $vgpr26, implicit killed $vgpr27, implicit killed $vgpr28, implicit killed $vgpr29, implicit killed $vgpr30, implicit killed $vgpr31, implicit killed $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   S_ENDPGM 0
 entry:
   %out.3 = getelementptr i32, ptr addrspace(5) %out, i32 3
@@ -1104,10 +677,12 @@ skip:
 ;
 ; LIVEINS: bb.1.bb:
 ; LIVEINS-NEXT: successors:
-; LIVEINS-NOT: liveins:
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
 ; LIVEINS: V_STORE_IDX
 ;
 ; LIVEINS: bb.2.ret:
+; LIVEINS-NEXT: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32{{$}}
+; LIVEINS:      VGPR_LIFETIME_END
 ; LIVEINS-NEXT: S_ENDPGM
 
 define amdgpu_kernel void @def_in_nonentry_block(ptr addrspace(5) %out, float %x) #0 {
@@ -1118,49 +693,18 @@ define amdgpu_kernel void @def_in_nonentry_block(ptr addrspace(5) %out, float %x
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_cmp_nge_f32 s1, 0x41100000
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:12
+; CHECK-NEXT:    ; VGPR lifetime start: v[0:32]
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB3_2
 ; CHECK-NEXT:  ; %bb.1: ; %bb
 ; CHECK-NEXT:    v_mov_b32_e32 v33, s1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    ; implicit-def: $vgpr2
-; CHECK-NEXT:    ; implicit-def: $vgpr3
-; CHECK-NEXT:    ; implicit-def: $vgpr4
-; CHECK-NEXT:    ; implicit-def: $vgpr5
-; CHECK-NEXT:    ; implicit-def: $vgpr6
-; CHECK-NEXT:    ; implicit-def: $vgpr7
-; CHECK-NEXT:    ; implicit-def: $vgpr8
-; CHECK-NEXT:    ; implicit-def: $vgpr9
-; CHECK-NEXT:    ; implicit-def: $vgpr10
-; CHECK-NEXT:    ; implicit-def: $vgpr11
-; CHECK-NEXT:    ; implicit-def: $vgpr12
-; CHECK-NEXT:    ; implicit-def: $vgpr13
-; CHECK-NEXT:    ; implicit-def: $vgpr14
-; CHECK-NEXT:    ; implicit-def: $vgpr15
-; CHECK-NEXT:    ; implicit-def: $vgpr16
-; CHECK-NEXT:    ; implicit-def: $vgpr17
-; CHECK-NEXT:    ; implicit-def: $vgpr18
-; CHECK-NEXT:    ; implicit-def: $vgpr19
-; CHECK-NEXT:    ; implicit-def: $vgpr20
-; CHECK-NEXT:    ; implicit-def: $vgpr21
-; CHECK-NEXT:    ; implicit-def: $vgpr22
-; CHECK-NEXT:    ; implicit-def: $vgpr23
-; CHECK-NEXT:    ; implicit-def: $vgpr24
-; CHECK-NEXT:    ; implicit-def: $vgpr25
-; CHECK-NEXT:    ; implicit-def: $vgpr26
-; CHECK-NEXT:    ; implicit-def: $vgpr27
-; CHECK-NEXT:    ; implicit-def: $vgpr28
-; CHECK-NEXT:    ; implicit-def: $vgpr29
-; CHECK-NEXT:    ; implicit-def: $vgpr30
-; CHECK-NEXT:    ; implicit-def: $vgpr31
-; CHECK-NEXT:    ; implicit-def: $vgpr32
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_mov_b32_e32 g1[1], v33
 ; CHECK-NEXT:    scratch_store_b32 off, v33, s0 offset:28
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:  .LBB3_2: ; %ret
+; CHECK-NEXT:    ; VGPR lifetime end: v[0:32]
 ; CHECK-NEXT:    s_endpgm
 ; GFX13-LABEL: def_in_nonentry_block:
 ; GFX13:       ; %bb.0: ; %entry
@@ -1169,49 +713,18 @@ define amdgpu_kernel void @def_in_nonentry_block(ptr addrspace(5) %out, float %x
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_cmp_nge_f32 s1, 0x41100000
 ; GFX13-NEXT:    scratch_store_b32 off, v0, s0 offset:12
+; GFX13-NEXT:    ; VGPR lifetime start: v[0:32]
 ; GFX13-NEXT:    s_cbranch_scc1 .LBB3_2
 ; GFX13-NEXT:  ; %bb.1: ; %bb
 ; GFX13-NEXT:    v_mov_b32_e32 v33, s1
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    ; implicit-def: $vgpr1
-; GFX13-NEXT:    ; implicit-def: $vgpr0
-; GFX13-NEXT:    ; implicit-def: $vgpr2
-; GFX13-NEXT:    ; implicit-def: $vgpr3
-; GFX13-NEXT:    ; implicit-def: $vgpr4
-; GFX13-NEXT:    ; implicit-def: $vgpr5
-; GFX13-NEXT:    ; implicit-def: $vgpr6
-; GFX13-NEXT:    ; implicit-def: $vgpr7
-; GFX13-NEXT:    ; implicit-def: $vgpr8
-; GFX13-NEXT:    ; implicit-def: $vgpr9
-; GFX13-NEXT:    ; implicit-def: $vgpr10
-; GFX13-NEXT:    ; implicit-def: $vgpr11
-; GFX13-NEXT:    ; implicit-def: $vgpr12
-; GFX13-NEXT:    ; implicit-def: $vgpr13
-; GFX13-NEXT:    ; implicit-def: $vgpr14
-; GFX13-NEXT:    ; implicit-def: $vgpr15
-; GFX13-NEXT:    ; implicit-def: $vgpr16
-; GFX13-NEXT:    ; implicit-def: $vgpr17
-; GFX13-NEXT:    ; implicit-def: $vgpr18
-; GFX13-NEXT:    ; implicit-def: $vgpr19
-; GFX13-NEXT:    ; implicit-def: $vgpr20
-; GFX13-NEXT:    ; implicit-def: $vgpr21
-; GFX13-NEXT:    ; implicit-def: $vgpr22
-; GFX13-NEXT:    ; implicit-def: $vgpr23
-; GFX13-NEXT:    ; implicit-def: $vgpr24
-; GFX13-NEXT:    ; implicit-def: $vgpr25
-; GFX13-NEXT:    ; implicit-def: $vgpr26
-; GFX13-NEXT:    ; implicit-def: $vgpr27
-; GFX13-NEXT:    ; implicit-def: $vgpr28
-; GFX13-NEXT:    ; implicit-def: $vgpr29
-; GFX13-NEXT:    ; implicit-def: $vgpr30
-; GFX13-NEXT:    ; implicit-def: $vgpr31
-; GFX13-NEXT:    ; implicit-def: $vgpr32
 ; GFX13-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_mov_b32_e32 g1[1], v33
 ; GFX13-NEXT:    scratch_store_b32 off, v33, s0 offset:28
 ; GFX13-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX13-NEXT:  .LBB3_2: ; %ret
+; GFX13-NEXT:    ; VGPR lifetime end: v[0:32]
 ; GFX13-NEXT:    s_endpgm
 ;
 ; GFX1260-LABEL: def_in_nonentry_block:
@@ -1222,49 +735,18 @@ define amdgpu_kernel void @def_in_nonentry_block(ptr addrspace(5) %out, float %x
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    s_cmp_nge_f32 s1, 0x41100000
 ; GFX1260-NEXT:    scratch_store_b32 off, v0, s0 offset:12
+; GFX1260-NEXT:    ; VGPR lifetime start: v[0:32]
 ; GFX1260-NEXT:    s_cbranch_scc1 .LBB3_2
 ; GFX1260-NEXT:  ; %bb.1: ; %bb
 ; GFX1260-NEXT:    v_mov_b32_e32 v33, s1
 ; GFX1260-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX1260-NEXT:    ; implicit-def: $vgpr1
-; GFX1260-NEXT:    ; implicit-def: $vgpr0
-; GFX1260-NEXT:    ; implicit-def: $vgpr2
-; GFX1260-NEXT:    ; implicit-def: $vgpr3
-; GFX1260-NEXT:    ; implicit-def: $vgpr4
-; GFX1260-NEXT:    ; implicit-def: $vgpr5
-; GFX1260-NEXT:    ; implicit-def: $vgpr6
-; GFX1260-NEXT:    ; implicit-def: $vgpr7
-; GFX1260-NEXT:    ; implicit-def: $vgpr8
-; GFX1260-NEXT:    ; implicit-def: $vgpr9
-; GFX1260-NEXT:    ; implicit-def: $vgpr10
-; GFX1260-NEXT:    ; implicit-def: $vgpr11
-; GFX1260-NEXT:    ; implicit-def: $vgpr12
-; GFX1260-NEXT:    ; implicit-def: $vgpr13
-; GFX1260-NEXT:    ; implicit-def: $vgpr14
-; GFX1260-NEXT:    ; implicit-def: $vgpr15
-; GFX1260-NEXT:    ; implicit-def: $vgpr16
-; GFX1260-NEXT:    ; implicit-def: $vgpr17
-; GFX1260-NEXT:    ; implicit-def: $vgpr18
-; GFX1260-NEXT:    ; implicit-def: $vgpr19
-; GFX1260-NEXT:    ; implicit-def: $vgpr20
-; GFX1260-NEXT:    ; implicit-def: $vgpr21
-; GFX1260-NEXT:    ; implicit-def: $vgpr22
-; GFX1260-NEXT:    ; implicit-def: $vgpr23
-; GFX1260-NEXT:    ; implicit-def: $vgpr24
-; GFX1260-NEXT:    ; implicit-def: $vgpr25
-; GFX1260-NEXT:    ; implicit-def: $vgpr26
-; GFX1260-NEXT:    ; implicit-def: $vgpr27
-; GFX1260-NEXT:    ; implicit-def: $vgpr28
-; GFX1260-NEXT:    ; implicit-def: $vgpr29
-; GFX1260-NEXT:    ; implicit-def: $vgpr30
-; GFX1260-NEXT:    ; implicit-def: $vgpr31
-; GFX1260-NEXT:    ; implicit-def: $vgpr32
 ; GFX1260-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1260-NEXT:    v_mov_b32_e32 g1[1], v33
 ; GFX1260-NEXT:    scratch_store_b32 off, v33, s0 offset:28
 ; GFX1260-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-NEXT:  .LBB3_2: ; %ret
+; GFX1260-NEXT:    ; VGPR lifetime end: v[0:32]
 ; GFX1260-NEXT:    s_endpgm
 ; LIVEINS-GFX13-LABEL: name: def_in_nonentry_block
 ; LIVEINS-GFX13: bb.0.entry:
@@ -1275,52 +757,24 @@ define amdgpu_kernel void @def_in_nonentry_block(ptr addrspace(5) %out, float %x
 ; LIVEINS-GFX13-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; LIVEINS-GFX13-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 3, implicit $exec
 ; LIVEINS-GFX13-NEXT:   SCRATCH_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX2_IMM]].sub0, 12, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out.3, addrspace 5)
+; LIVEINS-GFX13-NEXT:   VGPR_LIFETIME_START implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit-def $vgpr5, implicit-def $vgpr6, implicit-def $vgpr7, implicit-def $vgpr8, implicit-def $vgpr9, implicit-def $vgpr10, implicit-def $vgpr11, implicit-def $vgpr12, implicit-def $vgpr13, implicit-def $vgpr14, implicit-def $vgpr15, implicit-def $vgpr16, implicit-def $vgpr17, implicit-def $vgpr18, implicit-def $vgpr19, implicit-def $vgpr20, implicit-def $vgpr21, implicit-def $vgpr22, implicit-def $vgpr23, implicit-def $vgpr24, implicit-def $vgpr25, implicit-def $vgpr26, implicit-def $vgpr27, implicit-def $vgpr28, implicit-def $vgpr29, implicit-def $vgpr30, implicit-def $vgpr31, implicit-def $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   nofpexcept S_CMP_NGE_F32 [[S_LOAD_DWORDX2_IMM]].sub1, 1091567616, implicit-def $scc, implicit $mode
 ; LIVEINS-GFX13-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
 ; LIVEINS-GFX13-NEXT:   S_BRANCH %bb.1
 ; LIVEINS-GFX13-NEXT: {{  $}}
 ; LIVEINS-GFX13-NEXT: bb.1.bb:
 ; LIVEINS-GFX13-NEXT:   successors: %bb.2(0x80000000)
+; LIVEINS-GFX13-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32
 ; LIVEINS-GFX13-NEXT: {{  $}}
 ; LIVEINS-GFX13-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
 ; LIVEINS-GFX13-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-; LIVEINS-GFX13-NEXT:   $vgpr0 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr1 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr2 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr3 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr4 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr5 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr6 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr7 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr8 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr9 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr10 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr11 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr12 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr13 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr14 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr15 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr16 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr17 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr18 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr19 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr20 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr21 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr22 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr23 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr24 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr25 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr26 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr27 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr28 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr29 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr30 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr31 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr32 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   V_STORE_IDX_B32 [[COPY1]], killed $idx1, 1, implicit $exec, implicit-def $vgpr1 :: (store (s32) into %ir.sunkaddr, addrspace 5)
+; LIVEINS-GFX13-NEXT:   V_STORE_IDX_B32 [[COPY1]], killed $idx1, 1, implicit $exec :: (store (s32) into %ir.sunkaddr, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   SCRATCH_STORE_DWORD_SADDR killed [[COPY1]], killed [[S_LOAD_DWORDX2_IMM]].sub0, 28, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out.7, addrspace 5)
 ; LIVEINS-GFX13-NEXT: {{  $}}
 ; LIVEINS-GFX13-NEXT: bb.2.ret:
+; LIVEINS-GFX13-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32
+; LIVEINS-GFX13-NEXT: {{  $}}
+; LIVEINS-GFX13-NEXT:   VGPR_LIFETIME_END implicit killed $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit killed $vgpr4, implicit killed $vgpr5, implicit killed $vgpr6, implicit killed $vgpr7, implicit killed $vgpr8, implicit killed $vgpr9, implicit killed $vgpr10, implicit killed $vgpr11, implicit killed $vgpr12, implicit killed $vgpr13, implicit killed $vgpr14, implicit killed $vgpr15, implicit killed $vgpr16, implicit killed $vgpr17, implicit killed $vgpr18, implicit killed $vgpr19, implicit killed $vgpr20, implicit killed $vgpr21, implicit killed $vgpr22, implicit killed $vgpr23, implicit killed $vgpr24, implicit killed $vgpr25, implicit killed $vgpr26, implicit killed $vgpr27, implicit killed $vgpr28, implicit killed $vgpr29, implicit killed $vgpr30, implicit killed $vgpr31, implicit killed $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   S_ENDPGM 0
 ;
 ; LIVEINS-GFX1260-LABEL: name: def_in_nonentry_block
@@ -1332,52 +786,24 @@ define amdgpu_kernel void @def_in_nonentry_block(ptr addrspace(5) %out, float %x
 ; LIVEINS-GFX1260-NEXT:   early-clobber %7:sreg_64_xexec = S_LOAD_DWORDX2_IMM_ec killed [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; LIVEINS-GFX1260-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 3, implicit $exec
 ; LIVEINS-GFX1260-NEXT:   SCRATCH_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], %7.sub0, 12, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out.3, addrspace 5)
+; LIVEINS-GFX1260-NEXT:   VGPR_LIFETIME_START implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit-def $vgpr5, implicit-def $vgpr6, implicit-def $vgpr7, implicit-def $vgpr8, implicit-def $vgpr9, implicit-def $vgpr10, implicit-def $vgpr11, implicit-def $vgpr12, implicit-def $vgpr13, implicit-def $vgpr14, implicit-def $vgpr15, implicit-def $vgpr16, implicit-def $vgpr17, implicit-def $vgpr18, implicit-def $vgpr19, implicit-def $vgpr20, implicit-def $vgpr21, implicit-def $vgpr22, implicit-def $vgpr23, implicit-def $vgpr24, implicit-def $vgpr25, implicit-def $vgpr26, implicit-def $vgpr27, implicit-def $vgpr28, implicit-def $vgpr29, implicit-def $vgpr30, implicit-def $vgpr31, implicit-def $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   nofpexcept S_CMP_NGE_F32 %7.sub1, 1091567616, implicit-def $scc, implicit $mode
 ; LIVEINS-GFX1260-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
 ; LIVEINS-GFX1260-NEXT:   S_BRANCH %bb.1
 ; LIVEINS-GFX1260-NEXT: {{  $}}
 ; LIVEINS-GFX1260-NEXT: bb.1.bb:
 ; LIVEINS-GFX1260-NEXT:   successors: %bb.2(0x80000000)
+; LIVEINS-GFX1260-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32
 ; LIVEINS-GFX1260-NEXT: {{  $}}
 ; LIVEINS-GFX1260-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY %7.sub1
 ; LIVEINS-GFX1260-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-; LIVEINS-GFX1260-NEXT:   $vgpr0 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr1 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr2 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr3 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr4 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr5 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr6 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr7 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr8 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr9 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr10 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr11 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr12 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr13 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr14 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr15 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr16 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr17 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr18 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr19 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr20 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr21 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr22 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr23 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr24 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr25 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr26 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr27 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr28 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr29 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr30 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr31 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr32 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   V_STORE_IDX_B32 [[COPY1]], killed $idx1, 1, implicit $exec, implicit-def $vgpr1 :: (store (s32) into %ir.sunkaddr, addrspace 5)
+; LIVEINS-GFX1260-NEXT:   V_STORE_IDX_B32 [[COPY1]], killed $idx1, 1, implicit $exec :: (store (s32) into %ir.sunkaddr, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   SCRATCH_STORE_DWORD_SADDR killed [[COPY1]], killed %7.sub0, 28, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out.7, addrspace 5)
 ; LIVEINS-GFX1260-NEXT: {{  $}}
 ; LIVEINS-GFX1260-NEXT: bb.2.ret:
+; LIVEINS-GFX1260-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32
+; LIVEINS-GFX1260-NEXT: {{  $}}
+; LIVEINS-GFX1260-NEXT:   VGPR_LIFETIME_END implicit killed $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit killed $vgpr4, implicit killed $vgpr5, implicit killed $vgpr6, implicit killed $vgpr7, implicit killed $vgpr8, implicit killed $vgpr9, implicit killed $vgpr10, implicit killed $vgpr11, implicit killed $vgpr12, implicit killed $vgpr13, implicit killed $vgpr14, implicit killed $vgpr15, implicit killed $vgpr16, implicit killed $vgpr17, implicit killed $vgpr18, implicit killed $vgpr19, implicit killed $vgpr20, implicit killed $vgpr21, implicit killed $vgpr22, implicit killed $vgpr23, implicit killed $vgpr24, implicit killed $vgpr25, implicit killed $vgpr26, implicit killed $vgpr27, implicit killed $vgpr28, implicit killed $vgpr29, implicit killed $vgpr30, implicit killed $vgpr31, implicit killed $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   S_ENDPGM 0
 entry:
   %out.3 = getelementptr i32, ptr addrspace(5) %out, i32 3
@@ -1422,39 +848,7 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) #0 {
 ; CHECK-NEXT:    v_mov_b32_e32 v33, 3
 ; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    s_mov_b32 s3, 0
-; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr2
-; CHECK-NEXT:    ; implicit-def: $vgpr3
-; CHECK-NEXT:    ; implicit-def: $vgpr4
-; CHECK-NEXT:    ; implicit-def: $vgpr5
-; CHECK-NEXT:    ; implicit-def: $vgpr6
-; CHECK-NEXT:    ; implicit-def: $vgpr7
-; CHECK-NEXT:    ; implicit-def: $vgpr8
-; CHECK-NEXT:    ; implicit-def: $vgpr9
-; CHECK-NEXT:    ; implicit-def: $vgpr10
-; CHECK-NEXT:    ; implicit-def: $vgpr11
-; CHECK-NEXT:    ; implicit-def: $vgpr12
-; CHECK-NEXT:    ; implicit-def: $vgpr13
-; CHECK-NEXT:    ; implicit-def: $vgpr14
-; CHECK-NEXT:    ; implicit-def: $vgpr15
-; CHECK-NEXT:    ; implicit-def: $vgpr16
-; CHECK-NEXT:    ; implicit-def: $vgpr17
-; CHECK-NEXT:    ; implicit-def: $vgpr18
-; CHECK-NEXT:    ; implicit-def: $vgpr19
-; CHECK-NEXT:    ; implicit-def: $vgpr20
-; CHECK-NEXT:    ; implicit-def: $vgpr21
-; CHECK-NEXT:    ; implicit-def: $vgpr22
-; CHECK-NEXT:    ; implicit-def: $vgpr23
-; CHECK-NEXT:    ; implicit-def: $vgpr24
-; CHECK-NEXT:    ; implicit-def: $vgpr25
-; CHECK-NEXT:    ; implicit-def: $vgpr26
-; CHECK-NEXT:    ; implicit-def: $vgpr27
-; CHECK-NEXT:    ; implicit-def: $vgpr28
-; CHECK-NEXT:    ; implicit-def: $vgpr29
-; CHECK-NEXT:    ; implicit-def: $vgpr30
-; CHECK-NEXT:    ; implicit-def: $vgpr31
-; CHECK-NEXT:    ; implicit-def: $vgpr32
+; CHECK-NEXT:    ; VGPR lifetime start: v[0:32]
 ; CHECK-NEXT:  .LBB4_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -1472,6 +866,7 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) #0 {
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    scratch_store_b32 off, g1[5], s0
+; CHECK-NEXT:    ; VGPR lifetime end: v[0:32]
 ; CHECK-NEXT:    s_endpgm
 ; GFX13-LABEL: loop:
 ; GFX13:       ; %bb.0: ; %entry
@@ -1479,39 +874,7 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) #0 {
 ; GFX13-NEXT:    v_mov_b32_e32 v33, 3
 ; GFX13-NEXT:    s_mov_b32 s2, -1
 ; GFX13-NEXT:    s_mov_b32 s3, 0
-; GFX13-NEXT:    ; implicit-def: $vgpr0
-; GFX13-NEXT:    ; implicit-def: $vgpr1
-; GFX13-NEXT:    ; implicit-def: $vgpr2
-; GFX13-NEXT:    ; implicit-def: $vgpr3
-; GFX13-NEXT:    ; implicit-def: $vgpr4
-; GFX13-NEXT:    ; implicit-def: $vgpr5
-; GFX13-NEXT:    ; implicit-def: $vgpr6
-; GFX13-NEXT:    ; implicit-def: $vgpr7
-; GFX13-NEXT:    ; implicit-def: $vgpr8
-; GFX13-NEXT:    ; implicit-def: $vgpr9
-; GFX13-NEXT:    ; implicit-def: $vgpr10
-; GFX13-NEXT:    ; implicit-def: $vgpr11
-; GFX13-NEXT:    ; implicit-def: $vgpr12
-; GFX13-NEXT:    ; implicit-def: $vgpr13
-; GFX13-NEXT:    ; implicit-def: $vgpr14
-; GFX13-NEXT:    ; implicit-def: $vgpr15
-; GFX13-NEXT:    ; implicit-def: $vgpr16
-; GFX13-NEXT:    ; implicit-def: $vgpr17
-; GFX13-NEXT:    ; implicit-def: $vgpr18
-; GFX13-NEXT:    ; implicit-def: $vgpr19
-; GFX13-NEXT:    ; implicit-def: $vgpr20
-; GFX13-NEXT:    ; implicit-def: $vgpr21
-; GFX13-NEXT:    ; implicit-def: $vgpr22
-; GFX13-NEXT:    ; implicit-def: $vgpr23
-; GFX13-NEXT:    ; implicit-def: $vgpr24
-; GFX13-NEXT:    ; implicit-def: $vgpr25
-; GFX13-NEXT:    ; implicit-def: $vgpr26
-; GFX13-NEXT:    ; implicit-def: $vgpr27
-; GFX13-NEXT:    ; implicit-def: $vgpr28
-; GFX13-NEXT:    ; implicit-def: $vgpr29
-; GFX13-NEXT:    ; implicit-def: $vgpr30
-; GFX13-NEXT:    ; implicit-def: $vgpr31
-; GFX13-NEXT:    ; implicit-def: $vgpr32
+; GFX13-NEXT:    ; VGPR lifetime start: v[0:32]
 ; GFX13-NEXT:  .LBB4_1: ; %loop
 ; GFX13-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -1529,6 +892,7 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) #0 {
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX13-NEXT:    scratch_store_b32 off, g1[5], s0
+; GFX13-NEXT:    ; VGPR lifetime end: v[0:32]
 ; GFX13-NEXT:    s_endpgm
 ;
 ; GFX1260-LABEL: loop:
@@ -1538,39 +902,7 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) #0 {
 ; GFX1260-NEXT:    v_mov_b32_e32 v33, 3
 ; GFX1260-NEXT:    s_mov_b32 s2, -1
 ; GFX1260-NEXT:    s_mov_b32 s3, 0
-; GFX1260-NEXT:    ; implicit-def: $vgpr0
-; GFX1260-NEXT:    ; implicit-def: $vgpr1
-; GFX1260-NEXT:    ; implicit-def: $vgpr2
-; GFX1260-NEXT:    ; implicit-def: $vgpr3
-; GFX1260-NEXT:    ; implicit-def: $vgpr4
-; GFX1260-NEXT:    ; implicit-def: $vgpr5
-; GFX1260-NEXT:    ; implicit-def: $vgpr6
-; GFX1260-NEXT:    ; implicit-def: $vgpr7
-; GFX1260-NEXT:    ; implicit-def: $vgpr8
-; GFX1260-NEXT:    ; implicit-def: $vgpr9
-; GFX1260-NEXT:    ; implicit-def: $vgpr10
-; GFX1260-NEXT:    ; implicit-def: $vgpr11
-; GFX1260-NEXT:    ; implicit-def: $vgpr12
-; GFX1260-NEXT:    ; implicit-def: $vgpr13
-; GFX1260-NEXT:    ; implicit-def: $vgpr14
-; GFX1260-NEXT:    ; implicit-def: $vgpr15
-; GFX1260-NEXT:    ; implicit-def: $vgpr16
-; GFX1260-NEXT:    ; implicit-def: $vgpr17
-; GFX1260-NEXT:    ; implicit-def: $vgpr18
-; GFX1260-NEXT:    ; implicit-def: $vgpr19
-; GFX1260-NEXT:    ; implicit-def: $vgpr20
-; GFX1260-NEXT:    ; implicit-def: $vgpr21
-; GFX1260-NEXT:    ; implicit-def: $vgpr22
-; GFX1260-NEXT:    ; implicit-def: $vgpr23
-; GFX1260-NEXT:    ; implicit-def: $vgpr24
-; GFX1260-NEXT:    ; implicit-def: $vgpr25
-; GFX1260-NEXT:    ; implicit-def: $vgpr26
-; GFX1260-NEXT:    ; implicit-def: $vgpr27
-; GFX1260-NEXT:    ; implicit-def: $vgpr28
-; GFX1260-NEXT:    ; implicit-def: $vgpr29
-; GFX1260-NEXT:    ; implicit-def: $vgpr30
-; GFX1260-NEXT:    ; implicit-def: $vgpr31
-; GFX1260-NEXT:    ; implicit-def: $vgpr32
+; GFX1260-NEXT:    ; VGPR lifetime start: v[0:32]
 ; GFX1260-NEXT:  .LBB4_1: ; %loop
 ; GFX1260-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
@@ -1588,6 +920,7 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) #0 {
 ; GFX1260-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX1260-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1260-NEXT:    scratch_store_b32 off, g1[5], s0
+; GFX1260-NEXT:    ; VGPR lifetime end: v[0:32]
 ; GFX1260-NEXT:    s_endpgm
 ; LIVEINS-GFX13-LABEL: name: loop
 ; LIVEINS-GFX13: bb.0.entry:
@@ -1595,45 +928,13 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) #0 {
 ; LIVEINS-GFX13-NEXT:   liveins: $sgpr4_sgpr5
 ; LIVEINS-GFX13-NEXT: {{  $}}
 ; LIVEINS-GFX13-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY killed $sgpr4_sgpr5
+; LIVEINS-GFX13-NEXT:   VGPR_LIFETIME_START implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit-def $vgpr5, implicit-def $vgpr6, implicit-def $vgpr7, implicit-def $vgpr8, implicit-def $vgpr9, implicit-def $vgpr10, implicit-def $vgpr11, implicit-def $vgpr12, implicit-def $vgpr13, implicit-def $vgpr14, implicit-def $vgpr15, implicit-def $vgpr16, implicit-def $vgpr17, implicit-def $vgpr18, implicit-def $vgpr19, implicit-def $vgpr20, implicit-def $vgpr21, implicit-def $vgpr22, implicit-def $vgpr23, implicit-def $vgpr24, implicit-def $vgpr25, implicit-def $vgpr26, implicit-def $vgpr27, implicit-def $vgpr28, implicit-def $vgpr29, implicit-def $vgpr30, implicit-def $vgpr31, implicit-def $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; LIVEINS-GFX13-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
 ; LIVEINS-GFX13-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
 ; LIVEINS-GFX13-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 3, implicit $exec
 ; LIVEINS-GFX13-NEXT:   [[COPY1:%[0-9]+]]:sreg_32_xexec_hi = COPY killed [[S_MOV_B32_1]]
 ; LIVEINS-GFX13-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY killed [[S_MOV_B32_]]
-; LIVEINS-GFX13-NEXT:   $vgpr0 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr1 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr2 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr3 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr4 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr5 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr6 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr7 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr8 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr9 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr10 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr11 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr12 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr13 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr14 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr15 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr16 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr17 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr18 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr19 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr20 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr21 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr22 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr23 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr24 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr25 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr26 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr27 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr28 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr29 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr30 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr31 = IMPLICIT_DEF
-; LIVEINS-GFX13-NEXT:   $vgpr32 = IMPLICIT_DEF
 ; LIVEINS-GFX13-NEXT: {{  $}}
 ; LIVEINS-GFX13-NEXT: bb.1.loop:
 ; LIVEINS-GFX13-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
@@ -1642,7 +943,7 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) #0 {
 ; LIVEINS-GFX13-NEXT:   [[COPY3:%[0-9]+]]:sreg_32_xexec_hi = COPY killed [[COPY1]]
 ; LIVEINS-GFX13-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[COPY3]], 2, implicit-def dead $scc
 ; LIVEINS-GFX13-NEXT:   $idx1 = S_SET_GPR_IDX_U32 killed [[S_LSHR_B32_]]
-; LIVEINS-GFX13-NEXT:   V_STORE_IDX_B32 [[V_MOV_B32_e32_]], killed $idx1, 0, implicit $exec, implicit $vgpr0, implicit-def $vgpr0, implicit $vgpr1, implicit-def $vgpr1, implicit $vgpr2, implicit-def $vgpr2, implicit $vgpr3, implicit-def $vgpr3, implicit $vgpr4, implicit-def $vgpr4, implicit $vgpr5, implicit-def $vgpr5, implicit $vgpr6, implicit-def $vgpr6, implicit $vgpr7, implicit-def $vgpr7, implicit $vgpr8, implicit-def $vgpr8, implicit $vgpr9, implicit-def $vgpr9, implicit $vgpr10, implicit-def $vgpr10, implicit $vgpr11, implicit-def $vgpr11, implicit $vgpr12, implicit-def $vgpr12, implicit $vgpr13, implicit-def $vgpr13, implicit $vgpr14, implicit-def $vgpr14, implicit $vgpr15, implicit-def $vgpr15, implicit $vgpr16, implicit-def $vgpr16, implicit $vgpr17, implicit-def $vgpr17, implicit $vgpr18, implicit-def $vgpr18, implicit $vgpr19, implicit-def $vgpr19, implicit $vgpr20, implicit-def $vgpr20, implicit $vgpr21, implicit-def $vgpr21, implicit $vgpr22, implicit-def $vgpr22, implicit $vgpr23, implicit-def $vgpr23, implicit $vgpr24, implicit-def $vgpr24, implicit $vgpr25, implicit-def $vgpr25, implicit $vgpr26, implicit-def $vgpr26, implicit $vgpr27, implicit-def $vgpr27, implicit $vgpr28, implicit-def $vgpr28, implicit $vgpr29, implicit-def $vgpr29, implicit $vgpr30, implicit-def $vgpr30, implicit $vgpr31, implicit-def $vgpr31, implicit $vgpr32, implicit-def $vgpr32 :: (store (s32) into %ir.lsr.iv1, addrspace 5)
+; LIVEINS-GFX13-NEXT:   V_STORE_IDX_B32 [[V_MOV_B32_e32_]], killed $idx1, 0, implicit $exec :: (store (s32) into %ir.lsr.iv1, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY killed [[COPY2]]
 ; LIVEINS-GFX13-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 killed [[COPY4]], 1, implicit-def dead $scc
 ; LIVEINS-GFX13-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 killed [[COPY3]], 4, implicit-def dead $scc
@@ -1656,10 +957,11 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) #0 {
 ; LIVEINS-GFX13-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32
 ; LIVEINS-GFX13-NEXT: {{  $}}
 ; LIVEINS-GFX13-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-; LIVEINS-GFX13-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed $idx1, implicit $exec, implicit killed [[S_LOAD_DWORDX2_IMM]], implicit $flat_scr, implicit $vgpr5 :: (dereferenceable load (s32) from %ir.sunkaddr, addrspace 5), (store (s32) into %ir.1, addrspace 5) {
-; LIVEINS-GFX13-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 5, implicit $exec, implicit $vgpr5 :: (dereferenceable load (s32) from %ir.sunkaddr, addrspace 5)
+; LIVEINS-GFX13-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed $idx1, implicit $exec, implicit killed [[S_LOAD_DWORDX2_IMM]], implicit $flat_scr :: (dereferenceable load (s32) from %ir.sunkaddr, addrspace 5), (store (s32) into %ir.1, addrspace 5) {
+; LIVEINS-GFX13-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 5, implicit $exec :: (dereferenceable load (s32) from %ir.sunkaddr, addrspace 5)
 ; LIVEINS-GFX13-NEXT:     SCRATCH_STORE_DWORD_SADDR internal killed $stg_srca, [[S_LOAD_DWORDX2_IMM]].sub0, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.1, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   }
+; LIVEINS-GFX13-NEXT:   VGPR_LIFETIME_END implicit killed $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit killed $vgpr4, implicit killed $vgpr5, implicit killed $vgpr6, implicit killed $vgpr7, implicit killed $vgpr8, implicit killed $vgpr9, implicit killed $vgpr10, implicit killed $vgpr11, implicit killed $vgpr12, implicit killed $vgpr13, implicit killed $vgpr14, implicit killed $vgpr15, implicit killed $vgpr16, implicit killed $vgpr17, implicit killed $vgpr18, implicit killed $vgpr19, implicit killed $vgpr20, implicit killed $vgpr21, implicit killed $vgpr22, implicit killed $vgpr23, implicit killed $vgpr24, implicit killed $vgpr25, implicit killed $vgpr26, implicit killed $vgpr27, implicit killed $vgpr28, implicit killed $vgpr29, implicit killed $vgpr30, implicit killed $vgpr31, implicit killed $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX13-NEXT:   S_ENDPGM 0
 ;
 ; LIVEINS-GFX1260-LABEL: name: loop
@@ -1668,45 +970,13 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) #0 {
 ; LIVEINS-GFX1260-NEXT:   liveins: $sgpr4_sgpr5
 ; LIVEINS-GFX1260-NEXT: {{  $}}
 ; LIVEINS-GFX1260-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY killed $sgpr4_sgpr5
+; LIVEINS-GFX1260-NEXT:   VGPR_LIFETIME_START implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit-def $vgpr5, implicit-def $vgpr6, implicit-def $vgpr7, implicit-def $vgpr8, implicit-def $vgpr9, implicit-def $vgpr10, implicit-def $vgpr11, implicit-def $vgpr12, implicit-def $vgpr13, implicit-def $vgpr14, implicit-def $vgpr15, implicit-def $vgpr16, implicit-def $vgpr17, implicit-def $vgpr18, implicit-def $vgpr19, implicit-def $vgpr20, implicit-def $vgpr21, implicit-def $vgpr22, implicit-def $vgpr23, implicit-def $vgpr24, implicit-def $vgpr25, implicit-def $vgpr26, implicit-def $vgpr27, implicit-def $vgpr28, implicit-def $vgpr29, implicit-def $vgpr30, implicit-def $vgpr31, implicit-def $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   early-clobber %13:sreg_64_xexec = S_LOAD_DWORDX2_IMM_ec killed [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
 ; LIVEINS-GFX1260-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
 ; LIVEINS-GFX1260-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
 ; LIVEINS-GFX1260-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 3, implicit $exec
 ; LIVEINS-GFX1260-NEXT:   [[COPY1:%[0-9]+]]:sreg_32_xexec_hi = COPY killed [[S_MOV_B32_1]]
 ; LIVEINS-GFX1260-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY killed [[S_MOV_B32_]]
-; LIVEINS-GFX1260-NEXT:   $vgpr0 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr1 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr2 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr3 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr4 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr5 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr6 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr7 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr8 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr9 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr10 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr11 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr12 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr13 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr14 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr15 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr16 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr17 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr18 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr19 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr20 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr21 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr22 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr23 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr24 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr25 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr26 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr27 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr28 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr29 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr30 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr31 = IMPLICIT_DEF
-; LIVEINS-GFX1260-NEXT:   $vgpr32 = IMPLICIT_DEF
 ; LIVEINS-GFX1260-NEXT: {{  $}}
 ; LIVEINS-GFX1260-NEXT: bb.1.loop:
 ; LIVEINS-GFX1260-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
@@ -1715,7 +985,7 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) #0 {
 ; LIVEINS-GFX1260-NEXT:   [[COPY3:%[0-9]+]]:sreg_32_xexec_hi = COPY killed [[COPY1]]
 ; LIVEINS-GFX1260-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[COPY3]], 2, implicit-def dead $scc
 ; LIVEINS-GFX1260-NEXT:   $idx1 = S_SET_GPR_IDX_U32 killed [[S_LSHR_B32_]]
-; LIVEINS-GFX1260-NEXT:   V_STORE_IDX_B32 [[V_MOV_B32_e32_]], killed $idx1, 0, implicit $exec, implicit $vgpr0, implicit-def $vgpr0, implicit $vgpr1, implicit-def $vgpr1, implicit $vgpr2, implicit-def $vgpr2, implicit $vgpr3, implicit-def $vgpr3, implicit $vgpr4, implicit-def $vgpr4, implicit $vgpr5, implicit-def $vgpr5, implicit $vgpr6, implicit-def $vgpr6, implicit $vgpr7, implicit-def $vgpr7, implicit $vgpr8, implicit-def $vgpr8, implicit $vgpr9, implicit-def $vgpr9, implicit $vgpr10, implicit-def $vgpr10, implicit $vgpr11, implicit-def $vgpr11, implicit $vgpr12, implicit-def $vgpr12, implicit $vgpr13, implicit-def $vgpr13, implicit $vgpr14, implicit-def $vgpr14, implicit $vgpr15, implicit-def $vgpr15, implicit $vgpr16, implicit-def $vgpr16, implicit $vgpr17, implicit-def $vgpr17, implicit $vgpr18, implicit-def $vgpr18, implicit $vgpr19, implicit-def $vgpr19, implicit $vgpr20, implicit-def $vgpr20, implicit $vgpr21, implicit-def $vgpr21, implicit $vgpr22, implicit-def $vgpr22, implicit $vgpr23, implicit-def $vgpr23, implicit $vgpr24, implicit-def $vgpr24, implicit $vgpr25, implicit-def $vgpr25, implicit $vgpr26, implicit-def $vgpr26, implicit $vgpr27, implicit-def $vgpr27, implicit $vgpr28, implicit-def $vgpr28, implicit $vgpr29, implicit-def $vgpr29, implicit $vgpr30, implicit-def $vgpr30, implicit $vgpr31, implicit-def $vgpr31, implicit $vgpr32, implicit-def $vgpr32 :: (store (s32) into %ir.lsr.iv1, addrspace 5)
+; LIVEINS-GFX1260-NEXT:   V_STORE_IDX_B32 [[V_MOV_B32_e32_]], killed $idx1, 0, implicit $exec :: (store (s32) into %ir.lsr.iv1, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY killed [[COPY2]]
 ; LIVEINS-GFX1260-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 killed [[COPY4]], 1, implicit-def dead $scc
 ; LIVEINS-GFX1260-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 killed [[COPY3]], 4, implicit-def dead $scc
@@ -1729,10 +999,11 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) #0 {
 ; LIVEINS-GFX1260-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32
 ; LIVEINS-GFX1260-NEXT: {{  $}}
 ; LIVEINS-GFX1260-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-; LIVEINS-GFX1260-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed $idx1, implicit $exec, implicit killed %13, implicit $flat_scr, implicit $vgpr5 :: (dereferenceable load (s32) from %ir.sunkaddr, addrspace 5), (store (s32) into %ir.1, addrspace 5) {
-; LIVEINS-GFX1260-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 5, implicit $exec, implicit $vgpr5 :: (dereferenceable load (s32) from %ir.sunkaddr, addrspace 5)
+; LIVEINS-GFX1260-NEXT:   BUNDLE implicit-def dead $stg_srca, implicit killed $idx1, implicit $exec, implicit killed %13, implicit $flat_scr :: (dereferenceable load (s32) from %ir.sunkaddr, addrspace 5), (store (s32) into %ir.1, addrspace 5) {
+; LIVEINS-GFX1260-NEXT:     $stg_srca = V_LOAD_IDX_B32 killed $idx1, 5, implicit $exec :: (dereferenceable load (s32) from %ir.sunkaddr, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:     SCRATCH_STORE_DWORD_SADDR internal killed $stg_srca, %13.sub0, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.1, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   }
+; LIVEINS-GFX1260-NEXT:   VGPR_LIFETIME_END implicit killed $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit killed $vgpr4, implicit killed $vgpr5, implicit killed $vgpr6, implicit killed $vgpr7, implicit killed $vgpr8, implicit killed $vgpr9, implicit killed $vgpr10, implicit killed $vgpr11, implicit killed $vgpr12, implicit killed $vgpr13, implicit killed $vgpr14, implicit killed $vgpr15, implicit killed $vgpr16, implicit killed $vgpr17, implicit killed $vgpr18, implicit killed $vgpr19, implicit killed $vgpr20, implicit killed $vgpr21, implicit killed $vgpr22, implicit killed $vgpr23, implicit killed $vgpr24, implicit killed $vgpr25, implicit killed $vgpr26, implicit killed $vgpr27, implicit killed $vgpr28, implicit killed $vgpr29, implicit killed $vgpr30, implicit killed $vgpr31, implicit killed $vgpr32 :: (dereferenceable store (s1056) into %ir.p, align 1, addrspace 5)
 ; LIVEINS-GFX1260-NEXT:   S_ENDPGM 0
 entry:
   %p = alloca [33 x i32], align 4, addrspace(5)

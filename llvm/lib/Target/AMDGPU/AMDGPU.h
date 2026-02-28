@@ -72,7 +72,6 @@ FunctionPass *createAMDGPUPreloadKernArgPrologLegacyPass();
 ModulePass *createAMDGPUPreloadKernelArgumentsLegacyPass(const TargetMachine *);
 FunctionPass *createAMDGPUIdxRegAllocPass();
 FunctionPass *createAMDGPUPrivateObjectVGPRsPass();
-FunctionPass *createAMDGPUIndexingInfoWrapperPass();
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
   AMDGPUSimplifyLibCallsPass() = default;
@@ -292,9 +291,6 @@ extern char &AMDGPUPreloadKernelArgumentsLegacyID;
 
 void initializeAMDGPUPrivateObjectVGPRsPass(PassRegistry &);
 extern char &AMDGPUPrivateObjectVGPRsID;
-
-void initializeAMDGPUIndexingInfoWrapperPass(PassRegistry &);
-extern char &AMDGPUIndexingInfoWrapperID;
 
 void initializeAMDGPURegPressAnalysisPass(PassRegistry &);
 extern char &AMDGPURegPressAnalysisID;

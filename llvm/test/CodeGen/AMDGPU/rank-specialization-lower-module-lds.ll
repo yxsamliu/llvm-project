@@ -47,7 +47,7 @@ define private amdgpu_kernel void @input(ptr addrspace(1) %inbuf, ptr addrspace(
 ; CHECK-NEXT:    store <3 x i32> [[WEI31]], ptr addrspace(3) [[WEI_P1]], align 64
 ; CHECK-NEXT:    [[WEI_P2:%.*]] = getelementptr <3 x i32>, ptr addrspace(3) @llvm.amdgcn.module.lds, i64 24
 ; CHECK-NEXT:    store <3 x i32> [[WEI32]], ptr addrspace(3) [[WEI_P2]], align 64
-; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1)
+; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1, i32 poison)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -73,7 +73,7 @@ entry:
   %wei.p2 = getelementptr <3 x i32>, ptr addrspace(3) @weights, i64 24
   store <3 x i32> %wei32, ptr addrspace(3) %wei.p2, align 64
 
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1, i32 poison)
   ret void
 }
 
@@ -88,7 +88,7 @@ define private amdgpu_kernel void @compute(ptr addrspace(1) %inbuf, ptr addrspac
 ; CHECK-NEXT:    [[WEI:%.*]] = load <9 x i32>, ptr addrspace(3) @llvm.amdgcn.module.lds, align 64
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> zeroinitializer, <9 x i32> [[WEI]], <3 x i32> [[VEC30]], <3 x i32> [[VEC31]], <3 x i32> [[VEC32]], i32 42, i1 true)
 ; CHECK-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 3), align 16, !tbaa [[TBAA6:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2)
+; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2, i32 poison)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -99,7 +99,7 @@ entry:
   %wei = load <9 x i32>, ptr addrspace(3) @weights, align 64
   %0 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> zeroinitializer, <9 x i32> %wei, <3 x i32> %vec30, <3 x i32> %vec31, <3 x i32> %vec32, i32 42, i1 true)
   store <8 x half> %0, ptr addrspace(3) @out, align 16, !tbaa !4
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2, i32 poison)
   ret void
 }
 
@@ -149,7 +149,7 @@ define private amdgpu_kernel void @input_kern2(ptr addrspace(1) %inbuf, ptr addr
 ; CHECK-NEXT:    [[W:%.*]] = load <3 x i32>, ptr addrspace(1) [[WBUF]], align 64
 ; CHECK-NEXT:    [[VEC:%.*]] = add <3 x i32> [[W]], [[IN]]
 ; CHECK-NEXT:    store <3 x i32> [[VEC]], ptr addrspace(3) @llvm.amdgcn.module.lds, align 64
-; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1)
+; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1, i32 poison)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -159,7 +159,7 @@ entry:
 
   store <3 x i32> %vec, ptr addrspace(3) @weights, align 64
 
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1, i32 poison)
   ret void
 }
 

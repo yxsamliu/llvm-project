@@ -18,39 +18,7 @@ define amdgpu_kernel void @private_load_store(i32 inreg %idx) "amdgpu-wavegroup-
 ; CHECK-NEXT:    v_mov_b32_e32 v33, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v34, 1
 ; CHECK-NEXT:    s_lshr_b32 s2, s1, 2
-; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr2
-; CHECK-NEXT:    ; implicit-def: $vgpr3
-; CHECK-NEXT:    ; implicit-def: $vgpr4
-; CHECK-NEXT:    ; implicit-def: $vgpr5
-; CHECK-NEXT:    ; implicit-def: $vgpr6
-; CHECK-NEXT:    ; implicit-def: $vgpr7
-; CHECK-NEXT:    ; implicit-def: $vgpr8
-; CHECK-NEXT:    ; implicit-def: $vgpr9
-; CHECK-NEXT:    ; implicit-def: $vgpr10
-; CHECK-NEXT:    ; implicit-def: $vgpr11
-; CHECK-NEXT:    ; implicit-def: $vgpr12
-; CHECK-NEXT:    ; implicit-def: $vgpr13
-; CHECK-NEXT:    ; implicit-def: $vgpr14
-; CHECK-NEXT:    ; implicit-def: $vgpr15
-; CHECK-NEXT:    ; implicit-def: $vgpr16
-; CHECK-NEXT:    ; implicit-def: $vgpr17
-; CHECK-NEXT:    ; implicit-def: $vgpr18
-; CHECK-NEXT:    ; implicit-def: $vgpr19
-; CHECK-NEXT:    ; implicit-def: $vgpr20
-; CHECK-NEXT:    ; implicit-def: $vgpr21
-; CHECK-NEXT:    ; implicit-def: $vgpr22
-; CHECK-NEXT:    ; implicit-def: $vgpr23
-; CHECK-NEXT:    ; implicit-def: $vgpr24
-; CHECK-NEXT:    ; implicit-def: $vgpr25
-; CHECK-NEXT:    ; implicit-def: $vgpr26
-; CHECK-NEXT:    ; implicit-def: $vgpr27
-; CHECK-NEXT:    ; implicit-def: $vgpr28
-; CHECK-NEXT:    ; implicit-def: $vgpr29
-; CHECK-NEXT:    ; implicit-def: $vgpr30
-; CHECK-NEXT:    ; implicit-def: $vgpr31
-; CHECK-NEXT:    ; implicit-def: $vgpr32
+; CHECK-NEXT:    ; VGPR lifetime start: v[0:32]
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, s2
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -64,6 +32,9 @@ define amdgpu_kernel void @private_load_store(i32 inreg %idx) "amdgpu-wavegroup-
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 0x42 ; vsrc0_idx=2 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[0], g2[0]
+; CHECK-NEXT:    ; VGPR lifetime end: v[0:32]
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %p = alloca [33 x float], align 4, addrspace(5)
