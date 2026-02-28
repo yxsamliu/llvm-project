@@ -1163,11 +1163,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-<<<<<<< HEAD
-const unsigned NUM_PREDEF_TYPE_IDS = 523;
-=======
-const unsigned NUM_PREDEF_TYPE_IDS = 515;
->>>>>>> 774fb191e0ff8566005f198b310ad17518f827cc
+const unsigned NUM_PREDEF_TYPE_IDS = 524;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.

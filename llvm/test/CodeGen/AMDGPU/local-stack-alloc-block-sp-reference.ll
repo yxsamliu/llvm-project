@@ -507,13 +507,8 @@ define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; FLATSCR-NEXT:    s_mov_b32 s5, s33
 ; FLATSCR-NEXT:    s_add_i32 s33, s32, 0x1fff
-<<<<<<< HEAD
-; FLATSCR-NEXT:    s_and_b32 s33, s33, 0xffffe000
 ; FLATSCR-NEXT:    s_mov_b32 s6, s34
-=======
-; FLATSCR-NEXT:    s_mov_b32 s3, s34
 ; FLATSCR-NEXT:    s_and_b32 s33, s33, 0xffffe000
->>>>>>> 774fb191e0ff8566005f198b310ad17518f827cc
 ; FLATSCR-NEXT:    s_mov_b32 s34, s32
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, 0x8000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 0
@@ -589,17 +584,12 @@ define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[4:5], off, s0 offset:64 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_mov_b32 s32, s34
-<<<<<<< HEAD
 ; FLATSCR-NEXT:    s_mov_b32 s34, s6
-; FLATSCR-NEXT:    s_mov_b32 s33, s5
-=======
-; FLATSCR-NEXT:    s_mov_b32 s34, s3
->>>>>>> 774fb191e0ff8566005f198b310ad17518f827cc
 ; FLATSCR-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v4
 ; FLATSCR-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v5, vcc
 ; FLATSCR-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    s_mov_b32 s33, s2
+; FLATSCR-NEXT:    s_mov_b32 s33, s5
 ; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %pin.low = alloca i32, align 8192, addrspace(5)

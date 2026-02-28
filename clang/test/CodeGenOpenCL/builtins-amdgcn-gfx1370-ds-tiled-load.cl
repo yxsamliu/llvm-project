@@ -13,7 +13,7 @@ typedef unsigned char  v16uc __attribute__((ext_vector_type(16)));
 // CHECK-GFX1370-LABEL: define dso_local amdgpu_kernel void @test_ds_tiled_load_half_b64(
 // CHECK-GFX1370-SAME: ptr addrspace(3) noundef readonly align 4 captures(none) [[SRC:%.*]], ptr addrspace(1) noundef writeonly align 4 captures(none) initializes((0, 4)) [[DST:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] !kernel_arg_addr_space [[META8:![0-9]+]] !kernel_arg_access_qual [[META9:![0-9]+]] !kernel_arg_type [[META10:![0-9]+]] !kernel_arg_base_type [[META10]] !kernel_arg_type_qual [[META11:![0-9]+]] {
 // CHECK-GFX1370-NEXT:  [[ENTRY:.*:]]
-// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.ds.tiled.load.half.b64(ptr addrspace(3) align 4 [[SRC]])
+// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.ds.tiled.load.half.b64(ptr addrspace(3) readonly align 4 [[SRC]])
 // CHECK-GFX1370-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[DST]], align 4, !tbaa [[TBAA4:![0-9]+]]
 // CHECK-GFX1370-NEXT:    ret void
 //
@@ -24,7 +24,7 @@ void kernel test_ds_tiled_load_half_b64(local int *src, global int *dst) {
 // CHECK-GFX1370-LABEL: define dso_local amdgpu_kernel void @test_ds_tiled_load_b64(
 // CHECK-GFX1370-SAME: ptr addrspace(3) noundef readonly align 8 captures(none) [[SRC:%.*]], ptr addrspace(1) noundef writeonly align 8 captures(none) initializes((0, 8)) [[DST:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META8]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META12:![0-9]+]] !kernel_arg_base_type [[META13:![0-9]+]] !kernel_arg_type_qual [[META11]] {
 // CHECK-GFX1370-NEXT:  [[ENTRY:.*:]]
-// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.ds.tiled.load.b64(ptr addrspace(3) align 8 [[SRC]])
+// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.ds.tiled.load.b64(ptr addrspace(3) readonly align 8 [[SRC]])
 // CHECK-GFX1370-NEXT:    store <2 x i32> [[TMP0]], ptr addrspace(1) [[DST]], align 8, !tbaa [[TBAA14:![0-9]+]]
 // CHECK-GFX1370-NEXT:    ret void
 //
@@ -35,7 +35,7 @@ void kernel test_ds_tiled_load_b64(local v2i *src, global v2i *dst) {
 // CHECK-GFX1370-LABEL: define dso_local amdgpu_kernel void @test_ds_tiled_load_2x2_b128(
 // CHECK-GFX1370-SAME: ptr addrspace(3) noundef readonly align 16 captures(none) [[SRC:%.*]], ptr addrspace(1) noundef writeonly align 16 captures(none) initializes((0, 16)) [[DST:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META8]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META15:![0-9]+]] !kernel_arg_base_type [[META16:![0-9]+]] !kernel_arg_type_qual [[META11]] {
 // CHECK-GFX1370-NEXT:  [[ENTRY:.*:]]
-// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.ds.tiled.load.2x2.b128(ptr addrspace(3) align 16 [[SRC]])
+// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.ds.tiled.load.2x2.b128(ptr addrspace(3) readonly align 16 [[SRC]])
 // CHECK-GFX1370-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[DST]], align 16, !tbaa [[TBAA14]]
 // CHECK-GFX1370-NEXT:    ret void
 //
@@ -46,7 +46,7 @@ void kernel test_ds_tiled_load_2x2_b128(local v4i *src, global v4i *dst) {
 // CHECK-GFX1370-LABEL: define dso_local amdgpu_kernel void @test_ds_tiled_load_b128(
 // CHECK-GFX1370-SAME: ptr addrspace(3) noundef readonly align 16 captures(none) [[SRC:%.*]], ptr addrspace(1) noundef writeonly align 16 captures(none) initializes((0, 16)) [[DST:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META8]] !kernel_arg_access_qual [[META9]] !kernel_arg_type [[META15]] !kernel_arg_base_type [[META16]] !kernel_arg_type_qual [[META11]] {
 // CHECK-GFX1370-NEXT:  [[ENTRY:.*:]]
-// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.ds.tiled.load.b128(ptr addrspace(3) align 16 [[SRC]])
+// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.ds.tiled.load.b128(ptr addrspace(3) readonly align 16 [[SRC]])
 // CHECK-GFX1370-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[DST]], align 16, !tbaa [[TBAA14]]
 // CHECK-GFX1370-NEXT:    ret void
 //
@@ -57,7 +57,7 @@ void kernel test_ds_tiled_load_b128(local v4i *src, global v4i *dst) {
 // CHECK-GFX1370-LABEL: define dso_local amdgpu_kernel void @test_ds_tiled_load_mcast_half_b64(
 // CHECK-GFX1370-SAME: ptr addrspace(3) noundef readonly align 4 captures(none) [[SRC:%.*]], ptr addrspace(1) noundef writeonly align 4 captures(none) initializes((0, 4)) [[DST:%.*]], i32 noundef [[MASK:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] !kernel_arg_addr_space [[META17:![0-9]+]] !kernel_arg_access_qual [[META18:![0-9]+]] !kernel_arg_type [[META19:![0-9]+]] !kernel_arg_base_type [[META19]] !kernel_arg_type_qual [[META20:![0-9]+]] {
 // CHECK-GFX1370-NEXT:  [[ENTRY:.*:]]
-// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.ds.tiled.load.mcast.half.b64(ptr addrspace(3) align 4 [[SRC]], i32 [[MASK]])
+// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.ds.tiled.load.mcast.half.b64(ptr addrspace(3) readonly align 4 [[SRC]], i32 [[MASK]])
 // CHECK-GFX1370-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[DST]], align 4, !tbaa [[TBAA4]]
 // CHECK-GFX1370-NEXT:    ret void
 //
@@ -68,7 +68,7 @@ void kernel test_ds_tiled_load_mcast_half_b64(local int *src, global int *dst, i
 // CHECK-GFX1370-LABEL: define dso_local amdgpu_kernel void @test_ds_tiled_load_mcast_b64(
 // CHECK-GFX1370-SAME: ptr addrspace(3) noundef readonly align 8 captures(none) [[SRC:%.*]], ptr addrspace(1) noundef writeonly align 8 captures(none) initializes((0, 8)) [[DST:%.*]], i32 noundef [[MASK:%.*]]) local_unnamed_addr #[[ATTR2]] !kernel_arg_addr_space [[META17]] !kernel_arg_access_qual [[META18]] !kernel_arg_type [[META21:![0-9]+]] !kernel_arg_base_type [[META22:![0-9]+]] !kernel_arg_type_qual [[META20]] {
 // CHECK-GFX1370-NEXT:  [[ENTRY:.*:]]
-// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.ds.tiled.load.mcast.b64(ptr addrspace(3) align 8 [[SRC]], i32 [[MASK]])
+// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.ds.tiled.load.mcast.b64(ptr addrspace(3) readonly align 8 [[SRC]], i32 [[MASK]])
 // CHECK-GFX1370-NEXT:    store <2 x i32> [[TMP0]], ptr addrspace(1) [[DST]], align 8, !tbaa [[TBAA14]]
 // CHECK-GFX1370-NEXT:    ret void
 //
@@ -79,7 +79,7 @@ void kernel test_ds_tiled_load_mcast_b64(local v2i *src, global v2i *dst, int ma
 // CHECK-GFX1370-LABEL: define dso_local amdgpu_kernel void @test_ds_tiled_load_mcast_b128(
 // CHECK-GFX1370-SAME: ptr addrspace(3) noundef readonly align 16 captures(none) [[SRC:%.*]], ptr addrspace(1) noundef writeonly align 16 captures(none) initializes((0, 16)) [[DST:%.*]], i32 noundef [[MASK:%.*]]) local_unnamed_addr #[[ATTR2]] !kernel_arg_addr_space [[META17]] !kernel_arg_access_qual [[META18]] !kernel_arg_type [[META23:![0-9]+]] !kernel_arg_base_type [[META24:![0-9]+]] !kernel_arg_type_qual [[META20]] {
 // CHECK-GFX1370-NEXT:  [[ENTRY:.*:]]
-// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.ds.tiled.load.mcast.b128(ptr addrspace(3) align 16 [[SRC]], i32 [[MASK]])
+// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.ds.tiled.load.mcast.b128(ptr addrspace(3) readonly align 16 [[SRC]], i32 [[MASK]])
 // CHECK-GFX1370-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[DST]], align 16, !tbaa [[TBAA14]]
 // CHECK-GFX1370-NEXT:    ret void
 //
@@ -90,7 +90,7 @@ void kernel test_ds_tiled_load_mcast_b128(local v4i *src, global v4i *dst, int m
 // CHECK-GFX1370-LABEL: define dso_local amdgpu_kernel void @test_ds_tiled_load_mcast_2x2_b128(
 // CHECK-GFX1370-SAME: ptr addrspace(3) noundef readonly align 16 captures(none) [[SRC:%.*]], ptr addrspace(1) noundef writeonly align 16 captures(none) initializes((0, 16)) [[DST:%.*]], i32 noundef [[MASK:%.*]]) local_unnamed_addr #[[ATTR2]] !kernel_arg_addr_space [[META17]] !kernel_arg_access_qual [[META18]] !kernel_arg_type [[META23]] !kernel_arg_base_type [[META24]] !kernel_arg_type_qual [[META20]] {
 // CHECK-GFX1370-NEXT:  [[ENTRY:.*:]]
-// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.ds.tiled.load.mcast.2x2.b128(ptr addrspace(3) align 16 [[SRC]], i32 [[MASK]])
+// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.ds.tiled.load.mcast.2x2.b128(ptr addrspace(3) readonly align 16 [[SRC]], i32 [[MASK]])
 // CHECK-GFX1370-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[DST]], align 16, !tbaa [[TBAA14]]
 // CHECK-GFX1370-NEXT:    ret void
 //
@@ -101,7 +101,7 @@ void kernel test_ds_tiled_load_mcast_2x2_b128(local v4i *src, global v4i *dst, i
 // CHECK-GFX1370-LABEL: define dso_local amdgpu_kernel void @test_ds_load_mcast_tr4_b64(
 // CHECK-GFX1370-SAME: ptr addrspace(3) noundef readonly align 8 captures(none) [[SRC:%.*]], ptr addrspace(1) noundef writeonly align 8 captures(none) initializes((0, 8)) [[DST:%.*]], i32 noundef [[MASK:%.*]]) local_unnamed_addr #[[ATTR2]] !kernel_arg_addr_space [[META17]] !kernel_arg_access_qual [[META18]] !kernel_arg_type [[META21]] !kernel_arg_base_type [[META22]] !kernel_arg_type_qual [[META20]] {
 // CHECK-GFX1370-NEXT:  [[ENTRY:.*:]]
-// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.ds.load.mcast.tr4.b64(ptr addrspace(3) align 8 [[SRC]], i32 [[MASK]])
+// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.ds.load.mcast.tr4.b64(ptr addrspace(3) readonly align 8 [[SRC]], i32 [[MASK]])
 // CHECK-GFX1370-NEXT:    store <2 x i32> [[TMP0]], ptr addrspace(1) [[DST]], align 8, !tbaa [[TBAA14]]
 // CHECK-GFX1370-NEXT:    ret void
 //
@@ -112,7 +112,7 @@ void kernel test_ds_load_mcast_tr4_b64(local v2i *src, global v2i *dst, int mask
 // CHECK-GFX1370-LABEL: define dso_local amdgpu_kernel void @test_ds_load_mcast_tr6_b96(
 // CHECK-GFX1370-SAME: ptr addrspace(3) noundef readonly align 16 captures(none) [[SRC:%.*]], ptr addrspace(1) noundef writeonly align 16 captures(none) initializes((0, 12)) [[DST:%.*]], i32 noundef [[MASK:%.*]]) local_unnamed_addr #[[ATTR2]] !kernel_arg_addr_space [[META17]] !kernel_arg_access_qual [[META18]] !kernel_arg_type [[META25:![0-9]+]] !kernel_arg_base_type [[META26:![0-9]+]] !kernel_arg_type_qual [[META20]] {
 // CHECK-GFX1370-NEXT:  [[ENTRY:.*:]]
-// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <3 x i32> @llvm.amdgcn.ds.load.mcast.tr6.b96(ptr addrspace(3) align 16 [[SRC]], i32 [[MASK]])
+// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <3 x i32> @llvm.amdgcn.ds.load.mcast.tr6.b96(ptr addrspace(3) readonly align 16 [[SRC]], i32 [[MASK]])
 // CHECK-GFX1370-NEXT:    store <3 x i32> [[TMP0]], ptr addrspace(1) [[DST]], align 16, !tbaa [[TBAA14]]
 // CHECK-GFX1370-NEXT:    ret void
 //
@@ -123,7 +123,7 @@ void kernel test_ds_load_mcast_tr6_b96(local v3i *src, global v3i *dst, int mask
 // CHECK-GFX1370-LABEL: define dso_local amdgpu_kernel void @test_ds_load_mcast_tr8_b64(
 // CHECK-GFX1370-SAME: ptr addrspace(3) noundef readonly align 8 captures(none) [[SRC:%.*]], ptr addrspace(1) noundef writeonly align 8 captures(none) initializes((0, 8)) [[DST:%.*]], i32 noundef [[MASK:%.*]]) local_unnamed_addr #[[ATTR2]] !kernel_arg_addr_space [[META17]] !kernel_arg_access_qual [[META18]] !kernel_arg_type [[META21]] !kernel_arg_base_type [[META22]] !kernel_arg_type_qual [[META20]] {
 // CHECK-GFX1370-NEXT:  [[ENTRY:.*:]]
-// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.ds.load.mcast.tr8.b64(ptr addrspace(3) align 8 [[SRC]], i32 [[MASK]])
+// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.ds.load.mcast.tr8.b64(ptr addrspace(3) readonly align 8 [[SRC]], i32 [[MASK]])
 // CHECK-GFX1370-NEXT:    store <2 x i32> [[TMP0]], ptr addrspace(1) [[DST]], align 8, !tbaa [[TBAA14]]
 // CHECK-GFX1370-NEXT:    ret void
 //
@@ -134,7 +134,7 @@ void kernel test_ds_load_mcast_tr8_b64(local v2i *src, global v2i *dst, int mask
 // CHECK-GFX1370-LABEL: define dso_local amdgpu_kernel void @test_ds_load_mcast_tr16_b128(
 // CHECK-GFX1370-SAME: ptr addrspace(3) noundef readonly align 16 captures(none) [[SRC:%.*]], ptr addrspace(1) noundef writeonly align 16 captures(none) initializes((0, 16)) [[DST:%.*]], i32 noundef [[MASK:%.*]]) local_unnamed_addr #[[ATTR2]] !kernel_arg_addr_space [[META17]] !kernel_arg_access_qual [[META18]] !kernel_arg_type [[META23]] !kernel_arg_base_type [[META24]] !kernel_arg_type_qual [[META20]] {
 // CHECK-GFX1370-NEXT:  [[ENTRY:.*:]]
-// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.ds.load.mcast.tr16.b128(ptr addrspace(3) align 16 [[SRC]], i32 [[MASK]])
+// CHECK-GFX1370-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.ds.load.mcast.tr16.b128(ptr addrspace(3) readonly align 16 [[SRC]], i32 [[MASK]])
 // CHECK-GFX1370-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[DST]], align 16, !tbaa [[TBAA14]]
 // CHECK-GFX1370-NEXT:    ret void
 //

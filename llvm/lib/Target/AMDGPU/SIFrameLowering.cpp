@@ -12,17 +12,12 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
-<<<<<<< HEAD
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/CodeGen/LiveRegUnits.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineInstrBundle.h"
-=======
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
->>>>>>> 774fb191e0ff8566005f198b310ad17518f827cc
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Target/TargetMachine.h"
@@ -57,7 +52,6 @@ static MCRegister findUnusedRegister(MachineRegisterInfo &MRI,
   return MCRegister();
 }
 
-<<<<<<< HEAD
 // Allocate a scratch register for use at a single point in the program,
 // tracking available live units.
 static MCRegister allocScratchRegister(MachineRegisterInfo &MRI,
@@ -71,7 +65,8 @@ static MCRegister allocScratchRegister(MachineRegisterInfo &MRI,
   }
 
   llvm_unreachable("unable to find a scratch register");
-=======
+}
+
 static bool needsFrameMoves(const MachineFunction &MF) {
   // FIXME: There are some places in the compiler which are sensitive to the CFI
   // pseudos and so using MachineFunction::needsFrameMoves has the unintended
@@ -145,7 +140,6 @@ void SIFrameLowering::emitDefCFA(MachineBasicBlock &MBB,
                  : MCCFIInstruction::createDefCfaRegister(nullptr,
                                                           DwarfStackPtrReg));
   buildCFI(MBB, MBBI, DL, CFIInst, Flags);
->>>>>>> 774fb191e0ff8566005f198b310ad17518f827cc
 }
 
 // Find a scratch register that we can use in the prologue. We avoid using
@@ -2654,7 +2648,6 @@ bool SIFrameLowering::requiresStackPointerReference(
   return frameTriviallyRequiresSP(MFI);
 }
 
-<<<<<<< HEAD
 void SIFrameLowering::insertWavegroupEndBarrier(MachineFunction &MF) const {
   const Function &F = MF.getFunction();
 
@@ -2675,7 +2668,8 @@ void SIFrameLowering::insertWavegroupEndBarrier(MachineFunction &MF) const {
           .addImm(AMDGPU::Barrier::WORKGROUP);
     }
   }
-=======
+}
+
 MachineInstr *SIFrameLowering::buildCFI(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI,
                                         const DebugLoc &DL,
@@ -2810,5 +2804,4 @@ SIFrameLowering::buildCFIForSameValue(MachineBasicBlock &MBB,
   int DwarfReg = MCRI.getDwarfRegNum(Reg, /*isEH=*/false);
   auto CFIInst = MCCFIInstruction::createSameValue(nullptr, DwarfReg);
   return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
->>>>>>> 774fb191e0ff8566005f198b310ad17518f827cc
 }

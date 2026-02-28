@@ -100,11 +100,10 @@ private:
       Register PreloadedPrivateBufferReg, Register ScratchRsrcReg,
       Register ScratchWaveOffsetReg) const;
 
-<<<<<<< HEAD
   /// Insert a workgroup barrier before S_ENDPGM instructions in
   /// wavegroup-enabled kernels and rank functions.
   void insertWavegroupEndBarrier(MachineFunction &MF) const;
-=======
+
   void emitPrologueEntryCFI(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI,
                             const DebugLoc &DL) const;
@@ -113,7 +112,6 @@ private:
                   DebugLoc const &DL, Register StackPtrReg,
                   bool AspaceAlreadyDefined,
                   MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const;
->>>>>>> 774fb191e0ff8566005f198b310ad17518f827cc
 
 public:
   bool requiresStackPointerReference(const MachineFunction &MF) const;

@@ -14,11 +14,8 @@
 #include "AMDGPUMemoryUtils.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
-<<<<<<< HEAD
 #include "llvm/Analysis/CallGraph.h"
-=======
 #include "llvm/Analysis/TargetTransformInfo.h"
->>>>>>> 774fb191e0ff8566005f198b310ad17518f827cc
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/Target/TargetMachine.h"

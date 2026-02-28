@@ -1749,7 +1749,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    Instruction cache prefetches are unsafe on invalid address.
 
-<<<<<<< HEAD
   llvm.amdgcn.wavegroup.id                         In a wavegroup-enabled dispatch, return the 0-based ID of the
                                                    wavegroup within the workgroup. Otherwise the return value is
                                                    undefined.
@@ -1773,7 +1772,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    The supported range of values for the mask is 0 to 15.
                                                    It is undefined behavior if the low 28 bits of the argument are non-zero.
                                                    This mask argument must be 0 for GFX13.
-=======
   llvm.amdgcn.global.load.b128                     This intrinsic is supported on gfx9, gfx10, gfx11, and gfx12 targets.
   
                                                    Signature:
@@ -1879,7 +1877,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    appropriate instruction set reference (e.g. Chapter 4.1.1 in the "RDNA4"
                                                    Instruction Set Architecture Reference Guide).
                                                                    
->>>>>>> 774fb191e0ff8566005f198b310ad17518f827cc
 
   llvm.amdgcn.s.barrier                            Performs a barrier *signal* operation immediately followed
                                                    by a barrier *wait* operation on the *workgroup barrier* object.
