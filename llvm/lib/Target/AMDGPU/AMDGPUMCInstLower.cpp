@@ -16,11 +16,8 @@
 #include "AMDGPU.h"
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPUMachineFunction.h"
-<<<<<<< HEAD
 #include "AMDGPUStaticSimulator.h"
-=======
 #include "AMDGPUMemoryUtils.h"
->>>>>>> a8ccaa90ebdb71f2b83cfb5da6f137bf595df2ee
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"

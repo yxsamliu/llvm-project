@@ -1,15 +1,6 @@
-<<<<<<< HEAD
-; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx9-generic    < %s 2>&1 | FileCheck -check-prefixes=GFX9-GENERIC    %s
-; xxx: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx9-4-generic  < %s 2>&1 | FileCheck -check-prefixes=GFX9-4-GENERIC  %s
-; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx10-1-generic < %s 2>&1 | FileCheck -check-prefixes=GFX10-1-GENERIC %s
-; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx10-3-generic < %s 2>&1 | FileCheck -check-prefixes=GFX10-3-GENERIC %s
-; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx11-generic   < %s 2>&1 | FileCheck -check-prefixes=GFX11-GENERIC   %s
-
-=======
 ; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx602          < %s 2>&1 | FileCheck -check-prefixes=GFX602          %s
 ; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx705          < %s 2>&1 | FileCheck -check-prefixes=GFX705          %s
 ; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx810          < %s 2>&1 | FileCheck -check-prefixes=GFX810          %s
->>>>>>> a8ccaa90ebdb71f2b83cfb5da6f137bf595df2ee
 
 ; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx602          < %s 2>&1 | FileCheck -check-prefixes=GFX602-GBL-ISEL          %s
 ; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx705          < %s 2>&1 | FileCheck -check-prefixes=GFX705-GBL-ISEL          %s

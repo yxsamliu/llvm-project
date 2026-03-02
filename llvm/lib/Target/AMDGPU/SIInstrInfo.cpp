@@ -10447,11 +10447,7 @@ unsigned SIInstrInfo::getLiveRangeSplitOpcode(Register SrcReg,
 }
 
 bool SIInstrInfo::canAddToBBProlog(const MachineInstr &MI) const {
-<<<<<<< HEAD
-  uint16_t Opcode = MI.getOpcode();
-=======
   uint32_t Opcode = MI.getOpcode();
->>>>>>> a8ccaa90ebdb71f2b83cfb5da6f137bf595df2ee
   // Check if it is SGPR spill or wwm-register spill Opcode.
   if (isSGPRSpill(Opcode) || isWWMRegSpillOpcode(Opcode))
     return true;

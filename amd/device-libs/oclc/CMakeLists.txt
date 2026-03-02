@@ -62,17 +62,13 @@ set(OCLC_ISA_TARGETS
   "1151|11501"
   "1152|11502"
   "1153|11503"
-<<<<<<< HEAD
   "115E|11598"
-=======
->>>>>>> a8ccaa90ebdb71f2b83cfb5da6f137bf595df2ee
   "11-generic|11003"
   # GFX12
   "1200|12000"
   "1201|12001"
   "1250|12500"
   "1251|12501"
-<<<<<<< HEAD
   "1260|12600"
   "12-generic|12000"
   "12-5-generic|12500"
@@ -82,9 +78,6 @@ set(OCLC_ISA_TARGETS
   "1360|13600"
   "1370|13700"
   "131F|13199"
-=======
-  "12-generic|12000"
->>>>>>> a8ccaa90ebdb71f2b83cfb5da6f137bf595df2ee
 )
 
 # ABI versions (version in name equals value)

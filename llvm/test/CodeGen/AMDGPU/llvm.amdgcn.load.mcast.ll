@@ -495,11 +495,6 @@ define void @load_mcast_b32_vaddr_imm_mask_comp_local(ptr addrspace(3) %addr, pt
 ; CHECK-NEXT:    s_mov_b32 m0, 7
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    ds_load_mcast_b32 g1[3], v0 offset:16
-<<<<<<< HEAD
-; CHECK-NEXT:    global_store_b32 v[1:2], g1[0], off
-; CHECK-NEXT:    s_mov_b32 s33, s0
-=======
->>>>>>> a8ccaa90ebdb71f2b83cfb5da6f137bf595df2ee
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    global_store_b32 v[1:2], g1[0], off
 ; CHECK-NEXT:    s_mov_b32 s33, s0
@@ -897,11 +892,6 @@ define void @load_mcast_b32_vaddr_imm_mask_comp_distributed(ptr addrspace(11) %a
 ; CHECK-NEXT:    s_mov_b32 m0, 7
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    dds_load_mcast_b32 g1[3], v0, off offset:16 th:TH_LOAD_HT scope:SCOPE_SE
-<<<<<<< HEAD
-; CHECK-NEXT:    global_store_b32 v[1:2], g1[0], off
-; CHECK-NEXT:    s_mov_b32 s33, s0
-=======
->>>>>>> a8ccaa90ebdb71f2b83cfb5da6f137bf595df2ee
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    global_store_b32 v[1:2], g1[0], off
 ; CHECK-NEXT:    s_mov_b32 s33, s0

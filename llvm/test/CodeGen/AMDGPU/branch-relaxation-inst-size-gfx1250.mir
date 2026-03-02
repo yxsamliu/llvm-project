@@ -39,7 +39,10 @@ body: |
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_ADD_PC_I64 target-flags(<unknown target flag>) <mcsymbol >, post-instr-symbol <mcsymbol >
+  ; CHECK-NEXT:   $sgpr4_sgpr5 = S_GETPC_B64 post-instr-symbol <mcsymbol >
+  ; CHECK-NEXT:   $sgpr4 = S_ADD_U32 $sgpr4, target-flags(<unknown target flag>) <mcsymbol >, implicit-def $scc
+  ; CHECK-NEXT:   $sgpr5 = S_ADDC_U32 $sgpr5, target-flags(<unknown target flag>) <mcsymbol >, implicit-def $scc, implicit $scc
+  ; CHECK-NEXT:   S_SETPC_B64 $sgpr4_sgpr5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)

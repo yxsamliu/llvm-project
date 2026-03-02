@@ -496,7 +496,6 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::SALU;
   }
 
-<<<<<<< HEAD
   static bool isProgramStateSALU(const MachineInstr &MI) {
     return MI.getOpcode() == AMDGPU::S_DELAY_ALU ||
            MI.getOpcode() == AMDGPU::S_SET_VGPR_MSB ||
@@ -506,8 +505,6 @@ public:
   /// Get next real instruction, skipping debug/meta/implicit-def instructions.
   static MachineInstr *getNextRealInstr(MachineInstr *MI);
 
-=======
->>>>>>> a8ccaa90ebdb71f2b83cfb5da6f137bf595df2ee
   static bool isVALU(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::VALU;
   }

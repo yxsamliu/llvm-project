@@ -2147,28 +2147,20 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_global_tiled_load_qtr_b128:
   case Intrinsic::amdgcn_global_tiled_load_vst2_b128:
   case Intrinsic::amdgcn_global_tiled_load_vst2_b64:
-<<<<<<< HEAD
-  case Intrinsic::amdgcn_global_load_b128:
-  case Intrinsic::amdgcn_global_store_b128:
-=======
   case Intrinsic::amdgcn_global_tiled_load_mcast_half_b64:
   case Intrinsic::amdgcn_global_tiled_load_mcast_b64:
   case Intrinsic::amdgcn_global_tiled_load_mcast_b128:
   case Intrinsic::amdgcn_global_tiled_load_mcast_2x2_b128:
->>>>>>> a8ccaa90ebdb71f2b83cfb5da6f137bf595df2ee
   case Intrinsic::amdgcn_ds_tiled_load_half_b64:
   case Intrinsic::amdgcn_ds_tiled_load_b64:
   case Intrinsic::amdgcn_ds_tiled_load_b128:
   case Intrinsic::amdgcn_ds_tiled_load_2x2_b128:
-<<<<<<< HEAD
-=======
   case Intrinsic::amdgcn_ds_tiled_load_mcast_half_b64:
   case Intrinsic::amdgcn_ds_tiled_load_mcast_b64:
   case Intrinsic::amdgcn_ds_tiled_load_mcast_b128:
   case Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_b128:
   case Intrinsic::amdgcn_global_load_b128:
   case Intrinsic::amdgcn_global_store_b128:
->>>>>>> a8ccaa90ebdb71f2b83cfb5da6f137bf595df2ee
     Ptr = II->getArgOperand(0);
     break;
   case Intrinsic::amdgcn_load_to_lds:
