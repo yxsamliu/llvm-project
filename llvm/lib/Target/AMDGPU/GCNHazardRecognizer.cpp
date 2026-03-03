@@ -3657,7 +3657,8 @@ bool GCNHazardRecognizer::fixGetRegWaitIdle(MachineInstr *MI) {
   default:
     return false;
   case AMDGPU::Hwreg::ID_STATUS:
-  case AMDGPU::Hwreg::ID_STATE_PRIV:
+  case AMDGPU::Hwreg::ID_STATE_PRIV_gfx12:
+  case AMDGPU::Hwreg::ID_STATE_PRIV_gfx13:
   case AMDGPU::Hwreg::ID_EXCP_FLAG_PRIV:
   case AMDGPU::Hwreg::ID_EXCP_FLAG_USER:
     break;

@@ -574,7 +574,7 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_PERF_SNAPSHOT_PC_HI_gfx11 = 19,
 
   // Register numbers reused in GFX12+
-  ID_STATE_PRIV = 4,
+  ID_STATE_PRIV_gfx12 = 4,
   ID_PERF_SNAPSHOT_DATA1 = 15,
   ID_PERF_SNAPSHOT_DATA2 = 16,
   ID_EXCP_FLAG_PRIV = 17,
@@ -582,6 +582,7 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_TRAP_CTRL = 19,
 
   // Register numbers reused in GFX13+
+  ID_STATE_PRIV_gfx13 = 3,
   ID_WAVE_GROUP_INFO = 27,
 
   // GFX94* specific registers

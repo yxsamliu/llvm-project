@@ -121,7 +121,7 @@ s_getreg_b32 s0, hwreg(HW_REG_STATUS)
 // GFX13: s_getreg_b32 s0, hwreg(HW_REG_WAVE_STATUS) ; encoding: [0x02,0xf8,0x00,0xb9]
 
 s_getreg_b32 s0, hwreg(HW_REG_STATE_PRIV)
-// GFX13: s_getreg_b32 s0, hwreg(HW_REG_WAVE_STATE_PRIV) ; encoding: [0x04,0xf8,0x00,0xb9]
+// GFX13: encoding: [0x03,0xf8,0x00,0xb9]
 
 s_getreg_b32 s0, hwreg(HW_REG_GPR_ALLOC)
 // GFX13: s_getreg_b32 s0, hwreg(HW_REG_WAVE_GPR_ALLOC) ; encoding: [0x05,0xf8,0x00,0xb9]
